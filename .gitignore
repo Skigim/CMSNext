@@ -58,3 +58,24 @@ coverage/
 # Temporary folders
 tmp/
 temp/
+
+# Development artifacts
+debug-*.html
+debug-*.json
+test-case-*.json
+*-migration-*.py
+*.bak
+*.backup
+
+# Legacy code archives
+archive/legacy/
+archive/old/
+
+# Generated documentation
+docs/generated/
+docs/api/
+
+# IDE workspace files
+*.code-workspace
+.vscode/settings.json
+.vscode/launch.json
