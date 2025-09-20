@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useMemo, memo, lazy, Suspense } from "react";
 import { ThemeProvider } from "./contexts/ThemeContext";
-import { FileStorageProvider, useFileStorage, useFileStorageDataChange } from "./contexts/FileStorageContext";
+import { FileStorageProvider, useFileStorage } from "./contexts/FileStorageContext";
 import { MainLayout } from "./components/MainLayout";
 import { Toaster } from "./components/ui/sonner";
 import { CaseDisplay, CaseCategory, FinancialItem, Note, NewPersonData, NewCaseRecordData, NewNoteData } from "./types/case";
@@ -51,7 +51,6 @@ const AppContent = memo(function AppContent({
 }) {
   const { isSupported, isConnected, hasStoredHandle, status, connectToFolder, connectToExisting, loadExistingData } = useFileStorage();
   const dataManager = useDataManagerSafe(); // Get DataManager instance
-  const notifyFileStorageChange = useFileStorageDataChange();
   const [currentView, setCurrentView] = useState<View>('dashboard');
   const [selectedCaseId, setSelectedCaseId] = useState<string | null>(null);
   const [editingCase, setEditingCase] = useState<CaseDisplay | null>(null);
@@ -70,13 +69,6 @@ const AppContent = memo(function AppContent({
     cases.find(c => c.id === selectedCaseId), 
     [cases, selectedCaseId]
   );
-
-  // Helper to safely notify file storage changes (avoids conflicts during connect flow)
-  const safeNotifyFileStorageChange = useCallback(() => {
-    if (window.location.hash !== '#connect-to-existing') {
-      notifyFileStorageChange();
-    }
-  }, [notifyFileStorageChange]);
 
   const loadCases = useCallback(async () => {
     // Try DataManager first (new approach)
@@ -563,8 +555,7 @@ const AppContent = memo(function AppContent({
       
       toast.success(`Successfully imported ${importedCases.length} cases`);
       
-      // Notify file storage of data change
-      safeNotifyFileStorageChange();
+      // DataManager handles file system persistence automatically
     } catch (err) {
       console.error('Failed to handle imported cases:', err);
       const errorMsg = 'Failed to process imported cases. Please try again.';
