@@ -206,7 +206,7 @@ try {
 - Maintain consistent spacing and hierarchy
 
 ### Responsive Design
-- Mobile-first approach
+- Desktop first approach
 - Use Tailwind responsive prefixes (`sm:`, `md:`, `lg:`)
 - Ensure touch-friendly interface elements
 - Test on various screen sizes

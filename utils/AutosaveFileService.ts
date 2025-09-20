@@ -1,3 +1,5 @@
+/// <reference path="../types/global.d.ts" />
+
 /**
  * Case Tracking Platform Combined Autosave & File Service v1.0
  *
@@ -67,7 +69,6 @@ class AutosaveFileService {
   private directoryHandle: FileSystemDirectoryHandle | null = null;
   private fileName: string;
   private errorCallback: (message: string, type?: string) => void;
-  private sanitizeFn: (str: string) => string;
   private tabId: string;
   private dbName: string = 'CaseTrackingFileAccess';
   private storeName: string = 'directoryHandles';
@@ -89,18 +90,16 @@ class AutosaveFileService {
   constructor({
     fileName = 'case-tracker-data.json',
     errorCallback = () => {},
-    sanitizeFn = (str) => str,
-    tabId = null,
+    tabId = '',
     enabled = true,
     saveInterval = 120000, // 2 minutes
     debounceDelay = 5000, // 5 seconds
     maxRetries = 3,
-    statusCallback = null,
+    statusCallback = () => {},
   }: AutosaveConfig = {}) {
     // File service properties
     this.fileName = fileName;
     this.errorCallback = errorCallback;
-    this.sanitizeFn = sanitizeFn;
     this.tabId = tabId || `case-tracker-tab-${Date.now()}`;
 
     // Autosave properties
@@ -181,7 +180,7 @@ class AutosaveFileService {
     }
 
     try {
-      this.directoryHandle = await window.showDirectoryPicker();
+      this.directoryHandle = await (window as any).showDirectoryPicker();
       const permissionGranted = await this.requestPermission();
 
       if (permissionGranted) {
@@ -260,13 +259,13 @@ class AutosaveFileService {
 
   async checkPermission(): Promise<PermissionState> {
     if (!this.directoryHandle) return 'prompt';
-    return await this.directoryHandle.queryPermission({ mode: 'readwrite' });
+    return await (this.directoryHandle as any).queryPermission({ mode: 'readwrite' });
   }
 
   async requestPermission(): Promise<boolean> {
     if (!this.directoryHandle) return false;
 
-    const permission = await this.directoryHandle.requestPermission({
+    const permission = await (this.directoryHandle as any).requestPermission({
       mode: 'readwrite',
     });
     if (permission === 'granted') {
@@ -465,7 +464,7 @@ class AutosaveFileService {
       const dataFiles: string[] = [];
       
       // Iterate through all files in the directory
-      for await (const [name, handle] of this.directoryHandle.entries()) {
+      for await (const [name, handle] of (this.directoryHandle as any).entries()) {
         if (handle.kind === 'file') {
           // Look for JSON files that could contain case data
           if (name.endsWith('.json')) {
@@ -564,7 +563,7 @@ class AutosaveFileService {
       return false;
     }
     try {
-      const result = await this.directoryHandle.requestPermission({
+      const result = await (this.directoryHandle as any).requestPermission({
         mode: 'readwrite',
       });
       this.state.permissionStatus = result;

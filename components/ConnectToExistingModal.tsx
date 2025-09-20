@@ -3,7 +3,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Button } from "./ui/button";
 import { Alert, AlertDescription } from "./ui/alert";
 import { Card, CardContent } from "./ui/card";
-import { FolderOpen, AlertCircle, Loader2, FileText, Upload, Database } from "lucide-react";
+import { FolderOpen, AlertCircle, Loader2, Upload, Database } from "lucide-react";
 
 interface ConnectToExistingModalProps {
   isOpen: boolean;

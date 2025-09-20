@@ -29,7 +29,12 @@ export function ItemForm({ category, item, onSave, onCancel }: ItemFormProps) {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onSave(formData);
+    // Map the old status to verificationStatus
+    const itemData = {
+      ...formData,
+      verificationStatus: 'Needs VR' as const // Default verification status
+    };
+    onSave(itemData);
   };
 
   const getCategoryTitle = (category: CaseCategory) => {
@@ -85,7 +90,7 @@ export function ItemForm({ category, item, onSave, onCancel }: ItemFormProps) {
 
             <div className="space-y-2">
               <Label htmlFor="status">Status</Label>
-              <Select value={formData.status} onValueChange={(value: CaseItem['status']) => setFormData({ ...formData, status: value })}>
+              <Select value={formData.status} onValueChange={(value) => setFormData({ ...formData, status: value as CaseItem['status'] })}>
                 <SelectTrigger>
                   <SelectValue placeholder="Select status" />
                 </SelectTrigger>

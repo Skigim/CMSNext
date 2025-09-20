@@ -182,12 +182,12 @@ export class FileStorageAPI {
         organizationId: caseData.caseRecord.organizationId || '',
         authorizedReps: caseData.caseRecord.authorizedReps || [],
         retroRequested: caseData.caseRecord.retroRequested || '',
-        financials: caseData.caseRecord.financials || {
+        financials: {
           resources: [],
           income: [],
           expenses: []
         },
-        notes: caseData.caseRecord.notes || [],
+        notes: [],
         createdDate: new Date().toISOString(),
         updatedDate: new Date().toISOString()
       }
@@ -250,8 +250,8 @@ export class FileStorageAPI {
       organizationId: caseData.caseRecord.organizationId || '',
       authorizedReps: caseData.caseRecord.authorizedReps || [],
       retroRequested: caseData.caseRecord.retroRequested || '',
-      // Preserve or update financials data if provided
-      financials: caseData.caseRecord.financials || existingCase.caseRecord.financials,
+      // Preserve existing financials data
+      financials: existingCase.caseRecord.financials,
       updatedDate: new Date().toISOString()
     };
 
@@ -520,12 +520,12 @@ export class FileStorageAPI {
             organizationId: caseData.caseRecord.organizationId || '',
             authorizedReps: caseData.caseRecord.authorizedReps || [],
             retroRequested: caseData.caseRecord.retroRequested || '',
-            financials: caseData.caseRecord.financials || {
+            financials: {
               resources: [],
               income: [],
               expenses: []
             },
-            notes: caseData.caseRecord.notes || [],
+            notes: [],
             createdDate: new Date().toISOString(),
             updatedDate: new Date().toISOString()
           }

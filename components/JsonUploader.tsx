@@ -4,8 +4,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { Alert, AlertDescription } from "./ui/alert";
 import { Progress } from "./ui/progress";
 import { Badge } from "./ui/badge";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "./ui/collapsible";
-import { Upload, FileText, CheckCircle, XCircle, AlertTriangle, Download, HelpCircle, ChevronDown } from "lucide-react";
+import { Collapsible, CollapsibleContent } from "./ui/collapsible";
+import { Upload, FileText, CheckCircle, XCircle, AlertTriangle, Download, HelpCircle } from "lucide-react";
 import { CaseDisplay, NewPersonData, NewCaseRecordData } from "../types/case";
 import { downloadSampleJson, getImportDocumentation } from "../utils/jsonImportHelper";
 import { fileDataProvider } from "../utils/fileDataProvider";
@@ -172,7 +172,6 @@ export function JsonUploader({ onImportComplete, onClose }: JsonUploaderProps) {
       const person: NewPersonData = {
         firstName: item.person?.firstName || item.firstName || '',
         lastName: item.person?.lastName || item.lastName || '',
-        middleName: item.person?.middleName || item.middleName || '',
         email: item.person?.email || item.email || '',
         phone: item.person?.phone || item.phone || '',
         dateOfBirth: item.person?.dateOfBirth || item.dateOfBirth || '',
@@ -181,76 +180,38 @@ export function JsonUploader({ onImportComplete, onClose }: JsonUploaderProps) {
           street: item.person?.address?.street || item.address?.street || item.street || '',
           city: item.person?.address?.city || item.address?.city || item.city || '',
           state: item.person?.address?.state || item.address?.state || item.state || '',
-          zipCode: item.person?.address?.zipCode || item.address?.zipCode || item.zipCode || '',
-          county: item.person?.address?.county || item.address?.county || item.county || ''
+          zip: item.person?.address?.zipCode || item.address?.zipCode || item.zipCode || '',
         },
-        householdSize: item.person?.householdSize || item.householdSize || 1,
-        maritalStatus: item.person?.maritalStatus || item.maritalStatus || '',
-        employmentStatus: item.person?.employmentStatus || item.employmentStatus || ''
+        mailingAddress: {
+          street: item.person?.address?.street || item.address?.street || item.street || '',
+          city: item.person?.address?.city || item.address?.city || item.city || '',
+          state: item.person?.address?.state || item.address?.state || item.state || '',
+          zip: item.person?.address?.zipCode || item.address?.zipCode || item.zipCode || '',
+          sameAsPhysical: true
+        },
+        livingArrangement: item.person?.livingArrangement || item.livingArrangement || '',
+        status: item.person?.status || item.status || 'Active'
       };
 
       // Extract case record data
       const caseRecord: NewCaseRecordData = {
         mcn: item.caseRecord?.mcn || item.mcn || item.caseNumber || '',
+        applicationDate: item.caseRecord?.applicationDate || item.applicationDate || new Date().toISOString(),
+        caseType: item.caseRecord?.caseType || item.caseType || 'General',
+        personId: '', // Will be set later
         status: item.caseRecord?.status || item.status || 'In Progress',
-        priority: item.caseRecord?.priority || item.priority || 'Normal',
-        assignedTo: item.caseRecord?.assignedTo || item.assignedTo || '',
-        dateOpened: item.caseRecord?.dateOpened || item.dateOpened || new Date().toISOString().split('T')[0],
-        lastUpdated: item.caseRecord?.lastUpdated || item.lastUpdated || new Date().toISOString().split('T')[0],
-        financials: {
-          resources: transformFinancialItems(
-            item.caseRecord?.financials?.resources || 
-            item.financials?.resources || 
-            item.resources || 
-            []
-          ),
-          income: transformFinancialItems(
-            item.caseRecord?.financials?.income || 
-            item.financials?.income || 
-            item.income || 
-            []
-          ),
-          expenses: transformFinancialItems(
-            item.caseRecord?.financials?.expenses || 
-            item.financials?.expenses || 
-            item.expenses || 
-            []
-          )
-        },
-        notes: transformNotes(
-          item.caseRecord?.notes || 
-          item.notes || 
-          []
-        )
+        description: item.caseRecord?.description || item.description || '',
+        priority: Boolean(item.caseRecord?.priority || item.priority || false),
+        livingArrangement: item.caseRecord?.livingArrangement || item.livingArrangement || '',
+        withWaiver: Boolean(item.caseRecord?.withWaiver || item.withWaiver || false),
+        admissionDate: item.caseRecord?.admissionDate || item.admissionDate || new Date().toISOString(),
+        organizationId: item.caseRecord?.organizationId || item.organizationId || '',
+        authorizedReps: item.caseRecord?.authorizedReps || item.authorizedReps || [],
+        retroRequested: item.caseRecord?.retroRequested || item.retroRequested || ''
       };
 
       return { person, caseRecord };
     });
-  };
-
-  const transformFinancialItems = (items: any[]) => {
-    if (!Array.isArray(items)) return [];
-    
-    return items.map((item: any) => ({
-      description: item.description || item.name || item.type || 'Imported Item',
-      amount: parseFloat(item.amount || item.value || '0'),
-      frequency: item.frequency || 'monthly',
-      verificationStatus: item.verificationStatus || item.status || 'Needs VR',
-      verificationSource: item.verificationSource || item.source || '',
-      location: item.location || item.institution || item.bank || '',
-      accountNumber: item.accountNumber || item.account || '',
-      notes: item.notes || item.comments || ''
-    }));
-  };
-
-  const transformNotes = (notes: any[]) => {
-    if (!Array.isArray(notes)) return [];
-    
-    return notes.map((note: any) => ({
-      content: note.content || note.text || note.note || '',
-      createdAt: note.createdAt || note.date || new Date().toISOString(),
-      createdBy: note.createdBy || note.author || 'System'
-    }));
   };
 
   const handleImport = async () => {
@@ -295,7 +256,7 @@ export function JsonUploader({ onImportComplete, onClose }: JsonUploaderProps) {
           }
 
           // Split the full name into first and last names
-          const nameParts = (personInfo.name || '').split(' ');
+          const nameParts = ((personInfo as any).name || '').split(' ');
           const firstName = nameParts[0] || '';
           const lastName = nameParts.slice(1).join(' ') || '';
 
@@ -303,43 +264,40 @@ export function JsonUploader({ onImportComplete, onClose }: JsonUploaderProps) {
           const person: NewPersonData = {
             firstName,
             lastName,
-            middleName: personInfo.middleName || '',
-            email: personInfo.email || '',
-            phone: personInfo.phone || '',
-            dateOfBirth: personInfo.dateOfBirth || '',
-            ssn: personInfo.ssn || '',
+            email: (personInfo as any).email || '',
+            phone: (personInfo as any).phone || '',
+            dateOfBirth: (personInfo as any).dateOfBirth || '',
+            ssn: (personInfo as any).ssn || '',
+            livingArrangement: '',
+            status: 'Active',
             address: {
-              street: personInfo.address?.street || '',
-              city: personInfo.address?.city || '',
-              state: personInfo.address?.state || '',
-              zipCode: personInfo.address?.zip || personInfo.address?.zipCode || '',
-              county: ''
+              street: (personInfo as any).address?.street || '',
+              city: (personInfo as any).address?.city || '',
+              state: (personInfo as any).address?.state || '',
+              zip: (personInfo as any).address?.zip || (personInfo as any).address?.zipCode || ''
             },
-            householdSize: 1,
-            maritalStatus: '',
-            employmentStatus: ''
+            mailingAddress: {
+              street: (personInfo as any).mailingAddress?.street || '',
+              city: (personInfo as any).mailingAddress?.city || '',
+              state: (personInfo as any).mailingAddress?.state || '',
+              zip: (personInfo as any).mailingAddress?.zip || (personInfo as any).mailingAddress?.zipCode || '',
+              sameAsPhysical: false
+            }
           };
 
-          // Debug the migrated financial data structure
-          const migratedFinancials = caseDisplay.caseRecord.financials;
-          const resourcesCount = migratedFinancials?.resources?.length || 0;
-          const incomeCount = migratedFinancials?.income?.length || 0;
-          const expensesCount = migratedFinancials?.expenses?.length || 0;
           
           // Construct the complete case record, preserving migrated financials
           const caseRecord: NewCaseRecordData = {
             mcn: caseDisplay.caseRecord.mcn,
+            applicationDate: caseDisplay.caseRecord.applicationDate.split('T')[0],
+            caseType: 'Medicaid', // Default case type
+            personId: '', // Will be filled after person creation
             status: caseDisplay.caseRecord.status,
-            priority: caseDisplay.caseRecord.priority ? 'High' : 'Normal',
-            assignedTo: '',
-            dateOpened: caseDisplay.caseRecord.applicationDate.split('T')[0],
-            lastUpdated: caseDisplay.caseRecord.updatedDate.split('T')[0],
-            financials: migratedFinancials, // Preserve the migrated financials!
-            notes: caseDisplay.caseRecord.notes?.map(note => ({
-              content: note.content,
-              createdAt: note.createdAt,
-              createdBy: 'Migrated'
-            })) || []
+            description: '',
+            priority: caseDisplay.caseRecord.priority as boolean,
+            livingArrangement: '',
+            admissionDate: caseDisplay.caseRecord.applicationDate.split('T')[0],
+            organizationId: 'default'
           };
 
           return { person, caseRecord };

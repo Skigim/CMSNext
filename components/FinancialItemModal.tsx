@@ -46,7 +46,6 @@ interface FormData {
 
 interface FormErrors {
   [key: string]: string | null;
-  general?: string | null;
 }
 
 export function FinancialItemModal({
@@ -189,7 +188,7 @@ export function FinancialItemModal({
       amount: parseFloat(formData.amount.toString()) || 0,
       frequency: formData.frequency,
       owner: formData.owner,
-      verificationStatus: formData.verificationStatus,
+      verificationStatus: formData.verificationStatus as "Needs VR" | "VR Pending" | "AVS Pending" | "Verified",
       verificationSource: formData.verificationSource,
       notes: formData.notes,
       dateAdded: formData.dateAdded,
@@ -472,7 +471,7 @@ export function FinancialItemModal({
               <Checkbox
                 id="addAnother"
                 checked={addAnother}
-                onCheckedChange={setAddAnother}
+                onCheckedChange={(checked) => setAddAnother(checked === true)}
               />
               <Label htmlFor="addAnother">
                 Add another item after saving

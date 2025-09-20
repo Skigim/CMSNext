@@ -9,4 +9,21 @@ export default defineConfig({
       '@': new URL('./src', import.meta.url).pathname,
     },
   },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          vendor: ['react', 'react-dom'],
+          ui: ['lucide-react'],
+          forms: ['react-hook-form'],
+          charts: ['recharts']
+        }
+      }
+    },
+    chunkSizeWarningLimit: 250,
+    target: 'esnext'
+  },
+  optimizeDeps: {
+    include: ['react', 'react-dom', 'lucide-react']
+  }
 })

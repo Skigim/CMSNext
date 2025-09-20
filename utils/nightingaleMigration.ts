@@ -98,7 +98,7 @@ interface NightingaleCase {
 /**
  * Normalize status to match expected enum values
  */
-function normalizeStatus(status?: string): string {
+function normalizeStatus(status?: string): 'In Progress' | 'Priority' | 'Review' | 'Completed' {
   if (!status) {
     return 'In Progress';
   }
@@ -159,7 +159,7 @@ function findPersonById(people: NightingalePerson[], personId: string): Nighting
 /**
  * Convert person data from Nightingale format to expected format
  */
-function convertPersonData(person: NightingalePerson, organizations: any[]): Person {
+function convertPersonData(person: NightingalePerson): Person {
   const address = person.address || {};
   
   // Convert date of birth to simpler format if available
@@ -231,7 +231,7 @@ function convertPersonData(person: NightingalePerson, organizations: any[]): Per
 /**
  * Convert financial items (resources, income, expenses) to the target format
  */
-function convertFinancialItems(financialItems: any[], itemType: string): FinancialItem[] {
+function convertFinancialItems(financialItems: any[]): FinancialItem[] {
   return financialItems.map(item => {
     const itemId = item.id || generateId();
     
@@ -286,7 +286,7 @@ function convertNotes(notes: any[]): Note[] {
 /**
  * Convert case data from Nightingale format to expected format
  */
-function convertCaseData(caseData: NightingaleCase, person: NightingalePerson, organizations: any[]): CaseRecord {
+function convertCaseData(caseData: NightingaleCase, person: NightingalePerson): CaseRecord {
   const caseId = caseData.id || generateId();
   const personId = person.id || generateId();
   
@@ -315,9 +315,9 @@ function convertCaseData(caseData: NightingaleCase, person: NightingalePerson, o
   
   // Process financials
   const processedFinancials = {
-    resources: convertFinancialItems(financials.resources || [], 'resource'),
-    income: convertFinancialItems(financials.income || [], 'income'),
-    expenses: convertFinancialItems(financials.expenses || [], 'expense')
+    resources: convertFinancialItems(financials.resources || []),
+    income: convertFinancialItems(financials.income || []),
+    expenses: convertFinancialItems(financials.expenses || [])
   };
 
   const convertedCase: CaseRecord = {
@@ -351,7 +351,6 @@ function convertCaseData(caseData: NightingaleCase, person: NightingalePerson, o
 function convertToMultipleCasesFormat(nightingaleData: NightingaleData): CaseDisplay[] {
   const people = nightingaleData.people || [];
   const cases = nightingaleData.caseRecords || nightingaleData.cases || [];
-  const organizations = nightingaleData.organizations || [];
   
   const multipleCases: CaseDisplay[] = [];
   
@@ -360,8 +359,8 @@ function convertToMultipleCasesFormat(nightingaleData: NightingaleData): CaseDis
     const person = findPersonById(people, caseData.personId);
     if (person) {
       // Convert both person and case data
-      const convertedPerson = convertPersonData(person, organizations);
-      const convertedCase = convertCaseData(caseData, person, organizations);
+      const convertedPerson = convertPersonData(person);
+      const convertedCase = convertCaseData(caseData, person);
       
       // Create the complete case structure
       const caseItem: CaseDisplay = {

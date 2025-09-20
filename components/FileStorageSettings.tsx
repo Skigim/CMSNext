@@ -17,7 +17,6 @@ import {
   Settings as SettingsIcon,
   Save,
   Folder,
-  Wifi,
   WifiOff,
   FileText,
   Upload
@@ -34,7 +33,6 @@ export function FileStorageSettings() {
     connectToFolder, 
     disconnect, 
     saveNow, 
-    ensurePermission,
     updateSettings,
     listDataFiles,
     readNamedFile

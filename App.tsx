@@ -1,19 +1,21 @@
-import { useState, useEffect, useCallback, useMemo, memo } from "react";
+import { useState, useEffect, useCallback, useMemo, memo, lazy, Suspense } from "react";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import { FileStorageProvider, useFileStorage, useFileStorageDataChange } from "./contexts/FileStorageContext";
 import { MainLayout } from "./components/MainLayout";
-import { Dashboard } from "./components/Dashboard";
-import { CaseList } from "./components/CaseList";
-import { CaseDetails } from "./components/CaseDetails";
-import { CaseForm } from "./components/CaseForm";
-import { Settings } from "./components/Settings";
-import { FinancialItemModal } from "./components/FinancialItemModal";
-import { NoteModal } from "./components/NoteModal";
-import { ConnectToExistingModal } from "./components/ConnectToExistingModal";
 import { Toaster } from "./components/ui/sonner";
 import { CaseDisplay, CaseCategory, FinancialItem, Note, NewPersonData, NewCaseRecordData, NewNoteData } from "./types/case";
 import { fileDataProvider } from "./utils/fileDataProvider";
 import { toast } from "sonner";
+
+// Lazy load heavy components
+const Dashboard = lazy(() => import("./components/Dashboard").then(m => ({ default: m.Dashboard })));
+const CaseList = lazy(() => import("./components/CaseList").then(m => ({ default: m.CaseList })));
+const CaseDetails = lazy(() => import("./components/CaseDetails").then(m => ({ default: m.CaseDetails })));
+const CaseForm = lazy(() => import("./components/CaseForm").then(m => ({ default: m.CaseForm })));
+const Settings = lazy(() => import("./components/Settings").then(m => ({ default: m.Settings })));
+const FinancialItemModal = lazy(() => import("./components/FinancialItemModal").then(m => ({ default: m.FinancialItemModal })));
+const NoteModal = lazy(() => import("./components/NoteModal").then(m => ({ default: m.NoteModal })));
+const ConnectToExistingModal = lazy(() => import("./components/ConnectToExistingModal").then(m => ({ default: m.ConnectToExistingModal })));
 
 type View = 'dashboard' | 'list' | 'details' | 'form' | 'settings';
 type ItemFormState = {
@@ -668,18 +670,20 @@ const AppContent = memo(function AppContent() {
           </div>
         </MainLayout>
         
-        <ConnectToExistingModal
-          isOpen={showConnectModal}
-          isSupported={isSupported}
-          onConnectToExisting={handleConnectToExisting}
-          onGoToSettings={() => {
-            setShowConnectModal(false);
-            setHasLoadedData(true); // Mark as handled
-            handleNavigate('settings');
-          }}
-          permissionStatus={status?.permissionStatus}
-          hasStoredHandle={hasStoredHandle}
-        />
+        <Suspense fallback={<div>Loading...</div>}>
+          <ConnectToExistingModal
+            isOpen={showConnectModal}
+            isSupported={isSupported ?? false}
+            onConnectToExisting={handleConnectToExisting}
+            onGoToSettings={() => {
+              setShowConnectModal(false);
+              setHasLoadedData(true); // Mark as handled
+              handleNavigate('settings');
+            }}
+            permissionStatus={status?.permissionStatus}
+            hasStoredHandle={hasStoredHandle}
+          />
+        </Suspense>
       </>
     );
   }
@@ -722,80 +726,94 @@ const AppContent = memo(function AppContent() {
       )}
 
       {currentView === 'dashboard' && (
-        <Dashboard
-          cases={cases}
-          onViewAllCases={handleBackToList}
-          onNewCase={handleNewCase}
-        />
+        <Suspense fallback={<div className="flex items-center justify-center p-8">Loading dashboard...</div>}>
+          <Dashboard
+            cases={cases}
+            onViewAllCases={handleBackToList}
+            onNewCase={handleNewCase}
+          />
+        </Suspense>
       )}
 
       {currentView === 'list' && (
-        <CaseList
-          cases={cases}
-          onViewCase={handleViewCase}
-          onEditCase={handleEditCase}
-          onDeleteCase={handleDeleteCase}
-          onNewCase={handleNewCase}
-          onRefresh={loadCases}
-        />
+        <Suspense fallback={<div className="flex items-center justify-center p-8">Loading cases...</div>}>
+          <CaseList
+            cases={cases}
+            onViewCase={handleViewCase}
+            onEditCase={handleEditCase}
+            onDeleteCase={handleDeleteCase}
+            onNewCase={handleNewCase}
+            onRefresh={loadCases}
+          />
+        </Suspense>
       )}
 
       {currentView === 'settings' && (
-        <Settings
-          cases={cases}
-          onImportCases={handleImportCases}
-          onDataPurged={handleDataPurged}
-        />
+        <Suspense fallback={<div className="flex items-center justify-center p-8">Loading settings...</div>}>
+          <Settings
+            cases={cases}
+            onImportCases={handleImportCases}
+            onDataPurged={handleDataPurged}
+          />
+        </Suspense>
       )}
 
       {currentView === 'details' && selectedCase && (
-        <CaseDetails
-          case={selectedCase}
-          onBack={handleBackToList}
-          onEdit={() => handleEditCase(selectedCase.id)}
-          onDelete={() => handleDeleteCase(selectedCase.id)}
-          onAddItem={handleAddItem}
-          onEditItem={handleEditItem}
-          onDeleteItem={handleDeleteItem}
-          onAddNote={handleAddNote}
-          onEditNote={handleEditNote}
-          onDeleteNote={handleDeleteNote}
-        />
+        <Suspense fallback={<div className="flex items-center justify-center p-8">Loading case details...</div>}>
+          <CaseDetails
+            case={selectedCase}
+            onBack={handleBackToList}
+            onEdit={() => handleEditCase(selectedCase.id)}
+            onDelete={() => handleDeleteCase(selectedCase.id)}
+            onAddItem={handleAddItem}
+            onEditItem={handleEditItem}
+            onDeleteItem={handleDeleteItem}
+            onAddNote={handleAddNote}
+            onEditNote={handleEditNote}
+            onDeleteNote={handleDeleteNote}
+          />
+        </Suspense>
       )}
 
       {currentView === 'form' && (
-        <CaseForm
-          case={editingCase || undefined}
-          onSave={handleSaveCase}
-          onCancel={handleCancelForm}
-        />
+        <Suspense fallback={<div className="flex items-center justify-center p-8">Loading form...</div>}>
+          <CaseForm
+            case={editingCase || undefined}
+            onSave={handleSaveCase}
+            onCancel={handleCancelForm}
+          />
+        </Suspense>
       )}
 
       {itemForm.isOpen && itemForm.category && selectedCase && (
-        <FinancialItemModal
-          isOpen={itemForm.isOpen}
-          onClose={handleCancelItemForm}
-          caseData={selectedCase}
-          onUpdateCase={(updatedCase) => {
-            setCases(prevCases =>
-              prevCases.map(c =>
-                c.id === updatedCase.id ? updatedCase : c
-              )
-            );
-            setItemForm({ isOpen: false });
-          }}
-          itemType={itemForm.category}
-          editingItem={itemForm.item}
-        />
+        <Suspense fallback={<div>Loading...</div>}>
+          <FinancialItemModal
+            isOpen={itemForm.isOpen}
+            onClose={handleCancelItemForm}
+            caseData={selectedCase}
+            onUpdateCase={(updatedCase) => {
+              setCases(prevCases =>
+                prevCases.map(c =>
+                  c.id === updatedCase.id ? updatedCase : c
+                )
+              );
+              setItemForm({ isOpen: false });
+            }}
+            itemType={itemForm.category}
+            editingItem={itemForm.item}
+          />
+        </Suspense>
       )}
 
       {noteForm.isOpen && (
-        <NoteModal
-          isOpen={noteForm.isOpen}
-          onClose={handleCancelNoteForm}
-          onSave={handleSaveNote}
-          editingNote={noteForm.editingNote}
-        />
+        <Suspense fallback={<div>Loading...</div>}>
+          <NoteModal
+            isOpen={noteForm.isOpen}
+            onClose={handleCancelNoteForm}
+            onSave={handleSaveNote}
+            editingNote={noteForm.editingNote}
+          />
+        </Suspense>
       )}
     </MainLayout>
   );

@@ -140,7 +140,7 @@ export function CaseForm({ case: existingCase, onSave, onCancel }: CaseFormProps
     caseType: existingCase?.caseRecord.caseType || 'LTC',
     personId: existingCase?.caseRecord.personId || '',
     spouseId: existingCase?.caseRecord.spouseId || '',
-    status: existingCase?.caseRecord.status || 'Pending',
+    status: existingCase?.caseRecord.status || 'In Progress',
     description: existingCase?.caseRecord.description || '',
     priority: existingCase?.caseRecord.priority || false,
     livingArrangement: existingCase?.caseRecord.livingArrangement || '',
@@ -746,7 +746,7 @@ export function CaseForm({ case: existingCase, onSave, onCancel }: CaseFormProps
                           <Checkbox
                             id="retroRequested"
                             checked={retroRequested}
-                            onCheckedChange={(checked) => setRetroRequested(checked)}
+                            onCheckedChange={(checked) => setRetroRequested(checked === true)}
                           />
                           <Label htmlFor="retroRequested">Retro Requested</Label>
                         </div>
