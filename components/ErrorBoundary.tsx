@@ -47,16 +47,23 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
       errorInfo,
     });
 
-    // Report error to error reporting service
-    errorReporting.reportError(error, {
-      componentStack: errorInfo.componentStack || undefined,
-      context: {
-        type: 'react-error-boundary',
+    // Only report if this is likely a React-specific error not already caught by global handler
+    // Skip test errors to avoid duplicates from global handler
+    const isTestError = error.message?.includes('Test error for ErrorBoundary') || 
+                       error.stack?.includes('ErrorBoundaryTest');
+    
+    if (!isTestError) {
+      // Report error to error reporting service
+      errorReporting.reportError(error, {
         componentStack: errorInfo.componentStack || undefined,
-      },
-      severity: 'high',
-      tags: ['error-boundary', 'react'],
-    });
+        context: {
+          type: 'react-error-boundary',
+          componentStack: errorInfo.componentStack || undefined,
+        },
+        severity: 'high',
+        tags: ['error-boundary', 'react'],
+      });
+    }
 
     // Call custom error handler if provided
     if (this.props.onError) {

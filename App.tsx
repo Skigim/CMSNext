@@ -6,6 +6,7 @@ import { Toaster } from "./components/ui/sonner";
 import { CaseDisplay, CaseCategory, FinancialItem, Note, NewPersonData, NewCaseRecordData, NewNoteData } from "./types/case";
 import { fileDataProvider } from "./utils/fileDataProvider";
 import { toast } from "sonner";
+import ErrorBoundary from "./components/ErrorBoundary";
 import FileSystemErrorBoundary from "./components/FileSystemErrorBoundary";
 import { ErrorRecoveryProvider } from "./components/ErrorRecovery";
 
@@ -861,8 +862,8 @@ export default function App() {
   }, []);
 
   return (
-    <ThemeProvider>
-      <ErrorRecoveryProvider>
+    <ErrorBoundary>
+      <ThemeProvider>
         <FileSystemErrorBoundary>
           <FileStorageProvider 
             enabled={true} // Always enabled - filesystem only
@@ -888,31 +889,33 @@ export default function App() {
               if (caseCount === 0) {
                 // If we've never had data in this session and haven't explicitly loaded empty data, don't save
                 if (!(window as any).fileStorageDataBaseline) {
-                  return null;
+                    return null;
+                  }
                 }
-              }
-          
-          return {
-            exported_at: new Date().toISOString(),
-            total_cases: caseCount,
-            cases: api.internalData.cases
-          };
-        }}
-        onDataLoaded={handleFileDataLoaded}
-      >
-        <FileStorageIntegrator>
-          <AppContent 
-            cases={cases}
-            setCases={setCases}
-            hasLoadedData={hasLoadedData}
-            setHasLoadedData={setHasLoadedData}
-          />
-          <Toaster />
-        </FileStorageIntegrator>
-      </FileStorageProvider>
-      </FileSystemErrorBoundary>
-      </ErrorRecoveryProvider>
-    </ThemeProvider>
+            
+            return {
+              exported_at: new Date().toISOString(),
+              total_cases: caseCount,
+              cases: api.internalData.cases
+            };
+          }}
+          onDataLoaded={handleFileDataLoaded}
+        >
+          <ErrorRecoveryProvider>
+            <FileStorageIntegrator>
+              <AppContent 
+                cases={cases}
+                setCases={setCases}
+                hasLoadedData={hasLoadedData}
+                setHasLoadedData={setHasLoadedData}
+              />
+              <Toaster />
+            </FileStorageIntegrator>
+          </ErrorRecoveryProvider>
+        </FileStorageProvider>
+        </FileSystemErrorBoundary>
+      </ThemeProvider>
+    </ErrorBoundary>
   );
 }
 

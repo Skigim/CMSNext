@@ -28,6 +28,8 @@ class ErrorReportingService {
   private reports: ErrorReport[] = [];
   private maxReports = 100; // Keep last 100 error reports
   private isEnabled = true;
+  private recentErrors: Map<string, number> = new Map(); // Track recent errors for deduplication
+  private deduplicationWindow = 1000; // 1 second window for deduplication
 
   constructor() {
     // Load existing reports from localStorage
@@ -93,6 +95,32 @@ class ErrorReportingService {
     } catch (err) {
       console.warn('Failed to save error reports to localStorage:', err);
     }
+  }
+
+  private generateErrorHash(error: Error, context?: any): string {
+    // Create a hash of the error for deduplication
+    const errorSignature = `${error.name}:${error.message}`;
+    const stackSignature = error.stack?.split('\n')[1]?.trim() || ''; // Use second line for more specific location
+    const contextSignature = context?.type || 'unknown';
+    return `${errorSignature}:${stackSignature}:${contextSignature}`;
+  }
+
+  private isDuplicateError(errorHash: string): boolean {
+    const now = Date.now();
+    const lastReported = this.recentErrors.get(errorHash);
+    
+    if (lastReported && (now - lastReported) < this.deduplicationWindow) {
+      return true;
+    }
+    
+    // Clean up old entries
+    for (const [hash, timestamp] of this.recentErrors.entries()) {
+      if (now - timestamp > this.deduplicationWindow) {
+        this.recentErrors.delete(hash);
+      }
+    }
+    
+    return false;
   }
 
   private generateErrorId(): string {
@@ -168,6 +196,19 @@ class ErrorReportingService {
     } = {}
   ) {
     if (!this.isEnabled) return;
+
+    // Check for duplicate errors
+    const errorHash = this.generateErrorHash(error, options.context);
+    if (this.isDuplicateError(errorHash)) {
+      // Skip duplicate error, but log in development
+      if (process.env.NODE_ENV === 'development') {
+        console.log(`🔄 Skipping duplicate error: ${error.message}`);
+      }
+      return null;
+    }
+
+    // Mark this error as recently reported
+    this.recentErrors.set(errorHash, Date.now());
 
     const report: ErrorReport = {
       id: this.generateErrorId(),

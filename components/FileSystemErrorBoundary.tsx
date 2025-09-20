@@ -79,37 +79,40 @@ export class FileSystemErrorBoundary extends Component<
       errorInfo,
     });
 
-    // Report error to error reporting service
-    errorReporting.reportError(error, {
-      componentStack: errorInfo.componentStack || undefined,
-      context: {
-        type: 'filesystem-error-boundary',
-        isFileSystemError: this.state.isFileSystemError,
+    // Only report if we haven't reported this error recently
+    // The global error handler might have already caught this
+    const shouldReport = this.state.isFileSystemError || 
+                        !error.stack?.includes('ErrorBoundaryTest'); // Don't duplicate test errors
+
+    if (shouldReport) {
+      // Report error to error reporting service
+      errorReporting.reportError(error, {
         componentStack: errorInfo.componentStack || undefined,
-      },
-      severity: this.state.isFileSystemError ? 'medium' : 'high',
-      tags: this.state.isFileSystemError 
-        ? ['filesystem', 'error-boundary', 'user-action']
-        : ['error-boundary', 'react'],
-    });
+        context: {
+          type: 'filesystem-error-boundary',
+          isFileSystemError: this.state.isFileSystemError,
+          componentStack: errorInfo.componentStack || undefined,
+        },
+        severity: this.state.isFileSystemError ? 'medium' : 'high',
+        tags: this.state.isFileSystemError 
+          ? ['filesystem', 'error-boundary', 'user-action']
+          : ['error-boundary', 'react'],
+      });
+    }
 
     // Call custom error handler if provided
     if (this.props.onError) {
       this.props.onError(error, errorInfo);
     }
 
-    // Show appropriate toast based on error type
+    // Show appropriate toast based on error type (only for filesystem errors)
     if (this.state.isFileSystemError) {
       toast.error('File system error occurred', {
         description: 'There was a problem accessing the file system. Please check permissions and try again.',
         duration: 5000,
       });
-    } else {
-      toast.error('An error occurred in the file system component', {
-        description: 'Please try refreshing the page or contact support.',
-        duration: 5000,
-      });
     }
+    // Don't show toast for general React errors - let ErrorBoundary handle those
   }
 
   componentDidUpdate(prevProps: FileSystemErrorBoundaryProps) {
