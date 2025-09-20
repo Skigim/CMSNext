@@ -138,244 +138,60 @@ async createCompleteCase(
 
 ---
 
-## 🔨 Phase 2: Component Refactoring
+## 🔨 Phase 2: Component Refactoring (Broken into Sub-Phases)
 
-### 2.1 Extract Custom Hooks from App.tsx
-**Priority**: MEDIUM | **Effort**: 4 hours
+### Phase 2A: Extract Custom Hooks (1-2 days)
+**Priority**: HIGH | **Effort**: 4 hours per hook
 
-Create dedicated hooks directory and extract logic:
+#### 2A.1: Create useCaseManagement Hook
+Extract case management logic from App.tsx into a dedicated hook
+- Move CRUD operations (create, update, delete)
+- Move state management (cases, loading, error)
+- Maintain existing functionality
 
-````typescript
-// filepath: /workspaces/CMSNext/hooks/useCaseManagement.ts
-import { useState, useCallback, useMemo } from 'react';
-import { CaseDisplay, NewPersonData, NewCaseRecordData } from '../types/case';
-import { fileDataProvider } from '../utils/fileDataProvider';
-import { toast } from 'sonner';
+#### 2A.2: Create useFinancialItems Hook  
+Extract financial item management from App.tsx
+- Move financial item CRUD operations
+- Move financial item modal state
+- Simplify financial operations in components
 
-export function useCaseManagement() {
-  const [cases, setCases] = useState<CaseDisplay[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+#### 2A.3: Create useNotes Hook
+Extract note management from App.tsx
+- Move note CRUD operations
+- Move note modal state
+- Streamline note operations
 
-  const getDataAPI = useCallback(() => {
-    const api = fileDataProvider.getAPI();
-    if (!api) {
-      setError('Data storage is not available');
-      return null;
-    }
-    return api;
-  }, []);
+### Phase 2B: Split Large Components (2-3 days)
+**Priority**: MEDIUM | **Effort**: 6 hours per component
 
-  const loadCases = useCallback(async () => {
-    const dataAPI = getDataAPI();
-    if (!dataAPI) return;
+#### 2B.1: Split CaseForm.tsx (784 lines)
+Break down into focused sub-components:
+- `PersonInfoForm` - Personal details section
+- `CaseInfoForm` - Case record details section  
+- `AddressForm` - Address information section
+- `ContactInfoForm` - Phone, email, etc.
 
-    setIsLoading(true);
-    setError(null);
-    
-    try {
-      const loadedCases = await dataAPI.getAllCases();
-      setCases(loadedCases);
-    } catch (err) {
-      console.error('Failed to load cases:', err);
-      setError('Failed to load cases. Please try again.');
-      toast.error('Failed to load cases');
-    } finally {
-      setIsLoading(false);
-    }
-  }, [getDataAPI]);
+#### 2B.2: Split App.tsx Logic (964 lines)
+Extract logical sections:
+- `AppRouter` - View routing and navigation
+- `AppProviders` - Context provider wrapper
+- `AppContent` - Main application content
+- Keep App.tsx as coordinator only
 
-  const createCase = useCallback(async (
-    personData: NewPersonData,
-    caseData: NewCaseRecordData
-  ) => {
-    const dataAPI = getDataAPI();
-    if (!dataAPI) throw new Error('Storage unavailable');
+### Phase 2C: Create Hooks Directory Structure (1 day)
+**Priority**: LOW | **Effort**: 2 hours
 
-    const toastId = toast.loading("Creating case...");
-    try {
-      const newCase = await dataAPI.createCompleteCase(personData, caseData);
-      setCases(prev => [...prev, newCase]);
-      toast.success("Case created successfully", { id: toastId });
-      return newCase;
-    } catch (err) {
-      toast.error("Failed to create case", { id: toastId });
-      throw err;
-    }
-  }, [getDataAPI]);
-
-  const updateCase = useCallback(async (caseId: string, updates: Partial<CaseDisplay>) => {
-    const dataAPI = getDataAPI();
-    if (!dataAPI) throw new Error('Storage unavailable');
-
-    const toastId = toast.loading("Updating case...");
-    try {
-      const updated = await dataAPI.updateCase(caseId, updates);
-      setCases(prev => prev.map(c => c.id === caseId ? updated : c));
-      toast.success("Case updated", { id: toastId });
-      return updated;
-    } catch (err) {
-      toast.error("Failed to update case", { id: toastId });
-      throw err;
-    }
-  }, [getDataAPI]);
-
-  const deleteCase = useCallback(async (caseId: string) => {
-    const dataAPI = getDataAPI();
-    if (!dataAPI) throw new Error('Storage unavailable');
-
-    const toastId = toast.loading("Deleting case...");
-    try {
-      await dataAPI.deleteCase(caseId);
-      setCases(prev => prev.filter(c => c.id !== caseId));
-      toast.success("Case deleted", { id: toastId });
-    } catch (err) {
-      toast.error("Failed to delete case", { id: toastId });
-      throw err;
-    }
-  }, [getDataAPI]);
-
-  return {
-    cases,
-    isLoading,
-    error,
-    loadCases,
-    createCase,
-    updateCase,
-    deleteCase,
-    setCases
-  };
-}
-````
-
-### 2.2 Split Large Components
-**Priority**: MEDIUM | **Effort**: 6 hours
-
-Break down CaseForm.tsx into smaller components:
-
-````typescript
-// filepath: /workspaces/CMSNext/components/forms/PersonInfoForm.tsx
-import { memo } from 'react';
-import { Input } from '../ui/input';
-import { Label } from '../ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
-import { NewPersonData } from '../../types/case';
-
-interface PersonInfoFormProps {
-  data: Partial<NewPersonData>;
-  onChange: (field: keyof NewPersonData, value: any) => void;
-  errors?: Record<string, string>;
-}
-
-export const PersonInfoForm = memo(function PersonInfoForm({ 
-  data, 
-  onChange, 
-  errors 
-}: PersonInfoFormProps) {
-  return (
-    <div className="space-y-4">
-      <div className="grid grid-cols-2 gap-4">
-        <div>
-          <Label htmlFor="firstName">First Name *</Label>
-          <Input
-            id="firstName"
-            value={data.firstName || ''}
-            onChange={(e) => onChange('firstName', e.target.value)}
-            className={errors?.firstName ? 'border-red-500' : ''}
-          />
-          {errors?.firstName && (
-            <p className="text-sm text-red-500 mt-1">{errors.firstName}</p>
-          )}
-        </div>
-        
-        <div>
-          <Label htmlFor="lastName">Last Name *</Label>
-          <Input
-            id="lastName"
-            value={data.lastName || ''}
-            onChange={(e) => onChange('lastName', e.target.value)}
-            className={errors?.lastName ? 'border-red-500' : ''}
-          />
-        </div>
-      </div>
-
-      <div>
-        <Label htmlFor="gender">Gender</Label>
-        <Select value={data.gender || ''} onValueChange={(v) => onChange('gender', v)}>
-          <SelectTrigger id="gender">
-            <SelectValue placeholder="Select gender" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="Male">Male</SelectItem>
-            <SelectItem value="Female">Female</SelectItem>
-            <SelectItem value="Other">Other</SelectItem>
-            <SelectItem value="Prefer not to say">Prefer not to say</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
-
-      {/* Additional fields... */}
-    </div>
-  );
-});
-````
-
-````typescript
-// filepath: /workspaces/CMSNext/components/forms/CaseInfoForm.tsx
-import { memo } from 'react';
-import { Input } from '../ui/input';
-import { Label } from '../ui/label';
-import { Switch } from '../ui/switch';
-import { Textarea } from '../ui/textarea';
-import { NewCaseRecordData } from '../../types/case';
-
-interface CaseInfoFormProps {
-  data: Partial<NewCaseRecordData>;
-  onChange: (field: keyof NewCaseRecordData, value: any) => void;
-  errors?: Record<string, string>;
-}
-
-export const CaseInfoForm = memo(function CaseInfoForm({ 
-  data, 
-  onChange, 
-  errors 
-}: CaseInfoFormProps) {
-  return (
-    <div className="space-y-4">
-      <div>
-        <Label htmlFor="mcn">MCN *</Label>
-        <Input
-          id="mcn"
-          value={data.mcn || ''}
-          onChange={(e) => onChange('mcn', e.target.value)}
-          className={errors?.mcn ? 'border-red-500' : ''}
-        />
-      </div>
-
-      <div className="flex items-center space-x-2">
-        <Switch
-          id="priority"
-          checked={data.priority || false}
-          onCheckedChange={(checked) => onChange('priority', checked)}
-        />
-        <Label htmlFor="priority">High Priority</Label>
-      </div>
-
-      <div>
-        <Label htmlFor="description">Description</Label>
-        <Textarea
-          id="description"
-          value={data.description || ''}
-          onChange={(e) => onChange('description', e.target.value)}
-          rows={3}
-        />
-      </div>
-
-      {/* Additional fields... */}
-    </div>
-  );
-});
-````
+#### 2C.1: Organize Hook Architecture
+Create proper directory structure:
+```
+hooks/
+├── index.ts              # Barrel exports
+├── useCaseManagement.ts  # Case CRUD operations
+├── useFinancialItems.ts  # Financial item management
+├── useNotes.ts          # Note management
+├── useAppState.ts       # Global app state
+└── useFormValidation.ts # Form validation logic
+```
 
 ---
 
@@ -679,14 +495,35 @@ describe('useCaseManagement', () => {
 
 ## 📊 Implementation Timeline
 
-| Phase | Duration | Dependencies | Impact |
-|-------|----------|-------------|---------|
-| **Phase 1: Quick Wins** | 1-2 days | None | High - Immediate stability improvements |
-| **Phase 2: Refactoring** | 3-5 days | Phase 1 | High - Better maintainability |
-| **Phase 3: Performance** | 2-3 days | Phase 2 | Medium - Better UX for large datasets |
-| **Phase 4: Testing** | 3-4 days | Phase 2 | High - Long-term quality assurance |
+| Phase | Duration | Dependencies | Impact | Risk Level |
+|-------|----------|-------------|---------|------------|
+| **Phase 1: Quick Wins** | ✅ COMPLETED | None | High - Immediate stability | None |
+| **Phase 2A: Custom Hooks** | 1-2 days | Phase 1 | High - Better maintainability | Low |
+| **Phase 2B: Component Splitting** | 2-3 days | Phase 2A | Medium - Cleaner structure | Low-Medium |
+| **Phase 2C: Hook Organization** | 1 day | Phase 2A-2B | Low - Better organization | None |
+| **Phase 3: Performance** | 2-3 days | Phase 2B | Medium - Better UX | Low |
+| **Phase 4: Testing** | 3-4 days | Phase 2B | High - Quality assurance | None |
 
 **Total Timeline**: 9-14 days
+
+## 🎯 **Phase 2 Sub-Phase Benefits**
+
+### **Phase 2A Benefits** (Custom Hooks)
+- ✅ **Lower Risk**: Extract logic without changing UI
+- ✅ **Immediate Value**: Cleaner component structure
+- ✅ **Testable**: Hooks are easier to unit test
+- ✅ **Reusable**: Logic can be shared across components
+
+### **Phase 2B Benefits** (Component Splitting)  
+- ✅ **Maintainable**: Smaller, focused components
+- ✅ **Readable**: Easier to understand and modify
+- ✅ **Performance**: Better memoization opportunities
+- ✅ **Collaborative**: Multiple developers can work on different parts
+
+### **Phase 2C Benefits** (Organization)
+- ✅ **Scalable**: Clean architecture for future growth
+- ✅ **Discoverable**: Easy to find and understand hooks
+- ✅ **Standards**: Consistent patterns across codebase
 
 ## 🎯 Success Metrics
 

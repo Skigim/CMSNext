@@ -28,6 +28,6 @@
     }
   },
   "include": ["**/*.ts", "**/*.tsx"],
-  "exclude": ["node_modules", "dist", "vite.config.ts", "supabase/functions/**/*", "components/ui/chart.tsx"],
+  "exclude": ["node_modules", "dist", "vite.config.ts", "supabase/functions/**/*", "archive/**/*", "scripts/**/*", "components/ui/chart.tsx"],
   "references": [{ "path": "./tsconfig.node.json" }]
 }

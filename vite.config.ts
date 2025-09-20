@@ -12,6 +12,9 @@ export default defineConfig({
   },
   build: {
     rollupOptions: {
+      external: (id) => {
+        return id.includes('/scripts/') || id.includes('/archive/');
+      },
       output: {
         manualChunks: {
           vendor: ['react', 'react-dom'],
