@@ -9,8 +9,9 @@ interface FileStorageData {
 }
 
 /**
- * File-based API that works with AutosaveFileService
- * This replaces localStorage with file system storage
+ * File-based API that works with AutosaveFileService for case management
+ * Provides CRUD operations for cases, financial items, and notes with file system persistence
+ * Supports batch operations for optimized bulk imports and automatic data synchronization
  */
 export class FileStorageAPI {
   private data: FileStorageData = {
@@ -23,6 +24,10 @@ export class FileStorageAPI {
   private isBatchMode = false;
   private batchedChanges = false;
 
+  /**
+   * Creates a new FileStorageAPI instance
+   * @param fileService - The AutosaveFileService instance for file operations
+   */
   constructor(private fileService: any) {
     // Initialize with empty data - don't auto-load from service
     // Data will be explicitly loaded through updateInternalData or method calls
@@ -105,6 +110,14 @@ export class FileStorageAPI {
     return this.saveQueue;
   }
 
+  /**
+   * Retrieves all cases from file storage
+   * @returns Promise<CaseDisplay[]> - Array of all cases with person and case record data
+   * @throws {Error} If file storage service is unavailable or data loading fails
+   * @example
+   * const cases = await fileStorageAPI.getAllCases();
+   * console.log(`Loaded ${cases.length} cases`);
+   */
   async getAllCases(): Promise<CaseDisplay[]> {
     if (!this.isDataLoaded) {
       await this.loadDataFromService();
@@ -112,12 +125,28 @@ export class FileStorageAPI {
     return this.data.cases;
   }
 
-  // Batch operations for bulk imports
+  /**
+   * Enables batch mode to optimize bulk operations by deferring file saves
+   * Call this before performing multiple operations to improve performance
+   * @example
+   * fileStorageAPI.startBatchMode();
+   * // ... perform multiple createCompleteCase operations
+   * await fileStorageAPI.endBatchMode();
+   */
   startBatchMode(): void {
     this.isBatchMode = true;
     this.batchedChanges = false;
   }
 
+  /**
+   * Disables batch mode and saves any pending changes to file storage
+   * Always call this after startBatchMode() to ensure data persistence
+   * @returns Promise<void> - Resolves when all batched changes are saved
+   * @example
+   * fileStorageAPI.startBatchMode();
+   * // ... perform bulk operations
+   * await fileStorageAPI.endBatchMode(); // Saves all changes at once
+   */
   async endBatchMode(): Promise<void> {
     this.isBatchMode = false;
     
@@ -127,6 +156,19 @@ export class FileStorageAPI {
     }
   }
 
+  /**
+   * Creates a complete case with person and case record data
+   * @param caseData - Object containing person and caseRecord data
+   * @param caseData.person - Person information (firstName, lastName, etc.)
+   * @param caseData.caseRecord - Case record information (mcn, status, etc.)
+   * @returns Promise<CaseDisplay> - The complete created case with generated IDs
+   * @throws {Error} If file storage is unavailable or case creation fails
+   * @example
+   * const newCase = await fileStorageAPI.createCompleteCase({
+   *   person: { firstName: 'John', lastName: 'Doe', phone: '555-0123' },
+   *   caseRecord: { mcn: '12345', status: 'In Progress', priority: false }
+   * });
+   */
   async createCompleteCase(caseData: { person: NewPersonData; caseRecord: NewCaseRecordData }): Promise<CaseDisplay> {
     const newCase: CaseDisplay = {
       id: uuidv4(),
@@ -206,6 +248,20 @@ export class FileStorageAPI {
     return newCase;
   }
 
+  /**
+   * Updates an existing case with new person and case record data
+   * @param caseId - The unique identifier of the case to update
+   * @param caseData - Object containing updated person and caseRecord data
+   * @param caseData.person - Updated person information
+   * @param caseData.caseRecord - Updated case record information
+   * @returns Promise<CaseDisplay> - The updated case with preserved financials and notes
+   * @throws {Error} If case not found or update operation fails
+   * @example
+   * const updatedCase = await fileStorageAPI.updateCompleteCase('case-123', {
+   *   person: { firstName: 'Jane', lastName: 'Smith' },
+   *   caseRecord: { status: 'Completed', priority: true }
+   * });
+   */
   async updateCompleteCase(caseId: string, caseData: { person: NewPersonData; caseRecord: NewCaseRecordData }): Promise<CaseDisplay> {
     const caseIndex = this.data.cases.findIndex(c => c.id === caseId);
     
@@ -272,6 +328,21 @@ export class FileStorageAPI {
     return updatedCase;
   }
 
+  /**
+   * Adds a new financial item (resource, income, or expense) to a case
+   * @param caseId - The unique identifier of the case
+   * @param category - The financial category: 'resources', 'income', or 'expenses'
+   * @param itemData - Financial item data (description, amount, frequency, etc.)
+   * @returns Promise<CaseDisplay> - The updated case with the new financial item
+   * @throws {Error} If case not found or item creation fails
+   * @example
+   * const updatedCase = await fileStorageAPI.addItem('case-123', 'income', {
+   *   description: 'Social Security',
+   *   amount: 800,
+   *   frequency: 'Monthly',
+   *   verificationStatus: 'Verified'
+   * });
+   */
   async addItem(caseId: string, category: CaseCategory, itemData: Omit<FinancialItem, 'id' | 'createdAt' | 'updatedAt'>): Promise<CaseDisplay> {
     const caseIndex = this.data.cases.findIndex(c => c.id === caseId);
     
@@ -295,6 +366,20 @@ export class FileStorageAPI {
     return this.data.cases[caseIndex];
   }
 
+  /**
+   * Updates an existing financial item in a case
+   * @param caseId - The unique identifier of the case
+   * @param category - The financial category: 'resources', 'income', or 'expenses'
+   * @param itemId - The unique identifier of the financial item to update
+   * @param itemData - Updated financial item data
+   * @returns Promise<CaseDisplay> - The updated case with modified financial item
+   * @throws {Error} If case or item not found, or update fails
+   * @example
+   * const updatedCase = await fileStorageAPI.updateItem('case-123', 'income', 'item-456', {
+   *   amount: 850,
+   *   verificationStatus: 'Verified'
+   * });
+   */
   async updateItem(caseId: string, category: CaseCategory, itemId: string, itemData: Omit<FinancialItem, 'id' | 'createdAt' | 'updatedAt'>): Promise<CaseDisplay> {
     const caseIndex = this.data.cases.findIndex(c => c.id === caseId);
     
@@ -322,6 +407,16 @@ export class FileStorageAPI {
     return this.data.cases[caseIndex];
   }
 
+  /**
+   * Deletes a financial item from a case
+   * @param caseId - The unique identifier of the case
+   * @param category - The financial category: 'resources', 'income', or 'expenses'  
+   * @param itemId - The unique identifier of the financial item to delete
+   * @returns Promise<CaseDisplay> - The updated case with the financial item removed
+   * @throws {Error} If case or item not found, or deletion fails
+   * @example
+   * const updatedCase = await fileStorageAPI.deleteItem('case-123', 'expenses', 'item-789');
+   */
   async deleteItem(caseId: string, category: CaseCategory, itemId: string): Promise<CaseDisplay> {
     const caseIndex = this.data.cases.findIndex(c => c.id === caseId);
     
@@ -344,6 +439,18 @@ export class FileStorageAPI {
     return this.data.cases[caseIndex];
   }
 
+  /**
+   * Adds a new note to a case
+   * @param caseId - The unique identifier of the case
+   * @param noteData - Note data containing category and content
+   * @returns Promise<CaseDisplay> - The updated case with the new note
+   * @throws {Error} If case not found or note creation fails
+   * @example
+   * const updatedCase = await fileStorageAPI.addNote('case-123', {
+   *   category: 'Client Contact',
+   *   content: 'Called client to verify income documentation.'
+   * });
+   */
   async addNote(caseId: string, noteData: NewNoteData): Promise<CaseDisplay> {
     const caseIndex = this.data.cases.findIndex(c => c.id === caseId);
     
@@ -371,6 +478,19 @@ export class FileStorageAPI {
     return this.data.cases[caseIndex];
   }
 
+  /**
+   * Updates an existing note in a case
+   * @param caseId - The unique identifier of the case
+   * @param noteId - The unique identifier of the note to update
+   * @param noteData - Updated note data (category and/or content)
+   * @returns Promise<CaseDisplay> - The updated case with modified note
+   * @throws {Error} If case or note not found, or update fails
+   * @example
+   * const updatedCase = await fileStorageAPI.updateNote('case-123', 'note-456', {
+   *   category: 'Follow-up',
+   *   content: 'Updated: Client submitted missing documentation.'
+   * });
+   */
   async updateNote(caseId: string, noteId: string, noteData: NewNoteData): Promise<CaseDisplay> {
     const caseIndex = this.data.cases.findIndex(c => c.id === caseId);
     
@@ -399,6 +519,15 @@ export class FileStorageAPI {
     return this.data.cases[caseIndex];
   }
 
+  /**
+   * Deletes a note from a case
+   * @param caseId - The unique identifier of the case
+   * @param noteId - The unique identifier of the note to delete
+   * @returns Promise<CaseDisplay> - The updated case with the note removed
+   * @throws {Error} If case or note not found, or deletion fails
+   * @example
+   * const updatedCase = await fileStorageAPI.deleteNote('case-123', 'note-456');
+   */
   async deleteNote(caseId: string, noteId: string): Promise<CaseDisplay> {
     const caseIndex = this.data.cases.findIndex(c => c.id === caseId);
     
@@ -421,6 +550,15 @@ export class FileStorageAPI {
     return this.data.cases[caseIndex];
   }
 
+  /**
+   * Permanently deletes a case and all associated data
+   * @param caseId - The unique identifier of the case to delete
+   * @returns Promise<void> - Resolves when case is successfully deleted
+   * @throws {Error} If case not found or deletion fails
+   * @example
+   * await fileStorageAPI.deleteCase('case-123');
+   * console.log('Case deleted successfully');
+   */
   async deleteCase(caseId: string): Promise<void> {
     const caseIndex = this.data.cases.findIndex(c => c.id === caseId);
     
@@ -560,10 +698,25 @@ export class FileStorageAPI {
     }
   }
 
+  /**
+   * Exports all case data for backup or transfer purposes
+   * @returns Promise<{cases: CaseDisplay[]}> - Object containing all cases
+   * @example
+   * const backup = await fileStorageAPI.exportData();
+   * console.log(`Exported ${backup.cases.length} cases`);
+   */
   async exportData(): Promise<{ cases: CaseDisplay[] }> {
     return { cases: this.data.cases };
   }
 
+  /**
+   * Permanently deletes all case data from storage
+   * This operation cannot be undone - ensure data is backed up first
+   * @returns Promise<void> - Resolves when all data is purged
+   * @example
+   * await fileStorageAPI.purgeData();
+   * console.log('All case data has been deleted');
+   */
   async purgeData(): Promise<void> {
     this.data = {
       cases: [],
@@ -577,7 +730,14 @@ export class FileStorageAPI {
     this.isDataLoaded = false;
   }
 
-  // Method to update the internal data cache (called when file data is loaded)
+  /**
+   * Updates the internal data cache with file data loaded from storage
+   * Sanitizes data to ensure consistency and handles legacy data formats
+   * @param fileData - Raw file data containing cases and metadata
+   * @example
+   * // Called internally when data is loaded from file system
+   * fileStorageAPI.updateInternalData(loadedFileData);
+   */
   updateInternalData(fileData: any): void {
     console.log(`[FileStorageAPI] updateInternalData called with:`, fileData ? `${fileData.cases?.length || 0} cases` : 'null data');
     
