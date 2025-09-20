@@ -448,31 +448,67 @@ class AutosaveFileService {
   }
 
   /**
+   * Load data from a specific named file and trigger the data load callback
+   */
+  async loadDataFromFile(fileName: string): Promise<any> {
+    try {
+      console.log(`[AutosaveFileService] Loading data from file: ${fileName}`);
+      const data = await this.readNamedFile(fileName);
+      
+      if (data) {
+        console.log(`[AutosaveFileService] Successfully loaded data from ${fileName} with ${data.cases?.length || 0} cases`);
+        
+        // Call data load callback if set
+        if (this.dataLoadCallback) {
+          this.dataLoadCallback(data);
+        }
+      }
+      
+      return data;
+    } catch (error) {
+      console.error(`[AutosaveFileService] Failed to load data from ${fileName}:`, error);
+      throw error;
+    }
+  }
+
+  /**
    * List all data files in the connected directory
    */
   async listDataFiles(): Promise<string[]> {
+    console.log('[AutosaveFileService] listDataFiles called', {
+      directoryHandle: !!this.directoryHandle,
+      directoryName: this.directoryHandle?.name || 'none'
+    });
+    
     if (!this.directoryHandle) {
+      console.log('[AutosaveFileService] No directory handle, returning empty array');
       return [];
     }
 
     const permission = await this.checkPermission();
+    console.log('[AutosaveFileService] Permission check result:', permission);
     if (permission !== 'granted') {
+      console.log('[AutosaveFileService] Permission not granted, returning empty array');
       return [];
     }
 
     try {
       const dataFiles: string[] = [];
       
+      console.log('[AutosaveFileService] Iterating through directory entries...');
       // Iterate through all files in the directory
       for await (const [name, handle] of (this.directoryHandle as any).entries()) {
+        console.log('[AutosaveFileService] Found entry:', { name, kind: handle.kind });
         if (handle.kind === 'file') {
           // Look for JSON files that could contain case data
           if (name.endsWith('.json')) {
+            console.log('[AutosaveFileService] Adding JSON file:', name);
             dataFiles.push(name);
           }
         }
       }
       
+      console.log('[AutosaveFileService] Final file list:', dataFiles);
       return dataFiles;
     } catch (error) {
       console.error('[AutosaveFileService] Failed to list data files:', error);

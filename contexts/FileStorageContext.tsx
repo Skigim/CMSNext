@@ -26,6 +26,7 @@ interface FileStorageContextType {
   listDataFiles: () => Promise<string[]>;
   readNamedFile: (fileName: string) => Promise<any>;
   loadExistingData: () => Promise<any>;
+  loadDataFromFile: (fileName: string) => Promise<any>;
 }
 
 const FileStorageContext = createContext<FileStorageContextType | null>(null);
@@ -125,17 +126,23 @@ export function FileStorageProvider({
     }
   }, [service, onDataLoaded]);
 
-  const connectToFolder = async (): Promise<boolean> => {
+  const connectToFolder = useCallback(async (): Promise<boolean> => {
+    console.log('[FileStorageContext] connectToFolder called', { service: !!service });
     if (!service) return false;
-    const success = await service.connect();
-    if (success) {
-      setHasExplicitlyConnected(true);
-      setIsConnected(true); // Now we're truly connected
+    try {
+      const success = await service.connect();
+      console.log('[FileStorageContext] connectToFolder result:', success);
+      if (success) {
+        setHasExplicitlyConnected(true);
+      }
+      return success;
+    } catch (error) {
+      console.error('[FileStorageContext] connectToFolder error:', error);
+      return false;
     }
-    return success;
-  };
+  }, [service]);
 
-  const connectToExisting = async (): Promise<boolean> => {
+  const connectToExisting = useCallback(async (): Promise<boolean> => {
     if (!service) return false;
     const success = await service.connectToExisting();
     if (success) {
@@ -143,7 +150,7 @@ export function FileStorageProvider({
       setIsConnected(true); // Now we're truly connected
     }
     return success;
-  };
+  }, [service]);
 
   const disconnect = async (): Promise<void> => {
     if (!service) return;
@@ -174,20 +181,49 @@ export function FileStorageProvider({
     }
   };
 
-  const listDataFiles = async (): Promise<string[]> => {
+  const listDataFiles = useCallback(async (): Promise<string[]> => {
+    console.log('[FileStorageContext] listDataFiles called', { service: !!service });
     if (!service) return [];
-    return await service.listDataFiles();
-  };
+    try {
+      const result = await service.listDataFiles();
+      console.log('[FileStorageContext] listDataFiles result:', result);
+      return result;
+    } catch (error) {
+      console.error('[FileStorageContext] listDataFiles error:', error);
+      return [];
+    }
+  }, [service]);
 
   const readNamedFile = async (fileName: string): Promise<any> => {
+    console.log('[FileStorageContext] readNamedFile called', { service: !!service, fileName });
     if (!service) return null;
-    return await service.readNamedFile(fileName);
+    try {
+      const result = await service.readNamedFile(fileName);
+      console.log('[FileStorageContext] readNamedFile result:', result);
+      return result;
+    } catch (error) {
+      console.error('[FileStorageContext] readNamedFile error:', error);
+      return null;
+    }
   };
 
   const loadExistingData = async (): Promise<any> => {
     if (!service) return null;
     return await service.loadExistingData();
   };
+
+  const loadDataFromFile = useCallback(async (fileName: string): Promise<any> => {
+    console.log('[FileStorageContext] loadDataFromFile called', { service: !!service, fileName });
+    if (!service) return null;
+    try {
+      const result = await service.loadDataFromFile(fileName);
+      console.log('[FileStorageContext] loadDataFromFile result:', result);
+      return result;
+    } catch (error) {
+      console.error('[FileStorageContext] loadDataFromFile error:', error);
+      throw error;
+    }
+  }, [service]);
 
   const notifyDataChange = useCallback(() => {
     if (service) {
@@ -220,6 +256,7 @@ export function FileStorageProvider({
     listDataFiles,
     readNamedFile,
     loadExistingData,
+    loadDataFromFile,
   };
 
   return (

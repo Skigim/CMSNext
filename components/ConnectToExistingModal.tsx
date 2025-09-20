@@ -105,9 +105,9 @@ export function ConnectToExistingModal({
           </div>
 
           {hasStoredHandle && permissionStatus === 'granted' && (
-            <Alert className="border-green-200 bg-green-50 dark:border-green-800 dark:bg-green-950/20">
-              <FolderOpen className="h-4 w-4 text-green-600 dark:text-green-400" />
-              <AlertDescription className="text-green-800 dark:text-green-200">
+            <Alert className="border-emerald-200 bg-emerald-50 dark:border-emerald-800 dark:bg-emerald-950/20">
+              <FolderOpen className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+              <AlertDescription className="text-emerald-800 dark:text-emerald-200">
                 Your data folder is ready to reconnect. All permissions are in place.
               </AlertDescription>
             </Alert>
@@ -174,8 +174,8 @@ export function ConnectToExistingModal({
             <Card className="border-dashed border-muted-foreground/25">
               <CardContent className="pt-4 pb-4">
                 <div className="text-center space-y-3">
-                  <div className="w-10 h-10 bg-green-100 dark:bg-green-900/20 rounded-full flex items-center justify-center mx-auto">
-                    <Upload className="w-5 h-5 text-green-600 dark:text-green-400" />
+                  <div className="w-10 h-10 bg-emerald-100 dark:bg-emerald-900/20 rounded-full flex items-center justify-center mx-auto">
+                    <Upload className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
                   </div>
                   <div>
                     <h3 className="font-medium text-sm">Import New Data</h3>

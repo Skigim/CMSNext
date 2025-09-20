@@ -34,10 +34,19 @@ type NoteFormState = {
   caseId?: string;
 };
 
-const AppContent = memo(function AppContent() {
+const AppContent = memo(function AppContent({ 
+  cases, 
+  setCases, 
+  hasLoadedData, 
+  setHasLoadedData 
+}: { 
+  cases: CaseDisplay[];
+  setCases: React.Dispatch<React.SetStateAction<CaseDisplay[]>>;
+  hasLoadedData: boolean;
+  setHasLoadedData: React.Dispatch<React.SetStateAction<boolean>>;
+}) {
   const { isSupported, isConnected, hasStoredHandle, status, connectToFolder, connectToExisting, loadExistingData } = useFileStorage();
   const notifyFileStorageChange = useFileStorageDataChange();
-  const [cases, setCases] = useState<CaseDisplay[]>([]);
   const [currentView, setCurrentView] = useState<View>('dashboard');
   const [selectedCaseId, setSelectedCaseId] = useState<string | null>(null);
   const [editingCase, setEditingCase] = useState<CaseDisplay | null>(null);
@@ -47,7 +56,6 @@ const AppContent = memo(function AppContent() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showConnectModal, setShowConnectModal] = useState(false);
-  const [hasLoadedData, setHasLoadedData] = useState(false);
   
   // Always use file storage - no more API switching
   const getDataAPI = () => fileDataProvider.getAPI();
@@ -109,8 +117,6 @@ const AppContent = memo(function AppContent() {
       setLoading(false);
     }
   }, []);
-
-
 
   const handleConnectToExisting = useCallback(async (): Promise<boolean> => {
     try {
@@ -819,24 +825,39 @@ const AppContent = memo(function AppContent() {
   );
 });
 
-// Simple file data handler - only updates provider, no import processing
-const handleFileDataLoaded = (fileData: any) => {
-  try {
-    // Always update the file data provider cache (this is safe and necessary)
-    fileDataProvider.handleFileDataLoaded(fileData);
-    
-    // Set baseline - we've now loaded data through the file storage system
-    (window as any).fileStorageDataBaseline = true;
-    
-    if (fileData && fileData.cases && fileData.cases.length > 0) {
-      (window as any).fileStorageSessionHadData = true;
-    }
-  } catch (err) {
-    console.error('Failed to update file data provider:', err);
-  }
-};
-
 export default function App() {
+  // Move cases state to App level so handleFileDataLoaded can update it
+  const [cases, setCases] = useState<CaseDisplay[]>([]);
+  const [hasLoadedData, setHasLoadedData] = useState(false);
+
+  // Central file data handler that updates React state
+  const handleFileDataLoaded = useCallback((fileData: any) => {
+    try {
+      console.log('🔧 handleFileDataLoaded called with:', fileData);
+      
+      // Always update the file data provider cache (this is safe and necessary)
+      fileDataProvider.handleFileDataLoaded(fileData);
+      
+      // Update React state if we have cases data
+      if (fileData && fileData.cases && Array.isArray(fileData.cases)) {
+        console.log('📊 Updating React state with', fileData.cases.length, 'cases');
+        setCases(fileData.cases);
+        setHasLoadedData(true);
+        toast.success(`Loaded ${fileData.cases.length} cases successfully`, { id: 'data-loaded' });
+      }
+      
+      // Set baseline - we've now loaded data through the file storage system
+      (window as any).fileStorageDataBaseline = true;
+      
+      if (fileData && fileData.cases && fileData.cases.length > 0) {
+        (window as any).fileStorageSessionHadData = true;
+      }
+    } catch (err) {
+      console.error('Failed to handle file data loaded:', err);
+      toast.error('Failed to load data');
+    }
+  }, []);
+
   return (
     <ThemeProvider>
       <FileStorageProvider 
@@ -876,7 +897,12 @@ export default function App() {
         onDataLoaded={handleFileDataLoaded}
       >
         <FileStorageIntegrator>
-          <AppContent />
+          <AppContent 
+            cases={cases}
+            setCases={setCases}
+            hasLoadedData={hasLoadedData}
+            setHasLoadedData={setHasLoadedData}
+          />
           <Toaster />
         </FileStorageIntegrator>
       </FileStorageProvider>

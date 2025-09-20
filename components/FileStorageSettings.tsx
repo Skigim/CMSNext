@@ -35,7 +35,7 @@ export function FileStorageSettings() {
     saveNow, 
     updateSettings,
     listDataFiles,
-    readNamedFile
+    loadDataFromFile
   } = useFileStorage();
 
   const [localSettings, setLocalSettings] = useState({
@@ -48,6 +48,14 @@ export function FileStorageSettings() {
   const [isSaving, setIsSaving] = useState(false);
   const [availableFiles, setAvailableFiles] = useState<string[]>([]);
   const [isLoadingFiles, setIsLoadingFiles] = useState(false);
+
+  // Debug current state
+  console.log('[FileStorageSettings] Render state:', { 
+    isConnected, 
+    availableFilesCount: availableFiles.length, 
+    availableFiles,
+    isLoadingFiles 
+  });
 
   // Load settings from service when available
   useEffect(() => {
@@ -63,17 +71,19 @@ export function FileStorageSettings() {
 
   // Load available files when connected
   const loadAvailableFiles = useCallback(async () => {
+    console.log('[FileStorageSettings] loadAvailableFiles called', { isConnected, listDataFiles: typeof listDataFiles });
     setIsLoadingFiles(true);
     try {
       const files = await listDataFiles();
+      console.log('[FileStorageSettings] loadAvailableFiles result:', files);
       setAvailableFiles(files);
       if (files.length > 0) {
-        toast.success(`Found ${files.length} data file(s)`);
+        toast.success(`Found ${files.length} data file(s)`, { id: 'files-found' }); // Deduplicate with ID
       } else {
-        toast.info("No data files found in the connected folder");
+        toast.info("No data files found in the connected folder", { id: 'no-files-found' });
       }
     } catch (error) {
-      console.error('Failed to list files:', error);
+      console.error('[FileStorageSettings] loadAvailableFiles error:', error);
       toast.error("Failed to load available files");
     } finally {
       setIsLoadingFiles(false);
@@ -86,7 +96,7 @@ export function FileStorageSettings() {
     } else {
       setAvailableFiles([]);
     }
-  }, [isConnected, loadAvailableFiles]);
+  }, [isConnected]); // Removed loadAvailableFiles dependency to prevent infinite loop
 
   const handleConnect = async () => {
     setIsConnecting(true);
@@ -128,18 +138,18 @@ export function FileStorageSettings() {
   const handleLoadFromFile = async (fileName: string) => {
     const toastId = toast.loading(`Loading data from ${fileName}...`);
     try {
-      const data = await readNamedFile(fileName);
-      if (data && service) {
-        // Trigger the data loading callback
-        if ((service as any).dataLoadCallback) {
-          (service as any).dataLoadCallback(data);
-        }
+      console.log('[FileStorageSettings] Loading file:', fileName);
+      const data = await loadDataFromFile(fileName);
+      console.log('[FileStorageSettings] File data loaded:', data);
+      
+      if (data) {
         toast.success(`Successfully loaded data from ${fileName}`, { id: toastId });
       } else {
+        console.warn('[FileStorageSettings] No data found in file:', fileName);
         toast.error(`No data found in ${fileName}`, { id: toastId });
       }
     } catch (error) {
-      console.error('Failed to load file:', error);
+      console.error('[FileStorageSettings] Failed to load file:', error);
       toast.error(`Failed to load data from ${fileName}`, { id: toastId });
     }
   };
@@ -179,13 +189,13 @@ export function FileStorageSettings() {
     switch (status.status) {
       case 'connected':
       case 'saved':
-        return <CheckCircle className="h-4 w-4 text-green-500" />;
+        return <CheckCircle className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />;
       case 'saving':
-        return <Clock className="h-4 w-4 text-blue-500 animate-spin" />;
+        return <Clock className="h-4 w-4 text-primary animate-spin" />;
       case 'error':
         return <XCircle className="h-4 w-4 text-destructive" />;
       case 'waiting':
-        return <AlertTriangle className="h-4 w-4 text-yellow-500" />;
+        return <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-400" />;
       default:
         return <Clock className="h-4 w-4 text-muted-foreground" />;
     }
@@ -205,7 +215,7 @@ export function FileStorageSettings() {
     }
     
     if (isConnected) {
-      return <Badge variant="default" className="bg-green-600">Connected</Badge>;
+      return <Badge variant="default" className="bg-emerald-600 dark:bg-emerald-700 text-white">Connected</Badge>;
     } else {
       return <Badge variant="secondary">Disconnected</Badge>;
     }
@@ -444,12 +454,12 @@ export function FileStorageSettings() {
                 </div>
               </div>
 
-              <div className="p-3 bg-blue-50 dark:bg-blue-950/20 rounded-lg border border-blue-200 dark:border-blue-800">
+              <div className="p-3 bg-primary/5 dark:bg-primary/10 rounded-lg border border-primary/20">
                 <div className="flex items-center gap-2 mb-2">
-                  <SettingsIcon className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-                  <span className="text-sm font-medium text-blue-900 dark:text-blue-100">Autosave Features</span>
+                  <SettingsIcon className="h-4 w-4 text-primary" />
+                  <span className="text-sm font-medium text-foreground">Autosave Features</span>
                 </div>
-                <ul className="text-sm text-blue-800 dark:text-blue-200 space-y-1 ml-6">
+                <ul className="text-sm text-muted-foreground space-y-1 ml-6">
                   <li>• Saves automatically after data changes</li>
                   <li>• Periodic saves at set intervals</li>
                   <li>• Smart debouncing prevents excessive saves</li>

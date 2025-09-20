@@ -6,6 +6,7 @@ import { SeedDataGenerator } from "./SeedDataGenerator";
 import { Badge } from "./ui/badge";
 import { Separator } from "./ui/separator";
 import { FileStorageSettings } from "./FileStorageSettings";
+import { FileStorageDiagnostics } from "./FileStorageDiagnostics";
 import { useFileStorage } from "../contexts/FileStorageContext";
 import { useTheme } from "../contexts/ThemeContext";
 import { 
@@ -133,6 +134,9 @@ export function Settings({ cases, onImportCases, onDataPurged, onDataGenerated }
 
       {/* File Storage Section */}
       <FileStorageSettings />
+
+      {/* Debug Diagnostics */}
+      <FileStorageDiagnostics />
 
       {/* Seed Data Generation Section */}
       <SeedDataGenerator onDataGenerated={onDataGenerated} />
