@@ -6,6 +6,7 @@ import { Toaster } from "./components/ui/sonner";
 import { CaseDisplay, CaseCategory, FinancialItem, Note, NewPersonData, NewCaseRecordData, NewNoteData } from "./types/case";
 import { fileDataProvider } from "./utils/fileDataProvider";
 import { toast } from "sonner";
+import FileSystemErrorBoundary from "./components/FileSystemErrorBoundary";
 
 // Lazy load heavy components
 const Dashboard = lazy(() => import("./components/Dashboard").then(m => ({ default: m.Dashboard })));
@@ -860,33 +861,34 @@ export default function App() {
 
   return (
     <ThemeProvider>
-      <FileStorageProvider 
-        enabled={true} // Always enabled - filesystem only
-        getDataFunction={() => {
-          // Skip during connect flow to prevent empty data from being saved
-          if (window.location.hash === '#connect-to-existing') {
-            return null;
-          }
-          
-          // Don't save if we're still in loading/setup phase
-          if ((window as any).fileStorageInSetupPhase) {
-            return null;
-          }
-          
-          const api = fileDataProvider.getAPI();
-          if (!api || !api.internalData || !Array.isArray(api.internalData.cases)) {
-            return null; // No valid data structure
-          }
-          
-          const caseCount = api.internalData.cases.length;
-          
-          // Only return null for empty data if we haven't established a baseline yet
-          if (caseCount === 0) {
-            // If we've never had data in this session and haven't explicitly loaded empty data, don't save
-            if (!(window as any).fileStorageDataBaseline) {
+      <FileSystemErrorBoundary>
+        <FileStorageProvider 
+          enabled={true} // Always enabled - filesystem only
+          getDataFunction={() => {
+            // Skip during connect flow to prevent empty data from being saved
+            if (window.location.hash === '#connect-to-existing') {
               return null;
             }
-          }
+            
+            // Don't save if we're still in loading/setup phase
+            if ((window as any).fileStorageInSetupPhase) {
+              return null;
+            }
+            
+            const api = fileDataProvider.getAPI();
+            if (!api || !api.internalData || !Array.isArray(api.internalData.cases)) {
+              return null; // No valid data structure
+            }
+            
+            const caseCount = api.internalData.cases.length;
+            
+            // Only return null for empty data if we haven't established a baseline yet
+            if (caseCount === 0) {
+              // If we've never had data in this session and haven't explicitly loaded empty data, don't save
+              if (!(window as any).fileStorageDataBaseline) {
+                return null;
+              }
+            }
           
           return {
             exported_at: new Date().toISOString(),
@@ -906,6 +908,7 @@ export default function App() {
           <Toaster />
         </FileStorageIntegrator>
       </FileStorageProvider>
+      </FileSystemErrorBoundary>
     </ThemeProvider>
   );
 }
