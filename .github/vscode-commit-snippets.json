@@ -1,0 +1,34 @@
+{
+  "Conventional Commit": {
+    "prefix": "commit",
+    "body": [
+      "${1|feat,fix,refactor,perf,style,docs,test,chore,ci,revert|}: ${2:description}",
+      "",
+      "• ${3:change 1}",
+      "• ${4:change 2}",
+      "• ${5:change 3}",
+      "",
+      "${6:additional context}"
+    ],
+    "description": "Conventional commit message template"
+  },
+  "Simple Commit": {
+    "prefix": "commits",
+    "body": [
+      "${1|feat,fix,refactor,perf,style,docs,test,chore,ci,revert|}: ${2:description}"
+    ],
+    "description": "Simple conventional commit message"
+  },
+  "Breaking Change Commit": {
+    "prefix": "commitb",
+    "body": [
+      "${1|feat,fix,refactor,perf,style,docs,test,chore,ci,revert|}!: ${2:description}",
+      "",
+      "• ${3:change 1}",
+      "• ${4:change 2}",
+      "",
+      "BREAKING CHANGE: ${5:description of breaking change}"
+    ],
+    "description": "Breaking change commit message template"
+  }
+}

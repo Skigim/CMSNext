@@ -9,6 +9,7 @@ import { toast } from "sonner";
 import ErrorBoundary from "./components/ErrorBoundary";
 import FileSystemErrorBoundary from "./components/FileSystemErrorBoundary";
 import { ErrorRecoveryProvider } from "./components/ErrorRecovery";
+import { DataManagerProvider, useDataManagerSafe } from "./contexts/DataManagerContext";
 
 // Lazy load heavy components
 const Dashboard = lazy(() => import("./components/Dashboard").then(m => ({ default: m.Dashboard })));
@@ -49,6 +50,7 @@ const AppContent = memo(function AppContent({
   setHasLoadedData: React.Dispatch<React.SetStateAction<boolean>>;
 }) {
   const { isSupported, isConnected, hasStoredHandle, status, connectToFolder, connectToExisting, loadExistingData } = useFileStorage();
+  const dataManager = useDataManagerSafe(); // Get DataManager instance
   const notifyFileStorageChange = useFileStorageDataChange();
   const [currentView, setCurrentView] = useState<View>('dashboard');
   const [selectedCaseId, setSelectedCaseId] = useState<string | null>(null);
@@ -77,6 +79,37 @@ const AppContent = memo(function AppContent({
   }, [notifyFileStorageChange]);
 
   const loadCases = useCallback(async () => {
+    // Try DataManager first (new approach)
+    if (dataManager) {
+      try {
+        setLoading(true);
+        setError(null);
+        
+        const data = await dataManager.getAllCases();
+        setCases(data);
+        setHasLoadedData(true);
+        
+        // Set baseline - we've now loaded data (even if empty)
+        (window as any).fileStorageDataBaseline = true;
+        
+        if (data.length > 0) {
+          (window as any).fileStorageSessionHadData = true;
+          toast.success(`Loaded ${data.length} cases successfully`);
+        } else {
+          toast.success(`Connected successfully - ready to start fresh`);
+        }
+        
+        console.log(`[DataManager] Successfully loaded ${data.length} cases`);
+        return;
+      } catch (err) {
+        console.error('DataManager failed, falling back to old API:', err);
+        // Fall through to old API below
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    // Fallback to old API (for gradual migration)
     const dataAPI = getDataAPI();
     if (!dataAPI) {
       const errorMsg = 'Data storage is not available. Please check your file system connection.';
@@ -119,7 +152,7 @@ const AppContent = memo(function AppContent({
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [dataManager]);
 
   const handleConnectToExisting = useCallback(async (): Promise<boolean> => {
     try {
@@ -902,7 +935,8 @@ export default function App() {
           onDataLoaded={handleFileDataLoaded}
         >
           <ErrorRecoveryProvider>
-            <FileStorageIntegrator>
+            <DataManagerProvider>
+              <FileStorageIntegrator>
               <AppContent 
                 cases={cases}
                 setCases={setCases}
@@ -911,6 +945,7 @@ export default function App() {
               />
               <Toaster />
             </FileStorageIntegrator>
+            </DataManagerProvider>
           </ErrorRecoveryProvider>
         </FileStorageProvider>
         </FileSystemErrorBoundary>

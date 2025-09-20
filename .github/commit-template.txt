@@ -1,0 +1,41 @@
+# Commit Message Template for CMSNext
+#
+# Format: <type>: <description>
+#
+# <body>
+#
+# Types:
+# feat:     New feature or enhancement
+# fix:      Bug fix
+# refactor: Code restructuring without changing functionality
+# perf:     Performance improvement
+# style:    Code style changes (formatting, semicolons, etc.)
+# docs:     Documentation changes
+# test:     Adding or updating tests
+# chore:    Build process, dependency updates, etc.
+# ci:       CI/CD configuration changes
+# revert:   Reverting previous changes
+#
+# Example:
+# feat: Add stateless DataManager for improved file system integration
+#
+# • Implement pure read→modify→write pattern for all data operations
+# • Eliminate data caching to prevent synchronization issues
+# • Add comprehensive error handling with fallback mechanisms
+# • Create React hooks for seamless component integration
+# • Maintain backward compatibility during gradual migration
+#
+# Resolves data corruption issues during connection flows.
+# Improves multi-tab safety and predictable state management.
+#
+# Guidelines:
+# - Use present tense ("Add feature" not "Added feature")
+# - Limit first line to 72 characters
+# - Use bullet points (•) for detailed changes
+# - Include "why" not just "what" when helpful
+# - Reference issues/tickets when applicable
+# - Keep related changes in single commits
+#
+# Breaking Changes:
+# If this commit introduces breaking changes, add:
+# BREAKING CHANGE: <description of what breaks>
