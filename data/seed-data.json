@@ -1,0 +1,2269 @@
+{
+  "people": [
+    {
+      "id": "PER000001",
+      "firstName": "Brian",
+      "lastName": "Scott",
+      "name": "Brian Scott",
+      "email": "brian.scott@hotmail.com",
+      "phone": "205-577-3981",
+      "dateOfBirth": "1965-03-06",
+      "ssn": "872-59-8945",
+      "organizationId": "Southern District Center",
+      "livingArrangement": "Assisted Living",
+      "address": {
+        "street": "5117 Park Blvd",
+        "city": "Springfield",
+        "state": "HI",
+        "zip": "30695"
+      },
+      "mailingAddress": {
+        "street": "5117 Park Blvd",
+        "city": "Springfield",
+        "state": "HI",
+        "zip": "30695",
+        "sameAsPhysical": true
+      },
+      "authorizedRepIds": [],
+      "familyMembers": [],
+      "status": "Active",
+      "createdAt": "2025-07-20",
+      "dateAdded": "2025-07-20"
+    },
+    {
+      "id": "PER000002",
+      "firstName": "David",
+      "lastName": "Jones",
+      "name": "David Jones",
+      "email": "david.jones@hotmail.com",
+      "phone": "272-754-2066",
+      "dateOfBirth": "1983-11-07",
+      "ssn": "669-38-7146",
+      "organizationId": "Southern District Center",
+      "livingArrangement": "Transitional Housing",
+      "address": {
+        "street": "2686 School St",
+        "city": "Salem",
+        "state": "ID",
+        "zip": "67518"
+      },
+      "mailingAddress": {
+        "street": "2686 School St",
+        "city": "Salem",
+        "state": "ID",
+        "zip": "67518",
+        "sameAsPhysical": true
+      },
+      "authorizedRepIds": [],
+      "familyMembers": [],
+      "status": "Active",
+      "createdAt": "2025-07-07",
+      "dateAdded": "2025-07-07"
+    },
+    {
+      "id": "PER000003",
+      "firstName": "John",
+      "lastName": "Johnson",
+      "name": "John Johnson",
+      "email": "john.johnson@hotmail.com",
+      "phone": "359-912-1184",
+      "dateOfBirth": "1973-10-24",
+      "ssn": "158-21-8103",
+      "organizationId": "Southern District Center",
+      "livingArrangement": "Independent",
+      "address": {
+        "street": "2410 School St",
+        "city": "Arlington",
+        "state": "AK",
+        "zip": "69933"
+      },
+      "mailingAddress": {
+        "street": "2410 School St",
+        "city": "Arlington",
+        "state": "AK",
+        "zip": "69933",
+        "sameAsPhysical": true
+      },
+      "authorizedRepIds": [],
+      "familyMembers": [],
+      "status": "Pending",
+      "createdAt": "2024-09-08",
+      "dateAdded": "2024-09-08"
+    },
+    {
+      "id": "PER000004",
+      "firstName": "James",
+      "lastName": "Brown",
+      "name": "James Brown",
+      "email": "james.brown@hotmail.com",
+      "phone": "396-964-4633",
+      "dateOfBirth": "1946-04-05",
+      "ssn": "759-99-2792",
+      "organizationId": "Northern Regional Office",
+      "livingArrangement": "Senior Community",
+      "address": {
+        "street": "5939 Second Ave",
+        "city": "Centerville",
+        "state": "CO",
+        "zip": "58092"
+      },
+      "mailingAddress": {
+        "street": "5939 Second Ave",
+        "city": "Centerville",
+        "state": "CO",
+        "zip": "58092",
+        "sameAsPhysical": true
+      },
+      "authorizedRepIds": [],
+      "familyMembers": [],
+      "status": "Inactive",
+      "createdAt": "2024-08-17",
+      "dateAdded": "2024-08-17"
+    },
+    {
+      "id": "PER000005",
+      "firstName": "Carol",
+      "lastName": "Ramirez",
+      "name": "Carol Ramirez",
+      "email": "carol.ramirez@hotmail.com",
+      "phone": "284-853-9395",
+      "dateOfBirth": "2014-03-13",
+      "ssn": "146-12-7647",
+      "organizationId": "Western Community Hub",
+      "livingArrangement": "Independent",
+      "address": {
+        "street": "7480 Third St",
+        "city": "Georgetown",
+        "state": "AZ",
+        "zip": "76684"
+      },
+      "mailingAddress": {
+        "street": "7480 Third St",
+        "city": "Georgetown",
+        "state": "AZ",
+        "zip": "76684",
+        "sameAsPhysical": true
+      },
+      "authorizedRepIds": [],
+      "familyMembers": [],
+      "status": "Pending",
+      "createdAt": "2025-04-30",
+      "dateAdded": "2025-04-30"
+    },
+    {
+      "id": "PER000006",
+      "firstName": "Jessica",
+      "lastName": "Johnson",
+      "name": "Jessica Johnson",
+      "email": "jessica.johnson@outlook.com",
+      "phone": "968-278-3753",
+      "dateOfBirth": "2012-06-08",
+      "ssn": "285-45-5183",
+      "organizationId": "Downtown Service Center",
+      "livingArrangement": "Temporary Housing",
+      "address": {
+        "street": "4165 Maple Ave",
+        "city": "Salem",
+        "state": "GA",
+        "zip": "53028"
+      },
+      "mailingAddress": {
+        "street": "8911 Washington Ave",
+        "city": "Georgetown",
+        "state": "CO",
+        "zip": "32650",
+        "sameAsPhysical": false
+      },
+      "authorizedRepIds": [],
+      "familyMembers": [],
+      "status": "Inactive",
+      "createdAt": "2023-10-14",
+      "dateAdded": "2023-10-14"
+    },
+    {
+      "id": "PER000007",
+      "firstName": "Mark",
+      "lastName": "Williams",
+      "name": "Mark Williams",
+      "email": "mark.williams@outlook.com",
+      "phone": "280-961-5097",
+      "dateOfBirth": "1976-10-12",
+      "ssn": "391-53-2012",
+      "organizationId": "Southern District Center",
+      "livingArrangement": "Nursing Home",
+      "address": {
+        "street": "6988 Washington Ave",
+        "city": "Madison",
+        "state": "FL",
+        "zip": "31724"
+      },
+      "mailingAddress": {
+        "street": "6988 Washington Ave",
+        "city": "Madison",
+        "state": "FL",
+        "zip": "31724",
+        "sameAsPhysical": true
+      },
+      "authorizedRepIds": [],
+      "familyMembers": [],
+      "status": "Pending",
+      "createdAt": "2024-06-13",
+      "dateAdded": "2024-06-13"
+    },
+    {
+      "id": "PER000008",
+      "firstName": "Michael",
+      "lastName": "Wilson",
+      "name": "Michael Wilson",
+      "email": "michael.wilson@outlook.com",
+      "phone": "262-951-7923",
+      "dateOfBirth": "1999-12-14",
+      "ssn": "423-98-2800",
+      "organizationId": "Downtown Service Center",
+      "livingArrangement": "Temporary Housing",
+      "address": {
+        "street": "273 Park Blvd",
+        "city": "Salem",
+        "state": "HI",
+        "zip": "24331"
+      },
+      "mailingAddress": {
+        "street": "273 Park Blvd",
+        "city": "Salem",
+        "state": "HI",
+        "zip": "24331",
+        "sameAsPhysical": true
+      },
+      "authorizedRepIds": [],
+      "familyMembers": [],
+      "status": "Active",
+      "createdAt": "2023-11-26",
+      "dateAdded": "2023-11-26"
+    },
+    {
+      "id": "PER000009",
+      "firstName": "Matthew",
+      "lastName": "Jackson",
+      "name": "Matthew Jackson",
+      "email": "matthew.jackson@gmail.com",
+      "phone": "989-671-9427",
+      "dateOfBirth": "1973-01-15",
+      "ssn": "766-17-7908",
+      "organizationId": "Western Community Hub",
+      "livingArrangement": "Nursing Home",
+      "address": {
+        "street": "1839 Park Blvd",
+        "city": "Georgetown",
+        "state": "HI",
+        "zip": "14086"
+      },
+      "mailingAddress": {
+        "street": "1839 Park Blvd",
+        "city": "Georgetown",
+        "state": "HI",
+        "zip": "14086",
+        "sameAsPhysical": true
+      },
+      "authorizedRepIds": [],
+      "familyMembers": [],
+      "status": "Active",
+      "createdAt": "2024-07-14",
+      "dateAdded": "2024-07-14"
+    },
+    {
+      "id": "PER000010",
+      "firstName": "Thomas",
+      "lastName": "Johnson",
+      "name": "Thomas Johnson",
+      "email": "thomas.johnson@outlook.com",
+      "phone": "484-928-2697",
+      "dateOfBirth": "2017-10-04",
+      "ssn": "798-61-2301",
+      "organizationId": "Downtown Service Center",
+      "livingArrangement": "Shared Housing",
+      "address": {
+        "street": "3689 Pine St",
+        "city": "Greenville",
+        "state": "CO",
+        "zip": "82975"
+      },
+      "mailingAddress": {
+        "street": "3689 Pine St",
+        "city": "Greenville",
+        "state": "CO",
+        "zip": "82975",
+        "sameAsPhysical": true
+      },
+      "authorizedRepIds": [],
+      "familyMembers": [],
+      "status": "Active",
+      "createdAt": "2025-05-07",
+      "dateAdded": "2025-05-07"
+    },
+    {
+      "id": "PER000011",
+      "firstName": "Carol",
+      "lastName": "Nguyen",
+      "name": "Carol Nguyen",
+      "email": "carol.nguyen@outlook.com",
+      "phone": "318-421-4115",
+      "dateOfBirth": "2011-05-10",
+      "ssn": "316-41-6309",
+      "organizationId": "Downtown Service Center",
+      "livingArrangement": "Group Home",
+      "address": {
+        "street": "1479 Main St",
+        "city": "Greenville",
+        "state": "AL",
+        "zip": "78368"
+      },
+      "mailingAddress": {
+        "street": "6028 Pine St",
+        "city": "Franklin",
+        "state": "DE",
+        "zip": "90160",
+        "sameAsPhysical": false
+      },
+      "authorizedRepIds": [],
+      "familyMembers": [],
+      "status": "Inactive",
+      "createdAt": "2024-12-07",
+      "dateAdded": "2024-12-07"
+    },
+    {
+      "id": "PER000012",
+      "firstName": "Lisa",
+      "lastName": "Smith",
+      "name": "Lisa Smith",
+      "email": "lisa.smith@gmail.com",
+      "phone": "803-716-5945",
+      "dateOfBirth": "1988-02-28",
+      "ssn": "646-79-3272",
+      "organizationId": "Downtown Service Center",
+      "livingArrangement": "Group Home",
+      "address": {
+        "street": "962 School St",
+        "city": "Franklin",
+        "state": "AR",
+        "zip": "69372"
+      },
+      "mailingAddress": {
+        "street": "5761 Main St",
+        "city": "Salem",
+        "state": "CA",
+        "zip": "97942",
+        "sameAsPhysical": false
+      },
+      "authorizedRepIds": [],
+      "familyMembers": [],
+      "status": "Active",
+      "createdAt": "2025-04-24",
+      "dateAdded": "2025-04-24"
+    },
+    {
+      "id": "PER000013",
+      "firstName": "Daniel",
+      "lastName": "Davis",
+      "name": "Daniel Davis",
+      "email": "daniel.davis@yahoo.com",
+      "phone": "835-260-6275",
+      "dateOfBirth": "1973-08-05",
+      "ssn": "699-53-8025",
+      "organizationId": "Northern Regional Office",
+      "livingArrangement": "Group Home",
+      "address": {
+        "street": "6798 Park Blvd",
+        "city": "Fairview",
+        "state": "CA",
+        "zip": "69705"
+      },
+      "mailingAddress": {
+        "street": "6798 Park Blvd",
+        "city": "Fairview",
+        "state": "CA",
+        "zip": "69705",
+        "sameAsPhysical": true
+      },
+      "authorizedRepIds": [],
+      "familyMembers": [],
+      "status": "Pending",
+      "createdAt": "2023-11-01",
+      "dateAdded": "2023-11-01"
+    },
+    {
+      "id": "PER000014",
+      "firstName": "Nancy",
+      "lastName": "King",
+      "name": "Nancy King",
+      "email": "nancy.king@hotmail.com",
+      "phone": "894-435-3153",
+      "dateOfBirth": "1979-04-24",
+      "ssn": "533-34-4462",
+      "organizationId": "Northern Regional Office",
+      "livingArrangement": "Nursing Home",
+      "address": {
+        "street": "3702 Maple Ave",
+        "city": "Salem",
+        "state": "AZ",
+        "zip": "50701"
+      },
+      "mailingAddress": {
+        "street": "3702 Maple Ave",
+        "city": "Salem",
+        "state": "AZ",
+        "zip": "50701",
+        "sameAsPhysical": true
+      },
+      "authorizedRepIds": [],
+      "familyMembers": [],
+      "status": "Active",
+      "createdAt": "2025-01-04",
+      "dateAdded": "2025-01-04"
+    },
+    {
+      "id": "PER000015",
+      "firstName": "Kevin",
+      "lastName": "Martinez",
+      "name": "Kevin Martinez",
+      "email": "kevin.martinez@hotmail.com",
+      "phone": "492-400-5601",
+      "dateOfBirth": "1951-12-31",
+      "ssn": "913-76-8116",
+      "organizationId": "Central Community Services",
+      "livingArrangement": "Transitional Housing",
+      "address": {
+        "street": "9663 Main St",
+        "city": "Salem",
+        "state": "AL",
+        "zip": "42353"
+      },
+      "mailingAddress": {
+        "street": "9777 Pine St",
+        "city": "Fairview",
+        "state": "HI",
+        "zip": "44234",
+        "sameAsPhysical": false
+      },
+      "authorizedRepIds": [],
+      "familyMembers": [],
+      "status": "Active",
+      "createdAt": "2024-12-28",
+      "dateAdded": "2024-12-28"
+    },
+    {
+      "id": "PER000016",
+      "firstName": "Ronald",
+      "lastName": "Martinez",
+      "name": "Ronald Martinez",
+      "email": "ronald.martinez@outlook.com",
+      "phone": "805-937-9294",
+      "dateOfBirth": "2010-01-25",
+      "ssn": "291-58-6001",
+      "organizationId": "Southern District Center",
+      "livingArrangement": "Family Home",
+      "address": {
+        "street": "7407 Pine St",
+        "city": "Salem",
+        "state": "HI",
+        "zip": "51882"
+      },
+      "mailingAddress": {
+        "street": "3725 Oak Ave",
+        "city": "Georgetown",
+        "state": "AR",
+        "zip": "94839",
+        "sameAsPhysical": false
+      },
+      "authorizedRepIds": [],
+      "familyMembers": [],
+      "status": "Pending",
+      "createdAt": "2024-03-18",
+      "dateAdded": "2024-03-18"
+    }
+  ],
+  "caseRecords": [
+    {
+      "id": "CASE000001",
+      "mcn": "MCN144153",
+      "applicationDate": "2025-04-20T20:26:49.268Z",
+      "caseType": "SNAP Benefits",
+      "personId": "PER000001",
+      "spouseId": "",
+      "status": "In Progress",
+      "description": "Disability Services case for comprehensive services and support",
+      "priority": true,
+      "livingArrangement": "Shared Housing",
+      "withWaiver": false,
+      "admissionDate": "2025-04-20T20:26:49.268Z",
+      "organizationId": "Downtown Service Center",
+      "authorizedReps": [],
+      "retroRequested": "",
+      "financials": {
+        "resources": [
+          {
+            "id": "FIN000001",
+            "description": "Checking Account",
+            "amount": 3747.52,
+            "location": "Service Provider",
+            "accountNumber": "****2252",
+            "verificationStatus": "Needs VR",
+            "notes": "Additional details for checking account",
+            "owner": "Spouse",
+            "dateAdded": "2025-05-22",
+            "createdAt": "2025-05-22",
+            "updatedAt": "2025-08-29T19:57:18.297Z"
+          }
+        ],
+        "income": [
+          {
+            "id": "FIN000002",
+            "description": "Part-time Employment",
+            "amount": 2426.66,
+            "frequency": "monthly",
+            "location": "Service Provider",
+            "verificationStatus": "VR Pending",
+            "owner": "Client",
+            "dateAdded": "2024-12-09",
+            "createdAt": "2024-12-09",
+            "updatedAt": "2025-06-20T02:10:46.558Z"
+          },
+          {
+            "id": "FIN000003",
+            "description": "Social Security Benefits",
+            "amount": 1481.68,
+            "frequency": "monthly",
+            "location": "ABC Company",
+            "verificationStatus": "Needs VR",
+            "owner": "Client",
+            "dateAdded": "2025-02-04",
+            "createdAt": "2025-02-04",
+            "updatedAt": "2025-04-24T03:24:57.117Z"
+          }
+        ],
+        "expenses": [
+          {
+            "id": "FIN000004",
+            "description": "Utilities (Electric)",
+            "amount": 190.3,
+            "frequency": "monthly",
+            "location": "Service Provider",
+            "verificationStatus": "Verified",
+            "verificationSource": "Medical Documentation",
+            "notes": "Additional details for utilities (electric)",
+            "owner": "Client",
+            "dateAdded": "2024-11-26",
+            "createdAt": "2024-11-26",
+            "updatedAt": "2025-01-09T12:09:07.373Z"
+          }
+        ]
+      },
+      "notes": [
+        {
+          "id": "NOTE000001",
+          "category": "VR Update",
+          "content": "Verification request sent to employer for income confirmation.",
+          "createdAt": "2025-05-31",
+          "updatedAt": "2025-06-12T20:51:57.881Z"
+        },
+        {
+          "id": "NOTE000002",
+          "category": "Client Contact",
+          "content": "Home visit conducted. Living situation verified and documented.",
+          "createdAt": "2025-06-13",
+          "updatedAt": "2025-06-13T00:24:41.143Z"
+        },
+        {
+          "id": "NOTE000003",
+          "category": "General",
+          "content": "Application submitted to state system. Awaiting approval decision.",
+          "createdAt": "2025-07-30",
+          "updatedAt": "2025-08-13T18:53:19.863Z"
+        },
+        {
+          "id": "NOTE000004",
+          "category": "Follow-up",
+          "content": "Service plan updated based on changing client needs and circumstances.",
+          "createdAt": "2025-08-21",
+          "updatedAt": "2025-08-21T03:19:50.781Z"
+        }
+      ],
+      "createdDate": "2025-01-23",
+      "updatedDate": "2025-06-11T13:47:24.935Z"
+    },
+    {
+      "id": "CASE000002",
+      "mcn": "MCN797555",
+      "applicationDate": "2025-06-03T12:13:51.901Z",
+      "caseType": "SNAP Benefits",
+      "personId": "PER000002",
+      "spouseId": "",
+      "status": "Priority",
+      "description": "Healthcare Coverage case for comprehensive services and support",
+      "priority": true,
+      "livingArrangement": "Temporary Housing",
+      "withWaiver": false,
+      "admissionDate": "2025-06-03T12:13:51.901Z",
+      "organizationId": "Western Community Hub",
+      "authorizedReps": [],
+      "retroRequested": "",
+      "financials": {
+        "resources": [
+          {
+            "id": "FIN000005",
+            "description": "Vehicle (Estimated Value)",
+            "amount": 16972.89,
+            "location": "ABC Company",
+            "accountNumber": "****6610",
+            "verificationStatus": "Verified",
+            "verificationSource": "Medical Documentation",
+            "notes": "Additional details for vehicle (estimated value)",
+            "owner": "Client",
+            "dateAdded": "2025-01-12",
+            "createdAt": "2025-01-12",
+            "updatedAt": "2025-02-23T08:41:27.122Z"
+          },
+          {
+            "id": "FIN000006",
+            "description": "Certificate of Deposit",
+            "amount": 12679.15,
+            "location": "Service Provider",
+            "accountNumber": "****7876",
+            "verificationStatus": "Verified",
+            "verificationSource": "Medical Documentation",
+            "owner": "Spouse",
+            "dateAdded": "2025-03-21",
+            "createdAt": "2025-03-21",
+            "updatedAt": "2025-08-18T02:13:47.221Z"
+          }
+        ],
+        "income": [
+          {
+            "id": "FIN000007",
+            "description": "Social Security Benefits",
+            "amount": 2376.69,
+            "frequency": "monthly",
+            "location": "First National Bank",
+            "verificationStatus": "Verified",
+            "verificationSource": "Bank Statement",
+            "owner": "Client",
+            "dateAdded": "2025-02-04",
+            "createdAt": "2025-02-04",
+            "updatedAt": "2025-05-26T22:27:10.003Z"
+          },
+          {
+            "id": "FIN000008",
+            "description": "Part-time Employment",
+            "amount": 1205.88,
+            "frequency": "monthly",
+            "location": "ABC Company",
+            "verificationStatus": "Needs VR",
+            "owner": "Client",
+            "dateAdded": "2025-06-12",
+            "createdAt": "2025-06-12",
+            "updatedAt": "2025-06-16T12:16:31.067Z"
+          }
+        ],
+        "expenses": [
+          {
+            "id": "FIN000009",
+            "description": "Utilities (Electric)",
+            "amount": 269.97,
+            "frequency": "monthly",
+            "location": "Service Provider",
+            "verificationStatus": "Needs VR",
+            "owner": "Client",
+            "dateAdded": "2024-12-10",
+            "createdAt": "2024-12-10",
+            "updatedAt": "2025-05-22T05:55:44.385Z"
+          },
+          {
+            "id": "FIN000010",
+            "description": "Transportation/Gas",
+            "amount": 496.49,
+            "frequency": "monthly",
+            "location": "ABC Company",
+            "verificationStatus": "Needs VR",
+            "owner": "Client",
+            "dateAdded": "2025-02-15",
+            "createdAt": "2025-02-15",
+            "updatedAt": "2025-08-15T02:49:32.169Z"
+          }
+        ]
+      },
+      "notes": [
+        {
+          "id": "NOTE000005",
+          "category": "Follow-up",
+          "content": "Service plan updated based on changing client needs and circumstances.",
+          "createdAt": "2024-09-22",
+          "updatedAt": "2025-02-26T16:46:18.559Z"
+        },
+        {
+          "id": "NOTE000006",
+          "category": "Follow-up",
+          "content": "Service plan updated based on changing client needs and circumstances.",
+          "createdAt": "2024-12-22",
+          "updatedAt": "2025-08-09T10:33:31.626Z"
+        },
+        {
+          "id": "NOTE000007",
+          "category": "Client Contact",
+          "content": "Home visit conducted. Living situation verified and documented.",
+          "createdAt": "2025-01-22",
+          "updatedAt": "2025-07-24T14:49:33.602Z"
+        },
+        {
+          "id": "NOTE000009",
+          "category": "Client Contact",
+          "content": "Home visit conducted. Living situation verified and documented.",
+          "createdAt": "2025-01-26",
+          "updatedAt": "2025-06-27T03:43:00.619Z"
+        },
+        {
+          "id": "NOTE000008",
+          "category": "VR Update",
+          "content": "Verification request sent to employer for income confirmation.",
+          "createdAt": "2025-08-11",
+          "updatedAt": "2025-08-17T05:54:12.759Z"
+        }
+      ],
+      "createdDate": "2025-04-02",
+      "updatedDate": "2025-07-28T10:23:40.564Z"
+    },
+    {
+      "id": "CASE000003",
+      "mcn": "MCN110123",
+      "applicationDate": "2025-06-18T12:22:32.442Z",
+      "caseType": "Senior Services",
+      "personId": "PER000003",
+      "spouseId": "",
+      "status": "Review",
+      "description": "Family Services case for comprehensive services and support",
+      "priority": true,
+      "livingArrangement": "Nursing Home",
+      "withWaiver": false,
+      "admissionDate": "2025-06-18T12:22:32.442Z",
+      "organizationId": "Downtown Service Center",
+      "authorizedReps": [],
+      "retroRequested": "",
+      "financials": {
+        "resources": [
+          {
+            "id": "FIN000011",
+            "description": "Checking Account",
+            "amount": 2619.34,
+            "location": "Service Provider",
+            "accountNumber": "****8726",
+            "verificationStatus": "Verified",
+            "verificationSource": "Court Order",
+            "owner": "Client",
+            "dateAdded": "2024-09-27",
+            "createdAt": "2024-09-27",
+            "updatedAt": "2025-06-27T19:27:03.593Z"
+          },
+          {
+            "id": "FIN000012",
+            "description": "Savings Account",
+            "amount": 2132.57,
+            "location": "Service Provider",
+            "accountNumber": "****1032",
+            "verificationStatus": "Verified",
+            "verificationSource": "Medical Documentation",
+            "owner": "Client",
+            "dateAdded": "2024-12-28",
+            "createdAt": "2024-12-28",
+            "updatedAt": "2025-05-10T22:12:59.263Z"
+          }
+        ],
+        "income": [],
+        "expenses": [
+          {
+            "id": "FIN000013",
+            "description": "Rent/Mortgage",
+            "amount": 2946.26,
+            "frequency": "monthly",
+            "location": "ABC Company",
+            "verificationStatus": "Verified",
+            "verificationSource": "Bank Statement",
+            "owner": "Client",
+            "dateAdded": "2025-04-19",
+            "createdAt": "2025-04-19",
+            "updatedAt": "2025-09-17T17:57:24.741Z"
+          },
+          {
+            "id": "FIN000014",
+            "description": "Groceries/Food",
+            "amount": 697.46,
+            "frequency": "monthly",
+            "location": "ABC Company",
+            "verificationStatus": "AVS Pending",
+            "notes": "Additional details for groceries/food",
+            "owner": "Client",
+            "dateAdded": "2025-07-03",
+            "createdAt": "2025-07-03",
+            "updatedAt": "2025-08-13T02:58:53.668Z"
+          },
+          {
+            "id": "FIN000015",
+            "description": "Utilities (Electric)",
+            "amount": 103.24,
+            "frequency": "monthly",
+            "location": "First National Bank",
+            "verificationStatus": "Verified",
+            "verificationSource": "Medical Documentation",
+            "notes": "Additional details for utilities (electric)",
+            "owner": "Client",
+            "dateAdded": "2025-05-26",
+            "createdAt": "2025-05-26",
+            "updatedAt": "2025-07-10T20:42:10.275Z"
+          }
+        ]
+      },
+      "notes": [
+        {
+          "id": "NOTE000012",
+          "category": "Follow-up",
+          "content": "Follow-up appointment scheduled for benefit review in 6 months.",
+          "createdAt": "2024-10-08",
+          "updatedAt": "2024-12-31T19:07:59.599Z"
+        },
+        {
+          "id": "NOTE000010",
+          "category": "Client Contact",
+          "content": "Phone contact made. Client provided additional documentation.",
+          "createdAt": "2025-05-20",
+          "updatedAt": "2025-08-14T01:00:36.402Z"
+        },
+        {
+          "id": "NOTE000011",
+          "category": "General",
+          "content": "Initial case assessment completed. Client appears eligible for services.",
+          "createdAt": "2025-06-29",
+          "updatedAt": "2025-08-11T02:19:37.344Z"
+        }
+      ],
+      "createdDate": "2025-04-09",
+      "updatedDate": "2025-06-30T20:16:09.585Z"
+    },
+    {
+      "id": "CASE000004",
+      "mcn": "MCN630697",
+      "applicationDate": "2025-05-11T05:13:22.330Z",
+      "caseType": "Senior Services",
+      "personId": "PER000004",
+      "spouseId": "",
+      "status": "Completed",
+      "description": "Medicaid Application case for comprehensive services and support",
+      "priority": false,
+      "livingArrangement": "Temporary Housing",
+      "withWaiver": false,
+      "admissionDate": "2025-05-11T05:13:22.330Z",
+      "organizationId": "Northern Regional Office",
+      "authorizedReps": [],
+      "retroRequested": "",
+      "financials": {
+        "resources": [
+          {
+            "id": "FIN000016",
+            "description": "Checking Account",
+            "amount": 1679.22,
+            "location": "First National Bank",
+            "accountNumber": "****5081",
+            "verificationStatus": "AVS Pending",
+            "notes": "Additional details for checking account",
+            "owner": "Client",
+            "dateAdded": "2025-07-13",
+            "createdAt": "2025-07-13",
+            "updatedAt": "2025-09-01T12:20:18.595Z"
+          },
+          {
+            "id": "FIN000017",
+            "description": "Savings Account",
+            "amount": 6828.14,
+            "location": "Service Provider",
+            "accountNumber": "****3677",
+            "verificationStatus": "VR Pending",
+            "owner": "Client",
+            "dateAdded": "2025-04-06",
+            "createdAt": "2025-04-06",
+            "updatedAt": "2025-05-20T01:50:33.521Z"
+          },
+          {
+            "id": "FIN000018",
+            "description": "Certificate of Deposit",
+            "amount": 34968.91,
+            "location": "ABC Company",
+            "accountNumber": "****1614",
+            "verificationStatus": "Needs VR",
+            "notes": "Additional details for certificate of deposit",
+            "owner": "Client",
+            "dateAdded": "2025-06-02",
+            "createdAt": "2025-06-02",
+            "updatedAt": "2025-06-17T07:57:29.593Z"
+          }
+        ],
+        "income": [
+          {
+            "id": "FIN000019",
+            "description": "Part-time Employment",
+            "amount": 2333.69,
+            "frequency": "monthly",
+            "location": "First National Bank",
+            "verificationStatus": "AVS Pending",
+            "notes": "Additional details for part-time employment",
+            "owner": "Client",
+            "dateAdded": "2025-05-19",
+            "createdAt": "2025-05-19",
+            "updatedAt": "2025-07-26T00:37:25.530Z"
+          },
+          {
+            "id": "FIN000020",
+            "description": "Employment Income",
+            "amount": 5901.99,
+            "frequency": "monthly",
+            "location": "Service Provider",
+            "verificationStatus": "Needs VR",
+            "notes": "Additional details for employment income",
+            "owner": "Client",
+            "dateAdded": "2024-12-07",
+            "createdAt": "2024-12-07",
+            "updatedAt": "2025-05-18T06:16:53.929Z"
+          },
+          {
+            "id": "FIN000021",
+            "description": "Social Security Benefits",
+            "amount": 3117.02,
+            "frequency": "monthly",
+            "location": "First National Bank",
+            "verificationStatus": "Verified",
+            "verificationSource": "Employer Letter",
+            "owner": "Client",
+            "dateAdded": "2025-05-03",
+            "createdAt": "2025-05-03",
+            "updatedAt": "2025-09-02T05:58:45.028Z"
+          }
+        ],
+        "expenses": [
+          {
+            "id": "FIN000022",
+            "description": "Utilities (Electric)",
+            "amount": 280.31,
+            "frequency": "monthly",
+            "location": "ABC Company",
+            "verificationStatus": "Verified",
+            "verificationSource": "Social Security Statement",
+            "owner": "Client",
+            "dateAdded": "2024-12-13",
+            "createdAt": "2024-12-13",
+            "updatedAt": "2025-08-11T04:11:05.048Z"
+          },
+          {
+            "id": "FIN000023",
+            "description": "Groceries/Food",
+            "amount": 479.86,
+            "frequency": "monthly",
+            "location": "First National Bank",
+            "verificationStatus": "Verified",
+            "verificationSource": "Pay Stub",
+            "notes": "Additional details for groceries/food",
+            "owner": "Spouse",
+            "dateAdded": "2025-06-06",
+            "createdAt": "2025-06-06",
+            "updatedAt": "2025-08-21T23:33:00.983Z"
+          }
+        ]
+      },
+      "notes": [
+        {
+          "id": "NOTE000015",
+          "category": "VR Update",
+          "content": "Verification request sent to employer for income confirmation.",
+          "createdAt": "2024-10-18",
+          "updatedAt": "2025-04-01T06:55:58.993Z"
+        },
+        {
+          "id": "NOTE000014",
+          "category": "Client Contact",
+          "content": "Phone contact made. Client provided additional documentation.",
+          "createdAt": "2025-01-20",
+          "updatedAt": "2025-07-29T15:35:40.365Z"
+        },
+        {
+          "id": "NOTE000013",
+          "category": "Client Contact",
+          "content": "Phone contact made. Client provided additional documentation.",
+          "createdAt": "2025-08-17",
+          "updatedAt": "2025-08-22T06:35:41.636Z"
+        }
+      ],
+      "createdDate": "2023-10-22",
+      "updatedDate": "2025-04-06T16:42:35.538Z"
+    },
+    {
+      "id": "CASE000005",
+      "mcn": "MCN383236",
+      "applicationDate": "2025-07-03T18:45:07.158Z",
+      "caseType": "Disability Services",
+      "personId": "PER000005",
+      "spouseId": "PER000098",
+      "status": "Completed",
+      "description": "Housing Assistance case for comprehensive services and support",
+      "priority": false,
+      "livingArrangement": "Senior Community",
+      "withWaiver": true,
+      "admissionDate": "2025-07-03T18:45:07.158Z",
+      "organizationId": "Northern Regional Office",
+      "authorizedReps": [],
+      "retroRequested": "",
+      "financials": {
+        "resources": [
+          {
+            "id": "FIN000024",
+            "description": "Checking Account",
+            "amount": 1517.59,
+            "location": "Service Provider",
+            "accountNumber": "****6841",
+            "verificationStatus": "Needs VR",
+            "owner": "Client",
+            "dateAdded": "2025-02-09",
+            "createdAt": "2025-02-09",
+            "updatedAt": "2025-05-28T12:36:27.161Z"
+          },
+          {
+            "id": "FIN000025",
+            "description": "Savings Account",
+            "amount": 18948.04,
+            "location": "ABC Company",
+            "accountNumber": "****2460",
+            "verificationStatus": "Needs VR",
+            "notes": "Additional details for savings account",
+            "owner": "Client",
+            "dateAdded": "2025-08-29",
+            "createdAt": "2025-08-29",
+            "updatedAt": "2025-09-10T08:13:26.200Z"
+          },
+          {
+            "id": "FIN000026",
+            "description": "Certificate of Deposit",
+            "amount": 41827.54,
+            "location": "Service Provider",
+            "accountNumber": "****6861",
+            "verificationStatus": "VR Pending",
+            "owner": "Spouse",
+            "dateAdded": "2025-07-31",
+            "createdAt": "2025-07-31",
+            "updatedAt": "2025-08-09T09:16:02.970Z"
+          }
+        ],
+        "income": [
+          {
+            "id": "FIN000027",
+            "description": "Social Security Benefits",
+            "amount": 2695.88,
+            "frequency": "monthly",
+            "location": "First National Bank",
+            "verificationStatus": "VR Pending",
+            "notes": "Additional details for social security benefits",
+            "owner": "Client",
+            "dateAdded": "2025-08-09",
+            "createdAt": "2025-08-09",
+            "updatedAt": "2025-08-16T05:29:15.532Z"
+          },
+          {
+            "id": "FIN000028",
+            "description": "Disability Benefits (SSDI)",
+            "amount": 2260.25,
+            "frequency": "monthly",
+            "location": "ABC Company",
+            "verificationStatus": "Verified",
+            "verificationSource": "Bank Statement",
+            "notes": "Additional details for disability benefits (ssdi)",
+            "owner": "Client",
+            "dateAdded": "2024-12-24",
+            "createdAt": "2024-12-24",
+            "updatedAt": "2025-01-06T18:13:18.040Z"
+          },
+          {
+            "id": "FIN000029",
+            "description": "Employment Income",
+            "amount": 2900.1,
+            "frequency": "monthly",
+            "location": "Service Provider",
+            "verificationStatus": "AVS Pending",
+            "owner": "Client",
+            "dateAdded": "2025-07-24",
+            "createdAt": "2025-07-24",
+            "updatedAt": "2025-08-26T01:06:22.141Z"
+          }
+        ],
+        "expenses": [
+          {
+            "id": "FIN000030",
+            "description": "Rent/Mortgage",
+            "amount": 2102.28,
+            "frequency": "monthly",
+            "location": "ABC Company",
+            "verificationStatus": "VR Pending",
+            "notes": "Additional details for rent/mortgage",
+            "owner": "Spouse",
+            "dateAdded": "2025-06-06",
+            "createdAt": "2025-06-06",
+            "updatedAt": "2025-07-06T02:48:44.153Z"
+          },
+          {
+            "id": "FIN000031",
+            "description": "Transportation/Gas",
+            "amount": 313.04,
+            "frequency": "monthly",
+            "location": "ABC Company",
+            "verificationStatus": "Needs VR",
+            "owner": "Client",
+            "dateAdded": "2025-07-30",
+            "createdAt": "2025-07-30",
+            "updatedAt": "2025-08-29T05:39:07.200Z"
+          },
+          {
+            "id": "FIN000032",
+            "description": "Utilities (Electric)",
+            "amount": 187.99,
+            "frequency": "monthly",
+            "location": "First National Bank",
+            "verificationStatus": "Needs VR",
+            "owner": "Client",
+            "dateAdded": "2025-06-09",
+            "createdAt": "2025-06-09",
+            "updatedAt": "2025-07-03T13:21:45.099Z"
+          }
+        ]
+      },
+      "notes": [
+        {
+          "id": "NOTE000017",
+          "category": "General",
+          "content": "Initial case assessment completed. Client appears eligible for services.",
+          "createdAt": "2025-01-01",
+          "updatedAt": "2025-05-17T15:06:21.029Z"
+        },
+        {
+          "id": "NOTE000016",
+          "category": "General",
+          "content": "Application submitted to state system. Awaiting approval decision.",
+          "createdAt": "2025-06-28",
+          "updatedAt": "2025-08-16T01:39:05.261Z"
+        }
+      ],
+      "createdDate": "2024-12-22",
+      "updatedDate": "2025-02-16T13:11:42.145Z"
+    },
+    {
+      "id": "CASE000006",
+      "mcn": "MCN177840",
+      "applicationDate": "2025-03-27T19:18:02.207Z",
+      "caseType": "Medicaid Application",
+      "personId": "PER000006",
+      "spouseId": "",
+      "status": "Priority",
+      "description": "Healthcare Coverage case for comprehensive services and support",
+      "priority": false,
+      "livingArrangement": "Temporary Housing",
+      "withWaiver": false,
+      "admissionDate": "2025-03-27T19:18:02.207Z",
+      "organizationId": "Downtown Service Center",
+      "authorizedReps": [],
+      "retroRequested": "",
+      "financials": {
+        "resources": [
+          {
+            "id": "FIN000033",
+            "description": "Checking Account",
+            "amount": 3251.42,
+            "location": "Service Provider",
+            "accountNumber": "****8147",
+            "verificationStatus": "Verified",
+            "verificationSource": "Bank Statement",
+            "owner": "Client",
+            "dateAdded": "2024-11-05",
+            "createdAt": "2024-11-05",
+            "updatedAt": "2025-03-16T04:27:15.098Z"
+          },
+          {
+            "id": "FIN000034",
+            "description": "Savings Account",
+            "amount": 2728.37,
+            "location": "Service Provider",
+            "accountNumber": "****7924",
+            "verificationStatus": "AVS Pending",
+            "notes": "Additional details for savings account",
+            "owner": "Client",
+            "dateAdded": "2025-08-25",
+            "createdAt": "2025-08-25",
+            "updatedAt": "2025-09-01T21:16:25.579Z"
+          },
+          {
+            "id": "FIN000035",
+            "description": "Vehicle (Estimated Value)",
+            "amount": 4611.02,
+            "location": "Service Provider",
+            "accountNumber": "****3685",
+            "verificationStatus": "Verified",
+            "verificationSource": "Court Order",
+            "notes": "Additional details for vehicle (estimated value)",
+            "owner": "Client",
+            "dateAdded": "2025-07-04",
+            "createdAt": "2025-07-04",
+            "updatedAt": "2025-08-01T01:13:21.318Z"
+          }
+        ],
+        "income": [],
+        "expenses": []
+      },
+      "notes": [
+        {
+          "id": "NOTE000022",
+          "category": "Follow-up",
+          "content": "Follow-up appointment scheduled for benefit review in 6 months.",
+          "createdAt": "2024-12-16",
+          "updatedAt": "2025-01-14T03:11:54.724Z"
+        },
+        {
+          "id": "NOTE000018",
+          "category": "Follow-up",
+          "content": "Service plan updated based on changing client needs and circumstances.",
+          "createdAt": "2025-01-01",
+          "updatedAt": "2025-09-05T07:31:18.347Z"
+        },
+        {
+          "id": "NOTE000019",
+          "category": "VR Update",
+          "content": "Verification request sent to employer for income confirmation.",
+          "createdAt": "2025-04-14",
+          "updatedAt": "2025-06-24T17:46:42.043Z"
+        },
+        {
+          "id": "NOTE000021",
+          "category": "Client Contact",
+          "content": "Home visit conducted. Living situation verified and documented.",
+          "createdAt": "2025-04-25",
+          "updatedAt": "2025-04-25T12:04:29.629Z"
+        },
+        {
+          "id": "NOTE000020",
+          "category": "Follow-up",
+          "content": "Follow-up appointment scheduled for benefit review in 6 months.",
+          "createdAt": "2025-08-19",
+          "updatedAt": "2025-09-11T07:45:10.025Z"
+        }
+      ],
+      "createdDate": "2025-01-23",
+      "updatedDate": "2025-08-02T16:56:34.256Z"
+    },
+    {
+      "id": "CASE000007",
+      "mcn": "MCN961453",
+      "applicationDate": "2025-07-26T09:43:07.930Z",
+      "caseType": "Family Services",
+      "personId": "PER000007",
+      "spouseId": "",
+      "status": "Completed",
+      "description": "Emergency Assistance case for comprehensive services and support",
+      "priority": false,
+      "livingArrangement": "Group Home",
+      "withWaiver": false,
+      "admissionDate": "2025-07-26T09:43:07.930Z",
+      "organizationId": "Eastern Area Services",
+      "authorizedReps": [],
+      "retroRequested": "",
+      "financials": {
+        "resources": [],
+        "income": [
+          {
+            "id": "FIN000036",
+            "description": "Employment Income",
+            "amount": 6184.56,
+            "frequency": "monthly",
+            "location": "First National Bank",
+            "verificationStatus": "VR Pending",
+            "notes": "Additional details for employment income",
+            "owner": "Spouse",
+            "dateAdded": "2025-06-26",
+            "createdAt": "2025-06-26",
+            "updatedAt": "2025-07-18T21:23:54.010Z"
+          },
+          {
+            "id": "FIN000037",
+            "description": "Social Security Benefits",
+            "amount": 1478.26,
+            "frequency": "monthly",
+            "location": "First National Bank",
+            "verificationStatus": "Needs VR",
+            "notes": "Additional details for social security benefits",
+            "owner": "Client",
+            "dateAdded": "2025-04-22",
+            "createdAt": "2025-04-22",
+            "updatedAt": "2025-05-13T07:04:26.938Z"
+          },
+          {
+            "id": "FIN000038",
+            "description": "Disability Benefits (SSDI)",
+            "amount": 2362.67,
+            "frequency": "monthly",
+            "location": "ABC Company",
+            "verificationStatus": "Verified",
+            "verificationSource": "Medical Documentation",
+            "owner": "Spouse",
+            "dateAdded": "2025-04-21",
+            "createdAt": "2025-04-21",
+            "updatedAt": "2025-07-16T12:18:07.982Z"
+          }
+        ],
+        "expenses": []
+      },
+      "notes": [
+        {
+          "id": "NOTE000024",
+          "category": "Follow-up",
+          "content": "Service plan updated based on changing client needs and circumstances.",
+          "createdAt": "2025-02-18",
+          "updatedAt": "2025-06-06T16:44:34.108Z"
+        },
+        {
+          "id": "NOTE000023",
+          "category": "VR Update",
+          "content": "Bank statements received and reviewed. Financial verification complete.",
+          "createdAt": "2025-04-25",
+          "updatedAt": "2025-04-29T00:19:27.156Z"
+        }
+      ],
+      "createdDate": "2025-06-07",
+      "updatedDate": "2025-08-25T12:58:57.373Z"
+    },
+    {
+      "id": "CASE000008",
+      "mcn": "MCN566823",
+      "applicationDate": "2025-06-30T10:41:19.304Z",
+      "caseType": "SNAP Benefits",
+      "personId": "PER000008",
+      "spouseId": "",
+      "status": "In Progress",
+      "description": "Family Services case for comprehensive services and support",
+      "priority": false,
+      "livingArrangement": "Transitional Housing",
+      "withWaiver": false,
+      "admissionDate": "2025-06-30T10:41:19.304Z",
+      "organizationId": "Northern Regional Office",
+      "authorizedReps": [],
+      "retroRequested": "",
+      "financials": {
+        "resources": [
+          {
+            "id": "FIN000039",
+            "description": "Savings Account",
+            "amount": 1687.8,
+            "location": "First National Bank",
+            "accountNumber": "****4360",
+            "verificationStatus": "AVS Pending",
+            "owner": "Spouse",
+            "dateAdded": "2025-04-06",
+            "createdAt": "2025-04-06",
+            "updatedAt": "2025-04-17T20:21:47.710Z"
+          },
+          {
+            "id": "FIN000040",
+            "description": "Checking Account",
+            "amount": 3198.78,
+            "location": "Service Provider",
+            "accountNumber": "****6703",
+            "verificationStatus": "AVS Pending",
+            "notes": "Additional details for checking account",
+            "owner": "Client",
+            "dateAdded": "2025-04-10",
+            "createdAt": "2025-04-10",
+            "updatedAt": "2025-04-20T03:38:51.641Z"
+          }
+        ],
+        "income": [],
+        "expenses": []
+      },
+      "notes": [
+        {
+          "id": "NOTE000027",
+          "category": "VR Update",
+          "content": "Verification request sent to employer for income confirmation.",
+          "createdAt": "2025-01-07",
+          "updatedAt": "2025-01-29T16:06:37.742Z"
+        },
+        {
+          "id": "NOTE000025",
+          "category": "Client Contact",
+          "content": "Home visit conducted. Living situation verified and documented.",
+          "createdAt": "2025-03-16",
+          "updatedAt": "2025-08-16T16:11:02.027Z"
+        },
+        {
+          "id": "NOTE000026",
+          "category": "Follow-up",
+          "content": "Service plan updated based on changing client needs and circumstances.",
+          "createdAt": "2025-04-13",
+          "updatedAt": "2025-05-24T13:13:16.587Z"
+        },
+        {
+          "id": "NOTE000028",
+          "category": "Follow-up",
+          "content": "Service plan updated based on changing client needs and circumstances.",
+          "createdAt": "2025-07-22",
+          "updatedAt": "2025-08-01T20:53:12.196Z"
+        }
+      ],
+      "createdDate": "2024-11-10",
+      "updatedDate": "2025-06-19T15:44:27.897Z"
+    },
+    {
+      "id": "CASE000009",
+      "mcn": "MCN471965",
+      "applicationDate": "2025-06-07T08:45:10.669Z",
+      "caseType": "Healthcare Coverage",
+      "personId": "PER000009",
+      "spouseId": "",
+      "status": "In Progress",
+      "description": "Disability Services case for comprehensive services and support",
+      "priority": true,
+      "livingArrangement": "Independent",
+      "withWaiver": true,
+      "admissionDate": "2025-06-07T08:45:10.669Z",
+      "organizationId": "Southern District Center",
+      "authorizedReps": [],
+      "retroRequested": "",
+      "financials": {
+        "resources": [
+          {
+            "id": "FIN000041",
+            "description": "Savings Account",
+            "amount": 9647.85,
+            "location": "Service Provider",
+            "accountNumber": "****8419",
+            "verificationStatus": "Needs VR",
+            "notes": "Additional details for savings account",
+            "owner": "Client",
+            "dateAdded": "2025-01-18",
+            "createdAt": "2025-01-18",
+            "updatedAt": "2025-07-07T03:49:29.938Z"
+          },
+          {
+            "id": "FIN000042",
+            "description": "Vehicle (Estimated Value)",
+            "amount": 13063.95,
+            "location": "Service Provider",
+            "accountNumber": "****6759",
+            "verificationStatus": "Needs VR",
+            "owner": "Spouse",
+            "dateAdded": "2025-01-20",
+            "createdAt": "2025-01-20",
+            "updatedAt": "2025-05-16T05:37:05.774Z"
+          },
+          {
+            "id": "FIN000043",
+            "description": "Checking Account",
+            "amount": 2445.69,
+            "location": "First National Bank",
+            "accountNumber": "****2098",
+            "verificationStatus": "VR Pending",
+            "notes": "Additional details for checking account",
+            "owner": "Spouse",
+            "dateAdded": "2024-10-08",
+            "createdAt": "2024-10-08",
+            "updatedAt": "2025-03-24T06:32:43.639Z"
+          }
+        ],
+        "income": [],
+        "expenses": []
+      },
+      "notes": [
+        {
+          "id": "NOTE000030",
+          "category": "Follow-up",
+          "content": "Service plan updated based on changing client needs and circumstances.",
+          "createdAt": "2024-09-30",
+          "updatedAt": "2025-09-15T07:41:39.508Z"
+        },
+        {
+          "id": "NOTE000029",
+          "category": "General",
+          "content": "Application submitted to state system. Awaiting approval decision.",
+          "createdAt": "2024-11-29",
+          "updatedAt": "2024-12-23T05:36:47.173Z"
+        },
+        {
+          "id": "NOTE000031",
+          "category": "General",
+          "content": "Initial case assessment completed. Client appears eligible for services.",
+          "createdAt": "2025-05-30",
+          "updatedAt": "2025-09-18T17:50:16.050Z"
+        },
+        {
+          "id": "NOTE000032",
+          "category": "Client Contact",
+          "content": "Home visit conducted. Living situation verified and documented.",
+          "createdAt": "2025-09-01",
+          "updatedAt": "2025-09-09T17:55:43.336Z"
+        }
+      ],
+      "createdDate": "2024-12-07",
+      "updatedDate": "2025-08-14T16:30:34.926Z"
+    },
+    {
+      "id": "CASE000010",
+      "mcn": "MCN187075",
+      "applicationDate": "2025-01-25T17:21:01.843Z",
+      "caseType": "Medicaid Application",
+      "personId": "PER000010",
+      "spouseId": "PER000034",
+      "status": "Priority",
+      "description": "Emergency Assistance case for comprehensive services and support",
+      "priority": false,
+      "livingArrangement": "Shared Housing",
+      "withWaiver": false,
+      "admissionDate": "2025-01-25T17:21:01.843Z",
+      "organizationId": "Southern District Center",
+      "authorizedReps": [],
+      "retroRequested": "",
+      "financials": {
+        "resources": [
+          {
+            "id": "FIN000044",
+            "description": "Vehicle (Estimated Value)",
+            "amount": 10545.56,
+            "location": "ABC Company",
+            "accountNumber": "****2774",
+            "verificationStatus": "Verified",
+            "verificationSource": "Court Order",
+            "owner": "Client",
+            "dateAdded": "2025-08-29",
+            "createdAt": "2025-08-29",
+            "updatedAt": "2025-09-17T20:00:43.052Z"
+          },
+          {
+            "id": "FIN000045",
+            "description": "Checking Account",
+            "amount": 3425.93,
+            "location": "ABC Company",
+            "accountNumber": "****2909",
+            "verificationStatus": "AVS Pending",
+            "owner": "Spouse",
+            "dateAdded": "2025-01-24",
+            "createdAt": "2025-01-24",
+            "updatedAt": "2025-03-26T22:08:09.402Z"
+          }
+        ],
+        "income": [
+          {
+            "id": "FIN000046",
+            "description": "Social Security Benefits",
+            "amount": 2204.61,
+            "frequency": "monthly",
+            "location": "Service Provider",
+            "verificationStatus": "VR Pending",
+            "owner": "Client",
+            "dateAdded": "2025-03-13",
+            "createdAt": "2025-03-13",
+            "updatedAt": "2025-03-30T09:29:26.375Z"
+          }
+        ],
+        "expenses": [
+          {
+            "id": "FIN000047",
+            "description": "Groceries/Food",
+            "amount": 432.31,
+            "frequency": "monthly",
+            "location": "Service Provider",
+            "verificationStatus": "VR Pending",
+            "owner": "Client",
+            "dateAdded": "2024-11-30",
+            "createdAt": "2024-11-30",
+            "updatedAt": "2025-09-13T00:24:49.707Z"
+          },
+          {
+            "id": "FIN000048",
+            "description": "Utilities (Electric)",
+            "amount": 255.03,
+            "frequency": "monthly",
+            "location": "ABC Company",
+            "verificationStatus": "VR Pending",
+            "owner": "Client",
+            "dateAdded": "2025-04-30",
+            "createdAt": "2025-04-30",
+            "updatedAt": "2025-07-29T00:31:08.373Z"
+          },
+          {
+            "id": "FIN000049",
+            "description": "Transportation/Gas",
+            "amount": 499.68,
+            "frequency": "monthly",
+            "location": "ABC Company",
+            "verificationStatus": "VR Pending",
+            "notes": "Additional details for transportation/gas",
+            "owner": "Client",
+            "dateAdded": "2025-04-21",
+            "createdAt": "2025-04-21",
+            "updatedAt": "2025-07-25T06:59:52.187Z"
+          }
+        ]
+      },
+      "notes": [
+        {
+          "id": "NOTE000033",
+          "category": "VR Update",
+          "content": "Bank statements received and reviewed. Financial verification complete.",
+          "createdAt": "2024-11-05",
+          "updatedAt": "2025-04-26T17:25:10.866Z"
+        },
+        {
+          "id": "NOTE000034",
+          "category": "General",
+          "content": "Application submitted to state system. Awaiting approval decision.",
+          "createdAt": "2025-02-10",
+          "updatedAt": "2025-08-04T06:19:55.494Z"
+        },
+        {
+          "id": "NOTE000036",
+          "category": "General",
+          "content": "Initial case assessment completed. Client appears eligible for services.",
+          "createdAt": "2025-07-22",
+          "updatedAt": "2025-09-04T16:50:45.431Z"
+        },
+        {
+          "id": "NOTE000035",
+          "category": "General",
+          "content": "Initial case assessment completed. Client appears eligible for services.",
+          "createdAt": "2025-07-28",
+          "updatedAt": "2025-08-26T07:29:10.303Z"
+        }
+      ],
+      "createdDate": "2024-11-23",
+      "updatedDate": "2025-05-19T11:36:32.067Z"
+    },
+    {
+      "id": "CASE000011",
+      "mcn": "MCN541641",
+      "applicationDate": "2024-01-17T22:29:09.473Z",
+      "caseType": "Senior Services",
+      "personId": "PER000011",
+      "spouseId": "",
+      "status": "Priority",
+      "description": "Family Services case for comprehensive services and support",
+      "priority": false,
+      "livingArrangement": "Family Home",
+      "withWaiver": false,
+      "admissionDate": "2024-01-17T22:29:09.473Z",
+      "organizationId": "Northern Regional Office",
+      "authorizedReps": [],
+      "retroRequested": "",
+      "financials": {
+        "resources": [
+          {
+            "id": "FIN000050",
+            "description": "Vehicle (Estimated Value)",
+            "amount": 14324.25,
+            "location": "ABC Company",
+            "accountNumber": "****7340",
+            "verificationStatus": "Verified",
+            "verificationSource": "Tax Return",
+            "owner": "Client",
+            "dateAdded": "2025-03-22",
+            "createdAt": "2025-03-22",
+            "updatedAt": "2025-05-19T21:05:24.989Z"
+          },
+          {
+            "id": "FIN000051",
+            "description": "Checking Account",
+            "amount": 4443.79,
+            "location": "First National Bank",
+            "accountNumber": "****9007",
+            "verificationStatus": "VR Pending",
+            "notes": "Additional details for checking account",
+            "owner": "Spouse",
+            "dateAdded": "2025-04-17",
+            "createdAt": "2025-04-17",
+            "updatedAt": "2025-09-03T22:42:22.098Z"
+          },
+          {
+            "id": "FIN000052",
+            "description": "Savings Account",
+            "amount": 12779.21,
+            "location": "Service Provider",
+            "accountNumber": "****5814",
+            "verificationStatus": "AVS Pending",
+            "notes": "Additional details for savings account",
+            "owner": "Spouse",
+            "dateAdded": "2025-08-02",
+            "createdAt": "2025-08-02",
+            "updatedAt": "2025-09-18T16:00:49.034Z"
+          }
+        ],
+        "income": [
+          {
+            "id": "FIN000053",
+            "description": "Employment Income",
+            "amount": 2003.6,
+            "frequency": "monthly",
+            "location": "ABC Company",
+            "verificationStatus": "Needs VR",
+            "notes": "Additional details for employment income",
+            "owner": "Client",
+            "dateAdded": "2025-07-18",
+            "createdAt": "2025-07-18",
+            "updatedAt": "2025-09-07T17:39:32.714Z"
+          },
+          {
+            "id": "FIN000054",
+            "description": "Social Security Benefits",
+            "amount": 1308.64,
+            "frequency": "monthly",
+            "location": "First National Bank",
+            "verificationStatus": "Needs VR",
+            "notes": "Additional details for social security benefits",
+            "owner": "Client",
+            "dateAdded": "2025-02-02",
+            "createdAt": "2025-02-02",
+            "updatedAt": "2025-07-01T07:51:37.226Z"
+          },
+          {
+            "id": "FIN000055",
+            "description": "Disability Benefits (SSDI)",
+            "amount": 1821.13,
+            "frequency": "monthly",
+            "location": "First National Bank",
+            "verificationStatus": "VR Pending",
+            "owner": "Client",
+            "dateAdded": "2024-12-10",
+            "createdAt": "2024-12-10",
+            "updatedAt": "2025-03-15T09:37:59.483Z"
+          }
+        ],
+        "expenses": [
+          {
+            "id": "FIN000056",
+            "description": "Rent/Mortgage",
+            "amount": 3123.84,
+            "frequency": "monthly",
+            "location": "ABC Company",
+            "verificationStatus": "AVS Pending",
+            "owner": "Spouse",
+            "dateAdded": "2025-04-23",
+            "createdAt": "2025-04-23",
+            "updatedAt": "2025-07-05T19:41:21.831Z"
+          },
+          {
+            "id": "FIN000057",
+            "description": "Utilities (Electric)",
+            "amount": 134.3,
+            "frequency": "monthly",
+            "location": "Service Provider",
+            "verificationStatus": "AVS Pending",
+            "notes": "Additional details for utilities (electric)",
+            "owner": "Spouse",
+            "dateAdded": "2024-11-25",
+            "createdAt": "2024-11-25",
+            "updatedAt": "2025-02-13T08:41:42.773Z"
+          },
+          {
+            "id": "FIN000058",
+            "description": "Groceries/Food",
+            "amount": 339.12,
+            "frequency": "monthly",
+            "location": "First National Bank",
+            "verificationStatus": "Needs VR",
+            "notes": "Additional details for groceries/food",
+            "owner": "Client",
+            "dateAdded": "2025-08-16",
+            "createdAt": "2025-08-16",
+            "updatedAt": "2025-09-13T03:27:56.413Z"
+          }
+        ]
+      },
+      "notes": [
+        {
+          "id": "NOTE000037",
+          "category": "VR Update",
+          "content": "Verification request sent to employer for income confirmation.",
+          "createdAt": "2025-03-24",
+          "updatedAt": "2025-04-02T00:26:47.542Z"
+        },
+        {
+          "id": "NOTE000039",
+          "category": "VR Update",
+          "content": "Verification request sent to employer for income confirmation.",
+          "createdAt": "2025-05-12",
+          "updatedAt": "2025-05-28T12:56:00.194Z"
+        },
+        {
+          "id": "NOTE000038",
+          "category": "Follow-up",
+          "content": "Follow-up appointment scheduled for benefit review in 6 months.",
+          "createdAt": "2025-07-28",
+          "updatedAt": "2025-08-10T22:09:48.643Z"
+        },
+        {
+          "id": "NOTE000040",
+          "category": "Follow-up",
+          "content": "Service plan updated based on changing client needs and circumstances.",
+          "createdAt": "2025-09-13",
+          "updatedAt": "2025-09-17T10:06:37.455Z"
+        }
+      ],
+      "createdDate": "2023-11-24",
+      "updatedDate": "2025-04-27T22:35:04.895Z"
+    },
+    {
+      "id": "CASE000012",
+      "mcn": "MCN202798",
+      "applicationDate": "2025-04-19T01:47:03.478Z",
+      "caseType": "Senior Services",
+      "personId": "PER000012",
+      "spouseId": "",
+      "status": "Review",
+      "description": "Senior Services case for comprehensive services and support",
+      "priority": false,
+      "livingArrangement": "Shared Housing",
+      "withWaiver": true,
+      "admissionDate": "2025-04-19T01:47:03.478Z",
+      "organizationId": "Southern District Center",
+      "authorizedReps": [],
+      "retroRequested": "",
+      "financials": {
+        "resources": [
+          {
+            "id": "FIN000059",
+            "description": "Certificate of Deposit",
+            "amount": 48036.57,
+            "location": "ABC Company",
+            "accountNumber": "****3457",
+            "verificationStatus": "Needs VR",
+            "owner": "Client",
+            "dateAdded": "2025-08-09",
+            "createdAt": "2025-08-09",
+            "updatedAt": "2025-08-09T11:48:50.857Z"
+          },
+          {
+            "id": "FIN000060",
+            "description": "Savings Account",
+            "amount": 12395.53,
+            "location": "Service Provider",
+            "accountNumber": "****6634",
+            "verificationStatus": "Verified",
+            "verificationSource": "Medical Documentation",
+            "owner": "Spouse",
+            "dateAdded": "2024-10-27",
+            "createdAt": "2024-10-27",
+            "updatedAt": "2025-02-18T06:17:54.702Z"
+          }
+        ],
+        "income": [
+          {
+            "id": "FIN000061",
+            "description": "Employment Income",
+            "amount": 7111.26,
+            "frequency": "monthly",
+            "location": "ABC Company",
+            "verificationStatus": "AVS Pending",
+            "owner": "Client",
+            "dateAdded": "2025-08-16",
+            "createdAt": "2025-08-16",
+            "updatedAt": "2025-09-17T14:28:26.632Z"
+          },
+          {
+            "id": "FIN000062",
+            "description": "Social Security Benefits",
+            "amount": 2540.91,
+            "frequency": "monthly",
+            "location": "First National Bank",
+            "verificationStatus": "VR Pending",
+            "notes": "Additional details for social security benefits",
+            "owner": "Client",
+            "dateAdded": "2024-10-20",
+            "createdAt": "2024-10-20",
+            "updatedAt": "2025-08-24T11:53:21.000Z"
+          }
+        ],
+        "expenses": [
+          {
+            "id": "FIN000063",
+            "description": "Transportation/Gas",
+            "amount": 357.89,
+            "frequency": "monthly",
+            "location": "ABC Company",
+            "verificationStatus": "Verified",
+            "verificationSource": "Bank Statement",
+            "owner": "Spouse",
+            "dateAdded": "2025-05-04",
+            "createdAt": "2025-05-04",
+            "updatedAt": "2025-08-24T04:29:30.634Z"
+          },
+          {
+            "id": "FIN000064",
+            "description": "Groceries/Food",
+            "amount": 407.17,
+            "frequency": "monthly",
+            "location": "Service Provider",
+            "verificationStatus": "AVS Pending",
+            "owner": "Spouse",
+            "dateAdded": "2024-10-02",
+            "createdAt": "2024-10-02",
+            "updatedAt": "2025-08-29T18:28:36.430Z"
+          }
+        ]
+      },
+      "notes": [
+        {
+          "id": "NOTE000042",
+          "category": "Client Contact",
+          "content": "Phone contact made. Client provided additional documentation.",
+          "createdAt": "2024-09-27",
+          "updatedAt": "2024-10-03T23:36:04.370Z"
+        },
+        {
+          "id": "NOTE000041",
+          "category": "Follow-up",
+          "content": "Service plan updated based on changing client needs and circumstances.",
+          "createdAt": "2025-01-24",
+          "updatedAt": "2025-02-16T13:02:01.750Z"
+        }
+      ],
+      "createdDate": "2024-12-10",
+      "updatedDate": "2025-03-26T02:38:06.249Z"
+    },
+    {
+      "id": "CASE000013",
+      "mcn": "MCN300643",
+      "applicationDate": "2024-12-06T09:58:09.012Z",
+      "caseType": "Healthcare Coverage",
+      "personId": "PER000013",
+      "spouseId": "",
+      "status": "In Progress",
+      "description": "Family Services case for comprehensive services and support",
+      "priority": false,
+      "livingArrangement": "Transitional Housing",
+      "withWaiver": true,
+      "admissionDate": "2024-12-06T09:58:09.012Z",
+      "organizationId": "Southern District Center",
+      "authorizedReps": [],
+      "retroRequested": "",
+      "financials": {
+        "resources": [],
+        "income": [
+          {
+            "id": "FIN000065",
+            "description": "Employment Income",
+            "amount": 2438.05,
+            "frequency": "monthly",
+            "location": "First National Bank",
+            "verificationStatus": "Verified",
+            "verificationSource": "Medical Documentation",
+            "owner": "Client",
+            "dateAdded": "2024-10-10",
+            "createdAt": "2024-10-10",
+            "updatedAt": "2024-12-19T15:07:53.560Z"
+          }
+        ],
+        "expenses": [
+          {
+            "id": "FIN000066",
+            "description": "Groceries/Food",
+            "amount": 651.38,
+            "frequency": "monthly",
+            "location": "ABC Company",
+            "verificationStatus": "Needs VR",
+            "owner": "Spouse",
+            "dateAdded": "2024-12-30",
+            "createdAt": "2024-12-30",
+            "updatedAt": "2025-08-05T05:36:35.360Z"
+          },
+          {
+            "id": "FIN000067",
+            "description": "Utilities (Electric)",
+            "amount": 231.43,
+            "frequency": "monthly",
+            "location": "ABC Company",
+            "verificationStatus": "AVS Pending",
+            "owner": "Client",
+            "dateAdded": "2024-12-26",
+            "createdAt": "2024-12-26",
+            "updatedAt": "2025-04-20T21:10:05.423Z"
+          }
+        ]
+      },
+      "notes": [
+        {
+          "id": "NOTE000044",
+          "category": "Follow-up",
+          "content": "Follow-up appointment scheduled for benefit review in 6 months.",
+          "createdAt": "2024-10-04",
+          "updatedAt": "2024-10-31T18:45:36.680Z"
+        },
+        {
+          "id": "NOTE000045",
+          "category": "Client Contact",
+          "content": "Phone contact made. Client provided additional documentation.",
+          "createdAt": "2025-01-15",
+          "updatedAt": "2025-06-19T08:18:46.461Z"
+        },
+        {
+          "id": "NOTE000043",
+          "category": "Client Contact",
+          "content": "Phone contact made. Client provided additional documentation.",
+          "createdAt": "2025-05-05",
+          "updatedAt": "2025-06-04T19:21:09.034Z"
+        }
+      ],
+      "createdDate": "2023-10-21",
+      "updatedDate": "2025-09-18T21:02:18.402Z"
+    },
+    {
+      "id": "CASE000014",
+      "mcn": "MCN440365",
+      "applicationDate": "2024-12-16T19:01:07.179Z",
+      "caseType": "Housing Assistance",
+      "personId": "PER000014",
+      "spouseId": "PER000063",
+      "status": "Completed",
+      "description": "Disability Services case for comprehensive services and support",
+      "priority": true,
+      "livingArrangement": "Nursing Home",
+      "withWaiver": false,
+      "admissionDate": "2024-12-16T19:01:07.179Z",
+      "organizationId": "Southern District Center",
+      "authorizedReps": [],
+      "retroRequested": "2025-03-20",
+      "financials": {
+        "resources": [
+          {
+            "id": "FIN000068",
+            "description": "Checking Account",
+            "amount": 757.27,
+            "location": "Service Provider",
+            "accountNumber": "****4985",
+            "verificationStatus": "AVS Pending",
+            "owner": "Client",
+            "dateAdded": "2025-06-13",
+            "createdAt": "2025-06-13",
+            "updatedAt": "2025-06-13T15:40:01.832Z"
+          },
+          {
+            "id": "FIN000069",
+            "description": "Savings Account",
+            "amount": 16692.23,
+            "location": "Service Provider",
+            "accountNumber": "****6962",
+            "verificationStatus": "VR Pending",
+            "owner": "Spouse",
+            "dateAdded": "2025-06-03",
+            "createdAt": "2025-06-03",
+            "updatedAt": "2025-08-26T02:34:30.288Z"
+          },
+          {
+            "id": "FIN000070",
+            "description": "Vehicle (Estimated Value)",
+            "amount": 27478.8,
+            "location": "Service Provider",
+            "accountNumber": "****7212",
+            "verificationStatus": "AVS Pending",
+            "owner": "Spouse",
+            "dateAdded": "2025-04-25",
+            "createdAt": "2025-04-25",
+            "updatedAt": "2025-05-06T18:12:27.814Z"
+          }
+        ],
+        "income": [],
+        "expenses": []
+      },
+      "notes": [
+        {
+          "id": "NOTE000046",
+          "category": "VR Update",
+          "content": "Verification request sent to employer for income confirmation.",
+          "createdAt": "2024-10-15",
+          "updatedAt": "2024-11-07T16:23:22.592Z"
+        },
+        {
+          "id": "NOTE000050",
+          "category": "VR Update",
+          "content": "Bank statements received and reviewed. Financial verification complete.",
+          "createdAt": "2024-12-26",
+          "updatedAt": "2025-07-19T17:40:35.430Z"
+        },
+        {
+          "id": "NOTE000048",
+          "category": "General",
+          "content": "Initial case assessment completed. Client appears eligible for services.",
+          "createdAt": "2025-03-21",
+          "updatedAt": "2025-05-05T02:34:12.677Z"
+        },
+        {
+          "id": "NOTE000047",
+          "category": "Client Contact",
+          "content": "Phone contact made. Client provided additional documentation.",
+          "createdAt": "2025-04-30",
+          "updatedAt": "2025-09-03T18:04:37.085Z"
+        },
+        {
+          "id": "NOTE000049",
+          "category": "Client Contact",
+          "content": "Phone contact made. Client provided additional documentation.",
+          "createdAt": "2025-06-09",
+          "updatedAt": "2025-07-27T20:14:25.705Z"
+        }
+      ],
+      "createdDate": "2024-06-08",
+      "updatedDate": "2025-09-17T02:09:52.506Z"
+    },
+    {
+      "id": "CASE000015",
+      "mcn": "MCN888176",
+      "applicationDate": "2025-04-06T05:43:28.609Z",
+      "caseType": "Medicaid Application",
+      "personId": "PER000015",
+      "spouseId": "",
+      "status": "Review",
+      "description": "Senior Services case for comprehensive services and support",
+      "priority": false,
+      "livingArrangement": "Transitional Housing",
+      "withWaiver": false,
+      "admissionDate": "2025-04-06T05:43:28.609Z",
+      "organizationId": "Eastern Area Services",
+      "authorizedReps": [],
+      "retroRequested": "",
+      "financials": {
+        "resources": [
+          {
+            "id": "FIN000071",
+            "description": "Vehicle (Estimated Value)",
+            "amount": 18954.36,
+            "location": "First National Bank",
+            "accountNumber": "****7866",
+            "verificationStatus": "AVS Pending",
+            "owner": "Client",
+            "dateAdded": "2024-12-06",
+            "createdAt": "2024-12-06",
+            "updatedAt": "2025-06-25T11:51:28.044Z"
+          }
+        ],
+        "income": [
+          {
+            "id": "FIN000072",
+            "description": "Employment Income",
+            "amount": 3147.74,
+            "frequency": "monthly",
+            "location": "First National Bank",
+            "verificationStatus": "Verified",
+            "verificationSource": "Pay Stub",
+            "notes": "Additional details for employment income",
+            "owner": "Client",
+            "dateAdded": "2025-03-18",
+            "createdAt": "2025-03-18",
+            "updatedAt": "2025-04-02T16:54:55.462Z"
+          }
+        ],
+        "expenses": [
+          {
+            "id": "FIN000073",
+            "description": "Transportation/Gas",
+            "amount": 193.3,
+            "frequency": "monthly",
+            "location": "ABC Company",
+            "verificationStatus": "Needs VR",
+            "owner": "Client",
+            "dateAdded": "2024-10-29",
+            "createdAt": "2024-10-29",
+            "updatedAt": "2025-07-29T00:15:04.292Z"
+          },
+          {
+            "id": "FIN000074",
+            "description": "Rent/Mortgage",
+            "amount": 1401.05,
+            "frequency": "monthly",
+            "location": "Service Provider",
+            "verificationStatus": "AVS Pending",
+            "notes": "Additional details for rent/mortgage",
+            "owner": "Client",
+            "dateAdded": "2025-02-01",
+            "createdAt": "2025-02-01",
+            "updatedAt": "2025-04-13T00:23:52.926Z"
+          },
+          {
+            "id": "FIN000075",
+            "description": "Groceries/Food",
+            "amount": 451.06,
+            "frequency": "monthly",
+            "location": "First National Bank",
+            "verificationStatus": "Verified",
+            "verificationSource": "Bank Statement",
+            "owner": "Client",
+            "dateAdded": "2025-09-15",
+            "createdAt": "2025-09-15",
+            "updatedAt": "2025-09-16T16:46:50.680Z"
+          }
+        ]
+      },
+      "notes": [
+        {
+          "id": "NOTE000053",
+          "category": "Follow-up",
+          "content": "Service plan updated based on changing client needs and circumstances.",
+          "createdAt": "2024-09-22",
+          "updatedAt": "2025-07-04T03:31:25.098Z"
+        },
+        {
+          "id": "NOTE000055",
+          "category": "General",
+          "content": "Initial case assessment completed. Client appears eligible for services.",
+          "createdAt": "2024-10-16",
+          "updatedAt": "2025-04-27T04:19:17.592Z"
+        },
+        {
+          "id": "NOTE000052",
+          "category": "VR Update",
+          "content": "Bank statements received and reviewed. Financial verification complete.",
+          "createdAt": "2024-12-05",
+          "updatedAt": "2025-08-10T16:09:26.963Z"
+        },
+        {
+          "id": "NOTE000054",
+          "category": "General",
+          "content": "Initial case assessment completed. Client appears eligible for services.",
+          "createdAt": "2024-12-19",
+          "updatedAt": "2025-05-02T10:51:31.880Z"
+        },
+        {
+          "id": "NOTE000051",
+          "category": "VR Update",
+          "content": "Verification request sent to employer for income confirmation.",
+          "createdAt": "2025-08-15",
+          "updatedAt": "2025-09-03T22:19:15.771Z"
+        }
+      ],
+      "createdDate": "2024-08-29",
+      "updatedDate": "2025-08-26T12:38:48.512Z"
+    }
+  ],
+  "nextPersonId": 17,
+  "nextCaseId": 16,
+  "nextFinancialItemId": 76,
+  "nextNoteId": 56,
+  "showAllCases": true,
+  "showAllContacts": true,
+  "showAllPeople": true,
+  "showAllOrganizations": true,
+  "caseSortReversed": false,
+  "priorityFilterActive": false,
+  "contacts": [],
+  "vrTemplates": [],
+  "nextVrTemplateId": 1,
+  "vrCategories": [],
+  "vrRequests": [],
+  "nextVrRequestId": 1,
+  "vrDraftItems": [],
+  "activeCase": null,
+  "isDataLoaded": true,
+  "meta": {
+    "source": "Generated seed data - 15 cases created on 2025-09-20T03:08:20.368Z"
+  }
+}

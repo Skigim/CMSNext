@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card";
 import { Button } from "./ui/button";
 import { ImportModal } from "./ImportModal";
+import { SeedDataGenerator } from "./SeedDataGenerator";
 import { Badge } from "./ui/badge";
 import { Separator } from "./ui/separator";
 import { FileStorageSettings } from "./FileStorageSettings";
@@ -28,9 +29,10 @@ interface SettingsProps {
   cases: CaseDisplay[];
   onImportCases?: (importedCases: CaseDisplay[]) => void;
   onDataPurged?: () => void;
+  onDataGenerated?: () => void; // Add this for seed data integration
 }
 
-export function Settings({ cases, onImportCases, onDataPurged }: SettingsProps) {
+export function Settings({ cases, onImportCases, onDataPurged, onDataGenerated }: SettingsProps) {
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const [isPurging, setIsPurging] = useState(false);
   const { disconnect } = useFileStorage();
@@ -131,6 +133,9 @@ export function Settings({ cases, onImportCases, onDataPurged }: SettingsProps) 
 
       {/* File Storage Section */}
       <FileStorageSettings />
+
+      {/* Seed Data Generation Section */}
+      <SeedDataGenerator onDataGenerated={onDataGenerated} />
 
       {/* Data Management Section */}
       <Card>
