@@ -308,8 +308,8 @@ const AppContent = memo(function AppContent({
   }, [currentView]);
 
   const handleSaveCase = useCallback(async (caseData: { person: NewPersonData; caseRecord: NewCaseRecordData }) => {
-    const dataAPI = getDataAPI();
-    if (!dataAPI) {
+    const dataManager = useDataManagerSafe();
+    if (!dataManager) {
       const errorMsg = 'Data storage is not available. Please check your file system connection.';
       setError(errorMsg);
       toast.error(errorMsg);
@@ -322,8 +322,10 @@ const AppContent = memo(function AppContent({
     try {
       setError(null);
       if (editingCase) {
-        // Update existing case
-        const updatedCase = await dataAPI.updateCompleteCase(editingCase.id, caseData);
+        // Update existing case using DataManager
+        const updatedCase = await dataManager.updateCompleteCase(editingCase.id, caseData);
+        
+        // Update local state to reflect changes immediately
         setCases(prevCases => 
           prevCases.map(c => 
             c.id === editingCase.id ? updatedCase : c
@@ -340,8 +342,8 @@ const AppContent = memo(function AppContent({
           setCurrentView(formState.previousView);
         }
       } else {
-        // Create new case - always go to list after creating
-        const newCase = await dataAPI.createCompleteCase(caseData);
+        // Create new case using DataManager - always go to list after creating
+        const newCase = await dataManager.createCompleteCase(caseData);
         setCases(prevCases => [...prevCases, newCase]);
         
         toast.success(`Case for ${caseData.person.firstName} ${caseData.person.lastName} created successfully`, { id: toastId });
@@ -350,15 +352,14 @@ const AppContent = memo(function AppContent({
       setEditingCase(null);
       setFormState({ previousView: 'list' });
       
-      // Notify file storage of data change
-      safeNotifyFileStorageChange();
+      // DataManager handles file system persistence automatically
     } catch (err) {
       console.error('Failed to save case:', err);
       const errorMsg = `Failed to ${isEditing ? 'update' : 'create'} case. Please try again.`;
       setError(errorMsg);
       toast.error(errorMsg, { id: toastId });
     }
-  }, [editingCase, formState, safeNotifyFileStorageChange]);
+  }, [editingCase, formState, useDataManagerSafe]);
 
   const handleCancelForm = useCallback(() => {
     // Return to the previous view when cancelling the form
@@ -397,9 +398,9 @@ const AppContent = memo(function AppContent({
   };
 
   const handleDeleteItem = async (category: CaseCategory, itemId: string) => {
-    const dataAPI = getDataAPI();
-    if (!selectedCase || !dataAPI) {
-      if (!dataAPI) {
+    const dataManager = useDataManagerSafe();
+    if (!selectedCase || !dataManager) {
+      if (!dataManager) {
         const errorMsg = 'Data storage is not available. Please check your connection.';
         setError(errorMsg);
         toast.error(errorMsg);
@@ -409,7 +410,7 @@ const AppContent = memo(function AppContent({
     
     try {
       setError(null);
-      const updatedCase = await dataAPI.deleteItem(selectedCase.id, category, itemId);
+      const updatedCase = await dataManager.deleteItem(selectedCase.id, category, itemId);
       setCases(prevCases =>
         prevCases.map(c =>
           c.id === selectedCase.id ? updatedCase : c
@@ -418,8 +419,7 @@ const AppContent = memo(function AppContent({
       
       toast.success(`${category.charAt(0).toUpperCase() + category.slice(1)} item deleted successfully`);
       
-      // Notify file storage of data change
-      safeNotifyFileStorageChange();
+      // DataManager handles file system persistence automatically
     } catch (err) {
       console.error('Failed to delete item:', err);
       const errorMsg = 'Failed to delete item. Please try again.';
@@ -454,12 +454,12 @@ const AppContent = memo(function AppContent({
   };
 
   const handleDeleteNote = async (noteId: string) => {
-    const dataAPI = getDataAPI();
-    if (!selectedCase || !dataAPI) return;
+    const dataManager = useDataManagerSafe();
+    if (!selectedCase || !dataManager) return;
     
     try {
       setError(null);
-      const updatedCase = await dataAPI.deleteNote(selectedCase.id, noteId);
+      const updatedCase = await dataManager.deleteNote(selectedCase.id, noteId);
       setCases(prevCases =>
         prevCases.map(c =>
           c.id === selectedCase.id ? updatedCase : c
@@ -468,8 +468,7 @@ const AppContent = memo(function AppContent({
       
       toast.success("Note deleted successfully");
       
-      // Notify file storage of data change
-      safeNotifyFileStorageChange();
+      // DataManager handles file system persistence automatically
     } catch (err) {
       console.error('Failed to delete note:', err);
       const errorMsg = 'Failed to delete note. Please try again.';
@@ -479,8 +478,8 @@ const AppContent = memo(function AppContent({
   };
 
   const handleDeleteCase = async (caseId: string) => {
-    const dataAPI = getDataAPI();
-    if (!dataAPI) return;
+    const dataManager = useDataManagerSafe();
+    if (!dataManager) return;
     
     // Find the case to get the person's name for the toast
     const caseToDelete = cases.find(c => c.id === caseId);
@@ -488,7 +487,7 @@ const AppContent = memo(function AppContent({
     
     try {
       setError(null);
-      await dataAPI.deleteCase(caseId);
+      await dataManager.deleteCase(caseId);
       
       // Remove the case from the local state
       setCases(prevCases => prevCases.filter(c => c.id !== caseId));
@@ -501,8 +500,7 @@ const AppContent = memo(function AppContent({
       
       toast.success(`${personName} case deleted successfully`);
       
-      // Notify file storage of data change
-      safeNotifyFileStorageChange();
+      // DataManager handles file system persistence automatically
     } catch (err) {
       console.error('Failed to delete case:', err);
       const errorMsg = 'Failed to delete case. Please try again.';
@@ -512,8 +510,8 @@ const AppContent = memo(function AppContent({
   };
 
   const handleSaveNote = async (noteData: NewNoteData) => {
-    const dataAPI = getDataAPI();
-    if (!noteForm.caseId || !dataAPI) return;
+    const dataManager = useDataManagerSafe();
+    if (!noteForm.caseId || !dataManager) return;
 
     const isEditing = !!noteForm.editingNote;
 
@@ -523,11 +521,11 @@ const AppContent = memo(function AppContent({
       
       if (noteForm.editingNote) {
         // Update existing note
-        updatedCase = await dataAPI.updateNote(noteForm.caseId, noteForm.editingNote.id, noteData);
+        updatedCase = await dataManager.updateNote(noteForm.caseId, noteForm.editingNote.id, noteData);
         toast.success("Note updated successfully");
       } else {
         // Add new note
-        updatedCase = await dataAPI.addNote(noteForm.caseId, noteData);
+        updatedCase = await dataManager.addNote(noteForm.caseId, noteData);
         toast.success("Note added successfully");
       }
       
@@ -539,8 +537,7 @@ const AppContent = memo(function AppContent({
       
       setNoteForm({ isOpen: false });
       
-      // Notify file storage of data change
-      safeNotifyFileStorageChange();
+      // DataManager handles file system persistence automatically
     } catch (err) {
       console.error('Failed to save note:', err);
       const errorMsg = `Failed to ${isEditing ? 'update' : 'add'} note. Please try again.`;

@@ -7,19 +7,11 @@ import { Textarea } from "./ui/textarea";
 import { Checkbox } from "./ui/checkbox";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "./ui/dialog";
 import { CaseDisplay, FinancialItem, CaseCategory } from "../types/case";
-import { fileDataProvider } from "../utils/fileDataProvider";
+import { useDataManagerSafe } from "../contexts/DataManagerContext";
 import { AlertCircle } from "lucide-react";
 import { toast } from "sonner";
 
-// Always use file storage - filesystem only
-const getDataAPI = () => fileDataProvider.getAPI();
 
-// File storage notification
-const notifyFileStorageChange = () => {
-  if ((window as any).fileStorageNotifyChange) {
-    (window as any).fileStorageNotifyChange();
-  }
-};
 
 interface FinancialItemModalProps {
   isOpen: boolean;
@@ -141,9 +133,9 @@ export function FinancialItemModal({
   const handleSave = async () => {
     if (!validateForm()) return;
 
-    // Check if data API is available - get fresh reference each time
-    const dataAPI = getDataAPI();
-    if (!dataAPI) {
+    // Check if data manager is available
+    const dataManager = useDataManagerSafe();
+    if (!dataManager) {
       setErrors({ general: 'Data storage is not available. Please check your connection.' });
       return;
     }
@@ -154,25 +146,25 @@ export function FinancialItemModal({
         caseId: caseData.id,
         itemType,
         itemId: formData.id,
-        dataAPIType: dataAPI.constructor.name
+        dataManagerType: 'DataManager'
       });
       
-      // Check if the case exists in the data provider
+      // Check if the case exists in the data manager
       try {
-        const allCases = await dataAPI.getAllCases();
-        const caseExists = allCases.find(c => c.id === caseData.id);
+        const allCases = await dataManager.getAllCases();
+        const caseExists = allCases.find((c: CaseDisplay) => c.id === caseData.id);
         
         if (!caseExists) {
-          console.error('❌ Case not found in data provider:', {
+          console.error('❌ Case not found in data manager:', {
             requestedCaseId: caseData.id,
-            availableCaseIds: allCases.map(c => c.id),
+            availableCaseIds: allCases.map((c: CaseDisplay) => c.id),
             totalCases: allCases.length
           });
           setErrors({ general: `Case not found in data storage. Case ID: ${caseData.id}` });
           return;
         }
         
-        console.log('✅ Case found in data provider:', caseExists.name);
+        console.log('✅ Case found in data manager:', caseExists.name);
       } catch (checkError) {
         console.error('❌ Error checking case existence:', checkError);
         setErrors({ general: 'Error verifying case data. Please try again.' });
@@ -199,24 +191,23 @@ export function FinancialItemModal({
       
       if (isEditing && formData.id) {
         // Update existing item
-        updatedCase = await dataAPI.updateItem(caseData.id, itemType, formData.id, itemData);
+        updatedCase = await dataManager.updateItem(caseData.id, itemType, formData.id, itemData);
         toast.success(`${itemType.charAt(0).toUpperCase() + itemType.slice(1)} item updated successfully`);
       } else {
         // Add new item
         console.log('🔍 Adding financial item:', {
           caseId: caseData.id,
           itemType,
-          dataAPIType: dataAPI.constructor.name
+          dataManagerType: 'DataManager'
         });
         
-        updatedCase = await dataAPI.addItem(caseData.id, itemType, itemData);
+        updatedCase = await dataManager.addItem(caseData.id, itemType, itemData);
         toast.success(`${itemType.charAt(0).toUpperCase() + itemType.slice(1)} item added successfully`);
       }
 
       onUpdateCase(updatedCase);
 
-      // Notify file storage of data change
-      notifyFileStorageChange();
+      // DataManager handles file system persistence automatically
 
       if (addAnother && !isEditing) {
         // Reset form for another item
