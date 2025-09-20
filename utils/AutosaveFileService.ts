@@ -344,7 +344,7 @@ class AutosaveFileService {
       return true;
     } catch (err) {
       this.errorCallback(
-        `Error writing file \"${this.fileName}\": ${err instanceof Error ? err.message : 'Unknown error'}`,
+        `Error writing file "${this.fileName}": ${err instanceof Error ? err.message : 'Unknown error'}`,
         'error',
       );
       return false;
@@ -375,7 +375,7 @@ class AutosaveFileService {
       return true;
     } catch (err) {
       this.errorCallback(
-        `Error writing file \"${fileName}\": ${err instanceof Error ? err.message : 'Unknown error'}`,
+        `Error writing file "${fileName}": ${err instanceof Error ? err.message : 'Unknown error'}`,
         'error',
       );
       return false;
@@ -416,7 +416,7 @@ class AutosaveFileService {
         return null;
       } else {
         this.errorCallback(
-          `Error reading file \"${this.fileName}\": ${err instanceof Error ? err.message : 'Unknown error'}`,
+          `Error reading file "${this.fileName}": ${err instanceof Error ? err.message : 'Unknown error'}`,
           'error',
         );
         throw err;
@@ -506,7 +506,7 @@ class AutosaveFileService {
       if (err instanceof Error && err.name === 'NotFoundError') {
         return null;
       } else {
-        console.error(`[AutosaveFileService] Error reading file \"${fileName}\":`, err);
+        console.error(`[AutosaveFileService] Error reading file "${fileName}":`, err);
         throw err;
       }
     }
@@ -528,7 +528,7 @@ class AutosaveFileService {
         if (permission === 'granted') {
           // Permission still exists but we need explicit user action to connect
           this.state.permissionStatus = 'granted'; // We have permission
-          this.updateStatus('waiting', 'Ready to connect - click \"Connect to Existing\"');
+          this.updateStatus('waiting', 'Ready to connect - click "Connect to Existing"');
           
           console.log('[AutosaveFileService] Directory handle restored with granted permission - ready to connect');
         } else {

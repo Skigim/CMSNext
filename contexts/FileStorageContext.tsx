@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
 import AutosaveFileService from '../utils/AutosaveFileService';
 import { setFileService } from '../utils/fileServiceProvider';
 
@@ -90,7 +90,7 @@ export function FileStorageProvider({
       fileService.destroy();
       setFileService(null);
     };
-  }, [enabled]); // FIXED: Removed getDataFunction from dependencies
+  }, [enabled, hasExplicitlyConnected]); // Include hasExplicitlyConnected since it's used in statusCallback
 
   // Handle data provider setup separately to avoid recreating service
   useEffect(() => {
@@ -189,11 +189,11 @@ export function FileStorageProvider({
     return await service.loadExistingData();
   };
 
-  const notifyDataChange = () => {
+  const notifyDataChange = useCallback(() => {
     if (service) {
       service.notifyDataChange();
     }
-  };
+  }, [service]);
 
   // Expose notifyDataChange globally for easy access
   useEffect(() => {
@@ -203,7 +203,7 @@ export function FileStorageProvider({
     return () => {
       delete (window as any).fileStorageNotifyChange;
     };
-  }, [service]);
+  }, [service, notifyDataChange]);
 
   const contextValue: FileStorageContextType = {
     service,

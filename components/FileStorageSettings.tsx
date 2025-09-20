@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
@@ -62,15 +62,7 @@ export function FileStorageSettings() {
   }, [service]);
 
   // Load available files when connected
-  useEffect(() => {
-    if (isConnected) {
-      loadAvailableFiles();
-    } else {
-      setAvailableFiles([]);
-    }
-  }, [isConnected]);
-
-  const loadAvailableFiles = async () => {
+  const loadAvailableFiles = useCallback(async () => {
     setIsLoadingFiles(true);
     try {
       const files = await listDataFiles();
@@ -86,7 +78,15 @@ export function FileStorageSettings() {
     } finally {
       setIsLoadingFiles(false);
     }
-  };
+  }, [listDataFiles]);
+
+  useEffect(() => {
+    if (isConnected) {
+      loadAvailableFiles();
+    } else {
+      setAvailableFiles([]);
+    }
+  }, [isConnected, loadAvailableFiles]);
 
   const handleConnect = async () => {
     setIsConnecting(true);
