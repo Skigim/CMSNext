@@ -150,5 +150,6 @@ const NewComponent = memo(function NewComponent({ data, onUpdate }) {
 - TypeScript strict mode enabled
 - Tailwind CSS v4 with custom design tokens
 - No additional build steps or server setup required
+- Do NOT launch dev servers without first checking if a usable server is already running
 
 When implementing new features, prioritize file system integration, maintain the existing architectural patterns, and ensure all data operations flow through the established data provider system.

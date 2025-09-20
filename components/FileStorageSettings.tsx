@@ -23,6 +23,7 @@ import {
 } from 'lucide-react';
 import { useFileStorage } from '../contexts/FileStorageContext';
 import { toast } from "sonner";
+import { withFileSystemErrorBoundary } from './ErrorBoundaryHOC';
 
 export function FileStorageSettings() {
   const { 
@@ -484,3 +485,6 @@ export function FileStorageSettings() {
     </Card>
   );
 }
+
+// Export with error boundary for file system operations
+export default withFileSystemErrorBoundary(FileStorageSettings);

@@ -1,5 +1,6 @@
 import React, { Component, ReactNode } from 'react';
 import { toast } from 'sonner';
+import { errorReporting } from '../utils/errorReporting';
 
 interface ErrorBoundaryProps {
   children: ReactNode;
@@ -44,6 +45,17 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
     
     this.setState({
       errorInfo,
+    });
+
+    // Report error to error reporting service
+    errorReporting.reportError(error, {
+      componentStack: errorInfo.componentStack || undefined,
+      context: {
+        type: 'react-error-boundary',
+        componentStack: errorInfo.componentStack || undefined,
+      },
+      severity: 'high',
+      tags: ['error-boundary', 'react'],
     });
 
     // Call custom error handler if provided

@@ -1,5 +1,6 @@
 import React, { Component, ReactNode } from 'react';
 import { toast } from 'sonner';
+import { errorReporting } from '../utils/errorReporting';
 
 interface FileSystemErrorBoundaryProps {
   children: ReactNode;
@@ -76,6 +77,20 @@ export class FileSystemErrorBoundary extends Component<
     
     this.setState({
       errorInfo,
+    });
+
+    // Report error to error reporting service
+    errorReporting.reportError(error, {
+      componentStack: errorInfo.componentStack || undefined,
+      context: {
+        type: 'filesystem-error-boundary',
+        isFileSystemError: this.state.isFileSystemError,
+        componentStack: errorInfo.componentStack || undefined,
+      },
+      severity: this.state.isFileSystemError ? 'medium' : 'high',
+      tags: this.state.isFileSystemError 
+        ? ['filesystem', 'error-boundary', 'user-action']
+        : ['error-boundary', 'react'],
     });
 
     // Call custom error handler if provided

@@ -12,6 +12,7 @@ import { Separator } from "./ui/separator";
 import { ScrollArea } from "./ui/scroll-area";
 import { CaseDisplay, NewPersonData, NewCaseRecordData } from "../types/case";
 import { ArrowLeft, User, FileText, Save, X, Plus, Minus } from "lucide-react";
+import { withFormErrorBoundary } from "./ErrorBoundaryHOC";
 
 interface CaseFormProps {
   case?: CaseDisplay;
@@ -779,3 +780,6 @@ export function CaseForm({ case: existingCase, onSave, onCancel }: CaseFormProps
     </div>
   );
 }
+
+// Export with error boundary for form operations
+export default withFormErrorBoundary(CaseForm);

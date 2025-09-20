@@ -5,9 +5,11 @@ import { ImportModal } from "./ImportModal";
 import { SeedDataGenerator } from "./SeedDataGenerator";
 import { Badge } from "./ui/badge";
 import { Separator } from "./ui/separator";
-import { FileStorageSettings } from "./FileStorageSettings";
+import FileStorageSettings from "./FileStorageSettings";
 import { FileStorageDiagnostics } from "./FileStorageDiagnostics";
 import { ErrorBoundaryTest } from "./ErrorBoundaryTest";
+import { ErrorReportViewer } from "./ErrorReportViewer";
+import { FeedbackPanel } from "./ErrorFeedbackForm";
 import { useFileStorage } from "../contexts/FileStorageContext";
 import { useTheme } from "../contexts/ThemeContext";
 import { 
@@ -141,6 +143,12 @@ export function Settings({ cases, onImportCases, onDataPurged, onDataGenerated }
 
       {/* Error Boundary Testing (Development Only) */}
       <ErrorBoundaryTest />
+
+      {/* Error Reports (Development Only) */}
+      <ErrorReportViewer />
+
+      {/* User Feedback Collection (Development Only) */}
+      <FeedbackPanel />
 
       {/* Seed Data Generation Section */}
       <SeedDataGenerator onDataGenerated={onDataGenerated} />

@@ -5,6 +5,7 @@ import { CaseSection } from "./CaseSection";
 import { NotesSection } from "./NotesSection";
 import { CaseDisplay, CaseCategory } from "../types/case";
 import { ArrowLeft, Edit2, Trash2 } from "lucide-react";
+import { withDataErrorBoundary } from "./ErrorBoundaryHOC";
 
 interface CaseDetailsProps {
   case: CaseDisplay;
@@ -157,3 +158,6 @@ export function CaseDetails({
     </div>
   );
 }
+
+// Export with error boundary for data operations
+export default withDataErrorBoundary(CaseDetails);
