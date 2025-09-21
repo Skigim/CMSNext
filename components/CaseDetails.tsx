@@ -1,10 +1,12 @@
+import { useState } from "react";
 import { Button } from "./ui/button";
 import { Badge } from "./ui/badge";
+import { ToggleGroup, ToggleGroupItem } from "./ui/toggle-group";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "./ui/alert-dialog";
 import { CaseSection } from "./CaseSection";
 import { NotesSection } from "./NotesSection";
 import { CaseDisplay, CaseCategory } from "../types/case";
-import { ArrowLeft, Edit2, Trash2 } from "lucide-react";
+import { ArrowLeft, Edit2, Trash2, LayoutGrid, Table } from "lucide-react";
 import { withDataErrorBoundary } from "./ErrorBoundaryHOC";
 
 interface CaseDetailsProps {
@@ -18,7 +20,6 @@ interface CaseDetailsProps {
   onAddNote: () => void;
   onEditNote: (noteId: string) => void;
   onDeleteNote: (noteId: string) => void;
-  financialView?: 'cards' | 'table';
 }
 
 export function CaseDetails({ 
@@ -31,9 +32,9 @@ export function CaseDetails({
   onDeleteItem,
   onAddNote,
   onEditNote,
-  onDeleteNote,
-  financialView = 'cards'
+  onDeleteNote
 }: CaseDetailsProps) {
+  const [financialView, setFinancialView] = useState<'cards' | 'table'>('cards');
   const getStatusColor = (status: CaseDisplay['status']) => {
     switch (status) {
       case 'In Progress':
@@ -113,9 +114,24 @@ export function CaseDetails({
             <Button>
               Generate Summary
             </Button>
-            <Button variant="outline">
-              Open VR App
-            </Button>
+            <ToggleGroup 
+              type="single" 
+              value={financialView}
+              onValueChange={(value) => {
+                if (value) setFinancialView(value as 'cards' | 'table');
+              }}
+              variant="outline"
+              size="sm"
+            >
+              <ToggleGroupItem value="cards" aria-label="Card view">
+                <LayoutGrid className="h-4 w-4 mr-2" />
+                Cards
+              </ToggleGroupItem>
+              <ToggleGroupItem value="table" aria-label="Table view">
+                <Table className="h-4 w-4 mr-2" />
+                Table
+              </ToggleGroupItem>
+            </ToggleGroup>
           </div>
         </div>
       </div>

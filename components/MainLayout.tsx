@@ -10,8 +10,6 @@ interface MainLayoutProps {
   onNavigate: (view: string) => void;
   onNewCase: () => void;
   breadcrumbTitle?: string;
-  financialView?: 'cards' | 'table';
-  onFinancialViewChange?: (view: 'cards' | 'table') => void;
 }
 
 export function MainLayout({ 
@@ -19,9 +17,7 @@ export function MainLayout({
   currentView, 
   onNavigate, 
   onNewCase,
-  breadcrumbTitle,
-  financialView,
-  onFinancialViewChange 
+  breadcrumbTitle
 }: MainLayoutProps) {
   const getBreadcrumbTitle = () => {
     if (breadcrumbTitle) return breadcrumbTitle;
@@ -48,8 +44,6 @@ export function MainLayout({
         currentView={currentView}
         onNavigate={onNavigate}
         onNewCase={onNewCase}
-        financialView={financialView}
-        onFinancialViewChange={onFinancialViewChange}
       />
       <SidebarInset>
         <header className="flex h-16 shrink-0 items-center gap-2 border-b">
