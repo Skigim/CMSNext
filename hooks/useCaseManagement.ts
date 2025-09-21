@@ -11,7 +11,7 @@ interface UseCaseManagementReturn {
   hasLoadedData: boolean;
   
   // Actions
-  loadCases: () => Promise<void>;
+  loadCases: () => Promise<CaseDisplay[]>;
   saveCase: (caseData: { person: NewPersonData; caseRecord: NewCaseRecordData }, editingCase?: CaseDisplay | null) => Promise<void>;
   deleteCase: (caseId: string) => Promise<void>;
   saveNote: (noteData: NewNoteData, caseId: string, editingNote?: { id: string } | null) => Promise<CaseDisplay | null>;
@@ -43,12 +43,12 @@ export function useCaseManagement(): UseCaseManagementReturn {
   /**
    * Load all cases from file system via DataManager
    */
-  const loadCases = useCallback(async () => {
+  const loadCases = useCallback(async (): Promise<CaseDisplay[]> => {
     if (!dataManager) {
       const errorMsg = 'Data storage is not available. Please connect to a folder first.';
       setError(errorMsg);
       toast.error(errorMsg);
-      return;
+      return [];
     }
 
     try {
@@ -64,17 +64,26 @@ export function useCaseManagement(): UseCaseManagementReturn {
       
       if (data.length > 0) {
         (window as any).fileStorageSessionHadData = true;
-        toast.success(`Loaded ${data.length} cases successfully`);
+        // Don't show toast here - let the connection flow handle user feedback
+        console.log(`[DataManager] Successfully loaded ${data.length} cases`);
       } else {
-        toast.success(`Connected successfully - ready to start fresh`);
+        // Only show toast for empty state if not during connection flow
+        if (!(window as any).fileStorageInConnectionFlow) {
+          toast.success(`Connected successfully - ready to start fresh`, {
+            id: 'connected-empty',
+            duration: 3000
+          });
+        }
+        console.log(`[DataManager] Successfully loaded ${data.length} cases (empty)`);
       }
       
-      console.log(`[DataManager] Successfully loaded ${data.length} cases`);
+      return data; // Return the loaded data
     } catch (err) {
       console.error('Failed to load cases:', err);
       const errorMsg = 'Failed to load cases. Please try again.';
       setError(errorMsg);
       toast.error(errorMsg);
+      return []; // Return empty array on error
     } finally {
       setLoading(false);
     }

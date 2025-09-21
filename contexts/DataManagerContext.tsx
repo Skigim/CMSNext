@@ -18,7 +18,7 @@ export function DataManagerProvider({ children }: DataManagerProviderProps) {
   // Memoize DataManager creation to prevent recreation on every render
   const dataManager = useMemo(() => {
     if (!service) return null;
-    console.log('[DataManagerProvider] Creating new DataManager instance');
+    console.log('[DataManagerProvider] Creating new DataManager instance for service running:', service?.getStatus?.()?.isRunning || false);
     return new DataManager({ fileService: service });
   }, [service]); // Only recreate when service changes
 

@@ -146,6 +146,7 @@ const AppContent = memo(function AppContent() {
       // Set flags to prevent any interference from automatic processing
       window.location.hash = '#connect-to-existing';
       (window as any).fileStorageInSetupPhase = true;
+      (window as any).fileStorageInConnectionFlow = true;
       
       // Temporarily disable autosave during connect flow
       if (!dataManager) {
@@ -190,18 +191,17 @@ const AppContent = memo(function AppContent() {
       
       // Load cases using DataManager which reads from file system
       console.log('[App] Calling loadCases()...');
-      await loadCases();
+      const loadedCases = await loadCases();
       console.log('[App] loadCases() completed');
       
-      // Verify the data was actually loaded
-      const loadedCases = await dataManager.getAllCases();
+      // Use the cases data returned from loadCases()
       console.log(`[App] Initial file data: ${actualData?.cases?.length || actualData?.caseRecords?.length || 0} records`);
-      console.log(`[App] DataManager loaded: ${loadedCases.length} cases`);
+      console.log(`[App] Cases loaded by DataManager: ${loadedCases.length} cases`);
       
       if (loadedCases.length > 0) {
         // We have actual data from the file
         console.log('[App] Setting cases and hasLoadedData=true for non-empty data');
-        setCases(loadedCases);
+        // Cases are already set by loadCases(), no need to set again
         setHasLoadedData(true);
         setShowConnectModal(false);
         
@@ -209,7 +209,10 @@ const AppContent = memo(function AppContent() {
         (window as any).fileStorageDataBaseline = true;
         (window as any).fileStorageSessionHadData = true;
         
-        toast.success(`Connected and loaded ${loadedCases.length} cases`);
+        toast.success(`Connected and loaded ${loadedCases.length} cases`, {
+          id: 'connection-success',
+          duration: 3000
+        });
       } else {
         // No data in file - start fresh
         console.log('[App] Setting empty cases and hasLoadedData=true for empty data');
@@ -220,10 +223,18 @@ const AppContent = memo(function AppContent() {
         // Set baseline - we've explicitly loaded empty data
         (window as any).fileStorageDataBaseline = true;
         
-        toast.success("Connected successfully - ready to start fresh");
+        toast.success("Connected successfully - ready to start fresh", {
+          id: 'connection-empty',
+          duration: 3000
+        });
       }
       
       console.log('[App] handleConnectToExisting completed successfully');
+      
+      // Clear connection flow flags
+      (window as any).fileStorageInConnectionFlow = false;
+      (window as any).fileStorageInSetupPhase = false;
+      
       return true;
     } catch (error) {
       console.error('Failed to connect and load data:', error);
@@ -249,8 +260,9 @@ const AppContent = memo(function AppContent() {
       toast.error(errorMsg);
       return false;
     } finally {
-      // Clear setup phase flag
+      // Clear setup phase flags
       (window as any).fileStorageInSetupPhase = false;
+      (window as any).fileStorageInConnectionFlow = false;
       
       // Re-enable autosave if it was running before
       if (service && !service.getStatus().isRunning) {
@@ -748,33 +760,40 @@ const AppContent = memo(function AppContent() {
 });
 
 export default function App() {
+  console.log('[App] Rendering main App component');
+  
+  // Memoize callbacks to prevent FileStorageProvider prop changes
+  const getDataFunction = useCallback(() => {
+    // Skip during connect flow to prevent empty data from being saved
+    if (window.location.hash === '#connect-to-existing') {
+      return null;
+    }
+    
+    // Don't save if we're still in loading/setup phase
+    if ((window as any).fileStorageInSetupPhase) {
+      return null;
+    }
+    
+    // DataManager is stateless - we'll use the React state from useCaseManagement
+    // This is passed via the context and accessed through the cases state
+    // The FileStorageProvider will get data through onDataLoaded callback instead
+    return null; // DataManager handles its own file operations
+  }, []);
+
+  const handleDataLoaded = useCallback((fileData: any) => {
+    // Use the global function set by AppContent
+    if ((window as any).handleFileDataLoaded) {
+      (window as any).handleFileDataLoaded(fileData);
+    }
+  }, []);
+
   return (
     <ErrorBoundary>
       <ThemeProvider>
         <FileSystemErrorBoundary>
           <FileStorageProvider 
-            getDataFunction={() => {
-              // Skip during connect flow to prevent empty data from being saved
-              if (window.location.hash === '#connect-to-existing') {
-                return null;
-              }
-              
-              // Don't save if we're still in loading/setup phase
-              if ((window as any).fileStorageInSetupPhase) {
-                return null;
-              }
-              
-              // DataManager is stateless - we'll use the React state from useCaseManagement
-              // This is passed via the context and accessed through the cases state
-              // The FileStorageProvider will get data through onDataLoaded callback instead
-              return null; // DataManager handles its own file operations
-            }}
-            onDataLoaded={(fileData: any) => {
-              // Use the global function set by AppContent
-              if ((window as any).handleFileDataLoaded) {
-                (window as any).handleFileDataLoaded(fileData);
-              }
-            }}
+            getDataFunction={getDataFunction}
+            onDataLoaded={handleDataLoaded}
           >
             <DataManagerProvider>
               <FileStorageIntegrator>
