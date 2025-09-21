@@ -26,21 +26,21 @@ import {
   Check
 } from "lucide-react";
 import { CaseDisplay } from "../types/case";
-import { fileDataProvider } from "../utils/fileDataProvider";
 import { toast } from "sonner";
+import { useDataManagerSafe } from "../contexts/DataManagerContext";
 
 interface SettingsProps {
   cases: CaseDisplay[];
-  onImportCases?: (importedCases: CaseDisplay[]) => void;
   onDataPurged?: () => void;
   onDataGenerated?: () => void; // Add this for seed data integration
 }
 
-export function Settings({ cases, onImportCases, onDataPurged, onDataGenerated }: SettingsProps) {
+export function Settings({ cases, onDataPurged, onDataGenerated }: SettingsProps) {
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const [isPurging, setIsPurging] = useState(false);
   const { disconnect } = useFileStorage();
   const { theme, setTheme, themeOptions } = useTheme();
+  const dataManager = useDataManagerSafe();
 
   // Helper function to safely count valid cases
   const getValidCasesCount = () => {
@@ -94,13 +94,13 @@ export function Settings({ cases, onImportCases, onDataPurged, onDataGenerated }
 
     setIsPurging(true);
     try {
-      // Use file storage API and disconnect from file storage
-      const dataAPI = fileDataProvider.getAPI();
-      if (dataAPI) {
-        await dataAPI.purgeData();
-        console.log('File storage data purged');
+      // Use DataManager to purge data
+      if (dataManager) {
+        // For now, show a message that purge needs to be implemented
+        toast.error("Data purge needs to be implemented with DataManager");
+        console.log('DataManager purge not yet implemented');
       } else {
-        console.warn('File storage API not available for purge operation');
+        console.warn('DataManager not available for purge operation');
       }
       
       // Also disconnect from the file storage to clear the directoryHandle
@@ -451,11 +451,6 @@ export function Settings({ cases, onImportCases, onDataPurged, onDataGenerated }
       <ImportModal
         isOpen={isImportModalOpen}
         onClose={() => setIsImportModalOpen(false)}
-        onImportComplete={(importedCases) => {
-          if (onImportCases) {
-            onImportCases(importedCases);
-          }
-        }}
       />
     </div>
   );

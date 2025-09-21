@@ -145,6 +145,8 @@ export function FileStorageSettings() {
       
       if (data) {
         toast.success(`Successfully loaded data from ${fileName}`, { id: toastId });
+        // Note: Data will be automatically synced through the dataLoadCallback system
+        // No page refresh needed - React state will update automatically
       } else {
         console.warn('[FileStorageSettings] No data found in file:', fileName);
         toast.error(`No data found in ${fileName}`, { id: toastId });

@@ -1,7 +1,7 @@
 import { useState, useCallback } from 'react';
 import { toast } from 'sonner';
 import { CaseDisplay, Note, NewNoteData } from '../types/case';
-import { useDataManager } from '../contexts/DataManagerContext';
+import { useDataManagerSafe } from '../contexts/DataManagerContext';
 
 interface NoteFormState {
   isOpen: boolean;
@@ -31,7 +31,7 @@ interface UseNotesReturn {
  * - Automatic persistence through DataManager
  */
 export function useNotes(): UseNotesReturn {
-  const dataManager = useDataManager(); // Throws if not available - no fallback
+  const dataManager = useDataManagerSafe(); // Returns null if not available - safe fallback
   
   const [noteForm, setNoteForm] = useState<NoteFormState>({ isOpen: false });
 
@@ -77,6 +77,11 @@ export function useNotes(): UseNotesReturn {
       return null;
     }
 
+    if (!dataManager) {
+      toast.error('Data storage is not available. Please connect to a folder first.');
+      return null;
+    }
+
     const isEditing = !!noteForm.editingNote;
 
     try {
@@ -109,6 +114,11 @@ export function useNotes(): UseNotesReturn {
    * Delete a note by ID
    */
   const deleteNote = useCallback(async (caseId: string, noteId: string): Promise<CaseDisplay | null> => {
+    if (!dataManager) {
+      toast.error('Data storage is not available. Please connect to a folder first.');
+      return null;
+    }
+
     try {
       const updatedCase = await dataManager.deleteNote(caseId, noteId);
       

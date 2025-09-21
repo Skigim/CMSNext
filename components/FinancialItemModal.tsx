@@ -48,6 +48,9 @@ export function FinancialItemModal({
   itemType,
   editingItem = null
 }: FinancialItemModalProps) {
+  // Hook must be called at top level, not inside async functions
+  const dataManager = useDataManagerSafe();
+  
   const [formData, setFormData] = useState<FormData>({
     id: null,
     description: '',
@@ -133,8 +136,7 @@ export function FinancialItemModal({
   const handleSave = async () => {
     if (!validateForm()) return;
 
-    // Check if data manager is available
-    const dataManager = useDataManagerSafe();
+    // Check if data manager is available (use the hook value from component top level)
     if (!dataManager) {
       setErrors({ general: 'Data storage is not available. Please check your connection.' });
       return;

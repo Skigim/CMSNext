@@ -50,29 +50,19 @@ export function FileStorageProvider({
   const [hasExplicitlyConnected, setHasExplicitlyConnected] = useState(false);
   const [hasStoredHandle, setHasStoredHandle] = useState(false);
 
-  // Initialize the service
+  // Initialize the service - only once per component mount
   useEffect(() => {
+    console.log('[FileStorageContext] Creating new AutosaveFileService instance');
     const fileService = new AutosaveFileService({
       fileName: 'case-tracker-data.json',
-      enabled,
+      enabled: true, // Always start enabled, we'll control it separately
       saveInterval: 120000, // 2 minutes
       debounceDelay: 5000,   // 5 seconds
       maxRetries: 3,
       statusCallback: (statusUpdate) => {
         setStatus(statusUpdate);
-        // More resilient connection state - don't disconnect on transient errors
-        // Only disconnect if we get an explicit 'denied' permission or 'disconnected' status
-        if (hasExplicitlyConnected) {
-          if (statusUpdate.status === 'disconnected' || statusUpdate.permissionStatus === 'denied') {
-            setIsConnected(false);
-            setHasExplicitlyConnected(false); // Reset explicit connection flag on disconnect
-          } else if (statusUpdate.permissionStatus === 'granted' && statusUpdate.status === 'connected') {
-            setIsConnected(true);
-          }
-          // For other states like 'waiting', 'retrying', 'error' - maintain current connection state
-        }
+        
         // Track if we have a stored handle (even if not connected)
-        // We have a stored handle if permission is granted/prompt AND status is not 'disconnected'
         setHasStoredHandle(
           (statusUpdate.permissionStatus === 'granted' || statusUpdate.permissionStatus === 'prompt') &&
           statusUpdate.status !== 'disconnected'
@@ -88,36 +78,47 @@ export function FileStorageProvider({
     setFileService(fileService);
 
     return () => {
+      console.log('[FileStorageContext] Destroying AutosaveFileService instance');
       fileService.destroy();
       setFileService(null);
     };
-  }, [enabled, hasExplicitlyConnected]); // Include hasExplicitlyConnected since it's used in statusCallback
+  }, []); // No dependencies - create only once per component mount
+
+  // Handle enabled setting separately to avoid service recreation
+  useEffect(() => {
+    if (service && enabled !== undefined) {
+      service.updateConfig({ enabled });
+      if (enabled && !service.getStatus().isRunning) {
+        service.startAutosave();
+      } else if (!enabled && service.getStatus().isRunning) {
+        service.stopAutosave();
+      }
+    }
+  }, [service, enabled]);
+
+  // Handle connection state separately to avoid service recreation
+  useEffect(() => {
+    if (!status) return;
+    
+    // Only update connection state if we have explicitly connected before
+    if (hasExplicitlyConnected) {
+      if (status.status === 'disconnected' || status.permissionStatus === 'denied') {
+        setIsConnected(false);
+        setHasExplicitlyConnected(false); // Reset explicit connection flag on disconnect
+      } else if (status.permissionStatus === 'granted' && 
+                (status.status === 'connected' || status.status === 'running' || status.status === 'waiting')) {
+        // Any of these statuses with granted permission means we're connected
+        setIsConnected(true);
+      }
+    }
+  }, [status, hasExplicitlyConnected]);
 
   // Handle data provider setup separately to avoid recreating service
   useEffect(() => {
     if (service && getDataFunction) {
-      service.initializeWithReactState(getDataFunction, (statusUpdate) => {
-        setStatus(statusUpdate);
-        // More resilient connection state - don't disconnect on transient errors
-        // Only disconnect if we get an explicit 'denied' permission or 'disconnected' status
-        if (hasExplicitlyConnected) {
-          if (statusUpdate.status === 'disconnected' || statusUpdate.permissionStatus === 'denied') {
-            setIsConnected(false);
-            setHasExplicitlyConnected(false); // Reset explicit connection flag on disconnect
-          } else if (statusUpdate.permissionStatus === 'granted' && statusUpdate.status === 'connected') {
-            setIsConnected(true);
-          }
-          // For other states like 'waiting', 'retrying', 'error' - maintain current connection state
-        }
-        // Track if we have a stored handle (even if not connected)
-        // We have a stored handle if permission is granted/prompt AND status is not 'disconnected'
-        setHasStoredHandle(
-          (statusUpdate.permissionStatus === 'granted' || statusUpdate.permissionStatus === 'prompt') &&
-          statusUpdate.status !== 'disconnected'
-        );
-      });
+      service.initializeWithReactState(getDataFunction);
     }
-  }, [service, getDataFunction, hasExplicitlyConnected]);
+  }, [service, getDataFunction]);
 
   // Handle data load callback setup separately
   useEffect(() => {
@@ -127,13 +128,12 @@ export function FileStorageProvider({
   }, [service, onDataLoaded]);
 
   const connectToFolder = useCallback(async (): Promise<boolean> => {
-    console.log('[FileStorageContext] connectToFolder called', { service: !!service });
     if (!service) return false;
     try {
       const success = await service.connect();
-      console.log('[FileStorageContext] connectToFolder result:', success);
       if (success) {
         setHasExplicitlyConnected(true);
+        setIsConnected(true); // Set connected state for consistency with connectToExisting
       }
       return success;
     } catch (error) {
@@ -143,13 +143,21 @@ export function FileStorageProvider({
   }, [service]);
 
   const connectToExisting = useCallback(async (): Promise<boolean> => {
-    if (!service) return false;
-    const success = await service.connectToExisting();
-    if (success) {
-      setHasExplicitlyConnected(true);
-      setIsConnected(true); // Now we're truly connected
+    if (!service) {
+      console.error('[FileStorageContext] No service available for connectToExisting');
+      return false;
     }
-    return success;
+    try {
+      const success = await service.connectToExisting();
+      if (success) {
+        setHasExplicitlyConnected(true);
+        setIsConnected(true); // Now we're truly connected
+      }
+      return success;
+    } catch (error) {
+      console.error('[FileStorageContext] connectToExisting error:', error);
+      return false;
+    }
   }, [service]);
 
   const disconnect = async (): Promise<void> => {

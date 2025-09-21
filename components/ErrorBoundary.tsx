@@ -115,6 +115,37 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
     }, 100);
   };
 
+  handleCopyError = () => {
+    const { error, errorInfo, errorId } = this.state;
+    if (!error) return;
+
+    const errorDetails = {
+      errorId,
+      timestamp: new Date().toISOString(),
+      name: error.name,
+      message: error.message,
+      stack: error.stack,
+      componentStack: errorInfo?.componentStack,
+      userAgent: navigator.userAgent,
+      url: window.location.href,
+    };
+
+    const errorText = JSON.stringify(errorDetails, null, 2);
+    
+    navigator.clipboard.writeText(errorText).then(() => {
+      toast.success('Error details copied to clipboard');
+    }).catch(() => {
+      // Fallback for older browsers
+      const textArea = document.createElement('textarea');
+      textArea.value = errorText;
+      document.body.appendChild(textArea);
+      textArea.select();
+      document.execCommand('copy');
+      document.body.removeChild(textArea);
+      toast.success('Error details copied to clipboard');
+    });
+  };
+
   render() {
     if (this.state.hasError) {
       // Custom fallback UI
@@ -183,6 +214,12 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
                       </pre>
                     )}
                   </div>
+                  <button
+                    onClick={this.handleCopyError}
+                    className="mt-2 px-3 py-1 text-xs bg-muted-foreground text-background rounded hover:bg-foreground transition-colors"
+                  >
+                    📋 Copy Error Details
+                  </button>
                 </details>
               )}
             </div>

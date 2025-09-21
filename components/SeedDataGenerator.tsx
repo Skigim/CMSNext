@@ -16,7 +16,7 @@ import { Badge } from './ui/badge';
 import { Separator } from './ui/separator';
 import { Loader2, AlertTriangle, Sparkles, Download, Upload } from 'lucide-react';
 import { toast } from 'sonner';
-import { fileDataProvider } from '../utils/fileDataProvider';
+import { useDataManagerSafe } from '../contexts/DataManagerContext';
 import { generateFullSeedData, validateSeedData } from '../scripts/generateSeedData';
 import type { CaseData } from '../types/case';
 
@@ -53,6 +53,7 @@ export const SeedDataGenerator: React.FC<SeedDataGeneratorProps> = ({ onDataGene
   const [isGenerating, setIsGenerating] = useState(false);
   const [numCases, setNumCases] = useState(25);
   const [generatedData, setGeneratedData] = useState<CaseData | null>(null);
+  const dataManager = useDataManagerSafe();
   const [selectedPreset, setSelectedPreset] = useState<string>('medium');
 
   const handleGenerate = useCallback(async () => {
@@ -102,50 +103,22 @@ export const SeedDataGenerator: React.FC<SeedDataGeneratorProps> = ({ onDataGene
   const handleLoadToFileSystem = useCallback(async () => {
     if (!generatedData) return;
     
-    const dataAPI = fileDataProvider.getAPI();
-    if (!dataAPI) {
-      toast.error('File system access is not available');
+    if (!dataManager) {
+      toast.error('DataManager is not available');
       return;
     }
     
     const toastId = toast.loading('Loading seed data to file system...');
     
     try {
-      // Transform CaseData to CaseDisplay array for the FileStorageAPI
-      const transformedCases: import('../types/case').CaseDisplay[] = generatedData.caseRecords.map(caseRecord => {
-        const person = generatedData.people.find(p => p.id === caseRecord.personId);
-        if (!person) {
-          throw new Error(`Person not found for case ${caseRecord.id}`);
-        }
-        
-        return {
-          id: caseRecord.id,
-          name: person.name,
-          mcn: caseRecord.mcn,
-          status: caseRecord.status,
-          priority: caseRecord.priority,
-          createdAt: caseRecord.createdDate,
-          updatedAt: caseRecord.updatedDate,
-          person,
-          caseRecord
-        };
-      });
-      
-      // Import the transformed cases using the existing importCases method
-      await dataAPI.importCases(transformedCases);
-      
-      toast.success('Seed data loaded to file system successfully!', { id: toastId });
-      
-      // Reset the generated data
-      setGeneratedData(null);
-      
-      // Notify parent component
-      if (onDataGenerated) {
-        onDataGenerated();
-      }
+      // TODO: Implement DataManager-based seed data loading
+      toast.error('Seed data loading with DataManager needs implementation', { id: toastId });
+      console.log('SeedDataGenerator needs DataManager implementation');
+      // TODO: Implement DataManager seed data loading
+      console.log('SeedDataGenerator needs DataManager implementation');
       
     } catch (error) {
-      console.error('Failed to load seed data to file system:', error);
+      console.error('Failed to load seed data:', error);
       toast.error('Failed to load seed data to file system', { id: toastId });
     }
   }, [generatedData, onDataGenerated]);

@@ -1,7 +1,7 @@
 import { useState, useCallback } from 'react';
 import { toast } from 'sonner';
 import { CaseDisplay, NewPersonData, NewCaseRecordData, NewNoteData } from '../types/case';
-import { useDataManager } from '../contexts/DataManagerContext';
+import { useDataManagerSafe } from '../contexts/DataManagerContext';
 
 interface UseCaseManagementReturn {
   // State
@@ -33,7 +33,7 @@ interface UseCaseManagementReturn {
  * - Automatic persistence through DataManager
  */
 export function useCaseManagement(): UseCaseManagementReturn {
-  const dataManager = useDataManager(); // Throws if not available - no fallback
+  const dataManager = useDataManagerSafe(); // Returns null if not available - safe fallback
   
   const [cases, setCases] = useState<CaseDisplay[]>([]);
   const [loading, setLoading] = useState(false);
@@ -44,6 +44,13 @@ export function useCaseManagement(): UseCaseManagementReturn {
    * Load all cases from file system via DataManager
    */
   const loadCases = useCallback(async () => {
+    if (!dataManager) {
+      const errorMsg = 'Data storage is not available. Please connect to a folder first.';
+      setError(errorMsg);
+      toast.error(errorMsg);
+      return;
+    }
+
     try {
       setLoading(true);
       setError(null);
@@ -80,6 +87,13 @@ export function useCaseManagement(): UseCaseManagementReturn {
     caseData: { person: NewPersonData; caseRecord: NewCaseRecordData },
     editingCase?: CaseDisplay | null
   ) => {
+    if (!dataManager) {
+      const errorMsg = 'Data storage is not available. Please connect to a folder first.';
+      setError(errorMsg);
+      toast.error(errorMsg);
+      return;
+    }
+
     const isEditing = !!editingCase;
     const toastId = toast.loading(isEditing ? "Updating case..." : "Creating case...");
 
@@ -120,6 +134,13 @@ export function useCaseManagement(): UseCaseManagementReturn {
    * Delete a case by ID
    */
   const deleteCase = useCallback(async (caseId: string) => {
+    if (!dataManager) {
+      const errorMsg = 'Data storage is not available. Please connect to a folder first.';
+      setError(errorMsg);
+      toast.error(errorMsg);
+      return;
+    }
+
     // Find the case to get the person's name for the toast
     const caseToDelete = cases.find(c => c.id === caseId);
     const personName = caseToDelete ? `${caseToDelete.person.firstName} ${caseToDelete.person.lastName}` : 'Case';
@@ -151,6 +172,13 @@ export function useCaseManagement(): UseCaseManagementReturn {
     caseId: string,
     editingNote?: { id: string } | null
   ): Promise<CaseDisplay | null> => {
+    if (!dataManager) {
+      const errorMsg = 'Data storage is not available. Please connect to a folder first.';
+      setError(errorMsg);
+      toast.error(errorMsg);
+      return null;
+    }
+
     const isEditing = !!editingNote;
 
     try {

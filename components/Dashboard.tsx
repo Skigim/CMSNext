@@ -9,6 +9,7 @@ import {
   ArrowRight
 } from "lucide-react";
 import { CaseDisplay } from "../types/case";
+import { FileServiceDiagnostic } from "./FileServiceDiagnostic";
 
 interface DashboardProps {
   cases: CaseDisplay[];
@@ -210,6 +211,8 @@ export function Dashboard({ cases, onViewAllCases, onNewCase }: DashboardProps) 
         </CardContent>
       </Card>
 
+      {/* Temporary diagnostic tool */}
+      <FileServiceDiagnostic />
 
     </div>
   );

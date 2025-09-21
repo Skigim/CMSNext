@@ -30,13 +30,21 @@ export function ConnectToExistingModal({
     setError(null);
     
     try {
+      console.log('[ConnectToExistingModal] Starting connection process...');
+      console.log('[ConnectToExistingModal] Permission status:', permissionStatus);
+      console.log('[ConnectToExistingModal] Has stored handle:', hasStoredHandle);
+      
       const success = await onConnectToExisting();
+      console.log('[ConnectToExistingModal] Connection result:', success);
+      
       if (!success) {
-        setError('Failed to connect to directory or load data. Please try again.');
+        const errorMsg = 'Failed to connect to directory or load data. Please check console for details and try again.';
+        console.error('[ConnectToExistingModal] Connection failed');
+        setError(errorMsg);
       }
     } catch (err) {
-      console.error('Connect to existing error:', err);
-      setError('An error occurred while connecting to your data. Please try again.');
+      console.error('[ConnectToExistingModal] Connect to existing error:', err);
+      setError(`Connection error: ${err instanceof Error ? err.message : 'Unknown error occurred'}`);
     } finally {
       setIsConnecting(false);
     }

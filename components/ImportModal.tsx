@@ -1,6 +1,6 @@
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "./ui/dialog";
-import { JsonUploader } from "./JsonUploader";
 import { CaseDisplay } from "../types/case";
+import { Button } from "./ui/button";
 
 interface ImportModalProps {
   isOpen: boolean;
@@ -8,25 +8,24 @@ interface ImportModalProps {
   onImportComplete: (importedCases: CaseDisplay[]) => void;
 }
 
-export function ImportModal({ isOpen, onClose, onImportComplete }: ImportModalProps) {
-  const handleImportComplete = (importedCases: CaseDisplay[]) => {
-    onImportComplete(importedCases);
-    // Keep modal open to show results - user can close manually
-  };
-
+export function ImportModal({ isOpen, onClose }: Omit<ImportModalProps, 'onImportComplete'>) {
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-md">
         <DialogHeader>
           <DialogTitle>Import Legacy Data</DialogTitle>
           <DialogDescription>
-            Upload JSON files to import existing case data into the system. Supports both single cases and arrays of cases with flexible field mapping.
+            Import functionality needs to be implemented with DataManager.
           </DialogDescription>
         </DialogHeader>
-        <JsonUploader 
-          onImportComplete={handleImportComplete}
-          onClose={onClose}
-        />
+        <div className="py-4">
+          <p className="text-sm text-muted-foreground mb-4">
+            JSON import functionality will be reimplemented to use the DataManager architecture.
+          </p>
+          <Button onClick={onClose} className="w-full">
+            Close
+          </Button>
+        </div>
       </DialogContent>
     </Dialog>
   );

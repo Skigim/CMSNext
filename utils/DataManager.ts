@@ -1,6 +1,7 @@
 import { CaseDisplay, CaseCategory, FinancialItem, NewPersonData, NewCaseRecordData, NewNoteData } from "../types/case";
 import { v4 as uuidv4 } from 'uuid';
 import AutosaveFileService from './AutosaveFileService';
+import { transformImportedData } from './dataTransform';
 
 interface DataManagerConfig {
   fileService: AutosaveFileService;
@@ -49,11 +50,25 @@ export class DataManager {
         };
       }
 
-      // Ensure data structure is valid
+      // Handle different data formats
+      let cases: CaseDisplay[] = [];
+      
+      if (rawData.cases && Array.isArray(rawData.cases)) {
+        // Already in the correct format
+        cases = rawData.cases;
+      } else if (rawData.people && rawData.caseRecords) {
+        // Raw format - transform using the data transformer
+        console.log('[DataManager] Transforming raw data format (people + caseRecords) to cases');
+        cases = transformImportedData(rawData);
+      } else {
+        // Try to transform whatever format this is
+        cases = transformImportedData(rawData);
+      }
+
       return {
-        cases: Array.isArray(rawData.cases) ? rawData.cases : [],
+        cases: cases,
         exported_at: rawData.exported_at || rawData.exportedAt || new Date().toISOString(),
-        total_cases: rawData.total_cases || rawData.totalCases || rawData.cases?.length || 0
+        total_cases: cases.length
       };
     } catch (error) {
       console.error('Failed to read file data:', error);

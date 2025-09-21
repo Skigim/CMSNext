@@ -4,11 +4,9 @@ import { FileStorageProvider, useFileStorage } from "./contexts/FileStorageConte
 import { MainLayout } from "./components/MainLayout";
 import { Toaster } from "./components/ui/sonner";
 import { CaseDisplay, CaseCategory, FinancialItem, NewPersonData, NewCaseRecordData, NewNoteData } from "./types/case";
-import { fileDataProvider } from "./utils/fileDataProvider";
 import { toast } from "sonner";
 import ErrorBoundary from "./components/ErrorBoundary";
 import FileSystemErrorBoundary from "./components/FileSystemErrorBoundary";
-import { ErrorRecoveryProvider } from "./components/ErrorRecovery";
 import { DataManagerProvider, useDataManagerSafe } from "./contexts/DataManagerContext";
 import { useCaseManagement } from "./hooks/useCaseManagement";
 import { useNotes } from "./hooks/useNotes";
@@ -37,7 +35,10 @@ type FormState = {
 // NoteFormState moved to useNotes hook
 
 const AppContent = memo(function AppContent() {
-  const { isSupported, isConnected, hasStoredHandle, status, connectToFolder, connectToExisting, loadExistingData } = useFileStorage();
+  const { isSupported, isConnected, hasStoredHandle, status, connectToFolder, connectToExisting, loadExistingData, service } = useFileStorage();
+  
+  // Get DataManager instance at component level
+  const dataManager = useDataManagerSafe();
   
   // Use the secure case management hook
   const {
@@ -70,6 +71,63 @@ const AppContent = memo(function AppContent() {
   const [formState, setFormState] = useState<FormState>({ previousView: 'list' });
   const [showConnectModal, setShowConnectModal] = useState(false);
   
+  // Central file data handler that maintains file provider sync
+  const handleFileDataLoaded = useCallback((fileData: any) => {
+    try {
+      console.log('🔧 handleFileDataLoaded called with:', fileData);
+      
+      // Data might be in cases format (transformed) or people+caseRecords format (raw)
+      let casesToSet: any[] = [];
+      
+      if (fileData?.cases) {
+        // Already transformed data (CaseDisplay format)
+        casesToSet = fileData.cases;
+        console.log(`✅ File data loaded with transformed cases: ${casesToSet.length} cases`);
+      } else if (fileData?.people && fileData?.caseRecords) {
+        // Raw data format - let DataManager handle the transformation by reloading
+        console.log(`🔄 Raw file data detected: ${fileData.people.length} people, ${fileData.caseRecords.length} case records. Triggering DataManager reload...`);
+        
+        // Trigger a reload through DataManager to get proper transformed data
+        setTimeout(() => {
+          loadCases().catch(err => console.error('Failed to reload cases after file load:', err));
+        }, 100);
+        
+        // Set flag that data has been loaded
+        setHasLoadedData(true);
+        return;
+      } else if (fileData && Object.keys(fileData).length === 0) {
+        // Empty data
+        casesToSet = [];
+        console.log('✅ Empty file data loaded and synced to UI');
+      } else {
+        console.warn('⚠️ Unexpected file data format:', fileData);
+        casesToSet = [];
+      }
+      
+      // Update React state with the processed data
+      setCases(casesToSet);
+      setHasLoadedData(true);
+      
+      // Set baseline - we've now loaded data through the file storage system
+      (window as any).fileStorageDataBaseline = true;
+      
+      if (casesToSet.length > 0) {
+        (window as any).fileStorageSessionHadData = true;
+      }
+    } catch (err) {
+      console.error('Failed to handle file data loaded:', err);
+      toast.error('Failed to load data');
+    }
+  }, [setCases, setHasLoadedData, loadCases]);
+
+  // Expose the function globally so App component can use it
+  useEffect(() => {
+    (window as any).handleFileDataLoaded = handleFileDataLoaded;
+    return () => {
+      delete (window as any).handleFileDataLoaded;
+    };
+  }, [handleFileDataLoaded]);
+  
   // Always use file storage - no more API switching
   // Remove old getDataAPI function - replaced by DataManager-only pattern
   
@@ -83,21 +141,24 @@ const AppContent = memo(function AppContent() {
 
   const handleConnectToExisting = useCallback(async (): Promise<boolean> => {
     try {
+      console.log('[App] handleConnectToExisting started');
+      
       // Set flags to prevent any interference from automatic processing
       window.location.hash = '#connect-to-existing';
       (window as any).fileStorageInSetupPhase = true;
       
       // Temporarily disable autosave during connect flow
-      const fileService = fileDataProvider.getFileService();
-      const wasAutosaveRunning = fileService?.getStatus().isRunning;
-      if (fileService && wasAutosaveRunning) {
-        fileService.stopAutosave();
+      if (!dataManager) {
+        console.error('[App] DataManager not available');
+        toast.error('Data storage is not available. Please connect to a folder first.');
+        return false;
       }
       
       setError(null);
       
       // Use stored directory handle with explicit user permission request
       const success = hasStoredHandle ? await connectToExisting() : await connectToFolder();
+      console.log('[App] Connection attempt result:', success);
       if (!success) {
         toast.error("Failed to connect to directory");
         return false;
@@ -109,8 +170,11 @@ const AppContent = memo(function AppContent() {
       // Load existing data directly - this will verify the connection works
       let existingData;
       try {
+        console.log('[App] Loading existing data...');
         existingData = await loadExistingData();
+        console.log('[App] Loaded existing data:', existingData ? `${existingData.cases?.length || 0} cases` : 'null');
       } catch (loadError) {
+        console.error('[App] Failed to load existing data:', loadError);
         throw new Error(`Failed to access connected directory: ${loadError instanceof Error ? loadError.message : 'Unknown error'}`);
       }
       
@@ -121,24 +185,23 @@ const AppContent = memo(function AppContent() {
         cases: [] 
       };
       
-      // CRITICAL: Clear any stale data first, then load actual data
-      console.log(`[App] About to clear and load data. Loaded from file: ${actualData.cases.length} cases`);
-      fileDataProvider.clearInternalData(); // Force clear first
-      fileDataProvider.handleFileDataLoaded(actualData);
+      // CRITICAL: Load actual data from file system
+      console.log(`[App] About to load data from file system. Expected from loadExistingData: ${actualData?.cases?.length || actualData?.caseRecords?.length || 0} cases`);
       
-      // Verify the data was actually loaded into the provider
-      const verifyAPI = fileDataProvider.getAPI();
-      if (!verifyAPI || !verifyAPI.internalData) {
-        throw new Error('Data provider update failed');
-      }
+      // Load cases using DataManager which reads from file system
+      console.log('[App] Calling loadCases()...');
+      await loadCases();
+      console.log('[App] loadCases() completed');
       
-      // Make sure internal data matches what we just loaded
-      console.log(`[App] File data loaded: ${actualData.cases.length} cases`);
-      console.log(`[App] Provider internal data: ${verifyAPI.internalData.cases?.length || 0} cases`);
+      // Verify the data was actually loaded
+      const loadedCases = await dataManager.getAllCases();
+      console.log(`[App] Initial file data: ${actualData?.cases?.length || actualData?.caseRecords?.length || 0} records`);
+      console.log(`[App] DataManager loaded: ${loadedCases.length} cases`);
       
-      if (actualData.cases.length > 0) {
+      if (loadedCases.length > 0) {
         // We have actual data from the file
-        setCases(actualData.cases);
+        console.log('[App] Setting cases and hasLoadedData=true for non-empty data');
+        setCases(loadedCases);
         setHasLoadedData(true);
         setShowConnectModal(false);
         
@@ -146,9 +209,10 @@ const AppContent = memo(function AppContent() {
         (window as any).fileStorageDataBaseline = true;
         (window as any).fileStorageSessionHadData = true;
         
-        toast.success(`Connected and loaded ${actualData.cases.length} cases`);
+        toast.success(`Connected and loaded ${loadedCases.length} cases`);
       } else {
         // No data in file - start fresh
+        console.log('[App] Setting empty cases and hasLoadedData=true for empty data');
         setCases([]);
         setHasLoadedData(true);
         setShowConnectModal(false);
@@ -159,6 +223,7 @@ const AppContent = memo(function AppContent() {
         toast.success("Connected successfully - ready to start fresh");
       }
       
+      console.log('[App] handleConnectToExisting completed successfully');
       return true;
     } catch (error) {
       console.error('Failed to connect and load data:', error);
@@ -188,10 +253,9 @@ const AppContent = memo(function AppContent() {
       (window as any).fileStorageInSetupPhase = false;
       
       // Re-enable autosave if it was running before
-      const fileService = fileDataProvider.getFileService();
-      if (fileService && !fileService.getStatus().isRunning) {
+      if (service && !service.getStatus().isRunning) {
         setTimeout(() => {
-          fileService.startAutosave();
+          service.startAutosave();
         }, 500);
       }
       
@@ -202,7 +266,7 @@ const AppContent = memo(function AppContent() {
         }
       }, 300);
     }
-  }, [hasStoredHandle, connectToExisting, connectToFolder, loadExistingData]);
+  }, [hasStoredHandle, connectToExisting, connectToFolder, loadExistingData, dataManager, service]);
 
   const handleViewCase = useCallback((caseId: string) => {
     setSelectedCaseId(caseId);
@@ -296,7 +360,6 @@ const AppContent = memo(function AppContent() {
   };
 
   const handleDeleteItem = async (category: CaseCategory, itemId: string) => {
-    const dataManager = useDataManagerSafe();
     if (!selectedCase || !dataManager) {
       if (!dataManager) {
         const errorMsg = 'Data storage is not available. Please check your connection.';
@@ -393,28 +456,6 @@ const AppContent = memo(function AppContent() {
     closeNoteForm();
   };
 
-  const handleImportCases = async (importedCases: CaseDisplay[]) => {
-    try {
-      setError(null);
-      // Add imported cases to the current list
-      setCases(prevCases => [...prevCases, ...importedCases]);
-      setHasLoadedData(true);
-      
-      // Set baseline - we now have data
-      (window as any).fileStorageDataBaseline = true;
-      (window as any).fileStorageSessionHadData = true;
-      
-      toast.success(`Successfully imported ${importedCases.length} cases`);
-      
-      // DataManager handles file system persistence automatically
-    } catch (err) {
-      console.error('Failed to handle imported cases:', err);
-      const errorMsg = 'Failed to process imported cases. Please try again.';
-      setError(errorMsg);
-      toast.error(errorMsg);
-    }
-  };
-
   const handleDataPurged = async () => {
     try {
       setError(null);
@@ -503,6 +544,13 @@ const AppContent = memo(function AppContent() {
 
   // Monitor file storage connection status
   useEffect(() => {
+    console.log('[App] Connection status check:', {
+      isSupported,
+      isConnected,
+      hasLoadedData,
+      showConnectModal
+    });
+    
     const timeoutId = setTimeout(() => {
       // Check if File System Access API is not supported
       if (isSupported === false) {
@@ -512,17 +560,21 @@ const AppContent = memo(function AppContent() {
       
       // Only proceed if we have a definitive support status
       if (isSupported === undefined) {
+        console.log('[App] Still initializing file system support...');
         return; // Still initializing
       }
       
       // For file storage mode, check if setup is needed
       if (isSupported && !isConnected && !hasLoadedData) {
+        console.log('[App] Showing connect modal: not connected and no data loaded');
         setShowConnectModal(true);
       } else if (isConnected && !hasLoadedData) {
         // Directory connected but no data loaded yet - show modal for user to load
+        console.log('[App] Showing connect modal: connected but no data loaded');
         setShowConnectModal(true);
       } else if (isConnected && hasLoadedData) {
         // Everything is set up and ready
+        console.log('[App] Hiding connect modal: connected and data loaded');
         setShowConnectModal(false);
       }
     }, 100); // Small delay to prevent excessive re-renders
@@ -629,7 +681,6 @@ const AppContent = memo(function AppContent() {
         <Suspense fallback={<div className="flex items-center justify-center p-8">Loading settings...</div>}>
           <Settings
             cases={cases}
-            onImportCases={handleImportCases}
             onDataPurged={handleDataPurged}
           />
         </Suspense>
@@ -697,35 +748,11 @@ const AppContent = memo(function AppContent() {
 });
 
 export default function App() {
-  // Central file data handler that maintains file provider sync
-  const handleFileDataLoaded = useCallback((fileData: any) => {
-    try {
-      console.log('🔧 handleFileDataLoaded called with:', fileData);
-      
-      // Always update the file data provider cache (this is safe and necessary)
-      fileDataProvider.handleFileDataLoaded(fileData);
-      
-      // Note: React state is now managed by useCaseManagement hook
-      console.log('✅ File data loaded and synced to provider');
-      
-      // Set baseline - we've now loaded data through the file storage system
-      (window as any).fileStorageDataBaseline = true;
-      
-      if (fileData && fileData.cases && fileData.cases.length > 0) {
-        (window as any).fileStorageSessionHadData = true;
-      }
-    } catch (err) {
-      console.error('Failed to handle file data loaded:', err);
-      toast.error('Failed to load data');
-    }
-  }, []);
-
   return (
     <ErrorBoundary>
       <ThemeProvider>
         <FileSystemErrorBoundary>
           <FileStorageProvider 
-            enabled={true} // Always enabled - filesystem only
             getDataFunction={() => {
               // Skip during connect flow to prevent empty data from being saved
               if (window.location.hash === '#connect-to-existing') {
@@ -737,38 +764,25 @@ export default function App() {
                 return null;
               }
               
-              const api = fileDataProvider.getAPI();
-              if (!api || !api.internalData || !Array.isArray(api.internalData.cases)) {
-                return null; // No valid data structure
+              // DataManager is stateless - we'll use the React state from useCaseManagement
+              // This is passed via the context and accessed through the cases state
+              // The FileStorageProvider will get data through onDataLoaded callback instead
+              return null; // DataManager handles its own file operations
+            }}
+            onDataLoaded={(fileData: any) => {
+              // Use the global function set by AppContent
+              if ((window as any).handleFileDataLoaded) {
+                (window as any).handleFileDataLoaded(fileData);
               }
-              
-              const caseCount = api.internalData.cases.length;
-              
-              // Only return null for empty data if we haven't established a baseline yet
-              if (caseCount === 0) {
-                // If we've never had data in this session and haven't explicitly loaded empty data, don't save
-                if (!(window as any).fileStorageDataBaseline) {
-                    return null;
-                  }
-                }
-            
-            return {
-              exported_at: new Date().toISOString(),
-              total_cases: caseCount,
-              cases: api.internalData.cases
-            };
-          }}
-          onDataLoaded={handleFileDataLoaded}
-        >
-          <ErrorRecoveryProvider>
+            }}
+          >
             <DataManagerProvider>
               <FileStorageIntegrator>
-              <AppContent />
-              <Toaster />
-            </FileStorageIntegrator>
+                <AppContent />
+                <Toaster />
+              </FileStorageIntegrator>
             </DataManagerProvider>
-          </ErrorRecoveryProvider>
-        </FileStorageProvider>
+          </FileStorageProvider>
         </FileSystemErrorBoundary>
       </ThemeProvider>
     </ErrorBoundary>
@@ -778,11 +792,13 @@ export default function App() {
 // Component to integrate file storage service with data provider
 function FileStorageIntegrator({ children }: { children: React.ReactNode }) {
   const { service } = useFileStorage();
-
+  const dataManager = useDataManagerSafe();
+  
   useEffect(() => {
     // Only set the service if we have one and it's different from current
-    if (service) {
-      fileDataProvider.setFileService(service);
+    if (service && dataManager) {
+      // Note: DataManager integration happens through FileStorageContext
+      // This component is mainly for initialization flags
     }
     
     // Clean up any leftover flags from previous sessions on startup
@@ -792,7 +808,7 @@ function FileStorageIntegrator({ children }: { children: React.ReactNode }) {
       delete (window as any).fileStorageInSetupPhase;
       (window as any).fileStorageInitialized = true;
     }
-  }, [service]);
+  }, [service, dataManager]);
 
   return <>{children}</>;
 }

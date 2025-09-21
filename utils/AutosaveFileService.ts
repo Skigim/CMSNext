@@ -227,6 +227,8 @@ class AutosaveFileService {
         this.updateStatus('error', 'No stored directory handle found');
         return false;
       }
+      // Ensure the handle is properly assigned
+      this.directoryHandle = handle;
     }
 
     try {
@@ -238,6 +240,21 @@ class AutosaveFileService {
         this.updateStatus('connected', 'Connected to data folder');
 
         console.log('[AutosaveFileService] Successfully connected to existing directory');
+
+        // Validate that we can actually access the directory
+        try {
+          // Test the connection by checking if we can access the directory
+          const testPermission = await this.checkPermission();
+          if (testPermission !== 'granted') {
+            throw new Error(`Permission check failed: ${testPermission}`);
+          }
+          console.log('[AutosaveFileService] Directory access validated successfully');
+        } catch (testError) {
+          console.error('[AutosaveFileService] Directory access validation failed:', testError);
+          this.directoryHandle = null;
+          this.updateStatus('error', 'Failed to validate directory access');
+          return false;
+        }
 
         // Start autosave if not already running
         if (this.config.enabled && !this.state.isRunning) {
@@ -396,15 +413,23 @@ class AutosaveFileService {
 
   async readFile(): Promise<any> {
     if (!this.directoryHandle) {
+      console.error('[AutosaveFileService] readFile called but directoryHandle is null');
       return null;
     }
 
     const permission = await this.checkPermission();
     if (permission !== 'granted') {
+      console.error('[AutosaveFileService] readFile called but permission is not granted:', permission);
       return null;
     }
 
     try {
+      // Double-check the handle hasn't become null between checks
+      if (!this.directoryHandle) {
+        console.error('[AutosaveFileService] Directory handle became null during readFile execution');
+        return null;
+      }
+      
       const fileHandle = await this.directoryHandle.getFileHandle(this.fileName);
       const file = await fileHandle.getFile();
       const contents = await file.text();

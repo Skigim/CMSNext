@@ -1,4 +1,4 @@
-import { useContext, createContext, ReactNode } from 'react';
+import { useContext, createContext, ReactNode, useMemo } from 'react';
 import DataManager from '../utils/DataManager';
 import { useFileStorage } from './FileStorageContext';
 
@@ -13,10 +13,22 @@ interface DataManagerProviderProps {
 }
 
 export function DataManagerProvider({ children }: DataManagerProviderProps) {
-  const { service } = useFileStorage();
+  const { service, isConnected, status } = useFileStorage();
   
-  // Create DataManager instance when file service is available
-  const dataManager = service ? new DataManager({ fileService: service }) : null;
+  // Memoize DataManager creation to prevent recreation on every render
+  const dataManager = useMemo(() => {
+    if (!service) return null;
+    console.log('[DataManagerProvider] Creating new DataManager instance');
+    return new DataManager({ fileService: service });
+  }, [service]); // Only recreate when service changes
+
+  console.log('[DataManagerProvider] Render:', {
+    hasService: !!service,
+    isConnected,
+    hasDataManager: !!dataManager,
+    statusStatus: status?.status,
+    permissionStatus: status?.permissionStatus
+  });
 
   return (
     <DataManagerContext.Provider value={{ dataManager }}>
