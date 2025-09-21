@@ -18,6 +18,7 @@ interface CaseDetailsProps {
   onAddNote: () => void;
   onEditNote: (noteId: string) => void;
   onDeleteNote: (noteId: string) => void;
+  financialView?: 'cards' | 'table';
 }
 
 export function CaseDetails({ 
@@ -30,7 +31,8 @@ export function CaseDetails({
   onDeleteItem,
   onAddNote,
   onEditNote,
-  onDeleteNote
+  onDeleteNote,
+  financialView = 'cards'
 }: CaseDetailsProps) {
   const getStatusColor = (status: CaseDisplay['status']) => {
     switch (status) {
@@ -118,12 +120,14 @@ export function CaseDetails({
         </div>
       </div>
 
-      {/* Content */}
-      <div className="space-y-6">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      {/* Content - 2 Column Layout */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Left Column: Financial Sections */}
+        <div className="space-y-6">
           <CaseSection
             title="Resources"
             category="resources"
+            view={financialView}
             items={caseData.caseRecord.financials.resources || []}
             onAddItem={onAddItem}
             onEditItem={onEditItem}
@@ -132,6 +136,7 @@ export function CaseDetails({
           <CaseSection
             title="Income"
             category="income"
+            view={financialView}
             items={caseData.caseRecord.financials.income || []}
             onAddItem={onAddItem}
             onEditItem={onEditItem}
@@ -140,6 +145,7 @@ export function CaseDetails({
           <CaseSection
             title="Expenses"
             category="expenses"
+            view={financialView}
             items={caseData.caseRecord.financials.expenses || []}
             onAddItem={onAddItem}
             onEditItem={onEditItem}
@@ -147,13 +153,15 @@ export function CaseDetails({
           />
         </div>
 
-        {/* Notes Section */}
-        <NotesSection
-          notes={caseData.caseRecord.notes || []}
-          onAddNote={onAddNote}
-          onEditNote={onEditNote}
-          onDeleteNote={onDeleteNote}
-        />
+        {/* Right Column: Notes Section */}
+        <div>
+          <NotesSection
+            notes={caseData.caseRecord.notes || []}
+            onAddNote={onAddNote}
+            onEditNote={onEditNote}
+            onDeleteNote={onDeleteNote}
+          />
+        </div>
       </div>
     </div>
   );

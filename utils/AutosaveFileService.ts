@@ -457,7 +457,10 @@ class AutosaveFileService {
       const data = await this.readFile();
       
       if (data) {
-        console.log(`[AutosaveFileService] Successfully loaded existing data with ${data.cases?.length || 0} cases`);
+        // Log appropriate count based on data format
+        const caseCount = data.cases?.length || data.caseRecords?.length || 0;
+        const format = data.cases ? 'transformed' : data.caseRecords ? 'raw' : 'unknown';
+        console.log(`[AutosaveFileService] Successfully loaded existing data with ${caseCount} records (${format} format)`);
         
         // Call data load callback if set
         if (this.dataLoadCallback) {

@@ -11,6 +11,7 @@ import {
   SidebarMenuItem,
 } from "./ui/sidebar";
 import { ThemeToggle } from './ThemeToggle';
+import { ViewToggle } from './ViewToggle';
 import { 
   LayoutDashboard, 
   Users, 
@@ -23,9 +24,17 @@ interface AppSidebarProps {
   currentView: string;
   onNavigate: (view: string) => void;
   onNewCase: () => void;
+  financialView?: 'cards' | 'table';
+  onFinancialViewChange?: (view: 'cards' | 'table') => void;
 }
 
-export function AppSidebar({ currentView, onNavigate, onNewCase }: AppSidebarProps) {
+export function AppSidebar({ 
+  currentView, 
+  onNavigate, 
+  onNewCase, 
+  financialView = 'cards',
+  onFinancialViewChange 
+}: AppSidebarProps) {
   const menuItems = [
     {
       title: "Dashboard",
@@ -117,6 +126,14 @@ export function AppSidebar({ currentView, onNavigate, onNewCase }: AppSidebarPro
             </div>
           </div>
           <div className="flex items-center space-x-2">
+            {/* Show financial view toggle only on case details view */}
+            {currentView === 'details' && onFinancialViewChange && (
+              <ViewToggle 
+                view={financialView} 
+                onViewChange={onFinancialViewChange}
+                className="mr-2"
+              />
+            )}
             <ThemeToggle />
           </div>
         </div>

@@ -69,6 +69,7 @@ const AppContent = memo(function AppContent() {
   const [editingCase, setEditingCase] = useState<CaseDisplay | null>(null);
   const [itemForm, setItemForm] = useState<ItemFormState>({ isOpen: false });
   const [formState, setFormState] = useState<FormState>({ previousView: 'list' });
+  const [financialView, setFinancialView] = useState<'cards' | 'table'>('cards');
   const [showConnectModal, setShowConnectModal] = useState(false);
   
   // Central file data handler that maintains file provider sync
@@ -653,6 +654,8 @@ const AppContent = memo(function AppContent() {
       onNavigate={handleNavigate}
       onNewCase={handleNewCase}
       breadcrumbTitle={getBreadcrumbTitle}
+      financialView={financialView}
+      onFinancialViewChange={setFinancialView}
     >
       {error && (
         <div className="bg-destructive/10 border border-destructive/20 text-destructive px-4 py-3 rounded-md mb-4">
@@ -711,6 +714,7 @@ const AppContent = memo(function AppContent() {
             onAddNote={handleAddNote}
             onEditNote={handleEditNote}
             onDeleteNote={handleDeleteNote}
+            financialView={financialView}
           />
         </Suspense>
       )}
