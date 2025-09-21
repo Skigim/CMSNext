@@ -3,7 +3,7 @@ import { ThemeProvider } from "./contexts/ThemeContext";
 import { FileStorageProvider, useFileStorage } from "./contexts/FileStorageContext";
 import { MainLayout } from "./components/MainLayout";
 import { Toaster } from "./components/ui/sonner";
-import { CaseDisplay, CaseCategory, FinancialItem, Note, NewPersonData, NewCaseRecordData, NewNoteData } from "./types/case";
+import { CaseDisplay, CaseCategory, FinancialItem, NewPersonData, NewCaseRecordData, NewNoteData } from "./types/case";
 import { fileDataProvider } from "./utils/fileDataProvider";
 import { toast } from "sonner";
 import ErrorBoundary from "./components/ErrorBoundary";
@@ -11,6 +11,7 @@ import FileSystemErrorBoundary from "./components/FileSystemErrorBoundary";
 import { ErrorRecoveryProvider } from "./components/ErrorRecovery";
 import { DataManagerProvider, useDataManagerSafe } from "./contexts/DataManagerContext";
 import { useCaseManagement } from "./hooks/useCaseManagement";
+import { useNotes } from "./hooks/useNotes";
 
 // Lazy load heavy components
 const Dashboard = lazy(() => import("./components/Dashboard").then(m => ({ default: m.Dashboard })));
@@ -33,11 +34,7 @@ type FormState = {
   previousView: View;
   returnToCaseId?: string;
 };
-type NoteFormState = {
-  isOpen: boolean;
-  editingNote?: Note;
-  caseId?: string;
-};
+// NoteFormState moved to useNotes hook
 
 const AppContent = memo(function AppContent() {
   const { isSupported, isConnected, hasStoredHandle, status, connectToFolder, connectToExisting, loadExistingData } = useFileStorage();
@@ -51,17 +48,25 @@ const AppContent = memo(function AppContent() {
     loadCases,
     saveCase,
     deleteCase,
-    saveNote,
     setCases,
     setError,
     setHasLoadedData,
   } = useCaseManagement();
   
+  // Use the secure notes management hook
+  const {
+    noteForm,
+    openAddNote,
+    openEditNote,
+    saveNote: saveNoteHook,
+    deleteNote: deleteNoteHook,
+    closeNoteForm,
+  } = useNotes();
+  
   const [currentView, setCurrentView] = useState<View>('dashboard');
   const [selectedCaseId, setSelectedCaseId] = useState<string | null>(null);
   const [editingCase, setEditingCase] = useState<CaseDisplay | null>(null);
   const [itemForm, setItemForm] = useState<ItemFormState>({ isOpen: false });
-  const [noteForm, setNoteForm] = useState<NoteFormState>({ isOpen: false });
   const [formState, setFormState] = useState<FormState>({ previousView: 'list' });
   const [showConnectModal, setShowConnectModal] = useState(false);
   
@@ -327,46 +332,29 @@ const AppContent = memo(function AppContent() {
 
   const handleAddNote = () => {
     if (!selectedCase) return;
-    setNoteForm({
-      isOpen: true,
-      caseId: selectedCase.id
-    });
+    openAddNote(selectedCase.id);
   };
 
   const handleEditNote = (noteId: string) => {
     if (!selectedCase) return;
-    
-    const note = selectedCase.caseRecord.notes?.find(n => n.id === noteId);
-    if (note) {
-      setNoteForm({
-        isOpen: true,
-        editingNote: note,
-        caseId: selectedCase.id
-      });
-    }
+    openEditNote(selectedCase.id, noteId, cases);
   };
 
   const handleDeleteNote = async (noteId: string) => {
-    const dataManager = useDataManagerSafe();
-    if (!selectedCase || !dataManager) return;
+    if (!selectedCase) return;
     
     try {
-      setError(null);
-      const updatedCase = await dataManager.deleteNote(selectedCase.id, noteId);
-      setCases(prevCases =>
-        prevCases.map(c =>
-          c.id === selectedCase.id ? updatedCase : c
-        )
-      );
-      
-      toast.success("Note deleted successfully");
-      
-      // DataManager handles file system persistence automatically
+      const updatedCase = await deleteNoteHook(selectedCase.id, noteId);
+      if (updatedCase) {
+        setCases(prevCases =>
+          prevCases.map(c =>
+            c.id === selectedCase.id ? updatedCase : c
+          )
+        );
+      }
     } catch (err) {
-      console.error('Failed to delete note:', err);
-      const errorMsg = 'Failed to delete note. Please try again.';
-      setError(errorMsg);
-      toast.error(errorMsg);
+      // Error handling is done in the hook
+      console.error('Failed to delete note in handleDeleteNote wrapper:', err);
     }
   };
 
@@ -386,21 +374,23 @@ const AppContent = memo(function AppContent() {
   }, [deleteCase, selectedCaseId, setCurrentView, setSelectedCaseId]);
 
   const handleSaveNote = useCallback(async (noteData: NewNoteData) => {
-    if (!noteForm.caseId) return;
-
     try {
-      const updatedCase = await saveNote(noteData, noteForm.caseId, noteForm.editingNote);
+      const updatedCase = await saveNoteHook(noteData);
       if (updatedCase) {
-        setNoteForm({ isOpen: false });
+        setCases(prevCases =>
+          prevCases.map(c =>
+            c.id === updatedCase.id ? updatedCase : c
+          )
+        );
       }
     } catch (err) {
       // Error handling is done in the hook
       console.error('Failed to save note in handleSaveNote wrapper:', err);
     }
-  }, [saveNote, noteForm.caseId, noteForm.editingNote, setNoteForm]);
+  }, [saveNoteHook, setCases]);
 
   const handleCancelNoteForm = () => {
-    setNoteForm({ isOpen: false });
+    closeNoteForm();
   };
 
   const handleImportCases = async (importedCases: CaseDisplay[]) => {
