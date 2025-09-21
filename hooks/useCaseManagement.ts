@@ -1,0 +1,233 @@
+import { useState, useCallback } from 'react';
+import { toast } from 'sonner';
+import { CaseDisplay, NewPersonData, NewCaseRecordData, NewNoteData } from '../types/case';
+import { useDataManager } from '../contexts/DataManagerContext';
+
+interface UseCaseManagementReturn {
+  // State
+  cases: CaseDisplay[];
+  loading: boolean;
+  error: string | null;
+  hasLoadedData: boolean;
+  
+  // Actions
+  loadCases: () => Promise<void>;
+  saveCase: (caseData: { person: NewPersonData; caseRecord: NewCaseRecordData }, editingCase?: CaseDisplay | null) => Promise<void>;
+  deleteCase: (caseId: string) => Promise<void>;
+  saveNote: (noteData: NewNoteData, caseId: string, editingNote?: { id: string } | null) => Promise<CaseDisplay | null>;
+  importCases: (importedCases: CaseDisplay[]) => Promise<void>;
+  
+  // State setters for external control
+  setCases: React.Dispatch<React.SetStateAction<CaseDisplay[]>>;
+  setError: React.Dispatch<React.SetStateAction<string | null>>;
+  setHasLoadedData: React.Dispatch<React.SetStateAction<boolean>>;
+}
+
+/**
+ * Secure case management hook using DataManager only
+ * 
+ * Core Principles:
+ * - Uses DataManager exclusively (no fileDataProvider fallback)
+ * - File system is single source of truth
+ * - No render-time data storage
+ * - Automatic persistence through DataManager
+ */
+export function useCaseManagement(): UseCaseManagementReturn {
+  const dataManager = useDataManager(); // Throws if not available - no fallback
+  
+  const [cases, setCases] = useState<CaseDisplay[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [hasLoadedData, setHasLoadedData] = useState(false);
+
+  /**
+   * Load all cases from file system via DataManager
+   */
+  const loadCases = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      const data = await dataManager.getAllCases();
+      setCases(data);
+      setHasLoadedData(true);
+      
+      // Set baseline - we've now loaded data (even if empty)
+      (window as any).fileStorageDataBaseline = true;
+      
+      if (data.length > 0) {
+        (window as any).fileStorageSessionHadData = true;
+        toast.success(`Loaded ${data.length} cases successfully`);
+      } else {
+        toast.success(`Connected successfully - ready to start fresh`);
+      }
+      
+      console.log(`[DataManager] Successfully loaded ${data.length} cases`);
+    } catch (err) {
+      console.error('Failed to load cases:', err);
+      const errorMsg = 'Failed to load cases. Please try again.';
+      setError(errorMsg);
+      toast.error(errorMsg);
+    } finally {
+      setLoading(false);
+    }
+  }, [dataManager]);
+
+  /**
+   * Save (create or update) a case
+   */
+  const saveCase = useCallback(async (
+    caseData: { person: NewPersonData; caseRecord: NewCaseRecordData },
+    editingCase?: CaseDisplay | null
+  ) => {
+    const isEditing = !!editingCase;
+    const toastId = toast.loading(isEditing ? "Updating case..." : "Creating case...");
+
+    try {
+      setError(null);
+      
+      if (editingCase) {
+        // Update existing case using DataManager
+        const updatedCase = await dataManager.updateCompleteCase(editingCase.id, caseData);
+        
+        // Update local state to reflect changes immediately
+        setCases(prevCases => 
+          prevCases.map(c => 
+            c.id === editingCase.id ? updatedCase : c
+          )
+        );
+        
+        toast.success(`Case for ${caseData.person.firstName} ${caseData.person.lastName} updated successfully`, { id: toastId });
+      } else {
+        // Create new case using DataManager
+        const newCase = await dataManager.createCompleteCase(caseData);
+        setCases(prevCases => [...prevCases, newCase]);
+        
+        toast.success(`Case for ${caseData.person.firstName} ${caseData.person.lastName} created successfully`, { id: toastId });
+      }
+      
+      // DataManager handles file system persistence automatically
+    } catch (err) {
+      console.error('Failed to save case:', err);
+      const errorMsg = `Failed to ${isEditing ? 'update' : 'create'} case. Please try again.`;
+      setError(errorMsg);
+      toast.error(errorMsg, { id: toastId });
+      throw err; // Re-throw to allow caller to handle
+    }
+  }, [dataManager]);
+
+  /**
+   * Delete a case by ID
+   */
+  const deleteCase = useCallback(async (caseId: string) => {
+    // Find the case to get the person's name for the toast
+    const caseToDelete = cases.find(c => c.id === caseId);
+    const personName = caseToDelete ? `${caseToDelete.person.firstName} ${caseToDelete.person.lastName}` : 'Case';
+    
+    try {
+      setError(null);
+      await dataManager.deleteCase(caseId);
+      
+      // Remove the case from the local state
+      setCases(prevCases => prevCases.filter(c => c.id !== caseId));
+      
+      toast.success(`${personName} case deleted successfully`);
+      
+      // DataManager handles file system persistence automatically
+    } catch (err) {
+      console.error('Failed to delete case:', err);
+      const errorMsg = 'Failed to delete case. Please try again.';
+      setError(errorMsg);
+      toast.error(errorMsg);
+      throw err; // Re-throw to allow caller to handle
+    }
+  }, [dataManager, cases]);
+
+  /**
+   * Save (create or update) a note on a case
+   */
+  const saveNote = useCallback(async (
+    noteData: NewNoteData,
+    caseId: string,
+    editingNote?: { id: string } | null
+  ): Promise<CaseDisplay | null> => {
+    const isEditing = !!editingNote;
+
+    try {
+      setError(null);
+      let updatedCase: CaseDisplay;
+      
+      if (editingNote) {
+        // Update existing note
+        updatedCase = await dataManager.updateNote(caseId, editingNote.id, noteData);
+        toast.success("Note updated successfully");
+      } else {
+        // Add new note
+        updatedCase = await dataManager.addNote(caseId, noteData);
+        toast.success("Note added successfully");
+      }
+      
+      setCases(prevCases =>
+        prevCases.map(c =>
+          c.id === caseId ? updatedCase : c
+        )
+      );
+      
+      // DataManager handles file system persistence automatically
+      return updatedCase;
+    } catch (err) {
+      console.error('Failed to save note:', err);
+      const errorMsg = `Failed to ${isEditing ? 'update' : 'add'} note. Please try again.`;
+      setError(errorMsg);
+      toast.error(errorMsg);
+      return null;
+    }
+  }, [dataManager]);
+
+  /**
+   * Import multiple cases from external source
+   */
+  const importCases = useCallback(async (importedCases: CaseDisplay[]) => {
+    try {
+      setError(null);
+      
+      // Add imported cases to the current list
+      setCases(prevCases => [...prevCases, ...importedCases]);
+      setHasLoadedData(true);
+      
+      // Set baseline - we now have data
+      (window as any).fileStorageDataBaseline = true;
+      (window as any).fileStorageSessionHadData = true;
+      
+      toast.success(`Imported ${importedCases.length} cases successfully`);
+      
+      // Note: Import process should handle DataManager persistence at the import level
+    } catch (err) {
+      console.error('Failed to import cases:', err);
+      const errorMsg = 'Failed to import cases. Please try again.';
+      setError(errorMsg);
+      toast.error(errorMsg);
+      throw err;
+    }
+  }, []);
+
+  return {
+    // State
+    cases,
+    loading,
+    error,
+    hasLoadedData,
+    
+    // Actions
+    loadCases,
+    saveCase,
+    deleteCase,
+    saveNote,
+    importCases,
+    
+    // State setters for external control
+    setCases,
+    setError,
+    setHasLoadedData,
+  };
+}

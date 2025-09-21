@@ -10,6 +10,7 @@ import ErrorBoundary from "./components/ErrorBoundary";
 import FileSystemErrorBoundary from "./components/FileSystemErrorBoundary";
 import { ErrorRecoveryProvider } from "./components/ErrorRecovery";
 import { DataManagerProvider, useDataManagerSafe } from "./contexts/DataManagerContext";
+import { useCaseManagement } from "./hooks/useCaseManagement";
 
 // Lazy load heavy components
 const Dashboard = lazy(() => import("./components/Dashboard").then(m => ({ default: m.Dashboard })));
@@ -38,113 +39,42 @@ type NoteFormState = {
   caseId?: string;
 };
 
-const AppContent = memo(function AppContent({ 
-  cases, 
-  setCases, 
-  hasLoadedData, 
-  setHasLoadedData 
-}: { 
-  cases: CaseDisplay[];
-  setCases: React.Dispatch<React.SetStateAction<CaseDisplay[]>>;
-  hasLoadedData: boolean;
-  setHasLoadedData: React.Dispatch<React.SetStateAction<boolean>>;
-}) {
+const AppContent = memo(function AppContent() {
   const { isSupported, isConnected, hasStoredHandle, status, connectToFolder, connectToExisting, loadExistingData } = useFileStorage();
-  const dataManager = useDataManagerSafe(); // Get DataManager instance
+  
+  // Use the secure case management hook
+  const {
+    cases,
+    loading,
+    error,
+    hasLoadedData,
+    loadCases,
+    saveCase,
+    deleteCase,
+    saveNote,
+    setCases,
+    setError,
+    setHasLoadedData,
+  } = useCaseManagement();
+  
   const [currentView, setCurrentView] = useState<View>('dashboard');
   const [selectedCaseId, setSelectedCaseId] = useState<string | null>(null);
   const [editingCase, setEditingCase] = useState<CaseDisplay | null>(null);
   const [itemForm, setItemForm] = useState<ItemFormState>({ isOpen: false });
   const [noteForm, setNoteForm] = useState<NoteFormState>({ isOpen: false });
   const [formState, setFormState] = useState<FormState>({ previousView: 'list' });
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [showConnectModal, setShowConnectModal] = useState(false);
   
   // Always use file storage - no more API switching
-  const getDataAPI = () => fileDataProvider.getAPI();
-
+  // Remove old getDataAPI function - replaced by DataManager-only pattern
+  
   // Memoize selectedCase to prevent unnecessary recalculations
   const selectedCase = useMemo(() => 
     cases.find(c => c.id === selectedCaseId), 
     [cases, selectedCaseId]
   );
 
-  const loadCases = useCallback(async () => {
-    // Try DataManager first (new approach)
-    if (dataManager) {
-      try {
-        setLoading(true);
-        setError(null);
-        
-        const data = await dataManager.getAllCases();
-        setCases(data);
-        setHasLoadedData(true);
-        
-        // Set baseline - we've now loaded data (even if empty)
-        (window as any).fileStorageDataBaseline = true;
-        
-        if (data.length > 0) {
-          (window as any).fileStorageSessionHadData = true;
-          toast.success(`Loaded ${data.length} cases successfully`);
-        } else {
-          toast.success(`Connected successfully - ready to start fresh`);
-        }
-        
-        console.log(`[DataManager] Successfully loaded ${data.length} cases`);
-        return;
-      } catch (err) {
-        console.error('DataManager failed, falling back to old API:', err);
-        // Fall through to old API below
-      } finally {
-        setLoading(false);
-      }
-    }
-
-    // Fallback to old API (for gradual migration)
-    const dataAPI = getDataAPI();
-    if (!dataAPI) {
-      const errorMsg = 'Data storage is not available. Please check your file system connection.';
-      setError(errorMsg);
-      toast.error(errorMsg);
-      setLoading(false);
-      return;
-    }
-
-    try {
-      setLoading(true);
-      setError(null);
-      
-      const data = await dataAPI.getAllCases();
-      setCases(data);
-      setHasLoadedData(true);
-      
-      // Set baseline - we've now loaded data (even if empty)
-      (window as any).fileStorageDataBaseline = true;
-      
-      // Ensure FileStorageAPI internal cache is synchronized with loaded data
-      const fileData = {
-        exported_at: new Date().toISOString(),
-        total_cases: data.length,
-        cases: data
-      };
-      fileDataProvider.handleFileDataLoaded(fileData);
-      
-      if (data.length > 0) {
-        (window as any).fileStorageSessionHadData = true;
-        toast.success(`Loaded ${data.length} cases successfully`);
-      } else {
-        toast.success(`Connected successfully - ready to start fresh`);
-      }
-    } catch (err) {
-      console.error('Failed to load cases:', err);
-      const errorMsg = 'Failed to load cases. Please try again.';
-      setError(errorMsg);
-      toast.error(errorMsg);
-    } finally {
-      setLoading(false);
-    }
-  }, [dataManager]);
+  // Note: loadCases is now provided by useCaseManagement hook
 
   const handleConnectToExisting = useCallback(async (): Promise<boolean> => {
     try {
@@ -159,7 +89,6 @@ const AppContent = memo(function AppContent({
         fileService.stopAutosave();
       }
       
-      setLoading(true);
       setError(null);
       
       // Use stored directory handle with explicit user permission request
@@ -267,7 +196,6 @@ const AppContent = memo(function AppContent({
           window.location.hash = '';
         }
       }, 300);
-      setLoading(false);
     }
   }, [hasStoredHandle, connectToExisting, connectToFolder, loadExistingData]);
 
@@ -300,32 +228,12 @@ const AppContent = memo(function AppContent({
   }, [currentView]);
 
   const handleSaveCase = useCallback(async (caseData: { person: NewPersonData; caseRecord: NewCaseRecordData }) => {
-    const dataManager = useDataManagerSafe();
-    if (!dataManager) {
-      const errorMsg = 'Data storage is not available. Please check your file system connection.';
-      setError(errorMsg);
-      toast.error(errorMsg);
-      return;
-    }
-
-    const isEditing = !!editingCase;
-    const toastId = toast.loading(isEditing ? "Updating case..." : "Creating case...");
-
     try {
-      setError(null);
-      if (editingCase) {
-        // Update existing case using DataManager
-        const updatedCase = await dataManager.updateCompleteCase(editingCase.id, caseData);
-        
-        // Update local state to reflect changes immediately
-        setCases(prevCases => 
-          prevCases.map(c => 
-            c.id === editingCase.id ? updatedCase : c
-          )
-        );
-        
-        toast.success(`Case for ${caseData.person.firstName} ${caseData.person.lastName} updated successfully`, { id: toastId });
-        
+      await saveCase(caseData, editingCase);
+      
+      // Navigation logic after successful save
+      const isEditing = !!editingCase;
+      if (isEditing) {
         // Return to the previous view after saving
         if (formState.previousView === 'details' && formState.returnToCaseId) {
           setSelectedCaseId(formState.returnToCaseId);
@@ -334,24 +242,17 @@ const AppContent = memo(function AppContent({
           setCurrentView(formState.previousView);
         }
       } else {
-        // Create new case using DataManager - always go to list after creating
-        const newCase = await dataManager.createCompleteCase(caseData);
-        setCases(prevCases => [...prevCases, newCase]);
-        
-        toast.success(`Case for ${caseData.person.firstName} ${caseData.person.lastName} created successfully`, { id: toastId });
+        // Create new case - always go to list after creating
         setCurrentView('list');
       }
+      
       setEditingCase(null);
       setFormState({ previousView: 'list' });
-      
-      // DataManager handles file system persistence automatically
     } catch (err) {
-      console.error('Failed to save case:', err);
-      const errorMsg = `Failed to ${isEditing ? 'update' : 'create'} case. Please try again.`;
-      setError(errorMsg);
-      toast.error(errorMsg, { id: toastId });
+      // Error handling is done in the hook
+      console.error('Failed to save case in handleSaveCase wrapper:', err);
     }
-  }, [editingCase, formState, useDataManagerSafe]);
+  }, [saveCase, editingCase, formState, setSelectedCaseId, setCurrentView, setEditingCase, setFormState]);
 
   const handleCancelForm = useCallback(() => {
     // Return to the previous view when cancelling the form
@@ -469,74 +370,34 @@ const AppContent = memo(function AppContent({
     }
   };
 
-  const handleDeleteCase = async (caseId: string) => {
-    const dataManager = useDataManagerSafe();
-    if (!dataManager) return;
-    
-    // Find the case to get the person's name for the toast
-    const caseToDelete = cases.find(c => c.id === caseId);
-    const personName = caseToDelete ? `${caseToDelete.person.firstName} ${caseToDelete.person.lastName}` : 'Case';
-    
+  const handleDeleteCase = useCallback(async (caseId: string) => {
     try {
-      setError(null);
-      await dataManager.deleteCase(caseId);
-      
-      // Remove the case from the local state
-      setCases(prevCases => prevCases.filter(c => c.id !== caseId));
+      await deleteCase(caseId);
       
       // If we're currently viewing this case, redirect to list
       if (selectedCaseId === caseId) {
         setCurrentView('list');
         setSelectedCaseId(null);
       }
-      
-      toast.success(`${personName} case deleted successfully`);
-      
-      // DataManager handles file system persistence automatically
     } catch (err) {
-      console.error('Failed to delete case:', err);
-      const errorMsg = 'Failed to delete case. Please try again.';
-      setError(errorMsg);
-      toast.error(errorMsg);
+      // Error handling is done in the hook
+      console.error('Failed to delete case in handleDeleteCase wrapper:', err);
     }
-  };
+  }, [deleteCase, selectedCaseId, setCurrentView, setSelectedCaseId]);
 
-  const handleSaveNote = async (noteData: NewNoteData) => {
-    const dataManager = useDataManagerSafe();
-    if (!noteForm.caseId || !dataManager) return;
-
-    const isEditing = !!noteForm.editingNote;
+  const handleSaveNote = useCallback(async (noteData: NewNoteData) => {
+    if (!noteForm.caseId) return;
 
     try {
-      setError(null);
-      let updatedCase: CaseDisplay;
-      
-      if (noteForm.editingNote) {
-        // Update existing note
-        updatedCase = await dataManager.updateNote(noteForm.caseId, noteForm.editingNote.id, noteData);
-        toast.success("Note updated successfully");
-      } else {
-        // Add new note
-        updatedCase = await dataManager.addNote(noteForm.caseId, noteData);
-        toast.success("Note added successfully");
+      const updatedCase = await saveNote(noteData, noteForm.caseId, noteForm.editingNote);
+      if (updatedCase) {
+        setNoteForm({ isOpen: false });
       }
-      
-      setCases(prevCases =>
-        prevCases.map(c =>
-          c.id === noteForm.caseId ? updatedCase : c
-        )
-      );
-      
-      setNoteForm({ isOpen: false });
-      
-      // DataManager handles file system persistence automatically
     } catch (err) {
-      console.error('Failed to save note:', err);
-      const errorMsg = `Failed to ${isEditing ? 'update' : 'add'} note. Please try again.`;
-      setError(errorMsg);
-      toast.error(errorMsg);
+      // Error handling is done in the hook
+      console.error('Failed to save note in handleSaveNote wrapper:', err);
     }
-  };
+  }, [saveNote, noteForm.caseId, noteForm.editingNote, setNoteForm]);
 
   const handleCancelNoteForm = () => {
     setNoteForm({ isOpen: false });
@@ -656,7 +517,6 @@ const AppContent = memo(function AppContent({
       // Check if File System Access API is not supported
       if (isSupported === false) {
         setError('File System Access API is not supported in this browser. Please use a modern browser like Chrome, Edge, or Opera.');
-        setLoading(false);
         return;
       }
       
@@ -668,15 +528,12 @@ const AppContent = memo(function AppContent({
       // For file storage mode, check if setup is needed
       if (isSupported && !isConnected && !hasLoadedData) {
         setShowConnectModal(true);
-        setLoading(false); // Stop the main loading to show connect modal
       } else if (isConnected && !hasLoadedData) {
         // Directory connected but no data loaded yet - show modal for user to load
         setShowConnectModal(true);
-        setLoading(false);
       } else if (isConnected && hasLoadedData) {
         // Everything is set up and ready
         setShowConnectModal(false);
-        setLoading(false);
       }
     }, 100); // Small delay to prevent excessive re-renders
 
@@ -850,11 +707,7 @@ const AppContent = memo(function AppContent({
 });
 
 export default function App() {
-  // Move cases state to App level so handleFileDataLoaded can update it
-  const [cases, setCases] = useState<CaseDisplay[]>([]);
-  const [hasLoadedData, setHasLoadedData] = useState(false);
-
-  // Central file data handler that updates React state
+  // Central file data handler that maintains file provider sync
   const handleFileDataLoaded = useCallback((fileData: any) => {
     try {
       console.log('🔧 handleFileDataLoaded called with:', fileData);
@@ -862,13 +715,8 @@ export default function App() {
       // Always update the file data provider cache (this is safe and necessary)
       fileDataProvider.handleFileDataLoaded(fileData);
       
-      // Update React state if we have cases data
-      if (fileData && fileData.cases && Array.isArray(fileData.cases)) {
-        console.log('📊 Updating React state with', fileData.cases.length, 'cases');
-        setCases(fileData.cases);
-        setHasLoadedData(true);
-        toast.success(`Loaded ${fileData.cases.length} cases successfully`, { id: 'data-loaded' });
-      }
+      // Note: React state is now managed by useCaseManagement hook
+      console.log('✅ File data loaded and synced to provider');
       
       // Set baseline - we've now loaded data through the file storage system
       (window as any).fileStorageDataBaseline = true;
@@ -925,12 +773,7 @@ export default function App() {
           <ErrorRecoveryProvider>
             <DataManagerProvider>
               <FileStorageIntegrator>
-              <AppContent 
-                cases={cases}
-                setCases={setCases}
-                hasLoadedData={hasLoadedData}
-                setHasLoadedData={setHasLoadedData}
-              />
+              <AppContent />
               <Toaster />
             </FileStorageIntegrator>
             </DataManagerProvider>
