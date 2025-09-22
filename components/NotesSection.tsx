@@ -44,7 +44,7 @@ export function NotesSection({ notes, onAddNote, onEditNote, onDeleteNote }: Not
   );
 
   return (
-    <Card>
+    <Card key="notes-section">
       <CardHeader>
         <div className="flex items-center justify-between">
           <CardTitle className="flex items-center gap-2">
