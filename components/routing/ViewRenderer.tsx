@@ -8,22 +8,29 @@ import CaseDetailsDirect from "../CaseDetails";
 import CaseFormDirect from "../CaseForm";
 import SettingsDirect from "../Settings";
 
-// Enhanced lazy loading with direct import fallback
+// Enhanced lazy loading with direct import fallback and better error handling
 const createLazyComponent = (importFn: () => Promise<any>, DirectComponent: any, componentName: string) => {
   return lazy(async () => {
     const maxRetries = 3;
-    const retryDelays = [1000, 2000, 3000]; // Progressive delays
+    const retryDelays = [500, 1000, 2000]; // Faster initial retry
     
     for (let attempt = 0; attempt < maxRetries; attempt++) {
       try {
         console.log(`[ViewRenderer] Loading ${componentName} (attempt ${attempt + 1}/${maxRetries})`);
-        return await importFn();
+        const module = await importFn();
+        console.log(`[ViewRenderer] Successfully loaded ${componentName} via lazy import`);
+        return module;
       } catch (error) {
         console.warn(`[ViewRenderer] Failed to load ${componentName} (attempt ${attempt + 1}/${maxRetries})`, error);
         
         if (attempt < maxRetries - 1) {
           // Wait with progressive backoff before retry
           await new Promise(resolve => setTimeout(resolve, retryDelays[attempt]));
+          
+          // Clear any cached failed module attempts
+          if (typeof window !== 'undefined' && (window as any).__webpack_require__?.cache) {
+            delete (window as any).__webpack_require__.cache[importFn.toString()];
+          }
         } else {
           // Final attempt failed, use direct import fallback
           console.warn(`[ViewRenderer] All lazy loading attempts failed for ${componentName}, using direct import fallback`);
@@ -38,20 +45,26 @@ const createLazyComponent = (importFn: () => Promise<any>, DirectComponent: any,
             // Return a functional fallback component
             return {
               default: () => (
-                <div className="flex flex-col items-center justify-center p-8 space-y-4 border-2 border-dashed border-red-300 bg-red-50 rounded-lg">
-                  <div className="text-lg font-medium text-red-800">
+                <div className="flex flex-col items-center justify-center p-8 space-y-4 border-2 border-dashed border-red-300 bg-red-50 dark:bg-red-900/20 dark:border-red-700 rounded-lg">
+                  <div className="w-12 h-12 bg-red-100 dark:bg-red-900 rounded-full flex items-center justify-center">
+                    <span className="text-red-600 dark:text-red-400 text-xl">⚠</span>
+                  </div>
+                  <div className="text-lg font-medium text-red-800 dark:text-red-200">
                     {componentName} Failed to Load
                   </div>
-                  <div className="text-sm text-red-700 text-center max-w-md">
+                  <div className="text-sm text-red-700 dark:text-red-300 text-center max-w-md">
                     Both lazy loading and direct import failed. This indicates a serious module loading issue.
-                    Please refresh the page.
+                    Please refresh the page to resolve this.
                   </div>
                   <button 
                     onClick={() => window.location.reload()}
-                    className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 text-sm"
+                    className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded text-sm transition-colors"
                   >
                     Refresh Page
                   </button>
+                  <div className="text-xs text-red-600 dark:text-red-400 text-center mt-2">
+                    Your data is safe. This is a temporary loading issue.
+                  </div>
                 </div>
               )
             };

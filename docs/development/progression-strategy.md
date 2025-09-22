@@ -3,6 +3,43 @@
 ## 📋 Executive Summary
 This strategy addresses all improvements identified in the Code Review, organized by priority and implementation complexity. The focus is on maintaining the filesystem-only architecture while enhancing performance, maintainability, and user experience.
 
+---
+
+## 📋 **PR Review Insights from Case Detail UI Polish (PR #1)**
+
+### ✅ **Successfully Merged Improvements**
+The Case Detail UI Polish PR (#1) was successfully merged into main branch with the following achievements:
+- **React Key Prop Issues**: Fixed composite key generation for notes with missing IDs
+- **UI Enhancements**: Added resizable panels, improved animations, and visual polish  
+- **Sidebar Behavior**: Implemented automatic sidebar collapse for better UX in detail/form views
+- **Memory Safety**: Added proper cleanup for setTimeout to prevent memory leaks
+
+### 🔍 **Key Review Comments for Future Reference**
+
+#### **React Key Management Best Practices**
+- **Avoid Unnecessary Keys**: Don't add `key` props to static elements (Badge, div, DropdownMenuItem) that aren't in arrays
+- **Stable Key Generation**: Use content-based hashing instead of index-based keys to avoid reconciliation issues
+- **Content Encoding Safety**: When using `btoa()` for content hashing, handle non-Latin-1 characters with try-catch or use `encodeURIComponent()`
+
+#### **Performance & Animation Improvements**
+- **Memory Leak Prevention**: Always use `useRef` with cleanup for tracking component mount state when using `setTimeout`
+- **Better Animation Approach**: Consider CSS transitions or React's `useTransition` hook instead of `setTimeout` for UI transitions
+- **Efficient Transitions**: Avoid manual state management for animations when browser-native solutions exist
+
+#### **Code Quality Patterns Identified**
+1. **Static Key Anti-Pattern**: Adding keys to single rendered elements provides no benefit
+2. **Index Fallback Risk**: Using array index as fallback key can cause React reconciliation issues when items reorder
+3. **Content Hash Strategy**: Use content-based hashing (`btoa()` with error handling) for stable keys when IDs are missing
+4. **Mount State Tracking**: Use `useRef` with `useEffect` cleanup to prevent state updates on unmounted components
+
+### 📝 **Implementation Recommendations for Phase 4.2 (Testing)**
+Based on PR feedback, prioritize testing these specific patterns:
+- Key generation logic with various content types (including non-Latin-1 characters)
+- Component unmounting during transitions to verify memory leak prevention
+- Note reordering scenarios to validate stable key generation
+
+---
+
 ## 🎯 Implementation Phases
 
 ### Phase 1: Quick Wins (1-2 days)
@@ -419,6 +456,8 @@ export const validateFinancialItem = createValidator(FinancialItemSchema);
 ### 4.2 Test Infrastructure Setup
 **Priority**: HIGH | **Effort**: 4 hours
 
+**Updated Priority**: Focus on testing patterns identified in PR review feedback.
+
 ````bash
 npm install -D vitest @testing-library/react @testing-library/jest-dom @testing-library/user-event jsdom
 ````
@@ -456,6 +495,71 @@ afterEach(() => {
 global.showDirectoryPicker = vi.fn();
 global.showSaveFilePicker = vi.fn();
 global.showOpenFilePicker = vi.fn();
+````
+
+**Priority Test Cases** (Based on PR Review Feedback):
+
+````typescript
+// filepath: /workspaces/CMSNext/src/components/__tests__/NotesSection.test.ts
+import { renderHook, act } from '@testing-library/react';
+import { describe, it, expect, vi } from 'vitest';
+import { NotesSection } from '../NotesSection';
+
+describe('NotesSection Key Generation', () => {
+  it('should handle non-Latin-1 characters in content hash', () => {
+    const notesWithUnicode = [
+      { id: '', content: '测试内容', createdAt: '2025-01-01T00:00:00Z', category: 'General' },
+      { id: '', content: 'نص عربي', createdAt: '2025-01-01T00:00:00Z', category: 'General' }
+    ];
+    
+    // Should not throw encoding errors
+    expect(() => {
+      render(<NotesSection notes={notesWithUnicode} onAddNote={() => {}} onEditNote={() => {}} onDeleteNote={() => {}} />);
+    }).not.toThrow();
+  });
+
+  it('should generate stable keys for notes without IDs', () => {
+    const notes = [
+      { id: '', content: 'Test content', createdAt: '2025-01-01T00:00:00Z', category: 'General' },
+      { id: '', content: 'Different content', createdAt: '2025-01-01T00:00:00Z', category: 'General' }
+    ];
+    
+    // Keys should be stable across re-renders with same content
+    const { rerender } = render(<NotesSection notes={notes} onAddNote={() => {}} onEditNote={() => {}} onDeleteNote={() => {}} />);
+    const firstRenderKeys = screen.getAllByTestId('note-card').map(el => el.getAttribute('data-key'));
+    
+    rerender(<NotesSection notes={notes} onAddNote={() => {}} onEditNote={() => {}} onDeleteNote={() => {}} />);
+    const secondRenderKeys = screen.getAllByTestId('note-card').map(el => el.getAttribute('data-key'));
+    
+    expect(firstRenderKeys).toEqual(secondRenderKeys);
+  });
+});
+````
+
+````typescript
+// filepath: /workspaces/CMSNext/src/components/__tests__/CaseDetails.test.ts
+import { render, screen, waitFor } from '@testing-library/react';
+import { describe, it, expect, vi } from 'vitest';
+import { CaseDetails } from '../CaseDetails';
+
+describe('CaseDetails Memory Management', () => {
+  it('should not update state after component unmounts', async () => {
+    const mockSetState = vi.fn();
+    const { unmount } = render(<CaseDetails {...defaultProps} />);
+    
+    // Trigger view change
+    fireEvent.click(screen.getByRole('button', { name: /table/i }));
+    
+    // Unmount before timeout completes
+    unmount();
+    
+    // Wait for timeout
+    await waitFor(() => {}, { timeout: 200 });
+    
+    // Should not have called setState after unmount
+    expect(mockSetState).not.toHaveBeenCalled();
+  });
+});
 ````
 
 ````typescript

@@ -39,9 +39,9 @@ export default defineConfig({
       },
       output: {
         manualChunks: {
-          // Split React vendor chunk
+          // Keep React together and stable
           'react-vendor': ['react', 'react-dom'],
-          // Split UI library chunks
+          // UI libraries together
           'ui-vendor': [
             'lucide-react',
             '@radix-ui/react-dialog',
@@ -72,9 +72,7 @@ export default defineConfig({
             '@radix-ui/react-tooltip',
             '@radix-ui/react-aspect-ratio'
           ],
-          // Split form and chart libraries
-          'forms-charts': ['react-hook-form', 'recharts'],
-          // Split utility libraries  
+          // Utility libraries
           'utils': ['sonner', 'date-fns', 'clsx', 'tailwind-merge', 'class-variance-authority']
         }
       }

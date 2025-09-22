@@ -10,77 +10,10 @@ import { AppProviders } from "./components/providers/AppProviders";
 import { FileStorageIntegrator } from "./components/providers/FileStorageIntegrator";
 import { ViewRenderer } from "./components/routing/ViewRenderer";
 
-// Enhanced lazy loading with cache-miss fallback handling for modals
-const createLazyModal = (importFn: () => Promise<any>, modalName: string) => {
-  return lazy(async () => {
-    const maxRetries = 3;
-    const retryDelays = [1000, 2000, 3000];
-    
-    for (let attempt = 0; attempt < maxRetries; attempt++) {
-      try {
-        console.log(`[App] Loading ${modalName} (attempt ${attempt + 1}/${maxRetries})`);
-        return await importFn();
-      } catch (error) {
-        console.warn(`[App] Failed to load ${modalName} (attempt ${attempt + 1}/${maxRetries})`, error);
-        
-        if (attempt < maxRetries - 1) {
-          await new Promise(resolve => setTimeout(resolve, retryDelays[attempt]));
-        } else {
-          console.error(`[App] All attempts failed for ${modalName}`, error);
-          
-          // Return a simplified modal fallback that preserves workflow
-          return {
-            default: ({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) => (
-              isOpen ? (
-                <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center">
-                  <div className="bg-white p-6 rounded-lg max-w-md mx-4">
-                    <div className="text-lg font-medium text-yellow-800 mb-4">
-                      {modalName} Temporarily Unavailable
-                    </div>
-                    <div className="text-sm text-yellow-700 mb-4">
-                      This modal couldn't load due to a temporary network issue. 
-                      Your data is safe and you can continue working.
-                    </div>
-                    <div className="flex gap-2">
-                      <button 
-                        onClick={() => {
-                          // Try reloading just this modal
-                          setTimeout(() => {
-                            window.location.hash = `retry-${modalName}-${Date.now()}`;
-                          }, 100);
-                          onClose();
-                        }}
-                        className="px-4 py-2 bg-yellow-600 text-white rounded hover:bg-yellow-700 text-sm"
-                      >
-                        Try Again Later
-                      </button>
-                      <button 
-                        onClick={onClose}
-                        className="px-4 py-2 bg-gray-300 text-gray-700 rounded hover:bg-gray-400 text-sm"
-                      >
-                        Continue Working
-                      </button>
-                    </div>
-                    <div className="text-xs text-yellow-600 text-center mt-2">
-                      This usually resolves automatically in 1-2 minutes.
-                    </div>
-                  </div>
-                </div>
-              ) : null
-            )
-          };
-        }
-      }
-    }
-    
-    throw new Error(`Failed to load ${modalName} after ${maxRetries} attempts`);
-  });
-};
-
-// Lazy load modals with fallback handling
-const FinancialItemModal = createLazyModal(() => import("./components/FinancialItemModal"), "FinancialItemModal");
-const NoteModal = createLazyModal(() => import("./components/NoteModal"), "NoteModal");
-const ConnectToExistingModal = createLazyModal(() => import("./components/ConnectToExistingModal"), "ConnectToExistingModal");
+// Simplified lazy loading for modals only - more conservative approach
+const FinancialItemModal = lazy(() => import("./components/FinancialItemModal"));
+const NoteModal = lazy(() => import("./components/NoteModal"));
+const ConnectToExistingModal = lazy(() => import("./components/ConnectToExistingModal"));
 
 type View = 'dashboard' | 'list' | 'details' | 'form' | 'settings';
 type ItemFormState = {
