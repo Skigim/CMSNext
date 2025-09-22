@@ -208,7 +208,6 @@ export function CaseDetails({
           {/* Notes Section */}
           <div className="animate-in slide-in-from-right-4 duration-500 delay-200">
             <NotesSection
-              key="notes-mobile"
               notes={caseData.caseRecord.notes || []}
               onAddNote={onAddNote}
               onEditNote={onEditNote}
