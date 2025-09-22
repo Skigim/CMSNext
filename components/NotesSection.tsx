@@ -73,9 +73,18 @@ export function NotesSection({ notes, onAddNote, onEditNote, onDeleteNote }: Not
         ) : (
           <div className="space-y-4">
             {sortedNotes.map((note) => {
-              // Ensure a stable, unique key even if imported notes are missing ids
-              // Use a more stable approach than index to avoid reconciliation issues
-              const contentHash = note.content ? btoa(note.content).slice(0, 8) : '';
+              // Generate stable keys for notes, handling Unicode content safely
+              // Based on PR feedback: use content-based hashing with proper error handling
+              let contentHash = '';
+              if (note.content) {
+                try {
+                  // Handle non-Latin-1 characters safely
+                  contentHash = btoa(unescape(encodeURIComponent(note.content.slice(0, 50)))).slice(0, 8);
+                } catch (error) {
+                  // Fallback for encoding errors
+                  contentHash = note.content.slice(0, 8).replace(/[^a-zA-Z0-9]/g, '');
+                }
+              }
               const compositeKey = note.id || `${note.createdAt}-${contentHash}`;
               return (
               <Card key={compositeKey} className="border-l-4 border-l-primary/20">
