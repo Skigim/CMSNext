@@ -21,6 +21,15 @@ export default defineConfig({
       '@': new URL('./src', import.meta.url).pathname,
     },
   },
+  server: {
+    // Add security headers for development
+    headers: {
+      'X-Frame-Options': 'DENY',
+      'X-Content-Type-Options': 'nosniff',
+      'X-XSS-Protection': '1; mode=block',
+      'Referrer-Policy': 'strict-origin-when-cross-origin',
+    }
+  },
   build: {
     sourcemap: true,
     rollupOptions: {
@@ -28,6 +37,10 @@ export default defineConfig({
         return id.includes('/scripts/') || id.includes('/archive/');
       },
       output: {
+        // Force new hashes for cache busting
+        entryFileNames: `assets/[name]-[hash]-${Date.now()}.js`,
+        chunkFileNames: `assets/[name]-[hash]-${Date.now()}.js`,
+        assetFileNames: `assets/[name]-[hash]-${Date.now()}.[ext]`,
         manualChunks: {
           // Split React vendor chunk
           'react-vendor': ['react', 'react-dom'],
