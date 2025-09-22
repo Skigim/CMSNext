@@ -4,70 +4,78 @@ import { CaseDisplay, NewPersonData, NewCaseRecordData } from "../../types/case"
 // Enhanced lazy loading with cache-miss fallback handling
 const createLazyComponent = (importFn: () => Promise<any>, componentName: string) => {
   return lazy(async () => {
-    try {
-      return await importFn();
-    } catch (error) {
-      console.warn(`[ViewRenderer] Failed to load ${componentName}, attempting cache refresh...`, error);
-      
-      // If chunk fails to load (common with CDN cache mismatches), 
-      // wait a moment and try again with cache-busting
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
+    const maxRetries = 3;
+    const retryDelays = [1000, 2000, 3000]; // Progressive delays
+    
+    for (let attempt = 0; attempt < maxRetries; attempt++) {
       try {
-        // Force a hard refresh of the module cache by adding timestamp
-        const cacheBuster = Date.now();
-        
-        // Try to reload the page's module imports entirely
-        if (typeof window !== 'undefined' && window.location) {
-          console.log(`[ViewRenderer] Attempting cache-busted reload for ${componentName}`);
-          
-          // For CDN cache issues, reload the entire page with cache busting
-          const url = new URL(window.location.href);
-          url.searchParams.set('_cb', cacheBuster.toString());
-          window.location.href = url.toString();
-          
-          // This prevents the fallback from showing since we're reloading
-          return new Promise(() => {});
-        }
-        
+        console.log(`[ViewRenderer] Loading ${componentName} (attempt ${attempt + 1}/${maxRetries})`);
         return await importFn();
-      } catch (retryError) {
-        console.error(`[ViewRenderer] Failed to load ${componentName} after retry`, retryError);
+      } catch (error) {
+        console.warn(`[ViewRenderer] Failed to load ${componentName} (attempt ${attempt + 1}/${maxRetries})`, error);
         
-        // Return a fallback component for graceful degradation
-        return {
-          default: () => (
-            <div className="flex flex-col items-center justify-center p-8 space-y-4">
-              <div className="text-lg font-medium text-red-600">
-                Component Loading Error
+        if (attempt < maxRetries - 1) {
+          // Wait with progressive backoff before retry
+          await new Promise(resolve => setTimeout(resolve, retryDelays[attempt]));
+          
+          // Try to clear any module cache issues by creating a new import
+          try {
+            // Force module re-evaluation by clearing any cached references
+            if (typeof window !== 'undefined' && (window as any).__webpack_require__) {
+              // Webpack module cache clearing
+              delete (window as any).__webpack_require__.cache[componentName];
+            }
+          } catch (cacheError) {
+            // Ignore cache clearing errors
+          }
+        } else {
+          // Final attempt failed, show graceful fallback
+          console.error(`[ViewRenderer] All attempts failed for ${componentName}`, error);
+          
+          // Return a functional fallback component that doesn't disrupt workflow
+          return {
+            default: () => (
+              <div className="flex flex-col items-center justify-center p-8 space-y-4 border-2 border-dashed border-yellow-300 bg-yellow-50 rounded-lg">
+                <div className="text-lg font-medium text-yellow-800">
+                  {componentName} Temporarily Unavailable
+                </div>
+                <div className="text-sm text-yellow-700 text-center max-w-md">
+                  This component couldn't load due to a temporary network issue. 
+                  Your data and current session are safe.
+                </div>
+                <div className="flex gap-2">
+                  <button 
+                    onClick={() => {
+                      // Try to re-import the component
+                      window.location.hash = Math.random().toString();
+                      window.location.reload();
+                    }}
+                    className="px-4 py-2 bg-yellow-600 text-white rounded hover:bg-yellow-700 text-sm"
+                  >
+                    Try Again
+                  </button>
+                  <button 
+                    onClick={() => {
+                      // Go back to previous view without losing data
+                      window.history.back();
+                    }}
+                    className="px-4 py-2 bg-gray-300 text-gray-700 rounded hover:bg-gray-400 text-sm"
+                  >
+                    Go Back
+                  </button>
+                </div>
+                <div className="text-xs text-yellow-600 text-center">
+                  This is usually temporary and resolves automatically in 1-2 minutes.
+                </div>
               </div>
-              <div className="text-sm text-gray-600 text-center max-w-md">
-                Failed to load {componentName}. This may be due to a deployment cache issue. 
-                The page will automatically refresh to load the latest version.
-              </div>
-              <div className="flex gap-2">
-                <button 
-                  onClick={() => {
-                    const url = new URL(window.location.href);
-                    url.searchParams.set('_refresh', Date.now().toString());
-                    window.location.href = url.toString();
-                  }}
-                  className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-                >
-                  Refresh Now
-                </button>
-                <button 
-                  onClick={() => window.location.reload()}
-                  className="px-4 py-2 bg-gray-300 text-gray-700 rounded hover:bg-gray-400"
-                >
-                  Force Reload
-                </button>
-              </div>
-            </div>
-          )
-        };
+            )
+          };
+        }
       }
     }
+    
+    // This should never be reached, but TypeScript needs it
+    throw new Error(`Failed to load ${componentName} after ${maxRetries} attempts`);
   });
 };
 
