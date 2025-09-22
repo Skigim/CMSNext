@@ -72,15 +72,18 @@ export function NotesSection({ notes, onAddNote, onEditNote, onDeleteNote }: Not
           </div>
         ) : (
           <div key="notes-list" className="space-y-4">
-            {sortedNotes.map((note) => (
-              <Card key={note.id} className="border-l-4 border-l-primary/20">
+            {sortedNotes.map((note, index) => {
+              // Ensure a stable, unique key even if imported notes are missing ids
+              const compositeKey = note.id || `${note.createdAt}-${index}`;
+              return (
+              <Card key={compositeKey} className="border-l-4 border-l-primary/20">
                 <CardContent className="pt-4">
                   <div className="flex items-start justify-between mb-3">
                     <div className="flex items-center gap-2">
-                      <Badge key={`badge-${note.id}`} className={getCategoryColor(note.category)}>
+                      <Badge key={`badge-${compositeKey}`} className={getCategoryColor(note.category)}>
                         {note.category}
                       </Badge>
-                      <div key={`date-${note.id}`} className="flex items-center gap-1 text-xs text-muted-foreground">
+                      <div key={`date-${compositeKey}`} className="flex items-center gap-1 text-xs text-muted-foreground">
                         <Calendar className="w-3 h-3" />
                         {formatDate(note.createdAt)}
                       </div>
@@ -93,7 +96,7 @@ export function NotesSection({ notes, onAddNote, onEditNote, onDeleteNote }: Not
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
                         <DropdownMenuItem 
-                          key={`edit-${note.id}`}
+                          key={`edit-${compositeKey}`}
                           onClick={() => onEditNote(note.id)}
                           className="cursor-pointer"
                         >
@@ -101,7 +104,7 @@ export function NotesSection({ notes, onAddNote, onEditNote, onDeleteNote }: Not
                           Edit
                         </DropdownMenuItem>
                         <DropdownMenuItem 
-                          key={`delete-${note.id}`}
+                          key={`delete-${compositeKey}`}
                           onClick={() => onDeleteNote(note.id)}
                           className="cursor-pointer text-destructive"
                         >
@@ -127,7 +130,8 @@ export function NotesSection({ notes, onAddNote, onEditNote, onDeleteNote }: Not
                   )}
                 </CardContent>
               </Card>
-            ))}
+              );
+            })}
           </div>
         )}
       </CardContent>
