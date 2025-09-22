@@ -50,7 +50,7 @@ export function NotesSection({ notes, onAddNote, onEditNote, onDeleteNote }: Not
           <CardTitle className="flex items-center gap-2">
             Notes
             {notes.length > 0 && (
-              <Badge variant="secondary" className="ml-2">
+              <Badge key="notes-count" variant="secondary" className="ml-2">
                 {notes.length}
               </Badge>
             )}
@@ -72,8 +72,13 @@ export function NotesSection({ notes, onAddNote, onEditNote, onDeleteNote }: Not
           </div>
         ) : (
           <div className="space-y-4">
-            {sortedNotes.map((note) => (
-              <Card key={note.id} className="border-l-4 border-l-primary/20">
+            {sortedNotes.map((note) => {
+              // Ensure a stable, unique key even if imported notes are missing ids
+              // Use a more stable approach than index to avoid reconciliation issues
+              const contentHash = note.content ? btoa(note.content).slice(0, 8) : '';
+              const compositeKey = note.id || `${note.createdAt}-${contentHash}`;
+              return (
+              <Card key={compositeKey} className="border-l-4 border-l-primary/20">
                 <CardContent className="pt-4">
                   <div className="flex items-start justify-between mb-3">
                     <div className="flex items-center gap-2">
@@ -125,7 +130,8 @@ export function NotesSection({ notes, onAddNote, onEditNote, onDeleteNote }: Not
                   )}
                 </CardContent>
               </Card>
-            ))}
+              );
+            })}
           </div>
         )}
       </CardContent>

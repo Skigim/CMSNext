@@ -10,6 +10,8 @@ interface MainLayoutProps {
   onNavigate: (view: string) => void;
   onNewCase: () => void;
   breadcrumbTitle?: string;
+  sidebarOpen?: boolean;
+  onSidebarOpenChange?: (open: boolean) => void;
 }
 
 export function MainLayout({ 
@@ -17,7 +19,9 @@ export function MainLayout({
   currentView, 
   onNavigate, 
   onNewCase,
-  breadcrumbTitle
+  breadcrumbTitle,
+  sidebarOpen,
+  onSidebarOpenChange
 }: MainLayoutProps) {
   const getBreadcrumbTitle = () => {
     if (breadcrumbTitle) return breadcrumbTitle;
@@ -39,7 +43,10 @@ export function MainLayout({
   };
 
   return (
-    <SidebarProvider>
+    <SidebarProvider
+      open={sidebarOpen}
+      onOpenChange={onSidebarOpenChange}
+    >
       <AppSidebar 
         currentView={currentView}
         onNavigate={onNavigate}

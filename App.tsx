@@ -131,6 +131,7 @@ const AppContent = memo(function AppContent() {
   const [itemForm, setItemForm] = useState<ItemFormState>({ isOpen: false });
   const [formState, setFormState] = useState<FormState>({ previousView: 'list' });
   const [showConnectModal, setShowConnectModal] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState<boolean>(true);
   
   // Central file data handler that maintains file provider sync
   const handleFileDataLoaded = useCallback((fileData: any) => {
@@ -438,6 +439,8 @@ const AppContent = memo(function AppContent() {
   const handleViewCase = useCallback((caseId: string) => {
     setSelectedCaseId(caseId);
     setCurrentView('details');
+    // Auto-collapse sidebar for better case detail view experience
+    setSidebarOpen(false);
   }, []);
 
   const handleEditCase = useCallback((caseId: string) => {
@@ -450,6 +453,8 @@ const AppContent = memo(function AppContent() {
         returnToCaseId: currentView === 'details' ? caseId : undefined
       });
       setCurrentView('form');
+      // Auto-collapse sidebar for better form experience
+      setSidebarOpen(false);
     }
   }, [cases, currentView]);
 
@@ -461,6 +466,8 @@ const AppContent = memo(function AppContent() {
       returnToCaseId: undefined
     });
     setCurrentView('form');
+    // Auto-collapse sidebar for better form experience
+    setSidebarOpen(false);
   }, [currentView]);
 
   const handleSaveCase = useCallback(async (caseData: { person: NewPersonData; caseRecord: NewCaseRecordData }) => {
@@ -739,6 +746,14 @@ const AppContent = memo(function AppContent() {
   };
 
   const handleNavigate = (view: string) => {
+    // Auto-collapse sidebar for case details view
+    if (view === 'details' || view === 'form') {
+      setSidebarOpen(false);
+    } else {
+      // Auto-expand sidebar for other views if it was collapsed for details
+      setSidebarOpen(true);
+    }
+
     switch (view) {
       case 'dashboard':
         handleBackToDashboard();
@@ -817,6 +832,8 @@ const AppContent = memo(function AppContent() {
           onNavigate={handleNavigate}
           onNewCase={handleNewCase}
           breadcrumbTitle="Setup Required"
+          sidebarOpen={sidebarOpen}
+          onSidebarOpenChange={setSidebarOpen}
         >
           <div className="flex items-center justify-center h-96">
             <div className="text-center">
@@ -851,6 +868,8 @@ const AppContent = memo(function AppContent() {
         onNavigate={handleNavigate}
         onNewCase={handleNewCase}
         breadcrumbTitle="Loading..."
+        sidebarOpen={sidebarOpen}
+        onSidebarOpenChange={setSidebarOpen}
       >
         <div className="flex items-center justify-center h-96">
           <div className="text-center">
@@ -868,6 +887,8 @@ const AppContent = memo(function AppContent() {
       onNavigate={handleNavigate}
       onNewCase={handleNewCase}
       breadcrumbTitle={getBreadcrumbTitle}
+      sidebarOpen={sidebarOpen}
+      onSidebarOpenChange={setSidebarOpen}
     >
       {error && (
         <div className="bg-destructive/10 border border-destructive/20 text-destructive px-4 py-3 rounded-md mb-4">
