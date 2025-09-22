@@ -139,3 +139,5 @@ export const NoteModal = React.forwardRef<HTMLDivElement, NoteModalProps>(
 );
 
 NoteModal.displayName = 'NoteModal';
+
+export default NoteModal;

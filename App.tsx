@@ -11,9 +11,9 @@ import { FileStorageIntegrator } from "./components/providers/FileStorageIntegra
 import { ViewRenderer } from "./components/routing/ViewRenderer";
 
 // Lazy load modals only (main views are now in ViewRenderer)
-const FinancialItemModal = lazy(() => import("./components/FinancialItemModal").then(m => ({ default: m.FinancialItemModal })));
-const NoteModal = lazy(() => import("./components/NoteModal").then(m => ({ default: m.NoteModal })));
-const ConnectToExistingModal = lazy(() => import("./components/ConnectToExistingModal").then(m => ({ default: m.ConnectToExistingModal })));
+const FinancialItemModal = lazy(() => import("./components/FinancialItemModal"));
+const NoteModal = lazy(() => import("./components/NoteModal"));
+const ConnectToExistingModal = lazy(() => import("./components/ConnectToExistingModal"));
 
 type View = 'dashboard' | 'list' | 'details' | 'form' | 'settings';
 type ItemFormState = {

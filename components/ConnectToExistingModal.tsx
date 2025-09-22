@@ -290,3 +290,5 @@ export function ConnectToExistingModal({
     </Dialog>
   );
 }
+
+export default ConnectToExistingModal;

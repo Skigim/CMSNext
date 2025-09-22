@@ -485,3 +485,5 @@ export function FinancialItemModal({
     </Dialog>
   );
 }
+
+export default FinancialItemModal;
