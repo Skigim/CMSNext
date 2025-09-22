@@ -37,10 +37,6 @@ export default defineConfig({
         return id.includes('/scripts/') || id.includes('/archive/');
       },
       output: {
-        // Force new hashes for cache busting
-        entryFileNames: `assets/[name]-[hash]-${Date.now()}.js`,
-        chunkFileNames: `assets/[name]-[hash]-${Date.now()}.js`,
-        assetFileNames: `assets/[name]-[hash]-${Date.now()}.[ext]`,
         manualChunks: {
           // Split React vendor chunk
           'react-vendor': ['react', 'react-dom'],
