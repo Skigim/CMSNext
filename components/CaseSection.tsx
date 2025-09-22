@@ -13,6 +13,7 @@ interface CaseSectionProps {
   onAddItem: (category: CaseCategory) => void;
   onEditItem: (category: CaseCategory, itemId: string) => void;
   onDeleteItem: (category: CaseCategory, itemId: string) => void;
+  onUpdateItem?: (category: CaseCategory, itemId: string, field: string, value: string) => Promise<void>;
 }
 
 export function CaseSection({ 
@@ -22,7 +23,8 @@ export function CaseSection({
   view,
   onAddItem, 
   onEditItem, 
-  onDeleteItem 
+  onDeleteItem,
+  onUpdateItem
 }: CaseSectionProps) {
   return (
     <Card>
@@ -51,6 +53,7 @@ export function CaseSection({
             onEdit={onEditItem}
             onDelete={onDeleteItem}
             onAdd={onAddItem}
+            onUpdateItem={onUpdateItem}
             title=""
             showActions={true}
           />

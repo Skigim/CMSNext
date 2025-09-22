@@ -395,6 +395,65 @@ const AppContent = memo(function AppContent() {
     }
   };
 
+  const handleUpdateItem = async (category: CaseCategory, itemId: string, field: string, value: string) => {
+    if (!selectedCase || !dataManager) {
+      if (!dataManager) {
+        const errorMsg = 'Data storage is not available. Please check your connection.';
+        setError(errorMsg);
+        toast.error(errorMsg);
+      }
+      return;
+    }
+
+    try {
+      setError(null);
+      
+      // Create partial update object based on field
+      const updateData: any = {};
+      
+      if (field === 'description') {
+        updateData.description = value;
+      } else if (field === 'amount') {
+        const numericValue = parseFloat(value.replace(/[$,]/g, ''));
+        if (!isNaN(numericValue)) {
+          updateData.amount = numericValue;
+        } else {
+          toast.error('Invalid amount format');
+          return;
+        }
+      } else if (field === 'location') {
+        updateData.location = value;
+      } else if (field === 'verificationStatus') {
+        // Validate verification status
+        const validStatuses = ['Needs VR', 'VR Pending', 'AVS Pending', 'Verified'];
+        if (validStatuses.includes(value)) {
+          updateData.verificationStatus = value;
+        } else {
+          toast.error('Invalid verification status');
+          return;
+        }
+      }
+
+      const updatedCase = await dataManager.updateItem(selectedCase.id, category, itemId, updateData);
+      setCases(prevCases =>
+        prevCases.map(c =>
+          c.id === selectedCase.id ? updatedCase : c
+        )
+      );
+      
+      // Show a subtle success message
+      toast.success(`${field} updated`, { duration: 2000 });
+      
+      // DataManager handles file system persistence automatically
+    } catch (err) {
+      console.error('Failed to update item:', err);
+      const errorMsg = 'Failed to update item. Please try again.';
+      setError(errorMsg);
+      toast.error(errorMsg);
+      throw err; // Re-throw to let the component handle fallback
+    }
+  };
+
   const handleCancelItemForm = () => {
     setItemForm({ isOpen: false });
   };
@@ -677,6 +736,7 @@ const AppContent = memo(function AppContent() {
         handleAddItem={handleAddItem}
         handleEditItem={handleEditItem}
         handleDeleteItem={handleDeleteItem}
+        handleUpdateItem={handleUpdateItem}
         handleAddNote={handleAddNote}
         handleEditNote={handleEditNote}
         handleDeleteNote={handleDeleteNote}

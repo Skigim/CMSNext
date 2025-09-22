@@ -14,6 +14,7 @@ interface FinancialItemsTableProps {
   onEdit: (category: CaseCategory, itemId: string) => void;
   onDelete: (category: CaseCategory, itemId: string) => void;
   onAdd: (category: CaseCategory) => void;
+  onUpdateItem?: (category: CaseCategory, itemId: string, field: string, value: string) => Promise<void>;
   title: string;
   showActions?: boolean;
 }
@@ -33,6 +34,7 @@ export function FinancialItemsTable({
   onEdit,
   onDelete,
   onAdd,
+  onUpdateItem,
   title,
   showActions = true,
 }: FinancialItemsTableProps) {
@@ -155,13 +157,26 @@ export function FinancialItemsTable({
     setEditing({ itemId: null, field: null, value: '' });
   };
 
-  const saveEdit = useCallback(() => {
-    if (editing.itemId) {
-      // For now, trigger the modal edit - we'll implement inline saving later
-      onEdit(itemType, editing.itemId);
-      cancelEditing();
+  const saveEdit = useCallback(async () => {
+    if (editing.itemId && editing.field) {
+      if (onUpdateItem) {
+        // Use inline update if available
+        try {
+          await onUpdateItem(itemType, editing.itemId, editing.field, editing.value);
+          cancelEditing();
+        } catch (error) {
+          console.error('Failed to update item inline:', error);
+          // Fall back to modal edit on error
+          onEdit(itemType, editing.itemId);
+          cancelEditing();
+        }
+      } else {
+        // Fall back to modal edit if no inline update function
+        onEdit(itemType, editing.itemId);
+        cancelEditing();
+      }
     }
-  }, [editing.itemId, onEdit, itemType]);
+  }, [editing.itemId, editing.field, editing.value, onUpdateItem, itemType, onEdit]);
 
   // Handle delete confirmation
   const handleDeleteClick = (itemId: string) => {

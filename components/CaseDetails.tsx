@@ -17,6 +17,7 @@ interface CaseDetailsProps {
   onAddItem: (category: CaseCategory) => void;
   onEditItem: (category: CaseCategory, itemId: string) => void;
   onDeleteItem: (category: CaseCategory, itemId: string) => void;
+  onUpdateItem?: (category: CaseCategory, itemId: string, field: string, value: string) => Promise<void>;
   onAddNote: () => void;
   onEditNote: (noteId: string) => void;
   onDeleteNote: (noteId: string) => void;
@@ -30,6 +31,7 @@ export function CaseDetails({
   onAddItem,
   onEditItem,
   onDeleteItem,
+  onUpdateItem,
   onAddNote,
   onEditNote,
   onDeleteNote
@@ -148,6 +150,7 @@ export function CaseDetails({
             onAddItem={onAddItem}
             onEditItem={onEditItem}
             onDeleteItem={onDeleteItem}
+            onUpdateItem={onUpdateItem}
           />
           <CaseSection
             title="Income"
@@ -157,6 +160,7 @@ export function CaseDetails({
             onAddItem={onAddItem}
             onEditItem={onEditItem}
             onDeleteItem={onDeleteItem}
+            onUpdateItem={onUpdateItem}
           />
           <CaseSection
             title="Expenses"
@@ -166,6 +170,7 @@ export function CaseDetails({
             onAddItem={onAddItem}
             onEditItem={onEditItem}
             onDeleteItem={onDeleteItem}
+            onUpdateItem={onUpdateItem}
           />
         </div>
 
