@@ -1,12 +1,54 @@
 import { lazy, Suspense } from "react";
 import { CaseDisplay, NewPersonData, NewCaseRecordData } from "../../types/case";
 
-// Lazy load heavy components
-const Dashboard = lazy(() => import("../Dashboard"));
-const CaseList = lazy(() => import("../CaseList"));
-const CaseDetails = lazy(() => import("../CaseDetails"));
-const CaseForm = lazy(() => import("../CaseForm"));
-const Settings = lazy(() => import("../Settings"));
+// Enhanced lazy loading with cache-miss fallback handling
+const createLazyComponent = (importFn: () => Promise<any>, componentName: string) => {
+  return lazy(async () => {
+    try {
+      return await importFn();
+    } catch (error) {
+      console.warn(`[ViewRenderer] Failed to load ${componentName}, attempting cache refresh...`, error);
+      
+      // If chunk fails to load (common with CDN cache mismatches), 
+      // wait a moment and try again
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      try {
+        return await importFn();
+      } catch (retryError) {
+        console.error(`[ViewRenderer] Failed to load ${componentName} after retry`, retryError);
+        
+        // Return a fallback component for graceful degradation
+        return {
+          default: () => (
+            <div className="flex flex-col items-center justify-center p-8 space-y-4">
+              <div className="text-lg font-medium text-red-600">
+                Component Loading Error
+              </div>
+              <div className="text-sm text-gray-600 text-center max-w-md">
+                Failed to load {componentName}. This may be due to a deployment cache issue. 
+                Please refresh the page to try again.
+              </div>
+              <button 
+                onClick={() => window.location.reload()}
+                className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+              >
+                Refresh Page
+              </button>
+            </div>
+          )
+        };
+      }
+    }
+  });
+};
+
+// Lazy load heavy components with fallback handling
+const Dashboard = createLazyComponent(() => import("../Dashboard"), "Dashboard");
+const CaseList = createLazyComponent(() => import("../CaseList"), "CaseList");
+const CaseDetails = createLazyComponent(() => import("../CaseDetails"), "CaseDetails");
+const CaseForm = createLazyComponent(() => import("../CaseForm"), "CaseForm");
+const Settings = createLazyComponent(() => import("../Settings"), "Settings");
 
 export type View = 'dashboard' | 'list' | 'details' | 'form' | 'settings';
 

@@ -10,10 +10,63 @@ import { AppProviders } from "./components/providers/AppProviders";
 import { FileStorageIntegrator } from "./components/providers/FileStorageIntegrator";
 import { ViewRenderer } from "./components/routing/ViewRenderer";
 
-// Lazy load modals only (main views are now in ViewRenderer)
-const FinancialItemModal = lazy(() => import("./components/FinancialItemModal"));
-const NoteModal = lazy(() => import("./components/NoteModal"));
-const ConnectToExistingModal = lazy(() => import("./components/ConnectToExistingModal"));
+// Enhanced lazy loading with cache-miss fallback handling for modals
+const createLazyModal = (importFn: () => Promise<any>, modalName: string) => {
+  return lazy(async () => {
+    try {
+      return await importFn();
+    } catch (error) {
+      console.warn(`[App] Failed to load ${modalName}, attempting cache refresh...`, error);
+      
+      // If chunk fails to load (common with CDN cache mismatches), 
+      // wait a moment and try again
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      try {
+        return await importFn();
+      } catch (retryError) {
+        console.error(`[App] Failed to load ${modalName} after retry`, retryError);
+        
+        // Return a fallback modal component for graceful degradation
+        return {
+          default: ({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) => (
+            isOpen ? (
+              <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center">
+                <div className="bg-white p-6 rounded-lg max-w-md mx-4">
+                  <div className="text-lg font-medium text-red-600 mb-4">
+                    Modal Loading Error
+                  </div>
+                  <div className="text-sm text-gray-600 mb-4">
+                    Failed to load {modalName}. This may be due to a deployment cache issue.
+                  </div>
+                  <div className="flex gap-2">
+                    <button 
+                      onClick={() => window.location.reload()}
+                      className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+                    >
+                      Refresh Page
+                    </button>
+                    <button 
+                      onClick={onClose}
+                      className="px-4 py-2 bg-gray-300 text-gray-700 rounded hover:bg-gray-400"
+                    >
+                      Close
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ) : null
+          )
+        };
+      }
+    }
+  });
+};
+
+// Lazy load modals with fallback handling
+const FinancialItemModal = createLazyModal(() => import("./components/FinancialItemModal"), "FinancialItemModal");
+const NoteModal = createLazyModal(() => import("./components/NoteModal"), "NoteModal");
+const ConnectToExistingModal = createLazyModal(() => import("./components/ConnectToExistingModal"), "ConnectToExistingModal");
 
 type View = 'dashboard' | 'list' | 'details' | 'form' | 'settings';
 type ItemFormState = {
@@ -843,7 +896,7 @@ const AppContent = memo(function AppContent() {
             isOpen={itemForm.isOpen}
             onClose={handleCancelItemForm}
             caseData={selectedCase}
-            onUpdateCase={(updatedCase) => {
+            onUpdateCase={(updatedCase: CaseDisplay) => {
               setCases(prevCases =>
                 prevCases.map(c =>
                   c.id === updatedCase.id ? updatedCase : c
