@@ -1,8 +1,15 @@
 import { lazy, Suspense } from "react";
 import { CaseDisplay, NewPersonData, NewCaseRecordData } from "../../types/case";
 
-// Enhanced lazy loading with cache-miss fallback handling
-const createLazyComponent = (importFn: () => Promise<any>, componentName: string) => {
+// Direct imports as fallbacks (will be bundled with main app)
+import DashboardDirect from "../Dashboard";
+import CaseListDirect from "../CaseList";
+import CaseDetailsDirect from "../CaseDetails";
+import CaseFormDirect from "../CaseForm";
+import SettingsDirect from "../Settings";
+
+// Enhanced lazy loading with direct import fallback
+const createLazyComponent = (importFn: () => Promise<any>, DirectComponent: any, componentName: string) => {
   return lazy(async () => {
     const maxRetries = 3;
     const retryDelays = [1000, 2000, 3000]; // Progressive delays
@@ -17,59 +24,38 @@ const createLazyComponent = (importFn: () => Promise<any>, componentName: string
         if (attempt < maxRetries - 1) {
           // Wait with progressive backoff before retry
           await new Promise(resolve => setTimeout(resolve, retryDelays[attempt]));
-          
-          // Try to clear any module cache issues by creating a new import
-          try {
-            // Force module re-evaluation by clearing any cached references
-            if (typeof window !== 'undefined' && (window as any).__webpack_require__) {
-              // Webpack module cache clearing
-              delete (window as any).__webpack_require__.cache[componentName];
-            }
-          } catch (cacheError) {
-            // Ignore cache clearing errors
-          }
         } else {
-          // Final attempt failed, show graceful fallback
-          console.error(`[ViewRenderer] All attempts failed for ${componentName}`, error);
+          // Final attempt failed, use direct import fallback
+          console.warn(`[ViewRenderer] All lazy loading attempts failed for ${componentName}, using direct import fallback`);
           
-          // Return a functional fallback component that doesn't disrupt workflow
-          return {
-            default: () => (
-              <div className="flex flex-col items-center justify-center p-8 space-y-4 border-2 border-dashed border-yellow-300 bg-yellow-50 rounded-lg">
-                <div className="text-lg font-medium text-yellow-800">
-                  {componentName} Temporarily Unavailable
-                </div>
-                <div className="text-sm text-yellow-700 text-center max-w-md">
-                  This component couldn't load due to a temporary network issue. 
-                  Your data and current session are safe.
-                </div>
-                <div className="flex gap-2">
+          try {
+            // Return the directly imported component
+            console.log(`[ViewRenderer] Successfully loaded ${componentName} via direct import fallback`);
+            return { default: DirectComponent };
+          } catch (directError) {
+            console.error(`[ViewRenderer] Direct import fallback also failed for ${componentName}`, directError);
+            
+            // Return a functional fallback component
+            return {
+              default: () => (
+                <div className="flex flex-col items-center justify-center p-8 space-y-4 border-2 border-dashed border-red-300 bg-red-50 rounded-lg">
+                  <div className="text-lg font-medium text-red-800">
+                    {componentName} Failed to Load
+                  </div>
+                  <div className="text-sm text-red-700 text-center max-w-md">
+                    Both lazy loading and direct import failed. This indicates a serious module loading issue.
+                    Please refresh the page.
+                  </div>
                   <button 
-                    onClick={() => {
-                      // Try to re-import the component
-                      window.location.hash = Math.random().toString();
-                      window.location.reload();
-                    }}
-                    className="px-4 py-2 bg-yellow-600 text-white rounded hover:bg-yellow-700 text-sm"
+                    onClick={() => window.location.reload()}
+                    className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 text-sm"
                   >
-                    Try Again
-                  </button>
-                  <button 
-                    onClick={() => {
-                      // Go back to previous view without losing data
-                      window.history.back();
-                    }}
-                    className="px-4 py-2 bg-gray-300 text-gray-700 rounded hover:bg-gray-400 text-sm"
-                  >
-                    Go Back
+                    Refresh Page
                   </button>
                 </div>
-                <div className="text-xs text-yellow-600 text-center">
-                  This is usually temporary and resolves automatically in 1-2 minutes.
-                </div>
-              </div>
-            )
-          };
+              )
+            };
+          }
         }
       }
     }
@@ -79,12 +65,12 @@ const createLazyComponent = (importFn: () => Promise<any>, componentName: string
   });
 };
 
-// Lazy load heavy components with fallback handling
-const Dashboard = createLazyComponent(() => import("../Dashboard"), "Dashboard");
-const CaseList = createLazyComponent(() => import("../CaseList"), "CaseList");
-const CaseDetails = createLazyComponent(() => import("../CaseDetails"), "CaseDetails");
-const CaseForm = createLazyComponent(() => import("../CaseForm"), "CaseForm");
-const Settings = createLazyComponent(() => import("../Settings"), "Settings");
+// Lazy load heavy components with direct import fallbacks
+const Dashboard = createLazyComponent(() => import("../Dashboard"), DashboardDirect, "Dashboard");
+const CaseList = createLazyComponent(() => import("../CaseList"), CaseListDirect, "CaseList");
+const CaseDetails = createLazyComponent(() => import("../CaseDetails"), CaseDetailsDirect, "CaseDetails");
+const CaseForm = createLazyComponent(() => import("../CaseForm"), CaseFormDirect, "CaseForm");
+const Settings = createLazyComponent(() => import("../Settings"), SettingsDirect, "Settings");
 
 export type View = 'dashboard' | 'list' | 'details' | 'form' | 'settings';
 
