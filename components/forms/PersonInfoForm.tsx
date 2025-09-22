@@ -6,6 +6,7 @@ import { Button } from "../ui/button";
 import { Plus, Minus } from "lucide-react";
 import { NewPersonData } from "../../types/case";
 import { AddressForm } from "./AddressForm";
+import { ContactInfoForm } from "./ContactInfoForm";
 
 interface PersonInfoFormProps {
   personData: NewPersonData;
@@ -76,28 +77,15 @@ export function PersonInfoForm({
               required
             />
           </div>
-          <div className="space-y-2">
-            <Label htmlFor="email">Email *</Label>
-            <Input
-              id="email"
-              type="email"
-              value={personData.email}
-              onChange={(e) => onPersonDataChange('email', e.target.value)}
-              placeholder="Enter email address"
-              required
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="phone">Phone *</Label>
-            <Input
-              id="phone"
-              type="tel"
-              value={personData.phone}
-              onChange={(e) => onPersonDataChange('phone', e.target.value)}
-              placeholder="Enter phone number"
-              required
-            />
-          </div>
+        </div>
+
+        {/* Contact Information */}
+        <ContactInfoForm
+          personData={personData}
+          onPersonDataChange={onPersonDataChange}
+        />
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="space-y-2">
             <Label htmlFor="dateOfBirth">Date of Birth</Label>
             <Input

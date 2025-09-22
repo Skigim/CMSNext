@@ -1,22 +1,17 @@
 import { useState, useEffect, useCallback, useMemo, memo, lazy, Suspense } from "react";
-import { ThemeProvider } from "./contexts/ThemeContext";
-import { FileStorageProvider, useFileStorage } from "./contexts/FileStorageContext";
 import { MainLayout } from "./components/MainLayout";
 import { Toaster } from "./components/ui/sonner";
 import { CaseDisplay, CaseCategory, FinancialItem, NewPersonData, NewCaseRecordData, NewNoteData } from "./types/case";
 import { toast } from "sonner";
-import ErrorBoundary from "./components/ErrorBoundary";
-import FileSystemErrorBoundary from "./components/FileSystemErrorBoundary";
-import { DataManagerProvider, useDataManagerSafe } from "./contexts/DataManagerContext";
+import { useFileStorage } from "./contexts/FileStorageContext";
+import { useDataManagerSafe } from "./contexts/DataManagerContext";
 import { useCaseManagement } from "./hooks/useCaseManagement";
 import { useNotes } from "./hooks/useNotes";
+import { AppProviders } from "./components/providers/AppProviders";
+import { FileStorageIntegrator } from "./components/providers/FileStorageIntegrator";
+import { ViewRenderer } from "./components/routing/ViewRenderer";
 
-// Lazy load heavy components
-const Dashboard = lazy(() => import("./components/Dashboard").then(m => ({ default: m.Dashboard })));
-const CaseList = lazy(() => import("./components/CaseList").then(m => ({ default: m.CaseList })));
-const CaseDetails = lazy(() => import("./components/CaseDetails"));
-const CaseForm = lazy(() => import("./components/CaseForm"));
-const Settings = lazy(() => import("./components/Settings").then(m => ({ default: m.Settings })));
+// Lazy load modals only (main views are now in ViewRenderer)
 const FinancialItemModal = lazy(() => import("./components/FinancialItemModal").then(m => ({ default: m.FinancialItemModal })));
 const NoteModal = lazy(() => import("./components/NoteModal").then(m => ({ default: m.NoteModal })));
 const ConnectToExistingModal = lazy(() => import("./components/ConnectToExistingModal").then(m => ({ default: m.ConnectToExistingModal })));
@@ -666,64 +661,27 @@ const AppContent = memo(function AppContent() {
         </div>
       )}
 
-      {currentView === 'dashboard' && (
-        <Suspense fallback={<div className="flex items-center justify-center p-8">Loading dashboard...</div>}>
-          <Dashboard
-            cases={cases}
-            onViewAllCases={handleBackToList}
-            onNewCase={handleNewCase}
-          />
-        </Suspense>
-      )}
-
-      {currentView === 'list' && (
-        <Suspense fallback={<div className="flex items-center justify-center p-8">Loading cases...</div>}>
-          <CaseList
-            cases={cases}
-            onViewCase={handleViewCase}
-            onEditCase={handleEditCase}
-            onDeleteCase={handleDeleteCase}
-            onNewCase={handleNewCase}
-            onRefresh={loadCases}
-          />
-        </Suspense>
-      )}
-
-      {currentView === 'settings' && (
-        <Suspense fallback={<div className="flex items-center justify-center p-8">Loading settings...</div>}>
-          <Settings
-            cases={cases}
-            onDataPurged={handleDataPurged}
-          />
-        </Suspense>
-      )}
-
-      {currentView === 'details' && selectedCase && (
-        <Suspense fallback={<div className="flex items-center justify-center p-8">Loading case details...</div>}>
-          <CaseDetails
-            case={selectedCase}
-            onBack={handleBackToList}
-            onEdit={() => handleEditCase(selectedCase.id)}
-            onDelete={() => handleDeleteCase(selectedCase.id)}
-            onAddItem={handleAddItem}
-            onEditItem={handleEditItem}
-            onDeleteItem={handleDeleteItem}
-            onAddNote={handleAddNote}
-            onEditNote={handleEditNote}
-            onDeleteNote={handleDeleteNote}
-          />
-        </Suspense>
-      )}
-
-      {currentView === 'form' && (
-        <Suspense fallback={<div className="flex items-center justify-center p-8">Loading form...</div>}>
-          <CaseForm
-            case={editingCase || undefined}
-            onSave={handleSaveCase}
-            onCancel={handleCancelForm}
-          />
-        </Suspense>
-      )}
+      <ViewRenderer
+        currentView={currentView}
+        selectedCase={selectedCase}
+        editingCase={editingCase}
+        cases={cases}
+        loadCases={loadCases}
+        handleViewCase={handleViewCase}
+        handleEditCase={handleEditCase}
+        handleNewCase={handleNewCase}
+        handleBackToList={handleBackToList}
+        handleSaveCase={handleSaveCase}
+        handleCancelForm={handleCancelForm}
+        handleDeleteCase={handleDeleteCase}
+        handleDataPurged={handleDataPurged}
+        handleAddItem={handleAddItem}
+        handleEditItem={handleEditItem}
+        handleDeleteItem={handleDeleteItem}
+        handleAddNote={handleAddNote}
+        handleEditNote={handleEditNote}
+        handleDeleteNote={handleDeleteNote}
+      />
 
       {itemForm.isOpen && itemForm.category && selectedCase && (
         <Suspense fallback={<div>Loading...</div>}>
@@ -762,72 +720,12 @@ const AppContent = memo(function AppContent() {
 export default function App() {
   console.log('[App] Rendering main App component');
   
-  // Memoize callbacks to prevent FileStorageProvider prop changes
-  const getDataFunction = useCallback(() => {
-    // Skip during connect flow to prevent empty data from being saved
-    if (window.location.hash === '#connect-to-existing') {
-      return null;
-    }
-    
-    // Don't save if we're still in loading/setup phase
-    if ((window as any).fileStorageInSetupPhase) {
-      return null;
-    }
-    
-    // DataManager is stateless - we'll use the React state from useCaseManagement
-    // This is passed via the context and accessed through the cases state
-    // The FileStorageProvider will get data through onDataLoaded callback instead
-    return null; // DataManager handles its own file operations
-  }, []);
-
-  const handleDataLoaded = useCallback((fileData: any) => {
-    // Use the global function set by AppContent
-    if ((window as any).handleFileDataLoaded) {
-      (window as any).handleFileDataLoaded(fileData);
-    }
-  }, []);
-
   return (
-    <ErrorBoundary>
-      <ThemeProvider>
-        <FileSystemErrorBoundary>
-          <FileStorageProvider 
-            getDataFunction={getDataFunction}
-            onDataLoaded={handleDataLoaded}
-          >
-            <DataManagerProvider>
-              <FileStorageIntegrator>
-                <AppContent />
-                <Toaster />
-              </FileStorageIntegrator>
-            </DataManagerProvider>
-          </FileStorageProvider>
-        </FileSystemErrorBoundary>
-      </ThemeProvider>
-    </ErrorBoundary>
+    <AppProviders>
+      <FileStorageIntegrator>
+        <AppContent />
+        <Toaster />
+      </FileStorageIntegrator>
+    </AppProviders>
   );
-}
-
-// Component to integrate file storage service with data provider
-function FileStorageIntegrator({ children }: { children: React.ReactNode }) {
-  const { service } = useFileStorage();
-  const dataManager = useDataManagerSafe();
-  
-  useEffect(() => {
-    // Only set the service if we have one and it's different from current
-    if (service && dataManager) {
-      // Note: DataManager integration happens through FileStorageContext
-      // This component is mainly for initialization flags
-    }
-    
-    // Clean up any leftover flags from previous sessions on startup
-    if (!(window as any).fileStorageInitialized) {
-      delete (window as any).fileStorageDataBaseline;
-      delete (window as any).fileStorageSessionHadData;
-      delete (window as any).fileStorageInSetupPhase;
-      (window as any).fileStorageInitialized = true;
-    }
-  }, [service, dataManager]);
-
-  return <>{children}</>;
 }

@@ -182,20 +182,20 @@ async createCompleteCase(
 - ✅ ~~`PersonInfoForm` - Personal details section~~
 - ✅ ~~`CaseInfoForm` - Case record details section~~  
 - ✅ ~~`AddressForm` - Address information section (Physical & Mailing)~~
-- ❌ `ContactInfoForm` - Phone, email, etc. (optional future enhancement)
+- ✅ ~~`ContactInfoForm` - Phone, email, etc.~~
 
-**Status**: Core forms extracted to `/components/forms/` directory. AddressForm successfully extracted from PersonInfoForm (completed in latest session), reducing component complexity and improving maintainability. PersonInfoForm reduced from 420 lines to ~275 lines (35% reduction).
+**Status**: All core forms extracted to `/components/forms/` directory. AddressForm and ContactInfoForm successfully extracted from PersonInfoForm, reducing component complexity and improving maintainability. PersonInfoForm reduced from 420 lines to ~242 lines (42% reduction). **Phase 2B.1 is now complete.**
 
-#### 2B.2: Split App.tsx Logic (964 lines) ⚠️ **IN PROGRESS**
+#### ~~2B.2: Split App.tsx Logic~~ ✅ **COMPLETED**
 ~~Extract logical sections:~~
-- ✅ `useCaseManagement` - Case management operations extracted
-- ✅ `useNotes` - Note management operations extracted
-- ✅ Lazy loading - Components are lazy loaded with Suspense
-- ❌ `AppRouter` - View routing and navigation (still in App.tsx)
-- ❌ `AppProviders` - Context provider wrapper (still in App.tsx)
-- ❌ `AppContent` - Main application content separation
+- ✅ ~~`useCaseManagement` - Case management operations extracted~~
+- ✅ ~~`useNotes` - Note management operations extracted~~
+- ✅ ~~Lazy loading - Components are lazy loaded with Suspense~~
+- ✅ ~~`AppProviders` - Context provider wrapper (extracted to /components/providers/)~~
+- ✅ ~~`FileStorageIntegrator` - File storage initialization logic (extracted to /components/providers/)~~
+- ✅ ~~`ViewRenderer` - View routing and rendering logic (extracted to /components/routing/)~~
 
-**Status**: Significant progress made but App.tsx is still large (833 lines). More extraction possible.
+**Status**: **Phase 2B.2 is now complete!** App.tsx reduced from 832 lines to 730 lines (102 lines = 12.3% reduction). All logical sections successfully extracted with clean separation of concerns. Architecture significantly improved with new `/components/providers/` and `/components/routing/` directories.
 
 ### Phase 2C: Create Hooks Directory Structure (1 day)
 **Priority**: LOW | **Effort**: 2 hours
@@ -544,7 +544,7 @@ describe('useCaseManagement', () => {
 - ✅ **Phase 1**: Quick Wins **COMPLETED**
 - ✅ **Phase 2A**: Custom Hooks **COMPLETED** 
 - ✅ **Phase 2B.1**: CaseForm Splitting **COMPLETED**
-- ⚠️ **Phase 2B.2**: App.tsx Logic Splitting **IN PROGRESS** (833 lines remaining)
+- ✅ **Phase 2B.2**: App.tsx Logic Splitting **COMPLETED** (730 lines final size)
 
 ---
 
