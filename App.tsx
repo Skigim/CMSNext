@@ -5,8 +5,7 @@ import { CaseDisplay, CaseCategory, FinancialItem, NewPersonData, NewCaseRecordD
 import { toast } from "sonner";
 import { useFileStorage } from "./contexts/FileStorageContext";
 import { useDataManagerSafe } from "./contexts/DataManagerContext";
-import { useCaseManagement } from "./hooks/useCaseManagement";
-import { useNotes } from "./hooks/useNotes";
+import { useCaseManagement, useNotes } from "./hooks";
 import { AppProviders } from "./components/providers/AppProviders";
 import { FileStorageIntegrator } from "./components/providers/FileStorageIntegrator";
 import { ViewRenderer } from "./components/routing/ViewRenderer";
