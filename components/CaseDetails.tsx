@@ -208,6 +208,7 @@ export function CaseDetails({
           {/* Notes Section */}
           <div className="animate-in slide-in-from-right-4 duration-500 delay-200">
             <NotesSection
+              key="notes-mobile"
               notes={caseData.caseRecord.notes || []}
               onAddNote={onAddNote}
               onEditNote={onEditNote}
@@ -275,6 +276,7 @@ export function CaseDetails({
           <ResizablePanel defaultSize={40} minSize={25}>
             <div className="p-8 h-full overflow-y-auto bg-gradient-to-bl from-background via-background to-accent/5 animate-in slide-in-from-right-4 duration-500 delay-100">
               <NotesSection
+                key="notes-desktop"
                 notes={caseData.caseRecord.notes || []}
                 onAddNote={onAddNote}
                 onEditNote={onEditNote}

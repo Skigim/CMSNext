@@ -50,7 +50,7 @@ export function NotesSection({ notes, onAddNote, onEditNote, onDeleteNote }: Not
           <CardTitle className="flex items-center gap-2">
             Notes
             {notes.length > 0 && (
-              <Badge variant="secondary" className="ml-2">
+              <Badge key="notes-count" variant="secondary" className="ml-2">
                 {notes.length}
               </Badge>
             )}
@@ -63,7 +63,7 @@ export function NotesSection({ notes, onAddNote, onEditNote, onDeleteNote }: Not
       </CardHeader>
       <CardContent>
         {sortedNotes.length === 0 ? (
-          <div className="text-center py-8">
+          <div key="no-notes" className="text-center py-8">
             <p className="text-muted-foreground mb-4">No notes added yet</p>
             <Button onClick={onAddNote} variant="outline">
               <Plus className="w-4 h-4 mr-2" />
@@ -71,7 +71,7 @@ export function NotesSection({ notes, onAddNote, onEditNote, onDeleteNote }: Not
             </Button>
           </div>
         ) : (
-          <div className="space-y-4">
+          <div key="notes-list" className="space-y-4">
             {sortedNotes.map((note) => (
               <Card key={note.id} className="border-l-4 border-l-primary/20">
                 <CardContent className="pt-4">
