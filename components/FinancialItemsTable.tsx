@@ -245,15 +245,17 @@ export function FinancialItemsTable({
 
   if (items.length === 0) {
     return (
-      <div className="space-y-4">
-        {/* Header */}
-        <div className="flex justify-between items-center">
-          <h4 className="text-lg font-medium text-foreground">{title}</h4>
-          <Button size="sm" onClick={() => onAdd(itemType)} className="gap-2">
-            <Plus className="h-4 w-4" />
-            Add
-          </Button>
-        </div>
+      <div className={title ? "space-y-4" : ""}>
+        {/* Header - only show if title is provided */}
+        {title && (
+          <div className="flex justify-between items-center">
+            <h4 className="text-lg font-medium text-foreground">{title}</h4>
+            <Button size="sm" onClick={() => onAdd(itemType)} className="gap-2">
+              <Plus className="h-4 w-4" />
+              Add
+            </Button>
+          </div>
+        )}
 
         {/* Empty state */}
         <div className="text-center py-8 border border-dashed border-border rounded-lg">
