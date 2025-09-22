@@ -217,3 +217,5 @@ export function Dashboard({ cases, onViewAllCases, onNewCase }: DashboardProps) 
     </div>
   );
 }
+
+export default Dashboard;

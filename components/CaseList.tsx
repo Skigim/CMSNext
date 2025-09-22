@@ -141,3 +141,5 @@ export function CaseList({ cases, onViewCase, onEditCase, onDeleteCase, onNewCas
     </div>
   );
 }
+
+export default CaseList;

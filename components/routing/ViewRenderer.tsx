@@ -2,11 +2,11 @@ import { lazy, Suspense } from "react";
 import { CaseDisplay, NewPersonData, NewCaseRecordData } from "../../types/case";
 
 // Lazy load heavy components
-const Dashboard = lazy(() => import("../Dashboard").then(m => ({ default: m.Dashboard })));
-const CaseList = lazy(() => import("../CaseList").then(m => ({ default: m.CaseList })));
+const Dashboard = lazy(() => import("../Dashboard"));
+const CaseList = lazy(() => import("../CaseList"));
 const CaseDetails = lazy(() => import("../CaseDetails"));
 const CaseForm = lazy(() => import("../CaseForm"));
-const Settings = lazy(() => import("../Settings").then(m => ({ default: m.Settings })));
+const Settings = lazy(() => import("../Settings"));
 
 export type View = 'dashboard' | 'list' | 'details' | 'form' | 'settings';
 

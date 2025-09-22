@@ -555,3 +555,5 @@ export function Settings({ cases, onDataPurged, onDataGenerated }: SettingsProps
     </div>
   );
 }
+
+export default Settings;
