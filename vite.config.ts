@@ -34,7 +34,8 @@ export default defineConfig({
     sourcemap: true,
     rollupOptions: {
       external: (id) => {
-        return id.includes('/scripts/') || id.includes('/archive/');
+        // Only exclude archive directory, but include scripts for SeedDataGenerator
+        return id.includes('/archive/');
       },
       output: {
         manualChunks: {

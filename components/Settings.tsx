@@ -3,7 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/
 import { Button } from "./ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
 import { ImportModal } from "./ImportModal";
-import { SeedDataGenerator } from "./SeedDataGenerator";
+
 import { Badge } from "./ui/badge";
 import { Separator } from "./ui/separator";
 import FileStorageSettings from "./FileStorageSettings";
@@ -34,10 +34,9 @@ import { useDataManagerSafe } from "../contexts/DataManagerContext";
 interface SettingsProps {
   cases: CaseDisplay[];
   onDataPurged?: () => void;
-  onDataGenerated?: () => void; // Add this for seed data integration
 }
 
-export function Settings({ cases, onDataPurged, onDataGenerated }: SettingsProps) {
+export function Settings({ cases, onDataPurged }: SettingsProps) {
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const [isPurging, setIsPurging] = useState(false);
   const { disconnect } = useFileStorage();
@@ -163,19 +162,22 @@ export function Settings({ cases, onDataPurged, onDataGenerated }: SettingsProps
         {/* Data Management Tab */}
         <TabsContent value="data" className="space-y-6">
           <div className="grid gap-6">
-            {/* Sample Data Generator */}
+            {/* Sample Data Generator - Removed */}
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <FileText className="h-5 w-5" />
-                  Sample Data Generator
+                  Sample Data Generator (Removed)
                 </CardTitle>
                 <CardDescription>
-                  Generate sample data for testing purposes.
+                  Sample data generation has been removed since sufficient data is now available.
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <SeedDataGenerator onDataGenerated={onDataGenerated} />
+                <div className="text-sm text-muted-foreground">
+                  The seed data generator has been removed to simplify the application.
+                  Use the import/export features below to manage your case data.
+                </div>
               </CardContent>
             </Card>
 
