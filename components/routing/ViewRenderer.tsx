@@ -10,10 +10,26 @@ const createLazyComponent = (importFn: () => Promise<any>, componentName: string
       console.warn(`[ViewRenderer] Failed to load ${componentName}, attempting cache refresh...`, error);
       
       // If chunk fails to load (common with CDN cache mismatches), 
-      // wait a moment and try again
+      // wait a moment and try again with cache-busting
       await new Promise(resolve => setTimeout(resolve, 1000));
       
       try {
+        // Force a hard refresh of the module cache by adding timestamp
+        const cacheBuster = Date.now();
+        
+        // Try to reload the page's module imports entirely
+        if (typeof window !== 'undefined' && window.location) {
+          console.log(`[ViewRenderer] Attempting cache-busted reload for ${componentName}`);
+          
+          // For CDN cache issues, reload the entire page with cache busting
+          const url = new URL(window.location.href);
+          url.searchParams.set('_cb', cacheBuster.toString());
+          window.location.href = url.toString();
+          
+          // This prevents the fallback from showing since we're reloading
+          return new Promise(() => {});
+        }
+        
         return await importFn();
       } catch (retryError) {
         console.error(`[ViewRenderer] Failed to load ${componentName} after retry`, retryError);
@@ -27,14 +43,26 @@ const createLazyComponent = (importFn: () => Promise<any>, componentName: string
               </div>
               <div className="text-sm text-gray-600 text-center max-w-md">
                 Failed to load {componentName}. This may be due to a deployment cache issue. 
-                Please refresh the page to try again.
+                The page will automatically refresh to load the latest version.
               </div>
-              <button 
-                onClick={() => window.location.reload()}
-                className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-              >
-                Refresh Page
-              </button>
+              <div className="flex gap-2">
+                <button 
+                  onClick={() => {
+                    const url = new URL(window.location.href);
+                    url.searchParams.set('_refresh', Date.now().toString());
+                    window.location.href = url.toString();
+                  }}
+                  className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+                >
+                  Refresh Now
+                </button>
+                <button 
+                  onClick={() => window.location.reload()}
+                  className="px-4 py-2 bg-gray-300 text-gray-700 rounded hover:bg-gray-400"
+                >
+                  Force Reload
+                </button>
+              </div>
             </div>
           )
         };

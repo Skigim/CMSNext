@@ -19,10 +19,21 @@ const createLazyModal = (importFn: () => Promise<any>, modalName: string) => {
       console.warn(`[App] Failed to load ${modalName}, attempting cache refresh...`, error);
       
       // If chunk fails to load (common with CDN cache mismatches), 
-      // wait a moment and try again
+      // wait a moment and try again with cache-busting
       await new Promise(resolve => setTimeout(resolve, 1000));
       
       try {
+        // For CDN cache issues, try reloading the page with cache busting
+        if (typeof window !== 'undefined' && window.location) {
+          console.log(`[App] Attempting cache-busted reload for ${modalName}`);
+          
+          const url = new URL(window.location.href);
+          url.searchParams.set('_modal_cb', Date.now().toString());
+          window.location.href = url.toString();
+          
+          return new Promise(() => {});
+        }
+        
         return await importFn();
       } catch (retryError) {
         console.error(`[App] Failed to load ${modalName} after retry`, retryError);
@@ -38,13 +49,18 @@ const createLazyModal = (importFn: () => Promise<any>, modalName: string) => {
                   </div>
                   <div className="text-sm text-gray-600 mb-4">
                     Failed to load {modalName}. This may be due to a deployment cache issue.
+                    The page will refresh to load the latest version.
                   </div>
                   <div className="flex gap-2">
                     <button 
-                      onClick={() => window.location.reload()}
+                      onClick={() => {
+                        const url = new URL(window.location.href);
+                        url.searchParams.set('_modal_refresh', Date.now().toString());
+                        window.location.href = url.toString();
+                      }}
                       className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
                     >
-                      Refresh Page
+                      Refresh Now
                     </button>
                     <button 
                       onClick={onClose}
