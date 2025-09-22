@@ -80,10 +80,10 @@ export function NotesSection({ notes, onAddNote, onEditNote, onDeleteNote }: Not
                 <CardContent className="pt-4">
                   <div className="flex items-start justify-between mb-3">
                     <div className="flex items-center gap-2">
-                      <Badge key={`badge-${compositeKey}`} className={getCategoryColor(note.category)}>
+                      <Badge className={getCategoryColor(note.category)}>
                         {note.category}
                       </Badge>
-                      <div key={`date-${compositeKey}`} className="flex items-center gap-1 text-xs text-muted-foreground">
+                      <div className="flex items-center gap-1 text-xs text-muted-foreground">
                         <Calendar className="w-3 h-3" />
                         {formatDate(note.createdAt)}
                       </div>
@@ -96,7 +96,6 @@ export function NotesSection({ notes, onAddNote, onEditNote, onDeleteNote }: Not
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
                         <DropdownMenuItem 
-                          key={`edit-${compositeKey}`}
                           onClick={() => onEditNote(note.id)}
                           className="cursor-pointer"
                         >
@@ -104,7 +103,6 @@ export function NotesSection({ notes, onAddNote, onEditNote, onDeleteNote }: Not
                           Edit
                         </DropdownMenuItem>
                         <DropdownMenuItem 
-                          key={`delete-${compositeKey}`}
                           onClick={() => onDeleteNote(note.id)}
                           className="cursor-pointer text-destructive"
                         >
