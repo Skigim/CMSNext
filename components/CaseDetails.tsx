@@ -3,6 +3,7 @@ import { Button } from "./ui/button";
 import { Badge } from "./ui/badge";
 import { ToggleGroup, ToggleGroupItem } from "./ui/toggle-group";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "./ui/alert-dialog";
+import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "./ui/resizable";
 import { CaseSection } from "./CaseSection";
 import { NotesSection } from "./NotesSection";
 import { CaseDisplay, CaseCategory } from "../types/case";
@@ -138,51 +139,113 @@ export function CaseDetails({
         </div>
       </div>
 
-      {/* Content - 2 Column Layout */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Left Column: Financial Sections */}
+      {/* Content - Resizable Layout */}
+      <div className="block lg:hidden">
+        {/* Mobile: Stacked Layout */}
         <div className="space-y-6">
-          <CaseSection
-            title="Resources"
-            category="resources"
-            view={financialView}
-            items={caseData.caseRecord.financials.resources || []}
-            onAddItem={onAddItem}
-            onEditItem={onEditItem}
-            onDeleteItem={onDeleteItem}
-            onUpdateItem={onUpdateItem}
-          />
-          <CaseSection
-            title="Income"
-            category="income"
-            view={financialView}
-            items={caseData.caseRecord.financials.income || []}
-            onAddItem={onAddItem}
-            onEditItem={onEditItem}
-            onDeleteItem={onDeleteItem}
-            onUpdateItem={onUpdateItem}
-          />
-          <CaseSection
-            title="Expenses"
-            category="expenses"
-            view={financialView}
-            items={caseData.caseRecord.financials.expenses || []}
-            onAddItem={onAddItem}
-            onEditItem={onEditItem}
-            onDeleteItem={onDeleteItem}
-            onUpdateItem={onUpdateItem}
-          />
-        </div>
+          {/* Financial Sections */}
+          <div className="space-y-6">
+            <CaseSection
+              title="Resources"
+              category="resources"
+              view={financialView}
+              items={caseData.caseRecord.financials.resources || []}
+              onAddItem={onAddItem}
+              onEditItem={onEditItem}
+              onDeleteItem={onDeleteItem}
+              onUpdateItem={onUpdateItem}
+            />
+            <CaseSection
+              title="Income"
+              category="income"
+              view={financialView}
+              items={caseData.caseRecord.financials.income || []}
+              onAddItem={onAddItem}
+              onEditItem={onEditItem}
+              onDeleteItem={onDeleteItem}
+              onUpdateItem={onUpdateItem}
+            />
+            <CaseSection
+              title="Expenses"
+              category="expenses"
+              view={financialView}
+              items={caseData.caseRecord.financials.expenses || []}
+              onAddItem={onAddItem}
+              onEditItem={onEditItem}
+              onDeleteItem={onDeleteItem}
+              onUpdateItem={onUpdateItem}
+            />
+          </div>
 
-        {/* Right Column: Notes Section */}
-        <div>
-          <NotesSection
-            notes={caseData.caseRecord.notes || []}
-            onAddNote={onAddNote}
-            onEditNote={onEditNote}
-            onDeleteNote={onDeleteNote}
-          />
+          {/* Notes Section */}
+          <div>
+            <NotesSection
+              notes={caseData.caseRecord.notes || []}
+              onAddNote={onAddNote}
+              onEditNote={onEditNote}
+              onDeleteNote={onDeleteNote}
+            />
+          </div>
         </div>
+      </div>
+
+      <div className="hidden lg:block">
+        {/* Desktop: Resizable 2 Column Layout */}
+        <ResizablePanelGroup 
+          direction="horizontal" 
+          className="min-h-[600px] rounded-lg border bg-background"
+        >
+          {/* Left Panel: Financial Sections */}
+          <ResizablePanel defaultSize={60} minSize={30}>
+            <div className="p-6 space-y-6 h-full overflow-y-auto">
+              <CaseSection
+                title="Resources"
+                category="resources"
+                view={financialView}
+                items={caseData.caseRecord.financials.resources || []}
+                onAddItem={onAddItem}
+                onEditItem={onEditItem}
+                onDeleteItem={onDeleteItem}
+                onUpdateItem={onUpdateItem}
+              />
+              <CaseSection
+                title="Income"
+                category="income"
+                view={financialView}
+                items={caseData.caseRecord.financials.income || []}
+                onAddItem={onAddItem}
+                onEditItem={onEditItem}
+                onDeleteItem={onDeleteItem}
+                onUpdateItem={onUpdateItem}
+              />
+              <CaseSection
+                title="Expenses"
+                category="expenses"
+                view={financialView}
+                items={caseData.caseRecord.financials.expenses || []}
+                onAddItem={onAddItem}
+                onEditItem={onEditItem}
+                onDeleteItem={onDeleteItem}
+                onUpdateItem={onUpdateItem}
+              />
+            </div>
+          </ResizablePanel>
+
+          {/* Resizable Handle */}
+          <ResizableHandle withHandle />
+
+          {/* Right Panel: Notes Section */}
+          <ResizablePanel defaultSize={40} minSize={25}>
+            <div className="p-6 h-full overflow-y-auto">
+              <NotesSection
+                notes={caseData.caseRecord.notes || []}
+                onAddNote={onAddNote}
+                onEditNote={onEditNote}
+                onDeleteNote={onDeleteNote}
+              />
+            </div>
+          </ResizablePanel>
+        </ResizablePanelGroup>
       </div>
     </div>
   );
