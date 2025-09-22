@@ -38,7 +38,7 @@ export function ConnectToExistingModal({
       console.log('[ConnectToExistingModal] Connection result:', success);
       
       if (!success) {
-        const errorMsg = 'Failed to connect to directory or load data. Please check console for details and try again.';
+        const errorMsg = 'Failed to connect to directory or load data. Please check console for details, try restarting your browser, and try again.';
         console.error('[ConnectToExistingModal] Connection failed');
         setError(errorMsg);
       }
