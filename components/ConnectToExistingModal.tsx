@@ -9,6 +9,7 @@ interface ConnectToExistingModalProps {
   isOpen: boolean;
   isSupported: boolean;
   onConnectToExisting: () => Promise<boolean>;
+  onChooseNewFolder: () => Promise<boolean>;
   onGoToSettings: () => void;
   permissionStatus?: string;
   hasStoredHandle?: boolean;
@@ -18,28 +19,31 @@ export function ConnectToExistingModal({
   isOpen, 
   isSupported, 
   onConnectToExisting,
+  onChooseNewFolder,
   onGoToSettings,
   permissionStatus = 'unknown',
   hasStoredHandle = false
 }: ConnectToExistingModalProps) {
   const [isConnecting, setIsConnecting] = useState(false);
+  const [connectingType, setConnectingType] = useState<'existing' | 'new' | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const handleConnectToExisting = async () => {
     setIsConnecting(true);
+    setConnectingType('existing');
     setError(null);
     
     try {
-      console.log('[ConnectToExistingModal] Starting connection process...');
+      console.log('[ConnectToExistingModal] Starting existing connection process...');
       console.log('[ConnectToExistingModal] Permission status:', permissionStatus);
       console.log('[ConnectToExistingModal] Has stored handle:', hasStoredHandle);
       
       const success = await onConnectToExisting();
-      console.log('[ConnectToExistingModal] Connection result:', success);
+      console.log('[ConnectToExistingModal] Existing connection result:', success);
       
       if (!success) {
-        const errorMsg = 'Failed to connect to directory or load data. Please check console for details, try restarting your browser, and try again.';
-        console.error('[ConnectToExistingModal] Connection failed');
+        const errorMsg = 'Failed to connect to existing directory. Please check console for details and try again.';
+        console.error('[ConnectToExistingModal] Existing connection failed');
         setError(errorMsg);
       }
     } catch (err) {
@@ -47,6 +51,32 @@ export function ConnectToExistingModal({
       setError(`Connection error: ${err instanceof Error ? err.message : 'Unknown error occurred'}`);
     } finally {
       setIsConnecting(false);
+      setConnectingType(null);
+    }
+  };
+
+  const handleChooseNewFolder = async () => {
+    setIsConnecting(true);
+    setConnectingType('new');
+    setError(null);
+    
+    try {
+      console.log('[ConnectToExistingModal] Starting new folder selection process...');
+      
+      const success = await onChooseNewFolder();
+      console.log('[ConnectToExistingModal] New folder selection result:', success);
+      
+      if (!success) {
+        const errorMsg = 'Failed to connect to new folder. Please try again or check if you cancelled the selection.';
+        console.error('[ConnectToExistingModal] New folder selection failed');
+        setError(errorMsg);
+      }
+    } catch (err) {
+      console.error('[ConnectToExistingModal] Choose new folder error:', err);
+      setError(`Folder selection error: ${err instanceof Error ? err.message : 'Unknown error occurred'}`);
+    } finally {
+      setIsConnecting(false);
+      setConnectingType(null);
     }
   };
 
@@ -92,16 +122,24 @@ export function ConnectToExistingModal({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Database className="h-5 w-5 text-primary" />
-            {hasStoredHandle ? 'Ready to Connect' : 'Connect to Your Data'}
+            Connect to Your Data
           </DialogTitle>
           <DialogDescription>
-            {hasStoredHandle 
-              ? 'Your previous data folder is ready to reconnect. Click below to continue where you left off.' 
-              : 'Set up local data storage and load your existing cases.'}
+            Choose how you'd like to access your case management data stored locally on your computer.
           </DialogDescription>
         </DialogHeader>
         
         <div className="space-y-6">
+          {!hasStoredHandle && (
+            <Alert className="border-blue-200 bg-blue-50 dark:border-blue-800 dark:bg-blue-950/20">
+              <FolderOpen className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+              <AlertDescription className="text-blue-800 dark:text-blue-200">
+                <strong>First time setup:</strong> You'll be asked to choose a folder on your computer. 
+                This can be an empty folder or one containing existing case files.
+              </AlertDescription>
+            </Alert>
+          )}
+
           <div className="text-sm text-muted-foreground space-y-2">
             <p>This application stores your data locally in files on your computer for:</p>
             <ul className="list-disc list-inside space-y-1 ml-4">
@@ -139,33 +177,72 @@ export function ConnectToExistingModal({
 
 
 
-          <div className="bg-muted/50 rounded-lg p-4 text-sm">
-            <p className="font-medium mb-2">What happens when you connect:</p>
-            <ol className="list-decimal list-inside space-y-1 text-muted-foreground">
-              <li>{hasStoredHandle ? 'Reconnect to your existing folder' : 'Choose or create a folder for your case data'}</li>
-              <li>{hasStoredHandle ? 'Confirm access permissions' : 'Grant read/write permission to that folder'}</li>
-              <li>Directly load any existing case files (no import processing)</li>
-              <li>Start working with your data immediately</li>
-            </ol>
+          <div className="bg-muted/50 rounded-lg p-4 text-sm space-y-3">
+            <p className="font-medium">Your connection options:</p>
+            
+            {hasStoredHandle && (
+              <div className="flex gap-3">
+                <Database className="h-4 w-4 text-emerald-600 mt-0.5 flex-shrink-0" />
+                <div>
+                  <p className="font-medium text-emerald-700 dark:text-emerald-300">Connect to Previous Folder</p>
+                  <p className="text-xs text-muted-foreground">Reconnect to your existing data folder and load your cases immediately.</p>
+                </div>
+              </div>
+            )}
+            
+            <div className="flex gap-3">
+              <FolderOpen className="h-4 w-4 text-blue-600 mt-0.5 flex-shrink-0" />
+              <div>
+                <p className="font-medium text-blue-700 dark:text-blue-300">Choose {hasStoredHandle ? 'Different' : 'Data'} Folder</p>
+                <p className="text-xs text-muted-foreground">
+                  {hasStoredHandle 
+                    ? 'Select a different folder or start fresh with a new location.' 
+                    : 'Pick any folder on your computer to store your case data (can be empty or contain existing files).'}
+                </p>
+              </div>
+            </div>
           </div>
 
-          {/* Action Buttons */}
+          {/* Connection Options */}
           <div className="space-y-3">
+            {hasStoredHandle && (
+              <Button 
+                onClick={handleConnectToExisting}
+                disabled={isConnecting}
+                className="w-full"
+                size="lg"
+                variant="default"
+              >
+                {isConnecting && connectingType === 'existing' ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Reconnecting...
+                  </>
+                ) : (
+                  <>
+                    <Database className="mr-2 h-4 w-4" />
+                    Connect to Previous Folder
+                  </>
+                )}
+              </Button>
+            )}
+
             <Button 
-              onClick={handleConnectToExisting}
+              onClick={handleChooseNewFolder}
               disabled={isConnecting}
               className="w-full"
               size="lg"
+              variant={hasStoredHandle ? "outline" : "default"}
             >
-              {isConnecting ? (
+              {isConnecting && connectingType === 'new' ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Connecting...
+                  Selecting Folder...
                 </>
               ) : (
                 <>
                   <FolderOpen className="mr-2 h-4 w-4" />
-                  {hasStoredHandle ? 'Reconnect to Stored Folder' : 'Connect to Existing'}
+                  Choose {hasStoredHandle ? 'Different' : 'Data'} Folder
                 </>
               )}
             </Button>
@@ -196,6 +273,7 @@ export function ConnectToExistingModal({
                     variant="outline"
                     size="sm"
                     className="w-full"
+                    disabled={isConnecting}
                   >
                     Go to Settings
                   </Button>
@@ -205,9 +283,7 @@ export function ConnectToExistingModal({
           </div>
 
           <p className="text-xs text-muted-foreground text-center">
-            {hasStoredHandle 
-              ? 'This will reconnect to your previously selected folder'
-              : 'This will open your browser\'s folder selection dialog'}
+            Choose the option that best fits your needs
           </p>
         </div>
       </DialogContent>

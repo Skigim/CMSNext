@@ -133,6 +133,100 @@ const AppContent = memo(function AppContent() {
 
   // Note: loadCases is now provided by useCaseManagement hook
 
+  const handleChooseNewFolder = useCallback(async (): Promise<boolean> => {
+    try {
+      console.log('[App] handleChooseNewFolder started');
+      
+      if (!isSupported) {
+        toast.error("File System Access API is not supported in this browser");
+        return false;
+      }
+      
+      setError(null);
+      
+      // Always use connectToFolder for new folder selection
+      const success = await connectToFolder();
+      console.log('[App] New folder connection attempt result:', success);
+      if (!success) {
+        toast.error("Failed to connect to new folder");
+        return false;
+      }
+      
+      // Small delay to ensure directory connection is stable
+      await new Promise(resolve => setTimeout(resolve, 150));
+      
+      // Load existing data directly - this will verify the connection works
+      let existingData;
+      try {
+        console.log('[App] Loading existing data from new folder...');
+        existingData = await loadExistingData();
+        console.log('[App] Loaded existing data:', existingData ? `${existingData.cases?.length || 0} cases` : 'null');
+      } catch (loadError) {
+        console.error('[App] Error loading existing data:', loadError);
+        // This is OK for new folders - they might not have data yet
+        existingData = null;
+      }
+
+      if (existingData && Object.keys(existingData).length > 0) {
+        // Found existing data - load it using the same approach as handleConnectToExisting
+        try {
+          console.log('[App] Calling loadCases() for new folder...');
+          const loadedCases = await loadCases();
+          console.log('[App] loadCases() completed for new folder');
+          
+          console.log(`[App] Cases loaded from new folder: ${loadedCases.length} cases`);
+          
+          if (loadedCases.length > 0) {
+            // We have actual data from the file
+            console.log('[App] Setting hasLoadedData=true for non-empty data from new folder');
+            setHasLoadedData(true);
+            setShowConnectModal(false);
+            
+            // Set baseline - we now have established data
+            (window as any).fileStorageDataBaseline = true;
+            (window as any).fileStorageSessionHadData = true;
+            
+            toast.success(`Connected and loaded ${loadedCases.length} cases from new folder`, {
+              id: 'new-folder-success',
+              duration: 3000
+            });
+          } else {
+            // Empty file found
+            console.log('[App] Empty data file found in new folder');
+            setCases([]);
+            setHasLoadedData(true);
+            setShowConnectModal(false);
+            toast.success("Connected to folder with empty data file - ready to add cases!");
+          }
+        } catch (err) {
+          console.error('[App] Error loading cases from new folder:', err);
+          toast.error("Connected to folder but failed to load case data");
+          return false;
+        }
+      } else {
+        // No existing data found - that's fine for new folders
+        console.log('[App] No existing data found in new folder - starting fresh');
+        toast.success("Connected to new folder successfully! Ready to start managing cases.");
+      }
+
+      // Mark as successfully loaded and close modal
+      setHasLoadedData(true);
+      setShowConnectModal(false);
+      
+      // Make sure we notify the file service that we have initial data (even if empty)
+      if (service) {
+        service.notifyDataChange();
+      }
+
+      console.log('[App] handleChooseNewFolder completed successfully');
+      return true;
+    } catch (err) {
+      console.error('[App] handleChooseNewFolder error:', err);
+      toast.error("Failed to connect to new folder");
+      return false;
+    }
+  }, [isSupported, connectToFolder, loadExistingData, dataManager, service]);
+
   const handleConnectToExisting = useCallback(async (): Promise<boolean> => {
     try {
       console.log('[App] handleConnectToExisting started');
@@ -669,6 +763,7 @@ const AppContent = memo(function AppContent() {
             isOpen={showConnectModal}
             isSupported={isSupported ?? false}
             onConnectToExisting={handleConnectToExisting}
+            onChooseNewFolder={handleChooseNewFolder}
             onGoToSettings={() => {
               setShowConnectModal(false);
               setHasLoadedData(true); // Mark as handled
