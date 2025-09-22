@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Button } from "./ui/button";
 import { Badge } from "./ui/badge";
 import { ToggleGroup, ToggleGroupItem } from "./ui/toggle-group";
@@ -39,13 +39,22 @@ export function CaseDetails({
 }: CaseDetailsProps) {
   const [financialView, setFinancialView] = useState<'cards' | 'table'>('cards');
   const [isTransitioning, setIsTransitioning] = useState(false);
+  const mountedRef = useRef(true);
+  
+  useEffect(() => {
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
   
   const handleViewChange = (value: string | undefined) => {
     if (value && value !== financialView) {
       setIsTransitioning(true);
       setTimeout(() => {
-        setFinancialView(value as 'cards' | 'table');
-        setIsTransitioning(false);
+        if (mountedRef.current) {
+          setFinancialView(value as 'cards' | 'table');
+          setIsTransitioning(false);
+        }
       }, 150);
     }
   };

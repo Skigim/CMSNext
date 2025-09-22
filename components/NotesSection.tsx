@@ -44,7 +44,7 @@ export function NotesSection({ notes, onAddNote, onEditNote, onDeleteNote }: Not
   );
 
   return (
-    <Card key="notes-section">
+    <Card>
       <CardHeader>
         <div className="flex items-center justify-between">
           <CardTitle className="flex items-center gap-2">
@@ -63,7 +63,7 @@ export function NotesSection({ notes, onAddNote, onEditNote, onDeleteNote }: Not
       </CardHeader>
       <CardContent>
         {sortedNotes.length === 0 ? (
-          <div key="no-notes" className="text-center py-8">
+          <div className="text-center py-8">
             <p className="text-muted-foreground mb-4">No notes added yet</p>
             <Button onClick={onAddNote} variant="outline">
               <Plus className="w-4 h-4 mr-2" />
@@ -71,10 +71,12 @@ export function NotesSection({ notes, onAddNote, onEditNote, onDeleteNote }: Not
             </Button>
           </div>
         ) : (
-          <div key="notes-list" className="space-y-4">
-            {sortedNotes.map((note, index) => {
+          <div className="space-y-4">
+            {sortedNotes.map((note) => {
               // Ensure a stable, unique key even if imported notes are missing ids
-              const compositeKey = note.id || `${note.createdAt}-${note.content?.slice(0, 20) ?? ''}-${index}`;
+              // Use a more stable approach than index to avoid reconciliation issues
+              const contentHash = note.content ? btoa(note.content).slice(0, 8) : '';
+              const compositeKey = note.id || `${note.createdAt}-${contentHash}`;
               return (
               <Card key={compositeKey} className="border-l-4 border-l-primary/20">
                 <CardContent className="pt-4">
