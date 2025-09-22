@@ -74,7 +74,7 @@ export function NotesSection({ notes, onAddNote, onEditNote, onDeleteNote }: Not
           <div key="notes-list" className="space-y-4">
             {sortedNotes.map((note, index) => {
               // Ensure a stable, unique key even if imported notes are missing ids
-              const compositeKey = note.id || `${note.createdAt}-${index}`;
+              const compositeKey = note.id || `${note.createdAt}-${note.content?.slice(0, 20) ?? ''}-${index}`;
               return (
               <Card key={compositeKey} className="border-l-4 border-l-primary/20">
                 <CardContent className="pt-4">
