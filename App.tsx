@@ -952,7 +952,6 @@ const AppContent = memo(function AppContent() {
         selectedCase={selectedCase}
         editingCase={editingCase}
         cases={cases}
-        loadCases={loadCases}
         handleViewCase={handleViewCase}
         handleEditCase={handleEditCase}
         handleNewCase={handleNewCase}
