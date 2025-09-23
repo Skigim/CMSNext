@@ -95,14 +95,14 @@ export function FinancialItemCard({
     }));
   };
 
-  // Get verification status styling and text
+  // Get verification status styling and text with consistent colors
   const getVerificationStatus = () => {
     const status = (item.verificationStatus || 'Needs VR').toLowerCase();
-    const statusMap: Record<string, { text: string; variant: 'default' | 'secondary' | 'destructive' | 'outline' }> = {
-      'verified': { text: 'Verified', variant: 'default' },
-      'needs vr': { text: 'Needs VR', variant: 'secondary' },
-      'vr pending': { text: 'VR Pending', variant: 'outline' },
-      'avs pending': { text: 'AVS Pending', variant: 'outline' },
+    const statusMap: Record<string, { text: string; colorClass: string }> = {
+      'verified': { text: 'Verified', colorClass: 'bg-green-600 hover:bg-green-700 text-white border-green-600' },
+      'needs vr': { text: 'Needs VR', colorClass: 'bg-gray-500 hover:bg-gray-600 text-white border-gray-500' },
+      'vr pending': { text: 'VR Pending', colorClass: 'bg-yellow-500 hover:bg-yellow-600 text-white border-yellow-500' },
+      'avs pending': { text: 'AVS Pending', colorClass: 'bg-orange-500 hover:bg-orange-600 text-white border-orange-500' },
     };
 
     let badgeInfo = statusMap[status] || statusMap['needs vr'];
@@ -242,11 +242,9 @@ export function FinancialItemCard({
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button
-                variant={verificationStatus.variant === 'default' ? 'default' : 
-                        verificationStatus.variant === 'destructive' ? 'destructive' :
-                        verificationStatus.variant === 'outline' ? 'outline' : 'secondary'}
+                variant="default"
                 size="sm"
-                className="text-xs h-6 px-2 py-1 hover:scale-105 transition-all duration-200"
+                className={`text-xs h-6 px-2 py-1 hover:scale-105 transition-all duration-200 ${verificationStatus.colorClass}`}
               >
                 {verificationStatus.text}
                 <ChevronDown className="ml-1 h-3 w-3" />
