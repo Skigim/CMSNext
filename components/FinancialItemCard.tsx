@@ -60,14 +60,14 @@ export function FinancialItemCard({
       setIsEditing(true);
     } else {
       // Fall back to modal editing
-      if (item.id) {
+      if (typeof item.id === 'string') {
         onEdit(itemType, item.id);
       }
     }
   };
 
   const handleCancelClick = () => {
-    if (isSkeleton && onDelete) {
+    if (isSkeleton && onDelete && typeof item.id === 'string') {
       onDelete(itemType, item.id); // For skeleton cards, remove from list
     } else {
       setIsEditing(false);
@@ -77,7 +77,7 @@ export function FinancialItemCard({
 
   const handleSaveClick = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (onUpdate && item.id) {
+    if (onUpdate && typeof item.id === 'string') {
       try {
         await onUpdate(itemType, item.id, formData);
         setIsEditing(false);
@@ -169,7 +169,7 @@ export function FinancialItemCard({
 
   const handleDeleteConfirm = (e: React.MouseEvent) => {
     e.stopPropagation();
-    if (item.id) {
+    if (typeof item.id === 'string') {
       onDelete(itemType, item.id);
     }
     setConfirmingDelete(false);
@@ -474,14 +474,17 @@ export function FinancialItemList({
       ) : (
         <div className="space-y-2 group">
           {allItems.map((item, index) => {
-            const isSkeleton = item.id.startsWith('skeleton-');
+            const isSkeleton = typeof item.id === 'string' && item.id.startsWith('skeleton-');
             return (
               <FinancialItemCard
                 key={item.id || `${itemType}-${index}`}
                 item={item}
                 itemType={itemType}
                 onEdit={onEdit}
-                onDelete={isSkeleton ? () => handleCancelSkeleton(item.id) : onDelete}
+                onDelete={isSkeleton && typeof item.id === 'string' ? 
+                  () => handleCancelSkeleton(item.id as string) : 
+                  onDelete
+                }
                 onUpdate={isSkeleton ? 
                   (_, itemId, updatedItem) => handleSaveSkeleton(itemId, updatedItem) :
                   onUpdate
