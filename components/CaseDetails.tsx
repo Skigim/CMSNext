@@ -4,8 +4,9 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "./ui/resizable";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
 import { CaseSection } from "./CaseSection";
-import { CaseDisplay, CaseCategory, FinancialItem } from "../types/case";
-import { ArrowLeft, Edit2, Trash2, FileText, Landmark, Wallet, Receipt } from "lucide-react";
+import { NotesSection } from "./NotesSection";
+import { CaseDisplay, CaseCategory, FinancialItem, NewNoteData } from "../types/case";
+import { ArrowLeft, Edit2, Trash2, Landmark, Wallet, Receipt } from "lucide-react";
 import { withDataErrorBoundary } from "./ErrorBoundaryHOC";
 
 interface CaseDetailsProps {
@@ -21,6 +22,8 @@ interface CaseDetailsProps {
   onAddNote: () => void;
   onEditNote: (noteId: string) => void;
   onDeleteNote: (noteId: string) => void;
+  onBatchUpdateNote?: (noteId: string, updatedNote: NewNoteData) => Promise<void>;
+  onBatchCreateNote?: (noteData: NewNoteData) => Promise<void>;
 }
 
 export function CaseDetails({ 
@@ -35,7 +38,9 @@ export function CaseDetails({
   onCreateItem,
   onAddNote,
   onEditNote,
-  onDeleteNote
+  onDeleteNote,
+  onBatchUpdateNote,
+  onBatchCreateNote
 }: CaseDetailsProps) {
   
     // Handle batched update for inline editing
@@ -209,83 +214,14 @@ export function CaseDetails({
         {/* Right Panel: Notes Section */}
         <ResizablePanel defaultSize={40} minSize={25}>
           <div className="p-4 bg-muted/30 overflow-y-auto">
-            <div className="flex justify-between items-center mb-4">
-              <div className="flex items-center gap-3">
-                <FileText className="w-5 h-5 text-primary" />
-                <h2 className="text-lg font-semibold text-foreground">Notes</h2>
-                {caseData.caseRecord.notes && caseData.caseRecord.notes.length > 0 && (
-                  <Badge variant="secondary">
-                    {caseData.caseRecord.notes.length}
-                  </Badge>
-                )}
-              </div>
-              <Button variant="outline" size="sm" onClick={onAddNote}>
-                + Add Note
-              </Button>
-            </div>
-            
-            {!caseData.caseRecord.notes || caseData.caseRecord.notes.length === 0 ? (
-              <div className="text-center py-6">
-                <p className="text-muted-foreground mb-3">No notes added yet</p>
-                <Button onClick={onAddNote} variant="outline">
-                  + Add First Note
-                </Button>
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {caseData.caseRecord.notes
-                  .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-                  .map((note) => {
-                    let contentHash = '';
-                    if (note.content) {
-                      try {
-                        contentHash = btoa(unescape(encodeURIComponent(note.content.slice(0, 50)))).slice(0, 8);
-                      } catch (error) {
-                        contentHash = note.content.slice(0, 8).replace(/[^a-zA-Z0-9]/g, '');
-                      }
-                    }
-                    const compositeKey = note.id || `${note.createdAt}-${contentHash}`;
-                    
-                    return (
-                      <div key={compositeKey} className="bg-card/50 border p-3 rounded-lg">
-                        <div className="flex justify-between items-start mb-1.5">
-                          <div className="flex items-center gap-2">
-                            {note.category && (
-                              <Badge variant="secondary" className="text-xs py-0.5">
-                                {note.category}
-                              </Badge>
-                            )}
-                            <span className="text-xs text-muted-foreground">
-                              {new Date(note.createdAt).toLocaleDateString()}
-                            </span>
-                          </div>
-                          <div className="flex gap-1">
-                            <Button 
-                              variant="ghost" 
-                              size="sm" 
-                              onClick={() => onEditNote(note.id)}
-                              className="h-5 w-5 p-0"
-                            >
-                              <Edit2 className="w-3 h-3" />
-                            </Button>
-                            <Button 
-                              variant="ghost" 
-                              size="sm" 
-                              onClick={() => onDeleteNote(note.id)}
-                              className="h-5 w-5 p-0 text-destructive hover:text-destructive"
-                            >
-                              <Trash2 className="w-3 h-3" />
-                            </Button>
-                          </div>
-                        </div>
-                        <p className="text-sm text-foreground whitespace-pre-wrap break-words">
-                          {note.content}
-                        </p>
-                      </div>
-                    );
-                  })}
-              </div>
-            )}
+            <NotesSection
+              notes={caseData.caseRecord.notes || []}
+              onAddNote={onAddNote}
+              onEditNote={onEditNote}
+              onDeleteNote={onDeleteNote}
+              onUpdateNote={onBatchUpdateNote}
+              onCreateNote={onBatchCreateNote}
+            />
           </div>
         </ResizablePanel>
       </ResizablePanelGroup>

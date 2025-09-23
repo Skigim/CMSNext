@@ -116,6 +116,8 @@ interface ViewRendererProps {
   handleAddNote: (type?: string) => void;
   handleEditNote: (noteId: string) => void;
   handleDeleteNote: (noteId: string) => Promise<void>;
+  handleBatchUpdateNote?: (noteId: string, updatedNote: any) => Promise<void>;
+  handleBatchCreateNote?: (noteData: any) => Promise<void>;
 }
 
 /**
@@ -152,7 +154,9 @@ export function ViewRenderer({
   handleCreateItem,
   handleAddNote,
   handleEditNote,
-  handleDeleteNote
+  handleDeleteNote,
+  handleBatchUpdateNote,
+  handleBatchCreateNote
 }: ViewRendererProps) {
   
   switch (currentView) {
@@ -207,6 +211,8 @@ export function ViewRenderer({
             onAddNote={handleAddNote}
             onEditNote={handleEditNote}
             onDeleteNote={handleDeleteNote}
+            onBatchUpdateNote={handleBatchUpdateNote}
+            onBatchCreateNote={handleBatchCreateNote}
           />
         </Suspense>
       ) : null;
