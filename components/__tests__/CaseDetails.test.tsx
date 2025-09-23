@@ -121,15 +121,15 @@ describe('CaseDetails Memory Management', () => {
     
     const { unmount } = render(<CaseDetails {...mockProps} />);
     
-    // Find and click a view toggle button (assuming there are table/grid view toggles)
-    const viewToggle = screen.queryByRole('button');
+    // Find and click any button that might trigger state changes
+    const buttons = screen.queryAllByRole('button');
     
-    if (viewToggle) {
-      // Trigger a view change that might use setTimeout
-      fireEvent.click(viewToggle);
+    if (buttons.length > 0) {
+      // Trigger an action that might use setTimeout
+      fireEvent.click(buttons[0]);
     }
     
-    // Unmount component immediately after triggering transition
+    // Unmount component immediately after triggering action
     unmount();
     
     // Fast-forward through any pending timeouts

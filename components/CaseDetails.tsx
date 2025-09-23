@@ -1,13 +1,11 @@
-import { useState, useEffect, useRef } from "react";
 import { Button } from "./ui/button";
 import { Badge } from "./ui/badge";
-import { ToggleGroup, ToggleGroupItem } from "./ui/toggle-group";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "./ui/alert-dialog";
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "./ui/resizable";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
 import { CaseSection } from "./CaseSection";
-import { NotesSection } from "./NotesSection";
-import { CaseDisplay, CaseCategory } from "../types/case";
-import { ArrowLeft, Edit2, Trash2, LayoutGrid, Table } from "lucide-react";
+import { CaseDisplay, CaseCategory, FinancialItem } from "../types/case";
+import { ArrowLeft, Edit2, Trash2, FileText, Landmark, Wallet, Receipt } from "lucide-react";
 import { withDataErrorBoundary } from "./ErrorBoundaryHOC";
 
 interface CaseDetailsProps {
@@ -18,7 +16,8 @@ interface CaseDetailsProps {
   onAddItem: (category: CaseCategory) => void;
   onEditItem: (category: CaseCategory, itemId: string) => void;
   onDeleteItem: (category: CaseCategory, itemId: string) => void;
-  onUpdateItem?: (category: CaseCategory, itemId: string, field: string, value: string) => Promise<void>;
+  onBatchUpdateItem?: (category: CaseCategory, itemId: string, updatedItem: Partial<FinancialItem>) => Promise<void>;
+  onCreateItem?: (category: CaseCategory, itemData: Omit<FinancialItem, 'id' | 'createdAt' | 'updatedAt'>) => Promise<void>;
   onAddNote: () => void;
   onEditNote: (noteId: string) => void;
   onDeleteNote: (noteId: string) => void;
@@ -32,100 +31,91 @@ export function CaseDetails({
   onAddItem,
   onEditItem,
   onDeleteItem,
-  onUpdateItem,
+  onBatchUpdateItem,
+  onCreateItem,
   onAddNote,
   onEditNote,
   onDeleteNote
 }: CaseDetailsProps) {
-  const [financialView, setFinancialView] = useState<'cards' | 'table'>('cards');
-  const [isTransitioning, setIsTransitioning] = useState(false);
-  const mountedRef = useRef(true);
   
-  useEffect(() => {
-    return () => {
-      mountedRef.current = false;
-    };
-  }, []);
-  
-  const handleViewChange = (value: string | undefined) => {
-    if (value && value !== financialView) {
-      setIsTransitioning(true);
-      setTimeout(() => {
-        if (mountedRef.current) {
-          setFinancialView(value as 'cards' | 'table');
-          setIsTransitioning(false);
-        }
-      }, 150);
+    // Handle batched update for inline editing
+  const handleUpdateFullItem = async (category: CaseCategory, itemId: string, updatedItem: FinancialItem) => {
+    if (!caseData || !onBatchUpdateItem) return;
+
+    try {
+      // Use batch update function to avoid multiple toasts
+      await onBatchUpdateItem(category, itemId, updatedItem);
+    } catch (error) {
+      console.error('Failed to update item:', error);
     }
   };
 
   const getStatusColor = (status: CaseDisplay['status']) => {
     switch (status) {
       case 'In Progress':
-        return 'bg-blue-500/10 text-blue-500 border-blue-500/20';
+        return 'bg-blue-500/10 text-blue-700 border-blue-200 dark:bg-blue-500/20 dark:text-blue-300 dark:border-blue-800';
       case 'Priority':
-        return 'bg-orange-500/10 text-orange-500 border-orange-500/20';
+        return 'bg-orange-500/10 text-orange-700 border-orange-200 dark:bg-orange-500/20 dark:text-orange-300 dark:border-orange-800';
       case 'Review':
-        return 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20';
+        return 'bg-yellow-500/10 text-yellow-700 border-yellow-200 dark:bg-yellow-500/20 dark:text-yellow-300 dark:border-yellow-800';
       case 'Completed':
-        return 'bg-green-500/10 text-green-500 border-green-500/20';
+        return 'bg-green-500/10 text-green-700 border-green-200 dark:bg-green-500/20 dark:text-green-300 dark:border-green-800';
     }
   };
 
   return (
-    <div className="space-y-8 animate-in fade-in-0 duration-500">
+    <div className="space-y-6">
       {/* Enhanced Header with Better Visual Hierarchy */}
-      <div className="bg-gradient-to-r from-card via-card to-card/50 border rounded-xl p-8 shadow-sm hover:shadow-md transition-all duration-300">
-        <div className="flex items-start justify-between">
-          <div className="flex items-start gap-6">
+      <div className="bg-card border rounded-xl p-4 shadow-sm">
+        <div className="flex flex-col sm:flex-row items-start justify-between gap-3">
+          <div className="flex items-start gap-3">
             <Button 
               variant="ghost" 
               size="sm" 
               onClick={onBack}
-              className="mt-1 hover:bg-accent/50 transition-colors duration-200"
+              className="mt-0.5"
             >
               <ArrowLeft className="w-4 h-4 mr-2" />
               Back
             </Button>
-            <div className="space-y-3">
-              <div className="flex items-center gap-4">
-                <h1 className="text-3xl font-bold tracking-tight text-foreground leading-tight">
+            <div className="space-y-1.5">
+              <div className="flex items-center gap-3 flex-wrap">
+                <h1 className="text-xl font-bold text-foreground">
                   {caseData.name || 'Unnamed Case'}
                 </h1>
-                <Badge className={`${getStatusColor(caseData.status || 'In Progress')} font-medium px-3 py-1 text-sm transition-all duration-200 hover:scale-105`}>
+                <Badge className={`${getStatusColor(caseData.status || 'In Progress')}`}>
                   {caseData.status || 'In Progress'}
                 </Badge>
               </div>
               <div className="flex items-center gap-2 text-muted-foreground">
                 <span className="text-sm font-medium">MCN:</span>
-                <span className="text-sm font-mono bg-muted/50 px-2 py-1 rounded-md">
+                <span className="text-sm font-mono bg-muted px-2 py-0.5 rounded-md">
                   {caseData.mcn || 'No MCN'}
                 </span>
               </div>
             </div>
           </div>
-          <div className="flex gap-3 items-start">
+          <div className="flex gap-2 items-start flex-wrap">
             <Button 
               variant="outline" 
               size="sm"
               onClick={onEdit}
-              className="hover:bg-accent/50 transition-all duration-200 hover:scale-105"
             >
               <Edit2 className="w-4 h-4 mr-2" />
-              Edit Case
+              Edit
             </Button>
             <AlertDialog>
               <AlertDialogTrigger asChild>
                 <Button 
                   variant="outline" 
                   size="sm"
-                  className="text-destructive hover:text-destructive hover:bg-destructive/10 transition-all duration-200 hover:scale-105"
+                  className="text-destructive hover:text-destructive hover:bg-destructive/10"
                 >
                   <Trash2 className="w-4 h-4 mr-2" />
-                  Delete Case
+                  Delete
                 </Button>
               </AlertDialogTrigger>
-              <AlertDialogContent className="animate-in fade-in-0 zoom-in-95 duration-300">
+              <AlertDialogContent>
                 <AlertDialogHeader>
                   <AlertDialogTitle>Delete Case</AlertDialogTitle>
                   <AlertDialogDescription>
@@ -144,156 +134,161 @@ export function CaseDetails({
                 </AlertDialogFooter>
               </AlertDialogContent>
             </AlertDialog>
-            <Button className="bg-primary hover:bg-primary/90 transition-all duration-200 hover:scale-105 shadow-sm">
-              Generate Summary
-            </Button>
-            <ToggleGroup 
-              type="single" 
-              value={financialView}
-              onValueChange={handleViewChange}
-              variant="outline"
-              size="sm"
-              className="bg-background/50 rounded-lg p-1 transition-all duration-200"
-            >
-              <ToggleGroupItem 
-                value="cards" 
-                aria-label="Card view"
-                className="transition-all duration-200 data-[state=on]:bg-primary data-[state=on]:text-primary-foreground"
-              >
-                <LayoutGrid className="h-4 w-4 mr-2" />
-                Cards
-              </ToggleGroupItem>
-              <ToggleGroupItem 
-                value="table" 
-                aria-label="Table view"
-                className="transition-all duration-200 data-[state=on]:bg-primary data-[state=on]:text-primary-foreground"
-              >
-                <Table className="h-4 w-4 mr-2" />
-                Table
-              </ToggleGroupItem>
-            </ToggleGroup>
           </div>
         </div>
       </div>
 
-      {/* Content - Resizable Layout with Enhanced Animations */}
-      <div className="block lg:hidden">
-        {/* Mobile: Stacked Layout with Staggered Animation */}
-        <div className="space-y-8">
-          {/* Financial Sections */}
-          <div className={`space-y-6 animate-in slide-in-from-left-4 delay-100 transition-all duration-300 ${isTransitioning ? 'opacity-50 scale-98' : 'opacity-100 scale-100'}`}>
-            <CaseSection
-              title="Resources"
-              category="resources"
-              view={financialView}
-              items={caseData.caseRecord.financials.resources || []}
-              onAddItem={onAddItem}
-              onEditItem={onEditItem}
-              onDeleteItem={onDeleteItem}
-              onUpdateItem={onUpdateItem}
-            />
-            <CaseSection
-              title="Income"
-              category="income"
-              view={financialView}
-              items={caseData.caseRecord.financials.income || []}
-              onAddItem={onAddItem}
-              onEditItem={onEditItem}
-              onDeleteItem={onDeleteItem}
-              onUpdateItem={onUpdateItem}
-            />
-            <CaseSection
-              title="Expenses"
-              category="expenses"
-              view={financialView}
-              items={caseData.caseRecord.financials.expenses || []}
-              onAddItem={onAddItem}
-              onEditItem={onEditItem}
-              onDeleteItem={onDeleteItem}
-              onUpdateItem={onUpdateItem}
-            />
-          </div>
-
-          {/* Notes Section */}
-          <div className="animate-in slide-in-from-right-4 duration-500 delay-200">
-            <NotesSection
-              notes={caseData.caseRecord.notes || []}
-              onAddNote={onAddNote}
-              onEditNote={onEditNote}
-              onDeleteNote={onDeleteNote}
-            />
-          </div>
-        </div>
-      </div>
-
-      <div className="hidden lg:block">
-        {/* Desktop: Resizable 2 Column Layout with Enhanced Styling */}
-        <ResizablePanelGroup 
-          direction="horizontal" 
-          className="min-h-[700px] rounded-xl border border-border/50 bg-background/50 backdrop-blur-sm shadow-lg hover:shadow-xl transition-all duration-500 overflow-hidden"
-        >
-          {/* Left Panel: Financial Sections with Gradient Background */}
-          <ResizablePanel defaultSize={60} minSize={30}>
-            <div className="p-8 space-y-8 h-full overflow-y-auto bg-gradient-to-br from-background via-background to-accent/5">
-              <div className={`animate-in slide-in-from-left-4 delay-100 transition-all duration-300 ${isTransitioning ? 'opacity-50 scale-98' : 'opacity-100 scale-100'}`}>
+      {/* Content - Resizable Layout */}
+      <ResizablePanelGroup 
+        direction="horizontal" 
+        className="h-[calc(100vh-200px)] min-h-[400px] rounded-xl border bg-card/30 shadow-lg overflow-hidden"
+      >
+        {/* Left Panel: Financial Sections with Tabs */}
+        <ResizablePanel defaultSize={60} minSize={30}>
+          <div className="h-full p-4 flex flex-col">
+            <Tabs defaultValue="resources" className="w-full flex-1 flex flex-col">
+              <TabsList className="grid w-full grid-cols-3">
+                <TabsTrigger value="resources" className="flex items-center gap-2">
+                  <Landmark className="w-4 h-4" />
+                  Resources
+                </TabsTrigger>
+                <TabsTrigger value="income" className="flex items-center gap-2">
+                  <Wallet className="w-4 h-4" />
+                  Income
+                </TabsTrigger>
+                <TabsTrigger value="expenses" className="flex items-center gap-2">
+                  <Receipt className="w-4 h-4" />
+                  Expenses
+                </TabsTrigger>
+              </TabsList>
+              
+              <TabsContent value="resources" className="mt-4 flex-1 overflow-y-auto">
                 <CaseSection
                   title="Resources"
                   category="resources"
-                  view={financialView}
                   items={caseData.caseRecord.financials.resources || []}
                   onAddItem={onAddItem}
                   onEditItem={onEditItem}
                   onDeleteItem={onDeleteItem}
-                  onUpdateItem={onUpdateItem}
+                  onUpdateFullItem={handleUpdateFullItem}
+                  onCreateItem={onCreateItem}
                 />
-              </div>
-              <div className={`animate-in slide-in-from-left-4 delay-150 transition-all duration-300 ${isTransitioning ? 'opacity-50 scale-98' : 'opacity-100 scale-100'}`}>
+              </TabsContent>
+              
+              <TabsContent value="income" className="mt-4 flex-1 overflow-y-auto">
                 <CaseSection
                   title="Income"
                   category="income"
-                  view={financialView}
                   items={caseData.caseRecord.financials.income || []}
                   onAddItem={onAddItem}
                   onEditItem={onEditItem}
                   onDeleteItem={onDeleteItem}
-                  onUpdateItem={onUpdateItem}
+                  onUpdateFullItem={handleUpdateFullItem}
+                  onCreateItem={onCreateItem}
                 />
-              </div>
-              <div className={`animate-in slide-in-from-left-4 delay-200 transition-all duration-300 ${isTransitioning ? 'opacity-50 scale-98' : 'opacity-100 scale-100'}`}>
+              </TabsContent>
+              
+              <TabsContent value="expenses" className="mt-4 flex-1 overflow-y-auto">
                 <CaseSection
                   title="Expenses"
                   category="expenses"
-                  view={financialView}
                   items={caseData.caseRecord.financials.expenses || []}
                   onAddItem={onAddItem}
                   onEditItem={onEditItem}
                   onDeleteItem={onDeleteItem}
-                  onUpdateItem={onUpdateItem}
+                  onUpdateFullItem={handleUpdateFullItem}
+                  onCreateItem={onCreateItem}
                 />
+              </TabsContent>
+            </Tabs>
+          </div>
+        </ResizablePanel>
+
+        <ResizableHandle withHandle />
+
+        {/* Right Panel: Notes Section */}
+        <ResizablePanel defaultSize={40} minSize={25}>
+          <div className="p-4 bg-muted/30 overflow-y-auto">
+            <div className="flex justify-between items-center mb-4">
+              <div className="flex items-center gap-3">
+                <FileText className="w-5 h-5 text-primary" />
+                <h2 className="text-lg font-semibold text-foreground">Notes</h2>
+                {caseData.caseRecord.notes && caseData.caseRecord.notes.length > 0 && (
+                  <Badge variant="secondary">
+                    {caseData.caseRecord.notes.length}
+                  </Badge>
+                )}
               </div>
+              <Button variant="outline" size="sm" onClick={onAddNote}>
+                + Add Note
+              </Button>
             </div>
-          </ResizablePanel>
-
-          {/* Enhanced Resizable Handle */}
-          <ResizableHandle 
-            withHandle 
-            className="hover:bg-primary/20 transition-colors duration-200 group"
-          />
-
-          {/* Right Panel: Notes Section with Subtle Background */}
-          <ResizablePanel defaultSize={40} minSize={25}>
-            <div className="p-8 h-full overflow-y-auto bg-gradient-to-bl from-background via-background to-accent/5 animate-in slide-in-from-right-4 duration-500 delay-100">
-              <NotesSection
-                key="notes-desktop"
-                notes={caseData.caseRecord.notes || []}
-                onAddNote={onAddNote}
-                onEditNote={onEditNote}
-                onDeleteNote={onDeleteNote}
-              />
-            </div>
-          </ResizablePanel>
-        </ResizablePanelGroup>
-      </div>
+            
+            {!caseData.caseRecord.notes || caseData.caseRecord.notes.length === 0 ? (
+              <div className="text-center py-6">
+                <p className="text-muted-foreground mb-3">No notes added yet</p>
+                <Button onClick={onAddNote} variant="outline">
+                  + Add First Note
+                </Button>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {caseData.caseRecord.notes
+                  .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+                  .map((note) => {
+                    let contentHash = '';
+                    if (note.content) {
+                      try {
+                        contentHash = btoa(unescape(encodeURIComponent(note.content.slice(0, 50)))).slice(0, 8);
+                      } catch (error) {
+                        contentHash = note.content.slice(0, 8).replace(/[^a-zA-Z0-9]/g, '');
+                      }
+                    }
+                    const compositeKey = note.id || `${note.createdAt}-${contentHash}`;
+                    
+                    return (
+                      <div key={compositeKey} className="bg-card/50 border p-3 rounded-lg">
+                        <div className="flex justify-between items-start mb-1.5">
+                          <div className="flex items-center gap-2">
+                            {note.category && (
+                              <Badge variant="secondary" className="text-xs py-0.5">
+                                {note.category}
+                              </Badge>
+                            )}
+                            <span className="text-xs text-muted-foreground">
+                              {new Date(note.createdAt).toLocaleDateString()}
+                            </span>
+                          </div>
+                          <div className="flex gap-1">
+                            <Button 
+                              variant="ghost" 
+                              size="sm" 
+                              onClick={() => onEditNote(note.id)}
+                              className="h-5 w-5 p-0"
+                            >
+                              <Edit2 className="w-3 h-3" />
+                            </Button>
+                            <Button 
+                              variant="ghost" 
+                              size="sm" 
+                              onClick={() => onDeleteNote(note.id)}
+                              className="h-5 w-5 p-0 text-destructive hover:text-destructive"
+                            >
+                              <Trash2 className="w-3 h-3" />
+                            </Button>
+                          </div>
+                        </div>
+                        <p className="text-sm text-foreground whitespace-pre-wrap break-words">
+                          {note.content}
+                        </p>
+                      </div>
+                    );
+                  })}
+              </div>
+            )}
+          </div>
+        </ResizablePanel>
+      </ResizablePanelGroup>
     </div>
   );
 }

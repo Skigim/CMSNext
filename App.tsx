@@ -496,7 +496,7 @@ const AppContent = memo(function AppContent() {
     }
   };
 
-  const handleUpdateItem = async (category: CaseCategory, itemId: string, field: string, value: string) => {
+  const handleBatchUpdateItem = async (category: CaseCategory, itemId: string, updatedItem: Partial<FinancialItem>) => {
     if (!selectedCase || !dataManager) {
       if (!dataManager) {
         const errorMsg = 'Data storage is not available. Please check your connection.';
@@ -509,46 +509,53 @@ const AppContent = memo(function AppContent() {
     try {
       setError(null);
       
-      // Create partial update object based on field
-      const updateData: any = {};
-      
-      if (field === 'description') {
-        updateData.description = value;
-      } else if (field === 'amount') {
-        const numericValue = parseFloat(value.replace(/[$,]/g, ''));
-        if (!isNaN(numericValue)) {
-          updateData.amount = numericValue;
-        } else {
-          toast.error('Invalid amount format');
-          return;
-        }
-      } else if (field === 'location') {
-        updateData.location = value;
-      } else if (field === 'verificationStatus') {
-        // Validate verification status
-        const validStatuses = ['Needs VR', 'VR Pending', 'AVS Pending', 'Verified'];
-        if (validStatuses.includes(value)) {
-          updateData.verificationStatus = value;
-        } else {
-          toast.error('Invalid verification status');
-          return;
-        }
-      }
-
-      const updatedCase = await dataManager.updateItem(selectedCase.id, category, itemId, updateData);
+      // Single update operation for all fields
+      const updatedCase = await dataManager.updateItem(selectedCase.id, category, itemId, updatedItem as Omit<FinancialItem, 'id' | 'createdAt' | 'updatedAt'>);
       setCases(prevCases =>
         prevCases.map(c =>
           c.id === selectedCase.id ? updatedCase : c
         )
       );
       
-      // Show a subtle success message
-      toast.success(`${field} updated`, { duration: 2000 });
+      // Single success message for the batch update
+      toast.success('Item updated successfully', { duration: 2000 });
       
       // DataManager handles file system persistence automatically
     } catch (err) {
       console.error('Failed to update item:', err);
       const errorMsg = 'Failed to update item. Please try again.';
+      setError(errorMsg);
+      toast.error(errorMsg);
+      throw err; // Re-throw to let the component handle fallback
+    }
+  };
+
+  const handleCreateItem = async (category: CaseCategory, itemData: Omit<FinancialItem, 'id' | 'createdAt' | 'updatedAt'>) => {
+    if (!selectedCase || !dataManager) {
+      if (!dataManager) {
+        const errorMsg = 'Data storage is not available. Please check your connection.';
+        setError(errorMsg);
+        toast.error(errorMsg);
+      }
+      return;
+    }
+
+    try {
+      setError(null);
+      
+      const updatedCase = await dataManager.addItem(selectedCase.id, category, itemData);
+      setCases(prevCases =>
+        prevCases.map(c =>
+          c.id === selectedCase.id ? updatedCase : c
+        )
+      );
+      
+      toast.success('Item created successfully', { duration: 2000 });
+      
+      // DataManager handles file system persistence automatically
+    } catch (err) {
+      console.error('Failed to create item:', err);
+      const errorMsg = 'Failed to create item. Please try again.';
       setError(errorMsg);
       toast.error(errorMsg);
       throw err; // Re-throw to let the component handle fallback
@@ -852,7 +859,8 @@ const AppContent = memo(function AppContent() {
         handleAddItem={handleAddItem}
         handleEditItem={handleEditItem}
         handleDeleteItem={handleDeleteItem}
-        handleUpdateItem={handleUpdateItem}
+        handleBatchUpdateItem={handleBatchUpdateItem}
+        handleCreateItem={handleCreateItem}
         handleAddNote={handleAddNote}
         handleEditNote={handleEditNote}
         handleDeleteNote={handleDeleteNote}
