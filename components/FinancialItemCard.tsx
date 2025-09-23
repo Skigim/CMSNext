@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
@@ -34,6 +34,9 @@ export function FinancialItemCard({
   const [isEditing, setIsEditing] = useState(initialIsEditing);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [formData, setFormData] = useState(item);
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveSuccessVisible, setSaveSuccessVisible] = useState(false);
+  const saveSuccessTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Normalized data accessors using extracted utilities
   const normalizedItem = getNormalizedItem(item);
@@ -76,19 +79,39 @@ export function FinancialItemCard({
     if (onUpdate && normalizedItem.safeId) {
       // Immediately collapse the UI for instant response
       setIsEditing(false);
-      
+      setIsSaving(true);
+
       // Save in background - don't block UI
       try {
         await onUpdate(itemType, normalizedItem.safeId, formData);
-        // Save successful - no need to do anything, UI already collapsed
+        // Save successful - show success indicator briefly
+        setIsSaving(false);
+        setSaveSuccessVisible(true);
+        if (saveSuccessTimerRef.current) {
+          clearTimeout(saveSuccessTimerRef.current);
+        }
+        saveSuccessTimerRef.current = setTimeout(() => {
+          setSaveSuccessVisible(false);
+        }, 1200);
       } catch (error) {
         console.error('[FinancialItemCard] Failed to update item:', error);
         // On error, reopen the form and restore previous state
+        setIsSaving(false);
+        setSaveSuccessVisible(false);
         setFormData(item); // Reset to original data
         setIsEditing(true); // Reopen for user to retry
       }
     }
   };
+
+  // Cleanup any timers on unmount
+  useEffect(() => {
+    return () => {
+      if (saveSuccessTimerRef.current) {
+        clearTimeout(saveSuccessTimerRef.current);
+      }
+    };
+  }, []);
 
   const handleChange = (field: string, value: string | number) => {
     setFormData(prev => ({
@@ -144,6 +167,18 @@ export function FinancialItemCard({
 
   return (
     <div className={`financial-item-card ${isSkeleton ? 'financial-item-card--skeleton' : ''}`}>
+      {/* Save progress / success indicator */}
+      {(isSaving || saveSuccessVisible) && (
+        <div className="financial-item-save-indicator">
+          {isSaving ? (
+            <div className="financial-item-save-indicator__spinner" aria-label="Saving" />
+          ) : (
+            <div className="financial-item-save-indicator__success" aria-label="Saved">
+              <Check className="w-3.5 h-3.5" />
+            </div>
+          )}
+        </div>
+      )}
       {/* Display Header (Always Visible) - Now clickable */}
       <div 
         className="p-4 cursor-pointer" 
