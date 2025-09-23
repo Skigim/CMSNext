@@ -8,11 +8,13 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "./ui/t
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "./ui/dropdown-menu";
 import { FinancialItem, CaseCategory } from "../types/case";
 import { Trash2, Check, X, Plus, StickyNote, Landmark, Wallet, Receipt, ChevronDown } from "lucide-react";
+import { formatAccountNumber, getDisplayAmount, parseNumericInput } from "../utils/financialFormatters";
+import { getVerificationStatusInfo, shouldShowVerificationSource, updateVerificationStatus } from "../utils/verificationStatus";
+import { getNormalizedItem, getNormalizedFormData } from "../utils/dataNormalization";
 
 interface FinancialItemCardProps {
   item: FinancialItem;
   itemType: CaseCategory;
-  onEdit: (category: CaseCategory, itemId: string) => void;
   onDelete: (category: CaseCategory, itemId: string) => void;
   onUpdate?: (category: CaseCategory, itemId: string, updatedItem: FinancialItem) => void;
   showActions?: boolean;
@@ -23,7 +25,6 @@ interface FinancialItemCardProps {
 export function FinancialItemCard({
   item,
   itemType,
-  onEdit,
   onDelete,
   onUpdate,
   showActions = true,
@@ -34,66 +35,7 @@ export function FinancialItemCard({
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [formData, setFormData] = useState(item);
 
-  /**
-   * BACKWARD COMPATIBILITY & FALLBACK SECTION
-   * =========================================
-   * Consolidates all data normalization and fallback logic.
-   * Stack traces will point to these specific functions for easier debugging.
-   * 
-   * @deprecated These fallbacks support legacy data formats.
-   * Remove after nightingaleMigration.ts and dataTransform.ts are updated.
-   * Target removal: Q2 2025
-   */
-  const getNormalizedItem = (sourceItem: FinancialItem) => ({
-    displayName: sourceItem.description || sourceItem.name || 'Untitled Item', // Legacy: item.name
-    verificationStatus: (sourceItem.verificationStatus || 'Needs VR').toLowerCase(),
-    amount: sourceItem.amount || 0,
-    safeId: sourceItem.id || `fallback-${Date.now()}`, // Type safety for operations
-    location: sourceItem.location || '',
-    accountNumber: sourceItem.accountNumber || '',
-    notes: sourceItem.notes || '',
-    frequency: sourceItem.frequency || '',
-    verificationSource: sourceItem.verificationSource || '',
-    dateAdded: sourceItem.dateAdded || 'No date'
-  });
-
-  const getNormalizedFormData = (sourceFormData: FinancialItem) => ({
-    description: sourceFormData.description || '',
-    amount: sourceFormData.amount || '',
-    location: sourceFormData.location || '',
-    accountNumber: sourceFormData.accountNumber || '',
-    notes: sourceFormData.notes || '',
-    frequency: sourceFormData.frequency || '',
-    verificationSource: sourceFormData.verificationSource || ''
-  });
-
-  // Safe value parsers with fallbacks
-  const parseNumericInput = (value: string): number => {
-    return parseFloat(value) || 0;
-  };
-
-  const getStatusMapping = (status: string) => {
-    const statusMap: Record<string, { text: string; colorClass: string }> = {
-      'verified': { text: 'Verified', colorClass: 'bg-green-600 hover:bg-green-700 text-white border-green-600' },
-      'needs vr': { text: 'Needs VR', colorClass: 'bg-gray-500 hover:bg-gray-600 text-white border-gray-500' },
-      'vr pending': { text: 'VR Pending', colorClass: 'bg-yellow-500 hover:bg-yellow-600 text-white border-yellow-500' },
-      'avs pending': { text: 'AVS Pending', colorClass: 'bg-orange-500 hover:bg-orange-600 text-white border-orange-500' },
-    };
-    return statusMap[status] || statusMap['needs vr'];
-  };
-
-  const getFrequencyDisplay = (frequency?: string): string => {
-    const frequencyMap: Record<string, string> = {
-      monthly: '/mo',
-      yearly: '/yr',
-      weekly: '/wk',
-      daily: '/day',
-      'one-time': ' (1x)',
-    };
-    return frequency ? frequencyMap[frequency] || '' : '';
-  };
-
-  // Normalized data accessors
+  // Normalized data accessors using extracted utilities
   const normalizedItem = getNormalizedItem(item);
   const normalizedFormData = getNormalizedFormData(formData);
 
@@ -116,11 +58,6 @@ export function FinancialItemCard({
       // Use inline editing if onUpdate is provided
       setFormData(item);
       setIsEditing(true);
-    } else {
-      // Fall back to modal editing
-      if (typeof item.id === 'string') {
-        onEdit(itemType, item.id);
-      }
     }
   };
 
@@ -155,45 +92,16 @@ export function FinancialItemCard({
 
   // Get verification status styling and text with consistent colors
   const getVerificationStatus = () => {
-    const badgeInfo = getStatusMapping(normalizedItem.verificationStatus);
-
-    // Append verification source for verified items
-    if (normalizedItem.verificationStatus === 'verified' && normalizedItem.verificationSource) {
-      return { 
-        ...badgeInfo, 
-        text: `${badgeInfo.text} (${normalizedItem.verificationSource})` 
-      };
-    }
-
+    const badgeInfo = getVerificationStatusInfo(
+      normalizedItem.verificationStatus, 
+      normalizedItem.verificationSource
+    );
     return badgeInfo;
   };
 
-  // Format currency amounts
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-    }).format(amount);
-  };
-
-  // Format account number to show only last 4 digits
-  const formatAccountNumber = (accountNumber?: string) => {
-    if (!accountNumber) return '';
-    const digits = accountNumber.replace(/\D/g, ''); // Remove non-digits
-    if (digits.length <= 4) return digits;
-    return `****${digits.slice(-4)}`;
-  };
-
-  // Get display amount with frequency (but not for resources)
-  const getDisplayAmount = () => {
-    const baseAmount = formatCurrency(normalizedItem.amount);
-
-    // Only show frequency for income and expense items, not resources
-    if (normalizedItem.frequency && itemType !== 'resources') {
-      return baseAmount + getFrequencyDisplay(normalizedItem.frequency);
-    }
-
-    return baseAmount;
+  // Get display amount with frequency (but not for resources) - using extracted utility
+  const getDisplayAmountLocal = () => {
+    return getDisplayAmount(normalizedItem.amount, normalizedItem.frequency, itemType);
   };
 
   const handleDeleteClick = (e: React.MouseEvent) => {
@@ -217,13 +125,9 @@ export function FinancialItemCard({
     if (!onUpdate || !normalizedItem.safeId) return;
     
     try {
-      // Update the verification status
-      await onUpdate(itemType, normalizedItem.safeId, {
-        ...item,
-        verificationStatus: newStatus,
-        // Clear verification source if moving away from 'Verified'
-        ...(newStatus !== 'Verified' && { verificationSource: undefined })
-      });
+      // Update the verification status using extracted utility
+      const updatedItem = updateVerificationStatus(item, newStatus);
+      await onUpdate(itemType, normalizedItem.safeId, updatedItem);
     } catch (error) {
       console.error('Failed to update verification status:', error);
     }
@@ -232,7 +136,7 @@ export function FinancialItemCard({
   const verificationStatus = getVerificationStatus();
 
   return (
-    <div className={`bg-card border rounded-xl shadow-sm hover:shadow-lg transition-all duration-300 ease-in-out w-full relative ${isSkeleton ? 'border-dashed border-primary/50 bg-primary/5' : ''}`}>
+    <div className={`financial-item-card ${isSkeleton ? 'financial-item-card--skeleton' : ''}`}>
       {/* Display Header (Always Visible) - Now clickable */}
       <div 
         className="p-4 cursor-pointer" 
@@ -251,7 +155,7 @@ export function FinancialItemCard({
             </div>
           </div>
           <div className="flex flex-col items-end gap-2">
-            <p className="text-lg font-mono text-foreground">{getDisplayAmount()}</p>
+            <p className="text-lg font-mono text-foreground">{getDisplayAmountLocal()}</p>
           </div>
         </div>
 
@@ -324,16 +228,7 @@ export function FinancialItemCard({
               variant="ghost"
               size="sm"
               onClick={handleDeleteClick}
-              className="h-8 w-8 p-0 bg-background/90 backdrop-blur-sm border border-border/50 text-destructive hover:text-destructive hover:bg-destructive/10 shadow-sm hover:animate-pulse hover:scale-110 transition-all duration-200"
-              style={{
-                animation: 'wiggle 0.3s ease-in-out'
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.animation = 'wiggle 0.3s ease-in-out infinite';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.animation = '';
-              }}
+              className="financial-item-delete-btn"
             >
               <Trash2 className="w-4 h-4" />
             </Button>
@@ -343,7 +238,7 @@ export function FinancialItemCard({
                 variant="ghost"
                 size="sm"
                 onClick={handleDeleteConfirm}
-                className="h-8 w-8 p-0 bg-background/90 backdrop-blur-sm border border-border/50 text-green-600 hover:text-green-700 hover:bg-green-50 shadow-sm"
+                className="financial-item-confirm-btn financial-item-confirm-btn--approve"
               >
                 <Check className="w-4 h-4" />
               </Button>
@@ -351,7 +246,7 @@ export function FinancialItemCard({
                 variant="ghost"
                 size="sm"
                 onClick={handleDeleteClick}
-                className="h-8 w-8 p-0 bg-background/90 backdrop-blur-sm border border-border/50 text-red-600 hover:text-red-700 hover:bg-red-50 shadow-sm"
+                className="financial-item-confirm-btn financial-item-confirm-btn--cancel"
               >
                 <X className="w-4 h-4" />
               </Button>
@@ -361,7 +256,7 @@ export function FinancialItemCard({
       )}
 
       {/* Accordion Content (Editable Form) */}
-      <div className={`transition-all duration-300 ease-in-out ${isEditing ? 'opacity-100' : 'opacity-0 max-h-0 overflow-hidden'}`}>
+      <div className={`financial-item-form-accordion ${isEditing ? 'financial-item-form-accordion--open' : 'financial-item-form-accordion--closed'}`}>
         {isEditing && (
           <form onSubmit={handleSaveClick} className="p-4 border-t space-y-4 bg-muted/20">
           <div>
@@ -453,7 +348,7 @@ export function FinancialItemCard({
             />
           </div>
 
-          {(formData.verificationStatus === 'Verified' || item.verificationStatus === 'Verified') && (
+          {shouldShowVerificationSource(item.verificationStatus, formData.verificationStatus) && (
             <div>
               <Label htmlFor={`verificationSource-${item.id}`} className="block text-sm font-medium text-foreground mb-1">
                 Verification Source
@@ -490,7 +385,6 @@ export function FinancialItemCard({
 interface FinancialItemListProps {
   items: FinancialItem[];
   itemType: CaseCategory;
-  onEdit: (category: CaseCategory, itemId: string) => void;
   onDelete: (category: CaseCategory, itemId: string) => void;
   onUpdate?: (category: CaseCategory, itemId: string, updatedItem: FinancialItem) => void;
   onCreateItem?: (category: CaseCategory, itemData: Omit<FinancialItem, 'id' | 'createdAt' | 'updatedAt'>) => Promise<void>;
@@ -502,7 +396,6 @@ interface FinancialItemListProps {
 export function FinancialItemList({
   items = [],
   itemType,
-  onEdit,
   onDelete,
   onUpdate,
   onCreateItem,
@@ -591,7 +484,6 @@ export function FinancialItemList({
                 key={itemKey}
                 item={item}
                 itemType={itemType}
-                onEdit={onEdit}
                 onDelete={isSkeleton && item.id ? 
                   () => handleCancelSkeleton(item.id as string) : 
                   onDelete
@@ -615,7 +507,6 @@ export function FinancialItemList({
 interface FinancialItemGridProps {
   items: FinancialItem[];
   itemType: CaseCategory;
-  onEdit: (category: CaseCategory, itemId: string) => void;
   onDelete: (category: CaseCategory, itemId: string) => void;
   onAdd: (category: CaseCategory) => void;
   onUpdate?: (category: CaseCategory, itemId: string, updatedItem: FinancialItem) => void;
@@ -627,7 +518,6 @@ interface FinancialItemGridProps {
 export function FinancialItemGrid({
   items = [],
   itemType,
-  onEdit,
   onDelete,
   onAdd,
   onUpdate,
@@ -680,7 +570,6 @@ export function FinancialItemGrid({
                 key={itemKey}
                 item={item}
                 itemType={itemType}
-                onEdit={onEdit}
                 onDelete={onDelete}
                 onUpdate={onUpdate}
                 showActions={showActions}
