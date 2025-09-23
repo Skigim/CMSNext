@@ -274,8 +274,7 @@ interface NotesSectionProps {
 
 export function NotesSection({ 
   notes, 
-  onAddNote, 
-  onEditNote, 
+  onAddNote,  
   onDeleteNote,
   onUpdateNote,
   onCreateNote
