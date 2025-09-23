@@ -34,10 +34,68 @@ export function FinancialItemCard({
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [formData, setFormData] = useState(item);
 
-  // Update form data when item changes (important for skeleton cards)
-  useState(() => {
-    setFormData(item);
+  /**
+   * BACKWARD COMPATIBILITY & FALLBACK SECTION
+   * =========================================
+   * Consolidates all data normalization and fallback logic.
+   * Stack traces will point to these specific functions for easier debugging.
+   * 
+   * @deprecated These fallbacks support legacy data formats.
+   * Remove after nightingaleMigration.ts and dataTransform.ts are updated.
+   * Target removal: Q2 2025
+   */
+  const getNormalizedItem = (sourceItem: FinancialItem) => ({
+    displayName: sourceItem.description || sourceItem.name || 'Untitled Item', // Legacy: item.name
+    verificationStatus: (sourceItem.verificationStatus || 'Needs VR').toLowerCase(),
+    amount: sourceItem.amount || 0,
+    safeId: sourceItem.id || `fallback-${Date.now()}`, // Type safety for operations
+    location: sourceItem.location || '',
+    accountNumber: sourceItem.accountNumber || '',
+    notes: sourceItem.notes || '',
+    frequency: sourceItem.frequency || '',
+    verificationSource: sourceItem.verificationSource || '',
+    dateAdded: sourceItem.dateAdded || 'No date'
   });
+
+  const getNormalizedFormData = (sourceFormData: FinancialItem) => ({
+    description: sourceFormData.description || '',
+    amount: sourceFormData.amount || '',
+    location: sourceFormData.location || '',
+    accountNumber: sourceFormData.accountNumber || '',
+    notes: sourceFormData.notes || '',
+    frequency: sourceFormData.frequency || '',
+    verificationSource: sourceFormData.verificationSource || ''
+  });
+
+  // Safe value parsers with fallbacks
+  const parseNumericInput = (value: string): number => {
+    return parseFloat(value) || 0;
+  };
+
+  const getStatusMapping = (status: string) => {
+    const statusMap: Record<string, { text: string; colorClass: string }> = {
+      'verified': { text: 'Verified', colorClass: 'bg-green-600 hover:bg-green-700 text-white border-green-600' },
+      'needs vr': { text: 'Needs VR', colorClass: 'bg-gray-500 hover:bg-gray-600 text-white border-gray-500' },
+      'vr pending': { text: 'VR Pending', colorClass: 'bg-yellow-500 hover:bg-yellow-600 text-white border-yellow-500' },
+      'avs pending': { text: 'AVS Pending', colorClass: 'bg-orange-500 hover:bg-orange-600 text-white border-orange-500' },
+    };
+    return statusMap[status] || statusMap['needs vr'];
+  };
+
+  const getFrequencyDisplay = (frequency?: string): string => {
+    const frequencyMap: Record<string, string> = {
+      monthly: '/mo',
+      yearly: '/yr',
+      weekly: '/wk',
+      daily: '/day',
+      'one-time': ' (1x)',
+    };
+    return frequency ? frequencyMap[frequency] || '' : '';
+  };
+
+  // Normalized data accessors
+  const normalizedItem = getNormalizedItem(item);
+  const normalizedFormData = getNormalizedFormData(formData);
 
   // Get category icon
   const getCategoryIcon = () => {
@@ -67,8 +125,8 @@ export function FinancialItemCard({
   };
 
   const handleCancelClick = () => {
-    if (isSkeleton && onDelete && typeof item.id === 'string') {
-      onDelete(itemType, item.id); // For skeleton cards, remove from list
+    if (isSkeleton && onDelete && normalizedItem.safeId) {
+      onDelete(itemType, normalizedItem.safeId); // For skeleton cards, remove from list
     } else {
       setIsEditing(false);
       setFormData(item); // Reset form data
@@ -78,9 +136,9 @@ export function FinancialItemCard({
   const handleSaveClick = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (onUpdate && typeof item.id === 'string') {
+    if (onUpdate && normalizedItem.safeId) {
       try {
-        await onUpdate(itemType, item.id, formData);
+        await onUpdate(itemType, normalizedItem.safeId, formData);
         setIsEditing(false);
       } catch (error) {
         console.error('[FinancialItemCard] Failed to update item:', error);
@@ -97,21 +155,13 @@ export function FinancialItemCard({
 
   // Get verification status styling and text with consistent colors
   const getVerificationStatus = () => {
-    const status = (item.verificationStatus || 'Needs VR').toLowerCase();
-    const statusMap: Record<string, { text: string; colorClass: string }> = {
-      'verified': { text: 'Verified', colorClass: 'bg-green-600 hover:bg-green-700 text-white border-green-600' },
-      'needs vr': { text: 'Needs VR', colorClass: 'bg-gray-500 hover:bg-gray-600 text-white border-gray-500' },
-      'vr pending': { text: 'VR Pending', colorClass: 'bg-yellow-500 hover:bg-yellow-600 text-white border-yellow-500' },
-      'avs pending': { text: 'AVS Pending', colorClass: 'bg-orange-500 hover:bg-orange-600 text-white border-orange-500' },
-    };
-
-    let badgeInfo = statusMap[status] || statusMap['needs vr'];
+    const badgeInfo = getStatusMapping(normalizedItem.verificationStatus);
 
     // Append verification source for verified items
-    if (status === 'verified' && item.verificationSource) {
-      badgeInfo = { 
+    if (normalizedItem.verificationStatus === 'verified' && normalizedItem.verificationSource) {
+      return { 
         ...badgeInfo, 
-        text: `${badgeInfo.text} (${item.verificationSource})` 
+        text: `${badgeInfo.text} (${normalizedItem.verificationSource})` 
       };
     }
 
@@ -123,19 +173,7 @@ export function FinancialItemCard({
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
       currency: 'USD',
-    }).format(amount || 0);
-  };
-
-  // Format frequency display for income/expense items
-  const formatFrequency = (frequency?: string) => {
-    const frequencyMap: Record<string, string> = {
-      monthly: '/mo',
-      yearly: '/yr',
-      weekly: '/wk',
-      daily: '/day',
-      'one-time': ' (1x)',
-    };
-    return frequency ? frequencyMap[frequency] || '' : '';
+    }).format(amount);
   };
 
   // Format account number to show only last 4 digits
@@ -148,12 +186,11 @@ export function FinancialItemCard({
 
   // Get display amount with frequency (but not for resources)
   const getDisplayAmount = () => {
-    const amount = item.amount || 0;
-    const baseAmount = formatCurrency(amount);
+    const baseAmount = formatCurrency(normalizedItem.amount);
 
     // Only show frequency for income and expense items, not resources
-    if (item.frequency && itemType !== 'resources') {
-      return baseAmount + formatFrequency(item.frequency);
+    if (normalizedItem.frequency && itemType !== 'resources') {
+      return baseAmount + getFrequencyDisplay(normalizedItem.frequency);
     }
 
     return baseAmount;
@@ -170,19 +207,18 @@ export function FinancialItemCard({
 
   const handleDeleteConfirm = (e: React.MouseEvent) => {
     e.stopPropagation();
-    if (typeof item.id === 'string') {
-      onDelete(itemType, item.id);
+    if (normalizedItem.safeId) {
+      onDelete(itemType, normalizedItem.safeId);
     }
     setConfirmingDelete(false);
   };
 
-  // Handle verification status change from dropdown
   const handleStatusChange = async (newStatus: 'Needs VR' | 'VR Pending' | 'AVS Pending' | 'Verified') => {
-    if (!onUpdate || typeof item.id !== 'string') return;
+    if (!onUpdate || !normalizedItem.safeId) return;
     
     try {
       // Update the verification status
-      await onUpdate(itemType, item.id, {
+      await onUpdate(itemType, normalizedItem.safeId, {
         ...item,
         verificationStatus: newStatus,
         // Clear verification source if moving away from 'Verified'
@@ -208,9 +244,9 @@ export function FinancialItemCard({
               {getCategoryIcon()}
             </div>
             <div>
-              <p className="font-semibold text-foreground">{item.description || item.name || 'Untitled Item'}</p>
+              <p className="font-semibold text-foreground">{normalizedItem.displayName}</p>
               <p className="text-sm text-muted-foreground">
-                {item.dateAdded ? new Date(item.dateAdded).toLocaleDateString() : 'No date'}
+                {normalizedItem.dateAdded ? new Date(normalizedItem.dateAdded).toLocaleDateString() : 'No date'}
               </p>
             </div>
           </div>
@@ -222,9 +258,9 @@ export function FinancialItemCard({
         {/* Additional info row */}
         <div className="flex justify-between items-center mt-3">
           <div className="flex items-center gap-2 text-xs text-muted-foreground">
-            {item.location && <span>{item.location}</span>}
-            {item.accountNumber && <span>{formatAccountNumber(item.accountNumber)}</span>}
-            {item.notes && (
+            {normalizedItem.location && <span>{normalizedItem.location}</span>}
+            {normalizedItem.accountNumber && <span>{formatAccountNumber(normalizedItem.accountNumber)}</span>}
+            {normalizedItem.notes && (
               <TooltipProvider>
                 <Tooltip>
                   <TooltipTrigger asChild>
@@ -232,7 +268,7 @@ export function FinancialItemCard({
                   </TooltipTrigger>
                   <TooltipContent>
                     <p className="text-xs max-w-xs">
-                      {item.notes.length > 100 ? `${item.notes.substring(0, 100)}...` : item.notes}
+                      {normalizedItem.notes.length > 100 ? `${normalizedItem.notes.substring(0, 100)}...` : normalizedItem.notes}
                     </p>
                   </TooltipContent>
                 </Tooltip>
@@ -335,7 +371,7 @@ export function FinancialItemCard({
             <Input
               type="text"
               id={`description-${item.id}`}
-              value={formData.description || ''}
+              value={normalizedFormData.description}
               onChange={(e) => handleChange('description', e.target.value)}
               className="w-full"
             />
@@ -349,8 +385,8 @@ export function FinancialItemCard({
               <Input
                 type="number"
                 id={`amount-${item.id}`}
-                value={formData.amount || ''}
-                onChange={(e) => handleChange('amount', parseFloat(e.target.value) || 0)}
+                value={normalizedFormData.amount}
+                onChange={(e) => handleChange('amount', parseNumericInput(e.target.value))}
                 step="0.01"
                 className="w-full"
               />
@@ -361,7 +397,7 @@ export function FinancialItemCard({
                 <Label htmlFor={`frequency-${item.id}`} className="block text-sm font-medium text-foreground mb-1">
                   Frequency
                 </Label>
-                <Select value={formData.frequency || ''} onValueChange={(value) => handleChange('frequency', value)}>
+                <Select value={normalizedFormData.frequency} onValueChange={(value) => handleChange('frequency', value)}>
                   <SelectTrigger>
                     <SelectValue placeholder="Select frequency" />
                   </SelectTrigger>
@@ -384,7 +420,7 @@ export function FinancialItemCard({
               <Input
                 type="text"
                 id={`location-${item.id}`}
-                value={formData.location || ''}
+                value={normalizedFormData.location}
                 onChange={(e) => handleChange('location', e.target.value)}
                 className="w-full"
               />
@@ -397,7 +433,7 @@ export function FinancialItemCard({
               <Input
                 type="text"
                 id={`accountNumber-${item.id}`}
-                value={formData.accountNumber || ''}
+                value={normalizedFormData.accountNumber}
                 onChange={(e) => handleChange('accountNumber', e.target.value)}
                 className="w-full"
               />
@@ -410,7 +446,7 @@ export function FinancialItemCard({
             </Label>
             <Textarea
               id={`notes-${item.id}`}
-              value={formData.notes || ''}
+              value={normalizedFormData.notes}
               onChange={(e) => handleChange('notes', e.target.value)}
               className="w-full min-h-[60px] resize-y"
               placeholder="Add any relevant notes..."
@@ -425,7 +461,7 @@ export function FinancialItemCard({
               <Input
                 type="text"
                 id={`verificationSource-${item.id}`}
-                value={formData.verificationSource || ''}
+                value={normalizedFormData.verificationSource}
                 onChange={(e) => handleChange('verificationSource', e.target.value)}
                 className="w-full"
                 placeholder="e.g., Bank Statement, Paystub"
@@ -549,13 +585,14 @@ export function FinancialItemList({
         <div className="space-y-2 group">
           {allItems.map((item, index) => {
             const isSkeleton = typeof item.id === 'string' && item.id.startsWith('skeleton-');
+            const itemKey = item.id || `${itemType}-${index}`;
             return (
               <FinancialItemCard
-                key={item.id || `${itemType}-${index}`}
+                key={itemKey}
                 item={item}
                 itemType={itemType}
                 onEdit={onEdit}
-                onDelete={isSkeleton && typeof item.id === 'string' ? 
+                onDelete={isSkeleton && item.id ? 
                   () => handleCancelSkeleton(item.id as string) : 
                   onDelete
                 }
@@ -636,17 +673,20 @@ export function FinancialItemGrid({
         </div>
       ) : (
         <div className={`grid ${getGridClass()} gap-3 group`}>
-          {items.map((item, index) => (
-            <FinancialItemCard
-              key={item.id || `${itemType}-${index}`}
-              item={item}
-              itemType={itemType}
-              onEdit={onEdit}
-              onDelete={onDelete}
-              onUpdate={onUpdate}
-              showActions={showActions}
-            />
-          ))}
+          {items.map((item, index) => {
+            const itemKey = item.id || `${itemType}-${index}`;
+            return (
+              <FinancialItemCard
+                key={itemKey}
+                item={item}
+                itemType={itemType}
+                onEdit={onEdit}
+                onDelete={onDelete}
+                onUpdate={onUpdate}
+                showActions={showActions}
+              />
+            );
+          })}
         </div>
       )}
     </div>
