@@ -38,6 +38,17 @@ export interface NormalizedFormData {
 }
 
 /**
+ * Generate a unique fallback ID
+ */
+const generateFallbackId = (): string => {
+  // Use crypto.randomUUID if available, fallback to timestamp + random
+  if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+    return `fallback-${crypto.randomUUID()}`;
+  }
+  return `fallback-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+};
+
+/**
  * Normalize financial item data with backward compatibility fallbacks
  * @deprecated Remove when legacy data migration is complete
  */
@@ -45,7 +56,7 @@ export const getNormalizedItem = (sourceItem: FinancialItem): NormalizedItem => 
   displayName: sourceItem.description || sourceItem.name || 'Untitled Item', // Legacy: item.name
   verificationStatus: (sourceItem.verificationStatus || 'Needs VR').toLowerCase(),
   amount: sourceItem.amount || 0,
-  safeId: sourceItem.id || `fallback-${Date.now()}`, // Type safety for operations
+  safeId: sourceItem.id || generateFallbackId(), // Type safety for operations
   location: sourceItem.location || '',
   accountNumber: sourceItem.accountNumber || '',
   notes: sourceItem.notes || '',

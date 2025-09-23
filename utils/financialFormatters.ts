@@ -38,8 +38,8 @@ export const formatFrequency = (frequency?: string): string => {
 export const formatAccountNumber = (accountNumber?: string): string => {
   if (!accountNumber) return '';
   const digits = accountNumber.replace(/\D/g, ''); // Remove non-digits
-  if (digits.length <= 4) return digits;
-  return `****${digits.slice(-4)}`;
+  // Always mask, even if account number is short
+  return `****${digits.slice(-4).padStart(4, '0')}`;
 };
 
 /**

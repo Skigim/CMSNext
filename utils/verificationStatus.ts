@@ -78,7 +78,7 @@ export const updateVerificationStatus = (
   return {
     ...item,
     verificationStatus: newStatus,
-    // Clear verification source if moving away from 'Verified'
-    ...(newStatus !== 'Verified' && { verificationSource: undefined })
+    // Explicitly set verificationSource for clarity
+    verificationSource: newStatus === 'Verified' ? item.verificationSource : undefined
   };
 };
