@@ -325,8 +325,9 @@ export function FinancialItemCard({
       )}
 
       {/* Accordion Content (Editable Form) */}
-      <div className={`transition-all duration-300 ease-in-out overflow-hidden ${isEditing ? 'max-h-[500px]' : 'max-h-0'}`}>
-        <form onSubmit={handleSaveClick} className="p-4 border-t space-y-4 bg-muted/20">
+      <div className={`transition-all duration-300 ease-in-out ${isEditing ? 'opacity-100' : 'opacity-0 max-h-0 overflow-hidden'}`}>
+        {isEditing && (
+          <form onSubmit={handleSaveClick} className="p-4 border-t space-y-4 bg-muted/20">
           <div>
             <Label htmlFor={`description-${item.id}`} className="block text-sm font-medium text-foreground mb-1">
               Description
@@ -411,8 +412,8 @@ export function FinancialItemCard({
               id={`notes-${item.id}`}
               value={formData.notes || ''}
               onChange={(e) => handleChange('notes', e.target.value)}
-              className="w-full"
-              rows={2}
+              className="w-full min-h-[60px] resize-y"
+              placeholder="Add any relevant notes..."
             />
           </div>
 
@@ -443,7 +444,8 @@ export function FinancialItemCard({
               <Check className="w-4 h-4" /> Save
             </Button>
           </div>
-        </form>
+          </form>
+        )}
       </div>
     </div>
   );
