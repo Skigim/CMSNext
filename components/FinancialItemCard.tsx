@@ -74,11 +74,18 @@ export function FinancialItemCard({
     e.preventDefault();
     
     if (onUpdate && normalizedItem.safeId) {
+      // Immediately collapse the UI for instant response
+      setIsEditing(false);
+      
+      // Save in background - don't block UI
       try {
         await onUpdate(itemType, normalizedItem.safeId, formData);
-        setIsEditing(false);
+        // Save successful - no need to do anything, UI already collapsed
       } catch (error) {
         console.error('[FinancialItemCard] Failed to update item:', error);
+        // On error, reopen the form and restore previous state
+        setFormData(item); // Reset to original data
+        setIsEditing(true); // Reopen for user to retry
       }
     }
   };
