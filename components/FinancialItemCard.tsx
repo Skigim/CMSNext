@@ -77,23 +77,14 @@ export function FinancialItemCard({
 
   const handleSaveClick = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log('[FinancialItemCard] handleSaveClick triggered', { itemId: item.id, itemType, formData, hasOnUpdate: !!onUpdate });
     
     if (onUpdate && typeof item.id === 'string') {
       try {
-        console.log('[FinancialItemCard] Calling onUpdate with:', { itemType, itemId: item.id, formData });
         await onUpdate(itemType, item.id, formData);
-        console.log('[FinancialItemCard] onUpdate completed successfully');
         setIsEditing(false);
       } catch (error) {
         console.error('[FinancialItemCard] Failed to update item:', error);
       }
-    } else {
-      console.warn('[FinancialItemCard] Cannot save: missing onUpdate handler or invalid item.id', {
-        hasOnUpdate: !!onUpdate,
-        itemId: item.id,
-        itemIdType: typeof item.id
-      });
     }
   };
 
@@ -267,7 +258,7 @@ export function FinancialItemCard({
             variant={verificationStatus.variant} 
             className="text-xs cursor-pointer hover:opacity-80 hover:scale-105 transition-all duration-200 select-none border border-current/20"
             onClick={handleStatusClick}
-            title="Click to cycle through verification statuses"
+            title="Click to change verification status (Needs VR → VR Pending → AVS Pending → Verified)"
           >
             {verificationStatus.text}
           </Badge>
@@ -410,40 +401,21 @@ export function FinancialItemCard({
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          {(formData.verificationStatus === 'Verified' || item.verificationStatus === 'Verified') && (
             <div>
-              <Label htmlFor={`verificationStatus-${item.id}`} className="block text-sm font-medium text-foreground mb-1">
-                Verification Status
+              <Label htmlFor={`verificationSource-${item.id}`} className="block text-sm font-medium text-foreground mb-1">
+                Verification Source
               </Label>
-              <Select value={formData.verificationStatus || 'Needs VR'} onValueChange={(value) => handleChange('verificationStatus', value)}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Needs VR">Needs VR</SelectItem>
-                  <SelectItem value="VR Pending">VR Pending</SelectItem>
-                  <SelectItem value="AVS Pending">AVS Pending</SelectItem>
-                  <SelectItem value="Verified">Verified</SelectItem>
-                </SelectContent>
-              </Select>
+              <Input
+                type="text"
+                id={`verificationSource-${item.id}`}
+                value={formData.verificationSource || ''}
+                onChange={(e) => handleChange('verificationSource', e.target.value)}
+                className="w-full"
+                placeholder="e.g., Bank Statement, Paystub"
+              />
             </div>
-            
-            {formData.verificationStatus === 'Verified' && (
-              <div>
-                <Label htmlFor={`verificationSource-${item.id}`} className="block text-sm font-medium text-foreground mb-1">
-                  Verification Source
-                </Label>
-                <Input
-                  type="text"
-                  id={`verificationSource-${item.id}`}
-                  value={formData.verificationSource || ''}
-                  onChange={(e) => handleChange('verificationSource', e.target.value)}
-                  className="w-full"
-                  placeholder="e.g., Bank Statement, Paystub"
-                />
-              </div>
-            )}
-          </div>
+          )}
 
           <div className="flex justify-end gap-3 pt-3 border-t">
             <Button type="button" variant="outline" onClick={handleCancelClick} className="flex items-center gap-2">
@@ -451,10 +423,6 @@ export function FinancialItemCard({
             </Button>
             <Button 
               type="submit" 
-              onClick={() => {
-                console.log('[FinancialItemCard] Save button clicked directly');
-                // Let the form submission handle it, but also log the direct click
-              }}
               className="flex items-center gap-2"
             >
               <Check className="w-4 h-4" /> Save
