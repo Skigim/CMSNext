@@ -11,7 +11,6 @@ import { Trash2, Check, X, Plus, StickyNote, Landmark, Wallet, Receipt, ChevronD
 import { formatAccountNumber, getDisplayAmount, parseNumericInput } from "../utils/financialFormatters";
 import { getVerificationStatusInfo, shouldShowVerificationSource, updateVerificationStatus } from "../utils/verificationStatus";
 import { getNormalizedItem, getNormalizedFormData } from "../utils/dataNormalization";
-import "../styles/financial-item-animations.css";
 
 interface FinancialItemCardProps {
   item: FinancialItem;
@@ -185,7 +184,7 @@ export function FinancialItemCard({
               <Button
                 variant="default"
                 size="sm"
-                className={`verification-status-badge ${verificationStatus.colorClass}`}
+                className={`text-xs h-6 px-2 py-1 hover:scale-105 transition-all duration-200 ${verificationStatus.colorClass}`}
               >
                 {verificationStatus.text}
                 <ChevronDown className="ml-1 h-3 w-3" />
