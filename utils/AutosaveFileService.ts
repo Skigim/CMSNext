@@ -319,6 +319,11 @@ class AutosaveFileService {
         try {
           const success = await this._performWrite(data);
           resolve(success);
+          
+          // Add a small delay between write operations to prevent state conflicts
+          if (this.writeQueue.length > 0) {
+            await new Promise(resolve => setTimeout(resolve, 50));
+          }
         } catch (error) {
           console.error('Write operation failed', { error: error instanceof Error ? error.message : 'Unknown error' });
           reject(error);
@@ -329,7 +334,10 @@ class AutosaveFileService {
     }
   }
 
-  private async _performWrite(data: any): Promise<boolean> {
+  private async _performWrite(data: any, retryCount: number = 0): Promise<boolean> {
+    const maxRetries = 3;
+    const retryDelay = 100; // milliseconds
+
     // Check if we have a directory handle and permissions
     if (!this.directoryHandle) {
       return false;
@@ -341,11 +349,14 @@ class AutosaveFileService {
     }
 
     try {
+      // Get a fresh file handle each time to avoid cached state issues
       const fileHandleWrite = await this.directoryHandle.getFileHandle(
         this.fileName,
         { create: true },
       );
-      const writable = await fileHandleWrite.createWritable();
+      
+      // Use keepExistingData: false to ensure we're creating a fresh writable stream
+      const writable = await fileHandleWrite.createWritable({ keepExistingData: false });
       await writable.write(JSON.stringify(data, null, 2));
       await writable.close();
 
@@ -360,8 +371,32 @@ class AutosaveFileService {
 
       return true;
     } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+      
+      // Check if this is a state-related error that we can retry
+      const isRetryableError = errorMessage.includes('state cached in an interface object') ||
+                              errorMessage.includes('state had changed') ||
+                              errorMessage.includes('InvalidStateError');
+
+      if (isRetryableError && retryCount < maxRetries) {
+        console.warn(`[AutosaveFileService] Write failed with retryable error (attempt ${retryCount + 1}/${maxRetries + 1}): ${errorMessage}`);
+        
+        // Wait a bit before retrying
+        await new Promise(resolve => setTimeout(resolve, retryDelay * (retryCount + 1)));
+        
+        // Try to refresh the directory handle to clear cached state
+        try {
+          const permission = await this.checkPermission();
+          if (permission === 'granted') {
+            return await this._performWrite(data, retryCount + 1);
+          }
+        } catch (refreshError) {
+          console.warn(`[AutosaveFileService] Failed to refresh handle for retry: ${refreshError instanceof Error ? refreshError.message : 'Unknown error'}`);
+        }
+      }
+
       this.errorCallback(
-        `Error writing file "${this.fileName}": ${err instanceof Error ? err.message : 'Unknown error'}`,
+        `Error writing file "${this.fileName}": ${errorMessage}`,
         'error',
       );
       return false;
@@ -372,7 +407,10 @@ class AutosaveFileService {
    * Write JSON data to an arbitrary file name in the connected directory.
    * Returns true on success, false otherwise.
    */
-  async writeNamedFile(fileName: string, data: any): Promise<boolean> {
+  async writeNamedFile(fileName: string, data: any, retryCount: number = 0): Promise<boolean> {
+    const maxRetries = 3;
+    const retryDelay = 100; // milliseconds
+
     if (!this.directoryHandle) {
       return false;
     }
@@ -383,16 +421,43 @@ class AutosaveFileService {
     }
 
     try {
+      // Get a fresh file handle each time to avoid cached state issues
       const fileHandle = await this.directoryHandle.getFileHandle(fileName, {
         create: true,
       });
-      const writable = await fileHandle.createWritable();
+      
+      // Use keepExistingData: false to ensure we're creating a fresh writable stream
+      const writable = await fileHandle.createWritable({ keepExistingData: false });
       await writable.write(JSON.stringify(data, null, 2));
       await writable.close();
       return true;
     } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+      
+      // Check if this is a state-related error that we can retry
+      const isRetryableError = errorMessage.includes('state cached in an interface object') ||
+                              errorMessage.includes('state had changed') ||
+                              errorMessage.includes('InvalidStateError');
+
+      if (isRetryableError && retryCount < maxRetries) {
+        console.warn(`[AutosaveFileService] Named file write failed with retryable error (attempt ${retryCount + 1}/${maxRetries + 1}): ${errorMessage}`);
+        
+        // Wait a bit before retrying
+        await new Promise(resolve => setTimeout(resolve, retryDelay * (retryCount + 1)));
+        
+        // Try to refresh the directory handle to clear cached state
+        try {
+          const permission = await this.checkPermission();
+          if (permission === 'granted') {
+            return await this.writeNamedFile(fileName, data, retryCount + 1);
+          }
+        } catch (refreshError) {
+          console.warn(`[AutosaveFileService] Failed to refresh handle for retry: ${refreshError instanceof Error ? refreshError.message : 'Unknown error'}`);
+        }
+      }
+
       this.errorCallback(
-        `Error writing file "${fileName}": ${err instanceof Error ? err.message : 'Unknown error'}`,
+        `Error writing file "${fileName}": ${errorMessage}`,
         'error',
       );
       return false;

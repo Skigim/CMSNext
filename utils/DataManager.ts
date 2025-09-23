@@ -77,8 +77,8 @@ export class DataManager {
   }
 
   /**
-   * Write data to file system
-   * Throws error if write fails
+   * Write data to file system with retry logic
+   * Throws error if write fails after retries
    */
   private async writeFileData(data: FileData): Promise<void> {
     try {
@@ -100,7 +100,21 @@ export class DataManager {
       }
     } catch (error) {
       console.error('Failed to write file data:', error);
-      throw new Error(`Failed to save case data: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      
+      // Provide specific error messaging based on error type
+      let errorMessage = 'Unknown error';
+      if (error instanceof Error) {
+        if (error.message.includes('state cached in an interface object') || 
+            error.message.includes('state had changed')) {
+          errorMessage = 'File was modified by another process. Please try again.';
+        } else if (error.message.includes('permission')) {
+          errorMessage = 'Permission denied. Please check file permissions.';
+        } else {
+          errorMessage = error.message;
+        }
+      }
+      
+      throw new Error(`Failed to save case data: ${errorMessage}`);
     }
   }
 

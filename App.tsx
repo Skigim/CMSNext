@@ -523,9 +523,22 @@ const AppContent = memo(function AppContent() {
       // DataManager handles file system persistence automatically
     } catch (err) {
       console.error('Failed to update item:', err);
-      const errorMsg = 'Failed to update item. Please try again.';
+      
+      // Provide specific error messaging based on error type
+      let errorMsg = 'Failed to update item. Please try again.';
+      if (err instanceof Error) {
+        if (err.message.includes('File was modified by another process')) {
+          errorMsg = 'File was modified by another process. Your changes were not saved. Please refresh and try again.';
+        } else if (err.message.includes('Permission denied')) {
+          errorMsg = 'Permission denied. Please check that you have write access to the data folder.';
+        } else if (err.message.includes('state cached in an interface object') || 
+                   err.message.includes('state had changed')) {
+          errorMsg = 'Data sync issue detected. Please refresh the page and try again.';
+        }
+      }
+      
       setError(errorMsg);
-      toast.error(errorMsg);
+      toast.error(errorMsg, { duration: 5000 });
       throw err; // Re-throw to let the component handle fallback
     }
   };
