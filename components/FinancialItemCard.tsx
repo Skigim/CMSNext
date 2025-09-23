@@ -77,13 +77,23 @@ export function FinancialItemCard({
 
   const handleSaveClick = async (e: React.FormEvent) => {
     e.preventDefault();
+    console.log('[FinancialItemCard] handleSaveClick triggered', { itemId: item.id, itemType, formData, hasOnUpdate: !!onUpdate });
+    
     if (onUpdate && typeof item.id === 'string') {
       try {
+        console.log('[FinancialItemCard] Calling onUpdate with:', { itemType, itemId: item.id, formData });
         await onUpdate(itemType, item.id, formData);
+        console.log('[FinancialItemCard] onUpdate completed successfully');
         setIsEditing(false);
       } catch (error) {
-        console.error('Failed to update item:', error);
+        console.error('[FinancialItemCard] Failed to update item:', error);
       }
+    } else {
+      console.warn('[FinancialItemCard] Cannot save: missing onUpdate handler or invalid item.id', {
+        hasOnUpdate: !!onUpdate,
+        itemId: item.id,
+        itemIdType: typeof item.id
+      });
     }
   };
 
@@ -439,7 +449,14 @@ export function FinancialItemCard({
             <Button type="button" variant="outline" onClick={handleCancelClick} className="flex items-center gap-2">
               <X className="w-4 h-4" /> Cancel
             </Button>
-            <Button type="submit" className="flex items-center gap-2">
+            <Button 
+              type="submit" 
+              onClick={() => {
+                console.log('[FinancialItemCard] Save button clicked directly');
+                // Let the form submission handle it, but also log the direct click
+              }}
+              className="flex items-center gap-2"
+            >
               <Check className="w-4 h-4" /> Save
             </Button>
           </div>

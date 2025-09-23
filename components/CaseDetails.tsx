@@ -43,15 +43,25 @@ export function CaseDetails({
   onBatchCreateNote
 }: CaseDetailsProps) {
   
-    // Handle batched update for inline editing
+  // Handle batched update for inline editing
   const handleUpdateFullItem = async (category: CaseCategory, itemId: string, updatedItem: FinancialItem) => {
-    if (!caseData || !onBatchUpdateItem) return;
+    console.log('[CaseDetails] handleUpdateFullItem called', { category, itemId, updatedItem, hasCaseData: !!caseData, hasOnBatchUpdateItem: !!onBatchUpdateItem });
+    
+    if (!caseData || !onBatchUpdateItem) {
+      console.warn('[CaseDetails] Cannot update: missing caseData or onBatchUpdateItem', {
+        hasCaseData: !!caseData,
+        hasOnBatchUpdateItem: !!onBatchUpdateItem
+      });
+      return;
+    }
 
     try {
+      console.log('[CaseDetails] Calling onBatchUpdateItem...');
       // Use batch update function to avoid multiple toasts
       await onBatchUpdateItem(category, itemId, updatedItem);
+      console.log('[CaseDetails] onBatchUpdateItem completed successfully');
     } catch (error) {
-      console.error('Failed to update item:', error);
+      console.error('[CaseDetails] Failed to update item:', error);
     }
   };
 
