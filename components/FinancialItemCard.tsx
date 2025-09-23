@@ -175,6 +175,38 @@ export function FinancialItemCard({
     setConfirmingDelete(false);
   };
 
+  // Handle quick verification status change
+  const handleStatusClick = async (e: React.MouseEvent) => {
+    e.stopPropagation(); // Prevent card expansion
+    
+    if (!onUpdate || typeof item.id !== 'string') return;
+    
+    // Define status cycle order
+    const statusCycle: Array<'Needs VR' | 'VR Pending' | 'AVS Pending' | 'Verified'> = [
+      'Needs VR',
+      'VR Pending', 
+      'AVS Pending',
+      'Verified'
+    ];
+    
+    const currentStatus = item.verificationStatus || 'Needs VR';
+    const currentIndex = statusCycle.indexOf(currentStatus);
+    const nextIndex = (currentIndex + 1) % statusCycle.length;
+    const nextStatus = statusCycle[nextIndex];
+    
+    try {
+      // Update the verification status
+      await onUpdate(itemType, item.id, {
+        ...item,
+        verificationStatus: nextStatus,
+        // Clear verification source if moving away from 'Verified'
+        ...(nextStatus !== 'Verified' && { verificationSource: undefined })
+      });
+    } catch (error) {
+      console.error('Failed to update verification status:', error);
+    }
+  };
+
   const verificationStatus = getVerificationStatus();
 
   return (
@@ -221,7 +253,12 @@ export function FinancialItemCard({
               </TooltipProvider>
             )}
           </div>
-          <Badge variant={verificationStatus.variant} className="text-xs">
+          <Badge 
+            variant={verificationStatus.variant} 
+            className="text-xs cursor-pointer hover:opacity-80 hover:scale-105 transition-all duration-200 select-none border border-current/20"
+            onClick={handleStatusClick}
+            title="Click to cycle through verification statuses"
+          >
             {verificationStatus.text}
           </Badge>
         </div>
@@ -361,6 +398,41 @@ export function FinancialItemCard({
               className="w-full"
               rows={2}
             />
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor={`verificationStatus-${item.id}`} className="block text-sm font-medium text-foreground mb-1">
+                Verification Status
+              </Label>
+              <Select value={formData.verificationStatus || 'Needs VR'} onValueChange={(value) => handleChange('verificationStatus', value)}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Needs VR">Needs VR</SelectItem>
+                  <SelectItem value="VR Pending">VR Pending</SelectItem>
+                  <SelectItem value="AVS Pending">AVS Pending</SelectItem>
+                  <SelectItem value="Verified">Verified</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            
+            {formData.verificationStatus === 'Verified' && (
+              <div>
+                <Label htmlFor={`verificationSource-${item.id}`} className="block text-sm font-medium text-foreground mb-1">
+                  Verification Source
+                </Label>
+                <Input
+                  type="text"
+                  id={`verificationSource-${item.id}`}
+                  value={formData.verificationSource || ''}
+                  onChange={(e) => handleChange('verificationSource', e.target.value)}
+                  className="w-full"
+                  placeholder="e.g., Bank Statement, Paystub"
+                />
+              </div>
+            )}
           </div>
 
           <div className="flex justify-end gap-3 pt-3 border-t">
