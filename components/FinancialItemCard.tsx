@@ -242,17 +242,11 @@ export function FinancialItemCard({
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button
-                variant="outline"
+                variant={verificationStatus.variant === 'default' ? 'default' : 
+                        verificationStatus.variant === 'destructive' ? 'destructive' :
+                        verificationStatus.variant === 'outline' ? 'outline' : 'secondary'}
                 size="sm"
-                className={`text-xs h-6 px-2 py-1 border hover:opacity-80 hover:scale-105 transition-all duration-200 select-none ${
-                  verificationStatus.variant === 'default' 
-                    ? 'bg-primary text-primary-foreground border-primary/20' 
-                    : verificationStatus.variant === 'secondary'
-                    ? 'bg-secondary text-secondary-foreground border-secondary/20'
-                    : verificationStatus.variant === 'outline'
-                    ? 'bg-background text-foreground border-border'
-                    : 'bg-destructive text-destructive-foreground border-destructive/20'
-                }`}
+                className="text-xs h-6 px-2 py-1 hover:scale-105 transition-all duration-200"
               >
                 {verificationStatus.text}
                 <ChevronDown className="ml-1 h-3 w-3" />
