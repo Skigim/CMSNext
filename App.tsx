@@ -452,20 +452,6 @@ const AppContent = memo(function AppContent() {
     });
   };
 
-  const handleEditItem = (category: CaseCategory, itemId: string) => {
-    if (!selectedCase) return;
-    
-    const item = selectedCase.caseRecord.financials[category].find(item => item.id === itemId);
-    if (item) {
-      setItemForm({
-        isOpen: true,
-        category,
-        item,
-        caseId: selectedCase.id
-      });
-    }
-  };
-
   const handleDeleteItem = async (category: CaseCategory, itemId: string) => {
     if (!selectedCase || !dataManager) {
       if (!dataManager) {
@@ -961,7 +947,6 @@ const AppContent = memo(function AppContent() {
         handleDeleteCase={handleDeleteCase}
         handleDataPurged={handleDataPurged}
         handleAddItem={handleAddItem}
-        handleEditItem={handleEditItem}
         handleDeleteItem={handleDeleteItem}
         handleBatchUpdateItem={handleBatchUpdateItem}
         handleCreateItem={handleCreateItem}

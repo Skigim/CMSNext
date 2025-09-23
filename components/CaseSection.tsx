@@ -10,7 +10,6 @@ interface CaseSectionProps {
   category: CaseCategory;
   items: FinancialItem[];
   onAddItem: (category: CaseCategory) => void;
-  onEditItem: (category: CaseCategory, itemId: string) => void;
   onDeleteItem: (category: CaseCategory, itemId: string) => void;
   onUpdateFullItem?: (category: CaseCategory, itemId: string, updatedItem: FinancialItem) => Promise<void>;
   onCreateItem?: (category: CaseCategory, itemData: Omit<FinancialItem, 'id' | 'createdAt' | 'updatedAt'>) => Promise<void>;
@@ -21,7 +20,6 @@ export function CaseSection({
   category, 
   items, 
   onAddItem, 
-  onEditItem, 
   onDeleteItem,
   onUpdateFullItem,
   onCreateItem
@@ -40,7 +38,6 @@ export function CaseSection({
         <FinancialItemList
           items={items}
           itemType={category}
-          onEdit={onEditItem}
           onDelete={onDeleteItem}
           onUpdate={onUpdateFullItem}
           onCreateItem={onCreateItem}

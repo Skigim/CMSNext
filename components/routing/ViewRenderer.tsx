@@ -30,7 +30,6 @@ interface ViewRendererProps {
   handleDeleteCase: (caseId: string) => Promise<void>;
   handleDataPurged: () => void;
   handleAddItem: (category: any) => void;
-  handleEditItem: (category: any, itemId: string) => void;
   handleDeleteItem: (category: any, itemId: string) => Promise<void>;
   handleBatchUpdateItem?: (category: any, itemId: string, updatedItem: Partial<any>) => Promise<void>;
   handleCreateItem?: (category: any, itemData: Omit<any, 'id' | 'createdAt' | 'updatedAt'>) => Promise<void>;
@@ -75,7 +74,6 @@ export function ViewRenderer({
   handleDeleteCase,
   handleDataPurged,
   handleAddItem,
-  handleEditItem,
   handleDeleteItem,
   handleBatchUpdateItem,
   handleCreateItem,
@@ -123,7 +121,6 @@ export function ViewRenderer({
           onEdit={() => handleEditCase(selectedCase.id)}
           onDelete={() => handleDeleteCase(selectedCase.id)}
           onAddItem={handleAddItem}
-          onEditItem={handleEditItem}
           onDeleteItem={handleDeleteItem}
           onBatchUpdateItem={handleBatchUpdateItem}
           onCreateItem={handleCreateItem}

@@ -15,7 +15,6 @@ interface CaseDetailsProps {
   onEdit: () => void;
   onDelete: () => void;
   onAddItem: (category: CaseCategory) => void;
-  onEditItem: (category: CaseCategory, itemId: string) => void;
   onDeleteItem: (category: CaseCategory, itemId: string) => void;
   onBatchUpdateItem?: (category: CaseCategory, itemId: string, updatedItem: Partial<FinancialItem>) => Promise<void>;
   onCreateItem?: (category: CaseCategory, itemData: Omit<FinancialItem, 'id' | 'createdAt' | 'updatedAt'>) => Promise<void>;
@@ -32,7 +31,6 @@ export function CaseDetails({
   onEdit,
   onDelete,
   onAddItem,
-  onEditItem,
   onDeleteItem,
   onBatchUpdateItem,
   onCreateItem,
@@ -173,7 +171,6 @@ export function CaseDetails({
                   category="resources"
                   items={caseData.caseRecord.financials.resources || []}
                   onAddItem={onAddItem}
-                  onEditItem={onEditItem}
                   onDeleteItem={onDeleteItem}
                   onUpdateFullItem={handleUpdateFullItem}
                   onCreateItem={onCreateItem}
@@ -186,7 +183,6 @@ export function CaseDetails({
                   category="income"
                   items={caseData.caseRecord.financials.income || []}
                   onAddItem={onAddItem}
-                  onEditItem={onEditItem}
                   onDeleteItem={onDeleteItem}
                   onUpdateFullItem={handleUpdateFullItem}
                   onCreateItem={onCreateItem}
@@ -199,7 +195,6 @@ export function CaseDetails({
                   category="expenses"
                   items={caseData.caseRecord.financials.expenses || []}
                   onAddItem={onAddItem}
-                  onEditItem={onEditItem}
                   onDeleteItem={onDeleteItem}
                   onUpdateFullItem={handleUpdateFullItem}
                   onCreateItem={onCreateItem}
