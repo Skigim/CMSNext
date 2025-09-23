@@ -45,7 +45,7 @@ const generateFallbackId = (): string => {
   if (typeof crypto !== 'undefined' && crypto.randomUUID) {
     return `fallback-${crypto.randomUUID()}`;
   }
-  return `fallback-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+  return `fallback-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`;
 };
 
 /**
