@@ -1,13 +1,13 @@
 import { useState, useEffect } from 'react';
 import { Button } from "./ui/button";
-import { Badge } from "./ui/badge";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
 import { Textarea } from "./ui/textarea";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "./ui/tooltip";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "./ui/dropdown-menu";
 import { FinancialItem, CaseCategory } from "../types/case";
-import { Trash2, Check, X, Plus, StickyNote, Landmark, Wallet, Receipt } from "lucide-react";
+import { Trash2, Check, X, Plus, StickyNote, Landmark, Wallet, Receipt, ChevronDown } from "lucide-react";
 
 interface FinancialItemCardProps {
   item: FinancialItem;
@@ -176,32 +176,17 @@ export function FinancialItemCard({
     setConfirmingDelete(false);
   };
 
-  // Handle quick verification status change
-  const handleStatusClick = async (e: React.MouseEvent) => {
-    e.stopPropagation(); // Prevent card expansion
-    
+  // Handle verification status change from dropdown
+  const handleStatusChange = async (newStatus: 'Needs VR' | 'VR Pending' | 'AVS Pending' | 'Verified') => {
     if (!onUpdate || typeof item.id !== 'string') return;
-    
-    // Define status cycle order
-    const statusCycle: Array<'Needs VR' | 'VR Pending' | 'AVS Pending' | 'Verified'> = [
-      'Needs VR',
-      'VR Pending', 
-      'AVS Pending',
-      'Verified'
-    ];
-    
-    const currentStatus = item.verificationStatus || 'Needs VR';
-    const currentIndex = statusCycle.indexOf(currentStatus);
-    const nextIndex = (currentIndex + 1) % statusCycle.length;
-    const nextStatus = statusCycle[nextIndex];
     
     try {
       // Update the verification status
       await onUpdate(itemType, item.id, {
         ...item,
-        verificationStatus: nextStatus,
+        verificationStatus: newStatus,
         // Clear verification source if moving away from 'Verified'
-        ...(nextStatus !== 'Verified' && { verificationSource: undefined })
+        ...(newStatus !== 'Verified' && { verificationSource: undefined })
       });
     } catch (error) {
       console.error('Failed to update verification status:', error);
@@ -254,14 +239,52 @@ export function FinancialItemCard({
               </TooltipProvider>
             )}
           </div>
-          <Badge 
-            variant={verificationStatus.variant} 
-            className="text-xs cursor-pointer hover:opacity-80 hover:scale-105 transition-all duration-200 select-none border border-current/20"
-            onClick={handleStatusClick}
-            title="Click to change verification status (Needs VR → VR Pending → AVS Pending → Verified)"
-          >
-            {verificationStatus.text}
-          </Badge>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="outline"
+                size="sm"
+                className={`text-xs h-6 px-2 py-1 border hover:opacity-80 hover:scale-105 transition-all duration-200 select-none ${
+                  verificationStatus.variant === 'default' 
+                    ? 'bg-primary text-primary-foreground border-primary/20' 
+                    : verificationStatus.variant === 'secondary'
+                    ? 'bg-secondary text-secondary-foreground border-secondary/20'
+                    : verificationStatus.variant === 'outline'
+                    ? 'bg-background text-foreground border-border'
+                    : 'bg-destructive text-destructive-foreground border-destructive/20'
+                }`}
+              >
+                {verificationStatus.text}
+                <ChevronDown className="ml-1 h-3 w-3" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-36">
+              <DropdownMenuItem onClick={() => handleStatusChange('Needs VR')}>
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 rounded-full bg-secondary"></div>
+                  Needs VR
+                </div>
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleStatusChange('VR Pending')}>
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 rounded-full bg-yellow-500"></div>
+                  VR Pending
+                </div>
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleStatusChange('AVS Pending')}>
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 rounded-full bg-orange-500"></div>
+                  AVS Pending
+                </div>
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleStatusChange('Verified')}>
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 rounded-full bg-green-500"></div>
+                  Verified
+                </div>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
 
