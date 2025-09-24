@@ -21,9 +21,9 @@ CMSNext is a filesystem-only case management platform built with React 18, TypeS
 | Security        | 9/10  | Local-first, sanitized inputs, defensive File System Access API usage                       |
 
 ## Recent Validation
-- ✅ `npm run lint` — no warnings or errors (resolved 27 previous issues).
+- ✅ `npm run lint` — clean pass with ESLint 9 + @typescript-eslint 8 on TypeScript 5.9.2.
 - ✅ `npx vitest run` — 61 tests pass (DataManager/Autosave service suites). Logged errors are part of negative test assertions.
-- ✅ `npx tsc --noEmit` — passes with current TypeScript 5.9.2 (noted warning about unsupported version vs @typescript-eslint).
+- ✅ `npx tsc --noEmit` — passes with current TypeScript 5.9.2 (noted warning about unsupported version vs `@typescript-eslint`).
 
 ## Detailed Findings
 
@@ -63,7 +63,7 @@ CMSNext is a filesystem-only case management platform built with React 18, TypeS
 **Strengths**
 - `useCaseManagement` wraps DataManager CRUD with toasts and state updates, giving a single entry point for case operations.
 - `useFinancialItems` and `useNotes` encapsulate domain-specific flows, keeping UI leaner.
-- File storage synchronization uses explicit `safeNotifyFileStorageChange()` and service notifications to persist asynchronously.
+- File storage synchronization relies on the debounced write queue and status callbacks inside `AutosaveFileService` to persist updates asynchronously.
 
 **Opportunities**
 - Some state transitions rely on timeouts to allow the file system to "settle". Investigate whether callback-based signals could replace timers.
