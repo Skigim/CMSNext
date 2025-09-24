@@ -13,6 +13,85 @@ interface FileData {
   total_cases: number;
 }
 
+function normalizeCaseNotes(cases: CaseDisplay[]): { cases: CaseDisplay[]; changed: boolean } {
+  let changed = false;
+
+  const normalizedCases = cases.map(caseItem => {
+    const notes = caseItem.caseRecord?.notes;
+    if (!Array.isArray(notes) || notes.length === 0) {
+      return caseItem;
+    }
+
+    let notesChanged = false;
+    const normalizedNotes = notes.map(note => {
+      if (!note || typeof note !== "object") {
+        notesChanged = true;
+        changed = true;
+        const timestamp = new Date().toISOString();
+        return {
+          id: uuidv4(),
+          category: "General",
+          content: "",
+          createdAt: timestamp,
+          updatedAt: timestamp,
+        };
+      }
+
+      let noteChanged = false;
+
+      const hasValidId = typeof note.id === "string" && note.id.trim().length > 0;
+      const normalizedId = hasValidId ? note.id : uuidv4();
+      if (!hasValidId) {
+        noteChanged = true;
+      }
+
+      const normalizedCategory = note.category || "General";
+      const normalizedContent = typeof note.content === "string" ? note.content : "";
+      const normalizedCreatedAt = note.createdAt || note.updatedAt || new Date().toISOString();
+      const normalizedUpdatedAt = note.updatedAt || normalizedCreatedAt;
+
+      if (
+        noteChanged ||
+        normalizedCategory !== note.category ||
+        normalizedContent !== note.content ||
+        normalizedCreatedAt !== note.createdAt ||
+        normalizedUpdatedAt !== note.updatedAt
+      ) {
+        noteChanged = true;
+      }
+
+      if (!noteChanged) {
+        return note;
+      }
+
+      notesChanged = true;
+      changed = true;
+      return {
+        ...note,
+        id: normalizedId,
+        category: normalizedCategory,
+        content: normalizedContent,
+        createdAt: normalizedCreatedAt,
+        updatedAt: normalizedUpdatedAt,
+      };
+    });
+
+    if (!notesChanged) {
+      return caseItem;
+    }
+
+    return {
+      ...caseItem,
+      caseRecord: {
+        ...caseItem.caseRecord,
+        notes: normalizedNotes,
+      },
+    };
+  });
+
+  return { cases: normalizedCases, changed };
+}
+
 /**
  * Stateless Data Manager
  * 
@@ -65,10 +144,26 @@ export class DataManager {
         cases = transformImportedData(rawData);
       }
 
+      const { cases: normalizedCases, changed } = normalizeCaseNotes(cases);
+
+      let finalCases = normalizedCases;
+      let finalExportedAt = rawData.exported_at || rawData.exportedAt || new Date().toISOString();
+
+      if (changed) {
+        const persistedData = await this.writeFileData({
+          cases: normalizedCases,
+          exported_at: finalExportedAt,
+          total_cases: normalizedCases.length,
+        });
+
+        finalCases = persistedData.cases;
+        finalExportedAt = persistedData.exported_at;
+      }
+
       return {
-        cases: cases,
-        exported_at: rawData.exported_at || rawData.exportedAt || new Date().toISOString(),
-        total_cases: cases.length
+        cases: finalCases,
+        exported_at: finalExportedAt,
+        total_cases: finalCases.length
       };
     } catch (error) {
       console.error('Failed to read file data:', error);
@@ -80,7 +175,7 @@ export class DataManager {
    * Write data to file system with retry logic
    * Throws error if write fails after retries
    */
-  private async writeFileData(data: FileData): Promise<void> {
+  private async writeFileData(data: FileData): Promise<FileData> {
     try {
       // Ensure data integrity before writing
       const validatedData = {
@@ -98,6 +193,8 @@ export class DataManager {
       if (!success) {
         throw new Error('File write operation failed');
       }
+
+      return validatedData;
     } catch (error) {
       console.error('Failed to write file data:', error);
       
@@ -113,7 +210,7 @@ export class DataManager {
           errorMessage = error.message;
         }
       }
-      
+
       throw new Error(`Failed to save case data: ${errorMessage}`);
     }
   }

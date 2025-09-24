@@ -379,8 +379,13 @@ class AutosaveFileService {
                               errorMessage.includes('InvalidStateError');
 
       if (isRetryableError && retryCount < maxRetries) {
-        console.warn(`[AutosaveFileService] Write failed with retryable error (attempt ${retryCount + 1}/${maxRetries + 1}): ${errorMessage}`);
-        
+        const logMessage = `[AutosaveFileService] Write attempt ${retryCount + 1}/${maxRetries + 1} hit a transient state change. Retrying with a fresh handle… (${errorMessage})`;
+        if (retryCount === 0) {
+          console.info(logMessage);
+        } else {
+          console.warn(logMessage);
+        }
+
         // Wait a bit before retrying
         await new Promise(resolve => setTimeout(resolve, retryDelay * (retryCount + 1)));
         
@@ -440,8 +445,13 @@ class AutosaveFileService {
                               errorMessage.includes('InvalidStateError');
 
       if (isRetryableError && retryCount < maxRetries) {
-        console.warn(`[AutosaveFileService] Named file write failed with retryable error (attempt ${retryCount + 1}/${maxRetries + 1}): ${errorMessage}`);
-        
+        const logMessage = `[AutosaveFileService] Named write attempt ${retryCount + 1}/${maxRetries + 1} hit a transient state change. Retrying with a fresh handle… (${errorMessage})`;
+        if (retryCount === 0) {
+          console.info(logMessage);
+        } else {
+          console.warn(logMessage);
+        }
+
         // Wait a bit before retrying
         await new Promise(resolve => setTimeout(resolve, retryDelay * (retryCount + 1)));
         

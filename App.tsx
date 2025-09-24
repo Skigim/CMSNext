@@ -1,11 +1,11 @@
 import { useState, useEffect, useCallback, useMemo, memo, lazy, Suspense } from "react";
 import { MainLayout } from "./components/MainLayout";
 import { Toaster } from "./components/ui/sonner";
-import { CaseDisplay, CaseCategory, FinancialItem, NewPersonData, NewCaseRecordData, NewNoteData } from "./types/case";
+import { CaseDisplay, CaseCategory, FinancialItem, NewPersonData, NewCaseRecordData } from "./types/case";
 import { toast } from "sonner";
 import { useFileStorage } from "./contexts/FileStorageContext";
 import { useDataManagerSafe } from "./contexts/DataManagerContext";
-import { useCaseManagement, useNotes, useConnectionFlow, useFinancialItemFlow } from "./hooks";
+import { useCaseManagement, useConnectionFlow, useFinancialItemFlow, useNoteFlow } from "./hooks";
 import { AppProviders } from "./components/providers/AppProviders";
 import { FileStorageIntegrator } from "./components/providers/FileStorageIntegrator";
 import { ViewRenderer } from "./components/routing/ViewRenderer";
@@ -42,21 +42,16 @@ const AppContent = memo(function AppContent() {
     setHasLoadedData,
   } = useCaseManagement();
   
-  // Use the secure notes management hook
-  const {
-    noteForm,
-    openAddNote,
-    openEditNote,
-    saveNote: saveNoteHook,
-    deleteNote: deleteNoteHook,
-    closeNoteForm,
-  } = useNotes();
-  
   const [currentView, setCurrentView] = useState<View>('dashboard');
   const [selectedCaseId, setSelectedCaseId] = useState<string | null>(null);
   const [editingCase, setEditingCase] = useState<CaseDisplay | null>(null);
   const [formState, setFormState] = useState<FormState>({ previousView: 'list' });
   const [sidebarOpen, setSidebarOpen] = useState<boolean>(true);
+
+  const selectedCase = useMemo(
+    () => cases.find(c => c.id === selectedCaseId),
+    [cases, selectedCaseId],
+  );
 
   const {
     showConnectModal,
@@ -139,12 +134,6 @@ const AppContent = memo(function AppContent() {
   // Always use file storage - no more API switching
   // Remove old getDataAPI function - replaced by DataManager-only pattern
   
-  // Memoize selectedCase to prevent unnecessary recalculations
-  const selectedCase = useMemo(() => 
-    cases.find(c => c.id === selectedCaseId), 
-    [cases, selectedCaseId]
-  );
-
   const {
     itemForm,
     openItemForm,
@@ -154,6 +143,22 @@ const AppContent = memo(function AppContent() {
     handleCreateItem: createFinancialItem,
   } = useFinancialItemFlow({
     selectedCase: selectedCase ?? null,
+    setCases,
+    setError,
+  });
+
+  const {
+    noteForm,
+    handleAddNote,
+    handleEditNote,
+    handleDeleteNote,
+    handleSaveNote,
+    handleCancelNoteForm,
+    handleBatchUpdateNote,
+    handleBatchCreateNote,
+  } = useNoteFlow({
+    selectedCase: selectedCase ?? null,
+    cases,
     setCases,
     setError,
   });
@@ -263,126 +268,6 @@ const AppContent = memo(function AppContent() {
     closeItemForm();
   }, [closeItemForm]);
 
-  const handleAddNote = () => {
-    if (!selectedCase) return;
-    openAddNote(selectedCase.id);
-  };
-
-  const handleEditNote = (noteId: string) => {
-    if (!selectedCase) return;
-    openEditNote(selectedCase.id, noteId, cases);
-  };
-
-  const handleDeleteNote = async (noteId: string) => {
-    if (!selectedCase) return;
-    
-    try {
-      const updatedCase = await deleteNoteHook(selectedCase.id, noteId);
-      if (updatedCase) {
-        setCases(prevCases =>
-          prevCases.map(c =>
-            c.id === selectedCase.id ? updatedCase : c
-          )
-        );
-      }
-    } catch (err) {
-      // Error handling is done in the hook
-      console.error('Failed to delete note in handleDeleteNote wrapper:', err);
-    }
-  };
-
-  const handleBatchUpdateNote = async (noteId: string, updatedNote: NewNoteData) => {
-    if (!selectedCase || !dataManager) {
-      if (!dataManager) {
-        const errorMsg = 'Data storage is not available. Please check your connection.';
-        setError(errorMsg);
-        toast.error(errorMsg);
-      }
-      return;
-    }
-
-    try {
-      setError(null);
-      
-      // Single update operation for note
-      const updatedCase = await dataManager.updateNote(selectedCase.id, noteId, updatedNote);
-      setCases(prevCases =>
-        prevCases.map(c =>
-          c.id === selectedCase.id ? updatedCase : c
-        )
-      );
-      
-      // Success message for the batch update
-      toast.success('Note updated successfully', { duration: 2000 });
-      
-    } catch (err) {
-      console.error('Failed to update note:', err);
-      
-      // Provide specific error messaging based on error type
-      let errorMsg = 'Failed to update note. Please try again.';
-      if (err instanceof Error) {
-        if (err.message.includes('File was modified by another process')) {
-          errorMsg = 'File was modified by another process. Your changes were not saved. Please refresh and try again.';
-        } else if (err.message.includes('Permission denied')) {
-          errorMsg = 'Permission denied. Please check that you have write access to the data folder.';
-        } else if (err.message.includes('state cached in an interface object') || 
-                   err.message.includes('state had changed')) {
-          errorMsg = 'Data sync issue detected. Please refresh the page and try again.';
-        }
-      }
-      
-      setError(errorMsg);
-      toast.error(errorMsg, { duration: 5000 });
-      throw err; // Re-throw to let the component handle fallback
-    }
-  };
-
-  const handleBatchCreateNote = async (noteData: NewNoteData) => {
-    if (!selectedCase || !dataManager) {
-      if (!dataManager) {
-        const errorMsg = 'Data storage is not available. Please check your connection.';
-        setError(errorMsg);
-        toast.error(errorMsg);
-      }
-      return;
-    }
-
-    try {
-      setError(null);
-      
-      // Single create operation for note
-      const updatedCase = await dataManager.addNote(selectedCase.id, noteData);
-      setCases(prevCases =>
-        prevCases.map(c =>
-          c.id === selectedCase.id ? updatedCase : c
-        )
-      );
-      
-      // Success message for the creation
-      toast.success('Note added successfully', { duration: 2000 });
-      
-    } catch (err) {
-      console.error('Failed to create note:', err);
-      
-      // Provide specific error messaging based on error type
-      let errorMsg = 'Failed to create note. Please try again.';
-      if (err instanceof Error) {
-        if (err.message.includes('File was modified by another process')) {
-          errorMsg = 'File was modified by another process. Your note was not saved. Please refresh and try again.';
-        } else if (err.message.includes('Permission denied')) {
-          errorMsg = 'Permission denied. Please check that you have write access to the data folder.';
-        } else if (err.message.includes('state cached in an interface object') || 
-                   err.message.includes('state had changed')) {
-          errorMsg = 'Data sync issue detected. Please refresh the page and try again.';
-        }
-      }
-      
-      setError(errorMsg);
-      toast.error(errorMsg, { duration: 5000 });
-      throw err; // Re-throw to let the component handle fallback
-    }
-  };
-
   const handleDeleteCase = useCallback(async (caseId: string) => {
     try {
       await deleteCase(caseId);
@@ -397,26 +282,6 @@ const AppContent = memo(function AppContent() {
       console.error('Failed to delete case in handleDeleteCase wrapper:', err);
     }
   }, [deleteCase, selectedCaseId, setCurrentView, setSelectedCaseId]);
-
-  const handleSaveNote = useCallback(async (noteData: NewNoteData) => {
-    try {
-      const updatedCase = await saveNoteHook(noteData);
-      if (updatedCase) {
-        setCases(prevCases =>
-          prevCases.map(c =>
-            c.id === updatedCase.id ? updatedCase : c
-          )
-        );
-      }
-    } catch (err) {
-      // Error handling is done in the hook
-      console.error('Failed to save note in handleSaveNote wrapper:', err);
-    }
-  }, [saveNoteHook, setCases]);
-
-  const handleCancelNoteForm = () => {
-    closeNoteForm();
-  };
 
   const handleDataPurged = async () => {
     try {
