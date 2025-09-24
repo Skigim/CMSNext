@@ -2,6 +2,10 @@ import { useState, useCallback } from 'react';
 import { toast } from 'sonner';
 import { CaseDisplay, NewPersonData, NewCaseRecordData, NewNoteData } from '../types/case';
 import { useDataManagerSafe } from '../contexts/DataManagerContext';
+import {
+  getFileStorageFlags,
+  updateFileStorageFlags,
+} from '../utils/fileStorageFlags';
 
 interface UseCaseManagementReturn {
   // State
@@ -60,15 +64,15 @@ export function useCaseManagement(): UseCaseManagementReturn {
       setHasLoadedData(true);
       
       // Set baseline - we've now loaded data (even if empty)
-      (window as any).fileStorageDataBaseline = true;
+      updateFileStorageFlags({ dataBaseline: true });
       
       if (data.length > 0) {
-        (window as any).fileStorageSessionHadData = true;
+        updateFileStorageFlags({ sessionHadData: true });
         // Don't show toast here - let the connection flow handle user feedback
         console.log(`[DataManager] Successfully loaded ${data.length} cases`);
       } else {
         // Only show toast for empty state if not during connection flow
-        if (!(window as any).fileStorageInConnectionFlow) {
+        if (!getFileStorageFlags().inConnectionFlow) {
           toast.success(`Connected successfully - ready to start fresh`, {
             id: 'connected-empty',
             duration: 3000
@@ -232,9 +236,8 @@ export function useCaseManagement(): UseCaseManagementReturn {
       setCases(prevCases => [...prevCases, ...importedCases]);
       setHasLoadedData(true);
       
-      // Set baseline - we now have data
-      (window as any).fileStorageDataBaseline = true;
-      (window as any).fileStorageSessionHadData = true;
+  // Set baseline - we now have data
+  updateFileStorageFlags({ dataBaseline: true, sessionHadData: true });
       
       toast.success(`Imported ${importedCases.length} cases successfully`);
       

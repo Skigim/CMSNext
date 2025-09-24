@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { useFileStorage } from "../../contexts/FileStorageContext";
 import { useDataManagerSafe } from "../../contexts/DataManagerContext";
+import { markFileStorageInitialized, resetFileStorageFlags } from "../../utils/fileStorageFlags";
 
 interface FileStorageIntegratorProps {
   children: React.ReactNode;
@@ -32,11 +33,8 @@ export function FileStorageIntegrator({ children }: FileStorageIntegratorProps) 
     }
     
     // Clean up any leftover flags from previous sessions on startup
-    if (!(window as any).fileStorageInitialized) {
-      delete (window as any).fileStorageDataBaseline;
-      delete (window as any).fileStorageSessionHadData;
-      delete (window as any).fileStorageInSetupPhase;
-      (window as any).fileStorageInitialized = true;
+    if (markFileStorageInitialized()) {
+      resetFileStorageFlags();
     }
   }, [service, dataManager]);
 

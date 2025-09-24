@@ -2,6 +2,10 @@ import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
 import type { CaseDisplay } from "../types/case";
 import type AutosaveFileService from "../utils/AutosaveFileService";
+import {
+  clearFileStorageFlags,
+  updateFileStorageFlags,
+} from "../utils/fileStorageFlags";
 
 interface UseConnectionFlowParams {
   isSupported: boolean | undefined;
@@ -76,8 +80,7 @@ export function useConnectionFlow({
             setHasLoadedData(true);
             setShowConnectModal(false);
 
-            (window as any).fileStorageDataBaseline = true;
-            (window as any).fileStorageSessionHadData = true;
+            updateFileStorageFlags({ dataBaseline: true, sessionHadData: true });
 
             toast.success(`Connected and loaded ${loadedCases.length} cases from new folder`, {
               id: "new-folder-success",
@@ -87,6 +90,7 @@ export function useConnectionFlow({
             setCases([]);
             setHasLoadedData(true);
             setShowConnectModal(false);
+            updateFileStorageFlags({ dataBaseline: true });
             toast.success("Connected to folder with empty data file - ready to add cases!");
           }
         } catch (err) {
@@ -125,8 +129,7 @@ export function useConnectionFlow({
   const handleConnectToExisting = useCallback(async (): Promise<boolean> => {
     try {
       window.location.hash = "#connect-to-existing";
-      (window as any).fileStorageInSetupPhase = true;
-      (window as any).fileStorageInConnectionFlow = true;
+      updateFileStorageFlags({ inSetupPhase: true, inConnectionFlow: true });
 
       if (!dataManager) {
         console.error("[ConnectionFlow] DataManager not available");
@@ -170,8 +173,7 @@ export function useConnectionFlow({
         setHasLoadedData(true);
         setShowConnectModal(false);
 
-        (window as any).fileStorageDataBaseline = true;
-        (window as any).fileStorageSessionHadData = true;
+        updateFileStorageFlags({ dataBaseline: true, sessionHadData: true });
 
         toast.success(`Connected and loaded ${loadedCases.length} cases`, {
           id: "connection-success",
@@ -182,7 +184,7 @@ export function useConnectionFlow({
         setHasLoadedData(true);
         setShowConnectModal(false);
 
-        (window as any).fileStorageDataBaseline = true;
+        updateFileStorageFlags({ dataBaseline: true });
 
         toast.success("Connected successfully - ready to start fresh", {
           id: "connection-empty",
@@ -212,8 +214,7 @@ export function useConnectionFlow({
       toast.error(errorMsg);
       return false;
     } finally {
-      (window as any).fileStorageInSetupPhase = false;
-      (window as any).fileStorageInConnectionFlow = false;
+      clearFileStorageFlags("inSetupPhase", "inConnectionFlow");
 
       if (service && !service.getStatus().isRunning) {
         setTimeout(() => {

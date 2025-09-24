@@ -13,6 +13,16 @@ interface FileData {
   total_cases: number;
 }
 
+/**
+ * Normalizes note metadata for a collection of cases while gracefully pruning invalid entries.
+ *
+ * Ensures each note has an identifier, category, content, and timestamps. Notes that are not
+ * objects are discarded instead of being converted into placeholder items to avoid confusing
+ * empty entries in the UI.
+ *
+ * @param cases - The case collection to normalize.
+ * @returns A tuple containing the normalized cases array and whether any changes were applied.
+ */
 function normalizeCaseNotes(cases: CaseDisplay[]): { cases: CaseDisplay[]; changed: boolean } {
   let changed = false;
 
@@ -23,20 +33,26 @@ function normalizeCaseNotes(cases: CaseDisplay[]): { cases: CaseDisplay[]; chang
     }
 
     let notesChanged = false;
-    const normalizedNotes = notes.map(note => {
-      if (!note || typeof note !== "object") {
+    const filteredNotes = notes.filter(note => {
+      const isValid = !!note && typeof note === "object";
+      if (!isValid) {
         notesChanged = true;
         changed = true;
-        const timestamp = new Date().toISOString();
-        return {
-          id: uuidv4(),
-          category: "General",
-          content: "",
-          createdAt: timestamp,
-          updatedAt: timestamp,
-        };
       }
+      return isValid;
+    });
 
+    if (filteredNotes.length === 0) {
+      return {
+        ...caseItem,
+        caseRecord: {
+          ...caseItem.caseRecord,
+          notes: [],
+        },
+      };
+    }
+
+    const normalizedNotes = filteredNotes.map(note => {
       let noteChanged = false;
 
       const hasValidId = typeof note.id === "string" && note.id.trim().length > 0;

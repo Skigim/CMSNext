@@ -4,6 +4,7 @@ import { FileStorageProvider } from "../../contexts/FileStorageContext";
 import { DataManagerProvider } from "../../contexts/DataManagerContext";
 import ErrorBoundary from "../ErrorBoundary";
 import FileSystemErrorBoundary from "../FileSystemErrorBoundary";
+import { getFileStorageFlags } from "../../utils/fileStorageFlags";
 
 interface AppProvidersProps {
   children: React.ReactNode;
@@ -32,7 +33,7 @@ export function AppProviders({ children }: AppProvidersProps) {
     }
     
     // Don't save if we're still in loading/setup phase
-    if ((window as any).fileStorageInSetupPhase) {
+    if (getFileStorageFlags().inSetupPhase) {
       return null;
     }
     
@@ -44,8 +45,8 @@ export function AppProviders({ children }: AppProvidersProps) {
 
   const handleDataLoaded = useCallback((fileData: any) => {
     // Use the global function set by AppContent
-    if ((window as any).handleFileDataLoaded) {
-      (window as any).handleFileDataLoaded(fileData);
+    if (window.handleFileDataLoaded) {
+      window.handleFileDataLoaded(fileData);
     }
   }, []);
 

@@ -242,10 +242,10 @@ export function FileStorageProvider({
   // Expose notifyDataChange globally for easy access
   useEffect(() => {
     if (service) {
-      (window as any).fileStorageNotifyChange = notifyDataChange;
+      window.fileStorageNotifyChange = notifyDataChange;
     }
     return () => {
-      delete (window as any).fileStorageNotifyChange;
+      delete window.fileStorageNotifyChange;
     };
   }, [service, notifyDataChange]);
 

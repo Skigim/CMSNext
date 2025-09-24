@@ -180,7 +180,7 @@ class AutosaveFileService {
     }
 
     try {
-      this.directoryHandle = await (window as any).showDirectoryPicker();
+      this.directoryHandle = await window.showDirectoryPicker();
       const permissionGranted = await this.requestPermission();
 
       if (permissionGranted) {

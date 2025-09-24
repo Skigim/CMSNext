@@ -9,6 +9,7 @@ import { useCaseManagement, useConnectionFlow, useFinancialItemFlow, useNoteFlow
 import { AppProviders } from "./components/providers/AppProviders";
 import { FileStorageIntegrator } from "./components/providers/FileStorageIntegrator";
 import { ViewRenderer } from "./components/routing/ViewRenderer";
+import { clearFileStorageFlags, updateFileStorageFlags } from "./utils/fileStorageFlags";
 
 // Simplified lazy loading for modals only - more conservative approach
 const FinancialItemModal = lazy(() => import("./components/FinancialItemModal"));
@@ -112,10 +113,10 @@ const AppContent = memo(function AppContent() {
       setHasLoadedData(true);
       
       // Set baseline - we've now loaded data through the file storage system
-      (window as any).fileStorageDataBaseline = true;
+      updateFileStorageFlags({ dataBaseline: true });
       
       if (casesToSet.length > 0) {
-        (window as any).fileStorageSessionHadData = true;
+        updateFileStorageFlags({ sessionHadData: true });
       }
     } catch (err) {
       console.error('Failed to handle file data loaded:', err);
@@ -125,9 +126,9 @@ const AppContent = memo(function AppContent() {
 
   // Expose the function globally so App component can use it
   useEffect(() => {
-    (window as any).handleFileDataLoaded = handleFileDataLoaded;
+    window.handleFileDataLoaded = handleFileDataLoaded;
     return () => {
-      delete (window as any).handleFileDataLoaded;
+      delete window.handleFileDataLoaded;
     };
   }, [handleFileDataLoaded]);
   
@@ -288,11 +289,10 @@ const AppContent = memo(function AppContent() {
       setError(null);
       // Clear local state only - do not reload data after purge
       setCases([]);
-      setHasLoadedData(false);
-      
-      // Clear baseline flags - we're starting fresh
-      delete (window as any).fileStorageDataBaseline;
-      delete (window as any).fileStorageSessionHadData;
+    setHasLoadedData(false);
+
+    // Clear baseline flags - we're starting fresh
+    clearFileStorageFlags('dataBaseline', 'sessionHadData');
       
       toast.success("All data has been purged successfully");
     } catch (err) {
