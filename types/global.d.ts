@@ -15,9 +15,7 @@ interface Window {
 
 // Global type augmentations for the application
 declare global {
-  // eslint-disable-next-line no-var
   var NightingaleFileService: any;
-  // eslint-disable-next-line no-var
   var FileService: any;
 }
 
