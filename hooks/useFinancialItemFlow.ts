@@ -102,12 +102,7 @@ export function useFinancialItemFlow({
 
       try {
         setError(null);
-        const updatedCase = await dataManager.updateItem(
-          selectedCase.id,
-          category,
-          itemId,
-          updatedItem as Omit<FinancialItem, "id" | "createdAt" | "updatedAt">,
-        );
+        const updatedCase = await dataManager.updateItem(selectedCase.id, category, itemId, updatedItem);
 
         setCases(prevCases =>
           prevCases.map(c => (c.id === selectedCase.id ? updatedCase : c)),

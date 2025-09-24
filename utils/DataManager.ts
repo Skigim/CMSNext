@@ -534,7 +534,12 @@ export class DataManager {
    * Update financial item in a case
    * Pattern: read → modify → write
    */
-  async updateItem(caseId: string, category: CaseCategory, itemId: string, itemData: Omit<FinancialItem, 'id' | 'createdAt' | 'updatedAt'>): Promise<CaseDisplay> {
+  async updateItem(
+    caseId: string,
+    category: CaseCategory,
+    itemId: string,
+    updatedItem: Partial<FinancialItem>,
+  ) {
     // Read current data
     const currentData = await this.readFileData();
     if (!currentData) {
@@ -558,9 +563,9 @@ export class DataManager {
     const existingItem = targetCase.caseRecord.financials[category][itemIndex];
 
     // Update item
-    const updatedItem: FinancialItem = {
+    const updatedItemData: FinancialItem = {
       ...existingItem,
-      ...itemData,
+      ...updatedItem,
       id: itemId, // Preserve ID
       createdAt: existingItem.createdAt, // Preserve creation time
       updatedAt: new Date().toISOString()
@@ -575,7 +580,7 @@ export class DataManager {
         financials: {
           ...targetCase.caseRecord.financials,
           [category]: targetCase.caseRecord.financials[category].map((item, index) =>
-            index === itemIndex ? updatedItem : item
+            index === itemIndex ? updatedItemData : item
           )
         },
         updatedDate: new Date().toISOString()

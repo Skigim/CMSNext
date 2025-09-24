@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
 import type { CaseDisplay } from "../types/case";
 import type AutosaveFileService from "../utils/AutosaveFileService";
+import type DataManager from "../utils/DataManager";
 import {
   clearFileStorageFlags,
   updateFileStorageFlags,
@@ -16,7 +17,7 @@ interface UseConnectionFlowParams {
   connectToExisting: () => Promise<boolean>;
   loadExistingData: () => Promise<any>;
   service: AutosaveFileService | null;
-  dataManager: unknown;
+  dataManager: DataManager | null;
   loadCases: () => Promise<CaseDisplay[]>;
   setCases: React.Dispatch<React.SetStateAction<CaseDisplay[]>>;
   setError: React.Dispatch<React.SetStateAction<string | null>>;
