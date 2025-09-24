@@ -5,6 +5,7 @@ import { transformImportedData } from './dataTransform';
 
 interface DataManagerConfig {
   fileService: AutosaveFileService;
+  persistNormalizationFixes?: boolean;
 }
 
 interface FileData {
@@ -119,9 +120,11 @@ function normalizeCaseNotes(cases: CaseDisplay[]): { cases: CaseDisplay[]; chang
  */
 export class DataManager {
   private fileService: AutosaveFileService;
+  private persistNormalizationFixes: boolean;
 
   constructor(config: DataManagerConfig) {
     this.fileService = config.fileService;
+    this.persistNormalizationFixes = config.persistNormalizationFixes ?? true;
   }
 
   // =============================================================================
@@ -166,14 +169,20 @@ export class DataManager {
       let finalExportedAt = rawData.exported_at || rawData.exportedAt || new Date().toISOString();
 
       if (changed) {
-        const persistedData = await this.writeFileData({
-          cases: normalizedCases,
-          exported_at: finalExportedAt,
-          total_cases: normalizedCases.length,
-        });
+        if (this.persistNormalizationFixes) {
+          const persistedData = await this.writeFileData({
+            cases: normalizedCases,
+            exported_at: finalExportedAt,
+            total_cases: normalizedCases.length,
+          });
 
-        finalCases = persistedData.cases;
-        finalExportedAt = persistedData.exported_at;
+          finalCases = persistedData.cases;
+          finalExportedAt = persistedData.exported_at;
+        } else {
+          console.warn(
+            "[DataManager] Detected note normalization changes but skipping persistence due to configuration.",
+          );
+        }
       }
 
       return {

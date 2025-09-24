@@ -5,34 +5,67 @@ export interface FileStorageFlags {
   inConnectionFlow?: boolean;
 }
 
-const flags: FileStorageFlags = {};
-let initialized = false;
+export class FileStorageFlagsManager {
+  private flags: FileStorageFlags = {};
+  private initialized = false;
+
+  getFileStorageFlags(): Readonly<FileStorageFlags> {
+    return this.flags;
+  }
+
+  updateFileStorageFlags(updates: Partial<FileStorageFlags>): void {
+    Object.assign(this.flags, updates);
+  }
+
+  clearFileStorageFlags(...keys: (keyof FileStorageFlags)[]): void {
+    keys.forEach(key => {
+      delete this.flags[key];
+    });
+  }
+
+  resetFileStorageFlags(): void {
+    Object.keys(this.flags).forEach(key => {
+      delete this.flags[key as keyof FileStorageFlags];
+    });
+    this.initialized = false;
+  }
+
+  markFileStorageInitialized(): boolean {
+    if (this.initialized) {
+      return false;
+    }
+
+    this.initialized = true;
+    return true;
+  }
+}
+
+let manager: FileStorageFlagsManager = new FileStorageFlagsManager();
+
+export function setFileStorageFlagsManager(customManager: FileStorageFlagsManager): void {
+  manager = customManager;
+}
+
+export function restoreDefaultFileStorageFlagsManager(): void {
+  manager = new FileStorageFlagsManager();
+}
 
 export function getFileStorageFlags(): Readonly<FileStorageFlags> {
-  return flags;
+  return manager.getFileStorageFlags();
 }
 
 export function updateFileStorageFlags(updates: Partial<FileStorageFlags>): void {
-  Object.assign(flags, updates);
+  manager.updateFileStorageFlags(updates);
 }
 
 export function clearFileStorageFlags(...keys: (keyof FileStorageFlags)[]): void {
-  keys.forEach(key => {
-    delete flags[key];
-  });
+  manager.clearFileStorageFlags(...keys);
 }
 
 export function resetFileStorageFlags(): void {
-  Object.keys(flags).forEach(key => {
-    delete flags[key as keyof FileStorageFlags];
-  });
+  manager.resetFileStorageFlags();
 }
 
 export function markFileStorageInitialized(): boolean {
-  if (initialized) {
-    return false;
-  }
-
-  initialized = true;
-  return true;
+  return manager.markFileStorageInitialized();
 }

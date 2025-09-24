@@ -40,6 +40,14 @@ declare global {
 
   var NightingaleFileService: unknown;
   var FileService: unknown;
+
+  interface ImportMetaEnv {
+    readonly VITE_PERSIST_NORMALIZATION_FIXES?: string;
+  }
+
+  interface ImportMeta {
+    readonly env: ImportMetaEnv;
+  }
 }
 
 export {};
