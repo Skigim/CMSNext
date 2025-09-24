@@ -5,12 +5,108 @@ import { transformImportedData } from './dataTransform';
 
 interface DataManagerConfig {
   fileService: AutosaveFileService;
+  persistNormalizationFixes?: boolean;
 }
 
 interface FileData {
   cases: CaseDisplay[];
   exported_at: string;
   total_cases: number;
+}
+
+/**
+ * Normalizes note metadata for a collection of cases while gracefully pruning invalid entries.
+ *
+ * Ensures each note has an identifier, category, content, and timestamps. Notes that are not
+ * objects are discarded instead of being converted into placeholder items to avoid confusing
+ * empty entries in the UI.
+ *
+ * @param cases - The case collection to normalize.
+ * @returns A tuple containing the normalized cases array and whether any changes were applied.
+ */
+function normalizeCaseNotes(cases: CaseDisplay[]): { cases: CaseDisplay[]; changed: boolean } {
+  let changed = false;
+
+  const normalizedCases = cases.map(caseItem => {
+    const notes = caseItem.caseRecord?.notes;
+    if (!Array.isArray(notes) || notes.length === 0) {
+      return caseItem;
+    }
+
+    let notesChanged = false;
+    const filteredNotes = notes.filter(note => {
+      const isValid = !!note && typeof note === "object";
+      if (!isValid) {
+        notesChanged = true;
+        changed = true;
+      }
+      return isValid;
+    });
+
+    if (filteredNotes.length === 0) {
+      return {
+        ...caseItem,
+        caseRecord: {
+          ...caseItem.caseRecord,
+          notes: [],
+        },
+      };
+    }
+
+    const normalizedNotes = filteredNotes.map(note => {
+      let noteChanged = false;
+
+      const hasValidId = typeof note.id === "string" && note.id.trim().length > 0;
+      const normalizedId = hasValidId ? note.id : uuidv4();
+      if (!hasValidId) {
+        noteChanged = true;
+      }
+
+      const normalizedCategory = note.category || "General";
+      const normalizedContent = typeof note.content === "string" ? note.content : "";
+      const normalizedCreatedAt = note.createdAt || note.updatedAt || new Date().toISOString();
+      const normalizedUpdatedAt = note.updatedAt || normalizedCreatedAt;
+
+      if (
+        noteChanged ||
+        normalizedCategory !== note.category ||
+        normalizedContent !== note.content ||
+        normalizedCreatedAt !== note.createdAt ||
+        normalizedUpdatedAt !== note.updatedAt
+      ) {
+        noteChanged = true;
+      }
+
+      if (!noteChanged) {
+        return note;
+      }
+
+      notesChanged = true;
+      changed = true;
+      return {
+        ...note,
+        id: normalizedId,
+        category: normalizedCategory,
+        content: normalizedContent,
+        createdAt: normalizedCreatedAt,
+        updatedAt: normalizedUpdatedAt,
+      };
+    });
+
+    if (!notesChanged) {
+      return caseItem;
+    }
+
+    return {
+      ...caseItem,
+      caseRecord: {
+        ...caseItem.caseRecord,
+        notes: normalizedNotes,
+      },
+    };
+  });
+
+  return { cases: normalizedCases, changed };
 }
 
 /**
@@ -24,9 +120,11 @@ interface FileData {
  */
 export class DataManager {
   private fileService: AutosaveFileService;
+  private persistNormalizationFixes: boolean;
 
   constructor(config: DataManagerConfig) {
     this.fileService = config.fileService;
+    this.persistNormalizationFixes = config.persistNormalizationFixes ?? true;
   }
 
   // =============================================================================
@@ -65,10 +163,32 @@ export class DataManager {
         cases = transformImportedData(rawData);
       }
 
+      const { cases: normalizedCases, changed } = normalizeCaseNotes(cases);
+
+      let finalCases = normalizedCases;
+      let finalExportedAt = rawData.exported_at || rawData.exportedAt || new Date().toISOString();
+
+      if (changed) {
+        if (this.persistNormalizationFixes) {
+          const persistedData = await this.writeFileData({
+            cases: normalizedCases,
+            exported_at: finalExportedAt,
+            total_cases: normalizedCases.length,
+          });
+
+          finalCases = persistedData.cases;
+          finalExportedAt = persistedData.exported_at;
+        } else {
+          console.warn(
+            "[DataManager] Detected note normalization changes but skipping persistence due to configuration.",
+          );
+        }
+      }
+
       return {
-        cases: cases,
-        exported_at: rawData.exported_at || rawData.exportedAt || new Date().toISOString(),
-        total_cases: cases.length
+        cases: finalCases,
+        exported_at: finalExportedAt,
+        total_cases: finalCases.length
       };
     } catch (error) {
       console.error('Failed to read file data:', error);
@@ -80,7 +200,7 @@ export class DataManager {
    * Write data to file system with retry logic
    * Throws error if write fails after retries
    */
-  private async writeFileData(data: FileData): Promise<void> {
+  private async writeFileData(data: FileData): Promise<FileData> {
     try {
       // Ensure data integrity before writing
       const validatedData = {
@@ -98,6 +218,8 @@ export class DataManager {
       if (!success) {
         throw new Error('File write operation failed');
       }
+
+      return validatedData;
     } catch (error) {
       console.error('Failed to write file data:', error);
       
@@ -113,7 +235,7 @@ export class DataManager {
           errorMessage = error.message;
         }
       }
-      
+
       throw new Error(`Failed to save case data: ${errorMessage}`);
     }
   }
@@ -421,7 +543,12 @@ export class DataManager {
    * Update financial item in a case
    * Pattern: read → modify → write
    */
-  async updateItem(caseId: string, category: CaseCategory, itemId: string, itemData: Omit<FinancialItem, 'id' | 'createdAt' | 'updatedAt'>): Promise<CaseDisplay> {
+  async updateItem(
+    caseId: string,
+    category: CaseCategory,
+    itemId: string,
+    updatedItem: Partial<FinancialItem>,
+  ) {
     // Read current data
     const currentData = await this.readFileData();
     if (!currentData) {
@@ -445,9 +572,9 @@ export class DataManager {
     const existingItem = targetCase.caseRecord.financials[category][itemIndex];
 
     // Update item
-    const updatedItem: FinancialItem = {
+    const updatedItemData: FinancialItem = {
       ...existingItem,
-      ...itemData,
+      ...updatedItem,
       id: itemId, // Preserve ID
       createdAt: existingItem.createdAt, // Preserve creation time
       updatedAt: new Date().toISOString()
@@ -462,7 +589,7 @@ export class DataManager {
         financials: {
           ...targetCase.caseRecord.financials,
           [category]: targetCase.caseRecord.financials[category].map((item, index) =>
-            index === itemIndex ? updatedItem : item
+            index === itemIndex ? updatedItemData : item
           )
         },
         updatedDate: new Date().toISOString()
