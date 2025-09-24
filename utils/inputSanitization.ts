@@ -63,7 +63,7 @@ export function sanitizeText(
   }
 
   // HTML entity encoding
-  sanitized = sanitized.replace(/[&<>"'`=\/]/g, (match) => HTML_ENTITIES[match] || match);
+  sanitized = sanitized.replace(/[&<>"'`=/]/g, (match) => HTML_ENTITIES[match] || match);
 
   // Handle line breaks
   if (options.preserveLineBreaks) {
@@ -105,14 +105,14 @@ export function sanitizeHTML(
   // Remove dangerous tags
   const dangerousTags = ['script', 'style', 'iframe', 'object', 'embed', 'form', 'input', 'button', 'link', 'meta'];
   dangerousTags.forEach(tag => {
-    const regex = new RegExp(`<${tag}[^>]*>.*?<\/${tag}>`, 'gi');
+    const regex = new RegExp(`<${tag}[^>]*>.*?</${tag}>`, 'gi');
     sanitized = sanitized.replace(regex, '');
   });
 
   // Remove tags not in allowed list
   if (allowedTags.length > 0) {
     const allowedPattern = allowedTags.join('|');
-    const tagRegex = new RegExp(`<(?!\/?(?:${allowedPattern})(?:\\s|>))[^>]+>`, 'gi');
+    const tagRegex = new RegExp(`<(?!/?(?:${allowedPattern})(?:\\s|>))[^>]+>`, 'gi');
     sanitized = sanitized.replace(tagRegex, '');
   }
 
@@ -290,15 +290,15 @@ export function sanitizeFormField(
       
     case 'phone':
       // Remove non-numeric characters except parentheses, hyphens, and spaces
-      return stringValue.replace(/[^\d\s\-\(\)]/g, '').trim();
+      return stringValue.replace(/[^\d\s\-()]/g, '').trim();
       
     case 'ssn':
       // Remove non-numeric characters except hyphens
-      return stringValue.replace(/[^\d\-]/g, '').trim();
+      return stringValue.replace(/[^\d-]/g, '').trim();
       
     case 'number':
       // Keep only digits, decimal points, and minus signs
-      return stringValue.replace(/[^\d\.\-]/g, '').trim();
+      return stringValue.replace(/[^\d.-]/g, '').trim();
       
     case 'textarea':
       return sanitizeText(stringValue, { 

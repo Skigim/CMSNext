@@ -89,7 +89,7 @@ export function FileStorageSettings() {
     } finally {
       setIsLoadingFiles(false);
     }
-  }, [listDataFiles]);
+  }, [listDataFiles, isConnected]);
 
   useEffect(() => {
     if (isConnected) {
@@ -97,7 +97,7 @@ export function FileStorageSettings() {
     } else {
       setAvailableFiles([]);
     }
-  }, [isConnected]); // Removed loadAvailableFiles dependency to prevent infinite loop
+  }, [isConnected, loadAvailableFiles]);
 
   const handleConnect = async () => {
     setIsConnecting(true);

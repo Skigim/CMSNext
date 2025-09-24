@@ -473,6 +473,7 @@ export function FinancialItemList({
   const handleSaveSkeleton = async (skeletonId: string, itemData: FinancialItem) => {
     if (onCreateItem) {
       try {
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
         const { id, createdAt, updatedAt, ...createData } = itemData;
         await onCreateItem(itemType, createData);
         setSkeletonCards(prev => prev.filter(id => id !== skeletonId));

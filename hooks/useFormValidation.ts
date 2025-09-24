@@ -48,20 +48,6 @@ export function useFormValidation<T>(
     return result;
   }, [validator]);
 
-  const validateField = useCallback((field: string, _value: unknown): string | null => {
-    try {
-      // This is a simplified field validation - in practice, you'd want to
-      // validate the specific field using the schema
-      // For now, we'll just clear the error if validation passes
-      clearFieldError(field);
-      return null;
-    } catch (error) {
-      const errorMsg = error instanceof Error ? error.message : 'Validation error';
-      setFieldError(field, errorMsg);
-      return errorMsg;
-    }
-  }, []);
-
   const clearErrors = useCallback(() => {
     setErrors({});
     setFieldErrors({});
@@ -84,6 +70,20 @@ export function useFormValidation<T>(
     setErrors(prev => ({ ...prev, [field]: error }));
     setFieldErrors(prev => ({ ...prev, [field]: [error] }));
   }, []);
+
+  const validateField = useCallback((field: string, _value: unknown): string | null => {
+    try {
+      // This is a simplified field validation - in practice, you'd want to
+      // validate the specific field using the schema
+      // For now, we'll just clear the error if validation passes
+      clearFieldError(field);
+      return null;
+    } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : 'Validation error';
+      setFieldError(field, errorMsg);
+      return errorMsg;
+    }
+  }, [clearFieldError, setFieldError]);
 
   const getFieldError = useCallback((field: string): string | undefined => {
     return errors[field];

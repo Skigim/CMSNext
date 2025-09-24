@@ -58,6 +58,7 @@ function NoteCard({ note, onSave, onDelete, startExpanded = false }: NoteCardPro
     e.preventDefault();
     if (!editedNote.category.trim() || !editedNote.content.trim()) return;
     
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { isNew, ...noteToSave } = editedNote;
     onSave(noteToSave as Note);
     setIsExpanded(false);
@@ -301,6 +302,7 @@ export function NotesSection({
   const handleSaveSkeleton = async (skeletonId: string, noteData: Note) => {
     if (onCreateNote) {
       try {
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
         const { id, createdAt, updatedAt, ...createData } = noteData;
         await onCreateNote(createData as NewNoteData);
         setSkeletonNotes(prev => prev.filter(id => id !== skeletonId));
@@ -314,6 +316,7 @@ export function NotesSection({
   const handleUpdateNote = async (noteId: string, noteData: Note) => {
     if (onUpdateNote) {
       try {
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
         const { id, createdAt, updatedAt, ...updateData } = noteData;
         await onUpdateNote(noteId, updateData as NewNoteData);
       } catch (error) {

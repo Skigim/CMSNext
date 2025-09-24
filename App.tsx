@@ -226,7 +226,7 @@ const AppContent = memo(function AppContent() {
       toast.error("Failed to connect to new folder");
       return false;
     }
-  }, [isSupported, connectToFolder, loadExistingData, dataManager, service]);
+  }, [isSupported, connectToFolder, loadExistingData, service, loadCases, setCases, setError, setHasLoadedData]);
 
   const handleConnectToExisting = useCallback(async (): Promise<boolean> => {
     try {
@@ -367,7 +367,7 @@ const AppContent = memo(function AppContent() {
         }
       }, 300);
     }
-  }, [hasStoredHandle, connectToExisting, connectToFolder, loadExistingData, dataManager, service]);
+  }, [hasStoredHandle, connectToExisting, connectToFolder, loadExistingData, dataManager, service, loadCases, setCases, setError, setHasLoadedData]);
 
   const handleViewCase = useCallback((caseId: string) => {
     setSelectedCaseId(caseId);
@@ -764,7 +764,7 @@ const AppContent = memo(function AppContent() {
       window.removeEventListener('fileDataImported', handleFileImported);
       window.removeEventListener('fileImportError', handleFileImportError as EventListener);
     };
-  }, [loadCases]);
+  }, [loadCases, setError]);
 
   const handleBackToList = () => {
     setCurrentView('list');
@@ -852,7 +852,7 @@ const AppContent = memo(function AppContent() {
     }, 100); // Small delay to prevent excessive re-renders
 
     return () => clearTimeout(timeoutId);
-  }, [isSupported, isConnected, hasLoadedData]);
+  }, [isSupported, isConnected, hasLoadedData, setError, showConnectModal]);
 
   // Show connect to existing modal if needed
   if (showConnectModal) {

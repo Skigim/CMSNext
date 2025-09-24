@@ -11,7 +11,7 @@ vi.mock('../ui/button', () => ({
 }));
 
 vi.mock('../ui/toggle-group', () => ({
-  ToggleGroup: ({ children, onValueChange, value, ...props }: any) => (
+  ToggleGroup: ({ children, onValueChange: _onValueChange, value: _value, ...props }: any) => (
     <div data-testid="toggle-group" {...props}>
       {children}
     </div>
