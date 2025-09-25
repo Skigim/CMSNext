@@ -27,6 +27,9 @@ export { useFinancialItems } from './useFinancialItems';
 // Global application state
 export { useAppState } from './useAppState';
 
+// File import coordination
+export { useImportListeners } from './useImportListeners';
+
 // Form validation hooks
 export { 
   useFormValidation,
