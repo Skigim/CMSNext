@@ -1,11 +1,11 @@
-import { useState, useEffect, useCallback, useMemo, memo, lazy, Suspense } from "react";
+import { useEffect, useCallback, memo, lazy, Suspense } from "react";
 import { MainLayout } from "./components/MainLayout";
 import { Toaster } from "./components/ui/sonner";
-import { CaseDisplay, CaseCategory, FinancialItem, NewPersonData, NewCaseRecordData } from "./types/case";
+import { CaseDisplay, CaseCategory, FinancialItem } from "./types/case";
 import { toast } from "sonner";
 import { useFileStorage } from "./contexts/FileStorageContext";
 import { useDataManagerSafe } from "./contexts/DataManagerContext";
-import { useCaseManagement, useConnectionFlow, useFinancialItemFlow, useNoteFlow } from "./hooks";
+import { useCaseManagement, useConnectionFlow, useFinancialItemFlow, useNavigationFlow, useNoteFlow } from "./hooks";
 import { AppProviders } from "./components/providers/AppProviders";
 import { FileStorageIntegrator } from "./components/providers/FileStorageIntegrator";
 import { ViewRenderer } from "./components/routing/ViewRenderer";
@@ -16,11 +16,6 @@ const FinancialItemModal = lazy(() => import("./components/FinancialItemModal"))
 const NoteModal = lazy(() => import("./components/NoteModal"));
 const ConnectToExistingModal = lazy(() => import("./components/ConnectToExistingModal"));
 
-type View = 'dashboard' | 'list' | 'details' | 'form' | 'settings';
-type FormState = {
-  previousView: View;
-  returnToCaseId?: string;
-};
 // NoteFormState moved to useNotes hook
 
 const AppContent = memo(function AppContent() {
@@ -43,16 +38,26 @@ const AppContent = memo(function AppContent() {
     setHasLoadedData,
   } = useCaseManagement();
   
-  const [currentView, setCurrentView] = useState<View>('dashboard');
-  const [selectedCaseId, setSelectedCaseId] = useState<string | null>(null);
-  const [editingCase, setEditingCase] = useState<CaseDisplay | null>(null);
-  const [formState, setFormState] = useState<FormState>({ previousView: 'list' });
-  const [sidebarOpen, setSidebarOpen] = useState<boolean>(true);
-
-  const selectedCase = useMemo(
-    () => cases.find(c => c.id === selectedCaseId),
-    [cases, selectedCaseId],
-  );
+  const {
+    currentView,
+    selectedCase,
+    editingCase,
+    sidebarOpen,
+    breadcrumbTitle,
+  navigate: handleNavigate,
+    viewCase: handleViewCase,
+    editCase: handleEditCase,
+    newCase: handleNewCase,
+    saveCaseWithNavigation: handleSaveCase,
+    cancelForm: handleCancelForm,
+    deleteCaseWithNavigation: handleDeleteCase,
+    backToList: handleBackToList,
+    setSidebarOpen,
+  } = useNavigationFlow({
+    cases,
+    saveCase,
+    deleteCase,
+  });
 
   const {
     showConnectModal,
@@ -166,81 +171,6 @@ const AppContent = memo(function AppContent() {
 
   // Note: loadCases is now provided by useCaseManagement hook
 
-  const handleViewCase = useCallback((caseId: string) => {
-    setSelectedCaseId(caseId);
-    setCurrentView('details');
-    // Auto-collapse sidebar for better case detail view experience
-    setSidebarOpen(false);
-  }, []);
-
-  const handleEditCase = useCallback((caseId: string) => {
-    const caseToEdit = cases.find(c => c.id === caseId);
-    if (caseToEdit) {
-      setEditingCase(caseToEdit);
-      // Track where we came from so we can return there on cancel
-      setFormState({
-        previousView: currentView,
-        returnToCaseId: currentView === 'details' ? caseId : undefined
-      });
-      setCurrentView('form');
-      // Auto-collapse sidebar for better form experience
-      setSidebarOpen(false);
-    }
-  }, [cases, currentView]);
-
-  const handleNewCase = useCallback(() => {
-    setEditingCase(null);
-    // Track where we came from for new case creation
-    setFormState({
-      previousView: currentView,
-      returnToCaseId: undefined
-    });
-    setCurrentView('form');
-    // Auto-collapse sidebar for better form experience
-    setSidebarOpen(false);
-  }, [currentView]);
-
-  const handleSaveCase = useCallback(async (caseData: { person: NewPersonData; caseRecord: NewCaseRecordData }) => {
-    try {
-      await saveCase(caseData, editingCase);
-      
-      // Navigation logic after successful save
-      const isEditing = !!editingCase;
-      if (isEditing) {
-        // Return to the previous view after saving
-        if (formState.previousView === 'details' && formState.returnToCaseId) {
-          setSelectedCaseId(formState.returnToCaseId);
-          setCurrentView('details');
-        } else {
-          setCurrentView(formState.previousView);
-        }
-      } else {
-        // Create new case - always go to list after creating
-        setCurrentView('list');
-      }
-      
-      setEditingCase(null);
-      setFormState({ previousView: 'list' });
-    } catch (err) {
-      // Error handling is done in the hook
-      console.error('Failed to save case in handleSaveCase wrapper:', err);
-    }
-  }, [saveCase, editingCase, formState, setSelectedCaseId, setCurrentView, setEditingCase, setFormState]);
-
-  const handleCancelForm = useCallback(() => {
-    // Return to the previous view when cancelling the form
-    // If we came from case details, restore the selected case and return to details
-    if (formState.previousView === 'details' && formState.returnToCaseId) {
-      setSelectedCaseId(formState.returnToCaseId);
-      setCurrentView('details');
-    } else {
-      // Otherwise return to whatever view we came from (dashboard, list, etc.)
-      setCurrentView(formState.previousView);
-    }
-    setEditingCase(null);
-    setFormState({ previousView: 'list' });
-  }, [formState]);
-
   const handleAddItem = useCallback(
     (category: CaseCategory) => {
       openItemForm(category);
@@ -268,21 +198,6 @@ const AppContent = memo(function AppContent() {
   const handleCancelItemForm = useCallback(() => {
     closeItemForm();
   }, [closeItemForm]);
-
-  const handleDeleteCase = useCallback(async (caseId: string) => {
-    try {
-      await deleteCase(caseId);
-      
-      // If we're currently viewing this case, redirect to list
-      if (selectedCaseId === caseId) {
-        setCurrentView('list');
-        setSelectedCaseId(null);
-      }
-    } catch (err) {
-      // Error handling is done in the hook
-      console.error('Failed to delete case in handleDeleteCase wrapper:', err);
-    }
-  }, [deleteCase, selectedCaseId, setCurrentView, setSelectedCaseId]);
 
   const handleDataPurged = async () => {
     try {
@@ -328,54 +243,6 @@ const AppContent = memo(function AppContent() {
       window.removeEventListener('fileImportError', handleFileImportError as EventListener);
     };
   }, [loadCases, setError]);
-
-  const handleBackToList = () => {
-    setCurrentView('list');
-    setSelectedCaseId(null);
-  };
-
-  const handleBackToDashboard = () => {
-    setCurrentView('dashboard');
-    setSelectedCaseId(null);
-  };
-
-  const handleNavigate = (view: string) => {
-    // Auto-collapse sidebar for case details view
-    if (view === 'details' || view === 'form') {
-      setSidebarOpen(false);
-    } else {
-      // Auto-expand sidebar for other views if it was collapsed for details
-      setSidebarOpen(true);
-    }
-
-    switch (view) {
-      case 'dashboard':
-        handleBackToDashboard();
-        break;
-      case 'list':
-      case 'cases':
-        handleBackToList();
-        break;
-      case 'form':
-        handleNewCase();
-        break;
-      case 'settings':
-        setCurrentView('settings');
-        setSelectedCaseId(null);
-        break;
-      default:
-        handleBackToDashboard();
-    }
-  };
-
-  const getBreadcrumbTitle = useMemo(() => {
-    if (currentView === 'details' && selectedCase) {
-      return `${selectedCase.person.firstName} ${selectedCase.person.lastName}`;
-    }
-    return undefined;
-  }, [currentView, selectedCase]);
-
-
 
   // Monitor file storage connection status
   // Removed modal visibility effect since useConnectionFlow hook manages it
@@ -443,7 +310,7 @@ const AppContent = memo(function AppContent() {
       currentView={currentView}
       onNavigate={handleNavigate}
       onNewCase={handleNewCase}
-      breadcrumbTitle={getBreadcrumbTitle}
+  breadcrumbTitle={breadcrumbTitle}
       sidebarOpen={sidebarOpen}
       onSidebarOpenChange={setSidebarOpen}
     >

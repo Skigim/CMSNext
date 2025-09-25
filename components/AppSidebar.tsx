@@ -1,3 +1,5 @@
+import { AppView } from "../types/view";
+import { ComponentType } from "react";
 import {
   Sidebar,
   SidebarContent,
@@ -20,8 +22,8 @@ import {
 } from 'lucide-react';
 
 interface AppSidebarProps {
-  currentView: string;
-  onNavigate: (view: string) => void;
+  currentView: AppView;
+  onNavigate: (view: AppView) => void;
   onNewCase: () => void;
 }
 
@@ -30,39 +32,37 @@ export function AppSidebar({
   onNavigate, 
   onNewCase
 }: AppSidebarProps) {
-  const menuItems = [
+  const menuItems: Array<{
+    title: string;
+    icon: ComponentType<{ className?: string }>;
+    navigateTo: AppView;
+    activeViews: AppView[];
+    id: string;
+  }> = [
     {
       title: "Dashboard",
       icon: LayoutDashboard,
-      view: "dashboard",
+      navigateTo: "dashboard",
+      activeViews: ["dashboard"],
       id: "dashboard",
     },
     {
       title: "Cases",
       icon: Users,
-      view: "cases", 
+      navigateTo: "list",
+      activeViews: ["list", "details", "form"],
       id: "cases",
     },
     {
       title: "Settings",
       icon: Settings,
-      view: "settings",
+      navigateTo: "settings",
+      activeViews: ["settings"],
       id: "settings",
     },
   ];
 
-  const isActiveItem = (itemView: string) => {
-    if (itemView === 'dashboard') {
-      return currentView === 'dashboard';
-    }
-    if (itemView === 'cases') {
-      return ['list', 'details', 'form'].includes(currentView);
-    }
-    if (itemView === 'settings') {
-      return currentView === 'settings';
-    }
-    return currentView === itemView;
-  };
+  const isActiveItem = (views: AppView[]) => views.includes(currentView);
 
   return (
     <Sidebar variant="inset">
@@ -81,8 +81,8 @@ export function AppSidebar({
               {menuItems.map((item) => (
                 <SidebarMenuItem key={item.id}>
                   <SidebarMenuButton
-                    onClick={() => onNavigate(item.view)}
-                    isActive={isActiveItem(item.view)}
+                    onClick={() => onNavigate(item.navigateTo)}
+                    isActive={isActiveItem(item.activeViews)}
                   >
                     <item.icon className="h-4 w-4" />
                     <span>{item.title}</span>

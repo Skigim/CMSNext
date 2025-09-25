@@ -9,6 +9,9 @@ export { useCaseManagement } from './useCaseManagement';
 // File system connection flow
 export { useConnectionFlow } from './useConnectionFlow';
 
+// Navigation flow
+export { useNavigationFlow } from './useNavigationFlow';
+
 // Financial item flow
 export { useFinancialItemFlow } from './useFinancialItemFlow';
 
