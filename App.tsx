@@ -1,14 +1,15 @@
 import { useState, useEffect, useCallback, useMemo, memo, lazy, Suspense } from "react";
 import { MainLayout } from "./components/MainLayout";
 import { Toaster } from "./components/ui/sonner";
-import { CaseDisplay, CaseCategory, FinancialItem, NewPersonData, NewCaseRecordData, NewNoteData } from "./types/case";
+import { CaseDisplay, CaseCategory, FinancialItem, NewPersonData, NewCaseRecordData } from "./types/case";
 import { toast } from "sonner";
 import { useFileStorage } from "./contexts/FileStorageContext";
 import { useDataManagerSafe } from "./contexts/DataManagerContext";
-import { useCaseManagement, useNotes } from "./hooks";
+import { useCaseManagement, useConnectionFlow, useFinancialItemFlow, useNoteFlow } from "./hooks";
 import { AppProviders } from "./components/providers/AppProviders";
 import { FileStorageIntegrator } from "./components/providers/FileStorageIntegrator";
 import { ViewRenderer } from "./components/routing/ViewRenderer";
+import { clearFileStorageFlags, updateFileStorageFlags } from "./utils/fileStorageFlags";
 
 // Simplified lazy loading for modals only - more conservative approach
 const FinancialItemModal = lazy(() => import("./components/FinancialItemModal"));
@@ -16,12 +17,6 @@ const NoteModal = lazy(() => import("./components/NoteModal"));
 const ConnectToExistingModal = lazy(() => import("./components/ConnectToExistingModal"));
 
 type View = 'dashboard' | 'list' | 'details' | 'form' | 'settings';
-type ItemFormState = {
-  isOpen: boolean;
-  category?: CaseCategory;
-  item?: FinancialItem;
-  caseId?: string;
-};
 type FormState = {
   previousView: View;
   returnToCaseId?: string;
@@ -48,23 +43,37 @@ const AppContent = memo(function AppContent() {
     setHasLoadedData,
   } = useCaseManagement();
   
-  // Use the secure notes management hook
-  const {
-    noteForm,
-    openAddNote,
-    openEditNote,
-    saveNote: saveNoteHook,
-    deleteNote: deleteNoteHook,
-    closeNoteForm,
-  } = useNotes();
-  
   const [currentView, setCurrentView] = useState<View>('dashboard');
   const [selectedCaseId, setSelectedCaseId] = useState<string | null>(null);
   const [editingCase, setEditingCase] = useState<CaseDisplay | null>(null);
-  const [itemForm, setItemForm] = useState<ItemFormState>({ isOpen: false });
   const [formState, setFormState] = useState<FormState>({ previousView: 'list' });
-  const [showConnectModal, setShowConnectModal] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState<boolean>(true);
+
+  const selectedCase = useMemo(
+    () => cases.find(c => c.id === selectedCaseId),
+    [cases, selectedCaseId],
+  );
+
+  const {
+    showConnectModal,
+    handleChooseNewFolder,
+    handleConnectToExisting,
+    dismissConnectModal,
+  } = useConnectionFlow({
+    isSupported,
+    isConnected,
+    hasStoredHandle,
+    hasLoadedData,
+    connectToFolder,
+    connectToExisting,
+    loadExistingData,
+    service,
+    dataManager,
+    loadCases,
+    setCases,
+    setError,
+    setHasLoadedData,
+  });
   
   // Central file data handler that maintains file provider sync
   const handleFileDataLoaded = useCallback((fileData: any) => {
@@ -104,10 +113,10 @@ const AppContent = memo(function AppContent() {
       setHasLoadedData(true);
       
       // Set baseline - we've now loaded data through the file storage system
-      (window as any).fileStorageDataBaseline = true;
+      updateFileStorageFlags({ dataBaseline: true });
       
       if (casesToSet.length > 0) {
-        (window as any).fileStorageSessionHadData = true;
+        updateFileStorageFlags({ sessionHadData: true });
       }
     } catch (err) {
       console.error('Failed to handle file data loaded:', err);
@@ -117,257 +126,45 @@ const AppContent = memo(function AppContent() {
 
   // Expose the function globally so App component can use it
   useEffect(() => {
-    (window as any).handleFileDataLoaded = handleFileDataLoaded;
+    window.handleFileDataLoaded = handleFileDataLoaded;
     return () => {
-      delete (window as any).handleFileDataLoaded;
+      delete window.handleFileDataLoaded;
     };
   }, [handleFileDataLoaded]);
   
   // Always use file storage - no more API switching
   // Remove old getDataAPI function - replaced by DataManager-only pattern
   
-  // Memoize selectedCase to prevent unnecessary recalculations
-  const selectedCase = useMemo(() => 
-    cases.find(c => c.id === selectedCaseId), 
-    [cases, selectedCaseId]
-  );
+  const {
+    itemForm,
+    openItemForm,
+    closeItemForm,
+    handleDeleteItem: deleteFinancialItem,
+    handleBatchUpdateItem: batchUpdateFinancialItem,
+    handleCreateItem: createFinancialItem,
+  } = useFinancialItemFlow({
+    selectedCase: selectedCase ?? null,
+    setCases,
+    setError,
+  });
+
+  const {
+    noteForm,
+    handleAddNote,
+    handleEditNote,
+    handleDeleteNote,
+    handleSaveNote,
+    handleCancelNoteForm,
+    handleBatchUpdateNote,
+    handleBatchCreateNote,
+  } = useNoteFlow({
+    selectedCase: selectedCase ?? null,
+    cases,
+    setCases,
+    setError,
+  });
 
   // Note: loadCases is now provided by useCaseManagement hook
-
-  const handleChooseNewFolder = useCallback(async (): Promise<boolean> => {
-    try {
-      console.log('[App] handleChooseNewFolder started');
-      
-      if (!isSupported) {
-        toast.error("File System Access API is not supported in this browser");
-        return false;
-      }
-      
-      setError(null);
-      
-      // Always use connectToFolder for new folder selection
-      const success = await connectToFolder();
-      console.log('[App] New folder connection attempt result:', success);
-      if (!success) {
-        toast.error("Failed to connect to new folder");
-        return false;
-      }
-      
-      // Small delay to ensure directory connection is stable
-      await new Promise(resolve => setTimeout(resolve, 150));
-      
-      // Load existing data directly - this will verify the connection works
-      let existingData;
-      try {
-        console.log('[App] Loading existing data from new folder...');
-        existingData = await loadExistingData();
-        console.log('[App] Loaded existing data:', existingData ? `${existingData.cases?.length || 0} cases` : 'null');
-      } catch (loadError) {
-        console.error('[App] Error loading existing data:', loadError);
-        // This is OK for new folders - they might not have data yet
-        existingData = null;
-      }
-
-      if (existingData && Object.keys(existingData).length > 0) {
-        // Found existing data - load it using the same approach as handleConnectToExisting
-        try {
-          console.log('[App] Calling loadCases() for new folder...');
-          const loadedCases = await loadCases();
-          console.log('[App] loadCases() completed for new folder');
-          
-          console.log(`[App] Cases loaded from new folder: ${loadedCases.length} cases`);
-          
-          if (loadedCases.length > 0) {
-            // We have actual data from the file
-            console.log('[App] Setting hasLoadedData=true for non-empty data from new folder');
-            setHasLoadedData(true);
-            setShowConnectModal(false);
-            
-            // Set baseline - we now have established data
-            (window as any).fileStorageDataBaseline = true;
-            (window as any).fileStorageSessionHadData = true;
-            
-            toast.success(`Connected and loaded ${loadedCases.length} cases from new folder`, {
-              id: 'new-folder-success',
-              duration: 3000
-            });
-          } else {
-            // Empty file found
-            console.log('[App] Empty data file found in new folder');
-            setCases([]);
-            setHasLoadedData(true);
-            setShowConnectModal(false);
-            toast.success("Connected to folder with empty data file - ready to add cases!");
-          }
-        } catch (err) {
-          console.error('[App] Error loading cases from new folder:', err);
-          toast.error("Connected to folder but failed to load case data");
-          return false;
-        }
-      } else {
-        // No existing data found - that's fine for new folders
-        console.log('[App] No existing data found in new folder - starting fresh');
-        toast.success("Connected to new folder successfully! Ready to start managing cases.");
-      }
-
-      // Mark as successfully loaded and close modal
-      setHasLoadedData(true);
-      setShowConnectModal(false);
-      
-      // Make sure we notify the file service that we have initial data (even if empty)
-      if (service) {
-        service.notifyDataChange();
-      }
-
-      console.log('[App] handleChooseNewFolder completed successfully');
-      return true;
-    } catch (err) {
-      console.error('[App] handleChooseNewFolder error:', err);
-      toast.error("Failed to connect to new folder");
-      return false;
-    }
-  }, [isSupported, connectToFolder, loadExistingData, service, loadCases, setCases, setError, setHasLoadedData]);
-
-  const handleConnectToExisting = useCallback(async (): Promise<boolean> => {
-    try {
-      console.log('[App] handleConnectToExisting started');
-      
-      // Set flags to prevent any interference from automatic processing
-      window.location.hash = '#connect-to-existing';
-      (window as any).fileStorageInSetupPhase = true;
-      (window as any).fileStorageInConnectionFlow = true;
-      
-      // Temporarily disable autosave during connect flow
-      if (!dataManager) {
-        console.error('[App] DataManager not available');
-        toast.error('Data storage is not available. Please connect to a folder first.');
-        return false;
-      }
-      
-      setError(null);
-      
-      // Use stored directory handle with explicit user permission request
-      const success = hasStoredHandle ? await connectToExisting() : await connectToFolder();
-      console.log('[App] Connection attempt result:', success);
-      if (!success) {
-        toast.error("Failed to connect to directory");
-        return false;
-      }
-      
-      // Small delay to ensure directory connection is stable
-      await new Promise(resolve => setTimeout(resolve, 150));
-      
-      // Load existing data directly - this will verify the connection works
-      let existingData;
-      try {
-        console.log('[App] Loading existing data...');
-        existingData = await loadExistingData();
-        console.log('[App] Loaded existing data:', existingData ? `${existingData.cases?.length || 0} cases` : 'null');
-      } catch (loadError) {
-        console.error('[App] Failed to load existing data:', loadError);
-        throw new Error(`Failed to access connected directory: ${loadError instanceof Error ? loadError.message : 'Unknown error'}`);
-      }
-      
-      // Always initialize with the actual loaded data first
-      const actualData = existingData || { 
-        exported_at: new Date().toISOString(), 
-        total_cases: 0, 
-        cases: [] 
-      };
-      
-      // CRITICAL: Load actual data from file system
-      console.log(`[App] About to load data from file system. Expected from loadExistingData: ${actualData?.cases?.length || actualData?.caseRecords?.length || 0} cases`);
-      
-      // Load cases using DataManager which reads from file system
-      console.log('[App] Calling loadCases()...');
-      const loadedCases = await loadCases();
-      console.log('[App] loadCases() completed');
-      
-      // Use the cases data returned from loadCases()
-      console.log(`[App] Initial file data: ${actualData?.cases?.length || actualData?.caseRecords?.length || 0} records`);
-      console.log(`[App] Cases loaded by DataManager: ${loadedCases.length} cases`);
-      
-      if (loadedCases.length > 0) {
-        // We have actual data from the file
-        console.log('[App] Setting cases and hasLoadedData=true for non-empty data');
-        // Cases are already set by loadCases(), no need to set again
-        setHasLoadedData(true);
-        setShowConnectModal(false);
-        
-        // Set baseline - we now have established data
-        (window as any).fileStorageDataBaseline = true;
-        (window as any).fileStorageSessionHadData = true;
-        
-        toast.success(`Connected and loaded ${loadedCases.length} cases`, {
-          id: 'connection-success',
-          duration: 3000
-        });
-      } else {
-        // No data in file - start fresh
-        console.log('[App] Setting empty cases and hasLoadedData=true for empty data');
-        setCases([]);
-        setHasLoadedData(true);
-        setShowConnectModal(false);
-        
-        // Set baseline - we've explicitly loaded empty data
-        (window as any).fileStorageDataBaseline = true;
-        
-        toast.success("Connected successfully - ready to start fresh", {
-          id: 'connection-empty',
-          duration: 3000
-        });
-      }
-      
-      console.log('[App] handleConnectToExisting completed successfully');
-      
-      // Clear connection flow flags
-      (window as any).fileStorageInConnectionFlow = false;
-      (window as any).fileStorageInSetupPhase = false;
-      
-      return true;
-    } catch (error) {
-      console.error('Failed to connect and load data:', error);
-      
-      let errorMsg = 'Failed to connect and load existing data. Please try again.';
-      
-      // Provide more specific error messages
-      if (error instanceof Error) {
-        if (error.message.includes('User activation')) {
-          errorMsg = 'Directory selection was cancelled. Please try again.';
-        } else if (error.message.includes('permission')) {
-          errorMsg = 'Permission denied for the selected directory. Please choose a different folder.';
-        } else if (error.message.includes('connection')) {
-          errorMsg = 'Lost connection to directory. Please reconnect and try again.';
-        } else if (error.message.includes('AbortError')) {
-          errorMsg = 'Directory selection was cancelled.';
-          // Don't show error toast for cancellation
-          return false;
-        }
-      }
-      
-      setError(errorMsg);
-      toast.error(errorMsg);
-      return false;
-    } finally {
-      // Clear setup phase flags
-      (window as any).fileStorageInSetupPhase = false;
-      (window as any).fileStorageInConnectionFlow = false;
-      
-      // Re-enable autosave if it was running before
-      if (service && !service.getStatus().isRunning) {
-        setTimeout(() => {
-          service.startAutosave();
-        }, 500);
-      }
-      
-      // Always clear the flag and loading state (with small delay to ensure stability)
-      setTimeout(() => {
-        if (window.location.hash === '#connect-to-existing') {
-          window.location.hash = '';
-        }
-      }, 300);
-    }
-  }, [hasStoredHandle, connectToExisting, connectToFolder, loadExistingData, dataManager, service, loadCases, setCases, setError, setHasLoadedData]);
 
   const handleViewCase = useCallback((caseId: string) => {
     setSelectedCaseId(caseId);
@@ -444,246 +241,33 @@ const AppContent = memo(function AppContent() {
     setFormState({ previousView: 'list' });
   }, [formState]);
 
-  const handleAddItem = (category: CaseCategory) => {
-    setItemForm({
-      isOpen: true,
-      category,
-      caseId: selectedCaseId || undefined
-    });
-  };
+  const handleAddItem = useCallback(
+    (category: CaseCategory) => {
+      openItemForm(category);
+    },
+    [openItemForm],
+  );
 
-  const handleDeleteItem = async (category: CaseCategory, itemId: string) => {
-    if (!selectedCase || !dataManager) {
-      if (!dataManager) {
-        const errorMsg = 'Data storage is not available. Please check your connection.';
-        setError(errorMsg);
-        toast.error(errorMsg);
-      }
-      return;
-    }
-    
-    try {
-      setError(null);
-      const updatedCase = await dataManager.deleteItem(selectedCase.id, category, itemId);
-      setCases(prevCases =>
-        prevCases.map(c =>
-          c.id === selectedCase.id ? updatedCase : c
-        )
-      );
-      
-      toast.success(`${category.charAt(0).toUpperCase() + category.slice(1)} item deleted successfully`);
-      
-      // DataManager handles file system persistence automatically
-    } catch (err) {
-      console.error('Failed to delete item:', err);
-      const errorMsg = 'Failed to delete item. Please try again.';
-      setError(errorMsg);
-      toast.error(errorMsg);
-    }
-  };
+  const handleDeleteItem = useCallback(
+    (category: CaseCategory, itemId: string) => deleteFinancialItem(category, itemId),
+    [deleteFinancialItem],
+  );
 
-  const handleBatchUpdateItem = async (category: CaseCategory, itemId: string, updatedItem: Partial<FinancialItem>) => {
-    if (!selectedCase || !dataManager) {
-      if (!dataManager) {
-        const errorMsg = 'Data storage is not available. Please check your connection.';
-        setError(errorMsg);
-        toast.error(errorMsg);
-      }
-      return;
-    }
+  const handleBatchUpdateItem = useCallback(
+    (category: CaseCategory, itemId: string, updatedItem: Partial<FinancialItem>) =>
+      batchUpdateFinancialItem(category, itemId, updatedItem),
+    [batchUpdateFinancialItem],
+  );
 
-    try {
-      setError(null);
-      
-      // Single update operation for all fields
-      const updatedCase = await dataManager.updateItem(selectedCase.id, category, itemId, updatedItem as Omit<FinancialItem, 'id' | 'createdAt' | 'updatedAt'>);
-      setCases(prevCases =>
-        prevCases.map(c =>
-          c.id === selectedCase.id ? updatedCase : c
-        )
-      );
-      
-      // Single success message for the batch update
-      toast.success('Item updated successfully', { duration: 2000 });
-      
-      // DataManager handles file system persistence automatically
-    } catch (err) {
-      console.error('Failed to update item:', err);
-      
-      // Provide specific error messaging based on error type
-      let errorMsg = 'Failed to update item. Please try again.';
-      if (err instanceof Error) {
-        if (err.message.includes('File was modified by another process')) {
-          errorMsg = 'File was modified by another process. Your changes were not saved. Please refresh and try again.';
-        } else if (err.message.includes('Permission denied')) {
-          errorMsg = 'Permission denied. Please check that you have write access to the data folder.';
-        } else if (err.message.includes('state cached in an interface object') || 
-                   err.message.includes('state had changed')) {
-          errorMsg = 'Data sync issue detected. Please refresh the page and try again.';
-        }
-      }
-      
-      setError(errorMsg);
-      toast.error(errorMsg, { duration: 5000 });
-      throw err; // Re-throw to let the component handle fallback
-    }
-  };
+  const handleCreateItem = useCallback(
+    (category: CaseCategory, itemData: Omit<FinancialItem, 'id' | 'createdAt' | 'updatedAt'>) =>
+      createFinancialItem(category, itemData),
+    [createFinancialItem],
+  );
 
-  const handleCreateItem = async (category: CaseCategory, itemData: Omit<FinancialItem, 'id' | 'createdAt' | 'updatedAt'>) => {
-    if (!selectedCase || !dataManager) {
-      if (!dataManager) {
-        const errorMsg = 'Data storage is not available. Please check your connection.';
-        setError(errorMsg);
-        toast.error(errorMsg);
-      }
-      return;
-    }
-
-    try {
-      setError(null);
-      
-      const updatedCase = await dataManager.addItem(selectedCase.id, category, itemData);
-      setCases(prevCases =>
-        prevCases.map(c =>
-          c.id === selectedCase.id ? updatedCase : c
-        )
-      );
-      
-      toast.success('Item created successfully', { duration: 2000 });
-      
-      // DataManager handles file system persistence automatically
-    } catch (err) {
-      console.error('Failed to create item:', err);
-      const errorMsg = 'Failed to create item. Please try again.';
-      setError(errorMsg);
-      toast.error(errorMsg);
-      throw err; // Re-throw to let the component handle fallback
-    }
-  };
-
-  const handleCancelItemForm = () => {
-    setItemForm({ isOpen: false });
-  };
-
-  const handleAddNote = () => {
-    if (!selectedCase) return;
-    openAddNote(selectedCase.id);
-  };
-
-  const handleEditNote = (noteId: string) => {
-    if (!selectedCase) return;
-    openEditNote(selectedCase.id, noteId, cases);
-  };
-
-  const handleDeleteNote = async (noteId: string) => {
-    if (!selectedCase) return;
-    
-    try {
-      const updatedCase = await deleteNoteHook(selectedCase.id, noteId);
-      if (updatedCase) {
-        setCases(prevCases =>
-          prevCases.map(c =>
-            c.id === selectedCase.id ? updatedCase : c
-          )
-        );
-      }
-    } catch (err) {
-      // Error handling is done in the hook
-      console.error('Failed to delete note in handleDeleteNote wrapper:', err);
-    }
-  };
-
-  const handleBatchUpdateNote = async (noteId: string, updatedNote: NewNoteData) => {
-    if (!selectedCase || !dataManager) {
-      if (!dataManager) {
-        const errorMsg = 'Data storage is not available. Please check your connection.';
-        setError(errorMsg);
-        toast.error(errorMsg);
-      }
-      return;
-    }
-
-    try {
-      setError(null);
-      
-      // Single update operation for note
-      const updatedCase = await dataManager.updateNote(selectedCase.id, noteId, updatedNote);
-      setCases(prevCases =>
-        prevCases.map(c =>
-          c.id === selectedCase.id ? updatedCase : c
-        )
-      );
-      
-      // Success message for the batch update
-      toast.success('Note updated successfully', { duration: 2000 });
-      
-    } catch (err) {
-      console.error('Failed to update note:', err);
-      
-      // Provide specific error messaging based on error type
-      let errorMsg = 'Failed to update note. Please try again.';
-      if (err instanceof Error) {
-        if (err.message.includes('File was modified by another process')) {
-          errorMsg = 'File was modified by another process. Your changes were not saved. Please refresh and try again.';
-        } else if (err.message.includes('Permission denied')) {
-          errorMsg = 'Permission denied. Please check that you have write access to the data folder.';
-        } else if (err.message.includes('state cached in an interface object') || 
-                   err.message.includes('state had changed')) {
-          errorMsg = 'Data sync issue detected. Please refresh the page and try again.';
-        }
-      }
-      
-      setError(errorMsg);
-      toast.error(errorMsg, { duration: 5000 });
-      throw err; // Re-throw to let the component handle fallback
-    }
-  };
-
-  const handleBatchCreateNote = async (noteData: NewNoteData) => {
-    if (!selectedCase || !dataManager) {
-      if (!dataManager) {
-        const errorMsg = 'Data storage is not available. Please check your connection.';
-        setError(errorMsg);
-        toast.error(errorMsg);
-      }
-      return;
-    }
-
-    try {
-      setError(null);
-      
-      // Single create operation for note
-      const updatedCase = await dataManager.addNote(selectedCase.id, noteData);
-      setCases(prevCases =>
-        prevCases.map(c =>
-          c.id === selectedCase.id ? updatedCase : c
-        )
-      );
-      
-      // Success message for the creation
-      toast.success('Note added successfully', { duration: 2000 });
-      
-    } catch (err) {
-      console.error('Failed to create note:', err);
-      
-      // Provide specific error messaging based on error type
-      let errorMsg = 'Failed to create note. Please try again.';
-      if (err instanceof Error) {
-        if (err.message.includes('File was modified by another process')) {
-          errorMsg = 'File was modified by another process. Your note was not saved. Please refresh and try again.';
-        } else if (err.message.includes('Permission denied')) {
-          errorMsg = 'Permission denied. Please check that you have write access to the data folder.';
-        } else if (err.message.includes('state cached in an interface object') || 
-                   err.message.includes('state had changed')) {
-          errorMsg = 'Data sync issue detected. Please refresh the page and try again.';
-        }
-      }
-      
-      setError(errorMsg);
-      toast.error(errorMsg, { duration: 5000 });
-      throw err; // Re-throw to let the component handle fallback
-    }
-  };
+  const handleCancelItemForm = useCallback(() => {
+    closeItemForm();
+  }, [closeItemForm]);
 
   const handleDeleteCase = useCallback(async (caseId: string) => {
     try {
@@ -700,36 +284,15 @@ const AppContent = memo(function AppContent() {
     }
   }, [deleteCase, selectedCaseId, setCurrentView, setSelectedCaseId]);
 
-  const handleSaveNote = useCallback(async (noteData: NewNoteData) => {
-    try {
-      const updatedCase = await saveNoteHook(noteData);
-      if (updatedCase) {
-        setCases(prevCases =>
-          prevCases.map(c =>
-            c.id === updatedCase.id ? updatedCase : c
-          )
-        );
-      }
-    } catch (err) {
-      // Error handling is done in the hook
-      console.error('Failed to save note in handleSaveNote wrapper:', err);
-    }
-  }, [saveNoteHook, setCases]);
-
-  const handleCancelNoteForm = () => {
-    closeNoteForm();
-  };
-
   const handleDataPurged = async () => {
     try {
       setError(null);
       // Clear local state only - do not reload data after purge
       setCases([]);
-      setHasLoadedData(false);
-      
-      // Clear baseline flags - we're starting fresh
-      delete (window as any).fileStorageDataBaseline;
-      delete (window as any).fileStorageSessionHadData;
+    setHasLoadedData(false);
+
+    // Clear baseline flags - we're starting fresh
+    clearFileStorageFlags('dataBaseline', 'sessionHadData');
       
       toast.success("All data has been purged successfully");
     } catch (err) {
@@ -815,44 +378,7 @@ const AppContent = memo(function AppContent() {
 
 
   // Monitor file storage connection status
-  useEffect(() => {
-    console.log('[App] Connection status check:', {
-      isSupported,
-      isConnected,
-      hasLoadedData,
-      showConnectModal
-    });
-    
-    const timeoutId = setTimeout(() => {
-      // Check if File System Access API is not supported
-      if (isSupported === false) {
-        setError('File System Access API is not supported in this browser. Please use a modern browser like Chrome, Edge, or Opera.');
-        return;
-      }
-      
-      // Only proceed if we have a definitive support status
-      if (isSupported === undefined) {
-        console.log('[App] Still initializing file system support...');
-        return; // Still initializing
-      }
-      
-      // For file storage mode, check if setup is needed
-      if (isSupported && !isConnected && !hasLoadedData) {
-        console.log('[App] Showing connect modal: not connected and no data loaded');
-        setShowConnectModal(true);
-      } else if (isConnected && !hasLoadedData) {
-        // Directory connected but no data loaded yet - show modal for user to load
-        console.log('[App] Showing connect modal: connected but no data loaded');
-        setShowConnectModal(true);
-      } else if (isConnected && hasLoadedData) {
-        // Everything is set up and ready
-        console.log('[App] Hiding connect modal: connected and data loaded');
-        setShowConnectModal(false);
-      }
-    }, 100); // Small delay to prevent excessive re-renders
-
-    return () => clearTimeout(timeoutId);
-  }, [isSupported, isConnected, hasLoadedData, setError, showConnectModal]);
+  // Removed modal visibility effect since useConnectionFlow hook manages it
 
   // Show connect to existing modal if needed
   if (showConnectModal) {
@@ -880,7 +406,7 @@ const AppContent = memo(function AppContent() {
             onConnectToExisting={handleConnectToExisting}
             onChooseNewFolder={handleChooseNewFolder}
             onGoToSettings={() => {
-              setShowConnectModal(false);
+              dismissConnectModal();
               setHasLoadedData(true); // Mark as handled
               handleNavigate('settings');
             }}
@@ -969,7 +495,7 @@ const AppContent = memo(function AppContent() {
                   c.id === updatedCase.id ? updatedCase : c
                 )
               );
-              setItemForm({ isOpen: false });
+              closeItemForm();
             }}
             itemType={itemForm.category}
             editingItem={itemForm.item}

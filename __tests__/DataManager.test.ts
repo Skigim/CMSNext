@@ -116,6 +116,31 @@ describe('DataManager', () => {
 
       await expect(dataManager.getAllCases()).rejects.toThrow('Failed to read case data: Unknown error')
     })
+
+    it('should normalize notes missing identifiers when reading cases', async () => {
+      const legacyCase = createMockCaseDisplay()
+      const timestamp = new Date().toISOString()
+
+      legacyCase.caseRecord.notes = [
+        { id: '', category: '', content: 'Legacy note', createdAt: '', updatedAt: '' } as any,
+        { id: undefined as any, category: 'General', content: 'Second legacy note', createdAt: timestamp, updatedAt: '' } as any,
+      ]
+
+      mockAutosaveService.readFile.mockResolvedValue({
+        cases: [legacyCase],
+        exported_at: new Date().toISOString(),
+        total_cases: 1,
+      })
+
+      const cases = await dataManager.getAllCases()
+
+      expect(cases).toHaveLength(1)
+      expect(cases[0].caseRecord.notes.every(note => typeof note.id === 'string' && note.id.trim().length > 0)).toBe(true)
+      expect(mockAutosaveService.writeFile).toHaveBeenCalledTimes(1)
+
+      const writePayload = mockAutosaveService.writeFile.mock.calls[0][0]
+      expect(writePayload.cases[0].caseRecord.notes.every((note: any) => typeof note.id === 'string' && note.id.trim().length > 0)).toBe(true)
+    })
   })
 
   describe('writeFileData validation', () => {

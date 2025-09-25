@@ -25,13 +25,15 @@ This plan realigns the roadmap around those themes while preserving the filesyst
 
 ### Phase 1 · Component Decomposition (In Progress)
 - **App shell extraction**
-  - Split `AppContent` into navigation, connection/onboarding, and case workspace modules.
-  - Isolate `useEffect` chains into dedicated hooks (`useConnectionFlow`, `useImportListeners`) to reduce dependency-array churn.
+  - ✅ Extracted connection and onboarding responsibilities into `useConnectionFlow`, trimming modal wiring out of `App.tsx`.
+  - ✅ Ported note modal and CRUD logic into `useNoteFlow`, keeping case state updates centralized and predictable.
+  - 🔄 Next: Split `AppContent` into navigation, connection/onboarding, and case workspace modules, and migrate import listeners into a `useImportListeners` hook to reduce dependency-array churn.
 - **Financial workflows**
-  - Break `FinancialItemCard.tsx` into view, edit form, skeleton management, and list controller components.
-  - Move shared create/update helpers into `hooks/useFinancialItems.ts` to separate UI from data mutations.
+  - ✅ Moved financial item modal orchestration into `useFinancialItemFlow`, aligning CRUD handlers with the DataManager pattern.
+  - 🔄 Next: Break `FinancialItemCard.tsx` into view, edit form, skeleton management, and list controller components, moving shared create/update helpers into `hooks/useFinancialItems.ts`.
 
 **Success metric:** both files < 400 lines with clear ownership boundaries and unit coverage for new hooks/components.
+**Progress check:** `App.tsx` now delegates connection, financial item, and note flows to dedicated hooks; upcoming work focuses on navigation/layout state and the financial card breakup.
 
 ### Phase 2 · Testing Expansion (Planned)
 - Add React Testing Library suites for `CaseForm`, `FinancialItemCard`, and `ConnectToExistingModal`, covering happy paths, validation errors, and cancellation flows.

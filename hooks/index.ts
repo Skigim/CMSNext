@@ -6,6 +6,15 @@
 // Case management operations
 export { useCaseManagement } from './useCaseManagement';
 
+// File system connection flow
+export { useConnectionFlow } from './useConnectionFlow';
+
+// Financial item flow
+export { useFinancialItemFlow } from './useFinancialItemFlow';
+
+// Note flow
+export { useNoteFlow } from './useNoteFlow';
+
 // Note management operations  
 export { useNotes } from './useNotes';
 

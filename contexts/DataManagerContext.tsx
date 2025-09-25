@@ -14,13 +14,17 @@ interface DataManagerProviderProps {
 
 export function DataManagerProvider({ children }: DataManagerProviderProps) {
   const { service, isConnected, status } = useFileStorage();
+  const persistNormalizationFixes = import.meta.env.VITE_PERSIST_NORMALIZATION_FIXES !== 'false';
   
   // Memoize DataManager creation to prevent recreation on every render
   const dataManager = useMemo(() => {
     if (!service) return null;
     console.log('[DataManagerProvider] Creating new DataManager instance for service running:', service?.getStatus?.()?.isRunning || false);
-    return new DataManager({ fileService: service });
-  }, [service]); // Only recreate when service changes
+    return new DataManager({
+      fileService: service,
+      persistNormalizationFixes,
+    });
+  }, [persistNormalizationFixes, service]); // Only recreate when service changes or config toggles
 
   console.log('[DataManagerProvider] Render:', {
     hasService: !!service,
