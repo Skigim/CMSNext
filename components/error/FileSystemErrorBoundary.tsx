@@ -1,6 +1,6 @@
 import React, { Component, ReactNode } from 'react';
 import { toast } from 'sonner';
-import { errorReporting } from '../utils/errorReporting';
+import { errorReporting } from '@/utils/errorReporting';
 
 interface FileSystemErrorBoundaryProps {
   children: ReactNode;

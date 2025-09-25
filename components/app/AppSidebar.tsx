@@ -1,4 +1,4 @@
-import { AppView } from "../types/view";
+import { AppView } from "@/types/view";
 import { ComponentType } from "react";
 import {
   Sidebar,
@@ -11,7 +11,7 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
-} from "./ui/sidebar";
+} from "@/components/ui/sidebar";
 import { ThemeToggle } from './ThemeToggle';
 import { 
   LayoutDashboard, 

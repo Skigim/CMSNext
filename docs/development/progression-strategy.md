@@ -27,13 +27,14 @@ This plan realigns the roadmap around those themes while preserving the filesyst
 - **App shell extraction**
   - ✅ Extracted connection and onboarding responsibilities into `useConnectionFlow`, trimming modal wiring out of `App.tsx`.
   - ✅ Ported note modal and CRUD logic into `useNoteFlow`, keeping case state updates centralized and predictable.
+  - ✅ Introduced `useNavigationFlow`, which centralizes view/sidebar handling and drops `App.tsx` to 397 lines (beating the interim < 450 target and landing under the long-term < 400 goal).
   - 🔄 Next: Split `AppContent` into navigation, connection/onboarding, and case workspace modules, and migrate import listeners into a `useImportListeners` hook to reduce dependency-array churn.
 - **Financial workflows**
   - ✅ Moved financial item modal orchestration into `useFinancialItemFlow`, aligning CRUD handlers with the DataManager pattern.
   - 🔄 Next: Break `FinancialItemCard.tsx` into view, edit form, skeleton management, and list controller components, moving shared create/update helpers into `hooks/useFinancialItems.ts`.
 
-**Success metric:** bring `App.tsx` down from ~530 lines to < 450 after the navigation split, with a follow-up target of < 400 once the financial card breakup lands; keep `FinancialItemCard.tsx` < 400 lines post-refactor, with unit coverage for the new hooks/components.
-**Progress check:** `App.tsx` now delegates connection, financial item, and note flows to dedicated hooks; upcoming work focuses on navigation/layout state and the financial card breakup.
+**Success metric:** maintain `App.tsx` at or below the current 397-line footprint while finishing the workspace split, and drive `FinancialItemCard.tsx` to < 400 lines post-refactor with unit coverage for the new hooks/components.
+**Progress check:** `App.tsx` now delegates navigation, connection, financial item, and note flows to dedicated hooks; upcoming work focuses on carving out the remaining workspace modules and executing the financial card breakup.
 
 ### Phase 2 · Testing Expansion (Planned)
 - Add React Testing Library suites for `CaseForm`, `FinancialItemCard`, and `ConnectToExistingModal`, covering happy paths, validation errors, and cancellation flows.

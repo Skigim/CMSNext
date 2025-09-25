@@ -1,10 +1,10 @@
 import { useState } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
-import { Button } from './ui/button';
-import { Badge } from './ui/badge';
-import { ScrollArea } from './ui/scroll-area';
-import { Separator } from './ui/separator';
-import { Alert, AlertDescription } from './ui/alert';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Separator } from '@/components/ui/separator';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { 
   Bug, 
   Download, 
@@ -17,7 +17,7 @@ import {
   ChevronRight,
   Tag
 } from 'lucide-react';
-import { useErrorReporting } from '../utils/errorReporting';
+import { useErrorReporting } from '@/utils/errorReporting';
 import { toast } from 'sonner';
 
 export function ErrorReportViewer() {

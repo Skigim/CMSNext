@@ -1,13 +1,13 @@
-import { Button } from "./ui/button";
-import { Badge } from "./ui/badge";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "./ui/alert-dialog";
-import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "./ui/resizable";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
+import { Button } from "../ui/button";
+import { Badge } from "../ui/badge";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "../ui/alert-dialog";
+import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "../ui/resizable";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
 import { CaseSection } from "./CaseSection";
 import { NotesSection } from "./NotesSection";
-import { CaseDisplay, CaseCategory, FinancialItem, NewNoteData } from "../types/case";
+import { CaseDisplay, CaseCategory, FinancialItem, NewNoteData } from "../../types/case";
 import { ArrowLeft, Edit2, Trash2, Landmark, Wallet, Receipt } from "lucide-react";
-import { withDataErrorBoundary } from "./ErrorBoundaryHOC";
+import { withDataErrorBoundary } from "../error/ErrorBoundaryHOC";
 
 interface CaseDetailsProps {
   case: CaseDisplay;

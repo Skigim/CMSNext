@@ -1,16 +1,16 @@
 import { useState, useEffect, useRef } from 'react';
-import { Button } from "./ui/button";
-import { Input } from "./ui/input";
-import { Label } from "./ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
-import { Textarea } from "./ui/textarea";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "./ui/tooltip";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "./ui/dropdown-menu";
-import { FinancialItem, CaseCategory } from "../types/case";
+import { Button } from "../ui/button";
+import { Input } from "../ui/input";
+import { Label } from "../ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
+import { Textarea } from "../ui/textarea";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "../ui/tooltip";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "../ui/dropdown-menu";
+import { FinancialItem, CaseCategory } from "../../types/case";
 import { Trash2, Check, X, Plus, StickyNote, Landmark, Wallet, Receipt, ChevronDown } from "lucide-react";
-import { formatAccountNumber, getDisplayAmount, parseNumericInput } from "../utils/financialFormatters";
-import { getVerificationStatusInfo, shouldShowVerificationSource, updateVerificationStatus } from "../utils/verificationStatus";
-import { getNormalizedItem, getNormalizedFormData } from "../utils/dataNormalization";
+import { formatAccountNumber, getDisplayAmount, parseNumericInput } from "../../utils/financialFormatters";
+import { getVerificationStatusInfo, shouldShowVerificationSource, updateVerificationStatus } from "../../utils/verificationStatus";
+import { getNormalizedItem, getNormalizedFormData } from "../../utils/dataNormalization";
 
 interface FinancialItemCardProps {
   item: FinancialItem;

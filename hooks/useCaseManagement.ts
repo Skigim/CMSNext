@@ -1,11 +1,11 @@
 import { useState, useCallback } from 'react';
 import { toast } from 'sonner';
-import { CaseDisplay, NewPersonData, NewCaseRecordData, NewNoteData } from '../types/case';
-import { useDataManagerSafe } from '../contexts/DataManagerContext';
+import { CaseDisplay, NewPersonData, NewCaseRecordData, NewNoteData } from '@/types/case';
+import { useDataManagerSafe } from '@/contexts/DataManagerContext';
 import {
   getFileStorageFlags,
   updateFileStorageFlags,
-} from '../utils/fileStorageFlags';
+} from '@/utils/fileStorageFlags';
 
 interface UseCaseManagementReturn {
   // State

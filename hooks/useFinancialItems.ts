@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react';
-import { FinancialItem, NewFinancialItemData, CaseCategory } from '../types/case';
-import { useDataManagerSafe } from '../contexts/DataManagerContext';
+import { FinancialItem, NewFinancialItemData, CaseCategory } from '@/types/case';
+import { useDataManagerSafe } from '@/contexts/DataManagerContext';
 import { toast } from 'sonner';
 
 /**

@@ -1,7 +1,7 @@
 import { Moon, Sun, Palette, Check } from 'lucide-react';
-import { Button } from './ui/button';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from './ui/dropdown-menu';
-import { useTheme } from '../contexts/ThemeContext';
+import { Button } from '@/components/ui/button';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
+import { useTheme } from '@/contexts/ThemeContext';
 
 export function ThemeToggle() {
   const { theme, toggleTheme, setTheme, themeOptions } = useTheme();

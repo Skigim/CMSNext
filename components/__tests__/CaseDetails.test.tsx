@@ -1,7 +1,7 @@
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { CaseDetails } from '../CaseDetails';
-import type { CaseDisplay } from '../../types/case';
+import { CaseDetails } from '@/components/case/CaseDetails';
+import type { CaseDisplay } from '@/types/case';
 
 // Mock dependencies to focus on memory management
 vi.mock('../ui/button', () => ({

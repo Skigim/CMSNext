@@ -1,12 +1,12 @@
 import { useState } from "react";
-import { Button } from "./ui/button";
-import { Input } from "./ui/input";
+import { Button } from "../ui/button";
+import { Input } from "../ui/input";
 import { CaseCard } from "./CaseCard";
-import { VirtualCaseList } from "./VirtualCaseList";
-import { CaseDisplay } from "../types/case";
-import { setupSampleData } from "../utils/setupData";
+import { VirtualCaseList } from "../app/VirtualCaseList";
+import { CaseDisplay } from "../../types/case";
+import { setupSampleData } from "../../utils/setupData";
 import { Plus, Search, Database, List, Grid } from "lucide-react";
-import { Toggle } from "./ui/toggle";
+import { Toggle } from "../ui/toggle";
 
 interface CaseListProps {
   cases: CaseDisplay[];

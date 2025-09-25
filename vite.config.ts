@@ -18,7 +18,7 @@ export default defineConfig({
   base: process.env.NODE_ENV === 'production' ? '/CMSNext/' : '/',
   resolve: {
     alias: {
-      '@': new URL('./src', import.meta.url).pathname,
+      '@': new URL('./', import.meta.url).pathname,
     },
   },
   server: {

@@ -1,5 +1,5 @@
 import { vi } from 'vitest'
-import { CaseDisplay, FinancialItem, Note, Person, CaseRecord, CaseCategory } from '../../types/case'
+import { CaseDisplay, FinancialItem, Note, Person, CaseRecord, CaseCategory } from '@/types/case'
 
 /**
  * Test data factories for creating mock data objects

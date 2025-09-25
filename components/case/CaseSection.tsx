@@ -1,7 +1,7 @@
-import { Card, CardContent, CardHeader } from "./ui/card";
-import { Button } from "./ui/button";
-import { FinancialItemList } from "./FinancialItemCard";
-import { FinancialItem, CaseCategory } from "../types/case";
+import { Card, CardContent, CardHeader } from "../ui/card";
+import { Button } from "../ui/button";
+import { FinancialItemList } from "../financial/FinancialItemCard";
+import { FinancialItem, CaseCategory } from "../../types/case";
 import { Plus } from "lucide-react";
 import { useRef } from "react";
 

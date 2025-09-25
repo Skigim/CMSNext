@@ -1,5 +1,5 @@
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card";
-import { Button } from "./ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../ui/card";
+import { Button } from "../ui/button";
 import { 
   Users, 
   FileText, 
@@ -8,8 +8,8 @@ import {
   Plus,
   ArrowRight
 } from "lucide-react";
-import { CaseDisplay } from "../types/case";
-import { FileServiceDiagnostic } from "./FileServiceDiagnostic";
+import { CaseDisplay } from "../../types/case";
+import { FileServiceDiagnostic } from "../diagnostics/FileServiceDiagnostic";
 
 interface DashboardProps {
   cases: CaseDisplay[];

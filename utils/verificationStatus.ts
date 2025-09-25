@@ -8,7 +8,7 @@
  * @author GitHub Copilot
  */
 
-import { FinancialItem } from '../types/case';
+import { FinancialItem } from '@/types/case';
 
 export type VerificationStatus = 'Needs VR' | 'VR Pending' | 'AVS Pending' | 'Verified';
 

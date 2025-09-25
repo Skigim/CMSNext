@@ -1,9 +1,9 @@
 import { useState } from "react";
-import { Button } from "./ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card";
-import { useFileStorage } from "../contexts/FileStorageContext";
-import { useDataManagerSafe } from "../contexts/DataManagerContext";
-import { Badge } from "./ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { useFileStorage } from "@/contexts/FileStorageContext";
+import { useDataManagerSafe } from "@/contexts/DataManagerContext";
 
 export function FileServiceDiagnostic() {
   const [diagnosticResult, setDiagnosticResult] = useState<any>(null);

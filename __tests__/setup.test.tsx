@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { render, screen } from '@testing-library/react'
-import { createMockCaseDisplay } from '../src/test/testUtils'
+import { createMockCaseDisplay } from '@/src/test/testUtils'
 
 describe('Testing Setup', () => {
   it('should be able to create mock data', () => {

@@ -1,5 +1,5 @@
 import { useEffect, useCallback, memo, lazy, Suspense } from "react";
-import { MainLayout } from "./components/MainLayout";
+import { MainLayout } from "./components/app/MainLayout";
 import { Toaster } from "./components/ui/sonner";
 import { CaseDisplay, CaseCategory, FinancialItem } from "./types/case";
 import { toast } from "sonner";
@@ -12,9 +12,9 @@ import { ViewRenderer } from "./components/routing/ViewRenderer";
 import { clearFileStorageFlags, updateFileStorageFlags } from "./utils/fileStorageFlags";
 
 // Simplified lazy loading for modals only - more conservative approach
-const FinancialItemModal = lazy(() => import("./components/FinancialItemModal"));
-const NoteModal = lazy(() => import("./components/NoteModal"));
-const ConnectToExistingModal = lazy(() => import("./components/ConnectToExistingModal"));
+const FinancialItemModal = lazy(() => import("./components/modals/FinancialItemModal"));
+const NoteModal = lazy(() => import("./components/modals/NoteModal"));
+const ConnectToExistingModal = lazy(() => import("./components/modals/ConnectToExistingModal"));
 
 // NoteFormState moved to useNotes hook
 

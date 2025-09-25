@@ -1,9 +1,9 @@
 import { ReactNode } from 'react';
-import { AppView } from '../types/view';
-import { SidebarProvider, SidebarInset, SidebarTrigger } from './ui/sidebar';
+import { AppView } from '@/types/view';
+import { SidebarProvider, SidebarInset, SidebarTrigger } from '@/components/ui/sidebar';
 import { AppSidebar } from './AppSidebar';
-import { Separator } from './ui/separator';
-import { Breadcrumb, BreadcrumbItem, BreadcrumbList, BreadcrumbPage } from './ui/breadcrumb';
+import { Separator } from '@/components/ui/separator';
+import { Breadcrumb, BreadcrumbItem, BreadcrumbList, BreadcrumbPage } from '@/components/ui/breadcrumb';
 
 interface MainLayoutProps {
   children: ReactNode;

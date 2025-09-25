@@ -15,7 +15,7 @@
  */
 
 import { generateFullSeedData, validateSeedData, seedDataPresets } from './generateSeedData';
-import type { CaseData } from '../types/case';
+import type { CaseData, CaseRecord, Person } from '../types/case';
 
 // Command line argument parsing
 interface CliOptions {
@@ -164,16 +164,17 @@ const printStats = (data: CaseData): void => {
     cases: data.caseRecords.length,
     priorityCases: data.caseRecords.filter(c => c.priority).length,
     financialItems: data.caseRecords.reduce(
-      (sum, c) => sum + c.financials.resources.length + c.financials.income.length + c.financials.expenses.length,
+      (sum: number, record: CaseRecord) =>
+        sum + record.financials.resources.length + record.financials.income.length + record.financials.expenses.length,
       0
     ),
-    notes: data.caseRecords.reduce((sum, c) => sum + c.notes.length, 0),
-    organizations: new Set(data.people.map(p => p.organizationId)).size,
+    notes: data.caseRecords.reduce((sum: number, record: CaseRecord) => sum + record.notes.length, 0),
+    organizations: new Set(data.people.map((p: Person) => p.organizationId)).size,
     casesByStatus: {
-      'In Progress': data.caseRecords.filter(c => c.status === 'In Progress').length,
-      'Priority': data.caseRecords.filter(c => c.status === 'Priority').length,
-      'Review': data.caseRecords.filter(c => c.status === 'Review').length,
-      'Completed': data.caseRecords.filter(c => c.status === 'Completed').length,
+      'In Progress': data.caseRecords.filter((record: CaseRecord) => record.status === 'In Progress').length,
+      'Priority': data.caseRecords.filter((record: CaseRecord) => record.status === 'Priority').length,
+      'Review': data.caseRecords.filter((record: CaseRecord) => record.status === 'Review').length,
+      'Completed': data.caseRecords.filter((record: CaseRecord) => record.status === 'Completed').length,
     }
   };
   

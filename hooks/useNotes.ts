@@ -1,7 +1,7 @@
 import { useState, useCallback } from 'react';
 import { toast } from 'sonner';
-import { CaseDisplay, Note, NewNoteData } from '../types/case';
-import { useDataManagerSafe } from '../contexts/DataManagerContext';
+import { CaseDisplay, Note, NewNoteData } from '@/types/case';
+import { useDataManagerSafe } from '@/contexts/DataManagerContext';
 
 interface NoteFormState {
   isOpen: boolean;

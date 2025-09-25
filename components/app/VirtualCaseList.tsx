@@ -1,7 +1,7 @@
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { useRef, memo } from 'react';
-import { CaseDisplay } from '../types/case';
-import { CaseCard } from './CaseCard';
+import { CaseDisplay } from '@/types/case';
+import { CaseCard } from '@/components/case/CaseCard';
 
 interface VirtualCaseListProps {
   cases: CaseDisplay[];

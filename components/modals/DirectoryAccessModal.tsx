@@ -1,7 +1,7 @@
 import { useState } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "./ui/dialog";
-import { Button } from "./ui/button";
-import { Alert, AlertDescription } from "./ui/alert";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "../ui/dialog";
+import { Button } from "../ui/button";
+import { Alert, AlertDescription } from "../ui/alert";
 import { FolderOpen, AlertCircle, Loader2 } from "lucide-react";
 
 interface DirectoryAccessModalProps {

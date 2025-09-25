@@ -1,6 +1,6 @@
 import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
-import AutosaveFileService from '../utils/AutosaveFileService';
-import { setFileService } from '../utils/fileServiceProvider';
+import AutosaveFileService from '@/utils/AutosaveFileService';
+import { setFileService } from '@/utils/fileServiceProvider';
 
 interface FileStorageStatus {
   status: string;

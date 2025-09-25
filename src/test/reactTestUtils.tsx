@@ -1,7 +1,7 @@
 import React, { ReactElement } from 'react'
 import { render, RenderOptions, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { AppProviders } from '../../components/providers/AppProviders'
+import { AppProviders } from '@/components/providers/AppProviders'
 import { createMockDataManager, createMockDirectoryHandle } from './testUtils'
 
 /**

@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest'
-import AutosaveFileService from '../utils/AutosaveFileService'
+import AutosaveFileService from '@/utils/AutosaveFileService'
 
 // Mock File System Access API
 const mockShowDirectoryPicker = vi.fn()

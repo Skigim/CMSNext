@@ -1,13 +1,13 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest'
-import { DataManager } from '../utils/DataManager'
-import { createMockCaseDisplay, createMockFinancialItem, createMockNote } from '../src/test/testUtils'
-import AutosaveFileService from '../utils/AutosaveFileService'
+import { DataManager } from '@/utils/DataManager'
+import { createMockCaseDisplay, createMockFinancialItem, createMockNote } from '@/src/test/testUtils'
+import AutosaveFileService from '@/utils/AutosaveFileService'
 
 // Mock the AutosaveFileService
-vi.mock('../utils/AutosaveFileService')
+vi.mock('@/utils/AutosaveFileService')
 
 // Mock the dataTransform module
-vi.mock('../utils/dataTransform', () => ({
+vi.mock('@/utils/dataTransform', () => ({
   transformImportedData: vi.fn((data) => {
     // Mock transformation that returns an array of cases
     if (data.people && data.caseRecords) {

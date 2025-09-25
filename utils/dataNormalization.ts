@@ -12,7 +12,7 @@
  * @author GitHub Copilot
  */
 
-import { FinancialItem } from '../types/case';
+import { FinancialItem } from '@/types/case';
 
 export interface NormalizedItem {
   displayName: string;

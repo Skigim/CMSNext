@@ -1,4 +1,4 @@
-import { useFileStorage } from '../contexts/FileStorageContext';
+import { useFileStorage } from '@/contexts/FileStorageContext';
 import { useState } from 'react';
 
 export function FileStorageDiagnostics() {

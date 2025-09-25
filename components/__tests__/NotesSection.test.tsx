@@ -1,7 +1,7 @@
 import { render, screen } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { NotesSection } from '../NotesSection';
-import type { Note } from '../../types/case';
+import { NotesSection } from '@/components/case/NotesSection';
+import type { Note } from '@/types/case';
 
 // Mock UI components to focus on key generation logic
 vi.mock('../ui/card', () => ({

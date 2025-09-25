@@ -3,13 +3,13 @@
  * Use FinancialItemModal instead for new implementations
  */
 import { useState } from "react";
-import { Button } from "./ui/button";
-import { Input } from "./ui/input";
-import { Label } from "./ui/label";
-import { Textarea } from "./ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
-import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
-import { CaseItem, CaseCategory, NewCaseItemData } from "../types/case";
+import { Button } from "../ui/button";
+import { Input } from "../ui/input";
+import { Label } from "../ui/label";
+import { Textarea } from "../ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
+import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
+import { CaseItem, CaseCategory, NewCaseItemData } from "../../types/case";
 import { X } from "lucide-react";
 
 interface ItemFormProps {

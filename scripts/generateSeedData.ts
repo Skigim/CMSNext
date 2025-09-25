@@ -12,14 +12,14 @@
  * - Import as module: `import { generateFullSeedData } from './scripts/generateSeedData';`
  */
 
-import type { 
-  CaseData, 
-  Person, 
-  CaseRecord, 
-  FinancialItem, 
-  Note, 
-  Address, 
-  MailingAddress 
+import type {
+  CaseData,
+  Person,
+  CaseRecord,
+  FinancialItem,
+  Note,
+  Address,
+  MailingAddress
 } from '../types/case';
 
 // Realistic sample data pools
@@ -377,9 +377,18 @@ export const generateFullSeedData = (numCases: number = 50): CaseData => {
       'Completed': caseRecords.filter(c => c.status === 'Completed').length
     },
     financialsByCategory: {
-      resources: caseRecords.reduce((sum, c) => sum + c.financials.resources.length, 0),
-      income: caseRecords.reduce((sum, c) => sum + c.financials.income.length, 0),
-      expenses: caseRecords.reduce((sum, c) => sum + c.financials.expenses.length, 0)
+      resources: caseRecords.reduce(
+        (sum: number, record: CaseRecord) => sum + record.financials.resources.length,
+        0
+      ),
+      income: caseRecords.reduce(
+        (sum: number, record: CaseRecord) => sum + record.financials.income.length,
+        0
+      ),
+      expenses: caseRecords.reduce(
+        (sum: number, record: CaseRecord) => sum + record.financials.expenses.length,
+        0
+      )
     }
   };
   
@@ -408,14 +417,14 @@ export const seedDataPresets = {
     const data = generateFullSeedData(15);
     
     // Ensure we have some priority cases
-    data.caseRecords.slice(0, 3).forEach(caseRecord => {
+  data.caseRecords.slice(0, 3).forEach((caseRecord: CaseRecord) => {
       caseRecord.priority = true;
       caseRecord.status = 'Priority';
     });
     
     // Ensure we have cases in all statuses
     const statuses: CaseRecord['status'][] = ['In Progress', 'Priority', 'Review', 'Completed'];
-    data.caseRecords.slice(0, 4).forEach((caseRecord, index) => {
+  data.caseRecords.slice(0, 4).forEach((caseRecord: CaseRecord, index: number) => {
       caseRecord.status = statuses[index];
     });
     
@@ -439,14 +448,14 @@ export const validateSeedData = (data: CaseData): { isValid: boolean; errors: st
   }
   
   // Validate people
-  data.people?.forEach((person, index) => {
+  data.people?.forEach((person: Person, index: number) => {
     if (!person.id || !person.firstName || !person.lastName) {
       errors.push(`Person at index ${index} missing required fields`);
     }
   });
   
   // Validate case records
-  data.caseRecords?.forEach((caseRecord, index) => {
+  data.caseRecords?.forEach((caseRecord: CaseRecord, index: number) => {
     if (!caseRecord.id || !caseRecord.personId) {
       errors.push(`Case record at index ${index} missing required fields`);
     }

@@ -1,12 +1,12 @@
 import { useState, useCallback, useMemo } from 'react';
 import { z } from 'zod';
-import { 
-  validatePersonData, 
-  validateCaseRecordData, 
-  validateFinancialItemData, 
+import {
+  validatePersonData,
+  validateCaseRecordData,
+  validateFinancialItemData,
   validateNoteData,
-  ValidationResult 
-} from '../utils/validation';
+  ValidationResult,
+} from '@/utils/validation';
 
 /**
  * Hook for form validation using Zod schemas

@@ -1,18 +1,18 @@
 import { useState } from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card";
-import { Button } from "./ui/button";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
-import { ImportModal } from "./ImportModal";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../ui/card";
+import { Button } from "../ui/button";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
+import { ImportModal } from "../modals/ImportModal";
 
-import { Badge } from "./ui/badge";
-import { Separator } from "./ui/separator";
-import FileStorageSettings from "./FileStorageSettings";
-import { FileStorageDiagnostics } from "./FileStorageDiagnostics";
-import { ErrorBoundaryTest } from "./ErrorBoundaryTest";
-import { ErrorReportViewer } from "./ErrorReportViewer";
-import { FeedbackPanel } from "./ErrorFeedbackForm";
-import { useFileStorage } from "../contexts/FileStorageContext";
-import { useTheme } from "../contexts/ThemeContext";
+import { Badge } from "../ui/badge";
+import { Separator } from "../ui/separator";
+import FileStorageSettings from "../diagnostics/FileStorageSettings";
+import { FileStorageDiagnostics } from "../diagnostics/FileStorageDiagnostics";
+import { ErrorBoundaryTest } from "../error/ErrorBoundaryTest";
+import { ErrorReportViewer } from "../error/ErrorReportViewer";
+import { FeedbackPanel } from "../error/ErrorFeedbackForm";
+import { useFileStorage } from "../../contexts/FileStorageContext";
+import { useTheme } from "../../contexts/ThemeContext";
 import { 
   Upload, 
   Download, 
@@ -27,9 +27,9 @@ import {
   Info,
   Code
 } from "lucide-react";
-import { CaseDisplay } from "../types/case";
+import { CaseDisplay } from "../../types/case";
 import { toast } from "sonner";
-import { useDataManagerSafe } from "../contexts/DataManagerContext";
+import { useDataManagerSafe } from "../../contexts/DataManagerContext";
 
 interface SettingsProps {
   cases: CaseDisplay[];

@@ -1,12 +1,12 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
-import { Button } from './ui/button';
-import { Badge } from './ui/badge';
-import { Switch } from './ui/switch';
-import { Label } from './ui/label';
-import { Separator } from './ui/separator';
-import { Input } from './ui/input';
-import { Alert, AlertDescription } from './ui/alert';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Switch } from '@/components/ui/switch';
+import { Label } from '@/components/ui/label';
+import { Separator } from '@/components/ui/separator';
+import { Input } from '@/components/ui/input';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { 
   FolderOpen, 
   HardDrive, 
@@ -21,9 +21,9 @@ import {
   FileText,
   Upload
 } from 'lucide-react';
-import { useFileStorage } from '../contexts/FileStorageContext';
+import { useFileStorage } from '@/contexts/FileStorageContext';
 import { toast } from "sonner";
-import { withFileSystemErrorBoundary } from './ErrorBoundaryHOC';
+import { withFileSystemErrorBoundary } from '@/components/error/ErrorBoundaryHOC';
 
 export function FileStorageSettings() {
   const { 

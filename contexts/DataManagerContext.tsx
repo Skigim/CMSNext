@@ -1,6 +1,6 @@
 import { useContext, createContext, ReactNode, useMemo } from 'react';
-import DataManager from '../utils/DataManager';
-import { useFileStorage } from './FileStorageContext';
+import DataManager from '@/utils/DataManager';
+import { useFileStorage } from '@/contexts/FileStorageContext';
 
 interface DataManagerContextType {
   dataManager: DataManager | null;

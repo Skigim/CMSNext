@@ -1,5 +1,5 @@
-import { Button } from "./ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card";
+import { Button } from "../ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../ui/card";
 import { Database, FileText, Upload } from "lucide-react";
 
 interface DataLoadPromptProps {

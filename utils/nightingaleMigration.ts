@@ -12,7 +12,7 @@
  * - Normalizes status values to valid enum values
  */
 
-import { CaseDisplay, CaseRecord, Person, FinancialItem, Note, Address } from '../types/case';
+import { CaseDisplay, CaseRecord, Person, FinancialItem, Note, Address } from '@/types/case';
 
 /**
  * Generate a unique ID using crypto.randomUUID() with fallback

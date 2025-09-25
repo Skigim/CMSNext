@@ -1,10 +1,10 @@
 import { useCallback } from "react";
-import { ThemeProvider } from "../../contexts/ThemeContext";
-import { FileStorageProvider } from "../../contexts/FileStorageContext";
-import { DataManagerProvider } from "../../contexts/DataManagerContext";
-import ErrorBoundary from "../ErrorBoundary";
-import FileSystemErrorBoundary from "../FileSystemErrorBoundary";
-import { getFileStorageFlags } from "../../utils/fileStorageFlags";
+import { ThemeProvider } from "@/contexts/ThemeContext";
+import { FileStorageProvider } from "@/contexts/FileStorageContext";
+import { DataManagerProvider } from "@/contexts/DataManagerContext";
+import ErrorBoundary from "@/components/error/ErrorBoundary";
+import FileSystemErrorBoundary from "@/components/error/FileSystemErrorBoundary";
+import { getFileStorageFlags } from "@/utils/fileStorageFlags";
 
 interface AppProvidersProps {
   children: React.ReactNode;
