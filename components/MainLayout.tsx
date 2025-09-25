@@ -1,4 +1,5 @@
 import { ReactNode } from 'react';
+import { AppView } from '../types/view';
 import { SidebarProvider, SidebarInset, SidebarTrigger } from './ui/sidebar';
 import { AppSidebar } from './AppSidebar';
 import { Separator } from './ui/separator';
@@ -6,8 +7,8 @@ import { Breadcrumb, BreadcrumbItem, BreadcrumbList, BreadcrumbPage } from './ui
 
 interface MainLayoutProps {
   children: ReactNode;
-  currentView: string;
-  onNavigate: (view: string) => void;
+  currentView: AppView;
+  onNavigate: (view: AppView) => void;
   onNewCase: () => void;
   breadcrumbTitle?: string;
   sidebarOpen?: boolean;

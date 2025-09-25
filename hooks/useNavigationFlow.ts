@@ -23,7 +23,7 @@ interface NavigationHandlers {
   editingCase: CaseDisplay | null;
   sidebarOpen: boolean;
   breadcrumbTitle?: string;
-  navigate: (view: string) => void;
+  navigate: (view: AppView) => void;
   viewCase: (caseId: string) => void;
   editCase: (caseId: string) => void;
   newCase: () => void;
@@ -160,7 +160,7 @@ export function useNavigationFlow({
   );
 
   const navigate = useCallback(
-    (view: string) => {
+    (view: AppView) => {
       if (view === "details" || view === "form") {
         setSidebarOpen(false);
       } else {
@@ -172,7 +172,6 @@ export function useNavigationFlow({
           backToDashboard();
           break;
         case "list":
-        case "cases":
           backToList();
           break;
         case "form":

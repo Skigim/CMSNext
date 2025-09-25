@@ -1,3 +1,5 @@
+import { AppView } from "../types/view";
+import { ComponentType } from "react";
 import {
   Sidebar,
   SidebarContent,
@@ -20,8 +22,8 @@ import {
 } from 'lucide-react';
 
 interface AppSidebarProps {
-  currentView: string;
-  onNavigate: (view: string) => void;
+  currentView: AppView;
+  onNavigate: (view: AppView) => void;
   onNewCase: () => void;
 }
 
@@ -30,7 +32,12 @@ export function AppSidebar({
   onNavigate, 
   onNewCase
 }: AppSidebarProps) {
-  const menuItems = [
+  const menuItems: Array<{
+    title: string;
+    icon: ComponentType<{ className?: string }>;
+    view: AppView;
+    id: string;
+  }> = [
     {
       title: "Dashboard",
       icon: LayoutDashboard,
@@ -40,7 +47,7 @@ export function AppSidebar({
     {
       title: "Cases",
       icon: Users,
-      view: "cases", 
+      view: "list",
       id: "cases",
     },
     {
@@ -51,16 +58,11 @@ export function AppSidebar({
     },
   ];
 
-  const isActiveItem = (itemView: string) => {
-    if (itemView === 'dashboard') {
-      return currentView === 'dashboard';
-    }
-    if (itemView === 'cases') {
+  const isActiveItem = (itemId: string, itemView: AppView) => {
+    if (itemId === 'cases') {
       return ['list', 'details', 'form'].includes(currentView);
     }
-    if (itemView === 'settings') {
-      return currentView === 'settings';
-    }
+
     return currentView === itemView;
   };
 
@@ -82,7 +84,7 @@ export function AppSidebar({
                 <SidebarMenuItem key={item.id}>
                   <SidebarMenuButton
                     onClick={() => onNavigate(item.view)}
-                    isActive={isActiveItem(item.view)}
+                    isActive={isActiveItem(item.id, item.view)}
                   >
                     <item.icon className="h-4 w-4" />
                     <span>{item.title}</span>
