@@ -1,4 +1,5 @@
 import { CaseDisplay, NewPersonData, NewCaseRecordData } from "../../types/case";
+import { AppView } from "../../types/view";
 
 // Direct imports for high-turnover components - no lazy loading for snappiness
 import Dashboard from "../Dashboard";
@@ -7,7 +8,7 @@ import CaseDetails from "../CaseDetails";
 import CaseForm from "../CaseForm";
 import Settings from "../Settings";
 
-export type View = 'dashboard' | 'list' | 'details' | 'form' | 'settings';
+export type View = AppView;
 
 interface ViewRendererProps {
   // View state
