@@ -161,31 +161,40 @@ export function useNavigationFlow({
 
   const navigate = useCallback(
     (view: AppView) => {
-      if (view === "details" || view === "form") {
-        setSidebarOpen(false);
-      } else {
-        setSidebarOpen(true);
-      }
-
       switch (view) {
         case "dashboard":
+          setSidebarOpen(true);
           backToDashboard();
-          break;
+          return;
         case "list":
+          setSidebarOpen(true);
           backToList();
-          break;
+          return;
+        case "details":
+          if (selectedCaseId) {
+            setSidebarOpen(false);
+            setCurrentView("details");
+          } else {
+            setSidebarOpen(true);
+            backToList();
+          }
+          return;
         case "form":
+          setSidebarOpen(false);
           newCase();
-          break;
+          return;
         case "settings":
+          setSidebarOpen(true);
           setCurrentView("settings");
           setSelectedCaseId(null);
-          break;
-        default:
-          backToDashboard();
+          return;
+        default: {
+          const exhaustiveCheck: never = view;
+          return exhaustiveCheck;
+        }
       }
     },
-    [backToDashboard, backToList, newCase]
+    [backToDashboard, backToList, newCase, selectedCaseId]
   );
 
   return {

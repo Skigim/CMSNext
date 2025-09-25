@@ -35,36 +35,34 @@ export function AppSidebar({
   const menuItems: Array<{
     title: string;
     icon: ComponentType<{ className?: string }>;
-    view: AppView;
+    navigateTo: AppView;
+    activeViews: AppView[];
     id: string;
   }> = [
     {
       title: "Dashboard",
       icon: LayoutDashboard,
-      view: "dashboard",
+      navigateTo: "dashboard",
+      activeViews: ["dashboard"],
       id: "dashboard",
     },
     {
       title: "Cases",
       icon: Users,
-      view: "list",
+      navigateTo: "list",
+      activeViews: ["list", "details", "form"],
       id: "cases",
     },
     {
       title: "Settings",
       icon: Settings,
-      view: "settings",
+      navigateTo: "settings",
+      activeViews: ["settings"],
       id: "settings",
     },
   ];
 
-  const isActiveItem = (itemId: string, itemView: AppView) => {
-    if (itemId === 'cases') {
-      return ['list', 'details', 'form'].includes(currentView);
-    }
-
-    return currentView === itemView;
-  };
+  const isActiveItem = (views: AppView[]) => views.includes(currentView);
 
   return (
     <Sidebar variant="inset">
@@ -83,8 +81,8 @@ export function AppSidebar({
               {menuItems.map((item) => (
                 <SidebarMenuItem key={item.id}>
                   <SidebarMenuButton
-                    onClick={() => onNavigate(item.view)}
-                    isActive={isActiveItem(item.id, item.view)}
+                    onClick={() => onNavigate(item.navigateTo)}
+                    isActive={isActiveItem(item.activeViews)}
                   >
                     <item.icon className="h-4 w-4" />
                     <span>{item.title}</span>
