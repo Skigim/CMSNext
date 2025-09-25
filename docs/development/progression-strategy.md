@@ -32,7 +32,7 @@ This plan realigns the roadmap around those themes while preserving the filesyst
   - ✅ Moved financial item modal orchestration into `useFinancialItemFlow`, aligning CRUD handlers with the DataManager pattern.
   - 🔄 Next: Break `FinancialItemCard.tsx` into view, edit form, skeleton management, and list controller components, moving shared create/update helpers into `hooks/useFinancialItems.ts`.
 
-**Success metric:** both files < 400 lines with clear ownership boundaries and unit coverage for new hooks/components.
+**Success metric:** bring `App.tsx` down from ~530 lines to < 450 after the navigation split, with a follow-up target of < 400 once the financial card breakup lands; keep `FinancialItemCard.tsx` < 400 lines post-refactor, with unit coverage for the new hooks/components.
 **Progress check:** `App.tsx` now delegates connection, financial item, and note flows to dedicated hooks; upcoming work focuses on navigation/layout state and the financial card breakup.
 
 ### Phase 2 · Testing Expansion (Planned)
