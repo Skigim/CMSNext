@@ -49,6 +49,7 @@ export function FileStorageSettings() {
   const [isSaving, setIsSaving] = useState(false);
   const [availableFiles, setAvailableFiles] = useState<string[]>([]);
   const [isLoadingFiles, setIsLoadingFiles] = useState(false);
+  const consecutiveFailures = status?.consecutiveFailures ?? 0;
 
   // Debug current state
   console.log('[FileStorageSettings] Render state:', { 
@@ -474,12 +475,12 @@ export function FileStorageSettings() {
         </div>
 
         {/* Status Information */}
-        {status && status.consecutiveFailures > 0 && (
+        {consecutiveFailures > 0 && (
           <Alert variant="destructive">
             <AlertTriangle className="h-4 w-4" />
             <AlertDescription>
               <strong>Save Issues Detected</strong><br />
-              {status.consecutiveFailures} consecutive save failure(s). Check your folder connection and permissions.
+              {consecutiveFailures} consecutive save failure(s). Check your folder connection and permissions.
             </AlertDescription>
           </Alert>
         )}

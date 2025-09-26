@@ -39,6 +39,13 @@ const AppContent = memo(function AppContent() {
     setHasLoadedData,
   } = useCaseManagement();
   
+  const navigationFlow = useNavigationFlow({
+    cases,
+    connectionState,
+    saveCase,
+    deleteCase,
+  });
+
   const {
     currentView,
     selectedCase,
@@ -54,11 +61,8 @@ const AppContent = memo(function AppContent() {
     deleteCaseWithNavigation: handleDeleteCase,
     backToList: handleBackToList,
     setSidebarOpen,
-  } = useNavigationFlow({
-    cases,
-    saveCase,
-    deleteCase,
-  });
+    navigationLock: _navigationLock,
+  } = navigationFlow;
 
   const {
     showConnectModal,

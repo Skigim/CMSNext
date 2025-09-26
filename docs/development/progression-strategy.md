@@ -30,8 +30,8 @@ This plan realigns the roadmap around those themes while preserving the filesyst
 #### Subphase 3.1 · Storage State Machine
 - ✅ Replace the remaining `window.*` coordination flags with a reducer-backed state machine owned by `FileStorageContext`.
 - ✅ Model the full permission lifecycle (`idle → requesting → ready → blocked`, including `recovering` and `error` branches) so UI consumers can subscribe to stable selectors via `useFileStorageLifecycleSelectors`.
-- ✅ Update hooks (`useConnectionFlow`, `useImportListeners`) to consume the typed state instead of ad-hoc booleans; propagate lifecycle-aware messaging through `useAppContentViewModel`.
-- 🚧 Planned: extend navigation and additional autosave helpers once lifecycle telemetry drives UI decisions.
+- ✅ Update hooks (`useConnectionFlow`, `useNavigationFlow`, `useImportListeners`) to consume the typed state instead of ad-hoc booleans; propagate lifecycle-aware messaging through `useAppContentViewModel` and gate case interactions on lifecycle locks.
+- 🚧 Planned: extend autosave helpers once lifecycle telemetry drives UI decisions.
 - Deliverables: context reducer + action map, TypeScript definitions for storage states, regression tests covering grant/deny/revoke scenarios (**completed**).
 
 **State schema draft**
