@@ -13,10 +13,11 @@ This document provides comprehensive guidance for testing the CMSNext filesystem
 - **@testing-library/jest-dom** - Custom jest matchers
 
 ### **Test Coverage Status**
-- **61 passing tests** across 3 test files
+- **63 passing tests** across 7 suites (unit, component, and integration)
 - **95.91% coverage** on DataManager (38 tests)
 - **20 tests** for AutosaveFileService
-- **3 tests** for setup validation
+- **1 end-to-end connection flow test** exercising the file storage lifecycle
+- **New RTL suites** covering CaseForm, FinancialItemCard, and ConnectToExistingModal
 
 ## 🎯 **Priority Testing Patterns**
 
@@ -33,9 +34,10 @@ const generateContentKey = (content: string, fallbackIndex?: number): string => 
   }
   
   try {
-    // Handle non-Latin-1 characters safely
-    return `content-${btoa(unescape(encodeURIComponent(content.slice(0, 50))))}`;
-  } catch (error) {
+    // Attempt to encode content for key stability (handles Unicode)
+    const encoded = encodeURIComponent(content).replace(/%/g, '');
+    return `content-${encoded.slice(0, 20)}-${fallbackIndex || 0}`;
+  } catch (e) {
     // Fallback for encoding errors
     return `content-${content.slice(0, 20).replace(/[^a-zA-Z0-9]/g, '')}-${fallbackIndex || 0}`;
   }
@@ -158,14 +160,18 @@ describe('File System Integration', () => {
 ### **Current Test Files**
 ```
 __tests__/
-├── AutosaveFileService.test.ts     # File system operations (20 tests)
-├── DataManager.test.ts             # Data CRUD operations (38 tests)  
-├── setup.test.tsx                  # Environment validation (3 tests)
-└── components/
-    ├── __tests__/
-    │   ├── KeyManagement.test.ts   # Key generation patterns
-    │   ├── NotesSection.test.tsx   # Component key management
-    │   └── CaseDetails.test.tsx    # Memory leak prevention
+├── AutosaveFileService.test.ts          # File system operations (20 tests)
+├── DataManager.test.ts                  # Data CRUD operations (38 tests)
+├── setup.test.tsx                       # Environment validation (3 tests)
+├── integration/
+│   └── connectionFlow.test.tsx          # connect → load → edit → save happy path
+└── components/__tests__/
+  ├── CaseDetails.test.tsx             # Memory leak prevention
+  ├── CaseForm.test.tsx                # Form validation + normalization (new)
+  ├── ConnectToExistingModal.test.tsx  # File-storage onboarding UX (new)
+  ├── FinancialItemCard.test.tsx       # Inline edits + verification (new)
+  ├── KeyManagement.test.ts            # Key generation patterns
+  └── NotesSection.test.tsx            # Component key management
 ```
 
 ### **Recommended Test Categories**
@@ -175,8 +181,21 @@ __tests__/
 - **Hook Testing**: Custom hooks with proper mocking
 - **Component Logic**: Pure component behavior without UI integration
 
+## 🧭 **Choosing the Right Testing Approach**
+
+- **React Testing Library (RTL)**
+  - Exercise user-facing workflows end-to-end (e.g., connection onboarding, case editing, modal flows).
+  - Validate component behaviour that depends on context providers, hooks, or browser APIs (File System Access) by stubbing those integrations.
+  - Capture accessibility contracts (labels, roles, focus handling) and regression-proof event wiring.
+- **Headless Vitest Suites**
+  - Cover pure utilities, data normalization, and hooks that operate without DOM dependencies.
+  - Assert business rules, data transformations, and error handling where rendering adds little value.
+- **Integration Hybrids**
+  - Pair RTL with lightweight service doubles (e.g., mock `AutosaveFileService`) when verifying cross-context flows.
+  - Document assumptions inline so filesystem behaviour remains deterministic and repeatable across environments.
+
 #### **2. Integration Tests**
-- **File System Flows**: Complete save/load cycles
+- **File System Flows**: Complete save/load cycles *(happy path covered; add denial/error scenarios next)*
 - **Component Integration**: Parent-child component interactions
 - **Context Integration**: Provider + consumer testing
 
@@ -272,7 +291,7 @@ Current coverage exceeds these targets with **95.91%** on critical components.
 ## 🎯 **Future Testing Expansion**
 
 ### **Phase 4.3: Integration Tests** (Next Priority)
-1. **End-to-End File Workflows**: Complete save/load/edit cycles
+1. **End-to-End File Workflows**: Complete save/load/edit cycles (baseline happy path delivered; cover failures/denials next)
 2. **Multi-Component Integration**: Form submission flows
 3. **Error Recovery Testing**: Network failures, permission changes
 4. **Performance Regression Tests**: Bundle size, load times
@@ -286,7 +305,7 @@ Current coverage exceeds these targets with **95.91%** on critical components.
 
 Current testing infrastructure supports the **A+ (98/100)** quality score mentioned in CodeReview.md:
 
-- ✅ **61 passing tests** with comprehensive coverage
+- ✅ **63 passing tests** with comprehensive coverage
 - ✅ **React key management** patterns validated
 - ✅ **Memory leak prevention** patterns implemented
 - ✅ **File system integration** thoroughly mocked and tested
@@ -296,5 +315,5 @@ The testing foundation is **complete and robust**, positioning the project for t
 
 ---
 
-*Last Updated: September 22, 2025*  
+*Last Updated: September 26, 2025*  
 *Next Review: After Phase 4.3 completion*
