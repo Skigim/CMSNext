@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import type { CaseDisplay } from "../types/case";
 import type AutosaveFileService from "../utils/AutosaveFileService";
@@ -7,12 +7,12 @@ import {
   clearFileStorageFlags,
   updateFileStorageFlags,
 } from "../utils/fileStorageFlags";
+import type { FileStorageLifecycleSelectors } from "../contexts/FileStorageContext";
 
 interface UseConnectionFlowParams {
   isSupported: boolean | undefined;
-  isConnected: boolean;
-  hasStoredHandle: boolean;
   hasLoadedData: boolean;
+  connectionState: FileStorageLifecycleSelectors;
   connectToFolder: () => Promise<boolean>;
   connectToExisting: () => Promise<boolean>;
   loadExistingData: () => Promise<any>;
@@ -33,9 +33,8 @@ interface UseConnectionFlowResult {
 
 export function useConnectionFlow({
   isSupported,
-  isConnected,
-  hasStoredHandle,
   hasLoadedData,
+  connectionState,
   connectToFolder,
   connectToExisting,
   loadExistingData,
@@ -47,6 +46,20 @@ export function useConnectionFlow({
   setHasLoadedData,
 }: UseConnectionFlowParams): UseConnectionFlowResult {
   const [showConnectModal, setShowConnectModal] = useState(false);
+  const lastErrorRef = useRef<number | null>(null);
+
+  const {
+    lifecycle,
+    permissionStatus,
+    isReady,
+    isBlocked,
+    isErrored,
+    isRecovering,
+    isAwaitingUserChoice,
+    hasStoredHandle,
+    isConnected,
+    lastError,
+  } = connectionState;
 
   const handleChooseNewFolder = useCallback(async (): Promise<boolean> => {
     try {
@@ -139,8 +152,7 @@ export function useConnectionFlow({
       }
 
       setError(null);
-
-      const success = hasStoredHandle ? await connectToExisting() : await connectToFolder();
+    const success = hasStoredHandle ? await connectToExisting() : await connectToFolder();
       if (!success) {
         toast.error("Failed to connect to directory");
         return false;
@@ -243,29 +255,81 @@ export function useConnectionFlow({
   ]);
 
   useEffect(() => {
-    const timeoutId = setTimeout(() => {
-      if (isSupported === false) {
-        setError(
-          "File System Access API is not supported in this browser. Please use a modern browser like Chrome, Edge, or Opera.",
-        );
-        return;
-      }
+    if (isSupported === false) {
+      setError(
+        "File System Access API is not supported in this browser. Please use a modern browser like Chrome, Edge, or Opera.",
+      );
+      setShowConnectModal(false);
+      return;
+    }
 
-      if (isSupported === undefined) {
-        return;
-      }
+    if (isSupported === undefined || lifecycle === "uninitialized") {
+      return;
+    }
 
-      if (isSupported && !isConnected && !hasLoadedData) {
-        setShowConnectModal(true);
-      } else if (isConnected && !hasLoadedData) {
-        setShowConnectModal(true);
-      } else if (isConnected && hasLoadedData) {
-        setShowConnectModal(false);
-      }
-    }, 100);
+    if (isBlocked) {
+      setError(
+        permissionStatus === "denied"
+          ? "Permission denied for the selected directory. Please allow access to continue."
+          : "Directory access is currently blocked. Please review permissions and try again.",
+      );
+      setShowConnectModal(true);
+      return;
+    }
 
-    return () => clearTimeout(timeoutId);
-  }, [hasLoadedData, isConnected, isSupported, setError]);
+    if (isErrored && lastError) {
+      setError(lastError.message);
+    } else if (isReady) {
+      setError(null);
+    }
+
+    const shouldPromptConnection = !isReady || !isConnected || isAwaitingUserChoice;
+    const needsDataLoad = isConnected && !hasLoadedData;
+
+    if (!hasLoadedData && (shouldPromptConnection || needsDataLoad)) {
+      setShowConnectModal(true);
+    } else if (isReady && hasLoadedData) {
+      setShowConnectModal(false);
+    }
+  }, [
+    hasLoadedData,
+    isAwaitingUserChoice,
+    isBlocked,
+    isConnected,
+    isErrored,
+    isReady,
+    isSupported,
+    lastError,
+    lifecycle,
+    permissionStatus,
+    setError,
+  ]);
+
+  useEffect(() => {
+    if (!lastError) {
+      return;
+    }
+
+    if (lastErrorRef.current === lastError.timestamp) {
+      return;
+    }
+
+    lastErrorRef.current = lastError.timestamp;
+
+    if (lastError.type === "warning") {
+      toast.warning(lastError.message, { id: "file-storage-warning" });
+    } else {
+      toast.error(lastError.message, { id: "file-storage-error" });
+    }
+  }, [lastError]);
+
+  useEffect(() => {
+    if (isRecovering) {
+      toast.info("File storage is reconnecting…", { id: "file-storage-recovering" });
+    } else {
+      toast.dismiss("file-storage-recovering");
+    }
+  }, [isRecovering]);
 
   const dismissConnectModal = useCallback(() => {
     setShowConnectModal(false);

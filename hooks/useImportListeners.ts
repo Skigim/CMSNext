@@ -4,6 +4,7 @@ import { toast } from "sonner";
 interface UseImportListenersParams {
   loadCases: () => Promise<unknown>;
   setError: React.Dispatch<React.SetStateAction<string | null>>;
+  isStorageReady: boolean;
 }
 
 /**
@@ -14,11 +15,15 @@ interface UseImportListenersParams {
  * - Surface import errors consistently via toast + error banner
  * - Automatically cleans up listeners on unmount
  */
-export function useImportListeners({ loadCases, setError }: UseImportListenersParams) {
+export function useImportListeners({ loadCases, setError, isStorageReady }: UseImportListenersParams) {
   useEffect(() => {
     const handleFileImported = () => {
       // Skip automatic reloads during the connect-to-existing flow
       if (window.location.hash === "#connect-to-existing") {
+        return;
+      }
+
+      if (!isStorageReady) {
         return;
       }
 
@@ -45,5 +50,5 @@ export function useImportListeners({ loadCases, setError }: UseImportListenersPa
       window.removeEventListener("fileDataImported", handleFileImported);
       window.removeEventListener("fileImportError", handleFileImportError as EventListener);
     };
-  }, [loadCases, setError]);
+  }, [isStorageReady, loadCases, setError]);
 }

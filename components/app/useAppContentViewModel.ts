@@ -2,6 +2,7 @@ import { useMemo } from "react";
 import type { AppNavigationConfig } from "./AppNavigationShell";
 import type { AppContentViewProps } from "./AppContentView";
 import type { CaseWorkspaceProps } from "./CaseWorkspace";
+import type { FileStorageLifecycleState } from "../../contexts/FileStorageContext";
 
 interface ConnectionHandlers {
   onConnectToExisting: () => Promise<boolean>;
@@ -15,6 +16,7 @@ export interface AppContentViewModelArgs {
   isSupported?: boolean;
   permissionStatus?: string;
   hasStoredHandle: boolean;
+  lifecycle?: FileStorageLifecycleState;
   navigationState: AppNavigationConfig;
   connectionHandlers: ConnectionHandlers;
   workspaceState: Omit<CaseWorkspaceProps, "navigation">;
@@ -31,17 +33,37 @@ export function useAppContentViewModel({
   isSupported,
   permissionStatus,
   hasStoredHandle,
+  lifecycle,
   navigationState,
   connectionHandlers,
   workspaceState,
 }: AppContentViewModelArgs): AppContentViewProps {
+  const connectionMessage = useMemo(() => {
+    if (isSupported === false) {
+      return "This browser can’t access local files. Try Chrome, Edge, or Opera.";
+    }
+
+    switch (lifecycle) {
+      case "requestingPermission":
+        return "Please choose a folder so we can store your cases.";
+      case "blocked":
+        return "Access to the data folder was blocked. Reconnect to continue.";
+      case "recovering":
+        return "Reconnecting to your data folder…";
+      case "error":
+        return "We hit a storage error. Review the details below.";
+      default:
+        return "Setting up data storage…";
+    }
+  }, [isSupported, lifecycle]);
+
   const connectionProps = useMemo<AppContentViewProps["connection"]>(
     () => ({
       navigation: {
         ...navigationState,
         breadcrumbTitle: "Setup Required",
       },
-      message: "Setting up data storage...",
+      message: connectionMessage,
       isOpen: showConnectModal,
       isSupported: isSupported ?? false,
       permissionStatus,
@@ -55,6 +77,7 @@ export function useAppContentViewModel({
       connectionHandlers.onConnectToExisting,
       connectionHandlers.onGoToSettings,
       hasStoredHandle,
+      connectionMessage,
       isSupported,
       navigationState,
       permissionStatus,
