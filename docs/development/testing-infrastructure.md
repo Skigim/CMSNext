@@ -175,6 +175,19 @@ __tests__/
 - **Hook Testing**: Custom hooks with proper mocking
 - **Component Logic**: Pure component behavior without UI integration
 
+## 🧭 **Choosing the Right Testing Approach**
+
+- **React Testing Library (RTL)**
+  - Exercise user-facing workflows end-to-end (e.g., connection onboarding, case editing, modal flows).
+  - Validate component behaviour that depends on context providers, hooks, or browser APIs (File System Access) by stubbing those integrations.
+  - Capture accessibility contracts (labels, roles, focus handling) and regression-proof event wiring.
+- **Headless Vitest Suites**
+  - Cover pure utilities, data normalization, and hooks that operate without DOM dependencies.
+  - Assert business rules, data transformations, and error handling where rendering adds little value.
+- **Integration Hybrids**
+  - Pair RTL with lightweight service doubles (e.g., mock `AutosaveFileService`) when verifying cross-context flows.
+  - Document assumptions inline so filesystem behaviour remains deterministic and repeatable across environments.
+
 #### **2. Integration Tests**
 - **File System Flows**: Complete save/load cycles
 - **Component Integration**: Parent-child component interactions
