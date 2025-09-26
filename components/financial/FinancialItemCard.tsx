@@ -1,4 +1,3 @@
-import { MouseEvent } from "react";
 import type { FinancialItem, CaseCategory } from "../../types/case";
 import { FinancialItemSaveIndicator } from "./FinancialItemSaveIndicator";
 import { FinancialItemCardHeader } from "./FinancialItemCardHeader";
@@ -55,14 +54,6 @@ export function FinancialItemCard({
 
   const formItemId = String(normalizedItem.safeId ?? item.id ?? `financial-item-${itemType}`);
 
-  const onDeleteButtonClick = (_event: MouseEvent<HTMLButtonElement>) => {
-    handleDeleteClick();
-  };
-
-  const onDeleteConfirm = (_event: MouseEvent<HTMLButtonElement>) => {
-    handleDeleteConfirm();
-  };
-
   return (
     <div className={`financial-item-card ${isSkeleton ? "financial-item-card--skeleton" : ""}`}>
       <FinancialItemSaveIndicator isSaving={isSaving} saveSuccessVisible={saveSuccessVisible} />
@@ -87,8 +78,8 @@ export function FinancialItemCard({
         <div className="absolute -top-2 -right-2 z-10">
           <FinancialItemCardActions
             confirmingDelete={confirmingDelete}
-            onDeleteClick={onDeleteButtonClick}
-            onDeleteConfirm={onDeleteConfirm}
+            onDeleteClick={handleDeleteClick}
+            onDeleteConfirm={handleDeleteConfirm}
           />
         </div>
       )}

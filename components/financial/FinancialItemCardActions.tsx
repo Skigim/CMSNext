@@ -1,11 +1,10 @@
-import { MouseEvent } from "react";
 import { Button } from "../ui/button";
 import { Check, Trash2, X } from "lucide-react";
 
 interface FinancialItemCardActionsProps {
   confirmingDelete: boolean;
-  onDeleteClick: (event: MouseEvent<HTMLButtonElement>) => void;
-  onDeleteConfirm: (event: MouseEvent<HTMLButtonElement>) => void;
+  onDeleteClick: () => void;
+  onDeleteConfirm: () => void;
 }
 
 export function FinancialItemCardActions({
@@ -21,7 +20,7 @@ export function FinancialItemCardActions({
           size="sm"
           onClick={event => {
             event.stopPropagation();
-            onDeleteConfirm(event);
+            onDeleteConfirm();
           }}
           className="financial-item-confirm-btn financial-item-confirm-btn--approve"
         >
@@ -32,7 +31,7 @@ export function FinancialItemCardActions({
           size="sm"
           onClick={event => {
             event.stopPropagation();
-            onDeleteClick(event);
+            onDeleteClick();
           }}
           className="financial-item-confirm-btn financial-item-confirm-btn--cancel"
         >
@@ -48,7 +47,7 @@ export function FinancialItemCardActions({
       size="sm"
       onClick={event => {
         event.stopPropagation();
-        onDeleteClick(event);
+        onDeleteClick();
       }}
       className="financial-item-delete-btn"
     >
