@@ -53,7 +53,20 @@ export function FinancialItemList({
     if (!onCreateItem) return;
 
     try {
-      const { id, createdAt, updatedAt, ...createData } = itemData;
+      const createData: Omit<FinancialItem, "id" | "createdAt" | "updatedAt"> = {
+        description: itemData.description,
+        amount: itemData.amount,
+        verificationStatus: itemData.verificationStatus,
+        dateAdded: itemData.dateAdded,
+        name: itemData.name,
+        location: itemData.location,
+        accountNumber: itemData.accountNumber,
+        frequency: itemData.frequency,
+        owner: itemData.owner,
+        verificationSource: itemData.verificationSource,
+        notes: itemData.notes,
+        status: itemData.status,
+      };
       await onCreateItem(itemType, createData);
       setSkeletonCards(prev => prev.filter(existingId => existingId !== skeletonId));
     } catch (error) {

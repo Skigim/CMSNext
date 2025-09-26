@@ -112,17 +112,23 @@ export function useFinancialItemCardState({
     }
   }, [isEditing, item, onUpdate]);
 
+  const handleSkeletonCancel = useCallback(() => {
+    if (normalizedItem.safeId) {
+      onDelete(itemType, normalizedItem.safeId);
+    }
+  }, [itemType, normalizedItem.safeId, onDelete]);
+
   const handleCancelClick = useCallback(() => {
     setConfirmingDelete(false);
 
-    if (isSkeleton && normalizedItem.safeId) {
-      onDelete(itemType, normalizedItem.safeId);
+    if (isSkeleton) {
+      handleSkeletonCancel();
       return;
     }
 
     setIsEditing(false);
     setFormData(item);
-  }, [isSkeleton, item, itemType, normalizedItem.safeId, onDelete]);
+  }, [handleSkeletonCancel, isSkeleton, item]);
 
   const handleSaveClick = useCallback(
     async (event: FormEvent<HTMLFormElement>) => {
