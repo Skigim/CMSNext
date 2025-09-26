@@ -58,7 +58,7 @@ interface CaseWorkspaceNoteFlow {
   handleBatchCreateNote: (noteData: NewNoteData) => Promise<void>;
 }
 
-interface CaseWorkspaceProps {
+export interface CaseWorkspaceProps {
   navigation: AppNavigationConfig;
   cases: CaseDisplay[];
   selectedCase: CaseDisplay | null | undefined;

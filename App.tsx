@@ -1,4 +1,4 @@
-import { useEffect, useCallback, memo } from "react";
+import { useEffect, useCallback, useMemo, memo } from "react";
 import { Toaster } from "./components/ui/sonner";
 import { CaseDisplay, CaseCategory, FinancialItem } from "./types/case";
 import { toast } from "sonner";
@@ -14,9 +14,8 @@ import {
 } from "./hooks";
 import { AppProviders } from "./components/providers/AppProviders";
 import { FileStorageIntegrator } from "./components/providers/FileStorageIntegrator";
-import { ConnectionOnboarding } from "./components/app/ConnectionOnboarding";
-import { CaseWorkspace } from "./components/app/CaseWorkspace";
-import { AppNavigationShell, type AppNavigationConfig } from "./components/app/AppNavigationShell";
+import { AppContentView } from "./components/app/AppContentView";
+import { useAppContentViewModel } from "./components/app/useAppContentViewModel";
 import { clearFileStorageFlags, updateFileStorageFlags } from "./utils/fileStorageFlags";
 
 const AppContent = memo(function AppContent() {
@@ -224,98 +223,143 @@ const AppContent = memo(function AppContent() {
     setCases(prevCases => prevCases.map(c => (c.id === updatedCase.id ? updatedCase : c)));
   }, [setCases]);
 
-  const navigationConfig: AppNavigationConfig = {
-    currentView,
-    breadcrumbTitle,
-    sidebarOpen,
-    onNavigate: handleNavigate,
-    onNewCase: handleNewCase,
-    onSidebarOpenChange: handleSidebarOpenChange,
-  };
+  const handleDismissError = useCallback(() => {
+    setError(null);
+  }, [setError]);
 
-  if (showConnectModal) {
-    const onboardingNavigation: AppNavigationConfig = {
-      ...navigationConfig,
-      breadcrumbTitle: "Setup Required",
-    };
+  const handleGoToSettings = useCallback(() => {
+    dismissConnectModal();
+    setHasLoadedData(true);
+    handleNavigate("settings");
+  }, [dismissConnectModal, handleNavigate, setHasLoadedData]);
 
-    return (
-      <ConnectionOnboarding
-        navigation={onboardingNavigation}
-        message="Setting up data storage..."
-        isOpen={showConnectModal}
-        isSupported={isSupported ?? false}
-        permissionStatus={status?.permissionStatus}
-        hasStoredHandle={hasStoredHandle}
-        onConnectToExisting={handleConnectToExisting}
-        onChooseNewFolder={handleChooseNewFolder}
-        onGoToSettings={() => {
-          dismissConnectModal();
-          setHasLoadedData(true);
-          handleNavigate("settings");
-        }}
-      />
-    );
-  }
-
-  if (loading) {
-    const loadingNavigation: AppNavigationConfig = {
-      ...navigationConfig,
-      breadcrumbTitle: "Loading...",
-    };
-
-    return (
-      <AppNavigationShell {...loadingNavigation}>
-        <div className="flex h-96 items-center justify-center">
-          <div className="text-center">
-            <div className="mx-auto mb-4 h-8 w-8 animate-spin rounded-full border-b-2 border-primary"></div>
-            <p className="text-muted-foreground">Loading cases...</p>
-          </div>
-        </div>
-      </AppNavigationShell>
-    );
-  }
-
-  return (
-    <CaseWorkspace
-      navigation={navigationConfig}
-      cases={cases}
-      selectedCase={selectedCase}
-      editingCase={editingCase}
-      error={error}
-      onDismissError={() => setError(null)}
-      viewHandlers={{
-        handleViewCase,
-        handleEditCase,
-        handleNewCase,
-        handleBackToList,
-        handleSaveCase,
-        handleCancelForm,
-        handleDeleteCase,
-        handleDataPurged,
-      }}
-      financialFlow={{
-        itemForm,
-        handleAddItem,
-        handleDeleteItem,
-        handleBatchUpdateItem,
-        handleCreateItem,
-        handleCancelItemForm,
-        closeItemForm,
-        onCaseUpdated: handleCaseUpdated,
-      }}
-      noteFlow={{
-        noteForm,
-        handleAddNote,
-        handleEditNote,
-        handleDeleteNote,
-        handleSaveNote,
-        handleCancelNoteForm,
-        handleBatchUpdateNote,
-        handleBatchCreateNote,
-      }}
-    />
+  const navigationState = useMemo(
+    () => ({
+      currentView,
+      breadcrumbTitle,
+      sidebarOpen,
+      onNavigate: handleNavigate,
+      onNewCase: handleNewCase,
+      onSidebarOpenChange: handleSidebarOpenChange,
+    }),
+    [
+      breadcrumbTitle,
+      currentView,
+      handleNavigate,
+      handleNewCase,
+      handleSidebarOpenChange,
+      sidebarOpen,
+    ],
   );
+
+  const viewHandlers = useMemo(
+    () => ({
+      handleViewCase,
+      handleEditCase,
+      handleNewCase,
+      handleBackToList,
+      handleSaveCase,
+      handleCancelForm,
+      handleDeleteCase,
+      handleDataPurged,
+    }),
+    [
+      handleBackToList,
+      handleCancelForm,
+      handleDataPurged,
+      handleDeleteCase,
+      handleEditCase,
+      handleNewCase,
+      handleSaveCase,
+      handleViewCase,
+    ],
+  );
+
+  const financialFlow = useMemo(
+    () => ({
+      itemForm,
+      handleAddItem,
+      handleDeleteItem,
+      handleBatchUpdateItem,
+      handleCreateItem,
+      handleCancelItemForm,
+      closeItemForm,
+      onCaseUpdated: handleCaseUpdated,
+    }),
+    [
+      closeItemForm,
+      handleAddItem,
+      handleBatchUpdateItem,
+      handleCancelItemForm,
+      handleCaseUpdated,
+      handleCreateItem,
+      handleDeleteItem,
+      itemForm,
+    ],
+  );
+
+  const noteFlow = useMemo(
+    () => ({
+      noteForm,
+      handleAddNote,
+      handleEditNote,
+      handleDeleteNote,
+      handleSaveNote,
+      handleCancelNoteForm,
+      handleBatchUpdateNote,
+      handleBatchCreateNote,
+    }),
+    [
+      handleAddNote,
+      handleBatchCreateNote,
+      handleBatchUpdateNote,
+      handleCancelNoteForm,
+      handleDeleteNote,
+      handleEditNote,
+      handleSaveNote,
+      noteForm,
+    ],
+  );
+
+  const workspaceState = useMemo(
+    () => ({
+      cases,
+      selectedCase,
+      editingCase,
+      error,
+      onDismissError: handleDismissError,
+      viewHandlers,
+      financialFlow,
+      noteFlow,
+    }),
+    [
+      cases,
+      editingCase,
+      error,
+      financialFlow,
+      handleDismissError,
+      noteFlow,
+      selectedCase,
+      viewHandlers,
+    ],
+  );
+
+  const appContentViewProps = useAppContentViewModel({
+    showConnectModal,
+    isLoading: loading,
+    isSupported,
+    permissionStatus: status?.permissionStatus,
+    hasStoredHandle,
+    navigationState,
+    connectionHandlers: {
+      onConnectToExisting: handleConnectToExisting,
+      onChooseNewFolder: handleChooseNewFolder,
+      onGoToSettings: handleGoToSettings,
+    },
+    workspaceState,
+  });
+
+  return <AppContentView {...appContentViewProps} />;
 });
 
 export default function App() {

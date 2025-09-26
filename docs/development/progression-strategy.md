@@ -27,11 +27,12 @@ This plan realigns the roadmap around those themes while preserving the filesyst
 - **App shell extraction**
   - ✅ Extracted connection and onboarding responsibilities into `useConnectionFlow`, trimming modal wiring out of `App.tsx`.
   - ✅ Ported note modal and CRUD logic into `useNoteFlow`, keeping case state updates centralized and predictable.
-  - ✅ Introduced `useNavigationFlow`, which centralizes view/sidebar handling and drops `App.tsx` to 397 lines (beating the interim < 450 target and landing under the long-term < 400 goal).
-  - 🔄 Next: Split `AppContent` into navigation, connection/onboarding, and case workspace modules, and migrate import listeners into a `useImportListeners` hook to reduce dependency-array churn.
+  - ✅ Introduced `useNavigationFlow`, which centralizes view/sidebar handling and dropped `App.tsx` under the 400-line target.
+  - ✅ Split `AppContent` into memo-friendly view modules (`AppContentView`, `AppLoadingState`, `ConnectionOnboarding`, `CaseWorkspace`) with a `useAppContentViewModel` helper, and migrated import listeners into `useImportListeners` to reduce dependency-array churn.
 - **Financial workflows**
   - ✅ Moved financial item modal orchestration into `useFinancialItemFlow`, aligning CRUD handlers with the DataManager pattern.
-  - 🔄 Next: Break `FinancialItemCard.tsx` into view, edit form, skeleton management, and list controller components, moving shared create/update helpers into `hooks/useFinancialItems.ts`.
+  - ✅ Broke `FinancialItemCard` into dedicated presentation pieces (`FinancialItemCardHeader`, `FinancialItemCardMeta`, `FinancialItemCardActions`, `FinancialItemCardForm`) plus the `useFinancialItemCardState` hook; card wrapper now focuses on composition and remains well under the 400-line goal.
+  - 🔄 Next: Strengthen the financial item experience with targeted RTL coverage and explore list-level controller abstractions if new requirements emerge.
 
 **Success metric:** maintain `App.tsx` at or below the current 397-line footprint while finishing the workspace split, and drive `FinancialItemCard.tsx` to < 400 lines post-refactor with unit coverage for the new hooks/components.
 **Progress check:** `App.tsx` now delegates navigation, connection, financial item, and note flows to dedicated hooks; upcoming work focuses on carving out the remaining workspace modules and executing the financial card breakup.
