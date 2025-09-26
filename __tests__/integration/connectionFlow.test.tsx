@@ -173,9 +173,9 @@ vi.mock("@/utils/AutosaveFileService", () => {
     }
 
     async writeFile(data: any) {
-  const cloned = clone(data);
-  serviceState.data = cloned;
-  serviceState.lastWrite = cloned;
+      const cloned = clone(data);
+      serviceState.data = cloned;
+      serviceState.lastWrite = cloned;
       this.emitStatus("running", "Saved", "granted");
       return true;
     }
