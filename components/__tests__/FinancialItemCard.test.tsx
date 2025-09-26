@@ -86,7 +86,7 @@ describe("FinancialItemCard", () => {
     const onDelete = vi.fn();
     const user = userEvent.setup();
 
-    const { container } = render(
+    render(
       <FinancialItemCard
         item={item}
         itemType="income"
@@ -96,18 +96,10 @@ describe("FinancialItemCard", () => {
       />
     );
 
-    const deleteTrigger = container.querySelector(
-      ".financial-item-delete-btn"
-    ) as HTMLButtonElement;
-    expect(deleteTrigger).toBeTruthy();
-
+    const deleteTrigger = screen.getByRole("button", { name: /delete financial item/i });
     await user.click(deleteTrigger);
 
-    const confirmButton = container.querySelector(
-      ".financial-item-confirm-btn--approve"
-    ) as HTMLButtonElement;
-    expect(confirmButton).toBeTruthy();
-
+    const confirmButton = await screen.findByRole("button", { name: /confirm delete financial item/i });
     await user.click(confirmButton);
 
     expect(onDelete).toHaveBeenCalledWith("income", "income-1");

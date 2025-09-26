@@ -2,84 +2,77 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import App from "@/App";
-import { toast as mockToast } from "@/src/test/testUtils";
+import {
+  toast as mockToast,
+  createMockCaseDisplay,
+  createMockCaseRecord,
+  createMockPerson,
+} from "@/src/test/testUtils";
 
-const initialFileData = vi.hoisted(() => ({
-  exported_at: "2024-01-01T00:00:00.000Z",
-  total_cases: 1,
-  cases: [
-    {
-      id: "case-initial",
+function getExportTimestamp() {
+  return "2024-01-01T00:00:00.000Z";
+}
+
+function buildInitialCase() {
+  const exportTimestamp = getExportTimestamp();
+  return createMockCaseDisplay({
+    id: "case-initial",
+    name: "Existing Case",
+    mcn: "MCN-1234",
+    createdAt: exportTimestamp,
+    updatedAt: exportTimestamp,
+    person: createMockPerson({
+      id: "person-initial",
+      firstName: "Existing",
+      lastName: "Case",
       name: "Existing Case",
+      email: "existing@example.com",
+      phone: "555-000-0000",
+      createdAt: exportTimestamp,
+      dateAdded: exportTimestamp,
+    }),
+    caseRecord: createMockCaseRecord({
+      id: "case-record-initial",
       mcn: "MCN-1234",
+      applicationDate: "2024-01-02",
+      description: "Initial description",
+      personId: "person-initial",
+      spouseId: "",
       status: "In Progress",
       priority: false,
-      createdAt: "2024-01-01T00:00:00.000Z",
-      updatedAt: "2024-01-01T00:00:00.000Z",
-      person: {
-        id: "person-initial",
-        firstName: "Existing",
-        lastName: "Case",
-        name: "Existing Case",
-        email: "existing@example.com",
-        phone: "555-000-0000",
-        dateOfBirth: "1990-01-01",
-        ssn: "***-**-0000",
-        organizationId: null,
-        livingArrangement: "Apartment/House",
-        address: {
-          street: "123 Main St",
-          city: "Omaha",
-          state: "NE",
-          zip: "68102",
-        },
-        mailingAddress: {
-          street: "123 Main St",
-          city: "Omaha",
-          state: "NE",
-          zip: "68102",
-          sameAsPhysical: true,
-        },
-        authorizedRepIds: [],
-        familyMembers: [],
-        status: "Active",
-        createdAt: "2024-01-01T00:00:00.000Z",
-        dateAdded: "2024-01-01T00:00:00.000Z",
+      withWaiver: false,
+      admissionDate: "2024-01-03",
+      retroRequested: "",
+      financials: {
+        resources: [],
+        income: [],
+        expenses: [],
       },
-      caseRecord: {
-        id: "case-record-initial",
-        mcn: "MCN-1234",
-        applicationDate: "2024-01-02",
-        caseType: "LTC",
-        personId: "person-initial",
-        spouseId: "",
-        status: "In Progress",
-        description: "Initial description",
-        priority: false,
-        livingArrangement: "Apartment/House",
-        withWaiver: false,
-        admissionDate: "2024-01-03",
-        organizationId: "",
-        authorizedReps: [],
-        retroRequested: "",
-        financials: {
-          resources: [],
-          income: [],
-          expenses: [],
-        },
-        notes: [],
-        createdDate: "2024-01-01T00:00:00.000Z",
-        updatedDate: "2024-01-01T00:00:00.000Z",
-      },
-    },
-  ],
-}));
+      notes: [],
+      createdDate: exportTimestamp,
+      updatedDate: exportTimestamp,
+    }),
+  });
+}
 
-const serviceState = vi.hoisted(() => ({
-  data: JSON.parse(JSON.stringify(initialFileData)),
-  lastWrite: null as any,
-  lastSaveTime: null as number | null,
-}));
+function buildInitialFileData() {
+  const exportTimestamp = getExportTimestamp();
+  return {
+    exported_at: exportTimestamp,
+    total_cases: 1,
+    cases: [buildInitialCase()],
+  };
+}
+
+const serviceState: {
+  data: ReturnType<typeof buildInitialFileData>;
+  lastWrite: ReturnType<typeof buildInitialFileData> | null;
+  lastSaveTime: number | null;
+} = {
+  data: buildInitialFileData(),
+  lastWrite: null,
+  lastSaveTime: null,
+};
 
 vi.mock("@/utils/AutosaveFileService", () => {
   const clone = <T,>(value: T): T => JSON.parse(JSON.stringify(value));
@@ -87,12 +80,19 @@ vi.mock("@/utils/AutosaveFileService", () => {
   class MockAutosaveFileService {
     private statusCallback?: (status: any) => void;
     private dataLoadCallback?: (data: any) => void;
-    private status = {
+    private status: {
+      status: string;
+      message: string;
+      timestamp: number;
+      permissionStatus: string;
+      lastSaveTime: number | null;
+      consecutiveFailures: number;
+    } = {
       status: "waiting",
       message: "Awaiting connection",
       timestamp: Date.now(),
       permissionStatus: "granted",
-      lastSaveTime: null,
+      lastSaveTime: serviceState.lastSaveTime ?? null,
       consecutiveFailures: 0,
     };
 
@@ -107,7 +107,7 @@ vi.mock("@/utils/AutosaveFileService", () => {
         message,
         timestamp: Date.now(),
         permissionStatus,
-        lastSaveTime: serviceState.lastSaveTime,
+        lastSaveTime: serviceState.lastSaveTime ?? null,
         consecutiveFailures: 0,
       };
       this.statusCallback?.({ ...this.status });
@@ -153,7 +153,7 @@ vi.mock("@/utils/AutosaveFileService", () => {
 
     async save() {
       serviceState.lastSaveTime = Date.now();
-      this.emitStatus("running", "Saved", this.status.permissionStatus);
+  this.emitStatus("running", "Saved", this.status.permissionStatus);
     }
 
     async ensurePermission() {
@@ -173,8 +173,9 @@ vi.mock("@/utils/AutosaveFileService", () => {
     }
 
     async writeFile(data: any) {
-      serviceState.data = clone(data);
-      serviceState.lastWrite = serviceState.data;
+  const cloned = clone(data);
+  serviceState.data = cloned;
+  serviceState.lastWrite = cloned;
       this.emitStatus("running", "Saved", "granted");
       return true;
     }
@@ -209,9 +210,9 @@ vi.mock("@/utils/AutosaveFileService", () => {
 
 describe("connect → load → edit → save flow", () => {
   beforeEach(() => {
-    Object.defineProperty(window, "matchMedia", {
-      writable: true,
-      value: vi.fn().mockImplementation((query: string) => ({
+    vi.stubGlobal(
+      "matchMedia",
+      vi.fn().mockImplementation((query: string) => ({
         matches: query.includes("(prefers-color-scheme: dark)"),
         media: query,
         onchange: null,
@@ -221,7 +222,7 @@ describe("connect → load → edit → save flow", () => {
         removeEventListener: vi.fn(),
         dispatchEvent: vi.fn(),
       })),
-    });
+    );
 
     class MockResizeObserver {
       observe = vi.fn();
@@ -235,22 +236,10 @@ describe("connect → load → edit → save flow", () => {
       disconnect = vi.fn();
     }
 
-    Object.defineProperty(window, "ResizeObserver", {
-      writable: true,
-      value: MockResizeObserver,
-    });
-    Object.defineProperty(window, "IntersectionObserver", {
-      writable: true,
-      value: MockIntersectionObserver,
-    });
+    vi.stubGlobal("ResizeObserver", MockResizeObserver);
+    vi.stubGlobal("IntersectionObserver", MockIntersectionObserver);
 
-    // Keep Node global references in sync for Radix internals
-    // @ts-expect-error - assigning to global for test environment
-    global.ResizeObserver = MockResizeObserver;
-    // @ts-expect-error - assigning to global for test environment
-    global.IntersectionObserver = MockIntersectionObserver;
-
-    serviceState.data = JSON.parse(JSON.stringify(initialFileData));
+    serviceState.data = buildInitialFileData();
     serviceState.lastWrite = null;
     serviceState.lastSaveTime = null;
     mockToast.success.mockClear();
@@ -292,7 +281,13 @@ describe("connect → load → edit → save flow", () => {
     await screen.findByText(/case for updated case updated successfully/i);
 
     expect(serviceState.lastWrite).toBeTruthy();
-    expect(serviceState.lastWrite.cases[0].person.firstName).toBe("Updated");
-    expect(serviceState.lastWrite.cases[0].name).toBe("Updated Case");
+
+    const lastWrite = serviceState.lastWrite;
+    if (!lastWrite) {
+      throw new Error("Expected serviceState.lastWrite to be defined");
+    }
+
+    expect(lastWrite.cases[0].person.firstName).toBe("Updated");
+    expect(lastWrite.cases[0].name).toBe("Updated Case");
   });
 });

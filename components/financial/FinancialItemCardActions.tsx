@@ -22,9 +22,10 @@ export function FinancialItemCardActions({
             event.stopPropagation();
             onDeleteConfirm();
           }}
+          aria-label="Confirm delete financial item"
           className="financial-item-confirm-btn financial-item-confirm-btn--approve"
         >
-          <Check className="h-4 w-4" />
+          <Check className="h-4 w-4" aria-hidden="true" />
         </Button>
         <Button
           variant="ghost"
@@ -33,9 +34,10 @@ export function FinancialItemCardActions({
             event.stopPropagation();
             onDeleteClick();
           }}
+          aria-label="Cancel delete financial item"
           className="financial-item-confirm-btn financial-item-confirm-btn--cancel"
         >
-          <X className="h-4 w-4" />
+          <X className="h-4 w-4" aria-hidden="true" />
         </Button>
       </div>
     );
@@ -49,9 +51,10 @@ export function FinancialItemCardActions({
         event.stopPropagation();
         onDeleteClick();
       }}
+      aria-label="Delete financial item"
       className="financial-item-delete-btn"
     >
-      <Trash2 className="h-4 w-4" />
+      <Trash2 className="h-4 w-4" aria-hidden="true" />
     </Button>
   );
 }
