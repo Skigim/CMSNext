@@ -3,15 +3,6 @@ import type { AppNavigationConfig } from "./AppNavigationShell";
 import type { AppContentViewProps } from "./AppContentView";
 import type { CaseWorkspaceProps } from "./CaseWorkspace";
 
-interface NavigationState {
-  currentView: AppNavigationConfig["currentView"];
-  breadcrumbTitle?: AppNavigationConfig["breadcrumbTitle"];
-  sidebarOpen: AppNavigationConfig["sidebarOpen"];
-  onNavigate: AppNavigationConfig["onNavigate"];
-  onNewCase: AppNavigationConfig["onNewCase"];
-  onSidebarOpenChange: AppNavigationConfig["onSidebarOpenChange"];
-}
-
 interface ConnectionHandlers {
   onConnectToExisting: () => Promise<boolean>;
   onChooseNewFolder: () => Promise<boolean>;
@@ -24,7 +15,7 @@ export interface AppContentViewModelArgs {
   isSupported?: boolean;
   permissionStatus?: string;
   hasStoredHandle: boolean;
-  navigationState: NavigationState;
+  navigationState: AppNavigationConfig;
   connectionHandlers: ConnectionHandlers;
   workspaceState: Omit<CaseWorkspaceProps, "navigation">;
 }
@@ -44,44 +35,12 @@ export function useAppContentViewModel({
   connectionHandlers,
   workspaceState,
 }: AppContentViewModelArgs): AppContentViewProps {
-  const navigationConfig = useMemo<AppNavigationConfig>(
-    () => ({
-      currentView: navigationState.currentView,
-      breadcrumbTitle: navigationState.breadcrumbTitle,
-      sidebarOpen: navigationState.sidebarOpen,
-      onNavigate: navigationState.onNavigate,
-      onNewCase: navigationState.onNewCase,
-      onSidebarOpenChange: navigationState.onSidebarOpenChange,
-    }),
-    [
-      navigationState.breadcrumbTitle,
-      navigationState.currentView,
-      navigationState.onNavigate,
-      navigationState.onNewCase,
-      navigationState.onSidebarOpenChange,
-      navigationState.sidebarOpen,
-    ],
-  );
-
-  const onboardingNavigation = useMemo<AppNavigationConfig>(
-    () => ({
-      ...navigationConfig,
-      breadcrumbTitle: "Setup Required",
-    }),
-    [navigationConfig],
-  );
-
-  const loadingNavigation = useMemo<AppNavigationConfig>(
-    () => ({
-      ...navigationConfig,
-      breadcrumbTitle: "Loading...",
-    }),
-    [navigationConfig],
-  );
-
   const connectionProps = useMemo<AppContentViewProps["connection"]>(
     () => ({
-      navigation: onboardingNavigation,
+      navigation: {
+        ...navigationState,
+        breadcrumbTitle: "Setup Required",
+      },
       message: "Setting up data storage...",
       isOpen: showConnectModal,
       isSupported: isSupported ?? false,
@@ -97,7 +56,7 @@ export function useAppContentViewModel({
       connectionHandlers.onGoToSettings,
       hasStoredHandle,
       isSupported,
-      onboardingNavigation,
+      navigationState,
       permissionStatus,
       showConnectModal,
     ],
@@ -105,18 +64,21 @@ export function useAppContentViewModel({
 
   const loadingProps = useMemo<AppContentViewProps["loading"]>(
     () => ({
-      navigation: loadingNavigation,
+      navigation: {
+        ...navigationState,
+        breadcrumbTitle: "Loading...",
+      },
       message: "Loading cases...",
     }),
-    [loadingNavigation],
+    [navigationState],
   );
 
   const workspaceProps = useMemo<AppContentViewProps["workspace"]>(
     () => ({
-      navigation: navigationConfig,
+      navigation: navigationState,
       ...workspaceState,
     }),
-    [navigationConfig, workspaceState],
+    [navigationState, workspaceState],
   );
 
   return useMemo(
