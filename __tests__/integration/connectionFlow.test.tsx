@@ -153,7 +153,7 @@ vi.mock("@/utils/AutosaveFileService", () => {
 
     async save() {
       serviceState.lastSaveTime = Date.now();
-  this.emitStatus("running", "Saved", this.status.permissionStatus);
+      this.emitStatus("running", "Saved", this.status.permissionStatus);
     }
 
     async ensurePermission() {
