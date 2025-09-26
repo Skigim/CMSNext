@@ -4,6 +4,8 @@ import { CaseDisplay, NewCaseRecordData, NewPersonData } from "../types/case";
 import { AppView } from "../types/view";
 import type { FileStorageLifecycleSelectors } from "../contexts/FileStorageContext";
 
+const RESTRICTED_VIEWS: readonly AppView[] = ["list", "details", "form"];
+
 interface FormState {
   previousView: AppView;
   returnToCaseId?: string;
@@ -55,6 +57,7 @@ export function useNavigationFlow({
   saveCase,
   deleteCase,
 }: UseNavigationFlowParams): NavigationHandlers {
+  const navigationToastId = "navigation-lock";
   const [currentView, setCurrentView] = useState<AppView>("dashboard");
   const [selectedCaseId, setSelectedCaseId] = useState<string | null>(null);
   const [editingCase, setEditingCase] = useState<CaseDisplay | null>(null);
@@ -116,15 +119,18 @@ export function useNavigationFlow({
     return { locked: false, reason: "", tone: "info" };
   }, [isBlocked, isErrored, isReady, isRecovering, isAwaitingUserChoice, permissionStatus, lastError]);
 
-  const navigationToastId = "navigation-lock";
-
   const showNavigationLockToast = useCallback(() => {
     if (!navigationLock.locked) {
       toast.dismiss(navigationToastId);
       return;
     }
 
-    const toastFn = navigationLock.tone === "error" ? toast.error : navigationLock.tone === "warning" ? toast.warning : toast.info;
+    const toastFnMap: Record<LockTone, typeof toast.info> = {
+      error: toast.error,
+      warning: toast.warning,
+      info: toast.info,
+    };
+    const toastFn = toastFnMap[navigationLock.tone] ?? toast.info;
     toastFn(navigationLock.reason, { id: navigationToastId });
   }, [navigationLock]);
 
@@ -157,9 +163,7 @@ export function useNavigationFlow({
   }, [currentView, selectedCase]);
 
   useEffect(() => {
-    const restrictedViews: AppView[] = ["list", "details", "form"];
-
-    if (navigationLock.locked && restrictedViews.includes(currentView)) {
+    if (navigationLock.locked && RESTRICTED_VIEWS.includes(currentView)) {
       if (!forcedViewRef.current) {
         forcedViewRef.current = currentView;
       }
@@ -293,8 +297,7 @@ export function useNavigationFlow({
 
   const navigate = useCallback(
     (view: AppView) => {
-      const restrictedViews: AppView[] = ["list", "details", "form"];
-      if (restrictedViews.includes(view) && guardCaseInteraction()) {
+      if (RESTRICTED_VIEWS.includes(view) && guardCaseInteraction()) {
         forcedViewRef.current = forcedViewRef.current ?? view;
         setSidebarOpen(true);
         setCurrentView("settings");
