@@ -33,6 +33,41 @@ This plan realigns the roadmap around those themes while preserving the filesyst
 - Update hooks (`useConnectionFlow`, `useNavigationFlow`, autosave helpers) to consume the typed state instead of ad-hoc booleans.
 - Deliverables: context reducer + action map, TypeScript definitions for storage states, regression tests covering grant/deny/revoke scenarios.
 
+**State schema draft**
+- **States**
+	- `uninitialized`: provider mounted, Autosave service not yet ready.
+	- `unsupported`: File System Access API unavailable or browser refused feature.
+	- `idle`: service initialized, no directory handle selected.
+	- `requestingPermission`: user prompted to pick/grant access to a directory.
+	- `ready`: permission granted, autosave running, no pending work.
+	- `saving`: autosave/manual save in flight (transient substate of `ready`).
+	- `blocked`: permission revoked or directory handle missing; waiting on recovery.
+	- `error`: non-recoverable IO failure (corrupt file, exceeded retries).
+	- `recovering`: background retry after handled error; transitions back to `ready` or `blocked`.
+- **Events**
+	- `SERVICE_INITIALIZED`, `SUPPORT_UNAVAILABLE`
+	- `CONNECT_REQUESTED`, `PERMISSION_GRANTED`, `PERMISSION_DENIED`
+	- `HANDLE_RESTORED`, `HANDLE_LOST`
+	- `AUTOSAVE_STARTED`, `AUTOSAVE_COMPLETED`, `AUTOSAVE_FAILED`
+	- `MANUAL_SAVE_REQUESTED`, `MANUAL_SAVE_COMPLETED`
+	- `ERROR_ENCOUNTERED`, `ERROR_RECOVERED`
+- **Context data**
+	- `permissionStatus`, `directoryHandleId`
+	- `lastSaveTime`, `pendingWrites`, `consecutiveFailures`
+	- `lastError` (message + errorCode + timestamp)
+- **Actions / side effects** (triggered via effects, not inside reducer)
+	- Fire toast notifications for permission or error changes.
+	- Start/stop autosave timer.
+	- Persist state snapshot for diagnostics.
+- **Transition highlights**
+	- `uninitialized + SERVICE_INITIALIZED → idle` (if supported) or `unsupported` otherwise.
+	- `idle + CONNECT_REQUESTED → requestingPermission`.
+	- `requestingPermission + PERMISSION_GRANTED → ready` (kick off autosave, clear failures).
+	- `ready + AUTOSAVE_FAILED → recovering` (increment `consecutiveFailures`).
+	- `recovering + ERROR_RECOVERED → ready`; `recovering + HANDLE_LOST → blocked`.
+	- `blocked + HANDLE_RESTORED → ready`; `blocked + PERMISSION_GRANTED → ready`.
+	- Any state + `ERROR_ENCOUNTERED` (non-recoverable) → `error` (surface guidance, halt autosave).
+
 #### Subphase 3.2 · Error & Toast Harmonization
 - Introduce a centralized error helper that logs structured metadata (`operation`, `handleId`, `errorCode`) and emits consistent toast copy.
 - Normalize handling of benign cancellations (`AbortError`) so user-initiated dismissals exit silently.
