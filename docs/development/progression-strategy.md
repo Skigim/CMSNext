@@ -23,33 +23,35 @@ This plan realigns the roadmap around those themes while preserving the filesyst
 | 4 | Performance & observability | Bundle analysis, render profiling, lightweight telemetry |
 | 5 | Documentation & DX | Updated guides, threat model outline, formatting/tooling guardrails |
 
-### Phase 1 · Component Decomposition (In Progress)
-- **App shell extraction**
-  - ✅ Extracted connection and onboarding responsibilities into `useConnectionFlow`, trimming modal wiring out of `App.tsx`.
-  - ✅ Ported note modal and CRUD logic into `useNoteFlow`, keeping case state updates centralized and predictable.
-  - ✅ Introduced `useNavigationFlow`, which centralizes view/sidebar handling and dropped `App.tsx` under the 400-line target.
-  - ✅ Split `AppContent` into memo-friendly view modules (`AppContentView`, `AppLoadingState`, `ConnectionOnboarding`, `CaseWorkspace`) with a `useAppContentViewModel` helper, and migrated import listeners into `useImportListeners` to reduce dependency-array churn.
-- **Financial workflows**
-  - ✅ Moved financial item modal orchestration into `useFinancialItemFlow`, aligning CRUD handlers with the DataManager pattern.
-  - ✅ Broke `FinancialItemCard` into dedicated presentation pieces (`FinancialItemCardHeader`, `FinancialItemCardMeta`, `FinancialItemCardActions`, `FinancialItemCardForm`) plus the `useFinancialItemCardState` hook; card wrapper now focuses on composition and remains well under the 400-line goal.
-  - 🔄 Next: Strengthen the financial item experience with targeted RTL coverage and explore list-level controller abstractions if new requirements emerge.
+> Phase 1 and Phase 2 implementation notes have moved to `progression-strategy-archive.md` to keep this plan focused on active work.
 
-**Success metric:** maintain `App.tsx` at or below the current 397-line footprint while finishing the workspace split, and drive `FinancialItemCard.tsx` to < 400 lines post-refactor with unit coverage for the new hooks/components.
-**Progress check:** `App.tsx` now delegates navigation, connection, financial item, and note flows to dedicated hooks; upcoming work focuses on carving out the remaining workspace modules and executing the financial card breakup.
+### Phase 3 · File-Storage Experience (In Progress)
 
-### Phase 2 · Testing Expansion (Planned)
-- Add React Testing Library suites for `CaseForm`, `FinancialItemCard`, and `ConnectToExistingModal`, covering happy paths, validation errors, and cancellation flows.
-- Create an integration-style test that exercises “connect → load cases → edit → save”, using `msw` to emulate File System Access behaviour.
-- Update `/docs/development/testing-infrastructure.md` to describe when to add RTL vs. Vitest-only coverage.
+#### Subphase 3.1 · Storage State Machine
+- Replace the remaining `window.*` coordination flags with a reducer-backed state machine owned by `FileStorageContext`.
+- Model the full permission lifecycle (`idle → requesting → ready → blocked`, including `recovering` and `error` branches) so UI consumers can subscribe to stable selectors.
+- Update hooks (`useConnectionFlow`, `useNavigationFlow`, autosave helpers) to consume the typed state instead of ad-hoc booleans.
+- Deliverables: context reducer + action map, TypeScript definitions for storage states, regression tests covering grant/deny/revoke scenarios.
 
-**Success metric:** +10 UI/flow tests, maintain zero lint errors, CI runtime increase < 2 minutes.
+#### Subphase 3.2 · Error & Toast Harmonization
+- Introduce a centralized error helper that logs structured metadata (`operation`, `handleId`, `errorCode`) and emits consistent toast copy.
+- Normalize handling of benign cancellations (`AbortError`) so user-initiated dismissals exit silently.
+- Thread the helper through `DataManager`, `AutosaveFileService`, and modal flows to ensure all failures transition the state machine appropriately.
+- Deliverables: `reportFileStorageError` utility, updated toast messaging catalogue, Vitest coverage for read/write/import failures.
 
-### Phase 3 · File-Storage Experience (Planned)
-- Replace the `window.*` coordination flags with a typed state machine (e.g., reducer or XState) owned by `FileStorageContext`.
-- Standardize error logging (structured `console.error` metadata) and toast messages for connect/disconnect/import failures.
-- Surface autosave state (last save time, permission status) in `FileStorageSettings` or the global toolbar so users know when persistence pauses.
+#### Subphase 3.3 · Autosave Visibility
+- Expose autosave run state (last successful write timestamp, pending queue length, permission status) via a dedicated selector or hook.
+- Surface status in `FileStorageSettings` and the global toolbar—highlight “saving…”, “all changes saved”, and “permission required” states.
+- Respect existing debounce behaviour from `AutosaveFileService` and memoize derived values to prevent render churn.
+- Deliverables: `useAutosaveStatus` hook, shared status badge component, integration test simulating permission revocation mid-save.
 
-**Success metric:** no global mutable flags, user-facing autosave indicator, documented recovery steps for denied permissions.
+#### Subphase 3.4 · Resilience Verification
+- Backfill Vitest and RTL coverage for state transitions, ensuring UI reacts correctly to denied/expired permissions and IO failures.
+- Document recovery steps and update troubleshooting guides with the new status surfaces and error taxonomy.
+- Capture manual test scripts for edge cases (e.g., directory handle revoked while autosave pending) to support QA sign-off.
+- Deliverables: expanded test matrix, updated `/docs/development/error-boundary-guide.md`, smoke checklist appended to the release process.
+
+**Phase 3 success metric:** zero global mutable flags, a visible autosave indicator, structured error logging, and documented recovery flows.
 
 ### Phase 4 · Performance & Observability (Planned)
 - Run a bundle analysis (e.g., `vite-bundle-visualizer`) after Phase 1 to reconfirm vendor split sizes.
@@ -72,7 +74,7 @@ This plan realigns the roadmap around those themes while preserving the filesyst
 - TypeScript 5.9.2 remains the enforced compiler; keep `@typescript-eslint` dependencies on the 8.x line for compatibility.
 
 ## 🚀 Immediate Next Steps
-1. Draft a decomposition plan for `App.tsx`, including module boundaries and routing responsibilities.
-2. Spike the `FinancialItemCard` split, ensuring new subcomponents are memoized and typed.
-3. Outline the testing matrix (components vs. flows) before committing new suites.
-4. Capture current autosave/user messaging to baseline improvements before Phase 3.
+1. Draft the `FileStorageContext` state machine schema, actions, and TypeScript types.
+2. Implement the centralized file-storage error reporter and align toast copy across flows.
+3. Prototype the autosave status hook + UI badge and validate against live autosave events.
+4. Outline the resilience test matrix and documentation updates for Phase 3 hand-off.

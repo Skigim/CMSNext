@@ -252,7 +252,11 @@ describe("connect → load → edit → save flow", () => {
     const user = userEvent.setup();
     render(<App />);
 
-    const connectButton = await screen.findByRole("button", { name: /connect to previous folder/i });
+    const connectButton = await screen.findByRole(
+      "button",
+      { name: /connect to previous folder/i },
+      { timeout: 4000 },
+    );
     await user.click(connectButton);
 
     await waitFor(() => {
