@@ -34,6 +34,10 @@ const generateContentKey = (content: string, fallbackIndex?: number): string => 
   }
   
   try {
+    // Attempt to encode content for key stability (handles Unicode)
+    const encoded = encodeURIComponent(content).replace(/%/g, '');
+    return `content-${encoded.slice(0, 20)}-${fallbackIndex || 0}`;
+  } catch (e) {
     // Fallback for encoding errors
     return `content-${content.slice(0, 20).replace(/[^a-zA-Z0-9]/g, '')}-${fallbackIndex || 0}`;
   }
