@@ -2,7 +2,7 @@ import { useEffect, useCallback, useMemo, memo } from "react";
 import { Toaster } from "./components/ui/sonner";
 import { CaseDisplay, CaseCategory, FinancialItem } from "./types/case";
 import { toast } from "sonner";
-import { useFileStorage } from "./contexts/FileStorageContext";
+import { useFileStorage, useFileStorageLifecycleSelectors } from "./contexts/FileStorageContext";
 import { useDataManagerSafe } from "./contexts/DataManagerContext";
 import {
   useCaseManagement,
@@ -19,7 +19,8 @@ import { useAppContentViewModel } from "./components/app/useAppContentViewModel"
 import { clearFileStorageFlags, updateFileStorageFlags } from "./utils/fileStorageFlags";
 
 const AppContent = memo(function AppContent() {
-  const { isSupported, isConnected, hasStoredHandle, status, connectToFolder, connectToExisting, loadExistingData, service } = useFileStorage();
+  const { isSupported, hasStoredHandle, connectToFolder, connectToExisting, loadExistingData, service } = useFileStorage();
+  const connectionState = useFileStorageLifecycleSelectors();
   
   // Get DataManager instance at component level
   const dataManager = useDataManagerSafe();
@@ -38,6 +39,13 @@ const AppContent = memo(function AppContent() {
     setHasLoadedData,
   } = useCaseManagement();
   
+  const navigationFlow = useNavigationFlow({
+    cases,
+    connectionState,
+    saveCase,
+    deleteCase,
+  });
+
   const {
     currentView,
     selectedCase,
@@ -53,11 +61,8 @@ const AppContent = memo(function AppContent() {
     deleteCaseWithNavigation: handleDeleteCase,
     backToList: handleBackToList,
     setSidebarOpen,
-  } = useNavigationFlow({
-    cases,
-    saveCase,
-    deleteCase,
-  });
+    navigationLock: _navigationLock,
+  } = navigationFlow;
 
   const {
     showConnectModal,
@@ -66,9 +71,8 @@ const AppContent = memo(function AppContent() {
     dismissConnectModal,
   } = useConnectionFlow({
     isSupported,
-    isConnected,
-    hasStoredHandle,
     hasLoadedData,
+    connectionState,
     connectToFolder,
     connectToExisting,
     loadExistingData,
@@ -165,7 +169,7 @@ const AppContent = memo(function AppContent() {
 
   // Note: loadCases is now provided by useCaseManagement hook
 
-  useImportListeners({ loadCases, setError });
+  useImportListeners({ loadCases, setError, isStorageReady: connectionState.isReady });
 
   const handleAddItem = useCallback(
     (category: CaseCategory) => {
@@ -348,8 +352,9 @@ const AppContent = memo(function AppContent() {
     showConnectModal,
     isLoading: loading,
     isSupported,
-    permissionStatus: status?.permissionStatus,
+    permissionStatus: connectionState.permissionStatus,
     hasStoredHandle,
+    lifecycle: connectionState.lifecycle,
     navigationState,
     connectionHandlers: {
       onConnectToExisting: handleConnectToExisting,

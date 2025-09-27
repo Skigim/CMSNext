@@ -1,21 +1,25 @@
-import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback, useReducer, ReactNode, useMemo } from 'react';
 import AutosaveFileService from '@/utils/AutosaveFileService';
 import { setFileService } from '@/utils/fileServiceProvider';
-
-interface FileStorageStatus {
-  status: string;
-  message: string;
-  timestamp: number;
-  permissionStatus: string;
-  lastSaveTime: number | null;
-  consecutiveFailures: number;
-}
+import {
+  initialMachineState,
+  reduceFileStorageState,
+  readyLifecycleStates,
+  blockingLifecycleStates,
+  type FileStorageStatus,
+  type FileStorageLifecycleState,
+  type FileStoragePermissionState,
+  type FileStorageErrorInfo,
+} from './fileStorageMachine';
 
 interface FileStorageContextType {
   service: AutosaveFileService | null;
   isSupported: boolean | undefined; // undefined = not initialized yet, boolean = definitive answer
   isConnected: boolean;
   hasStoredHandle: boolean;
+  lifecycle: FileStorageLifecycleState;
+  permissionStatus: FileStoragePermissionState;
+  lastError: FileStorageErrorInfo | null;
   status: FileStorageStatus | null;
   connectToFolder: () => Promise<boolean>;
   connectToExisting: () => Promise<boolean>;
@@ -45,10 +49,7 @@ export function FileStorageProvider({
   onDataLoaded 
 }: FileStorageProviderProps) {
   const [service, setService] = useState<AutosaveFileService | null>(null);
-  const [status, setStatus] = useState<FileStorageStatus | null>(null);
-  const [isConnected, setIsConnected] = useState(false);
-  const [hasExplicitlyConnected, setHasExplicitlyConnected] = useState(false);
-  const [hasStoredHandle, setHasStoredHandle] = useState(false);
+  const [state, dispatch] = useReducer(reduceFileStorageState, initialMachineState);
 
   // Initialize the service - only once per component mount
   useEffect(() => {
@@ -60,20 +61,17 @@ export function FileStorageProvider({
       debounceDelay: 5000,   // 5 seconds
       maxRetries: 3,
       statusCallback: (statusUpdate) => {
-        setStatus(statusUpdate);
-        
-        // Track if we have a stored handle (even if not connected)
-        setHasStoredHandle(
-          (statusUpdate.permissionStatus === 'granted' || statusUpdate.permissionStatus === 'prompt') &&
-          statusUpdate.status !== 'disconnected'
-        );
+        dispatch({ type: 'STATUS_CHANGED', status: statusUpdate });
       },
       errorCallback: (message, type) => {
         console.error(`File storage ${type || 'error'}:`, message);
-        // You could also show a toast notification here
+        if (type !== 'info') {
+          dispatch({ type: 'ERROR_REPORTED', error: { message, type, timestamp: Date.now() } });
+        }
       }
     });
 
+    dispatch({ type: 'SERVICE_INITIALIZED', supported: fileService.isSupported() });
     setService(fileService);
     setFileService(fileService);
 
@@ -81,8 +79,9 @@ export function FileStorageProvider({
       console.log('[FileStorageContext] Destroying AutosaveFileService instance');
       fileService.destroy();
       setFileService(null);
+      dispatch({ type: 'SERVICE_RESET' });
     };
-  }, []); // No dependencies - create only once per component mount
+  }, [dispatch]); // No dependencies - create only once per component mount
 
   // Handle enabled setting separately to avoid service recreation
   useEffect(() => {
@@ -95,23 +94,6 @@ export function FileStorageProvider({
       }
     }
   }, [service, enabled]);
-
-  // Handle connection state separately to avoid service recreation
-  useEffect(() => {
-    if (!status) return;
-    
-    // Only update connection state if we have explicitly connected before
-    if (hasExplicitlyConnected) {
-      if (status.status === 'disconnected' || status.permissionStatus === 'denied') {
-        setIsConnected(false);
-        setHasExplicitlyConnected(false); // Reset explicit connection flag on disconnect
-      } else if (status.permissionStatus === 'granted' && 
-                (status.status === 'connected' || status.status === 'running' || status.status === 'waiting')) {
-        // Any of these statuses with granted permission means we're connected
-        setIsConnected(true);
-      }
-    }
-  }, [status, hasExplicitlyConnected]);
 
   // Handle data provider setup separately to avoid recreating service
   useEffect(() => {
@@ -129,43 +111,64 @@ export function FileStorageProvider({
 
   const connectToFolder = useCallback(async (): Promise<boolean> => {
     if (!service) return false;
+    dispatch({ type: 'CONNECT_REQUESTED' });
     try {
       const success = await service.connect();
       if (success) {
-        setHasExplicitlyConnected(true);
-        setIsConnected(true); // Set connected state for consistency with connectToExisting
+        dispatch({ type: 'CONNECT_CONFIRMED' });
+      } else {
+        dispatch({ type: 'CONNECT_COMPLETED' });
       }
       return success;
     } catch (error) {
       console.error('[FileStorageContext] connectToFolder error:', error);
+      dispatch({
+        type: 'ERROR_REPORTED',
+        error: {
+          message: error instanceof Error ? error.message : String(error),
+          type: 'error',
+          timestamp: Date.now(),
+        },
+      });
+      dispatch({ type: 'CONNECT_COMPLETED' });
       return false;
     }
-  }, [service]);
+  }, [dispatch, service]);
 
   const connectToExisting = useCallback(async (): Promise<boolean> => {
     if (!service) {
       console.error('[FileStorageContext] No service available for connectToExisting');
       return false;
     }
+    dispatch({ type: 'CONNECT_REQUESTED' });
     try {
       const success = await service.connectToExisting();
       if (success) {
-        setHasExplicitlyConnected(true);
-        setIsConnected(true); // Now we're truly connected
+        dispatch({ type: 'CONNECT_CONFIRMED' });
+      } else {
+        dispatch({ type: 'CONNECT_COMPLETED' });
       }
       return success;
     } catch (error) {
       console.error('[FileStorageContext] connectToExisting error:', error);
+      dispatch({
+        type: 'ERROR_REPORTED',
+        error: {
+          message: error instanceof Error ? error.message : String(error),
+          type: 'error',
+          timestamp: Date.now(),
+        },
+      });
+      dispatch({ type: 'CONNECT_COMPLETED' });
       return false;
     }
-  }, [service]);
+  }, [dispatch, service]);
 
-  const disconnect = async (): Promise<void> => {
+  const disconnect = useCallback(async (): Promise<void> => {
     if (!service) return;
     await service.disconnect();
-    setHasExplicitlyConnected(false);
-    setIsConnected(false);
-  };
+    dispatch({ type: 'DISCONNECTED' });
+  }, [dispatch, service]);
 
   const saveNow = async (): Promise<void> => {
     if (!service) return;
@@ -233,28 +236,15 @@ export function FileStorageProvider({
     }
   }, [service]);
 
-  const notifyDataChange = useCallback(() => {
-    if (service) {
-      service.notifyDataChange();
-    }
-  }, [service]);
-
-  // Expose notifyDataChange globally for easy access
-  useEffect(() => {
-    if (service) {
-      window.fileStorageNotifyChange = notifyDataChange;
-    }
-    return () => {
-      delete window.fileStorageNotifyChange;
-    };
-  }, [service, notifyDataChange]);
-
   const contextValue: FileStorageContextType = {
     service,
-    isSupported: service ? service.isSupported() : undefined, // undefined until service is initialized
-    isConnected,
-    hasStoredHandle,
-    status,
+    isSupported: state.isSupported,
+    isConnected: state.isConnected,
+    hasStoredHandle: state.hasStoredHandle,
+    lifecycle: state.lifecycle,
+    permissionStatus: state.permissionStatus,
+    lastError: state.lastError,
+    status: state.statusSnapshot,
     connectToFolder,
     connectToExisting,
     disconnect,
@@ -292,3 +282,57 @@ export function useFileStorageDataChange() {
     }
   };
 }
+
+export interface FileStorageLifecycleSelectors {
+  lifecycle: FileStorageLifecycleState;
+  permissionStatus: FileStoragePermissionState;
+  isReady: boolean;
+  isBlocked: boolean;
+  isErrored: boolean;
+  isRecovering: boolean;
+  isAwaitingUserChoice: boolean;
+  hasStoredHandle: boolean;
+  isConnected: boolean;
+  lastError: FileStorageErrorInfo | null;
+}
+
+export function useFileStorageLifecycleSelectors(): FileStorageLifecycleSelectors {
+  const { lifecycle, permissionStatus, hasStoredHandle, lastError, isConnected } = useFileStorage();
+
+  return useMemo(() => {
+    const isReady = readyLifecycleStates.has(lifecycle);
+    const isBlocked = blockingLifecycleStates.has(lifecycle);
+    const isErrored = lifecycle === 'error';
+    const isRecovering = lifecycle === 'recovering';
+    const isAwaitingUserChoice =
+      !isReady &&
+      !isBlocked &&
+      (lifecycle === 'idle' || lifecycle === 'requestingPermission' || permissionStatus === 'prompt');
+
+    return {
+      lifecycle,
+      permissionStatus,
+      isReady,
+      isBlocked,
+      isErrored,
+      isRecovering,
+      isAwaitingUserChoice,
+      hasStoredHandle,
+      isConnected,
+      lastError,
+    };
+  }, [
+    lifecycle,
+    permissionStatus,
+    hasStoredHandle,
+    lastError,
+    isConnected,
+  ]);
+}
+
+export type {
+  FileStorageLifecycleState,
+  FileStoragePermissionState,
+  FileStorageStatus,
+  FileStorageErrorInfo,
+} from './fileStorageMachine';

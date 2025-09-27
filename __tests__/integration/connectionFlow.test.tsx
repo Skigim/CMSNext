@@ -140,6 +140,9 @@ vi.mock("@/utils/AutosaveFileService", () => {
 
     async connectToExisting() {
       this.emitStatus("running", "Reconnected", "granted");
+      setTimeout(() => {
+        this.emitStatus("connected", "Connection ready", "granted");
+      }, 0);
       return true;
     }
 
