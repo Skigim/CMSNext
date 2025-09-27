@@ -115,6 +115,31 @@ function deriveLifecycle(
   }
 }
 
+function deriveConnectionState(
+  state: FileStorageMachineState,
+  status: FileStorageStatus,
+  permissionStatus: FileStoragePermissionState,
+): Pick<FileStorageMachineState, 'explicitlyConnected' | 'isConnected' | 'hasStoredHandle'> {
+  let explicitlyConnected = state.explicitlyConnected;
+  let isConnected = state.isConnected;
+
+  if (permissionStatus === 'denied' || status.status === 'disconnected') {
+    explicitlyConnected = false;
+    isConnected = false;
+  } else if (explicitlyConnected) {
+    isConnected =
+      permissionStatus === 'granted' &&
+      status.status !== 'disconnected' &&
+      status.status !== 'error';
+  }
+
+  return {
+    explicitlyConnected,
+    isConnected,
+    hasStoredHandle: computeHasStoredHandle(status, permissionStatus),
+  };
+}
+
 export function reduceFileStorageState(state: FileStorageMachineState, action: FileStorageAction): FileStorageMachineState {
   switch (action.type) {
     case 'SERVICE_INITIALIZED':
@@ -172,20 +197,11 @@ export function reduceFileStorageState(state: FileStorageMachineState, action: F
       };
     case 'STATUS_CHANGED': {
       const permissionStatus = normalizePermissionStatus(action.status.permissionStatus);
-      const hasStoredHandle = computeHasStoredHandle(action.status, permissionStatus);
-
-      let explicitlyConnected = state.explicitlyConnected;
-      let isConnected = state.isConnected;
-
-      if (permissionStatus === 'denied' || action.status.status === 'disconnected') {
-        explicitlyConnected = false;
-        isConnected = false;
-      } else if (explicitlyConnected) {
-        isConnected =
-          permissionStatus === 'granted' &&
-          action.status.status !== 'disconnected' &&
-          action.status.status !== 'error';
-      }
+      const { explicitlyConnected, isConnected, hasStoredHandle } = deriveConnectionState(
+        state,
+        action.status,
+        permissionStatus,
+      );
 
       const baseState: FileStorageMachineState = {
         ...state,

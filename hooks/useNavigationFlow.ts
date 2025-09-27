@@ -176,6 +176,7 @@ export function useNavigationFlow({
 
     if (!navigationLock.locked && forcedViewRef.current) {
       const returnView = forcedViewRef.current === "form" ? "list" : forcedViewRef.current;
+      // Form view relies on ephemeral draft state; returning users to the list avoids showing an empty form shell.
       setCurrentView(returnView);
       forcedViewRef.current = null;
     }
@@ -298,7 +299,7 @@ export function useNavigationFlow({
   const navigate = useCallback(
     (view: AppView) => {
       if (RESTRICTED_VIEWS.includes(view) && guardCaseInteraction()) {
-        forcedViewRef.current = forcedViewRef.current ?? view;
+        forcedViewRef.current = view;
         setSidebarOpen(true);
         setCurrentView("settings");
         setSelectedCaseId(null);
