@@ -70,16 +70,16 @@ This plan realigns the roadmap around those themes while preserving the filesyst
 	- Any state + `ERROR_ENCOUNTERED` (non-recoverable) → `error` (surface guidance, halt autosave).
 
 #### Subphase 3.2 · Error & Toast Harmonization
-- Introduce a centralized error helper that logs structured metadata (`operation`, `handleId`, `errorCode`) and emits consistent toast copy.
-- Normalize handling of benign cancellations (`AbortError`) so user-initiated dismissals exit silently.
-- Thread the helper through `DataManager`, `AutosaveFileService`, and modal flows to ensure all failures transition the state machine appropriately.
-- Deliverables: `reportFileStorageError` utility, updated toast messaging catalogue, Vitest coverage for read/write/import failures.
+- ✅ Introduce a centralized error helper that logs structured metadata (`operation`, `handleId`, `errorCode`) and emits consistent toast copy (`reportFileStorageError`).
+- ✅ Normalize handling of benign cancellations (`AbortError`) so user-initiated dismissals exit silently.
+- ✅ Thread the helper through `DataManager`, `AutosaveFileService`, and modal/import flows so every storage failure surfaces consistent copy and feeds telemetry.
+- Deliverables: `reportFileStorageError` utility, updated toast messaging catalogue ([`docs/development/file-storage-toast-catalogue.md`](./file-storage-toast-catalogue.md)), Vitest coverage for read/write/import failures (**completed**).
 
 #### Subphase 3.3 · Autosave Visibility
-- Expose autosave run state (last successful write timestamp, pending queue length, permission status) via a dedicated selector or hook.
-- Surface status in `FileStorageSettings` and the global toolbar—highlight “saving…”, “all changes saved”, and “permission required” states.
-- Respect existing debounce behaviour from `AutosaveFileService` and memoize derived values to prevent render churn.
-- Deliverables: `useAutosaveStatus` hook, shared status badge component, integration test simulating permission revocation mid-save.
+- ✅ Expose autosave run state (last successful write timestamp, pending queue length, permission status) via a dedicated selector or hook.
+- ✅ Surface status in `FileStorageSettings` and the global toolbar—highlight “saving…”, “all changes saved”, and “permission required” states.
+- ✅ Respect existing debounce behaviour from `AutosaveFileService` and memoize derived values to prevent render churn.
+- Deliverables: `useAutosaveStatus` hook, shared status badge component, integration test simulating permission revocation mid-save (**completed**).
 
 #### Subphase 3.4 · Resilience Verification
 - Backfill Vitest and RTL coverage for state transitions, ensuring UI reacts correctly to denied/expired permissions and IO failures.
@@ -110,7 +110,6 @@ This plan realigns the roadmap around those themes while preserving the filesyst
 - TypeScript 5.9.2 remains the enforced compiler; keep `@typescript-eslint` dependencies on the 8.x line for compatibility.
 
 ## 🚀 Immediate Next Steps
-1. Draft the `FileStorageContext` state machine schema, actions, and TypeScript types.
-2. Implement the centralized file-storage error reporter and align toast copy across flows.
-3. Prototype the autosave status hook + UI badge and validate against live autosave events.
-4. Outline the resilience test matrix and documentation updates for Phase 3 hand-off.
+1. Outline the resilience test matrix and documentation updates for Phase 3 hand-off.
+2. Extend RTL coverage to exercise autosave badge transitions (ready ↔ saving ↔ permission required) ahead of Subphase 3.4.
+3. Draft troubleshooting copy that references the unified toast catalogue for inclusion in the user-facing guides.

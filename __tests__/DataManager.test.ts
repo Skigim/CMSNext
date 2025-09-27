@@ -3,6 +3,10 @@ import { DataManager } from '@/utils/DataManager'
 import { createMockCaseDisplay, createMockFinancialItem, createMockNote } from '@/src/test/testUtils'
 import AutosaveFileService from '@/utils/AutosaveFileService'
 
+vi.mock('@/utils/fileStorageErrorReporter', () => ({
+  reportFileStorageError: vi.fn(() => null),
+}));
+
 // Mock the AutosaveFileService
 vi.mock('@/utils/AutosaveFileService')
 

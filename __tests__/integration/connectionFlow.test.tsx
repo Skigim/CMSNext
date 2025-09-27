@@ -87,6 +87,7 @@ vi.mock("@/utils/AutosaveFileService", () => {
       permissionStatus: string;
       lastSaveTime: number | null;
       consecutiveFailures: number;
+      pendingWrites: number;
     } = {
       status: "waiting",
       message: "Awaiting connection",
@@ -94,6 +95,7 @@ vi.mock("@/utils/AutosaveFileService", () => {
       permissionStatus: "granted",
       lastSaveTime: serviceState.lastSaveTime ?? null,
       consecutiveFailures: 0,
+      pendingWrites: 0,
     };
 
     constructor(config: { statusCallback?: (status: any) => void } = {}) {
@@ -109,6 +111,7 @@ vi.mock("@/utils/AutosaveFileService", () => {
         permissionStatus,
         lastSaveTime: serviceState.lastSaveTime ?? null,
         consecutiveFailures: 0,
+        pendingWrites: 0,
       };
       this.statusCallback?.({ ...this.status });
     }
@@ -118,7 +121,11 @@ vi.mock("@/utils/AutosaveFileService", () => {
     }
 
     getStatus() {
-      return { ...this.status, isRunning: this.status.status === "running" };
+      return {
+        ...this.status,
+        isRunning: this.status.status === "running",
+        pendingWrites: this.status.pendingWrites,
+      };
     }
 
     updateConfig() {
@@ -179,6 +186,8 @@ vi.mock("@/utils/AutosaveFileService", () => {
       const cloned = clone(data);
       serviceState.data = cloned;
       serviceState.lastWrite = cloned;
+      this.status.pendingWrites = 1;
+      this.statusCallback?.({ ...this.status });
       this.emitStatus("running", "Saved", "granted");
       return true;
     }

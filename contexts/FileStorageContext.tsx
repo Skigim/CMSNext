@@ -2,6 +2,10 @@ import { createContext, useContext, useState, useEffect, useCallback, useReducer
 import AutosaveFileService from '@/utils/AutosaveFileService';
 import { setFileService } from '@/utils/fileServiceProvider';
 import {
+  reportFileStorageError,
+  type FileStorageOperation,
+} from '@/utils/fileStorageErrorReporter';
+import {
   initialMachineState,
   reduceFileStorageState,
   readyLifecycleStates,
@@ -63,10 +67,27 @@ export function FileStorageProvider({
       statusCallback: (statusUpdate) => {
         dispatch({ type: 'STATUS_CHANGED', status: statusUpdate });
       },
-      errorCallback: (message, type) => {
-        console.error(`File storage ${type || 'error'}:`, message);
-        if (type !== 'info') {
-          dispatch({ type: 'ERROR_REPORTED', error: { message, type, timestamp: Date.now() } });
+      errorCallback: (message, type, error, context) => {
+        const operation = (context?.operation as FileStorageOperation) ?? 'unknown';
+        const notification = reportFileStorageError({
+          operation,
+          error,
+          messageOverride: message,
+          severity: type === 'warning' ? 'warning' : type === 'info' ? 'info' : 'error',
+          toast: false,
+          context,
+          source: 'AutosaveFileService',
+        });
+
+        if (notification) {
+          dispatch({
+            type: 'ERROR_REPORTED',
+            error: {
+              message: notification.message,
+              type: notification.type,
+              timestamp: notification.timestamp,
+            },
+          });
         }
       }
     });

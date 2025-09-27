@@ -7,21 +7,21 @@ import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import { Input } from '@/components/ui/input';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { 
-  FolderOpen, 
-  HardDrive, 
-  CheckCircle, 
-  XCircle, 
-  Clock, 
+import {
+  FolderOpen,
+  HardDrive,
+  XCircle,
   AlertTriangle,
   Settings as SettingsIcon,
   Save,
   Folder,
   WifiOff,
   FileText,
-  Upload
+  Upload,
 } from 'lucide-react';
 import { useFileStorage } from '@/contexts/FileStorageContext';
+import { useAutosaveStatus } from '@/hooks/useAutosaveStatus';
+import { AutosaveStatusBadge } from '@/components/app/AutosaveStatusBadge';
 import { toast } from "sonner";
 import { withFileSystemErrorBoundary } from '@/components/error/ErrorBoundaryHOC';
 
@@ -30,7 +30,6 @@ export function FileStorageSettings() {
     service, 
     isSupported, 
     isConnected, 
-    status, 
     connectToFolder, 
     disconnect, 
     saveNow, 
@@ -39,6 +38,8 @@ export function FileStorageSettings() {
     loadDataFromFile
   } = useFileStorage();
 
+  const autosaveStatus = useAutosaveStatus();
+
   const [localSettings, setLocalSettings] = useState({
     enabled: true,
     saveInterval: 120, // in seconds for UI
@@ -46,10 +47,10 @@ export function FileStorageSettings() {
   });
 
   const [isConnecting, setIsConnecting] = useState(false);
-  const [isSaving, setIsSaving] = useState(false);
+  const [isManualSaving, setIsManualSaving] = useState(false);
   const [availableFiles, setAvailableFiles] = useState<string[]>([]);
   const [isLoadingFiles, setIsLoadingFiles] = useState(false);
-  const consecutiveFailures = status?.consecutiveFailures ?? 0;
+  const consecutiveFailures = autosaveStatus.consecutiveFailures;
 
   // Debug current state
   console.log('[FileStorageSettings] Render state:', { 
@@ -126,14 +127,14 @@ export function FileStorageSettings() {
   };
 
   const handleSaveNow = async () => {
-    setIsSaving(true);
+    setIsManualSaving(true);
     try {
       await saveNow();
       toast.success("Data saved to file successfully");
     } catch (error) {
       toast.error("Failed to save data to file");
     } finally {
-      setIsSaving(false);
+      setIsManualSaving(false);
     }
   };
 
@@ -178,50 +179,6 @@ export function FileStorageSettings() {
       }
     } catch (error) {
       toast.error("Failed to update autosave settings");
-    }
-  };
-
-  const getStatusIcon = () => {
-    if (!isSupported) {
-      return <XCircle className="h-4 w-4 text-destructive" />;
-    }
-    
-    if (!status) {
-      return <Clock className="h-4 w-4 text-muted-foreground" />;
-    }
-
-    switch (status.status) {
-      case 'connected':
-      case 'saved':
-        return <CheckCircle className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />;
-      case 'saving':
-        return <Clock className="h-4 w-4 text-primary animate-spin" />;
-      case 'error':
-        return <XCircle className="h-4 w-4 text-destructive" />;
-      case 'waiting':
-        return <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-400" />;
-      default:
-        return <Clock className="h-4 w-4 text-muted-foreground" />;
-    }
-  };
-
-  const getStatusText = () => {
-    if (!isSupported) {
-      return 'File System Access API not supported in this browser';
-    }
-    
-    return status?.message || 'Initializing...';
-  };
-
-  const getStatusBadge = () => {
-    if (!isSupported) {
-      return <Badge variant="destructive">Not Supported</Badge>;
-    }
-    
-    if (isConnected) {
-      return <Badge variant="default" className="bg-emerald-600 dark:bg-emerald-700 text-white">Connected</Badge>;
-    } else {
-      return <Badge variant="secondary">Disconnected</Badge>;
     }
   };
 
@@ -271,17 +228,22 @@ export function FileStorageSettings() {
                 Current file storage connection state
               </p>
             </div>
-            {getStatusBadge()}
+            <Badge variant={isConnected ? "default" : "secondary"} className={isConnected ? "bg-emerald-600 dark:bg-emerald-700 text-white" : undefined}>
+              {isConnected ? "Connected" : "Disconnected"}
+            </Badge>
           </div>
           
-          <div className="flex items-center gap-2 text-sm">
-            {getStatusIcon()}
-            <span>{getStatusText()}</span>
-          </div>
+          <AutosaveStatusBadge summary={autosaveStatus} showDetail />
 
-          {status?.lastSaveTime && (
+          {autosaveStatus.lastSavedAt && (
             <div className="text-xs text-muted-foreground">
-              Last saved: {new Date(status.lastSaveTime).toLocaleString()}
+              Last saved: {new Date(autosaveStatus.lastSavedAt).toLocaleString()}
+            </div>
+          )}
+
+          {autosaveStatus.pendingWrites > 0 && (
+            <div className="text-xs text-muted-foreground">
+              Pending writes: {autosaveStatus.pendingWrites}
             </div>
           )}
         </div>
@@ -361,11 +323,11 @@ export function FileStorageSettings() {
                     variant="outline"
                     size="sm"
                     onClick={handleSaveNow}
-                    disabled={isSaving}
+                    disabled={isManualSaving || autosaveStatus.isSaving}
                     className="gap-2"
                   >
                     <Save className="h-4 w-4" />
-                    {isSaving ? 'Saving...' : 'Save Now'}
+                    {isManualSaving || autosaveStatus.isSaving ? 'Saving...' : 'Save Now'}
                   </Button>
                   <Button
                     variant="outline"
