@@ -67,7 +67,7 @@ export function FileStorageProvider({
       statusCallback: (statusUpdate) => {
         dispatch({ type: 'STATUS_CHANGED', status: statusUpdate });
       },
-      errorCallback: (message, type, error, context) => {
+      errorCallback: ({ message, type, error, context }) => {
         const operation = (context?.operation as FileStorageOperation) ?? 'unknown';
         const notification = reportFileStorageError({
           operation,

@@ -124,8 +124,8 @@ export function useAutosaveStatus(): AutosaveStatusSummary {
       state = "retrying";
       displayLabel = "Retrying save…";
       detailText =
-        message ??
-        `Autosave retrying (attempt ${Math.min(consecutiveFailures + 1, Number.MAX_SAFE_INTEGER)})`;
+  message ??
+  `Autosave retrying (attempt ${consecutiveFailures + 1})`;
       if (pendingDescription) {
         detailText += ` (${pendingDescription})`;
       }

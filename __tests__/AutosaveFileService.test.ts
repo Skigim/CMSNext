@@ -195,10 +195,11 @@ describe('AutosaveFileService', () => {
       
       expect(result).toBe(false)
       expect(mockErrorCallback).toHaveBeenCalledWith(
-        'File System Access API is not supported in this browser.',
-        'error',
-        null,
-        expect.objectContaining({ operation: 'connect' })
+        expect.objectContaining({
+          message: 'File System Access API is not supported in this browser.',
+          type: 'error',
+          context: expect.objectContaining({ operation: 'connect' })
+        })
       )
     })
 
@@ -228,10 +229,11 @@ describe('AutosaveFileService', () => {
       
       expect(result).toBe(false)
       expect(mockErrorCallback).toHaveBeenCalledWith(
-        'Permission denied for the directory.',
-        'error',
-        null,
-        expect.objectContaining({ operation: 'requestPermission' })
+        expect.objectContaining({
+          message: 'Permission denied for the directory.',
+          type: 'error',
+          context: expect.objectContaining({ operation: 'requestPermission' })
+        })
       )
     })
 
@@ -246,10 +248,11 @@ describe('AutosaveFileService', () => {
       const result = await service.connectToExisting()
       expect(result).toBe(false)
       expect(mockErrorCallback).toHaveBeenCalledWith(
-        'File System Access API is not supported in this browser.',
-        'error',
-        null,
-        expect.objectContaining({ operation: 'connectExisting' })
+        expect.objectContaining({
+          message: 'File System Access API is not supported in this browser.',
+          type: 'error',
+          context: expect.objectContaining({ operation: 'connectExisting' })
+        })
       )
     })
 

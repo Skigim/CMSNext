@@ -62,7 +62,7 @@ const CODE_MESSAGES: Record<FileStorageErrorCode, string> = {
   "read-failed": "We couldn’t read case data from the folder. Reconnect and retry.",
   "write-failed": "We couldn’t save changes to the data folder. Check the connection and try again.",
   "quota-exceeded": "The data folder appears to be out of space. Free up space and try again.",
-  unknown: "The file storage operation failed. Please try again.",
+  unknown: "An unexpected file storage error occurred. Please try again.",
 };
 
 const OPERATION_FALLBACKS: Partial<Record<FileStorageOperation, string>> = {
@@ -93,8 +93,17 @@ function isAbortError(error: unknown): boolean {
     const maybeName = (error as { name?: string }).name;
     if (maybeName === "AbortError") return true;
   }
-  const message = extractErrorMessage(error).toLowerCase();
-  return message.includes("aborterror");
+  const message = extractErrorMessage(error).trim();
+  if (!message) {
+    return false;
+  }
+  const normalized = message.toLowerCase();
+  return (
+    message === "AbortError" ||
+    message === "The operation was aborted." ||
+    normalized === "aborterror" ||
+    normalized === "the operation was aborted."
+  );
 }
 
 function extractErrorMessage(error: unknown): string {

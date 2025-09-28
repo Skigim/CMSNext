@@ -60,7 +60,10 @@ export const AutosaveStatusBadge = memo(function AutosaveStatusBadge({
       </Badge>
 
       {showDetail && (
-        <span className="max-w-xs text-xs text-muted-foreground">
+        <span
+          className="max-w-xs truncate text-xs text-muted-foreground"
+          title={summary.detailText}
+        >
           {summary.detailText}
         </span>
       )}

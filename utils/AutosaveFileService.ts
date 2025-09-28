@@ -19,9 +19,16 @@
 
 // Removed devConfig import - debug logging is no longer conditional
 
+interface ErrorCallbackOptions {
+  message: string;
+  type?: string;
+  error?: unknown;
+  context?: Record<string, unknown>;
+}
+
 interface AutosaveConfig {
   fileName?: string;
-  errorCallback?: (message: string, type?: string, error?: unknown, context?: Record<string, unknown>) => void;
+  errorCallback?: (options: ErrorCallbackOptions) => void;
   sanitizeFn?: (str: string) => string;
   tabId?: string;
   enabled?: boolean;
@@ -69,7 +76,7 @@ interface WriteQueueItem {
 class AutosaveFileService {
   private directoryHandle: FileSystemDirectoryHandle | null = null;
   private fileName: string;
-  private errorCallback: (message: string, type?: string, error?: unknown, context?: Record<string, unknown>) => void;
+  private errorCallback: (options: ErrorCallbackOptions) => void;
   private tabId: string;
   private dbName: string = 'CaseTrackingFileAccess';
   private storeName: string = 'directoryHandles';
@@ -173,12 +180,11 @@ class AutosaveFileService {
 
   async connect(): Promise<boolean> {
     if (!this.isSupported()) {
-      this.errorCallback(
-        'File System Access API is not supported in this browser.',
-        'error',
-        null,
-        { operation: 'connect' },
-      );
+      this.errorCallback({
+        message: 'File System Access API is not supported in this browser.',
+        type: 'error',
+        context: { operation: 'connect' },
+      });
       return false;
     }
 
@@ -216,12 +222,11 @@ class AutosaveFileService {
    */
   async connectToExisting(): Promise<boolean> {
     if (!this.isSupported()) {
-      this.errorCallback(
-        'File System Access API is not supported in this browser.',
-        'error',
-        null,
-        { operation: 'connectExisting' },
-      );
+      this.errorCallback({
+        message: 'File System Access API is not supported in this browser.',
+        type: 'error',
+        context: { operation: 'connectExisting' },
+      });
       return false;
     }
 
@@ -294,8 +299,10 @@ class AutosaveFileService {
       return true;
     }
 
-    this.errorCallback('Permission denied for the directory.', 'error', null, {
-      operation: 'requestPermission',
+    this.errorCallback({
+      message: 'Permission denied for the directory.',
+      type: 'error',
+      context: { operation: 'requestPermission' },
     });
     this.updateStatus('waiting', 'Permission required to save changes');
     return false;
@@ -416,12 +423,12 @@ class AutosaveFileService {
         }
       }
 
-      this.errorCallback(
-        `Error writing file "${this.fileName}": ${errorMessage}`,
-        'error',
-        err,
-        { operation: 'writeData', fileName: this.fileName },
-      );
+      this.errorCallback({
+        message: `Error writing file "${this.fileName}": ${errorMessage}`,
+        type: 'error',
+        error: err,
+        context: { operation: 'writeData', fileName: this.fileName },
+      });
       return false;
     }
   }
@@ -486,12 +493,12 @@ class AutosaveFileService {
         }
       }
 
-      this.errorCallback(
-        `Error writing file "${fileName}": ${errorMessage}`,
-        'error',
-        err,
-        { operation: 'writeData', fileName },
-      );
+      this.errorCallback({
+        message: `Error writing file "${fileName}": ${errorMessage}`,
+        type: 'error',
+        error: err,
+        context: { operation: 'writeData', fileName },
+      });
       return false;
     }
   }
@@ -537,12 +544,12 @@ class AutosaveFileService {
       if (err instanceof Error && err.name === 'NotFoundError') {
         return null;
       } else {
-        this.errorCallback(
-          `Error reading file "${this.fileName}": ${err instanceof Error ? err.message : 'Unknown error'}`,
-          'error',
-          err,
-          { operation: 'readData', fileName: this.fileName },
-        );
+        this.errorCallback({
+          message: `Error reading file "${this.fileName}": ${err instanceof Error ? err.message : 'Unknown error'}`,
+          type: 'error',
+          error: err,
+          context: { operation: 'readData', fileName: this.fileName },
+        });
         throw err;
       }
     }
@@ -960,6 +967,7 @@ class AutosaveFileService {
     try {
       const data = this.dataProvider();
       if (!data) {
+        this.state.pendingSave = false;
         this.updateStatus('running', this.state.lastSaveTime ? 'All changes saved' : 'Autosave active');
         return false;
       }
@@ -968,6 +976,8 @@ class AutosaveFileService {
       this.updateStatus('saving', 'Saving changes…');
 
       const result = await this.writeFile(data);
+
+      this.state.pendingSave = false;
 
       if (result) {
         this.state.lastSaveTime = Date.now();
@@ -982,6 +992,7 @@ class AutosaveFileService {
     } catch (error) {
       console.error('Failed to perform immediate save:', error);
       this.state.consecutiveFailures++;
+      this.state.pendingSave = false;
       this.updateStatus('error', 'Save failed - ' + (error instanceof Error ? error.message : 'Unknown error'));
       return false;
     } finally {
@@ -1008,11 +1019,13 @@ class AutosaveFileService {
       
       const data = this.dataProvider();
       if (!data) {
+        this.state.pendingSave = false;
         this.updateStatus('running', this.state.lastSaveTime ? 'All changes saved' : 'Autosave active');
         return;
       }
 
       const success = await this.writeFile(data);
+      this.state.pendingSave = false;
       
       if (success) {
         this.state.lastSaveTime = Date.now();
@@ -1031,6 +1044,7 @@ class AutosaveFileService {
       }
     } catch (error) {
       this.state.consecutiveFailures++;
+      this.state.pendingSave = false;
       console.error(`Autosave failed (${trigger}):`, error);
       this.updateStatus('error', 'Autosave error - ' + (error instanceof Error ? error.message : 'Unknown error'));
     } finally {
