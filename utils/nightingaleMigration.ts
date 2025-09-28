@@ -98,25 +98,26 @@ interface NightingaleCase {
 /**
  * Normalize status to match expected enum values
  */
-function normalizeStatus(status?: string): 'In Progress' | 'Priority' | 'Review' | 'Completed' {
+function normalizeStatus(status?: string): 'Pending' | 'Approved' | 'Denied' | 'Spenddown' {
   if (!status) {
-    return 'In Progress';
+    return 'Pending';
   }
-  
+
   const statusLower = status.toLowerCase();
-  
-  if (statusLower.includes('progress') || statusLower.includes('active') || statusLower.includes('open')) {
-    return 'In Progress';
-  } else if (statusLower.includes('priority') || statusLower.includes('urgent')) {
-    return 'Priority';
-  } else if (statusLower.includes('review') || statusLower.includes('pending')) {
-    return 'Review';
-  } else if (statusLower.includes('complete') || statusLower.includes('closed') || 
-             statusLower.includes('done') || statusLower.includes('denied')) {
-    return 'Completed';
-  } else {
-    return 'In Progress';
+
+  if (statusLower.includes('approve') || statusLower.includes('complete') || statusLower.includes('close')) {
+    return 'Approved';
   }
+
+  if (statusLower.includes('deny') || statusLower.includes('reject')) {
+    return 'Denied';
+  }
+
+  if (statusLower.includes('spend')) {
+    return 'Spenddown';
+  }
+
+  return 'Pending';
 }
 
 /**

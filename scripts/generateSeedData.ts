@@ -119,7 +119,7 @@ const VERIFICATION_SOURCES = [
   'Employer Letter', 'Court Order', 'Medical Documentation'
 ];
 
-const CASE_STATUSES: CaseRecord['status'][] = ['In Progress', 'Priority', 'Review', 'Completed'];
+const CASE_STATUSES: CaseRecord['status'][] = ['Pending', 'Approved', 'Denied', 'Spenddown'];
 
 // Utility functions
 const randomChoice = <T>(array: T[]): T => array[Math.floor(Math.random() * array.length)];
@@ -371,10 +371,10 @@ export const generateFullSeedData = (numCases: number = 50): CaseData => {
     totalNotes: counters.note.current,
     priorityCases: caseRecords.filter(c => c.priority).length,
     casesByStatus: {
-      'In Progress': caseRecords.filter(c => c.status === 'In Progress').length,
-      'Priority': caseRecords.filter(c => c.status === 'Priority').length,
-      'Review': caseRecords.filter(c => c.status === 'Review').length,
-      'Completed': caseRecords.filter(c => c.status === 'Completed').length
+      Pending: caseRecords.filter(c => c.status === 'Pending').length,
+      Approved: caseRecords.filter(c => c.status === 'Approved').length,
+      Denied: caseRecords.filter(c => c.status === 'Denied').length,
+      Spenddown: caseRecords.filter(c => c.status === 'Spenddown').length,
     },
     financialsByCategory: {
       resources: caseRecords.reduce(
@@ -417,14 +417,14 @@ export const seedDataPresets = {
     const data = generateFullSeedData(15);
     
     // Ensure we have some priority cases
-  data.caseRecords.slice(0, 3).forEach((caseRecord: CaseRecord) => {
+    data.caseRecords.slice(0, 3).forEach((caseRecord: CaseRecord) => {
       caseRecord.priority = true;
-      caseRecord.status = 'Priority';
+      caseRecord.status = 'Spenddown';
     });
     
     // Ensure we have cases in all statuses
-    const statuses: CaseRecord['status'][] = ['In Progress', 'Priority', 'Review', 'Completed'];
-  data.caseRecords.slice(0, 4).forEach((caseRecord: CaseRecord, index: number) => {
+    const statuses: CaseRecord['status'][] = ['Pending', 'Approved', 'Denied', 'Spenddown'];
+    data.caseRecords.slice(0, 4).forEach((caseRecord: CaseRecord, index: number) => {
       caseRecord.status = statuses[index];
     });
     

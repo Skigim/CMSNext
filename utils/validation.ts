@@ -95,7 +95,7 @@ export const CaseRecordSchema = z.object({
   }),
   personId: stringRequired('Person ID'),
   spouseId: stringOptional,
-  status: z.enum(['In Progress', 'Priority', 'Review', 'Completed'], {
+  status: z.enum(['Pending', 'Approved', 'Denied', 'Spenddown'], {
     message: 'Invalid case status'
   }),
   description: z.string().max(1000, 'Description must be less than 1000 characters').optional().default(''),

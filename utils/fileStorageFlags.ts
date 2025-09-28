@@ -1,13 +1,26 @@
+export type CaseListViewPreference = "grid" | "table";
+
+const PERSISTENT_FLAG_KEYS = ["caseListView"] as const;
+type PersistentFlagKey = (typeof PERSISTENT_FLAG_KEYS)[number];
+type PersistentFlagsSnapshot = Pick<FileStorageFlags, PersistentFlagKey>;
+
 export interface FileStorageFlags {
   dataBaseline?: boolean;
   sessionHadData?: boolean;
   inSetupPhase?: boolean;
   inConnectionFlow?: boolean;
+  caseListView?: CaseListViewPreference;
 }
 
 export class FileStorageFlagsManager {
+  private static readonly STORAGE_KEY = "cmsnext.fileStorageFlags";
+
   private flags: FileStorageFlags = {};
   private initialized = false;
+
+  constructor() {
+    this.loadPersistentFlags();
+  }
 
   getFileStorageFlags(): Readonly<FileStorageFlags> {
     return this.flags;
@@ -15,18 +28,28 @@ export class FileStorageFlagsManager {
 
   updateFileStorageFlags(updates: Partial<FileStorageFlags>): void {
     Object.assign(this.flags, updates);
+    this.persistPersistentFlags();
   }
 
   clearFileStorageFlags(...keys: (keyof FileStorageFlags)[]): void {
     keys.forEach(key => {
       delete this.flags[key];
     });
+    this.persistPersistentFlags();
   }
 
   resetFileStorageFlags(): void {
-    Object.keys(this.flags).forEach(key => {
-      delete this.flags[key as keyof FileStorageFlags];
+    const preservedEntries: Partial<FileStorageFlags> = {};
+
+    PERSISTENT_FLAG_KEYS.forEach(key => {
+      const value = this.flags[key];
+      if (value !== undefined) {
+        preservedEntries[key] = value;
+      }
     });
+
+    this.flags = { ...preservedEntries };
+    this.persistPersistentFlags();
     this.initialized = false;
   }
 
@@ -37,6 +60,63 @@ export class FileStorageFlagsManager {
 
     this.initialized = true;
     return true;
+  }
+
+  private loadPersistentFlags(): void {
+    if (typeof window === "undefined" || !window.localStorage) {
+      return;
+    }
+
+    try {
+      const stored = window.localStorage.getItem(FileStorageFlagsManager.STORAGE_KEY);
+      if (!stored) {
+        return;
+      }
+
+      const parsed = JSON.parse(stored) as Partial<FileStorageFlags> | null;
+      if (!parsed || typeof parsed !== "object") {
+        return;
+      }
+
+      PERSISTENT_FLAG_KEYS.forEach(key => {
+        if (key in parsed) {
+          const value = parsed[key];
+          if (value !== undefined) {
+            this.flags[key] = value as PersistentFlagsSnapshot[typeof key];
+          }
+        }
+      });
+    } catch (error) {
+      console.warn("Failed to load persistent file storage flags", error);
+    }
+  }
+
+  private persistPersistentFlags(): void {
+    if (typeof window === "undefined" || !window.localStorage) {
+      return;
+    }
+
+    try {
+      const snapshot: Partial<PersistentFlagsSnapshot> = {};
+      PERSISTENT_FLAG_KEYS.forEach(key => {
+        const value = this.flags[key];
+        if (value !== undefined) {
+          snapshot[key] = value;
+        }
+      });
+
+      if (Object.keys(snapshot).length === 0) {
+        window.localStorage.removeItem(FileStorageFlagsManager.STORAGE_KEY);
+        return;
+      }
+
+      window.localStorage.setItem(
+        FileStorageFlagsManager.STORAGE_KEY,
+        JSON.stringify(snapshot),
+      );
+    } catch (error) {
+      console.warn("Failed to persist file storage flags", error);
+    }
   }
 }
 

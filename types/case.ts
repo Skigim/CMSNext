@@ -75,7 +75,7 @@ export interface CaseRecord {
   caseType: string;
   personId: string;
   spouseId: string;
-  status: 'In Progress' | 'Priority' | 'Review' | 'Completed';
+  status: 'Pending' | 'Approved' | 'Denied' | 'Spenddown';
   description: string;
   priority: boolean;
   livingArrangement: string;

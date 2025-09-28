@@ -27,11 +27,11 @@ The case tracking platform now supports automatic migration of Nightingale data 
 - ✅ Normalizes all dates to ISO format
 
 #### Status Normalization
-- ✅ Maps various status strings to valid enum values:
-  - `progress/active/open` → `In Progress`
-  - `priority/urgent` → `Priority`  
-  - `review/pending` → `Review`
-  - `complete/closed/done/denied` → `Completed`
+- ✅ Maps various status strings to the platform status enum:
+  - `approve` / `complete` / `close` → `Approved`
+  - `deny` / `reject` → `Denied`
+  - `spend` / `spenddown` → `Spenddown`
+  - any other value → `Pending`
 
 #### Data Types
 - ✅ Converts priority strings to boolean values

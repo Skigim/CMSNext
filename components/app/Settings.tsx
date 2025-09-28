@@ -48,8 +48,12 @@ export function Settings({ cases, onDataPurged }: SettingsProps) {
     return cases.filter(c => c && c.caseRecord && typeof c.caseRecord === 'object').length;
   };
 
+  const ACTIVE_CASE_STATUSES: CaseDisplay['status'][] = ['Pending', 'Spenddown'];
+
   const getActiveCasesCount = () => {
-    return cases.filter(c => c && c.caseRecord && c.caseRecord.status === 'In Progress').length;
+    return cases.filter(
+      c => c && c.caseRecord && ACTIVE_CASE_STATUSES.includes(c.caseRecord.status),
+    ).length;
   };
 
   const getInvalidCasesCount = () => {

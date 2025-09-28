@@ -55,14 +55,14 @@ export function CaseDetails({
 
   const getStatusColor = (status: CaseDisplay['status']) => {
     switch (status) {
-      case 'In Progress':
+      case 'Pending':
         return 'bg-blue-500/10 text-blue-700 border-blue-200 dark:bg-blue-500/20 dark:text-blue-300 dark:border-blue-800';
-      case 'Priority':
-        return 'bg-orange-500/10 text-orange-700 border-orange-200 dark:bg-orange-500/20 dark:text-orange-300 dark:border-orange-800';
-      case 'Review':
-        return 'bg-yellow-500/10 text-yellow-700 border-yellow-200 dark:bg-yellow-500/20 dark:text-yellow-300 dark:border-yellow-800';
-      case 'Completed':
-        return 'bg-green-500/10 text-green-700 border-green-200 dark:bg-green-500/20 dark:text-green-300 dark:border-green-800';
+      case 'Approved':
+        return 'bg-emerald-500/10 text-emerald-700 border-emerald-200 dark:bg-emerald-500/20 dark:text-emerald-300 dark:border-emerald-800';
+      case 'Denied':
+        return 'bg-red-500/10 text-red-700 border-red-200 dark:bg-red-500/20 dark:text-red-300 dark:border-red-800';
+      case 'Spenddown':
+        return 'bg-amber-500/10 text-amber-700 border-amber-200 dark:bg-amber-500/20 dark:text-amber-300 dark:border-amber-800';
     }
   };
 
@@ -86,8 +86,8 @@ export function CaseDetails({
                 <h1 className="text-xl font-bold text-foreground">
                   {caseData.name || 'Unnamed Case'}
                 </h1>
-                <Badge className={`${getStatusColor(caseData.status || 'In Progress')}`}>
-                  {caseData.status || 'In Progress'}
+                <Badge className={`${getStatusColor(caseData.status || 'Pending')}`}>
+                  {caseData.status || 'Pending'}
                 </Badge>
               </div>
               <div className="flex items-center gap-2 text-muted-foreground">

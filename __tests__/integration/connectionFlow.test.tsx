@@ -38,7 +38,7 @@ function buildInitialCase() {
       description: "Initial description",
       personId: "person-initial",
       spouseId: "",
-      status: "In Progress",
+  status: "Pending",
       priority: false,
       withWaiver: false,
       admissionDate: "2024-01-03",

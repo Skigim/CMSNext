@@ -15,6 +15,9 @@ export { useAutosaveStatus } from './useAutosaveStatus';
 // Navigation flow
 export { useNavigationFlow } from './useNavigationFlow';
 
+// Case list preferences
+export { useCaseListPreferences } from './useCaseListPreferences';
+
 // Financial item flow
 export { useFinancialItemFlow } from './useFinancialItemFlow';
 

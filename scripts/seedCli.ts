@@ -171,10 +171,10 @@ const printStats = (data: CaseData): void => {
     notes: data.caseRecords.reduce((sum: number, record: CaseRecord) => sum + record.notes.length, 0),
     organizations: new Set(data.people.map((p: Person) => p.organizationId)).size,
     casesByStatus: {
-      'In Progress': data.caseRecords.filter((record: CaseRecord) => record.status === 'In Progress').length,
-      'Priority': data.caseRecords.filter((record: CaseRecord) => record.status === 'Priority').length,
-      'Review': data.caseRecords.filter((record: CaseRecord) => record.status === 'Review').length,
-      'Completed': data.caseRecords.filter((record: CaseRecord) => record.status === 'Completed').length,
+      Pending: data.caseRecords.filter((record: CaseRecord) => record.status === 'Pending').length,
+      Approved: data.caseRecords.filter((record: CaseRecord) => record.status === 'Approved').length,
+      Denied: data.caseRecords.filter((record: CaseRecord) => record.status === 'Denied').length,
+      Spenddown: data.caseRecords.filter((record: CaseRecord) => record.status === 'Spenddown').length,
     }
   };
   

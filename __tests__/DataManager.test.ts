@@ -614,7 +614,7 @@ describe('DataManager', () => {
         },
         caseRecord: {
           mcn: 'MCN123',
-          status: 'In Progress' as const
+          status: 'Pending' as const
         }
       }
 

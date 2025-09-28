@@ -1,12 +1,47 @@
-import { useState } from "react";
+import { useCallback, useMemo, useState } from "react";
+import { toast } from "sonner";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 import { CaseCard } from "./CaseCard";
 import { VirtualCaseList } from "../app/VirtualCaseList";
 import { CaseDisplay } from "../../types/case";
 import { setupSampleData } from "../../utils/setupData";
-import { Plus, Search, Database, List, Grid } from "lucide-react";
+import {
+  Plus,
+  Search,
+  Database,
+  Grid,
+  Table,
+  Filter,
+  SortAsc,
+  RefreshCcw,
+} from "lucide-react";
 import { Toggle } from "../ui/toggle";
+import { ToggleGroup, ToggleGroupItem } from "../ui/toggle-group";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "../ui/dropdown-menu";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "../ui/alert-dialog";
+import { CaseTable } from "./CaseTable";
+import {
+  useCaseListPreferences,
+  type CaseListSegment,
+  type CaseListSortKey,
+} from "@/hooks/useCaseListPreferences";
 
 interface CaseListProps {
   cases: CaseDisplay[];
@@ -18,110 +53,228 @@ interface CaseListProps {
 }
 
 export function CaseList({ cases, onViewCase, onEditCase, onDeleteCase, onNewCase, onRefresh }: CaseListProps) {
+  const { viewMode, setViewMode, sortKey, setSortKey, segment, setSegment } = useCaseListPreferences();
   const [searchTerm, setSearchTerm] = useState("");
   const [isSettingUpData, setIsSettingUpData] = useState(false);
   const [useVirtualScrolling, setUseVirtualScrolling] = useState(false);
+  const [showSampleDataDialog, setShowSampleDataDialog] = useState(false);
 
-  // Automatically enable virtual scrolling for large datasets
-  const shouldUseVirtual = cases.length > 100 || useVirtualScrolling;
+  const shouldUseVirtual = viewMode === "grid" && (cases.length > 100 || useVirtualScrolling);
 
-  const handleSetupSampleData = async () => {
+  const handleSetupSampleData = useCallback(async () => {
+    const toastId = toast.loading("Adding sample data...");
     try {
       setIsSettingUpData(true);
       await setupSampleData();
-      if (onRefresh) {
-        onRefresh();
-      }
+      toast.success("Sample data added", { id: toastId });
+      onRefresh?.();
     } catch (error) {
-      console.error('Failed to setup sample data:', error);
+      console.error("Failed to setup sample data:", error);
+      toast.error("Unable to add sample data", { id: toastId });
     } finally {
       setIsSettingUpData(false);
+      setShowSampleDataDialog(false);
     }
-  };
+  }, [onRefresh]);
 
-  const filteredCases = cases.filter(caseData =>
-    (caseData.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (caseData.mcn || '').toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const handleSearchChange = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
+    setSearchTerm(event.target.value);
+  }, []);
+
+  const handleViewModeChange = useCallback((value: string) => {
+    if (value === "grid" || value === "table") {
+      setViewMode(value);
+    }
+  }, [setViewMode]);
+
+  const handleSortChange = useCallback((value: string) => {
+    if (value === "updated" || value === "name" || value === "mcn") {
+      setSortKey(value as CaseListSortKey);
+    }
+  }, [setSortKey]);
+
+  const handleSegmentChange = useCallback((value: string) => {
+    if (value === "all" || value === "recent" || value === "priority") {
+      setSegment(value as CaseListSegment);
+    }
+  }, [setSegment]);
+
+  const filteredCases = useMemo(() => {
+    const normalizedSearch = searchTerm.trim().toLowerCase();
+    const now = Date.now();
+    const recentThreshold = now - 1000 * 60 * 60 * 24 * 14; // 14 days
+
+    return cases.filter(caseData => {
+      const matchesSearch =
+        normalizedSearch.length === 0 ||
+        (caseData.name || "").toLowerCase().includes(normalizedSearch) ||
+        (caseData.mcn || "").toLowerCase().includes(normalizedSearch);
+
+      if (!matchesSearch) {
+        return false;
+      }
+
+      if (segment === "priority") {
+        return Boolean(caseData.priority);
+      }
+
+      if (segment === "recent") {
+        const updatedAt = Date.parse(caseData.updatedAt || caseData.caseRecord?.updatedDate || "");
+        return Number.isFinite(updatedAt) && updatedAt >= recentThreshold;
+      }
+
+      return true;
+    });
+  }, [cases, searchTerm, segment]);
+
+  const sortedCases = useMemo(() => {
+    return [...filteredCases].sort((a, b) => {
+      switch (sortKey) {
+        case "name": {
+          return (a.name || "").localeCompare(b.name || "");
+        }
+        case "mcn": {
+          return (a.mcn || "").localeCompare(b.mcn || "");
+        }
+        case "updated":
+        default: {
+          const aUpdated = Date.parse(a.updatedAt || a.caseRecord?.updatedDate || a.createdAt);
+          const bUpdated = Date.parse(b.updatedAt || b.caseRecord?.updatedDate || b.createdAt);
+          return bUpdated - aUpdated;
+        }
+      }
+    });
+  }, [filteredCases, sortKey]);
+
+  const noMatches = sortedCases.length === 0;
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
         <div>
           <h1>Case Management</h1>
           <p className="text-muted-foreground">
-            Manage and track all cases
-            {shouldUseVirtual && filteredCases.length > 100 && (
-              <span className="ml-2 text-xs bg-blue-100 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 px-2 py-1 rounded">
-                Virtual scrolling enabled for {filteredCases.length} cases
-              </span>
-            )}
+            Manage and track all cases in your workspace
           </p>
         </div>
-        <div className="flex gap-2">
-          {cases.length === 0 && (
-            <Button 
-              variant="outline" 
-              onClick={handleSetupSampleData}
-              disabled={isSettingUpData}
-            >
-              <Database className="w-4 h-4 mr-2" />
-              {isSettingUpData ? 'Setting up...' : 'Add Sample Data'}
-            </Button>
-          )}
-
+        <div className="flex items-center gap-2">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline">
+                <Database className="mr-2 h-4 w-4" /> Demo tools
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuLabel>Data helpers</DropdownMenuLabel>
+              <DropdownMenuItem
+                onSelect={(event) => {
+                  event.preventDefault();
+                  setShowSampleDataDialog(true);
+                }}
+                disabled={isSettingUpData}
+              >
+                <RefreshCcw className="mr-2 h-4 w-4" /> Add sample data
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem disabled>
+                Additional helpers coming soon
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
           <Button onClick={onNewCase}>
-            <Plus className="w-4 h-4 mr-2" />
-            New Case
+            <Plus className="mr-2 h-4 w-4" />
+            New case
           </Button>
         </div>
       </div>
 
-      <div className="flex items-center gap-4">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="relative w-full sm:max-w-xl">
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             placeholder="Search cases by name or MCN..."
             value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
+            onChange={handleSearchChange}
             className="pl-10"
+            aria-label="Search cases"
           />
         </div>
-        
-        {cases.length > 50 && (
-          <div className="flex items-center gap-2">
-            <span className="text-sm text-muted-foreground">View:</span>
-            <Toggle 
-              pressed={shouldUseVirtual} 
-              onPressedChange={setUseVirtualScrolling}
-              aria-label="Toggle virtual scrolling"
-              size="sm"
-            >
-              {shouldUseVirtual ? (
-                <List className="w-4 h-4" />
-              ) : (
-                <Grid className="w-4 h-4" />
-              )}
-            </Toggle>
-            <span className="text-xs text-muted-foreground">
-              {shouldUseVirtual ? 'List' : 'Grid'}
-            </span>
-          </div>
-        )}
+        <ToggleGroup
+          type="single"
+          value={viewMode}
+          onValueChange={handleViewModeChange}
+          variant="outline"
+          size="sm"
+          aria-label="Select case list view"
+        >
+          <ToggleGroupItem value="grid" aria-label="Grid view">
+            <Grid className="mr-2 h-4 w-4" /> Grid view
+          </ToggleGroupItem>
+          <ToggleGroupItem value="table" aria-label="Table view">
+            <Table className="mr-2 h-4 w-4" /> Table view
+          </ToggleGroupItem>
+        </ToggleGroup>
       </div>
 
-      {shouldUseVirtual ? (
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+        <ToggleGroup
+          type="single"
+          value={segment}
+          onValueChange={handleSegmentChange}
+          variant="outline"
+          size="sm"
+          aria-label="Filter case segments"
+        >
+          <ToggleGroupItem value="all" aria-label="All cases">
+            <Filter className="mr-2 h-4 w-4" /> All cases
+          </ToggleGroupItem>
+          <ToggleGroupItem value="recent" aria-label="Recently updated">
+            <Filter className="mr-2 h-4 w-4" /> Recently updated
+          </ToggleGroupItem>
+          <ToggleGroupItem value="priority" aria-label="Priority cases">
+            <Filter className="mr-2 h-4 w-4" /> Priority
+          </ToggleGroupItem>
+        </ToggleGroup>
+
+        <ToggleGroup
+          type="single"
+          value={sortKey}
+          onValueChange={handleSortChange}
+          variant="outline"
+          size="sm"
+          aria-label="Sort cases"
+        >
+          <ToggleGroupItem value="updated" aria-label="Sort by last updated">
+            <SortAsc className="mr-2 h-4 w-4" /> Updated
+          </ToggleGroupItem>
+          <ToggleGroupItem value="name" aria-label="Sort by name">
+            <SortAsc className="mr-2 h-4 w-4" /> Name
+          </ToggleGroupItem>
+          <ToggleGroupItem value="mcn" aria-label="Sort by MCN">
+            <SortAsc className="mr-2 h-4 w-4" /> MCN
+          </ToggleGroupItem>
+        </ToggleGroup>
+      </div>
+
+      {viewMode === "table" ? (
+        <CaseTable
+          cases={sortedCases}
+          onViewCase={onViewCase}
+          onEditCase={onEditCase}
+          onDeleteCase={onDeleteCase}
+        />
+      ) : shouldUseVirtual ? (
         <VirtualCaseList
-          cases={filteredCases}
+          cases={sortedCases}
           onViewCase={onViewCase}
           onEditCase={onEditCase}
           onDeleteCase={onDeleteCase}
         />
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredCases.map((caseData, index) => (
+        <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
+          {sortedCases.map(caseData => (
             <CaseCard
-              key={caseData.id || `case-${index}`}
+              key={caseData.id}
               case={caseData}
               onView={onViewCase}
               onEdit={onEditCase}
@@ -131,13 +284,42 @@ export function CaseList({ cases, onViewCase, onEditCase, onDeleteCase, onNewCas
         </div>
       )}
 
-      {filteredCases.length === 0 && (
-        <div className="text-center py-12">
-          <p className="text-muted-foreground">No cases found matching your search.</p>
+      {viewMode === "grid" && cases.length > 100 && (
+        <div className="flex items-center justify-end gap-2 text-xs text-muted-foreground">
+          <Toggle
+            pressed={useVirtualScrolling}
+            onPressedChange={setUseVirtualScrolling}
+            aria-label="Toggle virtual scrolling"
+            size="sm"
+          >
+            {useVirtualScrolling ? "Virtual on" : "Virtual off"}
+          </Toggle>
+          <span>Virtual scrolling improves performance for large lists.</span>
         </div>
       )}
 
+      {noMatches && (
+        <div className="py-12 text-center">
+          <p className="text-muted-foreground">No cases match the current filters.</p>
+        </div>
+      )}
 
+      <AlertDialog open={showSampleDataDialog} onOpenChange={setShowSampleDataDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Add sample data?</AlertDialogTitle>
+            <AlertDialogDescription>
+              We'll add curated demo cases to your current workspace. Existing data will remain untouched.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isSettingUpData}>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleSetupSampleData} disabled={isSettingUpData}>
+              {isSettingUpData ? "Adding..." : "Add sample data"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

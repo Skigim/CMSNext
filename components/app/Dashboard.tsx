@@ -1,12 +1,14 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../ui/card";
 import { Button } from "../ui/button";
-import { 
-  Users, 
-  FileText, 
-  TrendingUp, 
+import {
+  FileText,
   Clock,
   Plus,
-  ArrowRight
+  ArrowRight,
+  CheckCircle2,
+  XCircle,
+  Coins,
+  TrendingUp,
 } from "lucide-react";
 import { CaseDisplay } from "../../types/case";
 import { FileServiceDiagnostic } from "../diagnostics/FileServiceDiagnostic";
@@ -22,38 +24,51 @@ export function Dashboard({ cases, onViewAllCases, onNewCase }: DashboardProps) 
   const getValidCases = () => cases.filter(c => c && c.caseRecord && typeof c.caseRecord === 'object');
   
   const totalCases = cases.length;
-  const activeCases = getValidCases().filter(c => c.caseRecord.status === 'In Progress').length;
+  const statusCount = (status: CaseDisplay['status']) =>
+    getValidCases().filter(c => c.caseRecord.status === status).length;
+
+  const pendingCases = statusCount('Pending');
+  const approvedCases = statusCount('Approved');
+  const deniedCases = statusCount('Denied');
+  const spenddownCases = statusCount('Spenddown');
   const recentCases = getValidCases().slice(0, 5); // Show 5 most recent cases
 
   const stats = [
     {
       title: "Total Cases",
       value: totalCases,
-      description: "All cases in the system",
+      description: "All tracked cases",
       icon: FileText,
       color: "text-blue-600"
     },
     {
-      title: "Active Cases", 
-      value: activeCases,
-      description: "Currently active cases",
-      icon: Users,
-      color: "text-green-600"
-    },
-    {
-      title: "Pending Review",
-      value: getValidCases().filter(c => c.caseRecord.status === 'Review').length,
-      description: "Cases awaiting review",
+      title: "Pending Cases",
+      value: pendingCases,
+      description: "Awaiting determination",
       icon: Clock,
-      color: "text-orange-600"
+      color: "text-amber-600"
     },
     {
-      title: "Growth",
-      value: "+12%",
-      description: "vs last month",
-      icon: TrendingUp,
+      title: "Approved Cases",
+      value: approvedCases,
+      description: "Cleared for services",
+      icon: CheckCircle2,
+      color: "text-emerald-600"
+    },
+    {
+      title: "Denied Cases",
+      value: deniedCases,
+      description: "Require follow-up",
+      icon: XCircle,
+      color: "text-red-600"
+    },
+    {
+      title: "Spenddown Cases",
+      value: spenddownCases,
+      description: "Managing spenddown requirements",
+      icon: Coins,
       color: "text-purple-600"
-    }
+    },
   ];
 
   return (

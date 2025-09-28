@@ -32,13 +32,7 @@ const CASE_TYPES = [
   'Other'
 ];
 
-const CASE_STATUSES = [
-  'Pending',
-  'In Progress', 
-  'Priority',
-  'Review',
-  'Completed'
-];
+const CASE_STATUSES = ['Pending', 'Approved', 'Denied', 'Spenddown'] as const;
 
 export function CaseInfoForm({
   caseData,

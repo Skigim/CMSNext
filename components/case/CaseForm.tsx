@@ -56,7 +56,7 @@ export function CaseForm({ case: existingCase, onSave, onCancel }: CaseFormProps
     caseType: existingCase?.caseRecord.caseType || 'LTC',
     personId: existingCase?.caseRecord.personId || '',
     spouseId: existingCase?.caseRecord.spouseId || '',
-    status: existingCase?.caseRecord.status || 'In Progress',
+    status: existingCase?.caseRecord.status || 'Pending',
     description: existingCase?.caseRecord.description || '',
     priority: existingCase?.caseRecord.priority || false,
     livingArrangement: existingCase?.caseRecord.livingArrangement || '',

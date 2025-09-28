@@ -167,24 +167,23 @@ function isValidCaseStructure(item: any): item is CaseDisplay {
  * Normalize case status to match expected values
  */
 function normalizeStatus(status: any): CaseDisplay['status'] {
-  if (!status) return 'In Progress';
-  
+  if (!status) return 'Pending';
+
   const statusStr = String(status).toLowerCase();
-  
-  if (statusStr.includes('progress') || statusStr.includes('active') || statusStr.includes('open')) {
-    return 'In Progress';
+
+  if (statusStr.includes('approve') || statusStr.includes('complete') || statusStr.includes('close')) {
+    return 'Approved';
   }
-  if (statusStr.includes('priority') || statusStr.includes('urgent')) {
-    return 'Priority';
+
+  if (statusStr.includes('deny') || statusStr.includes('reject')) {
+    return 'Denied';
   }
-  if (statusStr.includes('review') || statusStr.includes('pending')) {
-    return 'Review';
+
+  if (statusStr.includes('spend')) {
+    return 'Spenddown';
   }
-  if (statusStr.includes('complete') || statusStr.includes('closed') || statusStr.includes('done')) {
-    return 'Completed';
-  }
-  
-  return 'In Progress';
+
+  return 'Pending';
 }
 
 /**
@@ -270,7 +269,7 @@ export function repairCaseData(rawCases: any[]): CaseDisplay[] {
       caseType: item.caseType || 'General',
       personId: '', // Will be set below
       spouseId: item.spouseId || '',
-      status: normalizeStatus(item.status) || 'In Progress',
+  status: normalizeStatus(item.status) || 'Pending',
       description: item.description || '',
       priority: Boolean(item.priority === true || item.priority === 'high' || item.priority === 'urgent'),
       livingArrangement: item.livingArrangement || '',

@@ -10,7 +10,7 @@ describe('Testing Setup', () => {
     expect(mockCase.id).toBe('case-test-1')
     expect(mockCase.person.firstName).toBe('John')
     expect(mockCase.person.lastName).toBe('Doe')
-    expect(mockCase.caseRecord.status).toBe('In Progress')
+  expect(mockCase.caseRecord.status).toBe('Pending')
   })
 
   it('should be able to render a simple component', () => {

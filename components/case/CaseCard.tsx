@@ -1,9 +1,20 @@
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
 import { Badge } from "../ui/badge";
 import { Button } from "../ui/button";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "../ui/alert-dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "../ui/alert-dialog";
 import { CaseDisplay } from "../../types/case";
 import { Eye, Edit, Trash2 } from "lucide-react";
+import { CaseStatusBadge } from "./CaseStatusBadge";
 
 interface CaseCardProps {
   case: CaseDisplay;
@@ -13,50 +24,63 @@ interface CaseCardProps {
 }
 
 export function CaseCard({ case: caseData, onView, onEdit, onDelete }: CaseCardProps) {
-  // Safely access financial data with fallbacks for malformed cases
-  const financials = caseData.caseRecord?.financials || { resources: [], income: [], expenses: [] };
-  const totalResources = (financials.resources || []).reduce((sum, item) => sum + (item.amount || 0), 0);
-  const totalIncome = (financials.income || []).reduce((sum, item) => sum + (item.amount || 0), 0);
-  const totalExpenses = (financials.expenses || []).reduce((sum, item) => sum + (item.amount || 0), 0);
-
-  const getStatusColor = (status: CaseDisplay['status']) => {
-    switch (status) {
-      case 'In Progress':
-        return 'bg-blue-500/10 text-blue-500 border-blue-500/20';
-      case 'Priority':
-        return 'bg-orange-500/10 text-orange-500 border-orange-500/20';
-      case 'Review':
-        return 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20';
-      case 'Completed':
-        return 'bg-green-500/10 text-green-500 border-green-500/20';
+  const formatDate = (value?: string) => {
+    if (!value) {
+      return "—";
     }
+
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) {
+      return value;
+    }
+
+    return new Intl.DateTimeFormat(undefined, {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+    }).format(date);
   };
+
+  const caseType = caseData.caseRecord?.caseType || "Not specified";
+  const applicationDate = caseData.caseRecord?.applicationDate || caseData.createdAt;
+  const lastUpdated = caseData.updatedAt || caseData.caseRecord?.updatedDate || caseData.createdAt;
+  const primaryContact = caseData.person?.phone || caseData.person?.email || "Not provided";
+
+  const priorityLabel = caseData.priority ? "High priority" : "Standard priority";
+  const priorityClasses = caseData.priority
+    ? "bg-red-500/10 text-red-500 border-red-500/20"
+    : "bg-muted text-muted-foreground border-transparent";
 
   return (
     <Card className="hover:shadow-md transition-shadow">
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
           <CardTitle className="text-lg">{caseData.name || 'Unnamed Case'}</CardTitle>
-          <Badge className={getStatusColor(caseData.status || 'In Progress')}>
-            {caseData.status || 'In Progress'}
-          </Badge>
+          <CaseStatusBadge status={caseData.status} />
         </div>
         <p className="text-sm text-muted-foreground">MCN: {caseData.mcn || 'No MCN'}</p>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="grid grid-cols-3 gap-4 text-sm">
+        <div className="grid grid-cols-1 gap-4 text-sm sm:grid-cols-3">
           <div>
-            <p className="text-muted-foreground">Resources</p>
-            <p className="font-medium">${totalResources.toFixed(2)}</p>
+            <p className="text-muted-foreground">Case type</p>
+            <p className="font-medium">{caseType}</p>
           </div>
           <div>
-            <p className="text-muted-foreground">Income</p>
-            <p className="font-medium">${totalIncome.toFixed(2)}</p>
+            <p className="text-muted-foreground">Application date</p>
+            <p className="font-medium">{formatDate(applicationDate)}</p>
           </div>
           <div>
-            <p className="text-muted-foreground">Expenses</p>
-            <p className="font-medium">${totalExpenses.toFixed(2)}</p>
+            <p className="text-muted-foreground">Last updated</p>
+            <p className="font-medium">{formatDate(lastUpdated)}</p>
           </div>
+        </div>
+        <div className="flex flex-col justify-between gap-2 text-sm sm:flex-row sm:items-center">
+          <div>
+            <p className="text-muted-foreground">Primary contact</p>
+            <p className="font-medium text-foreground">{primaryContact}</p>
+          </div>
+          <Badge className={priorityClasses}>{priorityLabel}</Badge>
         </div>
         
         <div className="flex gap-2">
