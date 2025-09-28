@@ -4,9 +4,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from ".
 import { Separator } from "../ui/separator";
 import { Button } from "../ui/button";
 import { Plus, Minus } from "lucide-react";
+import { useMemo } from "react";
 import { NewPersonData } from "../../types/case";
 import { AddressForm } from "./AddressForm";
 import { ContactInfoForm } from "./ContactInfoForm";
+import { useCategoryConfig } from "@/contexts/CategoryConfigContext";
 
 interface PersonInfoFormProps {
   personData: NewPersonData;
@@ -29,16 +31,6 @@ interface PersonInfoFormProps {
   };
 }
 
-const LIVING_ARRANGEMENTS = [
-  'Apartment/House',
-  'Assisted Living',
-  'Nursing Home',
-  'Group Home',
-  'Family Home',
-  'Independent Living',
-  'Other'
-];
-
 export function PersonInfoForm({
   personData,
   spouseId,
@@ -51,6 +43,9 @@ export function PersonInfoForm({
   onAuthorizedRepsChange,
   onFamilyMembersChange
 }: PersonInfoFormProps) {
+  const { config } = useCategoryConfig();
+  const livingArrangements = useMemo(() => config.livingArrangements, [config.livingArrangements]);
+
   return (
     <div className="space-y-6">
       {/* Basic Information */}
@@ -122,7 +117,7 @@ export function PersonInfoForm({
               <SelectValue placeholder="Select living arrangement" />
             </SelectTrigger>
             <SelectContent>
-              {LIVING_ARRANGEMENTS.map((arrangement) => (
+              {livingArrangements.map((arrangement) => (
                 <SelectItem key={arrangement} value={arrangement}>
                   {arrangement}
                 </SelectItem>

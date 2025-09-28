@@ -80,9 +80,7 @@ export const FinancialItemSchema = z.object({
 
 // Note validation schema
 export const NoteSchema = z.object({
-  category: z.enum(['General', 'VR Update', 'Client Contact', 'Follow-up'], {
-    message: 'Invalid note category'
-  }),
+  category: stringRequired('Category'),
   content: stringRequired('Note content').max(2000, 'Note content must be less than 2000 characters')
 });
 
@@ -90,14 +88,10 @@ export const NoteSchema = z.object({
 export const CaseRecordSchema = z.object({
   mcn: stringRequired('MCN').max(50, 'MCN must be less than 50 characters'),
   applicationDate: z.string().datetime('Invalid application date'),
-  caseType: z.enum(['General', 'VR', 'Youth', 'IL'], {
-    message: 'Invalid case type'
-  }),
+  caseType: stringRequired('Case type'),
   personId: stringRequired('Person ID'),
   spouseId: stringOptional,
-  status: z.enum(['Pending', 'Approved', 'Denied', 'Spenddown'], {
-    message: 'Invalid case status'
-  }),
+  status: stringRequired('Case status'),
   description: z.string().max(1000, 'Description must be less than 1000 characters').optional().default(''),
   priority: z.boolean().optional().default(false),
   livingArrangement: stringRequired('Living arrangement'),

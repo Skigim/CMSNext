@@ -6,6 +6,12 @@ import {
   reportFileStorageError,
   type FileStorageOperation,
 } from "./fileStorageErrorReporter";
+import {
+  CategoryConfig,
+  CategoryKey,
+  mergeCategoryConfig,
+  sanitizeCategoryValues,
+} from "../types/categoryConfig";
 
 interface DataManagerConfig {
   fileService: AutosaveFileService;
@@ -16,6 +22,7 @@ interface FileData {
   cases: CaseDisplay[];
   exported_at: string;
   total_cases: number;
+  categoryConfig: CategoryConfig;
 }
 
 /**
@@ -164,7 +171,8 @@ export class DataManager {
         return {
           cases: [],
           exported_at: new Date().toISOString(),
-          total_cases: 0
+          total_cases: 0,
+          categoryConfig: mergeCategoryConfig(),
         };
       }
 
@@ -183,7 +191,9 @@ export class DataManager {
         cases = transformImportedData(rawData);
       }
 
-      const { cases: normalizedCases, changed } = normalizeCaseNotes(cases);
+  const categoryConfig = mergeCategoryConfig(rawData.categoryConfig);
+
+  const { cases: normalizedCases, changed } = normalizeCaseNotes(cases);
 
       let finalCases = normalizedCases;
       let finalExportedAt = rawData.exported_at || rawData.exportedAt || new Date().toISOString();
@@ -194,6 +204,7 @@ export class DataManager {
             cases: normalizedCases,
             exported_at: finalExportedAt,
             total_cases: normalizedCases.length,
+            categoryConfig,
           });
 
           finalCases = persistedData.cases;
@@ -208,7 +219,8 @@ export class DataManager {
       return {
         cases: finalCases,
         exported_at: finalExportedAt,
-        total_cases: finalCases.length
+        total_cases: finalCases.length,
+        categoryConfig,
       };
     } catch (error) {
       console.error('Failed to read file data:', error);
@@ -228,6 +240,7 @@ export class DataManager {
         ...data,
         exported_at: new Date().toISOString(),
         total_cases: data.cases.length,
+        categoryConfig: mergeCategoryConfig(data.categoryConfig),
         cases: data.cases.map(caseItem => ({
           ...caseItem,
           updatedAt: new Date().toISOString()
@@ -295,6 +308,56 @@ export class DataManager {
   async getCasesCount(): Promise<number> {
     const data = await this.readFileData();
     return data ? data.cases.length : 0;
+  }
+
+  // =============================================================================
+  // PUBLIC API - CATEGORY CONFIGURATION
+  // =============================================================================
+
+  async getCategoryConfig(): Promise<CategoryConfig> {
+    const data = await this.readFileData();
+    return data ? mergeCategoryConfig(data.categoryConfig) : mergeCategoryConfig();
+  }
+
+  async updateCategoryConfig(categoryConfig: CategoryConfig): Promise<CategoryConfig> {
+    const sanitized = mergeCategoryConfig(categoryConfig);
+    const currentData = await this.readFileData();
+
+    const baseData: FileData = currentData ?? {
+      cases: [],
+      exported_at: new Date().toISOString(),
+      total_cases: 0,
+      categoryConfig: mergeCategoryConfig(),
+    };
+
+    const updatedData: FileData = {
+      ...baseData,
+      categoryConfig: sanitized,
+    };
+
+    await this.writeFileData(updatedData);
+    return sanitized;
+  }
+
+  async updateCategoryValues(key: CategoryKey, values: string[]): Promise<CategoryConfig> {
+    const sanitizedValues = sanitizeCategoryValues(values);
+    if (sanitizedValues.length === 0) {
+      throw new Error('At least one option is required');
+    }
+
+    const currentConfig = await this.getCategoryConfig();
+    const nextConfig: CategoryConfig = {
+      ...currentConfig,
+      [key]: sanitizedValues,
+    };
+
+    return this.updateCategoryConfig(nextConfig);
+  }
+
+  async resetCategoryConfig(): Promise<CategoryConfig> {
+    const defaults = mergeCategoryConfig();
+    await this.updateCategoryConfig(defaults);
+    return defaults;
   }
 
   // =============================================================================
@@ -899,10 +962,21 @@ export class DataManager {
    * Pattern: write empty structure
    */
   async clearAllData(): Promise<void> {
+    let categoryConfig = mergeCategoryConfig();
+    try {
+      const currentData = await this.readFileData();
+      if (currentData) {
+        categoryConfig = mergeCategoryConfig(currentData.categoryConfig);
+      }
+    } catch (error) {
+      console.warn('[DataManager] Failed to read existing data before clearing. Using default category config.', error);
+    }
+
     const emptyData: FileData = {
       cases: [],
       exported_at: new Date().toISOString(),
-      total_cases: 0
+      total_cases: 0,
+      categoryConfig,
     };
 
     await this.writeFileData(emptyData);

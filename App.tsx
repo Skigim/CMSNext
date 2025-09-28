@@ -17,6 +17,7 @@ import { FileStorageIntegrator } from "./components/providers/FileStorageIntegra
 import { AppContentView } from "./components/app/AppContentView";
 import { useAppContentViewModel } from "./components/app/useAppContentViewModel";
 import { clearFileStorageFlags, updateFileStorageFlags } from "./utils/fileStorageFlags";
+import { useCategoryConfig } from "./contexts/CategoryConfigContext";
 
 const AppContent = memo(function AppContent() {
   const { isSupported, hasStoredHandle, connectToFolder, connectToExisting, loadExistingData, service } = useFileStorage();
@@ -38,6 +39,7 @@ const AppContent = memo(function AppContent() {
     setError,
     setHasLoadedData,
   } = useCaseManagement();
+  const { setConfigFromFile } = useCategoryConfig();
   
   const navigationFlow = useNavigationFlow({
     cases,
@@ -89,6 +91,12 @@ const AppContent = memo(function AppContent() {
     try {
       console.log("🔧 handleFileDataLoaded called with:", fileData);
 
+      if (fileData && typeof fileData === "object") {
+        setConfigFromFile(fileData.categoryConfig);
+      } else {
+        setConfigFromFile(undefined);
+      }
+
       let casesToSet: CaseDisplay[] = [];
 
       if (fileData?.cases) {
@@ -125,7 +133,7 @@ const AppContent = memo(function AppContent() {
       console.error("Failed to handle file data loaded:", err);
       toast.error("Failed to load data");
     }
-  }, [loadCases, setCases, setHasLoadedData]);
+  }, [loadCases, setCases, setHasLoadedData, setConfigFromFile]);
 
   // Expose the function globally so App component can use it
   useEffect(() => {

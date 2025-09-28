@@ -108,7 +108,7 @@ const mockProps = {
 describe('CaseDetails Memory Management', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.useFakeTimers();
+    vi.useFakeTimers({ shouldAdvanceTime: true });
   });
 
   afterEach(() => {
@@ -132,8 +132,8 @@ describe('CaseDetails Memory Management', () => {
     // Unmount component immediately after triggering action
     unmount();
     
-    // Fast-forward through any pending timeouts
-    vi.runAllTimers();
+  // Fast-forward through any pending timeouts without risking infinite loops
+  vi.runOnlyPendingTimers();
     
     // Should not have any React state update warnings
     expect(consoleSpy).not.toHaveBeenCalledWith(

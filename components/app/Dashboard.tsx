@@ -1,3 +1,4 @@
+import { useCallback, useMemo } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../ui/card";
 import { Button } from "../ui/button";
 import {
@@ -12,6 +13,7 @@ import {
 } from "lucide-react";
 import { CaseDisplay } from "../../types/case";
 import { FileServiceDiagnostic } from "../diagnostics/FileServiceDiagnostic";
+import { useCategoryConfig } from "../../contexts/CategoryConfigContext";
 
 interface DashboardProps {
   cases: CaseDisplay[];
@@ -20,56 +22,78 @@ interface DashboardProps {
 }
 
 export function Dashboard({ cases, onViewAllCases, onNewCase }: DashboardProps) {
-  // Helper function to safely filter cases
-  const getValidCases = () => cases.filter(c => c && c.caseRecord && typeof c.caseRecord === 'object');
-  
+  const { config } = useCategoryConfig();
+
+  const validCases = useMemo(
+    () => cases.filter(c => c && c.caseRecord && typeof c.caseRecord === "object"),
+    [cases],
+  );
+
   const totalCases = cases.length;
-  const statusCount = (status: CaseDisplay['status']) =>
-    getValidCases().filter(c => c.caseRecord.status === status).length;
 
-  const pendingCases = statusCount('Pending');
-  const approvedCases = statusCount('Approved');
-  const deniedCases = statusCount('Denied');
-  const spenddownCases = statusCount('Spenddown');
-  const recentCases = getValidCases().slice(0, 5); // Show 5 most recent cases
+  const statusCount = useCallback(
+    (status: CaseDisplay["status"]) =>
+      validCases.filter(c => c.caseRecord.status === status).length,
+    [validCases],
+  );
 
-  const stats = [
-    {
-      title: "Total Cases",
-      value: totalCases,
-      description: "All tracked cases",
-      icon: FileText,
-      color: "text-blue-600"
-    },
-    {
-      title: "Pending Cases",
-      value: pendingCases,
-      description: "Awaiting determination",
-      icon: Clock,
-      color: "text-amber-600"
-    },
-    {
-      title: "Approved Cases",
-      value: approvedCases,
-      description: "Cleared for services",
-      icon: CheckCircle2,
-      color: "text-emerald-600"
-    },
-    {
-      title: "Denied Cases",
-      value: deniedCases,
-      description: "Require follow-up",
-      icon: XCircle,
-      color: "text-red-600"
-    },
-    {
-      title: "Spenddown Cases",
-      value: spenddownCases,
-      description: "Managing spenddown requirements",
-      icon: Coins,
-      color: "text-purple-600"
-    },
-  ];
+  const recentCases = validCases.slice(0, 5);
+
+  const statusPalette = useMemo(
+    () => [
+      "text-amber-600",
+      "text-emerald-600",
+      "text-red-600",
+      "text-purple-600",
+      "text-blue-600",
+      "text-slate-600",
+    ],
+    [],
+  );
+
+  const statusIconMap = useMemo(
+    () => ({
+      pending: { icon: Clock, description: "Awaiting determination" },
+      approved: { icon: CheckCircle2, description: "Cleared for services" },
+      denied: { icon: XCircle, description: "Requires follow-up" },
+      spenddown: { icon: Coins, description: "Spenddown management" },
+    }),
+    [],
+  );
+
+  const statusStats = useMemo(
+    () =>
+      config.caseStatuses.map((status, index) => {
+        const key = status.toLowerCase();
+        const meta = statusIconMap[key as keyof typeof statusIconMap] || {
+          icon: TrendingUp,
+          description: "Tracked cases",
+        };
+
+        return {
+          title: `${status} Cases`,
+          value: statusCount(status),
+          description: meta.description,
+          icon: meta.icon,
+          color: statusPalette[index % statusPalette.length],
+        };
+      }),
+    [config.caseStatuses, statusCount, statusIconMap, statusPalette],
+  );
+
+  const stats = useMemo(
+    () => [
+      {
+        title: "Total Cases",
+        value: totalCases,
+        description: "All tracked cases",
+        icon: FileText,
+        color: "text-blue-600",
+      },
+      ...statusStats,
+    ],
+    [statusStats, totalCases],
+  );
 
   return (
     <div className="space-y-6">

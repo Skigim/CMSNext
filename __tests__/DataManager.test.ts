@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest'
 import { DataManager } from '@/utils/DataManager'
 import { createMockCaseDisplay, createMockFinancialItem, createMockNote } from '@/src/test/testUtils'
+import { mergeCategoryConfig } from '@/types/categoryConfig'
 import AutosaveFileService from '@/utils/AutosaveFileService'
 
 vi.mock('@/utils/fileStorageErrorReporter', () => ({
@@ -21,6 +22,14 @@ vi.mock('@/utils/dataTransform', () => ({
   })
 }))
 
+const createFileData = (overrides: Record<string, unknown> = {}) => ({
+  cases: [],
+  exported_at: new Date().toISOString(),
+  total_cases: 0,
+  categoryConfig: mergeCategoryConfig(),
+  ...overrides,
+})
+
 describe('DataManager', () => {
   let dataManager: DataManager
   let mockAutosaveService: any
@@ -32,21 +41,13 @@ describe('DataManager', () => {
     // Create mock autosave service
     mockAutosaveService = {
       initialize: vi.fn().mockResolvedValue(true),
-      readFile: vi.fn().mockResolvedValue({
-        cases: [],
-        exported_at: new Date().toISOString(),
-        total_cases: 0
-      }),
+      readFile: vi.fn().mockResolvedValue(createFileData()),
       writeFile: vi.fn().mockResolvedValue(true),
       saveData: vi.fn().mockResolvedValue(true),
       startBatchMode: vi.fn(),
       endBatchMode: vi.fn(),
       isSupported: true,
-      getFullData: vi.fn().mockReturnValue({
-        cases: [],
-        exported_at: new Date().toISOString(),
-        total_cases: 0
-      }),
+      getFullData: vi.fn().mockReturnValue(createFileData()),
       getStatus: vi.fn().mockReturnValue({
         permissionStatus: 'granted',
         isConnected: true,
@@ -149,11 +150,7 @@ describe('DataManager', () => {
 
   describe('writeFileData validation', () => {
     it('should handle writeFile returning false', async () => {
-      mockAutosaveService.readFile.mockResolvedValue({
-        cases: [],
-        exported_at: new Date().toISOString(),
-        total_cases: 0
-      })
+      mockAutosaveService.readFile.mockResolvedValue(createFileData())
       mockAutosaveService.writeFile.mockResolvedValue(false)
 
       const mockCase = createMockCaseDisplay()
@@ -165,11 +162,7 @@ describe('DataManager', () => {
     })
 
     it('should handle non-Error objects in write errors', async () => {
-      mockAutosaveService.readFile.mockResolvedValue({
-        cases: [],
-        exported_at: new Date().toISOString(),
-        total_cases: 0
-      })
+      mockAutosaveService.readFile.mockResolvedValue(createFileData())
       mockAutosaveService.writeFile.mockRejectedValue('String error')
 
       const mockCase = createMockCaseDisplay()
@@ -184,11 +177,7 @@ describe('DataManager', () => {
   describe('case management', () => {
     it('should create a complete case', async () => {
       const mockCase = createMockCaseDisplay()
-      mockAutosaveService.readFile.mockResolvedValue({
-        cases: [],
-        exported_at: new Date().toISOString(),
-        total_cases: 0
-      })
+      mockAutosaveService.readFile.mockResolvedValue(createFileData())
 
       const result = await dataManager.createCompleteCase({
         person: mockCase.person,
@@ -203,11 +192,10 @@ describe('DataManager', () => {
 
     it('should get all cases', async () => {
       const mockCases = [createMockCaseDisplay()]
-      mockAutosaveService.readFile.mockResolvedValue({
+      mockAutosaveService.readFile.mockResolvedValue(createFileData({
         cases: mockCases,
-        exported_at: new Date().toISOString(),
-        total_cases: mockCases.length
-      })
+        total_cases: mockCases.length,
+      }))
 
       const cases = await dataManager.getAllCases()
 
@@ -216,11 +204,10 @@ describe('DataManager', () => {
 
     it('should get a case by ID', async () => {
       const mockCase = createMockCaseDisplay()
-      mockAutosaveService.readFile.mockResolvedValue({
+      mockAutosaveService.readFile.mockResolvedValue(createFileData({
         cases: [mockCase],
-        exported_at: new Date().toISOString(),
-        total_cases: 1
-      })
+        total_cases: 1,
+      }))
 
       const result = await dataManager.getCaseById(mockCase.id)
 
@@ -228,11 +215,7 @@ describe('DataManager', () => {
     })
 
     it('should return null for non-existent case', async () => {
-      mockAutosaveService.readFile.mockResolvedValue({
-        cases: [],
-        exported_at: new Date().toISOString(),
-        total_cases: 0
-      })
+      mockAutosaveService.readFile.mockResolvedValue(createFileData())
 
       const result = await dataManager.getCaseById('non-existent')
 
@@ -241,11 +224,10 @@ describe('DataManager', () => {
 
     it('should update a complete case', async () => {
       const mockCase = createMockCaseDisplay()
-      mockAutosaveService.readFile.mockResolvedValue({
+      mockAutosaveService.readFile.mockResolvedValue(createFileData({
         cases: [mockCase],
-        exported_at: new Date().toISOString(),
-        total_cases: 1
-      })
+        total_cases: 1,
+      }))
 
       const updates = { 
         person: { ...mockCase.person, firstName: 'Updated' },
@@ -260,11 +242,10 @@ describe('DataManager', () => {
 
     it('should delete a case', async () => {
       const mockCase = createMockCaseDisplay()
-      mockAutosaveService.readFile.mockResolvedValue({
+      mockAutosaveService.readFile.mockResolvedValue(createFileData({
         cases: [mockCase],
-        exported_at: new Date().toISOString(),
-        total_cases: 1
-      })
+        total_cases: 1,
+      }))
 
       await dataManager.deleteCase(mockCase.id)
 
@@ -277,11 +258,10 @@ describe('DataManager', () => {
 
     beforeEach(() => {
       mockCase = createMockCaseDisplay()
-      mockAutosaveService.readFile.mockResolvedValue({
+      mockAutosaveService.readFile.mockResolvedValue(createFileData({
         cases: [mockCase],
-        exported_at: new Date().toISOString(),
-        total_cases: 1
-      })
+        total_cases: 1,
+      }))
     })
 
     it('should add a financial item', async () => {
@@ -332,11 +312,10 @@ describe('DataManager', () => {
 
     beforeEach(() => {
       mockCase = createMockCaseDisplay()
-      mockAutosaveService.readFile.mockResolvedValue({
+      mockAutosaveService.readFile.mockResolvedValue(createFileData({
         cases: [mockCase],
-        exported_at: new Date().toISOString(),
-        total_cases: 1
-      })
+        total_cases: 1,
+      }))
     })
 
     it('should add a note', async () => {
@@ -378,11 +357,7 @@ describe('DataManager', () => {
   describe('error handling', () => {
     it('should handle save errors gracefully', async () => {
       mockAutosaveService.writeFile.mockRejectedValue(new Error('Save failed'))
-      mockAutosaveService.readFile.mockResolvedValue({
-        cases: [],
-        exported_at: new Date().toISOString(),
-        total_cases: 0
-      })
+      mockAutosaveService.readFile.mockResolvedValue(createFileData())
 
       const mockCase = createMockCaseDisplay()
       
@@ -393,11 +368,7 @@ describe('DataManager', () => {
     })
 
     it('should handle case not found for update', async () => {
-      mockAutosaveService.readFile.mockResolvedValue({
-        cases: [],
-        exported_at: new Date().toISOString(),
-        total_cases: 0
-      })
+      mockAutosaveService.readFile.mockResolvedValue(createFileData())
 
       const mockCase = createMockCaseDisplay()
       
@@ -408,21 +379,13 @@ describe('DataManager', () => {
     })
 
     it('should handle case not found for delete', async () => {
-      mockAutosaveService.readFile.mockResolvedValue({
-        cases: [],
-        exported_at: new Date().toISOString(),
-        total_cases: 0
-      })
+      mockAutosaveService.readFile.mockResolvedValue(createFileData())
 
       await expect(dataManager.deleteCase('non-existent')).rejects.toThrow('Case not found')
     })
 
     it('should handle case not found for financial item operations', async () => {
-      mockAutosaveService.readFile.mockResolvedValue({
-        cases: [],
-        exported_at: new Date().toISOString(),
-        total_cases: 0
-      })
+      mockAutosaveService.readFile.mockResolvedValue(createFileData())
 
       const newItem = createMockFinancialItem('income')
 
@@ -433,11 +396,10 @@ describe('DataManager', () => {
 
     it('should handle item not found for update and delete', async () => {
       const mockCase = createMockCaseDisplay()
-      mockAutosaveService.readFile.mockResolvedValue({
+      mockAutosaveService.readFile.mockResolvedValue(createFileData({
         cases: [mockCase],
-        exported_at: new Date().toISOString(),
-        total_cases: 1
-      })
+        total_cases: 1,
+      }))
 
       const newItem = createMockFinancialItem('income')
 
@@ -446,11 +408,7 @@ describe('DataManager', () => {
     })
 
     it('should handle case not found for note operations', async () => {
-      mockAutosaveService.readFile.mockResolvedValue({
-        cases: [],
-        exported_at: new Date().toISOString(),
-        total_cases: 0
-      })
+      mockAutosaveService.readFile.mockResolvedValue(createFileData())
 
       const newNote = createMockNote()
 
@@ -485,11 +443,10 @@ describe('DataManager', () => {
   describe('bulk operations and utilities', () => {
     it('should get cases count', async () => {
       const mockCases = [createMockCaseDisplay(), createMockCaseDisplay()]
-      mockAutosaveService.readFile.mockResolvedValue({
+      mockAutosaveService.readFile.mockResolvedValue(createFileData({
         cases: mockCases,
-        exported_at: new Date().toISOString(),
-        total_cases: mockCases.length
-      })
+        total_cases: mockCases.length,
+      }))
 
       const count = await dataManager.getCasesCount()
 
@@ -497,11 +454,7 @@ describe('DataManager', () => {
     })
 
     it('should import multiple cases', async () => {
-      mockAutosaveService.readFile.mockResolvedValue({
-        cases: [],
-        exported_at: new Date().toISOString(),
-        total_cases: 0
-      })
+      mockAutosaveService.readFile.mockResolvedValue(createFileData())
 
       const casesToImport = [createMockCaseDisplay(), createMockCaseDisplay()]
 
@@ -515,11 +468,14 @@ describe('DataManager', () => {
     it('should clear all data', async () => {
       await dataManager.clearAllData()
 
-      expect(mockAutosaveService.writeFile).toHaveBeenCalledWith({
-        cases: [],
-        exported_at: expect.any(String),
-        total_cases: 0
-      })
+      expect(mockAutosaveService.writeFile).toHaveBeenCalledWith(
+        expect.objectContaining({
+          cases: [],
+          exported_at: expect.any(String),
+          total_cases: 0,
+          categoryConfig: expect.any(Object),
+        })
+      )
     })
 
     it('should check if connected', () => {
@@ -600,11 +556,7 @@ describe('DataManager', () => {
     })
 
     it('should set default values for missing case data', async () => {
-      mockAutosaveService.readFile.mockResolvedValue({
-        cases: [],
-        exported_at: new Date().toISOString(),
-        total_cases: 0
-      })
+      mockAutosaveService.readFile.mockResolvedValue(createFileData())
 
       // Create minimal case data
       const minimalCaseData = {

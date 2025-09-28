@@ -67,6 +67,8 @@ export interface Financials {
   expenses: FinancialItem[];
 }
 
+export type CaseStatus = string;
+
 // Case record interface
 export interface CaseRecord {
   id: string;
@@ -75,7 +77,7 @@ export interface CaseRecord {
   caseType: string;
   personId: string;
   spouseId: string;
-  status: 'Pending' | 'Approved' | 'Denied' | 'Spenddown';
+  status: CaseStatus;
   description: string;
   priority: boolean;
   livingArrangement: string;
@@ -144,7 +146,7 @@ export interface NewCaseRecordData {
   caseType: string;
   personId: string;
   spouseId?: string;
-  status: CaseRecord['status'];
+  status: CaseStatus;
   description: string;
   priority?: boolean;
   livingArrangement: string;
@@ -183,7 +185,7 @@ export interface CaseDisplay {
   id: string;
   name: string;
   mcn: string;
-  status: CaseRecord['status'];
+  status: CaseStatus;
   priority: boolean;
   createdAt: string;
   updatedAt: string;

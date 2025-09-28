@@ -1,9 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Note, NewNoteData } from '@/types/case';
+import { useCategoryConfig } from '@/contexts/CategoryConfigContext';
 
 interface NoteModalProps {
   isOpen: boolean;
@@ -12,34 +13,24 @@ interface NoteModalProps {
   editingNote?: Note;
 }
 
-const noteCategories = [
-  'General',
-  'VR Update',
-  'Client Contact',
-  'Case Review',
-  'Document Request',
-  'Follow-up Required',
-  'Important',
-  'Medical Update',
-  'Financial Update',
-  'Other'
-];
-
 export const NoteModal = React.forwardRef<HTMLDivElement, NoteModalProps>(
   ({ isOpen, onClose, onSave, editingNote }, ref) => {
+    const { config } = useCategoryConfig();
+    const noteCategories = useMemo(() => config.noteCategories, [config.noteCategories]);
     const [category, setCategory] = useState('');
     const [content, setContent] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
 
     useEffect(() => {
+      const fallbackCategory = noteCategories[0] ?? 'General';
       if (editingNote) {
-        setCategory(editingNote.category || 'General');
+        setCategory(editingNote.category || fallbackCategory);
         setContent(editingNote.content || '');
       } else {
-        setCategory('General');
+        setCategory(fallbackCategory);
         setContent('');
       }
-    }, [editingNote, isOpen]);
+    }, [editingNote, isOpen, noteCategories]);
 
     const handleSubmit = async (e: React.FormEvent) => {
       e.preventDefault();
@@ -64,7 +55,7 @@ export const NoteModal = React.forwardRef<HTMLDivElement, NoteModalProps>(
 
     const handleClose = () => {
       if (!isSubmitting) {
-        setCategory('General');
+        setCategory(noteCategories[0] ?? 'General');
         setContent('');
         onClose();
       }

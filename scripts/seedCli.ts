@@ -16,6 +16,7 @@
 
 import { generateFullSeedData, validateSeedData, seedDataPresets } from './generateSeedData';
 import type { CaseData, CaseRecord, Person } from '../types/case';
+import { defaultCategoryConfig } from '../types/categoryConfig';
 
 // Command line argument parsing
 interface CliOptions {
@@ -159,6 +160,16 @@ const saveToFile = async (data: CaseData, outputPath: string): Promise<void> => 
 };
 
 const printStats = (data: CaseData): void => {
+  const statusSet = new Set<string>([
+    ...defaultCategoryConfig.caseStatuses,
+    ...data.caseRecords.map((record: CaseRecord) => record.status),
+  ]);
+
+  const casesByStatus = Array.from(statusSet).reduce<Record<string, number>>((acc, status) => {
+    acc[status] = data.caseRecords.filter((record: CaseRecord) => record.status === status).length;
+    return acc;
+  }, {});
+
   const stats = {
     people: data.people.length,
     cases: data.caseRecords.length,
@@ -170,14 +181,9 @@ const printStats = (data: CaseData): void => {
     ),
     notes: data.caseRecords.reduce((sum: number, record: CaseRecord) => sum + record.notes.length, 0),
     organizations: new Set(data.people.map((p: Person) => p.organizationId)).size,
-    casesByStatus: {
-      Pending: data.caseRecords.filter((record: CaseRecord) => record.status === 'Pending').length,
-      Approved: data.caseRecords.filter((record: CaseRecord) => record.status === 'Approved').length,
-      Denied: data.caseRecords.filter((record: CaseRecord) => record.status === 'Denied').length,
-      Spenddown: data.caseRecords.filter((record: CaseRecord) => record.status === 'Spenddown').length,
-    }
+    casesByStatus,
   };
-  
+
   console.log('\n📈 Generated Data Statistics:');
   console.log(`   👥 People: ${stats.people}`);
   console.log(`   📋 Cases: ${stats.cases}`);

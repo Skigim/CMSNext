@@ -4,7 +4,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from ".
 import { Textarea } from "../ui/textarea";
 import { Checkbox } from "../ui/checkbox";
 import { Separator } from "../ui/separator";
+import { useMemo } from "react";
 import { NewCaseRecordData } from "../../types/case";
+import { useCategoryConfig } from "@/contexts/CategoryConfigContext";
 
 interface CaseInfoFormProps {
   caseData: NewCaseRecordData;
@@ -13,33 +15,20 @@ interface CaseInfoFormProps {
   onRetroRequestedChange: (value: boolean) => void;
 }
 
-const LIVING_ARRANGEMENTS = [
-  'Apartment/House',
-  'Assisted Living',
-  'Nursing Home',
-  'Group Home',
-  'Family Home',
-  'Independent Living',
-  'Other'
-];
-
-const CASE_TYPES = [
-  'LTC',
-  'Medicaid',
-  'SNAP',
-  'TANF',
-  'Emergency',
-  'Other'
-];
-
-const CASE_STATUSES = ['Pending', 'Approved', 'Denied', 'Spenddown'] as const;
-
 export function CaseInfoForm({
   caseData,
   retroRequested,
   onCaseDataChange,
   onRetroRequestedChange
 }: CaseInfoFormProps) {
+  const { config } = useCategoryConfig();
+
+  const { caseTypes, caseStatuses, livingArrangements } = useMemo(() => ({
+    caseTypes: config.caseTypes,
+    caseStatuses: config.caseStatuses,
+    livingArrangements: config.livingArrangements,
+  }), [config]);
+
   return (
     <div className="space-y-6">
       {/* Case Identification */}
@@ -66,7 +55,7 @@ export function CaseInfoForm({
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {CASE_TYPES.map((type) => (
+                {caseTypes.map((type) => (
                   <SelectItem key={type} value={type}>
                     {type}
                   </SelectItem>
@@ -94,7 +83,7 @@ export function CaseInfoForm({
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {CASE_STATUSES.map((status) => (
+                {caseStatuses.map((status) => (
                   <SelectItem key={status} value={status}>
                     {status}
                   </SelectItem>
@@ -132,7 +121,7 @@ export function CaseInfoForm({
                   <SelectValue placeholder="Select living arrangement" />
                 </SelectTrigger>
                 <SelectContent>
-                  {LIVING_ARRANGEMENTS.map((arrangement) => (
+                    {livingArrangements.map((arrangement) => (
                     <SelectItem key={arrangement} value={arrangement}>
                       {arrangement}
                     </SelectItem>

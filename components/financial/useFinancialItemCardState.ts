@@ -183,6 +183,14 @@ export function useFinancialItemCardState({
 
       try {
         const updatedItem = updateVerificationStatus(item, newStatus);
+        setFormData(prev => ({
+          ...prev,
+          verificationStatus: newStatus,
+          verificationSource:
+            newStatus === "Verified"
+              ? prev.verificationSource ?? updatedItem.verificationSource ?? ""
+              : undefined,
+        }));
         await onUpdate(itemType, normalizedItem.safeId, updatedItem);
       } catch (error) {
         console.error("[FinancialItemCard] Failed to update verification status:", error);

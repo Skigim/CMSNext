@@ -21,6 +21,7 @@ import type {
   Address,
   MailingAddress
 } from '../types/case';
+import { defaultCategoryConfig } from '../types/categoryConfig';
 
 // Realistic sample data pools
 const FIRST_NAMES = [
@@ -53,20 +54,14 @@ const CITIES = [
 
 const STATES = ['AL', 'AK', 'AZ', 'AR', 'CA', 'CO', 'CT', 'DE', 'FL', 'GA', 'HI', 'ID'];
 
-const CASE_TYPES = [
-  'Medicaid Application', 'SNAP Benefits', 'Housing Assistance', 'Disability Services',
-  'Emergency Assistance', 'Senior Services', 'Family Services', 'Healthcare Coverage'
-];
+const CASE_TYPES = [...defaultCategoryConfig.caseTypes];
 
 const ORGANIZATIONS = [
   'Central Community Services', 'Northern Regional Office', 'Southern District Center',
   'Eastern Area Services', 'Western Community Hub', 'Downtown Service Center'
 ];
 
-const LIVING_ARRANGEMENTS = [
-  'Independent', 'Assisted Living', 'Family Home', 'Group Home', 'Nursing Home',
-  'Temporary Housing', 'Transitional Housing', 'Shared Housing', 'Senior Community'
-];
+const LIVING_ARRANGEMENTS = [...defaultCategoryConfig.livingArrangements];
 
 const RESOURCE_TYPES = [
   { description: 'Checking Account', range: [500, 5000] as [number, number] },
@@ -89,7 +84,7 @@ const EXPENSE_TYPES = [
   { description: 'Transportation/Gas', frequency: 'monthly', range: [150, 500] as [number, number] }
 ];
 
-const NOTE_CATEGORIES = ['General', 'VR Update', 'Client Contact', 'Follow-up'];
+const NOTE_CATEGORIES = [...defaultCategoryConfig.noteCategories];
 
 const NOTE_TEMPLATES = {
   'General': [
@@ -119,7 +114,7 @@ const VERIFICATION_SOURCES = [
   'Employer Letter', 'Court Order', 'Medical Documentation'
 ];
 
-const CASE_STATUSES: CaseRecord['status'][] = ['Pending', 'Approved', 'Denied', 'Spenddown'];
+const CASE_STATUSES: CaseRecord['status'][] = [...defaultCategoryConfig.caseStatuses];
 
 // Utility functions
 const randomChoice = <T>(array: T[]): T => array[Math.floor(Math.random() * array.length)];
@@ -364,18 +359,18 @@ export const generateFullSeedData = (numCases: number = 50): CaseData => {
   };
   
   // Calculate statistics
+  const casesByStatus = CASE_STATUSES.reduce<Record<string, number>>((acc, status) => {
+    acc[status] = caseRecords.filter(c => c.status === status).length;
+    return acc;
+  }, {});
+
   const stats = {
     totalPeople: people.length,
     totalCases: caseRecords.length,
     totalFinancialItems: counters.financialItem.current,
     totalNotes: counters.note.current,
     priorityCases: caseRecords.filter(c => c.priority).length,
-    casesByStatus: {
-      Pending: caseRecords.filter(c => c.status === 'Pending').length,
-      Approved: caseRecords.filter(c => c.status === 'Approved').length,
-      Denied: caseRecords.filter(c => c.status === 'Denied').length,
-      Spenddown: caseRecords.filter(c => c.status === 'Spenddown').length,
-    },
+    casesByStatus,
     financialsByCategory: {
       resources: caseRecords.reduce(
         (sum: number, record: CaseRecord) => sum + record.financials.resources.length,
@@ -419,12 +414,12 @@ export const seedDataPresets = {
     // Ensure we have some priority cases
     data.caseRecords.slice(0, 3).forEach((caseRecord: CaseRecord) => {
       caseRecord.priority = true;
-      caseRecord.status = 'Spenddown';
+      caseRecord.status = CASE_STATUSES[CASE_STATUSES.length - 1] ?? caseRecord.status;
     });
     
     // Ensure we have cases in all statuses
-    const statuses: CaseRecord['status'][] = ['Pending', 'Approved', 'Denied', 'Spenddown'];
-    data.caseRecords.slice(0, 4).forEach((caseRecord: CaseRecord, index: number) => {
+    const statuses: CaseRecord['status'][] = [...CASE_STATUSES];
+    data.caseRecords.slice(0, statuses.length).forEach((caseRecord: CaseRecord, index: number) => {
       caseRecord.status = statuses[index];
     });
     

@@ -1,5 +1,6 @@
 import { vi } from 'vitest'
 import { CaseDisplay, FinancialItem, Note, Person, CaseRecord, CaseCategory } from '@/types/case'
+import { mergeCategoryConfig } from '@/types/categoryConfig'
 
 /**
  * Test data factories for creating mock data objects
@@ -183,7 +184,13 @@ export const createMockDataManager = () => ({
   ),
   deleteNote: vi.fn().mockImplementation((caseId, _noteId) => 
     Promise.resolve(createMockCaseDisplay({ id: caseId }))
-  )
+  ),
+
+  // Category configuration
+  getCategoryConfig: vi.fn().mockResolvedValue(mergeCategoryConfig()),
+  updateCategoryConfig: vi.fn().mockResolvedValue(mergeCategoryConfig()),
+  updateCategoryValues: vi.fn().mockResolvedValue(mergeCategoryConfig()),
+  resetCategoryConfig: vi.fn().mockResolvedValue(mergeCategoryConfig()),
 })
 
 /**

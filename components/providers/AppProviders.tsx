@@ -2,6 +2,7 @@ import { useCallback } from "react";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 import { FileStorageProvider } from "@/contexts/FileStorageContext";
 import { DataManagerProvider } from "@/contexts/DataManagerContext";
+import { CategoryConfigProvider } from "@/contexts/CategoryConfigContext";
 import ErrorBoundary from "@/components/error/ErrorBoundary";
 import FileSystemErrorBoundary from "@/components/error/FileSystemErrorBoundary";
 import { getFileStorageFlags } from "@/utils/fileStorageFlags";
@@ -59,7 +60,9 @@ export function AppProviders({ children }: AppProvidersProps) {
             onDataLoaded={handleDataLoaded}
           >
             <DataManagerProvider>
-              {children}
+              <CategoryConfigProvider>
+                {children}
+              </CategoryConfigProvider>
             </DataManagerProvider>
           </FileStorageProvider>
         </FileSystemErrorBoundary>

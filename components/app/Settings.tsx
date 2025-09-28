@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../ui/card";
 import { Button } from "../ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
@@ -11,6 +11,8 @@ import { FileStorageDiagnostics } from "../diagnostics/FileStorageDiagnostics";
 import { ErrorBoundaryTest } from "../error/ErrorBoundaryTest";
 import { ErrorReportViewer } from "../error/ErrorReportViewer";
 import { FeedbackPanel } from "../error/ErrorFeedbackForm";
+import { CategoryConfigDevPanel } from "../diagnostics/CategoryConfigDevPanel";
+import { CategoryManagerPanel } from "../category/CategoryManagerPanel";
 import { useFileStorage } from "../../contexts/FileStorageContext";
 import { useTheme } from "../../contexts/ThemeContext";
 import { 
@@ -25,11 +27,13 @@ import {
   FolderOpen,
   Check,
   Info,
-  Code
+  Code,
+  ListChecks
 } from "lucide-react";
 import { CaseDisplay } from "../../types/case";
 import { toast } from "sonner";
 import { useDataManagerSafe } from "../../contexts/DataManagerContext";
+import { useCategoryConfig } from "../../contexts/CategoryConfigContext";
 
 interface SettingsProps {
   cases: CaseDisplay[];
@@ -42,17 +46,30 @@ export function Settings({ cases, onDataPurged }: SettingsProps) {
   const { disconnect } = useFileStorage();
   const { theme, setTheme, themeOptions } = useTheme();
   const dataManager = useDataManagerSafe();
+  const { config } = useCategoryConfig();
 
   // Helper function to safely count valid cases
   const getValidCasesCount = () => {
     return cases.filter(c => c && c.caseRecord && typeof c.caseRecord === 'object').length;
   };
 
-  const ACTIVE_CASE_STATUSES: CaseDisplay['status'][] = ['Pending', 'Spenddown'];
+  const activeStatuses = useMemo(() => {
+    const statuses = config.caseStatuses;
+    if (!statuses.length) {
+      return [] as CaseDisplay['status'][];
+    }
+
+    const filtered = statuses.filter(status => !/denied|closed|inactive/i.test(status));
+    return (filtered.length > 0 ? filtered : [statuses[0]]) as CaseDisplay['status'][];
+  }, [config.caseStatuses]);
 
   const getActiveCasesCount = () => {
+    if (!activeStatuses.length) {
+      return 0;
+    }
+
     return cases.filter(
-      c => c && c.caseRecord && ACTIVE_CASE_STATUSES.includes(c.caseRecord.status),
+      c => c && c.caseRecord && activeStatuses.includes(c.caseRecord.status),
     ).length;
   };
 
@@ -140,7 +157,7 @@ export function Settings({ cases, onDataPurged }: SettingsProps) {
       </div>
 
       <Tabs defaultValue="data" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-5">
+        <TabsList className="grid w-full grid-cols-6">
           <TabsTrigger value="data" className="flex items-center gap-2">
             <Database className="h-4 w-4" />
             <span className="hidden sm:inline">Data</span>
@@ -152,6 +169,10 @@ export function Settings({ cases, onDataPurged }: SettingsProps) {
           <TabsTrigger value="storage" className="flex items-center gap-2">
             <FolderOpen className="h-4 w-4" />
             <span className="hidden sm:inline">Storage</span>
+          </TabsTrigger>
+          <TabsTrigger value="categories" className="flex items-center gap-2">
+            <ListChecks className="h-4 w-4" />
+            <span className="hidden sm:inline">Categories</span>
           </TabsTrigger>
           <TabsTrigger value="development" className="flex items-center gap-2">
             <Code className="h-4 w-4" />
@@ -439,9 +460,29 @@ export function Settings({ cases, onDataPurged }: SettingsProps) {
           </div>
         </TabsContent>
 
+        {/* Categories Tab */}
+        <TabsContent value="categories" className="space-y-6">
+          <div className="grid gap-6">
+            <CategoryManagerPanel
+              description="Adjust the lists that appear in forms, dashboards, and reports. Updates apply immediately across the workspace."
+              supportingContent={(
+                <div className="space-y-2 text-sm text-muted-foreground">
+                  <p>
+                    Add, rename, or remove options to match the language your organization uses. Changes save to the connected data folder so teammates pick them up automatically.
+                  </p>
+                  <p className="text-xs text-muted-foreground/80">
+                    Tip: keep the most frequently used options near the top for quicker selections in forms.
+                  </p>
+                </div>
+              )}
+            />
+          </div>
+        </TabsContent>
+
         {/* Development Tab */}
         <TabsContent value="development" className="space-y-6">
           <div className="grid gap-6">
+            <CategoryConfigDevPanel />
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">

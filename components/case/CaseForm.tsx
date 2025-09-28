@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Button } from "../ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
@@ -8,6 +8,7 @@ import { ArrowLeft, User, FileText, Save, X } from "lucide-react";
 import { withFormErrorBoundary } from "../error/ErrorBoundaryHOC";
 import { PersonInfoForm } from "../forms/PersonInfoForm";
 import { CaseInfoForm } from "../forms/CaseInfoForm";
+import { useCategoryConfig } from "@/contexts/CategoryConfigContext";
 
 interface CaseFormProps {
   case?: CaseDisplay;
@@ -22,6 +23,15 @@ const getTodayDate = () => {
 };
 
 export function CaseForm({ case: existingCase, onSave, onCancel }: CaseFormProps) {
+  const { config } = useCategoryConfig();
+
+  const defaultCaseType = useMemo(() => config.caseTypes[0] ?? "", [config.caseTypes]);
+  const defaultCaseStatus = useMemo(() => config.caseStatuses[0] ?? "", [config.caseStatuses]);
+  const defaultLivingArrangement = useMemo(
+    () => config.livingArrangements[0] ?? "",
+    [config.livingArrangements],
+  );
+
   const [activeTab, setActiveTab] = useState("person");
   const [personData, setPersonData] = useState<NewPersonData>({
     firstName: existingCase?.person.firstName || '',
@@ -31,7 +41,7 @@ export function CaseForm({ case: existingCase, onSave, onCancel }: CaseFormProps
     dateOfBirth: existingCase?.person.dateOfBirth || '',
     ssn: existingCase?.person.ssn || '',
     organizationId: null,
-    livingArrangement: existingCase?.person.livingArrangement || 'Apartment/House',
+    livingArrangement: existingCase?.person.livingArrangement || defaultLivingArrangement,
     address: {
       street: existingCase?.person.address.street || '',
       city: existingCase?.person.address.city || '',
@@ -53,13 +63,13 @@ export function CaseForm({ case: existingCase, onSave, onCancel }: CaseFormProps
   const [caseData, setCaseData] = useState<NewCaseRecordData>({
     mcn: existingCase?.caseRecord.mcn || '',
     applicationDate: existingCase?.caseRecord.applicationDate || getTodayDate(),
-    caseType: existingCase?.caseRecord.caseType || 'LTC',
+    caseType: existingCase?.caseRecord.caseType || defaultCaseType,
     personId: existingCase?.caseRecord.personId || '',
     spouseId: existingCase?.caseRecord.spouseId || '',
-    status: existingCase?.caseRecord.status || 'Pending',
+    status: existingCase?.caseRecord.status || defaultCaseStatus,
     description: existingCase?.caseRecord.description || '',
     priority: existingCase?.caseRecord.priority || false,
-    livingArrangement: existingCase?.caseRecord.livingArrangement || '',
+    livingArrangement: existingCase?.caseRecord.livingArrangement || defaultLivingArrangement,
     withWaiver: existingCase?.caseRecord.withWaiver || false,
     admissionDate: existingCase?.caseRecord.admissionDate || '',
     organizationId: '',
@@ -85,6 +95,61 @@ export function CaseForm({ case: existingCase, onSave, onCancel }: CaseFormProps
       }));
     }
   }, [personData.address, personData.mailingAddress.sameAsPhysical]);
+
+  useEffect(() => {
+    setPersonData(prev => {
+      if (existingCase?.person.livingArrangement) {
+        return prev;
+      }
+
+      if (!defaultLivingArrangement || prev.livingArrangement === defaultLivingArrangement) {
+        return prev;
+      }
+
+      return {
+        ...prev,
+        livingArrangement: defaultLivingArrangement,
+      };
+    });
+  }, [defaultLivingArrangement, existingCase?.person.livingArrangement]);
+
+  useEffect(() => {
+    setCaseData(prev => {
+      const next = { ...prev };
+      let changed = false;
+
+      if (!existingCase?.caseRecord.caseType && defaultCaseType && !config.caseTypes.includes(prev.caseType)) {
+        next.caseType = defaultCaseType;
+        changed = true;
+      }
+
+      if (!existingCase?.caseRecord.status && defaultCaseStatus && !config.caseStatuses.includes(prev.status)) {
+        next.status = defaultCaseStatus;
+        changed = true;
+      }
+
+      if (
+        !existingCase?.caseRecord.livingArrangement &&
+        defaultLivingArrangement &&
+        !config.livingArrangements.includes(prev.livingArrangement)
+      ) {
+        next.livingArrangement = defaultLivingArrangement;
+        changed = true;
+      }
+
+      return changed ? next : prev;
+    });
+  }, [
+    config.caseStatuses,
+    config.caseTypes,
+    config.livingArrangements,
+    defaultCaseStatus,
+    defaultCaseType,
+    defaultLivingArrangement,
+    existingCase?.caseRecord.caseType,
+    existingCase?.caseRecord.livingArrangement,
+    existingCase?.caseRecord.status,
+  ]);
 
   const handlePersonDataChange = (field: keyof NewPersonData, value: any) => {
     setPersonData(prev => ({ ...prev, [field]: value }));

@@ -1,5 +1,4 @@
 import { Button } from "../ui/button";
-import { Badge } from "../ui/badge";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "../ui/alert-dialog";
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "../ui/resizable";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
@@ -8,6 +7,7 @@ import { NotesSection } from "./NotesSection";
 import { CaseDisplay, CaseCategory, FinancialItem, NewNoteData } from "../../types/case";
 import { ArrowLeft, Edit2, Trash2, Landmark, Wallet, Receipt } from "lucide-react";
 import { withDataErrorBoundary } from "../error/ErrorBoundaryHOC";
+import { CaseStatusBadge } from "./CaseStatusBadge";
 
 interface CaseDetailsProps {
   case: CaseDisplay;
@@ -53,19 +53,6 @@ export function CaseDetails({
     }
   };
 
-  const getStatusColor = (status: CaseDisplay['status']) => {
-    switch (status) {
-      case 'Pending':
-        return 'bg-blue-500/10 text-blue-700 border-blue-200 dark:bg-blue-500/20 dark:text-blue-300 dark:border-blue-800';
-      case 'Approved':
-        return 'bg-emerald-500/10 text-emerald-700 border-emerald-200 dark:bg-emerald-500/20 dark:text-emerald-300 dark:border-emerald-800';
-      case 'Denied':
-        return 'bg-red-500/10 text-red-700 border-red-200 dark:bg-red-500/20 dark:text-red-300 dark:border-red-800';
-      case 'Spenddown':
-        return 'bg-amber-500/10 text-amber-700 border-amber-200 dark:bg-amber-500/20 dark:text-amber-300 dark:border-amber-800';
-    }
-  };
-
   return (
     <div className="space-y-6">
       {/* Enhanced Header with Better Visual Hierarchy */}
@@ -86,9 +73,7 @@ export function CaseDetails({
                 <h1 className="text-xl font-bold text-foreground">
                   {caseData.name || 'Unnamed Case'}
                 </h1>
-                <Badge className={`${getStatusColor(caseData.status || 'Pending')}`}>
-                  {caseData.status || 'Pending'}
-                </Badge>
+                <CaseStatusBadge status={caseData.status} />
               </div>
               <div className="flex items-center gap-2 text-muted-foreground">
                 <span className="text-sm font-medium">MCN:</span>
