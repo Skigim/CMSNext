@@ -109,4 +109,60 @@ describe("fileStorageMachine", () => {
     expect(recoveredState.lifecycle).toBe("ready");
     expect(recoveredState.lastError).toBeNull();
   });
+
+  it("tracks saving lifecycle and pending writes", () => {
+    const supportedState = reduceFileStorageState(initialMachineState, {
+      type: "SERVICE_INITIALIZED",
+      supported: true,
+    });
+
+    const confirmedState = reduceFileStorageState(supportedState, { type: "CONNECT_CONFIRMED" });
+
+    const savingState = reduceFileStorageState(confirmedState, {
+      type: "STATUS_CHANGED",
+      status: {
+        ...baseStatus({ status: "saving", permissionStatus: "granted" }),
+        pendingWrites: 2,
+        consecutiveFailures: 0,
+      },
+    });
+
+    expect(savingState.lifecycle).toBe("saving");
+    expect(savingState.pendingWrites).toBe(2);
+    expect(savingState.isConnected).toBe(true);
+  });
+
+  it("enters recovering lifecycle during retries and blocks when permission is revoked", () => {
+    const supportedState = reduceFileStorageState(initialMachineState, {
+      type: "SERVICE_INITIALIZED",
+      supported: true,
+    });
+
+    const confirmedState = reduceFileStorageState(supportedState, { type: "CONNECT_CONFIRMED" });
+
+    const recoveringState = reduceFileStorageState(confirmedState, {
+      type: "STATUS_CHANGED",
+      status: {
+        ...baseStatus({ status: "retrying", permissionStatus: "granted" }),
+        consecutiveFailures: 2,
+        pendingWrites: 1,
+      },
+    });
+
+    expect(recoveringState.lifecycle).toBe("recovering");
+    expect(recoveringState.consecutiveFailures).toBe(2);
+
+    const blockedState = reduceFileStorageState(recoveringState, {
+      type: "STATUS_CHANGED",
+      status: {
+        ...baseStatus({ status: "retrying", permissionStatus: "denied" }),
+        consecutiveFailures: 3,
+        pendingWrites: 1,
+      },
+    });
+
+    expect(blockedState.lifecycle).toBe("blocked");
+    expect(blockedState.permissionStatus).toBe("denied");
+    expect(blockedState.isConnected).toBe(false);
+  });
 });

@@ -224,5 +224,36 @@ describe("Autosave status indicator", () => {
     const permissionStatus = await screen.findByTestId("autosave-badge");
     expect(permissionStatus).toHaveTextContent(/permission required/i);
     expect(screen.getByText(/2 pending writes/i)).toBeInTheDocument();
+
+    act(() => {
+      emitStatus({
+        status: "retrying",
+        message: "Autosave retrying (attempt 2)…",
+        permissionStatus: "granted",
+        pendingWrites: 1,
+        consecutiveFailures: 1,
+      });
+    });
+
+    const retryingStatus = await screen.findByTestId("autosave-badge");
+    expect(retryingStatus).toHaveTextContent(/retrying save/i);
+    const retrySpinner = retryingStatus.querySelector(".animate-spin");
+    expect(retrySpinner).not.toBeNull();
+    expect(screen.getByText(/attempt 2/i)).toBeInTheDocument();
+
+    act(() => {
+      emitStatus({
+        status: "error",
+        message: "Autosave failed — check permission",
+        permissionStatus: "granted",
+        pendingWrites: 3,
+      });
+    });
+
+    const errorStatus = await screen.findByTestId("autosave-badge");
+    expect(errorStatus).toHaveTextContent(/save failed/i);
+    expect(screen.getByText(/Autosave failed/i)).toBeInTheDocument();
+    expect(screen.getByText(/3 pending writes/i)).toBeInTheDocument();
+    expect(errorStatus.querySelector(".animate-spin")).toBeNull();
   });
 });

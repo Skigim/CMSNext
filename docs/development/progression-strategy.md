@@ -82,10 +82,32 @@ This plan realigns the roadmap around those themes while preserving the filesyst
 - Deliverables: `useAutosaveStatus` hook, shared status badge component, integration test simulating permission revocation mid-save (**completed**).
 
 #### Subphase 3.4 · Resilience Verification
-- Backfill Vitest and RTL coverage for state transitions, ensuring UI reacts correctly to denied/expired permissions and IO failures.
-- Document recovery steps and update troubleshooting guides with the new status surfaces and error taxonomy.
-- Capture manual test scripts for edge cases (e.g., directory handle revoked while autosave pending) to support QA sign-off.
-- Deliverables: expanded test matrix, updated `/docs/development/error-boundary-guide.md`, smoke checklist appended to the release process.
+**Objectives**
+- Guarantee autosave and connection flows recover gracefully from permission loss, IO failures, and user cancellations.
+- Equip QA and support with prescriptive playbooks for diagnosing storage-state anomalies.
+
+**Testing Workstreams**
+1. ✅ **Vitest service coverage** – expanded suites now simulate permission revocation mid-write, retry escalation, and lifecycle transitions within `fileStorageMachine`.
+2. ✅ **React Testing Library (RTL)** – autosave badge and connection flow specs assert badge copy, spinner states, and modal reopen flow across `ready → saving → retrying → permission required` transitions.
+3. ✅ **Integration smoke runs** – in-memory handle driver reproduces connect → revoke → reconnect scenarios to verify catalogue-aligned messaging.
+
+**Manual Badge Verification**
+- ✅ Document autosave badge copy for each lifecycle state (`idle`, `ready`, `saving`, `retrying`, `permission-required`, `error`, `unsupported`) in `docs/error-boundary-guide.md`.
+- ✅ Capture optional console or badge snapshots for notable failures (stored in `docs/development/resilience-screenshots/`) to confirm metadata logging via `reportFileStorageError`.
+- ✅ Reference the badge legend throughout deployment and troubleshooting guides in place of the retired CSV matrix.
+
+**Documentation & DX Updates**
+- ✅ Refresh `error-boundary-guide.md` with: autosave badge legend, permission troubleshooting flowchart, and links to the toast catalogue.
+- ✅ Append a “File Storage Recovery” section to `docs/enhanced-error-boundary-summary.md` summarizing escalation steps.
+- ✅ Add a resilience-focused checklist to `docs/DeploymentGuide.md` and the release smoke checklist.
+
+**Timeline & Exit Criteria**
+- **Week 1:** Land Vitest expansions and state-machine fixtures; ensure coverage delta captured in `coverage/` report.
+- **Week 2:** Layer RTL specs and integration flows; stabilize CI runtime under +10% execution budget.
+- **Week 3:** Complete manual matrix execution, publish documentation updates, and secure sign-off from QA.
+- Exit when badge documentation covers every lifecycle state, updated guides are merged, and `npm run test:run` reflects the broader suite without regressions.
+
+- Deliverables: expanded automated test matrix, documentation refresh (error guides, deployment checklist), archived manual verification artefacts.
 
 **Phase 3 success metric:** zero global mutable flags, a visible autosave indicator, structured error logging, and documented recovery flows.
 
@@ -110,6 +132,6 @@ This plan realigns the roadmap around those themes while preserving the filesyst
 - TypeScript 5.9.2 remains the enforced compiler; keep `@typescript-eslint` dependencies on the 8.x line for compatibility.
 
 ## 🚀 Immediate Next Steps
-1. Outline the resilience test matrix and documentation updates for Phase 3 hand-off.
+1. Finalize the autosave badge reference and documentation updates for Phase 3 hand-off.
 2. Extend RTL coverage to exercise autosave badge transitions (ready ↔ saving ↔ permission required) ahead of Subphase 3.4.
 3. Draft troubleshooting copy that references the unified toast catalogue for inclusion in the user-facing guides.

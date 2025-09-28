@@ -331,6 +331,51 @@ describe('AutosaveFileService', () => {
     })
   })
 
+  describe('resilience behaviours', () => {
+    it('surfaces permission loss during write attempts', async () => {
+      mockStatusCallback.mockClear()
+      ;(service as any).directoryHandle = mockDirectoryHandle
+      mockDirectoryHandle.queryPermission.mockResolvedValueOnce('denied')
+
+      const result = await service.writeFile({ sample: 'data' })
+
+      expect(result).toBe(false)
+      expect(mockStatusCallback.mock.calls.some(call => call[0].status === 'waiting')).toBe(true)
+  const latestCall = mockStatusCallback.mock.calls[mockStatusCallback.mock.calls.length - 1]
+  const latestStatus = latestCall ? latestCall[0] : null
+      expect(latestStatus?.permissionStatus).toBe('denied')
+    })
+
+    it('emits retrying then error after repeated autosave failures', async () => {
+      mockStatusCallback.mockClear()
+      ;(service as any).state.isRunning = true
+      ;(service as any).dataProvider = () => ({ cases: [] })
+      ;(service as any).config.maxRetries = 2
+
+      const writeSpy = vi
+        .spyOn(service as any, 'writeFile')
+        .mockResolvedValue(false)
+
+      await (service as any).performAutosave('interval')
+
+      expect(
+        mockStatusCallback.mock.calls.some(call => call[0].status === 'retrying'),
+      ).toBe(true)
+      expect((service as any).state.consecutiveFailures).toBe(1)
+
+      mockStatusCallback.mockClear()
+
+      await (service as any).performAutosave('interval')
+
+      expect(
+        mockStatusCallback.mock.calls.some(call => call[0].status === 'error'),
+      ).toBe(true)
+      expect((service as any).state.consecutiveFailures).toBe(2)
+
+      writeSpy.mockRestore()
+    })
+  })
+
   describe('service lifecycle', () => {
     it('should destroy properly', () => {
       service.destroy()

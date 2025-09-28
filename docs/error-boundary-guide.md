@@ -173,6 +173,21 @@ A development-only component (`ErrorBoundaryTest`) is available in the Settings 
 4. Verify error boundaries show appropriate fallback UI
 5. Test retry functionality
 
+### Autosave Badge Reference
+
+The autosave badge communicates storage health at a glance. Use this table as the canonical reference for releases, smoke checks, and troubleshooting:
+
+| Lifecycle state | Badge label | Notes |
+|-----------------|-------------|-------|
+| `idle` / `ready` | **All changes saved** (or **Autosave ready** when no writes yet) | Indicates the service is connected and idle with no pending writes. |
+| `saving` | **Saving…** | Spinner appears; badge may append “n pending writes.” Manual save button is disabled until completion. |
+| `retrying` | **Retrying save…** | Shows current attempt copy (e.g., “Autosave retrying (attempt 2)…”). Spinner remains visible. |
+| `permission-required` / `blocked` | **Permission required** | Warns that folder access is missing. Pending writes count remains visible so the user knows work still needs to flush. |
+| `error` | **Save failed** | Destructive tone; pairs with toast copy describing the failing operation. |
+| `unsupported` | **Not available** | Displayed when the browser lacks File System Access API support. |
+
+During manual smoke checks you can capture the badge, toast stack, and console status (via `globalThis.__cmsAutosaveService.getStatus()`) for any anomalies, but screenshot archives are optional for solo development.
+
 ### Browser Console Testing
 
 ```javascript

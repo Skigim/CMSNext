@@ -107,7 +107,12 @@ function deriveLifecycle(
         return 'blocked';
       }
       return baseState.explicitlyConnected && permissionStatus === 'granted' ? 'ready' : 'idle';
+    case 'saving':
+      return 'saving';
     case 'retrying':
+      if (permissionStatus === 'denied') {
+        return 'blocked';
+      }
       return 'recovering';
     case 'disconnected':
       return 'idle';

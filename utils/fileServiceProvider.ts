@@ -5,6 +5,13 @@ let fileServiceInstance: any = null;
 
 export function setFileService(service: any) {
   fileServiceInstance = service || null;
+    try {
+      if (typeof globalThis !== 'undefined') {
+        (globalThis as Record<string, unknown>).__cmsAutosaveService = fileServiceInstance;
+      }
+    } catch (_) {
+      // Ignore inability to assign for non-browser contexts
+    }
   try {
     if (service && typeof document !== 'undefined') {
       document.dispatchEvent(

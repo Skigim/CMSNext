@@ -95,6 +95,13 @@ dist/
 - **Storage**: Local only, no server-side persistence
 - **Offline**: Works offline after initial load
 
+#### File Storage Recovery Checklist
+- ✅ Review autosave badge states against the reference in `docs/error-boundary-guide.md` and confirm each lifecycle transition (ready, saving, retrying, permission-required, error) appears during smoke testing.
+- ✅ (Optional) Capture badge/toast screenshots plus console logs when sharing findings; store them in `docs/development/resilience-screenshots/<release>/` if needed.
+- ✅ Confirm `npm run test:run` passes, specifically the autosave retry and connection flow suites.
+- ✅ Verify `ConnectToExistingModal` prompts when permissions are revoked mid-session.
+- ✅ Log findings in release notes with remediation steps for any deviations.
+
 ### Monitoring and Maintenance
 
 #### Deployment Status

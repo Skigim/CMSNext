@@ -352,7 +352,9 @@ class AutosaveFileService {
     }
 
     const permission = await this.checkPermission();
+    this.state.permissionStatus = permission;
     if (permission !== 'granted') {
+      this.updateStatus('waiting', 'Permission required to save changes');
       return false;
     }
 
@@ -376,6 +378,12 @@ class AutosaveFileService {
           tabId: this.tabId,
         }),
       );
+
+      if (!this.state.pendingSave) {
+        this.state.lastSaveTime = Date.now();
+        this.state.consecutiveFailures = 0;
+        this.updateStatus('running', 'All changes saved');
+      }
 
       return true;
     } catch (err) {
@@ -431,7 +439,9 @@ class AutosaveFileService {
     }
 
     const permission = await this.checkPermission();
+    this.state.permissionStatus = permission;
     if (permission !== 'granted') {
+      this.updateStatus('waiting', 'Permission required to save changes');
       return false;
     }
 
