@@ -1,4 +1,5 @@
 import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { NotesSection } from '@/components/case/NotesSection';
 import type { Note } from '@/types/case';
@@ -117,5 +118,39 @@ describe('NotesSection Key Generation', () => {
     expect(() => {
       render(<NotesSection notes={edgeCaseNotes} {...mockProps} />);
     }).not.toThrow();
+  });
+
+  it('collapses notes via header toggle and reverts unsaved changes', async () => {
+    const onUpdateNote = vi.fn().mockResolvedValue(undefined);
+    const onDeleteNote = vi.fn();
+    const user = userEvent.setup();
+
+    render(
+      <NotesSection
+        notes={[createNote('Original content', 'note-1', 'General')]}
+        onAddNote={vi.fn()}
+        onEditNote={vi.fn()}
+        onDeleteNote={onDeleteNote}
+        onUpdateNote={onUpdateNote}
+      />
+    );
+
+    expect(screen.queryByLabelText(/note content/i)).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: /expand note/i }));
+    const textarea = await screen.findByLabelText(/note content/i);
+
+    await user.clear(textarea);
+    await user.type(textarea, 'Edited content');
+
+    await user.click(screen.getByRole('button', { name: /collapse note/i }));
+
+    expect(screen.queryByLabelText(/note content/i)).not.toBeInTheDocument();
+    expect(onUpdateNote).not.toHaveBeenCalled();
+    expect(onDeleteNote).not.toHaveBeenCalled();
+
+    await user.click(screen.getByRole('button', { name: /expand note/i }));
+    const reopenedField = await screen.findByLabelText(/note content/i);
+    expect(reopenedField).toHaveValue('Original content');
   });
 });

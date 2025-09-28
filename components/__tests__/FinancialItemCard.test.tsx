@@ -120,6 +120,8 @@ describe("FinancialItemCard", () => {
       />
     );
 
+    expect(screen.queryByLabelText(/description/i)).not.toBeInTheDocument();
+
     await user.click(screen.getByRole("button", { name: /needs vr/i }));
     await user.click(await screen.findByRole("menuitem", { name: /verified/i }));
 
@@ -130,5 +132,33 @@ describe("FinancialItemCard", () => {
         expect.objectContaining({ verificationStatus: "Verified" })
       );
     });
+
+    expect(screen.queryByLabelText(/description/i)).not.toBeInTheDocument();
+  });
+
+  it("cancels edits when the card header is clicked while editing", async () => {
+    const item = createItem();
+    const onUpdate = vi.fn().mockResolvedValue(undefined);
+    const onDelete = vi.fn();
+    const user = userEvent.setup();
+
+    render(
+      <FinancialItemCard
+        item={item}
+        itemType="income"
+        onDelete={onDelete}
+        onUpdate={onUpdate}
+      />
+    );
+
+    await user.click(screen.getByText(/salary/i));
+    const descriptionField = await screen.findByLabelText(/description/i);
+    await user.clear(descriptionField);
+    await user.type(descriptionField, "Unsaved change");
+
+    await user.click(screen.getByText(/salary/i));
+
+    expect(screen.queryByLabelText(/description/i)).not.toBeInTheDocument();
+    expect(onUpdate).not.toHaveBeenCalled();
   });
 });

@@ -32,6 +32,10 @@ function NoteCard({
   const [editedNote, setEditedNote] = useState(note);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const hasUnsavedChanges = useMemo(
+    () => editedNote.category !== note.category || editedNote.content !== note.content,
+    [editedNote.category, editedNote.content, note.category, note.content]
+  );
 
   // Auto-resize textarea height based on content
   useEffect(() => {
@@ -46,24 +50,31 @@ function NoteCard({
     setEditedNote(note);
   }, [note]);
 
-  const handleToggle = () => {
-    if (!isExpanded) {
-      setIsExpanded(true);
-    } else if (!note.isNew) {
-      // Don't allow collapsing a new note, it must be saved or canceled
-      // Reset form data if collapsing without saving
-      setEditedNote(note);
-      setIsExpanded(false);
-    }
-  };
-
   const handleCancel = () => {
+    setConfirmingDelete(false);
+
     if (note.isNew) {
       onDelete(note.id); // If it's a new note, canceling deletes it
     } else {
       setEditedNote(note); // Otherwise, just reset and collapse
       setIsExpanded(false);
     }
+  };
+
+  const handleToggle = () => {
+    if (!isExpanded) {
+      setIsExpanded(true);
+      setConfirmingDelete(false);
+      return;
+    }
+
+    if (note.isNew || hasUnsavedChanges) {
+      handleCancel();
+      return;
+    }
+
+    setConfirmingDelete(false);
+    setIsExpanded(false);
   };
 
   const handleSave = (e: React.FormEvent) => {
@@ -136,7 +147,7 @@ function NoteCard({
       {/* Display Header (Always Visible) - Clickable */}
       <div 
         className="p-4 cursor-pointer" 
-        onClick={() => !isExpanded && handleToggle()}
+        onClick={handleToggle}
       >
         <div className="flex items-start justify-between">
           <div className="flex items-center gap-4">
@@ -166,7 +177,7 @@ function NoteCard({
             <button 
               onClick={(e) => { e.stopPropagation(); handleToggle(); }}
               className="text-muted-foreground hover:text-primary p-1 transition-colors"
-              aria-label="Expand note"
+              aria-label={isExpanded ? 'Collapse note' : 'Expand note'}
             >
               <ChevronDown className={`w-5 h-5 transition-transform duration-300 ${isExpanded ? 'rotate-180' : ''}`} />
             </button>

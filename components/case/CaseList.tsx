@@ -13,7 +13,6 @@ import {
   Grid,
   Table,
   Filter,
-  SortAsc,
   RefreshCcw,
 } from "lucide-react";
 import { Toggle } from "../ui/toggle";
@@ -41,6 +40,7 @@ import {
   useCaseListPreferences,
   type CaseListSegment,
   type CaseListSortKey,
+  type CaseListSortDirection,
 } from "@/hooks/useCaseListPreferences";
 
 interface CaseListProps {
@@ -53,7 +53,16 @@ interface CaseListProps {
 }
 
 export function CaseList({ cases, onViewCase, onEditCase, onDeleteCase, onNewCase, onRefresh }: CaseListProps) {
-  const { viewMode, setViewMode, sortKey, setSortKey, segment, setSegment } = useCaseListPreferences();
+  const {
+    viewMode,
+    setViewMode,
+    sortKey,
+    setSortKey,
+    sortDirection,
+    setSortDirection,
+    segment,
+    setSegment,
+  } = useCaseListPreferences();
   const [searchTerm, setSearchTerm] = useState("");
   const [isSettingUpData, setIsSettingUpData] = useState(false);
   const [useVirtualScrolling, setUseVirtualScrolling] = useState(false);
@@ -87,17 +96,16 @@ export function CaseList({ cases, onViewCase, onEditCase, onDeleteCase, onNewCas
     }
   }, [setViewMode]);
 
-  const handleSortChange = useCallback((value: string) => {
-    if (value === "updated" || value === "name" || value === "mcn") {
-      setSortKey(value as CaseListSortKey);
-    }
-  }, [setSortKey]);
-
   const handleSegmentChange = useCallback((value: string) => {
     if (value === "all" || value === "recent" || value === "priority") {
       setSegment(value as CaseListSegment);
     }
   }, [setSegment]);
+
+  const handleTableSortRequest = useCallback((key: CaseListSortKey, direction: CaseListSortDirection) => {
+    setSortKey(key);
+    setSortDirection(direction);
+  }, [setSortKey, setSortDirection]);
 
   const filteredCases = useMemo(() => {
     const normalizedSearch = searchTerm.trim().toLowerCase();
@@ -128,23 +136,44 @@ export function CaseList({ cases, onViewCase, onEditCase, onDeleteCase, onNewCas
   }, [cases, searchTerm, segment]);
 
   const sortedCases = useMemo(() => {
+    const directionFactor = sortDirection === "asc" ? 1 : -1;
+
     return [...filteredCases].sort((a, b) => {
       switch (sortKey) {
         case "name": {
-          return (a.name || "").localeCompare(b.name || "");
+          return ((a.name || "").localeCompare(b.name || "")) * directionFactor;
         }
         case "mcn": {
-          return (a.mcn || "").localeCompare(b.mcn || "");
+          return ((a.mcn || "").localeCompare(b.mcn || "")) * directionFactor;
+        }
+        case "status": {
+          return ((a.status || "").localeCompare(b.status || "")) * directionFactor;
+        }
+        case "caseType": {
+          const aType = a.caseRecord?.caseType || "";
+          const bType = b.caseRecord?.caseType || "";
+          return (aType.localeCompare(bType)) * directionFactor;
+        }
+        case "application": {
+          const aApplicationRaw = Date.parse(a.caseRecord?.applicationDate || a.createdAt);
+          const bApplicationRaw = Date.parse(b.caseRecord?.applicationDate || b.createdAt);
+          const aApplication = Number.isFinite(aApplicationRaw) ? aApplicationRaw : 0;
+          const bApplication = Number.isFinite(bApplicationRaw) ? bApplicationRaw : 0;
+          const comparison = aApplication - bApplication;
+          return comparison * directionFactor;
         }
         case "updated":
         default: {
-          const aUpdated = Date.parse(a.updatedAt || a.caseRecord?.updatedDate || a.createdAt);
-          const bUpdated = Date.parse(b.updatedAt || b.caseRecord?.updatedDate || b.createdAt);
-          return bUpdated - aUpdated;
+          const aUpdatedRaw = Date.parse(a.updatedAt || a.caseRecord?.updatedDate || a.createdAt);
+          const bUpdatedRaw = Date.parse(b.updatedAt || b.caseRecord?.updatedDate || b.createdAt);
+          const aUpdated = Number.isFinite(aUpdatedRaw) ? aUpdatedRaw : 0;
+          const bUpdated = Number.isFinite(bUpdatedRaw) ? bUpdatedRaw : 0;
+          const comparison = aUpdated - bUpdated;
+          return comparison * directionFactor;
         }
       }
     });
-  }, [filteredCases, sortKey]);
+  }, [filteredCases, sortKey, sortDirection]);
 
   const noMatches = sortedCases.length === 0;
 
@@ -216,7 +245,7 @@ export function CaseList({ cases, onViewCase, onEditCase, onDeleteCase, onNewCas
         </ToggleGroup>
       </div>
 
-      <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+      <div className="flex flex-wrap items-center gap-3">
         <ToggleGroup
           type="single"
           value={segment}
@@ -235,30 +264,14 @@ export function CaseList({ cases, onViewCase, onEditCase, onDeleteCase, onNewCas
             <Filter className="mr-2 h-4 w-4" /> Priority
           </ToggleGroupItem>
         </ToggleGroup>
-
-        <ToggleGroup
-          type="single"
-          value={sortKey}
-          onValueChange={handleSortChange}
-          variant="outline"
-          size="sm"
-          aria-label="Sort cases"
-        >
-          <ToggleGroupItem value="updated" aria-label="Sort by last updated">
-            <SortAsc className="mr-2 h-4 w-4" /> Updated
-          </ToggleGroupItem>
-          <ToggleGroupItem value="name" aria-label="Sort by name">
-            <SortAsc className="mr-2 h-4 w-4" /> Name
-          </ToggleGroupItem>
-          <ToggleGroupItem value="mcn" aria-label="Sort by MCN">
-            <SortAsc className="mr-2 h-4 w-4" /> MCN
-          </ToggleGroupItem>
-        </ToggleGroup>
       </div>
 
       {viewMode === "table" ? (
         <CaseTable
           cases={sortedCases}
+          sortKey={sortKey}
+          sortDirection={sortDirection}
+          onRequestSort={handleTableSortRequest}
           onViewCase={onViewCase}
           onEditCase={onEditCase}
           onDeleteCase={onDeleteCase}

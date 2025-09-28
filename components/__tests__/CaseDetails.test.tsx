@@ -1,4 +1,5 @@
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { CaseDetails } from '@/components/case/CaseDetails';
 import type { CaseDisplay } from '@/types/case';
@@ -9,6 +10,58 @@ vi.mock('../ui/button', () => ({
     <button onClick={onClick} {...props}>{children}</button>
   )
 }));
+
+const caseSectionPropsByCategory = new Map<string, any>();
+
+vi.mock('../case/CaseSection', () => ({
+  CaseSection: (props: any) => {
+    caseSectionPropsByCategory.set(props.category, props);
+    return (
+      <div data-testid={`case-section-${props.category}`}>
+        <span>{props.title}</span>
+      </div>
+    );
+  },
+}));
+
+const notesSectionRenderProps: any[] = [];
+
+vi.mock('../case/NotesSection', () => ({
+  NotesSection: (props: any) => {
+    notesSectionRenderProps.push(props);
+    return <div data-testid="notes-section" />;
+  },
+}));
+
+vi.mock('../case/CaseStatusBadge', () => ({
+  CaseStatusBadge: ({ status }: any) => (
+    <div data-testid="case-status-badge">{status ?? 'Pending'}</div>
+  ),
+}));
+
+vi.mock('../ui/alert-dialog', () => {
+  const React = require('react');
+  const Fragment = React.Fragment;
+
+  const passthrough = ({ children }: any) => <Fragment>{children}</Fragment>;
+  const ActionButton = ({ children, onClick, ...rest }: any) => (
+    <button onClick={onClick} {...rest}>
+      {children}
+    </button>
+  );
+
+  return {
+    AlertDialog: passthrough,
+    AlertDialogTrigger: ({ children }: any) => <Fragment>{children}</Fragment>,
+    AlertDialogContent: passthrough,
+    AlertDialogDescription: passthrough,
+    AlertDialogFooter: passthrough,
+    AlertDialogHeader: passthrough,
+    AlertDialogTitle: passthrough,
+    AlertDialogAction: ActionButton,
+    AlertDialogCancel: ActionButton,
+  };
+});
 
 vi.mock('../ui/toggle-group', () => ({
   ToggleGroup: ({ children, onValueChange: _onValueChange, value: _value, ...props }: any) => (
@@ -108,6 +161,8 @@ const mockProps = {
 describe('CaseDetails Memory Management', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    caseSectionPropsByCategory.clear();
+    notesSectionRenderProps.length = 0;
     vi.useFakeTimers({ shouldAdvanceTime: true });
   });
 
@@ -235,5 +290,228 @@ describe('CaseDetails Memory Management', () => {
     
     // Should not throw unhandled promise rejections
     expect(true).toBe(true); // Test passes if no errors thrown
+  });
+
+  it('renders header information and updates when props change', () => {
+    vi.useRealTimers();
+
+    const caseWithStatus = {
+      ...mockCase,
+      status: 'Pending',
+      mcn: '12345',
+    };
+
+    const { rerender } = render(<CaseDetails {...mockProps} case={caseWithStatus} />);
+
+    expect(screen.getByRole('heading', { name: 'John Doe' })).toBeInTheDocument();
+    expect(screen.getByText('12345')).toBeInTheDocument();
+    expect(screen.getByTestId('case-status-badge')).toHaveTextContent('Pending');
+
+    const updatedCase = {
+      ...caseWithStatus,
+      name: 'Jane Doe',
+      mcn: '67890',
+      status: 'Active',
+    };
+
+    rerender(<CaseDetails {...mockProps} case={updatedCase} />);
+
+    expect(screen.getByRole('heading', { name: 'Jane Doe' })).toBeInTheDocument();
+    expect(screen.getByText('67890')).toBeInTheDocument();
+    expect(screen.getByTestId('case-status-badge')).toHaveTextContent('Active');
+  });
+
+  it('calls navigation handlers when action buttons are clicked', async () => {
+    vi.useRealTimers();
+    const onBack = vi.fn();
+    const onEdit = vi.fn();
+    const user = userEvent.setup();
+
+    render(<CaseDetails {...mockProps} onBack={onBack} onEdit={onEdit} />);
+
+    await user.click(screen.getByRole('button', { name: /back/i }));
+    expect(onBack).toHaveBeenCalledTimes(1);
+
+    await user.click(screen.getByRole('button', { name: /edit/i }));
+    expect(onEdit).toHaveBeenCalledTimes(1);
+  });
+
+  it('confirms deletion through alert dialog flow', async () => {
+    vi.useRealTimers();
+    const onDelete = vi.fn();
+    const user = userEvent.setup();
+
+    render(<CaseDetails {...mockProps} onDelete={onDelete} />);
+
+    await user.click(screen.getByRole('button', { name: /delete/i }));
+    await user.click(screen.getByRole('button', { name: /cancel/i }));
+    expect(onDelete).not.toHaveBeenCalled();
+
+    await user.click(screen.getByRole('button', { name: /delete case/i }));
+    expect(onDelete).toHaveBeenCalledTimes(1);
+  });
+
+  it('wires financial tabs to the correct CaseSection props', async () => {
+    vi.useRealTimers();
+    const user = userEvent.setup();
+
+    const financialCase: CaseDisplay = {
+      ...mockCase,
+      caseRecord: {
+        ...mockCase.caseRecord,
+        financials: {
+          resources: [
+            {
+              id: 'res-1',
+              description: 'Resource 1',
+              amount: 100,
+              verificationStatus: 'Verified',
+              notes: '',
+            },
+          ],
+          income: [
+            {
+              id: 'inc-1',
+              description: 'Income 1',
+              amount: 200,
+              verificationStatus: 'VR Pending',
+              notes: '',
+            },
+          ],
+          expenses: [
+            {
+              id: 'exp-1',
+              description: 'Expense 1',
+              amount: 50,
+              verificationStatus: 'Needs VR',
+              notes: '',
+            },
+          ],
+        },
+      },
+    };
+
+    render(<CaseDetails {...mockProps} case={financialCase} />);
+
+    const tabs = screen.getAllByRole('tab');
+    expect(tabs).toHaveLength(3);
+
+    expect(caseSectionPropsByCategory.get('resources').items).toEqual(financialCase.caseRecord.financials.resources);
+    expect(screen.getByRole('tab', { name: /resources/i })).toHaveAttribute('data-state', 'active');
+
+    await user.click(screen.getByRole('tab', { name: /income/i }));
+    expect(caseSectionPropsByCategory.get('income').items).toEqual(financialCase.caseRecord.financials.income);
+    expect(screen.getByRole('tab', { name: /income/i })).toHaveAttribute('data-state', 'active');
+
+    await user.click(screen.getByRole('tab', { name: /expenses/i }));
+    expect(caseSectionPropsByCategory.get('expenses').items).toEqual(financialCase.caseRecord.financials.expenses);
+    expect(screen.getByRole('tab', { name: /expenses/i })).toHaveAttribute('data-state', 'active');
+  });
+
+  it('invokes onBatchUpdateItem when CaseSection requests an update', async () => {
+    vi.useRealTimers();
+    const onBatchUpdateItem = vi.fn().mockResolvedValue(undefined);
+
+    render(<CaseDetails {...mockProps} onBatchUpdateItem={onBatchUpdateItem} />);
+
+    const sectionProps = caseSectionPropsByCategory.get('resources');
+    const updatedItem = {
+      id: 'mock-item',
+      description: 'Updated',
+      amount: 123,
+      verificationStatus: 'Verified',
+    };
+
+    await sectionProps.onUpdateFullItem('resources', 'mock-item', updatedItem);
+
+    expect(onBatchUpdateItem).toHaveBeenCalledWith('resources', 'mock-item', updatedItem);
+  });
+
+  it('logs and swallows errors when batch update fails', async () => {
+    vi.useRealTimers();
+    const error = new Error('boom');
+    const onBatchUpdateItem = vi.fn().mockRejectedValue(error);
+    const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    render(<CaseDetails {...mockProps} onBatchUpdateItem={onBatchUpdateItem} />);
+
+    const sectionProps = caseSectionPropsByCategory.get('resources');
+
+    await sectionProps.onUpdateFullItem('resources', 'mock-item', {
+      id: 'mock-item',
+      description: 'Broken',
+      amount: 10,
+      verificationStatus: 'Needs VR',
+    });
+
+    expect(onBatchUpdateItem).toHaveBeenCalled();
+    expect(consoleSpy).toHaveBeenCalledWith('[CaseDetails] Failed to update item:', error);
+
+    consoleSpy.mockRestore();
+  });
+
+  it('safely handles missing batch update handler', async () => {
+    vi.useRealTimers();
+    const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    render(<CaseDetails {...mockProps} />);
+
+    const sectionProps = caseSectionPropsByCategory.get('resources');
+
+    await sectionProps.onUpdateFullItem('resources', 'mock-item', {
+      id: 'mock-item',
+      description: 'No handler',
+      amount: 0,
+      verificationStatus: 'VR Pending',
+    });
+
+    expect(consoleSpy).not.toHaveBeenCalled();
+
+    consoleSpy.mockRestore();
+  });
+
+  it('passes note handlers through to NotesSection', () => {
+    vi.useRealTimers();
+
+    const noteHandlers = {
+      onAddNote: vi.fn(),
+      onEditNote: vi.fn(),
+      onDeleteNote: vi.fn(),
+      onBatchUpdateNote: vi.fn(),
+      onBatchCreateNote: vi.fn(),
+    };
+
+    const caseWithNotes: CaseDisplay = {
+      ...mockCase,
+      caseRecord: {
+        ...mockCase.caseRecord,
+        notes: [
+          {
+            id: 'note-1',
+            category: 'General',
+            content: 'Test note',
+            createdAt: '2025-01-01T00:00:00Z',
+            updatedAt: '2025-01-01T00:00:00Z',
+          },
+        ],
+      },
+    };
+
+    render(
+      <CaseDetails
+        {...mockProps}
+        {...noteHandlers}
+        case={caseWithNotes}
+      />
+    );
+
+  const latestProps = notesSectionRenderProps[notesSectionRenderProps.length - 1];
+
+    expect(latestProps?.notes).toEqual(caseWithNotes.caseRecord.notes);
+    expect(latestProps?.onAddNote).toBe(noteHandlers.onAddNote);
+    expect(latestProps?.onEditNote).toBe(noteHandlers.onEditNote);
+    expect(latestProps?.onDeleteNote).toBe(noteHandlers.onDeleteNote);
+    expect(latestProps?.onUpdateNote).toBe(noteHandlers.onBatchUpdateNote);
+    expect(latestProps?.onCreateNote).toBe(noteHandlers.onBatchCreateNote);
   });
 });

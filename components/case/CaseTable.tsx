@@ -1,4 +1,4 @@
-import { memo, useMemo } from "react";
+import { memo, useCallback, useMemo } from "react";
 import {
   Table,
   TableBody,
@@ -11,10 +11,14 @@ import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import type { CaseDisplay } from "@/types/case";
 import { CaseStatusBadge } from "./CaseStatusBadge";
-import { Eye, MoreHorizontal, Pencil, Trash2 } from "lucide-react";
+import { ArrowDown, ArrowUp, ArrowUpDown, Eye, MoreHorizontal, Pencil, Trash2 } from "lucide-react";
+import type { CaseListSortDirection, CaseListSortKey } from "@/hooks/useCaseListPreferences";
 
 export interface CaseTableProps {
   cases: CaseDisplay[];
+  sortKey: CaseListSortKey;
+  sortDirection: CaseListSortDirection;
+  onRequestSort: (key: CaseListSortKey, direction: CaseListSortDirection) => void;
   onViewCase: (caseId: string) => void;
   onEditCase: (caseId: string) => void;
   onDeleteCase: (caseId: string) => void;
@@ -39,7 +43,7 @@ function formatDate(value?: string | null): string {
   return formatter.format(date);
 }
 
-export const CaseTable = memo(function CaseTable({ cases, onViewCase, onEditCase, onDeleteCase }: CaseTableProps) {
+export const CaseTable = memo(function CaseTable({ cases, sortKey, sortDirection, onRequestSort, onViewCase, onEditCase, onDeleteCase }: CaseTableProps) {
   const hasCases = cases.length > 0;
 
   const rows = useMemo(() => cases.map(item => {
@@ -61,16 +65,112 @@ export const CaseTable = memo(function CaseTable({ cases, onViewCase, onEditCase
     };
   }), [cases]);
 
+  const renderSortIndicator = useCallback((key: CaseListSortKey) => {
+    if (sortKey !== key) {
+      return <ArrowUpDown className="h-3.5 w-3.5 text-muted-foreground" aria-hidden />;
+    }
+
+    if (sortDirection === "asc") {
+      return <ArrowUp className="h-3.5 w-3.5" aria-hidden />;
+    }
+
+    return <ArrowDown className="h-3.5 w-3.5" aria-hidden />;
+  }, [sortDirection, sortKey]);
+
+  const handleSortClick = useCallback((key: CaseListSortKey) => {
+    const isActive = sortKey === key;
+    const nextDirection: CaseListSortDirection = isActive
+      ? (sortDirection === "asc" ? "desc" : "asc")
+      : key === "updated" || key === "application"
+        ? "desc"
+        : "asc";
+
+    onRequestSort(key, nextDirection);
+  }, [onRequestSort, sortDirection, sortKey]);
+
   return (
     <div className="overflow-hidden rounded-lg border">
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead>Name</TableHead>
-            <TableHead>Status</TableHead>
-            <TableHead>Case type</TableHead>
-            <TableHead>Application</TableHead>
-            <TableHead>Last updated</TableHead>
+            <TableHead
+              aria-sort={sortKey === "name" ? (sortDirection === "asc" ? "ascending" : "descending") : "none"}
+            >
+              <button
+                type="button"
+                onClick={() => handleSortClick("name")}
+                className="flex items-center gap-1 text-left font-semibold transition-colors hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
+                aria-label={`Sort by Name. Currently ${sortKey === "name" ? (sortDirection === "asc" ? "ascending" : "descending") : "unsorted"}.`}
+              >
+                <span>Name</span>
+                {renderSortIndicator("name")}
+              </button>
+            </TableHead>
+            <TableHead
+              aria-sort={sortKey === "mcn" ? (sortDirection === "asc" ? "ascending" : "descending") : "none"}
+            >
+              <button
+                type="button"
+                onClick={() => handleSortClick("mcn")}
+                className="flex items-center gap-1 text-left font-semibold transition-colors hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
+                aria-label={`Sort by MCN. Currently ${sortKey === "mcn" ? (sortDirection === "asc" ? "ascending" : "descending") : "unsorted"}.`}
+              >
+                <span>MCN</span>
+                {renderSortIndicator("mcn")}
+              </button>
+            </TableHead>
+            <TableHead
+              aria-sort={sortKey === "status" ? (sortDirection === "asc" ? "ascending" : "descending") : "none"}
+            >
+              <button
+                type="button"
+                onClick={() => handleSortClick("status")}
+                className="flex items-center gap-1 text-left font-semibold transition-colors hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
+                aria-label={`Sort by Status. Currently ${sortKey === "status" ? (sortDirection === "asc" ? "ascending" : "descending") : "unsorted"}.`}
+              >
+                <span>Status</span>
+                {renderSortIndicator("status")}
+              </button>
+            </TableHead>
+            <TableHead
+              aria-sort={sortKey === "caseType" ? (sortDirection === "asc" ? "ascending" : "descending") : "none"}
+            >
+              <button
+                type="button"
+                onClick={() => handleSortClick("caseType")}
+                className="flex items-center gap-1 text-left font-semibold transition-colors hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
+                aria-label={`Sort by Case type. Currently ${sortKey === "caseType" ? (sortDirection === "asc" ? "ascending" : "descending") : "unsorted"}.`}
+              >
+                <span>Case type</span>
+                {renderSortIndicator("caseType")}
+              </button>
+            </TableHead>
+            <TableHead
+              aria-sort={sortKey === "application" ? (sortDirection === "asc" ? "ascending" : "descending") : "none"}
+            >
+              <button
+                type="button"
+                onClick={() => handleSortClick("application")}
+                className="flex items-center gap-1 text-left font-semibold transition-colors hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
+                aria-label={`Sort by Application Date. Currently ${sortKey === "application" ? (sortDirection === "asc" ? "ascending" : "descending") : "unsorted"}.`}
+              >
+                <span>Application</span>
+                {renderSortIndicator("application")}
+              </button>
+            </TableHead>
+            <TableHead
+              aria-sort={sortKey === "updated" ? (sortDirection === "asc" ? "ascending" : "descending") : "none"}
+            >
+              <button
+                type="button"
+                onClick={() => handleSortClick("updated")}
+                className="flex items-center gap-1 text-left font-semibold transition-colors hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
+                aria-label={`Sort by Last updated. Currently ${sortKey === "updated" ? (sortDirection === "asc" ? "ascending" : "descending") : "unsorted"}.`}
+              >
+                <span>Last updated</span>
+                {renderSortIndicator("updated")}
+              </button>
+            </TableHead>
             <TableHead>Contact</TableHead>
             <TableHead className="w-0 text-right">Actions</TableHead>
           </TableRow>
@@ -78,7 +178,7 @@ export const CaseTable = memo(function CaseTable({ cases, onViewCase, onEditCase
         <TableBody>
           {!hasCases && (
             <TableRow>
-              <TableCell colSpan={7} className="py-12 text-center text-muted-foreground">
+              <TableCell colSpan={8} className="py-12 text-center text-muted-foreground">
                 No cases to display
               </TableCell>
             </TableRow>
@@ -104,8 +204,10 @@ export const CaseTable = memo(function CaseTable({ cases, onViewCase, onEditCase
                       />
                     )}
                   </div>
-                  <span className="text-xs text-muted-foreground">MCN: {row.mcn}</span>
                 </div>
+              </TableCell>
+              <TableCell>
+                <span className="text-sm text-muted-foreground">{row.mcn}</span>
               </TableCell>
               <TableCell>
                 <CaseStatusBadge status={row.status} />

@@ -100,18 +100,6 @@ export function useFinancialItemCardState({
     }));
   }, []);
 
-  const handleCardClick = useCallback(() => {
-    if (isEditing) {
-      return;
-    }
-
-    if (onUpdate) {
-      setFormData(item);
-      setIsEditing(true);
-      setConfirmingDelete(false);
-    }
-  }, [isEditing, item, onUpdate]);
-
   const handleSkeletonCancel = useCallback(() => {
     if (normalizedItem.safeId) {
       onDelete(itemType, normalizedItem.safeId);
@@ -129,6 +117,23 @@ export function useFinancialItemCardState({
     setIsEditing(false);
     setFormData(item);
   }, [handleSkeletonCancel, isSkeleton, item]);
+
+  const handleCardClick = useCallback(() => {
+    const canEdit = Boolean(onUpdate) || isSkeleton;
+
+    if (!canEdit) {
+      return;
+    }
+
+    if (isEditing) {
+      handleCancelClick();
+      return;
+    }
+
+    setFormData(item);
+    setIsEditing(true);
+    setConfirmingDelete(false);
+  }, [handleCancelClick, isEditing, isSkeleton, item, onUpdate]);
 
   const handleSaveClick = useCallback(
     async (event: FormEvent<HTMLFormElement>) => {

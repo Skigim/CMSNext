@@ -55,6 +55,7 @@ export function FinancialItemCardMeta({
             variant="default"
             size="sm"
             disabled={!canUpdateStatus}
+            onClick={event => event.stopPropagation()}
             className={`h-6 px-2 py-1 text-xs transition-all duration-200 hover:scale-105 ${verificationStatus.colorClass}`}
           >
             {verificationStatus.text}
@@ -62,16 +63,36 @@ export function FinancialItemCardMeta({
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-36">
-          <DropdownMenuItem onClick={() => onStatusChange("Needs VR")}>
+          <DropdownMenuItem
+            onClick={event => {
+              event.stopPropagation();
+              onStatusChange("Needs VR");
+            }}
+          >
             <MenuOption label="Needs VR" dotClassName="bg-secondary" />
           </DropdownMenuItem>
-          <DropdownMenuItem onClick={() => onStatusChange("VR Pending")}>
+          <DropdownMenuItem
+            onClick={event => {
+              event.stopPropagation();
+              onStatusChange("VR Pending");
+            }}
+          >
             <MenuOption label="VR Pending" dotClassName="bg-yellow-500" />
           </DropdownMenuItem>
-          <DropdownMenuItem onClick={() => onStatusChange("AVS Pending")}>
+          <DropdownMenuItem
+            onClick={event => {
+              event.stopPropagation();
+              onStatusChange("AVS Pending");
+            }}
+          >
             <MenuOption label="AVS Pending" dotClassName="bg-orange-500" />
           </DropdownMenuItem>
-          <DropdownMenuItem onClick={() => onStatusChange("Verified")}>
+          <DropdownMenuItem
+            onClick={event => {
+              event.stopPropagation();
+              onStatusChange("Verified");
+            }}
+          >
             <MenuOption label="Verified" dotClassName="bg-green-500" />
           </DropdownMenuItem>
         </DropdownMenuContent>
