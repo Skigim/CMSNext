@@ -111,15 +111,18 @@ This plan realigns the roadmap around those themes while preserving the filesyst
 
 **Phase 3 success metric:** zero global mutable flags, a visible autosave indicator, structured error logging, and documented recovery flows.
 
-### Phase 4 · Performance & Observability (Planned)
-- Run a bundle analysis (e.g., `vite-bundle-visualizer`) after Phase 1 to reconfirm vendor split sizes.
-- Instrument key operations with `performance.mark`/`measure` (connect duration, autosave latency) or lightweight logging.
-- Profile `AppContent` renders to validate memoization gains (goal: render cost reduction > 25%).
+## 🔄 Transition to Feature Development
+- Phase 3 deliverables are wrapped; remaining platform work shifts toward net-new features.
+- Phases 4 and 5 move to the backlog so performance and DX polish can ride along with future feature workstreams.
+- Prepare feature specs, UX mocks, and acceptance criteria before the next implementation sprint.
 
-### Phase 5 · Documentation & Developer Experience (Planned)
-- Refresh docs in `/docs/` and `/README.md` to describe the new connection flow, autosave indicators, and expanded testing expectations.
-- Capture a concise threat model (single-user, trusted filesystem assumptions) and link it from the docs index.
-- Evaluate adding Prettier or flat-config-native formatting rules once the `FlatCompat` bridge is retired.
+### Phase 4 · Performance & Observability (Backlog)
+- ⏸️ Deferred while feature delivery takes center stage. Revisit once the next feature milestones are stable.
+- Prioritize lightweight profiling alongside upcoming stories rather than as a standalone initiative.
+
+### Phase 5 · Documentation & Developer Experience (Backlog)
+- ⏸️ Deferred until feature-facing changes land. Fold doc and DX improvements into release prep for those features.
+- Keep lint/format tooling steady to avoid churn while feature teams iterate.
 
 ## 📈 Success Metrics
 - **Code size:** Top-level components < 400 lines; no hook > 250 lines.
@@ -132,6 +135,6 @@ This plan realigns the roadmap around those themes while preserving the filesyst
 - TypeScript 5.9.2 remains the enforced compiler; keep `@typescript-eslint` dependencies on the 8.x line for compatibility.
 
 ## 🚀 Immediate Next Steps
-1. Finalize the autosave badge reference and documentation updates for Phase 3 hand-off.
-2. Extend RTL coverage to exercise autosave badge transitions (ready ↔ saving ↔ permission required) ahead of Subphase 3.4.
-3. Draft troubleshooting copy that references the unified toast catalogue for inclusion in the user-facing guides.
+1. Curate the near-term feature backlog and select the top candidate(s) for implementation.
+2. Create lightweight specs and acceptance criteria for those features, including UX references or mockups.
+3. Align supporting tasks (telemetry hooks, docs stubs, test scaffolding) with the chosen feature slate.
