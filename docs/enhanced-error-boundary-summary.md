@@ -126,7 +126,15 @@ main.tsx
 - Recovery success rates
 ```
 
-## 🚀 **Production Readiness**
+## �️ **File Storage Resilience**
+
+- **Autosave telemetry:** Toolbar badge reflects `saving`, `retrying`, `error`, and `permission-required` states with pending write counts to guide recovery messaging.
+- **Badge reference:** `docs/error-boundary-guide.md` now documents the autosave badge labels for every lifecycle state and action.
+- **Automated coverage:** Vitest suites simulate permission revocation, retry exhaustion, and batch-mode recovery; RTL integration tests assert autosave badge copy across transitions.
+- **Manual artefacts:** Optional screenshots and console logs can be stored under `docs/development/resilience-screenshots/` when sharing verification with collaborators.
+- **Deployment gate:** `DeploymentGuide.md` now includes a “File Storage Recovery” checkpoint before production pushes.
+
+## �🚀 **Production Readiness**
 
 ### **Performance Optimizations**
 - Lazy loading of error boundary components

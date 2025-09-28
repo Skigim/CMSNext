@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
+import { act, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import App from "@/App";
 import {
@@ -87,6 +87,7 @@ vi.mock("@/utils/AutosaveFileService", () => {
       permissionStatus: string;
       lastSaveTime: number | null;
       consecutiveFailures: number;
+      pendingWrites: number;
     } = {
       status: "waiting",
       message: "Awaiting connection",
@@ -94,21 +95,57 @@ vi.mock("@/utils/AutosaveFileService", () => {
       permissionStatus: "granted",
       lastSaveTime: serviceState.lastSaveTime ?? null,
       consecutiveFailures: 0,
+      pendingWrites: 0,
     };
 
     constructor(config: { statusCallback?: (status: any) => void } = {}) {
       this.statusCallback = config.statusCallback;
       this.emitStatus("waiting", "Awaiting connection", "granted");
+      (globalThis as any).__connectionFlowDriver = {
+        instance: this,
+        emitStatus: (update: {
+          status: string;
+          message?: string;
+          permissionStatus?: string;
+          pendingWrites?: number;
+          consecutiveFailures?: number;
+        }) => {
+          this.emitStatus(
+            update.status,
+            update.message ?? this.status.message,
+            update.permissionStatus ?? this.status.permissionStatus,
+            {
+              pendingWrites:
+                update.pendingWrites !== undefined ? update.pendingWrites : this.status.pendingWrites,
+              consecutiveFailures:
+                update.consecutiveFailures !== undefined
+                  ? update.consecutiveFailures
+                  : this.status.consecutiveFailures,
+            },
+          );
+        },
+      };
     }
 
-    private emitStatus(status: string, message: string, permissionStatus: string) {
+    private emitStatus(
+      status: string,
+      message: string,
+      permissionStatus: string,
+      overrides: Partial<typeof this.status> = {},
+    ) {
+      const {
+        pendingWrites = 0,
+        consecutiveFailures = 0,
+        lastSaveTime,
+      } = overrides;
       this.status = {
         status,
         message,
         timestamp: Date.now(),
         permissionStatus,
-        lastSaveTime: serviceState.lastSaveTime ?? null,
-        consecutiveFailures: 0,
+        lastSaveTime: lastSaveTime ?? serviceState.lastSaveTime ?? null,
+        pendingWrites,
+        consecutiveFailures,
       };
       this.statusCallback?.({ ...this.status });
     }
@@ -118,7 +155,11 @@ vi.mock("@/utils/AutosaveFileService", () => {
     }
 
     getStatus() {
-      return { ...this.status, isRunning: this.status.status === "running" };
+      return {
+        ...this.status,
+        isRunning: this.status.status === "running",
+        pendingWrites: this.status.pendingWrites,
+      };
     }
 
     updateConfig() {
@@ -151,7 +192,9 @@ vi.mock("@/utils/AutosaveFileService", () => {
     }
 
     destroy() {
-      // No-op cleanup hook for tests
+      if ((globalThis as any).__connectionFlowDriver?.instance === this) {
+        delete (globalThis as any).__connectionFlowDriver;
+      }
     }
 
     async save() {
@@ -179,6 +222,8 @@ vi.mock("@/utils/AutosaveFileService", () => {
       const cloned = clone(data);
       serviceState.data = cloned;
       serviceState.lastWrite = cloned;
+      this.status.pendingWrites = 1;
+      this.statusCallback?.({ ...this.status });
       this.emitStatus("running", "Saved", "granted");
       return true;
     }
@@ -249,6 +294,7 @@ describe("connect → load → edit → save flow", () => {
     mockToast.error.mockClear();
     mockToast.loading.mockClear();
     window.location.hash = "";
+    delete (globalThis as any).__connectionFlowDriver;
   });
 
   it("connects to storage, loads cases, edits a record, and persists changes", async () => {
@@ -296,5 +342,41 @@ describe("connect → load → edit → save flow", () => {
 
     expect(lastWrite.cases[0].person.firstName).toBe("Updated");
     expect(lastWrite.cases[0].name).toBe("Updated Case");
+  });
+
+  it("re-opens the connection flow when permission is revoked mid-session", async () => {
+    const user = userEvent.setup();
+    render(<App />);
+
+    const connectButton = await screen.findByRole(
+      "button",
+      { name: /connect to previous folder/i },
+      { timeout: 4000 },
+    );
+    await user.click(connectButton);
+
+    await waitFor(() => {
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    });
+
+    await screen.findByRole("heading", { name: /dashboard/i });
+
+    const driver = (globalThis as any).__connectionFlowDriver;
+    expect(driver).toBeDefined();
+
+    act(() => {
+      driver.emitStatus({
+        status: "waiting",
+        message: "Permission required to save changes",
+        permissionStatus: "denied",
+        pendingWrites: 1,
+      });
+    });
+
+    const reconnectDialog = await screen.findByRole("dialog");
+    expect(reconnectDialog).toBeInTheDocument();
+    expect(
+      await screen.findByText(/permission was previously denied/i),
+    ).toBeInTheDocument();
   });
 });

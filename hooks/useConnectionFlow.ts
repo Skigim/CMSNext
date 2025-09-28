@@ -8,6 +8,7 @@ import {
   updateFileStorageFlags,
 } from "../utils/fileStorageFlags";
 import type { FileStorageLifecycleSelectors } from "../contexts/FileStorageContext";
+import { reportFileStorageError } from "../utils/fileStorageErrorReporter";
 
 interface UseConnectionFlowParams {
   isSupported: boolean | undefined;
@@ -48,6 +49,20 @@ export function useConnectionFlow({
   const [showConnectModal, setShowConnectModal] = useState(false);
   const lastErrorRef = useRef<number | null>(null);
 
+  const emitFileStorageError = useCallback(
+    (
+      options: Parameters<typeof reportFileStorageError>[0],
+      persistError: boolean = true,
+    ) => {
+      const notification = reportFileStorageError(options);
+      if (notification && persistError && notification.type !== "info") {
+        setError(notification.message);
+      }
+      return notification;
+    },
+    [setError],
+  );
+
   const {
     lifecycle,
     permissionStatus,
@@ -64,7 +79,12 @@ export function useConnectionFlow({
   const handleChooseNewFolder = useCallback(async (): Promise<boolean> => {
     try {
       if (!isSupported) {
-        toast.error("File System Access API is not supported in this browser");
+        emitFileStorageError({
+          operation: "connect",
+          messageOverride: "File System Access API is not supported in this browser",
+          severity: "warning",
+          toastId: "file-storage-unsupported",
+        });
         return false;
       }
 
@@ -72,7 +92,11 @@ export function useConnectionFlow({
 
       const success = await connectToFolder();
       if (!success) {
-        toast.error("Failed to connect to new folder");
+        emitFileStorageError({
+          operation: "connect",
+          messageOverride: "Failed to connect to new folder",
+          toastId: "file-storage-connect-new",
+        });
         return false;
       }
 
@@ -109,7 +133,12 @@ export function useConnectionFlow({
           }
         } catch (err) {
           console.error("[ConnectionFlow] Error loading cases from new folder:", err);
-          toast.error("Connected to folder but failed to load case data");
+          emitFileStorageError({
+            operation: "loadExistingData",
+            error: err,
+            messageOverride: "Connected to folder but failed to load case data",
+            toastId: "file-storage-load-cases",
+          });
           return false;
         }
       } else {
@@ -126,7 +155,15 @@ export function useConnectionFlow({
       return true;
     } catch (err) {
       console.error("[ConnectionFlow] handleChooseNewFolder error:", err);
-      toast.error("Failed to connect to new folder");
+      const notification = emitFileStorageError({
+        operation: "connect",
+        error: err,
+        fallbackMessage: "Failed to connect to new folder",
+        toastId: "file-storage-connect-new",
+      });
+      if (!notification) {
+        return false;
+      }
       return false;
     }
   }, [
@@ -136,8 +173,8 @@ export function useConnectionFlow({
     loadExistingData,
     service,
     setCases,
-    setError,
     setHasLoadedData,
+    emitFileStorageError,
   ]);
 
   const handleConnectToExisting = useCallback(async (): Promise<boolean> => {
@@ -147,14 +184,22 @@ export function useConnectionFlow({
 
       if (!dataManager) {
         console.error("[ConnectionFlow] DataManager not available");
-        toast.error("Data storage is not available. Please connect to a folder first.");
+        emitFileStorageError({
+          operation: "connectExisting",
+          messageOverride: "Data storage is not available. Please connect to a folder first.",
+          toastId: "file-storage-data-manager",
+        });
         return false;
       }
 
       setError(null);
-    const success = hasStoredHandle ? await connectToExisting() : await connectToFolder();
+      const success = hasStoredHandle ? await connectToExisting() : await connectToFolder();
       if (!success) {
-        toast.error("Failed to connect to directory");
+        emitFileStorageError({
+          operation: hasStoredHandle ? "connectExisting" : "connect",
+          messageOverride: "Failed to connect to directory",
+          toastId: "file-storage-connect-existing",
+        });
         return false;
       }
 
@@ -209,22 +254,16 @@ export function useConnectionFlow({
     } catch (error) {
       console.error("[ConnectionFlow] Failed to connect and load data:", error);
 
-      let errorMsg = "Failed to connect and load existing data. Please try again.";
-      if (error instanceof Error) {
-        if (error.message.includes("User activation")) {
-          errorMsg = "Directory selection was cancelled. Please try again.";
-        } else if (error.message.includes("permission")) {
-          errorMsg = "Permission denied for the selected directory. Please choose a different folder.";
-        } else if (error.message.includes("connection")) {
-          errorMsg = "Lost connection to directory. Please reconnect and try again.";
-        } else if (error.message.includes("AbortError")) {
-          errorMsg = "Directory selection was cancelled.";
-          return false;
-        }
-      }
+      const notification = emitFileStorageError({
+        operation: hasStoredHandle ? "connectExisting" : "connect",
+        error,
+        fallbackMessage: "Failed to connect and load existing data. Please try again.",
+        toastId: "file-storage-connect-existing",
+      });
 
-      setError(errorMsg);
-      toast.error(errorMsg);
+      if (!notification) {
+        return false;
+      }
       return false;
     } finally {
       clearFileStorageFlags("inSetupPhase", "inConnectionFlow");
@@ -245,12 +284,12 @@ export function useConnectionFlow({
     connectToExisting,
     connectToFolder,
     dataManager,
+    emitFileStorageError,
     hasStoredHandle,
     loadCases,
     loadExistingData,
     service,
     setCases,
-    setError,
     setHasLoadedData,
   ]);
 

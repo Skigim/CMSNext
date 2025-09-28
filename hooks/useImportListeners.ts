@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { toast } from "sonner";
+import { reportFileStorageError } from "@/utils/fileStorageErrorReporter";
 
 interface UseImportListenersParams {
   loadCases: () => Promise<unknown>;
@@ -32,15 +32,21 @@ export function useImportListeners({ loadCases, setError, isStorageReady }: UseI
     };
 
     const handleFileImportError = (event: Event) => {
-      if (!(event instanceof CustomEvent) || typeof event.detail !== "string") {
-        const fallbackMessage = "Failed to import data. Please try again.";
-        setError(fallbackMessage);
-        toast.error(fallbackMessage);
-        return;
-      }
+      const fallbackMessage = "Failed to import data. Please try again.";
+      const detailMessage = event instanceof CustomEvent && typeof event.detail === "string"
+        ? event.detail
+        : undefined;
 
-      setError(event.detail);
-      toast.error(event.detail);
+      const notification = reportFileStorageError({
+        operation: "importCases",
+        severity: "error",
+        source: "useImportListeners",
+        messageOverride: detailMessage,
+        fallbackMessage,
+        toastId: "file-storage-import",
+      });
+
+      setError(notification?.message ?? detailMessage ?? fallbackMessage);
     };
 
     window.addEventListener("fileDataImported", handleFileImported);

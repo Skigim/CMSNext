@@ -5,6 +5,7 @@ export interface FileStorageStatus {
   permissionStatus?: string;
   lastSaveTime?: number | null;
   consecutiveFailures?: number;
+  pendingWrites?: number;
 }
 
 export type FileStorageLifecycleState =
@@ -37,6 +38,7 @@ export interface FileStorageMachineState {
   lastError: FileStorageErrorInfo | null;
   lastSaveTime: number | null;
   consecutiveFailures: number;
+  pendingWrites: number;
 }
 
 export type FileStorageAction =
@@ -61,6 +63,7 @@ export const initialMachineState: FileStorageMachineState = {
   lastError: null,
   lastSaveTime: null,
   consecutiveFailures: 0,
+  pendingWrites: 0,
 };
 
 function normalizePermissionStatus(permission: string | undefined): FileStoragePermissionState {
@@ -104,7 +107,12 @@ function deriveLifecycle(
         return 'blocked';
       }
       return baseState.explicitlyConnected && permissionStatus === 'granted' ? 'ready' : 'idle';
+    case 'saving':
+      return 'saving';
     case 'retrying':
+      if (permissionStatus === 'denied') {
+        return 'blocked';
+      }
       return 'recovering';
     case 'disconnected':
       return 'idle';
@@ -219,6 +227,7 @@ export function reduceFileStorageState(state: FileStorageMachineState, action: F
         statusSnapshot: action.status,
         lastSaveTime: action.status.lastSaveTime ?? null,
         consecutiveFailures: action.status.consecutiveFailures ?? 0,
+        pendingWrites: action.status.pendingWrites ?? 0,
       };
 
       if (action.status.status !== 'error' && state.lastError) {

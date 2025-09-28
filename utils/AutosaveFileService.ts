@@ -19,9 +19,16 @@
 
 // Removed devConfig import - debug logging is no longer conditional
 
+interface ErrorCallbackOptions {
+  message: string;
+  type?: string;
+  error?: unknown;
+  context?: Record<string, unknown>;
+}
+
 interface AutosaveConfig {
   fileName?: string;
-  errorCallback?: (message: string, type?: string) => void;
+  errorCallback?: (options: ErrorCallbackOptions) => void;
   sanitizeFn?: (str: string) => string;
   tabId?: string;
   enabled?: boolean;
@@ -38,6 +45,7 @@ interface StatusUpdate {
   permissionStatus: string;
   lastSaveTime: number | null;
   consecutiveFailures: number;
+  pendingWrites: number;
 }
 
 interface ServiceState {
@@ -68,7 +76,7 @@ interface WriteQueueItem {
 class AutosaveFileService {
   private directoryHandle: FileSystemDirectoryHandle | null = null;
   private fileName: string;
-  private errorCallback: (message: string, type?: string) => void;
+  private errorCallback: (options: ErrorCallbackOptions) => void;
   private tabId: string;
   private dbName: string = 'CaseTrackingFileAccess';
   private storeName: string = 'directoryHandles';
@@ -172,10 +180,11 @@ class AutosaveFileService {
 
   async connect(): Promise<boolean> {
     if (!this.isSupported()) {
-      this.errorCallback(
-        'File System Access API is not supported in this browser.',
-        'error',
-      );
+      this.errorCallback({
+        message: 'File System Access API is not supported in this browser.',
+        type: 'error',
+        context: { operation: 'connect' },
+      });
       return false;
     }
 
@@ -213,10 +222,11 @@ class AutosaveFileService {
    */
   async connectToExisting(): Promise<boolean> {
     if (!this.isSupported()) {
-      this.errorCallback(
-        'File System Access API is not supported in this browser.',
-        'error',
-      );
+      this.errorCallback({
+        message: 'File System Access API is not supported in this browser.',
+        type: 'error',
+        context: { operation: 'connectExisting' },
+      });
       return false;
     }
 
@@ -289,7 +299,12 @@ class AutosaveFileService {
       return true;
     }
 
-    this.errorCallback('Permission denied for the directory.', 'error');
+    this.errorCallback({
+      message: 'Permission denied for the directory.',
+      type: 'error',
+      context: { operation: 'requestPermission' },
+    });
+    this.updateStatus('waiting', 'Permission required to save changes');
     return false;
   }
 
@@ -344,7 +359,9 @@ class AutosaveFileService {
     }
 
     const permission = await this.checkPermission();
+    this.state.permissionStatus = permission;
     if (permission !== 'granted') {
+      this.updateStatus('waiting', 'Permission required to save changes');
       return false;
     }
 
@@ -368,6 +385,12 @@ class AutosaveFileService {
           tabId: this.tabId,
         }),
       );
+
+      if (!this.state.pendingSave) {
+        this.state.lastSaveTime = Date.now();
+        this.state.consecutiveFailures = 0;
+        this.updateStatus('running', 'All changes saved');
+      }
 
       return true;
     } catch (err) {
@@ -400,10 +423,12 @@ class AutosaveFileService {
         }
       }
 
-      this.errorCallback(
-        `Error writing file "${this.fileName}": ${errorMessage}`,
-        'error',
-      );
+      this.errorCallback({
+        message: `Error writing file "${this.fileName}": ${errorMessage}`,
+        type: 'error',
+        error: err,
+        context: { operation: 'writeData', fileName: this.fileName },
+      });
       return false;
     }
   }
@@ -421,7 +446,9 @@ class AutosaveFileService {
     }
 
     const permission = await this.checkPermission();
+    this.state.permissionStatus = permission;
     if (permission !== 'granted') {
+      this.updateStatus('waiting', 'Permission required to save changes');
       return false;
     }
 
@@ -466,10 +493,12 @@ class AutosaveFileService {
         }
       }
 
-      this.errorCallback(
-        `Error writing file "${fileName}": ${errorMessage}`,
-        'error',
-      );
+      this.errorCallback({
+        message: `Error writing file "${fileName}": ${errorMessage}`,
+        type: 'error',
+        error: err,
+        context: { operation: 'writeData', fileName },
+      });
       return false;
     }
   }
@@ -515,10 +544,12 @@ class AutosaveFileService {
       if (err instanceof Error && err.name === 'NotFoundError') {
         return null;
       } else {
-        this.errorCallback(
-          `Error reading file "${this.fileName}": ${err instanceof Error ? err.message : 'Unknown error'}`,
-          'error',
-        );
+        this.errorCallback({
+          message: `Error reading file "${this.fileName}": ${err instanceof Error ? err.message : 'Unknown error'}`,
+          type: 'error',
+          error: err,
+          context: { operation: 'readData', fileName: this.fileName },
+        });
         throw err;
       }
     }
@@ -710,10 +741,10 @@ class AutosaveFileService {
         this.updateStatus('connected', 'Connected to data folder');
         return true;
       }
-      this.updateStatus('waiting', 'Waiting for folder connection');
+      this.updateStatus('waiting', 'Permission required to save changes');
       return false;
     } catch (_) {
-      this.updateStatus('waiting', 'Waiting for folder connection');
+      this.updateStatus('waiting', 'Permission required to save changes');
       return false;
     }
   }
@@ -858,17 +889,17 @@ class AutosaveFileService {
     }, 30000); // Check every 30 seconds
 
     // Immediately report running to match legacy UX, then correct based on permission
-    this.updateStatus('running', 'Autosave active');
+    this.updateStatus('running', this.state.lastSaveTime ? 'All changes saved' : 'Autosave active');
     // Do not request permission here to avoid non-gesture prompts
     Promise.resolve()
       .then(() => this.checkPermission?.())
       .then((perm) => {
         if (perm !== 'granted') {
-          this.updateStatus('waiting', 'Waiting for folder connection');
+          this.updateStatus('waiting', 'Permission required to save changes');
         }
       })
       .catch(() => {
-        this.updateStatus('waiting', 'Waiting for folder connection');
+        this.updateStatus('waiting', 'Permission required to save changes');
       });
   }
 
@@ -936,13 +967,36 @@ class AutosaveFileService {
     try {
       const data = this.dataProvider();
       if (!data) {
+        this.state.pendingSave = false;
+        this.updateStatus('running', this.state.lastSaveTime ? 'All changes saved' : 'Autosave active');
         return false;
       }
 
-      return await this.writeFile(data);
+      this.state.pendingSave = true;
+      this.updateStatus('saving', 'Saving changes…');
+
+      const result = await this.writeFile(data);
+
+      this.state.pendingSave = false;
+
+      if (result) {
+        this.state.lastSaveTime = Date.now();
+        this.state.consecutiveFailures = 0;
+        this.updateStatus('running', 'All changes saved');
+      } else {
+        this.state.consecutiveFailures++;
+        this.updateStatus('error', 'Save failed - check folder permissions');
+      }
+
+      return result;
     } catch (error) {
       console.error('Failed to perform immediate save:', error);
+      this.state.consecutiveFailures++;
+      this.state.pendingSave = false;
+      this.updateStatus('error', 'Save failed - ' + (error instanceof Error ? error.message : 'Unknown error'));
       return false;
+    } finally {
+      this.state.pendingSave = false;
     }
   }
 
@@ -961,28 +1015,36 @@ class AutosaveFileService {
 
     try {
       this.state.pendingSave = true;
+      this.updateStatus('saving', 'Saving changes…');
       
       const data = this.dataProvider();
       if (!data) {
+        this.state.pendingSave = false;
+        this.updateStatus('running', this.state.lastSaveTime ? 'All changes saved' : 'Autosave active');
         return;
       }
 
       const success = await this.writeFile(data);
+      this.state.pendingSave = false;
       
       if (success) {
         this.state.lastSaveTime = Date.now();
         this.state.consecutiveFailures = 0;
-        this.updateStatus('running', 'Autosave active');
+        this.updateStatus('running', 'All changes saved');
       } else {
         this.state.consecutiveFailures++;
         if (this.state.consecutiveFailures >= this.config.maxRetries) {
           this.updateStatus('error', 'Autosave failed - check permissions');
         } else {
-          this.updateStatus('retrying', `Autosave failed - retrying (${this.state.consecutiveFailures}/${this.config.maxRetries})`);
+          this.updateStatus(
+            'retrying',
+            `Autosave retrying (${this.state.consecutiveFailures}/${this.config.maxRetries})…`,
+          );
         }
       }
     } catch (error) {
       this.state.consecutiveFailures++;
+      this.state.pendingSave = false;
       console.error(`Autosave failed (${trigger}):`, error);
       this.updateStatus('error', 'Autosave error - ' + (error instanceof Error ? error.message : 'Unknown error'));
     } finally {
@@ -996,7 +1058,7 @@ class AutosaveFileService {
   private async checkPermissions(): Promise<void> {
     if (!this.directoryHandle) {
       this.state.permissionStatus = 'prompt';
-      this.updateStatus('waiting', 'Waiting for folder connection');
+      this.updateStatus('waiting', 'Permission required to save changes');
       return;
     }
 
@@ -1005,13 +1067,13 @@ class AutosaveFileService {
       this.state.permissionStatus = permission;
       
       if (permission !== 'granted') {
-        this.updateStatus('waiting', 'Waiting for folder connection');
+        this.updateStatus('waiting', 'Permission required to save changes');
       } else if (this.state.consecutiveFailures === 0) {
-        this.updateStatus('running', 'Autosave active');
+        this.updateStatus('running', this.state.lastSaveTime ? 'All changes saved' : 'Autosave active');
       }
     } catch (error) {
       this.state.permissionStatus = 'prompt';
-      this.updateStatus('waiting', 'Waiting for folder connection');
+      this.updateStatus('waiting', 'Permission required to save changes');
     }
   }
 
@@ -1019,6 +1081,7 @@ class AutosaveFileService {
    * Update status and notify callbacks
    */
   private updateStatus(status: string, message: string): void {
+    const pendingWrites = this.writeQueue.length + (this.state.pendingSave ? 1 : 0);
     const statusUpdate: StatusUpdate = {
       status,
       message,
@@ -1026,6 +1089,7 @@ class AutosaveFileService {
       permissionStatus: this.state.permissionStatus,
       lastSaveTime: this.state.lastSaveTime,
       consecutiveFailures: this.state.consecutiveFailures,
+      pendingWrites,
     };
 
     if (this.statusCallback) {
@@ -1040,10 +1104,11 @@ class AutosaveFileService {
   /**
    * Get current service status
    */
-  getStatus(): ServiceState & { isSupported: boolean } {
+  getStatus(): ServiceState & { isSupported: boolean; pendingWrites: number } {
     return {
       ...this.state,
       isSupported: this.isSupported(),
+      pendingWrites: this.writeQueue.length + (this.state.pendingSave ? 1 : 0),
     };
   }
 

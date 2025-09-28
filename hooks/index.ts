@@ -9,6 +9,9 @@ export { useCaseManagement } from './useCaseManagement';
 // File system connection flow
 export { useConnectionFlow } from './useConnectionFlow';
 
+// Autosave status helpers
+export { useAutosaveStatus } from './useAutosaveStatus';
+
 // Navigation flow
 export { useNavigationFlow } from './useNavigationFlow';
 

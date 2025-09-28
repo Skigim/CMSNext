@@ -2,6 +2,10 @@ import { CaseDisplay, CaseCategory, FinancialItem, NewPersonData, NewCaseRecordD
 import { v4 as uuidv4 } from 'uuid';
 import AutosaveFileService from './AutosaveFileService';
 import { transformImportedData } from './dataTransform';
+import {
+  reportFileStorageError,
+  type FileStorageOperation,
+} from "./fileStorageErrorReporter";
 
 interface DataManagerConfig {
   fileService: AutosaveFileService;
@@ -121,10 +125,26 @@ function normalizeCaseNotes(cases: CaseDisplay[]): { cases: CaseDisplay[]; chang
 export class DataManager {
   private fileService: AutosaveFileService;
   private persistNormalizationFixes: boolean;
+  private static readonly ERROR_SOURCE = "DataManager";
 
   constructor(config: DataManagerConfig) {
     this.fileService = config.fileService;
     this.persistNormalizationFixes = config.persistNormalizationFixes ?? true;
+  }
+
+  private reportStorageError(
+    operation: FileStorageOperation,
+    error: unknown,
+    context?: Record<string, unknown>,
+    fallbackMessage?: string,
+  ) {
+    reportFileStorageError({
+      operation,
+      error,
+      source: DataManager.ERROR_SOURCE,
+      context,
+      fallbackMessage,
+    });
   }
 
   // =============================================================================
@@ -192,6 +212,7 @@ export class DataManager {
       };
     } catch (error) {
       console.error('Failed to read file data:', error);
+      this.reportStorageError("readData", error, { method: "readFileData" });
       throw new Error(`Failed to read case data: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
@@ -235,6 +256,11 @@ export class DataManager {
           errorMessage = error.message;
         }
       }
+
+      this.reportStorageError("writeData", error, {
+        method: "writeFileData",
+        errorMessage,
+      });
 
       throw new Error(`Failed to save case data: ${errorMessage}`);
     }
