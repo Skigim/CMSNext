@@ -8,7 +8,7 @@ import {
 } from "../ui/dropdown-menu";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "../ui/tooltip";
 import { formatAccountNumber } from "../../utils/financialFormatters";
-import { cn } from "../ui/utils";
+import { cn, interactiveHoverClasses } from "../ui/utils";
 import type {
   NormalizedFinancialItem,
   VerificationBadgeInfo,
@@ -59,7 +59,7 @@ export function FinancialItemCardMeta({
             onClick={event => event.stopPropagation()}
             className={cn(
               "h-6 px-2 py-1 text-xs transition-all",
-              "interactive-hover",
+              interactiveHoverClasses,
               verificationStatus.colorClass,
             )}
           >
