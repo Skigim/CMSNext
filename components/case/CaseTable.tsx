@@ -13,6 +13,8 @@ import type { CaseDisplay } from "@/types/case";
 import { CaseStatusBadge } from "./CaseStatusBadge";
 import { ArrowDown, ArrowUp, ArrowUpDown, Eye, MoreHorizontal, Pencil, Trash2 } from "lucide-react";
 import type { CaseListSortDirection, CaseListSortKey } from "@/hooks/useCaseListPreferences";
+import type { AlertWithMatch } from "@/utils/alertsData";
+import { Badge } from "@/components/ui/badge";
 
 export interface CaseTableProps {
   cases: CaseDisplay[];
@@ -22,6 +24,7 @@ export interface CaseTableProps {
   onViewCase: (caseId: string) => void;
   onEditCase: (caseId: string) => void;
   onDeleteCase: (caseId: string) => void;
+  alertsByCaseId?: Map<string, AlertWithMatch[]>;
 }
 
 const formatter = new Intl.DateTimeFormat(undefined, {
@@ -43,27 +46,41 @@ function formatDate(value?: string | null): string {
   return formatter.format(date);
 }
 
-export const CaseTable = memo(function CaseTable({ cases, sortKey, sortDirection, onRequestSort, onViewCase, onEditCase, onDeleteCase }: CaseTableProps) {
+export const CaseTable = memo(function CaseTable({
+  cases,
+  sortKey,
+  sortDirection,
+  onRequestSort,
+  onViewCase,
+  onEditCase,
+  onDeleteCase,
+  alertsByCaseId,
+}: CaseTableProps) {
   const hasCases = cases.length > 0;
 
-  const rows = useMemo(() => cases.map(item => {
-    const caseType = item.caseRecord?.caseType || "Not specified";
-    const applicationDate = item.caseRecord?.applicationDate || item.createdAt;
-    const updatedDate = item.updatedAt || item.caseRecord?.updatedDate || item.createdAt;
-    const primaryContact = item.person?.phone || item.person?.email || "Not provided";
-
-    return {
-      id: item.id,
-      name: item.name || "Unnamed Case",
-      mcn: item.mcn || "No MCN",
-      status: item.status,
-      priority: item.priority,
-      caseType,
-      applicationDate: formatDate(applicationDate),
-      updatedDate: formatDate(updatedDate),
-      primaryContact,
-    };
-  }), [cases]);
+  const rows = useMemo(
+    () =>
+      cases.map(item => {
+        const caseType = item.caseRecord?.caseType || "Not specified";
+        const applicationDate = item.caseRecord?.applicationDate || item.createdAt;
+        const updatedDate = item.updatedAt || item.caseRecord?.updatedDate || item.createdAt;
+        const primaryContact = item.person?.phone || item.person?.email || "Not provided";
+        const caseAlerts = alertsByCaseId?.get(item.id) ?? [];
+        return {
+          id: item.id,
+          name: item.name || "Unnamed Case",
+          mcn: item.mcn || "No MCN",
+          status: item.status,
+          priority: item.priority,
+          caseType,
+          applicationDate: formatDate(applicationDate),
+          updatedDate: formatDate(updatedDate),
+          primaryContact,
+          alerts: caseAlerts,
+        };
+      }),
+    [alertsByCaseId, cases],
+  );
 
   const renderSortIndicator = useCallback((key: CaseListSortKey) => {
     if (sortKey !== key) {
@@ -202,6 +219,11 @@ export const CaseTable = memo(function CaseTable({ cases, sortKey, sortDirection
                         aria-label="High priority case"
                         title="High priority case"
                       />
+                    )}
+                    {row.alerts.length > 0 && (
+                      <Badge variant="outline" className="border-amber-500/40 text-amber-700">
+                        {row.alerts.length} alert{row.alerts.length === 1 ? "" : "s"}
+                      </Badge>
                     )}
                   </div>
                 </div>

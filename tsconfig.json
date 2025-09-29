@@ -5,7 +5,7 @@
     "lib": ["ES2020", "DOM", "DOM.Iterable", "WebWorker"],
     "module": "ESNext",
     "skipLibCheck": true,
-    "types": ["node"],
+  "types": ["node", "vite/client"],
 
     /* Bundler mode */
     "moduleResolution": "bundler",
@@ -28,6 +28,15 @@
     }
   },
   "include": ["**/*.ts", "**/*.tsx"],
-  "exclude": ["node_modules", "dist", "vite.config.ts", "supabase/functions/**/*", "archive/**/*", "scripts/**/*", "components/ui/chart.tsx"],
+  "exclude": [
+    "node_modules",
+    "dist",
+    "vite.config.ts",
+    "supabase/functions/**/*",
+    "archive/**/*.ts",
+    "archive/**/*.tsx",
+    "scripts/**/*",
+    "components/ui/chart.tsx"
+  ],
   "references": [{ "path": "./tsconfig.node.json" }]
 }

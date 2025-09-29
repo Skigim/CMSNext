@@ -12,6 +12,7 @@ import type {
 } from "../../types/case";
 import type { ItemFormState } from "../../hooks/useFinancialItemFlow";
 import type { useNotes } from "../../hooks/useNotes";
+import type { AlertsIndex } from "../../utils/alertsData";
 
 const FinancialItemModal = lazy(() => import("../modals/FinancialItemModal"));
 const NoteModal = lazy(() => import("../modals/NoteModal"));
@@ -68,6 +69,7 @@ export interface CaseWorkspaceProps {
   viewHandlers: CaseWorkspaceViewHandlers;
   financialFlow: CaseWorkspaceFinancialFlow;
   noteFlow: CaseWorkspaceNoteFlow;
+  alerts: AlertsIndex;
 }
 
 /**
@@ -85,6 +87,7 @@ export const CaseWorkspace = memo(function CaseWorkspace({
   viewHandlers,
   financialFlow,
   noteFlow,
+  alerts,
 }: CaseWorkspaceProps) {
   return (
     <AppNavigationShell {...navigation}>
@@ -105,6 +108,7 @@ export const CaseWorkspace = memo(function CaseWorkspace({
         selectedCase={selectedCase}
         editingCase={editingCase}
         cases={cases}
+        alerts={alerts}
         handleViewCase={viewHandlers.handleViewCase}
         handleEditCase={viewHandlers.handleEditCase}
         handleNewCase={viewHandlers.handleNewCase}

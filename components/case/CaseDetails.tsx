@@ -5,10 +5,12 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
 import { CaseSection } from "./CaseSection";
 import { NotesSection } from "./NotesSection";
 import { CaseDisplay, CaseCategory, FinancialItem, NewNoteData } from "../../types/case";
-import { ArrowLeft, Edit2, Trash2, Landmark, Wallet, Receipt, Copy } from "lucide-react";
+import { ArrowLeft, Edit2, Trash2, Landmark, Wallet, Receipt, Copy, BellRing } from "lucide-react";
 import { withDataErrorBoundary } from "../error/ErrorBoundaryHOC";
 import { CaseStatusBadge } from "./CaseStatusBadge";
 import { clickToCopy } from "../../utils/clipboard";
+import { Badge } from "../ui/badge";
+import type { AlertWithMatch } from "../../utils/alertsData";
 
 interface CaseDetailsProps {
   case: CaseDisplay;
@@ -24,6 +26,7 @@ interface CaseDetailsProps {
   onDeleteNote: (noteId: string) => void;
   onBatchUpdateNote?: (noteId: string, updatedNote: NewNoteData) => Promise<void>;
   onBatchCreateNote?: (noteData: NewNoteData) => Promise<void>;
+  alerts?: AlertWithMatch[];
 }
 
 export function CaseDetails({ 
@@ -39,7 +42,8 @@ export function CaseDetails({
   onEditNote,
   onDeleteNote,
   onBatchUpdateNote,
-  onBatchCreateNote
+  onBatchCreateNote,
+  alerts = [],
 }: CaseDetailsProps) {
   
   // Handle batched update for inline editing
@@ -53,6 +57,8 @@ export function CaseDetails({
       console.error('[CaseDetails] Failed to update item:', error);
     }
   };
+
+  const totalAlerts = alerts.length;
 
   return (
     <div className="space-y-6">
@@ -95,6 +101,18 @@ export function CaseDetails({
                 ) : (
                   <span className="text-sm font-mono bg-muted px-2 py-0.5 rounded-md">
                     No MCN
+                  </span>
+                )}
+              </div>
+              <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                {totalAlerts > 0 ? (
+                  <Badge className="border-amber-500/40 bg-amber-500/10 text-amber-800">
+                    <BellRing className="mr-1 h-3 w-3" />
+                    {totalAlerts} alert{totalAlerts === 1 ? "" : "s"} linked to this case
+                  </Badge>
+                ) : (
+                  <span className="inline-flex items-center gap-1">
+                    <BellRing className="h-3 w-3" /> All clear — no alerts for this case
                   </span>
                 )}
               </div>

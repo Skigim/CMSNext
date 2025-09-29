@@ -1,5 +1,6 @@
 import { CaseDisplay, NewPersonData, NewCaseRecordData } from "../../types/case";
 import { AppView } from "../../types/view";
+import type { AlertsIndex } from "../../utils/alertsData";
 
 // Direct imports for high-turnover components - no lazy loading for snappiness
 import Dashboard from "../app/Dashboard";
@@ -18,6 +19,7 @@ interface ViewRendererProps {
   
   // Data props
   cases: CaseDisplay[];
+  alerts: AlertsIndex;
   
   // Navigation handlers
   handleViewCase: (caseId: string) => void;
@@ -62,6 +64,7 @@ export function ViewRenderer({
   
   // Data props
   cases,
+  alerts,
   
   // Navigation handlers
   handleViewCase,
@@ -90,6 +93,7 @@ export function ViewRenderer({
       return (
         <Dashboard
           cases={cases}
+          alerts={alerts}
           onViewAllCases={handleBackToList}
           onNewCase={handleNewCase}
         />
@@ -99,6 +103,8 @@ export function ViewRenderer({
       return (
         <CaseList
           cases={cases}
+          alertsSummary={alerts.summary}
+          alertsByCaseId={alerts.alertsByCaseId}
           onViewCase={handleViewCase}
           onEditCase={handleEditCase}
           onDeleteCase={handleDeleteCase}
@@ -118,6 +124,7 @@ export function ViewRenderer({
       return selectedCase ? (
         <CaseDetails
           case={selectedCase}
+          alerts={alerts.alertsByCaseId.get(selectedCase.id) ?? []}
           onBack={handleBackToList}
           onEdit={() => handleEditCase(selectedCase.id)}
           onDelete={() => handleDeleteCase(selectedCase.id)}

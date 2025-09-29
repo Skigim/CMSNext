@@ -67,6 +67,32 @@ export interface Financials {
   expenses: FinancialItem[];
 }
 
+export type AlertSeverity = 'Low' | 'Medium' | 'High' | 'Critical' | 'Info';
+
+export type AlertWorkflowStatus = 'new' | 'in-progress' | 'acknowledged' | 'snoozed' | 'resolved';
+
+export interface AlertRecord {
+  id: string;
+  reportId?: string;
+  alertCode: string;
+  alertType: string;
+  severity: AlertSeverity;
+  alertDate: string;
+  createdAt: string;
+  updatedAt: string;
+  mcNumber?: string | null;
+  personName?: string;
+  program?: string;
+  region?: string;
+  state?: string;
+  source?: string;
+  description?: string;
+  status?: AlertWorkflowStatus;
+  resolvedAt?: string | null;
+  resolutionNotes?: string;
+  metadata?: Record<string, string | undefined>;
+}
+
 export type CaseStatus = string;
 
 // Case record interface
@@ -191,4 +217,5 @@ export interface CaseDisplay {
   updatedAt: string;
   person: Person;
   caseRecord: CaseRecord;
+  alerts?: AlertRecord[];
 }

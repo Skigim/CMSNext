@@ -1,4 +1,4 @@
-import { useEffect, useCallback, useMemo, memo } from "react";
+import { useEffect, useCallback, useMemo, memo, useRef } from "react";
 import { Toaster } from "./components/ui/sonner";
 import { CaseDisplay, CaseCategory, FinancialItem } from "./types/case";
 import { toast } from "sonner";
@@ -18,6 +18,22 @@ import { AppContentView } from "./components/app/AppContentView";
 import { useAppContentViewModel } from "./components/app/useAppContentViewModel";
 import { clearFileStorageFlags, updateFileStorageFlags } from "./utils/fileStorageFlags";
 import { useCategoryConfig } from "./contexts/CategoryConfigContext";
+import { parseAlertsFromCsv, type AlertsIndex } from "./utils/alertsData";
+import sampleAlertsCsv from "./archive/data/sample-alerts.csv?raw";
+
+const createEmptyAlertsIndex = (): AlertsIndex => ({
+  alerts: [],
+  summary: {
+    total: 0,
+    matched: 0,
+    unmatched: 0,
+    missingMcn: 0,
+    latestUpdated: null,
+  },
+  alertsByCaseId: new Map(),
+  unmatched: [],
+  missingMcn: [],
+});
 
 const AppContent = memo(function AppContent() {
   const { isSupported, hasStoredHandle, connectToFolder, connectToExisting, loadExistingData, service } = useFileStorage();
@@ -333,6 +349,38 @@ const AppContent = memo(function AppContent() {
     ],
   );
 
+  const alertsIndex = useMemo<AlertsIndex>(() => {
+    try {
+      return parseAlertsFromCsv(sampleAlertsCsv, cases);
+    } catch (err) {
+      console.error("Failed to parse alerts dataset", err);
+      return createEmptyAlertsIndex();
+    }
+  }, [cases]);
+
+  const previousAlertCountsRef = useRef({ unmatched: 0, missingMcn: 0 });
+
+  useEffect(() => {
+    const { unmatched, missingMcn } = alertsIndex.summary;
+    const prev = previousAlertCountsRef.current;
+
+    if ((unmatched > 0 || missingMcn > 0) && (unmatched !== prev.unmatched || missingMcn !== prev.missingMcn)) {
+      const messageParts: string[] = [];
+      if (unmatched > 0) {
+        messageParts.push(`${unmatched} alert${unmatched === 1 ? "" : "s"} need${unmatched === 1 ? "s" : ""} a case match`);
+      }
+      if (missingMcn > 0) {
+        messageParts.push(`${missingMcn} alert${missingMcn === 1 ? "" : "s"} missing an MCN`);
+      }
+
+      toast.warning(`Heads up: ${messageParts.join(" and ")}`, {
+        id: "alerts-match-status",
+      });
+    }
+
+    previousAlertCountsRef.current = { unmatched, missingMcn };
+  }, [alertsIndex.summary.missingMcn, alertsIndex.summary.unmatched]);
+
   const workspaceState = useMemo(
     () => ({
       cases,
@@ -343,6 +391,7 @@ const AppContent = memo(function AppContent() {
       viewHandlers,
       financialFlow,
       noteFlow,
+      alerts: alertsIndex,
     }),
     [
       cases,
@@ -353,6 +402,7 @@ const AppContent = memo(function AppContent() {
       noteFlow,
       selectedCase,
       viewHandlers,
+      alertsIndex,
     ],
   );
 

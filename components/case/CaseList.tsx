@@ -42,6 +42,8 @@ import {
   type CaseListSortKey,
   type CaseListSortDirection,
 } from "@/hooks/useCaseListPreferences";
+import { Badge } from "../ui/badge";
+import type { AlertsSummary, AlertWithMatch } from "../../utils/alertsData";
 
 interface CaseListProps {
   cases: CaseDisplay[];
@@ -50,9 +52,20 @@ interface CaseListProps {
   onDeleteCase: (caseId: string) => void;
   onNewCase: () => void;
   onRefresh?: () => void;
+  alertsSummary?: AlertsSummary;
+  alertsByCaseId?: Map<string, AlertWithMatch[]>;
 }
 
-export function CaseList({ cases, onViewCase, onEditCase, onDeleteCase, onNewCase, onRefresh }: CaseListProps) {
+export function CaseList({
+  cases,
+  onViewCase,
+  onEditCase,
+  onDeleteCase,
+  onNewCase,
+  onRefresh,
+  alertsSummary,
+  alertsByCaseId,
+}: CaseListProps) {
   const {
     viewMode,
     setViewMode,
@@ -67,6 +80,20 @@ export function CaseList({ cases, onViewCase, onEditCase, onDeleteCase, onNewCas
   const [isSettingUpData, setIsSettingUpData] = useState(false);
   const [useVirtualScrolling, setUseVirtualScrolling] = useState(false);
   const [showSampleDataDialog, setShowSampleDataDialog] = useState(false);
+
+  const alertsSummaryData: AlertsSummary = useMemo(
+    () =>
+      alertsSummary ?? {
+        total: 0,
+        matched: 0,
+        unmatched: 0,
+        missingMcn: 0,
+        latestUpdated: null,
+      },
+    [alertsSummary],
+  );
+
+  const alertsByCase = useMemo(() => alertsByCaseId ?? new Map<string, AlertWithMatch[]>(), [alertsByCaseId]);
 
   const shouldUseVirtual = viewMode === "grid" && (cases.length > 100 || useVirtualScrolling);
 
@@ -177,6 +204,40 @@ export function CaseList({ cases, onViewCase, onEditCase, onDeleteCase, onNewCas
 
   const noMatches = sortedCases.length === 0;
 
+  const renderAlertSummary = () => {
+    if (alertsSummaryData.total === 0) {
+      return (
+        <div className="rounded-md border border-dashed border-muted-foreground/30 bg-muted/20 p-3 text-xs text-muted-foreground">
+          No alerts detected for the current workspace.
+        </div>
+      );
+    }
+
+    return (
+      <div className="space-y-2">
+        <div className="grid gap-2 sm:grid-cols-2">
+          <div className="rounded-md border border-border/70 bg-card/60 p-3">
+            <p className="text-xs uppercase text-muted-foreground">Total alerts</p>
+            <p className="text-xl font-semibold text-foreground">{alertsSummaryData.total}</p>
+            {alertsSummaryData.latestUpdated && (
+              <p className="text-[11px] text-muted-foreground mt-1">
+                Updated {new Intl.DateTimeFormat(undefined, { dateStyle: "medium" }).format(new Date(alertsSummaryData.latestUpdated))}
+              </p>
+            )}
+          </div>
+          <div className="rounded-md border border-emerald-500/30 bg-emerald-500/10 p-3">
+            <p className="text-xs uppercase text-emerald-700">Linked to cases</p>
+            <p className="text-xl font-semibold text-emerald-900">{alertsSummaryData.matched}</p>
+            <p className="text-[11px] text-emerald-800 mt-1">Alerts already connected</p>
+          </div>
+        </div>
+        <p className="text-[11px] text-muted-foreground">
+          We&rsquo;ll surface a toast if any alerts can&rsquo;t be matched automatically.
+        </p>
+      </div>
+    );
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
@@ -266,6 +327,19 @@ export function CaseList({ cases, onViewCase, onEditCase, onDeleteCase, onNewCas
         </ToggleGroup>
       </div>
 
+      <section className="space-y-2">
+        <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
+          <span className="inline-flex h-2.5 w-2.5 rounded-full bg-amber-500" aria-hidden />
+          Alerts overview
+          {alertsSummaryData.total > 0 && (
+            <Badge variant="outline" className="ml-2 border-amber-500/40 text-amber-700">
+              {alertsSummaryData.total} active
+            </Badge>
+          )}
+        </div>
+        {renderAlertSummary()}
+      </section>
+
       {viewMode === "table" ? (
         <CaseTable
           cases={sortedCases}
@@ -275,6 +349,7 @@ export function CaseList({ cases, onViewCase, onEditCase, onDeleteCase, onNewCas
           onViewCase={onViewCase}
           onEditCase={onEditCase}
           onDeleteCase={onDeleteCase}
+          alertsByCaseId={alertsByCase}
         />
       ) : shouldUseVirtual ? (
         <VirtualCaseList
@@ -282,6 +357,7 @@ export function CaseList({ cases, onViewCase, onEditCase, onDeleteCase, onNewCas
           onViewCase={onViewCase}
           onEditCase={onEditCase}
           onDeleteCase={onDeleteCase}
+          alertsByCaseId={alertsByCase}
         />
       ) : (
         <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
@@ -292,6 +368,7 @@ export function CaseList({ cases, onViewCase, onEditCase, onDeleteCase, onNewCas
               onView={onViewCase}
               onEdit={onEditCase}
               onDelete={onDeleteCase}
+              alerts={alertsByCase.get(caseData.id) ?? []}
             />
           ))}
         </div>

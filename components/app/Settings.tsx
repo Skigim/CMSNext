@@ -13,6 +13,7 @@ import { ErrorReportViewer } from "../error/ErrorReportViewer";
 import { FeedbackPanel } from "../error/ErrorFeedbackForm";
 import { CategoryConfigDevPanel } from "../diagnostics/CategoryConfigDevPanel";
 import { CategoryManagerPanel } from "../category/CategoryManagerPanel";
+import { AlertsPreviewPanel } from "../alerts/AlertsPreviewPanel";
 import { useFileStorage } from "../../contexts/FileStorageContext";
 import { useTheme } from "../../contexts/ThemeContext";
 import { 
@@ -482,6 +483,7 @@ export function Settings({ cases, onDataPurged }: SettingsProps) {
         {/* Development Tab */}
         <TabsContent value="development" className="space-y-6">
           <div className="grid gap-6">
+            <AlertsPreviewPanel cases={cases} />
             <CategoryConfigDevPanel />
             <Card>
               <CardHeader>

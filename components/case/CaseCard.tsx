@@ -15,15 +15,17 @@ import {
 import { CaseDisplay } from "../../types/case";
 import { Eye, Edit, Trash2 } from "lucide-react";
 import { CaseStatusBadge } from "./CaseStatusBadge";
+import type { AlertWithMatch } from "../../utils/alertsData";
 
 interface CaseCardProps {
   case: CaseDisplay;
   onView: (caseId: string) => void;
   onEdit: (caseId: string) => void;
   onDelete: (caseId: string) => void;
+  alerts?: AlertWithMatch[];
 }
 
-export function CaseCard({ case: caseData, onView, onEdit, onDelete }: CaseCardProps) {
+export function CaseCard({ case: caseData, onView, onEdit, onDelete, alerts = [] }: CaseCardProps) {
   const formatDate = (value?: string) => {
     if (!value) {
       return "—";
@@ -51,6 +53,9 @@ export function CaseCard({ case: caseData, onView, onEdit, onDelete }: CaseCardP
     ? "bg-red-500/10 text-red-500 border-red-500/20"
     : "bg-muted text-muted-foreground border-transparent";
 
+  const totalAlerts = alerts.length;
+  const alertBadgeClasses = "bg-amber-500/15 text-amber-700 border-amber-500/30";
+
   return (
     <Card className="hover:shadow-md transition-shadow">
       <CardHeader className="pb-3">
@@ -58,7 +63,14 @@ export function CaseCard({ case: caseData, onView, onEdit, onDelete }: CaseCardP
           <CardTitle className="text-lg">{caseData.name || 'Unnamed Case'}</CardTitle>
           <CaseStatusBadge status={caseData.status} />
         </div>
-        <p className="text-sm text-muted-foreground">MCN: {caseData.mcn || 'No MCN'}</p>
+        <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
+          <p>MCN: {caseData.mcn || 'No MCN'}</p>
+          {totalAlerts > 0 && (
+            <Badge className={alertBadgeClasses}>
+              {totalAlerts} alert{totalAlerts === 1 ? '' : 's'}
+            </Badge>
+          )}
+        </div>
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="grid grid-cols-1 gap-4 text-sm sm:grid-cols-3">

@@ -11,17 +11,35 @@ import {
   Coins,
   TrendingUp,
 } from "lucide-react";
-import { CaseDisplay } from "../../types/case";
+import { CaseDisplay, AlertSeverity } from "../../types/case";
 import { FileServiceDiagnostic } from "../diagnostics/FileServiceDiagnostic";
 import { useCategoryConfig } from "../../contexts/CategoryConfigContext";
+import { BellRing, AlertTriangle } from "lucide-react";
+import type { AlertsIndex } from "../../utils/alertsData";
 
 interface DashboardProps {
   cases: CaseDisplay[];
+  alerts: AlertsIndex;
   onViewAllCases: () => void;
   onNewCase: () => void;
 }
 
-export function Dashboard({ cases, onViewAllCases, onNewCase }: DashboardProps) {
+function getSeverityBadgeClasses(severity: AlertSeverity): string {
+  switch (severity) {
+    case "Critical":
+      return "bg-red-500/15 text-red-600 border-red-500/20";
+    case "High":
+      return "bg-amber-500/15 text-amber-600 border-amber-500/20";
+    case "Medium":
+      return "bg-yellow-500/15 text-yellow-600 border-yellow-500/20";
+    case "Low":
+      return "bg-blue-500/15 text-blue-600 border-blue-500/20";
+    default:
+      return "bg-muted text-muted-foreground border-muted-foreground/20";
+  }
+}
+
+export function Dashboard({ cases, alerts, onViewAllCases, onNewCase }: DashboardProps) {
   const { config } = useCategoryConfig();
 
   const validCases = useMemo(
@@ -84,6 +102,16 @@ export function Dashboard({ cases, onViewAllCases, onNewCase }: DashboardProps) 
   const stats = useMemo(
     () => [
       {
+        title: "Active Alerts",
+        value: alerts.summary.total,
+        description:
+          alerts.summary.total === 0
+            ? "All clear"
+            : `${alerts.summary.matched} linked to cases`,
+        icon: BellRing,
+        color: alerts.summary.total > 0 ? "text-amber-600" : "text-muted-foreground",
+      },
+      {
         title: "Total Cases",
         value: totalCases,
         description: "All tracked cases",
@@ -92,8 +120,10 @@ export function Dashboard({ cases, onViewAllCases, onNewCase }: DashboardProps) 
       },
       ...statusStats,
     ],
-    [statusStats, totalCases],
+    [alerts.summary.matched, alerts.summary.total, statusStats, totalCases],
   );
+
+  const latestAlerts = useMemo(() => alerts.alerts.slice(0, 5), [alerts.alerts]);
 
   return (
     <div className="space-y-6">
@@ -132,7 +162,7 @@ export function Dashboard({ cases, onViewAllCases, onNewCase }: DashboardProps) 
       </div>
 
       {/* Recent Cases */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <Card>
           <CardHeader>
             <div className="flex items-center justify-between">
@@ -172,6 +202,72 @@ export function Dashboard({ cases, onViewAllCases, onNewCase }: DashboardProps) 
                 <Button variant="outline" size="sm" onClick={onNewCase} className="mt-2">
                   Create your first case
                 </Button>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle>Alert Center</CardTitle>
+                <CardDescription>Live feed from the alerts dataset</CardDescription>
+              </div>
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <BellRing className={alerts.summary.total ? "h-4 w-4 text-amber-600" : "h-4 w-4"} />
+                {alerts.summary.total ? `${alerts.summary.total} active` : "All clear"}
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent>
+            {alerts.summary.total === 0 ? (
+              <div className="py-6 text-center text-muted-foreground text-sm">
+                <p>No alerts detected in the sample feed.</p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <div className="rounded-lg border border-border/60 bg-muted/30 p-3">
+                  <p className="text-xs uppercase text-muted-foreground">Linked to cases</p>
+                  <p className="text-lg font-semibold text-foreground">{alerts.summary.matched}</p>
+                  <p className="text-xs text-muted-foreground mt-1">Anything that needs a manual match will trigger a toast.</p>
+                </div>
+
+                <div className="space-y-3">
+                  {latestAlerts.map(alert => {
+                    const severityClass = getSeverityBadgeClasses(alert.severity);
+                    return (
+                      <div
+                        key={alert.id}
+                        className="flex items-start justify-between gap-3 rounded-lg border border-border/60 bg-card/60 p-3"
+                      >
+                        <div className="space-y-1">
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm font-semibold text-foreground">{alert.alertType || alert.alertCode}</span>
+                            <span className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs ${severityClass}`}>
+                              <AlertTriangle className="h-3 w-3" />
+                              {alert.severity}
+                            </span>
+                          </div>
+                          {alert.description && (
+                            <p className="text-xs text-muted-foreground line-clamp-2">{alert.description}</p>
+                          )}
+                          <div className="flex flex-wrap gap-2 text-[11px] text-muted-foreground">
+                            {alert.personName && <span>{alert.personName}</span>}
+                            {alert.mcNumber && <span>MCN {alert.mcNumber}</span>}
+                            {alert.source && <span>{alert.source}</span>}
+                          </div>
+                        </div>
+                        <div className="text-xs text-muted-foreground text-right min-w-[128px]">
+                          <div>{alert.updatedAt ? new Date(alert.updatedAt).toLocaleDateString() : "—"}</div>
+                          <div className="truncate">
+                            {alert.matchedCaseName ? `Case: ${alert.matchedCaseName}` : alert.matchStatus === "matched" ? "Linked case" : "Needs review"}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
             )}
           </CardContent>
