@@ -348,6 +348,12 @@
   }
 }
 
+@layer utilities {
+  .interactive-hover {
+    @apply transition-all duration-200 ease-out hover:-translate-y-0.5 hover:scale-[1.02] hover:shadow-md focus-visible:-translate-y-0.5 focus-visible:shadow-md active:translate-y-0 active:scale-100;
+  }
+}
+
 /* Wiggle animation for delete button */
 @keyframes wiggle {
   0%, 100% { transform: rotate(0deg); }
@@ -357,7 +363,7 @@
 
 /* Financial Item Card Styles */
 .financial-item-delete-btn {
-  @apply h-8 w-8 p-0 bg-background/90 backdrop-blur-sm border border-border/50 text-destructive hover:text-destructive hover:bg-destructive/10 shadow-sm hover:animate-pulse hover:scale-110 transition-all duration-200;
+  @apply interactive-hover h-8 w-8 p-0 bg-background/90 backdrop-blur-sm border border-border/50 text-destructive hover:text-destructive hover:bg-destructive/10 shadow-sm hover:animate-pulse;
 }
 
 .financial-item-delete-btn:hover {

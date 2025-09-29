@@ -13,7 +13,7 @@ interface ContactInfoFormProps {
  * Features:
  * - Email input with validation
  * - Phone input with tel type
- * - Required field validation
+ * - Optional contact fields to avoid blocking edits
  * - Accessible form labels and inputs
  * 
  * @param personData - The person data object containing contact information
@@ -23,25 +23,23 @@ export function ContactInfoForm({ personData, onPersonDataChange }: ContactInfoF
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
       <div className="space-y-2">
-        <Label htmlFor="email">Email *</Label>
+        <Label htmlFor="email">Email (optional)</Label>
         <Input
           id="email"
           type="email"
           value={personData.email}
           onChange={(e) => onPersonDataChange('email', e.target.value)}
           placeholder="Enter email address"
-          required
         />
       </div>
       <div className="space-y-2">
-        <Label htmlFor="phone">Phone *</Label>
+        <Label htmlFor="phone">Phone (optional)</Label>
         <Input
           id="phone"
           type="tel"
           value={personData.phone}
           onChange={(e) => onPersonDataChange('phone', e.target.value)}
           placeholder="Enter phone number"
-          required
         />
       </div>
     </div>

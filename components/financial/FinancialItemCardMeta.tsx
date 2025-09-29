@@ -8,6 +8,7 @@ import {
 } from "../ui/dropdown-menu";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "../ui/tooltip";
 import { formatAccountNumber } from "../../utils/financialFormatters";
+import { cn } from "../ui/utils";
 import type {
   NormalizedFinancialItem,
   VerificationBadgeInfo,
@@ -56,7 +57,11 @@ export function FinancialItemCardMeta({
             size="sm"
             disabled={!canUpdateStatus}
             onClick={event => event.stopPropagation()}
-            className={`h-6 px-2 py-1 text-xs transition-all duration-200 hover:scale-105 ${verificationStatus.colorClass}`}
+            className={cn(
+              "h-6 px-2 py-1 text-xs transition-all",
+              "interactive-hover",
+              verificationStatus.colorClass,
+            )}
           >
             {verificationStatus.text}
             <ChevronDown className="ml-1 h-3 w-3" />

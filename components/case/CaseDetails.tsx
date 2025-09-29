@@ -70,7 +70,7 @@ export function CaseDetails({
               variant="ghost" 
               size="sm" 
               onClick={onBack}
-              className="mt-0.5"
+              className="interactive-hover mt-0.5"
             >
               <ArrowLeft className="w-4 h-4 mr-2" />
               Back
@@ -92,7 +92,7 @@ export function CaseDetails({
                         successMessage: `MCN ${caseData.mcn} copied`,
                       })
                     }
-                    className="inline-flex items-center gap-1 rounded-md bg-muted px-2 py-0.5 font-mono text-sm text-foreground transition-colors hover:bg-muted/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                    className="interactive-hover inline-flex items-center gap-1 rounded-md bg-muted px-2 py-0.5 font-mono text-sm text-foreground transition-colors hover:bg-muted/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
                     aria-label="Copy MCN to clipboard"
                   >
                     <span>{caseData.mcn}</span>
@@ -123,6 +123,7 @@ export function CaseDetails({
               variant="outline" 
               size="sm"
               onClick={onEdit}
+              className="interactive-hover"
             >
               <Edit2 className="w-4 h-4 mr-2" />
               Edit
@@ -132,7 +133,7 @@ export function CaseDetails({
                 <Button 
                   variant="outline" 
                   size="sm"
-                  className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                  className="interactive-hover text-destructive hover:text-destructive hover:bg-destructive/10"
                 >
                   <Trash2 className="w-4 h-4 mr-2" />
                   Delete
