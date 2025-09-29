@@ -1,3 +1,4 @@
+import { useCallback } from "react";
 import { Button } from "../ui/button";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "../ui/alert-dialog";
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "../ui/resizable";
@@ -28,6 +29,10 @@ interface CaseDetailsProps {
   onBatchUpdateNote?: (noteId: string, updatedNote: NewNoteData) => Promise<void>;
   onBatchCreateNote?: (noteData: NewNoteData) => Promise<void>;
   alerts?: AlertWithMatch[];
+  onUpdateStatus?: (
+    caseId: string,
+    status: CaseDisplay["status"],
+  ) => Promise<CaseDisplay | null> | CaseDisplay | null | void;
 }
 
 export function CaseDetails({ 
@@ -45,6 +50,7 @@ export function CaseDetails({
   onBatchUpdateNote,
   onBatchCreateNote,
   alerts = [],
+  onUpdateStatus,
 }: CaseDetailsProps) {
   
   // Handle batched update for inline editing
@@ -60,6 +66,14 @@ export function CaseDetails({
   };
 
   const totalAlerts = alerts.length;
+
+  const handleStatusChange = useCallback(
+    (status: CaseDisplay["status"]) => {
+      if (!onUpdateStatus) return;
+      onUpdateStatus(caseData.id, status);
+    },
+    [caseData.id, onUpdateStatus],
+  );
 
   return (
     <div className="space-y-6">
@@ -81,7 +95,10 @@ export function CaseDetails({
                 <h1 className="text-xl font-bold text-foreground">
                   {caseData.name || 'Unnamed Case'}
                 </h1>
-                <CaseStatusBadge status={caseData.status} />
+                <CaseStatusBadge
+                  status={caseData.status}
+                  onStatusChange={onUpdateStatus ? handleStatusChange : undefined}
+                />
               </div>
               <div className="flex items-center gap-2 text-muted-foreground">
                 <span className="text-sm font-medium">MCN:</span>

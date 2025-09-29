@@ -251,6 +251,34 @@ describe('DataManager', () => {
 
       expect(mockAutosaveService.writeFile).toHaveBeenCalled()
     })
+
+    it('should update case status without affecting other cases', async () => {
+      const pendingCase = createMockCaseDisplay({ id: 'case-1', status: 'Pending' })
+      pendingCase.caseRecord.status = 'Pending'
+
+      const untouchedCase = createMockCaseDisplay({ id: 'case-2', status: 'Approved' })
+      untouchedCase.caseRecord.status = 'Approved'
+
+      mockAutosaveService.readFile.mockResolvedValue(createFileData({
+        cases: [pendingCase, untouchedCase],
+        total_cases: 2,
+      }))
+
+      let capturedPayload: any
+      mockAutosaveService.writeFile.mockImplementation(async (data: any) => {
+        capturedPayload = data
+        return true
+      })
+
+      const updatedCase = await dataManager.updateCaseStatus('case-1', 'Approved')
+
+      expect(updatedCase.status).toBe('Approved')
+      expect(updatedCase.caseRecord.status).toBe('Approved')
+      expect(capturedPayload.cases.find((c: any) => c.id === 'case-1').status).toBe('Approved')
+      expect(capturedPayload.cases.find((c: any) => c.id === 'case-1').caseRecord.status).toBe('Approved')
+      expect(capturedPayload.cases.find((c: any) => c.id === 'case-2').status).toBe('Approved')
+      expect(capturedPayload.cases.find((c: any) => c.id === 'case-2').caseRecord.status).toBe('Approved')
+    })
   })
 
   describe('financial items', () => {
@@ -351,6 +379,56 @@ describe('DataManager', () => {
 
       expect(result).toBeDefined()
       expect(mockAutosaveService.writeFile).toHaveBeenCalled()
+    })
+  })
+
+  describe('timestamp control', () => {
+    it('updates updatedAt only for cases that were modified', async () => {
+      const originalTimestamp = '2024-01-01T00:00:00.000Z'
+      const untouchedTimestamp = '2023-12-15T12:00:00.000Z'
+      const targetCase = createMockCaseDisplay({ id: 'case-target', updatedAt: originalTimestamp })
+      const untouchedCase = createMockCaseDisplay({ id: 'case-untouched', updatedAt: untouchedTimestamp })
+
+      mockAutosaveService.readFile.mockResolvedValue(createFileData({
+        cases: [targetCase, untouchedCase],
+        total_cases: 2,
+      }))
+
+      let capturedPayload: any
+      mockAutosaveService.writeFile.mockImplementation(async (data: any) => {
+        capturedPayload = data
+        return true
+      })
+
+      const result = await dataManager.updateCompleteCase('case-target', {
+        person: { ...targetCase.person, firstName: 'Casey' },
+        caseRecord: targetCase.caseRecord,
+      })
+
+      expect(result.updatedAt).not.toBe(originalTimestamp)
+      expect(capturedPayload.cases.find((c: any) => c.id === 'case-target').updatedAt).toBe(result.updatedAt)
+      expect(capturedPayload.cases.find((c: any) => c.id === 'case-untouched').updatedAt).toBe(untouchedTimestamp)
+    })
+
+    it('preserves updatedAt during passive writes', async () => {
+      const originalTimestamp = '2024-02-02T08:00:00.000Z'
+      const existingCase = createMockCaseDisplay({ id: 'case-passive', updatedAt: originalTimestamp })
+
+      mockAutosaveService.readFile.mockResolvedValue(createFileData({
+        cases: [existingCase],
+        total_cases: 1,
+      }))
+
+      let capturedPayload: any
+      mockAutosaveService.writeFile.mockImplementation(async (data: any) => {
+        capturedPayload = data
+        return true
+      })
+
+      const updatedConfig = mergeCategoryConfig({ caseTypes: ['Passive Update'] })
+      await dataManager.updateCategoryConfig(updatedConfig)
+
+      expect(capturedPayload.cases[0].updatedAt).toBe(originalTimestamp)
     })
   })
 

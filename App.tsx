@@ -51,6 +51,7 @@ const AppContent = memo(function AppContent() {
     loadCases,
     saveCase,
     deleteCase,
+    updateCaseStatus,
     setCases,
     setError,
     setHasLoadedData,
@@ -251,6 +252,11 @@ const AppContent = memo(function AppContent() {
     setCases(prevCases => prevCases.map(c => (c.id === updatedCase.id ? updatedCase : c)));
   }, [setCases]);
 
+  const handleUpdateCaseStatus = useCallback(
+    (caseId: string, status: CaseDisplay["status"]) => updateCaseStatus(caseId, status),
+    [updateCaseStatus],
+  );
+
   const handleDismissError = useCallback(() => {
     setError(null);
   }, [setError]);
@@ -389,6 +395,7 @@ const AppContent = memo(function AppContent() {
       financialFlow,
       noteFlow,
       alerts: alertsIndex,
+      onUpdateCaseStatus: handleUpdateCaseStatus,
     }),
     [
       cases,
@@ -396,6 +403,7 @@ const AppContent = memo(function AppContent() {
       error,
       financialFlow,
       handleDismissError,
+      handleUpdateCaseStatus,
       noteFlow,
       selectedCase,
       viewHandlers,

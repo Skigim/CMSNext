@@ -236,15 +236,12 @@ export class DataManager {
   private async writeFileData(data: FileData): Promise<FileData> {
     try {
       // Ensure data integrity before writing
-      const validatedData = {
+      const validatedData: FileData = {
         ...data,
         exported_at: new Date().toISOString(),
         total_cases: data.cases.length,
         categoryConfig: mergeCategoryConfig(data.categoryConfig),
-        cases: data.cases.map(caseItem => ({
-          ...caseItem,
-          updatedAt: new Date().toISOString()
-        }))
+        cases: data.cases.map(caseItem => ({ ...caseItem })),
       };
 
       const success = await this.fileService.writeFile(validatedData);
@@ -277,6 +274,28 @@ export class DataManager {
 
       throw new Error(`Failed to save case data: ${errorMessage}`);
     }
+  }
+
+  private touchCaseTimestamps(
+    cases: CaseDisplay[],
+    touchedCaseIds?: Iterable<string>,
+  ): CaseDisplay[] {
+    if (!touchedCaseIds) {
+      return cases;
+    }
+
+    const ids = touchedCaseIds instanceof Set ? touchedCaseIds : new Set(touchedCaseIds);
+    if (ids.size === 0) {
+      return cases;
+    }
+
+    const timestamp = new Date().toISOString();
+
+    return cases.map(caseItem => (
+      ids.has(caseItem.id)
+        ? { ...caseItem, updatedAt: timestamp }
+        : caseItem
+    ));
   }
 
   // =============================================================================
@@ -445,15 +464,18 @@ export class DataManager {
     newCase.caseRecord.personId = newCase.person.id;
 
     // Modify data
+    const casesWithNewCase = [...currentData.cases, newCase];
+    const casesWithTouchedTimestamps = this.touchCaseTimestamps(casesWithNewCase, [newCase.id]);
+
     const updatedData: FileData = {
       ...currentData,
-      cases: [...currentData.cases, newCase]
+      cases: casesWithTouchedTimestamps,
     };
 
     // Write back to file
     await this.writeFileData(updatedData);
 
-    return newCase;
+    return casesWithTouchedTimestamps.find(c => c.id === newCase.id) ?? newCase;
   }
 
   /**
@@ -516,29 +538,71 @@ export class DataManager {
       updatedDate: new Date().toISOString()
     };
 
-    const updatedCase: CaseDisplay = {
+    const caseWithChanges: CaseDisplay = {
       ...existingCase,
       name: updatedPerson.name,
       mcn: updatedCaseRecord.mcn,
       status: updatedCaseRecord.status,
       priority: updatedCaseRecord.priority,
-      updatedAt: new Date().toISOString(),
       person: updatedPerson,
-      caseRecord: updatedCaseRecord
+      caseRecord: updatedCaseRecord,
     };
+
+    const casesWithChanges = currentData.cases.map((c, index) =>
+      index === caseIndex ? caseWithChanges : c,
+    );
+
+    const casesWithTouchedTimestamps = this.touchCaseTimestamps(casesWithChanges, [caseId]);
 
     // Modify data
     const updatedData: FileData = {
       ...currentData,
-      cases: currentData.cases.map((c, index) => 
-        index === caseIndex ? updatedCase : c
-      )
+      cases: casesWithTouchedTimestamps,
     };
 
     // Write back to file
     await this.writeFileData(updatedData);
 
-    return updatedCase;
+    return casesWithTouchedTimestamps[caseIndex];
+  }
+
+  async updateCaseStatus(caseId: string, status: CaseDisplay["status"]): Promise<CaseDisplay> {
+    const currentData = await this.readFileData();
+    if (!currentData) {
+      throw new Error("Failed to read current data");
+    }
+
+    const caseIndex = currentData.cases.findIndex(c => c.id === caseId);
+    if (caseIndex === -1) {
+      throw new Error("Case not found");
+    }
+
+    const targetCase = currentData.cases[caseIndex];
+
+    const caseWithUpdatedStatus: CaseDisplay = {
+      ...targetCase,
+      status,
+      caseRecord: {
+        ...targetCase.caseRecord,
+        status,
+        updatedDate: new Date().toISOString(),
+      },
+    };
+
+    const casesWithChanges = currentData.cases.map((c, index) =>
+      index === caseIndex ? caseWithUpdatedStatus : c,
+    );
+
+    const casesWithTouchedTimestamps = this.touchCaseTimestamps(casesWithChanges, [caseId]);
+
+    const updatedData: FileData = {
+      ...currentData,
+      cases: casesWithTouchedTimestamps,
+    };
+
+    await this.writeFileData(updatedData);
+
+    return casesWithTouchedTimestamps[caseIndex];
   }
 
   /**
@@ -601,31 +665,34 @@ export class DataManager {
     };
 
     // Modify case data
-    const updatedCase: CaseDisplay = {
+    const caseWithNewItem: CaseDisplay = {
       ...targetCase,
-      updatedAt: new Date().toISOString(),
       caseRecord: {
         ...targetCase.caseRecord,
         financials: {
           ...targetCase.caseRecord.financials,
-          [category]: [...targetCase.caseRecord.financials[category], newItem]
+          [category]: [...targetCase.caseRecord.financials[category], newItem],
         },
-        updatedDate: new Date().toISOString()
-      }
+        updatedDate: new Date().toISOString(),
+      },
     };
+
+    const casesWithChanges = currentData.cases.map((c, index) =>
+      index === caseIndex ? caseWithNewItem : c,
+    );
+
+    const casesWithTouchedTimestamps = this.touchCaseTimestamps(casesWithChanges, [caseId]);
 
     // Update data
     const updatedData: FileData = {
       ...currentData,
-      cases: currentData.cases.map((c, index) => 
-        index === caseIndex ? updatedCase : c
-      )
+      cases: casesWithTouchedTimestamps,
     };
 
     // Write back to file
     await this.writeFileData(updatedData);
 
-    return updatedCase;
+    return casesWithTouchedTimestamps[caseIndex];
   }
 
   /**
@@ -670,33 +737,36 @@ export class DataManager {
     };
 
     // Modify case data
-    const updatedCase: CaseDisplay = {
+    const caseWithUpdatedItem: CaseDisplay = {
       ...targetCase,
-      updatedAt: new Date().toISOString(),
       caseRecord: {
         ...targetCase.caseRecord,
         financials: {
           ...targetCase.caseRecord.financials,
           [category]: targetCase.caseRecord.financials[category].map((item, index) =>
-            index === itemIndex ? updatedItemData : item
-          )
+            index === itemIndex ? updatedItemData : item,
+          ),
         },
-        updatedDate: new Date().toISOString()
-      }
+        updatedDate: new Date().toISOString(),
+      },
     };
+
+    const casesWithChanges = currentData.cases.map((c, index) =>
+      index === caseIndex ? caseWithUpdatedItem : c,
+    );
+
+    const casesWithTouchedTimestamps = this.touchCaseTimestamps(casesWithChanges, [caseId]);
 
     // Update data
     const updatedData: FileData = {
       ...currentData,
-      cases: currentData.cases.map((c, index) => 
-        index === caseIndex ? updatedCase : c
-      )
+      cases: casesWithTouchedTimestamps,
     };
 
     // Write back to file
     await this.writeFileData(updatedData);
 
-    return updatedCase;
+    return casesWithTouchedTimestamps[caseIndex];
   }
 
   /**
@@ -725,31 +795,34 @@ export class DataManager {
     }
 
     // Modify case data
-    const updatedCase: CaseDisplay = {
+    const caseWithItemRemoved: CaseDisplay = {
       ...targetCase,
-      updatedAt: new Date().toISOString(),
       caseRecord: {
         ...targetCase.caseRecord,
         financials: {
           ...targetCase.caseRecord.financials,
-          [category]: targetCase.caseRecord.financials[category].filter(item => item.id !== itemId)
+          [category]: targetCase.caseRecord.financials[category].filter(item => item.id !== itemId),
         },
-        updatedDate: new Date().toISOString()
-      }
+        updatedDate: new Date().toISOString(),
+      },
     };
+
+    const casesWithChanges = currentData.cases.map((c, index) =>
+      index === caseIndex ? caseWithItemRemoved : c,
+    );
+
+    const casesWithTouchedTimestamps = this.touchCaseTimestamps(casesWithChanges, [caseId]);
 
     // Update data
     const updatedData: FileData = {
       ...currentData,
-      cases: currentData.cases.map((c, index) => 
-        index === caseIndex ? updatedCase : c
-      )
+      cases: casesWithTouchedTimestamps,
     };
 
     // Write back to file
     await this.writeFileData(updatedData);
 
-    return updatedCase;
+    return casesWithTouchedTimestamps[caseIndex];
   }
 
   // =============================================================================
@@ -785,28 +858,31 @@ export class DataManager {
     };
 
     // Modify case data
-    const updatedCase: CaseDisplay = {
+    const caseWithNewNote: CaseDisplay = {
       ...targetCase,
-      updatedAt: new Date().toISOString(),
       caseRecord: {
         ...targetCase.caseRecord,
         notes: [...(targetCase.caseRecord.notes || []), newNote],
-        updatedDate: new Date().toISOString()
-      }
+        updatedDate: new Date().toISOString(),
+      },
     };
+
+    const casesWithChanges = currentData.cases.map((c, index) =>
+      index === caseIndex ? caseWithNewNote : c,
+    );
+
+    const casesWithTouchedTimestamps = this.touchCaseTimestamps(casesWithChanges, [caseId]);
 
     // Update data
     const updatedData: FileData = {
       ...currentData,
-      cases: currentData.cases.map((c, index) => 
-        index === caseIndex ? updatedCase : c
-      )
+      cases: casesWithTouchedTimestamps,
     };
 
     // Write back to file
     await this.writeFileData(updatedData);
 
-    return updatedCase;
+    return casesWithTouchedTimestamps[caseIndex];
   }
 
   /**
@@ -845,30 +921,33 @@ export class DataManager {
     };
 
     // Modify case data
-    const updatedCase: CaseDisplay = {
+    const caseWithUpdatedNote: CaseDisplay = {
       ...targetCase,
-      updatedAt: new Date().toISOString(),
       caseRecord: {
         ...targetCase.caseRecord,
         notes: (targetCase.caseRecord.notes || []).map((note, index) =>
-          index === noteIndex ? updatedNote : note
+          index === noteIndex ? updatedNote : note,
         ),
-        updatedDate: new Date().toISOString()
-      }
+        updatedDate: new Date().toISOString(),
+      },
     };
+
+    const casesWithChanges = currentData.cases.map((c, index) =>
+      index === caseIndex ? caseWithUpdatedNote : c,
+    );
+
+    const casesWithTouchedTimestamps = this.touchCaseTimestamps(casesWithChanges, [caseId]);
 
     // Update data
     const updatedData: FileData = {
       ...currentData,
-      cases: currentData.cases.map((c, index) => 
-        index === caseIndex ? updatedCase : c
-      )
+      cases: casesWithTouchedTimestamps,
     };
 
     // Write back to file
     await this.writeFileData(updatedData);
 
-    return updatedCase;
+    return casesWithTouchedTimestamps[caseIndex];
   }
 
   /**
@@ -897,28 +976,31 @@ export class DataManager {
     }
 
     // Modify case data
-    const updatedCase: CaseDisplay = {
+    const caseWithNoteRemoved: CaseDisplay = {
       ...targetCase,
-      updatedAt: new Date().toISOString(),
       caseRecord: {
         ...targetCase.caseRecord,
         notes: (targetCase.caseRecord.notes || []).filter(note => note.id !== noteId),
-        updatedDate: new Date().toISOString()
-      }
+        updatedDate: new Date().toISOString(),
+      },
     };
+
+    const casesWithChanges = currentData.cases.map((c, index) =>
+      index === caseIndex ? caseWithNoteRemoved : c,
+    );
+
+    const casesWithTouchedTimestamps = this.touchCaseTimestamps(casesWithChanges, [caseId]);
 
     // Update data
     const updatedData: FileData = {
       ...currentData,
-      cases: currentData.cases.map((c, index) => 
-        index === caseIndex ? updatedCase : c
-      )
+      cases: casesWithTouchedTimestamps,
     };
 
     // Write back to file
     await this.writeFileData(updatedData);
 
-    return updatedCase;
+    return casesWithTouchedTimestamps[caseIndex];
   }
 
   // =============================================================================
@@ -937,20 +1019,24 @@ export class DataManager {
     }
 
     // Validate and ensure unique IDs
-    const validatedCases = cases.map(caseItem => ({
+    const casesToImport = cases.map(caseItem => ({
       ...caseItem,
       id: caseItem.id || uuidv4(),
-      updatedAt: new Date().toISOString(),
       caseRecord: {
         ...caseItem.caseRecord,
-        updatedDate: new Date().toISOString()
-      }
+        updatedDate: new Date().toISOString(),
+      },
     }));
+
+    const touchedCaseIds = casesToImport.map(caseItem => caseItem.id);
+
+    const combinedCases = [...currentData.cases, ...casesToImport];
+    const casesWithTouchedTimestamps = this.touchCaseTimestamps(combinedCases, touchedCaseIds);
 
     // Modify data (append new cases)
     const updatedData: FileData = {
       ...currentData,
-      cases: [...currentData.cases, ...validatedCases]
+      cases: casesWithTouchedTimestamps,
     };
 
     // Write back to file

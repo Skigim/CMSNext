@@ -70,6 +70,7 @@ export interface CaseWorkspaceProps {
   financialFlow: CaseWorkspaceFinancialFlow;
   noteFlow: CaseWorkspaceNoteFlow;
   alerts: AlertsIndex;
+  onUpdateCaseStatus: (caseId: string, status: CaseDisplay["status"]) => Promise<CaseDisplay | null> | CaseDisplay | null | void;
 }
 
 /**
@@ -88,6 +89,7 @@ export const CaseWorkspace = memo(function CaseWorkspace({
   financialFlow,
   noteFlow,
   alerts,
+  onUpdateCaseStatus,
 }: CaseWorkspaceProps) {
   return (
     <AppNavigationShell {...navigation}>
@@ -126,6 +128,7 @@ export const CaseWorkspace = memo(function CaseWorkspace({
         handleDeleteNote={noteFlow.handleDeleteNote}
         handleBatchUpdateNote={noteFlow.handleBatchUpdateNote}
         handleBatchCreateNote={noteFlow.handleBatchCreateNote}
+        handleUpdateCaseStatus={onUpdateCaseStatus}
       />
 
       {financialFlow.itemForm.isOpen && financialFlow.itemForm.category && selectedCase && (

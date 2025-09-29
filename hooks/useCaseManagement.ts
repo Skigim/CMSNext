@@ -20,6 +20,7 @@ interface UseCaseManagementReturn {
   deleteCase: (caseId: string) => Promise<void>;
   saveNote: (noteData: NewNoteData, caseId: string, editingNote?: { id: string } | null) => Promise<CaseDisplay | null>;
   importCases: (importedCases: CaseDisplay[]) => Promise<void>;
+  updateCaseStatus: (caseId: string, status: CaseDisplay["status"]) => Promise<CaseDisplay | null>;
   
   // State setters for external control
   setCases: React.Dispatch<React.SetStateAction<CaseDisplay[]>>;
@@ -225,6 +226,34 @@ export function useCaseManagement(): UseCaseManagementReturn {
     }
   }, [dataManager]);
 
+  const updateCaseStatus = useCallback(
+    async (caseId: string, status: CaseDisplay["status"]): Promise<CaseDisplay | null> => {
+      if (!dataManager) {
+        const errorMsg = 'Data storage is not available. Please connect to a folder first.';
+        setError(errorMsg);
+        toast.error(errorMsg);
+        return null;
+      }
+
+      const toastId = toast.loading('Updating case status...');
+
+      try {
+        setError(null);
+        const updatedCase = await dataManager.updateCaseStatus(caseId, status);
+        setCases(prevCases => prevCases.map(c => (c.id === caseId ? updatedCase : c)));
+        toast.success(`Status updated to ${status}`, { id: toastId, duration: 2000 });
+        return updatedCase;
+      } catch (err) {
+        console.error('Failed to update case status:', err);
+        const errorMsg = 'Failed to update case status. Please try again.';
+        setError(errorMsg);
+        toast.error(errorMsg, { id: toastId });
+        return null;
+      }
+    },
+    [dataManager, setCases, setError],
+  );
+
   /**
    * Import multiple cases from external source
    */
@@ -263,7 +292,8 @@ export function useCaseManagement(): UseCaseManagementReturn {
     saveCase,
     deleteCase,
     saveNote,
-    importCases,
+  importCases,
+  updateCaseStatus,
     
     // State setters for external control
     setCases,

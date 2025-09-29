@@ -162,6 +162,7 @@ const mockProps = {
   onAddNote: vi.fn(),
   onEditNote: vi.fn(),
   onDeleteNote: vi.fn(),
+  onUpdateStatus: vi.fn(),
 };
 
 describe('CaseDetails Memory Management', () => {
