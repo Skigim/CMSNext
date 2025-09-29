@@ -1,5 +1,15 @@
 import { memo, useMemo } from "react";
+import { ChevronDown } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuLabel,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { cn } from "@/components/ui/utils";
 import type { CaseDisplay } from "@/types/case";
 import { useCategoryConfig } from "@/contexts/CategoryConfigContext";
 const STATUS_COLOR_PALETTE = [
@@ -13,9 +23,14 @@ const STATUS_COLOR_PALETTE = [
 
 export interface CaseStatusBadgeProps {
   status?: CaseDisplay["status"];
+  onStatusChange?: (status: CaseDisplay["status"]) =>
+    | Promise<CaseDisplay | null>
+    | CaseDisplay
+    | null
+    | void;
 }
 
-export const CaseStatusBadge = memo(function CaseStatusBadge({ status }: CaseStatusBadgeProps) {
+export const CaseStatusBadge = memo(function CaseStatusBadge({ status, onStatusChange }: CaseStatusBadgeProps) {
   const { config } = useCategoryConfig();
 
   const statusPalette = useMemo(() => {
@@ -33,9 +48,47 @@ export const CaseStatusBadge = memo(function CaseStatusBadge({ status }: CaseSta
   const effectiveStatus: CaseDisplay["status"] = status ?? fallbackStatus;
   const className = statusPalette.get(effectiveStatus) ?? STATUS_COLOR_PALETTE[0];
 
+  const canChangeStatus = onStatusChange && config.caseStatuses.length > 1;
+
+  if (!canChangeStatus) {
+    return (
+      <Badge className={className} role="status">
+        {effectiveStatus}
+      </Badge>
+    );
+  }
+
   return (
-    <Badge className={className} role="status">
-      {effectiveStatus}
-    </Badge>
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Badge
+          className={cn(className, "cursor-pointer select-none items-center gap-1.5 pr-2")}
+          role="combobox"
+          aria-expanded="false"
+          aria-label="Update case status"
+        >
+          <span>{effectiveStatus}</span>
+          <ChevronDown className="h-3 w-3 opacity-80" aria-hidden="true" />
+        </Badge>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="start" className="min-w-[10rem]">
+        <DropdownMenuLabel>Set status</DropdownMenuLabel>
+        <DropdownMenuRadioGroup
+          value={effectiveStatus}
+          onValueChange={value => {
+            if (!onStatusChange || value === effectiveStatus) {
+              return;
+            }
+            void onStatusChange(value as CaseDisplay["status"]);
+          }}
+        >
+          {config.caseStatuses.map(caseStatus => (
+            <DropdownMenuRadioItem key={caseStatus} value={caseStatus}>
+              {caseStatus}
+            </DropdownMenuRadioItem>
+          ))}
+        </DropdownMenuRadioGroup>
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 });

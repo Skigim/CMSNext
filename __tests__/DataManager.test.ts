@@ -251,6 +251,34 @@ describe('DataManager', () => {
 
       expect(mockAutosaveService.writeFile).toHaveBeenCalled()
     })
+
+    it('should update case status without affecting other cases', async () => {
+      const pendingCase = createMockCaseDisplay({ id: 'case-1', status: 'Pending' })
+      pendingCase.caseRecord.status = 'Pending'
+
+      const untouchedCase = createMockCaseDisplay({ id: 'case-2', status: 'Approved' })
+      untouchedCase.caseRecord.status = 'Approved'
+
+      mockAutosaveService.readFile.mockResolvedValue(createFileData({
+        cases: [pendingCase, untouchedCase],
+        total_cases: 2,
+      }))
+
+      let capturedPayload: any
+      mockAutosaveService.writeFile.mockImplementation(async (data: any) => {
+        capturedPayload = data
+        return true
+      })
+
+      const updatedCase = await dataManager.updateCaseStatus('case-1', 'Approved')
+
+      expect(updatedCase.status).toBe('Approved')
+      expect(updatedCase.caseRecord.status).toBe('Approved')
+      expect(capturedPayload.cases.find((c: any) => c.id === 'case-1').status).toBe('Approved')
+      expect(capturedPayload.cases.find((c: any) => c.id === 'case-1').caseRecord.status).toBe('Approved')
+      expect(capturedPayload.cases.find((c: any) => c.id === 'case-2').status).toBe('Approved')
+      expect(capturedPayload.cases.find((c: any) => c.id === 'case-2').caseRecord.status).toBe('Approved')
+    })
   })
 
   describe('financial items', () => {

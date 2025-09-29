@@ -41,6 +41,11 @@ interface ViewRendererProps {
   handleDeleteNote: (noteId: string) => Promise<void>;
   handleBatchUpdateNote?: (noteId: string, updatedNote: any) => Promise<void>;
   handleBatchCreateNote?: (noteData: any) => Promise<void>;
+  handleUpdateCaseStatus?: (caseId: string, status: CaseDisplay["status"]) =>
+    | Promise<CaseDisplay | null>
+    | CaseDisplay
+    | null
+    | void;
 }
 
 /**
@@ -85,7 +90,8 @@ export function ViewRenderer({
   handleEditNote,
   handleDeleteNote,
   handleBatchUpdateNote,
-  handleBatchCreateNote
+  handleBatchCreateNote,
+  handleUpdateCaseStatus,
 }: ViewRendererProps) {
   
   switch (currentView) {
@@ -137,6 +143,7 @@ export function ViewRenderer({
           onDeleteNote={handleDeleteNote}
           onBatchUpdateNote={handleBatchUpdateNote}
           onBatchCreateNote={handleBatchCreateNote}
+          onUpdateStatus={handleUpdateCaseStatus}
         />
       ) : (
         <div className="text-center p-8">Case not found</div>

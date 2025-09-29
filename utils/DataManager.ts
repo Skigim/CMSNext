@@ -566,6 +566,45 @@ export class DataManager {
     return casesWithTouchedTimestamps[caseIndex];
   }
 
+  async updateCaseStatus(caseId: string, status: CaseDisplay["status"]): Promise<CaseDisplay> {
+    const currentData = await this.readFileData();
+    if (!currentData) {
+      throw new Error("Failed to read current data");
+    }
+
+    const caseIndex = currentData.cases.findIndex(c => c.id === caseId);
+    if (caseIndex === -1) {
+      throw new Error("Case not found");
+    }
+
+    const targetCase = currentData.cases[caseIndex];
+
+    const caseWithUpdatedStatus: CaseDisplay = {
+      ...targetCase,
+      status,
+      caseRecord: {
+        ...targetCase.caseRecord,
+        status,
+        updatedDate: new Date().toISOString(),
+      },
+    };
+
+    const casesWithChanges = currentData.cases.map((c, index) =>
+      index === caseIndex ? caseWithUpdatedStatus : c,
+    );
+
+    const casesWithTouchedTimestamps = this.touchCaseTimestamps(casesWithChanges, [caseId]);
+
+    const updatedData: FileData = {
+      ...currentData,
+      cases: casesWithTouchedTimestamps,
+    };
+
+    await this.writeFileData(updatedData);
+
+    return casesWithTouchedTimestamps[caseIndex];
+  }
+
   /**
    * Delete a case
    * Pattern: read → modify → write
