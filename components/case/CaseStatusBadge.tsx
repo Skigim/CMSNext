@@ -62,13 +62,21 @@ export const CaseStatusBadge = memo(function CaseStatusBadge({ status, onStatusC
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Badge
-          className={cn(className, "cursor-pointer select-none items-center gap-1.5 pr-2")}
-          role="combobox"
-          aria-expanded="false"
-          aria-label="Update case status"
+          asChild
+          className={cn(
+            className,
+            "cursor-pointer select-none pr-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
+          )}
         >
-          <span>{effectiveStatus}</span>
-          <ChevronDown className="h-3 w-3 opacity-80" aria-hidden="true" />
+          <button
+            type="button"
+            className="inline-flex items-center gap-1.5"
+            aria-label="Update case status"
+            aria-haspopup="listbox"
+          >
+            <span>{effectiveStatus}</span>
+            <ChevronDown className="h-3 w-3 opacity-80" aria-hidden="true" />
+          </button>
         </Badge>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="start" className="min-w-[10rem]">
