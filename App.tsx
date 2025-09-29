@@ -18,8 +18,8 @@ import { AppContentView } from "./components/app/AppContentView";
 import { useAppContentViewModel } from "./components/app/useAppContentViewModel";
 import { clearFileStorageFlags, updateFileStorageFlags } from "./utils/fileStorageFlags";
 import { useCategoryConfig } from "./contexts/CategoryConfigContext";
-import { parseAlertsFromCsv, type AlertsIndex } from "./utils/alertsData";
-import sampleAlertsCsv from "./archive/data/sample-alerts.csv?raw";
+import type { AlertsIndex } from "./utils/alertsData";
+import { ENABLE_SAMPLE_ALERTS } from "./utils/featureFlags";
 
 const createEmptyAlertsIndex = (): AlertsIndex => ({
   alerts: [],
@@ -349,18 +349,15 @@ const AppContent = memo(function AppContent() {
     ],
   );
 
-  const alertsIndex = useMemo<AlertsIndex>(() => {
-    try {
-      return parseAlertsFromCsv(sampleAlertsCsv, cases);
-    } catch (err) {
-      console.error("Failed to parse alerts dataset", err);
-      return createEmptyAlertsIndex();
-    }
-  }, [cases]);
+  const alertsIndex = useMemo<AlertsIndex>(() => createEmptyAlertsIndex(), [cases]);
 
   const previousAlertCountsRef = useRef({ unmatched: 0, missingMcn: 0 });
 
   useEffect(() => {
+    if (!ENABLE_SAMPLE_ALERTS) {
+      return;
+    }
+
     const { unmatched, missingMcn } = alertsIndex.summary;
     const prev = previousAlertCountsRef.current;
 
