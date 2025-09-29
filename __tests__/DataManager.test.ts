@@ -354,6 +354,103 @@ describe('DataManager', () => {
     })
   })
 
+  describe('category configuration', () => {
+    it('merges missing category values when retrieving config', async () => {
+      const partialConfig = {
+        caseTypes: ['Custom Type'],
+        caseStatuses: [],
+        livingArrangements: [],
+        noteCategories: [],
+      } as any
+
+      mockAutosaveService.readFile.mockResolvedValue(createFileData({
+        categoryConfig: partialConfig,
+      }))
+
+      const result = await dataManager.getCategoryConfig()
+      const defaults = mergeCategoryConfig()
+
+      expect(result.caseTypes).toEqual(['Custom Type'])
+      expect(result.caseStatuses).toEqual(defaults.caseStatuses)
+      expect(result.livingArrangements).toEqual(defaults.livingArrangements)
+      expect(result.noteCategories).toEqual(defaults.noteCategories)
+    })
+
+    it('sanitizes and persists category configuration updates', async () => {
+      mockAutosaveService.readFile.mockResolvedValue(createFileData())
+
+      let capturedPayload: any
+      mockAutosaveService.writeFile.mockImplementationOnce(async (data: any) => {
+        capturedPayload = data
+        return true
+      })
+
+      const unsanitizedConfig = {
+        caseTypes: [' Medicaid ', 'medicaid', ''],
+        caseStatuses: ['Pending', 'pending', ' '],
+        livingArrangements: ['Apartment', 'Apartment  ', '  '],
+        noteCategories: ['General', 'general', ''],
+      } as any
+
+      const result = await dataManager.updateCategoryConfig(unsanitizedConfig)
+      const expected = mergeCategoryConfig({
+        caseTypes: ['Medicaid'],
+        caseStatuses: ['Pending'],
+        livingArrangements: ['Apartment'],
+        noteCategories: ['General'],
+      })
+
+      expect(result).toEqual(expected)
+      expect(capturedPayload.categoryConfig).toEqual(expected)
+    })
+
+    it('rejects empty category value updates', async () => {
+      mockAutosaveService.readFile.mockResolvedValue(createFileData())
+
+      await expect(dataManager.updateCategoryValues('caseTypes', [])).rejects.toThrow(
+        'At least one option is required',
+      )
+    })
+
+    it('updates individual category values with sanitization', async () => {
+      const existingConfig = mergeCategoryConfig({ caseTypes: ['Existing'] })
+
+      mockAutosaveService.readFile
+        .mockResolvedValueOnce(createFileData({ categoryConfig: existingConfig }))
+        .mockResolvedValueOnce(createFileData({ categoryConfig: existingConfig }))
+
+      let capturedPayload: any
+      mockAutosaveService.writeFile.mockImplementationOnce(async (data: any) => {
+        capturedPayload = data
+        return true
+      })
+
+      const result = await dataManager.updateCategoryValues('caseTypes', [' SNAP ', 'snap'])
+
+      expect(result.caseTypes).toEqual(['SNAP'])
+      expect(capturedPayload.categoryConfig.caseTypes).toEqual(['SNAP'])
+      expect(result.caseStatuses).toEqual(existingConfig.caseStatuses)
+    })
+
+    it('resets category configuration to defaults', async () => {
+      mockAutosaveService.readFile.mockResolvedValue(createFileData({
+        categoryConfig: mergeCategoryConfig({ caseTypes: ['Custom'] }),
+      }))
+
+      let capturedPayload: any
+      mockAutosaveService.writeFile.mockImplementationOnce(async (data: any) => {
+        capturedPayload = data
+        return true
+      })
+
+      const defaults = mergeCategoryConfig()
+      const result = await dataManager.resetCategoryConfig()
+
+      expect(result).toEqual(defaults)
+      expect(capturedPayload.categoryConfig).toEqual(defaults)
+    })
+  })
+
   describe('error handling', () => {
     it('should handle save errors gracefully', async () => {
       mockAutosaveService.writeFile.mockRejectedValue(new Error('Save failed'))

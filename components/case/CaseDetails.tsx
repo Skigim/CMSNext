@@ -5,9 +5,10 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
 import { CaseSection } from "./CaseSection";
 import { NotesSection } from "./NotesSection";
 import { CaseDisplay, CaseCategory, FinancialItem, NewNoteData } from "../../types/case";
-import { ArrowLeft, Edit2, Trash2, Landmark, Wallet, Receipt } from "lucide-react";
+import { ArrowLeft, Edit2, Trash2, Landmark, Wallet, Receipt, Copy } from "lucide-react";
 import { withDataErrorBoundary } from "../error/ErrorBoundaryHOC";
 import { CaseStatusBadge } from "./CaseStatusBadge";
+import { clickToCopy } from "../../utils/clipboard";
 
 interface CaseDetailsProps {
   case: CaseDisplay;
@@ -77,9 +78,25 @@ export function CaseDetails({
               </div>
               <div className="flex items-center gap-2 text-muted-foreground">
                 <span className="text-sm font-medium">MCN:</span>
-                <span className="text-sm font-mono bg-muted px-2 py-0.5 rounded-md">
-                  {caseData.mcn || 'No MCN'}
-                </span>
+                {caseData.mcn ? (
+                  <button
+                    type="button"
+                    onClick={() =>
+                      void clickToCopy(caseData.mcn!, {
+                        successMessage: `MCN ${caseData.mcn} copied`,
+                      })
+                    }
+                    className="inline-flex items-center gap-1 rounded-md bg-muted px-2 py-0.5 font-mono text-sm text-foreground transition-colors hover:bg-muted/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                    aria-label="Copy MCN to clipboard"
+                  >
+                    <span>{caseData.mcn}</span>
+                    <Copy className="h-3.5 w-3.5" aria-hidden="true" />
+                  </button>
+                ) : (
+                  <span className="text-sm font-mono bg-muted px-2 py-0.5 rounded-md">
+                    No MCN
+                  </span>
+                )}
               </div>
             </div>
           </div>

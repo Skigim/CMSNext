@@ -4,6 +4,12 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { CaseDetails } from '@/components/case/CaseDetails';
 import type { CaseDisplay } from '@/types/case';
 
+const clickToCopyMock = vi.fn().mockResolvedValue(true);
+
+vi.mock('../../utils/clipboard', () => ({
+  clickToCopy: clickToCopyMock,
+}));
+
 // Mock dependencies to focus on memory management
 vi.mock('../ui/button', () => ({
   Button: ({ children, onClick, ...props }: any) => (
@@ -164,6 +170,7 @@ describe('CaseDetails Memory Management', () => {
     caseSectionPropsByCategory.clear();
     notesSectionRenderProps.length = 0;
     vi.useFakeTimers({ shouldAdvanceTime: true });
+    clickToCopyMock.mockClear();
   });
 
   afterEach(() => {
@@ -319,6 +326,20 @@ describe('CaseDetails Memory Management', () => {
     expect(screen.getByRole('heading', { name: 'Jane Doe' })).toBeInTheDocument();
     expect(screen.getByText('67890')).toBeInTheDocument();
     expect(screen.getByTestId('case-status-badge')).toHaveTextContent('Active');
+  });
+
+  it('copies the MCN to the clipboard when the copy control is clicked', async () => {
+    vi.useRealTimers();
+    const user = userEvent.setup();
+
+    render(<CaseDetails {...mockProps} />);
+
+    const copyButton = screen.getByRole('button', { name: /copy mcn to clipboard/i });
+    await user.click(copyButton);
+
+    expect(clickToCopyMock).toHaveBeenCalledWith('12345', {
+      successMessage: 'MCN 12345 copied',
+    });
   });
 
   it('calls navigation handlers when action buttons are clicked', async () => {
