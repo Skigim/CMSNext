@@ -1,13 +1,13 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { act, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import App from "@/App";
 import {
   toast as mockToast,
   createMockCaseDisplay,
   createMockCaseRecord,
   createMockPerson,
 } from "@/src/test/testUtils";
+import App from "@/App";
 
 function getExportTimestamp() {
   return "2024-01-01T00:00:00.000Z";
@@ -257,7 +257,19 @@ vi.mock("@/utils/AutosaveFileService", () => {
 });
 
 describe("connect → load → edit → save flow", () => {
+  const advanceTimers = async (ms = 0) => {
+    await vi.advanceTimersByTimeAsync(ms);
+  };
+
+  const flushTimers = async () => {
+    await act(async () => {
+      await vi.runAllTimersAsync();
+    });
+  };
+
   beforeEach(() => {
+    vi.useFakeTimers({ shouldAdvanceTime: true, advanceTimeDelta: 20 });
+
     vi.stubGlobal(
       "matchMedia",
       vi.fn().mockImplementation((query: string) => ({
@@ -297,9 +309,17 @@ describe("connect → load → edit → save flow", () => {
     delete (globalThis as any).__connectionFlowDriver;
   });
 
+  afterEach(async () => {
+    await flushTimers();
+    vi.useRealTimers();
+    vi.unstubAllGlobals();
+    delete (globalThis as any).__connectionFlowDriver;
+  });
+
   it("connects to storage, loads cases, edits a record, and persists changes", async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ advanceTimers });
     render(<App />);
+    await flushTimers();
 
     const connectButton = await screen.findByRole(
       "button",
@@ -307,6 +327,7 @@ describe("connect → load → edit → save flow", () => {
       { timeout: 4000 },
     );
     await user.click(connectButton);
+    await flushTimers();
 
     await waitFor(() => {
       expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
@@ -319,19 +340,27 @@ describe("connect → load → edit → save flow", () => {
     await screen.findByRole("heading", { name: /case management/i });
 
     await user.click(screen.getByRole("button", { name: /edit/i }));
+    await flushTimers();
 
     const firstNameInput = await screen.findByLabelText(/first name/i);
     await user.clear(firstNameInput);
     await user.type(firstNameInput, "Updated");
+    await flushTimers();
 
     const saveButton = screen.getByRole("button", { name: /update case/i });
     await user.click(saveButton);
+    await flushTimers();
 
     await waitFor(() => {
       expect(screen.queryByRole("button", { name: /update case/i })).not.toBeInTheDocument();
     });
 
-    await screen.findByText(/case for updated case updated successfully/i);
+    await waitFor(() => {
+      expect(mockToast.success).toHaveBeenCalledWith(
+        expect.stringMatching(/case for updated case updated successfully/i),
+        expect.anything(),
+      );
+    });
 
     expect(serviceState.lastWrite).toBeTruthy();
 
@@ -345,8 +374,9 @@ describe("connect → load → edit → save flow", () => {
   });
 
   it("re-opens the connection flow when permission is revoked mid-session", async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ advanceTimers });
     render(<App />);
+    await flushTimers();
 
     const connectButton = await screen.findByRole(
       "button",
@@ -354,6 +384,7 @@ describe("connect → load → edit → save flow", () => {
       { timeout: 4000 },
     );
     await user.click(connectButton);
+    await flushTimers();
 
     await waitFor(() => {
       expect(screen.queryByRole("dialog")).not.toBeInTheDocument();

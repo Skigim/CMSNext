@@ -3,9 +3,9 @@
 ## 📋 Executive Summary
 The September 24, 2025 code review (A- / 88) praised CMSNext’s filesystem-first architecture and robust validation while identifying three high-impact opportunities:
 
-1. **Decompose oversized components** – `App.tsx` (~1,000 lines) and `FinancialItemCard.tsx` (~625 lines) should be broken into cohesive, testable modules.
+1. **Continue decomposing orchestration-heavy modules** – `App.tsx` now sits around 440 lines after earlier trims, but it still centralizes multiple flows that should move into focused providers/hooks; the `FinancialItemCard` suite has been split into ~100-line leaf components and can serve as the pattern for the remaining breakouts.
 2. **Expand automated testing beyond core services** – complement the DataManager/Autosave coverage with React Testing Library suites and end-to-end flows.
-3. **Polish the file-storage experience** – replace ad-hoc `window.*` flags with typed state, surface autosave status, and harden recovery messaging when permissions fail.
+3. **Polish the file-storage experience** – retire the last global coordination hooks (e.g., `window.handleFileDataLoaded`) in favor of typed state, surface autosave status, and harden recovery messaging when permissions fail.
 
 This plan realigns the roadmap around those themes while preserving the filesystem-only contract.
 
@@ -13,6 +13,7 @@ This plan realigns the roadmap around those themes while preserving the filesyst
 - **React hook loading fix** (Sept 22) restored stable chunking by simplifying the Vite build and keeping lazy modal loading focused on large dialogs.
 - **ESLint 9 migration** (Sept 24) adopted `eslint.config.js` with `@eslint/eslintrc`’s `FlatCompat` bridge so legacy `extends` entries continue to work while we transition to fully flat-aware configs.
 - **Validation, virtualization, and Autosave improvements** from earlier iterations remain in place and inform the next round of work.
+- **Financial UI coverage expansion** (Sept 30) added focused RTL suites for the financial item stack and lifted overall coverage to 73.3% statements / 68.8% branches / 55.2% functions / 73.3% lines.
 
 ## 🔝 Priority Roadmap
 | Phase | Focus | Outcome Targets |
@@ -23,7 +24,19 @@ This plan realigns the roadmap around those themes while preserving the filesyst
 | 4 | Performance & observability | Bundle analysis, render profiling, lightweight telemetry |
 | 5 | Documentation & DX | Updated guides, threat model outline, formatting/tooling guardrails |
 
-> Phase 1 and Phase 2 implementation notes have moved to `progression-strategy-archive.md` to keep this plan focused on active work.
+> Phase 1 and Phase 2 implementation notes have moved to `progression-strategy-archive.md` to keep this plan focused on active work; highlights from the latest Phase 2 push are summarized below.
+
+### Phase 2 · Testing Expansion (Status: ✅ refreshed Sept 30, 2025)
+
+Recent gains
+- Added FinancialItem card/list/meta/action/save-indicator RTL suites with mocked storage APIs and permission flows.
+- Extended integration coverage for connection and autosave badges; full `npm run test:coverage` now executes 115 specs.
+- Captured fresh coverage baselines (73.3% statements) and logged remaining hot spots (`AutosaveFileService`, `dataTransform`, legacy UI shells).
+
+Next testing targets
+- Broaden form coverage (CaseForm/CategoryManager) and high-variance hooks (`useFinancialItemFlow`, `useNotes`).
+- Introduce lightweight smoke specs for diagnostic panels once decomposition work lands.
+- Track coverage deltas quarterly and retire the manual spreadsheet in favor of generated Vitest HTML reports.
 
 ### Phase 3 · File-Storage Experience (In Progress)
 
