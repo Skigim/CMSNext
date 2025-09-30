@@ -189,7 +189,7 @@ export function CaseDetails({
       {/* Content - Resizable Layout */}
       <ResizablePanelGroup 
         direction="horizontal" 
-        className="h-[calc(100vh-200px)] min-h-[400px] rounded-xl border bg-card/30 shadow-lg overflow-hidden"
+        className="h-auto min-h-[400px] rounded-xl border bg-card/30 shadow-lg"
       >
         {/* Left Panel: Financial Sections with Tabs */}
         <ResizablePanel defaultSize={60} minSize={30}>
@@ -253,7 +253,7 @@ export function CaseDetails({
 
         {/* Right Panel: Notes Section */}
         <ResizablePanel defaultSize={40} minSize={25}>
-          <div className="p-4 bg-muted/30 overflow-y-auto">
+          <div className="p-4 bg-muted/30">
             <NotesSection
               notes={caseData.caseRecord.notes || []}
               onAddNote={onAddNote}
