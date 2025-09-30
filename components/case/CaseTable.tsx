@@ -14,7 +14,7 @@ import { CaseStatusBadge } from "./CaseStatusBadge";
 import { ArrowDown, ArrowUp, ArrowUpDown, Eye, MoreHorizontal, Pencil, Trash2 } from "lucide-react";
 import type { CaseListSortDirection, CaseListSortKey } from "@/hooks/useCaseListPreferences";
 import type { AlertWithMatch } from "@/utils/alertsData";
-import { Badge } from "@/components/ui/badge";
+import { AlertBadge } from "@/components/alerts/AlertBadge";
 
 export interface CaseTableProps {
   cases: CaseDisplay[];
@@ -98,7 +98,7 @@ export const CaseTable = memo(function CaseTable({
     const isActive = sortKey === key;
     const nextDirection: CaseListSortDirection = isActive
       ? (sortDirection === "asc" ? "desc" : "asc")
-      : key === "updated" || key === "application"
+      : key === "updated" || key === "application" || key === "alerts"
         ? "desc"
         : "asc";
 
@@ -150,6 +150,19 @@ export const CaseTable = memo(function CaseTable({
               </button>
             </TableHead>
             <TableHead
+              aria-sort={sortKey === "alerts" ? (sortDirection === "asc" ? "ascending" : "descending") : "none"}
+            >
+              <button
+                type="button"
+                onClick={() => handleSortClick("alerts")}
+                className="flex items-center gap-1 text-left font-semibold transition-colors hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
+                aria-label={`Sort by Alerts. Currently ${sortKey === "alerts" ? (sortDirection === "asc" ? "ascending" : "descending") : "unsorted"}.`}
+              >
+                <span>Alerts</span>
+                {renderSortIndicator("alerts")}
+              </button>
+            </TableHead>
+            <TableHead
               aria-sort={sortKey === "caseType" ? (sortDirection === "asc" ? "ascending" : "descending") : "none"}
             >
               <button
@@ -195,7 +208,7 @@ export const CaseTable = memo(function CaseTable({
         <TableBody>
           {!hasCases && (
             <TableRow>
-              <TableCell colSpan={8} className="py-12 text-center text-muted-foreground">
+              <TableCell colSpan={9} className="py-12 text-center text-muted-foreground">
                 No cases to display
               </TableCell>
             </TableRow>
@@ -220,11 +233,6 @@ export const CaseTable = memo(function CaseTable({
                         title="High priority case"
                       />
                     )}
-                    {row.alerts.length > 0 && (
-                      <Badge variant="outline" className="border-amber-500/40 text-amber-700">
-                        {row.alerts.length} alert{row.alerts.length === 1 ? "" : "s"}
-                      </Badge>
-                    )}
                   </div>
                 </div>
               </TableCell>
@@ -233,6 +241,9 @@ export const CaseTable = memo(function CaseTable({
               </TableCell>
               <TableCell>
                 <CaseStatusBadge status={row.status} />
+              </TableCell>
+              <TableCell>
+                <AlertBadge alerts={row.alerts} />
               </TableCell>
               <TableCell>{row.caseType}</TableCell>
               <TableCell>{row.applicationDate}</TableCell>

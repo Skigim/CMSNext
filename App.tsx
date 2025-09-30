@@ -1,4 +1,4 @@
-import { useEffect, useCallback, useMemo, memo, useRef } from "react";
+import { useEffect, useCallback, useMemo, memo, useRef, useState } from "react";
 import { Toaster } from "./components/ui/sonner";
 import { CaseDisplay, CaseCategory, FinancialItem } from "./types/case";
 import { toast } from "sonner";
@@ -18,22 +18,8 @@ import { AppContentView } from "./components/app/AppContentView";
 import { useAppContentViewModel } from "./components/app/useAppContentViewModel";
 import { clearFileStorageFlags, updateFileStorageFlags } from "./utils/fileStorageFlags";
 import { useCategoryConfig } from "./contexts/CategoryConfigContext";
-import type { AlertsIndex } from "./utils/alertsData";
+import { createAlertsIndexFromAlerts, createEmptyAlertsIndex, type AlertWithMatch, type AlertsIndex } from "./utils/alertsData";
 import { ENABLE_SAMPLE_ALERTS } from "./utils/featureFlags";
-
-const createEmptyAlertsIndex = (): AlertsIndex => ({
-  alerts: [],
-  summary: {
-    total: 0,
-    matched: 0,
-    unmatched: 0,
-    missingMcn: 0,
-    latestUpdated: null,
-  },
-  alertsByCaseId: new Map(),
-  unmatched: [],
-  missingMcn: [],
-});
 
 const AppContent = memo(function AppContent() {
   const { isSupported, hasStoredHandle, connectToFolder, connectToExisting, loadExistingData, service } = useFileStorage();
@@ -57,6 +43,8 @@ const AppContent = memo(function AppContent() {
     setHasLoadedData,
   } = useCaseManagement();
   const { setConfigFromFile } = useCategoryConfig();
+  const [alertsIndex, setAlertsIndex] = useState<AlertsIndex>(() => createEmptyAlertsIndex());
+  const resolvedAlertOverridesRef = useRef(new Map<string, { resolvedAt: string; resolutionNotes?: string }>());
   
   const navigationFlow = useNavigationFlow({
     cases,
@@ -192,6 +180,47 @@ const AppContent = memo(function AppContent() {
     setError,
   });
 
+  const applyAlertOverrides = useCallback(
+    (index: AlertsIndex): AlertsIndex => {
+      if (resolvedAlertOverridesRef.current.size === 0) {
+        return index;
+      }
+
+      let hasChanges = false;
+      const adjustedAlerts = index.alerts.map(alert => {
+        const override = resolvedAlertOverridesRef.current.get(alert.id);
+        if (!override) {
+          return alert;
+        }
+
+        if (
+          alert.status === "resolved" &&
+          alert.resolvedAt === override.resolvedAt &&
+          alert.resolutionNotes === override.resolutionNotes
+        ) {
+          return alert;
+        }
+
+        hasChanges = true;
+        const resolvedAlert: AlertWithMatch = {
+          ...alert,
+          status: "resolved",
+          resolvedAt: override.resolvedAt,
+          resolutionNotes: override.resolutionNotes ?? alert.resolutionNotes,
+        };
+
+        return resolvedAlert;
+      });
+
+      if (!hasChanges) {
+        return index;
+      }
+
+      return createAlertsIndexFromAlerts(adjustedAlerts);
+    },
+    [resolvedAlertOverridesRef],
+  );
+
   // Note: loadCases is now provided by useCaseManagement hook
 
   useImportListeners({ loadCases, setError, isStorageReady: connectionState.isReady });
@@ -260,6 +289,64 @@ const AppContent = memo(function AppContent() {
   const handleDismissError = useCallback(() => {
     setError(null);
   }, [setError]);
+
+  const handleResolveAlert = useCallback(
+    async (alert: AlertWithMatch) => {
+      if (!selectedCase || (alert.matchedCaseId && alert.matchedCaseId !== selectedCase.id)) {
+        toast.error("Unable to resolve alert for this case.");
+        return;
+      }
+
+      try {
+        const resolvedAt = new Date().toISOString();
+        resolvedAlertOverridesRef.current.set(alert.id, {
+          resolvedAt,
+          resolutionNotes: alert.resolutionNotes,
+        });
+
+        setAlertsIndex(prevIndex => applyAlertOverrides(prevIndex));
+
+        toast.success("Alert resolved", {
+          description: "Add a note when you're ready to document the resolution.",
+        });
+      } catch (err) {
+        console.error("Failed to resolve alert:", err);
+        toast.error("Unable to resolve alert. Please try again.");
+      }
+    },
+    [applyAlertOverrides, selectedCase],
+  );
+
+  useEffect(() => {
+    let isCancelled = false;
+
+    async function loadAlerts() {
+      if (!dataManager || !hasLoadedData) {
+        if (!isCancelled) {
+          setAlertsIndex(createEmptyAlertsIndex());
+        }
+        return;
+      }
+
+      try {
+        const nextAlerts = await dataManager.getAlertsIndex({ cases });
+        if (!isCancelled) {
+          setAlertsIndex(applyAlertOverrides(nextAlerts));
+        }
+      } catch (error) {
+        console.error("Failed to load alerts: ", error);
+        if (!isCancelled) {
+          setAlertsIndex(createEmptyAlertsIndex());
+        }
+      }
+    }
+
+    loadAlerts();
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [applyAlertOverrides, cases, dataManager, hasLoadedData]);
 
   const handleGoToSettings = useCallback(() => {
     dismissConnectModal();
@@ -355,8 +442,6 @@ const AppContent = memo(function AppContent() {
     ],
   );
 
-  const alertsIndex = useMemo<AlertsIndex>(() => createEmptyAlertsIndex(), [cases]);
-
   const previousAlertCountsRef = useRef({ unmatched: 0, missingMcn: 0 });
 
   useEffect(() => {
@@ -396,6 +481,7 @@ const AppContent = memo(function AppContent() {
       noteFlow,
       alerts: alertsIndex,
       onUpdateCaseStatus: handleUpdateCaseStatus,
+      onResolveAlert: handleResolveAlert,
     }),
     [
       cases,
@@ -404,6 +490,7 @@ const AppContent = memo(function AppContent() {
       financialFlow,
       handleDismissError,
       handleUpdateCaseStatus,
+      handleResolveAlert,
       noteFlow,
       selectedCase,
       viewHandlers,

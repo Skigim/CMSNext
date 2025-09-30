@@ -181,6 +181,12 @@ export function CaseList({
           const bType = b.caseRecord?.caseType || "";
           return (aType.localeCompare(bType)) * directionFactor;
         }
+        case "alerts": {
+          const aAlerts = alertsByCase.get(a.id)?.length ?? 0;
+          const bAlerts = alertsByCase.get(b.id)?.length ?? 0;
+          const comparison = aAlerts - bAlerts;
+          return comparison * directionFactor;
+        }
         case "application": {
           const aApplicationRaw = Date.parse(a.caseRecord?.applicationDate || a.createdAt);
           const bApplicationRaw = Date.parse(b.caseRecord?.applicationDate || b.createdAt);
@@ -200,7 +206,7 @@ export function CaseList({
         }
       }
     });
-  }, [filteredCases, sortKey, sortDirection]);
+  }, [alertsByCase, filteredCases, sortKey, sortDirection]);
 
   const noMatches = sortedCases.length === 0;
 

@@ -12,6 +12,7 @@ import {
   mergeCategoryConfig,
   sanitizeCategoryValues,
 } from "../types/categoryConfig";
+import { AlertsIndex, createEmptyAlertsIndex, parseStackedAlerts } from "./alertsData";
 
 interface DataManagerConfig {
   fileService: AutosaveFileService;
@@ -133,6 +134,7 @@ export class DataManager {
   private fileService: AutosaveFileService;
   private persistNormalizationFixes: boolean;
   private static readonly ERROR_SOURCE = "DataManager";
+  private static readonly ALERTS_FILE_NAME = "alerts.csv";
 
   constructor(config: DataManagerConfig) {
     this.fileService = config.fileService;
@@ -327,6 +329,24 @@ export class DataManager {
   async getCasesCount(): Promise<number> {
     const data = await this.readFileData();
     return data ? data.cases.length : 0;
+  }
+
+  async getAlertsIndex(options: { cases?: CaseDisplay[] } = {}): Promise<AlertsIndex> {
+    const cases = options.cases ?? (await this.getAllCases());
+
+    try {
+      const csvContent = await this.fileService.readTextFile(DataManager.ALERTS_FILE_NAME);
+      if (!csvContent) {
+        return createEmptyAlertsIndex();
+      }
+
+      return parseStackedAlerts(csvContent, cases);
+    } catch (error) {
+      this.reportStorageError("readData", error, {
+        fileName: DataManager.ALERTS_FILE_NAME,
+      }, "We couldn’t read the alerts file. Reconnect and try again.");
+      return createEmptyAlertsIndex();
+    }
   }
 
   // =============================================================================

@@ -682,6 +682,35 @@ class AutosaveFileService {
     }
   }
 
+  async readTextFile(fileName: string): Promise<string | null> {
+    if (!this.directoryHandle) {
+      return null;
+    }
+
+    const permission = await this.checkPermission();
+    if (permission !== 'granted') {
+      return null;
+    }
+
+    try {
+      const fileHandle = await this.directoryHandle.getFileHandle(fileName);
+      const file = await fileHandle.getFile();
+      return await file.text();
+    } catch (err) {
+      if (err instanceof Error && err.name === 'NotFoundError') {
+        return null;
+      }
+
+      this.errorCallback({
+        message: `Error reading file "${fileName}": ${err instanceof Error ? err.message : 'Unknown error'}`,
+        type: 'error',
+        error: err,
+        context: { operation: 'readTextFile', fileName },
+      });
+      throw err;
+    }
+  }
+
   async restoreLastDirectoryAccess(): Promise<{ handle: FileSystemDirectoryHandle | null; permission: PermissionState }> {
     if (!this.isSupported()) {
       this.state.permissionStatus = 'unsupported';

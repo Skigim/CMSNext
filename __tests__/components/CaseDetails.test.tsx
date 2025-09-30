@@ -54,6 +54,12 @@ vi.mock("@/components/case/NotesSection", () => ({
   },
 }));
 
+vi.mock("@/components/case/CaseAlertsDrawer", () => ({
+  CaseAlertsDrawer: ({ alerts }: any) => (
+    <div data-testid="case-alerts-drawer" data-alert-count={alerts?.length ?? 0} />
+  ),
+}));
+
 vi.mock("@/components/case/CaseStatusBadge", () => ({
   CaseStatusBadge: (props: any) => {
     statusBadgePropsSpy(props);
@@ -153,7 +159,7 @@ describe("CaseDetails", () => {
     );
 
     expect(screen.getByRole("heading", { name: caseData.name })).toBeInTheDocument();
-    expect(screen.getByText(/1 alert linked to this case/i)).toBeInTheDocument();
+  expect(screen.getByText(/1 open alert/i)).toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: /back/i }));
     expect(onBack).toHaveBeenCalledTimes(1);

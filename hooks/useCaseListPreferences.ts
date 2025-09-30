@@ -1,7 +1,7 @@
 import { useCallback, useMemo, useState } from "react";
 import { getFileStorageFlags, updateFileStorageFlags, type CaseListViewPreference } from "@/utils/fileStorageFlags";
 
-export type CaseListSortKey = "updated" | "name" | "mcn" | "application" | "status" | "caseType";
+export type CaseListSortKey = "updated" | "name" | "mcn" | "application" | "status" | "caseType" | "alerts";
 export type CaseListSortDirection = "asc" | "desc";
 export type CaseListSegment = "all" | "recent" | "priority";
 
