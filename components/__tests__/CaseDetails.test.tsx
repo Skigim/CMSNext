@@ -45,6 +45,12 @@ vi.mock('../case/CaseStatusBadge', () => ({
   ),
 }));
 
+vi.mock('../case/CaseAlertsDrawer', () => ({
+  CaseAlertsDrawer: ({ alerts }: any) => (
+    <div data-testid="case-alerts-drawer" data-alert-count={alerts?.length ?? 0} />
+  ),
+}));
+
 vi.mock('../ui/alert-dialog', () => {
   const React = require('react');
   const Fragment = React.Fragment;

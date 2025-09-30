@@ -16,6 +16,7 @@ import { CaseDisplay } from "../../types/case";
 import { Eye, Edit, Trash2 } from "lucide-react";
 import { CaseStatusBadge } from "./CaseStatusBadge";
 import type { AlertWithMatch } from "../../utils/alertsData";
+import { AlertBadge } from "@/components/alerts/AlertBadge";
 
 interface CaseCardProps {
   case: CaseDisplay;
@@ -53,9 +54,6 @@ export function CaseCard({ case: caseData, onView, onEdit, onDelete, alerts = []
     ? "bg-red-500/10 text-red-500 border-red-500/20"
     : "bg-muted text-muted-foreground border-transparent";
 
-  const totalAlerts = alerts.length;
-  const alertBadgeClasses = "bg-amber-500/15 text-amber-700 border-amber-500/30";
-
   return (
     <Card className="hover:shadow-md transition-shadow">
       <CardHeader className="pb-3">
@@ -65,11 +63,7 @@ export function CaseCard({ case: caseData, onView, onEdit, onDelete, alerts = []
         </div>
         <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
           <p>MCN: {caseData.mcn || 'No MCN'}</p>
-          {totalAlerts > 0 && (
-            <Badge className={alertBadgeClasses}>
-              {totalAlerts} alert{totalAlerts === 1 ? '' : 's'}
-            </Badge>
-          )}
+          <AlertBadge alerts={alerts} />
         </div>
       </CardHeader>
       <CardContent className="space-y-4">

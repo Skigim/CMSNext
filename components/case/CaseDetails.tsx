@@ -1,4 +1,4 @@
-import { useCallback } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { Button } from "../ui/button";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "../ui/alert-dialog";
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "../ui/resizable";
@@ -13,6 +13,7 @@ import { clickToCopy } from "../../utils/clipboard";
 import { Badge } from "../ui/badge";
 import { cn, interactiveHoverClasses } from "../ui/utils";
 import type { AlertWithMatch } from "../../utils/alertsData";
+import { CaseAlertsDrawer } from "./CaseAlertsDrawer";
 
 interface CaseDetailsProps {
   case: CaseDisplay;
@@ -33,6 +34,8 @@ interface CaseDetailsProps {
     caseId: string,
     status: CaseDisplay["status"],
   ) => Promise<CaseDisplay | null> | CaseDisplay | null | void;
+  onResolveAlert?: (alertId: string) => void;
+  onAddNoteForAlert?: (alert: AlertWithMatch) => void;
 }
 
 export function CaseDetails({ 
@@ -51,6 +54,8 @@ export function CaseDetails({
   onBatchCreateNote,
   alerts = [],
   onUpdateStatus,
+  onResolveAlert,
+  onAddNoteForAlert,
 }: CaseDetailsProps) {
   
   // Handle batched update for inline editing
@@ -65,7 +70,13 @@ export function CaseDetails({
     }
   };
 
-  const totalAlerts = alerts.length;
+  const [alertsDrawerOpen, setAlertsDrawerOpen] = useState(false);
+
+  const { totalAlerts, hasOpenAlerts } = useMemo(() => {
+    const total = alerts.length;
+    const open = alerts.some(alert => alert.status !== "resolved");
+    return { totalAlerts: total, hasOpenAlerts: open };
+  }, [alerts]);
 
   const handleStatusChange = useCallback(
     (status: CaseDisplay["status"]) => {
@@ -73,6 +84,24 @@ export function CaseDetails({
       onUpdateStatus(caseData.id, status);
     },
     [caseData.id, onUpdateStatus],
+  );
+
+  const handleResolveAlert = useCallback(
+    (alertId: string) => {
+      onResolveAlert?.(alertId);
+    },
+    [onResolveAlert],
+  );
+
+  const handleAddNoteForAlert = useCallback(
+    (alert: AlertWithMatch) => {
+      if (onAddNoteForAlert) {
+        onAddNoteForAlert(alert);
+      } else {
+        onAddNote();
+      }
+    },
+    [onAddNoteForAlert, onAddNote],
   );
 
   return (
@@ -127,10 +156,20 @@ export function CaseDetails({
               </div>
               <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
                 {totalAlerts > 0 ? (
-                  <Badge className="border-amber-500/40 bg-amber-500/10 text-amber-800">
-                    <BellRing className="mr-1 h-3 w-3" />
-                    {totalAlerts} alert{totalAlerts === 1 ? "" : "s"} linked to this case
-                  </Badge>
+                  <div className="flex items-center gap-2">
+                    <Badge className="border-amber-500/40 bg-amber-500/10 text-amber-800">
+                      <BellRing className="mr-1 h-3 w-3" />
+                      {totalAlerts} alert{totalAlerts === 1 ? "" : "s"} linked to this case
+                    </Badge>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-7 px-3 text-xs"
+                      onClick={() => setAlertsDrawerOpen(true)}
+                    >
+                      View {hasOpenAlerts ? "alerts" : "history"}
+                    </Button>
+                  </div>
                 ) : (
                   <span className="inline-flex items-center gap-1">
                     <BellRing className="h-3 w-3" /> All clear — no alerts for this case
@@ -265,6 +304,14 @@ export function CaseDetails({
           </div>
         </ResizablePanel>
       </ResizablePanelGroup>
+        <CaseAlertsDrawer
+          alerts={alerts}
+          open={alertsDrawerOpen}
+          onOpenChange={setAlertsDrawerOpen}
+          caseName={caseData.name || "Unnamed Case"}
+          onResolveAlert={onResolveAlert ? handleResolveAlert : undefined}
+          onAddNoteForAlert={handleAddNoteForAlert}
+        />
     </div>
   );
 }

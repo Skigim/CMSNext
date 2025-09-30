@@ -54,6 +54,12 @@ vi.mock("@/components/case/NotesSection", () => ({
   },
 }));
 
+vi.mock("@/components/case/CaseAlertsDrawer", () => ({
+  CaseAlertsDrawer: ({ alerts }: any) => (
+    <div data-testid="case-alerts-drawer" data-alert-count={alerts?.length ?? 0} />
+  ),
+}));
+
 vi.mock("@/components/case/CaseStatusBadge", () => ({
   CaseStatusBadge: (props: any) => {
     statusBadgePropsSpy(props);

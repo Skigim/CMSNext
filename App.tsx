@@ -1,4 +1,4 @@
-import { useEffect, useCallback, useMemo, memo, useRef } from "react";
+import { useEffect, useCallback, useMemo, memo, useRef, useState } from "react";
 import { Toaster } from "./components/ui/sonner";
 import { CaseDisplay, CaseCategory, FinancialItem } from "./types/case";
 import { toast } from "sonner";
@@ -18,22 +18,8 @@ import { AppContentView } from "./components/app/AppContentView";
 import { useAppContentViewModel } from "./components/app/useAppContentViewModel";
 import { clearFileStorageFlags, updateFileStorageFlags } from "./utils/fileStorageFlags";
 import { useCategoryConfig } from "./contexts/CategoryConfigContext";
-import type { AlertsIndex } from "./utils/alertsData";
+import { createEmptyAlertsIndex, type AlertsIndex } from "./utils/alertsData";
 import { ENABLE_SAMPLE_ALERTS } from "./utils/featureFlags";
-
-const createEmptyAlertsIndex = (): AlertsIndex => ({
-  alerts: [],
-  summary: {
-    total: 0,
-    matched: 0,
-    unmatched: 0,
-    missingMcn: 0,
-    latestUpdated: null,
-  },
-  alertsByCaseId: new Map(),
-  unmatched: [],
-  missingMcn: [],
-});
 
 const AppContent = memo(function AppContent() {
   const { isSupported, hasStoredHandle, connectToFolder, connectToExisting, loadExistingData, service } = useFileStorage();
@@ -57,6 +43,7 @@ const AppContent = memo(function AppContent() {
     setHasLoadedData,
   } = useCaseManagement();
   const { setConfigFromFile } = useCategoryConfig();
+  const [alertsIndex, setAlertsIndex] = useState<AlertsIndex>(() => createEmptyAlertsIndex());
   
   const navigationFlow = useNavigationFlow({
     cases,
@@ -261,6 +248,37 @@ const AppContent = memo(function AppContent() {
     setError(null);
   }, [setError]);
 
+  useEffect(() => {
+    let isCancelled = false;
+
+    async function loadAlerts() {
+      if (!dataManager || !hasLoadedData) {
+        if (!isCancelled) {
+          setAlertsIndex(createEmptyAlertsIndex());
+        }
+        return;
+      }
+
+      try {
+        const nextAlerts = await dataManager.getAlertsIndex({ cases });
+        if (!isCancelled) {
+          setAlertsIndex(nextAlerts);
+        }
+      } catch (error) {
+        console.error("Failed to load alerts: ", error);
+        if (!isCancelled) {
+          setAlertsIndex(createEmptyAlertsIndex());
+        }
+      }
+    }
+
+    loadAlerts();
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [cases, dataManager, hasLoadedData]);
+
   const handleGoToSettings = useCallback(() => {
     dismissConnectModal();
     setHasLoadedData(true);
@@ -354,8 +372,6 @@ const AppContent = memo(function AppContent() {
       noteForm,
     ],
   );
-
-  const alertsIndex = useMemo<AlertsIndex>(() => createEmptyAlertsIndex(), [cases]);
 
   const previousAlertCountsRef = useRef({ unmatched: 0, missingMcn: 0 });
 
