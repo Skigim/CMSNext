@@ -9,58 +9,51 @@ import {
 } from "@/src/test/testUtils";
 import App from "@/App";
 
-function getExportTimestamp() {
-  return "2024-01-01T00:00:00.000Z";
-}
-
-function buildInitialCase() {
-  const exportTimestamp = getExportTimestamp();
-  return createMockCaseDisplay({
-    id: "case-initial",
-    name: "Existing Case",
-    mcn: "MCN-1234",
-    createdAt: exportTimestamp,
-    updatedAt: exportTimestamp,
-    person: createMockPerson({
-      id: "person-initial",
-      firstName: "Existing",
-      lastName: "Case",
-      name: "Existing Case",
-      email: "existing@example.com",
-      phone: "555-000-0000",
-      createdAt: exportTimestamp,
-      dateAdded: exportTimestamp,
-    }),
-    caseRecord: createMockCaseRecord({
-      id: "case-record-initial",
-      mcn: "MCN-1234",
-      applicationDate: "2024-01-02",
-      description: "Initial description",
-      personId: "person-initial",
-      spouseId: "",
-  status: "Pending",
-      priority: false,
-      withWaiver: false,
-      admissionDate: "2024-01-03",
-      retroRequested: "",
-      financials: {
-        resources: [],
-        income: [],
-        expenses: [],
-      },
-      notes: [],
-      createdDate: exportTimestamp,
-      updatedDate: exportTimestamp,
-    }),
-  });
-}
-
 function buildInitialFileData() {
-  const exportTimestamp = getExportTimestamp();
+  const exportTimestamp = "2024-01-01T00:00:00.000Z";
   return {
     exported_at: exportTimestamp,
     total_cases: 1,
-    cases: [buildInitialCase()],
+    cases: [
+      createMockCaseDisplay({
+        id: "case-initial",
+        name: "Existing Case",
+        mcn: "MCN-1234",
+        createdAt: exportTimestamp,
+        updatedAt: exportTimestamp,
+        person: createMockPerson({
+          id: "person-initial",
+          firstName: "Existing",
+          lastName: "Case",
+          name: "Existing Case",
+          email: "existing@example.com",
+          phone: "555-000-0000",
+          createdAt: exportTimestamp,
+          dateAdded: exportTimestamp,
+        }),
+        caseRecord: createMockCaseRecord({
+          id: "case-record-initial",
+          mcn: "MCN-1234",
+          applicationDate: "2024-01-02",
+          description: "Initial description",
+          personId: "person-initial",
+          spouseId: "",
+          status: "Pending",
+          priority: false,
+          withWaiver: false,
+          admissionDate: "2024-01-03",
+          retroRequested: "",
+          financials: {
+            resources: [],
+            income: [],
+            expenses: [],
+          },
+          notes: [],
+          createdDate: exportTimestamp,
+          updatedDate: exportTimestamp,
+        }),
+      }),
+    ],
   };
 }
 
