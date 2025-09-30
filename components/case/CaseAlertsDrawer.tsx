@@ -1,4 +1,4 @@
-import { memo, useMemo } from "react";
+import { memo, useMemo, useCallback } from "react";
 import {
   Sheet,
   SheetContent,
@@ -19,8 +19,7 @@ interface CaseAlertsDrawerProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   caseName: string;
-  onResolveAlert?: (alertId: string) => void;
-  onAddNoteForAlert?: (alert: AlertWithMatch) => void;
+  onResolveAlert?: (alert: AlertWithMatch) => void | Promise<void>;
 }
 
 const formatDisplayDate = (value?: string | null) => {
@@ -48,8 +47,14 @@ export const CaseAlertsDrawer = memo(function CaseAlertsDrawer({
   onOpenChange,
   caseName,
   onResolveAlert,
-  onAddNoteForAlert,
 }: CaseAlertsDrawerProps) {
+  const handleResolve = useCallback(
+    (alert: AlertWithMatch) => {
+      void onResolveAlert?.(alert);
+    },
+    [onResolveAlert],
+  );
+
   const { openAlerts, resolvedAlerts } = useMemo(() => {
     const openList: AlertWithMatch[] = [];
     const resolvedList: AlertWithMatch[] = [];
@@ -78,7 +83,7 @@ export const CaseAlertsDrawer = memo(function CaseAlertsDrawer({
             </span>
           </SheetTitle>
           <SheetDescription className="text-left">
-            Review incoming alerts, resolve items, or add notes for follow-up.
+            Review incoming alerts and resolve items—resolution notes are logged automatically.
           </SheetDescription>
         </SheetHeader>
         <ScrollArea className="flex-1 px-4 pb-6">
@@ -112,7 +117,9 @@ export const CaseAlertsDrawer = memo(function CaseAlertsDrawer({
                               </span>
                             )}
                           </div>
-                          <h3 className="text-sm font-semibold text-foreground">{alert.description || "Alert"}</h3>
+                          <h3 className="text-sm font-semibold text-foreground">
+                            {alert.description?.trim() || alert.alertType || alert.alertCode || "Alert"}
+                          </h3>
                           <div className="space-y-1 text-xs text-muted-foreground">
                             <p className="flex items-center gap-2">
                               <BellRing className="h-3.5 w-3.5" />
@@ -129,18 +136,10 @@ export const CaseAlertsDrawer = memo(function CaseAlertsDrawer({
                         <div className="flex flex-col gap-2">
                           <Button
                             size="sm"
-                            onClick={() => onResolveAlert?.(alert.id)}
+                            onClick={() => handleResolve(alert)}
                             disabled={!onResolveAlert}
                           >
                             Resolve
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => onAddNoteForAlert?.(alert)}
-                            disabled={!onAddNoteForAlert}
-                          >
-                            Add note
                           </Button>
                         </div>
                       </div>
@@ -175,7 +174,7 @@ export const CaseAlertsDrawer = memo(function CaseAlertsDrawer({
                       <div className="flex flex-col gap-1">
                         <div className="flex items-center gap-2 text-emerald-700">
                           <CheckCircle2 className="h-4 w-4" />
-                          <span>{alert.description || "Alert"}</span>
+                          <span>{alert.description?.trim() || alert.alertType || alert.alertCode || "Alert"}</span>
                         </div>
                         {resolvedAt && (
                           <p className="text-xs text-emerald-700/80">Resolved {resolvedAt}</p>

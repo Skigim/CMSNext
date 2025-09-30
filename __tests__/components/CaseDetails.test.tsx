@@ -159,7 +159,7 @@ describe("CaseDetails", () => {
     );
 
     expect(screen.getByRole("heading", { name: caseData.name })).toBeInTheDocument();
-    expect(screen.getByText(/1 alert linked to this case/i)).toBeInTheDocument();
+  expect(screen.getByText(/1 open alert/i)).toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: /back/i }));
     expect(onBack).toHaveBeenCalledTimes(1);

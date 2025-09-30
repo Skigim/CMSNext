@@ -1,20 +1,11 @@
 import { useCallback, useMemo } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../ui/card";
 import { Button } from "../ui/button";
-import {
-  FileText,
-  Clock,
-  Plus,
-  ArrowRight,
-  CheckCircle2,
-  XCircle,
-  Coins,
-  TrendingUp,
-} from "lucide-react";
-import { CaseDisplay, AlertSeverity } from "../../types/case";
+import { FileText, Clock, Plus, ArrowRight, CheckCircle2, XCircle, Coins, TrendingUp } from "lucide-react";
+import { CaseDisplay } from "../../types/case";
 import { FileServiceDiagnostic } from "../diagnostics/FileServiceDiagnostic";
 import { useCategoryConfig } from "../../contexts/CategoryConfigContext";
-import { BellRing, AlertTriangle } from "lucide-react";
+import { BellRing } from "lucide-react";
 import type { AlertsIndex } from "../../utils/alertsData";
 
 interface DashboardProps {
@@ -22,21 +13,6 @@ interface DashboardProps {
   alerts: AlertsIndex;
   onViewAllCases: () => void;
   onNewCase: () => void;
-}
-
-function getSeverityBadgeClasses(severity: AlertSeverity): string {
-  switch (severity) {
-    case "Critical":
-      return "bg-red-500/15 text-red-600 border-red-500/20";
-    case "High":
-      return "bg-amber-500/15 text-amber-600 border-amber-500/20";
-    case "Medium":
-      return "bg-yellow-500/15 text-yellow-600 border-yellow-500/20";
-    case "Low":
-      return "bg-blue-500/15 text-blue-600 border-blue-500/20";
-    default:
-      return "bg-muted text-muted-foreground border-muted-foreground/20";
-  }
 }
 
 export function Dashboard({ cases, alerts, onViewAllCases, onNewCase }: DashboardProps) {
@@ -143,8 +119,8 @@ export function Dashboard({ cases, alerts, onViewAllCases, onNewCase }: Dashboar
 
       {/* Stats Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        {stats.map((stat, index) => (
-          <Card key={index}>
+        {stats.map((stat) => (
+          <Card key={stat.title}>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground">
                 {stat.title}
@@ -234,39 +210,52 @@ export function Dashboard({ cases, alerts, onViewAllCases, onNewCase }: Dashboar
                 </div>
 
                 <div className="space-y-3">
-                  {latestAlerts.map(alert => {
-                    const severityClass = getSeverityBadgeClasses(alert.severity);
-                    return (
-                      <div
-                        key={alert.id}
-                        className="flex items-start justify-between gap-3 rounded-lg border border-border/60 bg-card/60 p-3"
-                      >
-                        <div className="space-y-1">
-                          <div className="flex items-center gap-2">
-                            <span className="text-sm font-semibold text-foreground">{alert.alertType || alert.alertCode}</span>
-                            <span className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs ${severityClass}`}>
-                              <AlertTriangle className="h-3 w-3" />
-                              {alert.severity}
-                            </span>
-                          </div>
-                          {alert.description && (
-                            <p className="text-xs text-muted-foreground line-clamp-2">{alert.description}</p>
-                          )}
-                          <div className="flex flex-wrap gap-2 text-[11px] text-muted-foreground">
-                            {alert.personName && <span>{alert.personName}</span>}
-                            {alert.mcNumber && <span>MCN {alert.mcNumber}</span>}
-                            {alert.source && <span>{alert.source}</span>}
-                          </div>
+                  {latestAlerts.map(alert => (
+                    <div
+                      key={alert.id}
+                      className="flex items-start justify-between gap-3 rounded-lg border border-border/60 bg-card/60 p-3"
+                    >
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-semibold text-foreground">
+                            {alert.alertType || alert.alertCode}
+                          </span>
+                          <span
+                            className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs ${
+                              alert.matchStatus === "matched"
+                                ? "bg-emerald-500/15 text-emerald-600 border-emerald-500/20"
+                                : "bg-amber-500/15 text-amber-600 border-amber-500/20"
+                            }`}
+                          >
+                            {alert.matchStatus === "matched" ? (
+                              <CheckCircle2 className="h-3 w-3" />
+                            ) : (
+                              <BellRing className="h-3 w-3" />
+                            )}
+                            {alert.matchStatus === "matched" ? "Linked" : "Needs review"}
+                          </span>
                         </div>
-                        <div className="text-xs text-muted-foreground text-right min-w-[128px]">
-                          <div>{alert.updatedAt ? new Date(alert.updatedAt).toLocaleDateString() : "—"}</div>
-                          <div className="truncate">
-                            {alert.matchedCaseName ? `Case: ${alert.matchedCaseName}` : alert.matchStatus === "matched" ? "Linked case" : "Needs review"}
-                          </div>
+                        {alert.description && (
+                          <p className="text-xs text-muted-foreground line-clamp-2">{alert.description}</p>
+                        )}
+                        <div className="flex flex-wrap gap-2 text-[11px] text-muted-foreground">
+                          {alert.personName && <span>{alert.personName}</span>}
+                          {alert.mcNumber && <span>MCN {alert.mcNumber}</span>}
+                          {alert.source && <span>{alert.source}</span>}
                         </div>
                       </div>
-                    );
-                  })}
+                      <div className="text-xs text-muted-foreground text-right min-w-[128px]">
+                        <div>{alert.updatedAt ? new Date(alert.updatedAt).toLocaleDateString() : "—"}</div>
+                        <div className="truncate">
+                          {alert.matchedCaseName
+                            ? `Case: ${alert.matchedCaseName}`
+                            : alert.matchStatus === "matched"
+                              ? "Linked case"
+                              : "Needs review"}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
                 </div>
               </div>
             )}

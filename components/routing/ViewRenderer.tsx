@@ -1,6 +1,6 @@
 import { CaseDisplay, NewPersonData, NewCaseRecordData } from "../../types/case";
 import { AppView } from "../../types/view";
-import type { AlertsIndex } from "../../utils/alertsData";
+import type { AlertsIndex, AlertWithMatch } from "../../utils/alertsData";
 
 // Direct imports for high-turnover components - no lazy loading for snappiness
 import Dashboard from "../app/Dashboard";
@@ -46,6 +46,7 @@ interface ViewRendererProps {
     | CaseDisplay
     | null
     | void;
+  handleResolveAlert?: (alert: AlertWithMatch) => Promise<void> | void;
 }
 
 /**
@@ -92,6 +93,7 @@ export function ViewRenderer({
   handleBatchUpdateNote,
   handleBatchCreateNote,
   handleUpdateCaseStatus,
+  handleResolveAlert,
 }: ViewRendererProps) {
   
   switch (currentView) {
@@ -144,6 +146,7 @@ export function ViewRenderer({
           onBatchUpdateNote={handleBatchUpdateNote}
           onBatchCreateNote={handleBatchCreateNote}
           onUpdateStatus={handleUpdateCaseStatus}
+          onResolveAlert={handleResolveAlert}
         />
       ) : (
         <div className="text-center p-8">Case not found</div>

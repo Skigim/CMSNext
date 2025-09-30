@@ -64,8 +64,7 @@ describe("CaseAlertsDrawer", () => {
   });
 
   it("renders open and resolved alerts with actions", async () => {
-    const onResolveAlert = vi.fn();
-    const onAddNoteForAlert = vi.fn();
+  const onResolveAlert = vi.fn();
 
     const openAlert = buildAlert({ id: "open-1", status: "new", severity: "Critical" });
     const resolvedAlert = buildAlert({ id: "resolved-1", status: "resolved", resolvedAt: "2024-04-01T00:00:00.000Z" });
@@ -76,8 +75,7 @@ describe("CaseAlertsDrawer", () => {
         open
         onOpenChange={() => {}}
         caseName="John Doe"
-        onResolveAlert={onResolveAlert}
-        onAddNoteForAlert={onAddNoteForAlert}
+  onResolveAlert={onResolveAlert}
       />,
     );
 
@@ -87,10 +85,7 @@ describe("CaseAlertsDrawer", () => {
   expect(screen.getAllByText(/Active alert/i)).toHaveLength(1);
 
     await user.click(screen.getByRole("button", { name: /resolve/i }));
-    expect(onResolveAlert).toHaveBeenCalledWith("open-1");
-
-    await user.click(screen.getByRole("button", { name: /add note/i }));
-    expect(onAddNoteForAlert).toHaveBeenCalledWith(expect.objectContaining({ id: "open-1" }));
+    expect(onResolveAlert).toHaveBeenCalledWith(expect.objectContaining({ id: "open-1" }));
 
     expect(screen.getByText((content) => content.startsWith("Resolved"))).toBeInTheDocument();
   });
@@ -108,9 +103,6 @@ describe("CaseAlertsDrawer", () => {
     );
 
     const resolveButton = screen.getByRole("button", { name: /resolve/i });
-    const noteButton = screen.getByRole("button", { name: /add note/i });
-
     expect(resolveButton).toBeDisabled();
-    expect(noteButton).toBeDisabled();
   });
 });

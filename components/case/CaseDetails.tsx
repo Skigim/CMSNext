@@ -34,8 +34,7 @@ interface CaseDetailsProps {
     caseId: string,
     status: CaseDisplay["status"],
   ) => Promise<CaseDisplay | null> | CaseDisplay | null | void;
-  onResolveAlert?: (alertId: string) => void;
-  onAddNoteForAlert?: (alert: AlertWithMatch) => void;
+  onResolveAlert?: (alert: AlertWithMatch) => Promise<void> | void;
 }
 
 export function CaseDetails({ 
@@ -55,7 +54,6 @@ export function CaseDetails({
   alerts = [],
   onUpdateStatus,
   onResolveAlert,
-  onAddNoteForAlert,
 }: CaseDetailsProps) {
   
   // Handle batched update for inline editing
@@ -72,10 +70,14 @@ export function CaseDetails({
 
   const [alertsDrawerOpen, setAlertsDrawerOpen] = useState(false);
 
-  const { totalAlerts, hasOpenAlerts } = useMemo(() => {
+  const { totalAlerts, openAlertCount, hasOpenAlerts } = useMemo(() => {
     const total = alerts.length;
-    const open = alerts.some(alert => alert.status !== "resolved");
-    return { totalAlerts: total, hasOpenAlerts: open };
+    const openCount = alerts.filter(alert => alert.status !== "resolved").length;
+    return {
+      totalAlerts: total,
+      openAlertCount: openCount,
+      hasOpenAlerts: openCount > 0,
+    };
   }, [alerts]);
 
   const handleStatusChange = useCallback(
@@ -87,21 +89,10 @@ export function CaseDetails({
   );
 
   const handleResolveAlert = useCallback(
-    (alertId: string) => {
-      onResolveAlert?.(alertId);
+    (alert: AlertWithMatch) => {
+      onResolveAlert?.(alert);
     },
     [onResolveAlert],
-  );
-
-  const handleAddNoteForAlert = useCallback(
-    (alert: AlertWithMatch) => {
-      if (onAddNoteForAlert) {
-        onAddNoteForAlert(alert);
-      } else {
-        onAddNote();
-      }
-    },
-    [onAddNoteForAlert, onAddNote],
   );
 
   return (
@@ -159,7 +150,9 @@ export function CaseDetails({
                   <div className="flex items-center gap-2">
                     <Badge className="border-amber-500/40 bg-amber-500/10 text-amber-800">
                       <BellRing className="mr-1 h-3 w-3" />
-                      {totalAlerts} alert{totalAlerts === 1 ? "" : "s"} linked to this case
+                      {hasOpenAlerts
+                        ? `${openAlertCount} open alert${openAlertCount === 1 ? "" : "s"}`
+                        : "All alerts resolved"}
                     </Badge>
                     <Button
                       variant="outline"
@@ -310,7 +303,6 @@ export function CaseDetails({
           onOpenChange={setAlertsDrawerOpen}
           caseName={caseData.name || "Unnamed Case"}
           onResolveAlert={onResolveAlert ? handleResolveAlert : undefined}
-          onAddNoteForAlert={handleAddNoteForAlert}
         />
     </div>
   );
