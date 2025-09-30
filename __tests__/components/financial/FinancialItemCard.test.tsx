@@ -194,13 +194,13 @@ describe("FinancialItemCard", () => {
 
   it("invokes skeleton cancel handler when editing a new card", async () => {
     const user = userEvent.setup();
-    const item: FinancialItem = {
+    const item = createMockFinancialItem("income", {
       id: "fallback-1234",
       description: "",
       amount: 0,
       verificationStatus: "Needs VR",
       dateAdded: new Date().toISOString(),
-    };
+    }) as FinancialItem;
 
     const onDelete = vi.fn();
 
