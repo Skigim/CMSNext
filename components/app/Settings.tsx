@@ -20,7 +20,6 @@ import {
   Upload, 
   Download, 
   Database, 
-  FileText, 
   Palette,
   Bell,
   Trash2,
@@ -188,26 +187,6 @@ export function Settings({ cases, onDataPurged }: SettingsProps) {
         {/* Data Management Tab */}
         <TabsContent value="data" className="space-y-6">
           <div className="grid gap-6">
-            {/* Sample Data Generator - Removed */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <FileText className="h-5 w-5" />
-                  Sample Data Generator (Removed)
-                </CardTitle>
-                <CardDescription>
-                  Sample data generation has been removed since sufficient data is now available.
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="text-sm text-muted-foreground">
-                  The seed data generator has been removed to simplify the application.
-                  Use the import/export features below to manage your case data.
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Data Management Section */}
             <Card>
               <CardHeader>
                 <div className="flex items-center gap-2">
@@ -215,20 +194,20 @@ export function Settings({ cases, onDataPurged }: SettingsProps) {
                   <CardTitle>Data Management</CardTitle>
                 </div>
                 <CardDescription>
-                  Import and export case data, manage your local files
+                  Import historical records, back up your workspace, or reset everything locally.
                 </CardDescription>
               </CardHeader>
-              <CardContent className="space-y-4">
+              <CardContent className="space-y-6">
                 {/* Import Section */}
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between">
+                <section className="space-y-3">
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                     <div>
-                      <h4 className="font-medium">Import Legacy Data</h4>
+                      <h4 className="font-medium">Import cases from JSON</h4>
                       <p className="text-sm text-muted-foreground">
-                        Upload JSON files to import existing cases into the system
+                        Merge legacy exports or bulk records into your current workspace.
                       </p>
                     </div>
-                    <Button 
+                    <Button
                       onClick={() => setIsImportModalOpen(true)}
                       className="flex items-center gap-2"
                     >
@@ -236,32 +215,23 @@ export function Settings({ cases, onDataPurged }: SettingsProps) {
                       Import JSON
                     </Button>
                   </div>
-                  
-                  <div className="p-3 bg-muted/30 rounded-lg border border-border/50">
-                    <div className="flex items-center gap-2 mb-2">
-                      <FileText className="h-4 w-4 text-muted-foreground" />
-                      <span className="text-sm font-medium">Supported formats</span>
-                    </div>
-                    <ul className="text-sm text-muted-foreground space-y-1 ml-6">
-                      <li>• JSON files with case data structure</li>
-                      <li>• Legacy case management exports</li>
-                      <li>• Bulk case data imports</li>
-                    </ul>
-                  </div>
-                </div>
+                  <p className="text-xs text-muted-foreground">
+                    The importer validates structure and skips duplicates automatically.
+                  </p>
+                </section>
 
                 <Separator />
 
                 {/* Export Section */}
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between">
+                <section className="space-y-3">
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                     <div>
-                      <h4 className="font-medium">Export Current Data</h4>
+                      <h4 className="font-medium">Export current data</h4>
                       <p className="text-sm text-muted-foreground">
-                        Download all your cases as a JSON file for backup or migration
+                        Download a JSON backup that mirrors the on-disk folder structure.
                       </p>
                     </div>
-                    <Button 
+                    <Button
                       variant="outline"
                       onClick={handleExportData}
                       disabled={cases.length === 0}
@@ -271,59 +241,53 @@ export function Settings({ cases, onDataPurged }: SettingsProps) {
                       Export JSON
                     </Button>
                   </div>
-                  
-                  <div className="flex items-center gap-4 text-sm text-muted-foreground">
+
+                  <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
                     <div className="flex items-center gap-1">
                       <Badge variant="secondary">{cases.length}</Badge>
-                      <span>Total Cases</span>
+                      <span>Total cases</span>
                     </div>
                     {cases.length > 0 && (
                       <div className="flex items-center gap-1">
-                        <Badge variant="outline">
-                          {getActiveCasesCount()}
-                        </Badge>
-                        <span>Active Cases</span>
+                        <Badge variant="outline">{getActiveCasesCount()}</Badge>
+                        <span>Active cases</span>
                       </div>
                     )}
                   </div>
-                </div>
+                </section>
 
                 <Separator />
 
                 {/* Purge Section */}
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between">
+                <section className="space-y-3">
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                     <div>
-                      <h4 className="font-medium text-destructive">
-                        Purge All Data
-                      </h4>
+                      <h4 className="font-medium text-destructive">Purge all data</h4>
                       <p className="text-sm text-muted-foreground">
-                        Permanently delete all cases, people, and financial data from local storage
+                        Permanently delete every case, person, and financial record from local storage.
                       </p>
                     </div>
-                    <Button 
+                    <Button
                       variant="destructive"
                       onClick={handlePurgeDatabase}
                       disabled={isPurging}
                       className="flex items-center gap-2"
                     >
                       <Trash2 className="h-4 w-4" />
-                      {isPurging ? 'Purging...' : 'Purge Local Storage'}
+                      {isPurging ? "Purging..." : "Purge local storage"}
                     </Button>
                   </div>
-                  
-                  <div className="p-3 bg-destructive/10 rounded-lg border border-destructive/20">
-                    <div className="flex items-center gap-2 mb-2">
-                      <Trash2 className="h-4 w-4 text-destructive" />
-                      <span className="text-sm font-medium text-destructive">Warning</span>
+
+                  <div className="rounded-lg border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
+                    <div className="flex items-center gap-2 font-medium">
+                      <Trash2 className="h-4 w-4" />
+                      This action can’t be undone.
                     </div>
-                    <ul className="text-sm text-destructive/80 space-y-1 ml-6">
-                      <li>• This action cannot be undone</li>
-                      <li>• All case data will be permanently deleted</li>
-                      <li>• You will need to reconnect to a directory afterward</li>
-                    </ul>
+                    <p className="mt-2 text-destructive/80">
+                      All local files will be removed and you’ll need to reconnect to a folder afterwards.
+                    </p>
                   </div>
-                </div>
+                </section>
               </CardContent>
             </Card>
           </div>

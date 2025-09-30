@@ -83,18 +83,32 @@ Object.defineProperty(URL, 'revokeObjectURL', {
 })
 
 // Mock ResizeObserver for components that use it
-global.ResizeObserver = vi.fn().mockImplementation(() => ({
-  observe: vi.fn(),
-  unobserve: vi.fn(),
-  disconnect: vi.fn(),
-}))
+class ResizeObserverMock {
+  observe = vi.fn()
+  unobserve = vi.fn()
+  disconnect = vi.fn()
+}
+
+(globalThis as any).ResizeObserver = ResizeObserverMock
+Object.defineProperty(window, 'ResizeObserver', {
+  value: ResizeObserverMock as unknown as ResizeObserver,
+  writable: true,
+  configurable: true,
+})
 
 // Mock IntersectionObserver 
-global.IntersectionObserver = vi.fn().mockImplementation(() => ({
-  observe: vi.fn(),
-  unobserve: vi.fn(),
-  disconnect: vi.fn(),
-}))
+class IntersectionObserverMock {
+  observe = vi.fn()
+  unobserve = vi.fn()
+  disconnect = vi.fn()
+}
+
+(globalThis as any).IntersectionObserver = IntersectionObserverMock
+Object.defineProperty(window, 'IntersectionObserver', {
+  value: IntersectionObserverMock as unknown as IntersectionObserver,
+  writable: true,
+  configurable: true,
+})
 
 // Extend expect with custom matchers if needed
 expect.extend({

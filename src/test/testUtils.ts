@@ -254,13 +254,19 @@ export const waitFor = (condition: () => boolean, timeout = 1000) => {
 export const mockToast = {
   success: vi.fn(),
   error: vi.fn(),
+  info: vi.fn(),
+  warning: vi.fn(),
   loading: vi.fn(),
   dismiss: vi.fn()
 }
 
-// Mock the toast library
-vi.mock('sonner', () => ({
-  toast: mockToast
-}))
+// Mock the toast library while preserving other exports like Toaster
+vi.mock('sonner', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('sonner')>();
+  return {
+    ...actual,
+    toast: mockToast
+  };
+})
 
 export { mockToast as toast }
