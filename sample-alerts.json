@@ -1,0 +1,221 @@
+{
+  "generatedAt": "2025-10-01T21:15:00.581Z",
+  "sourceFile": "Alerts.csv",
+  "summary": {
+    "total": 60,
+    "matched": 0,
+    "unmatched": 60,
+    "missingMcn": 0,
+    "latestUpdated": "2025-10-01T00:00:00.000Z"
+  },
+  "uniqueAlerts": 9,
+  "alerts": [
+    {
+      "id": "9996",
+      "reportId": "9996",
+      "alertCode": "9996",
+      "alertType": "WRKRM",
+      "severity": "Medium",
+      "alertDate": "2025-10-01T00:00:00.000Z",
+      "personName": "CAREN YORK",
+      "program": "MEDICAID",
+      "description": "FOLLOW UP",
+      "mcNumber": "761037",
+      "matchStatus": "unmatched",
+      "status": "new",
+      "resolvedAt": null,
+      "resolutionNotes": null,
+      "metadata": {
+        "rawType": "WRKRM",
+        "rawProgram": "MEDICAID",
+        "rawDescription": "FOLLOW UP",
+        "rawName": "YORK, CAREN",
+        "alertNumber": "9996"
+      }
+    },
+    {
+      "id": "9997",
+      "reportId": "9997",
+      "alertCode": "9997",
+      "alertType": "WRKRM",
+      "severity": "Medium",
+      "alertDate": "2025-10-01T00:00:00.000Z",
+      "personName": "JAMES E JOHNSON",
+      "program": "MEDICAID",
+      "description": "AVS DAY 11",
+      "mcNumber": "970699",
+      "matchStatus": "unmatched",
+      "status": "new",
+      "resolvedAt": null,
+      "resolutionNotes": null,
+      "metadata": {
+        "rawType": "WRKRM",
+        "rawProgram": "MEDICAID",
+        "rawDescription": "AVS DAY 11",
+        "rawName": "JOHNSON, JAMES E",
+        "alertNumber": "9997"
+      }
+    },
+    {
+      "id": "470",
+      "reportId": "470",
+      "alertCode": "470",
+      "alertType": "MAILM",
+      "severity": "Medium",
+      "alertDate": "2025-09-30T00:00:00.000Z",
+      "personName": "MARY A KRUNTORAD",
+      "program": "MEDICAID",
+      "description": "MAIL RECEIVED",
+      "mcNumber": "771320",
+      "matchStatus": "unmatched",
+      "status": "new",
+      "resolvedAt": null,
+      "resolutionNotes": null,
+      "metadata": {
+        "rawType": "MAILM",
+        "rawProgram": "MEDICAID",
+        "rawDescription": "MAIL RECEIVED",
+        "rawName": "KRUNTORAD, MARY A",
+        "alertNumber": "470"
+      }
+    },
+    {
+      "id": "467",
+      "reportId": "467",
+      "alertCode": "467",
+      "alertType": "TODOM",
+      "severity": "Medium",
+      "alertDate": "2025-09-30T00:00:00.000Z",
+      "personName": "JERRY MCCLURE",
+      "program": "MEDICAID",
+      "description": "CHANGE REPORTED",
+      "mcNumber": "958587",
+      "matchStatus": "unmatched",
+      "status": "new",
+      "resolvedAt": null,
+      "resolutionNotes": null,
+      "metadata": {
+        "rawType": "TODOM",
+        "rawProgram": "MEDICAID",
+        "rawDescription": "CHANGE REPORTED",
+        "rawName": "MCCLURE, JERRY",
+        "alertNumber": "467"
+      }
+    },
+    {
+      "id": "504",
+      "reportId": "504",
+      "alertCode": "504",
+      "alertType": "MAILM",
+      "severity": "Medium",
+      "alertDate": "2025-09-29T00:00:00.000Z",
+      "personName": "OLLIE DADY",
+      "program": "MEDICAID",
+      "description": "MAIL REC'D ON CLOSED",
+      "mcNumber": "950871",
+      "matchStatus": "unmatched",
+      "status": "new",
+      "resolvedAt": null,
+      "resolutionNotes": null,
+      "metadata": {
+        "rawType": "MAILM",
+        "rawProgram": "MEDICAID",
+        "rawDescription": "MAIL REC'D ON CLOSED",
+        "rawName": "DADY, OLLIE",
+        "alertNumber": "504"
+      }
+    },
+    {
+      "id": "462",
+      "reportId": "462",
+      "alertCode": "462",
+      "alertType": "TODOM",
+      "severity": "Medium",
+      "alertDate": "2025-09-26T00:00:00.000Z",
+      "personName": "MARY A PAVLISH",
+      "program": "MEDICAID",
+      "description": "VERIFICATION DUE",
+      "mcNumber": "543711",
+      "matchStatus": "unmatched",
+      "status": "new",
+      "resolvedAt": null,
+      "resolutionNotes": null,
+      "metadata": {
+        "rawType": "TODOM",
+        "rawProgram": "MEDICAID",
+        "rawDescription": "VERIFICATION DUE",
+        "rawName": "PAVLISH, MARY A",
+        "alertNumber": "462"
+      }
+    },
+    {
+      "id": "424",
+      "reportId": "424",
+      "alertCode": "424",
+      "alertType": "PENDM",
+      "severity": "Medium",
+      "alertDate": "2025-09-26T00:00:00.000Z",
+      "personName": "MARY MAJOR",
+      "program": "MEDICAID",
+      "description": "PENDING 45 DAYS",
+      "mcNumber": "545576",
+      "matchStatus": "unmatched",
+      "status": "new",
+      "resolvedAt": null,
+      "resolutionNotes": null,
+      "metadata": {
+        "rawType": "PENDM",
+        "rawProgram": "MEDICAID",
+        "rawDescription": "PENDING 45 DAYS",
+        "rawName": "MAJOR, MARY",
+        "alertNumber": "424"
+      }
+    },
+    {
+      "id": "536",
+      "reportId": "536",
+      "alertCode": "536",
+      "alertType": "MAILM",
+      "severity": "Medium",
+      "alertDate": "2025-09-24T00:00:00.000Z",
+      "personName": "GUY W SILVA",
+      "program": "MEDICAID",
+      "description": "RETURNED MAIL RCVD",
+      "mcNumber": "148632",
+      "matchStatus": "unmatched",
+      "status": "new",
+      "resolvedAt": null,
+      "resolutionNotes": null,
+      "metadata": {
+        "rawType": "MAILM",
+        "rawProgram": "MEDICAID",
+        "rawDescription": "RETURNED MAIL RCVD",
+        "rawName": "SILVA, GUY W",
+        "alertNumber": "536"
+      }
+    },
+    {
+      "id": "525",
+      "reportId": "525",
+      "alertCode": "525",
+      "alertType": "INFOM",
+      "severity": "Medium",
+      "alertDate": "2025-09-15T00:00:00.000Z",
+      "personName": "GEORGIA R SCHNEIDER",
+      "program": "MEDICAID",
+      "description": "RENEWAL OVERDUE",
+      "mcNumber": "250391",
+      "matchStatus": "unmatched",
+      "status": "new",
+      "resolvedAt": null,
+      "resolutionNotes": null,
+      "metadata": {
+        "rawType": "INFOM",
+        "rawProgram": "MEDICAID",
+        "rawDescription": "RENEWAL OVERDUE",
+        "rawName": "SCHNEIDER, GEORGIA R",
+        "alertNumber": "525"
+      }
+    }
+  ]
+}
