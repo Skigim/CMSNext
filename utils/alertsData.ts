@@ -320,35 +320,40 @@ export function parseStackedAlerts(csvContent: string, cases: CaseDisplay[]): Al
     const matchedCase = normalizedMcn ? casesByMcn.get(normalizedMcn) : undefined;
 
     const dueDateIso = normalizeStackedDate(groups.dueDate);
+    const program = groups.program?.toString().trim() ?? "";
+    const alertType = groups.type?.toString().trim() ?? "";
+    const description = groups.description?.toString().trim() ?? "";
     const alertNumber = (groups.alertNumber ?? "").toString().trim();
     const alertId = alertNumber && alertNumber.length > 0 ? alertNumber : createRandomAlertId();
 
-    const severity = deriveSeverityFromType(groups.type, groups.description);
+    const severity = deriveSeverityFromType(alertType, description);
     const personName = normalizePersonName(groups.name);
 
     const alert: AlertWithMatch = {
       id: alertId,
       reportId: alertNumber || undefined,
-      alertCode: groups.type?.trim() ?? "",
-      alertType: groups.program?.trim() ?? "",
+      alertCode: alertNumber || alertType || program,
+      alertType,
       severity,
       alertDate: dueDateIso,
       createdAt: dueDateIso,
       updatedAt: dueDateIso,
       mcNumber: normalizedMcn || null,
       personName,
-      program: groups.program?.trim() ?? "",
+      program,
       region: "",
       state: "",
       source: "Import",
-      description: groups.description?.trim() ?? "",
+      description,
       status: "new",
       resolvedAt: null,
       resolutionNotes: undefined,
       metadata: {
-        rawType: groups.type?.trim() ?? "",
-        rawProgram: groups.program?.trim() ?? "",
+        rawType: alertType,
+        rawProgram: program,
+        rawDescription: description,
         rawName: groups.name ?? "",
+        alertNumber,
       },
       matchStatus: !normalizedMcn
         ? "missing-mcn"

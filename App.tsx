@@ -297,24 +297,45 @@ const AppContent = memo(function AppContent() {
         return;
       }
 
-      try {
-        const resolvedAt = new Date().toISOString();
-        resolvedAlertOverridesRef.current.set(alert.id, {
-          resolvedAt,
-          resolutionNotes: alert.resolutionNotes,
-        });
+      if (!dataManager) {
+        toast.error("Alerts service is not ready. Try again after reconnecting.");
+        return;
+      }
 
-        setAlertsIndex(prevIndex => applyAlertOverrides(prevIndex));
+      const resolvedAt = new Date().toISOString();
+      resolvedAlertOverridesRef.current.set(alert.id, {
+        resolvedAt,
+        resolutionNotes: alert.resolutionNotes,
+      });
+      setAlertsIndex(prevIndex => applyAlertOverrides(prevIndex));
+
+      try {
+        await dataManager.updateAlertStatus(
+          alert.id,
+          {
+            status: "resolved",
+            resolvedAt,
+            resolutionNotes: alert.resolutionNotes,
+          },
+          { cases },
+        );
+
+        resolvedAlertOverridesRef.current.delete(alert.id);
+
+        const refreshedAlerts = await dataManager.getAlertsIndex({ cases });
+        setAlertsIndex(applyAlertOverrides(refreshedAlerts));
 
         toast.success("Alert resolved", {
           description: "Add a note when you're ready to document the resolution.",
         });
       } catch (err) {
         console.error("Failed to resolve alert:", err);
+        resolvedAlertOverridesRef.current.delete(alert.id);
+        setAlertsIndex(prevIndex => applyAlertOverrides(prevIndex));
         toast.error("Unable to resolve alert. Please try again.");
       }
     },
-    [applyAlertOverrides, selectedCase],
+    [applyAlertOverrides, cases, dataManager, selectedCase, setAlertsIndex],
   );
 
   useEffect(() => {

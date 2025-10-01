@@ -95,6 +95,15 @@ describe("alertsData", () => {
     expect(alert.personName).toBe("JANE DOE");
     expect(alert.alertDate).toBe("2025-09-22T00:00:00.000Z");
     expect(alert.matchStatus).toBe("matched");
+    expect(alert.program).toBe("MEDICAID");
+    expect(alert.alertType).toBe("WRKRM");
+    expect(alert.alertCode).toBe("9996");
+    expect(alert.metadata).toMatchObject({
+      rawProgram: "MEDICAID",
+      rawType: "WRKRM",
+      rawDescription: "POLICY RESPONSE",
+      alertNumber: "9996",
+    });
   });
 
   it("marks alerts without MCNs as missing", () => {

@@ -1,4 +1,12 @@
-import { CaseDisplay, CaseCategory, FinancialItem, NewPersonData, NewCaseRecordData, NewNoteData } from "../types/case";
+import {
+  CaseDisplay,
+  CaseCategory,
+  FinancialItem,
+  NewPersonData,
+  NewCaseRecordData,
+  NewNoteData,
+  AlertWorkflowStatus,
+} from "../types/case";
 import { v4 as uuidv4 } from 'uuid';
 import AutosaveFileService from './AutosaveFileService';
 import { transformImportedData } from './dataTransform';
@@ -12,7 +20,13 @@ import {
   mergeCategoryConfig,
   sanitizeCategoryValues,
 } from "../types/categoryConfig";
-import { AlertsIndex, createEmptyAlertsIndex, parseStackedAlerts } from "./alertsData";
+import {
+  AlertsIndex,
+  AlertWithMatch,
+  createAlertsIndexFromAlerts,
+  createEmptyAlertsIndex,
+  parseStackedAlerts,
+} from "./alertsData";
 
 interface DataManagerConfig {
   fileService: AutosaveFileService;
@@ -135,10 +149,335 @@ export class DataManager {
   private persistNormalizationFixes: boolean;
   private static readonly ERROR_SOURCE = "DataManager";
   private static readonly ALERTS_FILE_NAME = "alerts.csv";
+  private static readonly ALERTS_JSON_NAME = "alerts.json";
 
   constructor(config: DataManagerConfig) {
     this.fileService = config.fileService;
     this.persistNormalizationFixes = config.persistNormalizationFixes ?? true;
+  }
+
+  private normalizeMcn(value: string | null | undefined): string {
+    if (!value) {
+      return "";
+    }
+
+    return value.replace(/[^a-z0-9]/gi, "").trim().toUpperCase();
+  }
+
+  private buildCaseLookup(cases: CaseDisplay[]): Map<string, CaseDisplay> {
+    const lookup = new Map<string, CaseDisplay>();
+
+    cases.forEach(caseItem => {
+      const mcn = caseItem.caseRecord?.mcn ?? caseItem.mcn;
+      const normalized = this.normalizeMcn(mcn);
+      if (!normalized || lookup.has(normalized)) {
+        return;
+      }
+
+      lookup.set(normalized, caseItem);
+    });
+
+    return lookup;
+  }
+
+  private rematchAlertForCases(alert: AlertWithMatch, lookup: Map<string, CaseDisplay>): AlertWithMatch {
+    if (!alert) {
+      return alert;
+    }
+
+    const normalizedMcn = this.normalizeMcn(alert.mcNumber ?? null);
+    const matchedCase = normalizedMcn ? lookup.get(normalizedMcn) : undefined;
+
+    if (!matchedCase) {
+      if (alert.matchStatus === "matched" || alert.matchedCaseId) {
+        return {
+          ...alert,
+          matchStatus: normalizedMcn ? "unmatched" : "missing-mcn",
+          matchedCaseId: undefined,
+          matchedCaseName: undefined,
+          matchedCaseStatus: undefined,
+        };
+      }
+      return alert;
+    }
+
+    return {
+      ...alert,
+      matchStatus: "matched",
+      matchedCaseId: matchedCase.id,
+      matchedCaseName: matchedCase.name,
+      matchedCaseStatus: matchedCase.status,
+    };
+  }
+
+  private rematchAlertsForCases(alerts: AlertWithMatch[], cases: CaseDisplay[]): AlertWithMatch[] {
+    if (!alerts || alerts.length === 0) {
+      return alerts ?? [];
+    }
+
+    const lookup = this.buildCaseLookup(cases);
+    return alerts.map(alert => this.rematchAlertForCases(alert, lookup));
+  }
+
+  private rematchStoredAlerts(alerts: AlertWithMatch[] | undefined, cases: CaseDisplay[]): {
+    alerts: AlertWithMatch[];
+    changed: boolean;
+  } {
+    if (!alerts || alerts.length === 0) {
+      return { alerts: [], changed: false };
+    }
+
+    const rematched = this.rematchAlertsForCases(alerts, cases);
+    let changed = false;
+
+    for (let index = 0; index < alerts.length; index += 1) {
+      const original = alerts[index];
+      const updated = rematched[index];
+      if (
+        original.matchStatus !== updated.matchStatus ||
+        original.matchedCaseId !== updated.matchedCaseId ||
+        original.matchedCaseName !== updated.matchedCaseName ||
+        original.matchedCaseStatus !== updated.matchedCaseStatus
+      ) {
+        changed = true;
+        break;
+      }
+    }
+
+    return { alerts: rematched, changed };
+  }
+
+  private alertsAreEqual(a: AlertWithMatch, b: AlertWithMatch): boolean {
+    return (
+      a.id === b.id &&
+      a.reportId === b.reportId &&
+      a.status === b.status &&
+      a.resolvedAt === b.resolvedAt &&
+      a.resolutionNotes === b.resolutionNotes &&
+      a.matchStatus === b.matchStatus &&
+      a.matchedCaseId === b.matchedCaseId &&
+      a.matchedCaseName === b.matchedCaseName &&
+      a.matchedCaseStatus === b.matchedCaseStatus
+    );
+  }
+
+  private alertKey(alert: AlertWithMatch): string {
+    if (!alert) {
+      return "";
+    }
+
+    const key = alert.reportId ?? alert.id;
+    return key ?? alert.id;
+  }
+
+  private mergeStoredAndParsedAlerts(
+    storedAlerts: AlertWithMatch[],
+    parsedAlerts: AlertWithMatch[],
+    cases: CaseDisplay[],
+  ): { alerts: AlertWithMatch[]; changed: boolean } {
+    if (parsedAlerts.length === 0) {
+      return { alerts: this.rematchAlertsForCases(storedAlerts, cases), changed: false };
+    }
+
+  this.debugLogAlertKeyStats("merge-start", storedAlerts, parsedAlerts);
+
+  const storedMap = new Map<string, AlertWithMatch>();
+    storedAlerts.forEach(alert => {
+      storedMap.set(this.alertKey(alert), alert);
+    });
+
+    const merged: AlertWithMatch[] = [];
+    let changed = false;
+
+    parsedAlerts.forEach(parsed => {
+      const key = this.alertKey(parsed);
+      const existing = storedMap.get(key);
+      if (!existing) {
+        merged.push(parsed);
+        changed = true;
+        return;
+      }
+
+      const mergedAlert: AlertWithMatch = {
+        ...parsed,
+        status: existing.status ?? parsed.status,
+        resolvedAt: existing.resolvedAt ?? parsed.resolvedAt,
+        resolutionNotes: existing.resolutionNotes ?? parsed.resolutionNotes,
+      };
+
+      if (!this.alertsAreEqual(existing, mergedAlert)) {
+        changed = true;
+      }
+
+      merged.push(mergedAlert);
+      storedMap.delete(key);
+    });
+
+    if (storedMap.size > 0) {
+      changed = true;
+      storedMap.forEach(alert => {
+        merged.push(alert);
+      });
+    }
+
+    const rematched = this.rematchAlertsForCases(merged, cases);
+
+    this.debugLogAlertKeyStats("merge-result", storedAlerts, rematched);
+    this.debugLogAlertsSample("merge-output", rematched);
+
+    return { alerts: rematched, changed };
+  }
+
+  private isDebugEnvironment(): boolean {
+    try {
+      if (typeof import.meta !== "undefined" && (import.meta as any).env) {
+        const env = (import.meta as any).env;
+        if (typeof env.MODE === "string") {
+          return env.MODE !== "production";
+        }
+        if (typeof env.DEV === "boolean") {
+          return env.DEV;
+        }
+      }
+    } catch (error) {
+      // Ignore import.meta access issues in non-module contexts
+    }
+
+    if (typeof process !== "undefined" && process.env?.NODE_ENV) {
+      return process.env.NODE_ENV !== "production";
+    }
+
+    return false;
+  }
+
+  private debugLogAlertsSample(source: string, alerts: AlertWithMatch[] | undefined): void {
+    if (!alerts || alerts.length === 0 || !this.isDebugEnvironment()) {
+      return;
+    }
+
+    const preview = alerts.slice(0, Math.min(alerts.length, 3)).map(alert => ({
+      id: alert.id,
+      reportId: alert.reportId,
+      alertCode: alert.alertCode,
+      status: alert.status,
+      program: alert.program,
+      alertType: alert.alertType,
+      description: alert.description,
+      matchStatus: alert.matchStatus,
+      mcNumber: alert.mcNumber,
+      metadata: {
+        rawProgram: alert.metadata?.rawProgram,
+        rawType: alert.metadata?.rawType,
+        rawDescription: alert.metadata?.rawDescription,
+        alertNumber: alert.metadata?.alertNumber,
+      },
+    }));
+
+    console.info(`[DataManager] Alert preview (${source})`, preview);
+  }
+
+  private debugLogAlertKeyStats(
+    source: string,
+    storedAlerts: AlertWithMatch[],
+    parsedAlerts: AlertWithMatch[],
+  ): void {
+    if (!this.isDebugEnvironment()) {
+      return;
+    }
+
+    const storedKeys = new Set<string>();
+    const parsedKeys = new Set<string>();
+    const emptyStored: AlertWithMatch[] = [];
+    const emptyParsed: AlertWithMatch[] = [];
+
+    storedAlerts.forEach(alert => {
+      const key = this.alertKey(alert);
+      if (!key) {
+        emptyStored.push(alert);
+      } else {
+        storedKeys.add(key);
+      }
+    });
+
+    parsedAlerts.forEach(alert => {
+      const key = this.alertKey(alert);
+      if (!key) {
+        emptyParsed.push(alert);
+      } else {
+        parsedKeys.add(key);
+      }
+    });
+
+    const sampleMissingInStored: string[] = [];
+    parsedKeys.forEach(key => {
+      if (!storedKeys.has(key) && sampleMissingInStored.length < 5) {
+        sampleMissingInStored.push(key);
+      }
+    });
+
+    const sampleMissingInParsed: string[] = [];
+    storedKeys.forEach(key => {
+      if (!parsedKeys.has(key) && sampleMissingInParsed.length < 5) {
+        sampleMissingInParsed.push(key);
+      }
+    });
+
+    const intersection = [...parsedKeys].filter(key => storedKeys.has(key)).length;
+    const stats = {
+      storedTotal: storedAlerts.length,
+      parsedTotal: parsedAlerts.length,
+      storedUniqueKeys: storedKeys.size,
+      parsedUniqueKeys: parsedKeys.size,
+      intersection,
+      sampleMissingInStored,
+      sampleMissingInParsed,
+      emptyStoredKeys: emptyStored.slice(0, 3).map(alert => ({ id: alert.id, reportId: alert.reportId })),
+      emptyParsedKeys: emptyParsed.slice(0, 3).map(alert => ({ id: alert.id, reportId: alert.reportId })),
+    };
+
+    console.info(`[DataManager] Alert key stats (${source})`, JSON.stringify(stats, null, 2));
+  }
+
+  private countUniqueAlertKeys(alerts: AlertWithMatch[]): number {
+    if (!alerts || alerts.length === 0) {
+      return 0;
+    }
+
+    const keys = new Set<string>();
+    alerts.forEach(alert => {
+      const key = this.alertKey(alert);
+      if (key) {
+        keys.add(key);
+      }
+    });
+
+    return keys.size;
+  }
+
+  private parseAlertsWithFallback(csvContent: string, cases: CaseDisplay[]): AlertsIndex {
+    const stacked = parseStackedAlerts(csvContent, cases);
+    const stackedUnique = this.countUniqueAlertKeys(stacked.alerts);
+
+    if (this.isDebugEnvironment()) {
+      const metrics = {
+        stacked: {
+          total: stacked.alerts.length,
+          unique: stackedUnique,
+          uniqueRatio:
+            stacked.alerts.length > 0 && Number.isFinite(stackedUnique / stacked.alerts.length)
+              ? Number((stackedUnique / stacked.alerts.length).toFixed(4))
+              : 0,
+        },
+      };
+      console.info("[DataManager] Alert parser metrics", JSON.stringify(metrics, null, 2));
+    }
+
+    this.debugLogAlertsSample(
+      stacked.alerts.length > 0 ? "csv-stacked" : "csv-empty",
+      stacked.alerts,
+    );
+
+    return stacked;
   }
 
   private reportStorageError(
@@ -334,18 +673,183 @@ export class DataManager {
   async getAlertsIndex(options: { cases?: CaseDisplay[] } = {}): Promise<AlertsIndex> {
     const cases = options.cases ?? (await this.getAllCases());
 
+    let workingAlerts: AlertWithMatch[] = [];
+    let haveAlerts = false;
+    let shouldPersist = false;
+
+    try {
+      const storedJson = await this.fileService.readNamedFile(DataManager.ALERTS_JSON_NAME);
+      if (storedJson && Array.isArray(storedJson.alerts)) {
+        const { alerts: rematched, changed } = this.rematchStoredAlerts(
+          storedJson.alerts as AlertWithMatch[],
+          cases,
+        );
+        this.debugLogAlertsSample("stored-json", rematched);
+        workingAlerts = rematched;
+        haveAlerts = workingAlerts.length > 0;
+        shouldPersist = shouldPersist || changed;
+        console.info(
+          "[DataManager] Loaded %d alerts from alerts.json",
+          workingAlerts.length,
+        );
+      }
+    } catch (error) {
+      this.reportStorageError("readData", error, {
+        fileName: DataManager.ALERTS_JSON_NAME,
+      }, "We couldn’t load saved alerts. Reconnect and try again.");
+    }
+
+    let parsedCsvAlerts: AlertWithMatch[] = [];
     try {
       const csvContent = await this.fileService.readTextFile(DataManager.ALERTS_FILE_NAME);
-      if (!csvContent) {
-        return createEmptyAlertsIndex();
+      if (csvContent) {
+        const parsed = this.parseAlertsWithFallback(csvContent, cases);
+        parsedCsvAlerts = parsed.alerts;
+        this.debugLogAlertsSample("csv-parsed", parsedCsvAlerts);
+        console.info(
+          "[DataManager] Parsed %d alerts from alerts.csv",
+          parsedCsvAlerts.length,
+        );
       }
-
-      return parseStackedAlerts(csvContent, cases);
     } catch (error) {
       this.reportStorageError("readData", error, {
         fileName: DataManager.ALERTS_FILE_NAME,
       }, "We couldn’t read the alerts file. Reconnect and try again.");
+    }
+
+    if (parsedCsvAlerts.length > 0) {
+      if (haveAlerts) {
+        const { alerts, changed } = this.mergeStoredAndParsedAlerts(workingAlerts, parsedCsvAlerts, cases);
+        workingAlerts = alerts;
+        shouldPersist = shouldPersist || changed;
+      } else {
+        workingAlerts = this.rematchAlertsForCases(parsedCsvAlerts, cases);
+        haveAlerts = workingAlerts.length > 0;
+        shouldPersist = true;
+      }
+      this.debugLogAlertsSample("alerts-working", workingAlerts);
+    }
+
+    if (!haveAlerts) {
       return createEmptyAlertsIndex();
+    }
+
+    if (shouldPersist) {
+      console.info(
+        "[DataManager] Persisting %d alerts to alerts.json",
+        workingAlerts.length,
+      );
+      void this.saveAlerts(workingAlerts);
+    }
+
+    return createAlertsIndexFromAlerts(workingAlerts);
+  }
+
+  async updateAlertStatus(
+    alertId: string,
+    updates: {
+      status?: AlertWorkflowStatus;
+      resolvedAt?: string | null;
+      resolutionNotes?: string;
+    },
+    options: { cases?: CaseDisplay[] } = {},
+  ): Promise<AlertWithMatch | null> {
+    const cases = options.cases ?? (await this.getAllCases());
+
+    let workingAlerts: AlertWithMatch[] = [];
+
+    try {
+      const storedJson = await this.fileService.readNamedFile(DataManager.ALERTS_JSON_NAME);
+      if (storedJson && Array.isArray(storedJson.alerts)) {
+        workingAlerts = this.rematchAlertsForCases(storedJson.alerts as AlertWithMatch[], cases);
+      }
+    } catch (error) {
+      this.reportStorageError("readData", error, {
+        fileName: DataManager.ALERTS_JSON_NAME,
+      });
+    }
+
+    if (workingAlerts.length === 0) {
+      try {
+        const csvContent = await this.fileService.readTextFile(DataManager.ALERTS_FILE_NAME);
+        if (csvContent) {
+          const parsed = this.parseAlertsWithFallback(csvContent, cases);
+          workingAlerts = parsed.alerts;
+        }
+      } catch (error) {
+        this.reportStorageError("readData", error, {
+          fileName: DataManager.ALERTS_FILE_NAME,
+        });
+      }
+    }
+
+    if (workingAlerts.length === 0) {
+      console.warn("[DataManager] No alerts available to update status for", alertId);
+      return null;
+    }
+
+    const targetIndex = workingAlerts.findIndex(alert => alert.id === alertId || alert.reportId === alertId);
+    if (targetIndex === -1) {
+      console.warn("[DataManager] Could not find alert to update", alertId);
+      return null;
+    }
+
+    const targetAlert = workingAlerts[targetIndex];
+    const nextStatus: AlertWorkflowStatus = updates.status ?? targetAlert.status ?? "new";
+    let nextResolvedAt: string | null =
+      updates.resolvedAt !== undefined ? updates.resolvedAt : targetAlert.resolvedAt ?? null;
+
+    if (nextStatus === "resolved" && !nextResolvedAt) {
+      nextResolvedAt = new Date().toISOString();
+    }
+
+    if (nextStatus !== "resolved" && updates.resolvedAt === undefined) {
+      nextResolvedAt = targetAlert.resolvedAt ?? null;
+    }
+
+    const updatedAlertBase: AlertWithMatch = {
+      ...targetAlert,
+      status: nextStatus,
+      resolvedAt: nextResolvedAt,
+      resolutionNotes: updates.resolutionNotes ?? targetAlert.resolutionNotes,
+      updatedAt: new Date().toISOString(),
+    };
+
+    const [rematchedAlert] = this.rematchAlertsForCases([updatedAlertBase], cases);
+    workingAlerts[targetIndex] = rematchedAlert;
+
+    await this.saveAlerts(workingAlerts);
+    return rematchedAlert;
+  }
+
+  async saveAlerts(alerts: AlertWithMatch[]): Promise<boolean> {
+    try {
+      const payload = {
+        updatedAt: new Date().toISOString(),
+        alerts,
+      };
+      console.info(
+        "[DataManager] Saving %d alerts to alerts.json",
+        alerts.length,
+      );
+  const success = await this.fileService.writeNamedFile(DataManager.ALERTS_JSON_NAME, payload);
+      if (!success) {
+        throw new Error("Alerts write operation failed");
+      }
+      console.info("[DataManager] Saved alerts.json successfully");
+      try {
+        if (typeof this.fileService.notifyDataChange === "function") {
+          this.fileService.notifyDataChange();
+        }
+      } catch (notifyError) {
+        console.warn("[DataManager] Failed to notify file storage change after saving alerts", notifyError);
+      }
+      return true;
+    } catch (error) {
+      this.reportStorageError("writeData", error, {
+        fileName: DataManager.ALERTS_JSON_NAME,
+      }, "We couldn’t save the alerts file. Try again after reconnecting.");
+      return false;
     }
   }
 
