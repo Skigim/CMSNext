@@ -197,6 +197,13 @@ export class DataManager {
     "snoozed",
     "resolved",
   ]);
+  private static readonly ALERT_WORKFLOW_PRIORITY: AlertWorkflowStatus[] = [
+    "new",
+    "in-progress",
+    "acknowledged",
+    "snoozed",
+    "resolved",
+  ];
 
   constructor(config: DataManagerConfig) {
     this.fileService = config.fileService;
@@ -461,15 +468,31 @@ export class DataManager {
 
     const metadataValue = Object.keys(mergedMetadata).length > 0 ? mergedMetadata : undefined;
 
+    const preferredStatus = this.selectPreferredWorkflowStatus(existing.status, incoming.status);
+    const existingResolvedAt = existing.resolvedAt ?? null;
+    const incomingResolvedAt = incoming.resolvedAt ?? null;
+
+    const resolvedAtForStatus = preferredStatus === "resolved"
+      ? existingResolvedAt ?? incomingResolvedAt ?? null
+      : (existing.status === preferredStatus && existingResolvedAt !== null
+        ? existingResolvedAt
+        : incoming.status === preferredStatus && incomingResolvedAt !== null
+          ? incomingResolvedAt
+          : null);
+
+    const resolutionNotesForStatus =
+      preferredStatus === existing.status && existing.resolutionNotes !== undefined
+        ? existing.resolutionNotes
+        : preferredStatus === incoming.status && incoming.resolutionNotes !== undefined
+          ? incoming.resolutionNotes
+          : existing.resolutionNotes ?? incoming.resolutionNotes;
+
     const merged: AlertWithMatch = {
       ...incoming,
       metadata: metadataValue,
-      status: existing.status ?? incoming.status ?? "new",
-      resolvedAt:
-        existing.resolvedAt !== undefined
-          ? existing.resolvedAt
-          : incoming.resolvedAt ?? null,
-      resolutionNotes: existing.resolutionNotes ?? incoming.resolutionNotes,
+      status: preferredStatus,
+      resolvedAt: resolvedAtForStatus,
+      resolutionNotes: resolutionNotesForStatus,
     };
 
     if (!merged.mcNumber && existing.mcNumber) {
@@ -626,6 +649,23 @@ export class DataManager {
     }
 
     return "new";
+  }
+
+  private selectPreferredWorkflowStatus(
+    existingStatus: AlertWorkflowStatus | null | undefined,
+    incomingStatus: AlertWorkflowStatus | null | undefined,
+  ): AlertWorkflowStatus {
+    const normalizedExisting = this.normalizeWorkflowStatus(existingStatus);
+    const normalizedIncoming = this.normalizeWorkflowStatus(incomingStatus);
+
+    if (normalizedExisting === normalizedIncoming) {
+      return normalizedExisting;
+    }
+
+    const existingPriority = DataManager.ALERT_WORKFLOW_PRIORITY.indexOf(normalizedExisting);
+    const incomingPriority = DataManager.ALERT_WORKFLOW_PRIORITY.indexOf(normalizedIncoming);
+
+    return incomingPriority > existingPriority ? normalizedIncoming : normalizedExisting;
   }
 
   private normalizeMatchStatus(value: unknown): AlertWithMatch["matchStatus"] {
