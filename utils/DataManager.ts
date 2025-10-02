@@ -337,7 +337,7 @@ export class DataManager {
 
     const legacyKey = this.alertLegacyKey(alert);
     if (legacyKey) {
-      addCandidate(legacyKey);
+      addCandidate(legacyKey, { fallback: true });
     }
 
     if (alert.metadata && typeof alert.metadata === "object") {
@@ -396,9 +396,31 @@ export class DataManager {
       return true;
     }
 
-  const incomingMcn = normalizeMcn(incoming.mcNumber ?? null);
-  const existingMcn = normalizeMcn(existing.mcNumber ?? null);
+    const incomingMcn = normalizeMcn(incoming.mcNumber ?? null);
+    const existingMcn = normalizeMcn(existing.mcNumber ?? null);
     if (incomingMcn && existingMcn && incomingMcn !== existingMcn) {
+      return false;
+    }
+
+    const normalizeText = (value: string | undefined): string | null =>
+      value && value.trim().length > 0 ? value.trim().toLowerCase() : null;
+
+    const incomingDescription = normalizeText(incoming.description);
+    const existingDescription = normalizeText(existing.description);
+    const descriptionsMatch =
+      incomingDescription !== null &&
+      existingDescription !== null &&
+      incomingDescription === existingDescription;
+
+    const incomingRawDescription = normalizeText(incoming.metadata?.rawDescription);
+    const existingRawDescription = normalizeText(existing.metadata?.rawDescription);
+    const rawDescriptionsMatch =
+      incomingRawDescription !== null &&
+      existingRawDescription !== null &&
+      incomingRawDescription === existingRawDescription;
+
+    const hasTextualMatch = descriptionsMatch || rawDescriptionsMatch;
+    if (!hasTextualMatch) {
       return false;
     }
 
@@ -417,23 +439,11 @@ export class DataManager {
 
     const incomingDate = normalizeDate(incoming.alertDate || incoming.updatedAt || incoming.createdAt);
     const existingDate = normalizeDate(existing.alertDate || existing.updatedAt || existing.createdAt);
+    const datesMatch = incomingDate !== null && existingDate !== null && incomingDate === existingDate;
 
-    if (incomingDate && existingDate && incomingDate === existingDate) {
-      return true;
-    }
+    const mcnMatches = incomingMcn !== null && existingMcn !== null && incomingMcn === existingMcn;
 
-    const normalizeText = (value: string | undefined): string | null =>
-      value && value.trim().length > 0 ? value.trim().toLowerCase() : null;
-
-    const incomingDescription = normalizeText(incoming.description);
-    const existingDescription = normalizeText(existing.description);
-    if (incomingDescription && existingDescription && incomingDescription === existingDescription) {
-      return true;
-    }
-
-    const incomingRawDescription = normalizeText(incoming.metadata?.rawDescription);
-    const existingRawDescription = normalizeText(existing.metadata?.rawDescription);
-    if (incomingRawDescription && existingRawDescription && incomingRawDescription === existingRawDescription) {
+    if (datesMatch || mcnMatches) {
       return true;
     }
 

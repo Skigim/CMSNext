@@ -420,6 +420,68 @@ describe('DataManager', () => {
       expect(persistedSecond?.resolutionNotes).toBe('Awaiting paperwork')
     })
 
+    it('does not collapse stacked alerts that share a date but differ in description', async () => {
+      const mockCase = createMockCaseDisplay({
+        id: 'case-stacked-date',
+        mcn: '3333',
+        caseRecord: createMockCaseRecord({ id: 'record-stacked-date', mcn: '3333' }),
+      })
+
+      const stackedAlerts: AlertWithMatch[] = [
+        buildAlert({
+          id: 'stacked-date-1',
+          reportId: 'AL-STACK-DATE',
+          alertDate: '2025-09-30T00:00:00.000Z',
+          description: 'Follow up with client',
+          metadata: { rawDescription: 'Follow up with client' },
+          mcNumber: '3333',
+          matchedCaseId: mockCase.id,
+          matchedCaseName: `${mockCase.person.firstName} ${mockCase.person.lastName}`,
+          matchStatus: 'matched',
+          status: 'new',
+          updatedAt: '2025-09-30T00:00:00.000Z',
+        }),
+        buildAlert({
+          id: 'stacked-date-2',
+          reportId: 'AL-STACK-DATE',
+          alertDate: '2025-09-30T00:00:00.000Z',
+          description: 'Verify documentation received',
+          metadata: { rawDescription: 'Verify documentation received' },
+          mcNumber: '3333',
+          matchedCaseId: mockCase.id,
+          matchedCaseName: `${mockCase.person.firstName} ${mockCase.person.lastName}`,
+          matchStatus: 'matched',
+          status: 'new',
+          updatedAt: '2025-09-30T00:00:00.000Z',
+        }),
+      ]
+
+      const stackedIndex = alertsData.createAlertsIndexFromAlerts(stackedAlerts)
+      vi.spyOn(alertsData, 'parseStackedAlerts').mockReturnValueOnce(stackedIndex)
+
+      mockAutosaveService.readTextFile.mockResolvedValueOnce('csv-content')
+
+      const result = await dataManager.mergeAlertsFromCsvContent('csv-content', {
+        cases: [mockCase],
+        sourceFileName: 'alerts.csv',
+      })
+      await Promise.resolve()
+
+      expect(result.total).toBe(2)
+
+      const writeCall = mockAutosaveService.writeNamedFile.mock.calls.at(-1)
+      expect(writeCall).toBeDefined()
+
+      const persistedPayload = writeCall?.[1] as { alerts?: AlertWithMatch[] } | undefined
+      expect(persistedPayload?.alerts).toHaveLength(2)
+      expect(persistedPayload?.alerts?.map(alert => alert.description)).toEqual(
+        expect.arrayContaining([
+          'Follow up with client',
+          'Verify documentation received',
+        ]),
+      )
+    })
+
     it('updates alert status and persists changes to alerts.json', async () => {
       const mockCase = createMockCaseDisplay({ id: 'case-update', mcn: '5555', caseRecord: createMockCaseRecord({ id: 'record-update', mcn: '5555' }) })
 
@@ -486,6 +548,7 @@ describe('DataManager', () => {
         status: 'resolved',
         resolvedAt: '2025-09-20T12:00:00.000Z',
         resolutionNotes: 'Completed outreach',
+        metadata: { rawDescription: 'Client follow-up required' },
       })
 
       mockAutosaveService.readNamedFile.mockResolvedValueOnce({
@@ -515,6 +578,7 @@ describe('DataManager', () => {
         status: 'new',
         resolvedAt: null,
         resolutionNotes: undefined,
+        metadata: { rawDescription: 'Client follow-up required' },
       })
 
       const incomingNew = buildAlert({
