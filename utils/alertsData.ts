@@ -85,7 +85,7 @@ function createRandomAlertId(): string {
   return `alert-${Math.random().toString(36).slice(2, 10)}`;
 }
 
-function normalizeMcn(rawMcn: string | undefined | null): string {
+export function normalizeMcn(rawMcn: string | undefined | null): string {
   if (!rawMcn) {
     return "";
   }

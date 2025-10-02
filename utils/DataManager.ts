@@ -28,6 +28,7 @@ import {
   createAlertsIndexFromAlerts,
   createEmptyAlertsIndex,
   buildAlertStorageKey,
+  normalizeMcn,
   parseStackedAlerts,
 } from "./alertsData";
 
@@ -202,20 +203,12 @@ export class DataManager {
     this.persistNormalizationFixes = config.persistNormalizationFixes ?? true;
   }
 
-  private normalizeMcn(value: string | null | undefined): string {
-    if (!value) {
-      return "";
-    }
-
-    return value.replace(/[^a-z0-9]/gi, "").trim().toUpperCase();
-  }
-
   private buildCaseLookup(cases: CaseDisplay[]): Map<string, CaseDisplay> {
     const lookup = new Map<string, CaseDisplay>();
 
     cases.forEach(caseItem => {
       const mcn = caseItem.caseRecord?.mcn ?? caseItem.mcn;
-      const normalized = this.normalizeMcn(mcn);
+      const normalized = normalizeMcn(mcn);
       if (!normalized || lookup.has(normalized)) {
         return;
       }
@@ -231,7 +224,7 @@ export class DataManager {
       return alert;
     }
 
-    const normalizedMcn = this.normalizeMcn(alert.mcNumber ?? null);
+  const normalizedMcn = normalizeMcn(alert.mcNumber ?? null);
     const matchedCase = normalizedMcn ? lookup.get(normalizedMcn) : undefined;
 
     if (!matchedCase) {
@@ -403,8 +396,8 @@ export class DataManager {
       return true;
     }
 
-    const incomingMcn = this.normalizeMcn(incoming.mcNumber ?? null);
-    const existingMcn = this.normalizeMcn(existing.mcNumber ?? null);
+  const incomingMcn = normalizeMcn(incoming.mcNumber ?? null);
+  const existingMcn = normalizeMcn(existing.mcNumber ?? null);
     if (incomingMcn && existingMcn && incomingMcn !== existingMcn) {
       return false;
     }
