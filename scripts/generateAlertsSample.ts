@@ -1,7 +1,7 @@
-import { readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { parseStackedAlerts } from '../utils/alertsData';
+import { createAlertsIndexFromAlerts, parseStackedAlerts } from '../utils/alertsData';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -10,45 +10,27 @@ function main() {
   const projectRoot = path.resolve(__dirname, '..');
   const csvPath = path.resolve(projectRoot, 'Alerts.csv');
 
-  let csvContent: string;
-  try {
-    csvContent = readFileSync(csvPath, 'utf8');
-  } catch (error) {
-    console.error(`[generateAlertsSample] Failed to read Alerts.csv at ${csvPath}`);
-    throw error;
+  if (!existsSync(csvPath)) {
+    console.error(`[generateAlertsSample] Alerts.csv not found at ${csvPath}.`);
+    console.error('Provide a stacked alerts export to regenerate sample-alerts.json.');
+    process.exitCode = 1;
+    return;
   }
+
+  const csvContent = readFileSync(csvPath, 'utf8');
 
   const parsed = parseStackedAlerts(csvContent, []);
-  const uniqueById = new Map<string, typeof parsed.alerts[number]>();
-
-  for (const alert of parsed.alerts) {
-    if (!uniqueById.has(alert.id)) {
-      uniqueById.set(alert.id, alert);
-    }
-  }
+  const index = createAlertsIndexFromAlerts(parsed.alerts);
+  const timestamp = new Date().toISOString();
 
   const samplePayload = {
-    generatedAt: new Date().toISOString(),
+    version: 3,
+    generatedAt: timestamp,
+    updatedAt: timestamp,
     sourceFile: path.basename(csvPath),
-    summary: parsed.summary,
-    uniqueAlerts: uniqueById.size,
-    alerts: Array.from(uniqueById.values()).map(alert => ({
-      id: alert.id,
-      reportId: alert.reportId ?? null,
-      alertCode: alert.alertCode,
-      alertType: alert.alertType,
-      severity: alert.severity,
-      alertDate: alert.alertDate,
-      personName: alert.personName,
-      program: alert.program,
-      description: alert.description,
-      mcNumber: alert.mcNumber,
-      matchStatus: alert.matchStatus,
-      status: alert.status,
-      resolvedAt: alert.resolvedAt ?? null,
-      resolutionNotes: alert.resolutionNotes ?? null,
-      metadata: alert.metadata,
-    })),
+    summary: index.summary,
+    uniqueAlerts: new Set(index.alerts.map(alert => alert.id ?? alert.reportId ?? '')).size,
+    alerts: index.alerts,
   };
 
   const outputPath = path.resolve(projectRoot, 'sample-alerts.json');

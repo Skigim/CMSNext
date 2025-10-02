@@ -22,6 +22,7 @@ import {
 } from "../types/categoryConfig";
 import {
   AlertsIndex,
+  AlertsSummary,
   AlertWithMatch,
   createAlertsIndexFromAlerts,
   createEmptyAlertsIndex,
@@ -47,6 +48,14 @@ interface StoredAlertWorkflowState {
   resolutionNotes?: string;
   updatedAt?: string | null;
   firstSeenAt?: string | null;
+}
+
+interface LoadAlertsResult {
+  alerts: AlertWithMatch[] | null;
+  legacyWorkflows: StoredAlertWorkflowState[];
+  needsMigration: boolean;
+  invalidJson: boolean;
+  sourceFile?: string;
 }
 
 /**
@@ -159,7 +168,19 @@ export class DataManager {
   private static readonly ERROR_SOURCE = "DataManager";
   private static readonly ALERTS_FILE_NAME = "alerts.csv";
   private static readonly ALERTS_JSON_NAME = "alerts.json";
-  private static readonly ALERTS_STORAGE_VERSION = 2;
+  private static readonly ALERTS_STORAGE_VERSION = 3;
+  private static readonly ALERT_MATCH_STATUS_SET = new Set<AlertWithMatch["matchStatus"]>([
+    "matched",
+    "unmatched",
+    "missing-mcn",
+  ]);
+  private static readonly ALERT_WORKFLOW_STATUS_SET = new Set<AlertWorkflowStatus>([
+    "new",
+    "in-progress",
+    "acknowledged",
+    "snoozed",
+    "resolved",
+  ]);
 
   constructor(config: DataManagerConfig) {
     this.fileService = config.fileService;
@@ -316,6 +337,203 @@ export class DataManager {
     return keys.size;
   }
 
+  private normalizeWorkflowStatus(value: unknown): AlertWorkflowStatus {
+    if (typeof value === "string") {
+      const normalized = value.trim().toLowerCase() as AlertWorkflowStatus;
+      if (DataManager.ALERT_WORKFLOW_STATUS_SET.has(normalized)) {
+        return normalized;
+      }
+    }
+
+    return "new";
+  }
+
+  private normalizeMatchStatus(value: unknown): AlertWithMatch["matchStatus"] {
+    if (typeof value === "string") {
+      const normalized = value.trim().toLowerCase() as AlertWithMatch["matchStatus"];
+      if (DataManager.ALERT_MATCH_STATUS_SET.has(normalized)) {
+        return normalized;
+      }
+    }
+
+    return "unmatched";
+  }
+
+  private hydrateStoredAlert(entry: unknown): AlertWithMatch | null {
+    if (!entry || typeof entry !== "object") {
+      return null;
+    }
+
+    const raw = entry as Record<string, unknown>;
+    const idCandidate = typeof raw.id === "string" ? raw.id.trim() : "";
+    const reportIdCandidate = typeof raw.reportId === "string" ? raw.reportId.trim() : "";
+    const alertId = idCandidate || reportIdCandidate;
+    if (!alertId) {
+      return null;
+    }
+
+    const severity = typeof raw.severity === "string"
+      ? (raw.severity as AlertWithMatch["severity"])
+      : "Info";
+
+    const alert: AlertWithMatch = {
+      id: alertId,
+      reportId: reportIdCandidate || undefined,
+      alertCode: typeof raw.alertCode === "string" ? raw.alertCode : "",
+      alertType: typeof raw.alertType === "string" ? raw.alertType : "",
+      severity,
+      alertDate: typeof raw.alertDate === "string" ? raw.alertDate : "",
+      createdAt: typeof raw.createdAt === "string" ? raw.createdAt : "",
+      updatedAt: typeof raw.updatedAt === "string" ? raw.updatedAt : "",
+      mcNumber:
+        raw.mcNumber === null || typeof raw.mcNumber === "string"
+          ? (raw.mcNumber as string | null | undefined)
+          : undefined,
+      personName: typeof raw.personName === "string" ? raw.personName : undefined,
+      program: typeof raw.program === "string" ? raw.program : undefined,
+      region: typeof raw.region === "string" ? raw.region : undefined,
+      state: typeof raw.state === "string" ? raw.state : undefined,
+      source: typeof raw.source === "string" ? raw.source : undefined,
+      description: typeof raw.description === "string" ? raw.description : undefined,
+      status: this.normalizeWorkflowStatus(raw.status),
+      resolvedAt:
+        raw.resolvedAt === null || typeof raw.resolvedAt === "string"
+          ? (raw.resolvedAt as string | null | undefined)
+          : undefined,
+      resolutionNotes: typeof raw.resolutionNotes === "string" ? raw.resolutionNotes : undefined,
+      metadata:
+        typeof raw.metadata === "object" && raw.metadata !== null
+          ? (raw.metadata as Record<string, string | undefined>)
+          : undefined,
+      matchStatus: this.normalizeMatchStatus(raw.matchStatus),
+      matchedCaseId: typeof raw.matchedCaseId === "string" ? raw.matchedCaseId : undefined,
+      matchedCaseName: typeof raw.matchedCaseName === "string" ? raw.matchedCaseName : undefined,
+      matchedCaseStatus: typeof raw.matchedCaseStatus === "string" ? raw.matchedCaseStatus : undefined,
+    };
+
+    return alert;
+  }
+
+  private haveAlertsChanged(original: AlertWithMatch[], updated: AlertWithMatch[]): boolean {
+    if (original.length !== updated.length) {
+      return true;
+    }
+
+    const originalMap = new Map<string, AlertWithMatch>();
+    original.forEach(alert => {
+      originalMap.set(this.alertKey(alert), alert);
+    });
+
+    for (const alert of updated) {
+      const key = this.alertKey(alert);
+      const previous = originalMap.get(key);
+      if (!previous || !this.alertsAreEqual(previous, alert)) {
+        return true;
+      }
+      originalMap.delete(key);
+    }
+
+    return originalMap.size > 0;
+  }
+
+  private async loadAlertsFromStore(): Promise<LoadAlertsResult> {
+    try {
+      const payload = await this.fileService.readNamedFile(DataManager.ALERTS_JSON_NAME);
+      if (!payload) {
+        return {
+          alerts: null,
+          legacyWorkflows: [],
+          needsMigration: false,
+          invalidJson: false,
+        };
+      }
+
+      if (typeof payload !== "object" || payload === null) {
+        return {
+          alerts: null,
+          legacyWorkflows: [],
+          needsMigration: true,
+          invalidJson: false,
+        };
+      }
+
+      const root = payload as Record<string, unknown>;
+      const version = typeof root.version === "number" ? root.version : 1;
+      const sourceFile = typeof root.sourceFile === "string" ? root.sourceFile : undefined;
+
+      if (version >= DataManager.ALERTS_STORAGE_VERSION) {
+        if (!Array.isArray(root.alerts)) {
+          return {
+            alerts: null,
+            legacyWorkflows: [],
+            needsMigration: true,
+            invalidJson: false,
+            sourceFile,
+          };
+        }
+
+        const hydratedAlerts = (root.alerts as unknown[])
+          .map(entry => this.hydrateStoredAlert(entry))
+          .filter((alert): alert is AlertWithMatch => alert !== null);
+
+        return {
+          alerts: hydratedAlerts,
+          legacyWorkflows: [],
+          needsMigration: false,
+          invalidJson: false,
+          sourceFile,
+        };
+      }
+
+      const { workflows, needsMigration } = this.parseStoredAlertsPayload(root);
+      return {
+        alerts: null,
+        legacyWorkflows: workflows,
+        needsMigration: needsMigration || version < DataManager.ALERTS_STORAGE_VERSION,
+        invalidJson: false,
+        sourceFile,
+      };
+    } catch (error) {
+      if (error instanceof SyntaxError || (error as Error)?.name === "SyntaxError") {
+        console.warn("[DataManager] alerts.json contained invalid JSON and will be rebuilt", error);
+        return {
+          alerts: null,
+          legacyWorkflows: [],
+          needsMigration: true,
+          invalidJson: true,
+        };
+      }
+
+      this.reportStorageError("readData", error, {
+        fileName: DataManager.ALERTS_JSON_NAME,
+      }, "We couldn’t load saved alerts. Reconnect and try again.");
+
+      return {
+        alerts: null,
+        legacyWorkflows: [],
+        needsMigration: false,
+        invalidJson: false,
+      };
+    }
+  }
+
+  private async importAlertsFromCsv(cases: CaseDisplay[]): Promise<{ alerts: AlertWithMatch[]; sourceFile?: string }> {
+    try {
+      const csvContent = await this.fileService.readTextFile(DataManager.ALERTS_FILE_NAME);
+      if (!csvContent) {
+        return { alerts: [], sourceFile: DataManager.ALERTS_FILE_NAME };
+      }
+
+      const parsed = this.parseAlertsWithFallback(csvContent, cases);
+      return { alerts: parsed.alerts, sourceFile: DataManager.ALERTS_FILE_NAME };
+    } catch (error) {
+      this.reportStorageError("readData", error, {
+        fileName: DataManager.ALERTS_FILE_NAME,
+      }, "We couldn’t read the alerts file. Reconnect and try again.");
+      return { alerts: [], sourceFile: DataManager.ALERTS_FILE_NAME };
+    }
+  }
+
   private normalizeStoredAlertEntry(entry: unknown): {
     workflow: StoredAlertWorkflowState | null;
     legacy: boolean;
@@ -461,54 +679,6 @@ export class DataManager {
     });
 
     return { alerts: updatedAlerts, changed, unmatchedIds: [...storedMap.keys()] };
-  }
-
-  private serializeStoredAlert(
-    alert: AlertWithMatch,
-    options: { forceSnapshot?: boolean } = {},
-  ): StoredAlertWorkflowState | null {
-    const alertId = this.alertKey(alert);
-    if (!alertId) {
-      return null;
-    }
-
-    const entry: StoredAlertWorkflowState = { alertId };
-    const forceSnapshot = options.forceSnapshot === true;
-
-    if (alert.status && (alert.status !== "new" || forceSnapshot)) {
-      entry.status = alert.status;
-    } else if (forceSnapshot) {
-      entry.status = alert.status ?? "new";
-    }
-
-    if (alert.resolvedAt) {
-      entry.resolvedAt = alert.resolvedAt;
-    }
-
-    if (alert.resolutionNotes && alert.resolutionNotes.trim().length > 0) {
-      entry.resolutionNotes = alert.resolutionNotes;
-    }
-
-    const snapshotUpdatedAt = alert.updatedAt || alert.createdAt || alert.alertDate || null;
-
-    if (snapshotUpdatedAt && snapshotUpdatedAt.trim().length > 0) {
-      if (forceSnapshot) {
-        entry.updatedAt = snapshotUpdatedAt;
-      } else if (alert.updatedAt && alert.updatedAt.trim().length > 0 && alert.updatedAt !== alert.createdAt) {
-        entry.updatedAt = alert.updatedAt;
-      }
-    }
-
-    const snapshotFirstSeen = alert.alertDate || alert.createdAt || null;
-    if (forceSnapshot && snapshotFirstSeen && snapshotFirstSeen.trim().length > 0) {
-      entry.firstSeenAt = snapshotFirstSeen;
-    }
-
-    if (!forceSnapshot && Object.keys(entry).length <= 1) {
-      return null;
-    }
-
-    return entry;
   }
 
   private parseAlertsWithFallback(csvContent: string, cases: CaseDisplay[]): AlertsIndex {
@@ -729,91 +899,55 @@ export class DataManager {
 
   async getAlertsIndex(options: { cases?: CaseDisplay[] } = {}): Promise<AlertsIndex> {
     const cases = options.cases ?? (await this.getAllCases());
-    let storedWorkflows: StoredAlertWorkflowState[] = [];
-    let needsMigration = false;
-    let storedWorkflowReadIssue: "invalid-json" | null = null;
 
-    try {
-      const storedJson = await this.fileService.readNamedFile(DataManager.ALERTS_JSON_NAME);
-      if (storedJson && typeof storedJson === "object") {
-        const parsed = this.parseStoredAlertsPayload(storedJson);
-        storedWorkflows = parsed.workflows;
-        needsMigration = parsed.needsMigration;
-        if (storedWorkflows.length > 0) {
-          console.info(
-            "[DataManager] Loaded %d stored alert workflow entries",
-            storedWorkflows.length,
-          );
+    const loadResult = await this.loadAlertsFromStore();
+    let alerts = loadResult.alerts ?? [];
+    let shouldPersist = loadResult.needsMigration || loadResult.invalidJson;
+    let sourceFile = loadResult.sourceFile;
+
+    if (alerts.length === 0) {
+      const imported = await this.importAlertsFromCsv(cases);
+      alerts = imported.alerts;
+      sourceFile = imported.sourceFile ?? sourceFile;
+
+      if (alerts.length === 0) {
+        if (shouldPersist) {
+          const emptyIndex = createAlertsIndexFromAlerts([]);
+          void this.saveAlerts(emptyIndex.alerts, emptyIndex.summary, { sourceFile });
+        }
+        return createEmptyAlertsIndex();
+      }
+
+      if (loadResult.legacyWorkflows.length > 0) {
+        const applied = this.applyStoredAlertWorkflows(alerts, loadResult.legacyWorkflows);
+        alerts = applied.alerts;
+        if (applied.changed || applied.unmatchedIds.length > 0) {
+          shouldPersist = true;
         }
       }
-    } catch (error) {
-      if (error instanceof SyntaxError || (error as Error)?.name === "SyntaxError") {
-        console.warn(
-          "[DataManager] alerts.json contained invalid JSON and will be rebuilt",
-          error,
-        );
-        storedWorkflows = [];
-        needsMigration = true;
-        storedWorkflowReadIssue = "invalid-json";
-      } else {
-        this.reportStorageError("readData", error, {
-          fileName: DataManager.ALERTS_JSON_NAME,
-        }, "We couldn’t load saved alerts. Reconnect and try again.");
-      }
+
+      shouldPersist = true;
     }
 
-    let parsedCsvAlerts: AlertWithMatch[] = [];
-    try {
-      const csvContent = await this.fileService.readTextFile(DataManager.ALERTS_FILE_NAME);
-      if (csvContent) {
-        const parsed = this.parseAlertsWithFallback(csvContent, cases);
-        parsedCsvAlerts = parsed.alerts;
-        this.debugLogAlertsSample("csv-parsed", parsedCsvAlerts);
-        console.info(
-          "[DataManager] Parsed %d alerts from alerts.csv",
-          parsedCsvAlerts.length,
-        );
-      }
-    } catch (error) {
-      this.reportStorageError("readData", error, {
-        fileName: DataManager.ALERTS_FILE_NAME,
-      }, "We couldn’t read the alerts file. Reconnect and try again.");
+    const originalAlerts = alerts;
+    const rematchedAlerts = this.rematchAlertsForCases(alerts, cases);
+    const index = createAlertsIndexFromAlerts(rematchedAlerts);
+
+    this.debugLogAlertsSample("alerts-active", index.alerts);
+
+    if (!shouldPersist && this.haveAlertsChanged(originalAlerts, rematchedAlerts)) {
+      shouldPersist = true;
     }
-
-    if (parsedCsvAlerts.length === 0) {
-      if ((needsMigration || storedWorkflowReadIssue) && storedWorkflows.length === 0) {
-        void this.saveAlerts([]);
-      }
-      return createEmptyAlertsIndex();
-    }
-
-    let workingAlerts = this.rematchAlertsForCases(parsedCsvAlerts, cases);
-    const applied = this.applyStoredAlertWorkflows(workingAlerts, storedWorkflows);
-    workingAlerts = applied.alerts;
-
-    this.debugLogAlertsSample("alerts-working", workingAlerts);
-
-    const shouldPersist =
-      needsMigration ||
-      storedWorkflowReadIssue === "invalid-json" ||
-      applied.changed ||
-      (storedWorkflows.length > 0 && applied.unmatchedIds.length > 0);
 
     if (shouldPersist) {
       console.info(
         "[DataManager] Persisting %d alerts to alerts.json",
-        workingAlerts.length,
+        index.alerts.length,
       );
-      void this.saveAlerts(workingAlerts, {
-        forceSnapshot: storedWorkflowReadIssue === "invalid-json",
-      });
+      void this.saveAlerts(index.alerts, index.summary, { sourceFile });
     }
 
-    if (workingAlerts.length === 0) {
-      return createEmptyAlertsIndex();
-    }
-
-    return createAlertsIndexFromAlerts(workingAlerts);
+    return index;
   }
 
   async updateAlertStatus(
@@ -827,57 +961,33 @@ export class DataManager {
   ): Promise<AlertWithMatch | null> {
     const cases = options.cases ?? (await this.getAllCases());
 
-    let storedWorkflows: StoredAlertWorkflowState[] = [];
-    let storedWorkflowReadIssue: "invalid-json" | null = null;
-    try {
-      const storedJson = await this.fileService.readNamedFile(DataManager.ALERTS_JSON_NAME);
-      if (storedJson && typeof storedJson === "object") {
-        const parsedStored = this.parseStoredAlertsPayload(storedJson);
-        storedWorkflows = parsedStored.workflows;
+    const loadResult = await this.loadAlertsFromStore();
+    let alerts = loadResult.alerts ?? [];
+    let sourceFile = loadResult.sourceFile;
+
+    if (alerts.length === 0) {
+      const imported = await this.importAlertsFromCsv(cases);
+      alerts = imported.alerts;
+      sourceFile = imported.sourceFile ?? sourceFile;
+
+      if (alerts.length === 0) {
+        console.warn("[DataManager] No alerts available to update status for", alertId);
+        return null;
       }
-    } catch (error) {
-      if (error instanceof SyntaxError || (error as Error)?.name === "SyntaxError") {
-        console.warn(
-          "[DataManager] alerts.json contained invalid JSON before updating alert status; rebuilding",
-          error,
-        );
-        storedWorkflows = [];
-        storedWorkflowReadIssue = "invalid-json";
-      } else {
-        this.reportStorageError("readData", error, {
-          fileName: DataManager.ALERTS_JSON_NAME,
-        });
+
+      if (loadResult.legacyWorkflows.length > 0) {
+        const applied = this.applyStoredAlertWorkflows(alerts, loadResult.legacyWorkflows);
+        alerts = applied.alerts;
       }
     }
 
-    let workingAlerts: AlertWithMatch[] = [];
-    try {
-      const csvContent = await this.fileService.readTextFile(DataManager.ALERTS_FILE_NAME);
-      if (csvContent) {
-        const parsed = this.parseAlertsWithFallback(csvContent, cases);
-        workingAlerts = parsed.alerts;
-      }
-    } catch (error) {
-      this.reportStorageError("readData", error, {
-        fileName: DataManager.ALERTS_FILE_NAME,
-      });
-    }
-
-    if (workingAlerts.length === 0) {
-      console.warn("[DataManager] No alerts available to update status for", alertId);
-      return null;
-    }
-
-    const applied = this.applyStoredAlertWorkflows(workingAlerts, storedWorkflows);
-    workingAlerts = applied.alerts;
-
-    const targetIndex = workingAlerts.findIndex(alert => alert.id === alertId || alert.reportId === alertId);
+    const targetIndex = alerts.findIndex(alert => alert.id === alertId || alert.reportId === alertId);
     if (targetIndex === -1) {
       console.warn("[DataManager] Could not find alert to update", alertId);
       return null;
     }
 
-    const targetAlert = workingAlerts[targetIndex];
+    const targetAlert = alerts[targetIndex];
     const nextStatus: AlertWorkflowStatus = updates.status ?? targetAlert.status ?? "new";
     let nextResolvedAt: string | null =
       updates.resolvedAt !== undefined ? updates.resolvedAt : targetAlert.resolvedAt ?? null;
@@ -898,45 +1008,53 @@ export class DataManager {
       updatedAt: new Date().toISOString(),
     };
 
-    const [rematchedAlert] = this.rematchAlertsForCases([updatedAlertBase], cases);
-    workingAlerts[targetIndex] = rematchedAlert;
+    alerts[targetIndex] = updatedAlertBase;
 
-    if (storedWorkflowReadIssue === "invalid-json") {
-      console.info("[DataManager] Rewriting alerts.json after recovering from invalid JSON");
-    }
+    const rematchedAlerts = this.rematchAlertsForCases(alerts, cases);
+    const index = createAlertsIndexFromAlerts(rematchedAlerts);
 
-    await this.saveAlerts(workingAlerts);
-    return rematchedAlert;
+    await this.saveAlerts(index.alerts, index.summary, { sourceFile });
+
+    const updatedAlertKey = this.alertKey(updatedAlertBase);
+    const rematchedAlert = rematchedAlerts.find(alert => this.alertKey(alert) === updatedAlertKey);
+    return rematchedAlert ?? null;
   }
 
-  async saveAlerts(alerts: AlertWithMatch[], options: { forceSnapshot?: boolean } = {}): Promise<boolean> {
+  async saveAlerts(
+    alerts: AlertWithMatch[],
+    summary?: AlertsSummary,
+    options: { sourceFile?: string } = {},
+  ): Promise<boolean> {
     try {
-      const storedAlerts = alerts
-        .map(alert => this.serializeStoredAlert(alert, options))
-        .filter((entry): entry is StoredAlertWorkflowState => entry !== null);
+      const now = new Date().toISOString();
+      const index = summary
+        ? { alerts, summary }
+        : createAlertsIndexFromAlerts(alerts);
 
-      const alertsById = new Map<string, StoredAlertWorkflowState>();
-      storedAlerts.forEach(entry => {
-        const existing = alertsById.get(entry.alertId);
-        alertsById.set(entry.alertId, existing ? { ...existing, ...entry } : entry);
-      });
-
-      const dedupedAlerts = Array.from(alertsById.values());
-
-      const payload = {
+      const normalizedAlerts = index.alerts;
+      const payload: Record<string, unknown> = {
         version: DataManager.ALERTS_STORAGE_VERSION,
-        updatedAt: new Date().toISOString(),
-        alerts: dedupedAlerts,
+        generatedAt: now,
+        updatedAt: now,
+        summary: index.summary,
+        alerts: normalizedAlerts,
+        uniqueAlerts: this.countUniqueAlertKeys(normalizedAlerts),
       };
+
+      if (options.sourceFile) {
+        payload.sourceFile = options.sourceFile;
+      }
+
       console.info(
-        "[DataManager] Saving %d alert workflow entries to alerts.json",
-        storedAlerts.length,
+        "[DataManager] Saving %d alerts to alerts.json",
+        normalizedAlerts.length,
       );
+
       const success = await this.fileService.writeNamedFile(DataManager.ALERTS_JSON_NAME, payload);
       if (!success) {
         throw new Error("Alerts write operation failed");
       }
-      console.info("[DataManager] Saved alerts.json successfully");
+
       try {
         if (typeof this.fileService.notifyDataChange === "function") {
           this.fileService.notifyDataChange();
@@ -944,6 +1062,7 @@ export class DataManager {
       } catch (notifyError) {
         console.warn("[DataManager] Failed to notify file storage change after saving alerts", notifyError);
       }
+
       return true;
     } catch (error) {
       this.reportStorageError("writeData", error, {

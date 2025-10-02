@@ -186,57 +186,45 @@ describe('DataManager', () => {
 
   describe('alerts storage', () => {
     afterEach(() => {
-  mockAutosaveService.readNamedFile.mockResolvedValue(null)
-  mockAutosaveService.readTextFile.mockResolvedValue(null)
-  mockAutosaveService.writeNamedFile.mockResolvedValue(true)
+      mockAutosaveService.readNamedFile.mockResolvedValue(null)
+      mockAutosaveService.readTextFile.mockResolvedValue(null)
+      mockAutosaveService.writeNamedFile.mockResolvedValue(true)
     })
 
-    it('applies stored workflow state when alerts.json exists', async () => {
-      const mockCase = createMockCaseDisplay({
-        id: 'case-workflow',
-        mcn: '1111',
-        caseRecord: createMockCaseRecord({ id: 'record-workflow', mcn: '1111' })
+    it('loads alerts from json store when available', async () => {
+      const alert = buildAlert({ status: 'resolved', resolvedAt: '2025-09-30T00:00:00.000Z' })
+      mockAutosaveService.readNamedFile.mockResolvedValue({
+        version: 3,
+        generatedAt: '2025-09-30T00:00:00.000Z',
+        summary: {
+          total: 1,
+          matched: 1,
+          unmatched: 0,
+          missingMcn: 0,
+          latestUpdated: '2025-09-30T00:00:00.000Z',
+        },
+        alerts: [alert],
+        uniqueAlerts: 1,
       })
 
-      const csvAlert = buildAlert({
-        id: 'alert-workflow',
-        reportId: 'alert-workflow',
-        mcNumber: '1111',
-        matchedCaseId: 'case-workflow',
-        matchStatus: 'matched',
-        status: 'new',
-        resolvedAt: null,
-      })
-
-      const stackedIndex = alertsData.createAlertsIndexFromAlerts([csvAlert])
-      vi.spyOn(alertsData, 'parseStackedAlerts').mockReturnValueOnce(stackedIndex)
-
-      mockAutosaveService.readNamedFile.mockResolvedValueOnce({
-        version: 1,
-        alerts: [
-          {
-            alertId: 'alert-workflow',
-            status: 'resolved',
-            resolvedAt: '2025-10-01T00:00:00.000Z',
-            resolutionNotes: 'Verified manually',
-          }
-        ],
-        updatedAt: '2025-10-01T12:00:00.000Z'
-      })
-      mockAutosaveService.readTextFile.mockResolvedValueOnce('csv-content')
-
-      const index = await dataManager.getAlertsIndex({ cases: [mockCase] })
+      const index = await dataManager.getAlertsIndex({ cases: [] })
 
       expect(index.summary.total).toBe(1)
-      expect(index.alerts[0].id).toBe('alert-workflow')
-      expect(index.alerts[0].status).toBe('resolved')
-      expect(index.alerts[0].resolvedAt).toBe('2025-10-01T00:00:00.000Z')
-      expect(index.alerts[0].resolutionNotes).toBe('Verified manually')
+      expect(index.alerts[0].id).toBe(alert.id)
       expect(mockAutosaveService.readNamedFile).toHaveBeenCalledWith('alerts.json')
-      expect(mockAutosaveService.readTextFile).toHaveBeenCalledWith('alerts.csv')
+      expect(mockAutosaveService.readTextFile).not.toHaveBeenCalled()
+      expect(mockAutosaveService.writeNamedFile).toHaveBeenCalledWith(
+        'alerts.json',
+        expect.objectContaining({
+          version: 3,
+          alerts: expect.arrayContaining([
+            expect.objectContaining({ id: alert.id }),
+          ]),
+        }),
+      )
     })
 
-    it('falls back to csv data when json missing', async () => {
+    it('imports csv when json snapshot missing', async () => {
       const mockCase = createMockCaseDisplay({
         id: 'case-1',
         mcn: '12345',
@@ -246,15 +234,25 @@ describe('DataManager', () => {
       mockAutosaveService.readTextFile.mockResolvedValueOnce(sampleCsv)
 
       const index = await dataManager.getAlertsIndex({ cases: [mockCase] })
-
       await Promise.resolve()
 
       expect(index.summary.total).toBe(1)
       expect(index.summary.matched).toBe(1)
-      expect(index.alerts[0].alertDate).toBe('2025-09-22T00:00:00.000Z')
-      expect(index.alerts[0].createdAt).toBe('2025-09-22T00:00:00.000Z')
-      expect(index.alerts[0].updatedAt).toBe('2025-09-22T00:00:00.000Z')
-      expect(mockAutosaveService.writeNamedFile).not.toHaveBeenCalled()
+      expect(mockAutosaveService.writeNamedFile).toHaveBeenCalledWith(
+        'alerts.json',
+        expect.objectContaining({
+          version: 3,
+          summary: expect.objectContaining({ total: 1, matched: 1 }),
+          alerts: expect.arrayContaining([
+            expect.objectContaining({
+              alertType: 'WRKRM',
+              status: 'new',
+              mcNumber: '12345',
+            })
+          ]),
+          uniqueAlerts: 1,
+        }),
+      )
     })
 
     it('uses stacked parser output for alert index', async () => {
@@ -273,28 +271,32 @@ describe('DataManager', () => {
       })
 
       const stackedIndex = alertsData.createAlertsIndexFromAlerts([baseAlert])
-
       const parseStackedSpy = vi.spyOn(alertsData, 'parseStackedAlerts').mockReturnValueOnce(stackedIndex)
 
       mockAutosaveService.readTextFile.mockResolvedValueOnce('csv-content')
 
-      const index = await dataManager.getAlertsIndex({ cases: [mockCase] })
-
+  const index = await dataManager.getAlertsIndex({ cases: [mockCase] })
+  await Promise.resolve()
       expect(index.summary.total).toBe(1)
       expect(index.alerts[0].id).toBe('stacked-alert')
       expect(parseStackedSpy).toHaveBeenCalledWith('csv-content', [mockCase])
-      expect(mockAutosaveService.writeNamedFile).not.toHaveBeenCalled()
+      expect(mockAutosaveService.writeNamedFile).toHaveBeenCalledWith(
+        'alerts.json',
+        expect.objectContaining({
+          version: 3,
+          alerts: expect.arrayContaining([
+            expect.objectContaining({ id: 'stacked-alert' })
+          ]),
+        }),
+      )
     })
 
-    it('preserves stored alert workflow state when merging csv data', async () => {
+    it('migrates workflow snapshot from legacy json', async () => {
       const mockCase = createMockCaseDisplay({ id: 'case-merge', mcn: '9999', caseRecord: createMockCaseRecord({ id: 'record-merge', mcn: '9999' }) })
 
-      const csvAlert = buildAlert({ id: 'alert-merge', reportId: 'alert-merge', status: 'new', resolvedAt: null, resolutionNotes: undefined })
-
-      const stackedIndex = alertsData.createAlertsIndexFromAlerts([csvAlert])
-
-      vi.spyOn(alertsData, 'parseStackedAlerts').mockReturnValue(stackedIndex)
-
+    const csvAlert = buildAlert({ id: 'alert-merge', reportId: 'alert-merge', status: 'new', resolvedAt: null, resolutionNotes: undefined })
+    const stackedIndex = alertsData.createAlertsIndexFromAlerts([csvAlert])
+    vi.spyOn(alertsData, 'parseStackedAlerts').mockReturnValue(stackedIndex)
       mockAutosaveService.readNamedFile.mockResolvedValueOnce({
         version: 1,
         alerts: [
@@ -310,20 +312,19 @@ describe('DataManager', () => {
       mockAutosaveService.readTextFile.mockResolvedValueOnce('csv-input')
 
       const index = await dataManager.getAlertsIndex({ cases: [mockCase] })
+      await Promise.resolve()
 
       const mergedAlert = index.alerts.find(alert => alert.id === 'alert-merge')
       expect(mergedAlert?.status).toBe('resolved')
-      expect(mergedAlert?.resolvedAt).toBe('2025-09-29T12:00:00.000Z')
       expect(mockAutosaveService.writeNamedFile).toHaveBeenCalledWith(
         'alerts.json',
         expect.objectContaining({
-          version: expect.any(Number),
+          version: 3,
           alerts: expect.arrayContaining([
             expect.objectContaining({
-              alertId: 'alert-merge',
+              id: 'alert-merge',
               status: 'resolved',
               resolvedAt: '2025-09-29T12:00:00.000Z',
-              resolutionNotes: 'Documented',
             })
           ]),
         }),
@@ -333,21 +334,28 @@ describe('DataManager', () => {
     it('updates alert status and persists changes to alerts.json', async () => {
       const mockCase = createMockCaseDisplay({ id: 'case-update', mcn: '5555', caseRecord: createMockCaseRecord({ id: 'record-update', mcn: '5555' }) })
 
-      const csvAlert = buildAlert({
+      const storedAlert = buildAlert({
         id: 'alert-update',
         reportId: 'alert-update',
         mcNumber: '5555',
         matchedCaseId: 'case-update',
         matchStatus: 'matched',
         status: 'new',
-        resolvedAt: null,
       })
 
-      const stackedIndex = alertsData.createAlertsIndexFromAlerts([csvAlert])
-      vi.spyOn(alertsData, 'parseStackedAlerts').mockReturnValueOnce(stackedIndex)
-
-      mockAutosaveService.readNamedFile.mockResolvedValueOnce({ version: 1, alerts: [], updatedAt: '2025-09-28T00:00:00.000Z' })
-      mockAutosaveService.readTextFile.mockResolvedValueOnce('csv-input')
+      mockAutosaveService.readNamedFile.mockResolvedValueOnce({
+        version: 3,
+        generatedAt: '2025-09-28T00:00:00.000Z',
+        summary: {
+          total: 1,
+          matched: 1,
+          unmatched: 0,
+          missingMcn: 0,
+          latestUpdated: '2025-09-28T00:00:00.000Z',
+        },
+        alerts: [storedAlert],
+        uniqueAlerts: 1,
+      })
 
       const updated = await dataManager.updateAlertStatus(
         'alert-update',
@@ -357,15 +365,16 @@ describe('DataManager', () => {
 
       expect(updated?.status).toBe('resolved')
       expect(updated?.resolutionNotes).toBe('Handled in outreach')
+      expect(mockAutosaveService.readTextFile).not.toHaveBeenCalled()
       expect(mockAutosaveService.writeNamedFile).toHaveBeenCalledWith(
         'alerts.json',
         expect.objectContaining({
+          version: 3,
           alerts: expect.arrayContaining([
             expect.objectContaining({
-              alertId: 'alert-update',
+              id: 'alert-update',
               status: 'resolved',
               resolutionNotes: 'Handled in outreach',
-              resolvedAt: expect.any(String),
             })
           ]),
         }),
@@ -401,14 +410,9 @@ describe('DataManager', () => {
       expect(mockAutosaveService.writeNamedFile).toHaveBeenCalledWith(
         'alerts.json',
         expect.objectContaining({
-          version: expect.any(Number),
+          version: 3,
           alerts: expect.arrayContaining([
-            expect.objectContaining({
-              alertId: expect.any(String),
-              status: 'new',
-              updatedAt: expect.any(String),
-              firstSeenAt: expect.any(String),
-            })
+            expect.objectContaining({ id: expect.any(String), status: 'new' })
           ]),
         }),
       )
@@ -445,9 +449,7 @@ describe('DataManager', () => {
       expect(result?.status).toBe('in-progress')
       expect(mockAutosaveService.writeNamedFile).toHaveBeenCalledWith(
         'alerts.json',
-        expect.objectContaining({
-          version: expect.any(Number),
-        }),
+        expect.objectContaining({ version: 3 }),
       )
       expect(reportFileStorageError).not.toHaveBeenCalled()
     })

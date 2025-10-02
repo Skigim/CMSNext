@@ -41,9 +41,20 @@ describe("NotesSection", () => {
       />
     );
 
-  expect(screen.getByText(/notes/i)).toBeInTheDocument();
-  expect(screen.getByText(/1/i)).toBeInTheDocument();
-  expect(screen.getByText(/first note/i, { selector: "p" })).toBeInTheDocument();
+    expect(screen.getByText(/notes/i)).toBeInTheDocument();
+    const countBadge = screen.getByText((content, element) => {
+      if (!(element instanceof HTMLElement)) {
+        return false;
+      }
+
+      return (
+        element.tagName === "SPAN" &&
+        element.dataset.slot === "badge" &&
+        content.trim() === "1"
+      );
+    });
+    expect(countBadge).toBeInTheDocument();
+    expect(screen.getByText(/first note/i, { selector: "p" })).toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: /add note/i }));
     expect(onAddNote).toHaveBeenCalledTimes(1);
