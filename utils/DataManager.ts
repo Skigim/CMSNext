@@ -10,6 +10,7 @@ import {
 import { v4 as uuidv4 } from 'uuid';
 import AutosaveFileService from './AutosaveFileService';
 import { transformImportedData } from './dataTransform';
+import { createLogger } from './logger';
 import {
   reportFileStorageError,
   type FileStorageOperation,
@@ -26,6 +27,7 @@ import {
   AlertWithMatch,
   createAlertsIndexFromAlerts,
   createEmptyAlertsIndex,
+  buildAlertStorageKey,
   parseStackedAlerts,
 } from "./alertsData";
 
@@ -33,6 +35,8 @@ interface DataManagerConfig {
   fileService: AutosaveFileService;
   persistNormalizationFixes?: boolean;
 }
+
+const logger = createLogger('DataManager');
 
 interface FileData {
   cases: CaseDisplay[];
@@ -48,6 +52,11 @@ interface StoredAlertWorkflowState {
   resolutionNotes?: string;
   updatedAt?: string | null;
   firstSeenAt?: string | null;
+}
+
+interface AlertLookupCandidate {
+  key: string;
+  fallback: boolean;
 }
 
 interface LoadAlertsResult {
@@ -275,8 +284,161 @@ export class DataManager {
       return "";
     }
 
-    const key = alert.reportId ?? alert.id;
-    return key ?? alert.id;
+    const storageKey = buildAlertStorageKey(alert);
+    if (storageKey && storageKey.trim().length > 0) {
+      return storageKey;
+    }
+
+    return alert.reportId ?? alert.id ?? "";
+  }
+
+  private alertLegacyKey(alert: AlertWithMatch): string | null {
+    if (!alert) {
+      return null;
+    }
+
+    const baseId = alert.reportId?.trim() || alert.id?.trim();
+    if (!baseId) {
+      return null;
+    }
+
+    const dateSource = alert.alertDate || alert.updatedAt || alert.createdAt || "";
+    if (!dateSource) {
+      return baseId;
+    }
+
+    const parsed = new Date(dateSource);
+    const normalizedDate = Number.isNaN(parsed.getTime())
+      ? dateSource
+      : parsed.toISOString().slice(0, 10);
+
+    return `${baseId}|${normalizedDate}`;
+  }
+
+  private buildAlertLookupCandidates(alert: AlertWithMatch): AlertLookupCandidate[] {
+    const strong: AlertLookupCandidate[] = [];
+    const fallback: AlertLookupCandidate[] = [];
+
+    const addCandidate = (
+      value: string | null | undefined,
+      options: { fallback?: boolean } = {},
+    ) => {
+      if (!value) {
+        return;
+      }
+
+      const trimmed = value.trim();
+      if (trimmed.length === 0) {
+        return;
+      }
+
+      const target = options.fallback ? fallback : strong;
+      if (target.some(candidate => candidate.key === trimmed)) {
+        return;
+      }
+
+      target.push({ key: trimmed, fallback: !!options.fallback });
+    };
+
+    addCandidate(this.alertKey(alert));
+
+    const legacyKey = this.alertLegacyKey(alert);
+    if (legacyKey) {
+      addCandidate(legacyKey);
+    }
+
+    if (alert.metadata && typeof alert.metadata === "object") {
+      const metadataStrongKeys = ["uniqueId", "unique_id", "storageKey", "storage_key"];
+      metadataStrongKeys.forEach(key => {
+        const metaValue = alert.metadata?.[key];
+        if (typeof metaValue === "string") {
+          addCandidate(metaValue);
+        }
+      });
+
+      const metadataFallbackKeys = [
+        "alertId",
+        "reportId",
+        "id",
+        "report_id",
+        "alert_id",
+        "alert_number",
+        "alertNumber",
+        "alertCode",
+        "alert_code",
+      ];
+      metadataFallbackKeys.forEach(key => {
+        const metaValue = alert.metadata?.[key];
+        if (typeof metaValue === "string") {
+          addCandidate(metaValue, { fallback: true });
+        }
+      });
+    }
+
+    addCandidate(alert.reportId, { fallback: true });
+    addCandidate(alert.id, { fallback: true });
+    addCandidate(alert.alertCode, { fallback: true });
+
+    if (strong.length > 0) {
+      return [...strong, ...fallback];
+    }
+
+    return fallback;
+  }
+
+  private shouldMatchUsingFallback(
+    incoming: AlertWithMatch,
+    existing: AlertWithMatch,
+    incomingStrongKeys: string[],
+  ): boolean {
+    const existingStrongKeys = this.buildAlertLookupCandidates(existing)
+      .filter(candidate => !candidate.fallback)
+      .map(candidate => candidate.key);
+
+    if (incomingStrongKeys.length === 0 || existingStrongKeys.length === 0) {
+      return true;
+    }
+
+    if (incomingStrongKeys.some(key => existingStrongKeys.includes(key))) {
+      return true;
+    }
+
+    const normalizeDate = (value: string | null | undefined): string | null => {
+      if (!value) {
+        return null;
+      }
+
+      const parsed = new Date(value);
+      if (!Number.isNaN(parsed.getTime())) {
+        return parsed.toISOString().slice(0, 10);
+      }
+
+      return value.slice(0, 10);
+    };
+
+    const incomingDate = normalizeDate(incoming.alertDate || incoming.updatedAt || incoming.createdAt);
+    const existingDate = normalizeDate(existing.alertDate || existing.updatedAt || existing.createdAt);
+
+    if (incomingDate && existingDate && incomingDate === existingDate) {
+      return true;
+    }
+
+    const normalizeText = (value: string | undefined): string | null =>
+      value && value.trim().length > 0 ? value.trim().toLowerCase() : null;
+
+    const incomingDescription = normalizeText(incoming.description);
+    const existingDescription = normalizeText(existing.description);
+    if (incomingDescription && existingDescription && incomingDescription === existingDescription) {
+      return true;
+    }
+
+    const incomingRawDescription = normalizeText(incoming.metadata?.rawDescription);
+    const existingRawDescription = normalizeText(existing.metadata?.rawDescription);
+    if (incomingRawDescription && existingRawDescription && incomingRawDescription === existingRawDescription) {
+      return true;
+    }
+
+    return false;
   }
 
   private mergeAlertDetails(
@@ -424,7 +586,10 @@ export class DataManager {
       },
     }));
 
-    console.info(`[DataManager] Alert preview (${source})`, preview);
+    logger.debug('Alert preview generated', {
+      source,
+      preview,
+    });
   }
 
   private countUniqueAlertKeys(alerts: AlertWithMatch[]): number {
@@ -601,7 +766,9 @@ export class DataManager {
       };
     } catch (error) {
       if (error instanceof SyntaxError || (error as Error)?.name === "SyntaxError") {
-        console.warn("[DataManager] alerts.json contained invalid JSON and will be rebuilt", error);
+        logger.warn('alerts.json contained invalid JSON and will be rebuilt', {
+          error: error instanceof Error ? error.message : 'Unknown error',
+        });
         return {
           alerts: null,
           legacyWorkflows: [],
@@ -744,33 +911,67 @@ export class DataManager {
       return { alerts, changed: false, unmatchedIds: storedWorkflows.map(entry => entry.alertId) };
     }
 
-    const storedMap = new Map<string, StoredAlertWorkflowState>();
-    storedWorkflows.forEach(entry => {
-      storedMap.set(entry.alertId, entry);
-    });
+    const usedIndices = new Set<number>();
+
+    const resolveStoredWorkflowForAlert = (alert: AlertWithMatch): { workflow: StoredAlertWorkflowState | null; index: number } => {
+      const candidates = this.buildAlertLookupCandidates(alert);
+
+      let matchedIndex = -1;
+      let matchedWorkflow: StoredAlertWorkflowState | null = null;
+
+      for (const { key: candidate } of candidates) {
+        for (let i = 0; i < storedWorkflows.length; i += 1) {
+          if (usedIndices.has(i)) {
+            continue;
+          }
+
+          const workflow = storedWorkflows[i];
+          if (!workflow || !workflow.alertId) {
+            continue;
+          }
+
+          const storedKey = workflow.alertId.trim();
+          if (storedKey.length === 0) {
+            continue;
+          }
+
+          if (storedKey === candidate) {
+            matchedIndex = i;
+            matchedWorkflow = workflow;
+            break;
+          }
+        }
+
+        if (matchedWorkflow) {
+          break;
+        }
+      }
+
+      if (matchedIndex === -1 || !matchedWorkflow) {
+        return { workflow: null, index: -1 };
+      }
+
+      usedIndices.add(matchedIndex);
+      return { workflow: matchedWorkflow, index: matchedIndex };
+    };
 
     let changed = false;
     const updatedAlerts = alerts.map(alert => {
-      const key = this.alertKey(alert);
-      if (!key) {
-        return alert;
-      }
-
-      const stored = storedMap.get(key);
-      if (!stored) {
+      const { workflow } = resolveStoredWorkflowForAlert(alert);
+      if (!workflow) {
         return alert;
       }
 
       const nextAlert: AlertWithMatch = {
         ...alert,
-        status: stored.status ?? alert.status ?? "new",
+        status: workflow.status ?? alert.status ?? "new",
         resolvedAt:
-          stored.resolvedAt !== undefined
-            ? stored.resolvedAt
+          workflow.resolvedAt !== undefined
+            ? workflow.resolvedAt
             : alert.resolvedAt ?? null,
         resolutionNotes:
-          stored.resolutionNotes ?? alert.resolutionNotes,
-        updatedAt: stored.updatedAt ?? alert.updatedAt,
+          workflow.resolutionNotes ?? alert.resolutionNotes,
+        updatedAt: workflow.updatedAt ?? alert.updatedAt,
       };
 
       if (
@@ -780,11 +981,15 @@ export class DataManager {
         changed = true;
       }
 
-      storedMap.delete(key);
       return nextAlert;
     });
 
-    return { alerts: updatedAlerts, changed, unmatchedIds: [...storedMap.keys()] };
+    const unmatchedIds = storedWorkflows
+      .map((workflow, index) => ({ workflow, index }))
+      .filter(entry => entry.workflow.alertId && !usedIndices.has(entry.index))
+      .map(entry => entry.workflow.alertId);
+
+    return { alerts: updatedAlerts, changed, unmatchedIds };
   }
 
   private parseAlertsWithFallback(csvContent: string, cases: CaseDisplay[]): AlertsIndex {
@@ -802,7 +1007,7 @@ export class DataManager {
               : 0,
         },
       };
-      console.info("[DataManager] Alert parser metrics", JSON.stringify(metrics, null, 2));
+  logger.debug('Alert parser metrics', { metrics });
     }
 
     this.debugLogAlertsSample(
@@ -858,16 +1063,16 @@ export class DataManager {
         cases = rawData.cases;
       } else if (rawData.people && rawData.caseRecords) {
         // Raw format - transform using the data transformer
-        console.log('[DataManager] Transforming raw data format (people + caseRecords) to cases');
+        logger.info('Transforming raw data format to cases');
         cases = transformImportedData(rawData);
       } else {
         // Try to transform whatever format this is
         cases = transformImportedData(rawData);
       }
 
-  const categoryConfig = mergeCategoryConfig(rawData.categoryConfig);
+      const categoryConfig = mergeCategoryConfig(rawData.categoryConfig);
 
-  const { cases: normalizedCases, changed } = normalizeCaseNotes(cases);
+      const { cases: normalizedCases, changed } = normalizeCaseNotes(cases);
 
       let finalCases = normalizedCases;
       let finalExportedAt = rawData.exported_at || rawData.exportedAt || new Date().toISOString();
@@ -884,9 +1089,7 @@ export class DataManager {
           finalCases = persistedData.cases;
           finalExportedAt = persistedData.exported_at;
         } else {
-          console.warn(
-            "[DataManager] Detected note normalization changes but skipping persistence due to configuration.",
-          );
+          logger.warn('Note normalization produced changes but persistence disabled');
         }
       }
 
@@ -897,7 +1100,9 @@ export class DataManager {
         categoryConfig,
       };
     } catch (error) {
-      console.error('Failed to read file data:', error);
+      logger.error('Failed to read file data', {
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
       this.reportStorageError("readData", error, { method: "readFileData" });
       throw new Error(`Failed to read case data: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
@@ -926,7 +1131,9 @@ export class DataManager {
 
       return validatedData;
     } catch (error) {
-      console.error('Failed to write file data:', error);
+      logger.error('Failed to write file data', {
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
       
       // Provide specific error messaging based on error type
       let errorMessage = 'Unknown error';
@@ -1046,10 +1253,10 @@ export class DataManager {
     }
 
     if (shouldPersist) {
-      console.info(
-        "[DataManager] Persisting %d alerts to alerts.json",
-        index.alerts.length,
-      );
+      logger.info('Persisting alerts to store', {
+        alertCount: index.alerts.length,
+        sourceFile,
+      });
       void this.saveAlerts(index.alerts, index.summary, { sourceFile });
     }
 
@@ -1077,7 +1284,7 @@ export class DataManager {
       sourceFile = imported.sourceFile ?? sourceFile;
 
       if (alerts.length === 0) {
-        console.warn("[DataManager] No alerts available to update status for", alertId);
+        logger.warn('No alerts available to update status', { alertId });
         return null;
       }
 
@@ -1089,7 +1296,7 @@ export class DataManager {
 
     const targetIndex = alerts.findIndex(alert => alert.id === alertId || alert.reportId === alertId);
     if (targetIndex === -1) {
-      console.warn("[DataManager] Could not find alert to update", alertId);
+      logger.warn('Could not find alert to update', { alertId });
       return null;
     }
 
@@ -1151,10 +1358,10 @@ export class DataManager {
         payload.sourceFile = options.sourceFile;
       }
 
-      console.info(
-        "[DataManager] Saving %d alerts to alerts.json",
-        normalizedAlerts.length,
-      );
+      logger.info('Saving alerts to alerts.json', {
+        alertCount: normalizedAlerts.length,
+        sourceFile: options.sourceFile,
+      });
 
       const success = await this.fileService.writeNamedFile(DataManager.ALERTS_JSON_NAME, payload);
       if (!success) {
@@ -1166,7 +1373,9 @@ export class DataManager {
           this.fileService.notifyDataChange();
         }
       } catch (notifyError) {
-        console.warn("[DataManager] Failed to notify file storage change after saving alerts", notifyError);
+        logger.warn('Failed to notify file storage change after saving alerts', {
+          error: notifyError instanceof Error ? notifyError.message : 'Unknown error',
+        });
       }
 
       return true;
@@ -1207,39 +1416,92 @@ export class DataManager {
         : createEmptyAlertsIndex();
     const incomingAlerts = incomingIndex.alerts;
 
-    const existingMap = new Map<string, number>();
-    workingAlerts.forEach((alert, index) => {
-      const key = this.alertKey(alert);
-      if (key) {
-        existingMap.set(key, index);
+    const existingMap = new Map<string, Set<number>>();
+    const registerCandidateKey = (key: string, index: number) => {
+      if (!key) {
+        return;
       }
+
+      if (!existingMap.has(key)) {
+        existingMap.set(key, new Set());
+      }
+
+      existingMap.get(key)!.add(index);
+    };
+
+    const registerAlertCandidates = (alert: AlertWithMatch, index: number) => {
+      this.buildAlertLookupCandidates(alert).forEach(candidate => {
+        registerCandidateKey(candidate.key, index);
+      });
+    };
+
+    workingAlerts.forEach((alert, index) => {
+      registerAlertCandidates(alert, index);
     });
+
+    const matchedExistingIndices = new Set<number>();
 
     let added = 0;
     let updated = 0;
 
     incomingAlerts.forEach(incoming => {
-      const key = this.alertKey(incoming);
-      if (!key) {
+      const candidates = this.buildAlertLookupCandidates(incoming);
+      if (candidates.length === 0) {
         return;
       }
 
-      const existingIndex = existingMap.get(key);
-      if (existingIndex === undefined) {
-        workingAlerts.push(incoming);
-        existingMap.set(key, workingAlerts.length - 1);
+      const incomingStrongKeys = candidates.filter(candidate => !candidate.fallback).map(candidate => candidate.key);
+
+      let matchedIndex: number | undefined;
+
+      for (const candidate of candidates) {
+        const mappedSet = existingMap.get(candidate.key);
+        if (!mappedSet || mappedSet.size === 0) {
+          continue;
+        }
+
+        for (const index of mappedSet) {
+          if (matchedExistingIndices.has(index)) {
+            continue;
+          }
+
+          const existingAlert = workingAlerts[index];
+          if (!existingAlert) {
+            continue;
+          }
+
+          if (!candidate.fallback || this.shouldMatchUsingFallback(incoming, existingAlert, incomingStrongKeys)) {
+            matchedIndex = index;
+            break;
+          }
+        }
+
+        if (matchedIndex !== undefined) {
+          break;
+        }
+      }
+
+      if (matchedIndex === undefined) {
+        const newIndex = workingAlerts.push(incoming) - 1;
+        registerAlertCandidates(incoming, newIndex);
         added += 1;
         shouldPersist = true;
         return;
       }
 
-      const existingAlert = workingAlerts[existingIndex];
+      matchedExistingIndices.add(matchedIndex);
+
+      const existingAlert = workingAlerts[matchedIndex];
       const { alert: mergedAlert, changed } = this.mergeAlertDetails(existingAlert, incoming);
+      const resultingAlert = changed ? mergedAlert : existingAlert;
+
       if (changed) {
-        workingAlerts[existingIndex] = mergedAlert;
+        workingAlerts[matchedIndex] = mergedAlert;
         updated += 1;
         shouldPersist = true;
       }
+
+      registerAlertCandidates(resultingAlert, matchedIndex);
     });
 
     if (loadResult.legacyWorkflows.length > 0 && workingAlerts.length > 0) {
@@ -1994,7 +2256,9 @@ export class DataManager {
         categoryConfig = mergeCategoryConfig(currentData.categoryConfig);
       }
     } catch (error) {
-      console.warn('[DataManager] Failed to read existing data before clearing. Using default category config.', error);
+      logger.warn('Failed to read existing data before clearing; falling back to default category config', {
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
     }
 
     const emptyData: FileData = {

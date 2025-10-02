@@ -30,7 +30,7 @@ const workflowPriorityOrder: AlertWorkflowStatus[] = ["new", "in-progress", "ack
 
 const STACKED_ALERT_REGEX = /,,\s*(?<dueDate>\d{1,2}[\/-]\d{1,2}[\/-]\d{2,4})\s*,\s*(?<mcn>[^,"]*)\s*,"(?<name>(?:[^"]|"")*)","(?<program>(?:[^"]|"")*)","(?<type>(?:[^"]|"")*)","(?<description>(?:[^"]|"")*)",\s*(?<alertNumber>[^,\r\n]*)/g;
 
-function getAlertKey(alert: AlertWithMatch): string | null {
+export function buildAlertStorageKey(alert: AlertWithMatch): string | null {
   if (!alert) {
     return null;
   }
@@ -247,7 +247,7 @@ function dedupeAlerts(alerts: AlertWithMatch[]): AlertWithMatch[] {
   const passthrough: AlertWithMatch[] = [];
 
   alerts.forEach(alert => {
-    const key = getAlertKey(alert);
+  const key = buildAlertStorageKey(alert);
     if (!key) {
       passthrough.push(alert);
       return;

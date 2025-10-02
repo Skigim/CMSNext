@@ -474,6 +474,40 @@ describe('DataManager', () => {
       parseStackedSpy.mockRestore()
     })
 
+    it('preserves stacked alerts that share reportId but differ by metadata', async () => {
+      const csvContent = [
+        '"Stacked Alerts Export"',
+        ',,09-20-2025,MCN111222,"Alex Rivera","Medicaid","Recertification Due","Initial notice",AL-101,',
+        ',,09-25-2025,MCN111222,"Alex Rivera","Medicaid","Recertification Due","Second notice",AL-101,',
+      ].join('\n')
+
+      const matchingCase = createMockCaseDisplay({
+        id: 'case-alex',
+        name: 'Alex Rivera',
+        mcn: 'MCN111222',
+        caseRecord: createMockCaseRecord({
+          id: 'case-record-alex',
+          mcn: 'MCN111222',
+        }),
+      })
+
+      const result = await dataManager.mergeAlertsFromCsvContent(csvContent, {
+        cases: [matchingCase],
+        sourceFileName: 'Alerts.csv',
+      })
+
+      expect(result.total).toBe(2)
+      expect(result.added).toBe(2)
+      expect(mockAutosaveService.writeNamedFile).toHaveBeenCalled()
+
+      const payload = mockAutosaveService.writeNamedFile.mock.calls.at(-1)?.[1]
+      expect(payload).toBeTruthy()
+      expect(payload.alerts).toHaveLength(2)
+
+      const uniqueDescriptions = new Set(payload.alerts.map((alert: AlertWithMatch) => alert.description))
+      expect(uniqueDescriptions.size).toBe(2)
+    })
+
     it('rebuilds alerts.json when stored file contains invalid JSON', async () => {
       const mockCase = createMockCaseDisplay({
         id: 'case-invalid-json',
