@@ -382,6 +382,98 @@ describe('DataManager', () => {
       expect(mockAutosaveService.notifyDataChange).toHaveBeenCalled()
     })
 
+    it('merges alerts from csv content and preserves workflow history', async () => {
+      const mockCase = createMockCaseDisplay({
+        id: 'case-existing',
+        mcn: '12345',
+        caseRecord: createMockCaseRecord({ id: 'record-existing', mcn: '12345' })
+      })
+
+      const storedAlert = buildAlert({
+        id: 'alert-existing',
+        reportId: 'alert-existing',
+        mcNumber: '12345',
+        description: 'Original description',
+        status: 'resolved',
+        resolvedAt: '2025-09-20T12:00:00.000Z',
+        resolutionNotes: 'Completed outreach',
+      })
+
+      mockAutosaveService.readNamedFile.mockResolvedValueOnce({
+        version: 3,
+        generatedAt: '2025-09-25T00:00:00.000Z',
+        summary: {
+          total: 1,
+          matched: 1,
+          unmatched: 0,
+          missingMcn: 0,
+          latestUpdated: '2025-09-25T00:00:00.000Z',
+        },
+        alerts: [storedAlert],
+        uniqueAlerts: 1,
+        sourceFile: 'previous.csv'
+      })
+
+      const incomingExisting = buildAlert({
+        id: 'alert-existing',
+        reportId: 'alert-existing',
+        mcNumber: '12345',
+        description: 'Updated description',
+        matchStatus: 'unmatched',
+        matchedCaseId: undefined,
+        matchedCaseName: undefined,
+        matchedCaseStatus: undefined,
+        status: 'new',
+        resolvedAt: null,
+        resolutionNotes: undefined,
+      })
+
+      const incomingNew = buildAlert({
+        id: 'alert-new',
+        reportId: 'alert-new',
+        mcNumber: '67890',
+        status: 'new',
+        matchStatus: 'unmatched',
+        matchedCaseId: undefined,
+        matchedCaseName: undefined,
+        matchedCaseStatus: undefined,
+      })
+
+      const parseStackedSpy = vi.spyOn(alertsData, 'parseStackedAlerts').mockReturnValue(
+        alertsData.createAlertsIndexFromAlerts([incomingExisting, incomingNew])
+      )
+
+      const result = await dataManager.mergeAlertsFromCsvContent('csv-input', {
+        cases: [mockCase],
+        sourceFileName: 'alerts-import.csv',
+      })
+
+      expect(result.added).toBe(1)
+      expect(result.updated).toBe(1)
+      expect(result.total).toBe(2)
+
+      expect(mockAutosaveService.writeNamedFile).toHaveBeenCalledWith(
+        'alerts.json',
+        expect.objectContaining({
+          sourceFile: 'alerts-import.csv',
+          summary: expect.objectContaining({ total: 2 }),
+          alerts: expect.arrayContaining([
+            expect.objectContaining({
+              id: 'alert-existing',
+              status: 'resolved',
+              description: 'Updated description',
+              resolvedAt: '2025-09-20T12:00:00.000Z',
+              resolutionNotes: 'Completed outreach',
+            }),
+            expect.objectContaining({ id: 'alert-new' })
+          ])
+        })
+      )
+
+      expect(parseStackedSpy).toHaveBeenCalledWith('csv-input', [mockCase])
+      parseStackedSpy.mockRestore()
+    })
+
     it('rebuilds alerts.json when stored file contains invalid JSON', async () => {
       const mockCase = createMockCaseDisplay({
         id: 'case-invalid-json',
@@ -452,6 +544,108 @@ describe('DataManager', () => {
         expect.objectContaining({ version: 3 }),
       )
       expect(reportFileStorageError).not.toHaveBeenCalled()
+    })
+
+    it('dedupes duplicate alerts while preserving resolved workflow state', async () => {
+      const mockCase = createMockCaseDisplay({
+        id: 'case-dedupe',
+        mcn: '5555',
+        caseRecord: createMockCaseRecord({ id: 'record-dedupe', mcn: '5555' })
+      })
+
+      const resolvedDuplicate = buildAlert({
+        id: 'alert-duplicate',
+        reportId: 'alert-duplicate',
+        mcNumber: '5555',
+        matchedCaseId: 'case-dedupe',
+        status: 'resolved',
+        resolvedAt: '2025-10-01T09:00:00.000Z',
+        updatedAt: '2025-10-01T09:00:00.000Z',
+      })
+
+      const activeDuplicate = buildAlert({
+        id: 'alert-duplicate',
+        reportId: 'alert-duplicate',
+        mcNumber: '5555',
+        matchedCaseId: 'case-dedupe',
+        status: 'new',
+        resolvedAt: null,
+        updatedAt: '2025-09-29T09:00:00.000Z',
+      })
+
+      mockAutosaveService.readNamedFile.mockResolvedValueOnce({
+        version: 3,
+        generatedAt: '2025-10-01T09:30:00.000Z',
+        summary: { total: 2, matched: 2, unmatched: 0, missingMcn: 0, latestUpdated: '2025-10-01T09:30:00.000Z' },
+        alerts: [resolvedDuplicate, activeDuplicate],
+        uniqueAlerts: 2,
+      })
+
+      const index = await dataManager.getAlertsIndex({ cases: [mockCase] })
+      await Promise.resolve()
+
+      expect(index.alerts).toHaveLength(1)
+      expect(index.alerts[0].status).toBe('resolved')
+      expect(mockAutosaveService.writeNamedFile).toHaveBeenCalledWith(
+        'alerts.json',
+        expect.objectContaining({
+          alerts: expect.arrayContaining([
+            expect.objectContaining({ id: 'alert-duplicate', status: 'resolved' }),
+          ]),
+          summary: expect.objectContaining({ total: 1 }),
+        }),
+      )
+    })
+
+    it('updates alert status and removes duplicate entries for the same alert id', async () => {
+      const mockCase = createMockCaseDisplay({
+        id: 'case-update-duplicate',
+        mcn: '6666',
+        caseRecord: createMockCaseRecord({ id: 'record-update-duplicate', mcn: '6666' })
+      })
+
+      const initialDuplicate = buildAlert({
+        id: 'alert-dup-update',
+        reportId: 'alert-dup-update',
+        mcNumber: '6666',
+        matchedCaseId: 'case-update-duplicate',
+        status: 'new',
+        updatedAt: '2025-09-25T09:00:00.000Z',
+      })
+
+      const trailingDuplicate = buildAlert({
+        id: 'alert-dup-update',
+        reportId: 'alert-dup-update',
+        mcNumber: '6666',
+        matchedCaseId: 'case-update-duplicate',
+        status: 'new',
+        updatedAt: '2025-09-24T09:00:00.000Z',
+      })
+
+      mockAutosaveService.readNamedFile.mockResolvedValue({
+        version: 3,
+        generatedAt: '2025-09-25T10:00:00.000Z',
+        summary: { total: 2, matched: 2, unmatched: 0, missingMcn: 0, latestUpdated: '2025-09-25T10:00:00.000Z' },
+        alerts: [initialDuplicate, trailingDuplicate],
+        uniqueAlerts: 2,
+      })
+
+      const result = await dataManager.updateAlertStatus(
+        'alert-dup-update',
+        { status: 'resolved' },
+        { cases: [mockCase] },
+      )
+
+      expect(result?.status).toBe('resolved')
+      expect(mockAutosaveService.writeNamedFile).toHaveBeenCalledWith(
+        'alerts.json',
+        expect.objectContaining({
+          alerts: expect.arrayContaining([
+            expect.objectContaining({ id: 'alert-dup-update', status: 'resolved' }),
+          ]),
+          summary: expect.objectContaining({ total: 1 }),
+        }),
+      )
     })
 
     it('returns empty alerts index when no files found', async () => {

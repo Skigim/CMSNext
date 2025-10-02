@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState, type ChangeEvent } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../ui/card";
 import { Button } from "../ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
@@ -28,9 +28,11 @@ import {
   Check,
   Info,
   Code,
-  ListChecks
+  ListChecks,
+  FileSpreadsheet
 } from "lucide-react";
 import { CaseDisplay } from "../../types/case";
+import type { AlertsIndex } from "../../utils/alertsData";
 import { toast } from "sonner";
 import { useDataManagerSafe } from "../../contexts/DataManagerContext";
 import { useCategoryConfig } from "../../contexts/CategoryConfigContext";
@@ -38,11 +40,14 @@ import { useCategoryConfig } from "../../contexts/CategoryConfigContext";
 interface SettingsProps {
   cases: CaseDisplay[];
   onDataPurged?: () => void;
+  onAlertsCsvImported?: (index: AlertsIndex) => void;
 }
 
-export function Settings({ cases, onDataPurged }: SettingsProps) {
+export function Settings({ cases, onDataPurged, onAlertsCsvImported }: SettingsProps) {
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const [isPurging, setIsPurging] = useState(false);
+  const [isAlertsImporting, setIsAlertsImporting] = useState(false);
+  const alertsFileInputRef = useRef<HTMLInputElement>(null);
   const { disconnect } = useFileStorage();
   const { theme, setTheme, themeOptions } = useTheme();
   const dataManager = useDataManagerSafe();
@@ -102,6 +107,73 @@ export function Settings({ cases, onDataPurged }: SettingsProps) {
     } catch (error) {
       console.error('Export failed:', error);
       toast.error('Failed to export data. Please try again.');
+    }
+  };
+
+  const handleAlertsCsvButtonClick = () => {
+    if (!dataManager) {
+      toast.error("Connect a storage folder before importing alerts.");
+      return;
+    }
+
+    alertsFileInputRef.current?.click();
+  };
+
+  const handleAlertsCsvSelected = async (event: ChangeEvent<HTMLInputElement>) => {
+    const input = event.target;
+    const file = input.files?.[0];
+
+    if (!file) {
+      return;
+    }
+
+    if (!dataManager) {
+      toast.error("Alerts service isn't available yet. Connect storage and try again.");
+      input.value = "";
+      return;
+    }
+
+    setIsAlertsImporting(true);
+
+    try {
+      const csvText = await file.text();
+      if (!csvText.trim()) {
+        toast.info("No alerts detected", {
+          description: `${file.name} is empty.`,
+        });
+        return;
+      }
+
+      const result = await dataManager.mergeAlertsFromCsvContent(csvText, {
+        cases,
+        sourceFileName: file.name,
+      });
+
+      const refreshedIndex = await dataManager.getAlertsIndex({ cases });
+      onAlertsCsvImported?.(refreshedIndex);
+
+      if (result.added === 0 && result.updated === 0) {
+        toast.info("No new alerts found", {
+          description: `${file.name} didn't include new or updated alerts. Still tracking ${result.total} alerts.`,
+        });
+      } else {
+        const descriptionParts = [
+          result.added > 0 ? `${result.added} new` : null,
+          result.updated > 0 ? `${result.updated} updated` : null,
+        ].filter(Boolean) as string[];
+
+        toast.success("Alerts updated", {
+          description: `${descriptionParts.join(" · ")} • ${result.total} total alerts saved`,
+        });
+      }
+    } catch (error) {
+      console.error("Failed to import alerts from CSV:", error);
+      toast.error("Failed to import alerts", {
+        description: error instanceof Error ? error.message : "Please verify the file and try again.",
+      });
+    } finally {
+      setIsAlertsImporting(false);
+      input.value = "";
     }
   };
 
@@ -217,6 +289,31 @@ export function Settings({ cases, onDataPurged }: SettingsProps) {
                   </div>
                   <p className="text-xs text-muted-foreground">
                     The importer validates structure and skips duplicates automatically.
+                  </p>
+                </section>
+
+                <Separator />
+
+                {/* Alerts CSV Section */}
+                <section className="space-y-3">
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                      <h4 className="font-medium">Update alerts from CSV</h4>
+                      <p className="text-sm text-muted-foreground">
+                        Merge new alert records into the alerts.json snapshot without losing workflow history.
+                      </p>
+                    </div>
+                    <Button
+                      onClick={handleAlertsCsvButtonClick}
+                      className="flex items-center gap-2"
+                      disabled={isAlertsImporting || !dataManager}
+                    >
+                      <FileSpreadsheet className="h-4 w-4" />
+                      {isAlertsImporting ? "Importing..." : "Import Alerts CSV"}
+                    </Button>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    We skip duplicates automatically and keep existing resolutions intact. Supported formats: .csv exports from your alerts system.
                   </p>
                 </section>
 
@@ -559,6 +656,14 @@ export function Settings({ cases, onDataPurged }: SettingsProps) {
           </div>
         </TabsContent>
       </Tabs>
+
+      <input
+        ref={alertsFileInputRef}
+        type="file"
+        accept=".csv,text/csv"
+        className="hidden"
+        onChange={handleAlertsCsvSelected}
+      />
 
       {/* Import Modal */}
       <ImportModal

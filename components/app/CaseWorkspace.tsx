@@ -72,6 +72,7 @@ export interface CaseWorkspaceProps {
   alerts: AlertsIndex;
   onUpdateCaseStatus: (caseId: string, status: CaseDisplay["status"]) => Promise<CaseDisplay | null> | CaseDisplay | null | void;
   onResolveAlert?: (alert: AlertWithMatch) => Promise<void> | void;
+  onAlertsCsvImported?: (index: AlertsIndex) => void;
 }
 
 /**
@@ -92,6 +93,7 @@ export const CaseWorkspace = memo(function CaseWorkspace({
   alerts,
   onUpdateCaseStatus,
   onResolveAlert,
+  onAlertsCsvImported,
 }: CaseWorkspaceProps) {
   return (
     <AppNavigationShell {...navigation}>
@@ -132,6 +134,7 @@ export const CaseWorkspace = memo(function CaseWorkspace({
         handleBatchCreateNote={noteFlow.handleBatchCreateNote}
         handleUpdateCaseStatus={onUpdateCaseStatus}
         handleResolveAlert={onResolveAlert}
+        onAlertsCsvImported={onAlertsCsvImported}
       />
 
       {financialFlow.itemForm.isOpen && financialFlow.itemForm.category && selectedCase && (

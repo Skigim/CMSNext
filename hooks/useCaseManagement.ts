@@ -6,7 +6,9 @@ import {
   getFileStorageFlags,
   updateFileStorageFlags,
 } from '@/utils/fileStorageFlags';
+import { createLogger } from '@/utils/logger';
 
+const logger = createLogger('CaseManagement');
 interface UseCaseManagementReturn {
   // State
   cases: CaseDisplay[];
@@ -70,7 +72,7 @@ export function useCaseManagement(): UseCaseManagementReturn {
       if (data.length > 0) {
         updateFileStorageFlags({ sessionHadData: true });
         // Don't show toast here - let the connection flow handle user feedback
-        console.log(`[DataManager] Successfully loaded ${data.length} cases`);
+        logger.info('Cases loaded', { caseCount: data.length });
       } else {
         // Only show toast for empty state if not during connection flow
         if (!getFileStorageFlags().inConnectionFlow) {
@@ -79,7 +81,7 @@ export function useCaseManagement(): UseCaseManagementReturn {
             duration: 3000
           });
         }
-        console.log(`[DataManager] Successfully loaded ${data.length} cases (empty)`);
+        logger.debug('Cases loaded (empty)');
       }
       
       return data; // Return the loaded data
@@ -136,7 +138,10 @@ export function useCaseManagement(): UseCaseManagementReturn {
       
       // DataManager handles file system persistence automatically
     } catch (err) {
-      console.error('Failed to save case:', err);
+      logger.error('Failed to save case', {
+        error: err instanceof Error ? err.message : String(err),
+        isEditing,
+      });
       const errorMsg = `Failed to ${isEditing ? 'update' : 'create'} case. Please try again.`;
       setError(errorMsg);
       toast.error(errorMsg, { id: toastId });
@@ -170,7 +175,10 @@ export function useCaseManagement(): UseCaseManagementReturn {
       
       // DataManager handles file system persistence automatically
     } catch (err) {
-      console.error('Failed to delete case:', err);
+      logger.error('Failed to delete case', {
+        error: err instanceof Error ? err.message : String(err),
+        caseId,
+      });
       const errorMsg = 'Failed to delete case. Please try again.';
       setError(errorMsg);
       toast.error(errorMsg);
@@ -218,7 +226,11 @@ export function useCaseManagement(): UseCaseManagementReturn {
       // DataManager handles file system persistence automatically
       return updatedCase;
     } catch (err) {
-      console.error('Failed to save note:', err);
+      logger.error('Failed to save note', {
+        error: err instanceof Error ? err.message : String(err),
+        caseId,
+        isEditing,
+      });
       const errorMsg = `Failed to ${isEditing ? 'update' : 'add'} note. Please try again.`;
       setError(errorMsg);
       toast.error(errorMsg);
@@ -244,7 +256,11 @@ export function useCaseManagement(): UseCaseManagementReturn {
         toast.success(`Status updated to ${status}`, { id: toastId, duration: 2000 });
         return updatedCase;
       } catch (err) {
-        console.error('Failed to update case status:', err);
+        logger.error('Failed to update case status', {
+          error: err instanceof Error ? err.message : String(err),
+          caseId,
+          status,
+        });
         const errorMsg = 'Failed to update case status. Please try again.';
         setError(errorMsg);
         toast.error(errorMsg, { id: toastId });
@@ -272,7 +288,10 @@ export function useCaseManagement(): UseCaseManagementReturn {
       
       // Note: Import process should handle DataManager persistence at the import level
     } catch (err) {
-      console.error('Failed to import cases:', err);
+      logger.error('Failed to import cases', {
+        error: err instanceof Error ? err.message : String(err),
+        caseCount: importedCases.length,
+      });
       const errorMsg = 'Failed to import cases. Please try again.';
       setError(errorMsg);
       toast.error(errorMsg);

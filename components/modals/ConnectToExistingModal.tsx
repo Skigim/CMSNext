@@ -4,6 +4,9 @@ import { Button } from "../ui/button";
 import { Alert, AlertDescription } from "../ui/alert";
 import { Card, CardContent } from "../ui/card";
 import { FolderOpen, AlertCircle, Loader2, Upload, Database } from "lucide-react";
+import { createLogger } from "@/utils/logger";
+
+const logger = createLogger("ConnectToExistingModal");
 
 interface ConnectToExistingModalProps {
   isOpen: boolean;
@@ -34,20 +37,23 @@ export function ConnectToExistingModal({
     setError(null);
     
     try {
-      console.log('[ConnectToExistingModal] Starting existing connection process...');
-      console.log('[ConnectToExistingModal] Permission status:', permissionStatus);
-      console.log('[ConnectToExistingModal] Has stored handle:', hasStoredHandle);
+      logger.lifecycle('Starting existing connection', {
+        permissionStatus,
+        hasStoredHandle,
+      });
       
       const success = await onConnectToExisting();
-      console.log('[ConnectToExistingModal] Existing connection result:', success);
+      logger.info('Existing connection completed', { success });
       
       if (!success) {
         const errorMsg = 'Failed to connect to existing directory. Please check console for details and try again.';
-        console.error('[ConnectToExistingModal] Existing connection failed');
+        logger.warn('Existing connection failed');
         setError(errorMsg);
       }
     } catch (err) {
-      console.error('[ConnectToExistingModal] Connect to existing error:', err);
+      logger.error('Existing connection errored', {
+        error: err instanceof Error ? err.message : String(err),
+      });
       setError(`Connection error: ${err instanceof Error ? err.message : 'Unknown error occurred'}`);
     } finally {
       setIsConnecting(false);
@@ -61,18 +67,20 @@ export function ConnectToExistingModal({
     setError(null);
     
     try {
-      console.log('[ConnectToExistingModal] Starting new folder selection process...');
+      logger.lifecycle('Starting new folder selection');
       
       const success = await onChooseNewFolder();
-      console.log('[ConnectToExistingModal] New folder selection result:', success);
+      logger.info('New folder selection completed', { success });
       
       if (!success) {
         const errorMsg = 'Failed to connect to new folder. Please try again or check if you cancelled the selection.';
-        console.error('[ConnectToExistingModal] New folder selection failed');
+        logger.warn('New folder selection failed');
         setError(errorMsg);
       }
     } catch (err) {
-      console.error('[ConnectToExistingModal] Choose new folder error:', err);
+      logger.error('New folder selection errored', {
+        error: err instanceof Error ? err.message : String(err),
+      });
       setError(`Folder selection error: ${err instanceof Error ? err.message : 'Unknown error occurred'}`);
     } finally {
       setIsConnecting(false);

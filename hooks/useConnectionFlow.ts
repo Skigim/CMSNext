@@ -9,6 +9,9 @@ import {
 } from "../utils/fileStorageFlags";
 import type { FileStorageLifecycleSelectors } from "../contexts/FileStorageContext";
 import { reportFileStorageError } from "../utils/fileStorageErrorReporter";
+import { createLogger } from "@/utils/logger";
+
+const logger = createLogger("ConnectionFlow");
 
 interface UseConnectionFlowParams {
   isSupported: boolean | undefined;
@@ -106,7 +109,9 @@ export function useConnectionFlow({
       try {
         existingData = await loadExistingData();
       } catch (loadError) {
-        console.error("[ConnectionFlow] Error loading existing data:", loadError);
+        logger.error("Error loading existing data", {
+          error: loadError instanceof Error ? loadError.message : String(loadError),
+        });
         existingData = null;
       }
 
@@ -132,7 +137,9 @@ export function useConnectionFlow({
             toast.success("Connected to folder with empty data file - ready to add cases!");
           }
         } catch (err) {
-          console.error("[ConnectionFlow] Error loading cases from new folder:", err);
+          logger.error("Error loading cases from new folder", {
+            error: err instanceof Error ? err.message : String(err),
+          });
           emitFileStorageError({
             operation: "loadExistingData",
             error: err,
@@ -154,7 +161,9 @@ export function useConnectionFlow({
 
       return true;
     } catch (err) {
-      console.error("[ConnectionFlow] handleChooseNewFolder error:", err);
+      logger.error("handleChooseNewFolder failed", {
+        error: err instanceof Error ? err.message : String(err),
+      });
       const notification = emitFileStorageError({
         operation: "connect",
         error: err,
@@ -183,7 +192,7 @@ export function useConnectionFlow({
       updateFileStorageFlags({ inSetupPhase: true, inConnectionFlow: true });
 
       if (!dataManager) {
-        console.error("[ConnectionFlow] DataManager not available");
+        logger.warn("DataManager not available during connectToExisting");
         emitFileStorageError({
           operation: "connectExisting",
           messageOverride: "Data storage is not available. Please connect to a folder first.",
@@ -209,7 +218,9 @@ export function useConnectionFlow({
       try {
         existingData = await loadExistingData();
       } catch (loadError) {
-        console.error("[ConnectionFlow] Failed to load existing data:", loadError);
+        logger.error("Failed to load existing data", {
+          error: loadError instanceof Error ? loadError.message : String(loadError),
+        });
         throw new Error(
           `Failed to access connected directory: ${
             loadError instanceof Error ? loadError.message : "Unknown error"
@@ -220,10 +231,9 @@ export function useConnectionFlow({
       const actualData =
         existingData || ({ exported_at: new Date().toISOString(), total_cases: 0, cases: [] } as const);
 
-      console.log(
-        "[ConnectionFlow] About to load data. Expected records:",
-        actualData?.cases?.length || actualData?.caseRecords?.length || 0,
-      );
+      logger.debug("About to load data", {
+        expectedRecords: actualData?.cases?.length || actualData?.caseRecords?.length || 0,
+      });
 
       const loadedCases = await loadCases();
 
@@ -252,7 +262,9 @@ export function useConnectionFlow({
 
       return true;
     } catch (error) {
-      console.error("[ConnectionFlow] Failed to connect and load data:", error);
+      logger.error("Failed to connect and load data", {
+        error: error instanceof Error ? error.message : String(error),
+      });
 
       const notification = emitFileStorageError({
         operation: hasStoredHandle ? "connectExisting" : "connect",

@@ -58,6 +58,12 @@ interface LoadAlertsResult {
   sourceFile?: string;
 }
 
+interface MergeAlertsResult {
+  added: number;
+  updated: number;
+  total: number;
+}
+
 /**
  * Normalizes note metadata for a collection of cases while gracefully pruning invalid entries.
  *
@@ -271,6 +277,106 @@ export class DataManager {
 
     const key = alert.reportId ?? alert.id;
     return key ?? alert.id;
+  }
+
+  private mergeAlertDetails(
+    existing: AlertWithMatch,
+    incoming: AlertWithMatch,
+  ): { alert: AlertWithMatch; changed: boolean } {
+    const mergedMetadata = {
+      ...(existing.metadata ?? {}),
+      ...(incoming.metadata ?? {}),
+    };
+
+    const metadataValue = Object.keys(mergedMetadata).length > 0 ? mergedMetadata : undefined;
+
+    const merged: AlertWithMatch = {
+      ...incoming,
+      metadata: metadataValue,
+      status: existing.status ?? incoming.status ?? "new",
+      resolvedAt:
+        existing.resolvedAt !== undefined
+          ? existing.resolvedAt
+          : incoming.resolvedAt ?? null,
+      resolutionNotes: existing.resolutionNotes ?? incoming.resolutionNotes,
+    };
+
+    if (!merged.mcNumber && existing.mcNumber) {
+      merged.mcNumber = existing.mcNumber;
+    }
+
+    if (!merged.matchedCaseId && existing.matchedCaseId) {
+      merged.matchedCaseId = existing.matchedCaseId;
+    }
+
+    if (!merged.matchedCaseName && existing.matchedCaseName) {
+      merged.matchedCaseName = existing.matchedCaseName;
+    }
+
+    if (!merged.matchedCaseStatus && existing.matchedCaseStatus) {
+      merged.matchedCaseStatus = existing.matchedCaseStatus;
+    }
+
+    const existingUpdatedAt = existing.updatedAt ? new Date(existing.updatedAt).getTime() : Number.NaN;
+    const incomingUpdatedAt = merged.updatedAt ? new Date(merged.updatedAt).getTime() : Number.NaN;
+
+    if (!Number.isNaN(existingUpdatedAt) && Number.isNaN(incomingUpdatedAt)) {
+      merged.updatedAt = existing.updatedAt;
+    } else if (!Number.isNaN(existingUpdatedAt) && !Number.isNaN(incomingUpdatedAt)) {
+      if (existingUpdatedAt > incomingUpdatedAt) {
+        merged.updatedAt = existing.updatedAt;
+      }
+    }
+
+    const existingMetadataString = JSON.stringify(existing.metadata ?? {});
+    const mergedMetadataString = JSON.stringify(metadataValue ?? {});
+    const metadataChanged = existingMetadataString !== mergedMetadataString;
+
+    const fieldsToCompare: Array<keyof AlertWithMatch> = [
+      "alertCode",
+      "alertType",
+      "severity",
+      "alertDate",
+      "createdAt",
+      "updatedAt",
+      "mcNumber",
+      "personName",
+      "program",
+      "region",
+      "state",
+      "source",
+      "description",
+      "status",
+      "resolvedAt",
+      "resolutionNotes",
+      "matchStatus",
+      "matchedCaseId",
+      "matchedCaseName",
+      "matchedCaseStatus",
+    ];
+
+    const detailsChanged =
+      metadataChanged ||
+      fieldsToCompare.some(field => {
+        const existingValue = existing[field];
+        const mergedValue = merged[field];
+
+        if (existingValue === mergedValue) {
+          return false;
+        }
+
+        if ((existingValue === null || existingValue === undefined) && (mergedValue === null || mergedValue === undefined)) {
+          return false;
+        }
+
+        if (existingValue instanceof Date || mergedValue instanceof Date) {
+          return existingValue?.valueOf() !== mergedValue?.valueOf();
+        }
+
+        return existingValue !== mergedValue;
+      });
+
+    return { alert: merged, changed: detailsChanged };
   }
 
   private isDebugEnvironment(): boolean {
@@ -1070,6 +1176,96 @@ export class DataManager {
       }, "We couldn’t save the alerts file. Try again after reconnecting.");
       return false;
     }
+  }
+
+  async mergeAlertsFromCsvContent(
+    csvContent: string,
+    options: { cases?: CaseDisplay[]; sourceFileName?: string } = {},
+  ): Promise<MergeAlertsResult> {
+    const cases = options.cases ?? (await this.getAllCases());
+
+    const loadResult = await this.loadAlertsFromStore();
+    const storedAlerts = loadResult.alerts ?? [];
+    let shouldPersist = loadResult.needsMigration || loadResult.invalidJson;
+    let sourceFileName = loadResult.sourceFile ?? DataManager.ALERTS_FILE_NAME;
+
+    const requestedSourceFile = options.sourceFileName?.trim();
+    if (requestedSourceFile && requestedSourceFile !== sourceFileName) {
+      sourceFileName = requestedSourceFile;
+      shouldPersist = true;
+    } else if (requestedSourceFile) {
+      sourceFileName = requestedSourceFile;
+    }
+
+    let workingAlerts = storedAlerts.length > 0
+      ? this.rematchAlertsForCases(storedAlerts, cases)
+      : [];
+
+    const incomingIndex =
+      csvContent && csvContent.trim().length > 0
+        ? this.parseAlertsWithFallback(csvContent, cases)
+        : createEmptyAlertsIndex();
+    const incomingAlerts = incomingIndex.alerts;
+
+    const existingMap = new Map<string, number>();
+    workingAlerts.forEach((alert, index) => {
+      const key = this.alertKey(alert);
+      if (key) {
+        existingMap.set(key, index);
+      }
+    });
+
+    let added = 0;
+    let updated = 0;
+
+    incomingAlerts.forEach(incoming => {
+      const key = this.alertKey(incoming);
+      if (!key) {
+        return;
+      }
+
+      const existingIndex = existingMap.get(key);
+      if (existingIndex === undefined) {
+        workingAlerts.push(incoming);
+        existingMap.set(key, workingAlerts.length - 1);
+        added += 1;
+        shouldPersist = true;
+        return;
+      }
+
+      const existingAlert = workingAlerts[existingIndex];
+      const { alert: mergedAlert, changed } = this.mergeAlertDetails(existingAlert, incoming);
+      if (changed) {
+        workingAlerts[existingIndex] = mergedAlert;
+        updated += 1;
+        shouldPersist = true;
+      }
+    });
+
+    if (loadResult.legacyWorkflows.length > 0 && workingAlerts.length > 0) {
+      const applied = this.applyStoredAlertWorkflows(workingAlerts, loadResult.legacyWorkflows);
+      workingAlerts = applied.alerts;
+      if (applied.changed || applied.unmatchedIds.length > 0) {
+        shouldPersist = true;
+      }
+    }
+
+    const rematchedAlerts = this.rematchAlertsForCases(workingAlerts, cases);
+    const index = createAlertsIndexFromAlerts(rematchedAlerts);
+
+    shouldPersist = shouldPersist || added > 0 || updated > 0;
+
+    if (shouldPersist) {
+      await this.saveAlerts(index.alerts, index.summary, { sourceFile: sourceFileName });
+    }
+
+    this.debugLogAlertsSample("alerts-merge", index.alerts);
+
+    return {
+      added,
+      updated,
+      total: index.alerts.length,
+    };
   }
 
   // =============================================================================

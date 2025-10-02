@@ -47,6 +47,7 @@ interface ViewRendererProps {
     | null
     | void;
   handleResolveAlert?: (alert: AlertWithMatch) => Promise<void> | void;
+  onAlertsCsvImported?: (index: AlertsIndex) => void;
 }
 
 /**
@@ -94,6 +95,7 @@ export function ViewRenderer({
   handleBatchCreateNote,
   handleUpdateCaseStatus,
   handleResolveAlert,
+  onAlertsCsvImported,
 }: ViewRendererProps) {
   
   switch (currentView) {
@@ -125,6 +127,7 @@ export function ViewRenderer({
         <Settings
           cases={cases}
           onDataPurged={handleDataPurged}
+          onAlertsCsvImported={onAlertsCsvImported}
         />
       );
 

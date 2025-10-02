@@ -20,6 +20,9 @@ import { clearFileStorageFlags, updateFileStorageFlags } from "./utils/fileStora
 import { useCategoryConfig } from "./contexts/CategoryConfigContext";
 import { createAlertsIndexFromAlerts, createEmptyAlertsIndex, type AlertWithMatch, type AlertsIndex } from "./utils/alertsData";
 import { ENABLE_SAMPLE_ALERTS } from "./utils/featureFlags";
+import { createLogger } from "./utils/logger";
+
+const logger = createLogger("App");
 
 const AppContent = memo(function AppContent() {
   const { isSupported, hasStoredHandle, connectToFolder, connectToExisting, loadExistingData, service } = useFileStorage();
@@ -94,7 +97,10 @@ const AppContent = memo(function AppContent() {
   // Central file data handler that maintains file provider sync
   const handleFileDataLoaded = useCallback((fileData: any) => {
     try {
-      console.log("🔧 handleFileDataLoaded called with:", fileData);
+      logger.lifecycle("handleFileDataLoaded invoked", {
+        hasCases: Array.isArray(fileData?.cases),
+        peopleCount: Array.isArray(fileData?.people) ? fileData.people.length : undefined,
+      });
 
       if (fileData && typeof fileData === "object") {
         setConfigFromFile(fileData.categoryConfig);
@@ -106,23 +112,28 @@ const AppContent = memo(function AppContent() {
 
       if (fileData?.cases) {
         casesToSet = fileData.cases as CaseDisplay[];
-        console.log(`✅ File data loaded with transformed cases: ${casesToSet.length} cases`);
+        logger.info("File data loaded", { caseCount: casesToSet.length });
       } else if (fileData?.people && fileData?.caseRecords) {
-        console.log(
-          `🔄 Raw file data detected: ${fileData.people.length} people, ${fileData.caseRecords.length} case records. Triggering DataManager reload...`,
-        );
+        logger.warn("Raw file data detected; scheduling DataManager reload", {
+          peopleCount: fileData.people.length,
+          caseRecordCount: fileData.caseRecords.length,
+        });
 
         setTimeout(() => {
-          loadCases().catch(err => console.error("Failed to reload cases after file load:", err));
+          loadCases().catch(err =>
+            logger.error("Failed to reload cases after file load", {
+              error: err instanceof Error ? err.message : String(err),
+            }),
+          );
         }, 100);
 
         setHasLoadedData(true);
         return;
       } else if (fileData && Object.keys(fileData).length === 0) {
         casesToSet = [];
-        console.log("✅ Empty file data loaded and synced to UI");
+        logger.info("Empty file data loaded and synced to UI");
       } else {
-        console.warn("⚠️ Unexpected file data format:", fileData);
+        logger.warn("Unexpected file data format", { keys: Object.keys(fileData ?? {}) });
         casesToSet = [];
       }
 
@@ -135,7 +146,9 @@ const AppContent = memo(function AppContent() {
         updateFileStorageFlags({ sessionHadData: true });
       }
     } catch (err) {
-      console.error("Failed to handle file data loaded:", err);
+      logger.error("Failed to handle file data loaded", {
+        error: err instanceof Error ? err.message : String(err),
+      });
       toast.error("Failed to load data");
     }
   }, [loadCases, setCases, setHasLoadedData, setConfigFromFile]);
@@ -221,6 +234,13 @@ const AppContent = memo(function AppContent() {
     [resolvedAlertOverridesRef],
   );
 
+  const handleAlertsCsvImported = useCallback(
+    (index: AlertsIndex) => {
+      setAlertsIndex(applyAlertOverrides(index));
+    },
+    [applyAlertOverrides, setAlertsIndex],
+  );
+
   // Note: loadCases is now provided by useCaseManagement hook
 
   useImportListeners({ loadCases, setError, isStorageReady: connectionState.isReady });
@@ -263,7 +283,9 @@ const AppContent = memo(function AppContent() {
 
       toast.success("All data has been purged successfully");
     } catch (err) {
-      console.error("Failed to handle data purge:", err);
+      logger.error("Failed to handle data purge", {
+        error: err instanceof Error ? err.message : String(err),
+      });
       const errorMsg = "Failed to complete data purge. Please try again.";
       setError(errorMsg);
       toast.error(errorMsg);
@@ -329,7 +351,10 @@ const AppContent = memo(function AppContent() {
           description: "Add a note when you're ready to document the resolution.",
         });
       } catch (err) {
-        console.error("Failed to resolve alert:", err);
+        logger.error("Failed to resolve alert", {
+          alertId: alert.id,
+          error: err instanceof Error ? err.message : String(err),
+        });
         resolvedAlertOverridesRef.current.delete(alert.id);
         setAlertsIndex(prevIndex => applyAlertOverrides(prevIndex));
         toast.error("Unable to resolve alert. Please try again.");
@@ -355,7 +380,9 @@ const AppContent = memo(function AppContent() {
           setAlertsIndex(applyAlertOverrides(nextAlerts));
         }
       } catch (error) {
-        console.error("Failed to load alerts: ", error);
+        logger.error("Failed to load alerts", {
+          error: error instanceof Error ? error.message : String(error),
+        });
         if (!isCancelled) {
           setAlertsIndex(createEmptyAlertsIndex());
         }
@@ -503,6 +530,7 @@ const AppContent = memo(function AppContent() {
       alerts: alertsIndex,
       onUpdateCaseStatus: handleUpdateCaseStatus,
       onResolveAlert: handleResolveAlert,
+      onAlertsCsvImported: handleAlertsCsvImported,
     }),
     [
       cases,
@@ -512,6 +540,7 @@ const AppContent = memo(function AppContent() {
       handleDismissError,
       handleUpdateCaseStatus,
       handleResolveAlert,
+      handleAlertsCsvImported,
       noteFlow,
       selectedCase,
       viewHandlers,
@@ -539,8 +568,8 @@ const AppContent = memo(function AppContent() {
 });
 
 export default function App() {
-  console.log('[App] Rendering main App component');
-  
+  logger.lifecycle("Rendering main App component");
+
   return (
     <AppProviders>
       <FileStorageIntegrator>

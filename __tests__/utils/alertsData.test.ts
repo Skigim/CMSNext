@@ -115,4 +115,37 @@ describe("alertsData", () => {
     expect(result.summary.missingMcn).toBe(1);
     expect(result.alerts[0].matchStatus).toBe("missing-mcn");
   });
+
+  it("parses stacked alerts with flexible dates and escaped quotes", () => {
+    const sample = "\"header\",,9-5-25,MCN5555,\"SMITH,JOHN\",\"Medicaid\",\"Follow Up\",\"Needs \"\"special\"\" handling\",AL-777,\"tail\"";
+    const cases: CaseDisplay[] = [buildCase({ id: "case-2", mcn: "MCN5555" })];
+
+    const result = parseStackedAlerts(sample, cases);
+    expect(result.summary.total).toBe(1);
+    expect(result.summary.matched).toBe(1);
+    const [alert] = result.alerts;
+    expect(alert.alertDate).toBe("2025-09-05T00:00:00.000Z");
+    expect(alert.description).toBe("Needs \"special\" handling");
+    expect(alert.metadata?.rawDescription).toBe("Needs \"special\" handling");
+    expect(alert.personName).toBe("JOHN SMITH");
+  });
+
+  it("parses stacked alerts rows with trailing columns and preserves each entry", () => {
+    const sample = [
+      "\"DEPARTMENT OF HEALTH AND HUMAN SERVICES\",\"List Position Alert \",\"Office\",\"GENEVA - ELIGIBILITY\",\"Number\n\n\",\"61704790\",\"TAYLOR HARRIS\",\"Page -1 of 1\",\"Due Date\",\"Display Date\",\"MC#\",\" Name\",\"Program\",\"Type\",\"Description\",\"Alert_Number\",,10-02-2025,784589,\"DOE, JANE W\",\"MEDICAID\",\"MAILM\",\"RETURNED MAIL RCVD\",536,\"    Total:\",44,\"N-FOCUS: NFO6091L01\",\"Thursday, October 2, 2025   8:51 am\"",
+      "\"DEPARTMENT OF HEALTH AND HUMAN SERVICES\",\"List Position Alert \",\"Office\",\"GENEVA - ELIGIBILITY\",\"Number\n\n\",\"61704790\",\"TAYLOR HARRIS\",\"Page -1 of 1\",\"Due Date\",\"Display Date\",\"MC#\",\" Name\",\"Program\",\"Type\",\"Description\",\"Alert_Number\",,10-02-2025,965042,\"DUCK, DONALD H\",\"MEDICAID\",\"MAILM\",\"MAIL RECEIVED\",470,\"    Total:\",44,\"N-FOCUS: NFO6091L01\",\"Thursday, October 2, 2025   8:51 am\"",
+      "\"DEPARTMENT OF HEALTH AND HUMAN SERVICES\",\"List Position Alert \",\"Office\",\"GENEVA - ELIGIBILITY\",\"Number\n\n\",\"61704790\",\"TAYLOR HARRIS\",\"Page -1 of 1\",\"Due Date\",\"Display Date\",\"MC#\",\" Name\",\"Program\",\"Type\",\"Description\",\"Alert_Number\",,10-02-2025,970902,\"ARMSTRONG, NEIL\",\"MEDICAID\",\"WRKRM\",\"AVS DAY 11\",9997,\"    Total:\",44,\"N-FOCUS: NFO6091L01\",\"Thursday, October 2, 2025   8:51 am\"",
+    ].join("\n");
+
+    const cases: CaseDisplay[] = [
+      buildCase({ id: "case-1", mcn: "784589" }),
+      buildCase({ id: "case-2", mcn: "965042" }),
+      buildCase({ id: "case-3", mcn: "970902" }),
+    ];
+
+    const result = parseStackedAlerts(sample, cases);
+    expect(result.summary.total).toBe(3);
+    expect(result.alerts).toHaveLength(3);
+    expect(result.alerts.map(alert => alert.alertCode)).toEqual(["536", "470", "9997"]);
+  });
 });

@@ -1,5 +1,4 @@
-import { CaseDisplay, AlertRecord, AlertSeverity } from "../types/case";
-import { parseCsv, ParsedCsvRow } from "./csvParser";
+import { CaseDisplay, AlertRecord, AlertSeverity, AlertWorkflowStatus } from "../types/case";
 
 export type AlertMatchStatus = "matched" | "unmatched" | "missing-mcn";
 
@@ -27,60 +26,45 @@ export interface AlertsIndex {
 }
 
 const severityPriorityOrder: AlertSeverity[] = ["Critical", "High", "Medium", "Low", "Info"];
+const workflowPriorityOrder: AlertWorkflowStatus[] = ["new", "in-progress", "acknowledged", "snoozed", "resolved"];
 
-const STACKED_ALERT_REGEX = /,,(?<dueDate>\d{2}-\d{2}-\d{4}),(?<mcn>[^,]*),"(?<name>[^"]*)","(?<program>[^"]*)","(?<type>[^"]*)","(?<description>[^"]*)",(?<alertNumber>[^,]*),/g;
+const STACKED_ALERT_REGEX = /,,\s*(?<dueDate>\d{1,2}[\/-]\d{1,2}[\/-]\d{2,4})\s*,\s*(?<mcn>[^,"]*)\s*,"(?<name>(?:[^"]|"")*)","(?<program>(?:[^"]|"")*)","(?<type>(?:[^"]|"")*)","(?<description>(?:[^"]|"")*)",\s*(?<alertNumber>[^,\r\n]*)/g;
 
-function normalizeSeverity(rawSeverity: string | undefined): AlertSeverity {
-  const normalized = rawSeverity?.trim().toLowerCase();
-
-  switch (normalized) {
-    case "critical":
-      return "Critical";
-    case "high":
-      return "High";
-    case "medium":
-      return "Medium";
-    case "low":
-      return "Low";
-    default:
-      return "Info";
-  }
-}
-
-function normalizeDateString(value?: string): string {
-  if (!value) {
-    return "";
+function getAlertKey(alert: AlertWithMatch): string | null {
+  if (!alert) {
+    return null;
   }
 
-  const normalized = value.replace(/ /g, "T");
-  const date = new Date(normalized);
-
-  if (Number.isNaN(date.getTime())) {
-    return value;
+  const baseId = alert.reportId?.trim() || alert.id?.trim();
+  if (!baseId) {
+    return null;
   }
 
-  return date.toISOString();
-}
+  const normalizedMcn = normalizeMcn(alert.mcNumber ?? undefined);
+  const normalizedName = alert.personName?.trim().toLowerCase() ?? "";
+  const normalizedProgram = alert.program?.trim().toLowerCase() ?? "";
+  const normalizedType = alert.alertType?.trim().toLowerCase() ?? "";
+  const normalizedDescription = alert.description?.trim().toLowerCase() ?? "";
+  const normalizedStatus = alert.matchStatus ?? "";
 
-function normalizeSource(rawSource: string | undefined): string {
-  const normalized = rawSource?.trim().toLowerCase();
-  if (normalized === "user") {
-    return "User";
-  }
-  return "Import";
-}
-
-function createAlertId(row: ParsedCsvRow): string {
-  const reportId = row.ReportID ?? row["ReportID"];
-  if (reportId && reportId.trim().length > 0) {
-    return reportId.trim();
+  const dateSource = alert.alertDate || alert.updatedAt || alert.createdAt || "";
+  let normalizedDate = "";
+  if (dateSource) {
+    const parsed = new Date(dateSource);
+    normalizedDate = Number.isNaN(parsed.getTime()) ? dateSource : parsed.toISOString().slice(0, 10);
   }
 
-  if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
-    return crypto.randomUUID();
-  }
+  const discriminator = [
+    normalizedMcn,
+    normalizedName,
+    normalizedProgram,
+    normalizedType,
+    normalizedDescription,
+    normalizedStatus,
+    normalizedDate,
+  ].filter(Boolean).join("|");
 
-  return `alert-${Math.random().toString(36).slice(2, 10)}`;
+  return discriminator.length > 0 ? `${baseId}|${discriminator}` : baseId;
 }
 
 function createRandomAlertId(): string {
@@ -116,57 +100,6 @@ function buildCaseMap(cases: CaseDisplay[]): Map<string, CaseDisplay> {
   return map;
 }
 
-function transformRow(row: ParsedCsvRow, casesByMcn: Map<string, CaseDisplay>): AlertWithMatch {
-  const reportId = createAlertId(row);
-  const rawMcn = row.MCNumber ?? row["MCNumber"] ?? "";
-  const normalizedMcn = normalizeMcn(rawMcn);
-  const matchedCase = normalizedMcn ? casesByMcn.get(normalizedMcn) : undefined;
-
-  const severity = normalizeSeverity(row.Severity);
-
-  const alert: AlertWithMatch = {
-    id: reportId,
-    reportId,
-    alertCode: row.AlertCode ?? "",
-    alertType: row.AlertType ?? "",
-    severity,
-    alertDate: normalizeDateString(row.AlertDate || row.CreatedAt),
-    createdAt: normalizeDateString(row.CreatedAt || row.AlertDate),
-    updatedAt: normalizeDateString(row.UpdatedAt || row.CreatedAt || row.AlertDate),
-    mcNumber: rawMcn ? normalizedMcn : null,
-    personName: row.Name ?? "",
-    program: row.Program ?? "",
-    region: row.Region ?? "",
-    state: row.State ?? "",
-    source: normalizeSource(row.Source),
-    description: row.Comments ?? "",
-    status: "new",
-    metadata: {
-      rawSeverity: row.Severity ?? "",
-      alertType: row.AlertType ?? "",
-      alertCode: row.AlertCode ?? "",
-    },
-    matchStatus: !normalizedMcn
-      ? "missing-mcn"
-      : matchedCase
-        ? "matched"
-        : "unmatched",
-    matchedCaseId: matchedCase?.id,
-    matchedCaseName: matchedCase?.name,
-    matchedCaseStatus: matchedCase?.status,
-  };
-
-  return alert;
-}
-
-export function parseAlertsFromCsv(csvContent: string, cases: CaseDisplay[]): AlertsIndex {
-  const rows = parseCsv(csvContent);
-  const casesByMcn = buildCaseMap(cases);
-
-  const alerts = rows.map(row => transformRow(row, casesByMcn));
-  return createAlertsIndexFromAlerts(alerts);
-}
-
 export function filterAlertsForCase(caseId: string, alertsByCaseId: Map<string, AlertWithMatch[]>): AlertWithMatch[] {
   return alertsByCaseId.get(caseId) ?? [];
 }
@@ -190,7 +123,8 @@ function sortAlerts(alerts: AlertWithMatch[]): AlertWithMatch[] {
 }
 
 export function createAlertsIndexFromAlerts(alertsInput: AlertWithMatch[]): AlertsIndex {
-  const sortedAlerts = sortAlerts(alertsInput);
+  const dedupedAlerts = dedupeAlerts(alertsInput);
+  const sortedAlerts = sortAlerts(dedupedAlerts);
 
   const alertsByCaseId = new Map<string, AlertWithMatch[]>();
   const summary: AlertsSummary = {
@@ -234,6 +168,103 @@ export function createAlertsIndexFromAlerts(alertsInput: AlertWithMatch[]): Aler
   };
 }
 
+function getWorkflowPriority(status: AlertWithMatch["status"]): number {
+  const normalized = status ?? "new";
+  const index = workflowPriorityOrder.indexOf(normalized);
+  return index === -1 ? 0 : index;
+}
+
+function getChronologyScore(alert: AlertWithMatch): number {
+  const timestampSources = [alert.updatedAt, alert.createdAt, alert.alertDate];
+  for (const candidate of timestampSources) {
+    if (!candidate) {
+      continue;
+    }
+
+    const value = new Date(candidate).getTime();
+    if (!Number.isNaN(value)) {
+      return value;
+    }
+  }
+
+  return 0;
+}
+
+function mergeDuplicateAlerts(existing: AlertWithMatch, incoming: AlertWithMatch): AlertWithMatch {
+  if (!existing) {
+    return incoming;
+  }
+
+  if (!incoming) {
+    return existing;
+  }
+
+  const existingPriority = getWorkflowPriority(existing.status);
+  const incomingPriority = getWorkflowPriority(incoming.status);
+
+  let winner = existing;
+  let fallback = incoming;
+
+  if (incomingPriority > existingPriority) {
+    winner = incoming;
+    fallback = existing;
+  } else if (incomingPriority === existingPriority) {
+    const incomingChronology = getChronologyScore(incoming);
+    const existingChronology = getChronologyScore(existing);
+    if (incomingChronology > existingChronology) {
+      winner = incoming;
+      fallback = existing;
+    }
+  }
+
+  const mergedMetadata = {
+    ...(fallback.metadata ?? {}),
+    ...(winner.metadata ?? {}),
+  };
+
+  return {
+    ...fallback,
+    ...winner,
+    metadata: Object.keys(mergedMetadata).length > 0 ? mergedMetadata : undefined,
+    resolvedAt: winner.resolvedAt ?? fallback.resolvedAt ?? null,
+    resolutionNotes: winner.resolutionNotes ?? fallback.resolutionNotes,
+    mcNumber: winner.mcNumber ?? fallback.mcNumber,
+    matchedCaseId: winner.matchedCaseId ?? fallback.matchedCaseId,
+    matchedCaseName: winner.matchedCaseName ?? fallback.matchedCaseName,
+    matchedCaseStatus: winner.matchedCaseStatus ?? fallback.matchedCaseStatus,
+    updatedAt: winner.updatedAt ?? fallback.updatedAt,
+    createdAt: winner.createdAt ?? fallback.createdAt,
+    alertDate: winner.alertDate ?? fallback.alertDate,
+  };
+}
+
+function dedupeAlerts(alerts: AlertWithMatch[]): AlertWithMatch[] {
+  if (!alerts || alerts.length === 0) {
+    return [];
+  }
+
+  const deduped = new Map<string, AlertWithMatch>();
+  const passthrough: AlertWithMatch[] = [];
+
+  alerts.forEach(alert => {
+    const key = getAlertKey(alert);
+    if (!key) {
+      passthrough.push(alert);
+      return;
+    }
+
+    const existing = deduped.get(key);
+    if (!existing) {
+      deduped.set(key, alert);
+      return;
+    }
+
+    deduped.set(key, mergeDuplicateAlerts(existing, alert));
+  });
+
+  return [...deduped.values(), ...passthrough];
+}
+
 function normalizePersonName(rawName: string | undefined): string {
   if (!rawName) {
     return "";
@@ -255,18 +286,30 @@ function normalizeStackedDate(rawDate: string | undefined): string {
     return "";
   }
 
-  const parts = rawDate.trim().split("-");
+  const normalizedDate = rawDate.trim().replace(/\//g, "-");
+  const parts = normalizedDate.split("-");
   if (parts.length !== 3) {
-    return rawDate;
+    return normalizedDate;
   }
 
-  const [month, day, year] = parts;
-  const isoCandidate = `${year.padStart(4, "0")}-${month.padStart(2, "0")}-${day.padStart(2, "0")}T00:00:00.000Z`;
+  const [monthInput, dayInput, yearInput] = parts;
+  const month = monthInput.padStart(2, "0");
+  const day = dayInput.padStart(2, "0");
+  const year = (yearInput.length === 2 ? `20${yearInput}` : yearInput).padStart(4, "0");
+
+  const isoCandidate = `${year}-${month}-${day}T00:00:00.000Z`;
   const date = new Date(isoCandidate);
   if (Number.isNaN(date.getTime())) {
-    return rawDate;
+    return normalizedDate;
   }
   return date.toISOString();
+}
+
+function decodeStackedValue(value: string | undefined): string {
+  if (!value) {
+    return "";
+  }
+  return value.replace(/""/g, '"').trim();
 }
 
 function deriveSeverityFromType(type: string | undefined, description: string | undefined): AlertSeverity {
@@ -315,19 +358,20 @@ export function parseStackedAlerts(csvContent: string, cases: CaseDisplay[]): Al
 
   for (const match of sanitizedContent.matchAll(STACKED_ALERT_REGEX)) {
     const groups = match.groups ?? {};
-    const rawMcn = (groups.mcn ?? "").trim();
+    const rawMcn = decodeStackedValue(groups.mcn);
     const normalizedMcn = normalizeMcn(rawMcn);
     const matchedCase = normalizedMcn ? casesByMcn.get(normalizedMcn) : undefined;
 
     const dueDateIso = normalizeStackedDate(groups.dueDate);
-    const program = groups.program?.toString().trim() ?? "";
-    const alertType = groups.type?.toString().trim() ?? "";
-    const description = groups.description?.toString().trim() ?? "";
-    const alertNumber = (groups.alertNumber ?? "").toString().trim();
+    const program = decodeStackedValue(groups.program);
+    const alertType = decodeStackedValue(groups.type);
+    const description = decodeStackedValue(groups.description);
+    const alertNumber = decodeStackedValue(groups.alertNumber);
     const alertId = alertNumber && alertNumber.length > 0 ? alertNumber : createRandomAlertId();
 
     const severity = deriveSeverityFromType(alertType, description);
-    const personName = normalizePersonName(groups.name);
+    const rawName = decodeStackedValue(groups.name);
+    const personName = normalizePersonName(rawName);
 
     const alert: AlertWithMatch = {
       id: alertId,
@@ -352,7 +396,7 @@ export function parseStackedAlerts(csvContent: string, cases: CaseDisplay[]): Al
         rawType: alertType,
         rawProgram: program,
         rawDescription: description,
-        rawName: groups.name ?? "",
+        rawName: rawName,
         alertNumber,
       },
       matchStatus: !normalizedMcn

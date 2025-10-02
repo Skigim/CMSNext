@@ -6,6 +6,9 @@ import { CategoryConfigProvider } from "@/contexts/CategoryConfigContext";
 import ErrorBoundary from "@/components/error/ErrorBoundary";
 import FileSystemErrorBoundary from "@/components/error/FileSystemErrorBoundary";
 import { getFileStorageFlags } from "@/utils/fileStorageFlags";
+import { createLogger } from "@/utils/logger";
+
+const logger = createLogger("AppProviders");
 
 interface AppProvidersProps {
   children: React.ReactNode;
@@ -24,7 +27,7 @@ interface AppProvidersProps {
  * @param children - The application content to be wrapped with providers
  */
 export function AppProviders({ children }: AppProvidersProps) {
-  console.log('[AppProviders] Rendering provider hierarchy');
+  logger.lifecycle("Rendering provider hierarchy");
   
   // Memoize callbacks to prevent FileStorageProvider prop changes
   const getDataFunction = useCallback(() => {

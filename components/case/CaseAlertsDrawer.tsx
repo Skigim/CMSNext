@@ -74,8 +74,8 @@ export const CaseAlertsDrawer = memo(function CaseAlertsDrawer({
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="right" className="sm:max-w-md">
-        <SheetHeader className="border-b border-border/60 pb-4">
+      <SheetContent side="right" className="sm:max-w-md overflow-hidden">
+        <SheetHeader className="border-b border-border/60 pb-4 shrink-0">
           <SheetTitle className="flex flex-col gap-1 text-left">
             Alerts for {caseName}
             <span className="text-sm font-normal text-muted-foreground">
@@ -86,7 +86,7 @@ export const CaseAlertsDrawer = memo(function CaseAlertsDrawer({
             Review incoming alerts and resolve items—resolution notes are logged automatically.
           </SheetDescription>
         </SheetHeader>
-        <ScrollArea className="flex-1 px-4 pb-6">
+  <ScrollArea className="flex-1 min-h-0 overflow-y-auto px-4 pb-6">
           <section className="space-y-3 py-4">
             <header className="flex items-center justify-between">
               <h2 className="text-sm font-semibold text-foreground">Open alerts</h2>

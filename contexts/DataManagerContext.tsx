@@ -1,12 +1,15 @@
-import { useContext, createContext, ReactNode, useMemo } from 'react';
+import { useContext, createContext, ReactNode, useMemo, useEffect } from 'react';
 import DataManager from '@/utils/DataManager';
 import { useFileStorage } from '@/contexts/FileStorageContext';
+import { createLogger } from '@/utils/logger';
 
 interface DataManagerContextType {
   dataManager: DataManager | null;
 }
 
 const DataManagerContext = createContext<DataManagerContextType | null>(null);
+
+const logger = createLogger('DataManagerProvider');
 
 interface DataManagerProviderProps {
   children: ReactNode;
@@ -19,20 +22,24 @@ export function DataManagerProvider({ children }: DataManagerProviderProps) {
   // Memoize DataManager creation to prevent recreation on every render
   const dataManager = useMemo(() => {
     if (!service) return null;
-    console.log('[DataManagerProvider] Creating new DataManager instance for service running:', service?.getStatus?.()?.isRunning || false);
+    logger.info('Creating DataManager instance', {
+      serviceRunning: service?.getStatus?.()?.isRunning ?? false,
+    });
     return new DataManager({
       fileService: service,
       persistNormalizationFixes,
     });
   }, [persistNormalizationFixes, service]); // Only recreate when service changes or config toggles
 
-  console.log('[DataManagerProvider] Render:', {
-    hasService: !!service,
-    isConnected,
-    hasDataManager: !!dataManager,
-    statusStatus: status?.status,
-    permissionStatus: status?.permissionStatus
-  });
+  useEffect(() => {
+    logger.debug('Provider state updated', {
+      hasService: !!service,
+      isConnected,
+      hasDataManager: !!dataManager,
+      status: status?.status,
+      permissionStatus: status?.permissionStatus,
+    });
+  }, [dataManager, isConnected, service, status]);
 
   return (
     <DataManagerContext.Provider value={{ dataManager }}>

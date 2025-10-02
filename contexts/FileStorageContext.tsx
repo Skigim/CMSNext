@@ -15,6 +15,7 @@ import {
   type FileStoragePermissionState,
   type FileStorageErrorInfo,
 } from './fileStorageMachine';
+import { createLogger } from '@/utils/logger';
 
 interface FileStorageContextType {
   service: AutosaveFileService | null;
@@ -39,6 +40,8 @@ interface FileStorageContextType {
 
 const FileStorageContext = createContext<FileStorageContextType | null>(null);
 
+const logger = createLogger('FileStorageContext');
+
 interface FileStorageProviderProps {
   children: ReactNode;
   enabled?: boolean;
@@ -57,7 +60,7 @@ export function FileStorageProvider({
 
   // Initialize the service - only once per component mount
   useEffect(() => {
-    console.log('[FileStorageContext] Creating new AutosaveFileService instance');
+    logger.lifecycle('Creating AutosaveFileService instance');
     const fileService = new AutosaveFileService({
       fileName: 'case-tracker-data.json',
       enabled: true, // Always start enabled, we'll control it separately
@@ -97,7 +100,7 @@ export function FileStorageProvider({
     setFileService(fileService);
 
     return () => {
-      console.log('[FileStorageContext] Destroying AutosaveFileService instance');
+      logger.lifecycle('Destroying AutosaveFileService instance');
       fileService.destroy();
       setFileService(null);
       dispatch({ type: 'SERVICE_RESET' });
@@ -142,7 +145,9 @@ export function FileStorageProvider({
       }
       return success;
     } catch (error) {
-      console.error('[FileStorageContext] connectToFolder error:', error);
+      logger.error('connectToFolder failed', {
+        error: error instanceof Error ? error.message : String(error),
+      });
       dispatch({
         type: 'ERROR_REPORTED',
         error: {
@@ -158,7 +163,7 @@ export function FileStorageProvider({
 
   const connectToExisting = useCallback(async (): Promise<boolean> => {
     if (!service) {
-      console.error('[FileStorageContext] No service available for connectToExisting');
+      logger.warn('connectToExisting called without service');
       return false;
     }
     dispatch({ type: 'CONNECT_REQUESTED' });
@@ -171,7 +176,9 @@ export function FileStorageProvider({
       }
       return success;
     } catch (error) {
-      console.error('[FileStorageContext] connectToExisting error:', error);
+      logger.error('connectToExisting failed', {
+        error: error instanceof Error ? error.message : String(error),
+      });
       dispatch({
         type: 'ERROR_REPORTED',
         error: {
@@ -214,27 +221,35 @@ export function FileStorageProvider({
   };
 
   const listDataFiles = useCallback(async (): Promise<string[]> => {
-    console.log('[FileStorageContext] listDataFiles called', { service: !!service });
+    logger.debug('listDataFiles called', { serviceAvailable: !!service });
     if (!service) return [];
     try {
       const result = await service.listDataFiles();
-      console.log('[FileStorageContext] listDataFiles result:', result);
+      logger.debug('listDataFiles resolved', { fileCount: result.length });
       return result;
     } catch (error) {
-      console.error('[FileStorageContext] listDataFiles error:', error);
+      logger.error('listDataFiles failed', {
+        error: error instanceof Error ? error.message : String(error),
+      });
       return [];
     }
   }, [service]);
 
   const readNamedFile = async (fileName: string): Promise<any> => {
-    console.log('[FileStorageContext] readNamedFile called', { service: !!service, fileName });
+    logger.debug('readNamedFile called', { serviceAvailable: !!service, fileName });
     if (!service) return null;
     try {
       const result = await service.readNamedFile(fileName);
-      console.log('[FileStorageContext] readNamedFile result:', result);
+      logger.debug('readNamedFile resolved', {
+        fileName,
+        hasData: !!result,
+      });
       return result;
     } catch (error) {
-      console.error('[FileStorageContext] readNamedFile error:', error);
+      logger.error('readNamedFile failed', {
+        fileName,
+        error: error instanceof Error ? error.message : String(error),
+      });
       return null;
     }
   };
@@ -245,14 +260,20 @@ export function FileStorageProvider({
   };
 
   const loadDataFromFile = useCallback(async (fileName: string): Promise<any> => {
-    console.log('[FileStorageContext] loadDataFromFile called', { service: !!service, fileName });
+    logger.debug('loadDataFromFile called', { serviceAvailable: !!service, fileName });
     if (!service) return null;
     try {
       const result = await service.loadDataFromFile(fileName);
-      console.log('[FileStorageContext] loadDataFromFile result:', result);
+      logger.debug('loadDataFromFile resolved', {
+        fileName,
+        hasData: !!result,
+      });
       return result;
     } catch (error) {
-      console.error('[FileStorageContext] loadDataFromFile error:', error);
+      logger.error('loadDataFromFile failed', {
+        fileName,
+        error: error instanceof Error ? error.message : String(error),
+      });
       throw error;
     }
   }, [service]);
