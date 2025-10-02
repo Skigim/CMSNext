@@ -331,6 +331,157 @@ describe('DataManager', () => {
       )
     })
 
+    it('reattaches legacy workflows for stacked alerts sharing a report id', async () => {
+      const mockCase = createMockCaseDisplay({
+        id: 'case-legacy-stack',
+        mcn: '2222',
+        caseRecord: createMockCaseRecord({ id: 'record-legacy-stack', mcn: '2222' }),
+      })
+
+      const stackedAlerts: AlertWithMatch[] = [
+        buildAlert({
+          id: 'alert-stack-1',
+          reportId: 'AL-STACK',
+          alertDate: '2025-09-20T00:00:00.000Z',
+          description: 'First stacked alert',
+          mcNumber: '2222',
+          matchedCaseId: mockCase.id,
+          matchedCaseName: `${mockCase.person.firstName} ${mockCase.person.lastName}`,
+          matchStatus: 'matched',
+          status: 'new',
+          updatedAt: '2025-09-20T00:00:00.000Z',
+        }),
+        buildAlert({
+          id: 'alert-stack-2',
+          reportId: 'AL-STACK',
+          alertDate: '2025-09-25T00:00:00.000Z',
+          description: 'Second stacked alert',
+          mcNumber: '2222',
+          matchedCaseId: mockCase.id,
+          matchedCaseName: `${mockCase.person.firstName} ${mockCase.person.lastName}`,
+          matchStatus: 'matched',
+          status: 'new',
+          updatedAt: '2025-09-25T00:00:00.000Z',
+        }),
+      ]
+
+      const stackedIndex = alertsData.createAlertsIndexFromAlerts(stackedAlerts)
+      vi.spyOn(alertsData, 'parseStackedAlerts').mockReturnValueOnce(stackedIndex)
+
+      const firstKey = alertsData.buildAlertStorageKey(stackedAlerts[0])
+      const secondKey = alertsData.buildAlertStorageKey(stackedAlerts[1])
+
+      expect(firstKey).toBeTruthy()
+      expect(secondKey).toBeTruthy()
+
+      mockAutosaveService.readNamedFile.mockResolvedValueOnce({
+        version: 1,
+        alerts: [
+          {
+            alertId: firstKey,
+            status: 'resolved',
+            resolvedAt: '2025-09-26T00:00:00.000Z',
+            resolutionNotes: 'Initial contact documented',
+          },
+          {
+            alertId: secondKey,
+            status: 'in-progress',
+            resolutionNotes: 'Awaiting paperwork',
+          },
+        ],
+        updatedAt: '2025-09-27T00:00:00.000Z',
+      })
+
+      mockAutosaveService.readTextFile.mockResolvedValueOnce('csv-content')
+
+      const result = await dataManager.mergeAlertsFromCsvContent('csv-content', {
+        cases: [mockCase],
+        sourceFileName: 'alerts.csv',
+      })
+
+      expect(result.total).toBe(2)
+      expect(mockAutosaveService.writeNamedFile).toHaveBeenCalled()
+
+      const lastCall = mockAutosaveService.writeNamedFile.mock.calls.at(-1)
+      expect(lastCall).toBeDefined()
+
+  const persistedPayload = lastCall?.[1]
+  expect(persistedPayload).toBeDefined()
+  expect(persistedPayload?.alerts).toHaveLength(2)
+
+  const persistedFirst = persistedPayload!.alerts.find((alert: AlertWithMatch) => alert.id === 'alert-stack-1')
+  const persistedSecond = persistedPayload!.alerts.find((alert: AlertWithMatch) => alert.id === 'alert-stack-2')
+
+      expect(persistedFirst?.status).toBe('resolved')
+      expect(persistedFirst?.resolvedAt).toBe('2025-09-26T00:00:00.000Z')
+      expect(persistedFirst?.resolutionNotes).toBe('Initial contact documented')
+
+      expect(persistedSecond?.status).toBe('in-progress')
+      expect(persistedSecond?.resolutionNotes).toBe('Awaiting paperwork')
+    })
+
+    it('does not collapse stacked alerts that share a date but differ in description', async () => {
+      const mockCase = createMockCaseDisplay({
+        id: 'case-stacked-date',
+        mcn: '3333',
+        caseRecord: createMockCaseRecord({ id: 'record-stacked-date', mcn: '3333' }),
+      })
+
+      const stackedAlerts: AlertWithMatch[] = [
+        buildAlert({
+          id: 'stacked-date-1',
+          reportId: 'AL-STACK-DATE',
+          alertDate: '2025-09-30T00:00:00.000Z',
+          description: 'Follow up with client',
+          metadata: { rawDescription: 'Follow up with client' },
+          mcNumber: '3333',
+          matchedCaseId: mockCase.id,
+          matchedCaseName: `${mockCase.person.firstName} ${mockCase.person.lastName}`,
+          matchStatus: 'matched',
+          status: 'new',
+          updatedAt: '2025-09-30T00:00:00.000Z',
+        }),
+        buildAlert({
+          id: 'stacked-date-2',
+          reportId: 'AL-STACK-DATE',
+          alertDate: '2025-09-30T00:00:00.000Z',
+          description: 'Verify documentation received',
+          metadata: { rawDescription: 'Verify documentation received' },
+          mcNumber: '3333',
+          matchedCaseId: mockCase.id,
+          matchedCaseName: `${mockCase.person.firstName} ${mockCase.person.lastName}`,
+          matchStatus: 'matched',
+          status: 'new',
+          updatedAt: '2025-09-30T00:00:00.000Z',
+        }),
+      ]
+
+      const stackedIndex = alertsData.createAlertsIndexFromAlerts(stackedAlerts)
+      vi.spyOn(alertsData, 'parseStackedAlerts').mockReturnValueOnce(stackedIndex)
+
+      mockAutosaveService.readTextFile.mockResolvedValueOnce('csv-content')
+
+      const result = await dataManager.mergeAlertsFromCsvContent('csv-content', {
+        cases: [mockCase],
+        sourceFileName: 'alerts.csv',
+      })
+      await Promise.resolve()
+
+      expect(result.total).toBe(2)
+
+      const writeCall = mockAutosaveService.writeNamedFile.mock.calls.at(-1)
+      expect(writeCall).toBeDefined()
+
+      const persistedPayload = writeCall?.[1] as { alerts?: AlertWithMatch[] } | undefined
+      expect(persistedPayload?.alerts).toHaveLength(2)
+      expect(persistedPayload?.alerts?.map(alert => alert.description)).toEqual(
+        expect.arrayContaining([
+          'Follow up with client',
+          'Verify documentation received',
+        ]),
+      )
+    })
+
     it('updates alert status and persists changes to alerts.json', async () => {
       const mockCase = createMockCaseDisplay({ id: 'case-update', mcn: '5555', caseRecord: createMockCaseRecord({ id: 'record-update', mcn: '5555' }) })
 
@@ -397,6 +548,7 @@ describe('DataManager', () => {
         status: 'resolved',
         resolvedAt: '2025-09-20T12:00:00.000Z',
         resolutionNotes: 'Completed outreach',
+        metadata: { rawDescription: 'Client follow-up required' },
       })
 
       mockAutosaveService.readNamedFile.mockResolvedValueOnce({
@@ -426,6 +578,7 @@ describe('DataManager', () => {
         status: 'new',
         resolvedAt: null,
         resolutionNotes: undefined,
+        metadata: { rawDescription: 'Client follow-up required' },
       })
 
       const incomingNew = buildAlert({
@@ -471,6 +624,120 @@ describe('DataManager', () => {
       )
 
       expect(parseStackedSpy).toHaveBeenCalledWith('csv-input', [mockCase])
+      parseStackedSpy.mockRestore()
+    })
+
+    it('preserves stacked alerts that share reportId but differ by metadata', async () => {
+      const csvContent = [
+        '"Stacked Alerts Export"',
+        ',,09-20-2025,MCN111222,"Alex Rivera","Medicaid","Recertification Due","Initial notice",AL-101,',
+        ',,09-25-2025,MCN111222,"Alex Rivera","Medicaid","Recertification Due","Second notice",AL-101,',
+      ].join('\n')
+
+      const matchingCase = createMockCaseDisplay({
+        id: 'case-alex',
+        name: 'Alex Rivera',
+        mcn: 'MCN111222',
+        caseRecord: createMockCaseRecord({
+          id: 'case-record-alex',
+          mcn: 'MCN111222',
+        }),
+      })
+
+      const result = await dataManager.mergeAlertsFromCsvContent(csvContent, {
+        cases: [matchingCase],
+        sourceFileName: 'Alerts.csv',
+      })
+
+      expect(result.total).toBe(2)
+      expect(result.added).toBe(2)
+      expect(mockAutosaveService.writeNamedFile).toHaveBeenCalled()
+
+      const payload = mockAutosaveService.writeNamedFile.mock.calls.at(-1)?.[1]
+      expect(payload).toBeTruthy()
+      expect(payload.alerts).toHaveLength(2)
+
+      const uniqueDescriptions = new Set(payload.alerts.map((alert: AlertWithMatch) => alert.description))
+      expect(uniqueDescriptions.size).toBe(2)
+    })
+
+    it('allows multiple strong-key matches to reuse the same alert index', async () => {
+      const matchingCase = createMockCaseDisplay({
+        id: 'case-strong-reuse',
+        mcn: 'MCN333444',
+        caseRecord: createMockCaseRecord({ id: 'case-record-strong-reuse', mcn: 'MCN333444' })
+      })
+
+      const storedAlert = buildAlert({
+        id: 'alert-strong',
+        reportId: 'alert-strong',
+        mcNumber: 'MCN333444',
+        matchedCaseId: 'case-strong-reuse',
+        matchedCaseName: matchingCase.name,
+        matchStatus: 'matched',
+        program: 'Medicaid',
+        alertType: 'Recertification Due',
+        description: 'Initial notice',
+        alertDate: '2025-09-20T00:00:00.000Z'
+      })
+
+      mockAutosaveService.readNamedFile.mockResolvedValueOnce({
+        version: 3,
+        generatedAt: '2025-09-20T12:00:00.000Z',
+        summary: {
+          total: 1,
+          matched: 1,
+          unmatched: 0,
+          missingMcn: 0,
+          latestUpdated: '2025-09-20T12:00:00.000Z',
+        },
+        alerts: [storedAlert],
+        uniqueAlerts: 1,
+      })
+
+      const duplicateOne = buildAlert({
+        id: 'incoming-strong-1',
+        reportId: 'alert-strong',
+        mcNumber: 'MCN333444',
+        matchedCaseId: 'case-strong-reuse',
+        matchedCaseName: matchingCase.name,
+        matchStatus: 'matched',
+        program: 'Medicaid',
+        alertType: 'Recertification Due',
+        description: 'Initial notice',
+        alertDate: '2025-09-20T00:00:00.000Z'
+      })
+
+      const duplicateTwo = buildAlert({
+        id: 'incoming-strong-2',
+        reportId: 'alert-strong',
+        mcNumber: 'MCN333444',
+        matchedCaseId: 'case-strong-reuse',
+        matchedCaseName: matchingCase.name,
+        matchStatus: 'matched',
+        program: 'Medicaid',
+        alertType: 'Recertification Due',
+        description: 'Initial notice',
+        alertDate: '2025-09-20T00:00:00.000Z'
+      })
+
+      const parseStackedSpy = vi.spyOn(alertsData, 'parseStackedAlerts').mockReturnValue(
+        alertsData.createAlertsIndexFromAlerts([duplicateOne, duplicateTwo])
+      )
+
+      const result = await dataManager.mergeAlertsFromCsvContent('csv-strong-reuse', {
+        cases: [matchingCase],
+        sourceFileName: 'Alerts.csv',
+      })
+
+      expect(result.added).toBe(0)
+      expect(result.total).toBe(1)
+
+      const payload = mockAutosaveService.writeNamedFile.mock.calls.at(-1)?.[1]
+      expect(payload).toBeTruthy()
+      expect(payload.alerts).toHaveLength(1)
+      expect(new Set(payload.alerts.map((alert: AlertWithMatch) => alert.reportId))).toEqual(new Set(['alert-strong']))
+
       parseStackedSpy.mockRestore()
     })
 

@@ -1,5 +1,9 @@
 /// <reference path="../types/global.d.ts" />
 
+import { createLogger } from "./logger";
+
+const logger = createLogger("AutosaveFileService");
+
 /**
  * Case Tracking Platform Combined Autosave & File Service v1.0
  *
@@ -165,7 +169,9 @@ class AutosaveFileService {
 
       this.updateStatus('initialized', 'Service ready');
     } catch (error) {
-      console.error('Autosave init failed', { error: error instanceof Error ? error.message : 'Unknown error' });
+      logger.error('Autosave initialization failed', {
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
       this.updateStatus('error', 'Initialization failed: ' + (error instanceof Error ? error.message : 'Unknown error'));
     }
   }
@@ -249,7 +255,9 @@ class AutosaveFileService {
         this.state.permissionStatus = 'granted';
         this.updateStatus('connected', 'Connected to data folder');
 
-        console.log('[AutosaveFileService] Successfully connected to existing directory');
+        logger.info('Connected to existing directory', {
+          directoryName: this.directoryHandle?.name,
+        });
 
         // Validate that we can actually access the directory
         try {
@@ -258,9 +266,11 @@ class AutosaveFileService {
           if (testPermission !== 'granted') {
             throw new Error(`Permission check failed: ${testPermission}`);
           }
-          console.log('[AutosaveFileService] Directory access validated successfully');
+          logger.info('Directory access validated');
         } catch (testError) {
-          console.error('[AutosaveFileService] Directory access validation failed:', testError);
+          logger.error('Directory access validation failed', {
+            error: testError instanceof Error ? testError.message : String(testError),
+          });
           this.directoryHandle = null;
           this.updateStatus('error', 'Failed to validate directory access');
           return false;
@@ -340,7 +350,9 @@ class AutosaveFileService {
             await new Promise(resolve => setTimeout(resolve, 50));
           }
         } catch (error) {
-          console.error('Write operation failed', { error: error instanceof Error ? error.message : 'Unknown error' });
+          logger.error('Write queue operation failed', {
+            error: error instanceof Error ? error.message : 'Unknown error',
+          });
           reject(error);
         }
       }
@@ -404,9 +416,9 @@ class AutosaveFileService {
       if (isRetryableError && retryCount < maxRetries) {
         const logMessage = `[AutosaveFileService] Write attempt ${retryCount + 1}/${maxRetries + 1} hit a transient state change. Retrying with a fresh handle… (${errorMessage})`;
         if (retryCount === 0) {
-          console.info(logMessage);
+          logger.info(logMessage);
         } else {
-          console.warn(logMessage);
+          logger.warn(logMessage);
         }
 
         // Wait a bit before retrying
@@ -419,7 +431,9 @@ class AutosaveFileService {
             return await this._performWrite(data, retryCount + 1);
           }
         } catch (refreshError) {
-          console.warn(`[AutosaveFileService] Failed to refresh handle for retry: ${refreshError instanceof Error ? refreshError.message : 'Unknown error'}`);
+          logger.warn('Failed to refresh handle for write retry', {
+            error: refreshError instanceof Error ? refreshError.message : 'Unknown error',
+          });
         }
       }
 
@@ -474,9 +488,9 @@ class AutosaveFileService {
       if (isRetryableError && retryCount < maxRetries) {
         const logMessage = `[AutosaveFileService] Named write attempt ${retryCount + 1}/${maxRetries + 1} hit a transient state change. Retrying with a fresh handle… (${errorMessage})`;
         if (retryCount === 0) {
-          console.info(logMessage);
+          logger.info(logMessage);
         } else {
-          console.warn(logMessage);
+          logger.warn(logMessage);
         }
 
         // Wait a bit before retrying
@@ -489,7 +503,10 @@ class AutosaveFileService {
             return await this.writeNamedFile(fileName, data, retryCount + 1);
           }
         } catch (refreshError) {
-          console.warn(`[AutosaveFileService] Failed to refresh handle for retry: ${refreshError instanceof Error ? refreshError.message : 'Unknown error'}`);
+          logger.warn('Failed to refresh handle for named write retry', {
+            fileName,
+            error: refreshError instanceof Error ? refreshError.message : 'Unknown error',
+          });
         }
       }
 
@@ -517,20 +534,20 @@ class AutosaveFileService {
 
   async readFile(): Promise<any> {
     if (!this.directoryHandle) {
-      console.error('[AutosaveFileService] readFile called but directoryHandle is null');
+      logger.debug('readFile skipped - directory handle is not available');
       return null;
     }
 
     const permission = await this.checkPermission();
     if (permission !== 'granted') {
-      console.error('[AutosaveFileService] readFile called but permission is not granted:', permission);
+      logger.debug('readFile skipped - permission not granted', { permission });
       return null;
     }
 
     try {
       // Double-check the handle hasn't become null between checks
       if (!this.directoryHandle) {
-        console.error('[AutosaveFileService] Directory handle became null during readFile execution');
+        logger.warn('Directory handle became null during readFile execution');
         return null;
       }
       
@@ -544,8 +561,13 @@ class AutosaveFileService {
       if (err instanceof Error && err.name === 'NotFoundError') {
         return null;
       } else {
+        const message = err instanceof Error ? err.message : 'Unknown error';
+        logger.error('Failed to read primary data file', {
+          fileName: this.fileName,
+          error: message,
+        });
         this.errorCallback({
-          message: `Error reading file "${this.fileName}": ${err instanceof Error ? err.message : 'Unknown error'}`,
+          message: `Error reading file "${this.fileName}": ${message}`,
           type: 'error',
           error: err,
           context: { operation: 'readData', fileName: this.fileName },
@@ -564,9 +586,22 @@ class AutosaveFileService {
       
       if (data) {
         // Log appropriate count based on data format
-        const caseCount = data.cases?.length || data.caseRecords?.length || 0;
-        const format = data.cases ? 'transformed' : data.caseRecords ? 'raw' : 'unknown';
-        console.log(`[AutosaveFileService] Successfully loaded existing data with ${caseCount} records (${format} format)`);
+        const caseCount = Array.isArray(data.cases) ? data.cases.length : 0;
+        const recordCount = Array.isArray(data.caseRecords) ? data.caseRecords.length : 0;
+        const alertCount = Array.isArray((data as any).alerts) ? (data as any).alerts.length : 0;
+        const format = data.cases
+          ? 'transformed'
+          : data.caseRecords
+            ? 'raw'
+            : alertCount > 0
+              ? 'alerts'
+              : 'unknown';
+        logger.info('Existing data loaded', {
+          format,
+          caseCount,
+          recordCount,
+          alertCount,
+        });
         
         // Call data load callback if set
         if (this.dataLoadCallback) {
@@ -576,7 +611,9 @@ class AutosaveFileService {
       
       return data;
     } catch (error) {
-      console.error('[AutosaveFileService] Failed to load existing data:', error);
+      logger.error('Failed to load existing data', {
+        error: error instanceof Error ? error.message : String(error),
+      });
       throw error;
     }
   }
@@ -586,11 +623,15 @@ class AutosaveFileService {
    */
   async loadDataFromFile(fileName: string): Promise<any> {
     try {
-      console.log(`[AutosaveFileService] Loading data from file: ${fileName}`);
+      logger.info('Loading data from file', { fileName });
       const data = await this.readNamedFile(fileName);
       
       if (data) {
-        console.log(`[AutosaveFileService] Successfully loaded data from ${fileName} with ${data.cases?.length || 0} cases`);
+        logger.info('Loaded data from file', {
+          fileName,
+          caseCount: Array.isArray(data.cases) ? data.cases.length : 0,
+          alertCount: Array.isArray((data as any).alerts) ? (data as any).alerts.length : 0,
+        });
         
         // Call data load callback if set
         if (this.dataLoadCallback) {
@@ -600,7 +641,10 @@ class AutosaveFileService {
       
       return data;
     } catch (error) {
-      console.error(`[AutosaveFileService] Failed to load data from ${fileName}:`, error);
+      logger.error('Failed to load data from file', {
+        fileName,
+        error: error instanceof Error ? error.message : String(error),
+      });
       throw error;
     }
   }
@@ -609,43 +653,45 @@ class AutosaveFileService {
    * List all data files in the connected directory
    */
   async listDataFiles(): Promise<string[]> {
-    console.log('[AutosaveFileService] listDataFiles called', {
+    logger.debug('listDataFiles invoked', {
       directoryHandle: !!this.directoryHandle,
-      directoryName: this.directoryHandle?.name || 'none'
+      directoryName: this.directoryHandle?.name || 'none',
     });
     
     if (!this.directoryHandle) {
-      console.log('[AutosaveFileService] No directory handle, returning empty array');
+      logger.debug('listDataFiles skipped - directory handle not set');
       return [];
     }
 
     const permission = await this.checkPermission();
-    console.log('[AutosaveFileService] Permission check result:', permission);
+    logger.debug('listDataFiles permission check result', { permission });
     if (permission !== 'granted') {
-      console.log('[AutosaveFileService] Permission not granted, returning empty array');
+      logger.debug('listDataFiles skipped - permission not granted', { permission });
       return [];
     }
 
     try {
       const dataFiles: string[] = [];
       
-      console.log('[AutosaveFileService] Iterating through directory entries...');
+      logger.debug('Iterating through directory entries');
       // Iterate through all files in the directory
       for await (const [name, handle] of (this.directoryHandle as any).entries()) {
-        console.log('[AutosaveFileService] Found entry:', { name, kind: handle.kind });
+        logger.debug('Found directory entry', { name, kind: handle.kind });
         if (handle.kind === 'file') {
           // Look for JSON files that could contain case data
           if (name.endsWith('.json')) {
-            console.log('[AutosaveFileService] Adding JSON file:', name);
+            logger.debug('Adding JSON data file candidate', { name });
             dataFiles.push(name);
           }
         }
       }
       
-      console.log('[AutosaveFileService] Final file list:', dataFiles);
+      logger.info('Directory scan complete', { fileCount: dataFiles.length, files: dataFiles });
       return dataFiles;
     } catch (error) {
-      console.error('[AutosaveFileService] Failed to list data files:', error);
+      logger.error('Failed to list directory entries', {
+        error: error instanceof Error ? error.message : String(error),
+      });
       return [];
     }
   }
@@ -655,11 +701,13 @@ class AutosaveFileService {
    */
   async readNamedFile(fileName: string): Promise<any> {
     if (!this.directoryHandle) {
+      logger.debug('readNamedFile skipped - directory handle not set', { fileName });
       return null;
     }
 
     const permission = await this.checkPermission();
     if (permission !== 'granted') {
+      logger.debug('readNamedFile skipped - permission not granted', { fileName, permission });
       return null;
     }
 
@@ -669,14 +717,21 @@ class AutosaveFileService {
       const contents = await file.text();
       const rawData = JSON.parse(contents);
 
-      console.log(`[AutosaveFileService] Successfully read file: ${fileName} with ${rawData.cases?.length || 0} cases`);
+      logger.info('Successfully read data file', {
+        fileName,
+        caseCount: Array.isArray(rawData.cases) ? rawData.cases.length : 0,
+        alertCount: Array.isArray(rawData.alerts) ? rawData.alerts.length : 0,
+      });
       
       return rawData;
     } catch (err) {
       if (err instanceof Error && err.name === 'NotFoundError') {
         return null;
       } else {
-        console.error(`[AutosaveFileService] Error reading file "${fileName}":`, err);
+        logger.error('Failed to read named data file', {
+          fileName,
+          error: err instanceof Error ? err.message : String(err),
+        });
         throw err;
       }
     }
@@ -684,11 +739,13 @@ class AutosaveFileService {
 
   async readTextFile(fileName: string): Promise<string | null> {
     if (!this.directoryHandle) {
+      logger.debug('readTextFile skipped - directory handle not set', { fileName });
       return null;
     }
 
     const permission = await this.checkPermission();
     if (permission !== 'granted') {
+      logger.debug('readTextFile skipped - permission not granted', { fileName, permission });
       return null;
     }
 
@@ -701,8 +758,10 @@ class AutosaveFileService {
         return null;
       }
 
+      const message = err instanceof Error ? err.message : 'Unknown error';
+      logger.error('Failed to read text file', { fileName, error: message });
       this.errorCallback({
-        message: `Error reading file "${fileName}": ${err instanceof Error ? err.message : 'Unknown error'}`,
+        message: `Error reading file "${fileName}": ${message}`,
         type: 'error',
         error: err,
         context: { operation: 'readTextFile', fileName },
@@ -729,24 +788,30 @@ class AutosaveFileService {
           this.state.permissionStatus = 'granted'; // We have permission
           this.updateStatus('waiting', 'Ready to connect - click "Connect to Existing"');
           
-          console.log('[AutosaveFileService] Directory handle restored with granted permission - ready to connect');
+          logger.info('Directory handle restored from storage', {
+            permission,
+            directoryName: this.directoryHandle?.name,
+          });
         } else {
           // Permission lost or denied - needs re-grant
           this.state.permissionStatus = 'prompt';
           this.updateStatus('waiting', 'Ready to reconnect - permission required');
           
-          console.log('[AutosaveFileService] Directory handle found but permission status:', permission);
+          logger.info('Directory handle restored but permission needs refresh', {
+            permission,
+            directoryName: this.directoryHandle?.name,
+          });
         }
         
         return { handle, permission };
       }
     } catch (error) {
-      console.warn('Directory handle verification failed', {
+      logger.warn('Directory handle verification failed', {
         error: error instanceof Error ? error.message : 'Unknown error',
       });
       await this.clearStoredDirectoryHandle();
     }
-
+    
     this.state.permissionStatus = 'prompt';
     this.updateStatus('disconnected', 'No data folder connected');
     return { handle: null, permission: 'prompt' };
@@ -1019,7 +1084,9 @@ class AutosaveFileService {
 
       return result;
     } catch (error) {
-      console.error('Failed to perform immediate save:', error);
+      logger.error('Failed to perform immediate save', {
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
       this.state.consecutiveFailures++;
       this.state.pendingSave = false;
       this.updateStatus('error', 'Save failed - ' + (error instanceof Error ? error.message : 'Unknown error'));
@@ -1074,7 +1141,10 @@ class AutosaveFileService {
     } catch (error) {
       this.state.consecutiveFailures++;
       this.state.pendingSave = false;
-      console.error(`Autosave failed (${trigger}):`, error);
+      logger.error('Autosave attempt failed', {
+        trigger,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
       this.updateStatus('error', 'Autosave error - ' + (error instanceof Error ? error.message : 'Unknown error'));
     } finally {
       this.state.pendingSave = false;

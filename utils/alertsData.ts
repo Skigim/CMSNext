@@ -30,7 +30,17 @@ const workflowPriorityOrder: AlertWorkflowStatus[] = ["new", "in-progress", "ack
 
 const STACKED_ALERT_REGEX = /,,\s*(?<dueDate>\d{1,2}[\/-]\d{1,2}[\/-]\d{2,4})\s*,\s*(?<mcn>[^,"]*)\s*,"(?<name>(?:[^"]|"")*)","(?<program>(?:[^"]|"")*)","(?<type>(?:[^"]|"")*)","(?<description>(?:[^"]|"")*)",\s*(?<alertNumber>[^,\r\n]*)/g;
 
-function getAlertKey(alert: AlertWithMatch): string | null {
+/**
+ * Produces the canonical storage key for an alert by combining its base identifier with
+ * discriminators that differentiate stacked CSV entries. The key is structured as
+ * `baseId|normalizedMcn|person|program|type|description|matchStatus|date`, omitting any
+ * segments where the source value is missing.
+ *
+ * Legacy snapshots that only provided an id or reportId still resolve to the same key because
+ * the additional segments are optional. Prefer this key over plain id/reportId when persisting
+ * alert workflow state across parses or persistence rounds.
+ */
+export function buildAlertStorageKey(alert: AlertWithMatch): string | null {
   if (!alert) {
     return null;
   }
@@ -75,7 +85,7 @@ function createRandomAlertId(): string {
   return `alert-${Math.random().toString(36).slice(2, 10)}`;
 }
 
-function normalizeMcn(rawMcn: string | undefined | null): string {
+export function normalizeMcn(rawMcn: string | undefined | null): string {
   if (!rawMcn) {
     return "";
   }
@@ -247,7 +257,7 @@ function dedupeAlerts(alerts: AlertWithMatch[]): AlertWithMatch[] {
   const passthrough: AlertWithMatch[] = [];
 
   alerts.forEach(alert => {
-    const key = getAlertKey(alert);
+  const key = buildAlertStorageKey(alert);
     if (!key) {
       passthrough.push(alert);
       return;
