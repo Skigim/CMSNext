@@ -30,6 +30,16 @@ const workflowPriorityOrder: AlertWorkflowStatus[] = ["new", "in-progress", "ack
 
 const STACKED_ALERT_REGEX = /,,\s*(?<dueDate>\d{1,2}[\/-]\d{1,2}[\/-]\d{2,4})\s*,\s*(?<mcn>[^,"]*)\s*,"(?<name>(?:[^"]|"")*)","(?<program>(?:[^"]|"")*)","(?<type>(?:[^"]|"")*)","(?<description>(?:[^"]|"")*)",\s*(?<alertNumber>[^,\r\n]*)/g;
 
+/**
+ * Produces the canonical storage key for an alert by combining its base identifier with
+ * discriminators that differentiate stacked CSV entries. The key is structured as
+ * `baseId|normalizedMcn|person|program|type|description|matchStatus|date`, omitting any
+ * segments where the source value is missing.
+ *
+ * Legacy snapshots that only provided an id or reportId still resolve to the same key because
+ * the additional segments are optional. Prefer this key over plain id/reportId when persisting
+ * alert workflow state across parses or persistence rounds.
+ */
 export function buildAlertStorageKey(alert: AlertWithMatch): string | null {
   if (!alert) {
     return null;

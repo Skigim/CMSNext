@@ -403,6 +403,12 @@ export class DataManager {
       return true;
     }
 
+    const incomingMcn = this.normalizeMcn(incoming.mcNumber ?? null);
+    const existingMcn = this.normalizeMcn(existing.mcNumber ?? null);
+    if (incomingMcn && existingMcn && incomingMcn !== existingMcn) {
+      return false;
+    }
+
     const normalizeDate = (value: string | null | undefined): string | null => {
       if (!value) {
         return null;
@@ -911,6 +917,22 @@ export class DataManager {
       return { alerts, changed: false, unmatchedIds: storedWorkflows.map(entry => entry.alertId) };
     }
 
+    const workflowKeyIndex = new Map<string, number[]>();
+    storedWorkflows.forEach((workflow, index) => {
+      const key = workflow?.alertId?.trim();
+      if (!key) {
+        return;
+      }
+
+      const existing = workflowKeyIndex.get(key);
+      if (existing) {
+        existing.push(index);
+        return;
+      }
+
+      workflowKeyIndex.set(key, [index]);
+    });
+
     const usedIndices = new Set<number>();
 
     const resolveStoredWorkflowForAlert = (alert: AlertWithMatch): { workflow: StoredAlertWorkflowState | null; index: number } => {
@@ -920,26 +942,19 @@ export class DataManager {
       let matchedWorkflow: StoredAlertWorkflowState | null = null;
 
       for (const { key: candidate } of candidates) {
-        for (let i = 0; i < storedWorkflows.length; i += 1) {
-          if (usedIndices.has(i)) {
+        const candidateIndices = workflowKeyIndex.get(candidate);
+        if (!candidateIndices?.length) {
+          continue;
+        }
+
+        for (const index of candidateIndices) {
+          if (usedIndices.has(index)) {
             continue;
           }
 
-          const workflow = storedWorkflows[i];
-          if (!workflow || !workflow.alertId) {
-            continue;
-          }
-
-          const storedKey = workflow.alertId.trim();
-          if (storedKey.length === 0) {
-            continue;
-          }
-
-          if (storedKey === candidate) {
-            matchedIndex = i;
-            matchedWorkflow = workflow;
-            break;
-          }
+          matchedIndex = index;
+          matchedWorkflow = storedWorkflows[index] ?? null;
+          break;
         }
 
         if (matchedWorkflow) {
@@ -1294,7 +1309,57 @@ export class DataManager {
       }
     }
 
-    const targetIndex = alerts.findIndex(alert => alert.id === alertId || alert.reportId === alertId);
+    const normalizedAlertId = typeof alertId === "string" ? alertId.trim() : "";
+    if (normalizedAlertId.length === 0) {
+      logger.warn('Invalid alert identifier for status update', { alertId });
+      return null;
+    }
+
+    let targetIndex = alerts.findIndex(alert => alert.id === normalizedAlertId);
+
+    if (targetIndex === -1) {
+      const strongMatches: number[] = [];
+      const fallbackMatches: number[] = [];
+
+      alerts.forEach((alert, index) => {
+        const candidates = this.buildAlertLookupCandidates(alert);
+        candidates.forEach(candidate => {
+          if (candidate.key !== normalizedAlertId) {
+            return;
+          }
+
+          if (candidate.fallback) {
+            if (!fallbackMatches.includes(index)) {
+              fallbackMatches.push(index);
+            }
+            return;
+          }
+
+          if (!strongMatches.includes(index)) {
+            strongMatches.push(index);
+          }
+        });
+      });
+
+      if (strongMatches.length === 1) {
+        targetIndex = strongMatches[0];
+      } else if (strongMatches.length > 1) {
+        logger.warn('Multiple alerts matched status update request by strong key', {
+          alertId,
+          matchedCount: strongMatches.length,
+        });
+        return null;
+      } else if (fallbackMatches.length === 1) {
+        targetIndex = fallbackMatches[0];
+      } else if (fallbackMatches.length > 1) {
+        logger.warn('Multiple alerts matched status update request by fallback key', {
+          alertId,
+          matchedCount: fallbackMatches.length,
+        });
+        return null;
+      }
+    }
+
     if (targetIndex === -1) {
       logger.warn('Could not find alert to update', { alertId });
       return null;
@@ -1328,9 +1393,16 @@ export class DataManager {
 
     await this.saveAlerts(index.alerts, index.summary, { sourceFile });
 
-    const updatedAlertKey = this.alertKey(updatedAlertBase);
-    const rematchedAlert = rematchedAlerts.find(alert => this.alertKey(alert) === updatedAlertKey);
-    return rematchedAlert ?? null;
+    const rematchedAlert = rematchedAlerts.find(alert => alert.id === updatedAlertBase.id);
+    if (!rematchedAlert) {
+      logger.warn('Updated alert missing after rematch', {
+        alertId,
+        alertKey: this.alertKey(updatedAlertBase),
+      });
+      return null;
+    }
+
+    return rematchedAlert;
   }
 
   async saveAlerts(
@@ -1439,7 +1511,7 @@ export class DataManager {
       registerAlertCandidates(alert, index);
     });
 
-    const matchedExistingIndices = new Set<number>();
+    const fallbackLockedIndices = new Set<number>();
 
     let added = 0;
     let updated = 0;
@@ -1453,6 +1525,7 @@ export class DataManager {
       const incomingStrongKeys = candidates.filter(candidate => !candidate.fallback).map(candidate => candidate.key);
 
       let matchedIndex: number | undefined;
+      let matchedUsingFallback = false;
 
       for (const candidate of candidates) {
         const mappedSet = existingMap.get(candidate.key);
@@ -1461,7 +1534,7 @@ export class DataManager {
         }
 
         for (const index of mappedSet) {
-          if (matchedExistingIndices.has(index)) {
+          if (candidate.fallback && fallbackLockedIndices.has(index)) {
             continue;
           }
 
@@ -1470,10 +1543,18 @@ export class DataManager {
             continue;
           }
 
-          if (!candidate.fallback || this.shouldMatchUsingFallback(incoming, existingAlert, incomingStrongKeys)) {
+          if (candidate.fallback) {
+            if (!this.shouldMatchUsingFallback(incoming, existingAlert, incomingStrongKeys)) {
+              continue;
+            }
             matchedIndex = index;
+            matchedUsingFallback = true;
             break;
           }
+
+          matchedIndex = index;
+          matchedUsingFallback = false;
+          break;
         }
 
         if (matchedIndex !== undefined) {
@@ -1489,7 +1570,9 @@ export class DataManager {
         return;
       }
 
-      matchedExistingIndices.add(matchedIndex);
+      if (matchedUsingFallback) {
+        fallbackLockedIndices.add(matchedIndex);
+      }
 
       const existingAlert = workingAlerts[matchedIndex];
       const { alert: mergedAlert, changed } = this.mergeAlertDetails(existingAlert, incoming);
