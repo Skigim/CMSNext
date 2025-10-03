@@ -103,6 +103,7 @@ export const CaseAlertsDrawer = memo(function CaseAlertsDrawer({
               <ul className="space-y-3">
                 {openAlerts.map(alert => {
                   const dueDate = formatDisplayDate(alert.alertDate ?? alert.createdAt);
+                  const actionLabel = alert.status === "resolved" ? "Reopen" : "Resolve";
                   return (
                     <li key={alert.id} className="rounded-lg border border-border/60 bg-card p-4 shadow-sm">
                       <div className="flex items-start justify-between gap-3">
@@ -139,7 +140,7 @@ export const CaseAlertsDrawer = memo(function CaseAlertsDrawer({
                             onClick={() => handleResolve(alert)}
                             disabled={!onResolveAlert}
                           >
-                            Resolve
+                            {actionLabel}
                           </Button>
                         </div>
                       </div>
@@ -166,19 +167,30 @@ export const CaseAlertsDrawer = memo(function CaseAlertsDrawer({
               <ul className="space-y-3">
                 {resolvedAlerts.map(alert => {
                   const resolvedAt = formatDisplayDate(alert.resolvedAt);
+                  const actionLabel = alert.status === "resolved" ? "Reopen" : "Resolve";
                   return (
                     <li
                       key={alert.id}
                       className="rounded-lg border border-emerald-500/30 bg-emerald-500/5 p-4 text-sm text-emerald-800"
                     >
-                      <div className="flex flex-col gap-1">
-                        <div className="flex items-center gap-2 text-emerald-700">
-                          <CheckCircle2 className="h-4 w-4" />
-                          <span>{alert.description?.trim() || alert.alertType || alert.alertCode || "Alert"}</span>
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex flex-col gap-1">
+                          <div className="flex items-center gap-2 text-emerald-700">
+                            <CheckCircle2 className="h-4 w-4" />
+                            <span>{alert.description?.trim() || alert.alertType || alert.alertCode || "Alert"}</span>
+                          </div>
+                          {resolvedAt && (
+                            <p className="text-xs text-emerald-700/80">Resolved {resolvedAt}</p>
+                          )}
                         </div>
-                        {resolvedAt && (
-                          <p className="text-xs text-emerald-700/80">Resolved {resolvedAt}</p>
-                        )}
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleResolve(alert)}
+                          disabled={!onResolveAlert}
+                        >
+                          {actionLabel}
+                        </Button>
                       </div>
                     </li>
                   );

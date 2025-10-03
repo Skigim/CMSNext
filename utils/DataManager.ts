@@ -1411,8 +1411,8 @@ export class DataManager {
       nextResolvedAt = new Date().toISOString();
     }
 
-    if (nextStatus !== "resolved" && updates.resolvedAt === undefined) {
-      nextResolvedAt = targetAlert.resolvedAt ?? null;
+    if (nextStatus !== "resolved") {
+      nextResolvedAt = updates.resolvedAt !== undefined ? updates.resolvedAt : null;
     }
 
     const updatedAlertBase: AlertWithMatch = {

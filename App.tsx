@@ -1,6 +1,6 @@
 import { useEffect, useCallback, useMemo, memo, useRef, useState } from "react";
 import { Toaster } from "./components/ui/sonner";
-import { CaseDisplay, CaseCategory, FinancialItem } from "./types/case";
+import { CaseDisplay, CaseCategory, FinancialItem, type AlertWorkflowStatus } from "./types/case";
 import { toast } from "sonner";
 import { useFileStorage, useFileStorageLifecycleSelectors } from "./contexts/FileStorageContext";
 import { useDataManagerSafe } from "./contexts/DataManagerContext";
@@ -53,7 +53,9 @@ const AppContent = memo(function AppContent() {
   } = useCaseManagement();
   const { setConfigFromFile } = useCategoryConfig();
   const [alertsIndex, setAlertsIndex] = useState<AlertsIndex>(() => createEmptyAlertsIndex());
-  const resolvedAlertOverridesRef = useRef(new Map<string, { resolvedAt: string; resolutionNotes?: string }>());
+  const resolvedAlertOverridesRef = useRef(
+    new Map<string, { status?: AlertWorkflowStatus; resolvedAt?: string | null; resolutionNotes?: string }>(),
+  );
   
   const navigationFlow = useNavigationFlow({
     cases,
@@ -212,23 +214,28 @@ const AppContent = memo(function AppContent() {
           return alert;
         }
 
+        const nextStatus = override.status ?? alert.status;
+        const hasResolvedAtOverride = Object.prototype.hasOwnProperty.call(override, "resolvedAt");
+        const nextResolvedAt = hasResolvedAtOverride ? override.resolvedAt ?? null : alert.resolvedAt ?? null;
+        const nextResolutionNotes = override.resolutionNotes ?? alert.resolutionNotes;
+
         if (
-          alert.status === "resolved" &&
-          alert.resolvedAt === override.resolvedAt &&
-          alert.resolutionNotes === override.resolutionNotes
+          alert.status === nextStatus &&
+          (alert.resolvedAt ?? null) === nextResolvedAt &&
+          alert.resolutionNotes === nextResolutionNotes
         ) {
           return alert;
         }
 
         hasChanges = true;
-        const resolvedAlert: AlertWithMatch = {
+        const overriddenAlert: AlertWithMatch = {
           ...alert,
-          status: "resolved",
-          resolvedAt: override.resolvedAt,
-          resolutionNotes: override.resolutionNotes ?? alert.resolutionNotes,
+          status: nextStatus,
+          resolvedAt: nextResolvedAt,
+          resolutionNotes: nextResolutionNotes,
         };
 
-        return resolvedAlert;
+        return overriddenAlert;
       });
 
       if (!hasChanges) {
@@ -321,7 +328,7 @@ const AppContent = memo(function AppContent() {
   const handleResolveAlert = useCallback(
     async (alert: AlertWithMatch) => {
       if (!selectedCase || (alert.matchedCaseId && alert.matchedCaseId !== selectedCase.id)) {
-        toast.error("Unable to resolve alert for this case.");
+        toast.error("Unable to update alert for this case.");
         return;
       }
 
@@ -330,15 +337,57 @@ const AppContent = memo(function AppContent() {
         return;
       }
 
+      const identifier = buildAlertStorageKey(alert) ?? alert.id;
+      const isResolved = alert.status === "resolved";
+
+      if (isResolved) {
+        resolvedAlertOverridesRef.current.set(alert.id, {
+          status: "in-progress",
+          resolvedAt: null,
+        });
+        setAlertsIndex(prevIndex => applyAlertOverrides(prevIndex));
+
+        try {
+          await dataManager.updateAlertStatus(
+            identifier,
+            {
+              status: "in-progress",
+              resolvedAt: null,
+              resolutionNotes: alert.resolutionNotes,
+            },
+            { cases },
+          );
+
+          resolvedAlertOverridesRef.current.delete(alert.id);
+
+          const refreshedAlerts = await dataManager.getAlertsIndex({ cases });
+          setAlertsIndex(applyAlertOverrides(refreshedAlerts));
+
+          toast.success("Alert reopened", {
+            description: "We moved this alert back into the active queue.",
+          });
+        } catch (err) {
+          logger.error("Failed to reopen alert", {
+            alertId: alert.id,
+            error: err instanceof Error ? err.message : String(err),
+          });
+          resolvedAlertOverridesRef.current.delete(alert.id);
+          setAlertsIndex(prevIndex => applyAlertOverrides(prevIndex));
+          toast.error("Unable to reopen alert. Please try again.");
+        }
+
+        return;
+      }
+
       const resolvedAt = new Date().toISOString();
       resolvedAlertOverridesRef.current.set(alert.id, {
+        status: "resolved",
         resolvedAt,
         resolutionNotes: alert.resolutionNotes,
       });
       setAlertsIndex(prevIndex => applyAlertOverrides(prevIndex));
 
       try {
-        const identifier = buildAlertStorageKey(alert) ?? alert.id;
         await dataManager.updateAlertStatus(
           identifier,
           {
