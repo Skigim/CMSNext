@@ -190,20 +190,18 @@ export class DataManager {
     "unmatched",
     "missing-mcn",
   ]);
-  private static readonly ALERT_WORKFLOW_STATUS_SET = new Set<AlertWorkflowStatus>([
-    "new",
-    "in-progress",
-    "acknowledged",
-    "snoozed",
-    "resolved",
-  ]);
-  private static readonly ALERT_WORKFLOW_PRIORITY: AlertWorkflowStatus[] = [
+  private static readonly ALERT_WORKFLOW_STATUSES: readonly AlertWorkflowStatus[] = [
     "new",
     "in-progress",
     "acknowledged",
     "snoozed",
     "resolved",
   ];
+  private static readonly ALERT_WORKFLOW_STATUS_SET = new Set<AlertWorkflowStatus>(
+    DataManager.ALERT_WORKFLOW_STATUSES,
+  );
+  private static readonly ALERT_WORKFLOW_PRIORITY: readonly AlertWorkflowStatus[] =
+    DataManager.ALERT_WORKFLOW_STATUSES;
 
   constructor(config: DataManagerConfig) {
     this.fileService = config.fileService;

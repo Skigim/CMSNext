@@ -5,100 +5,77 @@ import type { AlertWithMatch } from "@/utils/alertsData";
 import { buildAlertStorageKey, createEmptyAlertsIndex } from "@/utils/alertsData";
 import type { CaseDisplay } from "@/types/case";
 
+type AppComponent = (typeof import("@/App"))["default"];
+
+const APP_MODULE_PATH = "@/App";
+const LOGGER_MODULE_PATH = "/workspaces/CMSNext/utils/logger.ts";
+const APP_PROVIDERS_MODULE_PATH = "/workspaces/CMSNext/components/providers/AppProviders.tsx";
+const FILE_STORAGE_INTEGRATOR_MODULE_PATH = "/workspaces/CMSNext/components/providers/FileStorageIntegrator.tsx";
+const TOASTER_MODULE_PATH = "/workspaces/CMSNext/components/ui/sonner.tsx";
+const APP_CONTENT_VIEW_MODULE_PATH = "/workspaces/CMSNext/components/app/AppContentView.tsx";
+const APP_CONTENT_VIEW_MODEL_MODULE_PATH = "/workspaces/CMSNext/components/app/useAppContentViewModel.ts";
+const CATEGORY_CONFIG_CONTEXT_MODULE_PATH = "/workspaces/CMSNext/contexts/CategoryConfigContext.tsx";
+const FILE_STORAGE_CONTEXT_MODULE_PATH = "/workspaces/CMSNext/contexts/FileStorageContext.tsx";
+const DATA_MANAGER_CONTEXT_MODULE_PATH = "/workspaces/CMSNext/contexts/DataManagerContext.tsx";
+const HOOKS_MODULE_PATH = "/workspaces/CMSNext/hooks/index.ts";
+
+type ToastMock = {
+  success: ReturnType<typeof vi.fn>;
+  error: ReturnType<typeof vi.fn>;
+  warning: ReturnType<typeof vi.fn>;
+  loading: ReturnType<typeof vi.fn>;
+};
+
+type FileStorageMock = {
+  isSupported: boolean;
+  hasStoredHandle: boolean;
+  connectToFolder: ReturnType<typeof vi.fn>;
+  connectToExisting: ReturnType<typeof vi.fn>;
+  loadExistingData: ReturnType<typeof vi.fn>;
+  service: unknown;
+};
+
+type LifecycleSelectorsMock = {
+  permissionStatus: string;
+  lifecycle: string;
+  isReady: boolean;
+};
+
+let App: AppComponent;
+let toastMock: ToastMock;
+let fileStorageMock: FileStorageMock;
+let lifecycleSelectorsMock: LifecycleSelectorsMock;
 let dataManagerMock: any = {};
 let caseManagementMock: any = {};
 let navigationFlowMock: any = {};
 let connectionFlowMock: any = {};
 let financialItemFlowMock: any = {};
 let noteFlowMock: any = {};
-let importListenersMock: any = vi.fn();
+let importListenersMock: ReturnType<typeof vi.fn> = vi.fn();
 let capturedViewProps: any = null;
 let setConfigFromFileMock: ReturnType<typeof vi.fn> = vi.fn();
 
-const toastMock = vi.hoisted(() => ({
+const createToastMock = (): ToastMock => ({
   success: vi.fn(),
   error: vi.fn(),
   warning: vi.fn(),
   loading: vi.fn(() => "toast-id"),
-}));
+});
 
-const fileStorageMock = {
+const createFileStorageMock = (): FileStorageMock => ({
   isSupported: true,
   hasStoredHandle: false,
   connectToFolder: vi.fn(),
   connectToExisting: vi.fn(),
   loadExistingData: vi.fn(),
   service: null,
-};
+});
 
-const lifecycleSelectorsMock = {
+const createLifecycleSelectorsMock = (): LifecycleSelectorsMock => ({
   permissionStatus: "granted",
   lifecycle: "ready",
   isReady: true,
-};
-
-vi.mock("sonner", () => ({
-  toast: toastMock,
-}));
-
-vi.mock("/workspaces/CMSNext/utils/logger.ts", () => ({
-  createLogger: () => ({
-    debug: vi.fn(),
-    info: vi.fn(),
-    warn: vi.fn(),
-    error: vi.fn(),
-    lifecycle: vi.fn(),
-  }),
-}));
-
-vi.mock("/workspaces/CMSNext/components/providers/AppProviders.tsx", () => ({
-  AppProviders: ({ children }: { children: React.ReactNode }) => <>{children}</>,
-}));
-
-vi.mock("/workspaces/CMSNext/components/providers/FileStorageIntegrator.tsx", () => ({
-  FileStorageIntegrator: ({ children }: { children: React.ReactNode }) => <>{children}</>,
-}));
-
-vi.mock("/workspaces/CMSNext/components/ui/sonner.tsx", () => ({
-  Toaster: () => <div data-testid="toaster" />,
-}));
-
-vi.mock("/workspaces/CMSNext/components/app/AppContentView.tsx", () => ({
-  AppContentView: (props: any) => {
-    capturedViewProps = props;
-    return <div data-testid="app-content-view" />;
-  },
-}));
-
-vi.mock("/workspaces/CMSNext/components/app/useAppContentViewModel.ts", () => ({
-  useAppContentViewModel: (args: any) => args,
-}));
-
-vi.mock("/workspaces/CMSNext/contexts/CategoryConfigContext.tsx", () => ({
-  useCategoryConfig: () => ({
-    setConfigFromFile: (...args: unknown[]) => setConfigFromFileMock(...args),
-  }),
-}));
-
-vi.mock("/workspaces/CMSNext/contexts/FileStorageContext.tsx", () => ({
-  useFileStorage: () => fileStorageMock,
-  useFileStorageLifecycleSelectors: () => lifecycleSelectorsMock,
-}));
-
-vi.mock("/workspaces/CMSNext/contexts/DataManagerContext.tsx", () => ({
-  useDataManagerSafe: () => dataManagerMock,
-}));
-
-vi.mock("/workspaces/CMSNext/hooks/index.ts", () => ({
-  useCaseManagement: () => caseManagementMock,
-  useConnectionFlow: () => connectionFlowMock,
-  useFinancialItemFlow: () => financialItemFlowMock,
-  useNavigationFlow: () => navigationFlowMock,
-  useNoteFlow: () => noteFlowMock,
-  useImportListeners: (args: unknown) => importListenersMock(args),
-}));
-
-import App from "@/App";
+});
 
 function buildTestCase(): CaseDisplay {
   const now = new Date().toISOString();
@@ -188,19 +165,14 @@ function buildMatchedAlert(overrides: Partial<AlertWithMatch> = {}): AlertWithMa
 }
 
 describe("App alert resolution", () => {
-  beforeEach(() => {
-  capturedViewProps = null;
+  beforeEach(async () => {
+    vi.resetModules();
+    vi.clearAllMocks();
 
-    Object.values(toastMock).forEach(mockFn => mockFn.mockClear());
-
-    Object.assign(fileStorageMock, {
-      isSupported: true,
-      hasStoredHandle: false,
-      connectToFolder: vi.fn(),
-      connectToExisting: vi.fn(),
-      loadExistingData: vi.fn(),
-      service: null,
-    });
+    toastMock = createToastMock();
+    fileStorageMock = createFileStorageMock();
+    lifecycleSelectorsMock = createLifecycleSelectorsMock();
+    capturedViewProps = null;
 
     dataManagerMock = {
       updateAlertStatus: vi.fn().mockResolvedValue(undefined),
@@ -269,10 +241,75 @@ describe("App alert resolution", () => {
 
     importListenersMock = vi.fn();
     setConfigFromFileMock = vi.fn();
+
+    vi.doMock("sonner", () => ({
+      toast: toastMock,
+    }));
+
+    vi.doMock(LOGGER_MODULE_PATH, () => ({
+      createLogger: () => ({
+        debug: vi.fn(),
+        info: vi.fn(),
+        warn: vi.fn(),
+        error: vi.fn(),
+        lifecycle: vi.fn(),
+      }),
+    }));
+
+    vi.doMock(APP_PROVIDERS_MODULE_PATH, () => ({
+      AppProviders: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+    }));
+
+    vi.doMock(FILE_STORAGE_INTEGRATOR_MODULE_PATH, () => ({
+      FileStorageIntegrator: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+    }));
+
+    vi.doMock(TOASTER_MODULE_PATH, () => ({
+      Toaster: () => <div data-testid="toaster" />,
+    }));
+
+    vi.doMock(APP_CONTENT_VIEW_MODULE_PATH, () => ({
+      AppContentView: (props: any) => {
+        capturedViewProps = props;
+        return <div data-testid="app-content-view" />;
+      },
+    }));
+
+    vi.doMock(APP_CONTENT_VIEW_MODEL_MODULE_PATH, () => ({
+      useAppContentViewModel: (args: any) => args,
+    }));
+
+    vi.doMock(CATEGORY_CONFIG_CONTEXT_MODULE_PATH, () => ({
+      useCategoryConfig: () => ({
+        setConfigFromFile: (...args: unknown[]) => setConfigFromFileMock(...args),
+      }),
+    }));
+
+    vi.doMock(FILE_STORAGE_CONTEXT_MODULE_PATH, () => ({
+      useFileStorage: () => fileStorageMock,
+      useFileStorageLifecycleSelectors: () => lifecycleSelectorsMock,
+    }));
+
+    vi.doMock(DATA_MANAGER_CONTEXT_MODULE_PATH, () => ({
+      useDataManagerSafe: () => dataManagerMock,
+    }));
+
+    vi.doMock(HOOKS_MODULE_PATH, () => ({
+      useCaseManagement: () => caseManagementMock,
+      useConnectionFlow: () => connectionFlowMock,
+      useFinancialItemFlow: () => financialItemFlowMock,
+      useNavigationFlow: () => navigationFlowMock,
+      useNoteFlow: () => noteFlowMock,
+      useImportListeners: (args: unknown) => importListenersMock(args),
+    }));
+
+    ({ default: App } = await import(APP_MODULE_PATH));
   });
 
   afterEach(() => {
     cleanup();
+    vi.resetModules();
+    vi.clearAllMocks();
   });
 
   it("uses the canonical alert storage key when resolving alerts", async () => {
@@ -303,13 +340,14 @@ describe("App alert resolution", () => {
       { cases: caseManagementMock.cases },
     );
 
-  expect(dataManagerMock.getAlertsIndex).toHaveBeenCalledTimes(2);
-  const finalGetAlertsCall = dataManagerMock.getAlertsIndex.mock.calls.at(-1);
-  expect(finalGetAlertsCall).toEqual([{ cases: caseManagementMock.cases }]);
+    expect(dataManagerMock.getAlertsIndex).toHaveBeenCalledTimes(2);
+    const finalGetAlertsCall = dataManagerMock.getAlertsIndex.mock.calls.at(-1);
+    expect(finalGetAlertsCall).toEqual([{ cases: caseManagementMock.cases }]);
     expect(toastMock.success).toHaveBeenCalledWith(
       "Alert resolved",
       expect.objectContaining({ description: expect.stringContaining("Add a note") }),
     );
+
     expect(toastMock.error).not.toHaveBeenCalled();
   });
 });

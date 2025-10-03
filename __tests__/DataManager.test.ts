@@ -683,7 +683,8 @@ describe('DataManager', () => {
 
       expect(result.updated).toBe(1)
 
-  const payload = mockAutosaveService.writeNamedFile.mock.calls.at(-1)?.[1] as { alerts?: AlertWithMatch[]; summary?: { total: number } } | undefined
+      const lastWriteCallArg = mockAutosaveService.writeNamedFile.mock.calls.at(-1)?.[1]
+      const payload = lastWriteCallArg as { alerts?: AlertWithMatch[]; summary?: { total: number } } | undefined
       expect(payload?.alerts).toEqual(
         expect.arrayContaining([
           expect.objectContaining({
