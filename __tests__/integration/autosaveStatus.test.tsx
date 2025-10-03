@@ -26,9 +26,8 @@ type StatusShape = {
 };
 
 vi.mock("@/utils/AutosaveFileService", () => {
-  let latestInstance: any = null;
-
   class MockAutosaveFileService {
+    private static latestInstance: MockAutosaveFileService | null = null;
     private status: StatusShape;
     private statusCallback?: (status: StatusShape) => void;
     private isRunning = false;
@@ -44,9 +43,9 @@ vi.mock("@/utils/AutosaveFileService", () => {
         consecutiveFailures: 0,
         pendingWrites: 0,
       };
-  latestInstance = this;
+      MockAutosaveFileService.latestInstance = this;
       (globalThis as any).__autosaveTestDriver = (update: Partial<StatusShape>) => {
-        latestInstance?.emit(update);
+        MockAutosaveFileService.latestInstance?.emit(update);
       };
       this.emit({});
     }
@@ -156,9 +155,9 @@ vi.mock("@/utils/AutosaveFileService", () => {
     }
 
     destroy() {
-      if ((globalThis as any).__autosaveTestDriver && latestInstance === this) {
+      if ((globalThis as any).__autosaveTestDriver && MockAutosaveFileService.latestInstance === this) {
         delete (globalThis as any).__autosaveTestDriver;
-        latestInstance = null;
+        MockAutosaveFileService.latestInstance = null;
       }
     }
   }

@@ -14,7 +14,8 @@
     "test": "vitest run",
     "test:ui": "vitest --ui",
     "test:run": "vitest run",
-    "test:coverage": "vitest run --coverage",
+  "test:coverage": "vitest run --coverage",
+  "analyze": "tsc && ANALYZE=true vite build --mode analyze",
     "test:watch": "vitest --watch",
     "seed": "npx tsx scripts/seedCli.ts",
     "seed:demo": "npx tsx scripts/seedCli.ts --preset demo",
@@ -98,6 +99,7 @@
   "typescript": "^5.9.2",
     "vite": "^7.1.6",
     "vite-plugin-compression": "^0.5.1",
-    "vitest": "^3.2.4"
+    "vitest": "^3.2.4",
+    "rollup-plugin-visualizer": "^5.13.0"
   }
 }

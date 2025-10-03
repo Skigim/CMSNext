@@ -18,120 +18,21 @@ This plan realigns the roadmap around those themes while preserving the filesyst
 ## 🔝 Priority Roadmap
 | Phase | Focus | Outcome Targets |
 |-------|-------|-----------------|
-| 1 | Component decomposition | Memo-friendly building blocks for navigation, connection flow, and financial items |
-| 2 | Testing expansion | RTL coverage for UI flows, smoke integrations for connect + CRUD |
-| 3 | File-storage experience | Typed state machine, consistent error logging, autosave status surfaced |
-| 4 | Performance & observability | Bundle analysis, render profiling, lightweight telemetry |
+| 4 | Performance & observability *(active prep)* | Bundle analysis, render profiling, lightweight telemetry |
 | 5 | Documentation & DX | Updated guides, threat model outline, formatting/tooling guardrails |
 
-> Phase 1 and Phase 2 implementation notes have moved to `progression-strategy-archive.md` to keep this plan focused on active work; highlights from the latest Phase 2 push are summarized below.
-
-### Phase 2 · Testing Expansion (Status: ✅ refreshed Sept 30, 2025)
-
-Recent gains
-- Added FinancialItem card/list/meta/action/save-indicator RTL suites with mocked storage APIs and permission flows.
-- Extended integration coverage for connection and autosave badges; full `npm run test:coverage` now executes 115 specs.
-- Captured fresh coverage baselines (73.3% statements) and logged remaining hot spots (`AutosaveFileService`, `dataTransform`, legacy UI shells).
-
-Next testing targets
-- Broaden form coverage (CaseForm/CategoryManager) and high-variance hooks (`useFinancialItemFlow`, `useNotes`).
-- Introduce lightweight smoke specs for diagnostic panels once decomposition work lands.
-- Track coverage deltas quarterly and retire the manual spreadsheet in favor of generated Vitest HTML reports.
-
-### Phase 3 · File-Storage Experience (In Progress)
-
-#### Subphase 3.1 · Storage State Machine
-- ✅ Replace the remaining `window.*` coordination flags with a reducer-backed state machine owned by `FileStorageContext`.
-- ✅ Model the full permission lifecycle (`idle → requesting → ready → blocked`, including `recovering` and `error` branches) so UI consumers can subscribe to stable selectors via `useFileStorageLifecycleSelectors`.
-- ✅ Update hooks (`useConnectionFlow`, `useNavigationFlow`, `useImportListeners`) to consume the typed state instead of ad-hoc booleans; propagate lifecycle-aware messaging through `useAppContentViewModel` and gate case interactions on lifecycle locks.
-- 🚧 Planned: extend autosave helpers once lifecycle telemetry drives UI decisions.
-- Deliverables: context reducer + action map, TypeScript definitions for storage states, regression tests covering grant/deny/revoke scenarios (**completed**).
-
-**State schema draft**
-- **States**
-	- `uninitialized`: provider mounted, Autosave service not yet ready.
-	- `unsupported`: File System Access API unavailable or browser refused feature.
-	- `idle`: service initialized, no directory handle selected.
-	- `requestingPermission`: user prompted to pick/grant access to a directory.
-	- `ready`: permission granted, autosave running, no pending work.
-	- `saving`: autosave/manual save in flight (transient substate of `ready`).
-	- `blocked`: permission revoked or directory handle missing; waiting on recovery.
-	- `error`: non-recoverable IO failure (corrupt file, exceeded retries).
-	- `recovering`: background retry after handled error; transitions back to `ready` or `blocked`.
-- **Events**
-	- `SERVICE_INITIALIZED`, `SUPPORT_UNAVAILABLE`
-	- `CONNECT_REQUESTED`, `PERMISSION_GRANTED`, `PERMISSION_DENIED`
-	- `HANDLE_RESTORED`, `HANDLE_LOST`
-	- `AUTOSAVE_STARTED`, `AUTOSAVE_COMPLETED`, `AUTOSAVE_FAILED`
-	- `MANUAL_SAVE_REQUESTED`, `MANUAL_SAVE_COMPLETED`
-	- `ERROR_ENCOUNTERED`, `ERROR_RECOVERED`
-- **Context data**
-	- `permissionStatus`, `directoryHandleId`
-	- `lastSaveTime`, `pendingWrites`, `consecutiveFailures`
-	- `lastError` (message + errorCode + timestamp)
-- **Actions / side effects** (triggered via effects, not inside reducer)
-	- Fire toast notifications for permission or error changes.
-	- Start/stop autosave timer.
-	- Persist state snapshot for diagnostics.
-- **Transition highlights**
-	- `uninitialized + SERVICE_INITIALIZED → idle` (if supported) or `unsupported` otherwise.
-	- `idle + CONNECT_REQUESTED → requestingPermission`.
-	- `requestingPermission + PERMISSION_GRANTED → ready` (kick off autosave, clear failures).
-	- `ready + AUTOSAVE_FAILED → recovering` (increment `consecutiveFailures`).
-	- `recovering + ERROR_RECOVERED → ready`; `recovering + HANDLE_LOST → blocked`.
-	- `blocked + HANDLE_RESTORED → ready`; `blocked + PERMISSION_GRANTED → ready`.
-	- Any state + `ERROR_ENCOUNTERED` (non-recoverable) → `error` (surface guidance, halt autosave).
-
-#### Subphase 3.2 · Error & Toast Harmonization
-- ✅ Introduce a centralized error helper that logs structured metadata (`operation`, `handleId`, `errorCode`) and emits consistent toast copy (`reportFileStorageError`).
-- ✅ Normalize handling of benign cancellations (`AbortError`) so user-initiated dismissals exit silently.
-- ✅ Thread the helper through `DataManager`, `AutosaveFileService`, and modal/import flows so every storage failure surfaces consistent copy and feeds telemetry.
-- Deliverables: `reportFileStorageError` utility, updated toast messaging catalogue ([`docs/development/file-storage-toast-catalogue.md`](./file-storage-toast-catalogue.md)), Vitest coverage for read/write/import failures (**completed**).
-
-#### Subphase 3.3 · Autosave Visibility
-- ✅ Expose autosave run state (last successful write timestamp, pending queue length, permission status) via a dedicated selector or hook.
-- ✅ Surface status in `FileStorageSettings` and the global toolbar—highlight “saving…”, “all changes saved”, and “permission required” states.
-- ✅ Respect existing debounce behaviour from `AutosaveFileService` and memoize derived values to prevent render churn.
-- Deliverables: `useAutosaveStatus` hook, shared status badge component, integration test simulating permission revocation mid-save (**completed**).
-
-#### Subphase 3.4 · Resilience Verification
-**Objectives**
-- Guarantee autosave and connection flows recover gracefully from permission loss, IO failures, and user cancellations.
-- Equip QA and support with prescriptive playbooks for diagnosing storage-state anomalies.
-
-**Testing Workstreams**
-1. ✅ **Vitest service coverage** – expanded suites now simulate permission revocation mid-write, retry escalation, and lifecycle transitions within `fileStorageMachine`.
-2. ✅ **React Testing Library (RTL)** – autosave badge and connection flow specs assert badge copy, spinner states, and modal reopen flow across `ready → saving → retrying → permission required` transitions.
-3. ✅ **Integration smoke runs** – in-memory handle driver reproduces connect → revoke → reconnect scenarios to verify catalogue-aligned messaging.
-
-**Manual Badge Verification**
-- ✅ Document autosave badge copy for each lifecycle state (`idle`, `ready`, `saving`, `retrying`, `permission-required`, `error`, `unsupported`) in `docs/error-boundary-guide.md`.
-- ✅ Capture optional console or badge snapshots for notable failures (stored in `docs/development/resilience-screenshots/`) to confirm metadata logging via `reportFileStorageError`.
-- ✅ Reference the badge legend throughout deployment and troubleshooting guides in place of the retired CSV matrix.
-
-**Documentation & DX Updates**
-- ✅ Refresh `error-boundary-guide.md` with: autosave badge legend, permission troubleshooting flowchart, and links to the toast catalogue.
-- ✅ Append a “File Storage Recovery” section to `docs/enhanced-error-boundary-summary.md` summarizing escalation steps.
-- ✅ Add a resilience-focused checklist to `docs/DeploymentGuide.md` and the release smoke checklist.
-
-**Timeline & Exit Criteria**
-- **Week 1:** Land Vitest expansions and state-machine fixtures; ensure coverage delta captured in `coverage/` report.
-- **Week 2:** Layer RTL specs and integration flows; stabilize CI runtime under +10% execution budget.
-- **Week 3:** Complete manual matrix execution, publish documentation updates, and secure sign-off from QA.
-- Exit when badge documentation covers every lifecycle state, updated guides are merged, and `npm run test:run` reflects the broader suite without regressions.
-
-- Deliverables: expanded automated test matrix, documentation refresh (error guides, deployment checklist), archived manual verification artefacts.
-
-**Phase 3 success metric:** zero global mutable flags, a visible autosave indicator, structured error logging, and documented recovery flows.
+> Phases 1–3 are complete and archived in `progression-strategy-archive.md`; this document now tracks active and upcoming efforts only.
 
 ## 🔄 Transition to Feature Development
 - Phase 3 deliverables are wrapped; remaining platform work shifts toward net-new features.
-- Phases 4 and 5 move to the backlog so performance and DX polish can ride along with future feature workstreams.
-- Prepare feature specs, UX mocks, and acceptance criteria before the next implementation sprint.
+- Phase 4 has entered an instrumentation prep window so performance work can start with reliable baselines.
+- Phase 5 remains on deck and will reactivate once performance telemetry stabilizes and feature specs are locked in.
 
-### Phase 4 · Performance & Observability (Backlog)
-- ⏸️ Deferred while feature delivery takes center stage. Revisit once the next feature milestones are stable.
-- Prioritize lightweight profiling alongside upcoming stories rather than as a standalone initiative.
+### Phase 4 · Performance & Observability (Active Prep)
+- ✅ Tooling: `npm run analyze` now emits a treemap via `rollup-plugin-visualizer`; results should be archived under `docs/development/performance/`.
+- ✅ Documentation: `performance-prep.md` and `performance-metrics.md` capture the baseline checklist and reporting template.
+- ⏳ Baseline capture: generate bundle metrics, profile `App.tsx` navigation flows, and log findings before optimization work merges.
+- 📌 Follow-up targets: break down `App.tsx` render hotspots, measure autosave badge updates, and prioritize chunk-splitting or memoization stories based on data.
 
 ### Phase 5 · Documentation & Developer Experience (Backlog)
 - ⏸️ Deferred until feature-facing changes land. Fold doc and DX improvements into release prep for those features.
