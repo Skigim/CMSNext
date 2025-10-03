@@ -627,6 +627,69 @@ describe('DataManager', () => {
       parseStackedSpy.mockRestore()
     })
 
+    it('clears resolvedAt when preferred workflow status is not resolved', async () => {
+      const mockCase = createMockCaseDisplay({
+        id: 'case-stale-resolved',
+        mcn: '7777',
+        caseRecord: createMockCaseRecord({ id: 'record-stale-resolved', mcn: '7777' })
+      })
+
+      const storedAlert = buildAlert({
+        id: 'alert-stale-resolved',
+        reportId: 'alert-stale-resolved',
+        mcNumber: '7777',
+        matchedCaseId: 'case-stale-resolved',
+        matchStatus: 'matched',
+        status: 'new',
+        resolvedAt: '2025-09-15T10:00:00.000Z',
+      })
+
+      mockAutosaveService.readNamedFile.mockResolvedValueOnce({
+        version: 3,
+        generatedAt: '2025-09-20T00:00:00.000Z',
+        summary: {
+          total: 1,
+          matched: 1,
+          unmatched: 0,
+          missingMcn: 0,
+          latestUpdated: '2025-09-20T00:00:00.000Z',
+        },
+        alerts: [storedAlert],
+        uniqueAlerts: 1,
+        sourceFile: 'alerts.csv',
+      })
+
+      const incomingAlert = buildAlert({
+        id: 'alert-stale-resolved',
+        reportId: 'alert-stale-resolved',
+        mcNumber: '7777',
+        matchedCaseId: 'case-stale-resolved',
+        matchStatus: 'matched',
+        status: 'acknowledged',
+        resolvedAt: null,
+      })
+
+      const parseStackedSpy = vi.spyOn(alertsData, 'parseStackedAlerts').mockReturnValue(
+        alertsData.createAlertsIndexFromAlerts([incomingAlert])
+      )
+
+      const result = await dataManager.mergeAlertsFromCsvContent('csv-stale-resolved', {
+        cases: [mockCase],
+        sourceFileName: 'alerts.csv',
+      })
+
+      expect(result.updated).toBe(1)
+
+      const lastWriteCallArg = mockAutosaveService.writeNamedFile.mock.calls.at(-1)?.[1]
+      const payload = lastWriteCallArg as { alerts?: AlertWithMatch[] } | undefined
+      const mergedAlert = payload?.alerts?.find(alert => alert.id === 'alert-stale-resolved')
+
+      expect(mergedAlert?.status).toBe('acknowledged')
+      expect(mergedAlert?.resolvedAt).toBeNull()
+
+      parseStackedSpy.mockRestore()
+    })
+
     it('upgrades stored workflow state when incoming alerts are resolved', async () => {
       const mockCase = createMockCaseDisplay({
         id: 'case-resolved-upgrade',

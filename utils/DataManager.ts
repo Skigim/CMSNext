@@ -472,11 +472,7 @@ export class DataManager {
 
     const resolvedAtForStatus = preferredStatus === "resolved"
       ? existingResolvedAt ?? incomingResolvedAt ?? null
-      : (existing.status === preferredStatus && existingResolvedAt !== null
-        ? existingResolvedAt
-        : incoming.status === preferredStatus && incomingResolvedAt !== null
-          ? incomingResolvedAt
-          : null);
+      : null;
 
     const resolutionNotesForStatus =
       preferredStatus === existing.status && existing.resolutionNotes !== undefined
