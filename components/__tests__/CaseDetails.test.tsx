@@ -52,10 +52,7 @@ vi.mock('../case/CaseAlertsDrawer', () => ({
 }));
 
 vi.mock('../ui/alert-dialog', () => {
-  const React = require('react');
-  const Fragment = React.Fragment;
-
-  const passthrough = ({ children }: any) => <Fragment>{children}</Fragment>;
+  const passthrough = ({ children }: any) => <>{children}</>;
   const ActionButton = ({ children, onClick, ...rest }: any) => (
     <button onClick={onClick} {...rest}>
       {children}
@@ -64,7 +61,7 @@ vi.mock('../ui/alert-dialog', () => {
 
   return {
     AlertDialog: passthrough,
-    AlertDialogTrigger: ({ children }: any) => <Fragment>{children}</Fragment>,
+    AlertDialogTrigger: passthrough,
     AlertDialogContent: passthrough,
     AlertDialogDescription: passthrough,
     AlertDialogFooter: passthrough,
