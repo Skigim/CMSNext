@@ -4,9 +4,17 @@ import compression from 'vite-plugin-compression'
 import { visualizer } from 'rollup-plugin-visualizer'
 
 // https://vitejs.dev/config/
-export default defineConfig(({ mode }) => {
-  const isProduction = process.env.NODE_ENV === 'production';
+export default defineConfig(({ command, mode }) => {
+  const isProduction = command === 'build' || mode === 'production';
   const analyze = process.env.ANALYZE === 'true' || mode === 'analyze';
+  const securityHeaders = {
+    'X-Frame-Options': 'DENY',
+    'X-Content-Type-Options': 'nosniff',
+    'X-XSS-Protection': '1; mode=block',
+    'Referrer-Policy': 'strict-origin-when-cross-origin',
+  } as const;
+  const serverConfig = !isProduction ? { headers: securityHeaders } : undefined;
+  const previewConfig = isProduction ? { headers: securityHeaders } : undefined;
 
   return {
     plugins: [
@@ -35,15 +43,8 @@ export default defineConfig(({ mode }) => {
         '@': new URL('./', import.meta.url).pathname,
       },
     },
-    server: {
-      // Add security headers for development
-      headers: {
-        'X-Frame-Options': 'DENY',
-        'X-Content-Type-Options': 'nosniff',
-        'X-XSS-Protection': '1; mode=block',
-        'Referrer-Policy': 'strict-origin-when-cross-origin',
-      },
-    },
+    server: serverConfig,
+    preview: previewConfig,
     build: {
       sourcemap: true,
       rollupOptions: {
