@@ -18,7 +18,13 @@ import { AppContentView } from "./components/app/AppContentView";
 import { useAppContentViewModel } from "./components/app/useAppContentViewModel";
 import { clearFileStorageFlags, updateFileStorageFlags } from "./utils/fileStorageFlags";
 import { useCategoryConfig } from "./contexts/CategoryConfigContext";
-import { createAlertsIndexFromAlerts, createEmptyAlertsIndex, type AlertWithMatch, type AlertsIndex } from "./utils/alertsData";
+import {
+  createAlertsIndexFromAlerts,
+  createEmptyAlertsIndex,
+  buildAlertStorageKey,
+  type AlertWithMatch,
+  type AlertsIndex,
+} from "./utils/alertsData";
 import { ENABLE_SAMPLE_ALERTS } from "./utils/featureFlags";
 import { createLogger } from "./utils/logger";
 
@@ -332,8 +338,9 @@ const AppContent = memo(function AppContent() {
       setAlertsIndex(prevIndex => applyAlertOverrides(prevIndex));
 
       try {
+        const identifier = buildAlertStorageKey(alert) ?? alert.id;
         await dataManager.updateAlertStatus(
-          alert.id,
+          identifier,
           {
             status: "resolved",
             resolvedAt,

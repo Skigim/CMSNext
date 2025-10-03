@@ -627,6 +627,79 @@ describe('DataManager', () => {
       parseStackedSpy.mockRestore()
     })
 
+    it('upgrades stored workflow state when incoming alerts are resolved', async () => {
+      const mockCase = createMockCaseDisplay({
+        id: 'case-resolved-upgrade',
+        mcn: '8888',
+        caseRecord: createMockCaseRecord({ id: 'record-resolved-upgrade', mcn: '8888' })
+      })
+
+      const storedAlert = buildAlert({
+        id: 'alert-resolved-upgrade',
+        reportId: 'alert-resolved-upgrade',
+        mcNumber: '8888',
+        matchedCaseId: 'case-resolved-upgrade',
+        matchStatus: 'matched',
+        status: 'new',
+        resolvedAt: null,
+        updatedAt: '2025-09-20T00:00:00.000Z',
+      })
+
+      mockAutosaveService.readNamedFile.mockResolvedValueOnce({
+        version: 3,
+        generatedAt: '2025-09-20T00:00:00.000Z',
+        summary: {
+          total: 1,
+          matched: 1,
+          unmatched: 0,
+          missingMcn: 0,
+          latestUpdated: '2025-09-20T00:00:00.000Z',
+        },
+        alerts: [storedAlert],
+        uniqueAlerts: 1,
+        sourceFile: 'alerts.csv',
+      })
+
+      const incomingResolved = buildAlert({
+        id: 'alert-resolved-upgrade',
+        reportId: 'alert-resolved-upgrade',
+        mcNumber: '8888',
+        matchedCaseId: 'case-resolved-upgrade',
+        matchStatus: 'matched',
+        status: 'resolved',
+        resolvedAt: '2025-09-25T15:30:00.000Z',
+        resolutionNotes: 'Resolved via import',
+        updatedAt: '2025-09-25T15:30:00.000Z',
+      })
+
+      const parseStackedSpy = vi.spyOn(alertsData, 'parseStackedAlerts').mockReturnValue(
+        alertsData.createAlertsIndexFromAlerts([incomingResolved])
+      )
+
+      const result = await dataManager.mergeAlertsFromCsvContent('csv-updated', {
+        cases: [mockCase],
+        sourceFileName: 'alerts-updated.csv',
+      })
+
+      expect(result.updated).toBe(1)
+
+      const lastWriteCallArg = mockAutosaveService.writeNamedFile.mock.calls.at(-1)?.[1]
+      const payload = lastWriteCallArg as { alerts?: AlertWithMatch[]; summary?: { total: number } } | undefined
+      expect(payload?.alerts).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            id: 'alert-resolved-upgrade',
+            status: 'resolved',
+            resolvedAt: '2025-09-25T15:30:00.000Z',
+            resolutionNotes: 'Resolved via import',
+          })
+        ])
+      )
+      expect(payload?.summary?.total).toBe(1)
+
+      parseStackedSpy.mockRestore()
+    })
+
     it('preserves stacked alerts that share reportId but differ by metadata', async () => {
       const csvContent = [
         '"Stacked Alerts Export"',
