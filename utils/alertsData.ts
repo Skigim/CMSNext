@@ -25,6 +25,35 @@ export interface AlertsIndex {
   missingMcn: AlertWithMatch[];
 }
 
+export function isAlertResolved(
+  alert: Pick<AlertRecord, "status" | "resolvedAt"> | AlertWithMatch | null | undefined,
+): boolean {
+  if (!alert) {
+    return false;
+  }
+
+  const normalizedStatus = typeof alert.status === "string" ? alert.status.toLowerCase() : undefined;
+  if (normalizedStatus === "resolved") {
+    return true;
+  }
+
+  if (alert.resolvedAt) {
+    return String(alert.resolvedAt).trim().length > 0;
+  }
+
+  return false;
+}
+
+export function filterOpenAlerts<T extends Pick<AlertRecord, "status" | "resolvedAt">>(
+  alerts: T[] | null | undefined,
+): T[] {
+  if (!alerts || alerts.length === 0) {
+    return [];
+  }
+
+  return alerts.filter(alert => !isAlertResolved(alert));
+}
+
 const severityPriorityOrder: AlertSeverity[] = ["Critical", "High", "Medium", "Low", "Info"];
 const workflowPriorityOrder: AlertWorkflowStatus[] = ["new", "in-progress", "acknowledged", "snoozed", "resolved"];
 

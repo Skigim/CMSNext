@@ -13,7 +13,7 @@ import type { CaseDisplay } from "@/types/case";
 import { CaseStatusBadge } from "./CaseStatusBadge";
 import { ArrowDown, ArrowUp, ArrowUpDown, Eye, MoreHorizontal, Pencil, Trash2 } from "lucide-react";
 import type { CaseListSortDirection, CaseListSortKey } from "@/hooks/useCaseListPreferences";
-import type { AlertWithMatch } from "@/utils/alertsData";
+import { filterOpenAlerts, type AlertWithMatch } from "@/utils/alertsData";
 import { AlertBadge } from "@/components/alerts/AlertBadge";
 
 export interface CaseTableProps {
@@ -65,7 +65,7 @@ export const CaseTable = memo(function CaseTable({
         const applicationDate = item.caseRecord?.applicationDate || item.createdAt;
         const updatedDate = item.updatedAt || item.caseRecord?.updatedDate || item.createdAt;
         const primaryContact = item.person?.phone || item.person?.email || "Not provided";
-        const caseAlerts = alertsByCaseId?.get(item.id) ?? [];
+        const caseAlerts = filterOpenAlerts(alertsByCaseId?.get(item.id));
         return {
           id: item.id,
           name: item.name || "Unnamed Case",

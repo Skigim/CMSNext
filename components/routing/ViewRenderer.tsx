@@ -115,6 +115,7 @@ export function ViewRenderer({
           cases={cases}
           alertsSummary={alerts.summary}
           alertsByCaseId={alerts.alertsByCaseId}
+          alerts={alerts.alerts}
           onViewCase={handleViewCase}
           onEditCase={handleEditCase}
           onDeleteCase={handleDeleteCase}

@@ -43,7 +43,7 @@ import {
   type CaseListSortDirection,
 } from "@/hooks/useCaseListPreferences";
 import { Badge } from "../ui/badge";
-import type { AlertsSummary, AlertWithMatch } from "../../utils/alertsData";
+import { filterOpenAlerts, type AlertsSummary, type AlertWithMatch } from "../../utils/alertsData";
 
 interface CaseListProps {
   cases: CaseDisplay[];
@@ -54,6 +54,7 @@ interface CaseListProps {
   onRefresh?: () => void;
   alertsSummary?: AlertsSummary;
   alertsByCaseId?: Map<string, AlertWithMatch[]>;
+  alerts?: AlertWithMatch[];
 }
 
 export function CaseList({
@@ -65,6 +66,7 @@ export function CaseList({
   onRefresh,
   alertsSummary,
   alertsByCaseId,
+  alerts,
 }: CaseListProps) {
   const {
     viewMode,
@@ -93,7 +95,53 @@ export function CaseList({
     [alertsSummary],
   );
 
-  const alertsByCase = useMemo(() => alertsByCaseId ?? new Map<string, AlertWithMatch[]>(), [alertsByCaseId]);
+  const matchedAlertsByCase = useMemo(
+    () => alertsByCaseId ?? new Map<string, AlertWithMatch[]>(),
+    [alertsByCaseId],
+  );
+
+  const openAlertsByCase = useMemo(() => {
+    if (matchedAlertsByCase.size === 0) {
+      return new Map<string, AlertWithMatch[]>();
+    }
+
+    const map = new Map<string, AlertWithMatch[]>();
+    matchedAlertsByCase.forEach((caseAlerts, caseId) => {
+      const openAlertsForCase = filterOpenAlerts(caseAlerts);
+      if (openAlertsForCase.length > 0) {
+        map.set(caseId, openAlertsForCase);
+      }
+    });
+
+    return map;
+  }, [matchedAlertsByCase]);
+
+  const openAlerts = useMemo(() => {
+    if (alerts && alerts.length > 0) {
+      return filterOpenAlerts(alerts);
+    }
+
+    if (matchedAlertsByCase.size === 0) {
+      return [];
+    }
+
+    const combined: AlertWithMatch[] = [];
+    matchedAlertsByCase.forEach(caseAlerts => {
+      const filtered = filterOpenAlerts(caseAlerts);
+      if (filtered.length > 0) {
+        combined.push(...filtered);
+      }
+    });
+
+    return combined;
+  }, [alerts, matchedAlertsByCase]);
+
+  const openAlertsTotal = openAlerts.length;
+
+  const openAlertsMatched = useMemo(
+    () => openAlerts.filter(alert => alert.matchStatus === "matched").length,
+    [openAlerts],
+  );
 
   const shouldUseVirtual = viewMode === "grid" && (cases.length > 100 || useVirtualScrolling);
 
@@ -182,8 +230,8 @@ export function CaseList({
           return (aType.localeCompare(bType)) * directionFactor;
         }
         case "alerts": {
-          const aAlerts = alertsByCase.get(a.id)?.length ?? 0;
-          const bAlerts = alertsByCase.get(b.id)?.length ?? 0;
+          const aAlerts = openAlertsByCase.get(a.id)?.length ?? 0;
+          const bAlerts = openAlertsByCase.get(b.id)?.length ?? 0;
           const comparison = aAlerts - bAlerts;
           return comparison * directionFactor;
         }
@@ -206,15 +254,15 @@ export function CaseList({
         }
       }
     });
-  }, [alertsByCase, filteredCases, sortKey, sortDirection]);
+  }, [filteredCases, openAlertsByCase, sortDirection, sortKey]);
 
   const noMatches = sortedCases.length === 0;
 
   const renderAlertSummary = () => {
-    if (alertsSummaryData.total === 0) {
+    if (openAlertsTotal === 0) {
       return (
         <div className="rounded-md border border-dashed border-muted-foreground/30 bg-muted/20 p-3 text-xs text-muted-foreground">
-          No alerts detected for the current workspace.
+          No unresolved alerts detected for the current workspace.
         </div>
       );
     }
@@ -223,8 +271,8 @@ export function CaseList({
       <div className="space-y-2">
         <div className="grid gap-2 sm:grid-cols-2">
           <div className="rounded-md border border-border/70 bg-card/60 p-3">
-            <p className="text-xs uppercase text-muted-foreground">Total alerts</p>
-            <p className="text-xl font-semibold text-foreground">{alertsSummaryData.total}</p>
+            <p className="text-xs uppercase text-muted-foreground">Unresolved alerts</p>
+            <p className="text-xl font-semibold text-foreground">{openAlertsTotal}</p>
             {alertsSummaryData.latestUpdated && (
               <p className="text-[11px] text-muted-foreground mt-1">
                 Updated {new Intl.DateTimeFormat(undefined, { dateStyle: "medium" }).format(new Date(alertsSummaryData.latestUpdated))}
@@ -233,8 +281,8 @@ export function CaseList({
           </div>
           <div className="rounded-md border border-emerald-500/30 bg-emerald-500/10 p-3">
             <p className="text-xs uppercase text-emerald-700">Linked to cases</p>
-            <p className="text-xl font-semibold text-emerald-900">{alertsSummaryData.matched}</p>
-            <p className="text-[11px] text-emerald-800 mt-1">Alerts already connected</p>
+            <p className="text-xl font-semibold text-emerald-900">{openAlertsMatched}</p>
+            <p className="text-[11px] text-emerald-800 mt-1">Unresolved alerts already connected</p>
           </div>
         </div>
         <p className="text-[11px] text-muted-foreground">
@@ -337,9 +385,9 @@ export function CaseList({
         <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
           <span className="inline-flex h-2.5 w-2.5 rounded-full bg-amber-500" aria-hidden />
           Alerts overview
-          {alertsSummaryData.total > 0 && (
+          {openAlertsTotal > 0 && (
             <Badge variant="outline" className="ml-2 border-amber-500/40 text-amber-700">
-              {alertsSummaryData.total} active
+              {openAlertsTotal} active
             </Badge>
           )}
         </div>
@@ -355,7 +403,7 @@ export function CaseList({
           onViewCase={onViewCase}
           onEditCase={onEditCase}
           onDeleteCase={onDeleteCase}
-          alertsByCaseId={alertsByCase}
+          alertsByCaseId={openAlertsByCase}
         />
       ) : shouldUseVirtual ? (
         <VirtualCaseList
@@ -363,7 +411,7 @@ export function CaseList({
           onViewCase={onViewCase}
           onEditCase={onEditCase}
           onDeleteCase={onDeleteCase}
-          alertsByCaseId={alertsByCase}
+          alertsByCaseId={openAlertsByCase}
         />
       ) : (
         <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
@@ -374,7 +422,7 @@ export function CaseList({
               onView={onViewCase}
               onEdit={onEditCase}
               onDelete={onDeleteCase}
-              alerts={alertsByCase.get(caseData.id) ?? []}
+              alerts={openAlertsByCase.get(caseData.id) ?? []}
             />
           ))}
         </div>

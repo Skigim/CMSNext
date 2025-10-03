@@ -1,6 +1,6 @@
 import { memo } from "react";
 import { cn } from "@/components/ui/utils";
-import type { AlertWithMatch } from "@/utils/alertsData";
+import { filterOpenAlerts, type AlertWithMatch } from "@/utils/alertsData";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 export interface AlertBadgeProps {
@@ -11,14 +11,16 @@ export interface AlertBadgeProps {
 }
 
 export const AlertBadge = memo(function AlertBadge({ alerts, className, size = "sm", showLabel = true }: AlertBadgeProps) {
-  if (!alerts || alerts.length === 0) {
+  const activeAlerts = filterOpenAlerts(alerts);
+
+  if (activeAlerts.length === 0) {
     return null;
   }
 
-  const count = alerts.length;
+  const count = activeAlerts.length;
 
   const groupedAlertsMap = new Map<string, { description: string; count: number }>();
-  alerts.forEach(alert => {
+  activeAlerts.forEach(alert => {
     const rawDescription = alert.description?.trim();
     const description = rawDescription && rawDescription.length > 0 ? rawDescription : "No description provided";
     const key = description.toLowerCase();

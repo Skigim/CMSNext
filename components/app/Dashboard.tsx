@@ -6,7 +6,7 @@ import { CaseDisplay } from "../../types/case";
 import { FileServiceDiagnostic } from "../diagnostics/FileServiceDiagnostic";
 import { useCategoryConfig } from "../../contexts/CategoryConfigContext";
 import { BellRing } from "lucide-react";
-import type { AlertsIndex } from "../../utils/alertsData";
+import { filterOpenAlerts, type AlertsIndex } from "../../utils/alertsData";
 
 interface DashboardProps {
   cases: CaseDisplay[];
@@ -75,17 +75,26 @@ export function Dashboard({ cases, alerts, onViewAllCases, onNewCase }: Dashboar
     [config.caseStatuses, statusCount, statusIconMap, statusPalette],
   );
 
+  const openAlerts = useMemo(() => filterOpenAlerts(alerts.alerts), [alerts.alerts]);
+
+  const openAlertsMatched = useMemo(
+    () => openAlerts.filter(alert => alert.matchStatus === "matched").length,
+    [openAlerts],
+  );
+
+  const openAlertsCount = openAlerts.length;
+
   const stats = useMemo(
     () => [
       {
         title: "Active Alerts",
-        value: alerts.summary.total,
+        value: openAlertsCount,
         description:
-          alerts.summary.total === 0
+          openAlertsCount === 0
             ? "All clear"
-            : `${alerts.summary.matched} linked to cases`,
+            : `${openAlertsMatched} linked to cases`,
         icon: BellRing,
-        color: alerts.summary.total > 0 ? "text-amber-600" : "text-muted-foreground",
+        color: openAlertsCount > 0 ? "text-amber-600" : "text-muted-foreground",
       },
       {
         title: "Total Cases",
@@ -96,10 +105,10 @@ export function Dashboard({ cases, alerts, onViewAllCases, onNewCase }: Dashboar
       },
       ...statusStats,
     ],
-    [alerts.summary.matched, alerts.summary.total, statusStats, totalCases],
+    [openAlertsCount, openAlertsMatched, statusStats, totalCases],
   );
 
-  const latestAlerts = useMemo(() => alerts.alerts.slice(0, 5), [alerts.alerts]);
+  const latestAlerts = useMemo(() => openAlerts.slice(0, 5), [openAlerts]);
 
   return (
     <div className="space-y-6">
@@ -191,13 +200,13 @@ export function Dashboard({ cases, alerts, onViewAllCases, onNewCase }: Dashboar
                 <CardDescription>Live feed from the alerts dataset</CardDescription>
               </div>
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <BellRing className={alerts.summary.total ? "h-4 w-4 text-amber-600" : "h-4 w-4"} />
-                {alerts.summary.total ? `${alerts.summary.total} active` : "All clear"}
+                <BellRing className={openAlertsCount ? "h-4 w-4 text-amber-600" : "h-4 w-4"} />
+                {openAlertsCount ? `${openAlertsCount} active` : "All clear"}
               </div>
             </div>
           </CardHeader>
           <CardContent>
-            {alerts.summary.total === 0 ? (
+            {openAlertsCount === 0 ? (
               <div className="py-6 text-center text-muted-foreground text-sm">
                 <p>No alerts detected in the sample feed.</p>
               </div>
@@ -205,7 +214,7 @@ export function Dashboard({ cases, alerts, onViewAllCases, onNewCase }: Dashboar
               <div className="space-y-4">
                 <div className="rounded-lg border border-border/60 bg-muted/30 p-3">
                   <p className="text-xs uppercase text-muted-foreground">Linked to cases</p>
-                  <p className="text-lg font-semibold text-foreground">{alerts.summary.matched}</p>
+                  <p className="text-lg font-semibold text-foreground">{openAlertsMatched}</p>
                   <p className="text-xs text-muted-foreground mt-1">Anything that needs a manual match will trigger a toast.</p>
                 </div>
 

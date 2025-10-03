@@ -329,4 +329,33 @@ describe("CaseList", () => {
     const resortedRows = screen.getAllByRole("row");
     expect(within(resortedRows[1]).getByRole("button", { name: /pending case/i })).toBeInTheDocument();
   });
+
+  it("only counts unresolved alerts in the list and overview", () => {
+    const caseItem = createCase({ id: "case-with-alerts", name: "Case With Alerts" });
+    const activeAlert = createAlert({ id: "alert-open", matchedCaseId: "case-with-alerts", matchedCaseName: "Case With Alerts", status: "new", resolvedAt: null });
+    const resolvedAlert = createAlert({ id: "alert-resolved", matchedCaseId: "case-with-alerts", matchedCaseName: "Case With Alerts", status: "resolved", resolvedAt: "2025-09-30T12:00:00.000Z" });
+
+    const alertsByCaseId = new Map<string, AlertWithMatch[]>([["case-with-alerts", [activeAlert, resolvedAlert]]]);
+    const allAlerts = [activeAlert, resolvedAlert];
+
+    render(
+      <CaseList
+        cases={[caseItem]}
+        onViewCase={vi.fn()}
+        onEditCase={vi.fn()}
+        onDeleteCase={vi.fn()}
+        onNewCase={vi.fn()}
+        alertsByCaseId={alertsByCaseId}
+        alerts={allAlerts}
+      />,
+    );
+
+    expect(screen.getByText(/1 active/i)).toBeInTheDocument();
+    expect(screen.queryByText(/2 active/i)).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: /table view/i }));
+
+    expect(screen.getByLabelText("1 alert")).toBeInTheDocument();
+    expect(screen.queryByLabelText("2 alerts")).not.toBeInTheDocument();
+  });
 });

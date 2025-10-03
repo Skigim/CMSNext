@@ -66,4 +66,16 @@ describe("AlertBadge", () => {
     expect(screen.getByText("No description provided")).toBeInTheDocument();
     expect(screen.getByText("×2")).toBeInTheDocument();
   });
+
+  it("filters resolved alerts out of the badge count", () => {
+    const alerts = [
+      buildAlert({ id: "open-1", description: "Follow up", status: "new", resolvedAt: null }),
+      buildAlert({ id: "resolved-1", description: "Completed", status: "resolved", resolvedAt: "2025-09-30T00:00:00.000Z" }),
+    ];
+
+    render(<AlertBadge alerts={alerts} />);
+
+    expect(screen.getByLabelText("1 alert")).toBeInTheDocument();
+    expect(screen.queryByText("Completed")).not.toBeInTheDocument();
+  });
 });
