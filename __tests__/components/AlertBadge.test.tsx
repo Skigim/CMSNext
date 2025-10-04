@@ -2,6 +2,7 @@ import { render, screen } from "@testing-library/react";
 import { describe, it, expect, vi } from "vitest";
 import { AlertBadge } from "@/components/alerts/AlertBadge";
 import type { AlertWithMatch } from "@/utils/alertsData";
+import { getAlertDisplayDescription, getAlertDueDateInfo } from "@/utils/alertDisplay";
 
 vi.mock("@/components/ui/tooltip", () => ({
   TooltipProvider: ({ children }: any) => <div data-testid="tooltip-provider">{children}</div>,
@@ -40,7 +41,7 @@ const buildAlert = (overrides: Partial<AlertWithMatch> = {}): AlertWithMatch => 
 };
 
 describe("AlertBadge", () => {
-  it("groups matching descriptions while preserving the total count", () => {
+  it("lists individual alerts with description and due date details", () => {
     const alerts = [
       buildAlert({ id: "alert-1", description: "Mail Received" }),
       buildAlert({ id: "alert-2", description: "Mail Received" }),
@@ -50,9 +51,20 @@ describe("AlertBadge", () => {
     render(<AlertBadge alerts={alerts} />);
 
     expect(screen.getByText("3")).toBeInTheDocument();
-    expect(screen.getAllByText("Mail Received")).toHaveLength(1);
-    expect(screen.getByText("×2")).toBeInTheDocument();
-    expect(screen.getByText("Follow-up Call")).toBeInTheDocument();
+
+    const firstDescription = getAlertDisplayDescription(alerts[0]);
+    const firstDue = getAlertDueDateInfo(alerts[0]);
+    const firstDueLabel = firstDue.hasDate ? `Due ${firstDue.label}` : firstDue.label;
+
+  expect(screen.getAllByText(firstDescription).length).toBeGreaterThanOrEqual(2);
+  expect(screen.getAllByText(firstDueLabel).length).toBeGreaterThanOrEqual(2);
+
+    const thirdDescription = getAlertDisplayDescription(alerts[2]);
+    const thirdDue = getAlertDueDateInfo(alerts[2]);
+    const thirdDueLabel = thirdDue.hasDate ? `Due ${thirdDue.label}` : thirdDue.label;
+
+  expect(screen.getByText(thirdDescription)).toBeInTheDocument();
+  expect(screen.getAllByText(thirdDueLabel).length).toBeGreaterThanOrEqual(1);
   });
 
   it("falls back to a default description when one is missing", () => {
@@ -63,8 +75,12 @@ describe("AlertBadge", () => {
 
     render(<AlertBadge alerts={alerts} />);
 
-    expect(screen.getByText("No description provided")).toBeInTheDocument();
-    expect(screen.getByText("×2")).toBeInTheDocument();
+    const fallbackDescription = getAlertDisplayDescription(alerts[0]);
+    expect(screen.getAllByText(fallbackDescription).length).toBeGreaterThanOrEqual(2);
+
+    const due = getAlertDueDateInfo(alerts[0]);
+    const dueLabel = due.hasDate ? `Due ${due.label}` : due.label;
+    expect(screen.getAllByText(dueLabel).length).toBeGreaterThanOrEqual(2);
   });
 
   it("filters resolved alerts out of the badge count", () => {

@@ -120,6 +120,7 @@ export function ViewRenderer({
           onEditCase={handleEditCase}
           onDeleteCase={handleDeleteCase}
           onNewCase={handleNewCase}
+          onResolveAlert={handleResolveAlert}
         />
       );
 
