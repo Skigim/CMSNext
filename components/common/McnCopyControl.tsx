@@ -40,7 +40,7 @@ export const McnCopyControl = memo(function McnCopyControl({
       return;
     }
 
-    void clickToCopy(mcn);
+    clickToCopy(mcn);
   }, [mcn]);
 
   const resolvedLabel = label?.trim() || DEFAULT_LABEL;
