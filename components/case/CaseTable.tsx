@@ -9,7 +9,7 @@ import {
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import type { CaseDisplay } from "@/types/case";
+import type { CaseDisplay, CaseStatusUpdateHandler } from "@/types/case";
 import { CaseStatusMenu } from "./CaseStatusMenu";
 import { ArrowDown, ArrowUp, ArrowUpDown, Eye, MoreHorizontal, Pencil, Trash2 } from "lucide-react";
 import type { CaseListSortDirection, CaseListSortKey } from "@/hooks/useCaseListPreferences";
@@ -27,10 +27,7 @@ export interface CaseTableProps {
   onDeleteCase: (caseId: string) => void;
   alertsByCaseId?: Map<string, AlertWithMatch[]>;
   onOpenAlerts?: (caseId: string) => void;
-  onUpdateCaseStatus?: (
-    caseId: string,
-    status: CaseDisplay["status"],
-  ) => Promise<CaseDisplay | null> | CaseDisplay | null | void;
+  onUpdateCaseStatus?: CaseStatusUpdateHandler;
 }
 
 const formatter = new Intl.DateTimeFormat(undefined, {

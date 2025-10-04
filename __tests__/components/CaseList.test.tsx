@@ -1,9 +1,9 @@
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import CaseList from "@/components/case/CaseList";
-import type { CaseDisplay } from "@/types/case";
+import { CaseList } from "@/components/case/CaseList";
 import { mergeCategoryConfig } from "@/types/categoryConfig";
+import { createMockCaseDisplay } from "@/src/test/testUtils";
 
 const categoryConfigMock = mergeCategoryConfig({
   caseStatuses: ["Pending", "Approved", "Denied"],
@@ -40,32 +40,6 @@ vi.mock("@/components/case/CaseAlertsDrawer", () => ({
   CaseAlertsDrawer: () => <div data-testid="alerts-drawer" />,
 }));
 
-const buildCase = (overrides: Partial<CaseDisplay> = {}): CaseDisplay => ({
-  id: overrides.id ?? "case-1",
-  status: overrides.status ?? "Pending",
-  name: overrides.name ?? "Sample Case",
-  mcn: overrides.mcn ?? "ABC123",
-  createdAt: overrides.createdAt ?? new Date().toISOString(),
-  updatedAt: overrides.updatedAt ?? new Date().toISOString(),
-  caseRecord: overrides.caseRecord ?? {
-    id: "record-1",
-    caseType: "Housing",
-    applicationDate: new Date().toISOString(),
-    status: overrides.status ?? "Pending",
-    updatedDate: new Date().toISOString(),
-  },
-  person: overrides.person ?? {
-    id: "person-1",
-    firstName: "Jane",
-    lastName: "Doe",
-    email: "jane@example.com",
-    phone: "555-1234",
-  },
-  priority: overrides.priority ?? false,
-  alerts: overrides.alerts ?? [],
-  notes: overrides.notes ?? [],
-});
-
 describe("CaseList status interactions", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -75,7 +49,7 @@ describe("CaseList status interactions", () => {
     const user = userEvent.setup();
     const onUpdateCaseStatus = vi.fn().mockResolvedValue({ status: "Approved" });
 
-    const cases = [buildCase()];
+  const cases = [createMockCaseDisplay({ id: "case-1" })];
 
     render(
       <CaseList

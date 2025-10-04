@@ -1,14 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import type { CaseDisplay } from "@/types/case";
+import type { CaseDisplay, CaseStatusUpdateHandler } from "@/types/case";
 import { useCategoryConfig } from "@/contexts/CategoryConfigContext";
 
 interface UseCaseStatusMenuOptions {
   caseId: string;
   status?: CaseDisplay["status"];
-  onUpdateStatus?: (
-    caseId: string,
-    status: CaseDisplay["status"],
-  ) => Promise<CaseDisplay | null> | CaseDisplay | null | void;
+  onUpdateStatus?: CaseStatusUpdateHandler;
 }
 
 interface UseCaseStatusMenuResult {
@@ -86,7 +83,17 @@ export function useCaseStatusMenu({
       setOptimisticStatus(nextStatus);
       setIsUpdating(true);
 
-      Promise.resolve(onUpdateStatus(caseId, nextStatus))
+      let updatePromise: Promise<CaseDisplay | null | void>;
+      try {
+        updatePromise = Promise.resolve(onUpdateStatus(caseId, nextStatus));
+      } catch (error) {
+        committedStatusRef.current = committedStatus;
+        setOptimisticStatus(committedStatus);
+        setIsUpdating(false);
+        return;
+      }
+
+      updatePromise
         .then(result => {
           if (result && typeof result === "object" && "status" in result) {
             const resolvedStatus = (result as CaseDisplay).status ?? nextStatus;

@@ -12,7 +12,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "../ui/alert-dialog";
-import { CaseDisplay } from "../../types/case";
+import type { CaseDisplay, CaseStatusUpdateHandler } from "../../types/case";
 import { Eye, Edit, Trash2 } from "lucide-react";
 import { CaseStatusMenu } from "./CaseStatusMenu";
 import type { AlertWithMatch } from "../../utils/alertsData";
@@ -25,10 +25,7 @@ interface CaseCardProps {
   onEdit: (caseId: string) => void;
   onDelete: (caseId: string) => void;
   alerts?: AlertWithMatch[];
-  onUpdateStatus?: (
-    caseId: string,
-    status: CaseDisplay["status"],
-  ) => Promise<CaseDisplay | null> | CaseDisplay | null | void;
+  onUpdateStatus?: CaseStatusUpdateHandler;
 }
 
 export function CaseCard({

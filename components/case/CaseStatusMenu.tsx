@@ -1,15 +1,12 @@
 import { memo } from "react";
-import type { CaseDisplay } from "@/types/case";
+import type { CaseDisplay, CaseStatusUpdateHandler } from "@/types/case";
 import { CaseStatusBadge } from "./CaseStatusBadge";
 import { useCaseStatusMenu } from "./useCaseStatusMenu";
 
 export interface CaseStatusMenuProps {
   caseId: string;
   status?: CaseDisplay["status"];
-  onUpdateStatus?: (
-    caseId: string,
-    status: CaseDisplay["status"],
-  ) => Promise<CaseDisplay | null> | CaseDisplay | null | void;
+  onUpdateStatus?: CaseStatusUpdateHandler;
 }
 
 export const CaseStatusMenu = memo(function CaseStatusMenu({

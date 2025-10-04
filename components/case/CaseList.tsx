@@ -4,7 +4,7 @@ import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 import { CaseCard } from "./CaseCard";
 import { VirtualCaseList } from "../app/VirtualCaseList";
-import { CaseDisplay } from "../../types/case";
+import type { CaseDisplay, CaseStatusUpdateHandler } from "../../types/case";
 import { setupSampleData } from "../../utils/setupData";
 import { CaseAlertsDrawer } from "./CaseAlertsDrawer";
 import {
@@ -56,10 +56,7 @@ interface CaseListProps {
   alertsByCaseId?: Map<string, AlertWithMatch[]>;
   alerts?: AlertWithMatch[];
   onResolveAlert?: (alert: AlertWithMatch) => void | Promise<void>;
-  onUpdateCaseStatus?: (
-    caseId: string,
-    status: CaseDisplay["status"],
-  ) => Promise<CaseDisplay | null> | CaseDisplay | null | void;
+  onUpdateCaseStatus?: CaseStatusUpdateHandler;
 }
 
 export function CaseList({
