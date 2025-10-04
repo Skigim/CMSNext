@@ -4,9 +4,9 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { CaseDetails } from '@/components/case/CaseDetails';
 import type { CaseDisplay } from '@/types/case';
 
-const clickToCopyMock = vi.fn().mockResolvedValue(true);
+const clickToCopyMock = vi.fn((text: string) => Promise.resolve(true));
 
-vi.mock('../../utils/clipboard', () => ({
+vi.mock('@/utils/clipboard', () => ({
   clickToCopy: clickToCopyMock,
 }));
 
@@ -338,12 +338,11 @@ describe('CaseDetails Memory Management', () => {
 
     render(<CaseDetails {...mockProps} />);
 
-    const copyButton = screen.getByRole('button', { name: /copy mcn to clipboard/i });
+    const copyButton = screen.getByRole('button', { name: /copy mcn 12345/i });
     await user.click(copyButton);
 
-    expect(clickToCopyMock).toHaveBeenCalledWith('12345', {
-      successMessage: 'MCN 12345 copied',
-    });
+    expect(clickToCopyMock).toHaveBeenCalledWith('12345');
+    expect(copyButton).toHaveAttribute('aria-label', 'Copy MCN 12345');
   });
 
   it('calls navigation handlers when action buttons are clicked', async () => {
