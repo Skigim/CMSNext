@@ -186,7 +186,7 @@ export function Dashboard({ cases, alerts, onViewAllCases, onNewCase }: Dashboar
                           labelClassName="text-sm font-normal text-muted-foreground"
                           buttonClassName="text-sm text-muted-foreground"
                           textClassName="text-sm"
-                          missingLabel="N/A"
+                          missingLabel="MCN unavailable"
                           missingClassName="text-sm text-muted-foreground"
                           variant="plain"
                         />
