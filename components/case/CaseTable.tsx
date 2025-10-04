@@ -15,6 +15,7 @@ import { ArrowDown, ArrowUp, ArrowUpDown, Eye, MoreHorizontal, Pencil, Trash2 } 
 import type { CaseListSortDirection, CaseListSortKey } from "@/hooks/useCaseListPreferences";
 import { filterOpenAlerts, type AlertWithMatch } from "@/utils/alertsData";
 import { AlertBadge } from "@/components/alerts/AlertBadge";
+import { McnCopyControl } from "@/components/common/McnCopyControl";
 
 export interface CaseTableProps {
   cases: CaseDisplay[];
@@ -72,7 +73,7 @@ export const CaseTable = memo(function CaseTable({
         return {
           id: item.id,
           name: item.name || "Unnamed Case",
-          mcn: item.mcn || "No MCN",
+          mcn: item.mcn ?? null,
           status: item.status,
           priority: item.priority,
           caseType,
@@ -241,7 +242,16 @@ export const CaseTable = memo(function CaseTable({
                 </div>
               </TableCell>
               <TableCell>
-                <span className="text-sm text-muted-foreground">{row.mcn}</span>
+                <McnCopyControl
+                  mcn={row.mcn}
+                  showLabel={false}
+                  className="text-muted-foreground"
+                  buttonClassName="text-sm text-muted-foreground"
+                  textClassName="text-sm"
+                  missingLabel="No MCN"
+                  missingClassName="text-sm text-muted-foreground"
+                  variant="plain"
+                />
               </TableCell>
               <TableCell>
                 <CaseStatusBadge status={row.status} />

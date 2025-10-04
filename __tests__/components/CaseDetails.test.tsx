@@ -8,7 +8,7 @@ import type { AlertWithMatch } from "@/utils/alertsData";
 const caseSectionPropsSpy = vi.fn();
 const notesSectionPropsSpy = vi.fn();
 const statusBadgePropsSpy = vi.fn();
-const clickToCopyMock = vi.fn();
+const clickToCopyMock = vi.fn().mockResolvedValue(true);
 
 vi.mock("@/components/ui/resizable", () => ({
   ResizablePanelGroup: ({ children }: { children: React.ReactNode }) => (
@@ -172,12 +172,10 @@ describe("CaseDetails", () => {
     await user.click(screen.getByRole("button", { name: /delete case/i }));
     expect(onDelete).toHaveBeenCalledTimes(1);
 
-    const copyButton = screen.getByRole("button", { name: /copy mcn to clipboard/i });
+    const copyButton = screen.getByRole("button", { name: new RegExp(`copy mcn ${caseData.mcn}`, "i") });
     await user.click(copyButton);
-    expect(clickToCopyMock).toHaveBeenCalledWith(
-      caseData.mcn,
-      expect.objectContaining({ successMessage: expect.stringContaining(caseData.mcn) })
-    );
+    expect(copyButton).toHaveAttribute("aria-label", `Copy MCN ${caseData.mcn}`);
+    expect(clickToCopyMock).toHaveBeenCalledWith(caseData.mcn);
 
     await user.click(screen.getByTestId("status-badge"));
     expect(onUpdateStatus).toHaveBeenCalledWith(caseData.id, "Approved");

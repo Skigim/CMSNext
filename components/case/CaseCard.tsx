@@ -17,6 +17,7 @@ import { Eye, Edit, Trash2 } from "lucide-react";
 import { CaseStatusBadge } from "./CaseStatusBadge";
 import type { AlertWithMatch } from "../../utils/alertsData";
 import { AlertBadge } from "@/components/alerts/AlertBadge";
+import { McnCopyControl } from "@/components/common/McnCopyControl";
 
 interface CaseCardProps {
   case: CaseDisplay;
@@ -62,7 +63,13 @@ export function CaseCard({ case: caseData, onView, onEdit, onDelete, alerts = []
           <CaseStatusBadge status={caseData.status} />
         </div>
         <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
-          <p>MCN: {caseData.mcn || 'No MCN'}</p>
+          <McnCopyControl
+            mcn={caseData.mcn}
+            className="text-muted-foreground"
+            labelClassName="text-sm"
+            textClassName="text-sm"
+            variant="muted"
+          />
           <AlertBadge alerts={alerts} />
         </div>
       </CardHeader>

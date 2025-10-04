@@ -10,6 +10,7 @@ import { BellRing } from "lucide-react";
 import { filterOpenAlerts, type AlertsIndex } from "../../utils/alertsData";
 import { getAlertClientName, getAlertDisplayDescription, getAlertDueDateInfo, getAlertMcn } from "@/utils/alertDisplay";
 import { UnlinkedAlertsDialog } from "@/components/alerts/UnlinkedAlertsDialog";
+import { McnCopyControl } from "@/components/common/McnCopyControl";
 
 interface DashboardProps {
   cases: CaseDisplay[];
@@ -178,8 +179,18 @@ export function Dashboard({ cases, alerts, onViewAllCases, onNewCase }: Dashboar
                       <div className="font-medium text-foreground">
                         {case_.person.firstName} {case_.person.lastName}
                       </div>
-                      <div className="text-sm text-muted-foreground">
-                        MCN: {case_.caseRecord?.mcn || 'N/A'} • Status: {case_.caseRecord?.status || 'Unknown'}
+                      <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-muted-foreground">
+                        <McnCopyControl
+                          mcn={case_.caseRecord?.mcn ?? null}
+                          className="inline-flex items-center gap-1 text-muted-foreground"
+                          labelClassName="text-sm font-normal text-muted-foreground"
+                          buttonClassName="text-sm text-muted-foreground"
+                          textClassName="text-sm"
+                          missingLabel="N/A"
+                          missingClassName="text-sm text-muted-foreground"
+                          variant="plain"
+                        />
+                        <span>• Status: {case_.caseRecord?.status || 'Unknown'}</span>
                       </div>
                     </div>
                     <div className="text-xs text-muted-foreground">
@@ -261,7 +272,7 @@ export function Dashboard({ cases, alerts, onViewAllCases, onNewCase }: Dashboar
                     const { label, hasDate } = getAlertDueDateInfo(alert);
                     const dueLabel = hasDate ? `Due ${label}` : label;
                     const clientName = getAlertClientName(alert) ?? "Client name unavailable";
-                    const mcn = getAlertMcn(alert) ?? "MCN unavailable";
+                    const mcn = getAlertMcn(alert);
 
                     return (
                       <div
@@ -273,7 +284,16 @@ export function Dashboard({ cases, alerts, onViewAllCases, onNewCase }: Dashboar
                           <p className="text-xs text-muted-foreground">{dueLabel}</p>
                           <div className="flex flex-wrap gap-3 text-[11px] text-muted-foreground">
                             <span>{clientName}</span>
-                            <span>{mcn}</span>
+                            <McnCopyControl
+                              mcn={mcn}
+                              showLabel={false}
+                              className="inline-flex items-center gap-1 text-[11px] text-muted-foreground"
+                              buttonClassName="text-[11px] text-muted-foreground"
+                              textClassName="text-[11px]"
+                              missingLabel="MCN unavailable"
+                              missingClassName="text-[11px] text-muted-foreground"
+                              variant="plain"
+                            />
                           </div>
                         </div>
                       </div>

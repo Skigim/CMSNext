@@ -3,6 +3,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { getAlertDisplayDescription, getAlertDueDateInfo, getAlertClientName, getAlertMcn } from "@/utils/alertDisplay";
+import { McnCopyControl } from "@/components/common/McnCopyControl";
 import type { AlertWithMatch } from "@/utils/alertsData";
 
 export interface UnlinkedAlertsDialogProps {
@@ -73,7 +74,16 @@ export const UnlinkedAlertsDialog = memo(function UnlinkedAlertsDialog({ alerts,
                     <p className="mt-1 text-xs text-muted-foreground">{dueLabel}</p>
                     <div className="mt-3 flex flex-wrap gap-3 text-[11px] text-muted-foreground">
                       <span>{clientName ?? "Client name unavailable"}</span>
-                      <span>{mcn ?? "MCN unavailable"}</span>
+                      <McnCopyControl
+                        mcn={mcn}
+                        showLabel={false}
+                        className="inline-flex items-center gap-1 text-[11px] text-muted-foreground"
+                        buttonClassName="text-[11px] text-muted-foreground"
+                        textClassName="text-[11px]"
+                        missingLabel="MCN unavailable"
+                        missingClassName="text-[11px] text-muted-foreground"
+                        variant="plain"
+                      />
                     </div>
                   </li>
                 );

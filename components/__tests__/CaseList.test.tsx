@@ -1,4 +1,5 @@
 import { render, screen, fireEvent, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { CaseList } from "@/components/case/CaseList";
 import type { CaseDisplay, CaseRecord, Person } from "@/types/case";
@@ -10,12 +11,18 @@ import {
 } from "@/utils/fileStorageFlags";
 import { setupSampleData } from "@/utils/setupData";
 
+const clickToCopyMock = vi.fn().mockResolvedValue(true);
+
 vi.mock("sonner", () => ({
   toast: {
     loading: vi.fn(() => "toast-id"),
     success: vi.fn(),
     error: vi.fn(),
   },
+}));
+
+vi.mock("@/utils/clipboard", () => ({
+  clickToCopy: clickToCopyMock,
 }));
 
 vi.mock("@/utils/setupData", () => ({
@@ -147,6 +154,7 @@ beforeEach(() => {
 
 afterEach(() => {
   vi.clearAllMocks();
+  clickToCopyMock.mockClear();
 });
 
 describe("CaseList", () => {
@@ -236,6 +244,29 @@ describe("CaseList", () => {
 
     const rowsAfter = screen.getAllByRole("row");
     expect(within(rowsAfter[1]).getByRole("button", { name: /old case/i })).toBeInTheDocument();
+  });
+
+  it("copies MCNs from the table view with accessible controls", async () => {
+    const user = userEvent.setup();
+    const cases = [createCase()];
+
+    render(
+      <CaseList
+        cases={cases}
+        onViewCase={vi.fn()}
+        onEditCase={vi.fn()}
+        onDeleteCase={vi.fn()}
+        onNewCase={vi.fn()}
+      />,
+    );
+
+    await user.click(screen.getByRole("button", { name: /table view/i }));
+
+    const copyButton = await screen.findByRole("button", { name: /copy mcn mcn123/i });
+    await user.click(copyButton);
+
+    expect(copyButton).toHaveAttribute("aria-label", "Copy MCN MCN123");
+    expect(clickToCopyMock).toHaveBeenCalledWith("MCN123");
   });
 
   it("sorts cases by alerts count when the alerts header is toggled", () => {
