@@ -4,7 +4,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { CaseDetails } from '@/components/case/CaseDetails';
 import type { CaseDisplay } from '@/types/case';
 
-const clickToCopyMock = vi.fn().mockResolvedValue(true);
+const clickToCopyMock = vi.fn((text: string) => Promise.resolve(true));
 
 vi.mock('@/utils/clipboard', () => ({
   clickToCopy: clickToCopyMock,
