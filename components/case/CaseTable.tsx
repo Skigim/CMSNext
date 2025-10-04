@@ -10,7 +10,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import type { CaseDisplay } from "@/types/case";
-import { CaseStatusBadge } from "./CaseStatusBadge";
+import { CaseStatusMenu } from "./CaseStatusMenu";
 import { ArrowDown, ArrowUp, ArrowUpDown, Eye, MoreHorizontal, Pencil, Trash2 } from "lucide-react";
 import type { CaseListSortDirection, CaseListSortKey } from "@/hooks/useCaseListPreferences";
 import { filterOpenAlerts, type AlertWithMatch } from "@/utils/alertsData";
@@ -27,6 +27,10 @@ export interface CaseTableProps {
   onDeleteCase: (caseId: string) => void;
   alertsByCaseId?: Map<string, AlertWithMatch[]>;
   onOpenAlerts?: (caseId: string) => void;
+  onUpdateCaseStatus?: (
+    caseId: string,
+    status: CaseDisplay["status"],
+  ) => Promise<CaseDisplay | null> | CaseDisplay | null | void;
 }
 
 const formatter = new Intl.DateTimeFormat(undefined, {
@@ -58,6 +62,7 @@ export const CaseTable = memo(function CaseTable({
   onDeleteCase,
   alertsByCaseId,
   onOpenAlerts,
+  onUpdateCaseStatus,
 }: CaseTableProps) {
   const hasCases = cases.length > 0;
 
@@ -254,7 +259,11 @@ export const CaseTable = memo(function CaseTable({
                 />
               </TableCell>
               <TableCell>
-                <CaseStatusBadge status={row.status} />
+                <CaseStatusMenu
+                  caseId={row.id}
+                  status={row.status}
+                  onUpdateStatus={onUpdateCaseStatus}
+                />
               </TableCell>
               <TableCell>
                 {row.alerts.length > 0 ? (

@@ -121,6 +121,7 @@ export function ViewRenderer({
           onDeleteCase={handleDeleteCase}
           onNewCase={handleNewCase}
           onResolveAlert={handleResolveAlert}
+          onUpdateCaseStatus={handleUpdateCaseStatus}
         />
       );
 

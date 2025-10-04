@@ -10,6 +10,10 @@ interface VirtualCaseListProps {
   onEditCase: (caseId: string) => void;
   onDeleteCase: (caseId: string) => void;
   alertsByCaseId?: Map<string, AlertWithMatch[]>;
+  onUpdateCaseStatus?: (
+    caseId: string,
+    status: CaseDisplay["status"],
+  ) => Promise<CaseDisplay | null> | CaseDisplay | null | void;
 }
 
 /**
@@ -27,6 +31,7 @@ export const VirtualCaseList = memo(function VirtualCaseList({
   onEditCase,
   onDeleteCase,
   alertsByCaseId,
+  onUpdateCaseStatus,
 }: VirtualCaseListProps) {
   const parentRef = useRef<HTMLDivElement>(null);
 
@@ -82,6 +87,7 @@ export const VirtualCaseList = memo(function VirtualCaseList({
                   onView={onViewCase}
                   onEdit={onEditCase}
                   onDelete={onDeleteCase}
+                  onUpdateStatus={onUpdateCaseStatus}
                   alerts={alertsByCaseId?.get(caseData.id) ?? []}
                 />
               </div>

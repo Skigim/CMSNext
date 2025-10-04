@@ -3,6 +3,23 @@ import userEvent from "@testing-library/user-event";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { CaseAlertsDrawer } from "@/components/case/CaseAlertsDrawer";
 import type { AlertWithMatch } from "@/utils/alertsData";
+import { mergeCategoryConfig } from "@/types/categoryConfig";
+
+const categoryConfigMock = mergeCategoryConfig({
+  caseStatuses: ["Pending", "Approved", "Denied"],
+});
+
+vi.mock("@/contexts/CategoryConfigContext", () => ({
+  useCategoryConfig: () => ({
+    config: categoryConfigMock,
+    loading: false,
+    error: null,
+    refresh: vi.fn(),
+    updateCategory: vi.fn(),
+    resetToDefaults: vi.fn(),
+    setConfigFromFile: vi.fn(),
+  }),
+}));
 
 vi.mock("@/components/ui/sheet", () => ({
   Sheet: ({ children, open, onOpenChange }: any) => (
@@ -64,7 +81,7 @@ describe("CaseAlertsDrawer", () => {
   });
 
   it("renders open and resolved alerts with actions", async () => {
-  const onResolveAlert = vi.fn();
+    const onResolveAlert = vi.fn();
 
     const openAlert = buildAlert({ id: "open-1", status: "new", severity: "Critical" });
     const resolvedAlert = buildAlert({ id: "resolved-1", status: "resolved", resolvedAt: "2024-04-01T00:00:00.000Z" });
@@ -75,7 +92,10 @@ describe("CaseAlertsDrawer", () => {
         open
         onOpenChange={() => {}}
         caseName="John Doe"
-  onResolveAlert={onResolveAlert}
+        caseId="case-1"
+        caseStatus="Pending"
+        onUpdateStatus={vi.fn()}
+        onResolveAlert={onResolveAlert}
       />,
     );
 
@@ -88,7 +108,7 @@ describe("CaseAlertsDrawer", () => {
     await user.click(screen.getByRole("button", { name: /resolve/i }));
     expect(onResolveAlert).toHaveBeenCalledWith(expect.objectContaining({ id: "open-1" }));
 
-  expect(screen.getAllByText(/Due/).length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText(/Due/).length).toBeGreaterThanOrEqual(1);
   });
 
   it("disables actions when handlers are not provided", () => {
@@ -105,5 +125,32 @@ describe("CaseAlertsDrawer", () => {
 
     const resolveButton = screen.getByRole("button", { name: /resolve/i });
     expect(resolveButton).toBeDisabled();
+  });
+
+  it("invokes the status update handler from the header menu", async () => {
+    const user = userEvent.setup();
+    const onUpdateStatus = vi.fn().mockResolvedValue(null);
+
+    const alert = buildAlert({ status: "new" });
+
+    render(
+      <CaseAlertsDrawer
+        alerts={[alert]}
+        open
+        onOpenChange={() => {}}
+        caseName="Jane Doe"
+        caseId="case-99"
+        caseStatus="Pending"
+        onUpdateStatus={onUpdateStatus}
+      />,
+    );
+
+    const trigger = screen.getByRole("button", { name: /update case status/i });
+    await user.click(trigger);
+
+    const approvedOption = await screen.findByRole("menuitemradio", { name: "Approved" });
+    await user.click(approvedOption);
+
+    expect(onUpdateStatus).toHaveBeenCalledWith("case-99", "Approved");
   });
 });

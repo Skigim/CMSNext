@@ -56,6 +56,10 @@ interface CaseListProps {
   alertsByCaseId?: Map<string, AlertWithMatch[]>;
   alerts?: AlertWithMatch[];
   onResolveAlert?: (alert: AlertWithMatch) => void | Promise<void>;
+  onUpdateCaseStatus?: (
+    caseId: string,
+    status: CaseDisplay["status"],
+  ) => Promise<CaseDisplay | null> | CaseDisplay | null | void;
 }
 
 export function CaseList({
@@ -69,6 +73,7 @@ export function CaseList({
   alertsByCaseId,
   alerts: _alerts,
   onResolveAlert,
+  onUpdateCaseStatus,
 }: CaseListProps) {
   const {
     viewMode,
@@ -358,6 +363,7 @@ export function CaseList({
           onDeleteCase={onDeleteCase}
           alertsByCaseId={matchedAlertsByCase}
           onOpenAlerts={handleOpenCaseAlerts}
+          onUpdateCaseStatus={onUpdateCaseStatus}
         />
       ) : shouldUseVirtual ? (
         <VirtualCaseList
@@ -366,6 +372,7 @@ export function CaseList({
           onEditCase={onEditCase}
           onDeleteCase={onDeleteCase}
           alertsByCaseId={openAlertsByCase}
+          onUpdateCaseStatus={onUpdateCaseStatus}
         />
       ) : (
         <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
@@ -376,6 +383,7 @@ export function CaseList({
               onView={onViewCase}
               onEdit={onEditCase}
               onDelete={onDeleteCase}
+              onUpdateStatus={onUpdateCaseStatus}
               alerts={openAlertsByCase.get(caseData.id) ?? []}
             />
           ))}
@@ -424,6 +432,9 @@ export function CaseList({
         open={alertsDrawerOpen}
         onOpenChange={handleAlertsDrawerOpenChange}
         caseName={activeCase?.name || "Unnamed Case"}
+        caseId={activeCase?.id}
+        caseStatus={activeCase?.status}
+        onUpdateStatus={onUpdateCaseStatus}
         onResolveAlert={onResolveAlert ? handleResolveAlert : undefined}
       />
     </div>
