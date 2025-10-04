@@ -8,17 +8,11 @@ export interface AlertDueDateInfo {
 }
 
 export function getAlertDisplayDescription(alert: AlertWithMatch): string {
-  const parts = [alert.description, alert.alertType, alert.alertCode].map(value =>
-    typeof value === "string" ? value.trim() : "",
+  const parts = [alert.description, alert.alertType, alert.alertCode];
+  const firstValid = parts.find(
+    value => typeof value === "string" && value.trim().length > 0,
   );
-
-  for (const part of parts) {
-    if (part.length > 0) {
-      return part;
-    }
-  }
-
-  return "No description provided";
+  return firstValid ? firstValid.trim() : "No description provided";
 }
 
 export function getAlertDueDateInfo(alert: AlertWithMatch): AlertDueDateInfo {
@@ -37,23 +31,13 @@ export function getAlertDueDateInfo(alert: AlertWithMatch): AlertDueDateInfo {
 
 export function getAlertClientName(alert: AlertWithMatch): string | null {
   const candidates = [alert.personName, alert.matchedCaseName];
-  for (const candidate of candidates) {
-    if (typeof candidate === "string") {
-      const trimmed = candidate.trim();
-      if (trimmed.length > 0) {
-        return trimmed;
-      }
-    }
-  }
-
-  return null;
+  const firstValid = candidates.find(
+    candidate => typeof candidate === "string" && candidate.trim().length > 0,
+  );
+  return firstValid ? firstValid.trim() : null;
 }
 
 export function getAlertMcn(alert: AlertWithMatch): string | null {
   const value = typeof alert.mcNumber === "string" ? alert.mcNumber.trim() : "";
-  if (value.length > 0) {
-    return value;
-  }
-
-  return null;
+  return value.length > 0 ? value : null;
 }
