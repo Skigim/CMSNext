@@ -8,11 +8,8 @@ import {
 } from "@/components/ui/sheet";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { AlertTriangle, BellRing, CheckCircle2, Clock } from "lucide-react";
 import type { AlertWithMatch } from "@/utils/alertsData";
-
-const mediumDateFormatter = new Intl.DateTimeFormat(undefined, { dateStyle: "medium" });
+import { getAlertDisplayDescription, getAlertDueDateInfo } from "@/utils/alertDisplay";
 
 interface CaseAlertsDrawerProps {
   alerts: AlertWithMatch[];
@@ -21,25 +18,6 @@ interface CaseAlertsDrawerProps {
   caseName: string;
   onResolveAlert?: (alert: AlertWithMatch) => void | Promise<void>;
 }
-
-const formatDisplayDate = (value?: string | null) => {
-  if (!value) {
-    return null;
-  }
-
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) {
-    return value;
-  }
-
-  return mediumDateFormatter.format(date);
-};
-
-const matchLabels: Record<AlertWithMatch["matchStatus"], string> = {
-  matched: "Linked to this case",
-  unmatched: "No matching case found",
-  "missing-mcn": "Missing MCN",
-};
 
 export const CaseAlertsDrawer = memo(function CaseAlertsDrawer({
   alerts,
@@ -93,56 +71,30 @@ export const CaseAlertsDrawer = memo(function CaseAlertsDrawer({
               <span className="text-xs text-muted-foreground">{openAlerts.length} active</span>
             </header>
             {openAlerts.length === 0 ? (
-              <div className="rounded-lg border border-dashed border-emerald-500/30 bg-emerald-500/5 p-4 text-sm text-emerald-700">
-                <div className="flex items-center gap-2">
-                  <CheckCircle2 className="h-4 w-4" />
-                  <span>No open alerts. Great job!</span>
-                </div>
+              <div className="rounded-lg border border-dashed border-muted-foreground/30 bg-muted/20 p-4 text-sm text-muted-foreground">
+                No open alerts for this case.
               </div>
             ) : (
               <ul className="space-y-3">
                 {openAlerts.map(alert => {
-                  const dueDate = formatDisplayDate(alert.alertDate ?? alert.createdAt);
-                  const actionLabel = alert.status === "resolved" ? "Reopen" : "Resolve";
+                  const description = getAlertDisplayDescription(alert);
+                  const { label, hasDate } = getAlertDueDateInfo(alert);
+                  const dueLabel = hasDate ? `Due ${label}` : label;
+
                   return (
                     <li key={alert.id} className="rounded-lg border border-border/60 bg-card p-4 shadow-sm">
                       <div className="flex items-start justify-between gap-3">
-                        <div className="space-y-2">
-                          <div className="flex flex-wrap items-center gap-2">
-                            <Badge className="border-amber-400/40 bg-amber-400/10 text-amber-700">
-                              <BellRing className="mr-1 h-3.5 w-3.5" /> Active alert
-                            </Badge>
-                            {dueDate && (
-                              <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
-                                <Clock className="h-3.5 w-3.5" /> {dueDate}
-                              </span>
-                            )}
-                          </div>
-                          <h3 className="text-sm font-semibold text-foreground">
-                            {alert.description?.trim() || alert.alertType || alert.alertCode || "Alert"}
-                          </h3>
-                          <div className="space-y-1 text-xs text-muted-foreground">
-                            <p className="flex items-center gap-2">
-                              <BellRing className="h-3.5 w-3.5" />
-                              <span>{matchLabels[alert.matchStatus]}</span>
-                            </p>
-                            {alert.mcNumber && (
-                              <p>MCN: <span className="font-mono text-foreground">{alert.mcNumber}</span></p>
-                            )}
-                            {alert.metadata?.rawProgram && (
-                              <p>Program: <span className="text-foreground">{alert.metadata.rawProgram}</span></p>
-                            )}
-                          </div>
+                        <div className="space-y-1">
+                          <p className="text-sm font-semibold text-foreground">{description}</p>
+                          <p className="text-xs text-muted-foreground">{dueLabel}</p>
                         </div>
-                        <div className="flex flex-col gap-2">
-                          <Button
-                            size="sm"
-                            onClick={() => handleResolve(alert)}
-                            disabled={!onResolveAlert}
-                          >
-                            {actionLabel}
-                          </Button>
-                        </div>
+                        <Button
+                          size="sm"
+                          onClick={() => handleResolve(alert)}
+                          disabled={!onResolveAlert}
+                        >
+                          Resolve
+                        </Button>
                       </div>
                     </li>
                   );
@@ -158,30 +110,24 @@ export const CaseAlertsDrawer = memo(function CaseAlertsDrawer({
             </header>
             {resolvedAlerts.length === 0 ? (
               <div className="rounded-lg border border-dashed border-muted-foreground/30 bg-muted/20 p-4 text-sm text-muted-foreground">
-                <div className="flex items-center gap-2">
-                  <AlertTriangle className="h-4 w-4" />
-                  <span>Resolved alerts will appear here for quick reference.</span>
-                </div>
+                Resolved alerts will appear here for quick reference.
               </div>
             ) : (
               <ul className="space-y-3">
                 {resolvedAlerts.map(alert => {
-                  const resolvedAt = formatDisplayDate(alert.resolvedAt);
-                  const actionLabel = alert.status === "resolved" ? "Reopen" : "Resolve";
+                  const description = getAlertDisplayDescription(alert);
+                  const { label, hasDate } = getAlertDueDateInfo(alert);
+                  const dueLabel = hasDate ? `Due ${label}` : label;
+
                   return (
                     <li
                       key={alert.id}
-                      className="rounded-lg border border-emerald-500/30 bg-emerald-500/5 p-4 text-sm text-emerald-800"
+                      className="rounded-lg border border-muted-foreground/40 bg-muted/20 p-4 text-sm text-foreground"
                     >
                       <div className="flex items-start justify-between gap-3">
-                        <div className="flex flex-col gap-1">
-                          <div className="flex items-center gap-2 text-emerald-700">
-                            <CheckCircle2 className="h-4 w-4" />
-                            <span>{alert.description?.trim() || alert.alertType || alert.alertCode || "Alert"}</span>
-                          </div>
-                          {resolvedAt && (
-                            <p className="text-xs text-emerald-700/80">Resolved {resolvedAt}</p>
-                          )}
+                        <div className="space-y-1">
+                          <p className="font-medium text-foreground">{description}</p>
+                          <p className="text-xs text-muted-foreground">{dueLabel}</p>
                         </div>
                         <Button
                           size="sm"
@@ -189,7 +135,7 @@ export const CaseAlertsDrawer = memo(function CaseAlertsDrawer({
                           onClick={() => handleResolve(alert)}
                           disabled={!onResolveAlert}
                         >
-                          {actionLabel}
+                          Reopen
                         </Button>
                       </div>
                     </li>

@@ -1,12 +1,15 @@
-import { useCallback, useMemo } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../ui/card";
 import { Button } from "../ui/button";
+import { Badge } from "../ui/badge";
 import { FileText, Clock, Plus, ArrowRight, CheckCircle2, XCircle, Coins, TrendingUp } from "lucide-react";
 import { CaseDisplay } from "../../types/case";
 import { FileServiceDiagnostic } from "../diagnostics/FileServiceDiagnostic";
 import { useCategoryConfig } from "../../contexts/CategoryConfigContext";
 import { BellRing } from "lucide-react";
 import { filterOpenAlerts, type AlertsIndex } from "../../utils/alertsData";
+import { getAlertClientName, getAlertDisplayDescription, getAlertDueDateInfo, getAlertMcn } from "@/utils/alertDisplay";
+import { UnlinkedAlertsDialog } from "@/components/alerts/UnlinkedAlertsDialog";
 
 interface DashboardProps {
   cases: CaseDisplay[];
@@ -75,26 +78,31 @@ export function Dashboard({ cases, alerts, onViewAllCases, onNewCase }: Dashboar
     [config.caseStatuses, statusCount, statusIconMap, statusPalette],
   );
 
+  const totalAlerts = alerts.alerts.length;
+
   const openAlerts = useMemo(() => filterOpenAlerts(alerts.alerts), [alerts.alerts]);
 
-  const openAlertsMatched = useMemo(
-    () => openAlerts.filter(alert => alert.matchStatus === "matched").length,
+  const unlinkedAlerts = useMemo(
+    () => openAlerts.filter(alert => alert.matchStatus !== "matched"),
     [openAlerts],
   );
 
   const openAlertsCount = openAlerts.length;
+  const unlinkedAlertCount = unlinkedAlerts.length;
+
+  const [showUnlinkedDialog, setShowUnlinkedDialog] = useState(false);
 
   const stats = useMemo(
     () => [
       {
-        title: "Active Alerts",
-        value: openAlertsCount,
+        title: "Alerts",
+        value: totalAlerts,
         description:
           openAlertsCount === 0
-            ? "All clear"
-            : `${openAlertsMatched} linked to cases`,
+            ? "No open alerts"
+            : `${openAlertsCount} open${unlinkedAlertCount ? ` • ${unlinkedAlertCount} unlinked` : ""}`,
         icon: BellRing,
-        color: openAlertsCount > 0 ? "text-amber-600" : "text-muted-foreground",
+        color: totalAlerts > 0 ? "text-amber-600" : "text-muted-foreground",
       },
       {
         title: "Total Cases",
@@ -105,7 +113,7 @@ export function Dashboard({ cases, alerts, onViewAllCases, onNewCase }: Dashboar
       },
       ...statusStats,
     ],
-    [openAlertsCount, openAlertsMatched, statusStats, totalCases],
+    [openAlertsCount, statusStats, totalAlerts, totalCases, unlinkedAlertCount],
   );
 
   const latestAlerts = useMemo(() => openAlerts.slice(0, 5), [openAlerts]);
@@ -199,72 +207,78 @@ export function Dashboard({ cases, alerts, onViewAllCases, onNewCase }: Dashboar
                 <CardTitle>Alert Center</CardTitle>
                 <CardDescription>Live feed from the alerts dataset</CardDescription>
               </div>
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <BellRing className={openAlertsCount ? "h-4 w-4 text-amber-600" : "h-4 w-4"} />
-                {openAlertsCount ? `${openAlertsCount} active` : "All clear"}
+              <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <BellRing className={totalAlerts ? "h-4 w-4 text-amber-600" : "h-4 w-4"} />
+                  {totalAlerts ? `${totalAlerts} total` : "No alerts"}
+                </div>
+                {unlinkedAlertCount > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => setShowUnlinkedDialog(true)}
+                    className="relative inline-flex items-center gap-1 rounded-full border border-destructive/40 bg-destructive/10 px-2 py-0.5 text-[11px] font-medium text-destructive transition hover:border-destructive/60 hover:bg-destructive/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-destructive/40 focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                    aria-label={`${unlinkedAlertCount} unlinked alert${unlinkedAlertCount === 1 ? "" : "s"}`}
+                  >
+                    <span className="inline-flex h-1.5 w-1.5 rounded-full bg-current opacity-70" aria-hidden />
+                    <span>Unlinked</span>
+                    <span>
+                      <Badge variant="secondary" className="ml-0 flex h-4 items-center justify-center px-1 text-[10px] font-semibold">
+                        {unlinkedAlertCount}
+                      </Badge>
+                    </span>
+                  </button>
+                )}
               </div>
             </div>
           </CardHeader>
           <CardContent>
-            {openAlertsCount === 0 ? (
+            {totalAlerts === 0 ? (
               <div className="py-6 text-center text-muted-foreground text-sm">
                 <p>No alerts detected in the sample feed.</p>
               </div>
             ) : (
               <div className="space-y-4">
-                <div className="rounded-lg border border-border/60 bg-muted/30 p-3">
-                  <p className="text-xs uppercase text-muted-foreground">Linked to cases</p>
-                  <p className="text-lg font-semibold text-foreground">{openAlertsMatched}</p>
-                  <p className="text-xs text-muted-foreground mt-1">Anything that needs a manual match will trigger a toast.</p>
+                <div className="flex flex-wrap items-center gap-4">
+                  <div>
+                    <p className="text-xs uppercase text-muted-foreground">Total alerts</p>
+                    <p className="text-2xl font-semibold text-foreground">{totalAlerts}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs uppercase text-muted-foreground">Open alerts</p>
+                    <p className="text-lg font-semibold text-foreground">{openAlertsCount}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs uppercase text-muted-foreground">Unlinked</p>
+                    <p className="text-lg font-semibold text-destructive">
+                      {unlinkedAlertCount}
+                    </p>
+                  </div>
                 </div>
 
                 <div className="space-y-3">
-                  {latestAlerts.map(alert => (
-                    <div
-                      key={alert.id}
-                      className="flex items-start justify-between gap-3 rounded-lg border border-border/60 bg-card/60 p-3"
-                    >
-                      <div className="space-y-1">
-                        <div className="flex items-center gap-2">
-                          <span className="text-sm font-semibold text-foreground">
-                            {alert.alertType || alert.alertCode}
-                          </span>
-                          <span
-                            className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs ${
-                              alert.matchStatus === "matched"
-                                ? "bg-emerald-500/15 text-emerald-600 border-emerald-500/20"
-                                : "bg-amber-500/15 text-amber-600 border-amber-500/20"
-                            }`}
-                          >
-                            {alert.matchStatus === "matched" ? (
-                              <CheckCircle2 className="h-3 w-3" />
-                            ) : (
-                              <BellRing className="h-3 w-3" />
-                            )}
-                            {alert.matchStatus === "matched" ? "Linked" : "Needs review"}
-                          </span>
-                        </div>
-                        {alert.description && (
-                          <p className="text-xs text-muted-foreground line-clamp-2">{alert.description}</p>
-                        )}
-                        <div className="flex flex-wrap gap-2 text-[11px] text-muted-foreground">
-                          {alert.personName && <span>{alert.personName}</span>}
-                          {alert.mcNumber && <span>MCN {alert.mcNumber}</span>}
-                          {alert.source && <span>{alert.source}</span>}
+                  {latestAlerts.map(alert => {
+                    const description = getAlertDisplayDescription(alert);
+                    const { label, hasDate } = getAlertDueDateInfo(alert);
+                    const dueLabel = hasDate ? `Due ${label}` : label;
+                    const clientName = getAlertClientName(alert) ?? "Client name unavailable";
+                    const mcn = getAlertMcn(alert) ?? "MCN unavailable";
+
+                    return (
+                      <div
+                        key={alert.id}
+                        className="rounded-lg border border-border/60 bg-card/60 p-3"
+                      >
+                        <div className="space-y-1">
+                          <p className="text-sm font-semibold text-foreground">{description}</p>
+                          <p className="text-xs text-muted-foreground">{dueLabel}</p>
+                          <div className="flex flex-wrap gap-3 text-[11px] text-muted-foreground">
+                            <span>{clientName}</span>
+                            <span>{mcn}</span>
+                          </div>
                         </div>
                       </div>
-                      <div className="text-xs text-muted-foreground text-right min-w-[128px]">
-                        <div>{alert.updatedAt ? new Date(alert.updatedAt).toLocaleDateString() : "—"}</div>
-                        <div className="truncate">
-                          {alert.matchedCaseName
-                            ? `Case: ${alert.matchedCaseName}`
-                            : alert.matchStatus === "matched"
-                              ? "Linked case"
-                              : "Needs review"}
-                        </div>
-                      </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
             )}
@@ -347,6 +361,11 @@ export function Dashboard({ cases, alerts, onViewAllCases, onNewCase }: Dashboar
       {/* Temporary diagnostic tool */}
       <FileServiceDiagnostic />
 
+      <UnlinkedAlertsDialog
+        alerts={unlinkedAlerts}
+        open={showUnlinkedDialog}
+        onOpenChange={setShowUnlinkedDialog}
+      />
     </div>
   );
 }

@@ -1,16 +1,18 @@
-import { memo } from "react";
+import { memo, type KeyboardEvent } from "react";
 import { cn } from "@/components/ui/utils";
 import { filterOpenAlerts, type AlertWithMatch } from "@/utils/alertsData";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { getAlertDisplayDescription, getAlertDueDateInfo } from "@/utils/alertDisplay";
 
 export interface AlertBadgeProps {
   alerts: AlertWithMatch[];
   className?: string;
   size?: "sm" | "md";
   showLabel?: boolean;
+  onClick?: () => void;
 }
 
-export const AlertBadge = memo(function AlertBadge({ alerts, className, size = "sm", showLabel = true }: AlertBadgeProps) {
+export const AlertBadge = memo(function AlertBadge({ alerts, className, size = "sm", showLabel = true, onClick }: AlertBadgeProps) {
   const activeAlerts = filterOpenAlerts(alerts);
 
   if (activeAlerts.length === 0) {
@@ -19,27 +21,38 @@ export const AlertBadge = memo(function AlertBadge({ alerts, className, size = "
 
   const count = activeAlerts.length;
 
-  const groupedAlertsMap = new Map<string, { description: string; count: number }>();
-  activeAlerts.forEach(alert => {
-    const rawDescription = alert.description?.trim();
-    const description = rawDescription && rawDescription.length > 0 ? rawDescription : "No description provided";
-    const key = description.toLowerCase();
-    const existing = groupedAlertsMap.get(key);
-    if (existing) {
-      existing.count += 1;
-    } else {
-      groupedAlertsMap.set(key, { description, count: 1 });
-    }
+  const sortedAlerts = [...activeAlerts].sort((a, b) => {
+    const getTimestamp = (alert: AlertWithMatch) => {
+      const raw = alert.alertDate ?? alert.createdAt ?? null;
+      if (!raw) {
+        return Number.POSITIVE_INFINITY;
+      }
+
+      const date = new Date(raw);
+      const timestamp = date.getTime();
+      return Number.isNaN(timestamp) ? Number.POSITIVE_INFINITY : timestamp;
+    };
+
+    return getTimestamp(a) - getTimestamp(b);
   });
 
-  const groupedAlerts = Array.from(groupedAlertsMap.values());
-  const tooltipAlerts = groupedAlerts.slice(0, 5);
-  const displayedAlertCount = tooltipAlerts.reduce((sum, group) => sum + group.count, 0);
-  const additionalCount = count - displayedAlertCount;
+  const tooltipAlerts = sortedAlerts.slice(0, 5);
+  const additionalCount = count - tooltipAlerts.length;
 
   const sizeClasses = size === "sm"
     ? "text-[11px] px-2 py-0.5"
     : "text-sm px-3 py-1";
+
+  const handleKeyDown = (event: KeyboardEvent<HTMLSpanElement>) => {
+    if (!onClick) {
+      return;
+    }
+
+    if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      onClick();
+    }
+  };
 
   const badge = (
     <span
@@ -52,6 +65,8 @@ export const AlertBadge = memo(function AlertBadge({ alerts, className, size = "
       aria-label={`${count} alert${count === 1 ? "" : "s"}`}
       role="button"
       aria-haspopup="dialog"
+      onClick={onClick}
+      onKeyDown={handleKeyDown}
     >
       <span className="inline-flex h-2 w-2 rounded-full bg-current opacity-70" aria-hidden />
       <span>{count}</span>
@@ -67,17 +82,18 @@ export const AlertBadge = memo(function AlertBadge({ alerts, className, size = "
           <div className="space-y-1">
             <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Alert details</p>
             <ul className="space-y-1 text-xs leading-snug text-foreground">
-              {tooltipAlerts.map((group, index) => (
-                <li key={`${group.description.toLowerCase()}-${index}`} className="flex items-start gap-2">
-                  <span className="text-muted-foreground">{index + 1}.</span>
-                  <span className="flex-1">
-                    {group.description}
-                  </span>
-                  {group.count > 1 && (
-                    <span className="text-[11px] text-muted-foreground/80">×{group.count}</span>
-                  )}
-                </li>
-              ))}
+              {tooltipAlerts.map(alert => {
+                const description = getAlertDisplayDescription(alert);
+                const { label, hasDate } = getAlertDueDateInfo(alert);
+                const dueLabel = hasDate ? `Due ${label}` : label;
+
+                return (
+                  <li key={alert.id} className="space-y-0.5">
+                    <p className="font-medium text-foreground">{description}</p>
+                    <p className="text-[11px] text-muted-foreground">{dueLabel}</p>
+                  </li>
+                );
+              })}
             </ul>
             {additionalCount > 0 && (
               <p className="text-[11px] text-muted-foreground/80">

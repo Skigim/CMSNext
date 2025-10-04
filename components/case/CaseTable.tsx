@@ -25,6 +25,7 @@ export interface CaseTableProps {
   onEditCase: (caseId: string) => void;
   onDeleteCase: (caseId: string) => void;
   alertsByCaseId?: Map<string, AlertWithMatch[]>;
+  onOpenAlerts?: (caseId: string) => void;
 }
 
 const formatter = new Intl.DateTimeFormat(undefined, {
@@ -55,6 +56,7 @@ export const CaseTable = memo(function CaseTable({
   onEditCase,
   onDeleteCase,
   alertsByCaseId,
+  onOpenAlerts,
 }: CaseTableProps) {
   const hasCases = cases.length > 0;
 
@@ -65,7 +67,8 @@ export const CaseTable = memo(function CaseTable({
         const applicationDate = item.caseRecord?.applicationDate || item.createdAt;
         const updatedDate = item.updatedAt || item.caseRecord?.updatedDate || item.createdAt;
         const primaryContact = item.person?.phone || item.person?.email || "Not provided";
-        const caseAlerts = filterOpenAlerts(alertsByCaseId?.get(item.id));
+        const allCaseAlerts = alertsByCaseId?.get(item.id) ?? [];
+        const caseAlerts = filterOpenAlerts(allCaseAlerts);
         return {
           id: item.id,
           name: item.name || "Unnamed Case",
@@ -77,6 +80,7 @@ export const CaseTable = memo(function CaseTable({
           updatedDate: formatDate(updatedDate),
           primaryContact,
           alerts: caseAlerts,
+          totalAlertCount: allCaseAlerts.length,
         };
       }),
     [alertsByCaseId, cases],
@@ -243,7 +247,24 @@ export const CaseTable = memo(function CaseTable({
                 <CaseStatusBadge status={row.status} />
               </TableCell>
               <TableCell>
-                <AlertBadge alerts={row.alerts} />
+                {row.alerts.length > 0 ? (
+                  <AlertBadge alerts={row.alerts} onClick={() => onOpenAlerts?.(row.id)} />
+                ) : row.totalAlertCount > 0 ? (
+                  onOpenAlerts ? (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-7 px-2 text-xs text-muted-foreground hover:text-primary"
+                      onClick={() => onOpenAlerts(row.id)}
+                    >
+                      View alerts
+                    </Button>
+                  ) : (
+                    <span className="text-xs text-muted-foreground">{row.totalAlertCount} resolved</span>
+                  )
+                ) : (
+                  <span className="text-xs text-muted-foreground">None</span>
+                )}
               </TableCell>
               <TableCell>{row.caseType}</TableCell>
               <TableCell>{row.applicationDate}</TableCell>
