@@ -327,7 +327,7 @@ const AppContent = memo(function AppContent() {
 
   const handleResolveAlert = useCallback(
     async (alert: AlertWithMatch) => {
-      if (!selectedCase || (alert.matchedCaseId && alert.matchedCaseId !== selectedCase.id)) {
+      if (selectedCase && alert.matchedCaseId && alert.matchedCaseId !== selectedCase.id) {
         toast.error("Unable to update alert for this case.");
         return;
       }
