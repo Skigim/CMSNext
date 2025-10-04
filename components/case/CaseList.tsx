@@ -431,7 +431,7 @@ export function CaseList({
         caseName={activeCase?.name || "Unnamed Case"}
         caseId={activeCase?.id}
         caseStatus={activeCase?.status}
-        onUpdateStatus={onUpdateCaseStatus}
+        onUpdateCaseStatus={onUpdateCaseStatus}
         onResolveAlert={onResolveAlert ? handleResolveAlert : undefined}
       />
     </div>

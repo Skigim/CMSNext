@@ -94,7 +94,7 @@ describe("CaseAlertsDrawer", () => {
         caseName="John Doe"
         caseId="case-1"
         caseStatus="Pending"
-        onUpdateStatus={vi.fn()}
+        onUpdateCaseStatus={vi.fn()}
         onResolveAlert={onResolveAlert}
       />,
     );
@@ -129,7 +129,7 @@ describe("CaseAlertsDrawer", () => {
 
   it("invokes the status update handler from the header menu", async () => {
     const user = userEvent.setup();
-    const onUpdateStatus = vi.fn().mockResolvedValue(null);
+  const onUpdateCaseStatus = vi.fn().mockResolvedValue(null);
 
     const alert = buildAlert({ status: "new" });
 
@@ -141,7 +141,7 @@ describe("CaseAlertsDrawer", () => {
         caseName="Jane Doe"
         caseId="case-99"
         caseStatus="Pending"
-        onUpdateStatus={onUpdateStatus}
+        onUpdateCaseStatus={onUpdateCaseStatus}
       />,
     );
 
@@ -151,6 +151,6 @@ describe("CaseAlertsDrawer", () => {
     const approvedOption = await screen.findByRole("menuitemradio", { name: "Approved" });
     await user.click(approvedOption);
 
-    expect(onUpdateStatus).toHaveBeenCalledWith("case-99", "Approved");
+    expect(onUpdateCaseStatus).toHaveBeenCalledWith("case-99", "Approved");
   });
 });

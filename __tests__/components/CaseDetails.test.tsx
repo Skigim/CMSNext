@@ -55,14 +55,14 @@ vi.mock("@/components/case/NotesSection", () => ({
 }));
 
 vi.mock("@/components/case/CaseAlertsDrawer", () => ({
-  CaseAlertsDrawer: ({ alerts, caseId, caseStatus, onUpdateStatus }: any) => {
+  CaseAlertsDrawer: ({ alerts, caseId, caseStatus, onUpdateCaseStatus }: any) => {
     return (
       <div
         data-testid="case-alerts-drawer"
         data-alert-count={alerts?.length ?? 0}
         data-case-id={caseId ?? ""}
         data-case-status={caseStatus ?? ""}
-        data-has-status-handler={Boolean(onUpdateStatus)}
+        data-has-status-handler={Boolean(onUpdateCaseStatus)}
       />
     );
   },

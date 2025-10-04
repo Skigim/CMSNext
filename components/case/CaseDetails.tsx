@@ -281,7 +281,7 @@ export function CaseDetails({
           caseName={caseData.name || "Unnamed Case"}
           caseId={caseData.id}
           caseStatus={caseData.status}
-          onUpdateStatus={onUpdateStatus}
+          onUpdateCaseStatus={onUpdateStatus}
           onResolveAlert={onResolveAlert ? handleResolveAlert : undefined}
         />
     </div>

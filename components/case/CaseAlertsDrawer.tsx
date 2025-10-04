@@ -10,7 +10,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
 import type { AlertWithMatch } from "@/utils/alertsData";
 import { CaseStatusMenu } from "./CaseStatusMenu";
-import type { CaseDisplay } from "@/types/case";
+import type { CaseDisplay, CaseStatusUpdateHandler } from "@/types/case";
 import { getAlertDisplayDescription, getAlertDueDateInfo } from "@/utils/alertDisplay";
 
 interface CaseAlertsDrawerProps {
@@ -21,10 +21,7 @@ interface CaseAlertsDrawerProps {
   onResolveAlert?: (alert: AlertWithMatch) => void | Promise<void>;
   caseId?: string;
   caseStatus?: CaseDisplay["status"];
-  onUpdateStatus?: (
-    caseId: string,
-    status: CaseDisplay["status"],
-  ) => Promise<CaseDisplay | null> | CaseDisplay | null | void;
+  onUpdateCaseStatus?: CaseStatusUpdateHandler;
 }
 
 export const CaseAlertsDrawer = memo(function CaseAlertsDrawer({
@@ -35,7 +32,7 @@ export const CaseAlertsDrawer = memo(function CaseAlertsDrawer({
   onResolveAlert,
   caseId,
   caseStatus,
-  onUpdateStatus,
+  onUpdateCaseStatus,
 }: CaseAlertsDrawerProps) {
   const handleResolve = useCallback(
     (alert: AlertWithMatch) => {
@@ -60,7 +57,7 @@ export const CaseAlertsDrawer = memo(function CaseAlertsDrawer({
   }, [alerts]);
 
   const totalAlerts = alerts.length;
-  const canUpdateStatus = Boolean(caseId && onUpdateStatus);
+  const canUpdateStatus = Boolean(caseId && onUpdateCaseStatus);
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -78,7 +75,7 @@ export const CaseAlertsDrawer = memo(function CaseAlertsDrawer({
                 <CaseStatusMenu
                   caseId={caseId}
                   status={caseStatus}
-                  onUpdateStatus={onUpdateStatus}
+                  onUpdateStatus={onUpdateCaseStatus}
                 />
               ) : null}
             </div>

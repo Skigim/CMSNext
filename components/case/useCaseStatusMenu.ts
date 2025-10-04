@@ -32,6 +32,15 @@ function isAbortError(error: unknown): boolean {
   return false;
 }
 
+/**
+ * Provides optimistic case-status selection with best-effort reconciliation.
+ *
+ * The hook keeps three views of status in sync (external, committed, optimistic),
+ * immediately reflects user choices, and gracefully reverts when the update handler
+ * returns `null`, throws (sync or async), or signals cancellation via `AbortError`.
+ * It also derives the available status options from the category configuration so
+ * consumers never need to duplicate that knowledge.
+ */
 export function useCaseStatusMenu({
   caseId,
   status,

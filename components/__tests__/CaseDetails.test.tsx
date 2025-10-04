@@ -4,7 +4,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { CaseDetails } from '@/components/case/CaseDetails';
 import type { CaseDisplay } from '@/types/case';
 
-const clickToCopyMock = vi.fn((text: string) => Promise.resolve(true));
+const clickToCopyMock = vi.fn(() => Promise.resolve(true));
 
 vi.mock('@/utils/clipboard', () => ({
   clickToCopy: clickToCopyMock,
@@ -39,15 +39,26 @@ vi.mock('../case/NotesSection', () => ({
   },
 }));
 
-vi.mock('../case/CaseStatusBadge', () => ({
-  CaseStatusBadge: ({ status }: any) => (
-    <div data-testid="case-status-badge">{status ?? 'Pending'}</div>
+vi.mock('../case/CaseStatusMenu', () => ({
+  CaseStatusMenu: (props: any) => (
+    <button
+      data-testid="case-status-badge"
+      onClick={() => props.onUpdateStatus?.(props.caseId, 'Approved')}
+    >
+      {props.status ?? 'Pending'}
+    </button>
   ),
 }));
 
 vi.mock('../case/CaseAlertsDrawer', () => ({
-  CaseAlertsDrawer: ({ alerts }: any) => (
-    <div data-testid="case-alerts-drawer" data-alert-count={alerts?.length ?? 0} />
+  CaseAlertsDrawer: ({ alerts, caseId, caseStatus, onUpdateCaseStatus }: any) => (
+    <div
+      data-testid="case-alerts-drawer"
+      data-alert-count={alerts?.length ?? 0}
+      data-case-id={caseId ?? ''}
+      data-case-status={caseStatus ?? ''}
+      data-has-status-handler={Boolean(onUpdateCaseStatus)}
+    />
   ),
 }));
 
