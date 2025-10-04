@@ -219,3 +219,8 @@ export interface CaseDisplay {
   caseRecord: CaseRecord;
   alerts?: AlertRecord[];
 }
+
+export type CaseStatusUpdateHandler = (
+  caseId: string,
+  status: CaseDisplay["status"],
+) => Promise<CaseDisplay | null> | CaseDisplay | null | void;

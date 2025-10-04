@@ -8,7 +8,7 @@ import { NotesSection } from "./NotesSection";
 import { CaseDisplay, CaseCategory, FinancialItem, NewNoteData } from "../../types/case";
 import { ArrowLeft, Edit2, Trash2, Landmark, Wallet, Receipt, BellRing } from "lucide-react";
 import { withDataErrorBoundary } from "../error/ErrorBoundaryHOC";
-import { CaseStatusBadge } from "./CaseStatusBadge";
+import { CaseStatusMenu } from "./CaseStatusMenu";
 import { Badge } from "../ui/badge";
 import { cn, interactiveHoverClasses } from "../ui/utils";
 import type { AlertWithMatch } from "../../utils/alertsData";
@@ -80,14 +80,6 @@ export function CaseDetails({
     };
   }, [alerts]);
 
-  const handleStatusChange = useCallback(
-    (status: CaseDisplay["status"]) => {
-      if (!onUpdateStatus) return;
-      onUpdateStatus(caseData.id, status);
-    },
-    [caseData.id, onUpdateStatus],
-  );
-
   const handleResolveAlert = useCallback(
     (alert: AlertWithMatch) => {
       onResolveAlert?.(alert);
@@ -115,9 +107,10 @@ export function CaseDetails({
                 <h1 className="text-xl font-bold text-foreground">
                   {caseData.name || 'Unnamed Case'}
                 </h1>
-                <CaseStatusBadge
+                <CaseStatusMenu
+                  caseId={caseData.id}
                   status={caseData.status}
-                  onStatusChange={onUpdateStatus ? handleStatusChange : undefined}
+                  onUpdateStatus={onUpdateStatus}
                 />
               </div>
               <McnCopyControl
@@ -286,6 +279,9 @@ export function CaseDetails({
           open={alertsDrawerOpen}
           onOpenChange={setAlertsDrawerOpen}
           caseName={caseData.name || "Unnamed Case"}
+          caseId={caseData.id}
+          caseStatus={caseData.status}
+          onUpdateCaseStatus={onUpdateStatus}
           onResolveAlert={onResolveAlert ? handleResolveAlert : undefined}
         />
     </div>

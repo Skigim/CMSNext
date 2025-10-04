@@ -4,7 +4,7 @@ import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 import { CaseCard } from "./CaseCard";
 import { VirtualCaseList } from "../app/VirtualCaseList";
-import { CaseDisplay } from "../../types/case";
+import type { CaseDisplay, CaseStatusUpdateHandler } from "../../types/case";
 import { setupSampleData } from "../../utils/setupData";
 import { CaseAlertsDrawer } from "./CaseAlertsDrawer";
 import {
@@ -56,6 +56,7 @@ interface CaseListProps {
   alertsByCaseId?: Map<string, AlertWithMatch[]>;
   alerts?: AlertWithMatch[];
   onResolveAlert?: (alert: AlertWithMatch) => void | Promise<void>;
+  onUpdateCaseStatus?: CaseStatusUpdateHandler;
 }
 
 export function CaseList({
@@ -69,6 +70,7 @@ export function CaseList({
   alertsByCaseId,
   alerts: _alerts,
   onResolveAlert,
+  onUpdateCaseStatus,
 }: CaseListProps) {
   const {
     viewMode,
@@ -358,6 +360,7 @@ export function CaseList({
           onDeleteCase={onDeleteCase}
           alertsByCaseId={matchedAlertsByCase}
           onOpenAlerts={handleOpenCaseAlerts}
+          onUpdateCaseStatus={onUpdateCaseStatus}
         />
       ) : shouldUseVirtual ? (
         <VirtualCaseList
@@ -366,6 +369,7 @@ export function CaseList({
           onEditCase={onEditCase}
           onDeleteCase={onDeleteCase}
           alertsByCaseId={openAlertsByCase}
+          onUpdateCaseStatus={onUpdateCaseStatus}
         />
       ) : (
         <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
@@ -376,6 +380,7 @@ export function CaseList({
               onView={onViewCase}
               onEdit={onEditCase}
               onDelete={onDeleteCase}
+              onUpdateStatus={onUpdateCaseStatus}
               alerts={openAlertsByCase.get(caseData.id) ?? []}
             />
           ))}
@@ -424,6 +429,9 @@ export function CaseList({
         open={alertsDrawerOpen}
         onOpenChange={handleAlertsDrawerOpenChange}
         caseName={activeCase?.name || "Unnamed Case"}
+        caseId={activeCase?.id}
+        caseStatus={activeCase?.status}
+        onUpdateCaseStatus={onUpdateCaseStatus}
         onResolveAlert={onResolveAlert ? handleResolveAlert : undefined}
       />
     </div>

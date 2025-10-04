@@ -1,6 +1,6 @@
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { useRef, memo } from 'react';
-import { CaseDisplay } from '@/types/case';
+import type { CaseDisplay, CaseStatusUpdateHandler } from '@/types/case';
 import { CaseCard } from '@/components/case/CaseCard';
 import type { AlertWithMatch } from '@/utils/alertsData';
 
@@ -10,6 +10,7 @@ interface VirtualCaseListProps {
   onEditCase: (caseId: string) => void;
   onDeleteCase: (caseId: string) => void;
   alertsByCaseId?: Map<string, AlertWithMatch[]>;
+  onUpdateCaseStatus?: CaseStatusUpdateHandler;
 }
 
 /**
@@ -27,6 +28,7 @@ export const VirtualCaseList = memo(function VirtualCaseList({
   onEditCase,
   onDeleteCase,
   alertsByCaseId,
+  onUpdateCaseStatus,
 }: VirtualCaseListProps) {
   const parentRef = useRef<HTMLDivElement>(null);
 
@@ -82,6 +84,7 @@ export const VirtualCaseList = memo(function VirtualCaseList({
                   onView={onViewCase}
                   onEdit={onEditCase}
                   onDelete={onDeleteCase}
+                  onUpdateStatus={onUpdateCaseStatus}
                   alerts={alertsByCaseId?.get(caseData.id) ?? []}
                 />
               </div>

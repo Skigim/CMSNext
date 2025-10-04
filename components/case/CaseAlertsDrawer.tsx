@@ -9,6 +9,8 @@ import {
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
 import type { AlertWithMatch } from "@/utils/alertsData";
+import { CaseStatusMenu } from "./CaseStatusMenu";
+import type { CaseDisplay, CaseStatusUpdateHandler } from "@/types/case";
 import { getAlertDisplayDescription, getAlertDueDateInfo } from "@/utils/alertDisplay";
 
 interface CaseAlertsDrawerProps {
@@ -17,6 +19,9 @@ interface CaseAlertsDrawerProps {
   onOpenChange: (open: boolean) => void;
   caseName: string;
   onResolveAlert?: (alert: AlertWithMatch) => void | Promise<void>;
+  caseId?: string;
+  caseStatus?: CaseDisplay["status"];
+  onUpdateCaseStatus?: CaseStatusUpdateHandler;
 }
 
 export const CaseAlertsDrawer = memo(function CaseAlertsDrawer({
@@ -25,6 +30,9 @@ export const CaseAlertsDrawer = memo(function CaseAlertsDrawer({
   onOpenChange,
   caseName,
   onResolveAlert,
+  caseId,
+  caseStatus,
+  onUpdateCaseStatus,
 }: CaseAlertsDrawerProps) {
   const handleResolve = useCallback(
     (alert: AlertWithMatch) => {
@@ -49,22 +57,34 @@ export const CaseAlertsDrawer = memo(function CaseAlertsDrawer({
   }, [alerts]);
 
   const totalAlerts = alerts.length;
+  const canUpdateStatus = Boolean(caseId && onUpdateCaseStatus);
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent side="right" className="sm:max-w-md overflow-hidden">
         <SheetHeader className="border-b border-border/60 pb-4 shrink-0">
-          <SheetTitle className="flex flex-col gap-1 text-left">
-            Alerts for {caseName}
-            <span className="text-sm font-normal text-muted-foreground">
-              {openAlerts.length} open · {resolvedAlerts.length} resolved · {totalAlerts} total
-            </span>
-          </SheetTitle>
-          <SheetDescription className="text-left">
-            Review incoming alerts and resolve items—resolution notes are logged automatically.
-          </SheetDescription>
+          <div className="flex flex-col gap-3">
+            <div className="flex flex-col gap-1 text-left sm:flex-row sm:items-start sm:justify-between sm:gap-3">
+              <div>
+                <SheetTitle className="text-left">Alerts for {caseName}</SheetTitle>
+                <span className="text-sm font-normal text-muted-foreground">
+                  {openAlerts.length} open · {resolvedAlerts.length} resolved · {totalAlerts} total
+                </span>
+              </div>
+              {canUpdateStatus && caseId ? (
+                <CaseStatusMenu
+                  caseId={caseId}
+                  status={caseStatus}
+                  onUpdateStatus={onUpdateCaseStatus}
+                />
+              ) : null}
+            </div>
+            <SheetDescription className="text-left">
+              Review incoming alerts and resolve items—resolution notes are logged automatically.
+            </SheetDescription>
+          </div>
         </SheetHeader>
-  <ScrollArea className="flex-1 min-h-0 overflow-y-auto px-4 pb-6">
+        <ScrollArea className="flex-1 min-h-0 overflow-y-auto px-4 pb-6">
           <section className="space-y-3 py-4">
             <header className="flex items-center justify-between">
               <h2 className="text-sm font-semibold text-foreground">Open alerts</h2>

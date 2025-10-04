@@ -12,9 +12,9 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "../ui/alert-dialog";
-import { CaseDisplay } from "../../types/case";
+import type { CaseDisplay, CaseStatusUpdateHandler } from "../../types/case";
 import { Eye, Edit, Trash2 } from "lucide-react";
-import { CaseStatusBadge } from "./CaseStatusBadge";
+import { CaseStatusMenu } from "./CaseStatusMenu";
 import type { AlertWithMatch } from "../../utils/alertsData";
 import { AlertBadge } from "@/components/alerts/AlertBadge";
 import { McnCopyControl } from "@/components/common/McnCopyControl";
@@ -25,9 +25,17 @@ interface CaseCardProps {
   onEdit: (caseId: string) => void;
   onDelete: (caseId: string) => void;
   alerts?: AlertWithMatch[];
+  onUpdateStatus?: CaseStatusUpdateHandler;
 }
 
-export function CaseCard({ case: caseData, onView, onEdit, onDelete, alerts = [] }: CaseCardProps) {
+export function CaseCard({
+  case: caseData,
+  onView,
+  onEdit,
+  onDelete,
+  alerts = [],
+  onUpdateStatus,
+}: CaseCardProps) {
   const formatDate = (value?: string) => {
     if (!value) {
       return "—";
@@ -60,7 +68,11 @@ export function CaseCard({ case: caseData, onView, onEdit, onDelete, alerts = []
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
           <CardTitle className="text-lg">{caseData.name || 'Unnamed Case'}</CardTitle>
-          <CaseStatusBadge status={caseData.status} />
+          <CaseStatusMenu
+            caseId={caseData.id}
+            status={caseData.status}
+            onUpdateStatus={onUpdateStatus}
+          />
         </div>
         <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
           <McnCopyControl

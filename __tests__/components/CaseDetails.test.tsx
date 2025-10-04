@@ -7,8 +7,8 @@ import type { AlertWithMatch } from "@/utils/alertsData";
 
 const caseSectionPropsSpy = vi.fn();
 const notesSectionPropsSpy = vi.fn();
-const statusBadgePropsSpy = vi.fn();
-const clickToCopyMock = vi.fn().mockResolvedValue(true);
+const statusMenuPropsSpy = vi.fn();
+const clickToCopyMock = vi.fn();
 
 vi.mock("@/components/ui/resizable", () => ({
   ResizablePanelGroup: ({ children }: { children: React.ReactNode }) => (
@@ -55,19 +55,27 @@ vi.mock("@/components/case/NotesSection", () => ({
 }));
 
 vi.mock("@/components/case/CaseAlertsDrawer", () => ({
-  CaseAlertsDrawer: ({ alerts }: any) => (
-    <div data-testid="case-alerts-drawer" data-alert-count={alerts?.length ?? 0} />
-  ),
+  CaseAlertsDrawer: ({ alerts, caseId, caseStatus, onUpdateCaseStatus }: any) => {
+    return (
+      <div
+        data-testid="case-alerts-drawer"
+        data-alert-count={alerts?.length ?? 0}
+        data-case-id={caseId ?? ""}
+        data-case-status={caseStatus ?? ""}
+        data-has-status-handler={Boolean(onUpdateCaseStatus)}
+      />
+    );
+  },
 }));
 
-vi.mock("@/components/case/CaseStatusBadge", () => ({
-  CaseStatusBadge: (props: any) => {
-    statusBadgePropsSpy(props);
+vi.mock("@/components/case/CaseStatusMenu", () => ({
+  CaseStatusMenu: (props: any) => {
+    statusMenuPropsSpy(props);
     return (
       <button
         type="button"
         data-testid="status-badge"
-        onClick={() => props.onStatusChange?.("Approved")}
+        onClick={() => props.onUpdateStatus?.(props.caseId, "Approved")}
       >
         {props.status}
       </button>
@@ -159,7 +167,7 @@ describe("CaseDetails", () => {
     );
 
     expect(screen.getByRole("heading", { name: caseData.name })).toBeInTheDocument();
-  expect(screen.getByText(/1 open alert/i)).toBeInTheDocument();
+    expect(screen.getByText(/1 open alert/i)).toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: /back/i }));
     expect(onBack).toHaveBeenCalledTimes(1);
@@ -167,8 +175,8 @@ describe("CaseDetails", () => {
     await user.click(screen.getByRole("button", { name: /edit/i }));
     expect(onEdit).toHaveBeenCalledTimes(1);
 
-  const deleteButtons = screen.getAllByRole("button", { name: /delete/i });
-  await user.click(deleteButtons[0]);
+    const deleteButtons = screen.getAllByRole("button", { name: /delete/i });
+    await user.click(deleteButtons[0]);
     await user.click(screen.getByRole("button", { name: /delete case/i }));
     expect(onDelete).toHaveBeenCalledTimes(1);
 
@@ -192,8 +200,8 @@ describe("CaseDetails", () => {
     expect(notesSectionPropsSpy).toHaveBeenCalledWith(
       expect.objectContaining({ notes: caseData.caseRecord.notes })
     );
-    expect(statusBadgePropsSpy).toHaveBeenCalledWith(
-      expect.objectContaining({ status: caseData.status })
+    expect(statusMenuPropsSpy).toHaveBeenCalledWith(
+      expect.objectContaining({ caseId: caseData.id, status: caseData.status })
     );
   });
 });
