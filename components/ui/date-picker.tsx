@@ -3,7 +3,7 @@ import * as React from "react";
 import { Calendar as CalendarIcon } from "lucide-react";
 
 import { cn } from "./utils";
-import { Button } from "./button";
+import { Button, buttonVariants } from "./button";
 import { Calendar } from "./calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "./popover";
 
@@ -41,18 +41,25 @@ export function DatePicker({
           type="button"
           variant="outline"
           disabled={disabled}
-          data-empty={date ? undefined : "true"}
+          data-placeholder={date ? "false" : "true"}
           className={cn(
-            "flex w-full min-w-[200px] items-center justify-start gap-2 text-left font-normal",
-            "data-[empty=true]:text-muted-foreground",
+            buttonVariants({ variant: "outline", size: "default" }),
+            "h-9 w-full min-w-0 justify-start gap-2 px-3 text-left text-sm font-normal",
+            "rounded-md border border-input bg-input-background shadow-none",
+            "focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px]",
+            "data-[placeholder=true]:text-muted-foreground",
             className,
           )}
         >
-          <CalendarIcon className="h-4 w-4 opacity-70" aria-hidden="true" />
+          <CalendarIcon className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
           {date ? format(date, formatString) : <span>{placeholder}</span>}
         </Button>
       </PopoverTrigger>
-      <PopoverContent className={cn("w-auto p-0", popoverClassName)} align={align} hidden={disabled}>
+      <PopoverContent
+        className={cn("w-auto p-0", popoverClassName)}
+        align={align}
+        hidden={disabled}
+      >
         <Calendar
           mode="single"
           selected={date}
