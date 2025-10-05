@@ -1,12 +1,11 @@
 import { useCallback, useMemo, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../ui/card";
 import { Button } from "../ui/button";
-import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
-import { Calendar } from "../ui/calendar";
 import { RefreshCcw, Calendar as CalendarIcon, Download } from "lucide-react";
 import { toast } from "sonner";
 import type { ActivityReportFormat, CaseActivityLogState } from "../../types/activityLog";
 import { getTopCasesForReport, serializeDailyActivityReport, toActivityDateKey } from "../../utils/activityReport";
+import { DatePicker } from "../ui/date-picker";
 
 interface ActivityReportCardProps {
   activityLogState: CaseActivityLogState;
@@ -32,14 +31,13 @@ export function ActivityReportCard({
     [getReportForDate, selectedReportDate],
   );
 
-  const selectedDateLabel = useMemo(
-    () =>
-      selectedReportDate.toLocaleDateString(undefined, {
-        year: "numeric",
-        month: "long",
-        day: "numeric",
-      }),
-    [selectedReportDate],
+  const handleSelectReportDate = useCallback(
+    (date?: Date) => {
+      if (date) {
+        setSelectedReportDate(date);
+      }
+    },
+    [],
   );
 
   const topCasesForSelectedDate = useMemo(
@@ -112,22 +110,12 @@ export function ActivityReportCard({
               </p>
             </div>
             <div className="flex flex-wrap items-center gap-2">
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button variant="outline" className="flex items-center gap-2">
-                    <CalendarIcon className="h-4 w-4" />
-                    {selectedDateLabel}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="p-2" align="end">
-                  <Calendar
-                    mode="single"
-                    selected={selectedReportDate}
-                    onSelect={date => date && setSelectedReportDate(date)}
-                    initialFocus
-                  />
-                </PopoverContent>
-              </Popover>
+              <DatePicker
+                date={selectedReportDate}
+                onDateChange={handleSelectReportDate}
+                className="w-full sm:w-auto"
+                popoverClassName="p-2"
+              />
               <Button
                 variant="outline"
                 onClick={handleRefreshActivityLog}
