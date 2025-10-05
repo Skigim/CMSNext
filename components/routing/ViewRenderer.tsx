@@ -1,6 +1,7 @@
 import { CaseDisplay, NewPersonData, NewCaseRecordData } from "../../types/case";
 import { AppView } from "../../types/view";
 import type { AlertsIndex, AlertWithMatch } from "../../utils/alertsData";
+import type { CaseActivityLogState } from "../../types/activityLog";
 
 // Direct imports for high-turnover components - no lazy loading for snappiness
 import Dashboard from "../app/Dashboard";
@@ -16,10 +17,11 @@ interface ViewRendererProps {
   currentView: View;
   selectedCase: CaseDisplay | null | undefined;
   editingCase: CaseDisplay | null;
-  
+
   // Data props
   cases: CaseDisplay[];
   alerts: AlertsIndex;
+  activityLogState: CaseActivityLogState;
   
   // Navigation handlers
   handleViewCase: (caseId: string) => void;
@@ -68,10 +70,11 @@ export function ViewRenderer({
   currentView,
   selectedCase,
   editingCase,
-  
+
   // Data props
   cases,
   alerts,
+  activityLogState,
   
   // Navigation handlers
   handleViewCase,
@@ -104,6 +107,7 @@ export function ViewRenderer({
         <Dashboard
           cases={cases}
           alerts={alerts}
+          activityLogState={activityLogState}
           onViewAllCases={handleBackToList}
           onNewCase={handleNewCase}
         />
@@ -129,6 +133,7 @@ export function ViewRenderer({
       return (
         <Settings
           cases={cases}
+          activityLogState={activityLogState}
           onDataPurged={handleDataPurged}
           onAlertsCsvImported={onAlertsCsvImported}
         />

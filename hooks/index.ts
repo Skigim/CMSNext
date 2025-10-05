@@ -6,6 +6,9 @@
 // Case management operations
 export { useCaseManagement } from './useCaseManagement';
 
+// Case activity log
+export { useCaseActivityLog } from './useCaseActivityLog';
+
 // File system connection flow
 export { useConnectionFlow } from './useConnectionFlow';
 
