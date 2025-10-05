@@ -31,6 +31,7 @@ const createFileData = (overrides: Record<string, unknown> = {}) => ({
   exported_at: new Date().toISOString(),
   total_cases: 0,
   categoryConfig: mergeCategoryConfig(),
+  activityLog: [],
   ...overrides,
 })
 
@@ -1190,6 +1191,33 @@ describe('DataManager', () => {
       expect(capturedPayload.cases.find((c: any) => c.id === 'case-2').status).toBe('Approved')
       expect(capturedPayload.cases.find((c: any) => c.id === 'case-2').caseRecord.status).toBe('Approved')
     })
+
+    it('records an activity log entry when case status changes', async () => {
+      const pendingCase = createMockCaseDisplay({ id: 'case-activity', status: 'Pending' })
+      pendingCase.caseRecord.status = 'Pending'
+
+      mockAutosaveService.readFile.mockResolvedValue(createFileData({
+        cases: [pendingCase],
+        total_cases: 1,
+        activityLog: [],
+      }))
+
+      let capturedPayload: any
+      mockAutosaveService.writeFile.mockImplementation(async (data: any) => {
+        capturedPayload = data
+        return true
+      })
+
+      await dataManager.updateCaseStatus('case-activity', 'Approved')
+
+      expect(capturedPayload.activityLog).toHaveLength(1)
+      const entry = capturedPayload.activityLog[0]
+      expect(entry.type).toBe('status-change')
+      expect(entry.caseId).toBe('case-activity')
+      expect(entry.payload.fromStatus).toBe('Pending')
+      expect(entry.payload.toStatus).toBe('Approved')
+      expect(typeof entry.timestamp).toBe('string')
+    })
   })
 
   describe('financial items', () => {
@@ -1268,6 +1296,28 @@ describe('DataManager', () => {
       expect(result).toBeDefined()
       expect(result.caseRecord.notes.length).toBeGreaterThan(0)
       expect(mockAutosaveService.writeFile).toHaveBeenCalled()
+    })
+
+    it('records an activity log entry when a note is added', async () => {
+      const noteContent = 'Client provided updated verification documents.'
+      let capturedPayload: any
+
+      mockAutosaveService.writeFile.mockImplementation(async (data: any) => {
+        capturedPayload = data
+        return true
+      })
+
+      await dataManager.addNote(mockCase.id, {
+        content: noteContent,
+        category: 'General',
+      })
+
+      expect(capturedPayload.activityLog).toHaveLength(1)
+      const entry = capturedPayload.activityLog[0]
+      expect(entry.type).toBe('note-added')
+      expect(entry.caseId).toBe(mockCase.id)
+      expect(entry.payload.category).toBe('General')
+      expect(entry.payload.preview.toLowerCase()).toContain('client provided')
     })
 
     it('should update a note', async () => {

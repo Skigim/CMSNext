@@ -13,6 +13,7 @@ import type {
 import type { ItemFormState } from "../../hooks/useFinancialItemFlow";
 import type { useNotes } from "../../hooks/useNotes";
 import type { AlertsIndex, AlertWithMatch } from "../../utils/alertsData";
+import type { CaseActivityLogState } from "../../types/activityLog";
 
 const FinancialItemModal = lazy(() => import("../modals/FinancialItemModal"));
 const NoteModal = lazy(() => import("../modals/NoteModal"));
@@ -73,6 +74,7 @@ export interface CaseWorkspaceProps {
   onUpdateCaseStatus: (caseId: string, status: CaseDisplay["status"]) => Promise<CaseDisplay | null> | CaseDisplay | null | void;
   onResolveAlert?: (alert: AlertWithMatch) => Promise<void> | void;
   onAlertsCsvImported?: (index: AlertsIndex) => void;
+  activityLogState: CaseActivityLogState;
 }
 
 /**
@@ -94,6 +96,7 @@ export const CaseWorkspace = memo(function CaseWorkspace({
   onUpdateCaseStatus,
   onResolveAlert,
   onAlertsCsvImported,
+  activityLogState,
 }: CaseWorkspaceProps) {
   return (
     <AppNavigationShell {...navigation}>
@@ -135,6 +138,7 @@ export const CaseWorkspace = memo(function CaseWorkspace({
         handleUpdateCaseStatus={onUpdateCaseStatus}
         handleResolveAlert={onResolveAlert}
         onAlertsCsvImported={onAlertsCsvImported}
+        activityLogState={activityLogState}
       />
 
       {financialFlow.itemForm.isOpen && financialFlow.itemForm.category && selectedCase && (

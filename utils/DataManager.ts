@@ -7,6 +7,7 @@ import {
   NewNoteData,
   AlertWorkflowStatus,
 } from "../types/case";
+import type { CaseActivityEntry } from "../types/activityLog";
 import { v4 as uuidv4 } from 'uuid';
 import AutosaveFileService from './AutosaveFileService';
 import { transformImportedData } from './dataTransform';
@@ -39,11 +40,129 @@ interface DataManagerConfig {
 
 const logger = createLogger('DataManager');
 
+function formatCaseDisplayName(caseData: CaseDisplay): string {
+  const trimmedName = (caseData.name ?? "").trim();
+  if (trimmedName.length > 0) {
+    return trimmedName;
+  }
+
+  const firstName = caseData.person?.firstName?.trim() ?? "";
+  const lastName = caseData.person?.lastName?.trim() ?? "";
+  const composed = `${firstName} ${lastName}`.trim();
+
+  if (composed.length > 0) {
+    return composed;
+  }
+
+  return "Unknown Case";
+}
+
+function normalizeActivityLog(rawActivityLog: unknown): CaseActivityEntry[] {
+  if (!Array.isArray(rawActivityLog)) {
+    return [];
+  }
+
+  const normalized: CaseActivityEntry[] = [];
+
+  for (const candidate of rawActivityLog) {
+    if (!candidate || typeof candidate !== "object") {
+      continue;
+    }
+
+    const base = candidate as Partial<CaseActivityEntry> & { payload?: unknown };
+    if (
+      typeof base.id !== "string" ||
+      typeof base.timestamp !== "string" ||
+      typeof base.caseId !== "string" ||
+      typeof base.caseName !== "string" ||
+      typeof base.type !== "string"
+    ) {
+      continue;
+    }
+
+    if (base.type === "status-change") {
+      const payload = base.payload as CaseActivityEntry["payload"] | undefined;
+      if (!payload || typeof payload !== "object") {
+        continue;
+      }
+
+      const fromStatus = (payload as any).fromStatus;
+      const toStatus = (payload as any).toStatus;
+
+      if (typeof toStatus !== "string") {
+        continue;
+      }
+
+      normalized.push({
+        id: base.id,
+        timestamp: base.timestamp,
+        caseId: base.caseId,
+        caseName: base.caseName,
+        caseMcn: base.caseMcn ?? null,
+        type: "status-change",
+        payload: {
+          fromStatus: typeof fromStatus === "string" || fromStatus === null ? fromStatus ?? null : undefined,
+          toStatus,
+        },
+      });
+      continue;
+    }
+
+    if (base.type === "note-added") {
+      const payload = base.payload as CaseActivityEntry["payload"] | undefined;
+      if (!payload || typeof payload !== "object") {
+        continue;
+      }
+
+      const noteId = (payload as any).noteId;
+      const category = (payload as any).category;
+      const preview = (payload as any).preview;
+
+      if (typeof noteId !== "string" || typeof category !== "string" || typeof preview !== "string") {
+        continue;
+      }
+
+      normalized.push({
+        id: base.id,
+        timestamp: base.timestamp,
+        caseId: base.caseId,
+        caseName: base.caseName,
+        caseMcn: base.caseMcn ?? null,
+        type: "note-added",
+        payload: {
+          noteId,
+          category,
+          preview,
+        },
+      });
+    }
+  }
+
+  return normalized.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+}
+
+function mergeActivityEntries(
+  current: CaseActivityEntry[] | undefined,
+  additions: CaseActivityEntry[],
+): CaseActivityEntry[] {
+  const combined = [...(current ?? []), ...additions];
+  return combined.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+}
+
+function buildNotePreview(content: string): string {
+  const sanitized = content.replace(/\s+/g, " ").trim();
+  if (sanitized.length <= 160) {
+    return sanitized;
+  }
+  return `${sanitized.slice(0, 157)}…`;
+}
+
 interface FileData {
   cases: CaseDisplay[];
   exported_at: string;
   total_cases: number;
   categoryConfig: CategoryConfig;
+  activityLog: CaseActivityEntry[];
 }
 
 interface StoredAlertWorkflowState {
@@ -1104,6 +1223,7 @@ export class DataManager {
           exported_at: new Date().toISOString(),
           total_cases: 0,
           categoryConfig: mergeCategoryConfig(),
+          activityLog: [],
         };
       }
 
@@ -1123,6 +1243,7 @@ export class DataManager {
       }
 
       const categoryConfig = mergeCategoryConfig(rawData.categoryConfig);
+      const activityLog = normalizeActivityLog((rawData as { activityLog?: unknown })?.activityLog);
 
       const { cases: normalizedCases, changed } = normalizeCaseNotes(cases);
 
@@ -1136,6 +1257,7 @@ export class DataManager {
             exported_at: finalExportedAt,
             total_cases: normalizedCases.length,
             categoryConfig,
+            activityLog,
           });
 
           finalCases = persistedData.cases;
@@ -1150,6 +1272,7 @@ export class DataManager {
         exported_at: finalExportedAt,
         total_cases: finalCases.length,
         categoryConfig,
+        activityLog,
       };
     } catch (error) {
       logger.error('Failed to read file data', {
@@ -1173,6 +1296,12 @@ export class DataManager {
         total_cases: data.cases.length,
         categoryConfig: mergeCategoryConfig(data.categoryConfig),
         cases: data.cases.map(caseItem => ({ ...caseItem })),
+        activityLog: [...(data.activityLog ?? [])]
+          .map(entry => ({
+            ...entry,
+            payload: { ...entry.payload },
+          }))
+          .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()),
       };
 
       const success = await this.fileService.writeFile(validatedData);
@@ -1241,6 +1370,11 @@ export class DataManager {
   async getAllCases(): Promise<CaseDisplay[]> {
     const data = await this.readFileData();
     return data ? data.cases : [];
+  }
+
+  async getActivityLog(): Promise<CaseActivityEntry[]> {
+    const data = await this.readFileData();
+    return data?.activityLog ?? [];
   }
 
   /**
@@ -1668,6 +1802,7 @@ export class DataManager {
       exported_at: new Date().toISOString(),
       total_cases: 0,
       categoryConfig: mergeCategoryConfig(),
+      activityLog: [],
     };
 
     const updatedData: FileData = {
@@ -1916,9 +2051,23 @@ export class DataManager {
 
     const casesWithTouchedTimestamps = this.touchCaseTimestamps(casesWithChanges, [caseId]);
 
+    const activityEntry: CaseActivityEntry = {
+      id: uuidv4(),
+      timestamp: new Date().toISOString(),
+      caseId: targetCase.id,
+      caseName: formatCaseDisplayName(targetCase),
+      caseMcn: targetCase.caseRecord?.mcn ?? targetCase.mcn ?? null,
+      type: "status-change",
+      payload: {
+        fromStatus: targetCase.caseRecord?.status ?? targetCase.status,
+        toStatus: status,
+      },
+    };
+
     const updatedData: FileData = {
       ...currentData,
       cases: casesWithTouchedTimestamps,
+      activityLog: mergeActivityEntries(currentData.activityLog, [activityEntry]),
     };
 
     await this.writeFileData(updatedData);
@@ -2170,12 +2319,13 @@ export class DataManager {
     const targetCase = currentData.cases[caseIndex];
 
     // Create new note
+    const timestamp = new Date().toISOString();
     const newNote = {
       id: uuidv4(),
       category: noteData.category || 'General',
       content: noteData.content,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
+      createdAt: timestamp,
+      updatedAt: timestamp
     };
 
     // Modify case data
@@ -2195,9 +2345,24 @@ export class DataManager {
     const casesWithTouchedTimestamps = this.touchCaseTimestamps(casesWithChanges, [caseId]);
 
     // Update data
+    const activityEntry: CaseActivityEntry = {
+      id: uuidv4(),
+      timestamp,
+      caseId: targetCase.id,
+      caseName: formatCaseDisplayName(targetCase),
+      caseMcn: targetCase.caseRecord?.mcn ?? targetCase.mcn ?? null,
+      type: "note-added",
+      payload: {
+        noteId: newNote.id,
+        category: newNote.category,
+        preview: buildNotePreview(noteData.content ?? ""),
+      },
+    };
+
     const updatedData: FileData = {
       ...currentData,
       cases: casesWithTouchedTimestamps,
+      activityLog: mergeActivityEntries(currentData.activityLog, [activityEntry]),
     };
 
     // Write back to file
@@ -2386,6 +2551,7 @@ export class DataManager {
       exported_at: new Date().toISOString(),
       total_cases: 0,
       categoryConfig,
+      activityLog: [],
     };
 
     await this.writeFileData(emptyData);

@@ -6,6 +6,7 @@ import { useFileStorage, useFileStorageLifecycleSelectors } from "./contexts/Fil
 import { useDataManagerSafe } from "./contexts/DataManagerContext";
 import {
   useCaseManagement,
+  useCaseActivityLog,
   useConnectionFlow,
   useFinancialItemFlow,
   useNavigationFlow,
@@ -51,6 +52,16 @@ const AppContent = memo(function AppContent() {
     setError,
     setHasLoadedData,
   } = useCaseManagement();
+  const {
+    activityLog,
+    dailyReports: dailyActivityReports,
+    todayReport: todayActivityReport,
+    yesterdayReport: yesterdayActivityReport,
+    loading: activityLogLoading,
+    error: activityLogError,
+    refreshActivityLog,
+    getReportForDate,
+  } = useCaseActivityLog();
   const { setConfigFromFile } = useCategoryConfig();
   const [alertsIndex, setAlertsIndex] = useState<AlertsIndex>(() => createEmptyAlertsIndex());
   const resolvedAlertOverridesRef = useRef(
@@ -190,16 +201,46 @@ const AppContent = memo(function AppContent() {
     handleAddNote,
     handleEditNote,
     handleDeleteNote,
-    handleSaveNote,
+    handleSaveNote: baseHandleSaveNote,
     handleCancelNoteForm,
-    handleBatchUpdateNote,
-    handleBatchCreateNote,
+    handleBatchUpdateNote: baseHandleBatchUpdateNote,
+    handleBatchCreateNote: baseHandleBatchCreateNote,
   } = useNoteFlow({
     selectedCase: selectedCase ?? null,
     cases,
     setCases,
     setError,
   });
+
+  const handleSaveNote = useCallback(
+    async (noteData: NewNoteData) => {
+      await baseHandleSaveNote(noteData);
+      await refreshActivityLog();
+    },
+    [baseHandleSaveNote, refreshActivityLog],
+  );
+
+  const handleBatchUpdateNote = useCallback(
+    async (noteId: string, noteData: NewNoteData) => {
+      if (!baseHandleBatchUpdateNote) {
+        return;
+      }
+      await baseHandleBatchUpdateNote(noteId, noteData);
+      await refreshActivityLog();
+    },
+    [baseHandleBatchUpdateNote, refreshActivityLog],
+  );
+
+  const handleBatchCreateNote = useCallback(
+    async (noteData: NewNoteData) => {
+      if (!baseHandleBatchCreateNote) {
+        return;
+      }
+      await baseHandleBatchCreateNote(noteData);
+      await refreshActivityLog();
+    },
+    [baseHandleBatchCreateNote, refreshActivityLog],
+  );
 
   const applyAlertOverrides = useCallback(
     (index: AlertsIndex): AlertsIndex => {
@@ -317,8 +358,14 @@ const AppContent = memo(function AppContent() {
   }, [setCases]);
 
   const handleUpdateCaseStatus = useCallback(
-    (caseId: string, status: CaseDisplay["status"]) => updateCaseStatus(caseId, status),
-    [updateCaseStatus],
+    async (caseId: string, status: CaseDisplay["status"]) => {
+      const result = await updateCaseStatus(caseId, status);
+      if (result) {
+        await refreshActivityLog();
+      }
+      return result;
+    },
+    [refreshActivityLog, updateCaseStatus],
   );
 
   const handleDismissError = useCallback(() => {
@@ -587,20 +634,38 @@ const AppContent = memo(function AppContent() {
       onUpdateCaseStatus: handleUpdateCaseStatus,
       onResolveAlert: handleResolveAlert,
       onAlertsCsvImported: handleAlertsCsvImported,
+      activityLogState: {
+        activityLog,
+        dailyReports: dailyActivityReports,
+        todayReport: todayActivityReport,
+        yesterdayReport: yesterdayActivityReport,
+        loading: activityLogLoading,
+        error: activityLogError,
+        refreshActivityLog,
+        getReportForDate,
+      },
     }),
     [
+      activityLog,
+      activityLogError,
+      activityLogLoading,
+      alertsIndex,
       cases,
+      dailyActivityReports,
       editingCase,
       error,
+      getReportForDate,
       financialFlow,
       handleDismissError,
       handleUpdateCaseStatus,
       handleResolveAlert,
       handleAlertsCsvImported,
       noteFlow,
+      refreshActivityLog,
       selectedCase,
+      todayActivityReport,
+      yesterdayActivityReport,
       viewHandlers,
-      alertsIndex,
     ],
   );
 
