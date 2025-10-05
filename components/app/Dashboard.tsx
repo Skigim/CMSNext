@@ -12,6 +12,7 @@ import { getAlertClientName, getAlertDisplayDescription, getAlertDueDateInfo, ge
 import { UnlinkedAlertsDialog } from "@/components/alerts/UnlinkedAlertsDialog";
 import { McnCopyControl } from "@/components/common/McnCopyControl";
 import type { CaseActivityLogState } from "../../types/activityLog";
+import { ActivityReportCard } from "./ActivityReportCard";
 import { getTopCasesForReport } from "../../utils/activityReport";
 
 interface DashboardProps {
@@ -146,6 +147,7 @@ export function Dashboard({ cases, alerts, activityLogState, onViewAllCases, onN
           </Button>
         </div>
       </div>
+      <ActivityReportCard activityLogState={activityLogState} />
 
       <Card>
         <CardHeader className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
