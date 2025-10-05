@@ -80,6 +80,12 @@ function normalizeActivityLog(rawActivityLog: unknown): CaseActivityEntry[] {
       continue;
     }
 
+    const parsedTimestamp = new Date(base.timestamp);
+    if (Number.isNaN(parsedTimestamp.getTime())) {
+      continue;
+    }
+    const normalizedTimestamp = parsedTimestamp.toISOString();
+
     if (base.type === "status-change") {
       const payload = base.payload as CaseActivityEntry["payload"] | undefined;
       if (!payload || typeof payload !== "object") {
@@ -95,7 +101,7 @@ function normalizeActivityLog(rawActivityLog: unknown): CaseActivityEntry[] {
 
       normalized.push({
         id: base.id,
-        timestamp: base.timestamp,
+        timestamp: normalizedTimestamp,
         caseId: base.caseId,
         caseName: base.caseName,
         caseMcn: base.caseMcn ?? null,
@@ -124,7 +130,7 @@ function normalizeActivityLog(rawActivityLog: unknown): CaseActivityEntry[] {
 
       normalized.push({
         id: base.id,
-        timestamp: base.timestamp,
+        timestamp: normalizedTimestamp,
         caseId: base.caseId,
         caseName: base.caseName,
         caseMcn: base.caseMcn ?? null,
@@ -1297,10 +1303,17 @@ export class DataManager {
         categoryConfig: mergeCategoryConfig(data.categoryConfig),
         cases: data.cases.map(caseItem => ({ ...caseItem })),
         activityLog: [...(data.activityLog ?? [])]
-          .map(entry => ({
-            ...entry,
-            payload: { ...entry.payload },
-          }))
+          .map((entry): CaseActivityEntry =>
+            entry.type === "status-change"
+              ? {
+                  ...entry,
+                  payload: { ...entry.payload },
+                }
+              : {
+                  ...entry,
+                  payload: { ...entry.payload },
+                },
+          )
           .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()),
       };
 
@@ -2034,6 +2047,11 @@ export class DataManager {
     }
 
     const targetCase = currentData.cases[caseIndex];
+
+    const currentStatus = targetCase.caseRecord?.status ?? targetCase.status;
+    if (currentStatus === status) {
+      return targetCase;
+    }
 
     const caseWithUpdatedStatus: CaseDisplay = {
       ...targetCase,

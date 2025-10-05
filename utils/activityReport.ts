@@ -5,6 +5,8 @@ import {
   DailyCaseActivityBreakdown,
 } from "../types/activityLog";
 
+const NOTE_PREVIEW_MAX_LENGTH = 80;
+
 function parseDateInput(targetDate: string | Date): Date {
   if (targetDate instanceof Date) {
     return new Date(targetDate.getTime());
@@ -120,7 +122,10 @@ function getEntryDetail(entry: CaseActivityEntry): string {
   }
 
   const preview = entry.payload.preview.replace(/\s+/g, " ").trim();
-  const snippet = preview.length > 80 ? `${preview.slice(0, 77)}…` : preview;
+  const snippet =
+    preview.length > NOTE_PREVIEW_MAX_LENGTH
+      ? `${preview.slice(0, NOTE_PREVIEW_MAX_LENGTH - 3)}…`
+      : preview;
   return `Note added (${entry.payload.category}) – ${snippet}`;
 }
 

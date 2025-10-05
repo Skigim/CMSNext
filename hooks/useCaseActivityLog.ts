@@ -27,6 +27,7 @@ export function useCaseActivityLog(): UseCaseActivityLogResult {
   const refreshActivityLog = useCallback(async () => {
     if (!dataManager) {
       setActivityLog([]);
+      setError("Data storage is not connected.");
       return;
     }
 
@@ -51,11 +52,13 @@ export function useCaseActivityLog(): UseCaseActivityLogResult {
 
   const groupedByDate = useMemo(() => groupActivityEntriesByDate(activityLog), [activityLog]);
 
-  const dailyReports = useMemo(() => {
-    return Array.from(groupedByDate.entries())
-      .map(([dateKey, entriesForDate]) => generateDailyActivityReport(entriesForDate, dateKey))
-      .sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0));
-  }, [groupedByDate]);
+  const dailyReports = useMemo(
+    () =>
+      Array.from(groupedByDate.entries()).map(([dateKey, entriesForDate]) =>
+        generateDailyActivityReport(entriesForDate, dateKey),
+      ),
+    [groupedByDate],
+  );
 
   const todayReport = useMemo(() => {
     const todayKey = toActivityDateKey(new Date());
@@ -70,7 +73,26 @@ export function useCaseActivityLog(): UseCaseActivityLogResult {
   }, [dailyReports]);
 
   const getReportForDate = useCallback(
-    (date: string | Date) => generateDailyActivityReport(activityLog, date),
+    (date: string | Date) => {
+      try {
+        return generateDailyActivityReport(activityLog, date);
+      } catch {
+        const fallbackDateKey = (() => {
+          try {
+            return toActivityDateKey(date);
+          } catch {
+            return toActivityDateKey(new Date());
+          }
+        })();
+
+        return {
+          date: fallbackDateKey,
+          totals: { total: 0, statusChanges: 0, notesAdded: 0 },
+          entries: [],
+          cases: [],
+        } as DailyActivityReport;
+      }
+    },
     [activityLog],
   );
 
