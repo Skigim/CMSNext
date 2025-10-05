@@ -1,6 +1,6 @@
 import { useEffect, useCallback, useMemo, memo, useRef, useState } from "react";
 import { Toaster } from "./components/ui/sonner";
-import { CaseDisplay, CaseCategory, FinancialItem, type AlertWorkflowStatus } from "./types/case";
+import { CaseDisplay, CaseCategory, FinancialItem, NewNoteData, type AlertWorkflowStatus } from "./types/case";
 import { toast } from "sonner";
 import { useFileStorage, useFileStorageLifecycleSelectors } from "./contexts/FileStorageContext";
 import { useDataManagerSafe } from "./contexts/DataManagerContext";
@@ -222,9 +222,6 @@ const AppContent = memo(function AppContent() {
 
   const handleBatchUpdateNote = useCallback(
     async (noteId: string, noteData: NewNoteData) => {
-      if (!baseHandleBatchUpdateNote) {
-        return;
-      }
       await baseHandleBatchUpdateNote(noteId, noteData);
       await refreshActivityLog();
     },
@@ -233,9 +230,6 @@ const AppContent = memo(function AppContent() {
 
   const handleBatchCreateNote = useCallback(
     async (noteData: NewNoteData) => {
-      if (!baseHandleBatchCreateNote) {
-        return;
-      }
       await baseHandleBatchCreateNote(noteData);
       await refreshActivityLog();
     },

@@ -155,8 +155,22 @@ function mergeActivityEntries(
   return combined.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
 }
 
+const EMAIL_PATTERN = /\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/gi;
+const LONG_NUMBER_PATTERN = /\b\d{10,}\b/g;
+const SSN_PATTERN = /\b\d{3}-?\d{2}-?\d{4}\b/g;
+
 function buildNotePreview(content: string): string {
-  const sanitized = content.replace(/\s+/g, " ").trim();
+  const sanitized = content
+    .replace(EMAIL_PATTERN, "***@***")
+    .replace(SSN_PATTERN, "***-**-****")
+    .replace(LONG_NUMBER_PATTERN, "***")
+    .replace(/\s+/g, " ")
+    .trim();
+
+  if (sanitized.length === 0) {
+    return "";
+  }
+
   if (sanitized.length <= 160) {
     return sanitized;
   }
