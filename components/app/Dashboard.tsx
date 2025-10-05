@@ -12,7 +12,7 @@ import { getAlertClientName, getAlertDisplayDescription, getAlertDueDateInfo, ge
 import { UnlinkedAlertsDialog } from "@/components/alerts/UnlinkedAlertsDialog";
 import { McnCopyControl } from "@/components/common/McnCopyControl";
 import type { CaseActivityLogState } from "../../types/activityLog";
-import { getTopCasesForReport } from "../../utils/activityReport";
+import { ActivityReportCard } from "./ActivityReportCard";
 
 interface DashboardProps {
   cases: CaseDisplay[];
@@ -122,15 +122,6 @@ export function Dashboard({ cases, alerts, activityLogState, onViewAllCases, onN
 
   const latestAlerts = useMemo(() => openAlerts.slice(0, 5), [openAlerts]);
 
-  const { todayReport, yesterdayReport, loading: activityLoading } = activityLogState;
-
-  const topTodayCases = useMemo(
-    () => (todayReport ? getTopCasesForReport(todayReport, 3) : []),
-    [todayReport],
-  );
-
-  const yesterdayTotals = yesterdayReport?.totals ?? null;
-
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -146,69 +137,7 @@ export function Dashboard({ cases, alerts, activityLogState, onViewAllCases, onN
           </Button>
         </div>
       </div>
-
-      <Card>
-        <CardHeader className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <CardTitle>Today&apos;s Case Activity</CardTitle>
-            <CardDescription>Automatic log of status changes and new notes</CardDescription>
-          </div>
-          {yesterdayTotals && (
-            <div className="text-xs text-muted-foreground">
-              Yesterday: {yesterdayTotals.total} total · {yesterdayTotals.statusChanges} status · {yesterdayTotals.notesAdded} notes
-            </div>
-          )}
-        </CardHeader>
-        <CardContent>
-          {activityLogState.error && !activityLoading && (
-            <p className="text-sm text-destructive mb-2">
-              Unable to refresh activity log: {activityLogState.error}
-            </p>
-          )}
-          {activityLoading ? (
-            <p className="text-sm text-muted-foreground">Loading recent activity…</p>
-          ) : todayReport && todayReport.totals.total > 0 ? (
-            <div className="space-y-4">
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-                <div className="rounded-lg border border-border bg-muted/40 p-4">
-                  <div className="text-xs uppercase text-muted-foreground">Total entries</div>
-                  <div className="text-2xl font-semibold text-foreground">{todayReport.totals.total}</div>
-                </div>
-                <div className="rounded-lg border border-border bg-muted/40 p-4">
-                  <div className="text-xs uppercase text-muted-foreground">Status changes</div>
-                  <div className="text-2xl font-semibold text-foreground">{todayReport.totals.statusChanges}</div>
-                </div>
-                <div className="rounded-lg border border-border bg-muted/40 p-4">
-                  <div className="text-xs uppercase text-muted-foreground">Notes added</div>
-                  <div className="text-2xl font-semibold text-foreground">{todayReport.totals.notesAdded}</div>
-                </div>
-              </div>
-              <div>
-                <h3 className="text-sm font-medium text-muted-foreground mb-2">Top cases touched today</h3>
-                {topTodayCases.length > 0 ? (
-                  <ul className="space-y-1 text-sm text-foreground">
-                    {topTodayCases.map(caseSummary => {
-                      const total = caseSummary.statusChanges + caseSummary.notesAdded;
-                      return (
-                        <li key={caseSummary.caseId} className="flex items-center justify-between rounded-md border border-border/60 bg-background/80 px-3 py-2">
-                          <span className="font-medium">{caseSummary.caseName}</span>
-                          <span className="text-xs text-muted-foreground">
-                            {total} entr{total === 1 ? "y" : "ies"} · {caseSummary.statusChanges} status · {caseSummary.notesAdded} notes
-                          </span>
-                        </li>
-                      );
-                    })}
-                  </ul>
-                ) : (
-                  <p className="text-sm text-muted-foreground">No case activity recorded yet today.</p>
-                )}
-              </div>
-            </div>
-          ) : (
-            <p className="text-sm text-muted-foreground">No case activity recorded yet today.</p>
-          )}
-        </CardContent>
-      </Card>
+      <ActivityReportCard activityLogState={activityLogState} />
 
       {/* Stats Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">

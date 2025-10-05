@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 import { Dashboard } from "@/components/app/Dashboard";
 import type { AlertsIndex, AlertWithMatch } from "@/utils/alertsData";
 import type { CaseDisplay } from "@/types/case";
+import type { CaseActivityLogState, DailyActivityReport } from "@/types/activityLog";
 
 vi.mock("@/contexts/CategoryConfigContext", () => ({
   useCategoryConfig: () => ({
@@ -110,6 +111,28 @@ const baseCase: CaseDisplay = {
   },
 };
 
+const emptyReport: DailyActivityReport = {
+  date: "2025-01-01",
+  totals: {
+    total: 0,
+    statusChanges: 0,
+    notesAdded: 0,
+  },
+  entries: [],
+  cases: [],
+};
+
+const mockActivityLogState: CaseActivityLogState = {
+  activityLog: [],
+  dailyReports: [],
+  todayReport: null,
+  yesterdayReport: null,
+  loading: false,
+  error: null,
+  refreshActivityLog: vi.fn().mockResolvedValue(undefined),
+  getReportForDate: () => emptyReport,
+};
+
 describe("Dashboard", () => {
   it("shows the unlinked alerts badge and dialog when alerts are unmatched", () => {
     const matchedAlert = createAlert({
@@ -143,6 +166,7 @@ describe("Dashboard", () => {
       <Dashboard
         cases={[baseCase]}
         alerts={alertsIndex}
+        activityLogState={mockActivityLogState}
         onNewCase={vi.fn()}
         onViewAllCases={vi.fn()}
       />,
@@ -183,6 +207,7 @@ describe("Dashboard", () => {
       <Dashboard
         cases={[baseCase]}
         alerts={alertsIndex}
+        activityLogState={mockActivityLogState}
         onNewCase={vi.fn()}
         onViewAllCases={vi.fn()}
       />,
