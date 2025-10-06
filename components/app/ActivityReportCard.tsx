@@ -114,7 +114,6 @@ export function ActivityReportCard({
                 date={selectedReportDate}
                 onDateChange={handleSelectReportDate}
                 className="w-full sm:w-auto"
-                popoverClassName="p-2"
               />
               <Button
                 variant="outline"

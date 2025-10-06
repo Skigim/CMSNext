@@ -1,73 +1,85 @@
 import { format } from "date-fns";
 import * as React from "react";
-import { Calendar as CalendarIcon } from "lucide-react";
 
 import { cn } from "./utils";
-import { Button, buttonVariants } from "./button";
-import { Calendar } from "./calendar";
-import { Popover, PopoverContent, PopoverTrigger } from "./popover";
+import { Input } from "./input";
 
-type CalendarProps = React.ComponentProps<typeof Calendar>;
-
-type PopoverAlign = React.ComponentProps<typeof PopoverContent>["align"];
+type InputProps = React.ComponentProps<typeof Input>;
 
 type DatePickerProps = {
   date?: Date;
   onDateChange: (date: Date | undefined) => void;
   placeholder?: string;
   formatString?: string;
-  disabled?: boolean;
-  align?: PopoverAlign;
-  className?: string;
-  popoverClassName?: string;
-  calendarProps?: Omit<CalendarProps, "mode" | "selected" | "onSelect">;
-};
+} & Omit<InputProps, "type" | "value" | "onChange" | "defaultValue">;
 
 export function DatePicker({
   date,
   onDateChange,
-  placeholder = "Pick a date",
+  placeholder = "Select date",
   formatString = "PPP",
-  disabled = false,
-  align = "end",
   className,
-  popoverClassName,
-  calendarProps,
+  disabled,
+  title,
+  ...inputProps
 }: DatePickerProps) {
+  const isoValue = React.useMemo(() => {
+    if (!date) {
+      return "";
+    }
+
+    try {
+      return format(date, "yyyy-MM-dd");
+    } catch (error) {
+      console.error("Failed to format date", error);
+      return "";
+    }
+  }, [date]);
+
+  const displayTitle = React.useMemo(() => {
+    if (!date) {
+      return undefined;
+    }
+
+    try {
+      return format(date, formatString);
+    } catch {
+      return undefined;
+    }
+  }, [date, formatString]);
+
+  const handleChange = React.useCallback(
+    (event: React.ChangeEvent<HTMLInputElement>) => {
+      const { value } = event.currentTarget;
+      if (!value) {
+        onDateChange(undefined);
+        return;
+      }
+
+      const nextValue = event.currentTarget.valueAsDate;
+      if (!nextValue) {
+        onDateChange(undefined);
+        return;
+      }
+
+      // Normalise to midnight to align with case info inputs
+      const normalized = new Date(nextValue);
+      normalized.setHours(0, 0, 0, 0);
+      onDateChange(normalized);
+    },
+    [onDateChange],
+  );
+
   return (
-    <Popover>
-      <PopoverTrigger asChild>
-        <Button
-          type="button"
-          variant="outline"
-          disabled={disabled}
-          data-placeholder={date ? "false" : "true"}
-          className={cn(
-            buttonVariants({ variant: "outline", size: "default" }),
-            "h-9 w-full min-w-0 justify-start gap-2 px-3 text-left text-sm font-normal",
-            "rounded-md border border-input bg-input-background shadow-none",
-            "focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px]",
-            "data-[placeholder=true]:text-muted-foreground",
-            className,
-          )}
-        >
-          <CalendarIcon className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
-          {date ? format(date, formatString) : <span>{placeholder}</span>}
-        </Button>
-      </PopoverTrigger>
-      <PopoverContent
-        className={cn("w-auto p-0", popoverClassName)}
-        align={align}
-        hidden={disabled}
-      >
-        <Calendar
-          mode="single"
-          selected={date}
-          onSelect={onDateChange}
-          initialFocus
-          {...calendarProps}
-        />
-      </PopoverContent>
-    </Popover>
+    <Input
+      type="date"
+      value={isoValue}
+      placeholder={placeholder}
+      onChange={handleChange}
+      disabled={disabled}
+      className={cn(className)}
+      title={title ?? displayTitle}
+      {...inputProps}
+    />
   );
 }
