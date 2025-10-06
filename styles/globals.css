@@ -400,6 +400,46 @@
   @apply opacity-0 max-h-0 overflow-hidden;
 }
 
+@layer base {
+  .rdp {
+    --rdp-cell-size: 2.25rem;
+    --rdp-cell-size-sm: 1.75rem;
+    --rdp-accent-color: var(--primary);
+    --rdp-background-color: color-mix(in srgb, var(--primary) 14%, transparent);
+    --rdp-outline: var(--ring);
+    margin: 0;
+  }
+
+  .rdp-months {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+  }
+
+  @media (min-width: 640px) {
+    .rdp-months {
+      flex-direction: row;
+    }
+  }
+
+  .rdp-button {
+    @apply rounded-md transition-colors;
+  }
+
+  .rdp-button:hover:not([disabled]):not(.rdp-day_selected):not(.rdp-day_disabled) {
+    @apply bg-accent text-accent-foreground;
+  }
+
+  .rdp-day_selected,
+  .rdp-day_selected:focus-visible {
+    @apply bg-primary text-primary-foreground;
+  }
+
+  .rdp-day_today:not(.rdp-day_selected) {
+    @apply bg-accent text-accent-foreground;
+  }
+}
+
 html {
   font-size: var(--font-size);
 }

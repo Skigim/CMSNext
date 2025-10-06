@@ -5,7 +5,8 @@ import { RefreshCcw, Calendar as CalendarIcon, Download } from "lucide-react";
 import { toast } from "sonner";
 import type { ActivityReportFormat, CaseActivityLogState } from "../../types/activityLog";
 import { getTopCasesForReport, serializeDailyActivityReport, toActivityDateKey } from "../../utils/activityReport";
-import { DatePicker } from "../ui/date-picker";
+import { CalendarPicker } from "../ui/calendar-picker";
+import { type CaptionLayout } from "../ui/calendar";
 
 interface ActivityReportCardProps {
   activityLogState: CaseActivityLogState;
@@ -19,6 +20,7 @@ export function ActivityReportCard({
   description = "Choose a day to review case activity and export the log as JSON, CSV, or plain text.",
 }: ActivityReportCardProps) {
   const [selectedReportDate, setSelectedReportDate] = useState<Date>(() => new Date());
+  const [captionLayout, setCaptionLayout] = useState<CaptionLayout>("dropdown");
   const {
     loading: activityLogLoading,
     error: activityLogError,
@@ -102,18 +104,32 @@ export function ActivityReportCard({
       </CardHeader>
       <CardContent className="space-y-6">
         <section className="space-y-3">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <h4 className="font-medium">Daily activity summary</h4>
-              <p className="text-sm text-muted-foreground">
-                Includes status updates and notes captured in the background as you work cases.
-              </p>
+          <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,320px)]">
+            <div className="space-y-3">
+              <div>
+                <h4 className="font-medium">Daily activity summary</h4>
+                <p className="text-sm text-muted-foreground">
+                  Includes status updates and notes captured in the background as you work cases.
+                </p>
+              </div>
+              {activityLogError && (
+                <p className="text-xs text-destructive">
+                  Unable to load the latest activity log: {activityLogError}
+                </p>
+              )}
             </div>
-            <div className="flex flex-wrap items-center gap-2">
-              <DatePicker
+            <div className="flex flex-col gap-3 rounded-lg border border-border/60 bg-muted/40 p-4">
+              <CalendarPicker
                 date={selectedReportDate}
                 onDateChange={handleSelectReportDate}
-                className="w-full sm:w-auto"
+                captionLayout={captionLayout}
+                onCaptionLayoutChange={setCaptionLayout}
+                label="Report date"
+                placeholder="Select report date"
+                formatString="P"
+                className="w-full"
+                buttonClassName="bg-background"
+                popoverClassName="bg-background"
               />
               <Button
                 variant="outline"
@@ -126,11 +142,6 @@ export function ActivityReportCard({
               </Button>
             </div>
           </div>
-          {activityLogError && (
-            <p className="text-xs text-destructive">
-              Unable to load the latest activity log: {activityLogError}
-            </p>
-          )}
           {activityLogLoading ? (
             <p className="text-sm text-muted-foreground">Loading activity data…</p>
           ) : (
