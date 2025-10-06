@@ -4,7 +4,6 @@ import { Button } from "../ui/button";
 import { Badge } from "../ui/badge";
 import { FileText, Clock, Plus, ArrowRight, CheckCircle2, XCircle, Coins, TrendingUp } from "lucide-react";
 import { CaseDisplay } from "../../types/case";
-import { FileServiceDiagnostic } from "../diagnostics/FileServiceDiagnostic";
 import { useCategoryConfig } from "../../contexts/CategoryConfigContext";
 import { BellRing } from "lucide-react";
 import { filterOpenAlerts, type AlertsIndex } from "../../utils/alertsData";
@@ -13,7 +12,6 @@ import { UnlinkedAlertsDialog } from "@/components/alerts/UnlinkedAlertsDialog";
 import { McnCopyControl } from "@/components/common/McnCopyControl";
 import type { CaseActivityLogState } from "../../types/activityLog";
 import { ActivityReportCard } from "./ActivityReportCard";
-import { getTopCasesForReport } from "../../utils/activityReport";
 
 interface DashboardProps {
   cases: CaseDisplay[];
@@ -123,15 +121,6 @@ export function Dashboard({ cases, alerts, activityLogState, onViewAllCases, onN
 
   const latestAlerts = useMemo(() => openAlerts.slice(0, 5), [openAlerts]);
 
-  const { todayReport, yesterdayReport, loading: activityLoading } = activityLogState;
-
-  const topTodayCases = useMemo(
-    () => (todayReport ? getTopCasesForReport(todayReport, 3) : []),
-    [todayReport],
-  );
-
-  const yesterdayTotals = yesterdayReport?.totals ?? null;
-
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -149,68 +138,7 @@ export function Dashboard({ cases, alerts, activityLogState, onViewAllCases, onN
       </div>
       <ActivityReportCard activityLogState={activityLogState} />
 
-      <Card>
-        <CardHeader className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <CardTitle>Today&apos;s Case Activity</CardTitle>
-            <CardDescription>Automatic log of status changes and new notes</CardDescription>
-          </div>
-          {yesterdayTotals && (
-            <div className="text-xs text-muted-foreground">
-              Yesterday: {yesterdayTotals.total} total · {yesterdayTotals.statusChanges} status · {yesterdayTotals.notesAdded} notes
-            </div>
-          )}
-        </CardHeader>
-        <CardContent>
-          {activityLogState.error && !activityLoading && (
-            <p className="text-sm text-destructive mb-2">
-              Unable to refresh activity log: {activityLogState.error}
-            </p>
-          )}
-          {activityLoading ? (
-            <p className="text-sm text-muted-foreground">Loading recent activity…</p>
-          ) : todayReport && todayReport.totals.total > 0 ? (
-            <div className="space-y-4">
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-                <div className="rounded-lg border border-border bg-muted/40 p-4">
-                  <div className="text-xs uppercase text-muted-foreground">Total entries</div>
-                  <div className="text-2xl font-semibold text-foreground">{todayReport.totals.total}</div>
-                </div>
-                <div className="rounded-lg border border-border bg-muted/40 p-4">
-                  <div className="text-xs uppercase text-muted-foreground">Status changes</div>
-                  <div className="text-2xl font-semibold text-foreground">{todayReport.totals.statusChanges}</div>
-                </div>
-                <div className="rounded-lg border border-border bg-muted/40 p-4">
-                  <div className="text-xs uppercase text-muted-foreground">Notes added</div>
-                  <div className="text-2xl font-semibold text-foreground">{todayReport.totals.notesAdded}</div>
-                </div>
-              </div>
-              <div>
-                <h3 className="text-sm font-medium text-muted-foreground mb-2">Top cases touched today</h3>
-                {topTodayCases.length > 0 ? (
-                  <ul className="space-y-1 text-sm text-foreground">
-                    {topTodayCases.map(caseSummary => {
-                      const total = caseSummary.statusChanges + caseSummary.notesAdded;
-                      return (
-                        <li key={caseSummary.caseId} className="flex items-center justify-between rounded-md border border-border/60 bg-background/80 px-3 py-2">
-                          <span className="font-medium">{caseSummary.caseName}</span>
-                          <span className="text-xs text-muted-foreground">
-                            {total} entr{total === 1 ? "y" : "ies"} · {caseSummary.statusChanges} status · {caseSummary.notesAdded} notes
-                          </span>
-                        </li>
-                      );
-                    })}
-                  </ul>
-                ) : (
-                  <p className="text-sm text-muted-foreground">No case activity recorded yet today.</p>
-                )}
-              </div>
-            </div>
-          ) : (
-            <p className="text-sm text-muted-foreground">No case activity recorded yet today.</p>
-          )}
-        </CardContent>
-      </Card>
+      {/* TODO: Consider blending Todays metrics directly into ActivityReportCard to reduce duplication. */}
 
       {/* Stats Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -382,82 +310,8 @@ export function Dashboard({ cases, alerts, activityLogState, onViewAllCases, onN
           </CardContent>
         </Card>
 
-        {/* Quick Actions */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Quick Actions</CardTitle>
-            <CardDescription>Common tasks and shortcuts</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              <Button 
-                variant="outline" 
-                className="w-full justify-start h-auto p-4"
-                onClick={onNewCase}
-              >
-                <div className="flex items-center w-full">
-                  <Plus className="h-5 w-5 mr-3" />
-                  <div className="text-left">
-                    <div className="font-medium">Create New Case</div>
-                    <div className="text-sm text-muted-foreground">Add a new case to the system</div>
-                  </div>
-                </div>
-              </Button>
-              
-              <Button 
-                variant="outline" 
-                className="w-full justify-start h-auto p-4"
-                onClick={onViewAllCases}
-              >
-                <div className="flex items-center w-full">
-                  <FileText className="h-5 w-5 mr-3" />
-                  <div className="text-left">
-                    <div className="font-medium">View All Cases</div>
-                    <div className="text-sm text-muted-foreground">Browse and manage existing cases</div>
-                  </div>
-                </div>
-              </Button>
-
-
-
-              <Button 
-                variant="outline" 
-                className="w-full justify-start h-auto p-4"
-                disabled
-              >
-                <div className="flex items-center w-full">
-                  <TrendingUp className="h-5 w-5 mr-3" />
-                  <div className="text-left">
-                    <div className="font-medium">Reports</div>
-                    <div className="text-sm text-muted-foreground">Generate case reports (Coming soon)</div>
-                  </div>
-                </div>
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
       </div>
-
-      {/* Placeholder for future dashboard widgets */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Analytics Overview</CardTitle>
-          <CardDescription>Case management insights and trends</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="text-center py-8 text-muted-foreground">
-            <TrendingUp className="h-12 w-12 mx-auto mb-4 opacity-50" />
-            <h3 className="font-medium mb-2">Analytics Coming Soon</h3>
-            <p className="text-sm">
-              Charts and insights about your case management will appear here.
-            </p>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Temporary diagnostic tool */}
-      <FileServiceDiagnostic />
-
+      
       <UnlinkedAlertsDialog
         alerts={unlinkedAlerts}
         open={showUnlinkedDialog}
