@@ -20,7 +20,8 @@
     "seed": "npx tsx scripts/seedCli.ts",
     "seed:demo": "npx tsx scripts/seedCli.ts --preset demo",
     "seed:small": "npx tsx scripts/seedCli.ts --preset small",
-    "seed:large": "npx tsx scripts/seedCli.ts --preset large"
+    "seed:large": "npx tsx scripts/seedCli.ts --preset large",
+    "usage:report": "tsx scripts/usageReport.ts"
   },
   "dependencies": {
     "@radix-ui/react-accordion": "^1.2.12",

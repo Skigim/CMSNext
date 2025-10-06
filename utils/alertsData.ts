@@ -57,7 +57,7 @@ export function filterOpenAlerts<T extends Pick<AlertRecord, "status" | "resolve
 const severityPriorityOrder: AlertSeverity[] = ["Critical", "High", "Medium", "Low", "Info"];
 const workflowPriorityOrder: AlertWorkflowStatus[] = ["new", "in-progress", "acknowledged", "snoozed", "resolved"];
 
-const STACKED_ALERT_REGEX = /,,\s*(?<dueDate>\d{1,2}[\/-]\d{1,2}[\/-]\d{2,4})\s*,\s*(?<mcn>[^,"]*)\s*,"(?<name>(?:[^"]|"")*)","(?<program>(?:[^"]|"")*)","(?<type>(?:[^"]|"")*)","(?<description>(?:[^"]|"")*)",\s*(?<alertNumber>[^,\r\n]*)/g;
+const STACKED_ALERT_REGEX = /,,\s*(?<dueDate>\d{1,2}[/-]\d{1,2}[/-]\d{2,4})\s*,\s*(?<mcn>[^,"]*)\s*,"(?<name>(?:[^"]|"")*)","(?<program>(?:[^"]|"")*)","(?<type>(?:[^"]|"")*)","(?<description>(?:[^"]|"")*)",\s*(?<alertNumber>[^,\r\n]*)/g;
 
 /**
  * Produces the canonical storage key for an alert by combining its base identifier with
