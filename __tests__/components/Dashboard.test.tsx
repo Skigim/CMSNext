@@ -131,6 +131,7 @@ const mockActivityLogState: CaseActivityLogState = {
   error: null,
   refreshActivityLog: vi.fn().mockResolvedValue(undefined),
   getReportForDate: () => emptyReport,
+  clearReportForDate: vi.fn().mockResolvedValue(0),
 };
 
 describe("Dashboard", () => {

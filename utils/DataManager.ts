@@ -32,6 +32,7 @@ import {
   normalizeMcn,
   parseStackedAlerts,
 } from "./alertsData";
+import { toActivityDateKey } from "./activityReport";
 
 interface DataManagerConfig {
   fileService: AutosaveFileService;
@@ -1402,6 +1403,52 @@ export class DataManager {
   async getActivityLog(): Promise<CaseActivityEntry[]> {
     const data = await this.readFileData();
     return data?.activityLog ?? [];
+  }
+
+  async clearActivityLogForDate(targetDate: string | Date): Promise<number> {
+    const currentData = await this.readFileData();
+    if (!currentData) {
+      throw new Error("Failed to read current data");
+    }
+
+    const { activityLog } = currentData;
+    if (!activityLog || activityLog.length === 0) {
+      return 0;
+    }
+
+    const dateKey = toActivityDateKey(targetDate);
+
+    const filtered = activityLog.filter(entry => {
+      try {
+        return toActivityDateKey(entry.timestamp) !== dateKey;
+      } catch (error) {
+        logger.warn('Skipping activity entry with invalid timestamp during clear operation', {
+          entryId: entry.id,
+          timestamp: entry.timestamp,
+          error: error instanceof Error ? error.message : error,
+        });
+        return true;
+      }
+    });
+
+    const removedCount = activityLog.length - filtered.length;
+    if (removedCount === 0) {
+      return 0;
+    }
+
+    const updatedData: FileData = {
+      ...currentData,
+      activityLog: filtered,
+    };
+
+    await this.writeFileData(updatedData);
+
+    logger.info('Cleared activity log entries for date', {
+      dateKey,
+      removedCount,
+    });
+
+    return removedCount;
   }
 
   /**

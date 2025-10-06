@@ -58,4 +58,5 @@ export interface CaseActivityLogState {
   error: string | null;
   refreshActivityLog: () => Promise<void>;
   getReportForDate: (date: string | Date) => DailyActivityReport;
+  clearReportForDate: (date: string | Date) => Promise<number>;
 }

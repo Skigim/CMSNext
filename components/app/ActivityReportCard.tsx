@@ -1,11 +1,23 @@
 import { useCallback, useMemo, useState } from "react";
+import { format } from "date-fns";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../ui/card";
 import { Button } from "../ui/button";
-import { RefreshCcw, Calendar as CalendarIcon, Download } from "lucide-react";
+import { RefreshCcw, Calendar as CalendarIcon, Download, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import type { ActivityReportFormat, CaseActivityLogState } from "../../types/activityLog";
 import { getTopCasesForReport, serializeDailyActivityReport, toActivityDateKey } from "../../utils/activityReport";
 import { CalendarPicker } from "../ui/calendar-picker";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "../ui/alert-dialog";
 
 interface ActivityReportCardProps {
   activityLogState: CaseActivityLogState;
@@ -24,12 +36,21 @@ export function ActivityReportCard({
     error: activityLogError,
     refreshActivityLog,
     getReportForDate,
+    clearReportForDate,
   } = activityLogState;
 
   const selectedActivityReport = useMemo(
     () => getReportForDate(selectedReportDate),
     [getReportForDate, selectedReportDate],
   );
+
+  const selectedDateLabel = useMemo(
+    () => format(selectedReportDate, "PPP"),
+    [selectedReportDate],
+  );
+
+  const [clearDialogOpen, setClearDialogOpen] = useState(false);
+  const [isClearing, setIsClearing] = useState(false);
 
   const handleSelectReportDate = useCallback(
     (date?: Date) => {
@@ -56,6 +77,37 @@ export function ActivityReportCard({
       toast.error("Unable to refresh the activity log.");
     }
   }, [refreshActivityLog]);
+
+  const handleClearSelectedReport = useCallback(async () => {
+    if (isClearing) {
+      return;
+    }
+
+  const targetDate = new Date(selectedReportDate);
+  const friendlyDate = selectedDateLabel;
+    const toastId = toast.loading("Clearing activity log entries...");
+
+    setIsClearing(true);
+    try {
+      const removedCount = await clearReportForDate(targetDate);
+
+      if (removedCount > 0) {
+        toast.success(
+          `Cleared ${removedCount} entr${removedCount === 1 ? "y" : "ies"} for ${friendlyDate}.`,
+          { id: toastId },
+        );
+      } else {
+        toast.info(`No activity entries recorded for ${friendlyDate}.`, { id: toastId });
+      }
+
+      setClearDialogOpen(false);
+    } catch (error) {
+      console.error("Failed to clear activity log for date", error);
+      toast.error("Unable to clear the activity log for this date.", { id: toastId });
+    } finally {
+      setIsClearing(false);
+    }
+  }, [clearReportForDate, isClearing, selectedDateLabel, selectedReportDate]);
 
   const handleExportActivityReport = useCallback(
     (format: ActivityReportFormat) => {
@@ -137,6 +189,37 @@ export function ActivityReportCard({
                 <RefreshCcw className="h-4 w-4" />
                 {activityLogLoading ? "Refreshing..." : "Refresh"}
               </Button>
+              <AlertDialog open={clearDialogOpen} onOpenChange={setClearDialogOpen}>
+                <AlertDialogTrigger asChild>
+                  <Button
+                    variant="destructive"
+                    className="flex items-center gap-2"
+                    disabled={!hasSelectedActivity || activityLogLoading || isClearing}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                    Clear day's log
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>
+                      Clear activity log for {selectedDateLabel}?
+                    </AlertDialogTitle>
+                    <AlertDialogDescription>
+                      This will permanently remove all {selectedActivityReport?.totals.total ?? 0} entries recorded on {selectedDateLabel}. This action cannot be undone.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel disabled={isClearing}>Cancel</AlertDialogCancel>
+                    <AlertDialogAction
+                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                      onClick={handleClearSelectedReport}
+                    >
+                      {isClearing ? "Clearing..." : "Clear entries"}
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
             </div>
           </div>
           {activityLogLoading ? (

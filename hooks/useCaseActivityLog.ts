@@ -16,6 +16,7 @@ interface UseCaseActivityLogResult {
   error: string | null;
   refreshActivityLog: () => Promise<void>;
   getReportForDate: (date: string | Date) => DailyActivityReport;
+  clearReportForDate: (date: string | Date) => Promise<number>;
 }
 
 export function useCaseActivityLog(): UseCaseActivityLogResult {
@@ -96,6 +97,32 @@ export function useCaseActivityLog(): UseCaseActivityLogResult {
     [activityLog],
   );
 
+  const clearReportForDate = useCallback(
+    async (date: string | Date) => {
+      if (!dataManager) {
+        throw new Error("Data storage is not connected.");
+      }
+
+      const dateKey = toActivityDateKey(date);
+      const removedCount = await dataManager.clearActivityLogForDate(date);
+
+      if (removedCount > 0) {
+        setActivityLog(prev =>
+          prev.filter(entry => {
+            try {
+              return toActivityDateKey(entry.timestamp) !== dateKey;
+            } catch {
+              return true;
+            }
+          }),
+        );
+      }
+
+      return removedCount;
+    },
+    [dataManager],
+  );
+
   return {
     activityLog,
     dailyReports,
@@ -105,5 +132,6 @@ export function useCaseActivityLog(): UseCaseActivityLogResult {
     error,
     refreshActivityLog,
     getReportForDate,
+    clearReportForDate,
   };
 }
