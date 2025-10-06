@@ -589,13 +589,14 @@ const AppContent = memo(function AppContent() {
   );
 
   const previousAlertCountsRef = useRef({ unmatched: 0, missingMcn: 0 });
+  const alertSummary = alertsIndex.summary;
 
   useEffect(() => {
     if (!ENABLE_SAMPLE_ALERTS) {
       return;
     }
 
-    const { unmatched, missingMcn } = alertsIndex.summary;
+    const { unmatched, missingMcn } = alertSummary;
     const prev = previousAlertCountsRef.current;
 
     if ((unmatched > 0 || missingMcn > 0) && (unmatched !== prev.unmatched || missingMcn !== prev.missingMcn)) {
@@ -613,7 +614,7 @@ const AppContent = memo(function AppContent() {
     }
 
     previousAlertCountsRef.current = { unmatched, missingMcn };
-  }, [alertsIndex.summary.missingMcn, alertsIndex.summary.unmatched]);
+  }, [alertSummary]);
 
   const workspaceState = useMemo(
     () => ({

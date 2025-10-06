@@ -182,6 +182,7 @@ export function useConnectionFlow({
     loadExistingData,
     service,
     setCases,
+    setError,
     setHasLoadedData,
     emitFileStorageError,
   ]);
@@ -302,6 +303,7 @@ export function useConnectionFlow({
     loadExistingData,
     service,
     setCases,
+    setError,
     setHasLoadedData,
   ]);
 
