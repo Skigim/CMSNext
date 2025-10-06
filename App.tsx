@@ -61,6 +61,7 @@ const AppContent = memo(function AppContent() {
     error: activityLogError,
     refreshActivityLog,
     getReportForDate,
+    clearReportForDate,
   } = useCaseActivityLog();
   const { setConfigFromFile } = useCategoryConfig();
   const [alertsIndex, setAlertsIndex] = useState<AlertsIndex>(() => createEmptyAlertsIndex());
@@ -637,12 +638,14 @@ const AppContent = memo(function AppContent() {
         error: activityLogError,
         refreshActivityLog,
         getReportForDate,
+        clearReportForDate,
       },
     }),
     [
       activityLog,
       activityLogError,
       activityLogLoading,
+      clearReportForDate,
       alertsIndex,
       cases,
       dailyActivityReports,
