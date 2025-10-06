@@ -6,7 +6,6 @@ import { toast } from "sonner";
 import type { ActivityReportFormat, CaseActivityLogState } from "../../types/activityLog";
 import { getTopCasesForReport, serializeDailyActivityReport, toActivityDateKey } from "../../utils/activityReport";
 import { CalendarPicker } from "../ui/calendar-picker";
-import { type CaptionLayout } from "../ui/calendar";
 
 interface ActivityReportCardProps {
   activityLogState: CaseActivityLogState;
@@ -20,7 +19,6 @@ export function ActivityReportCard({
   description = "Choose a day to review case activity and export the log as JSON, CSV, or plain text.",
 }: ActivityReportCardProps) {
   const [selectedReportDate, setSelectedReportDate] = useState<Date>(() => new Date());
-  const [captionLayout, setCaptionLayout] = useState<CaptionLayout>("dropdown");
   const {
     loading: activityLogLoading,
     error: activityLogError,
@@ -122,14 +120,13 @@ export function ActivityReportCard({
               <CalendarPicker
                 date={selectedReportDate}
                 onDateChange={handleSelectReportDate}
-                captionLayout={captionLayout}
-                onCaptionLayoutChange={setCaptionLayout}
                 label="Report date"
                 placeholder="Select report date"
                 formatString="P"
                 className="w-full"
                 buttonClassName="bg-background"
                 popoverClassName="bg-background"
+                calendarProps={{ className: "mx-auto" }}
               />
               <Button
                 variant="outline"

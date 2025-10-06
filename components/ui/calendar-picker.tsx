@@ -5,22 +5,20 @@ import * as React from "react";
 import { ChevronDownIcon } from "lucide-react";
 
 import { Button } from "./button";
-import {
-  CalendarWithCaptionLayoutSelector,
-  type CalendarSelectorProps,
-  type CaptionLayout,
-} from "./calendar";
+import { Calendar, type CalendarProps } from "./calendar";
 import { Label } from "./label";
 import { Popover, PopoverContent, PopoverTrigger } from "./popover";
 import { cn } from "./utils";
 
 type PopoverAlign = React.ComponentProps<typeof PopoverContent>["align"];
 
+type CalendarPickerCalendarProps = Omit<CalendarProps, "mode" | "selected" | "onSelect"> & {
+  className?: string;
+};
+
 type CalendarPickerProps = {
   date?: Date;
   onDateChange?: (date: Date | undefined) => void;
-  captionLayout?: CaptionLayout;
-  onCaptionLayoutChange?: (layout: CaptionLayout) => void;
   label?: string;
   id?: string;
   placeholder?: string;
@@ -28,17 +26,14 @@ type CalendarPickerProps = {
   className?: string;
   buttonClassName?: string;
   popoverClassName?: string;
-  selectorLabel?: string;
   align?: PopoverAlign;
   disabled?: boolean;
-  calendarProps?: CalendarSelectorProps & { className?: string };
+  calendarProps?: CalendarPickerCalendarProps;
 };
 
 export function CalendarPicker({
   date,
   onDateChange,
-  captionLayout,
-  onCaptionLayoutChange,
   label = "Select date",
   id,
   placeholder = "Select date",
@@ -46,7 +41,6 @@ export function CalendarPicker({
   className,
   buttonClassName,
   popoverClassName,
-  selectorLabel,
   align = "start",
   disabled = false,
   calendarProps,
@@ -59,16 +53,12 @@ export function CalendarPicker({
   const isDateControlled = date !== undefined;
   const [internalDate, setInternalDate] = React.useState<Date | undefined>(date);
 
-  const mergedCalendarProps = React.useMemo<
-    (CalendarSelectorProps & { className?: string }) | undefined
-  >(() => {
-    if (!calendarProps) {
-      return undefined;
-    }
-
+  const mergedCalendarProps = React.useMemo<CalendarPickerCalendarProps>(() => {
     return {
+      captionLayout: "dropdown",
+      showOutsideDays: true,
       ...calendarProps,
-      className: cn(calendarProps.className),
+      className: cn("min-w-[17.5rem]", calendarProps?.className),
     };
   }, [calendarProps]);
 
@@ -154,13 +144,12 @@ export function CalendarPicker({
           align={align}
           hidden={disabled}
         >
-          <CalendarWithCaptionLayoutSelector
-            date={displayDate}
-            onDateChange={handleSelect}
-            captionLayout={captionLayout}
-            onCaptionLayoutChange={onCaptionLayoutChange}
-            selectorLabel={selectorLabel}
-            calendarProps={mergedCalendarProps}
+          <Calendar
+            mode="single"
+            selected={displayDate}
+            onSelect={handleSelect}
+            initialFocus
+            {...mergedCalendarProps}
           />
         </PopoverContent>
       </Popover>
