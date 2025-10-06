@@ -232,9 +232,9 @@ function formatTxt(report: DailyActivityReport): string {
       } else {
         noteEntries.forEach((entry, index) => {
           const category = entry.payload.category?.trim() || "General";
-          const preview = normalizeWhitespace(entry.payload.preview);
+          const content = normalizeWhitespace(entry.payload.content ?? entry.payload.preview);
           lines.push(`${category}:`);
-          lines.push(`* ${preview}`);
+          lines.push(`* ${content}`);
           if (index < noteEntries.length - 1) {
             lines.push("");
           }

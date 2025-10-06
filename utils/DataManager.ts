@@ -124,10 +124,14 @@ function normalizeActivityLog(rawActivityLog: unknown): CaseActivityEntry[] {
       const noteId = (payload as any).noteId;
       const category = (payload as any).category;
       const preview = (payload as any).preview;
+      const content = (payload as any).content;
 
       if (typeof noteId !== "string" || typeof category !== "string" || typeof preview !== "string") {
         continue;
       }
+
+      const sanitizedContent =
+        typeof content === "string" && content.length > 0 ? sanitizeNoteContent(content) : undefined;
 
       normalized.push({
         id: base.id,
@@ -140,6 +144,7 @@ function normalizeActivityLog(rawActivityLog: unknown): CaseActivityEntry[] {
           noteId,
           category,
           preview,
+          ...(sanitizedContent ? { content: sanitizedContent } : {}),
         },
       });
     }
@@ -160,13 +165,17 @@ const EMAIL_PATTERN = /\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/gi;
 const LONG_NUMBER_PATTERN = /\b\d{10,}\b/g;
 const SSN_PATTERN = /\b\d{3}-?\d{2}-?\d{4}\b/g;
 
-function buildNotePreview(content: string): string {
-  const sanitized = content
+function sanitizeNoteContent(content: string): string {
+  return content
     .replace(EMAIL_PATTERN, "***@***")
     .replace(SSN_PATTERN, "***-**-****")
     .replace(LONG_NUMBER_PATTERN, "***")
     .replace(/\s+/g, " ")
     .trim();
+}
+
+function buildNotePreview(content: string): string {
+  const sanitized = sanitizeNoteContent(content);
 
   if (sanitized.length === 0) {
     return "";
@@ -2424,6 +2433,8 @@ export class DataManager {
     const casesWithTouchedTimestamps = this.touchCaseTimestamps(casesWithChanges, [caseId]);
 
     // Update data
+    const sanitizedContent = sanitizeNoteContent(noteData.content ?? "");
+
     const activityEntry: CaseActivityEntry = {
       id: uuidv4(),
       timestamp,
@@ -2435,6 +2446,7 @@ export class DataManager {
         noteId: newNote.id,
         category: newNote.category,
         preview: buildNotePreview(noteData.content ?? ""),
+        content: sanitizedContent,
       },
     };
 

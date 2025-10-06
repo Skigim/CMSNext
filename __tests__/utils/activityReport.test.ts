@@ -45,7 +45,8 @@ describe("serializeDailyActivityReport - txt format", () => {
       payload: {
         noteId: "note-1",
         category: "Follow-up",
-        preview: "Client provided bank statements for upload.",
+        preview: "Client provided bank statements for upload…",
+        content: "Client provided bank statements for upload and shared confirmation numbers for pending deposits.",
       },
     };
 
@@ -71,7 +72,7 @@ describe("serializeDailyActivityReport - txt format", () => {
         "",
         "Notes:",
         "Follow-up:",
-        "* Client provided bank statements for upload.",
+        "* Client provided bank statements for upload and shared confirmation numbers for pending deposits.",
         "",
         "-----",
       ].join("\n"),
@@ -90,6 +91,7 @@ describe("serializeDailyActivityReport - txt format", () => {
         noteId: "note-2",
         category: "General",
         preview: "  Scheduled   follow-up   call on   Monday.  ",
+        content: "  Scheduled   follow-up   call on   Monday.  ",
       },
     };
 

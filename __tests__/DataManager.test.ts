@@ -1318,6 +1318,7 @@ describe('DataManager', () => {
       expect(entry.caseId).toBe(mockCase.id)
       expect(entry.payload.category).toBe('General')
       expect(entry.payload.preview.toLowerCase()).toContain('client provided')
+      expect(entry.payload.content).toBe('Client provided updated verification documents.')
     })
 
     it('should update a note', async () => {

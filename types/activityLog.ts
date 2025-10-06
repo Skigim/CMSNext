@@ -22,6 +22,7 @@ export interface CaseNoteAddedActivity extends CaseActivityBase {
     noteId: string;
     category: string;
     preview: string;
+    content?: string;
   };
 }
 
