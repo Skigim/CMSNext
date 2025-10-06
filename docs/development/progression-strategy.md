@@ -14,6 +14,7 @@ This plan realigns the roadmap around those themes while preserving the filesyst
 - **ESLint 9 migration** (Sept 24) adopted `eslint.config.js` with `@eslint/eslintrc`’s `FlatCompat` bridge so legacy `extends` entries continue to work while we transition to fully flat-aware configs.
 - **Validation, virtualization, and Autosave improvements** from earlier iterations remain in place and inform the next round of work.
 - **Financial UI coverage expansion** (Sept 30) added focused RTL suites for the financial item stack and lifted overall coverage to 73.3% statements / 68.8% branches / 55.2% functions / 73.3% lines.
+- **Lint & storage cleanup** (Oct 6) cleared the lingering eslint warnings and replaced `window.handleFileDataLoaded` with context-level dispatchers, paving the way for usage metrics instrumentation.
 
 ## 🔝 Priority Roadmap
 | Phase | Focus | Outcome Targets |
@@ -51,8 +52,8 @@ This plan realigns the roadmap around those themes while preserving the filesyst
 - TypeScript 5.9.2 remains the enforced compiler; keep `@typescript-eslint` dependencies on the 8.x line for compatibility.
 
 ## 🚀 Immediate Next Steps
-1. Curate the near-term feature backlog and select the top candidate(s) for implementation.
-2. Create lightweight specs and acceptance criteria for those features, including UX references or mockups.
-3. Align supporting tasks (telemetry hooks, docs stubs, test scaffolding) with the chosen feature slate.
-4. Prototype how the Activity Report card can absorb the remaining dashboard metrics to cement the recent shell simplification.
-5. Begin instrumenting high-value flows per `usage-logging-strategy.md` (navigation, dashboard cards, exports).
+1. Stand up the filesystem-backed `UsageMetricsService` and shared context, then wire `useNavigationFlow` and the dashboard cards to record navigation metrics.
+2. Fold the remaining “today” metrics into `ActivityReportCard`, removing the placeholder tile from `Dashboard.tsx` once parity is achieved.
+3. Curate the near-term feature backlog and select the top candidate(s) for implementation.
+4. Create lightweight specs and acceptance criteria for those features, including UX references or mockups.
+5. Align supporting tasks (telemetry hooks, docs stubs, test scaffolding) with the chosen feature slate.

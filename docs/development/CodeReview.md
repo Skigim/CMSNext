@@ -4,7 +4,7 @@
 **Branch:** feature/ui-ux-refresh (commit state at review time)
 
 ## Executive Summary
-CMSNext remains a filesystem-first case management experience built with React 18, TypeScript, and the File System Access API. Since the September 29 review the team landed the file-storage lifecycle state machine, surfaced autosave status in the UI, decomposed the financial item stack into lean components, and expanded the automated suite to 142 Vitest specs (including new integration flows). Quality is trending up: data integrity safeguards and toast UX are cohesive, and docs match the current roadmap. The main opportunities now center on finishing the breakup of `App.tsx`, eliminating remaining window-level shims, and layering lightweight performance telemetry to quantify bundle/render costs.
+CMSNext remains a filesystem-first case management experience built with React 18, TypeScript, and the File System Access API. Since the September 29 review the team landed the file-storage lifecycle state machine, surfaced autosave status in the UI, decomposed the financial item stack into lean components, and expanded the automated suite to 142 Vitest specs (including new integration flows). Quality is trending up: data integrity safeguards and toast UX are cohesive, and docs match the current roadmap. With the window shim now retired, the main opportunities center on finishing the breakup of `App.tsx` and layering lightweight performance telemetry to quantify bundle/render costs.
 
 **Overall Grade: A (92/100)**
 
@@ -17,21 +17,21 @@ CMSNext remains a filesystem-first case management experience built with React 1
 | Error Handling  | 9/10  | Centralized file-storage error reporter delivers consistent toasts and structured logs                  |
 | Performance     | 7/10  | Memoization & virtualization help, but `App.tsx` re-renders remain heavy and bundle telemetry is absent   |
 | Testing         | 8/10  | 142 Vitest specs (integration + RTL) cover key flows; coverage baseline sits at 73.3% statements         |
-| Maintainability | 8/10  | Docs/backlog kept current and components trimmed, yet `App.tsx` still 587 lines with window shims        |
+| Maintainability | 8/10  | Docs/backlog kept current and components trimmed; `App.tsx` is slimmer but still carries orchestration glue |
 | Security        | 9/10  | Local-first storage, sanitized file imports, defensive File System Access API wrappers                  |
 
 ## Recent Validation
 - ✅ `npm run build` — production build succeeds (TypeScript 5.9.2 + Vite 7).
 - ✅ `npm run test -- --run` — 143 tests pass; includes new autosave, activity report export, and connection integration coverage.
-- ⚠️ `npm run lint` — completes with 5 warnings (hook dependency suggestions in `App.tsx` / `useConnectionFlow`, escape characters in `alertsData.ts`).
+- ✅ `npm run lint` — passes clean after the Oct 6 dependency + regex cleanup.
 
 ### Architecture & Design (8/10)
 **Strengths**
 - Filesystem-first architecture continues to route every CRUD action through `DataManager`, `AutosaveFileService`, and the File System Access API.
 - The new `fileStorageMachine` reducer and selectors give providers and consumers a typed, event-driven lifecycle.
 **Opportunities**
-- `App.tsx` is still 587 lines and mixes navigation, modal orchestration, alert loading, and shared flow glue—finish decomposing into the dedicated hooks already introduced elsewhere.
-- Data loads now dispatch through `FileStorageContext`; ensure new features use `useFileStorageDataLoadHandler` (or provider-level subscriptions) instead of introducing fresh globals.
+- `App.tsx` still mixes navigation, modal orchestration, alert loading, and shared flow glue—finish decomposing into the dedicated hooks already introduced elsewhere.
+- Continue routing new data-load features through the `FileStorageContext` dispatcher introduced on Oct 6 to avoid regressing into global shims.
 - Consider co-locating alert bootstrapping and autosave wiring in a storage-focused provider to slim the main app shell further.
 
 ### TypeScript & Validation (9/10)
@@ -90,7 +90,7 @@ CMSNext remains a filesystem-first case management experience built with React 1
 - Roadmap docs (`progression-strategy.md`) now list only active phases, with historical detail archived.
 - Component decomposition and hook extraction reduce per-file cognitive load, especially in the financial and storage stacks.
 **Opportunities**
-- Lint still reports hook dependency warnings (`App.tsx`, `useConnectionFlow`) and regex escapes in `alertsData.ts`; plan targeted cleanups.
+- Document the post-shim storage dispatcher and usage metrics plan so future contributors follow the new patterns.
 - `App.tsx` and provider wiring remain dense—track remaining responsibilities in ADRs or docs to guide the next decomposition steps.
 - Consider adding automated formatting (Prettier or Biome) to lock in style while refactors continue.
 
@@ -106,17 +106,18 @@ CMSNext remains a filesystem-first case management experience built with React 1
 - ✅ File-storage lifecycle is now state-machine driven with UI badges mirroring every state.
 - ✅ Financial item UI and hooks are decomposed, improving readability and making memoization effective.
 - ✅ Dashboard tiles were pruned in the Oct 6 cleanup so the shell focuses on actionable metrics.
+- ✅ Window-level shims were retired; file storage events now flow through the context dispatcher.
 - ✅ Activity report exports now log full note content with sanitization backed by regression tests.
 - ✅ Documentation and roadmap reflect completed phases, keeping contributors aligned.
 
 ### High Priority
 1. Split the remaining orchestration from `App.tsx` (alerts bootstrap, modal management) into dedicated providers/hooks to drop the file below 400 lines.
-2. Keep data-load flows local to the storage context—apply the new handler registry when wiring future autosave/import features to avoid regressing into global shims.
-3. Introduce bundle/render telemetry (e.g., Vite bundle analyzer, React Profiler checkpoints) to quantify performance work in Phase 4.
+2. Expand bundle/render telemetry (e.g., Vite bundle analyzer, React Profiler checkpoints) to quantify performance work in Phase 4.
+3. Stand up the planned usage metrics service + context to capture navigation/dashboard events via the filesystem API.
 
 ### Medium Priority
 1. Add RTL coverage for CaseForm, ConnectToExistingModal, and note flows to match the financial stack’s test depth.
-2. Address the outstanding lint warnings by tightening hook dependency arrays and simplifying regex literals.
+2. Keep eslint clean by baking the dependency/regex guardrails into contributor docs and pre-commit tooling.
 3. Capture the new storage lifecycle architecture in an ADR and the testing strategy in `/docs/development` to guide future contributions.
 
 ### Low Priority / Nice-to-Have
