@@ -21,7 +21,7 @@ describe("serializeDailyActivityReport - txt format", () => {
     cases,
   });
 
-  it("formats notes and resolved alerts using the activity export template", () => {
+  it("formats notes using the stripped-down activity export template", () => {
     const statusEntry: CaseActivityEntry = {
       id: "status-1",
       timestamp: "2025-10-05T14:00:00.000Z",
@@ -67,11 +67,7 @@ describe("serializeDailyActivityReport - txt format", () => {
       [
         "12345 - Alice Example",
         "",
-        "Alerts Cleared:",
-        "1. Alert marked Resolved (previously In Progress)",
-        "",
-        "Notes:",
-        "Follow-up:",
+        "Follow-up",
         "* Client provided bank statements for upload and shared confirmation numbers for pending deposits.",
         "",
         "-----",
@@ -79,7 +75,7 @@ describe("serializeDailyActivityReport - txt format", () => {
     );
   });
 
-  it("falls back to no-alert messaging and handles missing MC numbers", () => {
+  it("handles missing MC numbers and normalizes whitespace", () => {
     const noteEntry: CaseActivityEntry = {
       id: "note-2",
       timestamp: "2025-10-05T16:45:00.000Z",
@@ -112,11 +108,7 @@ describe("serializeDailyActivityReport - txt format", () => {
       [
         "No MC# - Bob Citizen",
         "",
-        "Alerts Cleared:",
-        "None recorded.",
-        "",
-        "Notes:",
-        "General:",
+        "General",
         "* Scheduled follow-up call on Monday.",
         "",
         "-----",

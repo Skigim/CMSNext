@@ -2,7 +2,6 @@ import {
   ActivityReportFormat,
   CaseActivityEntry,
   CaseNoteAddedActivity,
-  CaseStatusChangeActivity,
   DailyActivityReport,
   DailyCaseActivityBreakdown,
 } from "../types/activityLog";
@@ -169,77 +168,26 @@ function isNoteEntry(entry: CaseActivityEntry): entry is CaseNoteAddedActivity {
   return entry.type === "note-added";
 }
 
-function isStatusChangeEntry(entry: CaseActivityEntry): entry is CaseStatusChangeActivity {
-  return entry.type === "status-change";
-}
-
-const CLEARED_STATUS_KEYWORDS = ["resolved", "cleared", "closed"];
-
-function isClearedAlert(entry: CaseStatusChangeActivity): boolean {
-  const toStatus = entry.payload.toStatus?.toLowerCase()?.trim();
-  if (!toStatus) {
-    return false;
-  }
-
-  return CLEARED_STATUS_KEYWORDS.some(keyword => toStatus.includes(keyword));
-}
-
-function buildAlertDescription(entry: CaseStatusChangeActivity): string {
-  const fromStatus = entry.payload.fromStatus?.trim();
-  const toStatus = entry.payload.toStatus?.trim();
-
-  if (!toStatus) {
-    return "Alert updated";
-  }
-
-  if (!fromStatus || fromStatus.localeCompare(toStatus, undefined, { sensitivity: "accent" }) === 0) {
-    return `Alert marked ${toStatus}`;
-  }
-
-  return `Alert marked ${toStatus} (previously ${fromStatus})`;
-}
-
 function formatTxt(report: DailyActivityReport): string {
   const sections = report.cases
     .map(breakdown => {
       const noteEntries = breakdown.entries.filter(isNoteEntry);
-      const clearedAlerts = breakdown.entries
-        .filter(isStatusChangeEntry)
-        .filter(isClearedAlert);
-
-      if (noteEntries.length === 0 && clearedAlerts.length === 0) {
+      if (noteEntries.length === 0) {
         return null;
       }
 
       const lines: string[] = [];
       lines.push(formatCaseHeading(breakdown.caseMcn ?? null, breakdown.caseName));
       lines.push("");
-      lines.push("Alerts Cleared:");
-
-      if (clearedAlerts.length === 0) {
-        lines.push("None recorded.");
-      } else {
-        clearedAlerts.forEach((entry, index) => {
-          lines.push(`${index + 1}. ${buildAlertDescription(entry)}`);
-        });
-      }
-
-      lines.push("");
-      lines.push("Notes:");
-
-      if (noteEntries.length === 0) {
-        lines.push("None recorded.");
-      } else {
-        noteEntries.forEach((entry, index) => {
-          const category = entry.payload.category?.trim() || "General";
-          const content = normalizeWhitespace(entry.payload.content ?? entry.payload.preview);
-          lines.push(`${category}:`);
-          lines.push(`* ${content}`);
-          if (index < noteEntries.length - 1) {
-            lines.push("");
-          }
-        });
-      }
+      noteEntries.forEach((entry, index) => {
+        const category = entry.payload.category?.trim() || "General";
+        const content = normalizeWhitespace(entry.payload.content ?? entry.payload.preview);
+        lines.push(category);
+        lines.push(`* ${content}`);
+        if (index < noteEntries.length - 1) {
+          lines.push("");
+        }
+      });
 
       lines.push("");
       lines.push("-----");
