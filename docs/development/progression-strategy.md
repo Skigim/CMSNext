@@ -3,7 +3,7 @@
 ## 📋 Executive Summary
 The September 24, 2025 code review (A- / 88) praised CMSNext’s filesystem-first architecture and robust validation while identifying three high-impact opportunities:
 
-1. **Continue decomposing orchestration-heavy modules** – `App.tsx` now sits around 440 lines after earlier trims, but it still centralizes multiple flows that should move into focused providers/hooks; the `FinancialItemCard` suite has been split into ~100-line leaf components and can serve as the pattern for the remaining breakouts.
+1. **Continue decomposing orchestration-heavy modules** – `App.tsx` still sits near 690 lines even after recent trims and continues to centralize multiple flows that should move into focused providers/hooks; the `FinancialItemCard` suite has been split into ~100-line leaf components and can serve as the pattern for the remaining breakouts.
 2. **Expand automated testing beyond core services** – complement the DataManager/Autosave coverage with React Testing Library suites and end-to-end flows.
 3. **Polish the file-storage experience** – retire the last global coordination hooks (e.g., `window.handleFileDataLoaded`) in favor of typed state, surface autosave status, and harden recovery messaging when permissions fail.
 
@@ -31,6 +31,8 @@ This plan realigns the roadmap around those themes while preserving the filesyst
 ### Phase 4 · Performance & Observability (Active Prep)
 - ✅ Tooling: `npm run analyze` now emits a treemap via `rollup-plugin-visualizer`; results should be archived under `docs/development/performance/`.
 - ✅ Documentation: `performance-prep.md` and `performance-metrics.md` capture the baseline checklist and reporting template.
+- ✅ UI cleanup: dashboard tiles were pruned (Oct 6) to reduce layout churn ahead of profiling work.
+- ✅ Usage telemetry plan: `usage-logging-strategy.md` outlines filesystem-first event logging and diagnostics wiring.
 - ⏳ Baseline capture: generate bundle metrics, profile `App.tsx` navigation flows, and log findings before optimization work merges.
 - 📌 Follow-up targets: break down `App.tsx` render hotspots, measure autosave badge updates, and prioritize chunk-splitting or memoization stories based on data.
 
@@ -52,3 +54,5 @@ This plan realigns the roadmap around those themes while preserving the filesyst
 1. Curate the near-term feature backlog and select the top candidate(s) for implementation.
 2. Create lightweight specs and acceptance criteria for those features, including UX references or mockups.
 3. Align supporting tasks (telemetry hooks, docs stubs, test scaffolding) with the chosen feature slate.
+4. Prototype how the Activity Report card can absorb the remaining dashboard metrics to cement the recent shell simplification.
+5. Begin instrumenting high-value flows per `usage-logging-strategy.md` (navigation, dashboard cards, exports).

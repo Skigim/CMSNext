@@ -22,17 +22,13 @@ CMSNext remains a filesystem-first case management experience built with React 1
 
 ## Recent Validation
 - ✅ `npm run build` — production build succeeds (TypeScript 5.9.2 + Vite 7).
-- ✅ `npm run test -- --run` — 142 tests pass; includes new autosave + connection integration coverage.
+- ✅ `npm run test -- --run` — 143 tests pass; includes new autosave, activity report export, and connection integration coverage.
 - ⚠️ `npm run lint` — completes with 5 warnings (hook dependency suggestions in `App.tsx` / `useConnectionFlow`, escape characters in `alertsData.ts`).
-
-## Detailed Findings
 
 ### Architecture & Design (8/10)
 **Strengths**
 - Filesystem-first architecture continues to route every CRUD action through `DataManager`, `AutosaveFileService`, and the File System Access API.
 - The new `fileStorageMachine` reducer and selectors give providers and consumers a typed, event-driven lifecycle.
-- Provider composition (`AppProviders`, `FileStorageIntegrator`) keeps the rest of the app agnostic to storage transport quirks.
-
 **Opportunities**
 - `App.tsx` is still 587 lines and mixes navigation, modal orchestration, alert loading, and global exports—finish decomposing into the dedicated hooks already introduced elsewhere.
 - `window.handleFileDataLoaded` remains the bridge for autosave callbacks; replace it with context-level dispatch so no state relies on globals.
@@ -42,8 +38,6 @@ CMSNext remains a filesystem-first case management experience built with React 1
 **Strengths**
 - Strict compiler flags stay enabled (`noUnusedLocals`, `noUncheckedIndexedAccess`, etc.), keeping domain types trustworthy.
 - `types/case.ts` still models legacy + modern structures, now paired with helpers that clear stale `resolvedAt` timestamps automatically.
-- Zod schemas, sanitizers, and feature-flagged helpers maintain data hygiene for imports and clipboard actions.
-
 **Opportunities**
 - Several hooks still cast partial payloads (`useFinancialItems`, `useNotes`). Typed mappers could remove repeated casts.
 - Continue migrating File System Access browser bridges to strongly typed wrappers (e.g., `DirectoryHandle`) to eliminate the few remaining `any` escape hatches.
@@ -52,18 +46,15 @@ CMSNext remains a filesystem-first case management experience built with React 1
 **Strengths**
 - The financial item stack is now composed of `FinancialItemCard` plus dedicated header/meta/action/form components, keeping each under ~150 lines.
 - Autosave status is communicated via `AutosaveStatusBadge`, aligning copy with documentation and storage lifecycle states.
-- shadcn/ui-based primitives, theme toggles, and layout shells stay consistent across the six supported themes.
-
 **Opportunities**
 - `CaseForm` and `CaseDetails` still shoulder broad responsibilities; splitting subforms or adopting dedicated hooks would reduce re-render churn.
 - Some diagnostic and settings panels duplicate layout patterns that could migrate into shared presentation components for consistency.
+- Finish the dashboard consolidation by recombining the remaining metrics with the Activity Report export to keep the newly trimmed layout cohesive.
 
 ### State Management & Data Flow (9/10)
 **Strengths**
 - `useFileStorageLifecycleSelectors` exposes stable derived state, letting consumers respond to permission loss, retries, and autosave cycles.
 - `DataManager` handles alert deduplication, stacked record merges, and resolved timestamp downgrades with fresh regression coverage.
-- Connection, navigation, note, and financial flows remain encapsulated in hooks, preserving predictable state updates and toasts.
-
 **Opportunities**
 - The storage lifecycle reducer is powerful—surface a typed dispatcher or context helper so features can transition states without reaching back into providers.
 - Long-lived flows still fall back to timeouts (`setTimeout`) for reloads; consider event hooks from the autosave service to eliminate polling.
@@ -72,8 +63,6 @@ CMSNext remains a filesystem-first case management experience built with React 1
 **Strengths**
 - `fileStorageErrorReporter` unifies toast copy, structured logger payloads, and telemetry hooks across DataManager and autosave paths.
 - `AutosaveStatusBadge` conveys permission issues, failures, and saving progress without requiring a toast storm.
-- Defensive `try/catch` blocks still wrap every storage operation, rolling back optimistic updates when errors bubble.
-
 **Opportunities**
 - Inline recovery copy exists, but a contextual “Reconnect” affordance inside long-running dialogs would shorten the path from error to action.
 - Expand gentle messaging for unsupported browsers in the onboarding flow—current messaging leans on modals and toasts separately.
@@ -82,8 +71,6 @@ CMSNext remains a filesystem-first case management experience built with React 1
 **Strengths**
 - Heavy panels and modals stay lazy-loaded, and virtualization keeps large case lists responsive.
 - Hooks and components employ `memo`, `useMemo`, and `useCallback` to avoid unnecessary tree churn, especially after the financial UI refactor.
-- Build output remains reasonable, with vendor bundles ~140 KB gzip each.
-
 **Opportunities**
 - `App.tsx` re-renders propagate through many providers; splitting remaining flows would unlock finer memoization.
 - No bundle-budget or render profiling automation exists—wire up Vite bundle analyzer or simple `performance.mark` checkpoints.
@@ -91,10 +78,8 @@ CMSNext remains a filesystem-first case management experience built with React 1
 
 ### Testing (8/10)
 **Strengths**
-- Vitest suite now includes 22 files / 142 tests, spanning DataManager services, autosave lifecycle, connection flows, and financial UI interactions.
+- Vitest suite now includes 22 files / 143 tests, spanning DataManager services, autosave lifecycle, connection flows, and financial UI interactions.
 - Integration tests (`connectionFlow`, `autosaveStatus`) exercise permission revocation, autosave retries, and reconnection logic.
-- Coverage baseline sits at 73.3% statements / 68.8% branches, with DataManager alerts and timestamp logic guarded by focused specs.
-
 **Opportunities**
 - CaseForm, ConnectToExistingModal, and note flows would benefit from additional RTL suites to mirror the financial coverage gains.
 - Add smoke coverage for diagnostics panels and global navigation to ensure the decomposed layout stays wired.
@@ -104,8 +89,6 @@ CMSNext remains a filesystem-first case management experience built with React 1
 **Strengths**
 - Roadmap docs (`progression-strategy.md`) now list only active phases, with historical detail archived.
 - Component decomposition and hook extraction reduce per-file cognitive load, especially in the financial and storage stacks.
-- Build/test scripts remain fast and deterministic in the dev container.
-
 **Opportunities**
 - Lint still reports hook dependency warnings (`App.tsx`, `useConnectionFlow`) and regex escapes in `alertsData.ts`; plan targeted cleanups.
 - `App.tsx` and provider wiring remain dense—tracking remaining responsibilities in ADRs or docs will aid future refactors.
@@ -115,8 +98,6 @@ CMSNext remains a filesystem-first case management experience built with React 1
 **Strengths**
 - No data leaves the user’s machine; File System Access API interactions guard against unsupported browsers or permissions.
 - Input sanitization and CSV import hardening continue to strip risky payloads before persistence.
-- Feature flags and environment guards prevent accidental activation of non-filesystem storage paths.
-
 **Opportunities**
 - Capture the implicit threat model (single-user desktop) in docs to guide future contributors.
 - Periodically review CSP headers and offline guidance as new assets or diagnostics tooling lands.
@@ -124,11 +105,9 @@ CMSNext remains a filesystem-first case management experience built with React 1
 ## Key Strengths Snapshot
 - ✅ File-storage lifecycle is now state-machine driven with UI badges mirroring every state.
 - ✅ Financial item UI and hooks are decomposed, improving readability and making memoization effective.
-- ✅ DataManager’s alert workflows handle downgrades/upgrades safely, backed by regression coverage.
-- ✅ Expanded Vitest suite (142 specs) exercises integration flows for autosave and storage connection.
+- ✅ Dashboard tiles were pruned in the Oct 6 cleanup so the shell focuses on actionable metrics.
+- ✅ Activity report exports now log full note content with sanitization backed by regression tests.
 - ✅ Documentation and roadmap reflect completed phases, keeping contributors aligned.
-
-## Top Recommendations
 
 ### High Priority
 1. Split the remaining orchestration from `App.tsx` (alerts bootstrap, modal management) into dedicated providers/hooks to drop the file below 400 lines.
