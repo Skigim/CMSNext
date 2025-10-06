@@ -2,7 +2,7 @@ import { useEffect, useCallback, useMemo, memo, useRef, useState } from "react";
 import { Toaster } from "./components/ui/sonner";
 import { CaseDisplay, CaseCategory, FinancialItem, NewNoteData, type AlertWorkflowStatus } from "./types/case";
 import { toast } from "sonner";
-import { useFileStorage, useFileStorageLifecycleSelectors } from "./contexts/FileStorageContext";
+import { useFileStorage, useFileStorageLifecycleSelectors, useFileStorageDataLoadHandler } from "./contexts/FileStorageContext";
 import { useDataManagerSafe } from "./contexts/DataManagerContext";
 import {
   useCaseManagement,
@@ -173,13 +173,7 @@ const AppContent = memo(function AppContent() {
     }
   }, [loadCases, setCases, setHasLoadedData, setConfigFromFile]);
 
-  // Expose the function globally so App component can use it
-  useEffect(() => {
-    window.handleFileDataLoaded = handleFileDataLoaded;
-    return () => {
-      delete window.handleFileDataLoaded;
-    };
-  }, [handleFileDataLoaded]);
+  useFileStorageDataLoadHandler(handleFileDataLoaded);
   
   // Always use file storage - no more API switching
   // Remove old getDataAPI function - replaced by DataManager-only pattern

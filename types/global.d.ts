@@ -34,7 +34,6 @@ declare global {
 
   interface Window {
     showDirectoryPicker(): Promise<FileSystemDirectoryHandle>;
-    handleFileDataLoaded?: (fileData: unknown) => void;
   }
 
   var NightingaleFileService: unknown;

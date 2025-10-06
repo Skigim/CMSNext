@@ -66,11 +66,15 @@ export const McnCopyControl = memo(function McnCopyControl({
   );
 
   if (!mcn) {
+    const accessibleMissing = `${labelWithSuffix} ${missingLabel}`;
     return (
       <span className={wrapperClasses}>
         {showLabel ? (
-          <span className={cn("text-sm font-medium text-muted-foreground", labelClassName)}>{labelWithSuffix}</span>
+          <span aria-hidden className={cn("text-sm font-medium text-muted-foreground", labelClassName)}>
+            {labelWithSuffix}
+          </span>
         ) : null}
+        <span className="sr-only">{accessibleMissing}</span>
         <span
           className={cn(
             "font-mono text-sm text-muted-foreground/80",
@@ -84,11 +88,16 @@ export const McnCopyControl = memo(function McnCopyControl({
     );
   }
 
+  const accessibleLabel = `${labelWithSuffix} ${mcn}`;
+
   return (
     <span className={wrapperClasses}>
       {showLabel ? (
-        <span className={cn("text-sm font-medium text-muted-foreground", labelClassName)}>{labelWithSuffix}</span>
+        <span aria-hidden className={cn("text-sm font-medium text-muted-foreground", labelClassName)}>
+          {labelWithSuffix}
+        </span>
       ) : null}
+      <span className="sr-only">{accessibleLabel}</span>
       <button type="button" onClick={handleCopy} className={baseButtonClasses} aria-label={`Copy MCN ${mcn}`}>
         <span className={textClasses}>{mcn}</span>
         <Copy aria-hidden className={iconClasses} />

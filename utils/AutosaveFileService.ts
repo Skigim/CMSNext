@@ -1228,8 +1228,8 @@ class AutosaveFileService {
   /**
    * Set callback for when data is loaded from file
    */
-  setDataLoadCallback(callback: (data: any) => void): void {
-    this.dataLoadCallback = callback;
+  setDataLoadCallback(callback?: ((data: any) => void) | null): void {
+    this.dataLoadCallback = callback ?? null;
   }
 
   /**

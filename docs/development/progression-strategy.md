@@ -5,7 +5,7 @@ The September 24, 2025 code review (A- / 88) praised CMSNext’s filesystem-firs
 
 1. **Continue decomposing orchestration-heavy modules** – `App.tsx` still sits near 690 lines even after recent trims and continues to centralize multiple flows that should move into focused providers/hooks; the `FinancialItemCard` suite has been split into ~100-line leaf components and can serve as the pattern for the remaining breakouts.
 2. **Expand automated testing beyond core services** – complement the DataManager/Autosave coverage with React Testing Library suites and end-to-end flows.
-3. **Polish the file-storage experience** – retire the last global coordination hooks (e.g., `window.handleFileDataLoaded`) in favor of typed state, surface autosave status, and harden recovery messaging when permissions fail.
+3. **Polish the file-storage experience** – keep data orchestration inside the file-storage context (global bridges like `window.handleFileDataLoaded` were removed on Oct 6), surface autosave status, and harden recovery messaging when permissions fail.
 
 This plan realigns the roadmap around those themes while preserving the filesystem-only contract.
 

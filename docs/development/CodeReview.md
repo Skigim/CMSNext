@@ -30,8 +30,8 @@ CMSNext remains a filesystem-first case management experience built with React 1
 - Filesystem-first architecture continues to route every CRUD action through `DataManager`, `AutosaveFileService`, and the File System Access API.
 - The new `fileStorageMachine` reducer and selectors give providers and consumers a typed, event-driven lifecycle.
 **Opportunities**
-- `App.tsx` is still 587 lines and mixes navigation, modal orchestration, alert loading, and global exports—finish decomposing into the dedicated hooks already introduced elsewhere.
-- `window.handleFileDataLoaded` remains the bridge for autosave callbacks; replace it with context-level dispatch so no state relies on globals.
+- `App.tsx` is still 587 lines and mixes navigation, modal orchestration, alert loading, and shared flow glue—finish decomposing into the dedicated hooks already introduced elsewhere.
+- Data loads now dispatch through `FileStorageContext`; ensure new features use `useFileStorageDataLoadHandler` (or provider-level subscriptions) instead of introducing fresh globals.
 - Consider co-locating alert bootstrapping and autosave wiring in a storage-focused provider to slim the main app shell further.
 
 ### TypeScript & Validation (9/10)
@@ -91,7 +91,7 @@ CMSNext remains a filesystem-first case management experience built with React 1
 - Component decomposition and hook extraction reduce per-file cognitive load, especially in the financial and storage stacks.
 **Opportunities**
 - Lint still reports hook dependency warnings (`App.tsx`, `useConnectionFlow`) and regex escapes in `alertsData.ts`; plan targeted cleanups.
-- `App.tsx` and provider wiring remain dense—tracking remaining responsibilities in ADRs or docs will aid future refactors.
+- `App.tsx` and provider wiring remain dense—track remaining responsibilities in ADRs or docs to guide the next decomposition steps.
 - Consider adding automated formatting (Prettier or Biome) to lock in style while refactors continue.
 
 ### Security & Privacy (9/10)
@@ -111,7 +111,7 @@ CMSNext remains a filesystem-first case management experience built with React 1
 
 ### High Priority
 1. Split the remaining orchestration from `App.tsx` (alerts bootstrap, modal management) into dedicated providers/hooks to drop the file below 400 lines.
-2. Replace `window.handleFileDataLoaded` and similar globals with context-driven callbacks so autosave and imports never require global shims.
+2. Keep data-load flows local to the storage context—apply the new handler registry when wiring future autosave/import features to avoid regressing into global shims.
 3. Introduce bundle/render telemetry (e.g., Vite bundle analyzer, React Profiler checkpoints) to quantify performance work in Phase 4.
 
 ### Medium Priority
@@ -125,6 +125,6 @@ CMSNext remains a filesystem-first case management experience built with React 1
 3. Run an accessibility sweep (axe, manual keyboard tests) across the decomposed UI to confirm modal and badge flows remain compliant.
 
 ## Closing Summary
-CMSNext continues to deliver a polished, filesystem-first experience with increasingly disciplined architecture, state management, and coverage. The file-storage lifecycle, autosave visibility, and financial UI decomposition materially improved the codebase since the last review, while build/test health remains strong. Focus upcoming work on finishing the `App.tsx` breakup, removing residual window shims, and wiring performance telemetry—the last pieces standing between “great” and “exceptional”.
+CMSNext continues to deliver a polished, filesystem-first experience with increasingly disciplined architecture, state management, and coverage. The file-storage lifecycle, autosave visibility, and financial UI decomposition materially improved the codebase since the last review, while build/test health remains strong. Focus upcoming work on finishing the `App.tsx` breakup, leveraging the new storage-context handlers instead of globals, and wiring performance telemetry—the last pieces standing between “great” and “exceptional”.
 
 **Final Grade: A (92/100)** — Strong overall quality with clear, achievable steps to reach A+ territory.

@@ -47,20 +47,12 @@ export function AppProviders({ children }: AppProvidersProps) {
     return null; // DataManager handles its own file operations
   }, []);
 
-  const handleDataLoaded = useCallback((fileData: any) => {
-    // Use the global function set by AppContent
-    if (window.handleFileDataLoaded) {
-      window.handleFileDataLoaded(fileData);
-    }
-  }, []);
-
   return (
     <ErrorBoundary>
       <ThemeProvider>
         <FileSystemErrorBoundary>
           <FileStorageProvider 
             getDataFunction={getDataFunction}
-            onDataLoaded={handleDataLoaded}
           >
             <DataManagerProvider>
               <CategoryConfigProvider>

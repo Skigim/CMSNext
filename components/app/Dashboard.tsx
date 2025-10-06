@@ -6,7 +6,7 @@ import { FileText, Clock, Plus, ArrowRight, CheckCircle2, XCircle, Coins, Trendi
 import { CaseDisplay } from "../../types/case";
 import { useCategoryConfig } from "../../contexts/CategoryConfigContext";
 import { BellRing } from "lucide-react";
-import { filterOpenAlerts, type AlertsIndex } from "../../utils/alertsData";
+import { filterOpenAlerts, buildAlertStorageKey, type AlertsIndex } from "../../utils/alertsData";
 import { getAlertClientName, getAlertDisplayDescription, getAlertDueDateInfo, getAlertMcn } from "@/utils/alertDisplay";
 import { UnlinkedAlertsDialog } from "@/components/alerts/UnlinkedAlertsDialog";
 import { McnCopyControl } from "@/components/common/McnCopyControl";
@@ -272,16 +272,18 @@ export function Dashboard({ cases, alerts, activityLogState, onViewAllCases, onN
                 </div>
 
                 <div className="space-y-3">
-                  {latestAlerts.map(alert => {
+                  {latestAlerts.map((alert, index) => {
                     const description = getAlertDisplayDescription(alert);
                     const { label, hasDate } = getAlertDueDateInfo(alert);
                     const dueLabel = hasDate ? `Due ${label}` : label;
                     const clientName = getAlertClientName(alert) ?? "Client name unavailable";
                     const mcn = getAlertMcn(alert);
+                    const storageKey = buildAlertStorageKey(alert);
+                    const elementKey = storageKey ?? (alert.id ? `alert-${String(alert.id)}-${index}` : `alert-${index}`);
 
                     return (
                       <div
-                        key={alert.id}
+                        key={elementKey}
                         className="rounded-lg border border-border/60 bg-card/60 p-3"
                       >
                         <div className="space-y-1">

@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, useCallback, useReducer, ReactNode, useMemo } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback, useReducer, ReactNode, useMemo, useRef } from 'react';
 import AutosaveFileService from '@/utils/AutosaveFileService';
 import { setFileService } from '@/utils/fileServiceProvider';
 import {
@@ -36,6 +36,7 @@ interface FileStorageContextType {
   readNamedFile: (fileName: string) => Promise<any>;
   loadExistingData: () => Promise<any>;
   loadDataFromFile: (fileName: string) => Promise<any>;
+  registerDataLoadHandler: (handler: (data: unknown) => void) => () => void;
 }
 
 const FileStorageContext = createContext<FileStorageContextType | null>(null);
@@ -46,17 +47,16 @@ interface FileStorageProviderProps {
   children: ReactNode;
   enabled?: boolean;
   getDataFunction?: () => any;
-  onDataLoaded?: (data: any) => void;
 }
 
 export function FileStorageProvider({ 
   children, 
   enabled = true,
-  getDataFunction,
-  onDataLoaded 
+  getDataFunction
 }: FileStorageProviderProps) {
   const [service, setService] = useState<AutosaveFileService | null>(null);
   const [state, dispatch] = useReducer(reduceFileStorageState, initialMachineState);
+  const dataLoadHandlersRef = useRef(new Set<(data: unknown) => void>());
 
   // Initialize the service - only once per component mount
   useEffect(() => {
@@ -128,10 +128,35 @@ export function FileStorageProvider({
 
   // Handle data load callback setup separately
   useEffect(() => {
-    if (service && onDataLoaded) {
-      service.setDataLoadCallback(onDataLoaded);
+    if (!service) {
+      return;
     }
-  }, [service, onDataLoaded]);
+
+    const callback = (data: unknown) => {
+      dataLoadHandlersRef.current.forEach(handler => {
+        try {
+          handler(data);
+        } catch (error) {
+          logger.error('Data load handler threw an error', {
+            error: error instanceof Error ? error.message : String(error),
+          });
+        }
+      });
+    };
+
+    service.setDataLoadCallback(callback);
+
+    return () => {
+      service.setDataLoadCallback(undefined);
+    };
+  }, [service]);
+
+  const registerDataLoadHandler = useCallback((handler: (data: unknown) => void) => {
+    dataLoadHandlersRef.current.add(handler);
+    return () => {
+      dataLoadHandlersRef.current.delete(handler);
+    };
+  }, []);
 
   const connectToFolder = useCallback(async (): Promise<boolean> => {
     if (!service) return false;
@@ -297,6 +322,7 @@ export function FileStorageProvider({
     readNamedFile,
     loadExistingData,
     loadDataFromFile,
+    registerDataLoadHandler,
   };
 
   return (
@@ -323,6 +349,23 @@ export function useFileStorageDataChange() {
       service.notifyDataChange();
     }
   };
+}
+
+export function useFileStorageDataLoadHandler(handler: (data: unknown) => void) {
+  const { registerDataLoadHandler } = useFileStorage();
+  const handlerRef = useRef(handler);
+
+  useEffect(() => {
+    handlerRef.current = handler;
+  }, [handler]);
+
+  useEffect(() => {
+    const unsubscribe = registerDataLoadHandler(data => {
+      handlerRef.current(data);
+    });
+
+    return unsubscribe;
+  }, [registerDataLoadHandler]);
 }
 
 export interface FileStorageLifecycleSelectors {

@@ -71,7 +71,7 @@ export const CaseStatusBadge = memo(function CaseStatusBadge({ status, onStatusC
           <button
             type="button"
             className="inline-flex items-center gap-1.5"
-            aria-label="Update case status"
+            aria-label="Change case status"
             aria-haspopup="listbox"
           >
             <span>{effectiveStatus}</span>
