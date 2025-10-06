@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import { Moon, Sun, Palette, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
@@ -5,6 +6,20 @@ import { useTheme } from '@/contexts/ThemeContext';
 
 export function ThemeToggle() {
   const { theme, toggleTheme, setTheme, themeOptions } = useTheme();
+
+  const activeTheme = useMemo(
+    () => themeOptions.find((option) => option.id === theme),
+    [theme, themeOptions],
+  );
+
+  const nextTheme = useMemo(() => {
+    if (!themeOptions.length) {
+      return undefined;
+    }
+    const currentIndex = themeOptions.findIndex((option) => option.id === theme);
+    const nextIndex = currentIndex >= 0 ? (currentIndex + 1) % themeOptions.length : 0;
+    return themeOptions[nextIndex];
+  }, [theme, themeOptions]);
 
   const getThemeIcon = (themeId: string) => {
     switch (themeId) {
@@ -25,6 +40,7 @@ export function ThemeToggle() {
           variant="ghost"
           size="icon"
           className="h-9 w-9"
+          aria-label={activeTheme ? `Current theme: ${activeTheme.name}` : 'Toggle theme menu'}
         >
           {getThemeIcon(theme)}
           <span className="sr-only">Open theme menu</span>
@@ -50,19 +66,20 @@ export function ThemeToggle() {
           </DropdownMenuItem>
         ))}
         <DropdownMenuSeparator />
-        <DropdownMenuItem
-          onClick={toggleTheme}
-          className="flex items-center gap-2"
-        >
-          <div className="flex h-4 w-4 items-center justify-center">
-            {theme === 'light' ? (
-              <Moon className="h-3 w-3" />
-            ) : (
-              <Sun className="h-3 w-3" />
-            )}
-          </div>
-          <span className="text-sm">Quick toggle</span>
-        </DropdownMenuItem>
+        {nextTheme && (
+          <DropdownMenuItem
+            onClick={toggleTheme}
+            className="flex items-center justify-between gap-2"
+          >
+            <div className="flex items-center gap-2">
+              <div className="flex h-5 w-5 items-center justify-center rounded-md border border-border bg-muted/40">
+                {getThemeIcon(nextTheme.id)}
+              </div>
+              <span className="text-sm font-medium">Quick toggle</span>
+            </div>
+            <span className="text-xs text-muted-foreground">Next: {nextTheme.name}</span>
+          </DropdownMenuItem>
+        )}
       </DropdownMenuContent>
     </DropdownMenu>
   );

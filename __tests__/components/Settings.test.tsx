@@ -27,6 +27,9 @@ vi.mock("@/contexts/FileStorageContext", () => ({
 vi.mock("@/contexts/ThemeContext", () => ({
   useTheme: () => ({
     theme: "light",
+    tone: "light",
+    isDark: false,
+    toggleTheme: vi.fn(),
     setTheme: vi.fn(),
     themeOptions: [
       { id: "light", name: "Light", description: "Light theme" },

@@ -26,12 +26,16 @@ type StatusShape = {
 };
 
 vi.mock("@/utils/AutosaveFileService", () => {
-  let latestInstance: MockAutosaveFileService | null = null;
+  type AutosaveTestDriver = {
+    token: symbol;
+    emit: (update: Partial<StatusShape>) => void;
+  };
 
   class MockAutosaveFileService {
     private status: StatusShape;
     private statusCallback?: (status: StatusShape) => void;
     private isRunning = false;
+    private driverToken = Symbol("autosave-driver");
 
     constructor(config: { statusCallback?: (status: StatusShape) => void } = {}) {
       this.statusCallback = config.statusCallback;
@@ -44,10 +48,13 @@ vi.mock("@/utils/AutosaveFileService", () => {
         consecutiveFailures: 0,
         pendingWrites: 0,
       };
-      latestInstance = this;
-      (globalThis as any).__autosaveTestDriver = (update: Partial<StatusShape>) => {
-        latestInstance?.emit(update);
+      const driver: AutosaveTestDriver = {
+        token: this.driverToken,
+        emit: (update: Partial<StatusShape>) => {
+          this.emit(update);
+        },
       };
+      (globalThis as any).__autosaveTestDriver = driver;
       this.emit({});
     }
 
@@ -156,9 +163,9 @@ vi.mock("@/utils/AutosaveFileService", () => {
     }
 
     destroy() {
-      if ((globalThis as any).__autosaveTestDriver && latestInstance === this) {
+      const driver = (globalThis as any).__autosaveTestDriver as AutosaveTestDriver | undefined;
+      if (driver?.token === this.driverToken) {
         delete (globalThis as any).__autosaveTestDriver;
-        latestInstance = null;
       }
     }
   }
@@ -174,12 +181,12 @@ function AutosaveStatusHarness() {
 describe("Autosave status indicator", () => {
   function emitStatus(update: Partial<StatusShape>) {
     const driver = (globalThis as any).__autosaveTestDriver as
-      | ((update: Partial<StatusShape>) => void)
+      | { emit: (update: Partial<StatusShape>) => void }
       | undefined;
     if (!driver) {
       throw new Error("Autosave test driver is not available");
     }
-    driver(update);
+    driver.emit(update);
   }
 
   beforeEach(() => {

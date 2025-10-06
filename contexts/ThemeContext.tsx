@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 
 type Theme = 'light' | 'dark' | 'soft-dark' | 'warm' | 'blue' | 'paper';
+type ThemeTone = 'light' | 'dark';
 
 interface ThemeOption {
   id: Theme;
@@ -19,6 +20,8 @@ export const themeOptions: ThemeOption[] = [
 
 interface ThemeContextType {
   theme: Theme;
+  tone: ThemeTone;
+  isDark: boolean;
   toggleTheme: () => void;
   setTheme: (theme: Theme) => void;
   themeOptions: ThemeOption[];
@@ -44,9 +47,10 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   });
 
   const toggleTheme = () => {
-    // Cycle through the most common themes: light -> soft-dark -> light
-    const newTheme = theme === 'light' ? 'soft-dark' : 'light';
-    setTheme(newTheme);
+    const currentIndex = themeOptions.findIndex(option => option.id === theme);
+    const nextIndex = currentIndex >= 0 ? (currentIndex + 1) % themeOptions.length : 0;
+    const nextTheme = themeOptions[nextIndex]?.id ?? 'light';
+    setTheme(nextTheme);
   };
 
   const handleSetTheme = (newTheme: Theme) => {
@@ -68,8 +72,20 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     localStorage.setItem('theme', theme);
   }, [theme]);
 
+  const isDarkTheme = theme === 'dark' || theme === 'soft-dark';
+  const tone: ThemeTone = isDarkTheme ? 'dark' : 'light';
+
   return (
-    <ThemeContext.Provider value={{ theme, toggleTheme, setTheme: handleSetTheme, themeOptions }}>
+    <ThemeContext.Provider
+      value={{
+        theme,
+        tone,
+        isDark: isDarkTheme,
+        toggleTheme,
+        setTheme: handleSetTheme,
+        themeOptions,
+      }}
+    >
       {children}
     </ThemeContext.Provider>
   );
