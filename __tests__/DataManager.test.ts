@@ -40,7 +40,6 @@ const buildAlert = (overrides: Partial<AlertWithMatch> = {}): AlertWithMatch => 
   reportId: 'alert-1',
   alertCode: 'AL-101',
   alertType: 'Recertification Due',
-  severity: 'High',
   alertDate: '2025-09-20T00:00:00.000Z',
   createdAt: '2025-09-20T00:00:00.000Z',
   updatedAt: '2025-09-20T00:00:00.000Z',

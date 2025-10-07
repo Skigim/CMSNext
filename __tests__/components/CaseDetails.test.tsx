@@ -119,7 +119,6 @@ describe("CaseDetails", () => {
       reportId: "alert-1",
       alertCode: "AL-1",
       alertType: "Notice",
-      severity: "High",
       alertDate: timestamp,
       createdAt: timestamp,
       updatedAt: timestamp,

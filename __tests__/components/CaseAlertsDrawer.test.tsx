@@ -51,7 +51,6 @@ const buildAlert = (overrides: Partial<AlertWithMatch> = {}): AlertWithMatch => 
   reportId: overrides.reportId ?? "alert-1",
   alertCode: overrides.alertCode ?? "CODE",
   alertType: overrides.alertType ?? "Type",
-  severity: overrides.severity ?? "High",
   alertDate: overrides.alertDate ?? "2024-03-01T00:00:00.000Z",
   createdAt: overrides.createdAt ?? "2024-03-01T00:00:00.000Z",
   updatedAt: overrides.updatedAt ?? "2024-03-01T00:00:00.000Z",
@@ -83,7 +82,7 @@ describe("CaseAlertsDrawer", () => {
   it("renders open and resolved alerts with actions", async () => {
     const onResolveAlert = vi.fn();
 
-    const openAlert = buildAlert({ id: "open-1", status: "new", severity: "Critical" });
+  const openAlert = buildAlert({ id: "open-1", status: "new" });
     const resolvedAlert = buildAlert({ id: "resolved-1", status: "resolved", resolvedAt: "2024-04-01T00:00:00.000Z" });
 
     render(
@@ -145,7 +144,7 @@ describe("CaseAlertsDrawer", () => {
       />,
     );
 
-    const trigger = screen.getByRole("button", { name: /update case status/i });
+  const trigger = screen.getByRole("button", { name: /change case status/i });
     await user.click(trigger);
 
     const approvedOption = await screen.findByRole("menuitemradio", { name: "Approved" });

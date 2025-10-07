@@ -24,7 +24,6 @@ function createAlert(overrides: Partial<AlertWithMatch> = {}): AlertWithMatch {
     reportId: overrides.reportId ?? "report-1",
     alertCode: overrides.alertCode ?? "AL-1",
     alertType: overrides.alertType ?? "Notice",
-    severity: overrides.severity ?? "High",
     alertDate: overrides.alertDate ?? timestamp,
     createdAt: overrides.createdAt ?? timestamp,
     updatedAt: overrides.updatedAt ?? timestamp,

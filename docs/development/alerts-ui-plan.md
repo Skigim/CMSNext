@@ -22,13 +22,13 @@ _Last updated: 2025-09-29_
 
 | Surface | Purpose | Key Elements |
 |---------|---------|--------------|
-| **Dashboard Tile** | High-level status + quick entry | "Alerts" tile showing counts by severity, quick link to import, optional shortcut to unresolved filter |
-| **Reminder Tray** | Ambient, persistent nudge | Stack of top 3 alerts (highest severity / oldest), dismissible quick actions |
-| **Case List (table + grid)** | Fast triage across many cases | Alerts badge column (sortable), severity glyphs, tooltip preview, row-level actions |
-| **Case Card/Grid tiles** | Visual parity with table view | Corner badge showing count/severity colour band |
+| **Dashboard Tile** | High-level status + quick entry | "Alerts" tile showing open/unlinked counts, quick link to import, optional shortcut to unresolved filter |
+| **Reminder Tray** | Ambient, persistent nudge | Stack of top 3 alerts (oldest first), dismissible quick actions |
+| **Case List (table + grid)** | Fast triage across many cases | Alerts badge column (sortable), tooltip preview, row-level actions |
+| **Case Card/Grid tiles** | Visual parity with table view | Corner badge showing open alert count |
 | **Case Details header** | Immediate context when viewing a case | Inline alerts summary pill + "View alerts" button launching drawer |
 | **Alerts Drawer** | Deep work surface | Tabs for Open / Resolved, detail cards, "Resolve via note" CTA, history snippet |
-| **Resolve Modal** | Quick confirm + note creation | Prefilled templated note, severity toggle, optional attachments placeholder |
+| **Resolve Modal** | Quick confirm + note creation | Prefilled templated note, optional attachments placeholder |
 
 ### Layout Inspirations From the Reference Screenshot
 
@@ -40,7 +40,7 @@ _Last updated: 2025-09-29_
 
 | Component | Type | Responsibilities |
 |-----------|------|------------------|
-| `AlertBadge` | Presentational | Displays count + highest severity, shared between list/table/card headers |
+| `AlertBadge` | Presentational | Displays count of open alerts, shared between list/table/card headers |
 | `AlertsColumnHeader` | Presentational | Sort toggle + tooltip description for the table view |
 | `AlertsDrawer` | Stateful | Fetches alerts for selected case, handles resolve / reopen actions, shows audit timeline |
 | `AlertCard` | Presentational | Shows alert metadata, quick actions (resolve, view source note) |
@@ -62,8 +62,8 @@ _Last updated: 2025-09-29_
 │ Dana Wells    | MCN-5540 | Active   | ●○○ (1)   | 3d ago      | View • Edit │
 └───────────────┴──────────┴──────────┴───────────┴─────────────┴─────────────┘
 ```
-- `●` = red (critical), `▲`/`◆` icons optional for unique alert types.
-- Column header toggles sort by severity count then date.
+- `●` indicates the presence of open alerts; alternate glyphs can highlight special alert types.
+- Column header toggles sort by open alert count then date.
 - Hover or focus reveals tooltip summarizing alert types.
 
 ### 5.2 Alerts Drawer (inline with case details)
@@ -73,12 +73,12 @@ _Last updated: 2025-09-29_
 │ Case: Alice Carter        [Import Alerts] │
 │ Alerts (Open 2 · Resolved 5)              │
 │ ┌───────────────────────────────────────┐ │
-│ │ High | Medicaid Recert due 09/30      │ │
+│ │ Medicaid Recert due 09/30            │ │
 │ │      "Schedule interview"             │ │
 │ │      [Resolve via Note] [Reassign]    │ │
 │ └───────────────────────────────────────┘ │
 │ ┌───────────────────────────────────────┐ │
-│ │ Medium | Income mismatch (DSHS feed)  │ │
+│ │ Income mismatch (DSHS feed)           │ │
 │ │      "Verify with employer"          │ │
 │ │      [Resolve via Note] [Snooze]      │ │
 │ └───────────────────────────────────────┘ │
@@ -93,9 +93,9 @@ _Last updated: 2025-09-29_
 ```
 ┌───────────────────────────────┐
 │ 🔔 Alerts                     │
-│   Critical: 3 (▲2)           │
-│   Moderate: 8 (▲1)           │
-│   Low: 12 (▼4)               │
+│   Open: 11 (▲3)              │
+│   Unlinked: 4 (▲1)           │
+│   Resolved (7d): 6 (▼2)      │
 │ [Open Alerts View] [Import]  │
 └───────────────────────────────┘
 ```
@@ -109,7 +109,7 @@ _Last updated: 2025-09-29_
 - Provide "Resolve via note" button that routes to existing note modal with prefilled data.
 
 ### Phase B – Alerts Drawer Enhancements
-- Introduce filters (severity, type).
+- Introduce filters (status, type).
 - Add quick actions (resolve, snooze, jump to note).
 - Persist drawer open state in `useCaseListPreferences`.
 
@@ -140,13 +140,13 @@ _Last updated: 2025-09-29_
 ## 9. Risks & Open Questions
 
 - **Matching Confidence**: Should unresolved matches (CSV row with no case) be displayed in UI? (Proposed: yes, within import modal as "unmatched" section.)
-- **Severity Taxonomy**: Need confirmed mapping (Critical / High / Medium / Low) and color tokens.
+- **Alert Categorization**: Confirm if future releases need qualitative tags beyond status.
 - **Snooze Workflow**: Not part of MVP but should have placeholder hook.
-- **Accessibility**: Ensure badges and drawer controls are keyboard-navigable and announce severity.
+- **Accessibility**: Ensure badges and drawer controls are keyboard-navigable and announce alert context.
 
 ## 10. Next Steps
 
-1. Finalize alert data schema + severity palette.
+1. Finalize alert data schema (status-only, no severity).
 2. Kick off Phase A tasks (schema + badge + table integration).
 3. Prepare CSV import UI wire (separate doc once data parser is ported).
 

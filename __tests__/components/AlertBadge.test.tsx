@@ -16,9 +16,8 @@ const buildAlert = (overrides: Partial<AlertWithMatch> = {}): AlertWithMatch => 
   return {
     id: overrides.id ?? `alert-${Math.random().toString(36).slice(2)}`,
     reportId: overrides.reportId ?? "report-1",
-    alertCode: overrides.alertCode ?? "AL-1",
-    alertType: overrides.alertType ?? "Notice",
-    severity: overrides.severity ?? "High",
+  alertCode: overrides.alertCode ?? "AL-1",
+  alertType: overrides.alertType ?? "Notice",
     alertDate: overrides.alertDate ?? timestamp,
     createdAt: overrides.createdAt ?? timestamp,
     updatedAt: overrides.updatedAt ?? timestamp,
