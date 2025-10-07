@@ -680,20 +680,25 @@ const AppContent = memo(function AppContent() {
   });
 
   const casesCount = cases.length;
-  const handleAppRenderProfile = useCallback(
-    (
-      id: string,
-      phase: "mount" | "update",
-      actualDuration: number,
-      baseDuration: number,
-      startTime: number,
-      commitTime: number,
-      interactions: Set<unknown>,
-      lanes?: number,
-    ) => {
-      recordRenderProfile({
+  const handleAppRenderProfile = useCallback<ProfilerProps["onRender"]>(
+    (...args) => {
+      const [
         id,
         phase,
+        actualDuration,
+        baseDuration,
+        startTime,
+        commitTime,
+      ] = args;
+
+      const extras = args as unknown[];
+      const interactions = (extras[6] as Set<unknown> | undefined) ?? new Set<unknown>();
+      const lanes = extras[7] as number | undefined;
+      const normalizedPhase: "mount" | "update" = phase === "mount" ? "mount" : "update";
+
+      recordRenderProfile({
+        id,
+        phase: normalizedPhase,
         actualDuration,
         baseDuration,
         startTime,
@@ -708,7 +713,7 @@ const AppContent = memo(function AppContent() {
       });
     },
     [casesCount, currentView, navigationLock.locked],
-  ) as NonNullable<ProfilerProps["onRender"]>;
+  );
 
   return (
     <Profiler id="AppContent" onRender={handleAppRenderProfile}>

@@ -29,9 +29,20 @@ interface ActiveMark {
   detail?: MeasurementDetail;
 }
 
+interface PerformanceMetaEnv {
+  MODE?: string;
+  mode?: string;
+  DEV?: boolean;
+  dev?: boolean;
+  [key: string]: unknown;
+}
+
 const performanceLogger = createLogger("Performance");
 
-const env = typeof import.meta !== "undefined" ? (import.meta as any).env ?? {} : {};
+const env: PerformanceMetaEnv =
+  typeof import.meta !== "undefined" && typeof import.meta.env === "object"
+    ? (import.meta.env as PerformanceMetaEnv)
+    : {};
 const mode = env?.MODE ?? env?.mode;
 const dev = env?.DEV ?? env?.dev;
 const nodeEnv = typeof process !== "undefined" ? process.env.NODE_ENV : undefined;
@@ -130,7 +141,14 @@ export function endMeasurement(name: string, detail?: MeasurementDetail) {
     }
   }
 
-  const mergedDetail = startDetail || detail ? { ...startDetail, ...detail } : detail;
+  let mergedDetail: MeasurementDetail | undefined;
+  if (startDetail && detail) {
+    mergedDetail = { ...startDetail, ...detail };
+  } else if (startDetail) {
+    mergedDetail = { ...startDetail };
+  } else if (detail) {
+    mergedDetail = { ...detail };
+  }
   logMeasurement({
     name,
     duration,
