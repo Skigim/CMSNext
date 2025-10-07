@@ -124,6 +124,7 @@ export const CaseWorkspace = memo(function CaseWorkspace({
         handleBackToList={viewHandlers.handleBackToList}
         handleSaveCase={viewHandlers.handleSaveCase}
         handleCancelForm={viewHandlers.handleCancelForm}
+  handleNavigateToReports={() => navigation.onNavigate('reports')}
         handleDeleteCase={viewHandlers.handleDeleteCase}
         handleDataPurged={viewHandlers.handleDataPurged}
         handleAddItem={financialFlow.handleAddItem}

@@ -57,3 +57,4 @@ This plan realigns the roadmap around those themes while preserving the filesyst
 3. Curate the near-term feature backlog and select the top candidate(s) for implementation.
 4. Create lightweight specs and acceptance criteria for those features, including UX references or mockups.
 5. Align supporting tasks (telemetry hooks, docs stubs, test scaffolding) with the chosen feature slate.
+6. Refactor UI surfaces to rely on pure shadcn components, replacing bespoke hybrids with library-standard primitives.

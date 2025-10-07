@@ -40,6 +40,8 @@ export function MainLayout({
         return 'Case Details';
       case 'form':
         return 'Case Form';
+      case 'reports':
+        return 'Reports';
       case 'settings':
         return 'Settings';
       default:

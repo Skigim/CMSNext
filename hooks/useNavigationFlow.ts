@@ -328,6 +328,11 @@ export function useNavigationFlow({
           setSidebarOpen(false);
           newCase();
           return;
+        case "reports":
+          setSidebarOpen(true);
+          setCurrentView("reports");
+          setSelectedCaseId(null);
+          return;
         case "settings":
           setSidebarOpen(true);
           setCurrentView("settings");

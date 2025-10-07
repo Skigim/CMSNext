@@ -5,6 +5,7 @@ import type { CaseActivityLogState } from "../../types/activityLog";
 
 // Direct imports for high-turnover components - no lazy loading for snappiness
 import Dashboard from "../app/Dashboard";
+import Reporting from "../reporting/Reporting";
 import CaseList from "../case/CaseList";
 import CaseDetails from "../case/CaseDetails";
 import CaseForm from "../case/CaseForm";
@@ -30,6 +31,7 @@ interface ViewRendererProps {
   handleBackToList: () => void;
   handleSaveCase: (caseData: { person: NewPersonData; caseRecord: NewCaseRecordData }) => Promise<void>;
   handleCancelForm: () => void;
+  handleNavigateToReports: () => void;
   
   // Component handlers
   handleDeleteCase: (caseId: string) => Promise<void>;
@@ -83,6 +85,7 @@ export function ViewRenderer({
   handleBackToList,
   handleSaveCase,
   handleCancelForm,
+  handleNavigateToReports,
   
   // Component handlers
   handleDeleteCase,
@@ -110,6 +113,15 @@ export function ViewRenderer({
           activityLogState={activityLogState}
           onViewAllCases={handleBackToList}
           onNewCase={handleNewCase}
+          onNavigateToReports={handleNavigateToReports}
+        />
+      );
+
+    case 'reports':
+      return (
+        <Reporting
+          alerts={alerts}
+          onViewCase={handleViewCase}
         />
       );
 
