@@ -12,7 +12,7 @@ CMSNext remains a filesystem-first case management experience built with React 1
 |-----------------|:-----:|---------------------------------------------------------------------------------------------------------|
 | Architecture    | 8/10  | File-only stack reinforced by the new storage lifecycle reducer; `App.tsx` still carries modal + nav glue |
 | Type Safety     | 9/10  | Strict TS across contexts, exhaustive domain models, shared input sanitizers and Zod helpers            |
-| UI & Components | 9/10  | Financial item UI split into focused modules, autosave badge + theming consistent with shadcn/ui        |
+| UI & Components | 9/10  | Alerts reporting revamped with shadcn primitives and fuzzy search; layout shell stays cohesive with autosave theming |
 | State & Data    | 9/10  | DataManager + lifecycle selectors keep filesystem sync predictable; autosave status exposed everywhere  |
 | Error Handling  | 9/10  | Centralized file-storage error reporter delivers consistent toasts and structured logs                  |
 | Performance     | 7/10  | Memoization & virtualization help, but `App.tsx` re-renders remain heavy and bundle telemetry is absent   |
@@ -44,12 +44,13 @@ CMSNext remains a filesystem-first case management experience built with React 1
 
 ### UI & Component Layer (9/10)
 **Strengths**
-- The financial item stack is now composed of `FinancialItemCard` plus dedicated header/meta/action/form components, keeping each under ~150 lines.
-- Autosave status is communicated via `AutosaveStatusBadge`, aligning copy with documentation and storage lifecycle states.
+- The alerts reporting tab now ships with a shadcn-native table, fuzzy search, and matched-open filtering, giving analysts a fast, focused workflow out of the box.
+- Sidebar/navigation shell, dashboard cards, and autosave badge share the same design tokens; typography, spacing, and interactive states feel cohesive across surfaces.
+- Financial and note experiences remain modular—cards, drawers, and modals stay under ~150 lines, keeping refactors approachable.
 **Opportunities**
-- `CaseForm` and `CaseDetails` still shoulder broad responsibilities; splitting subforms or adopting dedicated hooks would reduce re-render churn.
-- Some diagnostic and settings panels duplicate layout patterns that could migrate into shared presentation components for consistency.
-- Finish the dashboard consolidation by recombining the remaining metrics with the Activity Report export to keep the newly trimmed layout cohesive.
+- `CaseForm` and `CaseDetails` still own large swaths of bespoke markup; extracting sub-sections into shared shadcn building blocks would reduce re-render churn and code drift.
+- Several legacy views (diagnostics, settings, onboarding) continue to mix custom flex layouts with shadcn components—standardize them to the new design system for consistency and theming.
+- Dashboard "Latest Alerts" panel now aligns with matched-open logic but still contains placeholder metric tiles; finish the consolidation pass so every stat card conveys actionable data.
 
 ### State Management & Data Flow (9/10)
 **Strengths**

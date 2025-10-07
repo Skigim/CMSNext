@@ -169,6 +169,7 @@ describe("Dashboard", () => {
         activityLogState={mockActivityLogState}
         onNewCase={vi.fn()}
         onViewAllCases={vi.fn()}
+        onNavigateToReports={vi.fn()}
       />,
     );
 
@@ -210,6 +211,7 @@ describe("Dashboard", () => {
         activityLogState={mockActivityLogState}
         onNewCase={vi.fn()}
         onViewAllCases={vi.fn()}
+        onNavigateToReports={vi.fn()}
       />,
     );
 
