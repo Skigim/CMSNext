@@ -1,0 +1,37 @@
+{
+  "generatedAt": "2025-10-07T20:49:58.181Z",
+  "navigationSample": {
+    "waitDurationMs": 18.344
+  },
+  "measurements": [
+    {
+      "name": "navigation:backToDashboard",
+      "duration": 19.009941999999967,
+      "startTime": 397.535073,
+      "endTime": 416.136992,
+      "detail": {
+        "scenario": "baseline",
+        "action": "backToDashboard",
+        "result": "dashboard"
+      }
+    }
+  ],
+  "renderProfiles": [
+    {
+      "id": "AppContent",
+      "phase": "mount",
+      "actualDuration": 22.344,
+      "baseDuration": 16.344,
+      "startTime": 397.56554,
+      "commitTime": 415.909577,
+      "interactionCount": 0,
+      "meta": {
+        "currentView": "dashboard",
+        "casesCount": 0,
+        "navigationLocked": false,
+        "lanes": 0,
+        "scenario": "baseline"
+      }
+    }
+  ]
+}

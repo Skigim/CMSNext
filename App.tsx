@@ -1,4 +1,5 @@
-import { useEffect, useCallback, useMemo, memo, useRef, useState } from "react";
+import { useEffect, useCallback, useMemo, memo, useRef, useState, Profiler } from "react";
+import type { ProfilerProps } from "react";
 import { Toaster } from "./components/ui/sonner";
 import { CaseDisplay, CaseCategory, FinancialItem, NewNoteData, type AlertWorkflowStatus } from "./types/case";
 import { toast } from "sonner";
@@ -28,6 +29,7 @@ import {
 } from "./utils/alertsData";
 import { ENABLE_SAMPLE_ALERTS } from "./utils/featureFlags";
 import { createLogger } from "./utils/logger";
+import { recordRenderProfile } from "./utils/performanceTracker";
 
 const logger = createLogger("App");
 
@@ -91,7 +93,7 @@ const AppContent = memo(function AppContent() {
     deleteCaseWithNavigation: handleDeleteCase,
     backToList: handleBackToList,
     setSidebarOpen,
-    navigationLock: _navigationLock,
+    navigationLock,
   } = navigationFlow;
 
   const {
@@ -677,7 +679,42 @@ const AppContent = memo(function AppContent() {
     workspaceState,
   });
 
-  return <AppContentView {...appContentViewProps} />;
+  const casesCount = cases.length;
+  const handleAppRenderProfile = useCallback(
+    (
+      id: string,
+      phase: "mount" | "update",
+      actualDuration: number,
+      baseDuration: number,
+      startTime: number,
+      commitTime: number,
+      interactions: Set<unknown>,
+      lanes?: number,
+    ) => {
+      recordRenderProfile({
+        id,
+        phase,
+        actualDuration,
+        baseDuration,
+        startTime,
+        commitTime,
+        interactionCount: interactions.size,
+        meta: {
+          currentView,
+          casesCount,
+          navigationLocked: navigationLock.locked,
+          lanes,
+        },
+      });
+    },
+    [casesCount, currentView, navigationLock.locked],
+  ) as NonNullable<ProfilerProps["onRender"]>;
+
+  return (
+    <Profiler id="AppContent" onRender={handleAppRenderProfile}>
+      <AppContentView {...appContentViewProps} />
+    </Profiler>
+  );
 });
 
 export default function App() {

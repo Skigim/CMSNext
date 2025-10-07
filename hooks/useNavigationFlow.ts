@@ -3,6 +3,7 @@ import { toast } from "sonner";
 import { CaseDisplay, NewCaseRecordData, NewPersonData } from "../types/case";
 import { AppView } from "../types/view";
 import type { FileStorageLifecycleSelectors } from "../contexts/FileStorageContext";
+import { startMeasurement, endMeasurement } from "../utils/performanceTracker";
 
 const RESTRICTED_VIEWS: readonly AppView[] = ["list", "details", "form"];
 
@@ -135,10 +136,13 @@ export function useNavigationFlow({
   }, [navigationLock]);
 
   const guardCaseInteraction = useCallback((): boolean => {
+    startMeasurement("navigation:guard", { locked: navigationLock.locked, reason: navigationLock.reason });
     if (!navigationLock.locked) {
+      endMeasurement("navigation:guard", { locked: false });
       return false;
     }
     showNavigationLockToast();
+    endMeasurement("navigation:guard", { locked: true });
     return true;
   }, [navigationLock, showNavigationLockToast]);
 
@@ -183,31 +187,41 @@ export function useNavigationFlow({
   }, [currentView, navigationLock.locked]);
 
   const backToList = useCallback(() => {
+    startMeasurement("navigation:backToList");
     setCurrentView("list");
     setSelectedCaseId(null);
+    endMeasurement("navigation:backToList", { result: "list" });
   }, []);
 
   const backToDashboard = useCallback(() => {
+    startMeasurement("navigation:backToDashboard");
     setCurrentView("dashboard");
     setSelectedCaseId(null);
+    endMeasurement("navigation:backToDashboard", { result: "dashboard" });
   }, []);
 
   const viewCase = useCallback((caseId: string) => {
+    startMeasurement("navigation:viewCase", { caseId, locked: navigationLock.locked });
     if (guardCaseInteraction()) {
+      endMeasurement("navigation:viewCase", { caseId, blocked: true });
       return;
     }
     setSelectedCaseId(caseId);
     setCurrentView("details");
     setSidebarOpen(false);
-  }, [guardCaseInteraction]);
+    endMeasurement("navigation:viewCase", { caseId, blocked: false });
+  }, [guardCaseInteraction, navigationLock.locked]);
 
   const editCase = useCallback(
     (caseId: string) => {
+      startMeasurement("navigation:editCase", { caseId, locked: navigationLock.locked });
       if (guardCaseInteraction()) {
+        endMeasurement("navigation:editCase", { caseId, blocked: true });
         return;
       }
       const caseToEdit = cases.find((c) => c.id === caseId);
       if (!caseToEdit) {
+        endMeasurement("navigation:editCase", { caseId, blocked: false, result: "missing" });
         return;
       }
 
@@ -218,12 +232,15 @@ export function useNavigationFlow({
       });
       setCurrentView("form");
       setSidebarOpen(false);
+      endMeasurement("navigation:editCase", { caseId, blocked: false, result: "form" });
     },
-    [cases, currentView, guardCaseInteraction]
+    [cases, currentView, guardCaseInteraction, navigationLock.locked]
   );
 
   const newCase = useCallback(() => {
+    startMeasurement("navigation:newCase", { locked: navigationLock.locked });
     if (guardCaseInteraction()) {
+      endMeasurement("navigation:newCase", { blocked: true });
       return;
     }
     setEditingCase(null);
@@ -233,11 +250,14 @@ export function useNavigationFlow({
     });
     setCurrentView("form");
     setSidebarOpen(false);
-  }, [currentView, guardCaseInteraction]);
+    endMeasurement("navigation:newCase", { blocked: false, result: "form" });
+  }, [currentView, guardCaseInteraction, navigationLock.locked]);
 
   const saveCaseWithNavigation = useCallback(
     async (caseData: { person: NewPersonData; caseRecord: NewCaseRecordData }) => {
+      startMeasurement("navigation:saveCase", { editing: Boolean(editingCase) });
       if (guardCaseInteraction()) {
+        endMeasurement("navigation:saveCase", { blocked: true });
         throw new Error(navigationLock.reason);
       }
       try {
@@ -256,8 +276,13 @@ export function useNavigationFlow({
 
         setEditingCase(null);
         setFormState({ previousView: "list" });
+        endMeasurement("navigation:saveCase", {
+          blocked: false,
+          result: editingCase ? "update" : "create",
+        });
       } catch (err) {
         console.error("Failed to save case in navigation flow wrapper:", err);
+        endMeasurement("navigation:saveCase", { blocked: false, result: "error" });
         throw err;
       }
     },
@@ -265,6 +290,7 @@ export function useNavigationFlow({
   );
 
   const cancelForm = useCallback(() => {
+    startMeasurement("navigation:cancelForm", { previousView: formState.previousView });
     if (formState.previousView === "details" && formState.returnToCaseId) {
       setSelectedCaseId(formState.returnToCaseId);
       setCurrentView("details");
@@ -274,11 +300,14 @@ export function useNavigationFlow({
 
     setEditingCase(null);
     setFormState({ previousView: "list" });
+    endMeasurement("navigation:cancelForm", { result: formState.previousView });
   }, [formState]);
 
   const deleteCaseWithNavigation = useCallback(
     async (caseId: string) => {
+      startMeasurement("navigation:deleteCase", { caseId });
       if (guardCaseInteraction()) {
+        endMeasurement("navigation:deleteCase", { caseId, blocked: true });
         throw new Error(navigationLock.reason);
       }
       try {
@@ -288,8 +317,10 @@ export function useNavigationFlow({
           setCurrentView("list");
           setSelectedCaseId(null);
         }
+        endMeasurement("navigation:deleteCase", { caseId, blocked: false, result: "deleted" });
       } catch (err) {
         console.error("Failed to delete case in navigation flow wrapper:", err);
+        endMeasurement("navigation:deleteCase", { caseId, blocked: false, result: "error" });
         throw err;
       }
     },
@@ -298,11 +329,13 @@ export function useNavigationFlow({
 
   const navigate = useCallback(
     (view: AppView) => {
+      startMeasurement("navigation:navigate", { view, locked: navigationLock.locked });
       if (RESTRICTED_VIEWS.includes(view) && guardCaseInteraction()) {
         forcedViewRef.current = view;
         setSidebarOpen(true);
         setCurrentView("settings");
         setSelectedCaseId(null);
+        endMeasurement("navigation:navigate", { view, blocked: true, redirected: "settings" });
         return;
       }
 
@@ -310,41 +343,49 @@ export function useNavigationFlow({
         case "dashboard":
           setSidebarOpen(true);
           backToDashboard();
+          endMeasurement("navigation:navigate", { view, blocked: false, target: "dashboard" });
           return;
         case "list":
           setSidebarOpen(true);
           backToList();
+          endMeasurement("navigation:navigate", { view, blocked: false, target: "list" });
           return;
         case "details":
           if (selectedCaseId) {
             setSidebarOpen(false);
             setCurrentView("details");
+            endMeasurement("navigation:navigate", { view, blocked: false, target: "details" });
           } else {
             setSidebarOpen(true);
             backToList();
+            endMeasurement("navigation:navigate", { view, blocked: false, target: "list" });
           }
           return;
         case "form":
           setSidebarOpen(false);
           newCase();
+          endMeasurement("navigation:navigate", { view, blocked: false, target: "form" });
           return;
         case "reports":
           setSidebarOpen(true);
           setCurrentView("reports");
           setSelectedCaseId(null);
+          endMeasurement("navigation:navigate", { view, blocked: false, target: "reports" });
           return;
         case "settings":
           setSidebarOpen(true);
           setCurrentView("settings");
           setSelectedCaseId(null);
+          endMeasurement("navigation:navigate", { view, blocked: false, target: "settings" });
           return;
         default: {
           const exhaustiveCheck: never = view;
+          endMeasurement("navigation:navigate", { view, blocked: false, target: "unknown" });
           return exhaustiveCheck;
         }
       }
     },
-    [backToDashboard, backToList, guardCaseInteraction, newCase, selectedCaseId]
+    [backToDashboard, backToList, guardCaseInteraction, navigationLock.locked, newCase, selectedCaseId]
   );
 
   return {
