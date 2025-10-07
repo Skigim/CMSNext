@@ -1728,6 +1728,8 @@ export class DataManager {
     let workingAlerts = storedAlerts.length > 0
       ? this.rematchAlertsForCases(storedAlerts, cases)
       : [];
+    const existingAlertCount = workingAlerts.length;
+    const matchedExistingIndices = new Set<number>();
 
     const incomingIndex =
       csvContent && csvContent.trim().length > 0
@@ -1817,6 +1819,10 @@ export class DataManager {
         return;
       }
 
+      if (matchedIndex < existingAlertCount) {
+        matchedExistingIndices.add(matchedIndex);
+      }
+
       if (matchedUsingFallback) {
         fallbackLockedIndices.add(matchedIndex);
       }
@@ -1839,6 +1845,42 @@ export class DataManager {
       workingAlerts = applied.alerts;
       if (applied.changed || applied.unmatchedIds.length > 0) {
         shouldPersist = true;
+      }
+    }
+
+    if (existingAlertCount > 0) {
+      const resolutionTimestamp = new Date().toISOString();
+
+      for (let index = 0; index < existingAlertCount; index += 1) {
+        if (matchedExistingIndices.has(index)) {
+          continue;
+        }
+
+        const alert = workingAlerts[index];
+        if (!alert) {
+          continue;
+        }
+
+        const alreadyResolved = (alert.status ?? "new").toLowerCase() === "resolved";
+        const hasResolution = alreadyResolved && alert.resolvedAt && String(alert.resolvedAt).trim().length > 0;
+
+        if (alreadyResolved && hasResolution) {
+          continue;
+        }
+
+        const resolvedAt = hasResolution ? alert.resolvedAt : resolutionTimestamp;
+        const nextAlert: AlertWithMatch = {
+          ...alert,
+          status: "resolved",
+          resolvedAt: resolvedAt ?? resolutionTimestamp,
+          updatedAt: resolutionTimestamp,
+        };
+
+        if (!this.alertsAreEqual(alert, nextAlert) || alert.updatedAt !== nextAlert.updatedAt) {
+          workingAlerts[index] = nextAlert;
+          updated += 1;
+          shouldPersist = true;
+        }
       }
     }
 

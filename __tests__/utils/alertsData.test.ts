@@ -88,7 +88,7 @@ describe("alertsData", () => {
 
     const result = parseStackedAlerts(sampleContent, []);
 
-    const totalMatches = [...sampleContent.matchAll(/"    Total:",([0-9]+)/g)];
+    const totalMatches = [...sampleContent.matchAll(/" {4}Total:",([0-9]+)/g)];
     expect(totalMatches.length).toBeGreaterThan(0);
 
     const uniqueTotals = new Set(totalMatches.map(([, value]) => Number.parseInt(value, 10)));
@@ -101,8 +101,8 @@ describe("alertsData", () => {
     expect(result.summary.missingMcn).toBe(1);
 
     const [latest] = result.alerts;
-  expect(latest.alertDate).toBe("2026-01-10T00:00:00.000Z");
-  expect(latest.personName).toBe("CHRISTOPHER ALAN DAVIS");
+    expect(latest.alertDate).toBe("2026-01-10T00:00:00.000Z");
+    expect(latest.personName).toBe("CHRISTOPHER ALAN DAVIS");
 
     const smith = result.alerts.find(alert => alert.personName === "JOHN MICHAEL SMITH");
     expect(smith?.metadata).toMatchObject({

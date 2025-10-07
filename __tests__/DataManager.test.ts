@@ -797,6 +797,73 @@ describe('DataManager', () => {
       expect(uniqueDescriptions.size).toBe(2)
     })
 
+    it('auto resolves stored alerts missing from the latest import', async () => {
+      const matchingCase = createMockCaseDisplay({
+        id: 'case-auto-resolve',
+        mcn: 'MCN999000',
+        caseRecord: createMockCaseRecord({ id: 'case-record-auto-resolve', mcn: 'MCN999000' })
+      })
+
+      const storedAlert = buildAlert({
+        id: 'alert-auto-resolve',
+        reportId: 'alert-auto-resolve',
+        mcNumber: 'MCN999000',
+        matchedCaseId: matchingCase.id,
+        matchedCaseName: matchingCase.name,
+        matchStatus: 'matched',
+        status: 'in-progress',
+        resolvedAt: null,
+        updatedAt: '2025-09-25T08:00:00.000Z',
+      })
+
+      mockAutosaveService.readNamedFile.mockResolvedValueOnce({
+        version: 3,
+        generatedAt: '2025-09-26T00:00:00.000Z',
+        summary: {
+          total: 1,
+          matched: 1,
+          unmatched: 0,
+          missingMcn: 0,
+          latestUpdated: '2025-09-26T00:00:00.000Z',
+        },
+        alerts: [storedAlert],
+        uniqueAlerts: 1,
+        sourceFile: 'alerts-previous.csv',
+      })
+
+      vi.useFakeTimers()
+      vi.setSystemTime(new Date('2025-10-07T12:00:00.000Z'))
+
+      const parseStackedSpy = vi.spyOn(alertsData, 'parseStackedAlerts').mockReturnValue(
+        alertsData.createAlertsIndexFromAlerts([])
+      )
+
+      try {
+        const result = await dataManager.mergeAlertsFromCsvContent('csv-empty', {
+          cases: [matchingCase],
+          sourceFileName: 'alerts-latest.csv',
+        })
+
+        expect(result.updated).toBe(1)
+        expect(result.total).toBe(1)
+
+        const lastWriteCall = mockAutosaveService.writeNamedFile.mock.calls.at(-1)
+        expect(lastWriteCall).toBeDefined()
+
+        const payload = lastWriteCall?.[1] as { alerts?: AlertWithMatch[] } | undefined
+        expect(payload?.alerts).toHaveLength(1)
+
+        const [alert] = payload!.alerts!
+        expect(alert.id).toBe('alert-auto-resolve')
+        expect(alert.status).toBe('resolved')
+        expect(alert.resolvedAt).toBe('2025-10-07T12:00:00.000Z')
+        expect(alert.updatedAt).toBe('2025-10-07T12:00:00.000Z')
+      } finally {
+        parseStackedSpy.mockRestore()
+        vi.useRealTimers()
+      }
+    })
+
     it('allows multiple strong-key matches to reuse the same alert index', async () => {
       const matchingCase = createMockCaseDisplay({
         id: 'case-strong-reuse',
