@@ -51,6 +51,8 @@ let navigationFlowMock: any = {};
 let connectionFlowMock: any = {};
 let financialItemFlowMock: any = {};
 let noteFlowMock: any = {};
+let activityLogStateMock: any = {};
+let dataLoadHandlerSpy: any = vi.fn();
 let importListenersMock: ReturnType<typeof vi.fn> = vi.fn();
 let capturedViewProps: any = null;
 let setConfigFromFileMock: ReturnType<typeof vi.fn> = vi.fn();
@@ -142,7 +144,6 @@ function buildMatchedAlert(overrides: Partial<AlertWithMatch> = {}): AlertWithMa
     reportId: overrides.reportId ?? "report-001",
     alertCode: overrides.alertCode ?? "AL-101",
     alertType: overrides.alertType ?? "Recertification",
-    severity: overrides.severity ?? "High",
     alertDate: overrides.alertDate ?? baseTimestamp,
     createdAt: overrides.createdAt ?? baseTimestamp,
     updatedAt: overrides.updatedAt ?? baseTimestamp,
@@ -239,6 +240,25 @@ describe("App alert resolution", () => {
       handleBatchCreateNote: vi.fn(),
     };
 
+    activityLogStateMock = {
+      activityLog: [],
+      dailyReports: [],
+      todayReport: null,
+      yesterdayReport: null,
+      loading: false,
+      error: null,
+      refreshActivityLog: vi.fn().mockResolvedValue(undefined),
+      getReportForDate: vi.fn().mockReturnValue({
+        date: "2025-01-01",
+        totals: { total: 0, statusChanges: 0, notesAdded: 0 },
+        entries: [],
+        cases: [],
+      }),
+      clearReportForDate: vi.fn().mockResolvedValue(0),
+    };
+
+    dataLoadHandlerSpy = vi.fn();
+
     importListenersMock = vi.fn();
     setConfigFromFileMock = vi.fn();
 
@@ -288,6 +308,9 @@ describe("App alert resolution", () => {
     vi.doMock(FILE_STORAGE_CONTEXT_MODULE_PATH, () => ({
       useFileStorage: () => fileStorageMock,
       useFileStorageLifecycleSelectors: () => lifecycleSelectorsMock,
+      useFileStorageDataLoadHandler: (handler: unknown) => {
+        dataLoadHandlerSpy(handler);
+      },
     }));
 
     vi.doMock(DATA_MANAGER_CONTEXT_MODULE_PATH, () => ({
@@ -301,6 +324,7 @@ describe("App alert resolution", () => {
       useNavigationFlow: () => navigationFlowMock,
       useNoteFlow: () => noteFlowMock,
       useImportListeners: (args: unknown) => importListenersMock(args),
+      useCaseActivityLog: () => activityLogStateMock,
     }));
 
     ({ default: App } = await import(APP_MODULE_PATH));

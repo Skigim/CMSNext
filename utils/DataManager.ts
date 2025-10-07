@@ -672,7 +672,6 @@ export class DataManager {
     const fieldsToCompare: Array<keyof AlertWithMatch> = [
       "alertCode",
       "alertType",
-      "severity",
       "alertDate",
       "createdAt",
       "updatedAt",
@@ -835,16 +834,11 @@ export class DataManager {
       return null;
     }
 
-    const severity = typeof raw.severity === "string"
-      ? (raw.severity as AlertWithMatch["severity"])
-      : "Info";
-
     const alert: AlertWithMatch = {
       id: alertId,
       reportId: reportIdCandidate || undefined,
       alertCode: typeof raw.alertCode === "string" ? raw.alertCode : "",
       alertType: typeof raw.alertType === "string" ? raw.alertType : "",
-      severity,
       alertDate: typeof raw.alertDate === "string" ? raw.alertDate : "",
       createdAt: typeof raw.createdAt === "string" ? raw.createdAt : "",
       updatedAt: typeof raw.updatedAt === "string" ? raw.updatedAt : "",
@@ -1042,9 +1036,8 @@ export class DataManager {
           : undefined;
 
     const legacy =
-      typeof raw.alertId !== "string" ||
-      "alertType" in raw ||
-      "severity" in raw ||
+  typeof raw.alertId !== "string" ||
+  "alertType" in raw ||
       "program" in raw ||
       "region" in raw ||
       "state" in raw ||

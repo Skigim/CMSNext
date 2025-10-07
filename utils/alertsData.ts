@@ -1,4 +1,6 @@
-import { CaseDisplay, AlertRecord, AlertSeverity, AlertWorkflowStatus } from "../types/case";
+import Papa from "papaparse";
+
+import { CaseDisplay, AlertRecord, AlertWorkflowStatus } from "../types/case";
 
 export type AlertMatchStatus = "matched" | "unmatched" | "missing-mcn";
 
@@ -54,10 +56,155 @@ export function filterOpenAlerts<T extends Pick<AlertRecord, "status" | "resolve
   return alerts.filter(alert => !isAlertResolved(alert));
 }
 
-const severityPriorityOrder: AlertSeverity[] = ["Critical", "High", "Medium", "Low", "Info"];
 const workflowPriorityOrder: AlertWorkflowStatus[] = ["new", "in-progress", "acknowledged", "snoozed", "resolved"];
 
-const STACKED_ALERT_REGEX = /,,\s*(?<dueDate>\d{1,2}[/-]\d{1,2}[/-]\d{2,4})\s*,\s*(?<mcn>[^,"]*)\s*,"(?<name>(?:[^"]|"")*)","(?<program>(?:[^"]|"")*)","(?<type>(?:[^"]|"")*)","(?<description>(?:[^"]|"")*)",\s*(?<alertNumber>[^,\r\n]*)/g;
+const DATE_VALUE_REGEX = /^(\d{1,2})[/-](\d{1,2})[/-](\d{2}|\d{4})$/;
+
+type RawAlertCsvRow = {
+  dueDate: string;
+  displayDate?: string;
+  mcNumber: string;
+  name: string;
+  program: string;
+  type: string;
+  description: string;
+  alertNumber: string;
+};
+
+function isLikelyDate(value: string | undefined): boolean {
+  if (!value) {
+    return false;
+  }
+
+  return DATE_VALUE_REGEX.test(value.trim());
+}
+
+function normalizeAlertDate(rawDate: string | undefined): string {
+  if (!rawDate) {
+    return "";
+  }
+
+  const trimmed = rawDate.trim();
+  if (!trimmed) {
+    return "";
+  }
+
+  const sanitized = trimmed.replace(/\//g, "-");
+  const match = DATE_VALUE_REGEX.exec(sanitized);
+  if (!match) {
+    return sanitized;
+  }
+
+  const [, monthInput, dayInput, yearInput] = match;
+  const month = monthInput.padStart(2, "0");
+  const day = dayInput.padStart(2, "0");
+  const normalizedYear = yearInput.length === 2 ? `20${yearInput}` : yearInput.padStart(4, "0");
+
+  const yearNumber = Number.parseInt(normalizedYear, 10);
+  const monthNumber = Number.parseInt(month, 10);
+  const dayNumber = Number.parseInt(day, 10);
+
+  if ([yearNumber, monthNumber, dayNumber].some(Number.isNaN)) {
+    return sanitized;
+  }
+
+  const date = new Date(Date.UTC(yearNumber, monthNumber - 1, dayNumber));
+  if (Number.isNaN(date.getTime())) {
+    return sanitized;
+  }
+
+  return date.toISOString();
+}
+
+/**
+ * Pulls alert rows from the Nightingale "stacked" CSV export format. Each line has a long
+ * prefix of report metadata, followed by the alert payload in this exact order:
+ * `Due Date`, optional `Display Date`, `MC#`, `Name`, `Program`, `Type`, `Description`, `Alert_Number`.
+ * We only support that layout and ignore any other structure.
+ */
+function extractAlertRows(csvContent: string): RawAlertCsvRow[] {
+  const parsed = Papa.parse<string[]>(csvContent, {
+    header: false,
+    skipEmptyLines: "greedy",
+    dynamicTyping: false,
+  });
+
+  if (parsed.errors.length > 0) {
+    console.warn("extractAlertRows encountered parse issues", parsed.errors);
+  }
+
+  const toTrimmedString = (value: unknown): string => {
+    if (typeof value === "string") {
+      return value.trim();
+    }
+    if (value == null) {
+      return "";
+    }
+    return String(value).trim();
+  };
+
+  return parsed.data.reduce<RawAlertCsvRow[]>((rows, rawColumns) => {
+    if (!Array.isArray(rawColumns) || rawColumns.length === 0) {
+      return rows;
+    }
+
+    const trimmedColumns = rawColumns.map(cell => toTrimmedString(cell));
+    const dueDateIndex = trimmedColumns.findIndex(cell => isLikelyDate(cell));
+    if (dueDateIndex === -1) {
+      return rows;
+    }
+
+    const dueDate = trimmedColumns[dueDateIndex];
+    let cursor = dueDateIndex + 1;
+
+    let displayDate: string | undefined;
+    const displayDateCandidate = trimmedColumns[cursor];
+    const hasSufficientColumnsAfterDisplay = trimmedColumns.length - (cursor + 1) >= 6;
+
+    if (displayDateCandidate === "" && hasSufficientColumnsAfterDisplay) {
+      displayDate = "";
+      cursor += 1;
+    } else if (isLikelyDate(displayDateCandidate)) {
+      displayDate = displayDateCandidate;
+      cursor += 1;
+    }
+
+    const remainingRequiredColumns = trimmedColumns.length - cursor;
+    if (remainingRequiredColumns < 6) {
+      return rows;
+    }
+
+    const mcNumber = trimmedColumns[cursor] ?? "";
+    cursor += 1;
+
+    const name = trimmedColumns[cursor] ?? "";
+    cursor += 1;
+
+    const program = trimmedColumns[cursor] ?? "";
+    cursor += 1;
+
+    const type = trimmedColumns[cursor] ?? "";
+    cursor += 1;
+
+    const description = trimmedColumns[cursor] ?? "";
+    cursor += 1;
+
+    const alertNumber = trimmedColumns[cursor] ?? "";
+
+    rows.push({
+      dueDate,
+      displayDate,
+      mcNumber,
+      name,
+      program,
+      type,
+      description,
+      alertNumber,
+    });
+
+    return rows;
+  }, []);
+}
 
 /**
  * Produces the canonical storage key for an alert by combining its base identifier with
@@ -145,16 +292,19 @@ export function filterAlertsForCase(caseId: string, alertsByCaseId: Map<string, 
 
 function sortAlerts(alerts: AlertWithMatch[]): AlertWithMatch[] {
   return [...alerts].sort((a, b) => {
-    const severityDifference = severityPriorityOrder.indexOf(a.severity) - severityPriorityOrder.indexOf(b.severity);
-    if (severityDifference !== 0) {
-      return severityDifference;
-    }
-
     const timeA = new Date(a.alertDate || a.createdAt || "").getTime();
     const timeB = new Date(b.alertDate || b.createdAt || "").getTime();
 
     if (!Number.isNaN(timeA) && !Number.isNaN(timeB)) {
       return timeB - timeA;
+    }
+
+    if (!Number.isNaN(timeA)) {
+      return -1;
+    }
+
+    if (!Number.isNaN(timeB)) {
+      return 1;
     }
 
     return 0;
@@ -286,7 +436,7 @@ function dedupeAlerts(alerts: AlertWithMatch[]): AlertWithMatch[] {
   const passthrough: AlertWithMatch[] = [];
 
   alerts.forEach(alert => {
-  const key = buildAlertStorageKey(alert);
+    const key = buildAlertStorageKey(alert);
     if (!key) {
       passthrough.push(alert);
       return;
@@ -309,65 +459,33 @@ function normalizePersonName(rawName: string | undefined): string {
     return "";
   }
 
-  const trimmed = rawName.trim();
-  if (trimmed.includes(",")) {
-    const [last, first] = trimmed.split(",");
-    const firstPart = (first ?? "").trim();
-    const lastPart = (last ?? "").trim();
-    return `${firstPart} ${lastPart}`.trim();
-  }
-
-  return trimmed;
-}
-
-function normalizeStackedDate(rawDate: string | undefined): string {
-  if (!rawDate) {
+  const normalizedWhitespace = rawName.replace(/\s+/g, " ").trim();
+  if (!normalizedWhitespace) {
     return "";
   }
 
-  const normalizedDate = rawDate.trim().replace(/\//g, "-");
-  const parts = normalizedDate.split("-");
-  if (parts.length !== 3) {
-    return normalizedDate;
-  }
+  const segments = normalizedWhitespace
+    .split(",")
+    .map(segment => segment.trim())
+    .filter(segment => segment.length > 0);
 
-  const [monthInput, dayInput, yearInput] = parts;
-  const month = monthInput.padStart(2, "0");
-  const day = dayInput.padStart(2, "0");
-  const year = (yearInput.length === 2 ? `20${yearInput}` : yearInput).padStart(4, "0");
-
-  const isoCandidate = `${year}-${month}-${day}T00:00:00.000Z`;
-  const date = new Date(isoCandidate);
-  if (Number.isNaN(date.getTime())) {
-    return normalizedDate;
-  }
-  return date.toISOString();
-}
-
-function decodeStackedValue(value: string | undefined): string {
-  if (!value) {
+  if (segments.length === 0) {
     return "";
   }
-  return value.replace(/""/g, '"').trim();
-}
 
-function deriveSeverityFromType(type: string | undefined, description: string | undefined): AlertSeverity {
-  const normalizedType = type?.trim().toLowerCase() ?? "";
-  const normalizedDescription = description?.trim().toLowerCase() ?? "";
-
-  if (normalizedType.includes("critical") || normalizedDescription.includes("critical")) {
-    return "Critical";
+  if (segments.length === 1) {
+    return segments[0];
   }
 
-  if (normalizedType.includes("high")) {
-    return "High";
+  const [lastName, givenNames, ...suffixParts] = segments;
+  const suffix = suffixParts.join(", ");
+  const baseName = [givenNames, lastName].filter(Boolean).join(" ").trim();
+
+  if (!suffix) {
+    return baseName;
   }
 
-  if (normalizedType.includes("low")) {
-    return "Low";
-  }
-
-  return "Medium";
+  return `${baseName} ${suffix}`.replace(/\s+/g, " ").trim();
 }
 
 export function createEmptyAlertsIndex(): AlertsIndex {
@@ -386,74 +504,82 @@ export function createEmptyAlertsIndex(): AlertsIndex {
   };
 }
 
+/**
+ * Parses alerts from the Nightingale stacked CSV export (see `external-examples/Alerts Sample.txt`).
+ * The importer assumes the column ordering described there and will skip any rows that do not
+ * match it exactly.
+ */
 export function parseStackedAlerts(csvContent: string, cases: CaseDisplay[]): AlertsIndex {
   if (!csvContent || csvContent.trim().length === 0) {
     return createEmptyAlertsIndex();
   }
 
-  const sanitizedContent = csvContent.replace(/\r\n|\r|\n/g, "\n");
+  const rows = extractAlertRows(csvContent);
+  if (rows.length === 0) {
+    return createEmptyAlertsIndex();
+  }
+
   const casesByMcn = buildCaseMap(cases);
   const alerts: AlertWithMatch[] = [];
 
-  for (const match of sanitizedContent.matchAll(STACKED_ALERT_REGEX)) {
-    const groups = match.groups ?? {};
-    const rawMcn = decodeStackedValue(groups.mcn);
-    const normalizedMcn = normalizeMcn(rawMcn);
+  rows.forEach(row => {
+    const normalizedMcn = normalizeMcn(row.mcNumber);
     const matchedCase = normalizedMcn ? casesByMcn.get(normalizedMcn) : undefined;
 
-    const dueDateIso = normalizeStackedDate(groups.dueDate);
-    const program = decodeStackedValue(groups.program);
-    const alertType = decodeStackedValue(groups.type);
-    const description = decodeStackedValue(groups.description);
-    const alertNumber = decodeStackedValue(groups.alertNumber);
+    const dueDateIso = normalizeAlertDate(row.dueDate);
+    const displayDateIso = row.displayDate ? normalizeAlertDate(row.displayDate) : "";
+    const alertNumber = row.alertNumber;
     const alertId = alertNumber && alertNumber.length > 0 ? alertNumber : createRandomAlertId();
+    const personName = normalizePersonName(row.name);
 
-    const severity = deriveSeverityFromType(alertType, description);
-    const rawName = decodeStackedValue(groups.name);
-    const personName = normalizePersonName(rawName);
+    const metadata: Record<string, string | undefined> = {
+      rawDueDate: row.dueDate,
+      rawProgram: row.program,
+      rawType: row.type,
+      rawDescription: row.description,
+      rawName: row.name,
+      alertNumber: row.alertNumber,
+    };
+
+    if (row.displayDate) {
+      metadata.rawDisplayDate = row.displayDate;
+    }
+
+    if (displayDateIso && displayDateIso !== row.displayDate) {
+      metadata.displayDateIso = displayDateIso;
+    }
+
+    if (dueDateIso && dueDateIso !== row.dueDate) {
+      metadata.dueDateIso = dueDateIso;
+    }
 
     const alert: AlertWithMatch = {
       id: alertId,
       reportId: alertNumber || undefined,
-      alertCode: alertNumber || alertType || program,
-      alertType,
-      severity,
+      alertCode: alertNumber || row.type || row.program,
+      alertType: row.type,
       alertDate: dueDateIso,
       createdAt: dueDateIso,
       updatedAt: dueDateIso,
       mcNumber: normalizedMcn || null,
       personName,
-      program,
+      program: row.program,
       region: "",
       state: "",
       source: "Import",
-      description,
+      description: row.description,
       status: "new",
       resolvedAt: null,
       resolutionNotes: undefined,
-      metadata: {
-        rawType: alertType,
-        rawProgram: program,
-        rawDescription: description,
-        rawName: rawName,
-        alertNumber,
-      },
-      matchStatus: !normalizedMcn
-        ? "missing-mcn"
-        : matchedCase
-          ? "matched"
-          : "unmatched",
+      metadata,
+      matchStatus: !normalizedMcn ? "missing-mcn" : matchedCase ? "matched" : "unmatched",
       matchedCaseId: matchedCase?.id,
       matchedCaseName: matchedCase?.name,
       matchedCaseStatus: matchedCase?.status,
     };
 
     alerts.push(alert);
-  }
-
-  if (alerts.length === 0) {
-    return createEmptyAlertsIndex();
-  }
+  });
 
   return createAlertsIndexFromAlerts(alerts);
 }

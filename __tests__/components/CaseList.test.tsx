@@ -65,7 +65,7 @@ describe("CaseList status interactions", () => {
       />,
     );
 
-    const trigger = screen.getByRole("button", { name: /update case status/i });
+  const trigger = screen.getByRole("button", { name: /change case status/i });
     expect(within(trigger).getByText("Pending")).toBeInTheDocument();
 
     await user.click(trigger);

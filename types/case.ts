@@ -67,8 +67,6 @@ export interface Financials {
   expenses: FinancialItem[];
 }
 
-export type AlertSeverity = 'Low' | 'Medium' | 'High' | 'Critical' | 'Info';
-
 export type AlertWorkflowStatus = 'new' | 'in-progress' | 'acknowledged' | 'snoozed' | 'resolved';
 
 export interface AlertRecord {
@@ -76,7 +74,6 @@ export interface AlertRecord {
   reportId?: string;
   alertCode: string;
   alertType: string;
-  severity: AlertSeverity;
   alertDate: string;
   createdAt: string;
   updatedAt: string;
