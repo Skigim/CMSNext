@@ -2,11 +2,20 @@ import { useCallback, useMemo, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../ui/card";
 import { Button } from "../ui/button";
 import { Badge } from "../ui/badge";
-import { FileText, Clock, Plus, ArrowRight, CheckCircle2, XCircle, Coins, TrendingUp } from "lucide-react";
-import { CaseDisplay } from "../../types/case";
+import { Input } from "../ui/input";
+import { Label } from "../ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
+import { ScrollArea } from "../ui/scroll-area";
+import { FileText, Clock, Plus, ArrowRight, CheckCircle2, XCircle, Coins, TrendingUp, BellRing } from "lucide-react";
+import { CaseDisplay, type AlertWorkflowStatus } from "../../types/case";
 import { useCategoryConfig } from "../../contexts/CategoryConfigContext";
-import { BellRing } from "lucide-react";
-import { filterOpenAlerts, buildAlertStorageKey, type AlertsIndex } from "../../utils/alertsData";
+import {
+  filterOpenAlerts,
+  buildAlertStorageKey,
+  isAlertResolved,
+  type AlertsIndex,
+  type AlertMatchStatus,
+} from "../../utils/alertsData";
 import { getAlertClientName, getAlertDisplayDescription, getAlertDueDateInfo, getAlertMcn } from "@/utils/alertDisplay";
 import { UnlinkedAlertsDialog } from "@/components/alerts/UnlinkedAlertsDialog";
 import { McnCopyControl } from "@/components/common/McnCopyControl";
@@ -19,6 +28,63 @@ interface DashboardProps {
   activityLogState: CaseActivityLogState;
   onViewAllCases: () => void;
   onNewCase: () => void;
+}
+
+type AlertStatusFilter = "open" | "resolved" | "all";
+type AlertMatchFilter = "all" | AlertMatchStatus;
+
+const MATCH_STATUS_BADGE_STYLES: Record<AlertMatchStatus, string> = {
+  matched: "border-emerald-500/40 bg-emerald-500/10 text-emerald-600 dark:border-emerald-400/40 dark:text-emerald-300",
+  unmatched: "border-amber-500/40 bg-amber-500/10 text-amber-600 dark:border-amber-400/40 dark:text-amber-300",
+  "missing-mcn": "border-destructive/30 bg-destructive/10 text-destructive",
+};
+
+const WORKFLOW_STATUS_BADGE_STYLES: Partial<Record<AlertWorkflowStatus, string>> = {
+  resolved: "border-emerald-500/40 bg-emerald-500/10 text-emerald-600 dark:border-emerald-400/40 dark:text-emerald-300",
+  "in-progress": "border-sky-500/30 bg-sky-500/10 text-sky-600 dark:border-sky-400/40 dark:text-sky-300",
+  acknowledged: "border-violet-500/30 bg-violet-500/10 text-violet-600 dark:border-violet-400/40 dark:text-violet-300",
+  snoozed: "border-slate-500/30 bg-slate-500/10 text-slate-600 dark:border-slate-400/40 dark:text-slate-300",
+  new: "border-primary/30 bg-primary/10 text-primary",
+};
+
+function toTitleCase(value: string): string {
+  return value
+    .split(/[\s_-]+/)
+    .filter(Boolean)
+    .map(segment => segment.charAt(0).toUpperCase() + segment.slice(1))
+    .join(" ");
+}
+
+function formatMatchStatusLabel(status: AlertMatchStatus): string {
+  if (status === "missing-mcn") {
+    return "Missing MCN";
+  }
+  return toTitleCase(status);
+}
+
+function formatWorkflowStatusLabel(status?: AlertWorkflowStatus | null): string {
+  if (!status) {
+    return "Unknown";
+  }
+  return toTitleCase(status);
+}
+
+function getWorkflowBadgeStyles(status?: AlertWorkflowStatus | null): string {
+  if (!status) {
+    return "border-border/60 bg-muted/40 text-foreground";
+  }
+  return WORKFLOW_STATUS_BADGE_STYLES[status] ?? "border-border/60 bg-muted/40 text-foreground";
+}
+
+function formatResolvedAt(value?: string | null): string | null {
+  if (!value) {
+    return null;
+  }
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return null;
+  }
+  return date.toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" });
 }
 
 export function Dashboard({ cases, alerts, activityLogState, onViewAllCases, onNewCase }: DashboardProps) {
@@ -93,6 +159,11 @@ export function Dashboard({ cases, alerts, activityLogState, onViewAllCases, onN
   const openAlertsCount = openAlerts.length;
   const unlinkedAlertCount = unlinkedAlerts.length;
 
+  const [showAllAlerts, setShowAllAlerts] = useState(false);
+  const [alertStatusFilter, setAlertStatusFilter] = useState<AlertStatusFilter>("open");
+  const [alertMatchFilter, setAlertMatchFilter] = useState<AlertMatchFilter>("all");
+  const [alertSearchTerm, setAlertSearchTerm] = useState("");
+
   const [showUnlinkedDialog, setShowUnlinkedDialog] = useState(false);
 
   const stats = useMemo(
@@ -120,6 +191,60 @@ export function Dashboard({ cases, alerts, activityLogState, onViewAllCases, onN
   );
 
   const latestAlerts = useMemo(() => openAlerts.slice(0, 5), [openAlerts]);
+
+  const filteredAlerts = useMemo(() => {
+    const normalizedSearch = alertSearchTerm.trim().toLowerCase();
+
+    return alerts.alerts.filter(alert => {
+      if (alertStatusFilter === "open" && isAlertResolved(alert)) {
+        return false;
+      }
+
+      if (alertStatusFilter === "resolved" && !isAlertResolved(alert)) {
+        return false;
+      }
+
+      if (alertMatchFilter !== "all" && alert.matchStatus !== alertMatchFilter) {
+        return false;
+      }
+
+      if (normalizedSearch) {
+        const dueInfo = getAlertDueDateInfo(alert);
+        const haystack = [
+          alert.alertType,
+          alert.description,
+          alert.program,
+          alert.personName,
+          alert.alertCode,
+          getAlertMcn(alert),
+          dueInfo?.label,
+          alert.metadata?.rawDescription,
+        ]
+          .filter(Boolean)
+          .join(" ")
+          .toLowerCase();
+
+        if (!haystack.includes(normalizedSearch)) {
+          return false;
+        }
+      }
+
+      return true;
+    });
+  }, [alertMatchFilter, alertSearchTerm, alertStatusFilter, alerts.alerts]);
+
+  const alertFiltersActive =
+    alertStatusFilter !== "open" || alertMatchFilter !== "all" || alertSearchTerm.trim().length > 0;
+
+  const handleResetAlertFilters = useCallback(() => {
+    setAlertStatusFilter("open");
+    setAlertMatchFilter("all");
+    setAlertSearchTerm("");
+  }, []);
+
+  const handleToggleAlertView = useCallback(() => {
+    setShowAllAlerts(prev => !prev);
+  }, []);
 
   return (
     <div className="space-y-6">
@@ -218,16 +343,27 @@ export function Dashboard({ cases, alerts, activityLogState, onViewAllCases, onN
 
         <Card>
           <CardHeader>
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
               <div>
                 <CardTitle>Alert Center</CardTitle>
                 <CardDescription>Live feed from the alerts dataset</CardDescription>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
                   <BellRing className={totalAlerts ? "h-4 w-4 text-amber-600" : "h-4 w-4"} />
                   {totalAlerts ? `${totalAlerts} total` : "No alerts"}
                 </div>
+                {totalAlerts > 0 && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={handleToggleAlertView}
+                    className="shrink-0"
+                  >
+                    {showAllAlerts ? "Show summary" : "View all"}
+                  </Button>
+                )}
                 {unlinkedAlertCount > 0 && (
                   <button
                     type="button"
@@ -265,48 +401,205 @@ export function Dashboard({ cases, alerts, activityLogState, onViewAllCases, onN
                   </div>
                   <div>
                     <p className="text-xs uppercase text-muted-foreground">Unlinked</p>
-                    <p className="text-lg font-semibold text-destructive">
-                      {unlinkedAlertCount}
-                    </p>
+                    <p className="text-lg font-semibold text-destructive">{unlinkedAlertCount}</p>
                   </div>
                 </div>
 
-                <div className="space-y-3">
-                  {latestAlerts.map((alert, index) => {
-                    const description = getAlertDisplayDescription(alert);
-                    const { label, hasDate } = getAlertDueDateInfo(alert);
-                    const dueLabel = hasDate ? `Due ${label}` : label;
-                    const clientName = getAlertClientName(alert) ?? "Client name unavailable";
-                    const mcn = getAlertMcn(alert);
-                    const storageKey = buildAlertStorageKey(alert);
-                    const elementKey = storageKey ?? (alert.id ? `alert-${String(alert.id)}-${index}` : `alert-${index}`);
-
-                    return (
-                      <div
-                        key={elementKey}
-                        className="rounded-lg border border-border/60 bg-card/60 p-3"
-                      >
-                        <div className="space-y-1">
-                          <p className="text-sm font-semibold text-foreground">{description}</p>
-                          <p className="text-xs text-muted-foreground">{dueLabel}</p>
-                          <div className="flex flex-wrap gap-3 text-[11px] text-muted-foreground">
-                            <span>{clientName}</span>
-                            <McnCopyControl
-                              mcn={mcn}
-                              showLabel={false}
-                              className="inline-flex items-center gap-1 text-[11px] text-muted-foreground"
-                              buttonClassName="text-[11px] text-muted-foreground"
-                              textClassName="text-[11px]"
-                              missingLabel="MCN unavailable"
-                              missingClassName="text-[11px] text-muted-foreground"
-                              variant="plain"
-                            />
-                          </div>
+                {showAllAlerts ? (
+                  <div className="space-y-4">
+                    <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+                      <div className="flex-1 space-y-1.5">
+                        <Label htmlFor="dashboard-alert-search">Search alerts</Label>
+                        <Input
+                          id="dashboard-alert-search"
+                          placeholder="Search by description, client, program, or MCN"
+                          value={alertSearchTerm}
+                          onChange={(event) => setAlertSearchTerm(event.target.value)}
+                        />
+                      </div>
+                      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 lg:w-auto">
+                        <div className="space-y-1.5">
+                          <Label htmlFor="dashboard-alert-status-filter">Workflow status</Label>
+                          <Select
+                            value={alertStatusFilter}
+                            onValueChange={value => setAlertStatusFilter(value as AlertStatusFilter)}
+                          >
+                            <SelectTrigger id="dashboard-alert-status-filter" size="sm" className="min-w-[160px]">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="open">Open</SelectItem>
+                              <SelectItem value="resolved">Resolved</SelectItem>
+                              <SelectItem value="all">All statuses</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="space-y-1.5">
+                          <Label htmlFor="dashboard-alert-match-filter">Match status</Label>
+                          <Select
+                            value={alertMatchFilter}
+                            onValueChange={value => setAlertMatchFilter(value as AlertMatchFilter)}
+                          >
+                            <SelectTrigger id="dashboard-alert-match-filter" size="sm" className="min-w-[160px]">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="all">All</SelectItem>
+                              <SelectItem value="matched">Matched</SelectItem>
+                              <SelectItem value="unmatched">Unmatched</SelectItem>
+                              <SelectItem value="missing-mcn">Missing MCN</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="flex items-end">
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={handleResetAlertFilters}
+                            disabled={!alertFiltersActive}
+                            className="justify-start"
+                          >
+                            Reset filters
+                          </Button>
                         </div>
                       </div>
-                    );
-                  })}
-                </div>
+                    </div>
+
+                    <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
+                      <span>
+                        Showing <span className="font-medium text-foreground">{filteredAlerts.length}</span> of {totalAlerts} alerts
+                      </span>
+                      {alertFiltersActive && <span>Filters applied</span>}
+                    </div>
+
+                    {filteredAlerts.length === 0 ? (
+                      <div className="rounded-lg border border-dashed border-muted-foreground/40 bg-muted/20 p-6 text-center text-sm text-muted-foreground">
+                        No alerts match the current filters.
+                      </div>
+                    ) : (
+                      <ScrollArea className="max-h-[420px]">
+                        <div className="min-w-[720px] overflow-hidden rounded-lg border border-border/60 bg-card/60">
+                          <table className="w-full text-sm">
+                            <thead className="bg-card/90 text-xs uppercase text-muted-foreground">
+                              <tr>
+                                <th className="px-4 py-3 text-left font-medium">Description</th>
+                                <th className="px-4 py-3 text-left font-medium">Due</th>
+                                <th className="px-4 py-3 text-left font-medium">Client</th>
+                                <th className="px-4 py-3 text-left font-medium">Program</th>
+                                <th className="px-4 py-3 text-left font-medium">Match</th>
+                                <th className="px-4 py-3 text-left font-medium">Workflow</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {filteredAlerts.map((alert, index) => {
+                                const description = getAlertDisplayDescription(alert);
+                                const { label, hasDate } = getAlertDueDateInfo(alert);
+                                const dueLabel = hasDate ? `Due ${label}` : label;
+                                const clientName = getAlertClientName(alert) ?? "Client name unavailable";
+                                const mcn = getAlertMcn(alert);
+                                const storageKey = buildAlertStorageKey(alert);
+                                const elementKey = storageKey ?? (alert.id ? `alert-${String(alert.id)}-${index}` : `alert-${index}`);
+                                const workflowStatusLabel = formatWorkflowStatusLabel(alert.status);
+                                const resolvedAtLabel = formatResolvedAt(alert.resolvedAt);
+
+                                return (
+                                  <tr key={elementKey} className="border-b border-border/50 last:border-0 align-top text-sm text-foreground">
+                                    <td className="px-4 py-3">
+                                      <div className="space-y-1">
+                                        <p className="font-medium text-foreground">{description}</p>
+                                        <p className="text-xs text-muted-foreground">
+                                          {(alert.alertType || "Alert")} • Code {alert.alertCode || "—"}
+                                        </p>
+                                      </div>
+                                    </td>
+                                    <td className="px-4 py-3 whitespace-nowrap text-xs text-muted-foreground">{dueLabel || "—"}</td>
+                                    <td className="px-4 py-3">
+                                      <div className="space-y-1">
+                                        <p className="text-sm text-foreground">{clientName}</p>
+                                        <McnCopyControl
+                                          mcn={mcn}
+                                          showLabel={false}
+                                          className="inline-flex items-center gap-1 text-xs text-muted-foreground"
+                                          buttonClassName="text-xs text-muted-foreground"
+                                          textClassName="text-xs"
+                                          missingLabel="MCN unavailable"
+                                          missingClassName="text-xs text-muted-foreground"
+                                          variant="plain"
+                                        />
+                                      </div>
+                                    </td>
+                                    <td className="px-4 py-3">
+                                      <div className="space-y-1 text-sm text-foreground">
+                                        <p>{alert.program || "—"}</p>
+                                        <p className="text-xs text-muted-foreground">{alert.metadata?.rawType || alert.alertType || "—"}</p>
+                                      </div>
+                                    </td>
+                                    <td className="px-4 py-3">
+                                      <Badge
+                                        variant="outline"
+                                        className={MATCH_STATUS_BADGE_STYLES[alert.matchStatus]}
+                                      >
+                                        {formatMatchStatusLabel(alert.matchStatus)}
+                                      </Badge>
+                                    </td>
+                                    <td className="px-4 py-3">
+                                      <div className="space-y-1">
+                                        <Badge variant="outline" className={getWorkflowBadgeStyles(alert.status)}>
+                                          {workflowStatusLabel}
+                                        </Badge>
+                                        {resolvedAtLabel ? (
+                                          <p className="text-[11px] text-muted-foreground">Resolved {resolvedAtLabel}</p>
+                                        ) : null}
+                                      </div>
+                                    </td>
+                                  </tr>
+                                );
+                              })}
+                            </tbody>
+                          </table>
+                        </div>
+                      </ScrollArea>
+                    )}
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {latestAlerts.map((alert, index) => {
+                      const description = getAlertDisplayDescription(alert);
+                      const { label, hasDate } = getAlertDueDateInfo(alert);
+                      const dueLabel = hasDate ? `Due ${label}` : label;
+                      const clientName = getAlertClientName(alert) ?? "Client name unavailable";
+                      const mcn = getAlertMcn(alert);
+                      const storageKey = buildAlertStorageKey(alert);
+                      const elementKey = storageKey ?? (alert.id ? `alert-${String(alert.id)}-${index}` : `alert-${index}`);
+
+                      return (
+                        <div
+                          key={elementKey}
+                          className="rounded-lg border border-border/60 bg-card/60 p-3"
+                        >
+                          <div className="space-y-1">
+                            <p className="text-sm font-semibold text-foreground">{description}</p>
+                            <p className="text-xs text-muted-foreground">{dueLabel}</p>
+                            <div className="flex flex-wrap gap-3 text-[11px] text-muted-foreground">
+                              <span>{clientName}</span>
+                              <McnCopyControl
+                                mcn={mcn}
+                                showLabel={false}
+                                className="inline-flex items-center gap-1 text-[11px] text-muted-foreground"
+                                buttonClassName="text-[11px] text-muted-foreground"
+                                textClassName="text-[11px]"
+                                missingLabel="MCN unavailable"
+                                missingClassName="text-[11px] text-muted-foreground"
+                                variant="plain"
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
             )}
           </CardContent>
