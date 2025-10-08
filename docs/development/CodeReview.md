@@ -4,20 +4,20 @@
 **Branch:** feature/ui-ux-refresh (commit state at review time)
 
 ## Executive Summary
-CMSNext remains a filesystem-first case management experience built with React 18, TypeScript, and the File System Access API. Since the September 29 review the team landed the file-storage lifecycle state machine, surfaced autosave status in the UI, decomposed the financial item stack into lean components, and expanded the automated suite to 142 Vitest specs (including new integration flows). Quality is trending up: data integrity safeguards and toast UX are cohesive, and docs match the current roadmap. With the window shim now retired, the main opportunities center on finishing the breakup of `App.tsx` and layering lightweight performance telemetry to quantify bundle/render costs.
+CMSNext remains a filesystem-first case management experience built with React 18, TypeScript, and the File System Access API. Since the September 29 review the team landed the file-storage lifecycle state machine, surfaced autosave status in the UI, decomposed the financial item stack into lean components, and expanded the automated suite to 142 Vitest specs (including new integration flows). Quality is trending up: data integrity safeguards and toast UX are cohesive, and docs match the current roadmap. With the window shim now retired, the main opportunities center on finishing the breakup of the new `AppContent` orchestrator and layering lightweight performance telemetry to quantify bundle/render costs.
 
 **Overall Grade: A (92/100)**
 
 | Category        | Score | Highlights                                                                                              |
 |-----------------|:-----:|---------------------------------------------------------------------------------------------------------|
-| Architecture    | 8/10  | File-only stack reinforced by the new storage lifecycle reducer; `App.tsx` still carries modal + nav glue |
+| Architecture    | 8/10  | File-only stack reinforced by the new storage lifecycle reducer; `AppContent` now carries the remaining modal + nav glue |
 | Type Safety     | 9/10  | Strict TS across contexts, exhaustive domain models, shared input sanitizers and Zod helpers            |
 | UI & Components | 9/10  | Alerts reporting revamped with shadcn primitives and fuzzy search; layout shell stays cohesive with autosave theming |
 | State & Data    | 9/10  | DataManager + lifecycle selectors keep filesystem sync predictable; autosave status exposed everywhere  |
 | Error Handling  | 9/10  | Centralized file-storage error reporter delivers consistent toasts and structured logs                  |
-| Performance     | 7/10  | Memoization & virtualization help, but `App.tsx` re-renders remain heavy and bundle telemetry is absent   |
+| Performance     | 7/10  | Memoization & virtualization help, but `AppContent` re-renders remain heavy and bundle telemetry is absent   |
 | Testing         | 8/10  | 142 Vitest specs (integration + RTL) cover key flows; coverage baseline sits at 73.3% statements         |
-| Maintainability | 8/10  | Docs/backlog kept current and components trimmed; `App.tsx` is slimmer but still carries orchestration glue |
+| Maintainability | 8/10  | Docs/backlog kept current and components trimmed; `AppContent` is sizeable and still carries orchestration glue |
 | Security        | 9/10  | Local-first storage, sanitized file imports, defensive File System Access API wrappers                  |
 
 ## Recent Validation
@@ -30,7 +30,7 @@ CMSNext remains a filesystem-first case management experience built with React 1
 - Filesystem-first architecture continues to route every CRUD action through `DataManager`, `AutosaveFileService`, and the File System Access API.
 - The new `fileStorageMachine` reducer and selectors give providers and consumers a typed, event-driven lifecycle.
 **Opportunities**
-- `App.tsx` still mixes navigation, modal orchestration, alert loading, and shared flow glue—finish decomposing into the dedicated hooks already introduced elsewhere.
+- `AppContent` mixes navigation, modal orchestration, alert loading, and shared flow glue—finish decomposing into the dedicated hooks already introduced elsewhere so the shell stays lean.
 - Continue routing new data-load features through the `FileStorageContext` dispatcher introduced on Oct 6 to avoid regressing into global shims.
 - Consider co-locating alert bootstrapping and autosave wiring in a storage-focused provider to slim the main app shell further.
 
@@ -73,7 +73,7 @@ CMSNext remains a filesystem-first case management experience built with React 1
 - Heavy panels and modals stay lazy-loaded, and virtualization keeps large case lists responsive.
 - Hooks and components employ `memo`, `useMemo`, and `useCallback` to avoid unnecessary tree churn, especially after the financial UI refactor.
 **Opportunities**
-- `App.tsx` re-renders propagate through many providers; splitting remaining flows would unlock finer memoization.
+- `AppContent` re-renders propagate through many providers; splitting remaining flows would unlock finer memoization.
 - No bundle-budget or render profiling automation exists—wire up Vite bundle analyzer or simple `performance.mark` checkpoints.
 - Autosave badge updates sometimes trigger double renders; investigate selector memoization or batching in the reducer.
 
@@ -90,9 +90,8 @@ CMSNext remains a filesystem-first case management experience built with React 1
 **Strengths**
 - Roadmap docs (`progression-strategy.md`) now list only active phases, with historical detail archived.
 - Component decomposition and hook extraction reduce per-file cognitive load, especially in the financial and storage stacks.
-**Opportunities**
 - Document the post-shim storage dispatcher and usage metrics plan so future contributors follow the new patterns.
-- `App.tsx` and provider wiring remain dense—track remaining responsibilities in ADRs or docs to guide the next decomposition steps.
+- `AppContent` and provider wiring remain dense—track remaining responsibilities in ADRs or docs to guide the next decomposition steps.
 - Consider adding automated formatting (Prettier or Biome) to lock in style while refactors continue.
 
 ### Security & Privacy (9/10)
@@ -112,7 +111,7 @@ CMSNext remains a filesystem-first case management experience built with React 1
 - ✅ Documentation and roadmap reflect completed phases, keeping contributors aligned.
 
 ### High Priority
-1. Split the remaining orchestration from `App.tsx` (alerts bootstrap, modal management) into dedicated providers/hooks to drop the file below 400 lines.
+1. Split the remaining orchestration from `AppContent` (alerts bootstrap, modal management) into dedicated providers/hooks so each feature owns its flow wiring.
 2. Expand bundle/render telemetry (e.g., Vite bundle analyzer, React Profiler checkpoints) to quantify performance work in Phase 4.
 3. Stand up the planned usage metrics service + context to capture navigation/dashboard events via the filesystem API.
 
@@ -127,6 +126,6 @@ CMSNext remains a filesystem-first case management experience built with React 1
 3. Run an accessibility sweep (axe, manual keyboard tests) across the decomposed UI to confirm modal and badge flows remain compliant.
 
 ## Closing Summary
-CMSNext continues to deliver a polished, filesystem-first experience with increasingly disciplined architecture, state management, and coverage. The file-storage lifecycle, autosave visibility, and financial UI decomposition materially improved the codebase since the last review, while build/test health remains strong. Focus upcoming work on finishing the `App.tsx` breakup, leveraging the new storage-context handlers instead of globals, and wiring performance telemetry—the last pieces standing between “great” and “exceptional”.
+CMSNext continues to deliver a polished, filesystem-first experience with increasingly disciplined architecture, state management, and coverage. The file-storage lifecycle, autosave visibility, and financial UI decomposition materially improved the codebase since the last review, while build/test health remains strong. Focus upcoming work on carving `AppContent` into smaller, feature-scoped providers, leveraging the new storage-context handlers instead of globals, and wiring performance telemetry—the last pieces standing between “great” and “exceptional”.
 
 **Final Grade: A (92/100)** — Strong overall quality with clear, achievable steps to reach A+ territory.

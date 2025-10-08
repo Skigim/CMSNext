@@ -3,7 +3,7 @@
 ## 📋 Executive Summary
 The September 24, 2025 code review (A- / 88) praised CMSNext’s filesystem-first architecture and robust validation while identifying three high-impact opportunities:
 
-1. **Continue decomposing orchestration-heavy modules** – `App.tsx` still sits near 690 lines even after recent trims and continues to centralize multiple flows that should move into focused providers/hooks; the `FinancialItemCard` suite has been split into ~100-line leaf components and can serve as the pattern for the remaining breakouts.
+1. **Keep chipping away at orchestration-heavy modules** – `App.tsx` is now a 15-line shell that delegates to `AppContent`, which carries the remaining ~400 lines of flow wiring; start teasing apart `AppContent` into feature-focused providers/hooks using the `FinancialItemCard` breakup as the pattern.
 2. **Expand automated testing beyond core services** – complement the DataManager/Autosave coverage with React Testing Library suites and end-to-end flows.
 3. **Polish the file-storage experience** – keep data orchestration inside the file-storage context (global bridges like `window.handleFileDataLoaded` were removed on Oct 6), surface autosave status, and harden recovery messaging when permissions fail.
 
@@ -35,8 +35,18 @@ This plan realigns the roadmap around those themes while preserving the filesyst
 - ✅ Documentation: `performance-prep.md` and `performance-metrics.md` capture the baseline checklist and reporting template.
 - ✅ UI cleanup: dashboard tiles were pruned (Oct 6) to reduce layout churn ahead of profiling work.
 - ✅ Usage telemetry plan: `usage-logging-strategy.md` outlines filesystem-first event logging and diagnostics wiring.
-- ✅ Baseline capture: `npm run analyze` outputs are archived at `docs/development/performance/2025-10-07-bundle-analysis.html`, `App.tsx` is wrapped in a React Profiler with logs stored via `performanceTracker` (`docs/development/performance/2025-10-07-performance-log.json`), and findings are summarized in `docs/development/performance/2025-10-07-baseline.md`.
-- 📌 Follow-up targets: export an interaction trace using the new measurement helpers, break down `App.tsx` render hotspots (targeting commits >25 ms), measure autosave badge update latency, verify the manual chunks still cover the heaviest modules after upcoming changes, and prioritize chunk-splitting or memoization stories based on the collected data.
+- ✅ Baseline capture: `npm run analyze` outputs are archived at `docs/development/performance/2025-10-07-bundle-analysis.html`, the newly introduced `AppContent` component is wrapped in a React Profiler with logs stored via `performanceTracker` (`docs/development/performance/2025-10-07-performance-log.json`), and findings are summarized in `docs/development/performance/2025-10-07-baseline.md`.
+- 📌 Follow-up targets: export an interaction trace using the new measurement helpers, break down `AppContent` render hotspots (targeting commits >25 ms), measure autosave badge update latency, verify the manual chunks still cover the heaviest modules after upcoming changes, and prioritize chunk-splitting or memoization stories based on the collected data.
+
+#### Phase 4 Remaining TODOs
+
+- [ ] Capture a real interaction trace (dashboard → case workspace → dashboard) using the instrumentation helpers and archive both the raw measurements and profiler export alongside the treemap.
+- [ ] Analyze `AppContent` React Profiler commits in an interactive session, documenting any updates that exceed ~25 ms and proposing memoization/chunk-splitting stories.
+- [ ] Measure autosave badge end-to-end latency under normal and degraded storage conditions, recording benchmarks in `performance-metrics.md`.
+- [ ] Re-run `npm run analyze` after the next set of changes to confirm manual chunk groupings still isolate the heaviest modules; update the bundle baseline entry if deltas are observed.
+- [ ] Add targeted unit/RTL coverage that exercises the new flow hooks (`useFileDataSync`, `useAlertsFlow`, `useNavigationFlow`) across success and error paths.
+- [ ] Execute the outstanding Phase 4 checklist in `performance-prep.md` (React Profiler capture, Chrome Performance panel audit) and log results in `performance-metrics.md`.
+- [ ] Complete the Phase 4 items in `state-management-refactor-plan.md`—edge-case validation, data integrity verification, and the final performance optimization pass driven by the above telemetry.
 
 ### Phase 5 · Documentation & Developer Experience (Backlog)
 - ⏸️ Deferred until feature-facing changes land. Fold doc and DX improvements into release prep for those features.

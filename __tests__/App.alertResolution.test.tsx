@@ -210,7 +210,7 @@ describe("App alert resolution", () => {
       deleteCaseWithNavigation: vi.fn(),
       backToList: vi.fn(),
       setSidebarOpen: vi.fn(),
-      navigationLock: null,
+      navigationLock: { locked: false, reason: "", tone: "info" },
     };
 
     connectionFlowMock = {
@@ -317,15 +317,19 @@ describe("App alert resolution", () => {
       useDataManagerSafe: () => dataManagerMock,
     }));
 
-    vi.doMock(HOOKS_MODULE_PATH, () => ({
-      useCaseManagement: () => caseManagementMock,
-      useConnectionFlow: () => connectionFlowMock,
-      useFinancialItemFlow: () => financialItemFlowMock,
-      useNavigationFlow: () => navigationFlowMock,
-      useNoteFlow: () => noteFlowMock,
-      useImportListeners: (args: unknown) => importListenersMock(args),
-      useCaseActivityLog: () => activityLogStateMock,
-    }));
+    vi.doMock(HOOKS_MODULE_PATH, async () => {
+      const actual = await vi.importActual<typeof import("@/hooks")>(HOOKS_MODULE_PATH);
+      return {
+        ...actual,
+        useCaseManagement: () => caseManagementMock,
+        useConnectionFlow: () => connectionFlowMock,
+        useFinancialItemFlow: () => financialItemFlowMock,
+        useNavigationFlow: () => navigationFlowMock,
+        useNoteFlow: () => noteFlowMock,
+        useImportListeners: (args: unknown) => importListenersMock(args),
+        useCaseActivityLog: () => activityLogStateMock,
+      };
+    });
 
     ({ default: App } = await import(APP_MODULE_PATH));
   });

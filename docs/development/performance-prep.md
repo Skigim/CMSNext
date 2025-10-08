@@ -16,7 +16,7 @@
 | Area | What to Measure | Tooling | Notes |
 |------|-----------------|---------|-------|
 | Bundle size | Total output, top 10 modules, compression impact | `npm run analyze` (treemap) | Run after `npm run build`; check brotli + gzip sizes. |
-| Initial render | React commit duration, suspended renders, large component updates | React Profiler (Chrome DevTools) | Profile `App.tsx` mount, navigation between dashboard and case workspace. |
+| Initial render | React commit duration, suspended renders, large component updates | React Profiler (Chrome DevTools) | Profile `AppContent` mount, navigation between dashboard and case workspace. |
 | Runtime responsiveness | Interaction latency for sidebar toggle, case selection, autosave badge updates | Chrome Performance panel + `performance.mark` hooks | Annotate `useNavigationFlow` and `AutosaveStatusBadge` transitions if needed. |
 | Network | Total JS payload, waterfall during initial load | Chrome DevTools Network tab | Ensure compression artifacts (`.gz`) served in production preview. |
 
@@ -35,6 +35,6 @@ Create a dated section inside `docs/development/performance-metrics.md` (create 
 
 ## 🚀 Next Steps
 1. Run `npm run analyze`, archive the output, and summarize bundle findings in the metrics log.
-2. Profile navigation flows with React Profiler to pinpoint remaining `App.tsx` hotspots.
+2. Profile navigation flows with React Profiler to pinpoint remaining `AppContent` hotspots.
 3. Open follow-up issues for each hotspot (e.g., memoization gaps, chunk splitting opportunities).
 4. Re-run the same measurements after each optimization to verify regression budgets stay intact.
