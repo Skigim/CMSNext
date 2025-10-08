@@ -1,5 +1,8 @@
 import { memo, Profiler, useCallback, useMemo } from "react";
-import type { ProfilerProps } from "react";
+import type { ProfilerOnRenderCallback } from "react";
+
+type ExtendedProfilerArgs = [...Parameters<ProfilerOnRenderCallback>, Set<unknown>?, number?];
+type ExtendedProfilerOnRenderCallback = (...args: ExtendedProfilerArgs) => void;
 import { toast } from "sonner";
 import { useFileStorage, useFileStorageLifecycleSelectors } from "../../contexts/FileStorageContext";
 import { useDataManagerSafe } from "../../contexts/DataManagerContext";
@@ -405,13 +408,20 @@ export const AppContent = memo(function AppContent() {
 
   const casesCount = cases.length;
 
-  const handleAppRenderProfile = useCallback<ProfilerProps["onRender"]>(
+  const handleAppRenderProfile = useCallback<ExtendedProfilerOnRenderCallback>(
     (...args) => {
-      const [id, phase, actualDuration, baseDuration, startTime, commitTime] = args;
-      const extras = args as unknown[];
-      const interactions = (extras[6] as Set<unknown> | undefined) ?? new Set<unknown>();
-      const lanes = extras[7] as number | undefined;
+      const [
+        id,
+        phase,
+        actualDuration,
+        baseDuration,
+        startTime,
+        commitTime,
+        interactions = new Set<unknown>(),
+        lanes,
+      ] = args;
       const normalizedPhase: "mount" | "update" = phase === "mount" ? "mount" : "update";
+      const normalizedLanes = typeof lanes === "number" ? lanes : undefined;
 
       recordRenderProfile({
         id,
@@ -425,7 +435,7 @@ export const AppContent = memo(function AppContent() {
           currentView,
           casesCount,
           navigationLocked: navigationLock.locked,
-          lanes,
+          lanes: normalizedLanes,
         },
       });
     },

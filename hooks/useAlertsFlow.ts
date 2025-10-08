@@ -176,7 +176,7 @@ export function useAlertsFlow({
             error: err instanceof Error ? err.message : String(err),
           });
           resolvedAlertOverridesRef.current.delete(alert.id);
-          setAlertsIndex(prev => applyAlertOverrides(prev));
+          await reloadAlerts();
           toast.error("Unable to reopen alert. Please try again.");
         }
 
@@ -214,7 +214,7 @@ export function useAlertsFlow({
           error: err instanceof Error ? err.message : String(err),
         });
         resolvedAlertOverridesRef.current.delete(alert.id);
-        setAlertsIndex(prev => applyAlertOverrides(prev));
+        await reloadAlerts();
         toast.error("Unable to resolve alert. Please try again.");
       }
     },

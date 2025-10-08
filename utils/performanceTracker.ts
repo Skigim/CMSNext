@@ -47,6 +47,7 @@ const mode = env?.MODE ?? env?.mode;
 const dev = env?.DEV ?? env?.dev;
 const nodeEnv = typeof process !== "undefined" ? process.env.NODE_ENV : undefined;
 const shouldTrack = Boolean(dev || mode === "analyze" || nodeEnv === "test");
+let idCounter = 0;
 
 const hasPerformanceApi = typeof performance !== "undefined" &&
   typeof performance.mark === "function" &&
@@ -95,7 +96,7 @@ export function startMeasurement(name: string, detail?: MeasurementDetail) {
   if (!shouldTrack) {
     return;
   }
-  const markId = `${name}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}-start`;
+  const markId = `${name}-${idCounter++}-start`;
   if (hasPerformanceApi) {
     try {
       performance.mark(markId);
@@ -121,7 +122,7 @@ export function endMeasurement(name: string, detail?: MeasurementDetail) {
   let duration = endTime - fallbackStart;
 
   if (hasPerformanceApi) {
-    const measureId = `${name}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}-measure`;
+    const measureId = `${name}-${idCounter++}-measure`;
     try {
       performance.measure(measureId, markId);
       const entries = performance.getEntriesByName(measureId);

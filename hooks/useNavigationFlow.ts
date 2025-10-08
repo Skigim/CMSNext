@@ -335,7 +335,7 @@ export function useNavigationFlow({
 
   const navigate = useCallback(
     (view: AppView) => {
-  startMeasurement("navigation:navigate", { view, locked: navigationLockedRef.current });
+      startMeasurement("navigation:navigate", { view, locked: navigationLockedRef.current });
       if (RESTRICTED_VIEWS.includes(view) && guardCaseInteraction()) {
         forcedViewRef.current = view;
         setSidebarOpen(true);
