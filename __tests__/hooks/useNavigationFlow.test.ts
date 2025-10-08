@@ -32,6 +32,12 @@ function createConnectionState(
   };
 }
 
+function getLastMeasurementMetadata(measurementName: string) {
+  const matchingCalls = endMeasurementMock.mock.calls.filter(([name]) => name === measurementName);
+  const lastCall = matchingCalls[matchingCalls.length - 1];
+  return lastCall?.[1];
+}
+
 describe("useNavigationFlow", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -114,9 +120,8 @@ describe("useNavigationFlow", () => {
       expect.objectContaining({ locked: true }),
     );
 
-  const saveCalls = endMeasurementMock.mock.calls.filter((call) => call[0] === "navigation:newCase");
-  const lastCall = saveCalls[saveCalls.length - 1];
-  expect(lastCall?.[1]).toMatchObject({ blocked: true });
+  const lastMeasurement = getLastMeasurementMetadata("navigation:newCase");
+  expect(lastMeasurement).toMatchObject({ blocked: true });
     expect(mockToast.error).toHaveBeenCalledWith(
       expect.stringContaining("Permission to the data folder was denied"),
       expect.any(Object),
@@ -209,8 +214,7 @@ describe("useNavigationFlow", () => {
     expect(result.current.currentView).toBe("dashboard");
     expect(result.current.editingCase).toBeNull();
 
-  const saveCalls = endMeasurementMock.mock.calls.filter((call) => call[0] === "navigation:saveCase");
-  const lastCall = saveCalls[saveCalls.length - 1];
-  expect(lastCall?.[1]).toMatchObject({ result: "update" });
+    const lastMeasurement = getLastMeasurementMetadata("navigation:saveCase");
+    expect(lastMeasurement).toMatchObject({ result: "update" });
   });
 });

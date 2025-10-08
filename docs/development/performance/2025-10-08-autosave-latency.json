@@ -18,7 +18,7 @@
         "name": "autosave:badgeUpdate",
         "durationMs": 137.412,
         "startTime": 1733716500.05,
-        "endTime": 1733716637.46
+        "endTime": 1733716500.187412
       }
     },
     {
@@ -37,7 +37,7 @@
         "name": "autosave:badgeUpdate",
         "durationMs": 482.987,
         "startTime": 1733716701.22,
-        "endTime": 1733717184.21
+        "endTime": 1733716701.702987
       }
     }
   ],
