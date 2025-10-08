@@ -41,11 +41,14 @@ This plan realigns the roadmap around those themes while preserving the filesyst
 
 #### Phase 4 Remaining TODOs
 
-- [ ] Capture a real interaction trace (dashboard → case workspace → dashboard) using the instrumentation helpers and archive both the raw measurements and profiler export alongside the treemap.
-- [ ] Analyze `AppContent` React Profiler commits in an interactive session, documenting any updates that exceed ~25 ms and proposing memoization/chunk-splitting stories.
-- [ ] Measure autosave badge end-to-end latency under normal and degraded storage conditions, recording benchmarks in `performance-metrics.md`.
-- [ ] Re-run `npm run analyze` after the next set of changes to confirm manual chunk groupings still isolate the heaviest modules; update the bundle baseline entry if deltas are observed.
-- [ ] Add targeted unit/RTL coverage that exercises the new flow hooks (`useFileDataSync`, `useAlertsFlow`, `useNavigationFlow`) across success and error paths.
+- [ ] Capture a real interaction trace (dashboard → case workspace → dashboard) using the instrumentation helpers and archive both the raw measurements and profiler export alongside the treemap (**manual run pending**).
+- [ ] Analyze `AppContent` React Profiler commits in an interactive session, documenting any updates that exceed ~25 ms and proposing memoization/chunk-splitting stories (**manual profiler session pending**).
+- [x] Measure autosave badge end-to-end latency under normal and degraded storage conditions, recording benchmarks in `performance-metrics.md` (see `docs/development/performance/2025-10-08-autosave-latency.json`; augment with live run after manual trace capture).
+- [x] Re-run `npm run analyze` after the next set of changes to confirm manual chunk groupings still isolate the heaviest modules; update the bundle baseline entry if deltas are observed (treemap archived at `docs/development/performance/2025-10-08-bundle-analysis.html`).
+- [x] Add targeted unit/RTL coverage that exercises the new flow hooks across success and error paths:
+  - ✅ `useNavigationFlow` (see `__tests__/hooks/useNavigationFlow.test.ts` for happy-path and blocked-state instrumentation coverage)
+  - ✅ `useFileDataSync` (see `__tests__/hooks/useFileDataSync.test.ts` covering standard payloads, legacy raw data reloads, and error handling)
+  - ✅ `useAlertsFlow` (see `__tests__/hooks/useAlertsFlow.test.ts` for alert reloads, success toasts, permission blocks, and failure handling)
 - [ ] Execute the outstanding Phase 4 checklist in `performance-prep.md` (Chrome Performance panel audit still pending; React Profiler capture logged on 2025-10-07) and log results in `performance-metrics.md`.
 - [ ] Complete the Phase 4 items in `state-management-refactor-plan.md`—edge-case validation, data integrity verification, and the final performance optimization pass driven by the above telemetry.
 
