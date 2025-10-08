@@ -13,9 +13,10 @@ This document provides comprehensive guidance for testing the CMSNext filesystem
 - **@testing-library/jest-dom** - Custom jest matchers
 
 ### **Test Coverage Status**
-- **63 passing tests** across 7 suites (unit, component, and integration)
+- **70+ passing tests** across hook, component, utility, and integration suites
 - **95.91% coverage** on DataManager (38 tests)
 - **20 tests** for AutosaveFileService
+- **3 targeted hook suites** covering navigation, file data sync, and alerts flows (new)
 - **1 end-to-end connection flow test** exercising the file storage lifecycle
 - **New RTL suites** covering CaseForm, FinancialItemCard, and ConnectToExistingModal
 
@@ -163,15 +164,19 @@ __tests__/
 ├── AutosaveFileService.test.ts          # File system operations (20 tests)
 ├── DataManager.test.ts                  # Data CRUD operations (38 tests)
 ├── setup.test.tsx                       # Environment validation (3 tests)
+├── hooks/
+│   ├── useAlertsFlow.test.ts            # Alert reloads, resolution flows, and failure handling (new)
+│   ├── useFileDataSync.test.ts          # Structured payload sync + legacy reloads + error surfacing (new)
+│   └── useNavigationFlow.test.ts        # Navigation locking + instrumentation integration
 ├── integration/
 │   └── connectionFlow.test.tsx          # connect → load → edit → save happy path
 └── components/__tests__/
-  ├── CaseDetails.test.tsx             # Memory leak prevention
-  ├── CaseForm.test.tsx                # Form validation + normalization (new)
-  ├── ConnectToExistingModal.test.tsx  # File-storage onboarding UX (new)
-  ├── FinancialItemCard.test.tsx       # Inline edits + verification (new)
-  ├── KeyManagement.test.ts            # Key generation patterns
-  └── NotesSection.test.tsx            # Component key management
+    ├── CaseDetails.test.tsx             # Memory leak prevention
+    ├── CaseForm.test.tsx                # Form validation + normalization (new)
+    ├── ConnectToExistingModal.test.tsx  # File-storage onboarding UX (new)
+    ├── FinancialItemCard.test.tsx       # Inline edits + verification (new)
+    ├── KeyManagement.test.ts            # Key generation patterns
+    └── NotesSection.test.tsx            # Component key management
 ```
 
 ### **Recommended Test Categories**

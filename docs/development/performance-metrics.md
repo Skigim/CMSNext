@@ -40,3 +40,20 @@
 1. Capture a real navigation trace (dashboard → list → detail) and archive the raw measurement/profile output alongside the treemap.
 2. Validate AppContent commit durations in live Profiler sessions and prioritize memoization if commits exceed ~25 ms.
 3. Audit `utils-CBw3aSZY.js` for code that can shift behind dynamic imports before new helpers land.
+
+## 2025-10-08 · Commit TBD (feature/perf-phase4-alignment)
+
+### Bundle Summary
+- Total JS output: ~1.24 MB raw / ~139 kB gzip (`index-CoT1BYhK.js` primary bundle) — +0.8 kB raw / +0.3 kB gzip versus 2025-10-07 baseline.
+- Largest chunk(s): `index-CoT1BYhK.js` at 492.35 kB raw / 132.81 kB gzip (↔); `ui-vendor-CHDmJV_O.js` at 151.77 kB raw / 46.62 kB gzip (↔); `utils-CBw3aSZY.js` steady at 82.62 kB raw / 23.34 kB gzip (↔).
+- Notable modules: Hook test additions pulled minimal shared runtime; manual chunks hold steady.
+- Compression savings: Primary bundle reduces ~73% post-gzip (492.35 → 132.81 kB), parity with baseline.
+
+### Runtime Observations
+- Autosave badge benchmark: Synthetic `autosave:badgeUpdate` measurement logs produced via `AutosaveLatencyBenchmark` helper (`docs/development/performance/2025-10-08-autosave-latency.json`). Normal storage flow stabilizes badge in ~137 ms, degraded flow (retrying with pending writes) stretches to ~483 ms.
+- Interaction trace & live profiler review: **Pending manual capture** (requires in-browser navigation run and React DevTools Profiler session).
+
+### Follow-up Actions
+1. Owner run: capture real dashboard → case → dashboard trace with profiler export; archive under `docs/development/performance/2025-10-08-interaction-trace.*` and update this log.
+2. Analyze resulting `AppContent` commits (>25 ms) and file memoization/chunk-splitting stories; update Phase 4 TODOs.
+3. Expand autosave latency benchmark to include actual browser session metrics and compare with synthetic baseline.

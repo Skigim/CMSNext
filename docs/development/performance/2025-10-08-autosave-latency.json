@@ -1,0 +1,48 @@
+{
+  "generatedAt": "2025-10-08T16:55:00.000Z",
+  "scenario": "autosave-latency-benchmark",
+  "runs": [
+    {
+      "id": "normal-storage",
+      "initialStatus": {
+        "lifecycle": "ready",
+        "permission": "granted",
+        "pendingWrites": 0
+      },
+      "badge": {
+        "before": "idle",
+        "after": "saved",
+        "detail": "All changes saved"
+      },
+      "measurement": {
+        "name": "autosave:badgeUpdate",
+        "durationMs": 137.412,
+        "startTime": 1733716500.05,
+        "endTime": 1733716637.46
+      }
+    },
+    {
+      "id": "degraded-storage",
+      "initialStatus": {
+        "lifecycle": "recovering",
+        "permission": "granted",
+        "pendingWrites": 3
+      },
+      "badge": {
+        "before": "retrying",
+        "after": "warning",
+        "detail": "Autosave retrying (attempt 2)"
+      },
+      "measurement": {
+        "name": "autosave:badgeUpdate",
+        "durationMs": 482.987,
+        "startTime": 1733716701.22,
+        "endTime": 1733717184.21
+      }
+    }
+  ],
+  "notes": [
+    "Synthetic benchmark driven by AutosaveLatencyBenchmark helper.",
+    "Durations represent badge state transition time after autosave state change notifications."
+  ]
+}
