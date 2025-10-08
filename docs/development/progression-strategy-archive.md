@@ -112,3 +112,20 @@ _Archived log initiated September 26, 2025 · last updated October 3, 2025_
 - Exit criteria met when badge documentation covered every lifecycle state, updated guides were merged, and `npm run test:run` reflected the broader suite without regressions.
 
 **Success metric:** Achieved zero global mutable flags, surfaced a visible autosave indicator, centralized error logging, and published documented recovery flows.
+
+## Phase 4 · Performance & Observability (Completed October 8, 2025)
+
+### Baseline & Telemetry Automation
+- ✅ Captured automated navigation timings and profiler samples via `npm run perf:baseline`, archiving outputs in `docs/development/performance/2025-10-07-*` and summarizing findings in `performance-metrics.md`.
+- ✅ Re-ran `npm run analyze` after Phase 4 refactors, confirming manual chunk groupings remained stable and publishing the updated treemap at `docs/development/performance/2025-10-08-bundle-analysis.html`.
+
+### Autosave Latency Benchmarking
+- ✅ Measured `autosave:badgeUpdate` end-to-end latency across normal and degraded storage scenarios, logging benchmarks in `docs/development/performance/2025-10-08-autosave-latency.json` and referencing the results in `performance-metrics.md` for future diffs.
+
+### Hook Test Coverage Expansion
+- ✅ Added targeted unit/RTL coverage for the newly refactored flow hooks to ensure instrumentation and error handling remain regression-proof:
+  - `__tests__/hooks/useNavigationFlow.test.ts` verifies happy-path navigation, blocked states, and measurement metadata.
+  - `__tests__/hooks/useFileDataSync.test.ts` covers structured payload sync, legacy raw data reloads, and failure surfacing.
+  - `__tests__/hooks/useAlertsFlow.test.ts` exercises reload, resolution, permission-denied flows, and toast messaging.
+
+**Success metric:** Established a reproducible performance baseline, validated autosave responsiveness under varied storage conditions, and locked in regression protection for the supporting hooks while leaving only manual trace/profiler work outstanding.
