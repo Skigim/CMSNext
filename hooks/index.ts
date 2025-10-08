@@ -39,6 +39,12 @@ export { useAppState } from './useAppState';
 // File import coordination
 export { useImportListeners } from './useImportListeners';
 
+// File data synchronization
+export { useFileDataSync } from './useFileDataSync';
+
+// Alerts flow management
+export { useAlertsFlow } from './useAlertsFlow';
+
 // Form validation hooks
 export { 
   useFormValidation,

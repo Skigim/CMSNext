@@ -17,7 +17,13 @@ const compat = new FlatCompat({
 
 export default [
   {
-    ignores: ['dist', 'scripts/', 'supabase/', 'archive/'],
+    ignores: [
+      'dist',
+      'scripts/',
+      'supabase/',
+      'archive/',
+      'docs/development/performance/**/*.html',
+    ],
   },
   {
     languageOptions: {

@@ -5,7 +5,7 @@
 ### 🚨 Critical Problems Identified:
 
 1. **Multiple Sources of Truth**
-   - React state (App.tsx cases[])
+   - React state (AppContent cases[])
    - FileStorageAPI internal data
    - FileDataProvider cache
    - Actual file system data
@@ -56,7 +56,7 @@ DataManager (Singleton)
 - [ ] Create React hooks for seamless integration
 
 #### Phase 2: Gradual Migration
-- [ ] Replace App.tsx state management with DataManager
+- [ ] Replace AppContent state management with DataManager
 - [ ] Migrate FileStorageAPI operations to DataManager
 - [ ] Remove global window flags and complex connection logic
 - [ ] Update all components to use new hooks
