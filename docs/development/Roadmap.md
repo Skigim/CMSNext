@@ -16,13 +16,11 @@
 
 ## Scoring Model
 
-| Rating | Maturity Level |
-|--------|----------------|
-| **0–49** | Foundational capabilities missing or unreliable; feature not marketable yet |
-| **50–69** | Core capability present but fragile or incomplete; major gaps limit adoption |
-| **70–84** | Solid implementation serving real users with clear, addressable improvements outstanding |
-| **85–94** | Advanced, polished experience; remaining work is fine-tuning or long-tail edge cases |
-| **95** | Near-ideal. Reserved for exceptional maturity with only incremental gains left. _(We never assign 100.)_ |
+- **0–49** – Foundational capabilities missing or unreliable; feature not marketable yet
+- **50–69** – Core capability present but fragile or incomplete; major gaps limit adoption
+- **70–84** – Solid implementation serving real users with clear, addressable improvements outstanding
+- **85–94** – Advanced, polished experience; remaining work is fine-tuning or long-tail edge cases
+- **95** – Near-ideal. Reserved for exceptional maturity with only incremental gains left. _(We never assign 100.)_
 
 ---
 
