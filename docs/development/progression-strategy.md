@@ -30,13 +30,13 @@ This plan realigns the roadmap around those themes while preserving the filesyst
 - Phase 5 remains on deck and will reactivate once performance telemetry stabilizes and feature specs are locked in.
 
 ### Phase 4 · Performance & Observability (Baseline captured)
-- ✅ Tooling: `npm run analyze` now emits a treemap via `rollup-plugin-visualizer` to `dist/bundle-analysis.html`; stash a copy under `docs/development/performance/` (create the folder on first export) so runs stay diffable.
+- ✅ Tooling: `npm run analyze` now emits a treemap via `rollup-plugin-visualizer` to `dist/bundle-analysis.html`; stash a copy under `reports/performance/` (create the folder on first export) so runs stay diffable.
 - ✅ Build defaults: `vite.config.ts` ships with manual chunk rules for React, UI vendors, and shared utilities plus gzip compression for production builds—treat these groupings as the current performance baseline when reviewing bundle diffs.
 - ✅ Documentation: `performance-prep.md` and `performance-metrics.md` capture the baseline checklist and reporting template.
 - ✅ UI cleanup: dashboard tiles were pruned (Oct 6) to reduce layout churn ahead of profiling work.
 - ✅ Usage telemetry plan: `usage-logging-strategy.md` outlines filesystem-first event logging and diagnostics wiring.
-- ✅ Baseline capture: `npm run analyze` outputs are archived at `docs/development/performance/2025-10-07-bundle-analysis.html`, the newly introduced `AppContent` component is wrapped in a React Profiler with logs stored via `performanceTracker` (`docs/development/performance/2025-10-07-performance-log.json`), and findings are summarized in `docs/development/performance/2025-10-07-baseline.md`.
-- ✅ Baseline scripting: `npm run perf:baseline` (see `scripts/performanceBaseline.ts`) now automates the capture of navigation timings and profiler samples, ensuring future diff runs produce comparable JSON under `docs/development/performance/`.
+- ✅ Baseline capture: `npm run analyze` outputs are archived at `reports/performance/2025-10-07-bundle-analysis.html`, the newly introduced `AppContent` component is wrapped in a React Profiler with logs stored via `performanceTracker` (`reports/performance/2025-10-07-performance-log.json`), and findings are summarized in `docs/development/performance/2025-10-07-baseline.md`.
+- ✅ Baseline scripting: `npm run perf:baseline` (see `scripts/performanceBaseline.ts`) now automates the capture of navigation timings and profiler samples, ensuring future diff runs produce comparable JSON under `reports/performance/`.
 - 📌 Follow-up targets: export an interaction trace using the new measurement helpers, break down `AppContent` render hotspots (targeting commits >25 ms), measure autosave badge update latency, verify the manual chunks still cover the heaviest modules after upcoming changes, and prioritize chunk-splitting or memoization stories based on the collected data.
 
 #### Phase 4 Remaining TODOs

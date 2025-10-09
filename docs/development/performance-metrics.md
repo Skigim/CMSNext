@@ -34,7 +34,7 @@
 ### Runtime Observations
 - React Profiler notes: `AppContent` mount logged at 22.34 ms actual / 16.34 ms base with metadata captured via `performanceTracker`.
 - Interaction latency: `navigation:backToDashboard` sample completed in 19.01 ms under the scripted baseline run.
-- Other findings: Instrumentation verified end-to-end (`npm run perf:baseline` output stored in `docs/development/performance/2025-10-07-performance-log.json`).
+- Other findings: Instrumentation verified end-to-end (`npm run perf:baseline` output stored in `reports/performance/2025-10-07-performance-log.json`).
 
 ### Follow-up Actions
 1. Capture a real navigation trace (dashboard → list → detail) and archive the raw measurement/profile output alongside the treemap.
@@ -50,10 +50,10 @@
 - Compression savings: Primary bundle reduces ~73% post-gzip (492.35 → 132.81 kB), parity with baseline.
 
 ### Runtime Observations
-- Autosave badge benchmark: Synthetic `autosave:badgeUpdate` measurement logs produced via `AutosaveLatencyBenchmark` helper (`docs/development/performance/2025-10-08-autosave-latency.json`). Normal storage flow stabilizes badge in ~137 ms, degraded flow (retrying with pending writes) stretches to ~483 ms.
+- Autosave badge benchmark: Synthetic `autosave:badgeUpdate` measurement logs produced via `AutosaveLatencyBenchmark` helper (`reports/performance/2025-10-08-autosave-latency.json`). Normal storage flow stabilizes badge in ~137 ms, degraded flow (retrying with pending writes) stretches to ~483 ms.
 - Interaction trace & live profiler review: **Pending manual capture** (requires in-browser navigation run and React DevTools Profiler session).
 
 ### Follow-up Actions
-1. Owner run: capture real dashboard → case → dashboard trace with profiler export; archive under `docs/development/performance/2025-10-08-interaction-trace.*` and update this log.
+1. Owner run: capture real dashboard → case → dashboard trace with profiler export; archive under `reports/performance/2025-10-08-interaction-trace.*` and update this log.
 2. Analyze resulting `AppContent` commits (>25 ms) and file memoization/chunk-splitting stories; update Phase 4 TODOs.
 3. Expand autosave latency benchmark to include actual browser session metrics and compare with synthetic baseline.

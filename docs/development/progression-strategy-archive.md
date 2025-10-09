@@ -116,11 +116,10 @@ _Archived log initiated September 26, 2025 · last updated October 3, 2025_
 ## Phase 4 · Performance & Observability (Completed October 8, 2025)
 
 ### Baseline & Telemetry Automation
-- ✅ Captured automated navigation timings and profiler samples via `npm run perf:baseline`, archiving outputs in `docs/development/performance/2025-10-07-*` and summarizing findings in `performance-metrics.md`.
-- ✅ Re-ran `npm run analyze` after Phase 4 refactors, confirming manual chunk groupings remained stable and publishing the updated treemap at `docs/development/performance/2025-10-08-bundle-analysis.html`.
+- ✅ Captured automated navigation timings and profiler samples via `npm run perf:baseline`, archiving raw outputs in `reports/performance/2025-10-07-*` and summarizing findings in `performance-metrics.md`.
 
 ### Autosave Latency Benchmarking
-- ✅ Measured `autosave:badgeUpdate` end-to-end latency across normal and degraded storage scenarios, logging benchmarks in `docs/development/performance/2025-10-08-autosave-latency.json` and referencing the results in `performance-metrics.md` for future diffs.
+- ✅ Measured `autosave:badgeUpdate` end-to-end latency across normal and degraded storage scenarios, logging benchmarks in `reports/performance/2025-10-08-autosave-latency.json` and referencing the results in `performance-metrics.md` for future diffs.
 
 ### Hook Test Coverage Expansion
 - ✅ Added targeted unit/RTL coverage for the newly refactored flow hooks to ensure instrumentation and error handling remain regression-proof:

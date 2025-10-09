@@ -13,6 +13,14 @@
    - URL: `https://skigim.github.io/CMSNext/`
    - Updates automatically when you push to `main` branch
 
+### Manual Deployment Run
+
+If you need to redeploy without pushing code:
+
+1. Open the **Actions** tab in GitHub.
+2. Select **Deploy to GitHub Pages**.
+3. Click **Run workflow**, choose the `main` branch, and confirm. The workflow reuses the same build steps described below.
+
 ### Deployment Architecture
 
 ```

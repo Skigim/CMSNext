@@ -7,9 +7,9 @@
 
 ## ✅ Tooling Readiness Checklist
 - [x] Install `rollup-plugin-visualizer` and expose an `npm run analyze` script.
-- [x] Generate a baseline treemap (`npm run analyze`) and archive the HTML report under `docs/development/performance/bundle-<date>.html` (`docs/development/performance/2025-10-07-bundle-analysis.html`).
+- [x] Generate a baseline treemap (`npm run analyze`) and archive the HTML report under `reports/performance/bundle-<date>.html` (`reports/performance/2025-10-07-bundle-analysis.html`).
 - [x] Record bundle metrics (total, vendor chunks, app chunk) in a new entry in `docs/development/performance-metrics.md` (see 2025-10-07 entry).
-- [x] Capture React Profiler output for the main navigation flow and autosave status updates (captured via `npm run perf:baseline`, raw log at `docs/development/performance/2025-10-07-performance-log.json`).
+- [x] Capture React Profiler output for the main navigation flow and autosave status updates (captured via `npm run perf:baseline`, raw log at `reports/performance/2025-10-07-performance-log.json`).
 - [ ] Verify Chrome Performance panel results for connect → load → dashboard render to spot blocking scripts or layout thrashing.
 
 ## 🔍 Baseline Data to Collect
