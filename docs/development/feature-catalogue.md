@@ -1,6 +1,6 @@
-# CMSNext Feature Roadmap
+# CMSNext Feature Catalogue
 
-> Living document for tracking marketable features, their current implementation status, quality, and future investments.
+> Living index of marketable features, their current implementation status, quality, and future investments.
 
 ## How to Use This Document
 
@@ -50,7 +50,7 @@ File System Access integration is production-ready with context-managed lifecycl
 - Robust lifecycle state machine handles ready, blocked, recovering, and error states, exposing selectors for UI consumers
 - Directory reconnect flow remembers previous handles and guides users through permission re-grant
 - Automatic backup strategy safeguards against data loss before imports or destructive saves
-- Comprehensive documentation in `DeploymentGuide.md`, `file-storage-toast-catalogue.md`, and `enhanced-error-boundary-summary.md`
+- Comprehensive documentation in `DeploymentGuide.md`, `file-storage-toast-catalogue.md`, and `error-boundary-guide.md`
 
 ### Gaps / Risks
 - File System Access API limited to Chromium browsers; Safari/Firefox require fallback guidance

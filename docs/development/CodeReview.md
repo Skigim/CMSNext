@@ -88,7 +88,7 @@ CMSNext remains a filesystem-first case management experience built with React 1
 
 ### Maintainability & Tooling (8/10)
 **Strengths**
-- Roadmap docs (`progression-strategy.md`) now list only active phases, with historical detail archived.
+- Roadmap docs (`feature-catalogue.md`, `actionable-roadmap.md`) now separate long-term vision from executable work.
 - Component decomposition and hook extraction reduce per-file cognitive load, especially in the financial and storage stacks.
 - Document the post-shim storage dispatcher and usage metrics plan so future contributors follow the new patterns.
 - `AppContent` and provider wiring remain dense—track remaining responsibilities in ADRs or docs to guide the next decomposition steps.
