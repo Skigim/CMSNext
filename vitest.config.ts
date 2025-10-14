@@ -46,7 +46,7 @@ export default defineConfig({
     // Test file patterns
     include: [
       'src/**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}',
-      '__tests__/**/*.{js,mjs,cjs,ts,mts,cts,jsx,tsx}'
+      '__tests__/**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}'
     ],
     exclude: [
       'node_modules/',

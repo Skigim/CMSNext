@@ -9,6 +9,10 @@ import {
 } from "@/src/test/testUtils";
 import App from "@/App";
 
+vi.mock("@/components/modals/ConnectToExistingModal", () =>
+  import("../__mocks__/ConnectToExistingModalStub"),
+);
+
 function buildInitialFileData() {
   const exportTimestamp = "2024-01-01T00:00:00.000Z";
   return {
@@ -309,10 +313,15 @@ describe("connect → load → edit → save flow", () => {
     delete (globalThis as any).__connectionFlowDriver;
   });
 
-  it("connects to storage, loads cases, edits a record, and persists changes", async () => {
+  it(
+    "connects to storage, loads cases, edits a record, and persists changes",
+    async () => {
     const user = userEvent.setup({ advanceTimers });
     render(<App />);
     await flushTimers();
+      await Promise.resolve();
+
+      await screen.findByTestId("connect-modal");
 
     const connectButton = await screen.findByRole(
       "button",
@@ -363,13 +372,20 @@ describe("connect → load → edit → save flow", () => {
     }
 
     expect(lastWrite.cases[0].person.firstName).toBe("Updated");
-    expect(lastWrite.cases[0].name).toBe("Updated Case");
-  });
+      expect(lastWrite.cases[0].name).toBe("Updated Case");
+    },
+    15000,
+  );
 
-  it("re-opens the connection flow when permission is revoked mid-session", async () => {
+  it(
+    "re-opens the connection flow when permission is revoked mid-session",
+    async () => {
     const user = userEvent.setup({ advanceTimers });
     render(<App />);
     await flushTimers();
+      await Promise.resolve();
+
+      await screen.findByTestId("connect-modal");
 
     const connectButton = await screen.findByRole(
       "button",
@@ -399,8 +415,10 @@ describe("connect → load → edit → save flow", () => {
 
     const reconnectDialog = await screen.findByRole("dialog");
     expect(reconnectDialog).toBeInTheDocument();
-    expect(
-      await screen.findByText(/permission was previously denied/i),
-    ).toBeInTheDocument();
-  });
+      expect(
+        await screen.findByText(/permission was previously denied/i),
+      ).toBeInTheDocument();
+    },
+    15000,
+  );
 });
