@@ -55,5 +55,5 @@
 
 ### Follow-up Actions
 1. Owner run: capture real dashboard → case → dashboard trace with profiler export; archive under `reports/performance/2025-10-08-interaction-trace.*` and update this log.
-2. Analyze resulting `AppContent` commits (>25 ms) and file memoization/chunk-splitting stories; update Phase 4 TODOs.
+2. Analyze resulting `AppContent` commits (>25 ms) and document the memoization/chunk-splitting stories in the Phase 4 action list.
 3. Expand autosave latency benchmark to include actual browser session metrics and compare with synthetic baseline.

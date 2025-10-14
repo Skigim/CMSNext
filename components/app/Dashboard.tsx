@@ -150,7 +150,7 @@ export function Dashboard({ cases, alerts, activityLogState, onViewAllCases, onN
       </div>
       <ActivityReportCard activityLogState={activityLogState} />
 
-      {/* TODO: Consider blending Todays metrics directly into ActivityReportCard to reduce duplication. */}
+      {/* Note: Evaluate blending Today's metrics directly into ActivityReportCard to reduce duplication when we revisit dashboard layout. */}
 
       {/* Stats Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
