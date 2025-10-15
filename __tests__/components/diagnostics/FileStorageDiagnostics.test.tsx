@@ -20,7 +20,6 @@ vi.mock("@/contexts/FileStorageContext", () => ({
 
 describe("FileStorageDiagnostics", () => {
   beforeEach(() => {
-    listDataFilesMock.mockReset();
     logSpy = vi.spyOn(console, "log").mockImplementation(() => undefined);
   });
 
