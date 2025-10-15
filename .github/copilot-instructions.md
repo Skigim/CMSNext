@@ -34,7 +34,7 @@
 - Testing & tooling: `docs/development/testing-infrastructure.md`
 - Performance + usage capture: `docs/development/performance-metrics.md`, `scripts/`
 
-## shadcn/ui Migration Checklist
+## Shadcn/UI Migration Checklist
 - [ ] `components/financial/FinancialItemCard*` → replace `.financial-item-*` classes with shadcn primitives.
 - [ ] `components/diagnostics/FileStorageDiagnostics.tsx` → wrap diagnostics UI with `Card`, `Button`, `Badge`.
 - [ ] `components/app/AppLoadingState.tsx` → shift spinner placeholder to shadcn loader/skeleton.

@@ -17,25 +17,25 @@ export function FinancialItemCardActions({
       <div className="flex gap-1">
         <Button
           variant="ghost"
-          size="sm"
+          size="icon"
           onClick={event => {
             event.stopPropagation();
             onDeleteConfirm();
           }}
           aria-label="Confirm delete financial item"
-          className="financial-item-confirm-btn financial-item-confirm-btn--approve"
+          className="h-8 w-8 text-emerald-600 hover:bg-emerald-100 hover:text-emerald-700"
         >
           <Check className="h-4 w-4" aria-hidden="true" />
         </Button>
         <Button
           variant="ghost"
-          size="sm"
+          size="icon"
           onClick={event => {
             event.stopPropagation();
             onDeleteClick();
           }}
           aria-label="Cancel delete financial item"
-          className="financial-item-confirm-btn financial-item-confirm-btn--cancel"
+          className="h-8 w-8 text-destructive hover:bg-destructive/10"
         >
           <X className="h-4 w-4" aria-hidden="true" />
         </Button>
@@ -46,13 +46,13 @@ export function FinancialItemCardActions({
   return (
     <Button
       variant="ghost"
-      size="sm"
+      size="icon"
       onClick={event => {
         event.stopPropagation();
         onDeleteClick();
       }}
       aria-label="Delete financial item"
-      className="financial-item-delete-btn"
+      className="h-8 w-8 text-destructive hover:bg-destructive/10"
     >
       <Trash2 className="h-4 w-4" aria-hidden="true" />
     </Button>
