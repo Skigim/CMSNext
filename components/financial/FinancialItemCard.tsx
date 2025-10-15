@@ -105,6 +105,7 @@ export function FinancialItemCard({
             tabIndex={canToggle ? 0 : undefined}
             onKeyDown={event => {
               if (!canToggle) return;
+              if (event.target !== event.currentTarget) return;
               if (event.key === "Enter" || event.key === " ") {
                 event.preventDefault();
                 handleCardClick();
