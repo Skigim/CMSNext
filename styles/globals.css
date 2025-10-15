@@ -357,51 +357,6 @@
   75% { transform: rotate(3deg); }
 }
 
-/* Financial Item Card Styles */
-.financial-item-delete-btn {
-  @apply h-8 w-8 p-0 bg-background/90 backdrop-blur-sm border border-border/50 text-destructive hover:text-destructive hover:bg-destructive/10 shadow-sm hover:animate-pulse hover:scale-110 transition-all duration-200;
-}
-
-.financial-item-delete-btn:hover {
-  animation: wiggle 0.3s ease-in-out infinite;
-}
-
-.financial-item-delete-btn:not(:hover) {
-  animation: none;
-}
-
-.financial-item-confirm-btn {
-  @apply h-8 w-8 p-0 bg-background/90 backdrop-blur-sm border border-border/50 shadow-sm;
-}
-
-.financial-item-confirm-btn--approve {
-  @apply text-green-600 hover:text-green-700 hover:bg-green-50;
-}
-
-.financial-item-confirm-btn--cancel {
-  @apply text-red-600 hover:text-red-700 hover:bg-red-50;
-}
-
-.financial-item-card {
-  @apply bg-card border rounded-xl shadow-sm hover:shadow-lg transition-all duration-300 ease-in-out w-full relative;
-}
-
-.financial-item-card--skeleton {
-  @apply border-dashed border-primary/50 bg-primary/5;
-}
-
-.financial-item-form-accordion {
-  @apply transition-all duration-300 ease-in-out;
-}
-
-.financial-item-form-accordion--open {
-  @apply opacity-100;
-}
-
-.financial-item-form-accordion--closed {
-  @apply opacity-0 max-h-0 overflow-hidden;
-}
-
 @layer base {
   .rdp {
     --rdp-cell-size: 2.25rem;

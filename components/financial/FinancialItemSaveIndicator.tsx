@@ -11,12 +11,18 @@ export function FinancialItemSaveIndicator({ isSaving, saveSuccessVisible }: Fin
   }
 
   return (
-    <div className="financial-item-save-indicator">
+    <div className="pointer-events-none absolute right-4 top-4 flex items-center justify-center">
       {isSaving ? (
-        <div className="financial-item-save-indicator__spinner" aria-label="Saving" />
+        <div
+          aria-label="Saving"
+          className="h-4 w-4 animate-spin rounded-full border-2 border-primary/40 border-t-primary"
+        />
       ) : (
-        <div className="financial-item-save-indicator__success" aria-label="Saved">
-          <Check className="h-3.5 w-3.5" />
+        <div
+          aria-label="Saved"
+          className="flex h-5 w-5 items-center justify-center rounded-full bg-emerald-100 text-emerald-600"
+        >
+          <Check className="h-3 w-3" />
         </div>
       )}
     </div>
