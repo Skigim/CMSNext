@@ -319,8 +319,6 @@ describe("connect → load → edit → save flow", () => {
     const user = userEvent.setup({ advanceTimers });
     render(<App />);
     await flushTimers();
-      await Promise.resolve();
-
       await screen.findByTestId("connect-modal");
 
     const connectButton = await screen.findByRole(
@@ -383,8 +381,6 @@ describe("connect → load → edit → save flow", () => {
     const user = userEvent.setup({ advanceTimers });
     render(<App />);
     await flushTimers();
-      await Promise.resolve();
-
       await screen.findByTestId("connect-modal");
 
     const connectButton = await screen.findByRole(
