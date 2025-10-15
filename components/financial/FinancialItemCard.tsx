@@ -144,7 +144,7 @@ export function FinancialItemCard({
         </CardHeader>
 
         <CollapsibleContent className="overflow-hidden data-[state=closed]:animate-accordion-up data-[state=open]:animate-accordion-down">
-          <CardContent className="border-t bg-muted/30 p-0">
+          <CardContent className="bg-muted/30 p-0">
             <FinancialItemCardForm
               itemId={formItemId}
               itemType={itemType}

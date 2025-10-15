@@ -11,7 +11,7 @@ export function FinancialItemSaveIndicator({ isSaving, saveSuccessVisible }: Fin
   }
 
   return (
-    <div className="pointer-events-none absolute right-4 top-4 flex items-center justify-center">
+    <div className="pointer-events-none absolute right-4 top-8 z-[5] flex items-center justify-center">
       {isSaving ? (
         <div
           aria-label="Saving"
