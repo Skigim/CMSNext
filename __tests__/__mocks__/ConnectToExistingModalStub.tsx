@@ -7,10 +7,10 @@ export interface ConnectToExistingModalStubProps {
   hasStoredHandle?: boolean;
   onConnectToExisting: AsyncButtonHandler;
   onChooseNewFolder: AsyncButtonHandler;
-  onGoToSettings: () => void;
+  onGoToSettings: AsyncButtonHandler;
 }
 
-function callHandler(handler: AsyncButtonHandler | undefined) {
+function callHandler(handler: AsyncButtonHandler | undefined): Promise<unknown> | undefined {
   if (!handler) return;
   const result = handler();
   if (result instanceof Promise) {
