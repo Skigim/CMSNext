@@ -35,7 +35,7 @@
 - Performance + usage capture: `docs/development/performance-metrics.md`, `scripts/`
 
 ## Shadcn/UI Migration Checklist
-- [ ] `components/financial/FinancialItemCard*` → replace `.financial-item-*` classes with shadcn primitives.
+- [x] `components/financial/FinancialItemCard*` → replace `.financial-item-*` classes with shadcn primitives.
 - [ ] `components/diagnostics/FileStorageDiagnostics.tsx` → wrap diagnostics UI with `Card`, `Button`, `Badge`.
 - [ ] `components/app/AppLoadingState.tsx` → shift spinner placeholder to shadcn loader/skeleton.
 - [ ] `components/app/ConnectionOnboarding.tsx` → use shadcn dialog/shell for the onboarding modal.
