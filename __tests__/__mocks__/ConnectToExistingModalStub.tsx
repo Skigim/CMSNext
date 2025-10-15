@@ -3,7 +3,7 @@ type AsyncButtonHandler = (() => Promise<unknown>) | (() => unknown);
 export interface ConnectToExistingModalStubProps {
   isOpen: boolean;
   isSupported: boolean;
-  permissionStatus?: string;
+  permissionStatus?: "granted" | "denied" | "prompt" | "unknown";
   hasStoredHandle?: boolean;
   onConnectToExisting: AsyncButtonHandler;
   onChooseNewFolder: AsyncButtonHandler;
