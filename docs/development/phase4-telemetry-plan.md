@@ -2,29 +2,43 @@
 
 **Created:** October 16, 2025  
 **Branch:** `feat/phase4-telemetry-captures`  
-**Team:** 3 Agents working simultaneously  
-**Timeline:** 1 day (8 hours total, ~2.5 hours per agent)  
+**Team:** 3 Agents creating tools + 1 Human executing manual tasks  
+**Timeline:** 1 day agent work + 2-3 hours human execution  
 **Prerequisites:** PR #29 merged, all telemetry infrastructure in place
 
 ---
 
 ## Overview
 
-Complete the Phase 4 manual telemetry captures required before architecture refactor kickoff. Three agents will work in parallel on different telemetry capture areas, coordinating via commit messages and this shared plan.
+Complete the Phase 4 manual telemetry captures required before architecture refactor kickoff. Three agents will work in parallel creating **automated instrumentation and measurement tools**. A human operator will then **execute** the manual browser interactions and performance profiling.
+
+### Division of Labor
+
+**Agents Build (Automated):**
+- Instrumentation scripts
+- Data collection utilities
+- Analysis and reporting tools
+- Documentation templates
+
+**Human Executes (Manual):**
+- Browser navigation workflows
+- React DevTools profiling sessions
+- Performance recording
+- Data export and validation
 
 ### Objectives
 
-1. **Real Navigation Trace** - Capture actual user journey through app
-2. **React Profiler Session** - Analyze AppContent commits and hotspots
-3. **Autosave Latency Benchmark** - Compare real vs. synthetic measurements
-4. **Dashboard Load Profiling** - Measure performance with 3+ widgets
+1. **Navigation Instrumentation** - Build tools to track user journeys
+2. **React Profiler Integration** - Create wrapper and analysis scripts
+3. **Automated Benchmarks** - Build scripts for autosave/dashboard measurement
+4. **Human Execution Guide** - Document manual steps for operator
 
 ### Success Criteria
 
-- [ ] All 4 telemetry captures complete with artifacts
-- [ ] Performance baseline updated with real-world data
-- [ ] Profiler flamegraphs and treemaps generated
-- [ ] Documentation updated with findings
+- [ ] All instrumentation tools created by agents
+- [ ] Automated benchmarks executable
+- [ ] Human execution guide complete
+- [ ] Manual tasks documented step-by-step
 - [ ] Zero test regressions (211/211 passing)
 - [ ] Build successful with no errors
 
@@ -91,35 +105,55 @@ Dependencies: None
 
 ---
 
-## Track 1: Navigation Trace (Agent 1)
+## Track 1: Navigation Instrumentation (Agent 1)
 
 ### Objective
-Capture real user navigation flow: Dashboard → Case List → Case Detail → Back to Dashboard
+Create instrumentation tools for tracking user navigation flows
 
-### Tasks
+### Agent Tasks (Automated - 2 hours)
 
-1. **Create Navigation Trace Script** (45 min)
-   - Script: `scripts/captureNavigationTrace.ts`
+1. **Create Browser-Side Instrumentation Script** (60 min)
+   - Script: `public/navigation-tracer.js` (browser console script)
    - Functionality:
-     - Record navigation timing with `performance.mark()`
-     - Capture memory snapshots at each step
-     - Track telemetry events during navigation
-     - Measure route transition latency
-     - Export JSON report
+     - Add `performance.mark()` calls for key navigation events
+     - Listen to route changes
+     - Capture memory snapshots via `performance.memory`
+     - Track telemetry events
+     - Auto-export JSON after 5 navigation cycles
+     - Console instructions for manual execution
 
-2. **Perform Manual Trace** (30 min)
-   - Start dev server
-   - Open browser with DevTools
-   - Execute navigation flow (3-5 iterations)
-   - Collect performance timeline
-   - Save Chrome DevTools trace file
+2. **Create Analysis Script** (45 min)
+   - Script: `scripts/analyzeNavigationTrace.ts`
+   - Functionality:
+     - Parse Chrome DevTools Performance JSON export
+     - Identify bottlenecks (>50ms operations)
+     - Compare against synthetic baselines
+     - Generate markdown report from trace data
+     - Output statistical summary
 
-3. **Analyze & Document** (45 min)
-   - Parse trace data
-   - Identify bottlenecks (>50ms operations)
-   - Compare against synthetic baselines
-   - Generate markdown report
-   - Update `performance-metrics.md`
+3. **Create Human Execution Guide** (15 min)
+   - Document: `docs/development/MANUAL_NAVIGATION_TRACE.md`
+   - Include:
+     - Step-by-step browser instructions
+     - DevTools setup
+     - How to export trace data
+     - Where to save files
+     - What to look for in results
+
+### Human Tasks (Manual - 30 min)
+
+1. **Execute Navigation Trace**
+   - Start dev server: `npm run dev`
+   - Open browser DevTools
+   - Copy/paste `public/navigation-tracer.js` into console
+   - Follow on-screen prompts for 5 navigation cycles
+   - Export Performance timeline as JSON
+   - Save to `reports/performance/2025-10-16-navigation-trace.json`
+
+2. **Run Analysis**
+   - Execute: `npx tsx scripts/analyzeNavigationTrace.ts`
+   - Review generated report
+   - Validate findings
 
 ### Deliverables
 
@@ -144,46 +178,67 @@ Capture real user navigation flow: Dashboard → Case List → Case Detail → B
 
 ---
 
-## Track 2: React Profiler Session (Agent 2)
+## Track 2: React Profiler Integration (Agent 2)
 
 ### Objective
-Analyze AppContent rendering behavior with React Profiler, generate flamegraph
+Create React Profiler tooling and analysis scripts for manual profiling sessions
 
-### Tasks
+### Agent Tasks (Automated - 2 hours)
 
-1. **Create Profiler Wrapper** (30 min)
+1. **Create Profiler Wrapper Component** (30 min)
    - Component: `components/app/ProfilerWrapper.tsx`
    - Functionality:
-     - Wrap AppContent with React Profiler
-     - Record mount/update phases
+     - Wrap AppContent with React.Profiler
+     - Record mount/update phases to console
      - Track actual vs. base duration
      - Identify slow components (>25ms commits)
-     - Export profiler data
+     - Provide dev-mode toggle
+     - Add usage instructions in comments
 
-2. **Generate Capture Script** (30 min)
-   - Script: `scripts/captureProfilerSession.ts`
+2. **Create Profiler Data Processor** (45 min)
+   - Script: `scripts/processProfilerData.ts`
    - Functionality:
-     - Automate profiler data collection
-     - Process React DevTools exports
-     - Convert to speedscope format
-     - Generate flamegraph HTML
+     - Read React DevTools Profiler JSON export
+     - Identify commits >25ms
+     - Find re-render hotspots
+     - Calculate component render statistics
+     - Export analysis as JSON and markdown
 
-3. **Perform Profiler Session** (30 min)
-   - Enable Profiler wrapper
-   - Start recording in React DevTools
-   - Perform standard workflows:
-     - Dashboard load
-     - Create case
-     - Edit financial items
-     - Add notes
-   - Export profiler JSON
+3. **Create Flamegraph Generator** (30 min)
+   - Script: `scripts/generateFlamegraph.ts`
+   - Functionality:
+     - Convert profiler data to speedscope format
+     - Generate interactive HTML flamegraph
+     - Include render timeline visualization
+     - Add navigation controls
 
-4. **Analyze & Document** (30 min)
-   - Identify commits >25ms
-   - Find re-render hotspots
-   - Suggest memoization opportunities
-   - Generate flamegraph visualization
-   - Document findings
+4. **Create Human Execution Guide** (15 min)
+   - Document: `docs/development/MANUAL_PROFILER_SESSION.md`
+   - Include:
+     - How to enable ProfilerWrapper
+     - React DevTools Profiler setup
+     - Workflows to perform (dashboard, create case, etc.)
+     - How to export profiler JSON
+     - How to run analysis scripts
+
+### Human Tasks (Manual - 45 min)
+
+1. **Enable Profiler**
+   - Uncomment ProfilerWrapper in `App.tsx`
+   - Rebuild: `npm run dev`
+
+2. **Record Profiler Session**
+   - Open React DevTools → Profiler tab
+   - Click "Record"
+   - Perform workflows: Dashboard → Create case → Add financials → Add notes
+   - Click "Stop"
+   - Export JSON: Right-click → "Export profiling data"
+   - Save to `reports/performance/2025-10-16-profiler-raw.json`
+
+3. **Generate Analysis**
+   - Process: `npx tsx scripts/processProfilerData.ts reports/performance/2025-10-16-profiler-raw.json`
+   - Generate flamegraph: `npx tsx scripts/generateFlamegraph.ts reports/performance/2025-10-16-profiler-raw.json`
+   - Review outputs
 
 ### Deliverables
 
@@ -209,41 +264,63 @@ Analyze AppContent rendering behavior with React Profiler, generate flamegraph
 
 ---
 
-## Track 3: Autosave & Dashboard Benchmarks (Agent 3)
+## Track 3: Automated Benchmarks (Agent 3)
 
 ### Objective
-Measure real autosave latency and dashboard load times with multiple widgets
+Create fully automated performance benchmarks for autosave and dashboard
 
-### Tasks
+### Agent Tasks (Automated - 2.5 hours)
 
-1. **Enhance Autosave Benchmark** (30 min)
-   - Enhance: `scripts/autosaveBenchmark.ts`
-   - Add real browser session measurement
-   - Compare synthetic vs. real timings
-   - Test with varying case counts (10, 50, 100)
-   - Measure degraded storage scenarios
-
-2. **Create Dashboard Load Benchmark** (45 min)
-   - Script: `scripts/dashboardLoadBenchmark.ts`
+1. **Create Autosave Benchmark** (45 min)
+   - Script: `scripts/benchmarkAutosave.ts`
    - Functionality:
+     - **Fully automated** - runs in test environment
+     - Test with varying case counts (10, 50, 100, 200)
+     - Measure normal and simulated degraded scenarios
+     - Calculate statistical measures (mean, median, p95, p99)
+     - Export JSON report
+     - **No manual steps required**
+
+2. **Create Dashboard Load Benchmark** (60 min)
+   - Script: `scripts/benchmarkDashboard.ts`
+   - Functionality:
+     - **Fully automated** - uses RTL render
      - Measure dashboard mount with 0, 2, 3, 5 widgets
-     - Track widget data fetch times
-     - Measure lazy loading overhead
-     - Test with varying case counts
-     - Export detailed timing report
+     - Track widget data fetch times individually
+     - Test lazy loading overhead
+     - Vary case counts (10, 50, 100)
+     - Calculate statistical analysis
+     - Export JSON report
+     - **No manual steps required**
 
-3. **Run Benchmarks** (30 min)
-   - Execute autosave benchmark
-   - Execute dashboard benchmark
-   - Collect multiple samples (5-10 runs)
-   - Calculate statistical measures (mean, median, p95)
+3. **Create Benchmark Runner** (30 min)
+   - Script: `scripts/runAllBenchmarks.ts`
+   - Functionality:
+     - Execute all benchmarks sequentially
+     - Collect results
+     - Generate consolidated report
+     - Compare against baselines
+     - Output summary to console
 
-4. **Analyze & Document** (30 min)
-   - Compare real vs. synthetic autosave
-   - Identify dashboard performance profile
-   - Recommend widget refresh intervals
-   - Document findings
-   - Update performance-metrics.md
+4. **Create Analysis & Reporting** (15 min)
+   - Script: `scripts/analyzeBenchmarks.ts`
+   - Functionality:
+     - Read benchmark JSON files
+     - Compare against synthetic baselines
+     - Generate markdown report
+     - Update performance-metrics.md template
+
+### Human Tasks (Manual - 15 min)
+
+1. **Run Automated Benchmarks**
+   - Execute: `npm run benchmark:all` (or `npx tsx scripts/runAllBenchmarks.ts`)
+   - Wait for completion (~5-10 minutes)
+   - Review console output
+
+2. **Generate Reports**
+   - Execute: `npx tsx scripts/analyzeBenchmarks.ts`
+   - Review generated markdown
+   - Copy findings to `docs/development/performance-metrics.md`
 
 ### Deliverables
 

@@ -36,9 +36,11 @@
 
 ## Shadcn/UI Migration Checklist
 - [x] `components/financial/FinancialItemCard*` → replace `.financial-item-*` classes with shadcn primitives.
-- [ ] `components/diagnostics/FileStorageDiagnostics.tsx` → wrap diagnostics UI with `Card`, `Button`, `Badge`.
-- [ ] `components/app/AppLoadingState.tsx` → shift spinner placeholder to shadcn loader/skeleton.
-- [ ] `components/app/ConnectionOnboarding.tsx` → use shadcn dialog/shell for the onboarding modal.
-- [ ] `components/app/CaseWorkspace.tsx` → convert error banner/button to shadcn `Alert` and `Button`.
-- [ ] `components/error/ErrorFallback.tsx` → rebuild fallback cards on shadcn `Card`/`Alert`.
-- [ ] `components/figma/ImageWithFallback.tsx` → replace custom fallback styling with shadcn `AspectRatio`/`Skeleton`.
+- [x] `components/diagnostics/FileStorageDiagnostics.tsx` → wrap diagnostics UI with `Card`, `Button`, `Badge`.
+- [x] `components/app/AppLoadingState.tsx` → shift spinner placeholder to shadcn loader/skeleton.
+- [x] `components/app/ConnectionOnboarding.tsx` → use shadcn dialog/shell for the onboarding modal.
+- [x] `components/app/CaseWorkspace.tsx` → convert error banner/button to shadcn `Alert` and `Button`.
+- [x] `components/error/ErrorFallback.tsx` → rebuild fallback cards on shadcn `Card`/`Alert`.
+- [x] `components/figma/ImageWithFallback.tsx` → replace custom fallback styling with shadcn `AspectRatio`/`Skeleton`.
+
+**Status:** ✅ 100% Complete (PR #28 merged October 15, 2025)
