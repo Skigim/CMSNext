@@ -230,7 +230,7 @@ export function ConnectToExistingModal({
         </div>
 
         {/* Dialog Footer with Action Buttons */}
-        <DialogFooter className="flex-col-reverse sm:flex-row gap-2 w-full sm:flex-wrap">
+        <DialogFooter className="flex-col-reverse sm:flex-row gap-2 w-full">
           <Button 
             onClick={onGoToSettings}
             variant="outline"
