@@ -1,8 +1,6 @@
 import { render, screen, fireEvent } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, it, expect, vi } from "vitest";
-// @ts-ignore - jest-axe doesn't have types but works fine with vitest
-import { axe } from 'jest-axe'
 import { AppNavigationShell } from "@/components/app/AppNavigationShell";
 import type { AppView } from "@/types/view";
 

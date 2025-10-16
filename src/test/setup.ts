@@ -1,7 +1,6 @@
 import '@testing-library/jest-dom'
 import { expect, afterEach, vi } from 'vitest'
 import { cleanup } from '@testing-library/react'
-// @ts-ignore - jest-axe doesn't have types but works fine with vitest
 import { toHaveNoViolations } from 'jest-axe'
 
 // Extend expect with jest-axe matchers

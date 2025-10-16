@@ -1,8 +1,6 @@
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-// @ts-ignore - jest-axe doesn't have types but works fine with vitest
-import { axe } from 'jest-axe'
 import { CaseDetails } from '@/components/case/CaseDetails';
 import type { CaseDisplay } from '@/types/case';
 

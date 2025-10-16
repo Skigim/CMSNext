@@ -2,8 +2,6 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, it, expect, vi, afterEach } from "vitest";
 import type { FormEvent } from "react";
-// @ts-ignore - jest-axe doesn't have types but works fine with vitest
-import { axe } from 'jest-axe'
 import { createMockFinancialItem } from "@/src/test/testUtils";
 import type { FinancialItem } from "@/types/case";
 import type { NormalizedFinancialFormData } from "@/components/financial/useFinancialItemCardState";
