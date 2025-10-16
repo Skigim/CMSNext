@@ -140,20 +140,19 @@ Create instrumentation tools for tracking user navigation flows
      - Where to save files
      - What to look for in results
 
-### Human Tasks (Manual - 30 min)
+### Human Tasks (Manual - 30 min total)
 
-1. **Execute Navigation Trace**
-   - Start dev server: `npm run dev`
-   - Open browser DevTools
-   - Copy/paste `public/navigation-tracer.js` into console
-   - Follow on-screen prompts for 5 navigation cycles
-   - Export Performance timeline as JSON
-   - Save to `reports/performance/2025-10-16-navigation-trace.json`
+**Technical User (15 min):**
+1. Setup dev server and browser DevTools
+2. Load `public/navigation-tracer.js` into console
+3. Brief non-technical tester on Part 1 of their guide
+4. Monitor console for completion message
+5. Run analysis: `npx tsx scripts/analyzeNavigationTrace.ts`
 
-2. **Run Analysis**
-   - Execute: `npx tsx scripts/analyzeNavigationTrace.ts`
-   - Review generated report
-   - Validate findings
+**Non-Technical User (15 min):**
+1. Follow `MANUAL_TESTING_GUIDE_NON_TECHNICAL.md` - Part 1
+2. Perform 5 navigation cycles (dashboard → list → detail → back)
+3. Report completion to technical user
 
 ### Deliverables
 
@@ -221,24 +220,28 @@ Create React Profiler tooling and analysis scripts for manual profiling sessions
      - How to export profiler JSON
      - How to run analysis scripts
 
-### Human Tasks (Manual - 45 min)
+### Human Tasks (Manual - 1 hour total)
 
-1. **Enable Profiler**
-   - Uncomment ProfilerWrapper in `App.tsx`
-   - Rebuild: `npm run dev`
+**Technical User (30 min):**
+1. Enable ProfilerWrapper in `App.tsx` (set `enabled={true}`)
+2. Rebuild: `npm run dev`
+3. Open React DevTools → Profiler tab
+4. Start recording (blue circle button)
+5. Brief non-technical tester on Parts 2-3 of their guide
+6. Monitor recording stays active
+7. Help non-technical user export profiler data
+8. Process data: `npx tsx scripts/processProfilerData.ts`
+9. Generate flamegraph: `npx tsx scripts/generateFlamegraph.ts`
 
-2. **Record Profiler Session**
-   - Open React DevTools → Profiler tab
-   - Click "Record"
-   - Perform workflows: Dashboard → Create case → Add financials → Add notes
-   - Click "Stop"
-   - Export JSON: Right-click → "Export profiling data"
-   - Save to `reports/performance/2025-10-16-profiler-raw.json`
-
-3. **Generate Analysis**
-   - Process: `npx tsx scripts/processProfilerData.ts reports/performance/2025-10-16-profiler-raw.json`
-   - Generate flamegraph: `npx tsx scripts/generateFlamegraph.ts reports/performance/2025-10-16-profiler-raw.json`
-   - Review outputs
+**Non-Technical User (45 min):**
+1. Follow `MANUAL_TESTING_GUIDE_NON_TECHNICAL.md` - Parts 2-4
+2. Perform workflows:
+   - Create 2 new cases
+   - Add financial items (resources, income, expenses)
+   - Add notes to cases
+   - Create 5 quick cases
+   - Browse around naturally
+3. Work with technical user to export profiler data
 
 ### Deliverables
 
@@ -312,15 +315,18 @@ Create fully automated performance benchmarks for autosave and dashboard
 
 ### Human Tasks (Manual - 15 min)
 
+**Technical User Only (No Non-Technical Help Needed):**
+
 1. **Run Automated Benchmarks**
    - Execute: `npm run benchmark:all` (or `npx tsx scripts/runAllBenchmarks.ts`)
    - Wait for completion (~5-10 minutes)
+   - Can run in parallel while non-technical user does Parts 2-3
    - Review console output
 
 2. **Generate Reports**
    - Execute: `npx tsx scripts/analyzeBenchmarks.ts`
    - Review generated markdown
-   - Copy findings to `docs/development/performance-metrics.md`
+   - Update `docs/development/performance-metrics.md` with all findings
 
 ### Deliverables
 
