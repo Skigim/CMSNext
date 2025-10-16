@@ -3,7 +3,13 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Button } from "../ui/button";
 import { Alert, AlertDescription } from "../ui/alert";
 import { Card, CardContent } from "../ui/card";
-import { FolderOpen, AlertCircle, Loader2, Upload, Database } from "lucide-react";
+import { 
+  DropdownMenu, 
+  DropdownMenuContent, 
+  DropdownMenuItem, 
+  DropdownMenuTrigger 
+} from "../ui/dropdown-menu";
+import { FolderOpen, AlertCircle, Loader2, Upload, Database, ChevronDown, FileJson } from "lucide-react";
 import { createLogger } from "@/utils/logger";
 
 const logger = createLogger("ConnectToExistingModal");
@@ -231,35 +237,38 @@ export function ConnectToExistingModal({
 
         {/* Dialog Footer with Action Buttons */}
         <DialogFooter className="flex-col-reverse sm:flex-row gap-2 w-full">
-          <Button 
-            onClick={onGoToSettings}
-            variant="outline"
-            disabled={isConnecting}
-            aria-label="Import data from settings"
-            className="w-full sm:w-auto text-xs sm:text-sm whitespace-nowrap"
-          >
-            Go to Settings
-          </Button>
-
-          <Button 
-            onClick={handleChooseNewFolder}
-            disabled={isConnecting}
-            variant={hasStoredHandle ? "outline" : "default"}
-            aria-label={`Choose ${hasStoredHandle ? 'different' : 'data'} folder`}
-            className="w-full sm:w-auto text-xs sm:text-sm flex-shrink-0"
-          >
-            {isConnecting && connectingType === 'new' ? (
-              <>
-                <Loader2 className="mr-2 h-3 w-3 sm:h-4 sm:w-4 animate-spin flex-shrink-0" />
-                <span className="truncate">Selecting Folder...</span>
-              </>
-            ) : (
-              <>
-                <FolderOpen className="mr-2 h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0" />
-                <span className="truncate">Choose {hasStoredHandle ? 'Different' : 'Data'} Folder</span>
-              </>
-            )}
-          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button 
+                disabled={isConnecting}
+                variant={hasStoredHandle ? "outline" : "default"}
+                className="w-full sm:w-auto text-xs sm:text-sm"
+              >
+                {isConnecting && connectingType === 'new' ? (
+                  <>
+                    <Loader2 className="mr-2 h-3 w-3 sm:h-4 sm:w-4 animate-spin" />
+                    <span>Loading...</span>
+                  </>
+                ) : (
+                  <>
+                    <Upload className="mr-2 h-3 w-3 sm:h-4 sm:w-4" />
+                    <span>Load New Data</span>
+                    <ChevronDown className="ml-2 h-3 w-3 sm:h-4 sm:w-4" />
+                  </>
+                )}
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={handleChooseNewFolder} disabled={isConnecting}>
+                <FolderOpen className="mr-2 h-4 w-4" />
+                Choose New Folder
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={onGoToSettings} disabled={isConnecting}>
+                <FileJson className="mr-2 h-4 w-4" />
+                Import JSON
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
 
           {hasStoredHandle && (
             <Button 
