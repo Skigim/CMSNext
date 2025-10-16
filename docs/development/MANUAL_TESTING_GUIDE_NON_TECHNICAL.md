@@ -15,14 +15,75 @@ Help us measure how fast the CMSNext application works by using it like a normal
 
 ---
 
-## ✅ Pre-Flight Checklist (Technical Setup - Already Done)
+## ✅ Step 1: Create Your Save Folder (5 minutes)
 
-**Before you start, verify these are complete:**
+**IMPORTANT:** The app needs a folder to save case data. You'll do this once at the very beginning.
 
-- [ ] Application is running in browser at `http://localhost:5173`
-- [ ] Browser DevTools are open (press F12)
-- [ ] Console tab is visible
-- [ ] You see a message like "Navigation tracer ready"
+### Instructions:
+
+1. **Create a folder on your computer:**
+   - **Windows:** Right-click on Desktop → New → Folder
+   - **Mac:** Right-click on Desktop → New Folder
+   - **Name it:** `CMSNext-Test-Data`
+
+2. **Remember where you put it!**
+   - Example: `Desktop/CMSNext-Test-Data`
+   - You'll need to find this folder in a moment
+
+✅ **Done?** Great! Now continue below.
+
+---
+
+## ✅ Step 2: Open the App (2 minutes)
+
+1. **Open your web browser** (Chrome or Edge recommended)
+
+2. **Go to this link:**
+   ```
+   https://skigim.github.io/CMSNext/
+   ```
+   - Type or paste this into your address bar
+   - Press Enter
+
+3. **The app will load!**
+   - You should see a welcome screen
+   - ✅ Checkpoint: You see the CMSNext logo and connection options
+
+**If the page doesn't load:** Check your internet connection and try again.
+
+---
+
+## ✅ Step 3: Connect the App to Your Folder (5 minutes)
+
+1. **You'll see two options on the welcome screen:**
+   - "Connect to New Folder"
+   - "Connect to Existing"
+
+2. **Click "Connect to New Folder"** (since this is your first time)
+
+3. **A system window will pop up** asking you to choose a folder
+   - Navigate to your Desktop
+   - Select the `CMSNext-Test-Data` folder you created in Step 1
+   - Click "Select Folder" or "Open"
+
+4. **The app will now load the main dashboard!**
+   - You should see widgets and case information
+   - ✅ Checkpoint: You see "Dashboard" at the top with a menu on the left
+
+**If something goes wrong:** Ask the technical person for help with this step.
+
+---
+
+## ✅ Step 4: Pre-Flight Checklist (Technical Setup - Already Done)
+
+**Before you start testing, verify these are complete:**
+
+- [ ] Application is open in browser at `https://skigim.github.io/CMSNext/`
+- [ ] You connected to your `CMSNext-Test-Data` folder (Step 3 above)
+- [ ] Dashboard is visible with widgets showing
+- [ ] Browser DevTools are open (press F12) - *Technical person does this*
+- [ ] Console tab is visible - *Technical person does this*
+- [ ] You see a message like "Navigation tracer ready" - *Technical person verifies this*
 
 **If any of these aren't ready, ask the technical person to set them up first!**
 
