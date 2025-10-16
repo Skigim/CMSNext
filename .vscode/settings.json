@@ -2,17 +2,58 @@
   "css.lint.unknownAtRules": "ignore",
   "scss.lint.unknownAtRules": "ignore", 
   "less.lint.unknownAtRules": "ignore",
+  "css.validate": false,
+  "scss.validate": false,
+  
+  // Tailwind CSS IntelliSense Configuration
   "tailwindCSS.experimental.classRegex": [
+    // Match cva() from class-variance-authority
     ["cva\\(([^)]*)\\)", "[\"'`]([^\"'`]*).*?[\"'`]"],
-    ["cx\\(([^)]*)\\)", "(?:'|\"|`)([^']*)(?:'|\"|`)"]
+    // Match cx() utility
+    ["cx\\(([^)]*)\\)", "(?:'|\"|`)([^']*)(?:'|\"|`)"],
+    // Match cn() utility from shadcn/ui
+    ["cn\\(([^)]*)\\)", "[\"'`]([^\"'`]*).*?[\"'`]"],
+    // Match className props
+    ["className\\s*[=:]\\s*[\"'`]([^\"'`]*)[\"'`]"],
+    // Match class props
+    ["class\\s*[=:]\\s*[\"'`]([^\"'`]*)[\"'`]"]
   ],
   "tailwindCSS.includeLanguages": {
     "typescript": "javascript",
     "typescriptreact": "javascript"
   },
+  "tailwindCSS.validate": true,
+  "tailwindCSS.lint.cssConflict": "warning",
+  "tailwindCSS.lint.invalidApply": "error",
+  "tailwindCSS.lint.invalidScreen": "error",
+  "tailwindCSS.lint.invalidVariant": "error",
+  "tailwindCSS.lint.invalidConfigPath": "error",
+  "tailwindCSS.lint.invalidTailwindDirective": "error",
+  "tailwindCSS.lint.recommendedVariantOrder": "warning",
+  
+  // File associations
   "files.associations": {
     "*.css": "tailwindcss"
   },
+  
+  // Editor settings for better autocomplete
+  "editor.quickSuggestions": {
+    "strings": true
+  },
+  
+  // TypeScript settings
+  "typescript.tsdk": "node_modules/typescript/lib",
+  "typescript.enablePromptUseWorkspaceTsdk": true,
+  
+  // ESLint settings
+  "eslint.validate": [
+    "javascript",
+    "javascriptreact",
+    "typescript",
+    "typescriptreact"
+  ],
+  
+  // CodeRabbit settings
   "coderabbit.agentType": "Codex CLI",
   "coderabbit.autoReviewMode": "auto"
 }
