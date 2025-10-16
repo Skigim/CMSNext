@@ -1,4 +1,6 @@
 import { memo } from "react";
+import { Card, CardContent } from "../ui/card";
+import { Spinner } from "../ui/spinner";
 import { AppNavigationShell, type AppNavigationConfig } from "./AppNavigationShell";
 
 interface AppLoadingStateProps {
@@ -10,6 +12,9 @@ interface AppLoadingStateProps {
  * Displays a consistent loading experience while case data is retrieved.
  * By extracting this from `App.tsx` we keep rendering concerns isolated
  * from the shell orchestration logic.
+ *
+ * Uses shadcn/ui primitives (Card, Spinner) for theme-compatible styling
+ * and proper centering with Tailwind flex utilities.
  */
 export const AppLoadingState = memo(function AppLoadingState({
   navigation,
@@ -18,10 +23,12 @@ export const AppLoadingState = memo(function AppLoadingState({
   return (
     <AppNavigationShell {...navigation}>
       <div className="flex h-96 items-center justify-center">
-        <div className="text-center">
-          <div className="mx-auto mb-4 h-8 w-8 animate-spin rounded-full border-b-2 border-primary"></div>
-          <p className="text-muted-foreground">{message}</p>
-        </div>
+        <Card className="w-full max-w-sm">
+          <CardContent className="flex flex-col items-center justify-center py-12">
+            <Spinner size={32} className="mb-4 text-primary" />
+            <p className="text-center text-sm text-muted-foreground">{message}</p>
+          </CardContent>
+        </Card>
       </div>
     </AppNavigationShell>
   );

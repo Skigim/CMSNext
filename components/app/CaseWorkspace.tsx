@@ -1,4 +1,5 @@
 import { lazy, memo, Suspense } from "react";
+import { AlertCircle } from "lucide-react";
 import type { AppNavigationConfig } from "./AppNavigationShell";
 import { AppNavigationShell } from "./AppNavigationShell";
 import { ViewRenderer } from "../routing/ViewRenderer";
@@ -14,6 +15,8 @@ import type { ItemFormState } from "../../hooks/useFinancialItemFlow";
 import type { useNotes } from "../../hooks/useNotes";
 import type { AlertsIndex, AlertWithMatch } from "../../utils/alertsData";
 import type { CaseActivityLogState } from "../../types/activityLog";
+import { Alert, AlertTitle, AlertDescription } from "../ui/alert";
+import { Button } from "../ui/button";
 
 const FinancialItemModal = lazy(() => import("../modals/FinancialItemModal"));
 const NoteModal = lazy(() => import("../modals/NoteModal"));
@@ -101,15 +104,21 @@ export const CaseWorkspace = memo(function CaseWorkspace({
   return (
     <AppNavigationShell {...navigation}>
       {error && (
-        <div className="mb-4 rounded-md border border-destructive/20 bg-destructive/10 px-4 py-3 text-destructive">
-          <p>{error}</p>
-          <button
-            onClick={onDismissError}
-            className="ml-2 text-destructive/80 underline hover:text-destructive"
-          >
-            Dismiss
-          </button>
-        </div>
+        <Alert variant="destructive" className="mb-4">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>Error</AlertTitle>
+          <AlertDescription>
+            <p>{error}</p>
+            <Button
+              onClick={onDismissError}
+              variant="ghost"
+              size="sm"
+              className="mt-2 h-auto px-2 py-1"
+            >
+              Dismiss
+            </Button>
+          </AlertDescription>
+        </Alert>
       )}
 
       <ViewRenderer

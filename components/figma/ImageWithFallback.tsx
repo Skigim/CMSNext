@@ -1,27 +1,56 @@
 import React, { useState } from 'react'
+import { AspectRatio } from '@/components/ui/aspect-ratio'
+import { Skeleton } from '@/components/ui/skeleton'
+import { ImageOff } from 'lucide-react'
 
-const ERROR_IMG_SRC =
-  'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iODgiIGhlaWdodD0iODgiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyIgc3Ryb2tlPSIjMDAwIiBzdHJva2UtbGluZWpvaW49InJvdW5kIiBvcGFjaXR5PSIuMyIgZmlsbD0ibm9uZSIgc3Ryb2tlLXdpZHRoPSIzLjciPjxyZWN0IHg9IjE2IiB5PSIxNiIgd2lkdGg9IjU2IiBoZWlnaHQ9IjU2IiByeD0iNiIvPjxwYXRoIGQ9Im0xNiA1OCAxNi0xOCAzMiAzMiIvPjxjaXJjbGUgY3g9IjUzIiBjeT0iMzUiIHI9IjciLz48L3N2Zz4KCg=='
+interface ImageWithFallbackProps extends React.ImgHTMLAttributes<HTMLImageElement> {
+  aspectRatio?: number
+}
 
-export function ImageWithFallback(props: React.ImgHTMLAttributes<HTMLImageElement>) {
+export function ImageWithFallback({
+  src,
+  alt,
+  style,
+  className,
+  aspectRatio = 16 / 9,
+  ...rest
+}: ImageWithFallbackProps) {
   const [didError, setDidError] = useState(false)
+  const [isLoading, setIsLoading] = useState(true)
 
   const handleError = () => {
     setDidError(true)
+    setIsLoading(false)
   }
 
-  const { src, alt, style, className, ...rest } = props
+  const handleLoad = () => {
+    setIsLoading(false)
+  }
 
-  return didError ? (
-    <div
-      className={`inline-block bg-gray-100 text-center align-middle ${className ?? ''}`}
-      style={style}
-    >
-      <div className="flex items-center justify-center w-full h-full">
-        <img src={ERROR_IMG_SRC} alt="Error loading image" {...rest} data-original-url={src} />
-      </div>
-    </div>
-  ) : (
-    <img src={src} alt={alt} className={className} style={style} {...rest} onError={handleError} />
+  if (didError) {
+    return (
+      <AspectRatio ratio={aspectRatio} className={className} style={style}>
+        <div className="flex items-center justify-center w-full h-full bg-muted rounded-md">
+          <div className="flex flex-col items-center justify-center gap-2">
+            <ImageOff className="h-8 w-8 text-muted-foreground" />
+            <span className="text-sm text-muted-foreground">{alt || 'Image not available'}</span>
+          </div>
+        </div>
+      </AspectRatio>
+    )
+  }
+
+  return (
+    <AspectRatio ratio={aspectRatio} className={className} style={style}>
+      {isLoading && <Skeleton className="w-full h-full rounded-md" />}
+      <img
+        src={src}
+        alt={alt}
+        className={`w-full h-full object-cover rounded-md ${isLoading ? 'hidden' : ''}`}
+        onError={handleError}
+        onLoad={handleLoad}
+        {...rest}
+      />
+    </AspectRatio>
   )
 }

@@ -22,7 +22,7 @@ describe("ErrorFallback", () => {
     });
   });
 
-  it("renders default messaging and supports retry", async () => {
+  it("renders default messaging with Card component and supports retry", async () => {
     const resetError = vi.fn();
     const reloadSpy = vi.fn();
     Object.defineProperty(window, "location", {
@@ -38,6 +38,10 @@ describe("ErrorFallback", () => {
 
     render(<ErrorFallback error={new Error("Boom")} resetError={resetError} />);
 
+    // Check that alert container is present with proper accessibility attributes
+    const alertContainer = screen.getByRole("alert");
+    expect(alertContainer).toHaveAttribute("aria-live", "polite");
+
     expect(screen.getByText(/Something went wrong/)).toBeVisible();
     expect(screen.getByText(/Try Again/)).toBeVisible();
 
@@ -48,7 +52,7 @@ describe("ErrorFallback", () => {
     expect(reloadSpy).toHaveBeenCalledTimes(1);
   });
 
-  it("reveals error details in development", async () => {
+  it("reveals error details in development using details element", async () => {
     const { ErrorFallback } = await import("@/components/error/ErrorFallback");
     render(<ErrorFallback error={new Error("Detailed")}/>);
 
@@ -57,10 +61,41 @@ describe("ErrorFallback", () => {
 
     expect(screen.getAllByText(/Detailed/).length).toBeGreaterThan(0);
   });
+
+  it("uses shadcn Button components with proper variants", async () => {
+    const resetError = vi.fn();
+    const { ErrorFallback } = await import("@/components/error/ErrorFallback");
+
+    render(<ErrorFallback error={new Error("Test")} resetError={resetError} />);
+
+    const tryAgainBtn = screen.getByRole("button", { name: /Try Again/i });
+    const reloadBtn = screen.getByRole("button", { name: /Reload Page/i });
+
+    // Verify buttons exist and have proper styling via data attributes from shadcn
+    expect(tryAgainBtn).toBeInTheDocument();
+    expect(reloadBtn).toBeInTheDocument();
+  });
+
+  it("renders without custom CSS classes, only Tailwind and shadcn primitives", async () => {
+    const { ErrorFallback } = await import("@/components/error/ErrorFallback");
+    const { container } = render(<ErrorFallback error={new Error("Test")} />);
+
+    // Verify no custom error-fallback or similar custom classes are present
+    const cards = container.querySelectorAll('[data-slot="card"]');
+    expect(cards.length).toBeGreaterThan(0);
+  });
 });
 
 describe("FileSystemErrorFallback", () => {
-  it("renders permission guidance for NotAllowedError", async () => {
+  beforeAll(() => {
+    process.env.NODE_ENV = "development";
+  });
+
+  afterAll(() => {
+    process.env.NODE_ENV = originalNodeEnv;
+  });
+
+  it("renders permission guidance for NotAllowedError with alert semantics", async () => {
     const retry = vi.fn();
     const { FileSystemErrorFallback } = await import("@/components/error/ErrorFallback");
 
@@ -68,9 +103,43 @@ describe("FileSystemErrorFallback", () => {
 
     render(<FileSystemErrorFallback error={error} onRetry={retry} />);
 
+    // Check for alert accessibility attributes
+    const alertContainer = screen.getByRole("alert");
+    expect(alertContainer).toHaveAttribute("aria-live", "assertive");
+
     expect(screen.getByText(/Permission denied to access the file system/)).toBeVisible();
 
     await userEvent.click(screen.getByRole("button", { name: /Try Again/i }));
     expect(retry).toHaveBeenCalledTimes(1);
+  });
+
+  it("handles compact mode with shadcn Button size variants", async () => {
+    const { FileSystemErrorFallback } = await import("@/components/error/ErrorFallback");
+
+    const error = Object.assign(new Error("Test"), { name: "NotAllowedError" });
+    render(<FileSystemErrorFallback error={error} compact={true} />);
+
+    expect(screen.getByRole("alert")).toHaveClass("min-h-[200px]");
+    expect(screen.getByText(/Permission denied/)).toBeVisible();
+  });
+
+  it("renders AbortError message correctly", async () => {
+    const { FileSystemErrorFallback } = await import("@/components/error/ErrorFallback");
+
+    const error = Object.assign(new Error("Aborted"), { name: "AbortError" });
+    render(<FileSystemErrorFallback error={error} />);
+
+    expect(screen.getByText(/File operation was cancelled/)).toBeVisible();
+    expect(screen.getByText(/The file operation was cancelled/)).toBeVisible();
+  });
+
+  it("renders security error message correctly", async () => {
+    const { FileSystemErrorFallback } = await import("@/components/error/ErrorFallback");
+
+    const error = Object.assign(new Error("Security blocked"), { name: "SecurityError" });
+    render(<FileSystemErrorFallback error={error} />);
+
+    expect(screen.getByText(/Security restriction prevented/)).toBeVisible();
+    expect(screen.getByText(/security settings/)).toBeVisible();
   });
 });

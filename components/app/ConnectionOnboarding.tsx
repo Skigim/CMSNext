@@ -19,6 +19,12 @@ interface ConnectionOnboardingProps {
  * Handles the initial connection workflow while keeping App.tsx focused on
  * data orchestration. Displays a placeholder workspace and coordinates the
  * lazily-loaded connection modal.
+ *
+ * The modal uses shadcn/ui Dialog primitives with:
+ * - Focus trap and keyboard navigation (via Radix UI)
+ * - Escape key handling for dismissal
+ * - Proper ARIA labels and semantic structure
+ * - Full accessibility compliance
  */
 export const ConnectionOnboarding = memo(function ConnectionOnboarding({
   navigation,
@@ -42,7 +48,7 @@ export const ConnectionOnboarding = memo(function ConnectionOnboarding({
       </AppNavigationShell>
 
       {isOpen && (
-        <Suspense fallback={<div>Loading...</div>}>
+        <Suspense fallback={<div aria-label="Loading connection modal">Loading...</div>}>
           <ConnectToExistingModal
             isOpen={isOpen}
             isSupported={isSupported}

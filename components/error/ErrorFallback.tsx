@@ -1,3 +1,16 @@
+'use client';
+
+import { AlertCircle } from 'lucide-react';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+
 interface ErrorFallbackProps {
   error?: Error;
   resetError?: () => void;
@@ -15,62 +28,34 @@ export function ErrorFallback({
   showReload = true,
   showDetails = true,
 }: ErrorFallbackProps) {
+  const handleReload = () => {
+    window.location.reload();
+  };
+
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background">
-      <div className="max-w-md w-full mx-4 p-6 bg-card border border-border rounded-lg shadow-lg">
-        <div className="text-center">
-          <div className="w-12 h-12 mx-auto mb-4 bg-destructive/20 rounded-full flex items-center justify-center">
-            <svg
-              className="w-6 h-6 text-destructive"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z"
-              />
-            </svg>
+    <div className="min-h-screen flex items-center justify-center bg-background p-4" role="alert" aria-live="polite">
+      <Card className="w-full max-w-md">
+        <CardHeader>
+          <div className="flex gap-3">
+            <AlertCircle className="h-6 w-6 text-destructive flex-shrink-0 mt-1" aria-hidden="true" />
+            <div className="flex-1">
+              <CardTitle className="text-destructive">{title}</CardTitle>
+              <CardDescription className="mt-2">
+                {description}
+              </CardDescription>
+            </div>
           </div>
-          
-          <h2 className="text-xl font-semibold text-foreground mb-2">
-            {title}
-          </h2>
-          
-          <p className="text-muted-foreground mb-6">
-            {description}
-          </p>
+        </CardHeader>
 
-          <div className="space-y-3">
-            {resetError && (
-              <button
-                onClick={resetError}
-                className="w-full px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors"
-              >
-                Try Again
-              </button>
-            )}
-            
-            {showReload && (
-              <button
-                onClick={() => window.location.reload()}
-                className="w-full px-4 py-2 bg-secondary text-secondary-foreground rounded-md hover:bg-secondary/90 transition-colors"
-              >
-                Reload Page
-              </button>
-            )}
-          </div>
-
+        <CardContent className="space-y-4">
           {/* Development error details */}
           {process.env.NODE_ENV === 'development' && error && showDetails && (
-            <details className="mt-6 text-left">
-              <summary className="cursor-pointer text-sm text-muted-foreground hover:text-foreground">
+            <details className="group">
+              <summary className="cursor-pointer text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
                 Error Details (Development)
               </summary>
-              <div className="mt-3 p-3 bg-muted rounded text-xs font-mono overflow-auto max-h-32">
-                <div className="text-destructive font-semibold mb-1">
+              <div className="mt-3 p-3 bg-muted rounded-md text-xs font-mono overflow-auto max-h-32 space-y-1">
+                <div className="text-destructive font-semibold">
                   {error.name}: {error.message}
                 </div>
                 {error.stack && (
@@ -81,8 +66,30 @@ export function ErrorFallback({
               </div>
             </details>
           )}
-        </div>
-      </div>
+        </CardContent>
+
+        <CardFooter className="flex gap-3 flex-col">
+          {resetError && (
+            <Button
+              onClick={resetError}
+              variant="default"
+              className="w-full"
+            >
+              Try Again
+            </Button>
+          )}
+
+          {showReload && (
+            <Button
+              onClick={handleReload}
+              variant="secondary"
+              className="w-full"
+            >
+              Reload Page
+            </Button>
+          )}
+        </CardFooter>
+      </Card>
     </div>
   );
 }
@@ -162,75 +169,47 @@ export function FileSystemErrorFallback({
     error.message.includes('permission')
   );
 
-  const containerClass = compact 
-    ? "min-h-[200px] flex items-center justify-center p-4"
-    : "min-h-[300px] flex items-center justify-center p-6";
+  const handleRetry = () => {
+    if (onRetry) {
+      onRetry();
+    } else if (resetError) {
+      resetError();
+    }
+  };
 
-  const cardClass = compact
-    ? "max-w-sm w-full p-4 bg-card border border-border rounded-lg shadow-sm"
-    : "max-w-md w-full p-6 bg-card border border-border rounded-lg shadow-sm";
+  const handleReload = () => {
+    window.location.reload();
+  };
 
   return (
-    <div className={containerClass}>
-      <div className={cardClass}>
-        <div className="text-center">
-          <div className="w-10 h-10 mx-auto mb-3 bg-amber-100 dark:bg-amber-900/20 rounded-full flex items-center justify-center">
-            <svg
-              className="w-5 h-5 text-amber-600 dark:text-amber-400"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2H5a2 2 0 00-2-2z"
-              />
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M8 5v4M16 5v4"
-              />
-            </svg>
+    <div
+      className={compact ? "min-h-[200px] flex items-center justify-center p-4" : "min-h-[300px] flex items-center justify-center p-6"}
+      role="alert"
+      aria-live="assertive"
+    >
+      <Card className={compact ? "w-full max-w-sm" : "w-full max-w-md"}>
+        <CardHeader>
+          <div className="flex gap-3">
+            <AlertCircle className="h-5 w-5 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" aria-hidden="true" />
+            <div className="flex-1">
+              <CardTitle className={compact ? "text-base" : "text-lg"}>
+                {getErrorMessage()}
+              </CardTitle>
+              <CardDescription className={compact ? "text-xs mt-1" : "text-sm mt-2"}>
+                {getErrorDescription()}
+              </CardDescription>
+            </div>
           </div>
-          
-          <h3 className={`font-semibold text-foreground mb-2 ${compact ? 'text-base' : 'text-lg'}`}>
-            {getErrorMessage()}
-          </h3>
-          
-          <p className={`text-muted-foreground mb-4 ${compact ? 'text-xs' : 'text-sm'}`}>
-            {getErrorDescription()}
-          </p>
+        </CardHeader>
 
-          <div className="space-y-2">
-            {(resetError || onRetry) && (
-              <button
-                onClick={onRetry || resetError}
-                className={`w-full px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors ${compact ? 'text-xs' : 'text-sm'}`}
-              >
-                Try Again
-              </button>
-            )}
-            
-            {isFileSystemError && (
-              <button
-                onClick={() => window.location.reload()}
-                className={`w-full px-4 py-2 bg-secondary text-secondary-foreground rounded-md hover:bg-secondary/90 transition-colors ${compact ? 'text-xs' : 'text-sm'}`}
-              >
-                Refresh Page
-              </button>
-            )}
-          </div>
-
+        <CardContent className="space-y-4">
           {/* Development error details */}
           {process.env.NODE_ENV === 'development' && error && (
-            <details className="mt-3 text-left">
-              <summary className={`cursor-pointer text-muted-foreground hover:text-foreground ${compact ? 'text-xs' : 'text-sm'}`}>
+            <details className="group">
+              <summary className={`cursor-pointer text-muted-foreground hover:text-foreground transition-colors ${compact ? 'text-xs' : 'text-sm'}`}>
                 Error Details (Development)
               </summary>
-              <div className={`mt-2 p-2 bg-muted rounded font-mono overflow-auto ${compact ? 'text-xs max-h-20' : 'text-xs max-h-24'}`}>
+              <div className={`mt-2 p-2 bg-muted rounded-md font-mono overflow-auto ${compact ? 'text-xs max-h-20' : 'text-xs max-h-24'}`}>
                 <div className="text-destructive font-semibold mb-1">
                   {error.name}: {error.message}
                 </div>
@@ -242,8 +221,32 @@ export function FileSystemErrorFallback({
               </div>
             </details>
           )}
-        </div>
-      </div>
+        </CardContent>
+
+        <CardFooter className="flex flex-col gap-2">
+          {(resetError || onRetry) && (
+            <Button
+              onClick={handleRetry}
+              variant="default"
+              className="w-full"
+              size={compact ? "sm" : "default"}
+            >
+              Try Again
+            </Button>
+          )}
+
+          {isFileSystemError && (
+            <Button
+              onClick={handleReload}
+              variant="secondary"
+              className="w-full"
+              size={compact ? "sm" : "default"}
+            >
+              Refresh Page
+            </Button>
+          )}
+        </CardFooter>
+      </Card>
     </div>
   );
 }
