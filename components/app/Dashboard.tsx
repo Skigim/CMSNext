@@ -18,6 +18,7 @@ import type { CaseActivityLogState } from "../../types/activityLog";
 import { ActivityReportCard } from "./ActivityReportCard";
 import { WidgetRegistry, type RegisteredWidget } from "./widgets/WidgetRegistry";
 import { CasePriorityWidget } from "./widgets/CasePriorityWidget";
+import { ActivityTimelineWidget } from "./widgets/ActivityTimelineWidget";
 
 interface DashboardProps {
   cases: CaseDisplay[];
@@ -54,8 +55,19 @@ export function Dashboard({ cases, alerts, activityLogState, onViewAllCases, onN
         component: CasePriorityWidget,
         props: { cases },
       },
+      {
+        metadata: {
+          id: 'activity-timeline',
+          title: 'Activity Timeline',
+          description: 'Recent activity from the last 7 days',
+          priority: 2,
+          refreshInterval: 2 * 60 * 1000, // 2 minutes
+        },
+        component: ActivityTimelineWidget,
+        props: { activityLogState },
+      },
     ];
-  }, [cases]);
+  }, [cases, activityLogState]);
 
   const validCases = useMemo(
     () => cases.filter(c => c && c.caseRecord && typeof c.caseRecord === "object"),

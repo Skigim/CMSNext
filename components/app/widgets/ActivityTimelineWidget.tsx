@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { FileText, Save, Upload, Clock } from 'lucide-react';
+import { FileText, Save, Clock } from 'lucide-react';
 import { useWidgetData } from '@/hooks/useWidgetData';
 import type { CaseActivityLogState, CaseActivityEntry } from '@/types/activityLog';
 import type { WidgetMetadata } from './WidgetRegistry';
@@ -99,15 +99,16 @@ function formatActivityTimeline(activityLog: CaseActivityEntry[]): TimelineItem[
       const relativeTime = getRelativeTime(entry.timestamp);
 
       if (entry.type === 'note-added') {
+        const noteEntry = entry as Extract<CaseActivityEntry, { type: 'note-added' }>;
         return {
-          id: entry.id,
+          id: noteEntry.id,
           type: 'note',
-          title: `Note added to ${entry.caseName}`,
-          description: entry.payload.preview || 'New case note',
-          timestamp: entry.timestamp,
+          title: `Note added to ${noteEntry.caseName}`,
+          description: noteEntry.payload.preview || 'New case note',
+          timestamp: noteEntry.timestamp,
           relativeTime,
-          caseId: entry.caseId,
-          caseName: entry.caseName,
+          caseId: noteEntry.caseId,
+          caseName: noteEntry.caseName,
           icon: FileText,
           badgeColor: 'bg-blue-100 text-blue-800',
           badgeText: 'Note',
@@ -115,32 +116,35 @@ function formatActivityTimeline(activityLog: CaseActivityEntry[]): TimelineItem[
       }
 
       if (entry.type === 'status-change') {
-        const fromStatus = entry.payload.fromStatus || 'Unknown';
-        const toStatus = entry.payload.toStatus || 'Unknown';
+        const statusEntry = entry as Extract<CaseActivityEntry, { type: 'status-change' }>;
+        const fromStatus = statusEntry.payload.fromStatus || 'Unknown';
+        const toStatus = statusEntry.payload.toStatus || 'Unknown';
         return {
-          id: entry.id,
+          id: statusEntry.id,
           type: 'save',
           title: `Status updated: ${fromStatus} → ${toStatus}`,
-          description: `${entry.caseName} status changed`,
-          timestamp: entry.timestamp,
+          description: `${statusEntry.caseName} status changed`,
+          timestamp: statusEntry.timestamp,
           relativeTime,
-          caseId: entry.caseId,
-          caseName: entry.caseName,
+          caseId: statusEntry.caseId,
+          caseName: statusEntry.caseName,
           icon: Save,
           badgeColor: 'bg-green-100 text-green-800',
           badgeText: 'Status Change',
         };
       }
 
+      // Fallback for unknown activity types - cast to base type
+      const baseEntry = entry as Extract<CaseActivityEntry, CaseActivityEntry>;
       return {
-        id: entry.id,
+        id: baseEntry.id,
         type: 'unknown',
         title: 'Activity recorded',
-        description: `Activity on ${entry.caseName}`,
-        timestamp: entry.timestamp,
+        description: `Activity on ${baseEntry.caseName}`,
+        timestamp: baseEntry.timestamp,
         relativeTime,
-        caseId: entry.caseId,
-        caseName: entry.caseName,
+        caseId: baseEntry.caseId,
+        caseName: baseEntry.caseName,
         icon: Clock,
         badgeColor: 'bg-gray-100 text-gray-800',
         badgeText: 'Other',
