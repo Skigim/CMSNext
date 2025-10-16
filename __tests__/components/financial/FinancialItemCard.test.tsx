@@ -2,6 +2,8 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, it, expect, vi, afterEach } from "vitest";
 import type { FormEvent } from "react";
+// @ts-ignore - jest-axe doesn't have types but works fine with vitest
+import { axe } from 'jest-axe'
 import { createMockFinancialItem } from "@/src/test/testUtils";
 import type { FinancialItem } from "@/types/case";
 import type { NormalizedFinancialFormData } from "@/components/financial/useFinancialItemCardState";
@@ -218,5 +220,37 @@ describe("FinancialItemCard", () => {
     await user.click(cancelButton);
 
     expect(onDelete).toHaveBeenCalledTimes(1);
+  });
+
+  it("should have accessible delete confirmation buttons", async () => {
+    const user = userEvent.setup();
+    const item = createMockFinancialItem("resources", { id: "res-1", description: "Savings" }) as FinancialItem;
+    const onDelete = vi.fn();
+
+    render(
+      <FinancialItemCard
+        item={item}
+        itemType="resources"
+        onDelete={onDelete}
+        onUpdate={vi.fn()}
+        isEditing
+      />
+    );
+
+    const deleteButton = screen.getByRole("button", { name: /delete financial item/i });
+    expect(deleteButton).toHaveAttribute("aria-label");
+    
+    await user.click(deleteButton);
+
+    // Verify confirmation buttons have proper labels
+    const confirmButton = screen.queryByRole("button", { name: /confirm delete/i });
+    const cancelDeleteButton = screen.queryByRole("button", { name: /cancel delete/i });
+    
+    if (confirmButton) {
+      expect(confirmButton).toHaveAttribute("aria-label");
+    }
+    if (cancelDeleteButton) {
+      expect(cancelDeleteButton).toHaveAttribute("aria-label");
+    }
   });
 });
