@@ -219,4 +219,35 @@ describe("FinancialItemCard", () => {
 
     expect(onDelete).toHaveBeenCalledTimes(1);
   });
+
+  it("should have accessible delete confirmation buttons", async () => {
+    const user = userEvent.setup();
+    const item = createMockFinancialItem("resources", { id: "res-1", description: "Savings" }) as FinancialItem;
+    const onDelete = vi.fn();
+
+    render(
+      <FinancialItemCard
+        item={item}
+        itemType="resources"
+        onDelete={onDelete}
+        onUpdate={vi.fn()}
+        isEditing
+      />
+    );
+
+    const deleteButton = screen.getByRole("button", { name: /delete financial item/i });
+    expect(deleteButton).toHaveAttribute("aria-label");
+    
+    await user.click(deleteButton);
+
+    // Verify confirmation buttons appear and have proper labels
+    const confirmButton = screen.queryByRole("button", { name: /confirm delete/i });
+    const cancelDeleteButton = screen.queryByRole("button", { name: /cancel delete/i });
+    
+    expect(confirmButton).toBeInTheDocument();
+    expect(confirmButton).toHaveAttribute("aria-label");
+    
+    expect(cancelDeleteButton).toBeInTheDocument();
+    expect(cancelDeleteButton).toHaveAttribute("aria-label");
+  });
 });

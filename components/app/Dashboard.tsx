@@ -16,6 +16,9 @@ import { UnlinkedAlertsDialog } from "@/components/alerts/UnlinkedAlertsDialog";
 import { McnCopyControl } from "@/components/common/McnCopyControl";
 import type { CaseActivityLogState } from "../../types/activityLog";
 import { ActivityReportCard } from "./ActivityReportCard";
+import { WidgetRegistry, type RegisteredWidget } from "./widgets/WidgetRegistry";
+import { CasePriorityWidget } from "./widgets/CasePriorityWidget";
+import { ActivityTimelineWidget } from "./widgets/ActivityTimelineWidget";
 
 interface DashboardProps {
   cases: CaseDisplay[];
@@ -35,6 +38,36 @@ function formatAlertMatchStatus(status: AlertMatchStatus): string {
 
 export function Dashboard({ cases, alerts, activityLogState, onViewAllCases, onNewCase, onNavigateToReports }: DashboardProps) {
   const { config } = useCategoryConfig();
+
+  /**
+   * Register dashboard widgets with metadata and props.
+   */
+  const widgets = useMemo<RegisteredWidget[]>(() => {
+    return [
+      {
+        metadata: {
+          id: 'case-priority',
+          title: 'Case Priority',
+          description: 'Breakdown of cases by priority level',
+          priority: 1,
+          refreshInterval: 5 * 60 * 1000, // 5 minutes
+        },
+        component: CasePriorityWidget,
+        props: { cases },
+      },
+      {
+        metadata: {
+          id: 'activity-timeline',
+          title: 'Activity Timeline',
+          description: 'Recent activity from the last 7 days',
+          priority: 2,
+          refreshInterval: 2 * 60 * 1000, // 2 minutes
+        },
+        component: ActivityTimelineWidget,
+        props: { activityLogState },
+      },
+    ];
+  }, [cases, activityLogState]);
 
   const validCases = useMemo(
     () => cases.filter(c => c && c.caseRecord && typeof c.caseRecord === "object"),
@@ -149,6 +182,17 @@ export function Dashboard({ cases, alerts, activityLogState, onViewAllCases, onN
         </div>
       </div>
       <ActivityReportCard activityLogState={activityLogState} />
+
+      {/* Widget Section */}
+      {widgets.length > 0 && (
+        <div>
+          <h2 className="text-lg font-semibold text-foreground mb-4">Insights</h2>
+          <WidgetRegistry
+            widgets={widgets}
+            gridClassName="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"
+          />
+        </div>
+      )}
 
       {/* Note: Evaluate blending Today's metrics directly into ActivityReportCard to reduce duplication when we revisit dashboard layout. */}
 

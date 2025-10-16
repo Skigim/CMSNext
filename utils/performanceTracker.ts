@@ -23,6 +23,20 @@ interface RenderProfileRecord {
   meta?: MeasurementDetail;
 }
 
+interface StorageHealthMetrics {
+  successCount: number;
+  failureCount: number;
+  totalOperations: number;
+  successRate: number;
+  totalLatencyMs: number;
+  averageLatencyMs: number;
+  minLatencyMs: number;
+  maxLatencyMs: number;
+  consecutiveFailures: number;
+  lastOperationTime: number;
+  operationTypes: Record<string, number>;
+}
+
 interface ActiveMark {
   markId: string;
   fallbackStart: number;
@@ -58,6 +72,18 @@ const hasPerformanceApi = typeof performance !== "undefined" &&
 const activeMarks = new Map<string, ActiveMark[]>();
 const measurementLog: MeasurementRecord[] = [];
 const renderProfileLog: RenderProfileRecord[] = [];
+
+// Storage health tracking
+const storageHealthStats = {
+  successCount: 0,
+  failureCount: 0,
+  totalLatencyMs: 0,
+  minLatencyMs: Infinity,
+  maxLatencyMs: 0,
+  consecutiveFailures: 0,
+  lastOperationTime: 0,
+  operationTypes: {} as Record<string, number>,
+};
 
 function now(): number {
   if (hasPerformanceApi && typeof performance.now === "function") {
@@ -191,4 +217,92 @@ export function clearRenderProfiles() {
   renderProfileLog.length = 0;
 }
 
-export type { MeasurementDetail, MeasurementRecord, RenderProfileRecord };
+/**
+ * Record a storage operation for health metrics tracking.
+ * Tracks success/failure rates, latency, operation types, and retry counts.
+ *
+ * @param operationType - Type of operation (load, save, sync, import, export)
+ * @param success - Whether the operation succeeded
+ * @param latencyMs - Duration of the operation in milliseconds
+ */
+export function recordStorageOperation(
+  operationType: string,
+  success: boolean,
+  latencyMs: number = 0,
+): void {
+  if (!shouldTrack) {
+    return;
+  }
+
+  // Update counters
+  if (success) {
+    storageHealthStats.successCount++;
+    storageHealthStats.consecutiveFailures = 0;
+  } else {
+    storageHealthStats.failureCount++;
+    storageHealthStats.consecutiveFailures++;
+  }
+
+  // Update latency stats
+  if (latencyMs > 0) {
+    storageHealthStats.totalLatencyMs += latencyMs;
+    storageHealthStats.minLatencyMs = Math.min(storageHealthStats.minLatencyMs, latencyMs);
+    storageHealthStats.maxLatencyMs = Math.max(storageHealthStats.maxLatencyMs, latencyMs);
+  }
+
+  // Track operation type
+  storageHealthStats.operationTypes[operationType] = (storageHealthStats.operationTypes[operationType] ?? 0) + 1;
+  storageHealthStats.lastOperationTime = now();
+
+  performanceLogger.debug("Storage operation recorded", {
+    operationType,
+    success,
+    latencyMs: Number(latencyMs.toFixed(2)),
+    consecutiveFailures: storageHealthStats.consecutiveFailures,
+  });
+}
+
+/**
+ * Get current storage health metrics snapshot.
+ * Useful for dashboards, diagnostics, or telemetry reporting.
+ *
+ * @returns Current storage health metrics
+ */
+export function getStorageHealthMetrics(): StorageHealthMetrics {
+  const totalOperations = storageHealthStats.successCount + storageHealthStats.failureCount;
+  const successRate = totalOperations > 0 ? storageHealthStats.successCount / totalOperations : 1;
+  const averageLatencyMs =
+    storageHealthStats.successCount > 0
+      ? storageHealthStats.totalLatencyMs / storageHealthStats.successCount
+      : 0;
+
+  return {
+    successCount: storageHealthStats.successCount,
+    failureCount: storageHealthStats.failureCount,
+    totalOperations,
+    successRate,
+    totalLatencyMs: storageHealthStats.totalLatencyMs,
+    averageLatencyMs,
+    minLatencyMs: storageHealthStats.minLatencyMs === Infinity ? 0 : storageHealthStats.minLatencyMs,
+    maxLatencyMs: storageHealthStats.maxLatencyMs,
+    consecutiveFailures: storageHealthStats.consecutiveFailures,
+    lastOperationTime: storageHealthStats.lastOperationTime,
+    operationTypes: { ...storageHealthStats.operationTypes },
+  };
+}
+
+/**
+ * Reset storage health metrics (useful for session resets or testing).
+ */
+export function resetStorageHealthMetrics(): void {
+  storageHealthStats.successCount = 0;
+  storageHealthStats.failureCount = 0;
+  storageHealthStats.totalLatencyMs = 0;
+  storageHealthStats.minLatencyMs = Infinity;
+  storageHealthStats.maxLatencyMs = 0;
+  storageHealthStats.consecutiveFailures = 0;
+  storageHealthStats.lastOperationTime = 0;
+  storageHealthStats.operationTypes = {};
+}
+
+export type { MeasurementDetail, MeasurementRecord, RenderProfileRecord, StorageHealthMetrics };

@@ -1,5 +1,6 @@
-import { useMemo } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { useFileStorage } from "@/contexts/FileStorageContext";
+import { recordAutosaveStateTransition } from "@/utils/telemetryInstrumentation";
 import type {
   FileStorageLifecycleState,
   FileStoragePermissionState,
@@ -81,8 +82,9 @@ function describePendingWrites(pendingWrites: number): string | null {
 
 export function useAutosaveStatus(): AutosaveStatusSummary {
   const { status: statusSnapshot, lifecycle, permissionStatus, isSupported } = useFileStorage();
+  const previousStateRef = useRef<AutosaveStatusState>("idle");
 
-  return useMemo(() => {
+  const result = useMemo(() => {
     const rawStatus = statusSnapshot?.status ?? "unknown";
     const pendingWrites = statusSnapshot?.pendingWrites ?? 0;
     const consecutiveFailures = statusSnapshot?.consecutiveFailures ?? 0;
@@ -179,4 +181,21 @@ export function useAutosaveStatus(): AutosaveStatusSummary {
     permissionStatus,
     isSupported,
   ]);
+
+  // Track state transitions for telemetry in useEffect
+  useEffect(() => {
+    if (previousStateRef.current !== result.state) {
+      recordAutosaveStateTransition(previousStateRef.current, result.state, {
+        metadata: {
+          permissionStatus: result.permissionStatus,
+          rawStatus: result.rawStatus,
+          consecutiveFailures: result.consecutiveFailures,
+          pendingWrites: result.pendingWrites,
+        },
+      });
+      previousStateRef.current = result.state;
+    }
+  }, [result]);
+
+  return result;
 }
