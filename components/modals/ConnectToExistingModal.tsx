@@ -124,7 +124,7 @@ export function ConnectToExistingModal({
 
   return (
     <Dialog open={isOpen}>
-      <DialogContent className="sm:max-w-lg max-w-[95vw] w-full" hideCloseButton>
+      <DialogContent hideCloseButton>
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-base sm:text-lg">
             <Database className="h-5 w-5 text-primary flex-shrink-0" />
