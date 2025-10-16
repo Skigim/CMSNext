@@ -107,7 +107,7 @@ describe("CaseWorkspace", () => {
     viewRendererSpy.mockClear();
   });
 
-  it("renders the error banner and dismisses it", async () => {
+  it("renders the error banner with Alert component and dismisses it", async () => {
     const onDismissError = vi.fn();
     const { CaseWorkspace } = await import("@/components/app/CaseWorkspace");
 
@@ -128,9 +128,19 @@ describe("CaseWorkspace", () => {
       />,
     );
 
+    // Verify Alert component structure with proper semantics
+    const alert = screen.getByRole("alert");
+    expect(alert).toBeVisible();
+    expect(alert).toHaveClass("bg-card");
+
+    // Verify error message is present
     expect(screen.getByText("Something went wrong")).toBeVisible();
 
-    await userEvent.click(screen.getByRole("button", { name: /Dismiss/i }));
+    // Verify Dismiss button is present and functional
+    const dismissButton = screen.getByRole("button", { name: /Dismiss/i });
+    expect(dismissButton).toBeVisible();
+
+    await userEvent.click(dismissButton);
 
     expect(onDismissError).toHaveBeenCalledTimes(1);
   });
