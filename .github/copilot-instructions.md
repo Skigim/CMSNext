@@ -10,7 +10,7 @@
 ## Architecture & Stack
 - Filesystem-only data flow: always call `fileDataProvider.getAPI()`; halt work if it returns `null`.
 - Mutations go `FileStorageAPI → AutosaveFileService → File System Access API`; call `safeNotifyFileStorageChange()` after writes.
-- Core contexts: `FileStorageContext` (permissions/handles) and `ThemeContext` (six themes); there is no auth context.
+- Core contexts: `FileStorageContext` (permissions/handles) and `ThemeContext` (seven themes); there is no auth context.
 - Autosave debounce is 5s; do not bypass `AutosaveFileService` or invent alternative storage layers.
 - Guard unsupported browsers by checking `isSupported`, surfacing the compatibility prompt, and treating `AbortError` as a non-error.
 
