@@ -124,41 +124,42 @@ export function ConnectToExistingModal({
 
   return (
     <Dialog open={isOpen}>
-      <DialogContent className="sm:max-w-lg max-w-[95vw]" hideCloseButton>
+      <DialogContent className="sm:max-w-lg max-w-[95vw] w-full" hideCloseButton>
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Database className="h-5 w-5 text-primary" />
-            Connect to Your Data
+          <DialogTitle className="flex items-center gap-2 text-base sm:text-lg">
+            <Database className="h-5 w-5 text-primary flex-shrink-0" />
+            <span className="break-words">Connect to Your Data</span>
           </DialogTitle>
-          <DialogDescription>
+          <DialogDescription className="text-xs sm:text-sm break-words">
             Choose how you'd like to access your case management data stored locally on your computer.
           </DialogDescription>
         </DialogHeader>
         
-        <div className="space-y-6 overflow-x-hidden">{!hasStoredHandle && (
+        <div className="space-y-4 sm:space-y-6 overflow-x-hidden w-full">
+          {!hasStoredHandle && (
             <Alert className="border-blue-200 bg-blue-50 dark:border-blue-800 dark:bg-blue-950/20">
-              <FolderOpen className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-              <AlertDescription className="text-blue-800 dark:text-blue-200">
+              <FolderOpen className="h-4 w-4 text-blue-600 dark:text-blue-400 flex-shrink-0" />
+              <AlertDescription className="text-blue-800 dark:text-blue-200 text-xs sm:text-sm break-words">
                 <strong>First time setup:</strong> You'll be asked to choose a folder on your computer. 
                 This can be an empty folder or one containing existing case files.
               </AlertDescription>
             </Alert>
           )}
 
-          <div className="text-sm text-muted-foreground space-y-2">
-            <p>This application stores your data locally in files on your computer for:</p>
-            <ul className="list-disc list-inside space-y-1 ml-4">
-              <li>Complete data privacy and security</li>
-              <li>Automatic local backups</li>
-              <li>Offline access to your cases</li>
-              <li>Full control over your data</li>
+          <div className="text-xs sm:text-sm text-muted-foreground space-y-2">
+            <p className="break-words">This application stores your data locally in files on your computer for:</p>
+            <ul className="list-disc list-inside space-y-1 ml-2 sm:ml-4">
+              <li className="break-words">Complete data privacy and security</li>
+              <li className="break-words">Automatic local backups</li>
+              <li className="break-words">Offline access to your cases</li>
+              <li className="break-words">Full control over your data</li>
             </ul>
           </div>
 
           {hasStoredHandle && permissionStatus === 'granted' && (
             <Alert className="border-emerald-200 bg-emerald-50 dark:border-emerald-800 dark:bg-emerald-950/20">
-              <FolderOpen className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
-              <AlertDescription className="text-emerald-800 dark:text-emerald-200">
+              <FolderOpen className="h-4 w-4 text-emerald-600 dark:text-emerald-400 flex-shrink-0" />
+              <AlertDescription className="text-emerald-800 dark:text-emerald-200 text-xs sm:text-sm break-words">
                 Your data folder is ready to reconnect. All permissions are in place.
               </AlertDescription>
             </Alert>
@@ -166,8 +167,8 @@ export function ConnectToExistingModal({
 
           {permissionStatus === 'denied' && (
             <Alert>
-              <AlertCircle className="h-4 w-4" />
-              <AlertDescription>
+              <AlertCircle className="h-4 w-4 flex-shrink-0" />
+              <AlertDescription className="text-xs sm:text-sm break-words">
                 Permission was previously denied. You'll need to grant permission to continue.
               </AlertDescription>
             </Alert>
@@ -175,29 +176,29 @@ export function ConnectToExistingModal({
           
           {error && (
             <Alert variant="destructive">
-              <AlertCircle className="h-4 w-4" />
-              <AlertDescription>{error}</AlertDescription>
+              <AlertCircle className="h-4 w-4 flex-shrink-0" />
+              <AlertDescription className="text-xs sm:text-sm break-words">{error}</AlertDescription>
             </Alert>
           )}
 
-          <div className="bg-muted/50 rounded-lg p-4 text-sm space-y-3">
-            <p className="font-medium">Your connection options:</p>
+          <div className="bg-muted/50 rounded-lg p-3 sm:p-4 text-xs sm:text-sm space-y-3 w-full">
+            <p className="font-medium break-words">Your connection options:</p>
             
             {hasStoredHandle && (
-              <div className="flex gap-3">
+              <div className="flex gap-2 sm:gap-3">
                 <Database className="h-4 w-4 text-emerald-600 mt-0.5 flex-shrink-0" />
-                <div>
-                  <p className="font-medium text-emerald-700 dark:text-emerald-300">Connect to Previous Folder</p>
-                  <p className="text-xs text-muted-foreground">Reconnect to your existing data folder and load your cases immediately.</p>
+                <div className="min-w-0 flex-1">
+                  <p className="font-medium text-emerald-700 dark:text-emerald-300 break-words">Connect to Previous Folder</p>
+                  <p className="text-xs text-muted-foreground break-words">Reconnect to your existing data folder and load your cases immediately.</p>
                 </div>
               </div>
             )}
             
-            <div className="flex gap-3">
+            <div className="flex gap-2 sm:gap-3">
               <FolderOpen className="h-4 w-4 text-blue-600 mt-0.5 flex-shrink-0" />
-              <div>
-                <p className="font-medium text-blue-700 dark:text-blue-300">Choose {hasStoredHandle ? 'Different' : 'Data'} Folder</p>
-                <p className="text-xs text-muted-foreground">
+              <div className="min-w-0 flex-1">
+                <p className="font-medium text-blue-700 dark:text-blue-300 break-words">Choose {hasStoredHandle ? 'Different' : 'Data'} Folder</p>
+                <p className="text-xs text-muted-foreground break-words">
                   {hasStoredHandle 
                     ? 'Select a different folder or start fresh with a new location.' 
                     : 'Pick any folder on your computer to store your case data (can be empty or contain existing files).'}
@@ -207,15 +208,15 @@ export function ConnectToExistingModal({
           </div>
 
           {/* Import Data Card Option */}
-          <Card className="border-dashed border-muted-foreground/25">
-            <CardContent className="pt-4 pb-4">
-              <div className="text-center space-y-3">
-                <div className="w-10 h-10 bg-emerald-100 dark:bg-emerald-900/20 rounded-full flex items-center justify-center mx-auto">
-                  <Upload className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
+          <Card className="border-dashed border-muted-foreground/25 w-full">
+            <CardContent className="pt-3 pb-3 sm:pt-4 sm:pb-4">
+              <div className="text-center space-y-2 sm:space-y-3">
+                <div className="w-8 h-8 sm:w-10 sm:h-10 bg-emerald-100 dark:bg-emerald-900/20 rounded-full flex items-center justify-center mx-auto">
+                  <Upload className="w-4 h-4 sm:w-5 sm:h-5 text-emerald-600 dark:text-emerald-400" />
                 </div>
                 <div>
-                  <h3 className="font-medium text-sm">Import New Data</h3>
-                  <p className="text-xs text-muted-foreground">
+                  <h3 className="font-medium text-xs sm:text-sm break-words">Import New Data</h3>
+                  <p className="text-xs text-muted-foreground break-words">
                     Import cases from JSON files or start fresh
                   </p>
                 </div>
@@ -223,18 +224,19 @@ export function ConnectToExistingModal({
             </CardContent>
           </Card>
 
-          <p className="text-xs text-muted-foreground text-center">
+          <p className="text-xs text-muted-foreground text-center break-words">
             Choose the option that best fits your needs
           </p>
         </div>
 
         {/* Dialog Footer with Action Buttons */}
-        <DialogFooter className="flex-col-reverse sm:flex-row">
+        <DialogFooter className="flex-col-reverse sm:flex-row gap-2 w-full">
           <Button 
             onClick={onGoToSettings}
             variant="outline"
             disabled={isConnecting}
             aria-label="Import data from settings"
+            className="w-full sm:w-auto text-xs sm:text-sm"
           >
             Go to Settings
           </Button>
@@ -244,16 +246,17 @@ export function ConnectToExistingModal({
             disabled={isConnecting}
             variant={hasStoredHandle ? "outline" : "default"}
             aria-label={`Choose ${hasStoredHandle ? 'different' : 'data'} folder`}
+            className="w-full sm:w-auto text-xs sm:text-sm"
           >
             {isConnecting && connectingType === 'new' ? (
               <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Selecting Folder...
+                <Loader2 className="mr-2 h-3 w-3 sm:h-4 sm:w-4 animate-spin flex-shrink-0" />
+                <span className="truncate">Selecting Folder...</span>
               </>
             ) : (
               <>
-                <FolderOpen className="mr-2 h-4 w-4" />
-                Choose {hasStoredHandle ? 'Different' : 'Data'} Folder
+                <FolderOpen className="mr-2 h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0" />
+                <span className="truncate">Choose {hasStoredHandle ? 'Different' : 'Data'} Folder</span>
               </>
             )}
           </Button>
@@ -264,16 +267,17 @@ export function ConnectToExistingModal({
               disabled={isConnecting}
               variant="default"
               aria-label="Connect to previous folder"
+              className="w-full sm:w-auto text-xs sm:text-sm"
             >
               {isConnecting && connectingType === 'existing' ? (
                 <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Reconnecting...
+                  <Loader2 className="mr-2 h-3 w-3 sm:h-4 sm:w-4 animate-spin flex-shrink-0" />
+                  <span className="truncate">Reconnecting...</span>
                 </>
               ) : (
                 <>
-                  <Database className="mr-2 h-4 w-4" />
-                  Connect to Previous Folder
+                  <Database className="mr-2 h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0" />
+                  <span className="truncate">Connect to Previous Folder</span>
                 </>
               )}
             </Button>
