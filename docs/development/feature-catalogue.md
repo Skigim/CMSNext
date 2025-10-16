@@ -224,38 +224,43 @@ Collaboration feature group; capture planned enhancements in updated documentati
 ## Intelligent Dashboard & Insights
 
 ### Implementation Snapshot
-**Rating: 55/100**
+**Rating: 70/100**
 
-Dashboard presents core stats (case counts, priorities, recent activity) with autosave badge awareness, but insights remain mostly static and manually curated. Widget framework is functional yet limited, and instrumentation for data freshness is pending.
+Dashboard now features a production-ready widget registry framework with lazy loading, automatic error handling, and data freshness tracking. Initial widgets (Case Priority, Activity Timeline) provide real-time insights. Core metrics (case counts, autosave badge) remain visible, and architecture scales for future analytics expansion.
 
 ### Strengths
-- Priority and status tiles highlight urgent cases at a glance
-- Recent activity section ties into notes/activity log for quick follow-up
-- Autosave status badge embedded in dashboard keeps storage health visible
-- Widget layout responsive and aligns with shadcn design baseline
-- Architecture supports lazy introduction of new widgets without full page reload
+- **Widget Registry Framework**: Lazy loading via `React.lazy()` + Suspense with per-widget error boundaries prevents cascading failures
+- **Data Freshness Tracking**: All widgets display "Last updated: X minutes ago" via `useWidgetData` hook with configurable refresh intervals
+- **Responsive Grid Layout**: Widgets adapt to screen size (1 column mobile → 3 columns desktop) using shadcn grid system
+- **Real-Time Metrics**: Case Priority widget aggregates counts by urgency/status; Activity Timeline shows last 7 days of notes/status changes
+- **Performance Instrumentation**: `telemetryInstrumentation` tracks widget load times, data fetch duration, and error rates
+- **Composable Architecture**: New widgets can be added without modifying core registry; metadata-driven registration enables priority sorting
+- **Seamless Integration**: Activity log feeds data to Activity Timeline widget; case state drives Priority widget
 
 ### Gaps / Risks
-- Lacks advanced analytics (trend lines, aging reports, workload distribution)
-- No customization or saved layouts; dashboard is one-size-fits-all
-- Data freshness indicators absent—users can't see when metrics last updated
-- Performance impact of additional widgets unproven; profiling not yet captured
-- Manual chunks may not isolate dashboard if new widgets import heavy dependencies
+- No advanced analytics yet (trend lines, aging reports, predictive insights)—widgets focus on snapshot metrics only
+- Dashboard customization not supported; layout is fixed across all users
+- Widget bundle size growth uninspected; lazy loading helps but large dependencies could slow initial render
+- Accessibility testing for new widgets pending (axe-core integration); keyboard navigation not yet verified
+- Performance profiling for dashboard with 3+ widgets not yet captured
 
 ### Expansion Opportunities
-- Build interactive charts that stay case-focused (e.g., pipeline progression, priority backlog) using lightweight visualization libs
-- Allow per-user widget selection or ordering for personalized workflows
-- Add data freshness timestamps and quick actions (e.g., jump to filters) for each widget
-- Integrate planned usage metrics to surface navigation hotspots or autosave reliability trends without aggregating sensitive financial totals
+- Build interactive pipeline chart showing case progression through statuses
+- Add trend widget displaying workload distribution over time using lightweight visualization library
+- Support widget pinning/hiding for personal dashboard views
+- Integrate usage metrics telemetry to surface navigation hotspots and user workflows
+- Create onboarding mode with guided widget tour for new users
+- Develop alerting widget surfacing high-priority cases requiring immediate action
 
 ### Coverage & Telemetry
-- Limited RTL coverage presently focuses on presence of key widgets; no deep behavioral tests
-- Telemetry for dashboard interactions absent; slated once usage metrics service ships
-- Bundle analysis monitors overall dashboard footprint but lacks widget-level granularity
-- Upcoming Phase 4 manual trace should measure dashboard render costs to inform optimization
+- Integration test (`__tests__/components/Dashboard.test.tsx`) verifies widget registry rendering and error handling
+- Hook suites: `useWidgetData` tested for data fetching, freshness tracking, and refresh intervals
+- Widget-specific tests: `__tests__/components/widgets/CasePriorityWidget.test.tsx` and `ActivityTimelineWidget.test.tsx` verify data aggregation and rendering
+- Performance markers tracked via `recordPerformanceMarker()` for each widget data fetch
+- Pending: manual dashboard load profiling and end-to-end performance baseline under realistic case volumes
 
 ### Owners / Notes
-Product insights pod (to be staffed as upcoming planning solidifies). Tie dashboard upgrades to feature launches so metrics reflect new capabilities.
+Dashboard framework maintained by insights platform team. Widget development follows pattern documented in `docs/development/widget-development.md`. Coordinate new widgets with UX for consistent design and with platform team to validate performance impact before shipping.
 
 ---
 
