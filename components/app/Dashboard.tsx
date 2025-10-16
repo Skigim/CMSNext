@@ -86,12 +86,12 @@ export function Dashboard({ cases, alerts, activityLogState, onViewAllCases, onN
 
   const statusPalette = useMemo(
     () => [
-      "text-amber-600",
-      "text-emerald-600",
-      "text-red-600",
-      "text-purple-600",
-      "text-blue-600",
-      "text-slate-600",
+      "text-primary",
+      "text-accent-foreground",
+      "text-destructive",
+      "text-secondary-foreground",
+      "text-chart-1",
+      "text-muted-foreground",
     ],
     [],
   );
@@ -150,14 +150,14 @@ export function Dashboard({ cases, alerts, activityLogState, onViewAllCases, onN
             ? "No open alerts"
             : `${openAlertsCount} open${unlinkedAlertCount ? ` • ${unlinkedAlertCount} unlinked` : ""}`,
         icon: BellRing,
-        color: totalAlerts > 0 ? "text-amber-600" : "text-muted-foreground",
+        color: totalAlerts > 0 ? "text-primary" : "text-muted-foreground",
       },
       {
         title: "Total Cases",
         value: totalCases,
         description: "All tracked cases",
         icon: FileText,
-        color: "text-blue-600",
+        color: "text-accent-foreground",
       },
       ...statusStats,
     ],
@@ -281,7 +281,7 @@ export function Dashboard({ cases, alerts, activityLogState, onViewAllCases, onN
               </div>
               <div className="flex flex-wrap items-center gap-2">
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <BellRing className={totalAlerts ? "h-4 w-4 text-amber-600" : "h-4 w-4"} />
+                  <BellRing className={totalAlerts ? "h-4 w-4 text-primary" : "h-4 w-4"} />
                   {totalAlerts ? `${totalAlerts} total` : "No alerts"}
                 </div>
                 {totalAlerts > 0 && (

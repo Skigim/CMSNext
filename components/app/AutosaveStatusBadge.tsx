@@ -15,8 +15,8 @@ const iconByState: Record<AutosaveStatusState, typeof Loader2> = {
 };
 
 const toneClasses: Record<AutosaveStatusSummary["tone"], string> = {
-  success: "border-emerald-500/50 bg-emerald-500/10 text-emerald-600 dark:text-emerald-300",
-  warning: "border-amber-500/50 bg-amber-500/10 text-amber-600 dark:text-amber-300",
+  success: "border-accent/60 bg-accent/50 text-accent-foreground",
+  warning: "border-primary/50 bg-primary/10 text-primary",
   danger: "border-destructive/60 bg-destructive/10 text-destructive",
   info: "border-primary/50 bg-primary/10 text-primary",
   muted: "border-border/60 bg-muted/30 text-muted-foreground",

@@ -110,7 +110,7 @@ function formatActivityTimeline(activityLog: CaseActivityEntry[]): TimelineItem[
           caseId: noteEntry.caseId,
           caseName: noteEntry.caseName,
           icon: FileText,
-          badgeColor: 'bg-blue-100 text-blue-800',
+          badgeColor: 'bg-primary/20 text-primary',
           badgeText: 'Note',
         };
       }
@@ -129,7 +129,7 @@ function formatActivityTimeline(activityLog: CaseActivityEntry[]): TimelineItem[
           caseId: statusEntry.caseId,
           caseName: statusEntry.caseName,
           icon: Save,
-          badgeColor: 'bg-green-100 text-green-800',
+          badgeColor: 'bg-accent text-accent-foreground',
           badgeText: 'Status Change',
         };
       }
@@ -146,7 +146,7 @@ function formatActivityTimeline(activityLog: CaseActivityEntry[]): TimelineItem[
         caseId: baseEntry.caseId,
         caseName: baseEntry.caseName,
         icon: Clock,
-        badgeColor: 'bg-gray-100 text-gray-800',
+        badgeColor: 'bg-muted text-muted-foreground',
         badgeText: 'Other',
       };
     });
