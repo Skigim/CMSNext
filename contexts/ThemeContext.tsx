@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 
-type Theme = 'light' | 'paperwhite' | 'dark' | 'soft-dark' | 'warm' | 'blue' | 'paper';
+type Theme = 'light' | 'paperwhite' | 'paper' | 'soft-dark' | 'dark';
 type ThemeTone = 'light' | 'dark';
 
 interface ThemeOption {
@@ -12,11 +12,9 @@ interface ThemeOption {
 export const themeOptions: ThemeOption[] = [
   { id: 'light', name: 'Light', description: 'Clean light theme' },
   { id: 'paperwhite', name: 'Paperwhite', description: 'Crisp white e-reader theme' },
-  { id: 'dark', name: 'Dark', description: 'High contrast dark theme' },
-  { id: 'soft-dark', name: 'Soft Dark', description: 'Easier on the eyes dark theme' },
-  { id: 'warm', name: 'Warm', description: 'Cream and warm tones' },
-  { id: 'blue', name: 'Blue', description: 'Professional blue theme' },
   { id: 'paper', name: 'Paper', description: 'Parchment' },
+  { id: 'soft-dark', name: 'Soft Dark', description: 'Easier on the eyes dark theme' },
+  { id: 'dark', name: 'Dark', description: 'High contrast dark theme' },
 ];
 
 interface ThemeContextType {
