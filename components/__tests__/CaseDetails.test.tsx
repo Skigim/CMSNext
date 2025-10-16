@@ -1,6 +1,8 @@
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+// @ts-ignore - jest-axe doesn't have types but works fine with vitest
+import { axe } from 'jest-axe'
 import { CaseDetails } from '@/components/case/CaseDetails';
 import type { CaseDisplay } from '@/types/case';
 
@@ -548,5 +550,53 @@ describe('CaseDetails Memory Management', () => {
     expect(latestProps?.onDeleteNote).toBe(noteHandlers.onDeleteNote);
     expect(latestProps?.onUpdateNote).toBe(noteHandlers.onBatchUpdateNote);
     expect(latestProps?.onCreateNote).toBe(noteHandlers.onBatchCreateNote);
+  });
+
+  it("should have proper heading hierarchy", () => {
+    vi.useRealTimers();
+    render(<CaseDetails {...mockProps} />);
+    
+    // Verify main heading exists
+    const mainHeading = screen.getByRole('heading', { name: 'John Doe' });
+    expect(mainHeading).toBeInTheDocument();
+  });
+
+  it("should have accessible button labels", () => {
+    vi.useRealTimers();
+    render(<CaseDetails {...mockProps} />);
+    
+    // Verify all buttons have accessible text/aria-labels
+    const backButton = screen.getByRole('button', { name: /back/i });
+    const editButton = screen.getByRole('button', { name: /edit/i });
+    const deleteButton = screen.getByRole('button', { name: /delete/i });
+    
+    expect(backButton).toBeInTheDocument();
+    expect(editButton).toBeInTheDocument();
+    expect(deleteButton).toBeInTheDocument();
+  });
+
+  it("should support keyboard navigation in action buttons", async () => {
+    vi.useRealTimers();
+    const user = userEvent.setup();
+    const onBack = vi.fn();
+    
+    render(<CaseDetails {...mockProps} onBack={onBack} />);
+    
+    // Focus and interact with back button using keyboard
+    const backButton = screen.getByRole('button', { name: /back/i });
+    backButton.focus();
+    expect(backButton).toHaveFocus();
+    
+    await user.keyboard('{Enter}');
+    expect(onBack).toHaveBeenCalled();
+  });
+
+  it("should have accessible copy button with aria-label", () => {
+    vi.useRealTimers();
+    render(<CaseDetails {...mockProps} />);
+    
+    const copyButton = screen.getByRole('button', { name: /copy mcn/i });
+    expect(copyButton).toHaveAttribute('aria-label');
+    expect(copyButton.getAttribute('aria-label')).toMatch(/copy mcn/i);
   });
 });

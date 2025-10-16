@@ -1,6 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+// @ts-ignore - jest-axe doesn't have types but works fine with vitest
+import { axe } from 'jest-axe'
 import { CaseForm } from "@/components/case/CaseForm";
 import { createMockCaseDisplay, createMockPerson, createMockCaseRecord } from "@/src/test/testUtils";
 
@@ -76,5 +78,49 @@ describe("CaseForm", () => {
 
     await user.click(screen.getByRole("button", { name: /cancel/i }));
     expect(onCancel).toHaveBeenCalledTimes(1);
+  });
+
+  it("should have proper ARIA labels on form fields", async () => {
+    const onSave = vi.fn();
+    const onCancel = vi.fn();
+
+    render(<CaseForm onSave={onSave} onCancel={onCancel} />);
+
+    // Verify that form fields have accessible labels
+    expect(screen.getByLabelText(/first name/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/last name/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/email/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/phone/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/mcn/i)).toBeInTheDocument();
+  });
+
+  it("should support keyboard navigation", async () => {
+    const onSave = vi.fn();
+    const onCancel = vi.fn();
+    const user = userEvent.setup();
+
+    render(<CaseForm onSave={onSave} onCancel={onCancel} />);
+
+    const firstNameInput = screen.getByLabelText(/first name/i);
+    
+    // Tab to first name field and verify it receives focus
+    await user.tab();
+    expect(firstNameInput).toHaveFocus();
+
+    // Fill in required fields via keyboard
+    await user.type(firstNameInput, "Alice");
+    await user.tab();
+    await user.type(screen.getByLabelText(/last name/i), "Smith");
+    await user.tab();
+    await user.type(screen.getByLabelText(/email/i), "alice@example.com");
+    await user.tab();
+    await user.type(screen.getByLabelText(/phone/i), "5551234567");
+    await user.tab();
+    await user.type(screen.getByLabelText(/mcn/i), "MCN-1");
+
+    // Tab to save button and verify it can be activated
+    const saveButton = screen.getByRole("button", { name: /create case/i });
+    await user.tab();
+    expect(saveButton).toHaveFocus();
   });
 });
