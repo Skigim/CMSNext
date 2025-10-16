@@ -1,4 +1,4 @@
-import { render, screen, fireEvent } from "@testing-library/react";
+import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { Dashboard } from "@/components/app/Dashboard";
 import type { AlertsIndex, AlertWithMatch } from "@/utils/alertsData";
@@ -134,7 +134,7 @@ const mockActivityLogState: CaseActivityLogState = {
 };
 
 describe("Dashboard", () => {
-  it("shows the unlinked alerts badge and dialog when alerts are unmatched", () => {
+  it("shows the unlinked alerts badge and dialog when alerts are unmatched", async () => {
     const matchedAlert = createAlert({
       id: "alert-matched",
       matchStatus: "matched",
@@ -173,7 +173,10 @@ describe("Dashboard", () => {
       />,
     );
 
-    expect(screen.getByText(/2 total/i)).toBeInTheDocument();
+    // Wait for widgets to load and complete their async operations
+    await waitFor(() => {
+      expect(screen.getByText(/2 total/i)).toBeInTheDocument();
+    });
 
     const badgeButton = screen.getByRole("button", { name: /1 unlinked alert/i });
     fireEvent.click(badgeButton);
@@ -182,7 +185,7 @@ describe("Dashboard", () => {
     expect(screen.getAllByText(/missing documents/i)).not.toHaveLength(0);
   });
 
-  it("hides the unlinked alerts badge when everything is matched", () => {
+  it("hides the unlinked alerts badge when everything is matched", async () => {
     const matchedAlert = createAlert({
       id: "alert-matched",
       matchStatus: "matched",
@@ -215,6 +218,9 @@ describe("Dashboard", () => {
       />,
     );
 
-    expect(screen.queryByRole("button", { name: /unlinked alert/i })).not.toBeInTheDocument();
+    // Wait for widgets to load and complete their async operations
+    await waitFor(() => {
+      expect(screen.queryByRole("button", { name: /unlinked alert/i })).not.toBeInTheDocument();
+    });
   });
 });

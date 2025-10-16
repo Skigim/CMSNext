@@ -240,15 +240,14 @@ describe("FinancialItemCard", () => {
     
     await user.click(deleteButton);
 
-    // Verify confirmation buttons have proper labels
+    // Verify confirmation buttons appear and have proper labels
     const confirmButton = screen.queryByRole("button", { name: /confirm delete/i });
     const cancelDeleteButton = screen.queryByRole("button", { name: /cancel delete/i });
     
-    if (confirmButton) {
-      expect(confirmButton).toHaveAttribute("aria-label");
-    }
-    if (cancelDeleteButton) {
-      expect(cancelDeleteButton).toHaveAttribute("aria-label");
-    }
+    expect(confirmButton).toBeInTheDocument();
+    expect(confirmButton).toHaveAttribute("aria-label");
+    
+    expect(cancelDeleteButton).toBeInTheDocument();
+    expect(cancelDeleteButton).toHaveAttribute("aria-label");
   });
 });

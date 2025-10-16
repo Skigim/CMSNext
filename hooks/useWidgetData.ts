@@ -61,9 +61,17 @@ export function useWidgetData<T>(
   });
 
   const mountedRef = useRef(true);
+  const dataFetcherRef = useRef(dataFetcher);
   const refreshTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastUpdateRef = useRef<number | null>(null);
   const performanceMarkRef = useRef<string | null>(null);
+
+  /**
+   * Keep dataFetcher ref in sync with the latest caller-provided function.
+   */
+  useEffect(() => {
+    dataFetcherRef.current = dataFetcher;
+  }, [dataFetcher]);
 
   /**
    * Update freshness information based on last update timestamp.
@@ -95,7 +103,7 @@ export function useWidgetData<T>(
       setLoading(true);
       setError(null);
 
-      const result = await dataFetcher();
+      const result = await dataFetcherRef.current();
 
       if (!mountedRef.current) return;
 
@@ -137,7 +145,7 @@ export function useWidgetData<T>(
         setLoading(false);
       }
     }
-  }, [dataFetcher, updateFreshness, enablePerformanceTracking]);
+  }, [updateFreshness, enablePerformanceTracking]);
 
   /**
    * Refresh data manually.
@@ -147,7 +155,24 @@ export function useWidgetData<T>(
       clearTimeout(refreshTimeoutRef.current);
     }
     await fetchData();
-  }, [fetchData]);
+    // Re-schedule the auto-refresh timer after manual refresh completes
+    if (mountedRef.current) {
+      refreshTimeoutRef.current = setTimeout(() => {
+        if (mountedRef.current) {
+          fetchData().then(() => {
+            // Re-schedule after this refresh too
+            if (mountedRef.current) {
+              refreshTimeoutRef.current = setTimeout(() => {
+                if (mountedRef.current) {
+                  // This will be handled by the main effect loop
+                }
+              }, refreshInterval);
+            }
+          });
+        }
+      }, refreshInterval);
+    }
+  }, [fetchData, refreshInterval]);
 
   /**
    * Set up automatic refresh interval.

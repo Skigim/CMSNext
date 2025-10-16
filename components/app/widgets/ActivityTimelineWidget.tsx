@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useCallback, useMemo } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -182,16 +182,14 @@ export function ActivityTimelineWidget({
 }: ActivityTimelineWidgetProps) {
   /**
    * Fetch and format activity data using widget data hook.
+   * Memoized to prevent continuous refetching from inline lambda recreation.
    */
+  const fetchTimeline = useCallback(async () => {
+    return formatActivityTimeline(activityLogState.activityLog || []);
+  }, [activityLogState.activityLog]);
+
   const { data: timeline, loading, freshness } = useWidgetData(
-    async () => {
-      // Simulate async operation for consistency
-      return new Promise<TimelineItem[]>((resolve) => {
-        setTimeout(() => {
-          resolve(formatActivityTimeline(activityLogState.activityLog || []));
-        }, 0);
-      });
-    },
+    fetchTimeline,
     {
       refreshInterval: metadata?.refreshInterval ?? 2 * 60 * 1000, // 2 minutes default for activity
       enablePerformanceTracking: true,

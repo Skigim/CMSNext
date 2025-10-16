@@ -86,12 +86,15 @@ export function recordStorageSyncEvent(
   };
 
   telemetryLogger.debug(`Storage sync event: ${operationType}`, {
-    success,
-    duration: details?.duration,
-    dataSize: details?.dataSize,
-    itemCount: details?.itemCount,
-    error: details?.error,
-  });
+    operationType: payload.operationType,
+    success: payload.success,
+    duration: payload.duration,
+    dataSize: payload.dataSize,
+    itemCount: payload.itemCount,
+    error: payload.error,
+    timestamp: payload.timestamp,
+    sessionId: payload.sessionId,
+  } as Record<string, unknown>);
 
   // TODO: Send to telemetry collection service when available
   // For now, this is captured in logs only
@@ -119,9 +122,13 @@ export function recordAutosaveStateTransition(
   };
 
   telemetryLogger.debug(`Autosave state transition: ${previousState} → ${newState}`, {
-    duration: details?.duration,
-    metadata: details?.metadata,
-  });
+    previousState: payload.previousState,
+    newState: payload.newState,
+    duration: payload.duration,
+    timestamp: payload.timestamp,
+    sessionId: payload.sessionId,
+    metadata: payload.metadata,
+  } as Record<string, unknown>);
 
   // TODO: Send to telemetry collection service when available
 }
@@ -145,9 +152,12 @@ export function recordPerformanceMarker(
   };
 
   telemetryLogger.debug(`Performance marker: ${markName}`, {
-    duration: details?.duration,
-    metadata: details?.metadata,
-  });
+    markName: payload.markName,
+    duration: payload.duration,
+    timestamp: payload.timestamp,
+    sessionId: payload.sessionId,
+    metadata: payload.metadata,
+  } as Record<string, unknown>);
 
   // TODO: Send to telemetry collection service when available
 }

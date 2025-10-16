@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useCallback, useMemo } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { AlertCircle, Clock, CheckCircle2, Archive } from 'lucide-react';
@@ -86,17 +86,14 @@ function calculatePriorityStats(cases: CaseDisplay[]): PriorityStats {
 export function CasePriorityWidget({ cases = [], metadata }: CasePriorityWidgetProps) {
   /**
    * Fetch priority data using widget data hook.
-   * Memoizes data fetching with freshness tracking.
+   * Memoized to prevent continuous refetching from inline lambda recreation.
    */
+  const fetchPriorityStats = useCallback(async () => {
+    return calculatePriorityStats(cases);
+  }, [cases]);
+
   const { data: stats, loading, freshness } = useWidgetData(
-    async () => {
-      // Simulate async operation for consistency with other widgets
-      return new Promise<PriorityStats>((resolve) => {
-        setTimeout(() => {
-          resolve(calculatePriorityStats(cases));
-        }, 0);
-      });
-    },
+    fetchPriorityStats,
     {
       refreshInterval: metadata?.refreshInterval ?? 5 * 60 * 1000, // 5 minutes default
       enablePerformanceTracking: true,
