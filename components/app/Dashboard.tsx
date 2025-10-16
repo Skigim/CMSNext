@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useMemo, useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../ui/card";
 import { Button } from "../ui/button";
 import { Badge } from "../ui/badge";
@@ -16,6 +16,9 @@ import { UnlinkedAlertsDialog } from "@/components/alerts/UnlinkedAlertsDialog";
 import { McnCopyControl } from "@/components/common/McnCopyControl";
 import type { CaseActivityLogState } from "../../types/activityLog";
 import { ActivityReportCard } from "./ActivityReportCard";
+import { registerWidget, WidgetRenderer } from "./widgets/WidgetRegistry";
+import { CasePriorityWidget } from "./widgets/CasePriorityWidget";
+import { recordPerformanceMarker } from "@/utils/telemetryInstrumentation";
 
 interface DashboardProps {
   cases: CaseDisplay[];
@@ -35,6 +38,35 @@ function formatAlertMatchStatus(status: AlertMatchStatus): string {
 
 export function Dashboard({ cases, alerts, activityLogState, onViewAllCases, onNewCase, onNavigateToReports }: DashboardProps) {
   const { config } = useCategoryConfig();
+  const [renderStartTime] = useState(() => performance.now?.() ?? Date.now());
+
+  // Record dashboard render completion and load timing
+  useEffect(() => {
+    const renderEndTime = performance.now?.() ?? Date.now();
+    const loadDuration = renderEndTime - renderStartTime;
+    recordPerformanceMarker("dashboard.render-complete", {
+      duration: loadDuration,
+      metadata: {
+        casesCount: cases.length,
+        alertsCount: alerts.alerts.length,
+      },
+    });
+  }, [renderStartTime, cases.length, alerts.alerts.length]);
+
+  // Register Case Priority Widget on mount
+  useEffect(() => {
+    registerWidget(
+      "case-priority",
+      {
+        id: "case-priority",
+        title: "Case Priority Pipeline",
+        description: "Visual breakdown of active cases by priority level",
+        refreshInterval: 60000, // 1 minute
+        aspectRatio: "square",
+      },
+      CasePriorityWidget,
+    );
+  }, []);
 
   const validCases = useMemo(
     () => cases.filter(c => c && c.caseRecord && typeof c.caseRecord === "object"),
@@ -149,6 +181,17 @@ export function Dashboard({ cases, alerts, activityLogState, onViewAllCases, onN
         </div>
       </div>
       <ActivityReportCard activityLogState={activityLogState} />
+
+      {/* Case Priority Widget */}
+      <div className="mt-8">
+        <WidgetRenderer
+          id="case-priority"
+          props={{
+            cases: validCases,
+            lastUpdated: Date.now(),
+          }}
+        />
+      </div>
 
       {/* Note: Evaluate blending Today's metrics directly into ActivityReportCard to reduce duplication when we revisit dashboard layout. */}
 
