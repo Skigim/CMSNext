@@ -230,13 +230,13 @@ export function ConnectToExistingModal({
         </div>
 
         {/* Dialog Footer with Action Buttons */}
-        <DialogFooter className="flex-col-reverse sm:flex-row gap-2 w-full">
+        <DialogFooter className="flex-col-reverse sm:flex-row gap-2 w-full sm:flex-wrap">
           <Button 
             onClick={onGoToSettings}
             variant="outline"
             disabled={isConnecting}
             aria-label="Import data from settings"
-            className="w-full sm:w-auto text-xs sm:text-sm"
+            className="w-full sm:w-auto text-xs sm:text-sm whitespace-nowrap"
           >
             Go to Settings
           </Button>
@@ -246,7 +246,7 @@ export function ConnectToExistingModal({
             disabled={isConnecting}
             variant={hasStoredHandle ? "outline" : "default"}
             aria-label={`Choose ${hasStoredHandle ? 'different' : 'data'} folder`}
-            className="w-full sm:w-auto text-xs sm:text-sm"
+            className="w-full sm:w-auto text-xs sm:text-sm flex-shrink-0"
           >
             {isConnecting && connectingType === 'new' ? (
               <>
@@ -267,7 +267,7 @@ export function ConnectToExistingModal({
               disabled={isConnecting}
               variant="default"
               aria-label="Connect to previous folder"
-              className="w-full sm:w-auto text-xs sm:text-sm"
+              className="w-full sm:w-auto text-xs sm:text-sm flex-shrink-0"
             >
               {isConnecting && connectingType === 'existing' ? (
                 <>
