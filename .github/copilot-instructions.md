@@ -43,4 +43,4 @@
 - [x] `components/error/ErrorFallback.tsx` → rebuild fallback cards on shadcn `Card`/`Alert`.
 - [x] `components/figma/ImageWithFallback.tsx` → replace custom fallback styling with shadcn `AspectRatio`/`Skeleton`.
 
-**Status:** ✅ 100% Complete (PR #28 merged October 15, 2025)
+**Status:** ✅ 100% Complete (Pull Request 28 merged October 15, 2025)
