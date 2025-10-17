@@ -112,11 +112,11 @@ npm run analyze:flamegraph reports/performance/profiler-session-2025-10-17.json
 | Scenario | Payload | Avg (ms) | Threshold (ms) | Result |
 |----------|---------|----------|----------------|--------|
 | Small (1-5 cases) | 10KB | 0.40 | 50 | ✅ PASS |
-| Medium (10-20 cases) | 50KB | 5.50 | 75 | ✅ PASS |
-| Large (50+ cases) | 200KB | 87.88 | 100 | ✅ PASS |
-| Very Large (100+ cases) | 500KB | 572.42 | 600 | ✅ PASS |
+| Medium (10-20 cases) | 50KB | 5.24 | 75 | ✅ PASS |
+| Large (50+ cases) | 200KB | 84.94 | 100 | ✅ PASS |
+| Very Large (100+ cases) | 500KB | 547.73 | 600 | ✅ PASS |
 
-**Note:** Threshold for Very Large payloads (500KB, 100+ cases) set to 600ms to accommodate edge case scenarios. This represents extreme datasets with 100+ cases and remains well within the 5-second autosave debounce window.
+**Note:** Very Large payload threshold increased to 600ms to accommodate extreme datasets (100+ cases). This is an edge case for typical usage patterns (5-25 cases).
 
 ### Dashboard Load Performance ✅
 
