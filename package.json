@@ -22,7 +22,11 @@
     "seed:demo": "npx tsx scripts/seedCli.ts --preset demo",
     "seed:small": "npx tsx scripts/seedCli.ts --preset small",
     "seed:large": "npx tsx scripts/seedCli.ts --preset large",
-    "usage:report": "tsx scripts/usageReport.ts"
+    "usage:report": "tsx scripts/usageReport.ts",
+    "bench:autosave": "tsx scripts/autosaveBenchmark.ts",
+    "bench:dashboard": "tsx scripts/dashboardLoadBenchmark.ts",
+    "analyze:nav": "tsx scripts/analyzeNavigationTrace.ts",
+    "analyze:flamegraph": "tsx scripts/generateFlamegraph.ts"
   },
   "dependencies": {
     "@radix-ui/react-accordion": "^1.2.12",
