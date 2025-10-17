@@ -85,13 +85,12 @@ export function ProfilerWrapper({ id, children, enabled = true }: ProfilerWrappe
   }, [enabled]);
 
   const onRenderCallback: ProfilerOnRenderCallback = (
-    id,
-    phase,
-    actualDuration,
-    baseDuration,
-    startTime,
-    commitTime,
-    interactions
+    id: string,
+    phase: 'mount' | 'update' | 'nested-update',
+    actualDuration: number,
+    baseDuration: number,
+    startTime: number,
+    commitTime: number
   ) => {
     if (!enabled) return;
 
@@ -104,7 +103,7 @@ export function ProfilerWrapper({ id, children, enabled = true }: ProfilerWrappe
       baseDuration,
       startTime,
       commitTime,
-      interactions,
+      interactions: new Set(), // React 18 removed interactions parameter
       timestamp: new Date().toISOString(),
     };
 

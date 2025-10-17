@@ -45,7 +45,7 @@
   // Utility: Capture current performance metrics
   function captureMetrics() {
     const now = performance.now();
-    const memory = performance.memory ? {
+    const memoryInfo = performance.memory ? {
       usedJSHeapSize: performance.memory.usedJSHeapSize,
       totalJSHeapSize: performance.memory.totalJSHeapSize,
       jsHeapSizeLimit: performance.memory.jsHeapSizeLimit,
@@ -53,7 +53,7 @@
 
     return {
       timestamp: now,
-      memory,
+      memory: memoryInfo,
       url: window.location.href,
       pathname: window.location.pathname,
     };
@@ -86,8 +86,8 @@
     if (trace.durationFromPrevious) {
       console.log(`   Duration from previous: ${trace.durationFromPrevious.toFixed(2)}ms`);
     }
-    if (memory) {
-      console.log(`   Memory used: ${(memory.usedJSHeapSize / 1024 / 1024).toFixed(2)} MB`);
+    if (metrics.memory) {
+      console.log(`   Memory used: ${(metrics.memory.usedJSHeapSize / 1024 / 1024).toFixed(2)} MB`);
     }
     console.log('');
   }
