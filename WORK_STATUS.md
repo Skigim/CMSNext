@@ -1,88 +1,85 @@
-# Multi-Track Work Status
+````markdown
+# CMSNext Work Status
 
-**Branch:** `feat/telemetry-accessibility-dashboard`  
-**Status as of:** 2025-10-16 15:00 UTC  
+**Branch:** `main`  
+**Status as of:** 2025-10-16 (Current)  
 **Tests:** 211/211 passing ✅
 
----
 
-## ✅ **Track 1: Telemetry** - COMPLETED (2/2 commits)
+## 🎉 **MAJOR MILESTONE ACHIEVED**
 
-### Agent 1 & 2 Work Done:
-- ✅ `telemetry: create opt-in collection stub with PII validation`
-- ✅ `telemetry: add comprehensive collection guide and patterns`
+All near-term roadmap items from the 30-day window have been **COMPLETED** and merged to main:
 
-### Files Created/Modified:
-- ✅ `.gitignore` - Added `.telemetry/` directory
-- ✅ `hooks/useFileDataSync.ts` - Added telemetry instrumentation
-- ✅ `hooks/useAutosaveStatus.ts` - Added badge state transition tracking
-- ✅ `components/app/Dashboard.tsx` - Added load timing markers
-- ✅ `utils/performanceTracker.ts` - Extended with storage health metrics
-- ✅ `utils/telemetryCollector.ts` - **CREATED** - Opt-in collection stub
-- ✅ `utils/telemetryInstrumentation.ts` - **CREATED** - Helper utilities
-- ✅ `docs/development/telemetry-guide.md` - **CREATED** - Complete documentation
+### ✅ **PR #28: Complete shadcn/ui Migration** (Merged Oct 15, 2025)
+  - ✅ AppLoadingState → Card + Spinner primitives
+  - ✅ CaseWorkspace → Alert component for error banners
+  - ✅ ConnectionOnboarding → Enhanced Dialog accessibility
+  - ✅ FileStorageDiagnostics → Full Card + Badge + Button rebuild
+  - ✅ ErrorFallback → Card-based error displays with ARIA attributes
+  - ✅ ImageWithFallback → AspectRatio + Skeleton integration
+  - ✅ FinancialItemCard* → shadcn primitives (completed earlier)
+  - ✅ Spinner component with theme integration
 
-**Status:** ✅ **TRACK 1 COMPLETE AND READY**
+### ✅ **PR #29: Telemetry + Accessibility + Dashboard** (Merged Oct 16, 2025)
 
----
+#### Track 1: Telemetry Infrastructure ✅
 
-## ⚠️ **Track 2: Accessibility** - NOT STARTED (0/6 commits expected)
+#### Track 2: Accessibility Testing ✅
 
-### Required Work:
-- ❌ Install `jest-axe` package
-- ❌ Configure axe test utilities in `__tests__/setup.test.tsx`
-- ❌ Add axe checks to case workflows
-- ❌ Add axe checks to financial workflows
-- ❌ Add axe checks to notes/dashboard
-- ❌ Create `docs/development/accessibility-testing.md`
-- ❌ Update `docs/development/testing-infrastructure.md`
+#### Track 3: Dashboard Widget Framework ✅
 
-**Status:** ⏳ **READY TO START - Agents 3 & 4 can begin immediately**
 
----
+## 📊 **Current Architecture Health**
 
-## ⚠️ **Track 3: Dashboard Widgets** - PARTIALLY STARTED (incomplete)
+| Category | Status | Notes |
+|----------|--------|-------|
+| **Tests** | ✅ 211/211 passing | Zero act() warnings, all workflows covered |
+| **Build** | ✅ Clean | 507.70 kB / 136.27 kB gzipped |
+| **TypeScript** | ✅ No errors | Strict mode, full type safety |
+| **Accessibility** | ✅ Infrastructure ready | jest-axe integrated, patterns documented |
+| **Telemetry** | ✅ Infrastructure ready | Opt-in collection, PII-safe |
+| **shadcn Migration** | ✅ 100% complete | All 7 target components migrated |
+| **Widget Framework** | ✅ Production-ready | 2 widgets live, extensible architecture |
 
-### Problem: Dashboard.tsx imports widgets that don't exist yet!
-Dashboard.tsx was modified but widgets weren't created, causing test failure:
-```
-Error: Failed to resolve import "./widgets/WidgetRegistry" from "components/app/Dashboard.tsx"
-```
 
-### Files That Need to be Created:
-- ❌ `components/app/widgets/WidgetRegistry.tsx`
-- ❌ `components/app/widgets/CasePriorityWidget.tsx`
-- ❌ `components/app/widgets/ActivityTimelineWidget.tsx`
-- ❌ `hooks/useWidgetData.ts`
-- ❌ `docs/development/widget-development.md`
+## 🎯 **Next Phase: Mid-Term Roadmap (30-90 Days)**
 
-### Action Required:
-**REVERT** the Dashboard.tsx changes OR **CREATE** the missing widget files immediately.
+With near-term foundations complete, focus shifts to:
 
-**Status:** ⚠️ **BLOCKED - Fix required before proceeding**
+### 1. **Dashboard Insights Expansion** (Ready to Start)
+  - Alerts widget (high-priority cases requiring attention)
+  - Financial trends widget (lightweight visualization)
+  - Storage health widget (autosave status, backup info)
 
----
+### 2. **Financial Operations Enhancements** (Design Phase)
 
-## 🎯 **Recovery Plan**
+### 3. **Data Portability Improvements** (Design Phase)
 
-### Option 1: Revert Dashboard Changes (Recommended)
-```bash
-git checkout main -- components/app/Dashboard.tsx
-git commit -m "revert: remove premature widget imports from Dashboard"
-```
 
-Then Agents 5 & 6 can properly implement widgets and integrate them.
+## 🔍 **Outstanding Technical Debt**
 
-### Option 2: Complete Widget Implementation Now
-Agents 5 & 6 immediately create all missing widget files per their prompts.
+### Phase 4 Manual Telemetry Captures (from performance-metrics.md)
 
----
+### Accessibility Coverage Expansion
 
-## 📊 **Summary**
+### Documentation Updates
 
-**Completed:** 2/12 expected commits  
-**Remaining:** 10 commits  
-**Tracks Ready:** 2/3 (Track 1 ✅ | Track 2 ⏳ | Track 3 ⚠️)  
-**Test Status:** 200/200 passing (Dashboard.test broken, fixable)
 
-**Recommendation:** Revert Dashboard.tsx, then proceed with Tracks 2 & 3 in order.
+## � **Achievement Summary**
+
+**Completed in Last Week:**
+
+**Impact:**
+
+
+## 🚦 **Go/No-Go for Architecture Refactor**
+
+**Current Status:** 🟡 ALMOST READY
+
+**Completed Prerequisites:**
+
+**Remaining Before Refactor:**
+
+**Recommendation:** Begin refactor planning now; execute after Phase 4 telemetry complete.
+
+````

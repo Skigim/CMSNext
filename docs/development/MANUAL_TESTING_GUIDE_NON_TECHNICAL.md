@@ -1,0 +1,346 @@
+# Manual Testing Guide (Non-Technical User)
+
+**Created:** October 16, 2025  
+**Tester:** Non-technical team member  
+**Duration:** ~1.5 hours  
+**Technical Setup Required:** ✅ Already done by technical team member
+
+---
+
+## 🎯 Your Mission
+
+Help us measure how fast the CMSNext application works by using it like a normal user would. You'll perform simple tasks (like creating cases and adding notes) while special measurement tools run in the background.
+
+**Don't worry!** Everything is already set up. You just need to follow these steps and click some buttons. You can't break anything! 😊
+
+---
+
+## ✅ Step 1: Create Your Save Folder (5 minutes)
+
+**IMPORTANT:** The app needs a folder to save case data. You'll do this once at the very beginning.
+
+### Instructions:
+
+1. **Create a folder on your computer:**
+   - **Windows:** Right-click on Desktop → New → Folder
+   - **Mac:** Right-click on Desktop → New Folder
+   - **Name it:** `CMSNext-Test-Data`
+
+2. **Remember where you put it!**
+   - Example: `Desktop/CMSNext-Test-Data`
+   - You'll need to find this folder in a moment
+
+✅ **Done?** Great! Now continue below.
+
+---
+
+## ✅ Step 2: Open the App (2 minutes)
+
+1. **Open your web browser** (Chrome or Edge recommended)
+
+2. **Go to this link:**
+   ```
+   https://skigim.github.io/CMSNext/
+   ```
+   - Type or paste this into your address bar
+   - Press Enter
+
+3. **The app will load!**
+   - You should see a welcome screen
+   - ✅ Checkpoint: You see the CMSNext logo and connection options
+
+**If the page doesn't load:** Check your internet connection and try again.
+
+---
+
+## ✅ Step 3: Connect the App to Your Folder (5 minutes)
+
+1. **You'll see two options on the welcome screen:**
+   - "Connect to New Folder"
+   - "Connect to Existing"
+
+2. **Click "Connect to New Folder"** (since this is your first time)
+
+3. **A system window will pop up** asking you to choose a folder
+   - Navigate to your Desktop
+   - Select the `CMSNext-Test-Data` folder you created in Step 1
+   - Click "Select Folder" or "Open"
+
+4. **The app will now load the main dashboard!**
+   - You should see widgets and case information
+   - ✅ Checkpoint: You see "Dashboard" at the top with a menu on the left
+
+**If something goes wrong:** Ask the technical person for help with this step.
+
+---
+
+## ✅ Step 4: Pre-Flight Checklist (Technical Setup - Already Done)
+
+**Before you start testing, verify these are complete:**
+
+- [ ] Application is open in browser at `https://skigim.github.io/CMSNext/`
+- [ ] You connected to your `CMSNext-Test-Data` folder (Step 3 above)
+- [ ] Dashboard is visible with widgets showing
+- [ ] Browser DevTools are open (press F12) - *Technical person does this*
+- [ ] Console tab is visible - *Technical person does this*
+- [ ] You see a message like "Navigation tracer ready" - *Technical person verifies this*
+
+**If any of these aren't ready, ask the technical person to set them up first!**
+
+---
+
+## 📋 Part 1: Navigation Testing (30 minutes)
+
+### What You're Testing
+We want to measure how long it takes to move between different screens in the app.
+
+### Your Tasks
+
+#### Round 1: Basic Navigation (Repeat 5 times)
+
+**For each round, do these steps in order:**
+
+1. **Start at Dashboard**
+   - You should see the main dashboard with widgets
+   - ✅ Checkpoint: You see "Dashboard" at the top
+
+2. **Go to Case List**
+   - Click the "View All Cases" button
+   - Wait for the list to load
+   - ✅ Checkpoint: You see a table with cases
+
+3. **Open a Case**
+   - Click on the **first case** in the list (first row)
+   - Wait for details to load
+   - ✅ Checkpoint: You see case details with financial info
+
+4. **Go Back to Dashboard**
+   - Click the "Back to Dashboard" button (or back arrow)
+   - Wait for dashboard to appear
+   - ✅ Checkpoint: You're back where you started
+
+5. **Wait 3 seconds** before starting the next round
+
+**Repeat this sequence 5 times total.**
+
+#### What to Watch For
+
+At the end of 5 rounds, you should see a message in the browser console that says:
+```
+✅ Navigation trace complete! Data saved.
+```
+
+**If you see this:** Great! Move to Part 2  
+**If you don't see this:** Ask for help - the script might need a restart
+
+---
+
+## 📋 Part 2: Normal User Workflows (45 minutes)
+
+### What You're Testing
+We want to see how the app performs during typical daily tasks.
+
+### Before You Start
+
+1. Make sure you see this message in the console: `React Profiler: Recording started`
+2. If not, ask the technical person to enable it
+
+### Your Tasks
+
+#### Workflow 1: Create a New Case (Do this 2 times)
+
+1. **Click "New Case" button** (big button on sidebar or dashboard)
+2. **Fill in the form:**
+   - First Name: `Test`
+   - Last Name: `Person [NUMBER]` (use 1, then 2, then 3, etc.)
+   - Date of Birth: Pick any date
+   - MCN: `MC00[NUMBER]` (like MC001, MC002, etc.)
+   - Address: `123 Test St`
+   - City: `Springfield`
+   - State: `IL`
+   - ZIP: `62701`
+   - Phone: `555-1234`
+   - Email: `test@test.com`
+3. **Click "Save"**
+4. **Wait** for success message
+5. **Repeat** one more time with different Last Name and MCN
+
+#### Workflow 2: Add Financial Items (Do this for 1 case)
+
+1. **Open any case** from the list
+2. **Go to "Financials" tab** (if not already there)
+3. **Click "Add Resource"**
+   - Description: `Bank Account`
+   - Amount: `5000`
+   - Frequency: `One-time`
+   - Click "Save"
+4. **Click "Add Income"**
+   - Description: `Job`
+   - Amount: `3200`
+   - Frequency: `Monthly`
+   - Click "Save"
+5. **Click "Add Expense"**
+   - Description: `Rent`
+   - Amount: `1200`
+   - Frequency: `Monthly`
+   - Click "Save"
+
+#### Workflow 3: Add Notes (Do this for 1 case)
+
+1. **Open any case** (use one you created or existing)
+2. **Click "Notes" tab**
+3. **Click "Add Note"**
+4. **Fill in note:**
+   - Category: `General`
+   - Note text: `This is a test note for performance testing`
+   - Click "Save"
+5. **Add one more note:**
+   - Category: `Client Contact`
+   - Note text: `Called client to discuss case status`
+   - Click "Save"
+
+#### Workflow 4: Browse Around (5 minutes of exploration)
+
+Just use the app naturally! Do any of these:
+- Open different cases
+- Switch between tabs (Details, Financials, Notes)
+- Click around the dashboard
+- Look at different widgets
+- Use the back button
+- Search for cases (if search exists)
+
+**The goal:** Just be a normal user for a few minutes
+
+---
+
+## 📋 Part 3: Test with Different Data Sizes (15 minutes)
+
+### What You're Testing
+How does the app perform with more data?
+
+### Your Tasks
+
+#### Create 5 More Cases (Quick Version)
+
+For each case (5 total):
+
+1. Click "New Case"
+2. **Only fill in required fields:**
+   - First Name: `Test`
+   - Last Name: `Speed[NUMBER]` (Speed1, Speed2, etc.)
+   - MCN: `SPD[NUMBER]` (SPD1, SPD2, etc.)
+   - Date of Birth: Any date
+3. Click "Save"
+4. **Don't** add financials or notes - just create the case quickly
+
+#### Navigate Through All Cases
+
+1. Go to "View All Cases"
+2. Scroll through the entire list
+3. Sort by different columns (if sorting exists)
+4. Click through to a few different cases
+
+---
+
+## 📋 Part 4: Wrap-Up (5 minutes)
+
+### Final Steps
+
+1. **Check the browser console** (the DevTools window)
+   - Look for any messages that say "Profiler" or "Recording"
+   
+2. **Stop the profiling:**
+   - In DevTools, find the **"React Profiler" tab** (ask for help if you can't find it)
+   - Click the **red circle button** to stop recording
+   - You should see a flamegraph/chart appear
+
+3. **Export the data:**
+   - Right-click anywhere in the Profiler view
+   - Select **"Export profiling data..."**
+   - Save the file as: `2025-10-16-profiler-raw.json`
+   - Save it in the `reports/performance/` folder
+
+4. **Let the technical person know you're done!**
+
+---
+
+## 🎉 You're Done!
+
+### What You Just Did
+
+You helped us measure:
+- ✅ Navigation speed between screens
+- ✅ How fast forms and data load
+- ✅ Performance with different amounts of data
+- ✅ Real-world usage patterns
+
+### What Happens Next
+
+The technical person will:
+1. Run analysis scripts on the data you generated
+2. Create performance reports
+3. Identify any slow areas
+4. Make the app faster!
+
+---
+
+## ❓ Troubleshooting
+
+### "I don't see the console messages"
+- Press **F12** to open DevTools
+- Click the **"Console"** tab at the top
+- If still nothing, ask for help
+
+### "The app froze or crashed"
+- Refresh the browser (F5)
+- Ask technical person to restart the server
+- Continue where you left off
+
+### "I made a mistake filling in a form"
+- Don't worry! It doesn't matter for testing
+- Just save it and move on
+- Or click Cancel and start over
+
+### "Nothing happened when I clicked Save"
+- Wait 2-3 seconds - it might be processing
+- Look for a success message (usually green popup)
+- If still nothing after 5 seconds, ask for help
+
+### "I can't find a button or tab"
+- Check the sidebar on the left
+- Check the top of the page
+- Ask for help - we'll point you to it
+
+---
+
+## 📝 Notes Section (For You)
+
+**Use this space to write down anything you noticed:**
+
+- Did anything feel slow?
+- Were there any errors or weird behavior?
+- What parts were confusing?
+- Any suggestions for improvement?
+
+**Your feedback is valuable!** Even non-technical observations help us make the app better.
+
+---
+
+## ⏱️ Time Tracking
+
+Keep track of your time (optional but helpful):
+
+| Task | Started | Finished | Duration |
+|------|---------|----------|----------|
+| Part 1: Navigation | | | |
+| Part 2: Workflows | | | |
+| Part 3: More Cases | | | |
+| Part 4: Wrap-up | | | |
+
+**Total Time:** _________
+
+---
+
+**Questions?** Ask anytime! There are no dumb questions. 😊
+
+**Thank you for helping make CMSNext faster!** 🚀
