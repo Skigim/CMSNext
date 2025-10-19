@@ -33,6 +33,15 @@
 - Delivery plan: `docs/development/actionable-roadmap.md`
 - Testing & tooling: `docs/development/testing-infrastructure.md`
 - Performance + usage capture: `docs/development/performance-metrics.md`, `scripts/`
+- Claude–Codex workflow: `docs/development/claude-codex-workflow.md`
+- MCP setup (Codex): ensure `~/.codex/config.toml` contains
+  
+	```toml
+	[mcp_servers.shadcn]
+	command = "npx"
+	args = ["shadcn@latest", "mcp"]
+	```
+	and restart Codex after editing.
 
 ## Shadcn/UI Migration Checklist
 - [x] `components/financial/FinancialItemCard*` → replace `.financial-item-*` classes with shadcn primitives.
