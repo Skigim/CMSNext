@@ -244,23 +244,31 @@ For each case (5 total):
 
 ## 📋 Part 4: Wrap-Up (5 minutes)
 
-### Final Steps
+### Stop Recording & Export Profiler Data
 
-1. **Check the browser console** (the DevTools window)
-   - Look for any messages that say "Profiler" or "Recording"
-   
-2. **Stop the profiling:**
-   - In DevTools, find the **"React Profiler" tab** (ask for help if you can't find it)
-   - Click the **red circle button** to stop recording
-   - You should see a flamegraph/chart appear
+**The technical person should have already started the React DevTools Profiler recording before you began. Now we need to stop it and save the data.**
 
-3. **Export the data:**
-   - Right-click anywhere in the Profiler view
-   - Select **"Export profiling data..."**
-   - Save the file as: `2025-10-16-profiler-raw.json`
-   - Save it in the `reports/performance/` folder
+1. **Open React DevTools Profiler Tab**
+   - Press **F12** to open DevTools (if not already open)
+   - Look for tabs at the top: Elements, Console, Sources, **⚛️ Profiler**
+   - Click the **⚛️ Profiler** tab
+   - You should see a recording indicator (or the technical person can help you find it)
+
+2. **Stop the Recording**
+   - Click the **red circle button** (⏹️ or similar) to stop recording
+   - A flamegraph/chart will appear showing all the app activity you just performed
+   - This is normal! It shows how the app performed during your testing
+
+3. **Export the Profiler Data**
+   - **Right-click** anywhere in the flamegraph area (the colorful chart)
+   - Select **"Export profiling data..."** from the menu
+   - A save dialog will appear
+   - **Save the file as:** `profiler-data-2025-10-19.json`
+   - **Save to folder:** Ask the technical person where to save it (likely `reports/performance/`)
 
 4. **Let the technical person know you're done!**
+   - Show them the exported file
+   - Share any observations you wrote down in the Notes Section below
 
 ---
 
@@ -269,18 +277,20 @@ For each case (5 total):
 ### What You Just Did
 
 You helped us measure:
-- ✅ Navigation speed between screens
 - ✅ How fast forms and data load
 - ✅ Performance with different amounts of data
-- ✅ Real-world usage patterns
+- ✅ Real-world usage patterns with actual user interactions
+- ✅ Component rendering performance during normal workflows
 
 ### What Happens Next
 
 The technical person will:
-1. Run analysis scripts on the data you generated
-2. Create performance reports
-3. Identify any slow areas
-4. Make the app faster!
+1. Analyze the profiler data you captured
+2. Review automated benchmark results
+3. Create performance baseline reports
+4. Use this data to validate improvements during the upcoming architecture refactor
+
+**Your data is critical for making sure the refactor doesn't slow anything down!**
 
 ---
 
