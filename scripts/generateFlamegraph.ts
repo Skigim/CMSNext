@@ -20,7 +20,7 @@ import { resolve } from 'path';
 
 interface ProfilerDataEntry {
   id: string;
-  phase: 'mount' | 'update' | 'nested-update';
+  phase: 'mount' | 'update';
   actualDuration: number;
   baseDuration: number;
   startTime: number;
@@ -74,7 +74,8 @@ async function generateFlamegraph(inputFile: string): Promise<void> {
   const rawData = await readFile(inputFile, 'utf-8');
   const report: ProfilerReport = JSON.parse(rawData);
 
-  console.log(`✅ Loaded ${report.totalRenders} renders\n`);
+  const totalRenders = typeof report.totalRenders === 'number' ? report.totalRenders : report.data.length;
+  console.log(`✅ Loaded ${totalRenders} renders\n`);
 
   // Convert to speedscope format
   console.log('🔄 Converting to speedscope format...');
@@ -125,7 +126,7 @@ function convertToSpeedscope(report: ProfilerReport): SpeedscopeFile {
     // Close event
     events.push({
       type: 'C',
-      at: entry.startTime + entry.actualDuration,
+      at: entry.commitTime,
       frame: frameIndex,
     });
   });

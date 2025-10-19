@@ -11,8 +11,8 @@
  *   npx tsx scripts/analyzeNavigationTrace.ts reports/performance/navigation-trace-2025-10-17.json
  */
 
-import { readFile, writeFile, mkdir } from 'fs/promises';
-import { resolve, basename } from 'path';
+import { readFile, writeFile } from 'fs/promises';
+import { resolve } from 'path';
 
 interface NavigationTrace {
   iteration: number;
@@ -199,7 +199,7 @@ function generateFindings(summary: NavigationReport['summary'], traces: Navigati
   findings.push(`### Consistency Analysis`);
   Object.entries(summary).forEach(([step, stats]) => {
     const variance = stats.max - stats.min;
-    const variancePercent = (variance / stats.avg) * 100;
+    const variancePercent = stats.avg > 0 ? (variance / stats.avg) * 100 : 0;
     if (variancePercent > 50) {
       findings.push(`⚠️ **${getStepLabel(step)}**: High variance (${variancePercent.toFixed(0)}% - ${stats.min}ms to ${stats.max}ms)`);
     }
@@ -249,7 +249,7 @@ function generateRecommendations(summary: NavigationReport['summary']): string[]
   // Check for high variance
   Object.entries(summary).forEach(([step, stats]) => {
     const variance = stats.max - stats.min;
-    const variancePercent = (variance / stats.avg) * 100;
+    const variancePercent = stats.avg > 0 ? (variance / stats.avg) * 100 : 0;
     if (variancePercent > 100) {
       recommendations.push(`- ⚠️ **${getStepLabel(step)}** shows high variance (${variancePercent.toFixed(0)}%) - investigate inconsistent performance.`);
     }

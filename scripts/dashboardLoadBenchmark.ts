@@ -136,13 +136,19 @@ function calculateStats(timings: number[]): {
 } {
   const sorted = [...timings].sort((a, b) => a - b);
   const sum = timings.reduce((acc, val) => acc + val, 0);
+  const len = sorted.length;
+  const median = len % 2 === 0
+    ? (sorted[len / 2 - 1] + sorted[len / 2]) / 2
+    : sorted[Math.floor(len / 2)];
+  const p95Index = Math.min(Math.ceil(len * 0.95) - 1, len - 1);
+  const p95 = sorted[Math.max(p95Index, 0)];
 
   return {
     avg: sum / timings.length,
     min: sorted[0],
     max: sorted[sorted.length - 1],
-    median: sorted[Math.floor(sorted.length / 2)],
-    p95: sorted[Math.floor(sorted.length * 0.95)],
+    median,
+    p95,
   };
 }
 

@@ -46,44 +46,68 @@ Capture and analyze real user navigation flows through the CMSNext application. 
 
 **Script Structure:**
 ```typescript
-// Pseudo-code outline
-import { performance } from 'perf_hooks';
-import { writeFile } from 'fs/promises';
-
-interface NavigationStep {
-  step: string;
-  timestamp: number;
-  duration: number;
-  memoryUsed?: number;
-  events: string[];
-}
-
-async function captureNavigationTrace() {
-  const steps: NavigationStep[] = [];
-  
-  // Instructions for manual execution
-  console.log('Navigation Trace Capture');
-  console.log('========================');
-  console.log('1. Open app in browser');
-  console.log('2. Open DevTools Console');
-  console.log('3. Paste this script');
-  console.log('4. Follow navigation prompts');
-  
-  // Record dashboard load
-  // Record navigation to list
-  // Record navigation to detail
-  // Record navigation back
-  
-  // Export JSON
-  const report = {
-    capturedAt: new Date().toISOString(),
-    browser: navigator.userAgent,
-    steps,
-    summary: calculateSummary(steps),
+// Pseudo-code outline (runs directly in the browser console)
+(function navigationTracer() {
+  type NavigationStep = {
+    step: string;
+    timestamp: number;
+    duration: number;
+    memoryUsed: number | null;
   };
-  
-  // Save to file
-}
+
+  const steps: NavigationStep[] = [];
+  const totals: Record<string, number[]> = {};
+
+  console.log('Navigation Trace Capture');
+  console.log('1. Make sure the app is open');
+  console.log('2. Call window.navStep("dashboard-load") to begin');
+
+  function recordStep(step: string) {
+    const now = performance.now();
+    const memoryUsed = performance.memory?.usedJSHeapSize ?? null;
+    const previous = steps[steps.length - 1];
+    const duration = previous ? now - previous.timestamp : 0;
+
+    steps.push({ step, timestamp: now, duration, memoryUsed });
+    if (!totals[step]) totals[step] = [];
+    if (duration) totals[step].push(duration);
+
+    console.log(`✅ ${step} @ ${now.toFixed(2)}ms`);
+  }
+
+  (window as any).navStep = (step: string) => {
+    recordStep(step);
+  };
+
+  (window as any).downloadTrace = () => {
+    const report = {
+      capturedAt: new Date().toISOString(),
+      browser: navigator.userAgent,
+      steps,
+      summary: summarise(totals),
+    };
+
+    const blob = new Blob([JSON.stringify(report, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `navigation-trace-${new Date().toISOString().split('T')[0]}.json`;
+    link.click();
+    URL.revokeObjectURL(url);
+  };
+
+  function summarise(groups: Record<string, number[]>) {
+    return Object.fromEntries(
+      Object.entries(groups).map(([step, values]) => {
+        const sorted = [...values].sort((a, b) => a - b);
+        const avg = values.reduce((sum, value) => sum + value, 0) / Math.max(values.length, 1);
+        const min = sorted[0] ?? 0;
+        const max = sorted[sorted.length - 1] ?? 0;
+        return [step, { avg, min, max }];
+      })
+    );
+  }
+})();
 ```
 
 **Commit when done:**
@@ -222,7 +246,7 @@ Create and execute React Profiler sessions to analyze AppContent rendering behav
 - Existing performance tracker in `utils/performanceTracker.ts`
 
 ### Your Files (No Conflicts with Other Agents)
-- `components/app/ProfilerWrapper.tsx` (create new)
+- `components/profiling/ProfilerWrapper.tsx` (create new)
 - `scripts/captureProfilerSession.ts` (create new)
 - `reports/performance/2025-10-16-profiler-session.json` (create new)
 - `reports/performance/2025-10-16-profiler-flamegraph.html` (create new)
@@ -231,7 +255,7 @@ Create and execute React Profiler sessions to analyze AppContent rendering behav
 ### Task Breakdown
 
 #### Task 1: Create Profiler Wrapper Component (30 minutes)
-**File:** `components/app/ProfilerWrapper.tsx`
+**File:** `components/profiling/ProfilerWrapper.tsx`
 
 **Requirements:**
 - Wrap any component with React Profiler

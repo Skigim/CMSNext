@@ -202,8 +202,12 @@
       const avg = durations.reduce((sum, d) => sum + d, 0) / durations.length;
       const min = sorted[0];
       const max = sorted[sorted.length - 1];
-      const median = sorted[Math.floor(sorted.length / 2)];
-      const p95 = sorted[Math.floor(sorted.length * 0.95)];
+      const len = sorted.length;
+      const median = len % 2 === 0
+        ? (sorted[len / 2 - 1] + sorted[len / 2]) / 2
+        : sorted[Math.floor(len / 2)];
+      const p95Index = Math.min(Math.ceil(len * 0.95) - 1, len - 1);
+      const p95 = sorted[Math.max(p95Index, 0)];
 
       summary[stepName] = {
         count: durations.length,

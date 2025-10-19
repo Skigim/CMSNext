@@ -16,7 +16,7 @@
  * 5. Download profiling data using window.downloadProfilerData()
  * 
  * FEATURES:
- * - Captures mount, update, and nested update phases
+ * - Captures mount and update phases
  * - Records duration, base duration, start time
  * - Tracks interactions (user events that triggered renders)
  * - Console logging for real-time feedback
@@ -27,12 +27,12 @@ import React, { Profiler, ProfilerOnRenderCallback, useRef, useEffect } from 're
 
 interface ProfilerData {
   id: string;
-  phase: 'mount' | 'update' | 'nested-update';
+  phase: 'mount' | 'update';
   actualDuration: number;
   baseDuration: number;
   startTime: number;
   commitTime: number;
-  interactions: Set<any>;
+  interactions: Set<unknown>;
   timestamp: string;
 }
 
@@ -53,12 +53,15 @@ declare global {
 
 const profilerDataStore: ProfilerData[] = [];
 
+const DEFAULT_PROFILER_ENABLED =
+  typeof import.meta !== 'undefined' ? import.meta.env.DEV : false;
+
 /**
  * ProfilerWrapper Component
  * 
  * Wraps children with React.Profiler and captures rendering metrics.
  */
-export function ProfilerWrapper({ id, children, enabled = true }: ProfilerWrapperProps) {
+export function ProfilerWrapper({ id, children, enabled = DEFAULT_PROFILER_ENABLED }: ProfilerWrapperProps) {
   const renderCountRef = useRef(0);
 
   useEffect(() => {
@@ -85,25 +88,30 @@ export function ProfilerWrapper({ id, children, enabled = true }: ProfilerWrappe
   }, [enabled]);
 
   const onRenderCallback: ProfilerOnRenderCallback = (
-    id: string,
-    phase: 'mount' | 'update' | 'nested-update',
-    actualDuration: number,
-    baseDuration: number,
-    startTime: number,
-    commitTime: number
+    ...args
   ) => {
-    if (!enabled) return;
-
-    renderCountRef.current++;
-
-    const data: ProfilerData = {
-      id,
+    const [
+      profilerId,
       phase,
       actualDuration,
       baseDuration,
       startTime,
       commitTime,
-      interactions: new Set(), // React 18 removed interactions parameter
+    ] = args;
+    const maybeInteractions = (args as unknown[])[6] as Set<unknown> | undefined;
+    if (!enabled) return;
+    const safePhase: 'mount' | 'update' = phase === 'mount' ? 'mount' : 'update';
+
+    renderCountRef.current++;
+
+    const data: ProfilerData = {
+      id: profilerId,
+      phase: safePhase,
+      actualDuration,
+      baseDuration,
+      startTime,
+      commitTime,
+  interactions: maybeInteractions instanceof Set ? new Set(maybeInteractions) : new Set(),
       timestamp: new Date().toISOString(),
     };
 
@@ -114,7 +122,7 @@ export function ProfilerWrapper({ id, children, enabled = true }: ProfilerWrappe
       console.log(
         `%c⚠️ Slow render detected`,
         'color: #f59e0b; font-weight: bold;',
-        `${id} (${phase})`,
+        `${profilerId} (${safePhase})`,
         `${actualDuration.toFixed(2)}ms`
       );
     }
@@ -197,8 +205,12 @@ function generateSummary(data: ProfilerData[]) {
   const avgDuration = totalDuration / durations.length;
   const minDuration = sorted[0];
   const maxDuration = sorted[sorted.length - 1];
-  const medianDuration = sorted[Math.floor(sorted.length / 2)];
-  const p95Duration = sorted[Math.floor(sorted.length * 0.95)];
+  const len = sorted.length;
+  const medianDuration = len % 2 === 0
+    ? (sorted[len / 2 - 1] + sorted[len / 2]) / 2
+    : sorted[Math.floor(len / 2)];
+  const p95Index = Math.min(Math.ceil(len * 0.95) - 1, len - 1);
+  const p95Duration = sorted[Math.max(p95Index, 0)];
 
   const slowRenders = data.filter(d => d.actualDuration > 16).length;
   const slowRenderPercent = (slowRenders / data.length) * 100;

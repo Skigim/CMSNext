@@ -113,7 +113,7 @@ Complete manual telemetry captures required before architecture refactor kickoff
 5. Document optimization opportunities
 
 **Deliverables:**
-- `components/app/ProfilerWrapper.tsx`
+- `components/profiling/ProfilerWrapper.tsx`
 - `scripts/captureProfilerSession.ts`
 - `reports/performance/2025-10-16-profiler-session.json`
 - `reports/performance/2025-10-16-profiler-flamegraph.html`
@@ -203,7 +203,7 @@ Dependencies: Agent X must complete Y first (if any)
 **Mission:** Create and execute React Profiler sessions with flamegraphs
 
 **Your Files:**
-- `components/app/ProfilerWrapper.tsx` (create)
+- `components/profiling/ProfilerWrapper.tsx` (create)
 - `scripts/captureProfilerSession.ts` (create)
 - `reports/performance/2025-10-16-profiler-session.json` (create)
 - `reports/performance/2025-10-16-profiler-flamegraph.html` (create)
@@ -316,7 +316,7 @@ Read: AGENT_PROMPTS.md → "Agent 2: React Profiler Specialist" section
 Your mission: Create React Profiler sessions and generate flamegraphs.
 
 Tasks:
-1. Create components/app/ProfilerWrapper.tsx
+1. Create components/profiling/ProfilerWrapper.tsx
 2. Create scripts/captureProfilerSession.ts
 3. Perform profiler session during workflows
 4. Generate reports/performance/2025-10-16-profiler-flamegraph.html

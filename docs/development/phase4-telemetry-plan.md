@@ -55,15 +55,16 @@ Complete the Phase 4 manual telemetry captures required before architecture refa
 ### File Ownership (Avoid Conflicts)
 
 **Agent 1:** Navigation & User Flows
-- `scripts/captureNavigationTrace.ts` (create)
+- `public/navigation-tracer.js` (create)
+- `scripts/analyzeNavigationTrace.ts` (create)
 - `reports/performance/2025-10-16-navigation-trace.json` (create)
 - `reports/performance/2025-10-16-navigation-trace.md` (create)
 
 **Agent 2:** React Profiler & Rendering
-- `scripts/captureProfilerSession.ts` (create)
+- `components/profiling/ProfilerWrapper.tsx` (create)
+- `scripts/generateFlamegraph.ts` (create)
 - `reports/performance/2025-10-16-profiler-session.json` (create)
 - `reports/performance/2025-10-16-profiler-flamegraph.html` (create)
-- `components/app/ProfilerWrapper.tsx` (create)
 
 **Agent 3:** Autosave & Dashboard Performance
 - `scripts/autosaveBenchmark.ts` (enhance existing)
@@ -185,7 +186,7 @@ Create React Profiler tooling and analysis scripts for manual profiling sessions
 ### Agent Tasks (Automated - 2 hours)
 
 1. **Create Profiler Wrapper Component** (30 min)
-   - Component: `components/app/ProfilerWrapper.tsx`
+   - Component: `components/profiling/ProfilerWrapper.tsx`
    - Functionality:
      - Wrap AppContent with React.Profiler
      - Record mount/update phases to console
@@ -245,7 +246,7 @@ Create React Profiler tooling and analysis scripts for manual profiling sessions
 
 ### Deliverables
 
-- `components/app/ProfilerWrapper.tsx`
+- `components/profiling/ProfilerWrapper.tsx`
 - `scripts/captureProfilerSession.ts`
 - `reports/performance/2025-10-16-profiler-session.json`
 - `reports/performance/2025-10-16-profiler-flamegraph.html`

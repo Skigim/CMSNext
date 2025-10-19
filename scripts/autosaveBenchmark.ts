@@ -20,6 +20,7 @@
 import { performance } from 'perf_hooks';
 import { writeFile, mkdir } from 'fs/promises';
 import { resolve } from 'path';
+import { Buffer } from 'node:buffer';
 
 interface BenchmarkResult {
   scenario: string;
@@ -47,12 +48,11 @@ interface BenchmarkReport {
 }
 
 // Simulate autosave operations
-function simulateAutosave(payloadSizeKB: number): number {
+function simulateAutosave(payload: unknown): number {
   const start = performance.now();
 
   // Simulate data serialization (JSON.stringify is typically the bottleneck)
-  const data = generatePayload(payloadSizeKB);
-  const serialized = JSON.stringify(data);
+  const serialized = JSON.stringify(payload);
 
   // Simulate some processing
   const parsed = JSON.parse(serialized);
@@ -61,39 +61,40 @@ function simulateAutosave(payloadSizeKB: number): number {
   return end - start;
 }
 
-function generatePayload(sizeKB: number): any {
+function generatePayload(sizeKB: number): { cases: Array<Record<string, unknown>> } {
   const targetBytes = sizeKB * 1024;
-  const items: any[] = [];
-
-  // Generate objects until we reach target size
-  let currentSize = 0;
-  let index = 0;
-
-  while (currentSize < targetBytes) {
-    const item = {
-      id: `case-${index}`,
-      title: `Case ${index}`,
-      description: 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. '.repeat(5),
-      status: 'Active',
-      priority: 'Medium',
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      metadata: {
-        tags: ['tag1', 'tag2', 'tag3'],
-        customFields: {
-          field1: 'value1',
-          field2: 'value2',
-          field3: 'value3',
-        },
+  const baseItem = {
+    title: 'Case Template',
+    description: 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. '.repeat(5),
+    status: 'Active',
+    priority: 'Medium',
+    metadata: {
+      tags: ['tag1', 'tag2', 'tag3'],
+      customFields: {
+        field1: 'value1',
+        field2: 'value2',
+        field3: 'value3',
       },
-    };
+    },
+  };
 
-    items.push(item);
-    currentSize = JSON.stringify(items).length;
-    index++;
-  }
+  const baseItemBytes = Buffer.byteLength(JSON.stringify(baseItem), 'utf8');
+  const itemsNeeded = Math.max(1, Math.ceil(targetBytes / baseItemBytes));
 
-  return { cases: items };
+  const cases = Array.from({ length: itemsNeeded }, (_, index) => ({
+    id: `case-${index}`,
+    title: `${baseItem.title} #${index}`,
+    description: baseItem.description,
+    status: index % 2 === 0 ? 'Active' : 'Pending',
+    priority: index % 3 === 0 ? 'High' : 'Medium',
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    metadata: {
+      ...baseItem.metadata,
+    },
+  }));
+
+  return { cases };
 }
 
 function calculateStats(timings: number[]): {
@@ -106,12 +107,19 @@ function calculateStats(timings: number[]): {
   const sorted = [...timings].sort((a, b) => a - b);
   const sum = timings.reduce((acc, val) => acc + val, 0);
 
+  const len = sorted.length;
+  const median = len % 2 === 0
+    ? (sorted[len / 2 - 1] + sorted[len / 2]) / 2
+    : sorted[Math.floor(len / 2)];
+  const p95Index = Math.min(Math.ceil(len * 0.95) - 1, len - 1);
+  const p95 = sorted[Math.max(p95Index, 0)];
+
   return {
     avg: sum / timings.length,
     min: sorted[0],
     max: sorted[sorted.length - 1],
-    median: sorted[Math.floor(sorted.length / 2)],
-    p95: sorted[Math.floor(sorted.length * 0.95)],
+    median,
+    p95,
   };
 }
 
@@ -129,13 +137,17 @@ async function runBenchmark(): Promise<BenchmarkReport> {
   const results: BenchmarkResult[] = [];
 
   for (const scenario of scenarios) {
+    const payload = generatePayload(scenario.sizeKB);
+    const payloadBytes = Buffer.byteLength(JSON.stringify(payload), 'utf8');
+    const payloadSizeKB = Math.round((payloadBytes / 1024) * 100) / 100;
+
     console.log(`🔄 Running: ${scenario.name}`);
-    console.log(`   Payload: ${scenario.sizeKB}KB, Iterations: ${scenario.iterations}`);
+    console.log(`   Payload: ~${payloadSizeKB}KB (target ${scenario.sizeKB}KB), Iterations: ${scenario.iterations}`);
 
     const timings: number[] = [];
 
     for (let i = 0; i < scenario.iterations; i++) {
-      const timing = simulateAutosave(scenario.sizeKB);
+      const timing = simulateAutosave(payload);
       timings.push(timing);
 
       // Progress indicator
@@ -149,7 +161,7 @@ async function runBenchmark(): Promise<BenchmarkReport> {
 
     results.push({
       scenario: scenario.name,
-      payloadSize: scenario.sizeKB,
+  payloadSize: payloadSizeKB,
       iterations: scenario.iterations,
       timings,
       ...stats,

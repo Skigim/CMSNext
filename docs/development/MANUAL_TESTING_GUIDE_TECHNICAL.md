@@ -22,13 +22,11 @@ Handle the technical setup, configuration, and data processing while non-technic
 ```bash
 # Verify all files exist
 ls -la public/navigation-tracer.js
-ls -la components/app/ProfilerWrapper.tsx
+ls -la components/profiling/ProfilerWrapper.tsx
 ls -la scripts/analyzeNavigationTrace.ts
-ls -la scripts/processProfilerData.ts
 ls -la scripts/generateFlamegraph.ts
-ls -la scripts/benchmarkAutosave.ts
-ls -la scripts/benchmarkDashboard.ts
-ls -la scripts/runAllBenchmarks.ts
+ls -la scripts/autosaveBenchmark.ts
+ls -la scripts/dashboardLoadBenchmark.ts
 ```
 
 **If any files missing:** Agents need to complete their work first.
@@ -40,7 +38,7 @@ ls -la scripts/runAllBenchmarks.ts
 **Find AppContent and wrap it:**
 
 ```typescript
-import { ProfilerWrapper } from './components/app/ProfilerWrapper';
+import { ProfilerWrapper } from './components/profiling/ProfilerWrapper';
 
 // In your render:
 <ProfilerWrapper id="AppContent" enabled={true}>
@@ -123,11 +121,14 @@ cat public/navigation-tracer.js | pbcopy
    
    ```bash
    # Open new terminal
-   npm run benchmark:all
-   # Or: npx tsx scripts/runAllBenchmarks.ts
+  npm run bench:autosave
+  npm run bench:dashboard
+  # Or run directly:
+  npx tsx scripts/autosaveBenchmark.ts
+  npx tsx scripts/dashboardLoadBenchmark.ts
    ```
    
-   This runs for ~10 minutes. Let it complete in background.
+  Each script runs for a few minutes. Let both complete in background.
 
 ### When Tester Reaches Part 4
 
@@ -165,25 +166,14 @@ npx tsx scripts/analyzeNavigationTrace.ts \
 ### Task 2: Process React Profiler Data
 
 ```bash
-# Process profiler data
-npx tsx scripts/processProfilerData.ts \
-  reports/performance/2025-10-16-profiler-raw.json
-
-# Output: reports/performance/2025-10-16-profiler-analysis.json
-```
-
-**Generate flamegraph:**
-```bash
+# Generate flamegraph input for speedscope
 npx tsx scripts/generateFlamegraph.ts \
   reports/performance/2025-10-16-profiler-raw.json
 
-# Output: reports/performance/2025-10-16-profiler-flamegraph.html
+# Output: reports/performance/2025-10-16-profiler-raw.speedscope.json
 ```
 
-**Open flamegraph in browser:**
-```bash
-open reports/performance/2025-10-16-profiler-flamegraph.html
-```
+**Upload to https://www.speedscope.app/** and open the generated `.speedscope.json` file for interactive analysis.
 
 **Analyze:**
 - Identify commits >25ms
@@ -195,10 +185,10 @@ open reports/performance/2025-10-16-profiler-flamegraph.html
 **Check benchmark results:**
 ```bash
 # View autosave results
-cat reports/performance/2025-10-16-autosave-benchmark.json | jq
+cat reports/performance/autosave-benchmark-2025-10-16.json | jq
 
 # View dashboard results
-cat reports/performance/2025-10-16-dashboard-benchmark.json | jq
+cat reports/performance/dashboard-load-benchmark-2025-10-16.json | jq
 ```
 
 **Generate consolidated analysis:**
