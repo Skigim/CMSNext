@@ -8,16 +8,16 @@ import type { CaseDisplay } from "@/types/case";
 type AppComponent = (typeof import("@/App"))["default"];
 
 const APP_MODULE_PATH = "@/App";
-const LOGGER_MODULE_PATH = "/workspaces/CMSNext/utils/logger.ts";
-const APP_PROVIDERS_MODULE_PATH = "/workspaces/CMSNext/components/providers/AppProviders.tsx";
-const FILE_STORAGE_INTEGRATOR_MODULE_PATH = "/workspaces/CMSNext/components/providers/FileStorageIntegrator.tsx";
-const TOASTER_MODULE_PATH = "/workspaces/CMSNext/components/ui/sonner.tsx";
-const APP_CONTENT_VIEW_MODULE_PATH = "/workspaces/CMSNext/components/app/AppContentView.tsx";
-const APP_CONTENT_VIEW_MODEL_MODULE_PATH = "/workspaces/CMSNext/components/app/useAppContentViewModel.ts";
-const CATEGORY_CONFIG_CONTEXT_MODULE_PATH = "/workspaces/CMSNext/contexts/CategoryConfigContext.tsx";
-const FILE_STORAGE_CONTEXT_MODULE_PATH = "/workspaces/CMSNext/contexts/FileStorageContext.tsx";
-const DATA_MANAGER_CONTEXT_MODULE_PATH = "/workspaces/CMSNext/contexts/DataManagerContext.tsx";
-const HOOKS_MODULE_PATH = "/workspaces/CMSNext/hooks/index.ts";
+const LOGGER_MODULE_PATH = "@/utils/logger";
+const APP_PROVIDERS_MODULE_PATH = "@/components/providers/AppProviders";
+const FILE_STORAGE_INTEGRATOR_MODULE_PATH = "@/components/providers/FileStorageIntegrator";
+const TOASTER_MODULE_PATH = "@/components/ui/sonner";
+const APP_CONTENT_VIEW_MODULE_PATH = "@/components/app/AppContentView";
+const APP_CONTENT_VIEW_MODEL_MODULE_PATH = "@/components/app/useAppContentViewModel";
+const CATEGORY_CONFIG_CONTEXT_MODULE_PATH = "@/contexts/CategoryConfigContext";
+const FILE_STORAGE_CONTEXT_MODULE_PATH = "@/contexts/FileStorageContext";
+const DATA_MANAGER_CONTEXT_MODULE_PATH = "@/contexts/DataManagerContext";
+const HOOKS_MODULE_PATH = "@/hooks";
 
 type ToastMock = {
   success: ReturnType<typeof vi.fn>;
