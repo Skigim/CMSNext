@@ -187,7 +187,7 @@ export function useFinancialItemCardState({
       }
 
       try {
-        const updatedItem = updateVerificationStatus(item, newStatus);
+        const updatedItem = updateVerificationStatus(formData, newStatus);
         setFormData(prev => ({
           ...prev,
           verificationStatus: newStatus,
@@ -201,7 +201,7 @@ export function useFinancialItemCardState({
         console.error("[FinancialItemCard] Failed to update verification status:", error);
       }
     },
-    [item, itemType, normalizedItem.safeId, onUpdate],
+    [formData, itemType, normalizedItem.safeId, onUpdate],
   );
 
   return {

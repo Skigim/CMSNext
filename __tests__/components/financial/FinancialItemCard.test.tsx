@@ -250,4 +250,53 @@ describe("FinancialItemCard", () => {
     expect(cancelDeleteButton).toBeInTheDocument();
     expect(cancelDeleteButton).toHaveAttribute("aria-label");
   });
+
+  it("preserves form data when status is changed before saving", async () => {
+    const user = userEvent.setup();
+    const item = createMockFinancialItem("income", { 
+      id: "item-1", 
+      description: "", 
+      amount: 0,
+      verificationStatus: "Needs VR" 
+    }) as FinancialItem;
+
+    const onUpdate = vi.fn().mockResolvedValue(undefined);
+
+    render(
+      <FinancialItemCard
+        item={item}
+        itemType="income"
+        onDelete={vi.fn()}
+        onUpdate={onUpdate}
+        isEditing
+      />
+    );
+
+    // Enter form data
+    const descriptionInput = screen.getByLabelText("Description");
+    await user.clear(descriptionInput);
+    await user.type(descriptionInput, "New Paycheck");
+
+    // Verify form data was entered
+    expect(descriptionInput).toHaveValue("New Paycheck");
+
+    // Change status before saving
+    const statusButton = screen.getByTestId("status-trigger");
+    await user.click(statusButton);
+
+    // Verify onUpdate was called with the updated status
+    await vi.waitFor(() => {
+      expect(onUpdate).toHaveBeenCalledWith(
+        "income", 
+        "item-1", 
+        expect.objectContaining({ 
+          description: "New Paycheck",  // Form data should be preserved
+          verificationStatus: "Verified"
+        })
+      );
+    });
+
+    // Verify the form still shows the entered data after status change
+    expect(descriptionInput).toHaveValue("New Paycheck");
+  });
 });
