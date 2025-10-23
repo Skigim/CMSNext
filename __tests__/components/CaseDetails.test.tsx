@@ -203,4 +203,41 @@ describe("CaseDetails", () => {
       expect.objectContaining({ caseId: caseData.id, status: caseData.status })
     );
   });
+
+  it("should render Generate Summary button and copy summary on click", async () => {
+    const user = userEvent.setup();
+    clickToCopyMock.mockClear();
+
+    const { CaseDetails } = await import("@/components/case/CaseDetails");
+    const caseData = createMockCaseDisplay({
+      id: "case-1",
+      name: "Test Case",
+      mcn: "MCN-123",
+    });
+
+    render(
+      <CaseDetails
+        case={caseData}
+        onBack={vi.fn()}
+        onEdit={vi.fn()}
+        onDelete={vi.fn()}
+        onAddItem={vi.fn()}
+        onDeleteItem={vi.fn()}
+        onAddNote={vi.fn()}
+        onEditNote={vi.fn()}
+        onDeleteNote={vi.fn()}
+      />
+    );
+
+    const summaryButton = screen.getByRole("button", { name: /generate summary/i });
+    expect(summaryButton).toBeInTheDocument();
+
+    await user.click(summaryButton);
+
+    expect(clickToCopyMock).toHaveBeenCalledTimes(1);
+    const summaryText = clickToCopyMock.mock.calls[0][0];
+    expect(summaryText).toContain("CASE SUMMARY");
+    expect(summaryText).toContain("Test Case");
+    expect(summaryText).toContain("MCN-123");
+  });
 });
