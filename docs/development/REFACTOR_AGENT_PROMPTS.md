@@ -1,9 +1,8 @@
-# Architecture Refactor - Multi-Agent Coordination Prompts
+# Architecture Refactor - Sequential Implementation Guide
 
-**Created:** October 19, 2025  
+**Created:** October 23, 2025  
 **Branch:** `feat/architecture-refactor`  
-**Agents:** 3 (expandable to 6 if needed)  
-**Coordination:** Git commit messages at breakpoints  
+**Execution:** Single agent, sequential phases  
 **Duration:** 4 weeks (November 1-30, 2025)
 
 ---
@@ -11,11 +10,11 @@
 ## 🎯 Mission Overview
 
 Transform CMSNext from a monolithic React application into a clean, domain-driven architecture with:
-- **Single source of truth** (eliminate 4+ data stores → 1)
-- **Domain boundaries** (5 independent domains)
+- **Single source of truth** (eliminate 2 data stores → 1 unified ApplicationState)
+- **Domain boundaries** (5 independent domains with clear responsibilities)
 - **Worker-ready interfaces** (prepare for performance offloading)
-- **Zero manual syncs** (eliminate `safeNotifyFileStorageChange()` calls)
-- **85%+ test coverage** for domain logic
+- **Zero manual syncs** (eliminate all `safeNotifyFileStorageChange()` calls)
+- **85%+ test coverage** for domain logic (up from ~40%)
 
 **Critical Constraints:**
 - ✅ All 211 existing tests MUST pass after each phase
@@ -26,77 +25,110 @@ Transform CMSNext from a monolithic React application into a clean, domain-drive
 
 ---
 
-## 📋 Agent Coordination Protocol
+## 📋 Git Workflow & Commit Standards
 
-### Git Commit Message Format
+### Commit Message Format
 
-**Breakpoint commits** (when waiting for another agent):
+**Phase start commits:**
 ```
-refactor(track-N): BREAKPOINT - <description>
+refactor(phase-N): START - <phase name>
 
-Agent N waiting for: <specific dependency>
-Next step requires: <what's needed>
-Resume when: <condition>
+Starting Phase N: <description>
+Target deliverables:
+- Deliverable 1
+- Deliverable 2
 
-Track: <track-name>
-Phase: <phase-number>
+Baseline: <current test count>/<total>
 ```
 
-**Progress commits** (normal work):
+**Progress commits:**
 ```
-refactor(track-N): <phase> - <description>
+refactor(phase-N): <task description>
 
 - Detailed change 1
 - Detailed change 2
+- Detailed change 3
 
-Track: <track-name>
 Phase: <phase-number>
 Tests: <passing/total>
+Files changed: <count>
 ```
 
-**Completion commits**:
+**Phase completion commits:**
 ```
-refactor(track-N): COMPLETE - <track-name>
+refactor(phase-N): COMPLETE - <phase name>
 
-All phases complete:
-- Phase 1: ✅ <summary>
-- Phase 2: ✅ <summary>
-...
+Phase N deliverables:
+✅ Deliverable 1: <summary>
+✅ Deliverable 2: <summary>
+✅ Deliverable 3: <summary>
 
-Track: <track-name>
 Tests: <passing/total>
-Ready for: <next track or integration>
+Performance: <benchmark results if applicable>
+Ready for: Phase <N+1>
 ```
 
-### Coordination Rules
+### Workflow Rules
 
-1. **Check git log** before starting each phase
-2. **Pull latest** from branch before committing
-3. **Run tests** before every commit (`npm run test:run`)
-4. **Update progress** in commit messages
-5. **Signal breakpoints** clearly when blocked
-6. **Validate integration** when resuming after breakpoint
+1. **Run tests** before every commit (`npm run test:run`)
+2. **Commit frequently** - small, focused changes
+3. **Document ADRs** when making architectural decisions
+4. **Update progress** in WORK_STATUS.md after each phase
+5. **Benchmark performance** at end of each phase
 
 ---
 
-## 🔧 Track 1: Infrastructure & State Management
+## 🏗️ Phase 1: Foundation (Week 1, Nov 1-7)
 
-**Agent Role:** Foundation Builder  
-**Priority:** HIGHEST (other tracks depend on this)  
-**Estimated Time:** Week 1-2
+**Goal:** Establish domain structure and repository pattern
 
-### Prerequisites
-- ✅ All telemetry baselines captured
+**Prerequisites:**
+- ✅ All telemetry baselines captured (Phase 4 complete)
 - ✅ 211/211 tests passing
 - ✅ Performance benchmarks documented
 
-### Phase 1.1: Repository Pattern Foundation (Days 1-2)
+### Day 1-2: Repository Interfaces & Folder Structure
 
-**Goal:** Create storage abstraction layer that all domains will use.
+### Day 1-2: Repository Interfaces & Folder Structure
+
+**Goal:** Create the foundation for domain-driven architecture.
 
 **Tasks:**
 
-1. **Create repository interfaces** (`src/domain/common/repositories/`):
+1. **Create folder structure:**
+   ```
+   domain/
+     common/
+       repositories/
+       events/
+     cases/
+       entities/
+       use-cases/
+     financials/
+       entities/
+       use-cases/
+     notes/
+       entities/
+       use-cases/
+     alerts/
+       entities/
+       use-cases/
+     activity/
+       entities/
+       use-cases/
+   
+   infrastructure/
+     storage/
+     repositories/
+   
+   application/
+     hooks/
+     services/
+     migration/
+     compatibility/
+   ```
+
+2. **Define repository interfaces** (`domain/common/repositories/`):
    ```typescript
    // IRepository.ts - Base interface
    export interface IRepository<T, TId> {
@@ -106,39 +138,257 @@ Ready for: <next track or integration>
      delete(id: TId): Promise<void>;
    }
 
-   // ITransactional.ts - For multi-entity operations
-   export interface ITransactional {
-     beginTransaction(): Promise<void>;
-     commit(): Promise<void>;
-     rollback(): Promise<void>;
+   // ICaseRepository.ts
+   export interface ICaseRepository extends IRepository<Case, string> {
+     findByMCN(mcn: string): Promise<Case | null>;
+     searchCases(query: string): Promise<Case[]>;
+   }
+
+   // IFinancialRepository.ts
+   export interface IFinancialRepository extends IRepository<FinancialItem, string> {
+     getByCaseId(caseId: string): Promise<FinancialItem[]>;
+     getByCategory(category: FinancialCategory): Promise<FinancialItem[]>;
+   }
+
+   // INoteRepository.ts
+   export interface INoteRepository extends IRepository<Note, string> {
+     getByCaseId(caseId: string): Promise<Note[]>;
+     filterByCategory(caseId: string, category: NoteCategory): Promise<Note[]>;
+   }
+
+   // IAlertRepository.ts
+   export interface IAlertRepository extends IRepository<Alert, string> {
+     findByMCN(mcn: string): Promise<Alert[]>;
+     getUnmatched(): Promise<Alert[]>;
+   }
+
+   // IActivityRepository.ts
+   export interface IActivityRepository extends IRepository<ActivityEvent, string> {
+     getByAggregateId(aggregateId: string): Promise<ActivityEvent[]>;
+     getRecent(limit: number): Promise<ActivityEvent[]>;
    }
    ```
 
-2. **Create FileSystemStorage adapter** (`src/infrastructure/storage/FileSystemStorage.ts`):
-   - Wraps existing `AutosaveFileService`
-   - Implements transaction-like semantics
-   - Provides JSON read/write operations
-   - Error handling with telemetry integration
-
-3. **Create ApplicationState singleton** (`src/application/ApplicationState.ts`):
+3. **Create StorageRepository** (`infrastructure/storage/StorageRepository.ts`):
    ```typescript
-   class ApplicationState {
+   /**
+    * Unified storage implementation that wraps AutosaveFileService
+    * and implements all domain repository interfaces.
+    * 
+    * This is the ONLY class that directly interacts with the file system.
+    */
+   export class StorageRepository implements 
+     ICaseRepository, 
+     IFinancialRepository, 
+     INoteRepository, 
+     IAlertRepository, 
+     IActivityRepository 
+   {
+     constructor(private fileService: AutosaveFileService) {}
+     
+     // Cases
+     async getById(id: string): Promise<Case | null> {
+       const data = await this.fileService.loadData();
+       return data.cases.find(c => c.id === id) || null;
+     }
+     
+     async save(entity: Case): Promise<void> {
+       const data = await this.fileService.loadData();
+       const index = data.cases.findIndex(c => c.id === entity.id);
+       if (index >= 0) {
+         data.cases[index] = entity;
+       } else {
+         data.cases.push(entity);
+       }
+       await this.fileService.saveData(data);
+     }
+     
+     // ... implement all interface methods
+   }
+   ```
+
+**Tests:**
+```typescript
+// __tests__/infrastructure/StorageRepository.test.ts
+describe('StorageRepository', () => {
+  it('should save and retrieve cases', async () => {
+    const repo = new StorageRepository(mockFileService);
+    const testCase = createTestCase();
+    
+    await repo.save(testCase);
+    const retrieved = await repo.getById(testCase.id);
+    
+    expect(retrieved).toEqual(testCase);
+  });
+  
+  // ... more tests
+});
+```
+
+**Commit:** `refactor(phase-1): Create repository interfaces and StorageRepository`
+
+---
+
+### Day 3-4: ApplicationState Singleton
+
+**Goal:** Single source of truth for all application data.
+
+**Tasks:**
+
+1. **Create ApplicationState** (`application/ApplicationState.ts`):
+   ```typescript
+   /**
+    * Singleton application state that holds all domain data in memory.
+    * Provides subscription mechanism for React components.
+    */
+   export class ApplicationState {
+     private static instance: ApplicationState | null = null;
+     
+     // Domain data
      private cases: Map<string, Case> = new Map();
      private financials: Map<string, FinancialItem> = new Map();
-     // ... other domains
+     private notes: Map<string, Note> = new Map();
+     private alerts: Map<string, Alert> = new Map();
+     private activityLog: ActivityEvent[] = [];
      
-     // Event bus for cross-domain communication
-     private eventBus: EventBus;
+     // Subscription mechanism
+     private listeners: Set<() => void> = new Set();
      
-     // Hydration from file system
-     async hydrate(storage: IStorage): Promise<void>;
+     private constructor() {}
      
-     // Serialization for persistence
-     async persist(storage: IStorage): Promise<void>;
+     static getInstance(): ApplicationState {
+       if (!ApplicationState.instance) {
+         ApplicationState.instance = new ApplicationState();
+       }
+       return ApplicationState.instance;
+     }
+     
+     // Hydration from storage
+     async hydrate(storage: StorageRepository): Promise<void> {
+       const allCases = await storage.getAll();
+       this.cases.clear();
+       allCases.forEach(c => this.cases.set(c.id, c));
+       
+       // ... hydrate other domains
+       
+       this.notifyListeners();
+     }
+     
+     // Persistence to storage
+     async persist(storage: StorageRepository): Promise<void> {
+       for (const caseEntity of this.cases.values()) {
+         await storage.save(caseEntity);
+       }
+       // ... persist other domains
+     }
+     
+     // Getters (return copies to prevent mutation)
+     getCases(): Case[] {
+       return Array.from(this.cases.values());
+     }
+     
+     getCase(id: string): Case | null {
+       return this.cases.get(id) || null;
+     }
+     
+     // Mutations
+     addCase(caseEntity: Case): void {
+       this.cases.set(caseEntity.id, caseEntity);
+       this.notifyListeners();
+     }
+     
+     updateCase(id: string, updates: Partial<Case>): void {
+       const existing = this.cases.get(id);
+       if (existing) {
+         this.cases.set(id, { ...existing, ...updates });
+         this.notifyListeners();
+       }
+     }
+     
+     // Subscription for React
+     subscribe(listener: () => void): () => void {
+       this.listeners.add(listener);
+       return () => this.listeners.delete(listener);
+     }
+     
+     private notifyListeners(): void {
+       this.listeners.forEach(listener => listener());
+     }
+     
+     // Testing helper
+     static resetInstance(): void {
+       ApplicationState.instance = null;
+     }
    }
    ```
 
-4. **Add feature flags** (`utils/featureFlags.ts`):
+2. **Create React integration hook** (`application/hooks/useApplicationState.ts`):
+   ```typescript
+   /**
+    * Custom hook to subscribe to ApplicationState changes.
+    * Components using this hook will re-render when selected data changes.
+    */
+   export function useApplicationState<T>(
+     selector: (state: ApplicationState) => T
+   ): T {
+     const [, forceUpdate] = useReducer(x => x + 1, 0);
+     
+     useEffect(() => {
+       const appState = ApplicationState.getInstance();
+       const unsubscribe = appState.subscribe(forceUpdate);
+       return unsubscribe;
+     }, []);
+     
+     return selector(ApplicationState.getInstance());
+   }
+   
+   // Convenience hooks
+   export function useCases(): Case[] {
+     return useApplicationState(state => state.getCases());
+   }
+   
+   export function useCase(id: string): Case | null {
+     return useApplicationState(state => state.getCase(id));
+   }
+   ```
+
+**Tests:**
+```typescript
+// __tests__/application/ApplicationState.test.ts
+describe('ApplicationState', () => {
+  afterEach(() => {
+    ApplicationState.resetInstance();
+  });
+  
+  it('should be a singleton', () => {
+    const instance1 = ApplicationState.getInstance();
+    const instance2 = ApplicationState.getInstance();
+    expect(instance1).toBe(instance2);
+  });
+  
+  it('should notify listeners on data changes', () => {
+    const appState = ApplicationState.getInstance();
+    const listener = jest.fn();
+    
+    appState.subscribe(listener);
+    appState.addCase(createTestCase());
+    
+    expect(listener).toHaveBeenCalledTimes(1);
+  });
+});
+```
+
+**Commit:** `refactor(phase-1): Create ApplicationState singleton with React integration`
+
+---
+
+### Day 5-7: Feature Flags & Basic Domain
+
+**Goal:** Enable gradual migration with Cases domain as proof of concept.
+
+**Tasks:**
+
+1. **Add feature flags** (`utils/featureFlags.ts`):
    ```typescript
    export const REFACTOR_FLAGS = {
      USE_NEW_ARCHITECTURE: false, // Master toggle
@@ -148,140 +398,891 @@ Ready for: <next track or integration>
      USE_ALERTS_DOMAIN: false,
      USE_ACTIVITY_DOMAIN: false,
    };
-   ```
-
-**Tests:**
-- Repository interface contracts
-- FileSystemStorage adapter operations
-- ApplicationState hydration/persistence
-- Feature flag toggling
-
-**BREAKPOINT:** Commit with "BREAKPOINT - Foundation ready for domain implementation"  
-**Waiting for:** Tracks 2 & 3 to start domain implementations
-
----
-
-### Phase 1.2: Event Bus & Domain Events (Days 3-4)
-
-**Goal:** Enable domains to communicate without tight coupling.
-
-**Tasks:**
-
-1. **Create EventBus** (`src/application/EventBus.ts`):
-   ```typescript
-   type EventHandler<T = unknown> = (event: T) => void | Promise<void>;
    
-   class EventBus {
-     private handlers: Map<string, Set<EventHandler>> = new Map();
-     
-     subscribe<T>(eventType: string, handler: EventHandler<T>): () => void;
-     publish<T>(eventType: string, event: T): Promise<void>;
-     publishSync<T>(eventType: string, event: T): void;
+   // Helper to check if new architecture is active
+   export function useNewArchitecture(): boolean {
+     return REFACTOR_FLAGS.USE_NEW_ARCHITECTURE;
    }
    ```
 
-2. **Define domain events** (`src/domain/common/events/`):
+2. **Create Case domain entities** (`domain/cases/entities/Case.ts`):
+   ```typescript
+   /**
+    * Case aggregate root.
+    * Contains all business logic for case management.
+    */
+   export class Case {
+     constructor(
+       public readonly id: string,
+       public person: Person,
+       public status: CaseStatus,
+       public createdAt: Date,
+       public updatedAt: Date
+     ) {}
+     
+     // Domain logic
+     updateStatus(newStatus: CaseStatus): void {
+       this.status = newStatus;
+       this.updatedAt = new Date();
+     }
+     
+     archive(): void {
+       if (this.status !== CaseStatus.Closed) {
+         throw new DomainError('Cannot archive non-closed case');
+       }
+       this.status = CaseStatus.Archived;
+       this.updatedAt = new Date();
+     }
+     
+     // Factory method
+     static create(input: CreateCaseInput): Case {
+       return new Case(
+         generateId(),
+         new Person(input),
+         CaseStatus.Active,
+         new Date(),
+         new Date()
+       );
+     }
+   }
+   ```
+
+3. **Create simple use case** (`domain/cases/use-cases/CreateCase.ts`):
+   ```typescript
+   /**
+    * Use case: Create a new case
+    */
+   export class CreateCaseUseCase {
+     constructor(
+       private repository: ICaseRepository,
+       private appState: ApplicationState
+     ) {}
+     
+     async execute(input: CreateCaseInput): Promise<Case> {
+       // Business logic
+       const caseEntity = Case.create(input);
+       
+       // Save to repository
+       await this.repository.save(caseEntity);
+       
+       // Update in-memory state
+       this.appState.addCase(caseEntity);
+       
+       return caseEntity;
+     }
+   }
+   ```
+
+4. **Update useConnectionFlow** to hydrate state:
+   ```typescript
+   // In hooks/useConnectionFlow.ts
+   const handleConnect = async (directoryHandle: FileSystemDirectoryHandle) => {
+     // ... existing connection logic
+     
+     if (REFACTOR_FLAGS.USE_NEW_ARCHITECTURE) {
+       const storage = new StorageRepository(fileService);
+       const appState = ApplicationState.getInstance();
+       await appState.hydrate(storage);
+     }
+   };
+   ```
+
+**Tests:**
+- Case entity creation and methods
+- CreateCaseUseCase execution
+- Feature flag toggling
+- ApplicationState hydration
+
+**Commit:** `refactor(phase-1): Add feature flags and Cases domain proof of concept`
+
+---
+
+### Phase 1 Completion Checklist
+
+- [ ] Domain folder structure created
+- [ ] Repository interfaces defined for all 5 domains
+- [ ] StorageRepository implements all interfaces
+- [ ] ApplicationState singleton with subscription mechanism
+- [ ] useApplicationState hook for React integration
+- [ ] Feature flags added and documented
+- [ ] Cases domain entities and one use case
+- [ ] 50+ new tests added
+- [ ] All 211+ tests passing
+- [ ] Documentation updated (ADR-001, ADR-003)
+
+---
+
+## 🔄 Phase 2: State Management & Event Bus (Week 2, Nov 8-14)
+
+**Goal:** Replace React state sprawl and manual sync with domain-driven state.
+
+### Day 1-3: Domain Event Bus
+
+**Goal:** Enable cross-domain communication without tight coupling.
+
+**Tasks:**
+
+1. **Create EventBus** (`application/EventBus.ts`):
+   ```typescript
+   type EventHandler<T = unknown> = (event: T) => void | Promise<void>;
+   
+   /**
+    * Simple event bus for domain event publishing and subscription.
+    * Enables decoupled cross-domain communication.
+    */
+   export class EventBus {
+     private handlers: Map<string, Set<EventHandler>> = new Map();
+     
+     subscribe<T>(eventType: string, handler: EventHandler<T>): () => void {
+       if (!this.handlers.has(eventType)) {
+         this.handlers.set(eventType, new Set());
+       }
+       this.handlers.get(eventType)!.add(handler);
+       
+       // Return unsubscribe function
+       return () => {
+         this.handlers.get(eventType)?.delete(handler);
+       };
+     }
+     
+     async publish<T>(eventType: string, event: T): Promise<void> {
+       const handlers = this.handlers.get(eventType) || new Set();
+       await Promise.all(
+         Array.from(handlers).map(handler => handler(event))
+       );
+     }
+     
+     publishSync<T>(eventType: string, event: T): void {
+       const handlers = this.handlers.get(eventType) || new Set();
+       handlers.forEach(handler => handler(event));
+     }
+   }
+   ```
+
+2. **Define domain events** (`domain/common/events/`):
    ```typescript
    // DomainEvent.ts
    export interface DomainEvent {
      eventId: string;
      eventType: string;
      aggregateId: string;
+     aggregateType: 'case' | 'financial' | 'note' | 'alert' | 'activity';
      timestamp: Date;
      metadata?: Record<string, unknown>;
    }
 
    // CaseEvents.ts
-   export type CaseCreatedEvent = DomainEvent & { case: Case };
-   export type CaseUpdatedEvent = DomainEvent & { case: Case; changes: Partial<Case> };
+   export type CaseCreatedEvent = DomainEvent & { 
+     case: Case;
+   };
+   
+   export type CaseUpdatedEvent = DomainEvent & { 
+     case: Case; 
+     changes: Partial<Case>;
+   };
+   
+   export type CaseArchivedEvent = DomainEvent & {
+     caseId: string;
+   };
    
    // FinancialEvents.ts
-   export type FinancialItemAddedEvent = DomainEvent & { item: FinancialItem; caseId: string };
-   // ... etc
+   export type FinancialItemAddedEvent = DomainEvent & { 
+     item: FinancialItem; 
+     caseId: string;
+   };
+   
+   export type FinancialItemVerifiedEvent = DomainEvent & {
+     itemId: string;
+     status: VerificationStatus;
+   };
+   
+   // ... other domain events
    ```
 
-3. **Integrate telemetry** with event bus:
-   - Log all domain events to telemetry collector
-   - Track event processing durations
-   - Monitor cross-domain event flows
-
-**Tests:**
-- Event subscription/unsubscription
-- Event publishing (sync & async)
-- Event handler error handling
-- Telemetry integration
-
-**BREAKPOINT:** Commit with "BREAKPOINT - Event system ready for domain integration"  
-**Waiting for:** Tracks 2 & 3 to integrate events into domains
-
----
-
-### Phase 1.3: Migration Orchestration (Days 5-7)
-
-**Goal:** Provide utilities for gradual migration from old → new architecture.
-
-**Tasks:**
-
-1. **Create DataMigrator** (`src/application/migration/DataMigrator.ts`):
+3. **Integrate EventBus into ApplicationState**:
    ```typescript
-   class DataMigrator {
-     // Convert old DataManager format to new domain models
-     async migrateFromDataManager(
-       dataManager: DataManager,
-       appState: ApplicationState
-     ): Promise<void>;
+   // Update ApplicationState.ts
+   export class ApplicationState {
+     private eventBus: EventBus = new EventBus();
      
-     // Dual-write: sync changes to both old and new stores
-     async syncToLegacyStore(event: DomainEvent): Promise<void>;
+     getEventBus(): EventBus {
+       return this.eventBus;
+     }
+     
+     // Mutations now publish events
+     addCase(caseEntity: Case): void {
+       this.cases.set(caseEntity.id, caseEntity);
+       this.notifyListeners();
+       
+       // Publish domain event
+       this.eventBus.publishSync('case:created', {
+         eventId: generateId(),
+         eventType: 'case:created',
+         aggregateId: caseEntity.id,
+         aggregateType: 'case',
+         timestamp: new Date(),
+         case: caseEntity
+       });
+     }
    }
    ```
 
-2. **Create compatibility layer** (`src/application/compatibility/`):
-   - `LegacyCaseAdapter`: Maps `Case` domain model ↔ old format
-   - `LegacyFinancialAdapter`: Maps `FinancialItem` ↔ old format
-   - Ensures existing hooks/components keep working during migration
-
-3. **Update `useConnectionFlow`** to hydrate ApplicationState:
+4. **Integrate telemetry with event bus**:
    ```typescript
-   // After loading from DataManager
-   if (REFACTOR_FLAGS.USE_NEW_ARCHITECTURE) {
-     await ApplicationState.getInstance().hydrate(fileSystemStorage);
+   // application/services/TelemetryEventLogger.ts
+   export class TelemetryEventLogger {
+     constructor(private eventBus: EventBus) {
+       this.subscribeToAllEvents();
+     }
+     
+     private subscribeToAllEvents(): void {
+       const eventTypes = [
+         'case:created', 'case:updated', 'case:archived',
+         'financial:added', 'financial:updated', 'financial:verified',
+         // ... all event types
+       ];
+       
+       eventTypes.forEach(eventType => {
+         this.eventBus.subscribe(eventType, (event: DomainEvent) => {
+           console.log(`[Domain Event] ${event.eventType}`, event);
+           // Could integrate with performance tracker here
+         });
+       });
+     }
    }
    ```
 
 **Tests:**
-- Data migration from DataManager
-- Dual-write synchronization
-- Compatibility adapters (old ↔ new format)
-- Feature flag-based routing
+```typescript
+describe('EventBus', () => {
+  it('should publish events to subscribers', async () => {
+    const bus = new EventBus();
+    const handler = jest.fn();
+    
+    bus.subscribe('test:event', handler);
+    await bus.publish('test:event', { data: 'test' });
+    
+    expect(handler).toHaveBeenCalledWith({ data: 'test' });
+  });
+  
+  it('should unsubscribe handlers', async () => {
+    const bus = new EventBus();
+    const handler = jest.fn();
+    
+    const unsubscribe = bus.subscribe('test:event', handler);
+    unsubscribe();
+    await bus.publish('test:event', { data: 'test' });
+    
+    expect(handler).not.toHaveBeenCalled();
+  });
+});
+```
 
-**COMPLETION:** Commit "refactor(track-1): COMPLETE - Infrastructure & State Management"
-
-**Success Criteria:**
-- ✅ Repository pattern implemented
-- ✅ Event bus functional
-- ✅ ApplicationState singleton ready
-- ✅ Migration utilities complete
-- ✅ All 211 tests still passing
-- ✅ Feature flags control refactor rollout
+**Commit:** `refactor(phase-2): Implement EventBus and domain events`
 
 ---
 
-## 🏢 Track 2: Cases & Financials Domains
+### Day 4-5: Remove Manual Sync Points
 
-**Agent Role:** Core Domain Builder  
-**Priority:** HIGH (depends on Track 1 Phase 1.1)  
-**Estimated Time:** Week 2-3
-
-### Phase 2.1: Cases Domain (Days 1-4)
-
-**Goal:** Extract case logic into isolated domain with clean interfaces.
-
-**DEPENDENCY:** Wait for Track 1 Phase 1.1 (Repository interfaces)
+**Goal:** Eliminate all `safeNotifyFileStorageChange()` calls.
 
 **Tasks:**
 
-1. **Define domain entities** (`src/domain/cases/entities/`):
+1. **Audit manual sync calls**:
+   ```bash
+   # Find all manual sync calls
+   grep -r "safeNotifyFileStorageChange" --include="*.ts" --include="*.tsx"
+   grep -r "notifyDataChange" --include="*.ts" --include="*.tsx"
+   grep -r "clearFileStorageFlags" --include="*.ts" --include="*.tsx"
+   ```
+
+2. **Replace with event-driven updates**:
+   ```typescript
+   // OLD: Manual sync
+   await dataManager.updateCase(id, updates);
+   safeNotifyFileStorageChange();
+   
+   // NEW: Event-driven (automatic via ApplicationState)
+   const appState = ApplicationState.getInstance();
+   appState.updateCase(id, updates); // Publishes event automatically
+   ```
+
+3. **Remove window globals from fileStorageFlags**:
+   ```typescript
+   // OLD: utils/fileStorageFlags.ts
+   export const fileStorageFlags = {
+     hasChanges: false,
+     lastSync: null,
+     // ...
+   };
+   
+   // NEW: State machine in FileStorageContext handles this
+   // (No changes needed - already event-driven via XState)
+   ```
+
+4. **Update AppContent.tsx**:
+   ```typescript
+   // Remove clearFileStorageFlags logic
+   // FileStorageContext state machine handles state transitions
+   ```
+
+**Tests:**
+- Verify no `safeNotifyFileStorageChange` calls remain
+- Test that updates propagate via events
+- Confirm FileStorageContext state machine works independently
+
+**Commit:** `refactor(phase-2): Remove all manual sync points`
+
+---
+
+### Day 6-7: Refactor AppContent State
+
+**Goal:** AppContent reads from ApplicationState instead of multiple sources.
+
+**Tasks:**
+
+1. **Update AppContent.tsx** to use ApplicationState:
+   ```typescript
+   function AppContent() {
+     // OLD: Multiple data sources
+     // const { cases } = useDataManager();
+     // const { alerts } = useAlerts();
+     
+     // NEW: Single source of truth
+     const cases = useApplicationState(state => state.getCases());
+     const currentCase = useApplicationState(state => 
+       state.getCase(currentCaseId)
+     );
+     
+     // Feature flag control
+     if (!REFACTOR_FLAGS.USE_NEW_ARCHITECTURE) {
+       // Fall back to old DataManager path
+       return <LegacyAppContent />;
+     }
+     
+     // ... rest of component
+   }
+   ```
+
+2. **Create compatibility layer** for gradual migration:
+   ```typescript
+   // application/compatibility/LegacyCaseAdapter.ts
+   export class LegacyCaseAdapter {
+     /**
+      * Convert old DataManager case format to new domain Case entity
+      */
+     static toDomain(legacyCase: any): Case {
+       return new Case(
+         legacyCase.id,
+         new Person(legacyCase.person),
+         legacyCase.status,
+         new Date(legacyCase.createdAt),
+         new Date(legacyCase.updatedAt)
+       );
+     }
+     
+     /**
+      * Convert domain Case entity to old format
+      */
+     static fromDomain(domainCase: Case): any {
+       return {
+         id: domainCase.id,
+         person: { ...domainCase.person },
+         status: domainCase.status,
+         createdAt: domainCase.createdAt.toISOString(),
+         updatedAt: domainCase.updatedAt.toISOString()
+       };
+     }
+   }
+   ```
+
+3. **Add dual-write during migration** (temporary):
+   ```typescript
+   // application/migration/DualWriteManager.ts
+   export class DualWriteManager {
+     constructor(
+       private appState: ApplicationState,
+       private dataManager: DataManager,
+       private eventBus: EventBus
+     ) {
+       this.setupEventHandlers();
+     }
+     
+     private setupEventHandlers(): void {
+       // Listen to new architecture events and sync to old DataManager
+       this.eventBus.subscribe('case:updated', async (event) => {
+         const legacyCase = LegacyCaseAdapter.fromDomain(event.case);
+         await this.dataManager.updateCase(legacyCase.id, legacyCase);
+       });
+     }
+   }
+   ```
+
+**Tests:**
+- AppContent renders with ApplicationState
+- Compatibility adapters convert correctly
+- Dual-write keeps both stores in sync
+
+**Commit:** `refactor(phase-2): Refactor AppContent to use ApplicationState`
+
+---
+
+### Phase 2 Completion Checklist
+
+- [ ] EventBus implemented and tested
+- [ ] All domain events defined
+- [ ] Telemetry integrated with event bus
+- [ ] All manual sync points removed (0 `safeNotifyFileStorageChange` calls)
+- [ ] All window globals removed
+- [ ] AppContent uses ApplicationState
+- [ ] Compatibility adapters for gradual migration
+- [ ] Dual-write manager (temporary safety net)
+- [ ] All 211+ tests passing
+- [ ] Documentation updated (ADR-002)
+
+**Success Metrics:**
+- ✅ Single source of truth confirmed
+- ✅ Zero manual sync calls
+- ✅ Event-driven architecture validated
+
+---
+
+## 🏗️ Phase 3: Use Case Extraction (Week 3, Nov 15-21)
+
+**Goal:** Move all business logic from hooks into domain use cases.
+
+### Day 1-2: Cases Domain Complete
+
+**Goal:** Extract all case management logic into domain layer.
+
+**Tasks:**
+
+1. **Complete Case entity** with all business logic (`domain/cases/entities/Case.ts`):
+   ```typescript
+   export class Case {
+     constructor(
+       public readonly id: string,
+       public person: Person,
+       public status: CaseStatus,
+       public createdAt: Date,
+       public updatedAt: Date
+     ) {}
+     
+     // Domain methods (all business rules here)
+     updatePerson(person: Person): void {
+       this.person = person;
+       this.updatedAt = new Date();
+     }
+     
+     updateStatus(newStatus: CaseStatus): void {
+       if (!this.canTransitionTo(newStatus)) {
+         throw new DomainError(`Cannot transition from ${this.status} to ${newStatus}`);
+       }
+       this.status = newStatus;
+       this.updatedAt = new Date();
+     }
+     
+     archive(): void {
+       if (this.status !== CaseStatus.Closed) {
+         throw new DomainError('Cannot archive non-closed case');
+       }
+       this.status = CaseStatus.Archived;
+       this.updatedAt = new Date();
+     }
+     
+     close(): void {
+       if (this.status === CaseStatus.Archived) {
+         throw new DomainError('Cannot close archived case');
+       }
+       this.status = CaseStatus.Closed;
+       this.updatedAt = new Date();
+     }
+     
+     private canTransitionTo(newStatus: CaseStatus): boolean {
+       const validTransitions: Record<CaseStatus, CaseStatus[]> = {
+         [CaseStatus.Active]: [CaseStatus.Pending, CaseStatus.Closed],
+         [CaseStatus.Pending]: [CaseStatus.Active, CaseStatus.Closed],
+         [CaseStatus.Closed]: [CaseStatus.Archived],
+         [CaseStatus.Archived]: []
+       };
+       return validTransitions[this.status].includes(newStatus);
+     }
+   }
+   ```
+
+2. **Create all use cases** (`domain/cases/use-cases/`):
+   ```typescript
+   // CreateCase.ts
+   export class CreateCaseUseCase {
+     constructor(
+       private repository: ICaseRepository,
+       private appState: ApplicationState
+     ) {}
+     
+     async execute(input: CreateCaseInput): Promise<Case> {
+       const caseEntity = Case.create(input);
+       await this.repository.save(caseEntity);
+       this.appState.addCase(caseEntity);
+       return caseEntity;
+     }
+   }
+   
+   // UpdateCase.ts
+   export class UpdateCaseUseCase {
+     async execute(id: string, updates: UpdateCaseInput): Promise<Case> {
+       const caseEntity = await this.repository.getById(id);
+       if (!caseEntity) {
+         throw new NotFoundError(`Case ${id} not found`);
+       }
+       
+       if (updates.person) caseEntity.updatePerson(updates.person);
+       if (updates.status) caseEntity.updateStatus(updates.status);
+       
+       await this.repository.save(caseEntity);
+       this.appState.updateCase(id, caseEntity);
+       return caseEntity;
+     }
+   }
+   
+   // ArchiveCase.ts
+   export class ArchiveCaseUseCase {
+     async execute(id: string): Promise<void> {
+       const caseEntity = await this.repository.getById(id);
+       if (!caseEntity) {
+         throw new NotFoundError(`Case ${id} not found`);
+       }
+       
+       caseEntity.archive(); // Business logic in entity
+       await this.repository.save(caseEntity);
+       this.appState.updateCase(id, caseEntity);
+     }
+   }
+   
+   // SearchCases.ts
+   export class SearchCasesUseCase {
+     async execute(query: string): Promise<Case[]> {
+       return await this.repository.searchCases(query);
+     }
+   }
+   ```
+
+3. **Create thin hook wrapper** (`application/hooks/useCases.ts`):
+   ```typescript
+   /**
+    * Application-level hook that exposes case use cases to React components.
+    * This is a THIN wrapper - all business logic is in use case classes.
+    */
+   export function useCaseService() {
+     const appState = ApplicationState.getInstance();
+     const storage = new StorageRepository(/* ... */);
+     
+     const createCase = useCallback(async (input: CreateCaseInput) => {
+       const useCase = new CreateCaseUseCase(storage, appState);
+       return await useCase.execute(input);
+     }, []);
+     
+     const updateCase = useCallback(async (id: string, updates: UpdateCaseInput) => {
+       const useCase = new UpdateCaseUseCase(storage, appState);
+       return await useCase.execute(id, updates);
+     }, []);
+     
+     const archiveCase = useCallback(async (id: string) => {
+       const useCase = new ArchiveCaseUseCase(storage, appState);
+       return await useCase.execute(id);
+     }, []);
+     
+     const searchCases = useCallback(async (query: string) => {
+       const useCase = new SearchCasesUseCase(storage, appState);
+       return await useCase.execute(query);
+     }, []);
+     
+     return { createCase, updateCase, archiveCase, searchCases };
+   }
+   ```
+
+4. **Migrate useCaseManagement.ts** logic to new architecture:
+   ```typescript
+   // OLD: useCaseManagement.ts (hundreds of lines of business logic)
+   
+   // NEW: Components use useCaseService hook
+   function CaseForm() {
+     const { createCase, updateCase } = useCaseService();
+     
+     const handleSubmit = async (data: CaseFormData) => {
+       if (editing) {
+         await updateCase(caseId, data);
+       } else {
+         await createCase(data);
+       }
+     };
+   }
+   ```
+
+**Tests:**
+```typescript
+describe('Case Use Cases', () => {
+  it('CreateCaseUseCase should create and save case', async () => {
+    const mockRepo = createMockRepository();
+    const mockState = createMockApplicationState();
+    const useCase = new CreateCaseUseCase(mockRepo, mockState);
+    
+    const result = await useCase.execute(testInput);
+    
+    expect(mockRepo.save).toHaveBeenCalledWith(expect.any(Case));
+    expect(mockState.addCase).toHaveBeenCalled();
+  });
+  
+  // ... test all use cases
+});
+```
+
+**Commit:** `refactor(phase-3): Extract Cases domain use cases from hooks`
+
+---
+
+### Day 3-4: Financials Domain
+
+**Goal:** Extract financial logic with case relationship handling.
+
+**Tasks:**
+
+1. **Complete FinancialItem entity** (`domain/financials/entities/FinancialItem.ts`):
+   ```typescript
+   export class FinancialItem {
+     constructor(
+       public readonly id: string,
+       public readonly caseId: string, // Foreign key to Cases domain
+       public category: FinancialCategory,
+       public description: string,
+       public amount: number,
+       public frequency: Frequency,
+       public verificationStatus: VerificationStatus,
+       public createdAt: Date,
+       public updatedAt: Date
+     ) {
+       this.validate();
+     }
+     
+     verify(status: VerificationStatus): void {
+       this.verificationStatus = status;
+       this.updatedAt = new Date();
+     }
+     
+     updateAmount(newAmount: number): void {
+       if (newAmount === 0) {
+         throw new DomainError('Amount cannot be zero');
+       }
+       if (newAmount < 0 && this.category !== FinancialCategory.Expense) {
+         throw new DomainError('Only expenses can have negative amounts');
+       }
+       this.amount = newAmount;
+       this.updatedAt = new Date();
+     }
+     
+     private validate(): void {
+       if (this.amount === 0) {
+         throw new ValidationError('Amount cannot be zero');
+       }
+       if (!this.caseId) {
+         throw new ValidationError('Financial item must be linked to a case');
+       }
+     }
+     
+     static create(input: CreateFinancialItemInput): FinancialItem {
+       return new FinancialItem(
+         generateId(),
+         input.caseId,
+         input.category,
+         input.description,
+         input.amount,
+         input.frequency,
+         VerificationStatus.Unverified,
+         new Date(),
+         new Date()
+       );
+     }
+   }
+   ```
+
+2. **Create financial use cases** with cross-domain validation:
+   ```typescript
+   // AddFinancialItem.ts
+   export class AddFinancialItemUseCase {
+     constructor(
+       private financialRepo: IFinancialRepository,
+       private caseRepo: ICaseRepository, // Cross-domain dependency
+       private appState: ApplicationState
+     ) {}
+     
+     async execute(input: CreateFinancialItemInput): Promise<FinancialItem> {
+       // Verify case exists (cross-domain check)
+       const caseEntity = await this.caseRepo.getById(input.caseId);
+       if (!caseEntity) {
+         throw new NotFoundError(`Case ${input.caseId} not found`);
+       }
+       
+       // Create item
+       const item = FinancialItem.create(input);
+       await this.financialRepo.save(item);
+       this.appState.addFinancialItem(item);
+       
+       return item;
+     }
+   }
+   
+   // UpdateFinancialItem.ts, VerifyFinancialItem.ts, etc.
+   ```
+
+3. **Create financial service hook** (`application/hooks/useFinancials.ts`):
+   ```typescript
+   export function useFinancialService() {
+     const appState = ApplicationState.getInstance();
+     const storage = new StorageRepository(/* ... */);
+     
+     const addFinancialItem = useCallback(async (input: CreateFinancialItemInput) => {
+       const useCase = new AddFinancialItemUseCase(storage, storage, appState);
+       return await useCase.execute(input);
+     }, []);
+     
+     // ... other methods
+     
+     return { addFinancialItem, updateFinancialItem, verifyFinancialItem };
+   }
+   ```
+
+4. **Migrate useFinancialItemFlow.ts** to new architecture.
+
+**Tests:**
+- FinancialItem entity validation
+- Cross-domain case verification
+- Use case execution
+- Hook integration
+
+**Commit:** `refactor(phase-3): Extract Financials domain use cases`
+
+---
+
+### Day 5: Notes & Alerts Domains
+
+**Goal:** Extract simpler domain logic for notes and alerts.
+
+**Tasks:**
+
+1. **Notes domain** (`domain/notes/`):
+   - Note entity with validation
+   - CreateNote, UpdateNote, DeleteNote, FilterNotesByCategory use cases
+   - useNoteService hook
+   - Migrate useNoteFlow.ts
+
+2. **Alerts domain** (`domain/alerts/`):
+   - Alert entity with MCN matching logic
+   - LoadAlerts, MatchAlertToCase, LinkAlert, ResolveAlert use cases
+   - useAlertService hook
+   - Migrate alert-related hooks
+
+**Commit:** `refactor(phase-3): Extract Notes and Alerts domain use cases`
+
+---
+
+### Day 6-7: Activity Log Domain
+
+**Goal:** Event-driven audit trail for all domain events.
+
+**Tasks:**
+
+1. **Activity domain** (`domain/activity/entities/ActivityEvent.ts`):
+   ```typescript
+   export class ActivityEvent {
+     constructor(
+       public readonly id: string,
+       public eventType: string,
+       public aggregateId: string,
+       public aggregateType: string,
+       public changes: Record<string, unknown>,
+       public timestamp: Date,
+       public metadata: Record<string, unknown>
+     ) {}
+     
+     static fromDomainEvent(event: DomainEvent): ActivityEvent {
+       return new ActivityEvent(
+         generateId(),
+         event.eventType,
+         event.aggregateId,
+         event.aggregateType,
+         event.metadata || {},
+         event.timestamp,
+         {}
+       );
+     }
+   }
+   ```
+
+2. **Activity logger** that subscribes to all events:
+   ```typescript
+   // application/services/ActivityLogger.ts
+   export class ActivityLogger {
+     constructor(
+       private eventBus: EventBus,
+       private activityRepo: IActivityRepository
+     ) {
+       this.subscribeToAllEvents();
+     }
+     
+     private subscribeToAllEvents(): void {
+       const eventTypes = [
+         'case:created', 'case:updated', 'case:archived',
+         'financial:added', 'financial:updated',
+         'note:created', 'note:updated',
+         'alert:matched', 'alert:resolved'
+       ];
+       
+       eventTypes.forEach(eventType => {
+         this.eventBus.subscribe(eventType, async (event: DomainEvent) => {
+           const activityEvent = ActivityEvent.fromDomainEvent(event);
+           await this.activityRepo.save(activityEvent);
+         });
+       });
+     }
+   }
+   ```
+
+3. **Activity use cases**:
+   - GetCaseActivity, GetRecentActivity, GenerateActivityReport
+
+4. **Initialize ActivityLogger** in app startup:
+   ```typescript
+   // In App.tsx or useConnectionFlow
+   const appState = ApplicationState.getInstance();
+   const eventBus = appState.getEventBus();
+   const activityLogger = new ActivityLogger(eventBus, storage);
+   ```
+
+**Tests:**
+- ActivityEvent creation from domain events
+- Logger captures all event types
+- Activity queries work correctly
+
+**Commit:** `refactor(phase-3): Implement Activity Log domain with event capture`
+
+---
+
+### Phase 3 Completion Checklist
+
+- [ ] All 5 domains have complete entities
+- [ ] 15+ use cases implemented
+- [ ] All business logic extracted from hooks
+- [ ] Hooks are thin wrappers around use cases
+- [ ] Components updated to use new service hooks
+- [ ] Activity logging captures all domain events
+- [ ] 100+ new domain tests added
+- [ ] All 211+ tests passing
+- [ ] 100% backward compatibility maintained
+- [ ] Documentation updated
+
+**Success Metrics:**
+- ✅ Business logic is 100% testable without React
+- ✅ Hooks reduced to < 50 lines each
+- ✅ Domain test coverage > 80%
    ```typescript
    // Case.ts (Aggregate Root)
    export class Case {
@@ -756,79 +1757,213 @@ Ready for: <next track or integration>
 
 ---
 
-## 🔗 Integration & Cleanup Phase (All Agents)
+---
 
-**Timeline:** Week 4 (After all tracks complete)  
-**Coordination:** All agents work together
+## 🚀 Phase 4: Worker Preparation & Cleanup (Week 4, Nov 22-30)
 
-### Tasks
+**Goal:** Prepare architecture for Web Worker offloading and finalize refactor.
 
-1. **Enable feature flags progressively**:
+### Day 1-2: Worker-Ready Interfaces
+
+**Goal:** Define worker message contracts for heavy operations.
+
+**Tasks:**
+
+1. **Identify worker-eligible operations**:
+   - Alert CSV import/parsing
+   - Case data export (JSON/CSV)
+   - Financial totals calculation (large datasets)
+   - Activity log report generation
+   - Case search across large datasets
+
+2. **Create worker message contracts** (`infrastructure/worker/messages.ts`):
    ```typescript
-   // Day 1-2: Cases only
-   USE_CASES_DOMAIN: true,
+   // Base message types
+   export type WorkerMessage = 
+     | ImportAlertsMessage
+     | ExportCasesMessage
+     | CalculateFinancialsMessage
+     | GenerateReportMessage;
    
-   // Day 3-4: Cases + Financials
-   USE_FINANCIALS_DOMAIN: true,
+   export interface WorkerRequest<T = unknown> {
+     id: string;
+     type: string;
+     payload: T;
+   }
    
-   // Day 5-6: All domains
-   USE_NEW_ARCHITECTURE: true,
+   export interface WorkerResponse<T = unknown> {
+     id: string;
+     success: boolean;
+     data?: T;
+     error?: string;
+   }
+   
+   // Specific message types
+   export interface ImportAlertsMessage extends WorkerRequest<{
+     csvContent: string;
+   }> {
+     type: 'import:alerts';
+   }
+   
+   export interface ExportCasesMessage extends WorkerRequest<{
+     cases: Case[];
+     format: 'json' | 'csv';
+   }> {
+     type: 'export:cases';
+   }
    ```
 
-2. **Run full test suite** after each flag toggle
-
-3. **Compare performance baselines**:
-   ```bash
-   npm run bench:autosave
-   npm run bench:dashboard
-   # Compare to pre-refactor baselines
+3. **Create WorkerBridge abstraction** (`infrastructure/worker/WorkerBridge.ts`):
+   ```typescript
+   /**
+    * Abstraction for offloading work to Web Workers.
+    * Currently a pass-through (no-op), but ready for worker integration.
+    */
+   export class WorkerBridge {
+     private useWorkers: boolean = false; // Feature flag
+     
+     async execute<TRequest, TResponse>(
+       operation: string,
+       payload: TRequest
+     ): Promise<TResponse> {
+       if (this.useWorkers && this.isWorkerEligible(operation)) {
+         return await this.executeInWorker(operation, payload);
+       } else {
+         return await this.executeInMainThread(operation, payload);
+       }
+     }
+     
+     private isWorkerEligible(operation: string): boolean {
+       const workerOps = ['import:alerts', 'export:cases', 'calculate:totals'];
+       return workerOps.includes(operation);
+     }
+     
+     private async executeInWorker<TRequest, TResponse>(
+       operation: string,
+       payload: TRequest
+     ): Promise<TResponse> {
+       // Future: Post message to worker and await response
+       throw new Error('Worker execution not yet implemented');
+     }
+     
+     private async executeInMainThread<TRequest, TResponse>(
+       operation: string,
+       payload: TRequest
+     ): Promise<TResponse> {
+       // Execute synchronously in main thread (current behavior)
+       switch (operation) {
+         case 'import:alerts':
+           return await this.importAlerts(payload as any) as TResponse;
+         // ... other operations
+         default:
+           throw new Error(`Unknown operation: ${operation}`);
+       }
+     }
+   }
    ```
 
-4. **Remove old code paths** once all flags enabled:
-   - Delete DataManager (keep as backup file)
-   - Remove compatibility adapters
-   - Clean up dual-write logic
-
-5. **Update documentation**:
-   - Architecture diagrams
-   - Developer guide for new patterns
-   - ADRs for major decisions
-
-6. **Final validation**:
-   - All 250+ tests passing
-   - No performance regressions
-   - Bundle size <600 kB
-   - Accessibility checks pass
+**Commit:** `refactor(phase-4): Add worker-ready interfaces and WorkerBridge`
 
 ---
 
-## 📊 Success Checklist
+### Day 3-4: Performance Validation
 
-### Infrastructure (Track 1)
+**Goal:** Ensure no performance regressions from refactor.
+
+**Tasks:**
+
+1. **Run performance benchmarks**:
+   ```bash
+   npm run bench:autosave
+   npm run bench:dashboard
+   ```
+
+2. **Compare to pre-refactor baselines**:
+   - Compare autosave timings (should be < 5ms for all payload sizes)
+   - Compare dashboard load (should be < 5ms for all case counts)
+   - Flag any regression > 10%
+
+3. **Profile render performance** with React DevTools Profiler
+
+4. **Check bundle size**: Should be < 600 kB raw, < 160 kB gzipped
+
+**Commit:** `refactor(phase-4): Validate performance baselines`
+
+---
+
+### Day 5-6: Enable Feature Flags & Remove Old Code
+
+**Goal:** Turn on new architecture and remove legacy code.
+
+**Tasks:**
+
+1. **Progressive flag enablement** (test after each):
+   - Enable Cases domain
+   - Enable Financials domain
+   - Enable Notes/Alerts/Activity domains
+   - Enable master toggle
+
+2. **Remove old code paths**:
+   - Archive DataManager.ts
+   - Remove manual sync utilities
+   - Remove dual-write manager
+   - Remove compatibility adapters
+   - Archive old hooks
+
+**Commit:** `refactor(phase-4): Enable all feature flags and remove legacy code`
+
+---
+
+### Day 7: Documentation & Finalization
+
+**Goal:** Complete documentation and prepare for production.
+
+**Tasks:**
+
+1. **Update architecture diagrams**
+2. **Write ADRs** for key decisions
+3. **Create developer guide** for domain patterns
+4. **Update WORK_STATUS.md**
+5. **Final validation checklist**
+
+**Commit:** `refactor(phase-4): COMPLETE - Architecture refactor finalized`
+
+---
+
+## 📊 Overall Success Checklist
+
+### Phase 1: Foundation
 - [ ] Repository pattern implemented
-- [ ] Event bus functional
 - [ ] ApplicationState singleton
-- [ ] Migration utilities complete
 - [ ] Feature flags working
+- [ ] Cases domain proof of concept
 
-### Core Domains (Track 2)
-- [ ] Cases domain complete
-- [ ] Financials domain complete
-- [ ] Cross-domain relationships working
-- [ ] Hooks integrated with components
+### Phase 2: State Management
+- [ ] EventBus functional
+- [ ] All manual sync points removed
+- [ ] AppContent uses ApplicationState
+- [ ] Zero window globals
 
-### Supporting Domains (Track 3)
-- [ ] Notes domain complete
-- [ ] Alerts domain complete
+### Phase 3: Use Cases
+- [ ] All 5 domains complete
+- [ ] 15+ use cases implemented
+- [ ] Hooks are thin wrappers
 - [ ] Activity logging functional
-- [ ] All events captured
 
-### Integration
-- [ ] All feature flags enabled
-- [ ] Old code paths removed
-- [ ] Performance baselines met
-- [ ] Documentation updated
+### Phase 4: Worker Prep & Cleanup
+- [ ] Worker interfaces defined
+- [ ] Performance validated
+- [ ] All flags enabled
+- [ ] Old code removed
+- [ ] Documentation complete
+
+### Final Validation
 - [ ] 250+ tests passing
+- [ ] No TypeScript errors
+- [ ] Performance within 10% of baseline
+- [ ] Bundle size < 600 kB
+- [ ] Accessibility checks pass
+- [ ] Production build verified
 
 ---
 
@@ -837,35 +1972,48 @@ Ready for: <next track or integration>
 1. **Test failures** that can't be fixed in 30 minutes
 2. **Performance regression** >10% on any baseline
 3. **Data corruption** in file storage
-4. **Merge conflicts** that affect core files
+4. **TypeScript errors** in production build
 5. **Circular dependencies** between domains
 
-**Protocol:** Commit current work with "RED FLAG" prefix, notify team, regroup
+**Protocol:** Commit current work with "RED FLAG" prefix, document issue, regroup
 
 ---
 
-## 📞 Communication Channels
+## 📚 Additional Resources
 
-**Git commits:** Primary coordination mechanism  
-**Branch:** `feat/architecture-refactor`  
-**Pull requests:** One per completed track  
-**Issues:** Tag critical blockers with `refactor-blocker` label
+**Architecture References:**
+- Clean Architecture Principles
+- Domain-Driven Design patterns
+- Repository Pattern
+- Event-Driven Architecture
+
+**Project Docs:**
+- `docs/development/architecture-refactor-plan.md` - Strategic plan
+- `docs/development/PROJECT_STRUCTURE.md` - Folder organization
+- `docs/development/testing-infrastructure.md` - Testing strategy
+
+**Performance:**
+- `reports/performance/` - Baseline benchmarks
+- `scripts/autosaveBenchmark.ts` - Performance testing
+- `scripts/dashboardLoadBenchmark.ts` - Dashboard metrics
 
 ---
 
 ## 🎉 Definition of Done
 
-**Per Track:**
-- All phases complete
+**Per Phase:**
+- All tasks complete
 - Tests passing
-- Performance validated
+- Performance validated (if applicable)
 - Documentation updated
-- Code reviewed (by other agents via commits)
+- Code committed
 
 **Overall Refactor:**
-- All 3 tracks complete
-- Integration phase successful
-- Old code removed
+- All 4 phases complete
+- Single source of truth established
+- Zero manual syncs
+- Worker-ready architecture
+- Clean codebase (old code archived)
 - Team aligned on new patterns
 - Ready for production deployment
 
@@ -873,6 +2021,8 @@ Ready for: <next track or integration>
 
 **Start Date:** November 1, 2025  
 **Target Completion:** November 30, 2025  
-**Review Cadence:** Check git log daily for blockers
+**Execution:** Sequential, single agent  
+**Review Cadence:** End of each phase
 
-Good luck, agents! 🚀
+Good luck! 🚀
+
