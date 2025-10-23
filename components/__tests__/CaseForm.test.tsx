@@ -9,7 +9,53 @@ describe("CaseForm", () => {
     vi.useRealTimers();
   });
 
-  it("disables save until required fields are filled and calls onSave with normalized payload", async () => {
+  it("allows form submission with optional email and phone fields empty", async () => {
+    const user = userEvent.setup();
+    const onSave = vi.fn();
+    const onCancel = vi.fn();
+
+    render(<CaseForm onSave={onSave} onCancel={onCancel} />);
+
+    const saveButton = screen.getByRole("button", { name: /create case/i });
+    expect(saveButton).toBeDisabled();
+
+    // Fill required fields only (firstName, lastName, MCN, applicationDate)
+    await user.type(screen.getByLabelText(/first name/i), "John");
+    await user.type(screen.getByLabelText(/last name/i), "Doe");
+    
+    // Switch to case tab to fill MCN
+    const caseTab = screen.getByRole("tab", { name: /case details/i });
+    await user.click(caseTab);
+    
+    const mcnInput = screen.getByLabelText(/mcn/i);
+    await user.clear(mcnInput);
+    await user.type(mcnInput, "MCN12345");
+
+    // Submit button should be enabled without email and phone
+    expect(saveButton).toBeEnabled();
+
+    await user.click(saveButton);
+
+    // Verify onSave was called with data where email and phone can be empty
+    expect(onSave).toHaveBeenCalledWith(
+      expect.objectContaining({
+        person: expect.objectContaining({
+          firstName: "John",
+          lastName: "Doe",
+          email: "", // Empty email should be accepted
+          phone: "", // Empty phone should be accepted
+          authorizedRepIds: [],
+          familyMembers: [],
+        }),
+        caseRecord: expect.objectContaining({
+          mcn: "MCN12345",
+          retroRequested: "",
+        }),
+      })
+    );
+  });
+
+  it("allows form submission with optional email and phone fields filled", async () => {
     const onSave = vi.fn();
     const onCancel = vi.fn();
     const user = userEvent.setup();
@@ -23,7 +69,14 @@ describe("CaseForm", () => {
     await user.type(screen.getByLabelText(/last name/i), "Smith");
     await user.type(screen.getByLabelText(/email/i), "alice@example.com");
     await user.type(screen.getByLabelText(/phone/i), "5551234567");
-    await user.type(screen.getByLabelText(/mcn/i), "MCN-1");
+    
+    // Switch to case tab
+    const caseTab = screen.getByRole("tab", { name: /case details/i });
+    await user.click(caseTab);
+    
+    const mcnInput = screen.getByLabelText(/mcn/i);
+    await user.clear(mcnInput);
+    await user.type(mcnInput, "MCN-1");
 
     // Application date defaults to today, but ensure the control has a value for clarity
     const applicationDateInput = screen.getByLabelText(/application date/i) as HTMLInputElement;
@@ -48,6 +101,26 @@ describe("CaseForm", () => {
       mcn: "MCN-1",
       retroRequested: "",
     });
+  });
+
+  it("disables submit button when required fields are missing", async () => {
+    const user = userEvent.setup();
+    const onSave = vi.fn();
+    const onCancel = vi.fn();
+
+    render(<CaseForm onSave={onSave} onCancel={onCancel} />);
+
+    const submitButton = screen.getByRole("button", { name: /create case/i });
+    
+    // Submit button should be disabled when required fields are empty
+    expect(submitButton).toBeDisabled();
+
+    // Fill only first name
+    const firstNameInput = screen.getByLabelText(/first name/i);
+    await user.type(firstNameInput, "John");
+
+    // Still disabled because last name and MCN are missing
+    expect(submitButton).toBeDisabled();
   });
 
   it("renders editing state with existing data and calls onCancel when cancelled", async () => {

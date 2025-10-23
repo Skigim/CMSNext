@@ -53,6 +53,34 @@
     "typescriptreact"
   ],
   
+  // Editor settings
+  "editor.formatOnSave": true,
+  "editor.codeActionsOnSave": {
+    "source.fixAll.eslint": "explicit"
+  },
+  
+  // Debugging
+  "debug.javascript.autoAttachFilter": "onlyWithFlag",
+  "debug.javascript.terminalOptions": {
+    "skipFiles": [
+      "<node_internals>/**",
+      "${workspaceFolder}/node_modules/**"
+    ]
+  },
+  
+  // Testing
+  "vitest.enable": true,
+  "vitest.commandLine": "npm run test:watch",
+  
+  // Search
+  "search.exclude": {
+    "**/node_modules": true,
+    "**/dist": true,
+    "**/.git": true,
+    "**/coverage": true,
+    "**/build": true
+  },
+  
   // CodeRabbit settings
   "coderabbit.agentType": "Codex CLI",
   "coderabbit.autoReviewMode": "auto"

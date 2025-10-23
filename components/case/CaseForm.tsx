@@ -215,12 +215,10 @@ export function CaseForm({ case: existingCase, onSave, onCancel }: CaseFormProps
   };
 
   const isFormValid = () => {
-    // Basic validation
+    // Basic validation - email and phone are optional
     return (
       personData.firstName.trim() !== '' &&
       personData.lastName.trim() !== '' &&
-      personData.email.trim() !== '' &&
-      personData.phone.trim() !== '' &&
       caseData.mcn.trim() !== '' &&
       caseData.applicationDate !== ''
     );
