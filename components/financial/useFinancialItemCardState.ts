@@ -188,17 +188,24 @@ export function useFinancialItemCardState({
 
       try {
         const updatedItem = updateVerificationStatus(formData, newStatus);
-        setFormData(prev => ({
-          ...prev,
+        const newFormData = {
+          ...formData,
           verificationStatus: newStatus,
           verificationSource:
             newStatus === "Verified"
-              ? prev.verificationSource ?? updatedItem.verificationSource ?? ""
+              ? formData.verificationSource ?? updatedItem.verificationSource ?? ""
               : undefined,
-        }));
+        };
+        
+        // Update form data state to reflect the change
+        setFormData(newFormData);
+        
+        // Save in background without closing the edit mode
         await onUpdate(itemType, normalizedItem.safeId, updatedItem);
       } catch (error) {
         console.error("[FinancialItemCard] Failed to update verification status:", error);
+        // Revert form data on error
+        setFormData(formData);
       }
     },
     [formData, itemType, normalizedItem.safeId, onUpdate],

@@ -298,5 +298,8 @@ describe("FinancialItemCard", () => {
 
     // Verify the form still shows the entered data after status change
     expect(descriptionInput).toHaveValue("New Paycheck");
+    
+    // Verify the form is still visible (accordion still open)
+    expect(screen.getByTestId("financial-item-form")).toBeInTheDocument();
   });
 });
