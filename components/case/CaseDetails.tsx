@@ -6,7 +6,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
 import { CaseSection } from "./CaseSection";
 import { NotesSection } from "./NotesSection";
 import { CaseDisplay, CaseCategory, FinancialItem, NewNoteData } from "../../types/case";
-import { ArrowLeft, Edit2, Trash2, Landmark, Wallet, Receipt, BellRing } from "lucide-react";
+import { ArrowLeft, Edit2, Trash2, Landmark, Wallet, Receipt, BellRing, FileText } from "lucide-react";
 import { withDataErrorBoundary } from "../error/ErrorBoundaryHOC";
 import { CaseStatusMenu } from "./CaseStatusMenu";
 import { Badge } from "../ui/badge";
@@ -14,6 +14,8 @@ import { cn, interactiveHoverClasses } from "../ui/utils";
 import type { AlertWithMatch } from "../../utils/alertsData";
 import { CaseAlertsDrawer } from "./CaseAlertsDrawer";
 import { McnCopyControl } from "@/components/common/McnCopyControl";
+import { generateCaseSummary } from "../../utils/caseSummaryGenerator";
+import { clickToCopy } from "../../utils/clipboard";
 
 interface CaseDetailsProps {
   case: CaseDisplay;
@@ -87,6 +89,14 @@ export function CaseDetails({
     [onResolveAlert],
   );
 
+  const handleGenerateSummary = useCallback(() => {
+    const summary = generateCaseSummary(caseData);
+    clickToCopy(summary, {
+      successMessage: "Case summary copied to clipboard",
+      errorMessage: "Failed to copy summary to clipboard",
+    });
+  }, [caseData]);
+
   return (
     <div className="space-y-6">
       {/* Enhanced Header with Better Visual Hierarchy */}
@@ -149,6 +159,15 @@ export function CaseDetails({
             </div>
           </div>
           <div className="flex gap-2 items-start flex-wrap">
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={handleGenerateSummary}
+              className={interactiveHoverClasses}
+            >
+              <FileText className="w-4 h-4 mr-2" />
+              Generate Summary
+            </Button>
             <Button 
               variant="outline" 
               size="sm"

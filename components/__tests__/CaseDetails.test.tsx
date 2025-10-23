@@ -597,4 +597,26 @@ describe('CaseDetails Memory Management', () => {
     expect(copyButton).toHaveAttribute('aria-label');
     expect(copyButton.getAttribute('aria-label')).toMatch(/copy mcn/i);
   });
+
+  it("should render Generate Summary button", () => {
+    vi.useRealTimers();
+    render(<CaseDetails {...mockProps} />);
+    
+    const summaryButton = screen.getByRole('button', { name: /generate summary/i });
+    expect(summaryButton).toBeInTheDocument();
+  });
+
+  it("should call clickToCopy when Generate Summary button is clicked", async () => {
+    vi.useRealTimers();
+    clickToCopyMock.mockClear();
+    
+    render(<CaseDetails {...mockProps} />);
+    
+    const summaryButton = screen.getByRole('button', { name: /generate summary/i });
+    fireEvent.click(summaryButton);
+    
+    await waitFor(() => {
+      expect(clickToCopyMock).toHaveBeenCalled();
+    });
+  });
 });
