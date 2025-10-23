@@ -2,6 +2,9 @@
   "recommendations": [
     "bradlc.vscode-tailwindcss",
     "dbaeumer.vscode-eslint",
-    "esbenp.prettier-vscode"
+    "esbenp.prettier-vscode",
+    "vitest.explorer",
+    "msjsdiag.debugger-for-chrome",
+    "ms-vscode.vscode-typescript-next"
   ]
 }
