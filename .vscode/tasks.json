@@ -5,8 +5,18 @@
             "label": "npm: dev",
             "type": "npm",
             "script": "dev",
-            "problemMatcher": [],
             "isBackground": true,
+            "problemMatcher": {
+                "owner": "vite",
+                "pattern": {
+                    "regexp": "."
+                },
+                "background": {
+                    "activeOnStart": true,
+                    "beginsPattern": "VITE.*ready in",
+                    "endsPattern": "(Local|Network):.*http"
+                }
+            },
             "presentation": {
                 "reveal": "always",
                 "panel": "new"
