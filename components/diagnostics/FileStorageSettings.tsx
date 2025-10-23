@@ -18,6 +18,7 @@ import {
   WifiOff,
   FileText,
   Upload,
+  Loader2,
 } from 'lucide-react';
 import { useFileStorage } from '@/contexts/FileStorageContext';
 import { useAutosaveStatus } from '@/hooks/useAutosaveStatus';
@@ -268,8 +269,17 @@ export function FileStorageSettings() {
                   disabled={isLoadingFiles}
                   className="gap-2"
                 >
-                  <FileText className="h-4 w-4" />
-                  {isLoadingFiles ? 'Loading...' : 'Refresh'}
+                  {isLoadingFiles ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Loading...
+                    </>
+                  ) : (
+                    <>
+                      <FileText className="h-4 w-4" />
+                      Refresh
+                    </>
+                  )}
                 </Button>
               </div>
 

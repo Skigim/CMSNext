@@ -152,7 +152,7 @@ export const CaseWorkspace = memo(function CaseWorkspace({
       />
 
       {financialFlow.itemForm.isOpen && financialFlow.itemForm.category && selectedCase && (
-        <Suspense fallback={<div>Loading...</div>}>
+        <Suspense fallback={null}>
           <FinancialItemModal
             isOpen={financialFlow.itemForm.isOpen}
             onClose={financialFlow.handleCancelItemForm}
@@ -168,7 +168,7 @@ export const CaseWorkspace = memo(function CaseWorkspace({
       )}
 
       {noteFlow.noteForm.isOpen && (
-        <Suspense fallback={<div>Loading...</div>}>
+        <Suspense fallback={null}>
           <NoteModal
             isOpen={noteFlow.noteForm.isOpen}
             onClose={noteFlow.handleCancelNoteForm}

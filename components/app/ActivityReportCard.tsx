@@ -2,7 +2,7 @@ import { useCallback, useMemo, useState } from "react";
 import { format } from "date-fns";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../ui/card";
 import { Button } from "../ui/button";
-import { RefreshCcw, Calendar as CalendarIcon, Download, Trash2 } from "lucide-react";
+import { RefreshCcw, Calendar as CalendarIcon, Download, Trash2, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import type { ActivityReportFormat, CaseActivityLogState } from "../../types/activityLog";
 import { getTopCasesForReport, serializeDailyActivityReport, toActivityDateKey } from "../../utils/activityReport";
@@ -186,8 +186,17 @@ export function ActivityReportCard({
                 disabled={activityLogLoading}
                 className="flex items-center gap-2"
               >
-                <RefreshCcw className="h-4 w-4" />
-                {activityLogLoading ? "Refreshing..." : "Refresh"}
+                {activityLogLoading ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Refreshing...
+                  </>
+                ) : (
+                  <>
+                    <RefreshCcw className="h-4 w-4" />
+                    Refresh
+                  </>
+                )}
               </Button>
               <AlertDialog open={clearDialogOpen} onOpenChange={setClearDialogOpen}>
                 <AlertDialogTrigger asChild>
@@ -215,7 +224,14 @@ export function ActivityReportCard({
                       className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                       onClick={handleClearSelectedReport}
                     >
-                      {isClearing ? "Clearing..." : "Clear entries"}
+                      {isClearing ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Clearing...
+                        </>
+                      ) : (
+                        "Clear entries"
+                      )}
                     </AlertDialogAction>
                   </AlertDialogFooter>
                 </AlertDialogContent>
@@ -223,7 +239,10 @@ export function ActivityReportCard({
             </div>
           </div>
           {activityLogLoading ? (
-            <p className="text-sm text-muted-foreground">Loading activity data…</p>
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              <p>Loading activity data…</p>
+            </div>
           ) : (
             <div className="space-y-4">
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">

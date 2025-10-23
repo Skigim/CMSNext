@@ -18,6 +18,7 @@ import { CaseStatusMenu } from "./CaseStatusMenu";
 import type { AlertWithMatch } from "../../utils/alertsData";
 import { AlertBadge } from "@/components/alerts/AlertBadge";
 import { McnCopyControl } from "@/components/common/McnCopyControl";
+import { CopyableText } from "@/components/common/CopyableText";
 
 interface CaseCardProps {
   case: CaseDisplay;
@@ -56,7 +57,8 @@ export function CaseCard({
   const caseType = caseData.caseRecord?.caseType || "Not specified";
   const applicationDate = caseData.caseRecord?.applicationDate || caseData.createdAt;
   const lastUpdated = caseData.updatedAt || caseData.caseRecord?.updatedDate || caseData.createdAt;
-  const primaryContact = caseData.person?.phone || caseData.person?.email || "Not provided";
+  // Prefer phone over email for primary contact
+  const primaryContact = caseData.person?.phone || caseData.person?.email;
 
   const priorityLabel = caseData.priority ? "High priority" : "Standard priority";
   const priorityClasses = caseData.priority
@@ -101,10 +103,12 @@ export function CaseCard({
           </div>
         </div>
         <div className="flex flex-col justify-between gap-2 text-sm sm:flex-row sm:items-center">
-          <div>
-            <p className="text-muted-foreground">Primary contact</p>
-            <p className="font-medium text-foreground">{primaryContact}</p>
-          </div>
+          <CopyableText
+            text={primaryContact}
+            label="Primary contact"
+            missingLabel="Not provided"
+            labelClassName="text-muted-foreground"
+          />
           <Badge className={priorityClasses}>{priorityLabel}</Badge>
         </div>
         
