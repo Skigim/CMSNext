@@ -16,9 +16,7 @@ import { UnlinkedAlertsDialog } from "@/components/alerts/UnlinkedAlertsDialog";
 import { McnCopyControl } from "@/components/common/McnCopyControl";
 import type { CaseActivityLogState } from "../../types/activityLog";
 import { ActivityReportCard } from "./ActivityReportCard";
-import { WidgetRegistry, type RegisteredWidget } from "./widgets/WidgetRegistry";
-import { CasePriorityWidget } from "./widgets/CasePriorityWidget";
-import { ActivityTimelineWidget } from "./widgets/ActivityTimelineWidget";
+import { WidgetRegistry, createLazyWidget, type RegisteredWidget } from "./widgets/WidgetRegistry";
 
 interface DashboardProps {
   cases: CaseDisplay[];
@@ -36,8 +34,51 @@ function formatAlertMatchStatus(status: AlertMatchStatus): string {
   return status === "matched" ? "Matched" : "Unmatched";
 }
 
+const CasePriorityWidgetLazy = createLazyWidget(
+  import("./widgets/CasePriorityWidget"),
+  "CasePriorityWidget",
+);
+
+const ActivityTimelineWidgetLazy = createLazyWidget(
+  import("./widgets/ActivityTimelineWidget"),
+  "ActivityTimelineWidget",
+);
+
+const AlertsClearedPerDayWidgetLazy = createLazyWidget(
+  import("./widgets/AlertsClearedPerDayWidget"),
+  "AlertsClearedPerDayWidget",
+);
+
+const CasesProcessedPerDayWidgetLazy = createLazyWidget(
+  import("./widgets/CasesProcessedPerDayWidget"),
+  "CasesProcessedPerDayWidget",
+);
+
+const CasesByStatusWidgetLazy = createLazyWidget(
+  import("./widgets/CasesByStatusWidget"),
+  "CasesByStatusWidget",
+);
+
+const AlertsByDescriptionWidgetLazy = createLazyWidget(
+  import("./widgets/AlertsByDescriptionWidget"),
+  "AlertsByDescriptionWidget",
+);
+
+const AvgAlertAgeWidgetLazy = createLazyWidget(
+  import("./widgets/AvgAlertAgeWidget"),
+  "AvgAlertAgeWidget",
+);
+
+const AvgCaseProcessingTimeWidgetLazy = createLazyWidget(
+  import("./widgets/AvgCaseProcessingTimeWidget"),
+  "AvgCaseProcessingTimeWidget",
+);
+
 export function Dashboard({ cases, alerts, activityLogState, onViewAllCases, onNewCase, onNavigateToReports }: DashboardProps) {
   const { config } = useCategoryConfig();
+
+  const allAlerts = useMemo(() => alerts.alerts ?? [], [alerts.alerts]);
+  const activityEntries = useMemo(() => activityLogState.activityLog ?? [], [activityLogState.activityLog]);
 
   /**
    * Register dashboard widgets with metadata and props.
@@ -52,22 +93,88 @@ export function Dashboard({ cases, alerts, activityLogState, onViewAllCases, onN
           priority: 1,
           refreshInterval: 5 * 60 * 1000, // 5 minutes
         },
-        component: CasePriorityWidget,
+        component: CasePriorityWidgetLazy,
         props: { cases },
+      },
+      {
+        metadata: {
+          id: 'alerts-cleared-per-day',
+          title: 'Alerts Cleared/Day',
+          description: 'Alert resolution trends over the last 7 days',
+          priority: 2,
+          refreshInterval: 5 * 60 * 1000,
+        },
+        component: AlertsClearedPerDayWidgetLazy,
+        props: { alerts: allAlerts },
+      },
+      {
+        metadata: {
+          id: 'cases-processed-per-day',
+          title: 'Cases Processed/Day',
+          description: 'Daily case processing over the last 7 days',
+          priority: 3,
+          refreshInterval: 5 * 60 * 1000,
+        },
+        component: CasesProcessedPerDayWidgetLazy,
+        props: { activityLog: activityEntries },
       },
       {
         metadata: {
           id: 'activity-timeline',
           title: 'Activity Timeline',
           description: 'Recent activity from the last 7 days',
-          priority: 2,
+          priority: 4,
           refreshInterval: 2 * 60 * 1000, // 2 minutes
         },
-        component: ActivityTimelineWidget,
+        component: ActivityTimelineWidgetLazy,
         props: { activityLogState },
       },
+      {
+        metadata: {
+          id: 'total-cases-by-status',
+          title: 'Total Cases by Status',
+          description: 'Current status distribution across all cases',
+          priority: 5,
+          refreshInterval: 5 * 60 * 1000,
+        },
+        component: CasesByStatusWidgetLazy,
+        props: { cases },
+      },
+      {
+        metadata: {
+          id: 'total-alerts-by-description',
+          title: 'Alerts by Description',
+          description: 'Top alert types by frequency',
+          priority: 6,
+          refreshInterval: 5 * 60 * 1000,
+        },
+        component: AlertsByDescriptionWidgetLazy,
+        props: { alerts: allAlerts },
+      },
+      {
+        metadata: {
+          id: 'avg-alert-age',
+          title: 'Avg. Alert Age',
+          description: 'Average age of active alerts',
+          priority: 7,
+          refreshInterval: 5 * 60 * 1000,
+        },
+        component: AvgAlertAgeWidgetLazy,
+        props: { alerts: allAlerts },
+      },
+      {
+        metadata: {
+          id: 'avg-case-processing-time',
+          title: 'Avg. Case Processing Time',
+          description: 'Average days to resolve a case',
+          priority: 8,
+          refreshInterval: 10 * 60 * 1000,
+        },
+        component: AvgCaseProcessingTimeWidgetLazy,
+        props: { activityLog: activityEntries, cases },
+      },
     ];
-  }, [cases, activityLogState]);
+  }, [cases, allAlerts, activityEntries, activityLogState]);
 
   const validCases = useMemo(
     () => cases.filter(c => c && c.caseRecord && typeof c.caseRecord === "object"),
