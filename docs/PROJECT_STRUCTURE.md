@@ -1,4 +1,5 @@
 # CMSNext Project Structure
+- Note: Architecture Refactor is planned - see architecture-refactor-plan.md.
 
 This document outlines the organization of the CMSNext filesystem-only case management system.
 
