@@ -1,81 +1,106 @@
-# CMSNext Architecture Refactor Plan
+CMSNext Architecture Refactor Plan (Current Status)
 
-**Created:** October 16, 2025  
-**Status:** Planning Phase  
-**Target Execution:** November 1-30, 2025  
-**Prerequisites:** 85% Complete (Phase 4 telemetry captures pending)
+Last Updated: October 23, 2025
+Status: Planning Phase
+Target Execution: November 1-30, 2025
+Prerequisites: 85% Complete (Phase 4 telemetry captures pending)
 
----
+Executive Summary
 
-## Executive Summary
+Transform CMSNext from a monolithic React application into a clean, domain-driven architecture with clear boundaries, worker-ready interfaces, and predictable data flow. This refactor builds on recent infrastructure wins (shadcn migration, telemetry, accessibility) to establish sustainable patterns for future growth.
 
-Transform CMSNext from a monolithic React application into a **clean, domain-driven architecture** with clear boundaries, worker-ready interfaces, and predictable data flow. This refactor builds on recent infrastructure wins (shadcn migration, telemetry, accessibility) to establish sustainable patterns for future growth.
+Goals
 
-### Goals
+Eliminate Race Conditions - Single source of truth for data
 
-1. **Eliminate Race Conditions** - Single source of truth for data
-2. **Improve Maintainability** - Clear domain boundaries and dependencies
-3. **Enable Scalability** - Worker-ready architecture for performance
-4. **Enhance Testability** - Isolated domains with dependency injection
-5. **Preserve Privacy** - Maintain 100% local-first architecture
+Improve Maintainability - Clear domain boundaries and dependencies
 
-### Non-Goals
+Enable Scalability - Worker-ready architecture for performance
 
-- ❌ Introduce network dependencies or cloud services
-- ❌ Add authentication or user accounts
-- ❌ Change user-facing features or UI
-- ❌ Break backward compatibility with existing data files
+Enhance Testability - Isolated domains with dependency injection
 
----
+Preserve Privacy - Maintain 100% local-first architecture
 
-## Current Architecture Problems
+Non-Goals
 
-### 🚨 Critical Issues
+❌ Introduce network dependencies or cloud services
 
-1. **Multiple Sources of Truth**
-   - React state (`AppContent cases[]`)
-   - `FileStorageAPI` internal cache
-   - `FileDataProvider` wrapper
-   - Actual file system data
-   - **Impact:** Data inconsistency, race conditions, difficult debugging
+❌ Add authentication or user accounts
 
-2. **Complex State Orchestration**
-   - Window globals for tracking operations
-   - Manual `safeNotifyFileStorageChange()` calls
-   - Flag-based coordination between components
-   - **Impact:** Unpredictable behavior, hard to test
+❌ Change user-facing features or UI
 
-3. **Tangled Dependencies**
-   - Components directly import utilities
-   - Business logic mixed with UI logic
-   - No clear domain boundaries
-   - **Impact:** Tight coupling, fragile changes
+❌ Break backward compatibility with existing data files
 
-4. **Error Handling Gaps**
-   - Silent failures in save operations
-   - Inconsistent recovery strategies
-   - Error states not surfaced to users
-   - **Impact:** Data loss without awareness
+Current Architecture Problems
 
-### 📊 Architecture Debt Metrics
+Note: This section reflects the state of the codebase after the initial DataManager refactor (documented in the now-superseded state-management-refactor-plan.md). That refactor successfully consolidated data access into DataManager.ts and standardized error handling, solving our worst "Multiple Sources of Truth" and "Error Handling Gaps" issues.
 
-| Metric | Current | Target |
-|--------|---------|--------|
-| Sources of Truth | 4+ | 1 |
-| Manual Sync Points | 12+ | 0 |
-| Window Globals | 3 | 0 |
-| Domain Boundaries | None | 5 |
-| Test Coverage (Domain Logic) | ~40% | 85%+ |
+This new plan is designed to solve the remaining problems.
 
----
+🚨 Critical Issues
 
-## Proposed Architecture
+Tangled Dependencies & Monolithic Hooks
 
-### Clean Architecture Layers
+Business logic is still heavily coupled to the React layer, living inside large hooks (useCaseManagement, useFinancialItemFlow, useNoteFlow).
 
-```
+The DataManager is a large utility class rather than a true repository, mixing all data concerns (cases, alerts, notes) into one file.
+
+UI components and hooks directly access data utilities, bypassing clear application boundaries.
+
+Impact: Difficult to test business logic in isolation; changes remain fragile and can have wide-ranging side effects.
+
+Complex State Orchestration
+
+The system still relies on manual synchronization calls (e.g., safeNotifyFileStorageChange(), fileService.notifyDataChange()) to manage race conditions.
+
+Global, flag-based logic is still used to coordinate state transitions (e.g., clearFileStorageFlags in AppContent.tsx).
+
+Impact: Unpredictable behavior in edge cases; hard to debug; code is declarative in some places but imperative in others.
+
+📊 Architecture Debt Metrics (Current Status)
+
+Metric
+
+Current
+
+Target
+
+Sources of Truth
+
+2 (DataManager, React State)
+
+1 (Unified App State)
+
+Manual Sync Points
+
+Multiple (in DataManager, etc.)
+
+0
+
+Window Globals
+
+2+ (via fileStorageFlags)
+
+0
+
+Domain Boundaries
+
+None (Monolithic utils/)
+
+5
+
+Test Coverage (Domain Logic)
+
+~40%
+
+85%+
+
+Proposed Architecture
+
+Clean Architecture Layers
+
 ┌─────────────────────────────────────────────────────────────┐
-│                     Presentation Layer                       │
+│                       Presentation Layer                    │
 │  ┌──────────────┐  ┌──────────────┐  ┌──────────────────┐  │
 │  │   React UI   │  │    Themes    │  │  Accessibility   │  │
 │  │  Components  │  │   Context    │  │    Patterns      │  │
@@ -83,7 +108,7 @@ Transform CMSNext from a monolithic React application into a **clean, domain-dri
 └─────────────────────────────────────────────────────────────┘
                               ↓
 ┌─────────────────────────────────────────────────────────────┐
-│                    Application Layer                         │
+│                      Application Layer                      │
 │  ┌──────────────┐  ┌──────────────┐  ┌──────────────────┐  │
 │  │  Use Cases   │  │   Workflows  │  │  Orchestration   │  │
 │  │   (Hooks)    │  │  (Commands)  │  │   (Navigation)   │  │
@@ -91,36 +116,37 @@ Transform CMSNext from a monolithic React application into a **clean, domain-dri
 └─────────────────────────────────────────────────────────────┘
                               ↓
 ┌─────────────────────────────────────────────────────────────┐
-│                      Domain Layer                            │
+│                         Domain Layer                        │
 │  ┌──────────────┐  ┌──────────────┐  ┌──────────────────┐  │
 │  │    Cases     │  │  Financials  │  │      Notes       │  │
 │  │   Domain     │  │   Domain     │  │     Domain       │  │
 │  └──────────────┘  └──────────────┘  └──────────────────┘  │
-│  ┌──────────────┐  ┌──────────────┐                        │
-│  │   Alerts     │  │   Activity   │                        │
-│  │   Domain     │  │     Log      │                        │
-│  └──────────────┘  └──────────────┘                        │
+│  ┌──────────────┐  ┌──────────────┐                       │
+│  │    Alerts    │  │   Activity   │                       │
+│  │   Domain     │  │    Log       │                       │
+│  └──────────────┘  └──────────────┘                       │
 └─────────────────────────────────────────────────────────────┘
                               ↓
 ┌─────────────────────────────────────────────────────────────┐
-│                  Infrastructure Layer                        │
+│                    Infrastructure Layer                     │
 │  ┌──────────────┐  ┌──────────────┐  ┌──────────────────┐  │
 │  │   Storage    │  │   Telemetry  │  │   Performance    │  │
-│  │  Repository  │  │   Collector  │  │     Tracker      │  │
+│  │  Repository  │  │   Collector  │  │    Tracker       │  │
 │  └──────────────┘  └──────────────┘  └──────────────────┘  │
-│  ┌──────────────┐  ┌──────────────┐                        │
-│  │   File API   │  │    Logger    │                        │
-│  │   Adapter    │  │   Service    │                        │
-│  └──────────────┘  └──────────────┘                        │
+│  ┌──────────────┐  ┌──────────────┐                       │
+│  │   File API   │  │    Logger    │                       │
+│  │   Adapter    │  │   Service    │                       │
+│  └──────────────┘  └──────────────┘                       │
 └─────────────────────────────────────────────────────────────┘
-```
 
-### Domain Boundaries
 
-#### 1. **Cases Domain** (`domain/cases/`)
-**Responsibility:** Case lifecycle, person records, status management
 
-```typescript
+Domain Boundaries
+
+1. Cases Domain (domain/cases/)
+
+Responsibility: Case lifecycle, person records, status management
+
 // Entities
 - Case (aggregate root)
 - Person (value object)
@@ -134,12 +160,13 @@ Transform CMSNext from a monolithic React application into a **clean, domain-dri
 
 // Repository Interface
 - ICaseRepository
-```
 
-#### 2. **Financials Domain** (`domain/financials/`)
-**Responsibility:** Resources, income, expenses, verification
 
-```typescript
+
+2. Financials Domain (domain/financials/)
+
+Responsibility: Resources, income, expenses, verification
+
 // Entities
 - FinancialItem (aggregate root)
 - VerificationStatus (value object)
@@ -153,12 +180,13 @@ Transform CMSNext from a monolithic React application into a **clean, domain-dri
 
 // Repository Interface
 - IFinancialRepository
-```
 
-#### 3. **Notes Domain** (`domain/notes/`)
-**Responsibility:** Case notes, categories, timestamps
 
-```typescript
+
+3. Notes Domain (domain/notes/)
+
+Responsibility: Case notes, categories, timestamps
+
 // Entities
 - Note (aggregate root)
 - NoteCategory (value object)
@@ -171,12 +199,13 @@ Transform CMSNext from a monolithic React application into a **clean, domain-dri
 
 // Repository Interface
 - INoteRepository
-```
 
-#### 4. **Alerts Domain** (`domain/alerts/`)
-**Responsibility:** Alert matching, status tracking, MCN linking
 
-```typescript
+
+4. Alerts Domain (domain/alerts/)
+
+Responsibility: Alert matching, status tracking, MCN linking
+
 // Entities
 - Alert (aggregate root)
 - AlertMatchStatus (value object)
@@ -189,12 +218,13 @@ Transform CMSNext from a monolithic React application into a **clean, domain-dri
 
 // Repository Interface
 - IAlertRepository
-```
 
-#### 5. **Activity Log Domain** (`domain/activity/`)
-**Responsibility:** Event tracking, audit trail, reporting
 
-```typescript
+
+5. Activity Log Domain (domain/activity/)
+
+Responsibility: Event tracking, audit trail, reporting
+
 // Entities
 - ActivityEvent (aggregate root)
 - EventType (value object)
@@ -206,227 +236,359 @@ Transform CMSNext from a monolithic React application into a **clean, domain-dri
 
 // Repository Interface
 - IActivityRepository
-```
 
----
 
-## Implementation Plan
 
-### Phase 1: Foundation (Week 1, Nov 1-7)
-**Goal:** Establish domain structure and repository pattern
+Implementation Plan
 
-**Tasks:**
-1. Create domain folder structure
-2. Define repository interfaces
-3. Build unified `StorageRepository` implementing all domain interfaces
-4. Migrate `DataManager` logic into domain use cases
-5. Add comprehensive unit tests for domain logic
+Phase 1: Foundation (Week 1, Nov 1-7)
 
-**Deliverables:**
-- `domain/` folder with 5 domain modules
-- `infrastructure/StorageRepository.ts`
-- Repository interfaces for each domain
-- 50+ new domain-level tests
+Goal: Establish domain structure and repository pattern
 
-**Success Criteria:**
-- All existing tests still passing
-- Domain logic isolated from UI
-- Repository pattern proven with 1 domain
+Tasks:
 
-### Phase 2: State Management (Week 2, Nov 8-14)
-**Goal:** Replace React state sprawl with domain-driven state
+Create domain/ and infrastructure/ folder structure.
 
-**Tasks:**
-1. Create `ApplicationState` store (lightweight, no Redux)
-2. Implement domain event bus for cross-domain communication
-3. Replace manual sync notifications with automatic events
-4. Migrate `AppContent` to use domain use cases
-5. Remove window globals and flag-based coordination
+Define repository interfaces (ICaseRepository, INoteRepository, etc.).
 
-**Deliverables:**
-- `application/ApplicationState.ts`
-- `application/DomainEventBus.ts`
-- Refactored `AppContent` using domain hooks
-- Zero window globals
+Build a unified StorageRepository that implements all domain interfaces and uses the existing AutosaveFileService for storage.
 
-**Success Criteria:**
-- Single source of truth for all data
-- No manual sync calls
-- All 211+ tests passing
+Begin migrating logic from DataManager.ts into the new StorageRepository and new domain-specific use case files (e.g., domain/cases/use-cases/CreateCase.ts).
 
-### Phase 3: Use Case Extraction (Week 3, Nov 15-21)
-**Goal:** Move business logic from hooks into domain use cases
+Add comprehensive unit tests for new domain logic, isolated from React.
 
-**Tasks:**
-1. Extract case management logic from `useCaseManagement`
-2. Extract financial logic from `useFinancialItemFlow`
-3. Extract note logic from `useNoteFlow`
-4. Create application-level orchestration hooks
-5. Update components to use new hook signatures
+Deliverables:
 
-**Deliverables:**
-- 15+ domain use case classes
-- Simplified hooks as thin wrappers
-- Updated components (no logic changes)
+domain/ folder with 5 domain modules.
 
-**Success Criteria:**
-- Business logic testable without React
-- Hooks reduced to <50 lines each
-- 100% backward compatibility
+infrastructure/StorageRepository.ts.
 
-### Phase 4: Worker Preparation (Week 4, Nov 22-30)
-**Goal:** Prepare architecture for Web Worker offloading
+Repository interfaces for each domain.
 
-**Tasks:**
-1. Identify worker-eligible operations (import, export, validation)
-2. Create worker-ready message contracts
-3. Build `WorkerBridge` abstraction (no-op initially)
-4. Document worker integration strategy
-5. Performance baseline before/after refactor
+50+ new domain-level tests.
 
-**Deliverables:**
-- `infrastructure/WorkerBridge.ts`
-- Worker message type definitions
-- Performance comparison report
-- Worker integration guide
+Success Criteria:
 
-**Success Criteria:**
-- Worker-ready interfaces defined
-- No performance regressions
-- Documentation complete
+All existing tests still passing.
 
----
+Domain logic is isolated from the UI.
 
-## Migration Strategy
+The repository pattern is proven with at least one domain (e.g., "Cases").
 
-### Gradual Rollout (Strangler Fig Pattern)
+Phase 2: State Management (Week 2, Nov 8-14)
 
-1. **Keep Old Code Working**
-   - New architecture alongside existing code
-   - Feature flags for domain-by-domain migration
-   - Dual-write period for data safety
+Goal: Replace React state sprawl and manual sync with domain-driven state.
 
-2. **Migrate Domain-by-Domain**
-   - Week 1: Cases domain
-   - Week 2: Financials domain
-   - Week 3: Notes & Alerts domains
-   - Week 4: Activity log & cleanup
+Tasks:
 
-3. **Test Everything**
-   - Existing tests must pass after each migration
-   - New domain tests added continuously
-   - Integration tests for cross-domain flows
+Create a lightweight ApplicationState store (e.g., using Zustand or React Context) that will hold the single source of truth.
 
-4. **Monitor Telemetry**
-   - Track error rates during migration
-   - Compare performance metrics
-   - Watch for data consistency issues
+Implement a simple domain event bus for cross-domain communication (e.g., "CaseUpdated" event).
 
----
+Refactor the StorageRepository and DataManager to use the event bus, removing all manual safeNotifyFileStorageChange() calls.
 
-## Risk Mitigation
+Migrate AppContent.tsx to read from the new ApplicationState store.
 
-### High-Risk Areas
+Remove all window globals and fileStorageFlags logic, replacing it with state from the FileStorageContext state machine.
 
-| Risk | Mitigation |
-|------|------------|
-| **Data Loss** | Automatic backups before each phase; dual-write period |
-| **Performance Regression** | Continuous benchmarking; profiler sessions |
-| **Breaking Changes** | Feature flags; backward compatibility layer |
-| **Test Failures** | No merge without green tests; comprehensive coverage |
-| **Developer Confusion** | Architecture Decision Records (ADRs); pair programming |
+Deliverables:
 
-### Rollback Strategy
+application/ApplicationState.ts
+
+application/DomainEventBus.ts
+
+Refactored AppContent using the new state store.
+
+Zero window globals or manual sync calls.
+
+Success Criteria:
+
+A single source of truth for all application data.
+
+No manual sync calls.
+
+All 211+ tests passing.
+
+Phase 3: Use Case Extraction (Week 3, Nov 15-21)
+
+Goal: Move all business logic from hooks into domain use cases.
+
+Tasks:
+
+Extract all case management logic from useCaseManagement.ts into domain/cases/use-cases/.
+
+Extract all financial logic from useFinancialItemFlow.ts into domain/financials/use-cases/.
+
+Extract all note logic from useNoteFlow.ts into domain/notes/use-cases/.
+
+Create application-level orchestration hooks (e.g., useCaseService) that call the domain use cases.
+
+Update components to use the new, thinner service hooks.
+
+Deliverables:
+
+15+ domain use case classes/functions.
+
+Simplified hooks that act as thin wrappers to the domain.
+
+Updated components (no logic changes).
+
+Success Criteria:
+
+Business logic is 100% testable without React.
+
+React hooks are reduced to simple state selection and orchestration.
+
+100% backward compatibility.
+
+Phase 4: Worker Preparation (Week 4, Nov 22-30)
+
+Goal: Prepare architecture for Web Worker offloading.
+
+Tasks:
+
+Identify worker-eligible operations (import, export, validation, alert parsing).
+
+Create worker-ready message contracts (serializable inputs/outputs) for the use cases.
+
+Build a WorkerBridge abstraction (which can be a no-op pass-through initially).
+
+Document the worker integration strategy.
+
+Performance baseline before/after refactor.
+
+Deliverables:
+
+infrastructure/WorkerBridge.ts
+
+Worker message type definitions.
+
+Performance comparison report.
+
+Worker integration guide.
+
+Success Criteria:
+
+Worker-ready interfaces are defined.
+
+No performance regressions.
+
+Documentation complete.
+
+Migration Strategy
+
+Gradual Rollout (Strangler Fig Pattern)
+
+Keep Old Code Working
+
+New architecture will be built alongside existing code.
+
+We will use feature flags (if needed) or dependency injection to toggle between the old DataManager logic and the new StorageRepository + Domain Use Cases.
+
+A dual-write period may be used for data safety during migration.
+
+Migrate Domain-by-Domain
+
+Week 1: Cases domain
+
+Week 2: Financials domain
+
+Week 3: Notes & Alerts domains
+
+Week 4: Activity log & cleanup
+
+Test Everything
+
+Existing tests must pass after each migration.
+
+New domain tests added continuously.
+
+Integration tests for cross-domain flows.
+
+Monitor Telemetry
+
+Track error rates during migration.
+
+Compare performance metrics.
+
+Watch for data consistency issues.
+
+Risk Mitigation
+
+High-Risk Areas
+
+Risk
+
+Mitigation
+
+Data Loss
+
+Automatic backups before each phase; dual-write period
+
+Performance Regression
+
+Continuous benchmarking; profiler sessions
+
+Breaking Changes
+
+Feature flags; backward compatibility layer
+
+Test Failures
+
+No merge without green tests; comprehensive coverage
+
+Developer Confusion
+
+Architecture Decision Records (ADRs); pair programming
+
+Rollback Strategy
 
 Each phase has a rollback plan:
-1. Feature flag toggle to disable new code paths
-2. Revert commits if critical issues found
-3. Data backups allow restoration to pre-refactor state
 
----
+Feature flag toggle to disable new code paths.
 
-## Success Metrics
+Revert commits if critical issues are found.
 
-### Technical Metrics
+Data backups allow restoration to pre-refactor state.
 
-- [ ] **Single Source of Truth:** 1 data store (vs. 4+)
-- [ ] **Zero Manual Syncs:** No `safeNotifyFileStorageChange()` calls
-- [ ] **Domain Isolation:** 5 independent domain modules
-- [ ] **Test Coverage:** 85%+ for domain logic (vs. ~40%)
-- [ ] **Bundle Size:** <600 kB raw / <160 kB gzipped
-- [ ] **Performance:** No >10% regression on any baseline
+Success Metrics
 
-### Quality Metrics
+Technical Metrics
 
-- [ ] **All Tests Passing:** 250+ tests green
-- [ ] **Zero TypeScript Errors:** Strict mode compliance
-- [ ] **Documentation Complete:** ADRs for major decisions
-- [ ] **Accessibility Maintained:** No jest-axe regressions
-- [ ] **Telemetry Healthy:** Error rates <1%
+$$$$
 
----
+ Single Source of Truth: 1 data store (vs. 2)
 
-## Post-Refactor Opportunities
+$$$$
+
+ Zero Manual Syncs: No safeNotifyFileStorageChange() calls
+
+$$$$
+
+ Domain Isolation: 5 independent domain modules
+
+$$$$
+
+ Test Coverage: 85%+ for domain logic (vs. ~40%)
+
+$$$$
+
+ Bundle Size: <600 kB raw / <160 kB gzipped
+
+$$$$
+
+ Performance: No >10% regression on any baseline
+
+Quality Metrics
+
+$$$$
+
+ All Tests Passing: 250+ tests green
+
+$$$$
+
+ Zero TypeScript Errors: Strict mode compliance
+
+$$$$
+
+ Documentation Complete: ADRs for major decisions
+
+$$$$
+
+ Accessibility Maintained: No jest-axe regressions
+
+$$$$
+
+ Telemetry Healthy: Error rates <1%
+
+Post-Refactor Opportunities
 
 With clean architecture in place, we can:
 
-1. **Web Workers** - Offload heavy operations (import/export)
-2. **Advanced Caching** - Domain-level cache strategies
-3. **Optimistic UI** - Predictable rollback with domain events
-4. **Better Testing** - Domain logic tested in isolation
-5. **Feature Velocity** - New features ship faster with clear boundaries
+Web Workers - Offload heavy operations (import/export, alert parsing)
 
----
+Advanced Caching - Domain-level cache strategies
 
-## Architecture Decision Records (ADRs)
+Optimistic UI - Predictable rollback with domain events
 
-### ADR-001: Repository Pattern Over Direct File Access
-**Decision:** All data access goes through repository interfaces  
-**Rationale:** Testability, worker-readiness, future storage options  
-**Consequences:** Slightly more boilerplate, but cleaner boundaries
+Better Testing - Domain logic tested in isolation
 
-### ADR-002: Domain Events Over Direct Calls
-**Decision:** Use event bus for cross-domain communication  
-**Rationale:** Decoupling, easier testing, observability  
-**Consequences:** Async communication patterns, event versioning
+Feature Velocity - New features ship faster with clear boundaries
 
-### ADR-003: No Redux or Complex State Libraries
-**Decision:** Lightweight `ApplicationState` with domain events  
-**Rationale:** Simplicity, no external deps, fits local-first model  
-**Consequences:** Custom state management, learning curve
+Architecture Decision Records (ADRs)
 
-### ADR-004: Gradual Migration with Feature Flags
-**Decision:** New architecture alongside old, toggle per domain  
-**Rationale:** Risk mitigation, continuous delivery  
-**Consequences:** Temporary code duplication, cleanup required
+ADR-001: Repository Pattern Over Direct File Access
 
----
+Decision: All data access goes through repository interfaces
+Rationale: Testability, worker-readiness, future storage options
+Consequences: Slightly more boilerplate, but cleaner boundaries
 
-## Timeline
+ADR-002: Domain Events Over Direct Calls
 
-| Week | Phase | Deliverables |
-|------|-------|--------------|
-| Nov 1-7 | Foundation | Domain structure, repository pattern |
-| Nov 8-14 | State Management | Single source of truth, event bus |
-| Nov 15-21 | Use Cases | Business logic extraction |
-| Nov 22-30 | Worker Prep | Worker-ready interfaces |
+Decision: Use event bus for cross-domain communication
+Rationale: Decoupling, easier testing, observability
+Consequences: Async communication patterns, event versioning
 
-**Total Duration:** 4 weeks  
-**Team Size:** 3 developers (coordinated via this plan)  
-**Review Cadence:** Daily standups, weekly demos
+ADR-003: No Redux or Complex State Libraries
 
----
+Decision: Lightweight ApplicationState (e.g., Zustand) with domain events
+Rationale: Simplicity, no external deps, fits local-first model
+Consequences: Custom state management, learning curve
 
-## References
+ADR-004: Gradual Rollout with Feature Flags
 
-- [State Management Refactor Plan](./state-management-refactor-plan.md)
-- [Clean Architecture Principles](https://blog.cleancoder.com/uncle-bob/2012/08/13/the-clean-architecture.html)
-- [Domain-Driven Design](https://martinfowler.com/tags/domain%20driven%20design.html)
-- [Repository Pattern](https://martinfowler.com/eaaCatalog/repository.html)
+Decision: New architecture alongside old, toggle per domain
+Rationale: Risk mitigation, continuous delivery
+Consequences: Temporary code duplication, cleanup required
 
----
+Timeline
 
-**Next Steps:**
-1. Complete Phase 4 telemetry captures (by Oct 30)
-2. Review this plan with stakeholders (Oct 23-30)
-3. Kick off Phase 1: Foundation (Nov 1)
+Week
+
+Phase
+
+Deliverables
+
+Nov 1-7
+
+Foundation
+
+Domain structure, repository pattern
+
+Nov 8-14
+
+State Management
+
+Single source of truth, event bus
+
+Nov 15-21
+
+Use Cases
+
+Business logic extraction
+
+Nov 22-30
+
+Worker Prep
+
+Worker-ready interfaces
+
+Total Duration: 4 weeks
+Team Size: 3 developers (coordinated via this plan)
+Review Cadence: Daily standups, weekly demos
+
+References
+
+Clean Architecture Principles
+
+Domain-Driven Design
+
+Repository Pattern
+
+Next Steps:
+
+Complete Phase 4 telemetry captures (by Oct 30)
+
+Review this plan with stakeholders (Oct 23-30)
+
+Kick off Phase 1: Foundation (Nov 1)
