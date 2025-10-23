@@ -48,7 +48,7 @@ export const ConnectionOnboarding = memo(function ConnectionOnboarding({
       </AppNavigationShell>
 
       {isOpen && (
-        <Suspense fallback={<div aria-label="Loading connection modal">Loading...</div>}>
+        <Suspense fallback={null}>
           <ConnectToExistingModal
             isOpen={isOpen}
             isSupported={isSupported}

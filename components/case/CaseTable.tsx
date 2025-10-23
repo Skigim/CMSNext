@@ -16,6 +16,7 @@ import type { CaseListSortDirection, CaseListSortKey } from "@/hooks/useCaseList
 import { filterOpenAlerts, type AlertWithMatch } from "@/utils/alertsData";
 import { AlertBadge } from "@/components/alerts/AlertBadge";
 import { McnCopyControl } from "@/components/common/McnCopyControl";
+import { CopyableText } from "@/components/common/CopyableText";
 
 export interface CaseTableProps {
   cases: CaseDisplay[];
@@ -69,7 +70,8 @@ export const CaseTable = memo(function CaseTable({
         const caseType = item.caseRecord?.caseType || "Not specified";
         const applicationDate = item.caseRecord?.applicationDate || item.createdAt;
         const updatedDate = item.updatedAt || item.caseRecord?.updatedDate || item.createdAt;
-        const primaryContact = item.person?.phone || item.person?.email || "Not provided";
+        // Prefer phone over email for primary contact
+        const primaryContact = item.person?.phone || item.person?.email;
         const allCaseAlerts = alertsByCaseId?.get(item.id) ?? [];
         const caseAlerts = filterOpenAlerts(allCaseAlerts);
         return {
@@ -286,9 +288,13 @@ export const CaseTable = memo(function CaseTable({
               <TableCell>{row.applicationDate}</TableCell>
               <TableCell>{row.updatedDate}</TableCell>
               <TableCell>
-                <span className="block max-w-[16rem] truncate" title={row.primaryContact}>
-                  {row.primaryContact}
-                </span>
+                <CopyableText
+                  text={row.primaryContact}
+                  showLabel={false}
+                  missingLabel="Not provided"
+                  buttonClassName="max-w-[16rem]"
+                  textClassName="truncate"
+                />
               </TableCell>
               <TableCell className="text-right">
                 <DropdownMenu>

@@ -1,6 +1,6 @@
 import { Button } from "../ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../ui/card";
-import { Database, FileText, Upload } from "lucide-react";
+import { Database, FileText, Upload, Loader2 } from "lucide-react";
 
 interface DataLoadPromptProps {
   onLoadExistingData: () => void;
@@ -42,7 +42,14 @@ export function DataLoadPrompt({ onLoadExistingData, onGoToSettings, isLoading }
                       className="w-full"
                       variant="outline"
                     >
-                      {isLoading ? 'Loading...' : 'Load Data'}
+                      {isLoading ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Loading...
+                        </>
+                      ) : (
+                        'Load Data'
+                      )}
                     </Button>
                   </div>
                 </CardContent>
