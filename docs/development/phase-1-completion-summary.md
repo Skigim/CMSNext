@@ -40,22 +40,26 @@ domain/
 ### 2. Key Architectural Patterns Implemented
 
 **Unified StorageRepository:**
+
 - Single repository class implementing ALL 5 domain repository interfaces
 - Domain-specific adapters route operations to correct collections
 - Uses domain scope hints to determine which entity type to operate on
 
 **Rich Domain Entities:**
+
 - `Case`: Aggregate root with factory methods (`create()`, `rehydrate()`), validation, immutability via `clone()`
 - `Person`: Value object with dual factory methods for creation vs rehydration, legacy `name` field support
 - Both entities have comprehensive validation and defensive cloning
 
 **ApplicationState Singleton:**
+
 - Map-based storage for cases, financials, notes, alerts, activities
 - `hydrate(storage)` method for loading initial state
 - Version tracking and listener pattern for change notifications
 - `resetForTesting()` utility for test isolation
 
 **Optimistic Update + Rollback Pattern:**
+
 ```typescript
 // 1. Optimistic update (add to state immediately)
 this.appState.addCase(caseEntity);
@@ -63,19 +67,20 @@ this.appState.addCase(caseEntity);
 try {
   // 2. Persist to storage
   await this.storage.cases.save(caseEntity);
-  logger.info('Case persisted successfully');
+  logger.info("Case persisted successfully");
   return caseEntity.clone();
 } catch (error) {
   // 3. Rollback on failure
-  logger.error('Failed to persist case, rolling back');
+  logger.error("Failed to persist case, rolling back");
   this.appState.removeCase(caseEntity.id);
-  throw new DomainError('Failed to create case', { cause: error });
+  throw new DomainError("Failed to create case", { cause: error });
 }
 ```
 
 ### 3. Files Created/Modified
 
 **Created:**
+
 - `domain/common/errors/DomainError.ts` (enhanced with cause/context)
 - `domain/common/errors/ValidationError.ts` (extends DomainError)
 - `domain/common/repositories/IRepository.ts` (base interface)
@@ -95,18 +100,21 @@ try {
 - `__tests__/infrastructure/StorageRepository.test.ts`
 
 **Modified:**
+
 - Updated `domain/common/repositories/IFinancialRepository.ts` signature (string category)
 - Enhanced error classes with structured error context
 
 ### 4. Test Coverage
 
 **New Tests Added:**
+
 - ✅ `CreateCase.test.ts`: 3 tests (optimistic update, rollback, validation)
 - ✅ `Case.test.ts`: 5 tests (factory, status transitions, archiving, validation)
 - ✅ `ApplicationState.test.ts`: 6 tests
 - ✅ `StorageRepository.test.ts`: 5 tests
 
 **Test Results:**
+
 - **Total Tests:** 277 tests passing
 - **Test Files:** 49 files
 - **Coverage:** Domain entities and use cases fully covered
@@ -120,21 +128,25 @@ try {
 ### 5. Architectural Decisions
 
 **ADR-001: Unified Repository Pattern**
+
 - **Decision:** Single `StorageRepository` class implementing all domain repository interfaces via adapters
 - **Rationale:** Simpler dependency injection, single file I/O coordination point, easier to reason about
 - **Alternative Rejected:** Separate repository per domain (would complicate DI and file coordination)
 
 **ADR-002: Rich Domain Entities Over DTOs**
+
 - **Decision:** Entities have factory methods, validation, business rules, and defensive cloning
 - **Rationale:** Encapsulates domain logic, prevents invalid states, provides immutability guarantees
 - **Alternative Rejected:** Simple DTOs with external validation (would scatter domain logic)
 
 **ADR-003: ApplicationState Singleton Over Zustand**
+
 - **Decision:** Singleton class with Map-based storage and listener pattern
 - **Rationale:** No external dependencies, full control over API, testable via `resetForTesting()`
 - **Alternative Rejected:** Zustand (adds dependency, less control over serialization)
 
 **ADR-004: Optimistic Updates with Structured Rollback**
+
 - **Decision:** Update state → persist → rollback on error with structured logging
 - **Rationale:** Immediate UI feedback, predictable error recovery, clear audit trail
 - **Alternative Rejected:** Pessimistic updates (would feel sluggish) or fire-and-forget (no error recovery)
@@ -160,6 +172,7 @@ try {
 ## Known Issues / Tech Debt
 
 **None.** All test failures were resolved:
+
 1. ✅ Fixed `personId` mismatch (added explicit `id: 'person-001'` in test helper)
 2. ✅ Fixed empty `personId` validation (updated test to not provide person object)
 
