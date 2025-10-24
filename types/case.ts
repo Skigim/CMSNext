@@ -91,10 +91,10 @@ export interface AlertRecord {
 }
 
 export const CASE_STATUS = {
-  Active: 'active',
-  Pending: 'pending',
-  Closed: 'closed',
-  Archived: 'archived',
+  Active: 'Active',
+  Pending: 'Pending',
+  Closed: 'Closed',
+  Archived: 'Archived',
 } as const;
 
 export type CaseStatus = typeof CASE_STATUS[keyof typeof CASE_STATUS];
