@@ -71,6 +71,10 @@ export class ApplicationState {
     ApplicationState.instance = null;
   }
 
+  static resetForTesting(): void {
+    ApplicationState.resetInstance();
+  }
+
   getVersion(): number {
     return this.version;
   }

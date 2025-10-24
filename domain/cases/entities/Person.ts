@@ -5,35 +5,94 @@ export interface ContactInfo {
   phone?: string;
 }
 
-export interface PersonSnapshot {
-  name: string;
-  dateOfBirth: string;
-  contactInfo: ContactInfo;
+export interface PersonProps {
+  id?: string;
+  firstName: string;
+  lastName: string;
+  dateOfBirth: string | Date;
+  contactInfo?: ContactInfo;
+  metadata?: Record<string, unknown>;
 }
 
-export interface PersonProps extends PersonSnapshot {}
+export interface PersonSnapshot {
+  id: string;
+  firstName: string;
+  lastName: string;
+  fullName: string;
+  dateOfBirth: string;
+  contactInfo: ContactInfo;
+  metadata: Record<string, unknown>;
+  /** Legacy support for persisted structures that only stored a single name field. */
+  name?: string;
+}
+
+type InternalPersonState = PersonSnapshot;
 
 /**
  * Immutable value object representing person details associated with a case.
  */
 export class Person {
-  private readonly snapshot: PersonSnapshot;
+  private readonly state: InternalPersonState;
 
-  constructor(props: PersonProps) {
-    this.snapshot = {
-      name: Person.normalizeName(props.name),
-      dateOfBirth: Person.normalizeDate(props.dateOfBirth),
-      contactInfo: Person.freezeContactInfo(props.contactInfo ?? {}),
+  private constructor(state: InternalPersonState) {
+    this.state = {
+      ...state,
+      contactInfo: Person.cloneContactInfo(state.contactInfo),
+      metadata: Person.cloneMetadata(state.metadata),
     };
 
     this.validate();
   }
 
   /**
-   * Recreate a person value object from persisted data.
+   * Create a new person value object, generating identifiers and normalising props as needed.
+   */
+  static create(props: PersonProps): Person {
+    return new Person({
+      id: Person.normalizeId(props.id),
+      firstName: Person.normalizeName(props.firstName),
+      lastName: Person.normalizeName(props.lastName),
+      fullName: Person.composeFullName(props.firstName, props.lastName),
+      dateOfBirth: Person.normalizeDate(props.dateOfBirth),
+      contactInfo: Person.normalizeContactInfo(props.contactInfo),
+      metadata: Person.cloneMetadata(props.metadata ?? {}),
+    });
+  }
+
+  /**
+   * Recreate a person from a persisted snapshot.
    */
   static rehydrate(snapshot: PersonSnapshot): Person {
-    return new Person(snapshot);
+    let firstName = Person.normalizeName(snapshot.firstName ?? '');
+    let lastName = Person.normalizeName(snapshot.lastName ?? '');
+
+    if ((!firstName || !lastName) && snapshot.name) {
+      const parts = snapshot.name.trim().split(/\s+/);
+      if (!firstName && parts.length > 0) {
+        firstName = parts[0];
+      }
+      if (!lastName && parts.length > 1) {
+        lastName = parts.slice(1).join(' ');
+      }
+    }
+
+    const derivedFullName = snapshot.fullName
+      || snapshot.name
+      || Person.composeFullName(firstName, lastName);
+
+    return new Person({
+      id: snapshot.id,
+      firstName,
+      lastName,
+      fullName: derivedFullName,
+      dateOfBirth: Person.normalizeDate(snapshot.dateOfBirth),
+      contactInfo: Person.cloneContactInfo(snapshot.contactInfo ?? {}),
+      metadata: Person.cloneMetadata(snapshot.metadata ?? {}),
+    });
+  }
+
+  clone(): Person {
+    return Person.rehydrate(this.toJSON());
   }
 
   /**
@@ -41,79 +100,142 @@ export class Person {
    */
   toJSON(): PersonSnapshot {
     return {
-      name: this.snapshot.name,
-      dateOfBirth: this.snapshot.dateOfBirth,
-      contactInfo: Person.cloneContactInfo(this.snapshot.contactInfo),
+      id: this.id,
+      firstName: this.firstName,
+      lastName: this.lastName,
+      fullName: this.fullName,
+      dateOfBirth: this.dateOfBirth,
+      contactInfo: Person.cloneContactInfo(this.contactInfo),
+      metadata: Person.cloneMetadata(this.metadata),
     };
   }
 
-  /**
-   * Person's full display name.
-   */
-  get name(): string {
-    return this.snapshot.name;
+  get id(): string {
+    return this.state.id;
   }
 
-  /**
-   * Date of birth stored as ISO 8601 string.
-   */
+  get firstName(): string {
+    return this.state.firstName;
+  }
+
+  get lastName(): string {
+    return this.state.lastName;
+  }
+
+  get fullName(): string {
+    return this.state.fullName;
+  }
+
   get dateOfBirth(): string {
-    return this.snapshot.dateOfBirth;
+    return this.state.dateOfBirth;
   }
 
-  /**
-   * Contact information (email, phone, etc.).
-   */
   get contactInfo(): ContactInfo {
-    return Person.cloneContactInfo(this.snapshot.contactInfo);
+    return Person.cloneContactInfo(this.state.contactInfo);
+  }
+
+  get metadata(): Record<string, unknown> {
+    return Person.cloneMetadata(this.state.metadata);
   }
 
   private validate(): void {
-    if (!this.snapshot.name.trim()) {
-      throw new ValidationError('Person name cannot be empty');
+    if (!this.state.firstName.trim()) {
+      throw new ValidationError('Person first name cannot be empty');
     }
 
-    if (!Person.isValidIsoDate(this.snapshot.dateOfBirth)) {
+    if (!this.state.lastName.trim()) {
+      throw new ValidationError('Person last name cannot be empty');
+    }
+
+    if (!Person.isValidIsoDate(this.state.dateOfBirth)) {
       throw new ValidationError('Person date of birth must be a valid ISO-8601 date string');
     }
 
-    const { email, phone } = this.snapshot.contactInfo;
+    const { email, phone } = this.state.contactInfo;
     if (email && !Person.emailPattern.test(email)) {
       throw new ValidationError('Person email address is invalid');
     }
 
-    if (phone && !Person.phonePattern.test(Person.normalizedPhone(phone))) {
+    if (phone && !Person.phonePattern.test(Person.normalizePhone(phone))) {
       throw new ValidationError('Person phone number is invalid');
     }
+
+    if (typeof this.state.metadata !== 'object' || this.state.metadata === null) {
+      throw new ValidationError('Person metadata must be an object');
+    }
   }
 
-  private static normalizeName(name: string): string {
-    return name.trim();
-  }
-
-  private static normalizeDate(value: string): string {
-    if (Person.isValidIsoDate(value)) {
-      return new Date(value).toISOString();
+  private static normalizeId(id?: string): string {
+    const trimmed = id?.trim();
+    if (trimmed) {
+      return trimmed;
     }
 
-    return value;
+    if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+      return crypto.randomUUID();
+    }
+
+    return `person-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
   }
 
-  private static isValidIsoDate(value: string): boolean {
-    const timestamp = Date.parse(value);
-    return Number.isFinite(timestamp);
+  private static normalizeName(value: string): string {
+    return value.trim();
   }
 
-  private static normalizedPhone(value: string): string {
+  private static composeFullName(firstName: string, lastName: string): string {
+    const first = `${firstName}`.trim();
+    const last = `${lastName}`.trim();
+
+    if (first && last) {
+      return `${first} ${last}`;
+    }
+
+    return first || last;
+  }
+
+  private static normalizeDate(value: string | Date): string {
+    if (value instanceof Date) {
+      return value.toISOString();
+    }
+
+    if (!Person.isValidIsoDate(value)) {
+      throw new ValidationError('Person date of birth must be a valid ISO-8601 date string');
+    }
+
+    return new Date(value).toISOString();
+  }
+
+  private static normalizeContactInfo(contactInfo?: ContactInfo): ContactInfo {
+    if (!contactInfo) {
+      return {};
+    }
+
+    const normalized: ContactInfo = {};
+    if (contactInfo.email) {
+      normalized.email = contactInfo.email.trim();
+    }
+
+    if (contactInfo.phone) {
+      normalized.phone = contactInfo.phone.trim();
+    }
+
+    return normalized;
+  }
+
+  private static normalizePhone(value: string): string {
     return value.replace(/[^\d]/g, '');
   }
 
-  private static freezeContactInfo(contactInfo: ContactInfo): ContactInfo {
-    return Object.freeze({ ...contactInfo });
+  private static isValidIsoDate(value: string): boolean {
+    return Number.isFinite(Date.parse(value));
   }
 
   private static cloneContactInfo(contactInfo: ContactInfo): ContactInfo {
     return { ...contactInfo };
+  }
+
+  private static cloneMetadata(metadata: Record<string, unknown>): Record<string, unknown> {
+    return JSON.parse(JSON.stringify(metadata ?? {}));
   }
 
   private static readonly emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;

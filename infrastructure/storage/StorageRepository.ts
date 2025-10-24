@@ -1,6 +1,6 @@
 import AutosaveFileService from '@/utils/AutosaveFileService';
 import { Case, type CaseSnapshot } from '@/domain/cases/entities/Case';
-import type { FinancialItem, FinancialCategory } from '@/domain/financials/entities/FinancialItem';
+import type { FinancialItem } from '@/domain/financials/entities/FinancialItem';
 import type { Note, NoteCategory } from '@/domain/notes/entities/Note';
 import type { Alert } from '@/domain/alerts/entities/Alert';
 import type { ActivityEvent } from '@/domain/activity/entities/ActivityEvent';
@@ -63,7 +63,7 @@ export class StorageRepository
       save: entity => this.runWithDomain('financials', () => this.save(entity)),
       delete: id => this.runWithDomain('financials', () => this.delete(id)),
       getByCaseId: caseId => this.runWithDomain('financials', () => this.getByCaseId(caseId)),
-      getByCategory: category => this.runWithDomain('financials', () => this.getByCategory(category)),
+  getByCategory: category => this.runWithDomain('financials', () => this.getByCategory(category)),
     };
 
     this.noteAdapter = {
@@ -265,7 +265,7 @@ export class StorageRepository
     );
   }
 
-  async getByCategory(category: FinancialCategory): Promise<FinancialItem[]> {
+  async getByCategory(category: string): Promise<FinancialItem[]> {
     if (this.domainHint !== 'financials') {
       throw new Error('StorageRepository.getByCategory can only be used for the financials domain');
     }

@@ -1,0 +1,101 @@
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { CreateCaseUseCase } from '@/domain/cases/use-cases/CreateCase';
+import { ApplicationState } from '@/application/ApplicationState';
+import type { StorageRepository } from '@/infrastructure/storage/StorageRepository';
+import type { ICaseRepository } from '@/domain/common/repositories';
+
+const buildPersonInput = () => ({
+  firstName: 'Jane',
+  lastName: 'Doe',
+  dateOfBirth: new Date('1990-01-01'),
+});
+
+describe('CreateCaseUseCase', () => {
+  let appState: ApplicationState;
+  let mockStorage: StorageRepository;
+  let mockCaseRepository: ICaseRepository;
+
+  beforeEach(() => {
+    ApplicationState.resetForTesting();
+    appState = ApplicationState.getInstance();
+
+    mockCaseRepository = {
+      save: vi.fn().mockResolvedValue(undefined),
+      getAll: vi.fn().mockResolvedValue([]),
+      getById: vi.fn(),
+      delete: vi.fn(),
+      findByMCN: vi.fn(),
+      searchCases: vi.fn(),
+    } as unknown as ICaseRepository;
+
+    mockStorage = {
+      cases: mockCaseRepository,
+    } as unknown as StorageRepository;
+  });
+
+  it('creates a case with optimistic update and persists it', async () => {
+    const useCase = new CreateCaseUseCase(appState, mockStorage);
+
+    const result = await useCase.execute({
+      mcn: 'MCN-001',
+      name: 'Sample Case',
+      person: buildPersonInput(),
+      metadata: { createdBy: 'unit-test' },
+    });
+
+    expect(result).toBeDefined();
+    expect(result.mcn).toBe('MCN-001');
+    expect(result.name).toBe('Sample Case');
+
+    const cases = appState.getCases();
+    expect(cases).toHaveLength(1);
+    expect(cases[0].id).toBe(result.id);
+
+    expect(mockCaseRepository.save).toHaveBeenCalledTimes(1);
+    expect(mockCaseRepository.save).toHaveBeenCalledWith(expect.objectContaining({ id: result.id }));
+  });
+
+  it('rolls back optimistic update when persistence fails', async () => {
+    mockCaseRepository.save = vi.fn().mockRejectedValue(new Error('persist failed'));
+
+    const useCase = new CreateCaseUseCase(appState, mockStorage);
+
+    await expect(
+      useCase.execute({
+        mcn: 'MCN-002',
+        name: 'Failure Case',
+        person: buildPersonInput(),
+      }),
+    ).rejects.toThrow('Failed to create case');
+
+    expect(appState.getCases()).toHaveLength(0);
+  });
+
+  it('validates required fields', async () => {
+    const useCase = new CreateCaseUseCase(appState, mockStorage);
+
+    await expect(
+      useCase.execute({
+        mcn: '',
+        name: 'Incomplete Case',
+        person: buildPersonInput(),
+      }),
+    ).rejects.toThrow('MCN is required');
+
+    await expect(
+      useCase.execute({
+        mcn: 'MCN-003',
+        name: '',
+        person: buildPersonInput(),
+      }),
+    ).rejects.toThrow('Case name is required');
+
+    await expect(
+      useCase.execute({
+        mcn: 'MCN-004',
+        name: 'Missing Person',
+        person: { ...buildPersonInput(), firstName: '' },
+      }),
+    ).rejects.toThrow('Person first name is required');
+  });
+});

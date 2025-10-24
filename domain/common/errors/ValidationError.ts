@@ -1,8 +1,8 @@
-import { DomainError } from './DomainError';
+import { DomainError, type DomainErrorOptions } from './DomainError';
 
 export class ValidationError extends DomainError {
-  constructor(message: string) {
-    super(message);
+  constructor(message: string, options: DomainErrorOptions = {}) {
+    super(message, options);
     this.name = 'ValidationError';
   }
 }

@@ -26,7 +26,7 @@ export interface CaseCreateInput {
   status?: CaseStatus;
   createdAt?: string | Date;
   updatedAt?: string | Date;
-  person?: Person | PersonProps;
+  person?: Person | PersonProps | PersonSnapshot;
 }
 
 type InternalCaseProps = CaseSnapshot & { person?: Person };
@@ -42,7 +42,7 @@ export class Case {
     this.props = {
       ...props,
       metadata: Case.cloneMetadata(props.metadata),
-      person: props.person,
+      person: props.person?.clone(),
     };
 
     this.validate();
@@ -54,13 +54,14 @@ export class Case {
   static create(input: CaseCreateInput): Case {
     const now = new Date();
     const person = Case.normalizePerson(input.person);
+    const personId = person ? person.id : Case.normalizePersonId(input.personId);
 
     return new Case({
       id: input.id?.trim() || Case.generateId(),
       mcn: Case.normalizeMcn(input.mcn),
       name: Case.normalizeName(input.name),
   status: input.status ?? CASE_STATUS.Active,
-      personId: Case.normalizePersonId(input.personId),
+      personId,
       createdAt: Case.normalizeDate(input.createdAt ?? now),
       updatedAt: Case.normalizeDate(input.updatedAt ?? now),
       metadata: Case.cloneMetadata(input.metadata ?? {}),
@@ -106,7 +107,7 @@ export class Case {
       createdAt: this.createdAt,
       updatedAt: this.updatedAt,
       metadata: Case.cloneMetadata(this.metadata),
-      person: this.person ? this.person.toJSON() : undefined,
+  person: this.props.person ? this.props.person.toJSON() : undefined,
     };
   }
 
@@ -152,7 +153,7 @@ export class Case {
 
   /** Optional associated person details. */
   get person(): Person | undefined {
-    return this.props.person ? Person.rehydrate(this.props.person.toJSON()) : undefined;
+    return this.props.person ? this.props.person.clone() : undefined;
   }
 
   /** Update the case display name, applying validation. */
@@ -249,10 +250,14 @@ export class Case {
     }
 
     if (person instanceof Person) {
-      return Person.rehydrate(person.toJSON());
+      return person.clone();
     }
 
-    return new Person(person);
+    if (typeof person === 'object' && 'id' in person && ('fullName' in person || 'name' in person)) {
+      return Person.rehydrate(person as PersonSnapshot);
+    }
+
+    return Person.create(person as PersonProps);
   }
 
   private static normalizeMcn(mcn: string): string {
