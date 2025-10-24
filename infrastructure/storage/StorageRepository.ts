@@ -155,19 +155,19 @@ export class StorageRepository
   async save(entity: DomainEntity): Promise<void> {
     const storage = await this.readStorage();
 
-    if (StorageRepository.isCase(entity) || this.domainHint === 'cases') {
+    if (this.domainHint === 'cases') {
       const cloned = this.clone(entity) as Case;
       storage.cases = StorageRepository.upsert<Case>(storage.cases, cloned);
-    } else if (StorageRepository.isFinancialItem(entity) || this.domainHint === 'financials') {
+    } else if (this.domainHint === 'financials') {
       const cloned = this.clone(entity) as FinancialItem;
       storage.financials = StorageRepository.upsert<FinancialItem>(storage.financials, cloned);
-    } else if (StorageRepository.isNote(entity) || this.domainHint === 'notes') {
+    } else if (this.domainHint === 'notes') {
       const cloned = this.clone(entity) as Note;
       storage.notes = StorageRepository.upsert<Note>(storage.notes, cloned);
-    } else if (StorageRepository.isAlert(entity) || this.domainHint === 'alerts') {
+    } else if (this.domainHint === 'alerts') {
       const cloned = this.clone(entity) as Alert;
       storage.alerts = StorageRepository.upsert<Alert>(storage.alerts, cloned);
-    } else if (StorageRepository.isActivity(entity) || this.domainHint === 'activities') {
+    } else if (this.domainHint === 'activities') {
       const cloned = this.clone(entity) as ActivityEvent;
       storage.activities = StorageRepository.upsert<ActivityEvent>(storage.activities, cloned);
     } else {
@@ -389,38 +389,6 @@ export class StorageRepository
     }
 
     return [...collection, entity];
-  }
-
-  private static isCase(entity: DomainEntity): entity is Case {
-    return (
-      typeof (entity as Case)?.mcn === 'string' &&
-      typeof (entity as Case)?.personId === 'string'
-    );
-  }
-
-  private static isFinancialItem(entity: DomainEntity): entity is FinancialItem {
-    return (
-      typeof (entity as FinancialItem)?.caseId === 'string' &&
-      typeof (entity as FinancialItem)?.category === 'string'
-    );
-  }
-
-  private static isNote(entity: DomainEntity): entity is Note {
-    return (
-      typeof (entity as Note)?.caseId === 'string' &&
-      typeof (entity as Note)?.content === 'string'
-    );
-  }
-
-  private static isAlert(entity: DomainEntity): entity is Alert {
-    return typeof (entity as Alert)?.status === 'string';
-  }
-
-  private static isActivity(entity: DomainEntity): entity is ActivityEvent {
-    return (
-      typeof (entity as ActivityEvent)?.aggregateId === 'string' &&
-      typeof (entity as ActivityEvent)?.eventType === 'string'
-    );
   }
 }
 
