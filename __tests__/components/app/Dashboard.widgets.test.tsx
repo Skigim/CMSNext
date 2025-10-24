@@ -2,7 +2,7 @@ import { act, render, screen, waitFor, within, cleanup } from "@testing-library/
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { Dashboard } from "@/components/app/Dashboard";
-import type { CaseDisplay } from "@/types/case";
+import { CASE_STATUS, type CaseDisplay } from "@/types/case";
 import type { AlertsIndex, AlertWithMatch } from "@/utils/alertsData";
 import type { CaseActivityEntry, CaseActivityLogState } from "@/types/activityLog";
 import { AvgAlertAgeWidget } from "@/components/app/widgets/AvgAlertAgeWidget";
@@ -14,7 +14,7 @@ function createCase(overrides: Partial<CaseDisplay> = {}): CaseDisplay {
     id: overrides.id ?? "case-1",
     name: overrides.name ?? "Sample Case",
     mcn: overrides.mcn ?? "MCN-1",
-    status: overrides.status ?? "Pending",
+    status: overrides.status ?? CASE_STATUS.Pending,
     priority: overrides.priority ?? false,
     createdAt: createdDate,
     updatedAt: overrides.updatedAt ?? createdDate,
@@ -138,8 +138,8 @@ describe("Dashboard widgets integration", () => {
 
   it("renders all eight widgets", async () => {
     const cases: CaseDisplay[] = [
-      createCase({ id: "case-1", status: "Pending" }),
-      createCase({ id: "case-2", status: "Closed" }),
+      createCase({ id: "case-1", status: CASE_STATUS.Pending }),
+      createCase({ id: "case-2", status: CASE_STATUS.Closed }),
     ];
 
     const alerts = [
@@ -193,8 +193,8 @@ describe("Dashboard widgets integration", () => {
     vi.setSystemTime(new Date("2025-10-22T00:00:00Z"));
 
     const cases: CaseDisplay[] = [
-      createCase({ id: "case-1", status: "Pending" }),
-      createCase({ id: "case-2", status: "Approved" }),
+      createCase({ id: "case-1", status: CASE_STATUS.Pending }),
+      createCase({ id: "case-2", status: CASE_STATUS.Active }),
     ];
 
     const initialAlerts = [

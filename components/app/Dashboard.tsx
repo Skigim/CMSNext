@@ -194,7 +194,7 @@ export function Dashboard({ cases, alerts, activityLogState, onViewAllCases, onN
   const totalCases = cases.length;
 
   const statusCount = useCallback(
-    (status: CaseDisplay["status"]) =>
+    (status: string) =>
       validCases.filter(c => c.caseRecord.status === status).length,
     [validCases],
   );

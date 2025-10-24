@@ -4,7 +4,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import ApplicationState from "@/application/ApplicationState";
 import { Dashboard } from "@/components/app/Dashboard";
 import type { CaseActivityEntry, CaseActivityLogState } from "@/types/activityLog";
-import type { CaseDisplay } from "@/types/case";
+import { CASE_STATUS, type CaseDisplay } from "@/types/case";
 import type { AlertsIndex, AlertWithMatch } from "@/utils/alertsData";
 
 function createCase(overrides: Partial<CaseDisplay> = {}): CaseDisplay {
@@ -13,7 +13,7 @@ function createCase(overrides: Partial<CaseDisplay> = {}): CaseDisplay {
     id: overrides.id ?? "case-1",
     name: overrides.name ?? "Sample Case",
     mcn: overrides.mcn ?? "MCN-1",
-    status: overrides.status ?? "Pending",
+    status: overrides.status ?? CASE_STATUS.Pending,
     priority: overrides.priority ?? false,
     createdAt: createdDate,
     updatedAt: overrides.updatedAt ?? createdDate,
@@ -146,7 +146,7 @@ describe("feature flag integration", () => {
   });
 
   function renderDashboard() {
-    const cases: CaseDisplay[] = [createCase({ id: "case-1" }), createCase({ id: "case-2", status: "Closed" })];
+    const cases: CaseDisplay[] = [createCase({ id: "case-1" }), createCase({ id: "case-2", status: CASE_STATUS.Closed })];
     const alerts = [
       createAlert({ id: "alert-1", status: "resolved", resolvedAt: "2025-10-20T00:00:00Z" }),
       createAlert({ id: "alert-2", status: "in-progress", resolvedAt: null }),
