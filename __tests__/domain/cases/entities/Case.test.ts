@@ -2,8 +2,8 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { Case, type CaseCreateInput } from '@/domain/cases/entities/Case';
 import { CASE_STATUS } from '@/types/case';
 import { Person } from '@/domain/cases/entities/Person';
-import DomainError from '@/domain/common/errors/DomainError';
-import ValidationError from '@/domain/common/errors/ValidationError';
+import { DomainError } from '@/domain/common/errors/DomainError';
+import { ValidationError } from '@/domain/common/errors/ValidationError';
 
 const createInput = (overrides: Partial<CaseCreateInput> = {}): CaseCreateInput => ({
   mcn: 'MCN-1001',

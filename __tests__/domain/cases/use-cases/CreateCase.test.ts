@@ -3,7 +3,7 @@ import ApplicationState from '@/application/ApplicationState';
 import StorageRepository from '@/infrastructure/storage/StorageRepository';
 import { CASE_STATUS } from '@/types/case';
 import { CreateCaseUseCase, type CreateCaseInput } from '@/domain/cases/use-cases/CreateCase';
-import ValidationError from '@/domain/common/errors/ValidationError';
+import { ValidationError } from '@/domain/common/errors/ValidationError';
 
 class StorageRepositoryStub {
   public readonly savedCases: unknown[] = [];

@@ -1,5 +1,5 @@
-import DomainError from '@/domain/common/errors/DomainError';
-import ValidationError from '@/domain/common/errors/ValidationError';
+import { DomainError } from '@/domain/common/errors/DomainError';
+import { ValidationError } from '@/domain/common/errors/ValidationError';
 import { CASE_STATUS, CASE_STATUS_VALUES, type CaseStatus } from '@/types/case';
 import { Person, type PersonProps, type PersonSnapshot } from './Person';
 

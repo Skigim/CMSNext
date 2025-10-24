@@ -1,7 +1,7 @@
 import ApplicationState from '@/application/ApplicationState';
 import StorageRepository from '@/infrastructure/storage/StorageRepository';
 import { Case, type CaseCreateInput } from '@/domain/cases/entities/Case';
-import ValidationError from '@/domain/common/errors/ValidationError';
+import { ValidationError } from '@/domain/common/errors/ValidationError';
 
 export type CreateCaseInput = Omit<CaseCreateInput, 'id' | 'createdAt' | 'updatedAt' | 'status'> & {
   status?: CaseCreateInput['status'];
