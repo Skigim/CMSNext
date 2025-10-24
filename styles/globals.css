@@ -120,41 +120,42 @@
 }
 
 .soft-dark {
-  --background: oklch(0.18 0.01 240);
-  --foreground: oklch(0.92 0.01 240);
-  --card: oklch(0.22 0.01 240);
-  --card-foreground: oklch(0.92 0.01 240);
-  --popover: oklch(0.22 0.01 240);
-  --popover-foreground: oklch(0.92 0.01 240);
-  --primary: oklch(0.75 0.15 240);
-  --primary-foreground: oklch(0.1 0.01 240);
-  --secondary: oklch(0.3 0.02 240);
-  --secondary-foreground: oklch(0.92 0.01 240);
-  --muted: oklch(0.26 0.02 240);
-  --muted-foreground: oklch(0.65 0.02 240);
-  --accent: oklch(0.28 0.02 240);
-  --accent-foreground: oklch(0.92 0.01 240);
-  --destructive: oklch(0.55 0.15 15);
-  --destructive-foreground: oklch(0.95 0.05 15);
-  --border: oklch(0.32 0.02 240);
-  --input: oklch(0.16 0.015 240);
-  --input-background: oklch(0.16 0.015 240);
-  --ring: oklch(0.75 0.15 240);
+  /* GitHub soft dark (increased contrast) palette */
+  --background: oklch(0.125 0.01 240); /* #0d1117 */
+  --foreground: oklch(0.96 0.005 240); /* #f0f6fc */
+  --card: oklch(0.16 0.01 240); /* #161b22 */
+  --card-foreground: oklch(0.96 0.005 240); /* #f0f6fc */
+  --popover: oklch(0.16 0.01 240); /* #161b22 */
+  --popover-foreground: oklch(0.96 0.005 240); /* #f0f6fc */
+  --primary: oklch(0.68 0.12 240); /* #58a6ff - GitHub blue */
+  --primary-foreground: oklch(0.125 0.01 240); /* dark bg for contrast */
+  --secondary: oklch(0.24 0.015 240); /* #21262d */
+  --secondary-foreground: oklch(0.96 0.005 240); /* #f0f6fc */
+  --muted: oklch(0.24 0.015 240); /* #21262d */
+  --muted-foreground: oklch(0.6 0.01 240); /* #8b949e */
+  --accent: oklch(0.24 0.015 240); /* #21262d */
+  --accent-foreground: oklch(0.96 0.005 240); /* #f0f6fc */
+  --destructive: oklch(0.55 0.18 20); /* reddish */
+  --destructive-foreground: oklch(0.96 0.005 240);
+  --border: oklch(0.27 0.015 240); /* #30363d */
+  --input: oklch(0.125 0.01 240); /* #0d1117 */
+  --input-background: oklch(0.125 0.01 240); /* #0d1117 */
+  --ring: oklch(0.68 0.12 240); /* #58a6ff */
   --font-weight-medium: 500;
   --font-weight-normal: 400;
-  --chart-1: oklch(0.6 0.2 260);
-  --chart-2: oklch(0.65 0.15 180);
-  --chart-3: oklch(0.7 0.18 80);
-  --chart-4: oklch(0.6 0.25 320);
-  --chart-5: oklch(0.65 0.2 20);
-  --sidebar: oklch(0.22 0.01 240);
-  --sidebar-foreground: oklch(0.92 0.01 240);
-  --sidebar-primary: oklch(0.75 0.15 240);
-  --sidebar-primary-foreground: oklch(0.1 0.01 240);
-  --sidebar-accent: oklch(0.28 0.02 240);
-  --sidebar-accent-foreground: oklch(0.92 0.01 240);
-  --sidebar-border: oklch(0.32 0.02 240);
-  --sidebar-ring: oklch(0.75 0.15 240);
+  --chart-1: oklch(0.68 0.12 240); /* blue */
+  --chart-2: oklch(0.65 0.15 160); /* teal */
+  --chart-3: oklch(0.7 0.18 80); /* yellow */
+  --chart-4: oklch(0.6 0.2 320); /* purple */
+  --chart-5: oklch(0.65 0.18 20); /* orange */
+  --sidebar: oklch(0.16 0.01 240); /* #161b22 */
+  --sidebar-foreground: oklch(0.96 0.005 240); /* #f0f6fc */
+  --sidebar-primary: oklch(0.68 0.12 240); /* #58a6ff */
+  --sidebar-primary-foreground: oklch(0.125 0.01 240);
+  --sidebar-accent: oklch(0.24 0.015 240); /* #21262d */
+  --sidebar-accent-foreground: oklch(0.96 0.005 240);
+  --sidebar-border: oklch(0.27 0.015 240); /* #30363d */
+  --sidebar-ring: oklch(0.68 0.12 240); /* #58a6ff */
 }
 
 .warm {
@@ -389,9 +390,16 @@
 
 /* Wiggle animation for delete button */
 @keyframes wiggle {
-  0%, 100% { transform: rotate(0deg); }
-  25% { transform: rotate(-3deg); }
-  75% { transform: rotate(3deg); }
+  0%,
+  100% {
+    transform: rotate(0deg);
+  }
+  25% {
+    transform: rotate(-3deg);
+  }
+  75% {
+    transform: rotate(3deg);
+  }
 }
 
 @layer base {
@@ -446,7 +454,9 @@
     @apply rounded-md transition-colors;
   }
 
-  .rdp-button:hover:not([disabled]):not(.rdp-day_selected):not(.rdp-day_disabled) {
+  .rdp-button:hover:not([disabled]):not(.rdp-day_selected):not(
+      .rdp-day_disabled
+    ) {
     @apply bg-accent text-accent-foreground;
   }
 
