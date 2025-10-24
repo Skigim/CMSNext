@@ -10,7 +10,7 @@
 
 - **Storage Layer:** Filesystem-only via `FileStorageAPI` → `AutosaveFileService` → File System Access API
 - **State Management:** `ApplicationState` class provides centralized domain state with immutable updates
-- **Testing:** Full suite passing (270 tests), including dashboard widget integration tests
+- **Testing:** Full suite passing (281 tests), including dashboard widget integration tests
 - **Shadcn Migration:** 100% complete (PR #28 merged Oct 15, 2025)
 
 ### Recent Completions
@@ -542,7 +542,7 @@ it("hides feature when flag disabled", () => {
 - ✅ ApplicationState flag integration tested
 - ✅ Dashboard widget filtering tested
 - ✅ Integration tests cover flag toggling scenarios
-- ✅ Full suite maintains 100% pass rate (270 tests)
+- ✅ Full suite maintains 100% pass rate (281 tests)
 
 ### Documentation
 - ✅ Feature flag guide created

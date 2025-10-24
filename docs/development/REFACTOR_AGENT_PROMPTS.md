@@ -106,6 +106,7 @@ Transform CMSNext from a monolithic React application into a clean, domain-drive
 - **Domain boundaries** (5 independent domains with clear responsibilities)
 - **Worker-ready interfaces** (prepare for performance offloading)
 - **Zero manual syncs** (eliminate all `safeNotifyFileStorageChange()` calls)
+  - Note: `AutosaveFileService` handles `safeNotifyFileStorageChange()` internally after writes; manual project-wide calls have been eliminated
 - **85%+ test coverage** for domain logic (up from ~40%)
 
 **Critical Constraints:**
@@ -183,8 +184,6 @@ Ready for: Phase <N+1>
 - ✅ All telemetry baselines captured (Phase 4 complete)
 - ✅ 211/211 tests passing
 - ✅ Performance benchmarks documented
-
-### Day 1-2: Repository Interfaces & Folder Structure
 
 ### Day 1-2: Repository Interfaces & Folder Structure
 
@@ -271,6 +270,7 @@ Ready for: Phase <N+1>
    ```
 
 3. **Create StorageRepository** (`infrastructure/storage/StorageRepository.ts`):
+
    ```typescript
    /**
     * Unified storage implementation that wraps AutosaveFileService
@@ -583,6 +583,7 @@ describe("ApplicationState", () => {
    ```
 
 4. **Update useConnectionFlow** to hydrate state:
+
    ```typescript
    // In hooks/useConnectionFlow.ts
    const handleConnect = async (directoryHandle: FileSystemDirectoryHandle) => {
@@ -739,6 +740,7 @@ describe("ApplicationState", () => {
    ```
 
 4. **Integrate telemetry with event bus**:
+
    ```typescript
    // application/services/TelemetryEventLogger.ts
    export class TelemetryEventLogger {
@@ -919,6 +921,7 @@ describe("EventBus", () => {
    ```
 
 3. **Add dual-write during migration** (temporary):
+
    ```typescript
    // application/migration/DualWriteManager.ts
    export class DualWriteManager {
@@ -1564,6 +1567,7 @@ describe("Case Use Cases", () => {
    ```
 
 4. **Create React hook wrapper** (`src/application/hooks/useCases.ts`):
+
    ```typescript
    export function useCases() {
      const appState = ApplicationState.getInstance();
@@ -2001,6 +2005,7 @@ describe("Case Use Cases", () => {
    ```
 
 3. **Create WorkerBridge abstraction** (`infrastructure/worker/WorkerBridge.ts`):
+
    ```typescript
    /**
     * Abstraction for offloading work to Web Workers.

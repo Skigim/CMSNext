@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { Case, CaseStatus, type CaseCreateInput } from '@/domain/cases/entities/Case';
+import { Case, type CaseCreateInput } from '@/domain/cases/entities/Case';
+import { CASE_STATUS } from '@/types/case';
 import { Person } from '@/domain/cases/entities/Person';
 import DomainError from '@/domain/common/errors/DomainError';
 import ValidationError from '@/domain/common/errors/ValidationError';
@@ -26,7 +27,7 @@ describe('Case aggregate', () => {
     const result = Case.create(createInput());
 
     expect(result.id).toMatch(/case-|[0-9a-f-]{8,}/i);
-    expect(result.status).toBe(CaseStatus.Active);
+  expect(result.status).toBe(CASE_STATUS.Active);
     expect(result.metadata).toEqual({ source: 'unit-test' });
     expect(result.personId).toBe('person-001');
     expect(result.person?.name).toBe('Sample Person');
@@ -43,9 +44,9 @@ describe('Case aggregate', () => {
     const nextTimestamp = new Date('2025-02-01T12:00:00.000Z');
     vi.setSystemTime(nextTimestamp);
 
-    base.updateStatus(CaseStatus.Pending);
+  base.updateStatus(CASE_STATUS.Pending);
 
-    expect(base.status).toBe(CaseStatus.Pending);
+  expect(base.status).toBe(CASE_STATUS.Pending);
     expect(Date.parse(base.updatedAt)).toBe(nextTimestamp.getTime());
     expect(Date.parse(initialUpdatedAt)).toBeLessThan(Date.parse(base.updatedAt));
   });
@@ -53,10 +54,10 @@ describe('Case aggregate', () => {
   it('prevents invalid status transitions', () => {
     const base = Case.create(createInput());
 
-    expect(() => base.updateStatus(CaseStatus.Archived)).toThrow(DomainError);
+  expect(() => base.updateStatus(CASE_STATUS.Archived)).toThrow(DomainError);
 
-    base.updateStatus(CaseStatus.Closed);
-    expect(() => base.updateStatus(CaseStatus.Active)).toThrow(DomainError);
+  base.updateStatus(CASE_STATUS.Closed);
+  expect(() => base.updateStatus(CASE_STATUS.Active)).toThrow(DomainError);
   });
 
   it('only allows archiving closed cases', () => {
@@ -64,10 +65,10 @@ describe('Case aggregate', () => {
 
     expect(() => base.archive()).toThrow(DomainError);
 
-    base.updateStatus(CaseStatus.Closed);
+  base.updateStatus(CASE_STATUS.Closed);
     base.archive();
 
-    expect(base.status).toBe(CaseStatus.Archived);
+  expect(base.status).toBe(CASE_STATUS.Archived);
   });
 
   it('validates structural invariants', () => {

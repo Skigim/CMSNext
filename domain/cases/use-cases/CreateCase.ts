@@ -25,7 +25,13 @@ export class CreateCaseUseCase {
     const caseEntity = Case.create(input);
 
     this.appState.addCase(caseEntity);
-    await this.storage.cases.save(caseEntity);
+
+    try {
+      await this.storage.cases.save(caseEntity);
+    } catch (error) {
+      this.appState.removeCase(caseEntity.id);
+      throw error;
+    }
 
     return caseEntity.clone();
   }

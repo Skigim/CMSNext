@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import ApplicationState from '@/application/ApplicationState';
 import StorageRepository from '@/infrastructure/storage/StorageRepository';
-import { CaseStatus } from '@/domain/cases/entities/Case';
+import { CASE_STATUS } from '@/types/case';
 import { CreateCaseUseCase, type CreateCaseInput } from '@/domain/cases/use-cases/CreateCase';
 import ValidationError from '@/domain/common/errors/ValidationError';
 
@@ -51,7 +51,7 @@ describe('CreateCaseUseCase', () => {
     const result = await useCase.execute(baseInput);
 
     expect(result.name).toBe('Integration Case');
-    expect(result.status).toBe(CaseStatus.Active);
+  expect(result.status).toBe(CASE_STATUS.Active);
     expect(ApplicationState.getInstance().getCase(result.id)).not.toBeNull();
     expect(storageStub.cases.save).toHaveBeenCalledWith(expect.anything());
     expect(storageStub.savedCases).toHaveLength(1);
@@ -74,10 +74,20 @@ describe('CreateCaseUseCase', () => {
 
     expect(() => {
       // Attempt to mutate the returned entity should not affect application state
-      result.updateStatus(CaseStatus.Pending);
+  result.updateStatus(CASE_STATUS.Pending);
     }).not.toThrow();
 
     const stored = ApplicationState.getInstance().getCase(result.id);
-    expect(stored?.status).toBe(CaseStatus.Active);
+    expect(stored?.status).toBe(CASE_STATUS.Active);
+  });
+
+  it('rolls back application state when storage persistence fails', async () => {
+    const failure = new Error('save failed');
+    storageStub.cases.save.mockRejectedValueOnce(failure);
+
+    await expect(useCase.execute(baseInput)).rejects.toThrow(failure);
+
+    expect(ApplicationState.getInstance().getCases()).toEqual([]);
+    expect(storageStub.savedCases).toHaveLength(0);
   });
 });

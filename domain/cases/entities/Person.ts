@@ -1,4 +1,4 @@
-import ValidationError from '@/domain/common/errors/ValidationError';
+import { ValidationError } from '@/domain/common/errors/ValidationError';
 
 export interface ContactInfo {
   email?: string;

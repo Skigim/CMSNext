@@ -2,14 +2,15 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
 import ApplicationState from '@/application/ApplicationState';
 import { useApplicationState, useCase, useCases } from '@/application/hooks/useApplicationState';
-import { Case, CaseStatus, type CaseSnapshot } from '@/domain/cases/entities/Case';
+import { Case, type CaseSnapshot } from '@/domain/cases/entities/Case';
+import { CASE_STATUS } from '@/types/case';
 
 function createTestCase(id: string, overrides: Partial<CaseSnapshot> = {}): Case {
   const base: CaseSnapshot = {
     id,
     mcn: `MCN-${id}`,
     name: `Case ${id}`,
-    status: CaseStatus.Active,
+  status: CASE_STATUS.Active,
     personId: `PER-${id}`,
     createdAt: new Date('2025-01-01').toISOString(),
     updatedAt: new Date('2025-01-02').toISOString(),

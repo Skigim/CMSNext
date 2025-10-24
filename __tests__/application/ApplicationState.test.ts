@@ -1,7 +1,8 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import ApplicationState from '@/application/ApplicationState';
 import type StorageRepository from '@/infrastructure/storage/StorageRepository';
-import { Case, CaseStatus, type CaseSnapshot } from '@/domain/cases/entities/Case';
+import { Case, type CaseSnapshot } from '@/domain/cases/entities/Case';
+import { CASE_STATUS } from '@/types/case';
 import type { FinancialItem } from '@/domain/financials/entities/FinancialItem';
 import { FinancialCategory } from '@/domain/financials/entities/FinancialItem';
 import type { Note } from '@/domain/notes/entities/Note';
@@ -91,7 +92,7 @@ function createTestCase(overrides: Partial<CaseSnapshot> = {}): Case {
     id: 'CASE-001',
     mcn: 'MCN-001',
     name: 'Test Case',
-    status: CaseStatus.Active,
+  status: CASE_STATUS.Active,
     personId: 'PER-001',
     createdAt: new Date('2025-01-01').toISOString(),
     updatedAt: new Date('2025-01-02').toISOString(),
@@ -212,7 +213,7 @@ describe('ApplicationState', () => {
     expect(listener).toHaveBeenCalledTimes(1);
 
   const cases = appState.getCases();
-  cases[0].updateStatus(CaseStatus.Pending);
+  cases[0].updateStatus(CASE_STATUS.Pending);
   expect(appState.getCase(seedCase.id)?.status).toBe(seedCase.status);
   });
 

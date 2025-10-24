@@ -109,7 +109,7 @@ export class ApplicationState {
   }
 
   getFeatureFlags(): FeatureFlags {
-    return createFeatureFlagContext(this.featureFlags);
+    return { ...this.featureFlags };
   }
 
   isFeatureEnabled(flag: FeatureFlagKey): boolean {

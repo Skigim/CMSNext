@@ -1,13 +1,7 @@
 import DomainError from '@/domain/common/errors/DomainError';
 import ValidationError from '@/domain/common/errors/ValidationError';
+import { CASE_STATUS, CASE_STATUS_VALUES, type CaseStatus } from '@/types/case';
 import { Person, type PersonProps, type PersonSnapshot } from './Person';
-
-export enum CaseStatus {
-  Active = 'active',
-  Pending = 'pending',
-  Closed = 'closed',
-  Archived = 'archived',
-}
 
 export type CaseMetadata = Record<string, unknown>;
 
@@ -65,7 +59,7 @@ export class Case {
       id: input.id?.trim() || Case.generateId(),
       mcn: Case.normalizeMcn(input.mcn),
       name: Case.normalizeName(input.name),
-      status: input.status ?? CaseStatus.Active,
+  status: input.status ?? CASE_STATUS.Active,
       personId: Case.normalizePersonId(input.personId),
       createdAt: Case.normalizeDate(input.createdAt ?? now),
       updatedAt: Case.normalizeDate(input.updatedAt ?? now),
@@ -183,11 +177,11 @@ export class Case {
    * Archive the case. Only closed cases may be archived.
    */
   archive(): void {
-    if (this.status !== CaseStatus.Closed) {
+    if (this.status !== CASE_STATUS.Closed) {
       throw new DomainError('Cannot archive non-closed case');
     }
 
-    this.props.status = CaseStatus.Archived;
+    this.props.status = CASE_STATUS.Archived;
     this.touchUpdatedAt();
   }
 
@@ -207,7 +201,7 @@ export class Case {
       throw new ValidationError('Case name cannot be empty');
     }
 
-    if (!Object.values(CaseStatus).includes(this.props.status)) {
+    if (!CASE_STATUS_VALUES.includes(this.props.status)) {
       throw new ValidationError(`Invalid case status: ${this.props.status}`);
     }
 
@@ -240,10 +234,10 @@ export class Case {
 
   private canTransitionTo(newStatus: CaseStatus): boolean {
     const validTransitions: Record<CaseStatus, CaseStatus[]> = {
-      [CaseStatus.Active]: [CaseStatus.Pending, CaseStatus.Closed],
-      [CaseStatus.Pending]: [CaseStatus.Active, CaseStatus.Closed],
-      [CaseStatus.Closed]: [CaseStatus.Archived],
-      [CaseStatus.Archived]: [],
+      [CASE_STATUS.Active]: [CASE_STATUS.Pending, CASE_STATUS.Closed],
+      [CASE_STATUS.Pending]: [CASE_STATUS.Active, CASE_STATUS.Closed],
+      [CASE_STATUS.Closed]: [CASE_STATUS.Archived],
+      [CASE_STATUS.Archived]: [],
     };
 
     return validTransitions[this.status].includes(newStatus);

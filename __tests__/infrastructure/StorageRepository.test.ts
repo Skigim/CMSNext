@@ -2,7 +2,8 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import StorageRepository from '@/infrastructure/storage/StorageRepository';
 import type AutosaveFileService from '@/utils/AutosaveFileService';
 import { FinancialCategory } from '@/domain/financials/entities/FinancialItem';
-import { Case, CaseStatus, type CaseSnapshot } from '@/domain/cases/entities/Case';
+import { Case, type CaseSnapshot } from '@/domain/cases/entities/Case';
+import { CASE_STATUS } from '@/types/case';
 import type { FinancialItem } from '@/domain/financials/entities/FinancialItem';
 import type { Note } from '@/domain/notes/entities/Note';
 import type { Alert } from '@/domain/alerts/entities/Alert';
@@ -52,7 +53,7 @@ function createCase(overrides: Partial<CaseSnapshot> = {}): Case {
     id: 'CASE-001',
     mcn: 'MCN-001',
     name: 'Sample Case',
-    status: CaseStatus.Active,
+  status: CASE_STATUS.Active,
     personId: 'PER-001',
     createdAt: new Date('2025-01-01').toISOString(),
     updatedAt: new Date('2025-01-02').toISOString(),
