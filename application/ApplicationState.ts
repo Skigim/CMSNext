@@ -5,6 +5,11 @@ import type { Alert } from '@/domain/alerts/entities/Alert';
 import type { ActivityEvent } from '@/domain/activity/entities/ActivityEvent';
 import type StorageRepository from '@/infrastructure/storage/StorageRepository';
 import type { IRepository } from '@/domain/common/repositories';
+import {
+  createFeatureFlagContext,
+  type FeatureFlagKey,
+  type FeatureFlags,
+} from '@/utils/featureFlags';
 
 type EntityWithId = { id: string };
 
@@ -16,6 +21,7 @@ export interface ApplicationStateSnapshot {
   notes: Note[];
   alerts: Alert[];
   activities: ActivityEvent[];
+  featureFlags: FeatureFlags;
 }
 
 function cloneValue<T>(value: T): T {
@@ -42,6 +48,7 @@ export class ApplicationState {
   private readonly notes = new Map<string, Note>();
   private readonly alerts = new Map<string, Alert>();
   private readonly activities = new Map<string, ActivityEvent>();
+  private featureFlags: FeatureFlags = createFeatureFlagContext();
 
   private readonly listeners = new Set<Listener>();
   private version = 0;
@@ -75,6 +82,7 @@ export class ApplicationState {
       notes: this.getNotes(),
       alerts: this.getAlerts(),
       activities: this.getActivities(),
+      featureFlags: this.getFeatureFlags(),
     };
   }
 
@@ -97,6 +105,34 @@ export class ApplicationState {
     this.replaceCollection(this.alerts, alerts);
     this.replaceCollection(this.activities, activities);
 
+    this.notifyListeners();
+  }
+
+  getFeatureFlags(): FeatureFlags {
+    return createFeatureFlagContext(this.featureFlags);
+  }
+
+  isFeatureEnabled(flag: FeatureFlagKey): boolean {
+    return Boolean(this.featureFlags[flag]);
+  }
+
+  setFeatureFlags(flags: Partial<FeatureFlags>): void {
+    if (!flags || Object.keys(flags).length === 0) {
+      return;
+    }
+
+    const nextFlags = createFeatureFlagContext({
+      ...this.featureFlags,
+      ...flags,
+    });
+
+    const changed = (Object.keys(flags) as FeatureFlagKey[]).some(key => this.featureFlags[key] !== nextFlags[key]);
+
+    if (!changed) {
+      return;
+    }
+
+    this.featureFlags = nextFlags;
     this.notifyListeners();
   }
 

@@ -1,11 +1,12 @@
 import { act, render, screen, waitFor, within, cleanup } from "@testing-library/react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { Dashboard } from "@/components/app/Dashboard";
 import type { CaseDisplay } from "@/types/case";
 import type { AlertsIndex, AlertWithMatch } from "@/utils/alertsData";
 import type { CaseActivityEntry, CaseActivityLogState } from "@/types/activityLog";
 import { AvgAlertAgeWidget } from "@/components/app/widgets/AvgAlertAgeWidget";
+import ApplicationState from "@/application/ApplicationState";
 
 function createCase(overrides: Partial<CaseDisplay> = {}): CaseDisplay {
   const createdDate = overrides.createdAt ?? "2025-10-01T00:00:00Z";
@@ -125,9 +126,14 @@ function createActivityLogState(entries: CaseActivityEntry[]): CaseActivityLogSt
 }
 
 describe("Dashboard widgets integration", () => {
+  beforeEach(() => {
+    ApplicationState.resetInstance();
+  });
+
   afterEach(() => {
     cleanup();
     vi.useRealTimers();
+    ApplicationState.resetInstance();
   });
 
   it("renders all eight widgets", async () => {

@@ -7,6 +7,7 @@ import { FinancialCategory } from '@/domain/financials/entities/FinancialItem';
 import type { Note } from '@/domain/notes/entities/Note';
 import type { Alert } from '@/domain/alerts/entities/Alert';
 import type { ActivityEvent } from '@/domain/activity/entities/ActivityEvent';
+import { DEFAULT_FLAGS } from '@/utils/featureFlags';
 type RepositoryStub<T extends { id: string }> = {
   data: T[];
   getAll: () => Promise<T[]>;
@@ -240,5 +241,33 @@ describe('ApplicationState', () => {
     expect(repos.notes.save).toHaveBeenCalledWith(expect.objectContaining({ id: 'NOTE-NEW' }));
     expect(repos.alerts.save).toHaveBeenCalledWith(expect.objectContaining({ id: 'ALERT-NEW' }));
     expect(repos.activity.save).toHaveBeenCalledWith(expect.objectContaining({ id: 'ACT-NEW' }));
+  });
+
+  it('returns default feature flags and clones the result', () => {
+    const appState = ApplicationState.getInstance();
+
+    const flags = appState.getFeatureFlags();
+
+    expect(flags).toEqual(DEFAULT_FLAGS);
+    expect(flags).not.toBe(DEFAULT_FLAGS);
+  });
+
+  it('applies feature flag updates immutably and notifies listeners only on change', () => {
+    const appState = ApplicationState.getInstance();
+    const listener = vi.fn();
+    const unsubscribe = appState.subscribe(listener);
+
+    expect(appState.isFeatureEnabled('dashboard.widgets.casePriority')).toBe(true);
+
+    appState.setFeatureFlags({ 'dashboard.widgets.casePriority': false });
+
+    expect(appState.isFeatureEnabled('dashboard.widgets.casePriority')).toBe(false);
+    expect(listener).toHaveBeenCalledTimes(1);
+
+    appState.setFeatureFlags({ 'dashboard.widgets.casePriority': false });
+
+    expect(listener).toHaveBeenCalledTimes(1);
+
+    unsubscribe();
   });
 });

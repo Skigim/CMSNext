@@ -17,6 +17,7 @@ import { McnCopyControl } from "@/components/common/McnCopyControl";
 import type { CaseActivityLogState } from "../../types/activityLog";
 import { ActivityReportCard } from "./ActivityReportCard";
 import { WidgetRegistry, createLazyWidget, type RegisteredWidget } from "./widgets/WidgetRegistry";
+import { useAppState } from "@/hooks/useAppState";
 
 interface DashboardProps {
   cases: CaseDisplay[];
@@ -76,6 +77,7 @@ const AvgCaseProcessingTimeWidgetLazy = createLazyWidget(
 
 export function Dashboard({ cases, alerts, activityLogState, onViewAllCases, onNewCase, onNavigateToReports }: DashboardProps) {
   const { config } = useCategoryConfig();
+  const { featureFlags } = useAppState();
 
   const allAlerts = useMemo(() => alerts.alerts ?? [], [alerts.alerts]);
   const activityEntries = useMemo(() => activityLogState.activityLog ?? [], [activityLogState.activityLog]);
@@ -92,6 +94,7 @@ export function Dashboard({ cases, alerts, activityLogState, onViewAllCases, onN
           description: 'Breakdown of cases by priority level',
           priority: 1,
           refreshInterval: 5 * 60 * 1000, // 5 minutes
+          featureFlag: 'dashboard.widgets.casePriority',
         },
         component: CasePriorityWidgetLazy,
         props: { cases },
@@ -103,6 +106,7 @@ export function Dashboard({ cases, alerts, activityLogState, onViewAllCases, onN
           description: 'Alert resolution trends over the last 7 days',
           priority: 2,
           refreshInterval: 5 * 60 * 1000,
+          featureFlag: 'dashboard.widgets.alertsCleared',
         },
         component: AlertsClearedPerDayWidgetLazy,
         props: { alerts: allAlerts },
@@ -114,6 +118,7 @@ export function Dashboard({ cases, alerts, activityLogState, onViewAllCases, onN
           description: 'Daily case processing over the last 7 days',
           priority: 3,
           refreshInterval: 5 * 60 * 1000,
+          featureFlag: 'dashboard.widgets.casesProcessed',
         },
         component: CasesProcessedPerDayWidgetLazy,
         props: { activityLog: activityEntries },
@@ -125,6 +130,7 @@ export function Dashboard({ cases, alerts, activityLogState, onViewAllCases, onN
           description: 'Recent activity from the last 7 days',
           priority: 4,
           refreshInterval: 2 * 60 * 1000, // 2 minutes
+          featureFlag: 'dashboard.widgets.activityTimeline',
         },
         component: ActivityTimelineWidgetLazy,
         props: { activityLogState },
@@ -136,6 +142,7 @@ export function Dashboard({ cases, alerts, activityLogState, onViewAllCases, onN
           description: 'Current status distribution across all cases',
           priority: 5,
           refreshInterval: 5 * 60 * 1000,
+          featureFlag: 'dashboard.widgets.casesByStatus',
         },
         component: CasesByStatusWidgetLazy,
         props: { cases },
@@ -147,6 +154,7 @@ export function Dashboard({ cases, alerts, activityLogState, onViewAllCases, onN
           description: 'Top alert types by frequency',
           priority: 6,
           refreshInterval: 5 * 60 * 1000,
+          featureFlag: 'dashboard.widgets.alertsByDescription',
         },
         component: AlertsByDescriptionWidgetLazy,
         props: { alerts: allAlerts },
@@ -158,6 +166,7 @@ export function Dashboard({ cases, alerts, activityLogState, onViewAllCases, onN
           description: 'Average age of active alerts',
           priority: 7,
           refreshInterval: 5 * 60 * 1000,
+          featureFlag: 'dashboard.widgets.avgAlertAge',
         },
         component: AvgAlertAgeWidgetLazy,
         props: { alerts: allAlerts },
@@ -169,6 +178,7 @@ export function Dashboard({ cases, alerts, activityLogState, onViewAllCases, onN
           description: 'Average days to resolve a case',
           priority: 8,
           refreshInterval: 10 * 60 * 1000,
+          featureFlag: 'dashboard.widgets.avgCaseProcessing',
         },
         component: AvgCaseProcessingTimeWidgetLazy,
         props: { activityLog: activityEntries, cases },
@@ -297,6 +307,7 @@ export function Dashboard({ cases, alerts, activityLogState, onViewAllCases, onN
           <WidgetRegistry
             widgets={widgets}
             gridClassName="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"
+            enabledFlags={featureFlags}
           />
         </div>
       )}
