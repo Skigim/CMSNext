@@ -22,6 +22,18 @@ function formatDays(value: number | null, formatter: Intl.NumberFormat): string 
 export function AvgAlertAgeWidget({ alerts = [], metadata }: AvgAlertAgeWidgetProps) {
   const formatter = useMemo(() => new Intl.NumberFormat('en-US', { maximumFractionDigits: 1, minimumFractionDigits: 0 }), []);
 
+  const refreshKey = alerts.length
+    ? JSON.stringify(
+        alerts.map((alert) => ({
+          id: alert.id,
+          status: alert.status ?? null,
+          resolvedAt: alert.resolvedAt ?? null,
+          alertDate: alert.alertDate ?? alert.createdAt ?? null,
+          updatedAt: alert.updatedAt ?? null,
+        })),
+      )
+    : 'no-alerts';
+
   const fetchData = useCallback(async () => {
     return calculateAvgAlertAge(alerts);
   }, [alerts]);
@@ -29,6 +41,7 @@ export function AvgAlertAgeWidget({ alerts = [], metadata }: AvgAlertAgeWidgetPr
   const { data, loading, error, freshness } = useWidgetData<AlertAgeStats>(fetchData, {
     refreshInterval: metadata?.refreshInterval ?? 5 * 60 * 1000,
     enablePerformanceTracking: true,
+    refreshKey,
   });
 
   const freshnessLabel = useMemo(() => {

@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import StorageRepository from '@/infrastructure/storage/StorageRepository';
 import type AutosaveFileService from '@/utils/AutosaveFileService';
 import { FinancialCategory } from '@/domain/financials/entities/FinancialItem';
-import type { Case } from '@/domain/cases/entities/Case';
+import { Case, CaseStatus, type CaseSnapshot } from '@/domain/cases/entities/Case';
 import type { FinancialItem } from '@/domain/financials/entities/FinancialItem';
 import type { Note } from '@/domain/notes/entities/Note';
 import type { Alert } from '@/domain/alerts/entities/Alert';
@@ -47,17 +47,19 @@ class MockAutosaveFileService {
   }
 }
 
-function createCase(overrides: Partial<Case> = {}): Case {
-  return {
-    id: overrides.id ?? 'CASE-001',
-    mcn: overrides.mcn ?? 'MCN-001',
-    name: overrides.name ?? 'Sample Case',
-    status: overrides.status ?? 'active',
-    personId: overrides.personId ?? 'PER-001',
-    createdAt: overrides.createdAt ?? new Date('2025-01-01').toISOString(),
-    updatedAt: overrides.updatedAt ?? new Date('2025-01-02').toISOString(),
-    metadata: overrides.metadata,
+function createCase(overrides: Partial<CaseSnapshot> = {}): Case {
+  const base: CaseSnapshot = {
+    id: 'CASE-001',
+    mcn: 'MCN-001',
+    name: 'Sample Case',
+    status: CaseStatus.Active,
+    personId: 'PER-001',
+    createdAt: new Date('2025-01-01').toISOString(),
+    updatedAt: new Date('2025-01-02').toISOString(),
+    metadata: {},
   };
+
+  return Case.rehydrate({ ...base, ...overrides });
 }
 
 function createFinancialItem(overrides: Partial<FinancialItem> = {}): FinancialItem {
@@ -125,23 +127,23 @@ describe('StorageRepository', () => {
     const caseRepo = repository.cases;
     const sampleCase = createCase();
 
-    await caseRepo.save(sampleCase);
+  await caseRepo.save(sampleCase);
     expect(mockService.writes).toBe(1);
 
     const fetched = await caseRepo.getById(sampleCase.id);
-    expect(fetched).toEqual(sampleCase);
+  expect(fetched?.toJSON()).toEqual(sampleCase.toJSON());
 
     const byMcn = await caseRepo.findByMCN(sampleCase.mcn);
-    expect(byMcn).toEqual(sampleCase);
+  expect(byMcn?.toJSON()).toEqual(sampleCase.toJSON());
 
     const searchResults = await caseRepo.searchCases('Sample');
-    expect(searchResults).toEqual([sampleCase]);
+  expect(searchResults.map(item => item.toJSON())).toEqual([sampleCase.toJSON()]);
 
-    await caseRepo.delete(sampleCase.id);
+  await caseRepo.delete(sampleCase.id);
     expect(mockService.writes).toBe(2);
 
     const allCases = await caseRepo.getAll();
-    expect(allCases).toEqual([]);
+  expect(allCases).toEqual([]);
   });
 
   it('manages financial items scoped to a case and category', async () => {

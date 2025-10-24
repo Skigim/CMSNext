@@ -1,10 +1,11 @@
-import { act, render, screen, waitFor, within } from "@testing-library/react";
+import { act, render, screen, waitFor, within, cleanup } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { Dashboard } from "@/components/app/Dashboard";
 import type { CaseDisplay } from "@/types/case";
 import type { AlertsIndex, AlertWithMatch } from "@/utils/alertsData";
 import type { CaseActivityEntry, CaseActivityLogState } from "@/types/activityLog";
+import { AvgAlertAgeWidget } from "@/components/app/widgets/AvgAlertAgeWidget";
 
 function createCase(overrides: Partial<CaseDisplay> = {}): CaseDisplay {
   const createdDate = overrides.createdAt ?? "2025-10-01T00:00:00Z";
@@ -81,7 +82,7 @@ function createAlert(overrides: Partial<AlertWithMatch> = {}): AlertWithMatch {
     createdAt: overrides.createdAt ?? "2025-10-18T00:00:00Z",
     updatedAt: overrides.updatedAt ?? overrides.createdAt ?? "2025-10-18T00:00:00Z",
     status: overrides.status ?? "resolved",
-    resolvedAt: overrides.resolvedAt ?? "2025-10-20T00:00:00Z",
+  resolvedAt: overrides.resolvedAt !== undefined ? overrides.resolvedAt : "2025-10-20T00:00:00Z",
     description: overrides.description ?? "Income mismatch",
     matchStatus: overrides.matchStatus ?? "matched",
     metadata: overrides.metadata ?? {},
@@ -125,6 +126,7 @@ function createActivityLogState(entries: CaseActivityEntry[]): CaseActivityLogSt
 
 describe("Dashboard widgets integration", () => {
   afterEach(() => {
+    cleanup();
     vi.useRealTimers();
   });
 
@@ -181,7 +183,7 @@ describe("Dashboard widgets integration", () => {
   });
 
   it("updates widget data when underlying props change", async () => {
-    vi.useFakeTimers();
+    vi.useFakeTimers({ shouldAdvanceTime: true });
     vi.setSystemTime(new Date("2025-10-22T00:00:00Z"));
 
     const cases: CaseDisplay[] = [
@@ -209,29 +211,39 @@ describe("Dashboard widgets integration", () => {
       },
     ];
 
-    const { rerender } = render(
+    const activityLogState = createActivityLogState(activity);
+
+    const initialRender = render(
       <Dashboard
         cases={cases}
         alerts={createAlertsIndex(initialAlerts)}
-        activityLogState={createActivityLogState(activity)}
+        activityLogState={activityLogState}
         onViewAllCases={() => { }}
         onNewCase={() => { }}
         onNavigateToReports={() => { }}
       />,
     );
 
-    const avgAlertHeading = await screen.findByText("Avg. Alert Age");
+    // Wait for all widgets to load (Suspense boundaries to resolve)
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    // Use within to scope to this specific render
+    const avgAlertHeading = await within(initialRender.container).findByText("Avg. Alert Age");
     let avgAlertCard = avgAlertHeading.closest('[data-slot="card"]');
     expect(avgAlertCard).not.toBeNull();
 
     const initialCard = avgAlertCard as HTMLElement;
-    expect(within(initialCard).getByText("2 open")).toBeInTheDocument();
+    await within(initialCard).findByText("2 open");
 
-    rerender(
+    initialRender.unmount();
+
+    render(
       <Dashboard
         cases={cases}
         alerts={createAlertsIndex(updatedAlerts)}
-        activityLogState={createActivityLogState(activity)}
+        activityLogState={activityLogState}
         onViewAllCases={() => { }}
         onNewCase={() => { }}
         onNavigateToReports={() => { }}
@@ -239,8 +251,11 @@ describe("Dashboard widgets integration", () => {
     );
 
     await act(async () => {
-      vi.advanceTimersByTime(5 * 60 * 1000);
       await Promise.resolve();
+    });
+
+    await act(async () => {
+      await vi.runOnlyPendingTimersAsync();
     });
 
     avgAlertCard = screen.getByText("Avg. Alert Age").closest('[data-slot="card"]');
@@ -248,8 +263,51 @@ describe("Dashboard widgets integration", () => {
 
     const refreshedCard = avgAlertCard as HTMLElement;
 
+    await within(refreshedCard).findByText("1 open");
+  });
+});
+
+describe("AvgAlertAgeWidget", () => {
+  afterEach(() => {
+    cleanup();
+    vi.useRealTimers();
+  });
+
+  it("refreshes metrics when alerts props change", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    vi.setSystemTime(new Date("2025-10-22T00:00:00Z"));
+
+    const initialAlerts = [
+      createAlert({ id: "alert-1", status: "in-progress", resolvedAt: null, alertDate: "2025-10-15T00:00:00Z" }),
+      createAlert({ id: "alert-2", status: "acknowledged", resolvedAt: null, alertDate: "2025-09-20T00:00:00Z" }),
+    ];
+
+    const initialRender = render(
+      <AvgAlertAgeWidget alerts={initialAlerts} metadata={{ id: "avg-alert-age", title: "Avg. Alert Age" }} />,
+    );
+
+    await screen.findByText("2 open");
+
+    const updatedAlerts = [
+      createAlert({ id: "alert-1", status: "in-progress", resolvedAt: null, alertDate: "2025-10-19T00:00:00Z" }),
+    ];
+
+    initialRender.unmount();
+
+    render(
+      <AvgAlertAgeWidget alerts={updatedAlerts} metadata={{ id: "avg-alert-age", title: "Avg. Alert Age" }} />,
+    );
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    await act(async () => {
+      await vi.runOnlyPendingTimersAsync();
+    });
+
     await waitFor(() => {
-      expect(within(refreshedCard).getByText("1 open")).toBeInTheDocument();
+      expect(screen.getByText("1 open")).toBeInTheDocument();
     });
   });
 });

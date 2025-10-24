@@ -1,4 +1,4 @@
-import type { Case } from '@/domain/cases/entities/Case';
+import { Case, type CaseSnapshot } from '@/domain/cases/entities/Case';
 import type { FinancialItem } from '@/domain/financials/entities/FinancialItem';
 import type { Note } from '@/domain/notes/entities/Note';
 import type { Alert } from '@/domain/alerts/entities/Alert';
@@ -21,6 +21,10 @@ export interface ApplicationStateSnapshot {
 function cloneValue<T>(value: T): T {
   if (value === null || value === undefined) {
     return value as T;
+  }
+
+  if (value instanceof Case) {
+    return value.clone() as T;
   }
 
   if (typeof structuredClone === 'function') {
@@ -87,7 +91,7 @@ export class ApplicationState {
       storage.activity.getAll(),
     ]);
 
-    this.replaceCollection(this.cases, cases);
+  this.replaceCases(cases);
     this.replaceCollection(this.financials, financials);
     this.replaceCollection(this.notes, notes);
     this.replaceCollection(this.alerts, alerts);
@@ -111,26 +115,32 @@ export class ApplicationState {
   }
 
   getCases(): Case[] {
-    return this.toArray(this.cases);
+    return Array.from(this.cases.values()).map(entity => entity.clone());
   }
 
   getCase(id: string): Case | null {
     const entity = this.cases.get(id);
-    return entity ? cloneValue(entity) : null;
+    return entity ? entity.clone() : null;
   }
 
   addCase(caseEntity: Case): void {
-    this.cases.set(caseEntity.id, cloneValue(caseEntity));
+    this.cases.set(caseEntity.id, caseEntity.clone());
     this.notifyListeners();
   }
 
-  updateCase(id: string, updates: Partial<Case>): void {
+  updateCase(id: string, updates: Partial<CaseSnapshot>): void {
     const existing = this.cases.get(id);
     if (!existing) {
       return;
     }
 
-    const updated: Case = { ...cloneValue(existing), ...cloneValue(updates) };
+    const mergedSnapshot: CaseSnapshot = {
+      ...existing.toJSON(),
+      ...cloneValue(updates),
+      updatedAt: updates.updatedAt ?? new Date().toISOString(),
+    };
+
+    const updated = Case.rehydrate(mergedSnapshot);
     this.cases.set(id, updated);
     this.notifyListeners();
   }
@@ -232,6 +242,13 @@ export class ApplicationState {
     map.clear();
     items.forEach(item => {
       map.set(item.id, cloneValue(item));
+    });
+  }
+
+  private replaceCases(items: Case[]): void {
+    this.cases.clear();
+    items.forEach(item => {
+      this.cases.set(item.id, item.clone());
     });
   }
 

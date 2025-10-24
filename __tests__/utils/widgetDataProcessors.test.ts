@@ -26,7 +26,7 @@ function buildAlert(partial: Partial<AlertWithMatch>): AlertWithMatch {
     updatedAt: partial.updatedAt ?? partial.createdAt ?? "2025-10-18T00:00:00Z",
     status: partial.status ?? "resolved",
     description: partial.description ?? "Generic",
-    resolvedAt: partial.resolvedAt ?? "2025-10-21T00:00:00Z",
+  resolvedAt: partial.resolvedAt !== undefined ? partial.resolvedAt : "2025-10-21T00:00:00Z",
     metadata: partial.metadata ?? {},
     matchStatus: partial.matchStatus ?? "matched",
   } as AlertWithMatch;

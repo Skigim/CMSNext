@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import ApplicationState from '@/application/ApplicationState';
 import type StorageRepository from '@/infrastructure/storage/StorageRepository';
-import type { Case } from '@/domain/cases/entities/Case';
+import { Case, CaseStatus, type CaseSnapshot } from '@/domain/cases/entities/Case';
 import type { FinancialItem } from '@/domain/financials/entities/FinancialItem';
 import { FinancialCategory } from '@/domain/financials/entities/FinancialItem';
 import type { Note } from '@/domain/notes/entities/Note';
@@ -33,18 +33,26 @@ type StorageStub = {
   };
 };
 
+function cloneEntity<T>(entity: T): T {
+  if (entity instanceof Case) {
+    return entity.clone() as T;
+  }
+
+  return JSON.parse(JSON.stringify(entity)) as T;
+}
+
 function createRepositoryStub<T extends { id: string }>(initial: T[] = []): RepositoryStub<T> {
-  const data: T[] = initial.map(entity => ({ ...entity }));
+  const data: T[] = initial.map(entity => cloneEntity(entity));
 
   return {
     data,
-    getAll: vi.fn(async () => data.map(entity => ({ ...entity }))),
+    getAll: vi.fn(async () => data.map(entity => cloneEntity(entity))),
     save: vi.fn(async (entity: T) => {
       const index = data.findIndex(item => item.id === entity.id);
       if (index >= 0) {
-        data[index] = { ...entity };
+        data[index] = cloneEntity(entity);
       } else {
-        data.push({ ...entity });
+        data.push(cloneEntity(entity));
       }
     }),
     delete: vi.fn(async (id: string) => {
@@ -77,17 +85,19 @@ function createStorageStub(initial: StorageData = {}): StorageStub {
   };
 }
 
-function createTestCase(overrides: Partial<Case> = {}): Case {
-  return {
-    id: overrides.id ?? 'CASE-001',
-    mcn: overrides.mcn ?? 'MCN-001',
-    name: overrides.name ?? 'Test Case',
-    status: overrides.status ?? 'active',
-    personId: overrides.personId ?? 'PER-001',
-    createdAt: overrides.createdAt ?? new Date('2025-01-01').toISOString(),
-    updatedAt: overrides.updatedAt ?? new Date('2025-01-02').toISOString(),
-    metadata: overrides.metadata ?? {},
+function createTestCase(overrides: Partial<CaseSnapshot> = {}): Case {
+  const base: CaseSnapshot = {
+    id: 'CASE-001',
+    mcn: 'MCN-001',
+    name: 'Test Case',
+    status: CaseStatus.Active,
+    personId: 'PER-001',
+    createdAt: new Date('2025-01-01').toISOString(),
+    updatedAt: new Date('2025-01-02').toISOString(),
+    metadata: {},
   };
+
+  return Case.rehydrate({ ...base, ...overrides });
 }
 
 function createTestFinancial(overrides: Partial<FinancialItem> = {}): FinancialItem {
@@ -163,7 +173,7 @@ describe('ApplicationState', () => {
     const listener = vi.fn();
 
     const unsubscribe = appState.subscribe(listener);
-    appState.addCase(createTestCase());
+  appState.addCase(createTestCase());
 
     expect(listener).toHaveBeenCalledTimes(1);
 
@@ -193,16 +203,16 @@ describe('ApplicationState', () => {
 
     await appState.hydrate(storage);
 
-    expect(appState.getCases()).toEqual([seedCase]);
+  expect(appState.getCases().map(item => item.toJSON())).toEqual([seedCase.toJSON()]);
     expect(appState.getFinancialItems()).toEqual([seedFinancial]);
     expect(appState.getNotes()).toEqual([seedNote]);
     expect(appState.getAlerts()).toEqual([seedAlert]);
     expect(appState.getActivities()).toEqual([seedActivity]);
     expect(listener).toHaveBeenCalledTimes(1);
 
-    const cases = appState.getCases();
-    cases[0].name = 'mutated';
-    expect(appState.getCase(seedCase.id)?.name).toBe(seedCase.name);
+  const cases = appState.getCases();
+  cases[0].updateStatus(CaseStatus.Pending);
+  expect(appState.getCase(seedCase.id)?.status).toBe(seedCase.status);
   });
 
   it('persists state to storage with saves and deletions', async () => {
@@ -225,7 +235,7 @@ describe('ApplicationState', () => {
     await appState.persist(storage);
 
     expect(repos.cases.delete).toHaveBeenCalledWith('CASE-LEGACY');
-    expect(repos.cases.save).toHaveBeenCalledWith(expect.objectContaining({ id: 'CASE-NEW' }));
+  expect(repos.cases.save).toHaveBeenCalledWith(expect.any(Case));
     expect(repos.financials.save).toHaveBeenCalledWith(expect.objectContaining({ id: 'FIN-NEW' }));
     expect(repos.notes.save).toHaveBeenCalledWith(expect.objectContaining({ id: 'NOTE-NEW' }));
     expect(repos.alerts.save).toHaveBeenCalledWith(expect.objectContaining({ id: 'ALERT-NEW' }));

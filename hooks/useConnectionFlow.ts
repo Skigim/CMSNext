@@ -10,6 +10,9 @@ import {
 import type { FileStorageLifecycleSelectors } from "../contexts/FileStorageContext";
 import { reportFileStorageError } from "../utils/fileStorageErrorReporter";
 import { createLogger } from "@/utils/logger";
+import ApplicationState from "@/application/ApplicationState";
+import StorageRepository from "@/infrastructure/storage/StorageRepository";
+import { REFACTOR_FLAGS } from "@/utils/featureFlags";
 
 const logger = createLogger("ConnectionFlow");
 
@@ -259,6 +262,12 @@ export function useConnectionFlow({
           id: "connection-empty",
           duration: 3000,
         });
+      }
+
+      if (REFACTOR_FLAGS.USE_NEW_ARCHITECTURE && service) {
+        const storageRepository = new StorageRepository(service);
+        const appState = ApplicationState.getInstance();
+        await appState.hydrate(storageRepository);
       }
 
       return true;

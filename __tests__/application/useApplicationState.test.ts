@@ -2,19 +2,21 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
 import ApplicationState from '@/application/ApplicationState';
 import { useApplicationState, useCase, useCases } from '@/application/hooks/useApplicationState';
-import type { Case } from '@/domain/cases/entities/Case';
+import { Case, CaseStatus, type CaseSnapshot } from '@/domain/cases/entities/Case';
 
-function createTestCase(id: string, overrides: Partial<Case> = {}): Case {
-  return {
+function createTestCase(id: string, overrides: Partial<CaseSnapshot> = {}): Case {
+  const base: CaseSnapshot = {
     id,
-    mcn: overrides.mcn ?? `MCN-${id}`,
-    name: overrides.name ?? `Case ${id}`,
-    status: overrides.status ?? 'active',
-    personId: overrides.personId ?? `PER-${id}`,
-    createdAt: overrides.createdAt ?? new Date('2025-01-01').toISOString(),
-    updatedAt: overrides.updatedAt ?? new Date('2025-01-02').toISOString(),
-    metadata: overrides.metadata ?? {},
+    mcn: `MCN-${id}`,
+    name: `Case ${id}`,
+    status: CaseStatus.Active,
+    personId: `PER-${id}`,
+    createdAt: new Date('2025-01-01').toISOString(),
+    updatedAt: new Date('2025-01-02').toISOString(),
+    metadata: {},
   };
+
+  return Case.rehydrate({ ...base, ...overrides });
 }
 
 describe('useApplicationState', () => {
@@ -53,8 +55,8 @@ describe('useApplicationState', () => {
       appState.addCase(createTestCase('CASE-002'));
     });
 
-    expect(casesHook.result.current.map(item => item.id)).toEqual(['CASE-002']);
-    expect(caseHook.result.current?.id).toBe('CASE-002');
+  expect(casesHook.result.current.map(item => item.id)).toEqual(['CASE-002']);
+  expect(caseHook.result.current?.name).toBe('Case CASE-002');
 
     act(() => {
       appState.updateCase('CASE-002', { name: 'Updated Case' });

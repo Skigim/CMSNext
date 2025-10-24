@@ -19,6 +19,8 @@ export interface UseWidgetDataOptions {
   refreshInterval?: number;
   /** Enable performance tracking for this widget */
   enablePerformanceTracking?: boolean;
+  /** Optional key that forces a refetch when it changes */
+  refreshKey?: unknown;
 }
 
 /**
@@ -49,6 +51,7 @@ export function useWidgetData<T>(
   const {
     refreshInterval = 5 * 60 * 1000, // 5 minutes default
     enablePerformanceTracking = true,
+    refreshKey,
   } = options;
 
   const [data, setData] = useState<T | null>(null);
@@ -65,13 +68,6 @@ export function useWidgetData<T>(
   const refreshTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastUpdateRef = useRef<number | null>(null);
   const performanceMarkRef = useRef<string | null>(null);
-
-  /**
-   * Keep dataFetcher ref in sync with the latest caller-provided function.
-   */
-  useEffect(() => {
-    dataFetcherRef.current = dataFetcher;
-  }, [dataFetcher]);
 
   /**
    * Update freshness information based on last update timestamp.
@@ -107,7 +103,7 @@ export function useWidgetData<T>(
 
       if (!mountedRef.current) return;
 
-      setData(result);
+  setData(result);
       const timestamp = Date.now();
       lastUpdateRef.current = timestamp;
       updateFreshness(timestamp);
@@ -174,11 +170,15 @@ export function useWidgetData<T>(
     }
   }, [fetchData, refreshInterval]);
 
+  useEffect(() => {
+    dataFetcherRef.current = dataFetcher;
+  }, [dataFetcher]);
+
   /**
    * Set up automatic refresh interval.
    */
   useEffect(() => {
-    // Initial fetch
+    // Initial fetch or refetch when the fetcher dependencies change
     fetchData();
 
     // Set up refresh interval
@@ -209,7 +209,7 @@ export function useWidgetData<T>(
       }
       clearInterval(freshnessInterval);
     };
-  }, [fetchData, refreshInterval, updateFreshness]);
+  }, [fetchData, refreshInterval, updateFreshness, dataFetcher, refreshKey]);
 
   /**
    * Cleanup on unmount.

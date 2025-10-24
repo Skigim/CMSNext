@@ -1,5 +1,5 @@
 import AutosaveFileService from '@/utils/AutosaveFileService';
-import type { Case } from '@/domain/cases/entities/Case';
+import { Case, type CaseSnapshot } from '@/domain/cases/entities/Case';
 import type { FinancialItem, FinancialCategory } from '@/domain/financials/entities/FinancialItem';
 import type { Note, NoteCategory } from '@/domain/notes/entities/Note';
 import type { Alert } from '@/domain/alerts/entities/Alert';
@@ -15,7 +15,7 @@ import type {
 export type DomainScope = 'cases' | 'financials' | 'notes' | 'alerts' | 'activities';
 
 type StorageCollections = {
-  cases: Case[];
+  cases: CaseSnapshot[];
   financials: FinancialItem[];
   notes: Note[];
   alerts: Alert[];
@@ -27,7 +27,7 @@ type StorageFile = StorageCollections & {
   [key: string]: unknown;
 };
 
-type DomainEntity = Case | FinancialItem | Note | Alert | ActivityEvent;
+type DomainEntity = Case | CaseSnapshot | FinancialItem | Note | Alert | ActivityEvent;
 
 export class StorageRepository
   implements
@@ -120,6 +120,8 @@ export class StorageRepository
     const storage = await this.readStorage();
 
     switch (this.domainHint) {
+      case 'cases':
+        return this.cloneCaseEntity(storage.cases.find(item => item.id === id) ?? null);
       case 'financials':
         return this.clone(storage.financials.find(item => item.id === id) ?? null);
       case 'notes':
@@ -128,9 +130,8 @@ export class StorageRepository
         return this.clone(storage.alerts.find(item => item.id === id) ?? null);
       case 'activities':
         return this.clone(storage.activities.find(item => item.id === id) ?? null);
-      case 'cases':
       default:
-        return this.clone(storage.cases.find(item => item.id === id) ?? null);
+        return this.cloneCaseEntity(storage.cases.find(item => item.id === id) ?? null);
     }
   }
 
@@ -138,6 +139,8 @@ export class StorageRepository
     const storage = await this.readStorage();
 
     switch (this.domainHint) {
+      case 'cases':
+        return this.cloneCaseEntities(storage.cases);
       case 'financials':
         return this.clone(storage.financials);
       case 'notes':
@@ -146,9 +149,8 @@ export class StorageRepository
         return this.clone(storage.alerts);
       case 'activities':
         return this.clone(storage.activities);
-      case 'cases':
       default:
-        return this.clone(storage.cases);
+        return this.cloneCaseEntities(storage.cases);
     }
   }
 
@@ -156,8 +158,8 @@ export class StorageRepository
     const storage = await this.readStorage();
 
     if (this.domainHint === 'cases') {
-      const cloned = this.clone(entity) as Case;
-      storage.cases = StorageRepository.upsert<Case>(storage.cases, cloned);
+      const snapshot = this.toCaseSnapshot(entity as Case | CaseSnapshot);
+      storage.cases = StorageRepository.upsert<CaseSnapshot>(storage.cases, snapshot);
     } else if (this.domainHint === 'financials') {
       const cloned = this.clone(entity) as FinancialItem;
       storage.financials = StorageRepository.upsert<FinancialItem>(storage.financials, cloned);
@@ -211,7 +213,7 @@ export class StorageRepository
     if (this.domainHint === 'cases') {
       const storage = await this.readStorage();
       const match = storage.cases.find(caseItem => this.normalize(caseItem.mcn) === this.normalize(mcn)) ?? null;
-      return this.clone(match);
+      return this.cloneCaseEntity(match);
     }
 
     throw new Error('StorageRepository.findByMCN is only supported for cases or alerts');
@@ -226,16 +228,16 @@ export class StorageRepository
     const normalizedQuery = query.trim().toLowerCase();
 
     if (!normalizedQuery) {
-      return this.clone(storage.cases);
+      return this.cloneCaseEntities(storage.cases);
     }
 
-    return this.clone(
-      storage.cases.filter(caseItem => {
-        const name = `${caseItem.name ?? ''}`.toLowerCase();
-        const mcn = this.normalize(caseItem.mcn);
-        return name.includes(normalizedQuery) || mcn.includes(normalizedQuery);
-      }),
-    );
+    const filtered = storage.cases.filter(caseItem => {
+      const name = `${caseItem.name ?? ''}`.toLowerCase();
+      const mcn = this.normalize(caseItem.mcn);
+      return name.includes(normalizedQuery) || mcn.includes(normalizedQuery);
+    });
+
+    return this.cloneCaseEntities(filtered);
   }
 
   async getByCaseId(caseId: string): Promise<any[]> {
@@ -319,7 +321,8 @@ export class StorageRepository
     const base = (raw && typeof raw === 'object' ? raw : {}) as Record<string, unknown>;
 
     const version = typeof base.version === 'number' ? base.version : StorageRepository.CURRENT_VERSION;
-    const cases = this.ensureArray<Case>(base.cases);
+  const rawCases = this.ensureArray<CaseSnapshot>(base.cases);
+  const cases = rawCases.map(snapshot => Case.rehydrate(snapshot).toJSON());
     const financials = this.ensureArray<FinancialItem>(base.financials);
     const notes = this.ensureArray<Note>(base.notes);
     const alerts = this.ensureArray<Alert>(base.alerts);
@@ -354,6 +357,30 @@ export class StorageRepository
     if (!success) {
       throw new Error('StorageRepository: Failed to persist data');
     }
+  }
+
+  private cloneCaseEntity(snapshot: CaseSnapshot | null): Case | null {
+    if (!snapshot) {
+      return null;
+    }
+
+    return Case.rehydrate(this.cloneCaseSnapshot(snapshot));
+  }
+
+  private cloneCaseEntities(snapshots: CaseSnapshot[]): Case[] {
+    return snapshots.map(snapshot => Case.rehydrate(this.cloneCaseSnapshot(snapshot)));
+  }
+
+  private cloneCaseSnapshot(snapshot: CaseSnapshot): CaseSnapshot {
+    return JSON.parse(JSON.stringify(snapshot)) as CaseSnapshot;
+  }
+
+  private toCaseSnapshot(entity: Case | CaseSnapshot): CaseSnapshot {
+    if (entity instanceof Case) {
+      return entity.toJSON();
+    }
+
+    return Case.rehydrate(entity).toJSON();
   }
 
   private ensureArray<T>(value: unknown): T[] {

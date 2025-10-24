@@ -13,7 +13,7 @@
     "preview": "vite preview",
     "test": "vitest run",
     "test:ui": "vitest --ui",
-    "test:run": "vitest run",
+  "test:run": "vitest run",
     "test:coverage": "vitest run --coverage",
     "analyze": "tsc && ANALYZE=true vite build --mode analyze",
     "perf:baseline": "tsx scripts/performanceBaseline.ts",
