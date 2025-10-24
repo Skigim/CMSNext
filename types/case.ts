@@ -90,7 +90,16 @@ export interface AlertRecord {
   metadata?: Record<string, string | undefined>;
 }
 
-export type CaseStatus = string;
+export const CASE_STATUS = {
+  Active: 'Active',
+  Pending: 'Pending',
+  Closed: 'Closed',
+  Archived: 'Archived',
+} as const;
+
+export type CaseStatus = typeof CASE_STATUS[keyof typeof CASE_STATUS];
+
+export const CASE_STATUS_VALUES: CaseStatus[] = Object.values(CASE_STATUS);
 
 // Case record interface
 export interface CaseRecord {

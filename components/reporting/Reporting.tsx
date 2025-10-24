@@ -88,10 +88,10 @@ export default function Reporting({ alerts, onViewCase }: ReportingProps) {
   const [selectedReport, setSelectedReport] = useState<ReportOptionId>("alerts");
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold text-foreground">Reporting</h1>
-        <p className="mt-2 max-w-3xl text-muted-foreground">
+        <h1 className="text-2xl font-semibold tracking-tight">Reporting</h1>
+        <p className="mt-1.5 text-sm text-muted-foreground">
           Deep dive into your case data with purpose-built reports. Start with the alerts report to audit unresolved issues and uncover follow-up opportunities.
         </p>
       </div>
@@ -297,17 +297,17 @@ function AlertsReport({ alerts, onViewCase }: AlertsReportProps) {
   const visibleAlerts = sortedAlerts;
 
   return (
-    <Card>
-      <CardHeader className="space-y-2">
-        <CardTitle className="flex items-center gap-2 text-2xl">
-          <BellRing className="h-5 w-5 text-primary" />
+    <Card className="flex flex-col">
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <BellRing className="h-5 w-5" />
           Alerts report
         </CardTitle>
         <CardDescription>
           Search across alert metadata with fuzzy matching and sort key fields to audit follow-up priorities.
         </CardDescription>
       </CardHeader>
-      <CardContent className="space-y-6">
+      <CardContent className="flex flex-col gap-6 flex-1 min-h-0">
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <SummaryStat label="Total alerts" value={totalAlerts} />
           <SummaryStat label="Open alerts" value={openAlertsCount} highlight="warning" />
@@ -346,15 +346,15 @@ function AlertsReport({ alerts, onViewCase }: AlertsReportProps) {
         </div>
 
         {visibleAlerts.length === 0 ? (
-          <div className="rounded-lg border border-dashed border-muted-foreground/40 bg-muted/20 p-8 text-center text-sm text-muted-foreground">
+          <div className="rounded-lg border border-dashed p-8 text-center text-sm text-muted-foreground">
             <p>No alerts match the current filters.</p>
           </div>
         ) : (
-          <ScrollArea className="max-h-[520px]">
-            <div className="min-w-[720px] overflow-hidden rounded-lg border border-border/60 bg-card/60">
+          <div className="flex-1 min-h-0 rounded-md border">
+            <ScrollArea className="h-full max-h-[480px]">
               <Table>
                 <TableHeader>
-                  <TableRow className="bg-card/90">
+                  <TableRow>
                     <TableHead aria-sort={getAriaSort("description")}>
                       <Button
                         type="button"
@@ -404,8 +404,8 @@ function AlertsReport({ alerts, onViewCase }: AlertsReportProps) {
                   ))}
                 </TableBody>
               </Table>
-            </div>
-          </ScrollArea>
+            </ScrollArea>
+          </div>
         )}
       </CardContent>
     </Card>
@@ -479,15 +479,15 @@ interface SummaryStatProps {
 
 function SummaryStat({ label, value, highlight }: SummaryStatProps) {
   const valueClass = highlight === "warning"
-    ? "text-amber-600"
+    ? "text-amber-600 dark:text-amber-500"
     : highlight === "danger"
       ? "text-destructive"
       : "text-foreground";
 
   return (
-    <div className="rounded-lg border border-border/60 bg-card/60 p-4">
-      <p className="text-xs uppercase text-muted-foreground">{label}</p>
-      <p className={`mt-2 text-2xl font-semibold ${valueClass}`}>{value}</p>
+    <div className="rounded-lg border bg-card p-4">
+      <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{label}</p>
+      <p className={`mt-2 text-2xl font-semibold tabular-nums ${valueClass}`}>{value}</p>
     </div>
   );
 }

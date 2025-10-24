@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import type { AlertWithMatch } from "@/utils/alertsData";
 import type { CaseActivityEntry } from "@/types/activityLog";
-import type { CaseDisplay } from "@/types/case";
+import { CASE_STATUS, type CaseDisplay } from "@/types/case";
 import {
   calculateAlertsClearedPerDay,
   calculateCasesProcessedPerDay,
@@ -26,7 +26,7 @@ function buildAlert(partial: Partial<AlertWithMatch>): AlertWithMatch {
     updatedAt: partial.updatedAt ?? partial.createdAt ?? "2025-10-18T00:00:00Z",
     status: partial.status ?? "resolved",
     description: partial.description ?? "Generic",
-    resolvedAt: partial.resolvedAt ?? "2025-10-21T00:00:00Z",
+  resolvedAt: partial.resolvedAt !== undefined ? partial.resolvedAt : "2025-10-21T00:00:00Z",
     metadata: partial.metadata ?? {},
     matchStatus: partial.matchStatus ?? "matched",
   } as AlertWithMatch;
@@ -74,7 +74,7 @@ function buildCase(partial: Partial<CaseDisplay>): CaseDisplay {
     caseType: caseOverrides.caseType ?? "Type",
     personId: caseOverrides.personId ?? person.id,
     spouseId: caseOverrides.spouseId ?? "",
-    status: caseOverrides.status ?? partial.status ?? "Pending",
+    status: caseOverrides.status ?? partial.status ?? CASE_STATUS.Pending,
     description: caseOverrides.description ?? "",
     priority: caseOverrides.priority ?? false,
     livingArrangement: caseOverrides.livingArrangement ?? "Home",
@@ -184,9 +184,9 @@ describe("widgetDataProcessors", () => {
   describe("calculateTotalCasesByStatus", () => {
     it("produces counts and percentages per status", () => {
       const cases: CaseDisplay[] = [
-        buildCase({ id: "case-1", status: "Pending" }),
-        buildCase({ id: "case-2", status: "Pending" }),
-        buildCase({ id: "case-3", status: "Closed" }),
+        buildCase({ id: "case-1", status: CASE_STATUS.Pending }),
+        buildCase({ id: "case-2", status: CASE_STATUS.Pending }),
+        buildCase({ id: "case-3", status: CASE_STATUS.Closed }),
       ];
 
       const breakdown = calculateTotalCasesByStatus(cases);
@@ -235,11 +235,11 @@ describe("widgetDataProcessors", () => {
 
   describe("calculateAvgCaseProcessingTime", () => {
     it("summarizes processing durations and previous baseline", () => {
-      const case1 = buildCase({ id: "case-1", status: "Approved" });
+      const case1 = buildCase({ id: "case-1", status: CASE_STATUS.Active });
       case1.caseRecord.createdDate = "2025-10-01T00:00:00Z";
-      const case2 = buildCase({ id: "case-2", status: "Denied" });
+      const case2 = buildCase({ id: "case-2", status: CASE_STATUS.Closed });
       case2.caseRecord.createdDate = "2025-10-05T00:00:00Z";
-      const case3 = buildCase({ id: "case-3", status: "Closed" });
+      const case3 = buildCase({ id: "case-3", status: CASE_STATUS.Closed });
       case3.caseRecord.createdDate = "2025-08-20T00:00:00Z";
 
       const cases: CaseDisplay[] = [case1, case2, case3];

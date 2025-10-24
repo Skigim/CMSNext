@@ -57,6 +57,43 @@ Global, flag-based logic is still used to coordinate state transitions (e.g., cl
 
 Impact: Unpredictable behavior in edge cases; hard to debug; code is declarative in some places but imperative in others.
 
+Current Architecture State (Actual Codebase)
+
+The following reflects the precise current state of the codebase:
+
+**Data Flow Architecture:**
+
+- File System (primary source of truth)
+  - Managed via: AutosaveFileService (1,228+ lines) with write queue, retry logic, permission state machine
+- DataManager (2,704 lines, stateless pattern)
+  - Pattern: read file → modify → write file (no in-memory caching)
+  - Manages all concerns: cases, financials, notes, alerts, activity log, category config
+  - All operations go: DataManager → AutosaveFileService → File System Access API
+- React State (UI ephemeral state + navigation)
+  - Managed via: FileStorageContext (state machine), DataManagerContext, ThemeContext
+- fileStorageFlags (localStorage, persistent session flags)
+  - Manages: dataBaseline, sessionHadData, inSetupPhase, inConnectionFlow, caseListView
+
+**Sync Mechanisms:**
+
+1. Primary: `safeNotifyFileStorageChange()` - called after data mutations to trigger file writes
+2. Secondary: `fileStorageFlags` mutations - used to coordinate state transitions imperatively
+3. Supporting: FileStorageContext reducer for lifecycle state management
+
+**Key Infrastructure:**
+
+- FileStorageContext: Encapsulates file system access, permissions, connection state
+- AutosaveFileService: Handles file I/O, write queuing, retry logic, directory handle persistence
+- Error reporting: fileStorageErrorReporter with telemetry integration
+- Logging: createLogger utility for structured logging across domains
+
+**Current Strengths (Foundation for Refactor):**
+
+- ✅ Stateless DataManager pattern = good foundation for repository pattern
+- ✅ FileStorageContext isolation = clean Infrastructure layer
+- ✅ Structured error handling and logging already in place
+- ✅ No in-memory caching to eliminate
+
 📊 Architecture Debt Metrics (Current Status)
 
 Metric
@@ -67,19 +104,19 @@ Target
 
 Sources of Truth
 
-2 (DataManager, React State)
+3 (File system, React state, fileStorageFlags)
 
 1 (Unified App State)
 
 Manual Sync Points
 
-Multiple (in DataManager, etc.)
+2 (safeNotifyFileStorageChange + fileStorageFlags mutations)
 
-0
+0 (replaced by domain events)
 
 Window Globals
 
-2+ (via fileStorageFlags)
+5+ (localStorage, location.hash, matchMedia, document, window)
 
 0
 
@@ -89,9 +126,21 @@ None (Monolithic utils/)
 
 5
 
+Monolithic Classes
+
+DataManager (2,704 lines)
+
+Multiple domain-specific repositories
+
+Tangled Hooks
+
+683 lines (useCaseManagement: 329, useFinancialItemFlow: 171, useNoteFlow: 183)
+
+Thin orchestration layers
+
 Test Coverage (Domain Logic)
 
-~40%
+~40% (to be verified via npm run test:coverage)
 
 85%+
 
@@ -100,46 +149,44 @@ Proposed Architecture
 Clean Architecture Layers
 
 ┌─────────────────────────────────────────────────────────────┐
-│                       Presentation Layer                    │
-│  ┌──────────────┐  ┌──────────────┐  ┌──────────────────┐  │
-│  │   React UI   │  │    Themes    │  │  Accessibility   │  │
-│  │  Components  │  │   Context    │  │    Patterns      │  │
-│  └──────────────┘  └──────────────┘  └──────────────────┘  │
+│ Presentation Layer │
+│ ┌──────────────┐ ┌──────────────┐ ┌──────────────────┐ │
+│ │ React UI │ │ Themes │ │ Accessibility │ │
+│ │ Components │ │ Context │ │ Patterns │ │
+│ └──────────────┘ └──────────────┘ └──────────────────┘ │
 └─────────────────────────────────────────────────────────────┘
-                              ↓
+↓
 ┌─────────────────────────────────────────────────────────────┐
-│                      Application Layer                      │
-│  ┌──────────────┐  ┌──────────────┐  ┌──────────────────┐  │
-│  │  Use Cases   │  │   Workflows  │  │  Orchestration   │  │
-│  │   (Hooks)    │  │  (Commands)  │  │   (Navigation)   │  │
-│  └──────────────┘  └──────────────┘  └──────────────────┘  │
+│ Application Layer │
+│ ┌──────────────┐ ┌──────────────┐ ┌──────────────────┐ │
+│ │ Use Cases │ │ Workflows │ │ Orchestration │ │
+│ │ (Hooks) │ │ (Commands) │ │ (Navigation) │ │
+│ └──────────────┘ └──────────────┘ └──────────────────┘ │
 └─────────────────────────────────────────────────────────────┘
-                              ↓
+↓
 ┌─────────────────────────────────────────────────────────────┐
-│                         Domain Layer                        │
-│  ┌──────────────┐  ┌──────────────┐  ┌──────────────────┐  │
-│  │    Cases     │  │  Financials  │  │      Notes       │  │
-│  │   Domain     │  │   Domain     │  │     Domain       │  │
-│  └──────────────┘  └──────────────┘  └──────────────────┘  │
-│  ┌──────────────┐  ┌──────────────┐                       │
-│  │    Alerts    │  │   Activity   │                       │
-│  │   Domain     │  │    Log       │                       │
-│  └──────────────┘  └──────────────┘                       │
+│ Domain Layer │
+│ ┌──────────────┐ ┌──────────────┐ ┌──────────────────┐ │
+│ │ Cases │ │ Financials │ │ Notes │ │
+│ │ Domain │ │ Domain │ │ Domain │ │
+│ └──────────────┘ └──────────────┘ └──────────────────┘ │
+│ ┌──────────────┐ ┌──────────────┐ │
+│ │ Alerts │ │ Activity │ │
+│ │ Domain │ │ Log │ │
+│ └──────────────┘ └──────────────┘ │
 └─────────────────────────────────────────────────────────────┘
-                              ↓
+↓
 ┌─────────────────────────────────────────────────────────────┐
-│                    Infrastructure Layer                     │
-│  ┌──────────────┐  ┌──────────────┐  ┌──────────────────┐  │
-│  │   Storage    │  │   Telemetry  │  │   Performance    │  │
-│  │  Repository  │  │   Collector  │  │    Tracker       │  │
-│  └──────────────┘  └──────────────┘  └──────────────────┘  │
-│  ┌──────────────┐  ┌──────────────┐                       │
-│  │   File API   │  │    Logger    │                       │
-│  │   Adapter    │  │   Service    │                       │
-│  └──────────────┘  └──────────────┘                       │
+│ Infrastructure Layer │
+│ ┌──────────────┐ ┌──────────────┐ ┌──────────────────┐ │
+│ │ Storage │ │ Telemetry │ │ Performance │ │
+│ │ Repository │ │ Collector │ │ Tracker │ │
+│ └──────────────┘ └──────────────┘ └──────────────────┘ │
+│ ┌──────────────┐ ┌──────────────┐ │
+│ │ File API │ │ Logger │ │
+│ │ Adapter │ │ Service │ │
+│ └──────────────┘ └──────────────┘ │
 └─────────────────────────────────────────────────────────────┘
-
-
 
 Domain Boundaries
 
@@ -148,96 +195,101 @@ Domain Boundaries
 Responsibility: Case lifecycle, person records, status management
 
 // Entities
+
 - Case (aggregate root)
 - Person (value object)
 - CaseStatus (value object)
 
 // Use Cases
+
 - CreateCase
 - UpdateCase
 - ArchiveCase
 - SearchCases
 
 // Repository Interface
+
 - ICaseRepository
-
-
 
 2. Financials Domain (domain/financials/)
 
 Responsibility: Resources, income, expenses, verification
 
 // Entities
+
 - FinancialItem (aggregate root)
 - VerificationStatus (value object)
 - Frequency (value object)
 
 // Use Cases
+
 - AddFinancialItem
 - UpdateFinancialItem
 - VerifyFinancialItem
 - CalculateTotals
 
 // Repository Interface
+
 - IFinancialRepository
-
-
 
 3. Notes Domain (domain/notes/)
 
 Responsibility: Case notes, categories, timestamps
 
 // Entities
+
 - Note (aggregate root)
 - NoteCategory (value object)
 
 // Use Cases
+
 - CreateNote
 - UpdateNote
 - DeleteNote
 - FilterNotesByCategory
 
 // Repository Interface
+
 - INoteRepository
-
-
 
 4. Alerts Domain (domain/alerts/)
 
 Responsibility: Alert matching, status tracking, MCN linking
 
 // Entities
+
 - Alert (aggregate root)
 - AlertMatchStatus (value object)
 
 // Use Cases
+
 - LoadAlerts
 - MatchAlertToCase
 - UpdateAlertStatus
 - ResolveAlert
 
 // Repository Interface
+
 - IAlertRepository
-
-
 
 5. Activity Log Domain (domain/activity/)
 
 Responsibility: Event tracking, audit trail, reporting
 
 // Entities
+
 - ActivityEvent (aggregate root)
 - EventType (value object)
 
 // Use Cases
+
 - RecordActivity
 - QueryActivityLog
 - GenerateReport
 
 // Repository Interface
+
 - IActivityRepository
-
-
 
 Implementation Plan
 
@@ -257,15 +309,19 @@ Begin migrating logic from DataManager.ts into the new StorageRepository and new
 
 Add comprehensive unit tests for new domain logic, isolated from React.
 
+**Establish performance and test coverage baseline** (before making changes).
+
 Deliverables:
 
-domain/ folder with 5 domain modules.
+domain/ folder with 5 domain modules (prioritize Cases first).
 
 infrastructure/StorageRepository.ts.
 
 Repository interfaces for each domain.
 
 50+ new domain-level tests.
+
+Performance baseline report.
 
 Success Criteria:
 
@@ -274,6 +330,20 @@ All existing tests still passing.
 Domain logic is isolated from the UI.
 
 The repository pattern is proven with at least one domain (e.g., "Cases").
+
+Test coverage baseline established.
+
+**⚠️ Important Notes for Phase 1:**
+
+- **Priority: Start with Cases domain** - It's simpler and will validate the repository pattern before tackling more complex domains
+- **Alert domain complexity** - Alerts are significantly more complex than other domains:
+  - Separate alerts.json versioning (ALERTS_STORAGE_VERSION = 3)
+  - CSV import/parse logic with sophisticated matching
+  - Legacy format migration handling
+  - MCN matching with case linking
+  - Consider deferring alert use case extraction to Phase 2-3, focusing only on alert repository pattern in Phase 1
+- **AutosaveFileService is immutable** - Do NOT refactor AutosaveFileService; it's infrastructure boundary. All domain code works through StorageRepository which delegates to AutosaveFileService
+- **FileStorageContext remains untouched** - This is the connection/permission management layer; does not change in this phase
 
 Phase 2: State Management (Week 2, Nov 8-14)
 
@@ -289,7 +359,7 @@ Refactor the StorageRepository and DataManager to use the event bus, removing al
 
 Migrate AppContent.tsx to read from the new ApplicationState store.
 
-Remove all window globals and fileStorageFlags logic, replacing it with state from the FileStorageContext state machine.
+Remove fileStorageFlags mutations, replacing them with state from the FileStorageContext state machine.
 
 Deliverables:
 
@@ -307,7 +377,7 @@ A single source of truth for all application data.
 
 No manual sync calls.
 
-All 211+ tests passing.
+All 250+ tests passing.
 
 Phase 3: Use Case Extraction (Week 3, Nov 15-21)
 
@@ -455,49 +525,54 @@ Success Metrics
 
 Technical Metrics
 
-$$$$
+$$
 
  Single Source of Truth: 1 data store (vs. 2)
 
-$$$$
 
- Zero Manual Syncs: No safeNotifyFileStorageChange() calls
+$$
 
-$$$$
+Zero Manual Syncs: No safeNotifyFileStorageChange() calls
+
+$$
 
  Domain Isolation: 5 independent domain modules
 
-$$$$
 
- Test Coverage: 85%+ for domain logic (vs. ~40%)
+$$
 
-$$$$
+Test Coverage: 85%+ for domain logic (vs. ~40%)
+
+$$
 
  Bundle Size: <600 kB raw / <160 kB gzipped
 
-$$$$
 
- Performance: No >10% regression on any baseline
+$$
+
+Performance: No >10% regression on any baseline
 
 Quality Metrics
 
-$$$$
+$$
 
  All Tests Passing: 250+ tests green
 
-$$$$
 
- Zero TypeScript Errors: Strict mode compliance
+$$
 
-$$$$
+Zero TypeScript Errors: Strict mode compliance
+
+$$
 
  Documentation Complete: ADRs for major decisions
 
-$$$$
 
- Accessibility Maintained: No jest-axe regressions
+$$
 
-$$$$
+Accessibility Maintained: No jest-axe regressions
+
+$$
 
  Telemetry Healthy: Error rates <1%
 
@@ -577,6 +652,60 @@ Total Duration: 4 weeks
 Team Size: 3 developers (coordinated via this plan)
 Review Cadence: Daily standups, weekly demos
 
+Important Architectural Notes
+
+**Infrastructure Boundaries (Do Not Refactor)**
+
+1. AutosaveFileService (1,228+ lines)
+   - Complex write queue, retry logic, IndexedDB persistence
+   - File I/O abstraction layer
+   - Keep as-is; domain code accesses only through StorageRepository
+
+2. FileStorageContext & FileStorageProvider
+   - Permission state machine and connection lifecycle management
+   - Remains the connection/auth boundary
+   - Do not merge into ApplicationState or domain event bus
+
+3. FileStorageFlags & localStorage
+   - Persists caseListView preference and session flags
+   - Will be migrated incrementally to ApplicationState in Phase 2
+   - Do not eliminate in Phase 1
+
+**State Management Architecture (Post-Refactor)**
+
+The refactored architecture will have 3 distinct state layers:
+
+1. **File System State** (Primary source of truth)
+   - Managed by: StorageRepository → AutosaveFileService → FileSystemAccessAPI
+   - Not held in memory; always read fresh on demand
+
+2. **Application State** (Post-Phase 2)
+   - Managed by: ApplicationState (Zustand or React Context)
+   - Holds: Active cases, selected case, UI form state, navigation state
+   - Single source for UI consistency
+
+3. **Infrastructure State** (Unchanged)
+   - Managed by: FileStorageContext state machine
+   - Holds: Connection status, permissions, lifecycle state
+
+**React State Post-Refactor**
+
+React components will only hold:
+- UI ephemeral state (form inputs, modals, temporary selections)
+- Navigation state (current view, breadcrumbs)
+- Subscription to ApplicationState changes
+
+**Alert Domain Special Considerations**
+
+The Alert domain requires special handling due to complexity:
+- Separate alerts.json versioning and migration logic
+- CSV parsing and alert matching algorithms
+- MCN normalization and cross-case linking
+- Workflow state persistence and hydration
+
+**Phase 1 approach:** Create alert repository interface only; defer use case extraction.
+**Phase 2-3:** Extract alert-specific use cases after pattern proven with simpler domains.
+
 References
 
 Clean Architecture Principles
@@ -592,3 +721,4 @@ Complete Phase 4 telemetry captures (by Oct 30)
 Review this plan with stakeholders (Oct 23-30)
 
 Kick off Phase 1: Foundation (Nov 1)
+$$

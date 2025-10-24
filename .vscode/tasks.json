@@ -66,5 +66,17 @@
             ],
             "group": "none"
         }
+            ,
+            {
+                "label": "mcp: chrome-devtools",
+                "type": "shell",
+                "command": "npx -y chrome-devtools-mcp@latest --headless=true --isolated=true --channel=stable",
+                "isBackground": true,
+                "problemMatcher": [],
+                "presentation": {
+                    "reveal": "always",
+                    "panel": "new"
+                }
+            }
     ]
 }

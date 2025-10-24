@@ -1,5 +1,6 @@
 import React, { Suspense, ReactNode, useMemo } from 'react';
 import { Skeleton } from '@/components/ui/skeleton';
+import type { FeatureFlagKey, FeatureFlags } from '@/utils/featureFlags';
 
 /**
  * Widget metadata for registration and rendering.
@@ -15,6 +16,8 @@ export interface WidgetMetadata {
   refreshInterval?: number;
   /** Priority order (lower = higher priority, displayed first) */
   priority?: number;
+  /** Optional feature flag key controlling visibility */
+  featureFlag?: FeatureFlagKey;
 }
 
 /**
@@ -75,6 +78,8 @@ export interface WidgetRegistryProps {
   loadingFallback?: ReactNode;
   /** Optional error message handler */
   onError?: (error: Error, widgetId: string) => void;
+  /** Active feature flag context used to filter widgets */
+  enabledFlags?: Partial<FeatureFlags>;
 }
 
 export function WidgetRegistry({
@@ -82,6 +87,7 @@ export function WidgetRegistry({
   gridClassName = 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4',
   loadingFallback = <WidgetSkeleton />,
   onError,
+  enabledFlags,
 }: WidgetRegistryProps) {
   /**
    * Sort widgets by priority (lower number = higher priority).
@@ -95,9 +101,25 @@ export function WidgetRegistry({
     });
   }, [widgets]);
 
+  const visibleWidgets = useMemo(() => {
+    return sortedWidgets.filter(widget => {
+      const flag = widget.metadata.featureFlag;
+      if (!flag) {
+        return true;
+      }
+
+      if (!enabledFlags) {
+        return true;
+      }
+
+      const value = enabledFlags[flag];
+      return value === undefined ? true : Boolean(value);
+    });
+  }, [sortedWidgets, enabledFlags]);
+
   return (
     <div className={gridClassName}>
-      {sortedWidgets.map((widget) => {
+      {visibleWidgets.map((widget) => {
         const WidgetComponent = widget.component;
 
         return (
