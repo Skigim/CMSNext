@@ -95,12 +95,13 @@ export class ApplicationState {
       throw new Error('ApplicationState.hydrate requires a StorageRepository instance');
     }
 
-    const [cases, financials, notes, alerts, activities] = await Promise.all([
+    const [cases, financials, notes, alerts, activities, featureFlags] = await Promise.all([
       storage.cases.getAll(),
       storage.financials.getAll(),
       storage.notes.getAll(),
       storage.alerts.getAll(),
       storage.activity.getAll(),
+      storage.getFeatureFlags(),
     ]);
 
   this.replaceCases(cases);
@@ -108,6 +109,11 @@ export class ApplicationState {
     this.replaceCollection(this.notes, notes);
     this.replaceCollection(this.alerts, alerts);
     this.replaceCollection(this.activities, activities);
+
+    // Restore feature flags if available
+    if (featureFlags && Object.keys(featureFlags).length > 0) {
+      this.setFeatureFlags(featureFlags);
+    }
 
     this.notifyListeners();
   }
@@ -151,6 +157,7 @@ export class ApplicationState {
       this.syncRepository(storage.notes, this.notes),
       this.syncRepository(storage.alerts, this.alerts),
       this.syncRepository(storage.activity, this.activities),
+      storage.saveFeatureFlags(this.featureFlags),
     ]);
   }
 

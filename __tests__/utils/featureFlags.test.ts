@@ -1,21 +1,24 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import {
   DEFAULT_FLAGS,
-  REFACTOR_FLAGS,
   createFeatureFlagContext,
   getEnabledFeatures,
+  getRefactorFlags,
   isFeatureEnabled,
+  setRefactorFlags,
   useNewArchitecture,
   type FeatureFlags,
 } from '@/utils/featureFlags';
 
 const resetRefactorFlags = (): void => {
-  REFACTOR_FLAGS.USE_NEW_ARCHITECTURE = false;
-  REFACTOR_FLAGS.USE_CASES_DOMAIN = false;
-  REFACTOR_FLAGS.USE_FINANCIALS_DOMAIN = false;
-  REFACTOR_FLAGS.USE_NOTES_DOMAIN = false;
-  REFACTOR_FLAGS.USE_ALERTS_DOMAIN = false;
-  REFACTOR_FLAGS.USE_ACTIVITY_DOMAIN = false;
+  setRefactorFlags({
+    USE_NEW_ARCHITECTURE: false,
+    USE_CASES_DOMAIN: false,
+    USE_FINANCIALS_DOMAIN: false,
+    USE_NOTES_DOMAIN: false,
+    USE_ALERTS_DOMAIN: false,
+    USE_ACTIVITY_DOMAIN: false,
+  });
 };
 
 describe('featureFlags', () => {
@@ -68,7 +71,8 @@ describe('featureFlags', () => {
   });
 
   it('keeps refactor feature toggles defaulted to disabled', () => {
-    expect(REFACTOR_FLAGS).toMatchObject({
+    const flags = getRefactorFlags();
+    expect(flags).toMatchObject({
       USE_NEW_ARCHITECTURE: false,
       USE_CASES_DOMAIN: false,
       USE_FINANCIALS_DOMAIN: false,
@@ -80,7 +84,7 @@ describe('featureFlags', () => {
 
   it('reflects refactor master toggle via helper', () => {
     expect(useNewArchitecture()).toBe(false);
-    REFACTOR_FLAGS.USE_NEW_ARCHITECTURE = true;
+    setRefactorFlags({ USE_NEW_ARCHITECTURE: true });
     expect(useNewArchitecture()).toBe(true);
   });
 });

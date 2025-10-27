@@ -12,7 +12,7 @@ import { reportFileStorageError } from "../utils/fileStorageErrorReporter";
 import { createLogger } from "@/utils/logger";
 import ApplicationState from "@/application/ApplicationState";
 import StorageRepository from "@/infrastructure/storage/StorageRepository";
-import { REFACTOR_FLAGS } from "@/utils/featureFlags";
+import { getRefactorFlags } from "@/utils/featureFlags";
 
 const logger = createLogger("ConnectionFlow");
 
@@ -264,10 +264,17 @@ export function useConnectionFlow({
         });
       }
 
-      if (REFACTOR_FLAGS.USE_NEW_ARCHITECTURE && service) {
-        const storageRepository = new StorageRepository(service);
-        const appState = ApplicationState.getInstance();
-        await appState.hydrate(storageRepository);
+      if (getRefactorFlags().USE_NEW_ARCHITECTURE && service) {
+        try {
+          const storageRepository = new StorageRepository(service);
+          const appState = ApplicationState.getInstance();
+          await appState.hydrate(storageRepository);
+        } catch (hydrateError) {
+          logger.error("Failed to hydrate ApplicationState from storage", {
+            error: hydrateError instanceof Error ? hydrateError.message : String(hydrateError),
+          });
+          // Continue execution even if hydration fails - the app can still function with empty state
+        }
       }
 
       return true;

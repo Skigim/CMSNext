@@ -79,6 +79,8 @@ function createStorageStub(initial: StorageData = {}): StorageStub {
     notes: notes as unknown,
     alerts: alerts as unknown,
     activity: activity as unknown,
+    getFeatureFlags: vi.fn(async () => ({})),
+    saveFeatureFlags: vi.fn(async () => {}),
   } as unknown as StorageRepository;
 
   return {
