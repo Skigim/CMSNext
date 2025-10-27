@@ -65,13 +65,13 @@ const STATUS_COLOR_MAP: Record<string, string> = {
 
 function startOfDay(date: Date): Date {
   const next = new Date(date);
-  next.setUTCHours(0, 0, 0, 0);
+  next.setHours(0, 0, 0, 0);
   return next;
 }
 
 function addDays(date: Date, amount: number): Date {
   const copy = new Date(date);
-  copy.setUTCDate(copy.getUTCDate() + amount);
+  copy.setDate(copy.getDate() + amount);
   return copy;
 }
 
