@@ -28,10 +28,14 @@ const alerts: AlertWithMatch[] = [];
 describe("AlertsClearedPerDayWidget", () => {
   beforeEach(() => {
     mockUseWidgetData.mockReset();
+    // Mock the current date to ensure consistent test behavior
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(2025, 9, 22, 12, 0, 0)); // Oct 22, 2025, noon local time
   });
 
   afterEach(() => {
     vi.clearAllMocks();
+    vi.useRealTimers();
   });
 
   it("renders resolution trend", () => {
@@ -41,9 +45,13 @@ describe("AlertsClearedPerDayWidget", () => {
           { date: "2025-10-16", clearedCount: 1 },
           { date: "2025-10-17", clearedCount: 0 },
           { date: "2025-10-18", clearedCount: 2 },
+          { date: "2025-10-19", clearedCount: 0 },
+          { date: "2025-10-20", clearedCount: 1 },
+          { date: "2025-10-21", clearedCount: 0 },
+          { date: "2025-10-22", clearedCount: 1 },
         ],
-        total: 3,
-        previousTotal: 1,
+        total: 5,
+        previousTotal: 3,
       },
       loading: false,
       error: null,
@@ -54,7 +62,7 @@ describe("AlertsClearedPerDayWidget", () => {
     render(<AlertsClearedPerDayWidget alerts={alerts} metadata={metadata} />);
 
     expect(screen.getByText("Alerts Cleared/Day")).toBeInTheDocument();
-    expect(screen.getByText(/3 cleared/)).toBeInTheDocument();
+    expect(screen.getByText(/5 cleared/)).toBeInTheDocument();
     expect(screen.getByText(/weekly change/i)).toBeInTheDocument();
   });
 
@@ -93,9 +101,13 @@ describe("AlertsClearedPerDayWidget", () => {
           { date: "2025-10-16", clearedCount: 1 },
           { date: "2025-10-17", clearedCount: 3 },
           { date: "2025-10-18", clearedCount: 2 },
+          { date: "2025-10-19", clearedCount: 0 },
+          { date: "2025-10-20", clearedCount: 1 },
+          { date: "2025-10-21", clearedCount: 2 },
+          { date: "2025-10-22", clearedCount: 1 },
         ],
-        total: 6,
-        previousTotal: 5,
+        total: 10,
+        previousTotal: 8,
       },
       loading: false,
       error: null,
