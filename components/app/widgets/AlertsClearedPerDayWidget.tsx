@@ -30,12 +30,48 @@ export function AlertsClearedPerDayWidget({ alerts = [], metadata, refreshKey }:
     // Keep reference date in local time to match alert timestamps
     const now = new Date();
     const reference = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    
+    console.log('=== AlertsClearedPerDayWidget Debug ===');
+    console.log('Current time (now):', now);
+    console.log('Current time ISO:', now.toISOString());
+    console.log('Reference date (local midnight):', reference);
+    console.log('Reference date ISO:', reference.toISOString());
+    console.log('Reference date components:', {
+      year: reference.getFullYear(),
+      month: reference.getMonth() + 1,
+      date: reference.getDate(),
+    });
+    
     const daily = calculateAlertsClearedPerDay(alerts, { referenceDate: reference });
+    console.log('Daily buckets returned:', daily);
+    console.log('Date range:', daily.length > 0 ? `${daily[0].date} to ${daily[daily.length - 1].date}` : 'empty');
+    
+    // Log sample resolved alerts
+    const resolvedAlerts = alerts.filter(a => a.status?.toLowerCase() === 'resolved' && a.resolvedAt);
+    console.log('Total resolved alerts with resolvedAt:', resolvedAlerts.length);
+    
+    if (resolvedAlerts.length > 0) {
+      const sample = resolvedAlerts[0];
+      console.log('Sample resolved alert:', {
+        id: sample.id,
+        resolvedAt: sample.resolvedAt,
+        parsedDate: new Date(sample.resolvedAt!),
+        parsedDateISO: new Date(sample.resolvedAt!).toISOString(),
+        localDate: new Date(sample.resolvedAt!).getDate(),
+        localMonth: new Date(sample.resolvedAt!).getMonth() + 1,
+        localYear: new Date(sample.resolvedAt!).getFullYear(),
+      });
+    }
+    
     const total = daily.reduce((acc, item) => acc + item.clearedCount, 0);
 
     const previousReference = widgetDateUtils.addDays(reference, -DEFAULT_WINDOW);
     const previousDaily = calculateAlertsClearedPerDay(alerts, { referenceDate: previousReference });
     const previousTotal = previousDaily.reduce((acc, item) => acc + item.clearedCount, 0);
+
+    console.log('Total cleared (current window):', total);
+    console.log('Total cleared (previous window):', previousTotal);
+    console.log('=== End Debug ===');
 
     return { daily, total, previousTotal } satisfies AlertsClearedPerDayData;
   }, [alerts]);
