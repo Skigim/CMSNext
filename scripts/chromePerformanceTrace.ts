@@ -5,7 +5,7 @@
  * then extracts key metrics and generates a report.
  */
 
-import { writeFile } from 'fs/promises';
+import { writeFile, mkdir } from 'fs/promises';
 import { join } from 'path';
 
 interface PerformanceMetrics {
@@ -53,21 +53,31 @@ async function analyzePerformance(url: string): Promise<PerformanceMetrics> {
     };
   });
 
+  // Ensure output directory exists
+  const outputDir = join(process.cwd(), 'reports', 'performance');
+  await mkdir(outputDir, { recursive: true });
+
   console.log('📊 Starting trace...');
   await page.tracing.start({ 
-    path: join(process.cwd(), 'reports', 'performance', `trace-${Date.now()}.json`),
+    path: join(outputDir, `trace-${Date.now()}.json`),
     screenshots: true,
     categories: ['devtools.timeline', 'v8.execute', 'disabled-by-default-v8.cpu_profiler'],
   });
 
   const startTime = Date.now();
   
-  // Navigate and wait for network idle
+  // Navigate and wait for network idle with error handling
   console.log('🌐 Navigating to page...');
-  await page.goto(url, { 
-    waitUntil: 'networkidle2',
-    timeout: 30000,
-  });
+  try {
+    await page.goto(url, { 
+      waitUntil: 'networkidle2',
+      timeout: 30000,
+    });
+  } catch (error) {
+    console.error('Navigation failed:', error instanceof Error ? error.message : String(error));
+    await browser.close();
+    throw new Error(`Failed to navigate to ${url}: ${error instanceof Error ? error.message : 'Unknown error'}`);
+  }
 
   // Collect Web Vitals
   const metrics = await page.evaluate(() => {
@@ -162,7 +172,7 @@ async function main() {
   try {
     const results = await analyzePerformance(url);
     
-    // Save report
+    // Save report - directory already created in analyzePerformance
     const reportPath = join(process.cwd(), 'reports', 'performance', `perf-report-${Date.now()}.json`);
     await writeFile(reportPath, JSON.stringify(results, null, 2));
     
