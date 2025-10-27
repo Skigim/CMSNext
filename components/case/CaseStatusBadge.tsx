@@ -44,7 +44,7 @@ export const CaseStatusBadge = memo(function CaseStatusBadge({ status, onStatusC
     return map;
   }, [config.caseStatuses]);
 
-  const fallbackStatus = config.caseStatuses[0] ?? "Pending";
+  const fallbackStatus = (config.caseStatuses[0] ?? "Pending") as CaseDisplay["status"];
   const effectiveStatus: CaseDisplay["status"] = status ?? fallbackStatus;
   const className = statusPalette.get(effectiveStatus) ?? STATUS_COLOR_PALETTE[0];
 

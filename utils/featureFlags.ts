@@ -137,7 +137,7 @@ export function setRefactorFlags(flags: Partial<RefactorFeatureFlags>): void {
  * @deprecated Use getRefactorFlags() instead to avoid mutation.
  */
 export const REFACTOR_FLAGS: Readonly<RefactorFeatureFlags> = new Proxy(refactorFlags, {
-	get: (target, prop: keyof RefactorFeatureFlags) => refactorFlags[prop],
+	get: (_target, prop: keyof RefactorFeatureFlags) => refactorFlags[prop],
 	set: () => {
 		throw new Error('Direct mutation of REFACTOR_FLAGS is not allowed. Use setRefactorFlags() in tests.');
 	}

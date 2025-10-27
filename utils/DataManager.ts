@@ -4,6 +4,7 @@ import {
   FinancialItem,
   NewPersonData,
   NewCaseRecordData,
+  CaseStatus,
   NewNoteData,
   AlertWorkflowStatus,
 } from "../types/case";
@@ -865,7 +866,7 @@ export class DataManager {
       matchStatus: this.normalizeMatchStatus(raw.matchStatus),
       matchedCaseId: typeof raw.matchedCaseId === "string" ? raw.matchedCaseId : undefined,
       matchedCaseName: typeof raw.matchedCaseName === "string" ? raw.matchedCaseName : undefined,
-      matchedCaseStatus: typeof raw.matchedCaseStatus === "string" ? raw.matchedCaseStatus : undefined,
+      matchedCaseStatus: (typeof raw.matchedCaseStatus === "string" ? raw.matchedCaseStatus as CaseStatus : undefined),
     };
 
     return alert;

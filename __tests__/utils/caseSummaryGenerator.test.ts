@@ -7,7 +7,7 @@ describe('caseSummaryGenerator', () => {
     id: 'case-123',
     name: 'John Doe Case',
     mcn: 'MCN-12345',
-    status: 'In Progress',
+    status: 'Active',
     priority: true,
     createdAt: '2024-01-01T00:00:00Z',
     updatedAt: '2024-01-15T00:00:00Z',
@@ -48,7 +48,7 @@ describe('caseSummaryGenerator', () => {
       caseType: 'Medicaid',
       personId: 'person-1',
       spouseId: '',
-      status: 'In Progress',
+      status: 'Active',
       description: 'Test case',
       priority: true,
       livingArrangement: 'Independent',
@@ -114,7 +114,7 @@ describe('caseSummaryGenerator', () => {
     expect(summary).toContain('John Doe Case');
     expect(summary).toContain('MCN-12345');
     expect(summary).toContain('case-123');
-    expect(summary).toContain('In Progress');
+    expect(summary).toContain('Active');
     expect(summary).toContain('Priority: Yes');
   });
 

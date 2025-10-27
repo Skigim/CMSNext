@@ -1234,8 +1234,8 @@ describe('DataManager', () => {
       const pendingCase = createMockCaseDisplay({ id: 'case-1', status: 'Pending' })
       pendingCase.caseRecord.status = 'Pending'
 
-      const untouchedCase = createMockCaseDisplay({ id: 'case-2', status: 'Approved' })
-      untouchedCase.caseRecord.status = 'Approved'
+      const untouchedCase = createMockCaseDisplay({ id: 'case-2', status: 'Active' })
+      untouchedCase.caseRecord.status = 'Active'
 
       mockAutosaveService.readFile.mockResolvedValue(createFileData({
         cases: [pendingCase, untouchedCase],
@@ -1248,14 +1248,14 @@ describe('DataManager', () => {
         return true
       })
 
-      const updatedCase = await dataManager.updateCaseStatus('case-1', 'Approved')
+      const updatedCase = await dataManager.updateCaseStatus('case-1', 'Active')
 
-      expect(updatedCase.status).toBe('Approved')
-      expect(updatedCase.caseRecord.status).toBe('Approved')
-      expect(capturedPayload.cases.find((c: any) => c.id === 'case-1').status).toBe('Approved')
-      expect(capturedPayload.cases.find((c: any) => c.id === 'case-1').caseRecord.status).toBe('Approved')
-      expect(capturedPayload.cases.find((c: any) => c.id === 'case-2').status).toBe('Approved')
-      expect(capturedPayload.cases.find((c: any) => c.id === 'case-2').caseRecord.status).toBe('Approved')
+      expect(updatedCase.status).toBe('Active')
+      expect(updatedCase.caseRecord.status).toBe('Active')
+      expect(capturedPayload.cases.find((c: any) => c.id === 'case-1').status).toBe('Active')
+      expect(capturedPayload.cases.find((c: any) => c.id === 'case-1').caseRecord.status).toBe('Active')
+      expect(capturedPayload.cases.find((c: any) => c.id === 'case-2').status).toBe('Active')
+      expect(capturedPayload.cases.find((c: any) => c.id === 'case-2').caseRecord.status).toBe('Active')
     })
 
     it('records an activity log entry when case status changes', async () => {
@@ -1274,14 +1274,14 @@ describe('DataManager', () => {
         return true
       })
 
-      await dataManager.updateCaseStatus('case-activity', 'Approved')
+      await dataManager.updateCaseStatus('case-activity', 'Active')
 
       expect(capturedPayload.activityLog).toHaveLength(1)
       const entry = capturedPayload.activityLog[0]
       expect(entry.type).toBe('status-change')
       expect(entry.caseId).toBe('case-activity')
       expect(entry.payload.fromStatus).toBe('Pending')
-      expect(entry.payload.toStatus).toBe('Approved')
+      expect(entry.payload.toStatus).toBe('Active')
       expect(typeof entry.timestamp).toBe('string')
     })
   })

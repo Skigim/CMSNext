@@ -12,7 +12,7 @@
  * - Normalizes status values to valid enum values
  */
 
-import { CaseDisplay, CaseRecord, Person, FinancialItem, Note, Address } from '@/types/case';
+import { CaseDisplay, CaseRecord, Person, FinancialItem, Note, Address, CaseStatus } from '@/types/case';
 
 /**
  * Generate a unique ID using crypto.randomUUID() with fallback
@@ -98,7 +98,7 @@ interface NightingaleCase {
 /**
  * Normalize status to match expected enum values
  */
-function normalizeStatus(status?: string): 'Pending' | 'Approved' | 'Denied' | 'Spenddown' {
+function normalizeStatus(status?: string): CaseStatus {
   if (!status) {
     return 'Pending';
   }
@@ -106,15 +106,15 @@ function normalizeStatus(status?: string): 'Pending' | 'Approved' | 'Denied' | '
   const statusLower = status.toLowerCase();
 
   if (statusLower.includes('approve') || statusLower.includes('complete') || statusLower.includes('close')) {
-    return 'Approved';
+    return 'Closed';
   }
 
   if (statusLower.includes('deny') || statusLower.includes('reject')) {
-    return 'Denied';
+    return 'Closed';
   }
 
-  if (statusLower.includes('spend')) {
-    return 'Spenddown';
+  if (statusLower.includes('spend') || statusLower.includes('active')) {
+    return 'Active';
   }
 
   return 'Pending';

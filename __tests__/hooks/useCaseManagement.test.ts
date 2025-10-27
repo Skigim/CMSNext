@@ -114,7 +114,7 @@ describe("useCaseManagement", () => {
 
   it("updates case status via DataManager and syncs local state", async () => {
     const initialCase = createCaseDisplay();
-    const updatedCase = createCaseDisplay({ status: "Approved" });
+    const updatedCase = createCaseDisplay({ status: "Active" });
 
     const mockDataManager = {
       updateCaseStatus: vi.fn().mockResolvedValue(updatedCase),
@@ -129,14 +129,14 @@ describe("useCaseManagement", () => {
     });
 
     await act(async () => {
-      const returned = await result.current.updateCaseStatus(initialCase.id, "Approved");
+      const returned = await result.current.updateCaseStatus(initialCase.id, "Active");
       expect(returned).toEqual(updatedCase);
     });
 
-    expect(mockDataManager.updateCaseStatus).toHaveBeenCalledWith(initialCase.id, "Approved");
+    expect(mockDataManager.updateCaseStatus).toHaveBeenCalledWith(initialCase.id, "Active");
     expect(result.current.cases[0]).toEqual(updatedCase);
     expect(mocks.toastLoading).toHaveBeenCalledWith("Updating case status...");
-    expect(mocks.toastSuccess).toHaveBeenCalledWith("Status updated to Approved", {
+    expect(mocks.toastSuccess).toHaveBeenCalledWith("Status updated to Active", {
       id: "toast-id",
       duration: 2000,
     });
@@ -148,7 +148,7 @@ describe("useCaseManagement", () => {
     const { result } = renderHook(() => useCaseManagement());
 
     await act(async () => {
-      const response = await result.current.updateCaseStatus("missing-case", "Approved");
+      const response = await result.current.updateCaseStatus("missing-case", "Active");
       expect(response).toBeNull();
     });
 
@@ -174,11 +174,11 @@ describe("useCaseManagement", () => {
     });
 
     await act(async () => {
-      const response = await result.current.updateCaseStatus(initialCase.id, "Denied");
+      const response = await result.current.updateCaseStatus(initialCase.id, "Closed");
       expect(response).toBeNull();
     });
 
-    expect(mockDataManager.updateCaseStatus).toHaveBeenCalledWith(initialCase.id, "Denied");
+    expect(mockDataManager.updateCaseStatus).toHaveBeenCalledWith(initialCase.id, "Closed");
     expect(mocks.toastLoading).toHaveBeenCalledWith("Updating case status...");
     expect(mocks.toastError).toHaveBeenCalledWith("Failed to update case status. Please try again.", {
       id: "toast-id",

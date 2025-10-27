@@ -319,7 +319,7 @@ describe('CaseDetails Memory Management', () => {
 
     const caseWithStatus = {
       ...mockCase,
-      status: 'Pending',
+      status: 'Pending' as const,
       mcn: '12345',
     };
 
@@ -333,7 +333,7 @@ describe('CaseDetails Memory Management', () => {
       ...caseWithStatus,
       name: 'Jane Doe',
       mcn: '67890',
-      status: 'Active',
+      status: 'Active' as const,
     };
 
     rerender(<CaseDetails {...mockProps} case={updatedCase} />);

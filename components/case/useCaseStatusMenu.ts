@@ -48,11 +48,11 @@ export function useCaseStatusMenu({
 }: UseCaseStatusMenuOptions): UseCaseStatusMenuResult {
   const { config } = useCategoryConfig();
   const fallbackStatus = useMemo<CaseDisplay["status"]>(() => {
-    return config.caseStatuses[0] ?? "Pending";
+    return (config.caseStatuses[0] ?? "Pending") as CaseDisplay["status"];
   }, [config.caseStatuses]);
 
   const availableStatuses = useMemo<CaseDisplay["status"][]>(() => {
-    return config.caseStatuses.length > 0 ? config.caseStatuses : [fallbackStatus];
+    return config.caseStatuses.length > 0 ? (config.caseStatuses as CaseDisplay["status"][]) : [fallbackStatus];
   }, [config.caseStatuses, fallbackStatus]);
 
   const externalStatus = status ?? fallbackStatus;

@@ -172,15 +172,15 @@ function normalizeStatus(status: any): CaseDisplay['status'] {
   const statusStr = String(status).toLowerCase();
 
   if (statusStr.includes('approve') || statusStr.includes('complete') || statusStr.includes('close')) {
-    return 'Approved';
+    return 'Closed';
   }
 
   if (statusStr.includes('deny') || statusStr.includes('reject')) {
-    return 'Denied';
+    return 'Closed';
   }
 
-  if (statusStr.includes('spend')) {
-    return 'Spenddown';
+  if (statusStr.includes('spend') || statusStr.includes('active')) {
+    return 'Active';
   }
 
   return 'Pending';

@@ -3,7 +3,7 @@ import { Button } from "../ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
 import { ScrollArea } from "../ui/scroll-area";
-import { CaseDisplay, NewPersonData, NewCaseRecordData } from "../../types/case";
+import { CaseDisplay, NewPersonData, NewCaseRecordData, CaseStatus, CASE_STATUS_VALUES } from "../../types/case";
 import { ArrowLeft, User, FileText, Save, X } from "lucide-react";
 import { withFormErrorBoundary } from "../error/ErrorBoundaryHOC";
 import { PersonInfoForm } from "../forms/PersonInfoForm";
@@ -26,7 +26,7 @@ export function CaseForm({ case: existingCase, onSave, onCancel }: CaseFormProps
   const { config } = useCategoryConfig();
 
   const defaultCaseType = useMemo(() => config.caseTypes[0] ?? "", [config.caseTypes]);
-  const defaultCaseStatus = useMemo(() => config.caseStatuses[0] ?? "", [config.caseStatuses]);
+  const defaultCaseStatus = useMemo(() => (config.caseStatuses[0] ?? "Pending") as CaseStatus, [config.caseStatuses]);
   const defaultLivingArrangement = useMemo(
     () => config.livingArrangements[0] ?? "",
     [config.livingArrangements],
@@ -66,7 +66,7 @@ export function CaseForm({ case: existingCase, onSave, onCancel }: CaseFormProps
     caseType: existingCase?.caseRecord.caseType || defaultCaseType,
     personId: existingCase?.caseRecord.personId || '',
     spouseId: existingCase?.caseRecord.spouseId || '',
-    status: existingCase?.caseRecord.status || defaultCaseStatus,
+    status: (existingCase?.caseRecord.status || defaultCaseStatus) as CaseStatus,
     description: existingCase?.caseRecord.description || '',
     priority: existingCase?.caseRecord.priority || false,
     livingArrangement: existingCase?.caseRecord.livingArrangement || defaultLivingArrangement,
@@ -123,7 +123,7 @@ export function CaseForm({ case: existingCase, onSave, onCancel }: CaseFormProps
         changed = true;
       }
 
-      if (!existingCase?.caseRecord.status && defaultCaseStatus && !config.caseStatuses.includes(prev.status)) {
+      if (!existingCase?.caseRecord.status && defaultCaseStatus && !CASE_STATUS_VALUES.includes(prev.status)) {
         next.status = defaultCaseStatus;
         changed = true;
       }
