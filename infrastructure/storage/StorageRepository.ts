@@ -42,8 +42,6 @@ export class StorageRepository
 {
   private static readonly CURRENT_VERSION = 1;
 
-  private domainHint: DomainScope = 'cases';
-
   private readonly caseAdapter: ICaseRepository;
   private readonly financialAdapter: IFinancialRepository;
   private readonly noteAdapter: INoteRepository;
@@ -52,50 +50,48 @@ export class StorageRepository
 
   constructor(private readonly fileService: AutosaveFileService) {
     this.caseAdapter = {
-      getById: id => this.runWithDomain('cases', () => this.getById(id)),
-      getAll: () => this.runWithDomain('cases', () => this.getAll()),
-      save: entity => this.runWithDomain('cases', () => this.save(entity)),
-      delete: id => this.runWithDomain('cases', () => this.delete(id)),
-      findByMCN: mcn => this.runWithDomain('cases', () => this.findByMCN(mcn)),
-      searchCases: query => this.runWithDomain('cases', () => this.searchCases(query)),
+      getById: id => this.getById('cases', id),
+      getAll: () => this.getAll('cases'),
+      save: entity => this.save('cases', entity),
+      delete: id => this.delete('cases', id),
+      findByMCN: mcn => this.findByMCN('cases', mcn),
+      searchCases: query => this.searchCases('cases', query),
     };
 
     this.financialAdapter = {
-      getById: id => this.runWithDomain('financials', () => this.getById(id)),
-      getAll: () => this.runWithDomain('financials', () => this.getAll()),
-      save: entity => this.runWithDomain('financials', () => this.save(entity)),
-      delete: id => this.runWithDomain('financials', () => this.delete(id)),
-      getByCaseId: caseId => this.runWithDomain('financials', () => this.getByCaseId(caseId)),
-  getByCategory: category => this.runWithDomain('financials', () => this.getByCategory(category)),
+      getById: id => this.getById('financials', id),
+      getAll: () => this.getAll('financials'),
+      save: entity => this.save('financials', entity),
+      delete: id => this.delete('financials', id),
+      getByCaseId: caseId => this.getByCaseId('financials', caseId),
+      getByCategory: category => this.getByCategory('financials', category),
     };
 
     this.noteAdapter = {
-      getById: id => this.runWithDomain('notes', () => this.getById(id)),
-      getAll: () => this.runWithDomain('notes', () => this.getAll()),
-      save: entity => this.runWithDomain('notes', () => this.save(entity)),
-      delete: id => this.runWithDomain('notes', () => this.delete(id)),
-      getByCaseId: caseId => this.runWithDomain('notes', () => this.getByCaseId(caseId)),
-      filterByCategory: (caseId, category) =>
-        this.runWithDomain('notes', () => this.filterByCategory(caseId, category)),
+      getById: id => this.getById('notes', id),
+      getAll: () => this.getAll('notes'),
+      save: entity => this.save('notes', entity),
+      delete: id => this.delete('notes', id),
+      getByCaseId: caseId => this.getByCaseId('notes', caseId),
+      filterByCategory: (caseId, category) => this.filterByCategory('notes', caseId, category),
     };
 
     this.alertAdapter = {
-      getById: id => this.runWithDomain('alerts', () => this.getById(id)),
-      getAll: () => this.runWithDomain('alerts', () => this.getAll()),
-      save: entity => this.runWithDomain('alerts', () => this.save(entity)),
-      delete: id => this.runWithDomain('alerts', () => this.delete(id)),
-      findByMCN: mcn => this.runWithDomain('alerts', () => this.findByMCN(mcn)),
-      getUnmatched: () => this.runWithDomain('alerts', () => this.getUnmatched()),
+      getById: id => this.getById('alerts', id),
+      getAll: () => this.getAll('alerts'),
+      save: entity => this.save('alerts', entity),
+      delete: id => this.delete('alerts', id),
+      findByMCN: mcn => this.findByMCN('alerts', mcn),
+      getUnmatched: () => this.getUnmatched('alerts'),
     };
 
     this.activityAdapter = {
-      getById: id => this.runWithDomain('activities', () => this.getById(id)),
-      getAll: () => this.runWithDomain('activities', () => this.getAll()),
-      save: entity => this.runWithDomain('activities', () => this.save(entity)),
-      delete: id => this.runWithDomain('activities', () => this.delete(id)),
-      getByAggregateId: aggregateId =>
-        this.runWithDomain('activities', () => this.getByAggregateId(aggregateId)),
-      getRecent: limit => this.runWithDomain('activities', () => this.getRecent(limit)),
+      getById: id => this.getById('activities', id),
+      getAll: () => this.getAll('activities'),
+      save: entity => this.save('activities', entity),
+      delete: id => this.delete('activities', id),
+      getByAggregateId: aggregateId => this.getByAggregateId('activities', aggregateId),
+      getRecent: limit => this.getRecent('activities', limit),
     };
   }
 
@@ -119,10 +115,10 @@ export class StorageRepository
     return this.activityAdapter;
   }
 
-  async getById(id: string): Promise<any> {
+  async getById(domain: DomainScope, id: string): Promise<any> {
     const storage = await this.readStorage();
 
-    switch (this.domainHint) {
+    switch (domain) {
       case 'cases':
         return this.cloneCaseEntity(storage.cases.find(item => item.id === id) ?? null);
       case 'financials':
@@ -138,10 +134,10 @@ export class StorageRepository
     }
   }
 
-  async getAll(): Promise<any[]> {
+  async getAll(domain: DomainScope): Promise<any[]> {
     const storage = await this.readStorage();
 
-    switch (this.domainHint) {
+    switch (domain) {
       case 'cases':
         return this.cloneCaseEntities(storage.cases);
       case 'financials':
@@ -157,22 +153,22 @@ export class StorageRepository
     }
   }
 
-  async save(entity: DomainEntity): Promise<void> {
+  async save(domain: DomainScope, entity: DomainEntity): Promise<void> {
     const storage = await this.readStorage();
 
-    if (this.domainHint === 'cases') {
+    if (domain === 'cases') {
       const snapshot = this.toCaseSnapshot(entity as Case | CaseSnapshot);
       storage.cases = StorageRepository.upsert<CaseSnapshot>(storage.cases, snapshot);
-    } else if (this.domainHint === 'financials') {
+    } else if (domain === 'financials') {
       const cloned = this.clone(entity) as FinancialItem;
       storage.financials = StorageRepository.upsert<FinancialItem>(storage.financials, cloned);
-    } else if (this.domainHint === 'notes') {
+    } else if (domain === 'notes') {
       const cloned = this.clone(entity) as Note;
       storage.notes = StorageRepository.upsert<Note>(storage.notes, cloned);
-    } else if (this.domainHint === 'alerts') {
+    } else if (domain === 'alerts') {
       const cloned = this.clone(entity) as Alert;
       storage.alerts = StorageRepository.upsert<Alert>(storage.alerts, cloned);
-    } else if (this.domainHint === 'activities') {
+    } else if (domain === 'activities') {
       const cloned = this.clone(entity) as ActivityEvent;
       storage.activities = StorageRepository.upsert<ActivityEvent>(storage.activities, cloned);
     } else {
@@ -182,10 +178,10 @@ export class StorageRepository
     await this.writeStorage(storage);
   }
 
-  async delete(id: string): Promise<void> {
+  async delete(domain: DomainScope, id: string): Promise<void> {
     const storage = await this.readStorage();
 
-    switch (this.domainHint) {
+    switch (domain) {
       case 'financials':
         storage.financials = storage.financials.filter(item => item.id !== id);
         break;
@@ -207,13 +203,13 @@ export class StorageRepository
     await this.writeStorage(storage);
   }
 
-  async findByMCN(mcn: string): Promise<any> {
-    if (this.domainHint === 'alerts') {
+  async findByMCN(domain: DomainScope, mcn: string): Promise<any> {
+    if (domain === 'alerts') {
       const storage = await this.readStorage();
       return this.clone(storage.alerts.filter(alert => this.normalize(alert.mcn) === this.normalize(mcn)));
     }
 
-    if (this.domainHint === 'cases') {
+    if (domain === 'cases') {
       const storage = await this.readStorage();
       const match = storage.cases.find(caseItem => this.normalize(caseItem.mcn) === this.normalize(mcn)) ?? null;
       return this.cloneCaseEntity(match);
@@ -222,8 +218,8 @@ export class StorageRepository
     throw new Error('StorageRepository.findByMCN is only supported for cases or alerts');
   }
 
-  async searchCases(query: string): Promise<Case[]> {
-    if (this.domainHint !== 'cases') {
+  async searchCases(domain: DomainScope, query: string): Promise<Case[]> {
+    if (domain !== 'cases') {
       throw new Error('StorageRepository.searchCases can only be used for the cases domain');
     }
 
@@ -243,22 +239,22 @@ export class StorageRepository
     return this.cloneCaseEntities(filtered);
   }
 
-  async getByCaseId(caseId: string): Promise<any[]> {
+  async getByCaseId(domain: DomainScope, caseId: string): Promise<any[]> {
     const storage = await this.readStorage();
 
-    if (this.domainHint === 'financials') {
+    if (domain === 'financials') {
       return this.clone(storage.financials.filter(item => item.caseId === caseId));
     }
 
-    if (this.domainHint === 'notes') {
+    if (domain === 'notes') {
       return this.clone(storage.notes.filter(item => item.caseId === caseId));
     }
 
     throw new Error('StorageRepository.getByCaseId is only supported for financials or notes');
   }
 
-  async filterByCategory(caseId: string, category: NoteCategory): Promise<Note[]> {
-    if (this.domainHint !== 'notes') {
+  async filterByCategory(domain: DomainScope, caseId: string, category: NoteCategory): Promise<Note[]> {
+    if (domain !== 'notes') {
       throw new Error('StorageRepository.filterByCategory can only be used for the notes domain');
     }
 
@@ -268,8 +264,8 @@ export class StorageRepository
     );
   }
 
-  async getByCategory(category: string): Promise<FinancialItem[]> {
-    if (this.domainHint !== 'financials') {
+  async getByCategory(domain: DomainScope, category: string): Promise<FinancialItem[]> {
+    if (domain !== 'financials') {
       throw new Error('StorageRepository.getByCategory can only be used for the financials domain');
     }
 
@@ -277,8 +273,8 @@ export class StorageRepository
     return this.clone(storage.financials.filter(item => item.category === category));
   }
 
-  async getUnmatched(): Promise<Alert[]> {
-    if (this.domainHint !== 'alerts') {
+  async getUnmatched(domain: DomainScope): Promise<Alert[]> {
+    if (domain !== 'alerts') {
       throw new Error('StorageRepository.getUnmatched can only be used for the alerts domain');
     }
 
@@ -286,8 +282,8 @@ export class StorageRepository
     return this.clone(storage.alerts.filter(alert => !alert.caseId));
   }
 
-  async getByAggregateId(aggregateId: string): Promise<ActivityEvent[]> {
-    if (this.domainHint !== 'activities') {
+  async getByAggregateId(domain: DomainScope, aggregateId: string): Promise<ActivityEvent[]> {
+    if (domain !== 'activities') {
       throw new Error('StorageRepository.getByAggregateId can only be used for the activity domain');
     }
 
@@ -295,8 +291,8 @@ export class StorageRepository
     return this.clone(storage.activities.filter(event => event.aggregateId === aggregateId));
   }
 
-  async getRecent(limit: number): Promise<ActivityEvent[]> {
-    if (this.domainHint !== 'activities') {
+  async getRecent(domain: DomainScope, limit: number): Promise<ActivityEvent[]> {
+    if (domain !== 'activities') {
       throw new Error('StorageRepository.getRecent can only be used for the activity domain');
     }
 
@@ -308,24 +304,13 @@ export class StorageRepository
     return this.clone(sorted.slice(0, Math.max(0, limit)));
   }
 
-  private async runWithDomain<T>(domain: DomainScope, action: () => Promise<T>): Promise<T> {
-    const previousDomain = this.domainHint;
-    this.domainHint = domain;
-
-    try {
-      return await action();
-    } finally {
-      this.domainHint = previousDomain;
-    }
-  }
-
   private async readStorage(): Promise<StorageFile> {
     const raw = await this.fileService.readFile();
     const base = (raw && typeof raw === 'object' ? raw : {}) as Record<string, unknown>;
 
     const version = typeof base.version === 'number' ? base.version : StorageRepository.CURRENT_VERSION;
-  const rawCases = this.ensureArray<CaseSnapshot>(base.cases);
-  const cases = rawCases.map(snapshot => Case.rehydrate(snapshot).toJSON());
+    const rawCases = this.ensureArray<CaseSnapshot>(base.cases);
+    const cases = rawCases.map(snapshot => Case.rehydrate(snapshot).toJSON());
     const financials = this.ensureArray<FinancialItem>(base.financials);
     const notes = this.ensureArray<Note>(base.notes);
     const alerts = this.ensureArray<Alert>(base.alerts);
