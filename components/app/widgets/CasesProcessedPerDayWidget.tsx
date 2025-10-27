@@ -153,7 +153,9 @@ export function CasesProcessedPerDayWidget({ activityLog = [], metadata, refresh
             <div className="flex h-44 gap-3">
               {data.daily.map((entry) => {
                 const height = maxCount === 0 ? 0 : (entry.processedCount / maxCount) * 100;
-                const date = new Date(entry.date);
+                // Parse the date string as local time by splitting the components
+                const [year, month, day] = entry.date.split('-').map(Number);
+                const date = new Date(year, month - 1, day);
                 return (
                   <div key={entry.date} className="flex-1 flex flex-col justify-end text-center">
                     <div
