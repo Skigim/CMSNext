@@ -195,7 +195,7 @@ export class Case {
     }
 
     if (!Case.isValidMcn(this.props.mcn)) {
-      throw new ValidationError('Case MCN must follow the expected format (e.g. MCN-1234)');
+      throw new ValidationError('Case MCN must start with MC or MCN followed by at least 3 alphanumeric or dash characters (e.g., MCN-1234, MC-5678)');
     }
 
     if (!this.props.name.trim()) {

@@ -198,8 +198,16 @@ export class Person {
       return value.toISOString();
     }
 
+    // Accept strict YYYY-MM-DD format or full ISO 8601 timestamps
+    const strictDatePattern = /^\d{4}-\d{2}-\d{2}$/;
+    const isoTimestampPattern = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{3})?Z?$/;
+    
+    if (!strictDatePattern.test(value) && !isoTimestampPattern.test(value)) {
+      throw new ValidationError('Person date of birth must be in YYYY-MM-DD format or ISO 8601 timestamp');
+    }
+
     if (!Person.isValidIsoDate(value)) {
-      throw new ValidationError('Person date of birth must be a valid ISO-8601 date string');
+      throw new ValidationError('Person date of birth must be a valid date');
     }
 
     return new Date(value).toISOString();

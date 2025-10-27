@@ -97,8 +97,8 @@ export interface RefactorFeatureFlags {
 	USE_ACTIVITY_DOMAIN: boolean;
 }
 
-/** Feature flags governing the architecture refactor rollout. */
-export const REFACTOR_FLAGS: RefactorFeatureFlags = {
+/** Feature flags governing the architecture refactor rollout (internal state). */
+let refactorFlags: RefactorFeatureFlags = {
 	/** Master toggle for switching between legacy and refactored architecture. */
 	USE_NEW_ARCHITECTURE: false,
 	/** Flag for enabling the cases domain rewrite. */
@@ -114,10 +114,40 @@ export const REFACTOR_FLAGS: RefactorFeatureFlags = {
 };
 
 /**
+ * Get a readonly copy of the current refactor flags state.
+ * Returns a new object to prevent external mutation.
+ */
+export function getRefactorFlags(): Readonly<RefactorFeatureFlags> {
+	return { ...refactorFlags };
+}
+
+/**
+ * Update refactor flags (test-only).
+ * Only allowed in test environment to prevent production misuse.
+ */
+export function setRefactorFlags(flags: Partial<RefactorFeatureFlags>): void {
+	if (process.env.NODE_ENV !== 'test' && process.env.NODE_ENV !== 'development') {
+		throw new Error('setRefactorFlags can only be called in test or development environments');
+	}
+	refactorFlags = { ...refactorFlags, ...flags };
+}
+
+/**
+ * Legacy export for backward compatibility.
+ * @deprecated Use getRefactorFlags() instead to avoid mutation.
+ */
+export const REFACTOR_FLAGS: Readonly<RefactorFeatureFlags> = new Proxy(refactorFlags, {
+	get: (target, prop: keyof RefactorFeatureFlags) => refactorFlags[prop],
+	set: () => {
+		throw new Error('Direct mutation of REFACTOR_FLAGS is not allowed. Use setRefactorFlags() in tests.');
+	}
+});
+
+/**
  * Convenience helper to determine if the architecture refactor is active.
  */
 export function useNewArchitecture(): boolean {
-	return REFACTOR_FLAGS.USE_NEW_ARCHITECTURE;
+	return refactorFlags.USE_NEW_ARCHITECTURE;
 }
 
 /** Temporary toggle for demo alerts data while the dataset stabilizes. */
