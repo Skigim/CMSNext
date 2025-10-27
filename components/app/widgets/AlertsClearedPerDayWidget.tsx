@@ -27,7 +27,9 @@ const DEFAULT_WINDOW = 7;
 
 export function AlertsClearedPerDayWidget({ alerts = [], metadata, refreshKey }: AlertsClearedPerDayWidgetProps) {
   const fetchData = useCallback(async () => {
-    const reference = widgetDateUtils.startOfDay(new Date());
+    // Keep reference date in local time to match alert timestamps
+    const now = new Date();
+    const reference = new Date(now.getFullYear(), now.getMonth(), now.getDate());
     const daily = calculateAlertsClearedPerDay(alerts, { referenceDate: reference });
     const total = daily.reduce((acc, item) => acc + item.clearedCount, 0);
 
