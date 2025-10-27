@@ -150,12 +150,12 @@ export function AlertsClearedPerDayWidget({ alerts = [], metadata, refreshKey }:
                 <span className="text-muted-foreground">vs. prior week</span>
               </div>
             </div>
-            <div className="flex h-44 items-end gap-3">
+            <div className="flex h-44 gap-3">
               {data.daily.map((entry) => {
                 const height = maxCount === 0 ? 0 : (entry.clearedCount / maxCount) * 100;
                 const date = new Date(entry.date);
                 return (
-                  <div key={entry.date} className="flex-1 text-center">
+                  <div key={entry.date} className="flex-1 flex flex-col justify-end text-center">
                     <div
                       className="mx-auto w-full rounded-t-md bg-primary/80"
                       style={{ height: `${height === 0 ? 4 : Math.max(height, 8)}%` }}
