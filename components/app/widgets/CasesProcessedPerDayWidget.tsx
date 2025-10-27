@@ -150,12 +150,12 @@ export function CasesProcessedPerDayWidget({ activityLog = [], metadata, refresh
                 <span className="text-muted-foreground">vs. prior week</span>
               </div>
             </div>
-            <div className="flex h-44 items-end gap-3">
+            <div className="flex h-44 gap-3">
               {data.daily.map((entry) => {
                 const height = maxCount === 0 ? 0 : (entry.processedCount / maxCount) * 100;
                 const date = new Date(entry.date);
                 return (
-                  <div key={entry.date} className="flex-1 text-center">
+                  <div key={entry.date} className="flex-1 flex flex-col justify-end text-center">
                     <div
                       className="mx-auto w-full rounded-t-md bg-accent"
                       style={{ height: `${height === 0 ? 4 : Math.max(height, 8)}%` }}
