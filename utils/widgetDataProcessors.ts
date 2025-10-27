@@ -76,7 +76,11 @@ function addDays(date: Date, amount: number): Date {
 }
 
 function isoDateKey(date: Date): string {
-  return startOfDay(date).toISOString().split('T')[0] ?? '';
+  const d = startOfDay(date);
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
 }
 
 function safeParseDate(value?: string | null): Date | null {

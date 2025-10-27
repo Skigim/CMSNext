@@ -13,7 +13,11 @@ import {
   widgetDateUtils,
 } from "@/utils/widgetDataProcessors";
 
-const referenceDate = widgetDateUtils.startOfDay(new Date("2025-10-22T00:00:00Z"));
+function isoLocal(year: number, monthIndex: number, day: number, hours = 0, minutes = 0, seconds = 0) {
+  return new Date(year, monthIndex, day, hours, minutes, seconds).toISOString();
+}
+
+const referenceDate = widgetDateUtils.startOfDay(new Date(2025, 9, 22));
 
 function buildAlert(partial: Partial<AlertWithMatch>): AlertWithMatch {
   return {
@@ -110,11 +114,17 @@ function buildCase(partial: Partial<CaseDisplay>): CaseDisplay {
 describe("widgetDataProcessors", () => {
   describe("calculateAlertsClearedPerDay", () => {
     it("counts resolved alerts across the last seven days", () => {
+      // Use local time construction to avoid timezone issues
+  const day22 = isoLocal(2025, 9, 22, 10, 0, 0);
+  const day20 = isoLocal(2025, 9, 20, 8, 0, 0);
+  const day18 = isoLocal(2025, 9, 18, 12, 0, 0);
+  const day05 = isoLocal(2025, 9, 5, 12, 0, 0);
+      
       const alerts: AlertWithMatch[] = [
-        buildAlert({ id: "a1", resolvedAt: "2025-10-22T10:00:00Z", status: "resolved" }),
-        buildAlert({ id: "a2", resolvedAt: "2025-10-20T08:00:00Z", status: "resolved" }),
-        buildAlert({ id: "a3", resolvedAt: "2025-10-18T12:00:00Z", status: "resolved" }),
-        buildAlert({ id: "a4", resolvedAt: "2025-10-05T12:00:00Z", status: "resolved" }), // outside window
+        buildAlert({ id: "a1", resolvedAt: day22, status: "resolved" }),
+        buildAlert({ id: "a2", resolvedAt: day20, status: "resolved" }),
+        buildAlert({ id: "a3", resolvedAt: day18, status: "resolved" }),
+        buildAlert({ id: "a4", resolvedAt: day05, status: "resolved" }), // outside window
         buildAlert({ id: "a5", resolvedAt: null, status: "in-progress" }),
       ];
 
@@ -137,11 +147,17 @@ describe("widgetDataProcessors", () => {
 
   describe("calculateCasesProcessedPerDay", () => {
     it("groups completed status changes", () => {
+      // Use local time construction
+  const day21 = isoLocal(2025, 9, 21, 14, 0, 0);
+  const day20 = isoLocal(2025, 9, 20, 9, 0, 0);
+  const day15 = isoLocal(2025, 9, 15, 10, 0, 0);
+  const day22 = isoLocal(2025, 9, 22, 11, 0, 0);
+      
       const activity: CaseActivityEntry[] = [
         {
           id: "c1",
           type: "status-change",
-          timestamp: "2025-10-21T14:00:00Z",
+          timestamp: day21,
           caseId: "case-1",
           caseName: "Case 1",
           payload: { toStatus: "Approved" },
@@ -149,7 +165,7 @@ describe("widgetDataProcessors", () => {
         {
           id: "c2",
           type: "status-change",
-          timestamp: "2025-10-20T09:00:00Z",
+          timestamp: day20,
           caseId: "case-2",
           caseName: "Case 2",
           payload: { toStatus: "Closed" },
@@ -157,7 +173,7 @@ describe("widgetDataProcessors", () => {
         {
           id: "c3",
           type: "status-change",
-          timestamp: "2025-10-15T10:00:00Z",
+          timestamp: day15,
           caseId: "case-3",
           caseName: "Case 3",
           payload: { toStatus: "Pending" },
@@ -165,7 +181,7 @@ describe("widgetDataProcessors", () => {
         {
           id: "c4",
           type: "note-added",
-          timestamp: "2025-10-22T11:00:00Z",
+          timestamp: day22,
           caseId: "case-4",
           caseName: "Case 4",
           payload: { noteId: "n1", category: "General", preview: "note" },
@@ -219,9 +235,9 @@ describe("widgetDataProcessors", () => {
   describe("calculateAvgAlertAge", () => {
     it("computes average, median, and backlog metrics", () => {
       const alerts: AlertWithMatch[] = [
-        buildAlert({ id: "backlog-1", status: "new", resolvedAt: null, alertDate: "2025-10-15T00:00:00Z" }),
-        buildAlert({ id: "backlog-2", status: "acknowledged", resolvedAt: null, alertDate: "2025-09-01T00:00:00Z" }),
-        buildAlert({ id: "backlog-3", status: "resolved", resolvedAt: "2025-10-18T00:00:00Z" }),
+        buildAlert({ id: "backlog-1", status: "new", resolvedAt: null, alertDate: isoLocal(2025, 9, 15) }),
+        buildAlert({ id: "backlog-2", status: "acknowledged", resolvedAt: null, alertDate: isoLocal(2025, 8, 1) }),
+        buildAlert({ id: "backlog-3", status: "resolved", resolvedAt: isoLocal(2025, 9, 18) }),
       ];
 
       const stats = calculateAvgAlertAge(alerts, { referenceDate });
@@ -236,11 +252,11 @@ describe("widgetDataProcessors", () => {
   describe("calculateAvgCaseProcessingTime", () => {
     it("summarizes processing durations and previous baseline", () => {
       const case1 = buildCase({ id: "case-1", status: CASE_STATUS.Active });
-      case1.caseRecord.createdDate = "2025-10-01T00:00:00Z";
+  case1.caseRecord.createdDate = isoLocal(2025, 9, 1);
       const case2 = buildCase({ id: "case-2", status: CASE_STATUS.Closed });
-      case2.caseRecord.createdDate = "2025-10-05T00:00:00Z";
+  case2.caseRecord.createdDate = isoLocal(2025, 9, 5);
       const case3 = buildCase({ id: "case-3", status: CASE_STATUS.Closed });
-      case3.caseRecord.createdDate = "2025-08-20T00:00:00Z";
+  case3.caseRecord.createdDate = isoLocal(2025, 7, 20);
 
       const cases: CaseDisplay[] = [case1, case2, case3];
 
@@ -248,7 +264,7 @@ describe("widgetDataProcessors", () => {
         {
           id: "act-1",
           type: "status-change",
-          timestamp: "2025-10-10T12:00:00Z",
+          timestamp: isoLocal(2025, 9, 10, 12),
           caseId: "case-1",
           caseName: "Case 1",
           payload: { toStatus: "Approved", fromStatus: "Pending" },
@@ -256,7 +272,7 @@ describe("widgetDataProcessors", () => {
         {
           id: "act-2",
           type: "status-change",
-          timestamp: "2025-10-18T09:00:00Z",
+          timestamp: isoLocal(2025, 9, 18, 9),
           caseId: "case-2",
           caseName: "Case 2",
           payload: { toStatus: "Denied", fromStatus: "Pending" },
@@ -264,7 +280,7 @@ describe("widgetDataProcessors", () => {
         {
           id: "act-3",
           type: "status-change",
-          timestamp: "2025-09-05T09:00:00Z",
+          timestamp: isoLocal(2025, 8, 5, 9),
           caseId: "case-3",
           caseName: "Case 3",
           payload: { toStatus: "Closed", fromStatus: "Pending" },
