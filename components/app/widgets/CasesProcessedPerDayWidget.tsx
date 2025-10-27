@@ -159,7 +159,7 @@ export function CasesProcessedPerDayWidget({ activityLog = [], metadata, refresh
                 return (
                   <div key={entry.date} className="flex-1 flex flex-col justify-end text-center">
                     <div
-                      className="mx-auto w-full rounded-t-md bg-accent"
+                      className="mx-auto w-full rounded-t-md bg-emerald-500/90"
                       style={{ height: `${height === 0 ? 4 : Math.max(height, 8)}%` }}
                       aria-label={`${entry.processedCount} cases processed on ${formatter.format(date)}`}
                     />
