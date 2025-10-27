@@ -83,16 +83,21 @@ export function Dashboard({ cases, alerts, activityLogState, onViewAllCases, onN
   const activityEntries = useMemo(() => activityLogState.activityLog ?? [], [activityLogState.activityLog]);
 
   // Create refresh keys that change whenever the actual data content changes
+  // These track the length and key metrics to detect when data has been updated
   const alertsRefreshKey = useMemo(() => {
-    return allAlerts.length > 0 
-      ? `${allAlerts.length}-${allAlerts.filter(a => a.status === 'resolved').length}-${Date.now()}`
-      : allAlerts.length;
+    const resolvedCount = allAlerts.filter(a => a.status?.toLowerCase() === 'resolved').length;
+    const resolvedWithDates = allAlerts.filter(a => a.status?.toLowerCase() === 'resolved' && a.resolvedAt).length;
+    return `${allAlerts.length}-${resolvedCount}-${resolvedWithDates}`;
   }, [allAlerts]);
 
   const activityRefreshKey = useMemo(() => {
-    return activityEntries.length > 0
-      ? `${activityEntries.length}-${activityEntries.filter(e => e.type === 'status-change').length}`
-      : activityEntries.length;
+    const statusChangeCount = activityEntries.filter(e => e.type === 'status-change').length;
+    const completedStatuses = activityEntries.filter(e => 
+      e.type === 'status-change' && 
+      e.payload?.toStatus && 
+      ['approved', 'denied', 'closed', 'spenddown'].includes(e.payload.toStatus.toLowerCase())
+    ).length;
+    return `${activityEntries.length}-${statusChangeCount}-${completedStatuses}`;
   }, [activityEntries]);
 
   /**
