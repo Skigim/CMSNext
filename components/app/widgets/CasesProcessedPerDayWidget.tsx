@@ -14,6 +14,7 @@ import type { WidgetMetadata } from './WidgetRegistry';
 interface CasesProcessedPerDayWidgetProps {
   activityLog: CaseActivityEntry[];
   metadata?: WidgetMetadata;
+  refreshKey?: unknown;
 }
 
 interface CasesProcessedPerDayData {
@@ -24,7 +25,7 @@ interface CasesProcessedPerDayData {
 
 const DEFAULT_WINDOW = 7;
 
-export function CasesProcessedPerDayWidget({ activityLog = [], metadata }: CasesProcessedPerDayWidgetProps) {
+export function CasesProcessedPerDayWidget({ activityLog = [], metadata, refreshKey }: CasesProcessedPerDayWidgetProps) {
   const fetchData = useCallback(async () => {
     const reference = widgetDateUtils.startOfDay(new Date());
     const daily = calculateCasesProcessedPerDay(activityLog, { referenceDate: reference });
@@ -40,6 +41,7 @@ export function CasesProcessedPerDayWidget({ activityLog = [], metadata }: Cases
   const { data, loading, error, freshness } = useWidgetData<CasesProcessedPerDayData>(fetchData, {
     refreshInterval: metadata?.refreshInterval ?? 5 * 60 * 1000,
     enablePerformanceTracking: true,
+    refreshKey,
   });
 
   const formatter = useMemo(() => new Intl.DateTimeFormat('en-US', { weekday: 'short' }), []);

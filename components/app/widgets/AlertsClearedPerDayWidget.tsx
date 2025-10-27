@@ -14,6 +14,7 @@ import type { WidgetMetadata } from './WidgetRegistry';
 interface AlertsClearedPerDayWidgetProps {
   alerts: AlertWithMatch[];
   metadata?: WidgetMetadata;
+  refreshKey?: unknown;
 }
 
 interface AlertsClearedPerDayData {
@@ -24,7 +25,7 @@ interface AlertsClearedPerDayData {
 
 const DEFAULT_WINDOW = 7;
 
-export function AlertsClearedPerDayWidget({ alerts = [], metadata }: AlertsClearedPerDayWidgetProps) {
+export function AlertsClearedPerDayWidget({ alerts = [], metadata, refreshKey }: AlertsClearedPerDayWidgetProps) {
   const fetchData = useCallback(async () => {
     const reference = widgetDateUtils.startOfDay(new Date());
     const daily = calculateAlertsClearedPerDay(alerts, { referenceDate: reference });
@@ -40,6 +41,7 @@ export function AlertsClearedPerDayWidget({ alerts = [], metadata }: AlertsClear
   const { data, loading, error, freshness } = useWidgetData<AlertsClearedPerDayData>(fetchData, {
     refreshInterval: metadata?.refreshInterval ?? 5 * 60 * 1000,
     enablePerformanceTracking: true,
+    refreshKey,
   });
 
   const formatter = useMemo(() => new Intl.DateTimeFormat('en-US', { weekday: 'short' }), []);

@@ -82,6 +82,19 @@ export function Dashboard({ cases, alerts, activityLogState, onViewAllCases, onN
   const allAlerts = useMemo(() => alerts.alerts ?? [], [alerts.alerts]);
   const activityEntries = useMemo(() => activityLogState.activityLog ?? [], [activityLogState.activityLog]);
 
+  // Create refresh keys that change whenever the actual data content changes
+  const alertsRefreshKey = useMemo(() => {
+    return allAlerts.length > 0 
+      ? `${allAlerts.length}-${allAlerts.filter(a => a.status === 'resolved').length}-${Date.now()}`
+      : allAlerts.length;
+  }, [allAlerts]);
+
+  const activityRefreshKey = useMemo(() => {
+    return activityEntries.length > 0
+      ? `${activityEntries.length}-${activityEntries.filter(e => e.type === 'status-change').length}`
+      : activityEntries.length;
+  }, [activityEntries]);
+
   /**
    * Register dashboard widgets with metadata and props.
    */
@@ -109,7 +122,7 @@ export function Dashboard({ cases, alerts, activityLogState, onViewAllCases, onN
           featureFlag: 'dashboard.widgets.alertsCleared',
         },
         component: AlertsClearedPerDayWidgetLazy,
-        props: { alerts: allAlerts },
+        props: { alerts: allAlerts, refreshKey: alertsRefreshKey },
       },
       {
         metadata: {
@@ -121,7 +134,7 @@ export function Dashboard({ cases, alerts, activityLogState, onViewAllCases, onN
           featureFlag: 'dashboard.widgets.casesProcessed',
         },
         component: CasesProcessedPerDayWidgetLazy,
-        props: { activityLog: activityEntries },
+        props: { activityLog: activityEntries, refreshKey: activityRefreshKey },
       },
       {
         metadata: {
@@ -184,7 +197,7 @@ export function Dashboard({ cases, alerts, activityLogState, onViewAllCases, onN
         props: { activityLog: activityEntries, cases },
       },
     ];
-  }, [cases, allAlerts, activityEntries, activityLogState]);
+  }, [cases, allAlerts, activityEntries, activityLogState, alertsRefreshKey, activityRefreshKey]);
 
   const validCases = useMemo(
     () => cases.filter(c => c && c.caseRecord && typeof c.caseRecord === "object"),
