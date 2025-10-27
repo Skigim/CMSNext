@@ -1,4 +1,6 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
+import ApplicationState from '@/application/ApplicationState';
+import type { FeatureFlagKey, FeatureFlags } from '@/utils/featureFlags';
 
 /**
  * Hook for managing global application state
@@ -41,6 +43,11 @@ interface UseAppStateReturn {
   globalError: string | null;
   setGlobalError: (error: string | null) => void;
   clearGlobalError: () => void;
+
+  // Feature flags
+  featureFlags: FeatureFlags;
+  isFeatureEnabled: (flag: FeatureFlagKey) => boolean;
+  setFeatureFlags: (flags: Partial<FeatureFlags>) => void;
 }
 
 export function useAppState(): UseAppStateReturn {
@@ -51,6 +58,18 @@ export function useAppState(): UseAppStateReturn {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [globalSearchTerm, setGlobalSearchTerm] = useState('');
   const [globalError, setGlobalError] = useState<string | null>(null);
+  const appStateRef = useRef(ApplicationState.getInstance());
+  const [featureFlags, setFeatureFlagsState] = useState<FeatureFlags>(() => 
+    appStateRef.current.getFeatureFlags()
+  );
+
+  useEffect(() => {
+    const unsubscribe = appStateRef.current.subscribe(() => {
+      setFeatureFlagsState(appStateRef.current.getFeatureFlags());
+    });
+
+    return unsubscribe;
+  }, []);
 
   const setView = useCallback((view: AppView, caseId?: string) => {
     setCurrentView(view);
@@ -97,6 +116,14 @@ export function useAppState(): UseAppStateReturn {
     setGlobalError(null);
   }, []);
 
+  const isFeatureEnabled = useCallback((flag: FeatureFlagKey) => {
+    return appStateRef.current.isFeatureEnabled(flag);
+  }, []);
+
+  const setFeatureFlags = useCallback((flags: Partial<FeatureFlags>) => {
+    appStateRef.current.setFeatureFlags(flags);
+  }, []);
+
   return {
     // View management
     currentView,
@@ -130,6 +157,11 @@ export function useAppState(): UseAppStateReturn {
     // Error handling
     globalError,
     setGlobalError,
-    clearGlobalError
+    clearGlobalError,
+
+    // Feature flags
+    featureFlags,
+    isFeatureEnabled,
+    setFeatureFlags,
   };
 }
