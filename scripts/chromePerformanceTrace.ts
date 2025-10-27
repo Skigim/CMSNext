@@ -74,9 +74,10 @@ async function analyzePerformance(url: string): Promise<PerformanceMetrics> {
       timeout: 30000,
     });
   } catch (error) {
-    console.error('Navigation failed:', error instanceof Error ? error.message : String(error));
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    console.error('Navigation failed:', errorMessage);
     await browser.close();
-    throw new Error(`Failed to navigate to ${url}: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    throw new Error(`Failed to navigate to ${url}: ${errorMessage}`);
   }
 
   // Collect Web Vitals
