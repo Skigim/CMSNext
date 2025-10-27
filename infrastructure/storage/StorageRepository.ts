@@ -32,14 +32,7 @@ type StorageFile = StorageCollections & {
 
 type DomainEntity = Case | CaseSnapshot | FinancialItem | Note | Alert | ActivityEvent;
 
-export class StorageRepository
-  implements
-    ICaseRepository,
-    IFinancialRepository,
-    INoteRepository,
-    IAlertRepository,
-    IActivityRepository
-{
+export class StorageRepository {
   private static readonly CURRENT_VERSION = 1;
 
   private readonly caseAdapter: ICaseRepository;
