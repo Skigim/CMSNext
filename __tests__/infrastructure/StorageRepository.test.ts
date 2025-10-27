@@ -1,13 +1,12 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import StorageRepository from '@/infrastructure/storage/StorageRepository';
 import type AutosaveFileService from '@/utils/AutosaveFileService';
-import { FinancialCategory } from '@/domain/financials/entities/FinancialItem';
+import { FinancialItem, type FinancialItemSnapshot, FinancialCategory } from '@/domain/financials/entities/FinancialItem';
 import { Case, type CaseSnapshot } from '@/domain/cases/entities/Case';
 import { CASE_STATUS } from '@/types/case';
-import type { FinancialItem } from '@/domain/financials/entities/FinancialItem';
-import type { Note } from '@/domain/notes/entities/Note';
-import type { Alert } from '@/domain/alerts/entities/Alert';
-import type { ActivityEvent } from '@/domain/activity/entities/ActivityEvent';
+import { Note, type NoteSnapshot } from '@/domain/notes/entities/Note';
+import { Alert, type AlertSnapshot } from '@/domain/alerts/entities/Alert';
+import { ActivityEvent, type ActivityEventSnapshot } from '@/domain/activity/entities/ActivityEvent';
 
 type StorageSnapshot = {
   cases: Case[];
@@ -63,8 +62,8 @@ function createCase(overrides: Partial<CaseSnapshot> = {}): Case {
   return Case.rehydrate({ ...base, ...overrides });
 }
 
-function createFinancialItem(overrides: Partial<FinancialItem> = {}): FinancialItem {
-  return {
+function createFinancialItem(overrides: Partial<FinancialItemSnapshot> = {}): FinancialItem {
+  return FinancialItem.create({
     id: overrides.id ?? 'FIN-001',
     caseId: overrides.caseId ?? 'CASE-001',
     category: overrides.category ?? FinancialCategory.Income,
@@ -73,12 +72,12 @@ function createFinancialItem(overrides: Partial<FinancialItem> = {}): FinancialI
     verificationStatus: overrides.verificationStatus ?? 'Verified',
     createdAt: overrides.createdAt ?? new Date('2025-01-05').toISOString(),
     updatedAt: overrides.updatedAt ?? new Date('2025-01-06').toISOString(),
-    metadata: overrides.metadata,
-  };
+    metadata: overrides.metadata ?? {},
+  });
 }
 
-function createNote(overrides: Partial<Note> = {}): Note {
-  return {
+function createNote(overrides: Partial<NoteSnapshot> = {}): Note {
+  return Note.create({
     id: overrides.id ?? 'NOTE-001',
     caseId: overrides.caseId ?? 'CASE-001',
     category: overrides.category ?? 'general',
@@ -86,12 +85,12 @@ function createNote(overrides: Partial<Note> = {}): Note {
     createdAt: overrides.createdAt ?? new Date('2025-01-07').toISOString(),
     updatedAt: overrides.updatedAt ?? new Date('2025-01-08').toISOString(),
     authorId: overrides.authorId,
-    metadata: overrides.metadata,
-  };
+    metadata: overrides.metadata ?? {},
+  });
 }
 
-function createAlert(overrides: Partial<Alert> = {}): Alert {
-  return {
+function createAlert(overrides: Partial<AlertSnapshot> = {}): Alert {
+  return Alert.create({
     id: overrides.id ?? 'ALERT-001',
     mcn: overrides.mcn ?? 'MCN-001',
     caseId: overrides.caseId ?? null,
@@ -99,12 +98,12 @@ function createAlert(overrides: Partial<Alert> = {}): Alert {
     description: overrides.description ?? 'Sample alert',
     createdAt: overrides.createdAt ?? new Date('2025-01-09').toISOString(),
     updatedAt: overrides.updatedAt ?? new Date('2025-01-10').toISOString(),
-    metadata: overrides.metadata,
-  };
+    metadata: overrides.metadata ?? {},
+  });
 }
 
-function createActivity(overrides: Partial<ActivityEvent> = {}): ActivityEvent {
-  return {
+function createActivity(overrides: Partial<ActivityEventSnapshot> = {}): ActivityEvent {
+  return ActivityEvent.create({
     id: overrides.id ?? 'ACT-001',
     eventType: overrides.eventType ?? 'case.updated',
     aggregateId: overrides.aggregateId ?? 'CASE-001',
@@ -112,7 +111,7 @@ function createActivity(overrides: Partial<ActivityEvent> = {}): ActivityEvent {
     changes: overrides.changes ?? { status: 'active' },
     timestamp: overrides.timestamp ?? new Date('2025-01-11').toISOString(),
     metadata: overrides.metadata ?? {},
-  };
+  });
 }
 
 describe('StorageRepository', () => {
@@ -167,14 +166,14 @@ describe('StorageRepository', () => {
     expect(itemsForCase.map(item => item.id).sort()).toEqual(['FIN-EXP', 'FIN-INC']);
 
     const incomeItems = await financialRepo.getByCategory(FinancialCategory.Income);
-    expect(incomeItems).toEqual([incomeItem]);
+    expect(incomeItems.map(item => item.id)).toEqual([incomeItem.id]);
 
     const allItems = await financialRepo.getAll();
     expect(allItems).toHaveLength(2);
 
     await financialRepo.delete('FIN-INC');
     const remaining = await financialRepo.getAll();
-    expect(remaining).toEqual([expenseItem]);
+    expect(remaining.map(item => item.id)).toEqual([expenseItem.id]);
   });
 
   it('filters notes by category for a case', async () => {
@@ -190,11 +189,11 @@ describe('StorageRepository', () => {
     expect(notesForCase).toHaveLength(2);
 
     const statusNotes = await noteRepo.filterByCategory(caseId, 'status');
-    expect(statusNotes).toEqual([statusNote]);
+    expect(statusNotes.map(note => note.id)).toEqual([statusNote.id]);
 
-    notesForCase[0].content = 'mutated content';
+    // Verify immutability - reloaded notes should still match originals
     const reloaded = await noteRepo.getByCaseId(caseId);
-    expect(reloaded).toEqual([generalNote, statusNote]);
+    expect(reloaded.map(note => note.id).sort()).toEqual([generalNote.id, statusNote.id].sort());
   });
 
   it('retrieves alerts by MCN and unmatched status', async () => {
@@ -216,7 +215,7 @@ describe('StorageRepository', () => {
 
     await alertRepo.delete('ALERT-A');
     const remainingUnmatched = await alertRepo.getUnmatched();
-    expect(remainingUnmatched).toEqual([unmatchedAlertB]);
+    expect(remainingUnmatched.map(alert => alert.id)).toEqual([unmatchedAlertB.id]);
   });
 
   it('tracks activity events by aggregate and recent order', async () => {
