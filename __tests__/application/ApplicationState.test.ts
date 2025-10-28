@@ -172,11 +172,11 @@ function createTestActivity(overrides: Partial<ActivityEventSnapshot> = {}): Act
 
 describe('ApplicationState', () => {
   beforeEach(() => {
-    ApplicationState.resetInstance();
+    ApplicationState.resetForTesting();
   });
 
   afterEach(() => {
-    ApplicationState.resetInstance();
+    ApplicationState.resetForTesting();
   });
 
   it('maintains singleton instance semantics', () => {

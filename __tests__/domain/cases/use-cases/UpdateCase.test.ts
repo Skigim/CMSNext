@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { UpdateCaseUseCase } from '@/domain/cases/use-cases/UpdateCase';
 import { ApplicationState } from '@/application/ApplicationState';
+import type { DomainEventBus } from '@/application/DomainEventBus';
 import type { StorageRepository } from '@/infrastructure/storage/StorageRepository';
 import type { ICaseRepository } from '@/domain/common/repositories';
 import { Case } from '@/domain/cases/entities/Case';
@@ -10,6 +11,7 @@ describe('UpdateCaseUseCase', () => {
   let appState: ApplicationState;
   let mockStorage: StorageRepository;
   let mockCaseRepository: ICaseRepository;
+  let mockEventBus: DomainEventBus;
 
   beforeEach(() => {
     ApplicationState.resetForTesting();
@@ -27,6 +29,10 @@ describe('UpdateCaseUseCase', () => {
     mockStorage = {
       cases: mockCaseRepository,
     } as unknown as StorageRepository;
+
+    mockEventBus = {
+      publish: vi.fn().mockResolvedValue(undefined),
+    } as unknown as DomainEventBus;
   });
 
   it('updates a case with optimistic update and persists it', async () => {
@@ -46,7 +52,7 @@ describe('UpdateCaseUseCase', () => {
 
     appState.addCase(initialCase);
 
-    const useCase = new UpdateCaseUseCase(appState, mockStorage);
+  const useCase = new UpdateCaseUseCase(appState, mockStorage, mockEventBus);
 
     // Execute
     const result = await useCase.execute({
@@ -62,6 +68,11 @@ describe('UpdateCaseUseCase', () => {
     expect(stateCase?.name).toBe('Updated Name');
 
     expect(mockCaseRepository.save).toHaveBeenCalledTimes(1);
+    expect(mockEventBus.publish).toHaveBeenCalledWith(
+      'CaseUpdated',
+      expect.objectContaining({ id: initialCase.id, name: 'Updated Name' }),
+      expect.objectContaining({ aggregateId: initialCase.id, metadata: { mcn: initialCase.mcn } }),
+    );
   });
 
   it('rolls back optimistic update when persistence fails', async () => {
@@ -82,7 +93,7 @@ describe('UpdateCaseUseCase', () => {
 
     mockCaseRepository.save = vi.fn().mockRejectedValue(new Error('persist failed'));
 
-    const useCase = new UpdateCaseUseCase(appState, mockStorage);
+  const useCase = new UpdateCaseUseCase(appState, mockStorage, mockEventBus);
 
     await expect(
       useCase.execute({
@@ -94,10 +105,11 @@ describe('UpdateCaseUseCase', () => {
     // Verify rollback - should still have original name
     const stateCase = appState.getCase(initialCase.id);
     expect(stateCase?.name).toBe('Original');
+    expect(mockEventBus.publish).not.toHaveBeenCalled();
   });
 
   it('throws error when case not found', async () => {
-    const useCase = new UpdateCaseUseCase(appState, mockStorage);
+  const useCase = new UpdateCaseUseCase(appState, mockStorage, mockEventBus);
 
     await expect(
       useCase.execute({
@@ -108,7 +120,7 @@ describe('UpdateCaseUseCase', () => {
   });
 
   it('validates required fields', async () => {
-    const useCase = new UpdateCaseUseCase(appState, mockStorage);
+  const useCase = new UpdateCaseUseCase(appState, mockStorage, mockEventBus);
 
     await expect(
       useCase.execute({

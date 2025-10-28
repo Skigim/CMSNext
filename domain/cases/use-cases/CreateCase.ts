@@ -1,4 +1,5 @@
 import { ApplicationState } from '@/application/ApplicationState';
+import { DomainEventBus } from '@/application/DomainEventBus';
 import type { StorageRepository } from '@/infrastructure/storage/StorageRepository';
 import { Case } from '@/domain/cases/entities/Case';
 import { Person, type PersonProps } from '@/domain/cases/entities/Person';
@@ -22,6 +23,7 @@ export class CreateCaseUseCase {
   constructor(
     private readonly appState: ApplicationState,
     private readonly storage: StorageRepository,
+    private readonly eventBus: DomainEventBus = DomainEventBus.getInstance(),
   ) {}
 
   async execute(input: CreateCaseInput): Promise<Case> {
@@ -38,14 +40,17 @@ export class CreateCaseUseCase {
 
     logger.info('Creating case', {
       caseId: caseEntity.id,
-      mcn: caseEntity.mcn,
-      name: caseEntity.name,
     });
 
     this.appState.addCase(caseEntity);
 
     try {
       await this.storage.cases.save(caseEntity);
+
+      await this.eventBus.publish('CaseCreated', caseEntity.toJSON(), {
+        aggregateId: caseEntity.id,
+        metadata: { mcn: caseEntity.mcn },
+      });
 
       logger.info('Case persisted successfully', { caseId: caseEntity.id });
 

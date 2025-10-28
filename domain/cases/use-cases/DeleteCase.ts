@@ -1,4 +1,5 @@
 import { ApplicationState } from '@/application/ApplicationState';
+import { DomainEventBus } from '@/application/DomainEventBus';
 import type { StorageRepository } from '@/infrastructure/storage/StorageRepository';
 import { createLogger } from '@/utils/logger';
 import { DomainError } from '@/domain/common/errors/DomainError';
@@ -17,6 +18,7 @@ export class DeleteCaseUseCase {
   constructor(
     private readonly appState: ApplicationState,
     private readonly storage: StorageRepository,
+    private readonly eventBus: DomainEventBus = DomainEventBus.getInstance(),
   ) {}
 
   async execute(input: DeleteCaseInput): Promise<void> {
@@ -29,7 +31,6 @@ export class DeleteCaseUseCase {
 
     logger.info('Deleting case', {
       caseId: input.caseId,
-      mcn: existing.mcn,
     });
 
     // Optimistic update - remove from state
@@ -38,6 +39,11 @@ export class DeleteCaseUseCase {
 
     try {
       await this.storage.cases.delete(input.caseId);
+
+      await this.eventBus.publish('CaseDeleted', existing.toJSON(), {
+        aggregateId: existing.id,
+        metadata: { mcn: existing.mcn },
+      });
 
       logger.info('Case deleted successfully', { caseId: input.caseId });
     } catch (error) {

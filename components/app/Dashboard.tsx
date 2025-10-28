@@ -17,7 +17,7 @@ import { McnCopyControl } from "@/components/common/McnCopyControl";
 import type { CaseActivityLogState } from "../../types/activityLog";
 import { ActivityReportCard } from "./ActivityReportCard";
 import { WidgetRegistry, createLazyWidget, type RegisteredWidget } from "./widgets/WidgetRegistry";
-import { useAppState } from "@/hooks/useAppState";
+import { useAppStateSelector } from "@/hooks/useAppState";
 
 interface DashboardProps {
   cases: CaseDisplay[];
@@ -77,7 +77,7 @@ const AvgCaseProcessingTimeWidgetLazy = createLazyWidget(
 
 export function Dashboard({ cases, alerts, activityLogState, onViewAllCases, onNewCase, onNavigateToReports }: DashboardProps) {
   const { config } = useCategoryConfig();
-  const { featureFlags } = useAppState();
+  const featureFlags = useAppStateSelector(snapshot => snapshot.featureFlags);
 
   const allAlerts = useMemo(() => alerts.alerts ?? [], [alerts.alerts]);
   const activityEntries = useMemo(() => activityLogState.activityLog ?? [], [activityLogState.activityLog]);

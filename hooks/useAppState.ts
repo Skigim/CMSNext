@@ -1,167 +1,41 @@
-import { useState, useCallback, useEffect, useRef } from 'react';
-import ApplicationState from '@/application/ApplicationState';
-import type { FeatureFlagKey, FeatureFlags } from '@/utils/featureFlags';
+import { useEffect, useState } from 'react';
+import { ApplicationState, type ApplicationStateSnapshot } from '@/application/ApplicationState';
 
 /**
- * Hook for managing global application state
- * Centralizes view state, loading states, and application-wide flags
+ * React hook for subscribing to ApplicationState changes.
+ * Provides snapshot-based reactivity so components can select the state they need.
  */
-
-export type AppView = 'dashboard' | 'list' | 'new' | 'details' | 'settings' | 'import';
-
-interface UseAppStateReturn {
-  // View management
-  currentView: AppView;
-  selectedCaseId: string | null;
-  
-  // View actions
-  setView: (view: AppView, caseId?: string) => void;
-  navigateToCase: (caseId: string) => void;
-  navigateToNewCase: () => void;
-  navigateToDashboard: () => void;
-  navigateToList: () => void;
-  navigateToSettings: () => void;
-  navigateToImport: () => void;
-  
-  // Global loading states
-  isAppLoading: boolean;
-  setAppLoading: (loading: boolean) => void;
-  
-  // Global flags
-  isDataLoaded: boolean;
-  setDataLoaded: (loaded: boolean) => void;
-  
-  // UI preferences
-  sidebarCollapsed: boolean;
-  setSidebarCollapsed: (collapsed: boolean) => void;
-  
-  // Search and filters
-  globalSearchTerm: string;
-  setGlobalSearchTerm: (term: string) => void;
-  
-  // Error handling
-  globalError: string | null;
-  setGlobalError: (error: string | null) => void;
-  clearGlobalError: () => void;
-
-  // Feature flags
-  featureFlags: FeatureFlags;
-  isFeatureEnabled: (flag: FeatureFlagKey) => boolean;
-  setFeatureFlags: (flags: Partial<FeatureFlags>) => void;
-}
-
-export function useAppState(): UseAppStateReturn {
-  const [currentView, setCurrentView] = useState<AppView>('dashboard');
-  const [selectedCaseId, setSelectedCaseId] = useState<string | null>(null);
-  const [isAppLoading, setIsAppLoading] = useState(false);
-  const [isDataLoaded, setIsDataLoaded] = useState(false);
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  const [globalSearchTerm, setGlobalSearchTerm] = useState('');
-  const [globalError, setGlobalError] = useState<string | null>(null);
-  const appStateRef = useRef(ApplicationState.getInstance());
-  const [featureFlags, setFeatureFlagsState] = useState<FeatureFlags>(() => 
-    appStateRef.current.getFeatureFlags()
-  );
+export function useAppState(): ApplicationStateSnapshot {
+  const appState = ApplicationState.getInstance();
+  const [snapshot, setSnapshot] = useState<ApplicationStateSnapshot>(() => appState.getSnapshot());
 
   useEffect(() => {
-    const unsubscribe = appStateRef.current.subscribe(() => {
-      setFeatureFlagsState(appStateRef.current.getFeatureFlags());
+    const unsubscribe = appState.subscribe(newSnapshot => {
+      setSnapshot(newSnapshot);
     });
 
     return unsubscribe;
-  }, []);
+  }, [appState]);
 
-  const setView = useCallback((view: AppView, caseId?: string) => {
-    setCurrentView(view);
-    if (caseId) {
-      setSelectedCaseId(caseId);
-    } else if (view !== 'details') {
-      setSelectedCaseId(null);
-    }
-  }, []);
+  return snapshot;
+}
 
-  const navigateToCase = useCallback((caseId: string) => {
-    setView('details', caseId);
-  }, [setView]);
+/**
+ * Selector-based convenience hook for consuming specific slices of ApplicationState.
+ */
+export function useAppStateSelector<T>(selector: (snapshot: ApplicationStateSnapshot) => T): T {
+  const snapshot = useAppState();
+  return selector(snapshot);
+}
 
-  const navigateToNewCase = useCallback(() => {
-    setView('new');
-  }, [setView]);
+export function useCases() {
+  return useAppStateSelector(snapshot => Array.from(snapshot.cases.values()));
+}
 
-  const navigateToDashboard = useCallback(() => {
-    setView('dashboard');
-  }, [setView]);
+export function useCase(id: string | null) {
+  return useAppStateSelector(snapshot => (id ? snapshot.cases.get(id) ?? null : null));
+}
 
-  const navigateToList = useCallback(() => {
-    setView('list');
-  }, [setView]);
-
-  const navigateToSettings = useCallback(() => {
-    setView('settings');
-  }, [setView]);
-
-  const navigateToImport = useCallback(() => {
-    setView('import');
-  }, [setView]);
-
-  const setAppLoading = useCallback((loading: boolean) => {
-    setIsAppLoading(loading);
-  }, []);
-
-  const setDataLoaded = useCallback((loaded: boolean) => {
-    setIsDataLoaded(loaded);
-  }, []);
-
-  const clearGlobalError = useCallback(() => {
-    setGlobalError(null);
-  }, []);
-
-  const isFeatureEnabled = useCallback((flag: FeatureFlagKey) => {
-    return appStateRef.current.isFeatureEnabled(flag);
-  }, []);
-
-  const setFeatureFlags = useCallback((flags: Partial<FeatureFlags>) => {
-    appStateRef.current.setFeatureFlags(flags);
-  }, []);
-
-  return {
-    // View management
-    currentView,
-    selectedCaseId,
-    
-    // View actions
-    setView,
-    navigateToCase,
-    navigateToNewCase,
-    navigateToDashboard,
-    navigateToList,
-    navigateToSettings,
-    navigateToImport,
-    
-    // Global loading states
-    isAppLoading,
-    setAppLoading,
-    
-    // Global flags
-    isDataLoaded,
-    setDataLoaded,
-    
-    // UI preferences
-    sidebarCollapsed,
-    setSidebarCollapsed,
-    
-    // Search and filters
-    globalSearchTerm,
-    setGlobalSearchTerm,
-    
-    // Error handling
-    globalError,
-    setGlobalError,
-    clearGlobalError,
-
-    // Feature flags
-    featureFlags,
-    isFeatureEnabled,
-    setFeatureFlags,
-  };
+export function useActivities() {
+  return useAppStateSelector(snapshot => Array.from(snapshot.activities.values()));
 }

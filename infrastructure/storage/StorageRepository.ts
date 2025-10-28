@@ -5,7 +5,6 @@ import type { Note, NoteCategory } from '@/domain/notes/entities/Note';
 import type { Alert } from '@/domain/alerts/entities/Alert';
 import type { ActivityEvent } from '@/domain/activity/entities/ActivityEvent';
 import type { FeatureFlags } from '@/utils/featureFlags';
-import safeNotifyFileStorageChange from '@/utils/safeNotifyFileStorageChange';
 import type {
   ICaseRepository,
   IFinancialRepository,
@@ -338,8 +337,6 @@ export class StorageRepository {
     if (!success) {
       throw new Error('StorageRepository: Failed to persist data');
     }
-    
-    safeNotifyFileStorageChange();
   }
 
   private cloneCaseEntity(snapshot: CaseSnapshot | null): Case | null {

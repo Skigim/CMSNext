@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
-import ApplicationState from '@/application/ApplicationState';
+import { ApplicationState } from '@/application/ApplicationState';
 import { useApplicationState, useCase, useCases } from '@/application/hooks/useApplicationState';
 import { Case, type CaseSnapshot } from '@/domain/cases/entities/Case';
 import { CASE_STATUS } from '@/types/case';
@@ -22,11 +22,11 @@ function createTestCase(id: string, overrides: Partial<CaseSnapshot> = {}): Case
 
 describe('useApplicationState', () => {
   beforeEach(() => {
-    ApplicationState.resetInstance();
+    ApplicationState.resetForTesting();
   });
 
   afterEach(() => {
-    ApplicationState.resetInstance();
+    ApplicationState.resetForTesting();
   });
 
   it('reflects selected slices of application state', () => {
