@@ -1,10 +1,9 @@
-import { useCallback, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../ui/card";
 import { Button } from "../ui/button";
 import { Badge } from "../ui/badge";
-import { FileText, Clock, Plus, ArrowRight, CheckCircle2, XCircle, Coins, TrendingUp, BellRing } from "lucide-react";
+import { FileText, Plus, ArrowRight, BellRing } from "lucide-react";
 import { CaseDisplay } from "../../types/case";
-import { useCategoryConfig } from "../../contexts/CategoryConfigContext";
 import {
   filterOpenAlerts,
   buildAlertStorageKey,
@@ -76,7 +75,6 @@ const AvgCaseProcessingTimeWidgetLazy = createLazyWidget(
 );
 
 export function Dashboard({ cases, alerts, activityLogState, onViewAllCases, onNewCase, onNavigateToReports }: DashboardProps) {
-  const { config } = useCategoryConfig();
   const featureFlags = useAppStateSelector(snapshot => snapshot.featureFlags);
 
   const allAlerts = useMemo(() => alerts.alerts ?? [], [alerts.alerts]);
@@ -209,57 +207,7 @@ export function Dashboard({ cases, alerts, activityLogState, onViewAllCases, onN
     [cases],
   );
 
-  const totalCases = cases.length;
-
-  const statusCount = useCallback(
-    (status: string) =>
-      validCases.filter(c => c.caseRecord.status === status).length,
-    [validCases],
-  );
-
   const recentCases = validCases.slice(0, 5);
-
-  const statusPalette = useMemo(
-    () => [
-      "text-primary",
-      "text-accent-foreground",
-      "text-destructive",
-      "text-secondary-foreground",
-      "text-chart-1",
-      "text-muted-foreground",
-    ],
-    [],
-  );
-
-  const statusIconMap = useMemo(
-    () => ({
-      pending: { icon: Clock, description: "Awaiting determination" },
-      approved: { icon: CheckCircle2, description: "Cleared for services" },
-      denied: { icon: XCircle, description: "Requires follow-up" },
-      spenddown: { icon: Coins, description: "Spenddown management" },
-    }),
-    [],
-  );
-
-  const statusStats = useMemo(
-    () =>
-      config.caseStatuses.map((status, index) => {
-        const key = status.toLowerCase();
-        const meta = statusIconMap[key as keyof typeof statusIconMap] || {
-          icon: TrendingUp,
-          description: "Tracked cases",
-        };
-
-        return {
-          title: `${status} Cases`,
-          value: statusCount(status),
-          description: meta.description,
-          icon: meta.icon,
-          color: statusPalette[index % statusPalette.length],
-        };
-      }),
-    [config.caseStatuses, statusCount, statusIconMap, statusPalette],
-  );
 
   const totalAlerts = alerts.alerts.length;
 
@@ -274,30 +222,6 @@ export function Dashboard({ cases, alerts, activityLogState, onViewAllCases, onN
   const unlinkedAlertCount = unlinkedAlerts.length;
 
   const [showUnlinkedDialog, setShowUnlinkedDialog] = useState(false);
-
-  const stats = useMemo(
-    () => [
-      {
-        title: "Alerts",
-        value: totalAlerts,
-        description:
-          openAlertsCount === 0
-            ? "No open alerts"
-            : `${openAlertsCount} open${unlinkedAlertCount ? ` • ${unlinkedAlertCount} unlinked` : ""}`,
-        icon: BellRing,
-        color: totalAlerts > 0 ? "text-primary" : "text-muted-foreground",
-      },
-      {
-        title: "Total Cases",
-        value: totalCases,
-        description: "All tracked cases",
-        icon: FileText,
-        color: "text-accent-foreground",
-      },
-      ...statusStats,
-    ],
-    [openAlertsCount, statusStats, totalAlerts, totalCases, unlinkedAlertCount],
-  );
 
   const latestAlerts = useMemo(() => openAlerts.slice(0, 5), [openAlerts]);
 
@@ -329,28 +253,6 @@ export function Dashboard({ cases, alerts, activityLogState, onViewAllCases, onN
           />
         </div>
       )}
-
-      {/* Note: Evaluate blending Today's metrics directly into ActivityReportCard to reduce duplication when we revisit dashboard layout. */}
-
-      {/* Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        {stats.map((stat) => (
-          <Card key={stat.title}>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
-                {stat.title}
-              </CardTitle>
-              <stat.icon className={`h-4 w-4 ${stat.color}`} />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-foreground">{stat.value}</div>
-              <p className="text-xs text-muted-foreground mt-1">
-                {stat.description}
-              </p>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
 
       {/* Recent Cases */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
