@@ -130,7 +130,7 @@ const widgetTitles = [
   "Cases Processed/Day",
   "Activity Timeline",
   "Total Cases by Status",
-  "Total Alerts by Description",
+  "Open Alerts by Description",
   "Avg. Alert Age",
   "Avg. Case Processing Time",
 ];
