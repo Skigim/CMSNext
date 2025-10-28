@@ -167,9 +167,8 @@ function AlertsReport({ alerts, onViewCase }: AlertsReportProps) {
     direction: "asc" | "desc";
   }>({ column: "due", direction: "asc" });
 
-  const totalAlerts = alerts.alerts.length;
   const openAlerts = useMemo(() => filterOpenAlerts(alerts.alerts), [alerts.alerts]);
-  const openAlertsCount = openAlerts.length;
+  const totalOpenAlerts = openAlerts.length;
   const matchedOpenAlerts = useMemo(
     () => openAlerts.filter(alert => alert.matchStatus === "matched"),
     [openAlerts],
@@ -309,8 +308,7 @@ function AlertsReport({ alerts, onViewCase }: AlertsReportProps) {
       </CardHeader>
       <CardContent className="flex flex-col gap-6 flex-1 min-h-0">
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <SummaryStat label="Total alerts" value={totalAlerts} />
-          <SummaryStat label="Open alerts" value={openAlertsCount} highlight="warning" />
+          <SummaryStat label="Open alerts" value={totalOpenAlerts} highlight="warning" />
           <SummaryStat label="Matched & open" value={matchedOpenAlertsCount} />
           <SummaryStat label="Unlinked" value={unlinkedAlertCount} highlight={unlinkedAlertCount > 0 ? "danger" : undefined} />
         </div>

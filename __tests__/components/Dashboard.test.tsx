@@ -179,7 +179,7 @@ describe("Dashboard", () => {
 
     // Wait for widgets to load and complete their async operations
     await waitFor(() => {
-      expect(screen.getByText(/2 total/i)).toBeInTheDocument();
+      expect(screen.getByText(/2 open/i)).toBeInTheDocument();
     });
 
     const badgeButton = screen.getByRole("button", { name: /1 unlinked alert/i });

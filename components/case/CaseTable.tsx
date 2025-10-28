@@ -85,7 +85,6 @@ export const CaseTable = memo(function CaseTable({
           updatedDate: formatDate(updatedDate),
           primaryContact,
           alerts: caseAlerts,
-          totalAlertCount: allCaseAlerts.length,
         };
       }),
     [alertsByCaseId, cases],
@@ -267,19 +266,6 @@ export const CaseTable = memo(function CaseTable({
               <TableCell>
                 {row.alerts.length > 0 ? (
                   <AlertBadge alerts={row.alerts} onClick={() => onOpenAlerts?.(row.id)} />
-                ) : row.totalAlertCount > 0 ? (
-                  onOpenAlerts ? (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="h-7 px-2 text-xs text-muted-foreground hover:text-primary"
-                      onClick={() => onOpenAlerts(row.id)}
-                    >
-                      View alerts
-                    </Button>
-                  ) : (
-                    <span className="text-xs text-muted-foreground">{row.totalAlertCount} resolved</span>
-                  )
                 ) : (
                   <span className="text-xs text-muted-foreground">None</span>
                 )}

@@ -274,17 +274,18 @@ export function calculateTotalAlertsByDescription(alerts: AlertWithMatch[] | nul
     });
   });
 
-  const grandTotal = [...totals.values()].reduce((acc, value) => acc + value.count, 0) || 1;
+  // Only count open alerts for the total
+  const grandTotal = [...totals.values()].reduce((acc, value) => acc + (value.count - value.resolved), 0) || 1;
 
   return [...totals.values()]
-    .sort((a, b) => b.count - a.count)
+    .sort((a, b) => (b.count - b.resolved) - (a.count - a.resolved))
     .map((item) => {
       const resolvedCount = item.resolved;
       const openCount = item.count - resolvedCount;
       return {
         description: item.label,
-        count: item.count,
-        percentage: (item.count / grandTotal) * 100,
+        count: openCount,
+        percentage: (openCount / grandTotal) * 100,
         openCount,
         resolvedCount,
       };

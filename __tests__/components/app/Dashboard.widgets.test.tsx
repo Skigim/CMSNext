@@ -183,7 +183,7 @@ describe("Dashboard widgets integration", () => {
     await screen.findByText("Cases Processed/Day");
     await screen.findByText("Activity Timeline");
     await screen.findByText("Total Cases by Status");
-    await screen.findByText("Total Alerts by Description");
+    await screen.findByText("Open Alerts by Description");
     await screen.findByText("Avg. Alert Age");
     await screen.findByText("Avg. Case Processing Time");
   });

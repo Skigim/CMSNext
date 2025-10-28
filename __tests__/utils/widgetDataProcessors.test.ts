@@ -214,7 +214,7 @@ describe("widgetDataProcessors", () => {
   });
 
   describe("calculateTotalAlertsByDescription", () => {
-    it("aggregates counts by description and flags open vs resolved", () => {
+    it("aggregates counts by description showing only open alerts", () => {
       const alerts: AlertWithMatch[] = [
         buildAlert({ id: "al-1", description: "Income mismatch", status: "resolved", resolvedAt: "2025-10-20T00:00:00Z" }),
         buildAlert({ id: "al-2", description: "Income mismatch", status: "in-progress", resolvedAt: null }),
@@ -225,10 +225,10 @@ describe("widgetDataProcessors", () => {
       expect(breakdown).toHaveLength(2);
       const top = breakdown[0];
       expect(top.description).toBe("Income mismatch");
-      expect(top.count).toBe(2);
+      expect(top.count).toBe(1); // Only counts open alerts
       expect(top.openCount).toBe(1);
       expect(top.resolvedCount).toBe(1);
-      expect(top.percentage).toBeCloseTo(66.6, 0);
+      expect(top.percentage).toBeCloseTo(100, 0); // 1 out of 1 open alert
     });
   });
 

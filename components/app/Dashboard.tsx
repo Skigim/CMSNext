@@ -209,8 +209,6 @@ export function Dashboard({ cases, alerts, activityLogState, onViewAllCases, onN
 
   const recentCases = validCases.slice(0, 5);
 
-  const totalAlerts = alerts.alerts.length;
-
   const openAlerts = useMemo(() => filterOpenAlerts(alerts.alerts), [alerts.alerts]);
 
   const unlinkedAlerts = useMemo(
@@ -319,10 +317,10 @@ export function Dashboard({ cases, alerts, activityLogState, onViewAllCases, onN
               </div>
               <div className="flex flex-wrap items-center gap-2">
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <BellRing className={totalAlerts ? "h-4 w-4 text-primary" : "h-4 w-4"} />
-                  {totalAlerts ? `${totalAlerts} total` : "No alerts"}
+                  <BellRing className={openAlertsCount ? "h-4 w-4 text-primary" : "h-4 w-4"} />
+                  {openAlertsCount ? `${openAlertsCount} open` : "No open alerts"}
                 </div>
-                {totalAlerts > 0 && (
+                {openAlertsCount > 0 && (
                   <Button
                     type="button"
                     variant="outline"
@@ -354,9 +352,9 @@ export function Dashboard({ cases, alerts, activityLogState, onViewAllCases, onN
             </div>
           </CardHeader>
           <CardContent>
-            {totalAlerts === 0 ? (
+            {openAlertsCount === 0 ? (
               <div className="py-6 text-center text-muted-foreground text-sm">
-                <p>No alerts detected in the sample feed.</p>
+                <p>No open alerts detected in the system.</p>
               </div>
             ) : (
               <div className="space-y-4">
@@ -368,12 +366,6 @@ export function Dashboard({ cases, alerts, activityLogState, onViewAllCases, onN
                   <div>
                     <p className="text-xs uppercase text-muted-foreground">Unlinked alerts</p>
                     <p className="text-lg font-semibold text-destructive">{unlinkedAlertCount}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs uppercase text-muted-foreground">Recently resolved</p>
-                    <p className="text-lg font-semibold text-foreground">
-                      {totalAlerts - openAlertsCount}
-                    </p>
                   </div>
                 </div>
 

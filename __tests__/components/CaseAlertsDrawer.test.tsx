@@ -103,9 +103,9 @@ describe("CaseAlertsDrawer", () => {
 
     expect(screen.getByText("Open alerts")).toBeInTheDocument();
     expect(screen.getByText("Recently resolved")).toBeInTheDocument();
-  expect(screen.getByText("1 open · 1 resolved · 2 total")).toBeInTheDocument();
-  expect(screen.getAllByText("Follow up with client").length).toBeGreaterThanOrEqual(1);
-  expect(screen.getAllByText(/Due/).length).toBeGreaterThanOrEqual(1);
+    expect(screen.getByText("1 open · 1 resolved")).toBeInTheDocument();
+    expect(screen.getAllByText("Follow up with client").length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText(/Due/).length).toBeGreaterThanOrEqual(1);
 
     await user.click(screen.getByRole("button", { name: /resolve/i }));
     expect(onResolveAlert).toHaveBeenCalledWith(expect.objectContaining({ id: "open-1" }));
