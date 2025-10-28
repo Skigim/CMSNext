@@ -1,5 +1,5 @@
 import { useCallback, useMemo } from 'react';
-import { Pie, PieChart } from 'recharts';
+import { Pie, PieChart, type PieLabelRenderProps } from 'recharts';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -149,7 +149,7 @@ export function CasesByStatusWidget({ cases = [], metadata }: CasesByStatusWidge
                   dataKey="count" 
                   label={{
                     position: 'inside',
-                    content: (props: any) => {
+                    content: (props: PieLabelRenderProps) => {
                       const { count } = props;
                       return count;
                     },
