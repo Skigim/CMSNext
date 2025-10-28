@@ -45,17 +45,20 @@
 **Core Architecture Changes:**
 
 1. **DomainEventBus** (`domain/common/DomainEventBus.ts`)
+
    - Type-safe event publishing with generic event types
    - Subscription management with automatic cleanup
    - Foundation for decoupled feature interactions (alerts, telemetry, offline sync)
 
 2. **ActivityLogger Service** (`application/ActivityLogger.ts`)
+
    - Centralized activity tracking with automatic persistence
    - Rollback support for failed storage operations
    - Event-driven architecture preventing state/storage divergence
    - Proper error handling with activity removal on persistence failure
 
 3. **Rich Domain Entities**
+
    - Case, FinancialItem, Note, Alert classes with encapsulated business logic
    - ActivityEvent for comprehensive audit trail
    - Type-safe entity factories with validation
@@ -68,12 +71,14 @@
    - Event-driven side effects
 
 **Testing Improvements:**
+
 - +79 new tests across domain, application, and infrastructure layers
 - 290 total tests passing (0 regressions)
 - Enhanced test helpers: `toSnapshot()`, `sortSnapshots()` for reliable comparisons
 - Comprehensive integration test coverage
 
 **Documentation:**
+
 - `docs/development/state-management-strategy.md` - Architecture overview
 - `docs/development/phase-2-completion-summary.md` - Deliverables & learnings
 - `docs/development/phase-3-completion-checklist.md` - Next phase planning

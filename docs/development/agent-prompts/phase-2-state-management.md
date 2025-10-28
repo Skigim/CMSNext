@@ -37,6 +37,7 @@
 ### 3. Rich Domain Entities
 
 **Files:** (✅ All Implemented)
+
 - `domain/cases/entities/Case.ts` (Phase 1)
 - `domain/cases/entities/Person.ts` (Phase 1)
 - `domain/financials/entities/FinancialItem.ts` (Phase 2)
@@ -47,6 +48,7 @@
 ### 4. Use Cases Expanded
 
 **Files:** (✅ All Implemented)
+
 - `domain/cases/use-cases/CreateCase.ts` (Phase 1)
 - `domain/cases/use-cases/UpdateCase.ts` (Phase 2)
 - `domain/cases/use-cases/DeleteCase.ts` (Phase 2)
@@ -54,6 +56,7 @@
 ### 5. Testing Infrastructure
 
 **Achievements:**
+
 - +79 new tests across domain, application, and infrastructure layers
 - 290 total tests passing (0 regressions)
 - Enhanced test helpers: `toSnapshot()`, `sortSnapshots()` for reliable comparisons

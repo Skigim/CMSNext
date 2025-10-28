@@ -9,21 +9,23 @@
 ## ⚠️ Phase 3 Complexity Assessment
 
 **Scale Comparison:**
+
 - **Phase 1:** +9,670 LOC, 59 files (greenfield architecture) - 10 days
-- **Phase 2:** +846 LOC, 23 files (event system addition) - 11 days  
+- **Phase 2:** +846 LOC, 23 files (event system addition) - 11 days
 - **Phase 3:** ~+600 net LOC, 30-35 files (refactoring-heavy) - **5-7 days estimated**
 
 **Key Differences from Phase 1 & 2:**
 
-| Aspect | Phase 1 | Phase 2 | **Phase 3** |
-|--------|---------|---------|-------------|
-| Greenfield Work | ⭐⭐⭐⭐⭐ High | ⭐⭐ Low | ⭐⭐ Low |
-| Refactoring Risk | ⭐ Low | ⭐⭐⭐ Medium | **⭐⭐⭐⭐ HIGH** |
-| Component Changes | Minimal | Minimal | **MANY** |
-| Breaking Change Risk | Low | Low | **Medium-High** |
-| Testing Burden | New tests | Enhanced tests | **Regression-heavy** |
+| Aspect               | Phase 1         | Phase 2        | **Phase 3**          |
+| -------------------- | --------------- | -------------- | -------------------- |
+| Greenfield Work      | ⭐⭐⭐⭐⭐ High | ⭐⭐ Low       | ⭐⭐ Low             |
+| Refactoring Risk     | ⭐ Low          | ⭐⭐⭐ Medium  | **⭐⭐⭐⭐ HIGH**    |
+| Component Changes    | Minimal         | Minimal        | **MANY**             |
+| Breaking Change Risk | Low             | Low            | **Medium-High**      |
+| Testing Burden       | New tests       | Enhanced tests | **Regression-heavy** |
 
 **⚠️ CRITICAL DIFFERENCES:**
+
 1. **More deletion than addition** - You'll be removing ~600 lines from hooks, not just adding code
 2. **Component updates required** - Unlike P1/P2, this phase touches many React components
 3. **Higher regression risk** - Working functionality must be preserved during migration
@@ -31,6 +33,7 @@
 5. **Cross-cutting changes** - Hooks, services, components, and use cases all change together
 
 **Success Strategy:**
+
 - ✅ Migrate ONE domain at a time (don't touch all 3 simultaneously)
 - ✅ Run full test suite after EACH domain migration
 - ✅ Keep components working throughout (no big-bang rewrite)
@@ -57,13 +60,13 @@ Transform fat hooks (309-164 lines each) into thin wrappers (~40-50 lines) over 
 
 ### **Hooks to Refactor (Current Line Counts):**
 
-| Hook | Current LOC | Target LOC | Reduction | Complexity |
-|------|-------------|------------|-----------|------------|
-| `useCaseManagement.ts` | 309 | ~50 | -259 | High - many operations |
-| `useFinancialItemFlow.ts` | 150 | ~40 | -110 | Medium - CRUD flows |
-| `useFinancialItems.ts` | 161 | ~40 | -121 | Medium - state management |
-| `useNoteFlow.ts` | 164 | ~40 | -124 | Low - simple operations |
-| **TOTAL** | **784** | **~170** | **-614** | **Significant refactor** |
+| Hook                      | Current LOC | Target LOC | Reduction | Complexity                |
+| ------------------------- | ----------- | ---------- | --------- | ------------------------- |
+| `useCaseManagement.ts`    | 309         | ~50        | -259      | High - many operations    |
+| `useFinancialItemFlow.ts` | 150         | ~40        | -110      | Medium - CRUD flows       |
+| `useFinancialItems.ts`    | 161         | ~40        | -121      | Medium - state management |
+| `useNoteFlow.ts`          | 164         | ~40        | -124      | Low - simple operations   |
+| **TOTAL**                 | **784**     | **~170**   | **-614**  | **Significant refactor**  |
 
 ### Files to Read:
 
@@ -554,18 +557,15 @@ describe("CreateCase", () => {
    - Largest hook (309 lines)
    - Once Cases work, pattern is proven
    - **STOP and test thoroughly before proceeding**
-   
 2. **Financial Items domain SECOND** (Days 4-5)
    - Complex validation, many operations
    - Two related hooks to refactor (150 + 161 lines)
    - Benefits from proven Cases pattern
    - **STOP and test thoroughly before proceeding**
-   
 3. **Notes domain THIRD** (Days 6-7)
    - Simpler, fewer edge cases
    - Smallest hook (164 lines)
    - Should be straightforward after 2 successful migrations
-   
 4. **Defer Alerts domain** (Phase 4 or later)
    - Will be redesigned in future phase
    - Keep minimal changes for now
@@ -626,6 +626,7 @@ For Each Domain (e.g., Cases):
 ### **Per-Domain Checklist (repeat for each domain):**
 
 **Cases Domain (PR #1):**
+
 - [ ] Use cases created (GetAllCases, GetCaseById, etc.)
 - [ ] CaseManagementService orchestrates flows
 - [ ] useCaseManagement hook refactored (309 → ~50 lines)
@@ -635,6 +636,7 @@ For Each Domain (e.g., Cases):
 - [ ] **Merged to main before starting Financials**
 
 **Financial Items Domain (PR #2):**
+
 - [ ] Use cases created (AddFinancialItem, UpdateFinancialItem, DeleteFinancialItem, GetFinancialItems)
 - [ ] FinancialManagementService created
 - [ ] useFinancialItemFlow refactored (150 → ~40 lines)
@@ -645,6 +647,7 @@ For Each Domain (e.g., Cases):
 - [ ] **Merged to main before starting Notes**
 
 **Notes Domain (PR #3):**
+
 - [ ] Use cases created (CreateNote, UpdateNote, DeleteNote)
 - [ ] NoteManagementService created
 - [ ] useNoteFlow refactored (164 → ~40 lines)
@@ -672,14 +675,15 @@ For Each Domain (e.g., Cases):
 
 **Total Duration:** 5-7 days (assuming sequential domain migration)
 
-| Domain | Estimated Days | Risk Level | Notes |
-|--------|---------------|------------|-------|
-| Cases | 2-3 days | ⚠️ High | Largest hook, most components touched |
-| Financials | 1.5-2 days | ⚠️ Medium | Two hooks, proven pattern from Cases |
-| Notes | 1-1.5 days | ✅ Low | Simplest domain, pattern proven 2x |
-| Buffer/Review | 0.5-1 day | - | Code review, regression testing |
+| Domain        | Estimated Days | Risk Level | Notes                                 |
+| ------------- | -------------- | ---------- | ------------------------------------- |
+| Cases         | 2-3 days       | ⚠️ High    | Largest hook, most components touched |
+| Financials    | 1.5-2 days     | ⚠️ Medium  | Two hooks, proven pattern from Cases  |
+| Notes         | 1-1.5 days     | ✅ Low     | Simplest domain, pattern proven 2x    |
+| Buffer/Review | 0.5-1 day      | -          | Code review, regression testing       |
 
 **Comparison to Previous Phases:**
+
 - Phase 1: 10 days (greenfield architecture)
 - Phase 2: 11 days (event system addition)
 - **Phase 3: 5-7 days** (refactoring-heavy, less net code)

@@ -7,13 +7,15 @@ A modern, filesystem-based case tracking application built with React, TypeScrip
 ## ✨ Key Features
 
 ### 🗂️ **Filesystem-Only Storage**
+
 - **Local-first architecture** using the File System Access API
 - **No database or authentication** required—works out of the box
-- **Intelligent autosave** with debouncing and conflict resolution  
+- **Intelligent autosave** with debouncing and conflict resolution
 - **Automatic backups** with timestamped versions
 - **100% offline capability** once connected to a directory
 
 ### 📋 **Advanced Case Management**
+
 - **Full CRUD operations** for cases, financial items, and notes
 - **Smart navigation** with breadcrumb trails and back functionality
 - **Real-time search and filtering** across all case data
@@ -21,6 +23,7 @@ A modern, filesystem-based case tracking application built with React, TypeScrip
 - **Priority flagging** and status tracking systems
 
 ### 💰 **Comprehensive Financial Tracking**
+
 - **Resources**: Assets, bank accounts, property, investments
 - **Income**: Employment, benefits, support with frequency tracking
 - **Expenses**: Bills, debts, recurring costs
@@ -28,12 +31,14 @@ A modern, filesystem-based case tracking application built with React, TypeScrip
 - **Smart categorization** with customizable types
 
 ### 📝 **Rich Notes System**
+
 - **Categorized notes**: General, VR Update, Client Contact, Follow-up, and more
 - **Timestamps and edit history** for full audit trails
 - **Rich text support** with proper formatting
 - **Quick add/edit/delete** functionality with keyboard shortcuts
 
 ### 🎨 **Premium UI/UX Experience**
+
 - **6 beautiful themes**: Light, Dark, Soft Dark, Warm, Blue, Paper
 - **Monday.com-inspired** workflow and interaction patterns
 - **Fully responsive design** optimized for desktop, tablet, and mobile
@@ -41,12 +46,14 @@ A modern, filesystem-based case tracking application built with React, TypeScrip
 - **Accessibility-first** design with proper ARIA labels and keyboard navigation
 
 ### 📊 **Intelligent Dashboard**
+
 - **Case overview statistics** with visual indicators
 - **Priority case highlighting** for urgent attention
 - **Recent activity tracking** with quick access
 - **Smart widgets** showing case distribution and trends
 
 ### ⚙️ **Advanced Data Management**
+
 - **JSON import/export** with comprehensive validation
 - **Data migration tools** for legacy formats
 - **Bulk import capabilities** with progress indicators
@@ -57,19 +64,20 @@ A modern, filesystem-based case tracking application built with React, TypeScrip
 
 This application requires the **File System Access API** for local file operations:
 
-| Browser | Support | Version | Notes |
-|---------|---------|---------|-------|
-| ✅ **Chrome** | Full Support | 86+ | Recommended |
-| ✅ **Edge** | Full Support | 86+ | Recommended |
-| ✅ **Opera** | Full Support | 72+ | Full compatibility |
-| ❌ **Firefox** | Not Supported | - | API not implemented |
-| ❌ **Safari** | Not Supported | - | API not implemented |
+| Browser        | Support       | Version | Notes               |
+| -------------- | ------------- | ------- | ------------------- |
+| ✅ **Chrome**  | Full Support  | 86+     | Recommended         |
+| ✅ **Edge**    | Full Support  | 86+     | Recommended         |
+| ✅ **Opera**   | Full Support  | 72+     | Full compatibility  |
+| ❌ **Firefox** | Not Supported | -       | API not implemented |
+| ❌ **Safari**  | Not Supported | -       | API not implemented |
 
 **Note**: For unsupported browsers, the application will show a compatibility message with alternative browser recommendations.
 
 ## 🚀 Getting Started
 
 ### 1. **Initial Setup** (First Time)
+
 1. **Open the application** in a supported browser (Chrome/Edge recommended)
 2. **Connect to Directory**: Click "Connect to Folder" when prompted
 3. **Choose a location**: Select or create a dedicated folder for your case data
@@ -77,17 +85,20 @@ This application requires the **File System Access API** for local file operatio
 5. **Ready to go**: The application will initialize automatically
 
 ### 2. **First Case Creation**
+
 - Click the **"New Case"** button in the sidebar or dashboard
 - Fill in the **person details** (name, MCN, contact info)
 - Add **case information** (status, priority, dates)
 - **Save** to create your first case
 
 ### 3. **Existing Users**
+
 - **Automatic recognition**: The app detects previous directory connections
 - **One-click restore**: Click "Connect to Existing" to reconnect
 - **Data loading**: Choose from available data files in your directory
 
 ### 4. **Data Import** (Optional)
+
 - Navigate to **Settings → Data Management**
 - **Upload JSON files** from other case management systems
 - **Automatic validation** ensures data integrity
@@ -106,6 +117,7 @@ your-chosen-directory/
 ```
 
 ### **File Management Features**
+
 - **Automatic backups** created before major operations
 - **Timestamped files** for easy chronological tracking
 - **Smart file detection** displays all JSON files in your directory
@@ -149,7 +161,7 @@ Case data is stored in a structured JSON format optimized for performance and da
             {
               "id": "res_001",
               "description": "Checking Account",
-              "amount": 2500.00,
+              "amount": 2500.0,
               "frequency": "one-time",
               "verificationStatus": "VR",
               "dateAdded": "2024-12-01T10:00:00.000Z"
@@ -157,9 +169,9 @@ Case data is stored in a structured JSON format optimized for performance and da
           ],
           "income": [
             {
-              "id": "inc_001", 
+              "id": "inc_001",
               "description": "Employment",
-              "amount": 3200.00,
+              "amount": 3200.0,
               "frequency": "monthly",
               "verificationStatus": "VR",
               "dateAdded": "2024-12-01T10:00:00.000Z"
@@ -169,7 +181,7 @@ Case data is stored in a structured JSON format optimized for performance and da
             {
               "id": "exp_001",
               "description": "Rent",
-              "amount": 1200.00,
+              "amount": 1200.0,
               "frequency": "monthly",
               "verificationStatus": "VR",
               "dateAdded": "2024-12-01T10:00:00.000Z"
@@ -192,32 +204,37 @@ Case data is stored in a structured JSON format optimized for performance and da
 ```
 
 ### **Data Validation**
+
 - **Automatic migration** from legacy formats
-- **Schema validation** ensures data consistency  
+- **Schema validation** ensures data consistency
 - **Type checking** prevents data corruption
 - **Backup creation** before any destructive operations
 
 ## 🛠️ Technology Stack
 
 ### **Core Technologies**
+
 - **React 18** with TypeScript for type-safe component development
 - **Tailwind CSS v4** for utility-first styling with custom design tokens
 - **File System Access API** for native filesystem integration
 - **Vite** for lightning-fast development and optimized builds
 
 ### **UI & Design System**
+
 - **shadcn/ui** - High-quality, accessible component library
 - **Lucide React** - Beautiful, consistent iconography
 - **Sonner** - Elegant toast notifications with stacking
 - **Custom theme system** - 6 carefully crafted themes with smooth transitions
 
 ### **State Management & Data**
+
 - **React Context** for global state management
 - **Custom hooks** for encapsulated business logic
 - **Intelligent autosave** with debouncing and conflict resolution
 - **File-based persistence** with automatic backup and recovery
 
 ### **Developer Experience**
+
 - **TypeScript strict mode** for maximum type safety
 - **Component-driven architecture** with clear separation of concerns
 - **Custom utilities** for data transformation and validation
@@ -228,6 +245,7 @@ Case data is stored in a structured JSON format optimized for performance and da
 The application follows a **clean, filesystem-only architecture** designed for privacy, performance, and simplicity:
 
 ### **Core Principles**
+
 - **🔒 Privacy-First**: All data remains on your local device
 - **⚡ Performance-Optimized**: No network requests, instant responses
 - **🎯 Single Responsibility**: Each component has a clear, focused purpose
@@ -267,8 +285,9 @@ The application follows a **clean, filesystem-only architecture** designed for p
 ```
 
 ### **Key Architectural Decisions**
+
 - **No Authentication Required**: Direct access without login complexity
-- **No Database Dependencies**: Eliminates server infrastructure needs  
+- **No Database Dependencies**: Eliminates server infrastructure needs
 - **No Network Requests**: Pure client-side application for maximum privacy
 - **Browser-Native Storage**: Leverages modern web platform capabilities
 
@@ -277,6 +296,7 @@ The application follows a **clean, filesystem-only architecture** designed for p
 The application is designed for **zero-configuration development** with no server setup required:
 
 ### **Quick Start**
+
 ```bash
 # Clone and install dependencies
 npm install
@@ -289,6 +309,7 @@ npm run dev
 ```
 
 ### **Development Features**
+
 - **⚡ Hot Module Replacement** - Instant updates during development
 - **🔍 TypeScript Integration** - Full type checking and IntelliSense
 - **🎨 Tailwind CSS v4** - Utility-first styling with custom design tokens
@@ -296,10 +317,11 @@ npm run dev
 - **🧪 Component Preview** - Individual component development and testing
 
 ### **Project Structure**
+
 ```
 /src
 ├── /components          # Reusable UI components
-│   ├── /ui             # shadcn/ui base components  
+│   ├── /ui             # shadcn/ui base components
 │   └── /modals         # Modal dialogs and overlays
 ├── /contexts           # React Context providers
 ├── /hooks              # Custom React hooks (future refactoring)
@@ -309,6 +331,7 @@ npm run dev
 ```
 
 ### **Code Quality**
+
 - **TypeScript Strict Mode** enabled for maximum type safety
 - **Component-driven architecture** with clear separation of concerns
 - **Custom hooks pattern** ready for business logic extraction
@@ -319,6 +342,7 @@ npm run dev
 This application is built with **privacy-by-design** principles:
 
 ### **Data Privacy Guarantees**
+
 - **🏠 100% Local Storage**: All case data remains on your device
 - **🚫 No Cloud Uploads**: Zero data transmission to external servers
 - **🔍 No Tracking**: No analytics, cookies, or user behavior monitoring
@@ -326,6 +350,7 @@ This application is built with **privacy-by-design** principles:
 - **🔐 No Authentication**: No accounts, passwords, or personal data collection
 
 ### **Security Features**
+
 - **Browser-native security**: Leverages File System Access API permissions
 - **Data validation**: Input sanitization and type checking
 - **Automatic backups**: Protection against data loss
@@ -334,7 +359,7 @@ This application is built with **privacy-by-design** principles:
 ## 📋 Current Status
 
 - **✅ Core Features**: Complete CRUD operations for cases, financial items, and notes
-- **✅ File Storage**: Robust autosave with File System Access API integration  
+- **✅ File Storage**: Robust autosave with File System Access API integration
 - **✅ UI/UX**: 6 polished themes with responsive design, 100% shadcn/ui migration complete
 - **✅ Data Management**: Import/export with validation and migration
 - **✅ Testing Infrastructure**: 290 tests passing with vitest + axe accessibility checks
@@ -346,6 +371,7 @@ This application is built with **privacy-by-design** principles:
 ### Architecture Progress
 
 **Completed:**
+
 - Domain structure with rich entities (Case, FinancialItem, Note, Alert, ActivityEvent)
 - Unified StorageRepository with domain adapters
 - ApplicationState singleton with Map-based storage
@@ -354,6 +380,7 @@ This application is built with **privacy-by-design** principles:
 - Use cases: CreateCase, UpdateCase, DeleteCase with optimistic update + rollback patterns
 
 **In Planning:**
+
 - Phase 3: Migrate React hooks to use ApplicationState and domain events
 - Phase 4: Alert system integration with event bus
 - Phase 5: Worker-ready interfaces for background processing
@@ -363,11 +390,13 @@ See `docs/development/architecture-refactor-plan.md` for detailed roadmap.
 ## 🆘 Support & Compatibility
 
 ### **Recommended Setup**
+
 - **Browser**: Chrome 86+ or Edge 86+ (File System Access API required)
 - **Platform**: Windows, macOS, or Linux desktop
 - **Storage**: Local directory with read/write permissions
 
 ### **Troubleshooting**
+
 - **Permission Issues**: Ensure your browser allows file system access
 - **Performance**: For large datasets (1000+ cases), consider data archival
 - **Browser Support**: Check [File System Access API compatibility](https://caniuse.com/native-filesystem-api)
