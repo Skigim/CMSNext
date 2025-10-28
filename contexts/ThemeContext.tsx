@@ -42,7 +42,8 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
       }
       
       // Check system preference
-      if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
+      const mediaQuery = window.matchMedia?.('(prefers-color-scheme: dark)');
+      if (mediaQuery?.matches) {
         return 'dark'; // Default to neutral dark
       }
     }
