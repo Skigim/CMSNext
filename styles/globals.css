@@ -43,16 +43,21 @@
   --font-weight-medium: 500;
   --font-weight-normal: 400;
   --ring: oklch(0.708 0 0);
-  --chart-1: oklch(0.646 0.222 41.116);
-  --chart-2: oklch(0.6 0.118 184.704);
-  --chart-3: oklch(0.398 0.07 227.392);
-  --chart-4: oklch(0.828 0.189 84.429);
-  --chart-5: oklch(0.769 0.188 70.08);
-  --chart-status-pending: var(--primary);
-  --chart-status-approved: oklch(0.646 0.222 142.1);
-  --chart-status-denied: var(--destructive);
-  --chart-status-closed: var(--muted-foreground);
-  --chart-status-spenddown: oklch(0.828 0.189 45);
+  
+  /* Chart colors using shadcn/ui palette */
+  --chart-1: oklch(0.646 0.222 142.1);      /* Green - for approved/positive */
+  --chart-2: oklch(0.6 0.118 184.704);      /* Blue - for informational */
+  --chart-3: oklch(0.828 0.189 84.429);     /* Yellow - for warnings */
+  --chart-4: oklch(0.627 0.265 303.9);      /* Purple - for secondary data */
+  --chart-5: oklch(0.577 0.245 27.325);     /* Red - for errors/destructive */
+  
+  /* Status-specific chart colors matching case widget */
+  --chart-status-pending: oklch(0.6 0.118 184.704);      /* Blue - same as chart-2 */
+  --chart-status-approved: oklch(0.646 0.222 142.1);     /* Green - same as chart-1 */
+  --chart-status-denied: oklch(0.577 0.245 27.325);      /* Red - same as destructive */
+  --chart-status-closed: oklch(0.556 0 0);                /* Gray - same as muted-foreground */
+  --chart-status-spenddown: oklch(0.828 0.189 84.429);   /* Yellow - same as chart-3 */
+  
   --sidebar: oklch(0.985 0 0);
   --sidebar-foreground: oklch(0.145 0 0);
   --sidebar-primary: oklch(0.205 0 0);
@@ -91,16 +96,21 @@
   --ring: oklch(0.556 0 0);
   --font-weight-medium: 500;
   --font-weight-normal: 400;
-  --chart-1: oklch(0.488 0.243 264.376);
-  --chart-2: oklch(0.696 0.17 162.48);
-  --chart-3: oklch(0.769 0.188 70.08);
-  --chart-4: oklch(0.627 0.265 303.9);
-  --chart-5: oklch(0.645 0.246 16.439);
-  --chart-status-pending: var(--primary);
-  --chart-status-approved: oklch(0.696 0.17 162.48);
-  --chart-status-denied: var(--destructive);
-  --chart-status-closed: var(--muted-foreground);
-  --chart-status-spenddown: oklch(0.769 0.188 70.08);
+  
+  /* Dark mode chart colors */
+  --chart-1: oklch(0.696 0.17 162.48);      /* Green - adjusted for dark mode */
+  --chart-2: oklch(0.488 0.243 264.376);    /* Blue - adjusted for dark mode */
+  --chart-3: oklch(0.769 0.188 70.08);      /* Yellow - adjusted for dark mode */
+  --chart-4: oklch(0.627 0.265 303.9);      /* Purple */
+  --chart-5: oklch(0.704 0.191 22.216);     /* Red - adjusted for dark mode */
+  
+  /* Status-specific chart colors for dark mode */
+  --chart-status-pending: oklch(0.488 0.243 264.376);    /* Blue - chart-2 */
+  --chart-status-approved: oklch(0.696 0.17 162.48);     /* Green - chart-1 */
+  --chart-status-denied: oklch(0.704 0.191 22.216);      /* Red - destructive */
+  --chart-status-closed: oklch(0.708 0 0);                /* Gray - muted-foreground */
+  --chart-status-spenddown: oklch(0.769 0.188 70.08);    /* Yellow - chart-3 */
+  
   --sidebar: oklch(0.205 0 0);
   --sidebar-foreground: oklch(0.985 0 0);
   --sidebar-primary: oklch(0.488 0.243 264.376);
@@ -139,16 +149,21 @@
   --ring: oklch(0.704 0.04 256.788);
   --font-weight-medium: 500;
   --font-weight-normal: 400;
-  --chart-1: oklch(0.646 0.222 41.116);
-  --chart-2: oklch(0.6 0.118 184.704);
-  --chart-3: oklch(0.398 0.07 227.392);
-  --chart-4: oklch(0.828 0.189 84.429);
-  --chart-5: oklch(0.769 0.188 70.08);
-  --chart-status-pending: var(--primary);
-  --chart-status-approved: oklch(0.646 0.222 142.1);
-  --chart-status-denied: var(--destructive);
-  --chart-status-closed: var(--muted-foreground);
-  --chart-status-spenddown: oklch(0.828 0.189 45);
+  
+  /* Chart colors using shadcn/ui palette */
+  --chart-1: oklch(0.646 0.222 142.1);      /* Green */
+  --chart-2: oklch(0.6 0.118 184.704);      /* Blue */
+  --chart-3: oklch(0.828 0.189 84.429);     /* Yellow */
+  --chart-4: oklch(0.627 0.265 303.9);      /* Purple */
+  --chart-5: oklch(0.577 0.245 27.325);     /* Red */
+  
+  /* Status-specific chart colors */
+  --chart-status-pending: oklch(0.6 0.118 184.704);      /* Blue */
+  --chart-status-approved: oklch(0.646 0.222 142.1);     /* Green */
+  --chart-status-denied: oklch(0.577 0.245 27.325);      /* Red */
+  --chart-status-closed: oklch(0.554 0.046 257.417);     /* Gray */
+  --chart-status-spenddown: oklch(0.828 0.189 84.429);   /* Yellow */
+  
   --sidebar: oklch(0.984 0.003 247.858);
   --sidebar-foreground: oklch(0.129 0.042 264.695);
   --sidebar-primary: oklch(0.208 0.042 265.755);
@@ -185,16 +200,21 @@
   --input-background: oklch(0.208 0.042 265.755);
   --switch-background: oklch(0.279 0.041 260.031);
   --ring: oklch(0.551 0.027 264.364);
-  --chart-1: oklch(0.488 0.243 264.376);
-  --chart-2: oklch(0.696 0.17 162.48);
-  --chart-3: oklch(0.769 0.188 70.08);
-  --chart-4: oklch(0.627 0.265 303.9);
-  --chart-5: oklch(0.645 0.246 16.439);
-  --chart-status-pending: var(--primary);
-  --chart-status-approved: oklch(0.696 0.17 162.48);
-  --chart-status-denied: var(--destructive);
-  --chart-status-closed: var(--muted-foreground);
-  --chart-status-spenddown: oklch(0.769 0.188 70.08);
+  
+  /* Dark mode chart colors */
+  --chart-1: oklch(0.696 0.17 162.48);      /* Green */
+  --chart-2: oklch(0.488 0.243 264.376);    /* Blue */
+  --chart-3: oklch(0.769 0.188 70.08);      /* Yellow */
+  --chart-4: oklch(0.627 0.265 303.9);      /* Purple */
+  --chart-5: oklch(0.704 0.191 22.216);     /* Red */
+  
+  /* Status-specific chart colors for dark mode */
+  --chart-status-pending: oklch(0.488 0.243 264.376);    /* Blue */
+  --chart-status-approved: oklch(0.696 0.17 162.48);     /* Green */
+  --chart-status-denied: oklch(0.704 0.191 22.216);      /* Red */
+  --chart-status-closed: oklch(0.704 0.04 256.788);      /* Gray */
+  --chart-status-spenddown: oklch(0.769 0.188 70.08);    /* Yellow */
+  
   --sidebar: oklch(0.208 0.042 265.755);
   --sidebar-foreground: oklch(0.984 0.003 247.858);
   --sidebar-primary: oklch(0.488 0.243 264.376);
@@ -233,16 +253,21 @@
   --ring: oklch(0.709 0.01 56.259);
   --font-weight-medium: 500;
   --font-weight-normal: 400;
-  --chart-1: oklch(0.646 0.222 41.116);
-  --chart-2: oklch(0.6 0.118 184.704);
-  --chart-3: oklch(0.398 0.07 227.392);
-  --chart-4: oklch(0.828 0.189 84.429);
-  --chart-5: oklch(0.769 0.188 70.08);
-  --chart-status-pending: var(--primary);
-  --chart-status-approved: oklch(0.646 0.222 142.1);
-  --chart-status-denied: var(--destructive);
-  --chart-status-closed: var(--muted-foreground);
-  --chart-status-spenddown: oklch(0.828 0.189 45);
+  
+  /* Chart colors using shadcn/ui palette */
+  --chart-1: oklch(0.646 0.222 142.1);      /* Green */
+  --chart-2: oklch(0.6 0.118 184.704);      /* Blue */
+  --chart-3: oklch(0.828 0.189 84.429);     /* Yellow */
+  --chart-4: oklch(0.627 0.265 303.9);      /* Purple */
+  --chart-5: oklch(0.577 0.245 27.325);     /* Red */
+  
+  /* Status-specific chart colors */
+  --chart-status-pending: oklch(0.6 0.118 184.704);      /* Blue */
+  --chart-status-approved: oklch(0.646 0.222 142.1);     /* Green */
+  --chart-status-denied: oklch(0.577 0.245 27.325);      /* Red */
+  --chart-status-closed: oklch(0.553 0.013 58.071);      /* Gray */
+  --chart-status-spenddown: oklch(0.828 0.189 84.429);   /* Yellow */
+  
   --sidebar: oklch(0.985 0.001 106.423);
   --sidebar-foreground: oklch(0.147 0.004 49.25);
   --sidebar-primary: oklch(0.216 0.006 56.043);
@@ -279,16 +304,21 @@
   --input-background: oklch(0.216 0.006 56.043);
   --switch-background: oklch(0.268 0.007 34.298);
   --ring: oklch(0.553 0.013 58.071);
-  --chart-1: oklch(0.488 0.243 264.376);
-  --chart-2: oklch(0.696 0.17 162.48);
-  --chart-3: oklch(0.769 0.188 70.08);
-  --chart-4: oklch(0.627 0.265 303.9);
-  --chart-5: oklch(0.645 0.246 16.439);
-  --chart-status-pending: var(--primary);
-  --chart-status-approved: oklch(0.696 0.17 162.48);
-  --chart-status-denied: var(--destructive);
-  --chart-status-closed: var(--muted-foreground);
-  --chart-status-spenddown: oklch(0.769 0.188 70.08);
+  
+  /* Dark mode chart colors */
+  --chart-1: oklch(0.696 0.17 162.48);      /* Green */
+  --chart-2: oklch(0.488 0.243 264.376);    /* Blue */
+  --chart-3: oklch(0.769 0.188 70.08);      /* Yellow */
+  --chart-4: oklch(0.627 0.265 303.9);      /* Purple */
+  --chart-5: oklch(0.704 0.191 22.216);     /* Red */
+  
+  /* Status-specific chart colors for dark mode */
+  --chart-status-pending: oklch(0.488 0.243 264.376);    /* Blue */
+  --chart-status-approved: oklch(0.696 0.17 162.48);     /* Green */
+  --chart-status-denied: oklch(0.704 0.191 22.216);      /* Red */
+  --chart-status-closed: oklch(0.709 0.01 56.259);       /* Gray */
+  --chart-status-spenddown: oklch(0.769 0.188 70.08);    /* Yellow */
+  
   --sidebar: oklch(0.216 0.006 56.043);
   --sidebar-foreground: oklch(0.985 0.001 106.423);
   --sidebar-primary: oklch(0.488 0.243 264.376);
@@ -327,16 +357,21 @@
   --ring: oklch(0.705 0.015 286.067);
   --font-weight-medium: 500;
   --font-weight-normal: 400;
-  --chart-1: oklch(0.646 0.222 41.116);
-  --chart-2: oklch(0.6 0.118 184.704);
-  --chart-3: oklch(0.398 0.07 227.392);
-  --chart-4: oklch(0.828 0.189 84.429);
-  --chart-5: oklch(0.769 0.188 70.08);
-  --chart-status-pending: var(--primary);
-  --chart-status-approved: oklch(0.646 0.222 142.1);
-  --chart-status-denied: var(--destructive);
-  --chart-status-closed: var(--muted-foreground);
-  --chart-status-spenddown: oklch(0.828 0.189 45);
+  
+  /* Chart colors using shadcn/ui palette */
+  --chart-1: oklch(0.646 0.222 142.1);      /* Green */
+  --chart-2: oklch(0.6 0.118 184.704);      /* Blue */
+  --chart-3: oklch(0.828 0.189 84.429);     /* Yellow */
+  --chart-4: oklch(0.627 0.265 303.9);      /* Purple */
+  --chart-5: oklch(0.577 0.245 27.325);     /* Red */
+  
+  /* Status-specific chart colors */
+  --chart-status-pending: oklch(0.6 0.118 184.704);      /* Blue */
+  --chart-status-approved: oklch(0.646 0.222 142.1);     /* Green */
+  --chart-status-denied: oklch(0.577 0.245 27.325);      /* Red */
+  --chart-status-closed: oklch(0.552 0.016 285.938);     /* Gray */
+  --chart-status-spenddown: oklch(0.828 0.189 84.429);   /* Yellow */
+  
   --sidebar: oklch(0.985 0 0);
   --sidebar-foreground: oklch(0.141 0.005 285.823);
   --sidebar-primary: oklch(0.21 0.006 285.885);
@@ -373,16 +408,21 @@
   --input-background: oklch(0.21 0.006 285.885);
   --switch-background: oklch(0.274 0.006 286.033);
   --ring: oklch(0.552 0.016 285.938);
-  --chart-1: oklch(0.488 0.243 264.376);
-  --chart-2: oklch(0.696 0.17 162.48);
-  --chart-3: oklch(0.769 0.188 70.08);
-  --chart-4: oklch(0.627 0.265 303.9);
-  --chart-5: oklch(0.645 0.246 16.439);
-  --chart-status-pending: var(--primary);
-  --chart-status-approved: oklch(0.696 0.17 162.48);
-  --chart-status-denied: var(--destructive);
-  --chart-status-closed: var(--muted-foreground);
-  --chart-status-spenddown: oklch(0.769 0.188 70.08);
+  
+  /* Dark mode chart colors */
+  --chart-1: oklch(0.696 0.17 162.48);      /* Green */
+  --chart-2: oklch(0.488 0.243 264.376);    /* Blue */
+  --chart-3: oklch(0.769 0.188 70.08);      /* Yellow */
+  --chart-4: oklch(0.627 0.265 303.9);      /* Purple */
+  --chart-5: oklch(0.704 0.191 22.216);     /* Red */
+  
+  /* Status-specific chart colors for dark mode */
+  --chart-status-pending: oklch(0.488 0.243 264.376);    /* Blue */
+  --chart-status-approved: oklch(0.696 0.17 162.48);     /* Green */
+  --chart-status-denied: oklch(0.704 0.191 22.216);      /* Red */
+  --chart-status-closed: oklch(0.705 0.015 286.067);     /* Gray */
+  --chart-status-spenddown: oklch(0.769 0.188 70.08);    /* Yellow */
+  
   --sidebar: oklch(0.21 0.006 285.885);
   --sidebar-foreground: oklch(0.985 0 0);
   --sidebar-primary: oklch(0.488 0.243 264.376);
