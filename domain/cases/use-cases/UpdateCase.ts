@@ -1,4 +1,5 @@
 import { ApplicationState } from '@/application/ApplicationState';
+import { DomainEventBus } from '@/application/DomainEventBus';
 import type { StorageRepository } from '@/infrastructure/storage/StorageRepository';
 import { Case, type CaseSnapshot } from '@/domain/cases/entities/Case';
 import { createLogger } from '@/utils/logger';
@@ -19,6 +20,7 @@ export class UpdateCaseUseCase {
   constructor(
     private readonly appState: ApplicationState,
     private readonly storage: StorageRepository,
+    private readonly eventBus: DomainEventBus = DomainEventBus.getInstance(),
   ) {}
 
   async execute(input: UpdateCaseInput): Promise<Case> {
@@ -48,6 +50,11 @@ export class UpdateCaseUseCase {
 
     try {
       await this.storage.cases.save(updatedCase);
+
+      await this.eventBus.publish('CaseUpdated', updatedCase.toJSON(), {
+        aggregateId: updatedCase.id,
+        metadata: { mcn: updatedCase.mcn },
+      });
 
       logger.info('Case updated successfully', { caseId: updatedCase.id });
 

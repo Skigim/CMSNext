@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { CreateCaseUseCase } from '@/domain/cases/use-cases/CreateCase';
 import { ApplicationState } from '@/application/ApplicationState';
+import type { DomainEventBus } from '@/application/DomainEventBus';
 import type { StorageRepository } from '@/infrastructure/storage/StorageRepository';
 import type { ICaseRepository } from '@/domain/common/repositories';
 
@@ -14,6 +15,7 @@ describe('CreateCaseUseCase', () => {
   let appState: ApplicationState;
   let mockStorage: StorageRepository;
   let mockCaseRepository: ICaseRepository;
+  let mockEventBus: DomainEventBus;
 
   beforeEach(() => {
     ApplicationState.resetForTesting();
@@ -31,10 +33,14 @@ describe('CreateCaseUseCase', () => {
     mockStorage = {
       cases: mockCaseRepository,
     } as unknown as StorageRepository;
+
+    mockEventBus = {
+      publish: vi.fn().mockResolvedValue(undefined),
+    } as unknown as DomainEventBus;
   });
 
   it('creates a case with optimistic update and persists it', async () => {
-    const useCase = new CreateCaseUseCase(appState, mockStorage);
+  const useCase = new CreateCaseUseCase(appState, mockStorage, mockEventBus);
 
     const result = await useCase.execute({
       mcn: 'MCN-001',
@@ -53,12 +59,17 @@ describe('CreateCaseUseCase', () => {
 
     expect(mockCaseRepository.save).toHaveBeenCalledTimes(1);
     expect(mockCaseRepository.save).toHaveBeenCalledWith(expect.objectContaining({ id: result.id }));
+    expect(mockEventBus.publish).toHaveBeenCalledWith(
+      'CaseCreated',
+      expect.objectContaining({ id: result.id, mcn: 'MCN-001' }),
+      expect.objectContaining({ aggregateId: result.id, metadata: { mcn: 'MCN-001' } }),
+    );
   });
 
   it('rolls back optimistic update when persistence fails', async () => {
     mockCaseRepository.save = vi.fn().mockRejectedValue(new Error('persist failed'));
 
-    const useCase = new CreateCaseUseCase(appState, mockStorage);
+  const useCase = new CreateCaseUseCase(appState, mockStorage, mockEventBus);
 
     await expect(
       useCase.execute({
@@ -69,10 +80,11 @@ describe('CreateCaseUseCase', () => {
     ).rejects.toThrow('Failed to create case');
 
     expect(appState.getCases()).toHaveLength(0);
+    expect(mockEventBus.publish).not.toHaveBeenCalled();
   });
 
   it('validates required fields', async () => {
-    const useCase = new CreateCaseUseCase(appState, mockStorage);
+  const useCase = new CreateCaseUseCase(appState, mockStorage, mockEventBus);
 
     await expect(
       useCase.execute({

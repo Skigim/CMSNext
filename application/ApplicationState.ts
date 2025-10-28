@@ -13,14 +13,12 @@ import {
 
 type EntityWithId = { id: string };
 
-type Listener = () => void;
-
 export interface ApplicationStateSnapshot {
-  cases: Case[];
-  financials: FinancialItem[];
-  notes: Note[];
-  alerts: Alert[];
-  activities: ActivityEvent[];
+  cases: ReadonlyMap<string, Case>;
+  financials: ReadonlyMap<string, FinancialItem>;
+  notes: ReadonlyMap<string, Note>;
+  alerts: ReadonlyMap<string, Alert>;
+  activities: ReadonlyMap<string, ActivityEvent>;
   featureFlags: FeatureFlags;
 }
 
@@ -56,6 +54,9 @@ function cloneValue<T>(value: T): T {
   return JSON.parse(JSON.stringify(value)) as T;
 }
 
+type SnapshotListener = (snapshot: ApplicationStateSnapshot) => void;
+type Listener = SnapshotListener | (() => void);
+
 export class ApplicationState {
   private static instance: ApplicationState | null = null;
 
@@ -66,7 +67,7 @@ export class ApplicationState {
   private readonly activities = new Map<string, ActivityEvent>();
   private featureFlags: FeatureFlags = createFeatureFlagContext();
 
-  private readonly listeners = new Set<Listener>();
+  private readonly listeners = new Map<Listener, SnapshotListener>();
   private version = 0;
 
   private constructor() {}
@@ -96,14 +97,7 @@ export class ApplicationState {
   }
 
   getSnapshot(): ApplicationStateSnapshot {
-    return {
-      cases: this.getCases(),
-      financials: this.getFinancialItems(),
-      notes: this.getNotes(),
-      alerts: this.getAlerts(),
-      activities: this.getActivities(),
-      featureFlags: this.getFeatureFlags(),
-    };
+    return this.createSnapshot();
   }
 
   async hydrate(storage: StorageRepository | null | undefined): Promise<void> {
@@ -120,7 +114,7 @@ export class ApplicationState {
       storage.getFeatureFlags(),
     ]);
 
-  this.replaceCases(cases);
+    this.replaceCases(cases);
     this.replaceCollection(this.financials, financials);
     this.replaceCollection(this.notes, notes);
     this.replaceCollection(this.alerts, alerts);
@@ -294,8 +288,21 @@ export class ApplicationState {
     }
   }
 
+  addActivity(event: ActivityEvent): void {
+    this.upsertActivity(event);
+  }
+
+  subscribe(listener: SnapshotListener): () => void;
+  subscribe(listener: () => void): () => void;
   subscribe(listener: Listener): () => void {
-    this.listeners.add(listener);
+    const wrapped: SnapshotListener = listener.length > 0
+      ? (listener as SnapshotListener)
+      : () => {
+          (listener as () => void)();
+        };
+
+    this.listeners.set(listener, wrapped);
+
     return () => {
       this.listeners.delete(listener);
     };
@@ -313,6 +320,23 @@ export class ApplicationState {
     items.forEach(item => {
       this.cases.set(item.id, item.clone());
     });
+  }
+
+  private createSnapshot(): ApplicationStateSnapshot {
+    return {
+      cases: this.cloneMap(this.cases),
+      financials: this.cloneMap(this.financials),
+      notes: this.cloneMap(this.notes),
+      alerts: this.cloneMap(this.alerts),
+      activities: this.cloneMap(this.activities),
+      featureFlags: { ...this.featureFlags },
+    };
+  }
+
+  private cloneMap<T extends EntityWithId>(source: Map<string, T>): Map<string, T> {
+    return new Map(
+      Array.from(source.entries()).map(([id, entity]) => [id, cloneValue(entity)] as const),
+    );
   }
 
   private toArray<T extends EntityWithId>(map: Map<string, T>): T[] {
@@ -337,9 +361,15 @@ export class ApplicationState {
   private notifyListeners(): void {
     this.version += 1;
 
-    for (const listener of Array.from(this.listeners)) {
+    if (this.listeners.size === 0) {
+      return;
+    }
+
+    const snapshot = this.createSnapshot();
+
+    for (const listener of this.listeners.values()) {
       try {
-        listener();
+        listener(snapshot);
       } catch (error) {
         if (process.env.NODE_ENV !== 'production') {
           console.error('ApplicationState listener error', error);

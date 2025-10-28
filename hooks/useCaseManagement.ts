@@ -7,7 +7,6 @@ import {
   updateFileStorageFlags,
 } from '@/utils/fileStorageFlags';
 import { createLogger } from '@/utils/logger';
-import { safeNotifyFileStorageChange } from '@/utils/safeNotifyFileStorageChange';
 
 const logger = createLogger('CaseManagement');
 interface UseCaseManagementReturn {
@@ -253,8 +252,7 @@ export function useCaseManagement(): UseCaseManagementReturn {
       try {
         setError(null);
         const updatedCase = await dataManager.updateCaseStatus(caseId, status);
-        setCases(prevCases => prevCases.map(c => (c.id === caseId ? updatedCase : c)));
-        safeNotifyFileStorageChange();
+  setCases(prevCases => prevCases.map(c => (c.id === caseId ? updatedCase : c)));
         toast.success(`Status updated to ${status}`, { id: toastId, duration: 2000 });
         return updatedCase;
       } catch (err) {
