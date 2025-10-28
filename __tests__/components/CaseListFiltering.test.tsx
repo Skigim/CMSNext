@@ -1,4 +1,4 @@
-import { render, screen, within } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { CaseList } from "@/components/case/CaseList";
@@ -67,7 +67,7 @@ describe("CaseList enhanced filtering and sorting", () => {
   it("renders filter button with active filter count", async () => {
     const cases = [
       createMockCaseDisplay({ id: "case-1", status: "Pending" }),
-      createMockCaseDisplay({ id: "case-2", status: "Approved" }),
+      createMockCaseDisplay({ id: "case-2", status: "Active" }),
     ];
 
     render(
