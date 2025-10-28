@@ -1,5 +1,5 @@
 import { useCallback, useMemo } from 'react';
-import { Pie, PieChart } from 'recharts';
+import { Pie, PieChart, type PieLabelRenderProps } from 'recharts';
 import { ListChecks } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -153,7 +153,15 @@ export function AlertsByDescriptionWidget({ alerts = [], metadata }: AlertsByDes
                 <Pie 
                   data={chartData} 
                   dataKey="count" 
-                  label={(entry) => `${entry.description}: ${entry.count}`}
+                  label={{
+                    position: 'inside',
+                    content: (props: PieLabelRenderProps) => {
+                      const { count } = props;
+                      return count;
+                    },
+                    fill: 'var(--foreground)',
+                  }}
+                  labelLine={false}
                   nameKey="description"
                 />
               </PieChart>
