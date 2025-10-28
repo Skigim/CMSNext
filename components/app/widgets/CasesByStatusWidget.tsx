@@ -147,7 +147,15 @@ export function CasesByStatusWidget({ cases = [], metadata }: CasesByStatusWidge
                 <Pie 
                   data={chartData} 
                   dataKey="count" 
-                  label={(entry) => `${entry.status}: ${entry.count}`}
+                  label={{
+                    position: 'inside',
+                    content: (props: any) => {
+                      const { count } = props;
+                      return count;
+                    },
+                    fill: 'var(--foreground)',
+                  }}
+                  labelLine={false}
                   nameKey="status"
                 />
               </PieChart>

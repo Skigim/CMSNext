@@ -153,7 +153,15 @@ export function AlertsByDescriptionWidget({ alerts = [], metadata }: AlertsByDes
                 <Pie 
                   data={chartData} 
                   dataKey="count" 
-                  label={(entry) => `${entry.description}: ${entry.count}`}
+                  label={{
+                    position: 'inside',
+                    content: (props: any) => {
+                      const { count } = props;
+                      return count;
+                    },
+                    fill: 'var(--foreground)',
+                  }}
+                  labelLine={false}
                   nameKey="description"
                 />
               </PieChart>
