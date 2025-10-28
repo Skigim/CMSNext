@@ -30,8 +30,6 @@ function ThemeTestComponent() {
 
 describe('ThemeContext', () => {
   const getHtmlClasses = () => Array.from(document.documentElement.classList);
-  let getItemSpy: any;
-  let setItemSpy: any;
   
   beforeAll(() => {
     // Mock matchMedia before any tests run
@@ -52,8 +50,8 @@ describe('ThemeContext', () => {
   
   beforeEach(() => {
     // Set up localStorage spies
-    getItemSpy = vi.spyOn(Storage.prototype, 'getItem').mockReturnValue(null);
-    setItemSpy = vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {});
+    vi.spyOn(Storage.prototype, 'getItem').mockReturnValue(null);
+    vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {});
     
     // Clear all classes from html element
     document.documentElement.className = '';
