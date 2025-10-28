@@ -56,7 +56,6 @@ export const CaseAlertsDrawer = memo(function CaseAlertsDrawer({
     return { openAlerts: openList, resolvedAlerts: resolvedList };
   }, [alerts]);
 
-  const totalAlerts = alerts.length;
   const canUpdateStatus = Boolean(caseId && onUpdateCaseStatus);
 
   return (
@@ -68,7 +67,7 @@ export const CaseAlertsDrawer = memo(function CaseAlertsDrawer({
               <div>
                 <SheetTitle className="text-left">Alerts for {caseName}</SheetTitle>
                 <span className="text-sm font-normal text-muted-foreground">
-                  {openAlerts.length} open · {resolvedAlerts.length} resolved · {totalAlerts} total
+                  {openAlerts.length} open · {resolvedAlerts.length} resolved
                 </span>
               </div>
               {canUpdateStatus && caseId ? (

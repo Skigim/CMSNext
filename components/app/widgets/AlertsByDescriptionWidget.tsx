@@ -30,7 +30,7 @@ export function AlertsByDescriptionWidget({ alerts = [], metadata }: AlertsByDes
   });
 
   const stats = useMemo(() => data ?? [], [data]);
-  const totalAlerts = useMemo(() => stats.reduce((acc, item) => acc + item.count, 0), [stats]);
+  const totalOpenAlerts = useMemo(() => stats.reduce((acc, item) => acc + item.count, 0), [stats]);
   const uniqueDescriptions = stats.length;
 
   // Use theme chart colors from globals.css - cycle through them
@@ -89,8 +89,8 @@ export function AlertsByDescriptionWidget({ alerts = [], metadata }: AlertsByDes
     return (
       <Card>
         <CardHeader>
-          <CardTitle>Total Alerts by Description</CardTitle>
-          <CardDescription>Analyzing alert descriptions...</CardDescription>
+          <CardTitle>Open Alerts by Description</CardTitle>
+          <CardDescription>Analyzing open alert descriptions...</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="space-y-3">
@@ -107,7 +107,7 @@ export function AlertsByDescriptionWidget({ alerts = [], metadata }: AlertsByDes
     return (
       <Card>
         <CardHeader>
-          <CardTitle>Total Alerts by Description</CardTitle>
+          <CardTitle>Open Alerts by Description</CardTitle>
           <CardDescription>Unable to load alert breakdown</CardDescription>
         </CardHeader>
         <CardContent>
@@ -124,11 +124,11 @@ export function AlertsByDescriptionWidget({ alerts = [], metadata }: AlertsByDes
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
           <div>
-            <CardTitle>Total Alerts by Description</CardTitle>
+            <CardTitle>Open Alerts by Description</CardTitle>
             <CardDescription>Top alert reasons driving current workload</CardDescription>
           </div>
           <Badge variant="outline" className="text-xs">
-            {uniqueDescriptions ? `${uniqueDescriptions} types` : 'No alerts'}
+            {uniqueDescriptions ? `${uniqueDescriptions} types` : 'No open alerts'}
           </Badge>
         </div>
       </CardHeader>
@@ -141,8 +141,8 @@ export function AlertsByDescriptionWidget({ alerts = [], metadata }: AlertsByDes
         ) : (
           <>
             <div className="mb-4 flex items-center justify-between text-sm text-muted-foreground">
-              <span>Total alerts</span>
-              <span className="text-foreground font-medium">{totalAlerts}</span>
+              <span>Open alerts</span>
+              <span className="text-foreground font-medium">{totalOpenAlerts}</span>
             </div>
             <ChartContainer
               config={chartConfig}
