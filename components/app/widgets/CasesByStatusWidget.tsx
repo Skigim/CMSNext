@@ -1,6 +1,13 @@
 import { useCallback, useMemo } from 'react';
+import { Pie, PieChart } from 'recharts';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import {
+  ChartConfig,
+  ChartContainer,
+  ChartTooltip,
+  ChartTooltipContent,
+} from '@/components/ui/chart';
 import { useWidgetData } from '@/hooks/useWidgetData';
 import type { CaseDisplay } from '@/types/case';
 import { calculateTotalCasesByStatus, type StatusBreakdown } from '@/utils/widgetDataProcessors';
@@ -40,6 +47,31 @@ export function CasesByStatusWidget({ cases = [], metadata }: CasesByStatusWidge
 
   const breakdown = useMemo(() => data ?? [], [data]);
   const totalCases = useMemo(() => breakdown.reduce((acc, item) => acc + item.count, 0), [breakdown]);
+
+  // Convert breakdown to chart data with fill colors
+  const chartData = useMemo(() => {
+    return breakdown.map((item, index) => ({
+      status: item.status,
+      count: item.count,
+      fill: `var(--chart-${(index % 5) + 1})`,
+    }));
+  }, [breakdown]);
+
+  // Build chart config from breakdown
+  const chartConfig = useMemo(() => {
+    const config: ChartConfig = {
+      count: {
+        label: 'Cases',
+      },
+    };
+    breakdown.forEach((item) => {
+      config[item.status.toLowerCase()] = {
+        label: item.status,
+      };
+    });
+    return config;
+  }, [breakdown]);
+
   if (loading && !data) {
     return (
       <Card>
@@ -91,31 +123,35 @@ export function CasesByStatusWidget({ cases = [], metadata }: CasesByStatusWidge
             <p className="text-sm">No cases available to analyze</p>
           </div>
         ) : (
-          <div className="space-y-4">
-            {breakdown.map((item) => {
-              const barWidth = item.percentage === 0 ? 0 : Math.max(item.percentage, 6);
-              return (
-                <div key={item.status} className="space-y-2">
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="font-medium text-foreground">{item.status}</span>
-                    <span className="text-muted-foreground">
-                      {item.count} • {item.percentage.toFixed(1)}%
-                    </span>
-                  </div>
-                  <div className="h-3 rounded-full bg-muted">
-                    <div
-                      className={`flex h-full items-center justify-end rounded-full ${item.colorClass}`}
-                      style={{ width: `${barWidth}%` }}
-                    >
-                      <span className="pr-2 text-[10px] font-medium tracking-wide uppercase">
-                        {item.count}
-                      </span>
-                    </div>
-                  </div>
+          <>
+            <ChartContainer
+              config={chartConfig}
+              className="mx-auto aspect-square max-h-[250px]"
+            >
+              <PieChart>
+                <ChartTooltip content={<ChartTooltipContent hideLabel />} />
+                <Pie 
+                  data={chartData} 
+                  dataKey="count" 
+                  label={(entry) => `${entry.status}: ${entry.count}`}
+                  nameKey="status"
+                />
+              </PieChart>
+            </ChartContainer>
+            <div className="mt-4 grid grid-cols-2 gap-2 text-sm">
+              {breakdown.map((item, index) => (
+                <div key={item.status} className="flex items-center gap-2">
+                  <div 
+                    className="h-3 w-3 rounded-sm" 
+                    style={{ backgroundColor: `var(--chart-${(index % 5) + 1})` }}
+                  />
+                  <span className="text-muted-foreground">
+                    {item.status}: <span className="font-medium text-foreground">{item.count}</span>
+                  </span>
                 </div>
-              );
-            })}
-          </div>
+              ))}
+            </div>
+          </>
         )}
 
         <div className="mt-4 border-t border-border/60 pt-3 text-center text-xs text-muted-foreground">

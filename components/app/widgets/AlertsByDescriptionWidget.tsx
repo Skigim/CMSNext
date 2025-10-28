@@ -1,8 +1,14 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useMemo } from 'react';
+import { Pie, PieChart } from 'recharts';
 import { ListChecks } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
+import {
+  ChartConfig,
+  ChartContainer,
+  ChartTooltip,
+  ChartTooltipContent,
+} from '@/components/ui/chart';
 import { useWidgetData } from '@/hooks/useWidgetData';
 import type { AlertWithMatch } from '@/utils/alertsData';
 import { calculateTotalAlertsByDescription, type AlertDescriptionStats } from '@/utils/widgetDataProcessors';
@@ -13,11 +19,7 @@ interface AlertsByDescriptionWidgetProps {
   metadata?: WidgetMetadata;
 }
 
-const MAX_COLLAPSED = 10;
-
 export function AlertsByDescriptionWidget({ alerts = [], metadata }: AlertsByDescriptionWidgetProps) {
-  const [showAll, setShowAll] = useState(false);
-
   const fetchData = useCallback(async () => {
     return calculateTotalAlertsByDescription(alerts);
   }, [alerts]);
@@ -30,7 +32,31 @@ export function AlertsByDescriptionWidget({ alerts = [], metadata }: AlertsByDes
   const stats = useMemo(() => data ?? [], [data]);
   const totalAlerts = useMemo(() => stats.reduce((acc, item) => acc + item.count, 0), [stats]);
   const uniqueDescriptions = stats.length;
-  const visibleItems = useMemo(() => (showAll ? stats : stats.slice(0, MAX_COLLAPSED)), [showAll, stats]);
+
+  // Convert stats to chart data with fill colors - take top 10
+  const chartData = useMemo(() => {
+    return stats.slice(0, 10).map((item, index) => ({
+      description: item.description,
+      count: item.count,
+      fill: `var(--chart-${(index % 5) + 1})`,
+    }));
+  }, [stats]);
+
+  // Build chart config from stats
+  const chartConfig = useMemo(() => {
+    const config: ChartConfig = {
+      count: {
+        label: 'Alerts',
+      },
+    };
+    stats.slice(0, 10).forEach((item) => {
+      const key = item.description.toLowerCase().replace(/[^a-z0-9]/g, '_');
+      config[key] = {
+        label: item.description,
+      };
+    });
+    return config;
+  }, [stats]);
 
   const freshnessLabel = useMemo(() => {
     if (!freshness.lastUpdatedAt) {
@@ -103,52 +129,45 @@ export function AlertsByDescriptionWidget({ alerts = [], metadata }: AlertsByDes
             <p className="text-sm">No alerts available to analyze.</p>
           </div>
         ) : (
-          <div className="space-y-4">
-            <div className="flex items-center justify-between text-sm text-muted-foreground">
+          <>
+            <div className="mb-4 flex items-center justify-between text-sm text-muted-foreground">
               <span>Total alerts</span>
               <span className="text-foreground font-medium">{totalAlerts}</span>
             </div>
-            <div className="space-y-3">
-              {visibleItems.map((item) => {
-                const width = item.percentage === 0 ? 0 : Math.max(item.percentage, 4);
-                return (
-                  <div key={item.description} className="space-y-2">
-                    <div className="flex items-baseline justify-between gap-2">
-                      <div className="text-sm font-medium text-foreground">{item.description}</div>
-                      <div className="text-xs uppercase tracking-wide text-muted-foreground">
-                        {item.count} • {item.percentage.toFixed(1)}%
-                      </div>
-                    </div>
-                    <div className="h-3 rounded-full bg-muted">
-                      <div
-                        className="flex h-full items-center rounded-full bg-primary/80 text-xs text-primary-foreground"
-                        style={{ width: `${width}%` }}
-                      >
-                        <span className="pl-2 text-[10px] font-semibold">{item.openCount} open</span>
-                      </div>
-                    </div>
-                    <div className="flex items-center justify-between text-xs text-muted-foreground">
-                      <span>{item.openCount} open</span>
-                      <span>{item.resolvedCount} resolved</span>
-                    </div>
+            <ChartContainer
+              config={chartConfig}
+              className="mx-auto aspect-square max-h-[250px]"
+            >
+              <PieChart>
+                <ChartTooltip content={<ChartTooltipContent hideLabel />} />
+                <Pie 
+                  data={chartData} 
+                  dataKey="count" 
+                  label={(entry) => `${entry.description}: ${entry.count}`}
+                  nameKey="description"
+                />
+              </PieChart>
+            </ChartContainer>
+            <div className="mt-4 space-y-2">
+              {stats.slice(0, 10).map((item, index) => (
+                <div key={item.description} className="flex items-center justify-between text-sm">
+                  <div className="flex items-center gap-2 flex-1 min-w-0">
+                    <div 
+                      className="h-3 w-3 rounded-sm flex-shrink-0" 
+                      style={{ backgroundColor: `var(--chart-${(index % 5) + 1})` }}
+                    />
+                    <span className="text-muted-foreground truncate">{item.description}</span>
                   </div>
-                );
-              })}
+                  <div className="flex items-center gap-2 flex-shrink-0">
+                    <span className="font-medium text-foreground">{item.count}</span>
+                    <span className="text-xs text-muted-foreground">
+                      ({item.openCount} open)
+                    </span>
+                  </div>
+                </div>
+              ))}
             </div>
-            {stats.length > MAX_COLLAPSED && (
-              <div className="flex justify-center">
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setShowAll((prev) => !prev)}
-                  className="text-xs"
-                >
-                  {showAll ? 'Show top 10' : `Show all ${uniqueDescriptions}`}
-                </Button>
-              </div>
-            )}
-          </div>
+          </>
         )}
 
         <div className="mt-4 border-t border-border/60 pt-3 text-center text-xs text-muted-foreground">
