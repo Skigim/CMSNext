@@ -50,11 +50,11 @@ export function CasesByStatusWidget({ cases = [], metadata }: CasesByStatusWidge
 
   // Map status to theme chart colors from globals.css
   const statusColorMap: Record<string, string> = useMemo(() => ({
-    pending: 'hsl(var(--chart-status-pending))',
-    approved: 'hsl(var(--chart-status-approved))',
-    denied: 'hsl(var(--chart-status-denied))',
-    closed: 'hsl(var(--chart-status-closed))',
-    spenddown: 'hsl(var(--chart-status-spenddown))',
+    pending: 'var(--chart-status-pending)',
+    approved: 'var(--chart-status-approved)',
+    denied: 'var(--chart-status-denied)',
+    closed: 'var(--chart-status-closed)',
+    spenddown: 'var(--chart-status-spenddown)',
   }), []);
 
   // Convert breakdown to chart data with theme colors
@@ -64,7 +64,7 @@ export function CasesByStatusWidget({ cases = [], metadata }: CasesByStatusWidge
       return {
         status: item.status,
         count: item.count,
-        fill: statusColorMap[statusKey] || 'hsl(var(--muted))',
+        fill: statusColorMap[statusKey] || 'var(--muted)',
       };
     });
   }, [breakdown, statusColorMap]);
@@ -80,7 +80,7 @@ export function CasesByStatusWidget({ cases = [], metadata }: CasesByStatusWidge
       const statusKey = item.status.toLowerCase();
       config[statusKey] = {
         label: item.status,
-        color: statusColorMap[statusKey] || 'hsl(var(--muted))',
+        color: statusColorMap[statusKey] || 'var(--muted)',
       };
     });
     return config;
@@ -155,7 +155,7 @@ export function CasesByStatusWidget({ cases = [], metadata }: CasesByStatusWidge
             <div className="mt-4 grid grid-cols-2 gap-2 text-sm">
               {breakdown.map((item) => {
                 const statusKey = item.status.toLowerCase();
-                const color = statusColorMap[statusKey] || 'hsl(var(--muted))';
+                const color = statusColorMap[statusKey] || 'var(--muted)';
                 return (
                   <div key={item.status} className="flex items-center gap-2">
                     <div 
