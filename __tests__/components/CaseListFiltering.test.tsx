@@ -6,7 +6,7 @@ import { mergeCategoryConfig } from "@/types/categoryConfig";
 import { createMockCaseDisplay } from "@/src/test/testUtils";
 
 const categoryConfigMock = mergeCategoryConfig({
-  caseStatuses: ["Pending", "Approved", "Denied", "Active", "Closed"],
+  caseStatuses: ["Pending", "Active", "Closed", "Archived"],
 });
 
 vi.mock("@/contexts/CategoryConfigContext", async (importOriginal) => {
