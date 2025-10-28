@@ -38,23 +38,31 @@ vi.mock("@/contexts/ThemeContext", () => ({
   }),
 }));
 
-vi.mock("@/contexts/DataManagerContext", () => ({
-  useDataManagerSafe: () => ({
-    clearAllData: vi.fn(),
-  }),
-}));
+vi.mock("@/contexts/DataManagerContext", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/contexts/DataManagerContext")>();
+  return {
+    ...actual,
+    useDataManagerSafe: () => ({
+      clearAllData: vi.fn(),
+    }),
+  };
+});
 
-vi.mock("@/contexts/CategoryConfigContext", () => ({
-  useCategoryConfig: () => ({
-    config: mergeCategoryConfig(),
-    loading: false,
-    error: null,
-    refresh: vi.fn(),
-    updateCategory: vi.fn(),
-    resetToDefaults: vi.fn(),
-    setConfigFromFile: vi.fn(),
-  }),
-}));
+vi.mock("@/contexts/CategoryConfigContext", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/contexts/CategoryConfigContext")>();
+  return {
+    ...actual,
+    useCategoryConfig: () => ({
+      config: mergeCategoryConfig(),
+      loading: false,
+      error: null,
+      refresh: vi.fn(),
+      updateCategory: vi.fn(),
+      resetToDefaults: vi.fn(),
+      setConfigFromFile: vi.fn(),
+    }),
+  };
+});
 
 vi.mock("@/components/modals/ImportModal", () => ({
   ImportModal: ({ isOpen }: { isOpen: boolean }) =>

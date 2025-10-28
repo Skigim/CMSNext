@@ -6,17 +6,21 @@ import { mergeCategoryConfig } from "@/types/categoryConfig";
 
 const categoryConfigMock = mergeCategoryConfig();
 
-vi.mock("@/contexts/CategoryConfigContext", () => ({
-  useCategoryConfig: () => ({
-    config: categoryConfigMock,
-    loading: false,
-    error: null,
-    refresh: vi.fn(),
-    updateCategory: vi.fn(),
-    resetToDefaults: vi.fn(),
-    setConfigFromFile: vi.fn(),
-  }),
-}));
+vi.mock("@/contexts/CategoryConfigContext", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/contexts/CategoryConfigContext")>();
+  return {
+    ...actual,
+    useCategoryConfig: () => ({
+      config: categoryConfigMock,
+      loading: false,
+      error: null,
+      refresh: vi.fn(),
+      updateCategory: vi.fn(),
+      resetToDefaults: vi.fn(),
+      setConfigFromFile: vi.fn(),
+    }),
+  };
+});
 
 import { NotesSection } from "@/components/case/NotesSection";
 

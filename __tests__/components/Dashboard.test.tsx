@@ -5,13 +5,17 @@ import type { AlertsIndex, AlertWithMatch } from "@/utils/alertsData";
 import type { CaseDisplay } from "@/types/case";
 import type { CaseActivityLogState, DailyActivityReport } from "@/types/activityLog";
 
-vi.mock("@/contexts/CategoryConfigContext", () => ({
-  useCategoryConfig: () => ({
-    config: {
-      caseStatuses: ["Pending", "Approved", "Denied"],
-    },
-  }),
-}));
+vi.mock("@/contexts/CategoryConfigContext", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/contexts/CategoryConfigContext")>();
+  return {
+    ...actual,
+    useCategoryConfig: () => ({
+      config: {
+        caseStatuses: ["Pending", "Approved", "Denied"],
+      },
+    }),
+  };
+});
 
 vi.mock("@/components/diagnostics/FileServiceDiagnostic", () => ({
   FileServiceDiagnostic: () => null,

@@ -17,9 +17,13 @@ vi.mock("sonner", () => ({
   },
 }));
 
-vi.mock("@/contexts/DataManagerContext", () => ({
-  useDataManagerSafe: mocks.useDataManagerSafeMock,
-}));
+vi.mock("@/contexts/DataManagerContext", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/contexts/DataManagerContext")>();
+  return {
+    ...actual,
+    useDataManagerSafe: mocks.useDataManagerSafeMock,
+  };
+});
 
 import { useCaseManagement } from "@/hooks/useCaseManagement";
 

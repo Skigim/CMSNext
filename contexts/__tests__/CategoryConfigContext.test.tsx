@@ -3,9 +3,13 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { CategoryConfigProvider, useCategoryConfig } from '../CategoryConfigContext';
 import type { CategoryConfig } from '@/types/categoryConfig';
 
-vi.mock('../DataManagerContext', () => ({
-  useDataManagerSafe: vi.fn(),
-}));
+vi.mock('../DataManagerContext', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../DataManagerContext')>();
+  return {
+    ...actual,
+    useDataManagerSafe: vi.fn(),
+  };
+});
 
 vi.mock('sonner', () => ({
   toast: {
