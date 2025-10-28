@@ -8,6 +8,21 @@ import { Note, type NoteSnapshot } from '@/domain/notes/entities/Note';
 import { Alert, type AlertSnapshot } from '@/domain/alerts/entities/Alert';
 import { ActivityEvent, type ActivityEventSnapshot } from '@/domain/activity/entities/ActivityEvent';
 import { DEFAULT_FLAGS } from '@/utils/featureFlags';
+
+type SnapshotWithId = { id: string } & Record<string, unknown>;
+
+function toSnapshot(value: unknown): SnapshotWithId {
+  if (value && typeof value === 'object') {
+    const maybeEntity = value as { toJSON?: () => SnapshotWithId };
+    if (typeof maybeEntity.toJSON === 'function') {
+      return maybeEntity.toJSON();
+    }
+
+    return JSON.parse(JSON.stringify(maybeEntity)) as SnapshotWithId;
+  }
+
+  throw new Error('Unable to convert value to snapshot for comparison');
+}
 type RepositoryStub<T extends { id: string }> = {
   data: T[];
   getAll: () => Promise<T[]>;
@@ -206,16 +221,16 @@ describe('ApplicationState', () => {
 
     await appState.hydrate(storage);
 
-    expect(appState.getCases().map(item => item.toJSON())).toEqual([seedCase.toJSON()]);
-    expect(appState.getFinancialItems().map(item => item.id)).toEqual([seedFinancial.id]);
-    expect(appState.getNotes().map(item => item.id)).toEqual([seedNote.id]);
-    expect(appState.getAlerts().map(item => item.id)).toEqual([seedAlert.id]);
-    expect(appState.getActivities().map(item => item.id)).toEqual([seedActivity.id]);
+    expect(appState.getCases().map(toSnapshot)).toEqual([toSnapshot(seedCase)]);
+    expect(appState.getFinancialItems().map(toSnapshot)).toEqual([toSnapshot(seedFinancial)]);
+    expect(appState.getNotes().map(toSnapshot)).toEqual([toSnapshot(seedNote)]);
+    expect(appState.getAlerts().map(toSnapshot)).toEqual([toSnapshot(seedAlert)]);
+    expect(appState.getActivities().map(toSnapshot)).toEqual([toSnapshot(seedActivity)]);
     expect(listener).toHaveBeenCalledTimes(1);
 
-  const cases = appState.getCases();
-  cases[0].updateStatus(CASE_STATUS.Pending);
-  expect(appState.getCase(seedCase.id)?.status).toBe(seedCase.status);
+    const cases = appState.getCases();
+    cases[0].updateStatus(CASE_STATUS.Pending);
+    expect(appState.getCase(seedCase.id)?.status).toBe(seedCase.status);
   });
 
   it('persists state to storage with saves and deletions', async () => {

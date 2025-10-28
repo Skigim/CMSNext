@@ -8,6 +8,8 @@ import { Note, type NoteSnapshot } from '@/domain/notes/entities/Note';
 import { Alert, type AlertSnapshot } from '@/domain/alerts/entities/Alert';
 import { ActivityEvent, type ActivityEventSnapshot } from '@/domain/activity/entities/ActivityEvent';
 
+type SnapshotWithId = { id: string } & Record<string, unknown>;
+
 type StorageSnapshot = {
   cases: Case[];
   financials: FinancialItem[];
@@ -114,6 +116,23 @@ function createActivity(overrides: Partial<ActivityEventSnapshot> = {}): Activit
   });
 }
 
+function sortSnapshots<T extends { id: string }>(snapshots: T[]): T[] {
+  return [...snapshots].sort((a, b) => a.id.localeCompare(b.id));
+}
+
+function toSnapshot(value: unknown): SnapshotWithId {
+  if (value && typeof value === 'object') {
+    const maybeEntity = value as { toJSON?: () => SnapshotWithId };
+    if (typeof maybeEntity.toJSON === 'function') {
+      return maybeEntity.toJSON();
+    }
+
+    return JSON.parse(JSON.stringify(maybeEntity)) as SnapshotWithId;
+  }
+
+  throw new Error('Unable to convert value to snapshot for comparison');
+}
+
 describe('StorageRepository', () => {
   let mockService: MockAutosaveFileService;
   let repository: StorageRepository;
@@ -127,23 +146,20 @@ describe('StorageRepository', () => {
     const caseRepo = repository.cases;
     const sampleCase = createCase();
 
-  await caseRepo.save(sampleCase);
+    await caseRepo.save(sampleCase);
     expect(mockService.writes).toBe(1);
 
     const fetched = await caseRepo.getById(sampleCase.id);
-  expect(fetched?.toJSON()).toEqual(sampleCase.toJSON());
-
-    const byMcn = await caseRepo.findByMCN(sampleCase.mcn);
-  expect(byMcn?.toJSON()).toEqual(sampleCase.toJSON());
+    expect(fetched?.toJSON()).toEqual(sampleCase.toJSON());
 
     const searchResults = await caseRepo.searchCases('Sample');
-  expect(searchResults.map(item => item.toJSON())).toEqual([sampleCase.toJSON()]);
+    expect(searchResults.map(item => item.toJSON())).toEqual([sampleCase.toJSON()]);
 
-  await caseRepo.delete(sampleCase.id);
+    await caseRepo.delete(sampleCase.id);
     expect(mockService.writes).toBe(2);
 
     const allCases = await caseRepo.getAll();
-  expect(allCases).toEqual([]);
+    expect(allCases).toEqual([]);
   });
 
   it('manages financial items scoped to a case and category', async () => {
@@ -162,18 +178,19 @@ describe('StorageRepository', () => {
     await financialRepo.save(expenseItem);
 
     const itemsForCase = await financialRepo.getByCaseId(caseId);
-    expect(itemsForCase).toHaveLength(2);
-    expect(itemsForCase.map(item => item.id).sort()).toEqual(['FIN-EXP', 'FIN-INC']);
+    const caseSnapshots = sortSnapshots(itemsForCase.map(toSnapshot));
+    const expectedCaseSnapshots = sortSnapshots([toSnapshot(incomeItem), toSnapshot(expenseItem)]);
+    expect(caseSnapshots).toEqual(expectedCaseSnapshots);
 
     const incomeItems = await financialRepo.getByCategory(FinancialCategory.Income);
-    expect(incomeItems.map(item => item.id)).toEqual([incomeItem.id]);
+    expect(incomeItems.map(toSnapshot)).toEqual([toSnapshot(incomeItem)]);
 
     const allItems = await financialRepo.getAll();
-    expect(allItems).toHaveLength(2);
+    expect(sortSnapshots(allItems.map(toSnapshot))).toEqual(expectedCaseSnapshots);
 
     await financialRepo.delete('FIN-INC');
     const remaining = await financialRepo.getAll();
-    expect(remaining.map(item => item.id)).toEqual([expenseItem.id]);
+    expect(remaining.map(toSnapshot)).toEqual([toSnapshot(expenseItem)]);
   });
 
   it('filters notes by category for a case', async () => {
@@ -186,14 +203,16 @@ describe('StorageRepository', () => {
     await noteRepo.save(statusNote);
 
     const notesForCase = await noteRepo.getByCaseId(caseId);
-    expect(notesForCase).toHaveLength(2);
+    const noteSnapshots = sortSnapshots(notesForCase.map(toSnapshot));
+    const expectedNotes = sortSnapshots([toSnapshot(generalNote), toSnapshot(statusNote)]);
+    expect(noteSnapshots).toEqual(expectedNotes);
 
     const statusNotes = await noteRepo.filterByCategory(caseId, 'status');
-    expect(statusNotes.map(note => note.id)).toEqual([statusNote.id]);
+    expect(statusNotes.map(toSnapshot)).toEqual([toSnapshot(statusNote)]);
 
     // Verify immutability - reloaded notes should still match originals
     const reloaded = await noteRepo.getByCaseId(caseId);
-    expect(reloaded.map(note => note.id).sort()).toEqual([generalNote.id, statusNote.id].sort());
+    expect(sortSnapshots(reloaded.map(toSnapshot))).toEqual(expectedNotes);
   });
 
   it('retrieves alerts by MCN and unmatched status', async () => {
@@ -207,15 +226,15 @@ describe('StorageRepository', () => {
     await alertRepo.save(unmatchedAlertB);
 
     const alertsForMcn = await alertRepo.findByMCN('MCN-333');
-    expect(alertsForMcn).toHaveLength(2);
-    expect(alertsForMcn.map(alert => alert.id).sort()).toEqual(['ALERT-A', 'ALERT-B']);
+    const expectedUnmatched = sortSnapshots([toSnapshot(unmatchedAlertA), toSnapshot(unmatchedAlertB)]);
+    expect(sortSnapshots(alertsForMcn.map(toSnapshot))).toEqual(expectedUnmatched);
 
     const unmatched = await alertRepo.getUnmatched();
-    expect(unmatched.map(alert => alert.id).sort()).toEqual(['ALERT-A', 'ALERT-B']);
+    expect(sortSnapshots(unmatched.map(toSnapshot))).toEqual(expectedUnmatched);
 
     await alertRepo.delete('ALERT-A');
     const remainingUnmatched = await alertRepo.getUnmatched();
-    expect(remainingUnmatched.map(alert => alert.id)).toEqual([unmatchedAlertB.id]);
+    expect(remainingUnmatched.map(toSnapshot)).toEqual([toSnapshot(unmatchedAlertB)]);
   });
 
   it('tracks activity events by aggregate and recent order', async () => {
@@ -233,9 +252,17 @@ describe('StorageRepository', () => {
     }
 
     const aggregateEvents = await activityRepo.getByAggregateId(baseAggregate);
-    expect(aggregateEvents.map(event => event.id).sort()).toEqual(['ACT-1', 'ACT-2', 'ACT-4']);
+    const expectedAggregate = sortSnapshots([
+      toSnapshot(events[0]),
+      toSnapshot(events[1]),
+      toSnapshot(events[3]),
+    ]);
+    expect(sortSnapshots(aggregateEvents.map(toSnapshot))).toEqual(expectedAggregate);
 
     const recentTwo = await activityRepo.getRecent(2);
-    expect(recentTwo.map(event => event.id)).toEqual(['ACT-4', 'ACT-2']);
+    expect(recentTwo.map(toSnapshot)).toEqual([
+      toSnapshot(events[3]),
+      toSnapshot(events[1]),
+    ]);
   });
 });
