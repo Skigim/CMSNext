@@ -1,0 +1,293 @@
+# GitHub Copilot Prebuild Configuration for CMSNext
+# This file configures prebuilt context for agentic prompts across the repository
+
+name: CMSNext Agentic Context
+version: 1.0.0
+
+# Repository metadata
+repository:
+  name: CMSNext
+  type: case-management-system
+  stack:
+    - React 18
+    - TypeScript
+    - Vite
+    - Tailwind CSS v4
+    - File System Access API
+    - shadcn/ui
+
+# Context sources for AI agents
+context:
+  # Core architectural documentation
+  architecture:
+    - path: .github/copilot-instructions.md
+      priority: high
+      description: Primary AI agent instructions and architecture patterns
+    
+    - path: docs/development/feature-catalogue.md
+      priority: high
+      description: Complete feature inventory and implementation status
+    
+    - path: docs/development/actionable-roadmap.md
+      priority: medium
+      description: Development roadmap and planned features
+    
+    - path: docs/development/EXECUTION_SUMMARY.md
+      priority: medium
+      description: Architecture refactor plan and key metrics
+  
+  # Development guidelines
+  development:
+    - path: .github/COMMIT_STYLE.md
+      priority: high
+      description: Commit message conventions and examples
+    
+    - path: docs/development/testing-infrastructure.md
+      priority: high
+      description: Testing stack, patterns, and best practices
+    
+    - path: docs/development/claude-codex-workflow.md
+      priority: medium
+      description: Claude-Codex workflow integration
+  
+  # Configuration files
+  config:
+    - path: vite.config.ts
+      priority: high
+      description: Build configuration and optimizations
+    
+    - path: vitest.config.ts
+      priority: high
+      description: Testing configuration and coverage thresholds
+    
+    - path: eslint.config.js
+      priority: medium
+      description: Linting rules (ESLint 9 flat config)
+    
+    - path: tailwind.config.js
+      priority: medium
+      description: Tailwind CSS v4 configuration
+  
+  # Core patterns and utilities
+  patterns:
+    - path: components/profiling/
+      priority: medium
+      description: Performance profiling patterns
+    
+    - path: scripts/
+      priority: low
+      description: Development scripts and tooling
+    
+    - path: contexts/
+      priority: high
+      description: React context patterns (FileStorage, Theme, DataManager)
+
+# Agentic prompt templates
+prompts:
+  # Feature development prompts
+  feature:
+    template: |
+      Create a new feature for CMSNext following these requirements:
+      - Use File System Access API via fileDataProvider.getAPI()
+      - Apply shadcn/ui components from components/ui/*
+      - Follow domain-driven patterns from Phase 1 & Phase 2 refactors
+      - Include Vitest tests with 70%+ coverage
+      - Add Sonner toast feedback (never alert())
+      - Maintain accessibility (keyboard navigation, focus management)
+      - Use Tailwind v4 tokens only
+      - Document in feature-catalogue.md
+    
+    examples:
+      - Add a new case status filter
+      - Implement bulk case operations
+      - Create custom report generator
+  
+  # Bug fix prompts
+  bugfix:
+    template: |
+      Fix a bug in CMSNext following these guidelines:
+      - Identify root cause in storage layer or UI layer
+      - Check autosave timing (5s debounce via AutosaveFileService)
+      - Verify safeNotifyFileStorageChange() is called after mutations
+      - Add regression test to prevent recurrence
+      - Use conventional commit format (fix: description)
+      - Toast error messages via Sonner
+    
+    examples:
+      - File storage synchronization issue
+      - Theme switching visual glitch
+      - Autosave not triggering
+  
+  # Refactoring prompts
+  refactor:
+    template: |
+      Refactor CMSNext code following these principles:
+      - Maintain filesystem-only data flow
+      - Use domain hooks (useCaseManagement, useNavigationFlow)
+      - Memoize expensive components with React.memo
+      - Keep mutations in FileStorageAPI → AutosaveFileService path
+      - No localStorage/sessionStorage/network APIs
+      - Update tests to match refactored code
+      - Document changes in commit message body
+    
+    examples:
+      - Extract reusable hook from component
+      - Simplify complex component logic
+      - Consolidate duplicate code patterns
+  
+  # Testing prompts
+  testing:
+    template: |
+      Write tests for CMSNext following these standards:
+      - Use Vitest + React Testing Library
+      - Mock File System Access API in setup.ts
+      - Target 70%+ coverage (branches, functions, lines, statements)
+      - Include happy path + error cases + edge cases
+      - Test accessibility with jest-axe
+      - Mock autosave with proper debounce simulation
+    
+    examples:
+      - Test case creation flow
+      - Test file storage error handling
+      - Test theme persistence
+
+# Anti-patterns to avoid
+antipatterns:
+  storage:
+    - "❌ No localStorage/sessionStorage"
+    - "❌ No direct filesystem calls outside provider stack"
+    - "❌ No network APIs or databases"
+  
+  ui:
+    - "❌ No alert() dialogs"
+    - "❌ No bespoke component libraries"
+    - "❌ No inline styles diverging from shadcn"
+  
+  state:
+    - "❌ No mutations without storage notification"
+    - "❌ No optimistic UI ignoring autosave timing"
+    - "❌ No long-lived feature branches"
+
+# Code patterns to follow
+patterns:
+  storage_mutation:
+    description: "Correct pattern for data mutations"
+    example: |
+      const api = fileDataProvider.getAPI();
+      if (!api) return;
+      
+      await api.updateCase(caseId, updates);
+      safeNotifyFileStorageChange();
+      toast.success("Case updated");
+  
+  component_with_hook:
+    description: "Use domain hooks for data access"
+    example: |
+      function MyCaseComponent() {
+        const { cases, updateCase } = useCaseManagement();
+        const { isAutosaving } = useAutosaveStatus();
+        
+        // Component logic...
+      }
+  
+  toast_feedback:
+    description: "User feedback with Sonner toasts"
+    example: |
+      import { toast } from "sonner";
+      
+      toast.loading("Saving...");
+      try {
+        await saveData();
+        toast.success("Saved successfully");
+      } catch (error) {
+        toast.error("Failed to save");
+      }
+
+# File organization rules
+file_organization:
+  components:
+    - "Place UI components in components/"
+    - "Use shadcn/ui primitives from components/ui/"
+    - "Domain-specific components in subfolders (financial/, diagnostics/)"
+  
+  contexts:
+    - "React contexts in contexts/"
+    - "FileStorageContext for permissions/handles"
+    - "ThemeContext for theme management"
+    - "DataManagerContext for data operations"
+  
+  utils:
+    - "Pure utility functions in utils/"
+    - "Type definitions in types/"
+    - "Keep utils stateless and testable"
+  
+  tests:
+    - "Tests alongside source files: *.test.tsx"
+    - "Shared test setup in src/test/setup.ts"
+    - "Test utilities in src/test/"
+
+# Integration points
+integrations:
+  mcp:
+    - service: shadcn
+      command: npx shadcn@latest mcp
+      config_path: ~/.codex/config.toml
+      description: MCP server for shadcn component installation
+  
+  github_actions:
+    - workflow: .github/workflows/deploy.yml
+      triggers: [push to main, manual dispatch]
+      description: Deploy to GitHub Pages
+
+# Performance standards
+performance:
+  metrics:
+    - "Autosave debounce: 5 seconds"
+    - "Test coverage: 70%+ (all categories)"
+    - "Bundle analysis available via npm run build:analyze"
+  
+  tools:
+    - scripts/autosaveBenchmark.ts
+    - scripts/dashboardLoadBenchmark.ts
+    - scripts/generateFlamegraph.ts
+    - scripts/analyzeNavigationTrace.ts
+
+# Development workflow
+workflow:
+  setup:
+    - npm install
+    - "Review .github/copilot-instructions.md"
+    - "Run .github/setup-commit-template.sh"
+  
+  development:
+    - npm run dev
+    - npm run test
+    - npm run lint
+  
+  production:
+    - npm run build:pages
+    - npm run preview
+
+# Accessibility requirements
+accessibility:
+  - "Maintain focus management in modals"
+  - "Verify keyboard navigation paths"
+  - "Use jest-axe for accessibility testing"
+  - "Follow WCAG 2.1 guidelines"
+  - "Test with screen readers when possible"
+
+# Documentation requirements
+documentation:
+  commit_messages:
+    - "Use conventional commits (feat, fix, refactor, etc.)"
+    - "Reference .github/COMMIT_STYLE.md"
+    - "Include bullet points for complex changes"
+  
+  code_comments:
+    - "Document complex business logic"
+    - "Explain non-obvious patterns"
+    - "Add JSDoc for public APIs"
+  
+  feature_tracking:
+    - "Update docs/development/feature-catalogue.md"
+    - "Add to docs/development/actionable-roadmap.md when planning"
