@@ -73,52 +73,67 @@
    Pure dark grayscale
    ============================================ */
 .dark {
-  --background: oklch(0.21 0.03 265)
-  --foreground: oklch(0.28 0.03 257)
-  --card: oklch(0.45 0.03 257)
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.71 0.02 261)
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --destructive-foreground: oklch(0.637 0.237 25.331);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --input-background: oklch(0.205 0 0);
-  --switch-background: oklch(0.269 0 0);
-  --ring: oklch(0.556 0 0);
+  /* Base color (your bunker color) is used for cards */
+  --bunker-l: 0.312;
+  --bunker-c: 0.015;
+  --bunker-h: 250.7;
+
+  /* --- Core Palette (Revolving around Bunker) --- */
+  --background: oklch(0.25 0.015 250.7);            /* Darker than card */
+  --foreground: oklch(0.95 0.005 250.7);            /* Light text for high contrast */
+  --card: oklch(var(--bunker-l) var(--bunker-c) var(--bunker-h)); /* Bunker color */
+  --card-foreground: oklch(0.95 0.005 250.7);       /* Light text on card */
+  --popover: oklch(0.40 0.015 250.7);               /* Lighter than card */
+  --popover-foreground: oklch(0.95 0.005 250.7);    /* Light text on popover */
+
+  /* --- Accents (Using Bunker Hue) --- */
+  --primary: oklch(0.6 0.2 250.7);                  /* Brighter, saturated bunker blue */
+  --primary-foreground: oklch(0.2 0.01 250.7);      /* Dark text on primary */
+  --secondary: oklch(0.4 0.015 250.7);              /* Same as popover */
+  --secondary-foreground: oklch(0.95 0.005 250.7);  /* Light text on secondary */
+  --muted: oklch(0.28 0.015 250.7);                 /* Between background and card */
+  --muted-foreground: oklch(0.7 0.01 250.7);        /* Lighter, muted text */
+  --accent: oklch(0.4 0.015 250.7);                 /* Same as secondary */
+  --accent-foreground: oklch(0.95 0.005 250.7);     /* Light text on accent */
+
+  /* --- Destructive (Muted) --- */
+  --destructive: oklch(0.704 0.12 22.216); /* Was 0.191 */
+  --destructive-foreground: oklch(0.95 0.02 22.216); /* Adjusted for contrast */
+
+  /* --- UI Elements (Using Bunker Palette) --- */
+  --border: oklch(0.35 0.015 250.7);
+  --input: oklch(0.35 0.015 250.7);
+  --input-background: oklch(var(--bunker-l) var(--bunker-c) var(--bunker-h));
+  --switch-background: oklch(0.28 0.015 250.7);
+  --ring: oklch(0.7 0.2 250.7);                     /* Lighter, saturated focus ring */
+
+  /* --- Font Weights (Kept from original) --- */
   --font-weight-medium: 500;
   --font-weight-normal: 400;
-  
-  /* Dark mode chart colors */
-  --chart-1: oklch(0.696 0.17 162.48);      /* Green - adjusted for dark mode */
-  --chart-2: oklch(0.488 0.243 264.376);    /* Blue - adjusted for dark mode */
-  --chart-3: oklch(0.769 0.188 70.08);      /* Yellow - adjusted for dark mode */
-  --chart-4: oklch(0.627 0.265 303.9);      /* Purple */
-  --chart-5: oklch(0.704 0.191 22.216);     /* Red - adjusted for dark mode */
-  
-  /* Status-specific chart colors for dark mode */
-  --chart-status-pending: oklch(0.488 0.243 264.376);    /* Blue - chart-2 */
-  --chart-status-approved: oklch(0.696 0.17 162.48);     /* Green - chart-1 */
-  --chart-status-denied: oklch(0.704 0.191 22.216);      /* Red - destructive */
-  --chart-status-closed: oklch(0.708 0 0);                /* Gray - muted-foreground */
-  --chart-status-spenddown: oklch(0.769 0.188 70.08);    /* Yellow - chart-3 */
-  
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
+
+  /* --- Charts (Muted) --- */
+  --chart-1: oklch(0.696 0.10 162.48);      /* Green (was 0.17) */
+  --chart-2: oklch(0.488 0.15 264.376);    /* Blue (was 0.243) */
+  --chart-3: oklch(0.769 0.11 70.08);      /* Yellow (was 0.188) */
+  --chart-4: oklch(0.627 0.16 303.9);      /* Purple (was 0.265) */
+  --chart-5: oklch(0.704 0.12 22.216);      /* Red (was 0.191) */
+
+  /* --- Statuses (Updated to match muted charts) --- */
+  --chart-status-pending: oklch(0.488 0.15 264.376);
+  --chart-status-approved: oklch(0.696 0.10 162.48);
+  --chart-status-denied: oklch(0.704 0.12 22.216);
+  --chart-status-closed: oklch(0.7 0.01 250.7);      /* Gray (new muted-fg) */
+  --chart-status-spenddown: oklch(0.769 0.11 70.08);
+
+  /* --- Sidebar (Using Bunker Palette) --- */
+  --sidebar: oklch(0.2 0.01 250.7);                 /* Darkest element */
+  --sidebar-foreground: oklch(0.95 0.005 250.7);
+  --sidebar-primary: oklch(0.6 0.2 250.7);
+  --sidebar-primary-foreground: oklch(0.2 0.01 250.7);
+  --sidebar-accent: oklch(0.4 0.015 250.7);
+  --sidebar-accent-foreground: oklch(0.95 0.005 250.7);
+  --sidebar-border: oklch(0.35 0.015 250.7);
+  --sidebar-ring: oklch(0.7 0.2 250.7);
 }
 
 /* ============================================
@@ -642,4 +657,5 @@
 html {
   font-size: var(--font-size);
 }
+
 
