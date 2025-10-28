@@ -3,12 +3,26 @@ import ApplicationState from '@/application/ApplicationState';
 import type StorageRepository from '@/infrastructure/storage/StorageRepository';
 import { Case, type CaseSnapshot } from '@/domain/cases/entities/Case';
 import { CASE_STATUS } from '@/types/case';
-import type { FinancialItem } from '@/domain/financials/entities/FinancialItem';
-import { FinancialCategory } from '@/domain/financials/entities/FinancialItem';
-import type { Note } from '@/domain/notes/entities/Note';
-import type { Alert } from '@/domain/alerts/entities/Alert';
-import type { ActivityEvent } from '@/domain/activity/entities/ActivityEvent';
+import { FinancialItem, type FinancialItemSnapshot, FinancialCategory } from '@/domain/financials/entities/FinancialItem';
+import { Note, type NoteSnapshot } from '@/domain/notes/entities/Note';
+import { Alert, type AlertSnapshot } from '@/domain/alerts/entities/Alert';
+import { ActivityEvent, type ActivityEventSnapshot } from '@/domain/activity/entities/ActivityEvent';
 import { DEFAULT_FLAGS } from '@/utils/featureFlags';
+
+type SnapshotWithId = { id: string } & Record<string, unknown>;
+
+function toSnapshot(value: unknown): SnapshotWithId {
+  if (value && typeof value === 'object') {
+    const maybeEntity = value as { toJSON?: () => SnapshotWithId };
+    if (typeof maybeEntity.toJSON === 'function') {
+      return maybeEntity.toJSON();
+    }
+
+    return JSON.parse(JSON.stringify(maybeEntity)) as SnapshotWithId;
+  }
+
+  throw new Error('Unable to convert value to snapshot for comparison');
+}
 type RepositoryStub<T extends { id: string }> = {
   data: T[];
   getAll: () => Promise<T[]>;
@@ -104,8 +118,8 @@ function createTestCase(overrides: Partial<CaseSnapshot> = {}): Case {
   return Case.rehydrate({ ...base, ...overrides });
 }
 
-function createTestFinancial(overrides: Partial<FinancialItem> = {}): FinancialItem {
-  return {
+function createTestFinancial(overrides: Partial<FinancialItemSnapshot> = {}): FinancialItem {
+  return FinancialItem.create({
     id: overrides.id ?? 'FIN-001',
     caseId: overrides.caseId ?? 'CASE-001',
     category: overrides.category ?? FinancialCategory.Income,
@@ -115,11 +129,11 @@ function createTestFinancial(overrides: Partial<FinancialItem> = {}): FinancialI
     createdAt: overrides.createdAt ?? new Date('2025-01-05').toISOString(),
     updatedAt: overrides.updatedAt ?? new Date('2025-01-06').toISOString(),
     metadata: overrides.metadata ?? {},
-  };
+  });
 }
 
-function createTestNote(overrides: Partial<Note> = {}): Note {
-  return {
+function createTestNote(overrides: Partial<NoteSnapshot> = {}): Note {
+  return Note.create({
     id: overrides.id ?? 'NOTE-001',
     caseId: overrides.caseId ?? 'CASE-001',
     category: overrides.category ?? 'general',
@@ -128,11 +142,11 @@ function createTestNote(overrides: Partial<Note> = {}): Note {
     updatedAt: overrides.updatedAt ?? new Date('2025-01-08').toISOString(),
     authorId: overrides.authorId,
     metadata: overrides.metadata ?? {},
-  };
+  });
 }
 
-function createTestAlert(overrides: Partial<Alert> = {}): Alert {
-  return {
+function createTestAlert(overrides: Partial<AlertSnapshot> = {}): Alert {
+  return Alert.create({
     id: overrides.id ?? 'ALERT-001',
     mcn: overrides.mcn ?? 'MCN-001',
     caseId: overrides.caseId ?? null,
@@ -141,11 +155,11 @@ function createTestAlert(overrides: Partial<Alert> = {}): Alert {
     createdAt: overrides.createdAt ?? new Date('2025-01-09').toISOString(),
     updatedAt: overrides.updatedAt ?? new Date('2025-01-10').toISOString(),
     metadata: overrides.metadata ?? {},
-  };
+  });
 }
 
-function createTestActivity(overrides: Partial<ActivityEvent> = {}): ActivityEvent {
-  return {
+function createTestActivity(overrides: Partial<ActivityEventSnapshot> = {}): ActivityEvent {
+  return ActivityEvent.create({
     id: overrides.id ?? 'ACT-001',
     eventType: overrides.eventType ?? 'case.created',
     aggregateId: overrides.aggregateId ?? 'CASE-001',
@@ -153,7 +167,7 @@ function createTestActivity(overrides: Partial<ActivityEvent> = {}): ActivityEve
     changes: overrides.changes ?? { status: 'active' },
     timestamp: overrides.timestamp ?? new Date('2025-01-11').toISOString(),
     metadata: overrides.metadata ?? {},
-  };
+  });
 }
 
 describe('ApplicationState', () => {
@@ -207,16 +221,16 @@ describe('ApplicationState', () => {
 
     await appState.hydrate(storage);
 
-  expect(appState.getCases().map(item => item.toJSON())).toEqual([seedCase.toJSON()]);
-    expect(appState.getFinancialItems()).toEqual([seedFinancial]);
-    expect(appState.getNotes()).toEqual([seedNote]);
-    expect(appState.getAlerts()).toEqual([seedAlert]);
-    expect(appState.getActivities()).toEqual([seedActivity]);
+    expect(appState.getCases().map(toSnapshot)).toEqual([toSnapshot(seedCase)]);
+    expect(appState.getFinancialItems().map(toSnapshot)).toEqual([toSnapshot(seedFinancial)]);
+    expect(appState.getNotes().map(toSnapshot)).toEqual([toSnapshot(seedNote)]);
+    expect(appState.getAlerts().map(toSnapshot)).toEqual([toSnapshot(seedAlert)]);
+    expect(appState.getActivities().map(toSnapshot)).toEqual([toSnapshot(seedActivity)]);
     expect(listener).toHaveBeenCalledTimes(1);
 
-  const cases = appState.getCases();
-  cases[0].updateStatus(CASE_STATUS.Pending);
-  expect(appState.getCase(seedCase.id)?.status).toBe(seedCase.status);
+    const cases = appState.getCases();
+    cases[0].updateStatus(CASE_STATUS.Pending);
+    expect(appState.getCase(seedCase.id)?.status).toBe(seedCase.status);
   });
 
   it('persists state to storage with saves and deletions', async () => {

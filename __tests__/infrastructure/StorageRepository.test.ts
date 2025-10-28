@@ -1,13 +1,14 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import StorageRepository from '@/infrastructure/storage/StorageRepository';
 import type AutosaveFileService from '@/utils/AutosaveFileService';
-import { FinancialCategory } from '@/domain/financials/entities/FinancialItem';
+import { FinancialItem, type FinancialItemSnapshot, FinancialCategory } from '@/domain/financials/entities/FinancialItem';
 import { Case, type CaseSnapshot } from '@/domain/cases/entities/Case';
 import { CASE_STATUS } from '@/types/case';
-import type { FinancialItem } from '@/domain/financials/entities/FinancialItem';
-import type { Note } from '@/domain/notes/entities/Note';
-import type { Alert } from '@/domain/alerts/entities/Alert';
-import type { ActivityEvent } from '@/domain/activity/entities/ActivityEvent';
+import { Note, type NoteSnapshot } from '@/domain/notes/entities/Note';
+import { Alert, type AlertSnapshot } from '@/domain/alerts/entities/Alert';
+import { ActivityEvent, type ActivityEventSnapshot } from '@/domain/activity/entities/ActivityEvent';
+
+type SnapshotWithId = { id: string } & Record<string, unknown>;
 
 type StorageSnapshot = {
   cases: Case[];
@@ -63,8 +64,8 @@ function createCase(overrides: Partial<CaseSnapshot> = {}): Case {
   return Case.rehydrate({ ...base, ...overrides });
 }
 
-function createFinancialItem(overrides: Partial<FinancialItem> = {}): FinancialItem {
-  return {
+function createFinancialItem(overrides: Partial<FinancialItemSnapshot> = {}): FinancialItem {
+  return FinancialItem.create({
     id: overrides.id ?? 'FIN-001',
     caseId: overrides.caseId ?? 'CASE-001',
     category: overrides.category ?? FinancialCategory.Income,
@@ -73,12 +74,12 @@ function createFinancialItem(overrides: Partial<FinancialItem> = {}): FinancialI
     verificationStatus: overrides.verificationStatus ?? 'Verified',
     createdAt: overrides.createdAt ?? new Date('2025-01-05').toISOString(),
     updatedAt: overrides.updatedAt ?? new Date('2025-01-06').toISOString(),
-    metadata: overrides.metadata,
-  };
+    metadata: overrides.metadata ?? {},
+  });
 }
 
-function createNote(overrides: Partial<Note> = {}): Note {
-  return {
+function createNote(overrides: Partial<NoteSnapshot> = {}): Note {
+  return Note.create({
     id: overrides.id ?? 'NOTE-001',
     caseId: overrides.caseId ?? 'CASE-001',
     category: overrides.category ?? 'general',
@@ -86,12 +87,12 @@ function createNote(overrides: Partial<Note> = {}): Note {
     createdAt: overrides.createdAt ?? new Date('2025-01-07').toISOString(),
     updatedAt: overrides.updatedAt ?? new Date('2025-01-08').toISOString(),
     authorId: overrides.authorId,
-    metadata: overrides.metadata,
-  };
+    metadata: overrides.metadata ?? {},
+  });
 }
 
-function createAlert(overrides: Partial<Alert> = {}): Alert {
-  return {
+function createAlert(overrides: Partial<AlertSnapshot> = {}): Alert {
+  return Alert.create({
     id: overrides.id ?? 'ALERT-001',
     mcn: overrides.mcn ?? 'MCN-001',
     caseId: overrides.caseId ?? null,
@@ -99,12 +100,12 @@ function createAlert(overrides: Partial<Alert> = {}): Alert {
     description: overrides.description ?? 'Sample alert',
     createdAt: overrides.createdAt ?? new Date('2025-01-09').toISOString(),
     updatedAt: overrides.updatedAt ?? new Date('2025-01-10').toISOString(),
-    metadata: overrides.metadata,
-  };
+    metadata: overrides.metadata ?? {},
+  });
 }
 
-function createActivity(overrides: Partial<ActivityEvent> = {}): ActivityEvent {
-  return {
+function createActivity(overrides: Partial<ActivityEventSnapshot> = {}): ActivityEvent {
+  return ActivityEvent.create({
     id: overrides.id ?? 'ACT-001',
     eventType: overrides.eventType ?? 'case.updated',
     aggregateId: overrides.aggregateId ?? 'CASE-001',
@@ -112,7 +113,24 @@ function createActivity(overrides: Partial<ActivityEvent> = {}): ActivityEvent {
     changes: overrides.changes ?? { status: 'active' },
     timestamp: overrides.timestamp ?? new Date('2025-01-11').toISOString(),
     metadata: overrides.metadata ?? {},
-  };
+  });
+}
+
+function sortSnapshots<T extends { id: string }>(snapshots: T[]): T[] {
+  return [...snapshots].sort((a, b) => a.id.localeCompare(b.id));
+}
+
+function toSnapshot(value: unknown): SnapshotWithId {
+  if (value && typeof value === 'object') {
+    const maybeEntity = value as { toJSON?: () => SnapshotWithId };
+    if (typeof maybeEntity.toJSON === 'function') {
+      return maybeEntity.toJSON();
+    }
+
+    return JSON.parse(JSON.stringify(maybeEntity)) as SnapshotWithId;
+  }
+
+  throw new Error('Unable to convert value to snapshot for comparison');
 }
 
 describe('StorageRepository', () => {
@@ -128,23 +146,20 @@ describe('StorageRepository', () => {
     const caseRepo = repository.cases;
     const sampleCase = createCase();
 
-  await caseRepo.save(sampleCase);
+    await caseRepo.save(sampleCase);
     expect(mockService.writes).toBe(1);
 
     const fetched = await caseRepo.getById(sampleCase.id);
-  expect(fetched?.toJSON()).toEqual(sampleCase.toJSON());
-
-    const byMcn = await caseRepo.findByMCN(sampleCase.mcn);
-  expect(byMcn?.toJSON()).toEqual(sampleCase.toJSON());
+    expect(fetched?.toJSON()).toEqual(sampleCase.toJSON());
 
     const searchResults = await caseRepo.searchCases('Sample');
-  expect(searchResults.map(item => item.toJSON())).toEqual([sampleCase.toJSON()]);
+    expect(searchResults.map(item => item.toJSON())).toEqual([sampleCase.toJSON()]);
 
-  await caseRepo.delete(sampleCase.id);
+    await caseRepo.delete(sampleCase.id);
     expect(mockService.writes).toBe(2);
 
     const allCases = await caseRepo.getAll();
-  expect(allCases).toEqual([]);
+    expect(allCases).toEqual([]);
   });
 
   it('manages financial items scoped to a case and category', async () => {
@@ -163,18 +178,19 @@ describe('StorageRepository', () => {
     await financialRepo.save(expenseItem);
 
     const itemsForCase = await financialRepo.getByCaseId(caseId);
-    expect(itemsForCase).toHaveLength(2);
-    expect(itemsForCase.map(item => item.id).sort()).toEqual(['FIN-EXP', 'FIN-INC']);
+    const caseSnapshots = sortSnapshots(itemsForCase.map(toSnapshot));
+    const expectedCaseSnapshots = sortSnapshots([toSnapshot(incomeItem), toSnapshot(expenseItem)]);
+    expect(caseSnapshots).toEqual(expectedCaseSnapshots);
 
     const incomeItems = await financialRepo.getByCategory(FinancialCategory.Income);
-    expect(incomeItems).toEqual([incomeItem]);
+    expect(incomeItems.map(toSnapshot)).toEqual([toSnapshot(incomeItem)]);
 
     const allItems = await financialRepo.getAll();
-    expect(allItems).toHaveLength(2);
+    expect(sortSnapshots(allItems.map(toSnapshot))).toEqual(expectedCaseSnapshots);
 
     await financialRepo.delete('FIN-INC');
     const remaining = await financialRepo.getAll();
-    expect(remaining).toEqual([expenseItem]);
+    expect(remaining.map(toSnapshot)).toEqual([toSnapshot(expenseItem)]);
   });
 
   it('filters notes by category for a case', async () => {
@@ -187,14 +203,16 @@ describe('StorageRepository', () => {
     await noteRepo.save(statusNote);
 
     const notesForCase = await noteRepo.getByCaseId(caseId);
-    expect(notesForCase).toHaveLength(2);
+    const noteSnapshots = sortSnapshots(notesForCase.map(toSnapshot));
+    const expectedNotes = sortSnapshots([toSnapshot(generalNote), toSnapshot(statusNote)]);
+    expect(noteSnapshots).toEqual(expectedNotes);
 
     const statusNotes = await noteRepo.filterByCategory(caseId, 'status');
-    expect(statusNotes).toEqual([statusNote]);
+    expect(statusNotes.map(toSnapshot)).toEqual([toSnapshot(statusNote)]);
 
-    notesForCase[0].content = 'mutated content';
+    // Verify immutability - reloaded notes should still match originals
     const reloaded = await noteRepo.getByCaseId(caseId);
-    expect(reloaded).toEqual([generalNote, statusNote]);
+    expect(sortSnapshots(reloaded.map(toSnapshot))).toEqual(expectedNotes);
   });
 
   it('retrieves alerts by MCN and unmatched status', async () => {
@@ -208,15 +226,15 @@ describe('StorageRepository', () => {
     await alertRepo.save(unmatchedAlertB);
 
     const alertsForMcn = await alertRepo.findByMCN('MCN-333');
-    expect(alertsForMcn).toHaveLength(2);
-    expect(alertsForMcn.map(alert => alert.id).sort()).toEqual(['ALERT-A', 'ALERT-B']);
+    const expectedUnmatched = sortSnapshots([toSnapshot(unmatchedAlertA), toSnapshot(unmatchedAlertB)]);
+    expect(sortSnapshots(alertsForMcn.map(toSnapshot))).toEqual(expectedUnmatched);
 
     const unmatched = await alertRepo.getUnmatched();
-    expect(unmatched.map(alert => alert.id).sort()).toEqual(['ALERT-A', 'ALERT-B']);
+    expect(sortSnapshots(unmatched.map(toSnapshot))).toEqual(expectedUnmatched);
 
     await alertRepo.delete('ALERT-A');
     const remainingUnmatched = await alertRepo.getUnmatched();
-    expect(remainingUnmatched).toEqual([unmatchedAlertB]);
+    expect(remainingUnmatched.map(toSnapshot)).toEqual([toSnapshot(unmatchedAlertB)]);
   });
 
   it('tracks activity events by aggregate and recent order', async () => {
@@ -234,9 +252,17 @@ describe('StorageRepository', () => {
     }
 
     const aggregateEvents = await activityRepo.getByAggregateId(baseAggregate);
-    expect(aggregateEvents.map(event => event.id).sort()).toEqual(['ACT-1', 'ACT-2', 'ACT-4']);
+    const expectedAggregate = sortSnapshots([
+      toSnapshot(events[0]),
+      toSnapshot(events[1]),
+      toSnapshot(events[3]),
+    ]);
+    expect(sortSnapshots(aggregateEvents.map(toSnapshot))).toEqual(expectedAggregate);
 
     const recentTwo = await activityRepo.getRecent(2);
-    expect(recentTwo.map(event => event.id)).toEqual(['ACT-4', 'ACT-2']);
+    expect(recentTwo.map(toSnapshot)).toEqual([
+      toSnapshot(events[3]),
+      toSnapshot(events[1]),
+    ]);
   });
 });

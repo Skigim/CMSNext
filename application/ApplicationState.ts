@@ -1,8 +1,8 @@
 import { Case, type CaseSnapshot } from '@/domain/cases/entities/Case';
-import type { FinancialItem } from '@/domain/financials/entities/FinancialItem';
-import type { Note } from '@/domain/notes/entities/Note';
-import type { Alert } from '@/domain/alerts/entities/Alert';
-import type { ActivityEvent } from '@/domain/activity/entities/ActivityEvent';
+import { FinancialItem } from '@/domain/financials/entities/FinancialItem';
+import { Note } from '@/domain/notes/entities/Note';
+import { Alert } from '@/domain/alerts/entities/Alert';
+import { ActivityEvent } from '@/domain/activity/entities/ActivityEvent';
 import type StorageRepository from '@/infrastructure/storage/StorageRepository';
 import type { IRepository } from '@/domain/common/repositories';
 import {
@@ -30,6 +30,22 @@ function cloneValue<T>(value: T): T {
   }
 
   if (value instanceof Case) {
+    return value.clone() as T;
+  }
+
+  if (value instanceof FinancialItem) {
+    return value.clone() as T;
+  }
+
+  if (value instanceof Note) {
+    return value.clone() as T;
+  }
+
+  if (value instanceof Alert) {
+    return value.clone() as T;
+  }
+
+  if (value instanceof ActivityEvent) {
     return value.clone() as T;
   }
 
