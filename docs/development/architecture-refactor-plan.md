@@ -1,13 +1,18 @@
 CMSNext Architecture Refactor Plan (Current Status)
 
-Last Updated: October 23, 2025
-Status: Planning Phase
+Last Updated: October 27, 2025
+Status: Planning Phase (Phase 2 Complete, Phase 3 Next)
 Target Execution: November 1-30, 2025
-Prerequisites: 85% Complete (Phase 4 telemetry captures pending)
+Prerequisites: ✅ Phase 1 & Phase 2 Complete
 
 Executive Summary
 
-Transform CMSNext from a monolithic React application into a clean, domain-driven architecture with clear boundaries, worker-ready interfaces, and predictable data flow. This refactor builds on recent infrastructure wins (shadcn migration, telemetry, accessibility) to establish sustainable patterns for future growth.
+Transform CMSNext from a monolithic React application into a clean, domain-driven architecture with clear boundaries, worker-ready interfaces, and predictable data flow. This refactor builds on recent infrastructure wins (shadcn migration, telemetry, accessibility) and the completed Phase 1 & Phase 2 foundations (domain entities, event bus, activity logging) to establish sustainable patterns for future growth.
+
+**Recent Progress:**
+- ✅ Phase 1 (Foundation): Domain structure, rich entities, unified repository pattern
+- ✅ Phase 2 (Event Bus): DomainEventBus, ActivityLogger, decoupled state management
+- 🔄 Phase 3 (Next): Hooks migration, use case expansion, event-driven patterns
 
 Goals
 
@@ -706,19 +711,68 @@ The Alert domain requires special handling due to complexity:
 **Phase 1 approach:** Create alert repository interface only; defer use case extraction.
 **Phase 2-3:** Extract alert-specific use cases after pattern proven with simpler domains.
 
-References
+---
 
-Clean Architecture Principles
+## References
 
-Domain-Driven Design
+- [Clean Architecture Principles](https://blog.cleancoder.com/uncle-bob/2012/08/13/the-clean-architecture.html)
+- [Domain-Driven Design](https://martinfowler.com/bliki/DomainDrivenDesign.html)
+- [Repository Pattern](https://martinfowler.com/eaaCatalog/repository.html)
 
-Repository Pattern
+---
 
-Next Steps:
+## Completed Phases
 
-Complete Phase 4 telemetry captures (by Oct 30)
+### ✅ Phase 1: Foundation (October 15-24, 2025)
 
-Review this plan with stakeholders (Oct 23-30)
+**Status:** Complete - PR #50 merged
 
-Kick off Phase 1: Foundation (Nov 1)
+**Deliverables:**
+- Domain structure with rich entities (Case, Person)
+- Unified StorageRepository implementing all domain repository interfaces
+- ApplicationState singleton with Map-based storage
+- CreateCase use case with optimistic update + rollback pattern
+- Comprehensive test coverage (211 tests passing)
+
+**Key Learnings:**
+- Optimistic update + rollback pattern prevents state/storage divergence
+- Rich domain entities with factory methods simplify validation
+- Unified repository pattern reduces code duplication
+- ApplicationState singleton provides single source of truth for in-memory state
+
+**Documentation:** `docs/development/phase-1-completion-summary.md`
+
+---
+
+### ✅ Phase 2: Event Bus (October 16-27, 2025)
+
+**Status:** Complete - PR #54 ready to merge
+
+**Deliverables:**
+- DomainEventBus for decoupled event publishing
+- ActivityLogger service with automatic persistence and rollback
+- UpdateCase and DeleteCase use cases
+- Rich domain entities for FinancialItem, Note, Alert
+- 79 additional tests (290 total passing, 0 regressions)
+
+**Key Learnings:**
+- Event-driven architecture enables future extensibility (alerts, telemetry, offline sync)
+- Centralized ActivityLogger prevents duplicate tracking logic
+- Rollback support in ActivityLogger prevents audit trail corruption
+- Enhanced test helpers improve test reliability
+
+**Documentation:** 
+- `docs/development/state-management-strategy.md`
+- `docs/development/phase-2-completion-summary.md`
+- `docs/development/phase-3-completion-checklist.md`
+
+---
+
+## Next Steps:
+
+1. ✅ ~~Complete Phase 4 telemetry captures (by Oct 30)~~ - Completed in PR #29, #30
+2. ✅ ~~Review this plan with stakeholders (Oct 23-30)~~ - Documented in phase summaries
+3. ✅ ~~Kick off Phase 1: Foundation (Nov 1)~~ - Completed October 24
+4. ✅ ~~Complete Phase 2: Event Bus~~ - Completed October 27, ready to merge
+5. 🔄 **Begin Phase 3: Hooks Migration** - Target: November 1-15, 2025
 $$

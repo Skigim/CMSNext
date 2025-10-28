@@ -335,9 +335,30 @@ This application is built with **privacy-by-design** principles:
 
 - **✅ Core Features**: Complete CRUD operations for cases, financial items, and notes
 - **✅ File Storage**: Robust autosave with File System Access API integration  
-- **✅ UI/UX**: 6 polished themes with responsive design
+- **✅ UI/UX**: 6 polished themes with responsive design, 100% shadcn/ui migration complete
 - **✅ Data Management**: Import/export with validation and migration
-- **🔄 Architecture**: Ready for clean architecture refactoring (see [CodeReview.md](CodeReview.md))
+- **✅ Testing Infrastructure**: 290 tests passing with vitest + axe accessibility checks
+- **✅ Telemetry & Performance**: Production-ready observability and performance tracking
+- **✅ Phase 1 Refactor**: Domain-driven architecture foundation with rich entities and repository pattern
+- **✅ Phase 2 Refactor**: Event-driven state management with DomainEventBus and ActivityLogger
+- **🔄 Phase 3 (Next)**: Hooks migration and use case expansion (November 2025)
+
+### Architecture Progress
+
+**Completed:**
+- Domain structure with rich entities (Case, FinancialItem, Note, Alert, ActivityEvent)
+- Unified StorageRepository with domain adapters
+- ApplicationState singleton with Map-based storage
+- DomainEventBus for decoupled event publishing
+- ActivityLogger with automatic persistence and rollback
+- Use cases: CreateCase, UpdateCase, DeleteCase with optimistic update + rollback patterns
+
+**In Planning:**
+- Phase 3: Migrate React hooks to use ApplicationState and domain events
+- Phase 4: Alert system integration with event bus
+- Phase 5: Worker-ready interfaces for background processing
+
+See `docs/development/architecture-refactor-plan.md` for detailed roadmap.
 
 ## 🆘 Support & Compatibility
 

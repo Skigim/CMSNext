@@ -1,18 +1,67 @@
 # Phase 2: State Management - Agent Prompt
 
-**Context:** You are implementing Phase 2 of the architecture refactor. Phase 1 established the unified StorageRepository with domain adapters, ApplicationState singleton, and rich domain entities. Now you'll add the DomainEventBus and complete the event-driven state synchronization.
+**Status:** ✅ COMPLETE (PR #54 merged October 27, 2025)
 
-**Reference:** See `docs/development/architecture-refactor-plan.md` for full context.
+**Context:** Phase 2 of the architecture refactor established the DomainEventBus, ActivityLogger, and event-driven state synchronization. This document is preserved for historical reference.
 
----
-
-## Objective
-
-Complete the event-driven state management system by adding domain event bus and integrating React components with ApplicationState.
+**Reference:** See `docs/development/phase-2-completion-summary.md` for implementation details and `docs/development/architecture-refactor-plan.md` for overall progress.
 
 ---
 
-## Current State (Post-Phase 1)
+## Objective (Achieved)
+
+✅ Complete the event-driven state management system by adding domain event bus and integrating React components with ApplicationState.
+
+---
+
+## Completed Deliverables
+
+### 1. Domain Event Bus
+
+**File:** `application/DomainEventBus.ts` (✅ Implemented)
+
+- Type-safe event publishing with generic event types
+- Subscription management with automatic cleanup
+- Support for: CaseCreated, CaseUpdated, CaseDeleted, FinancialItem events, Note events, Alert events, ActivityRecorded
+- Singleton pattern with `getInstance()`
+
+### 2. Activity Logger Service
+
+**File:** `application/ActivityLogger.ts` (✅ Implemented)
+
+- Centralized activity tracking with automatic persistence
+- Rollback support for failed storage operations
+- Event-driven architecture preventing state/storage divergence
+- Integration with DomainEventBus for all domain events
+
+### 3. Rich Domain Entities
+
+**Files:** (✅ All Implemented)
+- `domain/cases/entities/Case.ts` (Phase 1)
+- `domain/cases/entities/Person.ts` (Phase 1)
+- `domain/financials/entities/FinancialItem.ts` (Phase 2)
+- `domain/notes/entities/Note.ts` (Phase 2)
+- `domain/alerts/entities/Alert.ts` (Phase 2)
+- `domain/activity/entities/ActivityEvent.ts` (Phase 2)
+
+### 4. Use Cases Expanded
+
+**Files:** (✅ All Implemented)
+- `domain/cases/use-cases/CreateCase.ts` (Phase 1)
+- `domain/cases/use-cases/UpdateCase.ts` (Phase 2)
+- `domain/cases/use-cases/DeleteCase.ts` (Phase 2)
+
+### 5. Testing Infrastructure
+
+**Achievements:**
+- +79 new tests across domain, application, and infrastructure layers
+- 290 total tests passing (0 regressions)
+- Enhanced test helpers: `toSnapshot()`, `sortSnapshots()` for reliable comparisons
+- Comprehensive integration test coverage
+
+---
+
+## Historical Context (Pre-Phase 2)
 
 ### Existing Architecture:
 
