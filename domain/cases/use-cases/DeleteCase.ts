@@ -31,7 +31,6 @@ export class DeleteCaseUseCase {
 
     logger.info('Deleting case', {
       caseId: input.caseId,
-      mcn: existing.mcn,
     });
 
     // Optimistic update - remove from state

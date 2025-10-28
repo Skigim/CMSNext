@@ -31,9 +31,13 @@ export class UpdateCaseUseCase {
       throw new DomainError(`Case not found: ${input.caseId}`);
     }
 
+    // Disallow updating identity/creation fields
+    const { id: _ignoreId, createdAt: _ignoreCreatedAt, ...rest } = input.updates ?? {};
     const updatedSnapshot: CaseSnapshot = {
       ...existing.toJSON(),
-      ...input.updates,
+      ...rest,
+      id: existing.id,
+      createdAt: existing.createdAt,
       updatedAt: new Date().toISOString(),
     };
 
@@ -41,12 +45,11 @@ export class UpdateCaseUseCase {
 
     logger.info('Updating case', {
       caseId: updatedCase.id,
-      mcn: updatedCase.mcn,
     });
 
     // Optimistic update
     const previousCase = existing.clone();
-    this.appState.updateCase(updatedCase.id, updatedSnapshot);
+    this.appState.updateCase(existing.id, updatedSnapshot);
 
     try {
       await this.storage.cases.save(updatedCase);
@@ -65,8 +68,8 @@ export class UpdateCaseUseCase {
         caseId: updatedCase.id,
       });
 
-      // Rollback to previous state
-      this.appState.updateCase(previousCase.id, previousCase.toJSON());
+      // Rollback to previous state (by stable id)
+      this.appState.updateCase(existing.id, previousCase.toJSON());
       throw new DomainError('Failed to update case', { cause: error });
     }
   }

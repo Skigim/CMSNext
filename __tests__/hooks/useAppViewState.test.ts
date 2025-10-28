@@ -1,17 +1,17 @@
 import { renderHook, act } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
-import ApplicationState from '@/application/ApplicationState';
+import { ApplicationState } from '@/application/ApplicationState';
 import { useAppViewState } from '@/hooks/useAppViewState';
 import { DEFAULT_FLAGS } from '@/utils/featureFlags';
 
 describe('useAppViewState', () => {
   beforeEach(() => {
-    ApplicationState.resetInstance();
+    ApplicationState.resetForTesting();
   });
 
   afterEach(() => {
-    ApplicationState.resetInstance();
+    ApplicationState.resetForTesting();
   });
 
   it('exposes feature flags from ApplicationState', () => {

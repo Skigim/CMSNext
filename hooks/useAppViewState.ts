@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
-import ApplicationState from '@/application/ApplicationState';
+import { ApplicationState } from '@/application/ApplicationState';
 import type { FeatureFlagKey, FeatureFlags } from '@/utils/featureFlags';
 
 /**

@@ -1,7 +1,7 @@
 import { ApplicationState } from '@/application/ApplicationState';
 import { DomainEventBus, type DomainEvent } from '@/application/DomainEventBus';
 import { ActivityEvent } from '@/domain/activity/entities/ActivityEvent';
-import type StorageRepository from '@/infrastructure/storage/StorageRepository';
+import type { StorageRepository } from '@/infrastructure/storage/StorageRepository';
 import { createLogger } from '@/utils/logger';
 
 const logger = createLogger('ActivityLogger');

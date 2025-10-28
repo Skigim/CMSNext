@@ -40,8 +40,6 @@ export class CreateCaseUseCase {
 
     logger.info('Creating case', {
       caseId: caseEntity.id,
-      mcn: caseEntity.mcn,
-      name: caseEntity.name,
     });
 
     this.appState.addCase(caseEntity);
