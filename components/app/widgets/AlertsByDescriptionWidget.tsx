@@ -33,13 +33,13 @@ export function AlertsByDescriptionWidget({ alerts = [], metadata }: AlertsByDes
   const totalAlerts = useMemo(() => stats.reduce((acc, item) => acc + item.count, 0), [stats]);
   const uniqueDescriptions = stats.length;
 
-  // Use theme colors for alerts - cycle through semantic colors
+  // Use theme chart colors from globals.css - cycle through them
   const alertColorPalette = useMemo(() => [
-    'hsl(var(--primary))',
-    'hsl(142.1 70.6% 45.3%)', // emerald-500 (success/approved)
-    'hsl(var(--destructive))',
-    'hsl(45 93.4% 47.5%)', // amber-500 (warning/spenddown)
-    'hsl(221.2 83.2% 53.3%)', // blue-500 (info)
+    'hsl(var(--chart-1))',
+    'hsl(var(--chart-2))',
+    'hsl(var(--chart-3))',
+    'hsl(var(--chart-4))',
+    'hsl(var(--chart-5))',
   ], []);
 
   // Convert stats to chart data with theme colors - take top 10

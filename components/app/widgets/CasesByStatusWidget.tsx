@@ -48,16 +48,16 @@ export function CasesByStatusWidget({ cases = [], metadata }: CasesByStatusWidge
   const breakdown = useMemo(() => data ?? [], [data]);
   const totalCases = useMemo(() => breakdown.reduce((acc, item) => acc + item.count, 0), [breakdown]);
 
-  // Map status to semantic theme colors
+  // Map status to theme chart colors from globals.css
   const statusColorMap: Record<string, string> = useMemo(() => ({
-    pending: 'hsl(var(--primary))',
-    approved: 'hsl(142.1 70.6% 45.3%)', // emerald-500
-    denied: 'hsl(var(--destructive))',
-    closed: 'hsl(var(--muted-foreground))',
-    spenddown: 'hsl(45 93.4% 47.5%)', // amber-500
+    pending: 'hsl(var(--chart-status-pending))',
+    approved: 'hsl(var(--chart-status-approved))',
+    denied: 'hsl(var(--chart-status-denied))',
+    closed: 'hsl(var(--chart-status-closed))',
+    spenddown: 'hsl(var(--chart-status-spenddown))',
   }), []);
 
-  // Convert breakdown to chart data with semantic fill colors
+  // Convert breakdown to chart data with theme colors
   const chartData = useMemo(() => {
     return breakdown.map((item) => {
       const statusKey = item.status.toLowerCase();
