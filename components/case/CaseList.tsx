@@ -7,6 +7,8 @@ import { VirtualCaseList } from "../app/VirtualCaseList";
 import type { CaseDisplay, CaseStatusUpdateHandler } from "../../types/case";
 import { setupSampleData } from "../../utils/setupData";
 import { CaseAlertsDrawer } from "./CaseAlertsDrawer";
+import { CaseFilters } from "./CaseFilters";
+import { MultiSortConfig } from "./MultiSortConfig";
 import {
   Plus,
   Search,
@@ -81,6 +83,10 @@ export function CaseList({
     setSortDirection,
     segment,
     setSegment,
+    sortConfigs,
+    setSortConfigs,
+    filters,
+    setFilters,
   } = useCaseListPreferences();
   const [searchTerm, setSearchTerm] = useState("");
   const [isSettingUpData, setIsSettingUpData] = useState(false);
@@ -183,6 +189,36 @@ export function CaseList({
         return false;
       }
 
+      // Apply status filter
+      if (filters.statuses.length > 0 && !filters.statuses.includes(caseData.status)) {
+        return false;
+      }
+
+      // Apply priority filter
+      if (filters.priorityOnly && !caseData.priority) {
+        return false;
+      }
+
+      // Apply date range filter
+      if (filters.dateRange.from || filters.dateRange.to) {
+        const updatedAt = Date.parse(caseData.updatedAt || caseData.caseRecord?.updatedDate || "");
+        if (Number.isFinite(updatedAt)) {
+          const caseDate = new Date(updatedAt);
+          if (filters.dateRange.from && caseDate < filters.dateRange.from) {
+            return false;
+          }
+          if (filters.dateRange.to) {
+            // Include the entire end date by checking if before end of day
+            const endOfDay = new Date(filters.dateRange.to);
+            endOfDay.setHours(23, 59, 59, 999);
+            if (caseDate > endOfDay) {
+              return false;
+            }
+          }
+        }
+      }
+
+      // Legacy segment filter (kept for backward compatibility)
       if (segment === "priority") {
         return Boolean(caseData.priority);
       }
@@ -194,53 +230,69 @@ export function CaseList({
 
       return true;
     });
-  }, [cases, searchTerm, segment]);
+  }, [cases, searchTerm, segment, filters]);
 
   const sortedCases = useMemo(() => {
-    const directionFactor = sortDirection === "asc" ? 1 : -1;
-
     return [...filteredCases].sort((a, b) => {
-      switch (sortKey) {
-        case "name": {
-          return ((a.name || "").localeCompare(b.name || "")) * directionFactor;
+      // Apply each sort config in order
+      for (const config of sortConfigs) {
+        const directionFactor = config.direction === "asc" ? 1 : -1;
+        let comparison = 0;
+
+        switch (config.key) {
+          case "name": {
+            comparison = (a.name || "").localeCompare(b.name || "");
+            break;
+          }
+          case "mcn": {
+            comparison = (a.mcn || "").localeCompare(b.mcn || "");
+            break;
+          }
+          case "status": {
+            comparison = (a.status || "").localeCompare(b.status || "");
+            break;
+          }
+          case "caseType": {
+            const aType = a.caseRecord?.caseType || "";
+            const bType = b.caseRecord?.caseType || "";
+            comparison = aType.localeCompare(bType);
+            break;
+          }
+          case "alerts": {
+            const aAlerts = openAlertsByCase.get(a.id)?.length ?? 0;
+            const bAlerts = openAlertsByCase.get(b.id)?.length ?? 0;
+            comparison = aAlerts - bAlerts;
+            break;
+          }
+          case "application": {
+            const aApplicationRaw = Date.parse(a.caseRecord?.applicationDate || a.createdAt);
+            const bApplicationRaw = Date.parse(b.caseRecord?.applicationDate || b.createdAt);
+            const aApplication = Number.isFinite(aApplicationRaw) ? aApplicationRaw : 0;
+            const bApplication = Number.isFinite(bApplicationRaw) ? bApplicationRaw : 0;
+            comparison = aApplication - bApplication;
+            break;
+          }
+          case "updated":
+          default: {
+            const aUpdatedRaw = Date.parse(a.updatedAt || a.caseRecord?.updatedDate || a.createdAt);
+            const bUpdatedRaw = Date.parse(b.updatedAt || b.caseRecord?.updatedDate || b.createdAt);
+            const aUpdated = Number.isFinite(aUpdatedRaw) ? aUpdatedRaw : 0;
+            const bUpdated = Number.isFinite(bUpdatedRaw) ? bUpdatedRaw : 0;
+            comparison = aUpdated - bUpdated;
+            break;
+          }
         }
-        case "mcn": {
-          return ((a.mcn || "").localeCompare(b.mcn || "")) * directionFactor;
+
+        const result = comparison * directionFactor;
+        if (result !== 0) {
+          return result;
         }
-        case "status": {
-          return ((a.status || "").localeCompare(b.status || "")) * directionFactor;
-        }
-        case "caseType": {
-          const aType = a.caseRecord?.caseType || "";
-          const bType = b.caseRecord?.caseType || "";
-          return (aType.localeCompare(bType)) * directionFactor;
-        }
-        case "alerts": {
-          const aAlerts = openAlertsByCase.get(a.id)?.length ?? 0;
-          const bAlerts = openAlertsByCase.get(b.id)?.length ?? 0;
-          const comparison = aAlerts - bAlerts;
-          return comparison * directionFactor;
-        }
-        case "application": {
-          const aApplicationRaw = Date.parse(a.caseRecord?.applicationDate || a.createdAt);
-          const bApplicationRaw = Date.parse(b.caseRecord?.applicationDate || b.createdAt);
-          const aApplication = Number.isFinite(aApplicationRaw) ? aApplicationRaw : 0;
-          const bApplication = Number.isFinite(bApplicationRaw) ? bApplicationRaw : 0;
-          const comparison = aApplication - bApplication;
-          return comparison * directionFactor;
-        }
-        case "updated":
-        default: {
-          const aUpdatedRaw = Date.parse(a.updatedAt || a.caseRecord?.updatedDate || a.createdAt);
-          const bUpdatedRaw = Date.parse(b.updatedAt || b.caseRecord?.updatedDate || b.createdAt);
-          const aUpdated = Number.isFinite(aUpdatedRaw) ? aUpdatedRaw : 0;
-          const bUpdated = Number.isFinite(bUpdatedRaw) ? bUpdatedRaw : 0;
-          const comparison = aUpdated - bUpdated;
-          return comparison * directionFactor;
-        }
+        // If equal, continue to next sort config
       }
+
+      return 0;
     });
-  }, [filteredCases, openAlertsByCase, sortDirection, sortKey]);
+  }, [filteredCases, openAlertsByCase, sortConfigs]);
 
   const noMatches = sortedCases.length === 0;
 
@@ -329,6 +381,8 @@ export function CaseList({
       </div>
 
       <div className="flex flex-wrap items-center gap-3">
+        <CaseFilters filters={filters} onFiltersChange={setFilters} />
+        <MultiSortConfig sortConfigs={sortConfigs} onSortConfigsChange={setSortConfigs} />
         <ToggleGroup
           type="single"
           value={segment}

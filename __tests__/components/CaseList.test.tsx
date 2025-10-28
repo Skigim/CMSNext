@@ -34,6 +34,14 @@ const mockPreferences = {
   setSortDirection: vi.fn(),
   segment: "all" as const,
   setSegment: vi.fn(),
+  sortConfigs: [{ key: "updated" as const, direction: "desc" as const }],
+  setSortConfigs: vi.fn(),
+  filters: {
+    statuses: [],
+    priorityOnly: false,
+    dateRange: {},
+  },
+  setFilters: vi.fn(),
 };
 
 vi.mock("@/hooks/useCaseListPreferences", () => ({
