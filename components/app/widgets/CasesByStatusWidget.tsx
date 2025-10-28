@@ -48,14 +48,26 @@ export function CasesByStatusWidget({ cases = [], metadata }: CasesByStatusWidge
   const breakdown = useMemo(() => data ?? [], [data]);
   const totalCases = useMemo(() => breakdown.reduce((acc, item) => acc + item.count, 0), [breakdown]);
 
-  // Convert breakdown to chart data with fill colors
+  // Map status to semantic theme colors
+  const statusColorMap: Record<string, string> = useMemo(() => ({
+    pending: 'hsl(var(--primary))',
+    approved: 'hsl(142.1 70.6% 45.3%)', // emerald-500
+    denied: 'hsl(var(--destructive))',
+    closed: 'hsl(var(--muted-foreground))',
+    spenddown: 'hsl(45 93.4% 47.5%)', // amber-500
+  }), []);
+
+  // Convert breakdown to chart data with semantic fill colors
   const chartData = useMemo(() => {
-    return breakdown.map((item, index) => ({
-      status: item.status,
-      count: item.count,
-      fill: `var(--chart-${(index % 5) + 1})`,
-    }));
-  }, [breakdown]);
+    return breakdown.map((item) => {
+      const statusKey = item.status.toLowerCase();
+      return {
+        status: item.status,
+        count: item.count,
+        fill: statusColorMap[statusKey] || 'hsl(var(--muted))',
+      };
+    });
+  }, [breakdown, statusColorMap]);
 
   // Build chart config from breakdown
   const chartConfig = useMemo(() => {
@@ -65,12 +77,14 @@ export function CasesByStatusWidget({ cases = [], metadata }: CasesByStatusWidge
       },
     };
     breakdown.forEach((item) => {
-      config[item.status.toLowerCase()] = {
+      const statusKey = item.status.toLowerCase();
+      config[statusKey] = {
         label: item.status,
+        color: statusColorMap[statusKey] || 'hsl(var(--muted))',
       };
     });
     return config;
-  }, [breakdown]);
+  }, [breakdown, statusColorMap]);
 
   if (loading && !data) {
     return (
@@ -139,17 +153,21 @@ export function CasesByStatusWidget({ cases = [], metadata }: CasesByStatusWidge
               </PieChart>
             </ChartContainer>
             <div className="mt-4 grid grid-cols-2 gap-2 text-sm">
-              {breakdown.map((item, index) => (
-                <div key={item.status} className="flex items-center gap-2">
-                  <div 
-                    className="h-3 w-3 rounded-sm" 
-                    style={{ backgroundColor: `var(--chart-${(index % 5) + 1})` }}
-                  />
-                  <span className="text-muted-foreground">
-                    {item.status}: <span className="font-medium text-foreground">{item.count}</span>
-                  </span>
-                </div>
-              ))}
+              {breakdown.map((item) => {
+                const statusKey = item.status.toLowerCase();
+                const color = statusColorMap[statusKey] || 'hsl(var(--muted))';
+                return (
+                  <div key={item.status} className="flex items-center gap-2">
+                    <div 
+                      className="h-3 w-3 rounded-sm" 
+                      style={{ backgroundColor: color }}
+                    />
+                    <span className="text-muted-foreground">
+                      {item.status}: <span className="font-medium text-foreground">{item.count}</span>
+                    </span>
+                  </div>
+                );
+              })}
             </div>
           </>
         )}

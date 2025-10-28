@@ -33,14 +33,23 @@ export function AlertsByDescriptionWidget({ alerts = [], metadata }: AlertsByDes
   const totalAlerts = useMemo(() => stats.reduce((acc, item) => acc + item.count, 0), [stats]);
   const uniqueDescriptions = stats.length;
 
-  // Convert stats to chart data with fill colors - take top 10
+  // Use theme colors for alerts - cycle through semantic colors
+  const alertColorPalette = useMemo(() => [
+    'hsl(var(--primary))',
+    'hsl(142.1 70.6% 45.3%)', // emerald-500 (success/approved)
+    'hsl(var(--destructive))',
+    'hsl(45 93.4% 47.5%)', // amber-500 (warning/spenddown)
+    'hsl(221.2 83.2% 53.3%)', // blue-500 (info)
+  ], []);
+
+  // Convert stats to chart data with theme colors - take top 10
   const chartData = useMemo(() => {
     return stats.slice(0, 10).map((item, index) => ({
       description: item.description,
       count: item.count,
-      fill: `var(--chart-${(index % 5) + 1})`,
+      fill: alertColorPalette[index % alertColorPalette.length],
     }));
-  }, [stats]);
+  }, [stats, alertColorPalette]);
 
   // Build chart config from stats
   const chartConfig = useMemo(() => {
@@ -49,14 +58,15 @@ export function AlertsByDescriptionWidget({ alerts = [], metadata }: AlertsByDes
         label: 'Alerts',
       },
     };
-    stats.slice(0, 10).forEach((item) => {
+    stats.slice(0, 10).forEach((item, index) => {
       const key = item.description.toLowerCase().replace(/[^a-z0-9]/g, '_');
       config[key] = {
         label: item.description,
+        color: alertColorPalette[index % alertColorPalette.length],
       };
     });
     return config;
-  }, [stats]);
+  }, [stats, alertColorPalette]);
 
   const freshnessLabel = useMemo(() => {
     if (!freshness.lastUpdatedAt) {
@@ -149,23 +159,26 @@ export function AlertsByDescriptionWidget({ alerts = [], metadata }: AlertsByDes
               </PieChart>
             </ChartContainer>
             <div className="mt-4 space-y-2">
-              {stats.slice(0, 10).map((item, index) => (
-                <div key={item.description} className="flex items-center justify-between text-sm">
-                  <div className="flex items-center gap-2 flex-1 min-w-0">
-                    <div 
-                      className="h-3 w-3 rounded-sm flex-shrink-0" 
-                      style={{ backgroundColor: `var(--chart-${(index % 5) + 1})` }}
-                    />
-                    <span className="text-muted-foreground truncate">{item.description}</span>
+              {stats.slice(0, 10).map((item, index) => {
+                const color = alertColorPalette[index % alertColorPalette.length];
+                return (
+                  <div key={item.description} className="flex items-center justify-between text-sm">
+                    <div className="flex items-center gap-2 flex-1 min-w-0">
+                      <div 
+                        className="h-3 w-3 rounded-sm flex-shrink-0" 
+                        style={{ backgroundColor: color }}
+                      />
+                      <span className="text-muted-foreground truncate">{item.description}</span>
+                    </div>
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                      <span className="font-medium text-foreground">{item.count}</span>
+                      <span className="text-xs text-muted-foreground">
+                        ({item.openCount} open)
+                      </span>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-2 flex-shrink-0">
-                    <span className="font-medium text-foreground">{item.count}</span>
-                    <span className="text-xs text-muted-foreground">
-                      ({item.openCount} open)
-                    </span>
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </>
         )}
