@@ -142,6 +142,8 @@ export class ActivityLogger {
         aggregateId: activity.aggregateId,
       });
     } catch (error) {
+      // Rollback in-memory state on persistence failure
+      this.appState.removeActivity(activity.id);
       logger.error('Failed to persist activity event', {
         error,
         eventType: activity.eventType,
