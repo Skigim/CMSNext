@@ -73,69 +73,64 @@
    Pure dark grayscale
    ============================================ */
 .dark {
-  /* Base color (your bunker color) is used for cards */
-  --bunker-l: 0.312;
-  --bunker-c: 0.015;
-  --bunker-h: 250.7;
+          /* --- Base (Using Bunker Palette) --- */
+          --background: oklch(0.2 0.01 250.7);               /* Darkest background */
+          --foreground: oklch(0.95 0.005 250.7);            /* Lightest text */
+          --muted-foreground: oklch(0.7 0.01 250.7);        /* Medium-light text */
+          --card: oklch(0.25 0.012 250.7);                  /* Slightly lighter background */
+          --card-foreground: oklch(0.95 0.005 250.7);       /* Text on cards */
+          --popover: oklch(0.4 0.015 250.7);                /* Lightest background (tooltips, etc) */
+          --popover-foreground: oklch(0.95 0.005 250.7);    /* Light text on popover */
 
-  /* --- Core Palette (Revolving around Bunker) --- */
-  --background: oklch(0.25 0.015 250.7);            /* Darker than card */
-  --foreground: oklch(0.95 0.005 250.7);            /* Light text for high contrast */
-  --card: oklch(var(--bunker-l) var(--bunker-c) var(--bunker-h)); /* Bunker color */
-  --card-foreground: oklch(0.95 0.005 250.7);       /* Light text on card */
-  --popover: oklch(0.40 0.015 250.7);               /* Lighter than card */
-  --popover-foreground: oklch(0.95 0.005 250.7);    /* Light text on popover */
+          /* --- Accents (Using Bunker Hue) --- */
+          --primary: oklch(0.5 0.2 250.7);                  /* Darker, saturated bunker blue */
+          --primary-foreground: oklch(0.95 0.01 250.7);      /* Light text on primary */
+          --secondary: oklch(0.4 0.015 250.7);              /* Darker gray button */
+          --secondary-foreground: oklch(0.95 0.005 250.7);  /* Light text on secondary */
+          --muted: oklch(0.4 0.015 250.7);                  /* Muted elements */
+          --muted-foreground: oklch(0.7 0.01 250.7);        /* Text on muted elements */
+          --accent: oklch(0.4 0.015 250.7);                 /* Accent elements (badges) */
+          --accent-foreground: oklch(0.95 0.005 250.7);     /* Light text on accent */
 
-  /* --- Accents (Using Bunker Hue) --- */
-  --primary: oklch(0.6 0.2 250.7);                  /* Brighter, saturated bunker blue */
-  --primary-foreground: oklch(0.2 0.01 250.7);      /* Dark text on primary */
-  --secondary: oklch(0.4 0.015 250.7);              /* Same as popover */
-  --secondary-foreground: oklch(0.95 0.005 250.7);  /* Light text on secondary */
-  --muted: oklch(0.28 0.015 250.7);                 /* Between background and card */
-  --muted-foreground: oklch(0.7 0.01 250.7);        /* Lighter, muted text */
-  --accent: oklch(0.4 0.015 250.7);                 /* Same as secondary */
-  --accent-foreground: oklch(0.95 0.005 250.7);     /* Light text on accent */
+          /* --- Destructive (Muted) --- */
+          --destructive: oklch(0.5 0.12 22.216);             /* Darker, muted red bg */
+          --destructive-foreground: oklch(0.95 0.02 22.216); /* Light text on destructive */
 
-  /* --- Destructive (Muted) --- */
-  --destructive: oklch(0.704 0.12 22.216); /* Was 0.191 */
-  --destructive-foreground: oklch(0.95 0.02 22.216); /* Adjusted for contrast */
-
-  /* --- UI Elements (Using Bunker Palette) --- */
-  --border: oklch(0.35 0.015 250.7);
-  --input: oklch(0.35 0.015 250.7);
-  --input-background: oklch(var(--bunker-l) var(--bunker-c) var(--bunker-h));
-  --switch-background: oklch(0.28 0.015 250.7);
-  --ring: oklch(0.7 0.2 250.7);                     /* Lighter, saturated focus ring */
-
-  /* --- Font Weights (Kept from original) --- */
-  --font-weight-medium: 500;
-  --font-weight-normal: 400;
-
-  /* --- Charts (Muted) --- */
-  --chart-1: oklch(0.696 0.10 162.48);      /* Green (was 0.17) */
-  --chart-2: oklch(0.488 0.15 264.376);    /* Blue (was 0.243) */
-  --chart-3: oklch(0.769 0.11 70.08);      /* Yellow (was 0.188) */
-  --chart-4: oklch(0.627 0.16 303.9);      /* Purple (was 0.265) */
-  --chart-5: oklch(0.704 0.12 22.216);      /* Red (was 0.191) */
-
-  /* --- Statuses (Updated to match muted charts) --- */
-  --chart-status-pending: oklch(0.488 0.15 264.376);
-  --chart-status-approved: oklch(0.696 0.10 162.48);
-  --chart-status-denied: oklch(0.704 0.12 22.216);
-  --chart-status-closed: oklch(0.7 0.01 250.7);      /* Gray (new muted-fg) */
-  --chart-status-spenddown: oklch(0.769 0.11 70.08);
-
-  /* --- Sidebar (Using Bunker Palette) --- */
-  --sidebar: oklch(0.2 0.01 250.7);                 /* Darkest element */
-  --sidebar-foreground: oklch(0.95 0.005 250.7);
-  --sidebar-primary: oklch(0.6 0.2 250.7);
-  --sidebar-primary-foreground: oklch(0.2 0.01 250.7);
-  --sidebar-accent: oklch(0.4 0.015 250.7);
-  --sidebar-accent-foreground: oklch(0.95 0.005 250.7);
-  --sidebar-border: oklch(0.35 0.015 250.7);
-  --sidebar-ring: oklch(0.7 0.2 250.7);
-}
-
+          /* --- UI Elements (Using Bunker Palette) --- */
+          --border: oklch(0.95 0.005 250.7 / 0.1);           /* Light border (10% alpha) */
+          --input: oklch(0.95 0.005 250.7 / 0.15);          /* Input border (15% alpha) */
+          --input-background: oklch(0.2 0.01 250.7);        /* Same as main background */
+          --switch-background: oklch(0.4 0.015 250.7);     /* Same as secondary */
+          --ring: oklch(0.7 0.01 250.7);                     /* Focus ring (muted-fg) */
+          
+          /* --- Typography --- */
+          --font-weight-medium: 500;
+          --font-weight-normal: 400;
+          
+          /* --- Charts (Muted) --- */
+          --chart-1: oklch(0.696 0.10 162.48);      /* Green (was 0.17) */
+          --chart-2: oklch(0.488 0.15 264.376);    /* Blue (was 0.243) */
+          --chart-3: oklch(0.769 0.11 70.08);      /* Yellow (was 0.188) */
+          --chart-4: oklch(0.627 0.16 303.9);      /* Purple (was 0.265) */
+          --chart-5: oklch(0.5 0.12 22.216);       /* Red (was 0.704 L, matching new destructive) */
+          
+          /* --- Statuses (Updated to match muted charts) --- */
+          --chart-status-pending: var(--chart-2);
+          --chart-status-approved: var(--chart-1);
+          --chart-status-denied: var(--chart-5);
+          --chart-status-closed: var(--muted-foreground);
+          --chart-status-spenddown: var(--chart-3);
+          
+          /* --- Sidebar (Using Bunker Palette) --- */
+          --sidebar: oklch(0.2 0.01 250.7);                 /* Darkest element */
+          --sidebar-foreground: oklch(0.95 0.005 250.7);
+          --sidebar-primary: var(--primary);
+          --sidebar-primary-foreground: var(--primary-foreground);
+          --sidebar-accent: var(--accent);
+          --sidebar-accent-foreground: var(--accent-foreground);
+          --sidebar-border: var(--border);
+          --sidebar-ring: var(--ring);
+        }
 /* ============================================
    SLATE LIGHT
    Purple-gray - Sophisticated & creative
@@ -657,5 +652,6 @@
 html {
   font-size: var(--font-size);
 }
+
 
 
