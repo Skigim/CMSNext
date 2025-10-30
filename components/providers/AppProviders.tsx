@@ -2,6 +2,7 @@ import { useCallback } from "react";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 import { FileStorageProvider } from "@/contexts/FileStorageContext";
 import { DataManagerProvider } from "@/contexts/DataManagerContext";
+import { CaseServiceProvider } from "@/contexts/CaseServiceContext";
 import { CategoryConfigProvider } from "@/contexts/CategoryConfigContext";
 import ErrorBoundary from "@/components/error/ErrorBoundary";
 import FileSystemErrorBoundary from "@/components/error/FileSystemErrorBoundary";
@@ -23,6 +24,7 @@ interface AppProvidersProps {
  * - FileSystemErrorBoundary: File system specific error handling
  * - FileStorageProvider: File system access and data persistence
  * - DataManagerProvider: Data management operations
+ * - CaseServiceProvider: Case management service layer
  * 
  * @param children - The application content to be wrapped with providers
  */
@@ -55,9 +57,11 @@ export function AppProviders({ children }: AppProvidersProps) {
             getDataFunction={getDataFunction}
           >
             <DataManagerProvider>
-              <CategoryConfigProvider>
-                {children}
-              </CategoryConfigProvider>
+              <CaseServiceProvider>
+                <CategoryConfigProvider>
+                  {children}
+                </CategoryConfigProvider>
+              </CaseServiceProvider>
             </DataManagerProvider>
           </FileStorageProvider>
         </FileSystemErrorBoundary>
