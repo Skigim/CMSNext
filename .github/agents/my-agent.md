@@ -3,7 +3,7 @@ name: NextAgent
 description: A specialized development agent for CMSNext, a TypeScript React case tracking application.
 ---
 
-# My Agent
+# NextAgent
 
 ### ARCHITECTURE CONTEXT:
 - Domain-driven design with event-based state management
