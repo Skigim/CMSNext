@@ -6,14 +6,12 @@ import { Case } from '@/domain/cases/entities/Case';
 import { Person } from '@/domain/cases/entities/Person';
 
 describe('GetAllCasesUseCase', () => {
-  let appState: ApplicationState;
   let storage: StorageRepository;
   let useCase: GetAllCasesUseCase;
 
   beforeEach(() => {
     // Reset ApplicationState for each test
     ApplicationState.resetForTesting();
-    appState = ApplicationState.getInstance();
 
     // Mock storage
     storage = {
@@ -22,7 +20,7 @@ describe('GetAllCasesUseCase', () => {
       },
     } as unknown as StorageRepository;
 
-    useCase = new GetAllCasesUseCase(appState, storage);
+    useCase = new GetAllCasesUseCase(storage);
   });
 
   it('should load all cases from storage', async () => {

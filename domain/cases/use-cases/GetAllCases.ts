@@ -1,4 +1,3 @@
-import { ApplicationState } from '@/application/ApplicationState';
 import type { StorageRepository } from '@/infrastructure/storage/StorageRepository';
 import { Case } from '@/domain/cases/entities/Case';
 import { createLogger } from '@/utils/logger';
@@ -8,11 +7,10 @@ const logger = createLogger('GetAllCasesUseCase');
 
 /**
  * Use Case: Get all cases
- * Pattern: Load from Storage → Update ApplicationState → Return Cases
+ * Pattern: Load from Storage → Return Cases
  */
 export class GetAllCasesUseCase {
   constructor(
-    private readonly appState: ApplicationState,
     private readonly storage: StorageRepository,
   ) {}
 
