@@ -193,8 +193,9 @@ describe("useCaseManagement", () => {
 
     expect(mockDataManager.updateCaseStatus).toHaveBeenCalledWith(initialCase.id, "Closed");
     expect(mocks.toastLoading).toHaveBeenCalledWith("Updating case status...");
-    expect(mocks.toastError).toHaveBeenCalledWith("Failed to update case status. Please try again.", {
-      id: "toast-id",
-    });
+    expect(mocks.toastError).toHaveBeenCalledWith(
+      expect.stringContaining("Failed to update case status to Closed"),
+      { id: "toast-id" }
+    );
   });
 });
