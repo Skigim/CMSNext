@@ -3,16 +3,21 @@ import { DomainEventBus } from '@/application/DomainEventBus';
 import type { StorageRepository } from '@/infrastructure/storage/StorageRepository';
 import { Case } from '@/domain/cases/entities/Case';
 import { Person, type PersonProps } from '@/domain/cases/entities/Person';
+import type { CaseStatus } from '@/types/case';
 import { createLogger } from '@/utils/logger';
 import { DomainError } from '@/domain/common/errors/DomainError';
 
 const logger = createLogger('CreateCaseUseCase');
 
 export interface CreateCaseInput {
+  id?: string;
   mcn: string;
   name: string;
+  status?: CaseStatus;
   person: PersonProps;
   metadata?: Record<string, unknown>;
+  createdAt?: string | Date;
+  updatedAt?: string | Date;
 }
 
 /**
@@ -31,9 +36,13 @@ export class CreateCaseUseCase {
 
     const person = Person.create(input.person);
     const caseEntity = Case.create({
+      id: input.id,
       mcn: input.mcn,
       name: input.name,
+      status: input.status,
       personId: person.id,
+      createdAt: input.createdAt,
+      updatedAt: input.updatedAt,
       metadata: input.metadata,
       person,
     });
