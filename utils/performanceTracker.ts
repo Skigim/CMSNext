@@ -1,5 +1,8 @@
 import { createLogger } from "./logger";
 
+// Temporary flag to disable performance logging during development
+const PERFORMANCE_LOGGING_ENABLED = false;
+
 interface MeasurementDetail {
   [key: string]: unknown;
 }
@@ -111,6 +114,8 @@ function popActiveMark(name: string): ActiveMark | null {
 }
 
 function logMeasurement(record: MeasurementRecord) {
+  if (!PERFORMANCE_LOGGING_ENABLED) return;
+
   measurementLog.push(record);
   performanceLogger.debug(`Measurement: ${record.name}`, {
     durationMs: Number(record.duration.toFixed(3)),
@@ -139,7 +144,9 @@ export function endMeasurement(name: string, detail?: MeasurementDetail) {
   }
   const activeMark = popActiveMark(name);
   if (!activeMark) {
-    performanceLogger.warn("Attempted to end measurement with no active start", { name });
+    if (PERFORMANCE_LOGGING_ENABLED) {
+      performanceLogger.warn("Attempted to end measurement with no active start", { name });
+    }
     return;
   }
 
@@ -186,7 +193,7 @@ export function endMeasurement(name: string, detail?: MeasurementDetail) {
 }
 
 export function recordRenderProfile(sample: RenderProfileRecord) {
-  if (!shouldTrack) {
+  if (!shouldTrack || !PERFORMANCE_LOGGING_ENABLED) {
     return;
   }
 
@@ -254,12 +261,14 @@ export function recordStorageOperation(
   storageHealthStats.operationTypes[operationType] = (storageHealthStats.operationTypes[operationType] ?? 0) + 1;
   storageHealthStats.lastOperationTime = now();
 
-  performanceLogger.debug("Storage operation recorded", {
-    operationType,
-    success,
-    latencyMs: Number(latencyMs.toFixed(2)),
-    consecutiveFailures: storageHealthStats.consecutiveFailures,
-  });
+  if (PERFORMANCE_LOGGING_ENABLED) {
+    performanceLogger.debug("Storage operation recorded", {
+      operationType,
+      success,
+      latencyMs: Number(latencyMs.toFixed(2)),
+      consecutiveFailures: storageHealthStats.consecutiveFailures,
+    });
+  }
 }
 
 /**

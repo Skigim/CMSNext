@@ -40,7 +40,8 @@ const DEFAULT_LEVEL: LogLevel = (() => {
   if (explicitLevel && explicitLevel in levelPriority) {
     return explicitLevel as LogLevel;
   }
-  return env?.DEV ? "debug" : "warn";
+  // Temporarily set to warn to reduce noise during development
+  return "warn";
 })();
 
 let currentLevel: LogLevel = DEFAULT_LEVEL;
