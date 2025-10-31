@@ -53,15 +53,32 @@ export class CaseManagementService {
   }
 
   /**
-   * Load all cases from storage
+   * Load all cases
    */
   async loadCases(): Promise<Case[]> {
+    logger.info('Loading all cases');
+
     try {
       const cases = await this.getAllCases.execute();
       logger.info('Cases loaded', { count: cases.length });
       return cases;
     } catch (error) {
-      logger.error('Failed to load cases', { error });
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      logger.error('Failed to load cases', { 
+        error: errorMessage,
+        errorType: error instanceof Error ? error.constructor.name : typeof error,
+        stack: error instanceof Error ? error.stack : undefined,
+      });
+      
+      // If storage isn't available yet, return empty array
+      // This happens before file storage is connected
+      if (errorMessage.includes('directory handle') || 
+          errorMessage.includes('not available') ||
+          errorMessage.includes('readFile skipped')) {
+        logger.warn('Storage not available yet - returning empty cases');
+        return [];
+      }
+      
       throw error;
     }
   }
