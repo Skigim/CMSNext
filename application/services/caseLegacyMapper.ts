@@ -331,13 +331,16 @@ function toDateOnly(value: string): string {
   return `${year}-${month}-${day}`;
 }
 
+let idCounter = 0;
+
 function generateId(prefix: string): string {
   if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
     return `${prefix}-${crypto.randomUUID()}`;
   }
 
+  idCounter += 1;
   const randomSegment = Math.random().toString(36).slice(2, 10);
-  return `${prefix}-${Date.now().toString(36)}-${randomSegment}`;
+  return `${prefix}-${Date.now().toString(36)}-${idCounter.toString(36)}-${randomSegment}`;
 }
 
 function buildCaseName(firstName: string, lastName: string): string {

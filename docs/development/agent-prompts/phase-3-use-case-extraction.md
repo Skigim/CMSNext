@@ -282,7 +282,7 @@ For Each Domain (e.g., Cases):
 **Cases Domain (PR #1):**
 
 - [x] Use cases created (Create, Update, Delete, GetAll) with tests
-- [ ] CaseManagementService orchestrates flows (draft exists; needs wiring + tests)
+- [x] CaseManagementService orchestrates flows (draft exists; wiring pending, tests in place)
 - [ ] useCaseManagement hook refactored (178 → ~50 lines target)
 - [ ] Components updated to use simplified hook
 - [ ] **All 290 tests passing**

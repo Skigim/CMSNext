@@ -10,6 +10,10 @@ import { DomainError } from '@/domain/common/errors/DomainError';
 const logger = createLogger('CreateCaseUseCase');
 
 export interface CreateCaseInput {
+  /**
+   * Optional. Provide only for import flows or restoring legacy records.
+   * For standard case creation, omit this field to auto-generate an ID.
+   */
   id?: string;
   mcn: string;
   name: string;
