@@ -18,6 +18,9 @@ import { createLogger } from "./logger";
 
 const telemetryLogger = createLogger("Telemetry");
 
+// Temporary flag to disable telemetry logging during development
+const TELEMETRY_ENABLED = false;
+
 interface StorageSyncEventPayload {
   operationType: "load" | "save" | "sync" | "import" | "export";
   success: boolean;
@@ -77,6 +80,8 @@ export function recordStorageSyncEvent(
   success: boolean,
   details?: Omit<StorageSyncEventPayload, "operationType" | "success" | "timestamp" | "sessionId">,
 ): void {
+  if (!TELEMETRY_ENABLED) return;
+
   const payload: StorageSyncEventPayload = {
     operationType,
     success,
@@ -113,6 +118,8 @@ export function recordAutosaveStateTransition(
   newState: string,
   details?: Omit<AutosaveStateTransitionPayload, "previousState" | "newState" | "timestamp" | "sessionId">,
 ): void {
+  if (!TELEMETRY_ENABLED) return;
+
   const payload: AutosaveStateTransitionPayload = {
     previousState,
     newState,
@@ -144,6 +151,8 @@ export function recordPerformanceMarker(
   markName: string,
   details?: Omit<PerformanceMarkerPayload, "markName" | "timestamp" | "sessionId">,
 ): void {
+  if (!TELEMETRY_ENABLED) return;
+
   const payload: PerformanceMarkerPayload = {
     markName,
     timestamp: Date.now(),
@@ -171,6 +180,8 @@ export function recordPerformanceMarker(
 export function recordStorageHealthMetrics(
   metrics: Omit<StorageHealthMetricPayload, "timestamp" | "sessionId">,
 ): void {
+  if (!TELEMETRY_ENABLED) return;
+
   const payload: StorageHealthMetricPayload = {
     timestamp: Date.now(),
     sessionId,
@@ -203,7 +214,9 @@ export function getSessionId(): string {
  */
 export function resetSessionId(): void {
   sessionId = generateSessionId();
-  telemetryLogger.lifecycle("Session ID reset", { newSessionId: sessionId });
+  if (TELEMETRY_ENABLED) {
+    telemetryLogger.lifecycle("Session ID reset", { newSessionId: sessionId });
+  }
 }
 
 export type {

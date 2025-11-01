@@ -301,8 +301,28 @@ export class StorageRepository {
     const base = (raw && typeof raw === 'object' ? raw : {}) as Record<string, unknown>;
 
     const version = typeof base.version === 'number' ? base.version : StorageRepository.CURRENT_VERSION;
-    const rawCases = this.ensureArray<CaseSnapshot>(base.cases);
-    const cases = rawCases.map(snapshot => Case.rehydrate(snapshot).toJSON());
+    const rawCases = this.ensureArray<any>(base.cases);
+    
+    // Convert CaseDisplay format to CaseSnapshot if needed (for legacy DataManager compatibility)
+    const caseSnapshots: CaseSnapshot[] = rawCases.map((item: any) => {
+      // Detect CaseDisplay format (has 'person' and 'caseRecord' objects)
+      if (item.person && item.caseRecord) {
+        return {
+          id: item.id,
+          mcn: item.mcn,
+          name: item.name,
+          status: item.status,
+          personId: item.person.id,
+          createdAt: item.createdAt,
+          updatedAt: item.updatedAt,
+          metadata: item.caseRecord.metadata || {},
+        } as CaseSnapshot;
+      }
+      // Already CaseSnapshot format
+      return item as CaseSnapshot;
+    });
+    
+    const cases = caseSnapshots.map(snapshot => Case.rehydrate(snapshot).toJSON());
     const financials = this.ensureArray<FinancialItem>(base.financials);
     const notes = this.ensureArray<Note>(base.notes);
     const alerts = this.ensureArray<Alert>(base.alerts);

@@ -86,6 +86,23 @@ Object.defineProperty(URL, 'revokeObjectURL', {
   writable: true,
 })
 
+// Mock MutationObserver for testing-library
+class MutationObserverMock {
+  observe = vi.fn()
+  disconnect = vi.fn()
+  takeRecords = vi.fn(() => [])
+  constructor(_callback: MutationCallback) {
+    // Store callback but don't execute it
+  }
+}
+
+(globalThis as any).MutationObserver = MutationObserverMock
+Object.defineProperty(window, 'MutationObserver', {
+  value: MutationObserverMock as unknown as typeof MutationObserver,
+  writable: true,
+  configurable: true,
+})
+
 // Mock ResizeObserver for components that use it
 class ResizeObserverMock {
   observe = vi.fn()

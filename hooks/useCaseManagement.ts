@@ -24,16 +24,12 @@ interface UseCaseManagementReturn {
 }
 
 /**
- * Case management hook - thin wrapper around CaseManagementAdapter service.
- * 
- * Maintains React state for UI components while delegating all business logic
- * to the service layer. This hook is now ~50 lines instead of 326 lines.
- * 
- * The service layer (CaseManagementAdapter) handles:
- * - Business logic validation
- * - Toast notifications
- * - Error handling
- * - DataManager integration
+ * Case management hook - thin wrapper around the case service facade.
+ *
+ * Maintains React state for UI components while delegating business logic
+ * to whichever implementation the provider selects (legacy adapter or
+ * hybrid domain service). This keeps the hook agnostic to the underlying
+ * architecture during the migration.
  */
 export function useCaseManagement(): UseCaseManagementReturn {
   const service = useCaseService();

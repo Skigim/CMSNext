@@ -387,6 +387,8 @@ export const AppContent = memo(function AppContent() {
       todayActivityReport,
       viewHandlers,
       yesterdayActivityReport,
+      clearReportForDate,
+      getReportForDate,
     ],
   );
 

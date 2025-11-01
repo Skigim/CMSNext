@@ -29,6 +29,16 @@ vi.mock("@/contexts/DataManagerContext", async (importOriginal) => {
   };
 });
 
+vi.mock("@/contexts/FileStorageContext", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/contexts/FileStorageContext")>();
+  return {
+    ...actual,
+    useFileStorage: () => ({
+      service: null,
+    }),
+  };
+});
+
 import { useCaseManagement } from "@/hooks/useCaseManagement";
 
 const createCaseDisplay = (overrides: Partial<CaseDisplay> = {}): CaseDisplay => {
