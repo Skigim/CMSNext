@@ -219,9 +219,16 @@ vi.mock("@/utils/AutosaveFileService", () => {
       const cloned = clone(data);
       serviceState.data = cloned;
       serviceState.lastWrite = cloned;
-      this.status.pendingWrites = 1;
-      this.statusCallback?.({ ...this.status });
-      this.emitStatus("running", "Saved", "granted");
+      serviceState.lastSaveTime = Date.now();
+      
+      // Simulate save in progress
+      this.emitStatus("running", "Saving...", "granted", { pendingWrites: 1 });
+      
+      // Simulate async save completion
+      await new Promise(resolve => setTimeout(resolve, 0));
+      
+      // Save completed
+      this.emitStatus("connected", "Saved", "granted", { pendingWrites: 0 });
       return true;
     }
 

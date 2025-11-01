@@ -114,13 +114,15 @@ function popActiveMark(name: string): ActiveMark | null {
 }
 
 function logMeasurement(record: MeasurementRecord) {
-  if (!PERFORMANCE_LOGGING_ENABLED) return;
-
+  // Always record in test environment, but only log if PERFORMANCE_LOGGING_ENABLED
   measurementLog.push(record);
-  performanceLogger.debug(`Measurement: ${record.name}`, {
-    durationMs: Number(record.duration.toFixed(3)),
-    detail: record.detail,
-  });
+  
+  if (PERFORMANCE_LOGGING_ENABLED) {
+    performanceLogger.debug(`Measurement: ${record.name}`, {
+      durationMs: Number(record.duration.toFixed(3)),
+      detail: record.detail,
+    });
+  }
 }
 
 export function startMeasurement(name: string, detail?: MeasurementDetail) {
@@ -193,19 +195,23 @@ export function endMeasurement(name: string, detail?: MeasurementDetail) {
 }
 
 export function recordRenderProfile(sample: RenderProfileRecord) {
-  if (!shouldTrack || !PERFORMANCE_LOGGING_ENABLED) {
+  if (!shouldTrack) {
     return;
   }
 
+  // Always record in test environment, but only log if PERFORMANCE_LOGGING_ENABLED
   renderProfileLog.push(sample);
-  performanceLogger.debug("Render profile", {
-    component: sample.id,
-    phase: sample.phase,
-    actualDurationMs: Number(sample.actualDuration.toFixed(3)),
-    baseDurationMs: Number(sample.baseDuration.toFixed(3)),
-    interactionCount: sample.interactionCount,
-    meta: sample.meta,
-  });
+  
+  if (PERFORMANCE_LOGGING_ENABLED) {
+    performanceLogger.debug("Render profile", {
+      component: sample.id,
+      phase: sample.phase,
+      actualDurationMs: Number(sample.actualDuration.toFixed(3)),
+      baseDurationMs: Number(sample.baseDuration.toFixed(3)),
+      interactionCount: sample.interactionCount,
+      meta: sample.meta,
+    });
+  }
 }
 
 export function getRecordedMeasurements(): MeasurementRecord[] {

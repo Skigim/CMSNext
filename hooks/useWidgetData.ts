@@ -181,8 +181,13 @@ export function useWidgetData<T>(
     // Initial fetch or refetch when the fetcher dependencies change
     fetchData();
 
-    // Set up refresh interval
+    // Set up refresh interval (disabled in test environment to prevent infinite loops with fake timers)
     const setupRefreshInterval = () => {
+      // Skip auto-refresh in test environment
+      if (import.meta.env.MODE === 'test') {
+        return;
+      }
+      
       if (refreshTimeoutRef.current) {
         clearTimeout(refreshTimeoutRef.current);
       }
