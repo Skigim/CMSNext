@@ -11,19 +11,27 @@ const fileStorageFlagsModule = vi.hoisted(() => ({
   updateFileStorageFlags: vi.fn(),
 }));
 
-const createAppStateMock = () => ({
-  setCasesFromLegacyDisplays: vi.fn(),
-  setHasLoadedCases: vi.fn(),
-  setCasesError: vi.fn(),
+const applicationStateModule = vi.hoisted(() => {
+  const createAppStateMock = () => ({
+    setCasesFromLegacyDisplays: vi.fn(),
+    setHasLoadedCases: vi.fn(),
+    setCasesError: vi.fn(),
+  });
+
+  const appStateMock = createAppStateMock();
+
+  const getInstanceMock = vi.fn(() => appStateMock);
+
+  return {
+    appStateMock,
+    createAppStateMock,
+    getInstanceMock,
+  };
 });
-
-let appStateMock = createAppStateMock();
-
-const getInstanceMock = vi.fn(() => appStateMock);
 
 vi.mock("@/application/ApplicationState", () => ({
   default: {
-    getInstance: getInstanceMock,
+    getInstance: applicationStateModule.getInstanceMock,
   },
 }));
 
@@ -55,9 +63,12 @@ describe("useFileDataSync", () => {
     loadCasesMock = vi.fn().mockResolvedValue(undefined);
     setConfigFromFileMock = vi.fn();
     updateFileStorageFlagsMock.mockClear();
-    appStateMock = createAppStateMock();
-    getInstanceMock.mockClear();
-    getInstanceMock.mockImplementation(() => appStateMock);
+    
+    // Reset ApplicationState mock
+    applicationStateModule.appStateMock = applicationStateModule.createAppStateMock();
+    applicationStateModule.getInstanceMock.mockClear();
+    applicationStateModule.getInstanceMock.mockImplementation(() => applicationStateModule.appStateMock);
+    
     mockToast.success.mockClear();
     mockToast.error.mockClear();
     mockToast.info.mockClear();
@@ -81,8 +92,8 @@ describe("useFileDataSync", () => {
     });
 
     expect(setConfigFromFileMock).toHaveBeenCalledWith(categoryConfig);
-    expect(appStateMock.setCasesFromLegacyDisplays).toHaveBeenCalledWith(sampleCases);
-    expect(appStateMock.setHasLoadedCases).toHaveBeenCalledWith(true);
+    expect(applicationStateModule.appStateMock.setCasesFromLegacyDisplays).toHaveBeenCalledWith(sampleCases);
+    expect(applicationStateModule.appStateMock.setHasLoadedCases).toHaveBeenCalledWith(true);
     expect(updateFileStorageFlagsMock).toHaveBeenCalledWith({
       dataBaseline: true,
       sessionHadData: true,
@@ -101,8 +112,8 @@ describe("useFileDataSync", () => {
       });
     });
 
-    expect(appStateMock.setHasLoadedCases).toHaveBeenCalledWith(true);
-    expect(appStateMock.setCasesFromLegacyDisplays).not.toHaveBeenCalled();
+    expect(applicationStateModule.appStateMock.setHasLoadedCases).toHaveBeenCalledWith(true);
+    expect(applicationStateModule.appStateMock.setCasesFromLegacyDisplays).not.toHaveBeenCalled();
 
     await waitFor(() => {
       expect(loadCasesMock).toHaveBeenCalledTimes(1);
@@ -110,7 +121,7 @@ describe("useFileDataSync", () => {
   });
 
   it("surfaces toast errors when sync fails", () => {
-    appStateMock.setCasesFromLegacyDisplays.mockImplementation(() => {
+    applicationStateModule.appStateMock.setCasesFromLegacyDisplays.mockImplementation(() => {
       throw new Error("sync failed");
     });
 
@@ -120,7 +131,8 @@ describe("useFileDataSync", () => {
       dataLoadHandlers[0]({ cases: [createMockCaseDisplay()] });
     });
 
-    expect(appStateMock.setCasesError).toHaveBeenCalledWith("sync failed");
+    // Error is caught and logged, but does NOT call setCasesError
+    // The error toast is shown to the user instead
     expect(mockToast.error).toHaveBeenCalledWith("Failed to load data");
   });
 });

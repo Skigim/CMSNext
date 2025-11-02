@@ -1,4 +1,4 @@
-import { useCallback } from 'react';
+import { useCallback, useRef, useEffect } from 'react';
 import type { CaseDisplay, NewCaseRecordData, NewNoteData, NewPersonData } from '@/types/case';
 import { useCaseService } from '@/contexts/CaseServiceContext';
 import { useApplicationState } from '@/application/hooks/useApplicationState';
@@ -26,6 +26,12 @@ interface UseCaseManagementReturn {
 
 export function useCaseManagement(): UseCaseManagementReturn {
   const service = useCaseService();
+  const serviceRef = useRef(service);
+
+  // Keep service ref up to date without triggering callback recreation
+  useEffect(() => {
+    serviceRef.current = service;
+  }, [service]);
 
   const cases = useApplicationState(state =>
     state.getCases().map(caseToLegacyCaseDisplay),
@@ -35,24 +41,24 @@ export function useCaseManagement(): UseCaseManagementReturn {
   const hasLoadedData = useApplicationState(state => state.getHasLoadedCases());
 
   const loadCases = useCallback(async () => {
-    return await service.loadCases();
-  }, [service]);
+    return await serviceRef.current.loadCases();
+  }, []);
 
   const saveCase = useCallback(
     async (
       caseData: { person: NewPersonData; caseRecord: NewCaseRecordData },
       editingCase?: CaseDisplay | null,
     ) => {
-      await service.saveCase(caseData, editingCase);
+      await serviceRef.current.saveCase(caseData, editingCase);
     },
-    [service],
+    [],
   );
 
   const deleteCase = useCallback(
     async (caseId: string) => {
-      await service.deleteCase(caseId);
+      await serviceRef.current.deleteCase(caseId);
     },
-    [service],
+    [],
   );
 
   const saveNote = useCallback(
@@ -61,23 +67,23 @@ export function useCaseManagement(): UseCaseManagementReturn {
       caseId: string,
       editingNote?: { id: string } | null,
     ) => {
-      return await service.saveNote(noteData, caseId, editingNote);
+      return await serviceRef.current.saveNote(noteData, caseId, editingNote);
     },
-    [service],
+    [],
   );
 
   const importCases = useCallback(
     async (importedCases: CaseDisplay[]) => {
-      await service.importCases(importedCases);
+      await serviceRef.current.importCases(importedCases);
     },
-    [service],
+    [],
   );
 
   const updateCaseStatus = useCallback(
     async (caseId: string, status: CaseDisplay['status']) => {
-      return await service.updateCaseStatus(caseId, status);
+      return await serviceRef.current.updateCaseStatus(caseId, status);
     },
-    [service],
+    [],
   );
 
   return {
