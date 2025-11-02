@@ -51,7 +51,7 @@ interface TelemetryConfig {
 const telemetryLogger = createLogger("Telemetry");
 
 // Configuration from environment or local state
-let telemetryConfig: TelemetryConfig = {
+const telemetryConfig: TelemetryConfig = {
   enabled: isCollectionEnabled(),
   sessionId: generateSessionId(),
 };

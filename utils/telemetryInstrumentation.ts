@@ -177,13 +177,17 @@ export function recordStorageHealthMetrics(
     ...metrics,
   };
 
-  telemetryLogger.info(`Storage health metrics`, {
-    successRate: `${(payload.successRate * 100).toFixed(1)}%`,
-    totalOperations: payload.totalOperations,
-    failedOperations: payload.failedOperations,
-    averageLatencyMs: `${payload.averageLatencyMs.toFixed(1)}ms`,
-    consecutiveFailures: payload.consecutiveFailures,
-  });
+  try {
+    telemetryLogger.info(`Storage health metrics`, {
+      successRate: `${(payload.successRate * 100).toFixed(1)}%`,
+      totalOperations: payload.totalOperations,
+      failedOperations: payload.failedOperations,
+      averageLatencyMs: `${payload.averageLatencyMs.toFixed(1)}ms`,
+      consecutiveFailures: payload.consecutiveFailures,
+    });
+  } catch {
+    // Silently ignore logging failures
+  }
 
   // TODO: Send to telemetry collection service when available
 }

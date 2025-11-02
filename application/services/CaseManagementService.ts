@@ -53,15 +53,35 @@ export class CaseManagementService {
   }
 
   /**
-   * Load all cases from storage
+   * Load all cases
    */
   async loadCases(): Promise<Case[]> {
+    logger.info('Loading all cases');
+
     try {
       const cases = await this.getAllCases.execute();
       logger.info('Cases loaded', { count: cases.length });
       return cases;
     } catch (error) {
-      logger.error('Failed to load cases', { error });
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      logger.error('Failed to load cases', { 
+        error: errorMessage,
+        errorType: error instanceof Error ? error.constructor.name : typeof error,
+        stack: error instanceof Error ? error.stack : undefined,
+      });
+      
+      // If storage isn't available yet, return empty array
+      // This happens before file storage is connected
+      const storageUnavailablePatterns = ['directory handle', 'not available', 'readFile skipped'];
+      const isStorageUnavailable = storageUnavailablePatterns.some(pattern => 
+        errorMessage.includes(pattern)
+      );
+      
+      if (isStorageUnavailable) {
+        logger.warn('Storage not available yet - returning empty cases');
+        return [];
+      }
+      
       throw error;
     }
   }
@@ -141,8 +161,7 @@ export class CaseManagementService {
 
       // Check if it's a DomainError wrapping an AbortError
       if (error instanceof DomainError) {
-        const errorWithCause = error as Error & { cause?: unknown };
-        const cause = errorWithCause.cause;
+        const { cause } = error as Error & { cause?: unknown };
         if (cause instanceof Error && cause.name === 'AbortError') {
           toast.dismiss(toastId);
           throw cause;

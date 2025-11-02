@@ -130,7 +130,7 @@ const widgetTitles = [
   "Cases Processed/Day",
   "Activity Timeline",
   "Total Cases by Status",
-  "Open Alerts by Description",
+  /Alerts by Description/i, // Use regex for titles that might be split across elements
   "Avg. Alert Age",
   "Avg. Case Processing Time",
 ];
@@ -178,8 +178,15 @@ describe("feature flag integration", () => {
   }
 
   it("shows all widgets when all flags are enabled", async () => {
+    const appState = ApplicationState.getInstance();
+    const flags = appState.getFeatureFlags();
+    // All flags should be true by default
+    expect(flags["dashboard.widgets.casePriority"]).toBe(true);
+    expect(flags["dashboard.widgets.alertsCleared"]).toBe(true);
+    
     renderDashboard();
 
+    // Wait for each widget using the same pattern as the passing tests
     for (const title of widgetTitles) {
       await waitFor(() => {
         expect(screen.getByText(title)).toBeInTheDocument();

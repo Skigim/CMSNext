@@ -5,6 +5,11 @@ import type { Note, NoteCategory } from '@/domain/notes/entities/Note';
 import type { Alert } from '@/domain/alerts/entities/Alert';
 import type { ActivityEvent } from '@/domain/activity/entities/ActivityEvent';
 import type { FeatureFlags } from '@/utils/featureFlags';
+import { createLogger } from '@/utils/logger';
+import {
+  createLegacyMetadata,
+  personSnapshotFromLegacy,
+} from '@/application/services/caseLegacyMapper';
 import type {
   ICaseRepository,
   IFinancialRepository,
@@ -12,6 +17,8 @@ import type {
   IAlertRepository,
   IActivityRepository,
 } from '@/domain/common/repositories';
+
+const logger = createLogger('StorageRepository');
 
 export type DomainScope = 'cases' | 'financials' | 'notes' | 'alerts' | 'activities';
 
@@ -301,8 +308,68 @@ export class StorageRepository {
     const base = (raw && typeof raw === 'object' ? raw : {}) as Record<string, unknown>;
 
     const version = typeof base.version === 'number' ? base.version : StorageRepository.CURRENT_VERSION;
-    const rawCases = this.ensureArray<CaseSnapshot>(base.cases);
-    const cases = rawCases.map(snapshot => Case.rehydrate(snapshot).toJSON());
+    const rawCases = this.ensureArray<any>(base.cases);
+    
+    // Convert CaseDisplay format to CaseSnapshot if needed (for legacy DataManager compatibility)
+    const caseSnapshots: CaseSnapshot[] = rawCases
+      .map((item: any) => {
+        try {
+          // Detect CaseDisplay format (has 'person' and 'caseRecord' objects)
+          if (item.person && item.caseRecord) {
+            const legacyDisplay = {
+              id: item.id,
+              name: item.name,
+              mcn: item.mcn,
+              status: item.status,
+              priority: Boolean(item.priority),
+              createdAt: item.createdAt,
+              updatedAt: item.updatedAt,
+              person: item.person,
+              caseRecord: item.caseRecord,
+              alerts: Array.isArray(item.alerts) ? item.alerts : [],
+            };
+
+            return {
+              id: legacyDisplay.id,
+              mcn: legacyDisplay.mcn,
+              name: legacyDisplay.name,
+              status: legacyDisplay.status,
+              personId: legacyDisplay.person.id,
+              createdAt: legacyDisplay.createdAt,
+              updatedAt: legacyDisplay.updatedAt,
+              metadata: createLegacyMetadata(legacyDisplay, item.metadata),
+              person: personSnapshotFromLegacy(legacyDisplay.person),
+            } as CaseSnapshot;
+          }
+          // Already CaseSnapshot format
+          return item as CaseSnapshot;
+        } catch (error) {
+          // Skip invalid items during conversion
+          logger.warn('Skipping invalid case during read', { 
+            itemId: item?.id,
+            error: error instanceof Error ? error.message : String(error),
+          });
+          return null;
+        }
+      })
+      .filter((snapshot): snapshot is CaseSnapshot => snapshot !== null);
+    
+    // Rehydrate and validate cases, filtering out any that fail validation
+    const cases = caseSnapshots
+      .map(snapshot => {
+        try {
+          return Case.rehydrate(snapshot).toJSON();
+        } catch (error) {
+          // Skip cases that fail validation
+          logger.warn('Skipping invalid case during rehydration', { 
+            caseId: snapshot.id,
+            error: error instanceof Error ? error.message : String(error),
+          });
+          return null;
+        }
+      })
+      .filter((caseSnapshot): caseSnapshot is CaseSnapshot => caseSnapshot !== null);
+    
     const financials = this.ensureArray<FinancialItem>(base.financials);
     const notes = this.ensureArray<Note>(base.notes);
     const alerts = this.ensureArray<Alert>(base.alerts);
