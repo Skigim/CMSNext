@@ -1,15 +1,30 @@
 import { act, renderHook, waitFor } from "@testing-library/react";
-import type { Dispatch, SetStateAction } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { createMockCaseDisplay, toast as mockToast } from "@/src/test/testUtils";
-import type { CaseDisplay } from "@/types/case";
 import { useFileDataSync } from "@/hooks/useFileDataSync";
+import type { CaseDisplay } from "@/types/case";
 
 type DataHandler = (payload: unknown) => void;
 const dataLoadHandlers: DataHandler[] = [];
 
 const fileStorageFlagsModule = vi.hoisted(() => ({
   updateFileStorageFlags: vi.fn(),
+}));
+
+const createAppStateMock = () => ({
+  setCasesFromLegacyDisplays: vi.fn(),
+  setHasLoadedCases: vi.fn(),
+  setCasesError: vi.fn(),
+});
+
+let appStateMock = createAppStateMock();
+
+const getInstanceMock = vi.fn(() => appStateMock);
+
+vi.mock("@/application/ApplicationState", () => ({
+  default: {
+    getInstance: getInstanceMock,
+  },
 }));
 
 vi.mock("@/contexts/FileStorageContext", () => ({
@@ -25,16 +40,12 @@ const updateFileStorageFlagsMock = fileStorageFlagsModule.updateFileStorageFlags
 
 describe("useFileDataSync", () => {
   let loadCasesMock: ReturnType<typeof vi.fn>;
-  let setCasesMock: ReturnType<typeof vi.fn>;
-  let setHasLoadedDataMock: ReturnType<typeof vi.fn>;
   let setConfigFromFileMock: ReturnType<typeof vi.fn>;
 
   const renderHookWithDeps = () =>
     renderHook(() =>
       useFileDataSync({
-        loadCases: loadCasesMock as unknown as () => Promise<void>,
-        setCases: setCasesMock as unknown as Dispatch<SetStateAction<CaseDisplay[]>>,
-        setHasLoadedData: setHasLoadedDataMock as unknown as (value: boolean) => void,
+        loadCases: loadCasesMock as unknown as () => Promise<CaseDisplay[]>,
         setConfigFromFile: setConfigFromFileMock as unknown as (config?: Partial<Record<string, unknown>> | null) => void,
       }),
     );
@@ -42,10 +53,11 @@ describe("useFileDataSync", () => {
   beforeEach(() => {
     dataLoadHandlers.length = 0;
     loadCasesMock = vi.fn().mockResolvedValue(undefined);
-    setCasesMock = vi.fn();
-    setHasLoadedDataMock = vi.fn();
     setConfigFromFileMock = vi.fn();
     updateFileStorageFlagsMock.mockClear();
+    appStateMock = createAppStateMock();
+    getInstanceMock.mockClear();
+    getInstanceMock.mockImplementation(() => appStateMock);
     mockToast.success.mockClear();
     mockToast.error.mockClear();
     mockToast.info.mockClear();
@@ -69,8 +81,8 @@ describe("useFileDataSync", () => {
     });
 
     expect(setConfigFromFileMock).toHaveBeenCalledWith(categoryConfig);
-    expect(setCasesMock).toHaveBeenCalledWith(sampleCases);
-    expect(setHasLoadedDataMock).toHaveBeenCalledWith(true);
+    expect(appStateMock.setCasesFromLegacyDisplays).toHaveBeenCalledWith(sampleCases);
+    expect(appStateMock.setHasLoadedCases).toHaveBeenCalledWith(true);
     expect(updateFileStorageFlagsMock).toHaveBeenCalledWith({
       dataBaseline: true,
       sessionHadData: true,
@@ -89,8 +101,8 @@ describe("useFileDataSync", () => {
       });
     });
 
-    expect(setHasLoadedDataMock).toHaveBeenCalledWith(true);
-    expect(setCasesMock).not.toHaveBeenCalled();
+    expect(appStateMock.setHasLoadedCases).toHaveBeenCalledWith(true);
+    expect(appStateMock.setCasesFromLegacyDisplays).not.toHaveBeenCalled();
 
     await waitFor(() => {
       expect(loadCasesMock).toHaveBeenCalledTimes(1);
@@ -98,7 +110,7 @@ describe("useFileDataSync", () => {
   });
 
   it("surfaces toast errors when sync fails", () => {
-    setCasesMock.mockImplementation(() => {
+    appStateMock.setCasesFromLegacyDisplays.mockImplementation(() => {
       throw new Error("sync failed");
     });
 
@@ -108,6 +120,7 @@ describe("useFileDataSync", () => {
       dataLoadHandlers[0]({ cases: [createMockCaseDisplay()] });
     });
 
+    expect(appStateMock.setCasesError).toHaveBeenCalledWith("sync failed");
     expect(mockToast.error).toHaveBeenCalledWith("Failed to load data");
   });
 });

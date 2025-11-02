@@ -1,14 +1,13 @@
 import { useCallback } from "react";
 import { toast } from "sonner";
 import { useDataManagerSafe } from "../contexts/DataManagerContext";
+import ApplicationState from "@/application/ApplicationState";
 import type { CaseDisplay, NewNoteData } from "../types/case";
 import { useNotes } from "./useNotes";
 
 interface UseNoteFlowParams {
   selectedCase: CaseDisplay | null;
   cases: CaseDisplay[];
-  setCases: React.Dispatch<React.SetStateAction<CaseDisplay[]>>;
-  setError: React.Dispatch<React.SetStateAction<string | null>>;
 }
 
 interface UseNoteFlowResult {
@@ -25,8 +24,6 @@ interface UseNoteFlowResult {
 export function useNoteFlow({
   selectedCase,
   cases,
-  setCases,
-  setError,
 }: UseNoteFlowParams): UseNoteFlowResult {
   const dataManager = useDataManagerSafe();
   const { noteForm, openAddNote, openEditNote, saveNote, deleteNote, closeNoteForm } = useNotes();
@@ -53,15 +50,16 @@ export function useNoteFlow({
       try {
         const updatedCase = await saveNote(noteData);
         if (updatedCase) {
-          setCases(prevCases => prevCases.map(c => (c.id === updatedCase.id ? updatedCase : c)));
-          setError(null);
+          const appState = ApplicationState.getInstance();
+          appState.upsertCaseFromLegacy(updatedCase);
+          appState.setCasesError(null);
         }
       } catch (err) {
         console.error("[NoteFlow] Failed to save note:", err);
         throw err;
       }
     },
-    [saveNote, setCases, setError],
+    [saveNote],
   );
 
   const handleDeleteNote = useCallback(
@@ -73,14 +71,15 @@ export function useNoteFlow({
       try {
         const updatedCase = await deleteNote(selectedCase.id, noteId);
         if (updatedCase) {
-          setCases(prevCases => prevCases.map(c => (c.id === updatedCase.id ? updatedCase : c)));
-          setError(null);
+          const appState = ApplicationState.getInstance();
+          appState.upsertCaseFromLegacy(updatedCase);
+          appState.setCasesError(null);
         }
       } catch (err) {
         console.error("[NoteFlow] Failed to delete note:", err);
       }
     },
-    [deleteNote, selectedCase, setCases, setError],
+    [deleteNote, selectedCase],
   );
 
   const handleBatchUpdateNote = useCallback(
@@ -88,16 +87,17 @@ export function useNoteFlow({
       if (!selectedCase || !dataManager) {
         if (!dataManager) {
           const errorMsg = "Data storage is not available. Please check your connection.";
-          setError(errorMsg);
+          ApplicationState.getInstance().setCasesError(errorMsg);
           toast.error(errorMsg);
         }
         return;
       }
 
       try {
-        setError(null);
+        const appState = ApplicationState.getInstance();
+        appState.setCasesError(null);
         const updatedCase = await dataManager.updateNote(selectedCase.id, noteId, updatedNote);
-        setCases(prevCases => prevCases.map(c => (c.id === selectedCase.id ? updatedCase : c)));
+        appState.upsertCaseFromLegacy(updatedCase);
         toast.success("Note updated successfully", { duration: 2000 });
       } catch (err) {
         console.error("[NoteFlow] Failed to update note:", err);
@@ -116,12 +116,12 @@ export function useNoteFlow({
           }
         }
 
-        setError(errorMsg);
+        ApplicationState.getInstance().setCasesError(errorMsg);
         toast.error(errorMsg, { duration: 5000 });
         throw err;
       }
     },
-    [dataManager, selectedCase, setCases, setError],
+    [dataManager, selectedCase],
   );
 
   const handleBatchCreateNote = useCallback(
@@ -129,16 +129,17 @@ export function useNoteFlow({
       if (!selectedCase || !dataManager) {
         if (!dataManager) {
           const errorMsg = "Data storage is not available. Please check your connection.";
-          setError(errorMsg);
+          ApplicationState.getInstance().setCasesError(errorMsg);
           toast.error(errorMsg);
         }
         return;
       }
 
       try {
-        setError(null);
+        const appState = ApplicationState.getInstance();
+        appState.setCasesError(null);
         const updatedCase = await dataManager.addNote(selectedCase.id, noteData);
-        setCases(prevCases => prevCases.map(c => (c.id === selectedCase.id ? updatedCase : c)));
+        appState.upsertCaseFromLegacy(updatedCase);
         toast.success("Note added successfully", { duration: 2000 });
       } catch (err) {
         console.error("[NoteFlow] Failed to create note:", err);
@@ -157,12 +158,12 @@ export function useNoteFlow({
           }
         }
 
-        setError(errorMsg);
+        ApplicationState.getInstance().setCasesError(errorMsg);
         toast.error(errorMsg, { duration: 5000 });
         throw err;
       }
     },
-    [dataManager, selectedCase, setCases, setError],
+    [dataManager, selectedCase],
   );
 
   const handleCancelNoteForm = useCallback(() => {

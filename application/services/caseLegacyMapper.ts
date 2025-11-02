@@ -396,6 +396,22 @@ export function personSnapshotFromLegacy(person: LegacyPerson): PersonSnapshot {
   };
 }
 
+export function legacyCaseDisplayToCase(display: CaseDisplay, previous?: Case | null): Case {
+  const metadata = createLegacyMetadata(display, previous?.metadata);
+
+  return Case.rehydrate({
+    id: display.id,
+    mcn: display.mcn,
+    name: display.name,
+    status: display.status,
+    personId: display.person.id,
+    createdAt: display.createdAt,
+    updatedAt: display.updatedAt,
+    metadata,
+    person: personSnapshotFromLegacy(display.person),
+  });
+}
+
 export function personPropsFromNewPerson(data: NewPersonData): PersonProps {
   return {
     firstName: data.firstName.trim(),

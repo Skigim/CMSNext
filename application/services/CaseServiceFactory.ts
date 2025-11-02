@@ -6,7 +6,7 @@ import { caseToLegacyCaseDisplay } from './caseLegacyMapper';
 import { createLogger } from '@/utils/logger';
 import { getFileStorageFlags, updateFileStorageFlags } from '@/utils/fileStorageFlags';
 import type { CaseStatus } from '@/types/case';
-import type ApplicationState from '@/application/ApplicationState';
+import ApplicationState from '@/application/ApplicationState';
 import type { StorageRepository } from '@/infrastructure/storage/StorageRepository';
 
 const logger = createLogger('CaseServiceFactory');
@@ -29,41 +29,114 @@ export interface CaseServiceContract {
 }
 
 class LegacyCaseService implements CaseServiceContract {
-  constructor(private readonly legacy: CaseManagementAdapter) {}
+  constructor(
+    private readonly legacy: CaseManagementAdapter,
+    private readonly appState: ApplicationState,
+  ) {}
 
   isAvailable(): boolean {
     return this.legacy.isAvailable();
   }
 
-  loadCases(): Promise<CaseDisplay[]> {
-    return this.legacy.loadCases();
+  async loadCases(): Promise<CaseDisplay[]> {
+    this.appState.setCasesLoading(true);
+    this.appState.setCasesError(null);
+
+    try {
+      const cases = await this.legacy.loadCases();
+      this.appState.setCasesFromLegacyDisplays(cases);
+      this.appState.setHasLoadedCases(true);
+      return cases;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to load cases';
+      this.appState.setCasesError(message);
+      throw error;
+    } finally {
+      this.appState.setCasesLoading(false);
+    }
   }
 
-  saveCase(
+  async saveCase(
     caseData: { person: NewPersonData; caseRecord: NewCaseRecordData },
     editingCase?: CaseDisplay | null,
   ): Promise<CaseDisplay> {
-    return this.legacy.saveCase(caseData, editingCase);
+    this.appState.setCasesError(null);
+
+    try {
+      const result = await this.legacy.saveCase(caseData, editingCase);
+      this.appState.upsertCaseFromLegacy(result);
+      this.appState.setHasLoadedCases(true);
+      return result;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to save case';
+      this.appState.setCasesError(message);
+      throw error;
+    }
   }
 
-  deleteCase(caseId: string, personName?: string): Promise<void> {
-    return this.legacy.deleteCase(caseId, personName);
+  async deleteCase(caseId: string, personName?: string): Promise<void> {
+    this.appState.setCasesError(null);
+
+    try {
+      await this.legacy.deleteCase(caseId, personName);
+      this.appState.removeCase(caseId);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to delete case';
+      this.appState.setCasesError(message);
+      throw error;
+    }
   }
 
-  saveNote(
+  async saveNote(
     noteData: NewNoteData,
     caseId: string,
     editingNote?: { id: string } | null,
   ): Promise<CaseDisplay> {
-    return this.legacy.saveNote(noteData, caseId, editingNote);
+    this.appState.setCasesError(null);
+
+    try {
+      const updated = await this.legacy.saveNote(noteData, caseId, editingNote);
+      this.appState.upsertCaseFromLegacy(updated);
+      return updated;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to save note';
+      this.appState.setCasesError(message);
+      throw error;
+    }
   }
 
-  importCases(importedCases: CaseDisplay[]): Promise<void> {
-    return this.legacy.importCases(importedCases);
+  async importCases(importedCases: CaseDisplay[]): Promise<void> {
+    this.appState.setCasesError(null);
+
+    try {
+      await this.legacy.importCases(importedCases);
+      importedCases.forEach(display => {
+        this.appState.upsertCaseFromLegacy(display);
+      });
+      this.appState.setHasLoadedCases(true);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to import cases';
+      this.appState.setCasesError(message);
+      throw error;
+    }
   }
 
-  updateCaseStatus(caseId: string, status: CaseStatus): Promise<CaseDisplay> {
-    return this.legacy.updateCaseStatus(caseId, status);
+  async updateCaseStatus(caseId: string, status: CaseStatus): Promise<CaseDisplay> {
+    this.appState.setCasesError(null);
+
+    try {
+      const updated = await this.legacy.updateCaseStatus(caseId, status);
+      this.appState.upsertCaseFromLegacy(updated);
+      return updated;
+    } catch (error) {
+      if (error instanceof Error && error.name === 'AbortError') {
+        throw error;
+      }
+
+      const message = error instanceof Error ? error.message : 'Failed to update case status';
+      this.appState.setCasesError(message);
+      throw error;
+    }
   }
 }
 
@@ -83,7 +156,7 @@ class HybridCaseService implements CaseServiceContract {
 
   async loadCases(): Promise<CaseDisplay[]> {
     try {
-      const cases = await this.domain.loadCases();
+      const displays = await this.domain.loadCases();
 
       // Ensure ApplicationState stays in sync with on-disk storage so downstream
       // use cases (update/delete) can rely on the in-memory cache.
@@ -95,7 +168,6 @@ class HybridCaseService implements CaseServiceContract {
         });
       }
 
-      const displays = cases.map(caseToLegacyCaseDisplay);
       updateFileStorageFlags({ dataBaseline: true, sessionHadData: displays.length > 0 });
 
       if (displays.length === 0 && !getFileStorageFlags().inConnectionFlow) {
@@ -114,29 +186,62 @@ class HybridCaseService implements CaseServiceContract {
     }
   }
 
-  saveCase(
+  async saveCase(
     caseData: { person: NewPersonData; caseRecord: NewCaseRecordData },
     editingCase?: CaseDisplay | null,
   ): Promise<CaseDisplay> {
-    // Case creation & updates still pass through the legacy adapter until the
-    // domain service supports form-to-domain mapping.
-    return this.legacy.saveCase(caseData, editingCase);
+    this.appState.setCasesError(null);
+
+    try {
+      // Case creation & updates still pass through the legacy adapter until the
+      // domain service supports form-to-domain mapping.
+      const result = await this.legacy.saveCase(caseData, editingCase);
+      this.appState.upsertCaseFromLegacy(result);
+      this.appState.setHasLoadedCases(true);
+      return result;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to save case';
+      this.appState.setCasesError(message);
+      throw error;
+    }
   }
 
   async deleteCase(caseId: string, personName?: string): Promise<void> {
     await this.domain.deleteCaseWithFeedback(caseId, personName);
   }
 
-  saveNote(
+  async saveNote(
     noteData: NewNoteData,
     caseId: string,
     editingNote?: { id: string } | null,
   ): Promise<CaseDisplay> {
-    return this.legacy.saveNote(noteData, caseId, editingNote);
+    this.appState.setCasesError(null);
+
+    try {
+      const updated = await this.legacy.saveNote(noteData, caseId, editingNote);
+      this.appState.upsertCaseFromLegacy(updated);
+      return updated;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to save note';
+      this.appState.setCasesError(message);
+      throw error;
+    }
   }
 
-  importCases(importedCases: CaseDisplay[]): Promise<void> {
-    return this.legacy.importCases(importedCases);
+  async importCases(importedCases: CaseDisplay[]): Promise<void> {
+    this.appState.setCasesError(null);
+
+    try {
+      await this.legacy.importCases(importedCases);
+      importedCases.forEach(display => {
+        this.appState.upsertCaseFromLegacy(display);
+      });
+      this.appState.setHasLoadedCases(true);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to import cases';
+      this.appState.setCasesError(message);
+      throw error;
+    }
   }
 
   async updateCaseStatus(caseId: string, status: CaseStatus): Promise<CaseDisplay> {
@@ -162,5 +267,5 @@ export function createCaseService({ legacy, domain, useDomain }: CaseServiceFact
     return new HybridCaseService(domain.service, legacy, domain.appState, domain.storage);
   }
 
-  return new LegacyCaseService(legacy);
+  return new LegacyCaseService(legacy, ApplicationState.getInstance());
 }

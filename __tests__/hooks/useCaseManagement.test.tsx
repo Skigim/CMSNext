@@ -1,211 +1,99 @@
 import { renderHook, act } from "@testing-library/react";
-import { describe, it, expect, vi, beforeEach } from "vitest";
-import type { ReactNode } from "react";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { CaseDisplay } from "@/types/case";
-import { CaseServiceProvider } from "@/contexts/CaseServiceContext";
-
-const mocks = vi.hoisted(() => ({
-  toastSuccess: vi.fn(),
-  toastError: vi.fn(),
-  toastLoading: vi.fn(),
-  toastDismiss: vi.fn(),
-  useDataManagerSafeMock: vi.fn(),
-}));
-
-vi.mock("sonner", () => ({
-  toast: {
-    success: mocks.toastSuccess,
-    error: mocks.toastError,
-    loading: mocks.toastLoading,
-    dismiss: mocks.toastDismiss,
-  },
-}));
-
-vi.mock("@/contexts/DataManagerContext", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("@/contexts/DataManagerContext")>();
-  return {
-    ...actual,
-    useDataManagerSafe: mocks.useDataManagerSafeMock,
-  };
-});
-
-vi.mock("@/contexts/FileStorageContext", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("@/contexts/FileStorageContext")>();
-  return {
-    ...actual,
-    useFileStorage: () => ({
-      service: null,
-    }),
-  };
-});
-
 import { useCaseManagement } from "@/hooks/useCaseManagement";
 
-const createCaseDisplay = (overrides: Partial<CaseDisplay> = {}): CaseDisplay => {
-  const base: CaseDisplay = {
-    id: "case-1",
-    name: "Test Case",
-    mcn: "MCN-1",
-    status: "Pending",
-    priority: false,
-    createdAt: "2025-01-01T00:00:00.000Z",
-    updatedAt: "2025-01-01T00:00:00.000Z",
-    person: {
-      id: "person-1",
-      firstName: "Test",
-      lastName: "Case",
-      name: "Test Case",
-      email: "test@example.com",
-      phone: "555-555-5555",
-      dateOfBirth: "1990-01-01",
-      ssn: "111-22-3333",
-      organizationId: null,
-      livingArrangement: "Apartment/House",
-      address: {
-        street: "123 Main St",
-        city: "Anytown",
-        state: "CA",
-        zip: "90210",
-      },
-      mailingAddress: {
-        street: "123 Main St",
-        city: "Anytown",
-        state: "CA",
-        zip: "90210",
-        sameAsPhysical: true,
-      },
-      authorizedRepIds: [],
-      familyMembers: [],
-      status: "Active",
-      createdAt: "2025-01-01T00:00:00.000Z",
-      dateAdded: "2025-01-01T00:00:00.000Z",
-    },
-    caseRecord: {
-      id: "case-record-1",
-      mcn: "MCN-1",
-      applicationDate: "2025-01-10",
-      caseType: "LTC",
-      personId: "person-1",
-      spouseId: "",
-      status: "Pending",
-      description: "",
-      priority: false,
-      livingArrangement: "Apartment/House",
-      withWaiver: false,
-      admissionDate: "",
-      organizationId: "",
-      authorizedReps: [],
-      retroRequested: "",
-      financials: {
-        resources: [],
-        income: [],
-        expenses: [],
-      },
-      notes: [],
-      createdDate: "2025-01-01T00:00:00.000Z",
-      updatedDate: "2025-01-01T00:00:00.000Z",
-    },
-  };
+const mockCaseService = vi.hoisted(() => ({
+  loadCases: vi.fn(),
+  saveCase: vi.fn(),
+  deleteCase: vi.fn(),
+  saveNote: vi.fn(),
+  importCases: vi.fn(),
+  updateCaseStatus: vi.fn(),
+}));
 
-  return {
-    ...base,
-    ...overrides,
-    person: {
-      ...base.person,
-      ...(overrides.person ?? {}),
-    },
-    caseRecord: {
-      ...base.caseRecord,
-      ...(overrides.caseRecord ?? {}),
-    },
-  };
-};
+const mockAppState = vi.hoisted(() => ({
+  getCases: vi.fn(() => [] as CaseDisplay[]),
+  getCasesLoading: vi.fn(() => false),
+  getCasesError: vi.fn(() => null as string | null),
+  getHasLoadedCases: vi.fn(() => false),
+}));
+
+vi.mock("@/contexts/CaseServiceContext", () => ({
+  useCaseService: () => mockCaseService,
+}));
+
+vi.mock("@/application/hooks/useApplicationState", () => ({
+  useApplicationState: (selector: (state: typeof mockAppState) => unknown) => selector(mockAppState),
+}));
+
+vi.mock("@/application/services/caseLegacyMapper", () => ({
+  caseToLegacyCaseDisplay: (value: unknown) => value,
+}));
 
 describe("useCaseManagement", () => {
-  const wrapper = ({ children }: { children: ReactNode }) => (
-    <CaseServiceProvider>{children}</CaseServiceProvider>
-  );
-
   beforeEach(() => {
-    mocks.toastSuccess.mockReset();
-    mocks.toastError.mockReset();
-    mocks.toastLoading.mockReset();
-    mocks.toastDismiss.mockReset();
-    mocks.toastLoading.mockImplementation(() => "toast-id");
-    mocks.useDataManagerSafeMock.mockReset();
+    mockCaseService.loadCases.mockReset();
+    mockCaseService.saveCase.mockReset();
+    mockCaseService.deleteCase.mockReset();
+    mockCaseService.saveNote.mockReset();
+    mockCaseService.importCases.mockReset();
+    mockCaseService.updateCaseStatus.mockReset();
+
+    mockAppState.getCases.mockReturnValue([
+      {
+        id: "case-1",
+        name: "Example",
+      } as CaseDisplay,
+    ]);
+    mockAppState.getCasesLoading.mockReturnValue(true);
+  mockAppState.getCasesError.mockReturnValue("oops");
+    mockAppState.getHasLoadedCases.mockReturnValue(true);
   });
 
-  it("updates case status via DataManager and syncs local state", async () => {
-    const initialCase = createCaseDisplay();
-    const updatedCase = createCaseDisplay({ status: "Active" });
+  it("exposes projections from ApplicationState", () => {
+    const { result } = renderHook(() => useCaseManagement());
 
-    const mockDataManager = {
-      updateCaseStatus: vi.fn().mockResolvedValue(updatedCase),
-    };
-
-  mocks.useDataManagerSafeMock.mockReturnValue(mockDataManager);
-
-    const { result } = renderHook(() => useCaseManagement(), { wrapper });
-
-    act(() => {
-      result.current.setCases([initialCase]);
-    });
-
-    await act(async () => {
-      const returned = await result.current.updateCaseStatus(initialCase.id, "Active");
-      expect(returned).toEqual(updatedCase);
-    });
-
-    expect(mockDataManager.updateCaseStatus).toHaveBeenCalledWith(initialCase.id, "Active");
-    expect(result.current.cases[0]).toEqual(updatedCase);
-    expect(mocks.toastLoading).toHaveBeenCalledWith("Updating case status...");
-    expect(mocks.toastSuccess).toHaveBeenCalledWith("Status updated to Active", {
-      id: "toast-id",
-      duration: 2000,
-    });
+    expect(result.current.cases).toEqual([
+      {
+        id: "case-1",
+        name: "Example",
+      },
+    ]);
+    expect(result.current.loading).toBe(true);
+    expect(result.current.error).toBe("oops");
+    expect(result.current.hasLoadedData).toBe(true);
   });
 
-  it("returns null and surfaces an error when DataManager is unavailable", async () => {
-    mocks.useDataManagerSafeMock.mockReturnValue(null);
+  it("delegates loadCases to the service", async () => {
+    mockCaseService.loadCases.mockResolvedValue([{ id: "case-2" } as CaseDisplay]);
 
-    const { result } = renderHook(() => useCaseManagement(), { wrapper });
+    const { result } = renderHook(() => useCaseManagement());
+    const response = await result.current.loadCases();
 
-    await act(async () => {
-      const response = await result.current.updateCaseStatus("missing-case", "Active");
-      expect(response).toBeNull();
-    });
-
-    expect(mocks.toastLoading).not.toHaveBeenCalled();
-    expect(mocks.toastError).toHaveBeenCalledWith(
-      "Data storage is not available. Please connect to a folder first.",
-    );
+    expect(mockCaseService.loadCases).toHaveBeenCalledTimes(1);
+    expect(response).toEqual([{ id: "case-2" }]);
   });
 
-  it("handles DataManager update errors gracefully", async () => {
-    const initialCase = createCaseDisplay();
+  it("delegates updateCaseStatus to the service and returns the result", async () => {
+    const updatedCase = { id: "case-1", status: "Active" } as CaseDisplay;
+    mockCaseService.updateCaseStatus.mockResolvedValue(updatedCase);
 
-    const mockDataManager = {
-      updateCaseStatus: vi.fn().mockRejectedValue(new Error("Update failed")),
-    };
+    const { result } = renderHook(() => useCaseManagement());
+    const response = await result.current.updateCaseStatus("case-1", "Active");
 
-    mocks.useDataManagerSafeMock.mockReturnValue(mockDataManager);
+    expect(mockCaseService.updateCaseStatus).toHaveBeenCalledWith("case-1", "Active");
+    expect(response).toBe(updatedCase);
+  });
 
-    const { result } = renderHook(() => useCaseManagement(), { wrapper });
+  it("forwards deleteCase calls to the service", async () => {
+    mockCaseService.deleteCase.mockResolvedValue(undefined);
 
-    act(() => {
-      result.current.setCases([initialCase]);
-    });
-
+    const { result } = renderHook(() => useCaseManagement());
     await act(async () => {
-      const response = await result.current.updateCaseStatus(initialCase.id, "Closed");
-      expect(response).toBeNull();
+      await result.current.deleteCase("case-9");
     });
 
-    expect(mockDataManager.updateCaseStatus).toHaveBeenCalledWith(initialCase.id, "Closed");
-    expect(mocks.toastLoading).toHaveBeenCalledWith("Updating case status...");
-    expect(mocks.toastError).toHaveBeenCalledWith(
-      expect.stringContaining("Failed to update case status to Closed"),
-      { id: "toast-id" }
-    );
+    expect(mockCaseService.deleteCase).toHaveBeenCalledWith("case-9");
   });
 });
