@@ -72,9 +72,12 @@ export class CaseManagementService {
       
       // If storage isn't available yet, return empty array
       // This happens before file storage is connected
-      if (errorMessage.includes('directory handle') || 
-          errorMessage.includes('not available') ||
-          errorMessage.includes('readFile skipped')) {
+      const storageUnavailablePatterns = ['directory handle', 'not available', 'readFile skipped'];
+      const isStorageUnavailable = storageUnavailablePatterns.some(pattern => 
+        errorMessage.includes(pattern)
+      );
+      
+      if (isStorageUnavailable) {
         logger.warn('Storage not available yet - returning empty cases');
         return [];
       }
@@ -158,8 +161,7 @@ export class CaseManagementService {
 
       // Check if it's a DomainError wrapping an AbortError
       if (error instanceof DomainError) {
-        const errorWithCause = error as Error & { cause?: unknown };
-        const cause = errorWithCause.cause;
+        const { cause } = error as Error & { cause?: unknown };
         if (cause instanceof Error && cause.name === 'AbortError') {
           toast.dismiss(toastId);
           throw cause;

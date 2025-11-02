@@ -18,9 +18,6 @@ import { createLogger } from "./logger";
 
 const telemetryLogger = createLogger("Telemetry");
 
-// Temporary flag to disable telemetry logging during development
-const TELEMETRY_ENABLED = false;
-
 interface StorageSyncEventPayload {
   operationType: "load" | "save" | "sync" | "import" | "export";
   success: boolean;
@@ -80,8 +77,6 @@ export function recordStorageSyncEvent(
   success: boolean,
   details?: Omit<StorageSyncEventPayload, "operationType" | "success" | "timestamp" | "sessionId">,
 ): void {
-  if (!TELEMETRY_ENABLED) return;
-
   const payload: StorageSyncEventPayload = {
     operationType,
     success,
@@ -118,8 +113,6 @@ export function recordAutosaveStateTransition(
   newState: string,
   details?: Omit<AutosaveStateTransitionPayload, "previousState" | "newState" | "timestamp" | "sessionId">,
 ): void {
-  if (!TELEMETRY_ENABLED) return;
-
   const payload: AutosaveStateTransitionPayload = {
     previousState,
     newState,
@@ -151,8 +144,6 @@ export function recordPerformanceMarker(
   markName: string,
   details?: Omit<PerformanceMarkerPayload, "markName" | "timestamp" | "sessionId">,
 ): void {
-  if (!TELEMETRY_ENABLED) return;
-
   const payload: PerformanceMarkerPayload = {
     markName,
     timestamp: Date.now(),
@@ -180,21 +171,23 @@ export function recordPerformanceMarker(
 export function recordStorageHealthMetrics(
   metrics: Omit<StorageHealthMetricPayload, "timestamp" | "sessionId">,
 ): void {
-  if (!TELEMETRY_ENABLED) return;
-
   const payload: StorageHealthMetricPayload = {
     timestamp: Date.now(),
     sessionId,
     ...metrics,
   };
 
-  telemetryLogger.info(`Storage health metrics`, {
-    successRate: `${(payload.successRate * 100).toFixed(1)}%`,
-    totalOperations: payload.totalOperations,
-    failedOperations: payload.failedOperations,
-    averageLatencyMs: `${payload.averageLatencyMs.toFixed(1)}ms`,
-    consecutiveFailures: payload.consecutiveFailures,
-  });
+  try {
+    telemetryLogger.info(`Storage health metrics`, {
+      successRate: `${(payload.successRate * 100).toFixed(1)}%`,
+      totalOperations: payload.totalOperations,
+      failedOperations: payload.failedOperations,
+      averageLatencyMs: `${payload.averageLatencyMs.toFixed(1)}ms`,
+      consecutiveFailures: payload.consecutiveFailures,
+    });
+  } catch {
+    // Silently ignore logging failures
+  }
 
   // TODO: Send to telemetry collection service when available
 }
@@ -214,9 +207,7 @@ export function getSessionId(): string {
  */
 export function resetSessionId(): void {
   sessionId = generateSessionId();
-  if (TELEMETRY_ENABLED) {
-    telemetryLogger.lifecycle("Session ID reset", { newSessionId: sessionId });
-  }
+  telemetryLogger.lifecycle("Session ID reset", { newSessionId: sessionId });
 }
 
 export type {

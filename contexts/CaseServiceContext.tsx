@@ -1,4 +1,5 @@
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
+import { toast } from 'sonner';
 import { CaseManagementAdapter } from '@/application/services/CaseManagementAdapter';
 import { CaseManagementService } from '@/application/services/CaseManagementService';
 import { ApplicationState } from '@/application/ApplicationState';
@@ -56,14 +57,23 @@ export function CaseServiceProvider({ children }: CaseServiceProviderProps) {
     (async () => {
       try {
         await appState.hydrate(storage);
+
+        if (!cancelled) {
+          setDomainDeps({ service: domainService, appState, storage });
+        }
       } catch (error) {
+        // Handle AbortError as a non-error (user cancellation)
+        if (error instanceof Error && error.name === 'AbortError') {
+          // Silent cancellation - don't log or show toast
+          return;
+        }
+
+        // Log and notify user for all other errors
         logger.error('Failed to hydrate application state for domain service', {
           error: error instanceof Error ? error.message : String(error),
         });
-      }
-
-      if (!cancelled) {
-        setDomainDeps({ service: domainService, appState, storage });
+        toast.error('Failed to initialize case management');
+        // Don't set domainDeps on hydration failure
       }
     })();
 

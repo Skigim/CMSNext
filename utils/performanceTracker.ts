@@ -1,8 +1,5 @@
 import { createLogger } from "./logger";
 
-// Temporary flag to disable performance logging during development
-const PERFORMANCE_LOGGING_ENABLED = false;
-
 interface MeasurementDetail {
   [key: string]: unknown;
 }
@@ -114,15 +111,11 @@ function popActiveMark(name: string): ActiveMark | null {
 }
 
 function logMeasurement(record: MeasurementRecord) {
-  // Always record in test environment, but only log if PERFORMANCE_LOGGING_ENABLED
   measurementLog.push(record);
-  
-  if (PERFORMANCE_LOGGING_ENABLED) {
-    performanceLogger.debug(`Measurement: ${record.name}`, {
-      durationMs: Number(record.duration.toFixed(3)),
-      detail: record.detail,
-    });
-  }
+  performanceLogger.debug(`Measurement: ${record.name}`, {
+    durationMs: Number(record.duration.toFixed(3)),
+    detail: record.detail,
+  });
 }
 
 export function startMeasurement(name: string, detail?: MeasurementDetail) {
@@ -146,9 +139,7 @@ export function endMeasurement(name: string, detail?: MeasurementDetail) {
   }
   const activeMark = popActiveMark(name);
   if (!activeMark) {
-    if (PERFORMANCE_LOGGING_ENABLED) {
-      performanceLogger.warn("Attempted to end measurement with no active start", { name });
-    }
+    performanceLogger.warn("Attempted to end measurement with no active start", { name });
     return;
   }
 
@@ -199,19 +190,15 @@ export function recordRenderProfile(sample: RenderProfileRecord) {
     return;
   }
 
-  // Always record in test environment, but only log if PERFORMANCE_LOGGING_ENABLED
   renderProfileLog.push(sample);
-  
-  if (PERFORMANCE_LOGGING_ENABLED) {
-    performanceLogger.debug("Render profile", {
-      component: sample.id,
-      phase: sample.phase,
-      actualDurationMs: Number(sample.actualDuration.toFixed(3)),
-      baseDurationMs: Number(sample.baseDuration.toFixed(3)),
-      interactionCount: sample.interactionCount,
-      meta: sample.meta,
-    });
-  }
+  performanceLogger.debug("Render profile", {
+    component: sample.id,
+    phase: sample.phase,
+    actualDurationMs: Number(sample.actualDuration.toFixed(3)),
+    baseDurationMs: Number(sample.baseDuration.toFixed(3)),
+    interactionCount: sample.interactionCount,
+    meta: sample.meta,
+  });
 }
 
 export function getRecordedMeasurements(): MeasurementRecord[] {
@@ -267,14 +254,12 @@ export function recordStorageOperation(
   storageHealthStats.operationTypes[operationType] = (storageHealthStats.operationTypes[operationType] ?? 0) + 1;
   storageHealthStats.lastOperationTime = now();
 
-  if (PERFORMANCE_LOGGING_ENABLED) {
-    performanceLogger.debug("Storage operation recorded", {
-      operationType,
-      success,
-      latencyMs: Number(latencyMs.toFixed(2)),
-      consecutiveFailures: storageHealthStats.consecutiveFailures,
-    });
-  }
+  performanceLogger.debug("Storage operation recorded", {
+    operationType,
+    success,
+    latencyMs: Number(latencyMs.toFixed(2)),
+    consecutiveFailures: storageHealthStats.consecutiveFailures,
+  });
 }
 
 /**

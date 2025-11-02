@@ -5,6 +5,7 @@ import type { Note, NoteCategory } from '@/domain/notes/entities/Note';
 import type { Alert } from '@/domain/alerts/entities/Alert';
 import type { ActivityEvent } from '@/domain/activity/entities/ActivityEvent';
 import type { FeatureFlags } from '@/utils/featureFlags';
+import { createLogger } from '@/utils/logger';
 import type {
   ICaseRepository,
   IFinancialRepository,
@@ -12,6 +13,8 @@ import type {
   IAlertRepository,
   IActivityRepository,
 } from '@/domain/common/repositories';
+
+const logger = createLogger('StorageRepository');
 
 export type DomainScope = 'cases' | 'financials' | 'notes' | 'alerts' | 'activities';
 
@@ -324,7 +327,10 @@ export class StorageRepository {
           return item as CaseSnapshot;
         } catch (error) {
           // Skip invalid items during conversion
-          console.warn('StorageRepository: Skipping invalid case during read', { item, error });
+          logger.warn('Skipping invalid case during read', { 
+            itemId: item?.id,
+            error: error instanceof Error ? error.message : String(error),
+          });
           return null;
         }
       })
@@ -337,7 +343,10 @@ export class StorageRepository {
           return Case.rehydrate(snapshot).toJSON();
         } catch (error) {
           // Skip cases that fail validation
-          console.warn('StorageRepository: Skipping invalid case during rehydration', { snapshot, error });
+          logger.warn('Skipping invalid case during rehydration', { 
+            caseId: snapshot.id,
+            error: error instanceof Error ? error.message : String(error),
+          });
           return null;
         }
       })
