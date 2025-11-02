@@ -370,9 +370,11 @@ describe("connect → load → edit → save flow", () => {
       expect(mockToast.success).toHaveBeenCalled();
     }, { timeout: 5000 });
 
-    // Verify success - the hybrid service shows different toast messages than legacy
-    // Just verify that a success toast was called, which indicates the save completed
-    expect(mockToast.success).toHaveBeenCalled();
+    // Verify the data was actually persisted by checking the last write
+    expect(serviceState.lastWrite).toBeTruthy();
+    if (serviceState.lastWrite) {
+      expect(serviceState.lastWrite.cases[0].person.firstName).toBe("Updated");
+    }
     },
     15000,
   );

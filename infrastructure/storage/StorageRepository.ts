@@ -6,6 +6,10 @@ import type { Alert } from '@/domain/alerts/entities/Alert';
 import type { ActivityEvent } from '@/domain/activity/entities/ActivityEvent';
 import type { FeatureFlags } from '@/utils/featureFlags';
 import { createLogger } from '@/utils/logger';
+import {
+  createLegacyMetadata,
+  personSnapshotFromLegacy,
+} from '@/application/services/caseLegacyMapper';
 import type {
   ICaseRepository,
   IFinancialRepository,
@@ -312,15 +316,29 @@ export class StorageRepository {
         try {
           // Detect CaseDisplay format (has 'person' and 'caseRecord' objects)
           if (item.person && item.caseRecord) {
-            return {
+            const legacyDisplay = {
               id: item.id,
-              mcn: item.mcn,
               name: item.name,
+              mcn: item.mcn,
               status: item.status,
-              personId: item.person.id,
+              priority: Boolean(item.priority),
               createdAt: item.createdAt,
               updatedAt: item.updatedAt,
-              metadata: item.caseRecord.metadata || {},
+              person: item.person,
+              caseRecord: item.caseRecord,
+              alerts: Array.isArray(item.alerts) ? item.alerts : [],
+            };
+
+            return {
+              id: legacyDisplay.id,
+              mcn: legacyDisplay.mcn,
+              name: legacyDisplay.name,
+              status: legacyDisplay.status,
+              personId: legacyDisplay.person.id,
+              createdAt: legacyDisplay.createdAt,
+              updatedAt: legacyDisplay.updatedAt,
+              metadata: createLegacyMetadata(legacyDisplay, item.metadata),
+              person: personSnapshotFromLegacy(legacyDisplay.person),
             } as CaseSnapshot;
           }
           // Already CaseSnapshot format

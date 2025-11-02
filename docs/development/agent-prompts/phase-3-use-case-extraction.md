@@ -105,19 +105,19 @@ Test Updates Required:        ~15-20 test files
 
 ### 1. Extract Case Use Cases _(Status: core use cases implemented ✅ – integration + polish pending)_
 
-**Current implementation**
+### Current implementation
 
 - `domain/cases/use-cases/CreateCase.ts`, `UpdateCase.ts`, `DeleteCase.ts`, and `GetAllCases.ts` now exist and follow the pattern: validate → optimistic update via `ApplicationState` → persist with `StorageRepository` → publish via `DomainEventBus` → rollback on failure.
 - Inputs are strongly typed (`CreateCaseInput`, `UpdateCaseInput`) and support optional metadata, IDs, and timestamps to preserve legacy records through `caseLegacyMapper`.
 - Test coverage lives in `__tests__/domain/cases/use-cases/*.test.ts` and exercises happy-path + rollback/error scenarios.
 
-**Gaps to address**
+### Gaps to address
 
 - Ensure metadata from `caseLegacyMapper` round-trips through each use case (add regression tests for encoded alerts/notes once service wiring lands).
 - Confirm `DeleteCaseUseCase` publishes appropriate events and clears optimistic state for downstream dashboards (currently limited to state + storage).
 - Document the emitted domain events (`CaseCreated`, `CaseUpdated`, `CaseDeleted`) so service telemetry remains aligned with Phase 4 plans.
 
-**Next actions for the team**
+### Next actions for the team
 
 - Extend tests to cover AbortError propagation and storage failures (mock rejected promises with typed errors).
 - Decide whether `CreateCaseUseCase` should accept fully-hydrated `Case` instances for import flows or stay at DTO level with mapper conversions.
@@ -128,7 +128,7 @@ Test Updates Required:        ~15-20 test files
 - The service is constructed with an `ApplicationState` singleton and a `StorageRepository` instance. It still needs a composition root to supply these dependencies outside of tests.
 - UI continues to resolve `CaseManagementAdapter`, which wraps `DataManager` and operates on `CaseDisplay` structures. The adapter remains the live code path in `CaseServiceContext`.
 
-**Next actions**
+### Next actions
 
 - Introduce a provider that instantiates `CaseManagementService` once `fileDataProvider.getAPI()` succeeds; wire it into `CaseServiceContext` under a feature flag while keeping the adapter as fallback.
 - Bridge `CaseDisplay` ↔ domain `Case` conversion via `caseLegacyMapper.ts` inside the service so hooks/components keep their existing props until the UI migration completes.
@@ -139,7 +139,7 @@ Test Updates Required:        ~15-20 test files
 - `hooks/useCaseManagement.ts` currently spans 178 lines. It has already dropped most business rules but still owns local state management, error handling, and calls into `CaseManagementAdapter` (DataManager).
 - Hook exposes case CRUD, note operations, import pipeline, and status updates. Once the new service is wired, most of this logic should collapse into simple delegations with minimal state (loading/error can move into ApplicationState selectors).
 
-**Next actions**
+### Next actions
 
 - After `CaseManagementService` is available through context, replace adapter calls (`saveCase`, `deleteCase`, etc.) with service equivalents and move React state to selectors or `ApplicationState` subscription helpers.
 - Confirm note flows either remain here temporarily or move into a dedicated note service to avoid mixed responsibilities.
@@ -150,7 +150,7 @@ Test Updates Required:        ~15-20 test files
 - Hooks `useFinancialItemFlow.ts` and `useFinancialItems.ts` still depend directly on `DataManager` and `AutosaveFileService` (170 and 172 LOC respectively).
 - No domain use cases or services exist for financial items yet.
 
-**Next actions**
+### Next actions
 
 - Define domain use cases (`AddFinancialItemUseCase`, `UpdateFinancialItemUseCase`, `DeleteFinancialItemUseCase`, `GetFinancialItemsUseCase`) mirroring the case pattern.
 - Create `FinancialManagementService` plus tests, then refactor both hooks to delegate.
@@ -160,7 +160,7 @@ Test Updates Required:        ~15-20 test files
 - `useNoteFlow.ts` remains 182 LOC with direct `DataManager` access.
 - Note use cases/services are not yet defined.
 
-**Next actions**
+### Next actions
 
 - Implement note CRUD use cases, a `NoteManagementService`, and migrate the hook once case and financial migrations are stable.
 
