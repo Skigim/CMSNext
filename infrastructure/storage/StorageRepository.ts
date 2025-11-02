@@ -304,25 +304,45 @@ export class StorageRepository {
     const rawCases = this.ensureArray<any>(base.cases);
     
     // Convert CaseDisplay format to CaseSnapshot if needed (for legacy DataManager compatibility)
-    const caseSnapshots: CaseSnapshot[] = rawCases.map((item: any) => {
-      // Detect CaseDisplay format (has 'person' and 'caseRecord' objects)
-      if (item.person && item.caseRecord) {
-        return {
-          id: item.id,
-          mcn: item.mcn,
-          name: item.name,
-          status: item.status,
-          personId: item.person.id,
-          createdAt: item.createdAt,
-          updatedAt: item.updatedAt,
-          metadata: item.caseRecord.metadata || {},
-        } as CaseSnapshot;
-      }
-      // Already CaseSnapshot format
-      return item as CaseSnapshot;
-    });
+    const caseSnapshots: CaseSnapshot[] = rawCases
+      .map((item: any) => {
+        try {
+          // Detect CaseDisplay format (has 'person' and 'caseRecord' objects)
+          if (item.person && item.caseRecord) {
+            return {
+              id: item.id,
+              mcn: item.mcn,
+              name: item.name,
+              status: item.status,
+              personId: item.person.id,
+              createdAt: item.createdAt,
+              updatedAt: item.updatedAt,
+              metadata: item.caseRecord.metadata || {},
+            } as CaseSnapshot;
+          }
+          // Already CaseSnapshot format
+          return item as CaseSnapshot;
+        } catch (error) {
+          // Skip invalid items during conversion
+          console.warn('StorageRepository: Skipping invalid case during read', { item, error });
+          return null;
+        }
+      })
+      .filter((snapshot): snapshot is CaseSnapshot => snapshot !== null);
     
-    const cases = caseSnapshots.map(snapshot => Case.rehydrate(snapshot).toJSON());
+    // Rehydrate and validate cases, filtering out any that fail validation
+    const cases = caseSnapshots
+      .map(snapshot => {
+        try {
+          return Case.rehydrate(snapshot).toJSON();
+        } catch (error) {
+          // Skip cases that fail validation
+          console.warn('StorageRepository: Skipping invalid case during rehydration', { snapshot, error });
+          return null;
+        }
+      })
+      .filter((caseSnapshot): caseSnapshot is CaseSnapshot => caseSnapshot !== null);
+    
     const financials = this.ensureArray<FinancialItem>(base.financials);
     const notes = this.ensureArray<Note>(base.notes);
     const alerts = this.ensureArray<Alert>(base.alerts);
