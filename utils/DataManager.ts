@@ -2249,6 +2249,11 @@ export class DataManager {
 
     const targetCase = currentData.cases[caseIndex];
 
+    // Ensure caseRecord exists
+    if (!targetCase.caseRecord) {
+      throw new Error('Case record is missing - data integrity issue. Please reload the data.');
+    }
+
     // Create new item
     const newItem: FinancialItem = {
       ...itemData,
@@ -2312,6 +2317,11 @@ export class DataManager {
     }
 
     const targetCase = currentData.cases[caseIndex];
+
+    // Ensure caseRecord exists
+    if (!targetCase.caseRecord) {
+      throw new Error('Case record is missing - data integrity issue. Please reload the data.');
+    }
 
     // Find item to update
     const itemIndex = targetCase.caseRecord.financials[category].findIndex(item => item.id === itemId);
@@ -2381,6 +2391,11 @@ export class DataManager {
     }
 
     const targetCase = currentData.cases[caseIndex];
+
+    // Ensure caseRecord exists
+    if (!targetCase.caseRecord) {
+      throw new Error('Case record is missing - data integrity issue. Please reload the data.');
+    }
 
     // Check if item exists
     const itemExists = targetCase.caseRecord.financials[category].some(item => item.id === itemId);
