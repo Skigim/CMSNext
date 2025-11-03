@@ -12,14 +12,12 @@ import type {
   NewPersonData,
 } from "../../types/case";
 import type { ItemFormState } from "../../hooks/useFinancialItemFlow";
-import type { useNotes } from "../../hooks/useNotes";
 import type { AlertsIndex, AlertWithMatch } from "../../utils/alertsData";
 import type { CaseActivityLogState } from "../../types/activityLog";
 import { Alert, AlertTitle, AlertDescription } from "../ui/alert";
 import { Button } from "../ui/button";
 
 const FinancialItemModal = lazy(() => import("../modals/FinancialItemModal"));
-const NoteModal = lazy(() => import("../modals/NoteModal"));
 
 interface CaseWorkspaceViewHandlers {
   handleViewCase: (caseId: string) => void;
@@ -50,15 +48,8 @@ interface CaseWorkspaceFinancialFlow {
   onCaseUpdated: (updatedCase: CaseDisplay) => void;
 }
 
-type NoteFormState = ReturnType<typeof useNotes>["noteForm"];
-
 interface CaseWorkspaceNoteFlow {
-  noteForm: NoteFormState;
-  handleAddNote: () => void;
-  handleEditNote: (noteId: string) => void;
   handleDeleteNote: (noteId: string) => Promise<void>;
-  handleSaveNote: (noteData: NewNoteData) => Promise<void>;
-  handleCancelNoteForm: () => void;
   handleBatchUpdateNote: (noteId: string, noteData: NewNoteData) => Promise<void>;
   handleBatchCreateNote: (noteData: NewNoteData) => Promise<void>;
 }
@@ -140,8 +131,6 @@ export const CaseWorkspace = memo(function CaseWorkspace({
         handleDeleteItem={financialFlow.handleDeleteItem}
         handleBatchUpdateItem={financialFlow.handleBatchUpdateItem}
         handleCreateItem={financialFlow.handleCreateItem}
-        handleAddNote={noteFlow.handleAddNote}
-        handleEditNote={noteFlow.handleEditNote}
         handleDeleteNote={noteFlow.handleDeleteNote}
         handleBatchUpdateNote={noteFlow.handleBatchUpdateNote}
         handleBatchCreateNote={noteFlow.handleBatchCreateNote}
@@ -163,17 +152,6 @@ export const CaseWorkspace = memo(function CaseWorkspace({
             }}
             itemType={financialFlow.itemForm.category}
             editingItem={financialFlow.itemForm.item}
-          />
-        </Suspense>
-      )}
-
-      {noteFlow.noteForm.isOpen && (
-        <Suspense fallback={null}>
-          <NoteModal
-            isOpen={noteFlow.noteForm.isOpen}
-            onClose={noteFlow.handleCancelNoteForm}
-            onSave={noteFlow.handleSaveNote}
-            editingNote={noteFlow.noteForm.editingNote}
           />
         </Suspense>
       )}

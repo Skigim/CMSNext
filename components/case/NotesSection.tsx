@@ -284,8 +284,6 @@ function NoteCard({
 
 interface NotesSectionProps {
   notes: Note[];
-  onAddNote: () => void;
-  onEditNote: (noteId: string) => void;
   onDeleteNote: (noteId: string) => void;
   onUpdateNote?: (noteId: string, updatedNote: NewNoteData) => Promise<void>;
   onCreateNote?: (noteData: NewNoteData) => Promise<void>;
@@ -293,7 +291,6 @@ interface NotesSectionProps {
 
 export function NotesSection({ 
   notes, 
-  onAddNote,  
   onDeleteNote,
   onUpdateNote,
   onCreateNote
@@ -405,7 +402,7 @@ export function NotesSection({
             )}
           </CardTitle>
           <Button 
-            onClick={onCreateNote ? handleAddSkeleton : onAddNote} 
+            onClick={handleAddSkeleton} 
             size="sm"
             className="gap-2"
           >
@@ -419,7 +416,7 @@ export function NotesSection({
           <div className="text-center py-8">
             <p className="text-muted-foreground mb-4">No notes added yet</p>
             <Button 
-              onClick={onCreateNote ? handleAddSkeleton : onAddNote} 
+              onClick={handleAddSkeleton} 
               variant="outline"
               className="gap-2"
             >

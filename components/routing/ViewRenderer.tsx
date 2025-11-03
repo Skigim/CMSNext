@@ -40,8 +40,6 @@ interface ViewRendererProps {
   handleDeleteItem: (category: any, itemId: string) => Promise<void>;
   handleBatchUpdateItem?: (category: any, itemId: string, updatedItem: Partial<any>) => Promise<void>;
   handleCreateItem?: (category: any, itemData: Omit<any, 'id' | 'createdAt' | 'updatedAt'>) => Promise<void>;
-  handleAddNote: (type?: string) => void;
-  handleEditNote: (noteId: string) => void;
   handleDeleteNote: (noteId: string) => Promise<void>;
   handleBatchUpdateNote?: (noteId: string, updatedNote: any) => Promise<void>;
   handleBatchCreateNote?: (noteData: any) => Promise<void>;
@@ -94,8 +92,6 @@ export function ViewRenderer({
   handleDeleteItem,
   handleBatchUpdateItem,
   handleCreateItem,
-  handleAddNote,
-  handleEditNote,
   handleDeleteNote,
   handleBatchUpdateNote,
   handleBatchCreateNote,
@@ -163,8 +159,6 @@ export function ViewRenderer({
           onDeleteItem={handleDeleteItem}
           onBatchUpdateItem={handleBatchUpdateItem}
           onCreateItem={handleCreateItem}
-          onAddNote={handleAddNote}
-          onEditNote={handleEditNote}
           onDeleteNote={handleDeleteNote}
           onBatchUpdateNote={handleBatchUpdateNote}
           onBatchCreateNote={handleBatchCreateNote}

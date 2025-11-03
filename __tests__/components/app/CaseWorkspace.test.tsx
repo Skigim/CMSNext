@@ -31,13 +31,6 @@ vi.mock("@/components/modals/FinancialItemModal", () => ({
   ),
 }));
 
-vi.mock("@/components/modals/NoteModal", () => ({
-  __esModule: true,
-  default: (props: any) => (
-    <div data-testid="note-modal">note-open:{String(props.isOpen)}</div>
-  ),
-}));
-
 describe("CaseWorkspace", () => {
   const navigation = {
     currentView: "list" as AppView,
@@ -93,12 +86,7 @@ describe("CaseWorkspace", () => {
   };
 
   const baseNoteFlow: CaseWorkspaceProps["noteFlow"] = {
-    noteForm: { isOpen: false },
-    handleAddNote: vi.fn(),
-    handleEditNote: vi.fn(),
     handleDeleteNote: asyncVoid(),
-    handleSaveNote: asyncVoid(),
-    handleCancelNoteForm: vi.fn(),
     handleBatchUpdateNote: asyncVoid(),
     handleBatchCreateNote: asyncVoid(),
   };
@@ -145,18 +133,13 @@ describe("CaseWorkspace", () => {
     expect(onDismissError).toHaveBeenCalledTimes(1);
   });
 
-  it("opens financial and note modals when requested", async () => {
+  it("opens financial modal when requested", async () => {
     const { CaseWorkspace } = await import("@/components/app/CaseWorkspace");
 
     const financialFlow = {
       ...baseFinancialFlow,
       itemForm: { isOpen: true, category: "income" as CaseCategory },
     } satisfies CaseWorkspaceProps["financialFlow"];
-
-    const noteFlow = {
-      ...baseNoteFlow,
-      noteForm: { isOpen: true },
-    } satisfies CaseWorkspaceProps["noteFlow"];
 
     render(
       <CaseWorkspace
@@ -168,7 +151,7 @@ describe("CaseWorkspace", () => {
         onDismissError={vi.fn()}
         viewHandlers={baseViewHandlers}
         financialFlow={financialFlow}
-        noteFlow={noteFlow}
+        noteFlow={baseNoteFlow}
         alerts={alertsIndex}
         onUpdateCaseStatus={vi.fn()}
         activityLogState={activityLogState}
@@ -176,6 +159,5 @@ describe("CaseWorkspace", () => {
     );
 
     expect(await screen.findByTestId("financial-item-modal")).toHaveTextContent("modal-category:income");
-    expect(await screen.findByTestId("note-modal")).toHaveTextContent("note-open:true");
   });
 });
