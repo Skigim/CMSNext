@@ -362,8 +362,8 @@ class AutosaveFileService {
   }
 
   private async _performWrite(data: any, retryCount: number = 0): Promise<boolean> {
-    const maxRetries = 3;
-    const retryDelay = 100; // milliseconds
+    const maxRetries = 4; // Increased from 3 to allow for handle refresh attempts
+    const retryDelay = 150; // Increased from 100ms to allow concurrent operations to complete
 
     // Check if we have a directory handle and permissions
     if (!this.directoryHandle) {
@@ -421,14 +421,21 @@ class AutosaveFileService {
           logger.warn(logMessage);
         }
 
-        // Wait a bit before retrying
+        // Wait to let concurrent operations complete
         await new Promise(resolve => setTimeout(resolve, retryDelay * (retryCount + 1)));
         
-        // Try to refresh the directory handle to clear cached state
+        // CRITICAL FIX: Refresh the directory handle from IndexedDB to clear cached state
         try {
-          const permission = await this.checkPermission();
-          if (permission === 'granted') {
+          const refreshed = await this.refreshDirectoryHandle();
+          if (refreshed) {
+            logger.debug('Directory handle refreshed, retrying write', { attempt: retryCount + 1 });
             return await this._performWrite(data, retryCount + 1);
+          } else {
+            // Fall back to permission check if refresh fails
+            const permission = await this.checkPermission();
+            if (permission === 'granted') {
+              return await this._performWrite(data, retryCount + 1);
+            }
           }
         } catch (refreshError) {
           logger.warn('Failed to refresh handle for write retry', {
@@ -452,8 +459,8 @@ class AutosaveFileService {
    * Returns true on success, false otherwise.
    */
   async writeNamedFile(fileName: string, data: any, retryCount: number = 0): Promise<boolean> {
-    const maxRetries = 3;
-    const retryDelay = 100; // milliseconds
+    const maxRetries = 4; // Increased from 3 to allow for handle refresh attempts
+    const retryDelay = 150; // Increased from 100ms to allow concurrent operations to complete
 
     if (!this.directoryHandle) {
       return false;
@@ -493,14 +500,21 @@ class AutosaveFileService {
           logger.warn(logMessage);
         }
 
-        // Wait a bit before retrying
+        // Wait to let concurrent operations complete
         await new Promise(resolve => setTimeout(resolve, retryDelay * (retryCount + 1)));
         
-        // Try to refresh the directory handle to clear cached state
+        // CRITICAL FIX: Refresh the directory handle from IndexedDB to clear cached state
         try {
-          const permission = await this.checkPermission();
-          if (permission === 'granted') {
+          const refreshed = await this.refreshDirectoryHandle();
+          if (refreshed) {
+            logger.debug('Directory handle refreshed, retrying write', { fileName, attempt: retryCount + 1 });
             return await this.writeNamedFile(fileName, data, retryCount + 1);
+          } else {
+            // Fall back to permission check if refresh fails
+            const permission = await this.checkPermission();
+            if (permission === 'granted') {
+              return await this.writeNamedFile(fileName, data, retryCount + 1);
+            }
           }
         } catch (refreshError) {
           logger.warn('Failed to refresh handle for named write retry', {
@@ -942,6 +956,37 @@ class AutosaveFileService {
       };
       request.onerror = () => resolve();
     });
+  }
+
+  /**
+   * Refresh the directory handle from IndexedDB to clear cached state.
+   * This is critical for resolving "state cached in interface object" errors.
+   */
+  private async refreshDirectoryHandle(): Promise<boolean> {
+    try {
+      const storedHandle = await this.getStoredDirectoryHandle();
+      if (!storedHandle) {
+        logger.warn('No stored directory handle available for refresh');
+        return false;
+      }
+      
+      // Verify the handle is still valid
+      const permission = await (storedHandle as any).queryPermission({ mode: 'readwrite' });
+      if (permission !== 'granted') {
+        logger.warn('Refreshed handle does not have granted permission', { permission });
+        return false;
+      }
+      
+      // Update the active handle
+      this.directoryHandle = storedHandle;
+      logger.debug('Directory handle refreshed successfully');
+      return true;
+    } catch (error) {
+      logger.warn('Failed to refresh directory handle', {
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
+      return false;
+    }
   }
 
   // =============================================================================
