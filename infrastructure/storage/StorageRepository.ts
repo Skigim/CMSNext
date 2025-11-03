@@ -46,6 +46,10 @@ export class StorageRepository {
   private readonly noteAdapter: INoteRepository;
   private readonly alertAdapter: IAlertRepository;
   private readonly activityAdapter: IActivityRepository;
+  
+  // Track whether we've already logged rehydration warnings this session
+  private hasLoggedReadWarning = false;
+  private hasLoggedRehydrationWarning = false;
 
   constructor(private readonly fileService: AutosaveFileService) {
     this.caseAdapter = {
@@ -373,7 +377,8 @@ export class StorageRepository {
       })
       .filter((snapshot): snapshot is CaseSnapshot => snapshot !== null);
     
-    if (invalidReadCount > 0) {
+    if (invalidReadCount > 0 && !this.hasLoggedReadWarning) {
+      this.hasLoggedReadWarning = true;
       logger.warn(
         `[StorageRepository] Skipped ${invalidReadCount} invalid case(s) during read — sample(s):`,
         invalidReadSamples[0] as Record<string, unknown>
@@ -399,7 +404,8 @@ export class StorageRepository {
       })
       .filter((caseSnapshot): caseSnapshot is CaseSnapshot => caseSnapshot !== null);
 
-    if (invalidRehydrationCount > 0) {
+    if (invalidRehydrationCount > 0 && !this.hasLoggedRehydrationWarning) {
+      this.hasLoggedRehydrationWarning = true;
       logger.warn(
         `[StorageRepository] Skipped ${invalidRehydrationCount} invalid case(s) during rehydration — sample(s):`,
         invalidRehydrationSamples[0] as Record<string, unknown>
