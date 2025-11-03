@@ -147,7 +147,7 @@ export class Person {
       throw new ValidationError('Person last name cannot be empty');
     }
 
-    if (!Person.isValidIsoDate(this.state.dateOfBirth)) {
+    if (this.state.dateOfBirth && !Person.isValidIsoDate(this.state.dateOfBirth)) {
       throw new ValidationError('Person date of birth must be a valid ISO-8601 date string');
     }
 
@@ -194,6 +194,10 @@ export class Person {
   }
 
   private static normalizeDate(value: string | Date): string {
+    if (!value || (typeof value === 'string' && !value.trim())) {
+      return '';
+    }
+
     if (value instanceof Date) {
       return value.toISOString();
     }
