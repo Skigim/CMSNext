@@ -308,9 +308,28 @@ function normaliseCaseDisplay(base: CaseDisplay, entity: Case): CaseDisplay {
     name: buildCaseName(display.person.firstName, display.person.lastName) || display.person.name,
   };
   
-  // Ensure caseRecord exists before attempting to spread it
-  if (!display.caseRecord) {
-    display.caseRecord = fallbackCaseRecord(entity, display.person.id);
+  // Ensure caseRecord exists and has required structure
+  // Handle both missing caseRecord and caseRecord without required fields
+  if (!display.caseRecord || !display.caseRecord.financials || !display.caseRecord.notes) {
+    const fallback = fallbackCaseRecord(entity, display.person.id);
+    
+    if (!display.caseRecord) {
+      display.caseRecord = fallback;
+    } else {
+      // Merge existing caseRecord with fallback to ensure all required fields exist
+      display.caseRecord = {
+        ...fallback,
+        ...display.caseRecord,
+        financials: display.caseRecord.financials || fallback.financials,
+        notes: display.caseRecord.notes || fallback.notes,
+        id: display.caseRecord.id || fallback.id,
+        mcn: entity.mcn,
+        status: entity.status,
+        personId: display.person.id,
+        createdDate: display.caseRecord.createdDate || entity.createdAt,
+        updatedDate: entity.updatedAt,
+      };
+    }
   } else {
     display.caseRecord = {
       ...display.caseRecord,
