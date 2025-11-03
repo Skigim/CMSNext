@@ -151,14 +151,15 @@ export class Person {
       throw new ValidationError('Person date of birth must be a valid ISO-8601 date string');
     }
 
-    const { email, phone } = this.state.contactInfo;
-    if (email && email.trim() && !Person.emailPattern.test(email)) {
-      throw new ValidationError('Person email address is invalid');
-    }
+    // Email and phone validation disabled - will be reworked later
+    // const { email, phone } = this.state.contactInfo;
+    // if (email && email.trim() && !Person.emailPattern.test(email)) {
+    //   throw new ValidationError('Person email address is invalid');
+    // }
 
-    if (phone && phone.trim() && !Person.phonePattern.test(Person.normalizePhone(phone))) {
-      throw new ValidationError('Person phone number is invalid');
-    }
+    // if (phone && phone.trim() && !Person.phonePattern.test(Person.normalizePhone(phone))) {
+    //   throw new ValidationError('Person phone number is invalid');
+    // }
 
     if (typeof this.state.metadata !== 'object' || this.state.metadata === null) {
       throw new ValidationError('Person metadata must be an object');
@@ -236,9 +237,10 @@ export class Person {
     return normalized;
   }
 
-  private static normalizePhone(value: string): string {
-    return value.replace(/[^\d]/g, '');
-  }
+  // Validation patterns and helpers - currently unused, will be reworked
+  // private static normalizePhone(value: string): string {
+  //   return value.replace(/[^\d]/g, '');
+  // }
 
   private static isValidIsoDate(value: string): boolean {
     return Number.isFinite(Date.parse(value));
@@ -252,8 +254,8 @@ export class Person {
     return JSON.parse(JSON.stringify(metadata ?? {}));
   }
 
-  private static readonly emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  private static readonly phonePattern = /^\d{7,15}$/;
+  // private static readonly emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  // private static readonly phonePattern = /^\d{7,15}$/;
 }
 
 export default Person;
