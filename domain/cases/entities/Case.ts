@@ -293,7 +293,8 @@ export class Case {
   }
 
   private static isValidMcn(value: string): boolean {
-    return /^MCN?[A-Z0-9-]{3,}$/i.test(value);
+    // Allow MCN/MC prefix or plain numbers (at least 3 characters)
+    return /^(MCN?[A-Z0-9-]{3,}|[0-9]{3,})$/i.test(value);
   }
 
   private static generateId(): string {
