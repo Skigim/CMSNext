@@ -1,6 +1,20 @@
 # Codex Implementation Prompt: Financial Domain Migration
 
-## 📋 Task Summary
+## � CRITICAL: Read This First
+
+**BEFORE you start coding, read:** `FINANCIAL_MIGRATION_DISCOVERIES.md`
+
+This document contains critical findings from codebase analysis:
+
+- ✅ What already exists (don't recreate)
+- ⚠️ Missing fields and state management issues
+- 🔧 Required entity extensions
+- 📋 Open questions requiring decisions
+- 🎯 Corrected implementation tasks
+
+**Key Discovery:** Domain entity, repository interface, and some ApplicationState methods already exist. You'll be EXTENDING, not creating from scratch.
+
+## �📋 Task Summary
 
 Migrate the Financial domain to Phase 3 architecture following the successful Cases domain pattern. Extract business logic into domain use cases, introduce service layer orchestration, centralize state in `ApplicationState`, and streamline `useFinancialItemFlow` hook. This will improve testability, maintainability, and set the foundation for cross-domain event coordination.
 
@@ -355,32 +369,104 @@ export function useFinancialItemFlow(caseId: string) {
 3. **Follow Cases Pattern**: Use the same architectural patterns for consistency
 4. **Document As You Go**: Add code comments explaining complex logic
 5. **Incremental Commits**: Make small, focused commits for easier review
+6. **Read Discoveries First**: Review `FINANCIAL_MIGRATION_DISCOVERIES.md` before coding
 
 ## 🚀 Getting Started
 
+### Step 1: Create Feature Branch (REQUIRED)
+
 ```bash
-# 1. Create feature branch
+# Create and checkout feature branch
 git checkout -b phase-3-financial-domain-migration
 
-# 2. Study reference implementation
-# Read through domain/cases/ and application/services/Case*
+# Verify you're on the correct branch
+git branch --show-current
+# Should output: phase-3-financial-domain-migration
+```
 
-# 3. Start with domain layer
-# Create entities and use cases first
+**⚠️ DO NOT commit directly to `main`**. All work must be done on the feature branch.
 
-# 4. Run tests frequently
+### Step 2: Review Existing Infrastructure
+
+**CRITICAL - Read these files first:**
+
+1. **Discoveries Document** (START HERE):
+
+   ```bash
+   # Read the critical findings
+   cat FINANCIAL_MIGRATION_DISCOVERIES.md
+   ```
+
+   This contains:
+
+   - What already exists (don't recreate)
+   - Missing fields that need to be added
+   - Event naming decisions
+   - State management gaps
+
+2. **Existing Domain Entity**:
+
+   ```bash
+   # Study what's already implemented
+   cat domain/financials/entities/FinancialItem.ts
+   ```
+
+3. **Existing Repository**:
+
+   ```bash
+   # Review the interface
+   cat domain/common/repositories/IFinancialRepository.ts
+   ```
+
+4. **Reference Implementation**:
+   ```bash
+   # Study the Cases domain pattern
+   ls domain/cases/use-cases/
+   cat application/services/CaseManagementService.ts
+   cat hooks/useCaseManagement.ts
+   ```
+
+### Step 3: Implementation Workflow
+
+```bash
+# 1. Extend existing domain entity (don't recreate)
+# Add missing legacy fields to FinancialItem.ts
+
+# 2. Create use cases (these don't exist yet)
+# domain/financials/use-cases/*.ts
+
+# 3. Run tests frequently
 npm test -- --run
 
-# 5. Build to verify no compilation errors
+# 4. Build to verify no compilation errors
 npm run build
 
-# 6. Commit incrementally
+# 5. Commit incrementally with descriptive messages
 git add .
-git commit -m "feat(financial): add domain entities and use cases"
+git commit -m "feat(financial): extend FinancialItem entity with legacy fields"
+
+git add .
+git commit -m "feat(financial): add CreateFinancialItem use case"
+# ... etc
 ```
+
+### Step 4: Pre-Implementation Checklist
+
+Before writing code, confirm:
+
+- [ ] Read `FINANCIAL_MIGRATION_DISCOVERIES.md` completely
+- [ ] Reviewed existing `FinancialItem` entity (don't recreate)
+- [ ] Reviewed existing `IFinancialRepository` interface (don't recreate)
+- [ ] Studied Cases domain reference implementation
+- [ ] On feature branch `phase-3-financial-domain-migration`
+- [ ] Understand which files exist vs need to be created
 
 ## 📞 Questions?
 
-Refer to the Cases domain implementation as the authoritative example. If you encounter edge cases not covered there, follow the same architectural principles: domain purity, service orchestration, state centralization, and comprehensive testing.
+1. **First**: Check `FINANCIAL_MIGRATION_DISCOVERIES.md` for answers
+2. **Second**: Refer to Cases domain implementation as authoritative example
+3. **Third**: Follow the same architectural principles: domain purity, service orchestration, state centralization, and comprehensive testing
+
+**Remember:** You're EXTENDING existing infrastructure, not building from scratch!
 
 **Good luck! 🎉**
