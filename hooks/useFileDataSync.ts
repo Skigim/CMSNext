@@ -109,6 +109,12 @@ export function useFileDataSync({
         appState.setHasLoadedCases(true);
         updateFileStorageFlags({ dataBaseline: true, sessionHadData: false });
       } catch (err) {
+        // Treat AbortError as non-fatal per project rules
+        if (err && (err as any).name === 'AbortError') {
+          logger.info("File data load aborted (AbortError), ignoring.");
+          return;
+        }
+
         const errorMessage = err instanceof Error ? err.message : String(err);
         recordStorageSyncEvent("load", false, {
           error: errorMessage,

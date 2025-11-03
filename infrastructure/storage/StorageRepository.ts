@@ -310,9 +310,28 @@ export class StorageRepository {
     const version = typeof base.version === 'number' ? base.version : StorageRepository.CURRENT_VERSION;
     const rawCases = this.ensureArray<any>(base.cases);
     
+    // Validate case shape helper
+    const isValidCaseItem = (item: any): boolean => {
+      return item && typeof item === 'object' && typeof item.id === 'string';
+    };
+
+    let invalidReadCount = 0;
+    let invalidRehydrationCount = 0;
+    const MAX_LOG_SAMPLE = 3;
+    const invalidReadSamples: unknown[] = [];
+    const invalidRehydrationSamples: Array<{ id: string; error: string }> = [];
+    
     // Convert CaseDisplay format to CaseSnapshot if needed (for legacy DataManager compatibility)
     const caseSnapshots: CaseSnapshot[] = rawCases
       .map((item: any) => {
+        if (!isValidCaseItem(item)) {
+          invalidReadCount++;
+          if (invalidReadSamples.length < MAX_LOG_SAMPLE) {
+            invalidReadSamples.push(item);
+          }
+          return null;
+        }
+
         try {
           // Detect CaseDisplay format (has 'person' and 'caseRecord' objects)
           if (item.person && item.caseRecord) {
@@ -345,15 +364,22 @@ export class StorageRepository {
           return item as CaseSnapshot;
         } catch (error) {
           // Skip invalid items during conversion
-          logger.warn('Skipping invalid case during read', { 
-            itemId: item?.id,
-            error: error instanceof Error ? error.message : String(error),
-          });
+          invalidReadCount++;
+          if (invalidReadSamples.length < MAX_LOG_SAMPLE) {
+            invalidReadSamples.push({ itemId: item?.id, error: error instanceof Error ? error.message : String(error) });
+          }
           return null;
         }
       })
       .filter((snapshot): snapshot is CaseSnapshot => snapshot !== null);
     
+    if (invalidReadCount > 0) {
+      logger.warn(
+        `[StorageRepository] Skipped ${invalidReadCount} invalid case(s) during read — sample(s):`,
+        invalidReadSamples[0] as Record<string, unknown>
+      );
+    }
+
     // Rehydrate and validate cases, filtering out any that fail validation
     const cases = caseSnapshots
       .map(snapshot => {
@@ -361,14 +387,24 @@ export class StorageRepository {
           return Case.rehydrate(snapshot).toJSON();
         } catch (error) {
           // Skip cases that fail validation
-          logger.warn('Skipping invalid case during rehydration', { 
-            caseId: snapshot.id,
-            error: error instanceof Error ? error.message : String(error),
-          });
+          invalidRehydrationCount++;
+          if (invalidRehydrationSamples.length < MAX_LOG_SAMPLE) {
+            invalidRehydrationSamples.push({
+              id: snapshot.id,
+              error: error instanceof Error ? error.message : String(error),
+            });
+          }
           return null;
         }
       })
       .filter((caseSnapshot): caseSnapshot is CaseSnapshot => caseSnapshot !== null);
+
+    if (invalidRehydrationCount > 0) {
+      logger.warn(
+        `[StorageRepository] Skipped ${invalidRehydrationCount} invalid case(s) during rehydration — sample(s):`,
+        invalidRehydrationSamples[0] as Record<string, unknown>
+      );
+    }
     
     const financials = this.ensureArray<FinancialItem>(base.financials);
     const notes = this.ensureArray<Note>(base.notes);
