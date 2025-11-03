@@ -330,15 +330,15 @@ export function NotesSection({
 
   const [skeletonNotes, setSkeletonNotes] = useState<string[]>([]);
 
-  // Create a skeleton note for new notes
-  const createSkeletonNote = (id: string): Note & { isNew: boolean } => ({
+  // Create a skeleton note for new notes - memoized to prevent recreation
+  const createSkeletonNote = useCallback((id: string): Note & { isNew: boolean } => ({
     id,
     category: defaultCategory,
     content: '',
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
     isNew: true,
-  });
+  }), [defaultCategory]);
 
   // Handle adding a new skeleton note
   const handleAddSkeleton = () => {
@@ -383,9 +383,15 @@ export function NotesSection({
     new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
   );
 
+  // Memoize skeleton notes to prevent recreation on every render
+  const memoizedSkeletonNotes = useMemo(
+    () => skeletonNotes.map(id => createSkeletonNote(id)),
+    [skeletonNotes, createSkeletonNote]
+  );
+
   // Combine real notes with skeleton notes
   const allNotes = [
-    ...skeletonNotes.map(id => createSkeletonNote(id)),
+    ...memoizedSkeletonNotes,
     ...sortedNotes
   ];
 
