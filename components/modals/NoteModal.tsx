@@ -21,7 +21,10 @@ export const NoteModal = React.forwardRef<HTMLDivElement, NoteModalProps>(
     const [content, setContent] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
 
+    // Only reset form when modal opens, not on every noteCategories change
     useEffect(() => {
+      if (!isOpen) return;
+      
       const fallbackCategory = noteCategories[0] ?? 'General';
       if (editingNote) {
         setCategory(editingNote.category || fallbackCategory);
@@ -30,7 +33,8 @@ export const NoteModal = React.forwardRef<HTMLDivElement, NoteModalProps>(
         setCategory(fallbackCategory);
         setContent('');
       }
-    }, [editingNote, isOpen, noteCategories]);
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [isOpen, editingNote]); // noteCategories intentionally excluded to prevent form reset loop
 
     const handleSubmit = async (e: React.FormEvent) => {
       e.preventDefault();
