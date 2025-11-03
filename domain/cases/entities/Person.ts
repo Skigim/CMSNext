@@ -223,12 +223,14 @@ export class Person {
     }
 
     const normalized: ContactInfo = {};
-    if (contactInfo.email) {
-      normalized.email = contactInfo.email.trim();
+    const trimmedEmail = contactInfo.email?.trim();
+    if (trimmedEmail) {
+      normalized.email = trimmedEmail;
     }
 
-    if (contactInfo.phone) {
-      normalized.phone = contactInfo.phone.trim();
+    const trimmedPhone = contactInfo.phone?.trim();
+    if (trimmedPhone) {
+      normalized.phone = trimmedPhone;
     }
 
     return normalized;
