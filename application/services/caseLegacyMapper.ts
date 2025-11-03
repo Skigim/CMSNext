@@ -307,15 +307,22 @@ function normaliseCaseDisplay(base: CaseDisplay, entity: Case): CaseDisplay {
     id: display.person.id || entity.personId,
     name: buildCaseName(display.person.firstName, display.person.lastName) || display.person.name,
   };
-  display.caseRecord = {
-    ...display.caseRecord,
-    id: display.caseRecord.id || `${entity.id}-${CASE_RECORD_SUFFIX}`,
-    mcn: entity.mcn,
-    status: entity.status,
-    personId: display.person.id,
-    createdDate: display.caseRecord.createdDate || entity.createdAt,
-    updatedDate: entity.updatedAt,
-  };
+  
+  // Ensure caseRecord exists before attempting to spread it
+  if (!display.caseRecord) {
+    display.caseRecord = fallbackCaseRecord(entity, display.person.id);
+  } else {
+    display.caseRecord = {
+      ...display.caseRecord,
+      id: display.caseRecord.id || `${entity.id}-${CASE_RECORD_SUFFIX}`,
+      mcn: entity.mcn,
+      status: entity.status,
+      personId: display.person.id,
+      createdDate: display.caseRecord.createdDate || entity.createdAt,
+      updatedDate: entity.updatedAt,
+    };
+  }
+  
   return display;
 }
 
