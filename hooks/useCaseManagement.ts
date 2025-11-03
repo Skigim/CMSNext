@@ -1,9 +1,14 @@
-import { useCallback, useRef, useEffect } from 'react';
 import type { CaseDisplay, NewCaseRecordData, NewNoteData, NewPersonData } from '@/types/case';
 import { useCaseService } from '@/contexts/CaseServiceContext';
 import { useApplicationState } from '@/application/hooks/useApplicationState';
 import { caseToLegacyCaseDisplay } from '@/application/services/caseLegacyMapper';
 
+/**
+ * Thin wrapper hook for case management operations.
+ * 
+ * Delegates all business logic to CaseManagementService.
+ * Provides reactive state from ApplicationState.
+ */
 interface UseCaseManagementReturn {
   cases: CaseDisplay[];
   loading: boolean;
@@ -13,7 +18,7 @@ interface UseCaseManagementReturn {
   saveCase: (
     caseData: { person: NewPersonData; caseRecord: NewCaseRecordData },
     editingCase?: CaseDisplay | null,
-  ) => Promise<void>;
+  ) => Promise<CaseDisplay>;
   deleteCase: (caseId: string) => Promise<void>;
   saveNote: (
     noteData: NewNoteData,
@@ -26,13 +31,8 @@ interface UseCaseManagementReturn {
 
 export function useCaseManagement(): UseCaseManagementReturn {
   const service = useCaseService();
-  const serviceRef = useRef(service);
 
-  // Keep service ref up to date without triggering callback recreation
-  useEffect(() => {
-    serviceRef.current = service;
-  }, [service]);
-
+  // Reactive state from ApplicationState
   const cases = useApplicationState(state =>
     state.getCases().map(caseToLegacyCaseDisplay),
   );
@@ -40,62 +40,17 @@ export function useCaseManagement(): UseCaseManagementReturn {
   const error = useApplicationState(state => state.getCasesError());
   const hasLoadedData = useApplicationState(state => state.getHasLoadedCases());
 
-  const loadCases = useCallback(async () => {
-    return await serviceRef.current.loadCases();
-  }, []);
-
-  const saveCase = useCallback(
-    async (
-      caseData: { person: NewPersonData; caseRecord: NewCaseRecordData },
-      editingCase?: CaseDisplay | null,
-    ) => {
-      await serviceRef.current.saveCase(caseData, editingCase);
-    },
-    [],
-  );
-
-  const deleteCase = useCallback(
-    async (caseId: string) => {
-      await serviceRef.current.deleteCase(caseId);
-    },
-    [],
-  );
-
-  const saveNote = useCallback(
-    async (
-      noteData: NewNoteData,
-      caseId: string,
-      editingNote?: { id: string } | null,
-    ) => {
-      return await serviceRef.current.saveNote(noteData, caseId, editingNote);
-    },
-    [],
-  );
-
-  const importCases = useCallback(
-    async (importedCases: CaseDisplay[]) => {
-      await serviceRef.current.importCases(importedCases);
-    },
-    [],
-  );
-
-  const updateCaseStatus = useCallback(
-    async (caseId: string, status: CaseDisplay['status']) => {
-      return await serviceRef.current.updateCaseStatus(caseId, status);
-    },
-    [],
-  );
-
+  // Direct service delegation - no wrapper callbacks needed
   return {
     cases,
     loading,
     error,
     hasLoadedData,
-    loadCases,
-    saveCase,
-    deleteCase,
-    saveNote,
-    importCases,
-    updateCaseStatus,
+    loadCases: service.loadCases.bind(service),
+    saveCase: service.saveCase.bind(service),
+    deleteCase: service.deleteCase.bind(service),
+    saveNote: service.saveNote.bind(service),
+    importCases: service.importCases.bind(service),
+    updateCaseStatus: service.updateCaseStatus.bind(service),
   };
 }
