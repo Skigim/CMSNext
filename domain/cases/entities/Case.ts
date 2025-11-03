@@ -236,11 +236,10 @@ export class Case {
 
   private canTransitionTo(newStatus: CaseStatus): boolean {
     const validTransitions: Record<CaseStatus, CaseStatus[]> = {
-      [CASE_STATUS.Active]: [CASE_STATUS.Pending, CASE_STATUS.Closed, CASE_STATUS.Reassigned],
-      [CASE_STATUS.Pending]: [CASE_STATUS.Active, CASE_STATUS.Closed, CASE_STATUS.Reassigned],
+      [CASE_STATUS.Active]: [CASE_STATUS.Pending, CASE_STATUS.Closed],
+      [CASE_STATUS.Pending]: [CASE_STATUS.Active, CASE_STATUS.Closed],
       [CASE_STATUS.Closed]: [CASE_STATUS.Archived],
       [CASE_STATUS.Archived]: [],
-      [CASE_STATUS.Reassigned]: [CASE_STATUS.Active, CASE_STATUS.Pending, CASE_STATUS.Closed],
     };
 
     return validTransitions[this.status].includes(newStatus);

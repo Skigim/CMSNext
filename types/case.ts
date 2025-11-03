@@ -95,7 +95,6 @@ export const CASE_STATUS = {
   Pending: 'Pending',
   Closed: 'Closed',
   Archived: 'Archived',
-  Reassigned: 'Reassigned',
 } as const;
 
 export type CaseStatus = typeof CASE_STATUS[keyof typeof CASE_STATUS];
