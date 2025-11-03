@@ -711,28 +711,42 @@ class AutosaveFileService {
       return null;
     }
 
-    try {
-      const fileHandle = await this.directoryHandle.getFileHandle(fileName);
-      const file = await fileHandle.getFile();
-      const contents = await file.text();
-      const rawData = JSON.parse(contents);
+    const maxRetries = 3;
 
-      logger.info('Successfully read data file', {
-        fileName,
-        caseCount: Array.isArray(rawData.cases) ? rawData.cases.length : 0,
-        alertCount: Array.isArray(rawData.alerts) ? rawData.alerts.length : 0,
-      });
-      
-      return rawData;
-    } catch (err) {
-      if (err instanceof Error && (err.name === 'NotFoundError' || err.name === 'NotReadableError')) {
-        // File doesn't exist or no permission - treat as empty
-        logger.debug('Named file not available', {
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        const fileHandle = await this.directoryHandle.getFileHandle(fileName);
+        const file = await fileHandle.getFile();
+        const contents = await file.text();
+        const rawData = JSON.parse(contents);
+
+        logger.info('Successfully read data file', {
           fileName,
-          reason: err.name === 'NotFoundError' ? 'not found' : 'no permission',
+          caseCount: Array.isArray(rawData.cases) ? rawData.cases.length : 0,
+          alertCount: Array.isArray(rawData.alerts) ? rawData.alerts.length : 0,
         });
-        return null;
-      } else {
+        
+        return rawData;
+      } catch (err) {
+        if (err instanceof Error && err.name === 'NotFoundError') {
+          // File doesn't exist - no point retrying
+          logger.debug('Named file not found', { fileName });
+          return null;
+        }
+        
+        if (err instanceof Error && err.name === 'NotReadableError') {
+          // File is locked or stale handle - retry
+          if (attempt < maxRetries) {
+            logger.debug(`NotReadableError on attempt ${attempt}/${maxRetries}, retrying...`, { fileName });
+            await new Promise(resolve => setTimeout(resolve, 100 * attempt)); // exponential backoff
+            continue;
+          }
+          // Max retries reached
+          logger.warn('Failed to read file after retries (NotReadableError)', { fileName, attempts: maxRetries });
+          return null;
+        }
+
+        // Other errors
         logger.error('Failed to read named data file', {
           fileName,
           error: err instanceof Error ? err.message : String(err),
@@ -754,30 +768,46 @@ class AutosaveFileService {
       return null;
     }
 
-    try {
-      const fileHandle = await this.directoryHandle.getFileHandle(fileName);
-      const file = await fileHandle.getFile();
-      return await file.text();
-    } catch (err) {
-      if (err instanceof Error && (err.name === 'NotFoundError' || err.name === 'NotReadableError')) {
-        // File doesn't exist or no permission - treat as empty
-        logger.debug('Text file not available', {
-          fileName,
-          reason: err.name === 'NotFoundError' ? 'not found' : 'no permission',
-        });
-        return null;
-      }
+    const maxRetries = 3;
 
-      const message = err instanceof Error ? err.message : 'Unknown error';
-      logger.error('Failed to read text file', { fileName, error: message });
-      this.errorCallback({
-        message: `Error reading file "${fileName}": ${message}`,
-        type: 'error',
-        error: err,
-        context: { operation: 'readTextFile', fileName },
-      });
-      throw err;
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        const fileHandle = await this.directoryHandle.getFileHandle(fileName);
+        const file = await fileHandle.getFile();
+        return await file.text();
+      } catch (err) {
+        if (err instanceof Error && err.name === 'NotFoundError') {
+          // File doesn't exist - no point retrying
+          logger.debug('Text file not found', { fileName });
+          return null;
+        }
+
+        if (err instanceof Error && err.name === 'NotReadableError') {
+          // File is locked or stale handle - retry
+          if (attempt < maxRetries) {
+            logger.debug(`NotReadableError on attempt ${attempt}/${maxRetries}, retrying...`, { fileName });
+            await new Promise(resolve => setTimeout(resolve, 100 * attempt)); // exponential backoff
+            continue;
+          }
+          // Max retries reached
+          logger.warn('Failed to read text file after retries (NotReadableError)', { fileName, attempts: maxRetries });
+          return null;
+        }
+
+        // Other errors
+        const message = err instanceof Error ? err.message : 'Unknown error';
+        logger.error('Failed to read text file', { fileName, error: message });
+        this.errorCallback({
+          message: `Error reading file "${fileName}": ${message}`,
+          type: 'error',
+          error: err,
+          context: { operation: 'readTextFile', fileName },
+        });
+        throw err;
+      }
     }
+
+    return null; // Should never reach here, but TypeScript needs it
   }
 
   async restoreLastDirectoryAccess(): Promise<{ handle: FileSystemDirectoryHandle | null; permission: PermissionState }> {
