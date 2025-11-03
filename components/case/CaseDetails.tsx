@@ -242,7 +242,7 @@ export function CaseDetails({
                 <CaseSection
                   title="Resources"
                   category="resources"
-                  items={caseData.caseRecord.financials.resources || []}
+                  items={caseData.caseRecord?.financials?.resources || []}
                   onAddItem={onAddItem}
                   onDeleteItem={onDeleteItem}
                   onUpdateFullItem={handleUpdateFullItem}
@@ -254,7 +254,7 @@ export function CaseDetails({
                 <CaseSection
                   title="Income"
                   category="income"
-                  items={caseData.caseRecord.financials.income || []}
+                  items={caseData.caseRecord?.financials?.income || []}
                   onAddItem={onAddItem}
                   onDeleteItem={onDeleteItem}
                   onUpdateFullItem={handleUpdateFullItem}
@@ -266,7 +266,7 @@ export function CaseDetails({
                 <CaseSection
                   title="Expenses"
                   category="expenses"
-                  items={caseData.caseRecord.financials.expenses || []}
+                  items={caseData.caseRecord?.financials?.expenses || []}
                   onAddItem={onAddItem}
                   onDeleteItem={onDeleteItem}
                   onUpdateFullItem={handleUpdateFullItem}
@@ -283,7 +283,7 @@ export function CaseDetails({
         <ResizablePanel defaultSize={40} minSize={25}>
           <div className="p-4 bg-muted/30">
             <NotesSection
-              notes={caseData.caseRecord.notes || []}
+              notes={caseData.caseRecord?.notes || []}
               onAddNote={onAddNote}
               onEditNote={onEditNote}
               onDeleteNote={onDeleteNote}
