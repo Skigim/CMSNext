@@ -380,7 +380,7 @@ export class StorageRepository {
     if (invalidReadCount > 0 && !this.hasLoggedReadWarning) {
       this.hasLoggedReadWarning = true;
       logger.warn(
-        `[StorageRepository] Skipped ${invalidReadCount} invalid case(s) during read — sample(s):`,
+        `[StorageRepository] Skipped ${invalidReadCount} invalid case(s) during read — sample:`,
         invalidReadSamples[0] as Record<string, unknown>
       );
     }
@@ -406,10 +406,16 @@ export class StorageRepository {
 
     if (invalidRehydrationCount > 0 && !this.hasLoggedRehydrationWarning) {
       this.hasLoggedRehydrationWarning = true;
-      logger.warn(
-        `[StorageRepository] Skipped ${invalidRehydrationCount} invalid case(s) during rehydration — sample(s):`,
+      logger.error(
+        `[StorageRepository] CRITICAL: Skipped ${invalidRehydrationCount}/${caseSnapshots.length} cases during rehydration. First error:`,
         invalidRehydrationSamples[0] as Record<string, unknown>
       );
+      // Log additional samples if available
+      if (invalidRehydrationSamples.length > 1) {
+        invalidRehydrationSamples.slice(1, 3).forEach((sample, idx) => {
+          logger.error(`[StorageRepository] Error ${idx + 2}:`, sample as Record<string, unknown>);
+        });
+      }
     }
     
     const financials = this.ensureArray<FinancialItem>(base.financials);
