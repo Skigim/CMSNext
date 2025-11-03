@@ -406,14 +406,15 @@ export class StorageRepository {
 
     if (invalidRehydrationCount > 0 && !this.hasLoggedRehydrationWarning) {
       this.hasLoggedRehydrationWarning = true;
+      const firstSample = invalidRehydrationSamples[0];
       logger.error(
-        `[StorageRepository] CRITICAL: Skipped ${invalidRehydrationCount}/${caseSnapshots.length} cases during rehydration. First error:`,
-        invalidRehydrationSamples[0] as Record<string, unknown>
+        `[StorageRepository] CRITICAL: Skipped ${invalidRehydrationCount}/${caseSnapshots.length} cases during rehydration.\n` +
+        `First error - Case ID: ${firstSample?.id}, Error: ${firstSample?.error}`
       );
       // Log additional samples if available
       if (invalidRehydrationSamples.length > 1) {
         invalidRehydrationSamples.slice(1, 3).forEach((sample, idx) => {
-          logger.error(`[StorageRepository] Error ${idx + 2}:`, sample as Record<string, unknown>);
+          logger.error(`[StorageRepository] Error ${idx + 2} - Case ID: ${sample.id}, Error: ${sample.error}`);
         });
       }
     }
