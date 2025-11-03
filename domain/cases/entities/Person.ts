@@ -152,11 +152,11 @@ export class Person {
     }
 
     const { email, phone } = this.state.contactInfo;
-    if (email && !Person.emailPattern.test(email)) {
+    if (email && email.trim() && !Person.emailPattern.test(email)) {
       throw new ValidationError('Person email address is invalid');
     }
 
-    if (phone && !Person.phonePattern.test(Person.normalizePhone(phone))) {
+    if (phone && phone.trim() && !Person.phonePattern.test(Person.normalizePhone(phone))) {
       throw new ValidationError('Person phone number is invalid');
     }
 

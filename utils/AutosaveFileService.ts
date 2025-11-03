@@ -725,7 +725,12 @@ class AutosaveFileService {
       
       return rawData;
     } catch (err) {
-      if (err instanceof Error && err.name === 'NotFoundError') {
+      if (err instanceof Error && (err.name === 'NotFoundError' || err.name === 'NotReadableError')) {
+        // File doesn't exist or no permission - treat as empty
+        logger.debug('Named file not available', {
+          fileName,
+          reason: err.name === 'NotFoundError' ? 'not found' : 'no permission',
+        });
         return null;
       } else {
         logger.error('Failed to read named data file', {
