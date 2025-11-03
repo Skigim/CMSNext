@@ -19,8 +19,9 @@ export function transformImportedData(data: any): CaseDisplay[] {
   // If data is an array, assume it's an array of cases and normalize them
   if (Array.isArray(data)) {
     console.log(`Data is array with ${data.length} items`);
-    const filtered = data.filter(item => item && (item.person || item.firstName || item.name));
-    return normalizeCases(filtered);
+    // Only filter if the array contains items that look like cases (not already valid cases)
+    const cases = data.filter(item => item && (item.person || item.firstName || item.name || item.caseRecord));
+    return normalizeCases(cases);
   }
 
   // If data has case-like structure at the top level
