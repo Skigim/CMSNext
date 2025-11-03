@@ -16,16 +16,17 @@ export function transformImportedData(data: any): CaseDisplay[] {
     return normalizeCases(data.cases);
   }
 
-  // If data is an array, assume it's an array of cases
+  // If data is an array, assume it's an array of cases and normalize them
   if (Array.isArray(data)) {
     console.log(`Data is array with ${data.length} items`);
-    return data.filter(item => item && (item.person || item.firstName || item.name));
+    const filtered = data.filter(item => item && (item.person || item.firstName || item.name));
+    return normalizeCases(filtered);
   }
 
   // If data has case-like structure at the top level
   if (data.person || data.firstName || data.name) {
     console.log('Found single case at top level');
-    return [data];
+    return normalizeCases([data]);
   }
 
   // Nightingale-specific structure
@@ -47,7 +48,7 @@ export function transformImportedData(data: any): CaseDisplay[] {
   for (const { key, value } of possibleCaseArrays) {
     if (Array.isArray(value) && value.length > 0) {
       console.log(`Found cases in ${key} with ${value.length} items`);
-      return value;
+      return normalizeCases(value);
     }
   }
 
