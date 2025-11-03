@@ -63,8 +63,8 @@ export function transformImportedData(data: any): CaseDisplay[] {
  */
 function normalizeCases(cases: any[]): CaseDisplay[] {
   return cases.map(c => {
-    // If caseRecord is missing, null, or undefined, reconstruct it from top-level fields
-    if (!c.caseRecord || typeof c.caseRecord !== 'object') {
+    // If caseRecord is missing, null, or not a valid object, reconstruct it from top-level fields
+    if (!c.caseRecord || typeof c.caseRecord !== 'object' || Array.isArray(c.caseRecord)) {
       console.warn(`Migrating legacy case ${c.id} - reconstructing caseRecord from top-level fields`);
       c.caseRecord = {
         id: `${c.id}-record`,
@@ -89,7 +89,7 @@ function normalizeCases(cases: any[]): CaseDisplay[] {
       };
     } else {
       // Ensure caseRecord has required nested structures even if it exists
-      if (!c.caseRecord.financials || typeof c.caseRecord.financials !== 'object') {
+      if (!c.caseRecord.financials || typeof c.caseRecord.financials !== 'object' || Array.isArray(c.caseRecord.financials)) {
         console.warn(`Case ${c.id} has caseRecord but missing financials structure - adding defaults`);
         c.caseRecord.financials = { resources: [], income: [], expenses: [] };
       }

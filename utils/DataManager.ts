@@ -1254,8 +1254,17 @@ export class DataManager {
       // Handle different data formats
       let cases: CaseDisplay[] = [];
       
-      // ALWAYS use transformImportedData to ensure normalization runs
-      cases = transformImportedData(rawData);
+      if (rawData.cases && Array.isArray(rawData.cases)) {
+        // Already in the correct format
+        cases = rawData.cases;
+      } else if (rawData.people && rawData.caseRecords) {
+        // Raw format - transform using the data transformer
+        logger.info('Transforming raw data format to cases');
+        cases = transformImportedData(rawData);
+      } else {
+        // Try to transform whatever format this is
+        cases = transformImportedData(rawData);
+      }
 
       const categoryConfig = mergeCategoryConfig(rawData.categoryConfig);
       const activityLog = normalizeActivityLog((rawData as { activityLog?: unknown })?.activityLog);
