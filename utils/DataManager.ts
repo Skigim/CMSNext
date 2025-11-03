@@ -2442,9 +2442,30 @@ export class DataManager {
 
     const targetCase = currentData.cases[caseIndex];
 
-    // Ensure caseRecord exists
+    // Ensure caseRecord exists - create fallback if missing (defensive fix for data migration)
     if (!targetCase.caseRecord) {
-      throw new Error('Case record is missing. Cannot add note to incomplete case data.');
+      logger.warn('Case record missing, creating fallback', { caseId });
+      targetCase.caseRecord = {
+        id: `${targetCase.id}-record`,
+        mcn: targetCase.mcn,
+        applicationDate: targetCase.createdAt?.split('T')[0] || '',
+        caseType: 'General',
+        personId: targetCase.person?.id || '',
+        spouseId: '',
+        status: targetCase.status,
+        description: '',
+        priority: targetCase.priority || false,
+        livingArrangement: 'Unknown',
+        withWaiver: false,
+        admissionDate: '',
+        organizationId: '',
+        authorizedReps: [],
+        retroRequested: '',
+        financials: { resources: [], income: [], expenses: [] },
+        notes: [],
+        createdDate: targetCase.createdAt,
+        updatedDate: targetCase.updatedAt || targetCase.createdAt,
+      };
     }
 
     // Create new note
@@ -2522,9 +2543,30 @@ export class DataManager {
 
     const targetCase = currentData.cases[caseIndex];
 
-    // Ensure caseRecord exists
+    // Ensure caseRecord exists - create fallback if missing (defensive fix for data migration)
     if (!targetCase.caseRecord) {
-      throw new Error('Case record is missing. Cannot update note in incomplete case data.');
+      logger.warn('Case record missing during note update, creating fallback', { caseId });
+      targetCase.caseRecord = {
+        id: `${targetCase.id}-record`,
+        mcn: targetCase.mcn,
+        applicationDate: targetCase.createdAt?.split('T')[0] || '',
+        caseType: 'General',
+        personId: targetCase.person?.id || '',
+        spouseId: '',
+        status: targetCase.status,
+        description: '',
+        priority: targetCase.priority || false,
+        livingArrangement: 'Unknown',
+        withWaiver: false,
+        admissionDate: '',
+        organizationId: '',
+        authorizedReps: [],
+        retroRequested: '',
+        financials: { resources: [], income: [], expenses: [] },
+        notes: [],
+        createdDate: targetCase.createdAt,
+        updatedDate: targetCase.updatedAt || targetCase.createdAt,
+      };
     }
 
     // Find note to update
@@ -2592,9 +2634,30 @@ export class DataManager {
 
     const targetCase = currentData.cases[caseIndex];
 
-    // Ensure caseRecord exists
+    // Ensure caseRecord exists - create fallback if missing (defensive fix for data migration)
     if (!targetCase.caseRecord) {
-      throw new Error('Case record is missing. Cannot delete note from incomplete case data.');
+      logger.warn('Case record missing during note deletion, creating fallback', { caseId });
+      targetCase.caseRecord = {
+        id: `${targetCase.id}-record`,
+        mcn: targetCase.mcn,
+        applicationDate: targetCase.createdAt?.split('T')[0] || '',
+        caseType: 'General',
+        personId: targetCase.person?.id || '',
+        spouseId: '',
+        status: targetCase.status,
+        description: '',
+        priority: targetCase.priority || false,
+        livingArrangement: 'Unknown',
+        withWaiver: false,
+        admissionDate: '',
+        organizationId: '',
+        authorizedReps: [],
+        retroRequested: '',
+        financials: { resources: [], income: [], expenses: [] },
+        notes: [],
+        createdDate: targetCase.createdAt,
+        updatedDate: targetCase.updatedAt || targetCase.createdAt,
+      };
     }
 
     // Check if note exists
