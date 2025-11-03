@@ -85,11 +85,14 @@ export function useNoteFlow({
   const handleBatchUpdateNote = useCallback(
     async (noteId: string, updatedNote: NewNoteData) => {
       if (!selectedCase || !dataManager) {
+        let errorMsg = "Data storage is not available. Please check your connection.";
         if (!dataManager) {
-          const errorMsg = "Data storage is not available. Please check your connection.";
-          ApplicationState.getInstance().setCasesError(errorMsg);
-          toast.error(errorMsg);
+          errorMsg = "Data storage is not available. Please check your connection.";
+        } else if (!selectedCase) {
+          errorMsg = "No case selected. Please select a case first.";
         }
+        ApplicationState.getInstance().setCasesError(errorMsg);
+        toast.error(errorMsg);
         return;
       }
 
@@ -127,11 +130,14 @@ export function useNoteFlow({
   const handleBatchCreateNote = useCallback(
     async (noteData: NewNoteData) => {
       if (!selectedCase || !dataManager) {
+        let errorMsg = "Data storage is not available. Please check your connection.";
         if (!dataManager) {
-          const errorMsg = "Data storage is not available. Please check your connection.";
-          ApplicationState.getInstance().setCasesError(errorMsg);
-          toast.error(errorMsg);
+          errorMsg = "Data storage is not available. Please check your connection.";
+        } else if (!selectedCase) {
+          errorMsg = "No case selected. Please select a case first.";
         }
+        ApplicationState.getInstance().setCasesError(errorMsg);
+        toast.error(errorMsg);
         return;
       }
 
