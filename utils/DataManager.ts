@@ -2442,6 +2442,11 @@ export class DataManager {
 
     const targetCase = currentData.cases[caseIndex];
 
+    // Ensure caseRecord exists
+    if (!targetCase.caseRecord) {
+      throw new Error('Case record is missing. Cannot add note to incomplete case data.');
+    }
+
     // Create new note
     const timestamp = new Date().toISOString();
     const newNote = {
@@ -2517,6 +2522,11 @@ export class DataManager {
 
     const targetCase = currentData.cases[caseIndex];
 
+    // Ensure caseRecord exists
+    if (!targetCase.caseRecord) {
+      throw new Error('Case record is missing. Cannot update note in incomplete case data.');
+    }
+
     // Find note to update
     const noteIndex = (targetCase.caseRecord.notes || []).findIndex(note => note.id === noteId);
     if (noteIndex === -1) {
@@ -2581,6 +2591,11 @@ export class DataManager {
     }
 
     const targetCase = currentData.cases[caseIndex];
+
+    // Ensure caseRecord exists
+    if (!targetCase.caseRecord) {
+      throw new Error('Case record is missing. Cannot delete note from incomplete case data.');
+    }
 
     // Check if note exists
     const noteExists = (targetCase.caseRecord.notes || []).some(note => note.id === noteId);
