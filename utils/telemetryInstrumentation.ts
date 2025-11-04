@@ -73,31 +73,12 @@ function generateSessionId(): string {
  * @param details - Additional metadata about the operation
  */
 export function recordStorageSyncEvent(
-  operationType: StorageSyncEventPayload["operationType"],
-  success: boolean,
-  details?: Omit<StorageSyncEventPayload, "operationType" | "success" | "timestamp" | "sessionId">,
+  _operationType: StorageSyncEventPayload["operationType"],
+  _success: boolean,
+  _details?: Omit<StorageSyncEventPayload, "operationType" | "success" | "timestamp" | "sessionId">,
 ): void {
-  const payload: StorageSyncEventPayload = {
-    operationType,
-    success,
-    timestamp: Date.now(),
-    sessionId,
-    ...details,
-  };
-
-  telemetryLogger.debug(`Storage sync event: ${operationType}`, {
-    operationType: payload.operationType,
-    success: payload.success,
-    duration: payload.duration,
-    dataSize: payload.dataSize,
-    itemCount: payload.itemCount,
-    error: payload.error,
-    timestamp: payload.timestamp,
-    sessionId: payload.sessionId,
-  } as Record<string, unknown>);
-
-  // TODO: Send to telemetry collection service when available
-  // For now, this is captured in logs only
+  // Telemetry disabled
+  return;
 }
 
 /**
@@ -109,28 +90,12 @@ export function recordStorageSyncEvent(
  * @param details - Additional metadata (duration, error details)
  */
 export function recordAutosaveStateTransition(
-  previousState: string,
-  newState: string,
-  details?: Omit<AutosaveStateTransitionPayload, "previousState" | "newState" | "timestamp" | "sessionId">,
+  _previousState: string,
+  _newState: string,
+  _details?: Omit<AutosaveStateTransitionPayload, "previousState" | "newState" | "timestamp" | "sessionId">,
 ): void {
-  const payload: AutosaveStateTransitionPayload = {
-    previousState,
-    newState,
-    timestamp: Date.now(),
-    sessionId,
-    ...details,
-  };
-
-  telemetryLogger.debug(`Autosave state transition: ${previousState} → ${newState}`, {
-    previousState: payload.previousState,
-    newState: payload.newState,
-    duration: payload.duration,
-    timestamp: payload.timestamp,
-    sessionId: payload.sessionId,
-    metadata: payload.metadata,
-  } as Record<string, unknown>);
-
-  // TODO: Send to telemetry collection service when available
+  // Telemetry disabled
+  return;
 }
 
 /**
@@ -141,25 +106,11 @@ export function recordAutosaveStateTransition(
  * @param details - Duration, metadata, and other performance data
  */
 export function recordPerformanceMarker(
-  markName: string,
-  details?: Omit<PerformanceMarkerPayload, "markName" | "timestamp" | "sessionId">,
+  _markName: string,
+  _details?: Omit<PerformanceMarkerPayload, "markName" | "timestamp" | "sessionId">,
 ): void {
-  const payload: PerformanceMarkerPayload = {
-    markName,
-    timestamp: Date.now(),
-    sessionId,
-    ...details,
-  };
-
-  telemetryLogger.debug(`Performance marker: ${markName}`, {
-    markName: payload.markName,
-    duration: payload.duration,
-    timestamp: payload.timestamp,
-    sessionId: payload.sessionId,
-    metadata: payload.metadata,
-  } as Record<string, unknown>);
-
-  // TODO: Send to telemetry collection service when available
+  // Telemetry disabled
+  return;
 }
 
 /**
@@ -169,27 +120,10 @@ export function recordPerformanceMarker(
  * @param metrics - Storage health snapshot containing success/failure/latency data
  */
 export function recordStorageHealthMetrics(
-  metrics: Omit<StorageHealthMetricPayload, "timestamp" | "sessionId">,
+  _metrics: Omit<StorageHealthMetricPayload, "timestamp" | "sessionId">,
 ): void {
-  const payload: StorageHealthMetricPayload = {
-    timestamp: Date.now(),
-    sessionId,
-    ...metrics,
-  };
-
-  try {
-    telemetryLogger.info(`Storage health metrics`, {
-      successRate: `${(payload.successRate * 100).toFixed(1)}%`,
-      totalOperations: payload.totalOperations,
-      failedOperations: payload.failedOperations,
-      averageLatencyMs: `${payload.averageLatencyMs.toFixed(1)}ms`,
-      consecutiveFailures: payload.consecutiveFailures,
-    });
-  } catch {
-    // Silently ignore logging failures
-  }
-
-  // TODO: Send to telemetry collection service when available
+  // Telemetry disabled
+  return;
 }
 
 /**
