@@ -284,8 +284,6 @@ export function CaseDetails({
           <div className="p-4 bg-muted/30">
             <NotesSection
               notes={caseData.caseRecord?.notes || []}
-              onAddNote={onAddNote}
-              onEditNote={onEditNote}
               onDeleteNote={onDeleteNote}
               onUpdateNote={onBatchUpdateNote}
               onCreateNote={onBatchCreateNote}
