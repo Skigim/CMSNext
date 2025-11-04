@@ -22,6 +22,13 @@ export interface FinancialItemSnapshot {
   createdAt: string;
   updatedAt: string;
   metadata: Record<string, unknown>;
+  // Legacy UI fields for backward compatibility
+  frequency?: string;
+  location?: string;
+  accountNumber?: string;
+  verificationSource?: string;
+  notes?: string;
+  owner?: string;
 }
 
 export interface FinancialItemCreateInput {
@@ -34,6 +41,13 @@ export interface FinancialItemCreateInput {
   createdAt?: string | Date;
   updatedAt?: string | Date;
   metadata?: Record<string, unknown>;
+  // Legacy UI fields for backward compatibility
+  frequency?: string;
+  location?: string;
+  accountNumber?: string;
+  verificationSource?: string;
+  notes?: string;
+  owner?: string;
 }
 
 /**
@@ -63,6 +77,13 @@ export class FinancialItem {
       createdAt: FinancialItem.normalizeDate(input.createdAt ?? now),
       updatedAt: FinancialItem.normalizeDate(input.updatedAt ?? now),
       metadata: FinancialItem.cloneMetadata(input.metadata ?? {}),
+      // Include legacy fields if provided
+      frequency: input.frequency?.trim() || undefined,
+      location: input.location?.trim() || undefined,
+      accountNumber: input.accountNumber?.trim() || undefined,
+      verificationSource: input.verificationSource?.trim() || undefined,
+      notes: input.notes?.trim() || undefined,
+      owner: input.owner?.trim() || undefined,
     });
   }
 
@@ -80,6 +101,13 @@ export class FinancialItem {
       createdAt: FinancialItem.normalizeDate(snapshot.createdAt),
       updatedAt: FinancialItem.normalizeDate(snapshot.updatedAt),
       metadata: FinancialItem.cloneMetadata(snapshot.metadata ?? {}),
+      // Preserve legacy fields from storage
+      frequency: snapshot.frequency,
+      location: snapshot.location,
+      accountNumber: snapshot.accountNumber,
+      verificationSource: snapshot.verificationSource,
+      notes: snapshot.notes,
+      owner: snapshot.owner,
     });
   }
 
@@ -104,6 +132,13 @@ export class FinancialItem {
       createdAt: this.createdAt,
       updatedAt: this.updatedAt,
       metadata: FinancialItem.cloneMetadata(this.metadata),
+      // Include legacy fields in serialization
+      frequency: this.frequency,
+      location: this.location,
+      accountNumber: this.accountNumber,
+      verificationSource: this.verificationSource,
+      notes: this.notes,
+      owner: this.owner,
     };
   }
 
@@ -166,6 +201,42 @@ export class FinancialItem {
 
   get metadata(): Record<string, unknown> {
     return FinancialItem.cloneMetadata(this.props.metadata);
+  }
+
+  get frequency(): string | undefined {
+    return this.props.frequency;
+  }
+
+  get location(): string | undefined {
+    return this.props.location;
+  }
+
+  get accountNumber(): string | undefined {
+    return this.props.accountNumber;
+  }
+
+  get verificationSource(): string | undefined {
+    return this.props.verificationSource;
+  }
+
+  get notes(): string | undefined {
+    return this.props.notes;
+  }
+
+  get owner(): string | undefined {
+    return this.props.owner;
+  }
+
+  /**
+   * Apply updates immutably, returning a new FinancialItem instance.
+   * Used for updates that preserve entity integrity and timestamps.
+   */
+  applyUpdates(updates: Partial<Omit<FinancialItemSnapshot, 'id' | 'caseId' | 'createdAt'>>): FinancialItem {
+    return FinancialItem.rehydrate({
+      ...this.toJSON(),
+      ...updates,
+      updatedAt: new Date().toISOString(),
+    });
   }
 
   private static normalizeDate(value: string | Date): string {

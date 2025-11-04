@@ -1,59 +1,71 @@
-import { useCallback, useState } from "react";
-import { toast } from "sonner";
-import { useDataManagerSafe } from "../contexts/DataManagerContext";
-import type { CaseCategory, CaseDisplay, FinancialItem } from "../types/case";
+import { useCallback, useRef, useEffect, useState } from "react";
+import { useFinancialService } from "@/contexts/FinancialServiceContext";
+import { useApplicationState } from "@/application/hooks/useApplicationState";
+import { FinancialCategory, type FinancialItemCreateInput, type FinancialItemSnapshot } from "@/domain/financials/entities/FinancialItem";
+import type { CaseDisplay } from "../types/case";
 
 export type ItemFormState = {
   isOpen: boolean;
-  category?: CaseCategory;
-  item?: FinancialItem;
+  category?: FinancialCategory;
+  item?: FinancialItemSnapshot;
   caseId?: string;
 };
 
 interface UseFinancialItemFlowParams {
   selectedCase: CaseDisplay | null;
-  setCases: React.Dispatch<React.SetStateAction<CaseDisplay[]>>;
-  setError: React.Dispatch<React.SetStateAction<string | null>>;
 }
 
 interface UseFinancialItemFlowResult {
   itemForm: ItemFormState;
-  openItemForm: (category: CaseCategory) => void;
+  items: FinancialItemSnapshot[];
+  loading: boolean;
+  error: string | null;
+  openItemForm: (category: FinancialCategory) => void;
   closeItemForm: () => void;
-  handleDeleteItem: (category: CaseCategory, itemId: string) => Promise<void>;
+  handleDeleteItem: (category: FinancialCategory, itemId: string) => Promise<void>;
   handleBatchUpdateItem: (
-    category: CaseCategory,
+    category: FinancialCategory,
     itemId: string,
-    updatedItem: Partial<FinancialItem>,
+    updatedItem: Partial<FinancialItemSnapshot>,
   ) => Promise<void>;
   handleCreateItem: (
-    category: CaseCategory,
-    itemData: Omit<FinancialItem, "id" | "createdAt" | "updatedAt">,
+    category: FinancialCategory,
+    itemData: Omit<FinancialItemCreateInput, 'id' | 'caseId' | 'category' | 'createdAt' | 'updatedAt'>,
   ) => Promise<void>;
 }
 
+/**
+ * Hook for financial item management operations.
+ * 
+ * Thin wrapper around FinancialManagementService.
+ * Uses useRef pattern for callback stability (prevents infinite loops).
+ * 
+ * Pattern: Service Layer + useRef for stable callbacks
+ */
 export function useFinancialItemFlow({
   selectedCase,
-  setCases,
-  setError,
 }: UseFinancialItemFlowParams): UseFinancialItemFlowResult {
-  const dataManager = useDataManagerSafe();
+  const service = useFinancialService();
+  const serviceRef = useRef(service);
   const [itemForm, setItemForm] = useState<ItemFormState>({ isOpen: false });
 
-  const ensureCaseAndManager = useCallback(() => {
-    if (!selectedCase || !dataManager) {
-      if (!dataManager) {
-        const errorMsg = "Data storage is not available. Please check your connection.";
-        setError(errorMsg);
-        toast.error(errorMsg);
-      }
-      return false;
-    }
-    return true;
-  }, [dataManager, selectedCase, setError]);
+  // Update ref when service changes
+  useEffect(() => {
+    serviceRef.current = service;
+  }, [service]);
+
+  // Reactive state from ApplicationState
+  const allItems = useApplicationState(state =>
+    selectedCase ? state.getFinancialItemsByCaseId(selectedCase.id) : []
+  );
+  const loading = useApplicationState(state => state.getFinancialItemsLoading());
+  const error = useApplicationState(state => state.getFinancialItemsError());
+
+  // Convert domain entities to snapshots for UI
+  const items = allItems.map(item => item.toJSON());
 
   const openItemForm = useCallback(
-    (category: CaseCategory) => {
+    (category: FinancialCategory) => {
       if (!selectedCase) {
         return;
       }
@@ -71,96 +83,56 @@ export function useFinancialItemFlow({
   }, []);
 
   const handleDeleteItem = useCallback(
-    async (category: CaseCategory, itemId: string) => {
-      if (!ensureCaseAndManager() || !selectedCase || !dataManager) {
+    async (_category: FinancialCategory, itemId: string) => {
+      if (!selectedCase) {
         return;
       }
 
-      try {
-        setError(null);
-        const updatedCase = await dataManager.deleteItem(selectedCase.id, category, itemId);
-        setCases(prevCases =>
-          prevCases.map(c => (c.id === selectedCase.id ? updatedCase : c)),
-        );
-
-        toast.success(`${category.charAt(0).toUpperCase() + category.slice(1)} item deleted successfully`);
-      } catch (err) {
-        console.error("Failed to delete item:", err);
-        const errorMsg = "Failed to delete item. Please try again.";
-        setError(errorMsg);
-        toast.error(errorMsg);
-      }
+      await serviceRef.current.deleteItemWithFeedback(itemId);
     },
-    [dataManager, ensureCaseAndManager, selectedCase, setCases, setError],
+    [selectedCase],
   );
 
   const handleBatchUpdateItem = useCallback(
-    async (category: CaseCategory, itemId: string, updatedItem: Partial<FinancialItem>) => {
-      if (!ensureCaseAndManager() || !selectedCase || !dataManager) {
+    async (
+      _category: FinancialCategory,
+      itemId: string,
+      updatedItem: Partial<FinancialItemSnapshot>,
+    ) => {
+      if (!selectedCase) {
         return;
       }
 
-      try {
-        setError(null);
-        const updatedCase = await dataManager.updateItem(selectedCase.id, category, itemId, updatedItem);
-
-        setCases(prevCases =>
-          prevCases.map(c => (c.id === selectedCase.id ? updatedCase : c)),
-        );
-
-        toast.success("Item updated successfully", { duration: 2000 });
-      } catch (err) {
-        console.error("Failed to update item:", err);
-
-        let errorMsg = "Failed to update item. Please try again.";
-        if (err instanceof Error) {
-          if (err.message.includes("File was modified by another process")) {
-            errorMsg = "File was modified by another process. Your changes were not saved. Please refresh and try again.";
-          } else if (err.message.includes("Permission denied")) {
-            errorMsg = "Permission denied. Please check that you have write access to the data folder.";
-          } else if (
-            err.message.includes("state cached in an interface object") ||
-            err.message.includes("state had changed")
-          ) {
-            errorMsg = "Data sync issue detected. Please refresh the page and try again.";
-          }
-        }
-
-        setError(errorMsg);
-        toast.error(errorMsg, { duration: 5000 });
-        throw err;
-      }
+      await serviceRef.current.updateItemWithFeedback(itemId, updatedItem);
     },
-    [dataManager, ensureCaseAndManager, selectedCase, setCases, setError],
+    [selectedCase],
   );
 
   const handleCreateItem = useCallback(
-    async (category: CaseCategory, itemData: Omit<FinancialItem, "id" | "createdAt" | "updatedAt">) => {
-      if (!ensureCaseAndManager() || !selectedCase || !dataManager) {
+    async (
+      category: FinancialCategory,
+      itemData: Omit<FinancialItemCreateInput, 'id' | 'caseId' | 'category' | 'createdAt' | 'updatedAt'>,
+    ) => {
+      if (!selectedCase) {
         return;
       }
 
-      try {
-        setError(null);
-        const updatedCase = await dataManager.addItem(selectedCase.id, category, itemData);
-        setCases(prevCases =>
-          prevCases.map(c => (c.id === selectedCase.id ? updatedCase : c)),
-        );
+      const createInput: FinancialItemCreateInput = {
+        ...itemData,
+        caseId: selectedCase.id,
+        category,
+      };
 
-        toast.success("Item created successfully", { duration: 2000 });
-      } catch (err) {
-        console.error("Failed to create item:", err);
-        const errorMsg = "Failed to create item. Please try again.";
-        setError(errorMsg);
-        toast.error(errorMsg);
-        throw err;
-      }
+      await serviceRef.current.createItemWithFeedback(createInput);
     },
-    [dataManager, ensureCaseAndManager, selectedCase, setCases, setError],
+    [selectedCase],
   );
 
   return {
     itemForm,
+    items,
+    loading,
+    error,
     openItemForm,
     closeItemForm,
     handleDeleteItem,

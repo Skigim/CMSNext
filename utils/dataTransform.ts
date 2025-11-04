@@ -10,22 +10,24 @@ export function transformImportedData(data: any): CaseDisplay[] {
 
   console.log('Transforming imported data:', data);
 
-  // If data has a cases array, use that
+  // If data has a cases array, validate and normalize it
   if (data.cases && Array.isArray(data.cases)) {
     console.log(`Found cases array with ${data.cases.length} items`);
-    return data.cases;
+    return normalizeCases(data.cases);
   }
 
-  // If data is an array, assume it's an array of cases
+  // If data is an array, assume it's an array of cases and normalize them
   if (Array.isArray(data)) {
     console.log(`Data is array with ${data.length} items`);
-    return data.filter(item => item && (item.person || item.firstName || item.name));
+    // Only filter if the array contains items that look like cases (not already valid cases)
+    const cases = data.filter(item => item && (item.person || item.firstName || item.name || item.caseRecord));
+    return normalizeCases(cases);
   }
 
   // If data has case-like structure at the top level
   if (data.person || data.firstName || data.name) {
     console.log('Found single case at top level');
-    return [data];
+    return normalizeCases([data]);
   }
 
   // Nightingale-specific structure
@@ -47,12 +49,57 @@ export function transformImportedData(data: any): CaseDisplay[] {
   for (const { key, value } of possibleCaseArrays) {
     if (Array.isArray(value) && value.length > 0) {
       console.log(`Found cases in ${key} with ${value.length} items`);
-      return value;
+      return normalizeCases(value);
     }
   }
 
   console.warn('Could not find valid case data in imported file:', Object.keys(data));
   return [];
+}
+
+/**
+ * Normalize cases to ensure proper structure
+ * Defensive migration fix: add missing caseRecord from top-level fields
+ */
+function normalizeCases(cases: any[]): CaseDisplay[] {
+  return cases.map(c => {
+    // If caseRecord is missing, null, or not a valid object, reconstruct it from top-level fields
+    if (!c.caseRecord || typeof c.caseRecord !== 'object' || Array.isArray(c.caseRecord)) {
+      console.warn(`Migrating legacy case ${c.id} - reconstructing caseRecord from top-level fields`);
+      c.caseRecord = {
+        id: `${c.id}-record`,
+        personId: c.person?.id || '',
+        mcn: c.mcn || '',
+        applicationDate: c.createdAt?.split('T')[0] || new Date().toISOString(),
+        caseType: 'General',
+        spouseId: '',
+        status: c.status || 'Pending',
+        description: '',
+        priority: c.priority || false,
+        livingArrangement: c.person?.livingArrangement || 'Unknown',
+        withWaiver: false,
+        admissionDate: c.createdAt || new Date().toISOString(),
+        organizationId: c.person?.organizationId || '',
+        authorizedReps: [],
+        retroRequested: '',
+        financials: c.financials || { resources: [], income: [], expenses: [] },
+        notes: c.notes || [],
+        createdDate: c.createdAt || new Date().toISOString(),
+        updatedDate: c.updatedAt || new Date().toISOString(),
+      };
+    } else {
+      // Ensure caseRecord has required nested structures even if it exists
+      if (!c.caseRecord.financials || typeof c.caseRecord.financials !== 'object' || Array.isArray(c.caseRecord.financials)) {
+        console.warn(`Case ${c.id} has caseRecord but missing financials structure - adding defaults`);
+        c.caseRecord.financials = { resources: [], income: [], expenses: [] };
+      }
+      if (!Array.isArray(c.caseRecord.notes)) {
+        console.warn(`Case ${c.id} has caseRecord but invalid notes array - adding default`);
+        c.caseRecord.notes = [];
+      }
+    }
+    return c;
+  });
 }
 
 /**

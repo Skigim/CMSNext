@@ -190,9 +190,8 @@ describe("App alert resolution", () => {
       saveCase: vi.fn(),
       deleteCase: vi.fn(),
       updateCaseStatus: vi.fn(),
-      setCases: vi.fn(),
-      setError: vi.fn(),
-      setHasLoadedData: vi.fn(),
+      saveNote: vi.fn(),
+      importCases: vi.fn(),
     };
 
     navigationFlowMock = {

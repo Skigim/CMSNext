@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { useFileStorage, useFileStorageLifecycleSelectors } from "../../contexts/FileStorageContext";
 import { useDataManagerSafe } from "../../contexts/DataManagerContext";
 import { useCategoryConfig } from "../../contexts/CategoryConfigContext";
+import ApplicationState from "@/application/ApplicationState";
 import {
   useAlertsFlow,
   useCaseActivityLog,
@@ -41,9 +42,6 @@ export const AppContent = memo(function AppContent() {
     saveCase,
     deleteCase,
     updateCaseStatus,
-    setCases,
-    setError,
-    setHasLoadedData,
   } = useCaseManagement();
 
   const {
@@ -61,13 +59,11 @@ export const AppContent = memo(function AppContent() {
   const { setConfigFromFile } = useCategoryConfig();
 
   const reloadCasesFromFile = useCallback(async () => {
-    await loadCases();
+    return await loadCases();
   }, [loadCases]);
 
   useFileDataSync({
     loadCases: reloadCasesFromFile,
-    setCases,
-    setHasLoadedData,
     setConfigFromFile,
   });
 
@@ -111,9 +107,6 @@ export const AppContent = memo(function AppContent() {
     service,
     dataManager,
     loadCases,
-    setCases,
-    setError,
-    setHasLoadedData,
   });
 
   const {
@@ -125,8 +118,6 @@ export const AppContent = memo(function AppContent() {
     handleCreateItem: createFinancialItem,
   } = useFinancialItemFlow({
     selectedCase: selectedCase ?? null,
-    setCases,
-    setError,
   });
 
   const {
@@ -141,8 +132,6 @@ export const AppContent = memo(function AppContent() {
   } = useNoteFlow({
     selectedCase: selectedCase ?? null,
     cases,
-    setCases,
-    setError,
   });
 
   const handleSaveNote = useCallback(
@@ -169,7 +158,7 @@ export const AppContent = memo(function AppContent() {
     [baseHandleBatchCreateNote, refreshActivityLog],
   );
 
-  useImportListeners({ loadCases, setError, isStorageReady: connectionState.isReady });
+  useImportListeners({ loadCases, isStorageReady: connectionState.isReady });
 
   const { alertsIndex, onResolveAlert: handleResolveAlert, onAlertsCsvImported: handleAlertsCsvImported } = useAlertsFlow({
     cases,
@@ -208,9 +197,10 @@ export const AppContent = memo(function AppContent() {
 
   const handleDataPurged = useCallback(async () => {
     try {
-      setError(null);
-      setCases([]);
-      setHasLoadedData(false);
+      const appState = ApplicationState.getInstance();
+      appState.setCasesError(null);
+      appState.setCasesFromLegacyDisplays([]);
+      appState.setHasLoadedCases(false);
 
       clearFileStorageFlags("dataBaseline", "sessionHadData");
 
@@ -220,10 +210,10 @@ export const AppContent = memo(function AppContent() {
         error: err instanceof Error ? err.message : String(err),
       });
       const errorMsg = "Failed to complete data purge. Please try again.";
-      setError(errorMsg);
+      ApplicationState.getInstance().setCasesError(errorMsg);
       toast.error(errorMsg);
     }
-  }, [setCases, setError, setHasLoadedData]);
+  }, []);
 
   const handleSidebarOpenChange = useCallback(
     (open: boolean) => {
@@ -232,33 +222,35 @@ export const AppContent = memo(function AppContent() {
     [setSidebarOpen],
   );
 
-  const handleCaseUpdated = useCallback(
-    (updatedCase: CaseDisplay) => {
-      setCases(prevCases => prevCases.map(c => (c.id === updatedCase.id ? updatedCase : c)));
-    },
-    [setCases],
-  );
+  const handleCaseUpdated = useCallback((updatedCase: CaseDisplay) => {
+    ApplicationState.getInstance().upsertCaseFromLegacy(updatedCase);
+  }, []);
 
   const handleUpdateCaseStatus = useCallback(
     async (caseId: string, status: CaseDisplay["status"]) => {
-      const result = await updateCaseStatus(caseId, status);
-      if (result) {
+      try {
+        const result = await updateCaseStatus(caseId, status);
         await refreshActivityLog();
+        return result;
+      } catch (error) {
+        if (error instanceof Error && error.name === "AbortError") {
+          return null;
+        }
+        throw error;
       }
-      return result;
     },
     [refreshActivityLog, updateCaseStatus],
   );
 
   const handleDismissError = useCallback(() => {
-    setError(null);
-  }, [setError]);
+    ApplicationState.getInstance().setCasesError(null);
+  }, []);
 
   const handleGoToSettings = useCallback(() => {
     dismissConnectModal();
-    setHasLoadedData(true);
+    ApplicationState.getInstance().setHasLoadedCases(true);
     handleNavigate("settings");
-  }, [dismissConnectModal, handleNavigate, setHasLoadedData]);
+  }, [dismissConnectModal, handleNavigate]);
 
   const navigationState = useMemo(
     () => ({
@@ -387,6 +379,8 @@ export const AppContent = memo(function AppContent() {
       todayActivityReport,
       viewHandlers,
       yesterdayActivityReport,
+      clearReportForDate,
+      getReportForDate,
     ],
   );
 

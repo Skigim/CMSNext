@@ -1365,13 +1365,13 @@ export class DataManager {
 
       // Handle different data formats
       let cases: CaseDisplay[] = [];
-      let needsPersistence = false;
+      let needsMigrationPersistence = false;
       
       if (rawData.cases && Array.isArray(rawData.cases)) {
         // Check if this is Phase 3 format and migrate if needed
         const { migratedCases, wasMigrated } = this.migratePhase3Format(rawData);
         cases = migratedCases;
-        needsPersistence = wasMigrated;
+        needsMigrationPersistence = wasMigrated;
       } else if (rawData.people && rawData.caseRecords) {
         // Raw format - transform using the data transformer
         logger.info('Transforming raw data format to cases');
@@ -1390,10 +1390,7 @@ export class DataManager {
       let finalExportedAt = rawData.exported_at || rawData.exportedAt || new Date().toISOString();
 
       // Persist if migration occurred or notes were normalized
-      if ((changed || needsPersistence) && this.persistNormalizationFixes) {
-        if (needsPersistence) {
-          logger.info('Persisting migrated Phase 3 data');
-        }
+      if ((needsMigrationPersistence || changed) && this.persistNormalizationFixes) {
         const persistedData = await this.writeFileData({
           cases: normalizedCases,
           exported_at: finalExportedAt,
@@ -1404,7 +1401,7 @@ export class DataManager {
 
         finalCases = persistedData.cases;
         finalExportedAt = persistedData.exported_at;
-      } else if (changed || needsPersistence) {
+      } else if (needsMigrationPersistence || changed) {
         logger.warn('Data normalization or migration needed but persistence disabled');
       }
 
@@ -2366,6 +2363,11 @@ export class DataManager {
 
     const targetCase = currentData.cases[caseIndex];
 
+    // Ensure caseRecord exists
+    if (!targetCase.caseRecord) {
+      throw new Error('Case record is missing - data integrity issue. Please reload the data.');
+    }
+
     // Create new item
     const newItem: FinancialItem = {
       ...itemData,
@@ -2429,6 +2431,11 @@ export class DataManager {
     }
 
     const targetCase = currentData.cases[caseIndex];
+
+    // Ensure caseRecord exists
+    if (!targetCase.caseRecord) {
+      throw new Error('Case record is missing - data integrity issue. Please reload the data.');
+    }
 
     // Find item to update
     const itemIndex = targetCase.caseRecord.financials[category].findIndex(item => item.id === itemId);
@@ -2499,6 +2506,11 @@ export class DataManager {
 
     const targetCase = currentData.cases[caseIndex];
 
+    // Ensure caseRecord exists
+    if (!targetCase.caseRecord) {
+      throw new Error('Case record is missing - data integrity issue. Please reload the data.');
+    }
+
     // Check if item exists
     const itemExists = targetCase.caseRecord.financials[category].some(item => item.id === itemId);
     if (!itemExists) {
@@ -2558,6 +2570,11 @@ export class DataManager {
     }
 
     const targetCase = currentData.cases[caseIndex];
+
+    // Ensure caseRecord exists
+    if (!targetCase.caseRecord) {
+      throw new Error('Case record is missing - data integrity issue. Please reload the data.');
+    }
 
     // Create new note
     const timestamp = new Date().toISOString();
@@ -2634,6 +2651,11 @@ export class DataManager {
 
     const targetCase = currentData.cases[caseIndex];
 
+    // Ensure caseRecord exists
+    if (!targetCase.caseRecord) {
+      throw new Error('Case record is missing - data integrity issue. Please reload the data.');
+    }
+
     // Find note to update
     const noteIndex = (targetCase.caseRecord.notes || []).findIndex(note => note.id === noteId);
     if (noteIndex === -1) {
@@ -2698,6 +2720,11 @@ export class DataManager {
     }
 
     const targetCase = currentData.cases[caseIndex];
+
+    // Ensure caseRecord exists
+    if (!targetCase.caseRecord) {
+      throw new Error('Case record is missing - data integrity issue. Please reload the data.');
+    }
 
     // Check if note exists
     const noteExists = (targetCase.caseRecord.notes || []).some(note => note.id === noteId);

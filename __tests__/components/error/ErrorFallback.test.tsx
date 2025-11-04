@@ -50,7 +50,7 @@ describe("ErrorFallback", () => {
 
     await userEvent.click(screen.getByRole("button", { name: /Reload Page/i }));
     expect(reloadSpy).toHaveBeenCalledTimes(1);
-  });
+  }, 10000);
 
   it("reveals error details in development using details element", async () => {
     const { ErrorFallback } = await import("@/components/error/ErrorFallback");

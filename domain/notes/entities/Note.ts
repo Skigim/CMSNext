@@ -149,6 +149,18 @@ export class Note {
     return Note.cloneMetadata(this.props.metadata);
   }
 
+  /**
+   * Apply updates immutably, returning a new Note instance.
+   * Used for updates that preserve entity integrity and timestamps.
+   */
+  applyUpdates(updates: Partial<Omit<NoteSnapshot, 'id' | 'caseId' | 'createdAt'>>): Note {
+    return Note.rehydrate({
+      ...this.toJSON(),
+      ...updates,
+      updatedAt: new Date().toISOString(),
+    });
+  }
+
   private static normalizeDate(value: string | Date): string {
     if (value instanceof Date) {
       return value.toISOString();

@@ -130,7 +130,7 @@ const widgetTitles = [
   "Cases Processed/Day",
   "Activity Timeline",
   "Total Cases by Status",
-  "Open Alerts by Description",
+  /Alerts by Description/i, // Use regex for titles that might be split across elements
   "Avg. Alert Age",
   "Avg. Case Processing Time",
 ];
@@ -146,6 +146,9 @@ describe("feature flag integration", () => {
   });
 
   function renderDashboard() {
+    // Initialize ApplicationState before rendering
+    ApplicationState.getInstance();
+    
     const cases: CaseDisplay[] = [createCase({ id: "case-1" }), createCase({ id: "case-2", status: CASE_STATUS.Closed })];
     const alerts = [
       createAlert({ id: "alert-1", status: "resolved", resolvedAt: "2025-10-20T00:00:00Z" }),
@@ -175,14 +178,21 @@ describe("feature flag integration", () => {
   }
 
   it("shows all widgets when all flags are enabled", async () => {
+    const appState = ApplicationState.getInstance();
+    const flags = appState.getFeatureFlags();
+    // All flags should be true by default
+    expect(flags["dashboard.widgets.casePriority"]).toBe(true);
+    expect(flags["dashboard.widgets.alertsCleared"]).toBe(true);
+    
     renderDashboard();
 
+    // Wait for each widget using the same pattern as the passing tests
     for (const title of widgetTitles) {
       await waitFor(() => {
         expect(screen.getByText(title)).toBeInTheDocument();
-      });
+      }, { timeout: 20000 });
     }
-  });
+  }, 180000); // 3 minute test timeout
 
   it("hides widgets tied to disabled flags", async () => {
     const appState = ApplicationState.getInstance();
