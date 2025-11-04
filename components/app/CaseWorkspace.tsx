@@ -4,13 +4,12 @@ import type { AppNavigationConfig } from "./AppNavigationShell";
 import { AppNavigationShell } from "./AppNavigationShell";
 import { ViewRenderer } from "../routing/ViewRenderer";
 import type {
-  CaseCategory,
   CaseDisplay,
-  FinancialItem,
   NewCaseRecordData,
   NewNoteData,
   NewPersonData,
 } from "../../types/case";
+import { FinancialCategory, type FinancialItemSnapshot } from "@/domain/financials/entities/FinancialItem";
 import type { ItemFormState } from "../../hooks/useFinancialItemFlow";
 import type { AlertsIndex, AlertWithMatch } from "../../utils/alertsData";
 import type { CaseActivityLogState } from "../../types/activityLog";
@@ -32,16 +31,16 @@ interface CaseWorkspaceViewHandlers {
 
 interface CaseWorkspaceFinancialFlow {
   itemForm: ItemFormState;
-  handleAddItem: (category: CaseCategory) => void;
-  handleDeleteItem: (category: CaseCategory, itemId: string) => Promise<void>;
+  handleAddItem: (category: FinancialCategory) => void;
+  handleDeleteItem: (category: FinancialCategory, itemId: string) => Promise<void>;
   handleBatchUpdateItem: (
-    category: CaseCategory,
+    category: FinancialCategory,
     itemId: string,
-    updatedItem: Partial<FinancialItem>,
+    updatedItem: Partial<FinancialItemSnapshot>,
   ) => Promise<void>;
   handleCreateItem: (
-    category: CaseCategory,
-    itemData: Omit<FinancialItem, "id" | "createdAt" | "updatedAt">,
+    category: FinancialCategory,
+    itemData: Omit<FinancialItemSnapshot, "id" | "createdAt" | "updatedAt">,
   ) => Promise<void>;
   handleCancelItemForm: () => void;
   closeItemForm: () => void;

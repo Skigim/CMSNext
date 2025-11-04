@@ -5,7 +5,7 @@ import { createMockCaseDisplay } from "@/src/test/testUtils";
 import type { AlertsIndex } from "@/utils/alertsData";
 import type { AppView } from "@/types/view";
 import type { CaseWorkspaceProps } from "@/components/app/CaseWorkspace";
-import type { CaseCategory } from "@/types/case";
+import { FinancialCategory } from "@/domain/financials/entities/FinancialItem";
 
 const viewRendererSpy = vi.fn();
 
@@ -138,7 +138,7 @@ describe("CaseWorkspace", () => {
 
     const financialFlow = {
       ...baseFinancialFlow,
-      itemForm: { isOpen: true, category: "income" as CaseCategory },
+      itemForm: { isOpen: true, category: FinancialCategory.Income },
     } satisfies CaseWorkspaceProps["financialFlow"];
 
     render(

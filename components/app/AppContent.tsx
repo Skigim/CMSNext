@@ -24,7 +24,8 @@ import { recordRenderProfile } from "../../utils/performanceTracker";
 import { createLogger } from "../../utils/logger";
 import { AppContentView } from "./AppContentView";
 import { useAppContentViewModel } from "./useAppContentViewModel";
-import type { CaseCategory, CaseDisplay, FinancialItem, NewNoteData } from "../../types/case";
+import type { CaseDisplay, NewNoteData, NewPersonData, NewCaseRecordData } from "../../types/case";
+import { FinancialCategory, type FinancialItemSnapshot } from "@/domain/financials/entities/FinancialItem";
 
 const logger = createLogger("AppContent");
 
@@ -67,10 +68,17 @@ export const AppContent = memo(function AppContent() {
     setConfigFromFile,
   });
 
+  const handleSaveCaseForNav = useCallback(
+    async (caseData: { person: NewPersonData; caseRecord: NewCaseRecordData }, editingCase?: CaseDisplay | null) => {
+      await saveCase(caseData, editingCase);
+    },
+    [saveCase],
+  );
+
   const navigationFlow = useNavigationFlow({
     cases,
     connectionState,
-    saveCase,
+    saveCase: handleSaveCaseForNav,
     deleteCase,
   });
 
@@ -121,41 +129,65 @@ export const AppContent = memo(function AppContent() {
   });
 
   const {
-    noteForm,
-    handleAddNote,
-    handleEditNote,
-    handleDeleteNote,
-    handleSaveNote: baseHandleSaveNote,
-    handleCancelNoteForm,
-    handleBatchUpdateNote: baseHandleBatchUpdateNote,
-    handleBatchCreateNote: baseHandleBatchCreateNote,
+    notes: _notes, // Available for future use
+    createNote,
+    updateNote,
+    deleteNote,
   } = useNoteFlow({
-    selectedCase: selectedCase ?? null,
-    cases,
+    caseId: selectedCase?.id ?? null,
   });
+
+  // TODO: Refactor note form management - these are temporary stubs
+  const noteForm = useMemo(() => ({ isOpen: false }), []);
+  const handleAddNote = useCallback(() => {
+    // Note adding is handled directly through the modal now
+  }, []);
+  const handleEditNote = useCallback((_noteId: string) => {
+    // Note editing is handled directly through the modal now
+  }, []);
+  const handleCancelNoteForm = useCallback(() => {
+    // Form cancellation is handled directly in the modal now
+  }, []);
 
   const handleSaveNote = useCallback(
     async (noteData: NewNoteData) => {
-      await baseHandleSaveNote(noteData);
+      if (!selectedCase) return;
+      
+      await createNote({
+        caseId: selectedCase.id,
+        content: noteData.content,
+        category: noteData.category as any, // Type mapping needed
+        metadata: noteData as any,
+      });
       await refreshActivityLog();
     },
-    [baseHandleSaveNote, refreshActivityLog],
+    [selectedCase, createNote, refreshActivityLog],
   );
 
   const handleBatchUpdateNote = useCallback(
     async (noteId: string, noteData: NewNoteData) => {
-      await baseHandleBatchUpdateNote(noteId, noteData);
+      await updateNote(noteId, {
+        content: noteData.content,
+        category: noteData.category as any,
+      });
       await refreshActivityLog();
     },
-    [baseHandleBatchUpdateNote, refreshActivityLog],
+    [updateNote, refreshActivityLog],
   );
 
   const handleBatchCreateNote = useCallback(
     async (noteData: NewNoteData) => {
-      await baseHandleBatchCreateNote(noteData);
+      await handleSaveNote(noteData);
+    },
+    [handleSaveNote],
+  );
+
+  const handleDeleteNote = useCallback(
+    async (noteId: string) => {
+      await deleteNote(noteId);
       await refreshActivityLog();
     },
-    [baseHandleBatchCreateNote, refreshActivityLog],
+    [deleteNote, refreshActivityLog],
   );
 
   useImportListeners({ loadCases, isStorageReady: connectionState.isReady });
@@ -168,25 +200,25 @@ export const AppContent = memo(function AppContent() {
   });
 
   const handleAddItem = useCallback(
-    (category: CaseCategory) => {
+    (category: FinancialCategory) => {
       openItemForm(category);
     },
     [openItemForm],
   );
 
   const handleDeleteItem = useCallback(
-    (category: CaseCategory, itemId: string) => deleteFinancialItem(category, itemId),
+    (category: FinancialCategory, itemId: string) => deleteFinancialItem(category, itemId),
     [deleteFinancialItem],
   );
 
   const handleBatchUpdateItem = useCallback(
-    (category: CaseCategory, itemId: string, updatedItem: Partial<FinancialItem>) =>
+    (category: FinancialCategory, itemId: string, updatedItem: Partial<FinancialItemSnapshot>) =>
       batchUpdateFinancialItem(category, itemId, updatedItem),
     [batchUpdateFinancialItem],
   );
 
   const handleCreateItem = useCallback(
-    (category: CaseCategory, itemData: Omit<FinancialItem, "id" | "createdAt" | "updatedAt">) =>
+    (category: FinancialCategory, itemData: Omit<FinancialItemSnapshot, "id" | "createdAt" | "updatedAt">) =>
       createFinancialItem(category, itemData),
     [createFinancialItem],
   );
