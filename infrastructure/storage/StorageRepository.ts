@@ -324,6 +324,11 @@ export class StorageRepository {
     const invalidReadSamples: unknown[] = [];
     const invalidRehydrationSamples: Array<{ id: string; error: string }> = [];
     
+    // Accumulators for migrated data from legacy format
+    const migratedFinancials: any[] = [];
+    const migratedNotes: any[] = [];
+    const migratedAlerts: any[] = [];
+    
     // Convert CaseDisplay format to CaseSnapshot if needed (for legacy DataManager compatibility)
     const caseSnapshots: CaseSnapshot[] = rawCases
       .map((item: any) => {
@@ -350,6 +355,41 @@ export class StorageRepository {
               caseRecord: item.caseRecord,
               alerts: Array.isArray(item.alerts) ? item.alerts : [],
             };
+
+            // Extract nested data for migration to top-level arrays
+            const caseRecord = legacyDisplay.caseRecord;
+            const caseId = legacyDisplay.id;
+            
+            // Migrate financials: resources, income, expenses → financials[]
+            if (caseRecord.financials) {
+              const { resources = [], income = [], expenses = [] } = caseRecord.financials;
+              
+              resources.forEach((r: any) => {
+                migratedFinancials.push({ ...r, caseId, category: 'resource' });
+              });
+              
+              income.forEach((i: any) => {
+                migratedFinancials.push({ ...i, caseId, category: 'income' });
+              });
+              
+              expenses.forEach((e: any) => {
+                migratedFinancials.push({ ...e, caseId, category: 'expense' });
+              });
+            }
+            
+            // Migrate notes
+            if (Array.isArray(caseRecord.notes)) {
+              caseRecord.notes.forEach((n: any) => {
+                migratedNotes.push({ ...n, caseId });
+              });
+            }
+            
+            // Migrate alerts
+            if (Array.isArray(legacyDisplay.alerts)) {
+              legacyDisplay.alerts.forEach((a: any) => {
+                migratedAlerts.push({ ...a, caseId, mcn: legacyDisplay.mcn });
+              });
+            }
 
             return {
               id: legacyDisplay.id,
@@ -418,10 +458,24 @@ export class StorageRepository {
       }
     }
     
-    const financials = this.ensureArray<FinancialItem>(base.financials);
-    const notes = this.ensureArray<Note>(base.notes);
-    const alerts = this.ensureArray<Alert>(base.alerts);
+    // Merge migrated data with existing top-level arrays (dedupe by id)
+    const existingFinancials = this.ensureArray<FinancialItem>(base.financials);
+    const existingNotes = this.ensureArray<Note>(base.notes);
+    const existingAlerts = this.ensureArray<Alert>(base.alerts);
+    
+    const financials = this.dedupeById([...existingFinancials, ...migratedFinancials]);
+    const notes = this.dedupeById([...existingNotes, ...migratedNotes]);
+    const alerts = this.dedupeById([...existingAlerts, ...migratedAlerts]);
     const activities = this.ensureArray<ActivityEvent>(base.activities);
+    
+    // Log migration if data was extracted
+    if (migratedFinancials.length > 0 || migratedNotes.length > 0 || migratedAlerts.length > 0) {
+      logger.info('[StorageRepository] Migrated legacy data to Phase 3 format', {
+        financials: migratedFinancials.length,
+        notes: migratedNotes.length,
+        alerts: migratedAlerts.length,
+      });
+    }
 
     const extras: Record<string, unknown> = { ...base };
     delete extras.version;
@@ -484,6 +538,17 @@ export class StorageRepository {
     }
 
     return [];
+  }
+
+  private dedupeById<T extends { id: string }>(items: T[]): T[] {
+    const seen = new Set<string>();
+    return items.filter(item => {
+      if (seen.has(item.id)) {
+        return false;
+      }
+      seen.add(item.id);
+      return true;
+    });
   }
 
   private clone<T>(value: T): T {
