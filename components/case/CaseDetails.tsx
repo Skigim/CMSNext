@@ -26,8 +26,6 @@ interface CaseDetailsProps {
   onDeleteItem: (category: CaseCategory, itemId: string) => void;
   onBatchUpdateItem?: (category: CaseCategory, itemId: string, updatedItem: Partial<FinancialItem>) => Promise<void>;
   onCreateItem?: (category: CaseCategory, itemData: Omit<FinancialItem, 'id' | 'createdAt' | 'updatedAt'>) => Promise<void>;
-  onAddNote: () => void;
-  onEditNote: (noteId: string) => void;
   onDeleteNote: (noteId: string) => void;
   onBatchUpdateNote?: (noteId: string, updatedNote: NewNoteData) => Promise<void>;
   onBatchCreateNote?: (noteData: NewNoteData) => Promise<void>;
@@ -48,8 +46,6 @@ export function CaseDetails({
   onDeleteItem,
   onBatchUpdateItem,
   onCreateItem,
-  onAddNote,
-  onEditNote,
   onDeleteNote,
   onBatchUpdateNote,
   onBatchCreateNote,
