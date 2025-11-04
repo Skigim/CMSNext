@@ -1,189 +1,95 @@
-import { useCallback } from "react";
-import { toast } from "sonner";
-import { useDataManagerSafe } from "../contexts/DataManagerContext";
-import ApplicationState from "@/application/ApplicationState";
-import type { CaseDisplay, NewNoteData } from "../types/case";
-import { useNotes } from "./useNotes";
+import { useCallback, useRef, useEffect } from "react";
+import { useApplicationState } from "@/application/hooks/useApplicationState";
+import { useNoteService } from "@/contexts/NoteServiceContext";
+import type { Note, NoteCategory, NoteCreateInput } from "@/domain/notes/entities/Note";
+import type { NoteUpdateInput } from "@/domain/notes/use-cases/UpdateNote";
 
 interface UseNoteFlowParams {
-  selectedCase: CaseDisplay | null;
-  cases: CaseDisplay[];
+  caseId: string | null;
 }
 
 interface UseNoteFlowResult {
-  noteForm: ReturnType<typeof useNotes>["noteForm"];
-  handleAddNote: () => void;
-  handleEditNote: (noteId: string) => void;
-  handleDeleteNote: (noteId: string) => Promise<void>;
-  handleSaveNote: (noteData: NewNoteData) => Promise<void>;
-  handleCancelNoteForm: () => void;
-  handleBatchUpdateNote: (noteId: string, updatedNote: NewNoteData) => Promise<void>;
-  handleBatchCreateNote: (noteData: NewNoteData) => Promise<void>;
+  notes: Note[];
+  isLoading: boolean;
+  error: string | null;
+  createNote: (data: NoteCreateInput) => Promise<Note>;
+  updateNote: (noteId: string, updates: NoteUpdateInput) => Promise<void>;
+  deleteNote: (noteId: string) => Promise<void>;
+  getNotesByCategory: (category: NoteCategory) => Note[];
 }
 
-export function useNoteFlow({
-  selectedCase,
-  cases,
-}: UseNoteFlowParams): UseNoteFlowResult {
-  const dataManager = useDataManagerSafe();
-  const { noteForm, openAddNote, openEditNote, saveNote, deleteNote, closeNoteForm } = useNotes();
+/**
+ * Hook for managing note operations
+ * 
+ * Provides access to note management through the service layer
+ */
+export function useNoteFlow({ caseId }: UseNoteFlowParams): UseNoteFlowResult {
+  const service = useNoteService();
 
-  const handleAddNote = useCallback(() => {
-    if (!selectedCase) {
+  // Use ref to maintain stable service reference across renders
+  const serviceRef = useRef(service);
+  serviceRef.current = service;
+
+  // Subscribe to reactive state
+  const notes = useApplicationState(
+    appState => (caseId ? appState.getNotesByCaseId(caseId) : []),
+  );
+  const isLoading = useApplicationState(appState => appState.getNotesLoading());
+  const error = useApplicationState(appState => appState.getNotesError());
+
+  // Load notes when case changes
+  useEffect(() => {
+    if (!caseId) {
       return;
     }
-    openAddNote(selectedCase.id);
-  }, [openAddNote, selectedCase]);
 
-  const handleEditNote = useCallback(
-    (noteId: string) => {
-      if (!selectedCase) {
-        return;
-      }
-      openEditNote(selectedCase.id, noteId, cases);
-    },
-    [cases, openEditNote, selectedCase],
-  );
-
-  const handleSaveNote = useCallback(
-    async (noteData: NewNoteData) => {
+    const loadNotes = async () => {
       try {
-        const updatedCase = await saveNote(noteData);
-        if (updatedCase) {
-          const appState = ApplicationState.getInstance();
-          appState.upsertCaseFromLegacy(updatedCase);
-          appState.setCasesError(null);
-        }
-      } catch (err) {
-        console.error("[NoteFlow] Failed to save note:", err);
-        throw err;
+        await serviceRef.current.loadNotesByCaseId(caseId);
+      } catch (error) {
+        // Error already handled by service layer
+        console.error('[useNoteFlow] Failed to load notes:', error);
       }
+    };
+
+    loadNotes();
+  }, [caseId]);
+
+  const createNote = useCallback(
+    async (data: NoteCreateInput): Promise<Note> => {
+      return serviceRef.current.createNoteWithFeedback(data);
     },
-    [saveNote],
+    [],
   );
 
-  const handleDeleteNote = useCallback(
-    async (noteId: string) => {
-      if (!selectedCase) {
-        return;
-      }
-
-      try {
-        const updatedCase = await deleteNote(selectedCase.id, noteId);
-        if (updatedCase) {
-          const appState = ApplicationState.getInstance();
-          appState.upsertCaseFromLegacy(updatedCase);
-          appState.setCasesError(null);
-        }
-      } catch (err) {
-        console.error("[NoteFlow] Failed to delete note:", err);
-      }
+  const updateNote = useCallback(
+    async (noteId: string, updates: NoteUpdateInput): Promise<void> => {
+      await serviceRef.current.updateNoteWithFeedback(noteId, updates);
     },
-    [deleteNote, selectedCase],
+    [],
   );
 
-  const handleBatchUpdateNote = useCallback(
-    async (noteId: string, updatedNote: NewNoteData) => {
-      if (!selectedCase || !dataManager) {
-        let errorMsg = "Data storage is not available. Please check your connection.";
-        if (!dataManager) {
-          errorMsg = "Data storage is not available. Please check your connection.";
-        } else if (!selectedCase) {
-          errorMsg = "No case selected. Please select a case first.";
-        }
-        ApplicationState.getInstance().setCasesError(errorMsg);
-        toast.error(errorMsg);
-        return;
-      }
-
-      try {
-        const appState = ApplicationState.getInstance();
-        appState.setCasesError(null);
-        const updatedCase = await dataManager.updateNote(selectedCase.id, noteId, updatedNote);
-        appState.upsertCaseFromLegacy(updatedCase);
-        toast.success("Note updated successfully", { duration: 2000 });
-      } catch (err) {
-        console.error("[NoteFlow] Failed to update note:", err);
-
-        let errorMsg = "Failed to update note. Please try again.";
-        if (err instanceof Error) {
-          if (err.message.includes("File was modified by another process")) {
-            errorMsg = "File was modified by another process. Your changes were not saved. Please refresh and try again.";
-          } else if (err.message.includes("Permission denied")) {
-            errorMsg = "Permission denied. Please check that you have write access to the data folder.";
-          } else if (
-            err.message.includes("state cached in an interface object") ||
-            err.message.includes("state had changed")
-          ) {
-            errorMsg = "Data sync issue detected. Please refresh the page and try again.";
-          }
-        }
-
-        ApplicationState.getInstance().setCasesError(errorMsg);
-        toast.error(errorMsg, { duration: 5000 });
-        throw err;
-      }
+  const deleteNote = useCallback(
+    async (noteId: string): Promise<void> => {
+      await serviceRef.current.deleteNoteWithFeedback(noteId);
     },
-    [dataManager, selectedCase],
+    [],
   );
 
-  const handleBatchCreateNote = useCallback(
-    async (noteData: NewNoteData) => {
-      if (!selectedCase || !dataManager) {
-        let errorMsg = "Data storage is not available. Please check your connection.";
-        if (!dataManager) {
-          errorMsg = "Data storage is not available. Please check your connection.";
-        } else if (!selectedCase) {
-          errorMsg = "No case selected. Please select a case first.";
-        }
-        ApplicationState.getInstance().setCasesError(errorMsg);
-        toast.error(errorMsg);
-        return;
-      }
-
-      try {
-        const appState = ApplicationState.getInstance();
-        appState.setCasesError(null);
-        const updatedCase = await dataManager.addNote(selectedCase.id, noteData);
-        appState.upsertCaseFromLegacy(updatedCase);
-        toast.success("Note added successfully", { duration: 2000 });
-      } catch (err) {
-        console.error("[NoteFlow] Failed to create note:", err);
-
-        let errorMsg = "Failed to create note. Please try again.";
-        if (err instanceof Error) {
-          if (err.message.includes("File was modified by another process")) {
-            errorMsg = "File was modified by another process. Your note was not saved. Please refresh and try again.";
-          } else if (err.message.includes("Permission denied")) {
-            errorMsg = "Permission denied. Please check that you have write access to the data folder.";
-          } else if (
-            err.message.includes("state cached in an interface object") ||
-            err.message.includes("state had changed")
-          ) {
-            errorMsg = "Data sync issue detected. Please refresh the page and try again.";
-          }
-        }
-
-        ApplicationState.getInstance().setCasesError(errorMsg);
-        toast.error(errorMsg, { duration: 5000 });
-        throw err;
-      }
+  const getNotesByCategory = useCallback(
+    (category: NoteCategory): Note[] => {
+      return notes.filter((note: Note) => note.category === category);
     },
-    [dataManager, selectedCase],
+    [notes],
   );
-
-  const handleCancelNoteForm = useCallback(() => {
-    closeNoteForm();
-  }, [closeNoteForm]);
 
   return {
-    noteForm,
-    handleAddNote,
-    handleEditNote,
-    handleDeleteNote,
-    handleSaveNote,
-    handleCancelNoteForm,
-    handleBatchUpdateNote,
-    handleBatchCreateNote,
+    notes,
+    isLoading,
+    error,
+    createNote,
+    updateNote,
+    deleteNote,
+    getNotesByCategory,
   };
 }

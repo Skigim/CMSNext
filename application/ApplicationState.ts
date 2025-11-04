@@ -76,6 +76,12 @@ export class ApplicationState {
   private casesError: string | null = null;
   private hasLoadedCases = false;
 
+  private financialsLoading = false;
+  private financialsError: string | null = null;
+
+  private notesLoading = false;
+  private notesError: string | null = null;
+
   private readonly listeners = new Map<Listener, SnapshotListener>();
   private version = 0;
 
@@ -302,6 +308,36 @@ export class ApplicationState {
     }
   }
 
+  getFinancialItemsByCaseId(caseId: string): FinancialItem[] {
+    return this.toArray(this.financials).filter(item => item.caseId === caseId);
+  }
+
+  setFinancialItems(items: FinancialItem[]): void {
+    this.financials.clear();
+    items.forEach(item => {
+      this.financials.set(item.id, cloneValue(item));
+    });
+    this.notifyListeners();
+  }
+
+  getFinancialItemsLoading(): boolean {
+    return this.financialsLoading;
+  }
+
+  setFinancialItemsLoading(loading: boolean): void {
+    this.financialsLoading = loading;
+    this.notifyListeners();
+  }
+
+  getFinancialItemsError(): string | null {
+    return this.financialsError;
+  }
+
+  setFinancialItemsError(error: string | null): void {
+    this.financialsError = error;
+    this.notifyListeners();
+  }
+
   getNotes(): Note[] {
     return this.toArray(this.notes);
   }
@@ -320,6 +356,36 @@ export class ApplicationState {
     if (this.notes.delete(id)) {
       this.notifyListeners();
     }
+  }
+
+  getNotesByCaseId(caseId: string): Note[] {
+    return this.toArray(this.notes).filter(note => note.caseId === caseId);
+  }
+
+  setNotes(notes: Note[]): void {
+    this.notes.clear();
+    notes.forEach(note => {
+      this.notes.set(note.id, cloneValue(note));
+    });
+    this.notifyListeners();
+  }
+
+  getNotesLoading(): boolean {
+    return this.notesLoading;
+  }
+
+  setNotesLoading(loading: boolean): void {
+    this.notesLoading = loading;
+    this.notifyListeners();
+  }
+
+  getNotesError(): string | null {
+    return this.notesError;
+  }
+
+  setNotesError(error: string | null): void {
+    this.notesError = error;
+    this.notifyListeners();
   }
 
   getAlerts(): Alert[] {

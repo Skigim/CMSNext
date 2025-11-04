@@ -3,6 +3,8 @@ import { ThemeProvider } from "@/contexts/ThemeContext";
 import { FileStorageProvider } from "@/contexts/FileStorageContext";
 import { DataManagerProvider } from "@/contexts/DataManagerContext";
 import { CaseServiceProvider } from "@/contexts/CaseServiceContext";
+import { FinancialServiceProvider } from "@/contexts/FinancialServiceContext";
+import { NoteServiceProvider } from "@/contexts/NoteServiceContext";
 import { CategoryConfigProvider } from "@/contexts/CategoryConfigContext";
 import ErrorBoundary from "@/components/error/ErrorBoundary";
 import FileSystemErrorBoundary from "@/components/error/FileSystemErrorBoundary";
@@ -25,6 +27,8 @@ interface AppProvidersProps {
  * - FileStorageProvider: File system access and data persistence
  * - DataManagerProvider: Data management operations
  * - CaseServiceProvider: Case management service layer
+ * - FinancialServiceProvider: Financial management service layer
+ * - NoteServiceProvider: Note management service layer
  * 
  * @param children - The application content to be wrapped with providers
  */
@@ -58,9 +62,13 @@ export function AppProviders({ children }: AppProvidersProps) {
           >
             <DataManagerProvider>
               <CaseServiceProvider>
-                <CategoryConfigProvider>
-                  {children}
-                </CategoryConfigProvider>
+                <FinancialServiceProvider>
+                  <NoteServiceProvider>
+                    <CategoryConfigProvider>
+                      {children}
+                    </CategoryConfigProvider>
+                  </NoteServiceProvider>
+                </FinancialServiceProvider>
               </CaseServiceProvider>
             </DataManagerProvider>
           </FileStorageProvider>
