@@ -1229,22 +1229,100 @@ export class DataManager {
   }
 
   /**
-   * Migrate Phase 3 format (domain entities with metadata) to legacy CaseDisplay format
-   * Extracts metadata.legacyCase.caseDisplay if present
+   * Migrate Phase 3 format (normalized arrays) to legacy CaseDisplay format
+   * Detects CaseSnapshot format and reconstructs nested caseRecord structure
    */
-  private migratePhase3Format(cases: any[]): { migratedCases: CaseDisplay[]; wasMigrated: boolean } {
+  private migratePhase3Format(rawData: any): { migratedCases: CaseDisplay[]; wasMigrated: boolean } {
+    const cases = Array.isArray(rawData.cases) ? rawData.cases : rawData;
+    const financials = Array.isArray(rawData.financials) ? rawData.financials : [];
+    const notes = Array.isArray(rawData.notes) ? rawData.notes : [];
+    const alerts = Array.isArray(rawData.alerts) ? rawData.alerts : [];
+    
     const migratedCases: CaseDisplay[] = [];
     let migrationCount = 0;
 
     for (const caseData of cases) {
-      // Check if this is Phase 3 format (has metadata.legacyCase.caseDisplay)
-      if (caseData?.metadata?.legacyCase?.caseDisplay) {
-        // Extract the legacy CaseDisplay from metadata
-        const legacyCase = caseData.metadata.legacyCase.caseDisplay as CaseDisplay;
+      // Check if this is Phase 3 CaseSnapshot format (has personId, no caseRecord)
+      if (caseData?.personId && !caseData?.caseRecord) {
+        // This is Phase 3 CaseSnapshot - reconstruct legacy format
+        const caseId = caseData.id;
+        
+        // Gather financials for this case and group by category
+        const caseFinancials = financials.filter((f: any) => f.caseId === caseId);
+        const resources = caseFinancials.filter((f: any) => f.category === 'resource');
+        const income = caseFinancials.filter((f: any) => f.category === 'income');
+        const expenses = caseFinancials.filter((f: any) => f.category === 'expense');
+        
+        // Gather notes and alerts for this case
+        const caseNotes = notes.filter((n: any) => n.caseId === caseId);
+        const caseAlerts = alerts.filter((a: any) => a.caseId === caseId || a.mcn === caseData.mcn);
+        
+        logger.info('Migrating Phase 3 case to legacy format', {
+          caseId,
+          financials: caseFinancials.length,
+          notes: caseNotes.length,
+          alerts: caseAlerts.length,
+        });
+        
+        const legacyCase: CaseDisplay = {
+          id: caseData.id,
+          name: caseData.name,
+          mcn: caseData.mcn,
+          status: caseData.status || 'Active',
+          priority: false,
+          createdAt: caseData.createdAt,
+          updatedAt: caseData.updatedAt,
+          person: caseData.person || {
+            id: caseData.personId,
+            firstName: '',
+            lastName: '',
+            name: 'Unknown',
+            email: '',
+            phone: '',
+            dateOfBirth: '',
+            ssn: '',
+            organizationId: null,
+            livingArrangement: 'Unknown',
+            address: { street: '', city: '', state: '', zip: '' },
+            mailingAddress: { street: '', city: '', state: '', zip: '', sameAsPhysical: true },
+            authorizedRepIds: [],
+            familyMembers: [],
+            status: 'Active',
+            createdAt: caseData.createdAt,
+            dateAdded: caseData.createdAt,
+          },
+          caseRecord: {
+            id: `${caseData.id}-record`,
+            mcn: caseData.mcn,
+            applicationDate: caseData.createdAt?.substring(0, 10) || '',
+            caseType: 'General',
+            personId: caseData.personId,
+            spouseId: '',
+            status: caseData.status || 'Active',
+            description: '',
+            priority: false,
+            livingArrangement: 'Unknown',
+            withWaiver: false,
+            admissionDate: '',
+            organizationId: '',
+            authorizedReps: [],
+            retroRequested: '',
+            financials: {
+              resources: resources.map((r: any) => ({ ...r, caseId: undefined })),
+              income: income.map((i: any) => ({ ...i, caseId: undefined })),
+              expenses: expenses.map((e: any) => ({ ...e, caseId: undefined })),
+            },
+            notes: caseNotes.map((n: any) => ({ ...n, caseId: undefined })),
+            createdDate: caseData.createdAt,
+            updatedDate: caseData.updatedAt,
+          },
+          alerts: caseAlerts.map((a: any) => ({ ...a, caseId: undefined })),
+        };
+        
         migratedCases.push(legacyCase);
         migrationCount++;
       } else {
-        // Already in legacy format or malformed - keep as-is
+        // Already in legacy format or has caseRecord
         migratedCases.push(caseData as CaseDisplay);
       }
     }
@@ -1291,7 +1369,7 @@ export class DataManager {
       
       if (rawData.cases && Array.isArray(rawData.cases)) {
         // Check if this is Phase 3 format and migrate if needed
-        const { migratedCases, wasMigrated } = this.migratePhase3Format(rawData.cases);
+        const { migratedCases, wasMigrated } = this.migratePhase3Format(rawData);
         cases = migratedCases;
         needsPersistence = wasMigrated;
       } else if (rawData.people && rawData.caseRecords) {
