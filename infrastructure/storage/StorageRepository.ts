@@ -7,7 +7,6 @@ import type { ActivityEvent } from '@/domain/activity/entities/ActivityEvent';
 import type { FeatureFlags } from '@/utils/featureFlags';
 import { createLogger } from '@/utils/logger';
 import {
-  createLegacyMetadata,
   personSnapshotFromLegacy,
 } from '@/application/services/caseLegacyMapper';
 import type {
@@ -360,7 +359,7 @@ export class StorageRepository {
               personId: legacyDisplay.person.id,
               createdAt: legacyDisplay.createdAt,
               updatedAt: legacyDisplay.updatedAt,
-              metadata: createLegacyMetadata(legacyDisplay, item.metadata),
+              metadata: item.metadata ? this.clone(item.metadata) : {},
               person: personSnapshotFromLegacy(legacyDisplay.person),
             } as CaseSnapshot;
           }
