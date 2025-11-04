@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
+import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
 import { toast } from 'sonner';
 import { FinancialManagementService } from '@/application/services/FinancialManagementService';
 import { ApplicationState } from '@/application/ApplicationState';
@@ -73,18 +73,13 @@ export function FinancialServiceProvider({ children }: FinancialServiceProviderP
     };
   }, [fileService]);
 
-  const contextValue = useMemo(
-    () => (service ? { service } : null),
-    [service],
-  );
-
-  if (!contextValue) {
-    // Return a placeholder context while service initializes
-    return <>{children}</>;
+  // Don't render children until service is available
+  if (!service) {
+    return null;
   }
 
   return (
-    <FinancialServiceContext.Provider value={contextValue}>
+    <FinancialServiceContext.Provider value={{ service }}>
       {children}
     </FinancialServiceContext.Provider>
   );
