@@ -26,6 +26,8 @@ interface CaseDetailsProps {
   onDeleteItem: (category: CaseCategory, itemId: string) => void;
   onBatchUpdateItem?: (category: CaseCategory, itemId: string, updatedItem: Partial<FinancialItem>) => Promise<void>;
   onCreateItem?: (category: CaseCategory, itemData: Omit<FinancialItem, 'id' | 'createdAt' | 'updatedAt'>) => Promise<void>;
+  onAddNote: () => void;
+  onEditNote: (noteId: string) => void;
   onDeleteNote: (noteId: string) => void;
   onBatchUpdateNote?: (noteId: string, updatedNote: NewNoteData) => Promise<void>;
   onBatchCreateNote?: (noteData: NewNoteData) => Promise<void>;
@@ -46,6 +48,8 @@ export function CaseDetails({
   onDeleteItem,
   onBatchUpdateItem,
   onCreateItem,
+  onAddNote,
+  onEditNote,
   onDeleteNote,
   onBatchUpdateNote,
   onBatchCreateNote,
@@ -238,7 +242,7 @@ export function CaseDetails({
                 <CaseSection
                   title="Resources"
                   category="resources"
-                  items={caseData.caseRecord.financials.resources || []}
+                  items={caseData.caseRecord?.financials?.resources || []}
                   onAddItem={onAddItem}
                   onDeleteItem={onDeleteItem}
                   onUpdateFullItem={handleUpdateFullItem}
@@ -250,7 +254,7 @@ export function CaseDetails({
                 <CaseSection
                   title="Income"
                   category="income"
-                  items={caseData.caseRecord.financials.income || []}
+                  items={caseData.caseRecord?.financials?.income || []}
                   onAddItem={onAddItem}
                   onDeleteItem={onDeleteItem}
                   onUpdateFullItem={handleUpdateFullItem}
@@ -262,7 +266,7 @@ export function CaseDetails({
                 <CaseSection
                   title="Expenses"
                   category="expenses"
-                  items={caseData.caseRecord.financials.expenses || []}
+                  items={caseData.caseRecord?.financials?.expenses || []}
                   onAddItem={onAddItem}
                   onDeleteItem={onDeleteItem}
                   onUpdateFullItem={handleUpdateFullItem}
@@ -279,7 +283,9 @@ export function CaseDetails({
         <ResizablePanel defaultSize={40} minSize={25}>
           <div className="p-4 bg-muted/30">
             <NotesSection
-              notes={caseData.caseRecord.notes || []}
+              notes={caseData.caseRecord?.notes || []}
+              onAddNote={onAddNote}
+              onEditNote={onEditNote}
               onDeleteNote={onDeleteNote}
               onUpdateNote={onBatchUpdateNote}
               onCreateNote={onBatchCreateNote}

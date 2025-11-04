@@ -1228,6 +1228,40 @@ export class DataManager {
     });
   }
 
+  /**
+   * Migrate Phase 3 format (domain entities with metadata) to legacy CaseDisplay format
+   * Extracts metadata.legacyCase.caseDisplay if present
+   */
+  private migratePhase3Format(cases: any[]): { migratedCases: CaseDisplay[]; wasMigrated: boolean } {
+    const migratedCases: CaseDisplay[] = [];
+    let migrationCount = 0;
+
+    for (const caseData of cases) {
+      // Check if this is Phase 3 format (has metadata.legacyCase.caseDisplay)
+      if (caseData?.metadata?.legacyCase?.caseDisplay) {
+        // Extract the legacy CaseDisplay from metadata
+        const legacyCase = caseData.metadata.legacyCase.caseDisplay as CaseDisplay;
+        migratedCases.push(legacyCase);
+        migrationCount++;
+      } else {
+        // Already in legacy format or malformed - keep as-is
+        migratedCases.push(caseData as CaseDisplay);
+      }
+    }
+
+    if (migrationCount > 0) {
+      logger.info('Phase 3 format detected, migrated to legacy format', {
+        totalCases: cases.length,
+        migratedCount: migrationCount,
+      });
+    }
+
+    return {
+      migratedCases,
+      wasMigrated: migrationCount > 0,
+    };
+  }
+
   // =============================================================================
   // CORE FILE OPERATIONS (Private)
   // =============================================================================
@@ -1253,10 +1287,13 @@ export class DataManager {
 
       // Handle different data formats
       let cases: CaseDisplay[] = [];
+      let needsPersistence = false;
       
       if (rawData.cases && Array.isArray(rawData.cases)) {
-        // Already in the correct format
-        cases = rawData.cases;
+        // Check if this is Phase 3 format and migrate if needed
+        const { migratedCases, wasMigrated } = this.migratePhase3Format(rawData.cases);
+        cases = migratedCases;
+        needsPersistence = wasMigrated;
       } else if (rawData.people && rawData.caseRecords) {
         // Raw format - transform using the data transformer
         logger.info('Transforming raw data format to cases');
@@ -1274,21 +1311,23 @@ export class DataManager {
       let finalCases = normalizedCases;
       let finalExportedAt = rawData.exported_at || rawData.exportedAt || new Date().toISOString();
 
-      if (changed) {
-        if (this.persistNormalizationFixes) {
-          const persistedData = await this.writeFileData({
-            cases: normalizedCases,
-            exported_at: finalExportedAt,
-            total_cases: normalizedCases.length,
-            categoryConfig,
-            activityLog,
-          });
-
-          finalCases = persistedData.cases;
-          finalExportedAt = persistedData.exported_at;
-        } else {
-          logger.warn('Note normalization produced changes but persistence disabled');
+      // Persist if migration occurred or notes were normalized
+      if ((changed || needsPersistence) && this.persistNormalizationFixes) {
+        if (needsPersistence) {
+          logger.info('Persisting migrated Phase 3 data');
         }
+        const persistedData = await this.writeFileData({
+          cases: normalizedCases,
+          exported_at: finalExportedAt,
+          total_cases: normalizedCases.length,
+          categoryConfig,
+          activityLog,
+        });
+
+        finalCases = persistedData.cases;
+        finalExportedAt = persistedData.exported_at;
+      } else if (changed || needsPersistence) {
+        logger.warn('Data normalization or migration needed but persistence disabled');
       }
 
       return {
