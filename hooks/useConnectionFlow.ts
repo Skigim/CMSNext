@@ -1,3 +1,16 @@
+/**
+ * TODO: Refactor connection flow to eliminate duplication
+ * 
+ * handleChooseNewFolder() and handleConnectToExisting() contain ~95% identical logic:
+ * - Both: clear errors, connect to folder, load data, hydrate state, set flags, show toast
+ * - Only differ in: connection method (new vs existing) and toast messages
+ * 
+ * Should extract shared logic into single handleConnection({ isNewFolder: boolean }) function.
+ * This duplication caused the case hydration bug to exist in two places (fixed in PR #66).
+ * 
+ * @see https://github.com/Skigim/CMSNext/pull/66 - CodeRabbit caught duplicate bug locations
+ */
+
 import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import type { CaseDisplay } from "../types/case";
@@ -120,6 +133,7 @@ export function useConnectionFlow({
 
           if (loadedCases.length > 0) {
             const appState = ApplicationState.getInstance();
+            appState.setCasesFromLegacyDisplays(loadedCases);
             appState.setHasLoadedCases(true);
             setShowConnectModal(false);
 
@@ -238,6 +252,7 @@ export function useConnectionFlow({
 
       if (loadedCases.length > 0) {
         const appState = ApplicationState.getInstance();
+        appState.setCasesFromLegacyDisplays(loadedCases);
         appState.setHasLoadedCases(true);
         setShowConnectModal(false);
 

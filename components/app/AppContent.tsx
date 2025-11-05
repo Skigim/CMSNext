@@ -24,7 +24,7 @@ import { recordRenderProfile } from "../../utils/performanceTracker";
 import { createLogger } from "../../utils/logger";
 import { AppContentView } from "./AppContentView";
 import { useAppContentViewModel } from "./useAppContentViewModel";
-import type { CaseDisplay, NewNoteData, NewPersonData, NewCaseRecordData } from "../../types/case";
+import type { CaseDisplay, NewPersonData, NewCaseRecordData } from "../../types/case";
 import { FinancialCategory, type FinancialItemSnapshot } from "@/domain/financials/entities/FinancialItem";
 
 const logger = createLogger("AppContent");
@@ -117,6 +117,20 @@ export const AppContent = memo(function AppContent() {
     loadCases,
   });
 
+  // Legacy hooks require setState callbacks - create adapters for ApplicationState
+  const setCases = useCallback((updater: React.SetStateAction<CaseDisplay[]>) => {
+    const appState = ApplicationState.getInstance();
+    const newCases = typeof updater === 'function' ? updater(cases) : updater;
+    appState.setCasesFromLegacyDisplays(newCases);
+  }, [cases]);
+
+  const setError = useCallback((updater: React.SetStateAction<string | null>) => {
+    const appState = ApplicationState.getInstance();
+    const currentError = error;
+    const newError = typeof updater === 'function' ? updater(currentError) : updater;
+    appState.setCasesError(newError);
+  }, [error]);
+
   const {
     itemForm,
     openItemForm,
@@ -126,69 +140,25 @@ export const AppContent = memo(function AppContent() {
     handleCreateItem: createFinancialItem,
   } = useFinancialItemFlow({
     selectedCase: selectedCase ?? null,
+    setCases,
+    setError,
   });
 
   const {
-    notes: _notes, // Available for future use
-    createNote,
-    updateNote,
-    deleteNote,
+    noteForm,
+    handleAddNote,
+    handleEditNote,
+    handleDeleteNote,
+    handleSaveNote,
+    handleCancelNoteForm,
+    handleBatchUpdateNote,
+    handleBatchCreateNote,
   } = useNoteFlow({
-    caseId: selectedCase?.id ?? null,
+    selectedCase: selectedCase ?? null,
+    cases,
+    setCases,
+    setError,
   });
-
-  // TODO: Refactor note form management - these are temporary stubs
-  const noteForm = useMemo(() => ({ isOpen: false }), []);
-  const handleAddNote = useCallback(() => {
-    // Note adding is handled directly through the modal now
-  }, []);
-  const handleEditNote = useCallback((_noteId: string) => {
-    // Note editing is handled directly through the modal now
-  }, []);
-  const handleCancelNoteForm = useCallback(() => {
-    // Form cancellation is handled directly in the modal now
-  }, []);
-
-  const handleSaveNote = useCallback(
-    async (noteData: NewNoteData) => {
-      if (!selectedCase) return;
-      
-      await createNote({
-        caseId: selectedCase.id,
-        content: noteData.content,
-        category: noteData.category as any, // Type mapping needed
-        metadata: noteData as any,
-      });
-      await refreshActivityLog();
-    },
-    [selectedCase, createNote, refreshActivityLog],
-  );
-
-  const handleBatchUpdateNote = useCallback(
-    async (noteId: string, noteData: NewNoteData) => {
-      await updateNote(noteId, {
-        content: noteData.content,
-        category: noteData.category as any,
-      });
-      await refreshActivityLog();
-    },
-    [updateNote, refreshActivityLog],
-  );
-
-  const handleBatchCreateNote = useCallback(
-    async (noteData: NewNoteData) => {
-      await handleSaveNote(noteData);
-    },
-    [handleSaveNote],
-  );
-
-  const handleDeleteNote = useCallback(
-    async (noteId: string) => {
-      await deleteNote(noteId);
-      await refreshActivityLog();
-    },
-    [deleteNote, refreshActivityLog],
-  );
 
   useImportListeners({ loadCases, isStorageReady: connectionState.isReady });
 
