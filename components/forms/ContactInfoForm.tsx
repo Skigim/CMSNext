@@ -1,6 +1,8 @@
 import { Label } from "../ui/label";
 import { Input } from "../ui/input";
 import { NewPersonData } from "../../types/case";
+import { formatPhoneNumberAsTyped, normalizePhoneNumber } from "../../utils/phoneFormatter";
+import { useState } from "react";
 
 interface ContactInfoFormProps {
   personData: NewPersonData;
@@ -12,7 +14,9 @@ interface ContactInfoFormProps {
  * 
  * Features:
  * - Email input with validation
- * - Phone input with tel type
+ * - Phone input with format-as-you-type functionality
+ * - Automatic phone number formatting (XXX) XXX-XXXX
+ * - Stores normalized phone numbers (digits only) in state
  * - Optional contact fields to avoid blocking edits
  * - Accessible form labels and inputs
  * 
@@ -20,6 +24,20 @@ interface ContactInfoFormProps {
  * @param onPersonDataChange - Callback function to handle field changes
  */
 export function ContactInfoForm({ personData, onPersonDataChange }: ContactInfoFormProps) {
+  const [phoneDisplay, setPhoneDisplay] = useState(
+    formatPhoneNumberAsTyped(personData.phone)
+  );
+
+  const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newValue = e.target.value;
+    const formatted = formatPhoneNumberAsTyped(newValue, phoneDisplay);
+    setPhoneDisplay(formatted);
+    
+    // Store normalized (digits only) version in state
+    const normalized = normalizePhoneNumber(newValue);
+    onPersonDataChange('phone', normalized);
+  };
+
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
       <div className="space-y-2">
@@ -37,9 +55,9 @@ export function ContactInfoForm({ personData, onPersonDataChange }: ContactInfoF
         <Input
           id="phone"
           type="tel"
-          value={personData.phone}
-          onChange={(e) => onPersonDataChange('phone', e.target.value)}
-          placeholder="Enter phone number"
+          value={phoneDisplay}
+          onChange={handlePhoneChange}
+          placeholder="(555) 123-4567"
         />
       </div>
     </div>
