@@ -92,7 +92,7 @@ function normalizeCases(cases: any[]): CaseDisplay[] {
         priority: c.priority || false,
         livingArrangement: c.person?.livingArrangement || 'Unknown',
         withWaiver: false,
-        admissionDate: normalizedCreatedAt,
+        admissionDate: normalizedCreatedAt.slice(0, 10),
         organizationId: c.person?.organizationId || '',
         authorizedReps: [],
         retroRequested: '',
