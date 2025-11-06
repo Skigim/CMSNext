@@ -45,9 +45,14 @@ function NoteCard({
     }
   }, [isExpanded, editedNote.content]);
 
-  // If the note prop changes, update the local editedNote state
+  // Only update editedNote when the note ID changes (new note loaded)
+  // Don't reset on every parent re-render to preserve user edits
+  const noteIdRef = useRef(note.id);
   useEffect(() => {
-    setEditedNote(note);
+    if (note.id !== noteIdRef.current) {
+      noteIdRef.current = note.id;
+      setEditedNote(note);
+    }
   }, [note]);
 
   const handleCancel = () => {
