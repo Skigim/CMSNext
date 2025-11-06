@@ -5,7 +5,6 @@ import { getDisplayAmount } from "../../utils/financialFormatters";
 import {
   getVerificationStatusInfo,
   shouldShowVerificationSource,
-  updateVerificationStatus,
 } from "../../utils/verificationStatus";
 
 export type VerificationStatus = "Needs VR" | "VR Pending" | "AVS Pending" | "Verified";
@@ -182,33 +181,19 @@ export function useFinancialItemCardState({
 
   const handleStatusChange = useCallback(
     async (newStatus: VerificationStatus) => {
-      if (!onUpdate || !normalizedItem.safeId) {
-        return;
-      }
-
-      try {
-        const updatedItem = updateVerificationStatus(formData, newStatus);
-        const newFormData = {
-          ...formData,
-          verificationStatus: newStatus,
-          verificationSource:
-            newStatus === "Verified"
-              ? formData.verificationSource ?? updatedItem.verificationSource ?? ""
-              : undefined,
-        };
-        
-        // Update form data state to reflect the change
-        setFormData(newFormData);
-        
-        // Save in background without closing the edit mode
-        await onUpdate(itemType, normalizedItem.safeId, updatedItem);
-      } catch (error) {
-        console.error("[FinancialItemCard] Failed to update verification status:", error);
-        // Revert form data on error
-        setFormData(formData);
-      }
+      // Only update local form state - don't save until user clicks "Save"
+      const newFormData = {
+        ...formData,
+        verificationStatus: newStatus,
+        verificationSource:
+          newStatus === "Verified"
+            ? formData.verificationSource ?? ""
+            : undefined,
+      };
+      
+      setFormData(newFormData);
     },
-    [formData, itemType, normalizedItem.safeId, onUpdate],
+    [formData],
   );
 
   return {
