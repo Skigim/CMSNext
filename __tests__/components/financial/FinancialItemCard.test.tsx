@@ -251,12 +251,12 @@ describe("FinancialItemCard", () => {
     expect(cancelDeleteButton).toHaveAttribute("aria-label");
   });
 
-  it("preserves form data when status is changed before saving", async () => {
+  it("keeps accordion open when form fields change and only saves on submit", async () => {
     const user = userEvent.setup();
     const item = createMockFinancialItem("income", { 
       id: "item-1", 
-      description: "", 
-      amount: 0,
+      description: "Original Description", 
+      amount: 100,
       verificationStatus: "Needs VR" 
     }) as FinancialItem;
 
@@ -272,34 +272,34 @@ describe("FinancialItemCard", () => {
       />
     );
 
-    // Enter form data
+    // Edit description field
     const descriptionInput = screen.getByLabelText("Description");
     await user.clear(descriptionInput);
-    await user.type(descriptionInput, "New Paycheck");
+    await user.type(descriptionInput, "Updated Description");
 
     // Verify form data was entered
-    expect(descriptionInput).toHaveValue("New Paycheck");
+    expect(descriptionInput).toHaveValue("Updated Description");
+    
+    // Form should still be visible (not auto-saved and closed)
+    expect(screen.getByTestId("financial-item-form")).toBeInTheDocument();
+    
+    // onUpdate should NOT have been called yet
+    expect(onUpdate).not.toHaveBeenCalled();
+    
+    // Now click Save
+    const saveButton = screen.getByRole("button", { name: /save/i });
+    await user.click(saveButton);
 
-    // Change status before saving
-    const statusButton = screen.getByTestId("status-trigger");
-    await user.click(statusButton);
-
-    // Verify onUpdate was called with the updated status
+    // Verify onUpdate was called with the updated data
     await vi.waitFor(() => {
+      expect(onUpdate).toHaveBeenCalledTimes(1);
       expect(onUpdate).toHaveBeenCalledWith(
         "income", 
         "item-1", 
         expect.objectContaining({ 
-          description: "New Paycheck",  // Form data should be preserved
-          verificationStatus: "Verified"
+          description: "Updated Description"
         })
       );
     });
-
-    // Verify the form still shows the entered data after status change
-    expect(descriptionInput).toHaveValue("New Paycheck");
-    
-    // Verify the form is still visible (accordion still open)
-    expect(screen.getByTestId("financial-item-form")).toBeInTheDocument();
   });
 });
