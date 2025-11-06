@@ -7,6 +7,7 @@ import { Separator } from "../ui/separator";
 import { useMemo } from "react";
 import { NewCaseRecordData } from "../../types/case";
 import { useCategoryConfig } from "@/contexts/CategoryConfigContext";
+import { isoToDateInputValue, dateInputValueToISO } from "@/utils/dateFormatting";
 
 interface CaseInfoFormProps {
   caseData: NewCaseRecordData;
@@ -68,8 +69,8 @@ export function CaseInfoForm({
             <Input
               id="applicationDate"
               type="date"
-              value={caseData.applicationDate}
-              onChange={(e) => onCaseDataChange('applicationDate', e.target.value)}
+              value={isoToDateInputValue(caseData.applicationDate)}
+              onChange={(e) => onCaseDataChange('applicationDate', dateInputValueToISO(e.target.value) || '')}
               required
             />
           </div>
@@ -134,8 +135,8 @@ export function CaseInfoForm({
               <Input
                 id="admissionDate"
                 type="date"
-                value={caseData.admissionDate}
-                onChange={(e) => onCaseDataChange('admissionDate', e.target.value)}
+                value={isoToDateInputValue(caseData.admissionDate)}
+                onChange={(e) => onCaseDataChange('admissionDate', dateInputValueToISO(e.target.value) || '')}
               />
             </div>
           </div>

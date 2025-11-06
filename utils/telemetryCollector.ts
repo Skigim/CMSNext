@@ -51,14 +51,15 @@ interface TelemetryConfig {
 const telemetryLogger = createLogger("Telemetry");
 
 // Configuration from environment or local state
-let telemetryConfig: TelemetryConfig = {
+const telemetryConfig: TelemetryConfig = {
   enabled: isCollectionEnabled(),
   sessionId: generateSessionId(),
 };
 
 // In-memory event buffer (cleared when written to file)
 let eventBuffer: TelemetryEvent[] = [];
-const BUFFER_SIZE_LIMIT = 100; // Write to file when buffer reaches this size
+// Telemetry disabled - buffer limit not used
+// const BUFFER_SIZE_LIMIT = 100;
 
 /**
  * Check if telemetry collection is enabled.
@@ -129,34 +130,9 @@ function validateEvent(event: TelemetryEvent): boolean {
  * Collect a telemetry event.
  * Events are buffered in memory and written to disk when buffer is full.
  */
-export function collectEvent(eventType: TelemetryEventType, metadata?: Record<string, unknown>, duration?: number): void {
-  if (!telemetryConfig.enabled) {
-    return;
-  }
-
-  const event: TelemetryEvent = {
-    sessionId: telemetryConfig.sessionId,
-    timestamp: new Date().toISOString(),
-    eventType,
-    duration,
-    metadata: metadata && Object.keys(metadata).length > 0 ? metadata : undefined,
-  };
-
-  if (!validateEvent(event)) {
-    return;
-  }
-
-  eventBuffer.push(event);
-  telemetryLogger.debug("Telemetry event collected", { eventType, bufferSize: eventBuffer.length });
-
-  // Flush buffer to file if it reaches the limit
-  if (eventBuffer.length >= BUFFER_SIZE_LIMIT) {
-    flushEventBuffer().catch(err =>
-      telemetryLogger.error("Failed to flush telemetry buffer", {
-        error: err instanceof Error ? err.message : String(err),
-      })
-    );
-  }
+export function collectEvent(_eventType: TelemetryEventType, _metadata?: Record<string, unknown>, _duration?: number): void {
+  // Telemetry collection disabled
+  return;
 }
 
 /**

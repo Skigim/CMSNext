@@ -5,6 +5,10 @@ import type { Note, NoteCategory } from '@/domain/notes/entities/Note';
 import type { Alert } from '@/domain/alerts/entities/Alert';
 import type { ActivityEvent } from '@/domain/activity/entities/ActivityEvent';
 import type { FeatureFlags } from '@/utils/featureFlags';
+import { createLogger } from '@/utils/logger';
+import {
+  personSnapshotFromLegacy,
+} from '@/application/services/caseLegacyMapper';
 import type {
   ICaseRepository,
   IFinancialRepository,
@@ -12,6 +16,8 @@ import type {
   IAlertRepository,
   IActivityRepository,
 } from '@/domain/common/repositories';
+
+const logger = createLogger('StorageRepository');
 
 export type DomainScope = 'cases' | 'financials' | 'notes' | 'alerts' | 'activities';
 
@@ -39,6 +45,10 @@ export class StorageRepository {
   private readonly noteAdapter: INoteRepository;
   private readonly alertAdapter: IAlertRepository;
   private readonly activityAdapter: IActivityRepository;
+  
+  // Track whether we've already logged rehydration warnings this session
+  private hasLoggedReadWarning = false;
+  private hasLoggedRehydrationWarning = false;
 
   constructor(private readonly fileService: AutosaveFileService) {
     this.caseAdapter = {
@@ -301,12 +311,171 @@ export class StorageRepository {
     const base = (raw && typeof raw === 'object' ? raw : {}) as Record<string, unknown>;
 
     const version = typeof base.version === 'number' ? base.version : StorageRepository.CURRENT_VERSION;
-    const rawCases = this.ensureArray<CaseSnapshot>(base.cases);
-    const cases = rawCases.map(snapshot => Case.rehydrate(snapshot).toJSON());
-    const financials = this.ensureArray<FinancialItem>(base.financials);
-    const notes = this.ensureArray<Note>(base.notes);
-    const alerts = this.ensureArray<Alert>(base.alerts);
+    const rawCases = this.ensureArray<any>(base.cases);
+    
+    // Validate case shape helper
+    const isValidCaseItem = (item: any): boolean => {
+      return item && typeof item === 'object' && typeof item.id === 'string';
+    };
+
+    let invalidReadCount = 0;
+    let invalidRehydrationCount = 0;
+    const MAX_LOG_SAMPLE = 3;
+    const invalidReadSamples: unknown[] = [];
+    const invalidRehydrationSamples: Array<{ id: string; error: string }> = [];
+    
+    // Accumulators for migrated data from legacy format
+    const migratedFinancials: any[] = [];
+    const migratedNotes: any[] = [];
+    const migratedAlerts: any[] = [];
+    
+    // Convert CaseDisplay format to CaseSnapshot if needed (for legacy DataManager compatibility)
+    const caseSnapshots: CaseSnapshot[] = rawCases
+      .map((item: any) => {
+        if (!isValidCaseItem(item)) {
+          invalidReadCount++;
+          if (invalidReadSamples.length < MAX_LOG_SAMPLE) {
+            invalidReadSamples.push(item);
+          }
+          return null;
+        }
+
+        try {
+          // Detect CaseDisplay format (has 'person' and 'caseRecord' objects)
+          if (item.person && item.caseRecord) {
+            const legacyDisplay = {
+              id: item.id,
+              name: item.name,
+              mcn: item.mcn,
+              status: item.status,
+              priority: Boolean(item.priority),
+              createdAt: item.createdAt,
+              updatedAt: item.updatedAt,
+              person: item.person,
+              caseRecord: item.caseRecord,
+              alerts: Array.isArray(item.alerts) ? item.alerts : [],
+            };
+
+            // Extract nested data for migration to top-level arrays
+            const caseRecord = legacyDisplay.caseRecord;
+            const caseId = legacyDisplay.id;
+            
+            // Migrate financials: resources, income, expenses → financials[]
+            if (caseRecord.financials) {
+              const { resources = [], income = [], expenses = [] } = caseRecord.financials;
+              
+              resources.forEach((r: any) => {
+                migratedFinancials.push({ ...r, caseId, category: 'resource' });
+              });
+              
+              income.forEach((i: any) => {
+                migratedFinancials.push({ ...i, caseId, category: 'income' });
+              });
+              
+              expenses.forEach((e: any) => {
+                migratedFinancials.push({ ...e, caseId, category: 'expense' });
+              });
+            }
+            
+            // Migrate notes
+            if (Array.isArray(caseRecord.notes)) {
+              caseRecord.notes.forEach((n: any) => {
+                migratedNotes.push({ ...n, caseId });
+              });
+            }
+            
+            // Migrate alerts
+            if (Array.isArray(legacyDisplay.alerts)) {
+              legacyDisplay.alerts.forEach((a: any) => {
+                migratedAlerts.push({ ...a, caseId, mcn: legacyDisplay.mcn });
+              });
+            }
+
+            return {
+              id: legacyDisplay.id,
+              mcn: legacyDisplay.mcn,
+              name: legacyDisplay.name,
+              status: legacyDisplay.status,
+              personId: legacyDisplay.person.id,
+              createdAt: legacyDisplay.createdAt,
+              updatedAt: legacyDisplay.updatedAt,
+              metadata: item.metadata ? this.clone(item.metadata) : {},
+              person: personSnapshotFromLegacy(legacyDisplay.person),
+            } as CaseSnapshot;
+          }
+          // Already CaseSnapshot format
+          return item as CaseSnapshot;
+        } catch (error) {
+          // Skip invalid items during conversion
+          invalidReadCount++;
+          if (invalidReadSamples.length < MAX_LOG_SAMPLE) {
+            invalidReadSamples.push({ itemId: item?.id, error: error instanceof Error ? error.message : String(error) });
+          }
+          return null;
+        }
+      })
+      .filter((snapshot): snapshot is CaseSnapshot => snapshot !== null);
+    
+    if (invalidReadCount > 0 && !this.hasLoggedReadWarning) {
+      this.hasLoggedReadWarning = true;
+      logger.warn(
+        `[StorageRepository] Skipped ${invalidReadCount} invalid case(s) during read — sample:`,
+        invalidReadSamples[0] as Record<string, unknown>
+      );
+    }
+
+    // Rehydrate and validate cases, filtering out any that fail validation
+    const cases = caseSnapshots
+      .map(snapshot => {
+        try {
+          return Case.rehydrate(snapshot).toJSON();
+        } catch (error) {
+          // Skip cases that fail validation
+          invalidRehydrationCount++;
+          if (invalidRehydrationSamples.length < MAX_LOG_SAMPLE) {
+            invalidRehydrationSamples.push({
+              id: snapshot.id,
+              error: error instanceof Error ? error.message : String(error),
+            });
+          }
+          return null;
+        }
+      })
+      .filter((caseSnapshot): caseSnapshot is CaseSnapshot => caseSnapshot !== null);
+
+    if (invalidRehydrationCount > 0 && !this.hasLoggedRehydrationWarning) {
+      this.hasLoggedRehydrationWarning = true;
+      const firstSample = invalidRehydrationSamples[0];
+      logger.error(
+        `[StorageRepository] CRITICAL: Skipped ${invalidRehydrationCount}/${caseSnapshots.length} cases during rehydration.\n` +
+        `First error - Case ID: ${firstSample?.id}, Error: ${firstSample?.error}`
+      );
+      // Log additional samples if available
+      if (invalidRehydrationSamples.length > 1) {
+        invalidRehydrationSamples.slice(1, 3).forEach((sample, idx) => {
+          logger.error(`[StorageRepository] Error ${idx + 2} - Case ID: ${sample.id}, Error: ${sample.error}`);
+        });
+      }
+    }
+    
+    // Merge migrated data with existing top-level arrays (dedupe by id)
+    const existingFinancials = this.ensureArray<FinancialItem>(base.financials);
+    const existingNotes = this.ensureArray<Note>(base.notes);
+    const existingAlerts = this.ensureArray<Alert>(base.alerts);
+    
+    const financials = this.dedupeById([...existingFinancials, ...migratedFinancials]);
+    const notes = this.dedupeById([...existingNotes, ...migratedNotes]);
+    const alerts = this.dedupeById([...existingAlerts, ...migratedAlerts]);
     const activities = this.ensureArray<ActivityEvent>(base.activities);
+    
+    // Log migration if data was extracted
+    if (migratedFinancials.length > 0 || migratedNotes.length > 0 || migratedAlerts.length > 0) {
+      logger.info('[StorageRepository] Migrated legacy data to Phase 3 format', {
+        financials: migratedFinancials.length,
+        notes: migratedNotes.length,
+        alerts: migratedAlerts.length,
+      });
+    }
 
     const extras: Record<string, unknown> = { ...base };
     delete extras.version;
@@ -369,6 +538,17 @@ export class StorageRepository {
     }
 
     return [];
+  }
+
+  private dedupeById<T extends { id: string }>(items: T[]): T[] {
+    const seen = new Set<string>();
+    return items.filter(item => {
+      if (seen.has(item.id)) {
+        return false;
+      }
+      seen.add(item.id);
+      return true;
+    });
   }
 
   private clone<T>(value: T): T {

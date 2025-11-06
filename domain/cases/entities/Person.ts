@@ -1,4 +1,8 @@
 import { ValidationError } from '@/domain/common/errors/ValidationError';
+import { getRefactorFlags } from '@/utils/featureFlags';
+import { createLogger } from '@/utils/logger';
+
+const logger = createLogger('Person');
 
 export interface ContactInfo {
   email?: string;
@@ -147,17 +151,34 @@ export class Person {
       throw new ValidationError('Person last name cannot be empty');
     }
 
-    if (!Person.isValidIsoDate(this.state.dateOfBirth)) {
+    if (this.state.dateOfBirth && !Person.isValidIsoDate(this.state.dateOfBirth)) {
       throw new ValidationError('Person date of birth must be a valid ISO-8601 date string');
     }
 
+    // Email and phone validation with legacy data support
     const { email, phone } = this.state.contactInfo;
-    if (email && !Person.emailPattern.test(email)) {
-      throw new ValidationError('Person email address is invalid');
+    const allowLegacy = getRefactorFlags().ALLOW_LEGACY_DATA_FORMATS;
+    
+    if (email && email.trim()) {
+      const normalizedEmail = email.trim();
+      if (!Person.emailPattern.test(normalizedEmail)) {
+        if (allowLegacy) {
+          logger.warn('Legacy email format detected', { personId: this.id });
+        } else {
+          throw new ValidationError('Person email address is invalid');
+        }
+      }
     }
 
-    if (phone && !Person.phonePattern.test(Person.normalizePhone(phone))) {
-      throw new ValidationError('Person phone number is invalid');
+    if (phone && phone.trim()) {
+      const normalizedPhone = Person.normalizePhone(phone);
+      if (!Person.phonePattern.test(normalizedPhone)) {
+        if (allowLegacy) {
+          logger.warn('Legacy phone format detected', { personId: this.id });
+        } else {
+          throw new ValidationError('Person phone number is invalid');
+        }
+      }
     }
 
     if (typeof this.state.metadata !== 'object' || this.state.metadata === null) {
@@ -194,6 +215,10 @@ export class Person {
   }
 
   private static normalizeDate(value: string | Date): string {
+    if (!value || (typeof value === 'string' && !value.trim())) {
+      return '';
+    }
+
     if (value instanceof Date) {
       return value.toISOString();
     }
@@ -219,12 +244,14 @@ export class Person {
     }
 
     const normalized: ContactInfo = {};
-    if (contactInfo.email) {
-      normalized.email = contactInfo.email.trim();
+    const trimmedEmail = contactInfo.email?.trim();
+    if (trimmedEmail) {
+      normalized.email = trimmedEmail;
     }
 
-    if (contactInfo.phone) {
-      normalized.phone = contactInfo.phone.trim();
+    const trimmedPhone = contactInfo.phone?.trim();
+    if (trimmedPhone) {
+      normalized.phone = trimmedPhone;
     }
 
     return normalized;

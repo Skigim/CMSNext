@@ -12,6 +12,15 @@ export interface FileStorageFlags {
   caseListView?: CaseListViewPreference;
 }
 
+/**
+ * Manages file storage state flags.
+ * 
+ * ARCHITECTURE NOTE: This intentionally uses localStorage for UI preferences
+ * (e.g., caseListView) which are separate from case data managed by FileStorageAPI.
+ * Session flags (dataBaseline, inConnectionFlow) are memory-only and do not persist.
+ * This does NOT violate the "no localStorage for case data" guideline - those
+ * preferences would be lost if stored in the file system and need browser-level persistence.
+ */
 export class FileStorageFlagsManager {
   private static readonly STORAGE_KEY = "cmsnext.fileStorageFlags";
 

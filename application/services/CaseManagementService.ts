@@ -9,6 +9,8 @@ import type { PersonProps } from '@/domain/cases/entities/Person';
 import { createLogger } from '@/utils/logger';
 import { toast } from 'sonner';
 import { DomainError } from '@/domain/common/errors/DomainError';
+import type { CaseDisplay } from '@/types/case';
+import { caseToLegacyCaseDisplay } from '@/application/services/caseLegacyMapper';
 
 const logger = createLogger('CaseManagementService');
 
@@ -53,16 +55,51 @@ export class CaseManagementService {
   }
 
   /**
-   * Load all cases from storage
+   * Load all cases
    */
-  async loadCases(): Promise<Case[]> {
+  async loadCases(): Promise<CaseDisplay[]> {
+    logger.info('Loading all cases');
+
+    this._appState.setCasesLoading(true);
+    this._appState.setCasesError(null);
+
     try {
       const cases = await this.getAllCases.execute();
       logger.info('Cases loaded', { count: cases.length });
-      return cases;
+
+    this._appState.setCases(cases);
+    this._appState.setHasLoadedCases(true);
+
+      const displays = cases.map(caseToLegacyCaseDisplay);
+      return displays;
     } catch (error) {
-      logger.error('Failed to load cases', { error });
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      logger.error('Failed to load cases', { 
+        error: errorMessage,
+        errorType: error instanceof Error ? error.constructor.name : typeof error,
+        stack: error instanceof Error ? error.stack : undefined,
+      });
+      
+      // If storage isn't available yet, return empty array
+      // This happens before file storage is connected
+      const storageUnavailablePatterns = ['directory handle', 'not available', 'readfile skipped'];
+      const normalizedMessage = errorMessage.toLowerCase();
+      const isStorageUnavailable = storageUnavailablePatterns.some(pattern =>
+        normalizedMessage.includes(pattern)
+      );
+      
+      if (isStorageUnavailable) {
+        logger.warn('Storage not available yet - returning empty cases');
+        this._appState.setCases([]);
+        this._appState.setHasLoadedCases(false);
+        this._appState.setCasesError(null);
+        return [];
+      }
+      this._appState.setCasesError(errorMessage || 'Failed to load cases');
+      
       throw error;
+    } finally {
+      this._appState.setCasesLoading(false);
     }
   }
 
@@ -70,6 +107,7 @@ export class CaseManagementService {
    * Create a new case with UI feedback
    */
   async createCaseWithFeedback(data: CreateCaseData): Promise<Case> {
+    this._appState.setCasesError(null);
     const toastId = toast.loading('Creating case...');
 
     try {
@@ -81,11 +119,13 @@ export class CaseManagementService {
       );
 
       logger.info('Case created successfully', { caseId: newCase.id });
+      this._appState.setHasLoadedCases(true);
       return newCase;
     } catch (error) {
       const errorMsg = error instanceof DomainError ? error.message : 'Failed to create case';
       logger.error('Failed to create case', { error });
       toast.error(errorMsg, { id: toastId });
+      this._appState.setCasesError(errorMsg);
       throw error;
     }
   }
@@ -94,6 +134,7 @@ export class CaseManagementService {
    * Update an existing case with UI feedback
    */
   async updateCaseWithFeedback(caseId: string, updates: Partial<UpdateCaseData>): Promise<Case> {
+    this._appState.setCasesError(null);
     const toastId = toast.loading('Updating case...');
 
     try {
@@ -104,11 +145,13 @@ export class CaseManagementService {
       toast.success('Case updated successfully', { id: toastId });
 
       logger.info('Case updated successfully', { caseId });
+      this._appState.setHasLoadedCases(true);
       return updatedCase;
     } catch (error) {
       const errorMsg = error instanceof DomainError ? error.message : 'Failed to update case';
       logger.error('Failed to update case', { caseId, error });
       toast.error(errorMsg, { id: toastId });
+      this._appState.setCasesError(errorMsg);
       throw error;
     }
   }
@@ -120,6 +163,7 @@ export class CaseManagementService {
     caseId: string,
     status: 'Active' | 'Pending' | 'Closed' | 'Archived'
   ): Promise<Case> {
+    this._appState.setCasesError(null);
     const toastId = toast.loading('Updating case status...');
 
     try {
@@ -141,8 +185,7 @@ export class CaseManagementService {
 
       // Check if it's a DomainError wrapping an AbortError
       if (error instanceof DomainError) {
-        const errorWithCause = error as Error & { cause?: unknown };
-        const cause = errorWithCause.cause;
+        const { cause } = error as Error & { cause?: unknown };
         if (cause instanceof Error && cause.name === 'AbortError') {
           toast.dismiss(toastId);
           throw cause;
@@ -152,6 +195,7 @@ export class CaseManagementService {
       const errorMsg = error instanceof DomainError ? error.message : 'Failed to update case status';
       logger.error('Failed to update case status', { caseId, status, error });
       toast.error(errorMsg, { id: toastId });
+      this._appState.setCasesError(errorMsg);
       throw error;
     }
   }
@@ -160,6 +204,7 @@ export class CaseManagementService {
    * Delete a case with UI feedback
    */
   async deleteCaseWithFeedback(caseId: string, personName?: string): Promise<void> {
+    this._appState.setCasesError(null);
     try {
       await this.deleteCase.execute({ caseId });
 
@@ -171,6 +216,7 @@ export class CaseManagementService {
       const errorMsg = error instanceof DomainError ? error.message : 'Failed to delete case';
       logger.error('Failed to delete case', { caseId, error });
       toast.error(errorMsg);
+      this._appState.setCasesError(errorMsg);
       throw error;
     }
   }

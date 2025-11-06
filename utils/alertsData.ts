@@ -516,6 +516,12 @@ export function parseStackedAlerts(csvContent: string, cases: CaseDisplay[]): Al
 
   const rows = extractAlertRows(csvContent);
   if (rows.length === 0) {
+    // Attempt a more flexible parse for CSV exports that don't match the "stacked" layout.
+    const generic = parseGenericCsvAlerts(csvContent, cases);
+    if (generic.alerts.length > 0) {
+      return generic;
+    }
+
     return createEmptyAlertsIndex();
   }
 
@@ -573,6 +579,113 @@ export function parseStackedAlerts(csvContent: string, cases: CaseDisplay[]): Al
       resolutionNotes: undefined,
       metadata,
       matchStatus: !normalizedMcn ? "missing-mcn" : matchedCase ? "matched" : "unmatched",
+      matchedCaseId: matchedCase?.id,
+      matchedCaseName: matchedCase?.name,
+      matchedCaseStatus: matchedCase?.status,
+    };
+
+    alerts.push(alert);
+  });
+
+  return createAlertsIndexFromAlerts(alerts);
+}
+
+/**
+ * Generic CSV parser: attempts to map common header names to the expected alert fields.
+ * This is a forgiving fallback for CSV exports that don't follow the stacked layout.
+ */
+function parseGenericCsvAlerts(csvContent: string, cases: CaseDisplay[]): AlertsIndex {
+  const parsed = Papa.parse<Record<string, string | null>>(csvContent, {
+    header: true,
+    skipEmptyLines: true,
+    dynamicTyping: false,
+  });
+
+  if (parsed.errors && parsed.errors.length > 0) {
+    // If header parsing failed, give up
+    console.warn('parseGenericCsvAlerts encountered errors', parsed.errors);
+    return createEmptyAlertsIndex();
+  }
+
+  const rows = parsed.data || [];
+  if (rows.length === 0) {
+    return createEmptyAlertsIndex();
+  }
+
+  const casesByMcn = buildCaseMap(cases);
+  const alerts: AlertWithMatch[] = [];
+
+  const headerKeys = rows.length > 0 ? Object.keys(rows[0]).map(k => k.toLowerCase().trim()) : [];
+
+  const findKey = (aliases: string[]) => {
+    for (const alias of aliases) {
+      const idx = headerKeys.findIndex(h => h === alias.toLowerCase());
+      if (idx !== -1) return Object.keys(rows[0])[idx];
+    }
+    // fallback: find any key that contains alias
+    for (const alias of aliases) {
+      const idx = headerKeys.findIndex(h => h.includes(alias.toLowerCase()));
+      if (idx !== -1) return Object.keys(rows[0])[idx];
+    }
+    return undefined;
+  };
+
+  const keyDue = findKey(['due date', 'due_date', 'date', 'alert date', 'date of service']);
+  const keyMcn = findKey(['mc#', 'mcn', 'mc_number', 'mc', 'mc number']);
+  const keyName = findKey(['name', 'patient name']);
+  const keyProgram = findKey(['program']);
+  const keyType = findKey(['type']);
+  const keyDescription = findKey(['description', 'details']);
+  const keyAlertNumber = findKey(['alert_number', 'alertnumber', 'alert number', 'id', 'reportid']);
+
+  rows.forEach(raw => {
+    const get = (k?: string) => (k ? (raw[k] ?? '') : '');
+
+    const dueDate = (get(keyDue) as string) || '';
+    const mcNumber = (get(keyMcn) as string) || '';
+    const name = (get(keyName) as string) || '';
+    const program = (get(keyProgram) as string) || '';
+    const type = (get(keyType) as string) || '';
+    const description = (get(keyDescription) as string) || '';
+    const alertNumber = (get(keyAlertNumber) as string) || '';
+
+    const normalizedMcn = normalizeMcn(mcNumber);
+    const matchedCase = normalizedMcn ? casesByMcn.get(normalizedMcn) : undefined;
+
+    const dueDateIso = normalizeAlertDate(dueDate);
+    const personName = normalizePersonName(name);
+
+    const alertId = alertNumber && alertNumber.length > 0 ? alertNumber : createRandomAlertId();
+
+    const metadata: Record<string, string | undefined> = {
+      rawDueDate: dueDate || undefined,
+      rawProgram: program || undefined,
+      rawType: type || undefined,
+      rawDescription: description || undefined,
+      rawName: name || undefined,
+      alertNumber: alertNumber || undefined,
+    };
+
+    const alert: AlertWithMatch = {
+      id: alertId,
+      reportId: alertNumber || undefined,
+      alertCode: alertNumber || type || program,
+      alertType: type,
+      alertDate: dueDateIso,
+      createdAt: dueDateIso,
+      updatedAt: dueDateIso,
+      mcNumber: normalizedMcn || null,
+      personName,
+      program,
+      region: '',
+      state: '',
+      source: 'Import',
+      description,
+      status: 'new',
+      resolvedAt: null,
+      resolutionNotes: undefined,
+      metadata,
+      matchStatus: !normalizedMcn ? 'missing-mcn' : matchedCase ? 'matched' : 'unmatched',
       matchedCaseId: matchedCase?.id,
       matchedCaseName: matchedCase?.name,
       matchedCaseStatus: matchedCase?.status,

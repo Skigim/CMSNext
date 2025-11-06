@@ -45,9 +45,14 @@ function NoteCard({
     }
   }, [isExpanded, editedNote.content]);
 
-  // If the note prop changes, update the local editedNote state
+  // Only update editedNote when the note ID changes (new note loaded)
+  // Don't reset on every parent re-render to preserve user edits
+  const noteIdRef = useRef(note.id);
   useEffect(() => {
-    setEditedNote(note);
+    if (note.id !== noteIdRef.current) {
+      noteIdRef.current = note.id;
+      setEditedNote(note);
+    }
   }, [note]);
 
   const handleCancel = () => {
@@ -284,8 +289,6 @@ function NoteCard({
 
 interface NotesSectionProps {
   notes: Note[];
-  onAddNote: () => void;
-  onEditNote: (noteId: string) => void;
   onDeleteNote: (noteId: string) => void;
   onUpdateNote?: (noteId: string, updatedNote: NewNoteData) => Promise<void>;
   onCreateNote?: (noteData: NewNoteData) => Promise<void>;
@@ -293,7 +296,6 @@ interface NotesSectionProps {
 
 export function NotesSection({ 
   notes, 
-  onAddNote,  
   onDeleteNote,
   onUpdateNote,
   onCreateNote
@@ -333,15 +335,15 @@ export function NotesSection({
 
   const [skeletonNotes, setSkeletonNotes] = useState<string[]>([]);
 
-  // Create a skeleton note for new notes
-  const createSkeletonNote = (id: string): Note & { isNew: boolean } => ({
+  // Create a skeleton note for new notes - memoized to prevent recreation
+  const createSkeletonNote = useCallback((id: string): Note & { isNew: boolean } => ({
     id,
     category: defaultCategory,
     content: '',
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
     isNew: true,
-  });
+  }), [defaultCategory]);
 
   // Handle adding a new skeleton note
   const handleAddSkeleton = () => {
@@ -386,9 +388,15 @@ export function NotesSection({
     new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
   );
 
+  // Memoize skeleton notes to prevent recreation on every render
+  const memoizedSkeletonNotes = useMemo(
+    () => skeletonNotes.map(id => createSkeletonNote(id)),
+    [skeletonNotes, createSkeletonNote]
+  );
+
   // Combine real notes with skeleton notes
   const allNotes = [
-    ...skeletonNotes.map(id => createSkeletonNote(id)),
+    ...memoizedSkeletonNotes,
     ...sortedNotes
   ];
 
@@ -405,7 +413,7 @@ export function NotesSection({
             )}
           </CardTitle>
           <Button 
-            onClick={onCreateNote ? handleAddSkeleton : onAddNote} 
+            onClick={handleAddSkeleton} 
             size="sm"
             className="gap-2"
           >
@@ -419,7 +427,7 @@ export function NotesSection({
           <div className="text-center py-8">
             <p className="text-muted-foreground mb-4">No notes added yet</p>
             <Button 
-              onClick={onCreateNote ? handleAddSkeleton : onAddNote} 
+              onClick={handleAddSkeleton} 
               variant="outline"
               className="gap-2"
             >

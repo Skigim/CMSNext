@@ -1,7 +1,11 @@
 import { DomainError } from '@/domain/common/errors/DomainError';
 import { ValidationError } from '@/domain/common/errors/ValidationError';
-import { CASE_STATUS, CASE_STATUS_VALUES, type CaseStatus } from '@/types/case';
+import { CASE_STATUS, type CaseStatus } from '@/types/case';
 import { Person, type PersonProps, type PersonSnapshot } from './Person';
+import { getRefactorFlags } from '@/utils/featureFlags';
+import { createLogger } from '@/utils/logger';
+
+const logger = createLogger('Case');
 
 export type CaseMetadata = Record<string, unknown>;
 
@@ -202,8 +206,20 @@ export class Case {
       throw new ValidationError('Case name cannot be empty');
     }
 
-    if (!CASE_STATUS_VALUES.includes(this.props.status)) {
-      throw new ValidationError(`Invalid case status: ${this.props.status}`);
+    // Validate status with legacy data support
+    const validStatuses = Object.values(CASE_STATUS);
+    const allowLegacy = getRefactorFlags().ALLOW_LEGACY_DATA_FORMATS;
+    
+    if (!validStatuses.includes(this.props.status)) {
+      if (allowLegacy) {
+        logger.warn('Legacy case status detected', { 
+          status: this.props.status, 
+          caseId: this.id,
+          validStatuses 
+        });
+      } else {
+        throw new ValidationError(`Invalid case status: ${this.props.status}. Valid statuses: ${validStatuses.join(', ')}`);
+      }
     }
 
     if (!this.props.personId.trim()) {
@@ -293,7 +309,8 @@ export class Case {
   }
 
   private static isValidMcn(value: string): boolean {
-    return /^MCN?[A-Z0-9-]{3,}$/i.test(value);
+    // Allow MCN/MC prefix or plain numbers (at least 3 characters)
+    return /^(MCN?[A-Z0-9-]{3,}|[0-9]{3,})$/i.test(value);
   }
 
   private static generateId(): string {

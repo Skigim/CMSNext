@@ -40,10 +40,18 @@ const DEFAULT_LEVEL: LogLevel = (() => {
   if (explicitLevel && explicitLevel in levelPriority) {
     return explicitLevel as LogLevel;
   }
-  return env?.DEV ? "debug" : "warn";
+  // Changed from 'debug' to 'info' in dev to reduce console spam
+  // Use VITE_LOG_LEVEL=debug in .env to enable debug logs when needed
+  return env?.DEV ? "info" : "warn";
 })();
 
 let currentLevel: LogLevel = DEFAULT_LEVEL;
+
+// Deduplication tracking for repetitive logs
+const logDedupeCache = new Map<string, { count: number; lastLogged: number; firstSeen: number }>();
+const DEDUPE_WINDOW_MS = 60000; // 1 minute
+const DEDUPE_SUMMARY_INTERVAL_MS = 300000; // 5 minutes
+const MAX_LOGS_PER_WINDOW = 3; // Only log same message 3 times per window
 
 export function setLogLevel(level: LogLevel) {
   currentLevel = level;
@@ -51,6 +59,50 @@ export function setLogLevel(level: LogLevel) {
 
 function shouldLog(level: LogLevel): boolean {
   return levelPriority[level] >= levelPriority[currentLevel];
+}
+
+function createDedupeKey(scope: string, level: LogLevel, message: string): string {
+  return `${scope}:${level}:${message}`;
+}
+
+function shouldLogDeduplicated(scope: string, level: LogLevel, message: string): boolean {
+  const key = createDedupeKey(scope, level, message);
+  const now = Date.now();
+  const entry = logDedupeCache.get(key);
+
+  if (!entry) {
+    logDedupeCache.set(key, { count: 1, lastLogged: now, firstSeen: now });
+    return true;
+  }
+
+  entry.count++;
+
+  // Log summary every 5 minutes if suppressed
+  if (now - entry.lastLogged >= DEDUPE_SUMMARY_INTERVAL_MS && entry.count > MAX_LOGS_PER_WINDOW) {
+    const consoleFn = consoleMap[level];
+    consoleFn(`[${new Date().toISOString()}] [${scope}] ${message} (suppressed ${entry.count - MAX_LOGS_PER_WINDOW} similar messages in last ${Math.round((now - entry.firstSeen) / 60000)} minutes)`);
+    entry.count = 0;
+    entry.lastLogged = now;
+    entry.firstSeen = now;
+    return false;
+  }
+
+  // Reset window if enough time has passed
+  if (now - entry.firstSeen >= DEDUPE_WINDOW_MS) {
+    entry.count = 1;
+    entry.lastLogged = now;
+    entry.firstSeen = now;
+    return true;
+  }
+
+  // Allow first N logs in window
+  if (entry.count <= MAX_LOGS_PER_WINDOW) {
+    entry.lastLogged = now;
+    return true;
+  }
+
+  // Suppress subsequent logs in this window
+  return false;
 }
 
 function resolveCallSite(skip: number = 4): string | null {
@@ -70,6 +122,11 @@ function resolveCallSite(skip: number = 4): string | null {
 
 function logWithLevel(scope: string, level: LogLevel, message: string, context?: Record<string, unknown>, options?: LogOptions) {
   if (!shouldLog(level)) {
+    return;
+  }
+
+  // Deduplicate legacy/repetitive warnings
+  if (level === 'warn' && !shouldLogDeduplicated(scope, level, message)) {
     return;
   }
 

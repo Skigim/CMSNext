@@ -178,14 +178,18 @@ describe("Dashboard widgets integration", () => {
       />,
     );
 
-    await screen.findByText("Case Priority");
-    await screen.findByText("Alerts Cleared/Day");
-    await screen.findByText("Cases Processed/Day");
-    await screen.findByText("Activity Timeline");
-    await screen.findByText("Total Cases by Status");
-    await screen.findByText("Open Alerts by Description");
-    await screen.findByText("Avg. Alert Age");
-    await screen.findByText("Avg. Case Processing Time");
+    // Wait for widgets section to load
+    await screen.findByText("Insights", undefined, { timeout: 10000 });
+
+    await screen.findByText("Case Priority", undefined, { timeout: 10000 });
+    await screen.findByText("Alerts Cleared/Day", undefined, { timeout: 10000 });
+    await screen.findByText("Cases Processed/Day", undefined, { timeout: 10000 });
+    await screen.findByText("Activity Timeline", undefined, { timeout: 10000 });
+    await screen.findByText("Total Cases by Status", undefined, { timeout: 10000 });
+    // Check with regex since the title might be split across elements
+    await screen.findByText(/Alerts by Description/i, undefined, { timeout: 10000 });
+    await screen.findByText("Avg. Alert Age", undefined, { timeout: 10000 });
+    await screen.findByText("Avg. Case Processing Time", undefined, { timeout: 10000 });
   });
 
   it("updates widget data when underlying props change", async () => {

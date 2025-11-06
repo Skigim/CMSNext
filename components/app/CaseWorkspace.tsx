@@ -4,22 +4,19 @@ import type { AppNavigationConfig } from "./AppNavigationShell";
 import { AppNavigationShell } from "./AppNavigationShell";
 import { ViewRenderer } from "../routing/ViewRenderer";
 import type {
-  CaseCategory,
   CaseDisplay,
-  FinancialItem,
   NewCaseRecordData,
   NewNoteData,
   NewPersonData,
 } from "../../types/case";
+import { FinancialCategory, type FinancialItemSnapshot } from "@/domain/financials/entities/FinancialItem";
 import type { ItemFormState } from "../../hooks/useFinancialItemFlow";
-import type { useNotes } from "../../hooks/useNotes";
 import type { AlertsIndex, AlertWithMatch } from "../../utils/alertsData";
 import type { CaseActivityLogState } from "../../types/activityLog";
 import { Alert, AlertTitle, AlertDescription } from "../ui/alert";
 import { Button } from "../ui/button";
 
 const FinancialItemModal = lazy(() => import("../modals/FinancialItemModal"));
-const NoteModal = lazy(() => import("../modals/NoteModal"));
 
 interface CaseWorkspaceViewHandlers {
   handleViewCase: (caseId: string) => void;
@@ -34,31 +31,24 @@ interface CaseWorkspaceViewHandlers {
 
 interface CaseWorkspaceFinancialFlow {
   itemForm: ItemFormState;
-  handleAddItem: (category: CaseCategory) => void;
-  handleDeleteItem: (category: CaseCategory, itemId: string) => Promise<void>;
+  handleAddItem: (category: FinancialCategory) => void;
+  handleDeleteItem: (category: FinancialCategory, itemId: string) => Promise<void>;
   handleBatchUpdateItem: (
-    category: CaseCategory,
+    category: FinancialCategory,
     itemId: string,
-    updatedItem: Partial<FinancialItem>,
+    updatedItem: Partial<FinancialItemSnapshot>,
   ) => Promise<void>;
   handleCreateItem: (
-    category: CaseCategory,
-    itemData: Omit<FinancialItem, "id" | "createdAt" | "updatedAt">,
+    category: FinancialCategory,
+    itemData: Omit<FinancialItemSnapshot, "id" | "createdAt" | "updatedAt">,
   ) => Promise<void>;
   handleCancelItemForm: () => void;
   closeItemForm: () => void;
   onCaseUpdated: (updatedCase: CaseDisplay) => void;
 }
 
-type NoteFormState = ReturnType<typeof useNotes>["noteForm"];
-
 interface CaseWorkspaceNoteFlow {
-  noteForm: NoteFormState;
-  handleAddNote: () => void;
-  handleEditNote: (noteId: string) => void;
   handleDeleteNote: (noteId: string) => Promise<void>;
-  handleSaveNote: (noteData: NewNoteData) => Promise<void>;
-  handleCancelNoteForm: () => void;
   handleBatchUpdateNote: (noteId: string, noteData: NewNoteData) => Promise<void>;
   handleBatchCreateNote: (noteData: NewNoteData) => Promise<void>;
 }
@@ -140,8 +130,6 @@ export const CaseWorkspace = memo(function CaseWorkspace({
         handleDeleteItem={financialFlow.handleDeleteItem}
         handleBatchUpdateItem={financialFlow.handleBatchUpdateItem}
         handleCreateItem={financialFlow.handleCreateItem}
-        handleAddNote={noteFlow.handleAddNote}
-        handleEditNote={noteFlow.handleEditNote}
         handleDeleteNote={noteFlow.handleDeleteNote}
         handleBatchUpdateNote={noteFlow.handleBatchUpdateNote}
         handleBatchCreateNote={noteFlow.handleBatchCreateNote}
@@ -163,17 +151,6 @@ export const CaseWorkspace = memo(function CaseWorkspace({
             }}
             itemType={financialFlow.itemForm.category}
             editingItem={financialFlow.itemForm.item}
-          />
-        </Suspense>
-      )}
-
-      {noteFlow.noteForm.isOpen && (
-        <Suspense fallback={null}>
-          <NoteModal
-            isOpen={noteFlow.noteForm.isOpen}
-            onClose={noteFlow.handleCancelNoteForm}
-            onSave={noteFlow.handleSaveNote}
-            editingNote={noteFlow.noteForm.editingNote}
           />
         </Suspense>
       )}

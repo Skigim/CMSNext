@@ -9,6 +9,7 @@ import { NewPersonData } from "../../types/case";
 import { AddressForm } from "./AddressForm";
 import { ContactInfoForm } from "./ContactInfoForm";
 import { useCategoryConfig } from "@/contexts/CategoryConfigContext";
+import { isoToDateInputValue, dateInputValueToISO } from "@/utils/dateFormatting";
 
 interface PersonInfoFormProps {
   personData: NewPersonData;
@@ -86,8 +87,8 @@ export function PersonInfoForm({
             <Input
               id="dateOfBirth"
               type="date"
-              value={personData.dateOfBirth}
-              onChange={(e) => onPersonDataChange('dateOfBirth', e.target.value)}
+              value={isoToDateInputValue(personData.dateOfBirth)}
+              onChange={(e) => onPersonDataChange('dateOfBirth', dateInputValueToISO(e.target.value) || '')}
             />
           </div>
           <div className="space-y-2">

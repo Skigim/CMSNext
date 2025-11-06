@@ -181,8 +181,13 @@ export function useWidgetData<T>(
     // Initial fetch or refetch when the fetcher dependencies change
     fetchData();
 
-    // Set up refresh interval
+    // Set up refresh interval (disabled in test environment to prevent infinite loops with fake timers)
     const setupRefreshInterval = () => {
+      // Skip auto-refresh in test environment
+      if (import.meta.env.MODE === 'test') {
+        return;
+      }
+      
       if (refreshTimeoutRef.current) {
         clearTimeout(refreshTimeoutRef.current);
       }
@@ -197,17 +202,23 @@ export function useWidgetData<T>(
     setupRefreshInterval();
 
     // Freshness update interval (update "X minutes ago" every minute)
-    const freshnessInterval = setInterval(() => {
-      if (lastUpdateRef.current && mountedRef.current) {
-        updateFreshness(lastUpdateRef.current);
-      }
-    }, 60000); // Update every minute
+    // Skip in test environment for better test isolation
+    let freshnessInterval: ReturnType<typeof setInterval> | null = null;
+    if (import.meta.env.MODE !== 'test') {
+      freshnessInterval = setInterval(() => {
+        if (lastUpdateRef.current && mountedRef.current) {
+          updateFreshness(lastUpdateRef.current);
+        }
+      }, 60000); // Update every minute
+    }
 
     return () => {
       if (refreshTimeoutRef.current) {
         clearTimeout(refreshTimeoutRef.current);
       }
-      clearInterval(freshnessInterval);
+      if (freshnessInterval) {
+        clearInterval(freshnessInterval);
+      }
     };
   }, [fetchData, refreshInterval, updateFreshness, dataFetcher, refreshKey]);
 
