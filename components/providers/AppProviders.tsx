@@ -2,7 +2,6 @@ import { useCallback } from "react";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 import { FileStorageProvider } from "@/contexts/FileStorageContext";
 import { DataManagerProvider } from "@/contexts/DataManagerContext";
-import { CaseServiceProvider } from "@/contexts/CaseServiceContext";
 import { CategoryConfigProvider } from "@/contexts/CategoryConfigContext";
 import ErrorBoundary from "@/components/error/ErrorBoundary";
 import FileSystemErrorBoundary from "@/components/error/FileSystemErrorBoundary";
@@ -57,11 +56,9 @@ export function AppProviders({ children }: AppProvidersProps) {
             getDataFunction={getDataFunction}
           >
             <DataManagerProvider>
-              <CaseServiceProvider>
-                <CategoryConfigProvider>
-                  {children}
-                </CategoryConfigProvider>
-              </CaseServiceProvider>
+              <CategoryConfigProvider>
+                {children}
+              </CategoryConfigProvider>
             </DataManagerProvider>
           </FileStorageProvider>
         </FileSystemErrorBoundary>
