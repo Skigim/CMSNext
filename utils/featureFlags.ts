@@ -95,6 +95,8 @@ export interface RefactorFeatureFlags {
 	USE_ALERTS_DOMAIN: boolean;
 	/** Enables the new activity domain implementation. */
 	USE_ACTIVITY_DOMAIN: boolean;
+	/** Allows legacy data with relaxed email/phone/status validation during migration. */
+	ALLOW_LEGACY_DATA_FORMATS: boolean;
 }
 
 /** Feature flags governing the architecture refactor rollout (internal state). */
@@ -111,6 +113,8 @@ let refactorFlags: RefactorFeatureFlags = {
 	USE_ALERTS_DOMAIN: false,
 	/** Flag for enabling the activity domain rewrite. */
 	USE_ACTIVITY_DOMAIN: false,
+	/** Allows legacy data with relaxed validation during Phase 3 migration. */
+	ALLOW_LEGACY_DATA_FORMATS: true, // Set to true for migration compatibility
 };
 
 /**

@@ -63,6 +63,20 @@ export function transformImportedData(data: any): CaseDisplay[] {
  */
 function normalizeCases(cases: any[]): CaseDisplay[] {
   return cases.map(c => {
+    // Normalize timestamps to ISO strings first
+    const normalizedCreatedAt =
+      c.createdAt instanceof Date
+        ? c.createdAt.toISOString()
+        : typeof c.createdAt === 'string' && c.createdAt.trim().length > 0
+          ? c.createdAt
+          : new Date().toISOString();
+    const normalizedUpdatedAt =
+      c.updatedAt instanceof Date
+        ? c.updatedAt.toISOString()
+        : typeof c.updatedAt === 'string' && c.updatedAt.trim().length > 0
+          ? c.updatedAt
+          : normalizedCreatedAt;
+
     // If caseRecord is missing, null, or not a valid object, reconstruct it from top-level fields
     if (!c.caseRecord || typeof c.caseRecord !== 'object' || Array.isArray(c.caseRecord)) {
       console.warn(`Migrating legacy case ${c.id} - reconstructing caseRecord from top-level fields`);
@@ -70,7 +84,7 @@ function normalizeCases(cases: any[]): CaseDisplay[] {
         id: `${c.id}-record`,
         personId: c.person?.id || '',
         mcn: c.mcn || '',
-        applicationDate: c.createdAt?.split('T')[0] || new Date().toISOString(),
+        applicationDate: normalizedCreatedAt.slice(0, 10), // Extract yyyy-MM-dd
         caseType: 'General',
         spouseId: '',
         status: c.status || 'Pending',
@@ -78,15 +92,18 @@ function normalizeCases(cases: any[]): CaseDisplay[] {
         priority: c.priority || false,
         livingArrangement: c.person?.livingArrangement || 'Unknown',
         withWaiver: false,
-        admissionDate: c.createdAt || new Date().toISOString(),
+        admissionDate: normalizedCreatedAt,
         organizationId: c.person?.organizationId || '',
         authorizedReps: [],
         retroRequested: '',
         financials: c.financials || { resources: [], income: [], expenses: [] },
         notes: c.notes || [],
-        createdDate: c.createdAt || new Date().toISOString(),
-        updatedDate: c.updatedAt || new Date().toISOString(),
+        createdDate: normalizedCreatedAt,
+        updatedDate: normalizedUpdatedAt,
       };
+      // Update top-level timestamps to normalized versions
+      c.createdAt = normalizedCreatedAt;
+      c.updatedAt = normalizedUpdatedAt;
     } else {
       // Ensure caseRecord has required nested structures even if it exists
       if (!c.caseRecord.financials || typeof c.caseRecord.financials !== 'object' || Array.isArray(c.caseRecord.financials)) {

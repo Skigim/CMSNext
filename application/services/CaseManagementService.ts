@@ -82,9 +82,10 @@ export class CaseManagementService {
       
       // If storage isn't available yet, return empty array
       // This happens before file storage is connected
-      const storageUnavailablePatterns = ['directory handle', 'not available', 'readFile skipped'];
-      const isStorageUnavailable = storageUnavailablePatterns.some(pattern => 
-        errorMessage.includes(pattern)
+      const storageUnavailablePatterns = ['directory handle', 'not available', 'readfile skipped'];
+      const normalizedMessage = errorMessage.toLowerCase();
+      const isStorageUnavailable = storageUnavailablePatterns.some(pattern =>
+        normalizedMessage.includes(pattern)
       );
       
       if (isStorageUnavailable) {

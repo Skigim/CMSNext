@@ -1,4 +1,8 @@
 import { ValidationError } from '@/domain/common/errors/ValidationError';
+import { getRefactorFlags } from '@/utils/featureFlags';
+import { createLogger } from '@/utils/logger';
+
+const logger = createLogger('Person');
 
 export interface ContactInfo {
   email?: string;
@@ -151,15 +155,30 @@ export class Person {
       throw new ValidationError('Person date of birth must be a valid ISO-8601 date string');
     }
 
-    // Email and phone validation disabled - will be reworked later
-    // const { email, phone } = this.state.contactInfo;
-    // if (email && email.trim() && !Person.emailPattern.test(email)) {
-    //   throw new ValidationError('Person email address is invalid');
-    // }
+    // Email and phone validation with legacy data support
+    const { email, phone } = this.state.contactInfo;
+    const allowLegacy = getRefactorFlags().ALLOW_LEGACY_DATA_FORMATS;
+    
+    if (email && email.trim()) {
+      if (!Person.emailPattern.test(email)) {
+        if (allowLegacy) {
+          logger.warn('Legacy email format detected', { email, personId: this.id });
+        } else {
+          throw new ValidationError('Person email address is invalid');
+        }
+      }
+    }
 
-    // if (phone && phone.trim() && !Person.phonePattern.test(Person.normalizePhone(phone))) {
-    //   throw new ValidationError('Person phone number is invalid');
-    // }
+    if (phone && phone.trim()) {
+      const normalizedPhone = Person.normalizePhone(phone);
+      if (!Person.phonePattern.test(normalizedPhone)) {
+        if (allowLegacy) {
+          logger.warn('Legacy phone format detected', { phone, personId: this.id });
+        } else {
+          throw new ValidationError('Person phone number is invalid');
+        }
+      }
+    }
 
     if (typeof this.state.metadata !== 'object' || this.state.metadata === null) {
       throw new ValidationError('Person metadata must be an object');
@@ -237,10 +256,9 @@ export class Person {
     return normalized;
   }
 
-  // Validation patterns and helpers - currently unused, will be reworked
-  // private static normalizePhone(value: string): string {
-  //   return value.replace(/[^\d]/g, '');
-  // }
+  private static normalizePhone(value: string): string {
+    return value.replace(/[^\d]/g, '');
+  }
 
   private static isValidIsoDate(value: string): boolean {
     return Number.isFinite(Date.parse(value));
@@ -254,8 +272,8 @@ export class Person {
     return JSON.parse(JSON.stringify(metadata ?? {}));
   }
 
-  // private static readonly emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  // private static readonly phonePattern = /^\d{7,15}$/;
+  private static readonly emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  private static readonly phonePattern = /^\d{7,15}$/;
 }
 
 export default Person;

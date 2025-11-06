@@ -250,7 +250,8 @@ export const AppContent = memo(function AppContent() {
 
   const handleGoToSettings = useCallback(() => {
     dismissConnectModal();
-    ApplicationState.getInstance().setHasLoadedCases(true);
+    // NOTE: Settings page doesn't require loaded cases - just dismiss the connect modal
+    // Do NOT set hasLoadedCases(true) here as it misrepresents the application state
     handleNavigate("settings");
   }, [dismissConnectModal, handleNavigate]);
 
