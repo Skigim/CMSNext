@@ -71,18 +71,19 @@ export function ProfilerWrapper({ id, children, enabled = DEFAULT_PROFILER_ENABL
       window.downloadProfilerData = downloadProfilerData;
       window.clearProfilerData = clearProfilerData;
 
-      console.log('%c🔬 ProfilerWrapper initialized', 'color: #8b5cf6; font-weight: bold;');
-      console.log('%c  Use window.profilerData to access render data', 'color: #a78bfa;');
-      console.log('%c  Use window.downloadProfilerData() to export JSON', 'color: #a78bfa;');
-      console.log('');
+      // Only log once on initialization (reduced verbosity)
+      if (profilerDataStore.length === 0) {
+        console.log('%c🔬 ProfilerWrapper initialized', 'color: #8b5cf6; font-weight: bold;');
+        console.log('%c  Use window.profilerData to access render data', 'color: #a78bfa;');
+        console.log('%c  Use window.downloadProfilerData() to export JSON', 'color: #a78bfa;');
+      }
     }
 
     return () => {
-      // Cleanup on unmount
-      if (enabled && window.profilerData) {
+      // Cleanup on unmount - only log if data was captured
+      if (enabled && window.profilerData && profilerDataStore.length > 0) {
         console.log('%c🔬 ProfilerWrapper unmounted', 'color: #8b5cf6; font-weight: bold;');
         console.log(`   Total renders captured: ${profilerDataStore.length}`);
-        console.log('');
       }
     };
   }, [enabled]);
@@ -117,8 +118,9 @@ export function ProfilerWrapper({ id, children, enabled = DEFAULT_PROFILER_ENABL
 
     profilerDataStore.push(data);
 
-    // Log significant renders (>16ms indicates potential jank)
-    if (actualDuration > 16) {
+    // Only log very slow renders (>50ms indicates significant jank)
+    // Reduced threshold from 16ms to avoid console spam
+    if (actualDuration > 50) {
       console.log(
         `%c⚠️ Slow render detected`,
         'color: #f59e0b; font-weight: bold;',
@@ -127,14 +129,8 @@ export function ProfilerWrapper({ id, children, enabled = DEFAULT_PROFILER_ENABL
       );
     }
 
-    // Log every 10th render for progress tracking
-    if (renderCountRef.current % 10 === 0) {
-      console.log(
-        `%c📊 Profiler progress:`,
-        'color: #3b82f6;',
-        `${renderCountRef.current} renders captured`
-      );
-    }
+    // Removed periodic logging - use window.profilerData to check progress
+    // Old: logged every 10th render
   };
 
   if (!enabled) {

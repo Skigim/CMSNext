@@ -1630,7 +1630,7 @@ export class DataManager {
     }
 
     if (shouldPersist) {
-      logger.info('Persisting alerts to store', {
+      logger.debug('Persisting alerts to store', {
         alertCount: index.alerts.length,
         sourceFile,
       });
@@ -1792,7 +1792,7 @@ export class DataManager {
         payload.sourceFile = options.sourceFile;
       }
 
-      logger.info('Saving alerts to alerts.json', {
+      logger.debug('Saving alerts to alerts.json', {
         alertCount: normalizedAlerts.length,
         sourceFile: options.sourceFile,
       });
