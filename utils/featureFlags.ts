@@ -104,7 +104,7 @@ let refactorFlags: RefactorFeatureFlags = {
 	/** Master toggle for switching between legacy and refactored architecture. */
 	USE_NEW_ARCHITECTURE: false,
 	/** Flag for enabling the cases domain rewrite. */
-	USE_CASES_DOMAIN: false,
+	USE_CASES_DOMAIN: true,
 	/** Flag for enabling the financials domain rewrite. */
 	USE_FINANCIALS_DOMAIN: false,
 	/** Flag for enabling the notes domain rewrite. */

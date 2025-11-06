@@ -2,6 +2,7 @@ import { toast } from 'sonner';
 import type { CaseDisplay, NewPersonData, NewCaseRecordData, NewNoteData } from '@/types/case';
 import type DataManager from '@/utils/DataManager';
 import { createLogger } from '@/utils/logger';
+import { normalizePhoneNumber } from '@/utils/phoneFormatter';
 import {
   getFileStorageFlags,
   updateFileStorageFlags,
@@ -158,17 +159,26 @@ export class CaseManagementAdapter {
     const isEditing = !!editingCase;
     const toastId = toast.loading(isEditing ? "Updating case..." : "Creating case...");
 
+    // Normalize phone number to ensure consistent storage (digits-only)
+    const normalizedCaseData = {
+      ...caseData,
+      person: {
+        ...caseData.person,
+        phone: caseData.person.phone ? normalizePhoneNumber(caseData.person.phone) : caseData.person.phone,
+      },
+    };
+
     try {
       let result: CaseDisplay;
       
       if (editingCase) {
         // Update existing case using DataManager
-        result = await this.dataManager.updateCompleteCase(editingCase.id, caseData);
-        toast.success(`Case for ${caseData.person.firstName} ${caseData.person.lastName} updated successfully`, { id: toastId });
+        result = await this.dataManager.updateCompleteCase(editingCase.id, normalizedCaseData);
+        toast.success(`Case for ${normalizedCaseData.person.firstName} ${normalizedCaseData.person.lastName} updated successfully`, { id: toastId });
       } else {
         // Create new case using DataManager
-        result = await this.dataManager.createCompleteCase(caseData);
-        toast.success(`Case for ${caseData.person.firstName} ${caseData.person.lastName} created successfully`, { id: toastId });
+        result = await this.dataManager.createCompleteCase(normalizedCaseData);
+        toast.success(`Case for ${normalizedCaseData.person.firstName} ${normalizedCaseData.person.lastName} created successfully`, { id: toastId });
       }
       
       return result;
