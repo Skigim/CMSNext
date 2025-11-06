@@ -166,13 +166,9 @@ describe('phoneFormatter', () => {
       expect(formatPhoneNumberAsTyped('5551234567')).toBe('(555) 123-4567');
     });
 
-    it('handles deletion', () => {
-      expect(formatPhoneNumberAsTyped('555123', '5551234')).toBe('(555) 123');
-      expect(formatPhoneNumberAsTyped('555', '5551')).toBe('(555');
-    });
-
     it('strips non-numeric input', () => {
       expect(formatPhoneNumberAsTyped('555abc123')).toBe('(555) 123');
+      expect(formatPhoneNumberAsTyped('(555) 123-4567')).toBe('(555) 123-4567');
     });
   });
 

@@ -133,23 +133,11 @@ export function isValidUSPhoneNumber(phone: string): boolean {
 }
 
 /**
- * Formats phone number as user types (for input fields)
- * Handles backspace and maintains cursor position
+ * Formats a phone number as the user types (for input fields).
+ * Strips non-numeric characters and formats as a US phone number.
  */
-export function formatPhoneNumberAsTyped(
-  value: string,
-  previousValue: string = ''
-): string {
-  const digits = stripPhoneNumber(value);
-  const prevDigits = stripPhoneNumber(previousValue);
-  
-  // If user is deleting, allow the deletion
-  if (digits.length < prevDigits.length) {
-    return formatUSPhone(digits);
-  }
-  
-  // Format as user types
-  return formatUSPhone(digits);
+export function formatPhoneNumberAsTyped(value: string): string {
+  return formatUSPhone(stripPhoneNumber(value));
 }
 
 /**

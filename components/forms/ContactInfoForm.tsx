@@ -2,7 +2,7 @@ import { Label } from "../ui/label";
 import { Input } from "../ui/input";
 import { NewPersonData } from "../../types/case";
 import { formatPhoneNumberAsTyped, normalizePhoneNumber } from "../../utils/phoneFormatter";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 interface ContactInfoFormProps {
   personData: NewPersonData;
@@ -28,9 +28,14 @@ export function ContactInfoForm({ personData, onPersonDataChange }: ContactInfoF
     formatPhoneNumberAsTyped(personData.phone)
   );
 
+  // Sync local display state when personData.phone changes externally (e.g., editing existing case)
+  useEffect(() => {
+    setPhoneDisplay(formatPhoneNumberAsTyped(personData.phone));
+  }, [personData.phone]);
+
   const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newValue = e.target.value;
-    const formatted = formatPhoneNumberAsTyped(newValue, phoneDisplay);
+    const formatted = formatPhoneNumberAsTyped(newValue);
     setPhoneDisplay(formatted);
     
     // Store normalized (digits only) version in state
