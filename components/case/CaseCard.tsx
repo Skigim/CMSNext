@@ -19,6 +19,7 @@ import type { AlertWithMatch } from "../../utils/alertsData";
 import { AlertBadge } from "@/components/alerts/AlertBadge";
 import { McnCopyControl } from "@/components/common/McnCopyControl";
 import { CopyableText } from "@/components/common/CopyableText";
+import { getDisplayPhoneNumber } from "@/utils/phoneFormatter";
 
 interface CaseCardProps {
   case: CaseDisplay;
@@ -58,7 +59,8 @@ export function CaseCard({
   const applicationDate = caseData.caseRecord?.applicationDate || caseData.createdAt;
   const lastUpdated = caseData.updatedAt || caseData.caseRecord?.updatedDate || caseData.createdAt;
   // Prefer phone over email for primary contact
-  const primaryContact = caseData.person?.phone || caseData.person?.email;
+  const phone = caseData.person?.phone;
+  const primaryContact = phone ? getDisplayPhoneNumber(phone) : caseData.person?.email;
 
   const priorityLabel = caseData.priority ? "High priority" : "Standard priority";
   const priorityClasses = caseData.priority

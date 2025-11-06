@@ -17,6 +17,7 @@ import { filterOpenAlerts, type AlertWithMatch } from "@/utils/alertsData";
 import { AlertBadge } from "@/components/alerts/AlertBadge";
 import { McnCopyControl } from "@/components/common/McnCopyControl";
 import { CopyableText } from "@/components/common/CopyableText";
+import { getDisplayPhoneNumber } from "@/utils/phoneFormatter";
 
 export interface CaseTableProps {
   cases: CaseDisplay[];
@@ -71,7 +72,8 @@ export const CaseTable = memo(function CaseTable({
         const applicationDate = item.caseRecord?.applicationDate || item.createdAt;
         const updatedDate = item.updatedAt || item.caseRecord?.updatedDate || item.createdAt;
         // Prefer phone over email for primary contact
-        const primaryContact = item.person?.phone || item.person?.email;
+        const phone = item.person?.phone;
+        const primaryContact = phone ? getDisplayPhoneNumber(phone) : item.person?.email;
         const allCaseAlerts = alertsByCaseId?.get(item.id) ?? [];
         const caseAlerts = filterOpenAlerts(allCaseAlerts);
         return {
