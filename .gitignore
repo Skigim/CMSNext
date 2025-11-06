@@ -84,3 +84,12 @@ docs/api/
 *.code-workspace
 .vscode/settings.json
 .vscode/launch.json
+
+# Development notes and prompts (local only)
+AGENT_PROMPTS.md
+CODEX_PROMPT_*.md
+PHASE*.md
+PR*_*.md
+REFRESHED_PROMPTS.md
+WORK_STATUS.md
+.dev-notes/
