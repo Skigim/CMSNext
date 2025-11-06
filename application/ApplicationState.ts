@@ -10,8 +10,6 @@ import {
   type FeatureFlagKey,
   type FeatureFlags,
 } from '@/utils/featureFlags';
-import type { CaseDisplay } from '@/types/case';
-import { legacyCaseDisplayToCase } from '@/application/services/caseLegacyMapper';
 
 type EntityWithId = { id: string };
 
@@ -22,9 +20,6 @@ export interface ApplicationStateSnapshot {
   alerts: ReadonlyMap<string, Alert>;
   activities: ReadonlyMap<string, ActivityEvent>;
   featureFlags: FeatureFlags;
-  casesLoading: boolean;
-  casesError: string | null;
-  hasLoadedCases: boolean;
 }
 
 function cloneValue<T>(value: T): T {
@@ -71,16 +66,6 @@ export class ApplicationState {
   private readonly alerts = new Map<string, Alert>();
   private readonly activities = new Map<string, ActivityEvent>();
   private featureFlags: FeatureFlags = createFeatureFlagContext();
-
-  private casesLoading = false;
-  private casesError: string | null = null;
-  private hasLoadedCases = false;
-
-  private financialsLoading = false;
-  private financialsError: string | null = null;
-
-  private notesLoading = false;
-  private notesError: string | null = null;
 
   private readonly listeners = new Map<Listener, SnapshotListener>();
   private version = 0;
@@ -140,10 +125,6 @@ export class ApplicationState {
       this.setFeatureFlags(featureFlags);
     }
 
-    this.casesLoading = false;
-    this.casesError = null;
-    this.hasLoadedCases = true;
-
     this.notifyListeners();
   }
 
@@ -199,67 +180,6 @@ export class ApplicationState {
     return entity ? entity.clone() : null;
   }
 
-  getCasesLoading(): boolean {
-    return this.casesLoading;
-  }
-
-  getCasesError(): string | null {
-    return this.casesError;
-  }
-
-  getHasLoadedCases(): boolean {
-    return this.hasLoadedCases;
-  }
-
-  setCases(cases: Case[]): void {
-    this.replaceCases(cases);
-    this.notifyListeners();
-  }
-
-  setCasesLoading(loading: boolean): void {
-    if (this.casesLoading === loading) {
-      return;
-    }
-
-    this.casesLoading = loading;
-    this.notifyListeners();
-  }
-
-  setCasesError(error: string | null | undefined): void {
-    const nextError = error ?? null;
-
-    if (this.casesError === nextError) {
-      return;
-    }
-
-    this.casesError = nextError;
-    this.notifyListeners();
-  }
-
-  setHasLoadedCases(loaded: boolean): void {
-    if (this.hasLoadedCases === loaded) {
-      return;
-    }
-
-    this.hasLoadedCases = loaded;
-    this.notifyListeners();
-  }
-
-  setCasesFromLegacyDisplays(displays: CaseDisplay[]): void {
-    const nextCases = displays.map(display => legacyCaseDisplayToCase(display, this.cases.get(display.id) ?? null));
-    this.replaceCases(nextCases);
-    this.notifyListeners();
-  }
-
-  upsertCaseFromLegacy(display: CaseDisplay): void {
-    const next = legacyCaseDisplayToCase(display, this.cases.get(display.id) ?? null);
-    this.cases.set(next.id, next);
-    if (!this.hasLoadedCases) {
-      this.hasLoadedCases = true;
-    }
-    this.notifyListeners();
-  }
-
   addCase(caseEntity: Case): void {
     this.cases.set(caseEntity.id, caseEntity.clone());
     this.notifyListeners();
@@ -308,36 +228,6 @@ export class ApplicationState {
     }
   }
 
-  getFinancialItemsByCaseId(caseId: string): FinancialItem[] {
-    return this.toArray(this.financials).filter(item => item.caseId === caseId);
-  }
-
-  setFinancialItems(items: FinancialItem[]): void {
-    this.financials.clear();
-    items.forEach(item => {
-      this.financials.set(item.id, cloneValue(item));
-    });
-    this.notifyListeners();
-  }
-
-  getFinancialItemsLoading(): boolean {
-    return this.financialsLoading;
-  }
-
-  setFinancialItemsLoading(loading: boolean): void {
-    this.financialsLoading = loading;
-    this.notifyListeners();
-  }
-
-  getFinancialItemsError(): string | null {
-    return this.financialsError;
-  }
-
-  setFinancialItemsError(error: string | null): void {
-    this.financialsError = error;
-    this.notifyListeners();
-  }
-
   getNotes(): Note[] {
     return this.toArray(this.notes);
   }
@@ -356,36 +246,6 @@ export class ApplicationState {
     if (this.notes.delete(id)) {
       this.notifyListeners();
     }
-  }
-
-  getNotesByCaseId(caseId: string): Note[] {
-    return this.toArray(this.notes).filter(note => note.caseId === caseId);
-  }
-
-  setNotes(notes: Note[]): void {
-    this.notes.clear();
-    notes.forEach(note => {
-      this.notes.set(note.id, cloneValue(note));
-    });
-    this.notifyListeners();
-  }
-
-  getNotesLoading(): boolean {
-    return this.notesLoading;
-  }
-
-  setNotesLoading(loading: boolean): void {
-    this.notesLoading = loading;
-    this.notifyListeners();
-  }
-
-  getNotesError(): string | null {
-    return this.notesError;
-  }
-
-  setNotesError(error: string | null): void {
-    this.notesError = error;
-    this.notifyListeners();
   }
 
   getAlerts(): Alert[] {
@@ -470,9 +330,6 @@ export class ApplicationState {
       alerts: this.cloneMap(this.alerts),
       activities: this.cloneMap(this.activities),
       featureFlags: { ...this.featureFlags },
-      casesLoading: this.casesLoading,
-      casesError: this.casesError,
-      hasLoadedCases: this.hasLoadedCases,
     };
   }
 
