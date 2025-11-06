@@ -160,7 +160,8 @@ export class Person {
     const allowLegacy = getRefactorFlags().ALLOW_LEGACY_DATA_FORMATS;
     
     if (email && email.trim()) {
-      if (!Person.emailPattern.test(email)) {
+      const normalizedEmail = email.trim();
+      if (!Person.emailPattern.test(normalizedEmail)) {
         if (allowLegacy) {
           logger.warn('Legacy email format detected', { personId: this.id });
         } else {
