@@ -102,7 +102,7 @@ export interface RefactorFeatureFlags {
 /** Feature flags governing the architecture refactor rollout (internal state). */
 let refactorFlags: RefactorFeatureFlags = {
 	/** Master toggle for switching between legacy and refactored architecture. */
-	USE_NEW_ARCHITECTURE: false,
+	USE_NEW_ARCHITECTURE: true,
 	/** Flag for enabling the cases domain rewrite. */
 	USE_CASES_DOMAIN: true,
 	/** Flag for enabling the financials domain rewrite. */
