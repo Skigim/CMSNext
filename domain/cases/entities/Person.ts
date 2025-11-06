@@ -161,20 +161,20 @@ export class Person {
     
     if (email && email.trim()) {
       if (!Person.emailPattern.test(email)) {
-      if (allowLegacy) {
-        logger.warn('Legacy email format detected', { personId: this.id });
-      } else {
-        throw new ValidationError('Person email address is invalid');
-      }
+        if (allowLegacy) {
+          logger.warn('Legacy email format detected', { personId: this.id });
+        } else {
+          throw new ValidationError('Person email address is invalid');
+        }
       }
     }
 
     if (phone && phone.trim()) {
       const normalizedPhone = Person.normalizePhone(phone);
       if (!Person.phonePattern.test(normalizedPhone)) {
-      if (allowLegacy) {
-        logger.warn('Legacy phone format detected', { personId: this.id });
-      } else {
+        if (allowLegacy) {
+          logger.warn('Legacy phone format detected', { personId: this.id });
+        } else {
           throw new ValidationError('Person phone number is invalid');
         }
       }

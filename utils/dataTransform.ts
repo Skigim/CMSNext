@@ -105,6 +105,10 @@ function normalizeCases(cases: any[]): CaseDisplay[] {
       c.createdAt = normalizedCreatedAt;
       c.updatedAt = normalizedUpdatedAt;
     } else {
+      // Normalize top-level timestamps even when caseRecord exists
+      c.createdAt = normalizedCreatedAt;
+      c.updatedAt = normalizedUpdatedAt;
+
       // Ensure caseRecord has required nested structures even if it exists
       if (!c.caseRecord.financials || typeof c.caseRecord.financials !== 'object' || Array.isArray(c.caseRecord.financials)) {
         console.warn(`Case ${c.id} has caseRecord but missing financials structure - adding defaults`);
