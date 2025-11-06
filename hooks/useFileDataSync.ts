@@ -1,7 +1,7 @@
 import { useCallback } from "react";
 import { toast } from "sonner";
 import { useFileStorageDataLoadHandler } from "@/contexts/FileStorageContext";
-import ApplicationState from "@/application/ApplicationState";
+import type { Dispatch, SetStateAction } from "react";
 import type { CaseDisplay } from "@/types/case";
 import type { CategoryConfig } from "@/types/categoryConfig";
 import { createLogger } from "@/utils/logger";
@@ -9,7 +9,9 @@ import { updateFileStorageFlags } from "@/utils/fileStorageFlags";
 import { recordStorageSyncEvent } from "@/utils/telemetryInstrumentation";
 
 interface FileDataSyncDependencies {
-  loadCases: () => Promise<CaseDisplay[]>;
+  loadCases: () => Promise<void>;
+  setCases: Dispatch<SetStateAction<CaseDisplay[]>>;
+  setHasLoadedData: (value: boolean) => void;
   setConfigFromFile: (config?: Partial<CategoryConfig> | null) => void;
 }
 
@@ -25,11 +27,12 @@ type FileDataPayload = {
 
 export function useFileDataSync({
   loadCases,
+  setCases,
+  setHasLoadedData,
   setConfigFromFile,
 }: FileDataSyncDependencies) {
   const handleFileDataLoaded = useCallback(
     (fileData: unknown) => {
-      const appState = ApplicationState.getInstance();
       const payload = (fileData ?? null) as FileDataPayload;
       const startTime = performance.now?.() ?? Date.now();
       try {
@@ -52,8 +55,8 @@ export function useFileDataSync({
             itemCount: payload.cases.length,
             metadata: { type: "caseData" },
           });
-          appState.setCasesFromLegacyDisplays(payload.cases);
-          appState.setHasLoadedCases(true);
+          setCases(payload.cases);
+          setHasLoadedData(true);
           updateFileStorageFlags({ dataBaseline: true, sessionHadData: payload.cases.length > 0 });
           return;
         }
@@ -69,7 +72,7 @@ export function useFileDataSync({
             metadata: { type: "rawData", peopleCount: payload.people.length, recordCount: payload.caseRecords.length },
           });
 
-          appState.setHasLoadedCases(true);
+          setHasLoadedData(true);
 
           setTimeout(() => {
             loadCases().catch(err => {
@@ -91,8 +94,8 @@ export function useFileDataSync({
             itemCount: 0,
             metadata: { type: "emptyData" },
           });
-          appState.setCasesFromLegacyDisplays([]);
-          appState.setHasLoadedCases(true);
+          setCases([]);
+          setHasLoadedData(true);
           updateFileStorageFlags({ dataBaseline: true, sessionHadData: false });
           return;
         }
@@ -105,16 +108,10 @@ export function useFileDataSync({
           });
         }
 
-        appState.setCasesFromLegacyDisplays([]);
-        appState.setHasLoadedCases(true);
+        setCases([]);
+        setHasLoadedData(true);
         updateFileStorageFlags({ dataBaseline: true, sessionHadData: false });
       } catch (err) {
-        // Treat AbortError as non-fatal per project rules
-        if (err && (err as any).name === 'AbortError') {
-          logger.info("File data load aborted (AbortError), ignoring.");
-          return;
-        }
-
         const errorMessage = err instanceof Error ? err.message : String(err);
         recordStorageSyncEvent("load", false, {
           error: errorMessage,
@@ -126,7 +123,7 @@ export function useFileDataSync({
         toast.error("Failed to load data");
       }
     },
-    [loadCases, setConfigFromFile],
+    [loadCases, setCases, setConfigFromFile, setHasLoadedData],
   );
 
   useFileStorageDataLoadHandler(handleFileDataLoaded);

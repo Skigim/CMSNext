@@ -1,9 +1,9 @@
 import { useEffect } from "react";
 import { reportFileStorageError } from "@/utils/fileStorageErrorReporter";
-import ApplicationState from "@/application/ApplicationState";
 
 interface UseImportListenersParams {
   loadCases: () => Promise<unknown>;
+  setError: React.Dispatch<React.SetStateAction<string | null>>;
   isStorageReady: boolean;
 }
 
@@ -15,7 +15,7 @@ interface UseImportListenersParams {
  * - Surface import errors consistently via toast + error banner
  * - Automatically cleans up listeners on unmount
  */
-export function useImportListeners({ loadCases, isStorageReady }: UseImportListenersParams) {
+export function useImportListeners({ loadCases, setError, isStorageReady }: UseImportListenersParams) {
   useEffect(() => {
     const handleFileImported = () => {
       // Skip automatic reloads during the connect-to-existing flow
@@ -28,7 +28,7 @@ export function useImportListeners({ loadCases, isStorageReady }: UseImportListe
       }
 
       void loadCases();
-      ApplicationState.getInstance().setCasesError(null);
+      setError(null);
     };
 
     const handleFileImportError = (event: Event) => {
@@ -46,7 +46,7 @@ export function useImportListeners({ loadCases, isStorageReady }: UseImportListe
         toastId: "file-storage-import",
       });
 
-      ApplicationState.getInstance().setCasesError(notification?.message ?? detailMessage ?? fallbackMessage);
+      setError(notification?.message ?? detailMessage ?? fallbackMessage);
     };
 
     window.addEventListener("fileDataImported", handleFileImported);
@@ -56,5 +56,5 @@ export function useImportListeners({ loadCases, isStorageReady }: UseImportListe
       window.removeEventListener("fileDataImported", handleFileImported);
       window.removeEventListener("fileImportError", handleFileImportError as EventListener);
     };
-  }, [isStorageReady, loadCases]);
+  }, [isStorageReady, loadCases, setError]);
 }

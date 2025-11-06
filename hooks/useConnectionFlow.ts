@@ -1,16 +1,3 @@
-/**
- * TODO: Refactor connection flow to eliminate duplication
- * 
- * handleChooseNewFolder() and handleConnectToExisting() contain ~95% identical logic:
- * - Both: clear errors, connect to folder, load data, hydrate state, set flags, show toast
- * - Only differ in: connection method (new vs existing) and toast messages
- * 
- * Should extract shared logic into single handleConnection({ isNewFolder: boolean }) function.
- * This duplication caused the case hydration bug to exist in two places (fixed in PR #66).
- * 
- * @see https://github.com/Skigim/CMSNext/pull/66 - CodeRabbit caught duplicate bug locations
- */
-
 import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import type { CaseDisplay } from "../types/case";
@@ -40,6 +27,9 @@ interface UseConnectionFlowParams {
   service: AutosaveFileService | null;
   dataManager: DataManager | null;
   loadCases: () => Promise<CaseDisplay[]>;
+  setCases: React.Dispatch<React.SetStateAction<CaseDisplay[]>>;
+  setError: React.Dispatch<React.SetStateAction<string | null>>;
+  setHasLoadedData: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
 interface UseConnectionFlowResult {
@@ -59,6 +49,9 @@ export function useConnectionFlow({
   service,
   dataManager,
   loadCases,
+  setCases,
+  setError,
+  setHasLoadedData,
 }: UseConnectionFlowParams): UseConnectionFlowResult {
   const [showConnectModal, setShowConnectModal] = useState(false);
   const lastErrorRef = useRef<number | null>(null);
@@ -71,11 +64,11 @@ export function useConnectionFlow({
     ) => {
       const notification = reportFileStorageError(options);
       if (notification && persistError && notification.type !== "info") {
-        ApplicationState.getInstance().setCasesError(notification.message);
+        setError(notification.message);
       }
       return notification;
     },
-    [],
+    [setError],
   );
 
   const {
@@ -103,7 +96,7 @@ export function useConnectionFlow({
         return false;
       }
 
-  ApplicationState.getInstance().setCasesError(null);
+      setError(null);
 
       const success = await connectToFolder();
       if (!success) {
@@ -132,9 +125,7 @@ export function useConnectionFlow({
           const loadedCases = await loadCases();
 
           if (loadedCases.length > 0) {
-            const appState = ApplicationState.getInstance();
-            appState.setCasesFromLegacyDisplays(loadedCases);
-            appState.setHasLoadedCases(true);
+            setHasLoadedData(true);
             setShowConnectModal(false);
 
             updateFileStorageFlags({ dataBaseline: true, sessionHadData: true });
@@ -144,9 +135,8 @@ export function useConnectionFlow({
               duration: 3000,
             });
           } else {
-            const appState = ApplicationState.getInstance();
-            appState.setCasesFromLegacyDisplays([]);
-            appState.setHasLoadedCases(true);
+            setCases([]);
+            setHasLoadedData(true);
             setShowConnectModal(false);
             updateFileStorageFlags({ dataBaseline: true });
             toast.success("Connected to folder with empty data file - ready to add cases!");
@@ -167,7 +157,7 @@ export function useConnectionFlow({
         toast.success("Connected to new folder successfully! Ready to start managing cases.");
       }
 
-  ApplicationState.getInstance().setHasLoadedCases(true);
+      setHasLoadedData(true);
       setShowConnectModal(false);
 
       if (service) {
@@ -196,6 +186,9 @@ export function useConnectionFlow({
     loadCases,
     loadExistingData,
     service,
+    setCases,
+    setError,
+    setHasLoadedData,
     emitFileStorageError,
   ]);
 
@@ -214,7 +207,7 @@ export function useConnectionFlow({
         return false;
       }
 
-  ApplicationState.getInstance().setCasesError(null);
+      setError(null);
       const success = hasStoredHandle ? await connectToExisting() : await connectToFolder();
       if (!success) {
         emitFileStorageError({
@@ -251,9 +244,7 @@ export function useConnectionFlow({
       const loadedCases = await loadCases();
 
       if (loadedCases.length > 0) {
-        const appState = ApplicationState.getInstance();
-        appState.setCasesFromLegacyDisplays(loadedCases);
-        appState.setHasLoadedCases(true);
+        setHasLoadedData(true);
         setShowConnectModal(false);
 
         updateFileStorageFlags({ dataBaseline: true, sessionHadData: true });
@@ -263,9 +254,8 @@ export function useConnectionFlow({
           duration: 3000,
         });
       } else {
-        const appState = ApplicationState.getInstance();
-        appState.setCasesFromLegacyDisplays([]);
-        appState.setHasLoadedCases(true);
+        setCases([]);
+        setHasLoadedData(true);
         setShowConnectModal(false);
 
         updateFileStorageFlags({ dataBaseline: true });
@@ -335,11 +325,14 @@ export function useConnectionFlow({
     loadCases,
     loadExistingData,
     service,
+    setCases,
+    setError,
+    setHasLoadedData,
   ]);
 
   useEffect(() => {
     if (isSupported === false) {
-      ApplicationState.getInstance().setCasesError(
+      setError(
         "File System Access API is not supported in this browser. Please use a modern browser like Chrome, Edge, or Opera.",
       );
       setShowConnectModal(false);
@@ -351,7 +344,7 @@ export function useConnectionFlow({
     }
 
     if (isBlocked) {
-      ApplicationState.getInstance().setCasesError(
+      setError(
         permissionStatus === "denied"
           ? "Permission denied for the selected directory. Please allow access to continue."
           : "Directory access is currently blocked. Please review permissions and try again.",
@@ -361,9 +354,9 @@ export function useConnectionFlow({
     }
 
     if (isErrored && lastError) {
-      ApplicationState.getInstance().setCasesError(lastError.message);
+      setError(lastError.message);
     } else if (isReady) {
-      ApplicationState.getInstance().setCasesError(null);
+      setError(null);
     }
 
     const shouldPromptConnection = !isReady || !isConnected || isAwaitingUserChoice;
@@ -385,6 +378,7 @@ export function useConnectionFlow({
     lastError,
     lifecycle,
     permissionStatus,
+    setError,
   ]);
 
   useEffect(() => {

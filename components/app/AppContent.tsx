@@ -7,7 +7,6 @@ import { toast } from "sonner";
 import { useFileStorage, useFileStorageLifecycleSelectors } from "../../contexts/FileStorageContext";
 import { useDataManagerSafe } from "../../contexts/DataManagerContext";
 import { useCategoryConfig } from "../../contexts/CategoryConfigContext";
-import ApplicationState from "@/application/ApplicationState";
 import {
   useAlertsFlow,
   useCaseActivityLog,
@@ -24,8 +23,7 @@ import { recordRenderProfile } from "../../utils/performanceTracker";
 import { createLogger } from "../../utils/logger";
 import { AppContentView } from "./AppContentView";
 import { useAppContentViewModel } from "./useAppContentViewModel";
-import type { CaseDisplay, NewPersonData, NewCaseRecordData } from "../../types/case";
-import { FinancialCategory, type FinancialItemSnapshot } from "@/domain/financials/entities/FinancialItem";
+import type { CaseCategory, CaseDisplay, FinancialItem, NewNoteData } from "../../types/case";
 
 const logger = createLogger("AppContent");
 
@@ -43,6 +41,9 @@ export const AppContent = memo(function AppContent() {
     saveCase,
     deleteCase,
     updateCaseStatus,
+    setCases,
+    setError,
+    setHasLoadedData,
   } = useCaseManagement();
 
   const {
@@ -60,25 +61,20 @@ export const AppContent = memo(function AppContent() {
   const { setConfigFromFile } = useCategoryConfig();
 
   const reloadCasesFromFile = useCallback(async () => {
-    return await loadCases();
+    await loadCases();
   }, [loadCases]);
 
   useFileDataSync({
     loadCases: reloadCasesFromFile,
+    setCases,
+    setHasLoadedData,
     setConfigFromFile,
   });
-
-  const handleSaveCaseForNav = useCallback(
-    async (caseData: { person: NewPersonData; caseRecord: NewCaseRecordData }, editingCase?: CaseDisplay | null) => {
-      await saveCase(caseData, editingCase);
-    },
-    [saveCase],
-  );
 
   const navigationFlow = useNavigationFlow({
     cases,
     connectionState,
-    saveCase: handleSaveCaseForNav,
+    saveCase,
     deleteCase,
   });
 
@@ -115,21 +111,10 @@ export const AppContent = memo(function AppContent() {
     service,
     dataManager,
     loadCases,
+    setCases,
+    setError,
+    setHasLoadedData,
   });
-
-  // Legacy hooks require setState callbacks - create adapters for ApplicationState
-  const setCases = useCallback((updater: React.SetStateAction<CaseDisplay[]>) => {
-    const appState = ApplicationState.getInstance();
-    const newCases = typeof updater === 'function' ? updater(cases) : updater;
-    appState.setCasesFromLegacyDisplays(newCases);
-  }, [cases]);
-
-  const setError = useCallback((updater: React.SetStateAction<string | null>) => {
-    const appState = ApplicationState.getInstance();
-    const currentError = error;
-    const newError = typeof updater === 'function' ? updater(currentError) : updater;
-    appState.setCasesError(newError);
-  }, [error]);
 
   const {
     itemForm,
@@ -149,10 +134,10 @@ export const AppContent = memo(function AppContent() {
     handleAddNote,
     handleEditNote,
     handleDeleteNote,
-    handleSaveNote,
+    handleSaveNote: baseHandleSaveNote,
     handleCancelNoteForm,
-    handleBatchUpdateNote,
-    handleBatchCreateNote,
+    handleBatchUpdateNote: baseHandleBatchUpdateNote,
+    handleBatchCreateNote: baseHandleBatchCreateNote,
   } = useNoteFlow({
     selectedCase: selectedCase ?? null,
     cases,
@@ -160,7 +145,31 @@ export const AppContent = memo(function AppContent() {
     setError,
   });
 
-  useImportListeners({ loadCases, isStorageReady: connectionState.isReady });
+  const handleSaveNote = useCallback(
+    async (noteData: NewNoteData) => {
+      await baseHandleSaveNote(noteData);
+      await refreshActivityLog();
+    },
+    [baseHandleSaveNote, refreshActivityLog],
+  );
+
+  const handleBatchUpdateNote = useCallback(
+    async (noteId: string, noteData: NewNoteData) => {
+      await baseHandleBatchUpdateNote(noteId, noteData);
+      await refreshActivityLog();
+    },
+    [baseHandleBatchUpdateNote, refreshActivityLog],
+  );
+
+  const handleBatchCreateNote = useCallback(
+    async (noteData: NewNoteData) => {
+      await baseHandleBatchCreateNote(noteData);
+      await refreshActivityLog();
+    },
+    [baseHandleBatchCreateNote, refreshActivityLog],
+  );
+
+  useImportListeners({ loadCases, setError, isStorageReady: connectionState.isReady });
 
   const { alertsIndex, onResolveAlert: handleResolveAlert, onAlertsCsvImported: handleAlertsCsvImported } = useAlertsFlow({
     cases,
@@ -170,25 +179,25 @@ export const AppContent = memo(function AppContent() {
   });
 
   const handleAddItem = useCallback(
-    (category: FinancialCategory) => {
+    (category: CaseCategory) => {
       openItemForm(category);
     },
     [openItemForm],
   );
 
   const handleDeleteItem = useCallback(
-    (category: FinancialCategory, itemId: string) => deleteFinancialItem(category, itemId),
+    (category: CaseCategory, itemId: string) => deleteFinancialItem(category, itemId),
     [deleteFinancialItem],
   );
 
   const handleBatchUpdateItem = useCallback(
-    (category: FinancialCategory, itemId: string, updatedItem: Partial<FinancialItemSnapshot>) =>
+    (category: CaseCategory, itemId: string, updatedItem: Partial<FinancialItem>) =>
       batchUpdateFinancialItem(category, itemId, updatedItem),
     [batchUpdateFinancialItem],
   );
 
   const handleCreateItem = useCallback(
-    (category: FinancialCategory, itemData: Omit<FinancialItemSnapshot, "id" | "createdAt" | "updatedAt">) =>
+    (category: CaseCategory, itemData: Omit<FinancialItem, "id" | "createdAt" | "updatedAt">) =>
       createFinancialItem(category, itemData),
     [createFinancialItem],
   );
@@ -199,10 +208,9 @@ export const AppContent = memo(function AppContent() {
 
   const handleDataPurged = useCallback(async () => {
     try {
-      const appState = ApplicationState.getInstance();
-      appState.setCasesError(null);
-      appState.setCasesFromLegacyDisplays([]);
-      appState.setHasLoadedCases(false);
+      setError(null);
+      setCases([]);
+      setHasLoadedData(false);
 
       clearFileStorageFlags("dataBaseline", "sessionHadData");
 
@@ -212,10 +220,10 @@ export const AppContent = memo(function AppContent() {
         error: err instanceof Error ? err.message : String(err),
       });
       const errorMsg = "Failed to complete data purge. Please try again.";
-      ApplicationState.getInstance().setCasesError(errorMsg);
+      setError(errorMsg);
       toast.error(errorMsg);
     }
-  }, []);
+  }, [setCases, setError, setHasLoadedData]);
 
   const handleSidebarOpenChange = useCallback(
     (open: boolean) => {
@@ -224,36 +232,33 @@ export const AppContent = memo(function AppContent() {
     [setSidebarOpen],
   );
 
-  const handleCaseUpdated = useCallback((updatedCase: CaseDisplay) => {
-    ApplicationState.getInstance().upsertCaseFromLegacy(updatedCase);
-  }, []);
+  const handleCaseUpdated = useCallback(
+    (updatedCase: CaseDisplay) => {
+      setCases(prevCases => prevCases.map(c => (c.id === updatedCase.id ? updatedCase : c)));
+    },
+    [setCases],
+  );
 
   const handleUpdateCaseStatus = useCallback(
     async (caseId: string, status: CaseDisplay["status"]) => {
-      try {
-        const result = await updateCaseStatus(caseId, status);
+      const result = await updateCaseStatus(caseId, status);
+      if (result) {
         await refreshActivityLog();
-        return result;
-      } catch (error) {
-        if (error instanceof Error && error.name === "AbortError") {
-          return null;
-        }
-        throw error;
       }
+      return result;
     },
     [refreshActivityLog, updateCaseStatus],
   );
 
   const handleDismissError = useCallback(() => {
-    ApplicationState.getInstance().setCasesError(null);
-  }, []);
+    setError(null);
+  }, [setError]);
 
   const handleGoToSettings = useCallback(() => {
     dismissConnectModal();
-    // NOTE: Settings page doesn't require loaded cases - just dismiss the connect modal
-    // Do NOT set hasLoadedCases(true) here as it misrepresents the application state
+    setHasLoadedData(true);
     handleNavigate("settings");
-  }, [dismissConnectModal, handleNavigate]);
+  }, [dismissConnectModal, handleNavigate, setHasLoadedData]);
 
   const navigationState = useMemo(
     () => ({
@@ -382,8 +387,6 @@ export const AppContent = memo(function AppContent() {
       todayActivityReport,
       viewHandlers,
       yesterdayActivityReport,
-      clearReportForDate,
-      getReportForDate,
     ],
   );
 
