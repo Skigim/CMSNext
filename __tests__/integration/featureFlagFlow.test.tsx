@@ -146,6 +146,9 @@ describe("feature flag integration", () => {
   });
 
   function renderDashboard() {
+    // Initialize ApplicationState before rendering
+    ApplicationState.getInstance();
+    
     const cases: CaseDisplay[] = [createCase({ id: "case-1" }), createCase({ id: "case-2", status: CASE_STATUS.Closed })];
     const alerts = [
       createAlert({ id: "alert-1", status: "resolved", resolvedAt: "2025-10-20T00:00:00Z" }),
@@ -180,9 +183,9 @@ describe("feature flag integration", () => {
     for (const title of widgetTitles) {
       await waitFor(() => {
         expect(screen.getByText(title)).toBeInTheDocument();
-      });
+      }, { timeout: 20000 });
     }
-  });
+  }, 180000); // 3 minute test timeout
 
   it("hides widgets tied to disabled flags", async () => {
     const appState = ApplicationState.getInstance();

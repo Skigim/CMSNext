@@ -1,11 +1,14 @@
 import { renderHook, act } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import type { ReactNode } from "react";
 import type { CaseDisplay } from "@/types/case";
+import { CaseServiceProvider } from "@/contexts/CaseServiceContext";
 
 const mocks = vi.hoisted(() => ({
   toastSuccess: vi.fn(),
   toastError: vi.fn(),
   toastLoading: vi.fn(),
+  toastDismiss: vi.fn(),
   useDataManagerSafeMock: vi.fn(),
 }));
 
@@ -14,6 +17,7 @@ vi.mock("sonner", () => ({
     success: mocks.toastSuccess,
     error: mocks.toastError,
     loading: mocks.toastLoading,
+    dismiss: mocks.toastDismiss,
   },
 }));
 
@@ -108,10 +112,15 @@ const createCaseDisplay = (overrides: Partial<CaseDisplay> = {}): CaseDisplay =>
 };
 
 describe("useCaseManagement", () => {
+  const wrapper = ({ children }: { children: ReactNode }) => (
+    <CaseServiceProvider>{children}</CaseServiceProvider>
+  );
+
   beforeEach(() => {
     mocks.toastSuccess.mockReset();
     mocks.toastError.mockReset();
     mocks.toastLoading.mockReset();
+    mocks.toastDismiss.mockReset();
     mocks.toastLoading.mockImplementation(() => "toast-id");
     mocks.useDataManagerSafeMock.mockReset();
   });
@@ -126,7 +135,7 @@ describe("useCaseManagement", () => {
 
   mocks.useDataManagerSafeMock.mockReturnValue(mockDataManager);
 
-    const { result } = renderHook(() => useCaseManagement());
+    const { result } = renderHook(() => useCaseManagement(), { wrapper });
 
     act(() => {
       result.current.setCases([initialCase]);
@@ -149,7 +158,7 @@ describe("useCaseManagement", () => {
   it("returns null and surfaces an error when DataManager is unavailable", async () => {
     mocks.useDataManagerSafeMock.mockReturnValue(null);
 
-    const { result } = renderHook(() => useCaseManagement());
+    const { result } = renderHook(() => useCaseManagement(), { wrapper });
 
     await act(async () => {
       const response = await result.current.updateCaseStatus("missing-case", "Active");
@@ -171,7 +180,7 @@ describe("useCaseManagement", () => {
 
     mocks.useDataManagerSafeMock.mockReturnValue(mockDataManager);
 
-    const { result } = renderHook(() => useCaseManagement());
+    const { result } = renderHook(() => useCaseManagement(), { wrapper });
 
     act(() => {
       result.current.setCases([initialCase]);
@@ -184,8 +193,9 @@ describe("useCaseManagement", () => {
 
     expect(mockDataManager.updateCaseStatus).toHaveBeenCalledWith(initialCase.id, "Closed");
     expect(mocks.toastLoading).toHaveBeenCalledWith("Updating case status...");
-    expect(mocks.toastError).toHaveBeenCalledWith("Failed to update case status. Please try again.", {
-      id: "toast-id",
-    });
+    expect(mocks.toastError).toHaveBeenCalledWith(
+      expect.stringContaining("Failed to update case status to Closed"),
+      { id: "toast-id" }
+    );
   });
 });

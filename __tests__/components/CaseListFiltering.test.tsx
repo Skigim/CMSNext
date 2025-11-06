@@ -100,7 +100,7 @@ describe("CaseList enhanced filtering and sorting", () => {
       />
     );
 
-    const sortButton = screen.getByRole("button", { name: /sort/i });
+    const sortButton = screen.getByRole("button", { name: /^sort$/i });
     expect(sortButton).toBeInTheDocument();
   });
 
@@ -122,7 +122,9 @@ describe("CaseList enhanced filtering and sorting", () => {
     await user.click(filterButton);
 
     expect(screen.getByText("Filter cases")).toBeInTheDocument();
-    expect(screen.getByText("Status")).toBeInTheDocument();
+    // Use getAllByText since "Status" might appear in multiple places
+    const statusLabels = screen.getAllByText("Status");
+    expect(statusLabels.length).toBeGreaterThan(0);
   });
 
   it("opens multi-sort popover when sort button is clicked", async () => {
@@ -139,7 +141,7 @@ describe("CaseList enhanced filtering and sorting", () => {
       />
     );
 
-    const sortButton = screen.getByRole("button", { name: /sort/i });
+    const sortButton = screen.getByRole("button", { name: /^sort$/i });
     await user.click(sortButton);
 
     expect(screen.getByText("Sort cases")).toBeInTheDocument();
