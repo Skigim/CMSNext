@@ -40,7 +40,9 @@ const DEFAULT_LEVEL: LogLevel = (() => {
   if (explicitLevel && explicitLevel in levelPriority) {
     return explicitLevel as LogLevel;
   }
-  return env?.DEV ? "debug" : "warn";
+  // Changed from 'debug' to 'info' in dev to reduce console spam
+  // Use VITE_LOG_LEVEL=debug in .env to enable debug logs when needed
+  return env?.DEV ? "info" : "warn";
 })();
 
 let currentLevel: LogLevel = DEFAULT_LEVEL;
