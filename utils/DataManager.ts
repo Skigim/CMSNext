@@ -35,12 +35,20 @@ import {
 } from "./alertsData";
 import { toActivityDateKey } from "./activityReport";
 
+// ============================================================================
+// Configuration & Logging
+// ============================================================================
+
 interface DataManagerConfig {
   fileService: AutosaveFileService;
   persistNormalizationFixes?: boolean;
 }
 
 const logger = createLogger('DataManager');
+
+// ============================================================================
+// Utility Functions
+// ============================================================================
 
 function formatCaseDisplayName(caseData: CaseDisplay): string {
   const trimmedName = (caseData.name ?? "").trim();
@@ -187,6 +195,10 @@ function buildNotePreview(content: string): string {
   }
   return `${sanitized.slice(0, 157)}…`;
 }
+
+// ============================================================================
+// Type Definitions
+// ============================================================================
 
 interface FileData {
   cases: CaseDisplay[];
@@ -357,6 +369,10 @@ export class DataManager {
     this.fileService = config.fileService;
     this.persistNormalizationFixes = config.persistNormalizationFixes ?? true;
   }
+
+  // ==========================================================================
+  // Private: Alert Matching & Processing
+  // ==========================================================================
 
   private buildCaseLookup(cases: CaseDisplay[]): Map<string, CaseDisplay> {
     const lookup = new Map<string, CaseDisplay>();
@@ -1471,6 +1487,10 @@ export class DataManager {
     const data = await this.readFileData();
     return data ? data.cases.length : 0;
   }
+
+  // ==========================================================================
+  // PUBLIC API - ALERT OPERATIONS
+  // ==========================================================================
 
   async getAlertsIndex(options: { cases?: CaseDisplay[] } = {}): Promise<AlertsIndex> {
     const cases = options.cases ?? (await this.getAllCases());
