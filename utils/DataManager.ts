@@ -32,8 +32,8 @@ import {
   normalizeMcn,
   parseStackedAlerts,
 } from "./alertsData";
-import { toActivityDateKey } from "./activityReport";
 import { FileStorageService, type FileData } from "./services/FileStorageService";
+import { ActivityLogService } from "./services/ActivityLogService";
 
 // ============================================================================
 // Configuration & Logging
@@ -65,14 +65,6 @@ function formatCaseDisplayName(caseData: CaseDisplay): string {
   }
 
   return "Unknown Case";
-}
-
-function mergeActivityEntries(
-  current: CaseActivityEntry[] | undefined,
-  additions: CaseActivityEntry[],
-): CaseActivityEntry[] {
-  const combined = [...(current ?? []), ...additions];
-  return combined.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
 }
 
 const EMAIL_PATTERN = /\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/gi;
@@ -240,6 +232,7 @@ function normalizeCaseNotes(cases: CaseDisplay[]): { cases: CaseDisplay[]; chang
 export class DataManager {
   private fileService: AutosaveFileService;
   private fileStorage: FileStorageService;
+  private activityLog: ActivityLogService;
   private static readonly ERROR_SOURCE = "DataManager";
   private static readonly ALERTS_FILE_NAME = "alerts.csv";
   private static readonly ALERTS_JSON_NAME = "alerts.json";
@@ -268,6 +261,9 @@ export class DataManager {
       fileService: config.fileService,
       persistNormalizationFixes: config.persistNormalizationFixes,
       normalizeCaseNotes,
+    });
+    this.activityLog = new ActivityLogService({
+      fileStorage: this.fileStorage,
     });
   }
 
@@ -1185,54 +1181,11 @@ export class DataManager {
   }
 
   async getActivityLog(): Promise<CaseActivityEntry[]> {
-    const data = await this.readFileData();
-    return data?.activityLog ?? [];
+    return this.activityLog.getActivityLog();
   }
 
   async clearActivityLogForDate(targetDate: string | Date): Promise<number> {
-    const currentData = await this.readFileData();
-    if (!currentData) {
-      throw new Error("Failed to read current data");
-    }
-
-    const { activityLog } = currentData;
-    if (!activityLog || activityLog.length === 0) {
-      return 0;
-    }
-
-    const dateKey = toActivityDateKey(targetDate);
-
-    const filtered = activityLog.filter(entry => {
-      try {
-        return toActivityDateKey(entry.timestamp) !== dateKey;
-      } catch (error) {
-        logger.warn('Skipping activity entry with invalid timestamp during clear operation', {
-          entryId: entry.id,
-          timestamp: entry.timestamp,
-          error: error instanceof Error ? error.message : error,
-        });
-        return true;
-      }
-    });
-
-    const removedCount = activityLog.length - filtered.length;
-    if (removedCount === 0) {
-      return 0;
-    }
-
-    const updatedData: FileData = {
-      ...currentData,
-      activityLog: filtered,
-    };
-
-    await this.writeFileData(updatedData);
-
-    logger.info('Cleared activity log entries for date', {
-      dateKey,
-      removedCount,
-    });
-
-    return removedCount;
+    return this.activityLog.clearActivityLogForDate(targetDate);
   }
 
   /**
@@ -1976,7 +1929,7 @@ export class DataManager {
     const updatedData: FileData = {
       ...currentData,
       cases: casesWithTouchedTimestamps,
-      activityLog: mergeActivityEntries(currentData.activityLog, [activityEntry]),
+      activityLog: ActivityLogService.mergeActivityEntries(currentData.activityLog, [activityEntry]),
     };
 
     await this.writeFileData(updatedData);
@@ -2294,7 +2247,7 @@ export class DataManager {
     const updatedData: FileData = {
       ...currentData,
       cases: casesWithTouchedTimestamps,
-      activityLog: mergeActivityEntries(currentData.activityLog, [activityEntry]),
+      activityLog: ActivityLogService.mergeActivityEntries(currentData.activityLog, [activityEntry]),
     };
 
     // Write back to file

@@ -392,23 +392,27 @@
 
 ## 🎯 Next Steps
 
-### Immediate (This Week)
+### Immediate (Today/Tomorrow - November 7-8)
 
-- [ ] Execute Phase 3 Financial domain migration
-- [ ] Update feature catalogue post-Financial migration
-- [ ] Run full regression test suite
+- [ ] Extract ActivityLogService from DataManager (~54 lines) - **~30 min**
+- [ ] Extract CategoryConfigService from DataManager (~48 lines) - **~30 min**
+- [ ] Run full regression test suite after each extraction - **~5 min each**
+- [ ] Update dataManager-deconstruction.md with progress
 
-### Short-Term (November 2025)
+### Short-Term (This Week - November 8-14)
 
-- [ ] Phase 3 Notes domain migration
-- [ ] Cross-domain event handlers
-- [ ] Performance benchmarking (1k+ cases)
+- [ ] Extract AlertsService from DataManager (~430 lines - largest) - **~2 hours**
+- [ ] Extract NotesService from DataManager (~210 lines) - **~1 hour**
+- [ ] Extract FinancialsService from DataManager (~206 lines) - **~1 hour**
+- [ ] Extract CaseService from DataManager (~270 lines) - **~1.5 hours**
+- [ ] Refactor DataManager to thin orchestrator (~500-800 lines) - **~1 hour**
+- [ ] **Total estimate: ~8-10 hours with AI assistance**
 
-### Medium-Term (December 2025)
+### Medium-Term (Late November 2025)
 
-- [ ] Phase 3 Alerts domain migration
-- [ ] Activity domain enhancements
-- [ ] Dashboard widget expansion
+- [ ] Storage format normalization (Phase B - after service extraction complete) - **~3-4 hours**
+- [ ] Performance benchmarking (1k+ cases) - **~2 hours**
+- [ ] Cross-domain event handlers enhancement - **~4 hours**
 
 ---
 
