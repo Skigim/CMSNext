@@ -161,15 +161,17 @@
 
 ---
 
-## 📊 Cumulative Metrics (November 5, 2025)
+## 📊 Cumulative Metrics (November 7, 2025)
 
 | Metric                     | Value      | Change from Oct 1 |
 | -------------------------- | ---------- | ----------------- |
-| **Total Tests**            | 347        | +62               |
+| **Total Tests**            | 315+       | +62               |
 | **Test Pass Rate**         | 100%       | → 0               |
 | **Domain Entities**        | 5          | +5 (new)          |
 | **Use Cases**              | 4          | +4 (new)          |
-| **Service Classes**        | 2          | +2 (new)          |
+| **Service Classes**        | 3          | +3 (new)          |
+| **Service Extractions**    | 1/7        | +1 (FileStorage)  |
+| **DataManager LOC**        | 2,515      | -240 (-9%)        |
 | **Hook Complexity**        | 178 LOC    | -45%              |
 | **Feature Rating (Cases)** | 88/100     | +9                |
 | **Architecture Quality**   | Enterprise | ↗️                |
@@ -222,6 +224,51 @@
 - ESLint compliance (0 warnings)
 - TypeScript strict mode (0 errors)
 - Consistent error handling patterns
+
+---
+
+---
+
+## 🔄 Recent Updates (November 7, 2025)
+
+### DataManager Service Extraction - Phase 1, Step 1 ✅
+
+**Merged to:** dev & main branches  
+**Commit:** `92282e2`  
+**PR:** #70 - "refactor: Extract FileStorageService from DataManager"
+
+**What Was Extracted:**
+
+- **New:** `utils/services/FileStorageService.ts` (~320 lines)
+  - `readFileData()` - Read and transform file data from disk
+  - `writeFileData()` - Validate and write data with integrity checks
+  - `touchCaseTimestamps()` - Update timestamps for modified cases
+  - `normalizeActivityLog()` - Private helper for activity log normalization
+
+**Impact on DataManager:**
+
+- **Size:** 2,755 → 2,515 lines (-9% reduction, -240 lines)
+- **Coupling:** Reduced by extracting file I/O to dedicated service
+- **Testability:** FileStorageService independently testable
+- **API Compatibility:** Zero breaking changes
+
+**Architecture Benefits:**
+
+✅ Clean separation of concerns (file I/O isolated)  
+✅ Storage format changes localized to one service (future normalization trivial)  
+✅ Sets pattern for remaining 6 service extractions  
+✅ Maintains 100% test pass rate (315 tests verified)
+
+**Next in Queue:**
+
+1. ⏳ ActivityLogService (~54 lines) - Easier win before AlertsService
+2. ⏳ CategoryConfigService (~48 lines)
+3. ⏳ AlertsService (~430 lines) - Largest extraction
+4. ⏳ NotesService (~210 lines)
+5. ⏳ FinancialsService (~206 lines)
+6. ⏳ CaseService (~270 lines)
+
+**Estimated Completion:** DataManager → ~500-800 lines (orchestration layer only)
 
 ---
 
@@ -366,5 +413,6 @@
 ---
 
 **Changelog maintained by:** GitHub Copilot  
-**Last updated:** November 5, 2025  
-**Next update:** Post-Financial domain migration
+**Last updated:** November 7, 2025  
+**Current focus:** DataManager service extraction (Phase 1 of 7)  
+**Next update:** Post-ActivityLogService extraction
