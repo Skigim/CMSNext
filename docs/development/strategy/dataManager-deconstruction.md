@@ -466,6 +466,78 @@ Injected `normalizeCaseNotes` as a dependency instead of moving it to FileStorag
 
 ---
 
+#### Step 2: ActivityLogService ✅ COMPLETE
+
+**Branch:** `feature/extract-activitylog-service`  
+**Commit:** `184784f`  
+**Date:** November 7, 2025  
+**PR:** #71
+
+**What Was Extracted:**
+
+- `getActivityLog()` - 5 lines → ActivityLogService
+- `clearActivityLogForDate()` - 47 lines → ActivityLogService
+- `mergeActivityEntries()` - 6 lines → ActivityLogService (static method)
+
+**Total Reduction:** ~41 lines from DataManager (2,515 → 2,474 lines, -1.6%)
+
+**Architecture Change:**
+
+```typescript
+// BEFORE: DataManager handled activity log directly
+class DataManager {
+  async getActivityLog(): Promise<CaseActivityEntry[]> {
+    const data = await this.readFileData();
+    return data?.activityLog ?? [];
+  }
+
+  async clearActivityLogForDate(targetDate: string | Date): Promise<number> {
+    // 47 lines of filtering, validation, and persistence logic
+  }
+}
+
+function mergeActivityEntries(/* ... */) {
+  // Standalone utility function
+}
+
+// AFTER: DataManager delegates to ActivityLogService
+class DataManager {
+  private activityLog: ActivityLogService;
+
+  constructor(config) {
+    this.activityLog = new ActivityLogService({
+      fileStorage: this.fileStorage,
+    });
+  }
+
+  async getActivityLog(): Promise<CaseActivityEntry[]> {
+    return this.activityLog.getActivityLog(); // Delegate
+  }
+
+  async clearActivityLogForDate(targetDate: string | Date): Promise<number> {
+    return this.activityLog.clearActivityLogForDate(targetDate); // Delegate
+  }
+}
+
+// mergeActivityEntries now a static method
+ActivityLogService.mergeActivityEntries(current, additions);
+```
+
+**Benefits Realized:**
+
+1. ✅ Activity log operations isolated in dedicated service
+2. ✅ ActivityLogService independently testable
+3. ✅ Static utility method accessible without instance
+4. ✅ Zero breaking changes (DataManager API unchanged)
+5. ✅ All 67 tests passing
+
+**Key Design Decision:**
+Made `mergeActivityEntries` a static method rather than instance method since it's a pure utility function that doesn't need service state.
+
+**Next:** Extract CategoryConfigService (~48 lines, smallest remaining extraction)
+
+---
+
 ## Before/After Architecture
 
 ### Before Service Extraction
@@ -562,8 +634,8 @@ Injected `normalizeCaseNotes` as a dependency instead of moving it to FileStorag
 ┌───▼────────────────┐  ┌────────────────┐  ┌──────────────┐ │
 │NotesService        │  │FinancialsService│ │ActivityLog   │ │
 │   (~230 lines)     │  │  (~220 lines)  │  │Service       │ │
-│                    │  │                │  │ (~70 lines)  │ │
-│ Not started        │  │ Not started    │  │ Not started  │ │
+│                    │  │                │  │ (~115 lines) │ │
+│ Not started        │  │ Not started    │  │ ✅ EXTRACTED │ │
 │                    │  │                │  │              │ │
 │ - addNote          │  │ - addFinItem   │  │ - getLog     │ │
 │ - updateNote       │  │ - updateFinItem│  │ - clearLog   │ │
@@ -595,7 +667,8 @@ Injected `normalizeCaseNotes` as a dependency instead of moving it to FileStorag
 **Progress:**
 
 - ✅ FileStorageService extracted (240 lines)
-- ⏳ 6 services remaining
-- 📊 DataManager: 2,755 → 2,515 lines (9% reduction so far)
+- ✅ ActivityLogService extracted (41 lines)
+- ⏳ 5 services remaining
+- 📊 DataManager: 2,755 → 2,474 lines (10.2% reduction so far)
 
 ---
