@@ -11,7 +11,6 @@ import {
 import type { CaseActivityEntry } from "../types/activityLog";
 import { v4 as uuidv4 } from 'uuid';
 import AutosaveFileService from './AutosaveFileService';
-import { transformImportedData } from './dataTransform';
 import { createLogger } from './logger';
 import {
   reportFileStorageError,
@@ -34,6 +33,7 @@ import {
   parseStackedAlerts,
 } from "./alertsData";
 import { toActivityDateKey } from "./activityReport";
+import { FileStorageService, type FileData } from "./services/FileStorageService";
 
 // ============================================================================
 // Configuration & Logging
@@ -65,101 +65,6 @@ function formatCaseDisplayName(caseData: CaseDisplay): string {
   }
 
   return "Unknown Case";
-}
-
-function normalizeActivityLog(rawActivityLog: unknown): CaseActivityEntry[] {
-  if (!Array.isArray(rawActivityLog)) {
-    return [];
-  }
-
-  const normalized: CaseActivityEntry[] = [];
-
-  for (const candidate of rawActivityLog) {
-    if (!candidate || typeof candidate !== "object") {
-      continue;
-    }
-
-    const base = candidate as Partial<CaseActivityEntry> & { payload?: unknown };
-    if (
-      typeof base.id !== "string" ||
-      typeof base.timestamp !== "string" ||
-      typeof base.caseId !== "string" ||
-      typeof base.caseName !== "string" ||
-      typeof base.type !== "string"
-    ) {
-      continue;
-    }
-
-    const parsedTimestamp = new Date(base.timestamp);
-    if (Number.isNaN(parsedTimestamp.getTime())) {
-      continue;
-    }
-    const normalizedTimestamp = parsedTimestamp.toISOString();
-
-    if (base.type === "status-change") {
-      const payload = base.payload as CaseActivityEntry["payload"] | undefined;
-      if (!payload || typeof payload !== "object") {
-        continue;
-      }
-
-      const fromStatus = (payload as any).fromStatus;
-      const toStatus = (payload as any).toStatus;
-
-      if (typeof toStatus !== "string") {
-        continue;
-      }
-
-      normalized.push({
-        id: base.id,
-        timestamp: normalizedTimestamp,
-        caseId: base.caseId,
-        caseName: base.caseName,
-        caseMcn: base.caseMcn ?? null,
-        type: "status-change",
-        payload: {
-          fromStatus: typeof fromStatus === "string" || fromStatus === null ? fromStatus ?? null : undefined,
-          toStatus,
-        },
-      });
-      continue;
-    }
-
-    if (base.type === "note-added") {
-      const payload = base.payload as CaseActivityEntry["payload"] | undefined;
-      if (!payload || typeof payload !== "object") {
-        continue;
-      }
-
-      const noteId = (payload as any).noteId;
-      const category = (payload as any).category;
-      const preview = (payload as any).preview;
-      const content = (payload as any).content;
-
-      if (typeof noteId !== "string" || typeof category !== "string" || typeof preview !== "string") {
-        continue;
-      }
-
-      const sanitizedContent =
-        typeof content === "string" && content.length > 0 ? sanitizeNoteContent(content) : undefined;
-
-      normalized.push({
-        id: base.id,
-        timestamp: normalizedTimestamp,
-        caseId: base.caseId,
-        caseName: base.caseName,
-        caseMcn: base.caseMcn ?? null,
-        type: "note-added",
-        payload: {
-          noteId,
-          category,
-          preview,
-          ...(sanitizedContent ? { content: sanitizedContent } : {}),
-        },
-      });
-    }
-  }
-
-  return normalized.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
 }
 
 function mergeActivityEntries(
@@ -199,14 +104,6 @@ function buildNotePreview(content: string): string {
 // ============================================================================
 // Type Definitions
 // ============================================================================
-
-interface FileData {
-  cases: CaseDisplay[];
-  exported_at: string;
-  total_cases: number;
-  categoryConfig: CategoryConfig;
-  activityLog: CaseActivityEntry[];
-}
 
 interface StoredAlertWorkflowState {
   alertId: string;
@@ -342,7 +239,7 @@ function normalizeCaseNotes(cases: CaseDisplay[]): { cases: CaseDisplay[]; chang
  */
 export class DataManager {
   private fileService: AutosaveFileService;
-  private persistNormalizationFixes: boolean;
+  private fileStorage: FileStorageService;
   private static readonly ERROR_SOURCE = "DataManager";
   private static readonly ALERTS_FILE_NAME = "alerts.csv";
   private static readonly ALERTS_JSON_NAME = "alerts.json";
@@ -367,7 +264,11 @@ export class DataManager {
 
   constructor(config: DataManagerConfig) {
     this.fileService = config.fileService;
-    this.persistNormalizationFixes = config.persistNormalizationFixes ?? true;
+    this.fileStorage = new FileStorageService({
+      fileService: config.fileService,
+      persistNormalizationFixes: config.persistNormalizationFixes,
+      normalizeCaseNotes,
+    });
   }
 
   // ==========================================================================
@@ -1250,160 +1151,25 @@ export class DataManager {
 
   /**
    * Read current data from file system
-   * Returns null if no file exists or error occurs
+   * Delegates to FileStorageService
    */
   private async readFileData(): Promise<FileData | null> {
-    try {
-      const rawData = await this.fileService.readFile();
-      
-      if (!rawData) {
-        // No file exists yet - return empty structure
-        return {
-          cases: [],
-          exported_at: new Date().toISOString(),
-          total_cases: 0,
-          categoryConfig: mergeCategoryConfig(),
-          activityLog: [],
-        };
-      }
-
-      // Handle different data formats
-      let cases: CaseDisplay[] = [];
-      
-      if (rawData.cases && Array.isArray(rawData.cases)) {
-        // Already in CaseDisplay array format - use directly
-        cases = rawData.cases;
-      } else if (rawData.people && rawData.caseRecords) {
-        // Raw format - transform using the data transformer
-        logger.info('Transforming raw data format to cases');
-        cases = transformImportedData(rawData);
-      } else {
-        // Try to transform whatever format this is
-        cases = transformImportedData(rawData);
-      }
-
-      const categoryConfig = mergeCategoryConfig(rawData.categoryConfig);
-      const activityLog = normalizeActivityLog((rawData as { activityLog?: unknown })?.activityLog);
-
-      const { cases: normalizedCases, changed } = normalizeCaseNotes(cases);
-
-      let finalCases = normalizedCases;
-      let finalExportedAt = rawData.exported_at || rawData.exportedAt || new Date().toISOString();
-
-      // Persist if notes were normalized
-      if (changed && this.persistNormalizationFixes) {
-        const persistedData = await this.writeFileData({
-          cases: normalizedCases,
-          exported_at: finalExportedAt,
-          total_cases: normalizedCases.length,
-          categoryConfig,
-          activityLog,
-        });
-
-        finalCases = persistedData.cases;
-        finalExportedAt = persistedData.exported_at;
-      } else if (changed) {
-        logger.warn('Note normalization needed but persistence disabled');
-      }
-
-      return {
-        cases: finalCases,
-        exported_at: finalExportedAt,
-        total_cases: finalCases.length,
-        categoryConfig,
-        activityLog,
-      };
-    } catch (error) {
-      logger.error('Failed to read file data', {
-        error: error instanceof Error ? error.message : 'Unknown error',
-      });
-      this.reportStorageError("readData", error, { method: "readFileData" });
-      throw new Error(`Failed to read case data: ${error instanceof Error ? error.message : 'Unknown error'}`);
-    }
+    return this.fileStorage.readFileData();
   }
 
   /**
-   * Write data to file system with retry logic
-   * Throws error if write fails after retries
+   * Write data to file system
+   * Delegates to FileStorageService
    */
   private async writeFileData(data: FileData): Promise<FileData> {
-    try {
-      // Ensure data integrity before writing
-      const validatedData: FileData = {
-        ...data,
-        exported_at: new Date().toISOString(),
-        total_cases: data.cases.length,
-        categoryConfig: mergeCategoryConfig(data.categoryConfig),
-        cases: data.cases.map(caseItem => ({ ...caseItem })),
-        activityLog: [...(data.activityLog ?? [])]
-          .map((entry): CaseActivityEntry =>
-            entry.type === "status-change"
-              ? {
-                  ...entry,
-                  payload: { ...entry.payload },
-                }
-              : {
-                  ...entry,
-                  payload: { ...entry.payload },
-                },
-          )
-          .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()),
-      };
-
-      const success = await this.fileService.writeFile(validatedData);
-      
-      if (!success) {
-        throw new Error('File write operation failed');
-      }
-
-      return validatedData;
-    } catch (error) {
-      logger.error('Failed to write file data', {
-        error: error instanceof Error ? error.message : 'Unknown error',
-      });
-      
-      // Provide specific error messaging based on error type
-      let errorMessage = 'Unknown error';
-      if (error instanceof Error) {
-        if (error.message.includes('state cached in an interface object') || 
-            error.message.includes('state had changed')) {
-          errorMessage = 'File was modified by another process. Please try again.';
-        } else if (error.message.includes('permission')) {
-          errorMessage = 'Permission denied. Please check file permissions.';
-        } else {
-          errorMessage = error.message;
-        }
-      }
-
-      this.reportStorageError("writeData", error, {
-        method: "writeFileData",
-        errorMessage,
-      });
-
-      throw new Error(`Failed to save case data: ${errorMessage}`);
-    }
+    return this.fileStorage.writeFileData(data);
   }
 
-  private touchCaseTimestamps(
-    cases: CaseDisplay[],
-    touchedCaseIds?: Iterable<string>,
-  ): CaseDisplay[] {
-    if (!touchedCaseIds) {
-      return cases;
-    }
-
-    const ids = touchedCaseIds instanceof Set ? touchedCaseIds : new Set(touchedCaseIds);
-    if (ids.size === 0) {
-      return cases;
-    }
-
-    const timestamp = new Date().toISOString();
-
-    return cases.map(caseItem => (
-      ids.has(caseItem.id)
-        ? { ...caseItem, updatedAt: timestamp }
-        : caseItem
-    ));
+  /**
+   * Update case timestamps for modified cases
+   */
+  private touchCaseTimestamps(cases: CaseDisplay[], touchedCaseIds?: Iterable<string>): CaseDisplay[] {
+    return this.fileStorage.touchCaseTimestamps(cases, touchedCaseIds);
   }
 
   // =============================================================================
