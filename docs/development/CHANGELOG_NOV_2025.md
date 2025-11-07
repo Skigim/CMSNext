@@ -1,8 +1,18 @@
 # CMSNext Development Changelog - November 2025
 
-**Period:** October 1 - November 5, 2025  
+**Period:** October 1 - November 7, 2025  
 **Branch:** main (stable), dev (active development)  
-**Test Status:** 347/347 passing (100%)
+**Test Status:** 315/315 passing (100%)
+
+## 📊 Quick Metrics
+
+| Metric                   | Value        | Change                                             |
+| ------------------------ | ------------ | -------------------------------------------------- |
+| **Service Extractions**  | 2/7 complete | FileStorage, ActivityLog ✅                        |
+| **DataManager LOC**      | 2,474 lines  | ↓ 281 lines (10.2% reduction)                      |
+| **New Services Created** | 2            | FileStorageService (320), ActivityLogService (115) |
+| **Test Pass Rate**       | 100%         | 67/67 DataManager tests, 315/315 total             |
+| **Breaking Changes**     | 0            | Zero regressions across both extractions           |
 
 ---
 
@@ -300,6 +310,133 @@
 
 ---
 
+## 🆕 Recent Updates (November 7, 2025)
+
+### DataManager Deconstruction - Service Extraction (Phase 1A)
+
+**Objective:** Extract DataManager (~2,755 lines) into focused service classes with dependency injection pattern.
+
+#### Step 1: FileStorageService Extraction ✅ COMPLETE
+
+**PR:** [#70](https://github.com/Skigim/CMSNext/pull/70)  
+**Branch:** `feature/extract-datamanager-services`  
+**Commit:** `b58f9f0`  
+**Merged:** November 7, 2025
+
+**What Was Extracted:**
+
+- `utils/services/FileStorageService.ts` (320 lines)
+- Isolated all file I/O operations from DataManager
+- Methods: `readFileData()`, `writeFileData()`, `touchCaseTimestamps()`, `normalizeActivityLog()`
+
+**Architecture Changes:**
+
+```typescript
+// Before (monolithic)
+class DataManager {
+  async readFileData() {
+    /* 80 lines */
+  }
+  async writeFileData() {
+    /* 120 lines */
+  }
+  // ... mixed with 30+ other methods
+}
+
+// After (dependency injection)
+class DataManager {
+  private fileStorageService: FileStorageService;
+
+  constructor(autosaveService, fileContext, categoryConfig) {
+    this.fileStorageService = new FileStorageService(
+      autosaveService,
+      fileContext
+    );
+  }
+
+  async readFileData() {
+    return this.fileStorageService.readFileData();
+  }
+}
+```
+
+**Benefits Realized:**
+
+- ✅ Single Responsibility: File operations isolated
+- ✅ Testability: FileStorageService can be mocked independently
+- ✅ Maintainability: 320 lines extracted, easier to reason about
+- ✅ Zero Breaking Changes: All 67 DataManager tests passing
+- ✅ Type Safety: Full TypeScript coverage maintained
+
+**Impact:**
+
+- DataManager reduced: 2,755 → 2,515 lines (9% reduction)
+- New service: FileStorageService.ts (320 lines)
+- Test status: 67/67 DataManager tests passing
+
+#### Step 2: ActivityLogService Extraction ✅ COMPLETE
+
+**PR:** [#71](https://github.com/Skigim/CMSNext/pull/71)  
+**Branch:** `feature/extract-activitylog-service`  
+**Commit:** `184784f`  
+**Status:** Awaiting CodeRabbit/Copilot review
+
+**What Was Extracted:**
+
+- `utils/services/ActivityLogService.ts` (115 lines)
+- Isolated all activity log operations from DataManager
+- Methods: `getActivityLog()`, `clearActivityLogForDate()`, `mergeActivityEntries()` (static)
+
+**Architecture Changes:**
+
+```typescript
+// Before
+class DataManager {
+  getActivityLog() {
+    /* 25 lines */
+  }
+  clearActivityLogForDate() {
+    /* 30 lines */
+  }
+  mergeActivityEntries() {
+    /* 40 lines */
+  }
+  // ... 27 other methods
+}
+
+// After (dependency injection)
+class DataManager {
+  private activityLogService: ActivityLogService;
+
+  constructor(autosaveService, fileContext, categoryConfig) {
+    this.fileStorageService = new FileStorageService(
+      autosaveService,
+      fileContext
+    );
+    this.activityLogService = new ActivityLogService(this.fileStorageService);
+  }
+
+  getActivityLog() {
+    return this.activityLogService.getActivityLog();
+  }
+}
+```
+
+**Benefits Realized:**
+
+- ✅ Activity log operations isolated from file I/O
+- ✅ Static utilities (mergeActivityEntries) available for reuse
+- ✅ Service depends on FileStorageService (proper layering)
+- ✅ Zero Breaking Changes: All 67 DataManager tests passing
+
+**Impact:**
+
+- DataManager reduced: 2,515 → 2,474 lines (additional 1.6% reduction, 10.2% cumulative)
+- New service: ActivityLogService.ts (115 lines)
+- Test status: 67/67 DataManager tests passing
+
+---
+
 ## 📝 Documentation Updates
 
 ### Created
@@ -394,7 +531,7 @@
 
 ### Immediate (Today/Tomorrow - November 7-8)
 
-- [ ] Extract ActivityLogService from DataManager (~54 lines) - **~30 min**
+- [x] ~~Extract ActivityLogService from DataManager (~115 lines)~~ - **✅ COMPLETE (PR #71)**
 - [ ] Extract CategoryConfigService from DataManager (~48 lines) - **~30 min**
 - [ ] Run full regression test suite after each extraction - **~5 min each**
 - [ ] Update dataManager-deconstruction.md with progress
@@ -406,7 +543,7 @@
 - [ ] Extract FinancialsService from DataManager (~206 lines) - **~1 hour**
 - [ ] Extract CaseService from DataManager (~270 lines) - **~1.5 hours**
 - [ ] Refactor DataManager to thin orchestrator (~500-800 lines) - **~1 hour**
-- [ ] **Total estimate: ~8-10 hours with AI assistance**
+- [ ] **Total estimate: ~6-8 hours remaining with AI assistance**
 
 ### Medium-Term (Late November 2025)
 
@@ -418,5 +555,5 @@
 
 **Changelog maintained by:** GitHub Copilot  
 **Last updated:** November 7, 2025  
-**Current focus:** DataManager service extraction (Phase 1 of 7)  
-**Next update:** Post-ActivityLogService extraction
+**Current focus:** DataManager service extraction (Step 2 of 7 complete)  
+**Next update:** Post-CategoryConfigService extraction
