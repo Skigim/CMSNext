@@ -385,3 +385,217 @@ Switch FileStorageService to normalized format
 1. Get alignment on architecture approach
 2. Start with Phase 1, Step 1: FileStorageService extraction
 3. Work incrementally with test verification at each step
+
+---
+
+## Implementation Log
+
+### Phase 1: Foundation Services
+
+#### Step 1: FileStorageService ✅ COMPLETE
+
+**Branch:** `feature/extract-datamanager-services`  
+**Commit:** `a5cfa2f`  
+**Date:** November 7, 2025
+
+**What Was Extracted:**
+
+- `readFileData()` - 70 lines → FileStorageService
+- `writeFileData()` - 50 lines → FileStorageService
+- `touchCaseTimestamps()` - 15 lines → FileStorageService
+- `normalizeActivityLog()` - 100 lines → FileStorageService (private helper)
+
+**Total Reduction:** ~240 lines from DataManager (2,755 → 2,515 lines)
+
+**Architecture Change:**
+
+```typescript
+// BEFORE: DataManager handled everything
+class DataManager {
+  private fileService: AutosaveFileService;
+
+  private async readFileData() {
+    // 70 lines of file I/O logic
+    // Format transformation logic
+    // Note normalization logic
+  }
+
+  private async writeFileData() {
+    // 50 lines of validation
+    // Integrity checks
+    // Error handling
+  }
+}
+
+// AFTER: DataManager delegates to FileStorageService
+class DataManager {
+  private fileService: AutosaveFileService;
+  private fileStorage: FileStorageService; // NEW
+
+  constructor(config) {
+    this.fileService = config.fileService;
+    this.fileStorage = new FileStorageService({
+      fileService: config.fileService,
+      persistNormalizationFixes: config.persistNormalizationFixes,
+      normalizeCaseNotes, // Injected dependency
+    });
+  }
+
+  private async readFileData() {
+    return this.fileStorage.readFileData(); // Delegate
+  }
+
+  private async writeFileData(data) {
+    return this.fileStorage.writeFileData(data); // Delegate
+  }
+}
+```
+
+**Benefits Realized:**
+
+1. ✅ Clean separation of concerns (file I/O isolated)
+2. ✅ FileStorageService can be tested independently
+3. ✅ Storage format changes now localized to one service
+4. ✅ Zero breaking changes (DataManager API unchanged)
+5. ✅ All 67 tests passing
+
+**Key Design Decision:**
+Injected `normalizeCaseNotes` as a dependency instead of moving it to FileStorageService. This keeps the note normalization logic with the domain (DataManager) while FileStorageService handles the file format concern.
+
+**Next:** Extract ActivityLogService (smaller, easier win before tackling AlertsService)
+
+---
+
+## Before/After Architecture
+
+### Before Service Extraction
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                       DataManager                            │
+│                      (2,755 lines)                           │
+│                                                              │
+│  ┌────────────────────────────────────────────────────────┐ │
+│  │ File I/O Logic (~160 lines)                            │ │
+│  │ - readFileData, writeFileData, touchTimestamps         │ │
+│  │ - Format transformation, normalization                  │ │
+│  └────────────────────────────────────────────────────────┘ │
+│                                                              │
+│  ┌────────────────────────────────────────────────────────┐ │
+│  │ Alert Management (~430 lines)                          │ │
+│  │ - Build lookup, rematch, load, save, workflow          │ │
+│  └────────────────────────────────────────────────────────┘ │
+│                                                              │
+│  ┌────────────────────────────────────────────────────────┐ │
+│  │ Case CRUD (~270 lines)                                 │ │
+│  │ - addCase, updateCase, deleteCase, etc.                │ │
+│  └────────────────────────────────────────────────────────┘ │
+│                                                              │
+│  ┌────────────────────────────────────────────────────────┐ │
+│  │ Financial CRUD (~206 lines)                            │ │
+│  │ - addFinancialItem, updateFinancialItem, delete        │ │
+│  └────────────────────────────────────────────────────────┘ │
+│                                                              │
+│  ┌────────────────────────────────────────────────────────┐ │
+│  │ Notes CRUD (~210 lines)                                │ │
+│  │ - addNote, updateNote, deleteNote                      │ │
+│  └────────────────────────────────────────────────────────┘ │
+│                                                              │
+│  ┌────────────────────────────────────────────────────────┐ │
+│  │ Activity Log (~54 lines)                               │ │
+│  │ - getActivityLog, clearActivityLogForDate              │ │
+│  └────────────────────────────────────────────────────────┘ │
+│                                                              │
+│  ┌────────────────────────────────────────────────────────┐ │
+│  │ Category Config (~48 lines)                            │ │
+│  │ - getCategoryConfig, updateCategoryConfig              │ │
+│  └────────────────────────────────────────────────────────┘ │
+│                                                              │
+│  ┌────────────────────────────────────────────────────────┐ │
+│  │ Bulk Operations (~66 lines)                            │ │
+│  │ - deleteAllCases, importCases                          │ │
+│  └────────────────────────────────────────────────────────┘ │
+│                                                              │
+│  ┌────────────────────────────────────────────────────────┐ │
+│  │ Utilities (~150 lines)                                 │ │
+│  │ - formatCaseDisplayName, sanitize, normalize           │ │
+│  └────────────────────────────────────────────────────────┘ │
+└──────────────────────────────────────────────────────────────┘
+```
+
+**Problem:** Single 2,755-line class doing too much. Hard to navigate, test, and modify.
+
+---
+
+### After Service Extraction (Phase 1 - In Progress)
+
+```
+┌──────────────────────────────────────────────────────────────┐
+│                    DataManager                               │
+│                 (Orchestrator Layer)                         │
+│                   (~500-800 lines)                           │
+│                                                              │
+│  Responsibilities:                                           │
+│  - Coordinate cross-domain operations                        │
+│  - Maintain backward-compatible API                          │
+│  - Delegate to specialized services                          │
+│  - Handle case lifecycle (create → financials → notes)       │
+└───────┬──────────────────────────────────────────────────────┘
+        │
+        │ Depends on ↓
+        │
+    ┌───┴────────────────────────────────────────────────────┐
+    │                                                         │
+    │                                                         │
+┌───▼────────────────┐  ┌────────────────┐  ┌──────────────┐ │
+│FileStorageService  │  │AlertsService   │  │CaseService   │ │
+│   (~320 lines)     │  │  (~450 lines)  │  │ (~300 lines) │ │
+│                    │  │                │  │              │ │
+│ ✅ EXTRACTED       │  │ Not started    │  │ Not started  │ │
+│                    │  │                │  │              │ │
+│ - readFileData     │  │ - getAlerts    │  │ - addCase    │ │
+│ - writeFileData    │  │ - updateWF     │  │ - updateCase │ │
+│ - touchTimestamps  │  │ - bulkUpdate   │  │ - deleteCase │ │
+│ - normalizeLog     │  │ - buildLookup  │  │              │ │
+└────────────────────┘  └────────────────┘  └──────────────┘ │
+    │                                                         │
+┌───▼────────────────┐  ┌────────────────┐  ┌──────────────┐ │
+│NotesService        │  │FinancialsService│ │ActivityLog   │ │
+│   (~230 lines)     │  │  (~220 lines)  │  │Service       │ │
+│                    │  │                │  │ (~70 lines)  │ │
+│ Not started        │  │ Not started    │  │ Not started  │ │
+│                    │  │                │  │              │ │
+│ - addNote          │  │ - addFinItem   │  │ - getLog     │ │
+│ - updateNote       │  │ - updateFinItem│  │ - clearLog   │ │
+│ - deleteNote       │  │ - deleteFinItem│  │ - mergeLog   │ │
+│ - normalizeNotes   │  │                │  │              │ │
+└────────────────────┘  └────────────────┘  └──────────────┘ │
+    │                                                         │
+┌───▼────────────────┐                                        │
+│CategoryConfigService                                        │
+│   (~60 lines)      │                                        │
+│                    │                                        │
+│ Not started        │                                        │
+│                    │                                        │
+│ - getConfig        │                                        │
+│ - updateConfig     │                                        │
+└────────────────────┘                                        │
+                                                              │
+└──────────────────────────────────────────────────────────────┘
+```
+
+**Benefits:**
+
+1. **Clear responsibilities** - Each service has one job
+2. **Easier testing** - Services can be tested in isolation
+3. **Better maintainability** - Changes localized to specific services
+4. **Simpler storage migration** - Only FileStorageService needs to change
+5. **Reduced cognitive load** - Smaller files, focused concerns
+
+**Progress:**
+
+- ✅ FileStorageService extracted (240 lines)
+- ⏳ 6 services remaining
+- 📊 DataManager: 2,755 → 2,515 lines (9% reduction so far)
+
+---
