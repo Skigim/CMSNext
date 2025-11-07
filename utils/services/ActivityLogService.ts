@@ -99,7 +99,7 @@ export class ActivityLogService {
 
   /**
    * Merge activity entries (utility helper)
-   * Combines current and new entries, removing duplicates and sorting by timestamp
+   * Combines current and new entries and sorts by timestamp (newest first)
    */
   static mergeActivityEntries(
     current: CaseActivityEntry[] | undefined,
