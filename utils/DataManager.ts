@@ -20,7 +20,6 @@ import {
   CategoryConfig,
   CategoryKey,
   mergeCategoryConfig,
-  sanitizeCategoryValues,
 } from "../types/categoryConfig";
 import {
   AlertsIndex,
@@ -34,6 +33,7 @@ import {
 } from "./alertsData";
 import { FileStorageService, type FileData } from "./services/FileStorageService";
 import { ActivityLogService } from "./services/ActivityLogService";
+import { CategoryConfigService } from "./services/CategoryConfigService";
 
 // ============================================================================
 // Configuration & Logging
@@ -233,6 +233,7 @@ export class DataManager {
   private fileService: AutosaveFileService;
   private fileStorage: FileStorageService;
   private activityLog: ActivityLogService;
+  private categoryConfig: CategoryConfigService;
   private static readonly ERROR_SOURCE = "DataManager";
   private static readonly ALERTS_FILE_NAME = "alerts.csv";
   private static readonly ALERTS_JSON_NAME = "alerts.json";
@@ -263,6 +264,9 @@ export class DataManager {
       normalizeCaseNotes,
     });
     this.activityLog = new ActivityLogService({
+      fileStorage: this.fileStorage,
+    });
+    this.categoryConfig = new CategoryConfigService({
       fileStorage: this.fileStorage,
     });
   }
@@ -1646,50 +1650,19 @@ export class DataManager {
   // =============================================================================
 
   async getCategoryConfig(): Promise<CategoryConfig> {
-    const data = await this.readFileData();
-    return data ? mergeCategoryConfig(data.categoryConfig) : mergeCategoryConfig();
+    return this.categoryConfig.getCategoryConfig();
   }
 
   async updateCategoryConfig(categoryConfig: CategoryConfig): Promise<CategoryConfig> {
-    const sanitized = mergeCategoryConfig(categoryConfig);
-    const currentData = await this.readFileData();
-
-    const baseData: FileData = currentData ?? {
-      cases: [],
-      exported_at: new Date().toISOString(),
-      total_cases: 0,
-      categoryConfig: mergeCategoryConfig(),
-      activityLog: [],
-    };
-
-    const updatedData: FileData = {
-      ...baseData,
-      categoryConfig: sanitized,
-    };
-
-    await this.writeFileData(updatedData);
-    return sanitized;
+    return this.categoryConfig.updateCategoryConfig(categoryConfig);
   }
 
   async updateCategoryValues(key: CategoryKey, values: string[]): Promise<CategoryConfig> {
-    const sanitizedValues = sanitizeCategoryValues(values);
-    if (sanitizedValues.length === 0) {
-      throw new Error('At least one option is required');
-    }
-
-    const currentConfig = await this.getCategoryConfig();
-    const nextConfig: CategoryConfig = {
-      ...currentConfig,
-      [key]: sanitizedValues,
-    };
-
-    return this.updateCategoryConfig(nextConfig);
+    return this.categoryConfig.updateCategoryValues(key, values);
   }
 
   async resetCategoryConfig(): Promise<CategoryConfig> {
-    const defaults = mergeCategoryConfig();
-    await this.updateCategoryConfig(defaults);
-    return defaults;
+    return this.categoryConfig.resetCategoryConfig();
   }
 
   // =============================================================================
