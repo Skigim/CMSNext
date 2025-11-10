@@ -10,12 +10,28 @@
 
 import { FinancialItem } from '@/types/case';
 
-export type VerificationStatus = 'Needs VR' | 'VR Pending' | 'AVS Pending' | 'Verified';
+export type VerificationStatus = string;
 
 export interface VerificationStatusInfo {
   text: string;
   colorClass: string;
 }
+
+/**
+ * Get the color class for a verification status (for dropdown menu dots)
+ */
+export const getVerificationStatusDotColor = (status: string): string => {
+  const normalizedStatus = status.toLowerCase();
+  
+  const colorMap: Record<string, string> = {
+    'verified': 'bg-green-500',
+    'needs vr': 'bg-secondary',
+    'vr pending': 'bg-yellow-500',
+    'avs pending': 'bg-orange-500',
+  };
+
+  return colorMap[normalizedStatus] || 'bg-gray-500';
+};
 
 /**
  * Get verification status styling and display information

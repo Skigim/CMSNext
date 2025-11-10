@@ -9,6 +9,8 @@ import {
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "../ui/tooltip";
 import { formatAccountNumber } from "../../utils/financialFormatters";
 import { cn, interactiveHoverClasses } from "../ui/utils";
+import { useCategoryConfig } from "../../contexts/CategoryConfigContext";
+import { getVerificationStatusDotColor } from "../../utils/verificationStatus";
 import type {
   NormalizedFinancialItem,
   VerificationBadgeInfo,
@@ -28,6 +30,7 @@ export function FinancialItemCardMeta({
   canUpdateStatus,
   onStatusChange,
 }: FinancialItemCardMetaProps) {
+  const { config } = useCategoryConfig();
   const truncatedNotes = normalizedItem.notes && normalizedItem.notes.length > 100
     ? `${normalizedItem.notes.substring(0, 100)}...`
     : normalizedItem.notes;
@@ -68,38 +71,17 @@ export function FinancialItemCardMeta({
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-36">
-          <DropdownMenuItem
-            onClick={event => {
-              event.stopPropagation();
-              onStatusChange("Needs VR");
-            }}
-          >
-            <MenuOption label="Needs VR" dotClassName="bg-secondary" />
-          </DropdownMenuItem>
-          <DropdownMenuItem
-            onClick={event => {
-              event.stopPropagation();
-              onStatusChange("VR Pending");
-            }}
-          >
-            <MenuOption label="VR Pending" dotClassName="bg-yellow-500" />
-          </DropdownMenuItem>
-          <DropdownMenuItem
-            onClick={event => {
-              event.stopPropagation();
-              onStatusChange("AVS Pending");
-            }}
-          >
-            <MenuOption label="AVS Pending" dotClassName="bg-orange-500" />
-          </DropdownMenuItem>
-          <DropdownMenuItem
-            onClick={event => {
-              event.stopPropagation();
-              onStatusChange("Verified");
-            }}
-          >
-            <MenuOption label="Verified" dotClassName="bg-green-500" />
-          </DropdownMenuItem>
+          {config.verificationStatuses.map((status) => (
+            <DropdownMenuItem
+              key={status}
+              onClick={event => {
+                event.stopPropagation();
+                onStatusChange(status);
+              }}
+            >
+              <MenuOption label={status} dotClassName={getVerificationStatusDotColor(status)} />
+            </DropdownMenuItem>
+          ))}
         </DropdownMenuContent>
       </DropdownMenu>
     </div>

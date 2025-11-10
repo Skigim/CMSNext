@@ -6,11 +6,7 @@ export enum FinancialCategory {
   Expense = 'expenses',
 }
 
-export type FinancialVerificationStatus =
-  | 'Needs VR'
-  | 'VR Pending'
-  | 'AVS Pending'
-  | 'Verified';
+export type FinancialVerificationStatus = string;
 
 export interface FinancialItemSnapshot {
   id: string;

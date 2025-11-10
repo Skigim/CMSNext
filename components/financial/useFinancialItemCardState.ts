@@ -7,7 +7,7 @@ import {
   shouldShowVerificationSource,
 } from "../../utils/verificationStatus";
 
-export type VerificationStatus = "Needs VR" | "VR Pending" | "AVS Pending" | "Verified";
+export type VerificationStatus = string;
 
 export type NormalizedFinancialItem = ReturnType<typeof getNormalizedItem>;
 export type NormalizedFinancialFormData = ReturnType<typeof getNormalizedFormData>;
@@ -64,8 +64,8 @@ export function useFinancialItemCardState({
     [normalizedItem.amount, normalizedItem.frequency, itemType],
   );
   const verificationStatus = useMemo(
-    () => getVerificationStatusInfo(normalizedItem.verificationStatus, normalizedItem.verificationSource),
-    [normalizedItem.verificationStatus, normalizedItem.verificationSource],
+    () => getVerificationStatusInfo(formData.verificationStatus, formData.verificationSource),
+    [formData.verificationStatus, formData.verificationSource],
   );
   const showVerificationSourceField = useMemo(
     () => shouldShowVerificationSource(item.verificationStatus, formData.verificationStatus),
