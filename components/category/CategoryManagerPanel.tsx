@@ -26,6 +26,7 @@ const CATEGORY_KEYS: CategoryKey[] = [
   "caseStatuses",
   "livingArrangements",
   "noteCategories",
+  "verificationStatuses",
 ];
 
 type CategoryEditorProps = {
@@ -301,7 +302,7 @@ export function CategoryManagerPanel({
 
   const defaultSupportingContent = (
     <p className="text-sm text-muted-foreground">
-      Customize the lists for case types, statuses, living arrangements, and note categories. These settings are saved to your workspace directory via the file data provider.
+      Customize the lists for case types, statuses, living arrangements, note categories, and verification statuses. These settings are saved to your workspace directory via the file data provider.
     </p>
   );
 

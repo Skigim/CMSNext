@@ -64,8 +64,8 @@ export function useFinancialItemCardState({
     [normalizedItem.amount, normalizedItem.frequency, itemType],
   );
   const verificationStatus = useMemo(
-    () => getVerificationStatusInfo(normalizedItem.verificationStatus, normalizedItem.verificationSource),
-    [normalizedItem.verificationStatus, normalizedItem.verificationSource],
+    () => getVerificationStatusInfo(formData.verificationStatus, formData.verificationSource),
+    [formData.verificationStatus, formData.verificationSource],
   );
   const showVerificationSourceField = useMemo(
     () => shouldShowVerificationSource(item.verificationStatus, formData.verificationStatus),

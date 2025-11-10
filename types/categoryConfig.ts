@@ -2,13 +2,15 @@ export type CategoryKey =
   | "caseTypes"
   | "caseStatuses"
   | "livingArrangements"
-  | "noteCategories";
+  | "noteCategories"
+  | "verificationStatuses";
 
 export interface CategoryConfig {
   caseTypes: string[];
   caseStatuses: string[];
   livingArrangements: string[];
   noteCategories: string[];
+  verificationStatuses: string[];
 }
 
 export type PartialCategoryConfig = Partial<Record<CategoryKey, string[]>>;
@@ -47,11 +49,19 @@ const DEFAULT_NOTE_CATEGORIES = [
   "Other",
 ];
 
+const DEFAULT_VERIFICATION_STATUSES = [
+  "Needs VR",
+  "VR Pending",
+  "AVS Pending",
+  "Verified",
+];
+
 export const defaultCategoryConfig: CategoryConfig = Object.freeze({
   caseTypes: DEFAULT_CASE_TYPES,
   caseStatuses: DEFAULT_CASE_STATUSES,
   livingArrangements: DEFAULT_LIVING_ARRANGEMENTS,
   noteCategories: DEFAULT_NOTE_CATEGORIES,
+  verificationStatuses: DEFAULT_VERIFICATION_STATUSES,
 });
 
 export const CATEGORY_DISPLAY_METADATA: Record<
@@ -73,6 +83,10 @@ export const CATEGORY_DISPLAY_METADATA: Record<
   noteCategories: {
     label: "Note Categories",
     description: "Customize how you categorize notes across all cases.",
+  },
+  verificationStatuses: {
+    label: "Verification Statuses",
+    description: "Define the workflow stages for verifying financial items.",
   },
 };
 
@@ -106,6 +120,7 @@ export const mergeCategoryConfig = (
       caseStatuses: [...defaultCategoryConfig.caseStatuses],
       livingArrangements: [...defaultCategoryConfig.livingArrangements],
       noteCategories: [...defaultCategoryConfig.noteCategories],
+      verificationStatuses: [...defaultCategoryConfig.verificationStatuses],
     };
   }
 
@@ -128,6 +143,9 @@ export const mergeCategoryConfig = (
     noteCategories: sanitizedEntries.noteCategories?.length
       ? sanitizedEntries.noteCategories
       : [...defaultCategoryConfig.noteCategories],
+    verificationStatuses: sanitizedEntries.verificationStatuses?.length
+      ? sanitizedEntries.verificationStatuses
+      : [...defaultCategoryConfig.verificationStatuses],
   };
 };
 
@@ -138,6 +156,7 @@ export const cloneCategoryConfig = (config?: CategoryConfig | null): CategoryCon
     caseStatuses: [...source.caseStatuses],
     livingArrangements: [...source.livingArrangements],
     noteCategories: [...source.noteCategories],
+    verificationStatuses: [...source.verificationStatuses],
   };
 };
 
