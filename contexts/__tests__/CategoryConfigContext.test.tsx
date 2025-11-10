@@ -38,6 +38,7 @@ describe('CategoryConfigContext', () => {
         caseStatuses: ['Pending'],
         livingArrangements: ['Apartment'],
         noteCategories: ['General'],
+        verificationStatuses: ['Needs VR', 'VR Pending', 'AVS Pending', 'Verified'],
       } satisfies CategoryConfig),
       updateCategoryValues: vi.fn(),
       resetCategoryConfig: vi.fn(),
@@ -63,6 +64,7 @@ describe('CategoryConfigContext', () => {
       caseStatuses: ['Status 1'],
       livingArrangements: ['Housing'],
       noteCategories: ['NoteCat'],
+      verificationStatuses: ['Needs VR', 'Verified'],
     } satisfies CategoryConfig);
 
     const { result } = renderHook(() => useCategoryConfig(), { wrapper });
@@ -98,6 +100,7 @@ describe('CategoryConfigContext', () => {
       caseStatuses: ['Pending', 'Approved'],
       livingArrangements: ['Apartment'],
       noteCategories: ['General'],
+      verificationStatuses: ['Needs VR', 'Verified'],
     } satisfies CategoryConfig);
 
     const { result } = renderHook(() => useCategoryConfig(), { wrapper });
@@ -130,6 +133,7 @@ describe('CategoryConfigContext', () => {
       caseStatuses: ['Default Status'],
       livingArrangements: ['Default Housing'],
       noteCategories: ['Default Note'],
+      verificationStatuses: ['Needs VR', 'VR Pending', 'AVS Pending', 'Verified'],
     } satisfies CategoryConfig);
 
     const { result } = renderHook(() => useCategoryConfig(), { wrapper });
@@ -150,12 +154,14 @@ describe('CategoryConfigContext', () => {
       caseStatuses: ['Status 1'],
       livingArrangements: ['Arrangement 1'],
       noteCategories: ['Note 1'],
+      verificationStatuses: ['Needs VR', 'Verified'],
     };
     const refreshedConfig: CategoryConfig = {
       caseTypes: ['Type 2'],
       caseStatuses: ['Status 2'],
       livingArrangements: ['Arrangement 2'],
       noteCategories: ['Note 2'],
+      verificationStatuses: ['Pending', 'Complete'],
     };
 
     mockDataManager.getCategoryConfig
