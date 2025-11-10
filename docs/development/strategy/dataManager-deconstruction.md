@@ -629,7 +629,116 @@ async resetCategoryConfig(): Promise<CategoryConfig> {
 **Key Design Decision:**
 Added `updateCategoryValues()` for granular updates instead of forcing clients to pass the entire config. This makes it safer to update individual categories without risking data loss from partial config objects.
 
-**Next:** Extract AlertsService (~430 lines, largest and most complex extraction)
+**Next:** Extract NotesService (~230 lines)
+
+---
+
+#### Step 4: NotesService ✅ COMPLETE
+
+**Branch:** `dev`  
+**Commit:** TBD  
+**Date:** November 10, 2025
+
+**What Was Extracted:**
+
+- `addNote()` - ~75 lines → NotesService
+- `updateNote()` - ~60 lines → NotesService
+- `deleteNote()` - ~55 lines → NotesService
+- `sanitizeNoteContent()` - ~10 lines → NotesService (static utility)
+- `buildNotePreview()` - ~12 lines → NotesService (static utility)
+
+**Total Reduction:** ~206 lines from DataManager (2,447 → 2,241 lines, -8.4%)
+
+**Architecture Change:**
+
+```typescript
+// BEFORE: DataManager handled note CRUD directly
+class DataManager {
+  async addNote(caseId: string, noteData: NewNoteData): Promise<CaseDisplay> {
+    // 75 lines: read file, create note, update case, build activity log, write file
+  }
+
+  async updateNote(caseId: string, noteId: string, noteData: NewNoteData): Promise<CaseDisplay> {
+    // 60 lines: read file, find note, update, write file
+  }
+
+  async deleteNote(caseId: string, noteId: string): Promise<CaseDisplay> {
+    // 55 lines: read file, remove note, write file
+  }
+}
+
+// AFTER: DataManager delegates to NotesService
+class DataManager {
+  private notes: NotesService;
+
+  constructor(config) {
+    this.notes = new NotesService({
+      fileStorage: this.fileStorage,
+    });
+  }
+
+  async addNote(caseId: string, noteData: NewNoteData): Promise<CaseDisplay> {
+    return this.notes.addNote(caseId, noteData); // Delegate
+  }
+
+  async updateNote(caseId: string, noteId: string, noteData: NewNoteData): Promise<CaseDisplay> {
+    return this.notes.updateNote(caseId, noteId, noteData); // Delegate
+  }
+
+  async deleteNote(caseId: string, noteId: string): Promise<CaseDisplay> {
+    return this.notes.deleteNote(caseId, noteId); // Delegate
+  }
+}
+```
+
+**Static Utilities Added:**
+
+The NotesService includes static utility methods for note sanitization:
+
+```typescript
+// Sanitize note content to remove PII (emails, SSNs, long numbers)
+NotesService.sanitizeNoteContent(content: string): string
+
+// Build note preview (max 160 chars, sanitized)
+NotesService.buildNotePreview(content: string): string
+```
+
+**Benefits Realized:**
+
+1. ✅ Note operations isolated in dedicated service
+2. ✅ NotesService independently testable
+3. ✅ PII sanitization utilities centralized and reusable
+4. ✅ Activity log generation for note-added events
+5. ✅ Zero breaking changes (DataManager API unchanged)
+6. ✅ All 315 tests passing
+
+**Key Design Decision:**
+Included PII sanitization functions within NotesService as static utilities, making them available for external use while keeping the logic colocated with note operations.
+
+**Next:** Extract FinancialsService (~220 lines, remaining Phase 2 service)
+
+---
+
+## Before/After Architecture (Updated)
+
+### Current Progress
+
+**Phase 1 (Foundation Services):**
+- ✅ FileStorageService - 320 lines extracted
+- ✅ ActivityLogService - 115 lines extracted  
+- ✅ CategoryConfigService - 117 lines extracted
+
+**Phase 2 (Domain Services):**
+- ⏳ AlertsService - POSTPONED (will be broken down further)
+- ✅ NotesService - 206 lines extracted
+- ⏸️ FinancialsService - 220 lines (NEXT)
+
+**Progress:**
+- 📊 DataManager: 2,755 → 2,241 lines (18.7% reduction so far)
+- 🎯 Target: ~500-800 lines (orchestration only)
+- ✅ All 315 tests passing
+
+**Next:** Extract FinancialsService (~1 hour estimated)
 
 ---
 
