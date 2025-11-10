@@ -658,7 +658,11 @@ class DataManager {
     // 75 lines: read file, create note, update case, build activity log, write file
   }
 
-  async updateNote(caseId: string, noteId: string, noteData: NewNoteData): Promise<CaseDisplay> {
+  async updateNote(
+    caseId: string,
+    noteId: string,
+    noteData: NewNoteData
+  ): Promise<CaseDisplay> {
     // 60 lines: read file, find note, update, write file
   }
 
@@ -681,7 +685,11 @@ class DataManager {
     return this.notes.addNote(caseId, noteData); // Delegate
   }
 
-  async updateNote(caseId: string, noteId: string, noteData: NewNoteData): Promise<CaseDisplay> {
+  async updateNote(
+    caseId: string,
+    noteId: string,
+    noteData: NewNoteData
+  ): Promise<CaseDisplay> {
     return this.notes.updateNote(caseId, noteId, noteData); // Delegate
   }
 
@@ -724,16 +732,19 @@ Included PII sanitization functions within NotesService as static utilities, mak
 ### Current Progress
 
 **Phase 1 (Foundation Services):**
+
 - ✅ FileStorageService - 320 lines extracted
-- ✅ ActivityLogService - 115 lines extracted  
+- ✅ ActivityLogService - 115 lines extracted
 - ✅ CategoryConfigService - 117 lines extracted
 
 **Phase 2 (Domain Services):**
+
 - ⏳ AlertsService - POSTPONED (will be broken down further)
 - ✅ NotesService - 206 lines extracted
 - ⏸️ FinancialsService - 220 lines (NEXT)
 
 **Progress:**
+
 - 📊 DataManager: 2,755 → 2,241 lines (18.7% reduction so far)
 - 🎯 Target: ~500-800 lines (orchestration only)
 - ✅ All 315 tests passing
