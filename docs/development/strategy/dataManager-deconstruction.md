@@ -538,6 +538,101 @@ Made `mergeActivityEntries` a static method rather than instance method since it
 
 ---
 
+#### Step 3: CategoryConfigService ✅ COMPLETE
+
+**Branch:** `feature/extract-categoryconfig-service`  
+**Commit:** `61ad858`  
+**Date:** November 10, 2025  
+**PR:** #72
+
+**What Was Extracted:**
+
+- `getCategoryConfig()` - 5 lines → CategoryConfigService
+- `updateCategoryConfig()` - 23 lines → CategoryConfigService
+- `updateCategoryValues()` - 28 lines → CategoryConfigService (new method)
+- `resetCategoryConfig()` - 7 lines → CategoryConfigService (new method)
+
+**Total Reduction:** ~28 lines from DataManager (2,474 → 2,446 lines, -1.1%)
+
+**Architecture Change:**
+
+```typescript
+// BEFORE: DataManager handled category config directly
+class DataManager {
+  async getCategoryConfig(): Promise<CategoryConfig> {
+    const data = await this.readFileData();
+    return data
+      ? mergeCategoryConfig(data.categoryConfig)
+      : mergeCategoryConfig();
+  }
+
+  async updateCategoryConfig(
+    newConfig: Partial<CategoryConfig>
+  ): Promise<CategoryConfig> {
+    const currentData = await this.readFileData();
+    if (!currentData) {
+      throw new Error("Failed to read current data");
+    }
+    // 23 lines of validation and persistence logic
+  }
+}
+
+// AFTER: DataManager delegates to CategoryConfigService
+class DataManager {
+  private categoryConfig: CategoryConfigService;
+
+  constructor(config) {
+    this.categoryConfig = new CategoryConfigService({
+      fileStorage: this.fileStorage,
+    });
+  }
+
+  async getCategoryConfig(): Promise<CategoryConfig> {
+    return this.categoryConfig.getCategoryConfig(); // Delegate
+  }
+
+  async updateCategoryConfig(
+    newConfig: Partial<CategoryConfig>
+  ): Promise<CategoryConfig> {
+    return this.categoryConfig.updateCategoryConfig(newConfig); // Delegate
+  }
+}
+```
+
+**New Capabilities Added:**
+
+The CategoryConfigService extraction also added two new methods not previously in DataManager:
+
+```typescript
+// Update individual category values
+async updateCategoryValues(
+  categoryKey: CategoryKey,
+  values: string[]
+): Promise<CategoryConfig> {
+  // Granular updates without replacing entire config
+}
+
+// Reset to default configuration
+async resetCategoryConfig(): Promise<CategoryConfig> {
+  // Clear all customizations, return to defaults
+}
+```
+
+**Benefits Realized:**
+
+1. ✅ Category configuration isolated in dedicated service
+2. ✅ Enhanced API with granular update methods
+3. ✅ CategoryConfigService independently testable
+4. ✅ Zero breaking changes (DataManager API unchanged)
+5. ✅ All 315 tests passing
+
+**Key Design Decision:**
+Added `updateCategoryValues()` for granular updates instead of forcing clients to pass the entire config. This makes it safer to update individual categories without risking data loss from partial config objects.
+
+**Next:** Extract AlertsService (~430 lines, largest and most complex extraction)
+
+---
+
 ## Before/After Architecture
 
 ### Before Service Extraction
@@ -644,13 +739,15 @@ Made `mergeActivityEntries` a static method rather than instance method since it
 └────────────────────┘  └────────────────┘  └──────────────┘ │
     │                                                         │
 ┌───▼────────────────┐                                        │
-│CategoryConfigService                                        │
-│   (~60 lines)      │                                        │
+│CategoryConfigService│                                       │
+│   (~117 lines)     │                                        │
 │                    │                                        │
-│ Not started        │                                        │
+│ ✅ EXTRACTED       │                                        │
 │                    │                                        │
 │ - getConfig        │                                        │
 │ - updateConfig     │                                        │
+│ - updateValues     │                                        │
+│ - resetConfig      │                                        │
 └────────────────────┘                                        │
                                                               │
 └──────────────────────────────────────────────────────────────┘
@@ -666,9 +763,10 @@ Made `mergeActivityEntries` a static method rather than instance method since it
 
 **Progress:**
 
-- ✅ FileStorageService extracted (240 lines)
-- ✅ ActivityLogService extracted (41 lines)
-- ⏳ 5 services remaining
-- 📊 DataManager: 2,755 → 2,474 lines (10.2% reduction so far)
+- ✅ FileStorageService extracted (~320 lines)
+- ✅ ActivityLogService extracted (~115 lines)
+- ✅ CategoryConfigService extracted (~117 lines)
+- ⏳ 4 services remaining
+- 📊 DataManager: 2,755 → 2,446 lines (11.2% reduction so far)
 
 ---
