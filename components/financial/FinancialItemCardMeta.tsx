@@ -76,7 +76,7 @@ export function FinancialItemCardMeta({
               key={status}
               onClick={event => {
                 event.stopPropagation();
-                onStatusChange(status as VerificationStatus);
+                onStatusChange(status);
               }}
             >
               <MenuOption label={status} dotClassName={getVerificationStatusDotColor(status)} />

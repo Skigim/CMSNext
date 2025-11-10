@@ -42,7 +42,7 @@ export interface FinancialItem {
   amount: number;
   frequency?: string;
   owner?: string;
-  verificationStatus: 'Needs VR' | 'VR Pending' | 'AVS Pending' | 'Verified';
+  verificationStatus: string;
   verificationSource?: string;
   notes?: string;
   dateAdded?: string;

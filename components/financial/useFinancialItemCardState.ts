@@ -7,7 +7,7 @@ import {
   shouldShowVerificationSource,
 } from "../../utils/verificationStatus";
 
-export type VerificationStatus = "Needs VR" | "VR Pending" | "AVS Pending" | "Verified";
+export type VerificationStatus = string;
 
 export type NormalizedFinancialItem = ReturnType<typeof getNormalizedItem>;
 export type NormalizedFinancialFormData = ReturnType<typeof getNormalizedFormData>;

@@ -10,7 +10,7 @@
 
 import { FinancialItem } from '@/types/case';
 
-export type VerificationStatus = 'Needs VR' | 'VR Pending' | 'AVS Pending' | 'Verified';
+export type VerificationStatus = string;
 
 export interface VerificationStatusInfo {
   text: string;
