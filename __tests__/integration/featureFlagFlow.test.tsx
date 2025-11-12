@@ -128,7 +128,7 @@ const widgetTitles = [
   "Case Priority",
   "Alerts Cleared/Day",
   "Cases Processed/Day",
-  "Activity Timeline",
+  "Activity",
   "Total Cases by Status",
   /Alerts by Description/i, // Use regex for titles that might be split across elements
   "Avg. Alert Age",
@@ -203,7 +203,7 @@ describe("feature flag integration", () => {
 
     renderDashboard();
 
-    for (const title of ["Alerts Cleared/Day", "Activity Timeline", "Total Cases by Status"]) {
+    for (const title of ["Alerts Cleared/Day", "Activity", "Total Cases by Status"]) {
       await waitFor(() => {
         expect(screen.getByText(title)).toBeInTheDocument();
       });
