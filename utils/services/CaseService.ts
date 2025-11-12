@@ -1,6 +1,7 @@
 import { v4 as uuidv4 } from 'uuid';
 import type { CaseDisplay, NewPersonData, NewCaseRecordData } from '../../types/case';
 import type { CaseActivityEntry } from '../../types/activityLog';
+import type { CategoryConfig } from '../../types/categoryConfig';
 import type { FileStorageService, FileData } from './FileStorageService';
 import { ActivityLogService } from './ActivityLogService';
 
@@ -30,7 +31,7 @@ interface CaseServiceConfig {
  * 
  * Responsibilities:
  * - Read operations: getAllCases, getCaseById, getCasesCount
- * - Create/Update/Delete operations (to be added)
+ * - Create/Update/Delete operations: createCompleteCase, updateCompleteCase, updateCaseStatus, deleteCase
  * - Bulk operations: importCases, clearAllData
  * - Maintain case timestamps and metadata
  * 
@@ -417,7 +418,7 @@ export class CaseService {
    * Clear all data
    * Pattern: write empty structure
    */
-  async clearAllData(categoryConfig: any): Promise<void> {
+  async clearAllData(categoryConfig: CategoryConfig): Promise<void> {
     const emptyData: FileData = {
       cases: [],
       exported_at: new Date().toISOString(),
