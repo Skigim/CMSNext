@@ -1,0 +1,543 @@
+import { useCallback, useMemo, useState } from 'react';
+import { format } from 'date-fns';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
+import { CalendarPicker } from '@/components/ui/calendar-picker';
+import {
+  FileText,
+  Save,
+  Clock,
+  Download,
+  Trash2,
+  Loader2,
+  RefreshCcw,
+} from 'lucide-react';
+import { toast } from 'sonner';
+import { useWidgetData } from '@/hooks/useWidgetData';
+import type { CaseActivityLogState, CaseActivityEntry, ActivityReportFormat } from '@/types/activityLog';
+import type { WidgetMetadata } from './WidgetRegistry';
+import {
+  getTopCasesForReport,
+  serializeDailyActivityReport,
+  toActivityDateKey,
+} from '@/utils/activityReport';
+
+/**
+ * Activity timeline item with type and formatting.
+ */
+interface TimelineItem {
+  id: string;
+  type: 'note' | 'save' | 'import' | 'unknown';
+  title: string;
+  description: string;
+  timestamp: string;
+  relativeTime: string;
+  caseId: string;
+  caseName: string;
+  icon: typeof FileText;
+  badgeColor: string;
+  badgeText: string;
+}
+
+/**
+ * Props for the Activity Widget.
+ */
+interface ActivityWidgetProps {
+  /** Activity log state containing recent activity entries */
+  activityLogState: CaseActivityLogState;
+  /** Widget metadata (injected by WidgetRegistry) */
+  metadata?: WidgetMetadata;
+}
+
+/**
+ * Calculate relative time string from timestamp.
+ */
+function getRelativeTime(timestamp: string): string {
+  try {
+    const now = new Date();
+    const then = new Date(timestamp);
+    const secondsAgo = Math.floor((now.getTime() - then.getTime()) / 1000);
+
+    if (secondsAgo < 60) return 'Just now';
+    const minutesAgo = Math.floor(secondsAgo / 60);
+    if (minutesAgo === 1) return '1 minute ago';
+    if (minutesAgo < 60) return `${minutesAgo} minutes ago`;
+    const hoursAgo = Math.floor(minutesAgo / 60);
+    if (hoursAgo === 1) return '1 hour ago';
+    if (hoursAgo < 24) return `${hoursAgo} hours ago`;
+    const daysAgo = Math.floor(hoursAgo / 24);
+    if (daysAgo === 1) return 'Yesterday';
+    if (daysAgo < 7) return `${daysAgo} days ago`;
+    return 'Over a week ago';
+  } catch {
+    return 'Unknown time';
+  }
+}
+
+/**
+ * Format activity entries into timeline items.
+ */
+function formatActivityTimeline(activityLog: CaseActivityEntry[]): TimelineItem[] {
+  const sevenDaysAgo = new Date();
+  sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+
+  return activityLog
+    .filter((entry) => {
+      try {
+        return new Date(entry.timestamp) >= sevenDaysAgo;
+      } catch {
+        return false;
+      }
+    })
+    .slice(0, 10)
+    .map((entry): TimelineItem => {
+      const relativeTime = getRelativeTime(entry.timestamp);
+
+      if (entry.type === 'note-added') {
+        const noteEntry = entry as Extract<CaseActivityEntry, { type: 'note-added' }>;
+        return {
+          id: noteEntry.id,
+          type: 'note',
+          title: `Note added to ${noteEntry.caseName}`,
+          description: noteEntry.payload.preview || 'New case note',
+          timestamp: noteEntry.timestamp,
+          relativeTime,
+          caseId: noteEntry.caseId,
+          caseName: noteEntry.caseName,
+          icon: FileText,
+          badgeColor: 'bg-primary/20 text-primary',
+          badgeText: 'Note',
+        };
+      }
+
+      if (entry.type === 'status-change') {
+        const statusEntry = entry as Extract<CaseActivityEntry, { type: 'status-change' }>;
+        const fromStatus = statusEntry.payload.fromStatus || 'Unknown';
+        const toStatus = statusEntry.payload.toStatus || 'Unknown';
+        return {
+          id: statusEntry.id,
+          type: 'save',
+          title: `Status: ${fromStatus} → ${toStatus}`,
+          description: `${statusEntry.caseName}`,
+          timestamp: statusEntry.timestamp,
+          relativeTime,
+          caseId: statusEntry.caseId,
+          caseName: statusEntry.caseName,
+          icon: Save,
+          badgeColor: 'bg-accent text-accent-foreground',
+          badgeText: 'Status',
+        };
+      }
+
+      const baseEntry = entry as Extract<CaseActivityEntry, CaseActivityEntry>;
+      return {
+        id: baseEntry.id,
+        type: 'unknown',
+        title: 'Activity recorded',
+        description: `${baseEntry.caseName}`,
+        timestamp: baseEntry.timestamp,
+        relativeTime,
+        caseId: baseEntry.caseId,
+        caseName: baseEntry.caseName,
+        icon: Clock,
+        badgeColor: 'bg-muted text-muted-foreground',
+        badgeText: 'Other',
+      };
+    });
+}
+
+/**
+ * Activity Widget Component
+ *
+ * Combined widget displaying:
+ * - Timeline view: Last 7 days of recent activity (notes, status changes)
+ * - Export view: Daily activity reports with export capabilities
+ *
+ * Features:
+ * - Tabbed interface for timeline vs. export
+ * - Relative timestamps and type badges
+ * - Date picker for report selection
+ * - Export to JSON/CSV/TXT
+ * - Clear daily logs
+ * - Auto-refresh with freshness indicator
+ *
+ * @example
+ * ```tsx
+ * <ActivityWidget activityLogState={activityLogState} />
+ * ```
+ */
+export function ActivityWidget({ activityLogState, metadata }: ActivityWidgetProps) {
+  const [selectedReportDate, setSelectedReportDate] = useState<Date>(() => new Date());
+  const [clearDialogOpen, setClearDialogOpen] = useState(false);
+  const [isClearing, setIsClearing] = useState(false);
+
+  const {
+    loading: activityLogLoading,
+    error: activityLogError,
+    refreshActivityLog,
+    getReportForDate,
+    clearReportForDate,
+  } = activityLogState;
+
+  // Timeline data
+  const fetchTimeline = useCallback(async () => {
+    return formatActivityTimeline(activityLogState.activityLog || []);
+  }, [activityLogState.activityLog]);
+
+  const { data: timeline, loading, freshness } = useWidgetData(fetchTimeline, {
+    refreshInterval: metadata?.refreshInterval ?? 2 * 60 * 1000,
+    enablePerformanceTracking: true,
+  });
+
+  // Report data
+  const selectedActivityReport = useMemo(
+    () => getReportForDate(selectedReportDate),
+    [getReportForDate, selectedReportDate]
+  );
+
+  const selectedDateLabel = useMemo(() => format(selectedReportDate, 'PPP'), [selectedReportDate]);
+
+  const topCasesForSelectedDate = useMemo(
+    () => getTopCasesForReport(selectedActivityReport, 5),
+    [selectedActivityReport]
+  );
+
+  const hasSelectedActivity = selectedActivityReport?.totals.total > 0;
+
+  // Handlers
+  const handleSelectReportDate = useCallback((date?: Date) => {
+    if (date) setSelectedReportDate(date);
+  }, []);
+
+  const handleRefreshActivityLog = useCallback(async () => {
+    try {
+      await refreshActivityLog();
+      toast.success('Activity log refreshed');
+    } catch (error) {
+      console.error('Failed to refresh activity log', error);
+      toast.error('Unable to refresh the activity log.');
+    }
+  }, [refreshActivityLog]);
+
+  const handleClearSelectedReport = useCallback(async () => {
+    if (isClearing) return;
+
+    const targetDate = new Date(selectedReportDate);
+    const toastId = toast.loading('Clearing activity log entries...');
+
+    setIsClearing(true);
+    try {
+      const removedCount = await clearReportForDate(targetDate);
+      if (removedCount > 0) {
+        toast.success(
+          `Cleared ${removedCount} entr${removedCount === 1 ? 'y' : 'ies'} for ${selectedDateLabel}.`,
+          { id: toastId }
+        );
+      } else {
+        toast.info(`No activity entries recorded for ${selectedDateLabel}.`, { id: toastId });
+      }
+      setClearDialogOpen(false);
+    } catch (error) {
+      console.error('Failed to clear activity log for date', error);
+      toast.error('Unable to clear the activity log for this date.', { id: toastId });
+    } finally {
+      setIsClearing(false);
+    }
+  }, [clearReportForDate, isClearing, selectedDateLabel, selectedReportDate]);
+
+  const handleExportActivityReport = useCallback(
+    (format: ActivityReportFormat) => {
+      if (!selectedActivityReport || selectedActivityReport.totals.total === 0) {
+        toast.info('No activity recorded for the selected date.');
+        return;
+      }
+
+      try {
+        const content = serializeDailyActivityReport(selectedActivityReport, format);
+        const mimeType =
+          format === 'json' ? 'application/json' : format === 'csv' ? 'text/csv' : 'text/plain';
+        const extension = format === 'json' ? 'json' : format === 'csv' ? 'csv' : 'txt';
+        const blob = new Blob([content], { type: `${mimeType};charset=utf-8` });
+        const url = URL.createObjectURL(blob);
+        const anchor = document.createElement('a');
+        anchor.href = url;
+        anchor.download = `ActivityReport_${toActivityDateKey(selectedReportDate)}.${extension}`;
+        document.body.appendChild(anchor);
+        anchor.click();
+        document.body.removeChild(anchor);
+        URL.revokeObjectURL(url);
+        toast.success(`Exported ${extension.toUpperCase()} activity report.`);
+      } catch (error) {
+        console.error('Failed to export activity report', error);
+        toast.error('Unable to export the activity report.');
+      }
+    },
+    [selectedActivityReport, selectedReportDate]
+  );
+
+  const freshnessLabel = useMemo(() => {
+    if (!freshness.lastUpdatedAt) return 'Never updated';
+    if (freshness.minutesAgo === 0) return 'Just now';
+    if (freshness.minutesAgo === 1) return '1 minute ago';
+    if (freshness.minutesAgo && freshness.minutesAgo < 60)
+      return `${freshness.minutesAgo} minutes ago`;
+    const hoursAgo = Math.floor((freshness.minutesAgo || 0) / 60);
+    if (hoursAgo === 1) return '1 hour ago';
+    return `${hoursAgo} hours ago`;
+  }, [freshness]);
+
+  const items = timeline || [];
+
+  return (
+    <Card>
+      <CardHeader className="pb-3">
+        <CardTitle>Activity</CardTitle>
+        <CardDescription>Recent timeline and daily reports</CardDescription>
+      </CardHeader>
+      <CardContent>
+        <Tabs defaultValue="timeline" className="w-full">
+          <TabsList className="grid w-full grid-cols-2 mb-4">
+            <TabsTrigger value="timeline">Timeline</TabsTrigger>
+            <TabsTrigger value="export">Export</TabsTrigger>
+          </TabsList>
+
+          {/* Timeline Tab */}
+          <TabsContent value="timeline" className="space-y-3">
+            {loading && !timeline ? (
+              <div className="space-y-3">
+                {Array.from({ length: 4 }).map((_, i) => (
+                  <div key={i} className="h-12 bg-muted rounded" />
+                ))}
+              </div>
+            ) : items.length > 0 ? (
+              <>
+                <div className="flex items-center justify-between mb-2">
+                  <p className="text-sm text-muted-foreground">Last 7 days</p>
+                  <Badge variant="outline" className="text-xs">
+                    {items.length} recent
+                  </Badge>
+                </div>
+                <ScrollArea className="h-64 pr-4">
+                  <div className="space-y-2">
+                    {items.map((item) => {
+                      const Icon = item.icon;
+                      return (
+                        <div
+                          key={item.id}
+                          className="flex gap-3 pb-2 border-b border-border/50 last:border-0"
+                        >
+                          <div className="flex-shrink-0 mt-0.5">
+                            <Icon className="h-4 w-4 text-muted-foreground" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-start justify-between gap-2">
+                              <p className="text-sm font-medium truncate">{item.title}</p>
+                              <Badge
+                                variant="secondary"
+                                className={`text-xs flex-shrink-0 ${item.badgeColor}`}
+                              >
+                                {item.badgeText}
+                              </Badge>
+                            </div>
+                            <p className="text-xs text-muted-foreground">{item.relativeTime}</p>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </ScrollArea>
+                <div className="text-xs text-muted-foreground text-center pt-2 border-t">
+                  Last checked: {freshnessLabel}
+                </div>
+              </>
+            ) : (
+              <div className="text-center py-8">
+                <Clock className="h-8 w-8 text-muted-foreground mx-auto mb-2 opacity-50" />
+                <p className="text-sm text-muted-foreground">No recent activity in the last 7 days</p>
+              </div>
+            )}
+          </TabsContent>
+
+          {/* Export Tab */}
+          <TabsContent value="export" className="space-y-4">
+            <div className="flex flex-col gap-3 rounded-lg border bg-muted/30 p-3">
+              <CalendarPicker
+                date={selectedReportDate}
+                onDateChange={handleSelectReportDate}
+                label="Report date"
+                placeholder="Select date"
+                formatString="P"
+                className="w-full"
+                buttonClassName="bg-background"
+              />
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleRefreshActivityLog}
+                  disabled={activityLogLoading}
+                  className="flex-1"
+                >
+                  {activityLogLoading ? (
+                    <>
+                      <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                      Refreshing
+                    </>
+                  ) : (
+                    <>
+                      <RefreshCcw className="h-3 w-3 mr-1" />
+                      Refresh
+                    </>
+                  )}
+                </Button>
+                <AlertDialog open={clearDialogOpen} onOpenChange={setClearDialogOpen}>
+                  <AlertDialogTrigger asChild>
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      disabled={!hasSelectedActivity || activityLogLoading || isClearing}
+                      className="flex-1"
+                    >
+                      <Trash2 className="h-3 w-3 mr-1" />
+                      Clear
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Clear activity log for {selectedDateLabel}?</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        This will permanently remove all {selectedActivityReport?.totals.total ?? 0}{' '}
+                        entries recorded on {selectedDateLabel}. This action cannot be undone.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel disabled={isClearing}>Cancel</AlertDialogCancel>
+                      <AlertDialogAction
+                        className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                        onClick={handleClearSelectedReport}
+                      >
+                        {isClearing ? (
+                          <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            Clearing...
+                          </>
+                        ) : (
+                          'Clear entries'
+                        )}
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              </div>
+            </div>
+
+            {activityLogError && (
+              <p className="text-xs text-destructive">Error: {activityLogError}</p>
+            )}
+
+            {activityLogLoading ? (
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Loading...
+              </div>
+            ) : (
+              <div className="space-y-3">
+                <div className="grid grid-cols-3 gap-2">
+                  <div className="rounded border bg-muted/40 p-2 text-center">
+                    <div className="text-xs text-muted-foreground">Total</div>
+                    <div className="text-lg font-semibold">
+                      {selectedActivityReport.totals.total}
+                    </div>
+                  </div>
+                  <div className="rounded border bg-muted/40 p-2 text-center">
+                    <div className="text-xs text-muted-foreground">Status</div>
+                    <div className="text-lg font-semibold">
+                      {selectedActivityReport.totals.statusChanges}
+                    </div>
+                  </div>
+                  <div className="rounded border bg-muted/40 p-2 text-center">
+                    <div className="text-xs text-muted-foreground">Notes</div>
+                    <div className="text-lg font-semibold">
+                      {selectedActivityReport.totals.notesAdded}
+                    </div>
+                  </div>
+                </div>
+
+                {hasSelectedActivity && topCasesForSelectedDate.length > 0 && (
+                  <div>
+                    <h5 className="text-xs font-medium text-muted-foreground mb-2">Top cases</h5>
+                    <ul className="space-y-1 text-sm">
+                      {topCasesForSelectedDate.slice(0, 3).map((caseSummary) => {
+                        const total = caseSummary.statusChanges + caseSummary.notesAdded;
+                        return (
+                          <li
+                            key={caseSummary.caseId}
+                            className="flex justify-between rounded border bg-background/80 px-2 py-1.5"
+                          >
+                            <span className="font-medium truncate">{caseSummary.caseName}</span>
+                            <span className="text-xs text-muted-foreground flex-shrink-0">
+                              {total} · {caseSummary.statusChanges}s · {caseSummary.notesAdded}n
+                            </span>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  </div>
+                )}
+
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleExportActivityReport('json')}
+                    disabled={activityLogLoading || !hasSelectedActivity}
+                    className="flex-1"
+                  >
+                    <Download className="h-3 w-3 mr-1" />
+                    JSON
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleExportActivityReport('csv')}
+                    disabled={activityLogLoading || !hasSelectedActivity}
+                    className="flex-1"
+                  >
+                    <Download className="h-3 w-3 mr-1" />
+                    CSV
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleExportActivityReport('txt')}
+                    disabled={activityLogLoading || !hasSelectedActivity}
+                    className="flex-1"
+                  >
+                    <Download className="h-3 w-3 mr-1" />
+                    TXT
+                  </Button>
+                </div>
+              </div>
+            )}
+          </TabsContent>
+        </Tabs>
+      </CardContent>
+    </Card>
+  );
+}
+
+export default ActivityWidget;

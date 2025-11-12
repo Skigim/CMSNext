@@ -184,7 +184,7 @@ describe("Dashboard widgets integration", () => {
     await screen.findByText("Case Priority", undefined, { timeout: 10000 });
     await screen.findByText("Alerts Cleared/Day", undefined, { timeout: 10000 });
     await screen.findByText("Cases Processed/Day", undefined, { timeout: 10000 });
-    await screen.findByText("Activity Timeline", undefined, { timeout: 10000 });
+    await screen.findByText("Activity", undefined, { timeout: 10000 });
     await screen.findByText("Total Cases by Status", undefined, { timeout: 10000 });
     // Check with regex since the title might be split across elements
     await screen.findByText(/Alerts by Description/i, undefined, { timeout: 10000 });

@@ -1,5 +1,4 @@
 import { useMemo, useState } from "react";
-import type { ComponentType } from "react";
 import Fuse from "fuse.js";
 import {
   Card,
@@ -8,20 +7,23 @@ import {
   CardHeader,
   CardTitle,
 } from "../ui/card";
-import { Badge } from "../ui/badge";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 import { Label } from "../ui/label";
 import { ScrollArea } from "../ui/scroll-area";
 import {
-  AlertTriangle,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "../ui/select";
+import {
   ArrowDown,
   ArrowUp,
   ArrowUpDown,
-  BarChart3,
   BellRing,
   ChevronRight,
-  LineChart,
 } from "lucide-react";
 import {
   buildAlertStorageKey,
@@ -50,43 +52,7 @@ interface ReportingProps {
   onViewCase?: (caseId: string) => void;
 }
 
-type ReportOptionId = "alerts" | "caseload" | "outcomes";
-
-type ReportOption = {
-  id: ReportOptionId;
-  title: string;
-  description: string;
-  icon: ComponentType<{ className?: string }>;
-  status: "available" | "coming-soon";
-};
-
-const REPORT_OPTIONS: ReportOption[] = [
-  {
-    id: "alerts",
-    title: "Alerts activity",
-    description: "Track, filter, and manage every alert across your workspace.",
-    icon: BellRing,
-    status: "available",
-  },
-  {
-    id: "caseload",
-    title: "Caseload insights",
-    description: "Visualize caseload trends, assignments, and throughput.",
-    icon: LineChart,
-    status: "coming-soon",
-  },
-  {
-    id: "outcomes",
-    title: "Outcomes dashboard",
-    description: "Measure progress across key performance outcomes.",
-    icon: BarChart3,
-    status: "coming-soon",
-  },
-];
-
 export default function Reporting({ alerts, onViewCase }: ReportingProps) {
-  const [selectedReport, setSelectedReport] = useState<ReportOptionId>("alerts");
-
   return (
     <div className="space-y-6">
       <div>
@@ -96,61 +62,7 @@ export default function Reporting({ alerts, onViewCase }: ReportingProps) {
         </p>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {REPORT_OPTIONS.map((option) => {
-          const isSelected = option.id === selectedReport;
-          const isAvailable = option.status === "available";
-          const cardClasses = [
-            "h-full rounded-xl border transition",
-            isSelected ? "border-primary shadow-sm ring-2 ring-primary/20" : "border-border hover:border-primary/40 hover:bg-accent/30",
-            !isAvailable ? "cursor-not-allowed opacity-65" : "cursor-pointer",
-          ].join(" ");
-
-          return (
-            <Card key={option.id} className={cardClasses}>
-              <button
-                type="button"
-                onClick={() => {
-                  if (!isAvailable) return;
-                  setSelectedReport(option.id);
-                }}
-                disabled={!isAvailable}
-                className="flex h-full w-full flex-col text-left"
-              >
-                <CardHeader className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <option.icon className="h-5 w-5 text-primary" aria-hidden />
-                    {!isAvailable && (
-                      <Badge variant="outline" className="text-[10px] uppercase tracking-wide">
-                        Coming soon
-                      </Badge>
-                    )}
-                  </div>
-                  <CardTitle className="text-lg text-foreground">{option.title}</CardTitle>
-                  <CardDescription>{option.description}</CardDescription>
-                </CardHeader>
-              </button>
-            </Card>
-          );
-        })}
-      </div>
-
-      {selectedReport === "alerts" ? (
-        <AlertsReport alerts={alerts} onViewCase={onViewCase} />
-      ) : (
-        <Card>
-          <CardContent className="py-14 text-center text-muted-foreground">
-            <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-muted">
-              <AlertTriangle className="h-6 w-6 text-muted-foreground" />
-            </div>
-            <p className="mt-4 text-lg font-semibold text-foreground">This report is under construction</p>
-            <p className="mt-1 text-sm">
-              We&apos;re building dedicated visuals for {selectedReport === "caseload" ? "caseload insights" : "outcomes tracking"}.
-              Stay tuned!
-            </p>
-          </CardContent>
-        </Card>
-      )}
+      <AlertsReport alerts={alerts} onViewCase={onViewCase} />
     </div>
   );
 }
@@ -162,6 +74,7 @@ interface AlertsReportProps {
 
 function AlertsReport({ alerts, onViewCase }: AlertsReportProps) {
   const [searchTerm, setSearchTerm] = useState("");
+  const [selectedDescription, setSelectedDescription] = useState<string>("all");
   const [sortState, setSortState] = useState<{
     column: "description" | "client" | "due";
     direction: "asc" | "desc";
@@ -179,6 +92,18 @@ function AlertsReport({ alerts, onViewCase }: AlertsReportProps) {
     [openAlerts],
   );
   const unlinkedAlertCount = unlinkedAlerts.length;
+
+  // Get unique alert descriptions for the filter dropdown
+  const uniqueDescriptions = useMemo(() => {
+    const descriptions = new Set<string>();
+    matchedOpenAlerts.forEach(alert => {
+      const desc = getAlertDisplayDescription(alert);
+      if (desc) {
+        descriptions.add(desc);
+      }
+    });
+    return Array.from(descriptions).sort();
+  }, [matchedOpenAlerts]);
 
   const fuse = useMemo(() => {
     if (matchedOpenAlerts.length === 0) {
@@ -204,17 +129,43 @@ function AlertsReport({ alerts, onViewCase }: AlertsReportProps) {
   }, [matchedOpenAlerts]);
 
   const filteredAlerts = useMemo(() => {
+    let results = matchedOpenAlerts;
+
+    // Apply description filter
+    if (selectedDescription !== "all") {
+      results = results.filter(alert => 
+        getAlertDisplayDescription(alert) === selectedDescription
+      );
+    }
+
+    // Apply search filter
     const trimmed = searchTerm.trim();
-    if (!trimmed) {
-      return matchedOpenAlerts;
+    if (trimmed) {
+      if (!fuse) {
+        return results;
+      }
+      // Re-create fuse with filtered results
+      const descFuse = new Fuse(results, {
+        keys: [
+          "description",
+          "alertType",
+          "alertCode",
+          "program",
+          "personName",
+          "matchedCaseName",
+          "mcNumber",
+          "metadata.rawDescription",
+        ],
+        threshold: 0.35,
+        ignoreLocation: true,
+        minMatchCharLength: 2,
+        useExtendedSearch: true,
+      });
+      return descFuse.search(trimmed).map(result => result.item);
     }
 
-    if (!fuse) {
-      return matchedOpenAlerts;
-    }
-
-    return fuse.search(trimmed).map(result => result.item);
-  }, [fuse, matchedOpenAlerts, searchTerm]);
+    return results;
+  }, [fuse, matchedOpenAlerts, searchTerm, selectedDescription]);
 
   const sortedAlerts = useMemo(() => {
     const items = [...filteredAlerts];
@@ -256,7 +207,12 @@ function AlertsReport({ alerts, onViewCase }: AlertsReportProps) {
     return items;
   }, [filteredAlerts, sortState]);
 
-  const filtersActive = searchTerm.trim().length > 0;
+  const filtersActive = searchTerm.trim().length > 0 || selectedDescription !== "all";
+
+  const handleClearFilters = () => {
+    setSearchTerm("");
+    setSelectedDescription("all");
+  };
 
   const toggleSort = (column: "description" | "client" | "due") => {
     setSortState(current => {
@@ -291,8 +247,6 @@ function AlertsReport({ alerts, onViewCase }: AlertsReportProps) {
     return sortState.direction === "asc" ? "ascending" : "descending";
   };
 
-  const handleClearSearch = () => setSearchTerm("");
-
   const visibleAlerts = sortedAlerts;
 
   return (
@@ -313,7 +267,7 @@ function AlertsReport({ alerts, onViewCase }: AlertsReportProps) {
           <SummaryStat label="Unlinked" value={unlinkedAlertCount} highlight={unlinkedAlertCount > 0 ? "danger" : undefined} />
         </div>
 
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
           <div className="flex-1 space-y-1.5">
             <Label htmlFor="report-alert-search">Fuzzy search</Label>
             <Input
@@ -323,15 +277,31 @@ function AlertsReport({ alerts, onViewCase }: AlertsReportProps) {
               onChange={(event) => setSearchTerm(event.target.value)}
             />
           </div>
+          <div className="sm:w-[280px] space-y-1.5">
+            <Label htmlFor="description-filter">Alert Description</Label>
+            <Select value={selectedDescription} onValueChange={setSelectedDescription}>
+              <SelectTrigger id="description-filter">
+                <SelectValue placeholder="All descriptions" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All descriptions</SelectItem>
+                {uniqueDescriptions.map((desc) => (
+                  <SelectItem key={desc} value={desc}>
+                    {desc}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
           {filtersActive ? (
             <Button
               type="button"
               variant="ghost"
               size="sm"
-              onClick={handleClearSearch}
+              onClick={handleClearFilters}
               className="justify-start sm:w-auto"
             >
-              Clear search
+              Clear filters
             </Button>
           ) : null}
         </div>
@@ -340,7 +310,7 @@ function AlertsReport({ alerts, onViewCase }: AlertsReportProps) {
           <span>
             Showing <span className="font-medium text-foreground">{visibleAlerts.length}</span> of {matchedOpenAlertsCount} matched open alerts
           </span>
-          {filtersActive && <span>Fuzzy search active</span>}
+          {filtersActive && <span>Filters active</span>}
         </div>
 
         {visibleAlerts.length === 0 ? (

@@ -14,7 +14,6 @@ import { getAlertClientName, getAlertDisplayDescription, getAlertDueDateInfo, ge
 import { UnlinkedAlertsDialog } from "@/components/alerts/UnlinkedAlertsDialog";
 import { McnCopyControl } from "@/components/common/McnCopyControl";
 import type { CaseActivityLogState } from "../../types/activityLog";
-import { ActivityReportCard } from "./ActivityReportCard";
 import { WidgetRegistry, createLazyWidget, type RegisteredWidget } from "./widgets/WidgetRegistry";
 import { useAppStateSelector } from "@/hooks/useAppState";
 
@@ -39,9 +38,9 @@ const CasePriorityWidgetLazy = createLazyWidget(
   "CasePriorityWidget",
 );
 
-const ActivityTimelineWidgetLazy = createLazyWidget(
-  import("./widgets/ActivityTimelineWidget"),
-  "ActivityTimelineWidget",
+const ActivityWidgetLazy = createLazyWidget(
+  import("./widgets/ActivityWidget"),
+  "ActivityWidget",
 );
 
 const AlertsClearedPerDayWidgetLazy = createLazyWidget(
@@ -141,14 +140,14 @@ export function Dashboard({ cases, alerts, activityLogState, onViewAllCases, onN
       },
       {
         metadata: {
-          id: 'activity-timeline',
-          title: 'Activity Timeline',
-          description: 'Recent activity from the last 7 days',
+          id: 'activity',
+          title: 'Activity',
+          description: 'Recent timeline and daily reports',
           priority: 4,
           refreshInterval: 2 * 60 * 1000, // 2 minutes
           featureFlag: 'dashboard.widgets.activityTimeline',
         },
-        component: ActivityTimelineWidgetLazy,
+        component: ActivityWidgetLazy,
         props: { activityLogState },
       },
       {
@@ -238,7 +237,6 @@ export function Dashboard({ cases, alerts, activityLogState, onViewAllCases, onN
           </Button>
         </div>
       </div>
-      <ActivityReportCard activityLogState={activityLogState} />
 
       {/* Widget Section */}
       {widgets.length > 0 && (

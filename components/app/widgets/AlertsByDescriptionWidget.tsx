@@ -29,8 +29,10 @@ export function AlertsByDescriptionWidget({ alerts = [], metadata }: AlertsByDes
     enablePerformanceTracking: true,
   });
 
-  const stats = useMemo(() => data ?? [], [data]);
-  const totalOpenAlerts = useMemo(() => stats.reduce((acc, item) => acc + item.count, 0), [stats]);
+  const stats = useMemo(() => {
+    // Filter out items with zero count
+    return (data ?? []).filter(item => item.count > 0);
+  }, [data]);
   const uniqueDescriptions = stats.length;
 
   // Use theme chart colors from globals.css - cycle through them
@@ -140,10 +142,6 @@ export function AlertsByDescriptionWidget({ alerts = [], metadata }: AlertsByDes
           </div>
         ) : (
           <>
-            <div className="mb-4 flex items-center justify-between text-sm text-muted-foreground">
-              <span>Open alerts</span>
-              <span className="text-foreground font-medium">{totalOpenAlerts}</span>
-            </div>
             <ChartContainer
               config={chartConfig}
               className="mx-auto aspect-square max-h-[250px]"
@@ -166,24 +164,18 @@ export function AlertsByDescriptionWidget({ alerts = [], metadata }: AlertsByDes
                 />
               </PieChart>
             </ChartContainer>
-            <div className="mt-4 space-y-2">
+            <div className="mt-4 grid grid-cols-2 gap-2 text-sm">
               {stats.slice(0, 10).map((item, index) => {
                 const color = alertColorPalette[index % alertColorPalette.length];
                 return (
-                  <div key={item.description} className="flex items-center justify-between text-sm">
-                    <div className="flex items-center gap-2 flex-1 min-w-0">
-                      <div 
-                        className="h-3 w-3 rounded-sm flex-shrink-0" 
-                        style={{ backgroundColor: color }}
-                      />
-                      <span className="text-muted-foreground truncate">{item.description}</span>
-                    </div>
-                    <div className="flex items-center gap-2 flex-shrink-0">
-                      <span className="font-medium text-foreground">{item.count}</span>
-                      <span className="text-xs text-muted-foreground">
-                        ({item.openCount} open)
-                      </span>
-                    </div>
+                  <div key={item.description} className="flex items-center gap-2">
+                    <div 
+                      className="h-3 w-3 rounded-sm flex-shrink-0" 
+                      style={{ backgroundColor: color }}
+                    />
+                    <span className="text-muted-foreground truncate">
+                      {item.description}: <span className="font-medium text-foreground">{item.count}</span>
+                    </span>
                   </div>
                 );
               })}
