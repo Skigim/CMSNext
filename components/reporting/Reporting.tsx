@@ -296,7 +296,7 @@ function AlertsReport({ alerts, onViewCase }: AlertsReportProps) {
   const visibleAlerts = sortedAlerts;
 
   return (
-    <Card className="flex flex-col">
+    <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <BellRing className="h-5 w-5" />
@@ -306,7 +306,7 @@ function AlertsReport({ alerts, onViewCase }: AlertsReportProps) {
           Search across alert metadata with fuzzy matching and sort key fields to audit follow-up priorities.
         </CardDescription>
       </CardHeader>
-      <CardContent className="flex flex-col gap-6 flex-1 min-h-0">
+      <CardContent className="space-y-6">
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <SummaryStat label="Open alerts" value={totalOpenAlerts} highlight="warning" />
           <SummaryStat label="Matched & open" value={matchedOpenAlertsCount} />
@@ -348,8 +348,8 @@ function AlertsReport({ alerts, onViewCase }: AlertsReportProps) {
             <p>No alerts match the current filters.</p>
           </div>
         ) : (
-          <div className="flex-1 min-h-0 rounded-md border">
-            <ScrollArea className="h-full max-h-[480px]">
+          <div className="rounded-md border">
+            <ScrollArea className="h-[480px]">
               <Table>
                 <TableHeader>
                   <TableRow>
