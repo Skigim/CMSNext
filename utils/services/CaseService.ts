@@ -362,6 +362,7 @@ export class CaseService {
   /**
    * Import multiple cases at once
    * Pattern: read → modify → write (single operation)
+   * Strategy: Preserve existing cases; skip incoming duplicates by ID
    */
   async importCases(cases: CaseDisplay[]): Promise<void> {
     // Read current data
@@ -370,15 +371,32 @@ export class CaseService {
       throw new Error('Failed to read current data');
     }
 
-    // Validate and ensure unique IDs
-    const casesToImport = cases.map(caseItem => ({
-      ...caseItem,
-      id: caseItem.id || uuidv4(),
-      caseRecord: {
-        ...caseItem.caseRecord,
-        updatedDate: new Date().toISOString(),
-      },
-    }));
+    // Build set of existing case IDs to detect duplicates
+    const existingIds = new Set(currentData.cases.map(c => c.id));
+
+    // Validate, ensure unique IDs, and filter out duplicates
+    const casesToImport = cases
+      .map(caseItem => ({
+        ...caseItem,
+        id: caseItem.id || uuidv4(),
+        caseRecord: {
+          ...caseItem.caseRecord,
+          updatedDate: new Date().toISOString(),
+        },
+      }))
+      .filter(caseItem => {
+        if (existingIds.has(caseItem.id)) {
+          console.warn(`Skipping import: case with ID ${caseItem.id} already exists`);
+          return false;
+        }
+        return true;
+      });
+
+    // Only proceed if there are new cases to import
+    if (casesToImport.length === 0) {
+      console.info('No new cases to import (all IDs already exist)');
+      return;
+    }
 
     const touchedCaseIds = casesToImport.map(caseItem => caseItem.id);
 
