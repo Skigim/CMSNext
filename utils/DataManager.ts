@@ -36,6 +36,7 @@ import { ActivityLogService } from "./services/ActivityLogService";
 import { CategoryConfigService } from "./services/CategoryConfigService";
 import { NotesService } from "./services/NotesService";
 import { FinancialsService } from "./services/FinancialsService";
+import { CaseService } from "./services/CaseService";
 
 // ============================================================================
 // Configuration & Logging
@@ -47,27 +48,6 @@ interface DataManagerConfig {
 }
 
 const logger = createLogger('DataManager');
-
-// ============================================================================
-// Utility Functions
-// ============================================================================
-
-function formatCaseDisplayName(caseData: CaseDisplay): string {
-  const trimmedName = (caseData.name ?? "").trim();
-  if (trimmedName.length > 0) {
-    return trimmedName;
-  }
-
-  const firstName = caseData.person?.firstName?.trim() ?? "";
-  const lastName = caseData.person?.lastName?.trim() ?? "";
-  const composed = `${firstName} ${lastName}`.trim();
-
-  if (composed.length > 0) {
-    return composed;
-  }
-
-  return "Unknown Case";
-}
 
 // ============================================================================
 // Type Definitions
@@ -212,6 +192,7 @@ export class DataManager {
   private categoryConfig: CategoryConfigService;
   private notes: NotesService;
   private financials: FinancialsService;
+  private cases: CaseService;
   private static readonly ERROR_SOURCE = "DataManager";
   private static readonly ALERTS_FILE_NAME = "alerts.csv";
   private static readonly ALERTS_JSON_NAME = "alerts.json";
@@ -251,6 +232,9 @@ export class DataManager {
       fileStorage: this.fileStorage,
     });
     this.financials = new FinancialsService({
+      fileStorage: this.fileStorage,
+    });
+    this.cases = new CaseService({
       fileStorage: this.fileStorage,
     });
   }
@@ -1141,31 +1125,16 @@ export class DataManager {
     return this.fileStorage.readFileData();
   }
 
-  /**
-   * Write data to file system
-   * Delegates to FileStorageService
-   */
-  private async writeFileData(data: FileData): Promise<FileData> {
-    return this.fileStorage.writeFileData(data);
-  }
-
-  /**
-   * Update case timestamps for modified cases
-   */
-  private touchCaseTimestamps(cases: CaseDisplay[], touchedCaseIds?: Iterable<string>): CaseDisplay[] {
-    return this.fileStorage.touchCaseTimestamps(cases, touchedCaseIds);
-  }
-
   // =============================================================================
   // PUBLIC API - READ OPERATIONS
   // =============================================================================
 
   /**
    * Get all cases (always reads fresh from file)
+   * Delegates to CaseService
    */
   async getAllCases(): Promise<CaseDisplay[]> {
-    const data = await this.readFileData();
-    return data ? data.cases : [];
+    return this.cases.getAllCases();
   }
 
   async getActivityLog(): Promise<CaseActivityEntry[]> {
@@ -1178,21 +1147,18 @@ export class DataManager {
 
   /**
    * Get a specific case by ID (always reads fresh from file)
+   * Delegates to CaseService
    */
   async getCaseById(caseId: string): Promise<CaseDisplay | null> {
-    const data = await this.readFileData();
-    if (!data) return null;
-    
-    const caseItem = data.cases.find(c => c.id === caseId);
-    return caseItem || null;
+    return this.cases.getCaseById(caseId);
   }
 
   /**
    * Get cases count (always reads fresh from file)
+   * Delegates to CaseService
    */
   async getCasesCount(): Promise<number> {
-    const data = await this.readFileData();
-    return data ? data.cases.length : 0;
+    return this.cases.getCasesCount();
   }
 
   // ==========================================================================
@@ -1655,270 +1621,34 @@ export class DataManager {
 
   /**
    * Create a new complete case
-   * Pattern: read → modify → write
+   * Delegates to CaseService
    */
   async createCompleteCase(caseData: { person: NewPersonData; caseRecord: NewCaseRecordData }): Promise<CaseDisplay> {
-    // Read current data
-    const currentData = await this.readFileData();
-    if (!currentData) {
-      throw new Error('Failed to read current data');
-    }
-
-    // Create new case
-    const newCase: CaseDisplay = {
-      id: uuidv4(),
-      name: `${caseData.person.firstName} ${caseData.person.lastName}`.trim(),
-      mcn: caseData.caseRecord.mcn,
-      status: caseData.caseRecord.status,
-      priority: Boolean(caseData.caseRecord.priority),
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      person: {
-        id: uuidv4(),
-        firstName: caseData.person.firstName,
-        lastName: caseData.person.lastName,
-        name: `${caseData.person.firstName} ${caseData.person.lastName}`.trim(),
-        dateOfBirth: caseData.person.dateOfBirth || '',
-        ssn: caseData.person.ssn || '',
-        phone: caseData.person.phone || '',
-        email: caseData.person.email || '',
-        organizationId: caseData.person.organizationId || null,
-        livingArrangement: caseData.person.livingArrangement || '',
-        address: caseData.person.address || {
-          street: '',
-          city: '',
-          state: '',
-          zip: ''
-        },
-        mailingAddress: caseData.person.mailingAddress || {
-          street: '',
-          city: '',
-          state: '',
-          zip: '',
-          sameAsPhysical: true
-        },
-        authorizedRepIds: caseData.person.authorizedRepIds || [],
-        familyMembers: caseData.person.familyMembers || [],
-        status: caseData.person.status || 'Active',
-        dateAdded: new Date().toISOString(),
-        createdAt: new Date().toISOString()
-      },
-      caseRecord: {
-        id: uuidv4(),
-        personId: '', // Will be set below
-        mcn: caseData.caseRecord.mcn,
-        applicationDate: caseData.caseRecord.applicationDate || new Date().toISOString(),
-        caseType: caseData.caseRecord.caseType || 'General',
-        spouseId: caseData.caseRecord.spouseId || '',
-        status: caseData.caseRecord.status,
-        description: caseData.caseRecord.description || '',
-        priority: Boolean(caseData.caseRecord.priority),
-        livingArrangement: caseData.caseRecord.livingArrangement || '',
-        withWaiver: Boolean(caseData.caseRecord.withWaiver),
-        admissionDate: caseData.caseRecord.admissionDate || new Date().toISOString(),
-        organizationId: caseData.caseRecord.organizationId || '',
-        authorizedReps: caseData.caseRecord.authorizedReps || [],
-        retroRequested: caseData.caseRecord.retroRequested || '',
-        financials: {
-          resources: [],
-          income: [],
-          expenses: []
-        },
-        notes: [],
-        createdDate: new Date().toISOString(),
-        updatedDate: new Date().toISOString()
-      }
-    };
-
-    // Set the person ID reference
-    newCase.caseRecord.personId = newCase.person.id;
-
-    // Modify data
-    const casesWithNewCase = [...currentData.cases, newCase];
-    const casesWithTouchedTimestamps = this.touchCaseTimestamps(casesWithNewCase, [newCase.id]);
-
-    const updatedData: FileData = {
-      ...currentData,
-      cases: casesWithTouchedTimestamps,
-    };
-
-    // Write back to file
-    await this.writeFileData(updatedData);
-
-    return casesWithTouchedTimestamps.find(c => c.id === newCase.id) ?? newCase;
+    return this.cases.createCompleteCase(caseData);
   }
 
   /**
    * Update an existing complete case
-   * Pattern: read → modify → write
+   * Delegates to CaseService
    */
   async updateCompleteCase(caseId: string, caseData: { person: NewPersonData; caseRecord: NewCaseRecordData }): Promise<CaseDisplay> {
-    // Read current data
-    const currentData = await this.readFileData();
-    if (!currentData) {
-      throw new Error('Failed to read current data');
-    }
-
-    // Find case to update
-    const caseIndex = currentData.cases.findIndex(c => c.id === caseId);
-    if (caseIndex === -1) {
-      throw new Error('Case not found');
-    }
-
-    const existingCase = currentData.cases[caseIndex];
-
-    // Update person data
-    const updatedPerson = {
-      ...existingCase.person,
-      firstName: caseData.person.firstName,
-      lastName: caseData.person.lastName,
-      name: `${caseData.person.firstName} ${caseData.person.lastName}`.trim(),
-      dateOfBirth: caseData.person.dateOfBirth || '',
-      ssn: caseData.person.ssn || '',
-      phone: caseData.person.phone || '',
-      email: caseData.person.email || '',
-      organizationId: caseData.person.organizationId || null,
-      livingArrangement: caseData.person.livingArrangement || '',
-      address: caseData.person.address || existingCase.person.address,
-      mailingAddress: caseData.person.mailingAddress || existingCase.person.mailingAddress,
-      authorizedRepIds: caseData.person.authorizedRepIds || [],
-      familyMembers: caseData.person.familyMembers || [],
-      status: caseData.person.status || 'Active'
-    };
-
-    // Update case record data
-    const updatedCaseRecord = {
-      ...existingCase.caseRecord,
-      mcn: caseData.caseRecord.mcn,
-      applicationDate: caseData.caseRecord.applicationDate || existingCase.caseRecord.applicationDate,
-      caseType: caseData.caseRecord.caseType || existingCase.caseRecord.caseType,
-      spouseId: caseData.caseRecord.spouseId || '',
-      status: caseData.caseRecord.status,
-      description: caseData.caseRecord.description || '',
-      priority: Boolean(caseData.caseRecord.priority),
-      livingArrangement: caseData.caseRecord.livingArrangement || '',
-      withWaiver: Boolean(caseData.caseRecord.withWaiver),
-      admissionDate: caseData.caseRecord.admissionDate || existingCase.caseRecord.admissionDate,
-      organizationId: caseData.caseRecord.organizationId || '',
-      authorizedReps: caseData.caseRecord.authorizedReps || [],
-      retroRequested: caseData.caseRecord.retroRequested || '',
-      // Preserve existing financials and notes
-      financials: existingCase.caseRecord.financials,
-      notes: existingCase.caseRecord.notes,
-      updatedDate: new Date().toISOString()
-    };
-
-    const caseWithChanges: CaseDisplay = {
-      ...existingCase,
-      name: updatedPerson.name,
-      mcn: updatedCaseRecord.mcn,
-      status: updatedCaseRecord.status,
-      priority: updatedCaseRecord.priority,
-      person: updatedPerson,
-      caseRecord: updatedCaseRecord,
-    };
-
-    const casesWithChanges = currentData.cases.map((c, index) =>
-      index === caseIndex ? caseWithChanges : c,
-    );
-
-    const casesWithTouchedTimestamps = this.touchCaseTimestamps(casesWithChanges, [caseId]);
-
-    // Modify data
-    const updatedData: FileData = {
-      ...currentData,
-      cases: casesWithTouchedTimestamps,
-    };
-
-    // Write back to file
-    await this.writeFileData(updatedData);
-
-    return casesWithTouchedTimestamps[caseIndex];
+    return this.cases.updateCompleteCase(caseId, caseData);
   }
 
+  /**
+   * Update case status
+   * Delegates to CaseService
+   */
   async updateCaseStatus(caseId: string, status: CaseDisplay["status"]): Promise<CaseDisplay> {
-    const currentData = await this.readFileData();
-    if (!currentData) {
-      throw new Error("Failed to read current data");
-    }
-
-    const caseIndex = currentData.cases.findIndex(c => c.id === caseId);
-    if (caseIndex === -1) {
-      throw new Error("Case not found");
-    }
-
-    const targetCase = currentData.cases[caseIndex];
-
-    const currentStatus = targetCase.caseRecord?.status ?? targetCase.status;
-    if (currentStatus === status) {
-      return targetCase;
-    }
-
-    const caseWithUpdatedStatus: CaseDisplay = {
-      ...targetCase,
-      status,
-      caseRecord: {
-        ...targetCase.caseRecord,
-        status,
-        updatedDate: new Date().toISOString(),
-      },
-    };
-
-    const casesWithChanges = currentData.cases.map((c, index) =>
-      index === caseIndex ? caseWithUpdatedStatus : c,
-    );
-
-    const casesWithTouchedTimestamps = this.touchCaseTimestamps(casesWithChanges, [caseId]);
-
-    const activityEntry: CaseActivityEntry = {
-      id: uuidv4(),
-      timestamp: new Date().toISOString(),
-      caseId: targetCase.id,
-      caseName: formatCaseDisplayName(targetCase),
-      caseMcn: targetCase.caseRecord?.mcn ?? targetCase.mcn ?? null,
-      type: "status-change",
-      payload: {
-        fromStatus: targetCase.caseRecord?.status ?? targetCase.status,
-        toStatus: status,
-      },
-    };
-
-    const updatedData: FileData = {
-      ...currentData,
-      cases: casesWithTouchedTimestamps,
-      activityLog: ActivityLogService.mergeActivityEntries(currentData.activityLog, [activityEntry]),
-    };
-
-    await this.writeFileData(updatedData);
-
-    return casesWithTouchedTimestamps[caseIndex];
+    return this.cases.updateCaseStatus(caseId, status);
   }
 
   /**
    * Delete a case
-   * Pattern: read → modify → write
+   * Delegates to CaseService
    */
   async deleteCase(caseId: string): Promise<void> {
-    // Read current data
-    const currentData = await this.readFileData();
-    if (!currentData) {
-      throw new Error('Failed to read current data');
-    }
-
-    // Check if case exists
-    const caseExists = currentData.cases.some(c => c.id === caseId);
-    if (!caseExists) {
-      throw new Error('Case not found');
-    }
-
-    // Modify data (remove case)
-    const updatedData: FileData = {
-      ...currentData,
-      cases: currentData.cases.filter(c => c.id !== caseId)
-    };
-
-    // Write back to file
-    await this.writeFileData(updatedData);
+    return this.cases.deleteCase(caseId);
   }
 
   // =============================================================================
@@ -1988,43 +1718,15 @@ export class DataManager {
 
   /**
    * Import multiple cases at once
-   * Pattern: read → modify → write (single operation)
+   * Delegates to CaseService
    */
   async importCases(cases: CaseDisplay[]): Promise<void> {
-    // Read current data
-    const currentData = await this.readFileData();
-    if (!currentData) {
-      throw new Error('Failed to read current data');
-    }
-
-    // Validate and ensure unique IDs
-    const casesToImport = cases.map(caseItem => ({
-      ...caseItem,
-      id: caseItem.id || uuidv4(),
-      caseRecord: {
-        ...caseItem.caseRecord,
-        updatedDate: new Date().toISOString(),
-      },
-    }));
-
-    const touchedCaseIds = casesToImport.map(caseItem => caseItem.id);
-
-    const combinedCases = [...currentData.cases, ...casesToImport];
-    const casesWithTouchedTimestamps = this.touchCaseTimestamps(combinedCases, touchedCaseIds);
-
-    // Modify data (append new cases)
-    const updatedData: FileData = {
-      ...currentData,
-      cases: casesWithTouchedTimestamps,
-    };
-
-    // Write back to file
-    await this.writeFileData(updatedData);
+    return this.cases.importCases(cases);
   }
 
   /**
    * Clear all data
-   * Pattern: write empty structure
+   * Delegates to CaseService
    */
   async clearAllData(): Promise<void> {
     let categoryConfig = mergeCategoryConfig();
@@ -2039,15 +1741,7 @@ export class DataManager {
       });
     }
 
-    const emptyData: FileData = {
-      cases: [],
-      exported_at: new Date().toISOString(),
-      total_cases: 0,
-      categoryConfig,
-      activityLog: [],
-    };
-
-    await this.writeFileData(emptyData);
+    return this.cases.clearAllData(categoryConfig);
   }
 
   // =============================================================================
