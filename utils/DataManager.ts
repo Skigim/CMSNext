@@ -1125,21 +1125,6 @@ export class DataManager {
     return this.fileStorage.readFileData();
   }
 
-  /**
-   * Write data to file system
-   * Delegates to FileStorageService
-   */
-  private async writeFileData(data: FileData): Promise<FileData> {
-    return this.fileStorage.writeFileData(data);
-  }
-
-  /**
-   * Update case timestamps for modified cases
-   */
-  private touchCaseTimestamps(cases: CaseDisplay[], touchedCaseIds?: Iterable<string>): CaseDisplay[] {
-    return this.fileStorage.touchCaseTimestamps(cases, touchedCaseIds);
-  }
-
   // =============================================================================
   // PUBLIC API - READ OPERATIONS
   // =============================================================================
