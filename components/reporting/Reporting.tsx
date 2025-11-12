@@ -1,5 +1,4 @@
 import { useMemo, useState } from "react";
-import type { ComponentType } from "react";
 import Fuse from "fuse.js";
 import {
   Card,
@@ -8,20 +7,16 @@ import {
   CardHeader,
   CardTitle,
 } from "../ui/card";
-import { Badge } from "../ui/badge";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 import { Label } from "../ui/label";
 import { ScrollArea } from "../ui/scroll-area";
 import {
-  AlertTriangle,
   ArrowDown,
   ArrowUp,
   ArrowUpDown,
-  BarChart3,
   BellRing,
   ChevronRight,
-  LineChart,
 } from "lucide-react";
 import {
   buildAlertStorageKey,
@@ -50,43 +45,7 @@ interface ReportingProps {
   onViewCase?: (caseId: string) => void;
 }
 
-type ReportOptionId = "alerts" | "caseload" | "outcomes";
-
-type ReportOption = {
-  id: ReportOptionId;
-  title: string;
-  description: string;
-  icon: ComponentType<{ className?: string }>;
-  status: "available" | "coming-soon";
-};
-
-const REPORT_OPTIONS: ReportOption[] = [
-  {
-    id: "alerts",
-    title: "Alerts activity",
-    description: "Track, filter, and manage every alert across your workspace.",
-    icon: BellRing,
-    status: "available",
-  },
-  {
-    id: "caseload",
-    title: "Caseload insights",
-    description: "Visualize caseload trends, assignments, and throughput.",
-    icon: LineChart,
-    status: "coming-soon",
-  },
-  {
-    id: "outcomes",
-    title: "Outcomes dashboard",
-    description: "Measure progress across key performance outcomes.",
-    icon: BarChart3,
-    status: "coming-soon",
-  },
-];
-
 export default function Reporting({ alerts, onViewCase }: ReportingProps) {
-  const [selectedReport, setSelectedReport] = useState<ReportOptionId>("alerts");
-
   return (
     <div className="space-y-6">
       <div>
@@ -96,61 +55,7 @@ export default function Reporting({ alerts, onViewCase }: ReportingProps) {
         </p>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {REPORT_OPTIONS.map((option) => {
-          const isSelected = option.id === selectedReport;
-          const isAvailable = option.status === "available";
-          const cardClasses = [
-            "h-full rounded-xl border transition",
-            isSelected ? "border-primary shadow-sm ring-2 ring-primary/20" : "border-border hover:border-primary/40 hover:bg-accent/30",
-            !isAvailable ? "cursor-not-allowed opacity-65" : "cursor-pointer",
-          ].join(" ");
-
-          return (
-            <Card key={option.id} className={cardClasses}>
-              <button
-                type="button"
-                onClick={() => {
-                  if (!isAvailable) return;
-                  setSelectedReport(option.id);
-                }}
-                disabled={!isAvailable}
-                className="flex h-full w-full flex-col text-left"
-              >
-                <CardHeader className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <option.icon className="h-5 w-5 text-primary" aria-hidden />
-                    {!isAvailable && (
-                      <Badge variant="outline" className="text-[10px] uppercase tracking-wide">
-                        Coming soon
-                      </Badge>
-                    )}
-                  </div>
-                  <CardTitle className="text-lg text-foreground">{option.title}</CardTitle>
-                  <CardDescription>{option.description}</CardDescription>
-                </CardHeader>
-              </button>
-            </Card>
-          );
-        })}
-      </div>
-
-      {selectedReport === "alerts" ? (
-        <AlertsReport alerts={alerts} onViewCase={onViewCase} />
-      ) : (
-        <Card>
-          <CardContent className="py-14 text-center text-muted-foreground">
-            <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-muted">
-              <AlertTriangle className="h-6 w-6 text-muted-foreground" />
-            </div>
-            <p className="mt-4 text-lg font-semibold text-foreground">This report is under construction</p>
-            <p className="mt-1 text-sm">
-              We&apos;re building dedicated visuals for {selectedReport === "caseload" ? "caseload insights" : "outcomes tracking"}.
-              Stay tuned!
-            </p>
-          </CardContent>
-        </Card>
-      )}
+      <AlertsReport alerts={alerts} onViewCase={onViewCase} />
     </div>
   );
 }
