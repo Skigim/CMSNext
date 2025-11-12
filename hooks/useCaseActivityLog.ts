@@ -32,7 +32,7 @@ export function useCaseActivityLog(): UseCaseActivityLogResult {
   const refreshActivityLog = useCallback(async () => {
     if (!dataManager) {
       setActivityLog([]);
-      setError("Data storage is not connected.");
+      setError(null); // Clear error when not connected (it's expected)
       return;
     }
 
@@ -43,7 +43,12 @@ export function useCaseActivityLog(): UseCaseActivityLogResult {
       setError(null);
     } catch (err) {
       console.error("Failed to load activity log", err);
-      setError(err instanceof Error ? err.message : "Failed to load activity log");
+      // Only set error if it's not a permission issue (which is expected when not connected)
+      const isPermissionError = err instanceof Error && 
+        (err.message.includes('permission') || err.message.includes('requested file could not be read'));
+      if (!isPermissionError) {
+        setError(err instanceof Error ? err.message : "Failed to load activity log");
+      }
     } finally {
       setLoading(false);
     }
