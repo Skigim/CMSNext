@@ -29,7 +29,10 @@ export function AlertsByDescriptionWidget({ alerts = [], metadata }: AlertsByDes
     enablePerformanceTracking: true,
   });
 
-  const stats = useMemo(() => data ?? [], [data]);
+  const stats = useMemo(() => {
+    // Filter out items with zero count
+    return (data ?? []).filter(item => item.count > 0);
+  }, [data]);
   const totalOpenAlerts = useMemo(() => stats.reduce((acc, item) => acc + item.count, 0), [stats]);
   const uniqueDescriptions = stats.length;
 
@@ -178,12 +181,7 @@ export function AlertsByDescriptionWidget({ alerts = [], metadata }: AlertsByDes
                       />
                       <span className="text-muted-foreground truncate">{item.description}</span>
                     </div>
-                    <div className="flex items-center gap-2 flex-shrink-0">
-                      <span className="font-medium text-foreground">{item.count}</span>
-                      <span className="text-xs text-muted-foreground">
-                        ({item.openCount} open)
-                      </span>
-                    </div>
+                    <span className="font-medium text-foreground flex-shrink-0">{item.count}</span>
                   </div>
                 );
               })}
