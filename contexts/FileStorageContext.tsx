@@ -340,15 +340,22 @@ export function useFileStorage() {
   return context;
 }
 
-// Helper hook for notifying data changes
-export function useFileStorageDataChange() {
-  const { service } = useFileStorage();
+// Helper hook that returns a counter that increments when file storage data changes
+// Used to trigger re-fetching of data in dependent hooks (e.g., useCaseActivityLog)
+export function useFileStorageDataChange(): number {
+  const { registerDataLoadHandler } = useFileStorage();
+  const [changeCounter, setChangeCounter] = useState(0);
   
-  return () => {
-    if (service) {
-      service.notifyDataChange();
-    }
-  };
+  useEffect(() => {
+    // Register a handler that increments the counter whenever data is loaded
+    const unsubscribe = registerDataLoadHandler(() => {
+      setChangeCounter(prev => prev + 1);
+    });
+
+    return unsubscribe;
+  }, [registerDataLoadHandler]);
+
+  return changeCounter;
 }
 
 export function useFileStorageDataLoadHandler(handler: (data: unknown) => void) {
