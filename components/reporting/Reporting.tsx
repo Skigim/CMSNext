@@ -12,6 +12,13 @@ import { Input } from "../ui/input";
 import { Label } from "../ui/label";
 import { ScrollArea } from "../ui/scroll-area";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "../ui/select";
+import {
   ArrowDown,
   ArrowUp,
   ArrowUpDown,
@@ -67,6 +74,7 @@ interface AlertsReportProps {
 
 function AlertsReport({ alerts, onViewCase }: AlertsReportProps) {
   const [searchTerm, setSearchTerm] = useState("");
+  const [selectedDescription, setSelectedDescription] = useState<string>("all");
   const [sortState, setSortState] = useState<{
     column: "description" | "client" | "due";
     direction: "asc" | "desc";
@@ -84,6 +92,18 @@ function AlertsReport({ alerts, onViewCase }: AlertsReportProps) {
     [openAlerts],
   );
   const unlinkedAlertCount = unlinkedAlerts.length;
+
+  // Get unique alert descriptions for the filter dropdown
+  const uniqueDescriptions = useMemo(() => {
+    const descriptions = new Set<string>();
+    matchedOpenAlerts.forEach(alert => {
+      const desc = getAlertDisplayDescription(alert);
+      if (desc) {
+        descriptions.add(desc);
+      }
+    });
+    return Array.from(descriptions).sort();
+  }, [matchedOpenAlerts]);
 
   const fuse = useMemo(() => {
     if (matchedOpenAlerts.length === 0) {
@@ -109,17 +129,43 @@ function AlertsReport({ alerts, onViewCase }: AlertsReportProps) {
   }, [matchedOpenAlerts]);
 
   const filteredAlerts = useMemo(() => {
+    let results = matchedOpenAlerts;
+
+    // Apply description filter
+    if (selectedDescription !== "all") {
+      results = results.filter(alert => 
+        getAlertDisplayDescription(alert) === selectedDescription
+      );
+    }
+
+    // Apply search filter
     const trimmed = searchTerm.trim();
-    if (!trimmed) {
-      return matchedOpenAlerts;
+    if (trimmed) {
+      if (!fuse) {
+        return results;
+      }
+      // Re-create fuse with filtered results
+      const descFuse = new Fuse(results, {
+        keys: [
+          "description",
+          "alertType",
+          "alertCode",
+          "program",
+          "personName",
+          "matchedCaseName",
+          "mcNumber",
+          "metadata.rawDescription",
+        ],
+        threshold: 0.35,
+        ignoreLocation: true,
+        minMatchCharLength: 2,
+        useExtendedSearch: true,
+      });
+      return descFuse.search(trimmed).map(result => result.item);
     }
 
-    if (!fuse) {
-      return matchedOpenAlerts;
-    }
-
-    return fuse.search(trimmed).map(result => result.item);
-  }, [fuse, matchedOpenAlerts, searchTerm]);
+    return results;
+  }, [fuse, matchedOpenAlerts, searchTerm, selectedDescription]);
 
   const sortedAlerts = useMemo(() => {
     const items = [...filteredAlerts];
@@ -161,7 +207,12 @@ function AlertsReport({ alerts, onViewCase }: AlertsReportProps) {
     return items;
   }, [filteredAlerts, sortState]);
 
-  const filtersActive = searchTerm.trim().length > 0;
+  const filtersActive = searchTerm.trim().length > 0 || selectedDescription !== "all";
+
+  const handleClearFilters = () => {
+    setSearchTerm("");
+    setSelectedDescription("all");
+  };
 
   const toggleSort = (column: "description" | "client" | "due") => {
     setSortState(current => {
@@ -196,8 +247,6 @@ function AlertsReport({ alerts, onViewCase }: AlertsReportProps) {
     return sortState.direction === "asc" ? "ascending" : "descending";
   };
 
-  const handleClearSearch = () => setSearchTerm("");
-
   const visibleAlerts = sortedAlerts;
 
   return (
@@ -218,7 +267,7 @@ function AlertsReport({ alerts, onViewCase }: AlertsReportProps) {
           <SummaryStat label="Unlinked" value={unlinkedAlertCount} highlight={unlinkedAlertCount > 0 ? "danger" : undefined} />
         </div>
 
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
           <div className="flex-1 space-y-1.5">
             <Label htmlFor="report-alert-search">Fuzzy search</Label>
             <Input
@@ -228,15 +277,31 @@ function AlertsReport({ alerts, onViewCase }: AlertsReportProps) {
               onChange={(event) => setSearchTerm(event.target.value)}
             />
           </div>
+          <div className="sm:w-[280px] space-y-1.5">
+            <Label htmlFor="description-filter">Alert Description</Label>
+            <Select value={selectedDescription} onValueChange={setSelectedDescription}>
+              <SelectTrigger id="description-filter">
+                <SelectValue placeholder="All descriptions" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All descriptions</SelectItem>
+                {uniqueDescriptions.map((desc) => (
+                  <SelectItem key={desc} value={desc}>
+                    {desc}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
           {filtersActive ? (
             <Button
               type="button"
               variant="ghost"
               size="sm"
-              onClick={handleClearSearch}
+              onClick={handleClearFilters}
               className="justify-start sm:w-auto"
             >
-              Clear search
+              Clear filters
             </Button>
           ) : null}
         </div>
@@ -245,7 +310,7 @@ function AlertsReport({ alerts, onViewCase }: AlertsReportProps) {
           <span>
             Showing <span className="font-medium text-foreground">{visibleAlerts.length}</span> of {matchedOpenAlertsCount} matched open alerts
           </span>
-          {filtersActive && <span>Fuzzy search active</span>}
+          {filtersActive && <span>Filters active</span>}
         </div>
 
         {visibleAlerts.length === 0 ? (
