@@ -7,7 +7,8 @@ import { Badge } from "@/components/ui/badge";
 import { CalendarPicker } from "@/components/ui/calendar-picker";
 import { Filter, X } from "lucide-react";
 import type { CaseFilters as CaseFiltersType } from "@/hooks/useCaseListPreferences";
-import { CASE_STATUS_VALUES, type CaseStatus } from "@/types/case";
+import type { CaseStatus } from "@/types/case";
+import { useCategoryConfig } from "@/contexts/CategoryConfigContext";
 import { format } from "date-fns";
 
 interface CaseFiltersProps {
@@ -16,6 +17,10 @@ interface CaseFiltersProps {
 }
 
 export function CaseFilters({ filters, onFiltersChange }: CaseFiltersProps) {
+  const { config } = useCategoryConfig();
+  
+  const statusOptions = useMemo(() => config.caseStatus || [], [config.caseStatus]);
+  
   const activeFilterCount = useMemo(() => {
     let count = 0;
     if (filters.statuses.length > 0) count++;
@@ -81,12 +86,12 @@ export function CaseFilters({ filters, onFiltersChange }: CaseFiltersProps) {
               <div>
                 <Label className="text-sm font-medium mb-2 block">Status</Label>
                 <div className="space-y-2">
-                  {CASE_STATUS_VALUES.map(status => (
+                  {statusOptions.map(status => (
                     <div key={status} className="flex items-center space-x-2">
                       <Checkbox
                         id={`status-${status}`}
-                        checked={filters.statuses.includes(status)}
-                        onCheckedChange={() => handleStatusToggle(status)}
+                        checked={filters.statuses.includes(status as CaseStatus)}
+                        onCheckedChange={() => handleStatusToggle(status as CaseStatus)}
                       />
                       <label
                         htmlFor={`status-${status}`}
