@@ -1226,6 +1226,257 @@ describe("Alerts Performance", () => {
 
 ---
 
+## Implementation Clarifications
+
+### Q1: Debug Logging Without DataManager Context
+
+**Question**: CSV parser used `this.isDebugEnvironment()` from DataManager. How to handle debug logging in extracted code?
+
+**DECISION**: Use logger singleton pattern (existing in codebase)
+
+```typescript
+// utils/alerts/alertsCsvParser.ts
+import { createLogger } from "../logger";
+
+const logger = createLogger("AlertsCsvParser");
+
+export function parseAlertsFromCsv(
+  csvContent: string,
+  cases: CaseDisplay[]
+): AlertsIndex {
+  const stacked = parseStackedAlerts(csvContent, cases);
+  const stackedUnique = countUniqueAlertKeys(stacked.alerts);
+
+  // Use logger.debug instead of isDebugEnvironment check
+  logger.debug("Alert parser metrics", {
+    metrics: {
+      stacked: {
+        total: stacked.alerts.length,
+        unique: stackedUnique,
+        uniqueRatio:
+          stacked.alerts.length > 0
+            ? Number((stackedUnique / stacked.alerts.length).toFixed(4))
+            : 0,
+      },
+    },
+  });
+
+  return stacked;
+}
+```
+
+**Rationale**:
+
+- ✅ Existing pattern used by all services (FileStorageService, ActivityLogService, etc.)
+- ✅ Logger handles debug mode detection internally
+- ✅ No dependency on DataManager
+- ✅ Consistent with codebase conventions
+
+**Example from existing code**:
+
+```typescript
+// FileStorageService.ts line 11
+const logger = createLogger("FileStorageService");
+
+// ActivityLogService.ts line 6
+const logger = createLogger("ActivityLogService");
+```
+
+---
+
+### Q2: ActivityLogService Integration for Alert Status Changes
+
+**Question**: Should alert status changes create activity log entries?
+
+**DECISION**: No activity log for alert status changes (alerts are NOT case mutations)
+
+**Rationale**:
+
+- ❌ Alerts are **separate domain** from cases (stored in alerts.json, not data.json)
+- ❌ Alert status changes don't modify case data
+- ❌ ActivityLog is specifically for case lifecycle events (create, update, status change)
+- ✅ Alert workflow state is already persisted in alerts.json
+- ✅ Alert history can be reconstructed from resolvedAt timestamps
+
+**Current ActivityLog usage** (from existing code):
+
+```typescript
+// CaseService.ts - Creates activity entries for case status changes
+async updateCaseStatus(caseId: string, status: CaseDisplay["status"]): Promise<CaseDisplay> {
+  // ... update case ...
+
+  // Create activity log entry
+  const activityEntry: CaseActivityEntry = {
+    id: uuidv4(),
+    caseId,
+    caseName: updatedCase.name,
+    action: 'status_change',
+    timestamp: now,
+    details: {
+      previousStatus: targetCase.status,
+      newStatus: status,
+    },
+  };
+
+  currentData.activityLog.push(activityEntry);
+}
+```
+
+**AlertsService does NOT create activity entries** - alert updates are logged separately in alerts.json:
+
+```typescript
+// AlertsService.updateAlertStatus
+const updatedAlert: AlertWithMatch = {
+  ...targetAlert,
+  status: nextStatus,
+  resolvedAt: nextResolvedAt,
+  resolutionNotes: updates.resolutionNotes ?? targetAlert.resolutionNotes,
+  updatedAt: new Date().toISOString(), // ← Timestamp for alert history
+};
+```
+
+**Future consideration**: If alert-to-case linkage requires activity tracking, add in Phase C (not part of this extraction).
+
+---
+
+### Q3: Testing Strategy Specificity
+
+**REVISED**: Step-by-step testing checkpoints with specific test commands
+
+#### After Step 7a: Constants & CSV Parser
+
+**Run**:
+
+```bash
+npm run test -- alertsCsvParser.test.ts
+npm run test -- storage.test.ts
+```
+
+**Verify**:
+
+- ✅ CSV parsing with valid data
+- ✅ CSV parsing with invalid/corrupt data
+- ✅ Metrics calculation (unique alerts, match ratios)
+- ✅ Constants exported correctly
+
+**Exit criteria**: All new unit tests pass (expect ~5-8 new tests)
+
+---
+
+#### After Step 7b: AlertsStorageService
+
+**Run**:
+
+```bash
+npm run test -- AlertsStorageService.test.ts
+```
+
+**Verify**:
+
+- ✅ Load/save roundtrip
+- ✅ Version migration (v1 → v2)
+- ✅ Error boundaries (corrupt JSON, missing files)
+- ✅ CSV import fallback
+- ✅ Structured error objects returned
+
+**Mock dependencies**: `AutosaveFileService` (use existing test mocks)
+
+**Exit criteria**: All AlertsStorageService tests pass (expect ~15-20 new tests)
+
+---
+
+#### After Step 7c: AlertsService
+
+**Run**:
+
+```bash
+npm run test -- AlertsService.test.ts
+```
+
+**Verify**:
+
+- ✅ Alert matching logic (MCN, metadata, fallback keys)
+- ✅ Multi-tier candidate matching (strong → fallback)
+- ✅ Workflow application
+- ✅ Status update edge cases (no match, multiple matches)
+- ✅ CSV merge deduplication
+- ✅ Empty cases array handling
+
+**Mock dependencies**: `AlertsStorageService` (mock load/save methods)
+
+**Exit criteria**: All AlertsService tests pass (expect ~20-25 new tests)
+
+---
+
+#### After Step 7d: DataManager Integration
+
+**Run**:
+
+```bash
+npm run test -- DataManager.test.ts
+npm run test  # Full test suite
+```
+
+**Verify**:
+
+- ✅ DataManager delegation methods work
+- ✅ Case fetching orchestration (optional cases param)
+- ✅ Backward compatibility maintained
+- ✅ All 315 existing tests still pass
+- ✅ No new test failures introduced
+
+**Exit criteria**: 315/315 tests passing (may increase to ~340-350 with new tests)
+
+---
+
+#### After Step 7e: Integration Testing
+
+**Run**:
+
+```bash
+npm run test -- alerts-storage-isolation.test.ts
+npm run test  # Full suite again
+npm run build  # Production build
+```
+
+**Verify**:
+
+- ✅ Cross-contamination prevention (data.json ↔ alerts.json isolation)
+- ✅ Concurrent operations (cases + alerts simultaneously)
+- ✅ Error recovery (corrupt JSON → CSV fallback)
+- ✅ Version migration end-to-end
+- ✅ Performance (<200ms for 1000 alerts)
+- ✅ Production build successful
+- ✅ Zero TypeScript errors
+- ✅ Zero ESLint errors
+
+**Manual testing**: Load app, navigate to Alerts view, verify UI works
+
+**Exit criteria**: All tests pass, build succeeds, UI functional
+
+---
+
+### Testing Commands Reference
+
+```bash
+# Run specific test file
+npm run test -- <filename>.test.ts
+
+# Run all tests
+npm run test
+
+# Run tests in watch mode (during development)
+npm run test:watch
+
+# Build for production
+npm run build
+
+# Lint check
+npm run lint
+```
+
+---
+
 ## Final Approval Checklist
 
 Before proceeding with extraction, verify:
