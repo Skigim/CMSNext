@@ -19,7 +19,7 @@ interface CaseFiltersProps {
 export function CaseFilters({ filters, onFiltersChange }: CaseFiltersProps) {
   const { config } = useCategoryConfig();
   
-  const statusOptions = useMemo(() => config.caseStatus || [], [config.caseStatus]);
+  const statusOptions = useMemo(() => config.caseStatuses || [], [config.caseStatuses]);
   
   const activeFilterCount = useMemo(() => {
     let count = 0;
@@ -86,7 +86,7 @@ export function CaseFilters({ filters, onFiltersChange }: CaseFiltersProps) {
               <div>
                 <Label className="text-sm font-medium mb-2 block">Status</Label>
                 <div className="space-y-2">
-                  {statusOptions.map(status => (
+                  {statusOptions.map((status: string) => (
                     <div key={status} className="flex items-center space-x-2">
                       <Checkbox
                         id={`status-${status}`}
