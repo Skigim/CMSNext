@@ -157,8 +157,8 @@ export class AlertsStorageService {
       const version = typeof root.version === 'number' ? root.version : 1;
       const sourceFile = typeof root.sourceFile === 'string' ? root.sourceFile : undefined;
 
-      // V2+ format: alerts with merged workflows
-      if (version >= AlertsStorageService.STORAGE_VERSION) {
+      // V2+ format: alerts with merged workflows (accept v2 and above)
+      if (version >= 2) {
         if (!Array.isArray(root.alerts)) {
           return {
             alerts: null,
@@ -180,7 +180,7 @@ export class AlertsStorageService {
         return {
           alerts: hydratedAlerts,
           legacyWorkflows: [],
-          needsMigration: false,
+          needsMigration: false, // V2+ format is current, no migration needed
           sourceFile,
         };
       }

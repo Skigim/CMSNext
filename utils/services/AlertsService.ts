@@ -14,6 +14,7 @@ import {
 import { createLogger } from '../logger';
 import type { AlertsStorageService, StoredAlertWorkflowState, AlertsStoragePayload } from './AlertsStorageService';
 import type { AlertWorkflowStatus } from '../../types/case';
+import { STORAGE_CONSTANTS } from '../constants/storage';
 
 const logger = createLogger('AlertsService');
 
@@ -28,6 +29,13 @@ interface AlertLookupCandidate {
 
 interface AlertsServiceConfig {
   alertsStorage: AlertsStorageService;
+}
+
+export interface MergeAlertsResult {
+  alerts: AlertWithMatch[];
+  added: number;
+  updated: number;
+  total: number;
 }
 
 // ============================================================================
@@ -265,29 +273,41 @@ export class AlertsService {
    * 
    * @param csvContent - Raw CSV content to merge
    * @param cases - Cases for alert matching (required)
-   * @returns Array of merged alerts
+   * @returns Merged alerts with statistics
    */
   async mergeAlertsFromCsvContent(
     csvContent: string,
-    cases: CaseDisplay[]
-  ): Promise<AlertWithMatch[]> {
+    cases: CaseDisplay[],
+    sourceFileName?: string
+  ): Promise<MergeAlertsResult> {
     const { parseAlertsFromCsv } = await import('../alerts/alertsCsvParser');
     const incomingIndex = parseAlertsFromCsv(csvContent, cases);
     const incoming = incomingIndex.alerts;
 
-    if (incoming.length === 0) {
-      logger.info('No alerts to merge from CSV');
-      return [];
-    }
-
     const loadResult = await this.alertsStorage.loadAlertsFromStore();
     let existing = loadResult.alerts ?? [];
+
+    // If no existing alerts and no incoming, nothing to do
+    if (incoming.length === 0 && existing.length === 0) {
+      logger.info('No alerts to merge from CSV and no existing alerts');
+      return { alerts: [], added: 0, updated: 0, total: 0 };
+    }
 
     // If no existing alerts, import from CSV
     if (existing.length === 0) {
       const imported = await this.alertsStorage.importAlertsFromCsv(cases);
       existing = imported.alerts;
     }
+
+    // Apply legacy workflows to incoming alerts if any
+    let incomingWithWorkflows = incoming;
+    if (loadResult.legacyWorkflows.length > 0) {
+      const applied = this.applyStoredAlertWorkflows(incoming, loadResult.legacyWorkflows);
+      incomingWithWorkflows = applied.alerts;
+    }
+
+    let added = 0;
+    let updated = 0;
 
     // Build lookup maps for efficient matching
     const strongCandidates = new Map<string, number[]>();
@@ -308,7 +328,7 @@ export class AlertsService {
     const usedIndices = new Set<number>();
     const merged: AlertWithMatch[] = [];
 
-    incoming.forEach(incomingAlert => {
+    incomingWithWorkflows.forEach(incomingAlert => {
       const candidates = this.buildAlertLookupCandidates(incomingAlert);
       const incomingStrongKeys = candidates
         .filter(c => !c.fallback)
@@ -373,7 +393,13 @@ export class AlertsService {
       // Merge or add new alert
       if (matchedExisting) {
         usedIndices.add(matchedIndex);
+        const beforeMerge = JSON.stringify(matchedExisting);
         const mergedAlert = this.mergeAlertDetails(matchedExisting, incomingAlert);
+        const afterMerge = JSON.stringify(mergedAlert);
+        
+        if (beforeMerge !== afterMerge) {
+          updated += 1;
+        }
         merged.push(mergedAlert);
       } else {
         // New alert - auto-resolve if no MCN
@@ -388,13 +414,27 @@ export class AlertsService {
         } else {
           merged.push(incomingAlert);
         }
+        added += 1;
       }
     });
 
-    // Add unmatched existing alerts
+    // Add unmatched existing alerts (auto-resolve if not already resolved)
     existing.forEach((alert, index) => {
       if (!usedIndices.has(index)) {
-        merged.push(alert);
+        if (alert.status !== 'resolved') {
+          // Auto-resolve alerts missing from latest import
+          const now = new Date().toISOString();
+          merged.push({
+            ...alert,
+            status: 'resolved',
+            resolvedAt: alert.resolvedAt || now,
+            updatedAt: now,
+          });
+          updated += 1;
+        } else {
+          // Already resolved, keep as-is
+          merged.push(alert);
+        }
       }
     });
 
@@ -403,10 +443,15 @@ export class AlertsService {
     const index = createAlertsIndexFromAlerts(rematchedAlerts);
 
     await this.saveAlertsInternal(index.alerts, index.summary, {
-      sourceFile: 'Merged from CSV',
+      sourceFile: sourceFileName ?? 'Merged from CSV',
     });
 
-    return index.alerts;
+    return {
+      alerts: index.alerts,
+      added,
+      updated,
+      total: index.alerts.length,
+    };
   }
 
   // =============================================================================
@@ -794,11 +839,18 @@ export class AlertsService {
       return incomingStatus ?? existingStatus ?? 'new';
     };
 
+    const preferredStatus = selectPreferredWorkflowStatus(existing.status, incoming.status);
+    
+    // Clear resolvedAt if preferred status is not 'resolved'
+    const resolvedAt = preferredStatus === 'resolved'
+      ? (existing.resolvedAt ?? incoming.resolvedAt)
+      : null;
+
     return {
       ...existing,
       ...incoming,
-      status: selectPreferredWorkflowStatus(existing.status, incoming.status),
-      resolvedAt: existing.resolvedAt ?? incoming.resolvedAt,
+      status: preferredStatus,
+      resolvedAt,
       resolutionNotes: existing.resolutionNotes ?? incoming.resolutionNotes,
       metadata: {
         ...incoming.metadata,
@@ -887,7 +939,7 @@ export class AlertsService {
 
     const normalizedAlerts = index.alerts;
     const payload: AlertsStoragePayload = {
-      version: 2, // Using v2 format
+      version: STORAGE_CONSTANTS.ALERTS.STORAGE_VERSION,
       generatedAt: now,
       updatedAt: now,
       summary: index.summary,

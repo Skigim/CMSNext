@@ -12,7 +12,7 @@ describe('Storage Constants', () => {
     });
 
     it('should define alerts storage version', () => {
-      expect(STORAGE_CONSTANTS.ALERTS.STORAGE_VERSION).toBe(2);
+      expect(STORAGE_CONSTANTS.ALERTS.STORAGE_VERSION).toBe(3);
     });
   });
 

@@ -265,7 +265,7 @@ describe('AlertsService', () => {
       const result = await service.mergeAlertsFromCsvContent(csvContent, cases);
 
       // Should have both existing and new alert
-      expect(result.length).toBeGreaterThan(0);
+      expect(result.alerts.length).toBeGreaterThan(0);
       expect(mockAlertsStorage.saveAlerts).toHaveBeenCalled();
     });
 
@@ -291,7 +291,7 @@ describe('AlertsService', () => {
 
       const result = await service.mergeAlertsFromCsvContent(csvContent, cases);
 
-      expect(result.length).toBeGreaterThan(0);
+      expect(result.alerts.length).toBeGreaterThan(0);
     });
   });
 

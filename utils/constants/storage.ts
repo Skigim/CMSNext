@@ -9,7 +9,7 @@ export const STORAGE_CONSTANTS = {
   ALERTS: {
     FILE_NAME: 'alerts.json',
     CSV_NAME: 'Alerts.csv',
-    STORAGE_VERSION: 2,
+    STORAGE_VERSION: 3,
   },
   DATA: {
     FILE_NAME: 'data.json',
