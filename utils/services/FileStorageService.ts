@@ -107,10 +107,17 @@ export class FileStorageService {
       // Check for normalized format (v2.0)
       if ((rawData as any).version === "2.0") {
         logger.info("Detected normalized data format (v2.0)");
-        const legacyData = this.denormalizeForRuntime(rawData as NormalizedFileData);
-        cases = legacyData.cases;
-        // Use other properties from legacyData if needed, but mainly we need cases for now
-        // Note: We'll reconstruct the full object structure at the end
+        let legacyData = this.denormalizeForRuntime(rawData as NormalizedFileData);
+        
+        const { cases: normalizedCases, changed } = this.normalizeCaseNotes(legacyData.cases);
+
+        if (changed && this.persistNormalizationFixes) {
+          legacyData = await this.writeFileData({ ...legacyData, cases: normalizedCases });
+        } else if (changed) {
+          logger.warn("Note normalization needed but persistence disabled");
+          legacyData = { ...legacyData, cases: normalizedCases };
+        }
+        return legacyData;
       } else if (rawData.cases && Array.isArray(rawData.cases)) {
         // Already in CaseDisplay array format - use directly
         cases = rawData.cases;
@@ -168,12 +175,12 @@ export class FileStorageService {
    * Write data to file system with retry logic
    * Throws error if write fails after retries
    */
-  async writeFileData(data: LegacyFileData): Promise<LegacyFileData> {
+  async writeFileData(data: FileData): Promise<LegacyFileData> {
     try {
       // Ensure data integrity before writing
       
-      // If the input 'data' is NormalizedFileData, we first need to denormalize it to process it 
-      // (because the logic above assumes data.cases is CaseDisplay[]).
+      // If the input 'data' is NormalizedFileData (from a newer version), we need to denormalize it
+      // so that data.cases is a CaseDisplay[] as expected by the legacy format.
       let legacyData: LegacyFileData;
       if ('version' in data && (data as any).version === "2.0") {
           legacyData = this.denormalizeForRuntime(data as unknown as NormalizedFileData);
@@ -274,17 +281,23 @@ export class FileStorageService {
       if (caseItem.caseRecord.financials) {
         const { resources, income, expenses } = caseItem.caseRecord.financials;
         
-        resources.forEach(item => {
-          financials.push({ ...item, caseId: caseItem.id, category: "resources" });
-        });
+        if (resources) {
+          resources.forEach(item => {
+            financials.push({ ...item, caseId: caseItem.id, category: "resources" });
+          });
+        }
         
-        income.forEach(item => {
-          financials.push({ ...item, caseId: caseItem.id, category: "income" });
-        });
+        if (income) {
+          income.forEach(item => {
+            financials.push({ ...item, caseId: caseItem.id, category: "income" });
+          });
+        }
         
-        expenses.forEach(item => {
-          financials.push({ ...item, caseId: caseItem.id, category: "expenses" });
-        });
+        if (expenses) {
+          expenses.forEach(item => {
+            financials.push({ ...item, caseId: caseItem.id, category: "expenses" });
+          });
+        }
       }
 
       // Extract notes
@@ -323,22 +336,55 @@ export class FileStorageService {
   }
 
   private denormalizeForRuntime(data: NormalizedFileData): LegacyFileData {
+    // Create lookup maps for O(1) access
+    const financialsByCaseId = new Map<string, { resources: FinancialItem[], income: FinancialItem[], expenses: FinancialItem[] }>();
+    const notesByCaseId = new Map<string, Note[]>();
+    const alertsByMcn = new Map<string, AlertRecord[]>();
+
+    // Group financials
+    for (const item of data.financials) {
+      const { caseId, category, ...financial } = item;
+      if (!financialsByCaseId.has(caseId)) {
+        financialsByCaseId.set(caseId, { resources: [], income: [], expenses: [] });
+      }
+      const group = financialsByCaseId.get(caseId)!;
+      if (category in group) {
+        group[category].push(financial);
+      }
+    }
+
+    // Group notes
+    for (const item of data.notes) {
+      const { caseId, ...note } = item;
+      if (!notesByCaseId.has(caseId)) {
+        notesByCaseId.set(caseId, []);
+      }
+      notesByCaseId.get(caseId)!.push(note);
+    }
+
+    // Group alerts (normalize MCN for matching)
+    for (const alert of data.alerts) {
+      const mcn = alert.mcNumber;
+      if (mcn) {
+        if (!alertsByMcn.has(mcn)) {
+          alertsByMcn.set(mcn, []);
+        }
+        alertsByMcn.get(mcn)!.push(alert);
+      }
+    }
+
     const cases: CaseDisplay[] = data.cases.map(storedCase => {
-      const caseFinancials = data.financials.filter(f => f.caseId === storedCase.id);
-      const caseNotes = data.notes.filter(n => n.caseId === storedCase.id);
-      const caseAlerts = data.alerts.filter(a => a.mcNumber === storedCase.mcn); // Match alerts by MCN
+      const financials = financialsByCaseId.get(storedCase.id) ?? { resources: [], income: [], expenses: [] };
+      const notes = notesByCaseId.get(storedCase.id) ?? [];
+      const alerts = alertsByMcn.get(storedCase.mcn) ?? [];
 
       return {
         ...storedCase,
-        alerts: caseAlerts,
+        alerts,
         caseRecord: {
           ...storedCase.caseRecord,
-          financials: {
-            resources: caseFinancials.filter(f => f.category === "resources"),
-            income: caseFinancials.filter(f => f.category === "income"),
-            expenses: caseFinancials.filter(f => f.category === "expenses")
-          },
-          notes: caseNotes
+          financials,
+          notes
         }
       };
     });
