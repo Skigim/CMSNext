@@ -257,7 +257,7 @@ export const STORAGE_CONSTANTS = {
   ALERTS: {
     FILE_NAME: "alerts.json",
     CSV_NAME: "Alerts.csv",
-    STORAGE_VERSION: 2,
+    STORAGE_VERSION: 3,
   },
   DATA: {
     FILE_NAME: "data.json",
@@ -939,7 +939,7 @@ export type StorageConstants = typeof STORAGE_CONSTANTS;
 }
 ```
 
-**Version 2 (Current Format)**:
+**Version 2 (Intermediate Format)**:
 
 ```typescript
 {
@@ -953,15 +953,37 @@ export type StorageConstants = typeof STORAGE_CONSTANTS;
 }
 ```
 
-**Migration strategy**:
+**Version 3 (Current Format)**:
 
-1. Detect missing `version` field → assume v1
-2. Extract `workflows` array from v1 payload
-3. Load alerts from CSV (v1 had no stored alerts)
-4. Apply workflows to alerts via `applyStoredAlertWorkflows()`
-5. Save as v2 format with version stamp
-6. **Rollback**: If migration fails, log error and return empty alerts (safe degradation)
-7. **Partial migration**: If some workflows fail to match, log unmatchedIds and continue
+```typescript
+{
+  version: 3,
+  generatedAt: string,
+  updatedAt: string,
+  summary: AlertsSummary,
+  alerts: AlertWithMatch[], // Enhanced with resolvedAt workflow semantics
+  uniqueAlerts: number,
+  sourceFile?: string
+}
+```
+
+**Migration strategy (v1 → v2 → v3)**:
+
+1. **v1 → v2**: Detect missing `version` field → assume v1
+   - Extract `workflows` array from v1 payload
+   - Load alerts from CSV (v1 had no stored alerts)
+   - Apply workflows to alerts via `applyStoredAlertWorkflows()`
+   - Save as v2 format with version stamp
+
+2. **v2 → v3**: Detect `version: 2`
+   - v2 and v3 schemas are structurally identical
+   - v3 enforces stricter `resolvedAt` semantics (null when status !== 'resolved')
+   - No data migration needed - v2 files load directly
+   - Save operations write v3 format with corrected `resolvedAt` values
+
+3. **Rollback**: If migration fails, log error and return empty alerts (safe degradation)
+
+4. **Partial migration**: If some workflows fail to match, log unmatchedIds and continue
 
 ---
 

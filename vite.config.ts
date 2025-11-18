@@ -3,6 +3,10 @@ import react from '@vitejs/plugin-react'
 import compression from 'vite-plugin-compression'
 import { visualizer } from 'rollup-plugin-visualizer'
 import path from 'path'
+import { fileURLToPath } from 'url'
+
+const __filename = fileURLToPath(import.meta.url)
+const __dirname = path.dirname(__filename)
 
 // https://vitejs.dev/config/
 export default defineConfig(({ command, mode }) => {
@@ -14,7 +18,10 @@ export default defineConfig(({ command, mode }) => {
     'X-XSS-Protection': '1; mode=block',
     'Referrer-Policy': 'strict-origin-when-cross-origin',
   } as const;
-  const serverConfig = !isProduction ? { headers: securityHeaders } : undefined;
+  const serverConfig = !isProduction ? { 
+    headers: securityHeaders,
+    host: '127.0.0.1', // Force IPv4 for Windows compatibility
+  } : undefined;
   const previewConfig = isProduction ? { headers: securityHeaders } : undefined;
 
   return {

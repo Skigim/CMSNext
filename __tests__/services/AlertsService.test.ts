@@ -14,7 +14,7 @@ describe('AlertsService', () => {
     status: 'pending' as const,
     mcn,
     caseRecord: { mcn } as any,
-    priority: 'normal',
+    priority: false,
     createdAt: '2024-01-15T10:00:00Z',
     updatedAt: '2024-01-15T10:00:00Z',
   } as unknown as CaseDisplay);
@@ -270,9 +270,42 @@ describe('AlertsService', () => {
     });
 
     it('should auto-resolve alerts with missing MCN during merge', async () => {
-      // This test would require more sophisticated mocking of parseAlertsFromCsv
-      // to return an alert without MCN - skipping detailed implementation
-      expect(true).toBe(true);
+      const alertWithoutMcn = createMockAlert('alert-no-mcn', null);
+      const loadResult: LoadAlertsResult = {
+        alerts: [],
+        legacyWorkflows: [],
+        needsMigration: false,
+      };
+
+      vi.mocked(mockAlertsStorage.loadAlertsFromStore).mockResolvedValue(loadResult);
+      vi.mocked(mockAlertsStorage.importAlertsFromCsv).mockResolvedValue({
+        alerts: [alertWithoutMcn],
+        sourceFile: 'Alerts.csv',
+      });
+      vi.mocked(mockAlertsStorage.saveAlerts).mockResolvedValue(true);
+
+      const cases: CaseDisplay[] = [];
+      const csvContent = 'Description\nAlert without MCN';
+
+      // Mock parseAlertsFromCsv to return alert without MCN
+      vi.doMock('../alerts/alertsCsvParser', () => ({
+        parseAlertsFromCsv: vi.fn().mockReturnValue({
+          alerts: [alertWithoutMcn],
+          summary: { total: 1, matched: 0, unmatched: 0, missingMcn: 1 },
+        }),
+      }));
+
+      const result = await alertsService.mergeAlertsFromCsvContent(csvContent, cases);
+
+      expect(result.added).toBe(1);
+      expect(result.total).toBe(1);
+      
+      // Verify the alert was auto-resolved due to missing MCN
+      const saveCall = vi.mocked(mockAlertsStorage.saveAlerts).mock.calls[0];
+      const savedPayload = saveCall?.[0];
+      expect(savedPayload?.alerts[0]?.status).toBe('resolved');
+      expect(savedPayload?.alerts[0]?.resolvedAt).toBeTruthy();
+      expect(savedPayload?.alerts[0]?.resolutionNotes).toContain('Missing MCN');
     });
 
     it('should deduplicate alerts during merge', async () => {

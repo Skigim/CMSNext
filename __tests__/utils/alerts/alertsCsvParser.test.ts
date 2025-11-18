@@ -21,7 +21,7 @@ describe('AlertsCsvParser', () => {
       mcNumber: 'MC001',
       mcn: 'MC001',
       status: 'pending',
-      priority: 'normal',
+      priority: false,
       createdAt: '2025-01-01',
       updatedAt: '2025-01-01',
       person: {

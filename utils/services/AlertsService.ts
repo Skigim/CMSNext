@@ -227,17 +227,15 @@ export class AlertsService {
 
     const targetAlert = alerts[targetIndex];
     const nextStatus: AlertWorkflowStatus = updates.status ?? targetAlert.status ?? 'new';
-    let nextResolvedAt: string | null =
-      updates.resolvedAt !== undefined ? updates.resolvedAt : targetAlert.resolvedAt ?? null;
+    let nextResolvedAt: string | null;
 
-    // Auto-set resolvedAt when marking as resolved
-    if (nextStatus === 'resolved' && !nextResolvedAt) {
-      nextResolvedAt = new Date().toISOString();
-    }
-
-    // Clear resolvedAt when not resolved
-    if (nextStatus !== 'resolved') {
-      nextResolvedAt = updates.resolvedAt !== undefined ? updates.resolvedAt : null;
+    // Set resolvedAt only when status is 'resolved'
+    if (nextStatus === 'resolved') {
+      // Use provided resolvedAt or generate new timestamp
+      nextResolvedAt = updates.resolvedAt !== undefined ? updates.resolvedAt : (targetAlert.resolvedAt ?? new Date().toISOString());
+    } else {
+      // Force null when not resolved
+      nextResolvedAt = null;
     }
 
     const updatedAlertBase: AlertWithMatch = {
@@ -841,9 +839,9 @@ export class AlertsService {
 
     const preferredStatus = selectPreferredWorkflowStatus(existing.status, incoming.status);
     
-    // Clear resolvedAt if preferred status is not 'resolved'
+    // Set resolvedAt only when status is 'resolved', force null otherwise
     const resolvedAt = preferredStatus === 'resolved'
-      ? (existing.resolvedAt ?? incoming.resolvedAt)
+      ? (existing.resolvedAt ?? incoming.resolvedAt ?? null)
       : null;
 
     return {

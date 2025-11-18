@@ -185,16 +185,17 @@
 
 ### Service Extraction Progress
 
-| Service               | Lines | Status      | PR  | Merged |
-| --------------------- | ----- | ----------- | --- | ------ |
-| FileStorageService    | 320   | ✅ Complete | #70 | Nov 7  |
-| ActivityLogService    | 115   | ✅ Complete | #71 | Nov 7  |
-| CategoryConfigService | 48    | ✅ Complete | #72 | Nov 8  |
-| NotesService          | 210   | ✅ Complete | #74 | Nov 10 |
-| FinancialsService     | 235   | ✅ Complete | #75 | Nov 11 |
-| CaseService           | 432   | ✅ Complete | #76 | Nov 12 |
-| **AlertsService**     | ~430  | ⏳ Pending  | -   | -      |
-| **Total Extracted**   | 1,360 | 85.7%       | -   | -      |
+| Service                  | Lines | Status      | PR  | Merged |
+| ------------------------ | ----- | ----------- | --- | ------ |
+| FileStorageService       | 320   | ✅ Complete | #70 | Nov 7  |
+| ActivityLogService       | 115   | ✅ Complete | #71 | Nov 7  |
+| CategoryConfigService    | 48    | ✅ Complete | #72 | Nov 8  |
+| NotesService             | 210   | ✅ Complete | #74 | Nov 10 |
+| FinancialsService        | 235   | ✅ Complete | #75 | Nov 11 |
+| CaseService              | 432   | ✅ Complete | #76 | Nov 12 |
+| **AlertsService**        | 956   | ✅ Complete | #77 | Nov 13 |
+| **AlertsStorageService** | 503   | ✅ Complete | #77 | Nov 13 |
+| **Total Extracted**      | 2,819 | 100%        | -   | -      |
 
 ---
 
@@ -357,19 +358,25 @@
 - ✅ Documentation updated to reflect implemented operations
 - ✅ Type safety: `CategoryConfig` instead of `any`
 
-#### Step 7: AlertsService ⏳ REMAINING
+#### Step 7: AlertsService ✅ COMPLETE
 
-**Estimated:** ~430 lines (largest remaining extraction)  
-**Timeline:** ~2 hours with AI assistance  
+**Actual:** 956 lines (AlertsService) + 503 lines (AlertsStorageService) = 1,459 lines extracted  
+**Completed:** November 13, 2025 (PR #77)  
 **Scope:**
 
-- `getAlertsIndex()`, `updateAlertStatus()`, `saveAlerts()`, `mergeAlertsFromCsvContent()`
-- Alert matching logic
-- CSV import/export handling
+- ✅ `getAlertsIndex()` with case matching and migration
+- ✅ `updateAlertStatus()` with workflow management
+- ✅ `mergeAlertsFromCsvContent()` with deduplication
+- ✅ Alert matching logic (strong + fallback keys)
+- ✅ CSV import/export with parseAlertsFromCsv
+- ✅ Legacy v1 workflow migration
+- ✅ Storage version v3 with backward compatibility
 
-**Expected Final State:**
+**Final State:**
 
-- DataManager: ~1,335 lines (51.5% reduction from baseline)
+- DataManager: 461 lines (74% reduction from baseline of 1,766 lines)
+- Pure orchestration layer delegating to 8 focused services
+- All 355 tests passing
 - Pure orchestration layer delegating to 7 focused services
 
 ---
@@ -479,13 +486,14 @@
 
 ## 🎯 Next Steps
 
-### Immediate (This Week - November 13-15)
+### Immediate (This Week - November 13-17)
 
-- [ ] Extract AlertsService from DataManager (~430 lines - final extraction) - **~2 hours**
-- [ ] Refactor DataManager to thin orchestrator (~500-800 lines target) - **~1 hour**
+- [x] Extract AlertsService from DataManager (956 + 503 lines) - **COMPLETE (PR #77)**
+- [x] Refactor DataManager to thin orchestrator (461 lines final) - **COMPLETE (PR #77)**
 - [ ] Run full regression test suite - **~5 min**
 - [ ] Update documentation (feature catalogue, roadmap) - **~30 min**
-- [ ] **Total estimate: ~3.5-4 hours remaining with AI assistance**
+- [ ] Address CodeRabbit PR comments - **~1 hour**
+- [ ] Merge PR #77 to main - **~15 min**
 
 ### Short-Term (Late November 2025)
 
