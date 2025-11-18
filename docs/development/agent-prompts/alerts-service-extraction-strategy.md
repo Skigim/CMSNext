@@ -970,12 +970,14 @@ export type StorageConstants = typeof STORAGE_CONSTANTS;
 **Migration strategy (v1 → v2 → v3)**:
 
 1. **v1 → v2**: Detect missing `version` field → assume v1
+
    - Extract `workflows` array from v1 payload
    - Load alerts from CSV (v1 had no stored alerts)
    - Apply workflows to alerts via `applyStoredAlertWorkflows()`
    - Save as v2 format with version stamp
 
 2. **v2 → v3**: Detect `version: 2`
+
    - v2 and v3 schemas are structurally identical
    - v3 enforces stricter `resolvedAt` semantics (null when status !== 'resolved')
    - No data migration needed - v2 files load directly

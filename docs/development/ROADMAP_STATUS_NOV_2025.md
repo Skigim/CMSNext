@@ -375,6 +375,7 @@ class DataManager {
 **Estimate:** ~3-4 hours
 
 **Objectives:**
+
 - Normalize storage format across all domains
 - Update FileStorageService schema validation
 - Maintain backward compatibility
@@ -392,6 +393,7 @@ Target:   ████████████████░░░░░░░�
 ```
 
 **Remaining Work:**
+
 - AlertsService extraction: 430 lines
 - Orchestrator cleanup: minimal
 - Final target: ~1,335 lines (51.5% reduction)
