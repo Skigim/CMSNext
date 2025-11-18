@@ -183,6 +183,7 @@ describe("feature flag integration", () => {
     // All flags should be true by default
     expect(flags["dashboard.widgets.casePriority"]).toBe(true);
     expect(flags["dashboard.widgets.alertsCleared"]).toBe(true);
+    expect(flags["dashboard.widgets.activityTimeline"]).toBe(true);
     
     renderDashboard();
 
@@ -199,6 +200,7 @@ describe("feature flag integration", () => {
     appState.setFeatureFlags({
       "dashboard.widgets.casePriority": false,
       "dashboard.widgets.avgAlertAge": false,
+      "dashboard.widgets.activityTimeline": true, // Explicitly enable Activity
     });
 
     renderDashboard();

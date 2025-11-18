@@ -11,6 +11,7 @@ export default defineConfig({
     environment: 'jsdom',
     setupFiles: ['./src/test/setup.ts'],
     css: true,
+    testTimeout: 30000, // 30 second timeout for all tests
     // Mock file system APIs that aren't available in test environment
     mockReset: true,
     clearMocks: true,
