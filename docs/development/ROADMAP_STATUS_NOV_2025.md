@@ -386,7 +386,7 @@ class DataManager {
 
 ### Service Extraction Progress
 
-```
+```text
 Baseline: ████████████████████████████████████████ 2,755 lines (100%)
 Current:  ████████████████████████░░░░░░░░░░░░░░░░ 1,765 lines (64.1%)
 Target:   ████████████████░░░░░░░░░░░░░░░░░░░░░░░░ 1,335 lines (48.5%)

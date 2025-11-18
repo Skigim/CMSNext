@@ -295,7 +295,7 @@ describe('AlertsService', () => {
         }),
       }));
 
-      const result = await alertsService.mergeAlertsFromCsvContent(csvContent, cases);
+      const result = await service.mergeAlertsFromCsvContent(csvContent, cases);
 
       expect(result.added).toBe(1);
       expect(result.total).toBe(1);
