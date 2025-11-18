@@ -180,7 +180,10 @@ describe('DataManager', () => {
       expect(mockAutosaveService.writeFile).toHaveBeenCalledTimes(1)
 
       const writePayload = mockAutosaveService.writeFile.mock.calls[0][0]
-      expect(writePayload.cases[0].caseRecord.notes.every((note: any) => typeof note.id === 'string' && note.id.trim().length > 0)).toBe(true)
+      // With storage normalization, notes are now in a top-level 'notes' array
+      expect(writePayload.notes).toBeDefined()
+      expect(writePayload.notes.length).toBeGreaterThan(0)
+      expect(writePayload.notes.every((note: any) => typeof note.id === 'string' && note.id.trim().length > 0)).toBe(true)
     })
   })
 
