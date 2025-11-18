@@ -278,7 +278,7 @@ export class AlertsService {
     cases: CaseDisplay[],
     sourceFileName?: string
   ): Promise<MergeAlertsResult> {
-    const { parseAlertsFromCsv } = await import('../alerts/alertsCsvParser');
+    const { parseAlertsFromCsv } = await import('@/utils/alerts/alertsCsvParser');
     const incomingIndex = parseAlertsFromCsv(csvContent, cases);
     const incoming = incomingIndex.alerts;
 

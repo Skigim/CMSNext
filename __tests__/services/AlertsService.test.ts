@@ -3,6 +3,18 @@ import { AlertsService } from '@/utils/services/AlertsService';
 import type { AlertsStorageService, LoadAlertsResult } from '@/utils/services/AlertsStorageService';
 import type { AlertWithMatch } from '@/utils/alertsData';
 import type { CaseDisplay } from '@/types/case';
+import { parseAlertsFromCsv } from '@/utils/alerts/alertsCsvParser';
+
+// Mock the CSV parser globally
+vi.mock('@/utils/alerts/alertsCsvParser', () => ({
+  parseAlertsFromCsv: vi.fn().mockReturnValue({
+    alerts: [],
+    summary: { total: 0, matched: 0, unmatched: 0, missingMcn: 0 },
+    alertsByCaseId: new Map(),
+    unmatched: [],
+    missingMcn: [],
+  }),
+}));
 
 describe('AlertsService', () => {
   let mockAlertsStorage: AlertsStorageService;
@@ -262,6 +274,16 @@ describe('AlertsService', () => {
       const cases: CaseDisplay[] = [];
       const csvContent = 'MCN,Description\nMCN-999,New alert';
 
+      // Mock parser to return a new alert
+      const newAlert = createMockAlert('alert-2', 'MCN-999');
+      vi.mocked(parseAlertsFromCsv).mockReturnValue({
+        alerts: [newAlert],
+        summary: { total: 1, matched: 0, unmatched: 1, missingMcn: 0 },
+        alertsByCaseId: new Map(),
+        unmatched: [newAlert],
+        missingMcn: [],
+      });
+
       const result = await service.mergeAlertsFromCsvContent(csvContent, cases);
 
       // Should have both existing and new alert
@@ -271,6 +293,15 @@ describe('AlertsService', () => {
 
     it('should auto-resolve alerts with missing MCN during merge', async () => {
       const alertWithoutMcn = createMockAlert('alert-no-mcn', null);
+      
+      vi.mocked(parseAlertsFromCsv).mockReturnValue({
+        alerts: [alertWithoutMcn],
+        summary: { total: 1, matched: 0, unmatched: 0, missingMcn: 1 },
+        alertsByCaseId: new Map(),
+        unmatched: [],
+        missingMcn: [alertWithoutMcn],
+      });
+
       const loadResult: LoadAlertsResult = {
         alerts: [],
         legacyWorkflows: [],
@@ -279,21 +310,13 @@ describe('AlertsService', () => {
 
       vi.mocked(mockAlertsStorage.loadAlertsFromStore).mockResolvedValue(loadResult);
       vi.mocked(mockAlertsStorage.importAlertsFromCsv).mockResolvedValue({
-        alerts: [alertWithoutMcn],
+        alerts: [],
         sourceFile: 'Alerts.csv',
       });
       vi.mocked(mockAlertsStorage.saveAlerts).mockResolvedValue(true);
 
       const cases: CaseDisplay[] = [];
       const csvContent = 'Description\nAlert without MCN';
-
-      // Mock parseAlertsFromCsv to return alert without MCN
-      vi.doMock('../alerts/alertsCsvParser', () => ({
-        parseAlertsFromCsv: vi.fn().mockReturnValue({
-          alerts: [alertWithoutMcn],
-          summary: { total: 1, matched: 0, unmatched: 0, missingMcn: 1 },
-        }),
-      }));
 
       const result = await service.mergeAlertsFromCsvContent(csvContent, cases);
 
@@ -321,6 +344,17 @@ describe('AlertsService', () => {
 
       const cases: CaseDisplay[] = [];
       const csvContent = 'MCN,Description\nMCN-123,Same alert';
+
+      // Mock parser to return the same alert
+      const alertsByCaseId = new Map();
+      alertsByCaseId.set('case-1', [alert]);
+      vi.mocked(parseAlertsFromCsv).mockReturnValue({
+        alerts: [alert],
+        summary: { total: 1, matched: 1, unmatched: 0, missingMcn: 0 },
+        alertsByCaseId,
+        unmatched: [],
+        missingMcn: [],
+      });
 
       const result = await service.mergeAlertsFromCsvContent(csvContent, cases);
 
