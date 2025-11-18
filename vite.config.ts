@@ -2,6 +2,7 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import compression from 'vite-plugin-compression'
 import { visualizer } from 'rollup-plugin-visualizer'
+import path from 'path'
 
 // https://vitejs.dev/config/
 export default defineConfig(({ command, mode }) => {
@@ -40,7 +41,7 @@ export default defineConfig(({ command, mode }) => {
     base: isProduction ? '/CMSNext/' : '/',
     resolve: {
       alias: {
-        '@': new URL('./', import.meta.url).pathname,
+        '@': path.resolve(__dirname, './'),
       },
     },
     server: serverConfig,
