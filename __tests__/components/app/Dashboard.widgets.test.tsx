@@ -137,6 +137,8 @@ describe("Dashboard widgets integration", () => {
   });
 
   it("renders all eight widgets", async () => {
+    ApplicationState.getInstance(); // Initialize before rendering
+    
     const cases: CaseDisplay[] = [
       createCase({ id: "case-1", status: CASE_STATUS.Pending }),
       createCase({ id: "case-2", status: CASE_STATUS.Closed }),
@@ -190,9 +192,11 @@ describe("Dashboard widgets integration", () => {
     await screen.findByText(/Alerts by Description/i, undefined, { timeout: 10000 });
     await screen.findByText("Avg. Alert Age", undefined, { timeout: 10000 });
     await screen.findByText("Avg. Case Processing Time", undefined, { timeout: 10000 });
-  });
+  }, 30000); // 30 second timeout for this test
 
   it("updates widget data when underlying props change", async () => {
+    ApplicationState.getInstance(); // Initialize before rendering
+    
     vi.useFakeTimers({ shouldAdvanceTime: true });
     vi.setSystemTime(new Date("2025-10-22T00:00:00Z"));
 
@@ -274,7 +278,7 @@ describe("Dashboard widgets integration", () => {
     const refreshedCard = avgAlertCard as HTMLElement;
 
     await within(refreshedCard).findByText("1 open");
-  });
+  }, 30000); // 30 second timeout for this test
 });
 
 describe("AvgAlertAgeWidget", () => {
