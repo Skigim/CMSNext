@@ -44,7 +44,7 @@ const logger = createLogger('DataManager');
 // Type Definitions
 // ============================================================================
 
-interface MergeAlertsResult {
+interface AlertsMergeSummary {
   added: number;
   updated: number;
   total: number;
@@ -275,7 +275,7 @@ export class DataManager {
   async mergeAlertsFromCsvContent(
     csvContent: string,
     options: { cases?: CaseDisplay[]; sourceFileName?: string } = {},
-  ): Promise<MergeAlertsResult> {
+  ): Promise<AlertsMergeSummary> {
     const cases = options.cases ?? (await this.getAllCases());
     const result = await this.alerts.mergeAlertsFromCsvContent(csvContent, cases, options.sourceFileName);
     

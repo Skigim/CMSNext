@@ -411,7 +411,12 @@ export class AlertsStorageService {
       return { workflow: null, legacy: true };
     }
 
-    const status = typeof raw.status === 'string' ? (raw.status as AlertWorkflowStatus) : undefined;
+    // Normalize legacy workflow status to ensure canonical values
+    let status: AlertWorkflowStatus | undefined;
+    if (typeof raw.status === 'string') {
+      status = this.normalizeWorkflowStatus(raw.status);
+    }
+
     const resolvedAtValue = raw.resolvedAt;
     const resolvedAt =
       resolvedAtValue === null
