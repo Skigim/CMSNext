@@ -106,7 +106,7 @@ let refactorFlags: RefactorFeatureFlags = {
 	/** Flag for enabling the cases domain rewrite. */
 	USE_CASES_DOMAIN: false,
 	/** Flag for enabling the financials domain rewrite. */
-	USE_FINANCIALS_DOMAIN: false,
+	USE_FINANCIALS_DOMAIN: true,
 	/** Flag for enabling the notes domain rewrite. */
 	USE_NOTES_DOMAIN: false,
 	/** Flag for enabling the alerts domain rewrite. */
