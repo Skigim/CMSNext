@@ -191,6 +191,14 @@ export class Case {
   }
 
   /**
+   * Explicitly update the modification timestamp.
+   * Used when related entities (financials, notes) change.
+   */
+  touch(): void {
+    this.touchUpdatedAt();
+  }
+
+  /**
    * Validate all invariants for the aggregate.
    */
   validate(): void {

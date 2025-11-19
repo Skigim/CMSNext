@@ -1,6 +1,6 @@
-import AutosaveFileService from '@/utils/AutosaveFileService';
+import { FileStorageService, type FileData, type NormalizedFileData, isNormalizedFileData } from '@/utils/services/FileStorageService';
 import { Case, type CaseSnapshot } from '@/domain/cases/entities/Case';
-import type { FinancialItem } from '@/domain/financials/entities/FinancialItem';
+import { FinancialItem } from '@/domain/financials/entities/FinancialItem';
 import type { Note, NoteCategory } from '@/domain/notes/entities/Note';
 import type { Alert } from '@/domain/alerts/entities/Alert';
 import type { ActivityEvent } from '@/domain/activity/entities/ActivityEvent';
@@ -12,6 +12,7 @@ import type {
   IAlertRepository,
   IActivityRepository,
 } from '@/domain/common/repositories';
+import type { ITransactionRepository, TransactionOperation } from '@/domain/common/repositories/ITransactionRepository';
 
 export type DomainScope = 'cases' | 'financials' | 'notes' | 'alerts' | 'activities';
 
@@ -31,7 +32,7 @@ type StorageFile = StorageCollections & {
 
 type DomainEntity = Case | CaseSnapshot | FinancialItem | Note | Alert | ActivityEvent;
 
-export class StorageRepository {
+export class StorageRepository implements ITransactionRepository {
   private static readonly CURRENT_VERSION = 1;
 
   private readonly caseAdapter: ICaseRepository;
@@ -40,7 +41,7 @@ export class StorageRepository {
   private readonly alertAdapter: IAlertRepository;
   private readonly activityAdapter: IActivityRepository;
 
-  constructor(private readonly fileService: AutosaveFileService) {
+  constructor(private readonly fileStorageService: FileStorageService) {
     this.caseAdapter = {
       getById: id => this.getById('cases', id),
       getAll: () => this.getAll('cases'),
@@ -296,47 +297,231 @@ export class StorageRepository {
     return this.clone(sorted.slice(0, Math.max(0, limit)));
   }
 
+  async runTransaction(operations: TransactionOperation[]): Promise<void> {
+    const storage = await this.readStorage();
+
+    for (const op of operations) {
+      if (op.type === 'save') {
+        if (op.domain === 'cases') {
+          const snapshot = this.toCaseSnapshot(op.entity);
+          storage.cases = StorageRepository.upsert<CaseSnapshot>(storage.cases, snapshot);
+        } else if (op.domain === 'financials') {
+          const cloned = this.clone(op.entity) as FinancialItem;
+          storage.financials = StorageRepository.upsert<FinancialItem>(storage.financials, cloned);
+        } else if (op.domain === 'notes') {
+          const cloned = this.clone(op.entity) as Note;
+          storage.notes = StorageRepository.upsert<Note>(storage.notes, cloned);
+        } else if (op.domain === 'alerts') {
+          const cloned = this.clone(op.entity) as Alert;
+          storage.alerts = StorageRepository.upsert<Alert>(storage.alerts, cloned);
+        } else if (op.domain === 'activities') {
+          const cloned = this.clone(op.entity) as ActivityEvent;
+          storage.activities = StorageRepository.upsert<ActivityEvent>(storage.activities, cloned);
+        }
+      } else if (op.type === 'delete') {
+        switch (op.domain) {
+          case 'financials':
+            storage.financials = storage.financials.filter(item => item.id !== op.id);
+            break;
+          case 'notes':
+            storage.notes = storage.notes.filter(item => item.id !== op.id);
+            break;
+          case 'alerts':
+            storage.alerts = storage.alerts.filter(item => item.id !== op.id);
+            break;
+          case 'activities':
+            storage.activities = storage.activities.filter(item => item.id !== op.id);
+            break;
+          case 'cases':
+            storage.cases = storage.cases.filter(item => item.id !== op.id);
+            break;
+        }
+      }
+    }
+
+    await this.writeStorage(storage);
+  }
+
   private async readStorage(): Promise<StorageFile> {
-    const raw = await this.fileService.readFile();
-    const base = (raw && typeof raw === 'object' ? raw : {}) as Record<string, unknown>;
+    const raw = await this.fileStorageService.readFileData();
+    
+    if (!raw) {
+      return {
+        version: StorageRepository.CURRENT_VERSION,
+        cases: [],
+        financials: [],
+        notes: [],
+        alerts: [],
+        activities: [],
+      } as StorageFile;
+    }
 
-    const version = typeof base.version === 'number' ? base.version : StorageRepository.CURRENT_VERSION;
-    const rawCases = this.ensureArray<CaseSnapshot>(base.cases);
-    const cases = rawCases.map(snapshot => Case.rehydrate(snapshot).toJSON());
-    const financials = this.ensureArray<FinancialItem>(base.financials);
-    const notes = this.ensureArray<Note>(base.notes);
-    const alerts = this.ensureArray<Alert>(base.alerts);
-    const activities = this.ensureArray<ActivityEvent>(base.activities);
+    // FileStorageService returns LegacyFileData (denormalized)
+    // We need to extract the entities back into flat lists for the repository
+    
+    // 1. Cases (strip nested data)
+    const cases = raw.cases.map(c => {
+      const { financials: _, notes: __, ...caseRecord } = c.caseRecord;
+      const { alerts: ___, ...caseData } = c;
 
-    const extras: Record<string, unknown> = { ...base };
-    delete extras.version;
-    delete extras.cases;
-    delete extras.financials;
-    delete extras.notes;
-    delete extras.alerts;
-    delete extras.activities;
+      // Preserve legacy caseRecord data in metadata
+      const metadata = {
+        ...(c.metadata || {}),
+        legacy_caseRecord: caseRecord,
+      };
+
+      return {
+        ...caseData,
+        personId: c.caseRecord.personId || c.person?.id,
+        metadata,
+      } as CaseSnapshot;
+    });
+
+    // 2. Financials (flatten from cases)
+    const financials: FinancialItem[] = [];
+    raw.cases.forEach(c => {
+      if (c.caseRecord.financials) {
+        const { resources = [], income = [], expenses = [] } = c.caseRecord.financials;
+        
+        const processItems = (items: any[], category: string) => {
+          items.forEach(item => {
+            try {
+              // Migration logic: Handle legacy timestamps
+              const createdAt = item.createdAt || item.dateAdded || new Date().toISOString();
+              const updatedAt = item.updatedAt || item.dateAdded || new Date().toISOString();
+
+              financials.push(FinancialItem.rehydrate({ 
+                ...item, 
+                createdAt,
+                updatedAt,
+                caseId: c.id, 
+                category 
+              }));
+            } catch (error) {
+              console.warn(`Skipping corrupt financial item ${item.id} in case ${c.id}:`, error);
+            }
+          });
+        };
+
+        processItems(resources, 'resources');
+        processItems(income, 'income');
+        processItems(expenses, 'expenses');
+      }
+    });
+
+    // 3. Notes (flatten from cases)
+    const notes: Note[] = [];
+    raw.cases.forEach(c => {
+      if (c.caseRecord.notes) {
+        c.caseRecord.notes.forEach(note => {
+          notes.push({ ...note, caseId: c.id } as Note);
+        });
+      }
+    });
+
+    // 4. Alerts (use top-level or flatten)
+    const alerts: Alert[] = raw.alerts ? (raw.alerts as Alert[]) : [];
+    if (!raw.alerts) {
+      raw.cases.forEach(c => {
+        if (c.alerts) {
+          c.alerts.forEach(alert => alerts.push(alert as Alert));
+        }
+      });
+    }
+
+    // 5. Activities
+    const activities = (raw.activityLog || []) as ActivityEvent[];
 
     return {
-      version,
+      version: StorageRepository.CURRENT_VERSION,
       cases,
       financials,
       notes,
       alerts,
       activities,
-      ...extras,
+      // Preserve other metadata
+      exported_at: raw.exported_at,
+      total_cases: raw.total_cases,
+      categoryConfig: raw.categoryConfig,
     } as StorageFile;
   }
 
   private async writeStorage(storage: StorageFile): Promise<void> {
-    const payload = this.clone({
-      ...storage,
-      version: StorageRepository.CURRENT_VERSION,
+    // Reconstruct LegacyFileData structure for FileStorageService
+    // FileStorageService.writeFileData expects LegacyFileData and handles normalization internally
+    
+    // Group financials by case
+    const financialsByCase = new Map<string, { resources: any[], income: any[], expenses: any[] }>();
+    storage.financials.forEach(f => {
+      if (!financialsByCase.has(f.caseId)) {
+        financialsByCase.set(f.caseId, { resources: [], income: [], expenses: [] });
+      }
+      const group = financialsByCase.get(f.caseId)!;
+      // Map category string to object key
+      const cat = f.category as 'resources' | 'income' | 'expenses';
+      if (cat && group[cat]) {
+        // Ensure we store plain objects, not class instances
+        const itemData = f instanceof FinancialItem ? f.toJSON() : f;
+        group[cat].push(itemData);
+      } else {
+        console.warn(`Invalid financial category "${f.category}" for item ${f.id}, skipping`);
+      }
     });
 
-    const success = await this.fileService.writeFile(payload);
-    if (!success) {
-      throw new Error('StorageRepository: Failed to persist data');
-    }
+    // Group notes by case
+    const notesByCase = new Map<string, any[]>();
+    storage.notes.forEach(n => {
+      if (!notesByCase.has(n.caseId)) {
+        notesByCase.set(n.caseId, []);
+      }
+      notesByCase.get(n.caseId)!.push(n);
+    });
+
+    // Group alerts by MCN (for legacy support)
+    const alertsByMcn = new Map<string, any[]>();
+    storage.alerts.forEach(a => {
+      if (a.mcNumber) {
+        if (!alertsByMcn.has(a.mcNumber)) {
+          alertsByMcn.set(a.mcNumber, []);
+        }
+        alertsByMcn.get(a.mcNumber)!.push(a);
+      }
+    });
+
+    // Rebuild cases with nested data
+    const cases = storage.cases.map(c => {
+      const financials = financialsByCase.get(c.id) || { resources: [], income: [], expenses: [] };
+      const notes = notesByCase.get(c.id) || [];
+      const alerts = alertsByMcn.get(c.mcn) || [];
+
+      const legacyRecord = (c.metadata as any)?.legacy_caseRecord || {};
+
+      return {
+        ...c,
+        alerts, // Legacy support
+        caseRecord: {
+          ...legacyRecord,
+          ...c.caseRecord, // In case it was somehow preserved
+          id: c.id,
+          mcn: c.mcn,
+          status: c.status,
+          personId: c.personId,
+          financials,
+          notes
+        }
+      } as any; // Cast to any to match CaseDisplay structure roughly
+    });
+
+    const fileData: FileData = {
+      cases,
+      alerts: storage.alerts as any[],
+      exported_at: (storage as any).exported_at || new Date().toISOString(),
+      total_cases: cases.length,
+      categoryConfig: (storage as any).categoryConfig || {},
+      activityLog: storage.activities as any[]
+    };
+
+    await this.fileStorageService.writeFileData(fileData);
   }
 
   private cloneCaseEntity(snapshot: CaseSnapshot | null): Case | null {

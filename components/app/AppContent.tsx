@@ -28,7 +28,7 @@ import type { CaseCategory, CaseDisplay, FinancialItem, NewNoteData } from "../.
 const logger = createLogger("AppContent");
 
 export const AppContent = memo(function AppContent() {
-  const { isSupported, hasStoredHandle, connectToFolder, connectToExisting, loadExistingData, service } = useFileStorage();
+  const { isSupported, hasStoredHandle, connectToFolder, connectToExisting, loadExistingData, service, fileStorageService } = useFileStorage();
   const connectionState = useFileStorageLifecycleSelectors();
   const dataManager = useDataManagerSafe();
 
@@ -109,6 +109,7 @@ export const AppContent = memo(function AppContent() {
     connectToExisting,
     loadExistingData,
     service,
+    fileStorageService,
     dataManager,
     loadCases,
     setCases,

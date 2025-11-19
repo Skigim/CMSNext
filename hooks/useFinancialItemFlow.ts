@@ -1,6 +1,8 @@
 import { useCallback, useState } from "react";
 import { toast } from "sonner";
 import { useDataManagerSafe } from "../contexts/DataManagerContext";
+import { getRefactorFlags } from "@/utils/featureFlags";
+import { useFinancialManagement } from "./useFinancialManagement";
 import type { CaseCategory, CaseDisplay, FinancialItem } from "../types/case";
 
 export type ItemFormState = {
@@ -38,19 +40,30 @@ export function useFinancialItemFlow({
   setError,
 }: UseFinancialItemFlowParams): UseFinancialItemFlowResult {
   const dataManager = useDataManagerSafe();
+  const financialManagement = useFinancialManagement();
   const [itemForm, setItemForm] = useState<ItemFormState>({ isOpen: false });
 
   const ensureCaseAndManager = useCallback(() => {
-    if (!selectedCase || !dataManager) {
-      if (!dataManager) {
+    if (!selectedCase) return false;
+    
+    if (getRefactorFlags().USE_FINANCIALS_DOMAIN) {
+        if (!financialManagement) {
+            const errorMsg = "Financial management service is not available.";
+            setError(errorMsg);
+            toast.error(errorMsg);
+            return false;
+        }
+        return true;
+    }
+
+    if (!dataManager) {
         const errorMsg = "Data storage is not available. Please check your connection.";
         setError(errorMsg);
         toast.error(errorMsg);
-      }
-      return false;
+        return false;
     }
     return true;
-  }, [dataManager, selectedCase, setError]);
+  }, [dataManager, financialManagement, selectedCase, setError]);
 
   const openItemForm = useCallback(
     (category: CaseCategory) => {
@@ -72,12 +85,42 @@ export function useFinancialItemFlow({
 
   const handleDeleteItem = useCallback(
     async (category: CaseCategory, itemId: string) => {
-      if (!ensureCaseAndManager() || !selectedCase || !dataManager) {
+      if (!ensureCaseAndManager() || !selectedCase) {
         return;
       }
 
       try {
         setError(null);
+        
+        if (getRefactorFlags().USE_FINANCIALS_DOMAIN && financialManagement) {
+            await financialManagement.deleteItem(itemId);
+            
+            // Refetch items to ensure state consistency
+            const freshItems = await financialManagement.getItems(selectedCase.id);
+            const categoryItems = freshItems
+                .filter(i => i.category === category)
+                .map(i => i.toJSON() as unknown as FinancialItem);
+
+            setCases(prevCases =>
+              prevCases.map(c => {
+                  if (c.id === selectedCase.id) {
+                      const financials = { ...c.caseRecord.financials };
+                      financials[category] = categoryItems;
+                      return {
+                          ...c,
+                          caseRecord: { ...c.caseRecord, financials },
+                          updatedAt: new Date().toISOString()
+                      };
+                  }
+                  return c;
+              })
+            );
+            toast.success(`${category.charAt(0).toUpperCase() + category.slice(1)} item deleted successfully`);
+            return;
+        }
+
+        if (!dataManager) return;
+
         const updatedCase = await dataManager.deleteItem(selectedCase.id, category, itemId);
         setCases(prevCases =>
           prevCases.map(c => (c.id === selectedCase.id ? updatedCase : c)),
@@ -91,17 +134,47 @@ export function useFinancialItemFlow({
         toast.error(errorMsg);
       }
     },
-    [dataManager, ensureCaseAndManager, selectedCase, setCases, setError],
+    [dataManager, financialManagement, ensureCaseAndManager, selectedCase, setCases, setError],
   );
 
   const handleBatchUpdateItem = useCallback(
     async (category: CaseCategory, itemId: string, updatedItem: Partial<FinancialItem>) => {
-      if (!ensureCaseAndManager() || !selectedCase || !dataManager) {
+      if (!ensureCaseAndManager() || !selectedCase) {
         return;
       }
 
       try {
         setError(null);
+        
+        if (getRefactorFlags().USE_FINANCIALS_DOMAIN && financialManagement) {
+            await financialManagement.updateItem(itemId, updatedItem);
+            
+            // Refetch items to ensure state consistency
+            const freshItems = await financialManagement.getItems(selectedCase.id);
+            const categoryItems = freshItems
+                .filter(i => i.category === category)
+                .map(i => i.toJSON() as unknown as FinancialItem);
+
+            setCases(prevCases =>
+              prevCases.map(c => {
+                  if (c.id === selectedCase.id) {
+                      const financials = { ...c.caseRecord.financials };
+                      financials[category] = categoryItems;
+                      return {
+                          ...c,
+                          caseRecord: { ...c.caseRecord, financials },
+                          updatedAt: new Date().toISOString()
+                      };
+                  }
+                  return c;
+              })
+            );
+            toast.success("Item updated successfully", { duration: 2000 });
+            return;
+        }
+
+        if (!dataManager) return;
+
         const updatedCase = await dataManager.updateItem(selectedCase.id, category, itemId, updatedItem);
 
         setCases(prevCases =>
@@ -131,17 +204,48 @@ export function useFinancialItemFlow({
         throw err;
       }
     },
-    [dataManager, ensureCaseAndManager, selectedCase, setCases, setError],
+    [dataManager, financialManagement, ensureCaseAndManager, selectedCase, setCases, setError],
   );
 
   const handleCreateItem = useCallback(
     async (category: CaseCategory, itemData: Omit<FinancialItem, "id" | "createdAt" | "updatedAt">) => {
-      if (!ensureCaseAndManager() || !selectedCase || !dataManager) {
+      if (!ensureCaseAndManager() || !selectedCase) {
         return;
       }
 
       try {
         setError(null);
+        
+        if (getRefactorFlags().USE_FINANCIALS_DOMAIN && financialManagement) {
+            await financialManagement.createItem(selectedCase.id, category, itemData);
+            
+            // Refetch items to ensure state consistency
+            const freshItems = await financialManagement.getItems(selectedCase.id);
+            const categoryItems = freshItems
+                .filter(i => i.category === category)
+                .map(i => i.toJSON() as unknown as FinancialItem);
+
+            setCases(prevCases =>
+              prevCases.map(c => {
+                  if (c.id === selectedCase.id) {
+                      const financials = { ...c.caseRecord.financials };
+                      financials[category] = categoryItems;
+                      
+                      return {
+                          ...c,
+                          caseRecord: { ...c.caseRecord, financials },
+                          updatedAt: new Date().toISOString()
+                      };
+                  }
+                  return c;
+              })
+            );
+            toast.success("Item created successfully", { duration: 2000 });
+            return;
+        }
+
+        if (!dataManager) return;
+
         const updatedCase = await dataManager.addItem(selectedCase.id, category, itemData);
         setCases(prevCases =>
           prevCases.map(c => (c.id === selectedCase.id ? updatedCase : c)),
@@ -156,7 +260,7 @@ export function useFinancialItemFlow({
         throw err;
       }
     },
-    [dataManager, ensureCaseAndManager, selectedCase, setCases, setError],
+    [dataManager, financialManagement, ensureCaseAndManager, selectedCase, setCases, setError],
   );
 
   return {

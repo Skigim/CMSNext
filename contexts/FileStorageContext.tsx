@@ -1,5 +1,7 @@
 import { createContext, useContext, useState, useEffect, useCallback, useReducer, ReactNode, useMemo, useRef } from 'react';
 import AutosaveFileService from '@/utils/AutosaveFileService';
+import { FileStorageService } from '@/utils/services/FileStorageService';
+import { normalizeCaseNotes } from '@/utils/normalization';
 import { setFileService } from '@/utils/fileServiceProvider';
 import {
   reportFileStorageError,
@@ -19,6 +21,7 @@ import { createLogger } from '@/utils/logger';
 
 interface FileStorageContextType {
   service: AutosaveFileService | null;
+  fileStorageService: FileStorageService | null;
   isSupported: boolean | undefined; // undefined = not initialized yet, boolean = definitive answer
   isConnected: boolean;
   hasStoredHandle: boolean;
@@ -55,6 +58,7 @@ export function FileStorageProvider({
   getDataFunction
 }: FileStorageProviderProps) {
   const [service, setService] = useState<AutosaveFileService | null>(null);
+  const [fileStorageService, setFileStorageService] = useState<FileStorageService | null>(null);
   const [state, dispatch] = useReducer(reduceFileStorageState, initialMachineState);
   const dataLoadHandlersRef = useRef(new Set<(data: unknown) => void>());
 
@@ -95,8 +99,16 @@ export function FileStorageProvider({
       }
     });
 
+    const persistNormalizationFixes = import.meta.env.VITE_PERSIST_NORMALIZATION_FIXES !== 'false';
+    const storageService = new FileStorageService({
+      fileService,
+      persistNormalizationFixes,
+      normalizeCaseNotes,
+    });
+
     dispatch({ type: 'SERVICE_INITIALIZED', supported: fileService.isSupported() });
     setService(fileService);
+    setFileStorageService(storageService);
     setFileService(fileService);
 
     return () => {
@@ -305,6 +317,7 @@ export function FileStorageProvider({
 
   const contextValue: FileStorageContextType = {
     service,
+    fileStorageService,
     isSupported: state.isSupported,
     isConnected: state.isConnected,
     hasStoredHandle: state.hasStoredHandle,

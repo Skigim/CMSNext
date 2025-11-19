@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import type { CaseDisplay } from "../types/case";
 import type AutosaveFileService from "../utils/AutosaveFileService";
+import type { FileStorageService } from "@/utils/services/FileStorageService";
 import type DataManager from "../utils/DataManager";
 import {
   clearFileStorageFlags,
@@ -25,6 +26,7 @@ interface UseConnectionFlowParams {
   connectToExisting: () => Promise<boolean>;
   loadExistingData: () => Promise<any>;
   service: AutosaveFileService | null;
+  fileStorageService: FileStorageService | null;
   dataManager: DataManager | null;
   loadCases: () => Promise<CaseDisplay[]>;
   setCases: React.Dispatch<React.SetStateAction<CaseDisplay[]>>;
@@ -47,6 +49,7 @@ export function useConnectionFlow({
   connectToExisting,
   loadExistingData,
   service,
+  fileStorageService,
   dataManager,
   loadCases,
   setCases,
@@ -266,9 +269,9 @@ export function useConnectionFlow({
         });
       }
 
-      if (getRefactorFlags().USE_NEW_ARCHITECTURE && service) {
+      if (getRefactorFlags().USE_NEW_ARCHITECTURE && fileStorageService) {
         try {
-          const storageRepository = new StorageRepository(service);
+          const storageRepository = new StorageRepository(fileStorageService);
           const appState = ApplicationState.getInstance();
           await appState.hydrate(storageRepository);
 

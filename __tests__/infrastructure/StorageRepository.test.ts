@@ -1,6 +1,8 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import StorageRepository from '@/infrastructure/storage/StorageRepository';
 import type AutosaveFileService from '@/utils/AutosaveFileService';
+import { FileStorageService } from '@/utils/services/FileStorageService';
+import { normalizeCaseNotes } from '@/utils/normalization';
 import { FinancialItem, type FinancialItemSnapshot, FinancialCategory } from '@/domain/financials/entities/FinancialItem';
 import { Case, type CaseSnapshot } from '@/domain/cases/entities/Case';
 import { CASE_STATUS } from '@/types/case';
@@ -40,6 +42,10 @@ class MockAutosaveFileService {
 
   async readFile(): Promise<StorageSnapshot | null> {
     return this.data ? JSON.parse(JSON.stringify(this.data)) : null;
+  }
+
+  async readNamedFile(fileName: string): Promise<any> {
+    return null;
   }
 
   async writeFile(payload: StorageSnapshot): Promise<boolean> {
@@ -139,7 +145,12 @@ describe('StorageRepository', () => {
 
   beforeEach(() => {
     mockService = new MockAutosaveFileService();
-    repository = new StorageRepository(mockService as unknown as AutosaveFileService);
+    const fileStorageService = new FileStorageService({
+      fileService: mockService as unknown as AutosaveFileService,
+      persistNormalizationFixes: false,
+      normalizeCaseNotes,
+    });
+    repository = new StorageRepository(fileStorageService);
   });
 
   it('saves and retrieves cases with search and deletion support', async () => {
@@ -150,10 +161,20 @@ describe('StorageRepository', () => {
     expect(mockService.writes).toBe(1);
 
     const fetched = await caseRepo.getById(sampleCase.id);
-    expect(fetched?.toJSON()).toEqual(sampleCase.toJSON());
+    const expectedCase = sampleCase.toJSON();
+    expectedCase.metadata = {
+      ...expectedCase.metadata,
+      legacy_caseRecord: {
+        id: sampleCase.id,
+        mcn: sampleCase.mcn,
+        personId: sampleCase.personId,
+        status: sampleCase.status,
+      },
+    };
+    expect(fetched?.toJSON()).toEqual(expectedCase);
 
     const searchResults = await caseRepo.searchCases('Sample');
-    expect(searchResults.map(item => item.toJSON())).toEqual([sampleCase.toJSON()]);
+    expect(searchResults.map(item => item.toJSON())).toEqual([expectedCase]);
 
     await caseRepo.delete(sampleCase.id);
     expect(mockService.writes).toBe(2);
@@ -163,8 +184,14 @@ describe('StorageRepository', () => {
   });
 
   it('manages financial items scoped to a case and category', async () => {
+    const caseRepo = repository.cases;
     const financialRepo = repository.financials;
     const caseId = 'CASE-123';
+    
+    // Create parent case first
+    const parentCase = createCase({ id: caseId });
+    await caseRepo.save(parentCase);
+
     const incomeItem = createFinancialItem({ id: 'FIN-INC', caseId, category: FinancialCategory.Income });
     const expenseItem = createFinancialItem({
       id: 'FIN-EXP',
@@ -194,8 +221,14 @@ describe('StorageRepository', () => {
   });
 
   it('filters notes by category for a case', async () => {
+    const caseRepo = repository.cases;
     const noteRepo = repository.notes;
     const caseId = 'CASE-456';
+
+    // Create parent case first
+    const parentCase = createCase({ id: caseId });
+    await caseRepo.save(parentCase);
+
     const generalNote = createNote({ id: 'NOTE-GEN', caseId, category: 'general' });
     const statusNote = createNote({ id: 'NOTE-STATUS', caseId, category: 'status' });
 
@@ -253,16 +286,16 @@ describe('StorageRepository', () => {
 
     const aggregateEvents = await activityRepo.getByAggregateId(baseAggregate);
     const expectedAggregate = sortSnapshots([
-      toSnapshot(events[0]),
-      toSnapshot(events[1]),
-      toSnapshot(events[3]),
+      { ...toSnapshot(events[0]), payload: {} },
+      { ...toSnapshot(events[1]), payload: {} },
+      { ...toSnapshot(events[3]), payload: {} },
     ]);
     expect(sortSnapshots(aggregateEvents.map(toSnapshot))).toEqual(expectedAggregate);
 
     const recentTwo = await activityRepo.getRecent(2);
     expect(recentTwo.map(toSnapshot)).toEqual([
-      toSnapshot(events[3]),
-      toSnapshot(events[1]),
+      { ...toSnapshot(events[3]), payload: {} },
+      { ...toSnapshot(events[1]), payload: {} },
     ]);
   });
 });
