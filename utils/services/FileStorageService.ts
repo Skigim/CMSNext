@@ -6,6 +6,9 @@ import AutosaveFileService from "../AutosaveFileService";
 import { transformImportedData } from "../dataTransform";
 import { createLogger } from "../logger";
 import { reportFileStorageError, type FileStorageOperation } from "../fileStorageErrorReporter";
+import { STORAGE_CONSTANTS } from "../constants/storage";
+import { hydrateStoredAlert, parseStoredAlertsPayload } from "../alerts/alertMigrationUtils";
+import type { AlertWithMatch } from "../alertsData";
 
 const logger = createLogger("FileStorageService");
 
@@ -15,6 +18,7 @@ const logger = createLogger("FileStorageService");
 
 export interface LegacyFileData {
   cases: CaseDisplay[];
+  alerts?: AlertRecord[]; // Added for top-level alerts support
   exported_at: string;
   total_cases: number;
   categoryConfig: CategoryConfig;
@@ -88,7 +92,7 @@ export class FileStorageService {
    */
   async readFileData(): Promise<LegacyFileData | null> {
     try {
-      const rawData = await this.fileService.readFile();
+      let rawData = await this.fileService.readFile();
 
       if (!rawData) {
         // No file exists yet - return empty structure
@@ -100,6 +104,17 @@ export class FileStorageService {
           activityLog: [],
         };
       }
+
+      // --- MIGRATION START ---
+      // Check for legacy alerts.json and migrate if needed
+      const migrationResult = await this.migrateLegacyAlerts(rawData);
+      if (migrationResult.migrated) {
+        rawData = migrationResult.data;
+        // Persist the migration immediately
+        await this.writeFileData(rawData);
+        logger.info("Legacy alerts migration completed and persisted");
+      }
+      // --- MIGRATION END ---
 
       // Handle different data formats
       let cases: CaseDisplay[] = [];
@@ -155,8 +170,20 @@ export class FileStorageService {
         logger.warn("Note normalization needed but persistence disabled");
       }
 
+      // Extract alerts from cases if not present at top level (Legacy support)
+      let finalAlerts = rawData.alerts;
+      if (!finalAlerts && finalCases.length > 0) {
+        finalAlerts = [];
+        finalCases.forEach(c => {
+          if (c.alerts && Array.isArray(c.alerts)) {
+            finalAlerts!.push(...c.alerts);
+          }
+        });
+      }
+
       return {
         cases: finalCases,
+        alerts: finalAlerts,
         exported_at: finalExportedAt,
         total_cases: finalCases.length,
         categoryConfig,
@@ -191,6 +218,7 @@ export class FileStorageService {
       // Re-construct validated data using legacyData
       const finalData: LegacyFileData = {
         cases: legacyData.cases.map((caseItem) => ({ ...caseItem })),
+        alerts: legacyData.alerts,
         exported_at: new Date().toISOString(),
         total_cases: legacyData.cases.length,
         categoryConfig: mergeCategoryConfig(legacyData.categoryConfig),
@@ -274,7 +302,9 @@ export class FileStorageService {
     const cases: StoredCase[] = [];
     const financials: StoredFinancialItem[] = [];
     const notes: StoredNote[] = [];
-    const alerts: AlertRecord[] = [];
+    // Use top-level alerts if available, otherwise extract from cases (legacy fallback)
+    const alerts: AlertRecord[] = data.alerts ? [...data.alerts] : [];
+    const extractedAlerts: AlertRecord[] = [];
 
     for (const caseItem of data.cases) {
       // Extract financials
@@ -307,9 +337,9 @@ export class FileStorageService {
         });
       }
 
-      // Extract alerts
-      if (caseItem.alerts) {
-        alerts.push(...caseItem.alerts);
+      // Extract alerts (only if top-level alerts not provided)
+      if (!data.alerts && caseItem.alerts) {
+        extractedAlerts.push(...caseItem.alerts);
       }
 
       // Create stored case (without nested data)
@@ -327,7 +357,7 @@ export class FileStorageService {
       cases,
       financials,
       notes,
-      alerts,
+      alerts: data.alerts ? alerts : extractedAlerts,
       exported_at: data.exported_at,
       total_cases: cases.length,
       categoryConfig: data.categoryConfig,
@@ -391,6 +421,7 @@ export class FileStorageService {
 
     return {
       cases,
+      alerts: data.alerts, // Populate top-level alerts
       exported_at: data.exported_at,
       total_cases: data.total_cases,
       categoryConfig: data.categoryConfig,
@@ -495,5 +526,121 @@ export class FileStorageService {
       source: "FileStorageService",
       context,
     });
+  }
+
+  private async migrateLegacyAlerts(rawData: any): Promise<{ data: any; migrated: boolean }> {
+    try {
+      const alertsContent = await this.fileService.readNamedFile(STORAGE_CONSTANTS.ALERTS.FILE_NAME);
+      
+      if (!alertsContent || typeof alertsContent !== 'object') {
+        return { data: rawData, migrated: false };
+      }
+
+      // Check for tombstone
+      if (alertsContent.migrated === true) {
+        return { data: rawData, migrated: false };
+      }
+
+      logger.info("Found legacy alerts.json, starting migration...");
+
+      // Parse alerts
+      let alertsToMerge: AlertRecord[] = [];
+      const version = typeof alertsContent.version === 'number' ? alertsContent.version : 1;
+
+      if (version >= 2 && Array.isArray(alertsContent.alerts)) {
+        // V2+ format
+        alertsToMerge = (alertsContent.alerts as unknown[])
+          .map(entry => hydrateStoredAlert(entry))
+          .filter((alert): alert is AlertWithMatch => alert !== null);
+      } else {
+        // V1 format - extract workflows
+        const { workflows } = parseStoredAlertsPayload(alertsContent);
+        
+        if (workflows.length > 0) {
+           logger.warn("V1 alerts.json found. Complex workflow merging not fully implemented in migration step. Skipping.");
+           return { data: rawData, migrated: false };
+        }
+      }
+
+      if (alertsToMerge.length === 0) {
+        return { data: rawData, migrated: false };
+      }
+
+      // Merge into rawData
+      const newData = { ...rawData };
+      let mergedCount = 0;
+
+      // Check if rawData is Normalized (v2.0)
+      if (newData.version === "2.0" && Array.isArray(newData.alerts)) {
+        // Merge into root alerts array
+        // Create a map of existing alerts by ID
+        const existingAlertsMap = new Map<string, AlertRecord>();
+        newData.alerts.forEach((a: AlertRecord) => existingAlertsMap.set(a.id, a));
+
+        alertsToMerge.forEach(alert => {
+          // Overwrite or add
+          existingAlertsMap.set(alert.id, alert);
+        });
+
+        newData.alerts = Array.from(existingAlertsMap.values());
+        mergedCount = alertsToMerge.length;
+      } 
+      // Check if rawData is Legacy (cases array)
+      else if (Array.isArray(newData.cases)) {
+        // Distribute alerts to cases
+        const alertsByCaseId = new Map<string, AlertRecord[]>();
+        const alertsByMcn = new Map<string, AlertRecord[]>();
+
+        alertsToMerge.forEach(alert => {
+          if ((alert as any).matchedCaseId) {
+            const cid = (alert as any).matchedCaseId;
+            if (!alertsByCaseId.has(cid)) alertsByCaseId.set(cid, []);
+            alertsByCaseId.get(cid)!.push(alert);
+          } else if (alert.mcNumber) {
+             if (!alertsByMcn.has(alert.mcNumber)) alertsByMcn.set(alert.mcNumber, []);
+             alertsByMcn.get(alert.mcNumber)!.push(alert);
+          }
+        });
+
+        newData.cases = newData.cases.map((c: any) => {
+          const caseAlerts = [...(c.alerts || [])];
+          const updates = [
+            ...(alertsByCaseId.get(c.id) || []),
+            ...(c.caseRecord?.mcn ? alertsByMcn.get(c.caseRecord.mcn) || [] : [])
+          ];
+
+          // Merge updates into caseAlerts
+          updates.forEach(update => {
+            const idx = caseAlerts.findIndex((ca: any) => ca.id === update.id);
+            if (idx >= 0) {
+              caseAlerts[idx] = update;
+            } else {
+              caseAlerts.push(update);
+            }
+          });
+
+          return { ...c, alerts: caseAlerts };
+        });
+        mergedCount = alertsToMerge.length;
+      }
+
+      if (mergedCount > 0) {
+        // Write tombstone
+        await this.fileService.writeNamedFile(STORAGE_CONSTANTS.ALERTS.FILE_NAME, {
+          migrated: true,
+          migratedAt: new Date().toISOString(),
+          originalVersion: version
+        });
+        
+        logger.info(`Migrated ${mergedCount} alerts from alerts.json to data.json`);
+        return { data: newData, migrated: true };
+      }
+
+      return { data: rawData, migrated: false };
+
+    } catch (error) {
+      logger.error("Error during alerts migration", { error });
+      return { data: rawData, migrated: false };
+    }
   }
 }

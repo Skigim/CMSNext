@@ -28,19 +28,30 @@ Currently, two competing sources of truth exist:
 
 ## Implementation Plan
 
+### Step 0: Preparation (Logic Extraction)
+
+Before deleting `AlertsStorageService`, we must preserve its logic for the migration.
+
+- **Extract Parsing Logic:** Move `hydrateStoredAlert`, `parseStoredAlertsPayload`, and `normalizeStoredAlertEntry` from `AlertsStorageService` into a standalone utility (e.g., `utils/alerts/alertMigrationUtils.ts`).
+- **Verify Tombstone Capability:** Confirm `AutosaveFileService` can overwrite `alerts.json` with a small JSON object to mark it as migrated.
+
 ### Step 1: Migration Logic (FileStorageService)
 
 Modify `FileStorageService.readFileData()` to perform a one-time migration:
 
 - **Check:** Does `alerts.json` exist?
 - **Read:** Load `alerts.json` content.
-- **Merge:** Apply `alerts.json` workflow states (status, resolution notes) onto the v2.0 `alerts` array loaded from `data.json`.
-- **Archive:** Rename `alerts.json` to `alerts.json.migrated` (or delete) to prevent future reads.
+- **Tombstone Check:** If content contains `{ "migrated": true }`, skip migration.
+- **Hydrate:** Use the extracted utility to parse the legacy alerts.
+- **Merge:**
+  - **If Normalized (v2.0):** Merge hydrated alerts into the root `alerts` array.
+  - **If Legacy:** Map hydrated alerts into the nested `case.alerts` arrays (requires matching logic).
+- **Tombstone:** Overwrite `alerts.json` with `{ "migrated": true, "migratedAt": "..." }` to prevent future reads.
 - **Persist:** Immediately save the merged state to `data.json`.
 
 ### Step 2: Refactor AlertsService
 
-Remove `AlertsStorageService` dependency from `AlertsService`.
+Remove `AlertsStorageService` dependency from `AlertsService` and make it a pure logic library.
 
 - **Current:** `constructor(storage: AlertsStorageService)`
 - **New:** `constructor()` (Stateless)
@@ -51,10 +62,16 @@ Remove `AlertsStorageService` dependency from `AlertsService`.
 
 ### Step 3: Update DataManager Orchestration
 
-Update `DataManager` to handle the I/O that `AlertsService` used to do.
+Update `DataManager` to handle the I/O and data flow.
 
-- **Read:** `getAllCases()` already loads alerts via `FileStorageService`.
-- **Write:** When `AlertsService` returns an updated alert or merged list, `DataManager` calls `FileStorageService.writeFileData()`.
+- **Read:** `getAllCases()` loads data via `FileStorageService`.
+- **Extract:** `DataManager` extracts alerts from the loaded cases (or normalized structure) to pass to `AlertsService`.
+  ```typescript
+  const cases = await this.fileStorage.readFileData();
+  const allAlerts = cases.flatMap((c) => c.alerts ?? []);
+  const index = this.alertsService.getAlertsIndex(allAlerts, cases);
+  ```
+- **Write:** When `AlertsService` returns an updated alert or merged list, `DataManager` updates the in-memory model and calls `FileStorageService.writeFileData()`.
 
 ### Step 4: Cleanup
 
