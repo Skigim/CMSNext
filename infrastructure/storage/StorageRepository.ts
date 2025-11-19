@@ -386,7 +386,17 @@ export class StorageRepository implements ITransactionRepository {
         const processItems = (items: any[], category: string) => {
           items.forEach(item => {
             try {
-              financials.push(FinancialItem.rehydrate({ ...item, caseId: c.id, category }));
+              // Migration logic: Handle legacy timestamps
+              const createdAt = item.createdAt || item.dateAdded || new Date().toISOString();
+              const updatedAt = item.updatedAt || item.dateAdded || new Date().toISOString();
+
+              financials.push(FinancialItem.rehydrate({ 
+                ...item, 
+                createdAt,
+                updatedAt,
+                caseId: c.id, 
+                category 
+              }));
             } catch (error) {
               console.warn(`Skipping corrupt financial item ${item.id} in case ${c.id}:`, error);
             }
