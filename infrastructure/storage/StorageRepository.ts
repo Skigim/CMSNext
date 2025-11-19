@@ -386,10 +386,10 @@ export class StorageRepository implements ITransactionRepository {
         const processItems = (items: any[], category: string) => {
           items.forEach(item => {
             try {
-              // Migration logic: Handle legacy timestamps and data types
+              // Migration logic: Handle legacy timestamps
               const createdAt = item.createdAt || item.dateAdded || new Date().toISOString();
               const updatedAt = item.updatedAt || item.dateAdded || new Date().toISOString();
-              
+
               // Ensure amount is a number
               let amount = item.amount;
               if (typeof amount === 'string') {
