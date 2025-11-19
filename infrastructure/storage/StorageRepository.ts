@@ -1,4 +1,4 @@
-import { FileStorageService, type FileData, type NormalizedFileData, isNormalizedFileData } from '@/utils/services/FileStorageService';
+import { FileStorageService, type FileData } from '@/utils/services/FileStorageService';
 import { Case, type CaseSnapshot } from '@/domain/cases/entities/Case';
 import { FinancialItem } from '@/domain/financials/entities/FinancialItem';
 import type { Note, NoteCategory } from '@/domain/notes/entities/Note';
@@ -366,7 +366,7 @@ export class StorageRepository implements ITransactionRepository {
 
       // Preserve legacy caseRecord data in metadata
       const metadata = {
-        ...(c.metadata || {}),
+        ...((c as any).metadata || {}),
         legacy_caseRecord: caseRecord,
       };
 
@@ -374,7 +374,7 @@ export class StorageRepository implements ITransactionRepository {
         ...caseData,
         personId: c.caseRecord.personId || c.person?.id,
         metadata,
-      } as CaseSnapshot;
+      } as unknown as CaseSnapshot;
     });
 
     // 2. Financials (flatten from cases)
@@ -420,17 +420,17 @@ export class StorageRepository implements ITransactionRepository {
     });
 
     // 4. Alerts (use top-level or flatten)
-    const alerts: Alert[] = raw.alerts ? (raw.alerts as Alert[]) : [];
+    const alerts: Alert[] = raw.alerts ? (raw.alerts as unknown as Alert[]) : [];
     if (!raw.alerts) {
       raw.cases.forEach(c => {
         if (c.alerts) {
-          c.alerts.forEach(alert => alerts.push(alert as Alert));
+          c.alerts.forEach(alert => alerts.push(alert as unknown as Alert));
         }
       });
     }
 
     // 5. Activities
-    const activities = (raw.activityLog || []) as ActivityEvent[];
+    const activities = (raw.activityLog || []) as unknown as ActivityEvent[];
 
     return {
       version: StorageRepository.CURRENT_VERSION,
@@ -480,11 +480,11 @@ export class StorageRepository implements ITransactionRepository {
     // Group alerts by MCN (for legacy support)
     const alertsByMcn = new Map<string, any[]>();
     storage.alerts.forEach(a => {
-      if (a.mcNumber) {
-        if (!alertsByMcn.has(a.mcNumber)) {
-          alertsByMcn.set(a.mcNumber, []);
+      if (a.mcn) {
+        if (!alertsByMcn.has(a.mcn)) {
+          alertsByMcn.set(a.mcn, []);
         }
-        alertsByMcn.get(a.mcNumber)!.push(a);
+        alertsByMcn.get(a.mcn)!.push(a);
       }
     });
 
@@ -501,7 +501,6 @@ export class StorageRepository implements ITransactionRepository {
         alerts, // Legacy support
         caseRecord: {
           ...legacyRecord,
-          ...c.caseRecord, // In case it was somehow preserved
           id: c.id,
           mcn: c.mcn,
           status: c.status,
@@ -546,14 +545,6 @@ export class StorageRepository implements ITransactionRepository {
     }
 
     return Case.rehydrate(entity).toJSON();
-  }
-
-  private ensureArray<T>(value: unknown): T[] {
-    if (Array.isArray(value)) {
-      return this.clone(value as T[]);
-    }
-
-    return [];
   }
 
   private clone<T>(value: T): T {

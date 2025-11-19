@@ -217,7 +217,7 @@ export function useFinancialItemFlow({
         setError(null);
         
         if (getRefactorFlags().USE_FINANCIALS_DOMAIN && financialManagement) {
-            await financialManagement.createItem(selectedCase.id, category, itemData);
+            await financialManagement.createItem(selectedCase.id, category, itemData as any);
             
             // Refetch items to ensure state consistency
             const freshItems = await financialManagement.getItems(selectedCase.id);

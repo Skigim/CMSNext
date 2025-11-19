@@ -44,7 +44,7 @@ class MockAutosaveFileService {
     return this.data ? JSON.parse(JSON.stringify(this.data)) : null;
   }
 
-  async readNamedFile(fileName: string): Promise<any> {
+  async readNamedFile(_fileName: string): Promise<any> {
     return null;
   }
 
