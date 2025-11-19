@@ -28,9 +28,16 @@ export class UpdateFinancialItem {
 
   async execute(request: UpdateFinancialItemRequest): Promise<FinancialItem> {
     // 1. Fetch existing item
-    const existingItem = await this.financialRepository.getById(request.id);
+    let existingItem = await this.financialRepository.getById(request.id);
     if (!existingItem) {
       throw new ValidationError(`Financial item not found: ${request.id}`);
+    }
+
+    // Defensive fix: Ensure existingItem is an instance
+    if (!(existingItem instanceof FinancialItem)) {
+        console.warn('UpdateFinancialItem: existingItem is not an instance, rehydrating...', existingItem);
+        // Assuming existingItem is a plain object matching the snapshot structure
+        existingItem = FinancialItem.rehydrate(existingItem as any);
     }
 
     // 2. Validate Case ID match (security check)

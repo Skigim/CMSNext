@@ -1,9 +1,9 @@
 import { FileStorageService, type FileData } from '@/utils/services/FileStorageService';
 import { Case, type CaseSnapshot } from '@/domain/cases/entities/Case';
 import { FinancialItem } from '@/domain/financials/entities/FinancialItem';
-import type { Note, NoteCategory } from '@/domain/notes/entities/Note';
-import type { Alert } from '@/domain/alerts/entities/Alert';
-import type { ActivityEvent } from '@/domain/activity/entities/ActivityEvent';
+import { Note, type NoteCategory } from '@/domain/notes/entities/Note';
+import { Alert } from '@/domain/alerts/entities/Alert';
+import { ActivityEvent } from '@/domain/activity/entities/ActivityEvent';
 import type { FeatureFlags } from '@/utils/featureFlags';
 import type {
   ICaseRepository,
@@ -115,13 +115,13 @@ export class StorageRepository implements ITransactionRepository {
       case 'cases':
         return this.cloneCaseEntity(storage.cases.find(item => item.id === id) ?? null);
       case 'financials':
-        return this.clone(storage.financials.find(item => item.id === id) ?? null);
+        return this.cloneFinancialEntity(storage.financials.find(item => item.id === id) ?? null);
       case 'notes':
-        return this.clone(storage.notes.find(item => item.id === id) ?? null);
+        return this.cloneNoteEntity(storage.notes.find(item => item.id === id) ?? null);
       case 'alerts':
-        return this.clone(storage.alerts.find(item => item.id === id) ?? null);
+        return this.cloneAlertEntity(storage.alerts.find(item => item.id === id) ?? null);
       case 'activities':
-        return this.clone(storage.activities.find(item => item.id === id) ?? null);
+        return this.cloneActivityEntity(storage.activities.find(item => item.id === id) ?? null);
       default:
         return this.cloneCaseEntity(storage.cases.find(item => item.id === id) ?? null);
     }
@@ -134,13 +134,13 @@ export class StorageRepository implements ITransactionRepository {
       case 'cases':
         return this.cloneCaseEntities(storage.cases);
       case 'financials':
-        return this.clone(storage.financials);
+        return this.cloneFinancialEntities(storage.financials);
       case 'notes':
-        return this.clone(storage.notes);
+        return this.cloneNoteEntities(storage.notes);
       case 'alerts':
-        return this.clone(storage.alerts);
+        return this.cloneAlertEntities(storage.alerts);
       case 'activities':
-        return this.clone(storage.activities);
+        return this.cloneActivityEntities(storage.activities);
       default:
         return this.cloneCaseEntities(storage.cases);
     }
@@ -199,7 +199,7 @@ export class StorageRepository implements ITransactionRepository {
   async findByMCN(domain: DomainScope, mcn: string): Promise<any> {
     if (domain === 'alerts') {
       const storage = await this.readStorage();
-      return this.clone(storage.alerts.filter(alert => this.normalize(alert.mcn) === this.normalize(mcn)));
+      return this.cloneAlertEntities(storage.alerts.filter(alert => this.normalize(alert.mcn) === this.normalize(mcn)));
     }
 
     if (domain === 'cases') {
@@ -236,11 +236,11 @@ export class StorageRepository implements ITransactionRepository {
     const storage = await this.readStorage();
 
     if (domain === 'financials') {
-      return this.clone(storage.financials.filter(item => item.caseId === caseId));
+      return this.cloneFinancialEntities(storage.financials.filter(item => item.caseId === caseId));
     }
 
     if (domain === 'notes') {
-      return this.clone(storage.notes.filter(item => item.caseId === caseId));
+      return this.cloneNoteEntities(storage.notes.filter(item => item.caseId === caseId));
     }
 
     throw new Error('StorageRepository.getByCaseId is only supported for financials or notes');
@@ -252,7 +252,7 @@ export class StorageRepository implements ITransactionRepository {
     }
 
     const storage = await this.readStorage();
-    return this.clone(
+    return this.cloneNoteEntities(
       storage.notes.filter(note => note.caseId === caseId && note.category === category),
     );
   }
@@ -263,7 +263,7 @@ export class StorageRepository implements ITransactionRepository {
     }
 
     const storage = await this.readStorage();
-    return this.clone(storage.financials.filter(item => item.category === category));
+    return this.cloneFinancialEntities(storage.financials.filter(item => item.category === category));
   }
 
   async getUnmatched(domain: DomainScope): Promise<Alert[]> {
@@ -272,7 +272,7 @@ export class StorageRepository implements ITransactionRepository {
     }
 
     const storage = await this.readStorage();
-    return this.clone(storage.alerts.filter(alert => !alert.caseId));
+    return this.cloneAlertEntities(storage.alerts.filter(alert => !alert.caseId));
   }
 
   async getByAggregateId(domain: DomainScope, aggregateId: string): Promise<ActivityEvent[]> {
@@ -281,7 +281,7 @@ export class StorageRepository implements ITransactionRepository {
     }
 
     const storage = await this.readStorage();
-    return this.clone(storage.activities.filter(event => event.aggregateId === aggregateId));
+    return this.cloneActivityEntities(storage.activities.filter(event => event.aggregateId === aggregateId));
   }
 
   async getRecent(domain: DomainScope, limit: number): Promise<ActivityEvent[]> {
@@ -294,7 +294,7 @@ export class StorageRepository implements ITransactionRepository {
       (a, b) => this.toTimestamp(b.timestamp) - this.toTimestamp(a.timestamp),
     );
 
-    return this.clone(sorted.slice(0, Math.max(0, limit)));
+    return this.cloneActivityEntities(sorted.slice(0, Math.max(0, limit)));
   }
 
   async runTransaction(operations: TransactionOperation[]): Promise<void> {
@@ -555,6 +555,42 @@ export class StorageRepository implements ITransactionRepository {
 
   private cloneCaseSnapshot(snapshot: CaseSnapshot): CaseSnapshot {
     return JSON.parse(JSON.stringify(snapshot)) as CaseSnapshot;
+  }
+
+  private cloneFinancialEntity(entity: FinancialItem | null): FinancialItem | null {
+    if (!entity) return null;
+    return FinancialItem.rehydrate(this.clone(entity.toJSON()));
+  }
+
+  private cloneFinancialEntities(entities: FinancialItem[]): FinancialItem[] {
+    return entities.map(entity => this.cloneFinancialEntity(entity)!);
+  }
+
+  private cloneNoteEntity(entity: Note | null): Note | null {
+    if (!entity) return null;
+    return Note.rehydrate(this.clone(entity.toJSON()));
+  }
+
+  private cloneNoteEntities(entities: Note[]): Note[] {
+    return entities.map(entity => this.cloneNoteEntity(entity)!);
+  }
+
+  private cloneAlertEntity(entity: Alert | null): Alert | null {
+    if (!entity) return null;
+    return Alert.rehydrate(this.clone(entity.toJSON()));
+  }
+
+  private cloneAlertEntities(entities: Alert[]): Alert[] {
+    return entities.map(entity => this.cloneAlertEntity(entity)!);
+  }
+
+  private cloneActivityEntity(entity: ActivityEvent | null): ActivityEvent | null {
+    if (!entity) return null;
+    return ActivityEvent.rehydrate(this.clone(entity.toJSON()));
+  }
+
+  private cloneActivityEntities(entities: ActivityEvent[]): ActivityEvent[] {
+    return entities.map(entity => this.cloneActivityEntity(entity)!);
   }
 
   private toCaseSnapshot(entity: Case | CaseSnapshot): CaseSnapshot {
