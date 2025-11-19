@@ -386,12 +386,30 @@ export class StorageRepository implements ITransactionRepository {
         const processItems = (items: any[], category: string) => {
           items.forEach(item => {
             try {
-              // Migration logic: Handle legacy timestamps
+              // Migration logic: Handle legacy timestamps and data types
               const createdAt = item.createdAt || item.dateAdded || new Date().toISOString();
               const updatedAt = item.updatedAt || item.dateAdded || new Date().toISOString();
+              
+              // Ensure amount is a number
+              let amount = item.amount;
+              if (typeof amount === 'string') {
+                amount = parseFloat(amount);
+              }
+              if (isNaN(amount)) {
+                amount = 0;
+              }
+
+              // Ensure description exists
+              const description = item.description || item.name || 'Untitled Item';
+
+              // Ensure ID exists
+              const id = item.id || `legacy-${Math.random().toString(36).slice(2)}`;
 
               financials.push(FinancialItem.rehydrate({ 
                 ...item, 
+                id,
+                description,
+                amount,
                 createdAt,
                 updatedAt,
                 caseId: c.id, 
