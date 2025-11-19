@@ -6,6 +6,7 @@ import {
   NewCaseRecordData,
   NewNoteData,
   AlertWorkflowStatus,
+  AlertRecord,
 } from "../types/case";
 import type { CaseActivityEntry } from "../types/activityLog";
 import { v4 as uuidv4 } from 'uuid';
@@ -16,17 +17,18 @@ import {
   CategoryKey,
   mergeCategoryConfig,
 } from "../types/categoryConfig";
+import { STORAGE_CONSTANTS } from "./constants/storage";
 import {
   AlertsIndex,
   AlertWithMatch,
+  createEmptyAlertsIndex,
 } from "./alertsData";
-import { FileStorageService, type FileData } from "./services/FileStorageService";
+import { FileStorageService, type LegacyFileData } from "./services/FileStorageService";
 import { ActivityLogService } from "./services/ActivityLogService";
 import { CategoryConfigService } from "./services/CategoryConfigService";
 import { NotesService } from "./services/NotesService";
 import { FinancialsService } from "./services/FinancialsService";
 import { CaseService } from "./services/CaseService";
-import { AlertsStorageService } from "./services/AlertsStorageService";
 import { AlertsService } from "./services/AlertsService";
 
 // ============================================================================
@@ -48,6 +50,18 @@ interface AlertsMergeSummary {
   added: number;
   updated: number;
   total: number;
+  error?: string;
+}
+
+function toAlertWithMatch(record: AlertRecord): AlertWithMatch {
+  const candidate = record as unknown as Partial<AlertWithMatch>;
+  return {
+    ...record,
+    matchStatus: candidate.matchStatus ?? (record.mcNumber ? 'unmatched' : 'missing-mcn'),
+    matchedCaseId: candidate.matchedCaseId,
+    matchedCaseName: candidate.matchedCaseName,
+    matchedCaseStatus: candidate.matchedCaseStatus,
+  };
 }
 
 /**
@@ -162,7 +176,6 @@ export class DataManager {
   private notes: NotesService;
   private financials: FinancialsService;
   private cases: CaseService;
-  private alertsStorage: AlertsStorageService;
   private alerts: AlertsService;
 
   constructor(config: DataManagerConfig) {
@@ -187,12 +200,7 @@ export class DataManager {
     this.cases = new CaseService({
       fileStorage: this.fileStorage,
     });
-    this.alertsStorage = new AlertsStorageService({
-      fileService: this.fileService,
-    });
-    this.alerts = new AlertsService({
-      alertsStorage: this.alertsStorage,
-    });
+    this.alerts = new AlertsService();
   }
 
   // =============================================================================
@@ -203,7 +211,7 @@ export class DataManager {
    * Read current data from file system
    * Delegates to FileStorageService
    */
-  private async readFileData(): Promise<FileData | null> {
+  private async readFileData(): Promise<LegacyFileData | null> {
     return this.fileStorage.readFileData();
   }
 
@@ -248,8 +256,35 @@ export class DataManager {
   // ==========================================================================
 
   async getAlertsIndex(options: { cases?: CaseDisplay[] } = {}): Promise<AlertsIndex> {
-    const cases = options.cases ?? (await this.getAllCases());
-    return this.alerts.getAlertsIndex(cases);
+    let data = await this.readFileData();
+
+    // Check for pending CSV import
+    try {
+      const csvContent = await this.fileService.readTextFile(STORAGE_CONSTANTS.ALERTS.CSV_NAME);
+      if (csvContent) {
+        const cases = options.cases ?? data?.cases ?? [];
+        await this.mergeAlertsFromCsvContent(csvContent, { cases, sourceFileName: STORAGE_CONSTANTS.ALERTS.CSV_NAME });
+        // Refresh data after import
+        data = await this.readFileData();
+      }
+    } catch (error) {
+      logger.warn('Failed to check/import alerts CSV', { error });
+      // If the error is critical, do not continue with potentially stale data
+      if (error instanceof Error && error.message.includes('Critical')) {
+         return createEmptyAlertsIndex();
+      }
+    }
+
+    if (!data) {
+      return createEmptyAlertsIndex();
+    }
+
+    const cases = options.cases ?? data.cases ?? [];
+    const rawAlerts = data.alerts ?? [];
+    
+    const alerts: AlertWithMatch[] = rawAlerts.map(toAlertWithMatch);
+
+    return this.alerts.getAlertsIndex(alerts, cases);
   }
 
   async updateAlertStatus(
@@ -261,34 +296,83 @@ export class DataManager {
     },
     options: { cases?: CaseDisplay[] } = {},
   ): Promise<AlertWithMatch | null> {
-    const cases = options.cases ?? (await this.getAllCases());
-    const result = await this.alerts.updateAlertStatus(alertId, updates, cases);
-    
-    // Notify file storage of data change
-    if (result) {
-      this.fileService.notifyDataChange();
+    const data = await this.readFileData();
+    if (!data) {
+      logger.warn('Cannot update alert status: No data loaded');
+      return null;
     }
+
+    const cases = options.cases ?? data.cases ?? [];
+    const rawAlerts = data.alerts ?? [];
     
-    return result;
+    const alerts: AlertWithMatch[] = rawAlerts.map(toAlertWithMatch);
+
+    const updatedAlert = this.alerts.updateAlertStatus(alerts, alertId, updates, cases);
+    if (!updatedAlert) {
+      return null;
+    }
+
+    // Replace the alert in a new array to avoid mutating rawAlerts
+    const newAlerts = [...rawAlerts];
+    const index = newAlerts.findIndex(a => a.id === updatedAlert.id);
+    if (index !== -1) {
+      newAlerts[index] = updatedAlert;
+    } else {
+      // Should not happen if updateAlertStatus found it, but safe fallback
+      newAlerts.push(updatedAlert);
+    }
+
+    // Save updated alerts to storage
+    await this.fileStorage.writeFileData({
+      ...data,
+      alerts: newAlerts,
+    });
+
+    this.fileService.notifyDataChange();
+
+    return updatedAlert;
   }
 
   async mergeAlertsFromCsvContent(
     csvContent: string,
     options: { cases?: CaseDisplay[]; sourceFileName?: string } = {},
   ): Promise<AlertsMergeSummary> {
-    const cases = options.cases ?? (await this.getAllCases());
-    const result = await this.alerts.mergeAlertsFromCsvContent(csvContent, cases, options.sourceFileName);
-    
-    // Notify file storage of data change
-    if (result.total > 0) {
-      this.fileService.notifyDataChange();
+    const data = await this.readFileData();
+    if (!data) {
+      logger.warn('Cannot merge alerts: No data loaded');
+      return { added: 0, updated: 0, total: 0 };
     }
+
+    const cases = options.cases ?? data.cases ?? [];
+    const rawAlerts = data.alerts ?? [];
     
-    return {
-      added: result.added,
-      updated: result.updated,
-      total: result.total,
-    };
+    const existingAlerts: AlertWithMatch[] = rawAlerts.map(toAlertWithMatch);
+
+    try {
+      const result = await this.alerts.mergeAlertsFromCsvContent(csvContent, existingAlerts, cases);
+
+      if (result.added > 0 || result.updated > 0) {
+        await this.fileStorage.writeFileData({
+          ...data,
+          alerts: result.alerts,
+        });
+        this.fileService.notifyDataChange();
+      }
+
+      return {
+        added: result.added,
+        updated: result.updated,
+        total: result.total,
+      };
+    } catch (error) {
+      logger.error('Failed to merge alerts from CSV', { error });
+      return { 
+        added: 0, 
+        updated: 0, 
+        total: 0, 
+        error: error instanceof Error ? error.message : String(error) 
+      };
+    }
   }
 
   // =============================================================================

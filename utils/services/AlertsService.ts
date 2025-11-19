@@ -2,19 +2,15 @@ import type { CaseDisplay } from '../../types/case';
 import type {
   AlertWithMatch,
   AlertsIndex,
-  AlertsSummary,
   AlertMatchStatus,
 } from '../alertsData';
 import {
   createAlertsIndexFromAlerts,
-  createEmptyAlertsIndex,
   buildAlertStorageKey,
   normalizeMcn,
 } from '../alertsData';
 import { createLogger } from '../logger';
-import type { AlertsStorageService, StoredAlertWorkflowState, AlertsStoragePayload } from './AlertsStorageService';
 import type { AlertWorkflowStatus } from '../../types/case';
-import { STORAGE_CONSTANTS } from '../constants/storage';
 
 const logger = createLogger('AlertsService');
 
@@ -25,10 +21,6 @@ const logger = createLogger('AlertsService');
 interface AlertLookupCandidate {
   key: string;
   fallback: boolean;
-}
-
-interface AlertsServiceConfig {
-  alertsStorage: AlertsStorageService;
 }
 
 export interface MergeAlertsResult {
@@ -53,18 +45,12 @@ export interface MergeAlertsResult {
  * - Update alert status with workflow management
  * - Merge alerts from CSV with deduplication
  * - Match alerts to cases via MCN/metadata
- * - Apply stored workflow states
  * - Generate alert lookup candidates for matching
  * 
- * Pattern: Cases must be passed as parameters (no FileStorageService dependency)
+ * Pattern: Pure logic service (Stateless)
  */
 export class AlertsService {
-  private alertsStorage: AlertsStorageService;
-
-  constructor(config: AlertsServiceConfig) {
-    this.alertsStorage = config.alertsStorage;
-  }
-
+  
   // =============================================================================
   // PUBLIC API
   // =============================================================================
@@ -72,71 +58,27 @@ export class AlertsService {
   /**
    * Get alerts index with case matching
    * 
-   * @param cases - Cases for alert matching (required)
+   * @param alerts - Current alerts list
+   * @param cases - Cases for alert matching
    * @returns AlertsIndex with matched/unmatched/missingMcn classifications
    */
-  async getAlertsIndex(cases: CaseDisplay[]): Promise<AlertsIndex> {
-    const loadResult = await this.alertsStorage.loadAlertsFromStore();
-    let alerts = loadResult.alerts ?? [];
-    let shouldPersist = loadResult.needsMigration || !!loadResult.error;
-    let sourceFile = loadResult.sourceFile;
-
-    // If no alerts in storage, try CSV import
-    if (alerts.length === 0) {
-      const imported = await this.alertsStorage.importAlertsFromCsv(cases);
-      alerts = imported.alerts;
-      sourceFile = imported.sourceFile ?? sourceFile;
-
-      if (alerts.length === 0) {
-        // No alerts found anywhere - persist empty if migration needed
-        if (shouldPersist) {
-          const emptyIndex = createEmptyAlertsIndex();
-          void this.saveAlertsInternal(emptyIndex.alerts, emptyIndex.summary, { sourceFile });
-        }
-        return createEmptyAlertsIndex();
-      }
-
-      // Apply legacy workflows if any
-      if (loadResult.legacyWorkflows.length > 0) {
-        const applied = this.applyStoredAlertWorkflows(alerts, loadResult.legacyWorkflows);
-        alerts = applied.alerts;
-        if (applied.changed || applied.unmatchedIds.length > 0) {
-          shouldPersist = true;
-        }
-      }
-
-      shouldPersist = true;
-    }
-
-    const originalAlerts = alerts;
-
+  getAlertsIndex(alerts: AlertWithMatch[], cases: CaseDisplay[]): AlertsIndex {
     // Rematch alerts to current cases
     const rematchedAlerts = this.rematchAlertsForCases(alerts, cases);
-
-    // Check if rematching changed anything
-    if (this.haveAlertsChanged(originalAlerts, rematchedAlerts)) {
-      shouldPersist = true;
-    }
-
-    const index = createAlertsIndexFromAlerts(rematchedAlerts);
-
-    // Persist if needed
-    if (shouldPersist) {
-      void this.saveAlertsInternal(index.alerts, index.summary, { sourceFile });
-    }
-
-    return index;
+    return createAlertsIndexFromAlerts(rematchedAlerts);
   }
 
   /**
    * Update alert status with workflow management
    * 
+   * @param alerts - Current alerts list
    * @param alertId - Alert identifier (id, reportId, or lookup key)
    * @param updates - Status updates to apply
-   * @param cases - Cases for alert rematching (required)
-   * @returns Updated alert or null if not found
+   * @param cases - Cases for alert rematching
+   * @returns Updated alert object or null if not found
    */
-  async updateAlertStatus(
+  updateAlertStatus(
+    alerts: AlertWithMatch[],
     alertId: string,
     updates: {
       status?: AlertWorkflowStatus;
@@ -144,29 +86,7 @@ export class AlertsService {
       resolutionNotes?: string;
     },
     cases: CaseDisplay[]
-  ): Promise<AlertWithMatch | null> {
-    const loadResult = await this.alertsStorage.loadAlertsFromStore();
-    let alerts = loadResult.alerts ?? [];
-    let sourceFile = loadResult.sourceFile;
-
-    // If no alerts in storage, try CSV import
-    if (alerts.length === 0) {
-      const imported = await this.alertsStorage.importAlertsFromCsv(cases);
-      alerts = imported.alerts;
-      sourceFile = imported.sourceFile ?? sourceFile;
-
-      if (alerts.length === 0) {
-        logger.warn('No alerts available to update status', { alertId });
-        return null;
-      }
-
-      // Apply legacy workflows if any
-      if (loadResult.legacyWorkflows.length > 0) {
-        const applied = this.applyStoredAlertWorkflows(alerts, loadResult.legacyWorkflows);
-        alerts = applied.alerts;
-      }
-    }
-
+  ): AlertWithMatch | null {
     const normalizedAlertId = typeof alertId === 'string' ? alertId.trim() : '';
     if (normalizedAlertId.length === 0) {
       logger.warn('Invalid alert identifier for status update', { alertId });
@@ -246,23 +166,9 @@ export class AlertsService {
       updatedAt: new Date().toISOString(),
     };
 
-    alerts[targetIndex] = updatedAlertBase;
-
     // Rematch with current cases
-    const rematchedAlerts = this.rematchAlertsForCases(alerts, cases);
-    const index = createAlertsIndexFromAlerts(rematchedAlerts);
-
-    await this.saveAlertsInternal(index.alerts, index.summary, { sourceFile });
-
-    const rematchedAlert = rematchedAlerts.find(alert => alert.id === updatedAlertBase.id);
-    if (!rematchedAlert) {
-      logger.warn('Updated alert missing after rematch', {
-        alertId,
-        alertKey: this.alertKey(updatedAlertBase),
-      });
-      return null;
-    }
-
+    const rematchedAlert = this.rematchAlertForCases(updatedAlertBase, this.buildCaseLookup(cases));
+    
     return rematchedAlert;
   }
 
@@ -270,38 +176,25 @@ export class AlertsService {
    * Merge alerts from CSV content with deduplication
    * 
    * @param csvContent - Raw CSV content to merge
-   * @param cases - Cases for alert matching (required)
+   * @param existingAlerts - Current alerts list
+   * @param cases - Cases for alert matching
    * @returns Merged alerts with statistics
    */
   async mergeAlertsFromCsvContent(
     csvContent: string,
-    cases: CaseDisplay[],
-    sourceFileName?: string
+    existingAlerts: AlertWithMatch[],
+    cases: CaseDisplay[]
   ): Promise<MergeAlertsResult> {
     const { parseAlertsFromCsv } = await import('@/utils/alerts/alertsCsvParser');
     const incomingIndex = parseAlertsFromCsv(csvContent, cases);
     const incoming = incomingIndex.alerts;
 
-    const loadResult = await this.alertsStorage.loadAlertsFromStore();
-    let existing = loadResult.alerts ?? [];
+    const existing = existingAlerts;
 
     // If no existing alerts and no incoming, nothing to do
     if (incoming.length === 0 && existing.length === 0) {
       logger.info('No alerts to merge from CSV and no existing alerts');
       return { alerts: [], added: 0, updated: 0, total: 0 };
-    }
-
-    // If no existing alerts, import from CSV
-    if (existing.length === 0) {
-      const imported = await this.alertsStorage.importAlertsFromCsv(cases);
-      existing = imported.alerts;
-    }
-
-    // Apply legacy workflows to incoming alerts if any
-    let incomingWithWorkflows = incoming;
-    if (loadResult.legacyWorkflows.length > 0) {
-      const applied = this.applyStoredAlertWorkflows(incoming, loadResult.legacyWorkflows);
-      incomingWithWorkflows = applied.alerts;
     }
 
     let added = 0;
@@ -326,7 +219,7 @@ export class AlertsService {
     const usedIndices = new Set<number>();
     const merged: AlertWithMatch[] = [];
 
-    incomingWithWorkflows.forEach(incomingAlert => {
+    incoming.forEach(incomingAlert => {
       const candidates = this.buildAlertLookupCandidates(incomingAlert);
       const incomingStrongKeys = candidates
         .filter(c => !c.fallback)
@@ -438,17 +331,12 @@ export class AlertsService {
 
     // Rematch all with current cases
     const rematchedAlerts = this.rematchAlertsForCases(merged, cases);
-    const index = createAlertsIndexFromAlerts(rematchedAlerts);
-
-    await this.saveAlertsInternal(index.alerts, index.summary, {
-      sourceFile: sourceFileName ?? 'Merged from CSV',
-    });
 
     return {
-      alerts: index.alerts,
+      alerts: rematchedAlerts,
       added,
       updated,
-      total: index.alerts.length,
+      total: rematchedAlerts.length,
     };
   }
 
@@ -521,116 +409,6 @@ export class AlertsService {
 
     const lookup = this.buildCaseLookup(cases);
     return alerts.map(alert => this.rematchAlertForCases(alert, lookup));
-  }
-
-  // =============================================================================
-  // PRIVATE UTILITIES - Workflow Management
-  // =============================================================================
-
-  /**
-   * Apply stored workflow states to alerts (v1 migration)
-   */
-  private applyStoredAlertWorkflows(
-    alerts: AlertWithMatch[],
-    storedWorkflows: StoredAlertWorkflowState[],
-  ): {
-    alerts: AlertWithMatch[];
-    changed: boolean;
-    unmatchedIds: string[];
-  } {
-    if (!alerts.length || !storedWorkflows.length) {
-      return { alerts, changed: false, unmatchedIds: storedWorkflows.map(entry => entry.alertId) };
-    }
-
-    // Build workflow index
-    const workflowKeyIndex = new Map<string, number[]>();
-    storedWorkflows.forEach((workflow, index) => {
-      const key = workflow?.alertId?.trim();
-      if (!key) {
-        return;
-      }
-
-      const existing = workflowKeyIndex.get(key);
-      if (existing) {
-        existing.push(index);
-        return;
-      }
-
-      workflowKeyIndex.set(key, [index]);
-    });
-
-    const usedIndices = new Set<number>();
-
-    const resolveStoredWorkflowForAlert = (alert: AlertWithMatch): { workflow: StoredAlertWorkflowState | null; index: number } => {
-      const candidates = this.buildAlertLookupCandidates(alert);
-
-      let matchedIndex = -1;
-      let matchedWorkflow: StoredAlertWorkflowState | null = null;
-
-      for (const { key: candidate } of candidates) {
-        const candidateIndices = workflowKeyIndex.get(candidate);
-        if (!candidateIndices?.length) {
-          continue;
-        }
-
-        for (const index of candidateIndices) {
-          if (usedIndices.has(index)) {
-            continue;
-          }
-
-          matchedIndex = index;
-          matchedWorkflow = storedWorkflows[index] ?? null;
-          break;
-        }
-
-        if (matchedWorkflow) {
-          break;
-        }
-      }
-
-      if (matchedIndex === -1 || !matchedWorkflow) {
-        return { workflow: null, index: -1 };
-      }
-
-      usedIndices.add(matchedIndex);
-      return { workflow: matchedWorkflow, index: matchedIndex };
-    };
-
-    let changed = false;
-    const updatedAlerts = alerts.map(alert => {
-      const { workflow } = resolveStoredWorkflowForAlert(alert);
-      if (!workflow) {
-        return alert;
-      }
-
-      const nextAlert: AlertWithMatch = {
-        ...alert,
-        status: workflow.status ?? alert.status ?? 'new',
-        resolvedAt:
-          workflow.resolvedAt !== undefined
-            ? workflow.resolvedAt
-            : alert.resolvedAt ?? null,
-        resolutionNotes:
-          workflow.resolutionNotes ?? alert.resolutionNotes,
-        updatedAt: workflow.updatedAt ?? alert.updatedAt,
-      };
-
-      if (
-        !this.alertsAreEqual(alert, nextAlert) ||
-        alert.updatedAt !== nextAlert.updatedAt
-      ) {
-        changed = true;
-      }
-
-      return nextAlert;
-    });
-
-    const unmatchedIds = storedWorkflows
-      .map((workflow, index) => ({ workflow, index }))
-      .filter(entry => entry.workflow.alertId && !usedIndices.has(entry.index))
-      .map(entry => entry.workflow.alertId);
-
-    return { alerts: updatedAlerts, changed, unmatchedIds };
   }
 
   // =============================================================================
@@ -855,100 +633,5 @@ export class AlertsService {
         ...existing.metadata,
       },
     };
-  }
-
-  // =============================================================================
-  // PRIVATE UTILITIES - Comparison & Storage
-  // =============================================================================
-
-  /**
-   * Compare two alerts for equality
-   */
-  private alertsAreEqual(a: AlertWithMatch, b: AlertWithMatch): boolean {
-    return (
-      a.id === b.id &&
-      a.reportId === b.reportId &&
-      a.status === b.status &&
-      a.resolvedAt === b.resolvedAt &&
-      a.resolutionNotes === b.resolutionNotes &&
-      a.matchStatus === b.matchStatus &&
-      a.matchedCaseId === b.matchedCaseId &&
-      a.matchedCaseName === b.matchedCaseName &&
-      a.matchedCaseStatus === b.matchedCaseStatus
-    );
-  }
-
-  /**
-   * Check if alerts collection has changed
-   */
-  private haveAlertsChanged(original: AlertWithMatch[], updated: AlertWithMatch[]): boolean {
-    if (original.length !== updated.length) {
-      return true;
-    }
-
-    const originalMap = new Map<string, AlertWithMatch>();
-    original.forEach(alert => {
-      originalMap.set(this.alertKey(alert), alert);
-    });
-
-    for (const alert of updated) {
-      const key = this.alertKey(alert);
-      const previous = originalMap.get(key);
-      if (!previous || !this.alertsAreEqual(previous, alert)) {
-        return true;
-      }
-      originalMap.delete(key);
-    }
-
-    return originalMap.size > 0;
-  }
-
-  /**
-   * Count unique alerts by storage key
-   */
-  private countUniqueAlertKeys(alerts: AlertWithMatch[]): number {
-    if (!alerts || alerts.length === 0) {
-      return 0;
-    }
-
-    const keys = new Set<string>();
-    alerts.forEach(alert => {
-      const key = this.alertKey(alert);
-      if (key) {
-        keys.add(key);
-      }
-    });
-
-    return keys.size;
-  }
-
-  /**
-   * Internal save method with payload construction
-   */
-  private async saveAlertsInternal(
-    alerts: AlertWithMatch[],
-    summary?: AlertsSummary,
-    options: { sourceFile?: string } = {},
-  ): Promise<boolean> {
-    const now = new Date().toISOString();
-    const index = summary
-      ? { alerts, summary }
-      : createAlertsIndexFromAlerts(alerts);
-
-    const normalizedAlerts = index.alerts;
-    const payload: AlertsStoragePayload = {
-      version: STORAGE_CONSTANTS.ALERTS.STORAGE_VERSION,
-      generatedAt: now,
-      updatedAt: now,
-      summary: index.summary,
-      alerts: normalizedAlerts,
-      uniqueAlerts: this.countUniqueAlertKeys(normalizedAlerts),
-    };
-
-    if (options.sourceFile) {
-      payload.sourceFile = options.sourceFile;
-    }
-
-    return this.alertsStorage.saveAlerts(payload);
   }
 }
