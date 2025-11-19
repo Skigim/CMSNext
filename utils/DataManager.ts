@@ -6,6 +6,7 @@ import {
   NewCaseRecordData,
   NewNoteData,
   AlertWorkflowStatus,
+  AlertRecord,
 } from "../types/case";
 import type { CaseActivityEntry } from "../types/activityLog";
 import { v4 as uuidv4 } from 'uuid';
@@ -49,6 +50,18 @@ interface AlertsMergeSummary {
   added: number;
   updated: number;
   total: number;
+  error?: string;
+}
+
+function toAlertWithMatch(record: AlertRecord): AlertWithMatch {
+  const candidate = record as unknown as Partial<AlertWithMatch>;
+  return {
+    ...record,
+    matchStatus: candidate.matchStatus ?? (record.mcNumber ? 'unmatched' : 'missing-mcn'),
+    matchedCaseId: candidate.matchedCaseId,
+    matchedCaseName: candidate.matchedCaseName,
+    matchedCaseStatus: candidate.matchedCaseStatus,
+  };
 }
 
 /**
@@ -256,6 +269,10 @@ export class DataManager {
       }
     } catch (error) {
       logger.warn('Failed to check/import alerts CSV', { error });
+      // If the error is critical, do not continue with potentially stale data
+      if (error instanceof Error && error.message.includes('Critical')) {
+         return createEmptyAlertsIndex();
+      }
     }
 
     if (!data) {
@@ -265,13 +282,7 @@ export class DataManager {
     const cases = options.cases ?? data.cases ?? [];
     const rawAlerts = data.alerts ?? [];
     
-    const alerts: AlertWithMatch[] = rawAlerts.map(record => ({
-      ...record,
-      matchStatus: (record as any).matchStatus ?? (record.mcNumber ? 'unmatched' : 'missing-mcn'),
-      matchedCaseId: (record as any).matchedCaseId,
-      matchedCaseName: (record as any).matchedCaseName,
-      matchedCaseStatus: (record as any).matchedCaseStatus,
-    }));
+    const alerts: AlertWithMatch[] = rawAlerts.map(toAlertWithMatch);
 
     return this.alerts.getAlertsIndex(alerts, cases);
   }
@@ -294,32 +305,27 @@ export class DataManager {
     const cases = options.cases ?? data.cases ?? [];
     const rawAlerts = data.alerts ?? [];
     
-    const alerts: AlertWithMatch[] = rawAlerts.map(record => ({
-      ...record,
-      matchStatus: (record as any).matchStatus ?? (record.mcNumber ? 'unmatched' : 'missing-mcn'),
-      matchedCaseId: (record as any).matchedCaseId,
-      matchedCaseName: (record as any).matchedCaseName,
-      matchedCaseStatus: (record as any).matchedCaseStatus,
-    }));
+    const alerts: AlertWithMatch[] = rawAlerts.map(toAlertWithMatch);
 
     const updatedAlert = this.alerts.updateAlertStatus(alerts, alertId, updates, cases);
     if (!updatedAlert) {
       return null;
     }
 
-    // Replace the alert in the array
-    const index = rawAlerts.findIndex(a => a.id === updatedAlert.id);
+    // Replace the alert in a new array to avoid mutating rawAlerts
+    const newAlerts = [...rawAlerts];
+    const index = newAlerts.findIndex(a => a.id === updatedAlert.id);
     if (index !== -1) {
-      rawAlerts[index] = updatedAlert;
+      newAlerts[index] = updatedAlert;
     } else {
       // Should not happen if updateAlertStatus found it, but safe fallback
-      rawAlerts.push(updatedAlert);
+      newAlerts.push(updatedAlert);
     }
 
     // Save updated alerts to storage
     await this.fileStorage.writeFileData({
       ...data,
-      alerts: rawAlerts,
+      alerts: newAlerts,
     });
 
     this.fileService.notifyDataChange();
@@ -340,29 +346,33 @@ export class DataManager {
     const cases = options.cases ?? data.cases ?? [];
     const rawAlerts = data.alerts ?? [];
     
-    const existingAlerts: AlertWithMatch[] = rawAlerts.map(record => ({
-      ...record,
-      matchStatus: (record as any).matchStatus ?? (record.mcNumber ? 'unmatched' : 'missing-mcn'),
-      matchedCaseId: (record as any).matchedCaseId,
-      matchedCaseName: (record as any).matchedCaseName,
-      matchedCaseStatus: (record as any).matchedCaseStatus,
-    }));
+    const existingAlerts: AlertWithMatch[] = rawAlerts.map(toAlertWithMatch);
 
-    const result = await this.alerts.mergeAlertsFromCsvContent(csvContent, existingAlerts, cases);
+    try {
+      const result = await this.alerts.mergeAlertsFromCsvContent(csvContent, existingAlerts, cases);
 
-    if (result.added > 0 || result.updated > 0) {
-      await this.fileStorage.writeFileData({
-        ...data,
-        alerts: result.alerts,
-      });
-      this.fileService.notifyDataChange();
+      if (result.added > 0 || result.updated > 0) {
+        await this.fileStorage.writeFileData({
+          ...data,
+          alerts: result.alerts,
+        });
+        this.fileService.notifyDataChange();
+      }
+
+      return {
+        added: result.added,
+        updated: result.updated,
+        total: result.total,
+      };
+    } catch (error) {
+      logger.error('Failed to merge alerts from CSV', { error });
+      return { 
+        added: 0, 
+        updated: 0, 
+        total: 0, 
+        error: error instanceof Error ? error.message : String(error) 
+      };
     }
-
-    return {
-      added: result.added,
-      updated: result.updated,
-      total: result.total,
-    };
   }
 
   // =============================================================================

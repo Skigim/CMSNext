@@ -11,6 +11,7 @@ import { hydrateStoredAlert, parseStoredAlertsPayload } from "../alerts/alertMig
 import type { AlertWithMatch } from "../alertsData";
 
 const logger = createLogger("FileStorageService");
+const NORMALIZED_VERSION = "2.0";
 
 // ============================================================================
 // Type Definitions
@@ -51,6 +52,10 @@ export interface NormalizedFileData {
 }
 
 export type FileData = LegacyFileData | NormalizedFileData;
+
+export function isNormalizedFileData(data: any): data is NormalizedFileData {
+  return data && typeof data === 'object' && 'version' in data && data.version === NORMALIZED_VERSION;
+}
 
 interface FileStorageServiceConfig {
   fileService: AutosaveFileService;
@@ -120,9 +125,9 @@ export class FileStorageService {
       let cases: CaseDisplay[] = [];
 
       // Check for normalized format (v2.0)
-      if ((rawData as any).version === "2.0") {
+      if (isNormalizedFileData(rawData)) {
         logger.info("Detected normalized data format (v2.0)");
-        let legacyData = this.denormalizeForRuntime(rawData as NormalizedFileData);
+        let legacyData = this.denormalizeForRuntime(rawData);
         
         const { cases: normalizedCases, changed } = this.normalizeCaseNotes(legacyData.cases);
 
@@ -209,8 +214,8 @@ export class FileStorageService {
       // If the input 'data' is NormalizedFileData (from a newer version), we need to denormalize it
       // so that data.cases is a CaseDisplay[] as expected by the legacy format.
       let legacyData: LegacyFileData;
-      if ('version' in data && (data as any).version === "2.0") {
-          legacyData = this.denormalizeForRuntime(data as unknown as NormalizedFileData);
+      if (isNormalizedFileData(data)) {
+          legacyData = this.denormalizeForRuntime(data);
       } else {
           legacyData = data as LegacyFileData;
       }
@@ -353,7 +358,7 @@ export class FileStorageService {
     }
 
     return {
-      version: "2.0",
+      version: NORMALIZED_VERSION,
       cases,
       financials,
       notes,
@@ -378,7 +383,7 @@ export class FileStorageService {
         financialsByCaseId.set(caseId, { resources: [], income: [], expenses: [] });
       }
       const group = financialsByCaseId.get(caseId)!;
-      if (category in group) {
+      if (category === 'resources' || category === 'income' || category === 'expenses') {
         group[category].push(financial);
       }
     }
@@ -557,8 +562,9 @@ export class FileStorageService {
         const { workflows } = parseStoredAlertsPayload(alertsContent);
         
         if (workflows.length > 0) {
-           logger.warn("V1 alerts.json found. Complex workflow merging not fully implemented in migration step. Skipping.");
-           return { data: rawData, migrated: false };
+           const msg = "V1 alerts.json detected with workflow states. Automatic migration is not supported. To avoid data loss, please follow manual migration instructions.";
+           logger.warn(msg);
+           throw new Error(msg);
         }
       }
 
@@ -571,7 +577,7 @@ export class FileStorageService {
       let mergedCount = 0;
 
       // Check if rawData is Normalized (v2.0)
-      if (newData.version === "2.0" && Array.isArray(newData.alerts)) {
+      if (isNormalizedFileData(newData) && Array.isArray(newData.alerts)) {
         // Merge into root alerts array
         // Create a map of existing alerts by ID
         const existingAlertsMap = new Map<string, AlertRecord>();
