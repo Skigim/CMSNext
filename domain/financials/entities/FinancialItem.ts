@@ -228,9 +228,12 @@ export class FinancialItem {
    * Used for updates that preserve entity integrity and timestamps.
    */
   applyUpdates(updates: Partial<Omit<FinancialItemSnapshot, 'id' | 'caseId' | 'createdAt'>>): FinancialItem {
+    const cleanUpdates = Object.fromEntries(
+      Object.entries(updates).filter(([_, value]) => value !== undefined)
+    );
     return FinancialItem.rehydrate({
       ...this.toJSON(),
-      ...updates,
+      ...cleanUpdates,
       updatedAt: new Date().toISOString(),
     });
   }

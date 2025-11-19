@@ -1,6 +1,6 @@
 import { FileStorageService, type FileData, type NormalizedFileData, isNormalizedFileData } from '@/utils/services/FileStorageService';
 import { Case, type CaseSnapshot } from '@/domain/cases/entities/Case';
-import type { FinancialItem } from '@/domain/financials/entities/FinancialItem';
+import { FinancialItem } from '@/domain/financials/entities/FinancialItem';
 import type { Note, NoteCategory } from '@/domain/notes/entities/Note';
 import type { Alert } from '@/domain/alerts/entities/Alert';
 import type { ActivityEvent } from '@/domain/activity/entities/ActivityEvent';
@@ -381,19 +381,21 @@ export class StorageRepository implements ITransactionRepository {
     const financials: FinancialItem[] = [];
     raw.cases.forEach(c => {
       if (c.caseRecord.financials) {
-        const { resources, income, expenses } = c.caseRecord.financials;
+        const { resources = [], income = [], expenses = [] } = c.caseRecord.financials;
         
-        resources.forEach(item => {
-          financials.push({ ...item, caseId: c.id, category: 'resources' } as FinancialItem);
-        });
-        
-        income.forEach(item => {
-          financials.push({ ...item, caseId: c.id, category: 'income' } as FinancialItem);
-        });
-        
-        expenses.forEach(item => {
-          financials.push({ ...item, caseId: c.id, category: 'expenses' } as FinancialItem);
-        });
+        const processItems = (items: any[], category: string) => {
+          items.forEach(item => {
+            try {
+              financials.push(FinancialItem.rehydrate({ ...item, caseId: c.id, category }));
+            } catch (error) {
+              console.warn(`Skipping corrupt financial item ${item.id} in case ${c.id}:`, error);
+            }
+          });
+        };
+
+        processItems(resources, 'resources');
+        processItems(income, 'income');
+        processItems(expenses, 'expenses');
       }
     });
 
@@ -447,8 +449,12 @@ export class StorageRepository implements ITransactionRepository {
       const group = financialsByCase.get(f.caseId)!;
       // Map category string to object key
       const cat = f.category as 'resources' | 'income' | 'expenses';
-      if (group[cat]) {
-        group[cat].push(f);
+      if (cat && group[cat]) {
+        // Ensure we store plain objects, not class instances
+        const itemData = f instanceof FinancialItem ? f.toJSON() : f;
+        group[cat].push(itemData);
+      } else {
+        console.warn(`Invalid financial category "${f.category}" for item ${f.id}, skipping`);
       }
     });
 

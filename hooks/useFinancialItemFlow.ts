@@ -95,13 +95,17 @@ export function useFinancialItemFlow({
         if (getRefactorFlags().USE_FINANCIALS_DOMAIN && financialManagement) {
             await financialManagement.deleteItem(itemId);
             
+            // Refetch items to ensure state consistency
+            const freshItems = await financialManagement.getItems(selectedCase.id);
+            const categoryItems = freshItems
+                .filter(i => i.category === category)
+                .map(i => i.toJSON() as unknown as FinancialItem);
+
             setCases(prevCases =>
               prevCases.map(c => {
                   if (c.id === selectedCase.id) {
                       const financials = { ...c.caseRecord.financials };
-                      if (financials[category]) {
-                          financials[category] = financials[category].filter(i => i.id !== itemId);
-                      }
+                      financials[category] = categoryItems;
                       return {
                           ...c,
                           caseRecord: { ...c.caseRecord, financials },
@@ -143,18 +147,19 @@ export function useFinancialItemFlow({
         setError(null);
         
         if (getRefactorFlags().USE_FINANCIALS_DOMAIN && financialManagement) {
-            const result = await financialManagement.updateItem(itemId, updatedItem);
-            const resultSnapshot = result.toJSON();
+            await financialManagement.updateItem(itemId, updatedItem);
             
+            // Refetch items to ensure state consistency
+            const freshItems = await financialManagement.getItems(selectedCase.id);
+            const categoryItems = freshItems
+                .filter(i => i.category === category)
+                .map(i => i.toJSON() as unknown as FinancialItem);
+
             setCases(prevCases =>
               prevCases.map(c => {
                   if (c.id === selectedCase.id) {
                       const financials = { ...c.caseRecord.financials };
-                      if (financials[category]) {
-                          financials[category] = financials[category].map(i => 
-                              i.id === itemId ? { ...i, ...resultSnapshot } as any : i
-                          );
-                      }
+                      financials[category] = categoryItems;
                       return {
                           ...c,
                           caseRecord: { ...c.caseRecord, financials },
@@ -212,15 +217,19 @@ export function useFinancialItemFlow({
         setError(null);
         
         if (getRefactorFlags().USE_FINANCIALS_DOMAIN && financialManagement) {
-            const newItem = await financialManagement.createItem(selectedCase.id, category, itemData);
-            const newItemSnapshot = newItem.toJSON();
+            await financialManagement.createItem(selectedCase.id, category, itemData);
             
+            // Refetch items to ensure state consistency
+            const freshItems = await financialManagement.getItems(selectedCase.id);
+            const categoryItems = freshItems
+                .filter(i => i.category === category)
+                .map(i => i.toJSON() as unknown as FinancialItem);
+
             setCases(prevCases =>
               prevCases.map(c => {
                   if (c.id === selectedCase.id) {
                       const financials = { ...c.caseRecord.financials };
-                      if (!financials[category]) financials[category] = [];
-                      financials[category] = [...financials[category], newItemSnapshot as any];
+                      financials[category] = categoryItems;
                       
                       return {
                           ...c,
