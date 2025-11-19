@@ -12,6 +12,7 @@ import type {
   IAlertRepository,
   IActivityRepository,
 } from '@/domain/common/repositories';
+import type { ITransactionRepository, TransactionOperation } from '@/domain/common/repositories/ITransactionRepository';
 
 export type DomainScope = 'cases' | 'financials' | 'notes' | 'alerts' | 'activities';
 
@@ -31,7 +32,7 @@ type StorageFile = StorageCollections & {
 
 type DomainEntity = Case | CaseSnapshot | FinancialItem | Note | Alert | ActivityEvent;
 
-export class StorageRepository {
+export class StorageRepository implements ITransactionRepository {
   private static readonly CURRENT_VERSION = 1;
 
   private readonly caseAdapter: ICaseRepository;
@@ -294,6 +295,51 @@ export class StorageRepository {
     );
 
     return this.clone(sorted.slice(0, Math.max(0, limit)));
+  }
+
+  async runTransaction(operations: TransactionOperation[]): Promise<void> {
+    const storage = await this.readStorage();
+
+    for (const op of operations) {
+      if (op.type === 'save') {
+        if (op.domain === 'cases') {
+          const snapshot = this.toCaseSnapshot(op.entity);
+          storage.cases = StorageRepository.upsert<CaseSnapshot>(storage.cases, snapshot);
+        } else if (op.domain === 'financials') {
+          const cloned = this.clone(op.entity) as FinancialItem;
+          storage.financials = StorageRepository.upsert<FinancialItem>(storage.financials, cloned);
+        } else if (op.domain === 'notes') {
+          const cloned = this.clone(op.entity) as Note;
+          storage.notes = StorageRepository.upsert<Note>(storage.notes, cloned);
+        } else if (op.domain === 'alerts') {
+          const cloned = this.clone(op.entity) as Alert;
+          storage.alerts = StorageRepository.upsert<Alert>(storage.alerts, cloned);
+        } else if (op.domain === 'activities') {
+          const cloned = this.clone(op.entity) as ActivityEvent;
+          storage.activities = StorageRepository.upsert<ActivityEvent>(storage.activities, cloned);
+        }
+      } else if (op.type === 'delete') {
+        switch (op.domain) {
+          case 'financials':
+            storage.financials = storage.financials.filter(item => item.id !== op.id);
+            break;
+          case 'notes':
+            storage.notes = storage.notes.filter(item => item.id !== op.id);
+            break;
+          case 'alerts':
+            storage.alerts = storage.alerts.filter(item => item.id !== op.id);
+            break;
+          case 'activities':
+            storage.activities = storage.activities.filter(item => item.id !== op.id);
+            break;
+          case 'cases':
+            storage.cases = storage.cases.filter(item => item.id !== op.id);
+            break;
+        }
+      }
+    }
+
+    await this.writeStorage(storage);
   }
 
   private async readStorage(): Promise<StorageFile> {
