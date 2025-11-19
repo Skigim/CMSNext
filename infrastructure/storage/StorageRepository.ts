@@ -1,4 +1,4 @@
-import AutosaveFileService from '@/utils/AutosaveFileService';
+import { FileStorageService, type FileData, type NormalizedFileData, isNormalizedFileData } from '@/utils/services/FileStorageService';
 import { Case, type CaseSnapshot } from '@/domain/cases/entities/Case';
 import type { FinancialItem } from '@/domain/financials/entities/FinancialItem';
 import type { Note, NoteCategory } from '@/domain/notes/entities/Note';
@@ -41,7 +41,7 @@ export class StorageRepository implements ITransactionRepository {
   private readonly alertAdapter: IAlertRepository;
   private readonly activityAdapter: IActivityRepository;
 
-  constructor(private readonly fileService: AutosaveFileService) {
+  constructor(private readonly fileStorageService: FileStorageService) {
     this.caseAdapter = {
       getById: id => this.getById('cases', id),
       getAll: () => this.getAll('cases'),
@@ -343,46 +343,169 @@ export class StorageRepository implements ITransactionRepository {
   }
 
   private async readStorage(): Promise<StorageFile> {
-    const raw = await this.fileService.readFile();
-    const base = (raw && typeof raw === 'object' ? raw : {}) as Record<string, unknown>;
+    const raw = await this.fileStorageService.readFileData();
+    
+    if (!raw) {
+      return {
+        version: StorageRepository.CURRENT_VERSION,
+        cases: [],
+        financials: [],
+        notes: [],
+        alerts: [],
+        activities: [],
+      } as StorageFile;
+    }
 
-    const version = typeof base.version === 'number' ? base.version : StorageRepository.CURRENT_VERSION;
-    const rawCases = this.ensureArray<CaseSnapshot>(base.cases);
-    const cases = rawCases.map(snapshot => Case.rehydrate(snapshot).toJSON());
-    const financials = this.ensureArray<FinancialItem>(base.financials);
-    const notes = this.ensureArray<Note>(base.notes);
-    const alerts = this.ensureArray<Alert>(base.alerts);
-    const activities = this.ensureArray<ActivityEvent>(base.activities);
+    // FileStorageService returns LegacyFileData (denormalized)
+    // We need to extract the entities back into flat lists for the repository
+    
+    // 1. Cases (strip nested data)
+    const cases = raw.cases.map(c => {
+      const { financials: _, notes: __, ...caseRecord } = c.caseRecord;
+      const { alerts: ___, ...caseData } = c;
 
-    const extras: Record<string, unknown> = { ...base };
-    delete extras.version;
-    delete extras.cases;
-    delete extras.financials;
-    delete extras.notes;
-    delete extras.alerts;
-    delete extras.activities;
+      // Preserve legacy caseRecord data in metadata
+      const metadata = {
+        ...(c.metadata || {}),
+        legacy_caseRecord: caseRecord,
+      };
+
+      return {
+        ...caseData,
+        personId: c.caseRecord.personId || c.person?.id,
+        metadata,
+      } as CaseSnapshot;
+    });
+
+    // 2. Financials (flatten from cases)
+    const financials: FinancialItem[] = [];
+    raw.cases.forEach(c => {
+      if (c.caseRecord.financials) {
+        const { resources, income, expenses } = c.caseRecord.financials;
+        
+        resources.forEach(item => {
+          financials.push({ ...item, caseId: c.id, category: 'resources' } as FinancialItem);
+        });
+        
+        income.forEach(item => {
+          financials.push({ ...item, caseId: c.id, category: 'income' } as FinancialItem);
+        });
+        
+        expenses.forEach(item => {
+          financials.push({ ...item, caseId: c.id, category: 'expenses' } as FinancialItem);
+        });
+      }
+    });
+
+    // 3. Notes (flatten from cases)
+    const notes: Note[] = [];
+    raw.cases.forEach(c => {
+      if (c.caseRecord.notes) {
+        c.caseRecord.notes.forEach(note => {
+          notes.push({ ...note, caseId: c.id } as Note);
+        });
+      }
+    });
+
+    // 4. Alerts (use top-level or flatten)
+    const alerts: Alert[] = raw.alerts ? (raw.alerts as Alert[]) : [];
+    if (!raw.alerts) {
+      raw.cases.forEach(c => {
+        if (c.alerts) {
+          c.alerts.forEach(alert => alerts.push(alert as Alert));
+        }
+      });
+    }
+
+    // 5. Activities
+    const activities = (raw.activityLog || []) as ActivityEvent[];
 
     return {
-      version,
+      version: StorageRepository.CURRENT_VERSION,
       cases,
       financials,
       notes,
       alerts,
       activities,
-      ...extras,
+      // Preserve other metadata
+      exported_at: raw.exported_at,
+      total_cases: raw.total_cases,
+      categoryConfig: raw.categoryConfig,
     } as StorageFile;
   }
 
   private async writeStorage(storage: StorageFile): Promise<void> {
-    const payload = this.clone({
-      ...storage,
-      version: StorageRepository.CURRENT_VERSION,
+    // Reconstruct LegacyFileData structure for FileStorageService
+    // FileStorageService.writeFileData expects LegacyFileData and handles normalization internally
+    
+    // Group financials by case
+    const financialsByCase = new Map<string, { resources: any[], income: any[], expenses: any[] }>();
+    storage.financials.forEach(f => {
+      if (!financialsByCase.has(f.caseId)) {
+        financialsByCase.set(f.caseId, { resources: [], income: [], expenses: [] });
+      }
+      const group = financialsByCase.get(f.caseId)!;
+      // Map category string to object key
+      const cat = f.category as 'resources' | 'income' | 'expenses';
+      if (group[cat]) {
+        group[cat].push(f);
+      }
     });
 
-    const success = await this.fileService.writeFile(payload);
-    if (!success) {
-      throw new Error('StorageRepository: Failed to persist data');
-    }
+    // Group notes by case
+    const notesByCase = new Map<string, any[]>();
+    storage.notes.forEach(n => {
+      if (!notesByCase.has(n.caseId)) {
+        notesByCase.set(n.caseId, []);
+      }
+      notesByCase.get(n.caseId)!.push(n);
+    });
+
+    // Group alerts by MCN (for legacy support)
+    const alertsByMcn = new Map<string, any[]>();
+    storage.alerts.forEach(a => {
+      if (a.mcNumber) {
+        if (!alertsByMcn.has(a.mcNumber)) {
+          alertsByMcn.set(a.mcNumber, []);
+        }
+        alertsByMcn.get(a.mcNumber)!.push(a);
+      }
+    });
+
+    // Rebuild cases with nested data
+    const cases = storage.cases.map(c => {
+      const financials = financialsByCase.get(c.id) || { resources: [], income: [], expenses: [] };
+      const notes = notesByCase.get(c.id) || [];
+      const alerts = alertsByMcn.get(c.mcn) || [];
+
+      const legacyRecord = (c.metadata as any)?.legacy_caseRecord || {};
+
+      return {
+        ...c,
+        alerts, // Legacy support
+        caseRecord: {
+          ...legacyRecord,
+          ...c.caseRecord, // In case it was somehow preserved
+          id: c.id,
+          mcn: c.mcn,
+          status: c.status,
+          personId: c.personId,
+          financials,
+          notes
+        }
+      } as any; // Cast to any to match CaseDisplay structure roughly
+    });
+
+    const fileData: FileData = {
+      cases,
+      alerts: storage.alerts as any[],
+      exported_at: (storage as any).exported_at || new Date().toISOString(),
+      total_cases: cases.length,
+      categoryConfig: (storage as any).categoryConfig || {},
+      activityLog: storage.activities as any[]
+    };
+
+    await this.fileStorageService.writeFileData(fileData);
   }
 
   private cloneCaseEntity(snapshot: CaseSnapshot | null): Case | null {
