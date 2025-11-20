@@ -248,8 +248,10 @@ export default function App() {
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
-  const handleSwitchChange = (name: keyof FormData, checked: boolean) => {
-    setFormData(prev => ({ ...prev, [name]: checked }));
+  const handleSwitchChange = (name: keyof FormData, checked: boolean | 'indeterminate') => {
+    // Convert 'indeterminate' to false for our form data
+    const boolValue = checked === true;
+    setFormData(prev => ({ ...prev, [name]: boolValue }));
   };
 
   const handleDateChange = (name: keyof FormData, date: Date | undefined) => {
