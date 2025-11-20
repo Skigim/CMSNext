@@ -624,8 +624,39 @@ export class StorageRepository implements ITransactionRepository {
   private cloneActivityEntity(entity: ActivityEvent | any | null): ActivityEvent | null {
     if (!entity) return null;
     try {
-      const snapshot = typeof entity.toJSON === 'function' ? entity.toJSON() : entity;
-      return ActivityEvent.rehydrate(this.clone(snapshot));
+      let snapshot = typeof entity.toJSON === 'function' ? entity.toJSON() : entity;
+      snapshot = this.clone(snapshot);
+
+      // Migration for legacy activity logs
+      if (!snapshot.eventType && snapshot.type) {
+        snapshot.eventType = snapshot.type;
+      }
+      
+      if (!snapshot.aggregateId && snapshot.caseId) {
+        snapshot.aggregateId = snapshot.caseId;
+      }
+
+      if (!snapshot.aggregateType) {
+        snapshot.aggregateType = snapshot.caseId ? 'case' : 'unknown';
+      }
+
+      // Ensure required fields have defaults if still missing
+      if (!snapshot.eventType) snapshot.eventType = 'unknown_event';
+      if (!snapshot.aggregateId) snapshot.aggregateId = 'unknown_aggregate';
+      
+      // Ensure changes and metadata are objects
+      if (!snapshot.changes || typeof snapshot.changes !== 'object') {
+        snapshot.changes = snapshot.payload || {};
+      }
+      
+      if (!snapshot.metadata || typeof snapshot.metadata !== 'object') {
+        snapshot.metadata = {};
+        // Preserve legacy fields in metadata
+        if (snapshot.caseName) snapshot.metadata.caseName = snapshot.caseName;
+        if (snapshot.caseMcn) snapshot.metadata.caseMcn = snapshot.caseMcn;
+      }
+
+      return ActivityEvent.rehydrate(snapshot);
     } catch (error) {
       console.error(`Failed to rehydrate activity ${entity.id}:`, error);
       return null;
