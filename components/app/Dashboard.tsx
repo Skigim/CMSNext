@@ -1,21 +1,14 @@
-import { useMemo, useState } from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../ui/card";
+import { useMemo } from "react";
 import { Button } from "../ui/button";
-import { Badge } from "../ui/badge";
-import { FileText, Plus, ArrowRight, BellRing } from "lucide-react";
+import { Plus } from "lucide-react";
 import { CaseDisplay } from "../../types/case";
-import {
-  filterOpenAlerts,
-  buildAlertStorageKey,
-  type AlertsIndex,
-  type AlertMatchStatus,
-} from "../../utils/alertsData";
-import { getAlertClientName, getAlertDisplayDescription, getAlertDueDateInfo, getAlertMcn } from "@/utils/alertDisplay";
-import { UnlinkedAlertsDialog } from "@/components/alerts/UnlinkedAlertsDialog";
-import { McnCopyControl } from "@/components/common/McnCopyControl";
+import { type AlertsIndex } from "../../utils/alertsData";
 import type { CaseActivityLogState } from "../../types/activityLog";
 import { WidgetRegistry, createLazyWidget, type RegisteredWidget } from "./widgets/WidgetRegistry";
 import { useAppStateSelector } from "@/hooks/useAppState";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { RecentCasesWidget } from "./widgets/RecentCasesWidget";
+import { AlertCenterWidget } from "./widgets/AlertCenterWidget";
 
 interface DashboardProps {
   cases: CaseDisplay[];
@@ -24,13 +17,6 @@ interface DashboardProps {
   onViewAllCases: () => void;
   onNewCase: () => void;
   onNavigateToReports: () => void;
-}
-
-function formatAlertMatchStatus(status: AlertMatchStatus): string {
-  if (status === "missing-mcn") {
-    return "Missing MCN";
-  }
-  return status === "matched" ? "Matched" : "Unmatched";
 }
 
 const CasePriorityWidgetLazy = createLazyWidget(
@@ -201,26 +187,8 @@ export function Dashboard({ cases, alerts, activityLogState, onViewAllCases, onN
     ];
   }, [cases, allAlerts, activityEntries, activityLogState, alertsRefreshKey, activityRefreshKey]);
 
-  const validCases = useMemo(
-    () => cases.filter(c => c && c.caseRecord && typeof c.caseRecord === "object"),
-    [cases],
-  );
-
-  const recentCases = validCases.slice(0, 5);
-
-  const openAlerts = useMemo(() => filterOpenAlerts(alerts.alerts), [alerts.alerts]);
-
-  const unlinkedAlerts = useMemo(
-    () => openAlerts.filter(alert => alert.matchStatus !== "matched"),
-    [openAlerts],
-  );
-
-  const openAlertsCount = openAlerts.length;
-  const unlinkedAlertCount = unlinkedAlerts.length;
-
-  const [showUnlinkedDialog, setShowUnlinkedDialog] = useState(false);
-
-  const latestAlerts = useMemo(() => openAlerts.slice(0, 5), [openAlerts]);
+  const overviewWidgets = useMemo(() => widgets.filter(w => w.metadata.id === 'activity'), [widgets]);
+  const analyticsWidgets = useMemo(() => widgets.filter(w => w.metadata.id !== 'activity'), [widgets]);
 
   return (
     <div className="space-y-6">
@@ -238,198 +206,36 @@ export function Dashboard({ cases, alerts, activityLogState, onViewAllCases, onN
         </div>
       </div>
 
-      {/* Widget Section */}
-      {widgets.length > 0 && (
-        <div>
-          <h2 className="text-lg font-semibold text-foreground mb-4">Insights</h2>
+      <Tabs defaultValue="overview" className="space-y-4">
+        <TabsList>
+          <TabsTrigger value="overview">Overview</TabsTrigger>
+          <TabsTrigger value="analytics">Analytics</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="overview" className="space-y-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <AlertCenterWidget alerts={alerts} onNavigateToReports={onNavigateToReports} />
+            <RecentCasesWidget cases={cases} onViewAllCases={onViewAllCases} onNewCase={onNewCase} />
+          </div>
+
+          <div>
+            <h2 className="text-lg font-semibold text-foreground mb-4">Recent Activity</h2>
+            <WidgetRegistry
+              widgets={overviewWidgets}
+              gridClassName="grid grid-cols-1 gap-4"
+              enabledFlags={featureFlags}
+            />
+          </div>
+        </TabsContent>
+
+        <TabsContent value="analytics" className="space-y-6">
           <WidgetRegistry
-            widgets={widgets}
+            widgets={analyticsWidgets}
             gridClassName="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"
             enabledFlags={featureFlags}
           />
-        </div>
-      )}
-
-      {/* Recent Cases */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <Card>
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <div>
-                <CardTitle>Recent Cases</CardTitle>
-                <CardDescription>Latest cases added to the system</CardDescription>
-              </div>
-              <Button variant="outline" size="sm" onClick={onViewAllCases}>
-                View All
-                <ArrowRight className="h-3 w-3 ml-1" />
-              </Button>
-            </div>
-          </CardHeader>
-          <CardContent>
-            {recentCases.length > 0 ? (
-              <div className="space-y-3">
-                {recentCases.map((case_) => (
-                  <div key={case_.id} className="flex items-center justify-between p-3 border border-border rounded-lg hover:bg-accent/50 transition-colors">
-                    <div className="flex-1">
-                      <div className="font-medium text-foreground">
-                        {case_.person.firstName} {case_.person.lastName}
-                      </div>
-                      <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-muted-foreground">
-                        <McnCopyControl
-                          mcn={case_.caseRecord?.mcn ?? null}
-                          className="inline-flex items-center gap-1 text-muted-foreground"
-                          labelClassName="text-sm font-normal text-muted-foreground"
-                          buttonClassName="text-sm text-muted-foreground"
-                          textClassName="text-sm"
-                          missingLabel="MCN unavailable"
-                          missingClassName="text-sm text-muted-foreground"
-                          variant="plain"
-                        />
-                        <span>• Status: {case_.caseRecord?.status || 'Unknown'}</span>
-                      </div>
-                    </div>
-                    <div className="text-xs text-muted-foreground">
-                      {case_.caseRecord?.createdDate ? new Date(case_.caseRecord.createdDate).toLocaleDateString() : 'No date'}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="text-center py-8 text-muted-foreground">
-                <FileText className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                <p>No cases yet</p>
-                <Button variant="outline" size="sm" onClick={onNewCase} className="mt-2">
-                  Create your first case
-                </Button>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-              <div>
-                <CardTitle>Alert Center</CardTitle>
-                <CardDescription>Latest updates from the alerts feed</CardDescription>
-              </div>
-              <div className="flex flex-wrap items-center gap-2">
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <BellRing className={openAlertsCount ? "h-4 w-4 text-primary" : "h-4 w-4"} />
-                  {openAlertsCount ? `${openAlertsCount} open` : "No open alerts"}
-                </div>
-                {openAlertsCount > 0 && (
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={onNavigateToReports}
-                    className="flex items-center gap-1"
-                  >
-                    View reports
-                    <ArrowRight className="h-3 w-3" />
-                  </Button>
-                )}
-                {unlinkedAlertCount > 0 && (
-                  <button
-                    type="button"
-                    onClick={() => setShowUnlinkedDialog(true)}
-                    className="relative inline-flex items-center gap-1 rounded-full border border-destructive/40 bg-destructive/10 px-2 py-0.5 text-[11px] font-medium text-destructive transition hover:border-destructive/60 hover:bg-destructive/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-destructive/40 focus-visible:ring-offset-2 focus-visible:ring-offset-background"
-                    aria-label={`${unlinkedAlertCount} unlinked alert${unlinkedAlertCount === 1 ? "" : "s"}`}
-                  >
-                    <span className="inline-flex h-1.5 w-1.5 rounded-full bg-current opacity-70" aria-hidden />
-                    <span>Unlinked</span>
-                    <span>
-                      <Badge variant="secondary" className="ml-0 flex h-4 items-center justify-center px-1 text-[10px] font-semibold">
-                        {unlinkedAlertCount}
-                      </Badge>
-                    </span>
-                  </button>
-                )}
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent>
-            {openAlertsCount === 0 ? (
-              <div className="py-6 text-center text-muted-foreground text-sm">
-                <p>No open alerts detected in the system.</p>
-              </div>
-            ) : (
-              <div className="space-y-4">
-                <div className="flex flex-wrap gap-6 text-sm text-muted-foreground">
-                  <div>
-                    <p className="text-xs uppercase text-muted-foreground">Open alerts</p>
-                    <p className="text-lg font-semibold text-foreground">{openAlertsCount}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs uppercase text-muted-foreground">Unlinked alerts</p>
-                    <p className="text-lg font-semibold text-destructive">{unlinkedAlertCount}</p>
-                  </div>
-                </div>
-
-                {latestAlerts.length > 0 ? (
-                  <div className="space-y-3">
-                    {latestAlerts.map((alert, index) => {
-                      const description = getAlertDisplayDescription(alert);
-                      const { label, hasDate } = getAlertDueDateInfo(alert);
-                      const dueLabel = hasDate ? `Due ${label}` : label;
-                      const clientName = getAlertClientName(alert) ?? "Client name unavailable";
-                      const mcn = getAlertMcn(alert);
-                      const storageKey = buildAlertStorageKey(alert);
-                      const elementKey = storageKey ?? (alert.id ? `alert-${String(alert.id)}-${index}` : `alert-${index}`);
-
-                      return (
-                        <div
-                          key={elementKey}
-                          className="rounded-lg border border-border/60 bg-card/60 p-3"
-                        >
-                          <div className="space-y-1">
-                            <p className="text-sm font-semibold text-foreground">{description}</p>
-                            <p className="text-xs text-muted-foreground">{dueLabel || "No due date"}</p>
-                            <div className="flex flex-wrap items-center gap-3 text-[11px] text-muted-foreground">
-                              <span>{clientName}</span>
-                              <McnCopyControl
-                                mcn={mcn}
-                                showLabel={false}
-                                className="inline-flex items-center gap-1 text-[11px] text-muted-foreground"
-                                buttonClassName="text-[11px] text-muted-foreground"
-                                textClassName="text-[11px]"
-                                missingLabel="MCN unavailable"
-                                missingClassName="text-[11px] text-muted-foreground"
-                                variant="plain"
-                              />
-                              <span className="uppercase tracking-wide">
-                                Match: {formatAlertMatchStatus(alert.matchStatus)}
-                              </span>
-                            </div>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                ) : (
-                  <div className="rounded-lg border border-dashed border-muted-foreground/40 bg-muted/20 p-6 text-center text-sm text-muted-foreground">
-                    All open alerts are resolved. Great job!
-                  </div>
-                )}
-
-                {openAlertsCount > latestAlerts.length && (
-                  <p className="text-xs text-muted-foreground">
-                    Plus {openAlertsCount - latestAlerts.length} more open alert{openAlertsCount - latestAlerts.length === 1 ? "" : "s"} available in Reports.
-                  </p>
-                )}
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-      </div>
-      
-      <UnlinkedAlertsDialog
-        alerts={unlinkedAlerts}
-        open={showUnlinkedDialog}
-        onOpenChange={setShowUnlinkedDialog}
-      />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
