@@ -10,7 +10,6 @@ import {
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 import { Label } from "../ui/label";
-import { ScrollArea } from "../ui/scroll-area";
 import {
   Select,
   SelectContent,
@@ -318,61 +317,59 @@ function AlertsReport({ alerts, onViewCase }: AlertsReportProps) {
             <p>No alerts match the current filters.</p>
           </div>
         ) : (
-          <div className="rounded-md border">
-            <ScrollArea className="h-[480px]">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead aria-sort={getAriaSort("description")}>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        className="flex items-center justify-start gap-2 px-0 font-semibold"
-                        onClick={() => toggleSort("description")}
-                      >
-                        Description
-                        {renderSortIcon("description")}
-                      </Button>
-                    </TableHead>
-                    <TableHead aria-sort={getAriaSort("client")}>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        className="flex items-center justify-start gap-2 px-0 font-semibold"
-                        onClick={() => toggleSort("client")}
-                      >
-                        Client
-                        {renderSortIcon("client")}
-                      </Button>
-                    </TableHead>
-                    <TableHead aria-sort={getAriaSort("due")}>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        className="flex items-center justify-start gap-2 px-0 font-semibold"
-                        onClick={() => toggleSort("due")}
-                      >
-                        Due date
-                        {renderSortIcon("due")}
-                      </Button>
-                    </TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {visibleAlerts.map((alert, index) => (
-                    <AlertsReportRow
-                      key={buildAlertStorageKey(alert) ?? (alert.id ? `alert-${String(alert.id)}-${index}` : `alert-${index}`)}
-                      alert={alert}
-                      onViewCase={onViewCase}
-                    />
-                  ))}
-                </TableBody>
-              </Table>
-            </ScrollArea>
+          <div className="overflow-hidden rounded-lg border">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead aria-sort={getAriaSort("description")}>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="flex items-center justify-start gap-2 px-0 font-semibold"
+                      onClick={() => toggleSort("description")}
+                    >
+                      Description
+                      {renderSortIcon("description")}
+                    </Button>
+                  </TableHead>
+                  <TableHead aria-sort={getAriaSort("client")}>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="flex items-center justify-start gap-2 px-0 font-semibold"
+                      onClick={() => toggleSort("client")}
+                    >
+                      Client
+                      {renderSortIcon("client")}
+                    </Button>
+                  </TableHead>
+                  <TableHead aria-sort={getAriaSort("due")}>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="flex items-center justify-start gap-2 px-0 font-semibold"
+                      onClick={() => toggleSort("due")}
+                    >
+                      Due date
+                      {renderSortIcon("due")}
+                    </Button>
+                  </TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {visibleAlerts.map((alert, index) => (
+                  <AlertsReportRow
+                    key={buildAlertStorageKey(alert) ?? (alert.id ? `alert-${String(alert.id)}-${index}` : `alert-${index}`)}
+                    alert={alert}
+                    onViewCase={onViewCase}
+                  />
+                ))}
+              </TableBody>
+            </Table>
           </div>
         )}
       </CardContent>
