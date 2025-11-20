@@ -561,7 +561,24 @@ export class StorageRepository implements ITransactionRepository {
   }
 
   private cloneCaseSnapshot(snapshot: CaseSnapshot): CaseSnapshot {
-    return JSON.parse(JSON.stringify(snapshot)) as CaseSnapshot;
+    const cloned = JSON.parse(JSON.stringify(snapshot)) as CaseSnapshot;
+
+    // Fix for legacy status being an object
+    if (typeof cloned.status === 'object' && cloned.status !== null) {
+      const statusObj = cloned.status as any;
+      // Try to extract string status from common object patterns
+      if (typeof statusObj.name === 'string') {
+        cloned.status = statusObj.name;
+      } else if (typeof statusObj.value === 'string') {
+        cloned.status = statusObj.value;
+      } else if (typeof statusObj.label === 'string') {
+        cloned.status = statusObj.label;
+      } else if (typeof statusObj.id === 'string') {
+        cloned.status = statusObj.id;
+      }
+    }
+
+    return cloned;
   }
 
   private cloneFinancialEntity(entity: FinancialItem | any | null): FinancialItem | null {
