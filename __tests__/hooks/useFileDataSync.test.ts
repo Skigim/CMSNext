@@ -16,6 +16,9 @@ vi.mock("@/contexts/FileStorageContext", () => ({
   useFileStorageDataLoadHandler: (handler: DataHandler) => {
     dataLoadHandlers.push(handler);
   },
+  useFileStorage: () => ({
+    fileStorageService: {},
+  }),
 }));
 
 vi.mock("@/utils/fileStorageFlags", () => fileStorageFlagsModule);

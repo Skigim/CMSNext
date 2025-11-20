@@ -286,16 +286,16 @@ describe('StorageRepository', () => {
 
     const aggregateEvents = await activityRepo.getByAggregateId(baseAggregate);
     const expectedAggregate = sortSnapshots([
-      { ...toSnapshot(events[0]), payload: {} },
-      { ...toSnapshot(events[1]), payload: {} },
-      { ...toSnapshot(events[3]), payload: {} },
+      toSnapshot(events[0]),
+      toSnapshot(events[1]),
+      toSnapshot(events[3]),
     ]);
     expect(sortSnapshots(aggregateEvents.map(toSnapshot))).toEqual(expectedAggregate);
 
     const recentTwo = await activityRepo.getRecent(2);
     expect(recentTwo.map(toSnapshot)).toEqual([
-      { ...toSnapshot(events[3]), payload: {} },
-      { ...toSnapshot(events[1]), payload: {} },
+      toSnapshot(events[3]),
+      toSnapshot(events[1]),
     ]);
   });
 });

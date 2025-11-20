@@ -1,4 +1,5 @@
 import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import ApplicationState from "@/application/ApplicationState";
@@ -178,6 +179,7 @@ describe("feature flag integration", () => {
   }
 
   it("shows all widgets when all flags are enabled", async () => {
+    const user = userEvent.setup();
     const appState = ApplicationState.getInstance();
     const flags = appState.getFeatureFlags();
     // All flags should be true by default
@@ -187,8 +189,18 @@ describe("feature flag integration", () => {
     
     renderDashboard();
 
-    // Wait for each widget using the same pattern as the passing tests
-    for (const title of widgetTitles) {
+    // Check Activity (Overview tab)
+    await waitFor(() => {
+      expect(screen.getByText("Activity")).toBeInTheDocument();
+    }, { timeout: 20000 });
+
+    // Switch to Analytics tab
+    const analyticsTab = screen.getByRole("tab", { name: /analytics/i });
+    await user.click(analyticsTab);
+
+    // Check other widgets
+    const analyticsWidgets = widgetTitles.filter(t => t !== "Activity");
+    for (const title of analyticsWidgets) {
       await waitFor(() => {
         expect(screen.getByText(title)).toBeInTheDocument();
       }, { timeout: 20000 });
@@ -196,6 +208,7 @@ describe("feature flag integration", () => {
   }, 180000); // 3 minute test timeout
 
   it("hides widgets tied to disabled flags", async () => {
+    const user = userEvent.setup();
     const appState = ApplicationState.getInstance();
     appState.setFeatureFlags({
       "dashboard.widgets.casePriority": false,
@@ -205,7 +218,16 @@ describe("feature flag integration", () => {
 
     renderDashboard();
 
-    for (const title of ["Alerts Cleared/Day", "Activity", "Total Cases by Status"]) {
+    // Check Activity (Overview tab)
+    await waitFor(() => {
+      expect(screen.getByText("Activity")).toBeInTheDocument();
+    });
+
+    // Switch to Analytics tab
+    const analyticsTab = screen.getByRole("tab", { name: /analytics/i });
+    await user.click(analyticsTab);
+
+    for (const title of ["Alerts Cleared/Day", "Total Cases by Status"]) {
       await waitFor(() => {
         expect(screen.getByText(title)).toBeInTheDocument();
       });
@@ -216,8 +238,13 @@ describe("feature flag integration", () => {
   });
 
   it("updates widget visibility when flags change at runtime", async () => {
+    const user = userEvent.setup();
     const appState = ApplicationState.getInstance();
     renderDashboard();
+
+    // Switch to Analytics tab
+    const analyticsTab = screen.getByRole("tab", { name: /analytics/i });
+    await user.click(analyticsTab);
 
     await waitFor(() => {
       expect(screen.getByText("Avg. Alert Age")).toBeInTheDocument();

@@ -1,12 +1,13 @@
-import { act, render, screen, waitFor, within, cleanup } from "@testing-library/react";
+import { act, cleanup, render, screen, waitFor, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import ApplicationState from "@/application/ApplicationState";
 import { Dashboard } from "@/components/app/Dashboard";
+import { AvgAlertAgeWidget } from "@/components/app/widgets/AvgAlertAgeWidget";
+import type { CaseActivityEntry, CaseActivityLogState } from "@/types/activityLog";
 import { CASE_STATUS, type CaseDisplay } from "@/types/case";
 import type { AlertsIndex, AlertWithMatch } from "@/utils/alertsData";
-import type { CaseActivityEntry, CaseActivityLogState } from "@/types/activityLog";
-import { AvgAlertAgeWidget } from "@/components/app/widgets/AvgAlertAgeWidget";
-import ApplicationState from "@/application/ApplicationState";
 
 function createCase(overrides: Partial<CaseDisplay> = {}): CaseDisplay {
   const createdDate = overrides.createdAt ?? "2025-10-01T00:00:00Z";
@@ -137,6 +138,7 @@ describe("Dashboard widgets integration", () => {
   });
 
   it("renders all eight widgets", async () => {
+    const user = userEvent.setup();
     ApplicationState.getInstance(); // Initialize before rendering
     
     const cases: CaseDisplay[] = [
@@ -180,13 +182,17 @@ describe("Dashboard widgets integration", () => {
       />,
     );
 
-    // Wait for widgets section to load
-    await screen.findByText("Insights", undefined, { timeout: 10000 });
+    // Wait for Overview widgets to load
+    await screen.findByText("Activity", undefined, { timeout: 10000 });
 
+    // Switch to Analytics tab
+    const analyticsTab = screen.getByRole("tab", { name: /analytics/i });
+    await user.click(analyticsTab);
+
+    // Wait for Analytics widgets to load
     await screen.findByText("Case Priority", undefined, { timeout: 10000 });
     await screen.findByText("Alerts Cleared/Day", undefined, { timeout: 10000 });
     await screen.findByText("Cases Processed/Day", undefined, { timeout: 10000 });
-    await screen.findByText("Activity", undefined, { timeout: 10000 });
     await screen.findByText("Total Cases by Status", undefined, { timeout: 10000 });
     // Check with regex since the title might be split across elements
     await screen.findByText(/Alerts by Description/i, undefined, { timeout: 10000 });
@@ -195,6 +201,7 @@ describe("Dashboard widgets integration", () => {
   }, 30000); // 30 second timeout for this test
 
   it("updates widget data when underlying props change", async () => {
+    const user = userEvent.setup();
     ApplicationState.getInstance(); // Initialize before rendering
     
     vi.useFakeTimers({ shouldAdvanceTime: true });
@@ -243,6 +250,10 @@ describe("Dashboard widgets integration", () => {
       await Promise.resolve();
     });
 
+    // Switch to Analytics tab to see Avg. Alert Age
+    const analyticsTab = screen.getByRole("tab", { name: /analytics/i });
+    await user.click(analyticsTab);
+
     // Use within to scope to this specific render
     const avgAlertHeading = await within(initialRender.container).findByText("Avg. Alert Age");
     let avgAlertCard = avgAlertHeading.closest('[data-slot="card"]');
@@ -267,6 +278,10 @@ describe("Dashboard widgets integration", () => {
     await act(async () => {
       await Promise.resolve();
     });
+
+    // Switch to Analytics tab again
+    const analyticsTab2 = screen.getByRole("tab", { name: /analytics/i });
+    await user.click(analyticsTab2);
 
     await act(async () => {
       await vi.runOnlyPendingTimersAsync();
