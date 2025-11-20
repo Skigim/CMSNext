@@ -2,7 +2,6 @@ import { act, cleanup, render, screen, waitFor, within } from "@testing-library/
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import ApplicationState from "@/application/ApplicationState";
 import { Dashboard } from "@/components/app/Dashboard";
 import { AvgAlertAgeWidget } from "@/components/app/widgets/AvgAlertAgeWidget";
 import type { CaseActivityEntry, CaseActivityLogState } from "@/types/activityLog";
@@ -128,18 +127,16 @@ function createActivityLogState(entries: CaseActivityEntry[]): CaseActivityLogSt
 
 describe("Dashboard widgets integration", () => {
   beforeEach(() => {
-    ApplicationState.resetInstance();
+    vi.clearAllMocks();
   });
 
   afterEach(() => {
     cleanup();
     vi.useRealTimers();
-    ApplicationState.resetInstance();
   });
 
   it("renders all eight widgets", async () => {
     const user = userEvent.setup();
-    ApplicationState.getInstance(); // Initialize before rendering
     
     const cases: CaseDisplay[] = [
       createCase({ id: "case-1", status: CASE_STATUS.Pending }),
@@ -202,7 +199,6 @@ describe("Dashboard widgets integration", () => {
 
   it("updates widget data when underlying props change", async () => {
     const user = userEvent.setup();
-    ApplicationState.getInstance(); // Initialize before rendering
     
     vi.useFakeTimers({ shouldAdvanceTime: true });
     vi.setSystemTime(new Date("2025-10-22T00:00:00Z"));

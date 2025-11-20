@@ -1,4 +1,4 @@
-import { memo, Profiler, useCallback, useMemo, useEffect } from "react";
+import { memo, Profiler, useCallback, useMemo } from "react";
 import type { ProfilerOnRenderCallback } from "react";
 
 type ExtendedProfilerArgs = [...Parameters<ProfilerOnRenderCallback>, Set<unknown>?, number?];
@@ -7,9 +7,6 @@ import { toast } from "sonner";
 import { useFileStorage, useFileStorageLifecycleSelectors } from "../../contexts/FileStorageContext";
 import { useDataManagerSafe } from "../../contexts/DataManagerContext";
 import { useCategoryConfig } from "../../contexts/CategoryConfigContext";
-import ApplicationState from "../../application/ApplicationState";
-import StorageRepository from "../../infrastructure/storage/StorageRepository";
-import { getRefactorFlags } from "../../utils/featureFlags";
 import {
   useAlertsFlow,
   useCaseActivityLog,
@@ -73,24 +70,6 @@ export const AppContent = memo(function AppContent() {
     setHasLoadedData,
     setConfigFromFile,
   });
-
-  // Hydrate ApplicationState when data is loaded (for new domain architecture)
-  useEffect(() => {
-    if (hasLoadedData && fileStorageService && getRefactorFlags().USE_FINANCIALS_DOMAIN) {
-      const hydrateState = async () => {
-        try {
-          const repo = new StorageRepository(fileStorageService);
-          await ApplicationState.getInstance().hydrate(repo);
-          logger.info("ApplicationState hydrated successfully");
-        } catch (err) {
-          logger.error("Failed to hydrate ApplicationState", {
-            error: err instanceof Error ? err.message : String(err),
-          });
-        }
-      };
-      hydrateState();
-    }
-  }, [hasLoadedData, fileStorageService]);
 
   const navigationFlow = useNavigationFlow({
     cases,

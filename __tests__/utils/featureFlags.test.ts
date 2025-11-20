@@ -1,30 +1,13 @@
-import { afterEach, describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import {
   DEFAULT_FLAGS,
   createFeatureFlagContext,
   getEnabledFeatures,
-  getRefactorFlags,
   isFeatureEnabled,
-  setRefactorFlags,
-  useNewArchitecture,
   type FeatureFlags,
 } from '@/utils/featureFlags';
 
-const resetRefactorFlags = (): void => {
-  setRefactorFlags({
-    USE_NEW_ARCHITECTURE: false,
-    USE_CASES_DOMAIN: false,
-    USE_FINANCIALS_DOMAIN: false,
-    USE_NOTES_DOMAIN: false,
-    USE_ALERTS_DOMAIN: false,
-    USE_ACTIVITY_DOMAIN: false,
-  });
-};
-
 describe('featureFlags', () => {
-  afterEach(() => {
-    resetRefactorFlags();
-  });
 
   it('exposes immutable default configuration', () => {
     expect(DEFAULT_FLAGS['dashboard.widgets.casePriority']).toBe(true);
@@ -68,23 +51,5 @@ describe('featureFlags', () => {
     expect(enabled).toContain('dashboard.widgets.casePriority');
     expect(enabled).not.toContain('dashboard.widgets.avgAlertAge');
     expect(enabled).toContain('cases.bulkActions');
-  });
-
-  it('keeps refactor feature toggles defaulted to disabled', () => {
-    const flags = getRefactorFlags();
-    expect(flags).toMatchObject({
-      USE_NEW_ARCHITECTURE: false,
-      USE_CASES_DOMAIN: false,
-      USE_FINANCIALS_DOMAIN: false,
-      USE_NOTES_DOMAIN: false,
-      USE_ALERTS_DOMAIN: false,
-      USE_ACTIVITY_DOMAIN: false,
-    });
-  });
-
-  it('reflects refactor master toggle via helper', () => {
-    expect(useNewArchitecture()).toBe(false);
-    setRefactorFlags({ USE_NEW_ARCHITECTURE: true });
-    expect(useNewArchitecture()).toBe(true);
   });
 });
