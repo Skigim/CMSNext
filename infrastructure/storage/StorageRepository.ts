@@ -564,10 +564,11 @@ export class StorageRepository implements ITransactionRepository {
     return JSON.parse(JSON.stringify(snapshot)) as CaseSnapshot;
   }
 
-  private cloneFinancialEntity(entity: FinancialItem | null): FinancialItem | null {
+  private cloneFinancialEntity(entity: FinancialItem | any | null): FinancialItem | null {
     if (!entity) return null;
     try {
-      return FinancialItem.rehydrate(this.clone(entity.toJSON()));
+      const snapshot = typeof entity.toJSON === 'function' ? entity.toJSON() : entity;
+      return FinancialItem.rehydrate(this.clone(snapshot));
     } catch (error) {
       console.error(`Failed to rehydrate financial item ${entity.id}:`, error);
       return null;
@@ -582,10 +583,11 @@ export class StorageRepository implements ITransactionRepository {
     }, [] as FinancialItem[]);
   }
 
-  private cloneNoteEntity(entity: Note | null): Note | null {
+  private cloneNoteEntity(entity: Note | any | null): Note | null {
     if (!entity) return null;
     try {
-      return Note.rehydrate(this.clone(entity.toJSON()));
+      const snapshot = typeof entity.toJSON === 'function' ? entity.toJSON() : entity;
+      return Note.rehydrate(this.clone(snapshot));
     } catch (error) {
       console.error(`Failed to rehydrate note ${entity.id}:`, error);
       return null;
@@ -600,10 +602,11 @@ export class StorageRepository implements ITransactionRepository {
     }, [] as Note[]);
   }
 
-  private cloneAlertEntity(entity: Alert | null): Alert | null {
+  private cloneAlertEntity(entity: Alert | any | null): Alert | null {
     if (!entity) return null;
     try {
-      return Alert.rehydrate(this.clone(entity.toJSON()));
+      const snapshot = typeof entity.toJSON === 'function' ? entity.toJSON() : entity;
+      return Alert.rehydrate(this.clone(snapshot));
     } catch (error) {
       console.error(`Failed to rehydrate alert ${entity.id}:`, error);
       return null;
@@ -618,10 +621,11 @@ export class StorageRepository implements ITransactionRepository {
     }, [] as Alert[]);
   }
 
-  private cloneActivityEntity(entity: ActivityEvent | null): ActivityEvent | null {
+  private cloneActivityEntity(entity: ActivityEvent | any | null): ActivityEvent | null {
     if (!entity) return null;
     try {
-      return ActivityEvent.rehydrate(this.clone(entity.toJSON()));
+      const snapshot = typeof entity.toJSON === 'function' ? entity.toJSON() : entity;
+      return ActivityEvent.rehydrate(this.clone(snapshot));
     } catch (error) {
       console.error(`Failed to rehydrate activity ${entity.id}:`, error);
       return null;
