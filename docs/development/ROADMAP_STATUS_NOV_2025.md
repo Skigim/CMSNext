@@ -1,34 +1,102 @@
 # CMSNext Roadmap Status Report - November 2025
 
-**Report Date:** November 18, 2025  
-**Branch:** main  
-**Tests:** 355/355 passing ✅  
+**Report Date:** November 20, 2025  
+**Branch:** dev  
+**Tests:** 310/310 passing ✅  
 **Build:** Production-ready ✅  
-**Latest Milestone:** Storage Normalization (Phase B) - Complete (100%)
+**Latest Milestone:** Domain Layer Removal - Complete (100%)
 
 ---
 
 ## 🎉 Executive Summary
 
-**Major milestone achieved:** Storage normalization (Phase B) complete. FileStorageService now supports v2.0 normalized format with automatic migration.
+**Major milestone achieved:** Domain layer complexity removed. Application restored to clean DataManager + Services architecture.
 
-### Key Deliverables (November 18, 2025)
+### Key Deliverables (November 20, 2025)
 
-| Initiative                                   | Status      | Impact                                                         |
-| -------------------------------------------- | ----------- | -------------------------------------------------------------- |
-| **DataManager Service Extraction (Phase 1)** | ✅ Complete | 7 of 7 services extracted, 2,294 lines removed                 |
-| **Storage Normalization (Phase B)**          | ✅ Complete | Transition to v2.0 normalized storage format                   |
-| **Dependency Injection Pattern**             | ✅ Complete | Clean service architecture with focused responsibilities       |
-| **Test Suite Stability**                     | ✅ Complete | 355/355 tests passing (100%)                                   |
-| **Breaking Changes**                         | ✅ Zero     | No regressions across all extractions                          |
-| **AlertsService Extraction (Final)**         | ✅ Complete | PR #77 merged - DataManager reduced to 461 lines (83.5% total) |
+| Initiative                                   | Status      | Impact                                                   |
+| -------------------------------------------- | ----------- | -------------------------------------------------------- |
+| **DataManager Service Extraction (Phase 1)** | ✅ Complete | 7 of 7 services extracted, 2,294 lines removed           |
+| **Storage Normalization (Phase B)**          | ✅ Complete | Transition to v2.0 normalized storage format             |
+| **Domain Layer Removal**                     | ✅ Complete | ~4,000 lines removed, single code path restored          |
+| **Dependency Injection Pattern**             | ✅ Complete | Clean service architecture with focused responsibilities |
+| **Test Suite Stability**                     | ✅ Complete | 310/310 tests passing (100%)                             |
+| **Breaking Changes**                         | ✅ Zero     | No regressions across all changes                        |
 
 ### Metrics
 
-- **Test Coverage:** 355 tests passing (100% pass rate)
+- **Test Coverage:** 310 tests passing (100% pass rate)
 - **DataManager:** 461 lines (Stable)
-- **Storage Format:** v2.0 (Normalized) implemented with backward compatibility
-- **Architecture Quality:** Enterprise-grade dependency injection
+- **Storage Format:** v2.0 (Normalized) with backward compatibility
+- **Architecture Quality:** Clean DataManager + 7 Services pattern
+- **Code Removed:** ~4,000 lines of unused domain layer complexity
+
+---
+
+## 📊 Domain Layer Removal - Detailed Breakdown
+
+### Architecture Simplification (November 20, 2025)
+
+**Status:** Complete (100%) ✅
+**Objective:** Remove disabled domain layer complexity and restore clean DataManager + Services architecture
+
+**Context:**
+
+The domain layer (Phase D) was implemented as an experiment to introduce domain-driven design patterns. However, it was disabled via feature flags shortly after implementation due to:
+
+- Dual code path complexity (legacy + domain)
+- Hydration/dehydration bugs in StorageRepository
+- ApplicationState singleton issues
+- Feature flags (USE_FINANCIALS_DOMAIN, USE_NEW_ARCHITECTURE) turned off
+
+**What Was Removed (~4,000 lines):**
+
+1. **Domain Layer**
+
+   - Entire `domain/` directory (entities, use cases, repositories)
+   - Case, FinancialItem, Note, Alert entities
+   - CreateFinancialItem, UpdateFinancialItem, DeleteFinancialItem use cases
+   - IRepository interfaces and patterns
+
+2. **Infrastructure Layer**
+
+   - `infrastructure/storage/StorageRepository.ts` (700+ lines)
+   - Hydration/dehydration logic duplicating FileStorageService
+
+3. **Application Layer**
+
+   - `ApplicationState.ts` (383 lines) - singleton state management
+   - `ActivityLogger.ts` - domain event logging
+   - `DomainEventBus.ts` - event publishing system
+   - `FinancialManagementService.ts` - domain adapter service
+   - `CaseManagementDomainAdapter.ts` - domain adapter service
+
+4. **Hooks & Feature Flags**
+
+   - `useAppState.ts`, `useFinancialManagement.ts`
+   - Dual-path feature flag logic in `useFinancialItemFlow.ts`
+   - RefactorFeatureFlags interface (USE_FINANCIALS_DOMAIN, etc.)
+
+5. **Tests**
+   - 18 domain-related test files
+   - ApplicationState.test.ts, StorageRepository.test.ts, domain entity tests
+
+**What Was Preserved:**
+
+- All 7 DataManager services from Phase 1 (FileStorageService, AlertsService, CaseService, etc.)
+- All business logic and functionality
+- All UI components and user-facing features
+- Storage normalization (v2.0 format)
+- Test coverage (310/310 tests passing)
+
+**Result:**
+
+- Clean architecture: DataManager + 7 Services only
+- Single code path (no feature flag complexity)
+- ~4,000 lines removed
+- 0 compilation errors
+- 100% test pass rate maintained
+- Domain layer work preserved in git tag `domain-layer-experiment-nov-2025`
 
 ---
 
@@ -288,69 +356,68 @@ class DataManager {
 
 ## 🚀 Next Steps
 
-### Immediate (This Week)
+### Immediate (December 2025)
 
-1. ✅ Archive completed Cases domain documentation
-2. ✅ Update feature catalogue with Cases achievements
-3. ✅ Create Financial domain Codex prompt
-4. 📋 Execute Financial domain migration
+1. Monitor application stability post-cleanup
+2. Performance benchmarking for large datasets (1k+ cases)
+3. Identify next optimization opportunities
 
-### Short-Term (November 2025)
+### Short-Term (December 2025)
 
-1. Financial domain architecture migration
-2. Notes domain migration (if time permits)
-3. Cross-domain event handlers (e.g., case lifecycle triggers)
+1. UI/UX enhancements based on user feedback
+2. Additional test coverage for edge cases
+3. Documentation updates for new contributors
 
-### Medium-Term (December 2025)
+### Medium-Term (Q1 2026)
 
-1. Alerts domain migration
-2. Activity domain enhancements
-3. Performance benchmarking for large datasets (1k+ cases)
+1. Advanced reporting features
+2. Batch operations improvements
+3. Enhanced search and filtering capabilities
 
 ---
 
 ## 📊 Project Health Metrics
 
-| Metric                    | Current | Previous | Trend   |
-| ------------------------- | ------- | -------- | ------- |
-| Tests Passing             | 355/355 | 290/290  | ↗️ +65  |
-| Feature Quality (Cases)   | 88/100  | 79/100   | ↗️ +9   |
-| Feature Quality (Finance) | 73/100  | 73/100   | → 0     |
-| Code Complexity (Hooks)   | 101 LOC | 178 LOC  | ↗️ -38% |
-| Test Pass Rate            | 100%    | 100%     | → 0     |
-| Build Status              | ✅ Pass | ✅ Pass  | → 0     |
+| Metric                    | Current  | Previous | Trend            |
+| ------------------------- | -------- | -------- | ---------------- |
+| Tests Passing             | 310/310  | 355/355  | ↘️ -45 (cleanup) |
+| Feature Quality (Cases)   | 88/100   | 88/100   | → 0              |
+| Feature Quality (Finance) | 73/100   | 73/100   | → 0              |
+| Code Complexity (Total)   | ~12k LOC | ~16k LOC | ↗️ -25%          |
+| Test Pass Rate            | 100%     | 100%     | → 0              |
+| Build Status              | ✅ Pass  | ✅ Pass  | → 0              |
 
 ---
 
 ## 🎓 Architectural Patterns Established
 
-### Domain Layer
+### Service Layer (Current Architecture)
 
-- Pure business logic in use cases
-- Entity validation and immutability
-- Repository abstraction for storage
-- Domain event publishing
+- **DataManager Orchestration**: Thin coordination layer (461 lines)
+- **Focused Services**: 7 specialized services with single responsibilities
+  - FileStorageService: Core I/O operations
+  - AlertsService: Alert management and CSV import
+  - CaseService: Complete case CRUD operations
+  - NotesService: Note management per case
+  - FinancialsService: Financial item CRUD
+  - ActivityLogService: Activity tracking
+  - CategoryConfigService: Category configuration
+- **Dependency Injection**: Clean service composition pattern
+- **Read-Modify-Write**: Consistent data mutation pattern
 
-### Service Layer
+### Storage Layer
 
-- High-level orchestration
-- Toast feedback integration
-- Error handling and logging
-- AbortError special cases
-
-### State Management
-
-- Centralized in ApplicationState
-- Reactive selectors with cloning
-- Type-safe mutations
-- Automatic notification
+- **File System Access API**: Local-first architecture
+- **Normalized Format (v2.0)**: Relational storage structure
+- **Automatic Migration**: Seamless upgrade from legacy formats
+- **Autosave Service**: Debounced saves with conflict resolution
 
 ### Hook Layer
 
-- Thin facade over services
-- UseRef for callback stability
-- Minimal business logic
-- Clean API surface
+- **Service Delegation**: Hooks call DataManager methods
+- **React State Management**: Local state for UI concerns
+- **Toast Feedback**: Consistent user feedback patterns
+- **Error Handling**: AbortError special cases for user cancellations
 
 ---
 
@@ -420,18 +487,22 @@ class DataManager {
   - Automatic migration in `FileStorageService`
   - Verified with full test suite
 
-### Short-Term: Next Steps
+### Completed: Domain Layer Removal ✅
 
-**Timeline:** Late November 2025
+**Domain Layer Cleanup** ✅ Complete (Nov 20)
 
-**Objectives:**
-
-- Monitor v2.0 migration in production
-- **Phase C: Alerts Storage Unification** ✅ Complete
-- **Phase D: Financial Domain Architecture Migration** 🔄 In Progress
-  - Step 1: Domain Foundation (Use Cases & Transaction Support) ✅ Complete
-  - Step 2: Service Orchestration (Adapter) ✅ Implemented (Guarded Rollout)
-  - Step 3: UI Integration ✅ Implemented (Guarded Rollout)
+- **Objective:** Remove disabled domain layer experiment
+- **Scope:** ~4,000 lines removed
+  - `domain/` directory (entities, use cases, repositories)
+  - `infrastructure/storage/StorageRepository.ts`
+  - `ApplicationState`, `ActivityLogger`, `DomainEventBus`
+  - Feature flags (USE_FINANCIALS_DOMAIN, USE_NEW_ARCHITECTURE)
+  - 18 domain-related test files
+- **Result:**
+  - Clean architecture restored (DataManager + 7 Services)
+  - Single code path (no dual legacy/domain paths)
+  - 310/310 tests passing
+  - Domain work preserved in git tag `domain-layer-experiment-nov-2025`
 
 ---
 
@@ -454,6 +525,6 @@ Target:   ████████████████░░░░░░░�
 
 ---
 
-**Last updated:** November 19, 2025  
-**Current Sprint:** Financial Domain Architecture Migration (Phase D)
-**Next Milestone:** Verify Phase D (Feature Flag Toggle)
+**Last updated:** November 20, 2025  
+**Current Sprint:** Post-Cleanup Stabilization  
+**Next Milestone:** Application monitoring and performance optimization

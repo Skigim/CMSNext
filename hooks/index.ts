@@ -33,9 +33,6 @@ export { useNotes } from './useNotes';
 // Financial item management
 export { useFinancialItems } from './useFinancialItems';
 
-// Global application state snapshots
-export { useAppState, useAppStateSelector, useCases, useCase, useActivities } from './useAppState';
-
 // Legacy view state (to be refactored)
 export { useAppViewState } from './useAppViewState';
 

@@ -5,7 +5,7 @@ import { CaseDisplay } from "../../types/case";
 import { type AlertsIndex } from "../../utils/alertsData";
 import type { CaseActivityLogState } from "../../types/activityLog";
 import { WidgetRegistry, createLazyWidget, type RegisteredWidget } from "./widgets/WidgetRegistry";
-import { useAppStateSelector } from "@/hooks/useAppState";
+import { useAppViewState } from "@/hooks/useAppViewState";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { RecentCasesWidget } from "./widgets/RecentCasesWidget";
 import { AlertCenterWidget } from "./widgets/AlertCenterWidget";
@@ -60,7 +60,7 @@ const AvgCaseProcessingTimeWidgetLazy = createLazyWidget(
 );
 
 export function Dashboard({ cases, alerts, activityLogState, onViewAllCases, onNewCase, onNavigateToReports }: DashboardProps) {
-  const featureFlags = useAppStateSelector(snapshot => snapshot.featureFlags);
+  const { featureFlags } = useAppViewState();
 
   const allAlerts = useMemo(() => alerts.alerts ?? [], [alerts.alerts]);
   const activityEntries = useMemo(() => activityLogState.activityLog ?? [], [activityLogState.activityLog]);

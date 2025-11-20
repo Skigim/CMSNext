@@ -1,20 +1,11 @@
 import { renderHook, act } from '@testing-library/react';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'vitest';
 
-import { ApplicationState } from '@/application/ApplicationState';
 import { useAppViewState } from '@/hooks/useAppViewState';
 import { DEFAULT_FLAGS } from '@/utils/featureFlags';
 
 describe('useAppViewState', () => {
-  beforeEach(() => {
-    ApplicationState.resetForTesting();
-  });
-
-  afterEach(() => {
-    ApplicationState.resetForTesting();
-  });
-
-  it('exposes feature flags from ApplicationState', () => {
+  it('exposes feature flags with defaults', () => {
     const { result } = renderHook(() => useAppViewState());
 
     expect(result.current.featureFlags).toEqual(DEFAULT_FLAGS);

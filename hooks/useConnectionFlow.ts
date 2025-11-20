@@ -11,10 +11,6 @@ import {
 import type { FileStorageLifecycleSelectors } from "../contexts/FileStorageContext";
 import { reportFileStorageError } from "../utils/fileStorageErrorReporter";
 import { createLogger } from "@/utils/logger";
-import ApplicationState from "@/application/ApplicationState";
-import ActivityLogger from "@/application/ActivityLogger";
-import StorageRepository from "@/infrastructure/storage/StorageRepository";
-import { getRefactorFlags } from "@/utils/featureFlags";
 
 const logger = createLogger("ConnectionFlow");
 
@@ -49,7 +45,7 @@ export function useConnectionFlow({
   connectToExisting,
   loadExistingData,
   service,
-  fileStorageService,
+  fileStorageService: _fileStorageService,
   dataManager,
   loadCases,
   setCases,
@@ -58,7 +54,6 @@ export function useConnectionFlow({
 }: UseConnectionFlowParams): UseConnectionFlowResult {
   const [showConnectModal, setShowConnectModal] = useState(false);
   const lastErrorRef = useRef<number | null>(null);
-  const activityLoggerRef = useRef<ActivityLogger | null>(null);
 
   const emitFileStorageError = useCallback(
     (
@@ -269,24 +264,6 @@ export function useConnectionFlow({
         });
       }
 
-      if (getRefactorFlags().USE_NEW_ARCHITECTURE && fileStorageService) {
-        try {
-          const storageRepository = new StorageRepository(fileStorageService);
-          const appState = ApplicationState.getInstance();
-          await appState.hydrate(storageRepository);
-
-          activityLoggerRef.current?.stop();
-          const activityLogger = new ActivityLogger(appState, storageRepository);
-          activityLogger.start();
-          activityLoggerRef.current = activityLogger;
-        } catch (hydrateError) {
-          logger.error("Failed to hydrate ApplicationState from storage", {
-            error: hydrateError instanceof Error ? hydrateError.message : String(hydrateError),
-          });
-          // Continue execution even if hydration fails - the app can still function with empty state
-        }
-      }
-
       return true;
     } catch (error) {
       logger.error("Failed to connect and load data", {
@@ -409,15 +386,6 @@ export function useConnectionFlow({
       toast.dismiss("file-storage-recovering");
     }
   }, [isRecovering]);
-
-  useEffect(() => {
-    return () => {
-      if (activityLoggerRef.current) {
-        activityLoggerRef.current.stop();
-        activityLoggerRef.current = null;
-      }
-    };
-  }, []);
 
   const dismissConnectModal = useCallback(() => {
     setShowConnectModal(false);

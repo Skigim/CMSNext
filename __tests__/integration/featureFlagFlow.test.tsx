@@ -1,8 +1,7 @@
-import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 
-import ApplicationState from "@/application/ApplicationState";
 import { Dashboard } from "@/components/app/Dashboard";
 import type { CaseActivityEntry, CaseActivityLogState } from "@/types/activityLog";
 import { CASE_STATUS, type CaseDisplay } from "@/types/case";
@@ -136,19 +135,12 @@ const widgetTitles = [
   "Avg. Case Processing Time",
 ];
 
-describe("feature flag integration", () => {
-  beforeEach(() => {
-    ApplicationState.resetInstance();
-  });
-
+describe("Dashboard rendering integration", () => {
   afterEach(() => {
     cleanup();
-    ApplicationState.resetInstance();
   });
 
   function renderDashboard() {
-    // Initialize ApplicationState before rendering
-    ApplicationState.getInstance();
     
     const cases: CaseDisplay[] = [createCase({ id: "case-1" }), createCase({ id: "case-2", status: CASE_STATUS.Closed })];
     const alerts = [
@@ -178,14 +170,8 @@ describe("feature flag integration", () => {
     );
   }
 
-  it("shows all widgets when all flags are enabled", async () => {
+  it("shows all default widgets", async () => {
     const user = userEvent.setup();
-    const appState = ApplicationState.getInstance();
-    const flags = appState.getFeatureFlags();
-    // All flags should be true by default
-    expect(flags["dashboard.widgets.casePriority"]).toBe(true);
-    expect(flags["dashboard.widgets.alertsCleared"]).toBe(true);
-    expect(flags["dashboard.widgets.activityTimeline"]).toBe(true);
     
     renderDashboard();
 
@@ -205,65 +191,5 @@ describe("feature flag integration", () => {
         expect(screen.getByText(title)).toBeInTheDocument();
       }, { timeout: 20000 });
     }
-  }, 180000); // 3 minute test timeout
-
-  it("hides widgets tied to disabled flags", async () => {
-    const user = userEvent.setup();
-    const appState = ApplicationState.getInstance();
-    appState.setFeatureFlags({
-      "dashboard.widgets.casePriority": false,
-      "dashboard.widgets.avgAlertAge": false,
-      "dashboard.widgets.activityTimeline": true, // Explicitly enable Activity
-    });
-
-    renderDashboard();
-
-    // Check Activity (Overview tab)
-    await waitFor(() => {
-      expect(screen.getByText("Activity")).toBeInTheDocument();
-    });
-
-    // Switch to Analytics tab
-    const analyticsTab = screen.getByRole("tab", { name: /analytics/i });
-    await user.click(analyticsTab);
-
-    for (const title of ["Alerts Cleared/Day", "Total Cases by Status"]) {
-      await waitFor(() => {
-        expect(screen.getByText(title)).toBeInTheDocument();
-      });
-    }
-
-    expect(screen.queryByText("Case Priority")).toBeNull();
-    expect(screen.queryByText("Avg. Alert Age")).toBeNull();
-  });
-
-  it("updates widget visibility when flags change at runtime", async () => {
-    const user = userEvent.setup();
-    const appState = ApplicationState.getInstance();
-    renderDashboard();
-
-    // Switch to Analytics tab
-    const analyticsTab = screen.getByRole("tab", { name: /analytics/i });
-    await user.click(analyticsTab);
-
-    await waitFor(() => {
-      expect(screen.getByText("Avg. Alert Age")).toBeInTheDocument();
-    });
-
-    act(() => {
-      appState.setFeatureFlags({ "dashboard.widgets.avgAlertAge": false });
-    });
-
-    await waitFor(() => {
-      expect(screen.queryByText("Avg. Alert Age")).toBeNull();
-    });
-
-    act(() => {
-      appState.setFeatureFlags({ "dashboard.widgets.avgAlertAge": true });
-    });
-
-    await waitFor(() => {
-      expect(screen.getByText("Avg. Alert Age")).toBeInTheDocument();
-    });
-  });
+  }, 180000);
 });

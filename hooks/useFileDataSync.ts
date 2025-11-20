@@ -1,15 +1,12 @@
 import { useCallback } from "react";
 import { toast } from "sonner";
-import { useFileStorageDataLoadHandler, useFileStorage } from "@/contexts/FileStorageContext";
+import { useFileStorageDataLoadHandler } from "@/contexts/FileStorageContext";
 import type { Dispatch, SetStateAction } from "react";
 import type { CaseDisplay } from "@/types/case";
 import type { CategoryConfig } from "@/types/categoryConfig";
 import { createLogger } from "@/utils/logger";
 import { updateFileStorageFlags } from "@/utils/fileStorageFlags";
 import { recordStorageSyncEvent } from "@/utils/telemetryInstrumentation";
-import ApplicationState from "@/application/ApplicationState";
-import StorageRepository from "@/infrastructure/storage/StorageRepository";
-import { getRefactorFlags } from "@/utils/featureFlags";
 
 interface FileDataSyncDependencies {
   loadCases: () => Promise<void>;
@@ -34,8 +31,6 @@ export function useFileDataSync({
   setHasLoadedData,
   setConfigFromFile,
 }: FileDataSyncDependencies) {
-  const { fileStorageService } = useFileStorage();
-
   const handleFileDataLoaded = useCallback(
     async (fileData: unknown) => {
       const payload = (fileData ?? null) as FileDataPayload;
@@ -63,21 +58,6 @@ export function useFileDataSync({
           setCases(payload.cases);
           setHasLoadedData(true);
           updateFileStorageFlags({ dataBaseline: true, sessionHadData: payload.cases.length > 0 });
-
-          // Hydrate ApplicationState if using new domain logic
-          if (getRefactorFlags().USE_FINANCIALS_DOMAIN && fileStorageService) {
-            try {
-              const repo = new StorageRepository(fileStorageService);
-              await ApplicationState.getInstance().hydrate(repo);
-              logger.info("ApplicationState hydrated from file storage");
-            } catch (err) {
-              console.error("CRITICAL: ApplicationState hydration failed", err);
-              logger.error("Failed to hydrate ApplicationState", {
-                error: err instanceof Error ? err.message : String(err),
-                stack: err instanceof Error ? err.stack : undefined
-              });
-            }
-          }
 
           return;
         }
@@ -144,7 +124,7 @@ export function useFileDataSync({
         toast.error("Failed to load data");
       }
     },
-    [loadCases, setCases, setConfigFromFile, setHasLoadedData, fileStorageService],
+    [loadCases, setCases, setConfigFromFile, setHasLoadedData],
   );
 
   useFileStorageDataLoadHandler(handleFileDataLoaded);

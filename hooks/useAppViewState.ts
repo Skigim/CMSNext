@@ -1,6 +1,6 @@
-import { useState, useCallback, useEffect, useRef } from 'react';
-import { ApplicationState } from '@/application/ApplicationState';
+import { useState, useCallback } from 'react';
 import type { FeatureFlagKey, FeatureFlags } from '@/utils/featureFlags';
+import { DEFAULT_FLAGS } from '@/utils/featureFlags';
 
 /**
  * Hook for managing global application state
@@ -58,18 +58,7 @@ export function useAppViewState(): UseAppStateReturn {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [globalSearchTerm, setGlobalSearchTerm] = useState('');
   const [globalError, setGlobalError] = useState<string | null>(null);
-  const appStateRef = useRef(ApplicationState.getInstance());
-  const [featureFlags, setFeatureFlagsState] = useState<FeatureFlags>(() => 
-    appStateRef.current.getFeatureFlags()
-  );
-
-  useEffect(() => {
-    const unsubscribe = appStateRef.current.subscribe(() => {
-      setFeatureFlagsState(appStateRef.current.getFeatureFlags());
-    });
-
-    return unsubscribe;
-  }, []);
+  const [featureFlags, setFeatureFlagsState] = useState<FeatureFlags>(DEFAULT_FLAGS);
 
   const setView = useCallback((view: AppView, caseId?: string) => {
     setCurrentView(view);
@@ -117,11 +106,11 @@ export function useAppViewState(): UseAppStateReturn {
   }, []);
 
   const isFeatureEnabled = useCallback((flag: FeatureFlagKey) => {
-    return appStateRef.current.isFeatureEnabled(flag);
-  }, []);
+    return Boolean(featureFlags[flag]);
+  }, [featureFlags]);
 
   const setFeatureFlags = useCallback((flags: Partial<FeatureFlags>) => {
-    appStateRef.current.setFeatureFlags(flags);
+    setFeatureFlagsState(prev => ({ ...prev, ...flags }));
   }, []);
 
   return {

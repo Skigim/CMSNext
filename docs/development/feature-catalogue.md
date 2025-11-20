@@ -128,21 +128,20 @@ Maintained by the storage + autosave working group. Align telemetry follow-ups w
 
 ### Implementation Snapshot
 
-**Rating: 88/100** _(Updated November 2, 2025)_
+**Rating: 88/100** _(Updated November 20, 2025)_
 
-Core case workflows (create, view, edit, delete) are production-ready through the refactored Phase 3 architecture: domain-driven use cases (`CreateCase`, `UpdateCase`, `DeleteCase`, `GetAllCases`), service layer (`CaseManagementService`, `CaseManagementAdapter`), and streamlined hooks (`useCaseManagement` reduced from 178 to 101 lines). Application state centralization, optimistic updates with rollback, domain event publishing, and comprehensive test coverage (352/352 passing) deliver enterprise-grade reliability.
+Core case workflows (create, view, edit, delete) are production-ready through the refactored service architecture. CaseService handles all case CRUD operations with status tracking, import/export, and activity log integration. The hook layer (`useCaseManagement`) provides a clean facade over DataManager with optimistic updates and comprehensive test coverage (310/310 passing).
 
 ### Strengths
 
-- **Domain-Driven Architecture**: Clean use case layer (`domain/cases/use-cases/`) encapsulates business logic with optimistic updates and automatic rollback on persistence failure
-- **Service Layer Abstraction**: `CaseManagementService` provides high-level orchestration with toast feedback, error handling, and domain event integration; `CaseManagementAdapter` bridges legacy DataManager
-- **Centralized State Management**: `ApplicationState` handles all case state (cases array, loading flags, errors) with reactive selectors and type-safe mutations
-- **Streamlined Hook Layer**: `useCaseManagement` reduced 38% (178→101 lines) using `useRef` pattern for stable callbacks, preventing infinite render loops
-- **Domain Events**: `DomainEventBus` publishes `CaseCreated`, `CaseUpdated`, `CaseDeleted` events with metadata for future cross-domain coordination
-- **Navigation Integration**: `useNavigationFlow` ensures consistent transitions and performance measurement logging across dashboard, details, and workspace views
-- **Comprehensive Test Coverage**: 352/352 tests passing (100%) including unit tests for all use cases, service layer integration tests, and component tests
-- **Data Model Integrity**: Normalized structures (`CaseDisplay`, `CaseRecord`, `Person`) with strict TypeScript validation and masking utilities
-- **Autosave Integration**: Case forms seamlessly integrate with autosave service and FileStorage context for reliable persistence
+- **Service Layer Architecture**: `CaseService` (432 lines) encapsulates all case business logic with clean separation of concerns
+- **DataManager Orchestration**: Thin coordination layer delegates to specialized services via dependency injection
+- **Streamlined Hook Layer**: `useCaseManagement` provides clean React integration with toast feedback and error handling
+- **Navigation Integration**: `useNavigationFlow` ensures consistent transitions and performance measurement logging across views
+- **Comprehensive Test Coverage**: 310/310 tests passing (100%) including service tests, integration tests, and component tests
+- **Data Model Integrity**: Normalized structures (`CaseDisplay`, `CaseRecord`, `Person`) with strict TypeScript validation
+- **Import/Export**: Bulk operations with duplicate detection and progress indicators
+- **Autosave Integration**: Forms seamlessly integrate with AutosaveFileService for reliable persistence
 
 ### Gaps / Risks
 
@@ -156,17 +155,14 @@ Core case workflows (create, view, edit, delete) are production-ready through th
 - **Draft State & Change History**: Add draft persistence and snapshots for compliance-driven workflows requiring audit trails
 - **Performance Optimization**: Establish 1k+ case benchmark suite and optimize rendering/filtering for large datasets
 - **Guided Onboarding**: Develop in-app checklists or contextual guidance to reduce new-user friction
-- **Cross-Domain Events**: Expand `DomainEventBus` handlers to coordinate with Financial and Notes domains (e.g., auto-archive cases when all financials verified)
 
 ### Coverage & Telemetry
 
-- **Domain Layer**: Complete test coverage for all use cases (`CreateCase`, `UpdateCase`, `DeleteCase`, `GetAllCases`) with optimistic update and rollback scenarios
-- **Service Layer**: `CaseManagementService` (11 tests) and `CaseManagementAdapter` (26 tests) validate orchestration, error handling, and toast feedback flows
-- **Hook Layer**: `useCaseManagement.test.tsx` (4 tests) verifies hook facade, `useNavigationFlow.test.ts` (3 tests) exercises view transitions
+- **Service Layer**: CaseService fully tested with 100% coverage for CRUD operations, import/export, and activity logging
+- **Hook Layer**: `useCaseManagement.test.tsx` verifies hook facade, `useNavigationFlow.test.ts` exercises view transitions
 - **Component Layer**: RTL suites for `CaseWorkspace`, `CaseList`, `CaseStatusBadge`, and form components ensure rendering and interaction correctness
 - **Integration**: Autosave status integration test validates end-to-end persistence with FileStorage context
-- **Entity Tests**: `Case.test.ts` (5 tests) validates domain entity construction, validation, and cloning
-- **Test Suite Status**: 352/352 passing (100%) as of November 2, 2025
+- **Test Suite Status**: 310/310 passing (100%) as of November 20, 2025
 - **Performance**: Telemetry infrastructure ready for interaction traces; baseline measurements pending for case-view latency under load
 
 ### Owners / Notes
@@ -183,15 +179,15 @@ Phase 3 Cases domain refactor completed November 2, 2025. Architecture now serve
 
 Financial modules (resources, income, expenses) leverage dedicated components and hooks (`useFinancialItemFlow`, `FinancialItemCard`) with inline editing, validation, and autosave integration. Verification metadata and frequency handling cover core program requirements, while normalized data structures ensure consistent reporting.
 
-**🎯 Upcoming Migration**: Following the successful Cases domain refactor (rating jump from 79→88), Financial domain is next in line for the Phase 3 architecture pattern: domain use cases, service layer, centralized state, and streamlined hooks. Expected completion: Mid-November 2025.
-
 ### Strengths
 
-- Clear separation of financial categories with configurable definitions in `categoryConfig`
-- Inline editing via `FinancialItemCard` keeps UX fast; state managed by `useFinancialItemCardState`
-- Verification status badges (VR/AVS/etc.) surface compliance at a glance
-- Validation rules enforce numeric integrity, frequency selections, and required metadata
-- Financial summaries feed into dashboard widgets and case detail totals
+- **Service Architecture**: FinancialsService (235 lines) handles all financial CRUD operations with category-based management
+- **Clean Hook Layer**: `useFinancialItemFlow` provides React integration with toast feedback and optimistic updates
+- **Inline Editing**: `FinancialItemCard` keeps UX fast with state managed by `useFinancialItemCardState`
+- **Category Separation**: Clear separation of resources, income, and expenses with configurable definitions in `categoryConfig`
+- **Verification Status**: Badges (VR/AVS/etc.) surface compliance at a glance
+- **Validation Rules**: Enforce numeric integrity, frequency selections, and required metadata
+- **Dashboard Integration**: Financial summaries feed into dashboard widgets and case detail totals
 
 ### Gaps / Risks
 
@@ -401,21 +397,21 @@ Design systems + front-end platform pairing. Produce contributor-facing UI guide
 
 ### Implementation Snapshot
 
-**Rating: 79/100** _(Updated October 27, 2025)_
+**Rating: 79/100** _(Updated November 20, 2025)_
 
-Tooling stack (Vitest, ESLint 9 flat config, Tailwind v4 pipeline) covers day-to-day development with scripted performance baselines, seed data generators, and comprehensive architecture documentation. Phase 1 & Phase 2 refactor completions established domain-driven patterns with event bus infrastructure. Dev container + npm workflows yield repeatable environments, but release automation and telemetry collection remain largely manual.
+Tooling stack (Vitest, ESLint 9 flat config, Tailwind v4 pipeline) covers day-to-day development with scripted performance baselines, seed data generators, and comprehensive architecture documentation. Service extraction (Phase 1) established clean DataManager + Services pattern with dependency injection. Dev container + npm workflows yield repeatable environments, but release automation and telemetry collection remain largely manual.
 
 ### Strengths
 
-- **Comprehensive test harness**: 290 tests passing across unit, RTL, integration, and performance scripts with coverage reporting
-- **Architecture foundations**: Domain-driven structure with rich entities, repository pattern, and event-driven state management
-- **Phase 1 deliverables**: Unified StorageRepository, ApplicationState singleton, CreateCase use case with optimistic update + rollback
-- **Phase 2 deliverables**: DomainEventBus, ActivityLogger with persistence rollback, UpdateCase/DeleteCase use cases, rich domain entities for all aggregates
+- **Comprehensive test harness**: 310 tests passing across unit, RTL, integration, and performance scripts with coverage reporting
+- **Service Architecture**: DataManager + 7 focused services (FileStorageService, AlertsService, CaseService, NotesService, FinancialsService, ActivityLogService, CategoryConfigService)
+- **Dependency Injection**: Clean service composition with focused responsibilities
+- **Storage Normalization**: v2.0 normalized format with automatic migration from legacy formats
 - **Enhanced testing patterns**: `toSnapshot()` and `sortSnapshots()` helpers improve test reliability; comprehensive integration coverage
 - **Dev container** and documented setup enable consistent onboarding across platforms
 - **CLI utilities** (`scripts/`) generate sample data, run performance baselines, and capture usage reports
 - **Linting/formatting** standardized via ESLint 9 + Prettier; zero warning baseline maintained
-- **Documentation set** (Testing Infrastructure, Performance Metrics, Phase Completion Summaries, Architecture Refactor Plan) keeps teams aligned
+- **Documentation set** (Testing Infrastructure, Performance Metrics, Service Extraction summaries) keeps teams aligned
 
 ### Gaps / Risks
 
@@ -424,11 +420,9 @@ Tooling stack (Vitest, ESLint 9 flat config, Tailwind v4 pipeline) covers day-to
 - Accessibility and visual regression tooling not part of CI, risking regressions
 - Dev container updates rely on manual refresh; dependency drift can surprise contributors
 - Operational runbooks (backups, release checklists) live in docs but lack executable automation
-- Phase 3 (Hooks Migration) not yet started—React components still use legacy patterns
 
 ### Expansion Opportunities
 
-- **Phase 3: Hooks Migration** - Migrate React hooks to use ApplicationState and domain events (November 1-15, 2025)
 - Introduce lightweight release automation (tagged builds, checksum artifacts)
 - Stand up usage metrics service to feed feature roadmap and dashboard insights
 - Add automated accessibility/visual regression checks to CI
@@ -437,16 +431,16 @@ Tooling stack (Vitest, ESLint 9 flat config, Tailwind v4 pipeline) covers day-to
 
 ### Coverage & Telemetry
 
-- **Vitest suites**: 290 tests across major domains; coverage reports stored in `coverage/` and referenced in docs
-- **New test coverage**: +79 tests in Phase 2 covering domain entities, use cases, ApplicationState, StorageRepository, DomainEventBus, ActivityLogger
+- **Vitest suites**: 310 tests across major domains; coverage reports stored in `coverage/` and referenced in docs
+- **Service tests**: Complete coverage for all 7 services with unit and integration tests
 - **Performance telemetry**: Partially automated (`perf:baseline`, bundle analysis); manual traces pending
-- **Architecture documentation**: Phase 1 & 2 completion summaries, state management strategy, Phase 3 planning
+- **Architecture documentation**: Service extraction summaries, storage normalization strategy, testing infrastructure
 - No centralized telemetry ingestion yet—future work to log usage, autosave health, and import metrics
 - Dev tooling health tracked via docs but lacks automated status dashboard
 
 ### Owners / Notes
 
-Platform enablement group coordinates tooling, CI, and documentation upkeep. Architecture refactor squad owns domain structure, event bus, and use case patterns. Prioritize Phase 3 hooks migration (November 2025) to complete event-driven transition.
+Platform enablement group coordinates tooling, CI, and documentation upkeep. Service architecture maintained by core development team.
 
 ---
 
@@ -456,15 +450,15 @@ Platform enablement group coordinates tooling, CI, and documentation upkeep. Arc
 
 **Rating: 65/100**
 
-Feature flag infrastructure now lives in `utils/featureFlags.ts` with immutable defaults and helper utilities. `ApplicationState` exposes flag state, and `useAppState` streams updates into React so components (like dashboard widgets) can opt-in through metadata instead of ad-hoc conditionals. The system enables gradual rollout for dashboard insights and future refactor milestones.
+Feature flag infrastructure lives in `utils/featureFlags.ts` with immutable defaults and helper utilities. Flags are managed through `useAppViewState` hook, enabling dashboard widgets to opt-in through metadata instead of ad-hoc conditionals. The system enables gradual rollout for dashboard insights and UI customization.
 
 ### Strengths
 
 - Type-safe `FeatureFlagKey` union removes magic strings from the codebase
 - `DEFAULT_FLAGS` and `createFeatureFlagContext` yield reproducible flag contexts for tests and runtime overrides
-- Runtime toggling flows through `useAppState().setFeatureFlags`, keeping React components synchronized via subscriptions
-- Widget registry honours `metadata.featureFlag`, making new widget flags a metadata-only change
-- New documentation (`feature-flags-guide.md`) keeps usage patterns searchable for contributors
+- Runtime toggling flows through `useAppViewState().setFeatureFlags`, keeping React components synchronized
+- Widget registry honors `metadata.featureFlag`, making new widget flags a metadata-only change
+- Dashboard widget toggles enable user customization of their view
 
 ### Gaps / Risks
 
@@ -475,7 +469,7 @@ Feature flag infrastructure now lives in `utils/featureFlags.ts` with immutable 
 
 ### Expansion Opportunities
 
-- Persist overrides via ApplicationState hydration/persist flows so flags survive reloads
+- Persist flag overrides so they survive page reloads
 - Build a lightweight developer toolbar to inspect and toggle flags at runtime
 - Emit telemetry when flags change to measure adoption and schedule cleanup
 - Add lint rule or generator script to enforce naming/documentation of new flags
@@ -483,10 +477,9 @@ Feature flag infrastructure now lives in `utils/featureFlags.ts` with immutable 
 ### Coverage & Telemetry
 
 - Unit tests (`__tests__/utils/featureFlags.test.ts`) validate defaults, overrides, and helper utilities
-- `ApplicationState` tests verify mutable operations notify subscribers exactly once per change
-- Integration suite (`__tests__/integration/featureFlagFlow.test.tsx`) ensures dashboard widgets respond to toggles and runtime updates
+- Integration tests ensure dashboard widgets respond to flag toggles correctly
 - Telemetry capture is planned but not yet implemented; no metrics currently collected
 
 ### Owners / Notes
 
-Insights platform and architecture refactor squads co-own the flag catalogue. Update `feature-flags-guide.md` whenever new flags ship, and coordinate cleanup once features graduate from guarded rollout.
+Core development team owns the flag system. Coordinate cleanup once features graduate from guarded rollout.
