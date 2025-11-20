@@ -71,8 +71,10 @@ export function useFileDataSync({
               await ApplicationState.getInstance().hydrate(repo);
               logger.info("ApplicationState hydrated from file storage");
             } catch (err) {
+              console.error("CRITICAL: ApplicationState hydration failed", err);
               logger.error("Failed to hydrate ApplicationState", {
                 error: err instanceof Error ? err.message : String(err),
+                stack: err instanceof Error ? err.stack : undefined
               });
             }
           }

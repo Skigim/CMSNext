@@ -550,7 +550,14 @@ export class StorageRepository implements ITransactionRepository {
   }
 
   private cloneCaseEntities(snapshots: CaseSnapshot[]): Case[] {
-    return snapshots.map(snapshot => Case.rehydrate(this.cloneCaseSnapshot(snapshot)));
+    return snapshots.reduce((acc, snapshot) => {
+      try {
+        acc.push(Case.rehydrate(this.cloneCaseSnapshot(snapshot)));
+      } catch (error) {
+        console.error(`Failed to rehydrate case ${snapshot.id}:`, error);
+      }
+      return acc;
+    }, [] as Case[]);
   }
 
   private cloneCaseSnapshot(snapshot: CaseSnapshot): CaseSnapshot {
@@ -559,38 +566,74 @@ export class StorageRepository implements ITransactionRepository {
 
   private cloneFinancialEntity(entity: FinancialItem | null): FinancialItem | null {
     if (!entity) return null;
-    return FinancialItem.rehydrate(this.clone(entity.toJSON()));
+    try {
+      return FinancialItem.rehydrate(this.clone(entity.toJSON()));
+    } catch (error) {
+      console.error(`Failed to rehydrate financial item ${entity.id}:`, error);
+      return null;
+    }
   }
 
   private cloneFinancialEntities(entities: FinancialItem[]): FinancialItem[] {
-    return entities.map(entity => this.cloneFinancialEntity(entity)!);
+    return entities.reduce((acc, entity) => {
+      const cloned = this.cloneFinancialEntity(entity);
+      if (cloned) acc.push(cloned);
+      return acc;
+    }, [] as FinancialItem[]);
   }
 
   private cloneNoteEntity(entity: Note | null): Note | null {
     if (!entity) return null;
-    return Note.rehydrate(this.clone(entity.toJSON()));
+    try {
+      return Note.rehydrate(this.clone(entity.toJSON()));
+    } catch (error) {
+      console.error(`Failed to rehydrate note ${entity.id}:`, error);
+      return null;
+    }
   }
 
   private cloneNoteEntities(entities: Note[]): Note[] {
-    return entities.map(entity => this.cloneNoteEntity(entity)!);
+    return entities.reduce((acc, entity) => {
+      const cloned = this.cloneNoteEntity(entity);
+      if (cloned) acc.push(cloned);
+      return acc;
+    }, [] as Note[]);
   }
 
   private cloneAlertEntity(entity: Alert | null): Alert | null {
     if (!entity) return null;
-    return Alert.rehydrate(this.clone(entity.toJSON()));
+    try {
+      return Alert.rehydrate(this.clone(entity.toJSON()));
+    } catch (error) {
+      console.error(`Failed to rehydrate alert ${entity.id}:`, error);
+      return null;
+    }
   }
 
   private cloneAlertEntities(entities: Alert[]): Alert[] {
-    return entities.map(entity => this.cloneAlertEntity(entity)!);
+    return entities.reduce((acc, entity) => {
+      const cloned = this.cloneAlertEntity(entity);
+      if (cloned) acc.push(cloned);
+      return acc;
+    }, [] as Alert[]);
   }
 
   private cloneActivityEntity(entity: ActivityEvent | null): ActivityEvent | null {
     if (!entity) return null;
-    return ActivityEvent.rehydrate(this.clone(entity.toJSON()));
+    try {
+      return ActivityEvent.rehydrate(this.clone(entity.toJSON()));
+    } catch (error) {
+      console.error(`Failed to rehydrate activity ${entity.id}:`, error);
+      return null;
+    }
   }
 
   private cloneActivityEntities(entities: ActivityEvent[]): ActivityEvent[] {
-    return entities.map(entity => this.cloneActivityEntity(entity)!);
+    return entities.reduce((acc, entity) => {
+      const cloned = this.cloneActivityEntity(entity);
+      if (cloned) acc.push(cloned);
+      return acc;
+    }, [] as ActivityEvent[]);
   }
 
   private toCaseSnapshot(entity: Case | CaseSnapshot): CaseSnapshot {
