@@ -1,7 +1,7 @@
 import { v4 as uuidv4 } from 'uuid';
-import type { CaseDisplay, NewNoteData } from '../../types/case';
+import type { NewNoteData } from '../../types/case';
 import type { CaseActivityEntry } from '../../types/activityLog';
-import type { FileStorageService, FileData } from './FileStorageService';
+import type { FileStorageService, NormalizedFileData, StoredNote, StoredCase } from './FileStorageService';
 import { ActivityLogService } from './ActivityLogService';
 
 const EMAIL_PATTERN = /\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/gi;
@@ -30,7 +30,7 @@ function buildNotePreview(content: string): string {
   return `${sanitized.slice(0, 157)}…`;
 }
 
-function formatCaseDisplayName(caseData: CaseDisplay): string {
+function formatCaseDisplayName(caseData: StoredCase): string {
   const trimmedName = (caseData.name ?? "").trim();
   if (trimmedName.length > 0) {
     return trimmedName;
@@ -52,12 +52,17 @@ interface NotesServiceConfig {
 }
 
 /**
- * NotesService - Handles all note CRUD operations for cases
+ * NotesService - Handles all note CRUD operations
+ * 
+ * Works directly with normalized v2.0 data format:
+ * - Notes stored as flat array with caseId foreign key
+ * - No nested case structures
  * 
  * Responsibilities:
  * - Add notes to cases
  * - Update existing notes
  * - Delete notes
+ * - Get notes for a case
  * - Sanitize note content for PII
  * - Generate activity log entries for note operations
  */
@@ -69,58 +74,52 @@ export class NotesService {
   }
 
   /**
+   * Get all notes for a case
+   */
+  async getNotesForCase(caseId: string): Promise<StoredNote[]> {
+    const data = await this.fileStorage.readFileData();
+    if (!data) {
+      return [];
+    }
+    return this.fileStorage.getNotesForCase(data, caseId);
+  }
+
+  /**
    * Add note to a case
    * Pattern: read → modify → write
    */
-  async addNote(caseId: string, noteData: NewNoteData): Promise<CaseDisplay> {
+  async addNote(caseId: string, noteData: NewNoteData): Promise<StoredNote> {
     // Read current data
     const currentData = await this.fileStorage.readFileData();
     if (!currentData) {
       throw new Error('Failed to read current data');
     }
 
-    // Find case to update
-    const caseIndex = currentData.cases.findIndex(c => c.id === caseId);
-    if (caseIndex === -1) {
+    // Find case (needed for activity log)
+    const targetCase = currentData.cases.find(c => c.id === caseId);
+    if (!targetCase) {
       throw new Error('Case not found');
     }
 
-    const targetCase = currentData.cases[caseIndex];
-
-    // Ensure caseRecord exists
-    if (!targetCase.caseRecord) {
-      throw new Error('Case record is missing - data integrity issue. Please reload the data.');
-    }
-
-    // Create new note
+    // Create new note with foreign key
     const timestamp = new Date().toISOString();
-    const newNote = {
+    const newNote: StoredNote = {
       id: uuidv4(),
+      caseId,
       category: noteData.category || 'General',
       content: noteData.content,
       createdAt: timestamp,
       updatedAt: timestamp
     };
 
-    // Modify case data
-    const caseWithNewNote: CaseDisplay = {
-      ...targetCase,
-      caseRecord: {
-        ...targetCase.caseRecord,
-        notes: [...(targetCase.caseRecord.notes || []), newNote],
-        updatedDate: new Date().toISOString(),
-      },
-    };
+    // Add to notes array
+    const updatedNotes = [...currentData.notes, newNote];
 
-    const casesWithChanges = currentData.cases.map((c, index) =>
-      index === caseIndex ? caseWithNewNote : c,
-    );
+    // Touch case timestamp
+    const updatedCases = this.fileStorage.touchCaseTimestamps(currentData.cases, [caseId]);
 
-    const casesWithTouchedTimestamps = this.fileStorage.touchCaseTimestamps(casesWithChanges, [caseId]);
-
-    // Update data
+    // Create activity log entry
     const sanitizedContent = sanitizeNoteContent(noteData.content ?? "");
-
     const activityEntry: CaseActivityEntry = {
       id: uuidv4(),
       timestamp,
@@ -136,144 +135,126 @@ export class NotesService {
       },
     };
 
-    const updatedData: FileData = {
+    // Write updated data
+    const updatedData: NormalizedFileData = {
       ...currentData,
-      cases: casesWithTouchedTimestamps,
+      cases: updatedCases,
+      notes: updatedNotes,
       activityLog: ActivityLogService.mergeActivityEntries(currentData.activityLog, [activityEntry]),
     };
 
-    // Write back to file
-    await this.fileStorage.writeFileData(updatedData);
+    await this.fileStorage.writeNormalizedData(updatedData);
 
-    return casesWithTouchedTimestamps[caseIndex];
+    return newNote;
   }
 
   /**
-   * Update note in a case
+   * Update note
    * Pattern: read → modify → write
    */
-  async updateNote(caseId: string, noteId: string, noteData: NewNoteData): Promise<CaseDisplay> {
+  async updateNote(caseId: string, noteId: string, noteData: NewNoteData): Promise<StoredNote> {
     // Read current data
     const currentData = await this.fileStorage.readFileData();
     if (!currentData) {
       throw new Error('Failed to read current data');
     }
 
-    // Find case to update
-    const caseIndex = currentData.cases.findIndex(c => c.id === caseId);
-    if (caseIndex === -1) {
+    // Verify case exists first
+    const caseExists = currentData.cases.some(c => c.id === caseId);
+    if (!caseExists) {
       throw new Error('Case not found');
     }
 
-    const targetCase = currentData.cases[caseIndex];
-
-    // Ensure caseRecord exists
-    if (!targetCase.caseRecord) {
-      throw new Error('Case record is missing - data integrity issue. Please reload the data.');
-    }
-
     // Find note to update
-    const noteIndex = (targetCase.caseRecord.notes || []).findIndex(note => note.id === noteId);
+    const noteIndex = currentData.notes.findIndex(
+      n => n.id === noteId && n.caseId === caseId
+    );
     if (noteIndex === -1) {
       throw new Error('Note not found');
     }
 
-    const existingNote = targetCase.caseRecord.notes![noteIndex];
+    const existingNote = currentData.notes[noteIndex];
 
     // Update note
-    const updatedNote = {
+    const updatedNote: StoredNote = {
       ...existingNote,
       category: noteData.category || existingNote.category,
       content: noteData.content,
       updatedAt: new Date().toISOString()
     };
 
-    // Modify case data
-    const caseWithUpdatedNote: CaseDisplay = {
-      ...targetCase,
-      caseRecord: {
-        ...targetCase.caseRecord,
-        notes: (targetCase.caseRecord.notes || []).map((note, index) =>
-          index === noteIndex ? updatedNote : note,
-        ),
-        updatedDate: new Date().toISOString(),
-      },
-    };
-
-    const casesWithChanges = currentData.cases.map((c, index) =>
-      index === caseIndex ? caseWithUpdatedNote : c,
+    // Update notes array
+    const updatedNotes = currentData.notes.map((n, index) =>
+      index === noteIndex ? updatedNote : n
     );
 
-    const casesWithTouchedTimestamps = this.fileStorage.touchCaseTimestamps(casesWithChanges, [caseId]);
+    // Touch case timestamp
+    const updatedCases = this.fileStorage.touchCaseTimestamps(currentData.cases, [caseId]);
 
-    // Update data
-    const updatedData: FileData = {
+    // Write updated data
+    const updatedData: NormalizedFileData = {
       ...currentData,
-      cases: casesWithTouchedTimestamps,
+      cases: updatedCases,
+      notes: updatedNotes,
     };
 
-    // Write back to file
-    await this.fileStorage.writeFileData(updatedData);
+    await this.fileStorage.writeNormalizedData(updatedData);
 
-    return casesWithTouchedTimestamps[caseIndex];
+    return updatedNote;
   }
 
   /**
-   * Delete note from a case
+   * Delete note
    * Pattern: read → modify → write
    */
-  async deleteNote(caseId: string, noteId: string): Promise<CaseDisplay> {
+  async deleteNote(caseId: string, noteId: string): Promise<void> {
     // Read current data
     const currentData = await this.fileStorage.readFileData();
     if (!currentData) {
       throw new Error('Failed to read current data');
     }
 
-    // Find case to update
-    const caseIndex = currentData.cases.findIndex(c => c.id === caseId);
-    if (caseIndex === -1) {
+    // Verify case exists first
+    const caseExists = currentData.cases.some(c => c.id === caseId);
+    if (!caseExists) {
       throw new Error('Case not found');
     }
 
-    const targetCase = currentData.cases[caseIndex];
-
-    // Ensure caseRecord exists
-    if (!targetCase.caseRecord) {
-      throw new Error('Case record is missing - data integrity issue. Please reload the data.');
-    }
-
-    // Check if note exists
-    const noteExists = (targetCase.caseRecord.notes || []).some(note => note.id === noteId);
+    // Verify note exists
+    const noteExists = currentData.notes.some(
+      n => n.id === noteId && n.caseId === caseId
+    );
     if (!noteExists) {
       throw new Error('Note not found');
     }
 
-    // Modify case data
-    const caseWithNoteRemoved: CaseDisplay = {
-      ...targetCase,
-      caseRecord: {
-        ...targetCase.caseRecord,
-        notes: (targetCase.caseRecord.notes || []).filter(note => note.id !== noteId),
-        updatedDate: new Date().toISOString(),
-      },
-    };
-
-    const casesWithChanges = currentData.cases.map((c, index) =>
-      index === caseIndex ? caseWithNoteRemoved : c,
+    // Remove from notes array
+    const updatedNotes = currentData.notes.filter(
+      n => !(n.id === noteId && n.caseId === caseId)
     );
 
-    const casesWithTouchedTimestamps = this.fileStorage.touchCaseTimestamps(casesWithChanges, [caseId]);
+    // Touch case timestamp
+    const updatedCases = this.fileStorage.touchCaseTimestamps(currentData.cases, [caseId]);
 
-    // Update data
-    const updatedData: FileData = {
+    // Write updated data
+    const updatedData: NormalizedFileData = {
       ...currentData,
-      cases: casesWithTouchedTimestamps,
+      cases: updatedCases,
+      notes: updatedNotes,
     };
 
-    // Write back to file
-    await this.fileStorage.writeFileData(updatedData);
+    await this.fileStorage.writeNormalizedData(updatedData);
+  }
 
-    return casesWithTouchedTimestamps[caseIndex];
+  /**
+   * Get the case data for a note (for backward compatibility)
+   */
+  async getCaseForNote(caseId: string): Promise<StoredCase | null> {
+    const data = await this.fileStorage.readFileData();
+    if (!data) {
+      return null;
+    }
+    return this.fileStorage.getCaseById(data, caseId) ?? null;
   }
 
   /**

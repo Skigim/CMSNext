@@ -1,5 +1,6 @@
 import { vi } from 'vitest'
 import { CaseDisplay, FinancialItem, Note, Person, CaseRecord, CaseCategory } from '@/types/case'
+import type { StoredCase, StoredFinancialItem, StoredNote, NormalizedFileData } from '@/utils/services/FileStorageService'
 import { mergeCategoryConfig } from '@/types/categoryConfig'
 
 /**
@@ -102,6 +103,99 @@ export const createMockCaseDisplay = (overrides: Partial<CaseDisplay> = {}): Cas
     updatedAt: new Date().toISOString(),
     person,
     caseRecord,
+    ...overrides
+  }
+}
+
+/**
+ * Normalized data factories for v2.0 storage format
+ */
+
+export const createMockStoredCase = (overrides: Partial<StoredCase> = {}): StoredCase => {
+  const person = createMockPerson()
+  const timestamp = new Date().toISOString()
+  
+  return {
+    id: 'case-test-1',
+    name: `${person.firstName} ${person.lastName}`,
+    mcn: 'MCN123456',
+    status: 'Pending',
+    priority: false,
+    createdAt: timestamp,
+    updatedAt: timestamp,
+    person,
+    caseRecord: {
+      id: 'case-record-test-1',
+      mcn: 'MCN123456',
+      applicationDate: timestamp,
+      caseType: 'Medical Assistance',
+      personId: 'person-test-1',
+      spouseId: '',
+      status: 'Pending',
+      description: 'Test case description',
+      priority: false,
+      livingArrangement: 'Home',
+      withWaiver: false,
+      admissionDate: timestamp,
+      organizationId: 'org-1',
+      authorizedReps: [],
+      retroRequested: '',
+      createdDate: timestamp,
+      updatedDate: timestamp,
+    },
+    ...overrides
+  }
+}
+
+export const createMockStoredFinancialItem = (
+  category: CaseCategory, 
+  caseId: string = 'case-test-1',
+  overrides: Partial<StoredFinancialItem> = {}
+): StoredFinancialItem => ({
+  id: `${category}-test-1`,
+  caseId,
+  category,
+  description: `Test ${category} item`,
+  amount: 1000,
+  location: 'Test Bank',
+  accountNumber: '1234',
+  verificationStatus: 'Needs VR',
+  frequency: category !== 'resources' ? 'monthly' : undefined,
+  notes: 'Test notes',
+  createdAt: new Date().toISOString(),
+  updatedAt: new Date().toISOString(),
+  ...overrides
+})
+
+export const createMockStoredNote = (
+  caseId: string = 'case-test-1',
+  overrides: Partial<StoredNote> = {}
+): StoredNote => ({
+  id: 'note-test-1',
+  caseId,
+  content: 'This is a test note',
+  category: 'General',
+  createdAt: new Date().toISOString(),
+  updatedAt: new Date().toISOString(),
+  ...overrides
+})
+
+export const createMockNormalizedFileData = (overrides: Partial<NormalizedFileData> = {}): NormalizedFileData => {
+  const storedCase = createMockStoredCase()
+  return {
+    version: '2.0',
+    cases: [storedCase],
+    financials: [
+      createMockStoredFinancialItem('resources', storedCase.id),
+      createMockStoredFinancialItem('income', storedCase.id),
+      createMockStoredFinancialItem('expenses', storedCase.id),
+    ],
+    notes: [createMockStoredNote(storedCase.id)],
+    alerts: [],
+    exported_at: new Date().toISOString(),
+    total_cases: 1,
+    categoryConfig: mergeCategoryConfig(),
+    activityLog: [],
     ...overrides
   }
 }

@@ -1,8 +1,22 @@
 import Papa from "papaparse";
 
-import { CaseDisplay, AlertRecord, AlertWorkflowStatus } from "../types/case";
+import { CaseDisplay, AlertRecord, AlertWorkflowStatus, CaseStatus } from "../types/case";
 
 export type AlertMatchStatus = "matched" | "unmatched" | "missing-mcn";
+
+/**
+ * Minimal case interface for alert matching
+ * Compatible with both CaseDisplay and StoredCase
+ */
+export interface CaseForAlertMatching {
+  id: string;
+  name: string;
+  mcn: string;
+  status: CaseStatus;
+  caseRecord?: {
+    mcn?: string;
+  };
+}
 
 export interface AlertWithMatch extends AlertRecord {
   matchStatus: AlertMatchStatus;
@@ -268,8 +282,8 @@ export function normalizeMcn(rawMcn: string | undefined | null): string {
   return rawMcn.replace(/[^a-z0-9]/gi, "").trim().toUpperCase();
 }
 
-function buildCaseMap(cases: CaseDisplay[]): Map<string, CaseDisplay> {
-  const map = new Map<string, CaseDisplay>();
+function buildCaseMap(cases: CaseForAlertMatching[]): Map<string, CaseForAlertMatching> {
+  const map = new Map<string, CaseForAlertMatching>();
 
   cases.forEach(caseItem => {
     const mcn = caseItem.caseRecord?.mcn ?? caseItem.mcn;
@@ -509,7 +523,7 @@ export function createEmptyAlertsIndex(): AlertsIndex {
  * The importer assumes the column ordering described there and will skip any rows that do not
  * match it exactly.
  */
-export function parseStackedAlerts(csvContent: string, cases: CaseDisplay[]): AlertsIndex {
+export function parseStackedAlerts(csvContent: string, cases: CaseForAlertMatching[]): AlertsIndex {
   if (!csvContent || csvContent.trim().length === 0) {
     return createEmptyAlertsIndex();
   }
@@ -594,7 +608,7 @@ export function parseStackedAlerts(csvContent: string, cases: CaseDisplay[]): Al
  * Generic CSV parser: attempts to map common header names to the expected alert fields.
  * This is a forgiving fallback for CSV exports that don't follow the stacked layout.
  */
-function parseGenericCsvAlerts(csvContent: string, cases: CaseDisplay[]): AlertsIndex {
+function parseGenericCsvAlerts(csvContent: string, cases: CaseForAlertMatching[]): AlertsIndex {
   const parsed = Papa.parse<Record<string, string | null>>(csvContent, {
     header: true,
     skipEmptyLines: true,

@@ -74,11 +74,17 @@ interface FileStorageServiceConfig {
  * Abstracts storage format and provides clean interface for reading/writing.
  * 
  * Responsibilities:
- * - Read/write FileData to/from disk
- * - Handle format transformations (raw → CaseDisplay)
+ * - Read/write NormalizedFileData to/from disk
+ * - Handle format transformations (legacy → normalized v2.0)
  * - Normalize activity logs
  * - Validate data integrity before writes
  * - Error handling and reporting
+ * 
+ * Data Format (v2.0 Normalized):
+ * - cases: StoredCase[] (flat, without nested financials/notes)
+ * - financials: StoredFinancialItem[] (flat with caseId + category foreign keys)
+ * - notes: StoredNote[] (flat with caseId foreign key)
+ * - alerts: AlertRecord[] (flat)
  */
 export class FileStorageService {
   private fileService: AutosaveFileService;
@@ -92,17 +98,21 @@ export class FileStorageService {
   }
 
   /**
-   * Read current data from file system
-   * Returns null if no file exists or error occurs
+   * Read current data from file system in normalized v2.0 format
+   * Returns NormalizedFileData directly - no denormalization
    */
-  async readFileData(): Promise<LegacyFileData | null> {
+  async readFileData(): Promise<NormalizedFileData | null> {
     try {
       let rawData = await this.fileService.readFile();
 
       if (!rawData) {
-        // No file exists yet - return empty structure
+        // No file exists yet - return empty normalized structure
         return {
+          version: NORMALIZED_VERSION as "2.0",
           cases: [],
+          financials: [],
+          notes: [],
+          alerts: [],
           exported_at: new Date().toISOString(),
           total_cases: 0,
           categoryConfig: mergeCategoryConfig(),
@@ -116,29 +126,22 @@ export class FileStorageService {
       if (migrationResult.migrated) {
         rawData = migrationResult.data;
         // Persist the migration immediately
-        await this.writeFileData(rawData);
+        await this.writeNormalizedData(rawData);
         logger.info("Legacy alerts migration completed and persisted");
       }
       // --- MIGRATION END ---
 
-      // Handle different data formats
+      // Already in normalized format (v2.0) - return directly
+      if (isNormalizedFileData(rawData)) {
+        logger.debug("Detected normalized data format (v2.0)");
+        return rawData;
+      }
+
+      // Handle legacy formats - convert to normalized
+      logger.info("Converting legacy data format to normalized v2.0");
       let cases: CaseDisplay[] = [];
 
-      // Check for normalized format (v2.0)
-      if (isNormalizedFileData(rawData)) {
-        logger.info("Detected normalized data format (v2.0)");
-        let legacyData = this.denormalizeForRuntime(rawData);
-        
-        const { cases: normalizedCases, changed } = this.normalizeCaseNotes(legacyData.cases);
-
-        if (changed && this.persistNormalizationFixes) {
-          legacyData = await this.writeFileData({ ...legacyData, cases: normalizedCases });
-        } else if (changed) {
-          logger.warn("Note normalization needed but persistence disabled");
-          legacyData = { ...legacyData, cases: normalizedCases };
-        }
-        return legacyData;
-      } else if (rawData.cases && Array.isArray(rawData.cases)) {
+      if (rawData.cases && Array.isArray(rawData.cases)) {
         // Already in CaseDisplay array format - use directly
         cases = rawData.cases;
       } else if (rawData.people && rawData.caseRecords) {
@@ -155,45 +158,38 @@ export class FileStorageService {
 
       const { cases: normalizedCases, changed } = this.normalizeCaseNotes(cases);
 
-      let finalCases = normalizedCases;
-      let finalExportedAt = rawData.exported_at || rawData.exportedAt || new Date().toISOString();
-
-      // Persist if notes were normalized
-      if (changed && this.persistNormalizationFixes) {
-        const persistedData = await this.writeFileData({
-          cases: normalizedCases,
-          exported_at: finalExportedAt,
-          total_cases: normalizedCases.length,
-          categoryConfig,
-          activityLog,
-        });
-
-        // persistedData is now guaranteed to be LegacyFileData by the updated signature
-        finalCases = persistedData.cases;
-        finalExportedAt = persistedData.exported_at;
-      } else if (changed) {
-        logger.warn("Note normalization needed but persistence disabled");
-      }
+      const finalExportedAt = rawData.exported_at || rawData.exportedAt || new Date().toISOString();
 
       // Extract alerts from cases if not present at top level (Legacy support)
-      let finalAlerts = rawData.alerts;
-      if (!finalAlerts && finalCases.length > 0) {
-        finalAlerts = [];
-        finalCases.forEach(c => {
+      let finalAlerts: AlertRecord[] = rawData.alerts ?? [];
+      if (finalAlerts.length === 0 && normalizedCases.length > 0) {
+        normalizedCases.forEach(c => {
           if (c.alerts && Array.isArray(c.alerts)) {
-            finalAlerts!.push(...c.alerts);
+            finalAlerts.push(...c.alerts);
           }
         });
       }
 
-      return {
-        cases: finalCases,
+      // Build legacy data for normalization
+      const legacyData: LegacyFileData = {
+        cases: normalizedCases,
         alerts: finalAlerts,
         exported_at: finalExportedAt,
-        total_cases: finalCases.length,
+        total_cases: normalizedCases.length,
         categoryConfig,
         activityLog,
       };
+
+      // Convert to normalized format
+      const normalizedData = this.normalizeForStorage(legacyData);
+
+      // Persist if notes were normalized or if converting from legacy format
+      if ((changed && this.persistNormalizationFixes) || !isNormalizedFileData(rawData)) {
+        await this.writeNormalizedData(normalizedData);
+        logger.info("Legacy data migrated to normalized v2.0 format");
+      }
+
+      return normalizedData;
     } catch (error) {
       logger.error("Failed to read file data", {
         error: error instanceof Error ? error.message : "Unknown error",
@@ -204,54 +200,96 @@ export class FileStorageService {
   }
 
   /**
-   * Write data to file system with retry logic
-   * Throws error if write fails after retries
+   * @deprecated Use writeNormalizedData() instead
+   * Legacy method for backward compatibility during migration
    */
-  async writeFileData(data: FileData): Promise<LegacyFileData> {
-    try {
-      // Ensure data integrity before writing
-      
-      // If the input 'data' is NormalizedFileData (from a newer version), we need to denormalize it
-      // so that data.cases is a CaseDisplay[] as expected by the legacy format.
-      let legacyData: LegacyFileData;
-      if (isNormalizedFileData(data)) {
-          legacyData = this.denormalizeForRuntime(data);
-      } else {
-          legacyData = data as LegacyFileData;
-      }
+  async readFileDataLegacy(): Promise<LegacyFileData | null> {
+    const normalized = await this.readFileData();
+    if (!normalized) return null;
+    return this.denormalizeForRuntime(normalized);
+  }
 
-      // Re-construct validated data using legacyData
-      const finalData: LegacyFileData = {
-        cases: legacyData.cases.map((caseItem) => ({ ...caseItem })),
-        alerts: legacyData.alerts,
+  /**
+   * Write normalized data to file system
+   * This is the primary write method - accepts NormalizedFileData directly
+   */
+  async writeNormalizedData(data: NormalizedFileData): Promise<NormalizedFileData> {
+    try {
+      // Validate and clean data before writing
+      const finalData: NormalizedFileData = {
+        version: NORMALIZED_VERSION as "2.0",
+        cases: data.cases.map(c => ({ ...c })),
+        financials: data.financials.map(f => ({ ...f })),
+        notes: data.notes.map(n => ({ ...n })),
+        alerts: data.alerts.map(a => ({ ...a })),
         exported_at: new Date().toISOString(),
-        total_cases: legacyData.cases.length,
-        categoryConfig: mergeCategoryConfig(legacyData.categoryConfig),
-        activityLog: [...(legacyData.activityLog ?? [])]
-          .map(
-            (entry): CaseActivityEntry =>
-              entry.type === "status-change"
-                ? {
-                    ...entry,
-                    payload: { ...entry.payload },
-                  }
-                : {
-                    ...entry,
-                    payload: { ...entry.payload },
-                  },
+        total_cases: data.cases.length,
+        categoryConfig: mergeCategoryConfig(data.categoryConfig),
+        activityLog: [...(data.activityLog ?? [])]
+          .map((entry): CaseActivityEntry =>
+            entry.type === "status-change"
+              ? { ...entry, payload: { ...entry.payload } }
+              : { ...entry, payload: { ...entry.payload } }
           )
           .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()),
       };
 
-      // Normalize before writing to storage (Phase B3)
-      const normalizedData = this.normalizeForStorage(finalData);
-      const success = await this.fileService.writeFile(normalizedData);
+      const success = await this.fileService.writeFile(finalData);
 
       if (!success) {
         throw new Error("File write operation failed");
       }
 
       return finalData;
+    } catch (error) {
+      logger.error("Failed to write normalized data", {
+        error: error instanceof Error ? error.message : "Unknown error",
+      });
+
+      let errorMessage = "Unknown error";
+      if (error instanceof Error) {
+        if (
+          error.message.includes("state cached in an interface object") ||
+          error.message.includes("state had changed")
+        ) {
+          errorMessage = "File was modified by another process. Please try again.";
+        } else if (error.message.includes("permission")) {
+          errorMessage = "Permission denied. Please check file permissions.";
+        } else {
+          errorMessage = error.message;
+        }
+      }
+
+      this.reportStorageError("writeData", error, {
+        method: "writeNormalizedData",
+        errorMessage,
+      });
+
+      throw new Error(`Failed to save case data: ${errorMessage}`);
+    }
+  }
+
+  /**
+   * @deprecated Use writeNormalizedData() instead
+   * Write data to file system - accepts LegacyFileData and converts to normalized
+   */
+  async writeFileData(data: FileData): Promise<LegacyFileData> {
+    try {
+      // If the input 'data' is NormalizedFileData, convert to legacy for return
+      let legacyData: LegacyFileData;
+      let normalizedData: NormalizedFileData;
+
+      if (isNormalizedFileData(data)) {
+        normalizedData = data;
+        legacyData = this.denormalizeForRuntime(data);
+      } else {
+        legacyData = data as LegacyFileData;
+        normalizedData = this.normalizeForStorage(legacyData);
+      }
+
+      await this.writeNormalizedData(normalizedData);
+
+      return legacyData;
     } catch (error) {
       logger.error("Failed to write file data", {
         error: error instanceof Error ? error.message : "Unknown error",
@@ -284,7 +322,7 @@ export class FileStorageService {
   /**
    * Update case timestamps for modified cases
    */
-  touchCaseTimestamps(cases: CaseDisplay[], touchedCaseIds?: Iterable<string>): CaseDisplay[] {
+  touchCaseTimestamps(cases: StoredCase[], touchedCaseIds?: Iterable<string>): StoredCase[] {
     if (!touchedCaseIds) {
       return cases;
     }
@@ -300,77 +338,62 @@ export class FileStorageService {
   }
 
   // ==========================================================================
-  // Private Helpers
+  // Normalized Data Access Helpers
   // ==========================================================================
 
-  private normalizeForStorage(data: LegacyFileData): NormalizedFileData {
-    const cases: StoredCase[] = [];
-    const financials: StoredFinancialItem[] = [];
-    const notes: StoredNote[] = [];
-    // Use top-level alerts if available, otherwise extract from cases (legacy fallback)
-    const alerts: AlertRecord[] = data.alerts ? [...data.alerts] : [];
-    const extractedAlerts: AlertRecord[] = [];
+  /**
+   * Get all financial items for a specific case
+   */
+  getFinancialsForCase(data: NormalizedFileData, caseId: string): StoredFinancialItem[] {
+    return data.financials.filter(f => f.caseId === caseId);
+  }
 
-    for (const caseItem of data.cases) {
-      // Extract financials
-      if (caseItem.caseRecord.financials) {
-        const { resources, income, expenses } = caseItem.caseRecord.financials;
-        
-        if (resources) {
-          resources.forEach(item => {
-            financials.push({ ...item, caseId: caseItem.id, category: "resources" });
-          });
-        }
-        
-        if (income) {
-          income.forEach(item => {
-            financials.push({ ...item, caseId: caseItem.id, category: "income" });
-          });
-        }
-        
-        if (expenses) {
-          expenses.forEach(item => {
-            financials.push({ ...item, caseId: caseItem.id, category: "expenses" });
-          });
-        }
-      }
-
-      // Extract notes
-      if (caseItem.caseRecord.notes) {
-        caseItem.caseRecord.notes.forEach(note => {
-          notes.push({ ...note, caseId: caseItem.id });
-        });
-      }
-
-      // Extract alerts (only if top-level alerts not provided)
-      if (!data.alerts && caseItem.alerts) {
-        extractedAlerts.push(...caseItem.alerts);
-      }
-
-      // Create stored case (without nested data)
-      const { financials: _, notes: __, ...caseRecordWithoutNested } = caseItem.caseRecord;
-      const { alerts: ___, ...caseWithoutAlerts } = caseItem;
-
-      cases.push({
-        ...caseWithoutAlerts,
-        caseRecord: caseRecordWithoutNested
-      });
-    }
-
+  /**
+   * Get financial items for a case grouped by category
+   */
+  getFinancialsForCaseGrouped(data: NormalizedFileData, caseId: string): {
+    resources: StoredFinancialItem[];
+    income: StoredFinancialItem[];
+    expenses: StoredFinancialItem[];
+  } {
+    const items = this.getFinancialsForCase(data, caseId);
     return {
-      version: NORMALIZED_VERSION,
-      cases,
-      financials,
-      notes,
-      alerts: data.alerts ? alerts : extractedAlerts,
-      exported_at: data.exported_at,
-      total_cases: cases.length,
-      categoryConfig: data.categoryConfig,
-      activityLog: data.activityLog
+      resources: items.filter(f => f.category === 'resources'),
+      income: items.filter(f => f.category === 'income'),
+      expenses: items.filter(f => f.category === 'expenses'),
     };
   }
 
-  private denormalizeForRuntime(data: NormalizedFileData): LegacyFileData {
+  /**
+   * Get all notes for a specific case
+   */
+  getNotesForCase(data: NormalizedFileData, caseId: string): StoredNote[] {
+    return data.notes.filter(n => n.caseId === caseId);
+  }
+
+  /**
+   * Get all alerts for a specific case (by MCN)
+   */
+  getAlertsForCase(data: NormalizedFileData, mcn: string): AlertRecord[] {
+    return data.alerts.filter(a => a.mcNumber === mcn);
+  }
+
+  /**
+   * Get a specific case by ID
+   */
+  getCaseById(data: NormalizedFileData, caseId: string): StoredCase | undefined {
+    return data.cases.find(c => c.id === caseId);
+  }
+
+  // ==========================================================================
+  // Legacy Support - Denormalization (for backward compatibility)
+  // ==========================================================================
+
+  /**
+   * Convert normalized data to legacy nested format
+   * Use this only when interfacing with components not yet migrated
+   */
+  denormalizeForRuntime(data: NormalizedFileData): LegacyFileData {
     // Create lookup maps for O(1) access
     const financialsByCaseId = new Map<string, { resources: FinancialItem[], income: FinancialItem[], expenses: FinancialItem[] }>();
     const notesByCaseId = new Map<string, Note[]>();
@@ -426,9 +449,82 @@ export class FileStorageService {
 
     return {
       cases,
-      alerts: data.alerts, // Populate top-level alerts
+      alerts: data.alerts,
       exported_at: data.exported_at,
       total_cases: data.total_cases,
+      categoryConfig: data.categoryConfig,
+      activityLog: data.activityLog
+    };
+  }
+
+  // ==========================================================================
+  // Private Helpers
+  // ==========================================================================
+
+  /**
+   * Convert legacy nested format to normalized storage format
+   */
+  private normalizeForStorage(data: LegacyFileData): NormalizedFileData {
+    const cases: StoredCase[] = [];
+    const financials: StoredFinancialItem[] = [];
+    const notes: StoredNote[] = [];
+    const alerts: AlertRecord[] = data.alerts ? [...data.alerts] : [];
+    const extractedAlerts: AlertRecord[] = [];
+
+    for (const caseItem of data.cases) {
+      // Extract financials
+      if (caseItem.caseRecord.financials) {
+        const { resources, income, expenses } = caseItem.caseRecord.financials;
+        
+        if (resources) {
+          resources.forEach(item => {
+            financials.push({ ...item, caseId: caseItem.id, category: "resources" });
+          });
+        }
+        
+        if (income) {
+          income.forEach(item => {
+            financials.push({ ...item, caseId: caseItem.id, category: "income" });
+          });
+        }
+        
+        if (expenses) {
+          expenses.forEach(item => {
+            financials.push({ ...item, caseId: caseItem.id, category: "expenses" });
+          });
+        }
+      }
+
+      // Extract notes
+      if (caseItem.caseRecord.notes) {
+        caseItem.caseRecord.notes.forEach(note => {
+          notes.push({ ...note, caseId: caseItem.id });
+        });
+      }
+
+      // Extract alerts (only if top-level alerts not provided)
+      if (!data.alerts && caseItem.alerts) {
+        extractedAlerts.push(...caseItem.alerts);
+      }
+
+      // Create stored case (without nested data)
+      const { financials: _, notes: __, ...caseRecordWithoutNested } = caseItem.caseRecord;
+      const { alerts: ___, ...caseWithoutAlerts } = caseItem;
+
+      cases.push({
+        ...caseWithoutAlerts,
+        caseRecord: caseRecordWithoutNested
+      });
+    }
+
+    return {
+      version: NORMALIZED_VERSION as "2.0",
+      cases,
+      financials,
+      notes,
+      alerts: data.alerts ? alerts : extractedAlerts,
+      exported_at: data.exported_at,
+      total_cases: cases.length,
       categoryConfig: data.categoryConfig,
       activityLog: data.activityLog
     };

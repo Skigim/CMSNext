@@ -1,7 +1,7 @@
 import type { CaseActivityEntry } from "../../types/activityLog";
 import { toActivityDateKey } from "../activityReport";
 import { createLogger } from "../logger";
-import type { FileStorageService, FileData } from "./FileStorageService";
+import type { FileStorageService, NormalizedFileData } from "./FileStorageService";
 
 const logger = createLogger("ActivityLogService");
 
@@ -23,13 +23,15 @@ interface ActivityLogServiceConfig {
  * Handles all activity log operations.
  * Provides centralized access to case activity history with date-based filtering.
  * 
+ * Works with normalized v2.0 data format.
+ * 
  * Responsibilities:
  * - Retrieve activity log entries
  * - Clear activity log entries by date
  * - Merge activity entries (utility)
  * 
  * Note: Activity log entries are created by domain operations (case mutations,
- * note additions, etc.) and stored in FileData.activityLog array.
+ * note additions, etc.) and stored in NormalizedFileData.activityLog array.
  */
 export class ActivityLogService {
   private fileStorage: FileStorageService;
@@ -82,12 +84,12 @@ export class ActivityLogService {
       return 0;
     }
 
-    const updatedData: FileData = {
+    const updatedData: NormalizedFileData = {
       ...currentData,
       activityLog: filtered,
     };
 
-    await this.fileStorage.writeFileData(updatedData);
+    await this.fileStorage.writeNormalizedData(updatedData);
 
     logger.info("Cleared activity log entries for date", {
       dateKey,

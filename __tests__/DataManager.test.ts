@@ -1,9 +1,19 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest'
 import { DataManager } from '@/utils/DataManager'
-import { createMockCaseDisplay, createMockCaseRecord, createMockFinancialItem, createMockNote } from '@/src/test/testUtils'
+import { 
+  createMockCaseDisplay, 
+  createMockCaseRecord, 
+  createMockFinancialItem, 
+  createMockNote,
+  createMockStoredCase,
+  createMockStoredFinancialItem,
+  createMockStoredNote,
+  createMockNormalizedFileData,
+} from '@/src/test/testUtils'
 import { mergeCategoryConfig } from '@/types/categoryConfig'
 import AutosaveFileService from '@/utils/AutosaveFileService'
 import * as alertsData from '@/utils/alertsData'
+import type { NormalizedFileData, StoredCase, StoredFinancialItem, StoredNote } from '@/utils/services/FileStorageService'
 
 type AlertWithMatch = alertsData.AlertWithMatch
 
@@ -25,8 +35,14 @@ vi.mock('@/utils/dataTransform', () => ({
   })
 }))
 
-const createFileData = (overrides: Record<string, unknown> = {}) => ({
+/**
+ * Create normalized v2.0 file data for tests
+ */
+const createFileData = (overrides: Partial<NormalizedFileData> = {}): NormalizedFileData => ({
+  version: '2.0',
   cases: [],
+  financials: [],
+  notes: [],
   alerts: [],
   exported_at: new Date().toISOString(),
   total_cases: 0,
@@ -176,14 +192,16 @@ describe('DataManager', () => {
       const cases = await dataManager.getAllCases()
 
       expect(cases).toHaveLength(1)
-      expect(cases[0].caseRecord.notes.every(note => typeof note.id === 'string' && note.id.trim().length > 0)).toBe(true)
+      // StoredCase doesn't have nested notes - they are normalized to top-level notes array
       expect(mockAutosaveService.writeFile).toHaveBeenCalledTimes(1)
 
-      const writePayload = mockAutosaveService.writeFile.mock.calls[0][0]
+      const writePayload = mockAutosaveService.writeFile.mock.calls[0][0] as NormalizedFileData
       // With storage normalization, notes are now in a top-level 'notes' array
       expect(writePayload.notes).toBeDefined()
       expect(writePayload.notes.length).toBeGreaterThan(0)
-      expect(writePayload.notes.every((note: any) => typeof note.id === 'string' && note.id.trim().length > 0)).toBe(true)
+      expect(writePayload.notes.every((note: StoredNote) => typeof note.id === 'string' && note.id.trim().length > 0)).toBe(true)
+      // Verify notes have caseId foreign key
+      expect(writePayload.notes.every((note: StoredNote) => note.caseId === legacyCase.id)).toBe(true)
     })
   })
 
@@ -749,7 +767,7 @@ describe('DataManager', () => {
     })
 
     it('should get all cases', async () => {
-      const mockCases = [createMockCaseDisplay()]
+      const mockCases = [createMockStoredCase()]
       mockAutosaveService.readFile.mockResolvedValue(createFileData({
         cases: mockCases,
         total_cases: mockCases.length,
@@ -761,7 +779,7 @@ describe('DataManager', () => {
     })
 
     it('should get a case by ID', async () => {
-      const mockCase = createMockCaseDisplay()
+      const mockCase = createMockStoredCase()
       mockAutosaveService.readFile.mockResolvedValue(createFileData({
         cases: [mockCase],
         total_cases: 1,
@@ -867,12 +885,19 @@ describe('DataManager', () => {
   })
 
   describe('financial items', () => {
-    let mockCase: any
+    let mockCase: StoredCase
+    let mockFinancials: StoredFinancialItem[]
 
     beforeEach(() => {
-      mockCase = createMockCaseDisplay()
+      mockCase = createMockStoredCase()
+      mockFinancials = [
+        createMockStoredFinancialItem('resources', mockCase.id),
+        createMockStoredFinancialItem('income', mockCase.id),
+        createMockStoredFinancialItem('expenses', mockCase.id),
+      ]
       mockAutosaveService.readFile.mockResolvedValue(createFileData({
         cases: [mockCase],
+        financials: mockFinancials,
         total_cases: 1,
       }))
     })
@@ -882,13 +907,15 @@ describe('DataManager', () => {
 
       const result = await dataManager.addItem(mockCase.id, 'income', newItem)
 
+      // addItem now returns StoredFinancialItem directly
       expect(result).toBeDefined()
-      expect(result.caseRecord.financials.income.length).toBeGreaterThan(0)
+      expect(result.caseId).toBe(mockCase.id)
+      expect(result.category).toBe('income')
       expect(mockAutosaveService.writeFile).toHaveBeenCalled()
     })
 
     it('should update a financial item', async () => {
-      const existingItem = mockCase.caseRecord.financials.income[0]
+      const existingItem = mockFinancials.find(f => f.category === 'income')!
       const updates = { 
         description: 'Updated description', 
         amount: 2000,
@@ -902,31 +929,37 @@ describe('DataManager', () => {
         updates
       )
 
+      // updateItem now returns StoredFinancialItem directly
       expect(result).toBeDefined()
+      expect(result.description).toBe('Updated description')
+      expect(result.amount).toBe(2000)
       expect(mockAutosaveService.writeFile).toHaveBeenCalled()
     })
 
     it('should delete a financial item', async () => {
-      const existingItem = mockCase.caseRecord.financials.income[0]
+      const existingItem = mockFinancials.find(f => f.category === 'income')!
 
-      const result = await dataManager.deleteItem(
+      // deleteItem now returns void
+      await dataManager.deleteItem(
         mockCase.id, 
         'income', 
         existingItem.id
       )
 
-      expect(result).toBeDefined()
       expect(mockAutosaveService.writeFile).toHaveBeenCalled()
     })
   })
 
   describe('notes', () => {
-    let mockCase: any
+    let mockCase: StoredCase
+    let mockNotes: StoredNote[]
 
     beforeEach(() => {
-      mockCase = createMockCaseDisplay()
+      mockCase = createMockStoredCase()
+      mockNotes = [createMockStoredNote(mockCase.id)]
       mockAutosaveService.readFile.mockResolvedValue(createFileData({
         cases: [mockCase],
+        notes: mockNotes,
         total_cases: 1,
       }))
     })
@@ -939,16 +972,18 @@ describe('DataManager', () => {
         category: newNote.category
       })
 
+      // addNote now returns StoredNote directly
       expect(result).toBeDefined()
-      expect(result.caseRecord.notes.length).toBeGreaterThan(0)
+      expect(result.caseId).toBe(mockCase.id)
+      expect(result.content).toBe(newNote.content)
       expect(mockAutosaveService.writeFile).toHaveBeenCalled()
     })
 
     it('records an activity log entry when a note is added', async () => {
       const noteContent = 'Client provided updated verification documents.'
-      let capturedPayload: any
+      let capturedPayload: NormalizedFileData
 
-      mockAutosaveService.writeFile.mockImplementation(async (data: any) => {
+      mockAutosaveService.writeFile.mockImplementation(async (data: NormalizedFileData) => {
         capturedPayload = data
         return true
       })
@@ -958,8 +993,8 @@ describe('DataManager', () => {
         category: 'General',
       })
 
-      expect(capturedPayload.activityLog).toHaveLength(1)
-      const entry = capturedPayload.activityLog[0]
+      expect(capturedPayload!.activityLog).toHaveLength(1)
+      const entry = capturedPayload!.activityLog[0]
       expect(entry.type).toBe('note-added')
       expect(entry.caseId).toBe(mockCase.id)
       expect(entry.payload.category).toBe('General')
@@ -968,7 +1003,7 @@ describe('DataManager', () => {
     })
 
     it('should update a note', async () => {
-      const existingNote = mockCase.caseRecord.notes[0]
+      const existingNote = mockNotes[0]
       const updates = { 
         content: 'Updated note content',
         category: 'General' as const
@@ -976,16 +1011,18 @@ describe('DataManager', () => {
 
       const result = await dataManager.updateNote(mockCase.id, existingNote.id, updates)
 
+      // updateNote now returns StoredNote directly
       expect(result).toBeDefined()
+      expect(result.content).toBe('Updated note content')
       expect(mockAutosaveService.writeFile).toHaveBeenCalled()
     })
 
     it('should delete a note', async () => {
-      const existingNote = mockCase.caseRecord.notes[0]
+      const existingNote = mockNotes[0]
 
-      const result = await dataManager.deleteNote(mockCase.id, existingNote.id)
+      // deleteNote now returns void
+      await dataManager.deleteNote(mockCase.id, existingNote.id)
 
-      expect(result).toBeDefined()
       expect(mockAutosaveService.writeFile).toHaveBeenCalled()
     })
   })
@@ -1178,9 +1215,10 @@ describe('DataManager', () => {
     })
 
     it('should handle item not found for update and delete', async () => {
-      const mockCase = createMockCaseDisplay()
+      const mockCase = createMockStoredCase()
       mockAutosaveService.readFile.mockResolvedValue(createFileData({
         cases: [mockCase],
+        financials: [], // No financials in the system
         total_cases: 1,
       }))
 
@@ -1201,12 +1239,12 @@ describe('DataManager', () => {
     })
 
     it('should handle note not found for update and delete', async () => {
-      const mockCase = createMockCaseDisplay()
-      mockAutosaveService.readFile.mockResolvedValue({
+      const mockCase = createMockStoredCase()
+      mockAutosaveService.readFile.mockResolvedValue(createFileData({
         cases: [mockCase],
-        exported_at: new Date().toISOString(),
-        total_cases: 1
-      })
+        notes: [], // No notes in the system
+        total_cases: 1,
+      }))
 
       const newNote = createMockNote()
 
@@ -1225,7 +1263,7 @@ describe('DataManager', () => {
 
   describe('bulk operations and utilities', () => {
     it('should get cases count', async () => {
-      const mockCases = [createMockCaseDisplay(), createMockCaseDisplay()]
+      const mockCases = [createMockStoredCase({ id: 'case-1' }), createMockStoredCase({ id: 'case-2' })]
       mockAutosaveService.readFile.mockResolvedValue(createFileData({
         cases: mockCases,
         total_cases: mockCases.length,
@@ -1239,7 +1277,11 @@ describe('DataManager', () => {
     it('should import multiple cases', async () => {
       mockAutosaveService.readFile.mockResolvedValue(createFileData())
 
-      const casesToImport = [createMockCaseDisplay(), createMockCaseDisplay()]
+      // importCases now expects StoredCase[] (normalized format)
+      const casesToImport = [
+        createMockStoredCase({ id: 'import-1' }),
+        createMockStoredCase({ id: 'import-2' })
+      ]
 
       await dataManager.importCases(casesToImport)
 
@@ -1253,7 +1295,10 @@ describe('DataManager', () => {
 
       expect(mockAutosaveService.writeFile).toHaveBeenCalledWith(
         expect.objectContaining({
+          version: '2.0',
           cases: [],
+          financials: [],
+          notes: [],
           exported_at: expect.any(String),
           total_cases: 0,
           categoryConfig: expect.any(Object),
@@ -1281,7 +1326,7 @@ describe('DataManager', () => {
     it('should handle import cases with read failure', async () => {
       mockAutosaveService.readFile.mockRejectedValue(new Error('Read failed'))
 
-      const casesToImport = [createMockCaseDisplay()]
+      const casesToImport = [createMockStoredCase()]
 
       await expect(dataManager.importCases(casesToImport)).rejects.toThrow('Failed to read case data')
     })
@@ -1289,19 +1334,22 @@ describe('DataManager', () => {
 
   describe('data integrity and validation', () => {
     it('should preserve existing data when updating case', async () => {
-      const mockCase = createMockCaseDisplay()
-      // Start with empty financials, then add specific items we want to preserve
-      mockCase.caseRecord.financials = {
-        resources: [],
-        income: [createMockFinancialItem('income')],
-        expenses: []
-      }
-      mockCase.caseRecord.notes = [createMockNote()]
+      const mockCase = createMockStoredCase()
+      const mockFinancial = createMockStoredFinancialItem('income', mockCase.id)
+      const mockNoteItem = createMockStoredNote(mockCase.id)
       
-      mockAutosaveService.readFile.mockResolvedValue({
+      mockAutosaveService.readFile.mockResolvedValue(createFileData({
         cases: [mockCase],
-        exported_at: new Date().toISOString(),
-        total_cases: 1
+        financials: [mockFinancial],
+        notes: [mockNoteItem],
+        total_cases: 1,
+      }))
+
+      let capturedPayload: NormalizedFileData
+
+      mockAutosaveService.writeFile.mockImplementation(async (data: NormalizedFileData) => {
+        capturedPayload = data
+        return true
       })
 
       const updates = { 
@@ -1313,19 +1361,26 @@ describe('DataManager', () => {
 
       expect(result.person.firstName).toBe('Updated')
       expect(result.caseRecord.description).toBe('Updated description')
-      expect(result.caseRecord.financials.income).toHaveLength(1) // Preserved
-      expect(result.caseRecord.notes).toHaveLength(1) // Preserved
+      // Financials and notes are in separate arrays now
+      expect(capturedPayload!.financials).toHaveLength(1) // Preserved
+      expect(capturedPayload!.notes).toHaveLength(1) // Preserved
     })
 
-    it('should handle cases with missing notes array', async () => {
-      const mockCase = createMockCaseDisplay()
-      // Remove notes array to test edge case
-      delete (mockCase.caseRecord as any).notes
+    it('should handle cases with no existing notes', async () => {
+      const mockCase = createMockStoredCase()
       
-      mockAutosaveService.readFile.mockResolvedValue({
+      mockAutosaveService.readFile.mockResolvedValue(createFileData({
         cases: [mockCase],
-        exported_at: new Date().toISOString(),
-        total_cases: 1
+        financials: [],
+        notes: [], // No notes yet
+        total_cases: 1,
+      }))
+
+      let capturedPayload: NormalizedFileData
+
+      mockAutosaveService.writeFile.mockImplementation(async (data: NormalizedFileData) => {
+        capturedPayload = data
+        return true
       })
 
       const newNote = createMockNote()
@@ -1334,7 +1389,9 @@ describe('DataManager', () => {
         category: newNote.category
       })
 
-      expect(result.caseRecord.notes).toHaveLength(1)
+      expect(result.caseId).toBe(mockCase.id)
+      expect(result.content).toBe(newNote.content)
+      expect(capturedPayload!.notes).toHaveLength(1)
     })
 
     it('should set default values for missing case data', async () => {
@@ -1367,22 +1424,18 @@ describe('DataManager', () => {
     })
 
     it('should validate and ensure unique IDs for imported cases', async () => {
-      mockAutosaveService.readFile.mockResolvedValue({
-        cases: [],
-        exported_at: new Date().toISOString(),
-        total_cases: 0
-      })
+      mockAutosaveService.readFile.mockResolvedValue(createFileData())
 
       const casesToImport = [
-        { ...createMockCaseDisplay(), id: '' }, // Empty ID should get new one
-        createMockCaseDisplay() // Existing ID should be preserved
+        createMockStoredCase({ id: '' }), // Empty ID should get new one
+        createMockStoredCase({ id: 'preserved-id' }) // Existing ID should be preserved
       ]
 
       await dataManager.importCases(casesToImport)
 
-      const writeCall = mockAutosaveService.writeFile.mock.calls[0][0]
+      const writeCall = mockAutosaveService.writeFile.mock.calls[0][0] as NormalizedFileData
       expect(writeCall.cases[0].id).toBeTruthy() // Should have been assigned
-      expect(writeCall.cases[1].id).toBe(casesToImport[1].id) // Should be preserved
+      expect(writeCall.cases[1].id).toBe('preserved-id') // Should be preserved
     })
   })
 })
