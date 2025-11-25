@@ -90,6 +90,7 @@ export class FileStorageService {
   private fileService: AutosaveFileService;
   private persistNormalizationFixes: boolean;
   private normalizeCaseNotes: (cases: CaseDisplay[]) => { cases: CaseDisplay[]; changed: boolean };
+  private migrationChecked = false;
 
   constructor(config: FileStorageServiceConfig) {
     this.fileService = config.fileService;
@@ -633,15 +634,22 @@ export class FileStorageService {
   }
 
   private async migrateLegacyAlerts(rawData: any): Promise<{ data: any; migrated: boolean }> {
+    if (this.migrationChecked) {
+      return { data: rawData, migrated: false };
+    }
+
     try {
       const alertsContent = await this.fileService.readNamedFile(STORAGE_CONSTANTS.ALERTS.FILE_NAME);
       
       if (!alertsContent || typeof alertsContent !== 'object') {
+        // File doesn't exist or is invalid - mark checked so we don't keep trying
+        this.migrationChecked = true;
         return { data: rawData, migrated: false };
       }
 
       // Check for tombstone
       if (alertsContent.migrated === true) {
+        this.migrationChecked = true;
         return { data: rawData, migrated: false };
       }
 
@@ -737,10 +745,14 @@ export class FileStorageService {
           originalVersion: version
         });
         
+        this.migrationChecked = true;
         logger.info(`Migrated ${mergedCount} alerts from alerts.json to data.json`);
         return { data: newData, migrated: true };
       }
 
+      // No alerts to merge, but file exists and isn't migrated? 
+      // Mark checked to avoid repeated reads if we decided not to migrate
+      this.migrationChecked = true;
       return { data: rawData, migrated: false };
 
     } catch (error) {

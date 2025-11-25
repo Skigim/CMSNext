@@ -734,7 +734,7 @@ class AutosaveFileService {
         const contents = await file.text();
         const rawData = JSON.parse(contents);
 
-        logger.info('Successfully read data file', {
+        logger.debug('Successfully read data file', {
           fileName,
           caseCount: Array.isArray(rawData.cases) ? rawData.cases.length : 0,
           alertCount: Array.isArray(rawData.alerts) ? rawData.alerts.length : 0,
