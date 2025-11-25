@@ -5,7 +5,7 @@ import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "../ui/resi
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
 import { CaseSection } from "./CaseSection";
 import { NotesSection } from "./NotesSection";
-import { CaseDisplay, CaseCategory, FinancialItem, NewNoteData } from "../../types/case";
+import { StoredCase, CaseCategory, FinancialItem, NewNoteData } from "../../types/case";
 import { ArrowLeft, Edit2, Trash2, Landmark, Wallet, Receipt, BellRing, FileText } from "lucide-react";
 import { withDataErrorBoundary } from "../error/ErrorBoundaryHOC";
 import { CaseStatusMenu } from "./CaseStatusMenu";
@@ -18,22 +18,15 @@ import { generateCaseSummary } from "../../utils/caseSummaryGenerator";
 import { clickToCopy } from "../../utils/clipboard";
 
 interface CaseDetailsProps {
-  case: CaseDisplay;
+  case: StoredCase;
   onBack: () => void;
   onEdit: () => void;
   onDelete: () => void;
-  onAddItem: (category: CaseCategory) => void;
-  onDeleteItem: (category: CaseCategory, itemId: string) => void;
-  onBatchUpdateItem?: (category: CaseCategory, itemId: string, updatedItem: Partial<FinancialItem>) => Promise<void>;
-  onCreateItem?: (category: CaseCategory, itemData: Omit<FinancialItem, 'id' | 'createdAt' | 'updatedAt'>) => Promise<void>;
-  onDeleteNote: (noteId: string) => void;
-  onBatchUpdateNote?: (noteId: string, updatedNote: NewNoteData) => Promise<void>;
-  onBatchCreateNote?: (noteData: NewNoteData) => Promise<void>;
   alerts?: AlertWithMatch[];
   onUpdateStatus?: (
     caseId: string,
-    status: CaseDisplay["status"],
-  ) => Promise<CaseDisplay | null> | CaseDisplay | null | void;
+    status: StoredCase["status"],
+  ) => Promise<StoredCase | null> | StoredCase | null | void;
   onResolveAlert?: (alert: AlertWithMatch) => Promise<void> | void;
 }
 
@@ -42,30 +35,11 @@ export function CaseDetails({
   onBack, 
   onEdit,
   onDelete,
-  onAddItem,
-  onDeleteItem,
-  onBatchUpdateItem,
-  onCreateItem,
-  onDeleteNote,
-  onBatchUpdateNote,
-  onBatchCreateNote,
   alerts = [],
   onUpdateStatus,
   onResolveAlert,
 }: CaseDetailsProps) {
   
-  // Handle batched update for inline editing
-  const handleUpdateFullItem = async (category: CaseCategory, itemId: string, updatedItem: FinancialItem) => {
-    if (!caseData || !onBatchUpdateItem) return;
-
-    try {
-      // Use batch update function to avoid multiple toasts
-      await onBatchUpdateItem(category, itemId, updatedItem);
-    } catch (error) {
-      console.error('[CaseDetails] Failed to update item:', error);
-    }
-  };
-
   const [alertsDrawerOpen, setAlertsDrawerOpen] = useState(false);
 
   const { totalAlerts, openAlertCount, hasOpenAlerts } = useMemo(() => {
@@ -238,11 +212,7 @@ export function CaseDetails({
                 <CaseSection
                   title="Resources"
                   category="resources"
-                  items={caseData.caseRecord?.financials?.resources || []}
-                  onAddItem={onAddItem}
-                  onDeleteItem={onDeleteItem}
-                  onUpdateFullItem={handleUpdateFullItem}
-                  onCreateItem={onCreateItem}
+                  caseId={caseData.id}
                 />
               </TabsContent>
               
@@ -250,11 +220,7 @@ export function CaseDetails({
                 <CaseSection
                   title="Income"
                   category="income"
-                  items={caseData.caseRecord?.financials?.income || []}
-                  onAddItem={onAddItem}
-                  onDeleteItem={onDeleteItem}
-                  onUpdateFullItem={handleUpdateFullItem}
-                  onCreateItem={onCreateItem}
+                  caseId={caseData.id}
                 />
               </TabsContent>
               
@@ -262,11 +228,7 @@ export function CaseDetails({
                 <CaseSection
                   title="Expenses"
                   category="expenses"
-                  items={caseData.caseRecord?.financials?.expenses || []}
-                  onAddItem={onAddItem}
-                  onDeleteItem={onDeleteItem}
-                  onUpdateFullItem={handleUpdateFullItem}
-                  onCreateItem={onCreateItem}
+                  caseId={caseData.id}
                 />
               </TabsContent>
             </Tabs>
@@ -279,10 +241,7 @@ export function CaseDetails({
         <ResizablePanel defaultSize={40} minSize={25}>
           <div className="p-4 bg-muted/30">
             <NotesSection
-              notes={caseData.caseRecord?.notes || []}
-              onDeleteNote={onDeleteNote}
-              onUpdateNote={onBatchUpdateNote}
-              onCreateNote={onBatchCreateNote}
+              caseId={caseData.id}
             />
           </div>
         </ResizablePanel>

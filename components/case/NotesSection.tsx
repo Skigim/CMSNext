@@ -287,20 +287,18 @@ function NoteCard({
   );
 }
 
+import { useNotes } from '@/hooks/useNotes';
+
 interface NotesSectionProps {
-  notes: Note[];
-  onDeleteNote: (noteId: string) => void;
-  onUpdateNote?: (noteId: string, updatedNote: NewNoteData) => Promise<void>;
-  onCreateNote?: (noteData: NewNoteData) => Promise<void>;
+  caseId: string;
 }
 
 export function NotesSection({ 
-  notes, 
-  onDeleteNote,
-  onUpdateNote,
-  onCreateNote
+  caseId
 }: NotesSectionProps) {
   const { config } = useCategoryConfig();
+  const { notes, addNote, updateNote, deleteNote } = useNotes(caseId);
+
   const noteCategories = useMemo(() => config.noteCategories, [config.noteCategories]);
   const defaultCategory = noteCategories[0] ?? 'General';
 
@@ -353,29 +351,30 @@ export function NotesSection({
 
   // Handle saving a skeleton note
   const handleSaveSkeleton = async (skeletonId: string, noteData: Note) => {
-    if (onCreateNote) {
-      try {
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
-        const { id, createdAt, updatedAt, ...createData } = noteData;
-        await onCreateNote(createData as NewNoteData);
-        setSkeletonNotes(prev => prev.filter(id => id !== skeletonId));
-      } catch (error) {
-        console.error('Failed to create note:', error);
-      }
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const { id, createdAt, updatedAt, ...createData } = noteData;
+      await addNote(caseId, createData as NewNoteData);
+      setSkeletonNotes(prev => prev.filter(id => id !== skeletonId));
+    } catch (error) {
+      console.error('Failed to create note:', error);
     }
   };
 
   // Handle updating an existing note
   const handleUpdateNote = async (noteId: string, noteData: Note) => {
-    if (onUpdateNote) {
-      try {
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
-        const { id, createdAt, updatedAt, ...updateData } = noteData;
-        await onUpdateNote(noteId, updateData as NewNoteData);
-      } catch (error) {
-        console.error('Failed to update note:', error);
-      }
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const { id, createdAt, updatedAt, ...updateData } = noteData;
+      await updateNote(caseId, noteId, updateData as NewNoteData);
+    } catch (error) {
+      console.error('Failed to update note:', error);
     }
+  };
+
+  // Handle deleting a note
+  const handleDeleteNote = async (noteId: string) => {
+    await deleteNote(caseId, noteId);
   };
 
   // Handle cancelling a skeleton note
@@ -462,7 +461,7 @@ export function NotesSection({
                   }
                   onDelete={isSkeleton ? 
                     () => handleCancelSkeleton(note.id) : 
-                    onDeleteNote
+                    handleDeleteNote
                   }
                   startExpanded={isSkeleton}
                   noteCategories={noteCategories}

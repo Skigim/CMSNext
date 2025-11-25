@@ -4,7 +4,7 @@ import type { AppNavigationConfig } from "./AppNavigationShell";
 import { AppNavigationShell } from "./AppNavigationShell";
 import { ViewRenderer } from "../routing/ViewRenderer";
 import type {
-  CaseDisplay,
+  StoredCase,
   CaseCategory,
   FinancialItem,
   NewCaseRecordData,
@@ -45,7 +45,7 @@ interface CaseWorkspaceFinancialFlow {
   ) => Promise<void>;
   handleCancelItemForm: () => void;
   closeItemForm: () => void;
-  onCaseUpdated: (updatedCase: CaseDisplay) => void;
+  onCaseUpdated: (updatedCase: StoredCase) => void;
 }
 
 interface CaseWorkspaceNoteFlow {
@@ -56,16 +56,16 @@ interface CaseWorkspaceNoteFlow {
 
 export interface CaseWorkspaceProps {
   navigation: AppNavigationConfig;
-  cases: CaseDisplay[];
-  selectedCase: CaseDisplay | null | undefined;
-  editingCase: CaseDisplay | null;
+  cases: StoredCase[];
+  selectedCase: StoredCase | null | undefined;
+  editingCase: StoredCase | null;
   error: string | null;
   onDismissError: () => void;
   viewHandlers: CaseWorkspaceViewHandlers;
   financialFlow: CaseWorkspaceFinancialFlow;
   noteFlow: CaseWorkspaceNoteFlow;
   alerts: AlertsIndex;
-  onUpdateCaseStatus: (caseId: string, status: CaseDisplay["status"]) => Promise<CaseDisplay | null> | CaseDisplay | null | void;
+  onUpdateCaseStatus: (caseId: string, status: StoredCase["status"]) => Promise<StoredCase | null> | StoredCase | null | void;
   onResolveAlert?: (alert: AlertWithMatch) => Promise<void> | void;
   onAlertsCsvImported?: (index: AlertsIndex) => void;
   activityLogState: CaseActivityLogState;
@@ -146,7 +146,7 @@ export const CaseWorkspace = memo(function CaseWorkspace({
             isOpen={financialFlow.itemForm.isOpen}
             onClose={financialFlow.handleCancelItemForm}
             caseData={selectedCase}
-            onUpdateCase={(updatedCase: CaseDisplay) => {
+            onUpdateCase={(updatedCase: StoredCase) => {
               financialFlow.onCaseUpdated(updatedCase);
               financialFlow.closeItemForm();
             }}

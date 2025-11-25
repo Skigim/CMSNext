@@ -2,7 +2,7 @@ import { useCallback } from "react";
 import { toast } from "sonner";
 import { useFileStorageDataLoadHandler } from "@/contexts/FileStorageContext";
 import type { Dispatch, SetStateAction } from "react";
-import type { CaseDisplay } from "@/types/case";
+import type { CaseDisplay, StoredCase } from "@/types/case";
 import type { CategoryConfig } from "@/types/categoryConfig";
 import { createLogger } from "@/utils/logger";
 import { updateFileStorageFlags } from "@/utils/fileStorageFlags";
@@ -10,7 +10,7 @@ import { recordStorageSyncEvent } from "@/utils/telemetryInstrumentation";
 
 interface FileDataSyncDependencies {
   loadCases: () => Promise<void>;
-  setCases: Dispatch<SetStateAction<CaseDisplay[]>>;
+  setCases: Dispatch<SetStateAction<StoredCase[]>>;
   setHasLoadedData: (value: boolean) => void;
   setConfigFromFile: (config?: Partial<CategoryConfig> | null) => void;
 }
@@ -18,7 +18,7 @@ interface FileDataSyncDependencies {
 const logger = createLogger("FileDataSync");
 
 type FileDataPayload = {
-  cases?: CaseDisplay[];
+  cases?: StoredCase[];
   people?: unknown[];
   caseRecords?: unknown[];
   categoryConfig?: Partial<CategoryConfig> | null;

@@ -6,7 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from ".
 import { Textarea } from "../ui/textarea";
 import { Checkbox } from "../ui/checkbox";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "../ui/dialog";
-import { CaseDisplay, FinancialItem, CaseCategory } from "../../types/case";
+import { CaseDisplay, FinancialItem, CaseCategory, StoredCase } from "../../types/case";
 import { useDataManagerSafe } from "../../contexts/DataManagerContext";
 import { AlertCircle } from "lucide-react";
 import { toast } from "sonner";
@@ -16,8 +16,8 @@ import { toast } from "sonner";
 interface FinancialItemModalProps {
   isOpen: boolean;
   onClose: () => void;
-  caseData: CaseDisplay;
-  onUpdateCase: (updatedCase: CaseDisplay) => void;
+  caseData: StoredCase;
+  onUpdateCase: (updatedCase: StoredCase) => void;
   itemType: CaseCategory;
   editingItem?: FinancialItem | null;
 }
@@ -154,12 +154,12 @@ export function FinancialItemModal({
       // Check if the case exists in the data manager
       try {
         const allCases = await dataManager.getAllCases();
-        const caseExists = allCases.find((c: CaseDisplay) => c.id === caseData.id);
+        const caseExists = allCases.find((c: StoredCase) => c.id === caseData.id);
         
         if (!caseExists) {
           console.error('❌ Case not found in data manager:', {
             requestedCaseId: caseData.id,
-            availableCaseIds: allCases.map((c: CaseDisplay) => c.id),
+            availableCaseIds: allCases.map((c: StoredCase) => c.id),
             totalCases: allCases.length
           });
           setErrors({ general: `Case not found in data storage. Case ID: ${caseData.id}` });
@@ -189,7 +189,7 @@ export function FinancialItemModal({
     };
 
     try {
-      let updatedCase: CaseDisplay;
+      let updatedCase: StoredCase;
       
       if (isEditing && formData.id) {
         // Update existing item

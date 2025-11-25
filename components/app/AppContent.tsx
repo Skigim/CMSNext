@@ -23,7 +23,7 @@ import { recordRenderProfile } from "../../utils/performanceTracker";
 import { createLogger } from "../../utils/logger";
 import { AppContentView } from "./AppContentView";
 import { useAppContentViewModel } from "./useAppContentViewModel";
-import type { CaseCategory, CaseDisplay, FinancialItem, NewNoteData } from "../../types/case";
+import type { CaseCategory, StoredCase, FinancialItem, NewNoteData } from "../../types/case";
 
 const logger = createLogger("AppContent");
 
@@ -234,14 +234,14 @@ export const AppContent = memo(function AppContent() {
   );
 
   const handleCaseUpdated = useCallback(
-    (updatedCase: CaseDisplay) => {
+    (updatedCase: StoredCase) => {
       setCases(prevCases => prevCases.map(c => (c.id === updatedCase.id ? updatedCase : c)));
     },
     [setCases],
   );
 
   const handleUpdateCaseStatus = useCallback(
-    async (caseId: string, status: CaseDisplay["status"]) => {
+    async (caseId: string, status: StoredCase["status"]) => {
       const result = await updateCaseStatus(caseId, status);
       if (result) {
         await refreshActivityLog();

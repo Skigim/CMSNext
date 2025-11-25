@@ -1339,6 +1339,17 @@ class AutosaveFileService {
     this.dataLoadCallback = null;
     this.statusCallback = null;
   }
+
+  /**
+   * Broadcast data update to listeners
+   * Used when data is modified directly via file operations (e.g. DataManager)
+   * rather than through the autosave loop
+   */
+  broadcastDataUpdate(data: any): void {
+    if (this.dataLoadCallback) {
+      this.dataLoadCallback(data);
+    }
+  }
 }
 
 export default AutosaveFileService;

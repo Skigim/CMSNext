@@ -240,6 +240,9 @@ export class FileStorageService {
         throw new Error("File write operation failed");
       }
 
+      // Notify listeners that data has changed
+      this.fileService.broadcastDataUpdate(finalData);
+
       return finalData;
     } catch (error) {
       logger.error("Failed to write normalized data", {

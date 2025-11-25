@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { act, renderHook, waitFor } from "@testing-library/react";
 import type { FileStorageLifecycleSelectors } from "@/contexts/FileStorageContext";
 import type { NewCaseRecordData, NewPersonData } from "@/types/case";
-import { createMockCaseDisplay, toast as mockToast } from "@/src/test/testUtils";
+import { createMockStoredCase, toast as mockToast } from "@/src/test/testUtils";
 
 vi.mock("@/utils/performanceTracker", () => ({
   startMeasurement: vi.fn(),
@@ -44,7 +44,7 @@ describe("useNavigationFlow", () => {
   });
 
   it("navigates to case details and records measurements", () => {
-    const existingCase = createMockCaseDisplay({ id: "case-1" });
+    const existingCase = createMockStoredCase({ id: "case-1" });
     const saveCase = vi.fn().mockResolvedValue(undefined);
     const deleteCase = vi.fn().mockResolvedValue(undefined);
 
@@ -80,7 +80,7 @@ describe("useNavigationFlow", () => {
   });
 
   it("blocks restricted navigation when storage is locked", async () => {
-    const existingCase = createMockCaseDisplay({ id: "case-locked" });
+    const existingCase = createMockStoredCase({ id: "case-locked" });
     const saveCase = vi.fn().mockResolvedValue(undefined);
     const deleteCase = vi.fn().mockResolvedValue(undefined);
 
@@ -129,7 +129,7 @@ describe("useNavigationFlow", () => {
   });
 
   it("returns to the previous view after saving an existing case", async () => {
-    const existingCase = createMockCaseDisplay({ id: "case-edit" });
+    const existingCase = createMockStoredCase({ id: "case-edit" });
     const saveCase = vi.fn().mockResolvedValue(undefined);
     const deleteCase = vi.fn().mockResolvedValue(undefined);
 
