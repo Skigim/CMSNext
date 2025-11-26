@@ -5,30 +5,48 @@ import { FinancialItem, CaseCategory } from "../../types/case";
 import { Plus } from "lucide-react";
 import { useRef } from "react";
 
+import { useFinancialItems } from "../../hooks/useFinancialItems";
+
 interface CaseSectionProps {
   title: string;
   category: CaseCategory;
-  items: FinancialItem[];
-  onAddItem: (category: CaseCategory) => void;
-  onDeleteItem: (category: CaseCategory, itemId: string) => void;
-  onUpdateFullItem?: (category: CaseCategory, itemId: string, updatedItem: FinancialItem) => Promise<void>;
-  onCreateItem?: (category: CaseCategory, itemData: Omit<FinancialItem, 'id' | 'createdAt' | 'updatedAt'>) => Promise<void>;
+  caseId: string;
 }
 
 export function CaseSection({ 
   title, 
   category, 
-  items, 
-  onAddItem, 
-  onDeleteItem,
-  onUpdateFullItem,
-  onCreateItem
+  caseId
 }: CaseSectionProps) {
+  const { 
+    groupedItems, 
+    createFinancialItem, 
+    updateFinancialItem, 
+    deleteFinancialItem 
+  } = useFinancialItems(caseId);
+
+  const items = groupedItems[category] || [];
+
   const addSkeletonFnRef = useRef<(() => void) | null>(null);
 
   const handleAddSkeletonRegistration = (fn: () => void) => {
     addSkeletonFnRef.current = fn;
   };
+
+  const handleDelete = async (cat: CaseCategory, itemId: string) => {
+    await deleteFinancialItem(caseId, cat, itemId);
+  };
+
+  const handleUpdate = async (cat: CaseCategory, itemId: string, updatedItem: FinancialItem) => {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { id, createdAt, updatedAt, ...data } = updatedItem;
+    await updateFinancialItem(caseId, cat, itemId, data);
+  };
+
+  const handleCreate = async (cat: CaseCategory, itemData: Omit<FinancialItem, 'id' | 'createdAt' | 'updatedAt'>) => {
+    await createFinancialItem(caseId, cat, itemData);
+  };
+
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
@@ -38,9 +56,9 @@ export function CaseSection({
         <FinancialItemList
           items={items}
           itemType={category}
-          onDelete={onDeleteItem}
-          onUpdate={onUpdateFullItem}
-          onCreateItem={onCreateItem}
+          onDelete={handleDelete}
+          onUpdate={handleUpdate}
+          onCreateItem={handleCreate}
           onAddSkeleton={handleAddSkeletonRegistration}
           title=""
           showActions={true}
@@ -50,8 +68,6 @@ export function CaseSection({
           onClick={() => {
             if (addSkeletonFnRef.current) {
               addSkeletonFnRef.current();
-            } else {
-              onAddItem(category);
             }
           }} 
           className="gap-2 w-full"

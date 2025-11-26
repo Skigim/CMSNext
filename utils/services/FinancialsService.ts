@@ -1,18 +1,23 @@
 import { v4 as uuidv4 } from 'uuid';
-import type { CaseDisplay, CaseCategory, FinancialItem } from '../../types/case';
-import type { FileStorageService, FileData } from './FileStorageService';
+import type { CaseCategory, FinancialItem } from '../../types/case';
+import type { FileStorageService, NormalizedFileData, StoredFinancialItem, StoredCase } from './FileStorageService';
 
 interface FinancialsServiceConfig {
   fileStorage: FileStorageService;
 }
 
 /**
- * FinancialsService - Handles all financial item CRUD operations for cases
+ * FinancialsService - Handles all financial item CRUD operations
+ * 
+ * Works directly with normalized v2.0 data format:
+ * - Financial items stored as flat array with caseId + category foreign keys
+ * - No nested case structures
  * 
  * Responsibilities:
  * - Add financial items (resources, income, expenses) to cases
  * - Update existing financial items
  * - Delete financial items
+ * - Get financial items for a case
  * - Maintain financial item timestamps and metadata
  * - Touch case timestamps on financial changes
  * 
@@ -26,6 +31,32 @@ export class FinancialsService {
   }
 
   /**
+   * Get all financial items for a case
+   */
+  async getItemsForCase(caseId: string): Promise<StoredFinancialItem[]> {
+    const data = await this.fileStorage.readFileData();
+    if (!data) {
+      return [];
+    }
+    return this.fileStorage.getFinancialsForCase(data, caseId);
+  }
+
+  /**
+   * Get financial items for a case grouped by category
+   */
+  async getItemsForCaseGrouped(caseId: string): Promise<{
+    resources: StoredFinancialItem[];
+    income: StoredFinancialItem[];
+    expenses: StoredFinancialItem[];
+  }> {
+    const data = await this.fileStorage.readFileData();
+    if (!data) {
+      return { resources: [], income: [], expenses: [] };
+    }
+    return this.fileStorage.getFinancialsForCaseGrouped(data, caseId);
+  }
+
+  /**
    * Add financial item to a case
    * Pattern: read → modify → write
    */
@@ -33,203 +64,163 @@ export class FinancialsService {
     caseId: string,
     category: CaseCategory,
     itemData: Omit<FinancialItem, 'id' | 'createdAt' | 'updatedAt'>
-  ): Promise<CaseDisplay> {
+  ): Promise<StoredFinancialItem> {
     // Read current data
     const currentData = await this.fileStorage.readFileData();
     if (!currentData) {
       throw new Error('Failed to read current data');
     }
 
-    // Find case to update
-    const caseIndex = currentData.cases.findIndex(c => c.id === caseId);
-    if (caseIndex === -1) {
+    // Verify case exists
+    const caseExists = currentData.cases.some(c => c.id === caseId);
+    if (!caseExists) {
       throw new Error('Case not found');
     }
 
-    const targetCase = currentData.cases[caseIndex];
-
-    // Ensure caseRecord exists
-    if (!targetCase.caseRecord) {
-      throw new Error('Case record is missing - data integrity issue. Please reload the data.');
-    }
-
-    // Create new item
-    const newItem: FinancialItem = {
+    // Create new item with foreign keys
+    const timestamp = new Date().toISOString();
+    const newItem: StoredFinancialItem = {
       ...itemData,
       id: uuidv4(),
-      dateAdded: new Date().toISOString(),
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
+      caseId,
+      category,
+      dateAdded: timestamp,
+      createdAt: timestamp,
+      updatedAt: timestamp
     };
 
-    // Modify case data
-    const caseWithNewItem: CaseDisplay = {
-      ...targetCase,
-      caseRecord: {
-        ...targetCase.caseRecord,
-        financials: {
-          ...targetCase.caseRecord.financials,
-          [category]: [...targetCase.caseRecord.financials[category], newItem],
-        },
-        updatedDate: new Date().toISOString(),
-      },
-    };
+    // Add to financials array
+    const updatedFinancials = [...currentData.financials, newItem];
 
-    const casesWithChanges = currentData.cases.map((c, index) =>
-      index === caseIndex ? caseWithNewItem : c,
-    );
+    // Touch case timestamp
+    const updatedCases = this.fileStorage.touchCaseTimestamps(currentData.cases, [caseId]);
 
-    const casesWithTouchedTimestamps = this.fileStorage.touchCaseTimestamps(casesWithChanges, [caseId]);
-
-    // Update data
-    const updatedData: FileData = {
+    // Write updated data
+    const updatedData: NormalizedFileData = {
       ...currentData,
-      cases: casesWithTouchedTimestamps,
+      cases: updatedCases,
+      financials: updatedFinancials,
     };
 
-    // Write back to file
-    await this.fileStorage.writeFileData(updatedData);
+    await this.fileStorage.writeNormalizedData(updatedData);
 
-    return casesWithTouchedTimestamps[caseIndex];
+    return newItem;
   }
 
   /**
-   * Update financial item in a case
+   * Update financial item
    * Pattern: read → modify → write
    */
   async updateItem(
     caseId: string,
     category: CaseCategory,
     itemId: string,
-    updatedItem: Partial<FinancialItem>,
-  ): Promise<CaseDisplay> {
+    updates: Partial<FinancialItem>,
+  ): Promise<StoredFinancialItem> {
     // Read current data
     const currentData = await this.fileStorage.readFileData();
     if (!currentData) {
       throw new Error('Failed to read current data');
     }
 
-    // Find case to update
-    const caseIndex = currentData.cases.findIndex(c => c.id === caseId);
-    if (caseIndex === -1) {
+    // Verify case exists first
+    const caseExists = currentData.cases.some(c => c.id === caseId);
+    if (!caseExists) {
       throw new Error('Case not found');
     }
 
-    const targetCase = currentData.cases[caseIndex];
-
-    // Ensure caseRecord exists
-    if (!targetCase.caseRecord) {
-      throw new Error('Case record is missing - data integrity issue. Please reload the data.');
-    }
-
     // Find item to update
-    const itemIndex = targetCase.caseRecord.financials[category].findIndex(item => item.id === itemId);
+    const itemIndex = currentData.financials.findIndex(
+      f => f.id === itemId && f.caseId === caseId && f.category === category
+    );
     if (itemIndex === -1) {
       throw new Error('Item not found');
     }
 
-    const existingItem = targetCase.caseRecord.financials[category][itemIndex];
+    const existingItem = currentData.financials[itemIndex];
 
     // Update item
-    const updatedItemData: FinancialItem = {
+    const updatedItem: StoredFinancialItem = {
       ...existingItem,
-      ...updatedItem,
+      ...updates,
       id: itemId, // Preserve ID
+      caseId, // Preserve foreign key
+      category, // Preserve category
       createdAt: existingItem.createdAt, // Preserve creation time
       updatedAt: new Date().toISOString()
     };
 
-    // Modify case data
-    const caseWithUpdatedItem: CaseDisplay = {
-      ...targetCase,
-      caseRecord: {
-        ...targetCase.caseRecord,
-        financials: {
-          ...targetCase.caseRecord.financials,
-          [category]: targetCase.caseRecord.financials[category].map((item, index) =>
-            index === itemIndex ? updatedItemData : item,
-          ),
-        },
-        updatedDate: new Date().toISOString(),
-      },
-    };
-
-    const casesWithChanges = currentData.cases.map((c, index) =>
-      index === caseIndex ? caseWithUpdatedItem : c,
+    // Update financials array
+    const updatedFinancials = currentData.financials.map((f, index) =>
+      index === itemIndex ? updatedItem : f
     );
 
-    const casesWithTouchedTimestamps = this.fileStorage.touchCaseTimestamps(casesWithChanges, [caseId]);
+    // Touch case timestamp
+    const updatedCases = this.fileStorage.touchCaseTimestamps(currentData.cases, [caseId]);
 
-    // Update data
-    const updatedData: FileData = {
+    // Write updated data
+    const updatedData: NormalizedFileData = {
       ...currentData,
-      cases: casesWithTouchedTimestamps,
+      cases: updatedCases,
+      financials: updatedFinancials,
     };
 
-    // Write back to file
-    await this.fileStorage.writeFileData(updatedData);
+    await this.fileStorage.writeNormalizedData(updatedData);
 
-    return casesWithTouchedTimestamps[caseIndex];
+    return updatedItem;
   }
 
   /**
-   * Delete financial item from a case
+   * Delete financial item
    * Pattern: read → modify → write
    */
-  async deleteItem(caseId: string, category: CaseCategory, itemId: string): Promise<CaseDisplay> {
+  async deleteItem(caseId: string, category: CaseCategory, itemId: string): Promise<void> {
     // Read current data
     const currentData = await this.fileStorage.readFileData();
     if (!currentData) {
       throw new Error('Failed to read current data');
     }
 
-    // Find case to update
-    const caseIndex = currentData.cases.findIndex(c => c.id === caseId);
-    if (caseIndex === -1) {
+    // Verify case exists first
+    const caseExists = currentData.cases.some(c => c.id === caseId);
+    if (!caseExists) {
       throw new Error('Case not found');
     }
 
-    const targetCase = currentData.cases[caseIndex];
-
-    // Ensure caseRecord exists
-    if (!targetCase.caseRecord) {
-      throw new Error('Case record is missing - data integrity issue. Please reload the data.');
-    }
-
-    // Check if item exists
-    const itemExists = targetCase.caseRecord.financials[category].some(item => item.id === itemId);
+    // Verify item exists
+    const itemExists = currentData.financials.some(
+      f => f.id === itemId && f.caseId === caseId && f.category === category
+    );
     if (!itemExists) {
       throw new Error('Item not found');
     }
 
-    // Modify case data
-    const caseWithItemRemoved: CaseDisplay = {
-      ...targetCase,
-      caseRecord: {
-        ...targetCase.caseRecord,
-        financials: {
-          ...targetCase.caseRecord.financials,
-          [category]: targetCase.caseRecord.financials[category].filter(item => item.id !== itemId),
-        },
-        updatedDate: new Date().toISOString(),
-      },
-    };
-
-    const casesWithChanges = currentData.cases.map((c, index) =>
-      index === caseIndex ? caseWithItemRemoved : c,
+    // Remove from financials array
+    const updatedFinancials = currentData.financials.filter(
+      f => !(f.id === itemId && f.caseId === caseId && f.category === category)
     );
 
-    const casesWithTouchedTimestamps = this.fileStorage.touchCaseTimestamps(casesWithChanges, [caseId]);
+    // Touch case timestamp
+    const updatedCases = this.fileStorage.touchCaseTimestamps(currentData.cases, [caseId]);
 
-    // Update data
-    const updatedData: FileData = {
+    // Write updated data
+    const updatedData: NormalizedFileData = {
       ...currentData,
-      cases: casesWithTouchedTimestamps,
+      cases: updatedCases,
+      financials: updatedFinancials,
     };
 
-    // Write back to file
-    await this.fileStorage.writeFileData(updatedData);
+    await this.fileStorage.writeNormalizedData(updatedData);
+  }
 
-    return casesWithTouchedTimestamps[caseIndex];
+  /**
+   * Get the case data for a financial item (for backward compatibility)
+   */
+  async getCaseForItem(caseId: string): Promise<StoredCase | null> {
+    const data = await this.fileStorage.readFileData();
+    if (!data) {
+      return null;
+    }
+    return this.fileStorage.getCaseById(data, caseId) ?? null;
   }
 }

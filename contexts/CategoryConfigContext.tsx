@@ -7,6 +7,7 @@ import {
   sanitizeCategoryValues,
 } from "@/types/categoryConfig";
 import { useDataManagerSafe } from "./DataManagerContext";
+import { useFileStorageDataChange } from "./FileStorageContext";
 
 type UpdateHandler = (key: CategoryKey, values: string[]) => Promise<void>;
 
@@ -43,6 +44,7 @@ export const CategoryConfigProvider: React.FC<{ children: React.ReactNode }> = (
   const [config, setConfig] = useState<CategoryConfig>(() => mergeCategoryConfig());
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
+  const dataChangeCount = useFileStorageDataChange();
 
   const loadConfig = useCallback(async () => {
     if (!dataManager) {
@@ -70,7 +72,7 @@ export const CategoryConfigProvider: React.FC<{ children: React.ReactNode }> = (
     loadConfig().catch(err => {
       console.error("Unexpected error loading category configuration", err);
     });
-  }, [dataManager, loadConfig]);
+  }, [dataManager, loadConfig, dataChangeCount]);
 
   const updateCategory = useCallback<UpdateHandler>(
     async (key, values) => {

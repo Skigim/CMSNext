@@ -2,11 +2,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { FileText, ArrowRight } from "lucide-react";
 import { McnCopyControl } from "@/components/common/McnCopyControl";
-import type { CaseDisplay } from "@/types/case";
+import type { StoredCase } from "@/types/case";
 import { useMemo } from "react";
 
 interface RecentCasesWidgetProps {
-  cases: CaseDisplay[];
+  cases: StoredCase[];
   onViewAllCases: () => void;
   onNewCase: () => void;
 }

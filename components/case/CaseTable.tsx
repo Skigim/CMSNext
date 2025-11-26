@@ -9,7 +9,7 @@ import {
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import type { CaseDisplay, CaseStatusUpdateHandler } from "@/types/case";
+import type { StoredCase, CaseStatusUpdateHandler } from "@/types/case";
 import { CaseStatusMenu } from "./CaseStatusMenu";
 import { ArrowDown, ArrowUp, ArrowUpDown, Eye, MoreHorizontal, Pencil, Trash2 } from "lucide-react";
 import type { CaseListSortDirection, CaseListSortKey } from "@/hooks/useCaseListPreferences";
@@ -20,7 +20,7 @@ import { CopyableText } from "@/components/common/CopyableText";
 import { getDisplayPhoneNumber } from "@/utils/phoneFormatter";
 
 export interface CaseTableProps {
-  cases: CaseDisplay[];
+  cases: StoredCase[];
   sortKey: CaseListSortKey;
   sortDirection: CaseListSortDirection;
   onRequestSort: (key: CaseListSortKey, direction: CaseListSortDirection) => void;

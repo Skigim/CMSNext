@@ -9,12 +9,12 @@ import {
   ChartTooltipContent,
 } from '@/components/ui/chart';
 import { useWidgetData } from '@/hooks/useWidgetData';
-import type { CaseDisplay } from '@/types/case';
+import type { StoredCase } from '@/types/case';
 import { calculateTotalCasesByStatus, type StatusBreakdown } from '@/utils/widgetDataProcessors';
 import type { WidgetMetadata } from './WidgetRegistry';
 
 interface CasesByStatusWidgetProps {
-  cases: CaseDisplay[];
+  cases: StoredCase[];
   metadata?: WidgetMetadata;
 }
 

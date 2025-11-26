@@ -1,4 +1,4 @@
-import type { CaseDisplay } from '../../types/case';
+import type { CaseStatus } from '../../types/case';
 import type {
   AlertWithMatch,
   AlertsIndex,
@@ -30,6 +30,20 @@ export interface MergeAlertsResult {
   total: number;
 }
 
+/**
+ * Minimal case interface for alert matching
+ * Works with both StoredCase and CaseDisplay
+ */
+interface CaseForAlertMatching {
+  id: string;
+  name: string;
+  mcn: string;
+  status: CaseStatus;
+  caseRecord?: {
+    mcn?: string;
+  };
+}
+
 // ============================================================================
 // AlertsService
 // ============================================================================
@@ -59,10 +73,10 @@ export class AlertsService {
    * Get alerts index with case matching
    * 
    * @param alerts - Current alerts list
-   * @param cases - Cases for alert matching
+   * @param cases - Cases for alert matching (StoredCase or CaseDisplay)
    * @returns AlertsIndex with matched/unmatched/missingMcn classifications
    */
-  getAlertsIndex(alerts: AlertWithMatch[], cases: CaseDisplay[]): AlertsIndex {
+  getAlertsIndex(alerts: AlertWithMatch[], cases: CaseForAlertMatching[]): AlertsIndex {
     // Rematch alerts to current cases
     const rematchedAlerts = this.rematchAlertsForCases(alerts, cases);
     return createAlertsIndexFromAlerts(rematchedAlerts);
@@ -74,7 +88,7 @@ export class AlertsService {
    * @param alerts - Current alerts list
    * @param alertId - Alert identifier (id, reportId, or lookup key)
    * @param updates - Status updates to apply
-   * @param cases - Cases for alert rematching
+   * @param cases - Cases for alert rematching (StoredCase or CaseDisplay)
    * @returns Updated alert object or null if not found
    */
   updateAlertStatus(
@@ -85,7 +99,7 @@ export class AlertsService {
       resolvedAt?: string | null;
       resolutionNotes?: string;
     },
-    cases: CaseDisplay[]
+    cases: CaseForAlertMatching[]
   ): AlertWithMatch | null {
     const normalizedAlertId = typeof alertId === 'string' ? alertId.trim() : '';
     if (normalizedAlertId.length === 0) {
@@ -177,13 +191,13 @@ export class AlertsService {
    * 
    * @param csvContent - Raw CSV content to merge
    * @param existingAlerts - Current alerts list
-   * @param cases - Cases for alert matching
+   * @param cases - Cases for alert matching (StoredCase or CaseDisplay)
    * @returns Merged alerts with statistics
    */
   async mergeAlertsFromCsvContent(
     csvContent: string,
     existingAlerts: AlertWithMatch[],
-    cases: CaseDisplay[]
+    cases: CaseForAlertMatching[]
   ): Promise<MergeAlertsResult> {
     const { parseAlertsFromCsv } = await import('@/utils/alerts/alertsCsvParser');
     const incomingIndex = parseAlertsFromCsv(csvContent, cases);
@@ -347,8 +361,8 @@ export class AlertsService {
   /**
    * Build case lookup map by MCN for efficient matching
    */
-  private buildCaseLookup(cases: CaseDisplay[]): Map<string, CaseDisplay> {
-    const lookup = new Map<string, CaseDisplay>();
+  private buildCaseLookup(cases: CaseForAlertMatching[]): Map<string, CaseForAlertMatching> {
+    const lookup = new Map<string, CaseForAlertMatching>();
 
     cases.forEach(caseItem => {
       const mcn = caseItem.caseRecord?.mcn ?? caseItem.mcn;
@@ -366,7 +380,7 @@ export class AlertsService {
   /**
    * Rematch a single alert to cases
    */
-  private rematchAlertForCases(alert: AlertWithMatch, lookup: Map<string, CaseDisplay>): AlertWithMatch {
+  private rematchAlertForCases(alert: AlertWithMatch, lookup: Map<string, CaseForAlertMatching>): AlertWithMatch {
     if (!alert) {
       return alert;
     }
@@ -402,7 +416,7 @@ export class AlertsService {
   /**
    * Rematch all alerts to cases
    */
-  private rematchAlertsForCases(alerts: AlertWithMatch[], cases: CaseDisplay[]): AlertWithMatch[] {
+  private rematchAlertsForCases(alerts: AlertWithMatch[], cases: CaseForAlertMatching[]): AlertWithMatch[] {
     if (!alerts || alerts.length === 0) {
       return alerts ?? [];
     }

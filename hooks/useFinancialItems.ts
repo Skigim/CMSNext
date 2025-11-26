@@ -1,6 +1,7 @@
-import { useState, useCallback } from 'react';
-import { FinancialItem, NewFinancialItemData, CaseCategory } from '@/types/case';
+import { useState, useCallback, useEffect } from 'react';
+import { FinancialItem, NewFinancialItemData, CaseCategory, StoredFinancialItem } from '@/types/case';
 import { useDataManagerSafe } from '@/contexts/DataManagerContext';
+import { useFileStorageDataChange } from '@/contexts/FileStorageContext';
 import { toast } from 'sonner';
 
 /**
@@ -9,6 +10,15 @@ import { toast } from 'sonner';
  */
 
 interface UseFinancialItemsReturn {
+  // Data
+  items: StoredFinancialItem[];
+  groupedItems: {
+    resources: StoredFinancialItem[];
+    income: StoredFinancialItem[];
+    expenses: StoredFinancialItem[];
+  };
+  refreshItems: () => Promise<void>;
+
   // Modal state
   financialModalOpen: boolean;
   editingFinancialItem: FinancialItem | null;
@@ -19,8 +29,8 @@ interface UseFinancialItemsReturn {
   closeFinancialModal: () => void;
   
   // CRUD operations
-  createFinancialItem: (caseId: string, category: CaseCategory, data: NewFinancialItemData) => Promise<FinancialItem | null>;
-  updateFinancialItem: (caseId: string, category: CaseCategory, itemId: string, data: Partial<NewFinancialItemData>) => Promise<FinancialItem | null>;
+  createFinancialItem: (caseId: string, category: CaseCategory, data: NewFinancialItemData) => Promise<StoredFinancialItem | null>;
+  updateFinancialItem: (caseId: string, category: CaseCategory, itemId: string, data: Partial<NewFinancialItemData>) => Promise<StoredFinancialItem | null>;
   deleteFinancialItem: (caseId: string, category: CaseCategory, itemId: string) => Promise<boolean>;
   
   // State
@@ -28,14 +38,51 @@ interface UseFinancialItemsReturn {
   error: string | null;
 }
 
-export function useFinancialItems(): UseFinancialItemsReturn {
+export function useFinancialItems(caseId?: string): UseFinancialItemsReturn {
   const dataManager = useDataManagerSafe();
+  const dataChangeCount = useFileStorageDataChange();
   
+  const [items, setItems] = useState<StoredFinancialItem[]>([]);
+  const [groupedItems, setGroupedItems] = useState<{
+    resources: StoredFinancialItem[];
+    income: StoredFinancialItem[];
+    expenses: StoredFinancialItem[];
+  }>({
+    resources: [],
+    income: [],
+    expenses: []
+  });
+
   const [financialModalOpen, setFinancialModalOpen] = useState(false);
   const [editingFinancialItem, setEditingFinancialItem] = useState<FinancialItem | null>(null);
   const [financialCategory, setFinancialCategory] = useState<CaseCategory | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const refreshItems = useCallback(async () => {
+    if (!caseId || !dataManager) {
+      setItems([]);
+      setGroupedItems({ resources: [], income: [], expenses: [] });
+      return;
+    }
+
+    try {
+      const [allItems, grouped] = await Promise.all([
+        dataManager.getFinancialItemsForCase(caseId),
+        dataManager.getFinancialItemsForCaseGrouped(caseId)
+      ]);
+      setItems(allItems);
+      setGroupedItems(grouped);
+    } catch (err) {
+      console.error('Failed to fetch financial items:', err);
+      // Don't set error state here to avoid UI flashing, just log it
+    }
+  }, [caseId, dataManager]);
+
+  // Initial fetch and refresh on data change
+  useEffect(() => {
+    refreshItems();
+  }, [refreshItems, dataChangeCount]);
 
   const openFinancialModal = useCallback((category: CaseCategory, _caseId: string, item?: FinancialItem) => {
     setFinancialCategory(category);
@@ -52,10 +99,10 @@ export function useFinancialItems(): UseFinancialItemsReturn {
   }, []);
 
   const createFinancialItem = useCallback(async (
-    caseId: string,
+    targetCaseId: string,
     category: CaseCategory,
     data: NewFinancialItemData
-  ): Promise<FinancialItem | null> => {
+  ): Promise<StoredFinancialItem | null> => {
     if (!dataManager) {
       const errorMsg = 'Data storage is not available';
       setError(errorMsg);
@@ -69,9 +116,14 @@ export function useFinancialItems(): UseFinancialItemsReturn {
     const toastId = toast.loading(`Adding ${category} item...`);
     
     try {
-      const updatedCase = await dataManager.addItem(caseId, category, data);
-      const newItem = updatedCase.caseRecord.financials[category].slice(-1)[0]; // Get last added item
+      const newItem = await dataManager.addItem(targetCaseId, category, data);
       toast.success(`${category} item added successfully`, { id: toastId });
+      
+      // Refresh items if we're viewing the same case
+      if (caseId === targetCaseId) {
+        await refreshItems();
+      }
+      
       return newItem;
     } catch (err) {
       const errorMsg = `Failed to add ${category} item`;
@@ -82,14 +134,14 @@ export function useFinancialItems(): UseFinancialItemsReturn {
     } finally {
       setIsLoading(false);
     }
-  }, [dataManager]);
+  }, [dataManager, caseId, refreshItems]);
 
   const updateFinancialItem = useCallback(async (
-    caseId: string,
+    targetCaseId: string,
     category: CaseCategory,
     itemId: string,
     data: Partial<NewFinancialItemData>
-  ): Promise<FinancialItem | null> => {
+  ): Promise<StoredFinancialItem | null> => {
     if (!dataManager) {
       const errorMsg = 'Data storage is not available';
       setError(errorMsg);
@@ -104,10 +156,15 @@ export function useFinancialItems(): UseFinancialItemsReturn {
     
     try {
       // Cast to required type since we're doing a partial update
-      const updatedCase = await dataManager.updateItem(caseId, category, itemId, data as Omit<FinancialItem, 'id' | 'createdAt' | 'updatedAt'>);
-      const updatedItem = updatedCase.caseRecord.financials[category].find(item => item.id === itemId);
+      const updatedItem = await dataManager.updateItem(targetCaseId, category, itemId, data as Omit<FinancialItem, 'id' | 'createdAt' | 'updatedAt'>);
       toast.success(`${category} item updated successfully`, { id: toastId });
-      return updatedItem || null;
+      
+      // Refresh items if we're viewing the same case
+      if (caseId === targetCaseId) {
+        await refreshItems();
+      }
+
+      return updatedItem;
     } catch (err) {
       const errorMsg = `Failed to update ${category} item`;
       console.error(errorMsg, err);
@@ -117,10 +174,10 @@ export function useFinancialItems(): UseFinancialItemsReturn {
     } finally {
       setIsLoading(false);
     }
-  }, [dataManager]);
+  }, [dataManager, caseId, refreshItems]);
 
   const deleteFinancialItem = useCallback(async (
-    caseId: string,
+    targetCaseId: string,
     category: CaseCategory,
     itemId: string
   ): Promise<boolean> => {
@@ -137,8 +194,14 @@ export function useFinancialItems(): UseFinancialItemsReturn {
     const toastId = toast.loading(`Deleting ${category} item...`);
     
     try {
-      await dataManager.deleteItem(caseId, category, itemId);
+      await dataManager.deleteItem(targetCaseId, category, itemId);
       toast.success(`${category} item deleted successfully`, { id: toastId });
+      
+      // Refresh items if we're viewing the same case
+      if (caseId === targetCaseId) {
+        await refreshItems();
+      }
+
       return true;
     } catch (err) {
       const errorMsg = `Failed to delete ${category} item`;
@@ -149,9 +212,14 @@ export function useFinancialItems(): UseFinancialItemsReturn {
     } finally {
       setIsLoading(false);
     }
-  }, [dataManager]);
+  }, [dataManager, caseId, refreshItems]);
 
   return {
+    // Data
+    items,
+    groupedItems,
+    refreshItems,
+
     // Modal state
     financialModalOpen,
     editingFinancialItem,

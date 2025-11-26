@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
-import type { CaseDisplay } from "@/types/case";
+import type { StoredCase } from "@/types/case";
 import type { DataManager } from "@/utils/DataManager";
+import { useFileStorageDataChange } from "@/contexts/FileStorageContext";
 import {
   createAlertsIndexFromAlerts,
   createEmptyAlertsIndex,
@@ -14,8 +15,8 @@ import { ENABLE_SAMPLE_ALERTS } from "@/utils/featureFlags";
 import { createLogger } from "@/utils/logger";
 
 interface UseAlertsFlowOptions {
-  cases: CaseDisplay[];
-  selectedCase: CaseDisplay | null;
+  cases: StoredCase[];
+  selectedCase: StoredCase | null;
   hasLoadedData: boolean;
   dataManager: DataManager | null;
 }
@@ -41,6 +42,7 @@ export function useAlertsFlow({
     new Map<string, { status?: AlertWithMatch["status"]; resolvedAt?: string | null; resolutionNotes?: string }>(),
   );
   const previousAlertCountsRef = useRef({ unmatched: 0, missingMcn: 0 });
+  const dataChangeCount = useFileStorageDataChange();
 
   const applyAlertOverrides = useCallback(
     (index: AlertsIndex): AlertsIndex => {
@@ -116,7 +118,7 @@ export function useAlertsFlow({
         error: err instanceof Error ? err.message : String(err),
       });
     });
-  }, [reloadAlerts]);
+  }, [reloadAlerts, dataChangeCount]);
 
   const onAlertsCsvImported = useCallback(
     (index: AlertsIndex) => {

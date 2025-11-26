@@ -1,11 +1,11 @@
 import { v4 as uuidv4 } from 'uuid';
-import type { CaseDisplay, NewPersonData, NewCaseRecordData } from '../../types/case';
+import type { NewPersonData, NewCaseRecordData, CaseStatus } from '../../types/case';
 import type { CaseActivityEntry } from '../../types/activityLog';
 import type { CategoryConfig } from '../../types/categoryConfig';
-import type { FileStorageService, FileData } from './FileStorageService';
+import type { FileStorageService, NormalizedFileData, StoredCase } from './FileStorageService';
 import { ActivityLogService } from './ActivityLogService';
 
-function formatCaseDisplayName(caseData: CaseDisplay): string {
+function formatCaseDisplayName(caseData: StoredCase): string {
   const trimmedName = (caseData.name ?? "").trim();
   if (trimmedName.length > 0) {
     return trimmedName;
@@ -29,6 +29,10 @@ interface CaseServiceConfig {
 /**
  * CaseService - Handles all case CRUD operations
  * 
+ * Works directly with normalized v2.0 data format:
+ * - Cases stored as StoredCase[] (without nested financials/notes)
+ * - Financials and notes stored in separate arrays
+ * 
  * Responsibilities:
  * - Read operations: getAllCases, getCaseById, getCasesCount
  * - Create/Update/Delete operations: createCompleteCase, updateCompleteCase, updateCaseStatus, deleteCase
@@ -51,7 +55,7 @@ export class CaseService {
   /**
    * Get all cases (always reads fresh from file)
    */
-  async getAllCases(): Promise<CaseDisplay[]> {
+  async getAllCases(): Promise<StoredCase[]> {
     const data = await this.fileStorage.readFileData();
     return data ? data.cases : [];
   }
@@ -59,12 +63,11 @@ export class CaseService {
   /**
    * Get a specific case by ID (always reads fresh from file)
    */
-  async getCaseById(caseId: string): Promise<CaseDisplay | null> {
+  async getCaseById(caseId: string): Promise<StoredCase | null> {
     const data = await this.fileStorage.readFileData();
     if (!data) return null;
     
-    const caseItem = data.cases.find(c => c.id === caseId);
-    return caseItem || null;
+    return this.fileStorage.getCaseById(data, caseId) ?? null;
   }
 
   /**
@@ -83,24 +86,28 @@ export class CaseService {
    * Create a new complete case
    * Pattern: read → modify → write
    */
-  async createCompleteCase(caseData: { person: NewPersonData; caseRecord: NewCaseRecordData }): Promise<CaseDisplay> {
+  async createCompleteCase(caseData: { person: NewPersonData; caseRecord: NewCaseRecordData }): Promise<StoredCase> {
     // Read current data
     const currentData = await this.fileStorage.readFileData();
     if (!currentData) {
       throw new Error('Failed to read current data');
     }
 
-    // Create new case
-    const newCase: CaseDisplay = {
-      id: uuidv4(),
+    const timestamp = new Date().toISOString();
+    const caseId = uuidv4();
+    const personId = uuidv4();
+
+    // Create new case (StoredCase - without nested financials/notes)
+    const newCase: StoredCase = {
+      id: caseId,
       name: `${caseData.person.firstName} ${caseData.person.lastName}`.trim(),
       mcn: caseData.caseRecord.mcn,
       status: caseData.caseRecord.status,
       priority: Boolean(caseData.caseRecord.priority),
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
+      createdAt: timestamp,
+      updatedAt: timestamp,
       person: {
-        id: uuidv4(),
+        id: personId,
         firstName: caseData.person.firstName,
         lastName: caseData.person.lastName,
         name: `${caseData.person.firstName} ${caseData.person.lastName}`.trim(),
@@ -126,14 +133,14 @@ export class CaseService {
         authorizedRepIds: caseData.person.authorizedRepIds || [],
         familyMembers: caseData.person.familyMembers || [],
         status: caseData.person.status || 'Active',
-        dateAdded: new Date().toISOString(),
-        createdAt: new Date().toISOString()
+        dateAdded: timestamp,
+        createdAt: timestamp
       },
       caseRecord: {
         id: uuidv4(),
-        personId: '', // Will be set below
+        personId,
         mcn: caseData.caseRecord.mcn,
-        applicationDate: caseData.caseRecord.applicationDate || new Date().toISOString(),
+        applicationDate: caseData.caseRecord.applicationDate || timestamp,
         caseType: caseData.caseRecord.caseType || 'General',
         spouseId: caseData.caseRecord.spouseId || '',
         status: caseData.caseRecord.status,
@@ -141,44 +148,36 @@ export class CaseService {
         priority: Boolean(caseData.caseRecord.priority),
         livingArrangement: caseData.caseRecord.livingArrangement || '',
         withWaiver: Boolean(caseData.caseRecord.withWaiver),
-        admissionDate: caseData.caseRecord.admissionDate || new Date().toISOString(),
+        admissionDate: caseData.caseRecord.admissionDate || timestamp,
         organizationId: caseData.caseRecord.organizationId || '',
         authorizedReps: caseData.caseRecord.authorizedReps || [],
         retroRequested: caseData.caseRecord.retroRequested || '',
-        financials: {
-          resources: [],
-          income: [],
-          expenses: []
-        },
-        notes: [],
-        createdDate: new Date().toISOString(),
-        updatedDate: new Date().toISOString()
+        // Note: financials and notes are NOT included in StoredCase
+        createdDate: timestamp,
+        updatedDate: timestamp
       }
     };
 
-    // Set the person ID reference
-    newCase.caseRecord.personId = newCase.person.id;
+    // Add to cases array
+    const updatedCases = [...currentData.cases, newCase];
+    const casesWithTouchedTimestamps = this.fileStorage.touchCaseTimestamps(updatedCases, [caseId]);
 
-    // Modify data
-    const casesWithNewCase = [...currentData.cases, newCase];
-    const casesWithTouchedTimestamps = this.fileStorage.touchCaseTimestamps(casesWithNewCase, [newCase.id]);
-
-    const updatedData: FileData = {
+    // Write updated data
+    const updatedData: NormalizedFileData = {
       ...currentData,
       cases: casesWithTouchedTimestamps,
     };
 
-    // Write back to file
-    await this.fileStorage.writeFileData(updatedData);
+    await this.fileStorage.writeNormalizedData(updatedData);
 
-    return casesWithTouchedTimestamps.find(c => c.id === newCase.id) ?? newCase;
+    return casesWithTouchedTimestamps.find(c => c.id === caseId) ?? newCase;
   }
 
   /**
    * Update an existing complete case
    * Pattern: read → modify → write
    */
-  async updateCompleteCase(caseId: string, caseData: { person: NewPersonData; caseRecord: NewCaseRecordData }): Promise<CaseDisplay> {
+  async updateCompleteCase(caseId: string, caseData: { person: NewPersonData; caseRecord: NewCaseRecordData }): Promise<StoredCase> {
     // Read current data
     const currentData = await this.fileStorage.readFileData();
     if (!currentData) {
@@ -192,6 +191,7 @@ export class CaseService {
     }
 
     const existingCase = currentData.cases[caseIndex];
+    const timestamp = new Date().toISOString();
 
     // Update person data
     const updatedPerson = {
@@ -212,7 +212,7 @@ export class CaseService {
       status: caseData.person.status || 'Active'
     };
 
-    // Update case record data
+    // Update case record data (without financials/notes - they're stored separately)
     const updatedCaseRecord = {
       ...existingCase.caseRecord,
       mcn: caseData.caseRecord.mcn,
@@ -228,13 +228,10 @@ export class CaseService {
       organizationId: caseData.caseRecord.organizationId || '',
       authorizedReps: caseData.caseRecord.authorizedReps || [],
       retroRequested: caseData.caseRecord.retroRequested || '',
-      // Preserve existing financials and notes
-      financials: existingCase.caseRecord.financials,
-      notes: existingCase.caseRecord.notes,
-      updatedDate: new Date().toISOString()
+      updatedDate: timestamp
     };
 
-    const caseWithChanges: CaseDisplay = {
+    const caseWithChanges: StoredCase = {
       ...existingCase,
       name: updatedPerson.name,
       mcn: updatedCaseRecord.mcn,
@@ -244,20 +241,20 @@ export class CaseService {
       caseRecord: updatedCaseRecord,
     };
 
+    // Update cases array
     const casesWithChanges = currentData.cases.map((c, index) =>
       index === caseIndex ? caseWithChanges : c,
     );
 
     const casesWithTouchedTimestamps = this.fileStorage.touchCaseTimestamps(casesWithChanges, [caseId]);
 
-    // Modify data
-    const updatedData: FileData = {
+    // Write updated data
+    const updatedData: NormalizedFileData = {
       ...currentData,
       cases: casesWithTouchedTimestamps,
     };
 
-    // Write back to file
-    await this.fileStorage.writeFileData(updatedData);
+    await this.fileStorage.writeNormalizedData(updatedData);
 
     return casesWithTouchedTimestamps[caseIndex];
   }
@@ -267,7 +264,7 @@ export class CaseService {
    * Pattern: read → modify → write
    * Includes activity log entry for status changes
    */
-  async updateCaseStatus(caseId: string, status: CaseDisplay["status"]): Promise<CaseDisplay> {
+  async updateCaseStatus(caseId: string, status: CaseStatus): Promise<StoredCase> {
     const currentData = await this.fileStorage.readFileData();
     if (!currentData) {
       throw new Error("Failed to read current data");
@@ -279,48 +276,53 @@ export class CaseService {
     }
 
     const targetCase = currentData.cases[caseIndex];
-
     const currentStatus = targetCase.caseRecord?.status ?? targetCase.status;
+    
     if (currentStatus === status) {
       return targetCase;
     }
 
-    const caseWithUpdatedStatus: CaseDisplay = {
+    const timestamp = new Date().toISOString();
+
+    const caseWithUpdatedStatus: StoredCase = {
       ...targetCase,
       status,
       caseRecord: {
         ...targetCase.caseRecord,
         status,
-        updatedDate: new Date().toISOString(),
+        updatedDate: timestamp,
       },
     };
 
+    // Update cases array
     const casesWithChanges = currentData.cases.map((c, index) =>
       index === caseIndex ? caseWithUpdatedStatus : c,
     );
 
     const casesWithTouchedTimestamps = this.fileStorage.touchCaseTimestamps(casesWithChanges, [caseId]);
 
+    // Create activity log entry
     const activityEntry: CaseActivityEntry = {
       id: uuidv4(),
-      timestamp: new Date().toISOString(),
+      timestamp,
       caseId: targetCase.id,
       caseName: formatCaseDisplayName(targetCase),
       caseMcn: targetCase.caseRecord?.mcn ?? targetCase.mcn ?? null,
       type: "status-change",
       payload: {
-        fromStatus: targetCase.caseRecord?.status ?? targetCase.status,
+        fromStatus: currentStatus,
         toStatus: status,
       },
     };
 
-    const updatedData: FileData = {
+    // Write updated data
+    const updatedData: NormalizedFileData = {
       ...currentData,
       cases: casesWithTouchedTimestamps,
       activityLog: ActivityLogService.mergeActivityEntries(currentData.activityLog, [activityEntry]),
     };
 
-    await this.fileStorage.writeFileData(updatedData);
+    await this.fileStorage.writeNormalizedData(updatedData);
 
     return casesWithTouchedTimestamps[caseIndex];
   }
@@ -332,6 +334,7 @@ export class CaseService {
   /**
    * Delete a case
    * Pattern: read → modify → write
+   * Also removes associated financials and notes
    */
   async deleteCase(caseId: string): Promise<void> {
     // Read current data
@@ -346,14 +349,16 @@ export class CaseService {
       throw new Error('Case not found');
     }
 
-    // Modify data (remove case)
-    const updatedData: FileData = {
+    // Remove case and its associated data
+    const updatedData: NormalizedFileData = {
       ...currentData,
-      cases: currentData.cases.filter(c => c.id !== caseId)
+      cases: currentData.cases.filter(c => c.id !== caseId),
+      financials: currentData.financials.filter(f => f.caseId !== caseId),
+      notes: currentData.notes.filter(n => n.caseId !== caseId),
     };
 
     // Write back to file
-    await this.fileStorage.writeFileData(updatedData);
+    await this.fileStorage.writeNormalizedData(updatedData);
   }
 
   // =============================================================================
@@ -364,13 +369,16 @@ export class CaseService {
    * Import multiple cases at once
    * Pattern: read → modify → write (single operation)
    * Strategy: Preserve existing cases; skip incoming duplicates by ID
+   * Note: Imported cases should be StoredCase format (no nested financials/notes)
    */
-  async importCases(cases: CaseDisplay[]): Promise<void> {
+  async importCases(cases: StoredCase[]): Promise<void> {
     // Read current data
     const currentData = await this.fileStorage.readFileData();
     if (!currentData) {
       throw new Error('Failed to read current data');
     }
+
+    const timestamp = new Date().toISOString();
 
     // Build set of existing case IDs to detect duplicates
     const existingIds = new Set(currentData.cases.map(c => c.id));
@@ -382,7 +390,7 @@ export class CaseService {
         id: caseItem.id || uuidv4(),
         caseRecord: {
           ...caseItem.caseRecord,
-          updatedDate: new Date().toISOString(),
+          updatedDate: timestamp,
         },
       }))
       .filter(caseItem => {
@@ -400,18 +408,16 @@ export class CaseService {
     }
 
     const touchedCaseIds = casesToImport.map(caseItem => caseItem.id);
-
     const combinedCases = [...currentData.cases, ...casesToImport];
     const casesWithTouchedTimestamps = this.fileStorage.touchCaseTimestamps(combinedCases, touchedCaseIds);
 
-    // Modify data (append new cases)
-    const updatedData: FileData = {
+    // Write updated data
+    const updatedData: NormalizedFileData = {
       ...currentData,
       cases: casesWithTouchedTimestamps,
     };
 
-    // Write back to file
-    await this.fileStorage.writeFileData(updatedData);
+    await this.fileStorage.writeNormalizedData(updatedData);
   }
 
   /**
@@ -419,14 +425,18 @@ export class CaseService {
    * Pattern: write empty structure
    */
   async clearAllData(categoryConfig: CategoryConfig): Promise<void> {
-    const emptyData: FileData = {
+    const emptyData: NormalizedFileData = {
+      version: "2.0",
       cases: [],
+      financials: [],
+      notes: [],
+      alerts: [],
       exported_at: new Date().toISOString(),
       total_cases: 0,
       categoryConfig,
       activityLog: [],
     };
 
-    await this.fileStorage.writeFileData(emptyData);
+    await this.fileStorage.writeNormalizedData(emptyData);
   }
 }

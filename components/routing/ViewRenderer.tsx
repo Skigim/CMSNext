@@ -1,4 +1,4 @@
-import { CaseDisplay, NewPersonData, NewCaseRecordData } from "../../types/case";
+import { StoredCase, NewPersonData, NewCaseRecordData } from "../../types/case";
 import { AppView } from "../../types/view";
 import type { AlertsIndex, AlertWithMatch } from "../../utils/alertsData";
 import type { CaseActivityLogState } from "../../types/activityLog";
@@ -16,11 +16,11 @@ export type View = AppView;
 interface ViewRendererProps {
   // View state
   currentView: View;
-  selectedCase: CaseDisplay | null | undefined;
-  editingCase: CaseDisplay | null;
+  selectedCase: StoredCase | null | undefined;
+  editingCase: StoredCase | null;
 
   // Data props
-  cases: CaseDisplay[];
+  cases: StoredCase[];
   alerts: AlertsIndex;
   activityLogState: CaseActivityLogState;
   
@@ -36,16 +36,9 @@ interface ViewRendererProps {
   // Component handlers
   handleDeleteCase: (caseId: string) => Promise<void>;
   handleDataPurged: () => void;
-  handleAddItem: (category: any) => void;
-  handleDeleteItem: (category: any, itemId: string) => Promise<void>;
-  handleBatchUpdateItem?: (category: any, itemId: string, updatedItem: Partial<any>) => Promise<void>;
-  handleCreateItem?: (category: any, itemData: Omit<any, 'id' | 'createdAt' | 'updatedAt'>) => Promise<void>;
-  handleDeleteNote: (noteId: string) => Promise<void>;
-  handleBatchUpdateNote?: (noteId: string, updatedNote: any) => Promise<void>;
-  handleBatchCreateNote?: (noteData: any) => Promise<void>;
-  handleUpdateCaseStatus?: (caseId: string, status: CaseDisplay["status"]) =>
-    | Promise<CaseDisplay | null>
-    | CaseDisplay
+  handleUpdateCaseStatus?: (caseId: string, status: StoredCase["status"]) =>
+    | Promise<StoredCase | null>
+    | StoredCase
     | null
     | void;
   handleResolveAlert?: (alert: AlertWithMatch) => Promise<void> | void;
@@ -88,13 +81,6 @@ export function ViewRenderer({
   // Component handlers
   handleDeleteCase,
   handleDataPurged,
-  handleAddItem,
-  handleDeleteItem,
-  handleBatchUpdateItem,
-  handleCreateItem,
-  handleDeleteNote,
-  handleBatchUpdateNote,
-  handleBatchCreateNote,
   handleUpdateCaseStatus,
   handleResolveAlert,
   onAlertsCsvImported,
@@ -155,13 +141,6 @@ export function ViewRenderer({
           onBack={handleBackToList}
           onEdit={() => handleEditCase(selectedCase.id)}
           onDelete={() => handleDeleteCase(selectedCase.id)}
-          onAddItem={handleAddItem}
-          onDeleteItem={handleDeleteItem}
-          onBatchUpdateItem={handleBatchUpdateItem}
-          onCreateItem={handleCreateItem}
-          onDeleteNote={handleDeleteNote}
-          onBatchUpdateNote={handleBatchUpdateNote}
-          onBatchCreateNote={handleBatchCreateNote}
           onUpdateStatus={handleUpdateCaseStatus}
           onResolveAlert={handleResolveAlert}
         />

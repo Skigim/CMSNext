@@ -1,5 +1,5 @@
 import { isAlertResolved, type AlertWithMatch } from '@/utils/alertsData';
-import type { CaseDisplay } from '@/types/case';
+import type { StoredCase } from '@/types/case';
 import type { CaseActivityEntry } from '@/types/activityLog';
 
 export interface DailyAlertStats {
@@ -220,7 +220,7 @@ export function calculateCasesProcessedPerDay(
   }));
 }
 
-export function calculateTotalCasesByStatus(cases: CaseDisplay[] | null | undefined): StatusBreakdown[] {
+export function calculateTotalCasesByStatus(cases: StoredCase[] | null | undefined): StatusBreakdown[] {
   if (!cases || cases.length === 0) {
     return [];
   }
@@ -338,7 +338,7 @@ export function calculateAvgAlertAge(
 
 export function calculateAvgCaseProcessingTime(
   activityLog: CaseActivityEntry[] | null | undefined,
-  cases: CaseDisplay[] | null | undefined,
+  cases: StoredCase[] | null | undefined,
   options: ProcessingTimeOptions = {},
 ): ProcessingTimeStats {
   const referenceDate = options.referenceDate ? startOfDay(options.referenceDate) : startOfDay(new Date());

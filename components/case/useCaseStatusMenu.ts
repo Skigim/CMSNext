@@ -1,18 +1,18 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import type { CaseDisplay, CaseStatusUpdateHandler } from "@/types/case";
+import type { StoredCase, CaseStatusUpdateHandler } from "@/types/case";
 import { useCategoryConfig } from "@/contexts/CategoryConfigContext";
 
 interface UseCaseStatusMenuOptions {
   caseId: string;
-  status?: CaseDisplay["status"];
+  status?: StoredCase["status"];
   onUpdateStatus?: CaseStatusUpdateHandler;
 }
 
 interface UseCaseStatusMenuResult {
-  status: CaseDisplay["status"];
+  status: StoredCase["status"];
   isUpdating: boolean;
-  handleStatusChange: (status: CaseDisplay["status"]) => void;
-  availableStatuses: CaseDisplay["status"][];
+  handleStatusChange: (status: StoredCase["status"]) => void;
+  availableStatuses: StoredCase["status"][];
 }
 
 function isAbortError(error: unknown): boolean {
@@ -47,18 +47,18 @@ export function useCaseStatusMenu({
   onUpdateStatus,
 }: UseCaseStatusMenuOptions): UseCaseStatusMenuResult {
   const { config } = useCategoryConfig();
-  const fallbackStatus = useMemo<CaseDisplay["status"]>(() => {
-    return (config.caseStatuses[0] ?? "Pending") as CaseDisplay["status"];
+  const fallbackStatus = useMemo<StoredCase["status"]>(() => {
+    return (config.caseStatuses[0] ?? "Pending") as StoredCase["status"];
   }, [config.caseStatuses]);
 
-  const availableStatuses = useMemo<CaseDisplay["status"][]>(() => {
-    return config.caseStatuses.length > 0 ? (config.caseStatuses as CaseDisplay["status"][]) : [fallbackStatus];
+  const availableStatuses = useMemo<StoredCase["status"][]>(() => {
+    return config.caseStatuses.length > 0 ? (config.caseStatuses as StoredCase["status"][]) : [fallbackStatus];
   }, [config.caseStatuses, fallbackStatus]);
 
   const externalStatus = status ?? fallbackStatus;
-  const externalStatusRef = useRef<CaseDisplay["status"]>(externalStatus);
-  const committedStatusRef = useRef<CaseDisplay["status"]>(externalStatus);
-  const [optimisticStatus, setOptimisticStatus] = useState<CaseDisplay["status"]>(externalStatus);
+  const externalStatusRef = useRef<StoredCase["status"]>(externalStatus);
+  const committedStatusRef = useRef<StoredCase["status"]>(externalStatus);
+  const [optimisticStatus, setOptimisticStatus] = useState<StoredCase["status"]>(externalStatus);
   const [isUpdating, setIsUpdating] = useState(false);
   const isUpdatingRef = useRef(false);
 
@@ -75,7 +75,7 @@ export function useCaseStatusMenu({
   }, [isUpdating]);
 
   const handleStatusChange = useCallback(
-    (nextStatus: CaseDisplay["status"]) => {
+    (nextStatus: StoredCase["status"]) => {
       if (!onUpdateStatus) {
         return;
       }
@@ -92,7 +92,7 @@ export function useCaseStatusMenu({
       setOptimisticStatus(nextStatus);
       setIsUpdating(true);
 
-      let updatePromise: Promise<CaseDisplay | null | void>;
+      let updatePromise: Promise<StoredCase | null | void>;
       try {
         updatePromise = Promise.resolve(onUpdateStatus(caseId, nextStatus));
       } catch (error) {
@@ -105,7 +105,7 @@ export function useCaseStatusMenu({
       updatePromise
         .then(result => {
           if (result && typeof result === "object" && "status" in result) {
-            const resolvedStatus = (result as CaseDisplay).status ?? nextStatus;
+            const resolvedStatus = (result as StoredCase).status ?? nextStatus;
             committedStatusRef.current = resolvedStatus;
             setOptimisticStatus(resolvedStatus);
             return;

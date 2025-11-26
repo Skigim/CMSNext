@@ -31,7 +31,7 @@ import {
   ListChecks,
   FileSpreadsheet,
 } from "lucide-react";
-import { CaseDisplay } from "../../types/case";
+import { StoredCase } from "../../types/case";
 import type { AlertsIndex } from "../../utils/alertsData";
 import { toast } from "sonner";
 import { useDataManagerSafe } from "../../contexts/DataManagerContext";
@@ -39,7 +39,7 @@ import { useCategoryConfig } from "../../contexts/CategoryConfigContext";
 import type { CaseActivityLogState } from "../../types/activityLog";
 
 interface SettingsProps {
-  cases: CaseDisplay[];
+  cases: StoredCase[];
   activityLogState?: CaseActivityLogState;
   onDataPurged?: () => void;
   onAlertsCsvImported?: (index: AlertsIndex) => void;
@@ -63,11 +63,11 @@ export function Settings({ cases, onDataPurged, onAlertsCsvImported }: SettingsP
   const activeStatuses = useMemo(() => {
     const statuses = config.caseStatuses;
     if (!statuses.length) {
-      return [] as CaseDisplay['status'][];
+      return [] as StoredCase['status'][];
     }
 
     const filtered = statuses.filter(status => !/denied|closed|inactive/i.test(status));
-    return (filtered.length > 0 ? filtered : [statuses[0]]) as CaseDisplay['status'][];
+    return (filtered.length > 0 ? filtered : [statuses[0]]) as StoredCase['status'][];
   }, [config.caseStatuses]);
 
   const getActiveCasesCount = () => {

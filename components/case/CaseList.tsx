@@ -4,7 +4,7 @@ import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 import { CaseCard } from "./CaseCard";
 import { VirtualCaseList } from "../app/VirtualCaseList";
-import type { CaseDisplay, CaseStatusUpdateHandler } from "../../types/case";
+import type { StoredCase, CaseStatusUpdateHandler } from "../../types/case";
 import { setupSampleData } from "../../utils/setupData";
 import { CaseAlertsDrawer } from "./CaseAlertsDrawer";
 import { CaseFilters } from "./CaseFilters";
@@ -48,7 +48,7 @@ import {
 import { filterOpenAlerts, type AlertsSummary, type AlertWithMatch } from "../../utils/alertsData";
 
 interface CaseListProps {
-  cases: CaseDisplay[];
+  cases: StoredCase[];
   onViewCase: (caseId: string) => void;
   onEditCase: (caseId: string) => void;
   onDeleteCase: (caseId: string) => void;

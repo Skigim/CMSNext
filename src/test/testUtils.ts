@@ -1,5 +1,6 @@
 import { vi } from 'vitest'
 import { CaseDisplay, FinancialItem, Note, Person, CaseRecord, CaseCategory } from '@/types/case'
+import type { StoredCase, StoredFinancialItem, StoredNote, NormalizedFileData } from '@/utils/services/FileStorageService'
 import { mergeCategoryConfig } from '@/types/categoryConfig'
 
 /**
@@ -107,6 +108,99 @@ export const createMockCaseDisplay = (overrides: Partial<CaseDisplay> = {}): Cas
 }
 
 /**
+ * Normalized data factories for v2.0 storage format
+ */
+
+export const createMockStoredCase = (overrides: Partial<StoredCase> = {}): StoredCase => {
+  const person = createMockPerson()
+  const timestamp = new Date().toISOString()
+  
+  return {
+    id: 'case-test-1',
+    name: `${person.firstName} ${person.lastName}`,
+    mcn: 'MCN123456',
+    status: 'Pending',
+    priority: false,
+    createdAt: timestamp,
+    updatedAt: timestamp,
+    person,
+    caseRecord: {
+      id: 'case-record-test-1',
+      mcn: 'MCN123456',
+      applicationDate: timestamp,
+      caseType: 'Medical Assistance',
+      personId: 'person-test-1',
+      spouseId: '',
+      status: 'Pending',
+      description: 'Test case description',
+      priority: false,
+      livingArrangement: 'Home',
+      withWaiver: false,
+      admissionDate: timestamp,
+      organizationId: 'org-1',
+      authorizedReps: [],
+      retroRequested: '',
+      createdDate: timestamp,
+      updatedDate: timestamp,
+    },
+    ...overrides
+  }
+}
+
+export const createMockStoredFinancialItem = (
+  category: CaseCategory, 
+  caseId: string = 'case-test-1',
+  overrides: Partial<StoredFinancialItem> = {}
+): StoredFinancialItem => ({
+  id: `${category}-test-1`,
+  caseId,
+  category,
+  description: `Test ${category} item`,
+  amount: 1000,
+  location: 'Test Bank',
+  accountNumber: '1234',
+  verificationStatus: 'Needs VR',
+  frequency: category !== 'resources' ? 'monthly' : undefined,
+  notes: 'Test notes',
+  createdAt: new Date().toISOString(),
+  updatedAt: new Date().toISOString(),
+  ...overrides
+})
+
+export const createMockStoredNote = (
+  caseId: string = 'case-test-1',
+  overrides: Partial<StoredNote> = {}
+): StoredNote => ({
+  id: 'note-test-1',
+  caseId,
+  content: 'This is a test note',
+  category: 'General',
+  createdAt: new Date().toISOString(),
+  updatedAt: new Date().toISOString(),
+  ...overrides
+})
+
+export const createMockNormalizedFileData = (overrides: Partial<NormalizedFileData> = {}): NormalizedFileData => {
+  const storedCase = createMockStoredCase()
+  return {
+    version: '2.0',
+    cases: [storedCase],
+    financials: [
+      createMockStoredFinancialItem('resources', storedCase.id),
+      createMockStoredFinancialItem('income', storedCase.id),
+      createMockStoredFinancialItem('expenses', storedCase.id),
+    ],
+    notes: [createMockStoredNote(storedCase.id)],
+    alerts: [],
+    exported_at: new Date().toISOString(),
+    total_cases: 1,
+    categoryConfig: mergeCategoryConfig(),
+    activityLog: [],
+    ...overrides
+  }
+}
+
+/**
  * Mock implementations for various services
  */
 
@@ -140,57 +234,46 @@ export const createMockDirectoryHandle = () => ({
 
 export const createMockDataManager = () => ({
   // Case operations
-  loadAllCases: vi.fn().mockResolvedValue([createMockCaseDisplay()]),
+  getAllCases: vi.fn().mockResolvedValue([createMockStoredCase()]),
   createCompleteCase: vi.fn().mockImplementation((data) => 
-    Promise.resolve(createMockCaseDisplay({ ...data, id: 'new-case-id' }))
+    Promise.resolve(createMockStoredCase({ ...data, id: 'new-case-id' }))
   ),
-  updateCase: vi.fn().mockImplementation((id, data) => 
-    Promise.resolve(createMockCaseDisplay({ id, ...data }))
+  updateCompleteCase: vi.fn().mockImplementation((id, data) => 
+    Promise.resolve(createMockStoredCase({ id, ...data }))
   ),
   deleteCase: vi.fn().mockResolvedValue(undefined),
   
   // Financial item operations
   addItem: vi.fn().mockImplementation((caseId, category, data) => 
-    Promise.resolve(createMockCaseDisplay({
-      id: caseId,
-      caseRecord: createMockCaseRecord({
-        financials: {
-          resources: [],
-          income: [],
-          expenses: [],
-          [category]: [createMockFinancialItem(category, data)]
-        }
-      })
-    }))
+    Promise.resolve(createMockStoredFinancialItem(category, caseId, data))
   ),
-  updateItem: vi.fn().mockImplementation((caseId, _category, _itemId, _data) => 
-    Promise.resolve(createMockCaseDisplay({ id: caseId }))
+  updateItem: vi.fn().mockImplementation((caseId, category, itemId, data) => 
+    Promise.resolve(createMockStoredFinancialItem(category, caseId, { id: itemId, ...data }))
   ),
-  deleteItem: vi.fn().mockImplementation((caseId, _category, _itemId) => 
-    Promise.resolve(createMockCaseDisplay({ id: caseId }))
-  ),
+  deleteItem: vi.fn().mockResolvedValue(undefined),
   
   // Note operations
   addNote: vi.fn().mockImplementation((caseId, data) => 
-    Promise.resolve(createMockCaseDisplay({
-      id: caseId,
-      caseRecord: createMockCaseRecord({
-        notes: [createMockNote(data)]
-      })
-    }))
+    Promise.resolve(createMockStoredNote(caseId, data))
   ),
-  updateNote: vi.fn().mockImplementation((caseId, _noteId, _data) => 
-    Promise.resolve(createMockCaseDisplay({ id: caseId }))
+  updateNote: vi.fn().mockImplementation((caseId, noteId, data) => 
+    Promise.resolve(createMockStoredNote(caseId, { id: noteId, ...data }))
   ),
-  deleteNote: vi.fn().mockImplementation((caseId, _noteId) => 
-    Promise.resolve(createMockCaseDisplay({ id: caseId }))
-  ),
+  deleteNote: vi.fn().mockResolvedValue(undefined),
 
   // Category configuration
   getCategoryConfig: vi.fn().mockResolvedValue(mergeCategoryConfig()),
   updateCategoryConfig: vi.fn().mockResolvedValue(mergeCategoryConfig()),
   updateCategoryValues: vi.fn().mockResolvedValue(mergeCategoryConfig()),
   resetCategoryConfig: vi.fn().mockResolvedValue(mergeCategoryConfig()),
+  
+  // Alert operations
+  getAlertsIndex: vi.fn().mockResolvedValue({ alerts: [], stats: { total: 0, new: 0, inProgress: 0, resolved: 0 } }),
+  updateAlertStatus: vi.fn().mockResolvedValue(null),
+  
+  // Activity Log
+  getActivityLog: vi.fn().mockResolvedValue([]),
+  clearActivityLogForDate: vi.fn().mockResolvedValue(0),
 })
 
 /**

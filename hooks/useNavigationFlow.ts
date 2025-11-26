@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
-import { CaseDisplay, NewCaseRecordData, NewPersonData } from "../types/case";
+import { NewCaseRecordData, NewPersonData, StoredCase } from "../types/case";
 import { AppView } from "../types/view";
 import type { FileStorageLifecycleSelectors } from "../contexts/FileStorageContext";
 import { startMeasurement, endMeasurement } from "../utils/performanceTracker";
@@ -13,11 +13,11 @@ interface FormState {
 }
 
 interface UseNavigationFlowParams {
-  cases: CaseDisplay[];
+  cases: StoredCase[];
   connectionState: FileStorageLifecycleSelectors;
   saveCase: (
     caseData: { person: NewPersonData; caseRecord: NewCaseRecordData },
-    editingCase?: CaseDisplay | null
+    editingCase?: StoredCase | null
   ) => Promise<void>;
   deleteCase: (caseId: string) => Promise<void>;
 }
@@ -33,8 +33,8 @@ interface NavigationLock {
 interface NavigationHandlers {
   currentView: AppView;
   selectedCaseId: string | null;
-  selectedCase: CaseDisplay | undefined;
-  editingCase: CaseDisplay | null;
+  selectedCase: StoredCase | undefined;
+  editingCase: StoredCase | null;
   sidebarOpen: boolean;
   breadcrumbTitle?: string;
   navigationLock: NavigationLock;
@@ -61,7 +61,7 @@ export function useNavigationFlow({
   const navigationToastId = "navigation-lock";
   const [currentView, setCurrentView] = useState<AppView>("dashboard");
   const [selectedCaseId, setSelectedCaseId] = useState<string | null>(null);
-  const [editingCase, setEditingCase] = useState<CaseDisplay | null>(null);
+  const [editingCase, setEditingCase] = useState<StoredCase | null>(null);
   const [formState, setFormState] = useState<FormState>({ previousView: "list" });
   const [sidebarOpen, setSidebarOpen] = useState<boolean>(true);
   const forcedViewRef = useRef<AppView | null>(null);

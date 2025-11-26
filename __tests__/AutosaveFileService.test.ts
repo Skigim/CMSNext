@@ -397,4 +397,22 @@ describe('AutosaveFileService', () => {
       }).not.toThrow()
     })
   })
+
+  describe('broadcastDataUpdate', () => {
+    it('should call dataLoadCallback with provided data', () => {
+      const callback = vi.fn()
+      service.setDataLoadCallback(callback)
+      
+      const testData = { cases: [] }
+      service.broadcastDataUpdate(testData)
+      
+      expect(callback).toHaveBeenCalledWith(testData)
+    })
+
+    it('should do nothing if no callback is set', () => {
+      expect(() => {
+        service.broadcastDataUpdate({ cases: [] })
+      }).not.toThrow()
+    })
+  })
 })

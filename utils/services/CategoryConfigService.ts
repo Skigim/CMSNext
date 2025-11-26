@@ -1,7 +1,7 @@
 import type { CategoryConfig, CategoryKey } from "../../types/categoryConfig";
 import { mergeCategoryConfig, sanitizeCategoryValues } from "../../types/categoryConfig";
 import { createLogger } from "../logger";
-import type { FileStorageService, FileData } from "./FileStorageService";
+import type { FileStorageService, NormalizedFileData } from "./FileStorageService";
 
 const logger = createLogger("CategoryConfigService");
 
@@ -22,6 +22,8 @@ interface CategoryConfigServiceConfig {
  * 
  * Handles all category configuration operations.
  * Manages user-defined category values (case types, statuses, etc.).
+ * 
+ * Works with normalized v2.0 data format.
  * 
  * Responsibilities:
  * - Retrieve category configuration
@@ -56,20 +58,24 @@ export class CategoryConfigService {
     const sanitized = mergeCategoryConfig(categoryConfig);
     const currentData = await this.fileStorage.readFileData();
 
-    const baseData: FileData = currentData ?? {
+    const baseData: NormalizedFileData = currentData ?? {
+      version: "2.0",
       cases: [],
+      financials: [],
+      notes: [],
+      alerts: [],
       exported_at: new Date().toISOString(),
       total_cases: 0,
       categoryConfig: mergeCategoryConfig(),
       activityLog: [],
     };
 
-    const updatedData: FileData = {
+    const updatedData: NormalizedFileData = {
       ...baseData,
       categoryConfig: sanitized,
     };
 
-    await this.fileStorage.writeFileData(updatedData);
+    await this.fileStorage.writeNormalizedData(updatedData);
 
     logger.info("Category configuration updated", {
       categories: Object.keys(sanitized),

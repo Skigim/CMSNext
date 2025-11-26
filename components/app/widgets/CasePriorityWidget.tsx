@@ -2,7 +2,7 @@ import { useCallback, useMemo } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { AlertCircle, Clock, CheckCircle2, Archive } from 'lucide-react';
-import { CaseDisplay } from '@/types/case';
+import { StoredCase } from '@/types/case';
 import { useWidgetData } from '@/hooks/useWidgetData';
 import type { WidgetMetadata } from './WidgetRegistry';
 
@@ -22,7 +22,7 @@ interface PriorityStats {
  */
 interface CasePriorityWidgetProps {
   /** Array of cases to analyze */
-  cases: CaseDisplay[];
+  cases: StoredCase[];
   /** Widget metadata (injected by WidgetRegistry) */
   metadata?: WidgetMetadata;
 }
@@ -30,7 +30,7 @@ interface CasePriorityWidgetProps {
 /**
  * Calculate priority statistics from cases.
  */
-function calculatePriorityStats(cases: CaseDisplay[]): PriorityStats {
+function calculatePriorityStats(cases: StoredCase[]): PriorityStats {
   const stats: PriorityStats = {
     urgent: 0,
     active: 0,

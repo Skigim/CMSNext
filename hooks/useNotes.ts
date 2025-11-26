@@ -1,7 +1,8 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { toast } from 'sonner';
-import { CaseDisplay, Note, NewNoteData } from '@/types/case';
+import { Note, NewNoteData, StoredNote } from '@/types/case';
 import { useDataManagerSafe } from '@/contexts/DataManagerContext';
+import { useFileStorageDataChange } from '@/contexts/FileStorageContext';
 
 interface NoteFormState {
   isOpen: boolean;
@@ -10,14 +11,20 @@ interface NoteFormState {
 }
 
 interface UseNotesReturn {
+  // Data
+  notes: StoredNote[];
+  refreshNotes: () => Promise<void>;
+
   // Form state
   noteForm: NoteFormState;
   
   // Actions
   openAddNote: (caseId: string) => void;
-  openEditNote: (caseId: string, noteId: string, cases: CaseDisplay[]) => void;
-  saveNote: (noteData: NewNoteData) => Promise<CaseDisplay | null>;
-  deleteNote: (caseId: string, noteId: string) => Promise<CaseDisplay | null>;
+  openEditNote: (caseId: string, note: Note) => void;
+  saveNote: (noteData: NewNoteData) => Promise<StoredNote | null>;
+  addNote: (caseId: string, noteData: NewNoteData) => Promise<StoredNote | null>;
+  updateNote: (caseId: string, noteId: string, noteData: NewNoteData) => Promise<StoredNote | null>;
+  deleteNote: (caseId: string, noteId: string) => Promise<void>;
   closeNoteForm: () => void;
 }
 
@@ -30,109 +37,142 @@ interface UseNotesReturn {
  * - No render-time data storage
  * - Automatic persistence through DataManager
  */
-export function useNotes(): UseNotesReturn {
+export function useNotes(caseId?: string): UseNotesReturn {
   const dataManager = useDataManagerSafe(); // Returns null if not available - safe fallback
+  const dataChangeCount = useFileStorageDataChange();
   
+  const [notes, setNotes] = useState<StoredNote[]>([]);
   const [noteForm, setNoteForm] = useState<NoteFormState>({ isOpen: false });
+
+  const refreshNotes = useCallback(async () => {
+    if (!caseId || !dataManager) {
+      setNotes([]);
+      return;
+    }
+
+    try {
+      const fetchedNotes = await dataManager.getNotesForCase(caseId);
+      setNotes(fetchedNotes);
+    } catch (err) {
+      console.error('Failed to fetch notes:', err);
+    }
+  }, [caseId, dataManager]);
+
+  // Initial fetch and refresh on data change
+  useEffect(() => {
+    refreshNotes();
+  }, [refreshNotes, dataChangeCount]);
 
   /**
    * Open form to add a new note to a case
    */
-  const openAddNote = useCallback((caseId: string) => {
+  const openAddNote = useCallback((targetCaseId: string) => {
     setNoteForm({
       isOpen: true,
-      caseId
+      caseId: targetCaseId
     });
   }, []);
 
   /**
    * Open form to edit an existing note
    */
-  const openEditNote = useCallback((caseId: string, noteId: string, cases: CaseDisplay[]) => {
-    const selectedCase = cases.find(c => c.id === caseId);
-    if (!selectedCase) {
-      toast.error('Case not found');
-      return;
-    }
-    
-    const note = selectedCase.caseRecord.notes?.find(n => n.id === noteId);
-    if (!note) {
-      toast.error('Note not found');
-      return;
-    }
-    
+  const openEditNote = useCallback((targetCaseId: string, note: Note) => {
     setNoteForm({
       isOpen: true,
       editingNote: note,
-      caseId
+      caseId: targetCaseId
     });
   }, []);
+
+  const addNote = useCallback(async (targetCaseId: string, noteData: NewNoteData): Promise<StoredNote | null> => {
+    if (!dataManager) {
+      toast.error('Data storage is not available');
+      return null;
+    }
+    try {
+      const note = await dataManager.addNote(targetCaseId, noteData);
+      if (caseId === targetCaseId) await refreshNotes();
+      return note;
+    } catch (e) {
+      console.error('Failed to add note:', e);
+      toast.error('Failed to add note');
+      return null;
+    }
+  }, [dataManager, caseId, refreshNotes]);
+
+  const updateNote = useCallback(async (targetCaseId: string, noteId: string, noteData: NewNoteData): Promise<StoredNote | null> => {
+    if (!dataManager) {
+      toast.error('Data storage is not available');
+      return null;
+    }
+    try {
+      const note = await dataManager.updateNote(targetCaseId, noteId, noteData);
+      if (caseId === targetCaseId) await refreshNotes();
+      return note;
+    } catch (e) {
+      console.error('Failed to update note:', e);
+      toast.error('Failed to update note');
+      return null;
+    }
+  }, [dataManager, caseId, refreshNotes]);
 
   /**
    * Save (create or update) a note
    */
-  const saveNote = useCallback(async (noteData: NewNoteData): Promise<CaseDisplay | null> => {
+  const saveNote = useCallback(async (noteData: NewNoteData): Promise<StoredNote | null> => {
     if (!noteForm.caseId) {
       toast.error('No case selected for note');
       return null;
     }
 
-    if (!dataManager) {
-      toast.error('Data storage is not available. Please connect to a folder first.');
-      return null;
-    }
-
-    const isEditing = !!noteForm.editingNote;
-
     try {
-      let updatedCase: CaseDisplay;
+      let savedNote: StoredNote | null;
       
       if (noteForm.editingNote) {
-        // Update existing note
-        updatedCase = await dataManager.updateNote(noteForm.caseId, noteForm.editingNote.id, noteData);
-        toast.success("Note updated successfully");
+        savedNote = await updateNote(noteForm.caseId, noteForm.editingNote.id, noteData);
+        if (savedNote) toast.success("Note updated successfully");
       } else {
-        // Add new note
-        updatedCase = await dataManager.addNote(noteForm.caseId, noteData);
-        toast.success("Note added successfully");
+        savedNote = await addNote(noteForm.caseId, noteData);
+        if (savedNote) toast.success("Note added successfully");
       }
       
-      // Close the form on success
-      setNoteForm({ isOpen: false });
+      if (savedNote) {
+        setNoteForm({ isOpen: false });
+      }
       
-      // DataManager handles file system persistence automatically
-      return updatedCase;
+      return savedNote;
     } catch (err) {
       console.error('Failed to save note:', err);
-      const errorMsg = `Failed to ${isEditing ? 'update' : 'add'} note. Please try again.`;
-      toast.error(errorMsg);
       return null;
     }
-  }, [dataManager, noteForm.caseId, noteForm.editingNote]);
+  }, [noteForm.caseId, noteForm.editingNote, addNote, updateNote]);
 
   /**
    * Delete a note by ID
    */
-  const deleteNote = useCallback(async (caseId: string, noteId: string): Promise<CaseDisplay | null> => {
+  const deleteNote = useCallback(async (targetCaseId: string, noteId: string): Promise<void> => {
     if (!dataManager) {
       toast.error('Data storage is not available. Please connect to a folder first.');
-      return null;
+      return;
     }
 
     try {
-      const updatedCase = await dataManager.deleteNote(caseId, noteId);
+      await dataManager.deleteNote(targetCaseId, noteId);
       
       toast.success("Note deleted successfully");
       
+      // Refresh notes if we're viewing the same case
+      if (caseId === targetCaseId) {
+        await refreshNotes();
+      }
+      
       // DataManager handles file system persistence automatically
-      return updatedCase;
     } catch (err) {
       console.error('Failed to delete note:', err);
       const errorMsg = 'Failed to delete note. Please try again.';
       toast.error(errorMsg);
-      return null;
     }
-  }, [dataManager]);
+  }, [dataManager, caseId, refreshNotes]);
 
   /**
    * Close the note form without saving
@@ -142,6 +182,10 @@ export function useNotes(): UseNotesReturn {
   }, []);
 
   return {
+    // Data
+    notes,
+    refreshNotes,
+
     // Form state
     noteForm,
     
@@ -149,6 +193,8 @@ export function useNotes(): UseNotesReturn {
     openAddNote,
     openEditNote,
     saveNote,
+    addNote,
+    updateNote,
     deleteNote,
     closeNoteForm,
   };

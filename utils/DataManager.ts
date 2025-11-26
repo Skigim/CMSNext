@@ -22,8 +22,13 @@ import {
   AlertWithMatch,
   createEmptyAlertsIndex,
 } from "./alertsData";
-import { FileStorageService, type LegacyFileData } from "./services/FileStorageService";
-import { normalizeCaseNotes } from "./normalization";
+import { 
+  FileStorageService, 
+  type NormalizedFileData, 
+  type StoredCase, 
+  type StoredFinancialItem, 
+  type StoredNote,
+} from "./services/FileStorageService";
 import { ActivityLogService } from "./services/ActivityLogService";
 import { CategoryConfigService } from "./services/CategoryConfigService";
 import { NotesService } from "./services/NotesService";
@@ -38,7 +43,6 @@ import { AlertsService } from "./services/AlertsService";
 interface DataManagerConfig {
   fileService: AutosaveFileService;
   fileStorageService?: FileStorageService;
-  persistNormalizationFixes?: boolean;
 }
 
 const logger = createLogger('DataManager');
@@ -88,8 +92,6 @@ export class DataManager {
     this.fileService = config.fileService;
     this.fileStorage = config.fileStorageService || new FileStorageService({
       fileService: config.fileService,
-      persistNormalizationFixes: config.persistNormalizationFixes,
-      normalizeCaseNotes,
     });
     this.activityLog = new ActivityLogService({
       fileStorage: this.fileStorage,
@@ -114,10 +116,10 @@ export class DataManager {
   // =============================================================================
 
   /**
-   * Read current data from file system
+   * Read current data from file system in normalized v2.0 format
    * Delegates to FileStorageService
    */
-  private async readFileData(): Promise<LegacyFileData | null> {
+  private async readFileData(): Promise<NormalizedFileData | null> {
     return this.fileStorage.readFileData();
   }
 
@@ -127,9 +129,10 @@ export class DataManager {
 
   /**
    * Get all cases (always reads fresh from file)
+   * Returns StoredCase[] - normalized format without nested financials/notes
    * Delegates to CaseService
    */
-  async getAllCases(): Promise<CaseDisplay[]> {
+  async getAllCases(): Promise<StoredCase[]> {
     return this.cases.getAllCases();
   }
 
@@ -143,9 +146,10 @@ export class DataManager {
 
   /**
    * Get a specific case by ID (always reads fresh from file)
+   * Returns StoredCase - normalized format without nested financials/notes
    * Delegates to CaseService
    */
-  async getCaseById(caseId: string): Promise<CaseDisplay | null> {
+  async getCaseById(caseId: string): Promise<StoredCase | null> {
     return this.cases.getCaseById(caseId);
   }
 
@@ -157,11 +161,36 @@ export class DataManager {
     return this.cases.getCasesCount();
   }
 
+  /**
+   * Get all financial items for a specific case
+   */
+  async getFinancialItemsForCase(caseId: string): Promise<StoredFinancialItem[]> {
+    return this.financials.getItemsForCase(caseId);
+  }
+
+  /**
+   * Get financial items for a case grouped by category
+   */
+  async getFinancialItemsForCaseGrouped(caseId: string): Promise<{
+    resources: StoredFinancialItem[];
+    income: StoredFinancialItem[];
+    expenses: StoredFinancialItem[];
+  }> {
+    return this.financials.getItemsForCaseGrouped(caseId);
+  }
+
+  /**
+   * Get all notes for a specific case
+   */
+  async getNotesForCase(caseId: string): Promise<StoredNote[]> {
+    return this.notes.getNotesForCase(caseId);
+  }
+
   // ==========================================================================
   // PUBLIC API - ALERT OPERATIONS
   // ==========================================================================
 
-  async getAlertsIndex(options: { cases?: CaseDisplay[] } = {}): Promise<AlertsIndex> {
+  async getAlertsIndex(options: { cases?: StoredCase[] } = {}): Promise<AlertsIndex> {
     let data = await this.readFileData();
 
     // Check for pending CSV import
@@ -200,7 +229,7 @@ export class DataManager {
       resolvedAt?: string | null;
       resolutionNotes?: string;
     },
-    options: { cases?: CaseDisplay[] } = {},
+    options: { cases?: StoredCase[] } = {},
   ): Promise<AlertWithMatch | null> {
     const data = await this.readFileData();
     if (!data) {
@@ -228,20 +257,19 @@ export class DataManager {
       newAlerts.push(updatedAlert);
     }
 
-    // Save updated alerts to storage
-    await this.fileStorage.writeFileData({
+    // Save updated alerts to storage using normalized format
+    // Note: writeNormalizedData handles broadcasting data changes
+    await this.fileStorage.writeNormalizedData({
       ...data,
       alerts: newAlerts,
     });
-
-    this.fileService.notifyDataChange();
 
     return updatedAlert;
   }
 
   async mergeAlertsFromCsvContent(
     csvContent: string,
-    options: { cases?: CaseDisplay[]; sourceFileName?: string } = {},
+    options: { cases?: StoredCase[]; sourceFileName?: string } = {},
   ): Promise<AlertsMergeSummary> {
     const data = await this.readFileData();
     if (!data) {
@@ -258,11 +286,11 @@ export class DataManager {
       const result = await this.alerts.mergeAlertsFromCsvContent(csvContent, existingAlerts, cases);
 
       if (result.added > 0 || result.updated > 0) {
-        await this.fileStorage.writeFileData({
+        // Note: writeNormalizedData handles broadcasting data changes
+        await this.fileStorage.writeNormalizedData({
           ...data,
           alerts: result.alerts,
         });
-        this.fileService.notifyDataChange();
       }
 
       return {
@@ -307,25 +335,28 @@ export class DataManager {
 
   /**
    * Create a new complete case
+   * Returns StoredCase - normalized format without nested financials/notes
    * Delegates to CaseService
    */
-  async createCompleteCase(caseData: { person: NewPersonData; caseRecord: NewCaseRecordData }): Promise<CaseDisplay> {
+  async createCompleteCase(caseData: { person: NewPersonData; caseRecord: NewCaseRecordData }): Promise<StoredCase> {
     return this.cases.createCompleteCase(caseData);
   }
 
   /**
    * Update an existing complete case
+   * Returns StoredCase - normalized format without nested financials/notes
    * Delegates to CaseService
    */
-  async updateCompleteCase(caseId: string, caseData: { person: NewPersonData; caseRecord: NewCaseRecordData }): Promise<CaseDisplay> {
+  async updateCompleteCase(caseId: string, caseData: { person: NewPersonData; caseRecord: NewCaseRecordData }): Promise<StoredCase> {
     return this.cases.updateCompleteCase(caseId, caseData);
   }
 
   /**
    * Update case status
+   * Returns StoredCase - normalized format without nested financials/notes
    * Delegates to CaseService
    */
-  async updateCaseStatus(caseId: string, status: CaseDisplay["status"]): Promise<CaseDisplay> {
+  async updateCaseStatus(caseId: string, status: CaseDisplay["status"]): Promise<StoredCase> {
     return this.cases.updateCaseStatus(caseId, status);
   }
 
@@ -343,14 +374,16 @@ export class DataManager {
 
   /**
    * Add financial item to a case
+   * Returns StoredFinancialItem with caseId and category foreign keys
    * Delegates to FinancialsService
    */
-  async addItem(caseId: string, category: CaseCategory, itemData: Omit<FinancialItem, 'id' | 'createdAt' | 'updatedAt'>): Promise<CaseDisplay> {
+  async addItem(caseId: string, category: CaseCategory, itemData: Omit<FinancialItem, 'id' | 'createdAt' | 'updatedAt'>): Promise<StoredFinancialItem> {
     return this.financials.addItem(caseId, category, itemData);
   }
 
   /**
    * Update financial item in a case
+   * Returns StoredFinancialItem with caseId and category foreign keys
    * Delegates to FinancialsService
    */
   async updateItem(
@@ -358,7 +391,7 @@ export class DataManager {
     category: CaseCategory,
     itemId: string,
     updatedItem: Partial<FinancialItem>,
-  ): Promise<CaseDisplay> {
+  ): Promise<StoredFinancialItem> {
     return this.financials.updateItem(caseId, category, itemId, updatedItem);
   }
 
@@ -366,7 +399,7 @@ export class DataManager {
    * Delete financial item from a case
    * Delegates to FinancialsService
    */
-  async deleteItem(caseId: string, category: CaseCategory, itemId: string): Promise<CaseDisplay> {
+  async deleteItem(caseId: string, category: CaseCategory, itemId: string): Promise<void> {
     return this.financials.deleteItem(caseId, category, itemId);
   }
 
@@ -376,17 +409,19 @@ export class DataManager {
 
   /**
    * Add note to a case
+   * Returns StoredNote with caseId foreign key
    * Delegates to NotesService
    */
-  async addNote(caseId: string, noteData: NewNoteData): Promise<CaseDisplay> {
+  async addNote(caseId: string, noteData: NewNoteData): Promise<StoredNote> {
     return this.notes.addNote(caseId, noteData);
   }
 
   /**
    * Update note in a case
+   * Returns StoredNote with caseId foreign key
    * Delegates to NotesService
    */
-  async updateNote(caseId: string, noteId: string, noteData: NewNoteData): Promise<CaseDisplay> {
+  async updateNote(caseId: string, noteId: string, noteData: NewNoteData): Promise<StoredNote> {
     return this.notes.updateNote(caseId, noteId, noteData);
   }
 
@@ -394,7 +429,7 @@ export class DataManager {
    * Delete note from a case
    * Delegates to NotesService
    */
-  async deleteNote(caseId: string, noteId: string): Promise<CaseDisplay> {
+  async deleteNote(caseId: string, noteId: string): Promise<void> {
     return this.notes.deleteNote(caseId, noteId);
   }
 
@@ -406,7 +441,7 @@ export class DataManager {
    * Import multiple cases at once
    * Delegates to CaseService
    */
-  async importCases(cases: CaseDisplay[]): Promise<void> {
+  async importCases(cases: StoredCase[]): Promise<void> {
     return this.cases.importCases(cases);
   }
 

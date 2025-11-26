@@ -4,11 +4,10 @@ import type { AppNavigationConfig } from "./AppNavigationShell";
 import { AppNavigationShell } from "./AppNavigationShell";
 import { ViewRenderer } from "../routing/ViewRenderer";
 import type {
-  CaseDisplay,
+  StoredCase,
   CaseCategory,
   FinancialItem,
   NewCaseRecordData,
-  NewNoteData,
   NewPersonData,
 } from "../../types/case";
 import type { ItemFormState } from "../../hooks/useFinancialItemFlow";
@@ -45,27 +44,20 @@ interface CaseWorkspaceFinancialFlow {
   ) => Promise<void>;
   handleCancelItemForm: () => void;
   closeItemForm: () => void;
-  onCaseUpdated: (updatedCase: CaseDisplay) => void;
-}
-
-interface CaseWorkspaceNoteFlow {
-  handleDeleteNote: (noteId: string) => Promise<void>;
-  handleBatchUpdateNote: (noteId: string, noteData: NewNoteData) => Promise<void>;
-  handleBatchCreateNote: (noteData: NewNoteData) => Promise<void>;
+  onCaseUpdated: (updatedCase: StoredCase) => void;
 }
 
 export interface CaseWorkspaceProps {
   navigation: AppNavigationConfig;
-  cases: CaseDisplay[];
-  selectedCase: CaseDisplay | null | undefined;
-  editingCase: CaseDisplay | null;
+  cases: StoredCase[];
+  selectedCase: StoredCase | null | undefined;
+  editingCase: StoredCase | null;
   error: string | null;
   onDismissError: () => void;
   viewHandlers: CaseWorkspaceViewHandlers;
   financialFlow: CaseWorkspaceFinancialFlow;
-  noteFlow: CaseWorkspaceNoteFlow;
   alerts: AlertsIndex;
-  onUpdateCaseStatus: (caseId: string, status: CaseDisplay["status"]) => Promise<CaseDisplay | null> | CaseDisplay | null | void;
+  onUpdateCaseStatus: (caseId: string, status: StoredCase["status"]) => Promise<StoredCase | null> | StoredCase | null | void;
   onResolveAlert?: (alert: AlertWithMatch) => Promise<void> | void;
   onAlertsCsvImported?: (index: AlertsIndex) => void;
   activityLogState: CaseActivityLogState;
@@ -85,7 +77,6 @@ export const CaseWorkspace = memo(function CaseWorkspace({
   onDismissError,
   viewHandlers,
   financialFlow,
-  noteFlow,
   alerts,
   onUpdateCaseStatus,
   onResolveAlert,
@@ -127,13 +118,6 @@ export const CaseWorkspace = memo(function CaseWorkspace({
   handleNavigateToReports={() => navigation.onNavigate('reports')}
         handleDeleteCase={viewHandlers.handleDeleteCase}
         handleDataPurged={viewHandlers.handleDataPurged}
-        handleAddItem={financialFlow.handleAddItem}
-        handleDeleteItem={financialFlow.handleDeleteItem}
-        handleBatchUpdateItem={financialFlow.handleBatchUpdateItem}
-        handleCreateItem={financialFlow.handleCreateItem}
-        handleDeleteNote={noteFlow.handleDeleteNote}
-        handleBatchUpdateNote={noteFlow.handleBatchUpdateNote}
-        handleBatchCreateNote={noteFlow.handleBatchCreateNote}
         handleUpdateCaseStatus={onUpdateCaseStatus}
         handleResolveAlert={onResolveAlert}
         onAlertsCsvImported={onAlertsCsvImported}
@@ -146,7 +130,7 @@ export const CaseWorkspace = memo(function CaseWorkspace({
             isOpen={financialFlow.itemForm.isOpen}
             onClose={financialFlow.handleCancelItemForm}
             caseData={selectedCase}
-            onUpdateCase={(updatedCase: CaseDisplay) => {
+            onUpdateCase={(updatedCase: StoredCase) => {
               financialFlow.onCaseUpdated(updatedCase);
               financialFlow.closeItemForm();
             }}

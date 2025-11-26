@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import { Button } from "../ui/button";
 import { Plus } from "lucide-react";
-import { CaseDisplay } from "../../types/case";
+import { StoredCase } from "../../types/case";
 import { type AlertsIndex } from "../../utils/alertsData";
 import type { CaseActivityLogState } from "../../types/activityLog";
 import { WidgetRegistry, createLazyWidget, type RegisteredWidget } from "./widgets/WidgetRegistry";
@@ -11,7 +11,7 @@ import { RecentCasesWidget } from "./widgets/RecentCasesWidget";
 import { AlertCenterWidget } from "./widgets/AlertCenterWidget";
 
 interface DashboardProps {
-  cases: CaseDisplay[];
+  cases: StoredCase[];
   alerts: AlertsIndex;
   activityLogState: CaseActivityLogState;
   onViewAllCases: () => void;

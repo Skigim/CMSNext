@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { recordPerformanceMarker } from '@/utils/telemetryInstrumentation';
+import { useFileStorageDataChange } from '@/contexts/FileStorageContext';
 
 /**
  * Widget data freshness information.
@@ -68,6 +69,9 @@ export function useWidgetData<T>(
   const refreshTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastUpdateRef = useRef<number | null>(null);
   const performanceMarkRef = useRef<string | null>(null);
+  
+  // Listen for file storage changes to trigger refresh
+  const dataChangeCount = useFileStorageDataChange();
 
   /**
    * Update freshness information based on last update timestamp.
@@ -220,7 +224,7 @@ export function useWidgetData<T>(
         clearInterval(freshnessInterval);
       }
     };
-  }, [fetchData, refreshInterval, updateFreshness, dataFetcher, refreshKey]);
+  }, [fetchData, refreshInterval, updateFreshness, dataFetcher, refreshKey, dataChangeCount]);
 
   /**
    * Cleanup on unmount.

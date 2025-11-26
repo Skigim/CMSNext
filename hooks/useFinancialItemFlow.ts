@@ -1,7 +1,7 @@
 import { useCallback, useState } from "react";
 import { toast } from "sonner";
 import { useDataManagerSafe } from "../contexts/DataManagerContext";
-import type { CaseCategory, CaseDisplay, FinancialItem } from "../types/case";
+import type { CaseCategory, StoredCase, FinancialItem } from "../types/case";
 
 export type ItemFormState = {
   isOpen: boolean;
@@ -11,8 +11,7 @@ export type ItemFormState = {
 };
 
 interface UseFinancialItemFlowParams {
-  selectedCase: CaseDisplay | null;
-  setCases: React.Dispatch<React.SetStateAction<CaseDisplay[]>>;
+  selectedCase: StoredCase | null;
   setError: React.Dispatch<React.SetStateAction<string | null>>;
 }
 
@@ -34,7 +33,6 @@ interface UseFinancialItemFlowResult {
 
 export function useFinancialItemFlow({
   selectedCase,
-  setCases,
   setError,
 }: UseFinancialItemFlowParams): UseFinancialItemFlowResult {
   const dataManager = useDataManagerSafe();
@@ -79,10 +77,8 @@ export function useFinancialItemFlow({
       try {
         setError(null);
 
-        const updatedCase = await dataManager.deleteItem(selectedCase.id, category, itemId);
-        setCases(prevCases =>
-          prevCases.map(c => (c.id === selectedCase.id ? updatedCase : c)),
-        );
+        await dataManager.deleteItem(selectedCase.id, category, itemId);
+        // Don't update cases state as items are separate
 
         toast.success(`${category.charAt(0).toUpperCase() + category.slice(1)} item deleted successfully`);
       } catch (err) {
@@ -92,7 +88,7 @@ export function useFinancialItemFlow({
         toast.error(errorMsg);
       }
     },
-    [dataManager, ensureCaseAndManager, selectedCase, setCases, setError],
+    [dataManager, ensureCaseAndManager, selectedCase, setError],
   );
 
   const handleBatchUpdateItem = useCallback(
@@ -104,11 +100,8 @@ export function useFinancialItemFlow({
       try {
         setError(null);
 
-        const updatedCase = await dataManager.updateItem(selectedCase.id, category, itemId, updatedItem);
-
-        setCases(prevCases =>
-          prevCases.map(c => (c.id === selectedCase.id ? updatedCase : c)),
-        );
+        await dataManager.updateItem(selectedCase.id, category, itemId, updatedItem);
+        // Don't update cases state as items are separate
 
         toast.success("Item updated successfully", { duration: 2000 });
       } catch (err) {
@@ -133,7 +126,7 @@ export function useFinancialItemFlow({
         throw err;
       }
     },
-    [dataManager, ensureCaseAndManager, selectedCase, setCases, setError],
+    [dataManager, ensureCaseAndManager, selectedCase, setError],
   );
 
   const handleCreateItem = useCallback(
@@ -145,10 +138,8 @@ export function useFinancialItemFlow({
       try {
         setError(null);
 
-        const updatedCase = await dataManager.addItem(selectedCase.id, category, itemData);
-        setCases(prevCases =>
-          prevCases.map(c => (c.id === selectedCase.id ? updatedCase : c)),
-        );
+        await dataManager.addItem(selectedCase.id, category, itemData);
+        // Don't update cases state as items are separate
 
         toast.success("Item created successfully", { duration: 2000 });
       } catch (err) {
@@ -159,7 +150,7 @@ export function useFinancialItemFlow({
         throw err;
       }
     },
-    [dataManager, ensureCaseAndManager, selectedCase, setCases, setError],
+    [dataManager, ensureCaseAndManager, selectedCase, setError],
   );
 
   return {
@@ -171,3 +162,4 @@ export function useFinancialItemFlow({
     handleCreateItem,
   };
 }
+

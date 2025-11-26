@@ -226,7 +226,20 @@ export interface CaseDisplay {
   alerts?: AlertRecord[];
 }
 
+export interface StoredCase extends Omit<CaseDisplay, "caseRecord" | "alerts"> {
+  caseRecord: Omit<CaseRecord, "financials" | "notes">;
+}
+
+export interface StoredFinancialItem extends FinancialItem {
+  caseId: string;
+  category: "resources" | "income" | "expenses";
+}
+
+export interface StoredNote extends Note {
+  caseId: string;
+}
+
 export type CaseStatusUpdateHandler = (
   caseId: string,
-  status: CaseDisplay["status"],
-) => Promise<CaseDisplay | null> | CaseDisplay | null | void;
+  status: StoredCase["status"],
+) => Promise<StoredCase | null> | StoredCase | null | void;

@@ -12,7 +12,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "../ui/alert-dialog";
-import type { CaseDisplay, CaseStatusUpdateHandler } from "../../types/case";
+import type { StoredCase, CaseStatusUpdateHandler } from "../../types/case";
 import { Eye, Edit, Trash2 } from "lucide-react";
 import { CaseStatusMenu } from "./CaseStatusMenu";
 import type { AlertWithMatch } from "../../utils/alertsData";
@@ -22,7 +22,7 @@ import { CopyableText } from "@/components/common/CopyableText";
 import { getDisplayPhoneNumber } from "@/utils/phoneFormatter";
 
 interface CaseCardProps {
-  case: CaseDisplay;
+  case: StoredCase;
   onView: (caseId: string) => void;
   onEdit: (caseId: string) => void;
   onDelete: (caseId: string) => void;

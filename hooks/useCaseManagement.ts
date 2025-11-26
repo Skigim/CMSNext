@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react';
 import { toast } from 'sonner';
-import { CaseDisplay, NewPersonData, NewCaseRecordData, NewNoteData } from '@/types/case';
+import { NewPersonData, NewCaseRecordData, NewNoteData, StoredCase, StoredNote } from '@/types/case';
 import { useDataManagerSafe } from '@/contexts/DataManagerContext';
 import {
   getFileStorageFlags,
@@ -11,21 +11,21 @@ import { createLogger } from '@/utils/logger';
 const logger = createLogger('CaseManagement');
 interface UseCaseManagementReturn {
   // State
-  cases: CaseDisplay[];
+  cases: StoredCase[];
   loading: boolean;
   error: string | null;
   hasLoadedData: boolean;
   
   // Actions
-  loadCases: () => Promise<CaseDisplay[]>;
-  saveCase: (caseData: { person: NewPersonData; caseRecord: NewCaseRecordData }, editingCase?: CaseDisplay | null) => Promise<void>;
+  loadCases: () => Promise<StoredCase[]>;
+  saveCase: (caseData: { person: NewPersonData; caseRecord: NewCaseRecordData }, editingCase?: StoredCase | null) => Promise<void>;
   deleteCase: (caseId: string) => Promise<void>;
-  saveNote: (noteData: NewNoteData, caseId: string, editingNote?: { id: string } | null) => Promise<CaseDisplay | null>;
-  importCases: (importedCases: CaseDisplay[]) => Promise<void>;
-  updateCaseStatus: (caseId: string, status: CaseDisplay["status"]) => Promise<CaseDisplay | null>;
+  saveNote: (noteData: NewNoteData, caseId: string, editingNote?: { id: string } | null) => Promise<StoredNote | null>;
+  importCases: (importedCases: StoredCase[]) => Promise<void>;
+  updateCaseStatus: (caseId: string, status: StoredCase["status"]) => Promise<StoredCase | null>;
   
   // State setters for external control
-  setCases: React.Dispatch<React.SetStateAction<CaseDisplay[]>>;
+  setCases: React.Dispatch<React.SetStateAction<StoredCase[]>>;
   setError: React.Dispatch<React.SetStateAction<string | null>>;
   setHasLoadedData: React.Dispatch<React.SetStateAction<boolean>>;
 }
@@ -42,7 +42,7 @@ interface UseCaseManagementReturn {
 export function useCaseManagement(): UseCaseManagementReturn {
   const dataManager = useDataManagerSafe(); // Returns null if not available - safe fallback
   
-  const [cases, setCases] = useState<CaseDisplay[]>([]);
+  const [cases, setCases] = useState<StoredCase[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [hasLoadedData, setHasLoadedData] = useState(false);
@@ -50,7 +50,7 @@ export function useCaseManagement(): UseCaseManagementReturn {
   /**
    * Load all cases from file system via DataManager
    */
-  const loadCases = useCallback(async (): Promise<CaseDisplay[]> => {
+  const loadCases = useCallback(async (): Promise<StoredCase[]> => {
     if (!dataManager) {
       const errorMsg = 'Data storage is not available. Please connect to a folder first.';
       setError(errorMsg);
@@ -101,7 +101,7 @@ export function useCaseManagement(): UseCaseManagementReturn {
    */
   const saveCase = useCallback(async (
     caseData: { person: NewPersonData; caseRecord: NewCaseRecordData },
-    editingCase?: CaseDisplay | null
+    editingCase?: StoredCase | null
   ) => {
     if (!dataManager) {
       const errorMsg = 'Data storage is not available. Please connect to a folder first.';
@@ -193,7 +193,7 @@ export function useCaseManagement(): UseCaseManagementReturn {
     noteData: NewNoteData,
     caseId: string,
     editingNote?: { id: string } | null
-  ): Promise<CaseDisplay | null> => {
+  ): Promise<StoredNote | null> => {
     if (!dataManager) {
       const errorMsg = 'Data storage is not available. Please connect to a folder first.';
       setError(errorMsg);
@@ -205,26 +205,23 @@ export function useCaseManagement(): UseCaseManagementReturn {
 
     try {
       setError(null);
-      let updatedCase: CaseDisplay;
+      let savedNote: StoredNote;
       
       if (editingNote) {
         // Update existing note
-        updatedCase = await dataManager.updateNote(caseId, editingNote.id, noteData);
+        savedNote = await dataManager.updateNote(caseId, editingNote.id, noteData);
         toast.success("Note updated successfully");
       } else {
         // Add new note
-        updatedCase = await dataManager.addNote(caseId, noteData);
+        savedNote = await dataManager.addNote(caseId, noteData);
         toast.success("Note added successfully");
       }
       
-      setCases(prevCases =>
-        prevCases.map(c =>
-          c.id === caseId ? updatedCase : c
-        )
-      );
+      // Note: We don't update local cases state because notes are no longer nested in cases
+      // Components should use useNotes() or getNotesForCase() to fetch notes
       
       // DataManager handles file system persistence automatically
-      return updatedCase;
+      return savedNote;
     } catch (err) {
       logger.error('Failed to save note', {
         error: err instanceof Error ? err.message : String(err),
@@ -239,7 +236,7 @@ export function useCaseManagement(): UseCaseManagementReturn {
   }, [dataManager]);
 
   const updateCaseStatus = useCallback(
-    async (caseId: string, status: CaseDisplay["status"]): Promise<CaseDisplay | null> => {
+    async (caseId: string, status: StoredCase["status"]): Promise<StoredCase | null> => {
       if (!dataManager) {
         const errorMsg = 'Data storage is not available. Please connect to a folder first.';
         setError(errorMsg);
@@ -278,12 +275,20 @@ export function useCaseManagement(): UseCaseManagementReturn {
   /**
    * Import multiple cases from external source
    */
-  const importCases = useCallback(async (importedCases: CaseDisplay[]) => {
+  const importCases = useCallback(async (importedCases: StoredCase[]) => {
     try {
       setError(null);
       
-      // Add imported cases to the current list
-      setCases(prevCases => [...prevCases, ...importedCases]);
+      if (!dataManager) {
+        throw new Error('Data storage is not available');
+      }
+
+      // Use DataManager to import cases
+      await dataManager.importCases(importedCases);
+      
+      // Reload cases to get the normalized data
+      const freshCases = await dataManager.getAllCases();
+      setCases(freshCases);
       setHasLoadedData(true);
       
   // Set baseline - we now have data
@@ -302,7 +307,7 @@ export function useCaseManagement(): UseCaseManagementReturn {
       toast.error(errorMsg);
       throw err;
     }
-  }, []);
+  }, [dataManager]);
 
   return {
     // State

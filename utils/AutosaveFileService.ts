@@ -734,7 +734,7 @@ class AutosaveFileService {
         const contents = await file.text();
         const rawData = JSON.parse(contents);
 
-        logger.info('Successfully read data file', {
+        logger.debug('Successfully read data file', {
           fileName,
           caseCount: Array.isArray(rawData.cases) ? rawData.cases.length : 0,
           alertCount: Array.isArray(rawData.alerts) ? rawData.alerts.length : 0,
@@ -1338,6 +1338,17 @@ class AutosaveFileService {
     this.getFullData = null;
     this.dataLoadCallback = null;
     this.statusCallback = null;
+  }
+
+  /**
+   * Broadcast data update to listeners
+   * Used when data is modified directly via file operations (e.g. DataManager)
+   * rather than through the autosave loop
+   */
+  broadcastDataUpdate(data: any): void {
+    if (this.dataLoadCallback) {
+      this.dataLoadCallback(data);
+    }
   }
 }
 

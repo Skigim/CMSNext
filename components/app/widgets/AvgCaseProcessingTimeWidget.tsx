@@ -4,13 +4,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { useWidgetData } from '@/hooks/useWidgetData';
 import type { CaseActivityEntry } from '@/types/activityLog';
-import type { CaseDisplay } from '@/types/case';
+import type { StoredCase } from '@/types/case';
 import { calculateAvgCaseProcessingTime, type ProcessingTimeStats } from '@/utils/widgetDataProcessors';
 import type { WidgetMetadata } from './WidgetRegistry';
 
 interface AvgCaseProcessingTimeWidgetProps {
   activityLog: CaseActivityEntry[];
-  cases: CaseDisplay[];
+  cases: StoredCase[];
   metadata?: WidgetMetadata;
 }
 

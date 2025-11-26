@@ -85,12 +85,6 @@ describe("CaseWorkspace", () => {
     onCaseUpdated: vi.fn(),
   };
 
-  const baseNoteFlow: CaseWorkspaceProps["noteFlow"] = {
-    handleDeleteNote: asyncVoid(),
-    handleBatchUpdateNote: asyncVoid(),
-    handleBatchCreateNote: asyncVoid(),
-  };
-
   beforeEach(() => {
     viewRendererSpy.mockClear();
   });
@@ -109,7 +103,6 @@ describe("CaseWorkspace", () => {
         onDismissError={onDismissError}
         viewHandlers={baseViewHandlers}
         financialFlow={baseFinancialFlow}
-        noteFlow={baseNoteFlow}
         alerts={alertsIndex}
         onUpdateCaseStatus={vi.fn()}
         activityLogState={activityLogState}
@@ -151,7 +144,6 @@ describe("CaseWorkspace", () => {
         onDismissError={vi.fn()}
         viewHandlers={baseViewHandlers}
         financialFlow={financialFlow}
-        noteFlow={baseNoteFlow}
         alerts={alertsIndex}
         onUpdateCaseStatus={vi.fn()}
         activityLogState={activityLogState}

@@ -1,5 +1,4 @@
-import type { CaseDisplay } from '../../types/case';
-import type { AlertsIndex, AlertWithMatch } from '../alertsData';
+import type { AlertsIndex, AlertWithMatch, CaseForAlertMatching } from '../alertsData';
 import { parseStackedAlerts, buildAlertStorageKey } from '../alertsData';
 import { createLogger } from '../logger';
 
@@ -32,12 +31,12 @@ function countUniqueAlertKeys(alerts: AlertWithMatch[]): number {
  * Uses parseStackedAlerts from alertsData.ts for the heavy lifting
  * 
  * @param csvContent - Raw CSV string content
- * @param cases - Array of cases for alert matching
+ * @param cases - Array of cases for alert matching (StoredCase or CaseDisplay)
  * @returns AlertsIndex with matched/unmatched/missing-mcn classifications
  */
 export function parseAlertsFromCsv(
   csvContent: string,
-  cases: CaseDisplay[]
+  cases: CaseForAlertMatching[]
 ): AlertsIndex {
   const stacked = parseStackedAlerts(csvContent, cases);
   const stackedUnique = countUniqueAlertKeys(stacked.alerts);
