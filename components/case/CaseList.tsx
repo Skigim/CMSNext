@@ -46,6 +46,8 @@ import {
   type CaseListSortDirection,
 } from "@/hooks/useCaseListPreferences";
 import { filterOpenAlerts, type AlertsSummary, type AlertWithMatch } from "../../utils/alertsData";
+import { useAppViewState } from "@/hooks/useAppViewState";
+import { isFeatureEnabled } from "@/utils/featureFlags";
 
 interface CaseListProps {
   cases: StoredCase[];
@@ -74,6 +76,8 @@ export function CaseList({
   onResolveAlert,
   onUpdateCaseStatus,
 }: CaseListProps) {
+  const { featureFlags } = useAppViewState();
+  const showDevTools = isFeatureEnabled("settings.devTools", featureFlags);
   const {
     viewMode,
     setViewMode,
@@ -322,29 +326,31 @@ export function CaseList({
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline">
-                <Database className="mr-2 h-4 w-4" /> Demo tools
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuLabel>Data helpers</DropdownMenuLabel>
-              <DropdownMenuItem
-                onSelect={(event) => {
-                  event.preventDefault();
-                  setShowSampleDataDialog(true);
-                }}
-                disabled={isSettingUpData}
-              >
-                <RefreshCcw className="mr-2 h-4 w-4" /> Add sample data
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem disabled>
-                Additional helpers coming soon
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          {showDevTools && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline">
+                  <Database className="mr-2 h-4 w-4" /> Demo tools
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuLabel>Data helpers</DropdownMenuLabel>
+                <DropdownMenuItem
+                  onSelect={(event) => {
+                    event.preventDefault();
+                    setShowSampleDataDialog(true);
+                  }}
+                  disabled={isSettingUpData}
+                >
+                  <RefreshCcw className="mr-2 h-4 w-4" /> Add sample data
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem disabled>
+                  Additional helpers coming soon
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
           <Button onClick={onNewCase}>
             <Plus className="mr-2 h-4 w-4" />
             New case
