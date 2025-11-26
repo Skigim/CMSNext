@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect } from 'react';
 import { toast } from 'sonner';
-import { CaseDisplay, Note, NewNoteData, StoredNote } from '@/types/case';
+import { Note, NewNoteData, StoredNote } from '@/types/case';
 import { useDataManagerSafe } from '@/contexts/DataManagerContext';
 import { useFileStorageDataChange } from '@/contexts/FileStorageContext';
 
@@ -125,8 +125,6 @@ export function useNotes(caseId?: string): UseNotesReturn {
       return null;
     }
 
-    const isEditing = !!noteForm.editingNote;
-
     try {
       let savedNote: StoredNote | null;
       
@@ -195,6 +193,8 @@ export function useNotes(caseId?: string): UseNotesReturn {
     openAddNote,
     openEditNote,
     saveNote,
+    addNote,
+    updateNote,
     deleteNote,
     closeNoteForm,
   };

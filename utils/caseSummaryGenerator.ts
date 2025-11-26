@@ -4,7 +4,7 @@
  * Generates a plain-text summary of case information for easy export/sharing
  */
 
-import { CaseDisplay, FinancialItem } from '../types/case';
+import { StoredCase, FinancialItem, Note } from '../types/case';
 import { formatCurrency, formatFrequency } from './financialFormatters';
 
 /**
@@ -57,7 +57,7 @@ function formatFinancialItems(items: FinancialItem[], categoryName: string): str
 /**
  * Format notes for display in summary (showing most recent)
  */
-function formatRecentNotes(notes: CaseDisplay['caseRecord']['notes'], limit = 3): string {
+function formatRecentNotes(notes: Note[] | undefined, limit = 3): string {
   if (!notes || notes.length === 0) {
     return '  No notes recorded';
   }
@@ -90,9 +90,19 @@ function formatRecentNotes(notes: CaseDisplay['caseRecord']['notes'], limit = 3)
 
 /**
  * Generate a comprehensive case summary
+ * For StoredCase, notes and financials are stored separately
+ * and should be passed as optional parameters
  */
-export function generateCaseSummary(caseData: CaseDisplay): string {
+export function generateCaseSummary(
+  caseData: StoredCase, 
+  options?: {
+    financials?: { resources: FinancialItem[]; income: FinancialItem[]; expenses: FinancialItem[] };
+    notes?: Note[];
+  }
+): string {
   const { caseRecord, person, name, mcn, status } = caseData;
+  const financials = options?.financials ?? { resources: [], income: [], expenses: [] };
+  const notes = options?.notes ?? [];
   
   const sections = [
     '='.repeat(60),
@@ -126,17 +136,17 @@ export function generateCaseSummary(caseData: CaseDisplay): string {
     '-'.repeat(60),
     '',
     'Resources:',
-    formatFinancialItems(caseRecord.financials.resources || [], 'Resources'),
+    formatFinancialItems(financials.resources || [], 'Resources'),
     '',
     'Income:',
-    formatFinancialItems(caseRecord.financials.income || [], 'Income'),
+    formatFinancialItems(financials.income || [], 'Income'),
     '',
     'Expenses:',
-    formatFinancialItems(caseRecord.financials.expenses || [], 'Expenses'),
+    formatFinancialItems(financials.expenses || [], 'Expenses'),
     '',
     '📝 RECENT NOTES',
     '-'.repeat(60),
-    formatRecentNotes(caseRecord.notes),
+    formatRecentNotes(notes),
     '',
     '='.repeat(60),
     `Generated: ${new Date().toLocaleString('en-US')}`,

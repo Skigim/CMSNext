@@ -3,7 +3,7 @@ import { Button } from "../ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
 import { ScrollArea } from "../ui/scroll-area";
-import { CaseDisplay, NewPersonData, NewCaseRecordData, CaseStatus, CASE_STATUS_VALUES } from "../../types/case";
+import { StoredCase, NewPersonData, NewCaseRecordData, CaseStatus, CASE_STATUS_VALUES } from "../../types/case";
 import { ArrowLeft, User, FileText, Save, X } from "lucide-react";
 import { withFormErrorBoundary } from "../error/ErrorBoundaryHOC";
 import { PersonInfoForm } from "../forms/PersonInfoForm";
@@ -11,7 +11,7 @@ import { CaseInfoForm } from "../forms/CaseInfoForm";
 import { useCategoryConfig } from "@/contexts/CategoryConfigContext";
 
 interface CaseFormProps {
-  case?: CaseDisplay;
+  case?: StoredCase;
   onSave: (caseData: { person: NewPersonData; caseRecord: NewCaseRecordData }) => void;
   onCancel: () => void;
 }

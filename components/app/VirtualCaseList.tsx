@@ -1,11 +1,11 @@
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { useRef, memo } from 'react';
-import type { CaseDisplay, CaseStatusUpdateHandler } from '@/types/case';
+import type { StoredCase, CaseStatusUpdateHandler } from '@/types/case';
 import { CaseCard } from '@/components/case/CaseCard';
 import type { AlertWithMatch } from '@/utils/alertsData';
 
 interface VirtualCaseListProps {
-  cases: CaseDisplay[];
+  cases: StoredCase[];
   onViewCase: (caseId: string) => void;
   onEditCase: (caseId: string) => void;
   onDeleteCase: (caseId: string) => void;

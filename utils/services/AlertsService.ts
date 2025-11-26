@@ -1,5 +1,4 @@
-import type { CaseDisplay } from '../../types/case';
-import type { StoredCase } from './FileStorageService';
+import type { CaseStatus } from '../../types/case';
 import type {
   AlertWithMatch,
   AlertsIndex,
@@ -39,7 +38,7 @@ interface CaseForAlertMatching {
   id: string;
   name: string;
   mcn: string;
-  status: string;
+  status: CaseStatus;
   caseRecord?: {
     mcn?: string;
   };

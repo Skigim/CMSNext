@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react';
 import { toast } from 'sonner';
-import { CaseDisplay, NewPersonData, NewCaseRecordData, NewNoteData, StoredCase, StoredNote } from '@/types/case';
+import { NewPersonData, NewCaseRecordData, NewNoteData, StoredCase, StoredNote } from '@/types/case';
 import { useDataManagerSafe } from '@/contexts/DataManagerContext';
 import {
   getFileStorageFlags,
@@ -21,8 +21,8 @@ interface UseCaseManagementReturn {
   saveCase: (caseData: { person: NewPersonData; caseRecord: NewCaseRecordData }, editingCase?: StoredCase | null) => Promise<void>;
   deleteCase: (caseId: string) => Promise<void>;
   saveNote: (noteData: NewNoteData, caseId: string, editingNote?: { id: string } | null) => Promise<StoredNote | null>;
-  importCases: (importedCases: CaseDisplay[]) => Promise<void>;
-  updateCaseStatus: (caseId: string, status: CaseDisplay["status"]) => Promise<StoredCase | null>;
+  importCases: (importedCases: StoredCase[]) => Promise<void>;
+  updateCaseStatus: (caseId: string, status: StoredCase["status"]) => Promise<StoredCase | null>;
   
   // State setters for external control
   setCases: React.Dispatch<React.SetStateAction<StoredCase[]>>;
@@ -236,7 +236,7 @@ export function useCaseManagement(): UseCaseManagementReturn {
   }, [dataManager]);
 
   const updateCaseStatus = useCallback(
-    async (caseId: string, status: CaseDisplay["status"]): Promise<StoredCase | null> => {
+    async (caseId: string, status: StoredCase["status"]): Promise<StoredCase | null> => {
       if (!dataManager) {
         const errorMsg = 'Data storage is not available. Please connect to a folder first.';
         setError(errorMsg);
@@ -275,7 +275,7 @@ export function useCaseManagement(): UseCaseManagementReturn {
   /**
    * Import multiple cases from external source
    */
-  const importCases = useCallback(async (importedCases: CaseDisplay[]) => {
+  const importCases = useCallback(async (importedCases: StoredCase[]) => {
     try {
       setError(null);
       

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
-import type { CaseDisplay } from "@/types/case";
+import type { StoredCase } from "@/types/case";
 import type { DataManager } from "@/utils/DataManager";
 import { useFileStorageDataChange } from "@/contexts/FileStorageContext";
 import {
@@ -15,8 +15,8 @@ import { ENABLE_SAMPLE_ALERTS } from "@/utils/featureFlags";
 import { createLogger } from "@/utils/logger";
 
 interface UseAlertsFlowOptions {
-  cases: CaseDisplay[];
-  selectedCase: CaseDisplay | null;
+  cases: StoredCase[];
+  selectedCase: StoredCase | null;
   hasLoadedData: boolean;
   dataManager: DataManager | null;
 }

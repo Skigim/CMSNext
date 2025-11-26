@@ -126,7 +126,6 @@ export const AppContent = memo(function AppContent() {
     handleCreateItem: createFinancialItem,
   } = useFinancialItemFlow({
     selectedCase: selectedCase ?? null,
-    setCases,
     setError,
   });
 
@@ -141,8 +140,6 @@ export const AppContent = memo(function AppContent() {
     handleBatchCreateNote: baseHandleBatchCreateNote,
   } = useNoteFlow({
     selectedCase: selectedCase ?? null,
-    cases,
-    setCases,
     setError,
   });
 

@@ -8,7 +8,6 @@ import type {
   CaseCategory,
   FinancialItem,
   NewCaseRecordData,
-  NewNoteData,
   NewPersonData,
 } from "../../types/case";
 import type { ItemFormState } from "../../hooks/useFinancialItemFlow";
@@ -48,12 +47,6 @@ interface CaseWorkspaceFinancialFlow {
   onCaseUpdated: (updatedCase: StoredCase) => void;
 }
 
-interface CaseWorkspaceNoteFlow {
-  handleDeleteNote: (noteId: string) => Promise<void>;
-  handleBatchUpdateNote: (noteId: string, noteData: NewNoteData) => Promise<void>;
-  handleBatchCreateNote: (noteData: NewNoteData) => Promise<void>;
-}
-
 export interface CaseWorkspaceProps {
   navigation: AppNavigationConfig;
   cases: StoredCase[];
@@ -63,7 +56,6 @@ export interface CaseWorkspaceProps {
   onDismissError: () => void;
   viewHandlers: CaseWorkspaceViewHandlers;
   financialFlow: CaseWorkspaceFinancialFlow;
-  noteFlow: CaseWorkspaceNoteFlow;
   alerts: AlertsIndex;
   onUpdateCaseStatus: (caseId: string, status: StoredCase["status"]) => Promise<StoredCase | null> | StoredCase | null | void;
   onResolveAlert?: (alert: AlertWithMatch) => Promise<void> | void;
@@ -85,7 +77,6 @@ export const CaseWorkspace = memo(function CaseWorkspace({
   onDismissError,
   viewHandlers,
   financialFlow,
-  noteFlow,
   alerts,
   onUpdateCaseStatus,
   onResolveAlert,
@@ -127,13 +118,6 @@ export const CaseWorkspace = memo(function CaseWorkspace({
   handleNavigateToReports={() => navigation.onNavigate('reports')}
         handleDeleteCase={viewHandlers.handleDeleteCase}
         handleDataPurged={viewHandlers.handleDataPurged}
-        handleAddItem={financialFlow.handleAddItem}
-        handleDeleteItem={financialFlow.handleDeleteItem}
-        handleBatchUpdateItem={financialFlow.handleBatchUpdateItem}
-        handleCreateItem={financialFlow.handleCreateItem}
-        handleDeleteNote={noteFlow.handleDeleteNote}
-        handleBatchUpdateNote={noteFlow.handleBatchUpdateNote}
-        handleBatchCreateNote={noteFlow.handleBatchCreateNote}
         handleUpdateCaseStatus={onUpdateCaseStatus}
         handleResolveAlert={onResolveAlert}
         onAlertsCsvImported={onAlertsCsvImported}

@@ -5,7 +5,7 @@ import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "../ui/resi
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
 import { CaseSection } from "./CaseSection";
 import { NotesSection } from "./NotesSection";
-import { StoredCase, CaseCategory, FinancialItem, NewNoteData } from "../../types/case";
+import { StoredCase } from "../../types/case";
 import { ArrowLeft, Edit2, Trash2, Landmark, Wallet, Receipt, BellRing, FileText } from "lucide-react";
 import { withDataErrorBoundary } from "../error/ErrorBoundaryHOC";
 import { CaseStatusMenu } from "./CaseStatusMenu";

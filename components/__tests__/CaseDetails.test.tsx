@@ -443,47 +443,8 @@ describe('CaseDetails Memory Management', () => {
     expect(screen.getByRole('tab', { name: /expenses/i })).toHaveAttribute('data-state', 'active');
   });
 
-  it('invokes onBatchUpdateItem when CaseSection requests an update', async () => {
-    vi.useRealTimers();
-    const onBatchUpdateItem = vi.fn().mockResolvedValue(undefined);
-
-    render(<CaseDetails {...mockProps} onBatchUpdateItem={onBatchUpdateItem} />);
-
-    const sectionProps = caseSectionPropsByCategory.get('resources');
-    const updatedItem = {
-      id: 'mock-item',
-      description: 'Updated',
-      amount: 123,
-      verificationStatus: 'Verified',
-    };
-
-    await sectionProps.onUpdateFullItem('resources', 'mock-item', updatedItem);
-
-    expect(onBatchUpdateItem).toHaveBeenCalledWith('resources', 'mock-item', updatedItem);
-  });
-
-  it('logs and swallows errors when batch update fails', async () => {
-    vi.useRealTimers();
-    const error = new Error('boom');
-    const onBatchUpdateItem = vi.fn().mockRejectedValue(error);
-    const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
-
-    render(<CaseDetails {...mockProps} onBatchUpdateItem={onBatchUpdateItem} />);
-
-    const sectionProps = caseSectionPropsByCategory.get('resources');
-
-    await sectionProps.onUpdateFullItem('resources', 'mock-item', {
-      id: 'mock-item',
-      description: 'Broken',
-      amount: 10,
-      verificationStatus: 'Needs VR',
-    });
-
-    expect(onBatchUpdateItem).toHaveBeenCalled();
-    expect(consoleSpy).toHaveBeenCalledWith('[CaseDetails] Failed to update item:', error);
-
-    consoleSpy.mockRestore();
-  });
+  // Tests for onBatchUpdateItem removed - this prop was removed from CaseDetails
+  // Financial item updates now go through useFinancialItems hook directly
 
   it('safely handles missing batch update handler', async () => {
     vi.useRealTimers();

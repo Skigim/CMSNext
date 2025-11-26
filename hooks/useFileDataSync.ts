@@ -2,7 +2,7 @@ import { useCallback } from "react";
 import { toast } from "sonner";
 import { useFileStorageDataLoadHandler } from "@/contexts/FileStorageContext";
 import type { Dispatch, SetStateAction } from "react";
-import type { CaseDisplay, StoredCase } from "@/types/case";
+import type { StoredCase } from "@/types/case";
 import type { CategoryConfig } from "@/types/categoryConfig";
 import { createLogger } from "@/utils/logger";
 import { updateFileStorageFlags } from "@/utils/fileStorageFlags";

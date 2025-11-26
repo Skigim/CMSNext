@@ -36,13 +36,6 @@ interface ViewRendererProps {
   // Component handlers
   handleDeleteCase: (caseId: string) => Promise<void>;
   handleDataPurged: () => void;
-  handleAddItem: (category: any) => void;
-  handleDeleteItem: (category: any, itemId: string) => Promise<void>;
-  handleBatchUpdateItem?: (category: any, itemId: string, updatedItem: Partial<any>) => Promise<void>;
-  handleCreateItem?: (category: any, itemData: Omit<any, 'id' | 'createdAt' | 'updatedAt'>) => Promise<void>;
-  handleDeleteNote: (noteId: string) => Promise<void>;
-  handleBatchUpdateNote?: (noteId: string, updatedNote: any) => Promise<void>;
-  handleBatchCreateNote?: (noteData: any) => Promise<void>;
   handleUpdateCaseStatus?: (caseId: string, status: StoredCase["status"]) =>
     | Promise<StoredCase | null>
     | StoredCase
@@ -88,13 +81,6 @@ export function ViewRenderer({
   // Component handlers
   handleDeleteCase,
   handleDataPurged,
-  handleAddItem,
-  handleDeleteItem,
-  handleBatchUpdateItem,
-  handleCreateItem,
-  handleDeleteNote,
-  handleBatchUpdateNote,
-  handleBatchCreateNote,
   handleUpdateCaseStatus,
   handleResolveAlert,
   onAlertsCsvImported,

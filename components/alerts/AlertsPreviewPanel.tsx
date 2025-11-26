@@ -7,10 +7,10 @@ import {
   CardHeader,
   CardTitle,
 } from "../ui/card";
-import type { CaseDisplay } from "../../types/case";
+import type { StoredCase } from "../../types/case";
 
 interface AlertsPreviewPanelProps {
-  cases: CaseDisplay[];
+  cases: StoredCase[];
 }
 
 export const AlertsPreviewPanel = memo(function AlertsPreviewPanel({ cases }: AlertsPreviewPanelProps) {

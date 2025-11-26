@@ -2,7 +2,7 @@ import { act, renderHook, waitFor } from "@testing-library/react";
 import type { Dispatch, SetStateAction } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { createMockCaseDisplay, toast as mockToast } from "@/src/test/testUtils";
-import type { CaseDisplay } from "@/types/case";
+import type { StoredCase } from "@/types/case";
 import { useFileDataSync } from "@/hooks/useFileDataSync";
 
 type DataHandler = (payload: unknown) => void;
@@ -36,7 +36,7 @@ describe("useFileDataSync", () => {
     renderHook(() =>
       useFileDataSync({
         loadCases: loadCasesMock as unknown as () => Promise<void>,
-        setCases: setCasesMock as unknown as Dispatch<SetStateAction<CaseDisplay[]>>,
+        setCases: setCasesMock as unknown as Dispatch<SetStateAction<StoredCase[]>>,
         setHasLoadedData: setHasLoadedDataMock as unknown as (value: boolean) => void,
         setConfigFromFile: setConfigFromFileMock as unknown as (config?: Partial<Record<string, unknown>> | null) => void,
       }),

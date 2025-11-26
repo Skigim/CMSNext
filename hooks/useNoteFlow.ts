@@ -6,8 +6,6 @@ import { useNotes } from "./useNotes";
 
 interface UseNoteFlowParams {
   selectedCase: StoredCase | null;
-  cases: StoredCase[];
-  setCases: React.Dispatch<React.SetStateAction<StoredCase[]>>;
   setError: React.Dispatch<React.SetStateAction<string | null>>;
 }
 
@@ -24,12 +22,10 @@ interface UseNoteFlowResult {
 
 export function useNoteFlow({
   selectedCase,
-  cases,
-  setCases,
   setError,
 }: UseNoteFlowParams): UseNoteFlowResult {
   const dataManager = useDataManagerSafe();
-  const { noteForm, openAddNote, openEditNote, saveNote, deleteNote, closeNoteForm } = useNotes();
+  const { noteForm, openAddNote, saveNote, deleteNote, closeNoteForm } = useNotes();
 
   const handleAddNote = useCallback(() => {
     if (!selectedCase) {
@@ -39,7 +35,7 @@ export function useNoteFlow({
   }, [openAddNote, selectedCase]);
 
   const handleEditNote = useCallback(
-    (noteId: string) => {
+    (_noteId: string) => {
       if (!selectedCase) {
         return;
       }

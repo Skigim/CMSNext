@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
-import type { CaseDisplay, StoredCase } from "../types/case";
+import type { StoredCase } from "../types/case";
 import type AutosaveFileService from "../utils/AutosaveFileService";
 import type { FileStorageService } from "@/utils/services/FileStorageService";
 import type DataManager from "../utils/DataManager";

@@ -478,7 +478,7 @@ export class DataManager {
    * Import multiple cases at once
    * Delegates to CaseService
    */
-  async importCases(cases: CaseDisplay[]): Promise<void> {
+  async importCases(cases: StoredCase[]): Promise<void> {
     return this.cases.importCases(cases);
   }
 

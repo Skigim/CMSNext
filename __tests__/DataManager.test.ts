@@ -8,7 +8,6 @@ import {
   createMockStoredCase,
   createMockStoredFinancialItem,
   createMockStoredNote,
-  createMockNormalizedFileData,
 } from '@/src/test/testUtils'
 import { mergeCategoryConfig } from '@/types/categoryConfig'
 import AutosaveFileService from '@/utils/AutosaveFileService'
@@ -997,9 +996,12 @@ describe('DataManager', () => {
       const entry = capturedPayload!.activityLog[0]
       expect(entry.type).toBe('note-added')
       expect(entry.caseId).toBe(mockCase.id)
-      expect(entry.payload.category).toBe('General')
-      expect(entry.payload.preview.toLowerCase()).toContain('client provided')
-      expect(entry.payload.content).toBe('Client provided updated verification documents.')
+      // Type narrow to note-added payload
+      if (entry.type === 'note-added') {
+        expect(entry.payload.category).toBe('General')
+        expect(entry.payload.preview.toLowerCase()).toContain('client provided')
+        expect(entry.payload.content).toBe('Client provided updated verification documents.')
+      }
     })
 
     it('should update a note', async () => {

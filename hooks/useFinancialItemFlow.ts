@@ -12,7 +12,6 @@ export type ItemFormState = {
 
 interface UseFinancialItemFlowParams {
   selectedCase: StoredCase | null;
-  setCases: React.Dispatch<React.SetStateAction<StoredCase[]>>;
   setError: React.Dispatch<React.SetStateAction<string | null>>;
 }
 
@@ -34,7 +33,6 @@ interface UseFinancialItemFlowResult {
 
 export function useFinancialItemFlow({
   selectedCase,
-  setCases,
   setError,
 }: UseFinancialItemFlowParams): UseFinancialItemFlowResult {
   const dataManager = useDataManagerSafe();

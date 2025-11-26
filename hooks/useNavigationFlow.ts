@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
-import { CaseDisplay, NewCaseRecordData, NewPersonData, StoredCase } from "../types/case";
+import { NewCaseRecordData, NewPersonData, StoredCase } from "../types/case";
 import { AppView } from "../types/view";
 import type { FileStorageLifecycleSelectors } from "../contexts/FileStorageContext";
 import { startMeasurement, endMeasurement } from "../utils/performanceTracker";
