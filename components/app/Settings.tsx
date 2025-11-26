@@ -192,9 +192,7 @@ export function Settings({ cases, onDataPurged, onAlertsCsvImported }: SettingsP
     try {
       // Use DataManager to purge data
       if (dataManager) {
-        // For now, show a message that purge needs to be implemented
-        toast.error("Data purge needs to be implemented with DataManager");
-        console.log('DataManager purge not yet implemented');
+        await dataManager.clearAllData();
       } else {
         console.warn('DataManager not available for purge operation');
       }
@@ -212,7 +210,7 @@ export function Settings({ cases, onDataPurged, onAlertsCsvImported }: SettingsP
         onDataPurged();
       }
       
-      toast.success('Local storage purged successfully!');
+      toast.success('All data purged successfully!');
     } catch (error) {
       console.error('Error purging data:', error);
       toast.error('Failed to purge local storage. Please try again.');
