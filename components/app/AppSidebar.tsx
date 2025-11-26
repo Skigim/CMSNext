@@ -121,10 +121,10 @@ export function AppSidebar({
           <div className="flex items-center space-x-3">
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium text-sidebar-foreground">
-                Case Tracking Platform
+                Case Tracker
               </p>
               <p className="text-xs text-sidebar-foreground/60">
-                Filesystem Storage
+                v1.0.0
               </p>
             </div>
           </div>

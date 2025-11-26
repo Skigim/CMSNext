@@ -23,6 +23,8 @@ export interface FeatureFlags {
 	"reports.advancedFilters": boolean;
 	/** Placeholder for case bulk actions tooling. */
 	"cases.bulkActions": boolean;
+	/** Controls visibility of developer tools in Settings. */
+	"settings.devTools": boolean;
 }
 
 /** All known feature flag keys. */
@@ -39,6 +41,7 @@ const FEATURE_FLAG_DEFAULTS: FeatureFlags = {
 	"dashboard.widgets.avgCaseProcessing": true,
 	"reports.advancedFilters": false,
 	"cases.bulkActions": false,
+	"settings.devTools": import.meta.env.DEV,
 };
 
 /** Immutable default feature flag configuration. */
