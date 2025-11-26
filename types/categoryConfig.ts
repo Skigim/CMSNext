@@ -1,6 +1,7 @@
 import type { ColorSlot } from './colorSlots';
 import { 
-  DEFAULT_STATUS_COLORS, 
+  DEFAULT_STATUS_COLORS,
+  DEFAULT_ALERT_COLORS,
   autoAssignColorSlot, 
   isValidColorSlot 
 } from './colorSlots';
@@ -8,6 +9,7 @@ import {
 export type CategoryKey =
   | "caseTypes"
   | "caseStatuses"
+  | "alertTypes"
   | "livingArrangements"
   | "noteCategories"
   | "verificationStatuses";
@@ -20,9 +22,18 @@ export interface StatusConfig {
   colorSlot: ColorSlot;
 }
 
+/**
+ * Configuration for an alert type with its display color.
+ */
+export interface AlertTypeConfig {
+  name: string;
+  colorSlot: ColorSlot;
+}
+
 export interface CategoryConfig {
   caseTypes: string[];
   caseStatuses: StatusConfig[];
+  alertTypes: AlertTypeConfig[];
   livingArrangements: string[];
   noteCategories: string[];
   verificationStatuses: string[];
@@ -38,6 +49,7 @@ export interface CategoryConfig {
 export interface PartialCategoryConfigInput {
   caseTypes?: string[];
   caseStatuses?: string[] | StatusConfig[];
+  alertTypes?: string[] | AlertTypeConfig[];
   livingArrangements?: string[];
   noteCategories?: string[];
   verificationStatuses?: string[];
@@ -85,9 +97,13 @@ const DEFAULT_VERIFICATION_STATUSES = [
   "Verified",
 ];
 
+// No default alert types - populated from incoming alert data
+const DEFAULT_ALERT_TYPES: AlertTypeConfig[] = [];
+
 export const defaultCategoryConfig: CategoryConfig = Object.freeze({
   caseTypes: DEFAULT_CASE_TYPES,
   caseStatuses: DEFAULT_CASE_STATUSES,
+  alertTypes: DEFAULT_ALERT_TYPES,
   livingArrangements: DEFAULT_LIVING_ARRANGEMENTS,
   noteCategories: DEFAULT_NOTE_CATEGORIES,
   verificationStatuses: DEFAULT_VERIFICATION_STATUSES,
@@ -104,6 +120,10 @@ export const CATEGORY_DISPLAY_METADATA: Record<
   caseStatuses: {
     label: "Case Statuses",
     description: "Track where each case is in the review and approval process.",
+  },
+  alertTypes: {
+    label: "Alert Types",
+    description: "Configure colors for different alert categories.",
   },
   livingArrangements: {
     label: "Living Arrangements",
@@ -152,6 +172,25 @@ const dedupeStatuses = (statuses: StatusConfig[]): StatusConfig[] => {
   return result;
 };
 
+const dedupeAlertTypes = (alertTypes: AlertTypeConfig[]): AlertTypeConfig[] => {
+  const seen = new Set<string>();
+  const result: AlertTypeConfig[] = [];
+  for (const alertType of alertTypes) {
+    if (!alertType || typeof alertType !== 'object') continue;
+    const name = alertType.name;
+    if (typeof name !== 'string') continue;
+    const key = name.trim().toLowerCase();
+    if (!key) continue;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    result.push({ 
+      name: name.trim(), 
+      colorSlot: isValidColorSlot(alertType.colorSlot) ? alertType.colorSlot : 'amber' 
+    });
+  }
+  return result;
+};
+
 /**
  * Internal migration: Convert legacy string[] to StatusConfig[]
  * This is also exported from utils/categoryConfigMigration.ts for external use
@@ -188,6 +227,41 @@ const normalizeStatusesInternal = (
   return dedupeStatuses(value as StatusConfig[]);
 };
 
+/**
+ * Internal migration: Convert legacy string[] to AlertTypeConfig[]
+ */
+const normalizeAlertTypesInternal = (
+  value: string[] | AlertTypeConfig[] | undefined | null
+): AlertTypeConfig[] => {
+  if (!value || !Array.isArray(value) || value.length === 0) {
+    return [];
+  }
+  
+  // Check if first item is a string (legacy format)
+  const first = value[0];
+  if (typeof first === 'string') {
+    // Legacy format - migrate
+    const usedSlots = new Set<ColorSlot>();
+    return (value as string[]).map((name) => {
+      const trimmedName = String(name).trim();
+      if (!trimmedName) return null;
+      
+      const defaultColor = DEFAULT_ALERT_COLORS[trimmedName];
+      if (defaultColor && !usedSlots.has(defaultColor)) {
+        usedSlots.add(defaultColor);
+        return { name: trimmedName, colorSlot: defaultColor };
+      }
+      
+      const colorSlot = autoAssignColorSlot(trimmedName, usedSlots);
+      usedSlots.add(colorSlot);
+      return { name: trimmedName, colorSlot };
+    }).filter((s): s is AlertTypeConfig => s !== null);
+  }
+  
+  // Already AlertTypeConfig[] format
+  return dedupeAlertTypes(value as AlertTypeConfig[]);
+};
+
 export const sanitizeCategoryValues = (values: string[] | undefined | null): string[] => {
   if (!Array.isArray(values)) {
     return [];
@@ -214,6 +288,7 @@ export const mergeCategoryConfig = (
     return {
       caseTypes: [...defaultCategoryConfig.caseTypes],
       caseStatuses: defaultCategoryConfig.caseStatuses.map(s => ({ ...s })),
+      alertTypes: defaultCategoryConfig.alertTypes.map(a => ({ ...a })),
       livingArrangements: [...defaultCategoryConfig.livingArrangements],
       noteCategories: [...defaultCategoryConfig.noteCategories],
       verificationStatuses: [...defaultCategoryConfig.verificationStatuses],
@@ -226,11 +301,18 @@ export const mergeCategoryConfig = (
     ? normalizedStatuses
     : defaultCategoryConfig.caseStatuses.map(s => ({ ...s }));
 
+  // Handle alertTypes with automatic migration from string[] to AlertTypeConfig[]
+  const normalizedAlertTypes = normalizeAlertTypesInternal(config.alertTypes);
+  const alertTypes = normalizedAlertTypes.length > 0
+    ? normalizedAlertTypes
+    : defaultCategoryConfig.alertTypes.map(a => ({ ...a }));
+
   return {
     caseTypes: sanitizeCategoryValues(config.caseTypes).length
       ? sanitizeCategoryValues(config.caseTypes)
       : [...defaultCategoryConfig.caseTypes],
     caseStatuses,
+    alertTypes,
     livingArrangements: sanitizeCategoryValues(config.livingArrangements).length
       ? sanitizeCategoryValues(config.livingArrangements)
       : [...defaultCategoryConfig.livingArrangements],
@@ -248,6 +330,7 @@ export const cloneCategoryConfig = (config?: CategoryConfig | null): CategoryCon
   return {
     caseTypes: [...source.caseTypes],
     caseStatuses: source.caseStatuses.map(s => ({ ...s })),
+    alertTypes: source.alertTypes.map(a => ({ ...a })),
     livingArrangements: [...source.livingArrangements],
     noteCategories: [...source.noteCategories],
     verificationStatuses: [...source.verificationStatuses],
@@ -289,4 +372,22 @@ export const ensureValueInCategory = (
  */
 export const getStatusNames = (config: CategoryConfig): string[] => {
   return config.caseStatuses.map(s => s.name);
+};
+
+/**
+ * Helper to get alert type names as a string array.
+ * Useful for components that only need the names.
+ */
+export const getAlertTypeNames = (config: CategoryConfig): string[] => {
+  return config.alertTypes.map(a => a.name);
+};
+
+/**
+ * Sanitize and dedupe alert type configs
+ */
+export const sanitizeAlertTypeConfigs = (alertTypes: AlertTypeConfig[] | undefined | null): AlertTypeConfig[] => {
+  if (!Array.isArray(alertTypes)) {
+    return [];
+  }
+  return dedupeAlertTypes(alertTypes);
 };

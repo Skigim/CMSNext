@@ -10,11 +10,13 @@
 
 import { 
   type ColorSlot, 
-  DEFAULT_STATUS_COLORS, 
+  DEFAULT_STATUS_COLORS,
+  DEFAULT_ALERT_COLORS,
   autoAssignColorSlot,
   isValidColorSlot,
+  COLOR_SLOTS,
 } from '@/types/colorSlots';
-import type { StatusConfig } from '@/types/categoryConfig';
+import type { StatusConfig, AlertTypeConfig } from '@/types/categoryConfig';
 
 /**
  * Type guard to check if a value is a legacy string array format
@@ -171,6 +173,102 @@ export function discoverStatusesFromCases(
   
   // Return combined array - existing first, then discovered
   return [...existingStatuses, ...discoveredStatuses];
+}
+
+/**
+ * Discover alert types used in alert data that aren't in the config.
+ * Auto-assigns colors to newly discovered alert types.
+ * 
+ * @param existingAlertTypes - Current AlertTypeConfig array
+ * @param alerts - Array of alerts with alertType field
+ * @returns Updated AlertTypeConfig array with any discovered alert types added
+ */
+export function discoverAlertTypesFromAlerts(
+  existingAlertTypes: AlertTypeConfig[],
+  alerts: Array<{ alertType?: string }>
+): AlertTypeConfig[] {
+  // Build set of existing alert type names (case-insensitive)
+  const existingNames = new Set(
+    existingAlertTypes.map(a => a.name.toLowerCase())
+  );
+  
+  // Track used color slots to avoid duplicates when assigning
+  const usedSlots = new Set<ColorSlot>(
+    existingAlertTypes.map(a => a.colorSlot)
+  );
+  
+  // Collect unique alert types from alerts
+  const discoveredAlertTypes: AlertTypeConfig[] = [];
+  const discoveredNames = new Set<string>();
+  
+  for (const alert of alerts) {
+    const alertType = alert.alertType;
+    
+    if (!alertType || typeof alertType !== 'string') continue;
+    
+    const trimmed = alertType.trim();
+    if (!trimmed) continue;
+    
+    const lowerName = trimmed.toLowerCase();
+    
+    // Skip if already exists in config or already discovered
+    if (existingNames.has(lowerName) || discoveredNames.has(lowerName)) {
+      continue;
+    }
+    
+    // Discover this alert type
+    discoveredNames.add(lowerName);
+    
+    // Assign a color - check default colors first
+    const defaultColor = DEFAULT_ALERT_COLORS[trimmed];
+    let colorSlot: ColorSlot;
+    
+    if (defaultColor && !usedSlots.has(defaultColor)) {
+      colorSlot = defaultColor;
+    } else {
+      // Auto-assign from unused slots
+      colorSlot = autoAssignAlertColorSlot(trimmed, usedSlots);
+    }
+    
+    usedSlots.add(colorSlot);
+    discoveredAlertTypes.push({ name: trimmed, colorSlot });
+  }
+  
+  if (discoveredAlertTypes.length > 0) {
+    console.info(
+      `[CategoryConfig] Discovered ${discoveredAlertTypes.length} alert type(s) from alert data:`,
+      discoveredAlertTypes.map(a => a.name)
+    );
+  }
+  
+  // Return combined array - existing first, then discovered
+  return [...existingAlertTypes, ...discoveredAlertTypes];
+}
+
+/**
+ * Auto-assign a color slot to an alert type that doesn't have one.
+ * Tries to use unused slots first, then cycles through all slots.
+ */
+function autoAssignAlertColorSlot(
+  alertTypeName: string,
+  usedSlots: Set<ColorSlot>
+): ColorSlot {
+  // First, check if there's a default for this alert type name
+  const defaultSlot = DEFAULT_ALERT_COLORS[alertTypeName];
+  if (defaultSlot && !usedSlots.has(defaultSlot)) {
+    return defaultSlot;
+  }
+
+  // Find first unused slot
+  for (const slot of COLOR_SLOTS) {
+    if (!usedSlots.has(slot)) {
+      return slot;
+    }
+  }
+
+  // All slots used, cycle based on alert type name hash
+  const hash = alertTypeName.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+  return COLOR_SLOTS[hash % COLOR_SLOTS.length];
 }
 
 /**

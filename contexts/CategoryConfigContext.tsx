@@ -6,12 +6,13 @@ import {
   mergeCategoryConfig,
   sanitizeCategoryValues,
   type StatusConfig,
+  type AlertTypeConfig,
   type PartialCategoryConfigInput,
 } from "@/types/categoryConfig";
 import { useDataManagerSafe } from "./DataManagerContext";
 import { useFileStorageDataChange } from "./FileStorageContext";
 
-type UpdateHandler = (key: CategoryKey, values: string[] | StatusConfig[]) => Promise<void>;
+type UpdateHandler = (key: CategoryKey, values: string[] | StatusConfig[] | AlertTypeConfig[]) => Promise<void>;
 
 type CategoryConfigContextValue = {
   config: CategoryConfig;
@@ -133,6 +134,52 @@ export const CategoryConfigProvider: React.FC<{ children: React.ReactNode }> = (
           toast.success("Options updated", { id: toastId });
         } catch (err) {
           console.error("Failed to update statuses", err);
+          toast.error("Failed to update options", { id: toastId });
+        }
+        return;
+      }
+
+      // Handle alertTypes specially since it uses AlertTypeConfig[]
+      if (key === 'alertTypes') {
+        const inputValues = values as (string | AlertTypeConfig)[];
+        
+        // Check if we have AlertTypeConfig objects (with colorSlot)
+        const hasColorInfo = inputValues.length > 0 && 
+          typeof inputValues[0] === 'object' && 
+          'colorSlot' in inputValues[0];
+        
+        if (hasColorInfo) {
+          // New format with colors - use updateAlertTypes
+          const alertTypeConfigs = inputValues as AlertTypeConfig[];
+
+          const toastId = toast.loading("Saving alert types...");
+          try {
+            const updated = await dataManager.updateAlertTypes(alertTypeConfigs);
+            setConfig(mergeCategoryConfig(updated));
+            setError(null);
+            toast.success("Alert types updated", { id: toastId });
+          } catch (err) {
+            console.error("Failed to update alert types", err);
+            toast.error("Failed to update alert types", { id: toastId });
+          }
+          return;
+        }
+        
+        // Legacy string[] format - normalize and save as strings
+        // Colors will be auto-assigned on next load
+        const stringValues: string[] = inputValues.map(v => 
+          typeof v === 'string' ? v : v.name
+        );
+        const sanitizedValues = sanitizeCategoryValues(stringValues);
+
+        const toastId = toast.loading("Saving options...");
+        try {
+          const updated = await dataManager.updateCategoryValues(key, sanitizedValues);
+          setConfig(mergeCategoryConfig(updated));
+          setError(null);
+          toast.success("Options updated", { id: toastId });
+        } catch (err) {
+          console.error("Failed to update alert types", err);
           toast.error("Failed to update options", { id: toastId });
         }
         return;

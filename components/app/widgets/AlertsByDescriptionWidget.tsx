@@ -10,8 +10,10 @@ import {
   ChartTooltipContent,
 } from '@/components/ui/chart';
 import { useWidgetData } from '@/hooks/useWidgetData';
+import { useCategoryConfig } from '@/contexts/CategoryConfigContext';
 import type { AlertWithMatch } from '@/utils/alertsData';
 import { calculateTotalAlertsByDescription, type AlertDescriptionStats } from '@/utils/widgetDataProcessors';
+import { getColorSlotVar } from '@/types/colorSlots';
 import type { WidgetMetadata } from './WidgetRegistry';
 
 interface AlertsByDescriptionWidgetProps {
@@ -20,6 +22,8 @@ interface AlertsByDescriptionWidgetProps {
 }
 
 export function AlertsByDescriptionWidget({ alerts = [], metadata }: AlertsByDescriptionWidgetProps) {
+  const { config } = useCategoryConfig();
+  
   const fetchData = useCallback(async () => {
     return calculateTotalAlertsByDescription(alerts);
   }, [alerts]);
@@ -35,40 +39,62 @@ export function AlertsByDescriptionWidget({ alerts = [], metadata }: AlertsByDes
   }, [data]);
   const uniqueDescriptions = stats.length;
 
-  // Use theme chart colors from globals.css - cycle through them
-  const alertColorPalette = useMemo(() => [
-    'var(--chart-1)',
-    'var(--chart-2)',
-    'var(--chart-3)',
-    'var(--chart-4)',
-    'var(--chart-5)',
-  ], []);
+  // Build color map from category config's alertTypes colorSlot assignments
+  // Falls back to cycling through chart colors for unconfigured types
+  const alertColorMap = useMemo(() => {
+    const map: Record<string, string> = {};
+    const fallbackColors = [
+      'var(--chart-1)',
+      'var(--chart-2)',
+      'var(--chart-3)',
+      'var(--chart-4)',
+      'var(--chart-5)',
+    ];
+    let fallbackIndex = 0;
+    
+    stats.forEach((item) => {
+      // Look for configured color for this alert type/description
+      const alertTypeConfig = config.alertTypes.find(
+        at => at.name.toLowerCase() === item.description.toLowerCase()
+      );
+      
+      if (alertTypeConfig) {
+        map[item.description] = getColorSlotVar(alertTypeConfig.colorSlot);
+      } else {
+        // Use fallback color and cycle
+        map[item.description] = fallbackColors[fallbackIndex % fallbackColors.length];
+        fallbackIndex++;
+      }
+    });
+    
+    return map;
+  }, [stats, config.alertTypes]);
 
   // Convert stats to chart data with theme colors - take top 10
   const chartData = useMemo(() => {
-    return stats.slice(0, 10).map((item, index) => ({
+    return stats.slice(0, 10).map((item) => ({
       description: item.description,
       count: item.count,
-      fill: alertColorPalette[index % alertColorPalette.length],
+      fill: alertColorMap[item.description] || 'var(--muted)',
     }));
-  }, [stats, alertColorPalette]);
+  }, [stats, alertColorMap]);
 
   // Build chart config from stats
   const chartConfig = useMemo(() => {
-    const config: ChartConfig = {
+    const cfg: ChartConfig = {
       count: {
         label: 'Alerts',
       },
     };
-    stats.slice(0, 10).forEach((item, index) => {
+    stats.slice(0, 10).forEach((item) => {
       const key = item.description.toLowerCase().replace(/[^a-z0-9]/g, '_');
-      config[key] = {
+      cfg[key] = {
         label: item.description,
-        color: alertColorPalette[index % alertColorPalette.length],
+        color: alertColorMap[item.description] || 'var(--muted)',
       };
     });
-    return config;
-  }, [stats, alertColorPalette]);
+    return cfg;
+  }, [stats, alertColorMap]);
 
   const freshnessLabel = useMemo(() => {
     if (!freshness.lastUpdatedAt) {
@@ -165,8 +191,8 @@ export function AlertsByDescriptionWidget({ alerts = [], metadata }: AlertsByDes
               </PieChart>
             </ChartContainer>
             <div className="mt-4 grid grid-cols-2 gap-2 text-sm">
-              {stats.slice(0, 10).map((item, index) => {
-                const color = alertColorPalette[index % alertColorPalette.length];
+              {stats.slice(0, 10).map((item) => {
+                const color = alertColorMap[item.description] || 'var(--muted)';
                 return (
                   <div key={item.description} className="flex items-center gap-2">
                     <div 

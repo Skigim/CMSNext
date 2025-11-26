@@ -15,6 +15,7 @@ import {
   CategoryConfig,
   CategoryKey,
   StatusConfig,
+  AlertTypeConfig,
   mergeCategoryConfig,
 } from "../types/categoryConfig";
 import { STORAGE_CONSTANTS } from "./constants/storage";
@@ -328,6 +329,10 @@ export class DataManager {
 
   async updateCaseStatuses(statuses: StatusConfig[]): Promise<CategoryConfig> {
     return this.categoryConfig.updateCaseStatuses(statuses);
+  }
+
+  async updateAlertTypes(alertTypes: AlertTypeConfig[]): Promise<CategoryConfig> {
+    return this.categoryConfig.updateAlertTypes(alertTypes);
   }
 
   async resetCategoryConfig(): Promise<CategoryConfig> {

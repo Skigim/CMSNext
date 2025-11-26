@@ -2,7 +2,7 @@ import type { AlertRecord, StoredCase, StoredFinancialItem, StoredNote } from ".
 import type { CaseActivityEntry } from "../../types/activityLog";
 import type { CategoryConfig } from "../../types/categoryConfig";
 import { mergeCategoryConfig } from "../../types/categoryConfig";
-import { discoverStatusesFromCases } from "../categoryConfigMigration";
+import { discoverStatusesFromCases, discoverAlertTypesFromAlerts } from "../categoryConfigMigration";
 import AutosaveFileService from "../AutosaveFileService";
 import { createLogger } from "../logger";
 import { reportFileStorageError, type FileStorageOperation } from "../fileStorageErrorReporter";
@@ -190,12 +190,14 @@ export class FileStorageService {
     }
 
     try {
-      // Merge category config and discover any statuses used in cases
+      // Merge category config and discover any statuses/alert types from data
       const mergedConfig = mergeCategoryConfig(data.categoryConfig);
       const enrichedStatuses = discoverStatusesFromCases(mergedConfig.caseStatuses, data.cases);
+      const enrichedAlertTypes = discoverAlertTypesFromAlerts(mergedConfig.alertTypes ?? [], data.alerts);
       const categoryConfig: CategoryConfig = {
         ...mergedConfig,
         caseStatuses: enrichedStatuses,
+        alertTypes: enrichedAlertTypes,
       };
 
       // Validate and clean data before writing

@@ -1,5 +1,5 @@
-import type { CategoryConfig, CategoryKey, StatusConfig } from "../../types/categoryConfig";
-import { mergeCategoryConfig, sanitizeCategoryValues, sanitizeStatusConfigs } from "../../types/categoryConfig";
+import type { CategoryConfig, CategoryKey, StatusConfig, AlertTypeConfig } from "../../types/categoryConfig";
+import { mergeCategoryConfig, sanitizeCategoryValues, sanitizeStatusConfigs, sanitizeAlertTypeConfigs } from "../../types/categoryConfig";
 import { createLogger } from "../logger";
 import type { FileStorageService, NormalizedFileData } from "./FileStorageService";
 
@@ -126,6 +126,26 @@ export class CategoryConfigService {
 
     logger.info("Case statuses updated with colors", {
       statusCount: sanitized.length,
+    });
+
+    return this.updateCategoryConfig(nextConfig);
+  }
+
+  /**
+   * Update alert types with full AlertTypeConfig (name + color)
+   * Unlike statuses, alert types can be empty (no alerts imported yet)
+   */
+  async updateAlertTypes(alertTypes: AlertTypeConfig[]): Promise<CategoryConfig> {
+    const sanitized = sanitizeAlertTypeConfigs(alertTypes);
+
+    const currentConfig = await this.getCategoryConfig();
+    const nextConfig: CategoryConfig = {
+      ...currentConfig,
+      alertTypes: sanitized,
+    };
+
+    logger.info("Alert types updated with colors", {
+      alertTypeCount: sanitized.length,
     });
 
     return this.updateCategoryConfig(nextConfig);

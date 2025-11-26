@@ -43,6 +43,21 @@ export const DEFAULT_STATUS_COLORS: Record<string, ColorSlot> = {
 };
 
 /**
+ * Default color assignments for common alert types.
+ * These provide sensible defaults that users can override.
+ */
+export const DEFAULT_ALERT_COLORS: Record<string, ColorSlot> = {
+  'Overdue Documentation': 'red',
+  'Case Closure Notice': 'amber',
+  'Recertification Due': 'orange',
+  'Income Verification': 'blue',
+  'Residency Confirmation': 'teal',
+  'Asset Threshold': 'purple',
+  'Medical Review': 'rose',
+  'Eligibility Review': 'cyan',
+};
+
+/**
  * Get the CSS variable name for a color slot's main color.
  */
 export function getColorSlotVar(slot: ColorSlot): string {
@@ -64,11 +79,25 @@ export function getColorSlotBorderVar(slot: ColorSlot): string {
 }
 
 /**
- * Get Tailwind-compatible class string for a badge using a color slot.
- * Returns classes that reference the CSS custom properties.
+ * Style object for a badge using a color slot.
+ * Uses inline styles to ensure CSS variables work with dynamic slot names.
  */
-export function getColorSlotBadgeClasses(slot: ColorSlot): string {
-  return `bg-[var(--color-slot-${slot}-bg)] text-[var(--color-slot-${slot})] border-[var(--color-slot-${slot}-border)]`;
+export interface ColorSlotBadgeStyle {
+  backgroundColor: string;
+  color: string;
+  borderColor: string;
+}
+
+/**
+ * Get inline style object for a badge using a color slot.
+ * Returns a style object with CSS variable references.
+ */
+export function getColorSlotBadgeStyle(slot: ColorSlot): ColorSlotBadgeStyle {
+  return {
+    backgroundColor: `var(--color-slot-${slot}-bg)`,
+    color: `var(--color-slot-${slot})`,
+    borderColor: `var(--color-slot-${slot}-border)`,
+  };
 }
 
 /**
