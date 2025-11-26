@@ -1,7 +1,6 @@
 import { createContext, useContext, useState, useEffect, useCallback, useReducer, ReactNode, useMemo, useRef } from 'react';
 import AutosaveFileService from '@/utils/AutosaveFileService';
 import { FileStorageService } from '@/utils/services/FileStorageService';
-import { normalizeCaseNotes } from '@/utils/normalization';
 import { setFileService } from '@/utils/fileServiceProvider';
 import {
   reportFileStorageError,
@@ -99,11 +98,8 @@ export function FileStorageProvider({
       }
     });
 
-    const persistNormalizationFixes = import.meta.env.VITE_PERSIST_NORMALIZATION_FIXES !== 'false';
     const storageService = new FileStorageService({
       fileService,
-      persistNormalizationFixes,
-      normalizeCaseNotes,
     });
 
     dispatch({ type: 'SERVICE_INITIALIZED', supported: fileService.isSupported() });

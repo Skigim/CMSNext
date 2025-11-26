@@ -1,4 +1,4 @@
-import { act, renderHook, waitFor } from "@testing-library/react";
+import { act, renderHook } from "@testing-library/react";
 import type { Dispatch, SetStateAction } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { createMockCaseDisplay, toast as mockToast } from "@/src/test/testUtils";
@@ -79,25 +79,6 @@ describe("useFileDataSync", () => {
       sessionHadData: true,
     });
     expect(mockToast.error).not.toHaveBeenCalled();
-  });
-
-  it("reloads cases when raw people and records are loaded", async () => {
-    renderHookWithDeps();
-    const handler = dataLoadHandlers[0];
-
-    act(() => {
-      handler({
-        people: [{ id: "person-1" }],
-        caseRecords: [{ id: "case-record-1" }],
-      });
-    });
-
-    expect(setHasLoadedDataMock).toHaveBeenCalledWith(true);
-    expect(setCasesMock).not.toHaveBeenCalled();
-
-    await waitFor(() => {
-      expect(loadCasesMock).toHaveBeenCalledTimes(1);
-    });
   });
 
   it("surfaces toast errors when sync fails", () => {

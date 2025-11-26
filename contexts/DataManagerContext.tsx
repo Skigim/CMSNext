@@ -17,7 +17,6 @@ interface DataManagerProviderProps {
 
 export function DataManagerProvider({ children }: DataManagerProviderProps) {
   const { service, fileStorageService, isConnected, status } = useFileStorage();
-  const persistNormalizationFixes = import.meta.env.VITE_PERSIST_NORMALIZATION_FIXES !== 'false';
   
   // Memoize DataManager creation to prevent recreation on every render
   const dataManager = useMemo(() => {
@@ -28,9 +27,8 @@ export function DataManagerProvider({ children }: DataManagerProviderProps) {
     return new DataManager({
       fileService: service,
       fileStorageService: fileStorageService || undefined,
-      persistNormalizationFixes,
     });
-  }, [persistNormalizationFixes, service, fileStorageService]); // Only recreate when service changes or config toggles
+  }, [service, fileStorageService]); // Only recreate when service changes
 
   useEffect(() => {
     logger.debug('Provider state updated', {

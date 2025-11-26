@@ -28,9 +28,7 @@ import {
   type StoredCase, 
   type StoredFinancialItem, 
   type StoredNote,
-  type LegacyFileData 
 } from "./services/FileStorageService";
-import { normalizeCaseNotes } from "./normalization";
 import { ActivityLogService } from "./services/ActivityLogService";
 import { CategoryConfigService } from "./services/CategoryConfigService";
 import { NotesService } from "./services/NotesService";
@@ -45,7 +43,6 @@ import { AlertsService } from "./services/AlertsService";
 interface DataManagerConfig {
   fileService: AutosaveFileService;
   fileStorageService?: FileStorageService;
-  persistNormalizationFixes?: boolean;
 }
 
 const logger = createLogger('DataManager');
@@ -95,8 +92,6 @@ export class DataManager {
     this.fileService = config.fileService;
     this.fileStorage = config.fileStorageService || new FileStorageService({
       fileService: config.fileService,
-      persistNormalizationFixes: config.persistNormalizationFixes,
-      normalizeCaseNotes,
     });
     this.activityLog = new ActivityLogService({
       fileStorage: this.fileStorage,
@@ -128,16 +123,6 @@ export class DataManager {
     return this.fileStorage.readFileData();
   }
 
-  /**
-   * Get denormalized data for backward compatibility
-   * Use only when interfacing with components not yet migrated
-   */
-  private async readFileDataLegacy(): Promise<LegacyFileData | null> {
-    const normalized = await this.fileStorage.readFileData();
-    if (!normalized) return null;
-    return this.fileStorage.denormalizeForRuntime(normalized);
-  }
-
   // =============================================================================
   // PUBLIC API - READ OPERATIONS
   // =============================================================================
@@ -149,16 +134,6 @@ export class DataManager {
    */
   async getAllCases(): Promise<StoredCase[]> {
     return this.cases.getAllCases();
-  }
-
-  /**
-   * Get all cases in legacy format with nested financials/notes
-   * Use only for backward compatibility with components not yet migrated
-   * @deprecated Use getAllCases() + getFinancialItemsForCase() + getNotesForCase() instead
-   */
-  async getAllCasesLegacy(): Promise<CaseDisplay[]> {
-    const data = await this.readFileDataLegacy();
-    return data?.cases ?? [];
   }
 
   async getActivityLog(): Promise<CaseActivityEntry[]> {
@@ -176,17 +151,6 @@ export class DataManager {
    */
   async getCaseById(caseId: string): Promise<StoredCase | null> {
     return this.cases.getCaseById(caseId);
-  }
-
-  /**
-   * Get a specific case in legacy format with nested financials/notes
-   * Use only for backward compatibility with components not yet migrated
-   * @deprecated Use getCaseById() + getFinancialItemsForCase() + getNotesForCase() instead
-   */
-  async getCaseByIdLegacy(caseId: string): Promise<CaseDisplay | null> {
-    const data = await this.readFileDataLegacy();
-    if (!data) return null;
-    return data.cases.find(c => c.id === caseId) ?? null;
   }
 
   /**

@@ -19,8 +19,6 @@ const logger = createLogger("FileDataSync");
 
 type FileDataPayload = {
   cases?: StoredCase[];
-  people?: unknown[];
-  caseRecords?: unknown[];
   categoryConfig?: Partial<CategoryConfig> | null;
   [key: string]: unknown;
 } | null | undefined;
@@ -38,7 +36,6 @@ export function useFileDataSync({
       try {
         logger.lifecycle("handleFileDataLoaded invoked", {
           hasCases: Array.isArray(payload?.cases),
-          peopleCount: Array.isArray(payload?.people) ? payload?.people?.length : undefined,
         });
 
         if (payload && typeof payload === "object") {
@@ -59,33 +56,6 @@ export function useFileDataSync({
           setHasLoadedData(true);
           updateFileStorageFlags({ dataBaseline: true, sessionHadData: payload.cases.length > 0 });
 
-          return;
-        }
-
-        if (Array.isArray(payload?.people) && Array.isArray(payload?.caseRecords)) {
-          logger.warn("Raw file data detected; scheduling DataManager reload", {
-            peopleCount: payload.people.length,
-            caseRecordCount: payload.caseRecords.length,
-          });
-
-          recordStorageSyncEvent("sync", true, {
-            itemCount: payload.people.length + payload.caseRecords.length,
-            metadata: { type: "rawData", peopleCount: payload.people.length, recordCount: payload.caseRecords.length },
-          });
-
-          setHasLoadedData(true);
-
-          setTimeout(() => {
-            loadCases().catch(err => {
-              recordStorageSyncEvent("load", false, {
-                error: err instanceof Error ? err.message : String(err),
-                metadata: { type: "dataNormalization" },
-              });
-              logger.error("Failed to reload cases after file load", {
-                error: err instanceof Error ? err.message : String(err),
-              });
-            });
-          }, 100);
           return;
         }
 
