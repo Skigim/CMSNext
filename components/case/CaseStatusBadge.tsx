@@ -12,14 +12,8 @@ import {
 import { cn } from "@/components/ui/utils";
 import type { CaseDisplay } from "@/types/case";
 import { useCategoryConfig } from "@/contexts/CategoryConfigContext";
-const STATUS_COLOR_PALETTE = [
-  "bg-blue-500/10 text-blue-500 border-blue-500/20",
-  "bg-emerald-500/10 text-emerald-500 border-emerald-500/20",
-  "bg-red-500/10 text-red-500 border-red-500/20",
-  "bg-amber-500/10 text-amber-500 border-amber-500/20",
-  "bg-purple-500/10 text-purple-500 border-purple-500/20",
-  "bg-slate-500/10 text-slate-500 border-slate-500/20",
-];
+import { getColorSlotBadgeClasses } from "@/types/colorSlots";
+import { getStatusColorSlot } from "@/utils/categoryConfigMigration";
 
 export interface CaseStatusBadgeProps {
   status?: CaseDisplay["status"];
@@ -35,20 +29,24 @@ export const CaseStatusBadge = memo(function CaseStatusBadge({ status, onStatusC
 
   const statusPalette = useMemo(() => {
     const map = new Map<string, string>();
-    const statuses = config.caseStatuses;
-
-    statuses.forEach((caseStatus, index) => {
-      map.set(caseStatus, STATUS_COLOR_PALETTE[index % STATUS_COLOR_PALETTE.length]);
+    
+    config.caseStatuses.forEach((statusConfig) => {
+      const classes = getColorSlotBadgeClasses(statusConfig.colorSlot);
+      map.set(statusConfig.name, classes);
     });
 
     return map;
   }, [config.caseStatuses]);
 
-  const fallbackStatus = (config.caseStatuses[0] ?? "Pending") as CaseDisplay["status"];
+  const fallbackStatus = (config.caseStatuses[0]?.name ?? "Pending") as CaseDisplay["status"];
   const effectiveStatus: CaseDisplay["status"] = status ?? fallbackStatus;
-  const className = statusPalette.get(effectiveStatus) ?? STATUS_COLOR_PALETTE[0];
+  
+  // Get className from the palette, or derive from colorSlot lookup
+  const className = statusPalette.get(effectiveStatus) 
+    ?? getColorSlotBadgeClasses(getStatusColorSlot(config.caseStatuses, effectiveStatus));
 
   const canChangeStatus = onStatusChange && config.caseStatuses.length > 1;
+  const statusNames = config.caseStatuses.map(s => s.name);
 
   if (!canChangeStatus) {
     return (
@@ -90,9 +88,9 @@ export const CaseStatusBadge = memo(function CaseStatusBadge({ status, onStatusC
             void onStatusChange(value as CaseDisplay["status"]);
           }}
         >
-          {config.caseStatuses.map(caseStatus => (
-            <DropdownMenuRadioItem key={caseStatus} value={caseStatus}>
-              {caseStatus}
+          {statusNames.map(statusName => (
+            <DropdownMenuRadioItem key={statusName} value={statusName}>
+              {statusName}
             </DropdownMenuRadioItem>
           ))}
         </DropdownMenuRadioGroup>

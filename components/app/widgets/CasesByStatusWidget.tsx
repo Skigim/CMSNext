@@ -9,8 +9,11 @@ import {
   ChartTooltipContent,
 } from '@/components/ui/chart';
 import { useWidgetData } from '@/hooks/useWidgetData';
+import { useCategoryConfig } from '@/contexts/CategoryConfigContext';
 import type { StoredCase } from '@/types/case';
 import { calculateTotalCasesByStatus, type StatusBreakdown } from '@/utils/widgetDataProcessors';
+import { getColorSlotVar } from '@/types/colorSlots';
+import { getStatusColorSlot } from '@/utils/categoryConfigMigration';
 import type { WidgetMetadata } from './WidgetRegistry';
 
 interface CasesByStatusWidgetProps {
@@ -19,6 +22,8 @@ interface CasesByStatusWidgetProps {
 }
 
 export function CasesByStatusWidget({ cases = [], metadata }: CasesByStatusWidgetProps) {
+  const { config } = useCategoryConfig();
+  
   const fetchData = useCallback(async () => {
     return calculateTotalCasesByStatus(cases);
   }, [cases]);
@@ -48,42 +53,40 @@ export function CasesByStatusWidget({ cases = [], metadata }: CasesByStatusWidge
   const breakdown = useMemo(() => data ?? [], [data]);
   const totalCases = useMemo(() => breakdown.reduce((acc, item) => acc + item.count, 0), [breakdown]);
 
-  // Map status to theme chart colors from globals.css
-  const statusColorMap: Record<string, string> = useMemo(() => ({
-    pending: 'var(--chart-status-pending)',
-    approved: 'var(--chart-status-approved)',
-    denied: 'var(--chart-status-denied)',
-    closed: 'var(--chart-status-closed)',
-    spenddown: 'var(--chart-status-spenddown)',
-  }), []);
+  // Build color map from category config's colorSlot assignments
+  const statusColorMap = useMemo(() => {
+    const map: Record<string, string> = {};
+    breakdown.forEach((item) => {
+      const colorSlot = getStatusColorSlot(config.caseStatuses, item.status);
+      map[item.status] = getColorSlotVar(colorSlot);
+    });
+    return map;
+  }, [breakdown, config.caseStatuses]);
 
   // Convert breakdown to chart data with theme colors
   const chartData = useMemo(() => {
-    return breakdown.map((item) => {
-      const statusKey = item.status.toLowerCase();
-      return {
-        status: item.status,
-        count: item.count,
-        fill: statusColorMap[statusKey] || 'var(--muted)',
-      };
-    });
+    return breakdown.map((item) => ({
+      status: item.status,
+      count: item.count,
+      fill: statusColorMap[item.status] || 'var(--muted)',
+    }));
   }, [breakdown, statusColorMap]);
 
   // Build chart config from breakdown
   const chartConfig = useMemo(() => {
-    const config: ChartConfig = {
+    const cfg: ChartConfig = {
       count: {
         label: 'Cases',
       },
     };
     breakdown.forEach((item) => {
-      const statusKey = item.status.toLowerCase();
-      config[statusKey] = {
+      const statusKey = item.status.toLowerCase().replace(/\s+/g, '_');
+      cfg[statusKey] = {
         label: item.status,
-        color: statusColorMap[statusKey] || 'var(--muted)',
+        color: statusColorMap[item.status] || 'var(--muted)',
       };
     });
-    return config;
+    return cfg;
   }, [breakdown, statusColorMap]);
 
   if (loading && !data) {
@@ -162,8 +165,7 @@ export function CasesByStatusWidget({ cases = [], metadata }: CasesByStatusWidge
             </ChartContainer>
             <div className="mt-4 grid grid-cols-2 gap-2 text-sm">
               {breakdown.map((item) => {
-                const statusKey = item.status.toLowerCase();
-                const color = statusColorMap[statusKey] || 'var(--muted)';
+                const color = statusColorMap[item.status] || 'var(--muted)';
                 return (
                   <div key={item.status} className="flex items-center gap-2">
                     <div 

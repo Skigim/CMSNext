@@ -19,7 +19,11 @@ interface CaseFiltersProps {
 export function CaseFilters({ filters, onFiltersChange }: CaseFiltersProps) {
   const { config } = useCategoryConfig();
   
-  const statusOptions = useMemo(() => config.caseStatuses || [], [config.caseStatuses]);
+  // Extract status names from StatusConfig[] for UI display
+  const statusOptions = useMemo(() => 
+    config.caseStatuses.map(s => s.name), 
+    [config.caseStatuses]
+  );
   
   const activeFilterCount = useMemo(() => {
     let count = 0;

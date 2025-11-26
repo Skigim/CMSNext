@@ -85,8 +85,8 @@ export function CaseInfoForm({
               </SelectTrigger>
               <SelectContent>
                 {caseStatuses.map((status) => (
-                  <SelectItem key={status} value={status}>
-                    {status}
+                  <SelectItem key={status.name} value={status.name}>
+                    {status.name}
                   </SelectItem>
                 ))}
               </SelectContent>

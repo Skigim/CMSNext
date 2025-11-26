@@ -2,6 +2,7 @@ import type { AlertRecord, StoredCase, StoredFinancialItem, StoredNote } from ".
 import type { CaseActivityEntry } from "../../types/activityLog";
 import type { CategoryConfig } from "../../types/categoryConfig";
 import { mergeCategoryConfig } from "../../types/categoryConfig";
+import { discoverStatusesFromCases } from "../categoryConfigMigration";
 import AutosaveFileService from "../AutosaveFileService";
 import { createLogger } from "../logger";
 import { reportFileStorageError, type FileStorageOperation } from "../fileStorageErrorReporter";
@@ -189,6 +190,14 @@ export class FileStorageService {
     }
 
     try {
+      // Merge category config and discover any statuses used in cases
+      const mergedConfig = mergeCategoryConfig(data.categoryConfig);
+      const enrichedStatuses = discoverStatusesFromCases(mergedConfig.caseStatuses, data.cases);
+      const categoryConfig: CategoryConfig = {
+        ...mergedConfig,
+        caseStatuses: enrichedStatuses,
+      };
+
       // Validate and clean data before writing
       const finalData: NormalizedFileData = {
         version: NORMALIZED_VERSION as "2.0",
@@ -198,7 +207,7 @@ export class FileStorageService {
         alerts: data.alerts.map(a => ({ ...a })),
         exported_at: new Date().toISOString(),
         total_cases: data.cases.length,
-        categoryConfig: mergeCategoryConfig(data.categoryConfig),
+        categoryConfig,
         activityLog: [...(data.activityLog ?? [])]
           .map((entry): CaseActivityEntry =>
             entry.type === "status-change"

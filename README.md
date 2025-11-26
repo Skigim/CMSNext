@@ -126,86 +126,107 @@ your-chosen-directory/
 
 ## 💾 Data Format
 
-Case data is stored in a structured JSON format optimized for performance and data integrity:
+Case data is stored in a **normalized v2.0 JSON format** optimized for performance and data integrity. The format separates cases, financials, notes, and alerts into flat arrays with foreign key relationships:
 
 ```json
 {
-  "exported_at": "2024-12-19T15:30:00.000Z",
-  "total_cases": 2,
+  "version": "2.0",
+  "exported_at": "2025-11-26T15:30:00.000Z",
+  "total_cases": 1,
   "cases": [
     {
       "id": "550e8400-e29b-41d4-a716-446655440001",
       "name": "John Doe",
       "mcn": "MC001234",
-      "status": "In Progress",
+      "status": "Pending",
       "priority": false,
+      "createdAt": "2025-11-01T10:00:00.000Z",
+      "updatedAt": "2025-11-26T15:30:00.000Z",
       "person": {
+        "id": "person_001",
         "firstName": "John",
         "lastName": "Doe",
+        "name": "John Doe",
         "dateOfBirth": "1985-03-15",
+        "ssn": "***-**-1234",
+        "email": "john.doe@email.com",
+        "phone": "(555) 123-4567",
+        "livingArrangement": "Own Home",
         "address": {
           "street": "123 Main St",
           "city": "Springfield",
-          "state": "IL",
-          "zipCode": "62701"
+          "state": "NE",
+          "zip": "68501"
         },
-        "phone": "(555) 123-4567",
-        "email": "john.doe@email.com"
+        "mailingAddress": {
+          "street": "123 Main St",
+          "city": "Springfield",
+          "state": "NE",
+          "zip": "68501",
+          "sameAsPhysical": true
+        }
       },
       "caseRecord": {
-        "openDate": "2024-12-01",
-        "status": "In Progress",
+        "id": "case_001",
+        "mcn": "MC001234",
+        "applicationDate": "2025-11-01",
+        "caseType": "Initial Application",
+        "status": "Pending",
         "priority": false,
-        "financials": {
-          "resources": [
-            {
-              "id": "res_001",
-              "description": "Checking Account",
-              "amount": 2500.0,
-              "frequency": "one-time",
-              "verificationStatus": "VR",
-              "dateAdded": "2024-12-01T10:00:00.000Z"
-            }
-          ],
-          "income": [
-            {
-              "id": "inc_001",
-              "description": "Employment",
-              "amount": 3200.0,
-              "frequency": "monthly",
-              "verificationStatus": "VR",
-              "dateAdded": "2024-12-01T10:00:00.000Z"
-            }
-          ],
-          "expenses": [
-            {
-              "id": "exp_001",
-              "description": "Rent",
-              "amount": 1200.0,
-              "frequency": "monthly",
-              "verificationStatus": "VR",
-              "dateAdded": "2024-12-01T10:00:00.000Z"
-            }
-          ]
-        },
-        "notes": [
-          {
-            "id": "note_001",
-            "category": "General",
-            "content": "Initial intake completed",
-            "createdAt": "2024-12-01T10:00:00.000Z",
-            "updatedAt": "2024-12-01T10:00:00.000Z"
-          }
-        ]
+        "description": "New application for benefits"
       }
     }
-  ]
+  ],
+  "financials": [
+    {
+      "id": "fin_001",
+      "caseId": "550e8400-e29b-41d4-a716-446655440001",
+      "category": "resources",
+      "description": "Checking Account",
+      "amount": 2500.0,
+      "verificationStatus": "VR",
+      "dateAdded": "2025-11-01T10:00:00.000Z"
+    },
+    {
+      "id": "fin_002",
+      "caseId": "550e8400-e29b-41d4-a716-446655440001",
+      "category": "income",
+      "description": "Employment - Acme Corp",
+      "amount": 3200.0,
+      "frequency": "monthly",
+      "verificationStatus": "VR",
+      "dateAdded": "2025-11-01T10:00:00.000Z"
+    }
+  ],
+  "notes": [
+    {
+      "id": "note_001",
+      "caseId": "550e8400-e29b-41d4-a716-446655440001",
+      "category": "General",
+      "content": "Initial intake completed. Client provided all required documentation.",
+      "createdAt": "2025-11-01T10:00:00.000Z",
+      "updatedAt": "2025-11-01T10:00:00.000Z"
+    }
+  ],
+  "alerts": [],
+  "activityLog": [],
+  "categoryConfig": {
+    "caseTypes": ["Initial Application", "Renewal", "Change Report"],
+    "caseStatuses": [
+      { "name": "Pending", "colorSlot": "amber" },
+      { "name": "Active", "colorSlot": "green" },
+      { "name": "Closed", "colorSlot": "slate" }
+    ],
+    "livingArrangements": ["Own Home", "Rental", "Family Member"],
+    "noteCategories": ["General", "VR Update", "Client Contact"],
+    "verificationStatuses": ["Needs VR", "VR Pending", "Verified"]
+  }
 }
 ```
 
 ### **Data Validation**
 
-- **Automatic migration** from legacy formats
+- **v2.0 format required** - Legacy formats are rejected with helpful error messages
 - **Schema validation** ensures data consistency
 - **Type checking** prevents data corruption
 - **Backup creation** before any destructive operations

@@ -26,7 +26,7 @@ export function CaseForm({ case: existingCase, onSave, onCancel }: CaseFormProps
   const { config } = useCategoryConfig();
 
   const defaultCaseType = useMemo(() => config.caseTypes[0] ?? "", [config.caseTypes]);
-  const defaultCaseStatus = useMemo(() => (config.caseStatuses[0] ?? "Pending") as CaseStatus, [config.caseStatuses]);
+  const defaultCaseStatus = useMemo(() => (config.caseStatuses[0]?.name ?? "Pending") as CaseStatus, [config.caseStatuses]);
   const defaultLivingArrangement = useMemo(
     () => config.livingArrangements[0] ?? "",
     [config.livingArrangements],

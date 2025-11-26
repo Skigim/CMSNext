@@ -112,7 +112,8 @@ describe('CategoryConfigContext', () => {
     expect(toast.loading).toHaveBeenCalledWith('Saving options...');
     expect(mockDataManager.updateCategoryValues).toHaveBeenCalledWith('caseStatuses', ['Pending', 'Approved']);
     expect(toast.success).toHaveBeenCalledWith('Options updated', { id: 'toast-id' });
-    expect(result.current.config.caseStatuses).toEqual(['Pending', 'Approved']);
+    // caseStatuses is now StatusConfig[] - verify the names match
+    expect(result.current.config.caseStatuses.map(s => s.name)).toEqual(['Pending', 'Approved']);
     expect(result.current.error).toBeNull();
   });
 

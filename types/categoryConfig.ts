@@ -1,3 +1,10 @@
+import type { ColorSlot } from './colorSlots';
+import { 
+  DEFAULT_STATUS_COLORS, 
+  autoAssignColorSlot, 
+  isValidColorSlot 
+} from './colorSlots';
+
 export type CategoryKey =
   | "caseTypes"
   | "caseStatuses"
@@ -5,15 +12,36 @@ export type CategoryKey =
   | "noteCategories"
   | "verificationStatuses";
 
+/**
+ * Configuration for a case status with its display color.
+ */
+export interface StatusConfig {
+  name: string;
+  colorSlot: ColorSlot;
+}
+
 export interface CategoryConfig {
   caseTypes: string[];
-  caseStatuses: string[];
+  caseStatuses: StatusConfig[];
   livingArrangements: string[];
   noteCategories: string[];
   verificationStatuses: string[];
 }
 
-export type PartialCategoryConfig = Partial<Record<CategoryKey, string[]>>;
+/**
+ * Input format for partial config - supports both legacy string[] 
+ * and new StatusConfig[] format for caseStatuses.
+ * 
+ * NOTE: Legacy string[] support is handled by utils/categoryConfigMigration.ts
+ * and will be removed after migration period.
+ */
+export interface PartialCategoryConfigInput {
+  caseTypes?: string[];
+  caseStatuses?: string[] | StatusConfig[];
+  livingArrangements?: string[];
+  noteCategories?: string[];
+  verificationStatuses?: string[];
+}
 
 const DEFAULT_CASE_TYPES = [
   "LTC",
@@ -24,7 +52,8 @@ const DEFAULT_CASE_TYPES = [
   "Other",
 ];
 
-const DEFAULT_CASE_STATUSES = ["Pending", "Approved", "Denied", "Spenddown"];
+// No default statuses - users must configure their own workflow
+const DEFAULT_CASE_STATUSES: StatusConfig[] = [];
 
 const DEFAULT_LIVING_ARRANGEMENTS = [
   "Apartment/House",
@@ -104,6 +133,61 @@ const dedupe = (values: string[]): string[] => {
   return result;
 };
 
+const dedupeStatuses = (statuses: StatusConfig[]): StatusConfig[] => {
+  const seen = new Set<string>();
+  const result: StatusConfig[] = [];
+  for (const status of statuses) {
+    if (!status || typeof status !== 'object') continue;
+    const name = status.name;
+    if (typeof name !== 'string') continue;
+    const key = name.trim().toLowerCase();
+    if (!key) continue;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    result.push({ 
+      name: name.trim(), 
+      colorSlot: isValidColorSlot(status.colorSlot) ? status.colorSlot : 'slate' 
+    });
+  }
+  return result;
+};
+
+/**
+ * Internal migration: Convert legacy string[] to StatusConfig[]
+ * This is also exported from utils/categoryConfigMigration.ts for external use
+ */
+const normalizeStatusesInternal = (
+  value: string[] | StatusConfig[] | undefined | null
+): StatusConfig[] => {
+  if (!value || !Array.isArray(value) || value.length === 0) {
+    return [];
+  }
+  
+  // Check if first item is a string (legacy format)
+  const first = value[0];
+  if (typeof first === 'string') {
+    // Legacy format - migrate
+    const usedSlots = new Set<ColorSlot>();
+    return (value as string[]).map((name) => {
+      const trimmedName = String(name).trim();
+      if (!trimmedName) return null;
+      
+      const defaultColor = DEFAULT_STATUS_COLORS[trimmedName];
+      if (defaultColor && !usedSlots.has(defaultColor)) {
+        usedSlots.add(defaultColor);
+        return { name: trimmedName, colorSlot: defaultColor };
+      }
+      
+      const colorSlot = autoAssignColorSlot(trimmedName, usedSlots);
+      usedSlots.add(colorSlot);
+      return { name: trimmedName, colorSlot };
+    }).filter((s): s is StatusConfig => s !== null);
+  }
+  
+  // Already StatusConfig[] format
+  return dedupeStatuses(value as StatusConfig[]);
+};
+
 export const sanitizeCategoryValues = (values: string[] | undefined | null): string[] => {
   if (!Array.isArray(values)) {
     return [];
@@ -111,40 +195,50 @@ export const sanitizeCategoryValues = (values: string[] | undefined | null): str
   return dedupe(values.map(value => String(value)));
 };
 
+export const sanitizeStatusConfigs = (statuses: StatusConfig[] | undefined | null): StatusConfig[] => {
+  if (!Array.isArray(statuses)) {
+    return [];
+  }
+  return dedupeStatuses(statuses);
+};
+
+/**
+ * Merge partial config with defaults.
+ * 
+ * Automatically handles migration from legacy string[] caseStatuses to StatusConfig[].
+ */
 export const mergeCategoryConfig = (
-  config?: PartialCategoryConfig | null,
+  config?: PartialCategoryConfigInput | null,
 ): CategoryConfig => {
   if (!config) {
     return {
       caseTypes: [...defaultCategoryConfig.caseTypes],
-      caseStatuses: [...defaultCategoryConfig.caseStatuses],
+      caseStatuses: defaultCategoryConfig.caseStatuses.map(s => ({ ...s })),
       livingArrangements: [...defaultCategoryConfig.livingArrangements],
       noteCategories: [...defaultCategoryConfig.noteCategories],
       verificationStatuses: [...defaultCategoryConfig.verificationStatuses],
     };
   }
 
-  const sanitizedEntries = Object.entries(config).reduce<PartialCategoryConfig>((acc, [key, values]) => {
-    const categoryKey = key as CategoryKey;
-    acc[categoryKey] = sanitizeCategoryValues(values);
-    return acc;
-  }, {});
+  // Handle caseStatuses with automatic migration from string[] to StatusConfig[]
+  const normalizedStatuses = normalizeStatusesInternal(config.caseStatuses);
+  const caseStatuses = normalizedStatuses.length > 0
+    ? normalizedStatuses
+    : defaultCategoryConfig.caseStatuses.map(s => ({ ...s }));
 
   return {
-    caseTypes: sanitizedEntries.caseTypes?.length
-      ? sanitizedEntries.caseTypes
+    caseTypes: sanitizeCategoryValues(config.caseTypes).length
+      ? sanitizeCategoryValues(config.caseTypes)
       : [...defaultCategoryConfig.caseTypes],
-    caseStatuses: sanitizedEntries.caseStatuses?.length
-      ? sanitizedEntries.caseStatuses
-      : [...defaultCategoryConfig.caseStatuses],
-    livingArrangements: sanitizedEntries.livingArrangements?.length
-      ? sanitizedEntries.livingArrangements
+    caseStatuses,
+    livingArrangements: sanitizeCategoryValues(config.livingArrangements).length
+      ? sanitizeCategoryValues(config.livingArrangements)
       : [...defaultCategoryConfig.livingArrangements],
-    noteCategories: sanitizedEntries.noteCategories?.length
-      ? sanitizedEntries.noteCategories
+    noteCategories: sanitizeCategoryValues(config.noteCategories).length
+      ? sanitizeCategoryValues(config.noteCategories)
       : [...defaultCategoryConfig.noteCategories],
-    verificationStatuses: sanitizedEntries.verificationStatuses?.length
-      ? sanitizedEntries.verificationStatuses
+    verificationStatuses: sanitizeCategoryValues(config.verificationStatuses).length
+      ? sanitizeCategoryValues(config.verificationStatuses)
       : [...defaultCategoryConfig.verificationStatuses],
   };
 };
@@ -153,24 +247,46 @@ export const cloneCategoryConfig = (config?: CategoryConfig | null): CategoryCon
   const source = config ?? defaultCategoryConfig;
   return {
     caseTypes: [...source.caseTypes],
-    caseStatuses: [...source.caseStatuses],
+    caseStatuses: source.caseStatuses.map(s => ({ ...s })),
     livingArrangements: [...source.livingArrangements],
     noteCategories: [...source.noteCategories],
     verificationStatuses: [...source.verificationStatuses],
   };
 };
 
+/**
+ * Ensure a category has at least one value.
+ * For caseStatuses, the fallback is added with a 'slate' color.
+ */
 export const ensureValueInCategory = (
   config: CategoryConfig,
   key: CategoryKey,
   fallback: string,
 ): CategoryConfig => {
-  const values = sanitizeCategoryValues(config[key] ?? []);
+  if (key === 'caseStatuses') {
+    if (config.caseStatuses.length > 0) {
+      return config;
+    }
+    return {
+      ...config,
+      caseStatuses: [{ name: fallback, colorSlot: 'slate' }],
+    };
+  }
+
+  const values = sanitizeCategoryValues(config[key] as string[] ?? []);
   if (values.length > 0) {
     return config;
   }
 
   const updated = { ...config };
-  updated[key] = [fallback];
+  (updated[key] as string[]) = [fallback];
   return updated;
+};
+
+/**
+ * Helper to get status names as a string array.
+ * Useful for components that only need the names.
+ */
+export const getStatusNames = (config: CategoryConfig): string[] => {
+  return config.caseStatuses.map(s => s.name);
 };

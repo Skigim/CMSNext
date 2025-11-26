@@ -51,6 +51,50 @@
   --chart-4: oklch(0.627 0.265 303.9);      /* Purple - for secondary data */
   --chart-5: oklch(0.577 0.245 27.325);     /* Red - for errors/destructive */
   
+  /* ============================================
+     Color Slots - Semantic palette for user-assigned colors
+     Each slot has: main color, background (10%), border (20%)
+     ============================================ */
+  --color-slot-blue: oklch(0.588 0.158 241.966);
+  --color-slot-blue-bg: oklch(0.588 0.158 241.966 / 0.1);
+  --color-slot-blue-border: oklch(0.588 0.158 241.966 / 0.2);
+  
+  --color-slot-green: oklch(0.596 0.145 163.225);
+  --color-slot-green-bg: oklch(0.596 0.145 163.225 / 0.1);
+  --color-slot-green-border: oklch(0.596 0.145 163.225 / 0.2);
+  
+  --color-slot-red: oklch(0.577 0.245 27.325);
+  --color-slot-red-bg: oklch(0.577 0.245 27.325 / 0.1);
+  --color-slot-red-border: oklch(0.577 0.245 27.325 / 0.2);
+  
+  --color-slot-amber: oklch(0.769 0.188 70.08);
+  --color-slot-amber-bg: oklch(0.769 0.188 70.08 / 0.1);
+  --color-slot-amber-border: oklch(0.769 0.188 70.08 / 0.2);
+  
+  --color-slot-purple: oklch(0.627 0.265 303.9);
+  --color-slot-purple-bg: oklch(0.627 0.265 303.9 / 0.1);
+  --color-slot-purple-border: oklch(0.627 0.265 303.9 / 0.2);
+  
+  --color-slot-slate: oklch(0.556 0.022 257.417);
+  --color-slot-slate-bg: oklch(0.556 0.022 257.417 / 0.1);
+  --color-slot-slate-border: oklch(0.556 0.022 257.417 / 0.2);
+  
+  --color-slot-teal: oklch(0.6 0.118 184.704);
+  --color-slot-teal-bg: oklch(0.6 0.118 184.704 / 0.1);
+  --color-slot-teal-border: oklch(0.6 0.118 184.704 / 0.2);
+  
+  --color-slot-rose: oklch(0.645 0.246 16.439);
+  --color-slot-rose-bg: oklch(0.645 0.246 16.439 / 0.1);
+  --color-slot-rose-border: oklch(0.645 0.246 16.439 / 0.2);
+  
+  --color-slot-orange: oklch(0.705 0.213 47.604);
+  --color-slot-orange-bg: oklch(0.705 0.213 47.604 / 0.1);
+  --color-slot-orange-border: oklch(0.705 0.213 47.604 / 0.2);
+  
+  --color-slot-cyan: oklch(0.715 0.143 215.221);
+  --color-slot-cyan-bg: oklch(0.715 0.143 215.221 / 0.1);
+  --color-slot-cyan-border: oklch(0.715 0.143 215.221 / 0.2);
+  
   /* Status-specific chart colors matching case widget */
   --chart-status-pending: oklch(0.6 0.118 184.704);      /* Blue - same as chart-2 */
   --chart-status-approved: oklch(0.646 0.222 142.1);     /* Green - same as chart-1 */
@@ -114,6 +158,47 @@
           --chart-4: oklch(0.627 0.16 303.9);      /* Purple (was 0.265) */
           --chart-5: oklch(0.5 0.12 22.216);       /* Red (was 0.704 L, matching new destructive) */
           
+          /* --- Color Slots (Dark mode - increased lightness) --- */
+          --color-slot-blue: oklch(0.68 0.14 241.966);
+          --color-slot-blue-bg: oklch(0.68 0.14 241.966 / 0.15);
+          --color-slot-blue-border: oklch(0.68 0.14 241.966 / 0.25);
+          
+          --color-slot-green: oklch(0.70 0.12 163.225);
+          --color-slot-green-bg: oklch(0.70 0.12 163.225 / 0.15);
+          --color-slot-green-border: oklch(0.70 0.12 163.225 / 0.25);
+          
+          --color-slot-red: oklch(0.65 0.18 27.325);
+          --color-slot-red-bg: oklch(0.65 0.18 27.325 / 0.15);
+          --color-slot-red-border: oklch(0.65 0.18 27.325 / 0.25);
+          
+          --color-slot-amber: oklch(0.80 0.14 70.08);
+          --color-slot-amber-bg: oklch(0.80 0.14 70.08 / 0.15);
+          --color-slot-amber-border: oklch(0.80 0.14 70.08 / 0.25);
+          
+          --color-slot-purple: oklch(0.70 0.18 303.9);
+          --color-slot-purple-bg: oklch(0.70 0.18 303.9 / 0.15);
+          --color-slot-purple-border: oklch(0.70 0.18 303.9 / 0.25);
+          
+          --color-slot-slate: oklch(0.70 0.02 257.417);
+          --color-slot-slate-bg: oklch(0.70 0.02 257.417 / 0.15);
+          --color-slot-slate-border: oklch(0.70 0.02 257.417 / 0.25);
+          
+          --color-slot-teal: oklch(0.70 0.10 184.704);
+          --color-slot-teal-bg: oklch(0.70 0.10 184.704 / 0.15);
+          --color-slot-teal-border: oklch(0.70 0.10 184.704 / 0.25);
+          
+          --color-slot-rose: oklch(0.72 0.18 16.439);
+          --color-slot-rose-bg: oklch(0.72 0.18 16.439 / 0.15);
+          --color-slot-rose-border: oklch(0.72 0.18 16.439 / 0.25);
+          
+          --color-slot-orange: oklch(0.76 0.16 47.604);
+          --color-slot-orange-bg: oklch(0.76 0.16 47.604 / 0.15);
+          --color-slot-orange-border: oklch(0.76 0.16 47.604 / 0.25);
+          
+          --color-slot-cyan: oklch(0.76 0.12 215.221);
+          --color-slot-cyan-bg: oklch(0.76 0.12 215.221 / 0.15);
+          --color-slot-cyan-border: oklch(0.76 0.12 215.221 / 0.25);
+          
           /* --- Statuses (Updated to match muted charts) --- */
           --chart-status-pending: var(--chart-2);
           --chart-status-approved: var(--chart-1);
@@ -167,6 +252,8 @@
   --chart-4: oklch(0.627 0.265 303.9);      /* Purple */
   --chart-5: oklch(0.577 0.245 27.325);     /* Red */
   
+  /* Color slots inherit from :root for light themes */
+  
   /* Status-specific chart colors */
   --chart-status-pending: oklch(0.6 0.118 184.704);      /* Blue */
   --chart-status-approved: oklch(0.646 0.222 142.1);     /* Green */
@@ -217,6 +304,8 @@
   --chart-3: oklch(0.769 0.188 70.08);      /* Yellow */
   --chart-4: oklch(0.627 0.265 303.9);      /* Purple */
   --chart-5: oklch(0.704 0.191 22.216);     /* Red */
+  
+  /* Color slots inherit from .dark for dark themes */
   
   /* Status-specific chart colors for dark mode */
   --chart-status-pending: oklch(0.488 0.243 264.376);    /* Blue */
@@ -271,6 +360,8 @@
   --chart-4: oklch(0.627 0.265 303.9);      /* Purple */
   --chart-5: oklch(0.577 0.245 27.325);     /* Red */
   
+  /* Color slots inherit from :root for light themes */
+  
   /* Status-specific chart colors */
   --chart-status-pending: oklch(0.6 0.118 184.704);      /* Blue */
   --chart-status-approved: oklch(0.646 0.222 142.1);     /* Green */
@@ -321,6 +412,8 @@
   --chart-3: oklch(0.769 0.188 70.08);      /* Yellow */
   --chart-4: oklch(0.627 0.265 303.9);      /* Purple */
   --chart-5: oklch(0.704 0.191 22.216);     /* Red */
+  
+  /* Color slots inherit from .dark for dark themes */
   
   /* Status-specific chart colors for dark mode */
   --chart-status-pending: oklch(0.488 0.243 264.376);    /* Blue */
@@ -375,6 +468,8 @@
   --chart-4: oklch(0.627 0.265 303.9);      /* Purple */
   --chart-5: oklch(0.577 0.245 27.325);     /* Red */
   
+  /* Color slots inherit from :root for light themes */
+  
   /* Status-specific chart colors */
   --chart-status-pending: oklch(0.6 0.118 184.704);      /* Blue */
   --chart-status-approved: oklch(0.646 0.222 142.1);     /* Green */
@@ -425,6 +520,8 @@
   --chart-3: oklch(0.769 0.188 70.08);      /* Yellow */
   --chart-4: oklch(0.627 0.265 303.9);      /* Purple */
   --chart-5: oklch(0.704 0.191 22.216);     /* Red */
+  
+  /* Color slots inherit from .dark for dark themes */
   
   /* Status-specific chart colors for dark mode */
   --chart-status-pending: oklch(0.488 0.243 264.376);    /* Blue */
