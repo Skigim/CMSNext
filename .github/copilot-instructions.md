@@ -161,7 +161,7 @@ interface StatusConfig {
 
 - **Branch:** Work directly on `main` for small changes; use `dev` for larger features.
 - **Commits:** Follow `COMMIT_STYLE.md` format.
-- **Tests:** Ensure all tests pass before pushing.
+- **Tests:** Ensure all tests and build pass before pushing.
 
 ## Documentation
 
