@@ -294,12 +294,11 @@ export class DataManager {
     }
 
     // Save updated alerts to storage using normalized format
+    // Note: writeNormalizedData handles broadcasting data changes
     await this.fileStorage.writeNormalizedData({
       ...data,
       alerts: newAlerts,
     });
-
-    this.fileService.notifyDataChange();
 
     return updatedAlert;
   }
@@ -323,11 +322,11 @@ export class DataManager {
       const result = await this.alerts.mergeAlertsFromCsvContent(csvContent, existingAlerts, cases);
 
       if (result.added > 0 || result.updated > 0) {
+        // Note: writeNormalizedData handles broadcasting data changes
         await this.fileStorage.writeNormalizedData({
           ...data,
           alerts: result.alerts,
         });
-        this.fileService.notifyDataChange();
       }
 
       return {

@@ -213,8 +213,21 @@ export class FileStorageService {
   /**
    * Write normalized data to file system
    * This is the primary write method - accepts NormalizedFileData directly
+   * 
+   * Includes rollback mechanism: if write fails, broadcasts the previous
+   * file state to keep UI in sync with actual persisted data.
    */
   async writeNormalizedData(data: NormalizedFileData): Promise<NormalizedFileData> {
+    // Capture previous state for potential rollback
+    let previousData: NormalizedFileData | null = null;
+    try {
+      previousData = await this.fileService.readFile();
+    } catch {
+      // If we can't read previous state, rollback won't be possible
+      // but we should still attempt the write
+      logger.warn("Could not capture previous state for rollback");
+    }
+
     try {
       // Validate and clean data before writing
       const finalData: NormalizedFileData = {
@@ -246,6 +259,11 @@ export class FileStorageService {
 
       return finalData;
     } catch (error) {
+      // ROLLBACK: If write failed, broadcast previous data to resync UI with file state
+      if (previousData && isNormalizedFileData(previousData)) {
+        logger.warn("Write failed, broadcasting previous state to resync UI");
+        this.fileService.broadcastDataUpdate(previousData);
+      }
       logger.error("Failed to write normalized data", {
         error: error instanceof Error ? error.message : "Unknown error",
       });
