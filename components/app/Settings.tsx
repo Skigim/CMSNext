@@ -69,8 +69,10 @@ export function Settings({ cases, onDataPurged, onAlertsCsvImported }: SettingsP
       return [] as StoredCase['status'][];
     }
 
-    const filtered = statuses.filter(status => !/denied|closed|inactive/i.test(status));
-    return (filtered.length > 0 ? filtered : [statuses[0]]) as StoredCase['status'][];
+    // Filter out denied/closed/inactive statuses by name
+    const filtered = statuses.filter(status => !/denied|closed|inactive/i.test(status.name));
+    const resultStatuses = filtered.length > 0 ? filtered : [statuses[0]];
+    return resultStatuses.map(s => s.name) as StoredCase['status'][];
   }, [config.caseStatuses]);
 
   const getActiveCasesCount = () => {

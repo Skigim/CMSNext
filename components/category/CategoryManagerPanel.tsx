@@ -332,15 +332,24 @@ export function CategoryManagerPanel({
       <CardContent className="space-y-6">
         {supportingContent ?? defaultSupportingContent}
         <div className="grid gap-4 lg:grid-cols-2">
-          {CATEGORY_KEYS.map(key => (
-            <CategoryEditor
-              key={key}
-              categoryKey={key}
-              valuesFromConfig={config[key] ?? defaultCategoryConfig[key]}
-              onSave={values => handleSave(key, values)}
-              isGloballyLoading={loading || isResetting}
-            />
-          ))}
+          {CATEGORY_KEYS.map(key => {
+            // For caseStatuses, extract names since CategoryEditor expects string[]
+            const values = key === 'caseStatuses'
+              ? config.caseStatuses.map(s => s.name)
+              : config[key];
+            const defaults = key === 'caseStatuses'
+              ? defaultCategoryConfig.caseStatuses.map(s => s.name)
+              : defaultCategoryConfig[key];
+            return (
+              <CategoryEditor
+                key={key}
+                categoryKey={key}
+                valuesFromConfig={values ?? defaults}
+                onSave={values => handleSave(key, values)}
+                isGloballyLoading={loading || isResetting}
+              />
+            );
+          })}
         </div>
       </CardContent>
     </Card>
