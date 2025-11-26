@@ -162,12 +162,12 @@ Core case workflows (create, view, edit, delete) are production-ready through th
 - **Hook Layer**: `useCaseManagement.test.tsx` verifies hook facade, `useNavigationFlow.test.ts` exercises view transitions
 - **Component Layer**: RTL suites for `CaseWorkspace`, `CaseList`, `CaseStatusBadge`, and form components ensure rendering and interaction correctness
 - **Integration**: Autosave status integration test validates end-to-end persistence with FileStorage context
-- **Test Suite Status**: 310/310 passing (100%) as of November 20, 2025
+- **Test Suite Status**: 230 tests passing across 40 test files (100%) as of November 26, 2025
 - **Performance**: Telemetry infrastructure ready for interaction traces; baseline measurements pending for case-view latency under load
 
 ### Owners / Notes
 
-Phase 3 Cases domain refactor completed November 2, 2025. Architecture now serves as reference pattern for upcoming Financial domain migration. Coordinate with product workflows squad for feature expansion; align telemetry captures with Phase 4 manual tasks.
+Phase 3 Cases domain refactor completed November 2, 2025. Architecture now serves as reference pattern for future enhancements. Coordinate with product workflows squad for feature expansion; align telemetry captures with Phase 4 manual tasks.
 
 ---
 
@@ -431,7 +431,7 @@ Tooling stack (Vitest, ESLint 9 flat config, Tailwind v4 pipeline) covers day-to
 
 ### Coverage & Telemetry
 
-- **Vitest suites**: 310 tests across major domains; coverage reports stored in `coverage/` and referenced in docs
+- **Vitest suites**: 230 tests across 40 test files; coverage reports stored in `coverage/` and referenced in docs
 - **Service tests**: Complete coverage for all 7 services with unit and integration tests
 - **Performance telemetry**: Partially automated (`perf:baseline`, bundle analysis); manual traces pending
 - **Architecture documentation**: Service extraction summaries, storage normalization strategy, testing infrastructure
@@ -448,9 +448,11 @@ Platform enablement group coordinates tooling, CI, and documentation upkeep. Ser
 
 ### Implementation Snapshot
 
-**Rating: 65/100**
+**Rating: 70/100** _(Updated November 26, 2025)_
 
 Feature flag infrastructure lives in `utils/featureFlags.ts` with immutable defaults and helper utilities. Flags are managed through `useAppViewState` hook, enabling dashboard widgets to opt-in through metadata instead of ad-hoc conditionals. The system enables gradual rollout for dashboard insights and UI customization.
+
+**Note:** Legacy refactor flags (`USE_FINANCIALS_DOMAIN`, `USE_NEW_ARCHITECTURE`) were removed in November 2025 as the domain layer experiment was concluded and removed.
 
 ### Strengths
 
@@ -459,20 +461,19 @@ Feature flag infrastructure lives in `utils/featureFlags.ts` with immutable defa
 - Runtime toggling flows through `useAppViewState().setFeatureFlags`, keeping React components synchronized
 - Widget registry honors `metadata.featureFlag`, making new widget flags a metadata-only change
 - Dashboard widget toggles enable user customization of their view
+- Clean flag set with no legacy cruft after domain layer removal
 
 ### Gaps / Risks
 
 - Flags are in-memory only; there is no persisted storage for overrides across sessions yet
 - No diagnostic UI exists for QA or product to toggle flags during reviews
 - Observability is limited—flag enable/disable events are not tracked in telemetry
-- Naming convention relies on convention rather than automation or linting
 
 ### Expansion Opportunities
 
 - Persist flag overrides so they survive page reloads
 - Build a lightweight developer toolbar to inspect and toggle flags at runtime
 - Emit telemetry when flags change to measure adoption and schedule cleanup
-- Add lint rule or generator script to enforce naming/documentation of new flags
 
 ### Coverage & Telemetry
 
