@@ -86,14 +86,39 @@ export const CategoryConfigProvider: React.FC<{ children: React.ReactNode }> = (
 
       // Handle caseStatuses specially since it uses StatusConfig[]
       if (key === 'caseStatuses') {
-        // Accept both string[] (legacy UI) and StatusConfig[] (new UI) as input
-        // Normalize to string[] first for deduplication, then mergeCategoryConfig will convert back
         const inputValues = values as (string | StatusConfig)[];
+        
+        // Check if we have StatusConfig objects (with colorSlot)
+        const hasColorInfo = inputValues.length > 0 && 
+          typeof inputValues[0] === 'object' && 
+          'colorSlot' in inputValues[0];
+        
+        if (hasColorInfo) {
+          // New format with colors - use updateCaseStatuses
+          const statusConfigs = inputValues as StatusConfig[];
+          if (statusConfigs.length === 0) {
+            toast.error("Please provide at least one status.");
+            return;
+          }
+
+          const toastId = toast.loading("Saving statuses...");
+          try {
+            const updated = await dataManager.updateCaseStatuses(statusConfigs);
+            setConfig(mergeCategoryConfig(updated));
+            setError(null);
+            toast.success("Statuses updated", { id: toastId });
+          } catch (err) {
+            console.error("Failed to update statuses", err);
+            toast.error("Failed to update statuses", { id: toastId });
+          }
+          return;
+        }
+        
+        // Legacy string[] format - normalize and save as strings
+        // Colors will be auto-assigned on next load
         const stringValues: string[] = inputValues.map(v => 
           typeof v === 'string' ? v : v.name
         );
-        
-        // Sanitize: trim, dedupe (case-insensitive)
         const sanitizedValues = sanitizeCategoryValues(stringValues);
         if (sanitizedValues.length === 0) {
           toast.error("Please provide at least one option.");
@@ -102,10 +127,7 @@ export const CategoryConfigProvider: React.FC<{ children: React.ReactNode }> = (
 
         const toastId = toast.loading("Saving options...");
         try {
-          // Save as string[] for backward compatibility with storage
-          // The StatusConfig format will be reconstructed when loading
           const updated = await dataManager.updateCategoryValues(key, sanitizedValues);
-          // mergeCategoryConfig handles migration from legacy format
           setConfig(mergeCategoryConfig(updated));
           setError(null);
           toast.success("Options updated", { id: toastId });

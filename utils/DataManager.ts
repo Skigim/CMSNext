@@ -14,6 +14,7 @@ import { createLogger } from './logger';
 import {
   CategoryConfig,
   CategoryKey,
+  StatusConfig,
   mergeCategoryConfig,
 } from "../types/categoryConfig";
 import { STORAGE_CONSTANTS } from "./constants/storage";
@@ -323,6 +324,10 @@ export class DataManager {
 
   async updateCategoryValues(key: CategoryKey, values: string[]): Promise<CategoryConfig> {
     return this.categoryConfig.updateCategoryValues(key, values);
+  }
+
+  async updateCaseStatuses(statuses: StatusConfig[]): Promise<CategoryConfig> {
+    return this.categoryConfig.updateCaseStatuses(statuses);
   }
 
   async resetCategoryConfig(): Promise<CategoryConfig> {

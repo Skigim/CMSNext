@@ -1,5 +1,5 @@
-import type { CategoryConfig, CategoryKey } from "../../types/categoryConfig";
-import { mergeCategoryConfig, sanitizeCategoryValues } from "../../types/categoryConfig";
+import type { CategoryConfig, CategoryKey, StatusConfig } from "../../types/categoryConfig";
+import { mergeCategoryConfig, sanitizeCategoryValues, sanitizeStatusConfigs } from "../../types/categoryConfig";
 import { createLogger } from "../logger";
 import type { FileStorageService, NormalizedFileData } from "./FileStorageService";
 
@@ -103,6 +103,29 @@ export class CategoryConfigService {
     logger.info("Category values updated", {
       key,
       valueCount: sanitizedValues.length,
+    });
+
+    return this.updateCategoryConfig(nextConfig);
+  }
+
+  /**
+   * Update case statuses with full StatusConfig (name + color)
+   * Validates that at least one status is provided
+   */
+  async updateCaseStatuses(statuses: StatusConfig[]): Promise<CategoryConfig> {
+    const sanitized = sanitizeStatusConfigs(statuses);
+    if (sanitized.length === 0) {
+      throw new Error("At least one status is required");
+    }
+
+    const currentConfig = await this.getCategoryConfig();
+    const nextConfig: CategoryConfig = {
+      ...currentConfig,
+      caseStatuses: sanitized,
+    };
+
+    logger.info("Case statuses updated with colors", {
+      statusCount: sanitized.length,
     });
 
     return this.updateCategoryConfig(nextConfig);
