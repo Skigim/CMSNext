@@ -21,7 +21,6 @@ import {
   Download,
   Database,
   Palette,
-  Bell,
   Trash2,
   Bug,
   FolderOpen,
@@ -37,6 +36,7 @@ import { toast } from "sonner";
 import { useDataManagerSafe } from "../../contexts/DataManagerContext";
 import { useCategoryConfig } from "../../contexts/CategoryConfigContext";
 import type { CaseActivityLogState } from "../../types/activityLog";
+import { useAppViewState } from "@/hooks/useAppViewState";
 
 interface SettingsProps {
   cases: StoredCase[];
@@ -54,6 +54,9 @@ export function Settings({ cases, onDataPurged, onAlertsCsvImported }: SettingsP
   const { theme, setTheme, themeOptions } = useTheme();
   const dataManager = useDataManagerSafe();
   const { config } = useCategoryConfig();
+  const { featureFlags } = useAppViewState();
+  
+  const showDevTools = featureFlags["settings.devTools"] ?? false;
 
   // Helper function to safely count valid cases
   const getValidCasesCount = () => {
@@ -192,9 +195,7 @@ export function Settings({ cases, onDataPurged, onAlertsCsvImported }: SettingsP
     try {
       // Use DataManager to purge data
       if (dataManager) {
-        // For now, show a message that purge needs to be implemented
-        toast.error("Data purge needs to be implemented with DataManager");
-        console.log('DataManager purge not yet implemented');
+        await dataManager.clearAllData();
       } else {
         console.warn('DataManager not available for purge operation');
       }
@@ -212,7 +213,7 @@ export function Settings({ cases, onDataPurged, onAlertsCsvImported }: SettingsP
         onDataPurged();
       }
       
-      toast.success('Local storage purged successfully!');
+      toast.success('All data purged successfully!');
     } catch (error) {
       console.error('Error purging data:', error);
       toast.error('Failed to purge local storage. Please try again.');
@@ -231,7 +232,7 @@ export function Settings({ cases, onDataPurged, onAlertsCsvImported }: SettingsP
       </div>
 
       <Tabs defaultValue="data" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-6">
+        <TabsList className={`grid w-full ${showDevTools ? 'grid-cols-6' : 'grid-cols-5'}`}>
           <TabsTrigger value="data" className="flex items-center gap-2">
             <Database className="h-4 w-4" />
             <span className="hidden sm:inline">Data</span>
@@ -248,10 +249,12 @@ export function Settings({ cases, onDataPurged, onAlertsCsvImported }: SettingsP
             <ListChecks className="h-4 w-4" />
             <span className="hidden sm:inline">Categories</span>
           </TabsTrigger>
-          <TabsTrigger value="development" className="flex items-center gap-2">
-            <Code className="h-4 w-4" />
-            <span className="hidden sm:inline">Dev</span>
-          </TabsTrigger>
+          {showDevTools && (
+            <TabsTrigger value="development" className="flex items-center gap-2">
+              <Code className="h-4 w-4" />
+              <span className="hidden sm:inline">Dev</span>
+            </TabsTrigger>
+          )}
           <TabsTrigger value="system" className="flex items-center gap-2">
             <Info className="h-4 w-4" />
             <span className="hidden sm:inline">System</span>
@@ -450,22 +453,6 @@ export function Settings({ cases, onDataPurged, onAlertsCsvImported }: SettingsP
                     </div>
                   </div>
                 </div>
-
-                <Separator />
-
-                {/* Notifications */}
-                <div className="flex items-center justify-between py-3">
-                  <div className="flex items-center gap-3">
-                    <Bell className="h-4 w-4 text-muted-foreground" />
-                    <div>
-                      <h4 className="font-medium">Notifications</h4>
-                      <p className="text-sm text-muted-foreground">
-                        Notification preferences and alerts
-                      </p>
-                    </div>
-                  </div>
-                  <Badge variant="secondary">Coming Soon</Badge>
-                </div>
               </CardContent>
             </Card>
           </div>
@@ -543,51 +530,53 @@ export function Settings({ cases, onDataPurged, onAlertsCsvImported }: SettingsP
           </div>
         </TabsContent>
 
-        {/* Development Tab */}
-        <TabsContent value="development" className="space-y-6">
-          <div className="grid gap-6">
-            <AlertsPreviewPanel cases={cases} />
-            <CategoryConfigDevPanel />
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Bug className="h-5 w-5" />
-                  Error Testing & Debugging
-                </CardTitle>
-                <CardDescription>
-                  Tools for testing error handling and debugging
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <ErrorBoundaryTest />
-              </CardContent>
-            </Card>
+        {/* Development Tab - Only shown when devTools feature flag is enabled */}
+        {showDevTools && (
+          <TabsContent value="development" className="space-y-6">
+            <div className="grid gap-6">
+              <AlertsPreviewPanel cases={cases} />
+              <CategoryConfigDevPanel />
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Bug className="h-5 w-5" />
+                    Error Testing & Debugging
+                  </CardTitle>
+                  <CardDescription>
+                    Tools for testing error handling and debugging
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <ErrorBoundaryTest />
+                </CardContent>
+              </Card>
 
-            <Card>
-              <CardHeader>
-                <CardTitle>Error Reports</CardTitle>
-                <CardDescription>
-                  View and manage error reports from the application
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <ErrorReportViewer />
-              </CardContent>
-            </Card>
+              <Card>
+                <CardHeader>
+                  <CardTitle>Error Reports</CardTitle>
+                  <CardDescription>
+                    View and manage error reports from the application
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <ErrorReportViewer />
+                </CardContent>
+              </Card>
 
-            <Card>
-              <CardHeader>
-                <CardTitle>User Feedback</CardTitle>
-                <CardDescription>
-                  Submit feedback about the application
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <FeedbackPanel />
-              </CardContent>
-            </Card>
-          </div>
-        </TabsContent>
+              <Card>
+                <CardHeader>
+                  <CardTitle>User Feedback</CardTitle>
+                  <CardDescription>
+                    Submit feedback about the application
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <FeedbackPanel />
+                </CardContent>
+              </Card>
+            </div>
+          </TabsContent>
+        )}
 
         {/* System Information Tab */}
         <TabsContent value="system" className="space-y-6">
