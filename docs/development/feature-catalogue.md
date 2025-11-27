@@ -521,9 +521,9 @@ A dedicated migration utility (`utils/legacyMigration.ts`) enables users with v1
 
 ### Components
 
-| Component              | Lines | Description                                   |
-| ---------------------- | ----- | --------------------------------------------- |
-| `legacyMigration.ts`   | 464   | Core transformation logic                     |
+| Component              | Lines | Description                                      |
+| ---------------------- | ----- | ------------------------------------------------ |
+| `legacyMigration.ts`   | 464   | Core transformation logic                        |
 | `LegacyMigrationPanel` | 325   | React UI for triggering and previewing migration |
 
 ### Migration Flow
@@ -577,13 +577,13 @@ Dashboard metrics (Cases Processed/Day, Avg. Case Processing Time) now use user-
 
 ### Architecture Changes
 
-| File                           | Change                                              |
-| ------------------------------ | --------------------------------------------------- |
-| `types/categoryConfig.ts`      | Added `countsAsCompleted?: boolean` to StatusConfig |
-| `CategoryManagerPanel.tsx`     | Added checkbox column with tooltip                  |
-| `widgetDataProcessors.ts`      | Accepts `completionStatuses` option, net change logic |
-| `CasesProcessedPerDayWidget`   | Uses category config for completion statuses        |
-| `AvgCaseProcessingTimeWidget`  | Uses category config for completion statuses        |
+| File                          | Change                                                |
+| ----------------------------- | ----------------------------------------------------- |
+| `types/categoryConfig.ts`     | Added `countsAsCompleted?: boolean` to StatusConfig   |
+| `CategoryManagerPanel.tsx`    | Added checkbox column with tooltip                    |
+| `widgetDataProcessors.ts`     | Accepts `completionStatuses` option, net change logic |
+| `CasesProcessedPerDayWidget`  | Uses category config for completion statuses          |
+| `AvgCaseProcessingTimeWidget` | Uses category config for completion statuses          |
 
 ### Gaps / Risks
 
