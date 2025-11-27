@@ -213,7 +213,7 @@ const normalizeStatusesInternal = (
   if (typeof first === 'string') {
     // Legacy format - migrate
     const usedSlots = new Set<ColorSlot>();
-    return (value as string[]).map((name) => {
+    const migrated = (value as string[]).map((name): StatusConfig | null => {
       const trimmedName = String(name).trim();
       if (!trimmedName) return null;
       
@@ -234,7 +234,8 @@ const normalizeStatusesInternal = (
         colorSlot,
         countsAsCompleted: LEGACY_COMPLETION_STATUSES.has(trimmedName.toLowerCase()),
       };
-    }).filter((s): s is StatusConfig => s !== null);
+    });
+    return migrated.filter((s): s is StatusConfig => s !== null);
   }
   
   // Already StatusConfig[] format
