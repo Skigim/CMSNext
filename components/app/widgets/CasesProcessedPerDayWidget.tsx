@@ -3,6 +3,8 @@ import { ArrowDownRight, ArrowUpRight, Minus } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { useWidgetData } from '@/hooks/useWidgetData';
+import { useCategoryConfig } from '@/contexts/CategoryConfigContext';
+import { getCompletionStatusNames } from '@/types/categoryConfig';
 import type { CaseActivityEntry } from '@/types/activityLog';
 import {
   calculateCasesProcessedPerDay,
@@ -26,19 +28,22 @@ interface CasesProcessedPerDayData {
 const DEFAULT_WINDOW = 7;
 
 export function CasesProcessedPerDayWidget({ activityLog = [], metadata, refreshKey }: CasesProcessedPerDayWidgetProps) {
+  const { config } = useCategoryConfig();
+  const completionStatuses = useMemo(() => getCompletionStatusNames(config), [config]);
+
   const fetchData = useCallback(async () => {
     // Keep reference date in local time to match activity log timestamps
     const now = new Date();
     const reference = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    const daily = calculateCasesProcessedPerDay(activityLog, { referenceDate: reference });
+    const daily = calculateCasesProcessedPerDay(activityLog, { referenceDate: reference, completionStatuses });
     const total = daily.reduce((acc, item) => acc + item.processedCount, 0);
 
     const previousReference = widgetDateUtils.addDays(reference, -DEFAULT_WINDOW);
-    const previousDaily = calculateCasesProcessedPerDay(activityLog, { referenceDate: previousReference });
+    const previousDaily = calculateCasesProcessedPerDay(activityLog, { referenceDate: previousReference, completionStatuses });
     const previousTotal = previousDaily.reduce((acc, item) => acc + item.processedCount, 0);
 
     return { daily, total, previousTotal } satisfies CasesProcessedPerDayData;
-  }, [activityLog]);
+  }, [activityLog, completionStatuses]);
 
   const { data, loading, error, freshness } = useWidgetData<CasesProcessedPerDayData>(fetchData, {
     refreshInterval: metadata?.refreshInterval ?? 5 * 60 * 1000,

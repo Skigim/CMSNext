@@ -3,6 +3,8 @@ import { ArrowDownRight, ArrowUpRight, Minus, Timer } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { useWidgetData } from '@/hooks/useWidgetData';
+import { useCategoryConfig } from '@/contexts/CategoryConfigContext';
+import { getCompletionStatusNames } from '@/types/categoryConfig';
 import type { CaseActivityEntry } from '@/types/activityLog';
 import type { StoredCase } from '@/types/case';
 import { calculateAvgCaseProcessingTime, type ProcessingTimeStats } from '@/utils/widgetDataProcessors';
@@ -26,9 +28,12 @@ export function AvgCaseProcessingTimeWidget({
   cases = [],
   metadata,
 }: AvgCaseProcessingTimeWidgetProps) {
+  const { config } = useCategoryConfig();
+  const completionStatuses = useMemo(() => getCompletionStatusNames(config), [config]);
+
   const fetchData = useCallback(async () => {
-    return calculateAvgCaseProcessingTime(activityLog, cases, { windowInDays: 30 });
-  }, [activityLog, cases]);
+    return calculateAvgCaseProcessingTime(activityLog, cases, { windowInDays: 30, completionStatuses });
+  }, [activityLog, cases, completionStatuses]);
 
   const { data, loading, error, freshness } = useWidgetData<ProcessingTimeStats>(fetchData, {
     refreshInterval: metadata?.refreshInterval ?? 10 * 60 * 1000,

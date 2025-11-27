@@ -20,6 +20,8 @@ export type CategoryKey =
 export interface StatusConfig {
   name: string;
   colorSlot: ColorSlot;
+  /** When true, transitioning to this status counts toward "cases processed" metrics */
+  countsAsCompleted?: boolean;
 }
 
 /**
@@ -166,7 +168,8 @@ const dedupeStatuses = (statuses: StatusConfig[]): StatusConfig[] => {
     seen.add(key);
     result.push({ 
       name: name.trim(), 
-      colorSlot: isValidColorSlot(status.colorSlot) ? status.colorSlot : 'slate' 
+      colorSlot: isValidColorSlot(status.colorSlot) ? status.colorSlot : 'slate',
+      countsAsCompleted: status.countsAsCompleted ?? false,
     });
   }
   return result;
@@ -195,6 +198,9 @@ const dedupeAlertTypes = (alertTypes: AlertTypeConfig[]): AlertTypeConfig[] => {
  * Internal migration: Convert legacy string[] to StatusConfig[]
  * This is also exported from utils/categoryConfigMigration.ts for external use
  */
+/** Legacy statuses that should default to countsAsCompleted=true */
+const LEGACY_COMPLETION_STATUSES = new Set(['approved', 'denied', 'closed', 'spenddown']);
+
 const normalizeStatusesInternal = (
   value: string[] | StatusConfig[] | undefined | null
 ): StatusConfig[] => {
@@ -214,12 +220,20 @@ const normalizeStatusesInternal = (
       const defaultColor = DEFAULT_STATUS_COLORS[trimmedName];
       if (defaultColor && !usedSlots.has(defaultColor)) {
         usedSlots.add(defaultColor);
-        return { name: trimmedName, colorSlot: defaultColor };
+        return { 
+          name: trimmedName, 
+          colorSlot: defaultColor,
+          countsAsCompleted: LEGACY_COMPLETION_STATUSES.has(trimmedName.toLowerCase()),
+        };
       }
       
       const colorSlot = autoAssignColorSlot(trimmedName, usedSlots);
       usedSlots.add(colorSlot);
-      return { name: trimmedName, colorSlot };
+      return { 
+        name: trimmedName, 
+        colorSlot,
+        countsAsCompleted: LEGACY_COMPLETION_STATUSES.has(trimmedName.toLowerCase()),
+      };
     }).filter((s): s is StatusConfig => s !== null);
   }
   
@@ -329,7 +343,11 @@ export const cloneCategoryConfig = (config?: CategoryConfig | null): CategoryCon
   const source = config ?? defaultCategoryConfig;
   return {
     caseTypes: [...source.caseTypes],
-    caseStatuses: source.caseStatuses.map(s => ({ ...s })),
+    caseStatuses: source.caseStatuses.map(s => ({ 
+      name: s.name, 
+      colorSlot: s.colorSlot,
+      countsAsCompleted: s.countsAsCompleted ?? false,
+    })),
     alertTypes: source.alertTypes.map(a => ({ ...a })),
     livingArrangements: [...source.livingArrangements],
     noteCategories: [...source.noteCategories],
@@ -352,7 +370,7 @@ export const ensureValueInCategory = (
     }
     return {
       ...config,
-      caseStatuses: [{ name: fallback, colorSlot: 'slate' }],
+      caseStatuses: [{ name: fallback, colorSlot: 'slate', countsAsCompleted: false }],
     };
   }
 
@@ -372,6 +390,18 @@ export const ensureValueInCategory = (
  */
 export const getStatusNames = (config: CategoryConfig): string[] => {
   return config.caseStatuses.map(s => s.name);
+};
+
+/**
+ * Helper to get statuses that count as completed.
+ * Used by dashboard widgets for "cases processed" metrics.
+ */
+export const getCompletionStatusNames = (config: CategoryConfig): Set<string> => {
+  return new Set(
+    config.caseStatuses
+      .filter(s => s.countsAsCompleted)
+      .map(s => s.name.toLowerCase())
+  );
 };
 
 /**

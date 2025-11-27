@@ -13,12 +13,18 @@ import {
 import { Input } from "../ui/input";
 import { Badge } from "../ui/badge";
 import { Separator } from "../ui/separator";
+import { Checkbox } from "../ui/checkbox";
 import {
   Select,
   SelectContent,
   SelectTrigger,
   SelectValue,
 } from "../ui/select";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "../ui/tooltip";
 import {
   CATEGORY_DISPLAY_METADATA,
   CategoryKey,
@@ -339,15 +345,16 @@ function StatusCategoryEditor({
 }: StatusCategoryEditorProps) {
   const metadata = CATEGORY_DISPLAY_METADATA.caseStatuses;
   const [values, setValues] = useState<StatusConfig[]>(() => 
-    statusConfigs.map(s => ({ ...s }))
+    statusConfigs.map(s => ({ ...s, countsAsCompleted: s.countsAsCompleted ?? false }))
   );
   const [draftName, setDraftName] = useState<string>("");
   const [draftColor, setDraftColor] = useState<ColorSlot>("blue");
+  const [draftCountsAsCompleted, setDraftCountsAsCompleted] = useState<boolean>(false);
   const [isSaving, setIsSaving] = useState<boolean>(false);
   const [touched, setTouched] = useState<boolean>(false);
 
   useEffect(() => {
-    setValues(statusConfigs.map(s => ({ ...s })));
+    setValues(statusConfigs.map(s => ({ ...s, countsAsCompleted: s.countsAsCompleted ?? false })));
   }, [statusConfigs]);
 
   const valueMeta = useMemo(
@@ -357,6 +364,7 @@ function StatusCategoryEditor({
         trimmed: status.name.trim(),
         normalized: status.name.trim().toLowerCase(),
         colorSlot: status.colorSlot,
+        countsAsCompleted: status.countsAsCompleted ?? false,
       })),
     [values],
   );
@@ -380,7 +388,11 @@ function StatusCategoryEditor({
 
   const cleanedValues = useMemo(() => 
     values
-      .map(s => ({ name: s.name.trim(), colorSlot: s.colorSlot }))
+      .map(s => ({ 
+        name: s.name.trim(), 
+        colorSlot: s.colorSlot,
+        countsAsCompleted: s.countsAsCompleted ?? false,
+      }))
       .filter(s => s.name.length > 0),
     [values]
   );
@@ -388,7 +400,9 @@ function StatusCategoryEditor({
   const hasChanges = useMemo(() => {
     if (cleanedValues.length !== statusConfigs.length) return true;
     return cleanedValues.some((v, i) => 
-      v.name !== statusConfigs[i]?.name || v.colorSlot !== statusConfigs[i]?.colorSlot
+      v.name !== statusConfigs[i]?.name || 
+      v.colorSlot !== statusConfigs[i]?.colorSlot ||
+      v.countsAsCompleted !== (statusConfigs[i]?.countsAsCompleted ?? false)
     );
   }, [cleanedValues, statusConfigs]);
 
@@ -408,6 +422,11 @@ function StatusCategoryEditor({
   const handleColorChange = useCallback((index: number, colorSlot: ColorSlot) => {
     setTouched(true);
     setValues(current => current.map((s, idx) => idx === index ? { ...s, colorSlot } : s));
+  }, []);
+
+  const handleCompletedChange = useCallback((index: number, countsAsCompleted: boolean) => {
+    setTouched(true);
+    setValues(current => current.map((s, idx) => idx === index ? { ...s, countsAsCompleted } : s));
   }, []);
 
   const handleRemove = useCallback((index: number) => {
@@ -430,8 +449,13 @@ function StatusCategoryEditor({
     }
 
     setTouched(true);
-    setValues(current => [...current, { name: trimmed, colorSlot: draftColor }]);
+    setValues(current => [...current, { 
+      name: trimmed, 
+      colorSlot: draftColor, 
+      countsAsCompleted: draftCountsAsCompleted,
+    }]);
     setDraftName("");
+    setDraftCountsAsCompleted(false);
     // Cycle to next color for convenience
     const currentIndex = COLOR_SLOTS.indexOf(draftColor);
     setDraftColor(COLOR_SLOTS[(currentIndex + 1) % COLOR_SLOTS.length]);
@@ -467,13 +491,30 @@ function StatusCategoryEditor({
 
       <Separator className="my-4" />
 
+      {/* Column header for the completion checkbox */}
+      <div className="flex items-center gap-2 mb-2 text-xs text-muted-foreground">
+        <span className="flex-1">Status Name</span>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <span className="w-[70px] text-center cursor-help underline decoration-dotted">
+              Completed
+            </span>
+          </TooltipTrigger>
+          <TooltipContent side="top" className="max-w-[200px]">
+            <p>Check if this status counts toward "cases processed" metrics on the dashboard.</p>
+          </TooltipContent>
+        </Tooltip>
+        <span className="w-[52px]" /> {/* Color picker space */}
+        <span className="w-9" /> {/* Remove button space */}
+      </div>
+
       <div className="space-y-3">
         {values.map((status, index) => {
           const isDuplicate = duplicateIndices.has(index);
           const isEmpty = !status.name.trim();
           return (
             <div key={`status-${index}`} className="flex flex-col gap-1">
-              <div className="flex gap-2">
+              <div className="flex items-center gap-2">
                 <Input
                   value={status.name}
                   onChange={event => handleNameChange(index, event.target.value)}
@@ -486,6 +527,14 @@ function StatusCategoryEditor({
                       "border-destructive/60 focus-visible:ring-destructive/40",
                   )}
                 />
+                <div className="w-[70px] flex justify-center">
+                  <Checkbox
+                    checked={status.countsAsCompleted ?? false}
+                    onCheckedChange={(checked) => handleCompletedChange(index, checked === true)}
+                    disabled={isSaving || isGloballyLoading}
+                    aria-label={`Mark ${status.name || 'status'} as counting toward completion`}
+                  />
+                </div>
                 <ColorSlotPicker
                   value={status.colorSlot}
                   onChange={(color) => handleColorChange(index, color)}
@@ -510,7 +559,7 @@ function StatusCategoryEditor({
             </div>
           );
         })}
-        <div className="flex gap-2">
+        <div className="flex items-center gap-2">
           <Input
             value={draftName}
             onChange={event => setDraftName(event.target.value)}
@@ -525,6 +574,14 @@ function StatusCategoryEditor({
             disabled={isSaving || isGloballyLoading}
             className="flex-1"
           />
+          <div className="w-[70px] flex justify-center">
+            <Checkbox
+              checked={draftCountsAsCompleted}
+              onCheckedChange={(checked) => setDraftCountsAsCompleted(checked === true)}
+              disabled={isSaving || isGloballyLoading}
+              aria-label="New status counts toward completion"
+            />
+          </div>
           <ColorSlotPicker
             value={draftColor}
             onChange={setDraftColor}

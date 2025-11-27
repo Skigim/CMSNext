@@ -46,15 +46,20 @@ export interface ProcessingTimeStats {
 interface DateWindowOptions {
   referenceDate?: Date;
   days?: number;
+  /** Set of lowercase status names that count as completed. Falls back to legacy defaults if not provided. */
+  completionStatuses?: Set<string>;
 }
 
 interface ProcessingTimeOptions {
   referenceDate?: Date;
   windowInDays?: number;
+  /** Set of lowercase status names that count as completed. Falls back to legacy defaults if not provided. */
+  completionStatuses?: Set<string>;
 }
 
 const DEFAULT_DAYS = 7;
-const COMPLETION_STATUSES = new Set(['approved', 'denied', 'closed', 'spenddown']);
+/** @deprecated Use completionStatuses from CategoryConfig instead */
+const LEGACY_COMPLETION_STATUSES = new Set(['approved', 'denied', 'closed', 'spenddown']);
 const STATUS_COLOR_MAP: Record<string, string> = {
   pending: 'bg-primary/70 text-primary-foreground',
   approved: 'bg-emerald-500/80 text-emerald-950',
@@ -185,6 +190,7 @@ export function calculateCasesProcessedPerDay(
 ): DailyCaseStats[] {
   const referenceDate = options.referenceDate ? startOfDay(options.referenceDate) : startOfDay(new Date());
   const days = options.days && options.days > 0 ? options.days : DEFAULT_DAYS;
+  const completionStatuses = options.completionStatuses ?? LEGACY_COMPLETION_STATUSES;
   const keys = buildDayBuckets(days, referenceDate);
   const start = addDays(referenceDate, -(days - 1));
 
@@ -209,8 +215,8 @@ export function calculateCasesProcessedPerDay(
     const toStatus = entry.payload?.toStatus?.toLowerCase();
     const fromStatus = entry.payload?.fromStatus?.toLowerCase();
 
-    const movedToCompletion = toStatus && COMPLETION_STATUSES.has(toStatus);
-    const movedFromCompletion = fromStatus && COMPLETION_STATUSES.has(fromStatus);
+    const movedToCompletion = toStatus && completionStatuses.has(toStatus);
+    const movedFromCompletion = fromStatus && completionStatuses.has(fromStatus);
 
     // Net change: +1 when moving TO completion, -1 when moving FROM completion
     if (movedToCompletion && !movedFromCompletion) {
@@ -350,6 +356,7 @@ export function calculateAvgCaseProcessingTime(
 ): ProcessingTimeStats {
   const referenceDate = options.referenceDate ? startOfDay(options.referenceDate) : startOfDay(new Date());
   const windowDays = options.windowInDays && options.windowInDays > 0 ? options.windowInDays : 30;
+  const completionStatuses = options.completionStatuses ?? LEGACY_COMPLETION_STATUSES;
   const windowStart = addDays(referenceDate, -(windowDays - 1));
   const previousWindowEnd = addDays(windowStart, -1);
   const previousWindowStart = addDays(previousWindowEnd, -(windowDays - 1));
@@ -387,7 +394,7 @@ export function calculateAvgCaseProcessingTime(
     }
 
     const toStatus = entry.payload?.toStatus;
-    if (!toStatus || !COMPLETION_STATUSES.has(toStatus.toLowerCase())) {
+    if (!toStatus || !completionStatuses.has(toStatus.toLowerCase())) {
       return;
     }
 
