@@ -7,6 +7,10 @@ import {
   groupActivityEntriesByDate,
   toActivityDateKey,
 } from "../utils/activityReport";
+import { LegacyFormatError } from "../utils/services/FileStorageService";
+import { createLogger } from "../utils/logger";
+
+const logger = createLogger("useCaseActivityLog");
 
 interface UseCaseActivityLogResult {
   activityLog: CaseActivityEntry[];
@@ -42,12 +46,18 @@ export function useCaseActivityLog(): UseCaseActivityLogResult {
       setActivityLog(entries);
       setError(null);
     } catch (err) {
-      console.error("Failed to load activity log", err);
-      // Only set error if it's not a permission issue (which is expected when not connected)
-      const isPermissionError = err instanceof Error && 
-        (err.message.includes('permission') || err.message.includes('requested file could not be read'));
-      if (!isPermissionError) {
-        setError(err instanceof Error ? err.message : "Failed to load activity log");
+      // LegacyFormatError is expected when opening old data files - handle gracefully
+      if (err instanceof LegacyFormatError) {
+        logger.warn("Legacy format detected in activity log", { message: err.message });
+        setError(err.message);
+      } else {
+        console.error("Failed to load activity log", err);
+        // Only set error if it's not a permission issue (which is expected when not connected)
+        const isPermissionError = err instanceof Error && 
+          (err.message.includes('permission') || err.message.includes('requested file could not be read'));
+        if (!isPermissionError) {
+          setError(err instanceof Error ? err.message : "Failed to load activity log");
+        }
       }
     } finally {
       setLoading(false);

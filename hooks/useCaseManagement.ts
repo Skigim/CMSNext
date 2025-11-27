@@ -7,6 +7,7 @@ import {
   updateFileStorageFlags,
 } from '@/utils/fileStorageFlags';
 import { createLogger } from '@/utils/logger';
+import { LegacyFormatError } from '@/utils/services/FileStorageService';
 
 const logger = createLogger('CaseManagement');
 interface UseCaseManagementReturn {
@@ -86,6 +87,13 @@ export function useCaseManagement(): UseCaseManagementReturn {
       
       return data; // Return the loaded data
     } catch (err) {
+      // LegacyFormatError is expected when opening old data files - handle gracefully
+      if (err instanceof LegacyFormatError) {
+        logger.warn('Legacy format detected', { message: err.message });
+        setError(err.message);
+        toast.error(err.message, { duration: 8000 });
+        return [];
+      }
       console.error('Failed to load cases:', err);
       const errorMsg = 'Failed to load cases. Please try again.';
       setError(errorMsg);

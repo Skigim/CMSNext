@@ -13,6 +13,7 @@ import {
 } from "@/utils/alertsData";
 import { ENABLE_SAMPLE_ALERTS } from "@/utils/featureFlags";
 import { createLogger } from "@/utils/logger";
+import { LegacyFormatError } from "@/utils/services/FileStorageService";
 
 interface UseAlertsFlowOptions {
   cases: StoredCase[];
@@ -105,9 +106,14 @@ export function useAlertsFlow({
       const nextAlerts = await dataManager.getAlertsIndex({ cases });
       syncAlertsIndex(nextAlerts);
     } catch (error) {
-      logger.error("Failed to load alerts", {
-        error: error instanceof Error ? error.message : String(error),
-      });
+      // LegacyFormatError is expected when opening old data files - handle gracefully
+      if (error instanceof LegacyFormatError) {
+        logger.warn("Legacy format detected in alerts", { message: error.message });
+      } else {
+        logger.error("Failed to load alerts", {
+          error: error instanceof Error ? error.message : String(error),
+        });
+      }
       setAlertsIndex(createEmptyAlertsIndex());
     }
   }, [cases, dataManager, hasLoadedData, syncAlertsIndex]);

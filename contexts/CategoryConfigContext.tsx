@@ -11,6 +11,10 @@ import {
 } from "@/types/categoryConfig";
 import { useDataManagerSafe } from "./DataManagerContext";
 import { useFileStorageDataChange } from "./FileStorageContext";
+import { LegacyFormatError } from "@/utils/services/FileStorageService";
+import { createLogger } from "@/utils/logger";
+
+const logger = createLogger("CategoryConfigContext");
 
 type UpdateHandler = (key: CategoryKey, values: string[] | StatusConfig[] | AlertTypeConfig[]) => Promise<void>;
 
@@ -61,8 +65,14 @@ export const CategoryConfigProvider: React.FC<{ children: React.ReactNode }> = (
       setConfig(mergeCategoryConfig(result));
       setError(null);
     } catch (err) {
-      console.error("Failed to load category configuration", err);
-      setError("Unable to load category options.");
+      // LegacyFormatError is expected when opening old data files - handle gracefully
+      if (err instanceof LegacyFormatError) {
+        logger.warn("Legacy format detected in category config", { message: err.message });
+        setError(err.message);
+      } else {
+        console.error("Failed to load category configuration", err);
+        setError("Unable to load category options.");
+      }
     } finally {
       setLoading(false);
     }
