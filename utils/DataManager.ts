@@ -492,6 +492,22 @@ export class DataManager {
   getStatus() {
     return this.fileService.getStatus();
   }
+
+  /**
+   * Read raw file data without format validation.
+   * Used for migration utilities that need to read legacy formats.
+   */
+  async readRawFileData(): Promise<unknown | null> {
+    return this.fileStorage.readRawFileData();
+  }
+
+  /**
+   * Write normalized data to file system.
+   * Used by migration utilities to save converted data.
+   */
+  async writeNormalizedData(data: NormalizedFileData): Promise<NormalizedFileData> {
+    return this.fileStorage.writeNormalizedData(data);
+  }
 }
 
 export default DataManager;

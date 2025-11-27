@@ -137,6 +137,24 @@ export class FileStorageService {
   }
 
   /**
+   * Read raw data from file system without format validation.
+   * Used for migration utilities that need to read legacy formats.
+   * 
+   * @returns Raw file data or null if no file exists
+   */
+  async readRawFileData(): Promise<unknown | null> {
+    try {
+      const rawData = await this.fileService.readFile();
+      return rawData;
+    } catch (error) {
+      logger.error("Failed to read raw file data", {
+        error: error instanceof Error ? error.message : "Unknown error",
+      });
+      throw error;
+    }
+  }
+
+  /**
    * Detect which legacy format the data is in (for error messaging)
    */
   private detectLegacyFormat(data: unknown): string {

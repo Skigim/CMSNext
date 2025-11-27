@@ -8,6 +8,7 @@ import { Badge } from "../ui/badge";
 import { Separator } from "../ui/separator";
 import FileStorageSettings from "../diagnostics/FileStorageSettings";
 import { FileStorageDiagnostics } from "../diagnostics/FileStorageDiagnostics";
+import { LegacyMigrationPanel } from "../diagnostics/LegacyMigrationPanel";
 import { ErrorBoundaryTest } from "../error/ErrorBoundaryTest";
 import { ErrorReportViewer } from "../error/ErrorReportViewer";
 import { FeedbackPanel } from "../error/ErrorFeedbackForm";
@@ -57,6 +58,7 @@ export function Settings({ cases, onDataPurged, onAlertsCsvImported }: SettingsP
   const { featureFlags } = useAppViewState();
   
   const showDevTools = featureFlags["settings.devTools"] ?? false;
+  const showLegacyMigration = featureFlags["settings.legacyMigration"] ?? false;
 
   // Helper function to safely count valid cases
   const getValidCasesCount = () => {
@@ -465,6 +467,9 @@ export function Settings({ cases, onDataPurged, onAlertsCsvImported }: SettingsP
           <div className="grid gap-6">
             <FileStorageSettings />
             <FileStorageDiagnostics />
+            
+            {/* Legacy Migration Panel - shown when feature flag is enabled */}
+            {showLegacyMigration && <LegacyMigrationPanel />}
             
             {/* Storage Mode Section */}
             <Card>

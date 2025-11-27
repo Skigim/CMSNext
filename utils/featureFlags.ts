@@ -25,6 +25,8 @@ export interface FeatureFlags {
 	"cases.bulkActions": boolean;
 	/** Controls visibility of developer tools in Settings. */
 	"settings.devTools": boolean;
+	/** Enables legacy v1.x to v2.0 data migration utility in Settings. */
+	"settings.legacyMigration": boolean;
 }
 
 /** All known feature flag keys. */
@@ -42,6 +44,7 @@ const FEATURE_FLAG_DEFAULTS: FeatureFlags = {
 	"reports.advancedFilters": false,
 	"cases.bulkActions": false,
 	"settings.devTools": import.meta.env.DEV,
+	"settings.legacyMigration": import.meta.env.DEV,
 };
 
 /** Immutable default feature flag configuration. */
