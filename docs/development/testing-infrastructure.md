@@ -60,7 +60,7 @@ For comprehensive accessibility testing patterns, see [`docs/development/accessi
 ## Current Status
 
 - **Test Files:** 40
-- **Total Tests:** 230
+- **Total Tests:** 244
 - **Pass Rate:** 100%
 - **Last Updated:** November 26, 2025
 

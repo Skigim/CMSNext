@@ -383,7 +383,7 @@ This application is built with **privacy-by-design** principles:
 - **✅ File Storage**: Robust autosave with File System Access API integration
 - **✅ UI/UX**: 6 polished themes with responsive design, 100% shadcn/ui migration complete
 - **✅ Data Management**: Import/export with validation and migration
-- **✅ Testing Infrastructure**: 230 tests passing across 40 test files with vitest + axe accessibility checks
+- **✅ Testing Infrastructure**: 244 tests passing across 40 test files with vitest + axe accessibility checks
 - **✅ Telemetry & Performance**: Production-ready observability and performance tracking
 - **✅ Service Extraction**: Clean DataManager + 7 Services architecture with dependency injection
 - **✅ Storage Normalization**: v2.0 format only (legacy formats rejected with user-friendly error)

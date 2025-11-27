@@ -2,9 +2,9 @@
 
 **Report Date:** November 26, 2025  
 **Branch:** main (stable), dev (active)  
-**Tests:** 230/230 passing ✅  
+**Tests:** 244/244 passing ✅  
 **Build:** Production-ready ✅  
-**Latest Milestone:** Legacy Code Removal & Test Suite Cleanup - Complete (100%)
+**Latest Milestone:** Configurable Completion Statuses & Legacy Migration Utility (100%)
 
 ---
 
@@ -20,17 +20,18 @@
 | **Storage Normalization (Phase B)**          | ✅ Complete | Transition to v2.0 normalized storage format             |
 | **Domain Layer Removal**                     | ✅ Complete | ~4,000 lines removed, single code path restored          |
 | **Legacy Code Removal**                      | ✅ Complete | ~7,000 lines removed, v2.0-only storage format           |
-| **Test Suite Cleanup**                       | ✅ Complete | Removed stale tests, 230 tests passing (100%)            |
+| **Legacy Migration Utility**                 | ✅ Complete | v1.x to v2.0 migration tool for existing users           |
+| **Configurable Completion Statuses**         | ✅ Complete | Dashboard metrics respect user-defined completion states |
 | **Dependency Injection Pattern**             | ✅ Complete | Clean service architecture with focused responsibilities |
 | **Breaking Changes**                         | ✅ Zero     | No regressions across all changes                        |
 
 ### Metrics
 
-- **Test Coverage:** 230 tests passing across 40 test files (100% pass rate)
+- **Test Coverage:** 244 tests passing across 40 test files (100% pass rate)
 - **DataManager:** 461 lines (Stable)
 - **Storage Format:** v2.0 (Normalized) - legacy formats rejected with user-friendly error
 - **Architecture Quality:** Clean DataManager + 7 Services pattern
-- **Code Removed:** ~7,000 lines (legacy support, domain layer, stale tests)
+- **New Features:** Legacy v1.x migration utility, configurable completion statuses
 
 ---
 
@@ -379,15 +380,15 @@ class DataManager {
 
 ## 📊 Project Health Metrics
 
-| Metric                    | Current | Previous | Trend               |
-| ------------------------- | ------- | -------- | ------------------- |
-| Tests Passing             | 230/230 | 310/310  | ↘️ -80 (cleanup)    |
-| Test Files                | 40      | 46       | ↘️ -6 (stale tests) |
-| Feature Quality (Cases)   | 88/100  | 88/100   | → 0                 |
-| Feature Quality (Finance) | 73/100  | 73/100   | → 0                 |
-| Code Complexity (Total)   | ~9k LOC | ~12k LOC | ↗️ -25%             |
-| Test Pass Rate            | 100%    | 100%     | → 0                 |
-| Build Status              | ✅ Pass | ✅ Pass  | → 0                 |
+| Metric                    | Current | Previous | Trend              |
+| ------------------------- | ------- | -------- | ------------------ |
+| Tests Passing             | 244/244 | 230/230  | ↗️ +14 (new tests) |
+| Test Files                | 40      | 40       | → 0                |
+| Feature Quality (Cases)   | 88/100  | 88/100   | → 0                |
+| Feature Quality (Finance) | 73/100  | 73/100   | → 0                |
+| Code Complexity (Total)   | ~9k LOC | ~9k LOC  | → 0                |
+| Test Pass Rate            | 100%    | 100%     | → 0                |
+| Build Status              | ✅ Pass | ✅ Pass  | → 0                |
 
 ---
 

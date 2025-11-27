@@ -36,6 +36,8 @@
 8. [Premium UI/UX Layer](#premium-uiux-layer)
 9. [Developer & Operations Enablement](#developer--operations-enablement)
 10. [Feature Flags](#feature-flags)
+11. [Legacy Data Migration](#legacy-data-migration)
+12. [Configurable Completion Statuses](#configurable-completion-statuses)
 
 ---
 
@@ -130,7 +132,7 @@ Maintained by the storage + autosave working group. Align telemetry follow-ups w
 
 **Rating: 88/100** _(Updated November 20, 2025)_
 
-Core case workflows (create, view, edit, delete) are production-ready through the refactored service architecture. CaseService handles all case CRUD operations with status tracking, import/export, and activity log integration. The hook layer (`useCaseManagement`) provides a clean facade over DataManager with optimistic updates and comprehensive test coverage (310/310 passing).
+Core case workflows (create, view, edit, delete) are production-ready through the refactored service architecture. CaseService handles all case CRUD operations with status tracking, import/export, and activity log integration. The hook layer (`useCaseManagement`) provides a clean facade over DataManager with optimistic updates and comprehensive test coverage.
 
 ### Strengths
 
@@ -138,10 +140,11 @@ Core case workflows (create, view, edit, delete) are production-ready through th
 - **DataManager Orchestration**: Thin coordination layer delegates to specialized services via dependency injection
 - **Streamlined Hook Layer**: `useCaseManagement` provides clean React integration with toast feedback and error handling
 - **Navigation Integration**: `useNavigationFlow` ensures consistent transitions and performance measurement logging across views
-- **Comprehensive Test Coverage**: 310/310 tests passing (100%) including service tests, integration tests, and component tests
+- **Comprehensive Test Coverage**: 244/244 tests passing (100%) including service tests, integration tests, and component tests
 - **Data Model Integrity**: Normalized structures (`CaseDisplay`, `CaseRecord`, `Person`) with strict TypeScript validation
 - **Import/Export**: Bulk operations with duplicate detection and progress indicators
 - **Autosave Integration**: Forms seamlessly integrate with AutosaveFileService for reliable persistence
+- **Configurable Completion Statuses**: Users define which statuses count as "completed" for dashboard metrics
 
 ### Gaps / Risks
 
@@ -162,7 +165,7 @@ Core case workflows (create, view, edit, delete) are production-ready through th
 - **Hook Layer**: `useCaseManagement.test.tsx` verifies hook facade, `useNavigationFlow.test.ts` exercises view transitions
 - **Component Layer**: RTL suites for `CaseWorkspace`, `CaseList`, `CaseStatusBadge`, and form components ensure rendering and interaction correctness
 - **Integration**: Autosave status integration test validates end-to-end persistence with FileStorage context
-- **Test Suite Status**: 230 tests passing across 40 test files (100%) as of November 26, 2025
+- **Test Suite Status**: 244 tests passing across 40 test files (100%) as of November 26, 2025
 - **Performance**: Telemetry infrastructure ready for interaction traces; baseline measurements pending for case-view latency under load
 
 ### Owners / Notes
@@ -448,11 +451,21 @@ Platform enablement group coordinates tooling, CI, and documentation upkeep. Ser
 
 ### Implementation Snapshot
 
-**Rating: 70/100** _(Updated November 26, 2025)_
+**Rating: 72/100** _(Updated November 26, 2025)_
 
 Feature flag infrastructure lives in `utils/featureFlags.ts` with immutable defaults and helper utilities. Flags are managed through `useAppViewState` hook, enabling dashboard widgets to opt-in through metadata instead of ad-hoc conditionals. The system enables gradual rollout for dashboard insights and UI customization.
 
 **Note:** Legacy refactor flags (`USE_FINANCIALS_DOMAIN`, `USE_NEW_ARCHITECTURE`) were removed in November 2025 as the domain layer experiment was concluded and removed.
+
+### Current Flags
+
+| Flag                       | Default | Description                                           |
+| -------------------------- | ------- | ----------------------------------------------------- |
+| `dashboard.widgets.*`      | `true`  | Controls visibility of individual dashboard widgets   |
+| `reports.advancedFilters`  | `false` | Placeholder for advanced reporting filters            |
+| `cases.bulkActions`        | `false` | Placeholder for case bulk actions tooling             |
+| `settings.devTools`        | `DEV`   | Developer tools in Settings (dev mode only)           |
+| `settings.legacyMigration` | `DEV`   | Legacy v1.x to v2.0 migration utility (dev mode only) |
 
 ### Strengths
 
@@ -462,6 +475,7 @@ Feature flag infrastructure lives in `utils/featureFlags.ts` with immutable defa
 - Widget registry honors `metadata.featureFlag`, making new widget flags a metadata-only change
 - Dashboard widget toggles enable user customization of their view
 - Clean flag set with no legacy cruft after domain layer removal
+- `settings.legacyMigration` flag gates migration utility for safe rollout
 
 ### Gaps / Risks
 
@@ -484,3 +498,110 @@ Feature flag infrastructure lives in `utils/featureFlags.ts` with immutable defa
 ### Owners / Notes
 
 Core development team owns the flag system. Coordinate cleanup once features graduate from guarded rollout.
+
+---
+
+## Legacy Data Migration
+
+### Implementation Snapshot
+
+**Rating: 75/100** _(Added November 26, 2025)_
+
+A dedicated migration utility (`utils/legacyMigration.ts`) enables users with v1.x data files to migrate to the v2.0 normalized format. The utility is accessible through Settings when the `settings.legacyMigration` feature flag is enabled.
+
+### Strengths
+
+- **Comprehensive Transformation**: Migrates nested v1.x format (cases with embedded financials/notes) to flat v2.0 relational format
+- **Safe Migration Flow**: Preview before apply, with detailed statistics on what will be migrated
+- **Category Discovery**: Auto-discovers statuses and alert types from legacy data and merges with existing config
+- **User-Friendly UI**: `LegacyMigrationPanel` component provides guided migration with progress feedback
+- **Feature-Gated**: Only visible in dev mode via `settings.legacyMigration` flag
+- **Validation**: Rejects already-normalized data with clear error messaging
+- **Activity Logging**: Records migration events for audit trails
+
+### Components
+
+| Component              | Lines | Description                                   |
+| ---------------------- | ----- | --------------------------------------------- |
+| `legacyMigration.ts`   | 464   | Core transformation logic                     |
+| `LegacyMigrationPanel` | 325   | React UI for triggering and previewing migration |
+
+### Migration Flow
+
+1. **Read Raw File**: Uses `readRawFileData()` to bypass v2.0 validation
+2. **Detect Format**: Identifies legacy v1.x format vs already-normalized data
+3. **Preview Statistics**: Shows case/financial/note/alert counts before migration
+4. **Apply Migration**: Transforms data and writes to file storage
+5. **Notify Success**: Toast feedback and activity log entry
+
+### Gaps / Risks
+
+- Migration is one-way; no rollback mechanism built-in (though backups are created)
+- Large datasets (1000+ cases) may have performance considerations
+- Limited testing with real-world legacy files (mostly synthetic test data)
+
+### Expansion Opportunities
+
+- Add explicit backup creation before migration
+- Support batch migration for multiple files
+- Provide detailed migration report with any skipped/failed items
+- Add dry-run mode that shows exact changes without applying
+
+### Coverage & Telemetry
+
+- Core transformation logic tested via unit tests
+- UI component integration tested through Settings panel
+- No dedicated telemetry yet; migration events logged to activity log
+
+### Owners / Notes
+
+Core development team. Utility designed for existing users upgrading from v1.x; may be removed once migration window closes.
+
+---
+
+## Configurable Completion Statuses
+
+### Implementation Snapshot
+
+**Rating: 78/100** _(Added November 26, 2025)_
+
+Dashboard metrics (Cases Processed/Day, Avg. Case Processing Time) now use user-configurable completion statuses instead of hardcoded values. Users can mark which statuses count as "completed" via checkboxes in the Category Manager.
+
+### Strengths
+
+- **User Control**: Each status has a "Completed" checkbox in Category Manager settings
+- **Net Change Tracking**: Dashboard counts correctly increment/decrement as cases move to/from completion statuses
+- **Backward Compatible**: Legacy statuses (approved, denied, closed, spenddown) auto-marked as completed during migration
+- **Type-Safe**: `StatusConfig.countsAsCompleted` field with helper `getCompletionStatusNames()`
+- **Dashboard Integration**: Both `CasesProcessedPerDayWidget` and `AvgCaseProcessingTimeWidget` use category config
+
+### Architecture Changes
+
+| File                           | Change                                              |
+| ------------------------------ | --------------------------------------------------- |
+| `types/categoryConfig.ts`      | Added `countsAsCompleted?: boolean` to StatusConfig |
+| `CategoryManagerPanel.tsx`     | Added checkbox column with tooltip                  |
+| `widgetDataProcessors.ts`      | Accepts `completionStatuses` option, net change logic |
+| `CasesProcessedPerDayWidget`   | Uses category config for completion statuses        |
+| `AvgCaseProcessingTimeWidget`  | Uses category config for completion statuses        |
+
+### Gaps / Risks
+
+- New users must manually configure which statuses count as completed
+- No visual indication in case list of "completed" status distinction
+
+### Expansion Opportunities
+
+- Add bulk toggle for marking multiple statuses as completed
+- Visual indicator in status badges for completion states
+- Dashboard tooltip explaining what counts as "completed"
+
+### Coverage & Telemetry
+
+- Widget processor tests cover net change tracking behavior
+- Integration tested through dashboard widget rendering
+- 14 new tests added for completion status functionality
+
+### Owners / Notes
+
+Dashboard insights team. Feature enables accurate workflow metrics without hardcoded assumptions.
