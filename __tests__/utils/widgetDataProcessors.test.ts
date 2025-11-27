@@ -195,6 +195,53 @@ describe("widgetDataProcessors", () => {
       expect(day.date).toBe("2025-10-21");
       expect(day.processedCount).toBe(1);
     });
+
+    it("decrements count when reverting from a completion status", () => {
+      const day21 = isoLocal(2025, 9, 21, 14, 0, 0);
+      const day21Later = isoLocal(2025, 9, 21, 16, 0, 0);
+
+      const activity: CaseActivityEntry[] = [
+        {
+          id: "c1",
+          type: "status-change",
+          timestamp: day21,
+          caseId: "case-1",
+          caseName: "Case 1",
+          payload: { fromStatus: "Pending", toStatus: "Approved" },
+        },
+        {
+          id: "c2",
+          type: "status-change",
+          timestamp: day21Later,
+          caseId: "case-1",
+          caseName: "Case 1",
+          payload: { fromStatus: "Approved", toStatus: "Pending" },
+        },
+      ];
+
+      const stats = calculateCasesProcessedPerDay(activity, { referenceDate });
+      const day = stats.find((s) => s.date === "2025-10-21");
+      expect(day?.processedCount).toBe(0); // +1 then -1 = net 0
+    });
+
+    it("does not change count when moving between completion statuses", () => {
+      const day21 = isoLocal(2025, 9, 21, 14, 0, 0);
+
+      const activity: CaseActivityEntry[] = [
+        {
+          id: "c1",
+          type: "status-change",
+          timestamp: day21,
+          caseId: "case-1",
+          caseName: "Case 1",
+          payload: { fromStatus: "Approved", toStatus: "Denied" },
+        },
+      ];
+
+      const stats = calculateCasesProcessedPerDay(activity, { referenceDate });
+      const day = stats.find((s) => s.date === "2025-10-21");
+      expect(day?.processedCount).toBe(0); // Moving between completions = no net change
+    });
   });
 
   describe("calculateTotalCasesByStatus", () => {

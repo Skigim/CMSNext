@@ -200,18 +200,25 @@ export function calculateCasesProcessedPerDay(
       return;
     }
 
-    const completedStatus = entry.payload?.toStatus;
-    if (!completedStatus || !COMPLETION_STATUSES.has(completedStatus.toLowerCase())) {
-      return;
-    }
-
     const timestamp = safeParseDate(entry.timestamp);
     if (!timestamp || !isWithinRange(timestamp, start, referenceDate)) {
       return;
     }
 
     const key = isoDateKey(timestamp);
-    counts.set(key, (counts.get(key) ?? 0) + 1);
+    const toStatus = entry.payload?.toStatus?.toLowerCase();
+    const fromStatus = entry.payload?.fromStatus?.toLowerCase();
+
+    const movedToCompletion = toStatus && COMPLETION_STATUSES.has(toStatus);
+    const movedFromCompletion = fromStatus && COMPLETION_STATUSES.has(fromStatus);
+
+    // Net change: +1 when moving TO completion, -1 when moving FROM completion
+    if (movedToCompletion && !movedFromCompletion) {
+      counts.set(key, (counts.get(key) ?? 0) + 1);
+    } else if (movedFromCompletion && !movedToCompletion) {
+      counts.set(key, (counts.get(key) ?? 0) - 1);
+    }
+    // If moving between two completion statuses, net change is 0
   });
 
   return keys.map((date) => ({
