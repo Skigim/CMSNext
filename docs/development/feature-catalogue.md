@@ -2,6 +2,8 @@
 
 > Living index of marketable features, their current implementation status, quality, and future investments.
 
+**Last Updated:** December 1, 2025
+
 ## How to Use This Document
 
 - **Implementation Snapshot** — Update whenever new functionality lands
@@ -11,6 +13,28 @@
 - **Coverage & Telemetry** — Track automated coverage and observability
 
 ✍️ _Add dates and owners when significant updates occur to maintain historical context._
+
+---
+
+## Quick Reference (December 2025)
+
+| Feature | Rating | Trend | Notes |
+|---------|--------|-------|-------|
+| Case Management | 88 | → | Production-ready, relationships added |
+| Premium UI/UX | 82 | → | Solid, accessibility audits needed |
+| Local-First Storage | 80 | → | Production-ready |
+| Developer Enablement | 79 | → | Strong tooling |
+| Configurable Statuses | 78 | → | Recently stabilized |
+| Data Portability | 76 | → | Good, UX improvements possible |
+| Legacy Migration | 75 | → | Dev-only, one-way |
+| Autosave & Recovery | 74 | → | Works, telemetry pending |
+| Financial Operations | 73 | → | Next for refactoring |
+| Feature Flags | 72 | → | In-memory only |
+| Notes & Collaboration | 71 | → | Basic functionality |
+| Dashboard & Insights | 70 | → | Framework ready |
+
+**Average Rating:** 76.5/100  
+**Test Status:** 253/253 passing (100%)
 
 ---
 
@@ -130,47 +154,47 @@ Maintained by the storage + autosave working group. Align telemetry follow-ups w
 
 ### Implementation Snapshot
 
-**Rating: 88/100** _(Updated November 20, 2025)_
+**Rating: 88/100** _(Updated December 1, 2025)_
 
-Core case workflows (create, view, edit, delete) are production-ready through the refactored service architecture. CaseService handles all case CRUD operations with status tracking, import/export, and activity log integration. The hook layer (`useCaseManagement`) provides a clean facade over DataManager with optimistic updates and comprehensive test coverage.
+Core case workflows (create, view, edit, delete) are production-ready through the refactored service architecture. CaseService handles all case CRUD operations with status tracking, import/export, and activity log integration. The hook layer (`useCaseManagement`) provides a clean facade over DataManager with optimistic updates and comprehensive test coverage. **New:** Relationships feature added to Person data model (December 2025).
 
 ### Strengths
 
-- **Service Layer Architecture**: `CaseService` (432 lines) encapsulates all case business logic with clean separation of concerns
-- **DataManager Orchestration**: Thin coordination layer delegates to specialized services via dependency injection
+- **Service Layer Architecture**: `CaseService` (476 lines) encapsulates all case business logic with clean separation of concerns
+- **DataManager Orchestration**: Thin coordination layer (461 lines) delegates to 7 specialized services via dependency injection
+- **Relationships Model**: Formal relationship tracking (type, name, phone) integrated into Person data model
 - **Streamlined Hook Layer**: `useCaseManagement` provides clean React integration with toast feedback and error handling
 - **Navigation Integration**: `useNavigationFlow` ensures consistent transitions and performance measurement logging across views
-- **Comprehensive Test Coverage**: 244/244 tests passing (100%) including service tests, integration tests, and component tests
-- **Data Model Integrity**: Normalized structures (`CaseDisplay`, `CaseRecord`, `Person`) with strict TypeScript validation
+- **Comprehensive Test Coverage**: 253/253 tests passing (100%) including service tests, integration tests, and component tests
+- **Data Model Integrity**: Normalized structures (`CaseDisplay`, `CaseRecord`, `Person`, `Relationship`) with strict TypeScript validation
 - **Import/Export**: Bulk operations with duplicate detection and progress indicators
 - **Autosave Integration**: Forms seamlessly integrate with AutosaveFileService for reliable persistence
 - **Configurable Completion Statuses**: Users define which statuses count as "completed" for dashboard metrics
 
 ### Gaps / Risks
 
-- Case list filtering/search UX exposes basic predicates; advanced combos (status + priority + date range) exist but could benefit from saved filter presets
-- Accessibility audits for complex forms remain ad hoc; automated tooling for tab order and ARIA coverage would strengthen compliance
-- Performance benchmarks for large datasets (1k+ cases) not yet established; virtualization applied but not stress-tested
+- Hook complexity: `useCaseManagement` at 350 lines exceeds 200-line target (refactoring candidate)
+- Case list filtering/search UX exposes basic predicates; advanced combos could benefit from saved filter presets
+- Accessibility audits for complex forms remain ad hoc
+- Performance benchmarks for large datasets (1k+ cases) not yet established
 
 ### Expansion Opportunities
 
-- **Saved Filter Views**: Introduce user-configurable filter presets for quickly surfacing priority cases, aging items, or custom criteria
-- **Draft State & Change History**: Add draft persistence and snapshots for compliance-driven workflows requiring audit trails
-- **Performance Optimization**: Establish 1k+ case benchmark suite and optimize rendering/filtering for large datasets
-- **Guided Onboarding**: Develop in-app checklists or contextual guidance to reduce new-user friction
+- **Hook Refactoring**: Split `useCaseManagement` into focused hooks (state, operations)
+- **Saved Filter Views**: Introduce user-configurable filter presets
+- **Relationship Search**: Enable filtering/searching by relationship data
+- **Performance Optimization**: Establish 1k+ case benchmark suite
 
 ### Coverage & Telemetry
 
 - **Service Layer**: CaseService fully tested with 100% coverage for CRUD operations, import/export, and activity logging
-- **Hook Layer**: `useCaseManagement.test.tsx` verifies hook facade, `useNavigationFlow.test.ts` exercises view transitions
-- **Component Layer**: RTL suites for `CaseWorkspace`, `CaseList`, `CaseStatusBadge`, and form components ensure rendering and interaction correctness
-- **Integration**: Autosave status integration test validates end-to-end persistence with FileStorage context
-- **Test Suite Status**: 244 tests passing across 40 test files (100%) as of November 26, 2025
-- **Performance**: Telemetry infrastructure ready for interaction traces; baseline measurements pending for case-view latency under load
+- **Test Suite Status**: 253 tests passing across 41 test files (100%) as of December 1, 2025
+- **Relationships**: Persistence implemented in CaseService create/update methods
+- **Performance**: Telemetry infrastructure ready; baseline measurements pending
 
 ### Owners / Notes
 
-Phase 3 Cases domain refactor completed November 2, 2025. Architecture now serves as reference pattern for future enhancements. Coordinate with product workflows squad for feature expansion; align telemetry captures with Phase 4 manual tasks.
+Phase 3 Cases domain refactor completed November 2, 2025. Relationships feature added December 2025. Hook refactoring scheduled for December Week 1.
 
 ---
 
@@ -178,44 +202,44 @@ Phase 3 Cases domain refactor completed November 2, 2025. Architecture now serve
 
 ### Implementation Snapshot
 
-**Rating: 73/100** _(Next for Phase 3 Architecture Migration)_
+**Rating: 73/100** _(Updated December 1, 2025 - Refactoring Scheduled)_
 
-Financial modules (resources, income, expenses) leverage dedicated components and hooks (`useFinancialItemFlow`, `FinancialItemCard`) with inline editing, validation, and autosave integration. Verification metadata and frequency handling cover core program requirements, while normalized data structures ensure consistent reporting.
+Financial modules (resources, income, expenses) leverage dedicated components and hooks (`useFinancialItemFlow`, `FinancialItemCard`) with inline editing, validation, and autosave integration. Verification metadata and frequency handling cover core program requirements.
+
+**Known Issue:** `FinancialItemModal` component contains direct DataManager calls (anti-pattern) - scheduled for refactoring in December Week 2.
 
 ### Strengths
 
-- **Service Architecture**: FinancialsService (235 lines) handles all financial CRUD operations with category-based management
-- **Clean Hook Layer**: `useFinancialItemFlow` provides React integration with toast feedback and optimistic updates
+- **Service Architecture**: FinancialsService (226 lines) handles all financial CRUD operations with category-based management
+- **Hook Layer**: `useFinancialItemFlow` (165 lines) provides React integration with toast feedback
 - **Inline Editing**: `FinancialItemCard` keeps UX fast with state managed by `useFinancialItemCardState`
-- **Category Separation**: Clear separation of resources, income, and expenses with configurable definitions in `categoryConfig`
+- **Category Separation**: Clear separation of resources, income, and expenses
 - **Verification Status**: Badges (VR/AVS/etc.) surface compliance at a glance
-- **Validation Rules**: Enforce numeric integrity, frequency selections, and required metadata
-- **Dashboard Integration**: Financial summaries feed into dashboard widgets and case detail totals
+- **Grid View**: Simplified to grid-only mode (sub-tabs removed December 2025)
 
 ### Gaps / Risks
 
-- Budget rollups and scenario planning (what-if calculations) not yet implemented
-- No audit trail for financial changes; edit history limited to global notes
-- Table/list UX can be heavy on large datasets; virtualization only partially applied
-- Import/export validation focuses on structural correctness—business rule validation (e.g., negative balances) is manual
+- **Anti-Pattern**: `FinancialItemModal` (~370 lines) contains direct DataManager calls - violates architecture guidelines
+- Budget rollups and scenario planning not yet implemented
+- No audit trail for financial changes
+- Table/list UX can be heavy on large datasets
 
 ### Expansion Opportunities
 
-- Introduce changelog per financial item with user/time metadata to support historical tracking
-- Enhance bulk edit capabilities (e.g., mark multiple expenses verified)
-- Surface contextual insights within a case (e.g., category breakdown, verification deadlines) while avoiding cross-case aggregation
-- Explore contextual guidance or checklists to ensure verification tasks stay compliant
+- **Refactor FinancialItemModal**: Extract business logic to hooks, remove direct DataManager calls
+- Introduce changelog per financial item for historical tracking
+- Enhance bulk edit capabilities
+- Surface contextual insights within a case
 
 ### Coverage & Telemetry
 
 - RTL suites target FinancialItemCard, case financial forms, and verification flows
-- `useFinancialItemFlow` tested through component behavior; additional direct hook tests could increase confidence
-- No dedicated telemetry yet—future perf traces should include financial tab interactions
-- Synthetic bundle analysis shows financial utilities in `utils-CBw3aSZY.js`; monitoring ensures chunk strategy remains effective
+- `useFinancialItemFlow` tested through component behavior
+- No dedicated telemetry yet
 
 ### Owners / Notes
 
-Primary ownership with the financial workflows pod; coordinate future enhancements with compliance stakeholders to ensure verification rules meet program standards.
+Refactoring scheduled for December Week 2 to address FinancialItemModal anti-pattern.
 
 ---
 
@@ -400,50 +424,54 @@ Design systems + front-end platform pairing. Produce contributor-facing UI guide
 
 ### Implementation Snapshot
 
-**Rating: 79/100** _(Updated November 20, 2025)_
+**Rating: 79/100** _(Updated December 1, 2025)_
 
-Tooling stack (Vitest, ESLint 9 flat config, Tailwind v4 pipeline) covers day-to-day development with scripted performance baselines, seed data generators, and comprehensive architecture documentation. Service extraction (Phase 1) established clean DataManager + Services pattern with dependency injection. Dev container + npm workflows yield repeatable environments, but release automation and telemetry collection remain largely manual.
+Tooling stack (Vitest, ESLint 9 flat config, Tailwind v4 pipeline) covers day-to-day development with scripted performance baselines, seed data generators, and comprehensive architecture documentation. Service extraction (Phase 1) established clean DataManager + Services pattern with dependency injection. Dev container + npm workflows yield repeatable environments.
 
 ### Strengths
 
-- **Comprehensive test harness**: 310 tests passing across unit, RTL, integration, and performance scripts with coverage reporting
-- **Service Architecture**: DataManager + 7 focused services (FileStorageService, AlertsService, CaseService, NotesService, FinancialsService, ActivityLogService, CategoryConfigService)
+- **Comprehensive test harness**: 253 tests passing across unit, RTL, integration, and performance scripts with coverage reporting
+- **Service Architecture**: DataManager (461 lines) + 7 focused services totaling 2,265 lines
 - **Dependency Injection**: Clean service composition with focused responsibilities
 - **Storage Normalization**: v2.0 normalized format with automatic migration from legacy formats
-- **Enhanced testing patterns**: `toSnapshot()` and `sortSnapshots()` helpers improve test reliability; comprehensive integration coverage
-- **Dev container** and documented setup enable consistent onboarding across platforms
+- **Dev container** and documented setup enable consistent onboarding
 - **CLI utilities** (`scripts/`) generate sample data, run performance baselines, and capture usage reports
-- **Linting/formatting** standardized via ESLint 9 + Prettier; zero warning baseline maintained
-- **Documentation set** (Testing Infrastructure, Performance Metrics, Service Extraction summaries) keeps teams aligned
+- **Linting/formatting** standardized via ESLint 9 + Prettier; zero warning baseline
+
+### Hook Complexity Status
+
+Target: ≤200 lines per hook. **4 hooks over target:**
+
+| Hook | Lines | Priority |
+|------|-------|----------|
+| `useNavigationFlow` | 424 | P0 |
+| `useConnectionFlow` | 413 | P0 |
+| `useCaseManagement` | 350 | P0 |
+| `useAlertsFlow` | 289 | P0 |
 
 ### Gaps / Risks
 
-- No automated release packaging or signed build pipeline—manual steps required for distribution
-- Usage telemetry service still conceptual; no automated collection of feature adoption
-- Accessibility and visual regression tooling not part of CI, risking regressions
-- Dev container updates rely on manual refresh; dependency drift can surprise contributors
-- Operational runbooks (backups, release checklists) live in docs but lack executable automation
+- No automated release packaging
+- Usage telemetry service still conceptual
+- Accessibility and visual regression tooling not in CI
+- 4 hooks exceed 200-line target
 
 ### Expansion Opportunities
 
-- Introduce lightweight release automation (tagged builds, checksum artifacts)
-- Stand up usage metrics service to feed feature roadmap and dashboard insights
-- Add automated accessibility/visual regression checks to CI
-- Provide quickstart scripts for common contributor workflows (test subsets, perf baselines)
-- Automate dev container maintenance to flag outdated dependencies before they drift
+- Hook refactoring sprint (December Week 1)
+- Introduce lightweight release automation
+- Add automated accessibility checks to CI
+- Stand up usage metrics service
 
 ### Coverage & Telemetry
 
-- **Vitest suites**: 230 tests across 40 test files; coverage reports stored in `coverage/` and referenced in docs
-- **Service tests**: Complete coverage for all 7 services with unit and integration tests
-- **Performance telemetry**: Partially automated (`perf:baseline`, bundle analysis); manual traces pending
-- **Architecture documentation**: Service extraction summaries, storage normalization strategy, testing infrastructure
-- No centralized telemetry ingestion yet—future work to log usage, autosave health, and import metrics
-- Dev tooling health tracked via docs but lacks automated status dashboard
+- **Vitest suites**: 253 tests across 41 test files (100% passing)
+- **Service tests**: Complete coverage for all 7 services
+- **Performance telemetry**: Partially automated; manual traces pending
 
 ### Owners / Notes
 
-Platform enablement group coordinates tooling, CI, and documentation upkeep. Service architecture maintained by core development team.
+Platform enablement group coordinates tooling, CI, and documentation upkeep. Hook refactoring scheduled for December Week 1.
 
 ---
 
