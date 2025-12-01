@@ -134,27 +134,21 @@ export function useCaseManagement(): UseCaseManagementReturn {
       
       if (editingCase) {
         // Update existing case using DataManager
-        const updatedCase = await dataManager.updateCompleteCase(editingCase.id, caseData);
+        // Note: State updates are handled by the file storage broadcast via useFileDataSync
+        await dataManager.updateCompleteCase(editingCase.id, caseData);
         
         // Check if still mounted after async operation
         if (!isMounted.current) return;
-        
-        // Update local state to reflect changes immediately
-        setCases(prevCases => 
-          prevCases.map(c => 
-            c.id === editingCase.id ? updatedCase : c
-          )
-        );
         
         toast.success(`Case for ${caseData.person.firstName} ${caseData.person.lastName} updated successfully`, { id: toastId });
       } else {
         // Create new case using DataManager
-        const newCase = await dataManager.createCompleteCase(caseData);
+        // Note: State updates are handled by the file storage broadcast via useFileDataSync
+        // Do not add optimistic updates here as they cause ephemeral duplicate entries
+        await dataManager.createCompleteCase(caseData);
         
         // Check if still mounted after async operation
         if (!isMounted.current) return;
-        
-        setCases(prevCases => [...prevCases, newCase]);
         
         toast.success(`Case for ${caseData.person.firstName} ${caseData.person.lastName} created successfully`, { id: toastId });
       }
@@ -189,17 +183,13 @@ export function useCaseManagement(): UseCaseManagementReturn {
     
     try {
       setError(null);
+      // Note: State updates are handled by the file storage broadcast via useFileDataSync
       await dataManager.deleteCase(caseId);
       
       // Check if still mounted after async operation
       if (!isMounted.current) return;
       
-      // Remove the case from the local state
-      setCases(prevCases => prevCases.filter(c => c.id !== caseId));
-      
       toast.success(`${personName} case deleted successfully`);
-      
-      // DataManager handles file system persistence automatically
     } catch (err) {
       logger.error('Failed to delete case', {
         error: err instanceof Error ? err.message : String(err),
@@ -274,12 +264,12 @@ export function useCaseManagement(): UseCaseManagementReturn {
 
       try {
         setError(null);
+        // Note: State updates are handled by the file storage broadcast via useFileDataSync
         const updatedCase = await dataManager.updateCaseStatus(caseId, status);
         
         // Check if still mounted after async operation
         if (!isMounted.current) return null;
         
-  setCases(prevCases => prevCases.map(c => (c.id === caseId ? updatedCase : c)));
         toast.success(`Status updated to ${status}`, { id: toastId, duration: 2000 });
         return updatedCase;
       } catch (err) {
@@ -299,7 +289,7 @@ export function useCaseManagement(): UseCaseManagementReturn {
         return null;
       }
     },
-    [dataManager, isMounted, setCases, setError],
+    [dataManager, isMounted, setError],
   );
 
   /**
@@ -314,23 +304,18 @@ export function useCaseManagement(): UseCaseManagementReturn {
       }
 
       // Use DataManager to import cases
+      // Note: State updates are handled by the file storage broadcast via useFileDataSync
       await dataManager.importCases(importedCases);
-      
-      // Reload cases to get the normalized data
-      const freshCases = await dataManager.getAllCases();
       
       // Check if still mounted after async operation
       if (!isMounted.current) return;
       
-      setCases(freshCases);
       setHasLoadedData(true);
       
-  // Set baseline - we now have data
-  updateFileStorageFlags({ dataBaseline: true, sessionHadData: true });
+      // Set baseline - we now have data
+      updateFileStorageFlags({ dataBaseline: true, sessionHadData: true });
       
       toast.success(`Imported ${importedCases.length} cases successfully`);
-      
-      // Note: Import process should handle DataManager persistence at the import level
     } catch (err) {
       logger.error('Failed to import cases', {
         error: err instanceof Error ? err.message : String(err),
@@ -355,8 +340,8 @@ export function useCaseManagement(): UseCaseManagementReturn {
     saveCase,
     deleteCase,
     saveNote,
-  importCases,
-  updateCaseStatus,
+    importCases,
+    updateCaseStatus,
     
     // State setters for external control
     setCases,
