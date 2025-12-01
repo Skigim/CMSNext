@@ -3,7 +3,7 @@ import { Button } from "../ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
 import { ScrollArea } from "../ui/scroll-area";
-import { StoredCase, NewPersonData, NewCaseRecordData, CaseStatus, CASE_STATUS_VALUES } from "../../types/case";
+import { StoredCase, NewPersonData, NewCaseRecordData, CaseStatus, CASE_STATUS_VALUES, Relationship } from "../../types/case";
 import { ArrowLeft, User, FileText, Save, X, ClipboardCheck } from "lucide-react";
 import { withFormErrorBoundary } from "../error/ErrorBoundaryHOC";
 import { PersonInfoForm } from "../forms/PersonInfoForm";
@@ -58,6 +58,7 @@ export function CaseForm({ case: existingCase, onSave, onCancel }: CaseFormProps
     },
     authorizedRepIds: existingCase?.person.authorizedRepIds || [],
     familyMembers: existingCase?.person.familyMembers || [],
+    relationships: existingCase?.person.relationships || [],
     status: existingCase?.person.status || 'Active',
   });
 
@@ -98,6 +99,7 @@ export function CaseForm({ case: existingCase, onSave, onCancel }: CaseFormProps
   const [spouseId, setSpouseId] = useState(existingCase?.caseRecord.spouseId || '');
   const [authorizedReps, setAuthorizedReps] = useState<string[]>(existingCase?.person.authorizedRepIds || []);
   const [familyMembers, setFamilyMembers] = useState<string[]>(existingCase?.person.familyMembers || []);
+  const [relationships, setRelationships] = useState<Relationship[]>(existingCase?.person.relationships || []);
   const [retroRequested, setRetroRequested] = useState<boolean>(!!existingCase?.caseRecord.retroRequested);
 
   // Sync mailing address when "same as physical" is checked
@@ -215,6 +217,18 @@ export function CaseForm({ case: existingCase, onSave, onCancel }: CaseFormProps
     setFamilyMembers(prev => prev.filter((_, i) => i !== index));
   };
 
+  const addRelationship = () => {
+    setRelationships(prev => [...prev, { type: '', name: '', phone: '' }]);
+  };
+
+  const updateRelationship = (index: number, field: keyof Relationship, value: string) => {
+    setRelationships(prev => prev.map((rel, i) => i === index ? { ...rel, [field]: value } : rel));
+  };
+
+  const removeRelationship = (index: number) => {
+    setRelationships(prev => prev.filter((_, i) => i !== index));
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     onSave({
@@ -222,6 +236,7 @@ export function CaseForm({ case: existingCase, onSave, onCancel }: CaseFormProps
         ...personData,
         authorizedRepIds: authorizedReps.filter(rep => rep.trim() !== ''),
         familyMembers: familyMembers.filter(member => member.trim() !== ''),
+        relationships: relationships.filter(rel => rel.name.trim() !== ''),
       },
       caseRecord: {
         ...caseData,
@@ -301,6 +316,7 @@ export function CaseForm({ case: existingCase, onSave, onCancel }: CaseFormProps
                       spouseId={spouseId}
                       authorizedReps={authorizedReps}
                       familyMembers={familyMembers}
+                      relationships={relationships}
                       onPersonDataChange={handlePersonDataChange}
                       onAddressChange={handleAddressChange}
                       onMailingAddressChange={handleMailingAddressChange}
@@ -314,6 +330,11 @@ export function CaseForm({ case: existingCase, onSave, onCancel }: CaseFormProps
                         add: addFamilyMember,
                         update: updateFamilyMember,
                         remove: removeFamilyMember
+                      }}
+                      onRelationshipsChange={{
+                        add: addRelationship,
+                        update: updateRelationship,
+                        remove: removeRelationship
                       }}
                     />
                   </TabsContent>

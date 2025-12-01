@@ -5,17 +5,19 @@ import { Separator } from "../ui/separator";
 import { Button } from "../ui/button";
 import { Plus, Minus } from "lucide-react";
 import { useMemo } from "react";
-import { NewPersonData } from "../../types/case";
+import { NewPersonData, Relationship } from "../../types/case";
 import { AddressForm } from "./AddressForm";
 import { ContactInfoForm } from "./ContactInfoForm";
 import { useCategoryConfig } from "@/contexts/CategoryConfigContext";
 import { isoToDateInputValue, dateInputValueToISO } from "@/utils/dateFormatting";
+import { PhoneInput } from "../ui/phone-input";
 
 interface PersonInfoFormProps {
   personData: NewPersonData;
   spouseId: string;
   authorizedReps: string[];
   familyMembers: string[];
+  relationships: Relationship[];
   onPersonDataChange: (field: keyof NewPersonData, value: any) => void;
   onAddressChange: (field: keyof NewPersonData['address'], value: string) => void;
   onMailingAddressChange: (field: keyof NewPersonData['mailingAddress'], value: string | boolean) => void;
@@ -30,6 +32,11 @@ interface PersonInfoFormProps {
     update: (index: number, value: string) => void;
     remove: (index: number) => void;
   };
+  onRelationshipsChange: {
+    add: () => void;
+    update: (index: number, field: keyof Relationship, value: string) => void;
+    remove: (index: number) => void;
+  };
 }
 
 export function PersonInfoForm({
@@ -37,12 +44,14 @@ export function PersonInfoForm({
   spouseId,
   authorizedReps,
   familyMembers,
+  relationships,
   onPersonDataChange,
   onAddressChange,
   onMailingAddressChange,
   onSpouseIdChange,
   onAuthorizedRepsChange,
-  onFamilyMembersChange
+  onFamilyMembersChange,
+  onRelationshipsChange
 }: PersonInfoFormProps) {
   const { config } = useCategoryConfig();
   const livingArrangements = useMemo(() => config.livingArrangements, [config.livingArrangements]);
@@ -143,6 +152,84 @@ export function PersonInfoForm({
       <div className="space-y-4">
         <h3 className="font-medium text-foreground">Household</h3>
         
+        {/* Relationships */}
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <Label>Relationships</Label>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={onRelationshipsChange.add}
+              className="h-8 w-8 p-0"
+            >
+              <Plus className="h-4 w-4" />
+            </Button>
+          </div>
+          <div className="space-y-4">
+            {relationships.map((rel, index) => (
+              <div key={index} className="flex flex-col gap-3 p-3 border rounded-md bg-muted/20 relative group">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => onRelationshipsChange.remove(index)}
+                  className="absolute right-2 top-2 h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                >
+                  <Minus className="h-3 w-3" />
+                </Button>
+                
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                  <div className="space-y-1">
+                    <Label className="text-xs text-muted-foreground">Type</Label>
+                    <Select
+                      value={rel.type}
+                      onValueChange={(value) => onRelationshipsChange.update(index, 'type', value)}
+                    >
+                      <SelectTrigger className="h-8">
+                        <SelectValue placeholder="Select type" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Spouse">Spouse</SelectItem>
+                        <SelectItem value="Child">Child</SelectItem>
+                        <SelectItem value="Parent">Parent</SelectItem>
+                        <SelectItem value="Sibling">Sibling</SelectItem>
+                        <SelectItem value="Guardian">Guardian</SelectItem>
+                        <SelectItem value="Authorized Representative">Authorized Representative</SelectItem>
+                        <SelectItem value="Case Manager">Case Manager</SelectItem>
+                        <SelectItem value="Other">Other</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  
+                  <div className="space-y-1">
+                    <Label className="text-xs text-muted-foreground">Name</Label>
+                    <Input
+                      value={rel.name}
+                      onChange={(e) => onRelationshipsChange.update(index, 'name', e.target.value)}
+                      placeholder="Name"
+                      className="h-8"
+                    />
+                  </div>
+
+                  <div className="space-y-1">
+                    <Label className="text-xs text-muted-foreground">Phone</Label>
+                    <Input
+                      value={rel.phone}
+                      onChange={(e) => onRelationshipsChange.update(index, 'phone', e.target.value)}
+                      placeholder="Phone"
+                      className="h-8"
+                    />
+                  </div>
+                </div>
+              </div>
+            ))}
+            {relationships.length === 0 && (
+              <p className="text-sm text-muted-foreground">No relationships added</p>
+            )}
+          </div>
+        </div>
+
         {/* Spouse */}
         <div className="space-y-2">
           <Label htmlFor="spouseId">Spouse ID</Label>

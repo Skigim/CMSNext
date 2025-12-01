@@ -11,6 +11,12 @@ export interface MailingAddress extends Address {
   sameAsPhysical: boolean;
 }
 
+export interface Relationship {
+  type: string;
+  name: string;
+  phone: string;
+}
+
 // Person interface
 export interface Person {
   id: string;
@@ -27,6 +33,7 @@ export interface Person {
   mailingAddress: MailingAddress;
   authorizedRepIds: string[];
   familyMembers: string[];
+  relationships: Relationship[];
   status: string;
   createdAt: string;
   dateAdded: string;
@@ -192,6 +199,7 @@ export interface NewPersonData {
   mailingAddress: MailingAddress;
   authorizedRepIds?: string[];
   familyMembers?: string[];
+  relationships?: Relationship[];
   status: string;
 }
 

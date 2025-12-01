@@ -16,6 +16,7 @@ import {
   Shield,
   ClipboardCheck,
   FileSearch,
+  Users,
 } from "lucide-react";
 import { clickToCopy } from "../../utils/clipboard";
 import { getDisplayPhoneNumber } from "../../utils/phoneFormatter";
@@ -233,6 +234,37 @@ Submit Date: ${submitDate}
       </div>
 
       <Separator />
+
+      {/* Relationships Section */}
+      {person.relationships && person.relationships.length > 0 && (
+        <>
+          <div className="space-y-4">
+            <div className="flex items-center gap-2">
+              <Users className="h-4 w-4 text-muted-foreground" />
+              <h3 className="font-medium">Relationships</h3>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 pl-6">
+              {person.relationships.map((rel, index) => (
+                <div key={index} className="flex flex-col gap-1 p-3 border rounded-md bg-muted/10">
+                  <div className="flex items-center justify-between">
+                    <span className="font-medium text-sm">{rel.name}</span>
+                    <Badge variant="outline" className="text-[10px] h-5 px-1.5">
+                      {rel.type}
+                    </Badge>
+                  </div>
+                  {rel.phone && (
+                    <div className="flex items-center gap-1.5 text-xs text-muted-foreground mt-1">
+                      <Phone className="h-3 w-3" />
+                      <span>{getDisplayPhoneNumber(rel.phone)}</span>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+          <Separator />
+        </>
+      )}
 
       {/* Initial Checks Section */}
       <div className="space-y-4">
