@@ -13,24 +13,10 @@ import { isoToDateInputValue, dateInputValueToISO } from "@/utils/dateFormatting
 
 interface PersonInfoFormProps {
   personData: NewPersonData;
-  spouseId: string;
-  authorizedReps: string[];
-  familyMembers: string[];
   relationships: Relationship[];
   onPersonDataChange: (field: keyof NewPersonData, value: any) => void;
   onAddressChange: (field: keyof NewPersonData['address'], value: string) => void;
   onMailingAddressChange: (field: keyof NewPersonData['mailingAddress'], value: string | boolean) => void;
-  onSpouseIdChange: (value: string) => void;
-  onAuthorizedRepsChange: {
-    add: () => void;
-    update: (index: number, value: string) => void;
-    remove: (index: number) => void;
-  };
-  onFamilyMembersChange: {
-    add: () => void;
-    update: (index: number, value: string) => void;
-    remove: (index: number) => void;
-  };
   onRelationshipsChange: {
     add: () => void;
     update: (index: number, field: keyof Relationship, value: string) => void;
@@ -40,16 +26,10 @@ interface PersonInfoFormProps {
 
 export function PersonInfoForm({
   personData,
-  spouseId,
-  authorizedReps,
-  familyMembers,
   relationships,
   onPersonDataChange,
   onAddressChange,
   onMailingAddressChange,
-  onSpouseIdChange,
-  onAuthorizedRepsChange,
-  onFamilyMembersChange,
   onRelationshipsChange
 }: PersonInfoFormProps) {
   const { config } = useCategoryConfig();
@@ -225,97 +205,6 @@ export function PersonInfoForm({
             ))}
             {relationships.length === 0 && (
               <p className="text-sm text-muted-foreground">No relationships added</p>
-            )}
-          </div>
-        </div>
-
-        {/* Spouse */}
-        <div className="space-y-2">
-          <Label htmlFor="spouseId">Spouse ID</Label>
-          <Input
-            id="spouseId"
-            value={spouseId}
-            onChange={(e) => onSpouseIdChange(e.target.value)}
-            placeholder="Enter spouse ID"
-          />
-        </div>
-
-        {/* Authorized Representatives */}
-        <div className="space-y-3">
-          <div className="flex items-center justify-between">
-            <Label>Authorized Representatives</Label>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={onAuthorizedRepsChange.add}
-              className="h-8 w-8 p-0"
-            >
-              <Plus className="h-4 w-4" />
-            </Button>
-          </div>
-          <div className="space-y-2">
-            {authorizedReps.map((rep, index) => (
-              <div key={index} className="flex gap-2">
-                <Input
-                  value={rep}
-                  onChange={(e) => onAuthorizedRepsChange.update(index, e.target.value)}
-                  placeholder="Enter authorized representative ID"
-                  className="flex-1"
-                />
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => onAuthorizedRepsChange.remove(index)}
-                  className="h-10 w-10 p-0"
-                >
-                  <Minus className="h-4 w-4" />
-                </Button>
-              </div>
-            ))}
-            {authorizedReps.length === 0 && (
-              <p className="text-sm text-muted-foreground">No authorized representatives added</p>
-            )}
-          </div>
-        </div>
-
-        {/* Family Members */}
-        <div className="space-y-3">
-          <div className="flex items-center justify-between">
-            <Label>Family Members</Label>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={onFamilyMembersChange.add}
-              className="h-8 w-8 p-0"
-            >
-              <Plus className="h-4 w-4" />
-            </Button>
-          </div>
-          <div className="space-y-2">
-            {familyMembers.map((member, index) => (
-              <div key={index} className="flex gap-2">
-                <Input
-                  value={member}
-                  onChange={(e) => onFamilyMembersChange.update(index, e.target.value)}
-                  placeholder="Enter family member ID"
-                  className="flex-1"
-                />
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => onFamilyMembersChange.remove(index)}
-                  className="h-10 w-10 p-0"
-                >
-                  <Minus className="h-4 w-4" />
-                </Button>
-              </div>
-            ))}
-            {familyMembers.length === 0 && (
-              <p className="text-sm text-muted-foreground">No family members added</p>
             )}
           </div>
         </div>

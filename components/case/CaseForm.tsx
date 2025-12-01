@@ -96,9 +96,6 @@ export function CaseForm({ case: existingCase, onSave, onCancel }: CaseFormProps
   });
 
   // State for household information
-  const [spouseId, setSpouseId] = useState(existingCase?.caseRecord.spouseId || '');
-  const [authorizedReps, setAuthorizedReps] = useState<string[]>(existingCase?.person.authorizedRepIds || []);
-  const [familyMembers, setFamilyMembers] = useState<string[]>(existingCase?.person.familyMembers || []);
   const [relationships, setRelationships] = useState<Relationship[]>(existingCase?.person.relationships || []);
   const [retroRequested, setRetroRequested] = useState<boolean>(!!existingCase?.caseRecord.retroRequested);
 
@@ -192,31 +189,7 @@ export function CaseForm({ case: existingCase, onSave, onCancel }: CaseFormProps
     setCaseData(prev => ({ ...prev, [field]: value }));
   };
 
-  // Household management functions
-  const addAuthorizedRep = () => {
-    setAuthorizedReps(prev => [...prev, '']);
-  };
-
-  const updateAuthorizedRep = (index: number, value: string) => {
-    setAuthorizedReps(prev => prev.map((rep, i) => i === index ? value : rep));
-  };
-
-  const removeAuthorizedRep = (index: number) => {
-    setAuthorizedReps(prev => prev.filter((_, i) => i !== index));
-  };
-
-  const addFamilyMember = () => {
-    setFamilyMembers(prev => [...prev, '']);
-  };
-
-  const updateFamilyMember = (index: number, value: string) => {
-    setFamilyMembers(prev => prev.map((member, i) => i === index ? value : member));
-  };
-
-  const removeFamilyMember = (index: number) => {
-    setFamilyMembers(prev => prev.filter((_, i) => i !== index));
-  };
-
+  // Relationship management functions
   const addRelationship = () => {
     setRelationships(prev => [...prev, { type: '', name: '', phone: '' }]);
   };
@@ -234,13 +207,10 @@ export function CaseForm({ case: existingCase, onSave, onCancel }: CaseFormProps
     onSave({
       person: {
         ...personData,
-        authorizedRepIds: authorizedReps.filter(rep => rep.trim() !== ''),
-        familyMembers: familyMembers.filter(member => member.trim() !== ''),
         relationships: relationships.filter(rel => rel.name.trim() !== ''),
       },
       caseRecord: {
         ...caseData,
-        spouseId,
         retroRequested: retroRequested ? 'Yes' : '',
       }
     });
@@ -313,24 +283,10 @@ export function CaseForm({ case: existingCase, onSave, onCancel }: CaseFormProps
                   <TabsContent value="person" className="space-y-6 mt-4">
                     <PersonInfoForm
                       personData={personData}
-                      spouseId={spouseId}
-                      authorizedReps={authorizedReps}
-                      familyMembers={familyMembers}
                       relationships={relationships}
                       onPersonDataChange={handlePersonDataChange}
                       onAddressChange={handleAddressChange}
                       onMailingAddressChange={handleMailingAddressChange}
-                      onSpouseIdChange={setSpouseId}
-                      onAuthorizedRepsChange={{
-                        add: addAuthorizedRep,
-                        update: updateAuthorizedRep,
-                        remove: removeAuthorizedRep
-                      }}
-                      onFamilyMembersChange={{
-                        add: addFamilyMember,
-                        update: updateFamilyMember,
-                        remove: removeFamilyMember
-                      }}
                       onRelationshipsChange={{
                         add: addRelationship,
                         update: updateRelationship,
