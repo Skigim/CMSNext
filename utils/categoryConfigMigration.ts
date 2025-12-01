@@ -180,12 +180,12 @@ export function discoverStatusesFromCases(
  * Auto-assigns colors to newly discovered alert types.
  * 
  * @param existingAlertTypes - Current AlertTypeConfig array
- * @param alerts - Array of alerts with alertType field
+ * @param alerts - Array of alerts with description field
  * @returns Updated AlertTypeConfig array with any discovered alert types added
  */
 export function discoverAlertTypesFromAlerts(
   existingAlertTypes: AlertTypeConfig[],
-  alerts: Array<{ alertType?: string }>
+  alerts: Array<{ description?: string }>
 ): AlertTypeConfig[] {
   // Build set of existing alert type names (case-insensitive)
   const existingNames = new Set(
@@ -202,11 +202,11 @@ export function discoverAlertTypesFromAlerts(
   const discoveredNames = new Set<string>();
   
   for (const alert of alerts) {
-    const alertType = alert.alertType;
+    const description = alert.description;
     
-    if (!alertType || typeof alertType !== 'string') continue;
+    if (!description || typeof description !== 'string') continue;
     
-    const trimmed = alertType.trim();
+    const trimmed = description.trim();
     if (!trimmed) continue;
     
     const lowerName = trimmed.toLowerCase();

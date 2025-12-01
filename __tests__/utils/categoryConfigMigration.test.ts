@@ -59,9 +59,9 @@ describe("categoryConfigMigration", () => {
         { name: "Custom Alert Type", colorSlot: "purple" },
       ];
       const alerts = [
-        { alertType: "Overdue Documentation" },
-        { alertType: "Income Verification" },
-        { alertType: "New From Alerts" },
+        { description: "Overdue Documentation" },
+        { description: "Income Verification" },
+        { description: "New From Alerts" },
       ];
 
       const result = discoverAlertTypesFromAlerts(existing, alerts);
@@ -84,7 +84,7 @@ describe("categoryConfigMigration", () => {
       const existing: AlertTypeConfig[] = [
         { name: "Future Alert Type", colorSlot: "teal" },
       ];
-      const alerts = [{ alertType: "Overdue Documentation" }];
+      const alerts = [{ description: "Overdue Documentation" }];
 
       const result = discoverAlertTypesFromAlerts(existing, alerts);
 
@@ -98,7 +98,7 @@ describe("categoryConfigMigration", () => {
         { name: "Configured Type", colorSlot: "blue" },
         { name: "Another Type", colorSlot: "green" },
       ];
-      const alerts: Array<{ alertType?: string }> = [];
+      const alerts: Array<{ description?: string }> = [];
 
       const result = discoverAlertTypesFromAlerts(existing, alerts);
 
@@ -106,14 +106,14 @@ describe("categoryConfigMigration", () => {
       expect(result).toHaveLength(2);
     });
 
-    it("handles alerts without alertType field", () => {
+    it("handles alerts without description field", () => {
       const existing: AlertTypeConfig[] = [
         { name: "Configured Type", colorSlot: "blue" },
       ];
       const alerts = [
-        { alertType: undefined },
-        { alertType: "" },
-        { alertType: "Valid Type" },
+        { description: undefined },
+        { description: "" },
+        { description: "Valid Type" },
       ];
 
       const result = discoverAlertTypesFromAlerts(existing, alerts);
@@ -128,8 +128,8 @@ describe("categoryConfigMigration", () => {
         { name: "Overdue Documentation", colorSlot: "red" },
       ];
       const alerts = [
-        { alertType: "OVERDUE DOCUMENTATION" },
-        { alertType: "overdue documentation" },
+        { description: "OVERDUE DOCUMENTATION" },
+        { description: "overdue documentation" },
       ];
 
       const result = discoverAlertTypesFromAlerts(existing, alerts);

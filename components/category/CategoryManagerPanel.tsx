@@ -1,6 +1,5 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useState } from "react";
 import type { LucideIcon } from "lucide-react";
-import { useIsMounted } from "@/hooks/useIsMounted";
 import { ListChecks, Plus, RefreshCcw, Save, Undo2, X } from "lucide-react";
 import { Button } from "../ui/button";
 import {
@@ -35,23 +34,12 @@ import {
 } from "@/types/categoryConfig";
 import { COLOR_SLOTS, type ColorSlot } from "@/types/colorSlots";
 import { useCategoryConfig } from "@/contexts/CategoryConfigContext";
+import { useCategoryEditorState, useIsMounted } from "@/hooks";
 import { cn } from "../ui/utils";
 
-const CATEGORY_KEYS: CategoryKey[] = [
-  "caseTypes",
-  "caseStatuses",
-  "alertTypes",
-  "livingArrangements",
-  "noteCategories",
-  "verificationStatuses",
-];
-
-type CategoryEditorProps = {
-  categoryKey: CategoryKey;
-  valuesFromConfig: string[];
-  onSave: (values: string[]) => Promise<void>;
-  isGloballyLoading: boolean;
-};
+// ============================================================================
+// Types
+// ============================================================================
 
 type CategoryManagerPanelProps = {
   title?: string;
@@ -62,235 +50,10 @@ type CategoryManagerPanelProps = {
   className?: string;
 };
 
-const normalizeValues = (values: string[]): string[] =>
-  values.map(value => value.trim()).filter(Boolean);
-
-const arraysEqual = (a: string[], b: string[]): boolean => {
-  if (a.length !== b.length) {
-    return false;
-  }
-  return a.every((value, index) => value === b[index]);
-};
-
-function CategoryEditor({
-  categoryKey,
-  valuesFromConfig,
-  onSave,
-  isGloballyLoading,
-}: CategoryEditorProps) {
-  const isMounted = useIsMounted();
-  const metadata = CATEGORY_DISPLAY_METADATA[categoryKey];
-  const [values, setValues] = useState<string[]>(() => [...valuesFromConfig]);
-  const [draft, setDraft] = useState<string>("");
-  const [isSaving, setIsSaving] = useState<boolean>(false);
-  const [touched, setTouched] = useState<boolean>(false);
-
-  useEffect(() => {
-    setValues(valuesFromConfig);
-  }, [valuesFromConfig]);
-
-  const valueMeta = useMemo(
-    () =>
-      values.map(value => {
-        const trimmed = value.trim();
-        return {
-          raw: value,
-          trimmed,
-          normalized: trimmed.toLowerCase(),
-        };
-      }),
-    [values],
-  );
-
-  const duplicateIndices = useMemo(() => {
-    const seen = new Map<string, number>();
-    const duplicates = new Set<number>();
-    valueMeta.forEach((entry, index) => {
-      if (!entry.trimmed) {
-        return;
-      }
-      if (seen.has(entry.normalized)) {
-        duplicates.add(index);
-        duplicates.add(seen.get(entry.normalized)!);
-      } else {
-        seen.set(entry.normalized, index);
-      }
-    });
-    return duplicates;
-  }, [valueMeta]);
-
-  const hasEmptyValues = useMemo(() => valueMeta.some(entry => !entry.trimmed), [valueMeta]);
-
-  const cleanedValues = useMemo(() => normalizeValues(values), [values]);
-  const baselineValues = useMemo(() => normalizeValues(valuesFromConfig), [valuesFromConfig]);
-
-  const hasChanges = useMemo(() => !arraysEqual(cleanedValues, baselineValues), [baselineValues, cleanedValues]);
-
-  const disableSave =
-    isSaving ||
-    isGloballyLoading ||
-    !hasChanges ||
-    cleanedValues.length === 0 ||
-    hasEmptyValues ||
-    duplicateIndices.size > 0;
-
-  const handleValueChange = useCallback((index: number, next: string) => {
-    setTouched(true);
-    setValues(current => current.map((value, idx) => (idx === index ? next : value)));
-  }, []);
-
-  const handleRemove = useCallback((index: number) => {
-    setTouched(true);
-    setValues(current => current.filter((_, idx) => idx !== index));
-  }, []);
-
-  const handleAdd = useCallback(() => {
-    const trimmed = draft.trim();
-    if (!trimmed) {
-      setTouched(true);
-      return;
-    }
-
-    const exists = valueMeta.some(entry => entry.normalized === trimmed.toLowerCase());
-    if (exists) {
-      setDraft("");
-      setTouched(true);
-      return;
-    }
-
-    setTouched(true);
-    setValues(current => [...current, trimmed]);
-    setDraft("");
-  }, [draft, valueMeta]);
-
-  const handleRevert = useCallback(() => {
-    setValues(valuesFromConfig);
-    setDraft("");
-    setTouched(false);
-  }, [valuesFromConfig]);
-
-  const handleSave = useCallback(async () => {
-    setTouched(true);
-    setIsSaving(true);
-    try {
-      await onSave(cleanedValues);
-    } finally {
-      if (isMounted.current) {
-        setIsSaving(false);
-      }
-    }
-  }, [cleanedValues, onSave, isMounted]);
-
-  return (
-    <div className="rounded-lg border border-border/50 bg-background/40 p-4 shadow-sm">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="space-y-1">
-          <p className="text-sm font-semibold text-foreground">{metadata.label}</p>
-          <p className="text-xs text-muted-foreground max-w-xl">{metadata.description}</p>
-        </div>
-        <Badge variant="secondary" className="shrink-0">
-          {cleanedValues.length} options
-        </Badge>
-      </div>
-
-      <Separator className="my-4" />
-
-      <div className="space-y-3">
-        {values.map((value, index) => {
-          const isDuplicate = duplicateIndices.has(index);
-          const isEmpty = !value.trim();
-          return (
-            <div key={`${categoryKey}-${index}`} className="flex flex-col gap-1">
-              <div className="flex gap-2">
-                <Input
-                  value={value}
-                  onChange={event => handleValueChange(index, event.target.value)}
-                  data-testid={`${categoryKey}-value-${index}`}
-                  aria-label={`${metadata.label} option ${index + 1}`}
-                  aria-invalid={isDuplicate || isEmpty}
-                  disabled={isSaving || isGloballyLoading}
-                  className={cn(
-                    "flex-1",
-                    (isDuplicate || isEmpty) &&
-                      "border-destructive/60 focus-visible:ring-destructive/40",
-                  )}
-                />
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="icon"
-                  onClick={() => handleRemove(index)}
-                  disabled={isSaving || isGloballyLoading}
-                  aria-label={`Remove ${metadata.label} option ${index + 1}`}
-                >
-                  <X className="h-4 w-4" />
-                </Button>
-              </div>
-              {(isDuplicate || isEmpty) && (
-                <p className="text-xs text-destructive">
-                  {isEmpty ? "Please provide a value." : "Duplicate entries are not allowed."}
-                </p>
-              )}
-            </div>
-          );
-        })}
-        <div className="flex gap-2">
-          <Input
-            value={draft}
-            onChange={event => setDraft(event.target.value)}
-            onKeyDown={event => {
-              if (event.key === "Enter") {
-                event.preventDefault();
-                handleAdd();
-              }
-            }}
-            placeholder={`Add new ${metadata.label.toLowerCase().slice(0, -1)}...`}
-            aria-label={`Add ${metadata.label} option`}
-            disabled={isSaving || isGloballyLoading}
-          />
-          <Button
-            type="button"
-            onClick={handleAdd}
-            variant="secondary"
-            disabled={isSaving || isGloballyLoading}
-          >
-            <Plus className="mr-2 h-4 w-4" />
-            Add
-          </Button>
-        </div>
-      </div>
-
-      {touched && cleanedValues.length === 0 && (
-        <p className="mt-3 text-sm text-destructive">
-          At least one option is required.
-        </p>
-      )}
-
-      <div className="mt-5 flex flex-wrap justify-end gap-2">
-        <Button
-          type="button"
-          variant="ghost"
-          onClick={handleRevert}
-          disabled={isSaving || isGloballyLoading || !hasChanges}
-        >
-          <Undo2 className="mr-2 h-4 w-4" />
-          Revert
-        </Button>
-        <Button
-          type="button"
-          onClick={handleSave}
-          disabled={disableSave}
-        >
-          <Save className="mr-2 h-4 w-4" />
-          Save Changes
-        </Button>
-      </div>
-    </div>
-  );
-}
+type SimpleItem = { name: string };
 
 // ============================================================================
-// Color Slot Picker
+// Color Slot Picker (shared component)
 // ============================================================================
 
 type ColorSlotPickerProps = {
@@ -333,7 +96,291 @@ function ColorSlotPicker({ value, onChange, disabled }: ColorSlotPickerProps) {
 }
 
 // ============================================================================
-// Status Category Editor (with color picker)
+// Editor Shell (shared layout component)
+// ============================================================================
+
+type EditorShellProps = {
+  label: string;
+  description: string;
+  itemCount: number;
+  hasChanges: boolean;
+  disableSave: boolean;
+  isSaving: boolean;
+  isGloballyLoading: boolean;
+  onRevert: () => void;
+  onSave: () => void;
+  headerContent?: React.ReactNode;
+  emptyMessage?: React.ReactNode;
+  children: React.ReactNode;
+};
+
+function EditorShell({
+  label,
+  description,
+  itemCount,
+  hasChanges,
+  disableSave,
+  isSaving,
+  isGloballyLoading,
+  onRevert,
+  onSave,
+  headerContent,
+  emptyMessage,
+  children,
+}: EditorShellProps) {
+  return (
+    <div className="rounded-lg border border-border/50 bg-background/40 p-4 shadow-sm">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="space-y-1">
+          <p className="text-sm font-semibold text-foreground">{label}</p>
+          <p className="text-xs text-muted-foreground max-w-xl">{description}</p>
+        </div>
+        <Badge variant="secondary" className="shrink-0">
+          {itemCount} options
+        </Badge>
+      </div>
+
+      <Separator className="my-4" />
+
+      {headerContent}
+
+      <div className="space-y-3">
+        {children}
+      </div>
+
+      {emptyMessage}
+
+      <div className="mt-5 flex flex-wrap justify-end gap-2">
+        <Button
+          type="button"
+          variant="ghost"
+          onClick={onRevert}
+          disabled={isSaving || isGloballyLoading || !hasChanges}
+        >
+          <Undo2 className="mr-2 h-4 w-4" />
+          Revert
+        </Button>
+        <Button
+          type="button"
+          onClick={onSave}
+          disabled={disableSave}
+        >
+          <Save className="mr-2 h-4 w-4" />
+          Save Changes
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+// ============================================================================
+// Item Row (shared row component)
+// ============================================================================
+
+type ItemRowProps = {
+  value: string;
+  onChange: (value: string) => void;
+  onRemove: () => void;
+  isDuplicate: boolean;
+  isEmpty: boolean;
+  disabled: boolean;
+  ariaLabel: string;
+  extraControls?: React.ReactNode;
+};
+
+function ItemRow({
+  value,
+  onChange,
+  onRemove,
+  isDuplicate,
+  isEmpty,
+  disabled,
+  ariaLabel,
+  extraControls,
+}: ItemRowProps) {
+  const hasError = isDuplicate || isEmpty;
+  
+  return (
+    <div className="flex flex-col gap-1">
+      <div className="flex items-center gap-2">
+        <Input
+          value={value}
+          onChange={e => onChange(e.target.value)}
+          aria-label={ariaLabel}
+          aria-invalid={hasError}
+          disabled={disabled}
+          className={cn(
+            "flex-1",
+            hasError && "border-destructive/60 focus-visible:ring-destructive/40",
+          )}
+        />
+        {extraControls}
+        <Button
+          type="button"
+          variant="outline"
+          size="icon"
+          onClick={onRemove}
+          disabled={disabled}
+          aria-label={`Remove ${ariaLabel}`}
+        >
+          <X className="h-4 w-4" />
+        </Button>
+      </div>
+      {hasError && (
+        <p className="text-xs text-destructive">
+          {isEmpty ? "Please provide a value." : "Duplicate entries are not allowed."}
+        </p>
+      )}
+    </div>
+  );
+}
+
+// ============================================================================
+// Add Item Row (shared add row component)
+// ============================================================================
+
+type AddItemRowProps = {
+  draftValue: string;
+  onDraftChange: (value: string) => void;
+  onAdd: () => void;
+  disabled: boolean;
+  placeholder: string;
+  ariaLabel: string;
+  extraControls?: React.ReactNode;
+};
+
+function AddItemRow({
+  draftValue,
+  onDraftChange,
+  onAdd,
+  disabled,
+  placeholder,
+  ariaLabel,
+  extraControls,
+}: AddItemRowProps) {
+  return (
+    <div className="flex items-center gap-2">
+      <Input
+        value={draftValue}
+        onChange={e => onDraftChange(e.target.value)}
+        onKeyDown={e => {
+          if (e.key === "Enter") {
+            e.preventDefault();
+            onAdd();
+          }
+        }}
+        placeholder={placeholder}
+        aria-label={ariaLabel}
+        disabled={disabled}
+        className="flex-1"
+      />
+      {extraControls}
+      <Button
+        type="button"
+        onClick={onAdd}
+        variant="secondary"
+        disabled={disabled}
+      >
+        <Plus className="mr-2 h-4 w-4" />
+        Add
+      </Button>
+    </div>
+  );
+}
+
+// ============================================================================
+// Simple Category Editor (for string-only categories)
+// ============================================================================
+
+type SimpleCategoryEditorProps = {
+  categoryKey: CategoryKey;
+  valuesFromConfig: string[];
+  onSave: (values: string[]) => Promise<void>;
+  isGloballyLoading: boolean;
+};
+
+function SimpleCategoryEditor({
+  categoryKey,
+  valuesFromConfig,
+  onSave,
+  isGloballyLoading,
+}: SimpleCategoryEditorProps) {
+  const metadata = CATEGORY_DISPLAY_METADATA[categoryKey];
+  const [draft, setDraft] = useState("");
+
+  // Convert string[] to SimpleItem[] for the hook
+  const initialItems: SimpleItem[] = valuesFromConfig.map(name => ({ name }));
+
+  const {
+    items,
+    duplicateIndices,
+    cleanedItems,
+    hasChanges,
+    disableSave,
+    isSaving,
+    touched,
+    handleNameChange,
+    handleRemove,
+    handleAdd,
+    handleRevert,
+    handleSave,
+  } = useCategoryEditorState<SimpleItem>({
+    initialItems,
+    onSave: async (cleaned) => {
+      await onSave(cleaned.map(item => item.name));
+    },
+    isGloballyLoading,
+    createItem: (name) => ({ name }),
+    cleanItem: (item) => ({ name: item.name.trim() }),
+  });
+
+  const resetDraft = () => setDraft("");
+
+  return (
+    <EditorShell
+      label={metadata.label}
+      description={metadata.description}
+      itemCount={cleanedItems.length}
+      hasChanges={hasChanges}
+      disableSave={disableSave}
+      isSaving={isSaving}
+      isGloballyLoading={isGloballyLoading}
+      onRevert={() => handleRevert(resetDraft)}
+      onSave={handleSave}
+      emptyMessage={
+        touched && cleanedItems.length === 0 ? (
+          <p className="mt-3 text-sm text-destructive">
+            At least one option is required.
+          </p>
+        ) : null
+      }
+    >
+      {items.map((item, index) => (
+        <ItemRow
+          key={`${categoryKey}-${index}`}
+          value={item.name}
+          onChange={(name) => handleNameChange(index, name)}
+          onRemove={() => handleRemove(index)}
+          isDuplicate={duplicateIndices.has(index)}
+          isEmpty={!item.name.trim()}
+          disabled={isSaving || isGloballyLoading}
+          ariaLabel={`${metadata.label} option ${index + 1}`}
+        />
+      ))}
+      <AddItemRow
+        draftValue={draft}
+        onDraftChange={setDraft}
+        onAdd={() => handleAdd(draft, resetDraft)}
+        disabled={isSaving || isGloballyLoading}
+        placeholder={`Add new ${metadata.label.toLowerCase().slice(0, -1)}...`}
+        ariaLabel={`Add ${metadata.label} option`}
+      />
+    </EditorShell>
+  );
+}
+
+// ============================================================================
+// Status Category Editor (with color picker + completion checkbox)
 // ============================================================================
 
 type StatusCategoryEditorProps = {
@@ -347,291 +394,152 @@ function StatusCategoryEditor({
   onSave,
   isGloballyLoading,
 }: StatusCategoryEditorProps) {
-  const isMounted = useIsMounted();
   const metadata = CATEGORY_DISPLAY_METADATA.caseStatuses;
-  const [values, setValues] = useState<StatusConfig[]>(() => 
-    statusConfigs.map(s => ({ ...s, countsAsCompleted: s.countsAsCompleted ?? false }))
-  );
-  const [draftName, setDraftName] = useState<string>("");
+  const [draftName, setDraftName] = useState("");
   const [draftColor, setDraftColor] = useState<ColorSlot>("blue");
-  const [draftCountsAsCompleted, setDraftCountsAsCompleted] = useState<boolean>(false);
-  const [isSaving, setIsSaving] = useState<boolean>(false);
-  const [touched, setTouched] = useState<boolean>(false);
+  const [draftCountsAsCompleted, setDraftCountsAsCompleted] = useState(false);
 
-  useEffect(() => {
-    setValues(statusConfigs.map(s => ({ ...s, countsAsCompleted: s.countsAsCompleted ?? false })));
-  }, [statusConfigs]);
+  const initialItems: StatusConfig[] = statusConfigs.map(s => ({
+    ...s,
+    countsAsCompleted: s.countsAsCompleted ?? false,
+  }));
 
-  const valueMeta = useMemo(
-    () =>
-      values.map(status => ({
-        raw: status.name,
-        trimmed: status.name.trim(),
-        normalized: status.name.trim().toLowerCase(),
-        colorSlot: status.colorSlot,
-        countsAsCompleted: status.countsAsCompleted ?? false,
-      })),
-    [values],
-  );
-
-  const duplicateIndices = useMemo(() => {
-    const seen = new Map<string, number>();
-    const duplicates = new Set<number>();
-    valueMeta.forEach((entry, index) => {
-      if (!entry.trimmed) return;
-      if (seen.has(entry.normalized)) {
-        duplicates.add(index);
-        duplicates.add(seen.get(entry.normalized)!);
-      } else {
-        seen.set(entry.normalized, index);
-      }
-    });
-    return duplicates;
-  }, [valueMeta]);
-
-  const hasEmptyValues = useMemo(() => valueMeta.some(entry => !entry.trimmed), [valueMeta]);
-
-  const cleanedValues = useMemo(() => 
-    values
-      .map(s => ({ 
-        name: s.name.trim(), 
-        colorSlot: s.colorSlot,
-        countsAsCompleted: s.countsAsCompleted ?? false,
-      }))
-      .filter(s => s.name.length > 0),
-    [values]
-  );
-
-  const hasChanges = useMemo(() => {
-    if (cleanedValues.length !== statusConfigs.length) return true;
-    return cleanedValues.some((v, i) => 
-      v.name !== statusConfigs[i]?.name || 
-      v.colorSlot !== statusConfigs[i]?.colorSlot ||
-      v.countsAsCompleted !== (statusConfigs[i]?.countsAsCompleted ?? false)
-    );
-  }, [cleanedValues, statusConfigs]);
-
-  const disableSave =
-    isSaving ||
-    isGloballyLoading ||
-    !hasChanges ||
-    cleanedValues.length === 0 ||
-    hasEmptyValues ||
-    duplicateIndices.size > 0;
-
-  const handleNameChange = useCallback((index: number, name: string) => {
-    setTouched(true);
-    setValues(current => current.map((s, idx) => idx === index ? { ...s, name } : s));
-  }, []);
-
-  const handleColorChange = useCallback((index: number, colorSlot: ColorSlot) => {
-    setTouched(true);
-    setValues(current => current.map((s, idx) => idx === index ? { ...s, colorSlot } : s));
-  }, []);
-
-  const handleCompletedChange = useCallback((index: number, countsAsCompleted: boolean) => {
-    setTouched(true);
-    setValues(current => current.map((s, idx) => idx === index ? { ...s, countsAsCompleted } : s));
-  }, []);
-
-  const handleRemove = useCallback((index: number) => {
-    setTouched(true);
-    setValues(current => current.filter((_, idx) => idx !== index));
-  }, []);
-
-  const handleAdd = useCallback(() => {
-    const trimmed = draftName.trim();
-    if (!trimmed) {
-      setTouched(true);
-      return;
-    }
-
-    const exists = valueMeta.some(entry => entry.normalized === trimmed.toLowerCase());
-    if (exists) {
-      setDraftName("");
-      setTouched(true);
-      return;
-    }
-
-    setTouched(true);
-    setValues(current => [...current, { 
-      name: trimmed, 
-      colorSlot: draftColor, 
+  const {
+    items,
+    duplicateIndices,
+    cleanedItems,
+    hasChanges,
+    disableSave,
+    isSaving,
+    touched,
+    handleNameChange,
+    handleFieldChange,
+    handleRemove,
+    handleAdd,
+    handleRevert,
+    handleSave,
+  } = useCategoryEditorState<StatusConfig>({
+    initialItems,
+    onSave,
+    isGloballyLoading,
+    createItem: (name) => ({
+      name,
+      colorSlot: draftColor,
       countsAsCompleted: draftCountsAsCompleted,
-    }]);
+    }),
+    cleanItem: (item) => ({
+      name: item.name.trim(),
+      colorSlot: item.colorSlot,
+      countsAsCompleted: item.countsAsCompleted ?? false,
+    }),
+    hasItemChanged: (current, original) =>
+      current.name !== original.name ||
+      current.colorSlot !== original.colorSlot ||
+      current.countsAsCompleted !== (original.countsAsCompleted ?? false),
+  });
+
+  const resetDraft = () => {
     setDraftName("");
     setDraftCountsAsCompleted(false);
-    // Cycle to next color for convenience
+    // Cycle to next color
     const currentIndex = COLOR_SLOTS.indexOf(draftColor);
     setDraftColor(COLOR_SLOTS[(currentIndex + 1) % COLOR_SLOTS.length]);
-  }, [draftName, draftColor, draftCountsAsCompleted, valueMeta]);
-
-  const handleRevert = useCallback(() => {
-    setValues(statusConfigs.map(s => ({ ...s })));
-    setDraftName("");
-    setTouched(false);
-  }, [statusConfigs]);
-
-  const handleSave = useCallback(async () => {
-    setTouched(true);
-    setIsSaving(true);
-    try {
-      await onSave(cleanedValues);
-    } finally {
-      if (isMounted.current) {
-        setIsSaving(false);
-      }
-    }
-  }, [cleanedValues, onSave, isMounted]);
+  };
 
   return (
-    <div className="rounded-lg border border-border/50 bg-background/40 p-4 shadow-sm">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="space-y-1">
-          <p className="text-sm font-semibold text-foreground">{metadata.label}</p>
-          <p className="text-xs text-muted-foreground max-w-xl">{metadata.description}</p>
+    <EditorShell
+      label={metadata.label}
+      description={metadata.description}
+      itemCount={cleanedItems.length}
+      hasChanges={hasChanges}
+      disableSave={disableSave}
+      isSaving={isSaving}
+      isGloballyLoading={isGloballyLoading}
+      onRevert={() => handleRevert(() => {
+        setDraftName("");
+        setDraftCountsAsCompleted(false);
+      })}
+      onSave={handleSave}
+      headerContent={
+        <div className="flex items-center gap-2 mb-2 text-xs text-muted-foreground">
+          <span className="flex-1">Status Name</span>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <span className="w-[70px] text-center cursor-help underline decoration-dotted">
+                Completed
+              </span>
+            </TooltipTrigger>
+            <TooltipContent side="top" className="max-w-[200px]">
+              <p>Check if this status counts toward "cases processed" metrics on the dashboard.</p>
+            </TooltipContent>
+          </Tooltip>
+          <span className="w-[52px]" />
+          <span className="w-9" />
         </div>
-        <Badge variant="secondary" className="shrink-0">
-          {cleanedValues.length} options
-        </Badge>
-      </div>
-
-      <Separator className="my-4" />
-
-      {/* Column header for the completion checkbox */}
-      <div className="flex items-center gap-2 mb-2 text-xs text-muted-foreground">
-        <span className="flex-1">Status Name</span>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <span className="w-[70px] text-center cursor-help underline decoration-dotted">
-              Completed
-            </span>
-          </TooltipTrigger>
-          <TooltipContent side="top" className="max-w-[200px]">
-            <p>Check if this status counts toward "cases processed" metrics on the dashboard.</p>
-          </TooltipContent>
-        </Tooltip>
-        <span className="w-[52px]" /> {/* Color picker space */}
-        <span className="w-9" /> {/* Remove button space */}
-      </div>
-
-      <div className="space-y-3">
-        {values.map((status, index) => {
-          const isDuplicate = duplicateIndices.has(index);
-          const isEmpty = !status.name.trim();
-          return (
-            <div key={`status-${index}`} className="flex flex-col gap-1">
-              <div className="flex items-center gap-2">
-                <Input
-                  value={status.name}
-                  onChange={event => handleNameChange(index, event.target.value)}
-                  aria-label={`Status option ${index + 1}`}
-                  aria-invalid={isDuplicate || isEmpty}
+      }
+      emptyMessage={
+        touched && cleanedItems.length === 0 ? (
+          <p className="mt-3 text-sm text-destructive">
+            At least one status is required.
+          </p>
+        ) : null
+      }
+    >
+      {items.map((status, index) => (
+        <ItemRow
+          key={`status-${index}`}
+          value={status.name}
+          onChange={(name) => handleNameChange(index, name)}
+          onRemove={() => handleRemove(index)}
+          isDuplicate={duplicateIndices.has(index)}
+          isEmpty={!status.name.trim()}
+          disabled={isSaving || isGloballyLoading}
+          ariaLabel={`Status option ${index + 1}`}
+          extraControls={
+            <>
+              <div className="w-[70px] flex justify-center">
+                <Checkbox
+                  checked={status.countsAsCompleted ?? false}
+                  onCheckedChange={(checked) => handleFieldChange(index, 'countsAsCompleted', checked === true)}
                   disabled={isSaving || isGloballyLoading}
-                  className={cn(
-                    "flex-1",
-                    (isDuplicate || isEmpty) &&
-                      "border-destructive/60 focus-visible:ring-destructive/40",
-                  )}
+                  aria-label={`Mark ${status.name || 'status'} as counting toward completion`}
                 />
-                <div className="w-[70px] flex justify-center">
-                  <Checkbox
-                    checked={status.countsAsCompleted ?? false}
-                    onCheckedChange={(checked) => handleCompletedChange(index, checked === true)}
-                    disabled={isSaving || isGloballyLoading}
-                    aria-label={`Mark ${status.name || 'status'} as counting toward completion`}
-                  />
-                </div>
-                <ColorSlotPicker
-                  value={status.colorSlot}
-                  onChange={(color) => handleColorChange(index, color)}
-                  disabled={isSaving || isGloballyLoading}
-                />
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="icon"
-                  onClick={() => handleRemove(index)}
-                  disabled={isSaving || isGloballyLoading}
-                  aria-label={`Remove status option ${index + 1}`}
-                >
-                  <X className="h-4 w-4" />
-                </Button>
               </div>
-              {(isDuplicate || isEmpty) && (
-                <p className="text-xs text-destructive">
-                  {isEmpty ? "Please provide a value." : "Duplicate entries are not allowed."}
-                </p>
-              )}
+              <ColorSlotPicker
+                value={status.colorSlot}
+                onChange={(color) => handleFieldChange(index, 'colorSlot', color)}
+                disabled={isSaving || isGloballyLoading}
+              />
+            </>
+          }
+        />
+      ))}
+      <AddItemRow
+        draftValue={draftName}
+        onDraftChange={setDraftName}
+        onAdd={() => handleAdd(draftName, resetDraft)}
+        disabled={isSaving || isGloballyLoading}
+        placeholder="Add new status..."
+        ariaLabel="Add status option"
+        extraControls={
+          <>
+            <div className="w-[70px] flex justify-center">
+              <Checkbox
+                checked={draftCountsAsCompleted}
+                onCheckedChange={(checked) => setDraftCountsAsCompleted(checked === true)}
+                disabled={isSaving || isGloballyLoading}
+                aria-label="New status counts toward completion"
+              />
             </div>
-          );
-        })}
-        <div className="flex items-center gap-2">
-          <Input
-            value={draftName}
-            onChange={event => setDraftName(event.target.value)}
-            onKeyDown={event => {
-              if (event.key === "Enter") {
-                event.preventDefault();
-                handleAdd();
-              }
-            }}
-            placeholder="Add new status..."
-            aria-label="Add status option"
-            disabled={isSaving || isGloballyLoading}
-            className="flex-1"
-          />
-          <div className="w-[70px] flex justify-center">
-            <Checkbox
-              checked={draftCountsAsCompleted}
-              onCheckedChange={(checked) => setDraftCountsAsCompleted(checked === true)}
+            <ColorSlotPicker
+              value={draftColor}
+              onChange={setDraftColor}
               disabled={isSaving || isGloballyLoading}
-              aria-label="New status counts toward completion"
             />
-          </div>
-          <ColorSlotPicker
-            value={draftColor}
-            onChange={setDraftColor}
-            disabled={isSaving || isGloballyLoading}
-          />
-          <Button
-            type="button"
-            onClick={handleAdd}
-            variant="secondary"
-            disabled={isSaving || isGloballyLoading}
-          >
-            <Plus className="mr-2 h-4 w-4" />
-            Add
-          </Button>
-        </div>
-      </div>
-
-      {touched && cleanedValues.length === 0 && (
-        <p className="mt-3 text-sm text-destructive">
-          At least one status is required.
-        </p>
-      )}
-
-      <div className="mt-5 flex flex-wrap justify-end gap-2">
-        <Button
-          type="button"
-          variant="ghost"
-          onClick={handleRevert}
-          disabled={isSaving || isGloballyLoading || !hasChanges}
-        >
-          <Undo2 className="mr-2 h-4 w-4" />
-          Revert
-        </Button>
-        <Button
-          type="button"
-          onClick={handleSave}
-          disabled={disableSave}
-        >
-          <Save className="mr-2 h-4 w-4" />
-          Save Changes
-        </Button>
-      </div>
-    </div>
+          </>
+        }
+      />
+    </EditorShell>
   );
 }
 
@@ -650,241 +558,109 @@ function AlertTypeCategoryEditor({
   onSave,
   isGloballyLoading,
 }: AlertTypeCategoryEditorProps) {
-  const isMounted = useIsMounted();
   const metadata = CATEGORY_DISPLAY_METADATA.alertTypes;
-  const [values, setValues] = useState<AlertTypeConfig[]>(() => 
-    alertTypeConfigs.map(a => ({ ...a }))
-  );
-  const [draftName, setDraftName] = useState<string>("");
+  const [draftName, setDraftName] = useState("");
   const [draftColor, setDraftColor] = useState<ColorSlot>("amber");
-  const [isSaving, setIsSaving] = useState<boolean>(false);
-  const [touched, setTouched] = useState<boolean>(false);
 
-  useEffect(() => {
-    setValues(alertTypeConfigs.map(a => ({ ...a })));
-  }, [alertTypeConfigs]);
+  const {
+    items,
+    duplicateIndices,
+    cleanedItems,
+    hasChanges,
+    disableSave,
+    isSaving,
+    touched,
+    handleNameChange,
+    handleFieldChange,
+    handleRemove,
+    handleAdd,
+    handleRevert,
+    handleSave,
+  } = useCategoryEditorState<AlertTypeConfig>({
+    initialItems: alertTypeConfigs,
+    onSave,
+    isGloballyLoading,
+    allowEmpty: true, // Alert types can be empty
+    createItem: (name) => ({ name, colorSlot: draftColor }),
+    cleanItem: (item) => ({ name: item.name.trim(), colorSlot: item.colorSlot }),
+    hasItemChanged: (current, original) =>
+      current.name !== original.name || current.colorSlot !== original.colorSlot,
+  });
 
-  const valueMeta = useMemo(
-    () =>
-      values.map(alertType => ({
-        raw: alertType.name,
-        trimmed: alertType.name.trim(),
-        normalized: alertType.name.trim().toLowerCase(),
-        colorSlot: alertType.colorSlot,
-      })),
-    [values],
-  );
-
-  const duplicateIndices = useMemo(() => {
-    const seen = new Map<string, number>();
-    const duplicates = new Set<number>();
-    valueMeta.forEach((entry, index) => {
-      if (!entry.trimmed) return;
-      if (seen.has(entry.normalized)) {
-        duplicates.add(index);
-        duplicates.add(seen.get(entry.normalized)!);
-      } else {
-        seen.set(entry.normalized, index);
-      }
-    });
-    return duplicates;
-  }, [valueMeta]);
-
-  const hasEmptyValues = useMemo(() => valueMeta.some(entry => !entry.trimmed), [valueMeta]);
-
-  const cleanedValues = useMemo(() => 
-    values
-      .map(a => ({ name: a.name.trim(), colorSlot: a.colorSlot }))
-      .filter(a => a.name.length > 0),
-    [values]
-  );
-
-  const hasChanges = useMemo(() => {
-    if (cleanedValues.length !== alertTypeConfigs.length) return true;
-    return cleanedValues.some((v, i) => 
-      v.name !== alertTypeConfigs[i]?.name || v.colorSlot !== alertTypeConfigs[i]?.colorSlot
-    );
-  }, [cleanedValues, alertTypeConfigs]);
-
-  const disableSave =
-    isSaving ||
-    isGloballyLoading ||
-    !hasChanges ||
-    hasEmptyValues ||
-    duplicateIndices.size > 0;
-
-  const handleNameChange = useCallback((index: number, name: string) => {
-    setTouched(true);
-    setValues(current => current.map((a, idx) => idx === index ? { ...a, name } : a));
-  }, []);
-
-  const handleColorChange = useCallback((index: number, colorSlot: ColorSlot) => {
-    setTouched(true);
-    setValues(current => current.map((a, idx) => idx === index ? { ...a, colorSlot } : a));
-  }, []);
-
-  const handleRemove = useCallback((index: number) => {
-    setTouched(true);
-    setValues(current => current.filter((_, idx) => idx !== index));
-  }, []);
-
-  const handleAdd = useCallback(() => {
-    const trimmed = draftName.trim();
-    if (!trimmed) {
-      setTouched(true);
-      return;
-    }
-
-    const exists = valueMeta.some(entry => entry.normalized === trimmed.toLowerCase());
-    if (exists) {
-      setDraftName("");
-      setTouched(true);
-      return;
-    }
-
-    setTouched(true);
-    setValues(current => [...current, { name: trimmed, colorSlot: draftColor }]);
+  const resetDraft = () => {
     setDraftName("");
-    // Cycle to next color for convenience
+    // Cycle to next color
     const currentIndex = COLOR_SLOTS.indexOf(draftColor);
     setDraftColor(COLOR_SLOTS[(currentIndex + 1) % COLOR_SLOTS.length]);
-  }, [draftName, draftColor, valueMeta]);
-
-  const handleRevert = useCallback(() => {
-    setValues(alertTypeConfigs.map(a => ({ ...a })));
-    setDraftName("");
-    setTouched(false);
-  }, [alertTypeConfigs]);
-
-  const handleSave = useCallback(async () => {
-    setTouched(true);
-    setIsSaving(true);
-    try {
-      await onSave(cleanedValues);
-    } finally {
-      if (isMounted.current) {
-        setIsSaving(false);
-      }
-    }
-  }, [cleanedValues, onSave, isMounted]);
+  };
 
   return (
-    <div className="rounded-lg border border-border/50 bg-background/40 p-4 shadow-sm">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="space-y-1">
-          <p className="text-sm font-semibold text-foreground">{metadata.label}</p>
-          <p className="text-xs text-muted-foreground max-w-xl">{metadata.description}</p>
-        </div>
-        <Badge variant="secondary" className="shrink-0">
-          {cleanedValues.length} options
-        </Badge>
-      </div>
-
-      <Separator className="my-4" />
-
-      <div className="space-y-3">
-        {values.map((alertType, index) => {
-          const isDuplicate = duplicateIndices.has(index);
-          const isEmpty = !alertType.name.trim();
-          return (
-            <div key={`alertType-${index}`} className="flex flex-col gap-1">
-              <div className="flex gap-2">
-                <Input
-                  value={alertType.name}
-                  onChange={event => handleNameChange(index, event.target.value)}
-                  aria-label={`Alert type option ${index + 1}`}
-                  aria-invalid={isDuplicate || isEmpty}
-                  disabled={isSaving || isGloballyLoading}
-                  className={cn(
-                    "flex-1",
-                    (isDuplicate || isEmpty) &&
-                      "border-destructive/60 focus-visible:ring-destructive/40",
-                  )}
-                />
-                <ColorSlotPicker
-                  value={alertType.colorSlot}
-                  onChange={(color) => handleColorChange(index, color)}
-                  disabled={isSaving || isGloballyLoading}
-                />
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="icon"
-                  onClick={() => handleRemove(index)}
-                  disabled={isSaving || isGloballyLoading}
-                  aria-label={`Remove alert type option ${index + 1}`}
-                >
-                  <X className="h-4 w-4" />
-                </Button>
-              </div>
-              {(isDuplicate || isEmpty) && (
-                <p className="text-xs text-destructive">
-                  {isEmpty ? "Please provide a value." : "Duplicate entries are not allowed."}
-                </p>
-              )}
-            </div>
-          );
-        })}
-        <div className="flex gap-2">
-          <Input
-            value={draftName}
-            onChange={event => setDraftName(event.target.value)}
-            onKeyDown={event => {
-              if (event.key === "Enter") {
-                event.preventDefault();
-                handleAdd();
-              }
-            }}
-            placeholder="Add new alert type..."
-            aria-label="Add alert type option"
-            disabled={isSaving || isGloballyLoading}
-            className="flex-1"
-          />
+    <EditorShell
+      label={metadata.label}
+      description={metadata.description}
+      itemCount={cleanedItems.length}
+      hasChanges={hasChanges}
+      disableSave={disableSave}
+      isSaving={isSaving}
+      isGloballyLoading={isGloballyLoading}
+      onRevert={() => handleRevert(() => setDraftName(""))}
+      onSave={handleSave}
+      emptyMessage={
+        touched && cleanedItems.length === 0 ? (
+          <p className="mt-3 text-sm text-muted-foreground">
+            No alert types configured. Types will be added automatically when alerts are imported.
+          </p>
+        ) : null
+      }
+    >
+      {items.map((alertType, index) => (
+        <ItemRow
+          key={`alertType-${index}`}
+          value={alertType.name}
+          onChange={(name) => handleNameChange(index, name)}
+          onRemove={() => handleRemove(index)}
+          isDuplicate={duplicateIndices.has(index)}
+          isEmpty={!alertType.name.trim()}
+          disabled={isSaving || isGloballyLoading}
+          ariaLabel={`Alert type option ${index + 1}`}
+          extraControls={
+            <ColorSlotPicker
+              value={alertType.colorSlot}
+              onChange={(color) => handleFieldChange(index, 'colorSlot', color)}
+              disabled={isSaving || isGloballyLoading}
+            />
+          }
+        />
+      ))}
+      <AddItemRow
+        draftValue={draftName}
+        onDraftChange={setDraftName}
+        onAdd={() => handleAdd(draftName, resetDraft)}
+        disabled={isSaving || isGloballyLoading}
+        placeholder="Add new alert type..."
+        ariaLabel="Add alert type option"
+        extraControls={
           <ColorSlotPicker
             value={draftColor}
             onChange={setDraftColor}
             disabled={isSaving || isGloballyLoading}
           />
-          <Button
-            type="button"
-            onClick={handleAdd}
-            variant="secondary"
-            disabled={isSaving || isGloballyLoading}
-          >
-            <Plus className="mr-2 h-4 w-4" />
-            Add
-          </Button>
-        </div>
-      </div>
-
-      {touched && cleanedValues.length === 0 && (
-        <p className="mt-3 text-sm text-muted-foreground">
-          No alert types configured. Types will be added automatically when alerts are imported.
-        </p>
-      )}
-
-      <div className="mt-5 flex flex-wrap justify-end gap-2">
-        <Button
-          type="button"
-          variant="ghost"
-          onClick={handleRevert}
-          disabled={isSaving || isGloballyLoading || !hasChanges}
-        >
-          <Undo2 className="mr-2 h-4 w-4" />
-          Revert
-        </Button>
-        <Button
-          type="button"
-          onClick={handleSave}
-          disabled={disableSave}
-        >
-          <Save className="mr-2 h-4 w-4" />
-          Save Changes
-        </Button>
-      </div>
-    </div>
+        }
+      />
+    </EditorShell>
   );
 }
+
+// ============================================================================
+// Category Keys (excluding special editors)
+// ============================================================================
+
+const SIMPLE_CATEGORY_KEYS: CategoryKey[] = [
+  "caseTypes",
+  "livingArrangements",
+  "noteCategories",
+  "verificationStatuses",
+];
 
 // ============================================================================
 // Category Manager Panel
@@ -911,7 +687,6 @@ export function CategoryManagerPanel({
 
   const handleSaveStatuses = useCallback(
     async (configs: StatusConfig[]) => {
-      // updateCategory accepts both string[] and StatusConfig[] for caseStatuses
       await updateCategory('caseStatuses', configs as unknown as string[]);
     },
     [updateCategory],
@@ -919,16 +694,13 @@ export function CategoryManagerPanel({
 
   const handleSaveAlertTypes = useCallback(
     async (configs: AlertTypeConfig[]) => {
-      // updateCategory accepts both string[] and AlertTypeConfig[] for alertTypes
       await updateCategory('alertTypes', configs as unknown as string[]);
     },
     [updateCategory],
   );
 
   const handleResetAll = useCallback(async () => {
-    if (!showResetButton) {
-      return;
-    }
+    if (!showResetButton) return;
 
     setIsResetting(true);
     try {
@@ -972,21 +744,18 @@ export function CategoryManagerPanel({
       <CardContent className="space-y-6">
         {supportingContent ?? defaultSupportingContent}
         <div className="grid gap-4 lg:grid-cols-2">
-          {/* Status editor with color picker */}
           <StatusCategoryEditor
             statusConfigs={config.caseStatuses}
             onSave={handleSaveStatuses}
             isGloballyLoading={loading || isResetting}
           />
-          {/* Alert type editor with color picker */}
           <AlertTypeCategoryEditor
             alertTypeConfigs={config.alertTypes}
             onSave={handleSaveAlertTypes}
             isGloballyLoading={loading || isResetting}
           />
-          {/* Other category editors */}
-          {CATEGORY_KEYS.filter(key => key !== 'caseStatuses' && key !== 'alertTypes').map(key => (
-            <CategoryEditor
+          {SIMPLE_CATEGORY_KEYS.map(key => (
+            <SimpleCategoryEditor
               key={key}
               categoryKey={key}
               valuesFromConfig={config[key] as string[] ?? defaultCategoryConfig[key] as string[]}

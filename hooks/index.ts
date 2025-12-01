@@ -5,6 +5,13 @@
 
 // Utility hooks
 export { useIsMounted } from './useIsMounted';
+export { useCategoryEditorState } from './useCategoryEditorState';
+export type { 
+  EditorItem, 
+  ItemMeta, 
+  UseCategoryEditorStateOptions, 
+  UseCategoryEditorStateReturn 
+} from './useCategoryEditorState';
 
 // Case management operations
 export { useCaseManagement } from './useCaseManagement';
