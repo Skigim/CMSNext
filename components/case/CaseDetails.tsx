@@ -2,12 +2,11 @@ import { useCallback, useMemo, useState } from "react";
 import { Button } from "../ui/button";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "../ui/alert-dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
-import { CaseSection } from "./CaseSection";
 import { FinancialsGridView } from "./FinancialsGridView";
 import { NotesDrawer } from "./NotesDrawer";
 import { IntakeChecklistView } from "./IntakeChecklistView";
 import { StoredCase } from "../../types/case";
-import { ArrowLeft, Edit2, Trash2, Landmark, Wallet, Receipt, BellRing, FileText, ClipboardCheck, LayoutGrid, List } from "lucide-react";
+import { ArrowLeft, Edit2, Trash2, Wallet, BellRing, FileText, ClipboardCheck } from "lucide-react";
 import { withDataErrorBoundary } from "../error/ErrorBoundaryHOC";
 import { CaseStatusMenu } from "./CaseStatusMenu";
 import { Badge } from "../ui/badge";
@@ -31,8 +30,6 @@ interface CaseDetailsProps {
   onResolveAlert?: (alert: AlertWithMatch) => Promise<void> | void;
 }
 
-type FinancialsViewMode = "tabs" | "grid";
-
 export function CaseDetails({ 
   case: caseData, 
   onBack, 
@@ -44,7 +41,6 @@ export function CaseDetails({
 }: CaseDetailsProps) {
   
   const [alertsDrawerOpen, setAlertsDrawerOpen] = useState(false);
-  const [financialsViewMode, setFinancialsViewMode] = useState<FinancialsViewMode>("tabs");
 
   const { totalAlerts, openAlertCount, hasOpenAlerts } = useMemo(() => {
     const total = alerts.length;
@@ -204,77 +200,10 @@ export function CaseDetails({
             </TabsList>
           </div>
 
-          {/* Financials Tab with Sub-tabs or Grid View */}
+          {/* Financials Tab - Grid View */}
           <TabsContent value="financials" className="mt-0">
             <div className="p-4">
-              {/* View Mode Toggle */}
-              <div className="flex justify-end mb-4">
-                <div className="inline-flex rounded-lg border bg-muted p-1">
-                  <Button
-                    variant={financialsViewMode === "tabs" ? "secondary" : "ghost"}
-                    size="sm"
-                    onClick={() => setFinancialsViewMode("tabs")}
-                    className="h-8 px-3 gap-2"
-                  >
-                    <List className="w-4 h-4" />
-                    <span className="hidden sm:inline">Tabs</span>
-                  </Button>
-                  <Button
-                    variant={financialsViewMode === "grid" ? "secondary" : "ghost"}
-                    size="sm"
-                    onClick={() => setFinancialsViewMode("grid")}
-                    className="h-8 px-3 gap-2"
-                  >
-                    <LayoutGrid className="w-4 h-4" />
-                    <span className="hidden sm:inline">Grid</span>
-                  </Button>
-                </div>
-              </div>
-
-              {financialsViewMode === "grid" ? (
-                <FinancialsGridView caseId={caseData.id} />
-              ) : (
-                <Tabs defaultValue="resources" className="w-full">
-                  <TabsList className="grid w-full grid-cols-3">
-                    <TabsTrigger value="resources" className="flex items-center gap-2">
-                      <Landmark className="w-4 h-4" />
-                      Resources
-                    </TabsTrigger>
-                    <TabsTrigger value="income" className="flex items-center gap-2">
-                      <Wallet className="w-4 h-4" />
-                      Income
-                    </TabsTrigger>
-                    <TabsTrigger value="expenses" className="flex items-center gap-2">
-                      <Receipt className="w-4 h-4" />
-                      Expenses
-                    </TabsTrigger>
-                  </TabsList>
-
-                  <TabsContent value="resources" className="mt-4">
-                    <CaseSection
-                      title="Resources"
-                      category="resources"
-                      caseId={caseData.id}
-                    />
-                  </TabsContent>
-
-                  <TabsContent value="income" className="mt-4">
-                    <CaseSection
-                      title="Income"
-                      category="income"
-                      caseId={caseData.id}
-                    />
-                  </TabsContent>
-
-                  <TabsContent value="expenses" className="mt-4">
-                    <CaseSection
-                      title="Expenses"
-                      category="expenses"
-                      caseId={caseData.id}
-                    />
-                  </TabsContent>
-                </Tabs>
-              )}
+              <FinancialsGridView caseId={caseData.id} />
             </div>
           </TabsContent>
 
