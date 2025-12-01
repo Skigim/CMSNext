@@ -132,6 +132,7 @@ export class CaseService {
         },
         authorizedRepIds: caseData.person.authorizedRepIds || [],
         familyMembers: caseData.person.familyMembers || [],
+        relationships: caseData.person.relationships || [],
         status: caseData.person.status || 'Active',
         dateAdded: timestamp,
         createdAt: timestamp
@@ -225,6 +226,7 @@ export class CaseService {
       mailingAddress: caseData.person.mailingAddress || existingCase.person.mailingAddress,
       authorizedRepIds: caseData.person.authorizedRepIds || [],
       familyMembers: caseData.person.familyMembers || [],
+      relationships: caseData.person.relationships || [],
       status: caseData.person.status || 'Active'
     };
 
