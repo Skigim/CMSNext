@@ -1,6 +1,4 @@
-export type CaseListViewPreference = "grid" | "table";
-
-const PERSISTENT_FLAG_KEYS = ["caseListView"] as const;
+const PERSISTENT_FLAG_KEYS = [] as const;
 type PersistentFlagKey = (typeof PERSISTENT_FLAG_KEYS)[number];
 type PersistentFlagsSnapshot = Pick<FileStorageFlags, PersistentFlagKey>;
 
@@ -9,7 +7,6 @@ export interface FileStorageFlags {
   sessionHadData?: boolean;
   inSetupPhase?: boolean;
   inConnectionFlow?: boolean;
-  caseListView?: CaseListViewPreference;
 }
 
 /**

@@ -2,8 +2,6 @@ import { useCallback, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
-import { CaseCard } from "./CaseCard";
-import { VirtualCaseList } from "../app/VirtualCaseList";
 import type { StoredCase, CaseStatusUpdateHandler } from "../../types/case";
 import { setupSampleData } from "../../utils/setupData";
 import { CaseAlertsDrawer } from "./CaseAlertsDrawer";
@@ -13,12 +11,9 @@ import {
   Plus,
   Search,
   Database,
-  Grid,
-  Table,
   Filter,
   RefreshCcw,
 } from "lucide-react";
-import { Toggle } from "../ui/toggle";
 import { ToggleGroup, ToggleGroupItem } from "../ui/toggle-group";
 import {
   DropdownMenu,
@@ -79,8 +74,6 @@ export function CaseList({
   const { featureFlags } = useAppViewState();
   const showDevTools = isFeatureEnabled("settings.devTools", featureFlags);
   const {
-    viewMode,
-    setViewMode,
     sortKey,
     setSortKey,
     sortDirection,
@@ -94,7 +87,6 @@ export function CaseList({
   } = useCaseListPreferences();
   const [searchTerm, setSearchTerm] = useState("");
   const [isSettingUpData, setIsSettingUpData] = useState(false);
-  const [useVirtualScrolling, setUseVirtualScrolling] = useState(false);
   const [showSampleDataDialog, setShowSampleDataDialog] = useState(false);
   const [alertsDrawerOpen, setAlertsDrawerOpen] = useState(false);
   const [activeAlertsCaseId, setActiveAlertsCaseId] = useState<string | null>(null);
@@ -120,8 +112,6 @@ export function CaseList({
     return map;
   }, [matchedAlertsByCase]);
 
-  const shouldUseVirtual = viewMode === "grid" && (cases.length > 100 || useVirtualScrolling);
-
   const handleSetupSampleData = useCallback(async () => {
     const toastId = toast.loading("Adding sample data...");
     try {
@@ -141,12 +131,6 @@ export function CaseList({
   const handleSearchChange = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
     setSearchTerm(event.target.value);
   }, []);
-
-  const handleViewModeChange = useCallback((value: string) => {
-    if (value === "grid" || value === "table") {
-      setViewMode(value);
-    }
-  }, [setViewMode]);
 
   const handleSegmentChange = useCallback((value: string) => {
     if (value === "all" || value === "recent" || value === "priority") {
@@ -358,32 +342,15 @@ export function CaseList({
         </div>
       </div>
 
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="relative w-full sm:max-w-xl">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            placeholder="Search cases by name or MCN..."
-            value={searchTerm}
-            onChange={handleSearchChange}
-            className="pl-10"
-            aria-label="Search cases"
-          />
-        </div>
-        <ToggleGroup
-          type="single"
-          value={viewMode}
-          onValueChange={handleViewModeChange}
-          variant="outline"
-          size="sm"
-          aria-label="Select case list view"
-        >
-          <ToggleGroupItem value="grid" aria-label="Grid view">
-            <Grid className="mr-2 h-4 w-4" /> Grid view
-          </ToggleGroupItem>
-          <ToggleGroupItem value="table" aria-label="Table view">
-            <Table className="mr-2 h-4 w-4" /> Table view
-          </ToggleGroupItem>
-        </ToggleGroup>
+      <div className="relative w-full max-w-xl">
+        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+        <Input
+          placeholder="Search cases by name or MCN..."
+          value={searchTerm}
+          onChange={handleSearchChange}
+          className="pl-10"
+          aria-label="Search cases"
+        />
       </div>
 
       <div className="flex flex-wrap items-center gap-3">
@@ -409,57 +376,18 @@ export function CaseList({
         </ToggleGroup>
       </div>
 
-      {viewMode === "table" ? (
-        <CaseTable
-          cases={sortedCases}
-          sortKey={sortKey}
-          sortDirection={sortDirection}
-          onRequestSort={handleTableSortRequest}
-          onViewCase={onViewCase}
-          onEditCase={onEditCase}
-          onDeleteCase={onDeleteCase}
-          alertsByCaseId={matchedAlertsByCase}
-          onOpenAlerts={handleOpenCaseAlerts}
-          onUpdateCaseStatus={onUpdateCaseStatus}
-        />
-      ) : shouldUseVirtual ? (
-        <VirtualCaseList
-          cases={sortedCases}
-          onViewCase={onViewCase}
-          onEditCase={onEditCase}
-          onDeleteCase={onDeleteCase}
-          alertsByCaseId={openAlertsByCase}
-          onUpdateCaseStatus={onUpdateCaseStatus}
-        />
-      ) : (
-        <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
-          {sortedCases.map(caseData => (
-            <CaseCard
-              key={caseData.id}
-              case={caseData}
-              onView={onViewCase}
-              onEdit={onEditCase}
-              onDelete={onDeleteCase}
-              onUpdateStatus={onUpdateCaseStatus}
-              alerts={openAlertsByCase.get(caseData.id) ?? []}
-            />
-          ))}
-        </div>
-      )}
-
-      {viewMode === "grid" && cases.length > 100 && (
-        <div className="flex items-center justify-end gap-2 text-xs text-muted-foreground">
-          <Toggle
-            pressed={useVirtualScrolling}
-            onPressedChange={setUseVirtualScrolling}
-            aria-label="Toggle virtual scrolling"
-            size="sm"
-          >
-            {useVirtualScrolling ? "Virtual on" : "Virtual off"}
-          </Toggle>
-          <span>Virtual scrolling improves performance for large lists.</span>
-        </div>
-      )}
+      <CaseTable
+        cases={sortedCases}
+        sortKey={sortKey}
+        sortDirection={sortDirection}
+        onRequestSort={handleTableSortRequest}
+        onViewCase={onViewCase}
+        onEditCase={onEditCase}
+        onDeleteCase={onDeleteCase}
+        alertsByCaseId={matchedAlertsByCase}
+        onOpenAlerts={handleOpenCaseAlerts}
+        onUpdateCaseStatus={onUpdateCaseStatus}
+      />
 
       {noMatches && (
         <div className="py-12 text-center">

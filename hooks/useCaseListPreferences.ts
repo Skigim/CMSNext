@@ -1,5 +1,4 @@
-import { useCallback, useMemo, useState } from "react";
-import { getFileStorageFlags, updateFileStorageFlags, type CaseListViewPreference } from "@/utils/fileStorageFlags";
+import { useCallback, useState } from "react";
 import type { CaseStatus } from "@/types/case";
 
 export type CaseListSortKey = "updated" | "name" | "mcn" | "application" | "status" | "caseType" | "alerts";
@@ -23,8 +22,6 @@ export interface CaseFilters {
 }
 
 interface CaseListPreferences {
-  viewMode: CaseListViewPreference;
-  setViewMode: (mode: CaseListViewPreference) => void;
   sortKey: CaseListSortKey;
   setSortKey: (key: CaseListSortKey) => void;
   sortDirection: CaseListSortDirection;
@@ -39,7 +36,6 @@ interface CaseListPreferences {
   setFilters: (filters: CaseFilters) => void;
 }
 
-const DEFAULT_VIEW_MODE: CaseListViewPreference = "grid";
 const DEFAULT_SORT_KEY: CaseListSortKey = "updated";
 const DEFAULT_SORT_DIRECTION: CaseListSortDirection = "desc";
 const DEFAULT_SEGMENT: CaseListSegment = "all";
@@ -50,15 +46,6 @@ const DEFAULT_FILTERS: CaseFilters = {
 };
 
 export function useCaseListPreferences(): CaseListPreferences {
-  const initialViewMode = useMemo<CaseListViewPreference>(() => {
-    const flags = getFileStorageFlags();
-    if (flags.caseListView === "grid" || flags.caseListView === "table") {
-      return flags.caseListView;
-    }
-    return DEFAULT_VIEW_MODE;
-  }, []);
-
-  const [viewMode, setViewModeState] = useState<CaseListViewPreference>(initialViewMode);
   const [sortKey, setSortKeyState] = useState<CaseListSortKey>(DEFAULT_SORT_KEY);
   const [sortDirection, setSortDirectionState] = useState<CaseListSortDirection>(DEFAULT_SORT_DIRECTION);
   const [segment, setSegmentState] = useState<CaseListSegment>(DEFAULT_SEGMENT);
@@ -66,11 +53,6 @@ export function useCaseListPreferences(): CaseListPreferences {
     { key: DEFAULT_SORT_KEY, direction: DEFAULT_SORT_DIRECTION }
   ]);
   const [filters, setFiltersState] = useState<CaseFilters>(DEFAULT_FILTERS);
-
-  const setViewMode = useCallback((mode: CaseListViewPreference) => {
-    setViewModeState(mode);
-    updateFileStorageFlags({ caseListView: mode });
-  }, []);
 
   const setSortKey = useCallback((key: CaseListSortKey) => {
     setSortKeyState(key);
@@ -118,8 +100,6 @@ export function useCaseListPreferences(): CaseListPreferences {
   }, []);
 
   return {
-    viewMode,
-    setViewMode,
     sortKey,
     setSortKey,
     sortDirection,

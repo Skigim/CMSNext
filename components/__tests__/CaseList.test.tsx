@@ -7,7 +7,6 @@ import type { AlertWithMatch } from "@/utils/alertsData";
 import {
   restoreDefaultFileStorageFlagsManager,
   resetFileStorageFlags,
-  getFileStorageFlags,
 } from "@/utils/fileStorageFlags";
 import { setupSampleData } from "@/utils/setupData";
 
@@ -157,7 +156,7 @@ afterEach(() => {
 });
 
 describe("CaseList", () => {
-  it("switches to table view and persists the preference", () => {
+  it("displays cases in table format", () => {
     const cases = [
       createCase(),
       createCase({ id: "case-2", name: "Avery Chen", mcn: "MCN456", updatedAt: "2025-09-26T00:00:00.000Z" }),
@@ -173,13 +172,7 @@ describe("CaseList", () => {
       />,
     );
 
-    expect(screen.queryByText(/Resources/i)).not.toBeInTheDocument();
-
-    const tableToggle = screen.getByRole("button", { name: /table view/i });
-    fireEvent.click(tableToggle);
-
     expect(screen.getByRole("columnheader", { name: /status/i })).toBeInTheDocument();
-    expect(getFileStorageFlags().caseListView).toBe("table");
   });
 
   it("exposes sample data loader even when cases exist", () => {
@@ -225,8 +218,6 @@ describe("CaseList", () => {
       />,
     );
 
-    fireEvent.click(screen.getByRole("button", { name: /table view/i }));
-
     const lastUpdatedHeader = screen.getByRole("columnheader", { name: /last updated/i });
     expect(lastUpdatedHeader).toHaveAttribute("aria-sort", "descending");
 
@@ -258,8 +249,6 @@ describe("CaseList", () => {
         onNewCase={vi.fn()}
       />,
     );
-
-    await user.click(screen.getByRole("button", { name: /table view/i }));
 
     const copyButton = await screen.findByRole("button", { name: /copy mcn mcn123/i });
     await user.click(copyButton);
@@ -297,8 +286,6 @@ describe("CaseList", () => {
         alertsByCaseId={alertsByCaseId}
       />,
     );
-
-    fireEvent.click(screen.getByRole("button", { name: /table view/i }));
 
     const alertsHeader = screen.getByRole("columnheader", { name: /alerts/i });
     const sortButton = within(alertsHeader).getByRole("button", { name: /sort by alerts/i });
@@ -340,8 +327,6 @@ describe("CaseList", () => {
       />,
     );
 
-    fireEvent.click(screen.getByRole("button", { name: /table view/i }));
-
     const statusHeader = screen.getByRole("columnheader", { name: /^status$/i });
     expect(statusHeader).toHaveAttribute("aria-sort", "none");
 
@@ -379,8 +364,6 @@ describe("CaseList", () => {
         alerts={allAlerts}
       />,
     );
-
-    fireEvent.click(screen.getByRole("button", { name: /table view/i }));
 
     expect(screen.getByLabelText("1 alert")).toBeInTheDocument();
     expect(screen.queryByLabelText("2 alerts")).not.toBeInTheDocument();
