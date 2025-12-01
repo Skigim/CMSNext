@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -42,6 +42,16 @@ export function ErrorFeedbackForm({
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
+  const resetTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (resetTimeoutRef.current) {
+        clearTimeout(resetTimeoutRef.current);
+      }
+    };
+  }, []);
 
   const report = reportId ? getReportById(reportId) : null;
   const displayError = error || report?.error;
@@ -77,7 +87,7 @@ export function ErrorFeedbackForm({
       toast.success('Feedback submitted successfully');
       
       // Reset form after successful submission
-      setTimeout(() => {
+      resetTimeoutRef.current = setTimeout(() => {
         setFeedback({ description: '', email: '', reproductionSteps: '' });
         setIsSubmitted(false);
         if (onOpenChange) {

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { LucideIcon } from "lucide-react";
+import { useIsMounted } from "@/hooks/useIsMounted";
 import { ListChecks, Plus, RefreshCcw, Save, Undo2, X } from "lucide-react";
 import { Button } from "../ui/button";
 import {
@@ -77,6 +78,7 @@ function CategoryEditor({
   onSave,
   isGloballyLoading,
 }: CategoryEditorProps) {
+  const isMounted = useIsMounted();
   const metadata = CATEGORY_DISPLAY_METADATA[categoryKey];
   const [values, setValues] = useState<string[]>(() => [...valuesFromConfig]);
   const [draft, setDraft] = useState<string>("");
@@ -173,9 +175,11 @@ function CategoryEditor({
     try {
       await onSave(cleanedValues);
     } finally {
-      setIsSaving(false);
+      if (isMounted.current) {
+        setIsSaving(false);
+      }
     }
-  }, [cleanedValues, onSave]);
+  }, [cleanedValues, onSave, isMounted]);
 
   return (
     <div className="rounded-lg border border-border/50 bg-background/40 p-4 shadow-sm">
@@ -343,6 +347,7 @@ function StatusCategoryEditor({
   onSave,
   isGloballyLoading,
 }: StatusCategoryEditorProps) {
+  const isMounted = useIsMounted();
   const metadata = CATEGORY_DISPLAY_METADATA.caseStatuses;
   const [values, setValues] = useState<StatusConfig[]>(() => 
     statusConfigs.map(s => ({ ...s, countsAsCompleted: s.countsAsCompleted ?? false }))
@@ -473,9 +478,11 @@ function StatusCategoryEditor({
     try {
       await onSave(cleanedValues);
     } finally {
-      setIsSaving(false);
+      if (isMounted.current) {
+        setIsSaving(false);
+      }
     }
-  }, [cleanedValues, onSave]);
+  }, [cleanedValues, onSave, isMounted]);
 
   return (
     <div className="rounded-lg border border-border/50 bg-background/40 p-4 shadow-sm">
@@ -643,6 +650,7 @@ function AlertTypeCategoryEditor({
   onSave,
   isGloballyLoading,
 }: AlertTypeCategoryEditorProps) {
+  const isMounted = useIsMounted();
   const metadata = CATEGORY_DISPLAY_METADATA.alertTypes;
   const [values, setValues] = useState<AlertTypeConfig[]>(() => 
     alertTypeConfigs.map(a => ({ ...a }))
@@ -754,9 +762,11 @@ function AlertTypeCategoryEditor({
     try {
       await onSave(cleanedValues);
     } finally {
-      setIsSaving(false);
+      if (isMounted.current) {
+        setIsSaving(false);
+      }
     }
-  }, [cleanedValues, onSave]);
+  }, [cleanedValues, onSave, isMounted]);
 
   return (
     <div className="rounded-lg border border-border/50 bg-background/40 p-4 shadow-sm">
@@ -888,6 +898,7 @@ export function CategoryManagerPanel({
   showResetButton = true,
   className,
 }: CategoryManagerPanelProps) {
+  const isMounted = useIsMounted();
   const { config, loading, updateCategory, resetToDefaults } = useCategoryConfig();
   const [isResetting, setIsResetting] = useState(false);
 
@@ -923,9 +934,11 @@ export function CategoryManagerPanel({
     try {
       await resetToDefaults();
     } finally {
-      setIsResetting(false);
+      if (isMounted.current) {
+        setIsResetting(false);
+      }
     }
-  }, [resetToDefaults, showResetButton]);
+  }, [resetToDefaults, showResetButton, isMounted]);
 
   const defaultSupportingContent = (
     <p className="text-sm text-muted-foreground">

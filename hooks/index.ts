@@ -3,6 +3,9 @@
  * Provides clean import paths for all application-specific hooks
  */
 
+// Utility hooks
+export { useIsMounted } from './useIsMounted';
+
 // Case management operations
 export { useCaseManagement } from './useCaseManagement';
 

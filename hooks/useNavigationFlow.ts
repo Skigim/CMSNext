@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
+import { useIsMounted } from "./useIsMounted";
 import { NewCaseRecordData, NewPersonData, StoredCase } from "../types/case";
 import { AppView } from "../types/view";
 import type { FileStorageLifecycleSelectors } from "../contexts/FileStorageContext";
@@ -58,6 +59,7 @@ export function useNavigationFlow({
   saveCase,
   deleteCase,
 }: UseNavigationFlowParams): NavigationHandlers {
+  const isMounted = useIsMounted();
   const navigationToastId = "navigation-lock";
   const [currentView, setCurrentView] = useState<AppView>("dashboard");
   const [selectedCaseId, setSelectedCaseId] = useState<string | null>(null);
@@ -269,6 +271,9 @@ export function useNavigationFlow({
       try {
         await saveCase(caseData, editingCase);
 
+        // Check if still mounted after async operation
+        if (!isMounted.current) return;
+
         if (editingCase) {
           if (formState.previousView === "details" && formState.returnToCaseId) {
             setSelectedCaseId(formState.returnToCaseId);
@@ -292,7 +297,7 @@ export function useNavigationFlow({
         throw err;
       }
     },
-    [editingCase, formState, guardCaseInteraction, navigationLock.reason, saveCase]
+    [editingCase, formState, guardCaseInteraction, isMounted, navigationLock.reason, saveCase]
   );
 
   const cancelForm = useCallback(() => {
@@ -319,6 +324,9 @@ export function useNavigationFlow({
       try {
         await deleteCase(caseId);
 
+        // Check if still mounted after async operation
+        if (!isMounted.current) return;
+
         if (selectedCaseId === caseId) {
           setCurrentView("list");
           setSelectedCaseId(null);
@@ -330,7 +338,7 @@ export function useNavigationFlow({
         throw err;
       }
     },
-    [deleteCase, guardCaseInteraction, navigationLock.reason, selectedCaseId]
+    [deleteCase, guardCaseInteraction, isMounted, navigationLock.reason, selectedCaseId]
   );
 
   const navigate = useCallback(

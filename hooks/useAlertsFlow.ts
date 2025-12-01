@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
+import { useIsMounted } from "./useIsMounted";
 import type { StoredCase } from "@/types/case";
 import type { DataManager } from "@/utils/DataManager";
 import { useFileStorageDataChange } from "@/contexts/FileStorageContext";
@@ -38,6 +39,7 @@ export function useAlertsFlow({
   hasLoadedData,
   dataManager,
 }: UseAlertsFlowOptions): UseAlertsFlowResult {
+  const isMounted = useIsMounted();
   const [alertsIndex, setAlertsIndex] = useState<AlertsIndex>(() => createEmptyAlertsIndex());
   const resolvedAlertOverridesRef = useRef(
     new Map<string, { status?: AlertWithMatch["status"]; resolvedAt?: string | null; resolutionNotes?: string }>(),
@@ -104,6 +106,10 @@ export function useAlertsFlow({
 
     try {
       const nextAlerts = await dataManager.getAlertsIndex({ cases });
+      
+      // Check if still mounted after async operation
+      if (!isMounted.current) return;
+      
       syncAlertsIndex(nextAlerts);
     } catch (error) {
       // LegacyFormatError is expected when opening old data files - handle gracefully
@@ -114,9 +120,13 @@ export function useAlertsFlow({
           error: error instanceof Error ? error.message : String(error),
         });
       }
-      setAlertsIndex(createEmptyAlertsIndex());
+      
+      // Check if still mounted before updating state
+      if (isMounted.current) {
+        setAlertsIndex(createEmptyAlertsIndex());
+      }
     }
-  }, [cases, dataManager, hasLoadedData, syncAlertsIndex]);
+  }, [cases, dataManager, hasLoadedData, isMounted, syncAlertsIndex]);
 
   useEffect(() => {
     reloadAlerts().catch(err => {
@@ -172,6 +182,9 @@ export function useAlertsFlow({
             { cases },
           );
 
+          // Check if still mounted after async operation
+          if (!isMounted.current) return;
+
           resolvedAlertOverridesRef.current.delete(alert.id);
           await reloadAlerts();
 
@@ -183,6 +196,10 @@ export function useAlertsFlow({
             alertId: alert.id,
             error: err instanceof Error ? err.message : String(err),
           });
+          
+          // Check if still mounted before updating state
+          if (!isMounted.current) return;
+          
           resolvedAlertOverridesRef.current.delete(alert.id);
           await reloadAlerts();
           toast.error("Unable to reopen alert. Please try again.");
@@ -210,6 +227,9 @@ export function useAlertsFlow({
           { cases },
         );
 
+        // Check if still mounted after async operation
+        if (!isMounted.current) return;
+
         resolvedAlertOverridesRef.current.delete(alert.id);
         await reloadAlerts();
 
@@ -221,12 +241,16 @@ export function useAlertsFlow({
           alertId: alert.id,
           error: err instanceof Error ? err.message : String(err),
         });
+        
+        // Check if still mounted before updating state
+        if (!isMounted.current) return;
+        
         resolvedAlertOverridesRef.current.delete(alert.id);
         await reloadAlerts();
         toast.error("Unable to resolve alert. Please try again.");
       }
     },
-    [applyAlertOverrides, cases, dataManager, reloadAlerts, selectedCase],
+    [applyAlertOverrides, cases, dataManager, isMounted, reloadAlerts, selectedCase],
   );
 
   const openAlerts = useMemo(() => filterOpenAlerts(alertsIndex.alerts), [alertsIndex.alerts]);

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
+import { useIsMounted } from "./useIsMounted";
 import type { StoredCase } from "../types/case";
 import type AutosaveFileService from "../utils/AutosaveFileService";
 import type { FileStorageService } from "@/utils/services/FileStorageService";
@@ -52,6 +53,7 @@ export function useConnectionFlow({
   setError,
   setHasLoadedData,
 }: UseConnectionFlowParams): UseConnectionFlowResult {
+  const isMounted = useIsMounted();
   const [showConnectModal, setShowConnectModal] = useState(false);
   const lastErrorRef = useRef<number | null>(null);
 
@@ -108,6 +110,9 @@ export function useConnectionFlow({
 
       await new Promise(resolve => setTimeout(resolve, 150));
 
+      // Check if still mounted after async operation
+      if (!isMounted.current) return false;
+
       let existingData: any;
       try {
         existingData = await loadExistingData();
@@ -121,6 +126,9 @@ export function useConnectionFlow({
       if (existingData && Object.keys(existingData).length > 0) {
         try {
           const loadedCases = await loadCases();
+
+          // Check if still mounted after async operation
+          if (!isMounted.current) return false;
 
           if (loadedCases.length > 0) {
             setHasLoadedData(true);
@@ -180,6 +188,7 @@ export function useConnectionFlow({
     }
   }, [
     connectToFolder,
+    isMounted,
     isSupported,
     loadCases,
     loadExistingData,
@@ -240,6 +249,9 @@ export function useConnectionFlow({
       });
 
       const loadedCases = await loadCases();
+
+      // Check if still mounted after async operation
+      if (!isMounted.current) return false;
 
       if (loadedCases.length > 0) {
         setHasLoadedData(true);
@@ -302,6 +314,7 @@ export function useConnectionFlow({
     dataManager,
     emitFileStorageError,
     hasStoredHandle,
+    isMounted,
     loadCases,
     loadExistingData,
     service,

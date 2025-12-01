@@ -1,5 +1,6 @@
 import { useState, useCallback } from 'react';
 import { toast } from 'sonner';
+import { useIsMounted } from './useIsMounted';
 import { NewPersonData, NewCaseRecordData, NewNoteData, StoredCase, StoredNote } from '@/types/case';
 import { useDataManagerSafe } from '@/contexts/DataManagerContext';
 import {
@@ -41,6 +42,7 @@ interface UseCaseManagementReturn {
  * - Automatic persistence through DataManager
  */
 export function useCaseManagement(): UseCaseManagementReturn {
+  const isMounted = useIsMounted();
   const dataManager = useDataManagerSafe(); // Returns null if not available - safe fallback
   
   const [cases, setCases] = useState<StoredCase[]>([]);
@@ -64,6 +66,10 @@ export function useCaseManagement(): UseCaseManagementReturn {
       setError(null);
       
       const data = await dataManager.getAllCases();
+      
+      // Check if still mounted after async operation
+      if (!isMounted.current) return [];
+      
       setCases(data);
       setHasLoadedData(true);
       
@@ -100,9 +106,11 @@ export function useCaseManagement(): UseCaseManagementReturn {
       toast.error(errorMsg);
       return []; // Return empty array on error
     } finally {
-      setLoading(false);
+      if (isMounted.current) {
+        setLoading(false);
+      }
     }
-  }, [dataManager]);
+  }, [dataManager, isMounted]);
 
   /**
    * Save (create or update) a case
@@ -128,6 +136,9 @@ export function useCaseManagement(): UseCaseManagementReturn {
         // Update existing case using DataManager
         const updatedCase = await dataManager.updateCompleteCase(editingCase.id, caseData);
         
+        // Check if still mounted after async operation
+        if (!isMounted.current) return;
+        
         // Update local state to reflect changes immediately
         setCases(prevCases => 
           prevCases.map(c => 
@@ -139,6 +150,10 @@ export function useCaseManagement(): UseCaseManagementReturn {
       } else {
         // Create new case using DataManager
         const newCase = await dataManager.createCompleteCase(caseData);
+        
+        // Check if still mounted after async operation
+        if (!isMounted.current) return;
+        
         setCases(prevCases => [...prevCases, newCase]);
         
         toast.success(`Case for ${caseData.person.firstName} ${caseData.person.lastName} created successfully`, { id: toastId });
@@ -155,7 +170,7 @@ export function useCaseManagement(): UseCaseManagementReturn {
       toast.error(errorMsg, { id: toastId });
       throw err; // Re-throw to allow caller to handle
     }
-  }, [dataManager]);
+  }, [dataManager, isMounted]);
 
   /**
    * Delete a case by ID
@@ -176,6 +191,9 @@ export function useCaseManagement(): UseCaseManagementReturn {
       setError(null);
       await dataManager.deleteCase(caseId);
       
+      // Check if still mounted after async operation
+      if (!isMounted.current) return;
+      
       // Remove the case from the local state
       setCases(prevCases => prevCases.filter(c => c.id !== caseId));
       
@@ -192,7 +210,7 @@ export function useCaseManagement(): UseCaseManagementReturn {
       toast.error(errorMsg);
       throw err; // Re-throw to allow caller to handle
     }
-  }, [dataManager, cases]);
+  }, [dataManager, cases, isMounted]);
 
   /**
    * Save (create or update) a note on a case
@@ -257,6 +275,10 @@ export function useCaseManagement(): UseCaseManagementReturn {
       try {
         setError(null);
         const updatedCase = await dataManager.updateCaseStatus(caseId, status);
+        
+        // Check if still mounted after async operation
+        if (!isMounted.current) return null;
+        
   setCases(prevCases => prevCases.map(c => (c.id === caseId ? updatedCase : c)));
         toast.success(`Status updated to ${status}`, { id: toastId, duration: 2000 });
         return updatedCase;
@@ -277,7 +299,7 @@ export function useCaseManagement(): UseCaseManagementReturn {
         return null;
       }
     },
-    [dataManager, setCases, setError],
+    [dataManager, isMounted, setCases, setError],
   );
 
   /**
@@ -296,6 +318,10 @@ export function useCaseManagement(): UseCaseManagementReturn {
       
       // Reload cases to get the normalized data
       const freshCases = await dataManager.getAllCases();
+      
+      // Check if still mounted after async operation
+      if (!isMounted.current) return;
+      
       setCases(freshCases);
       setHasLoadedData(true);
       
@@ -315,7 +341,7 @@ export function useCaseManagement(): UseCaseManagementReturn {
       toast.error(errorMsg);
       throw err;
     }
-  }, [dataManager]);
+  }, [dataManager, isMounted]);
 
   return {
     // State
