@@ -18,20 +18,20 @@
 
 ## Quick Reference (December 2025)
 
-| Feature | Rating | Trend | Notes |
-|---------|--------|-------|-------|
-| Case Management | 88 | → | Production-ready, relationships added |
-| Premium UI/UX | 82 | → | Solid, accessibility audits needed |
-| Local-First Storage | 80 | → | Production-ready |
-| Developer Enablement | 79 | → | Strong tooling |
-| Configurable Statuses | 78 | → | Recently stabilized |
-| Data Portability | 76 | → | Good, UX improvements possible |
-| Legacy Migration | 75 | → | Dev-only, one-way |
-| Autosave & Recovery | 74 | → | Works, telemetry pending |
-| Financial Operations | 73 | → | Next for refactoring |
-| Feature Flags | 72 | → | In-memory only |
-| Notes & Collaboration | 71 | → | Basic functionality |
-| Dashboard & Insights | 70 | → | Framework ready |
+| Feature               | Rating | Trend | Notes                                 |
+| --------------------- | ------ | ----- | ------------------------------------- |
+| Case Management       | 88     | →     | Production-ready, relationships added |
+| Premium UI/UX         | 82     | →     | Solid, accessibility audits needed    |
+| Local-First Storage   | 80     | →     | Production-ready                      |
+| Developer Enablement  | 79     | →     | Strong tooling                        |
+| Configurable Statuses | 78     | →     | Recently stabilized                   |
+| Data Portability      | 76     | →     | Good, UX improvements possible        |
+| Legacy Migration      | 75     | →     | Dev-only, one-way                     |
+| Autosave & Recovery   | 74     | →     | Works, telemetry pending              |
+| Financial Operations  | 73     | →     | Next for refactoring                  |
+| Feature Flags         | 72     | →     | In-memory only                        |
+| Notes & Collaboration | 71     | →     | Basic functionality                   |
+| Dashboard & Insights  | 70     | →     | Framework ready                       |
 
 **Average Rating:** 76.5/100  
 **Test Status:** 253/253 passing (100%)
@@ -442,12 +442,12 @@ Tooling stack (Vitest, ESLint 9 flat config, Tailwind v4 pipeline) covers day-to
 
 Target: ≤200 lines per hook. **4 hooks over target:**
 
-| Hook | Lines | Priority |
-|------|-------|----------|
-| `useNavigationFlow` | 424 | P0 |
-| `useConnectionFlow` | 413 | P0 |
-| `useCaseManagement` | 350 | P0 |
-| `useAlertsFlow` | 289 | P0 |
+| Hook                | Lines | Priority |
+| ------------------- | ----- | -------- |
+| `useNavigationFlow` | 424   | P0       |
+| `useConnectionFlow` | 413   | P0       |
+| `useCaseManagement` | 350   | P0       |
+| `useAlertsFlow`     | 289   | P0       |
 
 ### Gaps / Risks
 
