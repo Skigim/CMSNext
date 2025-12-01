@@ -18,6 +18,7 @@ import {
   FileSearch,
 } from "lucide-react";
 import { clickToCopy } from "../../utils/clipboard";
+import { getDisplayPhoneNumber } from "../../utils/phoneFormatter";
 
 interface IntakeChecklistViewProps {
   caseData: StoredCase;
@@ -214,7 +215,7 @@ Submit Date: ${submitDate}
             icon={User}
           />
           <InfoItem label="Date of Birth" value={formatDate(person.dateOfBirth)} icon={Calendar} />
-          <InfoItem label="Phone" value={person.phone} icon={Phone} />
+          <InfoItem label="Phone" value={getDisplayPhoneNumber(person.phone)} icon={Phone} />
           <InfoItem label="Email" value={person.email} icon={Mail} />
           <InfoItem
             label="Address"
