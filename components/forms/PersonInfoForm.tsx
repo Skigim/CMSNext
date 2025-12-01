@@ -10,6 +10,7 @@ import { AddressForm } from "./AddressForm";
 import { ContactInfoForm } from "./ContactInfoForm";
 import { useCategoryConfig } from "@/contexts/CategoryConfigContext";
 import { isoToDateInputValue, dateInputValueToISO } from "@/utils/dateFormatting";
+import { formatPhoneNumberAsTyped, normalizePhoneNumber } from "@/utils/phoneFormatter";
 
 interface PersonInfoFormProps {
   personData: NewPersonData;
@@ -194,9 +195,9 @@ export function PersonInfoForm({
                   <div className="space-y-1">
                     <Label className="text-xs text-muted-foreground">Phone</Label>
                     <Input
-                      value={rel.phone}
-                      onChange={(e) => onRelationshipsChange.update(index, 'phone', e.target.value)}
-                      placeholder="Phone"
+                      value={formatPhoneNumberAsTyped(rel.phone)}
+                      onChange={(e) => onRelationshipsChange.update(index, 'phone', normalizePhoneNumber(e.target.value))}
+                      placeholder="(555) 123-4567"
                       className="h-8"
                     />
                   </div>
