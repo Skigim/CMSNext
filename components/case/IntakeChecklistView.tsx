@@ -235,36 +235,40 @@ Submit Date: ${submitDate}
 
       <Separator />
 
-      {/* Relationships Section */}
-      {person.relationships && person.relationships.length > 0 && (
-        <>
-          <div className="space-y-4">
-            <div className="flex items-center gap-2">
-              <Users className="h-4 w-4 text-muted-foreground" />
-              <h3 className="font-medium">Relationships</h3>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 pl-6">
-              {person.relationships.map((rel, index) => (
-                <div key={index} className="flex flex-col gap-1 p-3 border rounded-md bg-muted/10">
-                  <div className="flex items-center justify-between">
-                    <span className="font-medium text-sm">{rel.name}</span>
-                    <Badge variant="outline" className="text-[10px] h-5 px-1.5">
-                      {rel.type}
-                    </Badge>
-                  </div>
-                  {rel.phone && (
-                    <div className="flex items-center gap-1.5 text-xs text-muted-foreground mt-1">
-                      <Phone className="h-3 w-3" />
-                      <span>{getDisplayPhoneNumber(rel.phone)}</span>
-                    </div>
-                  )}
+      {/* Relationships Section - Always shown for debugging */}
+      <div className="space-y-4">
+        <div className="flex items-center gap-2">
+          <Users className="h-4 w-4 text-muted-foreground" />
+          <h3 className="font-medium">Relationships</h3>
+          <Badge variant="secondary" className="text-[10px] h-5 px-1.5">
+            {person.relationships?.length ?? 0}
+          </Badge>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 pl-6">
+          {person.relationships && person.relationships.length > 0 ? (
+            person.relationships.map((rel, index) => (
+              <div key={index} className="flex flex-col gap-1 p-3 border rounded-md bg-muted/10">
+                <div className="flex items-center justify-between">
+                  <span className="font-medium text-sm">{rel.name}</span>
+                  <Badge variant="outline" className="text-[10px] h-5 px-1.5">
+                    {rel.type}
+                  </Badge>
                 </div>
-              ))}
-            </div>
-          </div>
-          <Separator />
-        </>
-      )}
+                {rel.phone && (
+                  <div className="flex items-center gap-1.5 text-xs text-muted-foreground mt-1">
+                    <Phone className="h-3 w-3" />
+                    <span>{getDisplayPhoneNumber(rel.phone)}</span>
+                  </div>
+                )}
+              </div>
+            ))
+          ) : (
+            <p className="text-sm text-muted-foreground italic">No relationships added</p>
+          )}
+        </div>
+      </div>
+
+      <Separator />
 
       {/* Initial Checks Section */}
       <div className="space-y-4">
