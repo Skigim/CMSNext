@@ -10,7 +10,6 @@ import { AddressForm } from "./AddressForm";
 import { ContactInfoForm } from "./ContactInfoForm";
 import { useCategoryConfig } from "@/contexts/CategoryConfigContext";
 import { isoToDateInputValue, dateInputValueToISO } from "@/utils/dateFormatting";
-import { PhoneInput } from "../ui/phone-input";
 
 interface PersonInfoFormProps {
   personData: NewPersonData;

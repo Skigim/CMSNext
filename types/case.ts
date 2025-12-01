@@ -33,7 +33,7 @@ export interface Person {
   mailingAddress: MailingAddress;
   authorizedRepIds: string[];
   familyMembers: string[];
-  relationships: Relationship[];
+  relationships?: Relationship[];
   status: string;
   createdAt: string;
   dateAdded: string;
