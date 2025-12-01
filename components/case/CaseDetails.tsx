@@ -1,12 +1,12 @@
 import { useCallback, useMemo, useState } from "react";
 import { Button } from "../ui/button";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "../ui/alert-dialog";
-import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "../ui/resizable";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
 import { CaseSection } from "./CaseSection";
-import { NotesSection } from "./NotesSection";
+import { NotesDrawer } from "./NotesDrawer";
+import { IntakeChecklistView } from "./IntakeChecklistView";
 import { StoredCase } from "../../types/case";
-import { ArrowLeft, Edit2, Trash2, Landmark, Wallet, Receipt, BellRing, FileText } from "lucide-react";
+import { ArrowLeft, Edit2, Trash2, Landmark, Wallet, Receipt, BellRing, FileText, ClipboardCheck } from "lucide-react";
 import { withDataErrorBoundary } from "../error/ErrorBoundaryHOC";
 import { CaseStatusMenu } from "./CaseStatusMenu";
 import { Badge } from "../ui/badge";
@@ -184,69 +184,81 @@ export function CaseDetails({
         </div>
       </div>
 
-      {/* Content - Resizable Layout */}
-      <ResizablePanelGroup 
-        direction="horizontal" 
-        className="h-auto min-h-[400px] rounded-xl border bg-card/30 shadow-lg"
-      >
-        {/* Left Panel: Financial Sections with Tabs */}
-        <ResizablePanel defaultSize={60} minSize={30}>
-          <div className="h-full p-4 flex flex-col">
-            <Tabs defaultValue="resources" className="w-full flex-1 flex flex-col">
-              <TabsList className="grid w-full grid-cols-3">
-                <TabsTrigger value="resources" className="flex items-center gap-2">
-                  <Landmark className="w-4 h-4" />
-                  Resources
-                </TabsTrigger>
-                <TabsTrigger value="income" className="flex items-center gap-2">
-                  <Wallet className="w-4 h-4" />
-                  Income
-                </TabsTrigger>
-                <TabsTrigger value="expenses" className="flex items-center gap-2">
-                  <Receipt className="w-4 h-4" />
-                  Expenses
-                </TabsTrigger>
-              </TabsList>
-              
-              <TabsContent value="resources" className="mt-4 flex-1 overflow-y-auto">
-                <CaseSection
-                  title="Resources"
-                  category="resources"
-                  caseId={caseData.id}
-                />
-              </TabsContent>
-              
-              <TabsContent value="income" className="mt-4 flex-1 overflow-y-auto">
-                <CaseSection
-                  title="Income"
-                  category="income"
-                  caseId={caseData.id}
-                />
-              </TabsContent>
-              
-              <TabsContent value="expenses" className="mt-4 flex-1 overflow-y-auto">
-                <CaseSection
-                  title="Expenses"
-                  category="expenses"
-                  caseId={caseData.id}
-                />
-              </TabsContent>
-            </Tabs>
+      {/* Content - Top-level Tabs */}
+      <div className="rounded-xl border bg-card/30 shadow-lg pb-16">
+        <Tabs defaultValue="financials" className="w-full">
+          <div className="border-b px-4 pt-4">
+            <TabsList className="grid w-full max-w-md grid-cols-2">
+              <TabsTrigger value="financials" className="flex items-center gap-2">
+                <Wallet className="w-4 h-4" />
+                Financials
+              </TabsTrigger>
+              <TabsTrigger value="intake" className="flex items-center gap-2">
+                <ClipboardCheck className="w-4 h-4" />
+                Intake
+              </TabsTrigger>
+            </TabsList>
           </div>
-        </ResizablePanel>
 
-        <ResizableHandle withHandle />
+          {/* Financials Tab with Sub-tabs */}
+          <TabsContent value="financials" className="mt-0">
+            <div className="p-4">
+              <Tabs defaultValue="resources" className="w-full">
+                <TabsList className="grid w-full grid-cols-3">
+                  <TabsTrigger value="resources" className="flex items-center gap-2">
+                    <Landmark className="w-4 h-4" />
+                    Resources
+                  </TabsTrigger>
+                  <TabsTrigger value="income" className="flex items-center gap-2">
+                    <Wallet className="w-4 h-4" />
+                    Income
+                  </TabsTrigger>
+                  <TabsTrigger value="expenses" className="flex items-center gap-2">
+                    <Receipt className="w-4 h-4" />
+                    Expenses
+                  </TabsTrigger>
+                </TabsList>
 
-        {/* Right Panel: Notes Section */}
-        <ResizablePanel defaultSize={40} minSize={25}>
-          <div className="p-4 bg-muted/30">
-            <NotesSection
-              caseId={caseData.id}
-            />
-          </div>
-        </ResizablePanel>
-      </ResizablePanelGroup>
-        <CaseAlertsDrawer
+                <TabsContent value="resources" className="mt-4">
+                  <CaseSection
+                    title="Resources"
+                    category="resources"
+                    caseId={caseData.id}
+                  />
+                </TabsContent>
+
+                <TabsContent value="income" className="mt-4">
+                  <CaseSection
+                    title="Income"
+                    category="income"
+                    caseId={caseData.id}
+                  />
+                </TabsContent>
+
+                <TabsContent value="expenses" className="mt-4">
+                  <CaseSection
+                    title="Expenses"
+                    category="expenses"
+                    caseId={caseData.id}
+                  />
+                </TabsContent>
+              </Tabs>
+            </div>
+          </TabsContent>
+
+          {/* Intake Tab */}
+          <TabsContent value="intake" className="mt-0">
+            <div className="p-4">
+              <IntakeChecklistView caseData={caseData} onEdit={onEdit} />
+            </div>
+          </TabsContent>
+        </Tabs>
+      </div>
+
+      {/* Notes Bottom Drawer */}
+      <NotesDrawer caseId={caseData.id} />
+
+      <CaseAlertsDrawer
           alerts={alerts}
           open={alertsDrawerOpen}
           onOpenChange={setAlertsDrawerOpen}

@@ -4,10 +4,11 @@ import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
 import { ScrollArea } from "../ui/scroll-area";
 import { StoredCase, NewPersonData, NewCaseRecordData, CaseStatus, CASE_STATUS_VALUES } from "../../types/case";
-import { ArrowLeft, User, FileText, Save, X } from "lucide-react";
+import { ArrowLeft, User, FileText, Save, X, ClipboardCheck } from "lucide-react";
 import { withFormErrorBoundary } from "../error/ErrorBoundaryHOC";
 import { PersonInfoForm } from "../forms/PersonInfoForm";
 import { CaseInfoForm } from "../forms/CaseInfoForm";
+import { IntakeInfoForm } from "../forms/IntakeInfoForm";
 import { useCategoryConfig } from "@/contexts/CategoryConfigContext";
 
 interface CaseFormProps {
@@ -75,6 +76,22 @@ export function CaseForm({ case: existingCase, onSave, onCancel }: CaseFormProps
     organizationId: '',
     authorizedReps: existingCase?.caseRecord.authorizedReps || [],
     retroRequested: existingCase?.caseRecord.retroRequested || '',
+    // Intake checklist fields
+    appValidated: existingCase?.caseRecord.appValidated ?? false,
+    retroMonths: existingCase?.caseRecord.retroMonths ?? [],
+    contactMethods: existingCase?.caseRecord.contactMethods ?? [],
+    agedDisabledVerified: existingCase?.caseRecord.agedDisabledVerified ?? false,
+    citizenshipVerified: existingCase?.caseRecord.citizenshipVerified ?? false,
+    residencyVerified: existingCase?.caseRecord.residencyVerified ?? false,
+    avsSubmitted: existingCase?.caseRecord.avsSubmitted ?? false,
+    interfacesReviewed: existingCase?.caseRecord.interfacesReviewed ?? false,
+    reviewVRs: existingCase?.caseRecord.reviewVRs ?? false,
+    reviewPriorBudgets: existingCase?.caseRecord.reviewPriorBudgets ?? false,
+    reviewPriorNarr: existingCase?.caseRecord.reviewPriorNarr ?? false,
+    pregnancy: existingCase?.caseRecord.pregnancy ?? false,
+    avsConsentDate: existingCase?.caseRecord.avsConsentDate ?? '',
+    maritalStatus: existingCase?.caseRecord.maritalStatus ?? '',
+    voterFormStatus: existingCase?.caseRecord.voterFormStatus ?? '',
   });
 
   // State for household information
@@ -259,14 +276,18 @@ export function CaseForm({ case: existingCase, onSave, onCancel }: CaseFormProps
         <CardContent className="flex-1 p-0 overflow-hidden">
           <Tabs value={activeTab} onValueChange={setActiveTab} className="h-full flex flex-col">
             <div className="px-6 pt-4 shrink-0">
-              <TabsList className="grid w-full grid-cols-2">
+              <TabsList className="grid w-full grid-cols-3">
                 <TabsTrigger value="person" className="flex items-center gap-2">
                   <User className="h-4 w-4" />
-                  Person Information
+                  Person
                 </TabsTrigger>
                 <TabsTrigger value="case" className="flex items-center gap-2">
                   <FileText className="h-4 w-4" />
-                  Case Details
+                  Case
+                </TabsTrigger>
+                <TabsTrigger value="intake" className="flex items-center gap-2">
+                  <ClipboardCheck className="h-4 w-4" />
+                  Intake
                 </TabsTrigger>
               </TabsList>
             </div>
@@ -303,6 +324,13 @@ export function CaseForm({ case: existingCase, onSave, onCancel }: CaseFormProps
                       retroRequested={retroRequested}
                       onCaseDataChange={handleCaseDataChange}
                       onRetroRequestedChange={setRetroRequested}
+                    />
+                  </TabsContent>
+
+                  <TabsContent value="intake" className="space-y-6 mt-4">
+                    <IntakeInfoForm
+                      caseData={caseData}
+                      onCaseDataChange={handleCaseDataChange}
                     />
                   </TabsContent>
                 </form>

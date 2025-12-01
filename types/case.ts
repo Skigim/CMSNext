@@ -90,6 +90,12 @@ export interface AlertRecord {
   metadata?: Record<string, string | undefined>;
 }
 
+// Voter form status options
+export type VoterFormStatus = 'requested' | 'declined' | 'not_answered' | '';
+
+// Contact method options
+export type ContactMethod = 'mail' | 'text' | 'email';
+
 export const CASE_STATUS = {
   Active: 'Active',
   Pending: 'Pending',
@@ -122,6 +128,23 @@ export interface CaseRecord {
   notes: Note[];
   createdDate: string;
   updatedDate: string;
+
+  // Intake checklist fields
+  appValidated?: boolean;
+  retroMonths?: string[];
+  contactMethods?: ContactMethod[];
+  agedDisabledVerified?: boolean;
+  citizenshipVerified?: boolean;
+  residencyVerified?: boolean;
+  avsSubmitted?: boolean;
+  interfacesReviewed?: boolean;
+  reviewVRs?: boolean;
+  reviewPriorBudgets?: boolean;
+  reviewPriorNarr?: boolean;
+  pregnancy?: boolean;
+  avsConsentDate?: string;
+  maritalStatus?: string;
+  voterFormStatus?: VoterFormStatus;
 }
 
 // Main data structure
@@ -187,6 +210,23 @@ export interface NewCaseRecordData {
   organizationId: string;
   authorizedReps?: string[];
   retroRequested?: string;
+
+  // Intake checklist fields
+  appValidated?: boolean;
+  retroMonths?: string[];
+  contactMethods?: ContactMethod[];
+  agedDisabledVerified?: boolean;
+  citizenshipVerified?: boolean;
+  residencyVerified?: boolean;
+  avsSubmitted?: boolean;
+  interfacesReviewed?: boolean;
+  reviewVRs?: boolean;
+  reviewPriorBudgets?: boolean;
+  reviewPriorNarr?: boolean;
+  pregnancy?: boolean;
+  avsConsentDate?: string;
+  maritalStatus?: string;
+  voterFormStatus?: VoterFormStatus;
 }
 
 export interface NewFinancialItemData {

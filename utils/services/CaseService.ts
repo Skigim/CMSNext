@@ -152,6 +152,22 @@ export class CaseService {
         organizationId: caseData.caseRecord.organizationId || '',
         authorizedReps: caseData.caseRecord.authorizedReps || [],
         retroRequested: caseData.caseRecord.retroRequested || '',
+        // Intake checklist fields
+        appValidated: caseData.caseRecord.appValidated ?? false,
+        retroMonths: caseData.caseRecord.retroMonths ?? [],
+        contactMethods: caseData.caseRecord.contactMethods ?? [],
+        agedDisabledVerified: caseData.caseRecord.agedDisabledVerified ?? false,
+        citizenshipVerified: caseData.caseRecord.citizenshipVerified ?? false,
+        residencyVerified: caseData.caseRecord.residencyVerified ?? false,
+        avsSubmitted: caseData.caseRecord.avsSubmitted ?? false,
+        interfacesReviewed: caseData.caseRecord.interfacesReviewed ?? false,
+        reviewVRs: caseData.caseRecord.reviewVRs ?? false,
+        reviewPriorBudgets: caseData.caseRecord.reviewPriorBudgets ?? false,
+        reviewPriorNarr: caseData.caseRecord.reviewPriorNarr ?? false,
+        pregnancy: caseData.caseRecord.pregnancy ?? false,
+        avsConsentDate: caseData.caseRecord.avsConsentDate ?? '',
+        maritalStatus: caseData.caseRecord.maritalStatus ?? '',
+        voterFormStatus: caseData.caseRecord.voterFormStatus ?? '',
         // Note: financials and notes are NOT included in StoredCase
         createdDate: timestamp,
         updatedDate: timestamp
@@ -228,6 +244,22 @@ export class CaseService {
       organizationId: caseData.caseRecord.organizationId || '',
       authorizedReps: caseData.caseRecord.authorizedReps || [],
       retroRequested: caseData.caseRecord.retroRequested || '',
+      // Intake checklist fields
+      appValidated: caseData.caseRecord.appValidated ?? existingCase.caseRecord.appValidated ?? false,
+      retroMonths: caseData.caseRecord.retroMonths ?? existingCase.caseRecord.retroMonths ?? [],
+      contactMethods: caseData.caseRecord.contactMethods ?? existingCase.caseRecord.contactMethods ?? [],
+      agedDisabledVerified: caseData.caseRecord.agedDisabledVerified ?? existingCase.caseRecord.agedDisabledVerified ?? false,
+      citizenshipVerified: caseData.caseRecord.citizenshipVerified ?? existingCase.caseRecord.citizenshipVerified ?? false,
+      residencyVerified: caseData.caseRecord.residencyVerified ?? existingCase.caseRecord.residencyVerified ?? false,
+      avsSubmitted: caseData.caseRecord.avsSubmitted ?? existingCase.caseRecord.avsSubmitted ?? false,
+      interfacesReviewed: caseData.caseRecord.interfacesReviewed ?? existingCase.caseRecord.interfacesReviewed ?? false,
+      reviewVRs: caseData.caseRecord.reviewVRs ?? existingCase.caseRecord.reviewVRs ?? false,
+      reviewPriorBudgets: caseData.caseRecord.reviewPriorBudgets ?? existingCase.caseRecord.reviewPriorBudgets ?? false,
+      reviewPriorNarr: caseData.caseRecord.reviewPriorNarr ?? existingCase.caseRecord.reviewPriorNarr ?? false,
+      pregnancy: caseData.caseRecord.pregnancy ?? existingCase.caseRecord.pregnancy ?? false,
+      avsConsentDate: caseData.caseRecord.avsConsentDate ?? existingCase.caseRecord.avsConsentDate ?? '',
+      maritalStatus: caseData.caseRecord.maritalStatus ?? existingCase.caseRecord.maritalStatus ?? '',
+      voterFormStatus: caseData.caseRecord.voterFormStatus ?? existingCase.caseRecord.voterFormStatus ?? '',
       updatedDate: timestamp
     };
 
