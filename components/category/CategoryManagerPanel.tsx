@@ -459,7 +459,7 @@ function StatusCategoryEditor({
     // Cycle to next color for convenience
     const currentIndex = COLOR_SLOTS.indexOf(draftColor);
     setDraftColor(COLOR_SLOTS[(currentIndex + 1) % COLOR_SLOTS.length]);
-  }, [draftName, draftColor, valueMeta]);
+  }, [draftName, draftColor, draftCountsAsCompleted, valueMeta]);
 
   const handleRevert = useCallback(() => {
     setValues(statusConfigs.map(s => ({ ...s })));
