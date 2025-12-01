@@ -40,6 +40,9 @@ class ErrorReportingService {
   }
 
   private setupGlobalHandlers() {
+    // Skip if window is not available (e.g., during test teardown or SSR)
+    if (typeof window === 'undefined') return;
+
     // Handle unhandled promise rejections
     window.addEventListener('unhandledrejection', (event) => {
       this.reportError(
@@ -74,6 +77,8 @@ class ErrorReportingService {
   }
 
   private loadReports() {
+    if (typeof localStorage === 'undefined') return;
+
     try {
       const stored = localStorage.getItem('cmsnext_error_reports');
       if (stored) {
@@ -85,6 +90,8 @@ class ErrorReportingService {
   }
 
   private saveReports() {
+    if (typeof localStorage === 'undefined') return;
+
     try {
       // Keep only the most recent reports
       if (this.reports.length > this.maxReports) {
@@ -221,8 +228,8 @@ class ErrorReportingService {
       context: {
         componentStack: options.componentStack,
         props: options.context?.props,
-        userAgent: navigator.userAgent,
-        url: window.location.href,
+        userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : 'unknown',
+        url: typeof window !== 'undefined' ? window.location.href : 'unknown',
         ...options.context,
       },
       severity: options.severity || this.determineSeverity(error, options.context),
