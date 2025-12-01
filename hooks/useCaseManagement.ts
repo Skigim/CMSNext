@@ -312,8 +312,8 @@ export function useCaseManagement(): UseCaseManagementReturn {
       
       setHasLoadedData(true);
       
-  // Set baseline - we now have data
-  updateFileStorageFlags({ dataBaseline: true, sessionHadData: true });
+      // Set baseline - we now have data
+      updateFileStorageFlags({ dataBaseline: true, sessionHadData: true });
       
       toast.success(`Imported ${importedCases.length} cases successfully`);
     } catch (err) {
@@ -340,8 +340,8 @@ export function useCaseManagement(): UseCaseManagementReturn {
     saveCase,
     deleteCase,
     saveNote,
-  importCases,
-  updateCaseStatus,
+    importCases,
+    updateCaseStatus,
     
     // State setters for external control
     setCases,
