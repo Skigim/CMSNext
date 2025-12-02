@@ -10,7 +10,7 @@ import type {
   NewCaseRecordData,
   NewPersonData,
 } from "../../types/case";
-import type { ItemFormState } from "../../hooks/useFinancialItemFlow";
+import type { ItemFormState, FinancialFormData, FinancialFormErrors } from "../../hooks/useFinancialItemFlow";
 import type { AlertsIndex, AlertWithMatch } from "../../utils/alertsData";
 import type { CaseActivityLogState } from "../../types/activityLog";
 import { Alert, AlertTitle, AlertDescription } from "../ui/alert";
@@ -31,6 +31,10 @@ interface CaseWorkspaceViewHandlers {
 
 interface CaseWorkspaceFinancialFlow {
   itemForm: ItemFormState;
+  formData: FinancialFormData;
+  formErrors: FinancialFormErrors;
+  addAnother: boolean;
+  isEditing: boolean;
   handleAddItem: (category: CaseCategory) => void;
   handleDeleteItem: (category: CaseCategory, itemId: string) => Promise<void>;
   handleBatchUpdateItem: (
@@ -43,8 +47,9 @@ interface CaseWorkspaceFinancialFlow {
     itemData: Omit<FinancialItem, "id" | "createdAt" | "updatedAt">,
   ) => Promise<void>;
   handleCancelItemForm: () => void;
-  closeItemForm: () => void;
-  onCaseUpdated: (updatedCase: StoredCase) => void;
+  handleSaveItem: () => Promise<boolean>;
+  updateFormField: <K extends keyof FinancialFormData>(field: K, value: FinancialFormData[K]) => void;
+  setAddAnother: (value: boolean) => void;
 }
 
 export interface CaseWorkspaceProps {
@@ -129,13 +134,15 @@ export const CaseWorkspace = memo(function CaseWorkspace({
           <FinancialItemModal
             isOpen={financialFlow.itemForm.isOpen}
             onClose={financialFlow.handleCancelItemForm}
+            onSave={financialFlow.handleSaveItem}
             caseData={selectedCase}
-            onUpdateCase={(updatedCase: StoredCase) => {
-              financialFlow.onCaseUpdated(updatedCase);
-              financialFlow.closeItemForm();
-            }}
             itemType={financialFlow.itemForm.category}
-            editingItem={financialFlow.itemForm.item}
+            isEditing={financialFlow.isEditing}
+            formData={financialFlow.formData}
+            formErrors={financialFlow.formErrors}
+            addAnother={financialFlow.addAnother}
+            onFormFieldChange={financialFlow.updateFormField}
+            onAddAnotherChange={financialFlow.setAddAnother}
           />
         </Suspense>
       )}

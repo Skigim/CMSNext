@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react";
+import { useCallback, useState, useEffect } from "react";
 import { toast } from "sonner";
 import { useDataManagerSafe } from "../contexts/DataManagerContext";
 import type { CaseCategory, StoredCase, FinancialItem } from "../types/case";
@@ -10,15 +10,77 @@ export type ItemFormState = {
   caseId?: string;
 };
 
+export interface FinancialFormData {
+  id: string | null;
+  description: string;
+  location: string;
+  accountNumber: string;
+  amount: number;
+  frequency: string;
+  owner: string;
+  verificationStatus: string;
+  verificationSource: string;
+  notes: string;
+  dateAdded: string;
+}
+
+export interface FinancialFormErrors {
+  [key: string]: string | null;
+}
+
+const createEmptyFormData = (): FinancialFormData => ({
+  id: null,
+  description: "",
+  location: "",
+  accountNumber: "",
+  amount: 0,
+  frequency: "monthly",
+  owner: "applicant",
+  verificationStatus: "Needs VR",
+  verificationSource: "",
+  notes: "",
+  dateAdded: new Date().toISOString(),
+});
+
+const createFormDataFromItem = (item: FinancialItem): FinancialFormData => ({
+  id: item.id,
+  description: item.description || item.name || "",
+  location: item.location || "",
+  accountNumber: item.accountNumber || "",
+  amount: item.amount || 0,
+  frequency: item.frequency || "monthly",
+  owner: item.owner || "applicant",
+  verificationStatus: item.verificationStatus || "Needs VR",
+  verificationSource: item.verificationSource || "",
+  notes: item.notes || "",
+  dateAdded: item.dateAdded || new Date().toISOString(),
+});
+
 interface UseFinancialItemFlowParams {
   selectedCase: StoredCase | null;
   setError: React.Dispatch<React.SetStateAction<string | null>>;
 }
 
 interface UseFinancialItemFlowResult {
+  // Modal state
   itemForm: ItemFormState;
-  openItemForm: (category: CaseCategory) => void;
+  openItemForm: (category: CaseCategory, item?: FinancialItem) => void;
   closeItemForm: () => void;
+  
+  // Form state
+  formData: FinancialFormData;
+  formErrors: FinancialFormErrors;
+  addAnother: boolean;
+  setAddAnother: (value: boolean) => void;
+  updateFormField: <K extends keyof FinancialFormData>(field: K, value: FinancialFormData[K]) => void;
+  
+  // Form validation
+  validateForm: () => boolean;
+  
+  // Form submission
+  handleSaveItem: () => Promise<boolean>;
+  
+  // Direct item operations (for batch/inline edits)
   handleDeleteItem: (category: CaseCategory, itemId: string) => Promise<void>;
   handleBatchUpdateItem: (
     category: CaseCategory,
@@ -29,6 +91,9 @@ interface UseFinancialItemFlowResult {
     category: CaseCategory,
     itemData: Omit<FinancialItem, "id" | "createdAt" | "updatedAt">,
   ) => Promise<void>;
+  
+  // Computed properties
+  isEditing: boolean;
 }
 
 export function useFinancialItemFlow({
@@ -37,6 +102,22 @@ export function useFinancialItemFlow({
 }: UseFinancialItemFlowParams): UseFinancialItemFlowResult {
   const dataManager = useDataManagerSafe();
   const [itemForm, setItemForm] = useState<ItemFormState>({ isOpen: false });
+  const [formData, setFormData] = useState<FinancialFormData>(createEmptyFormData);
+  const [formErrors, setFormErrors] = useState<FinancialFormErrors>({});
+  const [addAnother, setAddAnother] = useState(false);
+
+  const isEditing = !!itemForm.item;
+
+  // Reset form when modal opens/closes or editing item changes
+  useEffect(() => {
+    if (itemForm.isOpen && itemForm.item) {
+      setFormData(createFormDataFromItem(itemForm.item));
+    } else if (itemForm.isOpen && !itemForm.item) {
+      setFormData(createEmptyFormData());
+    }
+    setFormErrors({});
+    setAddAnother(false);
+  }, [itemForm.isOpen, itemForm.item]);
 
   const ensureCaseAndManager = useCallback(() => {
     if (!selectedCase) return false;
@@ -51,7 +132,7 @@ export function useFinancialItemFlow({
   }, [dataManager, selectedCase, setError]);
 
   const openItemForm = useCallback(
-    (category: CaseCategory) => {
+    (category: CaseCategory, item?: FinancialItem) => {
       if (!selectedCase) {
         return;
       }
@@ -59,6 +140,7 @@ export function useFinancialItemFlow({
         isOpen: true,
         category,
         caseId: selectedCase.id,
+        item,
       });
     },
     [selectedCase],
@@ -67,6 +149,124 @@ export function useFinancialItemFlow({
   const closeItemForm = useCallback(() => {
     setItemForm({ isOpen: false });
   }, []);
+
+  const updateFormField = useCallback(<K extends keyof FinancialFormData>(
+    field: K,
+    value: FinancialFormData[K],
+  ) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
+    // Clear error when user starts typing
+    if (formErrors[field]) {
+      setFormErrors(prev => ({ ...prev, [field]: null }));
+    }
+  }, [formErrors]);
+
+  const validateForm = useCallback((): boolean => {
+    const newErrors: FinancialFormErrors = {};
+
+    if (!formData.description.trim()) {
+      newErrors.description = "Description is required";
+    }
+
+    if (formData.amount < 0) {
+      newErrors.amount = "Amount cannot be negative";
+    }
+
+    if (formData.verificationStatus === "Verified" && !formData.verificationSource.trim()) {
+      newErrors.verificationSource = "Verification source is required when status is Verified";
+    }
+
+    setFormErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  }, [formData.description, formData.amount, formData.verificationStatus, formData.verificationSource]);
+
+  const handleSaveItem = useCallback(async (): Promise<boolean> => {
+    if (!validateForm()) return false;
+
+    if (!dataManager) {
+      setFormErrors({ general: "Data storage is not available. Please check your connection." });
+      return false;
+    }
+
+    if (!selectedCase || !itemForm.category) {
+      setFormErrors({ general: "No case or category selected." });
+      return false;
+    }
+
+    // Verify case exists in data manager before proceeding
+    if (isEditing && formData.id) {
+      try {
+        const allCases = await dataManager.getAllCases();
+        const caseExists = allCases.find((c: StoredCase) => c.id === selectedCase.id);
+
+        if (!caseExists) {
+          console.error("❌ Case not found in data manager:", {
+            requestedCaseId: selectedCase.id,
+            availableCaseIds: allCases.map((c: StoredCase) => c.id),
+            totalCases: allCases.length,
+          });
+          setFormErrors({ general: `Case not found in data storage. Case ID: ${selectedCase.id}` });
+          return false;
+        }
+      } catch (checkError) {
+        console.error("❌ Error checking case existence:", checkError);
+        setFormErrors({ general: "Error verifying case data. Please try again." });
+        return false;
+      }
+    }
+
+    const itemData = {
+      description: formData.description,
+      name: formData.description, // For backward compatibility
+      location: formData.location,
+      accountNumber: formData.accountNumber,
+      amount: parseFloat(formData.amount.toString()) || 0,
+      frequency: formData.frequency,
+      owner: formData.owner,
+      verificationStatus: formData.verificationStatus as "Needs VR" | "VR Pending" | "AVS Pending" | "Verified",
+      verificationSource: formData.verificationSource,
+      notes: formData.notes,
+      dateAdded: formData.dateAdded,
+    };
+
+    try {
+      const categoryLabel = itemForm.category.charAt(0).toUpperCase() + itemForm.category.slice(1);
+
+      if (isEditing && formData.id) {
+        await dataManager.updateItem(selectedCase.id, itemForm.category, formData.id, itemData);
+        toast.success(`${categoryLabel} item updated successfully`);
+      } else {
+        await dataManager.addItem(selectedCase.id, itemForm.category, itemData);
+        toast.success(`${categoryLabel} item added successfully`);
+      }
+
+      if (addAnother && !isEditing) {
+        // Reset form for another item
+        setFormData(createEmptyFormData());
+        setFormErrors({});
+        toast.info("Ready to add another item");
+        return true; // Success but keep modal open
+      }
+
+      closeItemForm();
+      return true;
+    } catch (error) {
+      console.error("Failed to save financial item:", error);
+      const errorMsg = `Failed to ${isEditing ? "update" : "save"} item. Please try again.`;
+      setFormErrors({ general: errorMsg });
+      toast.error(errorMsg);
+      return false;
+    }
+  }, [
+    validateForm,
+    dataManager,
+    selectedCase,
+    itemForm.category,
+    isEditing,
+    formData,
+    addAnother,
+    closeItemForm,
+  ]);
 
   const handleDeleteItem = useCallback(
     async (category: CaseCategory, itemId: string) => {
@@ -154,12 +354,31 @@ export function useFinancialItemFlow({
   );
 
   return {
+    // Modal state
     itemForm,
     openItemForm,
     closeItemForm,
+    
+    // Form state
+    formData,
+    formErrors,
+    addAnother,
+    setAddAnother,
+    updateFormField,
+    
+    // Form validation
+    validateForm,
+    
+    // Form submission
+    handleSaveItem,
+    
+    // Direct item operations
     handleDeleteItem,
     handleBatchUpdateItem,
     handleCreateItem,
+    
+    // Computed
+    isEditing,
   };
 }
 

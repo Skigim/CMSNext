@@ -1,4 +1,3 @@
-import { useState, useEffect } from "react";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 import { Label } from "../ui/label";
@@ -6,237 +5,41 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from ".
 import { Textarea } from "../ui/textarea";
 import { Checkbox } from "../ui/checkbox";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "../ui/dialog";
-import { FinancialItem, CaseCategory, StoredCase } from "../../types/case";
-import { useDataManagerSafe } from "../../contexts/DataManagerContext";
+import { CaseCategory, StoredCase } from "../../types/case";
 import { AlertCircle } from "lucide-react";
-import { toast } from "sonner";
+import type { FinancialFormData, FinancialFormErrors } from "../../hooks/useFinancialItemFlow";
 
 
 
 interface FinancialItemModalProps {
   isOpen: boolean;
   onClose: () => void;
+  onSave: () => Promise<boolean>;
   caseData: StoredCase;
-  onUpdateCase: (updatedCase: StoredCase) => void;
   itemType: CaseCategory;
-  editingItem?: FinancialItem | null;
-}
-
-interface FormData {
-  id: string | null;
-  description: string;
-  location: string;
-  accountNumber: string;
-  amount: number;
-  frequency: string;
-  owner: string;
-  verificationStatus: string;
-  verificationSource: string;
-  notes: string;
-  dateAdded: string;
-}
-
-interface FormErrors {
-  [key: string]: string | null;
+  isEditing: boolean;
+  // Form state from hook
+  formData: FinancialFormData;
+  formErrors: FinancialFormErrors;
+  addAnother: boolean;
+  onFormFieldChange: <K extends keyof FinancialFormData>(field: K, value: FinancialFormData[K]) => void;
+  onAddAnotherChange: (value: boolean) => void;
 }
 
 export function FinancialItemModal({
   isOpen,
   onClose,
+  onSave,
   caseData,
-  onUpdateCase,
   itemType,
-  editingItem = null
+  isEditing,
+  formData,
+  formErrors,
+  addAnother,
+  onFormFieldChange,
+  onAddAnotherChange,
 }: FinancialItemModalProps) {
-  // Hook must be called at top level, not inside async functions
-  const dataManager = useDataManagerSafe();
-  
-  const [formData, setFormData] = useState<FormData>({
-    id: null,
-    description: '',
-    location: '',
-    accountNumber: '',
-    amount: 0,
-    frequency: 'monthly',
-    owner: 'applicant',
-    verificationStatus: 'Needs VR',
-    verificationSource: '',
-    notes: '',
-    dateAdded: new Date().toISOString(),
-  });
-
-  const [addAnother, setAddAnother] = useState(false);
-  const [errors, setErrors] = useState<FormErrors>({});
-
-  const isSimpCase = caseData.caseRecord.caseType === 'LTC'; // Assuming LTC cases need owner field
-  const isEditing = !!editingItem;
-
-  // Reset form when modal opens/closes or editing item changes
-  useEffect(() => {
-    if (isOpen && editingItem) {
-      setFormData({
-        id: editingItem.id,
-        description: editingItem.description || editingItem.name || '',
-        location: editingItem.location || '',
-        accountNumber: editingItem.accountNumber || '',
-        amount: editingItem.amount || 0,
-        frequency: editingItem.frequency || 'monthly',
-        owner: editingItem.owner || 'applicant',
-        verificationStatus: editingItem.verificationStatus || 'Needs VR',
-        verificationSource: editingItem.verificationSource || '',
-        notes: editingItem.notes || '',
-        dateAdded: editingItem.dateAdded || new Date().toISOString(),
-      });
-    } else if (isOpen && !editingItem) {
-      setFormData({
-        id: null,
-        description: '',
-        location: '',
-        accountNumber: '',
-        amount: 0,
-        frequency: 'monthly',
-        owner: 'applicant',
-        verificationStatus: 'Needs VR',
-        verificationSource: '',
-        notes: '',
-        dateAdded: new Date().toISOString(),
-      });
-    }
-    setErrors({});
-    setAddAnother(false);
-  }, [isOpen, editingItem]);
-
-  const updateFormData = (field: keyof FormData, value: any) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
-    // Clear error when user starts typing
-    if (errors[field]) {
-      setErrors(prev => ({ ...prev, [field]: null }));
-    }
-  };
-
-  const validateForm = (): boolean => {
-    const newErrors: FormErrors = {};
-
-    if (!formData.description.trim()) {
-      newErrors.description = 'Description is required';
-    }
-
-    if (formData.amount < 0) {
-      newErrors.amount = 'Amount cannot be negative';
-    }
-
-    if (formData.verificationStatus === 'Verified' && !formData.verificationSource.trim()) {
-      newErrors.verificationSource = 'Verification source is required when status is Verified';
-    }
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
-
-  const handleSave = async () => {
-    if (!validateForm()) return;
-
-    // Check if data manager is available (use the hook value from component top level)
-    if (!dataManager) {
-      setErrors({ general: 'Data storage is not available. Please check your connection.' });
-      return;
-    }
-
-    // Debug logging to help identify case mismatch issues
-    if (isEditing && formData.id) {
-      console.log('🔍 Updating financial item:', {
-        caseId: caseData.id,
-        itemType,
-        itemId: formData.id,
-        dataManagerType: 'DataManager'
-      });
-      
-      // Check if the case exists in the data manager
-      try {
-        const allCases = await dataManager.getAllCases();
-        const caseExists = allCases.find((c: StoredCase) => c.id === caseData.id);
-        
-        if (!caseExists) {
-          console.error('❌ Case not found in data manager:', {
-            requestedCaseId: caseData.id,
-            availableCaseIds: allCases.map((c: StoredCase) => c.id),
-            totalCases: allCases.length
-          });
-          setErrors({ general: `Case not found in data storage. Case ID: ${caseData.id}` });
-          return;
-        }
-        
-        console.log('✅ Case found in data manager:', caseExists.name);
-      } catch (checkError) {
-        console.error('❌ Error checking case existence:', checkError);
-        setErrors({ general: 'Error verifying case data. Please try again.' });
-        return;
-      }
-    }
-
-    const itemData = {
-      description: formData.description,
-      name: formData.description, // For backward compatibility
-      location: formData.location,
-      accountNumber: formData.accountNumber,
-      amount: parseFloat(formData.amount.toString()) || 0,
-      frequency: formData.frequency,
-      owner: formData.owner,
-      verificationStatus: formData.verificationStatus as "Needs VR" | "VR Pending" | "AVS Pending" | "Verified",
-      verificationSource: formData.verificationSource,
-      notes: formData.notes,
-      dateAdded: formData.dateAdded,
-    };
-
-    try {
-      if (isEditing && formData.id) {
-        // Update existing item
-        await dataManager.updateItem(caseData.id, itemType, formData.id, itemData);
-        toast.success(`${itemType.charAt(0).toUpperCase() + itemType.slice(1)} item updated successfully`);
-      } else {
-        // Add new item
-        console.log('🔍 Adding financial item:', {
-          caseId: caseData.id,
-          itemType,
-          dataManagerType: 'DataManager'
-        });
-        
-        await dataManager.addItem(caseData.id, itemType, itemData);
-        toast.success(`${itemType.charAt(0).toUpperCase() + itemType.slice(1)} item added successfully`);
-      }
-
-      // Notify parent that case was updated (it will re-fetch data via hooks)
-      onUpdateCase(caseData);
-
-      // DataManager handles file system persistence automatically
-
-      if (addAnother && !isEditing) {
-        // Reset form for another item
-        setFormData({
-          id: null,
-          description: '',
-          location: '',
-          accountNumber: '',
-          amount: 0,
-          frequency: 'monthly',
-          owner: 'applicant',
-          verificationStatus: 'Needs VR',
-          verificationSource: '',
-          notes: '',
-          dateAdded: new Date().toISOString(),
-        });
-        setErrors({});
-        toast.info("Ready to add another item");
-      } else {
-        onClose();
-      }
-    } catch (error) {
-      console.error('Failed to save financial item:', error);
-      const errorMsg = `Failed to ${isEditing ? 'update' : 'save'} item. Please try again.`;
-      setErrors({ general: errorMsg });
-      toast.error(errorMsg);
-    }
-  };
+  const isSimpCase = caseData.caseRecord.caseType === 'LTC'; // LTC cases need owner field
 
   const getPlaceholders = () => {
     const placeholders = {
@@ -258,9 +61,9 @@ export function FinancialItemModal({
 
   const placeholders = getPlaceholders();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    handleSave();
+    await onSave();
   };
 
   return (
@@ -285,10 +88,10 @@ export function FinancialItemModal({
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-6">
-          {errors.general && (
+          {formErrors.general && (
             <div className="flex items-center gap-2 text-sm text-destructive bg-destructive/10 p-3 rounded-md">
               <AlertCircle className="h-4 w-4" />
-              {errors.general}
+              {formErrors.general}
             </div>
           )}
           
@@ -299,14 +102,14 @@ export function FinancialItemModal({
               <Input
                 id="description"
                 value={formData.description}
-                onChange={(e) => updateFormData('description', e.target.value)}
+                onChange={(e) => onFormFieldChange('description', e.target.value)}
                 placeholder={placeholders.description}
-                className={errors.description ? 'border-destructive' : ''}
+                className={formErrors.description ? 'border-destructive' : ''}
               />
-              {errors.description && (
+              {formErrors.description && (
                 <div className="flex items-center gap-2 text-sm text-destructive">
                   <AlertCircle className="h-4 w-4" />
-                  {errors.description}
+                  {formErrors.description}
                 </div>
               )}
             </div>
@@ -316,7 +119,7 @@ export function FinancialItemModal({
               <Input
                 id="location"
                 value={formData.location}
-                onChange={(e) => updateFormData('location', e.target.value)}
+                onChange={(e) => onFormFieldChange('location', e.target.value)}
                 placeholder={placeholders.location}
               />
             </div>
@@ -333,7 +136,7 @@ export function FinancialItemModal({
               <Input
                 id="accountNumber"
                 value={formData.accountNumber}
-                onChange={(e) => updateFormData('accountNumber', e.target.value)}
+                onChange={(e) => onFormFieldChange('accountNumber', e.target.value)}
                 placeholder="Last 4 digits: 1234"
               />
             </div>
@@ -344,15 +147,15 @@ export function FinancialItemModal({
                 id="amount"
                 type="number"
                 value={formData.amount}
-                onChange={(e) => updateFormData('amount', e.target.value)}
+                onChange={(e) => onFormFieldChange('amount', parseFloat(e.target.value) || 0)}
                 min="0"
                 step="0.01"
-                className={errors.amount ? 'border-destructive' : ''}
+                className={formErrors.amount ? 'border-destructive' : ''}
               />
-              {errors.amount && (
+              {formErrors.amount && (
                 <div className="flex items-center gap-2 text-sm text-destructive">
                   <AlertCircle className="h-4 w-4" />
-                  {errors.amount}
+                  {formErrors.amount}
                 </div>
               )}
             </div>
@@ -362,7 +165,7 @@ export function FinancialItemModal({
                 <Label htmlFor="frequency">Frequency</Label>
                 <Select
                   value={formData.frequency}
-                  onValueChange={(value) => updateFormData('frequency', value)}
+                  onValueChange={(value) => onFormFieldChange('frequency', value)}
                 >
                   <SelectTrigger>
                     <SelectValue />
@@ -385,7 +188,7 @@ export function FinancialItemModal({
               <Label htmlFor="verificationStatus">Verification Status</Label>
               <Select
                 value={formData.verificationStatus}
-                onValueChange={(value) => updateFormData('verificationStatus', value)}
+                onValueChange={(value) => onFormFieldChange('verificationStatus', value)}
               >
                 <SelectTrigger>
                   <SelectValue />
@@ -404,19 +207,19 @@ export function FinancialItemModal({
               <Input
                 id="verificationSource"
                 value={formData.verificationSource}
-                onChange={(e) => updateFormData('verificationSource', e.target.value)}
+                onChange={(e) => onFormFieldChange('verificationSource', e.target.value)}
                 placeholder="e.g., Bank Statement 05/2025, Award Letter"
                 disabled={formData.verificationStatus !== 'Verified'}
                 className={`${
                   formData.verificationStatus !== 'Verified' 
                     ? 'opacity-50 cursor-not-allowed' 
                     : ''
-                } ${errors.verificationSource ? 'border-destructive' : ''}`}
+                } ${formErrors.verificationSource ? 'border-destructive' : ''}`}
               />
-              {errors.verificationSource && (
+              {formErrors.verificationSource && (
                 <div className="flex items-center gap-2 text-sm text-destructive">
                   <AlertCircle className="h-4 w-4" />
-                  {errors.verificationSource}
+                  {formErrors.verificationSource}
                 </div>
               )}
             </div>
@@ -429,7 +232,7 @@ export function FinancialItemModal({
                 <Label htmlFor="owner">Owner</Label>
                 <Select
                   value={formData.owner}
-                  onValueChange={(value) => updateFormData('owner', value)}
+                  onValueChange={(value) => onFormFieldChange('owner', value)}
                 >
                   <SelectTrigger>
                     <SelectValue />
@@ -451,7 +254,7 @@ export function FinancialItemModal({
             <Textarea
               id="notes"
               value={formData.notes}
-              onChange={(e) => updateFormData('notes', e.target.value)}
+              onChange={(e) => onFormFieldChange('notes', e.target.value)}
               placeholder="Additional notes about this item..."
               rows={3}
             />
@@ -463,7 +266,7 @@ export function FinancialItemModal({
               <Checkbox
                 id="addAnother"
                 checked={addAnother}
-                onCheckedChange={(checked) => setAddAnother(checked === true)}
+                onCheckedChange={(checked) => onAddAnotherChange(checked === true)}
               />
               <Label htmlFor="addAnother">
                 Add another item after saving
@@ -476,7 +279,7 @@ export function FinancialItemModal({
           <Button type="button" variant="outline" onClick={onClose}>
             Cancel
           </Button>
-          <Button type="submit" onClick={handleSave}>
+          <Button type="submit" onClick={onSave}>
             {isEditing ? 'Update Item' : 'Save Item'}
           </Button>
         </DialogFooter>

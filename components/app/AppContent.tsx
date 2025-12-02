@@ -124,6 +124,13 @@ export const AppContent = memo(function AppContent() {
     handleDeleteItem: deleteFinancialItem,
     handleBatchUpdateItem: batchUpdateFinancialItem,
     handleCreateItem: createFinancialItem,
+    formData,
+    formErrors,
+    addAnother,
+    setAddAnother,
+    updateFormField,
+    handleSaveItem,
+    isEditing,
   } = useFinancialItemFlow({
     selectedCase: selectedCase ?? null,
     setError,
@@ -230,13 +237,6 @@ export const AppContent = memo(function AppContent() {
     [setSidebarOpen],
   );
 
-  const handleCaseUpdated = useCallback(
-    (updatedCase: StoredCase) => {
-      setCases(prevCases => prevCases.map(c => (c.id === updatedCase.id ? updatedCase : c)));
-    },
-    [setCases],
-  );
-
   const handleUpdateCaseStatus = useCallback(
     async (caseId: string, status: StoredCase["status"]) => {
       const result = await updateCaseStatus(caseId, status);
@@ -296,23 +296,33 @@ export const AppContent = memo(function AppContent() {
   const financialFlow = useMemo(
     () => ({
       itemForm,
+      formData,
+      formErrors,
+      addAnother,
+      isEditing,
       handleAddItem,
       handleDeleteItem,
       handleBatchUpdateItem,
       handleCreateItem,
       handleCancelItemForm,
-      closeItemForm,
-      onCaseUpdated: handleCaseUpdated,
+      handleSaveItem,
+      updateFormField,
+      setAddAnother,
     }),
     [
-      closeItemForm,
+      addAnother,
+      formData,
+      formErrors,
       handleAddItem,
       handleBatchUpdateItem,
       handleCancelItemForm,
-      handleCaseUpdated,
       handleCreateItem,
       handleDeleteItem,
+      handleSaveItem,
+      isEditing,
       itemForm,
+      setAddAnother,
+      updateFormField,
     ],
   );
 

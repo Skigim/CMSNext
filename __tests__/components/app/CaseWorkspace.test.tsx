@@ -76,13 +76,30 @@ describe("CaseWorkspace", () => {
 
   const baseFinancialFlow: CaseWorkspaceProps["financialFlow"] = {
     itemForm: { isOpen: false },
+    formData: {
+      id: null,
+      description: "",
+      location: "",
+      accountNumber: "",
+      amount: 0,
+      frequency: "monthly",
+      owner: "applicant",
+      verificationStatus: "Needs VR",
+      verificationSource: "",
+      notes: "",
+      dateAdded: new Date().toISOString(),
+    },
+    formErrors: {},
+    addAnother: false,
+    isEditing: false,
     handleAddItem: vi.fn(),
     handleDeleteItem: asyncVoid(),
     handleBatchUpdateItem: asyncVoid(),
     handleCreateItem: asyncVoid(),
     handleCancelItemForm: vi.fn(),
-    closeItemForm: vi.fn(),
-    onCaseUpdated: vi.fn(),
+    handleSaveItem: vi.fn(async () => true),
+    updateFormField: vi.fn(),
+    setAddAnother: vi.fn(),
   };
 
   beforeEach(() => {
@@ -132,7 +149,7 @@ describe("CaseWorkspace", () => {
     const financialFlow = {
       ...baseFinancialFlow,
       itemForm: { isOpen: true, category: 'income' as CaseCategory },
-    } satisfies CaseWorkspaceProps["financialFlow"];
+    };
 
     render(
       <CaseWorkspace
