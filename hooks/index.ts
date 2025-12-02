@@ -55,6 +55,10 @@ export { useFileDataSync } from './useFileDataSync';
 // Alerts flow management
 export { useAlertsFlow } from './useAlertsFlow';
 
+// AVS import flow management
+export { useAVSImportFlow } from './useAVSImportFlow';
+export type { AVSImportState } from './useAVSImportFlow';
+
 // Form validation hooks
 export { 
   useFormValidation,

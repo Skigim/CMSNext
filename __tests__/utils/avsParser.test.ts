@@ -1,0 +1,243 @@
+import { describe, it, expect } from 'vitest';
+import {
+  parseAccountBlock,
+  parseAVSInput,
+  avsAccountToFinancialItem,
+  avsAccountsToFinancialItems,
+  KNOWN_ACCOUNT_TYPES,
+} from '../../utils/avsParser';
+
+describe('avsParser', () => {
+  describe('parseAccountBlock', () => {
+    it('parses a complete account block with all fields', () => {
+      const block = `John Doe; Jane Doe CHECKING
+First National Bank - (123456789)
+123 Main Street
+Anytown, ST 12345
+Balance as of 12/01/2025 - $5,432.10
+Refresh Date: 12/01/2025`;
+
+      const result = parseAccountBlock(block);
+
+      expect(result).not.toBeNull();
+      expect(result?.accountOwner).toBe('John Doe, Jane Doe');
+      expect(result?.accountType).toBe('CHECKING');
+      expect(result?.bankName).toBe('First National Bank');
+      expect(result?.accountNumber).toBe('6789');
+      expect(result?.address).toBe('123 Main Street Anytown, ST 12345');
+      expect(result?.balance).toBe('$5,432.10');
+      expect(result?.balanceAmount).toBe(5432.10);
+      expect(result?.refreshDate).toBe('12/01/2025');
+    });
+
+    it('parses account with SAVINGS type', () => {
+      const block = `Jane Smith SAVINGS
+Community Credit Union - (9876)
+456 Oak Ave
+Balance as of 11/15/2025 - $10,000.00`;
+
+      const result = parseAccountBlock(block);
+
+      expect(result?.accountType).toBe('SAVINGS');
+      expect(result?.accountOwner).toBe('Jane Smith');
+      expect(result?.bankName).toBe('Community Credit Union');
+      expect(result?.accountNumber).toBe('9876');
+      expect(result?.balanceAmount).toBe(10000);
+    });
+
+    it('handles accounts without recognized type', () => {
+      const block = `John Doe - Unknown Account Type
+Some Bank - (1234)
+Balance as of 01/01/2025 - $100.00`;
+
+      const result = parseAccountBlock(block);
+
+      expect(result?.accountType).toBe('N/A');
+      expect(result?.accountOwner).toBe('John Doe - Unknown Account Type');
+    });
+
+    it('returns null for blocks with less than 2 lines', () => {
+      expect(parseAccountBlock('Single line')).toBeNull();
+      expect(parseAccountBlock('')).toBeNull();
+    });
+
+    it('masks account number to last 4 digits', () => {
+      const block = `Owner CHECKING
+Bank - (12345678901234)
+Balance as of 01/01/2025 - $0.00`;
+
+      const result = parseAccountBlock(block);
+      expect(result?.accountNumber).toBe('1234');
+    });
+
+    it('handles missing balance line', () => {
+      const block = `Owner CHECKING
+Bank - (1234)
+123 Main St`;
+
+      const result = parseAccountBlock(block);
+
+      expect(result?.balance).toBe('N/A');
+      expect(result?.balanceAmount).toBe(0);
+    });
+
+    it('handles missing refresh date', () => {
+      const block = `Owner CHECKING
+Bank - (1234)
+Balance as of 01/01/2025 - $500.00`;
+
+      const result = parseAccountBlock(block);
+      expect(result?.refreshDate).toBe('N/A');
+    });
+  });
+
+  describe('parseAVSInput', () => {
+    it('parses multiple account blocks separated by double newlines', () => {
+      const input = `Owner1 CHECKING
+Bank1 - (1111)
+Balance as of 01/01/2025 - $1,000.00
+
+Owner2 SAVINGS
+Bank2 - (2222)
+Balance as of 01/01/2025 - $2,000.00`;
+
+      const results = parseAVSInput(input);
+
+      expect(results).toHaveLength(2);
+      expect(results[0].accountType).toBe('CHECKING');
+      expect(results[1].accountType).toBe('SAVINGS');
+    });
+
+    it('handles blocks separated by dashes', () => {
+      const input = `Owner1 CHECKING
+Bank1 - (1111)
+Balance as of 01/01/2025 - $1,000.00
+---
+Owner2 SAVINGS
+Bank2 - (2222)
+Balance as of 01/01/2025 - $2,000.00`;
+
+      const results = parseAVSInput(input);
+      expect(results).toHaveLength(2);
+    });
+
+    it('returns empty array for empty input', () => {
+      expect(parseAVSInput('')).toEqual([]);
+      expect(parseAVSInput('   ')).toEqual([]);
+    });
+
+    it('handles Windows line endings', () => {
+      const input = `Owner CHECKING\r\nBank - (1234)\r\nBalance as of 01/01/2025 - $100.00`;
+      const results = parseAVSInput(input);
+      expect(results).toHaveLength(1);
+    });
+
+    it('filters out unparseable blocks', () => {
+      const input = `Owner CHECKING
+Bank - (1234)
+Balance as of 01/01/2025 - $100.00
+
+Single line block
+
+Another SAVINGS
+AnotherBank - (5678)
+Balance as of 01/01/2025 - $200.00`;
+
+      const results = parseAVSInput(input);
+      expect(results).toHaveLength(2);
+    });
+  });
+
+  describe('avsAccountToFinancialItem', () => {
+    it('converts parsed account to financial item format', () => {
+      const account = {
+        accountOwner: 'John Doe',
+        accountType: 'CHECKING',
+        bankName: 'First National Bank',
+        accountNumber: '6789',
+        address: '123 Main St',
+        balance: '$5,000.00',
+        balanceAmount: 5000,
+        refreshDate: '12/01/2025',
+      };
+
+      const item = avsAccountToFinancialItem(account);
+
+      expect(item.description).toBe('CHECKING at First National Bank');
+      expect(item.amount).toBe(5000);
+      expect(item.location).toBe('First National Bank');
+      expect(item.accountNumber).toBe('****6789');
+      expect(item.owner).toBe('John Doe');
+      expect(item.verificationStatus).toBe('Verified');
+      expect(item.verificationSource).toBe('AVS');
+      expect(item.notes).toContain('Address: 123 Main St');
+      expect(item.notes).toContain('AVS Refresh Date: 12/01/2025');
+    });
+
+    it('handles N/A values gracefully', () => {
+      const account = {
+        accountOwner: 'N/A',
+        accountType: 'N/A',
+        bankName: 'N/A',
+        accountNumber: 'N/A',
+        address: '',
+        balance: 'N/A',
+        balanceAmount: 0,
+        refreshDate: 'N/A',
+      };
+
+      const item = avsAccountToFinancialItem(account);
+
+      expect(item.description).toBe('AVS Imported Account');
+      expect(item.amount).toBe(0);
+      expect(item.location).toBeUndefined();
+      expect(item.accountNumber).toBeUndefined();
+      expect(item.owner).toBeUndefined();
+      expect(item.verificationStatus).toBe('Verified');
+      expect(item.verificationSource).toBe('AVS');
+    });
+  });
+
+  describe('avsAccountsToFinancialItems', () => {
+    it('converts multiple accounts to financial items', () => {
+      const accounts = [
+        {
+          accountOwner: 'Owner1',
+          accountType: 'CHECKING',
+          bankName: 'Bank1',
+          accountNumber: '1111',
+          address: '',
+          balance: '$1,000.00',
+          balanceAmount: 1000,
+          refreshDate: 'N/A',
+        },
+        {
+          accountOwner: 'Owner2',
+          accountType: 'SAVINGS',
+          bankName: 'Bank2',
+          accountNumber: '2222',
+          address: '',
+          balance: '$2,000.00',
+          balanceAmount: 2000,
+          refreshDate: 'N/A',
+        },
+      ];
+
+      const items = avsAccountsToFinancialItems(accounts);
+
+      expect(items).toHaveLength(2);
+      expect(items[0].description).toBe('CHECKING at Bank1');
+      expect(items[1].description).toBe('SAVINGS at Bank2');
+    });
+  });
+
+  describe('KNOWN_ACCOUNT_TYPES', () => {
+    it('includes common account types', () => {
+      expect(KNOWN_ACCOUNT_TYPES).toContain('CHECKING');
+      expect(KNOWN_ACCOUNT_TYPES).toContain('SAVINGS');
+      expect(KNOWN_ACCOUNT_TYPES).toContain('MONEY MARKET');
+      expect(KNOWN_ACCOUNT_TYPES).toContain('IRA');
+      expect(KNOWN_ACCOUNT_TYPES).toContain('401K');
+    });
+  });
+});
