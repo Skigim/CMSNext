@@ -25,7 +25,8 @@
 - [x] Refactor 4 oversized hooks (useNavigationFlow, useConnectionFlow, useCaseManagement, useAlertsFlow)
 - [x] Extract CaseOperationsService for business logic separation
 - [x] PR #87 merged to main
-- [ ] FinancialItemModal refactor → `useFinancialItemFlow` hook
+- [x] FinancialItemModal refactor → `useFinancialItemFlow` hook
+- [x] Fix Category Manager checkbox reset bug (countsAsCompleted)
 
 #### New Features
 
@@ -99,7 +100,7 @@
 | Metric                        | Start | Week 1 | Week 2 | Week 3 | Target |
 | ----------------------------- | ----- | ------ | ------ | ------ | ------ |
 | Hooks over 200 lines          | 4     | 0 ✅   | 0      | 0      | 0      |
-| Components with anti-patterns | 1     | 0      | 0      | 0      | 0      |
+| Components with anti-patterns | 1     | 0 ✅   | 0      | 0      | 0      |
 | Test count                    | 253   | 269    | 280    | 290    | 290+   |
 | New features shipped          | -     | 4      | 4      | 4      | 12     |
 | Average feature rating        | 76.5  | 77     | 78     | 80     | 80+    |
@@ -111,9 +112,9 @@
 ### Week 1 - P0
 
 1. ~~Hook refactoring~~ ✅
-2. FinancialItemModal anti-pattern fix
-3. Relationships feature
-4. Bulk financial actions
+2. ~~FinancialItemModal anti-pattern fix~~ ✅
+3. ~~Category Manager checkbox bug~~ ✅
+4. Bulk case list actions
 
 ### Week 2 - P0
 

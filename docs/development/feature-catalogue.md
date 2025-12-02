@@ -202,11 +202,11 @@ Phase 3 Cases domain refactor completed November 2, 2025. Relationships feature 
 
 ### Implementation Snapshot
 
-**Rating: 73/100** _(Updated December 1, 2025 - Refactoring Scheduled)_
+**Rating: 78/100** _(Updated December 2, 2025)_
 
 Financial modules (resources, income, expenses) leverage dedicated components and hooks (`useFinancialItemFlow`, `FinancialItemCard`) with inline editing, validation, and autosave integration. Verification metadata and frequency handling cover core program requirements.
 
-**Known Issue:** `FinancialItemModal` component contains direct DataManager calls (anti-pattern) - scheduled for refactoring in December Week 2.
+**December 2, 2025:** `FinancialItemModal` refactored - all business logic extracted to `useFinancialItemFlow` hook. Modal is now a pure UI component (290 lines) with no direct DataManager access.
 
 ### Strengths
 
@@ -219,17 +219,16 @@ Financial modules (resources, income, expenses) leverage dedicated components an
 
 ### Gaps / Risks
 
-- **Anti-Pattern**: `FinancialItemModal` (~370 lines) contains direct DataManager calls - violates architecture guidelines
 - Budget rollups and scenario planning not yet implemented
 - No audit trail for financial changes
 - Table/list UX can be heavy on large datasets
 
 ### Expansion Opportunities
 
-- **Refactor FinancialItemModal**: Extract business logic to hooks, remove direct DataManager calls
 - Introduce changelog per financial item for historical tracking
 - Enhance bulk edit capabilities
 - Surface contextual insights within a case
+- AVS Import could support additional file formats
 
 ### Coverage & Telemetry
 
@@ -239,7 +238,7 @@ Financial modules (resources, income, expenses) leverage dedicated components an
 
 ### Owners / Notes
 
-Refactoring scheduled for December Week 2 to address FinancialItemModal anti-pattern.
+**December 2, 2025:** FinancialItemModal refactoring complete. Anti-pattern eliminated. AVS Import UI added to Financials tab.
 
 ---
 
