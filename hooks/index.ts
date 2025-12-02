@@ -27,6 +27,8 @@ export { useAutosaveStatus } from './useAutosaveStatus';
 
 // Navigation flow
 export { useNavigationFlow } from './useNavigationFlow';
+export { useNavigationLock } from './useNavigationLock';
+export type { NavigationLock } from './useNavigationLock';
 
 // Case list preferences
 export { useCaseListPreferences } from './useCaseListPreferences';
