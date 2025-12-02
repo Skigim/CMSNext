@@ -112,8 +112,16 @@ export function useConnectionHandlers(params: ConnectionHandlersParams) {
       return false;
     } finally {
       clearFileStorageFlags("inSetupPhase", "inConnectionFlow");
-      if (service && !service.getStatus().isRunning) setTimeout(() => service.startAutosave(), 500);
-      setTimeout(() => { if (window.location.hash === "#connect-to-existing") window.location.hash = ""; }, 300);
+      if (service && !service.getStatus().isRunning) {
+        setTimeout(() => {
+          if (isMounted.current) service.startAutosave();
+        }, 500);
+      }
+      setTimeout(() => {
+        if (isMounted.current && window.location.hash === "#connect-to-existing") {
+          window.location.hash = "";
+        }
+      }, 300);
     }
   }, [connectToExisting, connectToFolder, dataManager, emitError, finalizeConnection, hasStoredHandle, isMounted, loadCases, loadExistingData, service, setError]);
 

@@ -92,6 +92,9 @@ export function useNavigationFlow({
   });
 
   // Auto-redirect when locked/unlocked
+  // Loop-safe: When locked + currentView ∈ RESTRICTED_VIEWS, we set currentView to "settings"
+  // which is NOT in RESTRICTED_VIEWS, so the effect short-circuits on next render.
+  // When unlocked, we restore the prior view then clear the ref, exiting on next run.
   useEffect(() => {
     if (navigationLock.locked && RESTRICTED_VIEWS.includes(currentView)) {
       if (!forcedViewRef.current) {
