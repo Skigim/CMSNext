@@ -1,8 +1,8 @@
 # CMSNext Roadmap - December 2025
 
-**Report Date:** December 1, 2025  
-**Branch:** main (stable), dev (active)  
-**Tests:** 253/253 passing ✅  
+**Report Date:** December 2, 2025  
+**Branch:** main (stable)  
+**Tests:** 269/269 passing ✅  
 **Build:** Production-ready ✅  
 **Average Feature Rating:** 76.5/100
 
@@ -18,22 +18,25 @@
 
 ## 📅 Weekly Plan
 
-### Week 1: Hook Refactoring Sprint (Dec 2-8)
+### Week 1: Hook Refactoring Sprint (Dec 2-8) ✅ COMPLETE
 
 **Goal:** Reduce 4 hooks from >200 lines to ≤200 lines each
 
-| Hook                | Current | Target | Strategy                                         |
-| ------------------- | ------- | ------ | ------------------------------------------------ |
-| `useNavigationFlow` | 424     | ≤200   | Split into navigation state + navigation actions |
-| `useConnectionFlow` | 413     | ≤200   | Extract connection state machine logic           |
-| `useCaseManagement` | 350     | ≤200   | Split into case state + case operations          |
-| `useAlertsFlow`     | 289     | ≤200   | Extract alert matching/filtering logic           |
+| Hook                | Before | After | Extracted                                   |
+| ------------------- | ------ | ----- | ------------------------------------------- |
+| `useNavigationFlow` | 424    | 125   | `useNavigationLock`, `useNavigationActions` |
+| `useConnectionFlow` | 413    | 145   | `useConnectionHandlers`                     |
+| `useCaseManagement` | 350    | 77    | `useCaseOperations`                         |
+| `useAlertsFlow`     | 289    | 98    | `useAlertResolve`                           |
+
+**Additional:** Created `CaseOperationsService` for pure business logic separation.
 
 **Deliverables:**
 
-- [ ] 4 refactored hooks under 200 lines each
-- [ ] All 253+ tests passing
-- [ ] No functionality regression
+- [x] 4 refactored hooks under 200 lines each
+- [x] All 269 tests passing
+- [x] No functionality regression
+- [x] PR #87 merged to main
 
 ---
 
@@ -98,9 +101,9 @@
 
 | Metric                        | Current | December Target |
 | ----------------------------- | ------- | --------------- |
-| Hooks over 200 lines          | 4       | 0               |
+| Hooks over 200 lines          | 0 ✅    | 0               |
 | Components with anti-patterns | 1       | 0               |
-| Test count                    | 253     | 270+            |
+| Test count                    | 269     | 270+            |
 | Average feature rating        | 76.5    | 78+             |
 | Accessibility test coverage   | Partial | Key components  |
 
@@ -154,4 +157,4 @@
 ---
 
 **Prepared by:** GitHub Copilot  
-**Last updated:** December 1, 2025
+**Last updated:** December 2, 2025
