@@ -203,7 +203,7 @@ export function CaseDetails({
           {/* Financials Tab - Grid View */}
           <TabsContent value="financials" className="mt-0">
             <div className="p-4">
-              <FinancialsGridView caseId={caseData.id} />
+              <FinancialsGridView caseId={caseData.id} selectedCase={caseData} />
             </div>
           </TabsContent>
 
