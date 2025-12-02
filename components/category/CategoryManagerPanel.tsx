@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import type { LucideIcon } from "lucide-react";
 import { ListChecks, Plus, RefreshCcw, Save, Undo2, X } from "lucide-react";
 import { Button } from "../ui/button";
@@ -399,10 +399,14 @@ function StatusCategoryEditor({
   const [draftColor, setDraftColor] = useState<ColorSlot>("blue");
   const [draftCountsAsCompleted, setDraftCountsAsCompleted] = useState(false);
 
-  const initialItems: StatusConfig[] = statusConfigs.map(s => ({
-    ...s,
-    countsAsCompleted: s.countsAsCompleted ?? false,
-  }));
+  // Memoize to prevent re-creating on every render, which would reset the editor state
+  const initialItems: StatusConfig[] = useMemo(() => 
+    statusConfigs.map(s => ({
+      ...s,
+      countsAsCompleted: s.countsAsCompleted ?? false,
+    })),
+    [statusConfigs]
+  );
 
   const {
     items,
