@@ -33,6 +33,9 @@ export function useAlertsFlow({ cases, selectedCase, hasLoadedData, dataManager 
   const previousAlertCountsRef = useRef({ unmatched: 0, missingMcn: 0 });
   const dataChangeCount = useFileStorageDataChange();
 
+  // Use ref to break circular dependency between reloadAlerts and resolve
+  const applyOverridesRef = useRef<(index: AlertsIndex) => AlertsIndex>((i) => i);
+
   // Reload alerts from data manager
   const reloadAlerts = useCallback(async () => {
     if (!dataManager || !hasLoadedData) {
@@ -41,7 +44,7 @@ export function useAlertsFlow({ cases, selectedCase, hasLoadedData, dataManager 
     try {
       const nextAlerts = await dataManager.getAlertsIndex({ cases });
       if (!isMounted.current) return;
-      setAlertsIndex(prev => resolve.applyOverrides(nextAlerts));
+      setAlertsIndex(applyOverridesRef.current(nextAlerts));
     } catch (error) {
       if (error instanceof LegacyFormatError) {
         logger.warn("Legacy format detected in alerts", { message: error.message });
@@ -61,6 +64,11 @@ export function useAlertsFlow({ cases, selectedCase, hasLoadedData, dataManager 
     setAlertsIndex,
     reloadAlerts,
   });
+
+  // Keep ref in sync with resolve.applyOverrides
+  useEffect(() => {
+    applyOverridesRef.current = resolve.applyOverrides;
+  }, [resolve.applyOverrides]);
 
   // Reload alerts when data changes
   useEffect(() => {
