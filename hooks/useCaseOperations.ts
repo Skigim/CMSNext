@@ -1,12 +1,9 @@
-import { useCallback } from 'react';
+import { useCallback, useMemo } from 'react';
 import { toast } from 'sonner';
 import { NewPersonData, NewCaseRecordData, NewNoteData, StoredCase, StoredNote } from '@/types/case';
 import { DataManager } from '@/utils/DataManager';
-import { getFileStorageFlags, updateFileStorageFlags } from '@/utils/fileStorageFlags';
-import { createLogger } from '@/utils/logger';
-import { LegacyFormatError } from '@/utils/services/FileStorageService';
+import { CaseOperationsService } from '@/utils/services/CaseOperationsService';
 
-const logger = createLogger('CaseOperations');
 const NOT_AVAILABLE_MSG = 'Data storage is not available. Please connect to a folder first.';
 
 export interface CaseOperationsConfig {
@@ -19,202 +16,175 @@ export interface CaseOperationsConfig {
   setHasLoadedData: (loaded: boolean) => void;
 }
 
-/** Case operation handlers - provides all CRUD operations for cases and notes */
+/**
+ * React hook for case operations - handles UI concerns only.
+ * Delegates business logic to CaseOperationsService.
+ * Manages: toast notifications, mounted guards, loading states.
+ */
 export function useCaseOperations(config: CaseOperationsConfig) {
   const { dataManager, isMounted, cases, setError, setLoading, setCases, setHasLoadedData } = config;
 
-  const guardDataManager = useCallback(() => {
-    if (!dataManager) {
+  const service = useMemo(
+    () => dataManager ? new CaseOperationsService(dataManager) : null,
+    [dataManager]
+  );
+
+  const guardService = useCallback(() => {
+    if (!service) {
       setError(NOT_AVAILABLE_MSG);
       toast.error(NOT_AVAILABLE_MSG);
       return false;
     }
     return true;
-  }, [dataManager, setError]);
+  }, [service, setError]);
 
   const loadCases = useCallback(async (): Promise<StoredCase[]> => {
-    if (!guardDataManager()) return [];
+    if (!guardService()) return [];
 
-    try {
-      setLoading(true);
-      setError(null);
+    setLoading(true);
+    setError(null);
 
-      const data = await dataManager!.getAllCases();
-      if (!isMounted.current) return [];
+    const result = await service!.loadCases();
 
-      setCases(data);
-      setHasLoadedData(true);
-      updateFileStorageFlags({ dataBaseline: true });
+    if (!isMounted.current) return [];
 
-      if (data.length > 0) {
-        updateFileStorageFlags({ sessionHadData: true });
-        logger.info('Cases loaded', { caseCount: data.length });
-      } else if (!getFileStorageFlags().inConnectionFlow) {
-        toast.success('Connected successfully - ready to start fresh', {
-          id: 'connected-empty',
-          duration: 3000,
-        });
-      }
+    setLoading(false);
 
-      return data;
-    } catch (err) {
-      if (err instanceof LegacyFormatError) {
-        setError(err.message);
-        toast.error(err.message, { duration: 8000 });
-        return [];
-      }
-      setError('Failed to load cases. Please try again.');
-      toast.error('Failed to load cases. Please try again.');
+    if (!result.success) {
+      setError(result.error);
+      toast.error(result.error, { duration: result.isLegacyFormat ? 8000 : undefined });
       return [];
-    } finally {
-      if (isMounted.current) setLoading(false);
     }
-  }, [guardDataManager, dataManager, isMounted, setError, setLoading, setCases, setHasLoadedData]);
+
+    setCases(result.data);
+    setHasLoadedData(true);
+
+    // Show empty state message if applicable
+    if ('isEmpty' in result && result.isEmpty) {
+      toast.success('Connected successfully - ready to start fresh', {
+        id: 'connected-empty',
+        duration: 3000,
+      });
+    }
+
+    return result.data;
+  }, [guardService, service, isMounted, setError, setLoading, setCases, setHasLoadedData]);
 
   const saveCase = useCallback(async (
     caseData: { person: NewPersonData; caseRecord: NewCaseRecordData },
     editingCase?: StoredCase | null
   ) => {
-    if (!guardDataManager()) return;
+    if (!guardService()) return;
 
     const isEditing = !!editingCase;
     const toastId = toast.loading(isEditing ? "Updating case..." : "Creating case...");
+    setError(null);
 
-    try {
-      setError(null);
+    const result = await service!.saveCase(caseData, editingCase?.id);
 
-      if (editingCase) {
-        await dataManager!.updateCompleteCase(editingCase.id, caseData);
-      } else {
-        await dataManager!.createCompleteCase(caseData);
-      }
+    if (!isMounted.current) return;
 
-      if (!isMounted.current) return;
-
-      toast.success(
-        `Case for ${caseData.person.firstName} ${caseData.person.lastName} ${isEditing ? 'updated' : 'created'} successfully`,
-        { id: toastId }
-      );
-    } catch (err) {
-      logger.error('Failed to save case', {
-        error: err instanceof Error ? err.message : String(err),
-        isEditing,
-      });
-      setError(`Failed to ${isEditing ? 'update' : 'create'} case. Please try again.`);
-      toast.error(`Failed to ${isEditing ? 'update' : 'create'} case. Please try again.`, { id: toastId });
-      throw err;
+    if (!result.success) {
+      setError(result.error);
+      toast.error(result.error, { id: toastId });
+      throw new Error(result.error);
     }
-  }, [guardDataManager, dataManager, isMounted, setError]);
+
+    toast.success(
+      `Case for ${caseData.person.firstName} ${caseData.person.lastName} ${isEditing ? 'updated' : 'created'} successfully`,
+      { id: toastId }
+    );
+  }, [guardService, service, isMounted, setError]);
 
   const deleteCase = useCallback(async (caseId: string) => {
-    if (!guardDataManager()) return;
+    if (!guardService()) return;
 
     const caseToDelete = cases.find(c => c.id === caseId);
     const name = caseToDelete
       ? `${caseToDelete.person.firstName} ${caseToDelete.person.lastName}`
       : 'Case';
 
-    try {
-      setError(null);
-      await dataManager!.deleteCase(caseId);
+    setError(null);
 
-      if (!isMounted.current) return;
+    const result = await service!.deleteCase(caseId);
 
-      toast.success(`${name} case deleted successfully`);
-    } catch (err) {
-      logger.error('Failed to delete case', {
-        error: err instanceof Error ? err.message : String(err),
-        caseId,
-      });
-      setError('Failed to delete case. Please try again.');
-      toast.error('Failed to delete case. Please try again.');
-      throw err;
+    if (!isMounted.current) return;
+
+    if (!result.success) {
+      setError(result.error);
+      toast.error(result.error);
+      throw new Error(result.error);
     }
-  }, [guardDataManager, dataManager, cases, isMounted, setError]);
+
+    toast.success(`${name} case deleted successfully`);
+  }, [guardService, service, cases, isMounted, setError]);
 
   const saveNote = useCallback(async (
     noteData: NewNoteData,
     caseId: string,
     editingNote?: { id: string } | null
   ): Promise<StoredNote | null> => {
-    if (!guardDataManager()) return null;
+    if (!guardService()) return null;
 
-    try {
-      setError(null);
+    setError(null);
 
-      const savedNote = editingNote
-        ? await dataManager!.updateNote(caseId, editingNote.id, noteData)
-        : await dataManager!.addNote(caseId, noteData);
+    const result = await service!.saveNote(noteData, caseId, editingNote?.id);
 
-      toast.success(editingNote ? "Note updated successfully" : "Note added successfully");
-      return savedNote;
-    } catch (err) {
-      const action = editingNote ? 'update' : 'add';
-      logger.error('Failed to save note', {
-        error: err instanceof Error ? err.message : String(err),
-        caseId,
-      });
-      setError(`Failed to ${action} note. Please try again.`);
-      toast.error(`Failed to ${action} note. Please try again.`);
+    if (!result.success) {
+      setError(result.error);
+      toast.error(result.error);
       return null;
     }
-  }, [guardDataManager, dataManager, setError]);
+
+    toast.success(editingNote ? "Note updated successfully" : "Note added successfully");
+    return result.data;
+  }, [guardService, service, setError]);
 
   const updateCaseStatus = useCallback(async (
     caseId: string,
     status: StoredCase["status"]
   ): Promise<StoredCase | null> => {
-    if (!guardDataManager()) return null;
+    if (!guardService()) return null;
 
     const toastId = toast.loading('Updating case status...');
+    setError(null);
 
-    try {
-      setError(null);
+    const result = await service!.updateCaseStatus(caseId, status);
 
-      const updatedCase = await dataManager!.updateCaseStatus(caseId, status);
-      if (!isMounted.current) return null;
+    if (!isMounted.current) return null;
 
-      toast.success(`Status updated to ${status}`, { id: toastId, duration: 2000 });
-      return updatedCase;
-    } catch (err) {
-      if (err instanceof Error && err.name === 'AbortError') {
+    if (!result.success) {
+      if (result.isAborted) {
         toast.dismiss(toastId);
         return null;
       }
-
-      logger.error('Failed to update case status', {
-        error: err instanceof Error ? err.message : String(err),
-        caseId,
-        status,
-      });
-      setError('Failed to update case status. Please try again.');
-      toast.error('Failed to update case status. Please try again.', { id: toastId });
+      setError(result.error);
+      toast.error(result.error, { id: toastId });
       return null;
     }
-  }, [guardDataManager, dataManager, isMounted, setError]);
+
+    toast.success(`Status updated to ${status}`, { id: toastId, duration: 2000 });
+    return result.data;
+  }, [guardService, service, isMounted, setError]);
 
   const importCases = useCallback(async (importedCases: StoredCase[]) => {
-    if (!guardDataManager()) return;
+    if (!guardService()) return;
 
-    try {
-      setError(null);
-      await dataManager!.importCases(importedCases);
+    setError(null);
 
-      if (!isMounted.current) return;
+    const result = await service!.importCases(importedCases);
 
-      setHasLoadedData(true);
-      updateFileStorageFlags({ dataBaseline: true, sessionHadData: true });
-      toast.success(`Imported ${importedCases.length} cases successfully`);
-    } catch (err) {
-      logger.error('Failed to import cases', {
-        error: err instanceof Error ? err.message : String(err),
-        caseCount: importedCases.length,
-      });
-      setError('Failed to import cases. Please try again.');
-      toast.error('Failed to import cases. Please try again.');
-      throw err;
+    if (!isMounted.current) return;
+
+    if (!result.success) {
+      setError(result.error);
+      toast.error(result.error);
+      throw new Error(result.error);
     }
-  }, [guardDataManager, dataManager, isMounted, setError, setHasLoadedData]);
+
+    setHasLoadedData(true);
+    toast.success(`Imported ${importedCases.length} cases successfully`);
+  }, [guardService, service, isMounted, setError, setHasLoadedData]);
 
   return { loadCases, saveCase, deleteCase, saveNote, importCases, updateCaseStatus };
 }
