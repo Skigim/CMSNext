@@ -50,6 +50,8 @@ describe("useCaseListPreferences", () => {
         statuses: [],
         priorityOnly: false,
         dateRange: {},
+        excludeStatuses: [],
+        excludePriority: false,
       });
     });
   });
@@ -92,6 +94,8 @@ describe("useCaseListPreferences", () => {
           from: new Date("2025-01-01"),
           to: new Date("2025-12-31"),
         },
+        excludeStatuses: [],
+        excludePriority: false,
       };
 
       act(() => {
@@ -146,6 +150,8 @@ describe("useCaseListPreferences", () => {
         statuses: [],
         priorityOnly: false,
         dateRange: {},
+        excludeStatuses: [],
+        excludePriority: false,
       });
     });
 
@@ -227,6 +233,8 @@ describe("useCaseListPreferences", () => {
         statuses: [],
         priorityOnly: false,
         dateRange: {},
+        excludeStatuses: [],
+        excludePriority: false,
       });
       
       // After reset, defaults are persisted (useEffect writes them back)

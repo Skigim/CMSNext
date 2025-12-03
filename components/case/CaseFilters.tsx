@@ -30,6 +30,8 @@ export function CaseFilters({ filters, onFiltersChange }: CaseFiltersProps) {
     if (filters.statuses.length > 0) count++;
     if (filters.priorityOnly) count++;
     if (filters.dateRange.from || filters.dateRange.to) count++;
+    if (filters.excludeStatuses.length > 0) count++;
+    if (filters.excludePriority) count++;
     return count;
   }, [filters]);
 
@@ -40,8 +42,19 @@ export function CaseFilters({ filters, onFiltersChange }: CaseFiltersProps) {
     onFiltersChange({ ...filters, statuses: newStatuses });
   }, [filters, onFiltersChange]);
 
+  const handleExcludeStatusToggle = useCallback((status: CaseStatus) => {
+    const newStatuses = filters.excludeStatuses.includes(status)
+      ? filters.excludeStatuses.filter(s => s !== status)
+      : [...filters.excludeStatuses, status];
+    onFiltersChange({ ...filters, excludeStatuses: newStatuses });
+  }, [filters, onFiltersChange]);
+
   const handlePriorityToggle = useCallback(() => {
     onFiltersChange({ ...filters, priorityOnly: !filters.priorityOnly });
+  }, [filters, onFiltersChange]);
+
+  const handleExcludePriorityToggle = useCallback(() => {
+    onFiltersChange({ ...filters, excludePriority: !filters.excludePriority });
   }, [filters, onFiltersChange]);
 
   const handleDateRangeChange = useCallback((from: Date | undefined, to: Date | undefined) => {
@@ -53,6 +66,8 @@ export function CaseFilters({ filters, onFiltersChange }: CaseFiltersProps) {
       statuses: [],
       priorityOnly: false,
       dateRange: {},
+      excludeStatuses: [],
+      excludePriority: false,
     });
   }, [onFiltersChange]);
 
@@ -141,6 +156,43 @@ export function CaseFilters({ filters, onFiltersChange }: CaseFiltersProps) {
                   />
                 </div>
               </div>
+
+              <div className="border-t pt-3">
+                <Label className="text-sm font-medium mb-2 block">Exclude</Label>
+                <div className="space-y-2">
+                  <div className="text-xs text-muted-foreground mb-1">Hide cases with status:</div>
+                  {statusOptions.map((status: string) => (
+                    <div key={`exclude-${status}`} className="flex items-center space-x-2">
+                      <Checkbox
+                        id={`exclude-status-${status}`}
+                        checked={filters.excludeStatuses.includes(status as CaseStatus)}
+                        onCheckedChange={() => handleExcludeStatusToggle(status as CaseStatus)}
+                      />
+                      <label
+                        htmlFor={`exclude-status-${status}`}
+                        className="text-sm cursor-pointer flex-1"
+                      >
+                        {status}
+                      </label>
+                    </div>
+                  ))}
+                  <div className="border-t pt-2 mt-2">
+                    <div className="flex items-center space-x-2">
+                      <Checkbox
+                        id="exclude-priority-filter"
+                        checked={filters.excludePriority}
+                        onCheckedChange={handleExcludePriorityToggle}
+                      />
+                      <label
+                        htmlFor="exclude-priority-filter"
+                        className="text-sm cursor-pointer flex-1"
+                      >
+                        Hide priority cases
+                      </label>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </PopoverContent>
@@ -181,6 +233,30 @@ export function CaseFilters({ filters, onFiltersChange }: CaseFiltersProps) {
                 onClick={() => onFiltersChange({ ...filters, dateRange: {} })}
                 className="ml-1 hover:bg-secondary-foreground/20 rounded-full p-0.5"
                 aria-label="Clear date range filter"
+              >
+                <X className="h-3 w-3" />
+              </button>
+            </Badge>
+          )}
+          {filters.excludeStatuses.length > 0 && (
+            <Badge variant="secondary" className="gap-1">
+              Exclude: {filters.excludeStatuses.join(", ")}
+              <button
+                onClick={() => onFiltersChange({ ...filters, excludeStatuses: [] })}
+                className="ml-1 hover:bg-secondary-foreground/20 rounded-full p-0.5"
+                aria-label="Clear exclude status filter"
+              >
+                <X className="h-3 w-3" />
+              </button>
+            </Badge>
+          )}
+          {filters.excludePriority && (
+            <Badge variant="secondary" className="gap-1">
+              Hide priority
+              <button
+                onClick={() => onFiltersChange({ ...filters, excludePriority: false })}
+                className="ml-1 hover:bg-secondary-foreground/20 rounded-full p-0.5"
+                aria-label="Clear hide priority filter"
               >
                 <X className="h-3 w-3" />
               </button>

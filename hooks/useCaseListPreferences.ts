@@ -17,7 +17,9 @@ export interface DateRangeFilter {
 
 export interface CaseFilters {
   statuses: CaseStatus[];
+  excludeStatuses: CaseStatus[];
   priorityOnly: boolean;
+  excludePriority: boolean;
   dateRange: DateRangeFilter;
 }
 
@@ -43,7 +45,9 @@ const DEFAULT_SORT_DIRECTION: CaseListSortDirection = "asc";
 const DEFAULT_SEGMENT: CaseListSegment = "all";
 const DEFAULT_FILTERS: CaseFilters = {
   statuses: [],
+  excludeStatuses: [],
   priorityOnly: false,
+  excludePriority: false,
   dateRange: {},
 };
 
@@ -55,7 +59,9 @@ interface SerializedPreferences {
   segment: CaseListSegment;
   filters: {
     statuses: CaseStatus[];
+    excludeStatuses?: CaseStatus[];
     priorityOnly: boolean;
+    excludePriority?: boolean;
     dateRange: {
       from?: string;
       to?: string;
@@ -96,7 +102,9 @@ function loadPreferences(): {
     // Parse filters with Date reconstruction
     const filters: CaseFilters = {
       statuses: Array.isArray(parsed.filters?.statuses) ? parsed.filters.statuses : [],
+      excludeStatuses: Array.isArray(parsed.filters?.excludeStatuses) ? parsed.filters.excludeStatuses : [],
       priorityOnly: Boolean(parsed.filters?.priorityOnly),
+      excludePriority: Boolean(parsed.filters?.excludePriority),
       dateRange: {
         from: parsed.filters?.dateRange?.from ? new Date(parsed.filters.dateRange.from) : undefined,
         to: parsed.filters?.dateRange?.to ? new Date(parsed.filters.dateRange.to) : undefined,
@@ -133,7 +141,9 @@ function savePreferences(
       segment,
       filters: {
         statuses: filters.statuses,
+        excludeStatuses: filters.excludeStatuses,
         priorityOnly: filters.priorityOnly,
+        excludePriority: filters.excludePriority,
         dateRange: {
           from: filters.dateRange.from?.toISOString(),
           to: filters.dateRange.to?.toISOString(),

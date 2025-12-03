@@ -40,6 +40,8 @@ const mockPreferences = {
     statuses: [],
     priorityOnly: false,
     dateRange: {},
+    excludeStatuses: [],
+    excludePriority: false,
   },
   setFilters: vi.fn(),
 };

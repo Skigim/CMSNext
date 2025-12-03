@@ -395,6 +395,14 @@ export class DataManager {
     return this.cases.updateCasesStatus(caseIds, status);
   }
 
+  /**
+   * Update priority for multiple cases at once
+   * Delegates to CaseService
+   */
+  async updateCasesPriority(caseIds: string[], priority: boolean): Promise<{ updated: StoredCase[]; notFound: string[] }> {
+    return this.cases.updateCasesPriority(caseIds, priority);
+  }
+
   // =============================================================================
   // FINANCIAL ITEM OPERATIONS
   // =============================================================================

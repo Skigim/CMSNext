@@ -67,6 +67,7 @@ interface CaseListProps {
   // Bulk action handlers
   onDeleteCases?: (caseIds: string[]) => Promise<number>;
   onUpdateCasesStatus?: (caseIds: string[], status: CaseStatus) => Promise<number>;
+  onUpdateCasesPriority?: (caseIds: string[], priority: boolean) => Promise<number>;
 }
 
 export function CaseList({
@@ -83,6 +84,7 @@ export function CaseList({
   onUpdateCaseStatus,
   onDeleteCases,
   onUpdateCasesStatus,
+  onUpdateCasesPriority,
 }: CaseListProps) {
   const { featureFlags } = useAppViewState();
   const showDevTools = isFeatureEnabled("settings.devTools", featureFlags);
@@ -198,13 +200,23 @@ export function CaseList({
         return false;
       }
 
-      // Apply status filter
+      // Apply status filter (include)
       if (filters.statuses.length > 0 && !filters.statuses.includes(caseData.status)) {
         return false;
       }
 
-      // Apply priority filter
+      // Apply status anti-filter (exclude)
+      if (filters.excludeStatuses.length > 0 && filters.excludeStatuses.includes(caseData.status)) {
+        return false;
+      }
+
+      // Apply priority filter (show only priority)
       if (filters.priorityOnly && !caseData.priority) {
+        return false;
+      }
+
+      // Apply priority anti-filter (hide priority)
+      if (filters.excludePriority && caseData.priority) {
         return false;
       }
 
@@ -360,6 +372,37 @@ export function CaseList({
     }
   }, [onUpdateCasesStatus, visibleCaseIds, isSelected, clearSelection]);
 
+  const handleBulkPriorityToggle = useCallback(async (priority: boolean) => {
+    if (!onUpdateCasesPriority) return;
+
+    const idsToUpdate = visibleCaseIds.filter(id => isSelected(id));
+    if (idsToUpdate.length === 0) return;
+
+    setIsBulkUpdating(true);
+    try {
+      await onUpdateCasesPriority(idsToUpdate, priority);
+      clearSelection();
+    } finally {
+      setIsBulkUpdating(false);
+    }
+  }, [onUpdateCasesPriority, visibleCaseIds, isSelected, clearSelection]);
+
+  // Compute the priority state of selected cases: true if all priority, false if all non-priority, null if mixed
+  const selectedPriorityState = useMemo<boolean | null>(() => {
+    const selectedIds = visibleCaseIds.filter(id => isSelected(id));
+    if (selectedIds.length === 0) return null;
+
+    const caseMap = new Map(cases.map(c => [c.id, c]));
+    const selectedCases = selectedIds.map(id => caseMap.get(id)).filter((c): c is StoredCase => !!c);
+    
+    if (selectedCases.length === 0) return null;
+
+    const firstPriority = selectedCases[0].priority ?? false;
+    const allSame = selectedCases.every(c => (c.priority ?? false) === firstPriority);
+    
+    return allSame ? firstPriority : null;
+  }, [visibleCaseIds, isSelected, cases]);
+
   const activeCase = useMemo(() => {
     if (!activeAlertsCaseId) {
       return null;
@@ -499,9 +542,11 @@ export function CaseList({
           selectedCount={selectedCount}
           onDeleteSelected={handleBulkDelete}
           onStatusChange={handleBulkStatusChange}
+          onPriorityToggle={onUpdateCasesPriority ? handleBulkPriorityToggle : undefined}
           onClearSelection={clearSelection}
           isDeleting={isBulkDeleting}
           isUpdating={isBulkUpdating}
+          selectedPriorityState={selectedPriorityState}
         />
       )}
 

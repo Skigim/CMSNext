@@ -43,6 +43,7 @@ export const AppContent = memo(function AppContent() {
     deleteCases,
     updateCaseStatus,
     updateCasesStatus,
+    updateCasesPriority,
     setCases,
     setError,
     setHasLoadedData,
@@ -283,6 +284,7 @@ export const AppContent = memo(function AppContent() {
       handleDeleteCase,
       handleDeleteCases: deleteCases,
       handleUpdateCasesStatus: updateCasesStatus,
+      handleUpdateCasesPriority: updateCasesPriority,
       handleDataPurged,
     }),
     [
@@ -292,6 +294,7 @@ export const AppContent = memo(function AppContent() {
       handleDeleteCase,
       deleteCases,
       updateCasesStatus,
+      updateCasesPriority,
       handleEditCase,
       handleNewCase,
       handleSaveCase,

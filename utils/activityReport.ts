@@ -61,6 +61,7 @@ function summarizeCaseEntries(entries: CaseActivityEntry[]): DailyCaseActivityBr
         caseName: entry.caseName,
         caseMcn: entry.caseMcn,
         statusChanges: entry.type === "status-change" ? 1 : 0,
+        priorityChanges: entry.type === "priority-change" ? 1 : 0,
         notesAdded: entry.type === "note-added" ? 1 : 0,
         entries: [entry],
       });
@@ -69,6 +70,8 @@ function summarizeCaseEntries(entries: CaseActivityEntry[]): DailyCaseActivityBr
 
     if (entry.type === "status-change") {
       existing.statusChanges += 1;
+    } else if (entry.type === "priority-change") {
+      existing.priorityChanges += 1;
     } else if (entry.type === "note-added") {
       existing.notesAdded += 1;
     }
@@ -76,8 +79,8 @@ function summarizeCaseEntries(entries: CaseActivityEntry[]): DailyCaseActivityBr
   }
 
   return Array.from(caseMap.values()).sort((a, b) => {
-    const aTotal = a.statusChanges + a.notesAdded;
-    const bTotal = b.statusChanges + b.notesAdded;
+    const aTotal = a.statusChanges + a.priorityChanges + a.notesAdded;
+    const bTotal = b.statusChanges + b.priorityChanges + b.notesAdded;
     if (bTotal !== aTotal) {
       return bTotal - aTotal;
     }
@@ -94,6 +97,7 @@ export function generateDailyActivityReport(
   );
 
   const statusChanges = filteredEntries.filter(entry => entry.type === "status-change").length;
+  const priorityChanges = filteredEntries.filter(entry => entry.type === "priority-change").length;
   const notesAdded = filteredEntries.filter(entry => entry.type === "note-added").length;
 
   return {
@@ -101,6 +105,7 @@ export function generateDailyActivityReport(
     totals: {
       total: filteredEntries.length,
       statusChanges,
+      priorityChanges,
       notesAdded,
     },
     entries: filteredEntries,
@@ -120,6 +125,12 @@ function getEntryDetail(entry: CaseActivityEntry): string {
     const fromStatus = entry.payload.fromStatus ?? "Unknown";
     const toStatus = entry.payload.toStatus;
     return `Status changed from ${fromStatus} to ${toStatus}`;
+  }
+
+  if (entry.type === "priority-change") {
+    const from = entry.payload.fromPriority ? "Priority" : "Normal";
+    const to = entry.payload.toPriority ? "Priority" : "Normal";
+    return `Priority changed from ${from} to ${to}`;
   }
 
   const preview = entry.payload.preview.replace(/\s+/g, " ").trim();

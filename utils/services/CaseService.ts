@@ -522,6 +522,95 @@ export class CaseService {
     return { updated: updatedCases, notFound };
   }
 
+  /**
+   * Update priority for multiple cases at once
+   * Pattern: read → modify → write (single operation for efficiency)
+   * Creates activity log entries for each priority change
+   */
+  async updateCasesPriority(caseIds: string[], priority: boolean): Promise<{ updated: StoredCase[]; notFound: string[] }> {
+    if (caseIds.length === 0) {
+      return { updated: [], notFound: [] };
+    }
+
+    const currentData = await this.fileStorage.readFileData();
+    if (!currentData) {
+      throw new Error("Failed to read current data");
+    }
+
+    const idsToUpdate = new Set(caseIds);
+    const timestamp = new Date().toISOString();
+    const updatedCases: StoredCase[] = [];
+    const activityEntries: CaseActivityEntry[] = [];
+    const notFound: string[] = [];
+
+    // Track which IDs exist
+    const existingIds = new Set(currentData.cases.map(c => c.id));
+    caseIds.forEach(id => {
+      if (!existingIds.has(id)) {
+        notFound.push(id);
+      }
+    });
+
+    // Update matching cases
+    const casesWithChanges = currentData.cases.map(c => {
+      if (!idsToUpdate.has(c.id)) {
+        return c;
+      }
+
+      const currentPriority = c.priority ?? false;
+      
+      // Skip if priority is already the same
+      if (currentPriority === priority) {
+        updatedCases.push(c);
+        return c;
+      }
+
+      const updatedCase: StoredCase = {
+        ...c,
+        priority,
+        caseRecord: {
+          ...c.caseRecord,
+          priority,
+          updatedDate: timestamp,
+        },
+      };
+
+      updatedCases.push(updatedCase);
+
+      // Create activity log entry
+      activityEntries.push({
+        id: uuidv4(),
+        timestamp,
+        caseId: c.id,
+        caseName: formatCaseDisplayName(c),
+        caseMcn: c.caseRecord?.mcn ?? c.mcn ?? null,
+        type: "priority-change",
+        payload: {
+          fromPriority: currentPriority,
+          toPriority: priority,
+        },
+      });
+
+      return updatedCase;
+    });
+
+    const casesWithTouchedTimestamps = this.fileStorage.touchCaseTimestamps(
+      casesWithChanges,
+      caseIds.filter(id => existingIds.has(id))
+    );
+
+    // Write updated data
+    const updatedData: NormalizedFileData = {
+      ...currentData,
+      cases: casesWithTouchedTimestamps,
+      activityLog: ActivityLogService.mergeActivityEntries(currentData.activityLog, activityEntries),
+    };
+
+    await this.fileStorage.writeNormalizedData(updatedData);
+
+    return { updated: updatedCases, notFound };
+  }
+
   // =============================================================================
   // BULK OPERATIONS
   // =============================================================================

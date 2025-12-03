@@ -229,11 +229,15 @@ export class FileStorageService {
         total_cases: data.cases.length,
         categoryConfig,
         activityLog: [...(data.activityLog ?? [])]
-          .map((entry): CaseActivityEntry =>
-            entry.type === "status-change"
-              ? { ...entry, payload: { ...entry.payload } }
-              : { ...entry, payload: { ...entry.payload } }
-          )
+          .map((entry): CaseActivityEntry => {
+            if (entry.type === "status-change") {
+              return { ...entry, payload: { ...entry.payload } };
+            } else if (entry.type === "priority-change") {
+              return { ...entry, payload: { ...entry.payload } };
+            } else {
+              return { ...entry, payload: { ...entry.payload } };
+            }
+          })
           .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()),
       };
 

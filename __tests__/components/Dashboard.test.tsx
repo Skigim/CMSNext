@@ -119,6 +119,7 @@ const emptyReport: DailyActivityReport = {
   totals: {
     total: 0,
     statusChanges: 0,
+    priorityChanges: 0,
     notesAdded: 0,
   },
   entries: [],

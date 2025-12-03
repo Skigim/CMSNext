@@ -28,6 +28,7 @@ interface CaseWorkspaceViewHandlers {
   handleDeleteCase: (caseId: string) => Promise<void>;
   handleDeleteCases: (caseIds: string[]) => Promise<number>;
   handleUpdateCasesStatus: (caseIds: string[], status: StoredCase["status"]) => Promise<number>;
+  handleUpdateCasesPriority: (caseIds: string[], priority: boolean) => Promise<number>;
   handleDataPurged: () => Promise<void> | void;
 }
 
@@ -126,6 +127,7 @@ export const CaseWorkspace = memo(function CaseWorkspace({
         handleDeleteCase={viewHandlers.handleDeleteCase}
         handleDeleteCases={viewHandlers.handleDeleteCases}
         handleUpdateCasesStatus={viewHandlers.handleUpdateCasesStatus}
+        handleUpdateCasesPriority={viewHandlers.handleUpdateCasesPriority}
         handleDataPurged={viewHandlers.handleDataPurged}
         handleUpdateCaseStatus={onUpdateCaseStatus}
         handleResolveAlert={onResolveAlert}

@@ -37,6 +37,7 @@ interface ViewRendererProps {
   handleDeleteCase: (caseId: string) => Promise<void>;
   handleDeleteCases: (caseIds: string[]) => Promise<number>;
   handleUpdateCasesStatus: (caseIds: string[], status: StoredCase["status"]) => Promise<number>;
+  handleUpdateCasesPriority: (caseIds: string[], priority: boolean) => Promise<number>;
   handleDataPurged: () => void;
   handleUpdateCaseStatus?: (caseId: string, status: StoredCase["status"]) =>
     | Promise<StoredCase | null>
@@ -84,6 +85,7 @@ export function ViewRenderer({
   handleDeleteCase,
   handleDeleteCases,
   handleUpdateCasesStatus,
+  handleUpdateCasesPriority,
   handleDataPurged,
   handleUpdateCaseStatus,
   handleResolveAlert,
@@ -123,6 +125,7 @@ export function ViewRenderer({
           onDeleteCase={handleDeleteCase}
           onDeleteCases={handleDeleteCases}
           onUpdateCasesStatus={handleUpdateCasesStatus}
+          onUpdateCasesPriority={handleUpdateCasesPriority}
           onNewCase={handleNewCase}
           onResolveAlert={handleResolveAlert}
           onUpdateCaseStatus={handleUpdateCaseStatus}

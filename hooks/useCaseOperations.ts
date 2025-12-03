@@ -231,5 +231,30 @@ export function useCaseOperations(config: CaseOperationsConfig) {
     return updated.length;
   }, [guardService, service, isMounted, setError]);
 
-  return { loadCases, saveCase, deleteCase, deleteCases, saveNote, importCases, updateCaseStatus, updateCasesStatus };
+  const updateCasesPriority = useCallback(async (
+    caseIds: string[],
+    priority: boolean
+  ): Promise<number> => {
+    if (!guardService()) return 0;
+
+    const label = priority ? 'priority' : 'normal';
+    const toastId = toast.loading(`Updating ${caseIds.length} case${caseIds.length === 1 ? '' : 's'}...`);
+    setError(null);
+
+    const result = await service!.updateCasesPriority(caseIds, priority);
+
+    if (!isMounted.current) return 0;
+
+    if (!result.success) {
+      setError(result.error);
+      toast.error(result.error, { id: toastId });
+      return 0;
+    }
+
+    const { updated } = result.data;
+    toast.success(`Updated ${updated.length} case${updated.length === 1 ? '' : 's'} to ${label}`, { id: toastId, duration: 2000 });
+    return updated.length;
+  }, [guardService, service, isMounted, setError]);
+
+  return { loadCases, saveCase, deleteCase, deleteCases, saveNote, importCases, updateCaseStatus, updateCasesStatus, updateCasesPriority };
 }

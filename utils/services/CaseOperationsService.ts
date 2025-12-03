@@ -175,4 +175,22 @@ export class CaseOperationsService {
       return { success: false, error: 'Failed to update case statuses. Please try again.' };
     }
   }
+
+  async updateCasesPriority(
+    caseIds: string[],
+    priority: boolean
+  ): Promise<OperationResult<{ updated: StoredCase[]; notFound: string[] }>> {
+    try {
+      const result = await this.dataManager.updateCasesPriority(caseIds, priority);
+      logger.info('Bulk priority update completed', { updated: result.updated.length, notFound: result.notFound.length });
+      return { success: true, data: result };
+    } catch (err) {
+      logger.error('Failed to update case priorities', {
+        error: err instanceof Error ? err.message : String(err),
+        caseCount: caseIds.length,
+        priority,
+      });
+      return { success: false, error: 'Failed to update case priorities. Please try again.' };
+    }
+  }
 }

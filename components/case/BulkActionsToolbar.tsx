@@ -1,6 +1,8 @@
 import { memo, useCallback, useMemo, useState, type CSSProperties } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -28,18 +30,23 @@ export interface BulkActionsToolbarProps {
   selectedCount: number;
   onDeleteSelected: () => Promise<void>;
   onStatusChange: (status: CaseStatus) => Promise<void>;
+  onPriorityToggle?: (priority: boolean) => Promise<void>;
   onClearSelection: () => void;
   isDeleting?: boolean;
   isUpdating?: boolean;
+  /** Priority state of selected cases: true if all are priority, false if all are not priority, null if mixed */
+  selectedPriorityState?: boolean | null;
 }
 
 export const BulkActionsToolbar = memo(function BulkActionsToolbar({
   selectedCount,
   onDeleteSelected,
   onStatusChange,
+  onPriorityToggle,
   onClearSelection,
   isDeleting = false,
   isUpdating = false,
+  selectedPriorityState = null,
 }: BulkActionsToolbarProps) {
   const { config } = useCategoryConfig();
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
@@ -66,6 +73,15 @@ export const BulkActionsToolbar = memo(function BulkActionsToolbar({
     setShowDeleteDialog(false);
     await onDeleteSelected();
   }, [onDeleteSelected]);
+
+  const handlePriorityToggle = useCallback(async (checked: boolean) => {
+    if (onPriorityToggle) {
+      await onPriorityToggle(checked);
+    }
+  }, [onPriorityToggle]);
+
+  // Show priority toggle only when all selected cases have the same priority state
+  const showPriorityToggle = onPriorityToggle && selectedPriorityState !== null;
 
   if (selectedCount === 0) {
     return null;
@@ -110,6 +126,26 @@ export const BulkActionsToolbar = memo(function BulkActionsToolbar({
               </DropdownMenuRadioGroup>
             </DropdownMenuContent>
           </DropdownMenu>
+
+          {showPriorityToggle && (
+            <>
+              <div className="h-4 w-px bg-border" />
+              <div className="flex items-center gap-2">
+                <Switch
+                  id="bulk-priority-toggle"
+                  checked={selectedPriorityState}
+                  onCheckedChange={handlePriorityToggle}
+                  disabled={isDisabled}
+                />
+                <Label
+                  htmlFor="bulk-priority-toggle"
+                  className="text-sm cursor-pointer"
+                >
+                  Priority
+                </Label>
+              </div>
+            </>
+          )}
 
           <Button
             variant="destructive"
