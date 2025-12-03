@@ -11,7 +11,7 @@ interface UseNavigationFlowParams {
   saveCase: (
     caseData: { person: NewPersonData; caseRecord: NewCaseRecordData },
     editingCase?: StoredCase | null
-  ) => Promise<void>;
+  ) => Promise<StoredCase | undefined>;
   deleteCase: (caseId: string) => Promise<void>;
 }
 

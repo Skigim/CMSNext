@@ -73,8 +73,8 @@ export function useCaseOperations(config: CaseOperationsConfig) {
   const saveCase = useCallback(async (
     caseData: { person: NewPersonData; caseRecord: NewCaseRecordData },
     editingCase?: StoredCase | null
-  ) => {
-    if (!guardService()) return;
+  ): Promise<StoredCase | undefined> => {
+    if (!guardService()) return undefined;
 
     const isEditing = !!editingCase;
     const toastId = toast.loading(isEditing ? "Updating case..." : "Creating case...");
@@ -82,7 +82,7 @@ export function useCaseOperations(config: CaseOperationsConfig) {
 
     const result = await service!.saveCase(caseData, editingCase?.id);
 
-    if (!isMounted.current) return;
+    if (!isMounted.current) return undefined;
 
     if (!result.success) {
       setError(result.error);
@@ -94,6 +94,8 @@ export function useCaseOperations(config: CaseOperationsConfig) {
       `Case for ${caseData.person.firstName} ${caseData.person.lastName} ${isEditing ? 'updated' : 'created'} successfully`,
       { id: toastId }
     );
+
+    return result.data;
   }, [guardService, service, isMounted, setError]);
 
   const deleteCase = useCallback(async (caseId: string) => {

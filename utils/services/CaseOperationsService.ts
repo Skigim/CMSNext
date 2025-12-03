@@ -50,17 +50,18 @@ export class CaseOperationsService {
   async saveCase(
     caseData: { person: NewPersonData; caseRecord: NewCaseRecordData },
     editingCaseId?: string
-  ): Promise<OperationResult<void>> {
+  ): Promise<OperationResult<StoredCase>> {
     const isEditing = !!editingCaseId;
     
     try {
+      let savedCase: StoredCase;
       if (editingCaseId) {
-        await this.dataManager.updateCompleteCase(editingCaseId, caseData);
+        savedCase = await this.dataManager.updateCompleteCase(editingCaseId, caseData);
       } else {
-        await this.dataManager.createCompleteCase(caseData);
+        savedCase = await this.dataManager.createCompleteCase(caseData);
       }
 
-      return { success: true, data: undefined };
+      return { success: true, data: savedCase };
     } catch (err) {
       logger.error('Failed to save case', {
         error: err instanceof Error ? err.message : String(err),

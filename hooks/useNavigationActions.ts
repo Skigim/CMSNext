@@ -34,7 +34,7 @@ export interface UseNavigationActionsParams {
   guardCaseInteraction: () => boolean;
   isLocked: boolean;
   lockReason: string;
-  saveCase: (data: { person: NewPersonData; caseRecord: NewCaseRecordData }, editing?: StoredCase | null) => Promise<void>;
+  saveCase: (data: { person: NewPersonData; caseRecord: NewCaseRecordData }, editing?: StoredCase | null) => Promise<StoredCase | undefined>;
   deleteCase: (caseId: string) => Promise<void>;
 }
 
@@ -114,13 +114,22 @@ export function useNavigationActions({
       throw new Error(lockReason);
     }
     try {
-      await saveCase(caseData, editingCase);
+      const savedCase = await saveCase(caseData, editingCase);
       if (!isMounted.current) return;
       if (editingCase && formState.previousView === "details" && formState.returnToCaseId) {
+        // Editing from details view - return to that case
         setSelectedCaseId(formState.returnToCaseId);
         setCurrentView("details");
+      } else if (editingCase) {
+        // Editing from list - return to list
+        setCurrentView(formState.previousView);
+      } else if (savedCase) {
+        // New case created - navigate to its details
+        setSelectedCaseId(savedCase.id);
+        setCurrentView("details");
       } else {
-        setCurrentView(editingCase ? formState.previousView : "list");
+        // Fallback to list
+        setCurrentView("list");
       }
       setEditingCase(null);
       setFormState({ previousView: "list" });
