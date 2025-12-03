@@ -18,20 +18,20 @@
 
 ## Quick Reference (December 2025)
 
-| Feature               | Rating | Trend | Notes                                |
-| --------------------- | ------ | ----- | ------------------------------------ |
-| Case Management       | 90     | ↑     | Bulk actions added, production-ready |
-| Premium UI/UX         | 82     | →     | Solid, accessibility audits needed   |
-| Local-First Storage   | 80     | →     | Production-ready                     |
-| Developer Enablement  | 79     | →     | Strong tooling                       |
-| Configurable Statuses | 78     | →     | Recently stabilized                  |
+| Feature               | Rating | Trend | Notes                                 |
+| --------------------- | ------ | ----- | ------------------------------------- |
+| Case Management       | 90     | ↑     | Bulk actions added, production-ready  |
+| Premium UI/UX         | 82     | →     | Solid, accessibility audits needed    |
+| Local-First Storage   | 80     | →     | Production-ready                      |
+| Developer Enablement  | 79     | →     | Strong tooling                        |
+| Configurable Statuses | 78     | →     | Recently stabilized                   |
 | Data Portability      | 78     | ↑     | Smart alert import with case creation |
-| Legacy Migration      | 75     | →     | Dev-only, one-way                    |
-| Autosave & Recovery   | 74     | →     | Works, telemetry pending             |
-| Financial Operations  | 78     | ↑     | FinancialItemModal refactored        |
-| Feature Flags         | 72     | →     | In-memory only                       |
-| Notes & Collaboration | 71     | →     | Basic functionality                  |
-| Dashboard & Insights  | 70     | →     | Framework ready                      |
+| Legacy Migration      | 75     | →     | Dev-only, one-way                     |
+| Autosave & Recovery   | 74     | →     | Works, telemetry pending              |
+| Financial Operations  | 78     | ↑     | FinancialItemModal refactored         |
+| Feature Flags         | 72     | →     | In-memory only                        |
+| Notes & Collaboration | 71     | →     | Basic functionality                   |
+| Dashboard & Insights  | 70     | →     | Framework ready                       |
 
 **Average Rating:** 77.1/100  
 **Test Status:** 282/282 passing (100%)
