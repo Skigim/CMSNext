@@ -1,6 +1,7 @@
 import {
   CaseDisplay,
   CaseCategory,
+  CaseStatus,
   FinancialItem,
   NewPersonData,
   NewCaseRecordData,
@@ -376,6 +377,22 @@ export class DataManager {
    */
   async deleteCase(caseId: string): Promise<void> {
     return this.cases.deleteCase(caseId);
+  }
+
+  /**
+   * Delete multiple cases at once
+   * Delegates to CaseService
+   */
+  async deleteCases(caseIds: string[]): Promise<{ deleted: number; notFound: string[] }> {
+    return this.cases.deleteCases(caseIds);
+  }
+
+  /**
+   * Update status for multiple cases at once
+   * Delegates to CaseService
+   */
+  async updateCasesStatus(caseIds: string[], status: CaseStatus): Promise<{ updated: StoredCase[]; notFound: string[] }> {
+    return this.cases.updateCasesStatus(caseIds, status);
   }
 
   // =============================================================================

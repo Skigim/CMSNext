@@ -42,10 +42,10 @@ describe("useCaseListPreferences", () => {
     it("returns default preferences when localStorage is empty", () => {
       const { result } = renderHook(() => useCaseListPreferences());
 
-      expect(result.current.sortKey).toBe("updated");
-      expect(result.current.sortDirection).toBe("desc");
+      expect(result.current.sortKey).toBe("name");
+      expect(result.current.sortDirection).toBe("asc");
       expect(result.current.segment).toBe("all");
-      expect(result.current.sortConfigs).toEqual([{ key: "updated", direction: "desc" }]);
+      expect(result.current.sortConfigs).toEqual([{ key: "name", direction: "asc" }]);
       expect(result.current.filters).toEqual({
         statuses: [],
         priorityOnly: false,
@@ -139,7 +139,8 @@ describe("useCaseListPreferences", () => {
 
       const { result } = renderHook(() => useCaseListPreferences());
 
-      expect(result.current.sortKey).toBe("updated");
+      // Default sort is now alphabetical (name asc)
+      expect(result.current.sortKey).toBe("name");
       expect(result.current.segment).toBe("all");
       expect(result.current.filters).toEqual({
         statuses: [],
@@ -153,7 +154,8 @@ describe("useCaseListPreferences", () => {
 
       const { result } = renderHook(() => useCaseListPreferences());
 
-      expect(result.current.sortKey).toBe("updated");
+      // Default sort is now alphabetical (name asc)
+      expect(result.current.sortKey).toBe("name");
       expect(result.current.segment).toBe("all");
     });
 
@@ -217,10 +219,10 @@ describe("useCaseListPreferences", () => {
         result.current.resetPreferences();
       });
 
-      expect(result.current.sortKey).toBe("updated");
-      expect(result.current.sortDirection).toBe("desc");
+      expect(result.current.sortKey).toBe("name");
+      expect(result.current.sortDirection).toBe("asc");
       expect(result.current.segment).toBe("all");
-      expect(result.current.sortConfigs).toEqual([{ key: "updated", direction: "desc" }]);
+      expect(result.current.sortConfigs).toEqual([{ key: "name", direction: "asc" }]);
       expect(result.current.filters).toEqual({
         statuses: [],
         priorityOnly: false,
@@ -230,7 +232,7 @@ describe("useCaseListPreferences", () => {
       // After reset, defaults are persisted (useEffect writes them back)
       const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
       expect(stored.segment).toBe("all");
-      expect(stored.sortConfigs).toEqual([{ key: "updated", direction: "desc" }]);
+      expect(stored.sortConfigs).toEqual([{ key: "name", direction: "asc" }]);
     });
   });
 

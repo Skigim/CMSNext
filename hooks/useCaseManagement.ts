@@ -15,9 +15,11 @@ interface UseCaseManagementReturn {
   loadCases: () => Promise<StoredCase[]>;
   saveCase: (caseData: { person: NewPersonData; caseRecord: NewCaseRecordData }, editingCase?: StoredCase | null) => Promise<void>;
   deleteCase: (caseId: string) => Promise<void>;
+  deleteCases: (caseIds: string[]) => Promise<number>;
   saveNote: (noteData: NewNoteData, caseId: string, editingNote?: { id: string } | null) => Promise<StoredNote | null>;
   importCases: (importedCases: StoredCase[]) => Promise<void>;
   updateCaseStatus: (caseId: string, status: StoredCase["status"]) => Promise<StoredCase | null>;
+  updateCasesStatus: (caseIds: string[], status: StoredCase["status"]) => Promise<number>;
   
   // State setters for external control
   setCases: React.Dispatch<React.SetStateAction<StoredCase[]>>;
@@ -65,9 +67,11 @@ export function useCaseManagement(): UseCaseManagementReturn {
     loadCases: operations.loadCases,
     saveCase: operations.saveCase,
     deleteCase: operations.deleteCase,
+    deleteCases: operations.deleteCases,
     saveNote: operations.saveNote,
     importCases: operations.importCases,
     updateCaseStatus: operations.updateCaseStatus,
+    updateCasesStatus: operations.updateCasesStatus,
     
     // State setters for external control
     setCases,

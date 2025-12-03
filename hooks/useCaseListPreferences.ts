@@ -38,8 +38,8 @@ interface CaseListPreferences {
   resetPreferences: () => void;
 }
 
-const DEFAULT_SORT_KEY: CaseListSortKey = "updated";
-const DEFAULT_SORT_DIRECTION: CaseListSortDirection = "desc";
+const DEFAULT_SORT_KEY: CaseListSortKey = "name";
+const DEFAULT_SORT_DIRECTION: CaseListSortDirection = "asc";
 const DEFAULT_SEGMENT: CaseListSegment = "all";
 const DEFAULT_FILTERS: CaseFilters = {
   statuses: [],

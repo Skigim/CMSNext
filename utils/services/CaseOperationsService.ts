@@ -143,4 +143,36 @@ export class CaseOperationsService {
       return { success: false, error: 'Failed to import cases. Please try again.' };
     }
   }
+
+  async deleteCases(caseIds: string[]): Promise<OperationResult<{ deleted: number; notFound: string[] }>> {
+    try {
+      const result = await this.dataManager.deleteCases(caseIds);
+      logger.info('Bulk delete completed', { deleted: result.deleted, notFound: result.notFound.length });
+      return { success: true, data: result };
+    } catch (err) {
+      logger.error('Failed to delete cases', {
+        error: err instanceof Error ? err.message : String(err),
+        caseCount: caseIds.length,
+      });
+      return { success: false, error: 'Failed to delete cases. Please try again.' };
+    }
+  }
+
+  async updateCasesStatus(
+    caseIds: string[],
+    status: StoredCase["status"]
+  ): Promise<OperationResult<{ updated: StoredCase[]; notFound: string[] }>> {
+    try {
+      const result = await this.dataManager.updateCasesStatus(caseIds, status);
+      logger.info('Bulk status update completed', { updated: result.updated.length, notFound: result.notFound.length });
+      return { success: true, data: result };
+    } catch (err) {
+      logger.error('Failed to update case statuses', {
+        error: err instanceof Error ? err.message : String(err),
+        caseCount: caseIds.length,
+        status,
+      });
+      return { success: false, error: 'Failed to update case statuses. Please try again.' };
+    }
+  }
 }

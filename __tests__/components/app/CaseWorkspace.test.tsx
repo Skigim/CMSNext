@@ -71,6 +71,8 @@ describe("CaseWorkspace", () => {
     handleSaveCase: asyncVoid(),
     handleCancelForm: vi.fn(),
     handleDeleteCase: asyncVoid(),
+    handleDeleteCases: vi.fn(async () => 0),
+    handleUpdateCasesStatus: vi.fn(async () => 0),
     handleDataPurged: asyncVoid(),
   };
 

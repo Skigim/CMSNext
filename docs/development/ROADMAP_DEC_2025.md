@@ -1,10 +1,10 @@
 # CMSNext Roadmap - December 2025
 
-**Report Date:** December 2, 2025  
+**Report Date:** December 3, 2025  
 **Branch:** main (stable)  
-**Tests:** 269/269 passing ✅  
+**Tests:** 282/282 passing ✅  
 **Build:** Production-ready ✅  
-**Average Feature Rating:** 76.5/100
+**Average Feature Rating:** 77.1/100
 
 ---
 
@@ -31,7 +31,8 @@
 #### New Features
 
 - [x] AVS Import UI in Financials tab
-- [ ] Bulk case list actions (multi-select delete/status change)
+- [x] Bulk case list actions (multi-select delete/status change)
+- [x] Filter/sort persistence with localStorage and reset button
 - [ ] Refresh Case Summary Generator with better format for sharing
 - [ ] Improve navigation feel - better return tracking and anchor linking
 
@@ -102,9 +103,9 @@
 | ----------------------------- | ----- | ------ | ------ | ------ | ------ |
 | Hooks over 200 lines          | 4     | 0 ✅   | 0      | 0      | 0      |
 | Components with anti-patterns | 1     | 0 ✅   | 0      | 0      | 0      |
-| Test count                    | 253   | 269    | 280    | 290    | 290+   |
-| New features shipped          | -     | 4      | 4      | 4      | 12     |
-| Average feature rating        | 76.5  | 77     | 78     | 80     | 80+    |
+| Test count                    | 253   | 282 ✅ | 290    | 300    | 300+   |
+| New features shipped          | -     | 6 ✅   | 4      | 4      | 14     |
+| Average feature rating        | 76.5  | 77.1   | 78     | 80     | 80+    |
 
 ---
 
@@ -115,7 +116,8 @@
 1. ~~Hook refactoring~~ ✅
 2. ~~FinancialItemModal anti-pattern fix~~ ✅
 3. ~~Category Manager checkbox bug~~ ✅
-4. Bulk case list actions
+4. ~~Bulk case list actions~~ ✅
+5. ~~Filter/sort persistence~~ ✅
 
 ### Week 2 - P0
 
@@ -165,4 +167,4 @@ Every feature must:
 ---
 
 **Prepared by:** GitHub Copilot  
-**Last updated:** December 2, 2025
+**Last updated:** December 3, 2025

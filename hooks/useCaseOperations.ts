@@ -186,5 +186,50 @@ export function useCaseOperations(config: CaseOperationsConfig) {
     toast.success(`Imported ${importedCases.length} cases successfully`);
   }, [guardService, service, isMounted, setError, setHasLoadedData]);
 
-  return { loadCases, saveCase, deleteCase, saveNote, importCases, updateCaseStatus };
+  const deleteCases = useCallback(async (caseIds: string[]): Promise<number> => {
+    if (!guardService()) return 0;
+
+    const toastId = toast.loading(`Deleting ${caseIds.length} case${caseIds.length === 1 ? '' : 's'}...`);
+    setError(null);
+
+    const result = await service!.deleteCases(caseIds);
+
+    if (!isMounted.current) return 0;
+
+    if (!result.success) {
+      setError(result.error);
+      toast.error(result.error, { id: toastId });
+      return 0;
+    }
+
+    const { deleted } = result.data;
+    toast.success(`Deleted ${deleted} case${deleted === 1 ? '' : 's'}`, { id: toastId });
+    return deleted;
+  }, [guardService, service, isMounted, setError]);
+
+  const updateCasesStatus = useCallback(async (
+    caseIds: string[],
+    status: StoredCase["status"]
+  ): Promise<number> => {
+    if (!guardService()) return 0;
+
+    const toastId = toast.loading(`Updating ${caseIds.length} case${caseIds.length === 1 ? '' : 's'}...`);
+    setError(null);
+
+    const result = await service!.updateCasesStatus(caseIds, status);
+
+    if (!isMounted.current) return 0;
+
+    if (!result.success) {
+      setError(result.error);
+      toast.error(result.error, { id: toastId });
+      return 0;
+    }
+
+    const { updated } = result.data;
+    toast.success(`Updated ${updated.length} case${updated.length === 1 ? '' : 's'} to ${status}`, { id: toastId, duration: 2000 });
+    return updated.length;
+  }, [guardService, service, isMounted, setError]);
+
+  return { loadCases, saveCase, deleteCase, deleteCases, saveNote, importCases, updateCaseStatus, updateCasesStatus };
 }

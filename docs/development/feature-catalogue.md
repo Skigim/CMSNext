@@ -2,7 +2,7 @@
 
 > Living index of marketable features, their current implementation status, quality, and future investments.
 
-**Last Updated:** December 1, 2025
+**Last Updated:** December 3, 2025
 
 ## How to Use This Document
 
@@ -18,23 +18,23 @@
 
 ## Quick Reference (December 2025)
 
-| Feature               | Rating | Trend | Notes                                 |
-| --------------------- | ------ | ----- | ------------------------------------- |
-| Case Management       | 88     | →     | Production-ready, relationships added |
-| Premium UI/UX         | 82     | →     | Solid, accessibility audits needed    |
-| Local-First Storage   | 80     | →     | Production-ready                      |
-| Developer Enablement  | 79     | →     | Strong tooling                        |
-| Configurable Statuses | 78     | →     | Recently stabilized                   |
-| Data Portability      | 76     | →     | Good, UX improvements possible        |
-| Legacy Migration      | 75     | →     | Dev-only, one-way                     |
-| Autosave & Recovery   | 74     | →     | Works, telemetry pending              |
-| Financial Operations  | 73     | →     | Next for refactoring                  |
-| Feature Flags         | 72     | →     | In-memory only                        |
-| Notes & Collaboration | 71     | →     | Basic functionality                   |
-| Dashboard & Insights  | 70     | →     | Framework ready                       |
+| Feature               | Rating | Trend | Notes                                |
+| --------------------- | ------ | ----- | ------------------------------------ |
+| Case Management       | 90     | ↑     | Bulk actions added, production-ready |
+| Premium UI/UX         | 82     | →     | Solid, accessibility audits needed   |
+| Local-First Storage   | 80     | →     | Production-ready                     |
+| Developer Enablement  | 79     | →     | Strong tooling                       |
+| Configurable Statuses | 78     | →     | Recently stabilized                  |
+| Data Portability      | 76     | →     | Good, UX improvements possible       |
+| Legacy Migration      | 75     | →     | Dev-only, one-way                    |
+| Autosave & Recovery   | 74     | →     | Works, telemetry pending             |
+| Financial Operations  | 78     | ↑     | FinancialItemModal refactored        |
+| Feature Flags         | 72     | →     | In-memory only                       |
+| Notes & Collaboration | 71     | →     | Basic functionality                  |
+| Dashboard & Insights  | 70     | →     | Framework ready                      |
 
-**Average Rating:** 76.5/100  
-**Test Status:** 253/253 passing (100%)
+**Average Rating:** 77.1/100  
+**Test Status:** 282/282 passing (100%)
 
 ---
 
@@ -154,47 +154,49 @@ Maintained by the storage + autosave working group. Align telemetry follow-ups w
 
 ### Implementation Snapshot
 
-**Rating: 88/100** _(Updated December 1, 2025)_
+**Rating: 90/100** _(Updated December 3, 2025)_
 
-Core case workflows (create, view, edit, delete) are production-ready through the refactored service architecture. CaseService handles all case CRUD operations with status tracking, import/export, and activity log integration. The hook layer (`useCaseManagement`) provides a clean facade over DataManager with optimistic updates and comprehensive test coverage. **New:** Relationships feature added to Person data model (December 2025).
+Core case workflows (create, view, edit, delete) are production-ready through the refactored service architecture. CaseService handles all case CRUD operations with status tracking, import/export, and activity log integration. The hook layer (`useCaseManagement`) provides a clean facade over DataManager with optimistic updates and comprehensive test coverage. **New:** Bulk actions (multi-select delete and status change) added December 3, 2025.
 
 ### Strengths
 
-- **Service Layer Architecture**: `CaseService` (476 lines) encapsulates all case business logic with clean separation of concerns
-- **DataManager Orchestration**: Thin coordination layer (461 lines) delegates to 7 specialized services via dependency injection
+- **Bulk Actions**: Multi-select cases for batch delete or status change with floating toolbar and confirmation dialogs
+- **Service Layer Architecture**: `CaseService` (500+ lines) encapsulates all case business logic including bulk operations
+- **DataManager Orchestration**: Thin coordination layer delegates to 7 specialized services via dependency injection
 - **Relationships Model**: Formal relationship tracking (type, name, phone) integrated into Person data model
+- **Selection Management**: `useCaseSelection` hook provides multi-select state with select-all, partial selection indicators
 - **Streamlined Hook Layer**: `useCaseManagement` provides clean React integration with toast feedback and error handling
 - **Navigation Integration**: `useNavigationFlow` ensures consistent transitions and performance measurement logging across views
-- **Comprehensive Test Coverage**: 253/253 tests passing (100%) including service tests, integration tests, and component tests
+- **Comprehensive Test Coverage**: 282/282 tests passing (100%) including service tests, integration tests, and component tests
 - **Data Model Integrity**: Normalized structures (`CaseDisplay`, `CaseRecord`, `Person`, `Relationship`) with strict TypeScript validation
 - **Import/Export**: Bulk operations with duplicate detection and progress indicators
 - **Autosave Integration**: Forms seamlessly integrate with AutosaveFileService for reliable persistence
+- **Filter/Sort Persistence**: Case list preferences saved to localStorage with reset button
 - **Configurable Completion Statuses**: Users define which statuses count as "completed" for dashboard metrics
 
 ### Gaps / Risks
 
-- Hook complexity: `useCaseManagement` at 350 lines exceeds 200-line target (refactoring candidate)
 - Case list filtering/search UX exposes basic predicates; advanced combos could benefit from saved filter presets
 - Accessibility audits for complex forms remain ad hoc
 - Performance benchmarks for large datasets (1k+ cases) not yet established
 
 ### Expansion Opportunities
 
-- **Hook Refactoring**: Split `useCaseManagement` into focused hooks (state, operations)
 - **Saved Filter Views**: Introduce user-configurable filter presets
 - **Relationship Search**: Enable filtering/searching by relationship data
 - **Performance Optimization**: Establish 1k+ case benchmark suite
+- **Bulk Edit Fields**: Extend bulk actions to edit other case fields
 
 ### Coverage & Telemetry
 
-- **Service Layer**: CaseService fully tested with 100% coverage for CRUD operations, import/export, and activity logging
-- **Test Suite Status**: 253 tests passing across 41 test files (100%) as of December 1, 2025
-- **Relationships**: Persistence implemented in CaseService create/update methods
+- **Service Layer**: CaseService fully tested with 100% coverage for CRUD operations, bulk operations, import/export, and activity logging
+- **Test Suite Status**: 282 tests passing across 43 test files (100%) as of December 3, 2025
+- **Bulk Operations**: `deleteCases()` and `updateCasesStatus()` with single read/write pattern
 - **Performance**: Telemetry infrastructure ready; baseline measurements pending
 
 ### Owners / Notes
 
-Phase 3 Cases domain refactor completed November 2, 2025. Relationships feature added December 2025. Hook refactoring scheduled for December Week 1.
+Phase 3 Cases domain refactor completed November 2, 2025. Bulk actions feature added December 3, 2025. Hook refactoring completed December Week 1.
 
 ---
 

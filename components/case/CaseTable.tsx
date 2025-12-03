@@ -8,6 +8,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import type { StoredCase, CaseStatusUpdateHandler } from "@/types/case";
 import { CaseStatusMenu } from "./CaseStatusMenu";
@@ -30,6 +31,13 @@ export interface CaseTableProps {
   alertsByCaseId?: Map<string, AlertWithMatch[]>;
   onOpenAlerts?: (caseId: string) => void;
   onUpdateCaseStatus?: CaseStatusUpdateHandler;
+  // Selection props
+  selectionEnabled?: boolean;
+  isSelected?: (caseId: string) => boolean;
+  isAllSelected?: boolean;
+  isPartiallySelected?: boolean;
+  onToggleSelection?: (caseId: string) => void;
+  onToggleSelectAll?: () => void;
 }
 
 const formatter = new Intl.DateTimeFormat(undefined, {
@@ -62,6 +70,12 @@ export const CaseTable = memo(function CaseTable({
   alertsByCaseId,
   onOpenAlerts,
   onUpdateCaseStatus,
+  selectionEnabled = false,
+  isSelected,
+  isAllSelected = false,
+  isPartiallySelected = false,
+  onToggleSelection,
+  onToggleSelectAll,
 }: CaseTableProps) {
   const hasCases = cases.length > 0;
 
@@ -120,6 +134,21 @@ export const CaseTable = memo(function CaseTable({
       <Table>
         <TableHeader>
           <TableRow>
+            {selectionEnabled && (
+              <TableHead className="w-[40px]">
+                <Checkbox
+                  checked={isAllSelected}
+                  ref={(el) => {
+                    if (el) {
+                      // Set indeterminate state via DOM since it's not a standard HTML attribute
+                      (el as unknown as HTMLInputElement).indeterminate = isPartiallySelected;
+                    }
+                  }}
+                  onCheckedChange={() => onToggleSelectAll?.()}
+                  aria-label={isAllSelected ? "Deselect all cases" : "Select all cases"}
+                />
+              </TableHead>
+            )}
             <TableHead
               aria-sort={sortKey === "name" ? (sortDirection === "asc" ? "ascending" : "descending") : "none"}
             >
@@ -218,13 +247,22 @@ export const CaseTable = memo(function CaseTable({
         <TableBody>
           {!hasCases && (
             <TableRow>
-              <TableCell colSpan={9} className="py-12 text-center text-muted-foreground">
+              <TableCell colSpan={selectionEnabled ? 10 : 9} className="py-12 text-center text-muted-foreground">
                 No cases to display
               </TableCell>
             </TableRow>
           )}
           {rows.map(row => (
             <TableRow key={row.id} className="group">
+              {selectionEnabled && (
+                <TableCell className="w-[40px]">
+                  <Checkbox
+                    checked={isSelected?.(row.id) ?? false}
+                    onCheckedChange={() => onToggleSelection?.(row.id)}
+                    aria-label={`Select ${row.name}`}
+                  />
+                </TableCell>
+              )}
               <TableCell>
                 <div className="flex flex-col gap-1">
                   <div className="flex items-center gap-2">

@@ -2,11 +2,12 @@ import { useCallback, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
-import type { StoredCase, CaseStatusUpdateHandler } from "../../types/case";
+import type { StoredCase, CaseStatus, CaseStatusUpdateHandler } from "../../types/case";
 import { setupSampleData } from "../../utils/setupData";
 import { CaseAlertsDrawer } from "./CaseAlertsDrawer";
 import { CaseFilters } from "./CaseFilters";
 import { MultiSortConfig } from "./MultiSortConfig";
+import { BulkActionsToolbar } from "./BulkActionsToolbar";
 import {
   Plus,
   Search,
@@ -46,6 +47,7 @@ import {
   type CaseListSortKey,
   type CaseListSortDirection,
 } from "@/hooks/useCaseListPreferences";
+import { useCaseSelection } from "@/hooks/useCaseSelection";
 import { filterOpenAlerts, type AlertsSummary, type AlertWithMatch } from "../../utils/alertsData";
 import { useAppViewState } from "@/hooks/useAppViewState";
 import { isFeatureEnabled } from "@/utils/featureFlags";
@@ -62,6 +64,9 @@ interface CaseListProps {
   alerts?: AlertWithMatch[];
   onResolveAlert?: (alert: AlertWithMatch) => void | Promise<void>;
   onUpdateCaseStatus?: CaseStatusUpdateHandler;
+  // Bulk action handlers
+  onDeleteCases?: (caseIds: string[]) => Promise<number>;
+  onUpdateCasesStatus?: (caseIds: string[], status: CaseStatus) => Promise<number>;
 }
 
 export function CaseList({
@@ -76,6 +81,8 @@ export function CaseList({
   alerts: _alerts,
   onResolveAlert,
   onUpdateCaseStatus,
+  onDeleteCases,
+  onUpdateCasesStatus,
 }: CaseListProps) {
   const { featureFlags } = useAppViewState();
   const showDevTools = isFeatureEnabled("settings.devTools", featureFlags);
@@ -121,7 +128,7 @@ export function CaseList({
 
   const hasCustomPreferences = useMemo(() => {
     const hasFilters = filters.statuses.length > 0 || filters.priorityOnly || filters.dateRange.from || filters.dateRange.to;
-    const hasCustomSort = sortConfigs.length > 1 || sortConfigs[0]?.key !== "updated" || sortConfigs[0]?.direction !== "desc";
+    const hasCustomSort = sortConfigs.length > 1 || sortConfigs[0]?.key !== "name" || sortConfigs[0]?.direction !== "asc";
     const hasCustomSegment = segment !== "all";
     return hasFilters || hasCustomSort || hasCustomSegment;
   }, [filters, sortConfigs, segment]);
@@ -298,6 +305,61 @@ export function CaseList({
 
   const noMatches = sortedCases.length === 0;
 
+  // Selection management
+  const visibleCaseIds = useMemo(() => sortedCases.map(c => c.id), [sortedCases]);
+  const {
+    selectedCount,
+    isAllSelected,
+    isPartiallySelected,
+    toggleSelection,
+    selectAll,
+    deselectAll,
+    clearSelection,
+    isSelected,
+  } = useCaseSelection(visibleCaseIds);
+
+  const selectionEnabled = !!(onDeleteCases || onUpdateCasesStatus);
+  const [isBulkDeleting, setIsBulkDeleting] = useState(false);
+  const [isBulkUpdating, setIsBulkUpdating] = useState(false);
+
+  const handleToggleSelectAll = useCallback(() => {
+    if (isAllSelected) {
+      deselectAll(visibleCaseIds);
+    } else {
+      selectAll(visibleCaseIds);
+    }
+  }, [isAllSelected, visibleCaseIds, deselectAll, selectAll]);
+
+  const handleBulkDelete = useCallback(async () => {
+    if (!onDeleteCases) return;
+    
+    const idsToDelete = visibleCaseIds.filter(id => isSelected(id));
+    if (idsToDelete.length === 0) return;
+
+    setIsBulkDeleting(true);
+    try {
+      await onDeleteCases(idsToDelete);
+      clearSelection();
+    } finally {
+      setIsBulkDeleting(false);
+    }
+  }, [onDeleteCases, visibleCaseIds, isSelected, clearSelection]);
+
+  const handleBulkStatusChange = useCallback(async (status: CaseStatus) => {
+    if (!onUpdateCasesStatus) return;
+
+    const idsToUpdate = visibleCaseIds.filter(id => isSelected(id));
+    if (idsToUpdate.length === 0) return;
+
+    setIsBulkUpdating(true);
+    try {
+      await onUpdateCasesStatus(idsToUpdate, status);
+      clearSelection();
+    } finally {
+      setIsBulkUpdating(false);
+    }
+  }, [onUpdateCasesStatus, visibleCaseIds, isSelected, clearSelection]);
+
   const activeCase = useMemo(() => {
     if (!activeAlertsCaseId) {
       return null;
@@ -308,7 +370,7 @@ export function CaseList({
 
   const activeCaseAlerts = useMemo<AlertWithMatch[]>(() => {
     if (!activeAlertsCaseId) {
-      return [];
+      return [];;
     }
 
     return matchedAlertsByCase.get(activeAlertsCaseId) ?? [];
@@ -418,12 +480,29 @@ export function CaseList({
         alertsByCaseId={matchedAlertsByCase}
         onOpenAlerts={handleOpenCaseAlerts}
         onUpdateCaseStatus={onUpdateCaseStatus}
+        selectionEnabled={selectionEnabled}
+        isSelected={isSelected}
+        isAllSelected={isAllSelected}
+        isPartiallySelected={isPartiallySelected}
+        onToggleSelection={toggleSelection}
+        onToggleSelectAll={handleToggleSelectAll}
       />
 
       {noMatches && (
         <div className="py-12 text-center">
           <p className="text-muted-foreground">No cases match the current filters.</p>
         </div>
+      )}
+
+      {selectionEnabled && (
+        <BulkActionsToolbar
+          selectedCount={selectedCount}
+          onDeleteSelected={handleBulkDelete}
+          onStatusChange={handleBulkStatusChange}
+          onClearSelection={clearSelection}
+          isDeleting={isBulkDeleting}
+          isUpdating={isBulkUpdating}
+        />
       )}
 
       <AlertDialog open={showSampleDataDialog} onOpenChange={setShowSampleDataDialog}>
