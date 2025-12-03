@@ -7,16 +7,12 @@ import type { CaseActivityLogState } from "../../types/activityLog";
 import { WidgetRegistry, createLazyWidget, type RegisteredWidget } from "./widgets/WidgetRegistry";
 import { useAppViewState } from "@/hooks/useAppViewState";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { RecentCasesWidget } from "./widgets/RecentCasesWidget";
-import { AlertCenterWidget } from "./widgets/AlertCenterWidget";
 
 interface DashboardProps {
   cases: StoredCase[];
   alerts: AlertsIndex;
   activityLogState: CaseActivityLogState;
-  onViewAllCases: () => void;
   onNewCase: () => void;
-  onNavigateToReports: () => void;
 }
 
 const ActivityWidgetLazy = createLazyWidget(
@@ -54,7 +50,7 @@ const AvgCaseProcessingTimeWidgetLazy = createLazyWidget(
   "AvgCaseProcessingTimeWidget",
 );
 
-export function Dashboard({ cases, alerts, activityLogState, onViewAllCases, onNewCase, onNavigateToReports }: DashboardProps) {
+export function Dashboard({ cases, alerts, activityLogState, onNewCase }: DashboardProps) {
   const { featureFlags } = useAppViewState();
 
   const allAlerts = useMemo(() => alerts.alerts ?? [], [alerts.alerts]);
@@ -196,11 +192,6 @@ export function Dashboard({ cases, alerts, activityLogState, onViewAllCases, onN
         </TabsList>
 
         <TabsContent value="overview" className="space-y-6">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <AlertCenterWidget alerts={alerts} onNavigateToReports={onNavigateToReports} />
-            <RecentCasesWidget cases={cases} onViewAllCases={onViewAllCases} onNewCase={onNewCase} />
-          </div>
-
           <div>
             <h2 className="text-lg font-semibold text-foreground mb-4">Recent Activity</h2>
             <WidgetRegistry

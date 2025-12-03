@@ -1,4 +1,4 @@
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { Dashboard } from "@/components/app/Dashboard";
 import type { AlertsIndex, AlertWithMatch } from "@/utils/alertsData";
@@ -139,58 +139,7 @@ const mockActivityLogState: CaseActivityLogState = {
 };
 
 describe("Dashboard", () => {
-  it("shows the unlinked alerts badge and dialog when alerts are unmatched", async () => {
-    const matchedAlert = createAlert({
-      id: "alert-matched",
-      matchStatus: "matched",
-      matchedCaseId: baseCase.id,
-      matchedCaseName: baseCase.name,
-    });
-
-    const unlinkedAlert = createAlert({
-      id: "alert-unlinked",
-      matchStatus: "unmatched",
-      description: "Missing documents",
-    });
-
-    const alertsIndex: AlertsIndex = {
-      alerts: [matchedAlert, unlinkedAlert],
-      summary: {
-        total: 2,
-        matched: 1,
-        unmatched: 1,
-        missingMcn: 0,
-        latestUpdated: null,
-      },
-      alertsByCaseId: new Map([[baseCase.id, [matchedAlert]]]),
-      unmatched: [unlinkedAlert],
-      missingMcn: [],
-    };
-
-    render(
-      <Dashboard
-        cases={[baseCase]}
-        alerts={alertsIndex}
-        activityLogState={mockActivityLogState}
-        onNewCase={vi.fn()}
-        onViewAllCases={vi.fn()}
-        onNavigateToReports={vi.fn()}
-      />,
-    );
-
-    // Wait for widgets to load and complete their async operations
-    await waitFor(() => {
-      expect(screen.getByText(/2 open/i)).toBeInTheDocument();
-    });
-
-    const badgeButton = screen.getByRole("button", { name: /1 unlinked alert/i });
-    fireEvent.click(badgeButton);
-
-    expect(screen.getByRole("heading", { name: /unlinked alerts/i })).toBeInTheDocument();
-    expect(screen.getAllByText(/missing documents/i)).not.toHaveLength(0);
-  });
-
-  it("hides the unlinked alerts badge when everything is matched", async () => {
+  it("renders without crashing with basic props", async () => {
     const matchedAlert = createAlert({
       id: "alert-matched",
       matchStatus: "matched",
@@ -218,14 +167,45 @@ describe("Dashboard", () => {
         alerts={alertsIndex}
         activityLogState={mockActivityLogState}
         onNewCase={vi.fn()}
-        onViewAllCases={vi.fn()}
-        onNavigateToReports={vi.fn()}
       />,
     );
 
-    // Wait for widgets to load and complete their async operations
-    await waitFor(() => {
-      expect(screen.queryByRole("button", { name: /unlinked alert/i })).not.toBeInTheDocument();
-    });
+    // Check that the dashboard header is rendered
+    expect(screen.getByRole("heading", { name: /dashboard/i })).toBeInTheDocument();
+    
+    // Check that the New Case button is rendered
+    expect(screen.getByRole("button", { name: /new case/i })).toBeInTheDocument();
+    
+    // Check that tabs are rendered
+    expect(screen.getByRole("tab", { name: /overview/i })).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: /analytics/i })).toBeInTheDocument();
+  });
+
+  it("displays Recent Activity section in overview tab", async () => {
+    const alertsIndex: AlertsIndex = {
+      alerts: [],
+      summary: {
+        total: 0,
+        matched: 0,
+        unmatched: 0,
+        missingMcn: 0,
+        latestUpdated: null,
+      },
+      alertsByCaseId: new Map(),
+      unmatched: [],
+      missingMcn: [],
+    };
+
+    render(
+      <Dashboard
+        cases={[]}
+        alerts={alertsIndex}
+        activityLogState={mockActivityLogState}
+        onNewCase={vi.fn()}
+      />,
+    );
+
+    // Check that Recent Activity section is displayed
+    expect(screen.getByRole("heading", { name: /recent activity/i })).toBeInTheDocument();
   });
 });

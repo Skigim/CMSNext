@@ -325,6 +325,72 @@ function sortAlerts(alerts: AlertWithMatch[]): AlertWithMatch[] {
   });
 }
 
+/**
+ * Converts a string to proper title case.
+ * Handles ALL CAPS input by lowercasing first, then capitalizing first letter of each word.
+ * Handles special cases like "O'BRIEN" → "O'Brien", "MCDONALD" → "McDonald"
+ */
+function toProperCase(str: string): string {
+  if (!str) return "";
+  
+  // First lowercase everything, then capitalize first letter of each word
+  return str
+    .toLowerCase()
+    .replace(/\b\w/g, char => char.toUpperCase())
+    // Handle Mc/Mac prefixes (McDonald, MacArthur)
+    .replace(/\b(Mc|Mac)([a-z])/g, (_, prefix, letter) => prefix + letter.toUpperCase())
+    // Handle O' prefix (O'Brien, O'Connor)
+    .replace(/\bO'([a-z])/g, (_, letter) => "O'" + letter.toUpperCase());
+}
+
+/**
+ * Parse a name from "LASTNAME, FIRSTNAME" format (common in imports)
+ * and return properly-cased firstName and lastName.
+ * 
+ * Examples:
+ * - "DOE, JOHN" → { firstName: "John", lastName: "Doe" }
+ * - "O'BRIEN, MARY" → { firstName: "Mary", lastName: "O'Brien" }
+ * - "MCDONALD, JAMES" → { firstName: "James", lastName: "McDonald" }
+ * - "SMITH, JOHN JR" → { firstName: "John Jr", lastName: "Smith" }
+ */
+export function parseNameFromImport(rawName: string | undefined): { firstName: string; lastName: string } {
+  if (!rawName) {
+    return { firstName: "", lastName: "" };
+  }
+
+  const normalizedWhitespace = rawName.replace(/\s+/g, " ").trim();
+  if (!normalizedWhitespace) {
+    return { firstName: "", lastName: "" };
+  }
+
+  const segments = normalizedWhitespace
+    .split(",")
+    .map(segment => segment.trim())
+    .filter(segment => segment.length > 0);
+
+  if (segments.length === 0) {
+    return { firstName: "", lastName: "" };
+  }
+
+  // Single segment - treat as lastName only
+  if (segments.length === 1) {
+    return { firstName: "", lastName: toProperCase(segments[0]) };
+  }
+
+  // Two or more segments: "LastName, FirstName [, Suffix...]"
+  const [lastName, firstName, ...suffixParts] = segments;
+  const suffix = suffixParts.map(s => toProperCase(s)).join(" ").trim();
+  
+  const parsedFirstName = suffix 
+    ? `${toProperCase(firstName)} ${suffix}`.trim()
+    : toProperCase(firstName);
+
+  return {
+    firstName: parsedFirstName,
+    lastName: toProperCase(lastName),
+  };
+}
+
 export function createAlertsIndexFromAlerts(alertsInput: AlertWithMatch[]): AlertsIndex {
   const dedupedAlerts = dedupeAlerts(alertsInput);
   const sortedAlerts = sortAlerts(dedupedAlerts);

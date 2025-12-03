@@ -33,8 +33,10 @@
 - [x] AVS Import UI in Financials tab
 - [x] Bulk case list actions (multi-select delete/status change)
 - [x] Filter/sort persistence with localStorage and reset button
+- [x] Navigate to case details after creating new case
+- [x] Skeleton case auto-creation from unmatched alert imports (with proper name casing)
+- [x] Dashboard cleanup - removed AlertCenter and RecentCases widgets (Activity Log only)
 - [ ] Refresh Case Summary Generator with better format for sharing
-- [ ] Improve navigation UX - better return tracking and anchor linking
 
 #### Polish & Documentation
 
@@ -104,7 +106,7 @@
 | Hooks over 200 lines          | 4     | 0 ✅   | 0      | 0      | 0      |
 | Components with anti-patterns | 1     | 0 ✅   | 0      | 0      | 0      |
 | Test count                    | 253   | 282 ✅ | 290    | 300    | 300+   |
-| New features shipped          | -     | 6 ✅   | 4      | 4      | 14     |
+| New features shipped          | -     | 9 ✅   | 4      | 4      | 17     |
 | Average feature rating        | 76.5  | 77.1   | 78     | 80     | 80+    |
 
 ---
@@ -118,6 +120,9 @@
 3. ~~Category Manager checkbox bug~~ ✅
 4. ~~Bulk case list actions~~ ✅
 5. ~~Filter/sort persistence~~ ✅
+6. ~~Navigate to case details after new case~~ ✅
+7. ~~Skeleton case creation from alerts~~ ✅
+8. ~~Dashboard widget cleanup~~ ✅
 
 ### Week 2 - P0
 

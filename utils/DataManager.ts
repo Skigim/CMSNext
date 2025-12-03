@@ -24,6 +24,8 @@ import {
   AlertsIndex,
   AlertWithMatch,
   createEmptyAlertsIndex,
+  parseNameFromImport,
+  normalizeMcn,
 } from "./alertsData";
 import { 
   FileStorageService, 
@@ -59,6 +61,7 @@ interface AlertsMergeSummary {
   updated: number;
   total: number;
   error?: string;
+  casesCreated?: number;
 }
 
 function toAlertWithMatch(record: AlertRecord): AlertWithMatch {
@@ -280,13 +283,110 @@ export class DataManager {
       return { added: 0, updated: 0, total: 0 };
     }
 
-    const cases = options.cases ?? data.cases ?? [];
+    let cases = options.cases ?? data.cases ?? [];
     const rawAlerts = data.alerts ?? [];
     
     const existingAlerts: AlertWithMatch[] = rawAlerts.map(toAlertWithMatch);
 
     try {
+      // First pass: merge alerts with existing cases
       const result = await this.alerts.mergeAlertsFromCsvContent(csvContent, existingAlerts, cases);
+
+      // Find unmatched alerts that have MCNs - these need skeleton cases
+      const unmatchedWithMcn = result.alerts.filter(
+        alert => alert.matchStatus === "unmatched" && alert.mcNumber
+      );
+
+      // Group by normalized MCN to avoid duplicate case creation
+      const mcnToAlerts = new Map<string, AlertWithMatch[]>();
+      for (const alert of unmatchedWithMcn) {
+        const normalizedMcn = normalizeMcn(alert.mcNumber);
+        if (normalizedMcn) {
+          const existing = mcnToAlerts.get(normalizedMcn) ?? [];
+          existing.push(alert);
+          mcnToAlerts.set(normalizedMcn, existing);
+        }
+      }
+
+      // Create skeleton cases for each unique MCN
+      const createdCases: StoredCase[] = [];
+      for (const [, alerts] of mcnToAlerts) {
+        // Use the first alert's data for case creation
+        const alert = alerts[0];
+        const { firstName, lastName } = parseNameFromImport(alert.personName);
+        
+        // Only create if we have at least a name or MCN
+        if (!firstName && !lastName) {
+          logger.warn('Skipping skeleton case creation: no name available', { mcn: alert.mcNumber });
+          continue;
+        }
+
+        try {
+          const skeletonCase = await this.cases.createCompleteCase({
+            person: {
+              firstName: firstName || "Unknown",
+              lastName: lastName || "Unknown",
+              email: "",
+              phone: "",
+              dateOfBirth: "",
+              ssn: "",
+              livingArrangement: "",
+              address: { street: "", city: "", state: "", zip: "" },
+              mailingAddress: { street: "", city: "", state: "", zip: "", sameAsPhysical: true },
+              status: "Active",
+            },
+            caseRecord: {
+              mcn: alert.mcNumber ?? "",
+              status: "Active" as CaseStatus,
+              applicationDate: new Date().toISOString(),
+              caseType: "",
+              personId: "",
+              description: "Auto-created from alert import",
+              livingArrangement: "",
+              admissionDate: "",
+              organizationId: "",
+            },
+          });
+          createdCases.push(skeletonCase);
+          logger.info('Created skeleton case from unmatched alert', { 
+            caseId: skeletonCase.id, 
+            mcn: alert.mcNumber,
+            name: `${firstName} ${lastName}`.trim(),
+          });
+        } catch (err) {
+          logger.error('Failed to create skeleton case', { 
+            mcn: alert.mcNumber, 
+            error: err instanceof Error ? err.message : String(err) 
+          });
+        }
+      }
+
+      // If we created any cases, re-match the alerts against all cases
+      if (createdCases.length > 0) {
+        const allCases = [...cases, ...createdCases];
+        const rematchedResult = await this.alerts.mergeAlertsFromCsvContent(
+          csvContent, 
+          existingAlerts, 
+          allCases
+        );
+        
+        // Write updated data with new cases already included from createCompleteCase
+        // Just need to update alerts
+        const freshData = await this.readFileData();
+        if (freshData) {
+          await this.fileStorage.writeNormalizedData({
+            ...freshData,
+            alerts: rematchedResult.alerts,
+          });
+        }
+
+        return {
+          added: result.added,
+          updated: result.updated,
+          total: rematchedResult.total,
+          casesCreated: createdCases.length,
+        };
+      }
 
       if (result.added > 0 || result.updated > 0) {
         // Note: writeNormalizedData handles broadcasting data changes

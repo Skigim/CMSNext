@@ -31,7 +31,6 @@ interface ViewRendererProps {
   handleBackToList: () => void;
   handleSaveCase: (caseData: { person: NewPersonData; caseRecord: NewCaseRecordData }) => Promise<void>;
   handleCancelForm: () => void;
-  handleNavigateToReports: () => void;
   
   // Component handlers
   handleDeleteCase: (caseId: string) => Promise<void>;
@@ -79,7 +78,6 @@ export function ViewRenderer({
   handleBackToList,
   handleSaveCase,
   handleCancelForm,
-  handleNavigateToReports,
   
   // Component handlers
   handleDeleteCase,
@@ -99,9 +97,7 @@ export function ViewRenderer({
           cases={cases}
           alerts={alerts}
           activityLogState={activityLogState}
-          onViewAllCases={handleBackToList}
           onNewCase={handleNewCase}
-          onNavigateToReports={handleNavigateToReports}
         />
       );
 

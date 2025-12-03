@@ -25,7 +25,7 @@
 | Local-First Storage   | 80     | →     | Production-ready                     |
 | Developer Enablement  | 79     | →     | Strong tooling                       |
 | Configurable Statuses | 78     | →     | Recently stabilized                  |
-| Data Portability      | 76     | →     | Good, UX improvements possible       |
+| Data Portability      | 78     | ↑     | Smart alert import with case creation |
 | Legacy Migration      | 75     | →     | Dev-only, one-way                    |
 | Autosave & Recovery   | 74     | →     | Works, telemetry pending             |
 | Financial Operations  | 78     | ↑     | FinancialItemModal refactored        |
@@ -160,6 +160,7 @@ Core case workflows (create, view, edit, delete) are production-ready through th
 
 ### Strengths
 
+- **Smart Navigation**: Creating a new case automatically navigates to the case details view
 - **Bulk Actions**: Multi-select cases for batch delete or status change with floating toolbar and confirmation dialogs
 - **Service Layer Architecture**: `CaseService` (500+ lines) encapsulates all case business logic including bulk operations
 - **DataManager Orchestration**: Thin coordination layer delegates to 7 specialized services via dependency injection
@@ -290,12 +291,13 @@ Collaboration feature group; capture planned enhancements in updated documentati
 
 ### Implementation Snapshot
 
-**Rating: 70/100**
+**Rating: 70/100** _(Updated December 3, 2025)_
 
-Dashboard now features a production-ready widget registry framework with lazy loading, automatic error handling, and data freshness tracking. Initial widgets (Case Priority, Activity Timeline) provide real-time insights. Core metrics (case counts, autosave badge) remain visible, and architecture scales for future analytics expansion.
+Dashboard features a production-ready widget registry framework with lazy loading, automatic error handling, and data freshness tracking. **December 3, 2025:** Streamlined Overview tab to focus on Activity Log only (AlertCenter and RecentCases widgets removed). Analytics tab provides comprehensive metrics widgets. Core metrics remain visible, and architecture scales for future expansion.
 
 ### Strengths
 
+- **Streamlined Overview**: Dashboard Overview tab focuses on Activity Log for recent activity; detailed analytics moved to dedicated Analytics tab
 - **Widget Registry Framework**: Lazy loading via `React.lazy()` + Suspense with per-widget error boundaries prevents cascading failures
 - **Data Freshness Tracking**: All widgets display "Last updated: X minutes ago" via `useWidgetData` hook with configurable refresh intervals
 - **Responsive Grid Layout**: Widgets adapt to screen size (1 column mobile → 3 columns desktop) using shadcn grid system
@@ -339,12 +341,13 @@ Dashboard framework maintained by insights platform team. Widget development fol
 
 ### Implementation Snapshot
 
-**Rating: 76/100**
+**Rating: 78/100** _(Updated December 3, 2025)_
 
-JSON import/export flows are stable with schema validation, autosave-aware backups, and legacy migration helpers (`dataNormalization`, `convertLegacyCaseData`). CLI scripts generate seed data and examples, supporting offline onboarding.
+JSON import/export flows are stable with schema validation, autosave-aware backups, and legacy migration helpers. **December 3, 2025:** Alert CSV import now auto-creates skeleton cases for unmatched alerts with MCNs, using proper name casing (handles ALL CAPS input, Mc/Mac/O' prefixes). CLI scripts generate seed data and examples, supporting offline onboarding.
 
 ### Strengths
 
+- **Smart Alert Import**: Unmatched alerts with MCNs automatically create skeleton cases with properly-cased names (handles ALL CAPS, Mc/Mac/O' prefixes)
 - Import process validates structure, migrates legacy payloads, and records failures with descriptive toasts
 - Automatic backups (`case-tracker-data.backup-[timestamp].json`) protect against destructive imports
 - Exported data includes metadata (exported_at, totals) ensuring compatibility across environments
