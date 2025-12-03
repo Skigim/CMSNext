@@ -13,6 +13,7 @@ import {
   Database,
   Filter,
   RefreshCcw,
+  RotateCcw,
 } from "lucide-react";
 import { ToggleGroup, ToggleGroupItem } from "../ui/toggle-group";
 import {
@@ -33,6 +34,11 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "../ui/alert-dialog";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "../ui/tooltip";
 import { CaseTable } from "./CaseTable";
 import {
   useCaseListPreferences,
@@ -84,6 +90,7 @@ export function CaseList({
     setSortConfigs,
     filters,
     setFilters,
+    resetPreferences,
   } = useCaseListPreferences();
   const [searchTerm, setSearchTerm] = useState("");
   const [isSettingUpData, setIsSettingUpData] = useState(false);
@@ -111,6 +118,13 @@ export function CaseList({
 
     return map;
   }, [matchedAlertsByCase]);
+
+  const hasCustomPreferences = useMemo(() => {
+    const hasFilters = filters.statuses.length > 0 || filters.priorityOnly || filters.dateRange.from || filters.dateRange.to;
+    const hasCustomSort = sortConfigs.length > 1 || sortConfigs[0]?.key !== "updated" || sortConfigs[0]?.direction !== "desc";
+    const hasCustomSegment = segment !== "all";
+    return hasFilters || hasCustomSort || hasCustomSegment;
+  }, [filters, sortConfigs, segment]);
 
   const handleSetupSampleData = useCallback(async () => {
     const toastId = toast.loading("Adding sample data...");
@@ -374,6 +388,23 @@ export function CaseList({
             <Filter className="mr-2 h-4 w-4" /> Priority
           </ToggleGroupItem>
         </ToggleGroup>
+        {hasCustomPreferences && (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={resetPreferences}
+                aria-label="Reset all filters and sorting"
+              >
+                <RotateCcw className="h-4 w-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>Reset filters & sorting</p>
+            </TooltipContent>
+          </Tooltip>
+        )}
       </div>
 
       <CaseTable

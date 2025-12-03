@@ -33,6 +33,7 @@
 - [x] AVS Import UI in Financials tab
 - [ ] Bulk case list actions (multi-select delete/status change)
 - [ ] Refresh Case Summary Generator with better format for sharing
+- [ ] Improve navigation feel - better return tracking and anchor linking
 
 #### Polish & Documentation
 
