@@ -38,6 +38,7 @@
 - [x] Skeleton case auto-creation from unmatched alert imports (with proper name casing)
 - [x] Dashboard cleanup - removed AlertCenter and RecentCases widgets (Activity Log only)
 - [ ] Refresh Case Summary Generator with better format for sharing
+- [ ] Custom context menu using Radix ContextMenu primitive
 
 #### Polish & Documentation
 
