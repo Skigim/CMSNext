@@ -90,6 +90,8 @@ export function FinancialItemCard({
               confirmingDelete={confirmingDelete}
               onDeleteClick={handleDeleteClick}
               onDeleteConfirm={handleDeleteConfirm}
+              item={item}
+              itemType={itemType}
             />
           </div>
         )}

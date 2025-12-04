@@ -3,6 +3,16 @@ import userEvent from "@testing-library/user-event";
 import { describe, it, expect, vi } from "vitest";
 
 import { FinancialItemCardActions } from "@/components/financial/FinancialItemCardActions";
+import type { FinancialItem, CaseCategory } from "@/types/case";
+
+const mockItem: FinancialItem = {
+  id: "test-item-1",
+  description: "Test Item",
+  amount: 1000,
+  verificationStatus: "Pending",
+};
+
+const mockItemType: CaseCategory = "resources";
 
 describe("FinancialItemCardActions", () => {
   it("emits delete click when not confirming", async () => {
@@ -14,6 +24,8 @@ describe("FinancialItemCardActions", () => {
         confirmingDelete={false}
         onDeleteClick={onDeleteClick}
         onDeleteConfirm={vi.fn()}
+        item={mockItem}
+        itemType={mockItemType}
       />
     );
 
@@ -31,6 +43,8 @@ describe("FinancialItemCardActions", () => {
         confirmingDelete
         onDeleteClick={onDeleteClick}
         onDeleteConfirm={onDeleteConfirm}
+        item={mockItem}
+        itemType={mockItemType}
       />
     );
 
@@ -47,6 +61,8 @@ describe("FinancialItemCardActions", () => {
         confirmingDelete={false}
         onDeleteClick={vi.fn()}
         onDeleteConfirm={vi.fn()}
+        item={mockItem}
+        itemType={mockItemType}
       />
     );
 
@@ -60,6 +76,8 @@ describe("FinancialItemCardActions", () => {
         confirmingDelete={true}
         onDeleteClick={vi.fn()}
         onDeleteConfirm={vi.fn()}
+        item={mockItem}
+        itemType={mockItemType}
       />
     );
 
@@ -78,6 +96,8 @@ describe("FinancialItemCardActions", () => {
         confirmingDelete={false}
         onDeleteClick={onDeleteClick}
         onDeleteConfirm={vi.fn()}
+        item={mockItem}
+        itemType={mockItemType}
       />
     );
 
@@ -86,5 +106,55 @@ describe("FinancialItemCardActions", () => {
     // Simulate Tab to focus and Enter to activate
     deleteButton.focus();
     expect(deleteButton).toHaveFocus();
+  });
+
+  it("should have a copy button with proper aria-label", () => {
+    render(
+      <FinancialItemCardActions
+        confirmingDelete={false}
+        onDeleteClick={vi.fn()}
+        onDeleteConfirm={vi.fn()}
+        item={mockItem}
+        itemType={mockItemType}
+      />
+    );
+
+    const copyButton = screen.getByRole("button", { name: /copy financial item to clipboard/i });
+    expect(copyButton).toBeInTheDocument();
+  });
+
+  it("should call clickToCopy when copy button is clicked", async () => {
+    const user = userEvent.setup();
+    
+    // Mock clipboard API properly
+    const writeTextMock = vi.fn().mockResolvedValue(undefined);
+    const originalClipboard = navigator.clipboard;
+    Object.defineProperty(navigator, 'clipboard', {
+      value: { writeText: writeTextMock },
+      writable: true,
+      configurable: true,
+    });
+
+    render(
+      <FinancialItemCardActions
+        confirmingDelete={false}
+        onDeleteClick={vi.fn()}
+        onDeleteConfirm={vi.fn()}
+        item={mockItem}
+        itemType={mockItemType}
+      />
+    );
+
+    const copyButton = screen.getByRole("button", { name: /copy financial item to clipboard/i });
+    await user.click(copyButton);
+
+    expect(writeTextMock).toHaveBeenCalled();
+    
+    // Restore original
+    Object.defineProperty(navigator, 'clipboard', {
+      value: originalClipboard,
+      writable: true,
+      configurable: true,
+    });
   });
 });

@@ -55,7 +55,7 @@ function formatFrequencyDisplay(frequency?: string): string {
  * Format a resource item:
  * Description Account Number w/ Institution/Location - Amount (Verification Source or Status)
  */
-function formatResourceItem(item: FinancialItem): string {
+export function formatResourceItem(item: FinancialItem): string {
   const parts: string[] = [];
   
   // Description
@@ -88,7 +88,7 @@ function formatResourceItem(item: FinancialItem): string {
  * Format an income item:
  * Description from Institution - Amount/Frequency (Verification Source or Status)
  */
-function formatIncomeItem(item: FinancialItem): string {
+export function formatIncomeItem(item: FinancialItem): string {
   const parts: string[] = [];
   
   // Description
@@ -116,7 +116,7 @@ function formatIncomeItem(item: FinancialItem): string {
  * Format an expense item:
  * Description to Institution - Amount/Frequency (Verification Source or Status)
  */
-function formatExpenseItem(item: FinancialItem): string {
+export function formatExpenseItem(item: FinancialItem): string {
   const parts: string[] = [];
   
   // Description
