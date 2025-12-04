@@ -34,7 +34,7 @@
 | Dashboard & Insights  | 70     | →     | Framework ready                              |
 
 **Average Rating:** 79.4/100  
-**Test Status:** 340/340 passing (100%)
+**Test Status:** 347/347 passing (100%)
 
 ---
 
@@ -191,7 +191,7 @@ Core case workflows (create, view, edit, delete) are production-ready through th
 ### Coverage & Telemetry
 
 - **Service Layer**: CaseService fully tested with 100% coverage for CRUD operations, bulk operations, import/export, and activity logging
-- **Test Suite Status**: 340 tests passing across 45 test files (100%) as of December 4, 2025
+- **Test Suite Status**: 347 tests passing across 45 test files (100%) as of December 4, 2025
 - **Bulk Operations**: `deleteCases()` and `updateCasesStatus()` with single read/write pattern
 - **Performance**: Pagination provides immediate relief; telemetry infrastructure ready for benchmarking
 
@@ -492,9 +492,10 @@ Target: ≤200 lines per hook. **Week 1 refactoring complete:**
 
 ### Coverage & Telemetry
 
-- **Vitest suites**: 340 tests across 45 test files (100% passing)
+- **Vitest suites**: 347 tests across 45 test files (100% passing)
 - **Service tests**: Complete coverage for all 7 services
 - **Toast utilities**: 14 tests covering loading/success/error states, isMounted guards
+- **Pagination tests**: 7 tests covering navigation, disabled states, empty state
 - **Performance telemetry**: Partially automated; manual traces pending
 
 ### Owners / Notes
