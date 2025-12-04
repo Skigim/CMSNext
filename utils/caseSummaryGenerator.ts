@@ -1,97 +1,254 @@
 /**
  * Case Summary Generator
  * ======================
- * Generates a plain-text summary of case information for easy export/sharing
+ * Generates a plain-text summary of case information for easy export/sharing.
+ * Designed for copy-paste into emails, ticketing systems, or documents.
  */
 
-import { StoredCase, FinancialItem, Note } from '../types/case';
-import { formatCurrency, formatFrequency } from './financialFormatters';
+import { StoredCase, FinancialItem, Note, Relationship } from '../types/case';
+
+const SECTION_SEPARATOR = '\n-----\n';
 
 /**
- * Format a date string to a readable format
+ * Format a date string to MM/DD/YYYY
  */
-function formatDate(dateString: string | null | undefined): string {
-  if (!dateString) return 'Not set';
+function formatDateMMDDYYYY(dateString: string | null | undefined): string {
+  if (!dateString) return 'None';
   
   try {
     const date = new Date(dateString);
-    if (isNaN(date.getTime())) return 'Invalid date';
+    if (isNaN(date.getTime())) return 'None';
     
-    return date.toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric'
-    });
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    const year = date.getFullYear();
+    
+    return `${month}/${day}/${year}`;
   } catch {
-    return 'Invalid date';
+    return 'None';
   }
 }
 
 /**
- * Format financial items for display in summary
+ * Format currency as $1,500.00
  */
-function formatFinancialItems(items: FinancialItem[], categoryName: string): string {
+function formatCurrencyAmount(amount: number): string {
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'USD',
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(amount);
+}
+
+/**
+ * Format frequency for display (e.g., "Monthly" -> "/Monthly")
+ */
+function formatFrequencyDisplay(frequency?: string): string {
+  if (!frequency) return '';
+  // Capitalize first letter
+  const formatted = frequency.charAt(0).toUpperCase() + frequency.slice(1).toLowerCase();
+  return `/${formatted}`;
+}
+
+/**
+ * Format a resource item:
+ * Description Account Number w/ Institution/Location - Amount (Verification Source or Status)
+ */
+function formatResourceItem(item: FinancialItem): string {
+  const parts: string[] = [];
+  
+  // Description
+  parts.push(item.description || 'Unnamed');
+  
+  // Account Number (if present)
+  if (item.accountNumber) {
+    parts.push(` ${item.accountNumber}`);
+  }
+  
+  // Institution/Location (if present)
+  if (item.location) {
+    parts.push(` w/ ${item.location}`);
+  }
+  
+  // Amount
+  parts.push(` - ${formatCurrencyAmount(item.amount)}`);
+  
+  // Verification source (if verified) or status
+  if (item.verificationStatus === 'Verified' && item.verificationSource) {
+    parts.push(` (${item.verificationSource})`);
+  } else if (item.verificationStatus || item.status) {
+    parts.push(` (${item.verificationStatus || item.status})`);
+  }
+  
+  return parts.join('');
+}
+
+/**
+ * Format an income item:
+ * Description from Institution - Amount/Frequency (Verification Source or Status)
+ */
+function formatIncomeItem(item: FinancialItem): string {
+  const parts: string[] = [];
+  
+  // Description
+  parts.push(item.description || 'Unnamed');
+  
+  // Institution/Location (if present) - use "from" for income
+  if (item.location) {
+    parts.push(` from ${item.location}`);
+  }
+  
+  // Amount with frequency
+  parts.push(` - ${formatCurrencyAmount(item.amount)}${formatFrequencyDisplay(item.frequency)}`);
+  
+  // Verification source (if verified) or status
+  if (item.verificationStatus === 'Verified' && item.verificationSource) {
+    parts.push(` (${item.verificationSource})`);
+  } else if (item.verificationStatus || item.status) {
+    parts.push(` (${item.verificationStatus || item.status})`);
+  }
+  
+  return parts.join('');
+}
+
+/**
+ * Format an expense item:
+ * Description to Institution - Amount/Frequency (Verification Source or Status)
+ */
+function formatExpenseItem(item: FinancialItem): string {
+  const parts: string[] = [];
+  
+  // Description
+  parts.push(item.description || 'Unnamed');
+  
+  // Institution/Location (if present) - use "to" for expenses
+  if (item.location) {
+    parts.push(` to ${item.location}`);
+  }
+  
+  // Amount with frequency
+  parts.push(` - ${formatCurrencyAmount(item.amount)}${formatFrequencyDisplay(item.frequency)}`);
+  
+  // Verification source (if verified) or status
+  if (item.verificationStatus === 'Verified' && item.verificationSource) {
+    parts.push(` (${item.verificationSource})`);
+  } else if (item.verificationStatus || item.status) {
+    parts.push(` (${item.verificationStatus || item.status})`);
+  }
+  
+  return parts.join('');
+}
+
+/**
+ * Format a relationship: Type | Name | Phone
+ */
+function formatRelationship(rel: Relationship): string {
+  const parts = [rel.type || 'Unknown', rel.name || 'Unknown'];
+  if (rel.phone) {
+    parts.push(rel.phone);
+  }
+  return parts.join(' | ');
+}
+
+/**
+ * Build the Case Info section
+ */
+function buildCaseInfoSection(caseRecord: StoredCase['caseRecord']): string {
+  const lines = [
+    `Application Date: ${formatDateMMDDYYYY(caseRecord.applicationDate)}`,
+    `Retro Requested: ${caseRecord.retroRequested || 'None'}`,
+    `Waiver Requested: ${caseRecord.withWaiver ? 'Yes' : 'No'}`,
+  ];
+  return lines.join('\n');
+}
+
+/**
+ * Build the Person Info section
+ */
+function buildPersonInfoSection(person: StoredCase['person'], caseRecord: StoredCase['caseRecord']): string {
+  const nameLine = `${person.firstName} ${person.lastName}`;
+  
+  const contactParts: string[] = [];
+  if (person.email) contactParts.push(person.email);
+  if (person.phone) contactParts.push(person.phone);
+  const contactLine = contactParts.length > 0 ? contactParts.join(' | ') : 'No contact info';
+  
+  const lines = [
+    nameLine,
+    contactLine,
+    `Citizenship Verified: ${caseRecord.citizenshipVerified ? 'Yes' : 'No'}`,
+    `Aged/Disabled Verified: ${caseRecord.agedDisabledVerified ? 'Yes' : 'No'}`,
+    `Living Arrangement: ${caseRecord.livingArrangement || 'None'}`,
+  ];
+  return lines.join('\n');
+}
+
+/**
+ * Build the Relationships section
+ */
+function buildRelationshipsSection(relationships?: Relationship[]): string {
+  const header = 'Relationships';
+  
+  if (!relationships || relationships.length === 0) {
+    return `${header}\nNone`;
+  }
+  
+  const formatted = relationships.map(formatRelationship);
+  return `${header}\n${formatted.join('\n')}`;
+}
+
+/**
+ * Build a financial section (Resources, Income, or Expenses)
+ */
+function buildFinancialSection(
+  title: string,
+  items: FinancialItem[],
+  formatter: (item: FinancialItem) => string
+): string {
   if (!items || items.length === 0) {
-    return `  No ${categoryName.toLowerCase()} recorded`;
+    return `${title}\nNone`;
   }
-
-  const formatted = items.map(item => {
-    const parts = [`  • ${item.description || 'Unnamed item'}`];
-    
-    if (item.amount !== undefined && item.amount !== null) {
-      const amountStr = formatCurrency(item.amount);
-      const freqStr = formatFrequency(item.frequency);
-      parts.push(` - ${amountStr}${freqStr}`);
-    }
-    
-    if (item.verificationStatus) {
-      parts.push(` (${item.verificationStatus})`);
-    }
-    
-    return parts.join('');
-  });
-
-  return formatted.join('\n');
+  
+  const formatted = items.map(formatter);
+  return `${title}\n${formatted.join('\n')}`;
 }
 
 /**
- * Format notes for display in summary (showing most recent)
+ * Build the Notes section
  */
-function formatRecentNotes(notes: Note[] | undefined, limit = 3): string {
+function buildNotesSection(notes: Note[]): string {
+  const header = 'Notes';
+  
   if (!notes || notes.length === 0) {
-    return '  No notes recorded';
+    return `${header}\nNone`;
   }
-
-  // Sort by creation date (most recent first)
+  
+  // Sort by creation date (oldest first)
   const sortedNotes = [...notes].sort((a, b) => {
     const dateA = new Date(a.createdAt).getTime();
     const dateB = new Date(b.createdAt).getTime();
-    return dateB - dateA;
+    return dateA - dateB;
   });
-
-  const recentNotes = sortedNotes.slice(0, limit);
   
-  const formatted = recentNotes.map(note => {
-    const date = formatDate(note.createdAt);
-    const category = note.category || 'General';
-    const preview = note.content.length > 100 
-      ? note.content.substring(0, 100) + '...' 
-      : note.content;
-    
-    return `  • [${category}] ${date}\n    ${preview}`;
-  });
-
-  const header = notes.length > limit 
-    ? `  Showing ${limit} most recent of ${notes.length} total notes:\n\n`
-    : '';
-
-  return header + formatted.join('\n\n');
+  // Full content, separated by blank lines
+  const formatted = sortedNotes.map(note => note.content);
+  return `${header}\n${formatted.join('\n\n')}`;
 }
 
 /**
- * Generate a comprehensive case summary
- * For StoredCase, notes and financials are stored separately
- * and should be passed as optional parameters
+ * Generate a comprehensive case summary for sharing
+ * 
+ * Format:
+ * - Case Info (Application Date, Retro, Waiver)
+ * - Person Info (Name, Contact, Citizenship, Aged/Disabled)
+ * - Relationships
+ * - Resources
+ * - Income
+ * - Expenses
+ * - Notes
+ * 
+ * Sections separated by -----
  */
 export function generateCaseSummary(
   caseData: StoredCase, 
@@ -100,58 +257,19 @@ export function generateCaseSummary(
     notes?: Note[];
   }
 ): string {
-  const { caseRecord, person, name, mcn, status } = caseData;
+  const { caseRecord, person } = caseData;
   const financials = options?.financials ?? { resources: [], income: [], expenses: [] };
   const notes = options?.notes ?? [];
   
   const sections = [
-    '='.repeat(60),
-    'CASE SUMMARY',
-    '='.repeat(60),
-    '',
-    '📋 BASIC INFORMATION',
-    '-'.repeat(60),
-    `Case Name: ${name || 'Unnamed Case'}`,
-    `MCN: ${mcn || 'Not assigned'}`,
-    `Case ID: ${caseData.id}`,
-    `Status: ${status}`,
-    `Priority: ${caseRecord.priority ? 'Yes' : 'No'}`,
-    '',
-    '👤 PERSON INFORMATION',
-    '-'.repeat(60),
-    `Name: ${person.firstName} ${person.lastName}`,
-    `Email: ${person.email || 'Not provided'}`,
-    `Phone: ${person.phone || 'Not provided'}`,
-    `Date of Birth: ${formatDate(person.dateOfBirth)}`,
-    '',
-    '📅 KEY DATES',
-    '-'.repeat(60),
-    `Application Date: ${formatDate(caseRecord.applicationDate)}`,
-    `Admission Date: ${formatDate(caseRecord.admissionDate)}`,
-    `Retro Requested: ${caseRecord.retroRequested || 'Not specified'}`,
-    `Created: ${formatDate(caseRecord.createdDate)}`,
-    `Last Updated: ${formatDate(caseRecord.updatedDate)}`,
-    '',
-    '💰 FINANCIAL INFORMATION',
-    '-'.repeat(60),
-    '',
-    'Resources:',
-    formatFinancialItems(financials.resources || [], 'Resources'),
-    '',
-    'Income:',
-    formatFinancialItems(financials.income || [], 'Income'),
-    '',
-    'Expenses:',
-    formatFinancialItems(financials.expenses || [], 'Expenses'),
-    '',
-    '📝 RECENT NOTES',
-    '-'.repeat(60),
-    formatRecentNotes(notes),
-    '',
-    '='.repeat(60),
-    `Generated: ${new Date().toLocaleString('en-US')}`,
-    '='.repeat(60),
+    buildCaseInfoSection(caseRecord),
+    buildPersonInfoSection(person, caseRecord),
+    buildRelationshipsSection(person.relationships),
+    buildFinancialSection('Resources', financials.resources || [], formatResourceItem),
+    buildFinancialSection('Income', financials.income || [], formatIncomeItem),
+    buildFinancialSection('Expenses', financials.expenses || [], formatExpenseItem),
+    buildNotesSection(notes),
   ];
 
-  return sections.join('\n');
+  return sections.join(SECTION_SEPARATOR);
 }

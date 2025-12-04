@@ -16,6 +16,8 @@ import { CaseAlertsDrawer } from "./CaseAlertsDrawer";
 import { McnCopyControl } from "@/components/common/McnCopyControl";
 import { generateCaseSummary } from "../../utils/caseSummaryGenerator";
 import { clickToCopy } from "../../utils/clipboard";
+import { useFinancialItems } from "../../hooks/useFinancialItems";
+import { useNotes } from "../../hooks/useNotes";
 
 interface CaseDetailsProps {
   case: StoredCase;
@@ -41,6 +43,10 @@ export function CaseDetails({
 }: CaseDetailsProps) {
   
   const [alertsDrawerOpen, setAlertsDrawerOpen] = useState(false);
+  
+  // Fetch financials and notes for case summary generation
+  const { groupedItems: financials } = useFinancialItems(caseData.id);
+  const { notes } = useNotes(caseData.id);
 
   const { totalAlerts, openAlertCount, hasOpenAlerts } = useMemo(() => {
     const total = alerts.length;
@@ -60,12 +66,12 @@ export function CaseDetails({
   );
 
   const handleGenerateSummary = useCallback(() => {
-    const summary = generateCaseSummary(caseData);
+    const summary = generateCaseSummary(caseData, { financials, notes });
     clickToCopy(summary, {
       successMessage: "Case summary copied to clipboard",
       errorMessage: "Failed to copy summary to clipboard",
     });
-  }, [caseData]);
+  }, [caseData, financials, notes]);
 
   return (
     <div className="space-y-6">
