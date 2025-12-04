@@ -27,6 +27,7 @@
 - [x] PR #87 merged to main
 - [x] FinancialItemModal refactor → `useFinancialItemFlow` hook
 - [x] Fix Category Manager checkbox reset bug (countsAsCompleted)
+- [x] Refactor NotesDrawer to use shadcn Drawer component (was custom CSS transform implementation)
 
 #### New Features
 
@@ -37,6 +38,7 @@
 - [x] Skeleton case auto-creation from unmatched alert imports (with proper name casing)
 - [x] Dashboard cleanup - removed AlertCenter and RecentCases widgets (Activity Log only)
 - [ ] Refresh Case Summary Generator with better format for sharing
+- [ ] Custom context menu using Radix ContextMenu primitive
 
 #### Polish & Documentation
 
