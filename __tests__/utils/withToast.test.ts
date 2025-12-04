@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { toast } from 'sonner';
-import { withToast, createToastWrapper } from '@/utils/withToast';
+import { withToast, createToastWrapper, toastPromise } from '@/utils/withToast';
 
 // Mock sonner
 vi.mock('sonner', () => ({
@@ -9,6 +9,9 @@ vi.mock('sonner', () => ({
     success: vi.fn(),
     error: vi.fn(),
     dismiss: vi.fn(),
+    promise: vi.fn((promise: Promise<unknown>, _opts: unknown) => ({
+      unwrap: () => promise,
+    })),
   },
 }));
 
@@ -180,5 +183,75 @@ describe('createToastWrapper', () => {
     expect(setLoading).toHaveBeenCalledWith(true);
     expect(setLoading).toHaveBeenCalledWith(false);
     expect(toast.success).toHaveBeenCalledWith('Complete!', { id: 'toast-id', duration: undefined });
+  });
+});
+
+describe('toastPromise', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('calls toast.promise with correct messages', async () => {
+    const promise = Promise.resolve({ id: '123', name: 'Test' });
+
+    const result = await toastPromise(promise, {
+      loading: 'Loading...',
+      success: 'Done!',
+      error: 'Failed',
+    });
+
+    expect(toast.promise).toHaveBeenCalledWith(promise, {
+      loading: 'Loading...',
+      success: 'Done!',
+      error: 'Failed',
+    });
+    expect(result).toEqual({ id: '123', name: 'Test' });
+  });
+
+  it('supports dynamic success message', async () => {
+    const promise = Promise.resolve({ name: 'John' });
+    const successFn = (data: { name: string }) => `Created ${data.name}`;
+
+    await toastPromise(promise, {
+      loading: 'Creating...',
+      success: successFn,
+      error: 'Failed',
+    });
+
+    expect(toast.promise).toHaveBeenCalledWith(promise, {
+      loading: 'Creating...',
+      success: successFn,
+      error: 'Failed',
+    });
+  });
+
+  it('supports dynamic error message', async () => {
+    const promise = Promise.resolve('ok');
+    const errorFn = (err: Error) => `Error: ${err.message}`;
+
+    await toastPromise(promise, {
+      loading: 'Working...',
+      success: 'Done!',
+      error: errorFn,
+    });
+
+    expect(toast.promise).toHaveBeenCalledWith(promise, {
+      loading: 'Working...',
+      success: 'Done!',
+      error: errorFn,
+    });
+  });
+
+  it('returns the resolved value from the promise', async () => {
+    const data = { items: [1, 2, 3], total: 3 };
+    const promise = Promise.resolve(data);
+
+    const result = await toastPromise(promise, {
+      loading: 'Fetching...',
+      success: 'Fetched!',
+      error: 'Failed to fetch',
+    });
+
+    expect(result).toEqual(data);
   });
 });

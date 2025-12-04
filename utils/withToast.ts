@@ -124,3 +124,58 @@ export function createToastWrapper(
     options: Omit<WithToastOptions<T>, 'isMounted' | 'setError' | 'setLoading'>
   ) => withToast(operation, { ...defaultOptions, ...options });
 }
+
+/**
+ * Simple toast messages for async operations using Sonner's native toast.promise().
+ * Use this for simple cases that don't need isMounted guards or setError callbacks.
+ */
+export interface ToastMessages<T> {
+  loading: string;
+  success: string | ((data: T) => string);
+  error: string | ((err: Error) => string);
+}
+
+/**
+ * Lightweight wrapper around Sonner's toast.promise() for simple async operations.
+ * 
+ * Use this when you:
+ * - Don't need isMounted guards
+ * - Don't need setError/setLoading callbacks
+ * - Just want loading → success/error toasts
+ * 
+ * Use `withToast()` instead when you need:
+ * - isMounted guards for state updates after async ops
+ * - setError/setLoading state management
+ * - Custom error handling
+ * 
+ * @example
+ * const result = await toastPromise(
+ *   dataManager.addItem(caseId, 'resources', data),
+ *   {
+ *     loading: 'Adding resource...',
+ *     success: 'Resource added!',
+ *     error: 'Failed to add resource',
+ *   }
+ * );
+ * 
+ * @example
+ * // With dynamic messages
+ * const result = await toastPromise(
+ *   api.createUser(userData),
+ *   {
+ *     loading: 'Creating user...',
+ *     success: (user) => `Created ${user.name}`,
+ *     error: (err) => `Failed: ${err.message}`,
+ *   }
+ * );
+ */
+export async function toastPromise<T>(
+  promise: Promise<T>,
+  messages: ToastMessages<T>
+): Promise<T> {
+  return toast.promise(promise, {
+    loading: messages.loading,
+    success: messages.success,
+    error: messages.error,
+  }).unwrap();
+}
