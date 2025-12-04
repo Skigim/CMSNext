@@ -27,6 +27,7 @@
 - [x] PR #87 merged to main
 - [x] FinancialItemModal refactor → `useFinancialItemFlow` hook
 - [x] Fix Category Manager checkbox reset bug (countsAsCompleted)
+- [x] Refactor NotesDrawer to use shadcn Drawer component (was custom CSS transform implementation)
 
 #### New Features
 
