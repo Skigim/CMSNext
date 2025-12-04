@@ -283,7 +283,7 @@ export class DataManager {
       return { added: 0, updated: 0, total: 0 };
     }
 
-    let cases = options.cases ?? data.cases ?? [];
+    const cases = options.cases ?? data.cases ?? [];
     const rawAlerts = data.alerts ?? [];
     
     const existingAlerts: AlertWithMatch[] = rawAlerts.map(toAlertWithMatch);

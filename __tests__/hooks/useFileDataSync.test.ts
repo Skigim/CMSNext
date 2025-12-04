@@ -27,7 +27,6 @@ const updateFileStorageFlagsMock = fileStorageFlagsModule.updateFileStorageFlags
 
 
 describe("useFileDataSync", () => {
-  let loadCasesMock: ReturnType<typeof vi.fn>;
   let setCasesMock: ReturnType<typeof vi.fn>;
   let setHasLoadedDataMock: ReturnType<typeof vi.fn>;
   let setConfigFromFileMock: ReturnType<typeof vi.fn>;
@@ -35,7 +34,6 @@ describe("useFileDataSync", () => {
   const renderHookWithDeps = () =>
     renderHook(() =>
       useFileDataSync({
-        loadCases: loadCasesMock as unknown as () => Promise<void>,
         setCases: setCasesMock as unknown as Dispatch<SetStateAction<StoredCase[]>>,
         setHasLoadedData: setHasLoadedDataMock as unknown as (value: boolean) => void,
         setConfigFromFile: setConfigFromFileMock as unknown as (config?: Partial<Record<string, unknown>> | null) => void,
@@ -44,7 +42,6 @@ describe("useFileDataSync", () => {
 
   beforeEach(() => {
     dataLoadHandlers.length = 0;
-    loadCasesMock = vi.fn().mockResolvedValue(undefined);
     setCasesMock = vi.fn();
     setHasLoadedDataMock = vi.fn();
     setConfigFromFileMock = vi.fn();

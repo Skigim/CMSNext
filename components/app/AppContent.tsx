@@ -63,12 +63,7 @@ export const AppContent = memo(function AppContent() {
 
   const { setConfigFromFile } = useCategoryConfig();
 
-  const reloadCasesFromFile = useCallback(async () => {
-    await loadCases();
-  }, [loadCases]);
-
   useFileDataSync({
-    loadCases: reloadCasesFromFile,
     setCases,
     setHasLoadedData,
     setConfigFromFile,
