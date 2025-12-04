@@ -99,7 +99,7 @@ export function FinancialItemCard({
         <CardHeader className="flex flex-col gap-3">
           <div className="flex items-start gap-3">
             <div
-              className="cursor-pointer flex-1"
+              className="min-w-0 flex-1 cursor-pointer"
               onClick={() => {
                 if (!canToggle) return;
                 handleCardClick();
@@ -131,7 +131,7 @@ export function FinancialItemCard({
                   size="icon"
                   aria-expanded={isEditing}
                   aria-label={isEditing ? "Collapse financial item" : "Expand financial item"}
-                  className="self-start transition-transform data-[state=open]:rotate-180"
+                  className="shrink-0 self-start transition-transform data-[state=open]:rotate-180"
                   onClick={event => event.stopPropagation()}
                 >
                   <ChevronDown className="h-4 w-4" />
