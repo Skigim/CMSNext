@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useState } from "react";
-import { toast } from "sonner";
+import { toastPromise } from "@/utils/withToast";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 import type { StoredCase, CaseStatus, CaseStatusUpdateHandler } from "../../types/case";
@@ -136,15 +136,16 @@ export function CaseList({
   }, [filters, sortConfigs, segment]);
 
   const handleSetupSampleData = useCallback(async () => {
-    const toastId = toast.loading("Adding sample data...");
+    setIsSettingUpData(true);
     try {
-      setIsSettingUpData(true);
-      await setupSampleData();
-      toast.success("Sample data added", { id: toastId });
+      await toastPromise(setupSampleData(), {
+        loading: "Adding sample data...",
+        success: "Sample data added",
+        error: "Unable to add sample data",
+      });
       onRefresh?.();
     } catch (error) {
       console.error("Failed to setup sample data:", error);
-      toast.error("Unable to add sample data", { id: toastId });
     } finally {
       setIsSettingUpData(false);
       setShowSampleDataDialog(false);
