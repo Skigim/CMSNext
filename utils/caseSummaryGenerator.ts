@@ -237,6 +237,32 @@ function buildNotesSection(notes: Note[]): string {
 }
 
 /**
+ * Section visibility configuration for summary generation
+ */
+export interface SummarySections {
+  caseInfo: boolean;
+  personInfo: boolean;
+  relationships: boolean;
+  resources: boolean;
+  income: boolean;
+  expenses: boolean;
+  notes: boolean;
+}
+
+/**
+ * Default section visibility - all sections enabled
+ */
+export const DEFAULT_SUMMARY_SECTIONS: SummarySections = {
+  caseInfo: true,
+  personInfo: true,
+  relationships: true,
+  resources: true,
+  income: true,
+  expenses: true,
+  notes: true,
+};
+
+/**
  * Generate a comprehensive case summary for sharing
  * 
  * Format:
@@ -255,21 +281,37 @@ export function generateCaseSummary(
   options?: {
     financials?: { resources: FinancialItem[]; income: FinancialItem[]; expenses: FinancialItem[] };
     notes?: Note[];
+    sections?: SummarySections;
   }
 ): string {
   const { caseRecord, person } = caseData;
   const financials = options?.financials ?? { resources: [], income: [], expenses: [] };
   const notes = options?.notes ?? [];
+  const sectionConfig = options?.sections ?? DEFAULT_SUMMARY_SECTIONS;
   
-  const sections = [
-    buildCaseInfoSection(caseRecord),
-    buildPersonInfoSection(person, caseRecord),
-    buildRelationshipsSection(person.relationships),
-    buildFinancialSection('Resources', financials.resources || [], formatResourceItem),
-    buildFinancialSection('Income', financials.income || [], formatIncomeItem),
-    buildFinancialSection('Expenses', financials.expenses || [], formatExpenseItem),
-    buildNotesSection(notes),
-  ];
+  const enabledSections: string[] = [];
+  
+  if (sectionConfig.caseInfo) {
+    enabledSections.push(buildCaseInfoSection(caseRecord));
+  }
+  if (sectionConfig.personInfo) {
+    enabledSections.push(buildPersonInfoSection(person, caseRecord));
+  }
+  if (sectionConfig.relationships) {
+    enabledSections.push(buildRelationshipsSection(person.relationships));
+  }
+  if (sectionConfig.resources) {
+    enabledSections.push(buildFinancialSection('Resources', financials.resources || [], formatResourceItem));
+  }
+  if (sectionConfig.income) {
+    enabledSections.push(buildFinancialSection('Income', financials.income || [], formatIncomeItem));
+  }
+  if (sectionConfig.expenses) {
+    enabledSections.push(buildFinancialSection('Expenses', financials.expenses || [], formatExpenseItem));
+  }
+  if (sectionConfig.notes) {
+    enabledSections.push(buildNotesSection(notes));
+  }
 
-  return sections.join(SECTION_SEPARATOR);
+  return enabledSections.join(SECTION_SEPARATOR);
 }

@@ -1,10 +1,10 @@
 # CMSNext Roadmap - December 2025
 
-**Report Date:** December 3, 2025  
+**Report Date:** December 4, 2025  
 **Branch:** main (stable)  
-**Tests:** 282/282 passing ✅  
+**Tests:** 317/317 passing ✅  
 **Build:** Production-ready ✅  
-**Average Feature Rating:** 77.1/100
+**Average Feature Rating:** 77.3/100
 
 ---
 
@@ -37,7 +37,7 @@
 - [x] Navigate to case details after creating new case
 - [x] Skeleton case auto-creation from unmatched alert imports (with proper name casing)
 - [x] Dashboard cleanup - removed AlertCenter and RecentCases widgets (Activity Log only)
-- [ ] Refresh Case Summary Generator with better format for sharing
+- [x] Refresh Case Summary Generator with better format for sharing
 - [ ] Custom context menu using Radix ContextMenu primitive
 
 #### Polish & Documentation

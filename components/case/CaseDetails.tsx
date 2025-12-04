@@ -14,8 +14,7 @@ import { cn, interactiveHoverClasses } from "../ui/utils";
 import type { AlertWithMatch } from "../../utils/alertsData";
 import { CaseAlertsDrawer } from "./CaseAlertsDrawer";
 import { McnCopyControl } from "@/components/common/McnCopyControl";
-import { generateCaseSummary } from "../../utils/caseSummaryGenerator";
-import { clickToCopy } from "../../utils/clipboard";
+import { CaseSummaryModal } from "./CaseSummaryModal";
 import { useFinancialItems } from "../../hooks/useFinancialItems";
 import { useNotes } from "../../hooks/useNotes";
 
@@ -65,13 +64,7 @@ export function CaseDetails({
     [onResolveAlert],
   );
 
-  const handleGenerateSummary = useCallback(() => {
-    const summary = generateCaseSummary(caseData, { financials, notes });
-    clickToCopy(summary, {
-      successMessage: "Case summary copied to clipboard",
-      errorMessage: "Failed to copy summary to clipboard",
-    });
-  }, [caseData, financials, notes]);
+  const [summaryModalOpen, setSummaryModalOpen] = useState(false);
 
   return (
     <div className="space-y-6">
@@ -138,7 +131,7 @@ export function CaseDetails({
             <Button 
               variant="outline" 
               size="sm"
-              onClick={handleGenerateSummary}
+              onClick={() => setSummaryModalOpen(true)}
               className={interactiveHoverClasses}
             >
               <FileText className="w-4 h-4 mr-2" />
@@ -235,6 +228,14 @@ export function CaseDetails({
           onUpdateCaseStatus={onUpdateStatus}
           onResolveAlert={onResolveAlert ? handleResolveAlert : undefined}
         />
+
+      <CaseSummaryModal
+        open={summaryModalOpen}
+        onOpenChange={setSummaryModalOpen}
+        caseData={caseData}
+        financials={financials}
+        notes={notes}
+      />
     </div>
   );
 }

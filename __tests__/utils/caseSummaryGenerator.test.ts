@@ -602,4 +602,84 @@ describe('generateCaseSummary', () => {
       expect(summary).toContain('Asset - $1,000.00 (Approved)');
     });
   });
+
+  describe('Section Filtering', () => {
+    it('includes all sections by default', () => {
+      const caseData = createMockCase();
+
+      const summary = generateCaseSummary(caseData);
+
+      expect(summary).toContain('Application Date:');
+      expect(summary).toContain('John Doe');
+      expect(summary).toContain('Relationships');
+      expect(summary).toContain('Resources');
+      expect(summary).toContain('Income');
+      expect(summary).toContain('Expenses');
+      expect(summary).toContain('Notes');
+    });
+
+    it('excludes sections when disabled', () => {
+      const caseData = createMockCase();
+
+      const summary = generateCaseSummary(caseData, {
+        sections: {
+          caseInfo: false,
+          personInfo: true,
+          relationships: false,
+          resources: false,
+          income: false,
+          expenses: false,
+          notes: false,
+        },
+      });
+
+      expect(summary).not.toContain('Application Date:');
+      expect(summary).toContain('John Doe'); // personInfo is enabled
+      expect(summary).not.toContain('Relationships');
+      expect(summary).not.toContain('Resources');
+      expect(summary).not.toContain('Income');
+      expect(summary).not.toContain('Expenses');
+      expect(summary).not.toContain('Notes');
+    });
+
+    it('returns empty string when all sections disabled', () => {
+      const caseData = createMockCase();
+
+      const summary = generateCaseSummary(caseData, {
+        sections: {
+          caseInfo: false,
+          personInfo: false,
+          relationships: false,
+          resources: false,
+          income: false,
+          expenses: false,
+          notes: false,
+        },
+      });
+
+      expect(summary).toBe('');
+    });
+
+    it('only includes enabled sections with correct separators', () => {
+      const caseData = createMockCase();
+
+      const summary = generateCaseSummary(caseData, {
+        sections: {
+          caseInfo: true,
+          personInfo: false,
+          relationships: false,
+          resources: true,
+          income: false,
+          expenses: false,
+          notes: false,
+        },
+      });
+
+      // Should have exactly one separator between the two enabled sections
+      const separatorCount = (summary.match(/\n-----\n/g) || []).length;
+      expect(separatorCount).toBe(1);
+      expect(summary).toContain('Application Date:');
+      expect(summary).toContain('Resources');
+    });
+  });
 });

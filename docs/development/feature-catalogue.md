@@ -2,7 +2,7 @@
 
 > Living index of marketable features, their current implementation status, quality, and future investments.
 
-**Last Updated:** December 3, 2025
+**Last Updated:** December 4, 2025
 
 ## How to Use This Document
 
@@ -30,11 +30,11 @@
 | Autosave & Recovery   | 74     | →     | Works, telemetry pending              |
 | Financial Operations  | 78     | ↑     | FinancialItemModal refactored         |
 | Feature Flags         | 72     | →     | In-memory only                        |
-| Notes & Collaboration | 71     | →     | Basic functionality                   |
+| Notes & Collaboration | 74     | ↑     | Case Summary Generator added          |
 | Dashboard & Insights  | 70     | →     | Framework ready                       |
 
-**Average Rating:** 77.1/100  
-**Test Status:** 282/282 passing (100%)
+**Average Rating:** 77.3/100  
+**Test Status:** 317/317 passing (100%)
 
 ---
 
@@ -249,9 +249,9 @@ Financial modules (resources, income, expenses) leverage dedicated components an
 
 ### Implementation Snapshot
 
-**Rating: 71/100**
+**Rating: 74/100** _(Updated December 4, 2025)_
 
-Notes system supports categorized, timestamped entries tied to cases with edit history and toast feedback. Activity log integration keeps audit context nearby, and quick-add UX leverages keyboard shortcuts and autosave-friendly forms.
+Notes system supports categorized, timestamped entries tied to cases with edit history and toast feedback. Activity log integration keeps audit context nearby, and quick-add UX leverages keyboard shortcuts and autosave-friendly forms. **December 4, 2025:** Added Case Summary Generator with structured plain-text export for easy sharing via email or ticketing systems.
 
 ### Strengths
 
@@ -260,6 +260,7 @@ Notes system supports categorized, timestamped entries tied to cases with edit h
 - Sonner toasts provide immediate feedback on create/update/delete actions
 - Keyboard shortcuts and focused forms streamline fast note capture
 - Activity log complements notes by recording system-driven events (imports, autosave results)
+- **Case Summary Generator**: One-click export of structured case data (case info, person details, relationships, financials, notes) to clipboard in plain-text format optimized for sharing
 
 ### Gaps / Risks
 
@@ -274,10 +275,12 @@ Notes system supports categorized, timestamped entries tied to cases with edit h
 - Implement cross-case/global note search with filters by category/date
 - Introduce note pinning or favorites for quick retrieval of key updates
 - Explore lightweight attachment support (e.g., link to filesystem files within case directory)
+- Add PDF/CSV export options for case summaries
 
 ### Coverage & Telemetry
 
 - RTL suites cover notes components and ensure category filtering works; integration tests verify connection flow includes note creation
+- Case Summary Generator has 35 unit tests covering all sections, formatting, and edge cases
 - Activity log utilities tested via `useCaseActivityLog` hook coverage
 - No telemetry yet for note creation rate or latency; candidate for future usage metrics service
 
