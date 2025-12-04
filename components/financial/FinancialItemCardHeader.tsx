@@ -18,16 +18,16 @@ export function FinancialItemCardHeader({
   const dateLabel = dateAdded ? new Date(dateAdded).toLocaleDateString() : "No date";
 
   return (
-    <div className="flex items-start justify-between">
-      <div className="flex items-center gap-4">
-        <div className="rounded-lg bg-primary/10 p-2 text-primary">{icon}</div>
-        <div>
-          <p className="font-semibold text-foreground">{displayName}</p>
+    <div className="grid grid-cols-[1fr_auto] items-start gap-4">
+      <div className="flex items-center gap-4 min-w-0">
+        <div className="shrink-0 rounded-lg bg-primary/10 p-2 text-primary">{icon}</div>
+        <div className="min-w-0">
+          <p className="font-semibold text-foreground truncate">{displayName}</p>
           <p className="text-sm text-muted-foreground">{dateLabel}</p>
         </div>
       </div>
       <div className="flex flex-col items-end gap-2">
-        <p className="text-lg font-mono text-foreground">{displayAmount}</p>
+        <p className="text-lg font-mono text-foreground whitespace-nowrap">{displayAmount}</p>
       </div>
     </div>
   );
