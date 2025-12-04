@@ -1,7 +1,16 @@
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { toastPromise } from "@/utils/withToast";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+  PaginationEllipsis,
+} from "../ui/pagination";
 import type { StoredCase, CaseStatus, CaseStatusUpdateHandler } from "../../types/case";
 import { setupSampleData } from "../../utils/setupData";
 import { CaseAlertsDrawer } from "./CaseAlertsDrawer";
@@ -106,6 +115,10 @@ export function CaseList({
   const [showSampleDataDialog, setShowSampleDataDialog] = useState(false);
   const [alertsDrawerOpen, setAlertsDrawerOpen] = useState(false);
   const [activeAlertsCaseId, setActiveAlertsCaseId] = useState<string | null>(null);
+
+  // Pagination
+  const PAGE_SIZE = 20;
+  const [currentPage, setCurrentPage] = useState(1);
 
   const matchedAlertsByCase = useMemo(
     () => alertsByCaseId ?? new Map<string, AlertWithMatch[]>(),
@@ -316,10 +329,24 @@ export function CaseList({
     });
   }, [filteredCases, openAlertsByCase, sortConfigs]);
 
+  // Pagination computed values
+  const totalPages = Math.ceil(sortedCases.length / PAGE_SIZE);
+  const startIndex = (currentPage - 1) * PAGE_SIZE;
+  const endIndex = startIndex + PAGE_SIZE;
+  const paginatedCases = useMemo(
+    () => sortedCases.slice(startIndex, endIndex),
+    [sortedCases, startIndex, endIndex]
+  );
+
+  // Reset to page 1 when filters/search change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, segment, filters, sortConfigs]);
+
   const noMatches = sortedCases.length === 0;
 
-  // Selection management
-  const visibleCaseIds = useMemo(() => sortedCases.map(c => c.id), [sortedCases]);
+  // Selection management - operates on current page only
+  const visibleCaseIds = useMemo(() => paginatedCases.map(c => c.id), [paginatedCases]);
   const {
     selectedCount,
     isAllSelected,
@@ -514,7 +541,7 @@ export function CaseList({
       </div>
 
       <CaseTable
-        cases={sortedCases}
+        cases={paginatedCases}
         sortKey={sortKey}
         sortDirection={sortDirection}
         onRequestSort={handleTableSortRequest}
@@ -535,6 +562,87 @@ export function CaseList({
       {noMatches && (
         <div className="py-12 text-center">
           <p className="text-muted-foreground">No cases match the current filters.</p>
+        </div>
+      )}
+
+      {/* Pagination */}
+      {sortedCases.length > 0 && (
+        <div className="flex flex-col items-center gap-4 sm:flex-row sm:justify-between">
+          <p className="text-sm text-muted-foreground">
+            Showing {startIndex + 1}–{Math.min(endIndex, sortedCases.length)} of {sortedCases.length} cases
+          </p>
+          {totalPages > 1 && (
+            <Pagination>
+              <PaginationContent>
+                <PaginationItem>
+                  <PaginationPrevious
+                    onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                    aria-disabled={currentPage === 1}
+                    className={currentPage === 1 ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                  />
+                </PaginationItem>
+                {/* First page */}
+                <PaginationItem>
+                  <PaginationLink
+                    onClick={() => setCurrentPage(1)}
+                    isActive={currentPage === 1}
+                    className="cursor-pointer"
+                  >
+                    1
+                  </PaginationLink>
+                </PaginationItem>
+                {/* Ellipsis after first if needed */}
+                {currentPage > 3 && totalPages > 5 && (
+                  <PaginationItem>
+                    <PaginationEllipsis />
+                  </PaginationItem>
+                )}
+                {/* Middle pages */}
+                {Array.from({ length: totalPages }, (_, i) => i + 1)
+                  .filter(page => {
+                    if (page === 1 || page === totalPages) return false;
+                    if (totalPages <= 5) return true;
+                    return Math.abs(page - currentPage) <= 1;
+                  })
+                  .map(page => (
+                    <PaginationItem key={page}>
+                      <PaginationLink
+                        onClick={() => setCurrentPage(page)}
+                        isActive={currentPage === page}
+                        className="cursor-pointer"
+                      >
+                        {page}
+                      </PaginationLink>
+                    </PaginationItem>
+                  ))}
+                {/* Ellipsis before last if needed */}
+                {currentPage < totalPages - 2 && totalPages > 5 && (
+                  <PaginationItem>
+                    <PaginationEllipsis />
+                  </PaginationItem>
+                )}
+                {/* Last page (if more than 1 page) */}
+                {totalPages > 1 && (
+                  <PaginationItem>
+                    <PaginationLink
+                      onClick={() => setCurrentPage(totalPages)}
+                      isActive={currentPage === totalPages}
+                      className="cursor-pointer"
+                    >
+                      {totalPages}
+                    </PaginationLink>
+                  </PaginationItem>
+                )}
+                <PaginationItem>
+                  <PaginationNext
+                    onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                    aria-disabled={currentPage === totalPages}
+                    className={currentPage === totalPages ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                  />
+                </PaginationItem>
+              </PaginationContent>
+            </Pagination>
+          )}
         </div>
       )}
 
