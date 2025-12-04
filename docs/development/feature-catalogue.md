@@ -523,6 +523,7 @@ Feature flag infrastructure lives in `utils/featureFlags.ts` with immutable defa
 ### Future: Dashboard Customization
 
 When building dashboard customization:
+
 1. Wire `dashboard.widgets.*` flags to actual widget visibility
 2. Add persistence (localStorage or file) for user preferences
 3. Build settings UI to toggle widgets on/off
