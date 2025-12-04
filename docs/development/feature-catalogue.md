@@ -21,10 +21,10 @@
 | Feature               | Rating | Trend | Notes                                        |
 | --------------------- | ------ | ----- | -------------------------------------------- |
 | Case Management       | 90     | ↑     | Bulk actions added, production-ready         |
+| Developer Enablement  | 82     | ↑     | Hook refactoring done, 340 tests, withToast  |
 | Premium UI/UX         | 82     | →     | Solid, accessibility audits needed           |
 | Financial Operations  | 82     | ↑     | Copy button, hover actions, auto-save status |
 | Local-First Storage   | 80     | →     | Production-ready                             |
-| Developer Enablement  | 79     | →     | Strong tooling, 326 tests                    |
 | Data Portability      | 78     | ↑     | Smart alert import with case creation        |
 | Configurable Statuses | 78     | →     | Recently stabilized                          |
 | Notes & Collaboration | 78     | ↑     | Case Summary Generator with modal & sections |
@@ -33,8 +33,8 @@
 | Feature Flags         | 72     | →     | In-memory only                               |
 | Dashboard & Insights  | 70     | →     | Framework ready                              |
 
-**Average Rating:** 78.5/100  
-**Test Status:** 326/326 passing (100%)
+**Average Rating:** 78.8/100  
+**Test Status:** 340/340 passing (100%)
 
 ---
 
@@ -436,13 +436,13 @@ Design systems + front-end platform pairing. Produce contributor-facing UI guide
 
 ### Implementation Snapshot
 
-**Rating: 79/100** _(Updated December 1, 2025)_
+**Rating: 82/100** _(Updated December 4, 2025)_
 
-Tooling stack (Vitest, ESLint 9 flat config, Tailwind v4 pipeline) covers day-to-day development with scripted performance baselines, seed data generators, and comprehensive architecture documentation. Service extraction (Phase 1) established clean DataManager + Services pattern with dependency injection. Dev container + npm workflows yield repeatable environments.
+Tooling stack (Vitest, ESLint 9 flat config, Tailwind v4 pipeline) covers day-to-day development with scripted performance baselines, seed data generators, and comprehensive architecture documentation. Service extraction established clean DataManager + Services pattern with dependency injection. **December 4, 2025:** Week 1 hook refactoring complete—major hooks reduced from 400+ lines to <150 lines. New `withToast()` utility standardizes async operation feedback. Dev container + npm workflows yield repeatable environments.
 
 ### Strengths
 
-- **Comprehensive test harness**: 253 tests passing across unit, RTL, integration, and performance scripts with coverage reporting
+- **Comprehensive test harness**: 340 tests passing across unit, RTL, integration, and performance scripts with coverage reporting
 - **Service Architecture**: DataManager (461 lines) + 7 focused services totaling 2,265 lines
 - **Dependency Injection**: Clean service composition with focused responsibilities
 - **Storage Normalization**: v2.0 normalized format with automatic migration from legacy formats
@@ -452,38 +452,54 @@ Tooling stack (Vitest, ESLint 9 flat config, Tailwind v4 pipeline) covers day-to
 
 ### Hook Complexity Status
 
-Target: ≤200 lines per hook. **4 hooks over target:**
+Target: ≤200 lines per hook. **Week 1 refactoring complete:**
 
-| Hook                | Lines | Priority |
-| ------------------- | ----- | -------- |
-| `useNavigationFlow` | 424   | P0       |
-| `useConnectionFlow` | 413   | P0       |
-| `useCaseManagement` | 350   | P0       |
-| `useAlertsFlow`     | 289   | P0       |
+| Hook                | Before | After | Status      |
+| ------------------- | ------ | ----- | ----------- |
+| `useNavigationFlow` | 424    | 128   | ✅ Complete |
+| `useConnectionFlow` | 413    | 145   | ✅ Complete |
+| `useCaseManagement` | 350    | 83    | ✅ Complete |
+| `useAlertsFlow`     | 289    | 106   | ✅ Complete |
+
+**Remaining hooks over target:**
+
+| Hook                     | Lines | Notes                               |
+| ------------------------ | ----- | ----------------------------------- |
+| `useFinancialItemFlow`   | 384   | Complex modal state, lower priority |
+| `useCaseListPreferences` | 263   | Filter/sort logic, acceptable       |
+| `useCaseOperations`      | 262   | CRUD operations, acceptable         |
+| `useWidgetData`          | 245   | Data fetching, acceptable           |
+| `useCategoryEditorState` | 244   | Form state, acceptable              |
+
+### New Utilities (December 2025)
+
+- **`withToast()`**: Async wrapper with isMounted guards, loading/error state management
+- **`toastPromise()`**: Lightweight wrapper using Sonner's native `toast.promise()` API
+- **`project-structure-guidelines.md`**: Documents patterns for toast, hooks, services
 
 ### Gaps / Risks
 
 - No automated release packaging
 - Usage telemetry service still conceptual
 - Accessibility and visual regression tooling not in CI
-- 4 hooks exceed 200-line target
 
 ### Expansion Opportunities
 
-- Hook refactoring sprint (December Week 1)
 - Introduce lightweight release automation
 - Add automated accessibility checks to CI
 - Stand up usage metrics service
+- Consider `useFinancialItemFlow` extraction (lower priority)
 
 ### Coverage & Telemetry
 
-- **Vitest suites**: 253 tests across 41 test files (100% passing)
+- **Vitest suites**: 340 tests across 45 test files (100% passing)
 - **Service tests**: Complete coverage for all 7 services
+- **Toast utilities**: 14 tests covering loading/success/error states, isMounted guards
 - **Performance telemetry**: Partially automated; manual traces pending
 
 ### Owners / Notes
 
-Platform enablement group coordinates tooling, CI, and documentation upkeep. Hook refactoring scheduled for December Week 1.
+Platform enablement group coordinates tooling, CI, and documentation upkeep. Week 1 hook refactoring completed December 4, 2025.
 
 ---
 
