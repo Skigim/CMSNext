@@ -21,10 +21,10 @@
 | Feature               | Rating | Trend | Notes                                        |
 | --------------------- | ------ | ----- | -------------------------------------------- |
 | Case Management       | 90     | ↑     | Bulk actions added, production-ready         |
+| Developer Enablement  | 82     | ↑     | Hook refactoring done, 340 tests, withToast  |
 | Premium UI/UX         | 82     | →     | Solid, accessibility audits needed           |
 | Financial Operations  | 82     | ↑     | Copy button, hover actions, auto-save status |
 | Local-First Storage   | 80     | →     | Production-ready                             |
-| Developer Enablement  | 79     | →     | Strong tooling, 326 tests                    |
 | Data Portability      | 78     | ↑     | Smart alert import with case creation        |
 | Configurable Statuses | 78     | →     | Recently stabilized                          |
 | Notes & Collaboration | 78     | ↑     | Case Summary Generator with modal & sections |
@@ -33,8 +33,8 @@
 | Feature Flags         | 72     | →     | In-memory only                               |
 | Dashboard & Insights  | 70     | →     | Framework ready                              |
 
-**Average Rating:** 78.5/100  
-**Test Status:** 326/326 passing (100%)
+**Average Rating:** 78.8/100  
+**Test Status:** 340/340 passing (100%)
 
 ---
 
@@ -436,13 +436,13 @@ Design systems + front-end platform pairing. Produce contributor-facing UI guide
 
 ### Implementation Snapshot
 
-**Rating: 79/100** _(Updated December 1, 2025)_
+**Rating: 82/100** _(Updated December 4, 2025)_
 
-Tooling stack (Vitest, ESLint 9 flat config, Tailwind v4 pipeline) covers day-to-day development with scripted performance baselines, seed data generators, and comprehensive architecture documentation. Service extraction (Phase 1) established clean DataManager + Services pattern with dependency injection. Dev container + npm workflows yield repeatable environments.
+Tooling stack (Vitest, ESLint 9 flat config, Tailwind v4 pipeline) covers day-to-day development with scripted performance baselines, seed data generators, and comprehensive architecture documentation. Service extraction established clean DataManager + Services pattern with dependency injection. **December 4, 2025:** Week 1 hook refactoring complete—major hooks reduced from 400+ lines to <150 lines. New `withToast()` utility standardizes async operation feedback. Dev container + npm workflows yield repeatable environments.
 
 ### Strengths
 
-- **Comprehensive test harness**: 253 tests passing across unit, RTL, integration, and performance scripts with coverage reporting
+- **Comprehensive test harness**: 340 tests passing across unit, RTL, integration, and performance scripts with coverage reporting
 - **Service Architecture**: DataManager (461 lines) + 7 focused services totaling 2,265 lines
 - **Dependency Injection**: Clean service composition with focused responsibilities
 - **Storage Normalization**: v2.0 normalized format with automatic migration from legacy formats
@@ -452,38 +452,54 @@ Tooling stack (Vitest, ESLint 9 flat config, Tailwind v4 pipeline) covers day-to
 
 ### Hook Complexity Status
 
-Target: ≤200 lines per hook. **4 hooks over target:**
+Target: ≤200 lines per hook. **Week 1 refactoring complete:**
 
-| Hook                | Lines | Priority |
-| ------------------- | ----- | -------- |
-| `useNavigationFlow` | 424   | P0       |
-| `useConnectionFlow` | 413   | P0       |
-| `useCaseManagement` | 350   | P0       |
-| `useAlertsFlow`     | 289   | P0       |
+| Hook                | Before | After | Status      |
+| ------------------- | ------ | ----- | ----------- |
+| `useNavigationFlow` | 424    | 128   | ✅ Complete |
+| `useConnectionFlow` | 413    | 145   | ✅ Complete |
+| `useCaseManagement` | 350    | 83    | ✅ Complete |
+| `useAlertsFlow`     | 289    | 106   | ✅ Complete |
+
+**Remaining hooks over target:**
+
+| Hook                     | Lines | Notes                               |
+| ------------------------ | ----- | ----------------------------------- |
+| `useFinancialItemFlow`   | 384   | Complex modal state, lower priority |
+| `useCaseListPreferences` | 263   | Filter/sort logic, acceptable       |
+| `useCaseOperations`      | 262   | CRUD operations, acceptable         |
+| `useWidgetData`          | 245   | Data fetching, acceptable           |
+| `useCategoryEditorState` | 244   | Form state, acceptable              |
+
+### New Utilities (December 2025)
+
+- **`withToast()`**: Async wrapper with isMounted guards, loading/error state management
+- **`toastPromise()`**: Lightweight wrapper using Sonner's native `toast.promise()` API
+- **`project-structure-guidelines.md`**: Documents patterns for toast, hooks, services
 
 ### Gaps / Risks
 
 - No automated release packaging
 - Usage telemetry service still conceptual
 - Accessibility and visual regression tooling not in CI
-- 4 hooks exceed 200-line target
 
 ### Expansion Opportunities
 
-- Hook refactoring sprint (December Week 1)
 - Introduce lightweight release automation
 - Add automated accessibility checks to CI
 - Stand up usage metrics service
+- Consider `useFinancialItemFlow` extraction (lower priority)
 
 ### Coverage & Telemetry
 
-- **Vitest suites**: 253 tests across 41 test files (100% passing)
+- **Vitest suites**: 340 tests across 45 test files (100% passing)
 - **Service tests**: Complete coverage for all 7 services
+- **Toast utilities**: 14 tests covering loading/success/error states, isMounted guards
 - **Performance telemetry**: Partially automated; manual traces pending
 
 ### Owners / Notes
 
-Platform enablement group coordinates tooling, CI, and documentation upkeep. Hook refactoring scheduled for December Week 1.
+Platform enablement group coordinates tooling, CI, and documentation upkeep. Week 1 hook refactoring completed December 4, 2025.
 
 ---
 
@@ -491,53 +507,48 @@ Platform enablement group coordinates tooling, CI, and documentation upkeep. Hoo
 
 ### Implementation Snapshot
 
-**Rating: 72/100** _(Updated November 26, 2025)_
+**Rating: 72/100** _(Updated December 4, 2025)_
 
-Feature flag infrastructure lives in `utils/featureFlags.ts` with immutable defaults and helper utilities. Flags are managed through `useAppViewState` hook, enabling dashboard widgets to opt-in through metadata instead of ad-hoc conditionals. The system enables gradual rollout for dashboard insights and UI customization.
+Feature flag infrastructure lives in `utils/featureFlags.ts` with immutable defaults and helper utilities. Flags are managed through `useAppViewState` hook.
 
-**Note:** Legacy refactor flags (`USE_FINANCIALS_DOMAIN`, `USE_NEW_ARCHITECTURE`) were removed in November 2025 as the domain layer experiment was concluded and removed.
+### Current Usage
 
-### Current Flags
+**Actually used flags:**
 
-| Flag                       | Default | Description                                           |
-| -------------------------- | ------- | ----------------------------------------------------- |
-| `dashboard.widgets.*`      | `true`  | Controls visibility of individual dashboard widgets   |
-| `reports.advancedFilters`  | `false` | Placeholder for advanced reporting filters            |
-| `cases.bulkActions`        | `false` | Placeholder for case bulk actions tooling             |
-| `settings.devTools`        | `DEV`   | Developer tools in Settings (dev mode only)           |
-| `settings.legacyMigration` | `DEV`   | Legacy v1.x to v2.0 migration utility (dev mode only) |
+| Flag                       | Default | Where Used                     | Purpose                              |
+| -------------------------- | ------- | ------------------------------ | ------------------------------------ |
+| `settings.devTools`        | `DEV`   | `Settings.tsx`, `CaseList.tsx` | Show dev tools, sample data button   |
+| `settings.legacyMigration` | `DEV`   | `Settings.tsx`                 | Show v1→v2 migration panel           |
+| `ENABLE_SAMPLE_ALERTS`     | `false` | `useAlertsFlow.ts`             | Sample alerts (disabled permanently) |
 
-### Strengths
+**Placeholder flags (infrastructure ready, not wired up):**
 
-- Type-safe `FeatureFlagKey` union removes magic strings from the codebase
-- `DEFAULT_FLAGS` and `createFeatureFlagContext` yield reproducible flag contexts for tests and runtime overrides
-- Runtime toggling flows through `useAppViewState().setFeatureFlags`, keeping React components synchronized
-- Widget registry honors `metadata.featureFlag`, making new widget flags a metadata-only change
-- Dashboard widget toggles enable user customization of their view
-- Clean flag set with no legacy cruft after domain layer removal
-- `settings.legacyMigration` flag gates migration utility for safe rollout
+| Flag                      | Default | Intended Purpose                                   |
+| ------------------------- | ------- | -------------------------------------------------- |
+| `dashboard.widgets.*` (8) | `true`  | Dashboard widget customization (future feature)    |
+| `reports.advancedFilters` | `false` | Advanced reporting filters (future feature)        |
+| `cases.bulkActions`       | `false` | Was placeholder; bulk actions shipped without flag |
 
-### Gaps / Risks
+### Architecture Notes
 
-- Flags are in-memory only; there is no persisted storage for overrides across sessions yet
-- No diagnostic UI exists for QA or product to toggle flags during reviews
-- Observability is limited—flag enable/disable events are not tracked in telemetry
+- Type-safe `FeatureFlagKey` union prevents magic strings
+- `DEFAULT_FLAGS` provides reproducible defaults for tests
+- Runtime toggling via `useAppViewState().setFeatureFlags`
+- Widget registry supports `metadata.featureFlag` for future dashboard customization
 
-### Expansion Opportunities
+### Future: Dashboard Customization
 
-- Persist flag overrides so they survive page reloads
-- Build a lightweight developer toolbar to inspect and toggle flags at runtime
-- Emit telemetry when flags change to measure adoption and schedule cleanup
+When building dashboard customization:
 
-### Coverage & Telemetry
+1. Wire `dashboard.widgets.*` flags to actual widget visibility
+2. Add persistence (localStorage or file) for user preferences
+3. Build settings UI to toggle widgets on/off
+4. Consider removing unused flags (`reports.advancedFilters`, `cases.bulkActions`)
 
-- Unit tests (`__tests__/utils/featureFlags.test.ts`) validate defaults, overrides, and helper utilities
-- Integration tests ensure dashboard widgets respond to flag toggles correctly
-- Telemetry capture is planned but not yet implemented; no metrics currently collected
+### Coverage
 
-### Owners / Notes
-
-Core development team owns the flag system. Coordinate cleanup once features graduate from guarded rollout.
+- Unit tests: `__tests__/utils/featureFlags.test.ts`
+- Hook tests: `__tests__/hooks/useAppViewState.test.ts`
 
 ---
 

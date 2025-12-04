@@ -20,7 +20,7 @@
 
 ### Week 1: Foundation & Financial Features (Dec 2-8) ✅ COMPLETE
 
-#### Fixes & Refactoring
+#### Prep Work
 
 - [x] Refactor 4 oversized hooks (useNavigationFlow, useConnectionFlow, useCaseManagement, useAlertsFlow)
 - [x] Extract CaseOperationsService for business logic separation
@@ -29,7 +29,7 @@
 - [x] Fix Category Manager checkbox reset bug (countsAsCompleted)
 - [x] Refactor NotesDrawer to use shadcn Drawer component (was custom CSS transform implementation)
 
-#### New Features
+#### Features
 
 - [x] AVS Import UI in Financials tab
 - [x] Bulk case list actions (multi-select delete/status change)
@@ -41,7 +41,7 @@
 - [x] Click-to-copy on financial cards (uses same format as Case Summary)
 - [x] Financial card UX: show copy/delete on hover, status dropdown outside click area, auto-save status
 
-#### Polish & Documentation
+#### Refactoring & Polish
 
 - [x] Update feature catalogue with new features
 - [x] All features committed and merged to main
@@ -55,21 +55,22 @@
 
 ### Week 2: Reporting & Analytics (Dec 9-15)
 
-#### Fixes & Refactoring
+#### Prep Work
 
-- [ ] Add unit tests for Week 1 extracted hooks
 - [ ] Fix any bugs discovered from Week 1 features
 - [ ] Performance audit on dashboard load time
+- [ ] Plan feature implementation approach
 
-#### New Features
+#### Features
 
 - [ ] Case timeline view (activity log visualization)
 - [ ] Export case data to CSV/PDF
 - [ ] Dashboard widget: Cases by age distribution
 - [ ] Financial summary report per case
 
-#### Polish & Documentation
+#### Refactoring & Polish
 
+- [ ] Add unit tests for Week 2 features
 - [ ] Accessibility audit (jest-axe) for new components
 - [ ] Update copilot-instructions with 200-line hook target
 - [ ] Performance baseline documentation (1k cases)
@@ -78,25 +79,27 @@
 
 ### Week 3: UX Improvements & Automation (Dec 16-22)
 
-#### Fixes & Refactoring
+#### Prep Work
 
 - [ ] Address any accessibility issues from Week 2 audit
-- [ ] Optimize large case list rendering
-- [ ] Clean up deprecated code paths
+- [ ] Fix bugs discovered from Week 2 features
+- [ ] Plan feature implementation approach
 
-#### New Features
+#### Features
 
 - [ ] Keyboard shortcuts for common actions
 - [ ] Case templates for quick creation
 - [ ] Alert auto-assignment based on MCN matching
 - [ ] Notes search/filter functionality
 
-#### Polish & Documentation
+#### Refactoring & Polish
 
+- [ ] Add unit tests for Week 3 features
+- [ ] Optimize large case list rendering
+- [ ] Clean up deprecated code paths
 - [ ] Create December changelog
 - [ ] Update feature catalogue ratings
 - [ ] Plan January roadmap
-- [ ] Final test suite run, target 290+ tests
 
 ---
 
@@ -169,7 +172,7 @@ This roadmap reflects our accelerated development pace with direct AI assistance
 
 - **Traditional estimate:** 1-2 features per week
 - **AI-assisted reality:** 4+ features per week with full test coverage
-- **Each week includes:** fixes, features, polish, and documentation
+- **Each week includes:** prep work, features, then refactoring/polish
 
 ### Quality Gates
 

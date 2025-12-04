@@ -3,6 +3,7 @@ import { FinancialItem, NewFinancialItemData, CaseCategory, StoredFinancialItem 
 import { useDataManagerSafe } from '@/contexts/DataManagerContext';
 import { useFileStorageDataChange } from '@/contexts/FileStorageContext';
 import { toast } from 'sonner';
+import { withToast } from '@/utils/withToast';
 
 /**
  * Hook for managing financial items (resources, income, expenses)
@@ -110,31 +111,28 @@ export function useFinancialItems(caseId?: string): UseFinancialItemsReturn {
       return null;
     }
 
-    setIsLoading(true);
-    setError(null);
-    
-    const toastId = toast.loading(`Adding ${category} item...`);
-    
     try {
-      const newItem = await dataManager.addItem(targetCaseId, category, data);
-      toast.success(`${category} item added successfully`, { id: toastId });
+      const newItem = await withToast(
+        () => dataManager.addItem(targetCaseId, category, data),
+        {
+          loading: `Adding ${category} item...`,
+          success: `${category} item added successfully`,
+          error: `Failed to add ${category} item`,
+          setError,
+          setLoading: setIsLoading,
+        }
+      );
       
       // Refresh items if we're viewing the same case
-      if (caseId === targetCaseId) {
+      if (newItem && caseId === targetCaseId) {
         await refreshItems();
       }
       
       return newItem;
-    } catch (err) {
-      const errorMsg = `Failed to add ${category} item`;
-      console.error(errorMsg, err);
-      setError(errorMsg);
-      toast.error(errorMsg, { id: toastId });
+    } catch {
       return null;
-    } finally {
-      setIsLoading(false);
     }
-  }, [dataManager, caseId, refreshItems]);
+  }, [dataManager, caseId, refreshItems, setError]);
 
   const updateFinancialItem = useCallback(async (
     targetCaseId: string,
@@ -149,32 +147,28 @@ export function useFinancialItems(caseId?: string): UseFinancialItemsReturn {
       return null;
     }
 
-    setIsLoading(true);
-    setError(null);
-    
-    const toastId = toast.loading(`Updating ${category} item...`);
-    
     try {
-      // Cast to required type since we're doing a partial update
-      const updatedItem = await dataManager.updateItem(targetCaseId, category, itemId, data as Omit<FinancialItem, 'id' | 'createdAt' | 'updatedAt'>);
-      toast.success(`${category} item updated successfully`, { id: toastId });
+      const updatedItem = await withToast(
+        () => dataManager.updateItem(targetCaseId, category, itemId, data as Omit<FinancialItem, 'id' | 'createdAt' | 'updatedAt'>),
+        {
+          loading: `Updating ${category} item...`,
+          success: `${category} item updated successfully`,
+          error: `Failed to update ${category} item`,
+          setError,
+          setLoading: setIsLoading,
+        }
+      );
       
       // Refresh items if we're viewing the same case
-      if (caseId === targetCaseId) {
+      if (updatedItem && caseId === targetCaseId) {
         await refreshItems();
       }
 
       return updatedItem;
-    } catch (err) {
-      const errorMsg = `Failed to update ${category} item`;
-      console.error(errorMsg, err);
-      setError(errorMsg);
-      toast.error(errorMsg, { id: toastId });
+    } catch {
       return null;
-    } finally {
-      setIsLoading(false);
     }
-  }, [dataManager, caseId, refreshItems]);
+  }, [dataManager, caseId, refreshItems, setError]);
 
   const deleteFinancialItem = useCallback(async (
     targetCaseId: string,
@@ -188,14 +182,17 @@ export function useFinancialItems(caseId?: string): UseFinancialItemsReturn {
       return false;
     }
 
-    setIsLoading(true);
-    setError(null);
-    
-    const toastId = toast.loading(`Deleting ${category} item...`);
-    
     try {
-      await dataManager.deleteItem(targetCaseId, category, itemId);
-      toast.success(`${category} item deleted successfully`, { id: toastId });
+      await withToast(
+        () => dataManager.deleteItem(targetCaseId, category, itemId),
+        {
+          loading: `Deleting ${category} item...`,
+          success: `${category} item deleted successfully`,
+          error: `Failed to delete ${category} item`,
+          setError,
+          setLoading: setIsLoading,
+        }
+      );
       
       // Refresh items if we're viewing the same case
       if (caseId === targetCaseId) {
@@ -203,16 +200,10 @@ export function useFinancialItems(caseId?: string): UseFinancialItemsReturn {
       }
 
       return true;
-    } catch (err) {
-      const errorMsg = `Failed to delete ${category} item`;
-      console.error(errorMsg, err);
-      setError(errorMsg);
-      toast.error(errorMsg, { id: toastId });
+    } catch {
       return false;
-    } finally {
-      setIsLoading(false);
     }
-  }, [dataManager, caseId, refreshItems]);
+  }, [dataManager, caseId, refreshItems, setError]);
 
   return {
     // Data

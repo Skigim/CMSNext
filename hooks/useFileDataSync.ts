@@ -9,7 +9,6 @@ import { updateFileStorageFlags } from "@/utils/fileStorageFlags";
 import { recordStorageSyncEvent } from "@/utils/telemetryInstrumentation";
 
 interface FileDataSyncDependencies {
-  loadCases: () => Promise<void>;
   setCases: Dispatch<SetStateAction<StoredCase[]>>;
   setHasLoadedData: (value: boolean) => void;
   setConfigFromFile: (config?: Partial<CategoryConfig> | null) => void;
@@ -24,7 +23,6 @@ type FileDataPayload = {
 } | null | undefined;
 
 export function useFileDataSync({
-  loadCases,
   setCases,
   setHasLoadedData,
   setConfigFromFile,
@@ -94,7 +92,7 @@ export function useFileDataSync({
         toast.error("Failed to load data");
       }
     },
-    [loadCases, setCases, setConfigFromFile, setHasLoadedData],
+    [setCases, setConfigFromFile, setHasLoadedData],
   );
 
   useFileStorageDataLoadHandler(handleFileDataLoaded);
