@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { CaseStatus } from "@/types/case";
 
 export type CaseListSortKey = "updated" | "name" | "mcn" | "application" | "status" | "caseType" | "alerts";
@@ -188,9 +188,25 @@ export function useCaseListPreferences(): CaseListPreferences {
     initialPrefs?.filters ?? DEFAULT_FILTERS
   );
 
-  // Persist preferences when they change
+  // Debounced persistence to reduce main thread blocking
+  const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  
   useEffect(() => {
-    savePreferences(sortConfigs, segment, filters);
+    // Clear any pending save
+    if (saveTimeoutRef.current) {
+      clearTimeout(saveTimeoutRef.current);
+    }
+    
+    // Debounce localStorage writes by 300ms
+    saveTimeoutRef.current = setTimeout(() => {
+      savePreferences(sortConfigs, segment, filters);
+    }, 300);
+    
+    return () => {
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current);
+      }
+    };
   }, [sortConfigs, segment, filters]);
 
   const setSortKey = useCallback((key: CaseListSortKey) => {

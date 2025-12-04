@@ -26,6 +26,7 @@ describe("useCaseListPreferences", () => {
   let localStorageMock: ReturnType<typeof createLocalStorageMock>;
 
   beforeEach(() => {
+    vi.useFakeTimers();
     localStorageMock = createLocalStorageMock();
     Object.defineProperty(window, "localStorage", {
       value: localStorageMock,
@@ -35,6 +36,8 @@ describe("useCaseListPreferences", () => {
   });
 
   afterEach(() => {
+    vi.runOnlyPendingTimers();
+    vi.useRealTimers();
     localStorageMock.clear();
   });
 
@@ -64,6 +67,11 @@ describe("useCaseListPreferences", () => {
         result.current.setSegment("recent");
       });
 
+      // Advance past debounce delay (300ms)
+      act(() => {
+        vi.advanceTimersByTime(300);
+      });
+
       const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
       expect(stored.segment).toBe("recent");
     });
@@ -78,6 +86,11 @@ describe("useCaseListPreferences", () => {
 
       act(() => {
         result.current.setSortConfigs(newConfigs);
+      });
+
+      // Advance past debounce delay (300ms)
+      act(() => {
+        vi.advanceTimersByTime(300);
       });
 
       const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
@@ -100,6 +113,11 @@ describe("useCaseListPreferences", () => {
 
       act(() => {
         result.current.setFilters(newFilters);
+      });
+
+      // Advance past debounce delay (300ms)
+      act(() => {
+        vi.advanceTimersByTime(300);
       });
 
       const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
@@ -235,6 +253,11 @@ describe("useCaseListPreferences", () => {
         dateRange: {},
         excludeStatuses: [],
         excludePriority: false,
+      });
+      
+      // Advance past debounce delay (300ms) to allow localStorage save
+      act(() => {
+        vi.advanceTimersByTime(300);
       });
       
       // After reset, defaults are persisted (useEffect writes them back)
