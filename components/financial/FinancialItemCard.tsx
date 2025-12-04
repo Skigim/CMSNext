@@ -96,7 +96,7 @@ export function FinancialItemCard({
           </div>
         )}
 
-        <CardHeader className="flex flex-col gap-3">
+        <CardHeader className="!flex !flex-col gap-3">
           <div className="flex items-start gap-3">
             <div
               className="min-w-0 flex-1 cursor-pointer"
