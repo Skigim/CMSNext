@@ -491,53 +491,47 @@ Platform enablement group coordinates tooling, CI, and documentation upkeep. Hoo
 
 ### Implementation Snapshot
 
-**Rating: 72/100** _(Updated November 26, 2025)_
+**Rating: 72/100** _(Updated December 4, 2025)_
 
-Feature flag infrastructure lives in `utils/featureFlags.ts` with immutable defaults and helper utilities. Flags are managed through `useAppViewState` hook, enabling dashboard widgets to opt-in through metadata instead of ad-hoc conditionals. The system enables gradual rollout for dashboard insights and UI customization.
+Feature flag infrastructure lives in `utils/featureFlags.ts` with immutable defaults and helper utilities. Flags are managed through `useAppViewState` hook.
 
-**Note:** Legacy refactor flags (`USE_FINANCIALS_DOMAIN`, `USE_NEW_ARCHITECTURE`) were removed in November 2025 as the domain layer experiment was concluded and removed.
+### Current Usage
 
-### Current Flags
+**Actually used flags:**
 
-| Flag                       | Default | Description                                           |
-| -------------------------- | ------- | ----------------------------------------------------- |
-| `dashboard.widgets.*`      | `true`  | Controls visibility of individual dashboard widgets   |
-| `reports.advancedFilters`  | `false` | Placeholder for advanced reporting filters            |
-| `cases.bulkActions`        | `false` | Placeholder for case bulk actions tooling             |
-| `settings.devTools`        | `DEV`   | Developer tools in Settings (dev mode only)           |
-| `settings.legacyMigration` | `DEV`   | Legacy v1.x to v2.0 migration utility (dev mode only) |
+| Flag                       | Default | Where Used                     | Purpose                              |
+| -------------------------- | ------- | ------------------------------ | ------------------------------------ |
+| `settings.devTools`        | `DEV`   | `Settings.tsx`, `CaseList.tsx` | Show dev tools, sample data button   |
+| `settings.legacyMigration` | `DEV`   | `Settings.tsx`                 | Show v1→v2 migration panel           |
+| `ENABLE_SAMPLE_ALERTS`     | `false` | `useAlertsFlow.ts`             | Sample alerts (disabled permanently) |
 
-### Strengths
+**Placeholder flags (infrastructure ready, not wired up):**
 
-- Type-safe `FeatureFlagKey` union removes magic strings from the codebase
-- `DEFAULT_FLAGS` and `createFeatureFlagContext` yield reproducible flag contexts for tests and runtime overrides
-- Runtime toggling flows through `useAppViewState().setFeatureFlags`, keeping React components synchronized
-- Widget registry honors `metadata.featureFlag`, making new widget flags a metadata-only change
-- Dashboard widget toggles enable user customization of their view
-- Clean flag set with no legacy cruft after domain layer removal
-- `settings.legacyMigration` flag gates migration utility for safe rollout
+| Flag                      | Default | Intended Purpose                                   |
+| ------------------------- | ------- | -------------------------------------------------- |
+| `dashboard.widgets.*` (8) | `true`  | Dashboard widget customization (future feature)    |
+| `reports.advancedFilters` | `false` | Advanced reporting filters (future feature)        |
+| `cases.bulkActions`       | `false` | Was placeholder; bulk actions shipped without flag |
 
-### Gaps / Risks
+### Architecture Notes
 
-- Flags are in-memory only; there is no persisted storage for overrides across sessions yet
-- No diagnostic UI exists for QA or product to toggle flags during reviews
-- Observability is limited—flag enable/disable events are not tracked in telemetry
+- Type-safe `FeatureFlagKey` union prevents magic strings
+- `DEFAULT_FLAGS` provides reproducible defaults for tests
+- Runtime toggling via `useAppViewState().setFeatureFlags`
+- Widget registry supports `metadata.featureFlag` for future dashboard customization
 
-### Expansion Opportunities
+### Future: Dashboard Customization
 
-- Persist flag overrides so they survive page reloads
-- Build a lightweight developer toolbar to inspect and toggle flags at runtime
-- Emit telemetry when flags change to measure adoption and schedule cleanup
+When building dashboard customization:
+1. Wire `dashboard.widgets.*` flags to actual widget visibility
+2. Add persistence (localStorage or file) for user preferences
+3. Build settings UI to toggle widgets on/off
+4. Consider removing unused flags (`reports.advancedFilters`, `cases.bulkActions`)
 
-### Coverage & Telemetry
+### Coverage
 
-- Unit tests (`__tests__/utils/featureFlags.test.ts`) validate defaults, overrides, and helper utilities
-- Integration tests ensure dashboard widgets respond to flag toggles correctly
-- Telemetry capture is planned but not yet implemented; no metrics currently collected
-
-### Owners / Notes
-
-Core development team owns the flag system. Coordinate cleanup once features graduate from guarded rollout.
+- Unit tests: `__tests__/utils/featureFlags.test.ts`
+- Hook tests: `__tests__/hooks/useAppViewState.test.ts`
 
 ---
 
