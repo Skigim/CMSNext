@@ -24,7 +24,7 @@
 | Premium UI/UX         | 82     | →     | Solid, accessibility audits needed           |
 | Financial Operations  | 82     | ↑     | Copy button, hover actions, auto-save status |
 | Local-First Storage   | 80     | →     | Production-ready                             |
-| Developer Enablement  | 79     | →     | Strong tooling, 323 tests                    |
+| Developer Enablement  | 79     | →     | Strong tooling, 326 tests                    |
 | Data Portability      | 78     | ↑     | Smart alert import with case creation        |
 | Configurable Statuses | 78     | →     | Recently stabilized                          |
 | Notes & Collaboration | 78     | ↑     | Case Summary Generator with modal & sections |
@@ -34,7 +34,7 @@
 | Dashboard & Insights  | 70     | →     | Framework ready                              |
 
 **Average Rating:** 78.5/100  
-**Test Status:** 323/323 passing (100%)
+**Test Status:** 326/326 passing (100%)
 
 ---
 

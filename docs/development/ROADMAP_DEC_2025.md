@@ -2,7 +2,7 @@
 
 **Report Date:** December 4, 2025  
 **Branch:** main (stable)  
-**Tests:** 323/323 passing ✅  
+**Tests:** 326/326 passing ✅  
 **Build:** Production-ready ✅  
 **Average Feature Rating:** 78.5/100
 
@@ -45,7 +45,9 @@
 
 - [x] Update feature catalogue with new features
 - [x] All features committed and merged to main
-- [x] 323 tests passing
+- [x] 326 tests passing
+- [x] Phone number formatting in Case Summary Generator
+- [x] Financial card layout fixes (CSS grid, CardHeader override)
 
 **⏸️ FEATURE FREEZE: Dec 5-8 is polish time. No new features until Week 2.**
 
@@ -110,8 +112,8 @@
 | ----------------------------- | ----- | ------ | ------ | ------ | ------ |
 | Hooks over 200 lines          | 4     | 0 ✅   | 0      | 0      | 0      |
 | Components with anti-patterns | 1     | 0 ✅   | 0      | 0      | 0      |
-| Test count                    | 253   | 323 ✅ | 330    | 340    | 340+   |
-| New features shipped          | -     | 11 ✅  | 4      | 4      | 19     |
+| Test count                    | 253   | 326 ✅ | 335    | 345    | 345+   |
+| New features shipped          | -     | 12 ✅  | 4      | 4      | 20     |
 | Average feature rating        | 76.5  | 78.5   | 79     | 80     | 80+    |
 
 ---
@@ -131,6 +133,7 @@
 9. ~~Case Summary Generator with modal~~ ✅
 10. ~~Financial card copy button~~ ✅
 11. ~~Financial card UX polish~~ ✅
+12. ~~Phone number formatting~~ ✅
 
 ### Week 2 - P0
 
