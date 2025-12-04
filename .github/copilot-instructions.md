@@ -157,6 +157,41 @@ interface StatusConfig {
 - ❌ Do not put business logic in React components
 - ❌ No domain layer, repositories, or event bus patterns
 
+## Development Cycle
+
+### Weekly Structure
+
+Each week follows a consistent 3-phase pattern:
+
+1. **Prep Work** (Start of week)
+   - Fix bugs discovered from previous week
+   - Run audits (performance, accessibility)
+   - Plan feature implementation approach
+
+2. **Features** (Mid-week)
+   - Implement 3-4 new features
+   - Each feature includes tests
+   - Commit and push frequently
+
+3. **Refactoring & Polish** (End of week)
+   - Add/improve unit tests for week's features
+   - Clean up code, optimize performance
+   - Update documentation and feature catalogue
+
+### Monthly Roadmap
+
+- **Template:** `docs/development/ROADMAP_TEMPLATE.md`
+- **Current:** `docs/development/ROADMAP_DEC_2025.md`
+- **Archive:** `docs/development/archive/[YEAR]/`
+
+Each month targets ~12-20 features across 3-4 active weeks.
+
+### AI-Assisted Pace
+
+- **Traditional:** 1-2 features per week
+- **AI-assisted:** 4+ features per week with full test coverage
+- Maintain quality gates: all tests pass, patterns followed, docs updated
+
 ## Git Workflow
 
 - **Branch:** Work directly on `main` for small changes; use `dev` for larger features.
@@ -167,6 +202,6 @@ interface StatusConfig {
 
 - **Product:** `README.md`
 - **Features:** `docs/development/feature-catalogue.md`
-- **Roadmap:** `docs/development/ROADMAP_STATUS_NOV_2025.md`
+- **Roadmap:** `docs/development/ROADMAP_DEC_2025.md`
 - **Testing:** `docs/development/testing-infrastructure.md`
 - **Deployment:** `docs/DeploymentGuide.md`
