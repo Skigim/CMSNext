@@ -96,10 +96,10 @@ export function FinancialItemCard({
           </div>
         )}
 
-        <CardHeader className="!flex !flex-col gap-3">
+        <CardHeader className="!block">
           <div className="flex items-start gap-3">
             <div
-              className="min-w-0 flex-1 cursor-pointer"
+              className="min-w-0 flex-1 cursor-pointer space-y-4"
               onClick={() => {
                 if (!canToggle) return;
                 handleCardClick();
@@ -121,6 +121,12 @@ export function FinancialItemCard({
                 dateAdded={normalizedItem.dateAdded}
                 displayAmount={displayAmount}
               />
+              <FinancialItemCardMeta
+                normalizedItem={normalizedItem}
+                verificationStatus={verificationStatus}
+                canUpdateStatus={canUpdateStatus}
+                onStatusChange={handleStatusChange}
+              />
             </div>
 
             {canToggle && (
@@ -139,13 +145,6 @@ export function FinancialItemCard({
               </CollapsibleTrigger>
             )}
           </div>
-
-          <FinancialItemCardMeta
-            normalizedItem={normalizedItem}
-            verificationStatus={verificationStatus}
-            canUpdateStatus={canUpdateStatus}
-            onStatusChange={handleStatusChange}
-          />
         </CardHeader>
 
         <CollapsibleContent className="overflow-hidden data-[state=closed]:animate-accordion-up data-[state=open]:animate-accordion-down">
