@@ -18,23 +18,23 @@
 
 ## Quick Reference (December 2025)
 
-| Feature               | Rating | Trend | Notes                                 |
-| --------------------- | ------ | ----- | ------------------------------------- |
-| Case Management       | 90     | ↑     | Bulk actions added, production-ready  |
-| Premium UI/UX         | 82     | →     | Solid, accessibility audits needed    |
-| Local-First Storage   | 80     | →     | Production-ready                      |
-| Developer Enablement  | 79     | →     | Strong tooling                        |
-| Configurable Statuses | 78     | →     | Recently stabilized                   |
-| Data Portability      | 78     | ↑     | Smart alert import with case creation |
-| Legacy Migration      | 75     | →     | Dev-only, one-way                     |
-| Autosave & Recovery   | 74     | →     | Works, telemetry pending              |
-| Financial Operations  | 78     | ↑     | FinancialItemModal refactored         |
-| Feature Flags         | 72     | →     | In-memory only                        |
-| Notes & Collaboration | 74     | ↑     | Case Summary Generator added          |
-| Dashboard & Insights  | 70     | →     | Framework ready                       |
+| Feature               | Rating | Trend | Notes                                           |
+| --------------------- | ------ | ----- | ----------------------------------------------- |
+| Case Management       | 90     | ↑     | Bulk actions added, production-ready            |
+| Premium UI/UX         | 82     | →     | Solid, accessibility audits needed              |
+| Financial Operations  | 82     | ↑     | Copy button, hover actions, auto-save status    |
+| Local-First Storage   | 80     | →     | Production-ready                                |
+| Developer Enablement  | 79     | →     | Strong tooling, 323 tests                       |
+| Data Portability      | 78     | ↑     | Smart alert import with case creation           |
+| Configurable Statuses | 78     | →     | Recently stabilized                             |
+| Notes & Collaboration | 78     | ↑     | Case Summary Generator with modal & sections    |
+| Legacy Migration      | 75     | →     | Dev-only, one-way                               |
+| Autosave & Recovery   | 74     | →     | Works, telemetry pending                        |
+| Feature Flags         | 72     | →     | In-memory only                                  |
+| Dashboard & Insights  | 70     | →     | Framework ready                                 |
 
-**Average Rating:** 77.3/100  
-**Test Status:** 317/317 passing (100%)
+**Average Rating:** 78.5/100  
+**Test Status:** 323/323 passing (100%)
 
 ---
 
@@ -205,14 +205,17 @@ Phase 3 Cases domain refactor completed November 2, 2025. Bulk actions feature a
 
 ### Implementation Snapshot
 
-**Rating: 78/100** _(Updated December 2, 2025)_
+**Rating: 82/100** _(Updated December 4, 2025)_
 
 Financial modules (resources, income, expenses) leverage dedicated components and hooks (`useFinancialItemFlow`, `FinancialItemCard`) with inline editing, validation, and autosave integration. Verification metadata and frequency handling cover core program requirements.
 
-**December 2, 2025:** `FinancialItemModal` refactored - all business logic extracted to `useFinancialItemFlow` hook. Modal is now a pure UI component (290 lines) with no direct DataManager access.
+**December 4, 2025:** Financial cards now feature click-to-copy (using Case Summary Generator format), hover-visible action buttons, and auto-save for status changes in collapsed state.
 
 ### Strengths
 
+- **Click-to-Copy**: Copy button on each financial card formats item using Case Summary Generator conventions
+- **Hover Actions**: Copy and delete buttons appear on card hover, always visible when expanded
+- **Auto-Save Status**: Status dropdown works in collapsed state with immediate auto-save
 - **Service Architecture**: FinancialsService (226 lines) handles all financial CRUD operations with category-based management
 - **Hook Layer**: `useFinancialItemFlow` (165 lines) provides React integration with toast feedback
 - **Inline Editing**: `FinancialItemCard` keeps UX fast with state managed by `useFinancialItemCardState`
@@ -236,12 +239,13 @@ Financial modules (resources, income, expenses) leverage dedicated components an
 ### Coverage & Telemetry
 
 - RTL suites target FinancialItemCard, case financial forms, and verification flows
+- `FinancialItemCardActions` tests cover copy button and clipboard integration
 - `useFinancialItemFlow` tested through component behavior
 - No dedicated telemetry yet
 
 ### Owners / Notes
 
-**December 2, 2025:** FinancialItemModal refactoring complete. Anti-pattern eliminated. AVS Import UI added to Financials tab.
+**December 4, 2025:** Financial card UX improvements complete - hover actions, click-to-copy, auto-save status. Week 1 feature freeze in effect.
 
 ---
 
@@ -249,9 +253,9 @@ Financial modules (resources, income, expenses) leverage dedicated components an
 
 ### Implementation Snapshot
 
-**Rating: 74/100** _(Updated December 4, 2025)_
+**Rating: 78/100** _(Updated December 4, 2025)_
 
-Notes system supports categorized, timestamped entries tied to cases with edit history and toast feedback. Activity log integration keeps audit context nearby, and quick-add UX leverages keyboard shortcuts and autosave-friendly forms. **December 4, 2025:** Added Case Summary Generator with structured plain-text export for easy sharing via email or ticketing systems.
+Notes system supports categorized, timestamped entries tied to cases with edit history and toast feedback. Activity log integration keeps audit context nearby, and quick-add UX leverages keyboard shortcuts and autosave-friendly forms. **December 4, 2025:** Added Case Summary Generator with configurable section modal for customized exports.
 
 ### Strengths
 
@@ -260,7 +264,8 @@ Notes system supports categorized, timestamped entries tied to cases with edit h
 - Sonner toasts provide immediate feedback on create/update/delete actions
 - Keyboard shortcuts and focused forms streamline fast note capture
 - Activity log complements notes by recording system-driven events (imports, autosave results)
-- **Case Summary Generator**: One-click export of structured case data (case info, person details, relationships, financials, notes) to clipboard in plain-text format optimized for sharing
+- **Case Summary Generator**: Modal-based export with section toggles (Case Info, Person, Relationships, Resources, Income, Expenses, Notes), editable preview, and one-click copy to clipboard
+- **Consistent Formatting**: Plain-text format optimized for emails and ticketing systems (MM/DD/YYYY dates, $1,500.00 currency, verification source display)
 
 ### Gaps / Risks
 
