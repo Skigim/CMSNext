@@ -205,5 +205,6 @@ Each month targets ~12-20 features across 3-4 active weeks.
 - **Product:** `README.md`
 - **Features:** `docs/development/feature-catalogue.md`
 - **Roadmap:** `docs/development/ROADMAP_DEC_2025.md`
+- **Guidelines:** `docs/development/project-structure-guidelines.md`
 - **Testing:** `docs/development/testing-infrastructure.md`
 - **Deployment:** `docs/DeploymentGuide.md`
