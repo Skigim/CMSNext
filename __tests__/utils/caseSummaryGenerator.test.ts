@@ -143,6 +143,32 @@ describe('generateCaseSummary', () => {
       expect(summary).toContain('john.doe@email.com | (555) 123-4567');
     });
 
+    it('formats raw 10-digit phone number', () => {
+      const caseData = createMockCase({
+        person: {
+          ...createMockCase().person,
+          phone: '5551234567',
+        },
+      });
+
+      const summary = generateCaseSummary(caseData);
+      
+      expect(summary).toContain('(555) 123-4567');
+    });
+
+    it('formats 11-digit phone number with leading 1', () => {
+      const caseData = createMockCase({
+        person: {
+          ...createMockCase().person,
+          phone: '15559876543',
+        },
+      });
+
+      const summary = generateCaseSummary(caseData);
+      
+      expect(summary).toContain('(555) 987-6543');
+    });
+
     it('shows only email if no phone', () => {
       const caseData = createMockCase({
         person: {
@@ -246,6 +272,21 @@ describe('generateCaseSummary', () => {
       const summary = generateCaseSummary(caseData);
       
       expect(summary).toContain('Authorized Rep | Jane Smith | (555) 987-6543');
+    });
+
+    it('formats raw phone numbers in relationships', () => {
+      const caseData = createMockCase({
+        person: {
+          ...createMockCase().person,
+          relationships: [
+            { type: 'Spouse', name: 'Mary Doe', phone: '5551112222' },
+          ],
+        },
+      });
+
+      const summary = generateCaseSummary(caseData);
+      
+      expect(summary).toContain('Spouse | Mary Doe | (555) 111-2222');
     });
 
     it('formats relationship without phone as Type | Name', () => {

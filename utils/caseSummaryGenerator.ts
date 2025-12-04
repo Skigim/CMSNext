@@ -52,6 +52,29 @@ function formatFrequencyDisplay(frequency?: string): string {
 }
 
 /**
+ * Format phone number as (XXX) XXX-XXXX
+ */
+function formatPhoneNumber(phone: string | null | undefined): string {
+  if (!phone) return '';
+  
+  // Remove all non-digits
+  const digits = phone.replace(/\D/g, '');
+  
+  // Handle 10-digit US phone numbers
+  if (digits.length === 10) {
+    return `(${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6)}`;
+  }
+  
+  // Handle 11-digit with leading 1
+  if (digits.length === 11 && digits.startsWith('1')) {
+    return `(${digits.slice(1, 4)}) ${digits.slice(4, 7)}-${digits.slice(7)}`;
+  }
+  
+  // Return original if not a standard format
+  return phone;
+}
+
+/**
  * Format a resource item:
  * Description Account Number w/ Institution/Location - Amount (Verification Source or Status)
  */
@@ -146,7 +169,7 @@ export function formatExpenseItem(item: FinancialItem): string {
 function formatRelationship(rel: Relationship): string {
   const parts = [rel.type || 'Unknown', rel.name || 'Unknown'];
   if (rel.phone) {
-    parts.push(rel.phone);
+    parts.push(formatPhoneNumber(rel.phone));
   }
   return parts.join(' | ');
 }
@@ -171,7 +194,7 @@ function buildPersonInfoSection(person: StoredCase['person'], caseRecord: Stored
   
   const contactParts: string[] = [];
   if (person.email) contactParts.push(person.email);
-  if (person.phone) contactParts.push(person.phone);
+  if (person.phone) contactParts.push(formatPhoneNumber(person.phone));
   const contactLine = contactParts.length > 0 ? contactParts.join(' | ') : 'No contact info';
   
   const lines = [
