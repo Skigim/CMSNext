@@ -76,7 +76,7 @@ export function FinancialItemCard({
   return (
     <Collapsible open={isEditing} onOpenChange={handleOpenChange}>
       <Card
-        className={`relative overflow-hidden pb-3 transition-shadow ${
+        className={`group relative overflow-hidden pb-3 transition-shadow ${
           isSkeleton
             ? "border border-dashed border-primary/40 bg-primary/5 opacity-80"
             : "hover:shadow-md"
@@ -84,8 +84,8 @@ export function FinancialItemCard({
       >
         <FinancialItemSaveIndicator isSaving={isSaving} saveSuccessVisible={saveSuccessVisible} />
 
-        {isEditing && showActions && (
-          <div className="absolute right-3 top-3 z-10">
+        {showActions && (
+          <div className="absolute right-2 top-2 z-10 opacity-0 transition-opacity group-hover:opacity-100 data-[visible=true]:opacity-100" data-visible={isEditing || confirmingDelete}>
             <FinancialItemCardActions
               confirmingDelete={confirmingDelete}
               onDeleteClick={handleDeleteClick}
@@ -96,53 +96,56 @@ export function FinancialItemCard({
           </div>
         )}
 
-        <CardHeader className="flex items-start gap-3">
-          <div
-            className="cursor-pointer flex-1 space-y-4"
-            onClick={() => {
-              if (!canToggle) return;
-              handleCardClick();
-            }}
-            role={canToggle ? "button" : undefined}
-            tabIndex={canToggle ? 0 : undefined}
-            onKeyDown={event => {
-              if (!canToggle) return;
-              if (event.target !== event.currentTarget) return;
-              if (event.key === "Enter" || event.key === " ") {
-                event.preventDefault();
+        <CardHeader className="flex flex-col gap-3">
+          <div className="flex items-start gap-3">
+            <div
+              className="cursor-pointer flex-1"
+              onClick={() => {
+                if (!canToggle) return;
                 handleCardClick();
-              }
-            }}
-          >
-            <FinancialItemCardHeader
-              itemType={itemType}
-              displayName={normalizedItem.displayName}
-              dateAdded={normalizedItem.dateAdded}
-              displayAmount={displayAmount}
-            />
-            <FinancialItemCardMeta
-              normalizedItem={normalizedItem}
-              verificationStatus={verificationStatus}
-              canUpdateStatus={canUpdateStatus}
-              onStatusChange={handleStatusChange}
-            />
+              }}
+              role={canToggle ? "button" : undefined}
+              tabIndex={canToggle ? 0 : undefined}
+              onKeyDown={event => {
+                if (!canToggle) return;
+                if (event.target !== event.currentTarget) return;
+                if (event.key === "Enter" || event.key === " ") {
+                  event.preventDefault();
+                  handleCardClick();
+                }
+              }}
+            >
+              <FinancialItemCardHeader
+                itemType={itemType}
+                displayName={normalizedItem.displayName}
+                dateAdded={normalizedItem.dateAdded}
+                displayAmount={displayAmount}
+              />
+            </div>
+
+            {canToggle && (
+              <CollapsibleTrigger asChild>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  aria-expanded={isEditing}
+                  aria-label={isEditing ? "Collapse financial item" : "Expand financial item"}
+                  className="self-start transition-transform data-[state=open]:rotate-180"
+                  onClick={event => event.stopPropagation()}
+                >
+                  <ChevronDown className="h-4 w-4" />
+                </Button>
+              </CollapsibleTrigger>
+            )}
           </div>
 
-          {canToggle && (
-            <CollapsibleTrigger asChild>
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                aria-expanded={isEditing}
-                aria-label={isEditing ? "Collapse financial item" : "Expand financial item"}
-                className="self-start transition-transform data-[state=open]:rotate-180"
-                onClick={event => event.stopPropagation()}
-              >
-                <ChevronDown className="h-4 w-4" />
-              </Button>
-            </CollapsibleTrigger>
-          )}
+          <FinancialItemCardMeta
+            normalizedItem={normalizedItem}
+            verificationStatus={verificationStatus}
+            canUpdateStatus={canUpdateStatus}
+            onStatusChange={handleStatusChange}
+          />
         </CardHeader>
 
         <CollapsibleContent className="overflow-hidden data-[state=closed]:animate-accordion-up data-[state=open]:animate-accordion-down">

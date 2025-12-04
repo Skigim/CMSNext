@@ -181,7 +181,6 @@ export function useFinancialItemCardState({
 
   const handleStatusChange = useCallback(
     async (newStatus: VerificationStatus) => {
-      // Only update local form state - don't save until user clicks "Save"
       const newFormData = {
         ...formData,
         verificationStatus: newStatus,
@@ -192,8 +191,31 @@ export function useFinancialItemCardState({
       };
       
       setFormData(newFormData);
+      
+      // Auto-save when not in editing mode (collapsed state)
+      if (!isEditing && onUpdate && normalizedItem.safeId) {
+        setIsSaving(true);
+        try {
+          await onUpdate(itemType, normalizedItem.safeId, newFormData);
+          setIsSaving(false);
+          setSaveSuccessVisible(true);
+
+          if (saveSuccessTimerRef.current) {
+            clearTimeout(saveSuccessTimerRef.current);
+          }
+
+          saveSuccessTimerRef.current = setTimeout(() => {
+            setSaveSuccessVisible(false);
+          }, 1200);
+        } catch (error) {
+          console.error("[FinancialItemCard] Failed to update status:", error);
+          setIsSaving(false);
+          setSaveSuccessVisible(false);
+          setFormData(item);
+        }
+      }
     },
-    [formData],
+    [formData, isEditing, item, itemType, normalizedItem.safeId, onUpdate],
   );
 
   return {
