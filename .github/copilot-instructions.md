@@ -164,11 +164,13 @@ interface StatusConfig {
 Each week follows a consistent 3-phase pattern:
 
 1. **Prep Work** (Start of week)
+
    - Fix bugs discovered from previous week
    - Run audits (performance, accessibility)
    - Plan feature implementation approach
 
 2. **Features** (Mid-week)
+
    - Implement 3-4 new features
    - Each feature includes tests
    - Commit and push frequently
