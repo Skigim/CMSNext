@@ -90,6 +90,7 @@
 #### Refactoring & Polish
 
 - [ ] Add unit tests for Week 3 features
+- [ ] Refactor Settings.tsx (675 lines) - extract to hooks (`useDataPurge`, `useAlertsCsvImport`)
 - [ ] Optimize large case list rendering
 - [ ] Clean up deprecated code paths
 - [ ] Create December changelog

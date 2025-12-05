@@ -45,6 +45,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { EmptyState } from "@/components/common/EmptyState";
 
 interface ReportingProps {
   alerts: AlertsIndex;
@@ -313,9 +314,9 @@ function AlertsReport({ alerts, onViewCase }: AlertsReportProps) {
         </div>
 
         {visibleAlerts.length === 0 ? (
-          <div className="rounded-lg border border-dashed p-8 text-center text-sm text-muted-foreground">
-            <p>No alerts match the current filters.</p>
-          </div>
+          <EmptyState
+            title="No alerts match the current filters."
+          />
         ) : (
           <div className="overflow-hidden rounded-lg border">
             <Table>
