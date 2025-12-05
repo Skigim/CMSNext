@@ -2,8 +2,14 @@ import { Card, CardContent, CardHeader } from "../ui/card";
 import { Button } from "../ui/button";
 import { FinancialItemList } from "../financial/FinancialItemList";
 import { FinancialItem, CaseCategory } from "../../types/case";
-import { Plus } from "lucide-react";
-import { useRef } from "react";
+import { Copy, Plus } from "lucide-react";
+import { useCallback, useRef } from "react";
+import { clickToCopy } from "@/utils/clipboard";
+import {
+  formatResourceItem,
+  formatIncomeItem,
+  formatExpenseItem,
+} from "@/utils/caseSummaryGenerator";
 
 import { useFinancialItems } from "../../hooks/useFinancialItems";
 
@@ -47,10 +53,45 @@ export function CaseSection({
     await createFinancialItem(caseId, cat, itemData);
   };
 
+  const formatItem = useCallback((item: FinancialItem): string => {
+    switch (category) {
+      case "resources":
+        return formatResourceItem(item);
+      case "income":
+        return formatIncomeItem(item);
+      case "expenses":
+        return formatExpenseItem(item);
+      default:
+        return item.description || "Unknown item";
+    }
+  }, [category]);
+
+  const handleCopyCategory = useCallback(async () => {
+    if (items.length === 0) return;
+    
+    const formattedItems = items.map(formatItem).join("\n\n");
+    const text = `${title}\n${"─".repeat(title.length)}\n${formattedItems}`;
+    
+    await clickToCopy(text, {
+      successMessage: `${title} copied to clipboard`,
+    });
+  }, [items, formatItem, title]);
+
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
         <h3 className="text-lg font-medium">{title}</h3>
+        {items.length > 0 && (
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={handleCopyCategory}
+            aria-label={`Copy all ${title.toLowerCase()} to clipboard`}
+            className="h-8 w-8 text-muted-foreground hover:text-foreground"
+          >
+            <Copy className="h-4 w-4" aria-hidden="true" />
+          </Button>
+        )}
       </CardHeader>
       <CardContent className="pt-0 space-y-3">
         <FinancialItemList
