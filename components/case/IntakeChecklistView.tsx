@@ -20,6 +20,7 @@ import {
 } from "lucide-react";
 import { clickToCopy } from "../../utils/clipboard";
 import { getDisplayPhoneNumber } from "../../utils/phoneFormatter";
+import { CopyableText } from "../common/CopyableText";
 
 interface IntakeChecklistViewProps {
   caseData: StoredCase;
@@ -216,7 +217,20 @@ Submit Date: ${submitDate}
             icon={User}
           />
           <InfoItem label="Date of Birth" value={formatDate(person.dateOfBirth)} icon={Calendar} />
-          <InfoItem label="Phone" value={getDisplayPhoneNumber(person.phone)} icon={Phone} />
+          {person.phone && (
+            <div className="flex items-start gap-2">
+              <Phone className="h-4 w-4 text-muted-foreground mt-0.5" />
+              <div>
+                <span className="text-xs text-muted-foreground">Phone</span>
+                <CopyableText
+                  text={getDisplayPhoneNumber(person.phone)}
+                  label="Phone"
+                  showLabel={false}
+                  successMessage="Phone number copied"
+                />
+              </div>
+            </div>
+          )}
           <InfoItem label="Email" value={person.email} icon={Mail} />
           <InfoItem
             label="Address"
@@ -255,9 +269,16 @@ Submit Date: ${submitDate}
                   </Badge>
                 </div>
                 {rel.phone && (
-                  <div className="flex items-center gap-1.5 text-xs text-muted-foreground mt-1">
-                    <Phone className="h-3 w-3" />
-                    <span>{getDisplayPhoneNumber(rel.phone)}</span>
+                  <div className="flex items-center gap-1.5 mt-1">
+                    <Phone className="h-3 w-3 text-muted-foreground" />
+                    <CopyableText
+                      text={getDisplayPhoneNumber(rel.phone)}
+                      label="Phone"
+                      showLabel={false}
+                      successMessage="Phone number copied"
+                      textClassName="text-xs"
+                      buttonClassName="text-xs px-1 py-0"
+                    />
                   </div>
                 )}
               </div>

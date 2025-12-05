@@ -1,15 +1,18 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, fireEvent } from "@testing-library/react";
 import { describe, it, expect, vi } from "vitest";
 import { axe, toHaveNoViolations } from "jest-axe";
 import { IntakeChecklistView } from "@/components/case/IntakeChecklistView";
 import { createMockStoredCase } from "@/src/test/testUtils";
 import type { StoredCase } from "@/types/case";
+import { clickToCopy } from "@/utils/clipboard";
 
 expect.extend(toHaveNoViolations);
 
 vi.mock("@/utils/clipboard", () => ({
   clickToCopy: vi.fn().mockResolvedValue(true),
 }));
+
+const mockClickToCopy = vi.mocked(clickToCopy);
 
 function createCaseWithPhone(phone: string): StoredCase {
   return createMockStoredCase({
@@ -53,7 +56,9 @@ describe("IntakeChecklistView", () => {
 
       render(<IntakeChecklistView caseData={caseData} />);
 
-      expect(screen.getByText("(555) 123-4567")).toBeInTheDocument();
+      // CopyableText renders the text inside a button with a visible span
+      const phoneButton = screen.getByRole("button", { name: /Copy Phone \(555\) 123-4567/i });
+      expect(phoneButton).toBeInTheDocument();
     });
 
     it("formats 11-digit phone number with country code", () => {
@@ -61,7 +66,8 @@ describe("IntakeChecklistView", () => {
 
       render(<IntakeChecklistView caseData={caseData} />);
 
-      expect(screen.getByText("+1 (555) 987-6543")).toBeInTheDocument();
+      const phoneButton = screen.getByRole("button", { name: /Copy Phone \+1 \(555\) 987-6543/i });
+      expect(phoneButton).toBeInTheDocument();
     });
 
     it("displays already formatted phone numbers correctly", () => {
@@ -69,7 +75,8 @@ describe("IntakeChecklistView", () => {
 
       render(<IntakeChecklistView caseData={caseData} />);
 
-      expect(screen.getByText("(555) 111-2222")).toBeInTheDocument();
+      const phoneButton = screen.getByRole("button", { name: /Copy Phone \(555\) 111-2222/i });
+      expect(phoneButton).toBeInTheDocument();
     });
 
     it("displays incomplete phone numbers as-is", () => {
@@ -77,7 +84,8 @@ describe("IntakeChecklistView", () => {
 
       render(<IntakeChecklistView caseData={caseData} />);
 
-      expect(screen.getByText("555")).toBeInTheDocument();
+      const phoneButton = screen.getByRole("button", { name: /Copy Phone 555/i });
+      expect(phoneButton).toBeInTheDocument();
     });
 
     it("handles empty phone number gracefully", () => {
@@ -127,6 +135,30 @@ describe("IntakeChecklistView", () => {
       render(<IntakeChecklistView caseData={caseData} />);
 
       expect(screen.getByText(/complete$/)).toBeInTheDocument();
+    });
+  });
+
+  describe("Click to copy phone", () => {
+    it("copies applicant phone number when clicked", () => {
+      const caseData = createCaseWithPhone("5551234567");
+
+      render(<IntakeChecklistView caseData={caseData} />);
+
+      const phoneButton = screen.getByRole("button", { name: /Copy Phone \(555\) 123-4567/i });
+      fireEvent.click(phoneButton);
+
+      expect(mockClickToCopy).toHaveBeenCalledWith("(555) 123-4567", {
+        successMessage: "Phone number copied",
+      });
+    });
+
+    it("phone number is rendered as a clickable button", () => {
+      const caseData = createCaseWithPhone("5551234567");
+
+      render(<IntakeChecklistView caseData={caseData} />);
+
+      const phoneButton = screen.getByRole("button", { name: /Copy Phone \(555\) 123-4567/i });
+      expect(phoneButton).toBeInTheDocument();
     });
   });
 });
