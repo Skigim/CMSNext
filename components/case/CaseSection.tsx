@@ -74,7 +74,7 @@ export function CaseSection({
           variant="outline"
         >
           <Plus className="h-4 w-4" />
-          Add {title.slice(0, -1)}
+          Add {title === "Income" ? "Income" : title.slice(0, -1)}
         </Button>
       </CardContent>
     </Card>
