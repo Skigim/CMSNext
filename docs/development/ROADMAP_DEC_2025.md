@@ -1,10 +1,10 @@
 # CMSNext Roadmap - December 2025
 
-**Report Date:** December 4, 2025  
+**Report Date:** December 5, 2025  
 **Branch:** main (stable)  
-**Tests:** 326/326 passing ✅  
+**Tests:** 347/347 passing ✅  
 **Build:** Production-ready ✅  
-**Average Feature Rating:** 78.5/100
+**Average Feature Rating:** 80/100
 
 ---
 
@@ -41,15 +41,26 @@
 - [x] Click-to-copy on financial cards (uses same format as Case Summary)
 - [x] Financial card UX: show copy/delete on hover, status dropdown outside click area, auto-save status
 
+#### Polish Work (Dec 5)
+
+- [x] UI consistency audit - aria-labels, button sizes, icon margins, color standardization
+- [x] EmptyState component for consistent empty state messaging
+- [x] Replace browser confirm() with AlertDialog in Settings
+- [x] Unified CopyButton component (replaced McnCopyControl + CopyableText)
+- [x] CaseDetails header enhancements: App Date, Phone, Email with click-to-copy
+- [x] Priority toggle star button in case header
+- [x] Alerts indicator moved to right side of header
+- [x] Financial category copy button (copy all items in Resources/Income/Expenses)
+- [x] 347 tests passing
+
 #### Refactoring & Polish
 
 - [x] Update feature catalogue with new features
 - [x] All features committed and merged to main
-- [x] 326 tests passing
 - [x] Phone number formatting in Case Summary Generator
 - [x] Financial card layout fixes (CSS grid, CardHeader override)
 
-**⏸️ FEATURE FREEZE: Dec 5-8 is polish time. No new features until Week 2.**
+**Week 1 complete!**
 
 ---
 
@@ -108,9 +119,9 @@
 | ----------------------------- | ----- | ------ | ------ | ------ | ------ |
 | Hooks over 200 lines          | 4     | 0 ✅   | 0      | 0      | 0      |
 | Components with anti-patterns | 1     | 0 ✅   | 0      | 0      | 0      |
-| Test count                    | 253   | 326 ✅ | 335    | 345    | 345+   |
-| New features shipped          | -     | 12 ✅  | 4      | 4      | 20     |
-| Average feature rating        | 76.5  | 78.5   | 79     | 80     | 80+    |
+| Test count                    | 253   | 347 ✅ | 355    | 365    | 365+   |
+| New features shipped          | -     | 18 ✅  | 4      | 4      | 26     |
+| Average feature rating        | 76.5  | 80 ✅  | 81     | 82     | 82+    |
 
 ---
 
