@@ -17,8 +17,7 @@ import { Eye, Edit, Trash2 } from "lucide-react";
 import { CaseStatusMenu } from "./CaseStatusMenu";
 import type { AlertWithMatch } from "../../utils/alertsData";
 import { AlertBadge } from "@/components/alerts/AlertBadge";
-import { McnCopyControl } from "@/components/common/McnCopyControl";
-import { CopyableText } from "@/components/common/CopyableText";
+import { CopyButton } from "@/components/common/CopyButton";
 import { getDisplayPhoneNumber } from "@/utils/phoneFormatter";
 
 interface CaseCardProps {
@@ -79,8 +78,10 @@ export function CaseCard({
           />
         </div>
         <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
-          <McnCopyControl
-            mcn={caseData.mcn}
+          <CopyButton
+            value={caseData.mcn}
+            label="MCN"
+            mono
             className="text-muted-foreground"
             labelClassName="text-sm"
             textClassName="text-sm"
@@ -105,8 +106,8 @@ export function CaseCard({
           </div>
         </div>
         <div className="flex flex-col justify-between gap-2 text-sm sm:flex-row sm:items-center">
-          <CopyableText
-            text={primaryContact}
+          <CopyButton
+            value={primaryContact}
             label="Primary contact"
             missingLabel="Not provided"
             labelClassName="text-muted-foreground"

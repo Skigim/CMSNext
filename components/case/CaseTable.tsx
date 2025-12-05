@@ -16,8 +16,7 @@ import { ArrowDown, ArrowUp, ArrowUpDown, Eye, MoreHorizontal, Pencil, Trash2 } 
 import type { CaseListSortDirection, CaseListSortKey } from "@/hooks/useCaseListPreferences";
 import { filterOpenAlerts, type AlertWithMatch } from "@/utils/alertsData";
 import { AlertBadge } from "@/components/alerts/AlertBadge";
-import { McnCopyControl } from "@/components/common/McnCopyControl";
-import { CopyableText } from "@/components/common/CopyableText";
+import { CopyButton } from "@/components/common/CopyButton";
 import { getDisplayPhoneNumber } from "@/utils/phoneFormatter";
 
 export interface CaseTableProps {
@@ -285,9 +284,11 @@ export const CaseTable = memo(function CaseTable({
                 </div>
               </TableCell>
               <TableCell>
-                <McnCopyControl
-                  mcn={row.mcn}
+                <CopyButton
+                  value={row.mcn}
+                  label="MCN"
                   showLabel={false}
+                  mono
                   className="text-muted-foreground"
                   buttonClassName="text-sm text-muted-foreground"
                   textClassName="text-sm"
@@ -314,8 +315,8 @@ export const CaseTable = memo(function CaseTable({
               <TableCell>{row.applicationDate}</TableCell>
               <TableCell>{row.updatedDate}</TableCell>
               <TableCell>
-                <CopyableText
-                  text={row.primaryContact}
+                <CopyButton
+                  value={row.primaryContact}
                   showLabel={false}
                   missingLabel="Not provided"
                   buttonClassName="max-w-[16rem]"

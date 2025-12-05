@@ -3,6 +3,30 @@
  */
 
 /**
+ * Format a date for display in MM/DD/YYYY format
+ * @param dateString ISO date string or yyyy-MM-dd
+ * @returns Formatted date string or "None" if invalid
+ */
+export function formatDateForDisplay(
+  dateString: string | null | undefined
+): string {
+  if (!dateString) return "None";
+
+  try {
+    const date = new Date(dateString);
+    if (isNaN(date.getTime())) return "None";
+
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const day = String(date.getDate()).padStart(2, "0");
+    const year = date.getFullYear();
+
+    return `${month}/${day}/${year}`;
+  } catch {
+    return "None";
+  }
+}
+
+/**
  * Convert ISO timestamp to yyyy-MM-dd format for HTML date inputs
  * @param isoDate ISO 8601 timestamp (e.g., "2025-10-29T18:07:06.766Z")
  * @returns Date string in yyyy-MM-dd format or empty string if invalid

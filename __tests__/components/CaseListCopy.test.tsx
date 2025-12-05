@@ -47,6 +47,8 @@ describe("CaseList MCN copy accessibility", () => {
     await user.click(copyButton);
 
     expect(copyButton).toHaveAttribute("aria-label", `Copy MCN ${caseData.mcn}`);
-    expect(clickToCopyMock).toHaveBeenCalledWith(caseData.mcn);
+    expect(clickToCopyMock).toHaveBeenCalledWith(caseData.mcn, {
+      successMessage: "MCN copied to clipboard",
+    });
   });
 });

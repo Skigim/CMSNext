@@ -6,17 +6,19 @@ import { FinancialsGridView } from "./FinancialsGridView";
 import { NotesDrawer } from "./NotesDrawer";
 import { IntakeChecklistView } from "./IntakeChecklistView";
 import { StoredCase } from "../../types/case";
-import { ArrowLeft, Edit2, Trash2, Wallet, BellRing, FileText, ClipboardCheck } from "lucide-react";
+import { ArrowLeft, Edit2, Trash2, Wallet, BellRing, FileText, ClipboardCheck, Star, StarOff, Phone, Mail } from "lucide-react";
 import { withDataErrorBoundary } from "../error/ErrorBoundaryHOC";
 import { CaseStatusMenu } from "./CaseStatusMenu";
 import { Badge } from "../ui/badge";
 import { cn, interactiveHoverClasses } from "../ui/utils";
 import type { AlertWithMatch } from "../../utils/alertsData";
 import { CaseAlertsDrawer } from "./CaseAlertsDrawer";
-import { McnCopyControl } from "@/components/common/McnCopyControl";
+import { CopyButton } from "@/components/common/CopyButton";
 import { CaseSummaryModal } from "./CaseSummaryModal";
 import { useFinancialItems } from "../../hooks/useFinancialItems";
 import { useNotes } from "../../hooks/useNotes";
+import { formatUSPhone } from "@/utils/phoneFormatter";
+import { formatDateForDisplay } from "@/utils/dateFormatting";
 
 interface CaseDetailsProps {
   case: StoredCase;
@@ -29,6 +31,7 @@ interface CaseDetailsProps {
     status: StoredCase["status"],
   ) => Promise<StoredCase | null> | StoredCase | null | void;
   onResolveAlert?: (alert: AlertWithMatch) => Promise<void> | void;
+  onUpdatePriority?: (caseIds: string[], priority: boolean) => Promise<number>;
 }
 
 export function CaseDetails({ 
@@ -39,6 +42,7 @@ export function CaseDetails({
   alerts = [],
   onUpdateStatus,
   onResolveAlert,
+  onUpdatePriority,
 }: CaseDetailsProps) {
   
   const [alertsDrawerOpen, setAlertsDrawerOpen] = useState(false);
@@ -63,6 +67,11 @@ export function CaseDetails({
     },
     [onResolveAlert],
   );
+
+  const handleTogglePriority = useCallback(async () => {
+    if (!onUpdatePriority) return;
+    await onUpdatePriority([caseData.id], !caseData.priority);
+  }, [onUpdatePriority, caseData.id, caseData.priority]);
 
   const [summaryModalOpen, setSummaryModalOpen] = useState(false);
 
@@ -91,16 +100,82 @@ export function CaseDetails({
                   status={caseData.status}
                   onUpdateStatus={onUpdateStatus}
                 />
+                {onUpdatePriority && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={handleTogglePriority}
+                    className={cn(
+                      "h-7 px-2",
+                      caseData.priority 
+                        ? "text-amber-600 hover:text-amber-700" 
+                        : "text-muted-foreground hover:text-foreground"
+                    )}
+                    aria-label={caseData.priority ? "Remove priority" : "Mark as priority"}
+                  >
+                    {caseData.priority ? (
+                      <Star className="h-4 w-4 fill-current" />
+                    ) : (
+                      <StarOff className="h-4 w-4" />
+                    )}
+                  </Button>
+                )}
               </div>
-              <McnCopyControl
-                mcn={caseData.mcn}
-                className="text-muted-foreground"
-                labelClassName="text-sm font-medium"
-                buttonClassName={cn(interactiveHoverClasses, "text-foreground")}
-                textClassName="text-sm"
-                variant="muted"
-                interactive
-              />
+              
+              {/* Key case identifiers */}
+              <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
+                <CopyButton
+                  value={caseData.mcn}
+                  label="MCN"
+                  mono
+                  className="text-muted-foreground"
+                  labelClassName="text-sm font-medium"
+                  buttonClassName={cn(interactiveHoverClasses, "text-foreground")}
+                  textClassName="text-sm"
+                  variant="muted"
+                />
+                {caseData.caseRecord?.applicationDate && (
+                  <CopyButton
+                    value={caseData.caseRecord.applicationDate}
+                    displayText={formatDateForDisplay(caseData.caseRecord.applicationDate)}
+                    label="App Date"
+                    className="text-muted-foreground"
+                    labelClassName="text-sm font-medium"
+                    buttonClassName={cn(interactiveHoverClasses, "text-foreground")}
+                    textClassName="text-sm"
+                    variant="muted"
+                  />
+                )}
+              </div>
+
+              {/* Contact info */}
+              <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm">
+                {caseData.person?.phone && (
+                  <span className="inline-flex items-center gap-1.5 text-muted-foreground">
+                    <Phone className="h-3.5 w-3.5" aria-hidden />
+                    <CopyButton
+                      value={caseData.person.phone}
+                      displayText={formatUSPhone(caseData.person.phone)}
+                      label="Phone"
+                      showLabel={false}
+                      buttonClassName={interactiveHoverClasses}
+                      variant="plain"
+                    />
+                  </span>
+                )}
+                {caseData.person?.email && (
+                  <span className="inline-flex items-center gap-1.5 text-muted-foreground">
+                    <Mail className="h-3.5 w-3.5" aria-hidden />
+                    <CopyButton
+                      value={caseData.person.email}
+                      label="Email"
+                      showLabel={false}
+                      buttonClassName={interactiveHoverClasses}
+                      variant="plain"
+                    />
+                  </span>
+                )}
+              </div>
               <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
                 {totalAlerts > 0 ? (
                   <div className="flex items-center gap-2">

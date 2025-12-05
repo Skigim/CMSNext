@@ -11,7 +11,7 @@ import {
 } from "@/utils/alertsData";
 import { getAlertClientName, getAlertDisplayDescription, getAlertDueDateInfo, getAlertMcn } from "@/utils/alertDisplay";
 import { UnlinkedAlertsDialog } from "@/components/alerts/UnlinkedAlertsDialog";
-import { McnCopyControl } from "@/components/common/McnCopyControl";
+import { CopyButton } from "@/components/common/CopyButton";
 import { EmptyState } from "@/components/common/EmptyState";
 
 interface AlertCenterWidgetProps {
@@ -125,9 +125,11 @@ export function AlertCenterWidget({ alerts, onNavigateToReports }: AlertCenterWi
                           <p className="text-xs text-muted-foreground">{dueLabel || "No due date"}</p>
                           <div className="flex flex-wrap items-center gap-3 text-[11px] text-muted-foreground">
                             <span>{clientName}</span>
-                            <McnCopyControl
-                              mcn={mcn}
+                            <CopyButton
+                              value={mcn}
+                              label="MCN"
                               showLabel={false}
+                              mono
                               className="inline-flex items-center gap-1 text-[11px] text-muted-foreground"
                               buttonClassName="text-[11px] text-muted-foreground"
                               textClassName="text-[11px]"
