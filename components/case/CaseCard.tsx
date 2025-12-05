@@ -139,6 +139,7 @@ export function CaseCard({
                 variant="outline" 
                 size="sm"
                 className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                aria-label="Delete case"
               >
                 <Trash2 className="w-4 h-4" />
               </Button>
