@@ -33,11 +33,11 @@ export function NotesDrawer({ caseId, className }: NotesDrawerProps) {
 
   return (
     <Drawer open={isOpen} onOpenChange={setIsOpen}>
-      {/* Fixed trigger button at bottom of screen */}
+      {/* Fixed trigger button at bottom-left to avoid toast overlap */}
       <DrawerTrigger asChild>
         <Button
           variant="outline"
-          className={`fixed bottom-4 right-4 z-40 gap-2 shadow-lg ${className ?? ""}`}
+          className={`fixed bottom-4 left-4 z-40 gap-2 shadow-lg ${className ?? ""}`}
         >
           <StickyNote className="h-4 w-4" />
           <span>Notes{noteCount > 0 ? ` (${noteCount})` : ""}</span>
