@@ -12,6 +12,7 @@ import {
 import { getAlertClientName, getAlertDisplayDescription, getAlertDueDateInfo, getAlertMcn } from "@/utils/alertDisplay";
 import { UnlinkedAlertsDialog } from "@/components/alerts/UnlinkedAlertsDialog";
 import { McnCopyControl } from "@/components/common/McnCopyControl";
+import { EmptyState } from "@/components/common/EmptyState";
 
 interface AlertCenterWidgetProps {
   alerts: AlertsIndex;
@@ -144,9 +145,9 @@ export function AlertCenterWidget({ alerts, onNavigateToReports }: AlertCenterWi
                   })}
                 </div>
               ) : (
-                <div className="rounded-lg border border-dashed border-muted-foreground/40 bg-muted/20 p-6 text-center text-sm text-muted-foreground">
-                  All open alerts are resolved. Great job!
-                </div>
+                <EmptyState
+                  title="All open alerts are resolved. Great job!"
+                />
               )}
 
               {openAlertsCount > latestAlerts.length && (

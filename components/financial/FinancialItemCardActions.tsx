@@ -55,7 +55,7 @@ export function FinancialItemCardActions({
             onDeleteConfirm();
           }}
           aria-label="Confirm delete financial item"
-          className="h-8 w-8 text-emerald-600 hover:bg-emerald-100 hover:text-emerald-700"
+          className="h-8 w-8 text-green-600 hover:bg-green-100 hover:text-green-700"
         >
           <Check className="h-4 w-4" aria-hidden="true" />
         </Button>

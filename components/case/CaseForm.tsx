@@ -233,9 +233,9 @@ export function CaseForm({ case: existingCase, onSave, onCancel }: CaseFormProps
           <div className="flex items-center gap-3">
             <Button
               variant="ghost"
-              size="sm"
+              size="icon-sm"
               onClick={onCancel}
-              className="h-8 w-8 p-0"
+              aria-label="Go back"
             >
               <ArrowLeft className="h-4 w-4" />
             </Button>
@@ -250,9 +250,9 @@ export function CaseForm({ case: existingCase, onSave, onCancel }: CaseFormProps
           </div>
           <Button
             variant="ghost"
-            size="sm"
+            size="icon-sm"
             onClick={onCancel}
-            className="h-8 w-8 p-0"
+            aria-label="Close form"
           >
             <X className="h-4 w-4" />
           </Button>

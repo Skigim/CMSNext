@@ -139,9 +139,9 @@ export function PersonInfoForm({
             <Button
               type="button"
               variant="outline"
-              size="sm"
+              size="icon-sm"
               onClick={onRelationshipsChange.add}
-              className="h-8 w-8 p-0"
+              aria-label="Add relationship"
             >
               <Plus className="h-4 w-4" />
             </Button>
@@ -154,6 +154,7 @@ export function PersonInfoForm({
                   variant="ghost"
                   size="sm"
                   onClick={() => onRelationshipsChange.remove(index)}
+                  aria-label="Remove relationship"
                   className="absolute right-2 top-2 h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
                 >
                   <Minus className="h-3 w-3" />

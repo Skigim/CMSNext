@@ -121,7 +121,7 @@ export function CaseCard({
             onClick={() => onView(caseData.id)}
             className="flex-1"
           >
-            <Eye className="w-4 h-4 mr-2" />
+            <Eye className="h-4 w-4" />
             View
           </Button>
           <Button 
@@ -130,7 +130,7 @@ export function CaseCard({
             onClick={() => onEdit(caseData.id)}
             className="flex-1"
           >
-            <Edit className="w-4 h-4 mr-2" />
+            <Edit className="h-4 w-4" />
             Edit
           </Button>
           <AlertDialog>

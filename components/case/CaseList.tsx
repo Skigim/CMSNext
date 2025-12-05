@@ -461,7 +461,7 @@ export function CaseList({
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="outline">
-                  <Database className="mr-2 h-4 w-4" /> Demo tools
+                  <Database className="h-4 w-4" /> Demo tools
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
@@ -483,7 +483,7 @@ export function CaseList({
             </DropdownMenu>
           )}
           <Button onClick={onNewCase}>
-            <Plus className="mr-2 h-4 w-4" />
+            <Plus className="h-4 w-4" />
             New case
           </Button>
         </div>
