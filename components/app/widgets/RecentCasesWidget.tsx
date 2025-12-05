@@ -1,7 +1,7 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { FileText, ArrowRight } from "lucide-react";
-import { McnCopyControl } from "@/components/common/McnCopyControl";
+import { CopyButton } from "@/components/common/CopyButton";
 import type { StoredCase } from "@/types/case";
 import { useMemo } from "react";
 
@@ -43,8 +43,10 @@ export function RecentCasesWidget({ cases, onViewAllCases, onNewCase }: RecentCa
                     {case_.person.firstName} {case_.person.lastName}
                   </div>
                   <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-muted-foreground">
-                    <McnCopyControl
-                      mcn={case_.caseRecord?.mcn ?? null}
+                    <CopyButton
+                      value={case_.caseRecord?.mcn ?? null}
+                      label="MCN"
+                      mono
                       className="inline-flex items-center gap-1 text-muted-foreground"
                       labelClassName="text-sm font-normal text-muted-foreground"
                       buttonClassName="text-sm text-muted-foreground"

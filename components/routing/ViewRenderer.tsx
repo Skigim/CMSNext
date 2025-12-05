@@ -148,6 +148,7 @@ export function ViewRenderer({
           onDelete={() => handleDeleteCase(selectedCase.id)}
           onUpdateStatus={handleUpdateCaseStatus}
           onResolveAlert={handleResolveAlert}
+          onUpdatePriority={handleUpdateCasesPriority}
         />
       ) : (
         <div className="text-center p-8">Case not found</div>

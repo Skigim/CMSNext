@@ -20,7 +20,7 @@ import {
 } from "lucide-react";
 import { clickToCopy } from "../../utils/clipboard";
 import { getDisplayPhoneNumber } from "../../utils/phoneFormatter";
-import { CopyableText } from "../common/CopyableText";
+import { CopyButton } from "../common/CopyButton";
 
 interface IntakeChecklistViewProps {
   caseData: StoredCase;
@@ -222,8 +222,8 @@ Submit Date: ${submitDate}
               <Phone className="h-4 w-4 text-muted-foreground mt-0.5" />
               <div>
                 <span className="text-xs text-muted-foreground">Phone</span>
-                <CopyableText
-                  text={getDisplayPhoneNumber(person.phone)}
+                <CopyButton
+                  value={getDisplayPhoneNumber(person.phone)}
                   label="Phone"
                   showLabel={false}
                   successMessage="Phone number copied"
@@ -271,8 +271,8 @@ Submit Date: ${submitDate}
                 {rel.phone && (
                   <div className="flex items-center gap-1.5 mt-1">
                     <Phone className="h-3 w-3 text-muted-foreground" />
-                    <CopyableText
-                      text={getDisplayPhoneNumber(rel.phone)}
+                    <CopyButton
+                      value={getDisplayPhoneNumber(rel.phone)}
                       label="Phone"
                       showLabel={false}
                       successMessage="Phone number copied"

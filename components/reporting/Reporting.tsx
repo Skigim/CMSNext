@@ -36,7 +36,7 @@ import {
   getAlertDueDateInfo,
   getAlertMcn,
 } from "@/utils/alertDisplay";
-import { McnCopyControl } from "@/components/common/McnCopyControl";
+import { CopyButton } from "@/components/common/CopyButton";
 import {
   Table,
   TableBody,
@@ -402,9 +402,11 @@ function AlertsReportRow({ alert, onViewCase }: AlertsReportRowProps) {
       <TableCell>
         <div className="space-y-1">
           <p className="text-sm text-foreground">{clientName}</p>
-          <McnCopyControl
-            mcn={mcn}
+          <CopyButton
+            value={mcn}
+            label="MCN"
             showLabel={false}
+            mono
             className="inline-flex items-center gap-1 text-xs text-muted-foreground"
             buttonClassName="text-xs text-muted-foreground"
             textClassName="text-xs"
