@@ -25,7 +25,7 @@ vi.mock("@/contexts/CategoryConfigContext", async (importOriginal) => {
   };
 });
 
-let mockPreferences = {
+const mockPreferences = {
   viewMode: "table" as const,
   setViewMode: vi.fn(),
   sortKey: "updated" as const,

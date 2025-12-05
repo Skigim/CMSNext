@@ -58,15 +58,13 @@
 #### Prep Work
 
 - [ ] Fix any bugs discovered from Week 1 features
-- [ ] Performance audit on dashboard load time
 - [ ] Plan feature implementation approach
 
 #### Features
 
 - [ ] Case timeline view (activity log visualization)
-- [ ] Export case data to CSV/PDF
 - [ ] Dashboard widget: Cases by age distribution
-- [ ] Financial summary report per case
+- [ ] Historical financial tracking (track changes over time)
 
 #### Refactoring & Polish
 
