@@ -58,20 +58,17 @@
 #### Prep Work
 
 - [ ] Fix any bugs discovered from Week 1 features
-- [ ] Plan feature implementation approach
 
 #### Features
 
 - [ ] Case timeline view (activity log visualization)
 - [ ] Dashboard widget: Cases by age distribution
-- [ ] Historical financial tracking (track changes over time)
+- [ ] Historical financial tracking (amount history modal with dated entries + verification per entry)
 
 #### Refactoring & Polish
 
 - [ ] Add unit tests for Week 2 features
 - [ ] Accessibility audit (jest-axe) for new components
-- [ ] Update copilot-instructions with 200-line hook target
-- [ ] Performance baseline documentation (1k cases)
 
 ---
 
