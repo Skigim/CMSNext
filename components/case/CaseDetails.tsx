@@ -186,7 +186,7 @@ export function CaseDetails({
       {/* Content - Top-level Tabs */}
       <div className="rounded-xl border bg-card/30 shadow-lg pb-16">
         <Tabs defaultValue="financials" className="w-full">
-          <div className="border-b px-4 pt-4">
+          <div className="border-b px-4 py-4">
             <TabsList className="grid w-full max-w-md grid-cols-2">
               <TabsTrigger value="financials" className="flex items-center gap-2">
                 <Wallet className="w-4 h-4" />
