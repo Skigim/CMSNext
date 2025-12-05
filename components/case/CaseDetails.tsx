@@ -176,33 +176,33 @@ export function CaseDetails({
                   </span>
                 )}
               </div>
-              <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-                {totalAlerts > 0 ? (
-                  <div className="flex items-center gap-2">
-                    <Badge className="border-amber-500/40 bg-amber-500/10 text-amber-800">
-                      <BellRing className="mr-1 h-3 w-3" />
-                      {hasOpenAlerts
-                        ? `${openAlertCount} open alert${openAlertCount === 1 ? "" : "s"}`
-                        : "All alerts resolved"}
-                    </Badge>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="h-7 px-3 text-xs"
-                      onClick={() => setAlertsDrawerOpen(true)}
-                    >
-                      View {hasOpenAlerts ? "alerts" : "history"}
-                    </Button>
-                  </div>
-                ) : (
-                  <span className="inline-flex items-center gap-1">
-                    <BellRing className="h-3 w-3" /> All clear — no alerts for this case
-                  </span>
-                )}
-              </div>
             </div>
           </div>
           <div className="flex gap-2 items-start flex-wrap">
+            {/* Alerts indicator */}
+            {totalAlerts > 0 ? (
+              <>
+                <Badge className="border-amber-500/40 bg-amber-500/10 text-amber-800 h-9 px-3">
+                  <BellRing className="mr-1.5 h-3.5 w-3.5" />
+                  {hasOpenAlerts
+                    ? `${openAlertCount} open`
+                    : "Resolved"}
+                </Badge>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setAlertsDrawerOpen(true)}
+                >
+                  View {hasOpenAlerts ? "Alerts" : "History"}
+                </Button>
+              </>
+            ) : (
+              <Badge variant="outline" className="h-9 px-3 text-muted-foreground">
+                <BellRing className="mr-1.5 h-3.5 w-3.5" />
+                No alerts
+              </Badge>
+            )}
+            <div className="w-px h-9 bg-border" />
             <Button 
               variant="outline" 
               size="sm"

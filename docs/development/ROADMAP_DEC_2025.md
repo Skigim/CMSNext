@@ -83,9 +83,6 @@
 #### Features
 
 - [ ] Keyboard shortcuts for common actions
-- [ ] Case templates for quick creation
-- [ ] Alert auto-assignment based on MCN matching
-- [ ] Notes search/filter functionality
 
 #### Refactoring & Polish
 
