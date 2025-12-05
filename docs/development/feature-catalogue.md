@@ -2,7 +2,7 @@
 
 > Living index of marketable features, their current implementation status, quality, and future investments.
 
-**Last Updated:** December 4, 2025
+**Last Updated:** December 5, 2025
 
 ## How to Use This Document
 
@@ -20,20 +20,20 @@
 
 | Feature               | Rating | Trend | Notes                                        |
 | --------------------- | ------ | ----- | -------------------------------------------- |
-| Case Management       | 92     | ↑     | Pagination added, bulk actions, production   |
-| Developer Enablement  | 82     | ↑     | Hook refactoring done, 340 tests, withToast  |
-| Premium UI/UX         | 82     | →     | Solid, accessibility audits needed           |
-| Financial Operations  | 82     | ↑     | Copy button, hover actions, auto-save status |
+| Case Management       | 92     | ↑     | Enhanced header with copy, priority toggle   |
+| Developer Enablement  | 84     | ↑     | 347 tests, CopyButton unified, withToast     |
+| Premium UI/UX         | 84     | ↑     | EmptyState, AlertDialog, consistent patterns |
+| Financial Operations  | 84     | ↑     | Category copy button, enhanced card actions  |
 | Local-First Storage   | 80     | →     | Production-ready                             |
-| Data Portability      | 78     | ↑     | Smart alert import with case creation        |
+| Data Portability      | 78     | →     | Smart alert import with case creation        |
 | Configurable Statuses | 78     | →     | Recently stabilized                          |
-| Notes & Collaboration | 78     | ↑     | Case Summary Generator with modal & sections |
+| Notes & Collaboration | 78     | →     | Case Summary Generator with modal & sections |
 | Legacy Migration      | 75     | →     | Dev-only, one-way                            |
 | Autosave & Recovery   | 74     | →     | Works, telemetry pending                     |
 | Feature Flags         | 72     | →     | In-memory only                               |
 | Dashboard & Insights  | 70     | →     | Framework ready                              |
 
-**Average Rating:** 79.4/100  
+**Average Rating:** 79.9/100  
 **Test Status:** 347/347 passing (100%)
 
 ---
@@ -199,6 +199,8 @@ Core case workflows (create, view, edit, delete) are production-ready through th
 
 Phase 3 Cases domain refactor completed November 2, 2025. Bulk actions added December 3, 2025. Pagination added December 4, 2025.
 
+**December 5, 2025:** CaseDetails header enhanced with application date, phone, and email (all with click-to-copy). Priority toggle star button added. Alerts indicator moved to right side with action buttons.
+
 ---
 
 ## Financial Operations Suite
@@ -214,6 +216,7 @@ Financial modules (resources, income, expenses) leverage dedicated components an
 ### Strengths
 
 - **Click-to-Copy**: Copy button on each financial card formats item using Case Summary Generator conventions
+- **Category Copy**: Header copy button copies all items in Resources/Income/Expenses category
 - **Hover Actions**: Copy and delete buttons appear on card hover, always visible when expanded
 - **Auto-Save Status**: Status dropdown works in collapsed state with immediate auto-save
 - **Service Architecture**: FinancialsService (226 lines) handles all financial CRUD operations with category-based management
@@ -245,7 +248,9 @@ Financial modules (resources, income, expenses) leverage dedicated components an
 
 ### Owners / Notes
 
-**December 4, 2025:** Financial card UX improvements complete - hover actions, click-to-copy, auto-save status. Week 1 feature freeze in effect.
+**December 4, 2025:** Financial card UX improvements complete - hover actions, click-to-copy, auto-save status.
+
+**December 5, 2025:** Added category-level copy button to Resources/Income/Expenses headers. Copies all items in the category with identical formatting to individual items.
 
 ---
 
@@ -393,12 +398,15 @@ Data platform group. Coordinate with documentation team to keep `SeedDataSystem.
 
 ### Implementation Snapshot
 
-**Rating: 82/100**
+**Rating: 84/100** _(Updated December 5, 2025)_
 
-Six-theme system (Light, Dark, Soft Dark, Warm, Blue, Paper) built on shadcn/ui delivers polished, responsive layouts. Tailwind CSS v4 tokens and component decomposition keep styling consistent, while accessibility patterns are in place though not exhaustively audited.
+Six-theme system (Light, Dark, Soft Dark, Warm, Blue, Paper) built on shadcn/ui delivers polished, responsive layouts. Tailwind CSS v4 tokens and component decomposition keep styling consistent. **December 5, 2025:** Major consistency audit completed - unified CopyButton component, EmptyState for empty states, AlertDialog replacing browser confirm(), standardized button sizes/colors, and proper aria-labels throughout.
 
 ### Strengths
 
+- **CopyButton Component**: Unified click-to-copy pattern with display text, raw value, monospace option, and multiple variants
+- **EmptyState Component**: Consistent empty state messaging with icon, title, description slots
+- **AlertDialog Usage**: All destructive actions use shadcn AlertDialog instead of browser confirm()
 - Theme switcher integrates with ThemeContext; transitions smooth without layout shift
 - UI built on shadcn primitives ensures accessible defaults and consistent patterns
 - Responsive design tested across desktop/tablet/mobile breakpoints
@@ -408,27 +416,24 @@ Six-theme system (Light, Dark, Soft Dark, Warm, Blue, Paper) built on shadcn/ui 
 ### Gaps / Risks
 
 - Accessibility testing relies on manual reviews; automated tooling (axe, pa11y) not yet wired into CI
-- Some legacy components still mix custom and shadcn styles, risking drift
 - Theme contrast ratios need formal verification to meet WCAG AA across all palettes
 - Limited motion design guidelines; micro-interactions vary between features
 
 ### Expansion Opportunities
 
 - Introduce automated accessibility checks in CI and document remediation workflows
-- Complete migration of remaining bespoke components to shadcn standards
 - Publish UI style guide including motion, spacing, and tone guidelines for contributors
 - Explore theme presets for organization branding while preserving accessibility guarantees
 
 ### Coverage & Telemetry
 
-- Storybook-equivalent not in place; rely on RTL component tests (CaseForm, ConnectToExistingModal) for regression coverage
+- CopyButton tested with 11 unit tests covering variants, props, and copy behavior
+- Storybook-equivalent not in place; rely on RTL component tests for regression coverage
 - No UI performance telemetry; manual baseline captured via bundle analysis
-- Accessibility documentation partially covered in `PROJECT_STRUCTURE.md`; needs refresh
-- Consider adding visual regression testing once component count stabilizes
 
 ### Owners / Notes
 
-Design systems + front-end platform pairing. Produce contributor-facing UI guidelines and accessibility checklists alongside upcoming documentation refresh.
+**December 5, 2025:** UI consistency audit complete. Legacy McnCopyControl and CopyableText replaced with unified CopyButton. EmptyState component created and integrated. All confirm() calls replaced with AlertDialog. Aria-labels standardized throughout.
 
 ---
 
@@ -436,9 +441,9 @@ Design systems + front-end platform pairing. Produce contributor-facing UI guide
 
 ### Implementation Snapshot
 
-**Rating: 82/100** _(Updated December 4, 2025)_
+**Rating: 84/100** _(Updated December 5, 2025)_
 
-Tooling stack (Vitest, ESLint 9 flat config, Tailwind v4 pipeline) covers day-to-day development with scripted performance baselines, seed data generators, and comprehensive architecture documentation. Service extraction established clean DataManager + Services pattern with dependency injection. **December 4, 2025:** Week 1 hook refactoring complete—major hooks reduced from 400+ lines to <150 lines. New `withToast()` utility standardizes async operation feedback. Dev container + npm workflows yield repeatable environments.
+Tooling stack (Vitest, ESLint 9 flat config, Tailwind v4 pipeline) covers day-to-day development with scripted performance baselines, seed data generators, and comprehensive architecture documentation. Service extraction established clean DataManager + Services pattern with dependency injection. **December 5, 2025:** 347 tests passing. Unified CopyButton component demonstrates pattern consolidation. `formatDateForDisplay()` utility added. Test coverage includes CopyButton (11 tests), CaseListCopy, and financial card actions.
 
 ### Strengths
 
