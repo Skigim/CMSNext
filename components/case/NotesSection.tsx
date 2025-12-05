@@ -196,9 +196,10 @@ function NoteCard({
           {!confirmingDelete ? (
             <Button
               variant="ghost"
-              size="sm"
+              size="icon-sm"
               onClick={handleDeleteClick}
-              className="h-8 w-8 p-0 bg-background/90 backdrop-blur-sm border border-border/50 text-destructive hover:text-destructive hover:bg-destructive/10 shadow-sm hover:animate-pulse hover:scale-110 transition-all duration-200"
+              aria-label="Delete note"
+              className="p-0 bg-background/90 backdrop-blur-sm border border-border/50 text-destructive hover:text-destructive hover:bg-destructive/10 shadow-sm hover:animate-pulse hover:scale-110 transition-all duration-200"
             >
               <Trash2 className="w-4 h-4" />
             </Button>
@@ -206,17 +207,19 @@ function NoteCard({
             <div className="flex gap-1">
               <Button
                 variant="ghost"
-                size="sm"
+                size="icon-sm"
                 onClick={handleDeleteConfirm}
-                className="h-8 w-8 p-0 bg-background/90 backdrop-blur-sm border border-border/50 text-green-600 hover:text-green-700 hover:bg-green-50 shadow-sm"
+                aria-label="Confirm delete note"
+                className="p-0 bg-background/90 backdrop-blur-sm border border-border/50 text-green-600 hover:text-green-700 hover:bg-green-50 shadow-sm"
               >
                 <Check className="w-4 h-4" />
               </Button>
               <Button
                 variant="ghost"
-                size="sm"
+                size="icon-sm"
                 onClick={handleDeleteClick}
-                className="h-8 w-8 p-0 bg-background/90 backdrop-blur-sm border border-border/50 text-red-600 hover:text-red-700 hover:bg-red-50 shadow-sm"
+                aria-label="Cancel delete note"
+                className="p-0 bg-background/90 backdrop-blur-sm border border-border/50 text-destructive hover:text-destructive/80 hover:bg-destructive/10 shadow-sm"
               >
                 <X className="w-4 h-4" />
               </Button>

@@ -76,7 +76,7 @@ export function CaseFilters({ filters, onFiltersChange }: CaseFiltersProps) {
       <Popover>
         <PopoverTrigger asChild>
           <Button variant="outline" size="sm">
-            <Filter className="mr-2 h-4 w-4" />
+            <Filter className="h-4 w-4" />
             Filters
             {activeFilterCount > 0 && (
               <Badge variant="secondary" className="ml-2 h-5 px-1.5 text-xs">

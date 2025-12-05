@@ -60,7 +60,7 @@ export function MultiSortConfig({ sortConfigs, onSortConfigsChange }: MultiSortC
       <Popover>
         <PopoverTrigger asChild>
           <Button variant="outline" size="sm">
-            <ArrowUpDown className="mr-2 h-4 w-4" />
+            <ArrowUpDown className="h-4 w-4" />
             Sort
             {hasMultipleSorts && (
               <Badge variant="secondary" className="ml-2 h-5 px-1.5 text-xs">

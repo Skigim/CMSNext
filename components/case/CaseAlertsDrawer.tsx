@@ -8,6 +8,7 @@ import {
 } from "@/components/ui/sheet";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
+import { EmptyState } from "@/components/common/EmptyState";
 import type { AlertWithMatch } from "@/utils/alertsData";
 import { CaseStatusMenu } from "./CaseStatusMenu";
 import type { CaseDisplay, CaseStatusUpdateHandler } from "@/types/case";
@@ -90,9 +91,10 @@ export const CaseAlertsDrawer = memo(function CaseAlertsDrawer({
               <span className="text-xs text-muted-foreground">{openAlerts.length} active</span>
             </header>
             {openAlerts.length === 0 ? (
-              <div className="rounded-lg border border-dashed border-muted-foreground/30 bg-muted/20 p-4 text-sm text-muted-foreground">
-                No open alerts for this case.
-              </div>
+              <EmptyState
+                title="No open alerts for this case."
+                compact
+              />
             ) : (
               <ul className="space-y-3">
                 {openAlerts.map(alert => {
@@ -128,9 +130,10 @@ export const CaseAlertsDrawer = memo(function CaseAlertsDrawer({
               <span className="text-xs text-muted-foreground">{resolvedAlerts.length}</span>
             </header>
             {resolvedAlerts.length === 0 ? (
-              <div className="rounded-lg border border-dashed border-muted-foreground/30 bg-muted/20 p-4 text-sm text-muted-foreground">
-                Resolved alerts will appear here for quick reference.
-              </div>
+              <EmptyState
+                title="Resolved alerts will appear here for quick reference."
+                compact
+              />
             ) : (
               <ul className="space-y-3">
                 {resolvedAlerts.map(alert => {

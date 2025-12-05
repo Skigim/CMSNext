@@ -2,11 +2,11 @@
 
 ## General Approach
 
-- Read task thoroughly; infer intent if unclear, then discover rather than guess.
-- Gather context quickly, then act—balance understanding with forward momentum.
+- For every action, check for existing patterns and documentation first - do not invent new solutions until certain one does not already exist.
+- Prioritize clarity and maintainability over cleverness.
 - Break complex work into logical steps; track via todo lists.
 - Surface blockers immediately rather than proceeding with incomplete information.
-- Run full test suite after significant changes; fix before committing.
+- Run full test suite and build after significant changes; fix before committing.
 
 ## Architecture
 
