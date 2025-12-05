@@ -3,6 +3,17 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../ui
 import { Button } from "../ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
 import { ImportModal } from "../modals/ImportModal";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "../ui/alert-dialog";
 
 import { Badge } from "../ui/badge";
 import { Separator } from "../ui/separator";
@@ -187,14 +198,6 @@ export function Settings({ cases, onDataPurged, onAlertsCsvImported }: SettingsP
   };
 
   const handlePurgeDatabase = async () => {
-    if (!confirm('Are you sure you want to delete ALL data? This action cannot be undone.')) {
-      return;
-    }
-
-    if (!confirm('This will permanently delete all cases, people, and financial data. Are you absolutely sure?')) {
-      return;
-    }
-
     setIsPurging(true);
     try {
       // Use DataManager to purge data
@@ -373,15 +376,36 @@ export function Settings({ cases, onDataPurged, onAlertsCsvImported }: SettingsP
                         Permanently delete every case, person, and financial record from local storage.
                       </p>
                     </div>
-                    <Button
-                      variant="destructive"
-                      onClick={handlePurgeDatabase}
-                      disabled={isPurging}
-                      className="flex items-center gap-2"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                      {isPurging ? "Purging..." : "Purge local storage"}
-                    </Button>
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button
+                          variant="destructive"
+                          disabled={isPurging}
+                          className="flex items-center gap-2"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                          {isPurging ? "Purging..." : "Purge local storage"}
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Purge All Data</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            This will permanently delete all cases, people, and financial data. 
+                            This action cannot be undone. Are you absolutely sure?
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                          <AlertDialogAction
+                            onClick={handlePurgeDatabase}
+                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                          >
+                            Yes, purge everything
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
                   </div>
 
                   <div className="rounded-lg border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
