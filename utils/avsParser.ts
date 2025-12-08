@@ -1,43 +1,39 @@
-`/**
+/**
  * AVS (Account Verification Service) Parser
  * ==========================================
  * Parses account block data from AVS paste input and converts to financial resource items.
- * * Expected input format:
- * \`\`\`
- * Account Owner: Owner Name; Co-owner Name ACCOUNT_TYPE
+ * 
+ * Expected input format:
+ * ```
+ * Owner Name; Co-owner Name ACCOUNT_TYPE
  * Bank Name - (AccountNumber)
  * Address Line 1
  * Address Line 2
  * Balance as of MM/DD/YYYY - $XX,XXX.XX
  * Refresh Date: MM/DD/YYYY
- * \`\`\`
+ * ```
  */
 
 /**
  * Known account types that can appear at the end of the first line
- * NOTE: This list must be ordered by length (longest to shortest) to ensure
- * that composite types (e.g., "ROTH IRA") are matched before substrings (e.g., "IRA").
  */
 export const KNOWN_ACCOUNT_TYPES = [
-  'CERTIFICATE OF DEPOSIT',
-  'CHECKING ACCOUNT',
-  'SAVINGS ACCOUNT',
-  'XMAS CLUB SAVINGS',
-  'LIFE INSURANCE',
-  'MONEY MARKET',
-  'MUTUAL FUND',
-  'BROKERAGE',
-  'INVESTMENT',
-  'ROTH IRA',
   'CHECKING',
   'SAVINGS',
-  'PENSION',
-  'ANNUITY',
-  'TRUST',
+  'MONEY MARKET',
+  'CD',
+  'CERTIFICATE OF DEPOSIT',
   'IRA',
+  'ROTH IRA',
   '401K',
   '401(K)',
-  'CD',
+  'BROKERAGE',
+  'INVESTMENT',
+  'PENSION',
+  'ANNUITY',
+  'LIFE INSURANCE',
+  'MUTUAL FUND',
+  'TRUST',
 ] as const;
 
 export type KnownAccountType = typeof KNOWN_ACCOUNT_TYPES[number];
@@ -79,11 +75,12 @@ function parseBalance(balanceStr: string): number {
 
 /**
  * Parse a single account block from AVS data
- * * @param block - A single account block text
+ * 
+ * @param block - A single account block text
  * @returns Parsed account data or null if parsing fails
  */
 export function parseAccountBlock(block: string): ParsedAVSAccount | null {
-  const lines = block.split('\\n').filter(line => line.trim() !== '');
+  const lines = block.split('\n').filter(line => line.trim() !== '');
   
   if (lines.length < 2) {
     return null;
@@ -116,8 +113,8 @@ export function parseAccountBlock(block: string): ParsedAVSAccount | null {
 
   // Parse bank name and account number from second line
   const bankLine = lines[1] || '';
-  const bankNameMatch = bankLine.match(/([^\\n]+) - \\(/);
-  const accountNumberMatch = bankLine.match(/ - \\((\\d+)\\)/);
+  const bankNameMatch = bankLine.match(/([^\n]+) - \(/);
+  const accountNumberMatch = bankLine.match(/ - \((\d+)\)/);
 
   // Collect address lines (everything between bank line and balance line)
   const addressLines: string[] = [];
@@ -140,7 +137,7 @@ export function parseAccountBlock(block: string): ParsedAVSAccount | null {
 
   // Extract refresh date
   const refreshDateLine = lines.find(l => l.toLowerCase().startsWith('refresh date:'));
-  const refreshDateMatch = refreshDateLine ? refreshDateLine.match(/Refresh Date: ([^\\n]+)/) : null;
+  const refreshDateMatch = refreshDateLine ? refreshDateLine.match(/Refresh Date: ([^\n]+)/) : null;
 
   // Extract and mask account number (last 4 digits only)
   let accountNumber = accountNumberMatch ? accountNumberMatch[1].trim() : 'N/A';
@@ -162,9 +159,11 @@ export function parseAccountBlock(block: string): ParsedAVSAccount | null {
 
 /**
  * Parse multiple account blocks from pasted AVS data
- * * Account blocks are typically separated by empty lines or specific delimiters.
+ * 
+ * Account blocks are typically separated by empty lines or specific delimiters.
  * This function handles common formats.
- * * @param input - Raw pasted text containing one or more account blocks
+ * 
+ * @param input - Raw pasted text containing one or more account blocks
  * @returns Array of successfully parsed accounts
  */
 export function parseAVSInput(input: string): ParsedAVSAccount[] {
@@ -173,24 +172,14 @@ export function parseAVSInput(input: string): ParsedAVSAccount[] {
   }
 
   // Normalize line endings
-  const normalized = input.replace(/\\r\\n/g, '\\n').replace(/\\r/g, '\\n');
+  const normalized = input.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
 
-  let blocks: string[] = [];
-
-  // Strategy 1: Explicit "Account Owner:" delimiter (Most reliable for AVS dumps)
-  if (normalized.includes('Account Owner:')) {
-    blocks = normalized
-      .split(/Account Owner:\\s*/)
-      .map(block => block.trim())
-      .filter(block => block.length > 0);
-  } 
-  // Strategy 2: Double newlines or separator lines (Legacy support)
-  else {
-    blocks = normalized
-      .split(/\\n\\s*\\n|\\n-{3,}\\n|\\n={3,}\\n/)
-      .map(block => block.trim())
-      .filter(block => block.length > 0);
-  }
+  // Split on double newlines (common block separator)
+  // Also handle cases where blocks are separated by a line of dashes or equals
+  const blocks = normalized
+    .split(/\n\s*\n|\n-{3,}\n|\n={3,}\n/)
+    .map(block => block.trim())
+    .filter(block => block.length > 0);
 
   const parsed: ParsedAVSAccount[] = [];
 
@@ -206,7 +195,8 @@ export function parseAVSInput(input: string): ParsedAVSAccount[] {
 
 /**
  * Convert a parsed AVS account to a financial resource item format
- * * @param account - Parsed AVS account
+ * 
+ * @param account - Parsed AVS account
  * @returns Data formatted for FinancialItem creation
  */
 export function avsAccountToFinancialItem(
@@ -218,7 +208,7 @@ export function avsAccountToFinancialItem(
     descriptionParts.push(account.accountType);
   }
   if (account.bankName !== 'N/A') {
-    descriptionParts.push(\`at \${account.bankName}\`);
+    descriptionParts.push(`at ${account.bankName}`);
   }
   
   const description = descriptionParts.length > 0
@@ -228,24 +218,24 @@ export function avsAccountToFinancialItem(
   // Build notes with additional details
   const notesParts: string[] = [];
   if (account.address) {
-    notesParts.push(\`Address: \${account.address}\`);
+    notesParts.push(`Address: ${account.address}`);
   }
   if (account.refreshDate !== 'N/A') {
-    notesParts.push(\`AVS Refresh Date: \${account.refreshDate}\`);
+    notesParts.push(`AVS Refresh Date: ${account.refreshDate}`);
   }
   if (account.balance !== 'N/A') {
-    notesParts.push(\`Balance as reported: \${account.balance}\`);
+    notesParts.push(`Balance as reported: ${account.balance}`);
   }
 
   return {
     description,
     amount: account.balanceAmount,
     location: account.bankName !== 'N/A' ? account.bankName : undefined,
-    accountNumber: account.accountNumber !== 'N/A' ? \`****\${account.accountNumber}\` : undefined,
+    accountNumber: account.accountNumber !== 'N/A' ? `****${account.accountNumber}` : undefined,
     owner: account.accountOwner !== 'N/A' ? account.accountOwner : undefined,
     verificationStatus: 'Verified',
     verificationSource: 'AVS',
-    notes: notesParts.length > 0 ? notesParts.join('\\n') : undefined,
+    notes: notesParts.length > 0 ? notesParts.join('\n') : undefined,
     dateAdded: new Date().toISOString(),
   };
 }
@@ -257,6 +247,4 @@ export function avsAccountsToFinancialItems(
   accounts: ParsedAVSAccount[]
 ): Omit<import('../types/case').FinancialItem, 'id' | 'createdAt' | 'updatedAt'>[] {
   return accounts.map(avsAccountToFinancialItem);
-}
-`
 }

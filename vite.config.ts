@@ -1,3 +1,4 @@
+import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import compression from 'vite-plugin-compression'
 import { visualizer } from 'rollup-plugin-visualizer'
@@ -44,8 +45,7 @@ export default defineConfig(({ command, mode }) => {
           emitFile: true,
         }),
     ].filter(Boolean),
-    // CHANGED: Use relative base path to support any deployment location
-    base: './', 
+    base: isProduction ? '/CMSNext/' : '/',
     resolve: {
       alias: {
         '@': path.resolve(__dirname, './'),
@@ -110,5 +110,4 @@ export default defineConfig(({ command, mode }) => {
       include: ['react', 'react-dom', 'lucide-react', 'sonner', 'clsx', 'tailwind-merge', 'class-variance-authority'],
     },
   }
-})`
-}
+})
