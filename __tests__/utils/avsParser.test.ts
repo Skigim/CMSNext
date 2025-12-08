@@ -163,15 +163,15 @@ Balance as of 01/01/2025 - $200.00`;
 
       const item = avsAccountToFinancialItem(account);
 
-      expect(item.description).toBe('CHECKING at First National Bank');
+      expect(item.description).toBe('Checking');
       expect(item.amount).toBe(5000);
       expect(item.location).toBe('First National Bank');
       expect(item.accountNumber).toBe('****6789');
       expect(item.owner).toBe('John Doe');
       expect(item.verificationStatus).toBe('Verified');
       expect(item.verificationSource).toBe('AVS');
-      expect(item.notes).toContain('Address: 123 Main St');
-      expect(item.notes).toContain('AVS Refresh Date: 12/01/2025');
+      expect(item.notes).toBeUndefined();
+      expect(item.dateAdded).toBeDefined();
     });
 
     it('handles N/A values gracefully', () => {
@@ -188,13 +188,14 @@ Balance as of 01/01/2025 - $200.00`;
 
       const item = avsAccountToFinancialItem(account);
 
-      expect(item.description).toBe('AVS Imported Account');
+      expect(item.description).toBe('Account');
       expect(item.amount).toBe(0);
       expect(item.location).toBeUndefined();
       expect(item.accountNumber).toBeUndefined();
       expect(item.owner).toBeUndefined();
       expect(item.verificationStatus).toBe('Verified');
       expect(item.verificationSource).toBe('AVS');
+      expect(item.notes).toBeUndefined();
     });
   });
 
@@ -226,8 +227,8 @@ Balance as of 01/01/2025 - $200.00`;
       const items = avsAccountsToFinancialItems(accounts);
 
       expect(items).toHaveLength(2);
-      expect(items[0].description).toBe('CHECKING at Bank1');
-      expect(items[1].description).toBe('SAVINGS at Bank2');
+      expect(items[0].description).toBe('Checking');
+      expect(items[1].description).toBe('Savings');
     });
   });
 

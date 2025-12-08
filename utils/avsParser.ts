@@ -194,6 +194,21 @@ export function parseAVSInput(input: string): ParsedAVSAccount[] {
 }
 
 /**
+ * Normalize account type to title case (e.g., "CHECKING" -> "Checking")
+ */
+function normalizeAccountType(accountType: string): string {
+  if (accountType === 'N/A') {
+    return 'Account';
+  }
+  
+  // Convert to title case: "CHECKING ACCOUNT" -> "Checking Account"
+  return accountType
+    .split(' ')
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .join(' ');
+}
+
+/**
  * Convert a parsed AVS account to a financial resource item format
  * 
  * @param account - Parsed AVS account
@@ -202,40 +217,14 @@ export function parseAVSInput(input: string): ParsedAVSAccount[] {
 export function avsAccountToFinancialItem(
   account: ParsedAVSAccount
 ): Omit<import('../types/case').FinancialItem, 'id' | 'createdAt' | 'updatedAt'> {
-  // Build description from account type and bank name
-  const descriptionParts: string[] = [];
-  if (account.accountType !== 'N/A') {
-    descriptionParts.push(account.accountType);
-  }
-  if (account.bankName !== 'N/A') {
-    descriptionParts.push(`at ${account.bankName}`);
-  }
-  
-  const description = descriptionParts.length > 0
-    ? descriptionParts.join(' ')
-    : 'AVS Imported Account';
-
-  // Build notes with additional details
-  const notesParts: string[] = [];
-  if (account.address) {
-    notesParts.push(`Address: ${account.address}`);
-  }
-  if (account.refreshDate !== 'N/A') {
-    notesParts.push(`AVS Refresh Date: ${account.refreshDate}`);
-  }
-  if (account.balance !== 'N/A') {
-    notesParts.push(`Balance as reported: ${account.balance}`);
-  }
-
   return {
-    description,
+    description: normalizeAccountType(account.accountType),
     amount: account.balanceAmount,
     location: account.bankName !== 'N/A' ? account.bankName : undefined,
     accountNumber: account.accountNumber !== 'N/A' ? `****${account.accountNumber}` : undefined,
     owner: account.accountOwner !== 'N/A' ? account.accountOwner : undefined,
     verificationStatus: 'Verified',
     verificationSource: 'AVS',
-    notes: notesParts.length > 0 ? notesParts.join('\n') : undefined,
     dateAdded: new Date().toISOString(),
   };
 }
