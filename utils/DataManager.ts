@@ -313,7 +313,9 @@ export class DataManager {
       for (const [, alerts] of mcnToAlerts) {
         // Use the first alert's data for case creation
         const alert = alerts[0];
-        const { firstName, lastName } = parseNameFromImport(alert.personName);
+        // Use rawName from metadata (original "LASTNAME, FIRSTNAME" format) for proper parsing
+        const rawName = alert.metadata?.rawName as string | undefined;
+        const { firstName, lastName } = parseNameFromImport(rawName);
         
         // Only create if we have at least a name or MCN
         if (!firstName && !lastName) {
@@ -324,8 +326,8 @@ export class DataManager {
         try {
           const skeletonCase = await this.cases.createCompleteCase({
             person: {
-              firstName: firstName || "Unknown",
-              lastName: lastName || "Unknown",
+              firstName: firstName || "",
+              lastName: lastName || "",
               email: "",
               phone: "",
               dateOfBirth: "",
