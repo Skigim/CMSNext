@@ -2,7 +2,7 @@
 
 > Living index of marketable features, their current implementation status, quality, and future investments.
 
-**Last Updated:** December 5, 2025
+**Last Updated:** December 8, 2025
 
 ## How to Use This Document
 
@@ -21,11 +21,11 @@
 | Feature               | Rating | Trend | Notes                                        |
 | --------------------- | ------ | ----- | -------------------------------------------- |
 | Case Management       | 92     | ↑     | Enhanced header with copy, priority toggle   |
-| Developer Enablement  | 84     | ↑     | 347 tests, CopyButton unified, withToast     |
+| Developer Enablement  | 84     | ↑     | 355 tests, CopyButton unified, withToast     |
 | Premium UI/UX         | 84     | ↑     | EmptyState, AlertDialog, consistent patterns |
-| Financial Operations  | 84     | ↑     | Category copy button, enhanced card actions  |
+| Financial Operations  | 86     | ↑     | AVS duplicate detection, preview checkboxes  |
+| Data Portability      | 82     | ↑     | AVS import with update capability            |
 | Local-First Storage   | 80     | →     | Production-ready                             |
-| Data Portability      | 78     | →     | Smart alert import with case creation        |
 | Configurable Statuses | 78     | →     | Recently stabilized                          |
 | Notes & Collaboration | 78     | →     | Case Summary Generator with modal & sections |
 | Legacy Migration      | 75     | →     | Dev-only, one-way                            |
@@ -33,8 +33,8 @@
 | Feature Flags         | 72     | →     | In-memory only                               |
 | Dashboard & Insights  | 70     | →     | Framework ready                              |
 
-**Average Rating:** 79.9/100  
-**Test Status:** 347/347 passing (100%)
+**Average Rating:** 80.4/100  
+**Test Status:** 355/355 passing (100%)
 
 ---
 
@@ -354,12 +354,14 @@ Dashboard framework maintained by insights platform team. Widget development fol
 
 ### Implementation Snapshot
 
-**Rating: 78/100** _(Updated December 3, 2025)_
+**Rating: 82/100** _(Updated December 8, 2025)_
 
-JSON import/export flows are stable with schema validation, autosave-aware backups, and legacy migration helpers. **December 3, 2025:** Alert CSV import now auto-creates skeleton cases for unmatched alerts with MCNs, using proper name casing (handles ALL CAPS input, Mc/Mac/O' prefixes). CLI scripts generate seed data and examples, supporting offline onboarding.
+JSON import/export flows are stable with schema validation, autosave-aware backups, and legacy migration helpers. **December 8, 2025:** AVS import enhanced with duplicate detection - matches existing items by accountNumber + description and updates them instead of creating duplicates. Preview UI shows New/Update badges, selection checkboxes, and Select All toggle. Parser improved to handle bank-specific "Account Owner:" format and "Checking Account" type suffixes.
 
 ### Strengths
 
+- **AVS Duplicate Detection**: Matches existing items by accountNumber + description, updates instead of creating duplicates
+- **AVS Preview Checkboxes**: Select/deselect individual accounts before import with New/Update badges
 - **Smart Alert Import**: Unmatched alerts with MCNs automatically create skeleton cases with properly-cased names (handles ALL CAPS, Mc/Mac/O' prefixes)
 - Import process validates structure, migrates legacy payloads, and records failures with descriptive toasts
 - Automatic backups (`case-tracker-data.backup-[timestamp].json`) protect against destructive imports

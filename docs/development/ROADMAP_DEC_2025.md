@@ -1,8 +1,8 @@
 # CMSNext Roadmap - December 2025
 
-**Report Date:** December 5, 2025  
+**Report Date:** December 8, 2025  
 **Branch:** main (stable)  
-**Tests:** 347/347 passing ✅  
+**Tests:** 355/355 passing ✅  
 **Build:** Production-ready ✅  
 **Average Feature Rating:** 80/100
 
@@ -53,6 +53,17 @@
 - [x] Financial category copy button (copy all items in Resources/Income/Expenses)
 - [x] 347 tests passing
 
+#### Bug Fixes & Enhancements (Dec 8)
+
+- [x] Fix AVS import data mapping - normalize account types to title case, remove notes
+- [x] Fix AVS parser multi-account detection for bank-specific "Account Owner:" format
+- [x] Fix GitHub Pages deployment base path (/CMSNext/)
+- [x] AVS import duplicate detection - match by accountNumber + description
+- [x] AVS import preview checkboxes - select/deselect individual accounts
+- [x] AVS import New/Update badges on preview cards
+- [x] AVS import Select All/Deselect All toggle
+- [x] 355 tests passing (+8 new tests)
+
 #### Refactoring & Polish
 
 - [x] Update feature catalogue with new features
@@ -68,7 +79,8 @@
 
 #### Prep Work
 
-- [ ] Fix any bugs discovered from Week 1 features
+- [x] Fix AVS import bugs discovered from Week 1 (data mapping, multi-account detection)
+- [x] Add AVS duplicate detection with update capability
 
 #### Features
 
@@ -119,7 +131,7 @@
 | ----------------------------- | ----- | ------ | ------ | ------ | ------ |
 | Hooks over 200 lines          | 4     | 0 ✅   | 0      | 0      | 0      |
 | Components with anti-patterns | 1     | 0 ✅   | 0      | 0      | 0      |
-| Test count                    | 253   | 347 ✅ | 355    | 365    | 365+   |
+| Test count                    | 253   | 355 ✅ | 365    | 375    | 375+   |
 | New features shipped          | -     | 18 ✅  | 4      | 4      | 26     |
 | Average feature rating        | 76.5  | 80 ✅  | 81     | 82     | 82+    |
 
