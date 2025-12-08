@@ -34,6 +34,10 @@ export const KNOWN_ACCOUNT_TYPES = [
   'LIFE INSURANCE',
   'MUTUAL FUND',
   'TRUST',
+  // With "Account" suffix (common bank format)
+  'CHECKING ACCOUNT',
+  'SAVINGS ACCOUNT',
+  'MONEY MARKET ACCOUNT',
 ] as const;
 
 export type KnownAccountType = typeof KNOWN_ACCOUNT_TYPES[number];
@@ -86,12 +90,20 @@ export function parseAccountBlock(block: string): ParsedAVSAccount | null {
     return null;
   }
 
-  const firstLine = lines[0].trim();
+  let firstLine = lines[0].trim();
+  
+  // Strip "Account Owner:" prefix if present (common bank format)
+  if (firstLine.toUpperCase().startsWith('ACCOUNT OWNER:')) {
+    firstLine = firstLine.slice('Account Owner:'.length).trim();
+  }
+  
   let accountType = 'N/A';
   let owners = 'N/A';
 
   // Try to extract account type from end of first line
-  for (const type of KNOWN_ACCOUNT_TYPES) {
+  // Sort by length (longest first) to match "CHECKING ACCOUNT" before "CHECKING"
+  const sortedTypes = [...KNOWN_ACCOUNT_TYPES].sort((a, b) => b.length - a.length);
+  for (const type of sortedTypes) {
     if (firstLine.toUpperCase().endsWith(type.toUpperCase())) {
       accountType = type;
       owners = firstLine.slice(0, -type.length).trim();
@@ -174,16 +186,50 @@ export function parseAVSInput(input: string): ParsedAVSAccount[] {
   // Normalize line endings
   const normalized = input.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
 
-  // Split on double newlines (common block separator)
-  // Also handle cases where blocks are separated by a line of dashes or equals
-  const blocks = normalized
-    .split(/\n\s*\n|\n-{3,}\n|\n={3,}\n/)
-    .map(block => block.trim())
-    .filter(block => block.length > 0);
+  // Strategy 1: Try to detect "Account Owner:" markers (bank-specific format)
+  // These are highly reliable block delimiters
+  const hasAccountOwnerMarkers = normalized.includes('Account Owner:');
+  
+  let blocksToUse: string[];
+
+  if (hasAccountOwnerMarkers) {
+    // Use Account Owner markers as block delimiters
+    const lines = normalized.split('\n');
+    const blocks: string[] = [];
+    let currentBlock: string[] = [];
+
+    for (const line of lines) {
+      const trimmed = line.trim();
+      // Start a new block if we see "Account Owner:" and we already have content
+      if (trimmed.toUpperCase().startsWith('ACCOUNT OWNER:')) {
+        if (currentBlock.length > 0) {
+          blocks.push(currentBlock.join('\n'));
+          currentBlock = [];
+        }
+        currentBlock.push(line);
+      } else if (trimmed.length > 0) {
+        // Add non-empty lines to current block
+        currentBlock.push(line);
+      }
+    }
+
+    // Don't forget the last block
+    if (currentBlock.length > 0) {
+      blocks.push(currentBlock.join('\n'));
+    }
+
+    blocksToUse = blocks;
+  } else {
+    // Strategy 2: Fall back to standard block separators
+    blocksToUse = normalized
+      .split(/\n\s*\n|\n-{3,}\n|\n={3,}\n/)
+      .map(block => block.trim())
+      .filter(block => block.length > 0);
+  }
 
   const parsed: ParsedAVSAccount[] = [];
 
-  for (const block of blocks) {
+  for (const block of blocksToUse) {
     const account = parseAccountBlock(block);
     if (account) {
       parsed.push(account);

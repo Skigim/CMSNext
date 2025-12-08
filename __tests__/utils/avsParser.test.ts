@@ -146,6 +146,47 @@ Balance as of 01/01/2025 - $200.00`;
       const results = parseAVSInput(input);
       expect(results).toHaveLength(2);
     });
+
+    it('parses multiple accounts with "Account Owner:" prefix and "Checking Account" suffix', () => {
+      const input = `Account Owner: GERALD FORD;OR KARL MARXChecking Account
+US Bank National Association - (00001234)
+425 Walnut Street, Cincinnati, OH 45202
+Balance as of November 2025 - $199.99
+Refresh Date: December 04, 2025
+Account Owner: GERALD FORD;OR KARL MARXChecking Account
+US Bank National Association - (00001235)
+425 Walnut Street, Cincinnati, OH 45202
+Balance as of November 2025 - $199.99
+Refresh Date: December 04, 2025
+Account Owner: GERALD FORD;OR KARL MARXChecking Account
+US Bank National Association - (00001236)
+425 Walnut Street, Cincinnati, OH 45202
+Balance as of November 2025 - $199.99
+Refresh Date: December 04, 2025`;
+
+      const results = parseAVSInput(input);
+
+      expect(results).toHaveLength(3);
+      expect(results[0].accountOwner).toBe('GERALD FORD, OR KARL MARX');
+      expect(results[0].accountType).toBe('CHECKING ACCOUNT');
+      expect(results[0].bankName).toBe('US Bank National Association');
+      expect(results[0].accountNumber).toBe('1234');
+      expect(results[0].balanceAmount).toBe(199.99);
+      expect(results[1].accountNumber).toBe('1235');
+      expect(results[2].accountNumber).toBe('1236');
+    });
+
+    it('handles "Account Owner:" prefix in parsing', () => {
+      const input = `Account Owner: JOHN DOECHECKING
+First National Bank - (5555)
+Balance as of 01/01/2025 - $1,000.00`;
+
+      const results = parseAVSInput(input);
+
+      expect(results).toHaveLength(1);
+      expect(results[0].accountOwner).toBe('JOHN DOE');
+      expect(results[0].accountType).toBe('CHECKING');
+    });
   });
 
   describe('avsAccountToFinancialItem', () => {
