@@ -383,12 +383,13 @@ export class CaseService {
       throw new Error('Case not found');
     }
 
-    // Remove case and its associated data
+    // Remove case and its associated data (including alerts)
     const updatedData: NormalizedFileData = {
       ...currentData,
       cases: currentData.cases.filter(c => c.id !== caseId),
       financials: currentData.financials.filter(f => f.caseId !== caseId),
       notes: currentData.notes.filter(n => n.caseId !== caseId),
+      alerts: currentData.alerts.filter(a => a.caseId !== caseId),
     };
 
     // Write back to file
@@ -417,12 +418,13 @@ export class CaseService {
     // Track which IDs don't exist
     const notFound = caseIds.filter(id => !existingIds.has(id));
     
-    // Filter out cases and their associated data
+    // Filter out cases and their associated data (including alerts)
     const updatedData: NormalizedFileData = {
       ...currentData,
       cases: currentData.cases.filter(c => !idsToDelete.has(c.id)),
       financials: currentData.financials.filter(f => !idsToDelete.has(f.caseId)),
       notes: currentData.notes.filter(n => !idsToDelete.has(n.caseId)),
+      alerts: currentData.alerts.filter(a => !a.caseId || !idsToDelete.has(a.caseId)),
     };
 
     const deletedCount = currentData.cases.length - updatedData.cases.length;

@@ -392,9 +392,11 @@ export class AlertsService {
       const correctStatus: AlertMatchStatus = normalizedMcn ? 'unmatched' : 'missing-mcn';
       
       // Update if status or case references need clearing
-      if (alert.matchStatus !== correctStatus || alert.matchedCaseId) {
+      if (alert.matchStatus !== correctStatus || alert.matchedCaseId || alert.caseId) {
         return {
           ...alert,
+          // Clear persistent FK when unmatched
+          caseId: undefined,
           matchStatus: correctStatus,
           matchedCaseId: undefined,
           matchedCaseName: undefined,
@@ -406,6 +408,8 @@ export class AlertsService {
 
     return {
       ...alert,
+      // Persist caseId for FK relationship (alerts are deleted with their case)
+      caseId: matchedCase.id,
       matchStatus: 'matched',
       matchedCaseId: matchedCase.id,
       matchedCaseName: matchedCase.name,

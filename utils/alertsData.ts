@@ -642,6 +642,8 @@ export function parseStackedAlerts(csvContent: string, cases: CaseForAlertMatchi
     const alert: AlertWithMatch = {
       id: alertId,
       reportId: alertNumber || undefined,
+      // Persist caseId for FK relationship (alerts are deleted with their case)
+      caseId: matchedCase?.id,
       alertCode: alertNumber || row.type || row.program,
       alertType: row.type,
       alertDate: dueDateIso,
@@ -749,6 +751,8 @@ function parseGenericCsvAlerts(csvContent: string, cases: CaseForAlertMatching[]
     const alert: AlertWithMatch = {
       id: alertId,
       reportId: alertNumber || undefined,
+      // Persist caseId for FK relationship (alerts are deleted with their case)
+      caseId: matchedCase?.id,
       alertCode: alertNumber || type || program,
       alertType: type,
       alertDate: dueDateIso,

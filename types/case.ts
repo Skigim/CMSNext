@@ -79,6 +79,8 @@ export type AlertWorkflowStatus = 'new' | 'in-progress' | 'acknowledged' | 'snoo
 export interface AlertRecord {
   id: string;
   reportId?: string;
+  /** Foreign key linking alert to a case. Alerts with caseId are deleted when their case is deleted. */
+  caseId?: string;
   alertCode: string;
   alertType: string;
   alertDate: string;

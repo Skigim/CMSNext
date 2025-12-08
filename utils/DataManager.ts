@@ -293,8 +293,9 @@ export class DataManager {
       const result = await this.alerts.mergeAlertsFromCsvContent(csvContent, existingAlerts, cases);
 
       // Find unmatched alerts that have MCNs - these need skeleton cases
+      // Also exclude alerts that already have a caseId (already linked to a case)
       const unmatchedWithMcn = result.alerts.filter(
-        alert => alert.matchStatus === "unmatched" && alert.mcNumber
+        alert => alert.matchStatus === "unmatched" && alert.mcNumber && !alert.caseId
       );
 
       // Group by normalized MCN to avoid duplicate case creation
