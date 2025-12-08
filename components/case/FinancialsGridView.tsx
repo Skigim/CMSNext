@@ -22,6 +22,8 @@ export function FinancialsGridView({ caseId, selectedCase }: FinancialsGridViewP
     handleInputChange,
     clearInput,
     importAccounts,
+    toggleAccountSelection,
+    toggleAllAccounts,
     canImport,
   } = useAVSImportFlow({ selectedCase: selectedCase ?? null });
 
@@ -54,6 +56,8 @@ export function FinancialsGridView({ caseId, selectedCase }: FinancialsGridViewP
         onClear={clearInput}
         onImport={importAccounts}
         onClose={closeImportModal}
+        onToggleAccount={toggleAccountSelection}
+        onToggleAll={toggleAllAccounts}
         canImport={canImport}
       />
     </div>

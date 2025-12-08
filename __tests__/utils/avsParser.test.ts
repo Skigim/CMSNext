@@ -4,6 +4,7 @@ import {
   parseAVSInput,
   avsAccountToFinancialItem,
   avsAccountsToFinancialItems,
+  findMatchingFinancialItem,
   KNOWN_ACCOUNT_TYPES,
 } from '../../utils/avsParser';
 
@@ -280,6 +281,56 @@ Balance as of 01/01/2025 - $1,000.00`;
       expect(KNOWN_ACCOUNT_TYPES).toContain('MONEY MARKET');
       expect(KNOWN_ACCOUNT_TYPES).toContain('IRA');
       expect(KNOWN_ACCOUNT_TYPES).toContain('401K');
+    });
+  });
+
+  describe('findMatchingFinancialItem', () => {
+    const existingItems = [
+      { id: '1', accountNumber: '****1234', description: 'Checking' },
+      { id: '2', accountNumber: '****5678', description: 'Savings' },
+      { id: '3', accountNumber: '****1234', description: 'Savings' }, // Same number, different type
+    ];
+
+    it('finds matching item by accountNumber and description', () => {
+      const newItem = { accountNumber: '****1234', description: 'Checking' };
+      const match = findMatchingFinancialItem(newItem, existingItems);
+      expect(match).toBeDefined();
+      expect(match?.id).toBe('1');
+    });
+
+    it('returns undefined when no match found', () => {
+      const newItem = { accountNumber: '****9999', description: 'Checking' };
+      const match = findMatchingFinancialItem(newItem, existingItems);
+      expect(match).toBeUndefined();
+    });
+
+    it('does not match if only accountNumber matches', () => {
+      const newItem = { accountNumber: '****1234', description: 'Money Market' };
+      const match = findMatchingFinancialItem(newItem, existingItems);
+      expect(match).toBeUndefined();
+    });
+
+    it('does not match if only description matches', () => {
+      const newItem = { accountNumber: '****0000', description: 'Checking' };
+      const match = findMatchingFinancialItem(newItem, existingItems);
+      expect(match).toBeUndefined();
+    });
+
+    it('returns undefined when newItem has no accountNumber', () => {
+      const newItem = { description: 'Checking' };
+      const match = findMatchingFinancialItem(newItem, existingItems);
+      expect(match).toBeUndefined();
+    });
+
+    it('distinguishes same accountNumber with different description', () => {
+      const checkingItem = { accountNumber: '****1234', description: 'Checking' };
+      const savingsItem = { accountNumber: '****1234', description: 'Savings' };
+      
+      const checkingMatch = findMatchingFinancialItem(checkingItem, existingItems);
+      const savingsMatch = findMatchingFinancialItem(savingsItem, existingItems);
+      
+      expect(checkingMatch?.id).toBe('1');
+      expect(savingsMatch?.id).toBe('3');
     });
   });
 });

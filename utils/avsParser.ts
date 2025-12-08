@@ -283,3 +283,27 @@ export function avsAccountsToFinancialItems(
 ): Omit<import('../types/case').FinancialItem, 'id' | 'createdAt' | 'updatedAt'>[] {
   return accounts.map(avsAccountToFinancialItem);
 }
+
+/**
+ * Find a matching existing financial item based on accountNumber and description
+ * 
+ * Match criteria: same accountNumber AND same description (account type)
+ * 
+ * @param newItem - The new item data from AVS import
+ * @param existingItems - Array of existing financial items to search
+ * @returns The matching existing item, or undefined if no match
+ */
+export function findMatchingFinancialItem<T extends { id: string; accountNumber?: string; description: string }>(
+  newItem: { accountNumber?: string; description: string },
+  existingItems: T[]
+): T | undefined {
+  if (!newItem.accountNumber) {
+    // Can't match without an account number
+    return undefined;
+  }
+  
+  return existingItems.find(existing =>
+    existing.accountNumber === newItem.accountNumber &&
+    existing.description === newItem.description
+  );
+}

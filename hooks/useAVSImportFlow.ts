@@ -1,24 +1,37 @@
 import { useCallback, useState } from "react";
 import { toast } from "sonner";
 import { useDataManagerSafe } from "../contexts/DataManagerContext";
-import type { StoredCase, FinancialItem } from "../types/case";
+import type { StoredCase, FinancialItem, StoredFinancialItem } from "../types/case";
 import {
   parseAVSInput,
   avsAccountToFinancialItem,
+  findMatchingFinancialItem,
   type ParsedAVSAccount,
 } from "../utils/avsParser";
+
+/**
+ * Parsed AVS account with selection state and match info
+ */
+export interface AVSAccountWithMeta extends ParsedAVSAccount {
+  /** Whether this account is selected for import */
+  selected: boolean;
+  /** ID of existing item if this would update (undefined = new) */
+  existingItemId?: string;
+}
 
 export interface AVSImportState {
   /** Whether the import modal is open */
   isOpen: boolean;
   /** Raw input text */
   rawInput: string;
-  /** Parsed accounts from the input */
-  parsedAccounts: ParsedAVSAccount[];
+  /** Parsed accounts with selection and match metadata */
+  parsedAccounts: AVSAccountWithMeta[];
   /** Whether import is in progress */
   isImporting: boolean;
-  /** Number of successfully imported items */
+  /** Number of newly created items */
   importedCount: number;
+  /** Number of updated existing items */
+  updatedCount: number;
   /** Any error that occurred during import */
   error: string | null;
 }
@@ -45,7 +58,9 @@ interface UseAVSImportFlowResult {
   importAccounts: () => Promise<void>;
   /** Toggle selection of a specific account for import */
   toggleAccountSelection: (index: number) => void;
-  /** Whether import is possible (has accounts and case) */
+  /** Toggle all accounts selection */
+  toggleAllAccounts: () => void;
+  /** Whether import is possible (has selected accounts and case) */
   canImport: boolean;
 }
 
@@ -69,6 +84,7 @@ export function useAVSImportFlow({
     parsedAccounts: [],
     isImporting: false,
     importedCount: 0,
+    updatedCount: 0,
     error: null,
   });
 
@@ -79,6 +95,7 @@ export function useAVSImportFlow({
       rawInput: "",
       parsedAccounts: [],
       importedCount: 0,
+      updatedCount: 0,
       error: null,
     }));
   }, []);
@@ -94,15 +111,38 @@ export function useAVSImportFlow({
     }));
   }, []);
 
-  const handleInputChange = useCallback((input: string) => {
-    const parsedAccounts = parseAVSInput(input);
+  const handleInputChange = useCallback(async (input: string) => {
+    const parsed = parseAVSInput(input);
+    
+    // Fetch existing resources to detect duplicates
+    let existingResources: StoredFinancialItem[] = [];
+    if (selectedCase && dataManager) {
+      try {
+        const allItems = await dataManager.getFinancialItemsForCase(selectedCase.id);
+        existingResources = allItems.filter(item => item.category === 'resources');
+      } catch (e) {
+        console.error('Failed to fetch existing items for duplicate detection:', e);
+      }
+    }
+    
+    // Mark each parsed account with selection state and match status
+    const accountsWithMeta: AVSAccountWithMeta[] = parsed.map(account => {
+      const itemData = avsAccountToFinancialItem(account);
+      const match = findMatchingFinancialItem(itemData, existingResources);
+      return {
+        ...account,
+        selected: true, // Selected by default
+        existingItemId: match?.id,
+      };
+    });
+    
     setImportState(prev => ({
       ...prev,
       rawInput: input,
-      parsedAccounts,
+      parsedAccounts: accountsWithMeta,
       error: null,
     }));
-  }, []);
+  }, [selectedCase, dataManager]);
 
   const clearInput = useCallback(() => {
     setImportState(prev => ({
@@ -114,9 +154,25 @@ export function useAVSImportFlow({
   }, []);
 
   const toggleAccountSelection = useCallback((index: number) => {
-    // For future use - could add a "selected" array to importState
-    // to allow selective import
-    console.log("Toggle account selection:", index);
+    setImportState(prev => ({
+      ...prev,
+      parsedAccounts: prev.parsedAccounts.map((account, i) =>
+        i === index ? { ...account, selected: !account.selected } : account
+      ),
+    }));
+  }, []);
+
+  const toggleAllAccounts = useCallback(() => {
+    setImportState(prev => {
+      const allSelected = prev.parsedAccounts.every(a => a.selected);
+      return {
+        ...prev,
+        parsedAccounts: prev.parsedAccounts.map(account => ({
+          ...account,
+          selected: !allSelected,
+        })),
+      };
+    });
   }, []);
 
   const importAccounts = useCallback(async () => {
@@ -135,8 +191,11 @@ export function useAVSImportFlow({
       return;
     }
 
-    if (importState.parsedAccounts.length === 0) {
-      const errorMsg = "No accounts to import. Please paste AVS data first.";
+    // Only import selected accounts
+    const selectedAccounts = importState.parsedAccounts.filter(a => a.selected);
+
+    if (selectedAccounts.length === 0) {
+      const errorMsg = "No accounts selected for import.";
       setImportState(prev => ({ ...prev, error: errorMsg }));
       toast.error(errorMsg);
       return;
@@ -145,23 +204,37 @@ export function useAVSImportFlow({
     setImportState(prev => ({ ...prev, isImporting: true, error: null }));
 
     const toastId = toast.loading(
-      `Importing ${importState.parsedAccounts.length} account(s)...`
+      `Importing ${selectedAccounts.length} account(s)...`
     );
 
-    let successCount = 0;
+    let newCount = 0;
+    let updateCount = 0;
     const errors: string[] = [];
 
     try {
       // Import each account sequentially to avoid race conditions
-      for (const account of importState.parsedAccounts) {
+      for (const account of selectedAccounts) {
         try {
           const itemData = avsAccountToFinancialItem(account);
-          await dataManager.addItem(
-            selectedCase.id,
-            "resources",
-            itemData as Omit<FinancialItem, "id" | "createdAt" | "updatedAt">
-          );
-          successCount++;
+          
+          if (account.existingItemId) {
+            // Update existing item
+            await dataManager.updateItem(
+              selectedCase.id,
+              "resources",
+              account.existingItemId,
+              itemData as Partial<FinancialItem>
+            );
+            updateCount++;
+          } else {
+            // Add new item
+            await dataManager.addItem(
+              selectedCase.id,
+              "resources",
+              itemData as Omit<FinancialItem, "id" | "createdAt" | "updatedAt">
+            );
+            newCount++;
+          }
         } catch (itemError) {
           console.error("Failed to import account:", account, itemError);
           const description = account.accountType !== "N/A"
@@ -174,17 +247,23 @@ export function useAVSImportFlow({
       setImportState(prev => ({
         ...prev,
         isImporting: false,
-        importedCount: successCount,
+        importedCount: newCount,
+        updatedCount: updateCount,
       }));
+
+      // Build success message
+      const messageParts: string[] = [];
+      if (newCount > 0) messageParts.push(`${newCount} new`);
+      if (updateCount > 0) messageParts.push(`${updateCount} updated`);
 
       if (errors.length > 0) {
         toast.warning(
-          `Imported ${successCount} of ${importState.parsedAccounts.length} accounts. ${errors.length} failed.`,
+          `Imported ${messageParts.join(', ')}. ${errors.length} failed.`,
           { id: toastId, duration: 5000 }
         );
       } else {
         toast.success(
-          `Successfully imported ${successCount} resource(s) from AVS`,
+          `Successfully imported: ${messageParts.join(', ')}`,
           { id: toastId, duration: 3000 }
         );
         // Close modal on full success after a brief delay
@@ -208,7 +287,7 @@ export function useAVSImportFlow({
   const canImport =
     !!selectedCase &&
     !!dataManager &&
-    importState.parsedAccounts.length > 0 &&
+    importState.parsedAccounts.some(a => a.selected) &&
     !importState.isImporting;
 
   return {
@@ -219,6 +298,7 @@ export function useAVSImportFlow({
     clearInput,
     importAccounts,
     toggleAccountSelection,
+    toggleAllAccounts,
     canImport,
   };
 }
