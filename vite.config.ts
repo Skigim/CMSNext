@@ -45,7 +45,7 @@ export default defineConfig(({ command, mode }) => {
           emitFile: true,
         }),
     ].filter(Boolean),
-    base: isProduction ? '/CMSNext/' : '/',
+    base: '/',
     resolve: {
       alias: {
         '@': path.resolve(__dirname, './'),
