@@ -84,13 +84,12 @@
 
 #### Features
 
-- [ ] Case timeline view (activity log visualization)
-- [ ] Dashboard widget: Cases by age distribution
 - [x] Historical financial tracking (amount history modal with dated entries + verification per entry)
 
 #### Refactoring & Polish
 
 - [x] Add unit tests for Week 2 features (77 new tests: financialHistory, FinancialsService, AmountHistoryModal)
+- [x] Refactor CaseList.test.tsx to integration testing pattern
 - [ ] Accessibility audit (jest-axe) for new components
 
 ---
