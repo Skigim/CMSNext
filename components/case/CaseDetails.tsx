@@ -6,10 +6,9 @@ import { FinancialsGridView } from "./FinancialsGridView";
 import { NotesDrawer } from "./NotesDrawer";
 import { IntakeChecklistView } from "./IntakeChecklistView";
 import { StoredCase } from "../../types/case";
-import { ArrowLeft, Edit2, Trash2, Wallet, BellRing, FileText, ClipboardCheck, Star, StarOff, Phone, Mail } from "lucide-react";
+import { ArrowLeft, Edit2, Trash2, Wallet, BellRing, FileText, ClipboardCheck, Star, StarOff, Phone, Mail, Check } from "lucide-react";
 import { withDataErrorBoundary } from "../error/ErrorBoundaryHOC";
 import { CaseStatusMenu } from "./CaseStatusMenu";
-import { Badge } from "../ui/badge";
 import { cn, interactiveHoverClasses } from "../ui/utils";
 import type { AlertWithMatch } from "../../utils/alertsData";
 import { CaseAlertsDrawer } from "./CaseAlertsDrawer";
@@ -182,28 +181,32 @@ export function CaseDetails({
             {/* Notes drawer trigger */}
             <NotesDrawer caseId={caseData.id} className={interactiveHoverClasses} />
             
-            {/* Alerts indicator */}
-            {totalAlerts > 0 ? (
-              <>
-                <Badge className="border-amber-500/40 bg-amber-500/10 text-amber-800 h-9 px-3">
-                  <BellRing className="mr-1.5 h-3.5 w-3.5" />
-                  {hasOpenAlerts
-                    ? `${openAlertCount} open`
-                    : "Resolved"}
-                </Badge>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setAlertsDrawerOpen(true)}
+            {/* Alerts button with badge indicator */}
+            {totalAlerts > 0 && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setAlertsDrawerOpen(true)}
+                className={cn(interactiveHoverClasses, "relative pr-8")}
+              >
+                <BellRing className="w-4 h-4 mr-2" />
+                Alerts
+                {/* Badge overlay */}
+                <span
+                  className={cn(
+                    "absolute -top-1.5 -right-1.5 flex items-center justify-center rounded-full text-xs font-medium min-w-5 h-5 px-1",
+                    hasOpenAlerts
+                      ? "bg-amber-500 text-white"
+                      : "bg-green-500 text-white"
+                  )}
                 >
-                  View {hasOpenAlerts ? "Alerts" : "History"}
-                </Button>
-              </>
-            ) : (
-              <Badge variant="outline" className="h-9 px-3 text-muted-foreground">
-                <BellRing className="mr-1.5 h-3.5 w-3.5" />
-                No alerts
-              </Badge>
+                  {hasOpenAlerts ? (
+                    openAlertCount
+                  ) : (
+                    <Check className="h-3 w-3" />
+                  )}
+                </span>
+              </Button>
             )}
             <div className="w-px h-9 bg-border" />
             <Button 
