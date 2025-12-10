@@ -249,7 +249,7 @@ Financial modules (resources, income, expenses) leverage dedicated components an
 - `FinancialItemCardActions` tests cover copy button and clipboard integration
 - `useFinancialItemFlow` tested through component behavior
 - `financialHistory.test.ts` - 32 tests for utility functions (date manipulation, entry lookup)
-- `FinancialsService.test.ts` - 24 tests for service history methods
+- `FinancialsService.test.ts` - 27 tests for service history methods (including auto-tracking on add)
 - `AmountHistoryModal.test.tsx` - 18 tests for modal component (rendering, CRUD, validation)
 - No dedicated telemetry yet
 
@@ -259,7 +259,7 @@ Financial modules (resources, income, expenses) leverage dedicated components an
 
 **December 5, 2025:** Added category-level copy button to Resources/Income/Expenses headers. Copies all items in the category with identical formatting to individual items.
 
-**December 10, 2025:** Historical amount tracking feature complete with full test coverage (74 new tests). AmountHistoryEntry type, financialHistory utilities, FinancialsService history methods, AmountHistoryModal component, and SelectedMonthContext stub for future month picker.
+**December 10, 2025:** Historical amount tracking feature complete with full test coverage (77 new tests). AmountHistoryEntry type, financialHistory utilities, FinancialsService history methods, AmountHistoryModal component, and SelectedMonthContext stub for future month picker. Auto-tracking creates history entries when adding new items with non-zero amounts.
 
 ---
 
