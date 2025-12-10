@@ -21,7 +21,7 @@
 | Feature               | Rating | Trend | Notes                                        |
 | --------------------- | ------ | ----- | -------------------------------------------- |
 | Case Management       | 92     | ↑     | Enhanced header with copy, priority toggle   |
-| Financial Operations  | 88     | ↑     | Historical amount tracking with modal        |
+| Financial Operations  | 89     | ↑     | Inline edit mode, historical tracking        |
 | Developer Enablement  | 86     | ↑     | 447 tests, testing guidelines, withToast     |
 | Premium UI/UX         | 84     | ↑     | EmptyState, AlertDialog, consistent patterns |
 | Data Portability      | 82     | ↑     | AVS import with update capability            |
@@ -34,7 +34,7 @@
 | Dashboard & Insights  | 70     | →     | Framework ready                              |
 
 **Average Rating:** 82.4/100  
-**Test Status:** 447/447 passing (100%)
+**Test Status:** 450/450 passing (100%)
 
 ---
 
@@ -201,20 +201,23 @@ Phase 3 Cases domain refactor completed November 2, 2025. Bulk actions added Dec
 
 **December 5, 2025:** CaseDetails header enhanced with application date, phone, and email (all with click-to-copy). Priority toggle star button added. Alerts indicator moved to right side with action buttons.
 
+**December 10, 2025:** Notes button moved from floating bottom-left to header next to alerts. Alerts badge redesigned as overlay with count (amber) or green checkmark when all resolved.
+
 ---
 
 ## Financial Operations Suite
 
 ### Implementation Snapshot
 
-**Rating: 88/100** _(Updated December 10, 2025)_
+**Rating: 89/100** _(Updated December 10, 2025)_
 
 Financial modules (resources, income, expenses) leverage dedicated components and hooks (`useFinancialItemFlow`, `FinancialItemCard`) with inline editing, validation, and autosave integration. Verification metadata and frequency handling cover core program requirements.
 
-**December 10, 2025:** Added historical amount tracking with `AmountHistoryModal` - track how financial item amounts change over time with dated entries and per-entry verification sources.
+**December 10, 2025:** Added historical amount tracking with `AmountHistoryModal` and inline edit mode that swaps card display to form view with edit button trigger.
 
 ### Strengths
 
+- **Inline Edit Mode**: Edit button swaps card display to full form; verification status and source in two-column layout at bottom
 - **Historical Amount Tracking**: History button on Amount field opens modal showing chronological amount entries with Start Date, End Date, Amount, and Verification Source
 - **Auto-Tracking**: Quick edits automatically create history entries with 1st of current month as start date; previous ongoing entries auto-close
 - **Per-Entry Verification**: Each historical amount can have its own verification source (e.g., "Bank Statement 05/2025")
@@ -259,7 +262,7 @@ Financial modules (resources, income, expenses) leverage dedicated components an
 
 **December 5, 2025:** Added category-level copy button to Resources/Income/Expenses headers. Copies all items in the category with identical formatting to individual items.
 
-**December 10, 2025:** Historical amount tracking feature complete with full test coverage (77 new tests). AmountHistoryEntry type, financialHistory utilities, FinancialsService history methods, AmountHistoryModal component, and SelectedMonthContext stub for future month picker. Auto-tracking creates history entries when adding new items with non-zero amounts.
+**December 10, 2025:** Historical amount tracking feature complete with full test coverage (77 new tests). AmountHistoryEntry type, financialHistory utilities, FinancialsService history methods, AmountHistoryModal component, and SelectedMonthContext stub for future month picker. Auto-tracking creates history entries when adding new items with non-zero amounts. Inline edit mode refactored to swap card display to form (no more chevron/accordion), edit button in floating actions, verification status dropdown always visible in form.
 
 ---
 

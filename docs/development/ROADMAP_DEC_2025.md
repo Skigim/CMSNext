@@ -85,6 +85,9 @@
 #### Features
 
 - [x] Historical financial tracking (amount history modal with dated entries + verification per entry)
+- [x] Financial card inline edit mode (swap card display to form, edit button in floating actions)
+- [x] Notes button moved to case header (next to alerts)
+- [x] Alerts badge overlay (count or green checkmark when all resolved)
 
 #### Refactoring & Polish
 
