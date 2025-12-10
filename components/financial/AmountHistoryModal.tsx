@@ -54,18 +54,26 @@ const emptyFormData: EntryFormData = {
   verificationSource: "",
 };
 
-function formatDateForInput(isoDate: string | null | undefined): string {
-  if (!isoDate) return "";
-  const date = new Date(isoDate);
-  if (Number.isNaN(date.getTime())) return "";
-  return date.toISOString().split("T")[0];
+function formatDateForInput(dateStr: string | null | undefined): string {
+  if (!dateStr) return "";
+  // If it's already YYYY-MM-DD format, return as-is
+  if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+    return dateStr;
+  }
+  // If it's an ISO string, extract the date part
+  if (dateStr.includes('T')) {
+    return dateStr.split('T')[0];
+  }
+  return dateStr;
 }
 
 function parseDateInput(dateStr: string): string {
   if (!dateStr) return "";
-  const date = new Date(dateStr + "T00:00:00.000Z");
-  if (Number.isNaN(date.getTime())) return "";
-  return date.toISOString();
+  // Validate format
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+    return "";
+  }
+  return dateStr;
 }
 
 export function AmountHistoryModal({

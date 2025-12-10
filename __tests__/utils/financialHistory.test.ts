@@ -58,9 +58,9 @@ describe("financialHistory utilities", () => {
     const entry: AmountHistoryEntry = {
       id: "1",
       amount: 1000,
-      startDate: "2025-06-01T00:00:00.000Z",
-      endDate: "2025-06-30T23:59:59.999Z",
-      createdAt: "2025-06-01T00:00:00.000Z",
+      startDate: "2025-06-01",
+      endDate: "2025-06-30",
+      createdAt: "2025-06-01",
     };
 
     it("returns true for date within range", () => {
@@ -92,9 +92,9 @@ describe("financialHistory utilities", () => {
       const ongoingEntry: AmountHistoryEntry = {
         id: "2",
         amount: 2000,
-        startDate: "2025-06-01T00:00:00.000Z",
+        startDate: "2025-06-01",
         endDate: null,
-        createdAt: "2025-06-01T00:00:00.000Z",
+        createdAt: "2025-06-01",
       };
       expect(isDateInEntryRange(ongoingEntry, new Date("2025-12-15"))).toBe(true);
     });
@@ -124,9 +124,9 @@ describe("financialHistory utilities", () => {
           {
             id: "1",
             amount: 1000,
-            startDate: "2025-06-01T00:00:00.000Z",
+            startDate: "2025-06-01",
             endDate: null,
-            createdAt: "2025-06-01T00:00:00.000Z",
+            createdAt: "2025-06-01",
           },
         ],
       };
@@ -140,16 +140,16 @@ describe("financialHistory utilities", () => {
           {
             id: "1",
             amount: 1000,
-            startDate: "2025-05-01T00:00:00.000Z",
-            endDate: "2025-05-31T00:00:00.000Z",
-            createdAt: "2025-05-01T00:00:00.000Z",
+            startDate: "2025-05-01",
+            endDate: "2025-05-31",
+            createdAt: "2025-05-01",
           },
           {
             id: "2",
             amount: 1500,
-            startDate: "2025-06-01T00:00:00.000Z",
+            startDate: "2025-06-01",
             endDate: null,
-            createdAt: "2025-06-01T00:00:00.000Z",
+            createdAt: "2025-06-01",
           },
         ],
       };
@@ -164,9 +164,9 @@ describe("financialHistory utilities", () => {
           {
             id: "1",
             amount: 1000,
-            startDate: "2025-06-01T00:00:00.000Z",
-            endDate: "2025-06-30T00:00:00.000Z",
-            createdAt: "2025-06-01T00:00:00.000Z",
+            startDate: "2025-06-01",
+            endDate: "2025-06-30",
+            createdAt: "2025-06-01",
           },
         ],
       };
@@ -191,9 +191,9 @@ describe("financialHistory utilities", () => {
       const entry: AmountHistoryEntry = {
         id: "1",
         amount: 1000,
-        startDate: "2025-06-01T00:00:00.000Z",
+        startDate: "2025-06-01",
         endDate: null,
-        createdAt: "2025-06-01T00:00:00.000Z",
+        createdAt: "2025-06-01",
       };
       const itemWithHistory = { ...baseItem, amountHistory: [entry] };
       expect(getEntryForMonth(itemWithHistory, new Date("2025-06-15"))).toEqual(entry);
@@ -203,9 +203,9 @@ describe("financialHistory utilities", () => {
   describe("sortHistoryEntries", () => {
     it("sorts entries by startDate in descending order (most recent first)", () => {
       const entries: AmountHistoryEntry[] = [
-        { id: "1", amount: 100, startDate: "2025-04-01T00:00:00.000Z", createdAt: "" },
-        { id: "2", amount: 200, startDate: "2025-06-01T00:00:00.000Z", createdAt: "" },
-        { id: "3", amount: 300, startDate: "2025-05-01T00:00:00.000Z", createdAt: "" },
+        { id: "1", amount: 100, startDate: "2025-04-01", createdAt: "" },
+        { id: "2", amount: 200, startDate: "2025-06-01", createdAt: "" },
+        { id: "3", amount: 300, startDate: "2025-05-01", createdAt: "" },
       ];
 
       const sorted = sortHistoryEntries(entries);
@@ -216,8 +216,8 @@ describe("financialHistory utilities", () => {
 
     it("does not mutate the original array", () => {
       const entries: AmountHistoryEntry[] = [
-        { id: "1", amount: 100, startDate: "2025-04-01T00:00:00.000Z", createdAt: "" },
-        { id: "2", amount: 200, startDate: "2025-06-01T00:00:00.000Z", createdAt: "" },
+        { id: "1", amount: 100, startDate: "2025-04-01", createdAt: "" },
+        { id: "2", amount: 200, startDate: "2025-06-01", createdAt: "" },
       ];
 
       const sorted = sortHistoryEntries(entries);
@@ -229,7 +229,7 @@ describe("financialHistory utilities", () => {
   describe("createHistoryEntry", () => {
     beforeEach(() => {
       vi.useFakeTimers();
-      vi.setSystemTime(new Date("2025-06-15T12:00:00.000Z"));
+      vi.setSystemTime(new Date("2025-06-15"));
     });
 
     it("creates entry with provided amount and default startDate", () => {
@@ -241,16 +241,16 @@ describe("financialHistory utilities", () => {
     });
 
     it("uses provided startDate", () => {
-      const entry = createHistoryEntry(1500, "2025-05-01T00:00:00.000Z");
-      expect(entry.startDate).toBe("2025-05-01T00:00:00.000Z");
+      const entry = createHistoryEntry(1500, "2025-05-01");
+      expect(entry.startDate).toBe("2025-05-01");
     });
 
     it("includes optional endDate and verificationSource", () => {
       const entry = createHistoryEntry(1500, undefined, {
-        endDate: "2025-06-30T00:00:00.000Z",
+        endDate: "2025-06-30",
         verificationSource: "Bank Statement",
       });
-      expect(entry.endDate).toBe("2025-06-30T00:00:00.000Z");
+      expect(entry.endDate).toBe("2025-06-30");
       expect(entry.verificationSource).toBe("Bank Statement");
     });
   });
@@ -261,13 +261,13 @@ describe("financialHistory utilities", () => {
         {
           id: "1",
           amount: 1000,
-          startDate: "2025-05-01T00:00:00.000Z",
+          startDate: "2025-05-01",
           endDate: null,
-          createdAt: "2025-05-01T00:00:00.000Z",
+          createdAt: "2025-05-01",
         },
       ];
 
-      const updated = closePreviousOngoingEntry(history, "2025-06-01T00:00:00.000Z");
+      const updated = closePreviousOngoingEntry(history, "2025-06-01");
       expect(updated[0].endDate).toContain("2025-05-31");
     });
 
@@ -276,18 +276,18 @@ describe("financialHistory utilities", () => {
         {
           id: "1",
           amount: 1000,
-          startDate: "2025-05-01T00:00:00.000Z",
-          endDate: "2025-05-15T00:00:00.000Z",
-          createdAt: "2025-05-01T00:00:00.000Z",
+          startDate: "2025-05-01",
+          endDate: "2025-05-15",
+          createdAt: "2025-05-01",
         },
       ];
 
-      const updated = closePreviousOngoingEntry(history, "2025-06-01T00:00:00.000Z");
-      expect(updated[0].endDate).toBe("2025-05-15T00:00:00.000Z");
+      const updated = closePreviousOngoingEntry(history, "2025-06-01");
+      expect(updated[0].endDate).toBe("2025-05-15");
     });
 
     it("returns empty array for empty input", () => {
-      expect(closePreviousOngoingEntry([], "2025-06-01T00:00:00.000Z")).toEqual([]);
+      expect(closePreviousOngoingEntry([], "2025-06-01")).toEqual([]);
     });
   });
 
@@ -307,9 +307,9 @@ describe("financialHistory utilities", () => {
       const newEntry: AmountHistoryEntry = {
         id: "entry-1",
         amount: 1000,
-        startDate: "2025-06-01T00:00:00.000Z",
+        startDate: "2025-06-01",
         endDate: null,
-        createdAt: "2025-06-01T00:00:00.000Z",
+        createdAt: "2025-06-01",
       };
 
       const updated = addHistoryEntryToItem(item, newEntry);
@@ -327,9 +327,9 @@ describe("financialHistory utilities", () => {
           {
             id: "old-entry",
             amount: 800,
-            startDate: "2025-05-01T00:00:00.000Z",
+            startDate: "2025-05-01",
             endDate: null,
-            createdAt: "2025-05-01T00:00:00.000Z",
+            createdAt: "2025-05-01",
           },
         ],
       };
@@ -337,9 +337,9 @@ describe("financialHistory utilities", () => {
       const newEntry: AmountHistoryEntry = {
         id: "new-entry",
         amount: 1000,
-        startDate: "2025-06-01T00:00:00.000Z",
+        startDate: "2025-06-01",
         endDate: null,
-        createdAt: "2025-06-01T00:00:00.000Z",
+        createdAt: "2025-06-01",
       };
 
       const updated = addHistoryEntryToItem(item, newEntry);
@@ -355,7 +355,7 @@ describe("financialHistory utilities", () => {
     });
 
     it("formats valid ISO date", () => {
-      const formatted = formatHistoryDate("2025-06-15T00:00:00.000Z");
+      const formatted = formatHistoryDate("2025-06-15");
       expect(formatted).toContain("Jun");
       expect(formatted).toContain("15");
       expect(formatted).toContain("2025");

@@ -168,7 +168,7 @@ describe("AmountHistoryModal", () => {
       expect(mockOnAddEntry).toHaveBeenCalledTimes(1);
       expect(mockOnAddEntry).toHaveBeenCalledWith({
         amount: 750,
-        startDate: "2024-12-01T00:00:00.000Z",
+        startDate: "2024-12-01",
         endDate: null,
         verificationSource: "Direct Deposit Statement",
       });
