@@ -2,7 +2,7 @@
 
 > Living index of marketable features, their current implementation status, quality, and future investments.
 
-**Last Updated:** December 8, 2025
+**Last Updated:** December 10, 2025
 
 ## How to Use This Document
 
@@ -21,9 +21,9 @@
 | Feature               | Rating | Trend | Notes                                        |
 | --------------------- | ------ | ----- | -------------------------------------------- |
 | Case Management       | 92     | ↑     | Enhanced header with copy, priority toggle   |
-| Developer Enablement  | 84     | ↑     | 355 tests, CopyButton unified, withToast     |
+| Financial Operations  | 88     | ↑     | Historical amount tracking with modal        |
+| Developer Enablement  | 86     | ↑     | 447 tests, testing guidelines, withToast     |
 | Premium UI/UX         | 84     | ↑     | EmptyState, AlertDialog, consistent patterns |
-| Financial Operations  | 86     | ↑     | AVS duplicate detection, preview checkboxes  |
 | Data Portability      | 82     | ↑     | AVS import with update capability            |
 | Local-First Storage   | 80     | →     | Production-ready                             |
 | Configurable Statuses | 78     | →     | Recently stabilized                          |
@@ -33,8 +33,8 @@
 | Feature Flags         | 72     | →     | In-memory only                               |
 | Dashboard & Insights  | 70     | →     | Framework ready                              |
 
-**Average Rating:** 80.4/100  
-**Test Status:** 355/355 passing (100%)
+**Average Rating:** 82.4/100  
+**Test Status:** 447/447 passing (100%)
 
 ---
 
@@ -207,19 +207,22 @@ Phase 3 Cases domain refactor completed November 2, 2025. Bulk actions added Dec
 
 ### Implementation Snapshot
 
-**Rating: 82/100** _(Updated December 4, 2025)_
+**Rating: 88/100** _(Updated December 10, 2025)_
 
 Financial modules (resources, income, expenses) leverage dedicated components and hooks (`useFinancialItemFlow`, `FinancialItemCard`) with inline editing, validation, and autosave integration. Verification metadata and frequency handling cover core program requirements.
 
-**December 4, 2025:** Financial cards now feature click-to-copy (using Case Summary Generator format), hover-visible action buttons, and auto-save for status changes in collapsed state.
+**December 10, 2025:** Added historical amount tracking with `AmountHistoryModal` - track how financial item amounts change over time with dated entries and per-entry verification sources.
 
 ### Strengths
 
+- **Historical Amount Tracking**: History button on Amount field opens modal showing chronological amount entries with Start Date, End Date, Amount, and Verification Source
+- **Auto-Tracking**: Quick edits automatically create history entries with 1st of current month as start date; previous ongoing entries auto-close
+- **Per-Entry Verification**: Each historical amount can have its own verification source (e.g., "Bank Statement 05/2025")
 - **Click-to-Copy**: Copy button on each financial card formats item using Case Summary Generator conventions
 - **Category Copy**: Header copy button copies all items in Resources/Income/Expenses category
 - **Hover Actions**: Copy and delete buttons appear on card hover, always visible when expanded
 - **Auto-Save Status**: Status dropdown works in collapsed state with immediate auto-save
-- **Service Architecture**: FinancialsService (226 lines) handles all financial CRUD operations with category-based management
+- **Service Architecture**: FinancialsService (441 lines) handles all financial CRUD operations including history entry management
 - **Hook Layer**: `useFinancialItemFlow` (165 lines) provides React integration with toast feedback
 - **Inline Editing**: `FinancialItemCard` keeps UX fast with state managed by `useFinancialItemCardState`
 - **Category Separation**: Clear separation of resources, income, and expenses
@@ -229,21 +232,25 @@ Financial modules (resources, income, expenses) leverage dedicated components an
 ### Gaps / Risks
 
 - Budget rollups and scenario planning not yet implemented
-- No audit trail for financial changes
+- Month picker for historical amounts is stubbed (SelectedMonthContext) - currently shows current month
 - Table/list UX can be heavy on large datasets
 
 ### Expansion Opportunities
 
-- Introduce changelog per financial item for historical tracking
+- Implement month picker to view historical amounts for past months
 - Enhance bulk edit capabilities
 - Surface contextual insights within a case
 - AVS Import could support additional file formats
+- Amount trend visualization (chart showing amount changes over time)
 
 ### Coverage & Telemetry
 
 - RTL suites target FinancialItemCard, case financial forms, and verification flows
 - `FinancialItemCardActions` tests cover copy button and clipboard integration
 - `useFinancialItemFlow` tested through component behavior
+- `financialHistory.test.ts` - 32 tests for utility functions (date manipulation, entry lookup)
+- `FinancialsService.test.ts` - 24 tests for service history methods
+- `AmountHistoryModal.test.tsx` - 18 tests for modal component (rendering, CRUD, validation)
 - No dedicated telemetry yet
 
 ### Owners / Notes
@@ -251,6 +258,8 @@ Financial modules (resources, income, expenses) leverage dedicated components an
 **December 4, 2025:** Financial card UX improvements complete - hover actions, click-to-copy, auto-save status.
 
 **December 5, 2025:** Added category-level copy button to Resources/Income/Expenses headers. Copies all items in the category with identical formatting to individual items.
+
+**December 10, 2025:** Historical amount tracking feature complete with full test coverage (74 new tests). AmountHistoryEntry type, financialHistory utilities, FinancialsService history methods, AmountHistoryModal component, and SelectedMonthContext stub for future month picker.
 
 ---
 

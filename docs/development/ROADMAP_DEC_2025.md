@@ -1,10 +1,10 @@
 # CMSNext Roadmap - December 2025
 
-**Report Date:** December 8, 2025  
+**Report Date:** December 10, 2025  
 **Branch:** main (stable)  
-**Tests:** 355/355 passing ✅  
+**Tests:** 447/447 passing ✅  
 **Build:** Production-ready ✅  
-**Average Feature Rating:** 80/100
+**Average Feature Rating:** 82/100
 
 ---
 
@@ -86,11 +86,11 @@
 
 - [ ] Case timeline view (activity log visualization)
 - [ ] Dashboard widget: Cases by age distribution
-- [ ] Historical financial tracking (amount history modal with dated entries + verification per entry)
+- [x] Historical financial tracking (amount history modal with dated entries + verification per entry)
 
 #### Refactoring & Polish
 
-- [ ] Add unit tests for Week 2 features
+- [x] Add unit tests for Week 2 features (74 new tests: financialHistory, FinancialsService, AmountHistoryModal)
 - [ ] Accessibility audit (jest-axe) for new components
 
 ---
@@ -131,9 +131,9 @@
 | ----------------------------- | ----- | ------ | ------ | ------ | ------ |
 | Hooks over 200 lines          | 4     | 0 ✅   | 0      | 0      | 0      |
 | Components with anti-patterns | 1     | 0 ✅   | 0      | 0      | 0      |
-| Test count                    | 253   | 355 ✅ | 365    | 375    | 375+   |
-| New features shipped          | -     | 18 ✅  | 4      | 4      | 26     |
-| Average feature rating        | 76.5  | 80 ✅  | 81     | 82     | 82+    |
+| Test count                    | 253   | 355 ✅ | 447 ✅ | 475    | 475+   |
+| New features shipped          | -     | 18 ✅  | 1      | 4      | 23     |
+| Average feature rating        | 76.5  | 80 ✅  | 82 ✅  | 83     | 83+    |
 
 ---
 
