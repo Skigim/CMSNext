@@ -1,7 +1,5 @@
-import { ChevronDown } from "lucide-react";
 import { Card, CardContent, CardHeader } from "../ui/card";
-import { Button } from "../ui/button";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "../ui/collapsible";
+import { Collapsible, CollapsibleContent } from "../ui/collapsible";
 import type { AmountHistoryEntry, FinancialItem, CaseCategory } from "../../types/case";
 import { FinancialItemSaveIndicator } from "./FinancialItemSaveIndicator";
 import { FinancialItemCardHeader } from "./FinancialItemCardHeader";
@@ -124,6 +122,7 @@ export function FinancialItemCard({
           >
             <FinancialItemCardActions
               confirmingDelete={confirmingDelete}
+              onEditClick={canToggle ? handleCardClick : undefined}
               onDeleteClick={handleDeleteClick}
               onDeleteConfirm={handleDeleteConfirm}
               item={item}
@@ -164,25 +163,6 @@ export function FinancialItemCard({
             />
           </div>
         </CardHeader>
-
-        {/* Chevron at bottom center */}
-        {canToggle && (
-          <div className="flex justify-center pb-1">
-            <CollapsibleTrigger asChild>
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                aria-expanded={isEditing}
-                aria-label={isEditing ? "Collapse financial item" : "Expand financial item"}
-                className="h-6 w-10 transition-transform data-[state=open]:rotate-180"
-                onClick={event => event.stopPropagation()}
-              >
-                <ChevronDown className="h-4 w-4" />
-              </Button>
-            </CollapsibleTrigger>
-          </div>
-        )}
 
         <CollapsibleContent className="overflow-hidden data-[state=closed]:animate-accordion-up data-[state=open]:animate-accordion-down">
           <CardContent className="bg-muted/30 p-0">

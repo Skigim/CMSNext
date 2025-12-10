@@ -1,5 +1,5 @@
 import { Button } from "../ui/button";
-import { Check, Copy, Trash2, X } from "lucide-react";
+import { Check, Copy, Pencil, Trash2, X } from "lucide-react";
 import type { CaseCategory, FinancialItem } from "../../types/case";
 import { clickToCopy } from "../../utils/clipboard";
 import {
@@ -12,6 +12,7 @@ interface FinancialItemCardActionsProps {
   confirmingDelete: boolean;
   onDeleteClick: () => void;
   onDeleteConfirm: () => void;
+  onEditClick?: () => void;
   item: FinancialItem;
   itemType: CaseCategory;
 }
@@ -33,6 +34,7 @@ export function FinancialItemCardActions({
   confirmingDelete,
   onDeleteClick,
   onDeleteConfirm,
+  onEditClick,
   item,
   itemType,
 }: FinancialItemCardActionsProps) {
@@ -77,6 +79,20 @@ export function FinancialItemCardActions({
 
   return (
     <div className="flex gap-1">
+      {onEditClick && (
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={event => {
+            event.stopPropagation();
+            onEditClick();
+          }}
+          aria-label="Edit financial item"
+          className="h-8 w-8 text-muted-foreground hover:bg-muted hover:text-foreground"
+        >
+          <Pencil className="h-4 w-4" aria-hidden="true" />
+        </Button>
+      )}
       <Button
         variant="ghost"
         size="icon"
