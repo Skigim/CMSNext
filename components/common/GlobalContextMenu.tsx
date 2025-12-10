@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useState, type ReactNode } from "react";
+import { useCallback, useMemo, useState, type ReactNode } from "react";
 import {
   ContextMenu,
   ContextMenuContent,
@@ -13,6 +13,14 @@ import { Copy, ClipboardPaste, Scissors, RotateCcw, RotateCw } from "lucide-reac
 
 interface GlobalContextMenuProps {
   children: ReactNode;
+}
+
+/**
+ * Detect if the user is on macOS
+ */
+function isMacOS(): boolean {
+  if (typeof navigator === "undefined") return false;
+  return /Mac|iPod|iPhone|iPad/.test(navigator.platform);
 }
 
 /**
@@ -30,6 +38,20 @@ interface GlobalContextMenuProps {
  */
 export function GlobalContextMenu({ children }: GlobalContextMenuProps) {
   const [hasSelection, setHasSelection] = useState(false);
+
+  // Platform-aware keyboard shortcuts
+  const shortcuts = useMemo(() => {
+    const isMac = isMacOS();
+    const mod = isMac ? "⌘" : "Ctrl+";
+    const shift = isMac ? "⇧" : "Shift+";
+    return {
+      undo: `${mod}Z`,
+      redo: isMac ? `${shift}${mod}Z` : `${mod}Y`,
+      cut: `${mod}X`,
+      copy: `${mod}C`,
+      paste: `${mod}V`,
+    };
+  }, []);
 
   const handleOpenChange = useCallback((open: boolean) => {
     if (open) {
@@ -84,28 +106,28 @@ export function GlobalContextMenu({ children }: GlobalContextMenuProps) {
         <ContextMenuItem onClick={handleUndo}>
           <RotateCcw className="mr-2 h-4 w-4" />
           Undo
-          <ContextMenuShortcut>⌘Z</ContextMenuShortcut>
+          <ContextMenuShortcut>{shortcuts.undo}</ContextMenuShortcut>
         </ContextMenuItem>
         <ContextMenuItem onClick={handleRedo}>
           <RotateCw className="mr-2 h-4 w-4" />
           Redo
-          <ContextMenuShortcut>⇧⌘Z</ContextMenuShortcut>
+          <ContextMenuShortcut>{shortcuts.redo}</ContextMenuShortcut>
         </ContextMenuItem>
         <ContextMenuSeparator />
         <ContextMenuItem onClick={handleCut} disabled={!hasSelection}>
           <Scissors className="mr-2 h-4 w-4" />
           Cut
-          <ContextMenuShortcut>⌘X</ContextMenuShortcut>
+          <ContextMenuShortcut>{shortcuts.cut}</ContextMenuShortcut>
         </ContextMenuItem>
         <ContextMenuItem onClick={handleCopy} disabled={!hasSelection}>
           <Copy className="mr-2 h-4 w-4" />
           Copy
-          <ContextMenuShortcut>⌘C</ContextMenuShortcut>
+          <ContextMenuShortcut>{shortcuts.copy}</ContextMenuShortcut>
         </ContextMenuItem>
         <ContextMenuItem onClick={handlePaste}>
           <ClipboardPaste className="mr-2 h-4 w-4" />
           Paste
-          <ContextMenuShortcut>⌘V</ContextMenuShortcut>
+          <ContextMenuShortcut>{shortcuts.paste}</ContextMenuShortcut>
         </ContextMenuItem>
       </ContextMenuContent>
     </ContextMenu>
