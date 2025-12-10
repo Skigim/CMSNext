@@ -19,6 +19,19 @@ import { useNotes } from "../../hooks/useNotes";
 import { formatUSPhone } from "@/utils/phoneFormatter";
 import { formatDateForDisplay } from "@/utils/dateFormatting";
 
+/**
+ * Calculate 90 days from a date and format as tooltip text
+ */
+function get90DayTooltip(dateStr: string): string {
+  const date = new Date(dateStr);
+  if (isNaN(date.getTime())) return "";
+  date.setDate(date.getDate() + 90);
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  const year = date.getFullYear();
+  return `90 Days = ${month}/${day}/${year}`;
+}
+
 interface CaseDetailsProps {
   case: StoredCase;
   onBack: () => void;
@@ -138,6 +151,7 @@ export function CaseDetails({
                     value={caseData.caseRecord.applicationDate}
                     displayText={formatDateForDisplay(caseData.caseRecord.applicationDate)}
                     label="App Date"
+                    tooltip={get90DayTooltip(caseData.caseRecord.applicationDate)}
                     className="text-muted-foreground"
                     labelClassName="text-sm font-medium"
                     buttonClassName={cn(interactiveHoverClasses, "text-foreground")}
