@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect } from 'react';
-import { FinancialItem, NewFinancialItemData, CaseCategory, StoredFinancialItem } from '@/types/case';
+import { AmountHistoryEntry, FinancialItem, NewFinancialItemData, CaseCategory, StoredFinancialItem } from '@/types/case';
 import { useDataManagerSafe } from '@/contexts/DataManagerContext';
 import { useFileStorageDataChange } from '@/contexts/FileStorageContext';
 import { toast } from 'sonner';
@@ -33,6 +33,24 @@ interface UseFinancialItemsReturn {
   createFinancialItem: (caseId: string, category: CaseCategory, data: NewFinancialItemData) => Promise<StoredFinancialItem | null>;
   updateFinancialItem: (caseId: string, category: CaseCategory, itemId: string, data: Partial<NewFinancialItemData>) => Promise<StoredFinancialItem | null>;
   deleteFinancialItem: (caseId: string, category: CaseCategory, itemId: string) => Promise<boolean>;
+  
+  // Amount history operations
+  addAmountHistoryEntry: (
+    category: CaseCategory,
+    itemId: string,
+    entry: Omit<AmountHistoryEntry, "id" | "createdAt">
+  ) => Promise<StoredFinancialItem | null>;
+  updateAmountHistoryEntry: (
+    category: CaseCategory,
+    itemId: string,
+    entryId: string,
+    updates: Partial<Omit<AmountHistoryEntry, "id" | "createdAt">>
+  ) => Promise<StoredFinancialItem | null>;
+  deleteAmountHistoryEntry: (
+    category: CaseCategory,
+    itemId: string,
+    entryId: string
+  ) => Promise<StoredFinancialItem | null>;
   
   // State
   isLoading: boolean;
@@ -205,6 +223,110 @@ export function useFinancialItems(caseId?: string): UseFinancialItemsReturn {
     }
   }, [dataManager, caseId, refreshItems, setError]);
 
+  // Amount History Entry operations
+  const addAmountHistoryEntry = useCallback(async (
+    category: CaseCategory,
+    itemId: string,
+    entry: Omit<AmountHistoryEntry, "id" | "createdAt">
+  ): Promise<StoredFinancialItem | null> => {
+    if (!dataManager || !caseId) {
+      const errorMsg = 'Data storage is not available';
+      setError(errorMsg);
+      toast.error(errorMsg);
+      return null;
+    }
+
+    try {
+      const updatedItem = await withToast(
+        () => dataManager.addAmountHistoryEntry(caseId, category, itemId, entry),
+        {
+          loading: 'Adding history entry...',
+          success: 'History entry added',
+          error: 'Failed to add history entry',
+          setError,
+          setLoading: setIsLoading,
+        }
+      );
+      
+      if (updatedItem) {
+        await refreshItems();
+      }
+      
+      return updatedItem;
+    } catch {
+      return null;
+    }
+  }, [dataManager, caseId, refreshItems, setError]);
+
+  const updateAmountHistoryEntry = useCallback(async (
+    category: CaseCategory,
+    itemId: string,
+    entryId: string,
+    updates: Partial<Omit<AmountHistoryEntry, "id" | "createdAt">>
+  ): Promise<StoredFinancialItem | null> => {
+    if (!dataManager || !caseId) {
+      const errorMsg = 'Data storage is not available';
+      setError(errorMsg);
+      toast.error(errorMsg);
+      return null;
+    }
+
+    try {
+      const updatedItem = await withToast(
+        () => dataManager.updateAmountHistoryEntry(caseId, category, itemId, entryId, updates),
+        {
+          loading: 'Updating history entry...',
+          success: 'History entry updated',
+          error: 'Failed to update history entry',
+          setError,
+          setLoading: setIsLoading,
+        }
+      );
+      
+      if (updatedItem) {
+        await refreshItems();
+      }
+      
+      return updatedItem;
+    } catch {
+      return null;
+    }
+  }, [dataManager, caseId, refreshItems, setError]);
+
+  const deleteAmountHistoryEntry = useCallback(async (
+    category: CaseCategory,
+    itemId: string,
+    entryId: string
+  ): Promise<StoredFinancialItem | null> => {
+    if (!dataManager || !caseId) {
+      const errorMsg = 'Data storage is not available';
+      setError(errorMsg);
+      toast.error(errorMsg);
+      return null;
+    }
+
+    try {
+      const updatedItem = await withToast(
+        () => dataManager.deleteAmountHistoryEntry(caseId, category, itemId, entryId),
+        {
+          loading: 'Deleting history entry...',
+          success: 'History entry deleted',
+          error: 'Failed to delete history entry',
+          setError,
+          setLoading: setIsLoading,
+        }
+      );
+      
+      if (updatedItem) {
+        await refreshItems();
+      }
+      
+      return updatedItem;
+    } catch {
+      return null;
+    }
+  }, [dataManager, caseId, refreshItems, setError]);
+
   return {
     // Data
     items,
@@ -224,6 +346,11 @@ export function useFinancialItems(caseId?: string): UseFinancialItemsReturn {
     createFinancialItem,
     updateFinancialItem,
     deleteFinancialItem,
+    
+    // Amount history operations
+    addAmountHistoryEntry,
+    updateAmountHistoryEntry,
+    deleteAmountHistoryEntry,
     
     // State
     isLoading,
