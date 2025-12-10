@@ -2,6 +2,11 @@ import { memo, useCallback } from "react";
 import { Copy } from "lucide-react";
 import { clickToCopy } from "@/utils/clipboard";
 import { cn, interactiveHoverClasses } from "@/components/ui/utils";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 export type CopyButtonVariant = "muted" | "plain";
 
@@ -26,6 +31,8 @@ export interface CopyButtonProps {
   interactive?: boolean;
   /** Use monospace font for the value */
   mono?: boolean;
+  /** Optional tooltip text shown on hover */
+  tooltip?: string;
   /** Container className */
   className?: string;
   /** Label className */
@@ -70,6 +77,7 @@ export const CopyButton = memo(function CopyButton({
   variant = "muted",
   interactive = true,
   mono = false,
+  tooltip,
   className,
   labelClassName,
   buttonClassName,
@@ -158,6 +166,18 @@ export const CopyButton = memo(function CopyButton({
     : String(display);
   const copyAriaLabel = ariaLabel || `Copy ${label || "text"} ${value}`;
 
+  const buttonElement = (
+    <button
+      type="button"
+      onClick={handleCopy}
+      className={baseButtonClasses}
+      aria-label={copyAriaLabel}
+    >
+      <span className={textClasses}>{display}</span>
+      <Copy aria-hidden className={iconClasses} />
+    </button>
+  );
+
   return (
     <span className={wrapperClasses}>
       {labelWithSuffix && (
@@ -172,15 +192,14 @@ export const CopyButton = memo(function CopyButton({
         </span>
       )}
       <span className="sr-only">{accessibleLabel}</span>
-      <button
-        type="button"
-        onClick={handleCopy}
-        className={baseButtonClasses}
-        aria-label={copyAriaLabel}
-      >
-        <span className={textClasses}>{display}</span>
-        <Copy aria-hidden className={iconClasses} />
-      </button>
+      {tooltip ? (
+        <Tooltip>
+          <TooltipTrigger asChild>{buttonElement}</TooltipTrigger>
+          <TooltipContent>{tooltip}</TooltipContent>
+        </Tooltip>
+      ) : (
+        buttonElement
+      )}
     </span>
   );
 });
