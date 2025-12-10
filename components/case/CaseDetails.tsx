@@ -179,6 +179,9 @@ export function CaseDetails({
             </div>
           </div>
           <div className="flex gap-2 items-start flex-wrap">
+            {/* Notes drawer trigger */}
+            <NotesDrawer caseId={caseData.id} className={interactiveHoverClasses} />
+            
             {/* Alerts indicator */}
             {totalAlerts > 0 ? (
               <>
@@ -289,9 +292,6 @@ export function CaseDetails({
           </TabsContent>
         </Tabs>
       </div>
-
-      {/* Notes Bottom Drawer */}
-      <NotesDrawer caseId={caseData.id} />
 
       <CaseAlertsDrawer
           alerts={alerts}

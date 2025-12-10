@@ -14,9 +14,11 @@ import { useNotes } from "@/hooks/useNotes";
 interface NotesDrawerProps {
   caseId: string;
   className?: string;
+  /** Custom trigger element - if not provided, uses default button */
+  trigger?: React.ReactNode;
 }
 
-export function NotesDrawer({ caseId, className }: NotesDrawerProps) {
+export function NotesDrawer({ caseId, className, trigger }: NotesDrawerProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [previousCaseId, setPreviousCaseId] = useState(caseId);
   const { notes } = useNotes(caseId);
@@ -31,17 +33,21 @@ export function NotesDrawer({ caseId, className }: NotesDrawerProps) {
     }
   }, [caseId, previousCaseId]);
 
+  const defaultTrigger = (
+    <Button
+      variant="outline"
+      size="sm"
+      className={className}
+    >
+      <StickyNote className="h-4 w-4 mr-2" />
+      <span>Notes{noteCount > 0 ? ` (${noteCount})` : ""}</span>
+    </Button>
+  );
+
   return (
     <Drawer open={isOpen} onOpenChange={setIsOpen}>
-      {/* Fixed trigger button at bottom-left to avoid toast overlap */}
       <DrawerTrigger asChild>
-        <Button
-          variant="outline"
-          className={`fixed bottom-8 left-8 z-40 gap-2 shadow-lg ${className ?? ""}`}
-        >
-          <StickyNote className="h-4 w-4" />
-          <span>Notes{noteCount > 0 ? ` (${noteCount})` : ""}</span>
-        </Button>
+        {trigger ?? defaultTrigger}
       </DrawerTrigger>
 
       <DrawerContent className="max-h-[85vh]">
