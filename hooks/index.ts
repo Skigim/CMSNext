@@ -33,6 +33,10 @@ export type { NavigationLock } from './useNavigationLock';
 // Case list preferences
 export { useCaseListPreferences } from './useCaseListPreferences';
 
+// Alert list preferences
+export { useAlertListPreferences } from './useAlertListPreferences';
+export type { AlertFilters, AlertSortConfig, AlertListSortKey, AlertListSortDirection } from './useAlertListPreferences';
+
 // Financial item flow
 export { useFinancialItemFlow } from './useFinancialItemFlow';
 

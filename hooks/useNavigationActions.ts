@@ -9,6 +9,8 @@ const RESTRICTED_VIEWS: readonly AppView[] = ["list", "details", "form"];
 export interface FormState {
   previousView: AppView;
   returnToCaseId?: string;
+  /** Tracks which view we came from when viewing case details (for back navigation) */
+  detailsSourceView?: AppView;
 }
 
 export interface NavigationState {
@@ -51,10 +53,14 @@ export function useNavigationActions({
 
   const backToList = useCallback(() => {
     startMeasurement("navigation:backToList");
-    setCurrentView("list");
+    // If we have a tracked source view, return there; otherwise default to list
+    const targetView = formState.detailsSourceView ?? "list";
+    setCurrentView(targetView);
     setSelectedCaseId(null);
-    endMeasurement("navigation:backToList", { result: "list" });
-  }, [setCurrentView, setSelectedCaseId]);
+    // Clear the source view after navigating back
+    setFormState({ ...formState, detailsSourceView: undefined });
+    endMeasurement("navigation:backToList", { result: targetView });
+  }, [formState, setCurrentView, setFormState, setSelectedCaseId]);
 
   const backToDashboard = useCallback(() => {
     startMeasurement("navigation:backToDashboard");
@@ -66,11 +72,13 @@ export function useNavigationActions({
   const viewCase = useCallback((caseId: string) => {
     startMeasurement("navigation:viewCase", { caseId, locked: isLocked });
     if (guardCaseInteraction()) return endMeasurement("navigation:viewCase", { caseId, blocked: true });
+    // Track where we came from for back navigation
+    setFormState({ ...formState, detailsSourceView: currentView });
     setSelectedCaseId(caseId);
     setCurrentView("details");
     setSidebarOpen(false);
     endMeasurement("navigation:viewCase", { caseId, blocked: false });
-  }, [guardCaseInteraction, isLocked, setCurrentView, setSelectedCaseId, setSidebarOpen]);
+  }, [currentView, formState, guardCaseInteraction, isLocked, setCurrentView, setFormState, setSelectedCaseId, setSidebarOpen]);
 
   const editCase = useCallback((caseId: string) => {
     startMeasurement("navigation:editCase", { caseId });

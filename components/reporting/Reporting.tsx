@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import Fuse from "fuse.js";
 import {
   Card,
@@ -8,15 +8,6 @@ import {
   CardTitle,
 } from "../ui/card";
 import { Button } from "../ui/button";
-import { Input } from "../ui/input";
-import { Label } from "../ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "../ui/select";
 import {
   ArrowDown,
   ArrowUp,
@@ -46,6 +37,8 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { EmptyState } from "@/components/common/EmptyState";
+import { AlertFilters, AlertFilterBadges } from "@/components/alerts/AlertFilters";
+import { useAlertListPreferences } from "@/hooks/useAlertListPreferences";
 
 interface ReportingProps {
   alerts: AlertsIndex;
@@ -73,12 +66,13 @@ interface AlertsReportProps {
 }
 
 function AlertsReport({ alerts, onViewCase }: AlertsReportProps) {
-  const [searchTerm, setSearchTerm] = useState("");
-  const [selectedDescription, setSelectedDescription] = useState<string>("all");
-  const [sortState, setSortState] = useState<{
-    column: "description" | "client" | "due";
-    direction: "asc" | "desc";
-  }>({ column: "due", direction: "asc" });
+  const {
+    sortConfig,
+    setSortConfig,
+    filters,
+    setFilters,
+    hasActiveFilters,
+  } = useAlertListPreferences();
 
   const openAlerts = useMemo(() => filterOpenAlerts(alerts.alerts), [alerts.alerts]);
   const totalOpenAlerts = openAlerts.length;
@@ -132,14 +126,14 @@ function AlertsReport({ alerts, onViewCase }: AlertsReportProps) {
     let results = matchedOpenAlerts;
 
     // Apply description filter
-    if (selectedDescription !== "all") {
+    if (filters.description !== "all") {
       results = results.filter(alert => 
-        getAlertDisplayDescription(alert) === selectedDescription
+        getAlertDisplayDescription(alert) === filters.description
       );
     }
 
     // Apply search filter
-    const trimmed = searchTerm.trim();
+    const trimmed = filters.searchTerm.trim();
     if (trimmed) {
       if (!fuse) {
         return results;
@@ -165,16 +159,16 @@ function AlertsReport({ alerts, onViewCase }: AlertsReportProps) {
     }
 
     return results;
-  }, [fuse, matchedOpenAlerts, searchTerm, selectedDescription]);
+  }, [fuse, matchedOpenAlerts, filters.searchTerm, filters.description]);
 
   const sortedAlerts = useMemo(() => {
     const items = [...filteredAlerts];
     items.sort((a, b) => {
-      switch (sortState.column) {
+      switch (sortConfig.key) {
         case "description": {
           const aLabel = getAlertDisplayDescription(a).toLowerCase();
           const bLabel = getAlertDisplayDescription(b).toLowerCase();
-          return sortState.direction === "asc"
+          return sortConfig.direction === "asc"
             ? aLabel.localeCompare(bLabel)
             : bLabel.localeCompare(aLabel);
         }
@@ -184,11 +178,11 @@ function AlertsReport({ alerts, onViewCase }: AlertsReportProps) {
           if (aClient === bClient) {
             const aLabel = getAlertDisplayDescription(a).toLowerCase();
             const bLabel = getAlertDisplayDescription(b).toLowerCase();
-            return sortState.direction === "asc"
+            return sortConfig.direction === "asc"
               ? aLabel.localeCompare(bLabel)
               : bLabel.localeCompare(aLabel);
           }
-          return sortState.direction === "asc"
+          return sortConfig.direction === "asc"
             ? aClient.localeCompare(bClient)
             : bClient.localeCompare(aClient);
         }
@@ -196,43 +190,30 @@ function AlertsReport({ alerts, onViewCase }: AlertsReportProps) {
         default: {
           const aTime = getAlertDueTimestamp(a);
           const bTime = getAlertDueTimestamp(b);
-          const normalizedA = aTime ?? (sortState.direction === "asc" ? Number.POSITIVE_INFINITY : Number.NEGATIVE_INFINITY);
-          const normalizedB = bTime ?? (sortState.direction === "asc" ? Number.POSITIVE_INFINITY : Number.NEGATIVE_INFINITY);
-          return sortState.direction === "asc"
+          const normalizedA = aTime ?? (sortConfig.direction === "asc" ? Number.POSITIVE_INFINITY : Number.NEGATIVE_INFINITY);
+          const normalizedB = bTime ?? (sortConfig.direction === "asc" ? Number.POSITIVE_INFINITY : Number.NEGATIVE_INFINITY);
+          return sortConfig.direction === "asc"
             ? normalizedA - normalizedB
             : normalizedB - normalizedA;
         }
       }
     });
     return items;
-  }, [filteredAlerts, sortState]);
-
-  const filtersActive = searchTerm.trim().length > 0 || selectedDescription !== "all";
-
-  const handleClearFilters = () => {
-    setSearchTerm("");
-    setSelectedDescription("all");
-  };
+  }, [filteredAlerts, sortConfig]);
 
   const toggleSort = (column: "description" | "client" | "due") => {
-    setSortState(current => {
-      if (current.column === column) {
-        return {
-          column,
-          direction: current.direction === "asc" ? "desc" : "asc",
-        };
-      }
-
-      return { column, direction: "asc" };
+    setSortConfig({
+      key: column,
+      direction: sortConfig.key === column && sortConfig.direction === "asc" ? "desc" : "asc",
     });
   };
 
   const renderSortIcon = (column: "description" | "client" | "due") => {
-    if (sortState.column !== column) {
+    if (sortConfig.key !== column) {
       return <ArrowUpDown className="ml-2 h-3 w-3 text-muted-foreground" aria-hidden />;
     }
 
-    if (sortState.direction === "asc") {
+    if (sortConfig.direction === "asc") {
       return <ArrowUp className="ml-2 h-3 w-3 text-muted-foreground" aria-hidden />;
     }
 
@@ -240,11 +221,11 @@ function AlertsReport({ alerts, onViewCase }: AlertsReportProps) {
   };
 
   const getAriaSort = (column: "description" | "client" | "due"): "none" | "ascending" | "descending" => {
-    if (sortState.column !== column) {
+    if (sortConfig.key !== column) {
       return "none";
     }
 
-    return sortState.direction === "asc" ? "ascending" : "descending";
+    return sortConfig.direction === "asc" ? "ascending" : "descending";
   };
 
   const visibleAlerts = sortedAlerts;
@@ -267,50 +248,20 @@ function AlertsReport({ alerts, onViewCase }: AlertsReportProps) {
           <SummaryStat label="Unlinked" value={unlinkedAlertCount} highlight={unlinkedAlertCount > 0 ? "danger" : undefined} />
         </div>
 
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
-          <div className="flex-1 space-y-1.5">
-            <Label htmlFor="report-alert-search">Fuzzy search</Label>
-            <Input
-              id="report-alert-search"
-              placeholder="Try searching by description, client, code, or MCN"
-              value={searchTerm}
-              onChange={(event) => setSearchTerm(event.target.value)}
-            />
-          </div>
-          <div className="sm:w-[280px] space-y-1.5">
-            <Label htmlFor="description-filter">Alert Description</Label>
-            <Select value={selectedDescription} onValueChange={setSelectedDescription}>
-              <SelectTrigger id="description-filter">
-                <SelectValue placeholder="All descriptions" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All descriptions</SelectItem>
-                {uniqueDescriptions.map((desc) => (
-                  <SelectItem key={desc} value={desc}>
-                    {desc}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          {filtersActive ? (
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              onClick={handleClearFilters}
-              className="justify-start sm:w-auto"
-            >
-              Clear filters
-            </Button>
-          ) : null}
-        </div>
+        <AlertFilters
+          filters={filters}
+          onFiltersChange={setFilters}
+          descriptions={uniqueDescriptions}
+          hasActiveFilters={hasActiveFilters}
+        />
+        
+        <AlertFilterBadges filters={filters} onFiltersChange={setFilters} />
 
         <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
           <span>
             Showing <span className="font-medium text-foreground">{visibleAlerts.length}</span> of {matchedOpenAlertsCount} matched open alerts
           </span>
-          {filtersActive && <span>Filters active</span>}
+          {hasActiveFilters && <span>Filters active</span>}
         </div>
 
         {visibleAlerts.length === 0 ? (
