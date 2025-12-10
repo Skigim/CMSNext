@@ -1,7 +1,7 @@
 import { Card, CardContent, CardHeader } from "../ui/card";
 import { Button } from "../ui/button";
 import { FinancialItemList } from "../financial/FinancialItemList";
-import { FinancialItem, CaseCategory } from "../../types/case";
+import { AmountHistoryEntry, FinancialItem, CaseCategory } from "../../types/case";
 import { Copy, Plus } from "lucide-react";
 import { useCallback, useRef } from "react";
 import { clickToCopy } from "@/utils/clipboard";
@@ -28,7 +28,10 @@ export function CaseSection({
     groupedItems, 
     createFinancialItem, 
     updateFinancialItem, 
-    deleteFinancialItem 
+    deleteFinancialItem,
+    addAmountHistoryEntry,
+    updateAmountHistoryEntry,
+    deleteAmountHistoryEntry,
   } = useFinancialItems(caseId);
 
   const items = groupedItems[category] || [];
@@ -51,6 +54,37 @@ export function CaseSection({
 
   const handleCreate = async (cat: CaseCategory, itemData: Omit<FinancialItem, 'id' | 'createdAt' | 'updatedAt'>) => {
     await createFinancialItem(caseId, cat, itemData);
+  };
+
+  const handleAddHistoryEntry = async (
+    cat: CaseCategory,
+    itemId: string,
+    entry: Omit<AmountHistoryEntry, "id" | "createdAt">
+  ) => {
+    const result = await addAmountHistoryEntry(cat, itemId, entry);
+    if (!result) throw new Error("Failed to add history entry");
+    return result;
+  };
+
+  const handleUpdateHistoryEntry = async (
+    cat: CaseCategory,
+    itemId: string,
+    entryId: string,
+    updates: Partial<Omit<AmountHistoryEntry, "id" | "createdAt">>
+  ) => {
+    const result = await updateAmountHistoryEntry(cat, itemId, entryId, updates);
+    if (!result) throw new Error("Failed to update history entry");
+    return result;
+  };
+
+  const handleDeleteHistoryEntry = async (
+    cat: CaseCategory,
+    itemId: string,
+    entryId: string
+  ) => {
+    const result = await deleteAmountHistoryEntry(cat, itemId, entryId);
+    if (!result) throw new Error("Failed to delete history entry");
+    return result;
   };
 
   const formatItem = useCallback((item: FinancialItem): string => {
@@ -99,6 +133,9 @@ export function CaseSection({
           itemType={category}
           onDelete={handleDelete}
           onUpdate={handleUpdate}
+          onAddHistoryEntry={handleAddHistoryEntry}
+          onUpdateHistoryEntry={handleUpdateHistoryEntry}
+          onDeleteHistoryEntry={handleDeleteHistoryEntry}
           onCreateItem={handleCreate}
           onAddSkeleton={handleAddSkeletonRegistration}
           title=""

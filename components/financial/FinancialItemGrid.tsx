@@ -1,6 +1,6 @@
 import { Button } from "../ui/button";
 import { Plus } from "lucide-react";
-import type { CaseCategory, FinancialItem } from "../../types/case";
+import type { AmountHistoryEntry, CaseCategory, FinancialItem } from "../../types/case";
 import { FinancialItemCard } from "./FinancialItemCard";
 
 interface FinancialItemGridProps {
@@ -9,6 +9,22 @@ interface FinancialItemGridProps {
   onDelete: (category: CaseCategory, itemId: string) => void;
   onAdd: (category: CaseCategory) => void;
   onUpdate?: (category: CaseCategory, itemId: string, updatedItem: FinancialItem) => void;
+  onAddHistoryEntry?: (
+    category: CaseCategory,
+    itemId: string,
+    entry: Omit<AmountHistoryEntry, "id" | "createdAt">
+  ) => Promise<FinancialItem>;
+  onUpdateHistoryEntry?: (
+    category: CaseCategory,
+    itemId: string,
+    entryId: string,
+    updates: Partial<Omit<AmountHistoryEntry, "id" | "createdAt">>
+  ) => Promise<FinancialItem>;
+  onDeleteHistoryEntry?: (
+    category: CaseCategory,
+    itemId: string,
+    entryId: string
+  ) => Promise<FinancialItem>;
   title: string;
   showActions?: boolean;
   columns?: "auto" | 1 | 2 | 3 | 4;
@@ -20,6 +36,9 @@ export function FinancialItemGrid({
   onDelete,
   onAdd,
   onUpdate,
+  onAddHistoryEntry,
+  onUpdateHistoryEntry,
+  onDeleteHistoryEntry,
   title,
   showActions = true,
   columns = "auto",
@@ -62,6 +81,9 @@ export function FinancialItemGrid({
                 itemType={itemType}
                 onDelete={onDelete}
                 onUpdate={onUpdate}
+                onAddHistoryEntry={onAddHistoryEntry}
+                onUpdateHistoryEntry={onUpdateHistoryEntry}
+                onDeleteHistoryEntry={onDeleteHistoryEntry}
                 showActions={showActions}
               />
             );

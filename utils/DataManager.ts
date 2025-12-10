@@ -541,6 +541,46 @@ export class DataManager {
     return this.financials.deleteItem(caseId, category, itemId);
   }
 
+  /**
+   * Add amount history entry to a financial item
+   * Delegates to FinancialsService
+   */
+  async addAmountHistoryEntry(
+    caseId: string,
+    category: CaseCategory,
+    itemId: string,
+    entry: Omit<import("../types/case").AmountHistoryEntry, "id" | "createdAt">
+  ): Promise<StoredFinancialItem> {
+    return this.financials.addAmountHistoryEntry(caseId, category, itemId, entry);
+  }
+
+  /**
+   * Update amount history entry in a financial item
+   * Delegates to FinancialsService
+   */
+  async updateAmountHistoryEntry(
+    caseId: string,
+    category: CaseCategory,
+    itemId: string,
+    entryId: string,
+    updates: Partial<Omit<import("../types/case").AmountHistoryEntry, "id" | "createdAt">>
+  ): Promise<StoredFinancialItem> {
+    return this.financials.updateAmountHistoryEntry(caseId, category, itemId, entryId, updates);
+  }
+
+  /**
+   * Delete amount history entry from a financial item
+   * Delegates to FinancialsService
+   */
+  async deleteAmountHistoryEntry(
+    caseId: string,
+    category: CaseCategory,
+    itemId: string,
+    entryId: string
+  ): Promise<StoredFinancialItem> {
+    return this.financials.deleteAmountHistoryEntry(caseId, category, itemId, entryId);
+  }
+
   // =============================================================================
   // NOTE OPERATIONS
   // =============================================================================

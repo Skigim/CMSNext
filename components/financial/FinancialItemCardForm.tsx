@@ -4,7 +4,7 @@ import { Input } from "../ui/input";
 import { Label } from "../ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
 import { Textarea } from "../ui/textarea";
-import { Check, X } from "lucide-react";
+import { Check, X, History } from "lucide-react";
 import type { CaseCategory } from "../../types/case";
 import { parseNumericInput } from "../../utils/financialFormatters";
 import type { NormalizedFinancialFormData } from "./useFinancialItemCardState";
@@ -17,6 +17,8 @@ interface FinancialItemCardFormProps {
   onCancel: () => void;
   onSubmit: (event: FormEvent<HTMLFormElement>) => Promise<void>;
   showVerificationSource: boolean;
+  hasAmountHistory?: boolean;
+  onOpenHistoryModal?: () => void;
 }
 
 export function FinancialItemCardForm({
@@ -27,6 +29,8 @@ export function FinancialItemCardForm({
   onCancel,
   onSubmit,
   showVerificationSource,
+  hasAmountHistory = false,
+  onOpenHistoryModal,
 }: FinancialItemCardFormProps) {
   const frequencyFieldId = `frequency-${itemId}`;
   const descriptionFieldId = `description-${itemId}`;
@@ -53,9 +57,23 @@ export function FinancialItemCardForm({
 
       <div className="grid grid-cols-2 gap-4">
         <div>
-          <Label htmlFor={amountFieldId} className="mb-1 block text-sm font-medium text-foreground">
-            Amount
-          </Label>
+          <div className="mb-1 flex items-center justify-between">
+            <Label htmlFor={amountFieldId} className="text-sm font-medium text-foreground">
+              Amount
+            </Label>
+            {onOpenHistoryModal && (
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={onOpenHistoryModal}
+                className="h-6 px-2 text-xs text-muted-foreground hover:text-foreground"
+              >
+                <History className="mr-1 h-3 w-3" />
+                {hasAmountHistory ? "View History" : "Add History"}
+              </Button>
+            )}
+          </div>
           <Input
             type="number"
             id={amountFieldId}

@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Button } from "../ui/button";
 import { Plus } from "lucide-react";
-import type { CaseCategory, FinancialItem } from "../../types/case";
+import type { AmountHistoryEntry, CaseCategory, FinancialItem } from "../../types/case";
 import { FinancialItemCard } from "./FinancialItemCard";
 
 interface FinancialItemListProps {
@@ -9,6 +9,22 @@ interface FinancialItemListProps {
   itemType: CaseCategory;
   onDelete: (category: CaseCategory, itemId: string) => void;
   onUpdate?: (category: CaseCategory, itemId: string, updatedItem: FinancialItem) => void;
+  onAddHistoryEntry?: (
+    category: CaseCategory,
+    itemId: string,
+    entry: Omit<AmountHistoryEntry, "id" | "createdAt">
+  ) => Promise<FinancialItem>;
+  onUpdateHistoryEntry?: (
+    category: CaseCategory,
+    itemId: string,
+    entryId: string,
+    updates: Partial<Omit<AmountHistoryEntry, "id" | "createdAt">>
+  ) => Promise<FinancialItem>;
+  onDeleteHistoryEntry?: (
+    category: CaseCategory,
+    itemId: string,
+    entryId: string
+  ) => Promise<FinancialItem>;
   onCreateItem?: (
     category: CaseCategory,
     itemData: Omit<FinancialItem, "id" | "createdAt" | "updatedAt">
@@ -23,6 +39,9 @@ export function FinancialItemList({
   itemType,
   onDelete,
   onUpdate,
+  onAddHistoryEntry,
+  onUpdateHistoryEntry,
+  onDeleteHistoryEntry,
   onCreateItem,
   title,
   showActions = true,
@@ -117,6 +136,9 @@ export function FinancialItemList({
                     ? (_, itemId, updatedItem) => handleSaveSkeleton(itemId, updatedItem)
                     : onUpdate
                 }
+                onAddHistoryEntry={isSkeleton ? undefined : onAddHistoryEntry}
+                onUpdateHistoryEntry={isSkeleton ? undefined : onUpdateHistoryEntry}
+                onDeleteHistoryEntry={isSkeleton ? undefined : onDeleteHistoryEntry}
                 showActions={showActions}
                 isSkeleton={isSkeleton}
                 isEditing={isSkeleton}

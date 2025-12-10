@@ -2,12 +2,13 @@ import { ChevronDown } from "lucide-react";
 import { Card, CardContent, CardHeader } from "../ui/card";
 import { Button } from "../ui/button";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "../ui/collapsible";
-import type { FinancialItem, CaseCategory } from "../../types/case";
+import type { AmountHistoryEntry, FinancialItem, CaseCategory } from "../../types/case";
 import { FinancialItemSaveIndicator } from "./FinancialItemSaveIndicator";
 import { FinancialItemCardHeader } from "./FinancialItemCardHeader";
 import { FinancialItemCardMeta } from "./FinancialItemCardMeta";
 import { FinancialItemCardActions } from "./FinancialItemCardActions";
 import { FinancialItemCardForm } from "./FinancialItemCardForm";
+import { AmountHistoryModal } from "./AmountHistoryModal";
 import { useFinancialItemCardState } from "./useFinancialItemCardState";
 
 interface FinancialItemCardProps {
@@ -15,6 +16,22 @@ interface FinancialItemCardProps {
   itemType: CaseCategory;
   onDelete: (category: CaseCategory, itemId: string) => void;
   onUpdate?: (category: CaseCategory, itemId: string, updatedItem: FinancialItem) => void;
+  onAddHistoryEntry?: (
+    category: CaseCategory,
+    itemId: string,
+    entry: Omit<AmountHistoryEntry, "id" | "createdAt">
+  ) => Promise<FinancialItem>;
+  onUpdateHistoryEntry?: (
+    category: CaseCategory,
+    itemId: string,
+    entryId: string,
+    updates: Partial<Omit<AmountHistoryEntry, "id" | "createdAt">>
+  ) => Promise<FinancialItem>;
+  onDeleteHistoryEntry?: (
+    category: CaseCategory,
+    itemId: string,
+    entryId: string
+  ) => Promise<FinancialItem>;
   showActions?: boolean;
   isSkeleton?: boolean;
   isEditing?: boolean;
@@ -25,6 +42,9 @@ export function FinancialItemCard({
   itemType,
   onDelete,
   onUpdate,
+  onAddHistoryEntry,
+  onUpdateHistoryEntry,
+  onDeleteHistoryEntry,
   showActions = true,
   isSkeleton = false,
   isEditing: initialIsEditing = false,
@@ -40,6 +60,15 @@ export function FinancialItemCard({
     verificationStatus,
     showVerificationSourceField,
     canUpdateStatus,
+    // History modal
+    isHistoryModalOpen,
+    hasAmountHistory,
+    handleOpenHistoryModal,
+    handleCloseHistoryModal,
+    handleAddHistoryEntry,
+    handleUpdateHistoryEntry,
+    handleDeleteHistoryEntry,
+    // Card actions
     handleCardClick,
     handleCancelClick,
     handleSaveClick,
@@ -52,6 +81,9 @@ export function FinancialItemCard({
     itemType,
     onDelete,
     onUpdate,
+    onAddHistoryEntry,
+    onUpdateHistoryEntry,
+    onDeleteHistoryEntry,
     isSkeleton,
     initialIsEditing,
   });
@@ -157,10 +189,25 @@ export function FinancialItemCard({
               onCancel={handleCancelClick}
               onSubmit={handleSaveClick}
               showVerificationSource={showVerificationSourceField}
+              hasAmountHistory={hasAmountHistory}
+              onOpenHistoryModal={onAddHistoryEntry ? handleOpenHistoryModal : undefined}
             />
           </CardContent>
         </CollapsibleContent>
       </Card>
+
+      {/* Amount History Modal */}
+      {onAddHistoryEntry && (
+        <AmountHistoryModal
+          isOpen={isHistoryModalOpen}
+          onClose={handleCloseHistoryModal}
+          item={item}
+          itemType={itemType}
+          onAddEntry={handleAddHistoryEntry}
+          onUpdateEntry={handleUpdateHistoryEntry}
+          onDeleteEntry={handleDeleteHistoryEntry}
+        />
+      )}
     </Collapsible>
   );
 }

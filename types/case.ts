@@ -17,6 +17,24 @@ export interface Relationship {
   phone: string;
 }
 
+/**
+ * Represents a historical amount entry for a financial item.
+ * Tracks amount values over time with date ranges and verification.
+ */
+export interface AmountHistoryEntry {
+  id: string;
+  /** The amount value for this period */
+  amount: number;
+  /** Start date of this amount period (ISO string, typically 1st of month) */
+  startDate: string;
+  /** End date of this amount period (ISO string). Null/undefined means ongoing. */
+  endDate?: string | null;
+  /** Verification source for this specific entry (e.g., "Bank Statement 05/2025") */
+  verificationSource?: string;
+  /** When this entry was created */
+  createdAt: string;
+}
+
 // Person interface
 export interface Person {
   id: string;
@@ -47,6 +65,8 @@ export interface FinancialItem {
   location?: string;
   accountNumber?: string;
   amount: number;
+  /** Historical amount entries with date ranges and per-entry verification */
+  amountHistory?: AmountHistoryEntry[];
   frequency?: string;
   owner?: string;
   verificationStatus: string;

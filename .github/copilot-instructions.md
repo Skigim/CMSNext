@@ -134,6 +134,8 @@ interface StatusConfig {
 
 ## Testing
 
+- See `.github/testing-guidelines.md` for detailed testing standards and patterns. Use these without deviation.
+
 ### Stack
 
 - **Runner:** Vitest (`vitest.config.ts`)

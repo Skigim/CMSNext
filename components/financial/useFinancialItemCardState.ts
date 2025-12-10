@@ -1,7 +1,9 @@
 import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import type { CaseCategory, FinancialItem } from "../../types/case";
+import type { AmountHistoryEntry, CaseCategory, FinancialItem } from "../../types/case";
 import { getNormalizedFormData, getNormalizedItem } from "../../utils/dataNormalization";
 import { getDisplayAmount } from "../../utils/financialFormatters";
+import { getAmountForMonth } from "../../utils/financialHistory";
+import { useSelectedMonth } from "../../contexts/SelectedMonthContext";
 import {
   getVerificationStatusInfo,
   shouldShowVerificationSource,
@@ -18,6 +20,22 @@ interface UseFinancialItemCardStateParams {
   itemType: CaseCategory;
   onDelete: (category: CaseCategory, itemId: string) => void;
   onUpdate?: (category: CaseCategory, itemId: string, updatedItem: FinancialItem) => void;
+  onAddHistoryEntry?: (
+    category: CaseCategory,
+    itemId: string,
+    entry: Omit<AmountHistoryEntry, "id" | "createdAt">
+  ) => Promise<FinancialItem>;
+  onUpdateHistoryEntry?: (
+    category: CaseCategory,
+    itemId: string,
+    entryId: string,
+    updates: Partial<Omit<AmountHistoryEntry, "id" | "createdAt">>
+  ) => Promise<FinancialItem>;
+  onDeleteHistoryEntry?: (
+    category: CaseCategory,
+    itemId: string,
+    entryId: string
+  ) => Promise<FinancialItem>;
   isSkeleton?: boolean;
   initialIsEditing?: boolean;
 }
@@ -33,6 +51,18 @@ export interface UseFinancialItemCardStateResult {
   verificationStatus: VerificationBadgeInfo;
   showVerificationSourceField: boolean;
   canUpdateStatus: boolean;
+  // History modal
+  isHistoryModalOpen: boolean;
+  hasAmountHistory: boolean;
+  handleOpenHistoryModal: () => void;
+  handleCloseHistoryModal: () => void;
+  handleAddHistoryEntry: (entry: Omit<AmountHistoryEntry, "id" | "createdAt">) => Promise<void>;
+  handleUpdateHistoryEntry: (
+    entryId: string,
+    updates: Partial<Omit<AmountHistoryEntry, "id" | "createdAt">>
+  ) => Promise<void>;
+  handleDeleteHistoryEntry: (entryId: string) => Promise<void>;
+  // Card actions
   handleCardClick: () => void;
   handleCancelClick: () => void;
   handleSaveClick: (event: FormEvent<HTMLFormElement>) => Promise<void>;
@@ -47,6 +77,9 @@ export function useFinancialItemCardState({
   itemType,
   onDelete,
   onUpdate,
+  onAddHistoryEntry,
+  onUpdateHistoryEntry,
+  onDeleteHistoryEntry,
   isSkeleton = false,
   initialIsEditing = false,
 }: UseFinancialItemCardStateParams): UseFinancialItemCardStateResult {
@@ -55,14 +88,31 @@ export function useFinancialItemCardState({
   const [formData, setFormData] = useState<FinancialItem>(item);
   const [isSaving, setIsSaving] = useState(false);
   const [saveSuccessVisible, setSaveSuccessVisible] = useState(false);
+  const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
   const saveSuccessTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Get the selected month for displaying the correct amount
+  const { selectedMonth } = useSelectedMonth();
 
   const normalizedItem = useMemo(() => getNormalizedItem(item), [item]);
   const normalizedFormData = useMemo(() => getNormalizedFormData(formData), [formData]);
-  const displayAmount = useMemo(
-    () => getDisplayAmount(normalizedItem.amount, normalizedItem.frequency, itemType),
-    [normalizedItem.amount, normalizedItem.frequency, itemType],
+  
+  // Use getAmountForMonth to derive the display amount based on selected month
+  const currentAmount = useMemo(
+    () => getAmountForMonth(item, selectedMonth),
+    [item, selectedMonth]
   );
+  
+  const displayAmount = useMemo(
+    () => getDisplayAmount(currentAmount, normalizedItem.frequency, itemType),
+    [currentAmount, normalizedItem.frequency, itemType],
+  );
+  
+  const hasAmountHistory = useMemo(
+    () => Boolean(item.amountHistory && item.amountHistory.length > 0),
+    [item.amountHistory]
+  );
+  
   const verificationStatus = useMemo(
     () => getVerificationStatusInfo(formData.verificationStatus, formData.verificationSource),
     [formData.verificationStatus, formData.verificationSource],
@@ -218,6 +268,69 @@ export function useFinancialItemCardState({
     [formData, isEditing, item, itemType, normalizedItem.safeId, onUpdate],
   );
 
+  // History modal handlers
+  const handleOpenHistoryModal = useCallback(() => {
+    setIsHistoryModalOpen(true);
+  }, []);
+
+  const handleCloseHistoryModal = useCallback(() => {
+    setIsHistoryModalOpen(false);
+  }, []);
+
+  const handleAddHistoryEntry = useCallback(
+    async (entry: Omit<AmountHistoryEntry, "id" | "createdAt">) => {
+      if (!onAddHistoryEntry || !normalizedItem.safeId) {
+        console.warn("[FinancialItemCard] Cannot add history entry - missing handler or item ID");
+        return;
+      }
+      
+      try {
+        await onAddHistoryEntry(itemType, normalizedItem.safeId, entry);
+      } catch (error) {
+        console.error("[FinancialItemCard] Failed to add history entry:", error);
+        throw error;
+      }
+    },
+    [itemType, normalizedItem.safeId, onAddHistoryEntry]
+  );
+
+  const handleUpdateHistoryEntry = useCallback(
+    async (
+      entryId: string,
+      updates: Partial<Omit<AmountHistoryEntry, "id" | "createdAt">>
+    ) => {
+      if (!onUpdateHistoryEntry || !normalizedItem.safeId) {
+        console.warn("[FinancialItemCard] Cannot update history entry - missing handler or item ID");
+        return;
+      }
+      
+      try {
+        await onUpdateHistoryEntry(itemType, normalizedItem.safeId, entryId, updates);
+      } catch (error) {
+        console.error("[FinancialItemCard] Failed to update history entry:", error);
+        throw error;
+      }
+    },
+    [itemType, normalizedItem.safeId, onUpdateHistoryEntry]
+  );
+
+  const handleDeleteHistoryEntry = useCallback(
+    async (entryId: string) => {
+      if (!onDeleteHistoryEntry || !normalizedItem.safeId) {
+        console.warn("[FinancialItemCard] Cannot delete history entry - missing handler or item ID");
+        return;
+      }
+      
+      try {
+        await onDeleteHistoryEntry(itemType, normalizedItem.safeId, entryId);
+      } catch (error) {
+        console.error("[FinancialItemCard] Failed to delete history entry:", error);
+        throw error;
+      }
+    },
+    [itemType, normalizedItem.safeId, onDeleteHistoryEntry]
+  );
+
   return {
     isEditing,
     confirmingDelete,
@@ -229,6 +342,15 @@ export function useFinancialItemCardState({
     verificationStatus,
     showVerificationSourceField,
     canUpdateStatus,
+    // History modal
+    isHistoryModalOpen,
+    hasAmountHistory,
+    handleOpenHistoryModal,
+    handleCloseHistoryModal,
+    handleAddHistoryEntry,
+    handleUpdateHistoryEntry,
+    handleDeleteHistoryEntry,
+    // Card actions
     handleCardClick,
     handleCancelClick,
     handleSaveClick,
