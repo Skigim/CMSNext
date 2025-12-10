@@ -2,24 +2,27 @@ import { v4 as uuidv4 } from "uuid";
 import type { AmountHistoryEntry, FinancialItem } from "@/types/case";
 
 /**
- * Returns the first day of the given month as an ISO string.
+ * Returns the first day of the given month as a date string (YYYY-MM-DD).
  * @param date The date to get the first of month for (defaults to current date)
  */
 export function getFirstOfMonth(date: Date = new Date()): string {
   const year = date.getFullYear();
-  const month = date.getMonth();
-  return new Date(Date.UTC(year, month, 1)).toISOString();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  return `${year}-${month}-01`;
 }
 
 /**
- * Returns the last day of the given month as an ISO string.
+ * Returns the last day of the given month as a date string (YYYY-MM-DD).
  * @param date The date to get the last of month for
  */
 export function getLastOfMonth(date: Date): string {
   const year = date.getFullYear();
   const month = date.getMonth();
   // Day 0 of next month = last day of current month
-  return new Date(Date.UTC(year, month + 1, 0)).toISOString();
+  const lastDay = new Date(year, month + 1, 0);
+  const monthStr = String(lastDay.getMonth() + 1).padStart(2, '0');
+  const dayStr = String(lastDay.getDate()).padStart(2, '0');
+  return `${lastDay.getFullYear()}-${monthStr}-${dayStr}`;
 }
 
 /**
@@ -31,10 +34,11 @@ export function isDateInEntryRange(
   entry: AmountHistoryEntry,
   targetDate: Date = new Date()
 ): boolean {
-  const target = targetDate.getTime();
-  const start = new Date(entry.startDate).getTime();
+  // Parse dates at noon to avoid any timezone edge cases
+  const target = new Date(targetDate.getFullYear(), targetDate.getMonth(), targetDate.getDate(), 12, 0, 0);
+  const start = new Date(entry.startDate + 'T12:00:00');
   
-  if (Number.isNaN(start) || target < start) {
+  if (Number.isNaN(start.getTime()) || target < start) {
     return false;
   }
   
@@ -43,8 +47,8 @@ export function isDateInEntryRange(
     return true;
   }
   
-  const end = new Date(entry.endDate).getTime();
-  if (Number.isNaN(end)) {
+  const end = new Date(entry.endDate + 'T12:00:00');
+  if (Number.isNaN(end.getTime())) {
     return true; // Invalid end date treated as ongoing
   }
   
@@ -109,16 +113,8 @@ export function getEntryForMonth(
  */
 export function sortHistoryEntries(entries: AmountHistoryEntry[]): AmountHistoryEntry[] {
   return [...entries].sort((a, b) => {
-    const dateA = new Date(a.startDate).getTime();
-    const dateB = new Date(b.startDate).getTime();
-    
-    // Handle invalid dates
-    if (Number.isNaN(dateA) && Number.isNaN(dateB)) return 0;
-    if (Number.isNaN(dateA)) return 1;
-    if (Number.isNaN(dateB)) return -1;
-    
-    // Most recent first
-    return dateB - dateA;
+    // Simple string comparison works for YYYY-MM-DD format
+    return b.startDate.localeCompare(a.startDate);
   });
 }
 
@@ -151,7 +147,7 @@ export function createHistoryEntry(
  * Sets the previous entry's endDate to the day before the new entry's startDate.
  * 
  * @param history The current amount history array
- * @param newEntryStartDate The start date of the new entry being added
+ * @param newEntryStartDate The start date of the new entry being added (YYYY-MM-DD)
  * @returns Updated history array with previous ongoing entry closed
  */
 export function closePreviousOngoingEntry(
@@ -162,21 +158,23 @@ export function closePreviousOngoingEntry(
     return history;
   }
   
-  const newStartTime = new Date(newEntryStartDate).getTime();
-  if (Number.isNaN(newStartTime)) {
+  // Parse the new start date
+  const newStart = new Date(newEntryStartDate + 'T12:00:00');
+  if (Number.isNaN(newStart.getTime())) {
     return history;
   }
   
   // Calculate day before new start date
-  const dayBefore = new Date(newStartTime - 24 * 60 * 60 * 1000);
-  const endDateIso = dayBefore.toISOString();
+  const dayBefore = new Date(newStart);
+  dayBefore.setDate(dayBefore.getDate() - 1);
+  const endDateStr = `${dayBefore.getFullYear()}-${String(dayBefore.getMonth() + 1).padStart(2, '0')}-${String(dayBefore.getDate()).padStart(2, '0')}`;
   
   return history.map(entry => {
     // Only close entries that are ongoing (no endDate) and start before new entry
     if (!entry.endDate) {
-      const entryStartTime = new Date(entry.startDate).getTime();
-      if (!Number.isNaN(entryStartTime) && entryStartTime < newStartTime) {
-        return { ...entry, endDate: endDateIso };
+      const entryStart = new Date(entry.startDate + 'T12:00:00');
+      if (!Number.isNaN(entryStart.getTime()) && entryStart < newStart) {
+        return { ...entry, endDate: endDateStr };
       }
     }
     return entry;
