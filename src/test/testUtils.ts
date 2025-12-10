@@ -277,6 +277,20 @@ export const createMockDataManager = () => ({
 })
 
 /**
+ * Mock CategoryConfigContext value for component tests
+ * This allows testing components that use useCategoryConfig without DataManager
+ */
+export const createMockCategoryConfigValue = (configOverrides?: Parameters<typeof mergeCategoryConfig>[0]) => ({
+  config: mergeCategoryConfig(configOverrides),
+  loading: false,
+  error: null,
+  refresh: vi.fn().mockResolvedValue(undefined),
+  updateCategory: vi.fn().mockResolvedValue(undefined),
+  resetToDefaults: vi.fn().mockResolvedValue(undefined),
+  setConfigFromFile: vi.fn(),
+})
+
+/**
  * Test environment utilities
  */
 

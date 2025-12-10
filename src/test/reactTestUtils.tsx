@@ -1,27 +1,58 @@
 import React, { ReactElement } from 'react'
 import { render, RenderOptions, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { AppProviders } from '@/components/providers/AppProviders'
-import { createMockDataManager, createMockDirectoryHandle } from './testUtils'
+import { ThemeProvider } from '@/contexts/ThemeContext'
+import { CategoryConfigContext } from '@/contexts/CategoryConfigContext'
+import { createMockDataManager, createMockDirectoryHandle, createMockCategoryConfigValue } from './testUtils'
+import type { PartialCategoryConfigInput } from '@/types/categoryConfig'
 
 /**
- * Custom render function that includes all the providers
+ * Test-specific CategoryConfigProvider that uses injected config
+ * This bypasses the DataManager dependency for component tests by
+ * directly providing the context value
+ */
+const TestCategoryConfigProvider: React.FC<{
+  children: React.ReactNode
+  config?: PartialCategoryConfigInput
+}> = ({ children, config }) => {
+  const value = React.useMemo(() => createMockCategoryConfigValue(config), [config])
+  return (
+    <CategoryConfigContext.Provider value={value}>
+      {children}
+    </CategoryConfigContext.Provider>
+  )
+}
+
+/**
+ * Custom render function that includes providers needed for testing
  */
 
 interface CustomRenderOptions extends Omit<RenderOptions, 'wrapper'> {
-  // Add custom options here if needed
+  /**
+   * Whether to mock the file system context (default: true)
+   */
   mockFileSystem?: boolean
+  /**
+   * Mock DataManager instance - use createMockDataManager() from testUtils
+   */
   mockDataManager?: ReturnType<typeof createMockDataManager>
+  /**
+   * Category config to inject into CategoryConfigContext
+   * Bypasses DataManager dependency for simpler component tests
+   */
+  categoryConfig?: PartialCategoryConfigInput
 }
 
 const AllTheProviders = ({ 
   children, 
   mockFileSystem = true,
-  mockDataManager
+  mockDataManager,
+  categoryConfig
 }: { 
   children: React.ReactNode 
   mockFileSystem?: boolean
   mockDataManager?: ReturnType<typeof createMockDataManager>
+  categoryConfig?: PartialCategoryConfigInput
 }) => {
   // Mock file system context if requested
   if (mockFileSystem) {
@@ -34,10 +65,13 @@ const AllTheProviders = ({
     }
   }
 
+  // Use test-specific provider hierarchy that doesn't require DataManager
   return (
-    <AppProviders>
-      {children}
-    </AppProviders>
+    <ThemeProvider>
+      <TestCategoryConfigProvider config={categoryConfig}>
+        {children}
+      </TestCategoryConfigProvider>
+    </ThemeProvider>
   )
 }
 
@@ -48,6 +82,7 @@ const customRender = (
   const { 
     mockFileSystem, 
     mockDataManager,
+    categoryConfig,
     ...renderOptions 
   } = options
 
@@ -55,7 +90,8 @@ const customRender = (
     wrapper: (props) => AllTheProviders({ 
       ...props, 
       mockFileSystem,
-      mockDataManager 
+      mockDataManager,
+      categoryConfig
     }),
     ...renderOptions,
   })
@@ -87,6 +123,20 @@ export const renderWithMockData = (
   return customRender(ui, {
     mockFileSystem: true,
     mockDataManager,
+    ...options
+  })
+}
+
+/**
+ * Render with specific category config for testing components that use useCategoryConfig
+ */
+export const renderWithCategoryConfig = (
+  ui: ReactElement,
+  categoryConfig: PartialCategoryConfigInput,
+  options: CustomRenderOptions = {}
+) => {
+  return customRender(ui, {
+    categoryConfig,
     ...options
   })
 }

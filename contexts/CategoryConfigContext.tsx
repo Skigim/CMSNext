@@ -46,6 +46,9 @@ const defaultContextValue: CategoryConfigContextValue = {
 
 const CategoryConfigContext = createContext<CategoryConfigContextValue | null>(null);
 
+// Export context for test utilities - allows direct context injection in tests
+export { CategoryConfigContext };
+
 export const CategoryConfigProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const dataManager = useDataManagerSafe();
   const [config, setConfig] = useState<CategoryConfig>(() => mergeCategoryConfig());
