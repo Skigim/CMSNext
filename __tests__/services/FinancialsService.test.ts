@@ -199,6 +199,68 @@ describe('FinancialsService', () => {
         })
       ).rejects.toThrow('Failed to read current data');
     });
+
+    it('should auto-create history entry when adding item with amount', async () => {
+      // ARRANGE
+      const mockData = createBaseMockData();
+      mockFileStorage.setData(mockData);
+
+      // ACT
+      const result = await service.addItem('case-1', 'income', {
+        name: 'New Income',
+        description: 'Monthly salary',
+        amount: 500,
+        verificationStatus: 'Needs VR',
+      });
+
+      // ASSERT
+      expect(result.amountHistory).toBeDefined();
+      expect(result.amountHistory).toHaveLength(1);
+      expect(result.amountHistory![0].amount).toBe(500);
+      expect(result.amountHistory![0].startDate).toBe('2024-12-01'); // First of current month
+      expect(result.amountHistory![0].endDate).toBeFalsy(); // null or undefined
+    });
+
+    it('should not create history entry when adding item with zero amount', async () => {
+      // ARRANGE
+      const mockData = createBaseMockData();
+      mockFileStorage.setData(mockData);
+
+      // ACT
+      const result = await service.addItem('case-1', 'income', {
+        name: 'New Income',
+        description: 'TBD',
+        amount: 0,
+        verificationStatus: 'Needs VR',
+      });
+
+      // ASSERT
+      expect(result.amountHistory).toBeUndefined();
+    });
+
+    it('should preserve explicit amountHistory when provided', async () => {
+      // ARRANGE
+      const mockData = createBaseMockData();
+      mockFileStorage.setData(mockData);
+      const customHistory = [{
+        id: 'custom-id',
+        amount: 300,
+        startDate: '2024-06-01',
+        createdAt: '2024-06-01T10:00:00Z',
+      }];
+
+      // ACT
+      const result = await service.addItem('case-1', 'income', {
+        name: 'New Income',
+        description: 'Monthly salary',
+        amount: 500,
+        verificationStatus: 'Needs VR',
+        amountHistory: customHistory,
+      });
+
+      // ASSERT
+      expect(result.amountHistory).toEqual(customHistory);
+    });
   });
 
   describe('updateItem', () => {

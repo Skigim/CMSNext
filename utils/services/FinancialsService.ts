@@ -64,6 +64,9 @@ export class FinancialsService {
   /**
    * Add financial item to a case
    * Pattern: read → modify → write
+   * 
+   * If the item has an amount and no amountHistory is provided,
+   * automatically creates a history entry starting from the first of the current month.
    */
   async addItem(
     caseId: string,
@@ -82,10 +85,17 @@ export class FinancialsService {
       throw new Error('Case not found');
     }
 
+    // Auto-create history entry if amount provided but no history
+    let amountHistory = itemData.amountHistory;
+    if (itemData.amount !== undefined && itemData.amount !== 0 && !amountHistory) {
+      amountHistory = [createHistoryEntry(itemData.amount)];
+    }
+
     // Create new item with foreign keys
     const timestamp = new Date().toISOString();
     const newItem: StoredFinancialItem = {
       ...itemData,
+      amountHistory,
       id: uuidv4(),
       caseId,
       category,
