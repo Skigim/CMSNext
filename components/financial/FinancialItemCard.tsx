@@ -1,5 +1,4 @@
 import { Card, CardContent, CardHeader } from "../ui/card";
-import { Collapsible, CollapsibleContent } from "../ui/collapsible";
 import type { AmountHistoryEntry, FinancialItem, CaseCategory } from "../../types/case";
 import { FinancialItemSaveIndicator } from "./FinancialItemSaveIndicator";
 import { FinancialItemCardHeader } from "./FinancialItemCardHeader";
@@ -89,22 +88,8 @@ export function FinancialItemCard({
   const formItemId = String(normalizedItem.safeId ?? item.id ?? `financial-item-${itemType}`);
   const canToggle = Boolean(onUpdate) || isSkeleton;
 
-  const handleOpenChange = (open: boolean) => {
-    if (!canToggle) {
-      return;
-    }
-
-    if (open && !isEditing) {
-      handleCardClick();
-    }
-
-    if (!open && isEditing) {
-      handleCancelClick();
-    }
-  };
-
   return (
-    <Collapsible open={isEditing} onOpenChange={handleOpenChange}>
+    <>
       <Card
         className={`group relative overflow-visible transition-shadow ${
           isSkeleton
@@ -131,41 +116,45 @@ export function FinancialItemCard({
           </div>
         )}
 
-        <CardHeader className="!block pb-2">
-          <div
-            className="min-w-0 cursor-pointer space-y-4"
-            onClick={() => {
-              if (!canToggle) return;
-              handleCardClick();
-            }}
-            role={canToggle ? "button" : undefined}
-            tabIndex={canToggle ? 0 : undefined}
-            onKeyDown={event => {
-              if (!canToggle) return;
-              if (event.target !== event.currentTarget) return;
-              if (event.key === "Enter" || event.key === " ") {
-                event.preventDefault();
+        {/* Display mode - show card summary */}
+        {!isEditing && (
+          <CardHeader className="!block pb-2">
+            <div
+              className="min-w-0 cursor-pointer space-y-4"
+              onClick={() => {
+                if (!canToggle) return;
                 handleCardClick();
-              }
-            }}
-          >
-            <FinancialItemCardHeader
-              itemType={itemType}
-              displayName={normalizedItem.displayName}
-              dateAdded={normalizedItem.dateAdded}
-              displayAmount={displayAmount}
-            />
-            <FinancialItemCardMeta
-              normalizedItem={normalizedItem}
-              verificationStatus={verificationStatus}
-              canUpdateStatus={canUpdateStatus}
-              onStatusChange={handleStatusChange}
-            />
-          </div>
-        </CardHeader>
+              }}
+              role={canToggle ? "button" : undefined}
+              tabIndex={canToggle ? 0 : undefined}
+              onKeyDown={event => {
+                if (!canToggle) return;
+                if (event.target !== event.currentTarget) return;
+                if (event.key === "Enter" || event.key === " ") {
+                  event.preventDefault();
+                  handleCardClick();
+                }
+              }}
+            >
+              <FinancialItemCardHeader
+                itemType={itemType}
+                displayName={normalizedItem.displayName}
+                dateAdded={normalizedItem.dateAdded}
+                displayAmount={displayAmount}
+              />
+              <FinancialItemCardMeta
+                normalizedItem={normalizedItem}
+                verificationStatus={verificationStatus}
+                canUpdateStatus={canUpdateStatus}
+                onStatusChange={handleStatusChange}
+              />
+            </div>
+          </CardHeader>
+        )}
 
-        <CollapsibleContent className="overflow-hidden data-[state=closed]:animate-accordion-up data-[state=open]:animate-accordion-down">
-          <CardContent className="bg-muted/30 p-0">
+        {/* Edit mode - show form only */}
+        {isEditing && (
+          <CardContent className="p-0">
             <FinancialItemCardForm
               itemId={formItemId}
               itemType={itemType}
@@ -178,7 +167,7 @@ export function FinancialItemCard({
               onOpenHistoryModal={onAddHistoryEntry ? handleOpenHistoryModal : undefined}
             />
           </CardContent>
-        </CollapsibleContent>
+        )}
       </Card>
 
       {/* Amount History Modal */}
@@ -193,6 +182,6 @@ export function FinancialItemCard({
           onDeleteEntry={handleDeleteHistoryEntry}
         />
       )}
-    </Collapsible>
+    </>
   );
 }
