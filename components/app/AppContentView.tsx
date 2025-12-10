@@ -2,6 +2,7 @@ import { memo } from "react";
 import { ConnectionOnboarding } from "./ConnectionOnboarding";
 import { AppLoadingState } from "./AppLoadingState";
 import { CaseWorkspace } from "./CaseWorkspace";
+import { GlobalContextMenu } from "@/components/common/GlobalContextMenu";
 
 export interface AppContentViewProps {
   showConnectModal: boolean;
@@ -32,5 +33,11 @@ export const AppContentView = memo(function AppContentView({
     return <AppLoadingState {...loading} />;
   }
 
-  return <CaseWorkspace {...workspace} />;
+  return (
+    <GlobalContextMenu>
+      <div className="contents">
+        <CaseWorkspace {...workspace} />
+      </div>
+    </GlobalContextMenu>
+  );
 });
