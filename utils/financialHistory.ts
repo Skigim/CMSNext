@@ -220,7 +220,8 @@ export function formatHistoryDate(isoDate: string | null | undefined): string {
     return "Ongoing";
   }
   
-  const date = new Date(isoDate);
+  // Parse as local time by appending T12:00:00 to avoid timezone shift
+  const date = new Date(isoDate + 'T12:00:00');
   if (Number.isNaN(date.getTime())) {
     return isoDate;
   }
