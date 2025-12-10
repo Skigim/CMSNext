@@ -88,6 +88,8 @@
 - [x] Financial card inline edit mode (swap card display to form, edit button in floating actions)
 - [x] Notes button moved to case header (next to alerts)
 - [x] Alerts badge overlay (count or green checkmark when all resolved)
+- [x] CopyButton tooltip prop (optional hover tooltip, used for App Date 90-day calculation)
+- [x] Global context menu (right-click with Undo, Redo, Cut, Copy, Paste - platform-aware shortcuts)
 
 #### Refactoring & Polish
 

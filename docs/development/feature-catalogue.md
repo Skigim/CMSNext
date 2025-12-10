@@ -23,7 +23,7 @@
 | Case Management       | 92     | ↑     | Enhanced header with copy, priority toggle   |
 | Financial Operations  | 89     | ↑     | Inline edit mode, historical tracking        |
 | Developer Enablement  | 86     | ↑     | 447 tests, testing guidelines, withToast     |
-| Premium UI/UX         | 84     | ↑     | EmptyState, AlertDialog, consistent patterns |
+| Premium UI/UX         | 85     | ↑     | Global context menu, CopyButton tooltip      |
 | Data Portability      | 82     | ↑     | AVS import with update capability            |
 | Local-First Storage   | 80     | →     | Production-ready                             |
 | Configurable Statuses | 78     | →     | Recently stabilized                          |
@@ -412,12 +412,14 @@ Data platform group. Coordinate with documentation team to keep `SeedDataSystem.
 
 ### Implementation Snapshot
 
-**Rating: 84/100** _(Updated December 5, 2025)_
+**Rating: 85/100** _(Updated December 10, 2025)_
 
-Six-theme system (Light, Dark, Soft Dark, Warm, Blue, Paper) built on shadcn/ui delivers polished, responsive layouts. Tailwind CSS v4 tokens and component decomposition keep styling consistent. **December 5, 2025:** Major consistency audit completed - unified CopyButton component, EmptyState for empty states, AlertDialog replacing browser confirm(), standardized button sizes/colors, and proper aria-labels throughout.
+Six-theme system (Light, Dark, Soft Dark, Warm, Blue, Paper) built on shadcn/ui delivers polished, responsive layouts. Tailwind CSS v4 tokens and component decomposition keep styling consistent. **December 10, 2025:** Added global context menu with platform-aware shortcuts and CopyButton tooltip prop.
 
 ### Strengths
 
+- **Global Context Menu**: Right-click anywhere for Undo, Redo, Cut, Copy, Paste with platform-aware shortcuts (Ctrl on Windows, ⌘ on Mac)
+- **CopyButton Tooltip**: Optional tooltip prop for hover hints (e.g., App Date shows "90 Days = MM/DD/YYYY")
 - **CopyButton Component**: Unified click-to-copy pattern with display text, raw value, monospace option, and multiple variants
 - **EmptyState Component**: Consistent empty state messaging with icon, title, description slots
 - **AlertDialog Usage**: All destructive actions use shadcn AlertDialog instead of browser confirm()
