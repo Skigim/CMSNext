@@ -55,7 +55,6 @@ export function FinancialItemCard({
     normalizedFormData,
     displayAmount,
     verificationStatus,
-    showVerificationSourceField,
     canUpdateStatus,
     // History modal
     isHistoryModalOpen,
@@ -162,7 +161,6 @@ export function FinancialItemCard({
               onFieldChange={handleFieldChange}
               onCancel={handleCancelClick}
               onSubmit={handleSaveClick}
-              showVerificationSource={showVerificationSourceField}
               hasAmountHistory={hasAmountHistory}
               onOpenHistoryModal={onAddHistoryEntry ? handleOpenHistoryModal : undefined}
             />

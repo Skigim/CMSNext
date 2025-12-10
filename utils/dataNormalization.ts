@@ -34,6 +34,7 @@ export interface NormalizedFormData {
   accountNumber: string;
   notes: string;
   frequency: string;
+  verificationStatus: string;
   verificationSource: string;
 }
 
@@ -76,5 +77,6 @@ export const getNormalizedFormData = (sourceFormData: FinancialItem): Normalized
   accountNumber: sourceFormData.accountNumber || '',
   notes: sourceFormData.notes || '',
   frequency: sourceFormData.frequency || '',
+  verificationStatus: sourceFormData.verificationStatus || 'Needs VR',
   verificationSource: sourceFormData.verificationSource || ''
 });

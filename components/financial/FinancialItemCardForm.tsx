@@ -16,7 +16,6 @@ interface FinancialItemCardFormProps {
   onFieldChange: (field: string, value: string | number) => void;
   onCancel: () => void;
   onSubmit: (event: FormEvent<HTMLFormElement>) => Promise<void>;
-  showVerificationSource: boolean;
   hasAmountHistory?: boolean;
   onOpenHistoryModal?: () => void;
 }
@@ -28,7 +27,6 @@ export function FinancialItemCardForm({
   onFieldChange,
   onCancel,
   onSubmit,
-  showVerificationSource,
   hasAmountHistory = false,
   onOpenHistoryModal,
 }: FinancialItemCardFormProps) {
@@ -38,7 +36,10 @@ export function FinancialItemCardForm({
   const locationFieldId = `location-${itemId}`;
   const accountFieldId = `accountNumber-${itemId}`;
   const notesFieldId = `notes-${itemId}`;
+  const verificationStatusFieldId = `verificationStatus-${itemId}`;
   const verificationSourceFieldId = `verificationSource-${itemId}`;
+
+  const isVerified = formData.verificationStatus === 'Verified';
 
   return (
     <form onSubmit={onSubmit} className="space-y-4 border-t bg-muted/20 p-4">
@@ -148,7 +149,27 @@ export function FinancialItemCardForm({
         />
       </div>
 
-      {showVerificationSource && (
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <Label htmlFor={verificationStatusFieldId} className="mb-1 block text-sm font-medium text-foreground">
+            Verification Status
+          </Label>
+          <Select
+            value={formData.verificationStatus ?? "Needs VR"}
+            onValueChange={value => onFieldChange("verificationStatus", value)}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Select status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="Needs VR">Needs VR</SelectItem>
+              <SelectItem value="VR Pending">VR Pending</SelectItem>
+              <SelectItem value="AVS Pending">AVS Pending</SelectItem>
+              <SelectItem value="Verified">Verified</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
         <div>
           <Label htmlFor={verificationSourceFieldId} className="mb-1 block text-sm font-medium text-foreground">
             Verification Source
@@ -160,9 +181,10 @@ export function FinancialItemCardForm({
             onChange={event => onFieldChange("verificationSource", event.target.value)}
             className="w-full"
             placeholder="e.g., Bank Statement, Paystub"
+            disabled={!isVerified}
           />
         </div>
-      )}
+      </div>
 
       <div className="flex justify-end gap-3 border-t pt-3">
         <Button type="button" variant="outline" onClick={onCancel} className="flex items-center gap-2">
