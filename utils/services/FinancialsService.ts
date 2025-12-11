@@ -447,4 +447,75 @@ export class FinancialsService {
 
     return updatedItem;
   }
+
+  /**
+   * Migrate financial items without amount history
+   * 
+   * For backward compatibility, items that have a dateAdded but no amountHistory
+   * will get a history entry created using their current amount and dateAdded.
+   * 
+   * This ensures all items have at least one history entry for consistent date display.
+   * 
+   * @returns Number of items migrated
+   */
+  async migrateItemsWithoutHistory(): Promise<number> {
+    const currentData = await this.fileStorage.readFileData();
+    if (!currentData) {
+      return 0;
+    }
+
+    let migratedCount = 0;
+    const updatedFinancials = currentData.financials.map(item => {
+      // Skip if already has history
+      if (item.amountHistory && item.amountHistory.length > 0) {
+        return item;
+      }
+
+      // Skip if no amount to record
+      if (item.amount === undefined) {
+        return item;
+      }
+
+      // Create history entry from existing dateAdded or createdAt
+      const startDate = item.dateAdded || item.createdAt;
+      if (!startDate) {
+        // No date available, create with current first of month
+        const entry = createHistoryEntry(item.amount);
+        migratedCount++;
+        return {
+          ...item,
+          amountHistory: [entry],
+          updatedAt: new Date().toISOString(),
+        };
+      }
+
+      // Parse the date and set to first of that month
+      const date = new Date(startDate);
+      const firstOfMonth = new Date(date.getFullYear(), date.getMonth(), 1);
+      
+      const entry: AmountHistoryEntry = {
+        id: `migrated-${item.id}`,
+        amount: item.amount,
+        startDate: firstOfMonth.toISOString(),
+        endDate: null,
+        createdAt: new Date().toISOString(),
+      };
+
+      migratedCount++;
+      return {
+        ...item,
+        amountHistory: [entry],
+        updatedAt: new Date().toISOString(),
+      };
+    });
+
+    if (migratedCount > 0) {
+      await this.fileStorage.writeNormalizedData({
+        ...currentData,
+        financials: updatedFinancials,
+      });
+    }
+
+    return migratedCount;
+  }
 }

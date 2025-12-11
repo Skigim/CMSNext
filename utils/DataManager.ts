@@ -676,6 +676,20 @@ export class DataManager {
   async writeNormalizedData(data: NormalizedFileData): Promise<NormalizedFileData> {
     return this.fileStorage.writeNormalizedData(data);
   }
+
+  // =============================================================================
+  // MIGRATION OPERATIONS
+  // =============================================================================
+
+  /**
+   * Migrate financial items that don't have amount history
+   * Creates a history entry from their dateAdded/createdAt for backward compatibility
+   * 
+   * @returns Number of items migrated
+   */
+  async migrateFinancialsWithoutHistory(): Promise<number> {
+    return this.financials.migrateItemsWithoutHistory();
+  }
 }
 
 export default DataManager;

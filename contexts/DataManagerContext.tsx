@@ -1,4 +1,4 @@
-import { useContext, createContext, ReactNode, useMemo, useEffect } from 'react';
+import { useContext, createContext, ReactNode, useMemo, useEffect, useRef } from 'react';
 import DataManager from '@/utils/DataManager';
 import { useFileStorage } from '@/contexts/FileStorageContext';
 import { createLogger } from '@/utils/logger';
@@ -17,6 +17,7 @@ interface DataManagerProviderProps {
 
 export function DataManagerProvider({ children }: DataManagerProviderProps) {
   const { service, fileStorageService, isConnected, status } = useFileStorage();
+  const hasMigrated = useRef(false);
   
   // Memoize DataManager creation to prevent recreation on every render
   const dataManager = useMemo(() => {
@@ -39,6 +40,20 @@ export function DataManagerProvider({ children }: DataManagerProviderProps) {
       permissionStatus: status?.permissionStatus,
     });
   }, [dataManager, isConnected, service, status]);
+
+  // Run financial history migration once when connected
+  useEffect(() => {
+    if (!dataManager || !isConnected || hasMigrated.current) return;
+    
+    hasMigrated.current = true;
+    dataManager.migrateFinancialsWithoutHistory().then((count) => {
+      if (count > 0) {
+        logger.info('Migrated financial items without history', { count });
+      }
+    }).catch((err) => {
+      logger.error('Failed to migrate financial items', { error: err });
+    });
+  }, [dataManager, isConnected]);
 
   return (
     <DataManagerContext.Provider value={{ dataManager }}>
