@@ -180,7 +180,7 @@ export function FinancialItemCardForm({
             value={formData.verificationSource ?? ""}
             onChange={event => onFieldChange("verificationSource", event.target.value)}
             className="w-full"
-            placeholder="e.g., Bank Statement, Paystub"
+            placeholder={isVerified ? "e.g., Bank Statement, Paystub" : "Set status to Verified to enable"}
             disabled={!isVerified}
           />
         </div>

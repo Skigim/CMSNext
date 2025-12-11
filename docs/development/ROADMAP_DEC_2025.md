@@ -99,7 +99,6 @@
 
 - [x] Add unit tests for Week 2 features (77 new tests: financialHistory, FinancialsService, AmountHistoryModal)
 - [x] Refactor CaseList.test.tsx to integration testing pattern
-- [ ] Accessibility audit (jest-axe) for new components
 
 ---
 
@@ -114,7 +113,7 @@
 #### Features
 
 - [ ] Keyboard shortcuts for common actions
-- [ ] Intelligent 
+- [ ] Intelligent VR (Verification Request) generator
 
 #### Refactoring & Polish
 

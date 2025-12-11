@@ -12,7 +12,7 @@ import {
   ContextMenuSubTrigger,
   ContextMenuTrigger,
 } from "@/components/ui/context-menu";
-import { Copy, ClipboardPaste, Scissors, RotateCcw, RotateCw, LayoutDashboard, List, FileText, Settings } from "lucide-react";
+import { Copy, ClipboardPaste, Scissors, LayoutDashboard, List, FileText, Settings } from "lucide-react";
 import type { AppView } from "@/types/view";
 
 interface GlobalContextMenuProps {
@@ -49,10 +49,7 @@ export function GlobalContextMenu({ children, onNavigate }: GlobalContextMenuPro
   const shortcuts = useMemo(() => {
     const isMac = isMacOS();
     const mod = isMac ? "⌘" : "Ctrl+";
-    const shift = isMac ? "⇧" : "Shift+";
     return {
-      undo: `${mod}Z`,
-      redo: isMac ? `${shift}${mod}Z` : `${mod}Y`,
       cut: `${mod}X`,
       copy: `${mod}C`,
       paste: `${mod}V`,
@@ -95,14 +92,6 @@ export function GlobalContextMenu({ children, onNavigate }: GlobalContextMenuPro
     }
   }, []);
 
-  const handleUndo = useCallback(() => {
-    document.execCommand("undo");
-  }, []);
-
-  const handleRedo = useCallback(() => {
-    document.execCommand("redo");
-  }, []);
-
   return (
     <ContextMenu onOpenChange={handleOpenChange}>
       <ContextMenuTrigger asChild>
@@ -135,17 +124,7 @@ export function GlobalContextMenu({ children, onNavigate }: GlobalContextMenuPro
             <ContextMenuSeparator />
           </>
         )}
-        <ContextMenuItem onClick={handleUndo}>
-          <RotateCcw className="mr-2 h-4 w-4" />
-          Undo
-          <ContextMenuShortcut>{shortcuts.undo}</ContextMenuShortcut>
-        </ContextMenuItem>
-        <ContextMenuItem onClick={handleRedo}>
-          <RotateCw className="mr-2 h-4 w-4" />
-          Redo
-          <ContextMenuShortcut>{shortcuts.redo}</ContextMenuShortcut>
-        </ContextMenuItem>
-        <ContextMenuSeparator />
+
         <ContextMenuItem onClick={handleCut} disabled={!hasSelection}>
           <Scissors className="mr-2 h-4 w-4" />
           Cut
