@@ -15,112 +15,70 @@ const mockItem: FinancialItem = {
 const mockItemType: CaseCategory = "resources";
 
 describe("FinancialItemCardActions", () => {
-  it("emits delete click when not confirming", async () => {
+  it("should render copy button", () => {
+    render(
+      <FinancialItemCardActions
+        item={mockItem}
+        itemType={mockItemType}
+      />
+    );
+
+    expect(screen.getByRole("button", { name: /copy financial item to clipboard/i })).toBeInTheDocument();
+  });
+
+  it("should render edit button when onEditClick is provided", () => {
+    render(
+      <FinancialItemCardActions
+        onEditClick={vi.fn()}
+        item={mockItem}
+        itemType={mockItemType}
+      />
+    );
+
+    expect(screen.getByRole("button", { name: /edit financial item/i })).toBeInTheDocument();
+  });
+
+  it("should not render edit button when onEditClick is not provided", () => {
+    render(
+      <FinancialItemCardActions
+        item={mockItem}
+        itemType={mockItemType}
+      />
+    );
+
+    expect(screen.queryByRole("button", { name: /edit financial item/i })).not.toBeInTheDocument();
+  });
+
+  it("should call onEditClick when edit button is clicked", async () => {
     const user = userEvent.setup();
-    const onDeleteClick = vi.fn();
+    const onEditClick = vi.fn();
 
     render(
       <FinancialItemCardActions
-        confirmingDelete={false}
-        onDeleteClick={onDeleteClick}
-        onDeleteConfirm={vi.fn()}
+        onEditClick={onEditClick}
         item={mockItem}
         itemType={mockItemType}
       />
     );
 
-    await user.click(screen.getByRole("button", { name: /delete financial item/i }));
-    expect(onDeleteClick).toHaveBeenCalledTimes(1);
+    await user.click(screen.getByRole("button", { name: /edit financial item/i }));
+    expect(onEditClick).toHaveBeenCalledTimes(1);
   });
 
-  it("shows confirm controls when confirming delete", async () => {
-    const user = userEvent.setup();
-    const onDeleteClick = vi.fn();
-    const onDeleteConfirm = vi.fn();
-
+  it("should have proper ARIA labels on buttons", () => {
     render(
       <FinancialItemCardActions
-        confirmingDelete
-        onDeleteClick={onDeleteClick}
-        onDeleteConfirm={onDeleteConfirm}
+        onEditClick={vi.fn()}
         item={mockItem}
         itemType={mockItemType}
       />
     );
 
-    await user.click(screen.getByRole("button", { name: /confirm delete financial item/i }));
-    expect(onDeleteConfirm).toHaveBeenCalledTimes(1);
-
-    await user.click(screen.getByRole("button", { name: /cancel delete financial item/i }));
-    expect(onDeleteClick).toHaveBeenCalledTimes(1);
-  });
-
-  it("should have proper ARIA labels on delete buttons", () => {
-    render(
-      <FinancialItemCardActions
-        confirmingDelete={false}
-        onDeleteClick={vi.fn()}
-        onDeleteConfirm={vi.fn()}
-        item={mockItem}
-        itemType={mockItemType}
-      />
-    );
-
-    const deleteButton = screen.getByRole("button", { name: /delete financial item/i });
-    expect(deleteButton).toHaveAttribute("aria-label");
-  });
-
-  it("should show proper confirmation buttons with accessible labels", async () => {
-    render(
-      <FinancialItemCardActions
-        confirmingDelete={true}
-        onDeleteClick={vi.fn()}
-        onDeleteConfirm={vi.fn()}
-        item={mockItem}
-        itemType={mockItemType}
-      />
-    );
-
-    const confirmButton = screen.getByRole("button", { name: /confirm delete financial item/i });
-    const cancelButton = screen.getByRole("button", { name: /cancel delete financial item/i });
-
-    expect(confirmButton).toHaveAttribute("aria-label");
-    expect(cancelButton).toHaveAttribute("aria-label");
-  });
-
-  it("should support keyboard navigation for delete actions", async () => {
-    const onDeleteClick = vi.fn();
-
-    render(
-      <FinancialItemCardActions
-        confirmingDelete={false}
-        onDeleteClick={onDeleteClick}
-        onDeleteConfirm={vi.fn()}
-        item={mockItem}
-        itemType={mockItemType}
-      />
-    );
-
-    const deleteButton = screen.getByRole("button", { name: /delete financial item/i });
-    
-    // Simulate Tab to focus and Enter to activate
-    deleteButton.focus();
-    expect(deleteButton).toHaveFocus();
-  });
-
-  it("should have a copy button with proper aria-label", () => {
-    render(
-      <FinancialItemCardActions
-        confirmingDelete={false}
-        onDeleteClick={vi.fn()}
-        onDeleteConfirm={vi.fn()}
-        item={mockItem}
-        itemType={mockItemType}
-      />
-    );
-
+    const editButton = screen.getByRole("button", { name: /edit financial item/i });
     const copyButton = screen.getByRole("button", { name: /copy financial item to clipboard/i });
-    expect(copyButton).toBeInTheDocument();
+    
+    expect(editButton).toHaveAttribute("aria-label");
+    expect(copyButton).toHaveAttribute("aria-label");
   });
 
   it("should call clickToCopy when copy button is clicked", async () => {
@@ -137,9 +95,6 @@ describe("FinancialItemCardActions", () => {
 
     render(
       <FinancialItemCardActions
-        confirmingDelete={false}
-        onDeleteClick={vi.fn()}
-        onDeleteConfirm={vi.fn()}
         item={mockItem}
         itemType={mockItemType}
       />
@@ -149,12 +104,30 @@ describe("FinancialItemCardActions", () => {
     await user.click(copyButton);
 
     expect(writeTextMock).toHaveBeenCalled();
-    
-    // Restore original
+
+    // Restore original clipboard
     Object.defineProperty(navigator, 'clipboard', {
       value: originalClipboard,
       writable: true,
       configurable: true,
     });
+  });
+
+  it("should support keyboard navigation for edit action", async () => {
+    const onEditClick = vi.fn();
+
+    render(
+      <FinancialItemCardActions
+        onEditClick={onEditClick}
+        item={mockItem}
+        itemType={mockItemType}
+      />
+    );
+
+    const editButton = screen.getByRole("button", { name: /edit financial item/i });
+    
+    // Simulate Tab to focus
+    editButton.focus();
+    expect(editButton).toHaveFocus();
   });
 });

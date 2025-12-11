@@ -38,6 +38,8 @@ interface AmountHistoryModalProps {
     updates: Partial<Omit<AmountHistoryEntry, "id" | "createdAt">>
   ) => Promise<void>;
   onDeleteEntry: (entryId: string) => Promise<void>;
+  /** Delete the entire financial item (with all history) */
+  onDeleteItem?: () => Promise<void>;
 }
 
 interface EntryFormData {
@@ -84,12 +86,15 @@ export function AmountHistoryModal({
   onAddEntry,
   onUpdateEntry,
   onDeleteEntry,
+  onDeleteItem,
 }: AmountHistoryModalProps) {
   const [editingEntryId, setEditingEntryId] = useState<string | null>(null);
   const [isAddingNew, setIsAddingNew] = useState(false);
   const [formData, setFormData] = useState<EntryFormData>(emptyFormData);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
+  const [isConfirmingItemDelete, setIsConfirmingItemDelete] = useState(false);
+  const [isDeletingItem, setIsDeletingItem] = useState(false);
 
   const history = item.amountHistory ?? [];
   const sortedHistory = sortHistoryEntries(history);
@@ -99,6 +104,7 @@ export function AmountHistoryModal({
     setEditingEntryId(null);
     setIsAddingNew(false);
     setDeleteConfirmId(null);
+    setIsConfirmingItemDelete(false);
   }, []);
 
   const handleClose = useCallback(() => {
@@ -203,6 +209,25 @@ export function AmountHistoryModal({
   const handleCancelDelete = useCallback(() => {
     setDeleteConfirmId(null);
   }, []);
+
+  const handleDeleteItemClick = useCallback(() => {
+    setIsConfirmingItemDelete(true);
+  }, []);
+
+  const handleCancelItemDelete = useCallback(() => {
+    setIsConfirmingItemDelete(false);
+  }, []);
+
+  const handleConfirmItemDelete = useCallback(async () => {
+    if (!onDeleteItem) return;
+    setIsDeletingItem(true);
+    try {
+      await onDeleteItem();
+      handleClose();
+    } finally {
+      setIsDeletingItem(false);
+    }
+  }, [onDeleteItem, handleClose]);
 
   const isEditing = isAddingNew || editingEntryId !== null;
 
@@ -436,7 +461,45 @@ export function AmountHistoryModal({
           )}
         </div>
 
-        <DialogFooter>
+        <DialogFooter className="flex-col gap-3 sm:flex-row sm:justify-between">
+          {onDeleteItem && (
+            <div className="flex items-center gap-2">
+              {isConfirmingItemDelete ? (
+                <>
+                  <span className="text-sm text-destructive font-medium">Delete this item and all history?</span>
+                  <Button
+                    type="button"
+                    variant="destructive"
+                    size="sm"
+                    onClick={handleConfirmItemDelete}
+                    disabled={isDeletingItem}
+                  >
+                    {isDeletingItem ? "Deleting..." : "Yes, Delete"}
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={handleCancelItemDelete}
+                    disabled={isDeletingItem}
+                  >
+                    Cancel
+                  </Button>
+                </>
+              ) : (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                  onClick={handleDeleteItemClick}
+                  disabled={isEditing}
+                >
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Delete Item
+                </Button>
+              )}
+            </div>
+          )}
           <Button type="button" variant="outline" onClick={handleClose}>
             Close
           </Button>

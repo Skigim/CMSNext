@@ -113,8 +113,8 @@
 #### Features
 
 - [ ] File encryption (encrypt data file at rest, password-based key derivation)
-- [ ] Keyboard shortcuts for common actions
 - [ ] Intelligent VR (Verification Request) generator
+- [ ] Keyboard shortcuts for common actions
 
 #### Refactoring & Polish
 

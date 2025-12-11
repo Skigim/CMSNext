@@ -1,207 +1,184 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, it, expect, vi, afterEach } from "vitest";
-import type { FormEvent } from "react";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { createMockFinancialItem } from "@/src/test/testUtils";
 import type { FinancialItem } from "@/types/case";
-import type { NormalizedFinancialFormData } from "@/components/financial/useFinancialItemCardState";
-
-const headerMock = vi.fn();
-const metaMock = vi.fn();
-const actionsMock = vi.fn();
-const formMock = vi.fn();
-const indicatorMock = vi.fn();
-
-vi.mock("@/components/financial/FinancialItemSaveIndicator", () => ({
-  FinancialItemSaveIndicator: ({ isSaving, saveSuccessVisible }: { isSaving: boolean; saveSuccessVisible: boolean }) => {
-    indicatorMock({ isSaving, saveSuccessVisible });
-    return (
-      <div data-testid="save-indicator">
-        {isSaving ? "saving" : saveSuccessVisible ? "saved" : "idle"}
-      </div>
-    );
-  },
-}));
-
-vi.mock("@/components/financial/FinancialItemCardHeader", () => ({
-  FinancialItemCardHeader: (props: unknown) => {
-    headerMock(props);
-    const { displayName } = props as { displayName?: string | null };
-    return <div data-testid="financial-card-header">{displayName}</div>;
-  },
-}));
-
-vi.mock("@/components/financial/FinancialItemCardMeta", () => ({
-  FinancialItemCardMeta: ({ canUpdateStatus, onStatusChange }: { canUpdateStatus: boolean; onStatusChange: (status: string) => void }) => {
-    metaMock({ canUpdateStatus });
-    return (
-      <button
-        type="button"
-        data-testid="status-trigger"
-        disabled={!canUpdateStatus}
-        onClick={event => {
-          event.stopPropagation();
-          onStatusChange("Verified");
-        }}
-      >
-        status
-      </button>
-    );
-  },
-}));
-
-vi.mock("@/components/financial/FinancialItemCardActions", () => ({
-  FinancialItemCardActions: ({ confirmingDelete, onDeleteClick, onDeleteConfirm }: { confirmingDelete: boolean; onDeleteClick: () => void; onDeleteConfirm: () => void }) => {
-    actionsMock({ confirmingDelete });
-    return (
-      <div data-testid="card-actions">
-        {confirmingDelete ? (
-          <>
-            <button type="button" aria-label="Confirm delete financial item" onClick={onDeleteConfirm}>
-              confirm delete
-            </button>
-            <button type="button" aria-label="Cancel delete financial item" onClick={onDeleteClick}>
-              cancel delete
-            </button>
-          </>
-        ) : (
-          <button type="button" aria-label="Delete financial item" onClick={onDeleteClick}>
-            delete
-          </button>
-        )}
-      </div>
-    );
-  },
-}));
-
-vi.mock("@/components/financial/FinancialItemCardForm", () => ({
-  FinancialItemCardForm: ({ formData, onFieldChange, onCancel, onSubmit }: { formData: NormalizedFinancialFormData; onFieldChange: (field: string, value: string) => void; onCancel: () => void; onSubmit: (event: FormEvent<HTMLFormElement>) => Promise<void> }) => {
-    formMock(formData);
-    return (
-      <form
-        data-testid="financial-item-form"
-        onSubmit={event => {
-          event.preventDefault();
-          void onSubmit(event as unknown as FormEvent<HTMLFormElement>);
-        }}
-      >
-        <label htmlFor="description-input">Description</label>
-        <input
-          id="description-input"
-          aria-label="Description"
-          value={formData.description ?? ""}
-          onChange={event => onFieldChange("description", event.target.value)}
-        />
-        <button type="button" onClick={onCancel}>
-          cancel
-        </button>
-        <button type="submit">save</button>
-      </form>
-    );
-  },
-}));
-
 import { FinancialItemCard } from "@/components/financial/FinancialItemCard";
+import { toast } from "sonner";
+
+// Mock sonner toast to verify copy success
+vi.mock("sonner", () => ({
+  toast: {
+    success: vi.fn(),
+    error: vi.fn(),
+  },
+}));
+
+beforeEach(() => {
+  vi.clearAllMocks();
+  
+  // Mock clipboard API properly
+  Object.defineProperty(navigator, "clipboard", {
+    value: {
+      writeText: vi.fn().mockResolvedValue(undefined),
+      readText: vi.fn().mockResolvedValue(""),
+    },
+    configurable: true,
+  });
+});
 
 afterEach(() => {
   vi.clearAllMocks();
 });
 
 describe("FinancialItemCard", () => {
-  it("enters edit mode, saves changes, and exits", async () => {
-    const user = userEvent.setup();
-    const item = createMockFinancialItem("income", { id: "item-1", description: "Paycheck", verificationStatus: "Needs VR" }) as FinancialItem;
+  it("renders item details in display mode", () => {
+    // ARRANGE
+    const item = createMockFinancialItem("income", {
+      id: "item-1",
+      description: "Monthly Paycheck",
+      amount: 2500,
+      verificationStatus: "Verified",
+    }) as FinancialItem;
 
-    const onDelete = vi.fn();
-    const onUpdate = vi.fn().mockResolvedValue(undefined);
+    // ACT
+    render(
+      <FinancialItemCard
+        item={item}
+        itemType="income"
+        onDelete={vi.fn()}
+      />
+    );
+
+    // ASSERT
+    expect(screen.getByText("Monthly Paycheck")).toBeInTheDocument();
+    // Amount includes /mo suffix for income
+    expect(screen.getByText("$2,500.00/mo")).toBeInTheDocument();
+  });
+
+  it("enters edit mode when card is clicked", async () => {
+    // ARRANGE
+    const user = userEvent.setup();
+    const item = createMockFinancialItem("income", {
+      id: "item-1",
+      description: "Paycheck",
+      verificationStatus: "Needs VR",
+    }) as FinancialItem;
+    const onUpdate = vi.fn();
 
     const { container } = render(
       <FinancialItemCard
         item={item}
         itemType="income"
-        onDelete={onDelete}
+        onDelete={vi.fn()}
         onUpdate={onUpdate}
       />
     );
 
-    const cardBody = container.querySelector(".cursor-pointer") as HTMLElement;
-    expect(cardBody).toBeTruthy();
+    // ACT
+    const clickableArea = container.querySelector(".cursor-pointer") as HTMLElement;
+    await user.click(clickableArea);
 
-    await user.click(cardBody);
-    expect(screen.getByTestId("financial-item-form")).toBeInTheDocument();
-
-    const descriptionInput = screen.getByLabelText("Description");
-    await user.clear(descriptionInput);
-    await user.type(descriptionInput, "Updated Paycheck");
-
-    await user.click(screen.getByRole("button", { name: /save/i }));
-
-    await vi.waitFor(() => {
-      expect(onUpdate).toHaveBeenCalledWith("income", "item-1", expect.objectContaining({ description: "Updated Paycheck" }));
-    });
-
-    await vi.waitFor(() => {
-      expect(screen.queryByTestId("financial-item-form")).not.toBeInTheDocument();
-    });
+    // ASSERT - form should be visible
+    expect(screen.getByRole("textbox", { name: /description/i })).toBeInTheDocument();
   });
 
-  it("handles delete confirmation flow", async () => {
+  it("saves changes when form is submitted", async () => {
+    // ARRANGE
     const user = userEvent.setup();
-    const item = createMockFinancialItem("resources", { id: "res-1", description: "Savings" }) as FinancialItem;
-    const onDelete = vi.fn();
+    const item = createMockFinancialItem("income", {
+      id: "item-1",
+      description: "Original Description",
+      amount: 100,
+      verificationStatus: "Needs VR",
+    }) as FinancialItem;
+    const onUpdate = vi.fn().mockResolvedValue(undefined);
 
     render(
       <FinancialItemCard
         item={item}
-        itemType="resources"
-        onDelete={onDelete}
-        onUpdate={vi.fn()}
+        itemType="income"
+        onDelete={vi.fn()}
+        onUpdate={onUpdate}
         isEditing
       />
     );
 
-    const deleteButton = screen.getByRole("button", { name: /delete/i });
-    await user.click(deleteButton);
+    // ACT
+    const descriptionInput = screen.getByRole("textbox", { name: /description/i });
+    await user.clear(descriptionInput);
+    await user.type(descriptionInput, "Updated Description");
+    await user.click(screen.getByRole("button", { name: /save/i }));
 
+    // ASSERT
     await vi.waitFor(() => {
-      expect(actionsMock).toHaveBeenCalledWith(expect.objectContaining({ confirmingDelete: true }));
+      expect(onUpdate).toHaveBeenCalledWith(
+        "income",
+        "item-1",
+        expect.objectContaining({ description: "Updated Description" })
+      );
     });
-
-    const confirmButton = screen.getByRole("button", { name: /confirm delete financial item/i });
-    await user.click(confirmButton);
-
-    expect(onDelete).toHaveBeenCalledWith("resources", "res-1");
-
-    const saveIndicatorStates = indicatorMock.mock.calls.map(call => call[0]);
-    expect(saveIndicatorStates).toContainEqual({ isSaving: false, saveSuccessVisible: false });
   });
 
-  it("disables status control when updates are unavailable", () => {
-    const item = createMockFinancialItem("expenses", { id: "exp-1", description: "Rent" }) as FinancialItem;
+  it("cancels edit mode without saving", async () => {
+    // ARRANGE
+    const user = userEvent.setup();
+    const item = createMockFinancialItem("income", {
+      id: "item-1",
+      description: "Original",
+      verificationStatus: "Needs VR",
+    }) as FinancialItem;
+    const onUpdate = vi.fn();
 
     render(
       <FinancialItemCard
         item={item}
-        itemType="expenses"
+        itemType="income"
         onDelete={vi.fn()}
-        showActions={false}
+        onUpdate={onUpdate}
+        isEditing
       />
     );
 
-    const statusButton = screen.getByTestId("status-trigger");
-    expect(statusButton).toBeDisabled();
+    // ACT
+    await user.click(screen.getByRole("button", { name: /cancel/i }));
+
+    // ASSERT
+    expect(onUpdate).not.toHaveBeenCalled();
+    // Should return to display mode
+    expect(screen.getByText("Original")).toBeInTheDocument();
   });
 
-  it("invokes skeleton cancel handler when editing a new card", async () => {
+  it("disables edit when onUpdate is not provided", () => {
+    // ARRANGE
+    const item = createMockFinancialItem("expenses", {
+      id: "exp-1",
+      description: "Rent",
+    }) as FinancialItem;
+
+    const { container } = render(
+      <FinancialItemCard
+        item={item}
+        itemType="expenses"
+        onDelete={vi.fn()}
+        // No onUpdate provided
+      />
+    );
+
+    // ASSERT - card should not be clickable/focusable
+    const cardBody = container.querySelector("[role='button']");
+    expect(cardBody).toBeNull();
+  });
+
+  it("calls onDelete when skeleton card is cancelled", async () => {
+    // ARRANGE
     const user = userEvent.setup();
     const item = createMockFinancialItem("income", {
       id: "fallback-1234",
       description: "",
       amount: 0,
       verificationStatus: "Needs VR",
-      dateAdded: new Date().toISOString(),
     }) as FinancialItem;
-
     const onDelete = vi.fn();
 
     render(
@@ -214,52 +191,106 @@ describe("FinancialItemCard", () => {
       />
     );
 
-    const cancelButton = screen.getByRole("button", { name: /cancel/i });
-    await user.click(cancelButton);
+    // ACT
+    await user.click(screen.getByRole("button", { name: /cancel/i }));
 
+    // ASSERT
     expect(onDelete).toHaveBeenCalledTimes(1);
   });
 
-  it("should have accessible delete confirmation buttons", async () => {
+  it("shows floating actions on hover", async () => {
+    // ARRANGE
     const user = userEvent.setup();
-    const item = createMockFinancialItem("resources", { id: "res-1", description: "Savings" }) as FinancialItem;
-    const onDelete = vi.fn();
+    const item = createMockFinancialItem("resources", {
+      id: "res-1",
+      description: "Savings Account",
+    }) as FinancialItem;
 
     render(
       <FinancialItemCard
         item={item}
         itemType="resources"
-        onDelete={onDelete}
+        onDelete={vi.fn()}
         onUpdate={vi.fn()}
-        isEditing
       />
     );
 
-    const deleteButton = screen.getByRole("button", { name: /delete financial item/i });
-    expect(deleteButton).toHaveAttribute("aria-label");
-    
-    await user.click(deleteButton);
+    // ACT - hover over card
+    const card = screen.getByText("Savings Account").closest(".group");
+    expect(card).toBeInTheDocument();
+    await user.hover(card!);
 
-    // Verify confirmation buttons appear and have proper labels
-    const confirmButton = screen.queryByRole("button", { name: /confirm delete/i });
-    const cancelDeleteButton = screen.queryByRole("button", { name: /cancel delete/i });
-    
-    expect(confirmButton).toBeInTheDocument();
-    expect(confirmButton).toHaveAttribute("aria-label");
-    
-    expect(cancelDeleteButton).toBeInTheDocument();
-    expect(cancelDeleteButton).toHaveAttribute("aria-label");
+    // ASSERT - action buttons should be accessible
+    expect(screen.getByRole("button", { name: /edit financial item/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /copy financial item/i })).toBeInTheDocument();
   });
 
-  it("keeps accordion open when form fields change and only saves on submit", async () => {
+  it("shows history button when history handlers are provided", async () => {
+    // ARRANGE
     const user = userEvent.setup();
-    const item = createMockFinancialItem("income", { 
-      id: "item-1", 
-      description: "Original Description", 
-      amount: 100,
-      verificationStatus: "Needs VR" 
+    const item = createMockFinancialItem("income", {
+      id: "item-1",
+      description: "Paycheck",
     }) as FinancialItem;
 
+    render(
+      <FinancialItemCard
+        item={item}
+        itemType="income"
+        onDelete={vi.fn()}
+        onUpdate={vi.fn()}
+        onAddHistoryEntry={vi.fn()}
+        onUpdateHistoryEntry={vi.fn()}
+        onDeleteHistoryEntry={vi.fn()}
+      />
+    );
+
+    // ACT
+    const card = screen.getByText("Paycheck").closest(".group");
+    await user.hover(card!);
+
+    // ASSERT
+    expect(screen.getByRole("button", { name: /view amount history/i })).toBeInTheDocument();
+  });
+
+  it("triggers copy action when copy button is clicked", async () => {
+    // ARRANGE
+    const user = userEvent.setup();
+    const item = createMockFinancialItem("income", {
+      id: "item-1",
+      description: "Salary",
+      amount: 3000,
+    }) as FinancialItem;
+
+    render(
+      <FinancialItemCard
+        item={item}
+        itemType="income"
+        onDelete={vi.fn()}
+        onUpdate={vi.fn()}
+      />
+    );
+
+    // ACT
+    const card = screen.getByText("Salary").closest(".group");
+    await user.hover(card!);
+    await user.click(screen.getByRole("button", { name: /copy financial item/i }));
+
+    // ASSERT - verify toast was called indicating successful copy
+    await vi.waitFor(() => {
+      expect(toast.success).toHaveBeenCalledWith("Financial item copied to clipboard");
+    });
+  });
+
+  it("does not save on field change, only on submit", async () => {
+    // ARRANGE
+    const user = userEvent.setup();
+    const item = createMockFinancialItem("income", {
+      id: "item-1",
+      description: "Original",
+      amount: 100,
+      verificationStatus: "Needs VR",
+    }) as FinancialItem;
     const onUpdate = vi.fn().mockResolvedValue(undefined);
 
     render(
@@ -272,34 +303,43 @@ describe("FinancialItemCard", () => {
       />
     );
 
-    // Edit description field
-    const descriptionInput = screen.getByLabelText("Description");
+    // ACT - type in the field but don't submit
+    const descriptionInput = screen.getByRole("textbox", { name: /description/i });
     await user.clear(descriptionInput);
-    await user.type(descriptionInput, "Updated Description");
+    await user.type(descriptionInput, "Changed");
 
-    // Verify form data was entered
-    expect(descriptionInput).toHaveValue("Updated Description");
-    
-    // Form should still be visible (not auto-saved and closed)
-    expect(screen.getByTestId("financial-item-form")).toBeInTheDocument();
-    
-    // onUpdate should NOT have been called yet
+    // ASSERT - onUpdate should NOT have been called
     expect(onUpdate).not.toHaveBeenCalled();
-    
-    // Now click Save
-    const saveButton = screen.getByRole("button", { name: /save/i });
-    await user.click(saveButton);
 
-    // Verify onUpdate was called with the updated data
+    // ACT - now submit
+    await user.click(screen.getByRole("button", { name: /save/i }));
+
+    // ASSERT - now it should be called
     await vi.waitFor(() => {
       expect(onUpdate).toHaveBeenCalledTimes(1);
-      expect(onUpdate).toHaveBeenCalledWith(
-        "income", 
-        "item-1", 
-        expect.objectContaining({ 
-          description: "Updated Description"
-        })
-      );
     });
+  });
+
+  it("renders skeleton card with dashed border", () => {
+    // ARRANGE
+    const item = createMockFinancialItem("income", {
+      id: "new-item",
+      description: "",
+    }) as FinancialItem;
+
+    // ACT
+    const { container } = render(
+      <FinancialItemCard
+        item={item}
+        itemType="income"
+        onDelete={vi.fn()}
+        isSkeleton
+        isEditing
+      />
+    );
+
+    // ASSERT
+    const card = container.querySelector(".border-dashed");
+    expect(card).toBeInTheDocument();
   });
 });

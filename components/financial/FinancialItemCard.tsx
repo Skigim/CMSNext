@@ -48,7 +48,6 @@ export function FinancialItemCard({
 }: FinancialItemCardProps) {
   const {
     isEditing,
-    confirmingDelete,
     isSaving,
     saveSuccessVisible,
     normalizedItem,
@@ -68,8 +67,6 @@ export function FinancialItemCard({
     handleCardClick,
     handleCancelClick,
     handleSaveClick,
-    handleDeleteClick,
-    handleDeleteConfirm,
     handleFieldChange,
     handleStatusChange,
   } = useFinancialItemCardState({
@@ -102,13 +99,11 @@ export function FinancialItemCard({
         {showActions && (
           <div 
             className="absolute -right-2 -top-2 z-20 opacity-0 transition-opacity group-hover:opacity-100 data-[visible=true]:opacity-100 rounded-md bg-background border shadow-sm" 
-            data-visible={isEditing || confirmingDelete}
+            data-visible={isEditing}
           >
             <FinancialItemCardActions
-              confirmingDelete={confirmingDelete}
               onEditClick={canToggle ? handleCardClick : undefined}
-              onDeleteClick={handleDeleteClick}
-              onDeleteConfirm={handleDeleteConfirm}
+              onHistoryClick={onAddHistoryEntry ? handleOpenHistoryModal : undefined}
               item={item}
               itemType={itemType}
             />
@@ -178,6 +173,9 @@ export function FinancialItemCard({
           onAddEntry={handleAddHistoryEntry}
           onUpdateEntry={handleUpdateHistoryEntry}
           onDeleteEntry={handleDeleteHistoryEntry}
+          onDeleteItem={async () => {
+            onDelete(itemType, normalizedItem.safeId);
+          }}
         />
       )}
     </>
