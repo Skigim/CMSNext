@@ -8,7 +8,7 @@ import {
 } from "../ui/popover";
 import { ScrollArea } from "../ui/scroll-area";
 import { Badge } from "../ui/badge";
-import { StickyNote, Plus, Trash2, X } from "lucide-react";
+import { StickyNote, Plus, Trash2, X, Pencil, Check } from "lucide-react";
 import { useNotes } from "@/hooks/useNotes";
 import { useCategoryConfig } from "@/contexts/CategoryConfigContext";
 import type { Note } from "@/types/case";
@@ -23,8 +23,10 @@ export function NotesPopover({ caseId, className }: NotesPopoverProps) {
   const [isAdding, setIsAdding] = useState(false);
   const [newNoteContent, setNewNoteContent] = useState("");
   const [confirmingDeleteId, setConfirmingDeleteId] = useState<string | null>(null);
+  const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
+  const [editContent, setEditContent] = useState("");
   
-  const { notes, addNote, deleteNote } = useNotes(caseId);
+  const { notes, addNote, updateNote, deleteNote } = useNotes(caseId);
   const { config } = useCategoryConfig();
 
   const noteCount = useMemo(() => notes?.length ?? 0, [notes]);
@@ -59,6 +61,39 @@ export function NotesPopover({ caseId, className }: NotesPopoverProps) {
     await deleteNote(caseId, noteId);
     setConfirmingDeleteId(null);
   }, [caseId, deleteNote]);
+
+  const handleStartEdit = useCallback((note: Note) => {
+    setEditingNoteId(note.id);
+    setEditContent(note.content);
+    setConfirmingDeleteId(null);
+  }, []);
+
+  const handleSaveEdit = useCallback(async (note: Note) => {
+    if (!editContent.trim()) return;
+    
+    await updateNote(caseId, note.id, {
+      content: editContent.trim(),
+      category: note.category,
+    });
+    
+    setEditingNoteId(null);
+    setEditContent("");
+  }, [caseId, editContent, updateNote]);
+
+  const handleCancelEdit = useCallback(() => {
+    setEditingNoteId(null);
+    setEditContent("");
+  }, []);
+
+  const handleEditKeyDown = useCallback((e: React.KeyboardEvent, note: Note) => {
+    if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
+      e.preventDefault();
+      handleSaveEdit(note);
+    }
+    if (e.key === "Escape") {
+      handleCancelEdit();
+    }
+  }, [handleSaveEdit, handleCancelEdit]);
 
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
     if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
@@ -175,8 +210,9 @@ export function NotesPopover({ caseId, className }: NotesPopoverProps) {
                   key={note.id} 
                   className="p-3 hover:bg-muted/50 group relative"
                 >
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="flex-1 min-w-0">
+                  {editingNoteId === note.id ? (
+                    /* Edit Mode */
+                    <div className="space-y-2">
                       <div className="flex items-center gap-2 mb-1">
                         <Badge 
                           variant="secondary" 
@@ -188,44 +224,105 @@ export function NotesPopover({ caseId, className }: NotesPopoverProps) {
                           {formatDate(note.createdAt)}
                         </span>
                       </div>
-                      <p className="text-sm whitespace-pre-wrap break-words">
-                        {note.content}
-                      </p>
-                    </div>
-                    
-                    {/* Delete button */}
-                    <div className="opacity-0 group-hover:opacity-100 transition-opacity">
-                      {confirmingDeleteId === note.id ? (
+                      <Textarea
+                        value={editContent}
+                        onChange={(e) => setEditContent(e.target.value)}
+                        onKeyDown={(e) => handleEditKeyDown(e, note)}
+                        className="min-h-[60px] text-sm resize-none"
+                        autoFocus
+                      />
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs text-muted-foreground">
+                          {navigator.platform.includes("Mac") ? "⌘" : "Ctrl"}+Enter to save
+                        </span>
                         <div className="flex gap-1">
-                          <Button
-                            variant="destructive"
-                            size="sm"
-                            className="h-6 w-6 p-0"
-                            onClick={() => handleDeleteNote(note.id)}
-                          >
-                            <Trash2 className="h-3 w-3" />
-                          </Button>
                           <Button
                             variant="ghost"
                             size="sm"
-                            className="h-6 w-6 p-0"
-                            onClick={() => setConfirmingDeleteId(null)}
+                            className="h-6 px-2"
+                            onClick={handleCancelEdit}
                           >
-                            <X className="h-3 w-3" />
+                            Cancel
+                          </Button>
+                          <Button
+                            size="sm"
+                            className="h-6 px-2"
+                            onClick={() => handleSaveEdit(note)}
+                            disabled={!editContent.trim()}
+                          >
+                            <Check className="h-3 w-3 mr-1" />
+                            Save
                           </Button>
                         </div>
-                      ) : (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-6 w-6 p-0 text-muted-foreground hover:text-destructive"
-                          onClick={() => setConfirmingDeleteId(note.id)}
-                        >
-                          <Trash2 className="h-3 w-3" />
-                        </Button>
-                      )}
+                      </div>
                     </div>
-                  </div>
+                  ) : (
+                    /* View Mode */
+                    <div className="flex items-start justify-between gap-2">
+                      <div 
+                        className="flex-1 min-w-0 cursor-pointer"
+                        onClick={() => handleStartEdit(note)}
+                      >
+                        <div className="flex items-center gap-2 mb-1">
+                          <Badge 
+                            variant="secondary" 
+                            className={`text-xs ${getCategoryColor(note.category)}`}
+                          >
+                            {note.category}
+                          </Badge>
+                          <span className="text-xs text-muted-foreground">
+                            {formatDate(note.createdAt)}
+                          </span>
+                        </div>
+                        <p className="text-sm whitespace-pre-wrap break-words">
+                          {note.content}
+                        </p>
+                      </div>
+                      
+                      {/* Action buttons */}
+                      <div className="opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
+                        {confirmingDeleteId === note.id ? (
+                          <>
+                            <Button
+                              variant="destructive"
+                              size="sm"
+                              className="h-6 w-6 p-0"
+                              onClick={() => handleDeleteNote(note.id)}
+                            >
+                              <Trash2 className="h-3 w-3" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-6 w-6 p-0"
+                              onClick={() => setConfirmingDeleteId(null)}
+                            >
+                              <X className="h-3 w-3" />
+                            </Button>
+                          </>
+                        ) : (
+                          <>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-6 w-6 p-0 text-muted-foreground hover:text-foreground"
+                              onClick={() => handleStartEdit(note)}
+                            >
+                              <Pencil className="h-3 w-3" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-6 w-6 p-0 text-muted-foreground hover:text-destructive"
+                              onClick={() => setConfirmingDeleteId(note.id)}
+                            >
+                              <Trash2 className="h-3 w-3" />
+                            </Button>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
