@@ -456,6 +456,8 @@ export class FinancialsService {
    * 
    * This ensures all items have at least one history entry for consistent date display.
    * 
+   * Also normalizes any ISO timestamp dates in existing history to YYYY-MM-DD format.
+   * 
    * @returns Number of items migrated
    */
   async migrateItemsWithoutHistory(): Promise<number> {
@@ -466,8 +468,24 @@ export class FinancialsService {
 
     let migratedCount = 0;
     const updatedFinancials = currentData.financials.map(item => {
-      // Skip if already has history
+      // Check if item has history that needs date format normalization
       if (item.amountHistory && item.amountHistory.length > 0) {
+        const needsNormalization = item.amountHistory.some(
+          e => e.startDate && e.startDate.includes('T')
+        );
+        
+        if (needsNormalization) {
+          migratedCount++;
+          return {
+            ...item,
+            amountHistory: item.amountHistory.map(e => ({
+              ...e,
+              startDate: this.normalizeToDateOnly(e.startDate),
+              endDate: e.endDate ? this.normalizeToDateOnly(e.endDate) : e.endDate,
+            })),
+            updatedAt: new Date().toISOString(),
+          };
+        }
         return item;
       }
 
@@ -489,14 +507,16 @@ export class FinancialsService {
         };
       }
 
-      // Parse the date and set to first of that month
+      // Parse the date and format as YYYY-MM-DD (first of month)
       const date = new Date(startDate);
-      const firstOfMonth = new Date(date.getFullYear(), date.getMonth(), 1);
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const formattedDate = `${year}-${month}-01`;
       
       const entry: AmountHistoryEntry = {
         id: `migrated-${item.id}`,
         amount: item.amount,
-        startDate: firstOfMonth.toISOString(),
+        startDate: formattedDate,
         endDate: null,
         createdAt: new Date().toISOString(),
       };
@@ -517,5 +537,19 @@ export class FinancialsService {
     }
 
     return migratedCount;
+  }
+
+  /**
+   * Normalize an ISO timestamp or date string to YYYY-MM-DD format
+   */
+  private normalizeToDateOnly(dateStr: string): string {
+    if (!dateStr.includes('T')) {
+      return dateStr; // Already in date-only format
+    }
+    const date = new Date(dateStr);
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
   }
 }
