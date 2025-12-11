@@ -2,7 +2,7 @@
 
 > Living index of marketable features, their current implementation status, quality, and future investments.
 
-**Last Updated:** December 10, 2025
+**Last Updated:** December 11, 2025
 
 ## How to Use This Document
 
@@ -21,20 +21,20 @@
 | Feature               | Rating | Trend | Notes                                        |
 | --------------------- | ------ | ----- | -------------------------------------------- |
 | Case Management       | 92     | ↑     | Enhanced header with copy, priority toggle   |
-| Financial Operations  | 89     | ↑     | Inline edit mode, historical tracking        |
-| Developer Enablement  | 86     | ↑     | 447 tests, testing guidelines, withToast     |
-| Premium UI/UX         | 85     | ↑     | Global context menu, CopyButton tooltip      |
+| Financial Operations  | 90     | ↑     | Date from history, auto-migration            |
+| Developer Enablement  | 86     | ↑     | 455 tests, testing guidelines, withToast     |
+| Premium UI/UX         | 86     | ↑     | NotesPopover, global context menu            |
 | Data Portability      | 82     | ↑     | AVS import with update capability            |
 | Local-First Storage   | 80     | →     | Production-ready                             |
 | Configurable Statuses | 78     | →     | Recently stabilized                          |
-| Notes & Collaboration | 78     | →     | Case Summary Generator with modal & sections |
+| Notes & Collaboration | 82     | ↑     | Popover UI with inline edit, category select |
 | Legacy Migration      | 75     | →     | Dev-only, one-way                            |
 | Autosave & Recovery   | 74     | →     | Works, telemetry pending                     |
 | Feature Flags         | 72     | →     | In-memory only                               |
 | Dashboard & Insights  | 70     | →     | Framework ready                              |
 
-**Average Rating:** 82.4/100  
-**Test Status:** 450/450 passing (100%)
+**Average Rating:** 83.1/100  
+**Test Status:** 455/455 passing (100%)
 
 ---
 
@@ -209,14 +209,17 @@ Phase 3 Cases domain refactor completed November 2, 2025. Bulk actions added Dec
 
 ### Implementation Snapshot
 
-**Rating: 89/100** _(Updated December 10, 2025)_
+**Rating: 90/100** _(Updated December 11, 2025)_
 
 Financial modules (resources, income, expenses) leverage dedicated components and hooks (`useFinancialItemFlow`, `FinancialItemCard`) with inline editing, validation, and autosave integration. Verification metadata and frequency handling cover core program requirements.
 
-**December 10, 2025:** Added historical amount tracking with `AmountHistoryModal` and inline edit mode that swaps card display to form view with edit button trigger.
+**December 11, 2025:** Card date now reflects most recent history entry. Auto-migration for legacy items creates history from dateAdded. Amount 0 now valid for history creation.
 
 ### Strengths
 
+- **Smart Date Display**: Card shows most recent history entry's start date (not original dateAdded)
+- **Auto-Migration**: Legacy items without history get migrated on first load (uses dateAdded as start date, YYYY-MM-DD format)
+- **Zero Amount Support**: Financial forms accept $0 as valid amount, creating proper history entries
 - **Inline Edit Mode**: Edit button swaps card display to full form; verification status and source in two-column layout at bottom
 - **Historical Amount Tracking**: History button on Amount field opens modal showing chronological amount entries with Start Date, End Date, Amount, and Verification Source
 - **Auto-Tracking**: Quick edits automatically create history entries with 1st of current month as start date; previous ongoing entries auto-close
@@ -270,9 +273,9 @@ Financial modules (resources, income, expenses) leverage dedicated components an
 
 ### Implementation Snapshot
 
-**Rating: 78/100** _(Updated December 4, 2025)_
+**Rating: 82/100** _(Updated December 11, 2025)_
 
-Notes system supports categorized, timestamped entries tied to cases with edit history and toast feedback. Activity log integration keeps audit context nearby, and quick-add UX leverages keyboard shortcuts and autosave-friendly forms. **December 4, 2025:** Added Case Summary Generator with configurable section modal for customized exports.
+Notes system supports categorized, timestamped entries tied to cases with edit history and toast feedback. Activity log integration keeps audit context nearby, and quick-add UX leverages keyboard shortcuts and autosave-friendly forms. **December 11, 2025:** Replaced NotesDrawer with lightweight NotesPopover for faster access and inline editing.
 
 ### Strengths
 
@@ -281,6 +284,12 @@ Notes system supports categorized, timestamped entries tied to cases with edit h
 - Sonner toasts provide immediate feedback on create/update/delete actions
 - Keyboard shortcuts and focused forms streamline fast note capture
 - Activity log complements notes by recording system-driven events (imports, autosave results)
+- **NotesPopover** (December 2025): Lightweight popover UI replaces drawer
+  - Click-to-edit inline notes (click note content or pencil icon)
+  - Category dropdown in both add and edit forms
+  - Quick-add with Ctrl/⌘+Enter keyboard shortcut
+  - Expands to fit content (no fixed max height)
+  - Hover-to-reveal action buttons (edit, delete with confirmation)
 - **Case Summary Generator**: Modal-based export with section toggles (Case Info, Person, Relationships, Resources, Income, Expenses, Notes), editable preview, and one-click copy to clipboard
 - **Consistent Formatting**: Plain-text format optimized for emails and ticketing systems (MM/DD/YYYY dates, $1,500.00 currency, verification source display)
 

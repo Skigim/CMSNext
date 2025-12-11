@@ -1,10 +1,10 @@
 # CMSNext Roadmap - December 2025
 
-**Report Date:** December 10, 2025  
+**Report Date:** December 11, 2025  
 **Branch:** main (stable)  
-**Tests:** 450/450 passing ✅  
+**Tests:** 455/455 passing ✅  
 **Build:** Production-ready ✅  
-**Average Feature Rating:** 82/100
+**Average Feature Rating:** 83/100
 
 ---
 
@@ -95,6 +95,23 @@
 
 - [x] Fix timezone shift in financial history date display (dates showing one day earlier)
 
+#### Dec 11 - Polish & New Features
+
+- [x] Disabled verification source field uses native shadcn Input styling
+- [x] Removed Undo/Redo from global context menu (not needed for single-file app)
+- [x] Financial form accepts 0 as valid amount (creates history entry for $0 amounts)
+- [x] History modal delete button moved inside with "Delete Item" destructive button
+- [x] History button added to FinancialItemCardActions (CalendarDays icon)
+- [x] FinancialItemCard.test.tsx rewritten using real components (per testing guidelines)
+- [x] **NotesPopover**: Replaced NotesDrawer with lightweight popover UI
+  - Click-to-edit inline notes
+  - Category dropdown in add/edit forms
+  - Quick-add with Ctrl/⌘+Enter keyboard shortcut
+  - Pencil icon edit button on hover
+- [x] Financial card date shows most recent history entry date (not dateAdded)
+- [x] Auto-migration for legacy items without history (uses dateAdded as start date)
+- [x] Fixed migration date format to YYYY-MM-DD (was using ISO timestamps)
+
 #### Refactoring & Polish
 
 - [x] Add unit tests for Week 2 features (77 new tests: financialHistory, FinancialsService, AmountHistoryModal)
@@ -140,9 +157,9 @@
 | ----------------------------- | ----- | ------ | ------ | ------ | ------ |
 | Hooks over 200 lines          | 4     | 0 ✅   | 0      | 0      | 0      |
 | Components with anti-patterns | 1     | 0 ✅   | 0      | 0      | 0      |
-| Test count                    | 253   | 355 ✅ | 447 ✅ | 475    | 475+   |
-| New features shipped          | -     | 18 ✅  | 1      | 4      | 23     |
-| Average feature rating        | 76.5  | 80 ✅  | 82 ✅  | 83     | 83+    |
+| Test count                    | 253   | 355 ✅ | 455 ✅ | 475    | 475+   |
+| New features shipped          | -     | 18 ✅  | 12 ✅  | 4      | 30+    |
+| Average feature rating        | 76.5  | 80 ✅  | 83 ✅  | 85     | 85+    |
 
 ---
 
@@ -211,4 +228,4 @@ Every feature must:
 ---
 
 **Prepared by:** GitHub Copilot  
-**Last updated:** December 4, 2025
+**Last updated:** December 11, 2025
