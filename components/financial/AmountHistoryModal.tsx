@@ -461,9 +461,9 @@ export function AmountHistoryModal({
           )}
         </div>
 
-        <DialogFooter className="flex-col gap-3 sm:flex-row sm:justify-between">
+        <DialogFooter className="flex-col gap-4 pt-4 border-t sm:flex-row sm:justify-between">
           {onDeleteItem && (
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-3">
               {isConfirmingItemDelete ? (
                 <>
                   <span className="text-sm text-destructive font-medium">Delete this item and all history?</span>
@@ -489,8 +489,8 @@ export function AmountHistoryModal({
               ) : (
                 <Button
                   type="button"
-                  variant="ghost"
-                  className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                  variant="destructive"
+                  size="sm"
                   onClick={handleDeleteItemClick}
                   disabled={isEditing}
                 >
