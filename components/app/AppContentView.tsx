@@ -34,7 +34,7 @@ export const AppContentView = memo(function AppContentView({
   }
 
   return (
-    <GlobalContextMenu>
+    <GlobalContextMenu onNavigate={workspace.navigation.onNavigate}>
       <div className="contents">
         <CaseWorkspace {...workspace} />
       </div>

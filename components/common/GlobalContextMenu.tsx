@@ -7,12 +7,18 @@ import {
   ContextMenuItem,
   ContextMenuSeparator,
   ContextMenuShortcut,
+  ContextMenuSub,
+  ContextMenuSubContent,
+  ContextMenuSubTrigger,
   ContextMenuTrigger,
 } from "@/components/ui/context-menu";
-import { Copy, ClipboardPaste, Scissors, RotateCcw, RotateCw } from "lucide-react";
+import { Copy, ClipboardPaste, Scissors, RotateCcw, RotateCw, LayoutDashboard, List, FileText, Settings } from "lucide-react";
+import type { AppView } from "@/types/view";
 
 interface GlobalContextMenuProps {
   children: ReactNode;
+  /** Optional navigation callback for Go To submenu */
+  onNavigate?: (view: AppView) => void;
 }
 
 /**
@@ -36,7 +42,7 @@ function isMacOS(): boolean {
  * </GlobalContextMenu>
  * ```
  */
-export function GlobalContextMenu({ children }: GlobalContextMenuProps) {
+export function GlobalContextMenu({ children, onNavigate }: GlobalContextMenuProps) {
   const [hasSelection, setHasSelection] = useState(false);
 
   // Platform-aware keyboard shortcuts
@@ -103,6 +109,32 @@ export function GlobalContextMenu({ children }: GlobalContextMenuProps) {
         {children}
       </ContextMenuTrigger>
       <ContextMenuContent className="w-48">
+        {onNavigate && (
+          <>
+            <ContextMenuSub>
+              <ContextMenuSubTrigger>Go To...</ContextMenuSubTrigger>
+              <ContextMenuSubContent className="w-40">
+                <ContextMenuItem onClick={() => onNavigate("dashboard")}>
+                  <LayoutDashboard className="mr-2 h-4 w-4" />
+                  Dashboard
+                </ContextMenuItem>
+                <ContextMenuItem onClick={() => onNavigate("list")}>
+                  <List className="mr-2 h-4 w-4" />
+                  Cases List
+                </ContextMenuItem>
+                <ContextMenuItem onClick={() => onNavigate("reports")}>
+                  <FileText className="mr-2 h-4 w-4" />
+                  Reports
+                </ContextMenuItem>
+                <ContextMenuItem onClick={() => onNavigate("settings")}>
+                  <Settings className="mr-2 h-4 w-4" />
+                  Settings
+                </ContextMenuItem>
+              </ContextMenuSubContent>
+            </ContextMenuSub>
+            <ContextMenuSeparator />
+          </>
+        )}
         <ContextMenuItem onClick={handleUndo}>
           <RotateCcw className="mr-2 h-4 w-4" />
           Undo
