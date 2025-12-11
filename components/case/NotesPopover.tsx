@@ -13,7 +13,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "../ui/select";
-import { ScrollArea } from "../ui/scroll-area";
 import { Badge } from "../ui/badge";
 import { StickyNote, Plus, Trash2, X, Pencil, Check } from "lucide-react";
 import { useNotes } from "@/hooks/useNotes";
@@ -229,7 +228,7 @@ export function NotesPopover({ caseId, className }: NotesPopoverProps) {
         )}
 
         {/* Notes List */}
-        <ScrollArea className="max-h-[300px]">
+        <div>
           {sortedNotes.length === 0 ? (
             <div className="p-4 text-center text-sm text-muted-foreground">
               <StickyNote className="h-8 w-8 mx-auto mb-2 opacity-50" />
@@ -369,7 +368,7 @@ export function NotesPopover({ caseId, className }: NotesPopoverProps) {
               ))}
             </div>
           )}
-        </ScrollArea>
+        </div>
       </PopoverContent>
     </Popover>
   );
