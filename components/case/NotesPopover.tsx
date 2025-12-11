@@ -1,0 +1,239 @@
+import { useState, useMemo, useCallback } from "react";
+import { Button } from "../ui/button";
+import { Textarea } from "../ui/textarea";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "../ui/popover";
+import { ScrollArea } from "../ui/scroll-area";
+import { Badge } from "../ui/badge";
+import { StickyNote, Plus, Trash2, X } from "lucide-react";
+import { useNotes } from "@/hooks/useNotes";
+import { useCategoryConfig } from "@/contexts/CategoryConfigContext";
+import type { Note } from "@/types/case";
+
+interface NotesPopoverProps {
+  caseId: string;
+  className?: string;
+}
+
+export function NotesPopover({ caseId, className }: NotesPopoverProps) {
+  const [isOpen, setIsOpen] = useState(false);
+  const [isAdding, setIsAdding] = useState(false);
+  const [newNoteContent, setNewNoteContent] = useState("");
+  const [confirmingDeleteId, setConfirmingDeleteId] = useState<string | null>(null);
+  
+  const { notes, addNote, deleteNote } = useNotes(caseId);
+  const { config } = useCategoryConfig();
+
+  const noteCount = useMemo(() => notes?.length ?? 0, [notes]);
+  
+  const defaultCategory = useMemo(() => {
+    return config?.noteCategories?.[0] ?? "General";
+  }, [config]);
+
+  const getCategoryColor = useCallback((category: string) => {
+    const colors: Record<string, string> = {
+      General: "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300",
+      Important: "bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300",
+      "Follow Up": "bg-amber-100 text-amber-700 dark:bg-amber-900 dark:text-amber-300",
+      Contact: "bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300",
+    };
+    return colors[category] ?? colors.General;
+  }, []);
+
+  const handleAddNote = useCallback(async () => {
+    if (!newNoteContent.trim()) return;
+    
+    await addNote(caseId, {
+      content: newNoteContent.trim(),
+      category: defaultCategory,
+    });
+    
+    setNewNoteContent("");
+    setIsAdding(false);
+  }, [caseId, newNoteContent, addNote, defaultCategory]);
+
+  const handleDeleteNote = useCallback(async (noteId: string) => {
+    await deleteNote(caseId, noteId);
+    setConfirmingDeleteId(null);
+  }, [caseId, deleteNote]);
+
+  const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
+    if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
+      e.preventDefault();
+      handleAddNote();
+    }
+    if (e.key === "Escape") {
+      setIsAdding(false);
+      setNewNoteContent("");
+    }
+  }, [handleAddNote]);
+
+  const formatDate = (dateStr: string) => {
+    const date = new Date(dateStr);
+    return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  };
+
+  const sortedNotes = useMemo(() => {
+    if (!notes) return [];
+    return [...notes].sort((a, b) => 
+      new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    );
+  }, [notes]);
+
+  return (
+    <Popover open={isOpen} onOpenChange={setIsOpen}>
+      <PopoverTrigger asChild>
+        <Button
+          variant="outline"
+          size="sm"
+          className={className}
+        >
+          <StickyNote className="h-4 w-4 mr-2" />
+          <span>Notes{noteCount > 0 ? ` (${noteCount})` : ""}</span>
+        </Button>
+      </PopoverTrigger>
+
+      <PopoverContent 
+        className="w-80 p-0" 
+        align="start"
+        sideOffset={8}
+      >
+        {/* Header */}
+        <div className="flex items-center justify-between border-b px-3 py-2">
+          <div className="flex items-center gap-2 text-sm font-medium">
+            <StickyNote className="h-4 w-4" />
+            Notes {noteCount > 0 && <Badge variant="secondary" className="text-xs">{noteCount}</Badge>}
+          </div>
+          {!isAdding && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-7 px-2"
+              onClick={() => setIsAdding(true)}
+            >
+              <Plus className="h-4 w-4 mr-1" />
+              Add
+            </Button>
+          )}
+        </div>
+
+        {/* Quick Add Form */}
+        {isAdding && (
+          <div className="border-b p-3 space-y-2">
+            <Textarea
+              value={newNoteContent}
+              onChange={(e) => setNewNoteContent(e.target.value)}
+              onKeyDown={handleKeyDown}
+              placeholder="Type your note..."
+              className="min-h-[80px] text-sm resize-none"
+              autoFocus
+            />
+            <div className="flex items-center justify-between">
+              <span className="text-xs text-muted-foreground">
+                {navigator.platform.includes("Mac") ? "⌘" : "Ctrl"}+Enter to save
+              </span>
+              <div className="flex gap-2">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-7"
+                  onClick={() => {
+                    setIsAdding(false);
+                    setNewNoteContent("");
+                  }}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  size="sm"
+                  className="h-7"
+                  onClick={handleAddNote}
+                  disabled={!newNoteContent.trim()}
+                >
+                  Save
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Notes List */}
+        <ScrollArea className="max-h-[300px]">
+          {sortedNotes.length === 0 ? (
+            <div className="p-4 text-center text-sm text-muted-foreground">
+              <StickyNote className="h-8 w-8 mx-auto mb-2 opacity-50" />
+              <p>No notes yet</p>
+              <p className="text-xs mt-1">Click Add to create one</p>
+            </div>
+          ) : (
+            <div className="divide-y">
+              {sortedNotes.map((note: Note) => (
+                <div 
+                  key={note.id} 
+                  className="p-3 hover:bg-muted/50 group relative"
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-1">
+                        <Badge 
+                          variant="secondary" 
+                          className={`text-xs ${getCategoryColor(note.category)}`}
+                        >
+                          {note.category}
+                        </Badge>
+                        <span className="text-xs text-muted-foreground">
+                          {formatDate(note.createdAt)}
+                        </span>
+                      </div>
+                      <p className="text-sm whitespace-pre-wrap break-words">
+                        {note.content}
+                      </p>
+                    </div>
+                    
+                    {/* Delete button */}
+                    <div className="opacity-0 group-hover:opacity-100 transition-opacity">
+                      {confirmingDeleteId === note.id ? (
+                        <div className="flex gap-1">
+                          <Button
+                            variant="destructive"
+                            size="sm"
+                            className="h-6 w-6 p-0"
+                            onClick={() => handleDeleteNote(note.id)}
+                          >
+                            <Trash2 className="h-3 w-3" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-6 w-6 p-0"
+                            onClick={() => setConfirmingDeleteId(null)}
+                          >
+                            <X className="h-3 w-3" />
+                          </Button>
+                        </div>
+                      ) : (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-6 w-6 p-0 text-muted-foreground hover:text-destructive"
+                          onClick={() => setConfirmingDeleteId(note.id)}
+                        >
+                          <Trash2 className="h-3 w-3" />
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </ScrollArea>
+      </PopoverContent>
+    </Popover>
+  );
+}
+
+export default NotesPopover;

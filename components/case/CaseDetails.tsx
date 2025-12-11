@@ -3,7 +3,7 @@ import { Button } from "../ui/button";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "../ui/alert-dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
 import { FinancialsGridView } from "./FinancialsGridView";
-import { NotesDrawer } from "./NotesDrawer";
+import { NotesPopover } from "./NotesPopover";
 import { IntakeChecklistView } from "./IntakeChecklistView";
 import { StoredCase } from "../../types/case";
 import { ArrowLeft, Edit2, Trash2, Wallet, BellRing, FileText, ClipboardCheck, Star, StarOff, Phone, Mail, Check } from "lucide-react";
@@ -192,8 +192,8 @@ export function CaseDetails({
             </div>
           </div>
           <div className="flex gap-2 items-start flex-wrap">
-            {/* Notes drawer trigger */}
-            <NotesDrawer caseId={caseData.id} className={interactiveHoverClasses} />
+            {/* Notes popover */}
+            <NotesPopover caseId={caseData.id} className={interactiveHoverClasses} />
             
             {/* Alerts button with badge indicator */}
             {totalAlerts > 0 && (
