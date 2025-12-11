@@ -323,7 +323,7 @@ export function AmountHistoryModal({
                   type="button"
                   size="sm"
                   onClick={handleSubmitEntry}
-                  disabled={isSubmitting || formData.amount == null || !formData.startDate}
+                  disabled={isSubmitting || !formData.amount || !formData.startDate}
                 >
                   <Check className="h-4 w-4 mr-1" />
                   {isAddingNew ? "Add" : "Save"}

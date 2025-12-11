@@ -87,7 +87,7 @@ export class FinancialsService {
 
     // Auto-create history entry if amount provided but no history
     let amountHistory = itemData.amountHistory;
-    if (itemData.amount !== undefined && itemData.amount !== 0 && !amountHistory) {
+    if (itemData.amount !== undefined && !amountHistory) {
       amountHistory = [createHistoryEntry(itemData.amount)];
     }
 

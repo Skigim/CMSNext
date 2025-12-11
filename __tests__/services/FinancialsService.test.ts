@@ -221,7 +221,7 @@ describe('FinancialsService', () => {
       expect(result.amountHistory![0].endDate).toBeFalsy(); // null or undefined
     });
 
-    it('should not create history entry when adding item with zero amount', async () => {
+    it('should create history entry when adding item with zero amount', async () => {
       // ARRANGE
       const mockData = createBaseMockData();
       mockFileStorage.setData(mockData);
@@ -234,8 +234,9 @@ describe('FinancialsService', () => {
         verificationStatus: 'Needs VR',
       });
 
-      // ASSERT
-      expect(result.amountHistory).toBeUndefined();
+      // ASSERT - zero is a valid amount that should create history
+      expect(result.amountHistory).toBeDefined();
+      expect(result.amountHistory![0].amount).toBe(0);
     });
 
     it('should preserve explicit amountHistory when provided', async () => {
