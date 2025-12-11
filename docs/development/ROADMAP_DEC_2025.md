@@ -89,7 +89,11 @@
 - [x] Notes button moved to case header (next to alerts)
 - [x] Alerts badge overlay (count or green checkmark when all resolved)
 - [x] CopyButton tooltip prop (optional hover tooltip, used for App Date 90-day calculation)
-- [x] Global context menu (right-click with Undo, Redo, Cut, Copy, Paste - platform-aware shortcuts)
+- [x] Global context menu with Go To navigation submenu (platform-aware shortcuts)
+
+#### Bug Fixes
+
+- [x] Fix timezone shift in financial history date display (dates showing one day earlier)
 
 #### Refactoring & Polish
 
@@ -110,6 +114,7 @@
 #### Features
 
 - [ ] Keyboard shortcuts for common actions
+- [ ] Intelligent 
 
 #### Refactoring & Polish
 
