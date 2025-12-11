@@ -6,6 +6,13 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "../ui/popover";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "../ui/select";
 import { ScrollArea } from "../ui/scroll-area";
 import { Badge } from "../ui/badge";
 import { StickyNote, Plus, Trash2, X, Pencil, Check } from "lucide-react";
@@ -25,15 +32,21 @@ export function NotesPopover({ caseId, className }: NotesPopoverProps) {
   const [confirmingDeleteId, setConfirmingDeleteId] = useState<string | null>(null);
   const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
   const [editContent, setEditContent] = useState("");
+  const [editCategory, setEditCategory] = useState("");
+  const [newNoteCategory, setNewNoteCategory] = useState("");
   
   const { notes, addNote, updateNote, deleteNote } = useNotes(caseId);
   const { config } = useCategoryConfig();
 
   const noteCount = useMemo(() => notes?.length ?? 0, [notes]);
   
-  const defaultCategory = useMemo(() => {
-    return config?.noteCategories?.[0] ?? "General";
+  const noteCategories = useMemo(() => {
+    return config?.noteCategories ?? ["General", "Important", "Follow Up", "Contact"];
   }, [config]);
+
+  const defaultCategory = useMemo(() => {
+    return noteCategories[0] ?? "General";
+  }, [noteCategories]);
 
   const getCategoryColor = useCallback((category: string) => {
     const colors: Record<string, string> = {
@@ -50,12 +63,13 @@ export function NotesPopover({ caseId, className }: NotesPopoverProps) {
     
     await addNote(caseId, {
       content: newNoteContent.trim(),
-      category: defaultCategory,
+      category: newNoteCategory || defaultCategory,
     });
     
     setNewNoteContent("");
+    setNewNoteCategory("");
     setIsAdding(false);
-  }, [caseId, newNoteContent, addNote, defaultCategory]);
+  }, [caseId, newNoteContent, newNoteCategory, addNote, defaultCategory]);
 
   const handleDeleteNote = useCallback(async (noteId: string) => {
     await deleteNote(caseId, noteId);
@@ -65,6 +79,7 @@ export function NotesPopover({ caseId, className }: NotesPopoverProps) {
   const handleStartEdit = useCallback((note: Note) => {
     setEditingNoteId(note.id);
     setEditContent(note.content);
+    setEditCategory(note.category);
     setConfirmingDeleteId(null);
   }, []);
 
@@ -73,16 +88,18 @@ export function NotesPopover({ caseId, className }: NotesPopoverProps) {
     
     await updateNote(caseId, note.id, {
       content: editContent.trim(),
-      category: note.category,
+      category: editCategory || note.category,
     });
     
     setEditingNoteId(null);
     setEditContent("");
-  }, [caseId, editContent, updateNote]);
+    setEditCategory("");
+  }, [caseId, editContent, editCategory, updateNote]);
 
   const handleCancelEdit = useCallback(() => {
     setEditingNoteId(null);
     setEditContent("");
+    setEditCategory("");
   }, []);
 
   const handleEditKeyDown = useCallback((e: React.KeyboardEvent, note: Note) => {
@@ -166,9 +183,24 @@ export function NotesPopover({ caseId, className }: NotesPopoverProps) {
               className="min-h-[80px] text-sm resize-none"
               autoFocus
             />
-            <div className="flex items-center justify-between">
-              <span className="text-xs text-muted-foreground">
-                {navigator.platform.includes("Mac") ? "⌘" : "Ctrl"}+Enter to save
+            <div className="flex items-center gap-2">
+              <Select
+                value={newNoteCategory || defaultCategory}
+                onValueChange={setNewNoteCategory}
+              >
+                <SelectTrigger className="h-7 w-[120px] text-xs">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {noteCategories.map((cat) => (
+                    <SelectItem key={cat} value={cat} className="text-xs">
+                      {cat}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <span className="text-xs text-muted-foreground flex-1">
+                {navigator.platform.includes("Mac") ? "⌘" : "Ctrl"}+Enter
               </span>
               <div className="flex gap-2">
                 <Button
@@ -178,6 +210,7 @@ export function NotesPopover({ caseId, className }: NotesPopoverProps) {
                   onClick={() => {
                     setIsAdding(false);
                     setNewNoteContent("");
+                    setNewNoteCategory("");
                   }}
                 >
                   Cancel
@@ -214,12 +247,21 @@ export function NotesPopover({ caseId, className }: NotesPopoverProps) {
                     /* Edit Mode */
                     <div className="space-y-2">
                       <div className="flex items-center gap-2 mb-1">
-                        <Badge 
-                          variant="secondary" 
-                          className={`text-xs ${getCategoryColor(note.category)}`}
+                        <Select
+                          value={editCategory || note.category}
+                          onValueChange={setEditCategory}
                         >
-                          {note.category}
-                        </Badge>
+                          <SelectTrigger className="h-6 w-[110px] text-xs">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {noteCategories.map((cat) => (
+                              <SelectItem key={cat} value={cat} className="text-xs">
+                                {cat}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
                         <span className="text-xs text-muted-foreground">
                           {formatDate(note.createdAt)}
                         </span>
