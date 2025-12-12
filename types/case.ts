@@ -25,9 +25,9 @@ export interface AmountHistoryEntry {
   id: string;
   /** The amount value for this period */
   amount: number;
-  /** Start date of this amount period (ISO string, typically 1st of month) */
+  /** Start date of this amount period (YYYY-MM-DD format, typically 1st of month) */
   startDate: string;
-  /** End date of this amount period (ISO string). Null/undefined means ongoing. */
+  /** End date of this amount period (YYYY-MM-DD format). Null/undefined means ongoing. */
   endDate?: string | null;
   /** Verification source for this specific entry (e.g., "Bank Statement 05/2025") */
   verificationSource?: string;

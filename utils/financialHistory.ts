@@ -214,16 +214,17 @@ export function addHistoryEntryToItem(
 
 /**
  * Formats a date for display in the history modal.
+ * @param dateStr Date string in YYYY-MM-DD format
  */
-export function formatHistoryDate(isoDate: string | null | undefined): string {
-  if (!isoDate) {
+export function formatHistoryDate(dateStr: string | null | undefined): string {
+  if (!dateStr) {
     return "Ongoing";
   }
   
   // Parse as local time by appending T12:00:00 to avoid timezone shift
-  const date = new Date(isoDate + 'T12:00:00');
+  const date = new Date(dateStr + 'T12:00:00');
   if (Number.isNaN(date.getTime())) {
-    return isoDate;
+    return dateStr;
   }
   
   return date.toLocaleDateString("en-US", {

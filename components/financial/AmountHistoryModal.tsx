@@ -62,7 +62,7 @@ function formatDateForInput(dateStr: string | null | undefined): string {
   if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
     return dateStr;
   }
-  // If it's an ISO string, extract the date part
+  // If it contains a timestamp portion, extract just the date part
   if (dateStr.includes('T')) {
     return dateStr.split('T')[0];
   }
