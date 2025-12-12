@@ -261,7 +261,7 @@ export function CaseForm({ case: existingCase, onSave, onCancel }: CaseFormProps
         <CardContent className="flex-1 p-0 overflow-hidden">
           <Tabs value={activeTab} onValueChange={setActiveTab} className="h-full flex flex-col">
             <div className="px-6 pt-4 shrink-0">
-              <TabsList className="grid w-full grid-cols-3 gap-1 p-2">
+              <TabsList className="grid w-full grid-cols-3">
                 <TabsTrigger value="person" className="flex items-center gap-2">
                   <User className="h-4 w-4" />
                   Person
