@@ -278,7 +278,7 @@ export function CaseForm({ case: existingCase, onSave, onCancel }: CaseFormProps
             </div>
 
             <div className="flex-1 overflow-hidden">
-              <ScrollArea className="h-full px-6">
+              <ScrollArea className="h-full px-8">
                 <form onSubmit={handleSubmit} className="py-4 pb-6">
                   <TabsContent value="person" className="space-y-6 mt-4">
                     <PersonInfoForm
