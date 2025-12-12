@@ -16,7 +16,7 @@ describe("AmountHistoryModal", () => {
   ): AmountHistoryEntry => ({
     id: "entry-1",
     amount: 500,
-    startDate: "2024-11-01T00:00:00.000Z",
+    startDate: "2024-11-01",
     endDate: null,
     verificationSource: "Bank Statement",
     createdAt: "2024-11-01T10:00:00.000Z",
@@ -80,14 +80,14 @@ describe("AmountHistoryModal", () => {
           createMockHistoryEntry({
             id: "entry-1",
             amount: 500,
-            startDate: "2024-10-01T00:00:00.000Z",
-            endDate: "2024-10-31T00:00:00.000Z",
+            startDate: "2024-10-01",
+            endDate: "2024-10-31",
             verificationSource: "Pay Stub Oct",
           }),
           createMockHistoryEntry({
             id: "entry-2",
             amount: 600,
-            startDate: "2024-11-01T00:00:00.000Z",
+            startDate: "2024-11-01",
             endDate: null,
             verificationSource: "Pay Stub Nov",
           }),
@@ -216,8 +216,8 @@ describe("AmountHistoryModal", () => {
           createMockHistoryEntry({
             id: "entry-1",
             amount: 500,
-            startDate: "2024-10-01T00:00:00.000Z",
-            endDate: "2024-10-31T00:00:00.000Z",
+            startDate: "2024-10-01",
+            endDate: "2024-10-31",
             verificationSource: "Pay Stub",
           }),
         ],
@@ -249,7 +249,7 @@ describe("AmountHistoryModal", () => {
           createMockHistoryEntry({
             id: "entry-123",
             amount: 500,
-            startDate: "2024-10-01T00:00:00.000Z",
+            startDate: "2024-10-01",
           }),
         ],
       };

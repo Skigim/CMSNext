@@ -354,7 +354,7 @@ describe("financialHistory utilities", () => {
       expect(formatHistoryDate(undefined)).toBe("Ongoing");
     });
 
-    it("formats valid ISO date", () => {
+    it("formats valid date string", () => {
       const formatted = formatHistoryDate("2025-06-15");
       expect(formatted).toContain("Jun");
       expect(formatted).toContain("15");

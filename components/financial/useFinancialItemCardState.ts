@@ -136,6 +136,24 @@ export function useFinancialItemCardState({
     }
   }, [item, isEditing]);
 
+  // Sync amountHistory even while editing to prevent history modal changes from being overwritten
+  // when the form saves. Other fields (description, amount, etc.) should NOT sync while editing
+  // to preserve user's in-progress edits.
+  useEffect(() => {
+    if (isEditing) {
+      setFormData(prev => {
+        // Only update if the history actually changed (by reference)
+        if (prev.amountHistory !== item.amountHistory) {
+          return {
+            ...prev,
+            amountHistory: item.amountHistory,
+          };
+        }
+        return prev;
+      });
+    }
+  }, [item.amountHistory, isEditing]);
+
   useEffect(() => () => {
     if (saveSuccessTimerRef.current) {
       clearTimeout(saveSuccessTimerRef.current);
