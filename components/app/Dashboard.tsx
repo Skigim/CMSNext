@@ -165,7 +165,7 @@ export function Dashboard({ cases, alerts, activityLogState, onNewCase, onViewCa
         props: { activityLogState, onViewCase },
       },
     ];
-  }, [cases, allAlerts, activityEntries, activityLogState, alertsRefreshKey, activityRefreshKey]);
+  }, [cases, allAlerts, activityEntries, activityLogState, alertsRefreshKey, activityRefreshKey, onViewCase]);
 
   const overviewWidgets = useMemo(() => widgets.filter(w => w.metadata.id === 'activity'), [widgets]);
   const analyticsWidgets = useMemo(() => widgets.filter(w => w.metadata.id !== 'activity'), [widgets]);
