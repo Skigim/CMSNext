@@ -13,6 +13,7 @@ interface DashboardProps {
   alerts: AlertsIndex;
   activityLogState: CaseActivityLogState;
   onNewCase: () => void;
+  onViewCase?: (caseId: string) => void;
 }
 
 const ActivityWidgetLazy = createLazyWidget(
@@ -50,7 +51,7 @@ const AvgCaseProcessingTimeWidgetLazy = createLazyWidget(
   "AvgCaseProcessingTimeWidget",
 );
 
-export function Dashboard({ cases, alerts, activityLogState, onNewCase }: DashboardProps) {
+export function Dashboard({ cases, alerts, activityLogState, onNewCase, onViewCase }: DashboardProps) {
   const { featureFlags } = useAppViewState();
 
   const allAlerts = useMemo(() => alerts.alerts ?? [], [alerts.alerts]);
@@ -161,7 +162,7 @@ export function Dashboard({ cases, alerts, activityLogState, onNewCase }: Dashbo
           featureFlag: 'dashboard.widgets.activityTimeline',
         },
         component: ActivityWidgetLazy,
-        props: { activityLogState },
+        props: { activityLogState, onViewCase },
       },
     ];
   }, [cases, allAlerts, activityEntries, activityLogState, alertsRefreshKey, activityRefreshKey]);

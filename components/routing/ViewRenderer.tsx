@@ -98,6 +98,7 @@ export function ViewRenderer({
           alerts={alerts}
           activityLogState={activityLogState}
           onNewCase={handleNewCase}
+          onViewCase={handleViewCase}
         />
       );
 

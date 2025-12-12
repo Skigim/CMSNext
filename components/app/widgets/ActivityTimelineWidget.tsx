@@ -1,6 +1,8 @@
 import { useCallback, useMemo } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { CopyButton } from '@/components/common/CopyButton';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { FileText, Save, Clock } from 'lucide-react';
 import { useWidgetData } from '@/hooks/useWidgetData';
@@ -19,6 +21,7 @@ interface TimelineItem {
   relativeTime: string;
   caseId: string;
   caseName: string;
+  caseMcn?: string | null;
   icon: typeof FileText;
   badgeColor: string;
   badgeText: string;
@@ -32,6 +35,8 @@ interface ActivityTimelineWidgetProps {
   activityLogState: CaseActivityLogState;
   /** Widget metadata (injected by WidgetRegistry) */
   metadata?: WidgetMetadata;
+  /** Handler to view a case */
+  onViewCase?: (caseId: string) => void;
 }
 
 /**
@@ -103,12 +108,13 @@ function formatActivityTimeline(activityLog: CaseActivityEntry[]): TimelineItem[
         return {
           id: noteEntry.id,
           type: 'note',
-          title: `Note added to ${noteEntry.caseName}`,
+          title: `Note added`,
           description: noteEntry.payload.preview || 'New case note',
           timestamp: noteEntry.timestamp,
           relativeTime,
           caseId: noteEntry.caseId,
           caseName: noteEntry.caseName,
+          caseMcn: noteEntry.caseMcn,
           icon: FileText,
           badgeColor: 'bg-primary/20 text-primary',
           badgeText: 'Note',
@@ -123,11 +129,12 @@ function formatActivityTimeline(activityLog: CaseActivityEntry[]): TimelineItem[
           id: statusEntry.id,
           type: 'save',
           title: `Status updated: ${fromStatus} → ${toStatus}`,
-          description: `${statusEntry.caseName} status changed`,
+          description: `Status changed`,
           timestamp: statusEntry.timestamp,
           relativeTime,
           caseId: statusEntry.caseId,
           caseName: statusEntry.caseName,
+          caseMcn: statusEntry.caseMcn,
           icon: Save,
           badgeColor: 'bg-accent text-accent-foreground',
           badgeText: 'Status Change',
@@ -141,11 +148,12 @@ function formatActivityTimeline(activityLog: CaseActivityEntry[]): TimelineItem[
           id: priorityEntry.id,
           type: 'save',
           title: `Priority ${action}`,
-          description: `${priorityEntry.caseName}`,
+          description: `Priority updated`,
           timestamp: priorityEntry.timestamp,
           relativeTime,
           caseId: priorityEntry.caseId,
           caseName: priorityEntry.caseName,
+          caseMcn: priorityEntry.caseMcn,
           icon: Save,
           badgeColor: 'bg-amber-100 text-amber-700 dark:bg-amber-900 dark:text-amber-300',
           badgeText: 'Priority',
@@ -158,11 +166,12 @@ function formatActivityTimeline(activityLog: CaseActivityEntry[]): TimelineItem[
         id: baseEntry.id,
         type: 'unknown',
         title: 'Activity recorded',
-        description: `Activity on ${baseEntry.caseName}`,
+        description: `Activity on case`,
         timestamp: baseEntry.timestamp,
         relativeTime,
         caseId: baseEntry.caseId,
         caseName: baseEntry.caseName,
+        caseMcn: baseEntry.caseMcn,
         icon: Clock,
         badgeColor: 'bg-muted text-muted-foreground',
         badgeText: 'Other',
@@ -197,6 +206,7 @@ function formatActivityTimeline(activityLog: CaseActivityEntry[]): TimelineItem[
 export function ActivityTimelineWidget({
   activityLogState,
   metadata,
+  onViewCase,
 }: ActivityTimelineWidgetProps) {
   /**
    * Fetch and format activity data using widget data hook.
@@ -310,9 +320,35 @@ export function ActivityTimelineWidget({
                             {item.badgeText}
                           </Badge>
                         </div>
-                        <p className="text-xs text-muted-foreground truncate">
+                        <p className="text-xs text-muted-foreground truncate mb-1">
                           {item.description}
                         </p>
+                        <div className="flex items-center gap-2 mt-1">
+                          {onViewCase ? (
+                            <Button
+                              variant="link"
+                              className="h-auto p-0 text-xs font-medium"
+                              onClick={() => onViewCase(item.caseId)}
+                            >
+                              {item.caseName}
+                            </Button>
+                          ) : (
+                            <span className="text-xs font-medium">{item.caseName}</span>
+                          )}
+                          <span className="text-xs text-muted-foreground">•</span>
+                          <CopyButton
+                            value={item.caseMcn}
+                            label="MCN"
+                            showLabel={false}
+                            mono
+                            className="text-muted-foreground"
+                            buttonClassName="text-xs"
+                            textClassName="text-xs"
+                            missingLabel="No MCN"
+                            missingClassName="text-xs text-muted-foreground"
+                            variant="plain"
+                          />
+                        </div>
                         <p className="text-xs text-muted-foreground mt-1">
                           {item.relativeTime}
                         </p>
