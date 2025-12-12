@@ -143,6 +143,24 @@ function formatActivityTimeline(activityLog: CaseActivityEntry[]): TimelineItem[
         };
       }
 
+      if (entry.type === 'priority-change') {
+        const priorityEntry = entry as Extract<CaseActivityEntry, { type: 'priority-change' }>;
+        const action = priorityEntry.payload.toPriority ? 'marked as priority' : 'unmarked as priority';
+        return {
+          id: priorityEntry.id,
+          type: 'save',
+          title: `Priority ${action}`,
+          description: `${priorityEntry.caseName}`,
+          timestamp: priorityEntry.timestamp,
+          relativeTime,
+          caseId: priorityEntry.caseId,
+          caseName: priorityEntry.caseName,
+          icon: Save,
+          badgeColor: 'bg-amber-100 text-amber-700 dark:bg-amber-900 dark:text-amber-300',
+          badgeText: 'Priority',
+        };
+      }
+
       const baseEntry = entry as Extract<CaseActivityEntry, CaseActivityEntry>;
       return {
         id: baseEntry.id,
