@@ -31,8 +31,7 @@ describe("ConnectionOnboarding", () => {
     isSupported: true,
     permissionStatus: "granted",
     hasStoredHandle: true,
-    onConnectToExisting: vi.fn(),
-    onChooseNewFolder: vi.fn(),
+    onConnectionComplete: vi.fn(),
     onGoToSettings: vi.fn(),
   };
 
@@ -66,16 +65,14 @@ describe("ConnectionOnboarding", () => {
 
   it("passes correct connection callbacks to the modal", async () => {
     const { ConnectionOnboarding } = await import("@/components/app/ConnectionOnboarding");
-    const onConnectToExisting = vi.fn();
-    const onChooseNewFolder = vi.fn();
+    const onConnectionComplete = vi.fn();
     const onGoToSettings = vi.fn();
 
     render(
       <ConnectionOnboarding
         {...defaultProps}
         isOpen
-        onConnectToExisting={onConnectToExisting}
-        onChooseNewFolder={onChooseNewFolder}
+        onConnectionComplete={onConnectionComplete}
         onGoToSettings={onGoToSettings}
       />
     );

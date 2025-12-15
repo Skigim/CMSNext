@@ -10,8 +10,7 @@ interface ConnectionOnboardingProps {
   isSupported: boolean;
   permissionStatus?: string;
   hasStoredHandle?: boolean;
-  onConnectToExisting: () => Promise<boolean>;
-  onChooseNewFolder: () => Promise<boolean>;
+  onConnectionComplete: () => void;
   onGoToSettings: () => void;
 }
 
@@ -33,8 +32,7 @@ export const ConnectionOnboarding = memo(function ConnectionOnboarding({
   isSupported,
   permissionStatus,
   hasStoredHandle,
-  onConnectToExisting,
-  onChooseNewFolder,
+  onConnectionComplete,
   onGoToSettings,
 }: ConnectionOnboardingProps) {
   return (
@@ -52,8 +50,7 @@ export const ConnectionOnboarding = memo(function ConnectionOnboarding({
           <ConnectToExistingModal
             isOpen={isOpen}
             isSupported={isSupported}
-            onConnectToExisting={onConnectToExisting}
-            onChooseNewFolder={onChooseNewFolder}
+            onConnectionComplete={onConnectionComplete}
             onGoToSettings={onGoToSettings}
             permissionStatus={permissionStatus}
             hasStoredHandle={hasStoredHandle}

@@ -5,8 +5,7 @@ import type { CaseWorkspaceProps } from "./CaseWorkspace";
 import type { FileStorageLifecycleState } from "../../contexts/FileStorageContext";
 
 interface ConnectionHandlers {
-  onConnectToExisting: () => Promise<boolean>;
-  onChooseNewFolder: () => Promise<boolean>;
+  onConnectionComplete: () => void;
   onGoToSettings: () => void;
 }
 
@@ -68,13 +67,11 @@ export function useAppContentViewModel({
       isSupported: isSupported ?? false,
       permissionStatus,
       hasStoredHandle,
-      onConnectToExisting: connectionHandlers.onConnectToExisting,
-      onChooseNewFolder: connectionHandlers.onChooseNewFolder,
+      onConnectionComplete: connectionHandlers.onConnectionComplete,
       onGoToSettings: connectionHandlers.onGoToSettings,
     }),
     [
-      connectionHandlers.onChooseNewFolder,
-      connectionHandlers.onConnectToExisting,
+      connectionHandlers.onConnectionComplete,
       connectionHandlers.onGoToSettings,
       hasStoredHandle,
       connectionMessage,

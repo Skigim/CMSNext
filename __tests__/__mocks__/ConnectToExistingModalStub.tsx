@@ -5,8 +5,7 @@ export interface ConnectToExistingModalStubProps {
   isSupported: boolean;
   permissionStatus?: "granted" | "denied" | "prompt" | "unknown";
   hasStoredHandle?: boolean;
-  onConnectToExisting: AsyncButtonHandler;
-  onChooseNewFolder: AsyncButtonHandler;
+  onConnectionComplete: AsyncButtonHandler;
   onGoToSettings: AsyncButtonHandler;
 }
 
@@ -25,8 +24,7 @@ export default function ConnectToExistingModalStub(props: ConnectToExistingModal
     isSupported,
     permissionStatus = "unknown",
     hasStoredHandle = false,
-    onConnectToExisting,
-    onChooseNewFolder,
+    onConnectionComplete,
     onGoToSettings,
   } = props;
 
@@ -62,12 +60,12 @@ export default function ConnectToExistingModalStub(props: ConnectToExistingModal
       )}
 
       {hasStoredHandle && (
-        <button type="button" onClick={() => callHandler(onConnectToExisting)}>
+        <button type="button" onClick={() => callHandler(onConnectionComplete)}>
           Connect to Previous Folder
         </button>
       )}
 
-      <button type="button" onClick={() => callHandler(onChooseNewFolder)}>
+      <button type="button" onClick={() => callHandler(onConnectionComplete)}>
         Choose Data Folder
       </button>
 

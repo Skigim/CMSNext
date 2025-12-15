@@ -23,7 +23,7 @@ import { useAppContentViewModel } from "./useAppContentViewModel";
 import type { CaseCategory, StoredCase, FinancialItem, NewNoteData } from "../../types/case";
 
 export const AppContent = memo(function AppContent() {
-  const { isSupported, hasStoredHandle, connectToFolder, connectToExisting, loadExistingData, service, fileStorageService } = useFileStorage();
+  const { isSupported, hasStoredHandle, service, fileStorageService } = useFileStorage();
   const connectionState = useFileStorageLifecycleSelectors();
   const dataManager = useDataManagerSafe();
 
@@ -91,16 +91,12 @@ export const AppContent = memo(function AppContent() {
 
   const {
     showConnectModal,
-    handleChooseNewFolder,
-    handleConnectToExisting,
+    handleConnectionComplete,
     dismissConnectModal,
   } = useConnectionFlow({
     isSupported,
     hasLoadedData,
     connectionState,
-    connectToFolder,
-    connectToExisting,
-    loadExistingData,
     service,
     fileStorageService,
     dataManager,
@@ -389,8 +385,7 @@ export const AppContent = memo(function AppContent() {
     lifecycle: connectionState.lifecycle,
     navigationState,
     connectionHandlers: {
-      onConnectToExisting: handleConnectToExisting,
-      onChooseNewFolder: handleChooseNewFolder,
+      onConnectionComplete: handleConnectionComplete,
       onGoToSettings: handleGoToSettings,
     },
     workspaceState,
