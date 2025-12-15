@@ -3,7 +3,6 @@ import type { ProfilerOnRenderCallback } from "react";
 
 type ExtendedProfilerArgs = [...Parameters<ProfilerOnRenderCallback>, Set<unknown>?, number?];
 type ExtendedProfilerOnRenderCallback = (...args: ExtendedProfilerArgs) => void;
-import { toast } from "sonner";
 import { useFileStorage, useFileStorageLifecycleSelectors } from "../../contexts/FileStorageContext";
 import { useDataManagerSafe } from "../../contexts/DataManagerContext";
 import { useCategoryConfig } from "../../contexts/CategoryConfigContext";
@@ -18,14 +17,10 @@ import {
   useNavigationFlow,
   useNoteFlow,
 } from "../../hooks";
-import { clearFileStorageFlags } from "../../utils/fileStorageFlags";
 import { recordRenderProfile } from "../../utils/performanceTracker";
-import { createLogger } from "../../utils/logger";
 import { AppContentView } from "./AppContentView";
 import { useAppContentViewModel } from "./useAppContentViewModel";
 import type { CaseCategory, StoredCase, FinancialItem, NewNoteData } from "../../types/case";
-
-const logger = createLogger("AppContent");
 
 export const AppContent = memo(function AppContent() {
   const { isSupported, hasStoredHandle, connectToFolder, connectToExisting, loadExistingData, service, fileStorageService } = useFileStorage();
@@ -209,24 +204,7 @@ export const AppContent = memo(function AppContent() {
     closeItemForm();
   }, [closeItemForm]);
 
-  const handleDataPurged = useCallback(async () => {
-    try {
-      setError(null);
-      setCases([]);
-      setHasLoadedData(false);
 
-      clearFileStorageFlags("dataBaseline", "sessionHadData");
-
-      toast.success("All data has been purged successfully");
-    } catch (err) {
-      logger.error("Failed to handle data purge", {
-        error: err instanceof Error ? err.message : String(err),
-      });
-      const errorMsg = "Failed to complete data purge. Please try again.";
-      setError(errorMsg);
-      toast.error(errorMsg);
-    }
-  }, [setCases, setError, setHasLoadedData]);
 
   const handleSidebarOpenChange = useCallback(
     (open: boolean) => {
@@ -280,12 +258,10 @@ export const AppContent = memo(function AppContent() {
       handleDeleteCases: deleteCases,
       handleUpdateCasesStatus: updateCasesStatus,
       handleUpdateCasesPriority: updateCasesPriority,
-      handleDataPurged,
     }),
     [
       handleBackToList,
       handleCancelForm,
-      handleDataPurged,
       handleDeleteCase,
       deleteCases,
       updateCasesStatus,

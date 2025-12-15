@@ -98,7 +98,7 @@ export function FinancialItemCard({
         {/* Floating action buttons - top right corner overlapping card edge */}
         {showActions && (
           <div 
-            className="absolute -right-2 -top-2 z-20 opacity-0 transition-opacity group-hover:opacity-100 data-[visible=true]:opacity-100 rounded-md bg-background border shadow-sm" 
+            className="absolute -right-2 -top-2 z-20 opacity-0 transition-opacity group-hover:opacity-100 focus-within:opacity-100 data-[visible=true]:opacity-100 rounded-md bg-background border shadow-sm" 
             data-visible={isEditing}
           >
             <FinancialItemCardActions

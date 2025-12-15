@@ -1,6 +1,6 @@
 import { useCallback, useMemo, useState } from "react";
 import type { LucideIcon } from "lucide-react";
-import { ListChecks, Plus, RefreshCcw, Save, Undo2, X } from "lucide-react";
+import { ListChecks, Plus, RefreshCcw, Save, Undo2, X, FileText, Bell, Settings2 } from "lucide-react";
 import { Button } from "../ui/button";
 import {
   Card,
@@ -14,6 +14,7 @@ import { Input } from "../ui/input";
 import { Badge } from "../ui/badge";
 import { Separator } from "../ui/separator";
 import { Checkbox } from "../ui/checkbox";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
 import {
   Select,
   SelectContent,
@@ -656,16 +657,6 @@ function AlertTypeCategoryEditor({
 }
 
 // ============================================================================
-// Category Keys (excluding special editors)
-// ============================================================================
-
-const SIMPLE_CATEGORY_KEYS: CategoryKey[] = [
-  "caseTypes",
-  "livingArrangements",
-  "noteCategories",
-  "verificationStatuses",
-];
-
 // ============================================================================
 // Category Manager Panel
 // ============================================================================
@@ -747,27 +738,83 @@ export function CategoryManagerPanel({
       </CardHeader>
       <CardContent className="space-y-6">
         {supportingContent ?? defaultSupportingContent}
-        <div className="grid gap-4 lg:grid-cols-2">
-          <StatusCategoryEditor
-            statusConfigs={config.caseStatuses}
-            onSave={handleSaveStatuses}
-            isGloballyLoading={loading || isResetting}
-          />
-          <AlertTypeCategoryEditor
-            alertTypeConfigs={config.alertTypes}
-            onSave={handleSaveAlertTypes}
-            isGloballyLoading={loading || isResetting}
-          />
-          {SIMPLE_CATEGORY_KEYS.map(key => (
-            <SimpleCategoryEditor
-              key={key}
-              categoryKey={key}
-              valuesFromConfig={config[key] as string[] ?? defaultCategoryConfig[key] as string[]}
-              onSave={values => handleSave(key, values)}
-              isGloballyLoading={loading || isResetting}
-            />
-          ))}
-        </div>
+        <Tabs defaultValue="case-config" className="space-y-4">
+          <TabsList className="grid w-full grid-cols-3">
+            <TabsTrigger value="case-config" className="flex items-center gap-2">
+              <FileText className="h-4 w-4" />
+              <span className="hidden sm:inline">Case Config</span>
+            </TabsTrigger>
+            <TabsTrigger value="notes-alerts" className="flex items-center gap-2">
+              <Bell className="h-4 w-4" />
+              <span className="hidden sm:inline">Notes & Alerts</span>
+            </TabsTrigger>
+            <TabsTrigger value="other" className="flex items-center gap-2">
+              <Settings2 className="h-4 w-4" />
+              <span className="hidden sm:inline">Other</span>
+            </TabsTrigger>
+          </TabsList>
+
+          {/* Case Config Tab */}
+          <TabsContent value="case-config" className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              Configure case types and workflow statuses. Status colors appear throughout the application.
+            </p>
+            <div className="grid gap-4 lg:grid-cols-2">
+              <SimpleCategoryEditor
+                categoryKey="caseTypes"
+                valuesFromConfig={config.caseTypes ?? defaultCategoryConfig.caseTypes}
+                onSave={values => handleSave("caseTypes", values)}
+                isGloballyLoading={loading || isResetting}
+              />
+              <StatusCategoryEditor
+                statusConfigs={config.caseStatuses}
+                onSave={handleSaveStatuses}
+                isGloballyLoading={loading || isResetting}
+              />
+            </div>
+          </TabsContent>
+
+          {/* Notes & Alerts Tab */}
+          <TabsContent value="notes-alerts" className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              Manage note categories and alert type classifications.
+            </p>
+            <div className="grid gap-4 lg:grid-cols-2">
+              <SimpleCategoryEditor
+                categoryKey="noteCategories"
+                valuesFromConfig={config.noteCategories ?? defaultCategoryConfig.noteCategories}
+                onSave={values => handleSave("noteCategories", values)}
+                isGloballyLoading={loading || isResetting}
+              />
+              <AlertTypeCategoryEditor
+                alertTypeConfigs={config.alertTypes}
+                onSave={handleSaveAlertTypes}
+                isGloballyLoading={loading || isResetting}
+              />
+            </div>
+          </TabsContent>
+
+          {/* Other Settings Tab */}
+          <TabsContent value="other" className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              Additional category options for forms and verification workflows.
+            </p>
+            <div className="grid gap-4 lg:grid-cols-2">
+              <SimpleCategoryEditor
+                categoryKey="livingArrangements"
+                valuesFromConfig={config.livingArrangements ?? defaultCategoryConfig.livingArrangements}
+                onSave={values => handleSave("livingArrangements", values)}
+                isGloballyLoading={loading || isResetting}
+              />
+              <SimpleCategoryEditor
+                categoryKey="verificationStatuses"
+                valuesFromConfig={config.verificationStatuses ?? defaultCategoryConfig.verificationStatuses}
+                onSave={values => handleSave("verificationStatuses", values)}
+                isGloballyLoading={loading || isResetting}
+              />
+            </div>
+          </TabsContent>
+        </Tabs>
       </CardContent>
     </Card>
   );

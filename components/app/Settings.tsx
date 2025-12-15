@@ -1,19 +1,8 @@
-import { useMemo, useRef, useState, type ChangeEvent } from "react";
+import { useMemo, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../ui/card";
 import { Button } from "../ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
 import { ImportModal } from "../modals/ImportModal";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "../ui/alert-dialog";
 
 import { Badge } from "../ui/badge";
 import { Separator } from "../ui/separator";
@@ -26,14 +15,12 @@ import { FeedbackPanel } from "../error/ErrorFeedbackForm";
 import { CategoryConfigDevPanel } from "../diagnostics/CategoryConfigDevPanel";
 import { CategoryManagerPanel } from "../category/CategoryManagerPanel";
 import { AlertsPreviewPanel } from "../alerts/AlertsPreviewPanel";
-import { useFileStorage } from "../../contexts/FileStorageContext";
 import { useTheme } from "../../contexts/ThemeContext";
 import {
   Upload,
   Download,
   Database,
   Palette,
-  Trash2,
   Bug,
   FolderOpen,
   Check,
@@ -48,25 +35,31 @@ import { toast } from "sonner";
 import { useDataManagerSafe } from "../../contexts/DataManagerContext";
 import { useCategoryConfig } from "../../contexts/CategoryConfigContext";
 import type { CaseActivityLogState } from "../../types/activityLog";
-import { useAppViewState } from "@/hooks/useAppViewState";
+import { useAppViewState, useAlertsCsvImport } from "@/hooks";
 
 interface SettingsProps {
   cases: StoredCase[];
   activityLogState?: CaseActivityLogState;
-  onDataPurged?: () => void;
   onAlertsCsvImported?: (index: AlertsIndex) => void;
 }
 
-export function Settings({ cases, onDataPurged, onAlertsCsvImported }: SettingsProps) {
+export function Settings({ cases, onAlertsCsvImported }: SettingsProps) {
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
-  const [isPurging, setIsPurging] = useState(false);
-  const [isAlertsImporting, setIsAlertsImporting] = useState(false);
-  const alertsFileInputRef = useRef<HTMLInputElement>(null);
-  const { disconnect } = useFileStorage();
   const { theme, setTheme, themeOptions } = useTheme();
   const dataManager = useDataManagerSafe();
   const { config } = useCategoryConfig();
   const { featureFlags } = useAppViewState();
+  
+  const {
+    isImporting: isAlertsImporting,
+    fileInputRef: alertsFileInputRef,
+    handleButtonClick: handleAlertsCsvButtonClick,
+    handleFileSelected: handleAlertsCsvSelected,
+  } = useAlertsCsvImport({
+    dataManager,
+    cases,
+    onAlertsCsvImported,
+  });
   
   const showDevTools = featureFlags["settings.devTools"] ?? false;
   const showLegacyMigration = featureFlags["settings.legacyMigration"] ?? false;
@@ -127,105 +120,6 @@ export function Settings({ cases, onDataPurged, onAlertsCsvImported }: SettingsP
     } catch (error) {
       console.error('Export failed:', error);
       toast.error('Failed to export data. Please try again.');
-    }
-  };
-
-  const handleAlertsCsvButtonClick = () => {
-    if (!dataManager) {
-      toast.error("Connect a storage folder before importing alerts.");
-      return;
-    }
-
-    alertsFileInputRef.current?.click();
-  };
-
-  const handleAlertsCsvSelected = async (event: ChangeEvent<HTMLInputElement>) => {
-    const input = event.target;
-    const file = input.files?.[0];
-
-    if (!file) {
-      return;
-    }
-
-    if (!dataManager) {
-      toast.error("Alerts service isn't available yet. Connect storage and try again.");
-      input.value = "";
-      return;
-    }
-
-    setIsAlertsImporting(true);
-
-    try {
-      const csvText = await file.text();
-      if (!csvText.trim()) {
-        toast.info("No alerts detected", {
-          description: `${file.name} is empty.`,
-        });
-        return;
-      }
-
-      const result = await dataManager.mergeAlertsFromCsvContent(csvText, {
-        cases,
-        sourceFileName: file.name,
-      });
-
-      const refreshedIndex = await dataManager.getAlertsIndex({ cases });
-      onAlertsCsvImported?.(refreshedIndex);
-
-      if (result.added === 0 && result.updated === 0) {
-        toast.info("No new alerts found", {
-          description: `${file.name} didn't include new or updated alerts. Still tracking ${result.total} alerts.`,
-        });
-      } else {
-        const descriptionParts = [
-          result.added > 0 ? `${result.added} new` : null,
-          result.updated > 0 ? `${result.updated} updated` : null,
-        ].filter(Boolean) as string[];
-
-        toast.success("Alerts updated", {
-          description: `${descriptionParts.join(" · ")} • ${result.total} total alerts saved`,
-        });
-      }
-    } catch (error) {
-      console.error("Failed to import alerts from CSV:", error);
-      toast.error("Failed to import alerts", {
-        description: error instanceof Error ? error.message : "Please verify the file and try again.",
-      });
-    } finally {
-      setIsAlertsImporting(false);
-      input.value = "";
-    }
-  };
-
-  const handlePurgeDatabase = async () => {
-    setIsPurging(true);
-    try {
-      // Use DataManager to purge data
-      if (dataManager) {
-        await dataManager.clearAllData();
-      } else {
-        console.warn('DataManager not available for purge operation');
-      }
-      
-      // Also disconnect from the file storage to clear the directoryHandle
-      try {
-        await disconnect();
-        console.log('File storage disconnected');
-      } catch (err) {
-        console.warn('Could not disconnect from file storage:', err);
-      }
-      
-      // Notify parent component to refresh data
-      if (onDataPurged) {
-        onDataPurged();
-      }
-      
-      toast.success('All data purged successfully!');
-    } catch (error) {
-      console.error('Error purging data:', error);
-      toast.error('Failed to purge local storage. Please try again.');
-    } finally {
-      setIsPurging(false);
     }
   };
 
@@ -362,60 +256,6 @@ export function Settings({ cases, onDataPurged, onAlertsCsvImported }: SettingsP
                         <span>Active cases</span>
                       </div>
                     )}
-                  </div>
-                </section>
-
-                <Separator />
-
-                {/* Purge Section */}
-                <section className="space-y-3">
-                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                    <div>
-                      <h4 className="font-medium text-destructive">Purge all data</h4>
-                      <p className="text-sm text-muted-foreground">
-                        Permanently delete every case, person, and financial record from local storage.
-                      </p>
-                    </div>
-                    <AlertDialog>
-                      <AlertDialogTrigger asChild>
-                        <Button
-                          variant="destructive"
-                          disabled={isPurging}
-                          className="flex items-center gap-2"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                          {isPurging ? "Purging..." : "Purge local storage"}
-                        </Button>
-                      </AlertDialogTrigger>
-                      <AlertDialogContent>
-                        <AlertDialogHeader>
-                          <AlertDialogTitle>Purge All Data</AlertDialogTitle>
-                          <AlertDialogDescription>
-                            This will permanently delete all cases, people, and financial data. 
-                            This action cannot be undone. Are you absolutely sure?
-                          </AlertDialogDescription>
-                        </AlertDialogHeader>
-                        <AlertDialogFooter>
-                          <AlertDialogCancel>Cancel</AlertDialogCancel>
-                          <AlertDialogAction
-                            onClick={handlePurgeDatabase}
-                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                          >
-                            Yes, purge everything
-                          </AlertDialogAction>
-                        </AlertDialogFooter>
-                      </AlertDialogContent>
-                    </AlertDialog>
-                  </div>
-
-                  <div className="rounded-lg border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
-                    <div className="flex items-center gap-2 font-medium">
-                      <Trash2 className="h-4 w-4" />
-                      This action can’t be undone.
-                    </div>
-                    <p className="mt-2 text-destructive/80">
-                      All local files will be removed and you’ll need to reconnect to a folder afterwards.
-                    </p>
                   </div>
                 </section>
               </CardContent>

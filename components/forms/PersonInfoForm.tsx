@@ -155,7 +155,7 @@ export function PersonInfoForm({
                   size="sm"
                   onClick={() => onRelationshipsChange.remove(index)}
                   aria-label="Remove relationship"
-                  className="absolute right-2 top-2 h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                  className="absolute right-2 top-2 h-6 w-6 p-0 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity"
                 >
                   <Minus className="h-3 w-3" />
                 </Button>

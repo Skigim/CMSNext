@@ -321,7 +321,7 @@ export function NotesPopover({ caseId, className }: NotesPopoverProps) {
                       </div>
                       
                       {/* Action buttons */}
-                      <div className="opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
+                      <div className="opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity flex gap-1">
                         {confirmingDeleteId === note.id ? (
                           <>
                             <Button
@@ -329,6 +329,7 @@ export function NotesPopover({ caseId, className }: NotesPopoverProps) {
                               size="sm"
                               className="h-6 w-6 p-0"
                               onClick={() => handleDeleteNote(note.id)}
+                              aria-label="Confirm delete note"
                             >
                               <Trash2 className="h-3 w-3" />
                             </Button>
@@ -337,6 +338,7 @@ export function NotesPopover({ caseId, className }: NotesPopoverProps) {
                               size="sm"
                               className="h-6 w-6 p-0"
                               onClick={() => setConfirmingDeleteId(null)}
+                              aria-label="Cancel delete"
                             >
                               <X className="h-3 w-3" />
                             </Button>
@@ -348,6 +350,7 @@ export function NotesPopover({ caseId, className }: NotesPopoverProps) {
                               size="sm"
                               className="h-6 w-6 p-0 text-muted-foreground hover:text-foreground"
                               onClick={() => handleStartEdit(note)}
+                              aria-label="Edit note"
                             >
                               <Pencil className="h-3 w-3" />
                             </Button>
@@ -356,6 +359,7 @@ export function NotesPopover({ caseId, className }: NotesPopoverProps) {
                               size="sm"
                               className="h-6 w-6 p-0 text-muted-foreground hover:text-destructive"
                               onClick={() => setConfirmingDeleteId(note.id)}
+                              aria-label="Delete note"
                             >
                               <Trash2 className="h-3 w-3" />
                             </Button>

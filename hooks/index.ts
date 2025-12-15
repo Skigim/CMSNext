@@ -37,6 +37,9 @@ export { useCaseListPreferences } from './useCaseListPreferences';
 export { useAlertListPreferences } from './useAlertListPreferences';
 export type { AlertFilters, AlertSortConfig, AlertListSortKey, AlertListSortDirection } from './useAlertListPreferences';
 
+// Alerts CSV import
+export { useAlertsCsvImport } from './useAlertsCsvImport';
+
 // Financial item flow
 export { useFinancialItemFlow } from './useFinancialItemFlow';
 

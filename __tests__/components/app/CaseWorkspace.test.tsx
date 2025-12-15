@@ -74,7 +74,6 @@ describe("CaseWorkspace", () => {
     handleDeleteCases: vi.fn(async () => 0),
     handleUpdateCasesStatus: vi.fn(async () => 0),
     handleUpdateCasesPriority: vi.fn(async () => 0),
-    handleDataPurged: asyncVoid(),
   };
 
   const baseFinancialFlow: CaseWorkspaceProps["financialFlow"] = {

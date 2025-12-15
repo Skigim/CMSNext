@@ -121,22 +121,65 @@
 
 ### Week 3: UX Improvements & Automation (Dec 16-22)
 
-#### Prep Work
+#### Prep Work ✅
 
-- [ ] Address any accessibility issues from Week 2 audit
-- [ ] Fix bugs discovered from Week 2 features
-- [ ] Plan feature implementation approach
+- [x] Address accessibility issues from Week 2 (focus-within, aria-labels)
+- [x] Run tests and build verification (455 tests passing)
+- [x] Plan feature implementation approach
 
-#### Features
+#### Phase 1: Settings Refactor (Dec 15)
 
-- [ ] File encryption (encrypt data file at rest, password-based key derivation)
-- [ ] Intelligent VR (Verification Request) generator
-- [ ] Keyboard shortcuts for common actions
+**Goal:** Reduce Settings.tsx from 698 → ~450 lines
 
-#### Refactoring & Polish
+- [ ] Create `useDataPurge` hook (~40 lines) - extract purge logic with `isPurging` state
+- [ ] Create `useAlertsCsvImport` hook (~60 lines) - extract CSV import with file handling
+- [ ] Update Settings.tsx to use new hooks
+- [ ] Add unit tests for both hooks
 
-- [ ] Add unit tests for Week 3 features
-- [ ] Refactor Settings.tsx (675 lines) - extract to hooks (`useDataPurge`, `useAlertsCsvImport`)
+#### Phase 2: File Encryption (Dec 16-17)
+
+**Goal:** Password-based encryption at rest using Web Crypto API
+
+- [ ] Create `utils/encryption.ts` - AES-256-GCM encryption service
+  - `deriveKey(password, salt)` - PBKDF2 with 100k+ iterations
+  - `encrypt(data, key)` / `decrypt(payload, key)`
+- [ ] Create `types/encryption.ts` - type definitions
+- [ ] Modify `AutosaveFileService` - add encryption hooks in read/write paths
+- [ ] Modify `FileStorageContext` - encryption state management
+- [ ] Create password setup modal (first-time encryption)
+- [ ] Create password entry modal (on encrypted file load)
+- [ ] Add encryption toggle in Settings
+- [ ] Add unit tests for encryption service
+
+#### Phase 3: VR Generator (Dec 18-19)
+
+**Goal:** Generate Verification Request letters for financial items
+
+- [ ] Create `types/vr.ts` - VRRecipient, VRLineItem, GeneratedVR types
+- [ ] Create `utils/vrGenerator.ts` - letter generation (follow caseSummaryGenerator pattern)
+  - `groupItemsByRecipient(financials)` - group VR-pending items by institution
+  - `generateVRLetter(case, recipient)` - template-based letter text
+- [ ] Create `hooks/useVRGenerator.ts` - VR generation flow hook
+- [ ] Create `components/case/VRGeneratorModal.tsx` - UI with item selection, preview, copy
+- [ ] Add "Generate VRs" button to CaseDetails header
+- [ ] Add unit tests for generator and hook
+
+#### Phase 4: Keyboard Shortcuts (Dec 20-21)
+
+**Goal:** Gmail/GitHub-style keyboard navigation with chord support
+
+- [ ] Create `utils/keyboardShortcuts.ts` - shortcut definitions
+  - Navigation: `g+d` (dashboard), `g+l` (list), `g+r` (reports), `g+s` (settings)
+  - Actions: `n` (new case), `/` (search), `?` (help)
+  - List: `j/k` (up/down), `Enter` (open)
+- [ ] Create `hooks/useKeyboardShortcuts.ts` - global handler with chord state
+- [ ] Create `components/common/KeyboardShortcutsHelp.tsx` - help modal
+- [ ] Wire up shortcuts in App.tsx
+- [ ] Update GlobalContextMenu with shortcut hints
+- [ ] Add unit tests for shortcut handler
+
+#### Polish (Dec 21-22)
+
 - [ ] Optimize large case list rendering
 - [ ] Clean up deprecated code paths
 - [ ] Create December changelog
