@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { useFileStorage } from "../../contexts/FileStorageContext";
 import { useDataManagerSafe } from "../../contexts/DataManagerContext";
+import { useEncryptionFileHooks } from "../../hooks/useEncryptionFileHooks";
 import { markFileStorageInitialized, resetFileStorageFlags } from "../../utils/fileStorageFlags";
 
 interface FileStorageIntegratorProps {
@@ -24,6 +25,10 @@ interface FileStorageIntegratorProps {
 export function FileStorageIntegrator({ children }: FileStorageIntegratorProps) {
   const { service } = useFileStorage();
   const dataManager = useDataManagerSafe();
+  
+  // Wire up encryption hooks to the file service
+  // This enables automatic encryption/decryption during file operations
+  useEncryptionFileHooks();
   
   useEffect(() => {
     // Only set the service if we have one and it's different from current

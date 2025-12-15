@@ -2,6 +2,7 @@ import React, { ReactElement } from 'react'
 import { render, RenderOptions, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { ThemeProvider } from '@/contexts/ThemeContext'
+import { EncryptionProvider } from '@/contexts/EncryptionContext'
 import { CategoryConfigContext } from '@/contexts/CategoryConfigContext'
 import { createMockDataManager, createMockDirectoryHandle, createMockCategoryConfigValue } from './testUtils'
 import type { PartialCategoryConfigInput } from '@/types/categoryConfig'
@@ -68,9 +69,11 @@ const AllTheProviders = ({
   // Use test-specific provider hierarchy that doesn't require DataManager
   return (
     <ThemeProvider>
-      <TestCategoryConfigProvider config={categoryConfig}>
-        {children}
-      </TestCategoryConfigProvider>
+      <EncryptionProvider>
+        <TestCategoryConfigProvider config={categoryConfig}>
+          {children}
+        </TestCategoryConfigProvider>
+      </EncryptionProvider>
     </ThemeProvider>
   )
 }

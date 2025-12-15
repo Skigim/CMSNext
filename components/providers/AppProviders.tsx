@@ -3,6 +3,7 @@ import { ThemeProvider } from "@/contexts/ThemeContext";
 import { FileStorageProvider } from "@/contexts/FileStorageContext";
 import { DataManagerProvider } from "@/contexts/DataManagerContext";
 import { CategoryConfigProvider } from "@/contexts/CategoryConfigContext";
+import { EncryptionProvider } from "@/contexts/EncryptionContext";
 import ErrorBoundary from "@/components/error/ErrorBoundary";
 import FileSystemErrorBoundary from "@/components/error/FileSystemErrorBoundary";
 import { getFileStorageFlags } from "@/utils/fileStorageFlags";
@@ -51,17 +52,19 @@ export function AppProviders({ children }: AppProvidersProps) {
   return (
     <ErrorBoundary>
       <ThemeProvider>
-        <FileSystemErrorBoundary>
-          <FileStorageProvider 
-            getDataFunction={getDataFunction}
-          >
-            <DataManagerProvider>
-              <CategoryConfigProvider>
-                {children}
-              </CategoryConfigProvider>
-            </DataManagerProvider>
-          </FileStorageProvider>
-        </FileSystemErrorBoundary>
+        <EncryptionProvider>
+          <FileSystemErrorBoundary>
+            <FileStorageProvider 
+              getDataFunction={getDataFunction}
+            >
+              <DataManagerProvider>
+                <CategoryConfigProvider>
+                  {children}
+                </CategoryConfigProvider>
+              </DataManagerProvider>
+            </FileStorageProvider>
+          </FileSystemErrorBoundary>
+        </EncryptionProvider>
       </ThemeProvider>
     </ErrorBoundary>
   );

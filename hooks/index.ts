@@ -68,6 +68,9 @@ export { useAlertsFlow } from './useAlertsFlow';
 export { useAVSImportFlow } from './useAVSImportFlow';
 export type { AVSImportState } from './useAVSImportFlow';
 
+// Encryption file hooks
+export { useEncryptionFileHooks } from './useEncryptionFileHooks';
+
 // Form validation hooks
 export { 
   useFormValidation,

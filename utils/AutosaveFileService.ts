@@ -74,6 +74,19 @@ interface WriteQueueItem {
 }
 
 /**
+ * Encryption hooks for data at rest
+ * These are called during read/write operations
+ */
+interface EncryptionHooks {
+  /** Encrypt data before writing to file */
+  encrypt: (data: any) => Promise<any>;
+  /** Decrypt data after reading from file */
+  decrypt: (data: any) => Promise<any>;
+  /** Check if data is encrypted */
+  isEncrypted: (data: any) => boolean;
+}
+
+/**
  * Combined Autosave and File Service
  * Handles both file operations and automatic saving
  */
@@ -89,6 +102,9 @@ class AutosaveFileService {
   // Write operation queue to prevent race conditions
   private writeQueue: WriteQueueItem[] = [];
   private isWriting: boolean = false;
+
+  // Encryption hooks (optional)
+  private encryptionHooks: EncryptionHooks | null = null;
 
   // Autosave properties
   private config: Required<Omit<AutosaveConfig, 'errorCallback' | 'sanitizeFn' | 'statusCallback'>>;
@@ -378,6 +394,13 @@ class AutosaveFileService {
     }
 
     try {
+      // Encrypt data if encryption hooks are available
+      let dataToWrite = data;
+      if (this.encryptionHooks) {
+        logger.debug('Encrypting data before write...');
+        dataToWrite = await this.encryptionHooks.encrypt(data);
+      }
+
       // Get a fresh file handle each time to avoid cached state issues
       const fileHandleWrite = await this.directoryHandle.getFileHandle(
         this.fileName,
@@ -386,7 +409,7 @@ class AutosaveFileService {
       
       // Use keepExistingData: false to ensure we're creating a fresh writable stream
       const writable = await fileHandleWrite.createWritable({ keepExistingData: false });
-      await writable.write(JSON.stringify(data, null, 2));
+      await writable.write(JSON.stringify(dataToWrite, null, 2));
       await writable.close();
 
       // Store last save timestamp
@@ -569,6 +592,13 @@ class AutosaveFileService {
       const file = await fileHandle.getFile();
       const contents = await file.text();
       const rawData = JSON.parse(contents);
+
+      // Check if data is encrypted and decrypt if hooks are available
+      if (this.encryptionHooks?.isEncrypted(rawData)) {
+        logger.debug('Encrypted file detected, decrypting...');
+        const decryptedData = await this.encryptionHooks.decrypt(rawData);
+        return decryptedData;
+      }
 
       return rawData;
     } catch (err) {
@@ -1315,6 +1345,22 @@ class AutosaveFileService {
    */
   setDataLoadCallback(callback?: ((data: any) => void) | null): void {
     this.dataLoadCallback = callback ?? null;
+  }
+
+  /**
+   * Set encryption hooks for data at rest
+   * When set, all read/write operations will use these hooks
+   */
+  setEncryptionHooks(hooks: EncryptionHooks | null): void {
+    this.encryptionHooks = hooks;
+    logger.lifecycle('Encryption hooks updated', { enabled: !!hooks });
+  }
+
+  /**
+   * Check if encryption is currently enabled
+   */
+  hasEncryption(): boolean {
+    return this.encryptionHooks !== null;
   }
 
   /**
