@@ -2,7 +2,7 @@
 
 > Living index of marketable features, their current implementation status, quality, and future investments.
 
-**Last Updated:** December 11, 2025
+**Last Updated:** December 15, 2025
 
 ## How to Use This Document
 
@@ -21,20 +21,20 @@
 | Feature               | Rating | Trend | Notes                                        |
 | --------------------- | ------ | ----- | -------------------------------------------- |
 | Case Management       | 92     | ↑     | Enhanced header with copy, priority toggle   |
+| Local-First Storage   | 90     | ↑     | AES-256 encryption, split login/welcome UX   |
 | Financial Operations  | 90     | ↑     | Date from history, auto-migration            |
-| Developer Enablement  | 86     | ↑     | 455 tests, testing guidelines, withToast     |
+| Developer Enablement  | 88     | ↑     | 506 tests, testing guidelines, withToast     |
 | Premium UI/UX         | 86     | ↑     | NotesPopover, global context menu            |
 | Data Portability      | 82     | ↑     | AVS import with update capability            |
-| Local-First Storage   | 80     | →     | Production-ready                             |
-| Configurable Statuses | 78     | →     | Recently stabilized                          |
 | Notes & Collaboration | 82     | ↑     | Popover UI with inline edit, category select |
+| Configurable Statuses | 78     | →     | Recently stabilized                          |
 | Legacy Migration      | 75     | →     | Dev-only, one-way                            |
 | Autosave & Recovery   | 74     | →     | Works, telemetry pending                     |
 | Feature Flags         | 72     | →     | In-memory only                               |
 | Dashboard & Insights  | 70     | →     | Framework ready                              |
 
-**Average Rating:** 83.1/100  
-**Test Status:** 455/455 passing (100%)
+**Average Rating:** 82.4/100  
+**Test Status:** 506/506 passing (100%)
 
 ---
 
@@ -69,42 +69,49 @@
 
 ### Implementation Snapshot
 
-**Rating: 80/100**
+**Rating: 90/100**
 
-File System Access integration is production-ready with context-managed lifecycle (`FileStorageContext`), autosave-backed persistence, and timestamped backups. Connection flows (new vs. existing) are polished with clear permission prompts and recovery messaging, though browser support and security hardening remain works in progress.
+File System Access integration is production-ready with AES-256-GCM encryption, context-managed lifecycle (`FileStorageContext`), autosave-backed persistence, and timestamped backups. The connection flow features a polished split UX: returning users see a streamlined `LoginModal` with password entry, while first-time users get a welcoming `WelcomeModal` onboarding experience.
 
 ### Strengths
 
-- True offline-first experience; no servers or accounts required
-- Robust lifecycle state machine handles ready, blocked, recovering, and error states, exposing selectors for UI consumers
-- Directory reconnect flow remembers previous handles and guides users through permission re-grant
+- **AES-256-GCM encryption** with PBKDF2 key derivation (100k iterations) — all data encrypted at rest
+- Password never stored; derived key used only in memory during session
+- True offline-first experience; no servers, accounts, or network required
+- Split modal architecture: `LoginModal` for returning users (instant password prompt), `WelcomeModal` for new users (onboarding flow)
+- Decorative `AuthBackdrop` provides polished visual presentation during authentication
+- Robust lifecycle state machine handles ready, blocked, recovering, and error states
+- Directory reconnect via IndexedDB remembers previous handles across sessions
+- `checkFileEncryptionStatus()` detects encrypted files without requiring password first
 - Automatic backup strategy safeguards against data loss before imports or destructive saves
 - Comprehensive documentation in `DeploymentGuide.md`, `file-storage-toast-catalogue.md`, and `error-boundary-guide.md`
 
 ### Gaps / Risks
 
 - File System Access API limited to Chromium browsers; Safari/Firefox require fallback guidance
-- Manual recovery steps still depend on user action, especially when handles are deleted outside the app
-- No built-in encryption; privacy relies on local machine security
-- Large dataset performance (1k+ cases) not yet benchmarked for IO bottlenecks
+- No password recovery mechanism — forgotten password means inaccessible data (by design)
+- Manual recovery steps still depend on user action when handles are deleted outside the app
+- Large dataset performance (1k+ cases) not yet benchmarked for encryption overhead
 
 ### Expansion Opportunities
 
-- Explore optional encrypted archive export for sensitive deployments
+- Add password strength indicator during initial setup
 - Investigate progressive enhancement for non-supported browsers (e.g., read-only preview via drag-drop JSON)
 - Add automated health checks for stale directory handles and orphaned backup files
-- Publish troubleshooting videos or in-app walkthrough for permission recovery
+- Optional password hint storage (user-controlled, stored separately)
+- Benchmark encryption performance with large datasets
 
 ### Coverage & Telemetry
 
 - Vitest suites cover connection lifecycle (`integration/connectionFlow.test.tsx`) and storage service retries (`AutosaveFileService.test.ts`)
+- Encryption module tests validate AES-256-GCM encrypt/decrypt round-trips and key derivation
 - Hooks coverage: `useFileDataSync` and `useNavigationFlow` validate blocked/ready transitions
 - Performance telemetry baseline captures storage badge timings (`2025-10-08-autosave-latency.json`)
-- Pending: manual interaction trace + profiler sessions to validate recovery UX under live conditions
+- Pending: encryption performance benchmarks with large datasets
 
 ### Owners / Notes
 
-Current maintainers: storage platform squad (contact via `FileStorageContext` codeowners). Coordinate enhancements after the outstanding Phase 4 manual telemetry captures are complete.
+Current maintainers: storage platform squad (contact via `FileStorageContext` codeowners). Encryption implementation completed December 2025.
 
 ---
 
