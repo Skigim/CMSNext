@@ -141,16 +141,16 @@
 - [x] Update documentation (README, feature catalogue)
 - [x] 506 tests passing
 
-#### Phase 2: Settings Refactor (Dec 16)
+#### Phase 2: Settings Refactor ✅ COMPLETE
 
 **Goal:** Reduce Settings.tsx from 698 → ~450 lines
 
-- [ ] Create `useDataPurge` hook (~40 lines) - extract purge logic with `isPurging` state
-- [ ] Create `useAlertsCsvImport` hook (~60 lines) - extract CSV import with file handling
-- [ ] Update Settings.tsx to use new hooks
-- [ ] Add unit tests for both hooks
+- [x] Create `useAlertsCsvImport` hook - extract CSV import with file handling
+- [x] Update Settings.tsx to use new hook
+- [x] Remove Data Purge functionality (no longer needed)
+- [x] Settings.tsx reduced from 698 → 538 lines
 
-#### Phase 3: VR Generator (Dec 17-18)
+#### Phase 3: VR Generator (Dec 16-17)
 
 **Goal:** Generate Verification Request letters for financial items
 
@@ -234,7 +234,7 @@
 ### Week 3 - P0
 
 1. ~~File encryption (AES-256-GCM)~~ ✅
-2. Settings refactor
+2. ~~Settings refactor~~ ✅
 3. VR Generator
 4. Keyboard shortcuts
 
