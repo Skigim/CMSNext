@@ -1396,6 +1396,46 @@ class AutosaveFileService {
       this.dataLoadCallback(data);
     }
   }
+
+  /**
+   * Check if the data file exists and whether it's encrypted.
+   * Does NOT decrypt - just peeks at the file structure.
+   * 
+   * @returns { exists: boolean, encrypted: boolean } or null if no directory handle
+   */
+  async checkFileEncryptionStatus(): Promise<{ exists: boolean; encrypted: boolean } | null> {
+    if (!this.directoryHandle) {
+      return null;
+    }
+
+    const permission = await this.checkPermission();
+    if (permission !== 'granted') {
+      return null;
+    }
+
+    try {
+      const fileHandle = await this.directoryHandle.getFileHandle(this.fileName);
+      const file = await fileHandle.getFile();
+      const contents = await file.text();
+      
+      if (!contents.trim()) {
+        return { exists: true, encrypted: false };
+      }
+      
+      const rawData = JSON.parse(contents);
+      const encrypted = this.encryptionHooks?.isEncrypted(rawData) ?? false;
+      
+      return { exists: true, encrypted };
+    } catch (err) {
+      if (err instanceof Error && err.name === 'NotFoundError') {
+        return { exists: false, encrypted: false };
+      }
+      logger.error('Failed to check file encryption status', {
+        error: err instanceof Error ? err.message : String(err),
+      });
+      return null;
+    }
+  }
 }
 
 export default AutosaveFileService;

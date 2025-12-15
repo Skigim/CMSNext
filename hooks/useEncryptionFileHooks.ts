@@ -71,10 +71,11 @@ export function useEncryptionFileHooks(): UseEncryptionFileHooksResult {
           hasPendingPassword: !!encryption.pendingPassword,
         });
 
-        // If no key yet (unencrypted file), check if we should encrypt
-        // For now, always encrypt if authenticated
-        if (!encryption.derivedKey || !encryption.currentSalt) {
-          // Need to initialize encryption with a new salt
+        let key = encryption.derivedKey;
+        let salt = encryption.currentSalt;
+
+        // If no key yet (unencrypted file), initialize encryption with pending password
+        if (!key || !salt) {
           if (encryption.pendingPassword) {
             const result = await encryption.initializeEncryption(encryption.pendingPassword);
             if (!result) {
@@ -82,9 +83,12 @@ export function useEncryptionFileHooks(): UseEncryptionFileHooksResult {
               lastErrorRef.current = "Failed to initialize encryption";
               return data; // Return unencrypted on failure
             }
+            // Use the returned key/salt directly (state update is async)
+            key = result.key;
+            salt = result.salt;
             // Clear pending password after use
             encryption.setPendingPassword(null);
-            // Now we have a key - but need to re-get from context
+            logger.info("Encryption initialized for new file");
           } else {
             // No password stored - return data unencrypted
             // This happens on reconnection without re-entering password
@@ -94,7 +98,7 @@ export function useEncryptionFileHooks(): UseEncryptionFileHooksResult {
         }
 
         // At this point we should have both key and salt
-        if (!encryption.derivedKey || !encryption.currentSalt) {
+        if (!key || !salt) {
           logger.warn("Missing key or salt after initialization");
           return data;
         }
@@ -102,8 +106,8 @@ export function useEncryptionFileHooks(): UseEncryptionFileHooksResult {
         const user = encryption.getCurrentUser();
         const result = await encryptWithKey(
           data,
-          encryption.derivedKey,
-          encryption.currentSalt,
+          key,
+          salt,
           {},
           user ? [user] : undefined
         );

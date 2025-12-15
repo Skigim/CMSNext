@@ -5,15 +5,11 @@ import type AutosaveFileService from "../utils/AutosaveFileService";
 import type { FileStorageService } from "@/utils/services/FileStorageService";
 import type DataManager from "../utils/DataManager";
 import type { FileStorageLifecycleSelectors } from "../contexts/FileStorageContext";
-import { useConnectionHandlers } from "./useConnectionHandlers";
 
 interface UseConnectionFlowParams {
   isSupported: boolean | undefined;
   hasLoadedData: boolean;
   connectionState: FileStorageLifecycleSelectors;
-  connectToFolder: () => Promise<boolean>;
-  connectToExisting: () => Promise<boolean>;
-  loadExistingData: () => Promise<any>;
   service: AutosaveFileService | null;
   fileStorageService: FileStorageService | null;
   dataManager: DataManager | null;
@@ -25,27 +21,23 @@ interface UseConnectionFlowParams {
 
 interface UseConnectionFlowResult {
   showConnectModal: boolean;
-  handleChooseNewFolder: () => Promise<boolean>;
-  handleConnectToExisting: () => Promise<boolean>;
+  handleConnectionComplete: () => void;
   dismissConnectModal: () => void;
 }
 
 /**
  * Manages file storage connection flow and modal visibility.
  * 
- * Delegates connection operations to useConnectionHandlers.
- * Handles modal state, error syncing, and recovery notifications.
+ * The modal handles folder selection and password internally.
+ * This hook manages modal state, error syncing, and recovery notifications.
  */
 export function useConnectionFlow({
   isSupported,
   hasLoadedData,
   connectionState,
-  connectToFolder,
-  connectToExisting,
-  loadExistingData,
   service,
   fileStorageService: _fileStorageService,
-  dataManager,
+  dataManager: _dataManager,
   loadCases,
   setCases,
   setError,
@@ -62,26 +54,35 @@ export function useConnectionFlow({
     isErrored,
     isRecovering,
     isAwaitingUserChoice,
-    hasStoredHandle,
     isConnected,
     lastError,
   } = connectionState;
 
-  // Connection handlers
-  const { handleChooseNewFolder, handleConnectToExisting } = useConnectionHandlers({
-    isSupported,
-    hasStoredHandle,
-    connectToFolder,
-    connectToExisting,
-    loadExistingData,
-    service,
-    dataManager,
-    loadCases,
-    setCases,
-    setError,
-    setHasLoadedData,
-    setShowConnectModal,
-  });
+  // Called by modal when connection + password is complete
+  const handleConnectionComplete = useCallback(async () => {
+    try {
+      // Load cases into app state
+      const loadedCases = await loadCases();
+      setCases(loadedCases);
+      setHasLoadedData(true);
+      setShowConnectModal(false);
+      setError(null);
+      
+      // Start autosave if not already running
+      if (service && !service.getStatus().isRunning) {
+        setTimeout(() => service.startAutosave(), 500);
+      }
+      
+      const msg = loadedCases.length > 0 
+        ? `Connected and loaded ${loadedCases.length} cases` 
+        : "Connected successfully - ready to start!";
+      toast.success(msg, { id: "connection-success" });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Unknown error";
+      setError(`Failed to load cases: ${message}`);
+      toast.error(`Failed to load cases: ${message}`, { id: "connection-error" });
+    }
+  }, [loadCases, setCases, setHasLoadedData, setError, service]);
 
   // Modal visibility and error sync effect
   useEffect(() => {
@@ -141,5 +142,5 @@ export function useConnectionFlow({
 
   const dismissConnectModal = useCallback(() => setShowConnectModal(false), []);
 
-  return { showConnectModal, handleChooseNewFolder, handleConnectToExisting, dismissConnectModal };
+  return { showConnectModal, handleConnectionComplete, dismissConnectModal };
 }
