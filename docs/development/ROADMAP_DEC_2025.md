@@ -1,10 +1,10 @@
 # CMSNext Roadmap - December 2025
 
-**Report Date:** December 11, 2025  
+**Report Date:** December 15, 2025  
 **Branch:** main (stable)  
-**Tests:** 455/455 passing ✅  
+**Tests:** 506/506 passing ✅  
 **Build:** Production-ready ✅  
-**Average Feature Rating:** 83/100
+**Average Feature Rating:** 84/100
 
 ---
 
@@ -119,15 +119,29 @@
 
 ---
 
-### Week 3: UX Improvements & Automation (Dec 16-22)
+### Week 3: Encryption & UX Polish (Dec 15-22)
 
-#### Prep Work ✅
+#### Phase 1: File Encryption (Dec 15) ✅ COMPLETE
 
-- [x] Address accessibility issues from Week 2 (focus-within, aria-labels)
-- [x] Run tests and build verification (455 tests passing)
-- [x] Plan feature implementation approach
+**Goal:** Password-based encryption at rest using Web Crypto API
 
-#### Phase 1: Settings Refactor (Dec 15)
+- [x] Create `utils/encryption.ts` - AES-256-GCM encryption service
+  - `deriveKey(password, salt)` - PBKDF2 with 100k iterations
+  - `encrypt(data, key)` / `decrypt(payload, key)`
+- [x] Create `types/encryption.ts` - type definitions
+- [x] Create `EncryptionContext.tsx` - encryption state management
+- [x] Create encryption file hooks in `useEncryptionFileHooks.ts`
+- [x] Modify `AutosaveFileService` - add `checkFileEncryptionStatus()` method
+- [x] Split connection modal into `WelcomeModal` + `LoginModal`
+  - WelcomeModal: First-time users get welcoming onboarding flow
+  - LoginModal: Returning users see instant password prompt
+- [x] Create `AuthBackdrop` component for polished modal presentation
+- [x] Password never stored; derived key exists only in memory
+- [x] Add unit tests for encryption service
+- [x] Update documentation (README, feature catalogue)
+- [x] 506 tests passing
+
+#### Phase 2: Settings Refactor (Dec 16)
 
 **Goal:** Reduce Settings.tsx from 698 → ~450 lines
 
@@ -136,22 +150,7 @@
 - [ ] Update Settings.tsx to use new hooks
 - [ ] Add unit tests for both hooks
 
-#### Phase 2: File Encryption (Dec 16-17)
-
-**Goal:** Password-based encryption at rest using Web Crypto API
-
-- [ ] Create `utils/encryption.ts` - AES-256-GCM encryption service
-  - `deriveKey(password, salt)` - PBKDF2 with 100k+ iterations
-  - `encrypt(data, key)` / `decrypt(payload, key)`
-- [ ] Create `types/encryption.ts` - type definitions
-- [ ] Modify `AutosaveFileService` - add encryption hooks in read/write paths
-- [ ] Modify `FileStorageContext` - encryption state management
-- [ ] Create password setup modal (first-time encryption)
-- [ ] Create password entry modal (on encrypted file load)
-- [ ] Add encryption toggle in Settings
-- [ ] Add unit tests for encryption service
-
-#### Phase 3: VR Generator (Dec 18-19)
+#### Phase 3: VR Generator (Dec 17-18)
 
 **Goal:** Generate Verification Request letters for financial items
 
@@ -164,7 +163,7 @@
 - [ ] Add "Generate VRs" button to CaseDetails header
 - [ ] Add unit tests for generator and hook
 
-#### Phase 4: Keyboard Shortcuts (Dec 20-21)
+#### Phase 4: Keyboard Shortcuts (Dec 19-20)
 
 **Goal:** Gmail/GitHub-style keyboard navigation with chord support
 
@@ -200,9 +199,9 @@
 | ----------------------------- | ----- | ------ | ------ | ------ | ------ |
 | Hooks over 200 lines          | 4     | 0 ✅   | 0      | 0      | 0      |
 | Components with anti-patterns | 1     | 0 ✅   | 0      | 0      | 0      |
-| Test count                    | 253   | 355 ✅ | 455 ✅ | 475    | 475+   |
-| New features shipped          | -     | 18 ✅  | 12 ✅  | 4      | 30+    |
-| Average feature rating        | 76.5  | 80 ✅  | 83 ✅  | 85     | 85+    |
+| Test count                    | 253   | 355 ✅ | 455 ✅ | 506 ✅ | 525+   |
+| New features shipped          | -     | 18 ✅  | 12 ✅  | 1 ✅   | 35+    |
+| Average feature rating        | 76.5  | 80 ✅  | 83 ✅  | 84 ✅  | 85+    |
 
 ---
 
@@ -223,19 +222,21 @@
 11. ~~Financial card UX polish~~ ✅
 12. ~~Phone number formatting~~ ✅
 
-### Week 2 - P0
+### Week 2 - P0 ✅ ALL COMPLETE
 
-1. Case timeline view
-2. Export functionality
-3. Dashboard analytics widget
-4. Financial summary report
+1. ~~Historical financial tracking~~ ✅
+2. ~~Financial card inline edit mode~~ ✅
+3. ~~Notes button in case header~~ ✅
+4. ~~Alerts badge overlay~~ ✅
+5. ~~Global context menu~~ ✅
+6. ~~NotesPopover~~ ✅
 
 ### Week 3 - P0
 
-1. Keyboard shortcuts
-2. Case templates
-3. Alert auto-assignment
-4. Notes search
+1. ~~File encryption (AES-256-GCM)~~ ✅
+2. Settings refactor
+3. VR Generator
+4. Keyboard shortcuts
 
 ---
 
@@ -271,4 +272,4 @@ Every feature must:
 ---
 
 **Prepared by:** GitHub Copilot  
-**Last updated:** December 11, 2025
+**Last updated:** December 15, 2025
