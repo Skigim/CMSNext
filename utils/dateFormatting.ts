@@ -3,6 +3,38 @@
  */
 
 /**
+ * Parse a date string as local time (no UTC conversion).
+ * Handles both yyyy-MM-dd and ISO timestamps.
+ * 
+ * CRITICAL: When parsing date-only strings like "2024-12-15", JavaScript's
+ * Date constructor interprets them as UTC midnight. This causes dates to
+ * shift backward for users in negative UTC offset timezones (Americas).
+ * 
+ * This function ensures dates are always parsed as LOCAL midnight.
+ * 
+ * @param dateString Date string (yyyy-MM-dd or ISO timestamp)
+ * @returns Date object in local time, or null if invalid
+ */
+export function parseLocalDate(dateString: string | null | undefined): Date | null {
+  if (!dateString) return null;
+  
+  try {
+    // Handle yyyy-MM-dd format - parse as LOCAL time
+    if (/^\d{4}-\d{2}-\d{2}$/.test(dateString)) {
+      const [year, month, day] = dateString.split('-').map(Number);
+      // Month is 0-indexed in Date constructor
+      return new Date(year, month - 1, day);
+    }
+    
+    // Handle ISO timestamps - these already have timezone info
+    const date = new Date(dateString);
+    return isNaN(date.getTime()) ? null : date;
+  } catch {
+    return null;
+  }
+}
+
+/**
  * Format a date for display in MM/DD/YYYY format
  * @param dateString ISO date string or yyyy-MM-dd
  * @returns Formatted date string or "None" if invalid
@@ -12,18 +44,48 @@ export function formatDateForDisplay(
 ): string {
   if (!dateString) return "None";
 
-  try {
-    const date = new Date(dateString);
-    if (isNaN(date.getTime())) return "None";
+  const date = parseLocalDate(dateString);
+  if (!date) return "None";
 
-    const month = String(date.getMonth() + 1).padStart(2, "0");
-    const day = String(date.getDate()).padStart(2, "0");
-    const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  const year = date.getFullYear();
 
-    return `${month}/${day}/${year}`;
-  } catch {
-    return "None";
-  }
+  return `${month}/${day}/${year}`;
+}
+
+/**
+ * Format a date as short display (e.g., "Dec 15")
+ * @param dateString ISO date string or yyyy-MM-dd
+ * @returns Formatted short date string
+ */
+export function formatShortDate(dateString: string | null | undefined): string {
+  if (!dateString) return "";
+  
+  const date = parseLocalDate(dateString);
+  if (!date) return "";
+  
+  return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+}
+
+/**
+ * Format a datetime for display with time (e.g., "Dec 15, 2024, 3:45 PM")
+ * @param dateString ISO timestamp
+ * @returns Formatted datetime string
+ */
+export function formatDateTime(dateString: string | null | undefined): string {
+  if (!dateString) return "";
+  
+  const date = parseLocalDate(dateString);
+  if (!date) return "";
+  
+  return date.toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
 }
 
 /**

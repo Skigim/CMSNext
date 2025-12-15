@@ -2,6 +2,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { FileText, ArrowRight } from "lucide-react";
 import { CopyButton } from "@/components/common/CopyButton";
+import { formatDateForDisplay } from "@/utils/dateFormatting";
 import type { StoredCase } from "@/types/case";
 import { useMemo } from "react";
 
@@ -59,7 +60,7 @@ export function RecentCasesWidget({ cases, onViewAllCases, onNewCase }: RecentCa
                   </div>
                 </div>
                 <div className="text-xs text-muted-foreground">
-                  {case_.caseRecord?.createdDate ? new Date(case_.caseRecord.createdDate).toLocaleDateString() : 'No date'}
+                  {case_.caseRecord?.createdDate ? formatDateForDisplay(case_.caseRecord.createdDate) : 'No date'}
                 </div>
               </div>
             ))}

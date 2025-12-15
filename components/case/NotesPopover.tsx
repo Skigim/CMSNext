@@ -1,4 +1,5 @@
 import { useState, useMemo, useCallback } from "react";
+import { formatShortDate } from "../../utils/dateFormatting";
 import { Button } from "../ui/button";
 import { Textarea } from "../ui/textarea";
 import {
@@ -122,10 +123,7 @@ export function NotesPopover({ caseId, className }: NotesPopoverProps) {
     }
   }, [handleAddNote]);
 
-  const formatDate = (dateStr: string) => {
-    const date = new Date(dateStr);
-    return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
-  };
+  const formatDate = formatShortDate;
 
   const sortedNotes = useMemo(() => {
     if (!notes) return [];

@@ -1,5 +1,6 @@
 import { Landmark, Receipt, Wallet } from "lucide-react";
 import type { CaseCategory } from "../../types/case";
+import { formatDateForDisplay } from "../../utils/dateFormatting";
 
 interface FinancialItemCardHeaderProps {
   itemType: CaseCategory;
@@ -15,7 +16,7 @@ export function FinancialItemCardHeader({
   displayAmount,
 }: FinancialItemCardHeaderProps) {
   const icon = getCategoryIcon(itemType);
-  const dateLabel = dateAdded ? new Date(dateAdded).toLocaleDateString() : "No date";
+  const dateLabel = dateAdded ? formatDateForDisplay(dateAdded) : "No date";
 
   return (
     <div className="grid grid-cols-[1fr_auto] items-start gap-4">
