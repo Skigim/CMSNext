@@ -360,7 +360,7 @@ npm run dev
 
 ## 🔒 Privacy & Security
 
-This application is built with **privacy-by-design** principles:
+This application is built with **privacy-by-design** principles and **military-grade encryption**:
 
 ### **Data Privacy Guarantees**
 
@@ -368,22 +368,33 @@ This application is built with **privacy-by-design** principles:
 - **🚫 No Cloud Uploads**: Zero data transmission to external servers
 - **🔍 No Tracking**: No analytics, cookies, or user behavior monitoring
 - **📡 Offline Capable**: Full functionality without internet connection
-- **🔐 No Authentication**: No accounts, passwords, or personal data collection
+- **🔐 Password Protected**: Your data is encrypted and only accessible with your password
 
-### **Security Features**
+### **Encryption & Security**
 
-- **Browser-native security**: Leverages File System Access API permissions
-- **Data validation**: Input sanitization and type checking
-- **Automatic backups**: Protection against data loss
-- **Permission control**: You maintain full control over data access
+- **AES-256-GCM Encryption**: Industry-standard authenticated encryption for all stored data
+- **PBKDF2 Key Derivation**: 100,000 iterations with unique salt per file — resistant to brute-force attacks
+- **Zero-Knowledge Design**: Password never stored; derived key exists only in memory during your session
+- **No Recovery Backdoor**: By design, forgotten passwords cannot be recovered (your data stays private)
+- **Browser-native Security**: Leverages File System Access API permissions for folder access control
+- **Data Validation**: Input sanitization and type checking throughout
+- **Automatic Backups**: Protection against data loss with timestamped backups
+
+### **How It Works**
+
+1. **First Launch**: Choose a folder and create a password — your data file is immediately encrypted
+2. **Returning**: Enter your password to decrypt and access your data
+3. **During Use**: All changes auto-save and re-encrypt transparently
+4. **Password Never Leaves Device**: Encryption/decryption happens entirely in your browser
 
 ## 📋 Current Status
 
 - **✅ Core Features**: Complete CRUD operations for cases, financial items, and notes
+- **✅ Encryption**: AES-256-GCM encryption with PBKDF2 key derivation — all data encrypted at rest
 - **✅ File Storage**: Robust autosave with File System Access API integration
 - **✅ UI/UX**: 6 polished themes with responsive design, 100% shadcn/ui migration complete
 - **✅ Data Management**: Import/export with validation and migration
-- **✅ Testing Infrastructure**: 244 tests passing across 40 test files with vitest + axe accessibility checks
+- **✅ Testing Infrastructure**: 506 tests passing across 51 test files with vitest + axe accessibility checks
 - **✅ Telemetry & Performance**: Production-ready observability and performance tracking
 - **✅ Service Extraction**: Clean DataManager + 7 Services architecture with dependency injection
 - **✅ Storage Normalization**: v2.0 format only (legacy formats rejected with user-friendly error)
