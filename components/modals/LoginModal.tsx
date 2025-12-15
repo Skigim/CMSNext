@@ -15,6 +15,7 @@ import { AlertCircle, Loader2, Lock, KeyRound, FolderOpen } from "lucide-react";
 import { useEncryption } from "@/contexts/EncryptionContext";
 import { useFileStorage } from "@/contexts/FileStorageContext";
 import { createLogger } from "@/utils/logger";
+import { AuthBackdrop } from "./AuthBackdrop";
 
 const logger = createLogger("LoginModal");
 
@@ -144,52 +145,60 @@ export function LoginModal({
   // Loading state while checking file
   if (isCheckingFile) {
     return (
-      <Dialog open={isOpen}>
-        <DialogContent hideCloseButton className="sm:max-w-md">
-          <div className="flex flex-col items-center justify-center py-8 gap-4">
-            <Loader2 className="h-8 w-8 animate-spin text-primary" />
-            <p className="text-muted-foreground">Checking your data...</p>
-          </div>
-        </DialogContent>
-      </Dialog>
+      <>
+        <AuthBackdrop isOpen={isOpen} />
+        <Dialog open={isOpen}>
+          <DialogContent hideCloseButton className="sm:max-w-md">
+            <div className="flex flex-col items-center justify-center py-8 gap-4">
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+              <p className="text-muted-foreground">Checking your data...</p>
+            </div>
+          </DialogContent>
+        </Dialog>
+      </>
     );
   }
 
   // No file exists - prompt to choose folder
   if (!fileExists) {
     return (
-      <Dialog open={isOpen}>
-        <DialogContent hideCloseButton className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <AlertCircle className="h-5 w-5 text-amber-500" />
-              No Data Found
-            </DialogTitle>
-            <DialogDescription>
-              We couldn't find your data file in the stored location. It may have been moved or deleted.
-            </DialogDescription>
-          </DialogHeader>
+      <>
+        <AuthBackdrop isOpen={isOpen} />
+        <Dialog open={isOpen}>
+          <DialogContent hideCloseButton className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <AlertCircle className="h-5 w-5 text-amber-500" />
+                No Data Found
+              </DialogTitle>
+              <DialogDescription>
+                We couldn't find your data file in the stored location. It may have been moved or deleted.
+              </DialogDescription>
+            </DialogHeader>
 
-          <Alert className="border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-950/20">
-            <AlertCircle className="h-4 w-4 text-amber-600 dark:text-amber-400" />
-            <AlertDescription className="text-amber-800 dark:text-amber-200 text-sm">
-              Choose a folder to create new data or locate your existing data file.
-            </AlertDescription>
-          </Alert>
+            <Alert className="border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-950/20">
+              <AlertCircle className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+              <AlertDescription className="text-amber-800 dark:text-amber-200 text-sm">
+                Choose a folder to create new data or locate your existing data file.
+              </AlertDescription>
+            </Alert>
 
-          <DialogFooter>
-            <Button onClick={onChooseDifferentFolder} className="w-full">
-              <FolderOpen className="mr-2 h-4 w-4" />
-              Choose Folder
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+            <DialogFooter>
+              <Button onClick={onChooseDifferentFolder} className="w-full">
+                <FolderOpen className="mr-2 h-4 w-4" />
+                Choose Folder
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      </>
     );
   }
 
   return (
-    <Dialog open={isOpen}>
+    <>
+      <AuthBackdrop isOpen={isOpen} />
+      <Dialog open={isOpen}>
       <DialogContent hideCloseButton className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-base sm:text-lg">
@@ -268,6 +277,7 @@ export function LoginModal({
         </DialogFooter>
       </DialogContent>
     </Dialog>
+    </>
   );
 }
 
