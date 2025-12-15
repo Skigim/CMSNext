@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
+import { formatDateTime } from '@/utils/dateFormatting';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -130,15 +131,7 @@ function NoteCard({
     }
   }, [editedNote.category, normalizedCategory, noteCategories]);
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
-  };
+  const formatDate = formatDateTime;
 
   const truncateText = (text: string, maxLength = 100) => {
     if (!text || text.length <= maxLength) {
