@@ -82,30 +82,6 @@ export function VRGeneratorModal({
     }
   }, [open, financialItems, vrScripts]);
 
-  // Regenerate text when items are selected (not when script changes)
-  useEffect(() => {
-    if (!open || !storedCase) {
-      return;
-    }
-
-    const selectedItems = selectableItems
-      .filter(i => i.selected)
-      .map(({ item, type }) => ({ item, type }));
-
-    if (selectedItems.length === 0 || !selectedScript) {
-      // Don't auto-generate if no items or no script
-      return;
-    }
-
-    // Cast StoredCase to the expected type for renderMultipleVRs
-    const text = renderMultipleVRs(
-      selectedScript, 
-      selectedItems, 
-      storedCase as unknown as Parameters<typeof renderMultipleVRs>[2]
-    );
-    setRenderedText(text);
-  }, [open, selectedScript, selectableItems, storedCase]);
-
   const handleToggleItem = useCallback((itemId: string) => {
     setSelectedItemIds(prev => {
       const next = new Set(prev);
