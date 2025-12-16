@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Plus, Save, Undo2, Trash2 } from "lucide-react";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
@@ -285,6 +285,15 @@ export function VRScriptsEditor({
     scripts.length > 0 ? scripts[0].id : null
   );
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
+
+  // Sync local state with props when scripts prop changes (e.g., after save)
+  // This ensures the UI reflects the persisted state
+  useEffect(() => {
+    // Only sync if we're not actively saving (to avoid race conditions)
+    if (!isSaving) {
+      setLocalScripts([...scripts]);
+    }
+  }, [scripts, isSaving]);
 
   // Track changes
   const hasChanges = useMemo(() => {
