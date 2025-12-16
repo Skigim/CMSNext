@@ -165,8 +165,8 @@ function ScriptEditorRow({
     [script, onUpdate, textareaRef]
   );
 
-  const isEmpty = !script.name.trim();
-  const hasTemplate = script.template.trim().length > 0;
+  const isEmpty = !script.name?.trim();
+  const hasTemplate = (script.template ?? "").trim().length > 0;
 
   return (
     <div className="rounded-lg border border-border/50 bg-background/60 overflow-hidden">
@@ -184,7 +184,7 @@ function ScriptEditorRow({
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
             <Input
-              value={script.name}
+              value={script.name ?? ""}
               onChange={handleNameChange}
               onClick={(e) => e.stopPropagation()}
               placeholder="Script name..."
@@ -303,7 +303,7 @@ export function VRScriptsEditor({
   const validation = useMemo(() => {
     const nameCount = new Map<string, number>();
     localScripts.forEach(s => {
-      const name = s.name.trim().toLowerCase();
+      const name = s.name?.trim().toLowerCase() ?? "";
       nameCount.set(name, (nameCount.get(name) || 0) + 1);
     });
 
@@ -313,7 +313,7 @@ export function VRScriptsEditor({
         .map(([name]) => name)
     );
 
-    const hasEmpty = localScripts.some(s => !s.name.trim());
+    const hasEmpty = localScripts.some(s => !s.name?.trim());
     const hasDuplicates = duplicates.size > 0;
 
     return { duplicates, hasEmpty, hasDuplicates, isValid: !hasEmpty && !hasDuplicates };
@@ -395,7 +395,7 @@ export function VRScriptsEditor({
             onUpdate={handleUpdateScript}
             onDelete={() => setDeleteConfirmId(script.id)}
             disabled={isDisabled}
-            isNameDuplicate={validation.duplicates.has(script.name.trim().toLowerCase())}
+            isNameDuplicate={validation.duplicates.has((script.name ?? "").trim().toLowerCase())}
             isExpanded={expandedId === script.id}
             onToggleExpand={() => setExpandedId(expandedId === script.id ? null : script.id)}
           />
