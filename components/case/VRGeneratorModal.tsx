@@ -28,11 +28,12 @@ import {
 import { Badge } from "../ui/badge";
 import { ScrollArea } from "../ui/scroll-area";
 import { Separator } from "../ui/separator";
-import { Copy, FileText, CheckSquare, Square, AlertCircle } from "lucide-react";
+import { Copy, FileText, CheckSquare, Square, AlertCircle, Plus } from "lucide-react";
 import { toast } from "sonner";
 import type { StoredCase, StoredFinancialItem } from "@/types/case";
 import type { VRScript } from "@/types/vr";
 import { renderMultipleVRs } from "@/utils/vrGenerator";
+import { buildCaseLevelContext, renderTemplate } from "@/utils/vrGenerator";
 import { cn } from "@/lib/utils";
 
 interface VRGeneratorModalProps {
@@ -75,15 +76,15 @@ export function VRGeneratorModal({
     if (open) {
       // Select all items by default
       setSelectedItemIds(new Set(financialItems.map(i => i.id)));
-      // Select first script if available
+      // Select first script if available (but don't auto-populate)
       setSelectedScriptId(vrScripts[0]?.id ?? null);
       setRenderedText("");
     }
   }, [open, financialItems, vrScripts]);
 
-  // Regenerate text when script or selection changes
+  // Regenerate text when items are selected (not when script changes)
   useEffect(() => {
-    if (!open || !selectedScript || !storedCase) {
+    if (!open || !storedCase) {
       return;
     }
 
@@ -91,10 +92,8 @@ export function VRGeneratorModal({
       .filter(i => i.selected)
       .map(({ item, type }) => ({ item, type }));
 
-    if (selectedItems.length === 0) {
-      // No items selected - show the template with placeholder text intact
-      // User can manually replace placeholders
-      setRenderedText(selectedScript.template);
+    if (selectedItems.length === 0 || !selectedScript) {
+      // Don't auto-generate if no items or no script
       return;
     }
 
@@ -126,6 +125,41 @@ export function VRGeneratorModal({
   const handleDeselectAll = useCallback(() => {
     setSelectedItemIds(new Set());
   }, []);
+
+  const handleAddScript = useCallback(() => {
+    if (!selectedScript) {
+      toast.error("Select a script first");
+      return;
+    }
+
+    let textToAdd = selectedScript.template;
+    
+    const selectedItems = selectableItems
+      .filter(i => i.selected)
+      .map(({ item, type }) => ({ item, type }));
+
+    if (selectedItems.length > 0 && storedCase) {
+      // If items are selected, render with item values
+      textToAdd = renderMultipleVRs(
+        selectedScript,
+        selectedItems,
+        storedCase as unknown as Parameters<typeof renderMultipleVRs>[2]
+      );
+    } else if (storedCase) {
+      // No items selected - render with case-level placeholders filled
+      const caseContext = buildCaseLevelContext(storedCase);
+      textToAdd = renderTemplate(selectedScript.template, caseContext);
+    }
+
+    // Append to existing text with separator
+    if (renderedText) {
+      setRenderedText(renderedText + "\n-----\n" + textToAdd);
+    } else {
+      setRenderedText(textToAdd);
+    }
+
+    toast.success("Script added");
+  }, [selectedScript, selectableItems, renderedText, storedCase]);
 
   const handleCopy = async () => {
     if (!renderedText) {
@@ -194,21 +228,34 @@ export function VRGeneratorModal({
               {/* Script selector */}
               <div className="space-y-2">
                 <Label htmlFor="vr-script">VR Script</Label>
-                <Select
-                  value={selectedScriptId ?? ""}
-                  onValueChange={(value) => setSelectedScriptId(value || null)}
-                >
-                  <SelectTrigger id="vr-script">
-                    <SelectValue placeholder="Select a script..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {vrScripts.map((script) => (
-                      <SelectItem key={script.id} value={script.id}>
-                        {script.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <div className="flex gap-2">
+                  <Select
+                    value={selectedScriptId ?? ""}
+                    onValueChange={(value) => setSelectedScriptId(value || null)}
+                  >
+                    <SelectTrigger id="vr-script" className="flex-1">
+                      <SelectValue placeholder="Select a script..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {vrScripts.map((script) => (
+                        <SelectItem key={script.id} value={script.id}>
+                          {script.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={handleAddScript}
+                    disabled={!selectedScriptId}
+                    className="px-2"
+                    title="Add selected script to VR"
+                  >
+                    <Plus className="h-4 w-4" />
+                  </Button>
+                </div>
               </div>
 
               {/* Item selection */}
@@ -308,8 +355,8 @@ export function VRGeneratorModal({
                 onChange={(e) => setRenderedText(e.target.value)}
                 placeholder={
                   !selectedScriptId
-                    ? "Select a script to generate a template..."
-                    : "Script template will appear here - replace placeholders manually or select items to auto-fill"
+                    ? "Select a script and click + to add it here..."
+                    : "Click + to add the selected script, or select items to auto-fill placeholders..."
                 }
                 className="flex-1 min-h-[300px] font-mono text-sm resize-none"
               />

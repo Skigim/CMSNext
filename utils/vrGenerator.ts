@@ -61,6 +61,57 @@ function getLatestHistoryEntry(item: FinancialItem) {
 }
 
 /**
+ * Build a render context with only case-level data (no financial item data).
+ * Used for rendering templates when no items are selected.
+ */
+export function buildCaseLevelContext(storedCase: StoredCase): VRRenderContext {
+  const { caseRecord, person } = storedCase;
+
+  return {
+    // Financial item fields (empty for case-level only)
+    description: "",
+    accountNumber: "",
+    amount: 0,
+    location: "",
+    owner: "",
+    frequency: "",
+    verificationStatus: "",
+    verificationSource: "",
+    dateAdded: "",
+    itemNotes: "",
+    itemType: "",
+    
+    // Amount history fields (empty for case-level only)
+    lastUpdated: "",
+    lastVerified: "",
+    historyVerificationSource: "",
+    
+    // Case fields
+    caseName: person ? `${person.firstName} ${person.lastName}`.trim() : "",
+    caseNumber: caseRecord?.mcn || "",
+    caseType: caseRecord?.caseType || "",
+    applicationDate: caseRecord?.applicationDate || "",
+    caseStatus: caseRecord?.status || "",
+    
+    // Person fields
+    clientFirstName: person?.firstName || "",
+    clientLastName: person?.lastName || "",
+    clientPhone: person?.phone ? formatPhoneNumber(person.phone) : "",
+    clientEmail: person?.email || "",
+    clientSSN: person?.ssn || "",
+    clientDOB: person?.dateOfBirth || "",
+    clientAddress: formatAddress(person),
+    
+    // System
+    currentDate: new Date().toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+    }),
+  };
+}
+
+/**
  * Build the render context from a financial item and case data.
  */
 export function buildRenderContext(
