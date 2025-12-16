@@ -56,7 +56,9 @@ export class CategoryConfigService {
    * Sanitizes input and merges with defaults
    */
   async updateCategoryConfig(categoryConfig: CategoryConfig): Promise<CategoryConfig> {
+    console.log("[DEBUG] updateCategoryConfig input vrScripts:", JSON.stringify(categoryConfig.vrScripts, null, 2));
     const sanitized = mergeCategoryConfig(categoryConfig);
+    console.log("[DEBUG] After mergeCategoryConfig vrScripts:", JSON.stringify(sanitized.vrScripts, null, 2));
     const currentData = await this.fileStorage.readFileData();
 
     const baseData: NormalizedFileData = currentData ?? {
@@ -157,14 +159,17 @@ export class CategoryConfigService {
    * Scripts can be empty (user may not have created any yet)
    */
   async updateVRScripts(scripts: VRScript[]): Promise<CategoryConfig> {
+    console.log("[DEBUG] CategoryConfigService.updateVRScripts input:", JSON.stringify(scripts, null, 2));
     // Filter out scripts with empty/missing names or ids
     const sanitized = scripts.filter(s => s && s.id && typeof s.name === 'string');
+    console.log("[DEBUG] After sanitize:", JSON.stringify(sanitized, null, 2));
 
     const currentConfig = await this.getCategoryConfig();
     const nextConfig: CategoryConfig = {
       ...currentConfig,
       vrScripts: sanitized,
     };
+    console.log("[DEBUG] nextConfig.vrScripts:", JSON.stringify(nextConfig.vrScripts, null, 2));
 
     logger.info("VR scripts updated", {
       scriptCount: sanitized.length,
