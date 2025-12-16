@@ -81,18 +81,19 @@ export function VRGeneratorModal({
     }
   }, [open, financialItems, vrScripts]);
 
-  // Regenerate text when script or selection changes
+  // Regenerate text when script or selection changes (but preserve manual edits)
   useEffect(() => {
     if (!open || !selectedScript || !storedCase) {
       return;
     }
 
+    // Only auto-generate if there are selected items and renderedText is empty or was auto-generated
     const selectedItems = selectableItems
       .filter(i => i.selected)
       .map(({ item, type }) => ({ item, type }));
 
     if (selectedItems.length === 0) {
-      setRenderedText("");
+      // Don't clear the text - allow manual entry even without items
       return;
     }
 
@@ -306,10 +307,8 @@ export function VRGeneratorModal({
                 onChange={(e) => setRenderedText(e.target.value)}
                 placeholder={
                   !selectedScriptId
-                    ? "Select a script to generate VRs..."
-                    : selectedCount === 0
-                    ? "Select at least one item..."
-                    : "Generated VR will appear here..."
+                    ? "Select a script to generate VRs or enter manually..."
+                    : "Generated VR or manual text will appear here..."
                 }
                 className="flex-1 min-h-[300px] font-mono text-sm resize-none"
               />
