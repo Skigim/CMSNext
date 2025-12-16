@@ -19,6 +19,7 @@ import {
   AlertTypeConfig,
   mergeCategoryConfig,
 } from "../types/categoryConfig";
+import type { VRScript } from "../types/vr";
 import { STORAGE_CONSTANTS } from "./constants/storage";
 import {
   AlertsIndex,
@@ -437,6 +438,10 @@ export class DataManager {
 
   async updateAlertTypes(alertTypes: AlertTypeConfig[]): Promise<CategoryConfig> {
     return this.categoryConfig.updateAlertTypes(alertTypes);
+  }
+
+  async updateVRScripts(scripts: VRScript[]): Promise<CategoryConfig> {
+    return this.categoryConfig.updateVRScripts(scripts);
   }
 
   async resetCategoryConfig(): Promise<CategoryConfig> {

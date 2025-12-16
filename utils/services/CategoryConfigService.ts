@@ -1,4 +1,5 @@
 import type { CategoryConfig, CategoryKey, StatusConfig, AlertTypeConfig } from "../../types/categoryConfig";
+import type { VRScript } from "../../types/vr";
 import { mergeCategoryConfig, sanitizeCategoryValues, sanitizeStatusConfigs, sanitizeAlertTypeConfigs } from "../../types/categoryConfig";
 import { createLogger } from "../logger";
 import type { FileStorageService, NormalizedFileData } from "./FileStorageService";
@@ -146,6 +147,27 @@ export class CategoryConfigService {
 
     logger.info("Alert types updated with colors", {
       alertTypeCount: sanitized.length,
+    });
+
+    return this.updateCategoryConfig(nextConfig);
+  }
+
+  /**
+   * Update VR scripts
+   * Scripts can be empty (user may not have created any yet)
+   */
+  async updateVRScripts(scripts: VRScript[]): Promise<CategoryConfig> {
+    // Filter out scripts with empty/missing names or ids
+    const sanitized = scripts.filter(s => s && s.id && typeof s.name === 'string');
+
+    const currentConfig = await this.getCategoryConfig();
+    const nextConfig: CategoryConfig = {
+      ...currentConfig,
+      vrScripts: sanitized,
+    };
+
+    logger.info("VR scripts updated", {
+      scriptCount: sanitized.length,
     });
 
     return this.updateCategoryConfig(nextConfig);
