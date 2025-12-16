@@ -2,7 +2,7 @@
 
 > Living index of marketable features, their current implementation status, quality, and future investments.
 
-**Last Updated:** December 15, 2025
+**Last Updated:** December 16, 2025
 
 ## How to Use This Document
 
@@ -23,8 +23,9 @@
 | Case Management       | 92     | ↑     | Enhanced header with copy, priority toggle   |
 | Local-First Storage   | 90     | ↑     | AES-256 encryption, split login/welcome UX   |
 | Financial Operations  | 90     | ↑     | Date from history, auto-migration            |
-| Developer Enablement  | 88     | ↑     | 506 tests, testing guidelines, withToast     |
+| Developer Enablement  | 88     | ↑     | 537 tests, testing guidelines, withToast     |
 | Premium UI/UX         | 86     | ↑     | NotesPopover, global context menu            |
+| VR Generator          | 80     | NEW   | Template management with placeholder system  |
 | Data Portability      | 82     | ↑     | AVS import with update capability            |
 | Notes & Collaboration | 82     | ↑     | Popover UI with inline edit, category select |
 | Configurable Statuses | 78     | →     | Recently stabilized                          |
@@ -33,8 +34,8 @@
 | Feature Flags         | 72     | →     | In-memory only                               |
 | Dashboard & Insights  | 70     | →     | Framework ready                              |
 
-**Average Rating:** 82.4/100  
-**Test Status:** 506/506 passing (100%)
+**Average Rating:** 82.6/100  
+**Test Status:** 537/537 passing (100%)
 
 ---
 
@@ -55,13 +56,14 @@
 3. [Comprehensive Case Management](#comprehensive-case-management)
 4. [Financial Operations Suite](#financial-operations-suite)
 5. [Notes & Collaboration Aids](#notes--collaboration-aids)
-6. [Intelligent Dashboard & Insights](#intelligent-dashboard--insights)
-7. [Data Portability & Migration](#data-portability--migration)
-8. [Premium UI/UX Layer](#premium-uiux-layer)
-9. [Developer & Operations Enablement](#developer--operations-enablement)
-10. [Feature Flags](#feature-flags)
-11. [Legacy Data Migration](#legacy-data-migration)
-12. [Configurable Completion Statuses](#configurable-completion-statuses)
+6. [VR Generator & Templates](#vr-generator--templates)
+7. [Intelligent Dashboard & Insights](#intelligent-dashboard--insights)
+8. [Data Portability & Migration](#data-portability--migration)
+9. [Premium UI/UX Layer](#premium-uiux-layer)
+10. [Developer & Operations Enablement](#developer--operations-enablement)
+11. [Feature Flags](#feature-flags)
+12. [Legacy Data Migration](#legacy-data-migration)
+13. [Configurable Completion Statuses](#configurable-completion-statuses)
 
 ---
 
@@ -325,6 +327,57 @@ Notes system supports categorized, timestamped entries tied to cases with edit h
 ### Owners / Notes
 
 Collaboration feature group; capture planned enhancements in updated documentation and coordinate with security/privacy when considering attachments.
+
+---
+
+## VR Generator & Templates
+
+### Implementation Snapshot
+
+**Rating: 80/100** _(New - December 16, 2025)_
+
+VR Generator enables users to create reusable Verification Request (VR) letter templates with dynamic placeholders. Scripts are stored in the category config, managed via CategoryManager settings, and support full CRUD with view/edit mode toggle. Template rendering substitutes placeholders with case and financial item data.
+
+### Strengths
+
+- **Reusable Templates**: Create multiple scripts for different institutions or document types (e.g., "SSA Entitlement", "Bank Verification", "Asset Letter")
+- **Dynamic Placeholders**: 30+ placeholders organized by category (Case, Financial Item, Person, Amount History, System)
+- **View/Edit Toggle**: Saved scripts show in read-only collapsed state with preview; Edit button switches to full editor
+- **Template Editor**: Monaco-like textarea with placeholder palette sidebar; click-to-insert placeholders
+- **Placeholder Support**: Comprehensive set includes case data ({caseName}, {caseNumber}, {caseType}), financial item data ({description}, {amount}, {category}), person data ({personName}, {personPhone}, {personEmail}), and system data ({generatedDate}, {exportedDate})
+- **Validation**: Enforces unique script names, non-empty names, prevents duplicates in real-time
+- **Persistence**: Scripts persisted via CategoryConfigContext with dedicated updateVRScripts() handler; survives autosave and page reload
+- **Settings Integration**: Full CRUD (create, read, update, delete) from CategoryManager "VR Scripts" tab
+- **Confirmation UX**: Delete requires confirmation dialog; cancel reverts unsaved changes
+
+### Gaps / Risks
+
+- No direct "Generate VR Letter" button on CaseDetails yet (placeholder foundation ready for future implementation)
+- Limited to text substitution; no conditional blocks or loops
+- No import/export for script templates across workspaces
+- Performance not tested with 100+ scripts
+- No template versioning or rollback
+
+### Expansion Opportunities
+
+- Add "Generate VR" button to FinancialItemCard that uses selected script to generate letter preview
+- Template format selector (plain text, markdown, HTML)
+- Conditional placeholders: {if:caseType=SSA}...{/if}
+- Script sharing/import via JSON export
+- Template versioning and audit trail
+- Auto-suggest placeholders based on data availability in case
+- Keyboard shortcut (Ctrl+M) for quick script management
+
+### Coverage & Telemetry
+
+- 31 new unit tests covering placeholder definitions, template rendering, CRUD operations
+- Integration tests verify scripts persist across page reload
+- VRScriptsEditor component tested with React Testing Library
+- No telemetry yet for script usage or generation frequency
+
+### Owners / Notes
+
+Document generation feature group. Next phase: wire up template rendering to FinancialItemCard and CaseDetails for generating actual VR letters with live preview.
 
 ---
 

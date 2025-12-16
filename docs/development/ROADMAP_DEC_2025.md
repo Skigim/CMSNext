@@ -1,8 +1,8 @@
 # CMSNext Roadmap - December 2025
 
-**Report Date:** December 15, 2025  
+**Report Date:** December 16, 2025  
 **Branch:** main (stable)  
-**Tests:** 506/506 passing ✅  
+**Tests:** 537/537 passing ✅  
 **Build:** Production-ready ✅  
 **Average Feature Rating:** 84/100
 
@@ -150,18 +150,26 @@
 - [x] Remove Data Purge functionality (no longer needed)
 - [x] Settings.tsx reduced from 698 → 538 lines
 
-#### Phase 3: VR Generator (Dec 16-17)
+#### Phase 3: VR Generator (Dec 16-17) ✅ COMPLETE
 
-**Goal:** Generate Verification Request letters for financial items
+**Goal:** Generate Verification Request letters for financial items using reusable templates
 
-- [ ] Create `types/vr.ts` - VRRecipient, VRLineItem, GeneratedVR types
-- [ ] Create `utils/vrGenerator.ts` - letter generation (follow caseSummaryGenerator pattern)
-  - `groupItemsByRecipient(financials)` - group VR-pending items by institution
-  - `generateVRLetter(case, recipient)` - template-based letter text
-- [ ] Create `hooks/useVRGenerator.ts` - VR generation flow hook
-- [ ] Create `components/case/VRGeneratorModal.tsx` - UI with item selection, preview, copy
-- [ ] Add "Generate VRs" button to CaseDetails header
-- [ ] Add unit tests for generator and hook
+- [x] Create `types/vr.ts` - VRScript type with id, name, template, timestamps
+- [x] Create `utils/vrGenerator.ts` - letter generation with placeholder support
+  - `getPlaceholdersByCategory()` - organized placeholder definitions
+  - `createDefaultVRScript()` - factory for new VR scripts
+  - `renderVRTemplate()` - placeholder substitution with case/financial data
+- [x] Create `hooks/useVRGenerator.ts` - VR generation flow hook
+- [x] Create `components/category/VRScriptsEditor.tsx` - VR template management
+  - View/edit mode toggle for saved scripts
+  - Full template editor with placeholder palette
+  - Create, edit, delete operations with validation
+  - Collapse/expand with read-only preview
+- [x] Add "VR Scripts" tab to CategoryManager settings
+- [x] Add special handling in CategoryConfigContext for vrScripts persistence
+- [x] Add `updateVRScripts()` method to CategoryConfigService and DataManager
+- [x] Add unit tests for vrGenerator (31 new tests)
+- [x] Test coverage: placeholders, template rendering, script CRUD
 
 #### Phase 4: Keyboard Shortcuts (Dec 19-20)
 
@@ -199,7 +207,7 @@
 | ----------------------------- | ----- | ------ | ------ | ------ | ------ |
 | Hooks over 200 lines          | 4     | 0 ✅   | 0      | 0      | 0      |
 | Components with anti-patterns | 1     | 0 ✅   | 0      | 0      | 0      |
-| Test count                    | 253   | 355 ✅ | 455 ✅ | 506 ✅ | 525+   |
+| Test count                    | 253   | 355 ✅ | 455 ✅ | 537 ✅ | 550+   |
 | New features shipped          | -     | 18 ✅  | 12 ✅  | 1 ✅   | 35+    |
 | Average feature rating        | 76.5  | 80 ✅  | 83 ✅  | 84 ✅  | 85+    |
 
@@ -235,7 +243,7 @@
 
 1. ~~File encryption (AES-256-GCM)~~ ✅
 2. ~~Settings refactor~~ ✅
-3. VR Generator
+3. ~~VR Generator~~ ✅
 4. Keyboard shortcuts
 
 ---
@@ -272,4 +280,4 @@ Every feature must:
 ---
 
 **Prepared by:** GitHub Copilot  
-**Last updated:** December 15, 2025
+**Last updated:** December 16, 2025
