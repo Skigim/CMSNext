@@ -5,8 +5,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
 import { FinancialsGridView } from "./FinancialsGridView";
 import { NotesPopover } from "./NotesPopover";
 import { IntakeChecklistView } from "./IntakeChecklistView";
-import { StoredCase } from "../../types/case";
-import { ArrowLeft, Edit2, Trash2, Wallet, BellRing, FileText, ClipboardCheck, Star, StarOff, Phone, Mail, Check } from "lucide-react";
+import type { StoredCase } from "../../types/case";
+import { ArrowLeft, Edit2, Trash2, Wallet, BellRing, FileText, ClipboardCheck, Star, StarOff, Phone, Mail, Check, FileSignature } from "lucide-react";
 import { withDataErrorBoundary } from "../error/ErrorBoundaryHOC";
 import { CaseStatusMenu } from "./CaseStatusMenu";
 import { cn, interactiveHoverClasses } from "../ui/utils";
@@ -14,8 +14,10 @@ import type { AlertWithMatch } from "../../utils/alertsData";
 import { CaseAlertsDrawer } from "./CaseAlertsDrawer";
 import { CopyButton } from "@/components/common/CopyButton";
 import { CaseSummaryModal } from "./CaseSummaryModal";
+import { VRGeneratorModal } from "./VRGeneratorModal";
 import { useFinancialItems } from "../../hooks/useFinancialItems";
 import { useNotes } from "../../hooks/useNotes";
+import { useCategoryConfig } from "@/contexts/CategoryConfigContext";
 import { formatUSPhone } from "@/utils/phoneFormatter";
 import { formatDateForDisplay } from "@/utils/dateFormatting";
 
@@ -60,8 +62,12 @@ export function CaseDetails({
   const [alertsDrawerOpen, setAlertsDrawerOpen] = useState(false);
   
   // Fetch financials and notes for case summary generation
-  const { groupedItems: financials } = useFinancialItems(caseData.id);
+  const { groupedItems: financials, items: financialItemsList } = useFinancialItems(caseData.id);
   const { notes } = useNotes(caseData.id);
+  
+  // Get VR scripts from category config
+  const { config: categoryConfig } = useCategoryConfig();
+  const vrScripts = categoryConfig?.vrScripts ?? [];
 
   const { totalAlerts, openAlertCount, hasOpenAlerts } = useMemo(() => {
     const total = alerts.length;
@@ -86,6 +92,7 @@ export function CaseDetails({
   }, [onUpdatePriority, caseData.id, caseData.priority]);
 
   const [summaryModalOpen, setSummaryModalOpen] = useState(false);
+  const [vrModalOpen, setVrModalOpen] = useState(false);
 
   return (
     <div className="space-y-6">
@@ -235,6 +242,15 @@ export function CaseDetails({
             <Button 
               variant="outline" 
               size="sm"
+              onClick={() => setVrModalOpen(true)}
+              className={interactiveHoverClasses}
+            >
+              <FileSignature className="w-4 h-4 mr-2" />
+              Generate VRs
+            </Button>
+            <Button 
+              variant="outline" 
+              size="sm"
               onClick={onEdit}
               className={interactiveHoverClasses}
             >
@@ -327,6 +343,14 @@ export function CaseDetails({
         caseData={caseData}
         financials={financials}
         notes={notes}
+      />
+
+      <VRGeneratorModal
+        open={vrModalOpen}
+        onOpenChange={setVrModalOpen}
+        storedCase={caseData}
+        financialItems={financialItemsList}
+        vrScripts={vrScripts}
       />
     </div>
   );

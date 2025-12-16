@@ -5,6 +5,7 @@ import {
   autoAssignColorSlot, 
   isValidColorSlot 
 } from './colorSlots';
+import type { VRScript } from './vr';
 
 export type CategoryKey =
   | "caseTypes"
@@ -12,7 +13,8 @@ export type CategoryKey =
   | "alertTypes"
   | "livingArrangements"
   | "noteCategories"
-  | "verificationStatuses";
+  | "verificationStatuses"
+  | "vrScripts";
 
 /**
  * Configuration for a case status with its display color.
@@ -39,6 +41,8 @@ export interface CategoryConfig {
   livingArrangements: string[];
   noteCategories: string[];
   verificationStatuses: string[];
+  /** VR (Verification Request) script templates */
+  vrScripts: VRScript[];
 }
 
 /**
@@ -55,6 +59,7 @@ export interface PartialCategoryConfigInput {
   livingArrangements?: string[];
   noteCategories?: string[];
   verificationStatuses?: string[];
+  vrScripts?: VRScript[];
 }
 
 const DEFAULT_CASE_TYPES = [
@@ -102,6 +107,9 @@ const DEFAULT_VERIFICATION_STATUSES = [
 // No default alert types - populated from incoming alert data
 const DEFAULT_ALERT_TYPES: AlertTypeConfig[] = [];
 
+// No default VR scripts - users create their own
+const DEFAULT_VR_SCRIPTS: VRScript[] = [];
+
 export const defaultCategoryConfig: CategoryConfig = Object.freeze({
   caseTypes: DEFAULT_CASE_TYPES,
   caseStatuses: DEFAULT_CASE_STATUSES,
@@ -109,6 +117,7 @@ export const defaultCategoryConfig: CategoryConfig = Object.freeze({
   livingArrangements: DEFAULT_LIVING_ARRANGEMENTS,
   noteCategories: DEFAULT_NOTE_CATEGORIES,
   verificationStatuses: DEFAULT_VERIFICATION_STATUSES,
+  vrScripts: DEFAULT_VR_SCRIPTS,
 });
 
 export const CATEGORY_DISPLAY_METADATA: Record<
@@ -138,6 +147,10 @@ export const CATEGORY_DISPLAY_METADATA: Record<
   verificationStatuses: {
     label: "Verification Statuses",
     description: "Define the workflow stages for verifying financial items.",
+  },
+  vrScripts: {
+    label: "VR Scripts",
+    description: "Create reusable templates for generating Verification Requests.",
   },
 };
 
@@ -307,6 +320,7 @@ export const mergeCategoryConfig = (
       livingArrangements: [...defaultCategoryConfig.livingArrangements],
       noteCategories: [...defaultCategoryConfig.noteCategories],
       verificationStatuses: [...defaultCategoryConfig.verificationStatuses],
+      vrScripts: defaultCategoryConfig.vrScripts.map(s => ({ ...s })),
     };
   }
 
@@ -337,6 +351,9 @@ export const mergeCategoryConfig = (
     verificationStatuses: sanitizeCategoryValues(config.verificationStatuses).length
       ? sanitizeCategoryValues(config.verificationStatuses)
       : [...defaultCategoryConfig.verificationStatuses],
+    vrScripts: config.vrScripts?.length
+      ? config.vrScripts.map(s => ({ ...s }))
+      : [...defaultCategoryConfig.vrScripts],
   };
 };
 
@@ -353,6 +370,7 @@ export const cloneCategoryConfig = (config?: CategoryConfig | null): CategoryCon
     livingArrangements: [...source.livingArrangements],
     noteCategories: [...source.noteCategories],
     verificationStatuses: [...source.verificationStatuses],
+    vrScripts: (source.vrScripts || []).map(s => ({ ...s })),
   };
 };
 

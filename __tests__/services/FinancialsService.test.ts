@@ -117,6 +117,7 @@ describe('FinancialsService', () => {
     livingArrangements: ['Apartment/House'],
     noteCategories: ['General'],
     verificationStatuses: ['Needs VR', 'Verified'],
+    vrScripts: [],
   });
 
   const createBaseMockData = (): NormalizedFileData => ({
