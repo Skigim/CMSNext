@@ -9,6 +9,7 @@ import {
   type AlertTypeConfig,
   type PartialCategoryConfigInput,
 } from "@/types/categoryConfig";
+import type { VRScript } from "@/types/vr";
 import { useDataManagerSafe } from "./DataManagerContext";
 import { useFileStorageDataChange } from "./FileStorageContext";
 import { LegacyFormatError } from "@/utils/services/FileStorageService";
@@ -16,7 +17,7 @@ import { createLogger } from "@/utils/logger";
 
 const logger = createLogger("CategoryConfigContext");
 
-type UpdateHandler = (key: CategoryKey, values: string[] | StatusConfig[] | AlertTypeConfig[]) => Promise<void>;
+type UpdateHandler = (key: CategoryKey, values: string[] | StatusConfig[] | AlertTypeConfig[] | VRScript[]) => Promise<void>;
 
 type CategoryConfigContextValue = {
   config: CategoryConfig;
@@ -194,6 +195,23 @@ export const CategoryConfigProvider: React.FC<{ children: React.ReactNode }> = (
         } catch (err) {
           console.error("Failed to update alert types", err);
           toast.error("Failed to update options", { id: toastId });
+        }
+        return;
+      }
+
+      // Handle vrScripts specially since it uses VRScript[]
+      if (key === 'vrScripts') {
+        const scripts = values as VRScript[];
+
+        const toastId = toast.loading("Saving VR scripts...");
+        try {
+          const updated = await dataManager.updateVRScripts(scripts);
+          setConfig(mergeCategoryConfig(updated));
+          setError(null);
+          toast.success("VR scripts updated", { id: toastId });
+        } catch (err) {
+          console.error("Failed to update VR scripts", err);
+          toast.error("Failed to update VR scripts", { id: toastId });
         }
         return;
       }
