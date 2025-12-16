@@ -170,6 +170,14 @@
 - [x] Add `updateVRScripts()` method to CategoryConfigService and DataManager
 - [x] Add unit tests for vrGenerator (31 new tests)
 - [x] Test coverage: placeholders, template rendering, script CRUD
+- [x] VR Generator UX improvements:
+  - Explicit + button to add scripts (no auto-population)
+  - Case-level placeholder filling without items selected
+  - Append scripts with separator for multiple additions
+- [x] Background alert write queue for reliable persistence
+  - Writes continue when user closes drawer or navigates away
+  - Optimistic UI updates with fire-and-forget pattern
+  - Error toast only on actual write failure
 
 #### Phase 4: Keyboard Shortcuts (Dec 19-20)
 
@@ -208,7 +216,7 @@
 | Hooks over 200 lines          | 4     | 0 ✅   | 0      | 0      | 0      |
 | Components with anti-patterns | 1     | 0 ✅   | 0      | 0      | 0      |
 | Test count                    | 253   | 355 ✅ | 455 ✅ | 537 ✅ | 550+   |
-| New features shipped          | -     | 18 ✅  | 12 ✅  | 1 ✅   | 35+    |
+| New features shipped          | -     | 18 ✅  | 12 ✅  | 3 ✅   | 35+    |
 | Average feature rating        | 76.5  | 80 ✅  | 83 ✅  | 84 ✅  | 85+    |
 
 ---
