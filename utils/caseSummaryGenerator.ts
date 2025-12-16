@@ -238,13 +238,11 @@ function buildFinancialSection(
 }
 
 /**
- * Build the Notes section
+ * Build the Notes section with MLTC prefix
  */
 function buildNotesSection(notes: Note[]): string {
-  const header = 'Notes';
-  
   if (!notes || notes.length === 0) {
-    return `${header}\nNone`;
+    return 'MLTC: None';
   }
   
   // Sort by creation date (oldest first)
@@ -254,9 +252,9 @@ function buildNotesSection(notes: Note[]): string {
     return dateA - dateB;
   });
   
-  // Full content, separated by blank lines
+  // Full content, separated by blank lines, with MLTC prefix
   const formatted = sortedNotes.map(note => note.content);
-  return `${header}\n${formatted.join('\n\n')}`;
+  return `MLTC: ${formatted.join('\n\n')}`;
 }
 
 /**
@@ -289,13 +287,13 @@ export const DEFAULT_SUMMARY_SECTIONS: SummarySections = {
  * Generate a comprehensive case summary for sharing
  * 
  * Format:
+ * - Notes (with MLTC prefix)
  * - Case Info (Application Date, Retro, Waiver)
  * - Person Info (Name, Contact, Citizenship, Aged/Disabled)
  * - Relationships
  * - Resources
  * - Income
  * - Expenses
- * - Notes
  * 
  * Sections separated by -----
  */
@@ -314,6 +312,9 @@ export function generateCaseSummary(
   
   const enabledSections: string[] = [];
   
+  if (sectionConfig.notes) {
+    enabledSections.push(buildNotesSection(notes));
+  }
   if (sectionConfig.caseInfo) {
     enabledSections.push(buildCaseInfoSection(caseRecord));
   }
@@ -331,9 +332,6 @@ export function generateCaseSummary(
   }
   if (sectionConfig.expenses) {
     enabledSections.push(buildFinancialSection('Expenses', financials.expenses || [], formatExpenseItem));
-  }
-  if (sectionConfig.notes) {
-    enabledSections.push(buildNotesSection(notes));
   }
 
   return enabledSections.join(SECTION_SEPARATOR);

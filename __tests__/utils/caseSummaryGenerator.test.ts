@@ -514,7 +514,7 @@ describe('generateCaseSummary', () => {
 
       const summary = generateCaseSummary(caseData);
       
-      expect(summary).toContain('Notes\nNone');
+      expect(summary).toContain('MLTC: None');
     });
 
     it('displays full note content without truncation', () => {
@@ -532,7 +532,7 @@ describe('generateCaseSummary', () => {
 
       const summary = generateCaseSummary(caseData, { notes });
       
-      expect(summary).toContain(longContent);
+      expect(summary).toContain(`MLTC: ${longContent}`);
     });
 
     it('displays notes in chronological order (oldest first)', () => {
@@ -559,6 +559,8 @@ describe('generateCaseSummary', () => {
       const firstNoteIndex = summary.indexOf('First note');
       const secondNoteIndex = summary.indexOf('Second note');
       expect(firstNoteIndex).toBeLessThan(secondNoteIndex);
+      // Notes should appear first in the summary
+      expect(summary.startsWith('MLTC:')).toBe(true);
     });
 
     it('separates multiple notes with blank lines', () => {
@@ -582,7 +584,7 @@ describe('generateCaseSummary', () => {
 
       const summary = generateCaseSummary(caseData, { notes });
       
-      expect(summary).toContain('Note one content\n\nNote two content');
+      expect(summary).toContain('MLTC: Note one content\n\nNote two content');
     });
   });
 
@@ -592,7 +594,7 @@ describe('generateCaseSummary', () => {
 
       const summary = generateCaseSummary(caseData);
       
-      // Should have 6 separators (between 7 sections)
+      // Should have 6 separators (between 7 sections with notes first)
       const separatorCount = (summary.match(/\n-----\n/g) || []).length;
       expect(separatorCount).toBe(6);
     });
@@ -650,13 +652,13 @@ describe('generateCaseSummary', () => {
 
       const summary = generateCaseSummary(caseData);
 
+      expect(summary).toContain('MLTC:'); // Notes come first
       expect(summary).toContain('Application Date:');
       expect(summary).toContain('John Doe');
       expect(summary).toContain('Relationships');
       expect(summary).toContain('Resources');
       expect(summary).toContain('Income');
       expect(summary).toContain('Expenses');
-      expect(summary).toContain('Notes');
     });
 
     it('excludes sections when disabled', () => {
@@ -721,6 +723,7 @@ describe('generateCaseSummary', () => {
       expect(separatorCount).toBe(1);
       expect(summary).toContain('Application Date:');
       expect(summary).toContain('Resources');
+      expect(summary).not.toContain('MLTC:');
     });
   });
 });
