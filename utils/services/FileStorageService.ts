@@ -241,7 +241,9 @@ export class FileStorageService {
           .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()),
       };
 
+      console.log("[DEBUG] About to write file, vrScripts:", JSON.stringify(finalData.categoryConfig.vrScripts, null, 2));
       const success = await this.fileService.writeFile(finalData);
+      console.log("[DEBUG] File write success:", success);
 
       if (!success) {
         throw new Error("File write operation failed");
