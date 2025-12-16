@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Plus, Save, Undo2, Trash2 } from "lucide-react";
+import { Plus, Save, Undo2, Trash2, Pencil, ChevronDown, ChevronRight } from "lucide-react";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 import { Badge } from "../ui/badge";
@@ -91,27 +91,136 @@ function PlaceholderPalette({ onInsert, disabled }: PlaceholderPaletteProps) {
 }
 
 // ============================================================================
-// Script Editor Row
+// Script View Row Component (Read-only)
+// ============================================================================
+
+type ScriptViewRowProps = {
+  script: VRScript;
+  onEdit: () => void;
+  onDelete: () => void;
+  disabled: boolean;
+  isExpanded: boolean;
+  onToggleExpand: () => void;
+};
+
+function ScriptViewRow({
+  script,
+  onEdit,
+  onDelete,
+  disabled,
+  isExpanded,
+  onToggleExpand,
+}: ScriptViewRowProps) {
+  const hasTemplate = (script.template ?? "").trim().length > 0;
+
+  return (
+    <div className="rounded-lg border border-border/50 bg-background/60 overflow-hidden">
+      {/* Header Row */}
+      <div 
+        className={cn(
+          "flex items-center gap-2 p-3 cursor-pointer hover:bg-muted/50 transition-colors",
+          isExpanded && "border-b border-border/50"
+        )}
+        onClick={onToggleExpand}
+        role="button"
+        tabIndex={0}
+        onKeyDown={(e) => e.key === "Enter" && onToggleExpand()}
+      >
+        <div className="text-muted-foreground">
+          {isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2">
+            <span className="font-medium text-sm truncate">{script.name}</span>
+            {hasTemplate && (
+              <Badge variant="secondary" className="text-xs shrink-0">
+                {script.template.length} chars
+              </Badge>
+            )}
+            {!hasTemplate && (
+              <Badge variant="outline" className="text-xs text-muted-foreground shrink-0">
+                No template
+              </Badge>
+            )}
+          </div>
+        </div>
+        <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8"
+                onClick={onEdit}
+                disabled={disabled}
+                aria-label="Edit script"
+              >
+                <Pencil className="h-4 w-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Edit script</TooltipContent>
+          </Tooltip>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 text-destructive hover:text-destructive"
+                onClick={onDelete}
+                disabled={disabled}
+                aria-label="Delete script"
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Delete script</TooltipContent>
+          </Tooltip>
+        </div>
+      </div>
+
+      {/* Expanded Content (Read-only preview) */}
+      {isExpanded && (
+        <div className="p-4 bg-muted/20">
+          <Label className="text-xs font-medium text-muted-foreground mb-2 block">
+            Template Preview
+          </Label>
+          {hasTemplate ? (
+            <pre className="text-sm font-mono bg-background/50 p-3 rounded border border-border/30 whitespace-pre-wrap max-h-[200px] overflow-y-auto">
+              {script.template}
+            </pre>
+          ) : (
+            <p className="text-sm text-muted-foreground italic">No template content</p>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ============================================================================
+// Script Editor Row Component (Editable)
 // ============================================================================
 
 type ScriptEditorRowProps = {
   script: VRScript;
   onUpdate: (script: VRScript) => void;
   onDelete: () => void;
+  onCancel: () => void;
   disabled: boolean;
   isNameDuplicate: boolean;
-  isExpanded: boolean;
-  onToggleExpand: () => void;
+  isNew: boolean;
 };
 
 function ScriptEditorRow({
   script,
   onUpdate,
   onDelete,
+  onCancel,
   disabled,
   isNameDuplicate,
-  isExpanded,
-  onToggleExpand,
+  isNew,
 }: ScriptEditorRowProps) {
   const [textareaRef, setTextareaRef] = useState<HTMLTextAreaElement | null>(null);
 
@@ -166,46 +275,29 @@ function ScriptEditorRow({
   );
 
   const isEmpty = !script.name?.trim();
-  const hasTemplate = (script.template ?? "").trim().length > 0;
 
   return (
-    <div className="rounded-lg border border-border/50 bg-background/60 overflow-hidden">
-      {/* Collapsed Header Row */}
-      <div 
-        className={cn(
-          "flex items-center gap-2 p-3 cursor-pointer hover:bg-muted/50 transition-colors",
-          isExpanded && "border-b border-border/50"
-        )}
-        onClick={onToggleExpand}
-        role="button"
-        tabIndex={0}
-        onKeyDown={(e) => e.key === "Enter" && onToggleExpand()}
-      >
+    <div className="rounded-lg border-2 border-primary/50 bg-background/60 overflow-hidden">
+      {/* Header with name input */}
+      <div className="flex items-center gap-2 p-3 border-b border-border/50 bg-primary/5">
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
             <Input
               value={script.name ?? ""}
               onChange={handleNameChange}
-              onClick={(e) => e.stopPropagation()}
               placeholder="Script name..."
               disabled={disabled}
+              autoFocus={isNew}
               className={cn(
-                "h-8 max-w-[200px]",
+                "h-8 max-w-[250px]",
                 isEmpty && "border-destructive",
                 isNameDuplicate && "border-amber-500"
               )}
               aria-label="Script name"
             />
-            {hasTemplate && (
-              <Badge variant="secondary" className="text-xs shrink-0">
-                {script.template.length} chars
-              </Badge>
-            )}
-            {!hasTemplate && (
-              <Badge variant="outline" className="text-xs text-muted-foreground shrink-0">
-                No template
-              </Badge>
-            )}
+            <Badge variant="outline" className="text-xs shrink-0 bg-primary/10">
+              Editing
+            </Badge>
           </div>
           {(isEmpty || isNameDuplicate) && (
             <p className="text-xs text-destructive mt-1">
@@ -213,7 +305,23 @@ function ScriptEditorRow({
             </p>
           )}
         </div>
-        <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center gap-1">
+          {!isNew && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={onCancel}
+                  disabled={disabled}
+                >
+                  Cancel
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Cancel editing</TooltipContent>
+            </Tooltip>
+          )}
           <Tooltip>
             <TooltipTrigger asChild>
               <Button
@@ -233,39 +341,37 @@ function ScriptEditorRow({
         </div>
       </div>
 
-      {/* Expanded Content */}
-      {isExpanded && (
-        <div className="p-4 space-y-4 bg-muted/20">
-          <div className="grid gap-4 lg:grid-cols-[1fr,280px]">
-            {/* Template Editor */}
-            <div className="space-y-2">
-              <Label htmlFor={`template-${script.id}`} className="text-sm font-medium">
-                Template Content
-              </Label>
-              <Textarea
-                id={`template-${script.id}`}
-                ref={setTextareaRef}
-                value={script.template}
-                onChange={handleTemplateChange}
-                placeholder="Enter your VR template text here. Use placeholders like {description}, {amount}, {caseName}, etc."
-                disabled={disabled}
-                className="min-h-[200px] font-mono text-sm resize-y"
-              />
-              <p className="text-xs text-muted-foreground">
-                Use curly braces for placeholders, e.g., {"{amount}"} or {"{caseName}"}
-              </p>
-            </div>
+      {/* Template Editor - Always shown when editing */}
+      <div className="p-4 space-y-4 bg-muted/20">
+        <div className="grid gap-4 lg:grid-cols-[1fr,280px]">
+          {/* Template Editor */}
+          <div className="space-y-2">
+            <Label htmlFor={`template-${script.id}`} className="text-sm font-medium">
+              Template Content
+            </Label>
+            <Textarea
+              id={`template-${script.id}`}
+              ref={setTextareaRef}
+              value={script.template}
+              onChange={handleTemplateChange}
+              placeholder="Enter your VR template text here. Use placeholders like {description}, {amount}, {caseName}, etc."
+              disabled={disabled}
+              className="min-h-[200px] font-mono text-sm resize-y"
+            />
+            <p className="text-xs text-muted-foreground">
+              Use curly braces for placeholders, e.g., {"{amount}"} or {"{caseName}"}
+            </p>
+          </div>
 
-            {/* Placeholder Palette */}
-            <div className="lg:border-l lg:pl-4 border-border/50">
-              <PlaceholderPalette 
-                onInsert={handleInsertPlaceholder} 
-                disabled={disabled}
-              />
-            </div>
+          {/* Placeholder Palette */}
+          <div className="lg:border-l lg:pl-4 border-border/50">
+            <PlaceholderPalette 
+              onInsert={handleInsertPlaceholder} 
+              disabled={disabled}
+            />
           </div>
         </div>
-      )}
+      </div>
     </div>
   );
 }
@@ -281,9 +387,9 @@ export function VRScriptsEditor({
 }: VRScriptsEditorProps) {
   const [localScripts, setLocalScripts] = useState<VRScript[]>(() => [...scripts]);
   const [isSaving, setIsSaving] = useState(false);
-  const [expandedId, setExpandedId] = useState<string | null>(
-    scripts.length > 0 ? scripts[0].id : null
-  );
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [newScriptIds, setNewScriptIds] = useState<Set<string>>(() => new Set());
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
 
   // Sync local state with props when scripts prop changes (e.g., after save)
@@ -292,6 +398,9 @@ export function VRScriptsEditor({
     // Only sync if we're not actively saving (to avoid race conditions)
     if (!isSaving) {
       setLocalScripts([...scripts]);
+      // Clear editing state after save
+      setEditingId(null);
+      setNewScriptIds(new Set());
     }
   }, [scripts, isSaving]);
 
@@ -332,7 +441,8 @@ export function VRScriptsEditor({
   const handleAddScript = useCallback(() => {
     const newScript = createDefaultVRScript("New Script");
     setLocalScripts(prev => [...prev, newScript]);
-    setExpandedId(newScript.id);
+    setEditingId(newScript.id);
+    setNewScriptIds(prev => new Set(prev).add(newScript.id));
   }, []);
 
   const handleUpdateScript = useCallback((updated: VRScript) => {
@@ -343,15 +453,46 @@ export function VRScriptsEditor({
 
   const handleDeleteScript = useCallback((id: string) => {
     setLocalScripts(prev => prev.filter(s => s.id !== id));
+    if (editingId === id) {
+      setEditingId(null);
+    }
     if (expandedId === id) {
       setExpandedId(null);
     }
+    setNewScriptIds(prev => {
+      const next = new Set(prev);
+      next.delete(id);
+      return next;
+    });
     setDeleteConfirmId(null);
-  }, [expandedId]);
+  }, [editingId, expandedId]);
+
+  const handleCancelEdit = useCallback((id: string) => {
+    // If it's a new script that hasn't been saved, remove it
+    if (newScriptIds.has(id)) {
+      setLocalScripts(prev => prev.filter(s => s.id !== id));
+      setNewScriptIds(prev => {
+        const next = new Set(prev);
+        next.delete(id);
+        return next;
+      });
+    } else {
+      // Revert to saved version
+      const savedScript = scripts.find(s => s.id === id);
+      if (savedScript) {
+        setLocalScripts(prev =>
+          prev.map(s => (s.id === id ? { ...savedScript } : s))
+        );
+      }
+    }
+    setEditingId(null);
+  }, [newScriptIds, scripts]);
 
   const handleRevert = useCallback(() => {
     setLocalScripts([...scripts]);
-    setExpandedId(scripts.length > 0 ? scripts[0].id : null);
+    setEditingId(null);
+    setExpandedId(null);
+    setNewScriptIds(new Set());
   }, [scripts]);
 
   const handleSave = useCallback(async () => {
@@ -359,6 +500,7 @@ export function VRScriptsEditor({
     setIsSaving(true);
     try {
       await onSave(localScripts);
+      // editingId will be cleared by the useEffect when scripts prop updates
     } finally {
       setIsSaving(false);
     }
@@ -397,18 +539,37 @@ export function VRScriptsEditor({
       </div>
 
       <div className="space-y-3">
-        {localScripts.map(script => (
-          <ScriptEditorRow
-            key={script.id}
-            script={script}
-            onUpdate={handleUpdateScript}
-            onDelete={() => setDeleteConfirmId(script.id)}
-            disabled={isDisabled}
-            isNameDuplicate={validation.duplicates.has((script.name ?? "").trim().toLowerCase())}
-            isExpanded={expandedId === script.id}
-            onToggleExpand={() => setExpandedId(expandedId === script.id ? null : script.id)}
-          />
-        ))}
+        {localScripts.map(script => {
+          const isEditing = editingId === script.id;
+          const isNew = newScriptIds.has(script.id);
+          
+          if (isEditing) {
+            return (
+              <ScriptEditorRow
+                key={script.id}
+                script={script}
+                onUpdate={handleUpdateScript}
+                onDelete={() => setDeleteConfirmId(script.id)}
+                onCancel={() => handleCancelEdit(script.id)}
+                disabled={isDisabled}
+                isNameDuplicate={validation.duplicates.has((script.name ?? "").trim().toLowerCase())}
+                isNew={isNew}
+              />
+            );
+          }
+          
+          return (
+            <ScriptViewRow
+              key={script.id}
+              script={script}
+              onEdit={() => setEditingId(script.id)}
+              onDelete={() => setDeleteConfirmId(script.id)}
+              disabled={isDisabled}
+              isExpanded={expandedId === script.id}
+              onToggleExpand={() => setExpandedId(expandedId === script.id ? null : script.id)}
+            />
+          );
+        })}
 
         {localScripts.length === 0 && (
           <div className="text-center py-8 text-muted-foreground">

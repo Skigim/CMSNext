@@ -202,12 +202,10 @@ export const CategoryConfigProvider: React.FC<{ children: React.ReactNode }> = (
       // Handle vrScripts specially since it uses VRScript[]
       if (key === 'vrScripts') {
         const scripts = values as VRScript[];
-        console.log("[DEBUG] updateCategory vrScripts called with:", JSON.stringify(scripts, null, 2));
 
         const toastId = toast.loading("Saving VR scripts...");
         try {
           const updated = await dataManager.updateVRScripts(scripts);
-          console.log("[DEBUG] updateVRScripts returned:", JSON.stringify(updated.vrScripts, null, 2));
           setConfig(mergeCategoryConfig(updated));
           setError(null);
           toast.success("VR scripts updated", { id: toastId });
