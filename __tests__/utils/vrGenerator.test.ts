@@ -4,7 +4,7 @@
  * Tests for the VR template rendering and placeholder substitution system.
  */
 
-import { describe, it, expect, beforeEach } from "vitest";
+import { describe, it, expect } from "vitest";
 import {
   buildRenderContext,
   renderTemplate,
@@ -22,17 +22,33 @@ import type { VRScript } from "@/types/vr";
 
 function createMockPerson(overrides: Partial<Person> = {}): Person {
   return {
+    id: "person-1",
     firstName: "John",
     lastName: "Doe",
+    name: "John Doe",
     phone: "5551234567",
     email: "john.doe@example.com",
     ssn: "123-45-6789",
     dateOfBirth: "1980-05-15",
+    organizationId: null,
+    livingArrangement: "Apartment/House",
+    status: "Active",
+    createdAt: "2024-01-01T10:00:00Z",
+    dateAdded: "2024-01-01",
+    authorizedRepIds: [],
+    familyMembers: [],
     address: {
       street: "123 Main St",
       city: "Springfield",
       state: "IL",
       zip: "62701",
+    },
+    mailingAddress: {
+      sameAsPhysical: true,
+      street: "",
+      city: "",
+      state: "",
+      zip: "",
     },
     ...overrides,
   };
@@ -40,10 +56,23 @@ function createMockPerson(overrides: Partial<Person> = {}): Person {
 
 function createMockCaseRecord(overrides: Partial<CaseRecord> = {}): Omit<CaseRecord, "financials" | "notes"> {
   return {
+    id: "record-1",
     mcn: "MCN123456",
     caseType: "Medicaid",
     applicationDate: "2024-01-15",
     status: "Pending",
+    personId: "person-1",
+    spouseId: "",
+    description: "",
+    priority: false,
+    livingArrangement: "Apartment/House",
+    withWaiver: false,
+    admissionDate: "",
+    organizationId: "",
+    authorizedReps: [],
+    retroRequested: "",
+    createdDate: "2024-01-01T10:00:00Z",
+    updatedDate: "2024-01-15T10:00:00Z",
     ...overrides,
   };
 }
@@ -78,14 +107,18 @@ function createMockFinancialItem(overrides: Partial<FinancialItem> = {}): Financ
     notes: "Primary account",
     amountHistory: [
       {
+        id: "history-1",
         amount: 1500.50,
         startDate: "2024-01-10",
         verificationSource: "Bank Statement",
+        createdAt: "2024-01-10T10:00:00Z",
       },
       {
+        id: "history-2",
         amount: 1200.00,
         startDate: "2024-01-05",
         verificationSource: "Client Report",
+        createdAt: "2024-01-05T10:00:00Z",
       },
     ],
     createdAt: "2024-01-10T10:00:00Z",
@@ -195,8 +228,8 @@ describe("vrGenerator", () => {
     it("should use most recent history entry for lastUpdated", () => {
       const item = createMockFinancialItem({
         amountHistory: [
-          { amount: 1000, startDate: "2024-01-01", verificationSource: "Old" },
-          { amount: 2000, startDate: "2024-01-15", verificationSource: "New" },
+          { id: "h1", amount: 1000, startDate: "2024-01-01", verificationSource: "Old", createdAt: "2024-01-01T10:00:00Z" },
+          { id: "h2", amount: 2000, startDate: "2024-01-15", verificationSource: "New", createdAt: "2024-01-15T10:00:00Z" },
         ],
       });
       const storedCase = createMockStoredCase();
