@@ -81,19 +81,20 @@ export function VRGeneratorModal({
     }
   }, [open, financialItems, vrScripts]);
 
-  // Regenerate text when script or selection changes (but preserve manual edits)
+  // Regenerate text when script or selection changes
   useEffect(() => {
     if (!open || !selectedScript || !storedCase) {
       return;
     }
 
-    // Only auto-generate if there are selected items and renderedText is empty or was auto-generated
     const selectedItems = selectableItems
       .filter(i => i.selected)
       .map(({ item, type }) => ({ item, type }));
 
     if (selectedItems.length === 0) {
-      // Don't clear the text - allow manual entry even without items
+      // No items selected - show the template with placeholder text intact
+      // User can manually replace placeholders
+      setRenderedText(selectedScript.template);
       return;
     }
 
@@ -307,8 +308,8 @@ export function VRGeneratorModal({
                 onChange={(e) => setRenderedText(e.target.value)}
                 placeholder={
                   !selectedScriptId
-                    ? "Select a script to generate VRs or enter manually..."
-                    : "Generated VR or manual text will appear here..."
+                    ? "Select a script to generate a template..."
+                    : "Script template will appear here - replace placeholders manually or select items to auto-fill"
                 }
                 className="flex-1 min-h-[300px] font-mono text-sm resize-none"
               />
