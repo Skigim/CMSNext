@@ -1,4 +1,4 @@
-import { useCallback, useRef } from "react";
+import { useCallback, useRef, useEffect } from "react";
 import { toast } from "sonner";
 import type { StoredCase } from "@/types/case";
 import type { DataManager } from "@/utils/DataManager";
@@ -9,6 +9,7 @@ import {
   type AlertWithMatch,
 } from "@/utils/alertsData";
 import { createLogger } from "@/utils/logger";
+import { alertWriteQueue } from "@/utils/alertWriteQueue";
 
 const logger = createLogger("AlertResolve");
 
@@ -32,10 +33,41 @@ export interface UseAlertResolveReturn {
   applyOverrides: (index: AlertsIndex) => AlertsIndex;
 }
 
-/** Handles alert resolution and reopening with optimistic updates */
+/** Handles alert resolution and reopening with optimistic updates and background persistence */
 export function useAlertResolve(config: UseAlertResolveConfig): UseAlertResolveReturn {
   const { dataManager, isMounted, cases, selectedCase, setAlertsIndex, reloadAlerts } = config;
   const overridesRef = useRef(new Map<string, ResolvedOverride>());
+
+  // Set up queue callbacks for background write results
+  useEffect(() => {
+    alertWriteQueue.setCallbacks({
+      onSuccess: (alertId) => {
+        // Clear override after successful write
+        overridesRef.current.delete(alertId);
+        // Silently reload alerts if still mounted
+        if (isMounted.current) {
+          reloadAlerts().catch(() => {
+            // Silent reload failure - data will sync on next user action
+          });
+        }
+      },
+      onError: (alertId, error) => {
+        logger.error('Background alert write failed', { alertId, error: error.message });
+        // Clear override to revert optimistic update
+        overridesRef.current.delete(alertId);
+        // Show error toast only if mounted
+        if (isMounted.current) {
+          toast.error("Alert update failed. Please try again.");
+          reloadAlerts().catch(() => {});
+        }
+      },
+    });
+
+    return () => {
+      // Clear callbacks on unmount (writes continue but no notifications)
+      alertWriteQueue.setCallbacks({});
+    };
+  }, [isMounted, reloadAlerts]);
 
   const applyOverrides = useCallback((index: AlertsIndex): AlertsIndex => {
     if (overridesRef.current.size === 0) return index;
@@ -76,32 +108,25 @@ export function useAlertResolve(config: UseAlertResolveConfig): UseAlertResolveR
     }
 
     const isResolved = alert.status === "resolved";
+    const resolvedAt = new Date().toISOString();
 
-    // Set optimistic override
+    // Set optimistic override immediately
     overridesRef.current.set(alert.id, isResolved
       ? { status: "in-progress", resolvedAt: null }
-      : { status: "resolved", resolvedAt: new Date().toISOString(), resolutionNotes: alert.resolutionNotes });
+      : { status: "resolved", resolvedAt, resolutionNotes: alert.resolutionNotes });
     setAlertsIndex(prev => applyOverrides(prev));
 
-    try {
+    // Queue write to happen in background - don't await
+    // Capture current cases to avoid stale closure
+    const currentCases = [...cases];
+    alertWriteQueue.enqueue(alert.id, async () => {
       await dataManager.updateAlertStatus(identifier, isResolved
         ? { status: "in-progress", resolvedAt: null, resolutionNotes: alert.resolutionNotes }
-        : { status: "resolved", resolvedAt: new Date().toISOString(), resolutionNotes: alert.resolutionNotes }, { cases });
-      if (!isMounted.current) return;
+        : { status: "resolved", resolvedAt, resolutionNotes: alert.resolutionNotes }, { cases: currentCases });
+    });
 
-      overridesRef.current.delete(alert.id);
-      await reloadAlerts();
-      toast.success(isResolved ? "Alert reopened" : "Alert resolved", {
-        description: isResolved ? "We moved this alert back into the active queue." : "Add a note when you're ready to document the resolution.",
-      });
-    } catch (err) {
-      logger.error(`Failed to ${isResolved ? 'reopen' : 'resolve'} alert`, { alertId: alert.id, error: err instanceof Error ? err.message : String(err) });
-      if (!isMounted.current) return;
-      overridesRef.current.delete(alert.id);
-      await reloadAlerts();
-      toast.error(`Unable to ${isResolved ? 'reopen' : 'resolve'} alert. Please try again.`);
-    }
-  }, [applyOverrides, cases, dataManager, isMounted, reloadAlerts, selectedCase, setAlertsIndex]);
+    // Return immediately - write happens in background
+  }, [applyOverrides, cases, dataManager, selectedCase, setAlertsIndex]);
 
   return { onResolveAlert, applyOverrides };
 }
