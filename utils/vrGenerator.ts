@@ -41,13 +41,40 @@ function formatCurrency(amount?: number): string {
 }
 
 /**
- * Format a date with an offset from today.
- * @param daysOffset - Number of days to add to current date (can be negative)
+ * Apply a day offset to a date and format for display.
+ * If baseDate is a string, parse it first. If empty/invalid, returns empty string.
+ * @param baseDate - The base date (string or Date)
+ * @param daysOffset - Number of days to add (can be negative)
  */
-function formatDateOffset(daysOffset: number): string {
-  const date = new Date();
+function applyDateOffset(baseDate: string | Date | undefined, daysOffset: number): string {
+  if (!baseDate) return "";
+  
+  let date: Date;
+  if (typeof baseDate === "string") {
+    // Handle "now" or empty as current date
+    if (baseDate === "" || baseDate === "now") {
+      date = new Date();
+    } else {
+      date = new Date(baseDate);
+      if (isNaN(date.getTime())) return "";
+    }
+  } else {
+    date = new Date(baseDate);
+  }
+  
   date.setDate(date.getDate() + daysOffset);
   return date.toLocaleDateString("en-US", {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  });
+}
+
+/**
+ * Get today's date formatted for display.
+ */
+function getCurrentDateFormatted(): string {
+  return new Date().toLocaleDateString("en-US", {
     year: "numeric",
     month: "long",
     day: "numeric",
@@ -117,11 +144,7 @@ export function buildCaseLevelContext(storedCase: StoredCase): VRRenderContext {
     clientAddress: formatAddress(person),
     
     // System
-    currentDate: formatDateOffset(0),
-    currentDate30: formatDateOffset(30),
-    currentDate60: formatDateOffset(60),
-    currentDate90: formatDateOffset(90),
-    currentDate180: formatDateOffset(180),
+    currentDate: getCurrentDateFormatted(),
   };
 }
 
@@ -180,22 +203,44 @@ export function buildRenderContext(
     clientAddress: formatAddress(person),
     
     // System
-    currentDate: formatDateOffset(0),
-    currentDate30: formatDateOffset(30),
-    currentDate60: formatDateOffset(60),
-    currentDate90: formatDateOffset(90),
-    currentDate180: formatDateOffset(180),
+    currentDate: getCurrentDateFormatted(),
   };
+}
+
+/**
+ * List of date fields that support +/- offset syntax.
+ */
+const DATE_FIELDS = new Set([
+  "currentDate",
+  "applicationDate",
+  "dateAdded",
+  "lastUpdated",
+  "lastVerified",
+  "clientDOB",
+]);
+
+/**
+ * Check if a field is a date field that supports offsets.
+ */
+function isDateField(fieldName: string): boolean {
+  return DATE_FIELDS.has(fieldName) || 
+         fieldName.toLowerCase().includes("date") || 
+         fieldName === "lastUpdated" || 
+         fieldName === "lastVerified";
 }
 
 /**
  * Render a VR template by substituting placeholders with context values.
  * 
- * Placeholders are in the format {fieldName}.
+ * Placeholders support two formats:
+ * - {fieldName} - Simple substitution
+ * - {fieldName+N} or {fieldName-N} - Date fields with day offset
+ * 
  * Unknown placeholders are left as-is.
  */
 export function renderTemplate(template: string, context: VRRenderContext): string {
-  return template.replace(/\{(\w+)\}/g, (match, fieldName) => {
+  // Match {fieldName} or {fieldName+N} or {fieldName-N}
+  return template.replace(/\{(\w+)([+-]\d+)?\}/g, (match, fieldName, offsetStr) => {
     const key = fieldName as VRPlaceholderField;
     
     // Check if it's a valid placeholder
@@ -207,16 +252,36 @@ export function renderTemplate(template: string, context: VRRenderContext): stri
     
     // Format based on field type
     if (value === undefined || value === null) {
+      // Special case: currentDate with offset but no base value
+      if (key === "currentDate" && offsetStr) {
+        const offset = parseInt(offsetStr, 10);
+        return applyDateOffset(new Date(), offset);
+      }
       return "";
     }
     
-    // Special formatting for specific fields
-    if (key === "amount") {
-      return formatCurrency(value as number);
+    // Handle date fields with optional offset
+    if (isDateField(key)) {
+      const offset = offsetStr ? parseInt(offsetStr, 10) : 0;
+      
+      // Special handling for currentDate - always use today as base
+      if (key === "currentDate") {
+        return offset === 0 
+          ? getCurrentDateFormatted() 
+          : applyDateOffset(new Date(), offset);
+      }
+      
+      // For other date fields, apply offset to the stored date
+      if (offset !== 0) {
+        return applyDateOffset(value as string, offset);
+      }
+      
+      return formatDate(value as string);
     }
     
-    if (key.toLowerCase().includes("date") || key === "lastUpdated" || key === "lastVerified") {
-      return formatDate(value as string);
+    // Special formatting for amount
+    if (key === "amount") {
+      return formatCurrency(value as number);
     }
     
     return String(value);

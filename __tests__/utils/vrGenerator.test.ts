@@ -312,6 +312,72 @@ Case Management
       expect(result).toContain("case #MCN123");
       expect(result).toContain("$500.00");
     });
+
+    it("should apply positive offset to currentDate", () => {
+      const template = "App Date (90 days): {currentDate+90}";
+      const context = { currentDate: new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" }) };
+
+      const result = renderTemplate(template, context);
+
+      // Calculate expected date
+      const expected = new Date();
+      expected.setDate(expected.getDate() + 90);
+      const expectedStr = expected.toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" });
+
+      expect(result).toBe(`App Date (90 days): ${expectedStr}`);
+    });
+
+    it("should apply negative offset to currentDate", () => {
+      const template = "30 days ago: {currentDate-30}";
+      const context = { currentDate: new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" }) };
+
+      const result = renderTemplate(template, context);
+
+      const expected = new Date();
+      expected.setDate(expected.getDate() - 30);
+      const expectedStr = expected.toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" });
+
+      expect(result).toBe(`30 days ago: ${expectedStr}`);
+    });
+
+    it("should apply offset to applicationDate", () => {
+      const template = "Due by: {applicationDate+60}";
+      const context = { applicationDate: "2024-01-15" };
+
+      const result = renderTemplate(template, context);
+
+      // Jan 15 + 60 days = March 15
+      expect(result).toBe("Due by: March 15, 2024");
+    });
+
+    it("should apply offset to dateAdded", () => {
+      const template = "Review by: {dateAdded+30}";
+      const context = { dateAdded: "2024-03-01" };
+
+      const result = renderTemplate(template, context);
+
+      // March 1 + 30 days = March 31
+      expect(result).toBe("Review by: March 31, 2024");
+    });
+
+    it("should handle offset with zero correctly", () => {
+      const template = "Current: {currentDate+0}";
+      const context = { currentDate: new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" }) };
+
+      const result = renderTemplate(template, context);
+
+      const expectedStr = new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" });
+      expect(result).toBe(`Current: ${expectedStr}`);
+    });
+
+    it("should handle both offset and non-offset placeholders", () => {
+      const template = "Filed: {applicationDate}, Due: {applicationDate+90}";
+      const context = { applicationDate: "2024-06-01" };
+
+      const result = renderTemplate(template, context);
+
+      expect(result).toBe("Filed: June 1, 2024, Due: August 30, 2024");
+    });
   });
 
   describe("renderVR", () => {
