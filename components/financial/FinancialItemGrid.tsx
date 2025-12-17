@@ -71,7 +71,7 @@ export function FinancialItemGrid({
           </Button>
         </div>
       ) : (
-        <div className={`group grid ${getGridClass()} gap-3`}>
+        <div className={`grid ${getGridClass()} gap-3`}>
           {items.map((item, index) => {
             const itemKey = item.id || `${itemType}-${index}`;
             return (

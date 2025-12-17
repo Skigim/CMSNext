@@ -185,7 +185,7 @@ export function NotesPopover({ caseId, className }: NotesPopoverProps) {
                 value={newNoteCategory || defaultCategory}
                 onValueChange={setNewNoteCategory}
               >
-                <SelectTrigger className="h-7 w-[120px] text-xs">
+                <SelectTrigger className="h-7 w-[120px] text-xs truncate">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -248,7 +248,7 @@ export function NotesPopover({ caseId, className }: NotesPopoverProps) {
                           value={editCategory || note.category}
                           onValueChange={setEditCategory}
                         >
-                          <SelectTrigger className="h-6 w-[110px] text-xs">
+                          <SelectTrigger className="h-6 w-[110px] text-xs truncate">
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
