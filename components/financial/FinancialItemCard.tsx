@@ -87,6 +87,7 @@ export function FinancialItemCard({
   return (
     <>
       <Card
+        data-papercut-context="FinancialItemCard"
         className={`group relative overflow-visible transition-shadow ${
           isSkeleton
             ? "border border-dashed border-primary/40 bg-primary/5 opacity-80"

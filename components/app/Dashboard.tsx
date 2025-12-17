@@ -171,7 +171,7 @@ export function Dashboard({ cases, alerts, activityLogState, onNewCase, onViewCa
   const analyticsWidgets = useMemo(() => widgets.filter(w => w.metadata.id !== 'activity'), [widgets]);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6" data-papercut-context="Dashboard">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>

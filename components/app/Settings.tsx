@@ -124,7 +124,7 @@ export function Settings({ cases, onAlertsCsvImported }: SettingsProps) {
   };
 
   return (
-    <div className="container mx-auto py-6 px-6">
+    <div className="container mx-auto py-6 px-6" data-papercut-context="Settings">
       <div className="mb-6">
         <h1 className="text-3xl font-bold text-foreground">Settings</h1>
         <p className="text-muted-foreground">

@@ -61,7 +61,7 @@ export const CaseAlertsDrawer = memo(function CaseAlertsDrawer({
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="right" className="sm:max-w-md overflow-hidden">
+      <SheetContent data-papercut-context="AlertsDrawer" side="right" className="sm:max-w-md overflow-hidden">
         <SheetHeader className="border-b border-border/60 pb-4 shrink-0">
           <div className="flex flex-col gap-3">
             <div className="flex flex-col gap-1 text-left sm:flex-row sm:items-start sm:justify-between sm:gap-3">

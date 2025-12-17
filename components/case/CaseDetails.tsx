@@ -95,7 +95,7 @@ export function CaseDetails({
   const [vrModalOpen, setVrModalOpen] = useState(false);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6" data-papercut-context="CaseDetails">
       {/* Enhanced Header with Better Visual Hierarchy */}
       <div className="bg-card border rounded-xl p-4 shadow-sm">
         <div className="flex flex-col sm:flex-row items-start justify-between gap-3">

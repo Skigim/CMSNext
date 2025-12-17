@@ -49,7 +49,7 @@ export function FinancialItemGrid({
   };
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4" data-papercut-context="FinancialItemGrid">
       <div className="flex items-center justify-between">
         <h4 className="text-lg font-medium text-foreground">{title}</h4>
         <Button size="sm" onClick={() => onAdd(itemType)} className="gap-2">
