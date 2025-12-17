@@ -3,7 +3,7 @@ import { Button } from "../ui/button";
 import { FinancialItemList } from "../financial/FinancialItemList";
 import { AmountHistoryEntry, FinancialItem, CaseCategory } from "../../types/case";
 import { Copy, Plus } from "lucide-react";
-import { useCallback, useRef } from "react";
+import { useCallback, useMemo, useRef } from "react";
 import { clickToCopy } from "@/utils/clipboard";
 import {
   formatResourceItem,
@@ -34,7 +34,7 @@ export function CaseSection({
     deleteAmountHistoryEntry,
   } = useFinancialItems(caseId);
 
-  const items = groupedItems[category] || [];
+  const items = useMemo(() => groupedItems[category] || [], [groupedItems, category]);
 
   const addSkeletonFnRef = useRef<(() => void) | null>(null);
 

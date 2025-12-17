@@ -63,6 +63,10 @@ export const VR_PLACEHOLDER_FIELDS = {
   
   // Date placeholders
   currentDate: { label: "Current Date", category: "System" },
+  currentDate30: { label: "Current Date + 30 Days", category: "System" },
+  currentDate60: { label: "Current Date + 60 Days", category: "System" },
+  currentDate90: { label: "Current Date + 90 Days", category: "System" },
+  currentDate180: { label: "Current Date + 180 Days", category: "System" },
 } as const;
 
 export type VRPlaceholderField = keyof typeof VR_PLACEHOLDER_FIELDS;
@@ -107,6 +111,10 @@ export interface VRRenderContext {
   
   // System
   currentDate?: string;
+  currentDate30?: string;
+  currentDate60?: string;
+  currentDate90?: string;
+  currentDate180?: string;
 }
 
 /**

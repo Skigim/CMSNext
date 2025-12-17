@@ -1,4 +1,4 @@
-import { memo, Profiler, useCallback, useMemo } from "react";
+import { memo, Profiler, useCallback, useEffect, useMemo } from "react";
 import type { ProfilerOnRenderCallback } from "react";
 
 type ExtendedProfilerArgs = [...Parameters<ProfilerOnRenderCallback>, Set<unknown>?, number?];
@@ -88,6 +88,42 @@ export const AppContent = memo(function AppContent() {
     setSidebarOpen,
     navigationLock,
   } = navigationFlow;
+
+  // Listen for keyboard shortcut navigation events from App.tsx
+  useEffect(() => {
+    const handleNavigationEvent = (e: Event) => {
+      const path = (e as CustomEvent).detail?.path;
+      if (path === "/dashboard") handleNavigate("dashboard");
+      else if (path === "/cases") handleNavigate("list");
+      else if (path === "/settings") handleNavigate("settings");
+    };
+
+    const handleNewCaseEvent = () => {
+      handleNewCase();
+    };
+
+    const handleFocusSearchEvent = () => {
+      // Focus the search input if it exists
+      const searchInput = document.querySelector<HTMLInputElement>('[data-search-input]');
+      searchInput?.focus();
+    };
+
+    const handleToggleSidebarEvent = () => {
+      setSidebarOpen(!sidebarOpen);
+    };
+
+    window.addEventListener("app:navigate", handleNavigationEvent);
+    window.addEventListener("app:newcase", handleNewCaseEvent);
+    window.addEventListener("app:focussearch", handleFocusSearchEvent);
+    window.addEventListener("app:togglesidebar", handleToggleSidebarEvent);
+
+    return () => {
+      window.removeEventListener("app:navigate", handleNavigationEvent);
+      window.removeEventListener("app:newcase", handleNewCaseEvent);
+      window.removeEventListener("app:focussearch", handleFocusSearchEvent);
+      window.removeEventListener("app:togglesidebar", handleToggleSidebarEvent);
+    };
+  }, [handleNavigate, handleNewCase, setSidebarOpen, sidebarOpen]);
 
   const {
     showConnectModal,

@@ -178,19 +178,27 @@
   - Writes continue when user closes drawer or navigates away
   - Optimistic UI updates with fire-and-forget pattern
   - Error toast only on actual write failure
+- [x] Paper Cut feedback system (Ctrl+B / ⌘+B)
+  - Quick friction logging modal with context capture
+  - localStorage persistence with export/clear in Settings
+  - Auto-captures current route and nearest UI context
+  - PaperCutsPanel in Settings for review and management
 
-#### Phase 4: Keyboard Shortcuts (Dec 19-20)
+#### Phase 4: Keyboard Shortcuts (Dec 17-20)
 
-**Goal:** Gmail/GitHub-style keyboard navigation with chord support
+**Goal:** Customizable keyboard navigation with chord support and settings panel
 
-- [ ] Create `utils/keyboardShortcuts.ts` - shortcut definitions
-  - Navigation: `g+d` (dashboard), `g+l` (list), `g+r` (reports), `g+s` (settings)
-  - Actions: `n` (new case), `/` (search), `?` (help)
-  - List: `j/k` (up/down), `Enter` (open)
-- [ ] Create `hooks/useKeyboardShortcuts.ts` - global handler with chord state
-- [ ] Create `components/common/KeyboardShortcutsHelp.tsx` - help modal
-- [ ] Wire up shortcuts in App.tsx
-- [ ] Update GlobalContextMenu with shortcut hints
+- [x] Paper Cut moved to `Ctrl+Shift+B` to avoid sidebar conflict
+- [ ] Create `types/keyboardShortcuts.ts` - ShortcutDefinition, ShortcutConfig types
+- [ ] Create `utils/keyboardShortcuts.ts` - default shortcuts, parsing, display formatting
+  - Navigation chords: `Ctrl+G → D` (dashboard), `Ctrl+G → L` (list), `Ctrl+G → S` (settings)
+  - Actions: `Ctrl+N` (new case), `/` (search), `?` (help)
+  - UI: `Ctrl+B` (toggle sidebar)
+- [ ] Create `utils/shortcutStorage.ts` - localStorage persistence for custom bindings
+- [ ] Create `hooks/useKeyboardShortcuts.ts` - global handler with chord state machine
+- [ ] Create `components/common/KeyboardShortcutsHelp.tsx` - help modal (`?` to open)
+- [ ] Create `components/settings/KeyboardShortcutsPanel.tsx` - customize bindings in Settings
+- [ ] Wire up shortcuts in App.tsx with central registration
 - [ ] Add unit tests for shortcut handler
 
 #### Polish (Dec 21-22)

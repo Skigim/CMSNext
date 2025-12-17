@@ -41,6 +41,20 @@ function formatCurrency(amount?: number): string {
 }
 
 /**
+ * Format a date with an offset from today.
+ * @param daysOffset - Number of days to add to current date (can be negative)
+ */
+function formatDateOffset(daysOffset: number): string {
+  const date = new Date();
+  date.setDate(date.getDate() + daysOffset);
+  return date.toLocaleDateString("en-US", {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  });
+}
+
+/**
  * Format an address object as a single string.
  */
 function formatAddress(person?: Person): string {
@@ -103,11 +117,11 @@ export function buildCaseLevelContext(storedCase: StoredCase): VRRenderContext {
     clientAddress: formatAddress(person),
     
     // System
-    currentDate: new Date().toLocaleDateString("en-US", {
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-    }),
+    currentDate: formatDateOffset(0),
+    currentDate30: formatDateOffset(30),
+    currentDate60: formatDateOffset(60),
+    currentDate90: formatDateOffset(90),
+    currentDate180: formatDateOffset(180),
   };
 }
 
@@ -166,11 +180,11 @@ export function buildRenderContext(
     clientAddress: formatAddress(person),
     
     // System
-    currentDate: new Date().toLocaleDateString("en-US", {
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-    }),
+    currentDate: formatDateOffset(0),
+    currentDate30: formatDateOffset(30),
+    currentDate60: formatDateOffset(60),
+    currentDate90: formatDateOffset(90),
+    currentDate180: formatDateOffset(180),
   };
 }
 

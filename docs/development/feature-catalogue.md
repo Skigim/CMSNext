@@ -2,7 +2,7 @@
 
 > Living index of marketable features, their current implementation status, quality, and future investments.
 
-**Last Updated:** December 16, 2025
+**Last Updated:** December 17, 2025
 
 ## How to Use This Document
 
@@ -23,9 +23,9 @@
 | Case Management       | 92     | ↑     | Enhanced header with copy, priority toggle   |
 | Local-First Storage   | 90     | ↑     | AES-256 encryption, split login/welcome UX   |
 | Financial Operations  | 90     | ↑     | Date from history, auto-migration            |
-| Developer Enablement  | 88     | ↑     | 537 tests, testing guidelines, withToast     |
+| Developer Enablement  | 88     | ↑     | 537 tests, Paper Cut feedback, mode-based AI |
 | Premium UI/UX         | 86     | ↑     | NotesPopover, global context menu            |
-| VR Generator          | 86     | NEW   | Template management with placeholder system  |
+| VR Generator          | 86     | →     | Template management with placeholder system  |
 | Data Portability      | 82     | ↑     | AVS import with update capability            |
 | Notes & Collaboration | 82     | ↑     | Popover UI with inline edit, category select |
 | Configurable Statuses | 78     | →     | Recently stabilized                          |
@@ -482,6 +482,7 @@ Six-theme system (Light, Dark, Soft Dark, Warm, Blue, Paper) built on shadcn/ui 
 ### Strengths
 
 - **Global Context Menu**: Right-click anywhere for Undo, Redo, Cut, Copy, Paste with platform-aware shortcuts (Ctrl on Windows, ⌘ on Mac)
+- **Paper Cut Capture**: `Ctrl+Shift+B` opens quick modal for logging UX friction points with auto-context
 - **CopyButton Tooltip**: Optional tooltip prop for hover hints (e.g., App Date shows "90 Days = MM/DD/YYYY")
 - **CopyButton Component**: Unified click-to-copy pattern with display text, raw value, monospace option, and multiple variants
 - **EmptyState Component**: Consistent empty state messaging with icon, title, description slots
@@ -561,11 +562,50 @@ Target: ≤200 lines per hook. **Week 1 refactoring complete:**
 - **`toastPromise()`**: Lightweight wrapper using Sonner's native `toast.promise()` API
 - **`project-structure-guidelines.md`**: Documents patterns for toast, hooks, services
 
+### Paper Cut Feedback System (December 2025)
+
+Friction-logging infrastructure for capturing UX pain points during development and dogfooding:
+
+- **Hotkey**: `Ctrl+Shift+B` (⌘+Shift+B on Mac) opens quick capture modal
+- **Context Capture**: Auto-reads current route and nearest `data-papercut-context` ancestor
+- **Persistence**: localStorage with validation, export as JSON
+- **Management UI**: PaperCutsPanel in Settings shows all captured items with export/clear
+
+**Files:**
+
+| Path                                     | Purpose                              |
+| ---------------------------------------- | ------------------------------------ |
+| `types/paperCut.ts`                      | PaperCut interface                   |
+| `utils/paperCutStorage.ts`               | CRUD + export functions              |
+| `hooks/usePaperCutCapture.ts`            | Global hotkey listener, context grab |
+| `components/common/PaperCutModal.tsx`    | Capture modal with platform hints    |
+| `components/settings/PaperCutsPanel.tsx` | Settings tab for review/export/clear |
+
+### Mode-Based AI Instructions (December 2025)
+
+Copilot instruction files specialized by task type for multi-model workflows:
+
+| File                                | Activity        | Focus                           |
+| ----------------------------------- | --------------- | ------------------------------- |
+| `.github/copilot-implementation.md` | Code Generation | Services, hooks, data flow      |
+| `.github/copilot-frontend.md`       | Code Review     | UI components, shadcn, Tailwind |
+| `.github/copilot-testing.md`        | Test Generation | Vitest, RTL, mocking patterns   |
+
+### Keyboard Shortcuts (Planned - December 2025)
+
+Comprehensive keyboard navigation with chord support and user customization:
+
+- **Chord Navigation**: `Ctrl+G` leader key → `D` (dashboard), `L` (list), `S` (settings)
+- **Actions**: `Ctrl+N` (new case), `/` (search), `?` (help modal)
+- **Customization**: Settings panel for rebinding shortcuts
+- **Storage**: User preferences persisted to localStorage
+
 ### Gaps / Risks
 
 - No automated release packaging
 - Usage telemetry service still conceptual
 - Accessibility and visual regression tooling not in CI
+- Keyboard shortcuts not yet implemented
 
 ### Expansion Opportunities
 
