@@ -116,7 +116,7 @@ export function FinancialItemList({
           <p className="text-sm text-muted-foreground">No {itemType} items added yet</p>
         </div>
       ) : (
-        <div className="group space-y-2">
+        <div className="space-y-2">
           {allItems.map((item, index) => {
             const isSkeleton = typeof item.id === "string" && item.id.startsWith("skeleton-");
             const itemKey = item.id || `${itemType}-${index}`;
