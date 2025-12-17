@@ -1,5 +1,15 @@
 # CMSNext - AI Agent Instructions
 
+## Mode-Based Instructions
+
+This file provides high-level architecture guidance. Specialized instructions are loaded based on task type:
+
+| Activity        | Instruction File            | Focus                           |
+| --------------- | --------------------------- | ------------------------------- |
+| Code Generation | `copilot-implementation.md` | Services, hooks, data flow      |
+| Code Review     | `copilot-frontend.md`       | UI components, shadcn, Tailwind |
+| Test Generation | `copilot-testing.md`        | Vitest, RTL, mocking patterns   |
+
 ## General Approach
 
 - For every action, check for existing patterns and documentation first - do not invent new solutions until certain one does not already exist.

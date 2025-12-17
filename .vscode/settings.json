@@ -83,5 +83,16 @@
   
   // CodeRabbit settings
   "coderabbit.agentType": "Codex CLI",
-  "coderabbit.autoReviewMode": "auto"
+  "coderabbit.autoReviewMode": "auto",
+
+  // GitHub Copilot mode-based instructions
+  "github.copilot.chat.codeGeneration.instructions": [
+    { "file": ".github/copilot-implementation.md" }
+  ],
+  "github.copilot.chat.reviewSelection.instructions": [
+    { "file": ".github/copilot-frontend.md" }
+  ],
+  "github.copilot.chat.testGeneration.instructions": [
+    { "file": ".github/copilot-testing.md" }
+  ]
 }
