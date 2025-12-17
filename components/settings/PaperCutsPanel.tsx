@@ -18,6 +18,7 @@ import { clickToCopy } from "@/utils/clipboard";
 import { toast } from "sonner";
 import type { PaperCut } from "@/types/paperCut";
 import { Badge } from "@/components/ui/badge";
+import { Kbd } from "@/components/ui/kbd";
 
 export function PaperCutsPanel() {
   const [paperCuts, setPaperCuts] = useState<PaperCut[]>([]);
@@ -94,7 +95,7 @@ export function PaperCutsPanel() {
             <Scissors className="h-12 w-12 text-muted-foreground mb-4 opacity-50" />
             <h3 className="text-lg font-medium mb-2">No Paper Cuts Captured</h3>
             <p className="text-sm text-muted-foreground max-w-md">
-              Use <kbd className="pointer-events-none inline-flex h-5 select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium text-muted-foreground opacity-100"><span className="text-xs">⌘</span>B</kbd> or <kbd className="pointer-events-none inline-flex h-5 select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium text-muted-foreground opacity-100"><span className="text-xs">Ctrl</span>B</kbd> anywhere in the app to report friction points.
+              Use <Kbd><span className="text-xs">⌘</span>B</Kbd> or <Kbd><span className="text-xs">Ctrl</span>B</Kbd> anywhere in the app to report friction points.
             </p>
           </CardContent>
         </Card>
