@@ -15,6 +15,7 @@ import { FeedbackPanel } from "../error/ErrorFeedbackForm";
 import { CategoryConfigDevPanel } from "../diagnostics/CategoryConfigDevPanel";
 import { CategoryManagerPanel } from "../category/CategoryManagerPanel";
 import { AlertsPreviewPanel } from "../alerts/AlertsPreviewPanel";
+import { PaperCutsPanel } from "../settings/PaperCutsPanel";
 import { useTheme } from "../../contexts/ThemeContext";
 import {
   Upload,
@@ -28,6 +29,7 @@ import {
   Code,
   ListChecks,
   FileSpreadsheet,
+  Scissors,
 } from "lucide-react";
 import { StoredCase } from "../../types/case";
 import type { AlertsIndex } from "../../utils/alertsData";
@@ -133,7 +135,7 @@ export function Settings({ cases, onAlertsCsvImported }: SettingsProps) {
       </div>
 
       <Tabs defaultValue="data" className="space-y-6">
-        <TabsList className={`grid w-full ${showDevTools ? 'grid-cols-6' : 'grid-cols-5'}`}>
+        <TabsList className={`grid w-full ${showDevTools ? 'grid-cols-7' : 'grid-cols-6'}`}>
           <TabsTrigger value="data" className="flex items-center gap-2">
             <Database className="h-4 w-4" />
             <span className="hidden sm:inline">Data</span>
@@ -149,6 +151,10 @@ export function Settings({ cases, onAlertsCsvImported }: SettingsProps) {
           <TabsTrigger value="categories" className="flex items-center gap-2">
             <ListChecks className="h-4 w-4" />
             <span className="hidden sm:inline">Categories</span>
+          </TabsTrigger>
+          <TabsTrigger value="papercuts" className="flex items-center gap-2">
+            <Scissors className="h-4 w-4" />
+            <span className="hidden sm:inline">Paper Cuts</span>
           </TabsTrigger>
           {showDevTools && (
             <TabsTrigger value="development" className="flex items-center gap-2">
@@ -448,6 +454,11 @@ export function Settings({ cases, onAlertsCsvImported }: SettingsProps) {
             </div>
           </TabsContent>
         )}
+
+        {/* Paper Cuts Tab */}
+        <TabsContent value="papercuts">
+          <PaperCutsPanel />
+        </TabsContent>
 
         {/* System Information Tab */}
         <TabsContent value="system" className="space-y-6">
