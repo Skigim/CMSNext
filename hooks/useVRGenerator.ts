@@ -85,14 +85,13 @@ export function useVRGenerator({
     return selectableItems.filter(i => i.selected).length;
   }, [selectableItems]);
 
-  // Open modal and initialize with all items selected
+  // Open modal and initialize with no items selected
   const openModal = useCallback(() => {
-    const allIds = new Set(allItems.map(i => i.item.id));
-    setSelectedItemIds(allIds);
+    setSelectedItemIds(new Set());
     setSelectedScriptId(vrScripts[0]?.id ?? null);
     setRenderedText("");
     setIsOpen(true);
-  }, [allItems, vrScripts]);
+  }, [vrScripts]);
 
   // Close modal and reset state
   const closeModal = useCallback(() => {

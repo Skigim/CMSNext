@@ -13,11 +13,11 @@ const SECTION_SEPARATOR = '\n-----\n';
  * Format a date string to MM/DD/YYYY
  */
 function formatDateMMDDYYYY(dateString: string | null | undefined): string {
-  if (!dateString) return 'None';
+  if (!dateString) return 'None Attested';
   
   try {
     const date = new Date(dateString);
-    if (isNaN(date.getTime())) return 'None';
+    if (isNaN(date.getTime())) return 'None Attested';
     
     const month = String(date.getMonth() + 1).padStart(2, '0');
     const day = String(date.getDate()).padStart(2, '0');
@@ -25,7 +25,7 @@ function formatDateMMDDYYYY(dateString: string | null | undefined): string {
     
     return `${month}/${day}/${year}`;
   } catch {
-    return 'None';
+    return 'None Attested';
   }
 }
 
@@ -180,7 +180,7 @@ function formatRelationship(rel: Relationship): string {
 function buildCaseInfoSection(caseRecord: StoredCase['caseRecord']): string {
   const lines = [
     `Application Date: ${formatDateMMDDYYYY(caseRecord.applicationDate)}`,
-    `Retro Requested: ${caseRecord.retroRequested || 'None'}`,
+    `Retro Requested: ${caseRecord.retroRequested || 'None Attested'}`,
     `Waiver Requested: ${caseRecord.withWaiver ? 'Yes' : 'No'}`,
   ];
   return lines.join('\n');
@@ -202,7 +202,7 @@ function buildPersonInfoSection(person: StoredCase['person'], caseRecord: Stored
     contactLine,
     `Citizenship Verified: ${caseRecord.citizenshipVerified ? 'Yes' : 'No'}`,
     `Aged/Disabled Verified: ${caseRecord.agedDisabledVerified ? 'Yes' : 'No'}`,
-    `Living Arrangement: ${caseRecord.livingArrangement || 'None'}`,
+    `Living Arrangement: ${caseRecord.livingArrangement || 'None Attested'}`,
   ];
   return lines.join('\n');
 }
@@ -214,7 +214,7 @@ function buildRelationshipsSection(relationships?: Relationship[]): string {
   const header = 'Relationships';
   
   if (!relationships || relationships.length === 0) {
-    return `${header}\nNone`;
+    return `${header}\nNone Attested`;
   }
   
   const formatted = relationships.map(formatRelationship);
@@ -230,7 +230,7 @@ function buildFinancialSection(
   formatter: (item: FinancialItem) => string
 ): string {
   if (!items || items.length === 0) {
-    return `${title}\nNone`;
+    return `${title}\nNone Attested`;
   }
   
   const formatted = items.map(formatter);
@@ -242,7 +242,7 @@ function buildFinancialSection(
  */
 function buildNotesSection(notes: Note[]): string {
   if (!notes || notes.length === 0) {
-    return 'MLTC: None';
+    return 'MLTC: None Attested';
   }
   
   // Sort by creation date (oldest first)

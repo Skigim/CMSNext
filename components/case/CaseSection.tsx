@@ -103,8 +103,10 @@ export function CaseSection({
   const handleCopyCategory = useCallback(async () => {
     if (items.length === 0) return;
     
-    const formattedItems = items.map(formatItem).join("\n\n");
-    const text = `${title}\n${"─".repeat(title.length)}\n${formattedItems}`;
+    const text = items
+      .map(item => formatItem(item).trim())
+      .filter(Boolean)
+      .join("\n");
     
     await clickToCopy(text, {
       successMessage: `${title} copied to clipboard`,

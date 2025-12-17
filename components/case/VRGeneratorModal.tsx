@@ -74,13 +74,13 @@ export function VRGeneratorModal({
   // Reset state when modal opens
   useEffect(() => {
     if (open) {
-      // Select all items by default
-      setSelectedItemIds(new Set(financialItems.map(i => i.id)));
+      // Select no items by default
+      setSelectedItemIds(new Set());
       // Select first script if available (but don't auto-populate)
       setSelectedScriptId(vrScripts[0]?.id ?? null);
       setRenderedText("");
     }
-  }, [open, financialItems, vrScripts]);
+  }, [open, vrScripts]);
 
   const handleToggleItem = useCallback((itemId: string) => {
     setSelectedItemIds(prev => {
