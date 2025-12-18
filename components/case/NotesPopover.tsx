@@ -15,7 +15,7 @@ import {
   SelectValue,
 } from "../ui/select";
 import { Badge } from "../ui/badge";
-import { StickyNote, Plus, Trash2, X, Pencil, Check } from "lucide-react";
+import { StickyNote, Plus, Trash2, X, Pencil, Check, Copy } from "lucide-react";
 import { useNotes } from "@/hooks/useNotes";
 import { useCategoryConfig } from "@/contexts/CategoryConfigContext";
 import type { Note } from "@/types/case";
