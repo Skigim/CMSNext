@@ -4,6 +4,11 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/* Always show scrollbar to prevent layout shift during interactions */
+html {
+  overflow-y: scroll;
+}
+
 /* ============================================
    Shadcn Base Colors - 4 Theme Families
    ============================================
