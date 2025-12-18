@@ -5,30 +5,6 @@
 @custom-variant dark (&:is(.dark *));
 
 /* ============================================
-   Scrollbar Stability
-   ============================================
-   Reserve space for scrollbar to prevent layout shift
-   when modals open (which add overflow:hidden to body)
-   ============================================ */
-@supports (scrollbar-gutter: stable) {
-  html {
-    scrollbar-gutter: stable;
-  }
-
-  /*
-   * Radix Dialog uses react-remove-scroll-bar which applies a right-side
-   * compensation (padding/margin) when it locks body scroll.
-   * With scrollbar-gutter: stable, that compensation becomes double and can
-   * shift content to the right.
-   */
-  body[data-scroll-locked] {
-    padding-right: 0 !important;
-    margin-right: 0 !important;
-    --removed-body-scroll-bar-size: 0px;
-  }
-}
-
-/* ============================================
    Shadcn Base Colors - 4 Theme Families
    ============================================
    1. Neutral - Pure grayscale (default)
