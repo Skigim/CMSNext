@@ -33,6 +33,8 @@ export interface CopyButtonProps {
   mono?: boolean;
   /** Optional tooltip text shown on hover */
   tooltip?: string;
+  /** Which side to show the tooltip on */
+  tooltipSide?: "top" | "right" | "bottom" | "left";
   /** Container className */
   className?: string;
   /** Label className */
@@ -78,6 +80,7 @@ export const CopyButton = memo(function CopyButton({
   interactive = true,
   mono = false,
   tooltip,
+  tooltipSide,
   className,
   labelClassName,
   buttonClassName,
@@ -195,7 +198,7 @@ export const CopyButton = memo(function CopyButton({
       {tooltip ? (
         <Tooltip>
           <TooltipTrigger asChild>{buttonElement}</TooltipTrigger>
-          <TooltipContent>{tooltip}</TooltipContent>
+          <TooltipContent side={tooltipSide}>{tooltip}</TooltipContent>
         </Tooltip>
       ) : (
         buttonElement

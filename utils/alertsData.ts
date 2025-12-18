@@ -122,12 +122,17 @@ function normalizeAlertDate(rawDate: string | undefined): string {
     return sanitized;
   }
 
-  const date = new Date(Date.UTC(yearNumber, monthNumber - 1, dayNumber));
-  if (Number.isNaN(date.getTime())) {
+  // Validate date is real (e.g., not Feb 30)
+  const date = new Date(yearNumber, monthNumber - 1, dayNumber);
+  if (Number.isNaN(date.getTime()) || 
+      date.getFullYear() !== yearNumber || 
+      date.getMonth() !== monthNumber - 1 || 
+      date.getDate() !== dayNumber) {
     return sanitized;
   }
 
-  return date.toISOString();
+  // Return local YYYY-MM-DD format (no timezone conversion)
+  return `${normalizedYear}-${month}-${day}`;
 }
 
 /**

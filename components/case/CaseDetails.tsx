@@ -159,6 +159,7 @@ export function CaseDetails({
                     displayText={formatDateForDisplay(caseData.caseRecord.applicationDate)}
                     label="App Date"
                     tooltip={get90DayTooltip(caseData.caseRecord.applicationDate)}
+                    tooltipSide="bottom"
                     className="text-muted-foreground"
                     labelClassName="text-sm font-medium"
                     buttonClassName={cn(interactiveHoverClasses, "text-foreground")}
