@@ -201,6 +201,15 @@
 - [ ] Wire up shortcuts in App.tsx with central registration
 - [ ] Add unit tests for shortcut handler
 
+#### Console Log Follow-ups (Dec 18)
+
+- [ ] **Dialog a11y warnings**: Ensure every `DialogContent` includes a `DialogTitle` and either a `DialogDescription` or `aria-describedby={undefined}` when intentionally omitted.
+  - Radix warnings seen: missing `DialogTitle`, missing `Description` / `aria-describedby`.
+  - If title must be visually hidden, wrap with `VisuallyHidden` (Radix guidance).
+- [ ] **Password input not in form**: Wrap the login password field in a `<form>` with submit handling (supports Enter-to-submit and improves browser password manager behavior).
+- [ ] **File permission/read failures**: When reading `case-tracker-data.json` fails due to permission loss, surface a clear reconnect / re-authorize flow.
+  - Observed errors: Autosave read failure, FileStorage permission denied, alerts CSV import failing after file read.
+
 #### Polish (Dec 21-22)
 
 - [ ] Optimize large case list rendering
