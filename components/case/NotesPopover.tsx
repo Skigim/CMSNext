@@ -321,6 +321,17 @@ export function NotesPopover({ caseId, className }: NotesPopoverProps) {
                       
                       {/* Action buttons */}
                       <div className="opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity flex gap-1">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-6 w-6 p-0 text-muted-foreground hover:text-foreground"
+                          onClick={() => {
+                            navigator.clipboard.writeText(note.content);
+                          }}
+                          aria-label="Copy note"
+                        >
+                          <Copy className="h-3 w-3" />
+                        </Button>
                         {confirmingDeleteId === note.id ? (
                           <>
                             <Button

@@ -139,6 +139,17 @@ export function CaseDetails({
                     )}
                   </Button>
                 )}
+                {/* Retro/Waiver indicators */}
+                {caseData.caseRecord?.withWaiver && (
+                  <span className="inline-flex items-center rounded-full bg-purple-100 px-2 py-0.5 text-xs font-medium text-purple-700 dark:bg-purple-900/30 dark:text-purple-300">
+                    Waiver
+                  </span>
+                )}
+                {caseData.caseRecord?.retroRequested && (
+                  <span className="inline-flex items-center rounded-full bg-orange-100 px-2 py-0.5 text-xs font-medium text-orange-700 dark:bg-orange-900/30 dark:text-orange-300">
+                    Retro
+                  </span>
+                )}
               </div>
               
               {/* Key case identifiers */}

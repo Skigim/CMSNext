@@ -1,3 +1,4 @@
+import { useRef, useEffect } from "react";
 import { Card, CardContent, CardHeader } from "../ui/card";
 import type { AmountHistoryEntry, FinancialItem, CaseCategory } from "../../types/case";
 import { FinancialItemSaveIndicator } from "./FinancialItemSaveIndicator";
@@ -83,10 +84,19 @@ export function FinancialItemCard({
 
   const formItemId = String(normalizedItem.safeId ?? item.id ?? `financial-item-${itemType}`);
   const canToggle = Boolean(onUpdate) || isSkeleton;
+  const cardRef = useRef<HTMLDivElement>(null);
+
+  // Auto-scroll to card when entering edit mode
+  useEffect(() => {
+    if (isEditing && cardRef.current) {
+      cardRef.current.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+  }, [isEditing]);
 
   return (
     <>
       <Card
+        ref={cardRef}
         data-papercut-context="FinancialItemCard"
         className={`group relative overflow-visible transition-shadow ${
           isSkeleton
