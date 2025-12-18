@@ -24,7 +24,7 @@
 | Local-First Storage   | 90     | ↑     | AES-256 encryption, split login/welcome UX   |
 | Financial Operations  | 90     | ↑     | Auto-scroll on edit, date from history       |
 | Developer Enablement  | 88     | ↑     | 534 tests, Paper Cut feedback, mode-based AI |
-| Premium UI/UX         | 86     | ↑     | Note copy, instant sidebar, tooltip position |
+| Premium UI/UX         | 87     | ↑     | Stable scrollbar, instant sidebar, tooltips  |
 | VR Generator          | 88     | ↑     | Date offset syntax {field+N} for any date    |
 | Data Portability      | 82     | ↑     | AVS import with update capability            |
 | Notes & Collaboration | 84     | ↑     | Click-to-copy notes, popover UI              |
@@ -479,12 +479,13 @@ Data platform group. Coordinate with documentation team to keep `SeedDataSystem.
 
 ### Implementation Snapshot
 
-**Rating: 86/100** _(Updated December 18, 2025)_
+**Rating: 87/100** _(Updated December 18, 2025)_
 
-Eight-theme system built on shadcn/ui delivers polished, responsive layouts. Tailwind CSS v4 tokens and component decomposition keep styling consistent. **December 18, 2025:** Paper cut fixes - instant sidebar collapse (removed transition animation), CopyButton tooltipSide prop to prevent tooltip overlap with dropdowns, alert date display fixed to use local timezone.
+Eight-theme system built on shadcn/ui delivers polished, responsive layouts. Tailwind CSS v4 tokens and component decomposition keep styling consistent. **December 18, 2025:** Added `scrollbar-gutter: stable` to prevent layout shift when modals open, plus instant sidebar collapse and CopyButton tooltipSide prop.
 
 ### Strengths
 
+- **Stable Scrollbar**: `scrollbar-gutter: stable` prevents layout shift when modals add `overflow: hidden` to body
 - **Instant Sidebar**: Sidebar collapses immediately without transition delay for snappier UX
 - **CopyButton tooltipSide**: Control tooltip placement to prevent overlap with adjacent dropdowns
 - **Local Date Display**: Alert dates display in local timezone (no UTC shift confusion)
