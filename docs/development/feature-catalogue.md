@@ -2,7 +2,7 @@
 
 > Living index of marketable features, their current implementation status, quality, and future investments.
 
-**Last Updated:** December 17, 2025
+**Last Updated:** December 18, 2025
 
 ## How to Use This Document
 
@@ -20,22 +20,22 @@
 
 | Feature               | Rating | Trend | Notes                                        |
 | --------------------- | ------ | ----- | -------------------------------------------- |
-| Case Management       | 92     | ↑     | Enhanced header with copy, priority toggle   |
+| Case Management       | 92     | ↑     | Retro/Waiver badges, enhanced header         |
 | Local-First Storage   | 90     | ↑     | AES-256 encryption, split login/welcome UX   |
-| Financial Operations  | 90     | ↑     | Date from history, auto-migration            |
-| Developer Enablement  | 88     | ↑     | 537 tests, Paper Cut feedback, mode-based AI |
-| Premium UI/UX         | 86     | ↑     | NotesPopover, global context menu            |
-| VR Generator          | 86     | →     | Template management with placeholder system  |
+| Financial Operations  | 90     | ↑     | Auto-scroll on edit, date from history       |
+| Developer Enablement  | 88     | ↑     | 534 tests, Paper Cut feedback, mode-based AI |
+| Premium UI/UX         | 86     | ↑     | Note copy, instant sidebar, tooltip position |
+| VR Generator          | 88     | ↑     | Date offset syntax {field+N} for any date    |
 | Data Portability      | 82     | ↑     | AVS import with update capability            |
-| Notes & Collaboration | 82     | ↑     | Popover UI with inline edit, category select |
+| Notes & Collaboration | 84     | ↑     | Click-to-copy notes, popover UI              |
 | Configurable Statuses | 78     | →     | Recently stabilized                          |
 | Legacy Migration      | 75     | →     | Dev-only, one-way                            |
 | Autosave & Recovery   | 74     | →     | Works, telemetry pending                     |
 | Feature Flags         | 72     | →     | In-memory only                               |
 | Dashboard & Insights  | 70     | →     | Framework ready                              |
 
-**Average Rating:** 82.8/100  
-**Test Status:** 537/537 passing (100%)
+**Average Rating:** 83.5/100  
+**Test Status:** 534/534 passing (100%)
 
 ---
 
@@ -163,12 +163,13 @@ Maintained by the storage + autosave working group. Align telemetry follow-ups w
 
 ### Implementation Snapshot
 
-**Rating: 92/100** _(Updated December 4, 2025)_
+**Rating: 92/100** _(Updated December 18, 2025)_
 
-Core case workflows (create, view, edit, delete) are production-ready through the refactored service architecture. CaseService handles all case CRUD operations with status tracking, import/export, and activity log integration. The hook layer (`useCaseManagement`) provides a clean facade over DataManager with optimistic updates and comprehensive test coverage. **December 4, 2025:** Added pagination (20 items/page) for improved performance with large case lists.
+Core case workflows (create, view, edit, delete) are production-ready through the refactored service architecture. CaseService handles all case CRUD operations with status tracking, import/export, and activity log integration. The hook layer (`useCaseManagement`) provides a clean facade over DataManager with optimistic updates and comprehensive test coverage. **December 18, 2025:** Added Retro/Waiver badges in case details header.
 
 ### Strengths
 
+- **Retro/Waiver Badges**: Visual indicators in case details header when waiver requested or retro requested
 - **Pagination**: 20 items per page with "Showing X-Y of Z" count, page navigation, resets on filter changes
 - **Smart Navigation**: Creating a new case automatically navigates to the case details view
 - **Bulk Actions**: Multi-select cases for batch delete or status change with floating toolbar and confirmation dialogs
@@ -233,6 +234,7 @@ Financial modules (resources, income, expenses) leverage dedicated components an
 - **Historical Amount Tracking**: History button on Amount field opens modal showing chronological amount entries with Start Date, End Date, Amount, and Verification Source
 - **Auto-Tracking**: Quick edits automatically create history entries with 1st of current month as start date; previous ongoing entries auto-close
 - **Per-Entry Verification**: Each historical amount can have its own verification source (e.g., "Bank Statement 05/2025")
+- **Auto-Scroll on Edit**: Financial item cards auto-scroll to center when entering edit mode
 - **Click-to-Copy**: Copy button on each financial card formats item using Case Summary Generator conventions
 - **Category Copy**: Header copy button copies all items in Resources/Income/Expenses category
 - **Hover Actions**: Copy and delete buttons appear on card hover, always visible when expanded
@@ -282,12 +284,13 @@ Financial modules (resources, income, expenses) leverage dedicated components an
 
 ### Implementation Snapshot
 
-**Rating: 82/100** _(Updated December 11, 2025)_
+**Rating: 84/100** _(Updated December 18, 2025)_
 
-Notes system supports categorized, timestamped entries tied to cases with edit history and toast feedback. Activity log integration keeps audit context nearby, and quick-add UX leverages keyboard shortcuts and autosave-friendly forms. **December 11, 2025:** Replaced NotesDrawer with lightweight NotesPopover for faster access and inline editing.
+Notes system supports categorized, timestamped entries tied to cases with edit history and toast feedback. Activity log integration keeps audit context nearby, and quick-add UX leverages keyboard shortcuts and autosave-friendly forms. **December 18, 2025:** Added click-to-copy button on individual notes.
 
 ### Strengths
 
+- **Click-to-Copy Notes**: Hover reveals copy button on each note for quick clipboard access
 - Multiple categories (General, VR Update, Client Contact, Follow-up) with filtering in case detail views
 - Notes tied to case timeline with timestamps, author context, and inline editing
 - Sonner toasts provide immediate feedback on create/update/delete actions
@@ -334,12 +337,13 @@ Collaboration feature group; capture planned enhancements in updated documentati
 
 ### Implementation Snapshot
 
-**Rating: 86/100** _(New - December 16, 2025)_
+**Rating: 88/100** _(Updated December 18, 2025)_
 
-VR Generator is a complete, production-ready template system for creating reusable Verification Request letter templates with dynamic placeholders. Users create scripts in CategoryManager settings with full CRUD operations, view/edit mode toggle, and real-time validation. Templates render with placeholder substitution for case and financial item data, producing copiable text ready for use.
+VR Generator is a complete, production-ready template system for creating reusable Verification Request letter templates with dynamic placeholders. Users create scripts in CategoryManager settings with full CRUD operations, view/edit mode toggle, and real-time validation. Templates render with placeholder substitution for case and financial item data, producing copiable text ready for use. **December 18, 2025:** Added generic date offset syntax `{fieldName+N}` for any date field.
 
 ### Strengths
 
+- **Date Offset Syntax**: Generic `{fieldName+N}` pattern supports offsets on any date field (e.g., `{applicationDate+90}`, `{currentDate-30}`)
 - **Feature Complete for Core Purpose**: Full template creation, editing, deletion, and persistence. Produces clean, copiable text output.
 - **Reusable Templates**: Create multiple scripts for different institutions or document types (e.g., "SSA Entitlement", "Bank Verification", "Asset Letter")
 - **Dynamic Placeholders**: 30+ placeholders organized by category (Case, Financial Item, Person, Amount History, System); click-to-insert in editor
@@ -475,12 +479,15 @@ Data platform group. Coordinate with documentation team to keep `SeedDataSystem.
 
 ### Implementation Snapshot
 
-**Rating: 85/100** _(Updated December 10, 2025)_
+**Rating: 86/100** _(Updated December 18, 2025)_
 
-Six-theme system (Light, Dark, Soft Dark, Warm, Blue, Paper) built on shadcn/ui delivers polished, responsive layouts. Tailwind CSS v4 tokens and component decomposition keep styling consistent. **December 10, 2025:** Added global context menu with platform-aware shortcuts and CopyButton tooltip prop.
+Eight-theme system built on shadcn/ui delivers polished, responsive layouts. Tailwind CSS v4 tokens and component decomposition keep styling consistent. **December 18, 2025:** Paper cut fixes - instant sidebar collapse (removed transition animation), CopyButton tooltipSide prop to prevent tooltip overlap with dropdowns, alert date display fixed to use local timezone.
 
 ### Strengths
 
+- **Instant Sidebar**: Sidebar collapses immediately without transition delay for snappier UX
+- **CopyButton tooltipSide**: Control tooltip placement to prevent overlap with adjacent dropdowns
+- **Local Date Display**: Alert dates display in local timezone (no UTC shift confusion)
 - **Global Context Menu**: Right-click anywhere for Undo, Redo, Cut, Copy, Paste with platform-aware shortcuts (Ctrl on Windows, ⌘ on Mac)
 - **Paper Cut Capture**: `Ctrl+Shift+B` opens quick modal for logging UX friction points with auto-context
 - **CopyButton Tooltip**: Optional tooltip prop for hover hints (e.g., App Date shows "90 Days = MM/DD/YYYY")
