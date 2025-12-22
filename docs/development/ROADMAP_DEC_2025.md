@@ -215,6 +215,8 @@
 - [x] Delete `prototypeCaseInfoForm.tsx` (1001 lines dead code)
 - [x] Document hook overlap analysis (`useFinancialItems` vs `useFinancialItemFlow`)
 - [x] Wrap password inputs in `<form>` elements (LoginModal, WelcomeModal)
+- [x] Fix Dialog a11y warning (LoginModal loading state)
+- [x] Proper hierarchical breadcrumbs in header
 
 ---
 
@@ -226,6 +228,7 @@
 
 - [x] Pre-Domain cleanup (dead code, hook analysis)
 - [x] Password form wrapper fix
+- [x] Dialog a11y + breadcrumbs paper cuts
 - [ ] Merge dev to main
 - [ ] Create December changelog summary
 - [ ] Update feature catalogue with final Week 3 items

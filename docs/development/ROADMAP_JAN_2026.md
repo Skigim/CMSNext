@@ -133,9 +133,21 @@ _Focus: Integration testing and documentation._
 
 ## 🚫 Carried Over from December
 
-- [ ] **Dialog a11y warnings** - Ensure DialogContent includes proper aria attributes
-- [ ] **Password input form wrapper** - Improve browser password manager behavior
+- [x] ~~Dialog a11y warnings~~ - Fixed Dec 22
+- [x] ~~Password input form wrapper~~ - Fixed Dec 22
 - [ ] **File permission recovery flow** - Surface reconnect UI on permission loss
+
+---
+
+## 📋 Paper Cuts Backlog (Dec 22 Export)
+
+| Issue | Priority | Target Week |
+|-------|----------|-------------|
+| Alert optimistic updates inconsistent | P1 | Week 1 |
+| Financial item history/verification sync | P1 | Week 1 |
+| Alerts in popover (like notes) | P2 | Week 2 |
+| Consolidate action log per case | P3 | Week 3 |
+| Remove reports tab, add filtering to Case List | P3 | Week 3 |
 
 ---
 
