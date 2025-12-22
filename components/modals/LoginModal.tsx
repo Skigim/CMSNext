@@ -210,7 +210,15 @@ export function LoginModal({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4 py-2">
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            if (!isLoading && password.trim()) {
+              handleLogin();
+            }
+          }}
+          className="space-y-4 py-2"
+        >
           <div className="space-y-2">
             <Label htmlFor="login-password" className="text-sm font-medium">
               Password
@@ -225,11 +233,6 @@ export function LoginModal({
                 placeholder="Enter your password"
                 className="pl-10"
                 disabled={isLoading}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" && !isLoading) {
-                    handleLogin();
-                  }
-                }}
                 autoFocus
               />
             </div>
@@ -245,7 +248,7 @@ export function LoginModal({
           <p className="text-xs text-muted-foreground">
             Your data is encrypted locally using AES-256. The password never leaves your device.
           </p>
-        </div>
+        </form>
 
         <DialogFooter className="flex-col-reverse sm:flex-row gap-2">
           <Button

@@ -195,7 +195,15 @@ export function WelcomeModal({
               </DialogDescription>
             </DialogHeader>
 
-            <div className="space-y-4 py-2">
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                if (!isProcessingPassword && password.trim() && confirmPassword.trim()) {
+                  handleCreatePassword();
+                }
+              }}
+              className="space-y-4 py-2"
+            >
               <div className="space-y-2">
                 <Label htmlFor="new-password" className="text-sm font-medium">
                   Password
@@ -210,11 +218,6 @@ export function WelcomeModal({
                     placeholder="Create a password"
                     className="pl-10"
                     disabled={isProcessingPassword}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter" && !isProcessingPassword && !confirmPassword) {
-                        document.getElementById("confirm-password")?.focus();
-                      }
-                    }}
                     autoFocus
                   />
                 </div>
@@ -234,11 +237,6 @@ export function WelcomeModal({
                     placeholder="Confirm your password"
                     className="pl-10"
                     disabled={isProcessingPassword}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter" && !isProcessingPassword) {
-                        handleCreatePassword();
-                      }
-                    }}
                   />
                 </div>
               </div>
@@ -254,7 +252,7 @@ export function WelcomeModal({
                 <span className="text-amber-600 dark:text-amber-400">Remember this password</span>
                 {" — "}there's no way to recover it if forgotten.
               </p>
-            </div>
+            </form>
 
             <DialogFooter className="flex-col-reverse sm:flex-row gap-2">
               <Button variant="outline" onClick={handleBack} disabled={isProcessingPassword}>

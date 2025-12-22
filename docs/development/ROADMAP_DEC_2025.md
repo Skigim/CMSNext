@@ -208,9 +208,13 @@
 
 #### Deferred to January
 
-- [ ] **Dialog a11y warnings** - Ensure DialogContent includes proper aria attributes
-- [ ] **Password input form wrapper** - Improve browser password manager behavior
 - [ ] **File permission recovery flow** - Surface reconnect UI on permission loss
+
+#### Dec 22 Cleanup
+
+- [x] Delete `prototypeCaseInfoForm.tsx` (1001 lines dead code)
+- [x] Document hook overlap analysis (`useFinancialItems` vs `useFinancialItemFlow`)
+- [x] Wrap password inputs in `<form>` elements (LoginModal, WelcomeModal)
 
 ---
 
@@ -220,6 +224,8 @@
 
 #### Dec 22 (Today)
 
+- [x] Pre-Domain cleanup (dead code, hook analysis)
+- [x] Password form wrapper fix
 - [ ] Merge dev to main
 - [ ] Create December changelog summary
 - [ ] Update feature catalogue with final Week 3 items
