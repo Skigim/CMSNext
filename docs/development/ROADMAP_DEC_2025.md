@@ -1,10 +1,10 @@
 # CMSNext Roadmap - December 2025
 
-**Report Date:** December 16, 2025  
-**Branch:** main (stable)  
-**Tests:** 537/537 passing ✅  
+**Report Date:** December 22, 2025  
+**Branch:** dev (feature work)  
+**Tests:** 534/534 passing ✅  
 **Build:** Production-ready ✅  
-**Average Feature Rating:** 84/100
+**Average Feature Rating:** 83.5/100
 
 ---
 
@@ -184,43 +184,56 @@
   - Auto-captures current route and nearest UI context
   - PaperCutsPanel in Settings for review and management
 
-#### Phase 4: Keyboard Shortcuts (Dec 17-20)
+#### Phase 4: Paper Cuts & UX Polish (Dec 17-18) ✅ COMPLETE
 
-**Goal:** Customizable keyboard navigation with chord support and settings panel
+**Goal:** Quick wins and friction reduction based on feedback
 
 - [x] Paper Cut moved to `Ctrl+Shift+B` to avoid sidebar conflict
-- [ ] Create `types/keyboardShortcuts.ts` - ShortcutDefinition, ShortcutConfig types
-- [ ] Create `utils/keyboardShortcuts.ts` - default shortcuts, parsing, display formatting
-  - Navigation chords: `Ctrl+G → D` (dashboard), `Ctrl+G → L` (list), `Ctrl+G → S` (settings)
-  - Actions: `Ctrl+N` (new case), `/` (search), `?` (help)
-  - UI: `Ctrl+B` (toggle sidebar)
-- [ ] Create `utils/shortcutStorage.ts` - localStorage persistence for custom bindings
-- [ ] Create `hooks/useKeyboardShortcuts.ts` - global handler with chord state machine
-- [ ] Create `components/common/KeyboardShortcutsHelp.tsx` - help modal (`?` to open)
-- [ ] Create `components/settings/KeyboardShortcutsPanel.tsx` - customize bindings in Settings
-- [ ] Wire up shortcuts in App.tsx with central registration
-- [ ] Add unit tests for shortcut handler
+- [x] Kbd component for styled keyboard shortcut display
+- [x] **Keyboard shortcuts system** with chord support (`Ctrl+G → D`, etc.)
+  - Types, utils, storage, and hook (`useKeyboardShortcuts`)
+  - Navigation chords, action shortcuts, customizable bindings
+- [x] Retro/Waiver badges in case details header
+- [x] Note copy button in NotesPopover
+- [x] Auto-scroll to new financial items after add
+- [x] Alert resolved date display fix
+- [x] Sidebar animation smoothing
+- [x] App Date tooltip improvements
+- [x] Modal scrollbar layout shift prevention (multiple fix iterations)
+- [x] Copy icon import fix in NotesPopover
+- [x] Financial category copy button formatting simplified
+- [x] VR/case summary UX improvements
 
-#### Console Log Follow-ups (Dec 18)
+**Week 3 complete!**
 
-- [ ] **Dialog a11y warnings**: Ensure every `DialogContent` includes a `DialogTitle` and either a `DialogDescription` or `aria-describedby={undefined}` when intentionally omitted.
-  - Radix warnings seen: missing `DialogTitle`, missing `Description` / `aria-describedby`.
-  - If title must be visually hidden, wrap with `VisuallyHidden` (Radix guidance).
-- [ ] **Password input not in form**: Wrap the login password field in a `<form>` with submit handling (supports Enter-to-submit and improves browser password manager behavior).
-- [ ] **File permission/read failures**: When reading `case-tracker-data.json` fails due to permission loss, surface a clear reconnect / re-authorize flow.
-  - Observed errors: Autosave read failure, FileStorage permission denied, alerts CSV import failing after file read.
+#### Deferred to January
 
-#### Polish (Dec 21-22)
-
-- [ ] Optimize large case list rendering
-- [ ] Clean up deprecated code paths
-- [ ] Create December changelog
-- [ ] Update feature catalogue ratings
-- [ ] Plan January roadmap
+- [ ] **Dialog a11y warnings** - Ensure DialogContent includes proper aria attributes
+- [ ] **Password input form wrapper** - Improve browser password manager behavior
+- [ ] **File permission recovery flow** - Surface reconnect UI on permission loss
 
 ---
 
-### Week 4: Holiday Break (Dec 23-31) 🎄
+### Week 4: Holiday Wrap-up (Dec 22-23)
+
+**Goal:** Final polish items before holiday break
+
+#### Dec 22 (Today)
+
+- [ ] Merge dev to main
+- [ ] Create December changelog summary
+- [ ] Update feature catalogue with final Week 3 items
+
+#### Dec 23 (Tomorrow)
+
+- [ ] Final test suite verification
+- [ ] Tag release (if ready)
+- [ ] Update README with December accomplishments
+- [ ] Archive December roadmap
+
+---
+
+### Week 5: Holiday Break (Dec 24-31) 🎄
 
 **Off** - No planned development. Emergency fixes only if needed.
 
@@ -228,13 +241,13 @@
 
 ## 📊 Success Metrics
 
-| Metric                        | Start | Week 1 | Week 2 | Week 3 | Target |
-| ----------------------------- | ----- | ------ | ------ | ------ | ------ |
-| Hooks over 200 lines          | 4     | 0 ✅   | 0      | 0      | 0      |
-| Components with anti-patterns | 1     | 0 ✅   | 0      | 0      | 0      |
-| Test count                    | 253   | 355 ✅ | 455 ✅ | 537 ✅ | 550+   |
-| New features shipped          | -     | 18 ✅  | 12 ✅  | 3 ✅   | 35+    |
-| Average feature rating        | 76.5  | 80 ✅  | 83 ✅  | 84 ✅  | 85+    |
+| Metric                        | Start | Week 1 | Week 2 | Week 3  | Target |
+| ----------------------------- | ----- | ------ | ------ | ------- | ------ |
+| Hooks over 200 lines          | 4     | 0 ✅   | 0      | 0       | 0      |
+| Components with anti-patterns | 1     | 0 ✅   | 0      | 0       | 0      |
+| Test count                    | 253   | 355 ✅ | 455 ✅ | 534 ✅  | 550+   |
+| New features shipped          | -     | 18 ✅  | 12 ✅  | 16 ✅   | 35+    |
+| Average feature rating        | 76.5  | 80 ✅  | 83 ✅  | 83.5 ✅ | 85+    |
 
 ---
 
@@ -264,12 +277,14 @@
 5. ~~Global context menu~~ ✅
 6. ~~NotesPopover~~ ✅
 
-### Week 3 - P0
+### Week 3 - P0 ✅ COMPLETE
 
 1. ~~File encryption (AES-256-GCM)~~ ✅
 2. ~~Settings refactor~~ ✅
 3. ~~VR Generator~~ ✅
-4. Keyboard shortcuts
+4. ~~Keyboard shortcuts~~ ✅
+5. ~~Paper Cut feedback system~~ ✅
+6. ~~UX polish quick wins~~ ✅
 
 ---
 
@@ -305,4 +320,4 @@ Every feature must:
 ---
 
 **Prepared by:** GitHub Copilot  
-**Last updated:** December 16, 2025
+**Last updated:** December 22, 2025
