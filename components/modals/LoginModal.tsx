@@ -148,7 +148,10 @@ export function LoginModal({
       <>
         <AuthBackdrop isOpen={isOpen} />
         <Dialog open={isOpen}>
-          <DialogContent hideCloseButton className="sm:max-w-md">
+          <DialogContent hideCloseButton className="sm:max-w-md" aria-describedby={undefined}>
+            <DialogHeader className="sr-only">
+              <DialogTitle>Loading</DialogTitle>
+            </DialogHeader>
             <div className="flex flex-col items-center justify-center py-8 gap-4">
               <Loader2 className="h-8 w-8 animate-spin text-primary" />
               <p className="text-muted-foreground">Checking your data...</p>
