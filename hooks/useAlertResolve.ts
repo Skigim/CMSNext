@@ -3,7 +3,6 @@ import { toast } from "sonner";
 import type { StoredCase } from "@/types/case";
 import type { DataManager } from "@/utils/DataManager";
 import {
-  buildAlertStorageKey,
   createAlertsIndexFromAlerts,
   type AlertsIndex,
   type AlertWithMatch,
@@ -101,7 +100,9 @@ export function useAlertResolve(config: UseAlertResolveConfig): UseAlertResolveR
       toast.error("Alerts service is not ready. Try again after reconnecting."); return;
     }
 
-    const identifier = buildAlertStorageKey(alert) ?? alert.id;
+    // Use alert.id directly - it's unique per alert in our data store
+    // buildAlertStorageKey is for deduplication during CSV import, not for updates
+    const identifier = alert.id;
     if (!identifier) {
       logger.warn("Alert identifier missing; skipping resolution", { alertId: alert.id });
       toast.error("Unable to resolve alert. Please try again."); return;
