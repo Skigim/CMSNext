@@ -103,6 +103,30 @@ describe('AlertsService', () => {
       expect(result?.resolvedAt).toBeTruthy();
     });
 
+    it('should update correct alert by ID when multiple alerts share same fallback keys', () => {
+      // Simulates stacked CSV imports where multiple alerts have same reportId/description
+      // but different IDs. The bug was using buildAlertStorageKey which could match multiple.
+      const alert1 = {
+        ...createMockAlert('alert-uuid-1', 'MCN-123'),
+        reportId: 'SHARED-REPORT',
+        description: 'Same description',
+      };
+      const alert2 = {
+        ...createMockAlert('alert-uuid-2', 'MCN-123'),
+        reportId: 'SHARED-REPORT',
+        description: 'Same description',
+      };
+      const alerts = [alert1, alert2];
+      const cases: CaseDisplay[] = [];
+      
+      // Update by exact ID should work even when fallback keys collide
+      const result = service.updateAlertStatus(alerts, 'alert-uuid-2', { status: 'resolved' }, cases);
+
+      expect(result).not.toBeNull();
+      expect(result?.id).toBe('alert-uuid-2');
+      expect(result?.status).toBe('resolved');
+    });
+
     it('should auto-set resolvedAt when marking as resolved', () => {
       const alert = createMockAlert('alert-1', 'MCN-123');
       const alerts = [alert];
