@@ -141,13 +141,13 @@ _Focus: Integration testing and documentation._
 
 ## 📋 Paper Cuts Backlog (Dec 22 Export)
 
-| Issue | Priority | Target Week |
-|-------|----------|-------------|
-| Alert optimistic updates inconsistent | P1 | Week 1 |
-| Financial item history/verification sync | P1 | Week 1 |
-| Alerts in popover (like notes) | P2 | Week 2 |
-| Consolidate action log per case | P3 | Week 3 |
-| Remove reports tab, add filtering to Case List | P3 | Week 3 |
+| Issue                                          | Priority | Target Week |
+| ---------------------------------------------- | -------- | ----------- |
+| Alert optimistic updates inconsistent          | P1       | Week 1      |
+| Financial item history/verification sync       | P1       | Week 1      |
+| Alerts in popover (like notes)                 | P2       | Week 2      |
+| Consolidate action log per case                | P3       | Week 3      |
+| Remove reports tab, add filtering to Case List | P3       | Week 3      |
 
 ---
 
