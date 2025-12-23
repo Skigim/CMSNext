@@ -2,7 +2,7 @@ import { lazy, memo, Suspense } from "react";
 import { AlertCircle } from "lucide-react";
 import type { AppNavigationConfig } from "./AppNavigationShell";
 import { AppNavigationShell } from "./AppNavigationShell";
-import { ViewRenderer } from "../routing/ViewRenderer";
+import { ViewRendererWithModal } from "../routing/ViewRenderer";
 import type {
   StoredCase,
   CaseCategory,
@@ -20,11 +20,10 @@ const FinancialItemModal = lazy(() => import("../modals/FinancialItemModal"));
 
 interface CaseWorkspaceViewHandlers {
   handleViewCase: (caseId: string) => void;
-  handleEditCase: (caseId: string) => void;
   handleNewCase: () => void;
+  handleCloseNewCaseModal: () => void;
   handleBackToList: () => void;
   handleSaveCase: (caseData: { person: NewPersonData; caseRecord: NewCaseRecordData }) => Promise<void>;
-  handleCancelForm: () => void;
   handleDeleteCase: (caseId: string) => Promise<void>;
   handleDeleteCases: (caseIds: string[]) => Promise<number>;
   handleUpdateCasesStatus: (caseIds: string[], status: StoredCase["status"]) => Promise<number>;
@@ -58,7 +57,7 @@ export interface CaseWorkspaceProps {
   navigation: AppNavigationConfig;
   cases: StoredCase[];
   selectedCase: StoredCase | null | undefined;
-  editingCase: StoredCase | null;
+  showNewCaseModal: boolean;
   error: string | null;
   onDismissError: () => void;
   viewHandlers: CaseWorkspaceViewHandlers;
@@ -79,7 +78,7 @@ export const CaseWorkspace = memo(function CaseWorkspace({
   navigation,
   cases,
   selectedCase,
-  editingCase,
+  showNewCaseModal,
   error,
   onDismissError,
   viewHandlers,
@@ -110,18 +109,17 @@ export const CaseWorkspace = memo(function CaseWorkspace({
         </Alert>
       )}
 
-      <ViewRenderer
+      <ViewRendererWithModal
         currentView={navigation.currentView}
         selectedCase={selectedCase}
-        editingCase={editingCase}
+        showNewCaseModal={showNewCaseModal}
         cases={cases}
         alerts={alerts}
         handleViewCase={viewHandlers.handleViewCase}
-        handleEditCase={viewHandlers.handleEditCase}
         handleNewCase={viewHandlers.handleNewCase}
+        handleCloseNewCaseModal={viewHandlers.handleCloseNewCaseModal}
         handleBackToList={viewHandlers.handleBackToList}
         handleSaveCase={viewHandlers.handleSaveCase}
-        handleCancelForm={viewHandlers.handleCancelForm}
         handleDeleteCase={viewHandlers.handleDeleteCase}
         handleDeleteCases={viewHandlers.handleDeleteCases}
         handleUpdateCasesStatus={viewHandlers.handleUpdateCasesStatus}

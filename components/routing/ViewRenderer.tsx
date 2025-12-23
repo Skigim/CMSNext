@@ -8,7 +8,7 @@ import Dashboard from "../app/Dashboard";
 import Reporting from "../reporting/Reporting";
 import CaseList from "../case/CaseList";
 import CaseDetails from "../case/CaseDetails";
-import CaseForm from "../case/CaseForm";
+import { QuickCaseModal } from "../modals/QuickCaseModal";
 import Settings from "../app/Settings";
 
 export type View = AppView;
@@ -17,7 +17,7 @@ interface ViewRendererProps {
   // View state
   currentView: View;
   selectedCase: StoredCase | null | undefined;
-  editingCase: StoredCase | null;
+  showNewCaseModal: boolean;
 
   // Data props
   cases: StoredCase[];
@@ -26,11 +26,10 @@ interface ViewRendererProps {
   
   // Navigation handlers
   handleViewCase: (caseId: string) => void;
-  handleEditCase: (caseId: string) => void;
   handleNewCase: () => void;
+  handleCloseNewCaseModal: () => void;
   handleBackToList: () => void;
   handleSaveCase: (caseData: { person: NewPersonData; caseRecord: NewCaseRecordData }) => Promise<void>;
-  handleCancelForm: () => void;
   
   // Component handlers
   handleDeleteCase: (caseId: string) => Promise<void>;
@@ -63,7 +62,7 @@ export function ViewRenderer({
   // View state
   currentView,
   selectedCase,
-  editingCase,
+  showNewCaseModal: _showNewCaseModal,
 
   // Data props
   cases,
@@ -72,11 +71,10 @@ export function ViewRenderer({
   
   // Navigation handlers
   handleViewCase,
-  handleEditCase,
   handleNewCase,
+  handleCloseNewCaseModal: _handleCloseNewCaseModal,
   handleBackToList,
   handleSaveCase,
-  handleCancelForm,
   
   // Component handlers
   handleDeleteCase,
@@ -116,7 +114,7 @@ export function ViewRenderer({
           alertsByCaseId={alerts.alertsByCaseId}
           alerts={alerts.alerts}
           onViewCase={handleViewCase}
-          onEditCase={handleEditCase}
+          onEditCase={handleViewCase}
           onDeleteCase={handleDeleteCase}
           onDeleteCases={handleDeleteCases}
           onUpdateCasesStatus={handleUpdateCasesStatus}
@@ -142,7 +140,7 @@ export function ViewRenderer({
           case={selectedCase}
           alerts={alerts.alertsByCaseId.get(selectedCase.id) ?? []}
           onBack={handleBackToList}
-          onEdit={() => handleEditCase(selectedCase.id)}
+          onSave={handleSaveCase}
           onDelete={() => handleDeleteCase(selectedCase.id)}
           onUpdateStatus={handleUpdateCaseStatus}
           onResolveAlert={handleResolveAlert}
@@ -152,16 +150,23 @@ export function ViewRenderer({
         <div className="text-center p-8">Case not found</div>
       );
 
-    case 'form':
-      return (
-        <CaseForm
-          onSave={handleSaveCase}
-          onCancel={handleCancelForm}
-          case={editingCase || undefined}
-        />
-      );
-
     default:
       return <div>Unknown view: {currentView}</div>;
   }
+}
+
+/**
+ * Wrapper component that renders ViewRenderer plus the QuickCaseModal overlay
+ */
+export function ViewRendererWithModal(props: ViewRendererProps) {
+  return (
+    <>
+      <ViewRenderer {...props} />
+      <QuickCaseModal
+        isOpen={props.showNewCaseModal}
+        onClose={props.handleCloseNewCaseModal}
+        onSave={props.handleSaveCase}
+      />
+    </>
+  );
 }

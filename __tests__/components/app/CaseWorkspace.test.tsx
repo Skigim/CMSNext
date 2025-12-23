@@ -20,6 +20,10 @@ vi.mock("@/components/routing/ViewRenderer", () => ({
     viewRendererSpy(props);
     return <div data-testid="view-renderer">view:{props.currentView}</div>;
   },
+  ViewRendererWithModal: (props: any) => {
+    viewRendererSpy(props);
+    return <div data-testid="view-renderer">view:{props.currentView}</div>;
+  },
 }));
 
 vi.mock("@/components/modals/FinancialItemModal", () => ({
@@ -65,11 +69,10 @@ describe("CaseWorkspace", () => {
 
   const baseViewHandlers: CaseWorkspaceProps["viewHandlers"] = {
     handleViewCase: vi.fn(),
-    handleEditCase: vi.fn(),
     handleNewCase: vi.fn(),
+    handleCloseNewCaseModal: vi.fn(),
     handleBackToList: vi.fn(),
     handleSaveCase: asyncVoid(),
-    handleCancelForm: vi.fn(),
     handleDeleteCase: asyncVoid(),
     handleDeleteCases: vi.fn(async () => 0),
     handleUpdateCasesStatus: vi.fn(async () => 0),
@@ -117,7 +120,7 @@ describe("CaseWorkspace", () => {
         navigation={navigation}
         cases={[createMockCaseDisplay()]}
         selectedCase={null}
-        editingCase={null}
+        showNewCaseModal={false}
         error="Something went wrong"
         onDismissError={onDismissError}
         viewHandlers={baseViewHandlers}
@@ -158,7 +161,7 @@ describe("CaseWorkspace", () => {
         navigation={navigation}
         cases={[createMockCaseDisplay()]}
         selectedCase={createMockCaseDisplay()}
-        editingCase={null}
+        showNewCaseModal={false}
         error={null}
         onDismissError={vi.fn()}
         viewHandlers={baseViewHandlers}

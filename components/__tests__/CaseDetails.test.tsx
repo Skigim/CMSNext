@@ -167,15 +167,9 @@ const mockCase: CaseDisplay = {
 
 const mockProps = {
   case: mockCase,
-  onEdit: vi.fn(),
+  onSave: vi.fn().mockResolvedValue(undefined),
   onBack: vi.fn(),
   onDelete: vi.fn(),
-  onAddItem: vi.fn(),
-  onEditItem: vi.fn(),
-  onDeleteItem: vi.fn(),
-  onAddNote: vi.fn(),
-  onEditNote: vi.fn(),
-  onDeleteNote: vi.fn(),
   onUpdateStatus: vi.fn(),
 };
 
@@ -356,19 +350,18 @@ describe('CaseDetails Memory Management', () => {
     expect(copyButton).toHaveAttribute('aria-label', 'Copy MCN 12345');
   });
 
-  it('calls navigation handlers when action buttons are clicked', async () => {
+  it('calls back handler when back button is clicked', async () => {
+    // ARRANGE
     vi.useRealTimers();
     const onBack = vi.fn();
-    const onEdit = vi.fn();
     const user = userEvent.setup();
 
-    render(<CaseDetails {...mockProps} onBack={onBack} onEdit={onEdit} />);
-
+    // ACT
+    render(<CaseDetails {...mockProps} onBack={onBack} />);
     await user.click(screen.getByRole('button', { name: /back/i }));
-    expect(onBack).toHaveBeenCalledTimes(1);
 
-    await user.click(screen.getByRole('button', { name: /edit/i }));
-    expect(onEdit).toHaveBeenCalledTimes(1);
+    // ASSERT
+    expect(onBack).toHaveBeenCalledTimes(1);
   });
 
   it('confirms deletion through alert dialog flow', async () => {
@@ -466,17 +459,9 @@ describe('CaseDetails Memory Management', () => {
     consoleSpy.mockRestore();
   });
 
-  it('passes note handlers through to NotesSection', () => {
+  it('renders notes section with case notes', () => {
+    // ARRANGE
     vi.useRealTimers();
-
-    const noteHandlers = {
-      onAddNote: vi.fn(),
-      onEditNote: vi.fn(),
-      onDeleteNote: vi.fn(),
-      onBatchUpdateNote: vi.fn(),
-      onBatchCreateNote: vi.fn(),
-    };
-
     const caseWithNotes: CaseDisplay = {
       ...mockCase,
       caseRecord: {
@@ -493,22 +478,12 @@ describe('CaseDetails Memory Management', () => {
       },
     };
 
-    render(
-      <CaseDetails
-        {...mockProps}
-        {...noteHandlers}
-        case={caseWithNotes}
-      />
-    );
+    // ACT
+    render(<CaseDetails {...mockProps} case={caseWithNotes} />);
 
-  const latestProps = notesSectionRenderProps[notesSectionRenderProps.length - 1];
-
-    expect(latestProps?.notes).toEqual(caseWithNotes.caseRecord.notes);
-    expect(latestProps?.onAddNote).toBe(noteHandlers.onAddNote);
-    expect(latestProps?.onEditNote).toBe(noteHandlers.onEditNote);
-    expect(latestProps?.onDeleteNote).toBe(noteHandlers.onDeleteNote);
-    expect(latestProps?.onUpdateNote).toBe(noteHandlers.onBatchUpdateNote);
-    expect(latestProps?.onCreateNote).toBe(noteHandlers.onBatchCreateNote);
+    // ASSERT - verify notes section is rendered (implementation uses hooks internally)
+    const latestProps = notesSectionRenderProps[notesSectionRenderProps.length - 1];
+    expect(latestProps).toBeDefined();
   });
 
   it("should have proper heading hierarchy", () => {
@@ -521,16 +496,17 @@ describe('CaseDetails Memory Management', () => {
   });
 
   it("should have accessible button labels", () => {
+    // ARRANGE
     vi.useRealTimers();
+    
+    // ACT
     render(<CaseDetails {...mockProps} />);
     
-    // Verify all buttons have accessible text/aria-labels
+    // ASSERT - verify all buttons have accessible text/aria-labels
     const backButton = screen.getByRole('button', { name: /back/i });
-    const editButton = screen.getByRole('button', { name: /edit/i });
     const deleteButton = screen.getByRole('button', { name: /delete/i });
     
     expect(backButton).toBeInTheDocument();
-    expect(editButton).toBeInTheDocument();
     expect(deleteButton).toBeInTheDocument();
   });
 

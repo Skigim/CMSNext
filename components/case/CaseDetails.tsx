@@ -4,9 +4,9 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
 import { FinancialsGridView } from "./FinancialsGridView";
 import { NotesPopover } from "./NotesPopover";
-import { IntakeChecklistView } from "./IntakeChecklistView";
-import type { StoredCase } from "../../types/case";
-import { ArrowLeft, Edit2, Trash2, Wallet, BellRing, FileText, ClipboardCheck, Star, StarOff, Phone, Mail, Check, FileSignature } from "lucide-react";
+import { CaseIntakeScreen } from "./CaseIntakeScreen";
+import type { StoredCase, NewPersonData, NewCaseRecordData } from "../../types/case";
+import { ArrowLeft, Trash2, Wallet, BellRing, FileText, ClipboardCheck, Star, StarOff, Phone, Mail, Check, FileSignature } from "lucide-react";
 import { withDataErrorBoundary } from "../error/ErrorBoundaryHOC";
 import { CaseStatusMenu } from "./CaseStatusMenu";
 import { cn, interactiveHoverClasses } from "../ui/utils";
@@ -37,7 +37,7 @@ function get90DayTooltip(dateStr: string): string {
 interface CaseDetailsProps {
   case: StoredCase;
   onBack: () => void;
-  onEdit: () => void;
+  onSave: (caseData: { person: NewPersonData; caseRecord: NewCaseRecordData }) => Promise<void>;
   onDelete: () => void;
   alerts?: AlertWithMatch[];
   onUpdateStatus?: (
@@ -51,7 +51,7 @@ interface CaseDetailsProps {
 export function CaseDetails({ 
   case: caseData, 
   onBack, 
-  onEdit,
+  onSave,
   onDelete,
   alerts = [],
   onUpdateStatus,
@@ -260,15 +260,6 @@ export function CaseDetails({
               <FileSignature className="w-4 h-4 mr-2" />
               Generate VRs
             </Button>
-            <Button 
-              variant="outline" 
-              size="sm"
-              onClick={onEdit}
-              className={interactiveHoverClasses}
-            >
-              <Edit2 className="w-4 h-4 mr-2" />
-              Edit
-            </Button>
             <AlertDialog>
               <AlertDialogTrigger asChild>
                 <Button 
@@ -329,10 +320,10 @@ export function CaseDetails({
             </div>
           </TabsContent>
 
-          {/* Intake Tab */}
+          {/* Intake Tab - 3-Column Inline Editing */}
           <TabsContent value="intake" className="mt-0">
             <div className="p-4">
-              <IntakeChecklistView caseData={caseData} onEdit={onEdit} />
+              <CaseIntakeScreen caseData={caseData} onSave={onSave} />
             </div>
           </TabsContent>
         </Tabs>

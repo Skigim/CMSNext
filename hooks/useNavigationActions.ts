@@ -16,14 +16,14 @@ export interface FormState {
 export interface NavigationState {
   currentView: AppView;
   selectedCaseId: string | null;
-  editingCase: StoredCase | null;
+  showNewCaseModal: boolean;
   formState: FormState;
 }
 
 export interface NavigationStateSetters {
   setCurrentView: (view: AppView) => void;
   setSelectedCaseId: (id: string | null) => void;
-  setEditingCase: (c: StoredCase | null) => void;
+  setShowNewCaseModal: (show: boolean) => void;
   setFormState: (state: FormState) => void;
   setSidebarOpen: (open: boolean) => void;
   setForcedView: (view: AppView | null) => void;
@@ -32,11 +32,10 @@ export interface NavigationStateSetters {
 export interface UseNavigationActionsParams {
   state: NavigationState;
   setters: NavigationStateSetters;
-  cases: StoredCase[];
   guardCaseInteraction: () => boolean;
   isLocked: boolean;
   lockReason: string;
-  saveCase: (data: { person: NewPersonData; caseRecord: NewCaseRecordData }, editing?: StoredCase | null) => Promise<StoredCase | undefined>;
+  saveCase: (data: { person: NewPersonData; caseRecord: NewCaseRecordData }) => Promise<StoredCase | undefined>;
   deleteCase: (caseId: string) => Promise<void>;
 }
 
@@ -45,11 +44,11 @@ export interface UseNavigationActionsParams {
  * Separated from state management for cleaner organization.
  */
 export function useNavigationActions({
-  state, setters, cases, guardCaseInteraction, isLocked, lockReason, saveCase, deleteCase,
+  state, setters, guardCaseInteraction, isLocked, lockReason, saveCase, deleteCase,
 }: UseNavigationActionsParams) {
   const isMounted = useIsMounted();
-  const { currentView, selectedCaseId, editingCase, formState } = state;
-  const { setCurrentView, setSelectedCaseId, setEditingCase, setFormState, setSidebarOpen, setForcedView } = setters;
+  const { currentView, selectedCaseId, showNewCaseModal, formState } = state;
+  const { setCurrentView, setSelectedCaseId, setShowNewCaseModal, setFormState, setSidebarOpen, setForcedView } = setters;
 
   const backToList = useCallback(() => {
     startMeasurement("navigation:backToList");
@@ -80,74 +79,48 @@ export function useNavigationActions({
     endMeasurement("navigation:viewCase", { caseId, blocked: false });
   }, [currentView, formState, guardCaseInteraction, isLocked, setCurrentView, setFormState, setSelectedCaseId, setSidebarOpen]);
 
-  const editCase = useCallback((caseId: string) => {
-    startMeasurement("navigation:editCase", { caseId });
-    if (guardCaseInteraction()) return endMeasurement("navigation:editCase", { blocked: true });
-    const caseToEdit = cases.find((c) => c.id === caseId);
-    if (!caseToEdit) return endMeasurement("navigation:editCase", { result: "missing" });
-    setEditingCase(caseToEdit);
-    setFormState({ previousView: currentView, returnToCaseId: currentView === "details" ? caseId : undefined });
-    setCurrentView("form");
-    setSidebarOpen(false);
-    endMeasurement("navigation:editCase", { result: "form" });
-  }, [cases, currentView, guardCaseInteraction, setCurrentView, setEditingCase, setFormState, setSidebarOpen]);
-
   const newCase = useCallback(() => {
     startMeasurement("navigation:newCase", { locked: isLocked });
     if (guardCaseInteraction()) return endMeasurement("navigation:newCase", { blocked: true });
-    setEditingCase(null);
-    setFormState({ previousView: currentView, returnToCaseId: undefined });
-    setCurrentView("form");
-    setSidebarOpen(false);
-    endMeasurement("navigation:newCase", { result: "form" });
-  }, [currentView, guardCaseInteraction, isLocked, setCurrentView, setEditingCase, setFormState, setSidebarOpen]);
+    setShowNewCaseModal(true);
+    endMeasurement("navigation:newCase", { result: "modal" });
+  }, [guardCaseInteraction, isLocked, setShowNewCaseModal]);
 
-  const cancelForm = useCallback(() => {
-    startMeasurement("navigation:cancelForm");
-    if (formState.previousView === "details" && formState.returnToCaseId) {
-      setSelectedCaseId(formState.returnToCaseId);
-      setCurrentView("details");
-    } else {
-      setCurrentView(formState.previousView);
-    }
-    setEditingCase(null);
-    setFormState({ previousView: "list" });
-    endMeasurement("navigation:cancelForm", { result: formState.previousView });
-  }, [formState, setCurrentView, setEditingCase, setFormState, setSelectedCaseId]);
+  const closeNewCaseModal = useCallback(() => {
+    startMeasurement("navigation:closeNewCaseModal");
+    setShowNewCaseModal(false);
+    endMeasurement("navigation:closeNewCaseModal", { result: "closed" });
+  }, [setShowNewCaseModal]);
 
   const saveCaseWithNavigation = useCallback(async (caseData: { person: NewPersonData; caseRecord: NewCaseRecordData }) => {
-    startMeasurement("navigation:saveCase", { editing: Boolean(editingCase) });
+    startMeasurement("navigation:saveCase");
     if (guardCaseInteraction()) {
       endMeasurement("navigation:saveCase", { blocked: true });
       throw new Error(lockReason);
     }
     try {
-      const savedCase = await saveCase(caseData, editingCase);
+      const savedCase = await saveCase(caseData);
       if (!isMounted.current) return;
-      if (editingCase && formState.previousView === "details" && formState.returnToCaseId) {
-        // Editing from details view - return to that case
-        setSelectedCaseId(formState.returnToCaseId);
-        setCurrentView("details");
-      } else if (editingCase) {
-        // Editing from list - return to list
-        setCurrentView(formState.previousView);
-      } else if (savedCase) {
-        // New case created - navigate to its details
+      
+      // Close modal if open
+      if (showNewCaseModal) {
+        setShowNewCaseModal(false);
+      }
+      
+      // If we created a new case, navigate to it
+      if (savedCase && showNewCaseModal) {
         setSelectedCaseId(savedCase.id);
         setCurrentView("details");
-      } else {
-        // Fallback to list
-        setCurrentView("list");
+        setSidebarOpen(false);
       }
-      setEditingCase(null);
-      setFormState({ previousView: "list" });
-      endMeasurement("navigation:saveCase", { result: editingCase ? "update" : "create" });
+      
+      endMeasurement("navigation:saveCase", { result: showNewCaseModal ? "create" : "update" });
     } catch (err) {
       console.error("Failed to save case:", err);
       endMeasurement("navigation:saveCase", { result: "error" });
       throw err;
     }
-  }, [editingCase, formState, guardCaseInteraction, isMounted, lockReason, saveCase, setCurrentView, setEditingCase, setFormState, setSelectedCaseId]);
+  }, [guardCaseInteraction, isMounted, lockReason, saveCase, setCurrentView, setSelectedCaseId, setShowNewCaseModal, setSidebarOpen, showNewCaseModal]);
 
   const deleteCaseWithNavigation = useCallback(async (caseId: string) => {
     startMeasurement("navigation:deleteCase", { caseId });
@@ -191,7 +164,7 @@ export function useNavigationActions({
     endMeasurement("navigation:navigate", { target: view });
   }, [backToDashboard, backToList, guardCaseInteraction, newCase, selectedCaseId, setCurrentView, setForcedView, setSelectedCaseId, setSidebarOpen]);
 
-  return { navigate, viewCase, editCase, newCase, saveCaseWithNavigation, cancelForm, deleteCaseWithNavigation, backToList, backToDashboard };
+  return { navigate, viewCase, newCase, closeNewCaseModal, saveCaseWithNavigation, deleteCaseWithNavigation, backToList, backToDashboard };
 }
 
 export { RESTRICTED_VIEWS };

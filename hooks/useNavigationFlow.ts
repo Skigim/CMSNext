@@ -9,8 +9,7 @@ interface UseNavigationFlowParams {
   cases: StoredCase[];
   connectionState: FileStorageLifecycleSelectors;
   saveCase: (
-    caseData: { person: NewPersonData; caseRecord: NewCaseRecordData },
-    editingCase?: StoredCase | null
+    caseData: { person: NewPersonData; caseRecord: NewCaseRecordData }
   ) => Promise<StoredCase | undefined>;
   deleteCase: (caseId: string) => Promise<void>;
 }
@@ -19,18 +18,17 @@ interface NavigationHandlers {
   currentView: AppView;
   selectedCaseId: string | null;
   selectedCase: StoredCase | undefined;
-  editingCase: StoredCase | null;
+  showNewCaseModal: boolean;
   sidebarOpen: boolean;
   breadcrumbTitle?: string;
   navigationLock: NavigationLock;
   navigate: (view: AppView) => void;
   viewCase: (caseId: string) => void;
-  editCase: (caseId: string) => void;
   newCase: () => void;
+  closeNewCaseModal: () => void;
   saveCaseWithNavigation: (
     caseData: { person: NewPersonData; caseRecord: NewCaseRecordData }
   ) => Promise<void>;
-  cancelForm: () => void;
   deleteCaseWithNavigation: (caseId: string) => Promise<void>;
   backToList: () => void;
   backToDashboard: () => void;
@@ -53,7 +51,7 @@ export function useNavigationFlow({
   // Core navigation state
   const [currentView, setCurrentView] = useState<AppView>("dashboard");
   const [selectedCaseId, setSelectedCaseId] = useState<string | null>(null);
-  const [editingCase, setEditingCase] = useState<StoredCase | null>(null);
+  const [showNewCaseModal, setShowNewCaseModal] = useState(false);
   const [formState, setFormState] = useState<FormState>({ previousView: "list" });
   const [sidebarOpen, setSidebarOpen] = useState<boolean>(true);
   const forcedViewRef = useRef<AppView | null>(null);
@@ -81,9 +79,8 @@ export function useNavigationFlow({
 
   // Navigation actions
   const actions = useNavigationActions({
-    state: { currentView, selectedCaseId, editingCase, formState },
-    setters: { setCurrentView, setSelectedCaseId, setEditingCase, setFormState, setSidebarOpen, setForcedView },
-    cases,
+    state: { currentView, selectedCaseId, showNewCaseModal, formState },
+    setters: { setCurrentView, setSelectedCaseId, setShowNewCaseModal, setFormState, setSidebarOpen, setForcedView },
     guardCaseInteraction,
     isLocked: navigationLock.locked,
     lockReason: navigationLock.reason,
@@ -102,7 +99,7 @@ export function useNavigationFlow({
       }
       setCurrentView("settings");
       setSelectedCaseId(null);
-      setEditingCase(null);
+      setShowNewCaseModal(false);
       setSidebarOpen(true);
       return;
     }
@@ -118,7 +115,7 @@ export function useNavigationFlow({
     currentView,
     selectedCaseId,
     selectedCase,
-    editingCase,
+    showNewCaseModal,
     sidebarOpen,
     breadcrumbTitle,
     navigationLock,

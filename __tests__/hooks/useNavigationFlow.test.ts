@@ -128,9 +128,9 @@ describe("useNavigationFlow", () => {
     );
   });
 
-  it("returns to the previous view after saving an existing case", async () => {
+  it("opens and closes the new case modal", async () => {
     const existingCase = createMockStoredCase({ id: "case-edit" });
-    const saveCase = vi.fn().mockResolvedValue(undefined);
+    const saveCase = vi.fn().mockResolvedValue(existingCase);
     const deleteCase = vi.fn().mockResolvedValue(undefined);
 
     const { result } = renderHook(({ connectionState }) =>
@@ -146,11 +146,57 @@ describe("useNavigationFlow", () => {
       },
     });
 
+    // Initially modal should be closed
+    expect(result.current.showNewCaseModal).toBe(false);
+
+    // Open new case modal
     act(() => {
-      result.current.editCase(existingCase.id);
+      result.current.newCase();
     });
 
-    expect(result.current.currentView).toBe("form");
+    expect(result.current.showNewCaseModal).toBe(true);
+    expect(startMeasurementMock).toHaveBeenCalledWith(
+      "navigation:newCase",
+      expect.objectContaining({ locked: false }),
+    );
+    expect(endMeasurementMock).toHaveBeenCalledWith(
+      "navigation:newCase",
+      expect.objectContaining({ result: "modal" }),
+    );
+
+    // Close the modal
+    act(() => {
+      result.current.closeNewCaseModal();
+    });
+
+    expect(result.current.showNewCaseModal).toBe(false);
+    expect(startMeasurementMock).toHaveBeenCalledWith("navigation:closeNewCaseModal");
+  });
+
+  it("navigates to case details after creating a new case", async () => {
+    const newCase = createMockStoredCase({ id: "new-case-id" });
+    const saveCase = vi.fn().mockResolvedValue(newCase);
+    const deleteCase = vi.fn().mockResolvedValue(undefined);
+
+    const { result } = renderHook(({ connectionState }) =>
+      useNavigationFlow({
+        cases: [],
+        connectionState,
+        saveCase,
+        deleteCase,
+      }),
+    {
+      initialProps: {
+        connectionState: createConnectionState(),
+      },
+    });
+
+    // Open new case modal first
+    act(() => {
+      result.current.newCase();
+    });
+
+    expect(result.current.showNewCaseModal).toBe(true);
 
     const personForm: NewPersonData = {
       firstName: "Casey",
@@ -183,7 +229,7 @@ describe("useNavigationFlow", () => {
       mcn: "MCN-0001",
       applicationDate: "2024-01-01",
       caseType: "Sample",
-      personId: existingCase.person.id,
+      personId: "temp-person-id",
       spouseId: "",
       status: "Pending",
       description: "Test case",
@@ -203,18 +249,18 @@ describe("useNavigationFlow", () => {
       });
     });
 
-    expect(saveCase).toHaveBeenCalledWith(
-      {
-        person: personForm,
-        caseRecord: caseRecordForm,
-      },
-      expect.objectContaining({ id: existingCase.id }),
-    );
+    expect(saveCase).toHaveBeenCalledWith({
+      person: personForm,
+      caseRecord: caseRecordForm,
+    });
 
-    expect(result.current.currentView).toBe("dashboard");
-    expect(result.current.editingCase).toBeNull();
+    // Modal should be closed after save
+    expect(result.current.showNewCaseModal).toBe(false);
+    // Should navigate to the new case details
+    expect(result.current.currentView).toBe("details");
+    expect(result.current.selectedCaseId).toBe(newCase.id);
 
     const lastMeasurement = getLastMeasurementMetadata("navigation:saveCase");
-    expect(lastMeasurement).toMatchObject({ result: "update" });
+    expect(lastMeasurement).toMatchObject({ result: "create" });
   });
 });
