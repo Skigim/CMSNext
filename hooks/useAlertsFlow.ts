@@ -11,7 +11,6 @@ import { createLogger } from "@/utils/logger";
 import { LegacyFormatError } from "@/utils/services/FileStorageService";
 
 interface UseAlertsFlowOptions {
-  cases: StoredCase[];
   selectedCase: StoredCase | null;
   hasLoadedData: boolean;
   dataManager: DataManager | null;
@@ -27,7 +26,7 @@ interface UseAlertsFlowResult {
 
 const logger = createLogger("AlertsFlow");
 
-export function useAlertsFlow({ cases, selectedCase, hasLoadedData, dataManager }: UseAlertsFlowOptions): UseAlertsFlowResult {
+export function useAlertsFlow({ selectedCase, hasLoadedData, dataManager }: UseAlertsFlowOptions): UseAlertsFlowResult {
   const isMounted = useIsMounted();
   const [alertsIndex, setAlertsIndex] = useState<AlertsIndex>(() => createEmptyAlertsIndex());
   const previousAlertCountsRef = useRef({ unmatched: 0, missingMcn: 0 });
@@ -42,7 +41,9 @@ export function useAlertsFlow({ cases, selectedCase, hasLoadedData, dataManager 
       setAlertsIndex(createEmptyAlertsIndex()); return;
     }
     try {
-      const nextAlerts = await dataManager.getAlertsIndex({ cases });
+      // Don't pass cases from React state - let getAlertsIndex use cases from file
+      // This ensures skeleton cases created during import are always included
+      const nextAlerts = await dataManager.getAlertsIndex();
       if (!isMounted.current) return;
       setAlertsIndex(applyOverridesRef.current(nextAlerts));
     } catch (error) {
@@ -53,13 +54,12 @@ export function useAlertsFlow({ cases, selectedCase, hasLoadedData, dataManager 
       }
       if (isMounted.current) setAlertsIndex(createEmptyAlertsIndex());
     }
-  }, [cases, dataManager, hasLoadedData, isMounted]);
+  }, [dataManager, hasLoadedData, isMounted]);
 
   // Use alert resolution hook (needs reloadAlerts as dependency)
   const resolve = useAlertResolve({
     dataManager,
     isMounted,
-    cases,
     selectedCase,
     setAlertsIndex,
     reloadAlerts,

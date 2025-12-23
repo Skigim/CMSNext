@@ -202,7 +202,6 @@ export const AppContent = memo(function AppContent() {
   useImportListeners({ loadCases, setError, isStorageReady: connectionState.isReady });
 
   const { alertsIndex, onResolveAlert: handleResolveAlert, onAlertsCsvImported: handleAlertsCsvImported } = useAlertsFlow({
-    cases,
     selectedCase: selectedCase ?? null,
     hasLoadedData,
     dataManager,

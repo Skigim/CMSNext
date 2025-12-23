@@ -21,7 +21,6 @@ interface ResolvedOverride {
 export interface UseAlertResolveConfig {
   dataManager: DataManager | null;
   isMounted: React.MutableRefObject<boolean>;
-  cases: StoredCase[];
   selectedCase: StoredCase | null;
   setAlertsIndex: React.Dispatch<React.SetStateAction<AlertsIndex>>;
   reloadAlerts: () => Promise<void>;
@@ -34,7 +33,7 @@ export interface UseAlertResolveReturn {
 
 /** Handles alert resolution and reopening with optimistic updates and background persistence */
 export function useAlertResolve(config: UseAlertResolveConfig): UseAlertResolveReturn {
-  const { dataManager, isMounted, cases, selectedCase, setAlertsIndex, reloadAlerts } = config;
+  const { dataManager, isMounted, selectedCase, setAlertsIndex, reloadAlerts } = config;
   const overridesRef = useRef(new Map<string, ResolvedOverride>());
 
   // Set up queue callbacks for background write results
@@ -118,16 +117,16 @@ export function useAlertResolve(config: UseAlertResolveConfig): UseAlertResolveR
     setAlertsIndex(prev => applyOverrides(prev));
 
     // Queue write to happen in background - don't await
-    // Capture current cases to avoid stale closure
-    const currentCases = [...cases];
+    // Don't pass cases from React state - updateAlertStatus will use cases from file
+    // This ensures skeleton cases created during import are always included
     alertWriteQueue.enqueue(alert.id, async () => {
       await dataManager.updateAlertStatus(identifier, isResolved
         ? { status: "in-progress", resolvedAt: null, resolutionNotes: alert.resolutionNotes }
-        : { status: "resolved", resolvedAt, resolutionNotes: alert.resolutionNotes }, { cases: currentCases });
+        : { status: "resolved", resolvedAt, resolutionNotes: alert.resolutionNotes });
     });
 
     // Return immediately - write happens in background
-  }, [applyOverrides, cases, dataManager, selectedCase, setAlertsIndex]);
+  }, [applyOverrides, dataManager, selectedCase, setAlertsIndex]);
 
   return { onResolveAlert, applyOverrides };
 }
