@@ -296,8 +296,8 @@
   --secondary-foreground: oklch(0.92 0.01 260);
   --muted: oklch(0.45 0.018 260);
   --muted-foreground: oklch(0.7 0.015 260); /* Medium-light gray */
-  --accent: oklch(0.45 0.018 260);
-  --accent-foreground: oklch(0.92 0.01 260);
+  --accent: oklch(0.52 0.025 260); /* Brighter for dropdown/select visibility */
+  --accent-foreground: oklch(0.95 0.01 260);
   --destructive: oklch(0.55 0.15 25);
   --destructive-foreground: oklch(0.95 0.01 260);
   --border: oklch(0.92 0.01 260 / 0.12); /* Subtle border */
