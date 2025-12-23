@@ -13,7 +13,7 @@ interface UseCaseManagementReturn {
   
   // Actions
   loadCases: () => Promise<StoredCase[]>;
-  saveCase: (caseData: { person: NewPersonData; caseRecord: NewCaseRecordData }, editingCase?: StoredCase | null) => Promise<StoredCase | undefined>;
+  saveCase: (caseData: { person: NewPersonData; caseRecord: NewCaseRecordData }, editingCaseId?: string) => Promise<StoredCase | undefined>;
   deleteCase: (caseId: string) => Promise<void>;
   deleteCases: (caseIds: string[]) => Promise<number>;
   saveNote: (noteData: NewNoteData, caseId: string, editingNote?: { id: string } | null) => Promise<StoredNote | null>;
