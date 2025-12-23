@@ -206,6 +206,11 @@ export class DataManager {
       if (csvContent) {
         const cases = options.cases ?? data?.cases ?? [];
         await this.mergeAlertsFromCsvContent(csvContent, { cases, sourceFileName: STORAGE_CONSTANTS.ALERTS.CSV_NAME });
+        // Delete the CSV file after successful import to prevent re-processing
+        const deleted = await this.fileService.deleteFile(STORAGE_CONSTANTS.ALERTS.CSV_NAME);
+        if (deleted) {
+          logger.info('Alerts CSV file deleted after successful import');
+        }
         // Refresh data after import
         data = await this.readFileData();
       }

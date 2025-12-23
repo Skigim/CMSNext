@@ -854,6 +854,41 @@ class AutosaveFileService {
     return null; // Should never reach here, but TypeScript needs it
   }
 
+  /**
+   * Delete a file from the directory.
+   * Used to clean up processed files like Alerts.csv after import.
+   * @param fileName - The name of the file to delete
+   * @returns true if file was deleted, false if file didn't exist or couldn't be deleted
+   */
+  async deleteFile(fileName: string): Promise<boolean> {
+    if (!this.directoryHandle) {
+      logger.debug('deleteFile skipped - directory handle not set', { fileName });
+      return false;
+    }
+
+    const permission = await this.checkPermission();
+    if (permission !== 'granted') {
+      logger.debug('deleteFile skipped - permission not granted', { fileName, permission });
+      return false;
+    }
+
+    try {
+      await this.directoryHandle.removeEntry(fileName);
+      logger.info('File deleted', { fileName });
+      return true;
+    } catch (err) {
+      if (err instanceof Error && err.name === 'NotFoundError') {
+        // File doesn't exist - that's fine
+        logger.debug('File not found for deletion', { fileName });
+        return false;
+      }
+
+      const message = err instanceof Error ? err.message : 'Unknown error';
+      logger.warn('Failed to delete file', { fileName, error: message });
+      return false;
+    }
+  }
+
   async restoreLastDirectoryAccess(): Promise<{ handle: FileSystemDirectoryHandle | null; permission: PermissionState }> {
     if (!this.isSupported()) {
       this.state.permissionStatus = 'unsupported';
