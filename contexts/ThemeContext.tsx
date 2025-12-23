@@ -1,24 +1,19 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 
-type Theme = 'light' | 'dark' | 'slate' | 'slate-dark' | 'stone' | 'stone-dark' | 'zinc' | 'zinc-dark';
+type Theme = 'light' | 'dark' | 'paperwhite' | 'sterling';
 type ThemeTone = 'light' | 'dark';
 
 interface ThemeOption {
   id: Theme;
   name: string;
   description: string;
-  family: 'neutral' | 'slate' | 'stone' | 'zinc';
 }
 
 export const themeOptions: ThemeOption[] = [
-  { id: 'light', name: 'Neutral Light', description: 'Clean pure grayscale', family: 'neutral' },
-  { id: 'dark', name: 'Neutral Dark', description: 'Pure dark grayscale', family: 'neutral' },
-  { id: 'slate', name: 'Slate Light', description: 'Sophisticated purple-gray', family: 'slate' },
-  { id: 'slate-dark', name: 'Slate Dark', description: 'Purple-gray dark mode', family: 'slate' },
-  { id: 'stone', name: 'Stone Light', description: 'Warm earthy brown-gray', family: 'stone' },
-  { id: 'stone-dark', name: 'Stone Dark', description: 'Warm dark mode', family: 'stone' },
-  { id: 'zinc', name: 'Zinc Light', description: 'Modern cool blue-gray', family: 'zinc' },
-  { id: 'zinc-dark', name: 'Zinc Dark', description: 'Cool dark mode', family: 'zinc' },
+  { id: 'light', name: 'Light', description: 'Clean bright white' },
+  { id: 'paperwhite', name: 'Paperwhite', description: 'Warm cream, easy on the eyes' },
+  { id: 'sterling', name: 'Sterling', description: 'Soft gray, between light and dark' },
+  { id: 'dark', name: 'Dark', description: 'Deep blue-gray' },
 ];
 
 interface ThemeContextType {
@@ -64,24 +59,25 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const root = window.document.documentElement;
     
-    // Remove all theme classes
-    themeOptions.forEach(option => {
-      root.classList.remove(option.id);
+    // Remove all theme classes including legacy ones
+    const allThemeClasses = ['light', 'dark', 'paperwhite', 'sterling', 'slate', 'stone', 'zinc'];
+    allThemeClasses.forEach(cls => {
+      root.classList.remove(cls);
     });
     
-    // For compound themes like 'slate-dark', we need to add both 'slate' and 'dark' classes
-    if (theme.includes('-dark')) {
-      const baseTheme = theme.replace('-dark', '');
-      root.classList.add(baseTheme, 'dark');
-    } else {
-      root.classList.add(theme);
+    // Add the current theme class
+    root.classList.add(theme);
+    
+    // Add 'dark' class for dark-mode themes (for Tailwind dark: variants)
+    if (theme === 'dark' || theme === 'sterling') {
+      root.classList.add('dark');
     }
     
     // Store in localStorage
     localStorage.setItem('theme', theme);
   }, [theme]);
 
-  const isDarkTheme = theme.includes('-dark') || theme === 'dark';
+  const isDarkTheme = theme === 'dark' || theme === 'sterling';
   const tone: ThemeTone = isDarkTheme ? 'dark' : 'light';
 
   return (

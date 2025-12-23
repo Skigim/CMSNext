@@ -5,12 +5,12 @@
 @custom-variant dark (&:is(.dark *));
 
 /* ============================================
-   Shadcn Base Colors - 4 Theme Families
+   Shadcn Base Colors - 4 Distinct Themes
    ============================================
-   1. Neutral - Pure grayscale (default)
-   2. Slate - Purple-gray (sophisticated)
-   3. Stone - Warm brown-gray (earthy)
-   4. Zinc - Cool blue-gray (modern)
+   1. Light - Pure bright white (default)
+   2. Paperwhite - Warm cream, easy on eyes
+   3. Sterling - Medium gray, between light/dark
+   4. Dark - Deep blue-gray
    ============================================ */
 
 /* ============================================
@@ -43,14 +43,14 @@
   --font-weight-medium: 500;
   --font-weight-normal: 400;
   --ring: oklch(0.708 0 0);
-  
+
   /* Chart colors using shadcn/ui palette */
-  --chart-1: oklch(0.646 0.222 142.1);      /* Green - for approved/positive */
-  --chart-2: oklch(0.6 0.118 184.704);      /* Blue - for informational */
-  --chart-3: oklch(0.828 0.189 84.429);     /* Yellow - for warnings */
-  --chart-4: oklch(0.627 0.265 303.9);      /* Purple - for secondary data */
-  --chart-5: oklch(0.577 0.245 27.325);     /* Red - for errors/destructive */
-  
+  --chart-1: oklch(0.646 0.222 142.1); /* Green - for approved/positive */
+  --chart-2: oklch(0.6 0.118 184.704); /* Blue - for informational */
+  --chart-3: oklch(0.828 0.189 84.429); /* Yellow - for warnings */
+  --chart-4: oklch(0.627 0.265 303.9); /* Purple - for secondary data */
+  --chart-5: oklch(0.577 0.245 27.325); /* Red - for errors/destructive */
+
   /* ============================================
      Color Slots - Semantic palette for user-assigned colors
      Each slot has: main color, background (10%), border (20%)
@@ -58,50 +58,56 @@
   --color-slot-blue: oklch(0.588 0.158 241.966);
   --color-slot-blue-bg: oklch(0.588 0.158 241.966 / 0.1);
   --color-slot-blue-border: oklch(0.588 0.158 241.966 / 0.2);
-  
+
   --color-slot-green: oklch(0.596 0.145 163.225);
   --color-slot-green-bg: oklch(0.596 0.145 163.225 / 0.1);
   --color-slot-green-border: oklch(0.596 0.145 163.225 / 0.2);
-  
+
   --color-slot-red: oklch(0.577 0.245 27.325);
   --color-slot-red-bg: oklch(0.577 0.245 27.325 / 0.1);
   --color-slot-red-border: oklch(0.577 0.245 27.325 / 0.2);
-  
+
   --color-slot-amber: oklch(0.769 0.188 70.08);
   --color-slot-amber-bg: oklch(0.769 0.188 70.08 / 0.1);
   --color-slot-amber-border: oklch(0.769 0.188 70.08 / 0.2);
-  
+
   --color-slot-purple: oklch(0.627 0.265 303.9);
   --color-slot-purple-bg: oklch(0.627 0.265 303.9 / 0.1);
   --color-slot-purple-border: oklch(0.627 0.265 303.9 / 0.2);
-  
+
   --color-slot-slate: oklch(0.556 0.022 257.417);
   --color-slot-slate-bg: oklch(0.556 0.022 257.417 / 0.1);
   --color-slot-slate-border: oklch(0.556 0.022 257.417 / 0.2);
-  
+
   --color-slot-teal: oklch(0.6 0.118 184.704);
   --color-slot-teal-bg: oklch(0.6 0.118 184.704 / 0.1);
   --color-slot-teal-border: oklch(0.6 0.118 184.704 / 0.2);
-  
+
   --color-slot-rose: oklch(0.645 0.246 16.439);
   --color-slot-rose-bg: oklch(0.645 0.246 16.439 / 0.1);
   --color-slot-rose-border: oklch(0.645 0.246 16.439 / 0.2);
-  
+
   --color-slot-orange: oklch(0.705 0.213 47.604);
   --color-slot-orange-bg: oklch(0.705 0.213 47.604 / 0.1);
   --color-slot-orange-border: oklch(0.705 0.213 47.604 / 0.2);
-  
+
   --color-slot-cyan: oklch(0.715 0.143 215.221);
   --color-slot-cyan-bg: oklch(0.715 0.143 215.221 / 0.1);
   --color-slot-cyan-border: oklch(0.715 0.143 215.221 / 0.2);
-  
+
   /* Status-specific chart colors matching case widget */
-  --chart-status-pending: oklch(0.6 0.118 184.704);      /* Blue - same as chart-2 */
-  --chart-status-approved: oklch(0.646 0.222 142.1);     /* Green - same as chart-1 */
-  --chart-status-denied: oklch(0.577 0.245 27.325);      /* Red - same as destructive */
-  --chart-status-closed: oklch(0.556 0 0);                /* Gray - same as muted-foreground */
-  --chart-status-spenddown: oklch(0.828 0.189 84.429);   /* Yellow - same as chart-3 */
-  
+  --chart-status-pending: oklch(0.6 0.118 184.704); /* Blue - same as chart-2 */
+  --chart-status-approved: oklch(
+    0.646 0.222 142.1
+  ); /* Green - same as chart-1 */
+  --chart-status-denied: oklch(
+    0.577 0.245 27.325
+  ); /* Red - same as destructive */
+  --chart-status-closed: oklch(0.556 0 0); /* Gray - same as muted-foreground */
+  --chart-status-spenddown: oklch(
+    0.828 0.189 84.429
+  ); /* Yellow - same as chart-3 */
+
   --sidebar: oklch(0.985 0 0);
   --sidebar-foreground: oklch(0.145 0 0);
   --sidebar-primary: oklch(0.205 0 0);
@@ -117,427 +123,254 @@
    Pure dark grayscale
    ============================================ */
 .dark {
-          /* --- Base (Using Bunker Palette) --- */
-          --background: oklch(0.2 0.01 250.7);               /* Darkest background */
-          --foreground: oklch(0.95 0.005 250.7);            /* Lightest text */
-          --muted-foreground: oklch(0.7 0.01 250.7);        /* Medium-light text */
-          --card: oklch(0.25 0.012 250.7);                  /* Slightly lighter background */
-          --card-foreground: oklch(0.95 0.005 250.7);       /* Text on cards */
-          --popover: oklch(0.4 0.015 250.7);                /* Lightest background (tooltips, etc) */
-          --popover-foreground: oklch(0.95 0.005 250.7);    /* Light text on popover */
+  /* --- Base (Using Bunker Palette) --- */
+  --background: oklch(0.2 0.01 250.7); /* Darkest background */
+  --foreground: oklch(0.95 0.005 250.7); /* Lightest text */
+  --muted-foreground: oklch(0.7 0.01 250.7); /* Medium-light text */
+  --card: oklch(0.25 0.012 250.7); /* Slightly lighter background */
+  --card-foreground: oklch(0.95 0.005 250.7); /* Text on cards */
+  --popover: oklch(0.4 0.015 250.7); /* Lightest background (tooltips, etc) */
+  --popover-foreground: oklch(0.95 0.005 250.7); /* Light text on popover */
 
-          /* --- Accents (Using Bunker Hue) --- */
-          --primary: oklch(0.5 0.2 250.7);                  /* Darker, saturated bunker blue */
-          --primary-foreground: oklch(0.95 0.01 250.7);      /* Light text on primary */
-          --secondary: oklch(0.4 0.015 250.7);              /* Darker gray button */
-          --secondary-foreground: oklch(0.95 0.005 250.7);  /* Light text on secondary */
-          --muted: oklch(0.4 0.015 250.7);                  /* Muted elements */
-          --muted-foreground: oklch(0.7 0.01 250.7);        /* Text on muted elements */
-          --accent: oklch(0.4 0.015 250.7);                 /* Accent elements (badges) */
-          --accent-foreground: oklch(0.95 0.005 250.7);     /* Light text on accent */
+  /* --- Accents (Using Bunker Hue) --- */
+  --primary: oklch(0.5 0.2 250.7); /* Darker, saturated bunker blue */
+  --primary-foreground: oklch(0.95 0.01 250.7); /* Light text on primary */
+  --secondary: oklch(0.4 0.015 250.7); /* Darker gray button */
+  --secondary-foreground: oklch(0.95 0.005 250.7); /* Light text on secondary */
+  --muted: oklch(0.4 0.015 250.7); /* Muted elements */
+  --muted-foreground: oklch(0.7 0.01 250.7); /* Text on muted elements */
+  --accent: oklch(0.4 0.015 250.7); /* Accent elements (badges) */
+  --accent-foreground: oklch(0.95 0.005 250.7); /* Light text on accent */
 
-          /* --- Destructive (Muted) --- */
-          --destructive: oklch(0.5 0.12 22.216);             /* Darker, muted red bg */
-          --destructive-foreground: oklch(0.95 0.02 22.216); /* Light text on destructive */
+  /* --- Destructive (Muted) --- */
+  --destructive: oklch(0.5 0.12 22.216); /* Darker, muted red bg */
+  --destructive-foreground: oklch(
+    0.95 0.02 22.216
+  ); /* Light text on destructive */
 
-          /* --- UI Elements (Using Bunker Palette) --- */
-          --border: oklch(0.95 0.005 250.7 / 0.1);           /* Light border (10% alpha) */
-          --input: oklch(0.95 0.005 250.7 / 0.15);          /* Input border (15% alpha) */
-          --input-background: oklch(0.2 0.01 250.7);        /* Same as main background */
-          --switch-background: oklch(0.4 0.015 250.7);     /* Same as secondary */
-          --ring: oklch(0.7 0.01 250.7);                     /* Focus ring (muted-fg) */
-          
-          /* --- Typography --- */
-          --font-weight-medium: 500;
-          --font-weight-normal: 400;
-          
-          /* --- Charts (Muted) --- */
-          --chart-1: oklch(0.696 0.10 162.48);      /* Green (was 0.17) */
-          --chart-2: oklch(0.488 0.15 264.376);    /* Blue (was 0.243) */
-          --chart-3: oklch(0.769 0.11 70.08);      /* Yellow (was 0.188) */
-          --chart-4: oklch(0.627 0.16 303.9);      /* Purple (was 0.265) */
-          --chart-5: oklch(0.5 0.12 22.216);       /* Red (was 0.704 L, matching new destructive) */
-          
-          /* --- Color Slots (Dark mode - increased lightness) --- */
-          --color-slot-blue: oklch(0.68 0.14 241.966);
-          --color-slot-blue-bg: oklch(0.68 0.14 241.966 / 0.15);
-          --color-slot-blue-border: oklch(0.68 0.14 241.966 / 0.25);
-          
-          --color-slot-green: oklch(0.70 0.12 163.225);
-          --color-slot-green-bg: oklch(0.70 0.12 163.225 / 0.15);
-          --color-slot-green-border: oklch(0.70 0.12 163.225 / 0.25);
-          
-          --color-slot-red: oklch(0.65 0.18 27.325);
-          --color-slot-red-bg: oklch(0.65 0.18 27.325 / 0.15);
-          --color-slot-red-border: oklch(0.65 0.18 27.325 / 0.25);
-          
-          --color-slot-amber: oklch(0.80 0.14 70.08);
-          --color-slot-amber-bg: oklch(0.80 0.14 70.08 / 0.15);
-          --color-slot-amber-border: oklch(0.80 0.14 70.08 / 0.25);
-          
-          --color-slot-purple: oklch(0.70 0.18 303.9);
-          --color-slot-purple-bg: oklch(0.70 0.18 303.9 / 0.15);
-          --color-slot-purple-border: oklch(0.70 0.18 303.9 / 0.25);
-          
-          --color-slot-slate: oklch(0.70 0.02 257.417);
-          --color-slot-slate-bg: oklch(0.70 0.02 257.417 / 0.15);
-          --color-slot-slate-border: oklch(0.70 0.02 257.417 / 0.25);
-          
-          --color-slot-teal: oklch(0.70 0.10 184.704);
-          --color-slot-teal-bg: oklch(0.70 0.10 184.704 / 0.15);
-          --color-slot-teal-border: oklch(0.70 0.10 184.704 / 0.25);
-          
-          --color-slot-rose: oklch(0.72 0.18 16.439);
-          --color-slot-rose-bg: oklch(0.72 0.18 16.439 / 0.15);
-          --color-slot-rose-border: oklch(0.72 0.18 16.439 / 0.25);
-          
-          --color-slot-orange: oklch(0.76 0.16 47.604);
-          --color-slot-orange-bg: oklch(0.76 0.16 47.604 / 0.15);
-          --color-slot-orange-border: oklch(0.76 0.16 47.604 / 0.25);
-          
-          --color-slot-cyan: oklch(0.76 0.12 215.221);
-          --color-slot-cyan-bg: oklch(0.76 0.12 215.221 / 0.15);
-          --color-slot-cyan-border: oklch(0.76 0.12 215.221 / 0.25);
-          
-          /* --- Statuses (Updated to match muted charts) --- */
-          --chart-status-pending: var(--chart-2);
-          --chart-status-approved: var(--chart-1);
-          --chart-status-denied: var(--chart-5);
-          --chart-status-closed: var(--muted-foreground);
-          --chart-status-spenddown: var(--chart-3);
-          
-          /* --- Sidebar (Using Bunker Palette) --- */
-          --sidebar: oklch(0.2 0.01 250.7);                 /* Darkest element */
-          --sidebar-foreground: oklch(0.95 0.005 250.7);
-          --sidebar-primary: var(--primary);
-          --sidebar-primary-foreground: var(--primary-foreground);
-          --sidebar-accent: var(--accent);
-          --sidebar-accent-foreground: var(--accent-foreground);
-          --sidebar-border: var(--border);
-          --sidebar-ring: var(--ring);
-        }
-/* ============================================
-   SLATE LIGHT
-   Purple-gray - Sophisticated & creative
-   ============================================ */
-.slate {
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.129 0.042 264.695);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.129 0.042 264.695);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.129 0.042 264.695);
-  --primary: oklch(0.208 0.042 265.755);
-  --primary-foreground: oklch(0.984 0.003 247.858);
-  --secondary: oklch(0.968 0.007 247.896);
-  --secondary-foreground: oklch(0.208 0.042 265.755);
-  --muted: oklch(0.968 0.007 247.896);
-  --muted-foreground: oklch(0.554 0.046 257.417);
-  --accent: oklch(0.968 0.007 247.896);
-  --accent-foreground: oklch(0.208 0.042 265.755);
-  --destructive: oklch(0.577 0.245 27.325);
-  --destructive-foreground: #ffffff;
-  --border: oklch(0.929 0.013 255.508);
-  --input: oklch(0.929 0.013 255.508);
-  --input-background: oklch(0.968 0.007 247.896);
-  --switch-background: oklch(0.929 0.013 255.508);
-  --ring: oklch(0.704 0.04 256.788);
+  /* --- UI Elements (Using Bunker Palette) --- */
+  --border: oklch(0.95 0.005 250.7 / 0.1); /* Light border (10% alpha) */
+  --input: oklch(0.95 0.005 250.7 / 0.15); /* Input border (15% alpha) */
+  --input-background: oklch(0.2 0.01 250.7); /* Same as main background */
+  --switch-background: oklch(0.4 0.015 250.7); /* Same as secondary */
+  --ring: oklch(0.7 0.01 250.7); /* Focus ring (muted-fg) */
+
+  /* --- Typography --- */
   --font-weight-medium: 500;
   --font-weight-normal: 400;
-  
-  /* Chart colors using shadcn/ui palette */
-  --chart-1: oklch(0.646 0.222 142.1);      /* Green */
-  --chart-2: oklch(0.6 0.118 184.704);      /* Blue */
-  --chart-3: oklch(0.828 0.189 84.429);     /* Yellow */
-  --chart-4: oklch(0.627 0.265 303.9);      /* Purple */
-  --chart-5: oklch(0.577 0.245 27.325);     /* Red */
-  
-  /* Color slots inherit from :root for light themes */
-  
-  /* Status-specific chart colors */
-  --chart-status-pending: oklch(0.6 0.118 184.704);      /* Blue */
-  --chart-status-approved: oklch(0.646 0.222 142.1);     /* Green */
-  --chart-status-denied: oklch(0.577 0.245 27.325);      /* Red */
-  --chart-status-closed: oklch(0.554 0.046 257.417);     /* Gray */
-  --chart-status-spenddown: oklch(0.828 0.189 84.429);   /* Yellow */
-  
-  --sidebar: oklch(0.984 0.003 247.858);
-  --sidebar-foreground: oklch(0.129 0.042 264.695);
-  --sidebar-primary: oklch(0.208 0.042 265.755);
-  --sidebar-primary-foreground: oklch(0.984 0.003 247.858);
-  --sidebar-accent: oklch(0.968 0.007 247.896);
-  --sidebar-accent-foreground: oklch(0.208 0.042 265.755);
-  --sidebar-border: oklch(0.929 0.013 255.508);
-  --sidebar-ring: oklch(0.704 0.04 256.788);
-}
 
-/* ============================================
-   SLATE DARK
-   Purple-gray dark variant
-   ============================================ */
-.slate.dark {
-  --background: oklch(0.129 0.042 264.695);
-  --foreground: oklch(0.984 0.003 247.858);
-  --card: oklch(0.208 0.042 265.755);
-  --card-foreground: oklch(0.984 0.003 247.858);
-  --popover: oklch(0.208 0.042 265.755);
-  --popover-foreground: oklch(0.984 0.003 247.858);
-  --primary: oklch(0.929 0.013 255.508);
-  --primary-foreground: oklch(0.208 0.042 265.755);
-  --secondary: oklch(0.279 0.041 260.031);
-  --secondary-foreground: oklch(0.984 0.003 247.858);
-  --muted: oklch(0.279 0.041 260.031);
-  --muted-foreground: oklch(0.704 0.04 256.788);
-  --accent: oklch(0.279 0.041 260.031);
-  --accent-foreground: oklch(0.984 0.003 247.858);
-  --destructive: oklch(0.704 0.191 22.216);
-  --destructive-foreground: oklch(0.984 0.003 247.858);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --input-background: oklch(0.208 0.042 265.755);
-  --switch-background: oklch(0.279 0.041 260.031);
-  --ring: oklch(0.551 0.027 264.364);
-  
-  /* Dark mode chart colors */
-  --chart-1: oklch(0.696 0.17 162.48);      /* Green */
-  --chart-2: oklch(0.488 0.243 264.376);    /* Blue */
-  --chart-3: oklch(0.769 0.188 70.08);      /* Yellow */
-  --chart-4: oklch(0.627 0.265 303.9);      /* Purple */
-  --chart-5: oklch(0.704 0.191 22.216);     /* Red */
-  
-  /* Color slots inherit from .dark for dark themes */
-  
-  /* Status-specific chart colors for dark mode */
-  --chart-status-pending: oklch(0.488 0.243 264.376);    /* Blue */
-  --chart-status-approved: oklch(0.696 0.17 162.48);     /* Green */
-  --chart-status-denied: oklch(0.704 0.191 22.216);      /* Red */
-  --chart-status-closed: oklch(0.704 0.04 256.788);      /* Gray */
-  --chart-status-spenddown: oklch(0.769 0.188 70.08);    /* Yellow */
-  
-  --sidebar: oklch(0.208 0.042 265.755);
-  --sidebar-foreground: oklch(0.984 0.003 247.858);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.984 0.003 247.858);
-  --sidebar-accent: oklch(0.279 0.041 260.031);
-  --sidebar-accent-foreground: oklch(0.984 0.003 247.858);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.551 0.027 264.364);
-}
+  /* --- Charts (Muted) --- */
+  --chart-1: oklch(0.696 0.1 162.48); /* Green (was 0.17) */
+  --chart-2: oklch(0.488 0.15 264.376); /* Blue (was 0.243) */
+  --chart-3: oklch(0.769 0.11 70.08); /* Yellow (was 0.188) */
+  --chart-4: oklch(0.627 0.16 303.9); /* Purple (was 0.265) */
+  --chart-5: oklch(
+    0.5 0.12 22.216
+  ); /* Red (was 0.704 L, matching new destructive) */
 
+  /* --- Color Slots (Dark mode - increased lightness) --- */
+  --color-slot-blue: oklch(0.68 0.14 241.966);
+  --color-slot-blue-bg: oklch(0.68 0.14 241.966 / 0.15);
+  --color-slot-blue-border: oklch(0.68 0.14 241.966 / 0.25);
+
+  --color-slot-green: oklch(0.7 0.12 163.225);
+  --color-slot-green-bg: oklch(0.7 0.12 163.225 / 0.15);
+  --color-slot-green-border: oklch(0.7 0.12 163.225 / 0.25);
+
+  --color-slot-red: oklch(0.65 0.18 27.325);
+  --color-slot-red-bg: oklch(0.65 0.18 27.325 / 0.15);
+  --color-slot-red-border: oklch(0.65 0.18 27.325 / 0.25);
+
+  --color-slot-amber: oklch(0.8 0.14 70.08);
+  --color-slot-amber-bg: oklch(0.8 0.14 70.08 / 0.15);
+  --color-slot-amber-border: oklch(0.8 0.14 70.08 / 0.25);
+
+  --color-slot-purple: oklch(0.7 0.18 303.9);
+  --color-slot-purple-bg: oklch(0.7 0.18 303.9 / 0.15);
+  --color-slot-purple-border: oklch(0.7 0.18 303.9 / 0.25);
+
+  --color-slot-slate: oklch(0.7 0.02 257.417);
+  --color-slot-slate-bg: oklch(0.7 0.02 257.417 / 0.15);
+  --color-slot-slate-border: oklch(0.7 0.02 257.417 / 0.25);
+
+  --color-slot-teal: oklch(0.7 0.1 184.704);
+  --color-slot-teal-bg: oklch(0.7 0.1 184.704 / 0.15);
+  --color-slot-teal-border: oklch(0.7 0.1 184.704 / 0.25);
+
+  --color-slot-rose: oklch(0.72 0.18 16.439);
+  --color-slot-rose-bg: oklch(0.72 0.18 16.439 / 0.15);
+  --color-slot-rose-border: oklch(0.72 0.18 16.439 / 0.25);
+
+  --color-slot-orange: oklch(0.76 0.16 47.604);
+  --color-slot-orange-bg: oklch(0.76 0.16 47.604 / 0.15);
+  --color-slot-orange-border: oklch(0.76 0.16 47.604 / 0.25);
+
+  --color-slot-cyan: oklch(0.76 0.12 215.221);
+  --color-slot-cyan-bg: oklch(0.76 0.12 215.221 / 0.15);
+  --color-slot-cyan-border: oklch(0.76 0.12 215.221 / 0.25);
+
+  /* --- Statuses (Updated to match muted charts) --- */
+  --chart-status-pending: var(--chart-2);
+  --chart-status-approved: var(--chart-1);
+  --chart-status-denied: var(--chart-5);
+  --chart-status-closed: var(--muted-foreground);
+  --chart-status-spenddown: var(--chart-3);
+
+  /* --- Sidebar (Using Bunker Palette) --- */
+  --sidebar: oklch(0.2 0.01 250.7); /* Darkest element */
+  --sidebar-foreground: oklch(0.95 0.005 250.7);
+  --sidebar-primary: var(--primary);
+  --sidebar-primary-foreground: var(--primary-foreground);
+  --sidebar-accent: var(--accent);
+  --sidebar-accent-foreground: var(--accent-foreground);
+  --sidebar-border: var(--border);
+  --sidebar-ring: var(--ring);
+}
 /* ============================================
-   STONE LIGHT
-   Warm brown-gray - Earthy & approachable
+   PAPERWHITE
+   Warm cream background - Easy on the eyes
    ============================================ */
-.stone {
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.147 0.004 49.25);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.147 0.004 49.25);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.147 0.004 49.25);
-  --primary: oklch(0.216 0.006 56.043);
-  --primary-foreground: oklch(0.985 0.001 106.423);
-  --secondary: oklch(0.97 0.001 106.424);
-  --secondary-foreground: oklch(0.216 0.006 56.043);
-  --muted: oklch(0.97 0.001 106.424);
-  --muted-foreground: oklch(0.553 0.013 58.071);
-  --accent: oklch(0.97 0.001 106.424);
-  --accent-foreground: oklch(0.216 0.006 56.043);
-  --destructive: oklch(0.577 0.245 27.325);
+.paperwhite {
+  --background: oklch(0.98 0.01 85); /* Warm cream */
+  --foreground: oklch(0.25 0.02 60); /* Warm dark brown */
+  --card: oklch(0.99 0.008 85); /* Slightly lighter cream */
+  --card-foreground: oklch(0.25 0.02 60);
+  --popover: oklch(0.99 0.008 85);
+  --popover-foreground: oklch(0.25 0.02 60);
+  --primary: oklch(0.35 0.08 250); /* Muted blue accent */
+  --primary-foreground: oklch(0.98 0.01 85);
+  --secondary: oklch(0.94 0.015 85); /* Warm secondary */
+  --secondary-foreground: oklch(0.25 0.02 60);
+  --muted: oklch(0.94 0.015 85);
+  --muted-foreground: oklch(0.5 0.02 60); /* Warm medium gray */
+  --accent: oklch(0.94 0.015 85);
+  --accent-foreground: oklch(0.25 0.02 60);
+  --destructive: oklch(0.55 0.22 25);
   --destructive-foreground: #ffffff;
-  --border: oklch(0.923 0.003 48.717);
-  --input: oklch(0.923 0.003 48.717);
-  --input-background: oklch(0.97 0.001 106.424);
-  --switch-background: oklch(0.923 0.003 48.717);
-  --ring: oklch(0.709 0.01 56.259);
+  --border: oklch(0.88 0.02 85); /* Warm border */
+  --input: oklch(0.88 0.02 85);
+  --input-background: oklch(0.96 0.012 85);
+  --switch-background: oklch(0.85 0.02 85);
+  --ring: oklch(0.65 0.05 250);
   --font-weight-medium: 500;
   --font-weight-normal: 400;
-  
-  /* Chart colors using shadcn/ui palette */
-  --chart-1: oklch(0.646 0.222 142.1);      /* Green */
-  --chart-2: oklch(0.6 0.118 184.704);      /* Blue */
-  --chart-3: oklch(0.828 0.189 84.429);     /* Yellow */
-  --chart-4: oklch(0.627 0.265 303.9);      /* Purple */
-  --chart-5: oklch(0.577 0.245 27.325);     /* Red */
-  
-  /* Color slots inherit from :root for light themes */
-  
+
+  /* Chart colors - slightly warmer */
+  --chart-1: oklch(0.6 0.18 145); /* Green */
+  --chart-2: oklch(0.55 0.12 240); /* Blue */
+  --chart-3: oklch(0.78 0.16 80); /* Yellow/Amber */
+  --chart-4: oklch(0.58 0.2 300); /* Purple */
+  --chart-5: oklch(0.55 0.22 25); /* Red */
+
   /* Status-specific chart colors */
-  --chart-status-pending: oklch(0.6 0.118 184.704);      /* Blue */
-  --chart-status-approved: oklch(0.646 0.222 142.1);     /* Green */
-  --chart-status-denied: oklch(0.577 0.245 27.325);      /* Red */
-  --chart-status-closed: oklch(0.553 0.013 58.071);      /* Gray */
-  --chart-status-spenddown: oklch(0.828 0.189 84.429);   /* Yellow */
-  
-  --sidebar: oklch(0.985 0.001 106.423);
-  --sidebar-foreground: oklch(0.147 0.004 49.25);
-  --sidebar-primary: oklch(0.216 0.006 56.043);
-  --sidebar-primary-foreground: oklch(0.985 0.001 106.423);
-  --sidebar-accent: oklch(0.97 0.001 106.424);
-  --sidebar-accent-foreground: oklch(0.216 0.006 56.043);
-  --sidebar-border: oklch(0.923 0.003 48.717);
-  --sidebar-ring: oklch(0.709 0.01 56.259);
+  --chart-status-pending: var(--chart-2);
+  --chart-status-approved: var(--chart-1);
+  --chart-status-denied: var(--chart-5);
+  --chart-status-closed: var(--muted-foreground);
+  --chart-status-spenddown: var(--chart-3);
+
+  --sidebar: oklch(0.96 0.012 85);
+  --sidebar-foreground: oklch(0.25 0.02 60);
+  --sidebar-primary: oklch(0.35 0.08 250);
+  --sidebar-primary-foreground: oklch(0.98 0.01 85);
+  --sidebar-accent: oklch(0.94 0.015 85);
+  --sidebar-accent-foreground: oklch(0.25 0.02 60);
+  --sidebar-border: oklch(0.88 0.02 85);
+  --sidebar-ring: oklch(0.65 0.05 250);
 }
 
 /* ============================================
-   STONE DARK
-   Warm brown-gray dark variant
+   STERLING
+   Medium gray - Softer than pure dark
    ============================================ */
-.stone.dark {
-  --background: oklch(0.147 0.004 49.25);
-  --foreground: oklch(0.985 0.001 106.423);
-  --card: oklch(0.216 0.006 56.043);
-  --card-foreground: oklch(0.985 0.001 106.423);
-  --popover: oklch(0.216 0.006 56.043);
-  --popover-foreground: oklch(0.985 0.001 106.423);
-  --primary: oklch(0.923 0.003 48.717);
-  --primary-foreground: oklch(0.216 0.006 56.043);
-  --secondary: oklch(0.268 0.007 34.298);
-  --secondary-foreground: oklch(0.985 0.001 106.423);
-  --muted: oklch(0.268 0.007 34.298);
-  --muted-foreground: oklch(0.709 0.01 56.259);
-  --accent: oklch(0.268 0.007 34.298);
-  --accent-foreground: oklch(0.985 0.001 106.423);
-  --destructive: oklch(0.704 0.191 22.216);
-  --destructive-foreground: oklch(0.985 0.001 106.423);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --input-background: oklch(0.216 0.006 56.043);
-  --switch-background: oklch(0.268 0.007 34.298);
-  --ring: oklch(0.553 0.013 58.071);
-  
-  /* Dark mode chart colors */
-  --chart-1: oklch(0.696 0.17 162.48);      /* Green */
-  --chart-2: oklch(0.488 0.243 264.376);    /* Blue */
-  --chart-3: oklch(0.769 0.188 70.08);      /* Yellow */
-  --chart-4: oklch(0.627 0.265 303.9);      /* Purple */
-  --chart-5: oklch(0.704 0.191 22.216);     /* Red */
-  
-  /* Color slots inherit from .dark for dark themes */
-  
-  /* Status-specific chart colors for dark mode */
-  --chart-status-pending: oklch(0.488 0.243 264.376);    /* Blue */
-  --chart-status-approved: oklch(0.696 0.17 162.48);     /* Green */
-  --chart-status-denied: oklch(0.704 0.191 22.216);      /* Red */
-  --chart-status-closed: oklch(0.709 0.01 56.259);       /* Gray */
-  --chart-status-spenddown: oklch(0.769 0.188 70.08);    /* Yellow */
-  
-  --sidebar: oklch(0.216 0.006 56.043);
-  --sidebar-foreground: oklch(0.985 0.001 106.423);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0.001 106.423);
-  --sidebar-accent: oklch(0.268 0.007 34.298);
-  --sidebar-accent-foreground: oklch(0.985 0.001 106.423);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.553 0.013 58.071);
-}
-
-/* ============================================
-   ZINC LIGHT
-   Cool blue-gray - Modern & tech-forward
-   ============================================ */
-.zinc {
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.141 0.005 285.823);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.141 0.005 285.823);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.141 0.005 285.823);
-  --primary: oklch(0.21 0.006 285.885);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.967 0.001 286.375);
-  --secondary-foreground: oklch(0.21 0.006 285.885);
-  --muted: oklch(0.967 0.001 286.375);
-  --muted-foreground: oklch(0.552 0.016 285.938);
-  --accent: oklch(0.967 0.001 286.375);
-  --accent-foreground: oklch(0.21 0.006 285.885);
-  --destructive: oklch(0.577 0.245 27.325);
-  --destructive-foreground: #ffffff;
-  --border: oklch(0.92 0.004 286.32);
-  --input: oklch(0.92 0.004 286.32);
-  --input-background: oklch(0.967 0.001 286.375);
-  --switch-background: oklch(0.92 0.004 286.32);
-  --ring: oklch(0.705 0.015 286.067);
+.sterling {
+  --background: oklch(0.35 0.015 260); /* Medium steel gray */
+  --foreground: oklch(0.92 0.01 260); /* Light text */
+  --card: oklch(0.4 0.018 260); /* Slightly lighter card */
+  --card-foreground: oklch(0.92 0.01 260);
+  --popover: oklch(0.45 0.02 260); /* Lighter popover */
+  --popover-foreground: oklch(0.92 0.01 260);
+  --primary: oklch(0.6 0.15 250); /* Blue accent */
+  --primary-foreground: oklch(0.95 0.01 260);
+  --secondary: oklch(0.45 0.018 260);
+  --secondary-foreground: oklch(0.92 0.01 260);
+  --muted: oklch(0.45 0.018 260);
+  --muted-foreground: oklch(0.7 0.015 260); /* Medium-light gray */
+  --accent: oklch(0.45 0.018 260);
+  --accent-foreground: oklch(0.92 0.01 260);
+  --destructive: oklch(0.55 0.15 25);
+  --destructive-foreground: oklch(0.95 0.01 260);
+  --border: oklch(0.92 0.01 260 / 0.12); /* Subtle border */
+  --input: oklch(0.92 0.01 260 / 0.15);
+  --input-background: oklch(0.38 0.016 260);
+  --switch-background: oklch(0.45 0.018 260);
+  --ring: oklch(0.65 0.015 260);
   --font-weight-medium: 500;
   --font-weight-normal: 400;
-  
-  /* Chart colors using shadcn/ui palette */
-  --chart-1: oklch(0.646 0.222 142.1);      /* Green */
-  --chart-2: oklch(0.6 0.118 184.704);      /* Blue */
-  --chart-3: oklch(0.828 0.189 84.429);     /* Yellow */
-  --chart-4: oklch(0.627 0.265 303.9);      /* Purple */
-  --chart-5: oklch(0.577 0.245 27.325);     /* Red */
-  
-  /* Color slots inherit from :root for light themes */
-  
-  /* Status-specific chart colors */
-  --chart-status-pending: oklch(0.6 0.118 184.704);      /* Blue */
-  --chart-status-approved: oklch(0.646 0.222 142.1);     /* Green */
-  --chart-status-denied: oklch(0.577 0.245 27.325);      /* Red */
-  --chart-status-closed: oklch(0.552 0.016 285.938);     /* Gray */
-  --chart-status-spenddown: oklch(0.828 0.189 84.429);   /* Yellow */
-  
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.141 0.005 285.823);
-  --sidebar-primary: oklch(0.21 0.006 285.885);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.967 0.001 286.375);
-  --sidebar-accent-foreground: oklch(0.21 0.006 285.885);
-  --sidebar-border: oklch(0.92 0.004 286.32);
-  --sidebar-ring: oklch(0.705 0.015 286.067);
-}
 
-/* ============================================
-   ZINC DARK
-   Cool blue-gray dark variant
-   ============================================ */
-.zinc.dark {
-  --background: oklch(0.141 0.005 285.823);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.21 0.006 285.885);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.21 0.006 285.885);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.92 0.004 286.32);
-  --primary-foreground: oklch(0.21 0.006 285.885);
-  --secondary: oklch(0.274 0.006 286.033);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.274 0.006 286.033);
-  --muted-foreground: oklch(0.705 0.015 286.067);
-  --accent: oklch(0.274 0.006 286.033);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --destructive-foreground: oklch(0.985 0 0);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --input-background: oklch(0.21 0.006 285.885);
-  --switch-background: oklch(0.274 0.006 286.033);
-  --ring: oklch(0.552 0.016 285.938);
-  
-  /* Dark mode chart colors */
-  --chart-1: oklch(0.696 0.17 162.48);      /* Green */
-  --chart-2: oklch(0.488 0.243 264.376);    /* Blue */
-  --chart-3: oklch(0.769 0.188 70.08);      /* Yellow */
-  --chart-4: oklch(0.627 0.265 303.9);      /* Purple */
-  --chart-5: oklch(0.704 0.191 22.216);     /* Red */
-  
-  /* Color slots inherit from .dark for dark themes */
-  
-  /* Status-specific chart colors for dark mode */
-  --chart-status-pending: oklch(0.488 0.243 264.376);    /* Blue */
-  --chart-status-approved: oklch(0.696 0.17 162.48);     /* Green */
-  --chart-status-denied: oklch(0.704 0.191 22.216);      /* Red */
-  --chart-status-closed: oklch(0.705 0.015 286.067);     /* Gray */
-  --chart-status-spenddown: oklch(0.769 0.188 70.08);    /* Yellow */
-  
-  --sidebar: oklch(0.21 0.006 285.885);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.274 0.006 286.033);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.552 0.016 285.938);
+  /* Chart colors - balanced for mid-gray background */
+  --chart-1: oklch(0.68 0.14 160); /* Green */
+  --chart-2: oklch(0.58 0.18 250); /* Blue */
+  --chart-3: oklch(0.78 0.14 75); /* Yellow */
+  --chart-4: oklch(0.65 0.18 300); /* Purple */
+  --chart-5: oklch(0.6 0.16 25); /* Red */
+
+  /* Color slots for sterling - slightly muted */
+  --color-slot-blue: oklch(0.65 0.14 242);
+  --color-slot-blue-bg: oklch(0.65 0.14 242 / 0.15);
+  --color-slot-blue-border: oklch(0.65 0.14 242 / 0.25);
+
+  --color-slot-green: oklch(0.68 0.12 163);
+  --color-slot-green-bg: oklch(0.68 0.12 163 / 0.15);
+  --color-slot-green-border: oklch(0.68 0.12 163 / 0.25);
+
+  --color-slot-red: oklch(0.62 0.18 27);
+  --color-slot-red-bg: oklch(0.62 0.18 27 / 0.15);
+  --color-slot-red-border: oklch(0.62 0.18 27 / 0.25);
+
+  --color-slot-amber: oklch(0.78 0.14 70);
+  --color-slot-amber-bg: oklch(0.78 0.14 70 / 0.15);
+  --color-slot-amber-border: oklch(0.78 0.14 70 / 0.25);
+
+  --color-slot-purple: oklch(0.68 0.18 304);
+  --color-slot-purple-bg: oklch(0.68 0.18 304 / 0.15);
+  --color-slot-purple-border: oklch(0.68 0.18 304 / 0.25);
+
+  --color-slot-slate: oklch(0.68 0.02 257);
+  --color-slot-slate-bg: oklch(0.68 0.02 257 / 0.15);
+  --color-slot-slate-border: oklch(0.68 0.02 257 / 0.25);
+
+  --color-slot-teal: oklch(0.68 0.1 185);
+  --color-slot-teal-bg: oklch(0.68 0.1 185 / 0.15);
+  --color-slot-teal-border: oklch(0.68 0.1 185 / 0.25);
+
+  --color-slot-rose: oklch(0.7 0.18 16);
+  --color-slot-rose-bg: oklch(0.7 0.18 16 / 0.15);
+  --color-slot-rose-border: oklch(0.7 0.18 16 / 0.25);
+
+  --color-slot-orange: oklch(0.74 0.16 48);
+  --color-slot-orange-bg: oklch(0.74 0.16 48 / 0.15);
+  --color-slot-orange-border: oklch(0.74 0.16 48 / 0.25);
+
+  --color-slot-cyan: oklch(0.74 0.12 215);
+  --color-slot-cyan-bg: oklch(0.74 0.12 215 / 0.15);
+  --color-slot-cyan-border: oklch(0.74 0.12 215 / 0.25);
+
+  /* Status-specific chart colors */
+  --chart-status-pending: var(--chart-2);
+  --chart-status-approved: var(--chart-1);
+  --chart-status-denied: var(--chart-5);
+  --chart-status-closed: var(--muted-foreground);
+  --chart-status-spenddown: var(--chart-3);
+
+  --sidebar: oklch(0.32 0.015 260);
+  --sidebar-foreground: oklch(0.92 0.01 260);
+  --sidebar-primary: var(--primary);
+  --sidebar-primary-foreground: var(--primary-foreground);
+  --sidebar-accent: var(--accent);
+  --sidebar-accent-foreground: var(--accent-foreground);
+  --sidebar-border: var(--border);
+  --sidebar-ring: var(--ring);
 }
 
 @theme inline {
@@ -749,6 +582,3 @@
 html {
   font-size: var(--font-size);
 }
-
-
-

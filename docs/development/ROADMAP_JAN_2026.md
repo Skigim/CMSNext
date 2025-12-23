@@ -151,7 +151,16 @@ _Focus: Integration testing and documentation._
 
 ---
 
-## 📝 Notes
+## � Out of Scope (January)
+
+| Item                    | Notes                                                                                              |
+| ----------------------- | -------------------------------------------------------------------------------------------------- |
+| **PWA Infrastructure**  | Service worker, manifest, install prompt, update flow. Target Chrome/Edge only. Revisit February+. |
+| **Tauri Desktop Build** | Native app wrapper. Depends on PWA work being complete first.                                      |
+
+---
+
+## �📝 Notes
 
 ### The Domain Layer Shift
 

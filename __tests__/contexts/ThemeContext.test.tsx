@@ -13,16 +13,16 @@ function ThemeTestComponent() {
       <div data-testid="is-dark">{isDark ? 'true' : 'false'}</div>
       <div data-testid="tone">{tone}</div>
       <button onClick={() => setTheme('dark')} data-testid="set-dark">
-        Set Neutral Dark
+        Set Dark
       </button>
-      <button onClick={() => setTheme('slate-dark')} data-testid="set-slate-dark">
-        Set Slate Dark
+      <button onClick={() => setTheme('sterling')} data-testid="set-sterling">
+        Set Sterling
       </button>
       <button onClick={() => setTheme('light')} data-testid="set-light">
         Set Light
       </button>
-      <button onClick={() => setTheme('slate')} data-testid="set-slate">
-        Set Slate
+      <button onClick={() => setTheme('paperwhite')} data-testid="set-paperwhite">
+        Set Paperwhite
       </button>
     </div>
   );
@@ -64,7 +64,7 @@ describe('ThemeContext', () => {
   });
 
   describe('theme class application', () => {
-    it('should apply only "dark" class for neutral dark theme', async () => {
+    it('should apply only "dark" class for dark theme', async () => {
       const user = userEvent.setup();
       render(
         <ThemeProvider>
@@ -78,14 +78,14 @@ describe('ThemeContext', () => {
       await waitFor(() => {
         const classes = getHtmlClasses();
         expect(classes).toContain('dark');
-        expect(classes).not.toContain('slate');
-        expect(classes).not.toContain('stone');
-        expect(classes).not.toContain('zinc');
+        expect(classes).not.toContain('paperwhite');
+        expect(classes).not.toContain('sterling');
+        expect(classes).not.toContain('light');
         expect(screen.getByTestId('current-theme')).toHaveTextContent('dark');
       });
     });
 
-    it('should apply both "slate" and "dark" classes for slate-dark theme', async () => {
+    it('should apply both "sterling" and "dark" classes for sterling theme', async () => {
       const user = userEvent.setup();
       render(
         <ThemeProvider>
@@ -93,19 +93,18 @@ describe('ThemeContext', () => {
         </ThemeProvider>
       );
 
-      const setSlateDarkBtn = screen.getByTestId('set-slate-dark');
-      await user.click(setSlateDarkBtn);
+      const setSterlingBtn = screen.getByTestId('set-sterling');
+      await user.click(setSterlingBtn);
 
       await waitFor(() => {
         const classes = getHtmlClasses();
-        expect(classes).toContain('slate');
-        expect(classes).toContain('dark');
-        expect(classes).not.toContain('slate-dark'); // compound ID should NOT be a class
-        expect(screen.getByTestId('current-theme')).toHaveTextContent('slate-dark');
+        expect(classes).toContain('sterling');
+        expect(classes).toContain('dark'); // Sterling is a dark-mode theme
+        expect(screen.getByTestId('current-theme')).toHaveTextContent('sterling');
       });
     });
 
-    it('should properly clean up classes when switching from slate-dark to dark', async () => {
+    it('should properly clean up classes when switching from sterling to dark', async () => {
       const user = userEvent.setup();
       render(
         <ThemeProvider>
@@ -113,29 +112,29 @@ describe('ThemeContext', () => {
         </ThemeProvider>
       );
 
-      // First set slate-dark
-      const setSlateDarkBtn = screen.getByTestId('set-slate-dark');
-      await user.click(setSlateDarkBtn);
+      // First set sterling
+      const setSterlingBtn = screen.getByTestId('set-sterling');
+      await user.click(setSterlingBtn);
 
       await waitFor(() => {
         const classes = getHtmlClasses();
-        expect(classes).toContain('slate');
+        expect(classes).toContain('sterling');
         expect(classes).toContain('dark');
       });
 
-      // Then switch to neutral dark
+      // Then switch to pure dark
       const setDarkBtn = screen.getByTestId('set-dark');
       await user.click(setDarkBtn);
 
       await waitFor(() => {
         const classes = getHtmlClasses();
         expect(classes).toContain('dark');
-        expect(classes).not.toContain('slate');
+        expect(classes).not.toContain('sterling');
         expect(screen.getByTestId('current-theme')).toHaveTextContent('dark');
       });
     });
 
-    it('should properly clean up classes when switching from dark to slate-dark', async () => {
+    it('should properly clean up classes when switching from dark to sterling', async () => {
       const user = userEvent.setup();
       render(
         <ThemeProvider>
@@ -143,29 +142,29 @@ describe('ThemeContext', () => {
         </ThemeProvider>
       );
 
-      // First set neutral dark
+      // First set pure dark
       const setDarkBtn = screen.getByTestId('set-dark');
       await user.click(setDarkBtn);
 
       await waitFor(() => {
         const classes = getHtmlClasses();
         expect(classes).toContain('dark');
-        expect(classes).not.toContain('slate');
+        expect(classes).not.toContain('sterling');
       });
 
-      // Then switch to slate-dark
-      const setSlateDarkBtn = screen.getByTestId('set-slate-dark');
-      await user.click(setSlateDarkBtn);
+      // Then switch to sterling
+      const setSterlingBtn = screen.getByTestId('set-sterling');
+      await user.click(setSterlingBtn);
 
       await waitFor(() => {
         const classes = getHtmlClasses();
-        expect(classes).toContain('slate');
+        expect(classes).toContain('sterling');
         expect(classes).toContain('dark');
-        expect(screen.getByTestId('current-theme')).toHaveTextContent('slate-dark');
+        expect(screen.getByTestId('current-theme')).toHaveTextContent('sterling');
       });
     });
 
-    it('should apply only "slate" class for slate light theme', async () => {
+    it('should apply only "paperwhite" class for paperwhite theme', async () => {
       const user = userEvent.setup();
       render(
         <ThemeProvider>
@@ -173,14 +172,14 @@ describe('ThemeContext', () => {
         </ThemeProvider>
       );
 
-      const setSlateBtn = screen.getByTestId('set-slate');
-      await user.click(setSlateBtn);
+      const setPaperwhiteBtn = screen.getByTestId('set-paperwhite');
+      await user.click(setPaperwhiteBtn);
 
       await waitFor(() => {
         const classes = getHtmlClasses();
-        expect(classes).toContain('slate');
+        expect(classes).toContain('paperwhite');
         expect(classes).not.toContain('dark');
-        expect(screen.getByTestId('current-theme')).toHaveTextContent('slate');
+        expect(screen.getByTestId('current-theme')).toHaveTextContent('paperwhite');
       });
     });
 
@@ -201,13 +200,13 @@ describe('ThemeContext', () => {
         expect(classes).toContain('light');
       });
 
-      // Switch to slate
-      const setSlateBtn = screen.getByTestId('set-slate');
-      await user.click(setSlateBtn);
+      // Switch to paperwhite
+      const setPaperwhiteBtn = screen.getByTestId('set-paperwhite');
+      await user.click(setPaperwhiteBtn);
 
       await waitFor(() => {
         const classes = getHtmlClasses();
-        expect(classes).toContain('slate');
+        expect(classes).toContain('paperwhite');
         expect(classes).not.toContain('light');
       });
 
@@ -218,14 +217,14 @@ describe('ThemeContext', () => {
       await waitFor(() => {
         const classes = getHtmlClasses();
         expect(classes).toContain('dark');
-        expect(classes).not.toContain('slate');
+        expect(classes).not.toContain('paperwhite');
         expect(classes).not.toContain('light');
       });
     });
   });
 
   describe('theme state', () => {
-    it('should set isDark to true for neutral dark theme', async () => {
+    it('should set isDark to true for dark theme', async () => {
       const user = userEvent.setup();
       render(
         <ThemeProvider>
@@ -242,7 +241,7 @@ describe('ThemeContext', () => {
       });
     });
 
-    it('should set isDark to true for slate-dark theme', async () => {
+    it('should set isDark to true for sterling theme', async () => {
       const user = userEvent.setup();
       render(
         <ThemeProvider>
@@ -250,8 +249,8 @@ describe('ThemeContext', () => {
         </ThemeProvider>
       );
 
-      const setSlateDarkBtn = screen.getByTestId('set-slate-dark');
-      await user.click(setSlateDarkBtn);
+      const setSterlingBtn = screen.getByTestId('set-sterling');
+      await user.click(setSterlingBtn);
 
       await waitFor(() => {
         expect(screen.getByTestId('is-dark')).toHaveTextContent('true');
@@ -269,6 +268,23 @@ describe('ThemeContext', () => {
 
       const setLightBtn = screen.getByTestId('set-light');
       await user.click(setLightBtn);
+
+      await waitFor(() => {
+        expect(screen.getByTestId('is-dark')).toHaveTextContent('false');
+        expect(screen.getByTestId('tone')).toHaveTextContent('light');
+      });
+    });
+
+    it('should set isDark to false for paperwhite theme', async () => {
+      const user = userEvent.setup();
+      render(
+        <ThemeProvider>
+          <ThemeTestComponent />
+        </ThemeProvider>
+      );
+
+      const setPaperwhiteBtn = screen.getByTestId('set-paperwhite');
+      await user.click(setPaperwhiteBtn);
 
       await waitFor(() => {
         expect(screen.getByTestId('is-dark')).toHaveTextContent('false');
