@@ -45,7 +45,8 @@ export function useAlertsFlow({ selectedCase, hasLoadedData, dataManager }: UseA
       // This ensures skeleton cases created during import are always included
       const nextAlerts = await dataManager.getAlertsIndex();
       if (!isMounted.current) return;
-      setAlertsIndex(applyOverridesRef.current(nextAlerts));
+      const afterOverrides = applyOverridesRef.current(nextAlerts);
+      setAlertsIndex(afterOverrides);
     } catch (error) {
       if (error instanceof LegacyFormatError) {
         logger.warn("Legacy format detected in alerts", { message: error.message });

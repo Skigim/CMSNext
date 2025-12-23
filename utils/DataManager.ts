@@ -259,14 +259,22 @@ export class DataManager {
       return null;
     }
 
-    // Replace the alert in a new array to avoid mutating rawAlerts
-    const newAlerts = [...rawAlerts];
-    const index = newAlerts.findIndex(a => a.id === updatedAlert.id);
-    if (index !== -1) {
-      newAlerts[index] = updatedAlert;
-    } else {
+    // Replace ALL alerts with matching ID (handles duplicate IDs from CSV import)
+    // findIndex only finds the first occurrence, but there may be duplicates
+    let foundCount = 0;
+    const newAlerts = rawAlerts.map(a => {
+      if (a.id === updatedAlert.id) {
+        foundCount++;
+        return updatedAlert;
+      }
+      return a;
+    });
+    
+    if (foundCount === 0) {
       // Should not happen if updateAlertStatus found it, but safe fallback
       newAlerts.push(updatedAlert);
+    } else if (foundCount > 1) {
+      logger.warn('Multiple alerts with same ID updated', { alertId, count: foundCount });
     }
 
     // Save updated alerts to storage using normalized format

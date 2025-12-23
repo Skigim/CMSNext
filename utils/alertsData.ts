@@ -612,15 +612,29 @@ export function parseStackedAlerts(csvContent: string, cases: CaseForAlertMatchi
 
   const casesByMcn = buildCaseMap(cases);
   const alerts: AlertWithMatch[] = [];
+  
+  // Track used IDs to prevent duplicates from CSV rows with same alertNumber
+  const usedIds = new Set<string>();
 
-  rows.forEach(row => {
+  rows.forEach((row) => {
     const normalizedMcn = normalizeMcn(row.mcNumber);
     const matchedCase = normalizedMcn ? casesByMcn.get(normalizedMcn) : undefined;
 
     const dueDateIso = normalizeAlertDate(row.dueDate);
     const displayDateIso = row.displayDate ? normalizeAlertDate(row.displayDate) : "";
     const alertNumber = row.alertNumber;
-    const alertId = alertNumber && alertNumber.length > 0 ? alertNumber : createRandomAlertId();
+    
+    // Generate unique ID - use alertNumber if present, otherwise random
+    // Append suffix if the ID was already used (handles duplicate alertNumbers in CSV)
+    let baseId = alertNumber && alertNumber.length > 0 ? alertNumber : createRandomAlertId();
+    let alertId = baseId;
+    let suffix = 1;
+    while (usedIds.has(alertId)) {
+      alertId = `${baseId}-${suffix}`;
+      suffix++;
+    }
+    usedIds.add(alertId);
+    
     const personName = normalizePersonName(row.name);
 
     const metadata: Record<string, string | undefined> = {
@@ -701,6 +715,9 @@ function parseGenericCsvAlerts(csvContent: string, cases: CaseForAlertMatching[]
 
   const casesByMcn = buildCaseMap(cases);
   const alerts: AlertWithMatch[] = [];
+  
+  // Track used IDs to prevent duplicates from CSV rows with same alertNumber
+  const usedIds = new Set<string>();
 
   const headerKeys = rows.length > 0 ? Object.keys(rows[0]).map(k => k.toLowerCase().trim()) : [];
 
@@ -742,7 +759,16 @@ function parseGenericCsvAlerts(csvContent: string, cases: CaseForAlertMatching[]
     const dueDateIso = normalizeAlertDate(dueDate);
     const personName = normalizePersonName(name);
 
-    const alertId = alertNumber && alertNumber.length > 0 ? alertNumber : createRandomAlertId();
+    // Generate unique ID - use alertNumber if present, otherwise random
+    // Append suffix if the ID was already used (handles duplicate alertNumbers in CSV)
+    let baseId = alertNumber && alertNumber.length > 0 ? alertNumber : createRandomAlertId();
+    let alertId = baseId;
+    let suffix = 1;
+    while (usedIds.has(alertId)) {
+      alertId = `${baseId}-${suffix}`;
+      suffix++;
+    }
+    usedIds.add(alertId);
 
     const metadata: Record<string, string | undefined> = {
       rawDueDate: dueDate || undefined,
