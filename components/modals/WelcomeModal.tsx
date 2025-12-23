@@ -213,6 +213,7 @@ export function WelcomeModal({
                   <Input
                     id="new-password"
                     type="password"
+                    autoComplete="new-password"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder="Create a password"
@@ -232,6 +233,7 @@ export function WelcomeModal({
                   <Input
                     id="confirm-password"
                     type="password"
+                    autoComplete="new-password"
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
                     placeholder="Confirm your password"

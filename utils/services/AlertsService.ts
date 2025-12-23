@@ -180,8 +180,9 @@ export class AlertsService {
       updatedAt: new Date().toISOString(),
     };
 
-    // Rematch with current cases
-    const rematchedAlert = this.rematchAlertForCases(updatedAlertBase, this.buildCaseLookup(cases));
+    // Rematch with current cases, preserving existing link if case not found in lookup
+    // This prevents race conditions where React state hasn't synced skeleton cases yet
+    const rematchedAlert = this.rematchAlertForCases(updatedAlertBase, this.buildCaseLookup(cases), true);
     
     return rematchedAlert;
   }
@@ -379,8 +380,13 @@ export class AlertsService {
 
   /**
    * Rematch a single alert to cases
+   * @param preserveExistingLink - If true, preserve existing caseId when no match found (for status updates)
    */
-  private rematchAlertForCases(alert: AlertWithMatch, lookup: Map<string, CaseForAlertMatching>): AlertWithMatch {
+  private rematchAlertForCases(
+    alert: AlertWithMatch, 
+    lookup: Map<string, CaseForAlertMatching>,
+    preserveExistingLink = false
+  ): AlertWithMatch {
     if (!alert) {
       return alert;
     }
@@ -389,6 +395,12 @@ export class AlertsService {
     const matchedCase = normalizedMcn ? lookup.get(normalizedMcn) : undefined;
 
     if (!matchedCase) {
+      // If preserveExistingLink is true and alert already has a caseId, keep the existing link
+      // This prevents race conditions where React state hasn't synced with file data yet
+      if (preserveExistingLink && alert.caseId) {
+        return alert;
+      }
+
       const correctStatus: AlertMatchStatus = normalizedMcn ? 'unmatched' : 'missing-mcn';
       
       // Update if status or case references need clearing

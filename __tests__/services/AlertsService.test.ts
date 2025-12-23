@@ -173,6 +173,33 @@ describe('AlertsService', () => {
       expect(result).not.toBeNull();
       expect(result?.id).toBe('alert-1');
     });
+
+    it('should preserve existing caseId when case is not in lookup (skeleton case race condition)', () => {
+      // This test covers the scenario where:
+      // 1. Alert was matched to a skeleton case during import
+      // 2. User tries to resolve the alert
+      // 3. React state hasn't synced yet, so skeleton case isn't in the cases array
+      // 4. The alert's caseId should be preserved, not cleared
+      const skeletonCaseId = 'skeleton-case-123';
+      const alert: AlertWithMatch = {
+        ...createMockAlert('alert-1', 'MCN-123'),
+        caseId: skeletonCaseId,
+        matchedCaseId: skeletonCaseId,
+        matchedCaseName: 'Doe, John',
+        matchStatus: 'matched',
+      };
+      const alerts = [alert];
+      // Empty cases array simulates React state not having synced yet
+      const cases: CaseDisplay[] = [];
+      
+      const result = service.updateAlertStatus(alerts, 'alert-1', { status: 'resolved' }, cases);
+
+      expect(result).not.toBeNull();
+      expect(result?.status).toBe('resolved');
+      // Key assertion: caseId should be preserved even though case wasn't in lookup
+      expect(result?.caseId).toBe(skeletonCaseId);
+      expect(result?.matchedCaseId).toBe(skeletonCaseId);
+    });
   });
 
   describe('mergeAlertsFromCsvContent', () => {

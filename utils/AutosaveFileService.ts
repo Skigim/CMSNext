@@ -884,7 +884,8 @@ class AutosaveFileService {
       }
 
       const message = err instanceof Error ? err.message : 'Unknown error';
-      logger.warn('Failed to delete file', { fileName, error: message });
+      // Non-critical - file will be re-imported but that's okay
+      logger.debug('Could not delete file (will be re-processed on next import)', { fileName, error: message });
       return false;
     }
   }
