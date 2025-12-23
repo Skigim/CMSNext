@@ -299,31 +299,31 @@ export function CaseDetails({
 
       {/* Content - Top-level Tabs */}
       <div className="rounded-xl border bg-card/30 shadow-lg pb-16">
-        <Tabs defaultValue="financials" className="w-full">
+        <Tabs defaultValue="details" className="w-full">
           <div className="border-b px-4 py-4">
             <TabsList className="grid w-full max-w-md grid-cols-2">
+              <TabsTrigger value="details" className="flex items-center gap-2">
+                <ClipboardCheck className="w-4 h-4" />
+                Details
+              </TabsTrigger>
               <TabsTrigger value="financials" className="flex items-center gap-2">
                 <Wallet className="w-4 h-4" />
                 Financials
               </TabsTrigger>
-              <TabsTrigger value="intake" className="flex items-center gap-2">
-                <ClipboardCheck className="w-4 h-4" />
-                Intake
-              </TabsTrigger>
             </TabsList>
           </div>
+
+          {/* Details Tab - 3-Column Inline Editing */}
+          <TabsContent value="details" className="mt-0">
+            <div className="p-4">
+              <CaseIntakeScreen caseData={caseData} onSave={onSave} />
+            </div>
+          </TabsContent>
 
           {/* Financials Tab - Grid View */}
           <TabsContent value="financials" className="mt-0">
             <div className="p-4">
               <FinancialsGridView caseId={caseData.id} selectedCase={caseData} />
-            </div>
-          </TabsContent>
-
-          {/* Intake Tab - 3-Column Inline Editing */}
-          <TabsContent value="intake" className="mt-0">
-            <div className="p-4">
-              <CaseIntakeScreen caseData={caseData} onSave={onSave} />
             </div>
           </TabsContent>
         </Tabs>
