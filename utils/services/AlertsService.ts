@@ -18,27 +18,51 @@ const logger = createLogger('AlertsService');
 // Type Definitions
 // ============================================================================
 
+/**
+ * Alert lookup candidate for matching algorithms.
+ * @private
+ * @interface AlertLookupCandidate
+ */
 interface AlertLookupCandidate {
+  /** Lookup key for matching */
   key: string;
+  /** Whether this is a fallback match strategy */
   fallback: boolean;
 }
 
+/**
+ * Result of merging alerts from CSV import.
+ * @interface MergeAlertsResult
+ */
 export interface MergeAlertsResult {
+  /** Merged alerts with match status */
   alerts: AlertWithMatch[];
+  /** Number of new alerts added */
   added: number;
+  /** Number of existing alerts updated */
   updated: number;
+  /** Total number of alerts after merge */
   total: number;
 }
 
 /**
- * Minimal case interface for alert matching
- * Works with both StoredCase and CaseDisplay
+ * Minimal case interface for alert matching.
+ * 
+ * Works with both StoredCase and CaseDisplay formats,
+ * extracting only the fields needed for alert-to-case matching.
+ * 
+ * @interface CaseForAlertMatching
  */
 interface CaseForAlertMatching {
+  /** Case ID */
   id: string;
+  /** Case display name */
   name: string;
+  /** Medical Case Number (MCN) */
   mcn: string;
+  /** Case status */
   status: CaseStatus;
+  /** Optional case record with MCN */
   caseRecord?: {
     mcn?: string;
   };
@@ -49,19 +73,80 @@ interface CaseForAlertMatching {
 // ============================================================================
 
 /**
- * AlertsService
+ * AlertsService - Alert matching, workflow, and deduplication
  * 
- * Business logic layer for alerts management.
- * Handles alert matching, workflow orchestration, and deduplication.
+ * This service provides pure business logic for managing alerts imported from
+ * external systems (typically via CSV). It handles intelligent matching to cases,
+ * workflow state management, and deduplication during imports.
  * 
- * Responsibilities:
- * - Get alerts index with case matching
- * - Update alert status with workflow management
- * - Merge alerts from CSV with deduplication
- * - Match alerts to cases via MCN/metadata
- * - Generate alert lookup candidates for matching
+ * ## Architecture
  * 
- * Pattern: Pure logic service (Stateless)
+ * ```
+ * DataManager/Hooks
+ *     ↓
+ * AlertsService (pure logic, stateless)
+ *     ↓
+ * Alert matching algorithms & workflow rules
+ * ```
+ * 
+ * **Note:** This is a stateless service with no file I/O. It operates on
+ * in-memory data and returns transformed results. The caller (DataManager)
+ * handles persistence.
+ * 
+ * ## Core Responsibilities
+ * 
+ * ### Alert-to-Case Matching
+ * - Match alerts to cases via MCN (Medical Case Number)
+ * - Handle MCN normalization (remove dashes, spaces)
+ * - Generate lookup candidates with fallback strategies
+ * - Classify alerts as: matched, unmatched, or missing-mcn
+ * - Support rematching when case data changes
+ * 
+ * ### Workflow Management
+ * - Update alert workflow status (pending, in-progress, resolved, dismissed)
+ * - Track resolution timestamps and notes
+ * - Maintain audit trail of status changes
+ * - Validate workflow transitions
+ * 
+ * ### CSV Import & Deduplication
+ * - Parse alert data from CSV content
+ * - Detect duplicate alerts by multiple strategies:
+ *   - Exact match (reportId + name + mcNumber)
+ *   - Metadata match (name + DOB + MCN)
+ *   - Fallback match (name + MCN only)
+ * - Merge new alerts with existing alerts
+ * - Update existing alerts with fresher data
+ * - Track import statistics (added, updated, total)
+ * 
+ * ### Alert Classification
+ * - **Matched:** Alert has MCN and matches an existing case
+ * - **Unmatched:** Alert has MCN but no matching case found
+ * - **Missing MCN:** Alert lacks MCN, cannot match to case
+ * 
+ * ## Matching Algorithm
+ * 
+ * The service uses a sophisticated multi-strategy matching system:
+ * 
+ * 1. **Primary:** Exact MCN match (normalized)
+ * 2. **Fallback:** Name-based matching when MCN match fails
+ * 3. **Deduplication:** Multiple strategies to detect existing alerts
+ * 
+ * MCN normalization handles variations:
+ * - Removes dashes, spaces, and non-alphanumeric characters
+ * - Case-insensitive comparison
+ * 
+ * ## Pattern: Stateless Pure Functions
+ * 
+ * All methods are pure functions:
+ * - No side effects
+ * - No file I/O
+ * - Deterministic results
+ * - Caller handles persistence
+ * 
+ * @class AlertsService
+ * @see {@link createAlertsIndexFromAlerts} for index creation
+ * @see {@link buildAlertStorageKey} for deduplication keys
+ * @see {@link normalizeMcn} for MCN normalization
  */
 export class AlertsService {
   
@@ -70,11 +155,24 @@ export class AlertsService {
   // =============================================================================
 
   /**
-   * Get alerts index with case matching
+   * Get alerts index with case matching.
    * 
-   * @param alerts - Current alerts list
-   * @param cases - Cases for alert matching (StoredCase or CaseDisplay)
-   * @returns AlertsIndex with matched/unmatched/missingMcn classifications
+   * This method:
+   * 1. Rematches all alerts to current cases
+   * 2. Classifies alerts into matched/unmatched/missing-mcn
+   * 3. Returns organized index for UI display
+   * 
+   * **Use Case:** Called when displaying alerts list or when case data changes.
+   * 
+   * @param {AlertWithMatch[]} alerts - Current alerts list
+   * @param {CaseForAlertMatching[]} cases - Cases for matching (StoredCase or CaseDisplay)
+   * @returns {AlertsIndex} Organized index with matched, unmatched, and missing-mcn classifications
+   * 
+   * @example
+   * const index = alertsService.getAlertsIndex(alerts, cases);
+   * console.log(`Matched: ${index.matched.length}`);
+   * console.log(`Unmatched: ${index.unmatched.length}`);
+   * console.log(`Missing MCN: ${index.missingMcn.length}`);
    */
   getAlertsIndex(alerts: AlertWithMatch[], cases: CaseForAlertMatching[]): AlertsIndex {
     // Rematch alerts to current cases
@@ -83,13 +181,36 @@ export class AlertsService {
   }
 
   /**
-   * Update alert status with workflow management
+   * Update alert status with workflow management.
    * 
-   * @param alerts - Current alerts list
-   * @param alertId - Alert identifier (id, reportId, or lookup key)
-   * @param updates - Status updates to apply
-   * @param cases - Cases for alert rematching (StoredCase or CaseDisplay)
-   * @returns Updated alert object or null if not found
+   * This method:
+   * 1. Finds alert(s) by ID (handles duplicates from CSV imports)
+   * 2. Updates workflow status and resolution details
+   * 3. Rematches alerts to cases after update
+   * 4. Returns first updated alert with match info
+   * 
+   * **Note:** Handles alerts with duplicate IDs by updating all matching alerts.
+   * This can occur when the same alert appears in multiple CSV imports.
+   * 
+   * @param {AlertWithMatch[]} alerts - Current alerts list
+   * @param {string} alertId - Alert identifier (id, reportId, or lookup key)
+   * @param {Object} updates - Status updates to apply
+   * @param {AlertWorkflowStatus} [updates.status] - New workflow status
+   * @param {string | null} [updates.resolvedAt] - Resolution timestamp
+   * @param {string} [updates.resolutionNotes] - Notes about resolution
+   * @param {CaseForAlertMatching[]} cases - Cases for rematching
+   * @returns {AlertWithMatch | null} Updated alert with match info, or null if not found
+   * 
+   * @example
+   * const updated = alertsService.updateAlertStatus(
+   *   alerts,
+   *   "alert-123",
+   *   { status: "resolved", resolvedAt: new Date().toISOString() },
+   *   cases
+   * );
+   * if (updated) {
+   *   console.log(`Alert resolved: ${updated.alertType}`);
+   * }
    */
   updateAlertStatus(
     alerts: AlertWithMatch[],
@@ -188,12 +309,41 @@ export class AlertsService {
   }
 
   /**
-   * Merge alerts from CSV content with deduplication
+   * Merge alerts from CSV content with deduplication.
    * 
-   * @param csvContent - Raw CSV content to merge
-   * @param existingAlerts - Current alerts list
-   * @param cases - Cases for alert matching (StoredCase or CaseDisplay)
-   * @returns Merged alerts with statistics
+   * This method provides sophisticated CSV import handling:
+   * 1. Parses CSV content into alert objects
+   * 2. Builds lookup indices for efficient matching
+   * 3. Uses multi-strategy deduplication:
+   *    - Strong match: reportId + name + mcNumber
+   *    - Metadata match: name + DOB + MCN
+   *    - Fallback match: name + MCN only
+   * 4. Updates existing alerts with fresher data
+   * 5. Adds new alerts that don't match existing
+   * 6. Matches all alerts to cases
+   * 7. Returns merged result with statistics
+   * 
+   * **Deduplication Logic:**
+   * - Tries strong matches first (most specific)
+   * - Falls back to broader matches if no strong match
+   * - Marks matched alerts as "used" to prevent double-matching
+   * - Preserves existing alerts not in CSV
+   * 
+   * **Pattern:** Async (loads CSV parser dynamically)
+   * 
+   * @param {string} csvContent - Raw CSV content to parse and merge
+   * @param {AlertWithMatch[]} existingAlerts - Current alerts list
+   * @param {CaseForAlertMatching[]} cases - Cases for alert matching (StoredCase or CaseDisplay)
+   * @returns {Promise<MergeAlertsResult>} Merged alerts with added/updated statistics
+   * 
+   * @example
+   * const result = await alertsService.mergeAlertsFromCsvContent(
+   *   csvFileContent,
+   *   currentAlerts,
+   *   cases
+   * );
+   * console.log(`Added: ${result.added}, Updated: ${result.updated}`);
+   * console.log(`Total alerts: ${result.total}`);
    */
   async mergeAlertsFromCsvContent(
     csvContent: string,
