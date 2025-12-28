@@ -23,59 +23,122 @@ const logger = createLogger("AutosaveFileService");
 
 // Removed devConfig import - debug logging is no longer conditional
 
+/**
+ * Options for configuring error callbacks.
+ * @interface ErrorCallbackOptions
+ */
 interface ErrorCallbackOptions {
+  /** Human-readable error message */
   message: string;
+  /** Type of error ('error', 'warning', 'info') */
   type?: string;
+  /** The underlying error object, if available */
   error?: unknown;
+  /** Additional context about the operation that failed */
   context?: Record<string, unknown>;
 }
 
+/**
+ * Configuration options for AutosaveFileService initialization.
+ * @interface AutosaveConfig
+ */
 interface AutosaveConfig {
+  /** Name of the JSON file to store data (default: 'case-tracker-data.json') */
   fileName?: string;
+  /** Callback function for error notifications */
   errorCallback?: (options: ErrorCallbackOptions) => void;
+  /** Optional sanitization function for strings (deprecated) */
   sanitizeFn?: (str: string) => string;
+  /** Unique identifier for this browser tab */
   tabId?: string;
+  /** Whether autosave is enabled (default: true) */
   enabled?: boolean;
+  /** Interval between periodic saves in milliseconds (default: 120000 = 2 minutes) */
   saveInterval?: number;
+  /** Debounce delay after data changes in milliseconds (default: 5000 = 5 seconds) */
   debounceDelay?: number;
+  /** Maximum number of save retries on failure (default: 3) */
   maxRetries?: number;
+  /** Callback function for status updates */
   statusCallback?: (status: StatusUpdate) => void;
 }
 
+/**
+ * Status update information provided to status callbacks.
+ * @interface StatusUpdate
+ */
 interface StatusUpdate {
+  /** Current status ('running', 'saving', 'error', 'waiting', etc.) */
   status: string;
+  /** Human-readable status message */
   message: string;
+  /** Timestamp of this status update */
   timestamp: number;
+  /** Current file system permission status */
   permissionStatus: string;
+  /** Timestamp of last successful save, or null if never saved */
   lastSaveTime: number | null;
+  /** Number of consecutive save failures */
   consecutiveFailures: number;
+  /** Number of pending write operations */
   pendingWrites: number;
 }
 
+/**
+ * Internal service state tracking.
+ * @private
+ * @interface ServiceState
+ */
 interface ServiceState {
+  /** Whether the autosave service is actively running */
   isRunning: boolean;
+  /** Current file system permission status */
   permissionStatus: string;
+  /** Timestamp of last successful save */
   lastSaveTime: number | null;
+  /** Timestamp of last data change notification */
   lastDataChange: number | null;
+  /** Number of consecutive save failures */
   consecutiveFailures: number;
+  /** Whether a save operation is currently pending */
   pendingSave: boolean;
 }
 
+/**
+ * Timer references for cleanup.
+ * @private
+ * @interface Timers
+ */
 interface Timers {
+  /** Interval timer for periodic saves */
   saveInterval: NodeJS.Timeout | null;
+  /** Timeout for debounced saves after data changes */
   debounceTimeout: NodeJS.Timeout | null;
+  /** Interval timer for permission checks */
   permissionCheck: NodeJS.Timeout | null;
 }
 
+/**
+ * A queued write operation waiting to be processed.
+ * @private
+ * @interface WriteQueueItem
+ */
 interface WriteQueueItem {
+  /** The data to write */
   data: any;
+  /** Promise resolve function for operation completion */
   resolve: (value: boolean) => void;
+  /** Promise reject function for operation failure */
   reject: (reason: any) => void;
 }
 
 /**
- * Encryption hooks for data at rest
- * These are called during read/write operations
+ * Encryption hooks for data at rest encryption.
+ * 
+ * These hooks are called during read/write operations to encrypt/decrypt
+ * data transparently. If not provided, data is stored in plain JSON.
+ * 
+ * @interface EncryptionHooks
  */
 interface EncryptionHooks {
   /** Encrypt data before writing to file */
@@ -87,34 +150,150 @@ interface EncryptionHooks {
 }
 
 /**
- * Combined Autosave and File Service
- * Handles both file operations and automatic saving
+ * AutosaveFileService - Combined File System Access and Autosave Service
+ * 
+ * This service combines file system operations with automatic save functionality
+ * to provide a complete local-first data persistence solution. It uses the
+ * File System Access API with IndexedDB for handle persistence.
+ * 
+ * ## Core Features
+ * 
+ * ### File System Operations
+ * - **Directory Access**: Uses File System Access API for local file operations
+ * - **Permission Management**: Handles permission requests and restoration
+ * - **Handle Persistence**: Stores directory handles in IndexedDB across sessions
+ * - **Multi-file Support**: Can read/write multiple files in the same directory
+ * 
+ * ### Autosave Functionality
+ * - **Intelligent Timing**: Combines periodic saves with debounced change detection
+ * - **Bulk Operation Detection**: Uses longer delays during rapid changes
+ * - **Write Queue**: Prevents race conditions with serialized writes
+ * - **Retry Logic**: Automatically retries failed writes with exponential backoff
+ * - **State Conflict Resolution**: Refreshes handles to resolve cached state issues
+ * 
+ * ### Data Security
+ * - **Optional Encryption**: Supports transparent encryption via hooks
+ * - **Local-First**: All data stays on the user's device
+ * - **No Network**: Never sends data over the network
+ * 
+ * ## Architecture
+ * 
+ * ```
+ * AutosaveFileService
+ * ├── File System Access API (primary storage)
+ * ├── IndexedDB (directory handle persistence)
+ * ├── Write Queue (race condition prevention)
+ * └── Autosave Timers (periodic + debounced)
+ * ```
+ * 
+ * ## Usage Patterns
+ * 
+ * ### Basic Setup
+ * ```typescript
+ * const service = new AutosaveFileService({
+ *   fileName: 'data.json',
+ *   enabled: true,
+ *   saveInterval: 120000,  // 2 minutes
+ *   debounceDelay: 5000,   // 5 seconds
+ * });
+ * 
+ * // Connect to a folder (requires user gesture)
+ * await service.connect();
+ * 
+ * // Set data provider
+ * service.setDataProvider(() => myDataState);
+ * ```
+ * 
+ * ### React Integration
+ * ```typescript
+ * service.initializeWithReactState(
+ *   () => fullData,
+ *   (status) => setServiceStatus(status)
+ * );
+ * 
+ * // Notify of changes for debounced save
+ * service.notifyDataChange();
+ * ```
+ * 
+ * ## Important Patterns
+ * 
+ * - **User Gestures**: connect() and connectToExisting() require user interaction
+ * - **Permission Flow**: Check → Prompt → Grant → Store Handle → Auto-restore
+ * - **Write Serialization**: All writes go through queue to prevent conflicts
+ * - **Bulk Detection**: Rapid changes trigger longer debounce delays
+ * - **Handle Refresh**: Clears cached state to resolve write conflicts
+ * 
+ * @class AutosaveFileService
+ * @version 1.0.0
  */
 class AutosaveFileService {
+  // File System Access API properties
+  /** Handle to the directory selected by the user, or null if not connected */
   private directoryHandle: FileSystemDirectoryHandle | null = null;
+  /** Name of the primary data file */
   private fileName: string;
+  /** Callback for error notifications */
   private errorCallback: (options: ErrorCallbackOptions) => void;
+  /** Unique identifier for this browser tab instance */
   private tabId: string;
+  
+  // IndexedDB configuration for handle persistence
+  /** Name of the IndexedDB database */
   private dbName: string = 'CaseTrackingFileAccess';
+  /** Name of the object store within the database */
   private storeName: string = 'directoryHandles';
+  /** Key used to store/retrieve the directory handle */
   private dbKey: string = 'caseTrackingDirectory';
 
   // Write operation queue to prevent race conditions
+  /** Queue of pending write operations to process serially */
   private writeQueue: WriteQueueItem[] = [];
+  /** Flag indicating whether a write operation is currently in progress */
   private isWriting: boolean = false;
 
   // Encryption hooks (optional)
+  /** Optional encryption hooks for data-at-rest encryption */
   private encryptionHooks: EncryptionHooks | null = null;
 
   // Autosave properties
+  /** Combined configuration options (required fields only) */
   private config: Required<Omit<AutosaveConfig, 'errorCallback' | 'sanitizeFn' | 'statusCallback'>>;
+  /** Current service state */
   private state: ServiceState;
+  /** Callback for status update notifications */
   private statusCallback: ((status: StatusUpdate) => void) | null;
+  /** Function that provides current data to save */
   private dataProvider: (() => any) | null = null;
+  /** Active timer references for cleanup */
   private timers: Timers;
+  /** Alternative data provider (legacy) */
   private getFullData: (() => any) | null = null;
+  /** Callback triggered when data is loaded from file */
   private dataLoadCallback: ((data: any) => void) | null = null;
 
+  /**
+   * Create a new AutosaveFileService instance.
+   * 
+   * The service auto-initializes on construction, attempting to restore
+   * any previously saved directory handle from IndexedDB.
+   * 
+   * @param {AutosaveConfig} [config] - Configuration options
+   * @param {string} [config.fileName='case-tracker-data.json'] - Name of the data file
+   * @param {Function} [config.errorCallback] - Callback for error notifications
+   * @param {string} [config.tabId] - Unique tab identifier (auto-generated if not provided)
+   * @param {boolean} [config.enabled=true] - Whether autosave is enabled
+   * @param {number} [config.saveInterval=120000] - Interval between periodic saves (ms)
+   * @param {number} [config.debounceDelay=5000] - Debounce delay after changes (ms)
+   * @param {number} [config.maxRetries=3] - Maximum save retry attempts
+   * @param {Function} [config.statusCallback] - Callback for status updates
+   * 
+   * @example
+   * const service = new AutosaveFileService({
+   *   fileName: 'my-data.json',
+   *   statusCallback: (status) => console.log(status.message),
+   *   errorCallback: ({ message }) => console.error(message)
+   * });
+   */
   constructor({
     fileName = 'case-tracker-data.json',
     errorCallback = () => {},
@@ -162,7 +341,17 @@ class AutosaveFileService {
   }
 
   /**
-   * Initialize the combined service
+   * Initialize the combined service.
+   * 
+   * This method:
+   * 1. Requests persistent storage (Chromium/Edge)
+   * 2. Attempts to restore previous directory access from IndexedDB
+   * 3. Starts autosave if enabled
+   * 
+   * Called automatically by the constructor.
+   * 
+   * @private
+   * @returns {Promise<void>}
    */
   async initialize(): Promise<void> {
     try {
@@ -196,10 +385,36 @@ class AutosaveFileService {
   // FILE SYSTEM OPERATIONS
   // =============================================================================
 
+  /**
+   * Check if the File System Access API is supported in this browser.
+   * 
+   * @returns {boolean} true if supported, false otherwise
+   */
   isSupported(): boolean {
     return 'showDirectoryPicker' in window;
   }
 
+  /**
+   * Connect to a directory by prompting the user to select a folder.
+   * 
+   * This method:
+   * 1. Shows the directory picker dialog (requires user gesture)
+   * 2. Requests read/write permissions
+   * 3. Stores the directory handle in IndexedDB
+   * 4. Starts autosave if enabled
+   * 
+   * **Important:** Must be called in response to a user action (click, etc.)
+   * 
+   * @returns {Promise<boolean>} true if connection successful and permission granted
+   * @throws {AbortError} If user cancels the directory picker (silently handled)
+   * 
+   * @example
+   * // In a button click handler
+   * const connected = await service.connect();
+   * if (connected) {
+   *   console.log('Connected to folder');
+   * }
+   */
   async connect(): Promise<boolean> {
     if (!this.isSupported()) {
       this.errorCallback({
@@ -240,7 +455,26 @@ class AutosaveFileService {
 
   /**
    * Connect to an existing stored directory handle.
-   * This requires a user gesture and uses the already stored handle.
+   * 
+   * This method re-establishes a connection to a previously selected directory
+   * using the handle stored in IndexedDB. It requires a user gesture to request
+   * permissions for the stored handle.
+   * 
+   * **Important:** Must be called in response to a user action (click, etc.)
+   * 
+   * Use this method when:
+   * - The user returns to the app after closing it
+   * - A stored handle exists but permissions need to be re-granted
+   * - You want to avoid showing the directory picker again
+   * 
+   * @returns {Promise<boolean>} true if connection successful and permission granted
+   * 
+   * @example
+   * // In a "Connect to Existing Folder" button handler
+   * const connected = await service.connectToExisting();
+   * if (connected) {
+   *   console.log('Reconnected to previously selected folder');
+   * }
    */
   async connectToExisting(): Promise<boolean> {
     if (!this.isSupported()) {
@@ -310,11 +544,24 @@ class AutosaveFileService {
     }
   }
 
+  /**
+   * Check the current permission state for the directory.
+   * 
+   * @returns {Promise<PermissionState>} 'granted', 'denied', or 'prompt'
+   */
   async checkPermission(): Promise<PermissionState> {
     if (!this.directoryHandle) return 'prompt';
     return await (this.directoryHandle as any).queryPermission({ mode: 'readwrite' });
   }
 
+  /**
+   * Request read/write permissions for the directory.
+   * 
+   * **Important:** Must be called in response to a user action (click, etc.)
+   * 
+   * @returns {Promise<boolean>} true if permission granted
+   * @private
+   */
   async requestPermission(): Promise<boolean> {
     if (!this.directoryHandle) return false;
 
@@ -334,6 +581,27 @@ class AutosaveFileService {
     return false;
   }
 
+  /**
+   * Write data to the primary data file.
+   * 
+   * This method queues the write operation to prevent race conditions.
+   * All writes are serialized through a queue and processed one at a time.
+   * 
+   * Features:
+   * - **Automatic encryption** if encryption hooks are configured
+   * - **Retry logic** with exponential backoff for transient errors
+   * - **Handle refresh** to resolve cached state conflicts
+   * - **Race condition prevention** via write queue
+   * 
+   * @param {any} data - Data to write (will be JSON stringified)
+   * @returns {Promise<boolean>} true if write successful, false otherwise
+   * 
+   * @example
+   * const success = await service.writeFile({ cases: [...], alerts: [...] });
+   * if (success) {
+   *   console.log('Data saved successfully');
+   * }
+   */
   async writeFile(data: any): Promise<boolean> {
     // Add to write queue to prevent race conditions
     return new Promise((resolve, reject) => {
@@ -560,6 +828,22 @@ class AutosaveFileService {
   /**
    * Create a timestamped backup file, then write to the primary file.
    */
+  /**
+   * Create a timestamped backup file, then write to the primary file.
+   * 
+   * This method creates a backup with a timestamp in the filename before
+   * writing to the main data file. Useful for manual backup operations.
+   * 
+   * @param {any} data - Data to backup and write
+   * @returns {Promise<{backupCreated: boolean, written: boolean, backupName: string}>}
+   *   Result with backup status and filename
+   * 
+   * @example
+   * const result = await service.backupAndWrite(data);
+   * if (result.backupCreated && result.written) {
+   *   console.log(`Backup created: ${result.backupName}`);
+   * }
+   */
   async backupAndWrite(data: any): Promise<{ backupCreated: boolean; written: boolean; backupName: string }> {
     const ts = new Date().toISOString().replace(/[:]/g, '-');
     const backupName = `case-tracker-data.backup-${ts}.json`;
@@ -569,6 +853,24 @@ class AutosaveFileService {
     return { backupCreated, written, backupName };
   }
 
+  /**
+   * Read data from the primary data file.
+   * 
+   * This method:
+   * 1. Checks for directory handle and permissions
+   * 2. Reads the file contents
+   * 3. Parses JSON
+   * 4. Automatically decrypts if encryption hooks are configured
+   * 
+   * @returns {Promise<any>} The parsed file data, or null if file doesn't exist
+   * @throws {Error} If file read fails (excluding NotFoundError)
+   * 
+   * @example
+   * const data = await service.readFile();
+   * if (data) {
+   *   console.log(`Loaded ${data.cases?.length || 0} cases`);
+   * }
+   */
   async readFile(): Promise<any> {
     if (!this.directoryHandle) {
       logger.debug('readFile skipped - directory handle is not available');
@@ -622,7 +924,13 @@ class AutosaveFileService {
   }
 
   /**
-   * Load existing data from the connected directory
+   * Load existing data from the connected directory.
+   * 
+   * Reads the primary data file and triggers the data load callback if configured.
+   * Logs information about the loaded data format and record counts.
+   * 
+   * @returns {Promise<any>} The loaded data, or null if no file exists
+   * @throws {Error} If file read fails
    */
   async loadExistingData(): Promise<any> {
     try {
@@ -1026,7 +1334,12 @@ class AutosaveFileService {
 
   /**
    * Refresh the directory handle from IndexedDB to clear cached state.
-   * This is critical for resolving "state cached in interface object" errors.
+   * 
+   * This is critical for resolving "state cached in interface object" errors
+   * that can occur when multiple operations access the same file handle.
+   * 
+   * @private
+   * @returns {Promise<boolean>} true if refresh successful
    */
   private async refreshDirectoryHandle(): Promise<boolean> {
     try {
@@ -1060,14 +1373,24 @@ class AutosaveFileService {
   // =============================================================================
 
   /**
-   * Set the data provider function (allows dynamic updates)
+   * Set the data provider function.
+   * 
+   * The data provider is called when autosave needs to get the current
+   * data to save. It should return the complete data object to write.
+   * 
+   * @param {Function} dataProvider - Function that returns current data to save
+   * 
+   * @example
+   * service.setDataProvider(() => currentDataState);
    */
   setDataProvider(dataProvider: () => any): void {
     this.dataProvider = dataProvider;
   }
 
   /**
-   * Update the data provider with current data reference
+   * Update the data provider with a new data reference getter.
+   * 
+   * @param {Function} getCurrentData - Function that returns current data
    */
   updateDataProvider(getCurrentData: () => any): void {
     this.dataProvider = () => {
@@ -1080,8 +1403,25 @@ class AutosaveFileService {
   }
 
   /**
-   * Initialize with React state integration
-   * This method handles the common React pattern of passing a state getter
+   * Initialize with React state integration.
+   * 
+   * This method sets up the service to work seamlessly with React state.
+   * It configures both the data provider and status callback for a
+   * complete React integration.
+   * 
+   * @param {Function} getFullData - Function that returns current React state
+   * @param {Function} [statusCallback] - Optional callback for status updates
+   * @returns {AutosaveFileService} this instance for chaining
+   * 
+   * @example
+   * const service = useRef(new AutosaveFileService());
+   * 
+   * useEffect(() => {
+   *   service.current.initializeWithReactState(
+   *     () => fullData,
+   *     (status) => setServiceStatus(status)
+   *   );
+   * }, [fullData]);
    */
   initializeWithReactState(getFullData: () => any, statusCallback?: (status: StatusUpdate) => void): AutosaveFileService {
     // Store the data getter for future updates
@@ -1105,7 +1445,12 @@ class AutosaveFileService {
   }
 
   /**
-   * Update the React data getter (for when state reference changes)
+   * Update the React data getter when state reference changes.
+   * 
+   * Call this when your React state reference changes to ensure
+   * the service always has access to current data.
+   * 
+   * @param {Function} getFullData - Function that returns updated React state
    */
   updateReactState(getFullData: () => any): void {
     if (this.getFullData) {
@@ -1114,7 +1459,18 @@ class AutosaveFileService {
   }
 
   /**
-   * Start the autosave service
+   * Start the autosave service.
+   * 
+   * This method:
+   * 1. Starts periodic save interval
+   * 2. Starts permission checking interval
+   * 3. Updates status to 'running'
+   * 
+   * The service will automatically save data based on:
+   * - Periodic interval (default: 2 minutes)
+   * - Debounced data changes (default: 5 seconds after change)
+   * 
+   * Called automatically by constructor if `enabled: true`.
    */
   startAutosave(): void {
     if (this.state.isRunning) {
@@ -1149,7 +1505,10 @@ class AutosaveFileService {
   }
 
   /**
-   * Stop the autosave service
+   * Stop the autosave service.
+   * 
+   * Clears all autosave timers and updates status to 'stopped'.
+   * Data will no longer be automatically saved until startAutosave() is called.
    */
   stopAutosave(): void {
     this.state.isRunning = false;
@@ -1174,7 +1533,29 @@ class AutosaveFileService {
   }
 
   /**
-   * Notify that data has changed (for debounced saves)
+   * Notify the service that data has changed.
+   * 
+   * This triggers a debounced save operation. Multiple rapid calls
+   * will be coalesced into a single save operation.
+   * 
+   * The service automatically detects bulk operations (rapid successive
+   * calls within 2 seconds) and uses a longer debounce delay (3x, max 15s)
+   * to avoid excessive saves during bulk imports or batch operations.
+   * 
+   * **Pattern:**
+   * - Single changes: 5 second debounce (default)
+   * - Bulk operations: 15 second debounce (detected automatically)
+   * 
+   * @example
+   * // After modifying data
+   * setData(newData);
+   * service.notifyDataChange(); // Will save after 5 seconds
+   * 
+   * // During bulk import
+   * for (const item of items) {
+   *   addItem(item);
+   *   service.notifyDataChange(); // Detected as bulk, will save once after 15s
+   * }
    */
   notifyDataChange(): void {
     if (!this.state.isRunning) return;
@@ -1202,7 +1583,24 @@ class AutosaveFileService {
   }
 
   /**
-   * Force an immediate save
+   * Force an immediate save operation.
+   * 
+   * This method bypasses the autosave timing and immediately writes
+   * current data to disk. Useful for:
+   * - Manual "Save" button implementations
+   * - Saving before critical operations
+   * - Ensuring data is persisted before navigation
+   * 
+   * @returns {Promise<boolean>} true if save successful, false otherwise
+   * 
+   * @example
+   * // In a "Save Now" button handler
+   * const saved = await service.save();
+   * if (saved) {
+   *   toast.success('Data saved successfully');
+   * } else {
+   *   toast.error('Save failed - check permissions');
+   * }
    */
   async save(): Promise<boolean> {
     if (!this.dataProvider) {
