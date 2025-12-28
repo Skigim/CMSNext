@@ -5,6 +5,18 @@ import type { CategoryConfig } from '../../types/categoryConfig';
 import type { FileStorageService, NormalizedFileData, StoredCase } from './FileStorageService';
 import { ActivityLogService } from './ActivityLogService';
 
+/**
+ * Format a case display name from case data.
+ * 
+ * Priority order:
+ * 1. Uses case.name if set
+ * 2. Falls back to person's firstName + lastName
+ * 3. Returns "Unknown Case" if no name available
+ * 
+ * @private
+ * @param {StoredCase} caseData - The case data to format
+ * @returns {string} Formatted display name
+ */
 function formatCaseDisplayName(caseData: StoredCase): string {
   const trimmedName = (caseData.name ?? "").trim();
   if (trimmedName.length > 0) {
@@ -22,28 +34,99 @@ function formatCaseDisplayName(caseData: StoredCase): string {
   return "Unknown Case";
 }
 
+/**
+ * Configuration for CaseService initialization.
+ * @interface CaseServiceConfig
+ */
 interface CaseServiceConfig {
+  /** File storage service for reading/writing case data */
   fileStorage: FileStorageService;
 }
 
 /**
- * CaseService - Handles all case CRUD operations
+ * CaseService - Case CRUD operations and lifecycle management
  * 
- * Works directly with normalized v2.0 data format:
- * - Cases stored as StoredCase[] (without nested financials/notes)
- * - Financials and notes stored in separate arrays
+ * This service handles all case-related operations in the normalized v2.0 format.
+ * It maintains the separation between cases, financials, and notes using foreign
+ * key references instead of nested structures.
  * 
- * Responsibilities:
- * - Read operations: getAllCases, getCaseById, getCasesCount
- * - Create/Update/Delete operations: createCompleteCase, updateCompleteCase, updateCaseStatus, deleteCase
- * - Bulk operations: importCases, clearAllData
- * - Maintain case timestamps and metadata
+ * ## Architecture
  * 
- * Pattern: read → modify → write (file system is single source of truth)
+ * ```
+ * CaseService
+ *     ↓
+ * FileStorageService (read/write operations)
+ *     ↓
+ * AutosaveFileService (file I/O)
+ * ```
+ * 
+ * ## Data Format
+ * 
+ * Cases are stored in a flat array without nested relations:
+ * 
+ * ```typescript
+ * {
+ *   id: string,
+ *   person: PersonData,
+ *   caseRecord: CaseRecordData,
+ *   createdAt: string,
+ *   updatedAt: string,
+ *   name: string  // Generated display name
+ * }
+ * ```
+ * 
+ * Financials and notes reference cases by `caseId` foreign key.
+ * 
+ * ## Core Responsibilities
+ * 
+ * ### Read Operations
+ * - Get all cases
+ * - Get case by ID
+ * - Get case count
+ * 
+ * ### Write Operations
+ * - Create complete case (person + case record)
+ * - Update complete case
+ * - Update case status
+ * - Delete single case
+ * - Bulk delete cases
+ * - Bulk status updates
+ * - Bulk priority updates
+ * 
+ * ### Bulk Operations
+ * - Import multiple cases
+ * - Clear all data
+ * 
+ * ### Activity Logging
+ * - Logs all case modifications to activity log
+ * - Tracks status changes
+ * - Tracks priority changes
+ * - Tracks deletions
+ * 
+ * ## Pattern: Read → Modify → Write
+ * 
+ * All operations follow the stateless pattern:
+ * 1. Read current data from file
+ * 2. Modify data in memory
+ * 3. Write updated data back to file
+ * 4. Return updated entity
+ * 
+ * No data is cached - file system is single source of truth.
+ * 
+ * @class CaseService
+ * @see {@link FileStorageService} for underlying storage operations
+ * @see {@link ActivityLogService} for activity logging
  */
 export class CaseService {
+  /** File storage service for data persistence */
   private fileStorage: FileStorageService;
 
+  /**
+   * Create a new CaseService instance.
+   * 
+   * @param {CaseServiceConfig} config - Configuration object
+   * @param {FileStorageService} config.fileStorage - File storage service instance
+   */
   constructor(config: CaseServiceConfig) {
     this.fileStorage = config.fileStorage;
   }
@@ -53,7 +136,15 @@ export class CaseService {
   // =============================================================================
 
   /**
-   * Get all cases (always reads fresh from file)
+   * Get all cases from the file system.
+   * 
+   * Always reads fresh data from disk - no caching.
+   * Returns cases in normalized format without nested financials or notes.
+   * 
+   * @returns {Promise<StoredCase[]>} Array of all cases, or empty array if no data
+   * @example
+   * const cases = await caseService.getAllCases();
+   * console.log(`Found ${cases.length} cases`);
    */
   async getAllCases(): Promise<StoredCase[]> {
     const data = await this.fileStorage.readFileData();
@@ -61,7 +152,17 @@ export class CaseService {
   }
 
   /**
-   * Get a specific case by ID (always reads fresh from file)
+   * Get a specific case by its ID.
+   * 
+   * Always reads fresh data from disk.
+   * 
+   * @param {string} caseId - The unique identifier of the case
+   * @returns {Promise<StoredCase | null>} The case if found, null otherwise
+   * @example
+   * const case = await caseService.getCaseById("abc-123");
+   * if (case) {
+   *   console.log(`Case: ${case.name}`);
+   * }
    */
   async getCaseById(caseId: string): Promise<StoredCase | null> {
     const data = await this.fileStorage.readFileData();
@@ -71,7 +172,9 @@ export class CaseService {
   }
 
   /**
-   * Get cases count (always reads fresh from file)
+   * Get the total count of cases.
+   * 
+   * @returns {Promise<number>} Number of cases in the system
    */
   async getCasesCount(): Promise<number> {
     const data = await this.fileStorage.readFileData();
@@ -83,8 +186,46 @@ export class CaseService {
   // =============================================================================
 
   /**
-   * Create a new complete case
-   * Pattern: read → modify → write
+   * Create a new complete case with person and case record data.
+   * 
+   * This method:
+   * 1. Reads current data from file
+   * 2. Generates UUIDs for case, person, and case record
+   * 3. Creates a complete StoredCase object with all required fields
+   * 4. Adds to cases array
+   * 5. Updates timestamps
+   * 6. Writes back to file
+   * 7. Returns the created case
+   * 
+   * **Pattern:** Read → Modify → Write
+   * 
+   * The created case is in normalized format without nested financials or notes.
+   * Financials and notes must be added separately using their respective services.
+   * 
+   * @param {Object} caseData - The case data
+   * @param {NewPersonData} caseData.person - Person information
+   * @param {NewCaseRecordData} caseData.caseRecord - Case record information
+   * @returns {Promise<StoredCase>} The created case
+   * @throws {Error} If failed to read current data
+   * 
+   * @example
+   * const newCase = await caseService.createCompleteCase({
+   *   person: {
+   *     firstName: "John",
+   *     lastName: "Doe",
+   *     email: "john@example.com",
+   *     phone: "555-1234",
+   *     dateOfBirth: "1990-01-01",
+   *     status: "Active",
+   *     address: { street: "123 Main St", city: "Anytown", state: "CA", zip: "12345" }
+   *   },
+   *   caseRecord: {
+   *     mcn: "12345",
+   *     status: "Active",
+   *     applicationDate: new Date().toISOString(),
+   *     caseType: "Medical Assistance"
+   *   }
+   * });
    */
   async createCompleteCase(caseData: { person: NewPersonData; caseRecord: NewCaseRecordData }): Promise<StoredCase> {
     // Read current data
@@ -191,8 +332,37 @@ export class CaseService {
   }
 
   /**
-   * Update an existing complete case
-   * Pattern: read → modify → write
+   * Update an existing complete case.
+   * 
+   * This method:
+   * 1. Reads current data from file
+   * 2. Finds the case to update
+   * 3. Updates person and case record data
+   * 4. Maintains existing metadata (IDs, creation dates)
+   * 5. Updates timestamps
+   * 6. Writes back to file
+   * 7. Returns the updated case
+   * 
+   * **Pattern:** Read → Modify → Write
+   * 
+   * @param {string} caseId - The ID of the case to update
+   * @param {Object} caseData - The updated case data
+   * @param {NewPersonData} caseData.person - Updated person information
+   * @param {NewCaseRecordData} caseData.caseRecord - Updated case record information
+   * @returns {Promise<StoredCase>} The updated case
+   * @throws {Error} If failed to read current data or case not found
+   * 
+   * @example
+   * const updated = await caseService.updateCompleteCase(caseId, {
+   *   person: {
+   *     ...existingPerson,
+   *     phone: "555-9999"  // Update phone
+   *   },
+   *   caseRecord: {
+   *     ...existingRecord,
+   *     status: "Pending"  // Update status
+   *   }
+   * });
    */
   async updateCompleteCase(caseId: string, caseData: { person: NewPersonData; caseRecord: NewCaseRecordData }): Promise<StoredCase> {
     // Read current data
@@ -294,9 +464,30 @@ export class CaseService {
   }
 
   /**
-   * Update case status
-   * Pattern: read → modify → write
-   * Includes activity log entry for status changes
+   * Update the status of a case.
+   * 
+   * This method:
+   * 1. Reads current data from file
+   * 2. Finds the case to update
+   * 3. Updates case status if different from current
+   * 4. Creates activity log entry for the status change
+   * 5. Updates timestamps
+   * 6. Writes back to file
+   * 7. Returns the updated case
+   * 
+   * **Pattern:** Read → Modify → Write
+   * 
+   * Activity logging tracks the status change with from/to values.
+   * If the status is already the target value, returns the case unchanged.
+   * 
+   * @param {string} caseId - The ID of the case to update
+   * @param {CaseStatus} status - The new status value
+   * @returns {Promise<StoredCase>} The updated case
+   * @throws {Error} If failed to read current data or case not found
+   * 
+   * @example
+   * const updated = await caseService.updateCaseStatus(caseId, "Approved");
+   * console.log(`Status changed to ${updated.status}`);
    */
   async updateCaseStatus(caseId: string, status: CaseStatus): Promise<StoredCase> {
     const currentData = await this.fileStorage.readFileData();
@@ -366,9 +557,29 @@ export class CaseService {
   // =============================================================================
 
   /**
-   * Delete a case
-   * Pattern: read → modify → write
-   * Also removes associated financials and notes
+   * Delete a case and all its associated data.
+   * 
+   * This method:
+   * 1. Reads current data from file
+   * 2. Verifies case exists
+   * 3. Removes case from cases array
+   * 4. Removes all associated financials (by caseId)
+   * 5. Removes all associated notes (by caseId)
+   * 6. Removes all associated alerts (by caseId)
+   * 7. Writes back to file
+   * 
+   * **Pattern:** Read → Modify → Write
+   * 
+   * **Warning:** This operation is permanent and cannot be undone.
+   * All related data (financials, notes, alerts) is also deleted.
+   * 
+   * @param {string} caseId - The ID of the case to delete
+   * @returns {Promise<void>}
+   * @throws {Error} If failed to read current data or case not found
+   * 
+   * @example
+   * await caseService.deleteCase(caseId);
+   * console.log('Case and all associated data deleted');
    */
   async deleteCase(caseId: string): Promise<void> {
     // Read current data
@@ -397,9 +608,25 @@ export class CaseService {
   }
 
   /**
-   * Delete multiple cases at once
-   * Pattern: read → modify → write (single operation for efficiency)
-   * Also removes associated financials and notes for all deleted cases
+   * Delete multiple cases at once.
+   * 
+   * This is a batch delete operation that removes multiple cases and their
+   * associated data (financials, notes, alerts) in a single file operation
+   * for better performance.
+   * 
+   * **Pattern:** Read → Modify → Write (single operation)
+   * 
+   * **Warning:** This operation is permanent and cannot be undone.
+   * 
+   * @param {string[]} caseIds - Array of case IDs to delete
+   * @returns {Promise<{deleted: number, notFound: string[]}>} Result with count and missing IDs
+   * 
+   * @example
+   * const result = await caseService.deleteCases([id1, id2, id3]);
+   * console.log(`Deleted ${result.deleted} cases`);
+   * if (result.notFound.length > 0) {
+   *   console.log(`Not found: ${result.notFound.join(', ')}`);
+   * }
    */
   async deleteCases(caseIds: string[]): Promise<{ deleted: number; notFound: string[] }> {
     if (caseIds.length === 0) {
@@ -436,9 +663,29 @@ export class CaseService {
   }
 
   /**
-   * Update status for multiple cases at once
-   * Pattern: read → modify → write (single operation for efficiency)
-   * Creates activity log entries for each status change
+   * Update status for multiple cases at once.
+   * 
+   * This is a batch status update operation that:
+   * 1. Updates multiple case statuses in a single file operation
+   * 2. Creates activity log entries for each status change
+   * 3. Only updates cases whose status differs from the target
+   * 4. Tracks which IDs don't exist
+   * 
+   * **Pattern:** Read → Modify → Write (single operation)
+   * 
+   * More efficient than calling updateCaseStatus() multiple times as it
+   * only performs one file read and one file write.
+   * 
+   * @param {string[]} caseIds - Array of case IDs to update
+   * @param {CaseStatus} status - The new status to apply
+   * @returns {Promise<{updated: StoredCase[], notFound: string[]}>} Result with updated cases and missing IDs
+   * 
+   * @example
+   * const result = await caseService.updateCasesStatus([id1, id2, id3], "Approved");
+   * console.log(`Updated ${result.updated.length} cases`);
+   * if (result.notFound.length > 0) {
+   *   console.log(`Not found: ${result.notFound.join(', ')}`);
+   * }
    */
   async updateCasesStatus(caseIds: string[], status: CaseStatus): Promise<{ updated: StoredCase[]; notFound: string[] }> {
     if (caseIds.length === 0) {
@@ -525,9 +772,26 @@ export class CaseService {
   }
 
   /**
-   * Update priority for multiple cases at once
-   * Pattern: read → modify → write (single operation for efficiency)
-   * Creates activity log entries for each priority change
+   * Update priority flag for multiple cases at once.
+   * 
+   * This is a batch priority update operation that:
+   * 1. Updates multiple case priority flags in a single file operation
+   * 2. Creates activity log entries for each priority change
+   * 3. Only updates cases whose priority differs from the target
+   * 4. Tracks which IDs don't exist
+   * 
+   * **Pattern:** Read → Modify → Write (single operation)
+   * 
+   * Priority is a boolean flag indicating whether a case requires immediate attention.
+   * More efficient than calling individual updates as it performs one file read/write.
+   * 
+   * @param {string[]} caseIds - Array of case IDs to update
+   * @param {boolean} priority - The priority flag to set (true = priority case)
+   * @returns {Promise<{updated: StoredCase[], notFound: string[]}>} Result with updated cases and missing IDs
+   * 
+   * @example
+   * const result = await caseService.updateCasesPriority([id1, id2], true);
+   * console.log(`Marked ${result.updated.length} cases as priority`);
    */
   async updateCasesPriority(caseIds: string[], priority: boolean): Promise<{ updated: StoredCase[]; notFound: string[] }> {
     if (caseIds.length === 0) {
@@ -618,10 +882,32 @@ export class CaseService {
   // =============================================================================
 
   /**
-   * Import multiple cases at once
-   * Pattern: read → modify → write (single operation)
-   * Strategy: Preserve existing cases; skip incoming duplicates by ID
-   * Note: Imported cases should be StoredCase format (no nested financials/notes)
+   * Import multiple cases at once.
+   * 
+   * This method:
+   * 1. Reads current data
+   * 2. Validates incoming cases
+   * 3. Filters out cases with duplicate IDs (preserves existing)
+   * 4. Generates IDs for cases without them
+   * 5. Updates timestamps
+   * 6. Combines with existing cases
+   * 7. Writes back to file
+   * 
+   * **Pattern:** Read → Modify → Write (single operation)
+   * 
+   * **Strategy:** Preserve existing cases; skip incoming duplicates by ID
+   * 
+   * **Note:** Imported cases should be in StoredCase format (normalized, 
+   * without nested financials/notes). Financials and notes must be
+   * imported separately.
+   * 
+   * @param {StoredCase[]} cases - Array of cases to import in normalized format
+   * @returns {Promise<void>}
+   * @throws {Error} If failed to read current data
+   * 
+   * @example
+   * await caseService.importCases(importedCases);
+   * console.log('Cases imported successfully');
    */
   async importCases(cases: StoredCase[]): Promise<void> {
     // Read current data
@@ -673,8 +959,29 @@ export class CaseService {
   }
 
   /**
-   * Clear all data
-   * Pattern: write empty structure
+   * Clear all data from the system.
+   * 
+   * This destructive operation:
+   * 1. Removes all cases
+   * 2. Removes all financials
+   * 3. Removes all notes
+   * 4. Removes all alerts
+   * 5. Clears activity log
+   * 6. Preserves category configuration
+   * 7. Writes empty structure to file
+   * 
+   * **Pattern:** Write empty structure
+   * 
+   * **Warning:** This operation is permanent and cannot be undone.
+   * Only category configuration is preserved.
+   * 
+   * @param {CategoryConfig} categoryConfig - The category config to preserve
+   * @returns {Promise<void>}
+   * 
+   * @example
+   * const config = await getCurrentCategoryConfig();
+   * await caseService.clearAllData(config);
+   * console.log('All data cleared, configuration preserved');
    */
   async clearAllData(categoryConfig: CategoryConfig): Promise<void> {
     const emptyData: NormalizedFileData = {
