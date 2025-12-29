@@ -133,7 +133,9 @@ export function useNavigationActions({
     try {
       // Pass selectedCaseId if editing, otherwise omit for create
       const editingCaseId = !showNewCaseModal ? state.selectedCaseId ?? undefined : undefined;
-      const savedCase = await saveCase(caseData, editingCaseId);
+      const savedCase = editingCaseId !== undefined 
+        ? await saveCase(caseData, editingCaseId)
+        : await saveCase(caseData);
       if (!isMounted.current) return;
       
       // Close modal if open
