@@ -9,15 +9,15 @@
 
 ## Quick Reference
 
-| Area | Standard | Threshold | Frequency |
-|------|----------|-----------|-----------|
-| **Tests** | 534+ tests passing | 100% | Pre-commit |
-| **Build** | TypeScript + Vite | Zero errors | Pre-commit |
-| **Coverage** | Critical paths tested | ≥80% | Weekly |
-| **Performance** | Core metrics tracked | Baseline + 10% | Monthly |
-| **Accessibility** | jest-axe violations | Zero critical | Per PR |
-| **Security** | OWASP Top 10 | No high/critical | Monthly |
-| **Documentation** | JSDoc + feature catalogue | 85%+ code | Release |
+| Area              | Standard                  | Threshold        | Frequency  |
+| ----------------- | ------------------------- | ---------------- | ---------- |
+| **Tests**         | 534+ tests passing        | 100%             | Pre-commit |
+| **Build**         | TypeScript + Vite         | Zero errors      | Pre-commit |
+| **Coverage**      | Critical paths tested     | ≥80%             | Weekly     |
+| **Performance**   | Core metrics tracked      | Baseline + 10%   | Monthly    |
+| **Accessibility** | jest-axe violations       | Zero critical    | Per PR     |
+| **Security**      | OWASP Top 10              | No high/critical | Monthly    |
+| **Documentation** | JSDoc + feature catalogue | 85%+ code        | Release    |
 
 ---
 
@@ -26,22 +26,27 @@
 Before pushing any code, verify:
 
 ### 1.1 TypeScript Compilation
+
 ```bash
 npm run build
 ```
+
 - **Standard:** Zero TypeScript errors
 - **Check:** Compiler output shows no `error TS` messages
 - **Action:** Fix all errors before committing
 
 ### 1.2 Test Suite
+
 ```bash
 npm run test
 ```
+
 - **Standard:** All 534+ tests pass
 - **Check:** Output shows `Test Files X passed (Y)` with no failures
 - **Action:** Fix failing tests; skip only with documented reason
 
 ### 1.3 Code Quality
+
 - **JSDoc Coverage:** Every exported function/class has JSDoc
 - **Type Safety:** No `any` types unless documented
 - **Imports:** No unused imports; all dependencies are listed
@@ -56,6 +61,7 @@ npm run test
 **Rule:** All code follows established patterns in `copilot-instructions.md`
 
 Verify:
+
 - ✅ Services are stateless (no instance variables holding data)
 - ✅ All mutations go through `DataManager`
 - ✅ No direct file system calls outside `FileStorageService`
@@ -70,6 +76,7 @@ Verify:
 **Rule:** Data flows in one direction: FileSystem → DataManager → Services → Contexts → Hooks → Components
 
 Verify:
+
 - ✅ Components don't mutate state directly
 - ✅ No bidirectional dependencies between layers
 - ✅ All async operations use `useCallback` or memoization
@@ -77,6 +84,7 @@ Verify:
 - ✅ Autosave is never bypassed
 
 **Red Flags:**
+
 - 🚩 Direct `useState` mutations without service calls
 - 🚩 Circular imports between modules
 - 🚩 Props drilling more than 3 levels
@@ -93,6 +101,7 @@ Verify:
 - [ ] Edge cases are tested (null, empty, large datasets)
 
 **Minimum Coverage:**
+
 - Critical paths: ≥90%
 - UI components: ≥80%
 - Utilities: ≥85%
@@ -121,6 +130,7 @@ npm run test -- --reporter=verbose 2>&1 | grep -i "violations"
 ```
 
 Every component must pass:
+
 ```typescript
 const results = await axe(container);
 expect(results).toHaveNoViolations();
@@ -161,6 +171,7 @@ npm run build
 ```
 
 Check console output:
+
 - **JS Bundle Size:** Track growth; flag if >10% increase
 - **CSS Bundle Size:** Should stay under 150KB gzipped
 - **Asset Count:** Minimize HTTP requests
@@ -190,6 +201,7 @@ For key features, measure:
 - **Autosave Trigger:** < 100ms debounce + write time
 
 **Tools:**
+
 - Chrome DevTools Performance tab
 - `performanceTracker` utility in codebase
 - `telemetryCollector` for real-world metrics
@@ -243,13 +255,13 @@ npm audit
 
 **Feature Scoring Model** (from feature-catalogue.md)
 
-| Score | Criteria | Examples |
-|-------|----------|----------|
-| **95–100** | Near-ideal; only incremental gains remain | _Reserved for exceptional maturity_ |
-| **85–94** | Advanced, polished; fine-tuning or edge cases | Case Management (92), Local Storage (90) |
-| **70–84** | Solid implementation; clear improvements outstanding | Dashboard (70), Autosave (74) |
-| **50–69** | Core capability present but fragile/incomplete | _Avoid in production_ |
-| **0–49** | Foundational gaps; not marketable | _Do not release_ |
+| Score      | Criteria                                             | Examples                                 |
+| ---------- | ---------------------------------------------------- | ---------------------------------------- |
+| **95–100** | Near-ideal; only incremental gains remain            | _Reserved for exceptional maturity_      |
+| **85–94**  | Advanced, polished; fine-tuning or edge cases        | Case Management (92), Local Storage (90) |
+| **70–84**  | Solid implementation; clear improvements outstanding | Dashboard (70), Autosave (74)            |
+| **50–69**  | Core capability present but fragile/incomplete       | _Avoid in production_                    |
+| **0–49**   | Foundational gaps; not marketable                    | _Do not release_                         |
 
 ### 6.1 Quality Audit Process
 
@@ -280,6 +292,7 @@ All features in critical user workflows must score ≥80:
 Before releasing to production:
 
 ### 7.1 Code Quality ✅
+
 - [ ] All tests passing (534+)
 - [ ] TypeScript compilation zero errors
 - [ ] No console warnings in browser dev tools
@@ -287,6 +300,7 @@ Before releasing to production:
 - [ ] JSDoc coverage ≥85%
 
 ### 7.2 Documentation ✅
+
 - [ ] Feature catalogue updated
 - [ ] Release notes written
 - [ ] Breaking changes documented
@@ -294,6 +308,7 @@ Before releasing to production:
 - [ ] Upgrade guide created (if needed)
 
 ### 7.3 Performance ✅
+
 - [ ] Build completes in <30 seconds
 - [ ] JS bundle <500KB gzipped
 - [ ] Critical paths measured (all <3s)
@@ -301,6 +316,7 @@ Before releasing to production:
 - [ ] No memory leaks in extended testing
 
 ### 7.4 Security ✅
+
 - [ ] npm audit shows no high/critical vulnerabilities
 - [ ] Encryption implementation verified
 - [ ] Input validation comprehensive
@@ -308,6 +324,7 @@ Before releasing to production:
 - [ ] Error messages don't leak information
 
 ### 7.5 Accessibility ✅
+
 - [ ] jest-axe reports zero violations
 - [ ] Keyboard navigation tested
 - [ ] Screen reader tested (NVDA or VoiceOver)
@@ -315,6 +332,7 @@ Before releasing to production:
 - [ ] All interactive elements properly labeled
 
 ### 7.6 User Testing ✅
+
 - [ ] Feature tested with real users (if applicable)
 - [ ] Edge cases handled gracefully
 - [ ] Error messages are clear
@@ -325,15 +343,15 @@ Before releasing to production:
 
 ## 8. Audit Frequency & Responsibility
 
-| Audit Type | Frequency | Owner | Tools |
-|-----------|-----------|-------|-------|
-| Pre-commit | Per push | Developer | `npm run build test` |
-| Code Review | Per PR | Reviewer | GitHub + Static Analysis |
-| Accessibility | Per PR | Reviewer | jest-axe + Manual Testing |
-| Performance | Monthly | Tech Lead | Lighthouse + DevTools |
-| Security | Monthly | Tech Lead | npm audit + OWASP checklist |
-| Quality Scoring | Quarterly | Product | Feature Catalogue |
-| Release Readiness | Before release | Team | Full checklist above |
+| Audit Type        | Frequency      | Owner     | Tools                       |
+| ----------------- | -------------- | --------- | --------------------------- |
+| Pre-commit        | Per push       | Developer | `npm run build test`        |
+| Code Review       | Per PR         | Reviewer  | GitHub + Static Analysis    |
+| Accessibility     | Per PR         | Reviewer  | jest-axe + Manual Testing   |
+| Performance       | Monthly        | Tech Lead | Lighthouse + DevTools       |
+| Security          | Monthly        | Tech Lead | npm audit + OWASP checklist |
+| Quality Scoring   | Quarterly      | Product   | Feature Catalogue           |
+| Release Readiness | Before release | Team      | Full checklist above        |
 
 ---
 
@@ -362,6 +380,7 @@ Every quarter:
 ### 9.3 Incident Log
 
 Maintain a log of:
+
 - Security vulnerabilities found and fixed
 - Performance incidents and root causes
 - Accessibility issues reported
@@ -373,12 +392,14 @@ Maintain a log of:
 ## 10. References & Tools
 
 ### Documentation
+
 - [copilot-instructions.md](./.github/copilot-instructions.md) — Architecture patterns
 - [feature-catalogue.md](./feature-catalogue.md) — Quality scoring model
 - [testing-infrastructure.md](./testing-infrastructure.md) — Test setup and patterns
 - [JSDOC_ROLLOUT_PROGRESS.md](./JSDOC_ROLLOUT_PROGRESS.md) — Documentation coverage
 
 ### Tools
+
 - **Testing:** Vitest + React Testing Library + jest-axe
 - **Linting:** ESLint (configured in `eslint.config.js`)
 - **Performance:** Chrome DevTools Lighthouse
