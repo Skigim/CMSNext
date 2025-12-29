@@ -1,7 +1,42 @@
 import Papa from "papaparse";
 
+/**
+ * CSV Parsing Utilities
+ * ====================
+ * Robust CSV parsing with PapaParse for handling file imports and data loading.
+ * Handles header extraction, empty line removal, and data normalization.
+ * 
+ * ## Features
+ * 
+ * - **Header Detection**: Automatically extracts and trims header row
+ * - **Data Normalization**: Ensures all values are strings, replaces null with empty strings
+ * - **Empty Line Removal**: Skips empty rows with "greedy" strategy
+ * - **Error Logging**: Logs parsing errors to console for debugging
+ * - **Type Safety**: Returns typed row objects with string values
+ * 
+ * ## Usage Example
+ * 
+ * ```typescript
+ * const csv = "Name,Email\\nJohn,john@example.com\\nJane,jane@example.com";
+ * const rows = parseCsv(csv);
+ * // [{ Name: "John", Email: "john@example.com" }, ...]
+ * ```
+ * 
+ * @module csvParser
+ */
+
 export type ParsedCsvRow = Record<string, string>;
 
+/**
+ * Parse CSV text into typed row objects.
+ * 
+ * Uses PapaParse with header detection. Headers are trimmed of whitespace.
+ * All values are normalized to strings (null becomes empty string).
+ * Empty lines are skipped using "greedy" strategy.
+ * 
+ * @param {string} text - CSV text to parse (can be multi-line)
+ * @returns {ParsedCsvRow[]} Array of parsed rows as key-value objects
+ */
 export function parseCsv(text: string): ParsedCsvRow[] {
   if (!text.trim()) {
     return [];

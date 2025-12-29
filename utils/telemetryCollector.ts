@@ -1,6 +1,29 @@
 import { createLogger } from "./logger";
 
 /**
+ * Telemetry Collection Utilities
+ * ===============================
+ * Collects and manages non-sensitive telemetry events for usage analytics.
+ * Tracks user actions without capturing personal or financial data.
+ * 
+ * ## Event Types
+ * 
+ * - **Navigation**: Route changes and page views
+ * - **Actions**: User interactions like case creation, file operations
+ * - **Errors**: Application errors for debugging
+ * - **Performance**: Timing information for optimization
+ * 
+ * ## Privacy
+ * 
+ * - No personal data (names, emails, SSN, etc.)
+ * - No financial information
+ * - No sensitive medical records
+ * - Only aggregated event counts and timings
+ * 
+ * @module telemetryCollector
+ */
+
+/**
  * Telemetry event types that can be captured.
  * Represents key system events without PII or sensitive financial data.
  */

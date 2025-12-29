@@ -1,5 +1,22 @@
 import { toast } from 'sonner';
 
+/**
+ * Error Reporting Utilities
+ * =========================
+ * Captures and reports application errors with context.
+ * Provides structured error logging for debugging and monitoring.
+ * 
+ * ## Error Report Structure
+ * 
+ * - **ID**: Unique error identifier
+ * - **Timestamp**: When the error occurred
+ * - **Error Details**: Message, stack, type
+ * - **Context**: Additional context about the error
+ * - **User Action**: What user was doing when error occurred
+ * 
+ * @module errorReporting
+ */
+
 export interface ErrorReport {
   id: string;
   timestamp: string;

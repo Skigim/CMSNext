@@ -1,5 +1,25 @@
 import type { ResolvedShortcut, ShortcutConfig, ShortcutDefinition } from "@/types/keyboardShortcuts";
 
+/**
+ * Keyboard Shortcut Definitions and Resolution
+ * =============================================
+ * Defines built-in keyboard shortcuts and resolves shortcut bindings.
+ * Handles parsing, validation, and binding resolution for global shortcuts.
+ * 
+ * ## Shortcut Categories
+ * 
+ * - **Navigation**: Route navigation (Ctrl+G for chord, then D for Dashboard)
+ * - **Actions**: New case, focus search, toggle sidebar, etc.
+ * - **Help**: Show help and keyboard shortcut reference
+ * - **Utilities**: Paper cut capture, etc.
+ * 
+ * ## Platform Support
+ * 
+ * Automatically handles platform differences (Ctrl vs Cmd on Mac).
+ * 
+ * @module keyboardShortcuts
+ */
+
 export const DEFAULT_SHORTCUTS: ShortcutDefinition[] = [
   // Navigation (chord: ctrl+g then key)
   { id: "goToDashboard", label: "Go to Dashboard", category: "navigation", defaultBinding: "ctrl+g d", enabled: true },

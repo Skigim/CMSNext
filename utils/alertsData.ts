@@ -2,6 +2,43 @@ import Papa from "papaparse";
 
 import { CaseDisplay, AlertRecord, AlertWorkflowStatus, CaseStatus } from "../types/case";
 
+/**
+ * Alerts Data Utilities
+ * ====================
+ * Core alert processing and matching logic for the case tracking system.
+ * Handles alert parsing, matching to cases via MCN, and managing alert workflows.
+ * 
+ * ## Key Concepts
+ * 
+ * - **Alert Matching**: Matches alert MCNs to case data using fuzzy matching
+ * - **Match Status**: Tracks whether alerts are matched, unmatched, or missing MCN
+ * - **Workflow Status**: Manages alert resolution states (pending, resolved, ignored)
+ * - **Case Linking**: Creates skeleton cases for unmatched alerts when needed
+ * 
+ * ## Match Status Types
+ * 
+ * - **matched**: Alert MCN found in a case
+ * - **unmatched**: Alert has MCN but no matching case
+ * - **missing-mcn**: Alert has no medical certification number
+ * 
+ * ## Usage Example
+ * 
+ * ```typescript
+ * const alerts = [
+ *   { mcNumber: "12345", description: "Renewal", ... },
+ *   { mcNumber: "67890", description: "Update", ... }
+ * ];
+ * 
+ * const cases = await dataManager.getAllCases();
+ * const alertsWithMatches = matchAlertsToCase(cases, alerts);
+ * const summary = summarizeAlertMatching(cases, alerts);
+ * ```
+ * 
+ * @module alertsData
+ * @see {@link AlertWithMatch} for alert structure
+ * @see {@link CaseForAlertMatching} for case matching interface
+ */
+
 export type AlertMatchStatus = "matched" | "unmatched" | "missing-mcn";
 
 /**

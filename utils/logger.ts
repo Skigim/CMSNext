@@ -1,3 +1,26 @@
+/**
+ * Logging Utilities
+ * =================
+ * Centralized logging with configurable levels, optional call site tracking, and stack traces.
+ * Provides structured logging for debugging and diagnostics across the application.
+ * 
+ * ## Log Levels
+ * 
+ * - **debug**: Detailed development-level information
+ * - **info**: General informational messages
+ * - **warn**: Warning conditions and potential issues
+ * - **error**: Error conditions requiring attention
+ * 
+ * ## Features
+ * 
+ * - **Call Site Tracking**: Optional file:line attribution
+ * - **Stack Traces**: Optional full stack trace output
+ * - **Context Data**: Structured logging with additional context
+ * - **Named Loggers**: Create loggers with module names for filtering
+ * 
+ * @module logger
+ */
+
 type LogLevel = "debug" | "info" | "warn" | "error";
 
 type LogMethod = (message: string, context?: Record<string, unknown>, options?: LogOptions) => void;

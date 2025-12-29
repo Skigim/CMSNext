@@ -1,6 +1,22 @@
 import type { ShortcutConfig, ShortcutDefinition } from "@/types/keyboardShortcuts";
 import { DEFAULT_SHORTCUTS } from "@/utils/keyboardShortcuts";
 
+/**
+ * Keyboard Shortcut Storage Utilities
+ * ===================================
+ * Manages persistent storage and retrieval of keyboard shortcut configurations.
+ * Allows users to customize keyboard shortcuts with persistence across sessions.
+ * 
+ * ## Features
+ * 
+ * - **Load/Save**: Retrieve and persist shortcut configurations
+ * - **Defaults**: Fallback to default shortcuts if none saved
+ * - **Reset**: Clear custom shortcuts and restore defaults
+ * - **Validation**: Ensures shortcut definitions are valid
+ * 
+ * @module shortcutStorage
+ */
+
 const STORAGE_KEY = "keyboard-shortcuts";
 
 function hasLocalStorage(): boolean {

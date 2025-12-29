@@ -1,3 +1,26 @@
+/**
+ * File Storage Flags Utilities
+ * ============================
+ * Manages transient state flags for file storage operations.
+ * Tracks connection flow state, setup phases, and data baselines.
+ * 
+ * ## Flag Types
+ * 
+ * - **dataBaseline**: Whether initial data baseline has been established
+ * - **sessionHadData**: Whether session started with existing data
+ * - **inSetupPhase**: Whether user is in initial setup process
+ * - **inConnectionFlow**: Whether currently in file connection dialog
+ * 
+ * ## Architecture Note
+ * 
+ * This manages UI state flags separate from case data. Storage preferences
+ * (UI view mode, etc.) use localStorage intentionally - those are separate
+ * from case data managed by File Storage API. This does NOT violate "no
+ * localStorage for case data" guideline since UI preferences must persist.
+ * 
+ * @module fileStorageFlags
+ */
+
 const PERSISTENT_FLAG_KEYS = [] as const;
 type PersistentFlagKey = (typeof PERSISTENT_FLAG_KEYS)[number];
 type PersistentFlagsSnapshot = Pick<FileStorageFlags, PersistentFlagKey>;

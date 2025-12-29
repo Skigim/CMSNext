@@ -2,6 +2,23 @@ import { toast } from "sonner";
 
 import errorReporting from "./errorReporting";
 
+/**
+ * File Storage Error Reporting
+ * ============================
+ * Specialized error handling for file storage operations.
+ * Reports file system errors with appropriate user messaging.
+ * 
+ * ## Operations Tracked
+ * 
+ * - **connect**: Initial file system connection
+ * - **connectExisting**: Connect to existing files
+ * - **requestPermission**: Request file access permission
+ * - **write**: File write operations
+ * - **read**: File read operations
+ * 
+ * @module fileStorageErrorReporter
+ */
+
 export type FileStorageOperation =
   | "connect"
   | "connectExisting"

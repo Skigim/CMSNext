@@ -1,3 +1,19 @@
+/**
+ * File Service Provider
+ * ====================
+ * Centralized file service instance management with dependency injection.
+ * Provides a clean way to share the file service across modules without globals.
+ * 
+ * ## Architecture
+ * 
+ * - **Singleton Pattern**: One file service instance shared application-wide
+ * - **Lazy Initialization**: Service created on first use
+ * - **Type-Safe**: Properly typed through FileStorageContext
+ * - **No Globals**: Avoids window-based fallbacks
+ * 
+ * @module fileServiceProvider
+ */
+
 // Simple provider to share a file service instance across modules
 // Avoids window-based fallbacks and allows clean dependency injection.
 

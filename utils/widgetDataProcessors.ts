@@ -2,6 +2,44 @@ import { isAlertResolved, type AlertWithMatch } from '@/utils/alertsData';
 import type { StoredCase } from '@/types/case';
 import type { CaseActivityEntry } from '@/types/activityLog';
 
+/**
+ * Widget Data Processors
+ * =====================
+ * Statistical processing utilities for dashboard widgets.
+ * Generates metrics, breakdowns, and trend analysis from case and alert data.
+ * 
+ * ## Metrics Provided
+ * 
+ * - **Alert Stats**: Daily cleared counts, open/resolved counts by description
+ * - **Case Stats**: Processing counts by day, status breakdowns
+ * - **Trends**: Alert age analysis, processing time comparisons
+ * - **Activity**: Case processing activity with percentage calculations
+ * 
+ * ## Key Functions
+ * 
+ * - **getAlertStats**: Daily alert clearing activity
+ * - **getCaseStats**: Daily case processing volume
+ * - **getStatusBreakdown**: Case distribution by status
+ * - **getAlertDescriptionStats**: Alert summary by type/description
+ * - **getProcessingTimeStats**: Average time to complete cases
+ * 
+ * ## Usage Example
+ * 
+ * ```typescript
+ * const alerts = await dataManager.getAllAlerts();
+ * const cases = await dataManager.getAllCases();
+ * const activityLog = await dataManager.getActivityLog();
+ * 
+ * const statusBreakdown = getStatusBreakdown(cases);
+ * const alertStats = getAlertStats(alerts);
+ * const timeStats = getProcessingTimeStats(cases, activityLog);
+ * ```
+ * 
+ * @module widgetDataProcessors
+ * @see {@link AlertWithMatch} for alert structure
+ * @see {@link CaseActivityEntry} for activity log
+ */
+
 export interface DailyAlertStats {
   date: string;
   clearedCount: number;

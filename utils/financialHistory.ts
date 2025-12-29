@@ -2,6 +2,22 @@ import { v4 as uuidv4 } from "uuid";
 import type { AmountHistoryEntry, FinancialItem } from "@/types/case";
 
 /**
+ * Financial History Tracking Utilities
+ * ====================================
+ * Manages financial item amount history and change tracking.
+ * Records historical amounts for audit trails and trend analysis.
+ * 
+ * ## Features
+ * 
+ * - **Amount History**: Track changes to financial amounts over time
+ * - **Timestamps**: Record when each change occurred
+ * - **History Queries**: Get history for specific periods
+ * - **Change Detection**: Identify when amounts have been modified
+ * 
+ * @module financialHistory
+ */
+
+/**
  * Returns the first day of the given month as a date string (YYYY-MM-DD).
  * @param date The date to get the first of month for (defaults to current date)
  */

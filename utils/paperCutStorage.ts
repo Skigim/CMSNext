@@ -1,5 +1,21 @@
 import type { PaperCut } from "@/types/paperCut";
 
+/**
+ * Paper Cut Storage Utilities
+ * ===========================
+ * Manages persistent storage of paper cut screen captures.
+ * Stores screenshots locally for quick reference and UX feedback.
+ * 
+ * ## Features
+ * 
+ * - **Local Storage**: Persist paper cuts across sessions
+ * - **Retrieval**: Get saved paper cuts by ID or list all
+ * - **Cleanup**: Remove individual or all paper cuts
+ * - **Type Safety**: Fully typed paper cut objects
+ * 
+ * @module paperCutStorage
+ */
+
 const STORAGE_KEY = "papercuts";
 
 function hasLocalStorage(): boolean {

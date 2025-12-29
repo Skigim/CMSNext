@@ -1,3 +1,39 @@
+/**
+ * JSON Import Helper Utilities
+ * ============================
+ * Documentation and sample data for JSON import functionality.
+ * Provides examples and reference data for importing cases from JSON files.
+ * 
+ * ## Supported JSON Formats
+ * 
+ * - **Single Case**: Object with person and caseRecord
+ * - **Multiple Cases**: Array of case objects
+ * - **Nested Structure**: Flexible nesting for person info at root or nested
+ * 
+ * ## Key Fields
+ * 
+ * **Person Information:**
+ * - firstName, lastName (required)
+ * - email, phone, dateOfBirth, ssn
+ * - address (street, city, state, zipCode, county)
+ * - householdSize, maritalStatus, employmentStatus
+ * 
+ * **Case Record:**
+ * - mcn (medical certification number)
+ * - status, priority
+ * - applicationDate, admissionDate
+ * 
+ * ## Usage Example
+ * 
+ * ```typescript
+ * const sample = getSampleJsonStructure();
+ * const example = getJsonImportExample();
+ * const docs = getJsonImportDocumentation();
+ * ```
+ * 
+ * @module jsonImportHelper
+ */
+
 // Helper utilities and documentation for JSON import functionality
 
 export const getSampleJsonStructure = () => {

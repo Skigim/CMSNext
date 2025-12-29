@@ -1,5 +1,21 @@
 import { createLogger } from "./logger";
 
+/**
+ * Performance Tracking Utilities
+ * ==============================
+ * Measures and logs application performance metrics.
+ * Tracks operation duration, memory usage, and identifies performance bottlenecks.
+ * 
+ * ## Tracked Metrics
+ * 
+ * - **Operation Duration**: Time to complete operations
+ * - **Memory Usage**: Heap size and garbage collection impact
+ * - **Performance Warnings**: Alerts for slow operations
+ * - **Custom Details**: Application-specific metric details
+ * 
+ * @module performanceTracker
+ */
+
 interface MeasurementDetail {
   [key: string]: unknown;
 }
