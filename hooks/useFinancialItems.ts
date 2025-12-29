@@ -6,21 +6,6 @@ import { toast } from 'sonner';
 import { withToast } from '@/utils/withToast';
 
 /**
- * Modal state for financial item editor.
- * @interface FinancialModalState
- */
-interface FinancialModalState {
-  /** Modal visibility */
-  isOpen: boolean;
-  /** Currently editing item, or null if creating new */
-  editingItem: FinancialItem | null;
-  /** Case ID for the financial item */
-  caseId: string | null;
-  /** Category (resources, income, expenses) */
-  category: CaseCategory | null;
-}
-
-/**
  * Return type for useFinancialItems hook.
  * @interface UseFinancialItemsReturn
  */

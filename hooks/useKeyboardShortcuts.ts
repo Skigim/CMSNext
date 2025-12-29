@@ -212,32 +212,14 @@ function actionForShortcutId(id: string): ((opts: UseKeyboardShortcutsOptions) =
  * 
  * ## Usage Example
  * 
- * ```typescript
- * function AppLayout() {
- *   const navigate = useNavigate();
- *   const { openNewCaseForm } = useApp();
- *   
- *   const { chordPending, pendingModifier } = useKeyboardShortcuts({
- *     onNavigate: (path) => navigate(path),
- *     onNewCase: () => openNewCaseForm(),
- *     onFocusSearch: () => searchInput.focus(),
- *     onPaperCut: () => captureScreen(),
- *     onShowHelp: () => setHelpOpen(true),
- *     onToggleSidebar: () => setSidebarOpen(s => !s)
- *   });
- *   
- *   return (
- *     <div>
- *       {chordPending && (
- *         <div className="chord-hint">
- *           {pendingModifier} press next key...
- *         </div>
- *       )}
- *       {/* Rest of layout */}
- *     </div>
- *   );
- * }
- * ```
+ * Import the hook and pass callback handlers for each action.
+ * The hook returns chord state for UI feedback (showing pending modifier keys).
+ * 
+ * Usage patterns:
+ * - Register handlers in your layout component
+ * - Use chordPending and pendingModifier for UI hints
+ * - Handlers are called when shortcuts are activated
+ * - Shortcuts disabled when focused on input fields or contentEditable elements
  * 
  * ## Return Values
  * 

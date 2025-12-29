@@ -3,6 +3,19 @@ import { recordPerformanceMarker } from '@/utils/telemetryInstrumentation';
 import { useFileStorageDataChange } from '@/contexts/FileStorageContext';
 
 /**
+ * Configuration options for useWidgetData hook.
+ * @interface UseWidgetDataOptions
+ */
+interface UseWidgetDataOptions {
+  /** Auto-refresh period in milliseconds (default: 300000 = 5 minutes) */
+  refreshInterval?: number;
+  /** Enable performance tracking metrics (default: false) */
+  enablePerformanceTracking?: boolean;
+  /** Dependency value to trigger refetch when it changes (optional) */
+  refreshKey?: any;
+}
+
+/**
  * Hook for managing widget data fetching with auto-refresh and freshness tracking
  * 
  * Provides:
@@ -65,7 +78,11 @@ export function useWidgetData<T>(
   const [data, setData] = useState<T | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
-  const [freshness, setFreshness] = useState<WidgetDataFreshness>({
+  const [freshness, setFreshness] = useState<{
+    lastUpdatedAt: number | null;
+    isStale: boolean;
+    minutesAgo: number | null;
+  }>({
     lastUpdatedAt: null,
     isStale: true,
     minutesAgo: null,
