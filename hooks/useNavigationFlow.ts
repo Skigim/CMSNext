@@ -9,7 +9,8 @@ interface UseNavigationFlowParams {
   cases: StoredCase[];
   connectionState: FileStorageLifecycleSelectors;
   saveCase: (
-    caseData: { person: NewPersonData; caseRecord: NewCaseRecordData }
+    caseData: { person: NewPersonData; caseRecord: NewCaseRecordData },
+    editingCaseId?: string
   ) => Promise<StoredCase | undefined>;
   deleteCase: (caseId: string) => Promise<void>;
 }

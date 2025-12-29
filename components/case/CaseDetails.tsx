@@ -6,7 +6,7 @@ import { FinancialsGridView } from "./FinancialsGridView";
 import { NotesPopover } from "./NotesPopover";
 import { CaseIntakeScreen } from "./CaseIntakeScreen";
 import type { StoredCase, NewPersonData, NewCaseRecordData } from "../../types/case";
-import { ArrowLeft, Trash2, Wallet, BellRing, FileText, ClipboardCheck, Star, StarOff, Phone, Mail, Check, FileSignature } from "lucide-react";
+import { ArrowLeft, Trash2, Wallet, BellRing, FileText, ClipboardCheck, Star, StarOff, Phone, Mail, Check, FileSignature, Copy } from "lucide-react";
 import { withDataErrorBoundary } from "../error/ErrorBoundaryHOC";
 import { CaseStatusMenu } from "./CaseStatusMenu";
 import { cn, interactiveHoverClasses } from "../ui/utils";
@@ -20,6 +20,7 @@ import { useNotes } from "../../hooks/useNotes";
 import { useCategoryConfig } from "@/contexts/CategoryConfigContext";
 import { formatUSPhone } from "@/utils/phoneFormatter";
 import { formatDateForDisplay } from "@/utils/dateFormatting";
+import { clickToCopy } from "@/utils/clipboard";
 
 /**
  * Calculate 90 days from a date and format as tooltip text
@@ -90,6 +91,40 @@ export function CaseDetails({
     if (!onUpdatePriority) return;
     await onUpdatePriority([caseData.id], !caseData.priority);
   }, [onUpdatePriority, caseData.id, caseData.priority]);
+
+  const formatDateMMDDYYYY = useCallback((date: Date): string => {
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const day = String(date.getDate()).padStart(2, "0");
+    const year = date.getFullYear();
+    return `${month}/${day}/${year}`;
+  }, []);
+
+  const generateAVSNarrative = useCallback(() => {
+    const consentDateValue = caseData.caseRecord?.avsConsentDate;
+    const consentDateDisplay = consentDateValue ? formatDateForDisplay(consentDateValue) : "None";
+    const consentDate = consentDateDisplay !== "None" ? consentDateDisplay : "MM/DD/YYYY";
+
+    const today = new Date();
+    const submitDate = formatDateMMDDYYYY(today);
+
+    const fiveDay = new Date(today);
+    fiveDay.setDate(today.getDate() + 5);
+    const fiveDayDate = formatDateMMDDYYYY(fiveDay);
+
+    const elevenDay = new Date(today);
+    elevenDay.setDate(today.getDate() + 11);
+    const elevenDayDate = formatDateMMDDYYYY(elevenDay);
+
+    return `MLTC: AVS Submitted\nConsent Date: ${consentDate}\nSubmit Date: ${submitDate}\n5 Day: ${fiveDayDate}\n11 Day: ${elevenDayDate}`;
+  }, [caseData.caseRecord?.avsConsentDate, formatDateMMDDYYYY]);
+
+  const handleCopyAVSNarrative = useCallback(() => {
+    const narrative = generateAVSNarrative();
+    clickToCopy(narrative, {
+      successMessage: "AVS narrative copied to clipboard",
+      errorMessage: "Failed to copy narrative",
+    });
+  }, [generateAVSNarrative]);
 
   const [summaryModalOpen, setSummaryModalOpen] = useState(false);
   const [vrModalOpen, setVrModalOpen] = useState(false);
@@ -242,6 +277,15 @@ export function CaseDetails({
               </Button>
             )}
             <div className="w-px h-9 bg-border" />
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleCopyAVSNarrative}
+              className={interactiveHoverClasses}
+            >
+              <Copy className="w-4 h-4 mr-2" />
+              Copy AVS Narrative
+            </Button>
             <Button 
               variant="outline" 
               size="sm"

@@ -6,19 +6,133 @@ import { LegacyFormatError } from '@/utils/services/FileStorageService';
 
 const logger = createLogger('CaseOperationsService');
 
-/** Result type for service operations */
+/**
+ * Result type for service operations.
+ * 
+ * Provides a discriminated union for operation results with success/failure
+ * states and additional metadata for special cases (legacy format, abort).
+ * 
+ * @template T - The data type returned on success
+ */
 export type OperationResult<T> = 
   | { success: true; data: T }
   | { success: false; error: string; isLegacyFormat?: boolean; isAborted?: boolean };
 
 /**
- * Pure business logic service for case operations.
- * No React dependencies, no UI concerns (toasts, mounted checks).
- * Handles DataManager interactions, error handling, and logging.
+ * CaseOperationsService - UI-agnostic orchestration layer
+ * 
+ * This service provides a clean separation between UI components and the
+ * DataManager layer. It handles all case-related operations with consistent
+ * error handling, logging, and result formatting.
+ * 
+ * ## Architecture
+ * 
+ * ```
+ * React Components/Hooks
+ *     ↓
+ * CaseOperationsService (orchestration & error handling)
+ *     ↓
+ * DataManager (business logic)
+ *     ↓
+ * Domain Services (CaseService, NotesService, etc.)
+ * ```
+ * 
+ * ## Design Principles
+ * 
+ * ### UI-Agnostic
+ * - No React dependencies
+ * - No toast notifications
+ * - No component state management
+ * - Returns structured results for UI to handle
+ * 
+ * ### Consistent Error Handling
+ * - All methods return OperationResult<T>
+ * - Errors are caught, logged, and formatted
+ * - Special cases flagged (legacy format, abort)
+ * - User-friendly error messages
+ * 
+ * ### Logging & Observability
+ * - Logs all operations with context
+ * - Tracks success/failure rates
+ * - Records error details for debugging
+ * 
+ * ### File Storage Flag Management
+ * - Updates dataBaseline flag after successful loads
+ * - Sets sessionHadData flag when data exists
+ * - Manages connection flow state
+ * 
+ * ## Core Responsibilities
+ * 
+ * ### Case Operations
+ * - Load all cases
+ * - Save case (create or update)
+ * - Delete single case
+ * - Update case status
+ * - Import multiple cases
+ * 
+ * ### Bulk Operations
+ * - Delete multiple cases
+ * - Update status for multiple cases
+ * - Update priority for multiple cases
+ * 
+ * ### Note Operations
+ * - Save note (create or update)
+ * 
+ * ## Pattern: Result-Oriented Architecture
+ * 
+ * All methods follow a consistent pattern:
+ * 1. Try operation via DataManager
+ * 2. Log the operation (success or failure)
+ * 3. Update file storage flags if needed
+ * 4. Return OperationResult with data or error
+ * 5. Let caller handle UI feedback
+ * 
+ * ## Error Handling
+ * 
+ * Errors are categorized and handled appropriately:
+ * - **LegacyFormatError:** Flagged with isLegacyFormat=true
+ * - **AbortError:** Flagged with isAborted=true
+ * - **Other errors:** Logged with context, user-friendly message returned
+ * 
+ * @class CaseOperationsService
+ * @see {@link DataManager} for business logic layer
+ * @see {@link OperationResult} for result type structure
  */
 export class CaseOperationsService {
+  /**
+   * Create a new CaseOperationsService instance.
+   * 
+   * @param {DataManager} dataManager - The data manager instance for operations
+   */
   constructor(private dataManager: DataManager) {}
 
+  /**
+   * Load all cases from storage.
+   * 
+   * This method:
+   * 1. Loads all cases via DataManager
+   * 2. Updates file storage flags (dataBaseline, sessionHadData)
+   * 3. Checks for empty state outside connection flow
+   * 4. Handles legacy format errors
+   * 5. Returns structured result with data or error
+   * 
+   * **Special Handling:**
+   * - LegacyFormatError flagged with isLegacyFormat=true
+   * - Empty state outside connection flow flagged with isEmpty=true
+   * 
+   * @returns {Promise<OperationResult<StoredCase[]>>} Result with cases array or error
+   * 
+   * @example
+   * const result = await caseOps.loadCases();
+   * if (result.success) {
+   *   console.log(`Loaded ${result.data.length} cases`);
+   *   if ('isEmpty' in result && result.isEmpty) {
+   *     console.log('No data found');
+   *   }
+   * } else if (result.isLegacyFormat) {
+   *   console.error('Legacy format detected:', result.error);
+   * }
+   */
   async loadCases(): Promise<OperationResult<StoredCase[]>> {
     try {
       const data = await this.dataManager.getAllCases();
@@ -47,6 +161,28 @@ export class CaseOperationsService {
     }
   }
 
+  /**
+   * Save a case (create new or update existing).
+   * 
+   * Delegates to DataManager's createCompleteCase or updateCompleteCase
+   * based on whether editingCaseId is provided.
+   * 
+   * @param {Object} caseData - The case data
+   * @param {NewPersonData} caseData.person - Person information
+   * @param {NewCaseRecordData} caseData.caseRecord - Case record information
+   * @param {string} [editingCaseId] - ID of case to update (omit for create)
+   * @returns {Promise<OperationResult<StoredCase>>} Result with saved case or error
+   * 
+   * @example
+   * // Create new case
+   * const result = await caseOps.saveCase({
+   *   person: { firstName: "John", lastName: "Doe", ... },
+   *   caseRecord: { mcn: "12345", status: "Active", ... }
+   * });
+   * 
+   * // Update existing case
+   * const updateResult = await caseOps.saveCase(caseData, caseId);
+   */
   async saveCase(
     caseData: { person: NewPersonData; caseRecord: NewCaseRecordData },
     editingCaseId?: string
@@ -74,6 +210,21 @@ export class CaseOperationsService {
     }
   }
 
+  /**
+   * Delete a single case.
+   * 
+   * Delegates to DataManager's deleteCase which also removes associated
+   * financials, notes, and alerts.
+   * 
+   * @param {string} caseId - The ID of the case to delete
+   * @returns {Promise<OperationResult<void>>} Result with success or error
+   * 
+   * @example
+   * const result = await caseOps.deleteCase(caseId);
+   * if (result.success) {
+   *   console.log('Case deleted successfully');
+   * }
+   */
   async deleteCase(caseId: string): Promise<OperationResult<void>> {
     try {
       await this.dataManager.deleteCase(caseId);
@@ -87,6 +238,27 @@ export class CaseOperationsService {
     }
   }
 
+  /**
+   * Save a note (create new or update existing).
+   * 
+   * Delegates to DataManager's addNote or updateNote based on whether
+   * editingNoteId is provided.
+   * 
+   * @param {NewNoteData} noteData - The note data (content, category, etc.)
+   * @param {string} caseId - The ID of the case to add/update note for
+   * @param {string} [editingNoteId] - ID of note to update (omit for create)
+   * @returns {Promise<OperationResult<StoredNote>>} Result with saved note or error
+   * 
+   * @example
+   * // Add new note
+   * const result = await caseOps.saveNote(
+   *   { content: "Follow-up scheduled", category: "Contact" },
+   *   caseId
+   * );
+   * 
+   * // Update existing note
+   * const updateResult = await caseOps.saveNote(noteData, caseId, noteId);
+   */
   async saveNote(
     noteData: NewNoteData,
     caseId: string,
@@ -110,6 +282,26 @@ export class CaseOperationsService {
     }
   }
 
+  /**
+   * Update a case's status.
+   * 
+   * Delegates to DataManager's updateCaseStatus which creates an activity
+   * log entry for the status change.
+   * 
+   * **Special Handling:** AbortError (user cancelled) flagged with isAborted=true
+   * 
+   * @param {string} caseId - The ID of the case to update
+   * @param {CaseStatus} status - The new status value
+   * @returns {Promise<OperationResult<StoredCase>>} Result with updated case or error
+   * 
+   * @example
+   * const result = await caseOps.updateCaseStatus(caseId, "Approved");
+   * if (result.success) {
+   *   console.log('Status updated:', result.data.status);
+   * } else if (result.isAborted) {
+   *   console.log('User cancelled operation');
+   * }
+   */
   async updateCaseStatus(
     caseId: string,
     status: StoredCase["status"]
@@ -131,6 +323,21 @@ export class CaseOperationsService {
     }
   }
 
+  /**
+   * Import multiple cases at once.
+   * 
+   * Delegates to DataManager's importCases which handles deduplication
+   * (skips cases with existing IDs). Updates file storage flags on success.
+   * 
+   * @param {StoredCase[]} importedCases - Array of cases to import
+   * @returns {Promise<OperationResult<void>>} Result with success or error
+   * 
+   * @example
+   * const result = await caseOps.importCases(parsedCases);
+   * if (result.success) {
+   *   console.log('Cases imported successfully');
+   * }
+   */
   async importCases(importedCases: StoredCase[]): Promise<OperationResult<void>> {
     try {
       await this.dataManager.importCases(importedCases);
@@ -145,6 +352,25 @@ export class CaseOperationsService {
     }
   }
 
+  /**
+   * Delete multiple cases at once (bulk operation).
+   * 
+   * Delegates to DataManager's deleteCases which removes all cases and their
+   * associated data in a single operation.
+   * 
+   * @param {string[]} caseIds - Array of case IDs to delete
+   * @returns {Promise<OperationResult<{deleted: number, notFound: string[]}>>}
+   *   Result with deletion statistics or error
+   * 
+   * @example
+   * const result = await caseOps.deleteCases([id1, id2, id3]);
+   * if (result.success) {
+   *   console.log(`Deleted ${result.data.deleted} cases`);
+   *   if (result.data.notFound.length > 0) {
+   *     console.log(`Not found: ${result.data.notFound.length}`);
+   *   }
+   * }
+   */
   async deleteCases(caseIds: string[]): Promise<OperationResult<{ deleted: number; notFound: string[] }>> {
     try {
       const result = await this.dataManager.deleteCases(caseIds);
@@ -159,6 +385,23 @@ export class CaseOperationsService {
     }
   }
 
+  /**
+   * Update status for multiple cases at once (bulk operation).
+   * 
+   * Delegates to DataManager's updateCasesStatus which updates all cases
+   * and creates activity log entries in a single operation.
+   * 
+   * @param {string[]} caseIds - Array of case IDs to update
+   * @param {CaseStatus} status - The new status to apply to all cases
+   * @returns {Promise<OperationResult<{updated: StoredCase[], notFound: string[]}>>}
+   *   Result with update statistics or error
+   * 
+   * @example
+   * const result = await caseOps.updateCasesStatus([id1, id2, id3], "Pending");
+   * if (result.success) {
+   *   console.log(`Updated ${result.data.updated.length} cases`);
+   * }
+   */
   async updateCasesStatus(
     caseIds: string[],
     status: StoredCase["status"]
@@ -177,6 +420,23 @@ export class CaseOperationsService {
     }
   }
 
+  /**
+   * Update priority for multiple cases at once (bulk operation).
+   * 
+   * Delegates to DataManager's updateCasesPriority which updates all cases
+   * and creates activity log entries in a single operation.
+   * 
+   * @param {string[]} caseIds - Array of case IDs to update
+   * @param {boolean} priority - The priority flag to set (true = priority case)
+   * @returns {Promise<OperationResult<{updated: StoredCase[], notFound: string[]}>>}
+   *   Result with update statistics or error
+   * 
+   * @example
+   * const result = await caseOps.updateCasesPriority([id1, id2], true);
+   * if (result.success) {
+   *   console.log(`Marked ${result.data.updated.length} cases as priority`);
+   * }
+   */
   async updateCasesPriority(
     caseIds: string[],
     priority: boolean

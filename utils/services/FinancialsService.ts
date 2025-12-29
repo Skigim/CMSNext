@@ -7,36 +7,115 @@ import {
   getAmountForMonth,
 } from '../financialHistory';
 
+/**
+ * Configuration for FinancialsService initialization.
+ * @interface FinancialsServiceConfig
+ */
 interface FinancialsServiceConfig {
+  /** File storage service for reading/writing financial data */
   fileStorage: FileStorageService;
 }
 
 /**
- * FinancialsService - Handles all financial item CRUD operations
+ * FinancialsService - Financial item operations and amount history management
  * 
- * Works directly with normalized v2.0 data format:
- * - Financial items stored as flat array with caseId + category foreign keys
- * - No nested case structures
+ * This service handles all operations related to financial items (resources,
+ * income, expenses) in the normalized v2.0 format. Financial items are stored
+ * separately from cases with foreign key references.
  * 
- * Responsibilities:
- * - Add financial items (resources, income, expenses) to cases
+ * ## Architecture
+ * 
+ * ```
+ * FinancialsService
+ *     ↓
+ * FileStorageService (read/write operations)
+ *     ↓
+ * AutosaveFileService (file I/O)
+ * ```
+ * 
+ * ## Data Format
+ * 
+ * Financial items are stored in a flat array with foreign keys:
+ * 
+ * ```typescript
+ * {
+ *   id: string,
+ *   caseId: string,  // Foreign key to case
+ *   category: 'resources' | 'income' | 'expenses',
+ *   name: string,
+ *   amount: number,
+ *   amountHistory: AmountHistoryEntry[],  // Track changes over time
+ *   frequency: string,
+ *   verified: boolean,
+ *   createdAt: string,
+ *   updatedAt: string
+ * }
+ * ```
+ * 
+ * ## Core Responsibilities
+ * 
+ * ### CRUD Operations
+ * - Add financial items to cases
  * - Update existing financial items
  * - Delete financial items
- * - Get financial items for a case
- * - Maintain financial item timestamps and metadata
- * - Touch case timestamps on financial changes
+ * - Get items for a case (all or grouped by category)
  * 
- * Pattern: read → modify → write (file system is single source of truth)
+ * ### Amount History Management
+ * - Auto-create history entry when adding items with amounts
+ * - Add new history entries for amount changes
+ * - Update existing history entries
+ * - Delete history entries
+ * - Get amount for specific month
+ * 
+ * ### Data Integrity
+ * - Verify case exists before adding items
+ * - Update case timestamps when financials change
+ * - Maintain item timestamps (createdAt, updatedAt)
+ * 
+ * ### Migration Support
+ * - Migrate items without history to include initial entry
+ * 
+ * ## Pattern: Read → Modify → Write
+ * 
+ * All operations follow the stateless pattern:
+ * 1. Read current data from file
+ * 2. Modify data in memory
+ * 3. Update related timestamps
+ * 4. Write updated data back to file
+ * 5. Return updated entity
+ * 
+ * No data is cached - file system is single source of truth.
+ * 
+ * @class FinancialsService
+ * @see {@link FileStorageService} for underlying storage operations
+ * @see {@link financialHistory} for amount history utilities
  */
 export class FinancialsService {
+  /** File storage service for data persistence */
   private fileStorage: FileStorageService;
 
+  /**
+   * Create a new FinancialsService instance.
+   * 
+   * @param {FinancialsServiceConfig} config - Configuration object
+   * @param {FileStorageService} config.fileStorage - File storage service instance
+   */
   constructor(config: FinancialsServiceConfig) {
     this.fileStorage = config.fileStorage;
   }
 
   /**
-   * Get all financial items for a case
+   * Get all financial items for a specific case.
+   * 
+   * Returns items with caseId and category foreign keys in normalized format.
+   * Always reads fresh data from disk.
+   * 
+   * @param {string} caseId - The case ID to get financial items for
+   * @returns {Promise<StoredFinancialItem[]>} Array of financial items for the case
+   * 
+   * @example
+   * const items = await financialsService.getItemsForCase(caseId);
+   * console.log(`Case has ${items.length} financial items`);
    */
   async getItemsForCase(caseId: string): Promise<StoredFinancialItem[]> {
     const data = await this.fileStorage.readFileData();
@@ -47,7 +126,20 @@ export class FinancialsService {
   }
 
   /**
-   * Get financial items for a case grouped by category
+   * Get financial items for a case grouped by category.
+   * 
+   * Organizes items into three categories: resources, income, and expenses.
+   * Useful for displaying financials in categorized views.
+   * 
+   * @param {string} caseId - The case ID to get financial items for
+   * @returns {Promise<{resources: StoredFinancialItem[], income: StoredFinancialItem[], expenses: StoredFinancialItem[]}>}
+   *   Object with financial items grouped by category
+   * 
+   * @example
+   * const grouped = await financialsService.getItemsForCaseGrouped(caseId);
+   * console.log(`Resources: ${grouped.resources.length}`);
+   * console.log(`Income: ${grouped.income.length}`);
+   * console.log(`Expenses: ${grouped.expenses.length}`);
    */
   async getItemsForCaseGrouped(caseId: string): Promise<{
     resources: StoredFinancialItem[];
@@ -62,11 +154,37 @@ export class FinancialsService {
   }
 
   /**
-   * Add financial item to a case
-   * Pattern: read → modify → write
+   * Add a financial item to a case.
    * 
-   * If the item has an amount and no amountHistory is provided,
+   * This method:
+   * 1. Reads current data from file
+   * 2. Verifies case exists
+   * 3. Auto-creates amount history if amount provided but no history
+   * 4. Creates new item with foreign keys (caseId, category)
+   * 5. Adds to financials array
+   * 6. Updates case timestamp
+   * 7. Writes back to file
+   * 8. Returns the created item
+   * 
+   * **Pattern:** Read → Modify → Write
+   * 
+   * **Amount History:** If the item has an amount but no amountHistory is provided,
    * automatically creates a history entry starting from the first of the current month.
+   * 
+   * @param {string} caseId - The case ID to add the item to
+   * @param {CaseCategory} category - The category ('resources', 'income', or 'expenses')
+   * @param {Omit<FinancialItem, 'id' | 'createdAt' | 'updatedAt'>} itemData - The financial item data
+   * @returns {Promise<StoredFinancialItem>} The created financial item with caseId and category
+   * @throws {Error} If failed to read current data or case not found
+   * 
+   * @example
+   * const item = await financialsService.addItem(caseId, 'resources', {
+   *   name: "SNAP Benefits",
+   *   amount: 500,
+   *   frequency: "monthly",
+   *   verified: true
+   * });
+   * // Auto-creates amount history entry starting from current month
    */
   async addItem(
     caseId: string,
@@ -123,11 +241,38 @@ export class FinancialsService {
   }
 
   /**
-   * Update financial item
-   * Pattern: read → modify → write
+   * Update a financial item in a case.
    * 
-   * If the amount changes and no amountHistory update is provided,
-   * automatically creates a history entry starting from the first of the current month.
+   * This method:
+   * 1. Reads current data from file
+   * 2. Verifies case and item exist
+   * 3. Handles amount changes with automatic history management
+   * 4. Updates item with provided fields
+   * 5. Preserves ID, foreign keys, and creation timestamp
+   * 6. Updates case timestamp
+   * 7. Writes back to file
+   * 8. Returns the updated item
+   * 
+   * **Pattern:** Read → Modify → Write
+   * 
+   * **Amount History:** If the amount changes and no amountHistory update is provided,
+   * automatically creates a new history entry and closes previous ongoing entries.
+   * 
+   * @param {string} caseId - The case ID
+   * @param {CaseCategory} category - The category of the item
+   * @param {string} itemId - The ID of the item to update
+   * @param {Partial<FinancialItem>} updates - The fields to update
+   * @returns {Promise<StoredFinancialItem>} The updated financial item
+   * @throws {Error} If failed to read current data, case not found, or item not found
+   * 
+   * @example
+   * const updated = await financialsService.updateItem(
+   *   caseId,
+   *   'resources',
+   *   itemId,
+   *   { amount: 600, verified: true }
+   * );
+   * // Auto-creates new history entry and closes previous ones
    */
   async updateItem(
     caseId: string,
@@ -209,8 +354,28 @@ export class FinancialsService {
   }
 
   /**
-   * Delete financial item
-   * Pattern: read → modify → write
+   * Delete a financial item from a case.
+   * 
+   * This method:
+   * 1. Reads current data from file
+   * 2. Verifies case and item exist
+   * 3. Removes item from financials array
+   * 4. Updates case timestamp
+   * 5. Writes back to file
+   * 
+   * **Pattern:** Read → Modify → Write
+   * 
+   * **Warning:** This operation is permanent and cannot be undone.
+   * 
+   * @param {string} caseId - The case ID
+   * @param {CaseCategory} category - The category of the item
+   * @param {string} itemId - The ID of the item to delete
+   * @returns {Promise<void>}
+   * @throws {Error} If failed to read current data, case not found, or item not found
+   * 
+   * @example
+   * await financialsService.deleteItem(caseId, 'resources', itemId);
+   * console.log('Financial item deleted');
    */
   async deleteItem(caseId: string, category: CaseCategory, itemId: string): Promise<void> {
     // Read current data
@@ -252,7 +417,13 @@ export class FinancialsService {
   }
 
   /**
-   * Get the case data for a financial item (for backward compatibility)
+   * Get the case data for a financial item.
+   * 
+   * Helper method for backward compatibility.
+   * Returns the full case object associated with a financial item.
+   * 
+   * @param {string} caseId - The case ID
+   * @returns {Promise<StoredCase | null>} The case if found, null otherwise
    */
   async getCaseForItem(caseId: string): Promise<StoredCase | null> {
     const data = await this.fileStorage.readFileData();
@@ -264,7 +435,32 @@ export class FinancialsService {
 
   /**
    * Add a new amount history entry to a financial item.
-   * Auto-closes any previous ongoing entries.
+   * 
+   * Amount history tracks changes in the item's amount over time.
+   * This method automatically closes any previous ongoing entries
+   * (entries with no endDate) to maintain data integrity.
+   * 
+   * **Pattern:** Read → Modify → Write
+   * 
+   * @param {string} caseId - The case ID
+   * @param {CaseCategory} category - The category of the item
+   * @param {string} itemId - The ID of the financial item
+   * @param {Omit<AmountHistoryEntry, 'id' | 'createdAt'>} entry - The history entry data
+   * @returns {Promise<StoredFinancialItem>} The updated financial item with new history entry
+   * @throws {Error} If failed to read current data, case not found, or item not found
+   * 
+   * @example
+   * const updated = await financialsService.addAmountHistoryEntry(
+   *   caseId,
+   *   'resources',
+   *   itemId,
+   *   {
+   *     amount: 700,
+   *     startDate: '2024-01-01',
+   *     notes: 'Benefit increase'
+   *   }
+   * );
+   * // Previous ongoing entries are automatically closed
    */
   async addAmountHistoryEntry(
     caseId: string,
@@ -325,6 +521,28 @@ export class FinancialsService {
 
   /**
    * Update an existing amount history entry.
+   * 
+   * Modifies an existing history entry for a financial item.
+   * Recalculates the current amount based on the updated history.
+   * 
+   * **Pattern:** Read → Modify → Write
+   * 
+   * @param {string} caseId - The case ID
+   * @param {CaseCategory} category - The category of the item
+   * @param {string} itemId - The ID of the financial item
+   * @param {string} entryId - The ID of the history entry to update
+   * @param {Partial<Omit<AmountHistoryEntry, 'id' | 'createdAt'>>} updates - The fields to update
+   * @returns {Promise<StoredFinancialItem>} The updated financial item
+   * @throws {Error} If item or history entry not found
+   * 
+   * @example
+   * const updated = await financialsService.updateAmountHistoryEntry(
+   *   caseId,
+   *   'resources',
+   *   itemId,
+   *   entryId,
+   *   { amount: 750, notes: 'Corrected amount' }
+   * );
    */
   async updateAmountHistoryEntry(
     caseId: string,
@@ -391,7 +609,30 @@ export class FinancialsService {
   }
 
   /**
-   * Delete an amount history entry.
+   * Delete an amount history entry from a financial item.
+   * 
+   * Removes a history entry and recalculates the current amount.
+   * If no history entries remain after deletion, clears the amountHistory field.
+   * 
+   * **Pattern:** Read → Modify → Write
+   * 
+   * **Warning:** This operation is permanent and cannot be undone.
+   * 
+   * @param {string} caseId - The case ID
+   * @param {CaseCategory} category - The category of the item
+   * @param {string} itemId - The ID of the financial item
+   * @param {string} entryId - The ID of the history entry to delete
+   * @returns {Promise<StoredFinancialItem>} The updated financial item
+   * @throws {Error} If item or history entry not found
+   * 
+   * @example
+   * const updated = await financialsService.deleteAmountHistoryEntry(
+   *   caseId,
+   *   'resources',
+   *   itemId,
+   *   entryId
+   * );
+   * console.log('History entry deleted, amount recalculated');
    */
   async deleteAmountHistoryEntry(
     caseId: string,
@@ -449,7 +690,17 @@ export class FinancialsService {
   }
 
   /**
-   * Migrate financial items without amount history
+   * Migrate financial items without amount history to include initial entries.
+   * 
+   * This migration method:
+   * 1. Finds items that have an amount but no amountHistory
+   * 2. Creates history entries from existing dateAdded or createdAt timestamps
+   * 3. Normalizes ISO timestamp dates to YYYY-MM-DD format
+   * 4. Updates all affected items in a single write operation
+   * 
+   * **Use Case:** Run once after upgrading from a version that didn't support amount history.
+   * 
+   * **Pattern:** Read → Modify → Write
    * 
    * For backward compatibility, items that have a dateAdded but no amountHistory
    * will get a history entry created using their current amount and dateAdded.
@@ -458,7 +709,11 @@ export class FinancialsService {
    * 
    * Also normalizes any ISO timestamp dates in existing history to YYYY-MM-DD format.
    * 
-   * @returns Number of items migrated
+   * @returns {Promise<number>} Number of items migrated
+   * 
+   * @example
+   * const migrated = await financialsService.migrateItemsWithoutHistory();
+   * console.log(`Migrated ${migrated} financial items`);
    */
   async migrateItemsWithoutHistory(): Promise<number> {
     const currentData = await this.fileStorage.readFileData();

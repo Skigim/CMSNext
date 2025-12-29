@@ -35,7 +35,7 @@ export interface UseNavigationActionsParams {
   guardCaseInteraction: () => boolean;
   isLocked: boolean;
   lockReason: string;
-  saveCase: (data: { person: NewPersonData; caseRecord: NewCaseRecordData }) => Promise<StoredCase | undefined>;
+  saveCase: (data: { person: NewPersonData; caseRecord: NewCaseRecordData }, editingCaseId?: string) => Promise<StoredCase | undefined>;
   deleteCase: (caseId: string) => Promise<void>;
 }
 
@@ -99,7 +99,9 @@ export function useNavigationActions({
       throw new Error(lockReason);
     }
     try {
-      const savedCase = await saveCase(caseData);
+      // Pass selectedCaseId if editing, otherwise omit for create
+      const editingCaseId = !showNewCaseModal ? state.selectedCaseId ?? undefined : undefined;
+      const savedCase = await saveCase(caseData, editingCaseId);
       if (!isMounted.current) return;
       
       // Close modal if open
@@ -120,7 +122,7 @@ export function useNavigationActions({
       endMeasurement("navigation:saveCase", { result: "error" });
       throw err;
     }
-  }, [guardCaseInteraction, isMounted, lockReason, saveCase, setCurrentView, setSelectedCaseId, setShowNewCaseModal, setSidebarOpen, showNewCaseModal]);
+  }, [guardCaseInteraction, isMounted, lockReason, saveCase, setCurrentView, setSelectedCaseId, setShowNewCaseModal, setSidebarOpen, showNewCaseModal, state.selectedCaseId]);
 
   const deleteCaseWithNavigation = useCallback(async (caseId: string) => {
     startMeasurement("navigation:deleteCase", { caseId });
