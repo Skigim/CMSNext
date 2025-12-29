@@ -1,17 +1,17 @@
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useState } from "react";
 import { Button } from "../ui/button";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "../ui/alert-dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
 import { FinancialsGridView } from "./FinancialsGridView";
 import { NotesPopover } from "./NotesPopover";
+import { AlertsPopover } from "./AlertsPopover";
 import { CaseIntakeScreen } from "./CaseIntakeScreen";
 import type { StoredCase, NewPersonData, NewCaseRecordData } from "../../types/case";
-import { ArrowLeft, Trash2, Wallet, BellRing, FileText, ClipboardCheck, Star, StarOff, Phone, Mail, Check, FileSignature, Copy } from "lucide-react";
+import { ArrowLeft, Trash2, Wallet, FileText, ClipboardCheck, Star, StarOff, Phone, Mail, FileSignature, Copy } from "lucide-react";
 import { withDataErrorBoundary } from "../error/ErrorBoundaryHOC";
 import { CaseStatusMenu } from "./CaseStatusMenu";
 import { cn, interactiveHoverClasses } from "../ui/utils";
 import type { AlertWithMatch } from "../../utils/alertsData";
-import { CaseAlertsDrawer } from "./CaseAlertsDrawer";
 import { CopyButton } from "@/components/common/CopyButton";
 import { CaseSummaryModal } from "./CaseSummaryModal";
 import { VRGeneratorModal } from "./VRGeneratorModal";
@@ -60,8 +60,6 @@ export function CaseDetails({
   onUpdatePriority,
 }: CaseDetailsProps) {
   
-  const [alertsDrawerOpen, setAlertsDrawerOpen] = useState(false);
-  
   // Fetch financials and notes for case summary generation
   const { groupedItems: financials, items: financialItemsList } = useFinancialItems(caseData.id);
   const { notes } = useNotes(caseData.id);
@@ -69,16 +67,6 @@ export function CaseDetails({
   // Get VR scripts from category config
   const { config: categoryConfig } = useCategoryConfig();
   const vrScripts = categoryConfig?.vrScripts ?? [];
-
-  const { totalAlerts, openAlertCount, hasOpenAlerts } = useMemo(() => {
-    const total = alerts.length;
-    const openCount = alerts.filter(alert => alert.status !== "resolved").length;
-    return {
-      totalAlerts: total,
-      openAlertCount: openCount,
-      hasOpenAlerts: openCount > 0,
-    };
-  }, [alerts]);
 
   const handleResolveAlert = useCallback(
     (alert: AlertWithMatch) => {
@@ -249,33 +237,16 @@ export function CaseDetails({
             {/* Notes popover */}
             <NotesPopover caseId={caseData.id} className={interactiveHoverClasses} />
             
-            {/* Alerts button with badge indicator */}
-            {totalAlerts > 0 && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setAlertsDrawerOpen(true)}
-                className={cn(interactiveHoverClasses, "relative pr-8")}
-              >
-                <BellRing className="w-4 h-4 mr-2" />
-                Alerts
-                {/* Badge overlay */}
-                <span
-                  className={cn(
-                    "absolute -top-1.5 -right-1.5 flex items-center justify-center rounded-full text-xs font-medium min-w-5 h-5 px-1",
-                    hasOpenAlerts
-                      ? "bg-amber-500 text-white"
-                      : "bg-green-500 text-white"
-                  )}
-                >
-                  {hasOpenAlerts ? (
-                    openAlertCount
-                  ) : (
-                    <Check className="h-3 w-3" />
-                  )}
-                </span>
-              </Button>
-            )}
+            {/* Alerts popover */}
+            <AlertsPopover
+              alerts={alerts}
+              caseName={caseData.name || "Unnamed Case"}
+              className={interactiveHoverClasses}
+              caseId={caseData.id}
+              caseStatus={caseData.status}
+              onUpdateCaseStatus={onUpdateStatus}
+              onResolveAlert={onResolveAlert ? handleResolveAlert : undefined}
+            />
             <div className="w-px h-9 bg-border" />
             <Button
               variant="outline"
@@ -372,17 +343,6 @@ export function CaseDetails({
           </TabsContent>
         </Tabs>
       </div>
-
-      <CaseAlertsDrawer
-          alerts={alerts}
-          open={alertsDrawerOpen}
-          onOpenChange={setAlertsDrawerOpen}
-          caseName={caseData.name || "Unnamed Case"}
-          caseId={caseData.id}
-          caseStatus={caseData.status}
-          onUpdateCaseStatus={onUpdateStatus}
-          onResolveAlert={onResolveAlert ? handleResolveAlert : undefined}
-        />
 
       <CaseSummaryModal
         open={summaryModalOpen}
