@@ -65,12 +65,44 @@ interface UseAVSImportFlowResult {
 }
 
 /**
- * Hook for managing AVS account import flow
+ * Hook for managing AVS (Automated Verification System) account import flow
  * 
- * Provides state management and operations for:
- * - Pasting and parsing AVS account data
- * - Previewing parsed accounts before import
- * - Bulk importing accounts as verified financial resources
+ * Coordinates the complete workflow for importing pre-verified financial accounts:
+ * Parse raw AVS text → Preview parsed accounts → Select for import → Bulk import as resources
+ * 
+ * Supports duplicate detection and update-or-create semantics (if an imported account
+ * matches an existing resource, it updates; otherwise creates new).
+ * 
+ * @example
+ * ```typescript
+ * const { importState, openImportModal, importAccounts, toggleAccountSelection } = useAVSImportFlow({
+ *   selectedCase: case1,
+ *   setError: setErrorState
+ * });
+ * 
+ * // User clicks import button
+ * openImportModal();
+ * 
+ * // User pastes AVS data
+ * await handleInputChange("Checking\n12345\nSavings\n67890\n...");
+ * // importState.parsedAccounts now has [ { bankName, accountType, selected: true }, ... ]
+ * 
+ * // User reviews and deselects accounts they don't want
+ * toggleAccountSelection(2); // Skip the 3rd account
+ * 
+ * // User imports selected accounts
+ * await importAccounts();
+ * // Creates or updates resources in selectedCase, shows success/warning toast
+ * ```
+ * 
+ * @returns {UseAVSImportFlowResult} Import state and operations:
+ * - `importState`: Modal visibility, parsed accounts with selection, progress
+ * - `openImportModal/closeImportModal`: Modal lifecycle
+ * - `handleInputChange`: Parse raw AVS text and detect duplicates
+ * - `toggleAccountSelection(index)`: Toggle account selection by index
+ * - `toggleAllAccounts()`: Toggle all-select/deselect
+ * - `importAccounts()`: Bulk import selected accounts (create or update)
+ * - `canImport`: Computed boolean - true if case + dataManager + selected accounts exist
  */
 export function useAVSImportFlow({
   selectedCase,

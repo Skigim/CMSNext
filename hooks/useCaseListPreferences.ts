@@ -168,6 +168,88 @@ function clearPreferences(): void {
   }
 }
 
+/**
+ * Hook for managing case list view preferences (sorting, segmentation, filtering)
+ * 
+ * Persists user's case list configuration to localStorage with debounced writes.
+ * Automatically restores preferences on mount. More feature-rich than alert preferences.
+ * 
+ * **Supported Sorts:**
+ * - Keys: "updated" | "name" | "mcn" | "application" | "status" | "caseType" | "alerts"
+ * - Direction: "asc" | "desc"
+ * - Multi-sort: sortConfigs array supports primary + secondary sorts
+ * - Default: Sort by "updated" descending
+ * 
+ * **Supported Segments:**
+ * - "all": Show all cases
+ * - "recent": Show recently modified cases (convenience segment)
+ * - "priority": Show priority-flagged cases only
+ * 
+ * **Supported Filters:**
+ * - `statuses`: Array of CaseStatus (Active, Closed, On Hold, etc.)
+ * - `excludeStatuses`: Array of CaseStatus to exclude
+ * - `priorityOnly`: Show only priority-flagged cases
+ * - `excludePriority`: Hide priority-flagged cases
+ * - `dateRange`: { from?: Date, to?: Date } for case creation/update date filtering
+ * 
+ * **Usage Example:**
+ * ```typescript
+ * const prefs = useCaseListPreferences();
+ * 
+ * // Set primary sort
+ * prefs.setSortKey("updated");
+ * prefs.setSortDirection("desc");
+ * 
+ * // Or use multi-sort configs
+ * prefs.setSortConfigs([
+ *   { key: "status", direction: "asc" },
+ *   { key: "updated", direction: "desc" }
+ * ]);
+ * 
+ * // Switch to priority segment
+ * prefs.setSegment("priority");
+ * 
+ * // Filter by status and date range
+ * prefs.setFilters({
+ *   statuses: ["Active"],
+ *   excludeStatuses: ["Closed"],
+ *   priorityOnly: false,
+ *   excludePriority: false,
+ *   dateRange: {
+ *     from: new Date("2024-01-01"),
+ *     to: new Date("2024-12-31")
+ *   }
+ * });
+ * 
+ * // Reset to defaults and clear localStorage
+ * prefs.resetPreferences();
+ * ```
+ * 
+ * **Persistence Details:**
+ * - Debounced localStorage writes delayed 300ms to batch rapid changes
+ * - Validation: On load, invalid dates removed, invalid sorts reset to defaults
+ * - Date handling: Serialized to ISO strings, reconstructed as Date objects
+ * - Error handling: Logs to console; preferences lost if localStorage unavailable
+ * 
+ * **Sorting Architecture:**
+ * Maintains both simple (sortKey + sortDirection) and advanced (sortConfigs[]) APIs:
+ * - `sortKey/sortDirection`: Convenience API for primary sort only
+ * - `sortConfigs`: Full multi-sort configuration
+ * - Setters keep both APIs in sync internally
+ * 
+ * @returns {CaseListPreferences} State and setters:
+ * - `sortKey`: Current primary sort column
+ * - `setSortKey(key)`: Update primary sort column (updates sortConfigs[0])
+ * - `sortDirection`: Current primary sort direction
+ * - `setSortDirection(dir)`: Update primary sort direction
+ * - `segment`: Current segment filter (all|recent|priority)
+ * - `setSegment(segment)`: Switch to different view segment
+ * - `sortConfigs`: Full multi-sort configuration array
+ * - `setSortConfigs(configs)`: Set complete sort config (updates sortKey/sortDirection)
+ * - `filters`: All active filters (statuses, date range, priority, etc.)
+ * - `setFilters(filters)`: Batch update all filters
+ * - `resetPreferences()`: Clear all prefs, delete from localStorage
+ */
 export function useCaseListPreferences(): CaseListPreferences {
   // Load preferences once during initial render
   const [initialPrefs] = useState(() => loadPreferences());

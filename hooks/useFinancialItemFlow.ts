@@ -96,6 +96,68 @@ interface UseFinancialItemFlowResult {
   isEditing: boolean;
 }
 
+/**
+ * Hook for managing financial item (resource/income/expense/debt) CRUD and modal lifecycle
+ * 
+ * Orchestrates the complete financial item edit workflow:
+ * Open form → Load or create blank → Validate → Save or Delete → Auto-close or reset
+ * 
+ * **Form State Architecture:**
+ * - `itemForm.isOpen`: Modal visibility
+ * - `itemForm.category`: Current category (resources|income|expenses|debts)
+ * - `itemForm.item`: Item being edited (undefined = create mode)
+ * - `formData`: FinancialFormData object with description, amount, verification status, etc.
+ * - `formErrors`: Field-level error messages keyed by field name
+ * - `addAnother`: Checkbox state (create mode only) - resets form instead of closing
+ * 
+ * **Form Validation:**
+ * - description: Required, non-empty
+ * - amount: Number, non-negative
+ * - verificationStatus="Verified": Requires verificationSource
+ * 
+ * **Create vs Edit:**
+ * - Create: itemForm.item is undefined, formData initialized empty, "Add Another" checkbox shown
+ * - Edit: itemForm.item populated, formData loaded from item, form title reflects "Edit"
+ * 
+ * **CRUD Operations:**
+ * - `handleSaveItem()`: Validates → delegates to dataManager.addItem or updateItem
+ * - `handleDeleteItem(category, id)`: Removes item from category
+ * - `handleBatchUpdateItem(category, id, partial)`: Partial update for inline edits
+ * - `handleCreateItem(category, data)`: Direct creation bypassing form validation
+ * 
+ * **Usage Example:**
+ * ```typescript
+ * const flow = useFinancialItemFlow({
+ *   selectedCase: caseData,
+ *   setError: setErrorMsg
+ * });
+ * 
+ * // Open create form for resources
+ * flow.openItemForm("resources");
+ * 
+ * // User fills form
+ * flow.updateFormField("description", "Savings Account");
+ * flow.updateFormField("amount", 50000);
+ * 
+ * // Validate and save
+ * const success = await flow.handleSaveItem();
+ * if (success) flow.closeItemForm();
+ * 
+ * // Or open existing item for edit
+ * flow.openItemForm("resources", existingResourceItem);
+ * ```
+ * 
+ * **Modal State:**
+ * - When `itemForm.isOpen` changes, form resets (loads item or blanks out)
+ * - When `itemForm.item` changes, form data syncs automatically via useEffect
+ * - Closing modal clears form errors and "add another" state
+ * 
+ * @param {UseFinancialItemFlowParams} params
+ *   - `selectedCase`: Current case context (null = operations disabled)
+ *   - `setError`: Parent error state setter for error messaging
+ * 
+ * @returns {UseFinancialItemFlowResult} Form and operation handlers
+ */
 export function useFinancialItemFlow({
   selectedCase,
   setError,

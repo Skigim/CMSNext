@@ -149,6 +149,65 @@ function clearPreferences(): void {
   }
 }
 
+/**
+ * Hook for managing alert list view preferences (sorting and filtering)
+ * 
+ * Persists user's alert list configuration to localStorage with debounced writes.
+ * Automatically restores preferences on mount.
+ * 
+ * **Supported Sorts:**
+ * - "description" | "client" | "due" | "program" | "mcn"
+ * - Direction: "asc" | "desc"
+ * - Default: Sort by "due" ascending
+ * 
+ * **Supported Filters:**
+ * - `searchTerm`: Fuzzy search across all alert fields
+ * - `description`: Alert type filter (e.g., "Court Notice", "Fee Payment")
+ * - `statuses`: Array of AlertWorkflowStatus (new, in-progress, resolved, etc.)
+ * - `matchStatus`: Filter by case matching ("all", "matched", "unmatched", "missing-mcn")
+ * 
+ * **Usage Example:**
+ * ```typescript
+ * const prefs = useAlertListPreferences();
+ * 
+ * // Sort by due date
+ * prefs.setSortConfig({ key: "due", direction: "asc" });
+ * 
+ * // Filter by status
+ * prefs.setFilters({
+ *   ...prefs.filters,
+ *   statuses: ["in-progress", "new"],
+ *   matchStatus: "matched"
+ * });
+ * 
+ * // Quick filter setters
+ * prefs.setSearchTerm("urgent");
+ * prefs.setDescription("Court Notice");
+ * 
+ * // Check if any filters active
+ * if (prefs.hasActiveFilters) {
+ *   console.log("Filtered alerts displayed");
+ * }
+ * 
+ * // Reset to defaults and clear localStorage
+ * prefs.resetPreferences();
+ * ```
+ * 
+ * **Persistence Details:**
+ * - Debounced localStorage writes delayed 300ms to batch rapid changes
+ * - Validation: On load, invalid values reset to defaults
+ * - Error handling: Logs to console; preferences lost if localStorage unavailable
+ * 
+ * @returns {AlertListPreferences} State and setters:
+ * - `sortConfig`: Current sort (key: description|client|due|program|mcn, direction: asc|desc)
+ * - `filters`: Filter state (searchTerm, description, statuses[], matchStatus)
+ * - `setSearchTerm(term)`: Update search term
+ * - `setDescription(desc)`: Update alert type filter
+ * - `setFilters(filters)`: Batch update all filters
+ * - `setSortConfig(config)`: Update sort configuration
+ * - `resetPreferences()`: Clear all filters/sort, delete from localStorage
+ * - `hasActiveFilters`: Computed boolean - true if any filter is set
+ */
 export function useAlertListPreferences(): AlertListPreferences {
   // Load preferences once during initial render
   const [initialPrefs] = useState(() => loadPreferences());

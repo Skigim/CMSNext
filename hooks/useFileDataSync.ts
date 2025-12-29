@@ -22,6 +22,50 @@ type FileDataPayload = {
   [key: string]: unknown;
 } | null | undefined;
 
+/**
+ * Hook for synchronizing file-system-loaded data into React component state
+ * 
+ * Handles the critical data load phase: when FileStorageContext loads JSON from disk,
+ * this hook receives the event and distributes normalized data (cases, category config)
+ * to the appropriate React state setters.
+ * 
+ * **Data Normalization:**
+ * File format is v2.0 normalized (flat arrays with foreign keys):
+ * ```json
+ * {
+ *   "cases": [ { "id": "c1", "caseNumber": "2024-001", ... }, ... ],
+ *   "categoryConfig": { "statuses": [ { "name": "Active", "colorSlot": "blue" } ], ... },
+ *   "financials": [ ... ],
+ *   "notes": [ ... ],
+ *   "alerts": [ ... ]
+ * }
+ * ```
+ * 
+ * **Setup in Component:**
+ * Typically invoked once on mount, passed state setters from parent component:
+ * ```typescript
+ * const [cases, setCases] = useState<StoredCase[]>([]);
+ * const [categoryConfig, setConfig] = useState<CategoryConfig | undefined>();
+ * 
+ * useFileDataSync({
+ *   setCases,
+ *   setConfigFromFile: setConfig,
+ *   setHasLoadedData: setLoaded
+ * });
+ * ```
+ * 
+ * **Dependencies:**
+ * - Requires `FileStorageContext` in tree (provides useFileStorageDataLoadHandler)
+ * - Delegates logging to `createLogger("FileDataSync")`
+ * - Reports sync events to telemetry via recordStorageSyncEvent()
+ * 
+ * @param {FileDataSyncDependencies} deps
+ *   - `setCases`: State setter for loaded cases array
+ *   - `setHasLoadedData`: Lifecycle flag (true = initial load complete)
+ *   - `setConfigFromFile`: State setter for category config (nullable)
+ * 
+ * @returns {void} No return value; side effect only
+ */
 export function useFileDataSync({
   setCases,
   setHasLoadedData,
