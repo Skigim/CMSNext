@@ -1,10 +1,34 @@
 /**
  * Encryption context for managing session credentials and encryption state.
  * 
- * Security model:
- * - Password never stored, only used to derive key
- * - CryptoKey cached in memory for session (non-extractable)
+ * **Security Model:**
+ * - Password never stored, only used to derive key via PBKDF2
+ * - CryptoKey cached in memory for session (non-extractable, use-only)
  * - All state cleared on page refresh/close
+ * - Salt stored with encrypted file, never hardcoded
+ * 
+ * ## Encryption Flow
+ * 
+ * **Encrypting a New File:**
+ * 1. User provides password
+ * 2. Context generates random salt
+ * 3. PBKDF2 derives encryption key from password + salt
+ * 4. Salt is saved with encrypted data
+ * 5. Key stays in memory for session
+ * 
+ * **Decrypting Existing File:**
+ * 1. File read, salt discovered
+ * 2. User provides password
+ * 3. PBKDF2 derives key using salt from file
+ * 4. If key matches encrypted data, authentication succeeds
+ * 
+ * **Key Management:**
+ * - CryptoKey is non-extractable (can't be read from memory)
+ * - Key only used for encryption/decryption operations
+ * - Stays in memory only during session
+ * - Cleared when user logs out or page closes
+ * 
+ * @fileoverview Encryption context and provider
  */
 
 import {
@@ -27,24 +51,31 @@ import { createLogger } from "../utils/logger";
 
 const logger = createLogger("EncryptionContext");
 
+/**
+ * Encryption context value type - provides encryption state and operations.
+ * 
+ * Extends EncryptionState with encryption-specific methods and status flags.
+ * 
+ * @interface EncryptionContextValue
+ */
 interface EncryptionContextValue extends EncryptionState {
-  /** Whether encryption is supported in this browser */
+  /** Whether encryption is supported in this browser (Web Crypto API available) */
   isSupported: boolean;
-  /** Authenticate user and derive encryption key */
+  /** Authenticate user and optionally derive encryption key */
   authenticate: (username: string, password: string, salt?: string) => Promise<boolean>;
-  /** Set file encryption status (called after reading file) */
+  /** Update file encryption status (called after reading file metadata) */
   setFileEncrypted: (isEncrypted: boolean, salt?: string) => void;
-  /** Generate new salt for enabling encryption */
+  /** Generate new salt and derive key for new encrypted file */
   initializeEncryption: (password: string) => Promise<{ salt: string; key: CryptoKey } | null>;
-  /** Derive key from salt when file salt is discovered */
+  /** Derive key from existing file salt using pending password */
   deriveKeyFromFileSalt: (salt: string) => Promise<CryptoKey | null>;
-  /** Clear all credentials (logout) */
+  /** Clear all credentials and logout user */
   clearCredentials: () => void;
-  /** Get current user profile */
+  /** Get current authenticated user profile */
   getCurrentUser: () => UserProfile | null;
   /** Temporary password storage for key derivation (cleared after use) */
   pendingPassword: string | null;
-  /** Store password temporarily for key derivation */
+  /** Store password temporarily for key derivation when file salt is discovered */
   setPendingPassword: (password: string | null) => void;
 }
 
@@ -52,10 +83,83 @@ const EncryptionContext = createContext<EncryptionContextValue | null>(null);
 
 const DEFAULT_USERNAME = "admin";
 
+/**
+ * Props for EncryptionProvider component.
+ * @interface EncryptionProviderProps
+ */
 interface EncryptionProviderProps {
+  /** React child components */
   children: ReactNode;
 }
 
+/**
+ * EncryptionProvider - Manages encryption state and key derivation.
+ * 
+ * Handles user authentication and encryption key management for file encryption.
+ * Uses PBKDF2 for key derivation with configurable iterations.
+ * 
+ * ## Authentication Flow
+ * 
+ * **New File:**
+ * 1. User provides password
+ * 2. generateSalt() creates random bytes
+ * 3. deriveKey(password, salt) → CryptoKey via PBKDF2
+ * 4. Salt saved with encrypted file
+ * 
+ * **Existing File:**
+ * 1. File read, salt discovered from metadata
+ * 2. User provides password (stored as pending)
+ * 3. deriveKeyFromFileSalt(salt) → CryptoKey
+ * 4. Application uses key for decryption
+ * 
+ * ## Setup
+ * 
+ * ```typescript
+ * function App() {
+ *   return (
+ *     <EncryptionProvider>
+ *       <YourApp />
+ *     </EncryptionProvider>
+ *   );
+ * }
+ * ```
+ * 
+ * ## Usage
+ * 
+ * ```typescript
+ * function AuthComponent() {
+ *   const { authenticate, isAuthenticated } = useEncryption();
+ *   
+ *   const handleLogin = async (username, password) => {
+ *     const success = await authenticate(username, password);
+ *     if (success) {
+ *       // User authenticated, can now decrypt
+ *     }
+ *   };
+ * }
+ * ```
+ * 
+ * ## Compatibility
+ * 
+ * Check `isSupported` before using encryption features. Returns false if:
+ * - Web Crypto API not available
+ * - Running on non-secure context (not HTTPS)
+ * - Browser doesn't support SubtleCrypto
+ * 
+ * ## Security Notes
+ * 
+ * - Password is never stored (only used for key derivation)
+ * - CryptoKey is non-extractable and session-only
+ * - Salt is generated randomly per new encrypted file
+ * - All data cleared on logout or page close
+ * 
+ * @component
+ * @param {EncryptionProviderProps} props - Provider configuration
+ * @returns {ReactNode} Provider wrapping children
+ * 
+ * @see {@link useEncryption} to access encryption context
+ * @see {@link DEFAULT_ENCRYPTION_CONFIG} for PBKDF2 settings
+ */
 export function EncryptionProvider({ children }: EncryptionProviderProps) {
   const [state, setState] = useState<EncryptionState>({
     isAuthenticated: false,
@@ -272,7 +376,36 @@ export function EncryptionProvider({ children }: EncryptionProviderProps) {
 
 /**
  * Hook to access encryption context.
+ * 
+ * Provides access to encryption state and operations.
  * Throws if used outside EncryptionProvider.
+ * 
+ * Use when you need encryption and can guarantee provider is present.
+ * 
+ * ## Example
+ * 
+ * ```typescript
+ * function AuthForm() {
+ *   const { authenticate, isAuthenticated, isSupported } = useEncryption();
+ *   
+ *   if (!isSupported) {
+ *     return <p>Encryption not supported in this browser</p>;
+ *   }
+ *   
+ *   const handleSubmit = async (password) => {
+ *     const success = await authenticate('admin', password);
+ *     if (success) {
+ *       // User is now authenticated
+ *     }
+ *   };
+ * }
+ * ```
+ * 
+ * @hook
+ * @returns {EncryptionContextValue} Encryption state and operations
+ * @throws {Error} If used outside EncryptionProvider
+ * 
+ * @see {@link useEncryptionSafe} for safe alternative that returns null
  */
 export function useEncryption(): EncryptionContextValue {
   const context = useContext(EncryptionContext);
@@ -283,7 +416,28 @@ export function useEncryption(): EncryptionContextValue {
 }
 
 /**
- * Hook to safely access encryption context (returns null if not available).
+ * Hook to safely access encryption context (returns null if unavailable).
+ * 
+ * Use when encryption might not be available or you're uncertain about provider presence.
+ * 
+ * ## Example
+ * 
+ * ```typescript
+ * function OptionalEncryption() {
+ *   const encryption = useEncryptionSafe();
+ *   
+ *   if (!encryption) {
+ *     return <NoEncryption />;
+ *   }
+ *   
+ *   return <EncryptionUI encryption={encryption} />;
+ * }
+ * ```
+ * 
+ * @hook
+ * @returns {EncryptionContextValue | null} Encryption context or null if unavailable
+ * 
+ * @see {@link useEncryption} for throwing alternative (stricter)
  */
 export function useEncryptionSafe(): EncryptionContextValue | null {
   return useContext(EncryptionContext);

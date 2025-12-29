@@ -17,15 +17,35 @@ import { createLogger } from "@/utils/logger";
 
 const logger = createLogger("CategoryConfigContext");
 
+/**
+ * Handler type for category updates.
+ * Accepts category key and values (string array, StatusConfig array, etc.)
+ * @typedef {Function} UpdateHandler
+ */
 type UpdateHandler = (key: CategoryKey, values: string[] | StatusConfig[] | AlertTypeConfig[] | VRScript[]) => Promise<void>;
 
+/**
+ * Category configuration context value - provides access to case/alert/VR configuration.
+ * 
+ * Manages loading, updating, and resetting category configurations.
+ * Handles migration from legacy string[] format to new StatusConfig format.
+ * 
+ * @interface CategoryConfigContextValue
+ */
 type CategoryConfigContextValue = {
+  /** Current merged category configuration */
   config: CategoryConfig;
+  /** Whether configuration is currently loading */
   loading: boolean;
+  /** Error message if loading failed */
   error: string | null;
+  /** Reload configuration from DataManager */
   refresh: () => Promise<void>;
+  /** Update a specific category (statuses, priorities, alert types, etc.) */
   updateCategory: UpdateHandler;
+  /** Reset all categories to default values */
   resetToDefaults: () => Promise<void>;
+  /** Set configuration directly from file data (used on import) */
   setConfigFromFile: (config?: PartialCategoryConfigInput | null) => void;
 };
 
@@ -50,6 +70,71 @@ const CategoryConfigContext = createContext<CategoryConfigContextValue | null>(n
 // Export context for test utilities - allows direct context injection in tests
 export { CategoryConfigContext };
 
+/**
+ * CategoryConfigProvider - Manages case statuses, priorities, alert types, and VR scripts.
+ * 
+ * Provides configuration data for categorical elements in the application.
+ * Handles loading, updating, and resetting category configurations.
+ * Automatically reloads when file data changes.
+ * 
+ * ## Supported Categories
+ * 
+ * - **caseStatuses**: Case workflow states (e.g., Open, In Progress, Closed)
+ *   - Supports color customization via StatusConfig
+ * - **casePriorities**: Case priority levels (e.g., High, Medium, Low)
+ * - **alertTypes**: Alert classifications for alerts
+ *   - Supports color customization via AlertTypeConfig
+ * - **vrScripts**: Virtual Reality scripts configuration
+ * 
+ * ## Format Migration
+ * 
+ * Automatically handles migration from legacy string[] format to new StatusConfig format:
+ * ```
+ * Legacy: ["Open", "In Progress", "Closed"]
+ * New:    [{ name: "Open", colorSlot: "blue" }, ...]
+ * ```
+ * 
+ * ## Setup
+ * 
+ * ```typescript
+ * function App() {
+ *   return (
+ *     <FileStorageProvider>
+ *       <DataManagerProvider>
+ *         <CategoryConfigProvider>
+ *           <YourApp />
+ *         </CategoryConfigProvider>
+ *       </DataManagerProvider>
+ *     </FileStorageProvider>
+ *   );
+ * }
+ * ```
+ * 
+ * ## Usage
+ * 
+ * ```typescript
+ * function StatusSelector() {
+ *   const { config, updateCategory } = useCategoryConfig();
+ *   
+ *   const statuses = config.caseStatuses;
+ *   
+ *   const handleAddStatus = async (statusName) => {
+ *     await updateCategory('caseStatuses', [
+ *       ...statuses,
+ *       { name: statusName, colorSlot: 'blue' }
+ *     ]);
+ *   };
+ * }
+ * ```
+ * 
+ * @component
+ * @param {Object} props - Provider props
+ * @param {ReactNode} props.children - Child components
+ * @returns {ReactNode} Provider wrapping children
+ * 
+ * @see {@link useCategoryConfig} to access configuration
+ * @see {@link CategoryConfig} for configuration structure
+ */
 export const CategoryConfigProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const dataManager = useDataManagerSafe();
   const [config, setConfig] = useState<CategoryConfig>(() => mergeCategoryConfig());
@@ -284,6 +369,50 @@ export const CategoryConfigProvider: React.FC<{ children: React.ReactNode }> = (
   return <CategoryConfigContext.Provider value={value}>{children}</CategoryConfigContext.Provider>;
 };
 
+/**
+ * Hook to access category configuration context.
+ * 
+ * Provides access to case statuses, priorities, alert types, and VR script configuration.
+ * Falls back to default configuration if used outside provider (with warning in dev).
+ * 
+ * ## Example
+ * 
+ * ```typescript
+ * function CaseStatusForm() {
+ *   const { config, loading, error, updateCategory } = useCategoryConfig();
+ *   
+ *   if (loading) return <Spinner />;
+ *   if (error) return <Error message={error} />;
+ *   
+ *   const statuses = config.caseStatuses;
+ *   
+ *   const handleAddStatus = async (newStatus: StatusConfig) => {
+ *     await updateCategory('caseStatuses', [
+ *       ...statuses,
+ *       newStatus
+ *     ]);
+ *   };
+ * }
+ * ```
+ * 
+ * ## Available Categories
+ * 
+ * - `caseStatuses`: Array of StatusConfig with color slots
+ * - `casePriorities`: Array of priority strings
+ * - `alertTypes`: Array of AlertTypeConfig with color slots
+ * - `vrScripts`: Array of VRScript configurations
+ * 
+ * ## Fallback Behavior
+ * 
+ * If used outside CategoryConfigProvider, returns default configuration.
+ * Logs warning in development mode.
+ * 
+ * @hook
+ * @returns {CategoryConfigContextValue} Configuration state and update methods
+ * 
+ * @see {@link updateCategory} for category update patterns
+ * @see {@link CategoryConfig} for full configuration structure
+ */
 export const useCategoryConfig = (): CategoryConfigContextValue => {
   const context = useContext(CategoryConfigContext);
 

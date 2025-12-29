@@ -3,7 +3,13 @@ import DataManager from '@/utils/DataManager';
 import { useFileStorage } from '@/contexts/FileStorageContext';
 import { createLogger } from '@/utils/logger';
 
+/**
+ * DataManager context value - provides access to the central data orchestration layer.
+ * 
+ * @interface DataManagerContextType
+ */
 interface DataManagerContextType {
+  /** Instance of DataManager, or null if file service not connected */
   dataManager: DataManager | null;
 }
 
@@ -11,6 +17,69 @@ const DataManagerContext = createContext<DataManagerContextType | null>(null);
 
 const logger = createLogger('DataManagerProvider');
 
+/**
+ * Props for DataManagerProvider component.
+ * @interface DataManagerProviderProps
+ */
+interface DataManagerProviderProps {
+  /** React child components */
+  children: ReactNode;
+}
+
+/**
+ * DataManagerProvider - Provides access to the DataManager orchestration layer.
+ * 
+ * Creates and manages a single DataManager instance that orchestrates all case-related
+ * data operations. Depends on FileStorageProvider being present in the tree.
+ * 
+ * ## Architecture
+ * 
+ * ```
+ * DataManagerProvider
+ *     ↓
+ * DataManager (central orchestration)
+ *     ↓
+ * Service Layer (Case, Financial, Note, Alert, etc.)
+ *     ↓
+ * FileStorageService → AutosaveFileService → File System
+ * ```
+ * 
+ * ## Lifecycle
+ * 
+ * - Waits for FileStorage to connect before creating DataManager
+ * - Runs financial history migration once on first connection
+ * - Cleans up on unmount
+ * 
+ * ## Setup
+ * 
+ * ```typescript
+ * function App() {
+ *   return (
+ *     <FileStorageProvider>
+ *       <DataManagerProvider>
+ *         <YourApp />
+ *       </DataManagerProvider>
+ *     </FileStorageProvider>
+ *   );
+ * }
+ * ```
+ * 
+ * ## Usage
+ * 
+ * ```typescript
+ * function MyComponent() {
+ *   const dataManager = useDataManager(); // Throws if not available
+ *   const cases = await dataManager.getAllCases();
+ * }
+ * ```
+ * 
+ * @component
+ * @param {DataManagerProviderProps} props - Provider configuration
+ * @returns {ReactNode} Provider wrapping children
+ * 
+ * @see {@link useDataManager} to access DataManager instance
+ * @see {@link DataManager} for available operations
+ */
 interface DataManagerProviderProps {
   children: ReactNode;
 }
@@ -62,6 +131,30 @@ export function DataManagerProvider({ children }: DataManagerProviderProps) {
   );
 }
 
+/**
+ * Hook to access the DataManager instance.
+ * 
+ * Provides access to the central orchestration layer for all data operations.
+ * Throws if DataManager is not available (FileStorage not connected).
+ * 
+ * Use when you need to perform data operations and can guarantee availability.
+ * 
+ * ## Example
+ * 
+ * ```typescript
+ * function MyCaseComponent() {
+ *   const dataManager = useDataManager(); // Throws if not available
+ *   const cases = await dataManager.getAllCases();
+ * }
+ * ```
+ * 
+ * @hook
+ * @returns {DataManager} DataManager instance for all data operations
+ * @throws {Error} If used outside DataManagerProvider or FileStorage not connected
+ * 
+ * @see {@link useDataManagerSafe} for safe alternative that returns null
+ * @see {@link DataManager} for available operations
+ */
 export function useDataManager() {
   const context = useContext(DataManagerContext);
   if (!context) {
@@ -76,8 +169,29 @@ export function useDataManager() {
 }
 
 /**
- * Hook that safely returns DataManager or null if not available
- * Use this when you need to check availability before using
+ * Hook to safely access the DataManager instance (returns null if unavailable).
+ * 
+ * Use when you need to check availability before using, or when DataManager
+ * might not be available yet (e.g., during initialization).
+ * 
+ * ## Example
+ * 
+ * ```typescript
+ * function MyComponent() {
+ *   const dataManager = useDataManagerSafe(); // Returns null if not available
+ *   
+ *   if (!dataManager) {
+ *     return <LoadingSpinner />;
+ *   }
+ *   
+ *   // Safe to use dataManager here
+ * }
+ * ```
+ * 
+ * @hook
+ * @returns {DataManager | null} DataManager instance or null if not available
+ * 
+ * @see {@link useDataManager} for throwing alternative (stricter)
  */
 export function useDataManagerSafe() {
   const context = useContext(DataManagerContext);

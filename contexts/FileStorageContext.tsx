@@ -18,26 +18,78 @@ import {
 } from './fileStorageMachine';
 import { createLogger } from '@/utils/logger';
 
+/**
+ * File Storage context type - provides access to file system integration and autosave functionality.
+ * 
+ * Manages File System Access API integration, autosave functionality, and file permissions.
+ * Wraps AutosaveFileService with React state management and permission handling.
+ * 
+ * ## Architecture
+ * 
+ * ```
+ * FileStorageContext (React state + permission mgmt)
+ *     ↓
+ * FileStorageProvider (lifecycle management)
+ *     ↓
+ * AutosaveFileService (File System API integration, autosave)
+ * ```
+ * 
+ * ## Lifecycle States
+ * 
+ * - **INITIAL**: Not yet connected
+ * - **CONNECTING**: User selecting folder
+ * - **CONNECTED**: Folder connected, ready for operations
+ * - **ERROR**: Connection or permission error occurred
+ * - **READY**: Fully initialized and ready for data operations
+ * 
+ * ## Permission States
+ * 
+ * - **INITIAL**: Permission status not yet determined
+ * - **GRANTED**: User has granted write access
+ * - **DENIED**: User denied permission request
+ * 
+ * @interface FileStorageContextType
+ */
 interface FileStorageContextType {
+  /** Instance of AutosaveFileService, or null if not yet initialized */
   service: AutosaveFileService | null;
+  /** Instance of FileStorageService, or null if not yet initialized */
   fileStorageService: FileStorageService | null;
-  isSupported: boolean | undefined; // undefined = not initialized yet, boolean = definitive answer
+  /** Whether File System Access API is supported (undefined while detecting) */
+  isSupported: boolean | undefined;
+  /** Whether a folder is currently connected for file operations */
   isConnected: boolean;
+  /** Whether a handle to the folder is stored (persists across sessions) */
   hasStoredHandle: boolean;
+  /** Current lifecycle state of file storage system */
   lifecycle: FileStorageLifecycleState;
+  /** Current permission state for file operations */
   permissionStatus: FileStoragePermissionState;
+  /** Last error encountered, if any */
   lastError: FileStorageErrorInfo | null;
+  /** Current autosave status with statistics */
   status: FileStorageStatus | null;
+  /** Connect to a new folder using directory picker */
   connectToFolder: () => Promise<boolean>;
+  /** Restore connection to previously selected folder */
   connectToExisting: () => Promise<boolean>;
+  /** Disconnect from the current folder */
   disconnect: () => Promise<void>;
+  /** Trigger immediate save (bypasses autosave debounce) */
   saveNow: () => Promise<void>;
+  /** Request write permission for the current folder */
   ensurePermission: () => Promise<boolean>;
+  /** Update autosave settings (enabled, interval, debounce) */
   updateSettings: (settings: { enabled: boolean; saveInterval: number; debounceDelay: number }) => void;
+  /** List all .json files in the connected folder */
   listDataFiles: () => Promise<string[]>;
+  /** Read JSON from a specific file in the connected folder */
   readNamedFile: (fileName: string) => Promise<any>;
+  /** Load existing data from the default case-tracker-data.json file */
   loadExistingData: () => Promise<any>;
+  /** Load data from a specific file in the connected folder */
   loadDataFromFile: (fileName: string) => Promise<any>;
+  /** Register callback for when data is loaded from file - returns cleanup function */
   registerDataLoadHandler: (handler: (data: unknown) => void) => () => void;
 }
 
@@ -45,12 +97,85 @@ const FileStorageContext = createContext<FileStorageContextType | null>(null);
 
 const logger = createLogger('FileStorageContext');
 
+/**
+ * Props for FileStorageProvider component.
+ * @interface FileStorageProviderProps
+ */
 interface FileStorageProviderProps {
+  /** React child components */
   children: ReactNode;
+  /** Whether autosave is enabled on startup (default: true) */
   enabled?: boolean;
+  /** Optional function to get current application data for autosave */
   getDataFunction?: () => any;
 }
 
+/**
+ * FileStorageProvider - Manages file system access and autosave functionality.
+ * 
+ * Provides access to the File System Access API with React state management.
+ * Handles:
+ * - Folder connection and permission management
+ * - Autosave with configurable interval and debounce
+ * - File reading and writing operations
+ * - Error handling and status tracking
+ * - Lifecycle state management (INITIAL → CONNECTING → CONNECTED → READY)
+ * 
+ * ## Setup
+ * 
+ * ```typescript
+ * function App() {
+ *   return (
+ *     <FileStorageProvider enabled={true}>
+ *       <YourApp />
+ *     </FileStorageProvider>
+ *   );
+ * }
+ * ```
+ * 
+ * ## Usage Pattern
+ * 
+ * ```typescript
+ * function MyComponent() {
+ *   const { isConnected, connectToFolder, saveNow } = useFileStorage();
+ *   
+ *   if (!isConnected) {
+ *     return <button onClick={connectToFolder}>Connect Folder</button>;
+ *   }
+ *   
+ *   return <button onClick={saveNow}>Save Now</button>;
+ * }
+ * ```
+ * 
+ * ## Browser Compatibility
+ * 
+ * Check `isSupported` before using. If `false`, File System Access API is unavailable:
+ * 
+ * ```typescript
+ * const { isSupported } = useFileStorage();
+ * 
+ * if (!isSupported) {
+ *   return <CompatibilityPrompt />;
+ * }
+ * ```
+ * 
+ * ## Autosave Defaults
+ * 
+ * - Save interval: 2 minutes
+ * - Debounce delay: 5 seconds (waits 5s after last change before saving)
+ * - Max retries: 3 attempts per save
+ * 
+ * ## Error Handling
+ * 
+ * Errors are captured in `lastError` with timestamp and type:
+ * - 'error': Critical failures
+ * - 'warning': Non-blocking issues (e.g., retry in progress)
+ * - 'info': Status updates
+ * 
+ * @component
+ * @param {FileStorageProviderProps} props - Provider configuration
+ * @returns {ReactNode} Provider wrapping children
+ */
 export function FileStorageProvider({ 
   children, 
   enabled = true,
@@ -341,6 +466,30 @@ export function FileStorageProvider({
   );
 }
 
+/**
+ * Hook to access file storage context.
+ * 
+ * Provides access to file system operations, autosave control, and connection status.
+ * Throws if used outside FileStorageProvider.
+ * 
+ * ## Example
+ * 
+ * ```typescript
+ * function MyComponent() {
+ *   const { isConnected, connectToFolder, status } = useFileStorage();
+ *   
+ *   if (!isConnected) {
+ *     return <button onClick={connectToFolder}>Connect Folder</button>;
+ *   }
+ *   
+ *   return <p>Saves: {status?.saveCount || 0}</p>;
+ * }
+ * ```
+ * 
+ * @hook
+ * @returns {FileStorageContextType} File storage context with all operations and state
+ * @throws {Error} If used outside FileStorageProvider
+ */
 export function useFileStorage() {
   const context = useContext(FileStorageContext);
   if (!context) {
@@ -349,6 +498,27 @@ export function useFileStorage() {
   return context;
 }
 
+/**
+ * Hook that returns a counter incrementing when file data is loaded.
+ * 
+ * Useful for triggering dependent data fetches when the file is reloaded.
+ * 
+ * ## Example
+ * 
+ * ```typescript
+ * function MyComponent() {
+ *   const changeCount = useFileStorageDataChange();
+ *   
+ *   useEffect(() => {
+ *     // Re-fetch data when file is loaded
+ *     loadData();
+ *   }, [changeCount]);
+ * }
+ * ```
+ * 
+ * @hook
+ * @returns {number} Counter that increments on file data load
+ */
 // Helper hook that returns a counter that increments when file storage data changes
 // Used to trigger re-fetching of data in dependent hooks (e.g., useCaseActivityLog)
 export function useFileStorageDataChange(): number {
@@ -367,6 +537,24 @@ export function useFileStorageDataChange(): number {
   return changeCounter;
 }
 
+/**
+ * Hook to register a callback when file storage data is loaded.
+ * 
+ * The callback is called whenever data is loaded from the file system.
+ * Useful for custom sync logic or data validation.
+ * 
+ * ## Example
+ * 
+ * ```typescript
+ * useFileStorageDataLoadHandler((data) => {
+ *   console.log('File data loaded:', data);
+ *   validateData(data);
+ * });
+ * ```
+ * 
+ * @hook
+ * @param {Function} handler - Callback receiving loaded data
+ */
 export function useFileStorageDataLoadHandler(handler: (data: unknown) => void) {
   const { registerDataLoadHandler } = useFileStorage();
   const handlerRef = useRef(handler);
@@ -384,19 +572,63 @@ export function useFileStorageDataLoadHandler(handler: (data: unknown) => void) 
   }, [registerDataLoadHandler]);
 }
 
+/**
+ * Lifecycle and permission state selectors.
+ * Derived boolean flags for easier state checks.
+ * @interface FileStorageLifecycleSelectors
+ */
 export interface FileStorageLifecycleSelectors {
+  /** Current lifecycle state */
   lifecycle: FileStorageLifecycleState;
+  /** Current permission state */
   permissionStatus: FileStoragePermissionState;
+  /** Whether system is ready for operations */
   isReady: boolean;
+  /** Whether system is blocked (can't proceed without user action) */
   isBlocked: boolean;
+  /** Whether system is in error state */
   isErrored: boolean;
+  /** Whether system is recovering from error */
   isRecovering: boolean;
+  /** Whether awaiting user choice (folder selection, permission prompt) */
   isAwaitingUserChoice: boolean;
+  /** Whether folder handle is persisted */
   hasStoredHandle: boolean;
+  /** Whether currently connected to a folder */
   isConnected: boolean;
+  /** Last error that occurred */
   lastError: FileStorageErrorInfo | null;
 }
 
+/**
+ * Hook for state selectors with derived boolean flags.
+ * 
+ * Provides convenient boolean flags for checking system state:
+ * - isReady, isBlocked, isErrored
+ * - isAwaitingUserChoice
+ * - isRecovering
+ * 
+ * ## Example
+ * 
+ * ```typescript
+ * const { isReady, isAwaitingUserChoice, lastError } = useFileStorageLifecycleSelectors();
+ * 
+ * if (isAwaitingUserChoice) {
+ *   return <SelectFolderPrompt />;
+ * }
+ * 
+ * if (lastError) {
+ *   return <ErrorDisplay error={lastError} />;
+ * }
+ * 
+ * if (isReady) {
+ *   return <AppContent />;
+ * }
+ * ```
+ * 
+ * @hook
+ * @returns {FileStorageLifecycleSelectors} State selectors with boolean flags
+ */
 export function useFileStorageLifecycleSelectors(): FileStorageLifecycleSelectors {
   const { lifecycle, permissionStatus, hasStoredHandle, lastError, isConnected } = useFileStorage();
 
