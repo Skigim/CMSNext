@@ -168,8 +168,8 @@ _Focus: Integration testing and documentation._
 
 | Issue                                          | Priority | Target Week |
 | ---------------------------------------------- | -------- | ----------- |
-| Alert optimistic updates inconsistent          | P1       | Week 1      |
-| Financial item history/verification sync       | P1       | Week 1      |
+| ~~Alert optimistic updates inconsistent~~      | ~~P1~~   | ✅ Done     |
+| ~~Financial item history/verification sync~~   | ~~P1~~   | ✅ Done     |
 | Alerts in popover (like notes)                 | P2       | Week 2      |
 | Consolidate action log per case                | P3       | Week 3      |
 | Remove reports tab, add filtering to Case List | P3       | Week 3      |
