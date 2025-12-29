@@ -12,10 +12,32 @@
 1. **Architectural Evolution** - Establish a pure **Domain Layer** to isolate business rules from React/Persistence.
 2. **UI Scalability** - Implement virtualization for lists to support 5,000+ item datasets.
 3. **Data Intelligence** - Deploy a charting engine and "Predictive" widgets (Trends/Forecasting).
+4. **Tech Debt Reduction** - Reduce oversized files flagged in December audit.
 
 ---
 
 ## 📅 Weekly Plan
+
+### Week 0: Audit Response & Quick Wins (Dec 30 - Jan 1)
+
+_Focus: Address December 2025 audit findings with low-risk extractions._
+
+#### Refactoring Targets (from Audit)
+
+| File                     | Current Lines | Target | Extraction                                       |
+| ------------------------ | ------------- | ------ | ------------------------------------------------ |
+| `AutosaveFileService.ts` | 1875          | <1200  | Extract `IndexedDBHandleStore` (~100 lines)      |
+| `CaseService.ts`         | 1002          | <700   | Extract `CaseBulkOperationsService` (~300 lines) |
+| `DataManager.ts`         | 1137          | —      | Defer (thin facade, splitting adds complexity)   |
+
+#### Tasks
+
+- [ ] Extract `IndexedDBHandleStore` from `AutosaveFileService.ts`
+- [ ] Extract `CaseBulkOperationsService` from `CaseService.ts`
+- [ ] Add unit tests for extracted modules
+- [ ] Fix 3 lint warnings (QuickCaseModal.tsx, alertsData.ts)
+
+---
 
 ### Week 1: The Domain Core (Jan 2-8)
 
@@ -101,13 +123,16 @@ _Focus: Integration testing and documentation._
 
 ## 📊 Success Metrics
 
-| Metric                       | Start | Week 1 | Week 2 | Week 3 | Target |
-| ---------------------------- | ----- | ------ | ------ | ------ | ------ |
-| Business Logic Coverage      | 100%  |        |        |        | 100%   |
-| Max Renderable Items (60fps) | ~100  |        | 5000+  |        | 5000+  |
-| Logic in Components/Hooks    | High  | Med    | Low    | Low    | Low    |
-| New Analytics Widgets        | 0     |        |        | 3      | 3      |
-| Test count                   | 534   |        |        |        | 600+   |
+| Metric                       | Start | Week 0 | Week 1 | Week 2 | Week 3 | Target |
+| ---------------------------- | ----- | ------ | ------ | ------ | ------ | ------ |
+| Business Logic Coverage      | 100%  |        |        |        |        | 100%   |
+| Max Renderable Items (60fps) | ~100  |        |        | 5000+  |        | 5000+  |
+| Logic in Components/Hooks    | High  |        | Med    | Low    | Low    | Low    |
+| New Analytics Widgets        | 0     |        |        |        | 3      | 3      |
+| Test count                   | 538   |        |        |        |        | 600+   |
+| AutosaveFileService.ts lines | 1875  | <1500  |        |        |        | <1200  |
+| CaseService.ts lines         | 1002  | <800   |        |        |        | <700   |
+| Lint warnings                | 3     | 0      |        |        |        | 0      |
 
 ---
 
@@ -213,4 +238,4 @@ Decision point: Week 2 prep work will benchmark both.
 ---
 
 **Prepared by:** GitHub Copilot  
-**Last updated:** December 22, 2025
+**Last updated:** December 29, 2025

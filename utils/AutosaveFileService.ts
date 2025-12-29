@@ -1,6 +1,12 @@
 /// <reference path="../types/global.d.ts" />
 
 import { createLogger } from "./logger";
+import {
+  getStoredDirectoryHandle,
+  storeDirectoryHandle,
+  clearStoredDirectoryHandle,
+  type IndexedDBHandleStoreConfig,
+} from "./IndexedDBHandleStore";
 
 const logger = createLogger("AutosaveFileService");
 
@@ -1272,64 +1278,28 @@ class AutosaveFileService {
   }
 
   // IndexedDB operations for directory handle persistence
+  // Delegated to IndexedDBHandleStore module for better separation of concerns
+  
+  /** Get the IndexedDB configuration for this service instance */
+  private getIndexedDBConfig(): IndexedDBHandleStoreConfig {
+    return {
+      dbName: this.dbName,
+      storeName: this.storeName,
+      dbKey: this.dbKey,
+    };
+  }
+
   private async getStoredDirectoryHandle(): Promise<FileSystemDirectoryHandle | null> {
-    return new Promise((resolve, reject) => {
-      const request = indexedDB.open(this.dbName, 1);
-      request.onerror = () => reject(request.error);
-      request.onsuccess = () => {
-        const db = request.result;
-        if (!db.objectStoreNames.contains(this.storeName)) {
-          resolve(null);
-          return;
-        }
-        const getRequest = db
-          .transaction(this.storeName)
-          .objectStore(this.storeName)
-          .get(this.dbKey);
-        getRequest.onsuccess = () => resolve(getRequest.result?.handle || null);
-        getRequest.onerror = () => resolve(null);
-      };
-      request.onupgradeneeded = (e) => {
-        (e.target as IDBOpenDBRequest).result.createObjectStore(this.storeName);
-      };
-    });
+    return getStoredDirectoryHandle(this.getIndexedDBConfig());
   }
 
   private async storeDirectoryHandle(): Promise<void> {
     if (!this.directoryHandle) return;
-    return new Promise((resolve, reject) => {
-      const request = indexedDB.open(this.dbName, 1);
-      request.onerror = (e) => reject(e);
-      request.onsuccess = () => {
-        const db = request.result;
-        const putRequest = db
-          .transaction(this.storeName, 'readwrite')
-          .objectStore(this.storeName)
-          .put({ handle: this.directoryHandle }, this.dbKey);
-        putRequest.onsuccess = () => resolve();
-        putRequest.onerror = (e) => reject(e);
-      };
-    });
+    return storeDirectoryHandle(this.directoryHandle, this.getIndexedDBConfig());
   }
 
   private async clearStoredDirectoryHandle(): Promise<void> {
-    return new Promise((resolve) => {
-      const request = indexedDB.open(this.dbName, 1);
-      request.onsuccess = () => {
-        const db = request.result;
-        if (!db.objectStoreNames.contains(this.storeName)) {
-          resolve();
-          return;
-        }
-        const deleteRequest = db
-          .transaction(this.storeName, 'readwrite')
-          .objectStore(this.storeName)
-          .delete(this.dbKey);
-        deleteRequest.onsuccess = () => resolve();
-        deleteRequest.onerror = () => resolve();
-      };
-      request.onerror = () => resolve();
-    });
+    return clearStoredDirectoryHandle(this.getIndexedDBConfig());
   }
 
   /**

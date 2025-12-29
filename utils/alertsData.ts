@@ -663,7 +663,7 @@ export function parseStackedAlerts(csvContent: string, cases: CaseForAlertMatchi
     
     // Generate unique ID - use alertNumber if present, otherwise random
     // Append suffix if the ID was already used (handles duplicate alertNumbers in CSV)
-    let baseId = alertNumber && alertNumber.length > 0 ? alertNumber : createRandomAlertId();
+    const baseId = alertNumber && alertNumber.length > 0 ? alertNumber : createRandomAlertId();
     let alertId = baseId;
     let suffix = 1;
     while (usedIds.has(alertId)) {
@@ -798,7 +798,7 @@ function parseGenericCsvAlerts(csvContent: string, cases: CaseForAlertMatching[]
 
     // Generate unique ID - use alertNumber if present, otherwise random
     // Append suffix if the ID was already used (handles duplicate alertNumbers in CSV)
-    let baseId = alertNumber && alertNumber.length > 0 ? alertNumber : createRandomAlertId();
+    const baseId = alertNumber && alertNumber.length > 0 ? alertNumber : createRandomAlertId();
     let alertId = baseId;
     let suffix = 1;
     while (usedIds.has(alertId)) {

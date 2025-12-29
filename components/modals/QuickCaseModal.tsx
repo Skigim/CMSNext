@@ -46,7 +46,7 @@ export function QuickCaseModal({ isOpen, onClose, onSave }: QuickCaseModalProps)
   const defaultCaseType = useMemo(() => config.caseTypes[0] ?? "", [config.caseTypes]);
   const defaultCaseStatus = useMemo(
     () => "Intake" as CaseStatus,
-    [config.caseStatuses],
+    [],
   );
   const defaultLivingArrangement = useMemo(
     () => config.livingArrangements[0] ?? "",

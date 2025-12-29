@@ -4,6 +4,7 @@ import type { CaseActivityEntry } from '../../types/activityLog';
 import type { CategoryConfig } from '../../types/categoryConfig';
 import type { FileStorageService, NormalizedFileData, StoredCase } from './FileStorageService';
 import { ActivityLogService } from './ActivityLogService';
+import { CaseBulkOperationsService } from './CaseBulkOperationsService';
 
 /**
  * Format a case display name from case data.
@@ -116,10 +117,13 @@ interface CaseServiceConfig {
  * @class CaseService
  * @see {@link FileStorageService} for underlying storage operations
  * @see {@link ActivityLogService} for activity logging
+ * @see {@link CaseBulkOperationsService} for bulk operations
  */
 export class CaseService {
   /** File storage service for data persistence */
   private fileStorage: FileStorageService;
+  /** Bulk operations service for batch operations */
+  private bulkOperations: CaseBulkOperationsService;
 
   /**
    * Create a new CaseService instance.
@@ -129,6 +133,9 @@ export class CaseService {
    */
   constructor(config: CaseServiceConfig) {
     this.fileStorage = config.fileStorage;
+    this.bulkOperations = new CaseBulkOperationsService({
+      fileStorage: config.fileStorage,
+    });
   }
 
   // =============================================================================
@@ -629,37 +636,7 @@ export class CaseService {
    * }
    */
   async deleteCases(caseIds: string[]): Promise<{ deleted: number; notFound: string[] }> {
-    if (caseIds.length === 0) {
-      return { deleted: 0, notFound: [] };
-    }
-
-    // Read current data
-    const currentData = await this.fileStorage.readFileData();
-    if (!currentData) {
-      throw new Error('Failed to read current data');
-    }
-
-    const idsToDelete = new Set(caseIds);
-    const existingIds = new Set(currentData.cases.map(c => c.id));
-    
-    // Track which IDs don't exist
-    const notFound = caseIds.filter(id => !existingIds.has(id));
-    
-    // Filter out cases and their associated data (including alerts)
-    const updatedData: NormalizedFileData = {
-      ...currentData,
-      cases: currentData.cases.filter(c => !idsToDelete.has(c.id)),
-      financials: currentData.financials.filter(f => !idsToDelete.has(f.caseId)),
-      notes: currentData.notes.filter(n => !idsToDelete.has(n.caseId)),
-      alerts: currentData.alerts.filter(a => !a.caseId || !idsToDelete.has(a.caseId)),
-    };
-
-    const deletedCount = currentData.cases.length - updatedData.cases.length;
-
-    // Write back to file
-    await this.fileStorage.writeNormalizedData(updatedData);
-
-    return { deleted: deletedCount, notFound };
+    return this.bulkOperations.deleteCases(caseIds);
   }
 
   /**
@@ -688,87 +665,7 @@ export class CaseService {
    * }
    */
   async updateCasesStatus(caseIds: string[], status: CaseStatus): Promise<{ updated: StoredCase[]; notFound: string[] }> {
-    if (caseIds.length === 0) {
-      return { updated: [], notFound: [] };
-    }
-
-    const currentData = await this.fileStorage.readFileData();
-    if (!currentData) {
-      throw new Error("Failed to read current data");
-    }
-
-    const idsToUpdate = new Set(caseIds);
-    const timestamp = new Date().toISOString();
-    const updatedCases: StoredCase[] = [];
-    const activityEntries: CaseActivityEntry[] = [];
-    const notFound: string[] = [];
-
-    // Track which IDs exist
-    const existingIds = new Set(currentData.cases.map(c => c.id));
-    caseIds.forEach(id => {
-      if (!existingIds.has(id)) {
-        notFound.push(id);
-      }
-    });
-
-    // Update matching cases
-    const casesWithChanges = currentData.cases.map(c => {
-      if (!idsToUpdate.has(c.id)) {
-        return c;
-      }
-
-      const currentStatus = c.caseRecord?.status ?? c.status;
-      
-      // Skip if status is already the same
-      if (currentStatus === status) {
-        updatedCases.push(c);
-        return c;
-      }
-
-      const updatedCase: StoredCase = {
-        ...c,
-        status,
-        caseRecord: {
-          ...c.caseRecord,
-          status,
-          updatedDate: timestamp,
-        },
-      };
-
-      updatedCases.push(updatedCase);
-
-      // Create activity log entry
-      activityEntries.push({
-        id: uuidv4(),
-        timestamp,
-        caseId: c.id,
-        caseName: formatCaseDisplayName(c),
-        caseMcn: c.caseRecord?.mcn ?? c.mcn ?? null,
-        type: "status-change",
-        payload: {
-          fromStatus: currentStatus,
-          toStatus: status,
-        },
-      });
-
-      return updatedCase;
-    });
-
-    const casesWithTouchedTimestamps = this.fileStorage.touchCaseTimestamps(
-      casesWithChanges,
-      caseIds.filter(id => existingIds.has(id))
-    );
-
-    // Write updated data
-    const updatedData: NormalizedFileData = {
-      ...currentData,
-      cases: casesWithTouchedTimestamps,
-      activityLog: ActivityLogService.mergeActivityEntries(currentData.activityLog, activityEntries),
-    };
-
-    await this.fileStorage.writeNormalizedData(updatedData);
-
-    return { updated: updatedCases, notFound };
+    return this.bulkOperations.updateCasesStatus(caseIds, status);
   }
 
   /**
@@ -794,87 +691,7 @@ export class CaseService {
    * console.log(`Marked ${result.updated.length} cases as priority`);
    */
   async updateCasesPriority(caseIds: string[], priority: boolean): Promise<{ updated: StoredCase[]; notFound: string[] }> {
-    if (caseIds.length === 0) {
-      return { updated: [], notFound: [] };
-    }
-
-    const currentData = await this.fileStorage.readFileData();
-    if (!currentData) {
-      throw new Error("Failed to read current data");
-    }
-
-    const idsToUpdate = new Set(caseIds);
-    const timestamp = new Date().toISOString();
-    const updatedCases: StoredCase[] = [];
-    const activityEntries: CaseActivityEntry[] = [];
-    const notFound: string[] = [];
-
-    // Track which IDs exist
-    const existingIds = new Set(currentData.cases.map(c => c.id));
-    caseIds.forEach(id => {
-      if (!existingIds.has(id)) {
-        notFound.push(id);
-      }
-    });
-
-    // Update matching cases
-    const casesWithChanges = currentData.cases.map(c => {
-      if (!idsToUpdate.has(c.id)) {
-        return c;
-      }
-
-      const currentPriority = c.priority ?? false;
-      
-      // Skip if priority is already the same
-      if (currentPriority === priority) {
-        updatedCases.push(c);
-        return c;
-      }
-
-      const updatedCase: StoredCase = {
-        ...c,
-        priority,
-        caseRecord: {
-          ...c.caseRecord,
-          priority,
-          updatedDate: timestamp,
-        },
-      };
-
-      updatedCases.push(updatedCase);
-
-      // Create activity log entry
-      activityEntries.push({
-        id: uuidv4(),
-        timestamp,
-        caseId: c.id,
-        caseName: formatCaseDisplayName(c),
-        caseMcn: c.caseRecord?.mcn ?? c.mcn ?? null,
-        type: "priority-change",
-        payload: {
-          fromPriority: currentPriority,
-          toPriority: priority,
-        },
-      });
-
-      return updatedCase;
-    });
-
-    const casesWithTouchedTimestamps = this.fileStorage.touchCaseTimestamps(
-      casesWithChanges,
-      caseIds.filter(id => existingIds.has(id))
-    );
-
-    // Write updated data
-    const updatedData: NormalizedFileData = {
-      ...currentData,
-      cases: casesWithTouchedTimestamps,
-      activityLog: ActivityLogService.mergeActivityEntries(currentData.activityLog, activityEntries),
-    };
-
-    await this.fileStorage.writeNormalizedData(updatedData);
-
-    return { updated: updatedCases, notFound };
+    return this.bulkOperations.updateCasesPriority(caseIds, priority);
   }
 
   // =============================================================================
@@ -910,52 +727,7 @@ export class CaseService {
    * console.log('Cases imported successfully');
    */
   async importCases(cases: StoredCase[]): Promise<void> {
-    // Read current data
-    const currentData = await this.fileStorage.readFileData();
-    if (!currentData) {
-      throw new Error('Failed to read current data');
-    }
-
-    const timestamp = new Date().toISOString();
-
-    // Build set of existing case IDs to detect duplicates
-    const existingIds = new Set(currentData.cases.map(c => c.id));
-
-    // Validate, ensure unique IDs, and filter out duplicates
-    const casesToImport = cases
-      .map(caseItem => ({
-        ...caseItem,
-        id: caseItem.id || uuidv4(),
-        caseRecord: {
-          ...caseItem.caseRecord,
-          updatedDate: timestamp,
-        },
-      }))
-      .filter(caseItem => {
-        if (existingIds.has(caseItem.id)) {
-          console.warn(`Skipping import: case with ID ${caseItem.id} already exists`);
-          return false;
-        }
-        return true;
-      });
-
-    // Only proceed if there are new cases to import
-    if (casesToImport.length === 0) {
-      console.info('No new cases to import (all IDs already exist)');
-      return;
-    }
-
-    const touchedCaseIds = casesToImport.map(caseItem => caseItem.id);
-    const combinedCases = [...currentData.cases, ...casesToImport];
-    const casesWithTouchedTimestamps = this.fileStorage.touchCaseTimestamps(combinedCases, touchedCaseIds);
-
-    // Write updated data
-    const updatedData: NormalizedFileData = {
-      ...currentData,
-      cases: casesWithTouchedTimestamps,
-    };
-
-    await this.fileStorage.writeNormalizedData(updatedData);
+    return this.bulkOperations.importCases(cases);
   }
 
   /**
@@ -984,18 +756,6 @@ export class CaseService {
    * console.log('All data cleared, configuration preserved');
    */
   async clearAllData(categoryConfig: CategoryConfig): Promise<void> {
-    const emptyData: NormalizedFileData = {
-      version: "2.0",
-      cases: [],
-      financials: [],
-      notes: [],
-      alerts: [],
-      exported_at: new Date().toISOString(),
-      total_cases: 0,
-      categoryConfig,
-      activityLog: [],
-    };
-
-    await this.fileStorage.writeNormalizedData(emptyData);
+    return this.bulkOperations.clearAllData(categoryConfig);
   }
 }
