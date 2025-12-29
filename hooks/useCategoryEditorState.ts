@@ -79,8 +79,96 @@ export type UseCategoryEditorStateReturn<T extends EditorItem> = {
 };
 
 /**
- * Shared state management hook for category editors.
+ * Shared state management hook for category editors
+ * 
  * Eliminates duplicate logic across CategoryEditor, StatusCategoryEditor, and AlertTypeCategoryEditor.
+ * Provides complete state, validation, and CRUD operations for managing lists of configurable items.
+ * 
+ * **Supported Operations:**
+ * - Add: Create new item from draft name (validates uniqueness, auto-reset draft)
+ * - Update: Change name or fields of existing item
+ * - Remove: Delete item by index
+ * - Revert: Restore to initial items, reset touched state
+ * - Save: Async persist to parent component
+ * 
+ * **Validation:**
+ * - Duplicate detection: Case-insensitive, normalized (trimmed) names
+ * - Empty names: Detected but form depends on allowEmpty option
+ * - Changes: Compares cleaned (trimmed, non-empty) items to initial items
+ * - Save disable: When duplicates exist, has empty values, no changes, or globally loading
+ * 
+ * **Metadata Tracking:**
+ * - `itemMeta`: For each item, stores raw name, trimmed, and normalized versions
+ * - `duplicateIndices`: Set of indices with duplicate names (for UI highlighting)
+ * - `cleanedItems`: Non-empty, trimmed items ready for persistence
+ * - `hasChanges`: Boolean - true if cleaned items differ from initial
+ * - `touched`: Boolean - tracks if user has made any edits (form touched state)
+ * 
+ * **Form Lifecycle:**
+ * 1. Initialize with initialItems (copied to avoid mutations)
+ * 2. User edits: handleNameChange/handleFieldChange update items + set touched=true
+ * 3. User adds: handleAdd validates uniqueness, creates item, resets draft, updates items
+ * 4. Validation: Continuous - meta/duplicates/changes computed on every item change
+ * 5. Save: handleSave calls onSave with cleanedItems, shows loading state
+ * 6. Revert: handleRevert restores initialItems, resets touched state
+ * 7. External changes: useEffect syncs initialItems prop changes to local state
+ * 
+ * **Usage Example:**
+ * ```typescript
+ * const editor = useCategoryEditorState({
+ *   initialItems: [
+ *     { name: "Active", colorSlot: "green" },
+ *     { name: "Closed", colorSlot: "gray" }
+ *   ],
+ *   createItem: (name) => ({ name, colorSlot: "blue" }),
+ *   cleanItem: (item) => ({ ...item, name: item.name.trim() }),
+ *   onSave: async (items) => {
+ *     await dataManager.updateStatuses(items);
+ *   },
+ *   isGloballyLoading: isLoadingData,
+ *   allowEmpty: false,
+ *   hasItemChanged: (current, orig) => {
+ *     return current.name !== orig.name || current.colorSlot !== orig.colorSlot;
+ *   }
+ * });
+ * 
+ * // Render form
+ * {editor.items.map((item, i) => (
+ *   <div key={i} className={editor.duplicateIndices.has(i) ? 'error' : ''}>
+ *     <input
+ *       value={item.name}
+ *       onChange={(e) => editor.handleNameChange(i, e.target.value)}
+ *     />
+ *     {editor.itemMeta[i].trimmed === "" && <span>Required</span>}
+ *     <button onClick={() => editor.handleRemove(i)}>Remove</button>
+ *   </div>
+ * ))}
+ * 
+ * <button onClick={() => editor.handleAdd(draftName, resetDraft)} disabled={editor.disableSave}>
+ *   Add
+ * </button>
+ * 
+ * <button onClick={() => editor.handleSave()} disabled={editor.disableSave}>
+ *   {editor.isSaving ? "Saving..." : "Save"}
+ * </button>
+ * ```
+ * 
+ * **Generic Type Parameter:**
+ * `T extends EditorItem` - Any object with at least `{ name: string }` field.
+ * Allows status configs, alert types, categories, etc. to reuse same logic.
+ * 
+ * @template T Type of item being edited (must have `name: string` field)
+ * 
+ * @param {UseCategoryEditorStateOptions<T>} options
+ *   - `initialItems`: Initial list of items from parent config
+ *   - `onSave(items)`: Async callback to persist cleaned items
+ *   - `isGloballyLoading`: Disable save if parent is loading
+ *   - `createItem(name)`: Factory function to create new item from draft name
+ *   - `cleanItem(item)`: Function to clean item (trim name, normalize, etc.)
+ *   - `allowEmpty`: If true, allows saving with zero items (default: false)
+ *   - `hasItemChanged`: Custom equality check for detecting changes (default: compare name only)
+ * 
+ * @returns {UseCategoryEditorStateReturn<T>} Editor state and handlers
  */
 export function useCategoryEditorState<T extends EditorItem>({
   initialItems,

@@ -31,7 +31,88 @@ export interface UseAlertResolveReturn {
   applyOverrides: (index: AlertsIndex) => AlertsIndex;
 }
 
-/** Handles alert resolution and reopening with optimistic updates and background persistence */
+/**
+ * Hook for handling alert resolution with optimistic UI updates and background persistence
+ * 
+ * Provides optimistic alert status updates (toggle resolved ↔ in-progress) with:
+ * - Immediate UI update via applyOverrides()
+ * - Background write via alertWriteQueue for persistence
+ * - Automatic reload on success, error toast on failure
+ * - Error recovery without blocking UI
+ * 
+ * **Status Transitions:**
+ * - resolved → in-progress: Mark as work-in-progress (clear resolvedAt)
+ * - in-progress → resolved: Mark complete (set resolvedAt = now, preserve notes)
+ * 
+ * **Optimistic Update Flow:**
+ * 1. User clicks resolve button on alert
+ * 2. onResolveAlert() immediately updates local state via applyOverrides()
+ * 3. UI re-renders with new status (alert appears resolved/reopened)
+ * 4. Background queue persists change to file system
+ * 5. On success: Silent reload to sync with any other clients
+ * 6. On error: Show toast, clear override to revert optimistic update
+ * 
+ * **Resolution Notes:**
+ * - Persisted when toggling resolved → in-progress
+ * - User can edit in modal before resolving
+ * - Preserved on status changes for context/audit trail
+ * 
+ * **Background Write Queue:**
+ * - Uses alertWriteQueue to serialize writes and handle retries
+ * - Non-blocking: Returns immediately after setting override
+ * - If unmounted during write: Continues in background, no UI feedback
+ * - On failure: Only shows error toast if still mounted
+ * 
+ * **Case Validation:**
+ * - Alert.matchedCaseId must match selectedCase.id (or be undefined)
+ * - Prevents updating alerts for wrong case in multi-select scenario
+ * - Silent error toast if case mismatch detected
+ * 
+ * **Dependencies:**
+ * - Requires alerts have unique `alert.id` (primary key for updates)
+ * - Requires dataManager for updateAlertStatus() operations
+ * - Requires useIsMounted to prevent updates after unmount
+ * 
+ * **Usage Example:**
+ * ```typescript
+ * const alerts = useAlertResolve({
+ *   dataManager: dm,
+ *   isMounted: isMountedRef,
+ *   selectedCase: currentCase,
+ *   setAlertsIndex: setAlerts,
+ *   reloadAlerts: async () => {
+ *     const fresh = await dm.getAlertsIndex({ cases: [currentCase] });
+ *     setAlerts(fresh);
+ *   }
+ * });
+ * 
+ * // In alert list item
+ * <button onClick={() => alerts.onResolveAlert(alert)}>
+ *   {alert.status === "resolved" ? "Reopen" : "Resolve"}
+ * </button>
+ * 
+ * // In selector
+ * const visibleAlerts = alerts.applyOverrides(alertsIndex).alerts
+ *   .filter(a => a.status !== "resolved");
+ * ```
+ * 
+ * **Error Handling:**
+ * - Missing dataManager: Error toast "Alerts service is not ready..."
+ * - Case mismatch: Silent error (internal state inconsistency)
+ * - Write queue failure: Error toast "Alert update failed. Please try again."
+ * - Unmounted errors: Logs but no UI feedback
+ * 
+ * @param {UseAlertResolveConfig} config
+ *   - `dataManager`: DataManager instance for updateAlertStatus calls
+ *   - `isMounted`: Ref to boolean indicating component mount state
+ *   - `selectedCase`: Current case context (alerts must belong to this case)
+ *   - `setAlertsIndex`: State setter to apply overrides to UI
+ *   - `reloadAlerts`: Async function to refresh alerts after background write succeeds
+ * 
+ * @returns {UseAlertResolveReturn} Resolution handlers:
+ * - `onResolveAlert(alert)`: Toggle alert resolution (optimistic + background)
+ * - `applyOverrides(index)`: Apply pending overrides to alerts index for UI
+ */
 export function useAlertResolve(config: UseAlertResolveConfig): UseAlertResolveReturn {
   const { dataManager, isMounted, selectedCase, setAlertsIndex, reloadAlerts } = config;
   const overridesRef = useRef(new Map<string, ResolvedOverride>());

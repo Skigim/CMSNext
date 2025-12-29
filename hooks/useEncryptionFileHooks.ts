@@ -1,10 +1,3 @@
-/**
- * Hook to wire up EncryptionContext to AutosaveFileService.
- * 
- * Sets encryption hooks on the file service when credentials are available,
- * enabling transparent encryption/decryption during file operations.
- */
-
 import { useEffect, useCallback, useMemo, useRef } from "react";
 import { useEncryption } from "@/contexts/EncryptionContext";
 import { useFileStorage } from "@/contexts/FileStorageContext";
@@ -31,12 +24,71 @@ interface UseEncryptionFileHooksResult {
 }
 
 /**
- * Wires up the EncryptionContext to the AutosaveFileService.
+ * Hook to wire up EncryptionContext to AutosaveFileService
  * 
- * When credentials are available (after login), this hook:
- * 1. Creates encryption hooks that use the derived key
- * 2. Sets those hooks on the file service
- * 3. Handles key derivation for encrypted files
+ * Enables transparent file-level encryption/decryption by creating and installing
+ * encryption hooks on the file service. Automatically derives keys from password when needed.
+ * 
+ * **Encryption Architecture:**
+ * File service → Before write: encrypt data → After read: decrypt data
+ * Uses cached CryptoKey (non-extractable) from EncryptionContext for all operations.
+ * 
+ * **Initialization Flow:**
+ * 1. User enters password → EncryptionContext.setPendingPassword(pwd)
+ * 2. First encrypt operation: deriveKey(pwd, newSalt) → cache key
+ * 3. First decrypt operation: deriveKey(pwd, fileSalt) from existing file
+ * 4. Subsequent operations: Use cached key (fast, no PBKDF2 overhead)
+ * 
+ * **PBKDF2 Key Derivation (EncryptionContext):**
+ * - Algorithm: PBKDF2-SHA256
+ * - Iterations: 600,000 (OWASP 2023 recommendation)
+ * - Salt: Stored in encrypted file header for recovery
+ * - Key: 256-bit (AES-GCM compatible)
+ * 
+ * **Encryption/Decryption:**
+ * - Algorithm: AES-256-GCM
+ * - IV: Random per operation
+ * - Auth tag: Prevents tampering
+ * - Format: { iv, authTag, ciphertext, salt } in EncryptedPayload
+ * 
+ * **Error Handling:**
+ * - Missing password: Falls back to unencrypted storage
+ * - Failed initialization: Logs error, returns data unencrypted, allows work to continue
+ * - Invalid encrypted file: Throws error (decryption must succeed or user is notified)
+ * 
+ * **Usage Example:**
+ * ```typescript
+ * const encryption = useEncryptionFileHooks();
+ * 
+ * // User enters password
+ * encryption.storePassword("user-entered-password");
+ * // Hook automatically derives key on next read/write
+ * 
+ * // User logs out
+ * // EncryptionContext clears credentials
+ * // Next operation: Falls back to unencrypted (or re-prompts for password)
+ * 
+ * // Check if encryption is active
+ * if (encryption.isActive) {
+ *   console.log("Encryption enabled");
+ * }
+ * 
+ * if (encryption.lastError) {
+ *   console.error("Encryption error:", encryption.lastError);
+ *   encryption.clearError();
+ * }
+ * ```
+ * 
+ * **Dependencies:**
+ * - Requires EncryptionContext in tree (provides useEncryption)
+ * - Requires FileStorageContext in tree (provides useFileStorage)
+ * - AutosaveFileService must support setEncryptionHooks()
+ * 
+ * @returns {UseEncryptionFileHooksResult} Encryption status and control:
+ * - `isActive`: Boolean - true when encryption hooks are installed on file service
+ * - `lastError`: String | null - error from last encrypt/decrypt operation
+ * - `clearError()`: Clear lastError state for display purposes
+ * - `storePassword(pwd)`: Pass password to context for key derivation
  */
 export function useEncryptionFileHooks(): UseEncryptionFileHooksResult {
   const encryption = useEncryption();

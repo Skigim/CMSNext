@@ -26,10 +26,61 @@ interface UseConnectionFlowResult {
 }
 
 /**
- * Manages file storage connection flow and modal visibility.
+ * Hook for managing file storage connection flow and modal lifecycle
  * 
- * The modal handles folder selection and password internally.
- * This hook manages modal state, error syncing, and recovery notifications.
+ * Monitors FileStorageContext lifecycle events and automatically shows/hides
+ * the connection modal based on storage state. Handles error display, recovery notifications,
+ * and initial data load when connection succeeds.
+ * 
+ * **Connection Lifecycle:**
+ * 1. INITIAL → CONNECTING: User selects folder
+ * 2. CONNECTING → CONNECTED (+ encrypted): Folder mounted, password validated
+ * 3. CONNECTED → READY: Initial file load complete, autosave started
+ * 4. READY → (error) → RECOVERING: Handles transient failures with reconnection
+ * 5. If blocked/permission-denied: Modal re-shown for retry
+ * 
+ * **Modal Behavior:**
+ * - Shows when: Not ready, not connected, awaiting user choice, or permission denied
+ * - Hides when: Connection complete, data loaded, and ready state achieved
+ * - User can manually dismiss (modal remains but allows work)
+ * - Dismissal persists until next lifecycle change
+ * 
+ * **Error Handling:**
+ * - Browser unsupported: Sets error state, hides modal
+ * - Permission denied: Shows modal, sets error message
+ * - File storage errors: Syncs to setError, displays error toast
+ * - Recovery attempts: Shows "reconnecting..." toast during recovery
+ * 
+ * **Data Loading:**
+ * - Triggered by handleConnectionComplete (called when modal closes)
+ * - Calls loadCases() to fetch StoredCase[] from file storage
+ * - Updates React state: setCases, setHasLoadedData, setError
+ * - Shows success toast with count: "Connected and loaded 15 cases"
+ * 
+ * **Autosave Integration:**
+ * - On connection complete, ensures AutosaveFileService is running
+ * - Delays start by 500ms to allow FileStorageService to stabilize
+ * 
+ * **Browser Compatibility:**
+ * - Checks isSupported for File System Access API availability
+ * - Sets user-friendly message if API unavailable
+ * 
+ * @param {UseConnectionFlowParams} params
+ *   - `isSupported`: File System API availability (undefined = not yet checked)
+ *   - `hasLoadedData`: Flag for initial data load completion
+ *   - `connectionState`: FileStorageLifecycleSelectors (lifecycle, permissions, errors)
+ *   - `service`: AutosaveFileService instance (null = not initialized)
+ *   - `fileStorageService`: FileStorageService (unused, kept for typing)
+ *   - `dataManager`: DataManager (unused, kept for typing)
+ *   - `loadCases`: Async function to fetch cases from file storage
+ *   - `setCases`: React state setter for loaded cases
+ *   - `setError`: React state setter for error messages
+ *   - `setHasLoadedData`: Lifecycle flag setter
+ * 
+ * @returns {UseConnectionFlowResult} Modal and lifecycle handlers:
+ * - `showConnectModal`: Boolean visibility state
+ * - `handleConnectionComplete()`: Called by modal on successful connection (loads data)
+ * - `dismissConnectModal()`: Called by user to manually hide modal (allows work)
  */
 export function useConnectionFlow({
   isSupported,

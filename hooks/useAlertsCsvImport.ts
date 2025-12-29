@@ -18,8 +18,61 @@ interface UseAlertsCsvImportReturn {
 }
 
 /**
- * Hook for handling alerts CSV import functionality.
- * Extracts the CSV import logic from Settings for reusability and cleaner code.
+ * Hook for handling alerts CSV import functionality
+ * 
+ * Orchestrates CSV file selection and import workflow:
+ * File picker → Read CSV → Parse and merge with existing alerts → Notify success
+ * 
+ * **Supported CSV Format:**
+ * Expected columns: MCN, Description, Due Date, Priority, Status, etc.
+ * Parsed by `dataManager.mergeAlertsFromCsvContent()` which handles format validation
+ * 
+ * **Import Behavior:**
+ * - New alerts added, existing alerts updated based on MCN + description match
+ * - Shows summary toast: "2 new · 1 updated • 15 total alerts saved"
+ * - Empty file shows info toast, file selection cleared after import
+ * 
+ * **Error Handling:**
+ * - Missing dataManager: Prevents import, shows error toast
+ * - Invalid CSV: Catches parse error, displays error message to user
+ * - Always clears file input after operation (success or failure)
+ * 
+ * **Usage Example:**
+ * ```typescript
+ * const csvImport = useAlertsCsvImport({
+ *   dataManager: dm,
+ *   cases: allCases,
+ *   onAlertsCsvImported: (alertsIndex) => {
+ *     // Called after successful import with refreshed alerts index
+ *     setAlertsIndex(alertsIndex);
+ *   }
+ * });
+ * 
+ * // Render hidden file input
+ * <input
+ *   ref={csvImport.fileInputRef}
+ *   type="file"
+ *   accept=".csv"
+ *   onChange={csvImport.handleFileSelected}
+ *   hidden
+ * />
+ * 
+ * // Render button
+ * <button onClick={csvImport.handleButtonClick} disabled={csvImport.isImporting}>
+ *   {csvImport.isImporting ? "Importing..." : "Import Alerts"}
+ * </button>
+ * ```
+ * 
+ * @param {UseAlertsCsvImportParams} params
+ *   - `dataManager`: Alert merge service (null = import disabled)
+ *   - `cases`: All cases for alert matching context
+ *   - `onAlertsCsvImported`: Callback with refreshed AlertsIndex after import
+ * 
+ * @returns {UseAlertsCsvImportReturn} Import control interface:
+ * - `isImporting`: Boolean loading state
+ * - `fileInputRef`: Ref to attach to <input type="file" />
+ * - `handleButtonClick()`: Trigger file picker
+ * - `handleFileSelected(event)`: Process selected file (attach to input onChange)
  */
 export function useAlertsCsvImport({
   dataManager,
