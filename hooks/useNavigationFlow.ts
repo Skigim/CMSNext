@@ -37,11 +37,47 @@ interface NavigationHandlers {
 }
 
 /**
- * Orchestrates navigation state and actions for the application.
+ * Hook for managing application navigation with connection-aware locking
  * 
- * Delegates to:
- * - useNavigationLock: Lock state based on file storage connection
- * - useNavigationActions: Navigation action callbacks
+ * Orchestrates complete navigation flow:
+ * - View and case selection state
+ * - Navigation lock (disabled when offline/connecting)
+ * - Case save/delete with navigation side-effects
+ * - Sidebar and breadcrumb management
+ * - Form state tracking for back navigation
+ * 
+ * **Navigation Lock:**
+ * Based on FileStorageContext connection state:
+ * - DISCONNECTED: Lock all case operations, show error message
+ * - CONNECTING: Lock, show reconnecting message
+ * - CONNECTED: Unlock, allow case operations
+ * - ERROR: Lock, show error with details
+ * 
+ * **Views and Transitions:**
+ * - dashboard → list/details: Normal navigation
+ * - list → details (caseId): Select case, show sidebar
+ * - details → new: Create case from details context
+ * - * → form: Track previousView + returnToCaseId for back button
+ * - form → previousView: Return with new/updated caseId
+ * 
+ * **Sidebar Behavior:**
+ * - Open when viewing case details
+ * - Close when returning to list
+ * - Persists across view changes
+ * 
+ * **Usage Example:**
+ * ```typescript
+ * const nav = useNavigationFlow({\n *   cases: allCases,\n *   connectionState: fileStorageState,\n *   saveCase,\n *   deleteCase\n * });\n * \n * if (nav.navigationLock.locked) {\n *   return <LockedView reason={nav.navigationLock.reason} />;\n * }\n * \n * // Navigate
+ * nav.viewCase(\"case-123\");\n * nav.newCase();\n * nav.backToList();\n * \n * // Save case (with nav side-effects)
+ * await nav.saveCaseWithNavigation(caseData);\n * ```
+ * 
+ * @param {UseNavigationFlowParams} params
+ *   - `cases`: All available cases for lookup
+ *   - `connectionState`: FileStorageLifecycleSelectors for lock determination
+ *   - `saveCase`: Async function to persist case
+ *   - `deleteCase`: Async function to delete case
+ * 
+ * @returns {NavigationHandlers} Complete navigation interface
  */
 export function useNavigationFlow({
   cases,

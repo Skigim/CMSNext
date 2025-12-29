@@ -20,6 +20,49 @@ interface UseNoteFlowResult {
   handleBatchCreateNote: (noteData: NewNoteData) => Promise<void>;
 }
 
+/**
+ * Hook for managing note workflow (layer between UI and useNotes hook)
+ * 
+ * Wraps useNotes with case context and error handling.
+ * Delegates all note operations to useNotes, adds batch operations for inline edits.
+ * 
+ * **Operations:**
+ * - `handleAddNote()`: Open form for new note in selectedCase
+ * - `handleSaveNote(data)`: Save via useNotes (create or update based on form mode)
+ * - `handleDeleteNote(id)`: Delete note from selectedCase
+ * - `handleBatchUpdateNote(id, data)`: Update existing note (inline/batch edits)
+ * - `handleBatchCreateNote(data)`: Create note directly (bypassing form)
+ * - `handleCancelNoteForm()`: Close form without saving
+ * 
+ * **Error Handling:**
+ * - Requires selectedCase (operations no-op if null)
+ * - Requires dataManager for batch operations (shows toast if unavailable)
+ * - All errors propagate to caller with try/catch
+ * - Clears setError on success for clean state
+ * 
+ * **Usage Example:**
+ * ```typescript
+ * const flow = useNoteFlow({
+ *   selectedCase: caseData,
+ *   setError: setErrorMsg
+ * });
+ * 
+ * // Open add form
+ * flow.handleAddNote();
+ * 
+ * // User fills and submits form
+ * await flow.handleSaveNote({ content: "..." });
+ * 
+ * // Or update inline without form
+ * await flow.handleBatchUpdateNote(noteId, { content: "Updated" });
+ * ```
+ * 
+ * @param {UseNoteFlowParams} params
+ *   - `selectedCase`: Current case (operations no-op if null)
+ *   - `setError`: Parent error state setter
+ * 
+ * @returns {UseNoteFlowResult} Note operations
+ */
 export function useNoteFlow({
   selectedCase,
   setError,

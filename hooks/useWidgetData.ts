@@ -3,47 +3,54 @@ import { recordPerformanceMarker } from '@/utils/telemetryInstrumentation';
 import { useFileStorageDataChange } from '@/contexts/FileStorageContext';
 
 /**
- * Widget data freshness information.
- * Tracks when data was last updated and how stale it is.
- */
-export interface WidgetDataFreshness {
-  lastUpdatedAt: number | null;
-  isStale: boolean;
-  minutesAgo: number | null;
-}
-
-/**
- * Widget data hook options.
- */
-export interface UseWidgetDataOptions {
-  /** How often to refresh data in milliseconds. Default: 5 minutes */
-  refreshInterval?: number;
-  /** Enable performance tracking for this widget */
-  enablePerformanceTracking?: boolean;
-  /** Optional key that forces a refetch when it changes */
-  refreshKey?: unknown;
-}
-
-/**
- * useWidgetData Hook
- *
- * Manages data fetching, freshness tracking, and performance metrics for dashboard widgets.
- * Automatically refreshes data at specified intervals and tracks staleness.
- *
- * @param dataFetcher - Async function that fetches the widget data
- * @param options - Configuration options (refreshInterval, performance tracking)
- * @returns Object containing data, loading state, error, and freshness info
- *
- * @example
- * ```tsx
- * const { data, loading, error, freshness, refresh } = useWidgetData(
- *   async () => {
- *     const cases = await getCases();
- *     return calculatePriorities(cases);
- *   },
- *   { refreshInterval: 60000 } // 1 minute
- * );
- * ```
+ * Hook for managing widget data fetching with auto-refresh and freshness tracking
+ * 
+ * Provides:
+ * - Periodic data refresh with configurable interval
+ * - Error handling with silent retries
+ * - Data staleness tracking (minutes since last update)
+ * - Performance metrics for dashboard optimization
+ * - Forced refresh via dependency or manual trigger
+ * 
+ * **Refresh Behavior:**
+ * - Auto-refresh at specified interval (default: 5 minutes = 300,000ms)
+ * - Skips refresh if component unmounted
+ * - Continues refreshing even if error (doesn't break polling)
+ * - Manual refresh via `refresh()` function restarts timer
+ * 
+ * **Staleness Tracking:**
+ * - `lastUpdatedAt`: Timestamp of last successful fetch
+ * - `isStale`: Boolean - true if data > 1 interval old
+ * - `minutesAgo`: Minutes since last update (null if never fetched)
+ * 
+ * **Error Handling:**
+ * - Catches errors from dataFetcher
+ * - Stores error in state (doesn't throw)
+ * - Shows error to user via widget UI
+ * - Auto-retries on next interval (doesn't stop polling)
+ * 
+ * **Performance Tracking:**
+ * - Optional performance metrics via recordPerformanceMarker()
+ * - Tracks fetch duration for dashboard optimization
+ * - Helps identify slow widgets
+ * 
+ * **Usage Example:**
+ * ```typescript
+ * const widget = useWidgetData(\n *   async () => {\n *     const cases = await dataManager.getAllCases();\n *     return {\n *       total: cases.length,\n *       priority: cases.filter(c => c.priority).length\n *     };\n *   },\n *   { \n *     refreshInterval: 60000, // 1 minute\n *     enablePerformanceTracking: true,\n *     refreshKey: selectedCaseId // Refetch when case changes\n *   }\n * );\n * \n * if (widget.loading) return <Skeleton />;\n * if (widget.error) return <Error message={widget.error} />;\n * \n * <div>\n *   <h3>Cases: {widget.data.total}</h3>\n *   <small>Updated {widget.freshness.minutesAgo}min ago</small>\n *   <button onClick={() => widget.refresh()}>Refresh</button>\n * </div>\n * ```
+ * 
+ * **Dependencies:**
+ * - Requires useFileStorageDataChange() hook for reactive updates
+ * - Respects component unmount state (useIsMounted)
+ * 
+ * @template T Type of data returned by dataFetcher
+ * 
+ * @param {() => Promise<T>} dataFetcher Async function to fetch widget data
+ * @param {UseWidgetDataOptions} options Configuration
+ *   - `refreshInterval`: Auto-refresh period in ms (default: 300000 = 5min)
+ *   - `enablePerformanceTracking`: Record fetch duration metrics (default: false)
+ *   - `refreshKey`: Dependency to force refetch when changes (optional)
+ * 
+ * @returns Widget data, loading state, error, staleness, and refresh control
  */
 export function useWidgetData<T>(
   dataFetcher: () => Promise<T>,

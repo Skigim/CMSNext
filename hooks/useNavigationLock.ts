@@ -24,12 +24,46 @@ interface UseNavigationLockResult {
 const NAVIGATION_TOAST_ID = "navigation-lock";
 
 /**
- * Manages navigation lock state based on file storage connection status.
+ * Hook for managing navigation lock based on file storage connection state
  * 
- * Provides:
- * - Computed lock state with reason and tone
- * - Guard function to block case interactions when locked
- * - Automatic toast notifications for lock state changes
+ * Prevents case operations (create/edit/delete) when file storage is unavailable.
+ * Provides computed lock state with user-friendly reason and UI tone.
+ * 
+ * **Lock Conditions:**
+ * - BLOCKED: No folder selected (isBlocked=true)
+ *   - Permission denied → tone: error, reason: \"Permission denied...\"
+ *   - Other block → tone: warning, reason: \"Directory access is blocked...\"
+ * - ERROR: File storage error occurred
+ *   - tone: error, reason: lastError.message
+ * - RECOVERING: Attempting to reconnect
+ *   - tone: warning, reason: \"Reconnecting to storage...\"
+ * - AWAITING CHOICE: User action needed (password, etc.)
+ *   - tone: warning, reason: \"Please complete connection setup\"
+ * - READY: Ready to go
+ *   - tone: info, reason: \"\" (empty, not locked)
+ * 
+ * **Guard Function:**
+ * - `guardCaseInteraction()`: Returns true if locked
+ * - Shows toast with lock reason if blocked
+ * - Called before case create/edit/delete operations
+ * 
+ * **Toast Behavior:**
+ * - Shows once when lock engaged, dismisses when unlocked
+ * - Uses NAVIGATION_TOAST_ID for deduplication
+ * - Toast ID fixed: \"navigation-lock\" for tracking
+ * 
+ * **Usage Example:**
+ * ```typescript
+ * const { navigationLock, guardCaseInteraction } = useNavigationLock({\n *   connectionState: fileStorageState\n * });\n * 
+ * // Check lock status
+ * if (navigationLock.locked) {\n *   <LockedBanner\n *     reason={navigationLock.reason}\n *     tone={navigationLock.tone}\n *   />\n * }\n * \n * // Guard operations
+ * async handleDelete(caseId) {\n *   if (guardCaseInteraction()) return; // Blocked
+ *   await deleteCase(caseId);\n * }\n * ```
+ * 
+ * @param {UseNavigationLockParams} params
+ *   - `connectionState`: FileStorageLifecycleSelectors for lock determination
+ * 
+ * @returns {UseNavigationLockResult} Lock state and guard function
  */
 export function useNavigationLock({
   connectionState,

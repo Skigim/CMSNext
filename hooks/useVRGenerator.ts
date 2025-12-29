@@ -1,10 +1,67 @@
-/**
- * VR Generator Hook
- * 
- * Manages the VR generation modal state and rendering logic.
- */
-
 import { useState, useCallback, useMemo, useEffect } from "react";
+
+/**
+ * Hook for managing VR (Verification Report) generation workflow
+ * 
+ * Orchestrates:
+ * - VR script selection from category config
+ * - Financial item selection with multi-select
+ * - VR template rendering from selected items
+ * - Generated text preview with copy-to-clipboard
+ * 
+ * **Workflow:**
+ * 1. Select VR script (template type)
+ * 2. Select financial items (resources/income/expenses)
+ * 3. Preview rendered text in preview area
+ * 4. Copy to clipboard or save
+ * 
+ * **Item Selection:**
+ * - Shows all financial items grouped by type
+ * - Select/deselect individual items
+ * - Bulk select/deselect all
+ * - Count of selected items for UI feedback
+ * 
+ * **Script Selection:**
+ * - Choose from vrScripts array (from category config)
+ * - Each script has different template/format
+ * - Selected script ID tracked separately
+ * - Script details provided for preview (name, description)
+ * 
+ * **VR Generation:**
+ * - Uses renderMultipleVRs() utility to generate text
+ * - Takes selected script + selected items
+ * - Produces formatted verification report text
+ * - Updates renderedText state for display
+ * 
+ * **Copy to Clipboard:**
+ * - Uses modern Clipboard API (navigator.clipboard)
+ * - Returns boolean: true=success, false=failed
+ * - Handles browser compatibility
+ * 
+ * **Usage Example:**
+ * ```typescript
+ * const vr = useVRGenerator({\n *   storedCase: currentCase,\n *   financialItems: allItems,\n *   vrScripts: categoryConfig.vrScripts\n * });\n * 
+ * // Open modal
+ * vr.openModal();\n * 
+ * // User selects script
+ * vr.setSelectedScriptId(\"template-1\");\n * 
+ * // User selects items
+ * vr.selectAll();\n * vr.toggleItem(\"item-3\"); // Deselect one
+ * \n * // Generate and copy
+ * vr.setRenderedText(generatedText);\n * const copied = await vr.copyToClipboard();\n * if (copied) {\n *   toast.success(\"Copied to clipboard\");\n * }\n * ```
+ * 
+ * **Modal State:**
+ * - isOpen: Boolean for modal visibility
+ * - openModal/closeModal: Toggle visibility
+ * - Modal closes on copy or manual dismiss
+ * 
+ * @param {UseVRGeneratorParams} params
+ *   - `storedCase`: Current case (for VR generation context)
+ *   - `financialItems`: All available financial items to render
+ *   - `vrScripts`: Available VR script templates from config
+ * 
+ * @returns {UseVRGeneratorReturn} VR generation interface
+ */
 import type { StoredCase, FinancialItem, StoredFinancialItem } from "@/types/case";
 import type { VRScript } from "@/types/vr";
 import { renderMultipleVRs } from "@/utils/vrGenerator";

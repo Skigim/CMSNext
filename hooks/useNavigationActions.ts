@@ -40,8 +40,40 @@ export interface UseNavigationActionsParams {
 }
 
 /**
- * Provides navigation action callbacks.
- * Separated from state management for cleaner organization.
+ * Provides navigation action callbacks with locked state awareness
+ * 
+ * Handles all navigation mutations:
+ * - View transitions (navigate, viewCase, newCase, etc.)
+ * - Case operations with navigation (saveCaseWithNavigation, deleteCaseWithNavigation)
+ * - Form state management for back navigation
+ * - Breadcrumb and sidebar control
+ * 
+ * **Lock-Aware Actions:**
+ * - All case interactions check `guardCaseInteraction()` (blocks if locked)
+ * - Shows toast with lockReason if action blocked
+ * - Navigation still works (view transitions allowed)
+ * - Prevents data mutations during disconnection
+ * 
+ * **Form State Tracking:**
+ * - `previousView`: Where user came from (list/details)
+ * - `returnToCaseId`: Case to return to when form closes
+ * - `detailsSourceView`: Track if details view opened from list or form
+ * 
+ * **Save/Delete with Navigation:**
+ * - `saveCaseWithNavigation(caseData)`: Save → navigate to details → open sidebar
+ * - `deleteCaseWithNavigation(caseId)`: Delete → close sidebar → navigate to list
+ * - Both have performance tracking (startMeasurement/endMeasurement)
+ * 
+ * **Usage Example:**
+ * ```typescript
+ * const actions = useNavigationActions({\n *   state: navState,\n *   setters: navSetters,\n *   guardCaseInteraction: () => !isLocked,\n *   isLocked,\n *   lockReason: \"Offline\",\n *   saveCase,\n *   deleteCase\n * });\n * \n * // Navigate
+ * actions.navigate(\"details\");\n * actions.viewCase(\"case-123\");\n * \n * // Save and navigate
+ * await actions.saveCaseWithNavigation(caseData);\n * // Auto-navigates to details, opens sidebar
+ * \n * // Restricted actions
+ * if (actions.isLocked) {\n *   <button onClick={actions.newCase} disabled>\n *     {actions.lockReason} - Can't create case\n *   </button>\n * }\n * ```
+ * 
+ * @param {UseNavigationActionsParams} params Configuration
+ * @returns Navigation action handlers
  */
 export function useNavigationActions({
   state, setters, guardCaseInteraction, isLocked, lockReason, saveCase, deleteCase,

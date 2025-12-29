@@ -2,12 +2,45 @@ import { useState, useCallback } from 'react';
 import type { FeatureFlagKey, FeatureFlags } from '@/utils/featureFlags';
 import { DEFAULT_FLAGS } from '@/utils/featureFlags';
 
-/**
- * Hook for managing global application state
- * Centralizes view state, loading states, and application-wide flags
- */
-
 export type AppView = 'dashboard' | 'list' | 'new' | 'details' | 'settings' | 'import';
+
+/**
+ * Hook for managing global application state and view navigation
+ * 
+ * Centralizes:
+ * - Current view and selected case for navigation
+ * - Global loading states and data readiness flags
+ * - UI preferences (sidebar, search)
+ * - Error state and user feedback
+ * - Feature flags for progressive enhancement
+ * 
+ * **View Types:**
+ * - `dashboard`: Overview with widgets and summary
+ * - `list`: Case list with filters and sorting
+ * - `details`: Single case detail view
+ * - `new`: New case creation form
+ * - `settings`: App settings and configuration
+ * - `import`: Data import workflows
+ * 
+ * **Lazy Initialization:**
+ * State initialized on first hook call (not on mount), allows components
+ * to define state locally and avoid prop drilling
+ * 
+ * **Usage Example:**
+ * ```typescript
+ * const appState = useAppViewState();
+ * 
+ * // Navigate to case
+ * appState.navigateToCase(\"case-123\");\n * 
+ * // Or set view directly
+ * appState.setView(\"details\", \"case-123\");\n * 
+ * // Error handling
+ * appState.setGlobalError(\"Failed to save\");\n * setTimeout(() => appState.clearGlobalError(), 3000);\n * 
+ * // Feature flags
+ * if (appState.isFeatureEnabled(\"darkMode\")) {\n *   // Show dark mode option
+ * }\n * ```
+ * \n * @returns {UseAppStateReturn} App state with view, loading, UI, and feature management
+ */
 
 interface UseAppStateReturn {
   // View management

@@ -17,9 +17,42 @@ export interface CaseOperationsConfig {
 }
 
 /**
- * React hook for case operations - handles UI concerns only.
- * Delegates business logic to CaseOperationsService.
- * Manages: toast notifications, mounted guards, loading states.
+ * React hook for case CRUD operations with UI integration
+ * 
+ * Bridges React state management and CaseOperationsService business logic.
+ * Handles: toast notifications, error messages, loading states, mounted guards.
+ * 
+ * **Operations:**
+ * - `loadCases()`: Fetch all cases from file storage, update React state
+ * - `addCase(person, caseRecord)`: Create new case
+ * - `updateCase(caseId, updates)`: Modify existing case
+ * - `deleteCase(caseId)`: Remove case (with soft delete option)
+ * - `savePerson(caseId, person)`: Update person info
+ * - `updateCaseStatus(caseId, status)`: Change case status
+ * - `exportCase(caseId)`: Download case as JSON/PDF
+ * 
+ * **State Management:**
+ * - Updates setCases after mutations
+ * - Clears setError on success, sets on failure
+ * - Shows appropriate toast notifications (success/error/info)
+ * - Guards with isMounted to prevent updates after unmount
+ * - Manages setLoading flag for UI feedback
+ * 
+ * **Error Handling:**
+ * - Missing dataManager: Shows error toast, returns early
+ * - Failed operations: Logs error, displays user-friendly message
+ * - Unmounted during async: Silently ignores state updates
+ * - Toast format: Success/error with operation-specific messages
+ * 
+ * **Usage Example:**
+ * ```typescript
+ * const ops = useCaseOperations({\n *   dataManager: dm,\n *   isMounted: isMountedRef,\n *   cases: allCases,\n *   setError,\n *   setLoading,\n *   setCases,\n *   setHasLoadedData\n * });\n * \n * // Load initial data
+ * const cases = await ops.loadCases();\n * 
+ * // Create new case
+ * await ops.addCase(\n *   { firstName: \"John\", lastName: \"Doe\" },\n *   { caseNumber: \"2024-001\" }\n * );\n * ```
+ * 
+ * @param {CaseOperationsConfig} config Injected dependencies
+ * @returns Case operation handlers
  */
 export function useCaseOperations(config: CaseOperationsConfig) {
   const { dataManager, isMounted, cases, setError, setLoading, setCases, setHasLoadedData } = config;
