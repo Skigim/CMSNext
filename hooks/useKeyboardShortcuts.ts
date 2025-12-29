@@ -3,22 +3,42 @@ import type { ResolvedShortcut } from "@/types/keyboardShortcuts";
 import { parseBinding, resolveShortcuts } from "@/utils/keyboardShortcuts";
 import { getShortcutConfig } from "@/utils/shortcutStorage";
 
+/**
+ * Keyboard shortcut handler options.
+ * @interface UseKeyboardShortcutsOptions
+ */
 interface UseKeyboardShortcutsOptions {
+  /** Called when user navigates with shortcut */
   onNavigate: (path: string) => void;
+  /** Called when user opens new case form */
   onNewCase: () => void;
+  /** Called when user focuses search */
   onFocusSearch: () => void;
+  /** Called when user uses paper cut capture shortcut */
   onPaperCut: () => void;
+  /** Called when user opens help */
   onShowHelp: () => void;
+  /** Called when user toggles sidebar */
   onToggleSidebar: () => void;
 }
 
+/**
+ * Pending keyboard chord state.
+ * @interface PendingChord
+ */
 type PendingChord = {
+  /** Key prefix accumulated so far (e.g., "ctrl+k") */
   prefix: string;
+  /** Timestamp when chord started (for timeout detection) */
   startedAt: number;
 };
 
 const CHORD_TIMEOUT_MS = 1000;
 
+/**
+ * Check if running on macOS platform.
+ * @private
+ */
 function isMacPlatform(): boolean {
   if (typeof navigator === "undefined") return false;
   const platform = (navigator as any).platform ?? "";
@@ -26,10 +46,18 @@ function isMacPlatform(): boolean {
   return /Mac|iPhone|iPad|iPod/i.test(String(platform)) || /Mac|iPhone|iPad|iPod/i.test(userAgent);
 }
 
+/**
+ * Normalize key name for comparison.
+ * @private
+ */
 function normalizeKey(key: string): string {
   return key.toLowerCase();
 }
 
+/**
+ * Check if event target is an editable element.
+ * @private
+ */
 function isEditableTarget(target: EventTarget | null): boolean {
   if (!target || !(target instanceof HTMLElement)) return false;
 
@@ -139,6 +167,97 @@ function actionForShortcutId(id: string): ((opts: UseKeyboardShortcutsOptions) =
   }
 }
 
+/**
+ * Keyboard shortcuts management hook.
+ * 
+ * Registers global keyboard shortcuts and calls handlers when activated.
+ * Supports single shortcuts (Ctrl+K) and chord shortcuts (Ctrl+K, C).
+ * Automatically skips shortcuts when focused on editable elements.
+ * 
+ * ## Supported Shortcuts
+ * 
+ * - **Navigate**: Jump to routes (e.g., Ctrl+K, then D for Dashboard)
+ * - **New Case**: Create new case (Ctrl+Alt+N)
+ * - **Focus Search**: Jump to search box (Ctrl+/)
+ * - **Paper Cut**: Capture to clipboard (Ctrl+Shift+C)
+ * - **Help**: Show help modal (Ctrl+?)
+ * - **Sidebar**: Toggle sidebar (Ctrl+B)
+ * 
+ * ## Platform Support
+ * 
+ * Automatically adapts to Mac vs Windows:
+ * - Mac: Uses Cmd instead of Ctrl
+ * - Windows/Linux: Uses Ctrl
+ * 
+ * Example: Ctrl+K on Windows → Cmd+K on Mac
+ * 
+ * ## Chord Shortcuts
+ * 
+ * Two-key sequences with timeout:
+ * 1. User presses Ctrl+K
+ * 2. System waits for second key (1000ms timeout)
+ * 3. User presses C for Cases view
+ * 4. Handler fires for Ctrl+K, C
+ * 
+ * If timeout expires or user presses Escape, chord resets.
+ * 
+ * ## Skip Conditions
+ * 
+ * Shortcuts are disabled when:
+ * - Focused on input/textarea/select
+ * - Focused on contentEditable element
+ * - Modal dialogs open (check via event target)
+ * 
+ * Prevents accidentally triggering shortcuts while typing.
+ * 
+ * ## Usage Example
+ * 
+ * ```typescript
+ * function AppLayout() {
+ *   const navigate = useNavigate();
+ *   const { openNewCaseForm } = useApp();
+ *   
+ *   const { chordPending, pendingModifier } = useKeyboardShortcuts({
+ *     onNavigate: (path) => navigate(path),
+ *     onNewCase: () => openNewCaseForm(),
+ *     onFocusSearch: () => searchInput.focus(),
+ *     onPaperCut: () => captureScreen(),
+ *     onShowHelp: () => setHelpOpen(true),
+ *     onToggleSidebar: () => setSidebarOpen(s => !s)
+ *   });
+ *   
+ *   return (
+ *     <div>
+ *       {chordPending && (
+ *         <div className="chord-hint">
+ *           {pendingModifier} press next key...
+ *         </div>
+ *       )}
+ *       {/* Rest of layout */}
+ *     </div>
+ *   );
+ * }
+ * ```
+ * 
+ * ## Return Values
+ * 
+ * - `chordPending`: Boolean indicating if user has started a chord sequence
+ * - `pendingModifier`: First key of chord (e.g., "Ctrl+K"), or null if no chord
+ * 
+ * Useful for showing UI hint about pending chord state.
+ * 
+ * ## Configuration
+ * 
+ * Shortcuts can be customized via localStorage or shortcut config file.
+ * Built-in defaults provided for all actions.
+ * 
+ * @hook
+ * @param {UseKeyboardShortcutsOptions} options - Handler functions for each shortcut
+ * @returns {{chordPending: boolean, pendingModifier: string | null}} Chord state for UI
+ * 
+ * @see {@link ResolvedShortcut} for shortcut structure
+ * @see {@link getShortcutConfig} for configuration
+ */
 export function useKeyboardShortcuts(options: UseKeyboardShortcutsOptions): {
   chordPending: boolean;
   pendingModifier: string | null;

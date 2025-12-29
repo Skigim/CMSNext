@@ -12,18 +12,109 @@ import { createLogger } from "../utils/logger";
 
 const logger = createLogger("useCaseActivityLog");
 
+/**
+ * Return type for useCaseActivityLog hook.
+ * @interface UseCaseActivityLogResult
+ */
 interface UseCaseActivityLogResult {
+  /** All activity log entries */
   activityLog: CaseActivityEntry[];
+  /** Activity grouped and summarized by date */
   dailyReports: DailyActivityReport[];
+  /** Today's activity report (or null if no activity today) */
   todayReport: DailyActivityReport | null;
+  /** Yesterday's activity report (or null if none) */
   yesterdayReport: DailyActivityReport | null;
+  /** Whether activity log is loading */
   loading: boolean;
+  /** Error message if load failed */
   error: string | null;
+  /** Manually reload activity log from file */
   refreshActivityLog: () => Promise<void>;
+  /** Get activity report for specific date */
   getReportForDate: (date: string | Date) => DailyActivityReport;
+  /** Clear/delete activity for specific date */
   clearReportForDate: (date: string | Date) => Promise<number>;
 }
 
+/**
+ * Case activity log hook.
+ * 
+ * Manages application activity log across all cases.
+ * Automatically loads and groups activity by date.
+ * Provides daily summaries and date-specific queries.
+ * 
+ * ## Activity Tracking
+ * 
+ * Logs all case changes:
+ * - Case creation, updates, deletions
+ * - Status and priority changes
+ * - Note additions and edits
+ * - Financial item changes
+ * - Alert resolutions
+ * 
+ * ## Daily Summaries
+ * 
+ * Activity automatically summarized into daily reports with counts:
+ * - Case changes: Creates, updates, deletions
+ * - Note changes: Adds, updates, deletions
+ * - Financial changes: Adds, updates, deletions
+ * 
+ * ## Usage Example
+ * 
+ * ```typescript
+ * function ActivityPanel() {
+ *   const {
+ *     dailyReports,
+ *     todayReport,
+ *     refreshActivityLog
+ *   } = useCaseActivityLog();
+ *   
+ *   return (
+ *     <div>
+ *       <h2>Activity Log</h2>
+ *       {todayReport && (
+ *         <TodaysSummary report={todayReport} />
+ *       )}
+ *       {dailyReports.map(report => (
+ *         <DayReport key={report.date} report={report} />
+ *       ))}
+ *     </div>
+ *   );
+ * }
+ * ```
+ * 
+ * ## Date Queries
+ * 
+ * Get summary for specific date:
+ * 
+ * ```typescript
+ * const report = getReportForDate('2025-12-29');
+ * // or
+ * const report = getReportForDate(new Date('2025-12-29'));
+ * ```
+ * 
+ * ## Activity Clearing
+ * 
+ * Delete activity entries for specific date:
+ * 
+ * ```typescript
+ * const deletedCount = await clearReportForDate('2025-12-28');
+ * console.log(`Deleted ${deletedCount} entries`);
+ * ```
+ * 
+ * ## Auto-Reload
+ * 
+ * Activity log automatically reloads when:
+ * - File data changes (imports, case modifications)
+ * - DataManager becomes available
+ * 
+ * @hook
+ * @returns {UseCaseActivityLogResult} Activity log state and methods
+ * 
+ * @see {@link useDataManagerSafe} for safe DataManager access
+ * @see {@link DataManager} for underlying persistence
+ */
 export function useCaseActivityLog(): UseCaseActivityLogResult {
   const dataManager = useDataManagerSafe();
   const [activityLog, setActivityLog] = useState<CaseActivityEntry[]>([]);

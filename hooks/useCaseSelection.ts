@@ -1,19 +1,23 @@
 import { useCallback, useMemo, useState } from "react";
 
+/**
+ * Return type for useCaseSelection hook.
+ * @interface UseCaseSelectionReturn
+ */
 export interface UseCaseSelectionReturn {
   /** Set of currently selected case IDs */
   selectedIds: Set<string>;
-  /** Number of selected cases */
+  /** Number of selected cases (counts only visible items) */
   selectedCount: number;
   /** Whether all visible cases are selected */
   isAllSelected: boolean;
-  /** Whether some but not all visible cases are selected */
+  /** Whether some but not all visible cases are selected (indeterminate state) */
   isPartiallySelected: boolean;
   /** Toggle selection for a single case */
   toggleSelection: (caseId: string) => void;
   /** Select all provided case IDs */
   selectAll: (caseIds: string[]) => void;
-  /** Deselect all provided case IDs (or all if none specified) */
+  /** Deselect provided case IDs (or all if none specified) */
   deselectAll: (caseIds?: string[]) => void;
   /** Clear all selections */
   clearSelection: () => void;
@@ -22,10 +26,122 @@ export interface UseCaseSelectionReturn {
 }
 
 /**
- * Hook for managing case list multi-selection state.
+ * Multi-selection state management for case lists.
  * 
- * @param visibleCaseIds - Array of case IDs currently visible in the list (after filtering)
- * @returns Selection state and handlers
+ * Manages checkbox selection state for case list tables/grids.
+ * Automatically handles visible-count selection tracking (respects filters).
+ * 
+ * ## Selection Types
+ * 
+ * - **Single**: Click checkbox to toggle one case
+ * - **All Visible**: Click table header checkbox to select/deselect all visible
+ * - **Partial**: Some visible items selected (indeterminate state for header)
+ * 
+ * ## Visible-Only Counting
+ * 
+ * Selection counts only consider visible items:
+ * - `selectedCount`: Number of selected items in current view
+ * - `isAllSelected`: True if all visible items are selected
+ * - `isPartiallySelected`: True if some visible items are selected
+ * 
+ * Useful when filtering cases - selection respects the filtered list.
+ * 
+ * ## State Structure
+ * 
+ * ```typescript
+ * const {
+ *   selectedIds,       // Set<string> of selected case IDs
+ *   selectedCount,     // Number visible items selected
+ *   isAllSelected,     // Header checkbox checked state
+ *   isPartiallySelected, // Header checkbox indeterminate state
+ *   toggleSelection,   // (caseId) => void
+ *   selectAll,         // (caseIds) => void
+ *   deselectAll,       // (caseIds?) => void
+ *   clearSelection,    // () => void
+ *   isSelected         // (caseId) => boolean
+ * } = useCaseSelection(visibleCaseIds);
+ * ```
+ * 
+ * ## Usage Example
+ * 
+ * ```typescript
+ * function CaseTable() {
+ *   const cases = useCases(); // From parent or hook
+ *   const filteredCases = cases.filter(c => c.status === 'open');
+ *   const visibleIds = filteredCases.map(c => c.id);
+ *   
+ *   const {
+ *     selectedIds,
+ *     isAllSelected,
+ *     isPartiallySelected,
+ *     toggleSelection,
+ *     selectAll,
+ *     deselectAll
+ *   } = useCaseSelection(visibleIds);
+ *   
+ *   return (
+ *     <table>
+ *       <thead>
+ *         <tr>
+ *           <th>
+ *             <Checkbox
+ *               checked={isAllSelected}
+ *               indeterminate={isPartiallySelected}
+ *               onChange={(e) => {
+ *                 if (e.target.checked) {
+ *                   selectAll(visibleIds);
+ *                 } else {
+ *                   deselectAll(visibleIds);
+ *                 }
+ *               }}
+ *             />
+ *           </th>
+ *           <th>Name</th>
+ *         </tr>
+ *       </thead>
+ *       <tbody>
+ *         {filteredCases.map(caseItem => (
+ *           <tr key={caseItem.id}>
+ *             <td>
+ *               <Checkbox
+ *                 checked={selectedIds.has(caseItem.id)}
+ *                 onChange={() => toggleSelection(caseItem.id)}
+ *               />
+ *             </td>
+ *             <td>{caseItem.name}</td>
+ *           </tr>
+ *         ))}
+ *       </tbody>
+ *     </table>
+ *   );
+ * }
+ * ```
+ * 
+ * ## Bulk Operations
+ * 
+ * After selection, trigger bulk actions:
+ * 
+ * ```typescript
+ * const handleDeleteSelected = async () => {
+ *   const ids = Array.from(selectedIds);
+ *   await dataManager.deleteCases(ids);
+ *   clearSelection();
+ *   await refreshCases();
+ * };
+ * 
+ * const handleUpdateStatus = async (newStatus) => {
+ *   const ids = Array.from(selectedIds);
+ *   await dataManager.updateCasesStatus(ids, newStatus);
+ *   clearSelection();
+ *   await refreshCases();
+ * };
+ * ```
+ * 
+ * @hook
+ * @param {string[]} visibleCaseIds - Array of case IDs currently visible (after filtering)
+ * @returns {UseCaseSelectionReturn} Selection state and handlers
+ * 
+ * @see {@link useCaseManagement} for case operations
  */
 export function useCaseSelection(visibleCaseIds: string[]): UseCaseSelectionReturn {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());

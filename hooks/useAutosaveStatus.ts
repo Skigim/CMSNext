@@ -6,6 +6,10 @@ import type {
   FileStoragePermissionState,
 } from "@/contexts/FileStorageContext";
 
+/**
+ * Autosave status states - represents the current save operation state.
+ * @typedef {'saving' | 'saved' | 'permission-required' | 'retrying' | 'error' | 'idle' | 'unsupported'} AutosaveStatusState
+ */
 export type AutosaveStatusState =
   | "saving"
   | "saved"
@@ -15,22 +19,44 @@ export type AutosaveStatusState =
   | "idle"
   | "unsupported";
 
+/**
+ * Tone for UI styling - maps status to color/severity.
+ * @typedef {'success' | 'warning' | 'danger' | 'info' | 'muted'} AutosaveTone
+ */
 type AutosaveTone = "success" | "warning" | "danger" | "info" | "muted";
 
+/**
+ * Autosave status summary with display-ready text and state.
+ * @interface AutosaveStatusSummary
+ */
 export interface AutosaveStatusSummary {
+  /** Current save operation state */
   state: AutosaveStatusState;
+  /** Human-readable status label (e.g., "Saving...", "All changes saved") */
   displayLabel: string;
+  /** Detailed description for UI display */
   detailText: string;
+  /** Timestamp of last successful save (milliseconds since epoch) */
   lastSavedAt: number | null;
+  /** Human-readable relative time of last save (e.g., "2min ago") */
   lastSavedRelative: string | null;
+  /** Number of writes waiting to be saved */
   pendingWrites: number;
+  /** Number of consecutive failed save attempts */
   consecutiveFailures: number;
+  /** Current permission status for file access */
   permissionStatus: FileStoragePermissionState;
+  /** Current lifecycle state of file storage */
   lifecycle: FileStorageLifecycleState;
+  /** Raw status string from autosave service */
   rawStatus: string;
+  /** Optional error or status message from service */
   message: string | null;
+  /** Whether currently in save operation */
   isSaving: boolean;
+  /** Whether to show loading spinner in UI */
   showSpinner: boolean;
+  /** UI tone/severity (success, warning, danger, info, muted) */
   tone: AutosaveTone;
 }
 
@@ -80,6 +106,96 @@ function describePendingWrites(pendingWrites: number): string | null {
   return `${pendingWrites} pending writes`;
 }
 
+/**
+ * Autosave status summary hook.
+ * 
+ * Provides human-readable status information about autosave operations.
+ * Derives display text, icons, and UI state from raw autosave metrics.
+ * 
+ * ## Status States
+ * 
+ * - **saving**: Currently writing changes to file
+ * - **saved**: All changes saved, standing by
+ * - **retrying**: Previous save failed, retrying
+ * - **error**: Save operation failed, user action needed
+ * - **permission-required**: Need folder access permission
+ * - **idle**: Autosave disabled or not yet started
+ * - **unsupported**: File System Access API not available in browser
+ * 
+ * ## Display Properties
+ * 
+ * All properties are computed from autosave service state and ready for UI:
+ * - `displayLabel`: Short status text ("Saving...", "All changes saved")
+ * - `detailText`: Longer explanation for status bar or tooltip
+ * - `tone`: Color/severity indicator (success, warning, danger, info, muted)
+ * - `showSpinner`: Whether to show loading animation
+ * 
+ * ## Time Formatting
+ * 
+ * Relative timestamps are automatically formatted:
+ * - `< 10s`: "just now"
+ * - `< 60s`: "45s ago"
+ * - `< 60m`: "12min ago"
+ * - `< 24h`: "2h ago"
+ * - `< 7d`: "3d ago"
+ * - `>= 7d`: Full date (e.g., "12/29/2025")
+ * 
+ * ## Usage in Status Bar
+ * 
+ * ```typescript
+ * function AutosaveStatusDisplay() {
+ *   const {
+ *     state,
+ *     displayLabel,
+ *     detailText,
+ *     tone,
+ *     showSpinner
+ *   } = useAutosaveStatus();
+ *   
+ *   return (
+ *     <div className={`status-${tone}`}>
+ *       {showSpinner && <Spinner />}
+ *       <strong>{displayLabel}</strong>
+ *       <p>{detailText}</p>
+ *     </div>
+ *   );
+ * }
+ * ```
+ * 
+ * ## Error Handling Display
+ * 
+ * When errors occur, shows both the error and pending write count:
+ * 
+ * ```
+ * Save failed
+ * Autosave encountered an error. (3 pending writes)
+ * ```
+ * 
+ * ## Permission Flow
+ * 
+ * When permission is required:
+ * 
+ * ```
+ * Permission required
+ * Allow folder access to resume autosave. (5 pending writes)
+ * ```
+ * 
+ * ## Architecture
+ * 
+ * ```
+ * useAutosaveStatus
+ *     ↓
+ * useFileStorage (raw status)
+ *     ↓
+ * useMemo (format for display)
+ * ```
+ * 
+ * @hook
+ * @returns {AutosaveStatusSummary} Formatted status with display properties
+ * 
+ * @see {@link useFileStorage} for raw autosave status
+ * @see {@link FileStorageContext} for underlying service
+ */
 export function useAutosaveStatus(): AutosaveStatusSummary {
   const { status: statusSnapshot, lifecycle, permissionStatus, isSupported } = useFileStorage();
   const previousStateRef = useRef<AutosaveStatusState>("idle");

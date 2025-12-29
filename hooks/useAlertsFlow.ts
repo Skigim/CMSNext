@@ -10,22 +10,106 @@ import { ENABLE_SAMPLE_ALERTS } from "@/utils/featureFlags";
 import { createLogger } from "@/utils/logger";
 import { LegacyFormatError } from "@/utils/services/FileStorageService";
 
+/**
+ * Options for useAlertsFlow hook.
+ * @interface UseAlertsFlowOptions
+ */
 interface UseAlertsFlowOptions {
+  /** Currently selected case (or null if none) */
   selectedCase: StoredCase | null;
+  /** Whether initial case data has loaded */
   hasLoadedData: boolean;
+  /** DataManager instance for alert operations */
   dataManager: DataManager | null;
 }
 
+/**
+ * Return type for useAlertsFlow hook.
+ * @interface UseAlertsFlowResult
+ */
 interface UseAlertsFlowResult {
+  /** Complete alerts index with all alerts and their statuses */
   alertsIndex: AlertsIndex;
+  /** Filtered list of open (unresolved) alerts */
   openAlerts: AlertWithMatch[];
+  /** Handler to resolve/dismiss an alert */
   onResolveAlert: (alert: AlertWithMatch) => Promise<void>;
+  /** Handler called when CSV alerts are imported */
   onAlertsCsvImported: (index: AlertsIndex) => void;
+  /** Manual reload of alerts from data manager */
   reloadAlerts: () => Promise<void>;
 }
 
 const logger = createLogger("AlertsFlow");
 
+/**
+ * Alerts management workflow hook.
+ * 
+ * Manages the complete alerts system: loading, filtering, resolving, and matching.
+ * Automatically reloads alerts when case changes or file data updates.
+ * 
+ * ## Workflow
+ * 
+ * 1. **Load**: Fetch all alerts from data manager
+ * 2. **Match**: Match alerts to existing cases by MCN
+ * 3. **Filter**: Show only open (unresolved) alerts
+ * 4. **Resolve**: Mark alert as resolved when matched
+ * 
+ * ## Alerts States
+ * 
+ * Each alert can be in one of several states:
+ * - **unmatched**: MCN present but no matching case found
+ * - **missing-mcn**: No MCN in alert data
+ * - **matched**: Matched to existing case
+ * - **resolved**: Dismissed by user
+ * 
+ * ## Usage Example
+ * 
+ * ```typescript
+ * function AlertsPanel() {
+ *   const cases = useCases();
+ *   const { openAlerts, onResolveAlert, reloadAlerts } = useAlertsFlow({
+ *     selectedCase: cases[0] || null,
+ *     hasLoadedData: true,
+ *     dataManager
+ *   });
+ *   
+ *   return (
+ *     <div>
+ *       <h2>Open Alerts ({openAlerts.length})</h2>
+ *       {openAlerts.map(alert => (
+ *         <AlertItem
+ *           key={alert.id}
+ *           alert={alert}
+ *           onResolve={() => onResolveAlert(alert)}
+ *         />
+ *       ))}
+ *     </div>
+ *   );
+ * }
+ * ```
+ * 
+ * ## Auto-Reload
+ * 
+ * Alerts automatically reload when:
+ * - Selected case changes
+ * - File data is updated (CSV import, case changes)
+ * - Initial data finishes loading
+ * 
+ * ## Match Resolution
+ * 
+ * When user resolves alert matching:
+ * 1. Alert moves to resolved state
+ * 2. Removed from open alerts list
+ * 3. Case linked to alert (if match found)
+ * 
+ * @hook
+ * @param {UseAlertsFlowOptions} options - Hook configuration
+ * @returns {UseAlertsFlowResult} Alerts state and handlers
+ * 
+ * @see {@link useAlertResolve} for alert resolution logic
+ * @see {@link DataManager} for underlying persistence
+ */
 export function useAlertsFlow({ selectedCase, hasLoadedData, dataManager }: UseAlertsFlowOptions): UseAlertsFlowResult {
   const isMounted = useIsMounted();
   const [alertsIndex, setAlertsIndex] = useState<AlertsIndex>(() => createEmptyAlertsIndex());

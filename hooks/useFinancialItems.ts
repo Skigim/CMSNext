@@ -6,46 +6,77 @@ import { toast } from 'sonner';
 import { withToast } from '@/utils/withToast';
 
 /**
- * Hook for managing financial items (resources, income, expenses)
- * Provides CRUD operations and modal state management for financial items
+ * Modal state for financial item editor.
+ * @interface FinancialModalState
  */
+interface FinancialModalState {
+  /** Modal visibility */
+  isOpen: boolean;
+  /** Currently editing item, or null if creating new */
+  editingItem: FinancialItem | null;
+  /** Case ID for the financial item */
+  caseId: string | null;
+  /** Category (resources, income, expenses) */
+  category: CaseCategory | null;
+}
 
+/**
+ * Return type for useFinancialItems hook.
+ * @interface UseFinancialItemsReturn
+ */
 interface UseFinancialItemsReturn {
   // Data
+  /** All financial items for active case */
   items: StoredFinancialItem[];
+  /** Financial items grouped by category */
   groupedItems: {
+    /** Resource-type items */
     resources: StoredFinancialItem[];
+    /** Income-type items */
     income: StoredFinancialItem[];
+    /** Expense-type items */
     expenses: StoredFinancialItem[];
   };
+  /** Reload financial items from file */
   refreshItems: () => Promise<void>;
 
   // Modal state
+  /** Modal open/closed state */
   financialModalOpen: boolean;
+  /** Item currently being edited (null if creating) */
   editingFinancialItem: FinancialItem | null;
+  /** Current category for modal */
   financialCategory: CaseCategory | null;
   
   // Modal actions
+  /** Open modal for creating or editing item */
   openFinancialModal: (category: CaseCategory, caseId: string, item?: FinancialItem) => void;
+  /** Close modal without saving */
   closeFinancialModal: () => void;
   
   // CRUD operations
+  /** Create new financial item */
   createFinancialItem: (caseId: string, category: CaseCategory, data: NewFinancialItemData) => Promise<StoredFinancialItem | null>;
+  /** Update existing financial item */
   updateFinancialItem: (caseId: string, category: CaseCategory, itemId: string, data: Partial<NewFinancialItemData>) => Promise<StoredFinancialItem | null>;
+  /** Delete financial item */
   deleteFinancialItem: (caseId: string, category: CaseCategory, itemId: string) => Promise<boolean>;
   
   // Amount history operations
+  /** Add entry to amount history (e.g., new payment, deposit) */
   addAmountHistoryEntry: (
     category: CaseCategory,
     itemId: string,
     entry: Omit<AmountHistoryEntry, "id" | "createdAt">
   ) => Promise<StoredFinancialItem | null>;
+  /** Update existing history entry */
   updateAmountHistoryEntry: (
     category: CaseCategory,
     itemId: string,
     entryId: string,
     updates: Partial<Omit<AmountHistoryEntry, "id" | "createdAt">>
   ) => Promise<StoredFinancialItem | null>;
+  /** Delete history entry */
   deleteAmountHistoryEntry: (
     category: CaseCategory,
     itemId: string,
@@ -53,10 +84,111 @@ interface UseFinancialItemsReturn {
   ) => Promise<StoredFinancialItem | null>;
   
   // State
+  /** Whether items are currently loading */
   isLoading: boolean;
+  /** Error message if operation failed */
   error: string | null;
 }
 
+/**
+ * Financial items management hook.
+ * 
+ * Provides complete CRUD operations for financial items (resources, income, expenses)
+ * and their amount history. Handles modal state for item editor UI.
+ * 
+ * ## Categories
+ * 
+ * - **resources**: Available funds/assets (e.g., savings, property)
+ * - **income**: Money received (e.g., salary, grants)
+ * - **expenses**: Money spent (e.g., rent, utilities)
+ * 
+ * ## Amount History
+ * 
+ * Each financial item tracks an amount history with timestamped entries.
+ * Supports recording changes over time (e.g., payment installments, deposits).
+ * 
+ * ## Architecture
+ * 
+ * ```
+ * useFinancialItems (state + modal mgmt)
+ *     ↓
+ * useDataManagerSafe (safe context access)
+ *     ↓
+ * DataManager (persistence layer)
+ * ```
+ * 
+ * ## Modal Management
+ * 
+ * Handles both create and edit workflows:
+ * - `openFinancialModal(category, caseId)` - New item
+ * - `openFinancialModal(category, caseId, item)` - Edit item
+ * - `closeFinancialModal()` - Close without saving
+ * 
+ * ## CRUD Operations
+ * 
+ * ### Create/Update
+ * - `createFinancialItem()` - New item
+ * - `updateFinancialItem()` - Update item properties
+ * 
+ * ### Delete
+ * - `deleteFinancialItem()` - Remove item and history
+ * 
+ * ### Amount History
+ * - `addAmountHistoryEntry()` - Record new amount
+ * - `updateAmountHistoryEntry()` - Change recorded amount
+ * - `deleteAmountHistoryEntry()` - Remove history entry
+ * 
+ * ## Usage Example
+ * 
+ * ```typescript
+ * function FinancialPanel({ caseId }: { caseId: string }) {
+ *   const {
+ *     groupedItems,
+ *     financialModalOpen,
+ *     openFinancialModal,
+ *     closeFinancialModal,
+ *     createFinancialItem,
+ *     deleteFinancialItem
+ *   } = useFinancialItems(caseId);
+ *   
+ *   const handleAddIncome = async (data: NewFinancialItemData) => {
+ *     await createFinancialItem(caseId, 'income', data);
+ *     closeFinancialModal();
+ *   };
+ *   
+ *   return (
+ *     <>
+ *       <div>
+ *         {groupedItems.income.map(item => (
+ *           <FinancialItem key={item.id} item={item} />
+ *         ))}
+ *       </div>
+ *       {financialModalOpen && (
+ *         <FinancialModal onSave={handleAddIncome} onClose={closeFinancialModal} />
+ *       )}
+ *     </>
+ *   );
+ * }
+ * ```
+ * 
+ * ## Grouping
+ * 
+ * Items are automatically grouped by category for easier UI rendering:
+ * 
+ * ```typescript
+ * const { groupedItems } = useFinancialItems(caseId);
+ * // groupedItems.resources: StoredFinancialItem[]
+ * // groupedItems.income: StoredFinancialItem[]
+ * // groupedItems.expenses: StoredFinancialItem[]
+ * ```
+ * 
+ * @hook
+ * @param {string} [caseId] - Optional case ID to auto-load items for
+ * @returns {UseFinancialItemsReturn} Financial items state and operations
+ * 
+ * @see {@link useDataManagerSafe} for safe DataManager access
+ * @see {@link DataManager} for underlying persistence
+ */
 export function useFinancialItems(caseId?: string): UseFinancialItemsReturn {
   const dataManager = useDataManagerSafe();
   const dataChangeCount = useFileStorageDataChange();

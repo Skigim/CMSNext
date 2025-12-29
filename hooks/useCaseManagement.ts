@@ -4,38 +4,138 @@ import { useCaseOperations } from './useCaseOperations';
 import { NewPersonData, NewCaseRecordData, NewNoteData, StoredCase, StoredNote } from '@/types/case';
 import { useDataManagerSafe } from '@/contexts/DataManagerContext';
 
+/**
+ * Return type for useCaseManagement hook.
+ * @interface UseCaseManagementReturn
+ */
 interface UseCaseManagementReturn {
   // State
+  /** All cases currently loaded in memory */
   cases: StoredCase[];
+  /** Whether cases are currently loading from file */
   loading: boolean;
+  /** Error message if load/save failed */
   error: string | null;
+  /** Whether initial data load has completed */
   hasLoadedData: boolean;
   
   // Actions
+  /** Load all cases from file system */
   loadCases: () => Promise<StoredCase[]>;
+  /** Save or create a case (detects create vs update by editingCaseId) */
   saveCase: (caseData: { person: NewPersonData; caseRecord: NewCaseRecordData }, editingCaseId?: string) => Promise<StoredCase | undefined>;
+  /** Delete a single case by ID */
   deleteCase: (caseId: string) => Promise<void>;
+  /** Delete multiple cases in bulk */
   deleteCases: (caseIds: string[]) => Promise<number>;
+  /** Save a note for a case (create or update) */
   saveNote: (noteData: NewNoteData, caseId: string, editingNote?: { id: string } | null) => Promise<StoredNote | null>;
+  /** Import multiple cases from bulk data */
   importCases: (importedCases: StoredCase[]) => Promise<void>;
+  /** Update status for a single case */
   updateCaseStatus: (caseId: string, status: StoredCase["status"]) => Promise<StoredCase | null>;
+  /** Update status for multiple cases */
   updateCasesStatus: (caseIds: string[], status: StoredCase["status"]) => Promise<number>;
+  /** Update priority flag for multiple cases */
   updateCasesPriority: (caseIds: string[], priority: boolean) => Promise<number>;
   
   // State setters for external control
+  /** Directly update cases array (use for UI optimism) */
   setCases: React.Dispatch<React.SetStateAction<StoredCase[]>>;
+  /** Directly update error state */
   setError: React.Dispatch<React.SetStateAction<string | null>>;
+  /** Directly update load state */
   setHasLoadedData: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
 /**
- * Secure case management hook using DataManager only
+ * Secure case management hook using DataManager.
  * 
- * Core Principles:
- * - Uses DataManager exclusively (no fileDataProvider fallback)
+ * Provides complete case CRUD operations and state management.
+ * Automatically persists all changes through DataManager to file system.
+ * 
+ * ## Core Principles
+ * 
+ * - Uses DataManager exclusively (no direct file access)
  * - File system is single source of truth
- * - No render-time data storage
- * - Automatic persistence through DataManager
+ * - No render-time data caching
+ * - Automatic persistence on all mutations
+ * - Safe to use outside DataManagerProvider (returns null, no errors)
+ * 
+ * ## Architecture
+ * 
+ * ```
+ * useCaseManagement (state + orchestration)
+ *     ↓
+ * useCaseOperations (mutation logic)
+ *     ↓
+ * useDataManagerSafe (safe context access)
+ *     ↓
+ * DataManager (persistence layer)
+ * ```
+ * 
+ * ## Operations
+ * 
+ * ### Read
+ * - `loadCases()` - Load all cases from file
+ * 
+ * ### Create/Update
+ * - `saveCase()` - Create new or update existing case
+ * - `saveNote()` - Add/update note for case
+ * 
+ * ### Delete
+ * - `deleteCase()` - Delete single case
+ * - `deleteCases()` - Delete multiple cases
+ * - (Notes deleted through case deletion)
+ * 
+ * ### Bulk Operations
+ * - `importCases()` - Import multiple cases
+ * - `updateCasesStatus()` - Bulk status update
+ * - `updateCasesPriority()` - Bulk priority update
+ * 
+ * ## Usage Example
+ * 
+ * ```typescript
+ * function CasesPanel() {
+ *   const {
+ *     cases,
+ *     loading,
+ *     error,
+ *     loadCases,
+ *     saveCase,
+ *     deleteCase,
+ *     updateCaseStatus
+ *   } = useCaseManagement();
+ *   
+ *   useEffect(() => {
+ *     loadCases();
+ *   }, []);
+ *   
+ *   if (loading) return <Spinner />;
+ *   if (error) return <Error message={error} />;
+ *   
+ *   const handleSave = async (caseData) => {
+ *     const saved = await saveCase(caseData);
+ *     if (saved) toast.success('Case saved');
+ *   };
+ * }
+ * ```
+ * 
+ * ## State Management
+ * 
+ * State setters (`setCases`, `setError`, etc.) are exposed for advanced use cases:
+ * - Optimistic UI updates
+ * - Controlled rollback
+ * - Manual state synchronization
+ * 
+ * Use sparingly - prefer direct operation methods for automatic persistence.
+ * 
+ * @hook
+ * @returns {UseCaseManagementReturn} Case management state and operations
+ * 
+ * @see {@link useCaseOperations} for mutation logic
+ * @see {@link useDataManagerSafe} for safe DataManager access
+ * @see {@link DataManager} for underlying persistence
  */
 export function useCaseManagement(): UseCaseManagementReturn {
   const isMounted = useIsMounted();
