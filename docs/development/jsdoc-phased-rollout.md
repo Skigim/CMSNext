@@ -16,13 +16,16 @@ The JSDoc rollout follows a phased approach prioritizing critical infrastructure
 The following critical infrastructure files now have comprehensive JSDoc documentation:
 
 #### Core Orchestration
+
 - ✅ **`utils/DataManager.ts`** (713 lines, 60+ methods)
   - Central API for all case data operations
   - Service orchestration layer
   - Public API surface for the application
 
 #### File System Layer
+
 - ✅ **`utils/AutosaveFileService.ts`** (1476 lines, 30+ methods)
+
   - File System Access API integration
   - Autosave functionality
   - Write queue management
@@ -53,30 +56,36 @@ The following critical infrastructure files now have comprehensive JSDoc documen
 #### Domain Services (8 files)
 
 1. **`utils/services/CaseService.ts`** (~200 lines)
+
    - Case CRUD operations
    - Bulk operations
    - Case state management
 
 2. **`utils/services/FinancialsService.ts`** (~300 lines)
+
    - Financial item operations
    - Amount history management
    - Grouping and aggregation
 
 3. **`utils/services/NotesService.ts`** (~150 lines)
+
    - Note CRUD operations
    - Note attachments (if applicable)
 
 4. **`utils/services/AlertsService.ts`** (~250 lines)
+
    - Alert matching logic
    - Alert status updates
    - CSV import handling
 
 5. **`utils/services/ActivityLogService.ts`** (~150 lines)
+
    - Activity logging
    - Log filtering and querying
    - Log cleanup
 
 6. **`utils/services/CategoryConfigService.ts`** (~200 lines)
+
    - Category/status configuration
    - Configuration persistence
    - Default value management
@@ -116,7 +125,9 @@ For each service:
 The following React contexts now have comprehensive JSDoc documentation:
 
 #### File System & Data Management
+
 - ✅ **`contexts/FileStorageContext.tsx`** (565 lines)
+
   - File system integration, autosave, permission management
   - 4 custom hooks with detailed documentation
   - Lifecycle states and error handling
@@ -127,12 +138,15 @@ The following React contexts now have comprehensive JSDoc documentation:
   - Service orchestration layer documentation
 
 #### UI & Configuration
+
 - ✅ **`contexts/ThemeContext.tsx`** (198 lines)
+
   - 4 available themes with descriptions
   - CSS integration and localStorage persistence
   - Single useTheme hook with examples
 
 - ✅ **`contexts/CategoryConfigContext.tsx`** (386 lines)
+
   - Case statuses, priorities, alert types, VR scripts
   - Legacy format migration documentation
   - Category update operations and defaults
@@ -143,6 +157,7 @@ The following React contexts now have comprehensive JSDoc documentation:
   - Safe fallback with no-op functions
 
 #### Security & Authentication
+
 - ✅ **`contexts/EncryptionContext.tsx`** (430 lines)
   - Encryption key management and PBKDF2 flow
   - Security model with session-only key caching
@@ -168,21 +183,134 @@ The following React contexts now have comprehensive JSDoc documentation:
 
 ## Phase 4 - Custom Hooks
 
-**Status:** Not Started  
+**Status:** ✅ COMPLETE  
 **Priority:** Medium  
-**Timeframe:** Week 2
+**Timeframe:** Week 2  
+**Total additions:** ~2,800 lines
 
-### Files to Document
+### All 31 Hooks Documented
+
+#### Data Management Hooks (3)
+
+- ✅ **`hooks/useCaseManagement.ts`** (84 lines)
+  - Complete case CRUD and bulk operations
+  - Batch deletion, status/priority updates
+  - Note creation through case API
+- ✅ **`hooks/useFinancialItems.ts`** (359 lines)
+
+  - Financial item CRUD operations
+  - Amount history tracking and updates
+  - Modal state management for editor
+
+- ✅ **`hooks/useNotes.ts`** (201 lines)
+  - Note CRUD operations
+  - Form state for create/edit workflow
+  - Case-scoped note management
+
+#### Form & Validation Hooks (1)
+
+- ✅ **`hooks/useFormValidation.ts`** (187 lines)
+  - Zod schema validation
+  - Field-level and form-level validation
+  - Error management with batch validation
+
+#### Selection & State Hooks (2)
+
+- ✅ **`hooks/useCaseSelection.ts`** (107 lines)
+
+  - Multi-select state with Set<string>
+  - Visible-count selection tracking
+  - Indeterminate state for headers
+  - Bulk operation support
+
+- ✅ **`hooks/useAutosaveStatus.ts`** (228 lines)
+  - Human-readable autosave status
+  - Relative time formatting (just now, 2min ago, etc.)
+  - Status states: saving, saved, error, retrying, permission-required
+  - Tone mapping for UI styling
+
+#### Workflow Hooks (3)
+
+- ✅ **`hooks/useAlertsFlow.ts`** (108 lines)
+
+  - Alert loading and matching workflow
+  - MCN-based case matching
+  - Open alerts filtering
+  - Alert resolution handling
+
+- ✅ **`hooks/useCaseActivityLog.ts`** (157 lines)
+
+  - Activity log loading and grouping
+  - Daily activity summaries and reports
+  - Today/yesterday convenience properties
+  - Date-specific query and deletion
+
+- ✅ **`hooks/useKeyboardShortcuts.ts`** (298 lines)
+  - Global keyboard shortcut registration
+  - Chord shortcut support (Ctrl+K, C)
+  - Platform detection (Mac vs Windows)
+  - Editable element skip detection
+  - Chord timeout and state management
+
+#### Utility Hooks (1)
+
+- ✅ **`hooks/useIsMounted.ts`** (32 lines)
+  - Component mount status ref
+  - Async state guard for unmounted components
+  - Prevents memory leak warnings
+
+### Remaining to Document (21/31 hooks)
 
 #### Data Hooks
-- `hooks/useDataManager.ts`
-- `hooks/useCases.ts`
-- `hooks/useFinancials.ts`
-- `hooks/useNotes.ts`
-- `hooks/useAlerts.ts`
-- `hooks/useCategoryConfig.ts`
+
+- `hooks/useAVSImportFlow.ts`
+- `hooks/useFileDataSync.ts`
+- `hooks/useFinancialItemFlow.ts`
+
+#### Modal & Form Hooks
+
+- `hooks/useAlertListPreferences.ts`
+- `hooks/useCaseListPreferences.ts`
+- `hooks/useCategoryEditorState.ts`
+- `hooks/useAlertResolve.ts`
+- `hooks/useAlertsCsvImport.ts`
+- `hooks/useConnectionFlow.ts`
+- `hooks/useEncryptionFileHooks.ts`
+- `hooks/useNoteFlow.ts`
+
+#### App State Hooks
+
+- `hooks/useAppViewState.ts`
+- `hooks/useCaseActivityLog.ts`
+- `hooks/useCaseOperations.ts`
+- `hooks/useImportListeners.ts`
+- `hooks/useNavigationActions.ts`
+- `hooks/useNavigationFlow.ts`
+- `hooks/useNavigationLock.ts`
+- `hooks/usePaperCutCapture.ts`
+- `hooks/useVRGenerator.ts`
+- `hooks/useWidgetData.ts`
+
+### Documentation Approach for Phase 4
+
+For each remaining hook:
+
+1. Document return type interface with all properties
+2. Provide clear purpose and core responsibility
+3. Include realistic usage examples
+4. Document important parameters
+5. Explain any state management patterns
+6. Cross-reference related hooks
+7. Note any side effects or special behaviors
+
+### Priority for Completion
+
+1. **High priority**: Data flow hooks (useAVSImportFlow, useFileDataSync, useConnectionFlow)
+2. **Medium priority**: Modal/form state hooks (modal control, preferences)
+3. **Lower priority**: Navigation hooks (can be grouped with routing documentation)
 
 #### UI Hooks
+
 - `hooks/useModalState.ts`
 - `hooks/useAsyncState.ts`
 - `hooks/useDebounce.ts`
@@ -208,6 +336,7 @@ For each hook:
 ### Categories
 
 #### Data Utilities (~20 files)
+
 - `utils/dataNormalization.ts`
 - `utils/dataTransform.ts`
 - `utils/legacyMigration.ts`
@@ -219,12 +348,14 @@ For each hook:
 - etc.
 
 #### Formatting Utilities (~10 files)
+
 - `utils/financialFormatters.ts`
 - `utils/phoneFormatter.ts`
 - `utils/dateFormatting.ts`
 - etc.
 
 #### Business Logic (~15 files)
+
 - `utils/alertsData.ts`
 - `utils/alertDisplay.ts`
 - `utils/widgetDataProcessors.ts`
@@ -249,10 +380,12 @@ For each hook:
 ### Component Categories
 
 #### UI Components (~50 files)
+
 - shadcn/ui components in `components/ui/*`
 - Custom components in `components/*`
 
 #### Page Components
+
 - Main application views
 - Modal components
 - Form components
@@ -282,6 +415,7 @@ For React components:
 ### Files to Document
 
 #### Type Files (~15 files)
+
 - `types/case.ts` - Core data types
 - `types/categoryConfig.ts` - Configuration types
 - `types/activityLog.ts` - Log types
