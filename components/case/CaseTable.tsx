@@ -307,11 +307,7 @@ export const CaseTable = memo(function CaseTable({
                 {row.alerts.length > 0 ? (
                   <AlertsPopover
                     alerts={row.alerts}
-                    caseName={row.name}
-                    caseId={row.id}
-                    caseStatus={row.status}
                     onResolveAlert={onResolveAlert}
-                    onUpdateCaseStatus={onUpdateCaseStatus}
                   />
                 ) : (
                   <span className="text-xs text-muted-foreground">None</span>

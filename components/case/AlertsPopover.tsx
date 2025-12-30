@@ -8,7 +8,6 @@
  * - Shows open alerts with resolve action
  * - Shows recently resolved alerts (up to 5) with reopen action
  * - Badge overlay indicating open count or checkmark when all resolved
- * - Integrated case status menu for quick status updates
  * 
  * @module components/case/AlertsPopover
  */
@@ -19,13 +18,11 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "../ui/popover";
-import { Badge } from "../ui/badge";
 import { BellRing, Check, AlertCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { AlertWithMatch } from "@/utils/alertsData";
 import { getAlertDisplayDescription, getAlertDueDateInfo } from "@/utils/alertDisplay";
-import { CaseStatusMenu } from "./CaseStatusMenu";
-import type { CaseDisplay, CaseStatusUpdateHandler } from "@/types/case";
+
 
 /**
  * Props for the AlertsPopover component.
@@ -33,18 +30,10 @@ import type { CaseDisplay, CaseStatusUpdateHandler } from "@/types/case";
 interface AlertsPopoverProps {
   /** Array of alerts associated with the case */
   alerts: AlertWithMatch[];
-  /** Display name of the case (shown in header) */
-  caseName: string;
   /** Optional CSS class for the trigger button */
   className?: string;
   /** Callback to resolve or reopen an alert */
   onResolveAlert?: (alert: AlertWithMatch) => void | Promise<void>;
-  /** Case ID for status menu integration */
-  caseId?: string;
-  /** Current case status for status menu */
-  caseStatus?: CaseDisplay["status"];
-  /** Callback to update case status */
-  onUpdateCaseStatus?: CaseStatusUpdateHandler;
 }
 
 /**
@@ -58,22 +47,14 @@ interface AlertsPopoverProps {
  * ```tsx
  * <AlertsPopover
  *   alerts={caseAlerts}
- *   caseName="John Doe"
  *   onResolveAlert={handleResolve}
- *   caseId={case.id}
- *   caseStatus={case.status}
- *   onUpdateCaseStatus={handleStatusUpdate}
  * />
  * ```
  */
 export function AlertsPopover({
   alerts,
-  caseName,
   className,
   onResolveAlert,
-  caseId,
-  caseStatus,
-  onUpdateCaseStatus,
 }: AlertsPopoverProps) {
   const [isOpen, setIsOpen] = useState(false);
 
@@ -105,8 +86,6 @@ export function AlertsPopover({
     },
     [onResolveAlert],
   );
-
-  const canUpdateStatus = Boolean(caseId && onUpdateCaseStatus);
 
   // Don't render if no alerts
   if (totalCount === 0) {
@@ -143,26 +122,6 @@ export function AlertsPopover({
         align="start"
         sideOffset={8}
       >
-        {/* Header */}
-        <div className="flex items-center justify-between border-b px-3 py-2 shrink-0">
-          <div className="flex items-center gap-2 text-sm font-medium">
-            <BellRing className="h-4 w-4" />
-            <span className="truncate max-w-[150px]" title={caseName}>
-              {caseName}
-            </span>
-            <Badge variant="secondary" className="text-xs">
-              {openCount} open
-            </Badge>
-          </div>
-          {canUpdateStatus && caseId ? (
-            <CaseStatusMenu
-              caseId={caseId}
-              status={caseStatus}
-              onUpdateStatus={onUpdateCaseStatus}
-            />
-          ) : null}
-        </div>
-
         {/* Content with scroll */}
         <div className="flex-1 overflow-y-auto">
           {/* Open Alerts Section */}

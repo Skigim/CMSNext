@@ -240,11 +240,7 @@ export function CaseDetails({
             {/* Alerts popover */}
             <AlertsPopover
               alerts={alerts}
-              caseName={caseData.name || "Unnamed Case"}
               className={interactiveHoverClasses}
-              caseId={caseData.id}
-              caseStatus={caseData.status}
-              onUpdateCaseStatus={onUpdateStatus}
               onResolveAlert={onResolveAlert ? handleResolveAlert : undefined}
             />
             <div className="w-px h-9 bg-border" />
