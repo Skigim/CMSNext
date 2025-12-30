@@ -14,8 +14,8 @@ import type { StoredCase, CaseStatusUpdateHandler } from "@/types/case";
 import { CaseStatusMenu } from "./CaseStatusMenu";
 import { ArrowDown, ArrowUp, ArrowUpDown, Eye, MoreHorizontal, Pencil, Trash2 } from "lucide-react";
 import type { CaseListSortDirection, CaseListSortKey } from "@/hooks/useCaseListPreferences";
-import { filterOpenAlerts, type AlertWithMatch } from "@/utils/alertsData";
-import { AlertBadge } from "@/components/alerts/AlertBadge";
+import type { AlertWithMatch } from "@/utils/alertsData";
+import { AlertsPopover } from "./AlertsPopover";
 import { CopyButton } from "@/components/common/CopyButton";
 import { getDisplayPhoneNumber } from "@/utils/phoneFormatter";
 
@@ -28,7 +28,7 @@ export interface CaseTableProps {
   onEditCase: (caseId: string) => void;
   onDeleteCase: (caseId: string) => void;
   alertsByCaseId?: Map<string, AlertWithMatch[]>;
-  onOpenAlerts?: (caseId: string) => void;
+  onResolveAlert?: (alert: AlertWithMatch) => void | Promise<void>;
   onUpdateCaseStatus?: CaseStatusUpdateHandler;
   // Selection props
   selectionEnabled?: boolean;
@@ -67,7 +67,7 @@ export const CaseTable = memo(function CaseTable({
   onEditCase,
   onDeleteCase,
   alertsByCaseId,
-  onOpenAlerts,
+  onResolveAlert,
   onUpdateCaseStatus,
   selectionEnabled = false,
   isSelected,
@@ -88,7 +88,6 @@ export const CaseTable = memo(function CaseTable({
         const phone = item.person?.phone;
         const primaryContact = phone ? getDisplayPhoneNumber(phone) : item.person?.email;
         const allCaseAlerts = alertsByCaseId?.get(item.id) ?? [];
-        const caseAlerts = filterOpenAlerts(allCaseAlerts);
         return {
           id: item.id,
           name: item.name || "Unnamed Case",
@@ -99,7 +98,7 @@ export const CaseTable = memo(function CaseTable({
           applicationDate: formatDate(applicationDate),
           updatedDate: formatDate(updatedDate),
           primaryContact,
-          alerts: caseAlerts,
+          alerts: allCaseAlerts,
         };
       }),
     [alertsByCaseId, cases],
@@ -306,7 +305,14 @@ export const CaseTable = memo(function CaseTable({
               </TableCell>
               <TableCell>
                 {row.alerts.length > 0 ? (
-                  <AlertBadge alerts={row.alerts} onClick={() => onOpenAlerts?.(row.id)} />
+                  <AlertsPopover
+                    alerts={row.alerts}
+                    caseName={row.name}
+                    caseId={row.id}
+                    caseStatus={row.status}
+                    onResolveAlert={onResolveAlert}
+                    onUpdateCaseStatus={onUpdateCaseStatus}
+                  />
                 ) : (
                   <span className="text-xs text-muted-foreground">None</span>
                 )}

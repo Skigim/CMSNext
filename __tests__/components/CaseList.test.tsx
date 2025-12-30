@@ -12,13 +12,7 @@ import { createMockCaseDisplay } from "@/src/test/testUtils";
  * - Real hooks (useCaseListPreferences, useCategoryConfig) run during tests
  * - CategoryConfig is injected via the test render wrapper
  * - localStorage is cleared between tests for useCaseListPreferences
- * - Only external component boundaries (CaseAlertsDrawer) are mocked
  */
-
-// Mock external component boundary - CaseAlertsDrawer is a separate feature
-vi.mock("@/components/case/CaseAlertsDrawer", () => ({
-  CaseAlertsDrawer: () => <div data-testid="alerts-drawer" />,
-}));
 
 // Category config for status dropdown - injected via render wrapper
 const testCategoryConfig = {

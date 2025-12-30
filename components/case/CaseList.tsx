@@ -13,7 +13,6 @@ import {
 } from "../ui/pagination";
 import type { StoredCase, CaseStatus, CaseStatusUpdateHandler } from "../../types/case";
 import { setupSampleData } from "../../utils/setupData";
-import { CaseAlertsDrawer } from "./CaseAlertsDrawer";
 import { CaseFilters } from "./CaseFilters";
 import { MultiSortConfig } from "./MultiSortConfig";
 import { BulkActionsToolbar } from "./BulkActionsToolbar";
@@ -113,8 +112,6 @@ export function CaseList({
   const [searchTerm, setSearchTerm] = useState("");
   const [isSettingUpData, setIsSettingUpData] = useState(false);
   const [showSampleDataDialog, setShowSampleDataDialog] = useState(false);
-  const [alertsDrawerOpen, setAlertsDrawerOpen] = useState(false);
-  const [activeAlertsCaseId, setActiveAlertsCaseId] = useState<string | null>(null);
 
   // Pagination
   const PAGE_SIZE = 20;
@@ -179,18 +176,6 @@ export function CaseList({
     setSortKey(key);
     setSortDirection(direction);
   }, [setSortKey, setSortDirection]);
-
-  const handleOpenCaseAlerts = useCallback((caseId: string) => {
-    setActiveAlertsCaseId(caseId);
-    setAlertsDrawerOpen(true);
-  }, []);
-
-  const handleAlertsDrawerOpenChange = useCallback((open: boolean) => {
-    setAlertsDrawerOpen(open);
-    if (!open) {
-      setActiveAlertsCaseId(null);
-    }
-  }, []);
 
   const handleResolveAlert = useCallback((alert: AlertWithMatch) => {
     if (!onResolveAlert) {
@@ -431,22 +416,6 @@ export function CaseList({
     return allSame ? firstPriority : null;
   }, [visibleCaseIds, isSelected, cases]);
 
-  const activeCase = useMemo(() => {
-    if (!activeAlertsCaseId) {
-      return null;
-    }
-
-    return cases.find(caseData => caseData.id === activeAlertsCaseId) ?? null;
-  }, [activeAlertsCaseId, cases]);
-
-  const activeCaseAlerts = useMemo<AlertWithMatch[]>(() => {
-    if (!activeAlertsCaseId) {
-      return [];;
-    }
-
-    return matchedAlertsByCase.get(activeAlertsCaseId) ?? [];
-  }, [activeAlertsCaseId, matchedAlertsByCase]);
-
   return (
     <div className="space-y-6" data-papercut-context="CaseList">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
@@ -549,7 +518,7 @@ export function CaseList({
         onEditCase={onEditCase}
         onDeleteCase={onDeleteCase}
         alertsByCaseId={matchedAlertsByCase}
-        onOpenAlerts={handleOpenCaseAlerts}
+        onResolveAlert={onResolveAlert ? handleResolveAlert : undefined}
         onUpdateCaseStatus={onUpdateCaseStatus}
         selectionEnabled={selectionEnabled}
         isSelected={isSelected}
@@ -675,17 +644,6 @@ export function CaseList({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-
-      <CaseAlertsDrawer
-        alerts={activeCaseAlerts}
-        open={alertsDrawerOpen}
-        onOpenChange={handleAlertsDrawerOpenChange}
-        caseName={activeCase?.name || "Unnamed Case"}
-        caseId={activeCase?.id}
-        caseStatus={activeCase?.status}
-        onUpdateCaseStatus={onUpdateCaseStatus}
-        onResolveAlert={onResolveAlert ? handleResolveAlert : undefined}
-      />
     </div>
   );
 }

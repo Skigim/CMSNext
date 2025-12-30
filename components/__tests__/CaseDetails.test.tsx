@@ -50,18 +50,6 @@ vi.mock('../case/CaseStatusMenu', () => ({
   ),
 }));
 
-vi.mock('../case/CaseAlertsDrawer', () => ({
-  CaseAlertsDrawer: ({ alerts, caseId, caseStatus, onUpdateCaseStatus }: any) => (
-    <div
-      data-testid="case-alerts-drawer"
-      data-alert-count={alerts?.length ?? 0}
-      data-case-id={caseId ?? ''}
-      data-case-status={caseStatus ?? ''}
-      data-has-status-handler={Boolean(onUpdateCaseStatus)}
-    />
-  ),
-}));
-
 vi.mock('../ui/alert-dialog', () => {
   const passthrough = ({ children }: any) => <>{children}</>;
   const ActionButton = ({ children, onClick, ...rest }: any) => (
