@@ -49,7 +49,6 @@ import {
   TooltipTrigger,
 } from "../ui/tooltip";
 import { CaseTable } from "./CaseTable";
-import { AlertsTableView } from "./AlertsTableView";
 import {
   useCaseListPreferences,
   type CaseListSegment,
@@ -513,38 +512,31 @@ export function CaseList({
         )}
       </div>
 
-      {segment === "alerts" ? (
-        <AlertsTableView
-          alerts={_alerts ?? []}
-          onViewCase={onViewCase}
-          onResolveAlert={onResolveAlert ? handleResolveAlert : undefined}
-        />
-      ) : (
-        <>
-          <CaseTable
-            cases={paginatedCases}
-            sortKey={sortKey}
-            sortDirection={sortDirection}
-            onRequestSort={handleTableSortRequest}
-            onViewCase={onViewCase}
-            onEditCase={onEditCase}
-            onDeleteCase={onDeleteCase}
-            alertsByCaseId={matchedAlertsByCase}
-            onResolveAlert={onResolveAlert ? handleResolveAlert : undefined}
-            onUpdateCaseStatus={onUpdateCaseStatus}
-            selectionEnabled={selectionEnabled}
-            isSelected={isSelected}
-            isAllSelected={isAllSelected}
-            isPartiallySelected={isPartiallySelected}
-            onToggleSelection={toggleSelection}
-            onToggleSelectAll={handleToggleSelectAll}
-          />
+      <CaseTable
+        cases={paginatedCases}
+        sortKey={sortKey}
+        sortDirection={sortDirection}
+        onRequestSort={handleTableSortRequest}
+        onViewCase={onViewCase}
+        onEditCase={onEditCase}
+        onDeleteCase={onDeleteCase}
+        alertsByCaseId={matchedAlertsByCase}
+        onResolveAlert={onResolveAlert ? handleResolveAlert : undefined}
+        onUpdateCaseStatus={onUpdateCaseStatus}
+        expandAlerts={segment === "alerts"}
+        selectionEnabled={selectionEnabled}
+        isSelected={isSelected}
+        isAllSelected={isAllSelected}
+        isPartiallySelected={isPartiallySelected}
+        onToggleSelection={toggleSelection}
+        onToggleSelectAll={handleToggleSelectAll}
+      />
 
-          {noMatches && (
-            <div className="py-12 text-center">
-              <p className="text-muted-foreground">No cases match the current filters.</p>
-            </div>
-          )}
+      {noMatches && (
+        <div className="py-12 text-center">
+          <p className="text-muted-foreground">No cases match the current filters.</p>
+        </div>
+      )}
 
           {/* Pagination */}
           {sortedCases.length > 0 && (
@@ -626,8 +618,6 @@ export function CaseList({
               )}
             </div>
           )}
-        </>
-      )}
 
       {selectionEnabled && (
         <BulkActionsToolbar

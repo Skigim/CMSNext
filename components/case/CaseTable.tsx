@@ -12,12 +12,13 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import type { StoredCase, CaseStatusUpdateHandler } from "@/types/case";
 import { CaseStatusMenu } from "./CaseStatusMenu";
-import { ArrowDown, ArrowUp, ArrowUpDown, Eye, MoreHorizontal, Pencil, Trash2 } from "lucide-react";
+import { ArrowDown, ArrowUp, ArrowUpDown, Eye, MoreHorizontal, Pencil, Trash2, AlertCircle, Check } from "lucide-react";
 import type { CaseListSortDirection, CaseListSortKey } from "@/hooks/useCaseListPreferences";
 import type { AlertWithMatch } from "@/utils/alertsData";
 import { AlertsPopover } from "./AlertsPopover";
 import { CopyButton } from "@/components/common/CopyButton";
 import { getDisplayPhoneNumber } from "@/utils/phoneFormatter";
+import { getAlertDisplayDescription, getAlertDueDateInfo } from "@/utils/alertDisplay";
 
 export interface CaseTableProps {
   cases: StoredCase[];
@@ -30,6 +31,8 @@ export interface CaseTableProps {
   alertsByCaseId?: Map<string, AlertWithMatch[]>;
   onResolveAlert?: (alert: AlertWithMatch) => void | Promise<void>;
   onUpdateCaseStatus?: CaseStatusUpdateHandler;
+  /** When true, shows inline expanded alert details instead of popover */
+  expandAlerts?: boolean;
   // Selection props
   selectionEnabled?: boolean;
   isSelected?: (caseId: string) => boolean;
@@ -69,6 +72,7 @@ export const CaseTable = memo(function CaseTable({
   alertsByCaseId,
   onResolveAlert,
   onUpdateCaseStatus,
+  expandAlerts = false,
   selectionEnabled = false,
   isSelected,
   isAllSelected = false,
@@ -305,10 +309,14 @@ export const CaseTable = memo(function CaseTable({
               </TableCell>
               <TableCell>
                 {row.alerts.length > 0 ? (
-                  <AlertsPopover
-                    alerts={row.alerts}
-                    onResolveAlert={onResolveAlert}
-                  />
+                  expandAlerts ? (
+                    <ExpandedAlertsCell alerts={row.alerts} onResolveAlert={onResolveAlert} />
+                  ) : (
+                    <AlertsPopover
+                      alerts={row.alerts}
+                      onResolveAlert={onResolveAlert}
+                    />
+                  )
                 ) : (
                   <span className="text-xs text-muted-foreground">None</span>
                 )}
@@ -352,6 +360,86 @@ export const CaseTable = memo(function CaseTable({
           ))}
         </TableBody>
       </Table>
+    </div>
+  );
+});
+
+/**
+ * ExpandedAlertsCell - Inline expanded alert details for the alerts column.
+ * Shows alert descriptions with due dates and resolve buttons.
+ */
+interface ExpandedAlertsCellProps {
+  alerts: AlertWithMatch[];
+  onResolveAlert?: (alert: AlertWithMatch) => void | Promise<void>;
+}
+
+const ExpandedAlertsCell = memo(function ExpandedAlertsCell({
+  alerts,
+  onResolveAlert,
+}: ExpandedAlertsCellProps) {
+  const openAlerts = useMemo(
+    () => alerts.filter((a) => a.status !== "resolved"),
+    [alerts]
+  );
+  const resolvedCount = alerts.length - openAlerts.length;
+
+  const handleResolve = useCallback(
+    (alert: AlertWithMatch) => {
+      void onResolveAlert?.(alert);
+    },
+    [onResolveAlert]
+  );
+
+  if (openAlerts.length === 0) {
+    return (
+      <div className="flex items-center gap-1 text-xs text-green-600">
+        <Check className="h-3 w-3" />
+        <span>{resolvedCount} resolved</span>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-2 max-w-xs">
+      {openAlerts.slice(0, 3).map((alert, idx) => {
+        const description = getAlertDisplayDescription(alert);
+        const { label: dueLabel } = getAlertDueDateInfo(alert);
+
+        return (
+          <div
+            key={alert.id ?? idx}
+            className="flex items-start gap-2 text-xs"
+          >
+            <AlertCircle className="h-3 w-3 mt-0.5 shrink-0 text-amber-500" />
+            <div className="flex-1 min-w-0">
+              <p className="font-medium text-foreground truncate">{description}</p>
+              {dueLabel && (
+                <p className="text-muted-foreground">Due {dueLabel}</p>
+              )}
+            </div>
+            {onResolveAlert && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-5 px-1.5 text-xs shrink-0"
+                onClick={() => handleResolve(alert)}
+              >
+                Resolve
+              </Button>
+            )}
+          </div>
+        );
+      })}
+      {openAlerts.length > 3 && (
+        <p className="text-xs text-muted-foreground">
+          +{openAlerts.length - 3} more alert{openAlerts.length - 3 > 1 ? "s" : ""}
+        </p>
+      )}
+      {resolvedCount > 0 && (
+        <p className="text-xs text-muted-foreground">
+          {resolvedCount} resolved
+        </p>
+      )}
     </div>
   );
 });
