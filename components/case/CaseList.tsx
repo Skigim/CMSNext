@@ -49,6 +49,7 @@ import {
   TooltipTrigger,
 } from "../ui/tooltip";
 import { CaseTable } from "./CaseTable";
+import { AlertsTableView } from "./AlertsTableView";
 import {
   useCaseListPreferences,
   type CaseListSegment,
@@ -167,7 +168,7 @@ export function CaseList({
   }, []);
 
   const handleSegmentChange = useCallback((value: string) => {
-    if (value === "all" || value === "recent" || value === "priority") {
+    if (value === "all" || value === "recent" || value === "priority" || value === "alerts") {
       setSegment(value as CaseListSegment);
     }
   }, [setSegment]);
@@ -489,6 +490,9 @@ export function CaseList({
           <ToggleGroupItem value="priority" aria-label="Priority cases">
             <Filter className="mr-2 h-4 w-4" /> Priority
           </ToggleGroupItem>
+          <ToggleGroupItem value="alerts" aria-label="Alerts">
+            <Filter className="mr-2 h-4 w-4" /> Alerts
+          </ToggleGroupItem>
         </ToggleGroup>
         {hasCustomPreferences && (
           <Tooltip>
@@ -509,110 +513,120 @@ export function CaseList({
         )}
       </div>
 
-      <CaseTable
-        cases={paginatedCases}
-        sortKey={sortKey}
-        sortDirection={sortDirection}
-        onRequestSort={handleTableSortRequest}
-        onViewCase={onViewCase}
-        onEditCase={onEditCase}
-        onDeleteCase={onDeleteCase}
-        alertsByCaseId={matchedAlertsByCase}
-        onResolveAlert={onResolveAlert ? handleResolveAlert : undefined}
-        onUpdateCaseStatus={onUpdateCaseStatus}
-        selectionEnabled={selectionEnabled}
-        isSelected={isSelected}
-        isAllSelected={isAllSelected}
-        isPartiallySelected={isPartiallySelected}
-        onToggleSelection={toggleSelection}
-        onToggleSelectAll={handleToggleSelectAll}
-      />
+      {segment === "alerts" ? (
+        <AlertsTableView
+          alerts={_alerts ?? []}
+          onViewCase={onViewCase}
+          onResolveAlert={onResolveAlert ? handleResolveAlert : undefined}
+        />
+      ) : (
+        <>
+          <CaseTable
+            cases={paginatedCases}
+            sortKey={sortKey}
+            sortDirection={sortDirection}
+            onRequestSort={handleTableSortRequest}
+            onViewCase={onViewCase}
+            onEditCase={onEditCase}
+            onDeleteCase={onDeleteCase}
+            alertsByCaseId={matchedAlertsByCase}
+            onResolveAlert={onResolveAlert ? handleResolveAlert : undefined}
+            onUpdateCaseStatus={onUpdateCaseStatus}
+            selectionEnabled={selectionEnabled}
+            isSelected={isSelected}
+            isAllSelected={isAllSelected}
+            isPartiallySelected={isPartiallySelected}
+            onToggleSelection={toggleSelection}
+            onToggleSelectAll={handleToggleSelectAll}
+          />
 
-      {noMatches && (
-        <div className="py-12 text-center">
-          <p className="text-muted-foreground">No cases match the current filters.</p>
-        </div>
-      )}
+          {noMatches && (
+            <div className="py-12 text-center">
+              <p className="text-muted-foreground">No cases match the current filters.</p>
+            </div>
+          )}
 
-      {/* Pagination */}
-      {sortedCases.length > 0 && (
-        <div className="flex flex-col items-center gap-4 sm:flex-row sm:justify-between">
-          <p className="text-sm text-muted-foreground">
-            Showing {startIndex + 1}–{Math.min(endIndex, sortedCases.length)} of {sortedCases.length} cases
-          </p>
-          {totalPages > 1 && (
-            <Pagination>
-              <PaginationContent>
-                <PaginationItem>
-                  <PaginationPrevious
-                    onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                    aria-disabled={currentPage === 1}
-                    className={currentPage === 1 ? "pointer-events-none opacity-50" : "cursor-pointer"}
-                  />
-                </PaginationItem>
-                {/* First page */}
-                <PaginationItem>
-                  <PaginationLink
-                    onClick={() => setCurrentPage(1)}
-                    isActive={currentPage === 1}
-                    className="cursor-pointer"
-                  >
-                    1
-                  </PaginationLink>
-                </PaginationItem>
-                {/* Ellipsis after first if needed */}
-                {currentPage > 3 && totalPages > 5 && (
-                  <PaginationItem>
-                    <PaginationEllipsis />
-                  </PaginationItem>
-                )}
-                {/* Middle pages */}
-                {Array.from({ length: totalPages }, (_, i) => i + 1)
-                  .filter(page => {
-                    if (page === 1 || page === totalPages) return false;
-                    if (totalPages <= 5) return true;
-                    return Math.abs(page - currentPage) <= 1;
-                  })
-                  .map(page => (
-                    <PaginationItem key={page}>
+          {/* Pagination */}
+          {sortedCases.length > 0 && (
+            <div className="flex flex-col items-center gap-4 sm:flex-row sm:justify-between">
+              <p className="text-sm text-muted-foreground">
+                Showing {startIndex + 1}–{Math.min(endIndex, sortedCases.length)} of {sortedCases.length} cases
+              </p>
+              {totalPages > 1 && (
+                <Pagination>
+                  <PaginationContent>
+                    <PaginationItem>
+                      <PaginationPrevious
+                        onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                        aria-disabled={currentPage === 1}
+                        className={currentPage === 1 ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                      />
+                    </PaginationItem>
+                    {/* First page */}
+                    <PaginationItem>
                       <PaginationLink
-                        onClick={() => setCurrentPage(page)}
-                        isActive={currentPage === page}
+                        onClick={() => setCurrentPage(1)}
+                        isActive={currentPage === 1}
                         className="cursor-pointer"
                       >
-                        {page}
+                        1
                       </PaginationLink>
                     </PaginationItem>
-                  ))}
-                {/* Ellipsis before last if needed */}
-                {currentPage < totalPages - 2 && totalPages > 5 && (
-                  <PaginationItem>
-                    <PaginationEllipsis />
-                  </PaginationItem>
-                )}
-                {/* Last page (if more than 1 page) */}
-                {totalPages > 1 && (
-                  <PaginationItem>
-                    <PaginationLink
-                      onClick={() => setCurrentPage(totalPages)}
-                      isActive={currentPage === totalPages}
-                      className="cursor-pointer"
-                    >
-                      {totalPages}
-                    </PaginationLink>
-                  </PaginationItem>
-                )}
-                <PaginationItem>
-                  <PaginationNext
-                    onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                    aria-disabled={currentPage === totalPages}
-                    className={currentPage === totalPages ? "pointer-events-none opacity-50" : "cursor-pointer"}
-                  />
-                </PaginationItem>
-              </PaginationContent>
-            </Pagination>
+                    {/* Ellipsis after first if needed */}
+                    {currentPage > 3 && totalPages > 5 && (
+                      <PaginationItem>
+                        <PaginationEllipsis />
+                      </PaginationItem>
+                    )}
+                    {/* Middle pages */}
+                    {Array.from({ length: totalPages }, (_, i) => i + 1)
+                      .filter(page => {
+                        if (page === 1 || page === totalPages) return false;
+                        if (totalPages <= 5) return true;
+                        return Math.abs(page - currentPage) <= 1;
+                      })
+                      .map(page => (
+                        <PaginationItem key={page}>
+                          <PaginationLink
+                            onClick={() => setCurrentPage(page)}
+                            isActive={currentPage === page}
+                            className="cursor-pointer"
+                          >
+                            {page}
+                          </PaginationLink>
+                        </PaginationItem>
+                      ))}
+                    {/* Ellipsis before last if needed */}
+                    {currentPage < totalPages - 2 && totalPages > 5 && (
+                      <PaginationItem>
+                        <PaginationEllipsis />
+                      </PaginationItem>
+                    )}
+                    {/* Last page (if more than 1 page) */}
+                    {totalPages > 1 && (
+                      <PaginationItem>
+                        <PaginationLink
+                          onClick={() => setCurrentPage(totalPages)}
+                          isActive={currentPage === totalPages}
+                          className="cursor-pointer"
+                        >
+                          {totalPages}
+                        </PaginationLink>
+                      </PaginationItem>
+                    )}
+                    <PaginationItem>
+                      <PaginationNext
+                        onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                        aria-disabled={currentPage === totalPages}
+                        className={currentPage === totalPages ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                      />
+                    </PaginationItem>
+                  </PaginationContent>
+                </Pagination>
+              )}
+            </div>
           )}
-        </div>
+        </>
       )}
 
       {selectionEnabled && (

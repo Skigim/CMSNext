@@ -1,9 +1,9 @@
 # CMSNext Roadmap - January 2026
 
-**Report Date:** December 22, 2025  
-**Branch:** dev (planning)  
+**Report Date:** December 30, 2025  
+**Branch:** dev  
 **Focus:** Scalability, Domain Architecture, and Data Intelligence  
-**Status:** Planning Phase
+**Status:** Week 0 In Progress
 
 ---
 
@@ -24,16 +24,16 @@ _Focus: Address December 2025 audit findings with low-risk extractions._
 
 #### Refactoring Targets (from Audit)
 
-| File                     | Current Lines | Target | Extraction                                       |
-| ------------------------ | ------------- | ------ | ------------------------------------------------ |
-| `AutosaveFileService.ts` | 1875          | <1200  | Extract `IndexedDBHandleStore` (~100 lines)      |
-| `CaseService.ts`         | 1002          | <700   | Extract `CaseBulkOperationsService` (~300 lines) |
-| `DataManager.ts`         | 1137          | —      | Defer (thin facade, splitting adds complexity)   |
+| File                     | Current Lines | Target | Extraction                                     |
+| ------------------------ | ------------- | ------ | ---------------------------------------------- |
+| `AutosaveFileService.ts` | 1844          | <1200  | Extract `IndexedDBHandleStore` (~100 lines)    |
+| `CaseService.ts`         | ~~1002~~ 761  | <700   | ✅ Already reduced via prior refactoring       |
+| `DataManager.ts`         | 1136          | —      | Defer (thin facade, splitting adds complexity) |
 
 #### Tasks
 
 - [ ] Extract `IndexedDBHandleStore` from `AutosaveFileService.ts`
-- [ ] Extract `CaseBulkOperationsService` from `CaseService.ts`
+- [x] ~~Extract `CaseBulkOperationsService` from `CaseService.ts`~~ Already at 761 lines
 - [ ] Add unit tests for extracted modules
 - [ ] Fix 3 lint warnings (QuickCaseModal.tsx, alertsData.ts)
 
@@ -47,7 +47,7 @@ _Focus: Establishing the new architectural pattern without breaking the app._
 
 #### Day 1: Cleanup & Prep
 
-- [ ] Delete `prototypeCaseInfoForm.tsx` (1001 lines dead code)
+- [x] ~~Delete `prototypeCaseInfoForm.tsx` (1001 lines dead code)~~ Already deleted
 - [ ] Document hook overlap: `useFinancialItems.ts` vs `useFinancialItemFlow.ts`
 - [ ] Define Domain pattern (functional, not OOP)
 
@@ -125,14 +125,14 @@ _Focus: Integration testing and documentation._
 
 | Metric                       | Start | Week 0 | Week 1 | Week 2 | Week 3 | Target |
 | ---------------------------- | ----- | ------ | ------ | ------ | ------ | ------ |
-| Business Logic Coverage      | 100%  |        |        |        |        | 100%   |
+| Business Logic Coverage      | 100%  | 100%   |        |        |        | 100%   |
 | Max Renderable Items (60fps) | ~100  |        |        | 5000+  |        | 5000+  |
 | Logic in Components/Hooks    | High  |        | Med    | Low    | Low    | Low    |
 | New Analytics Widgets        | 0     |        |        |        | 3      | 3      |
-| Test count                   | 538   |        |        |        |        | 600+   |
-| AutosaveFileService.ts lines | 1875  | <1500  |        |        |        | <1200  |
-| CaseService.ts lines         | 1002  | <800   |        |        |        | <700   |
-| Lint warnings                | 3     | 0      |        |        |        | 0      |
+| Test count                   | 538   | 572    |        |        |        | 600+   |
+| AutosaveFileService.ts lines | 1875  | 1844   |        |        |        | <1200  |
+| CaseService.ts lines         | 1002  | 761 ✅ |        |        |        | <700   |
+| Lint warnings                | 3     | TBD    |        |        |        | 0      |
 
 ---
 
@@ -170,7 +170,7 @@ _Focus: Integration testing and documentation._
 | ---------------------------------------------- | -------- | ----------- |
 | ~~Alert optimistic updates inconsistent~~      | ~~P1~~   | ✅ Done     |
 | ~~Financial item history/verification sync~~   | ~~P1~~   | ✅ Done     |
-| Alerts in popover (like notes)                 | P2       | Week 2      |
+| ~~Alerts in popover (like notes)~~             | ~~P2~~   | ✅ Done     |
 | Consolidate action log per case                | P3       | Week 3      |
 | Remove reports tab, add filtering to Case List | P3       | Week 3      |
 
@@ -238,4 +238,4 @@ Decision point: Week 2 prep work will benchmark both.
 ---
 
 **Prepared by:** GitHub Copilot  
-**Last updated:** December 29, 2025
+**Last updated:** December 30, 2025

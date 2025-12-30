@@ -3,7 +3,7 @@ import type { CaseStatus } from "@/types/case";
 
 export type CaseListSortKey = "updated" | "name" | "mcn" | "application" | "status" | "caseType" | "alerts";
 export type CaseListSortDirection = "asc" | "desc";
-export type CaseListSegment = "all" | "recent" | "priority";
+export type CaseListSegment = "all" | "recent" | "priority" | "alerts";
 
 export interface SortConfig {
   key: CaseListSortKey;
@@ -95,7 +95,7 @@ function loadPreferences(): {
       : [{ key: DEFAULT_SORT_KEY, direction: DEFAULT_SORT_DIRECTION }];
 
     // Validate segment
-    const segment = ["all", "recent", "priority"].includes(parsed.segment)
+    const segment = ["all", "recent", "priority", "alerts"].includes(parsed.segment)
       ? parsed.segment
       : DEFAULT_SEGMENT;
 
