@@ -113,7 +113,7 @@ export function CaseFiltersDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-2xl">
         <DialogHeader>
           <DialogTitle className="flex items-center justify-between">
             <span>Filter cases</span>
@@ -130,135 +130,137 @@ export function CaseFiltersDialog({
           </DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-2">
-          {/* Status filter */}
-          <div>
-            <Label className="text-sm font-medium mb-2 block">Status</Label>
-            <div className="space-y-2">
-              {statusOptions.map((status: string) => (
-                <div key={status} className="flex items-center space-x-2">
-                  <Checkbox
-                    id={`status-${status}`}
-                    checked={filters.statuses.includes(status as CaseStatus)}
-                    onCheckedChange={() => handleStatusToggle(status as CaseStatus)}
-                  />
-                  <label
-                    htmlFor={`status-${status}`}
-                    className="text-sm cursor-pointer flex-1"
-                  >
-                    {status}
-                  </label>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Priority filter */}
-          <div className="border-t pt-3">
-            <div className="flex items-center space-x-2">
-              <Checkbox
-                id="priority-filter"
-                checked={filters.priorityOnly}
-                onCheckedChange={handlePriorityToggle}
-              />
-              <label
-                htmlFor="priority-filter"
-                className="text-sm cursor-pointer flex-1 font-medium"
-              >
-                Priority cases only
-              </label>
-            </div>
-          </div>
-
-          {/* Date range filter */}
-          <div className="border-t pt-3">
-            <Label className="text-sm font-medium mb-2 block">Date range</Label>
-            <div className="space-y-2">
-              <CalendarPicker
-                date={filters.dateRange.from}
-                onDateChange={(date) =>
-                  handleDateRangeChange(date, filters.dateRange.to)
-                }
-                label="From"
-                className="w-full"
-              />
-              <CalendarPicker
-                date={filters.dateRange.to}
-                onDateChange={(date) =>
-                  handleDateRangeChange(filters.dateRange.from, date)
-                }
-                label="To"
-                className="w-full"
-              />
-            </div>
-          </div>
-
-          {/* Exclude filters */}
-          <div className="border-t pt-3">
-            <Label className="text-sm font-medium mb-2 block">Exclude</Label>
-            <div className="space-y-2">
-              <div className="text-xs text-muted-foreground mb-1">
-                Hide cases with status:
-              </div>
-              {statusOptions.map((status: string) => (
-                <div key={`exclude-${status}`} className="flex items-center space-x-2">
-                  <Checkbox
-                    id={`exclude-status-${status}`}
-                    checked={filters.excludeStatuses.includes(status as CaseStatus)}
-                    onCheckedChange={() =>
-                      handleExcludeStatusToggle(status as CaseStatus)
-                    }
-                  />
-                  <label
-                    htmlFor={`exclude-status-${status}`}
-                    className="text-sm cursor-pointer flex-1"
-                  >
-                    {status}
-                  </label>
-                </div>
-              ))}
-              <div className="border-t pt-2 mt-2">
-                <div className="flex items-center space-x-2">
-                  <Checkbox
-                    id="exclude-priority-filter"
-                    checked={filters.excludePriority}
-                    onCheckedChange={handleExcludePriorityToggle}
-                  />
-                  <label
-                    htmlFor="exclude-priority-filter"
-                    className="text-sm cursor-pointer flex-1"
-                  >
-                    Hide priority cases
-                  </label>
-                </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+          {/* Column 1: Status & Priority */}
+          <div className="space-y-4">
+            <div>
+              <Label className="text-sm font-medium mb-2 block">Include status</Label>
+              <div className="space-y-2">
+                {statusOptions.map((status: string) => (
+                  <div key={status} className="flex items-center space-x-2">
+                    <Checkbox
+                      id={`status-${status}`}
+                      checked={filters.statuses.includes(status as CaseStatus)}
+                      onCheckedChange={() => handleStatusToggle(status as CaseStatus)}
+                    />
+                    <label
+                      htmlFor={`status-${status}`}
+                      className="text-sm cursor-pointer flex-1"
+                    >
+                      {status}
+                    </label>
+                  </div>
+                ))}
               </div>
             </div>
-          </div>
 
-          {/* Alert description filter (only in alerts segment) */}
-          {segment === "alerts" && alertDescriptions.length > 0 && (
             <div className="border-t pt-3">
-              <Label className="text-sm font-medium mb-2 block">
-                Alert description
-              </Label>
-              <Select
-                value={filters.alertDescription}
-                onValueChange={handleAlertDescriptionChange}
-              >
-                <SelectTrigger id="alert-description-filter">
-                  <SelectValue placeholder="All descriptions" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All descriptions</SelectItem>
-                  {alertDescriptions.map((desc) => (
-                    <SelectItem key={desc} value={desc}>
-                      {desc}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="priority-filter"
+                  checked={filters.priorityOnly}
+                  onCheckedChange={handlePriorityToggle}
+                />
+                <label
+                  htmlFor="priority-filter"
+                  className="text-sm cursor-pointer flex-1 font-medium"
+                >
+                  Priority cases only
+                </label>
+              </div>
             </div>
-          )}
+          </div>
+
+          {/* Column 2: Exclude filters */}
+          <div className="space-y-4">
+            <div>
+              <Label className="text-sm font-medium mb-2 block">Exclude status</Label>
+              <div className="space-y-2">
+                {statusOptions.map((status: string) => (
+                  <div key={`exclude-${status}`} className="flex items-center space-x-2">
+                    <Checkbox
+                      id={`exclude-status-${status}`}
+                      checked={filters.excludeStatuses.includes(status as CaseStatus)}
+                      onCheckedChange={() =>
+                        handleExcludeStatusToggle(status as CaseStatus)
+                      }
+                    />
+                    <label
+                      htmlFor={`exclude-status-${status}`}
+                      className="text-sm cursor-pointer flex-1"
+                    >
+                      {status}
+                    </label>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="border-t pt-3">
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="exclude-priority-filter"
+                  checked={filters.excludePriority}
+                  onCheckedChange={handleExcludePriorityToggle}
+                />
+                <label
+                  htmlFor="exclude-priority-filter"
+                  className="text-sm cursor-pointer flex-1 font-medium"
+                >
+                  Hide priority cases
+                </label>
+              </div>
+            </div>
+          </div>
+
+          {/* Column 3: Date range & Alert description */}
+          <div className="space-y-4">
+            <div>
+              <Label className="text-sm font-medium mb-2 block">Date range</Label>
+              <div className="space-y-2">
+                <CalendarPicker
+                  date={filters.dateRange.from}
+                  onDateChange={(date) =>
+                    handleDateRangeChange(date, filters.dateRange.to)
+                  }
+                  label="From"
+                  className="w-full"
+                />
+                <CalendarPicker
+                  date={filters.dateRange.to}
+                  onDateChange={(date) =>
+                    handleDateRangeChange(filters.dateRange.from, date)
+                  }
+                  label="To"
+                  className="w-full"
+                />
+              </div>
+            </div>
+
+            {segment === "alerts" && alertDescriptions.length > 0 && (
+              <div className="border-t pt-3">
+                <Label className="text-sm font-medium mb-2 block">
+                  Alert description
+                </Label>
+                <Select
+                  value={filters.alertDescription}
+                  onValueChange={handleAlertDescriptionChange}
+                >
+                  <SelectTrigger id="alert-description-filter">
+                    <SelectValue placeholder="All descriptions" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All descriptions</SelectItem>
+                    {alertDescriptions.map((desc) => (
+                      <SelectItem key={desc} value={desc}>
+                        {desc}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+          </div>
         </div>
       </DialogContent>
     </Dialog>
