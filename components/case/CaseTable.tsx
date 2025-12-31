@@ -256,9 +256,9 @@ export const CaseTable = memo(function CaseTable({
                 type="button"
                 onClick={() => handleSortClick("updated")}
                 className="flex items-center gap-1 text-left font-semibold transition-colors hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
-                aria-label={`Sort by Last updated. Currently ${sortKey === "updated" ? (sortDirection === "asc" ? "ascending" : "descending") : "unsorted"}.`}
+                aria-label={`Sort by ${expandAlerts ? "Due Date" : "Last updated"}. Currently ${sortKey === "updated" ? (sortDirection === "asc" ? "ascending" : "descending") : "unsorted"}.`}
               >
-                <span>Last updated</span>
+                <span>{expandAlerts ? "Due Date" : "Last updated"}</span>
                 {renderSortIndicator("updated")}
               </button>
             </TableHead>
@@ -341,7 +341,11 @@ export const CaseTable = memo(function CaseTable({
               </TableCell>
               <TableCell>{row.caseType}</TableCell>
               <TableCell>{row.applicationDate}</TableCell>
-              <TableCell>{row.updatedDate}</TableCell>
+              <TableCell>
+                {row.expandedAlert
+                  ? getAlertDueDateInfo(row.expandedAlert).label || "—"
+                  : row.updatedDate}
+              </TableCell>
               <TableCell>
                 <CopyButton
                   value={row.primaryContact}
