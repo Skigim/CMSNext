@@ -314,10 +314,28 @@ export function CaseList({
     });
   }, [filteredCases, openAlertsByCase, sortConfigs]);
 
-  // Pagination computed values
-  const totalPages = Math.ceil(sortedCases.length / PAGE_SIZE);
+  // When in alerts mode, count total open alerts for pagination
+  const totalAlertRows = useMemo(() => {
+    if (segment !== "alerts") {
+      return 0;
+    }
+    let count = 0;
+    for (const caseData of sortedCases) {
+      const openAlerts = openAlertsByCase.get(caseData.id);
+      if (openAlerts) {
+        count += openAlerts.length;
+      }
+    }
+    return count;
+  }, [segment, sortedCases, openAlertsByCase]);
+
+  // Pagination computed values - use alert count when in alerts mode
+  const totalItems = segment === "alerts" ? totalAlertRows : sortedCases.length;
+  const totalPages = Math.ceil(totalItems / PAGE_SIZE);
   const startIndex = (currentPage - 1) * PAGE_SIZE;
   const endIndex = startIndex + PAGE_SIZE;
+
+  // Paginated cases (for non-alerts mode)
   const paginatedCases = useMemo(
     () => sortedCases.slice(startIndex, endIndex),
     [sortedCases, startIndex, endIndex]
@@ -328,7 +346,7 @@ export function CaseList({
     setCurrentPage(1);
   }, [searchTerm, segment, filters, sortConfigs]);
 
-  const noMatches = sortedCases.length === 0;
+  const noMatches = segment === "alerts" ? totalAlertRows === 0 : sortedCases.length === 0;
 
   // Selection management - operates on current page only
   const visibleCaseIds = useMemo(() => paginatedCases.map(c => c.id), [paginatedCases]);
@@ -513,7 +531,7 @@ export function CaseList({
       </div>
 
       <CaseTable
-        cases={paginatedCases}
+        cases={segment === "alerts" ? sortedCases : paginatedCases}
         sortKey={sortKey}
         sortDirection={sortDirection}
         onRequestSort={handleTableSortRequest}
@@ -524,6 +542,7 @@ export function CaseList({
         onResolveAlert={onResolveAlert ? handleResolveAlert : undefined}
         onUpdateCaseStatus={onUpdateCaseStatus}
         expandAlerts={segment === "alerts"}
+        alertPageRange={segment === "alerts" ? { start: startIndex, end: endIndex } : undefined}
         selectionEnabled={selectionEnabled}
         isSelected={isSelected}
         isAllSelected={isAllSelected}
@@ -534,15 +553,15 @@ export function CaseList({
 
       {noMatches && (
         <div className="py-12 text-center">
-          <p className="text-muted-foreground">No cases match the current filters.</p>
+          <p className="text-muted-foreground">{segment === "alerts" ? "No open alerts to display." : "No cases match the current filters."}</p>
         </div>
       )}
 
           {/* Pagination */}
-          {sortedCases.length > 0 && (
+          {totalItems > 0 && (
             <div className="flex flex-col items-center gap-4 sm:flex-row sm:justify-between">
               <p className="text-sm text-muted-foreground">
-                Showing {startIndex + 1}–{Math.min(endIndex, sortedCases.length)} of {sortedCases.length} cases
+                Showing {startIndex + 1}–{Math.min(endIndex, totalItems)} of {totalItems} {segment === "alerts" ? "alerts" : "cases"}
               </p>
               {totalPages > 1 && (
                 <Pagination>
