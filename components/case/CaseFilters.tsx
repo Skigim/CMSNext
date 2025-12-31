@@ -1,22 +1,10 @@
-import { useCallback, useMemo } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { CalendarPicker } from "@/components/ui/calendar-picker";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Filter, X } from "lucide-react";
 import type { CaseFilters as CaseFiltersType, CaseListSegment } from "@/hooks/useCaseListPreferences";
-import type { CaseStatus } from "@/types/case";
-import { useCategoryConfig } from "@/contexts/CategoryConfigContext";
 import { format } from "date-fns";
+import { CaseFiltersDialog } from "./CaseFiltersDialog";
 
 interface CaseFiltersProps {
   filters: CaseFiltersType;
@@ -28,14 +16,8 @@ interface CaseFiltersProps {
 }
 
 export function CaseFilters({ filters, onFiltersChange, segment, alertDescriptions = [] }: CaseFiltersProps) {
-  const { config } = useCategoryConfig();
-  
-  // Extract status names from StatusConfig[] for UI display
-  const statusOptions = useMemo(() => 
-    config.caseStatuses.map(s => s.name), 
-    [config.caseStatuses]
-  );
-  
+  const [dialogOpen, setDialogOpen] = useState(false);
+
   const activeFilterCount = useMemo(() => {
     let count = 0;
     if (filters.statuses.length > 0) count++;
@@ -47,195 +29,50 @@ export function CaseFilters({ filters, onFiltersChange, segment, alertDescriptio
     return count;
   }, [filters]);
 
-  const handleStatusToggle = useCallback((status: CaseStatus) => {
-    const newStatuses = filters.statuses.includes(status)
-      ? filters.statuses.filter(s => s !== status)
-      : [...filters.statuses, status];
-    onFiltersChange({ ...filters, statuses: newStatuses });
+  const handleClearStatus = useCallback(() => {
+    onFiltersChange({ ...filters, statuses: [] });
   }, [filters, onFiltersChange]);
 
-  const handleExcludeStatusToggle = useCallback((status: CaseStatus) => {
-    const newStatuses = filters.excludeStatuses.includes(status)
-      ? filters.excludeStatuses.filter(s => s !== status)
-      : [...filters.excludeStatuses, status];
-    onFiltersChange({ ...filters, excludeStatuses: newStatuses });
+  const handleClearPriority = useCallback(() => {
+    onFiltersChange({ ...filters, priorityOnly: false });
   }, [filters, onFiltersChange]);
 
-  const handlePriorityToggle = useCallback(() => {
-    onFiltersChange({ ...filters, priorityOnly: !filters.priorityOnly });
+  const handleClearDateRange = useCallback(() => {
+    onFiltersChange({ ...filters, dateRange: {} });
   }, [filters, onFiltersChange]);
 
-  const handleExcludePriorityToggle = useCallback(() => {
-    onFiltersChange({ ...filters, excludePriority: !filters.excludePriority });
+  const handleClearExcludeStatuses = useCallback(() => {
+    onFiltersChange({ ...filters, excludeStatuses: [] });
   }, [filters, onFiltersChange]);
 
-  const handleDateRangeChange = useCallback((from: Date | undefined, to: Date | undefined) => {
-    onFiltersChange({ ...filters, dateRange: { from, to } });
+  const handleClearExcludePriority = useCallback(() => {
+    onFiltersChange({ ...filters, excludePriority: false });
   }, [filters, onFiltersChange]);
 
-  const handleAlertDescriptionChange = useCallback((description: string) => {
-    onFiltersChange({ ...filters, alertDescription: description });
+  const handleClearAlertDescription = useCallback(() => {
+    onFiltersChange({ ...filters, alertDescription: "all" });
   }, [filters, onFiltersChange]);
-
-  const handleClearFilters = useCallback(() => {
-    onFiltersChange({
-      statuses: [],
-      priorityOnly: false,
-      dateRange: {},
-      excludeStatuses: [],
-      excludePriority: false,
-      alertDescription: "all",
-    });
-  }, [onFiltersChange]);
 
   return (
     <div className="flex items-center gap-2">
-      <Popover>
-        <PopoverTrigger asChild>
-          <Button variant="outline" size="sm">
-            <Filter className="h-4 w-4" />
-            Filters
-            {activeFilterCount > 0 && (
-              <Badge variant="secondary" className="ml-2 h-5 px-1.5 text-xs">
-                {activeFilterCount}
-              </Badge>
-            )}
-          </Button>
-        </PopoverTrigger>
-        <PopoverContent className="w-80" align="start">
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <h4 className="font-semibold text-sm">Filter cases</h4>
-              {activeFilterCount > 0 && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={handleClearFilters}
-                  className="h-auto px-2 py-1 text-xs"
-                >
-                  Clear all
-                </Button>
-              )}
-            </div>
+      <Button variant="outline" size="sm" onClick={() => setDialogOpen(true)}>
+        <Filter className="h-4 w-4" />
+        Filters
+        {activeFilterCount > 0 && (
+          <Badge variant="secondary" className="ml-2 h-5 px-1.5 text-xs">
+            {activeFilterCount}
+          </Badge>
+        )}
+      </Button>
 
-            <div className="space-y-3">
-              <div>
-                <Label className="text-sm font-medium mb-2 block">Status</Label>
-                <div className="space-y-2">
-                  {statusOptions.map((status: string) => (
-                    <div key={status} className="flex items-center space-x-2">
-                      <Checkbox
-                        id={`status-${status}`}
-                        checked={filters.statuses.includes(status as CaseStatus)}
-                        onCheckedChange={() => handleStatusToggle(status as CaseStatus)}
-                      />
-                      <label
-                        htmlFor={`status-${status}`}
-                        className="text-sm cursor-pointer flex-1"
-                      >
-                        {status}
-                      </label>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              <div className="border-t pt-3">
-                <div className="flex items-center space-x-2">
-                  <Checkbox
-                    id="priority-filter"
-                    checked={filters.priorityOnly}
-                    onCheckedChange={handlePriorityToggle}
-                  />
-                  <label
-                    htmlFor="priority-filter"
-                    className="text-sm cursor-pointer flex-1 font-medium"
-                  >
-                    Priority cases only
-                  </label>
-                </div>
-              </div>
-
-              <div className="border-t pt-3">
-                <Label className="text-sm font-medium mb-2 block">Date range</Label>
-                <div className="space-y-2">
-                  <CalendarPicker
-                    date={filters.dateRange.from}
-                    onDateChange={(date) => handleDateRangeChange(date, filters.dateRange.to)}
-                    label="From"
-                    className="w-full"
-                  />
-                  <CalendarPicker
-                    date={filters.dateRange.to}
-                    onDateChange={(date) => handleDateRangeChange(filters.dateRange.from, date)}
-                    label="To"
-                    className="w-full"
-                  />
-                </div>
-              </div>
-
-              <div className="border-t pt-3">
-                <Label className="text-sm font-medium mb-2 block">Exclude</Label>
-                <div className="space-y-2">
-                  <div className="text-xs text-muted-foreground mb-1">Hide cases with status:</div>
-                  {statusOptions.map((status: string) => (
-                    <div key={`exclude-${status}`} className="flex items-center space-x-2">
-                      <Checkbox
-                        id={`exclude-status-${status}`}
-                        checked={filters.excludeStatuses.includes(status as CaseStatus)}
-                        onCheckedChange={() => handleExcludeStatusToggle(status as CaseStatus)}
-                      />
-                      <label
-                        htmlFor={`exclude-status-${status}`}
-                        className="text-sm cursor-pointer flex-1"
-                      >
-                        {status}
-                      </label>
-                    </div>
-                  ))}
-                  <div className="border-t pt-2 mt-2">
-                    <div className="flex items-center space-x-2">
-                      <Checkbox
-                        id="exclude-priority-filter"
-                        checked={filters.excludePriority}
-                        onCheckedChange={handleExcludePriorityToggle}
-                      />
-                      <label
-                        htmlFor="exclude-priority-filter"
-                        className="text-sm cursor-pointer flex-1"
-                      >
-                        Hide priority cases
-                      </label>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {segment === "alerts" && alertDescriptions.length > 0 && (
-                <div className="border-t pt-3">
-                  <Label className="text-sm font-medium mb-2 block">Alert description</Label>
-                  <Select
-                    value={filters.alertDescription}
-                    onValueChange={handleAlertDescriptionChange}
-                  >
-                    <SelectTrigger id="alert-description-filter">
-                      <SelectValue placeholder="All descriptions" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All descriptions</SelectItem>
-                      {alertDescriptions.map((desc) => (
-                        <SelectItem key={desc} value={desc}>
-                          {desc}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              )}
-            </div>
-          </div>
-        </PopoverContent>
-      </Popover>
+      <CaseFiltersDialog
+        open={dialogOpen}
+        onOpenChange={setDialogOpen}
+        filters={filters}
+        onFiltersChange={onFiltersChange}
+        segment={segment}
+        alertDescriptions={alertDescriptions}
+      />
 
       {activeFilterCount > 0 && (
         <div className="flex items-center gap-2 flex-wrap">
@@ -243,7 +80,7 @@ export function CaseFilters({ filters, onFiltersChange, segment, alertDescriptio
             <Badge variant="secondary" className="gap-1">
               Status: {filters.statuses.join(", ")}
               <button
-                onClick={() => onFiltersChange({ ...filters, statuses: [] })}
+                onClick={handleClearStatus}
                 className="ml-1 hover:bg-secondary-foreground/20 rounded-full p-0.5"
                 aria-label="Clear status filter"
               >
@@ -255,7 +92,7 @@ export function CaseFilters({ filters, onFiltersChange, segment, alertDescriptio
             <Badge variant="secondary" className="gap-1">
               Priority only
               <button
-                onClick={() => onFiltersChange({ ...filters, priorityOnly: false })}
+                onClick={handleClearPriority}
                 className="ml-1 hover:bg-secondary-foreground/20 rounded-full p-0.5"
                 aria-label="Clear priority filter"
               >
@@ -269,7 +106,7 @@ export function CaseFilters({ filters, onFiltersChange, segment, alertDescriptio
               {filters.dateRange.from && filters.dateRange.to && " - "}
               {filters.dateRange.to && format(filters.dateRange.to, "MMM d, yyyy")}
               <button
-                onClick={() => onFiltersChange({ ...filters, dateRange: {} })}
+                onClick={handleClearDateRange}
                 className="ml-1 hover:bg-secondary-foreground/20 rounded-full p-0.5"
                 aria-label="Clear date range filter"
               >
@@ -281,7 +118,7 @@ export function CaseFilters({ filters, onFiltersChange, segment, alertDescriptio
             <Badge variant="secondary" className="gap-1">
               Exclude: {filters.excludeStatuses.join(", ")}
               <button
-                onClick={() => onFiltersChange({ ...filters, excludeStatuses: [] })}
+                onClick={handleClearExcludeStatuses}
                 className="ml-1 hover:bg-secondary-foreground/20 rounded-full p-0.5"
                 aria-label="Clear exclude status filter"
               >
@@ -293,7 +130,7 @@ export function CaseFilters({ filters, onFiltersChange, segment, alertDescriptio
             <Badge variant="secondary" className="gap-1">
               Hide priority
               <button
-                onClick={() => onFiltersChange({ ...filters, excludePriority: false })}
+                onClick={handleClearExcludePriority}
                 className="ml-1 hover:bg-secondary-foreground/20 rounded-full p-0.5"
                 aria-label="Clear hide priority filter"
               >
@@ -305,7 +142,7 @@ export function CaseFilters({ filters, onFiltersChange, segment, alertDescriptio
             <Badge variant="secondary" className="gap-1">
               Description: {filters.alertDescription}
               <button
-                onClick={() => onFiltersChange({ ...filters, alertDescription: "all" })}
+                onClick={handleClearAlertDescription}
                 className="ml-1 hover:bg-secondary-foreground/20 rounded-full p-0.5"
                 aria-label="Clear alert description filter"
               >
