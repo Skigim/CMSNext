@@ -138,6 +138,19 @@ export function CaseList({
     return map;
   }, [matchedAlertsByCase]);
 
+  // Get unique alert descriptions for the filter dropdown
+  const uniqueAlertDescriptions = useMemo(() => {
+    const descriptions = new Set<string>();
+    openAlertsByCase.forEach((alerts) => {
+      for (const alert of alerts) {
+        if (alert.description && alert.description.trim().length > 0) {
+          descriptions.add(alert.description.trim());
+        }
+      }
+    });
+    return Array.from(descriptions).sort();
+  }, [openAlertsByCase]);
+
   const hasCustomPreferences = useMemo(() => {
     const hasFilters = filters.statuses.length > 0 || filters.priorityOnly || filters.dateRange.from || filters.dateRange.to;
     const hasCustomSort = sortConfigs.length > 1 || sortConfigs[0]?.key !== "name" || sortConfigs[0]?.direction !== "asc";
@@ -314,20 +327,25 @@ export function CaseList({
     });
   }, [filteredCases, openAlertsByCase, sortConfigs]);
 
-  // When in alerts mode, count total open alerts for pagination
+  // When in alerts mode, count total open alerts for pagination (respecting description filter)
   const totalAlertRows = useMemo(() => {
     if (segment !== "alerts") {
       return 0;
     }
     let count = 0;
+    const descFilter = filters.alertDescription !== "all" ? filters.alertDescription : null;
     for (const caseData of sortedCases) {
       const openAlerts = openAlertsByCase.get(caseData.id);
       if (openAlerts) {
-        count += openAlerts.length;
+        if (descFilter) {
+          count += openAlerts.filter(a => a.description === descFilter).length;
+        } else {
+          count += openAlerts.length;
+        }
       }
     }
     return count;
-  }, [segment, sortedCases, openAlertsByCase]);
+  }, [segment, sortedCases, openAlertsByCase, filters.alertDescription]);
 
   // Pagination computed values - use alert count when in alerts mode
   const totalItems = segment === "alerts" ? totalAlertRows : sortedCases.length;
@@ -488,7 +506,12 @@ export function CaseList({
       </div>
 
       <div className="flex flex-wrap items-center gap-3">
-        <CaseFilters filters={filters} onFiltersChange={setFilters} />
+        <CaseFilters 
+          filters={filters} 
+          onFiltersChange={setFilters} 
+          segment={segment}
+          alertDescriptions={uniqueAlertDescriptions}
+        />
         <MultiSortConfig sortConfigs={sortConfigs} onSortConfigsChange={setSortConfigs} />
         <ToggleGroup
           type="single"
@@ -543,6 +566,7 @@ export function CaseList({
         onUpdateCaseStatus={onUpdateCaseStatus}
         expandAlerts={segment === "alerts"}
         alertPageRange={segment === "alerts" ? { start: startIndex, end: endIndex } : undefined}
+        alertDescriptionFilter={segment === "alerts" && filters.alertDescription !== "all" ? filters.alertDescription : undefined}
         selectionEnabled={selectionEnabled}
         isSelected={isSelected}
         isAllSelected={isAllSelected}

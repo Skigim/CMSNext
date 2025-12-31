@@ -35,6 +35,8 @@ export interface CaseTableProps {
   expandAlerts?: boolean;
   /** When expandAlerts is true, specifies which alert indices to show (for pagination) */
   alertPageRange?: { start: number; end: number };
+  /** When expandAlerts is true, filter alerts by description */
+  alertDescriptionFilter?: string;
   // Selection props
   selectionEnabled?: boolean;
   isSelected?: (caseId: string) => boolean;
@@ -76,6 +78,7 @@ export const CaseTable = memo(function CaseTable({
   onUpdateCaseStatus,
   expandAlerts = false,
   alertPageRange,
+  alertDescriptionFilter,
   selectionEnabled = false,
   isSelected,
   isAllSelected = false,
@@ -115,13 +118,19 @@ export const CaseTable = memo(function CaseTable({
       return baseRows.map(row => ({ ...row, expandedAlert: null as AlertWithMatch | null }));
     }
 
-    // Flatten: one row per open alert
+    // Flatten: one row per open alert, applying description filter
     const flattened: Array<typeof baseRows[number] & { expandedAlert: AlertWithMatch | null }> = [];
 
     for (const row of baseRows) {
-      const openAlerts = row.alerts.filter(a => a.status !== "resolved");
+      let openAlerts = row.alerts.filter(a => a.status !== "resolved");
+      
+      // Apply description filter if set
+      if (alertDescriptionFilter) {
+        openAlerts = openAlerts.filter(a => a.description === alertDescriptionFilter);
+      }
+      
       if (openAlerts.length === 0) {
-        continue; // Skip cases with no open alerts in expanded view
+        continue; // Skip cases with no matching open alerts
       }
 
       for (const alert of openAlerts) {
@@ -157,7 +166,7 @@ export const CaseTable = memo(function CaseTable({
       return sorted.slice(alertPageRange.start, alertPageRange.end);
     }
     return sorted;
-  }, [baseRows, expandAlerts, alertPageRange, sortKey, sortDirection]);
+  }, [baseRows, expandAlerts, alertPageRange, alertDescriptionFilter, sortKey, sortDirection]);
 
   const hasRows = rows.length > 0;
 

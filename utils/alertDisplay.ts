@@ -34,24 +34,19 @@ export interface AlertDueDateInfo {
 }
 
 /**
- * Extract a display-friendly description from an alert.
+ * Extract the description from an alert.
  * 
- * Checks multiple fields in priority order:
- * 1. description
- * 2. alertType
- * 3. alertCode
- * 
- * Returns the first non-empty string, or default message if all are empty.
+ * Returns the description field only, or a default message if empty.
  * 
  * @param {AlertWithMatch} alert - Alert to extract description from
- * @returns {string} Display-friendly description (never empty)
+ * @returns {string} Description or default message (never empty)
  */
 export function getAlertDisplayDescription(alert: AlertWithMatch): string {
-  const parts = [alert.description, alert.alertType, alert.alertCode];
-  const firstValid = parts.find(
-    value => typeof value === "string" && value.trim().length > 0,
-  );
-  return firstValid ? firstValid.trim() : "No description provided";
+  const desc = alert.description;
+  if (typeof desc === "string" && desc.trim().length > 0) {
+    return desc.trim();
+  }
+  return "No description provided";
 }
 
 /**

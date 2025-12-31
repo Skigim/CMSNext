@@ -21,6 +21,8 @@ export interface CaseFilters {
   priorityOnly: boolean;
   excludePriority: boolean;
   dateRange: DateRangeFilter;
+  /** Filter alerts by description (only used in alerts segment) */
+  alertDescription: string;
 }
 
 interface CaseListPreferences {
@@ -49,6 +51,7 @@ const DEFAULT_FILTERS: CaseFilters = {
   priorityOnly: false,
   excludePriority: false,
   dateRange: {},
+  alertDescription: "all",
 };
 
 const STORAGE_KEY = "cmsnext-case-list-preferences";
@@ -66,6 +69,7 @@ interface SerializedPreferences {
       from?: string;
       to?: string;
     };
+    alertDescription?: string;
   };
 }
 
@@ -109,6 +113,9 @@ function loadPreferences(): {
         from: parsed.filters?.dateRange?.from ? new Date(parsed.filters.dateRange.from) : undefined,
         to: parsed.filters?.dateRange?.to ? new Date(parsed.filters.dateRange.to) : undefined,
       },
+      alertDescription: typeof parsed.filters?.alertDescription === "string" 
+        ? parsed.filters.alertDescription 
+        : "all",
     };
 
     // Validate parsed dates (check for Invalid Date)
@@ -148,6 +155,7 @@ function savePreferences(
           from: filters.dateRange.from?.toISOString(),
           to: filters.dateRange.to?.toISOString(),
         },
+        alertDescription: filters.alertDescription,
       },
     };
 

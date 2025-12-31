@@ -5,8 +5,15 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { CalendarPicker } from "@/components/ui/calendar-picker";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Filter, X } from "lucide-react";
-import type { CaseFilters as CaseFiltersType } from "@/hooks/useCaseListPreferences";
+import type { CaseFilters as CaseFiltersType, CaseListSegment } from "@/hooks/useCaseListPreferences";
 import type { CaseStatus } from "@/types/case";
 import { useCategoryConfig } from "@/contexts/CategoryConfigContext";
 import { format } from "date-fns";
@@ -14,9 +21,13 @@ import { format } from "date-fns";
 interface CaseFiltersProps {
   filters: CaseFiltersType;
   onFiltersChange: (filters: CaseFiltersType) => void;
+  /** Current segment - used to show alert-specific filters */
+  segment?: CaseListSegment;
+  /** List of unique alert descriptions for filter dropdown (only used in alerts segment) */
+  alertDescriptions?: string[];
 }
 
-export function CaseFilters({ filters, onFiltersChange }: CaseFiltersProps) {
+export function CaseFilters({ filters, onFiltersChange, segment, alertDescriptions = [] }: CaseFiltersProps) {
   const { config } = useCategoryConfig();
   
   // Extract status names from StatusConfig[] for UI display
@@ -32,6 +43,7 @@ export function CaseFilters({ filters, onFiltersChange }: CaseFiltersProps) {
     if (filters.dateRange.from || filters.dateRange.to) count++;
     if (filters.excludeStatuses.length > 0) count++;
     if (filters.excludePriority) count++;
+    if (filters.alertDescription !== "all") count++;
     return count;
   }, [filters]);
 
@@ -61,6 +73,10 @@ export function CaseFilters({ filters, onFiltersChange }: CaseFiltersProps) {
     onFiltersChange({ ...filters, dateRange: { from, to } });
   }, [filters, onFiltersChange]);
 
+  const handleAlertDescriptionChange = useCallback((description: string) => {
+    onFiltersChange({ ...filters, alertDescription: description });
+  }, [filters, onFiltersChange]);
+
   const handleClearFilters = useCallback(() => {
     onFiltersChange({
       statuses: [],
@@ -68,6 +84,7 @@ export function CaseFilters({ filters, onFiltersChange }: CaseFiltersProps) {
       dateRange: {},
       excludeStatuses: [],
       excludePriority: false,
+      alertDescription: "all",
     });
   }, [onFiltersChange]);
 
@@ -193,6 +210,28 @@ export function CaseFilters({ filters, onFiltersChange }: CaseFiltersProps) {
                   </div>
                 </div>
               </div>
+
+              {segment === "alerts" && alertDescriptions.length > 0 && (
+                <div className="border-t pt-3">
+                  <Label className="text-sm font-medium mb-2 block">Alert description</Label>
+                  <Select
+                    value={filters.alertDescription}
+                    onValueChange={handleAlertDescriptionChange}
+                  >
+                    <SelectTrigger id="alert-description-filter">
+                      <SelectValue placeholder="All descriptions" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All descriptions</SelectItem>
+                      {alertDescriptions.map((desc) => (
+                        <SelectItem key={desc} value={desc}>
+                          {desc}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
             </div>
           </div>
         </PopoverContent>
@@ -257,6 +296,18 @@ export function CaseFilters({ filters, onFiltersChange }: CaseFiltersProps) {
                 onClick={() => onFiltersChange({ ...filters, excludePriority: false })}
                 className="ml-1 hover:bg-secondary-foreground/20 rounded-full p-0.5"
                 aria-label="Clear hide priority filter"
+              >
+                <X className="h-3 w-3" />
+              </button>
+            </Badge>
+          )}
+          {filters.alertDescription !== "all" && (
+            <Badge variant="secondary" className="gap-1">
+              Description: {filters.alertDescription}
+              <button
+                onClick={() => onFiltersChange({ ...filters, alertDescription: "all" })}
+                className="ml-1 hover:bg-secondary-foreground/20 rounded-full p-0.5"
+                aria-label="Clear alert description filter"
               >
                 <X className="h-3 w-3" />
               </button>
