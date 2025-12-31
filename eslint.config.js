@@ -1,3 +1,6 @@
+// For more info, see https://github.com/storybookjs/eslint-plugin-storybook#configuration-flat-config-format
+import storybook from "eslint-plugin-storybook";
+
 import { FlatCompat } from '@eslint/eslintrc';
 import js from '@eslint/js';
 import globals from 'globals';
@@ -15,54 +18,47 @@ const compat = new FlatCompat({
   allConfig: js.configs.all,
 });
 
-export default [
-  {
-    ignores: [
-      'dist',
-      'scripts/',
-      'supabase/',
-      'archive/',
-      'docs/development/performance/**/*.html',
-    ],
-  },
-  {
-    languageOptions: {
-      globals: {
-        ...globals.browser,
-        ...globals.es2020,
-      },
+export default [{
+  ignores: [
+    'dist',
+    'scripts/',
+    'supabase/',
+    'archive/',
+    'docs/development/performance/**/*.html',
+  ],
+}, {
+  languageOptions: {
+    globals: {
+      ...globals.browser,
+      ...globals.es2020,
     },
   },
-  js.configs.recommended,
-  ...compat.extends(
-    'plugin:@typescript-eslint/recommended',
-    'plugin:react-hooks/recommended'
-  ),
-  {
-    plugins: {
-      'react-refresh': reactRefresh,
-    },
-    rules: {
-      'react-refresh/only-export-components': 'off',
-      '@typescript-eslint/no-unused-vars': ['error', {
-        argsIgnorePattern: '^_',
-        varsIgnorePattern: '^_',
-  caughtErrorsIgnorePattern: '^(err|error|e|_)$'
-      }],
-      '@typescript-eslint/no-explicit-any': 'off',
-      '@typescript-eslint/triple-slash-reference': 'off',
-      '@typescript-eslint/no-empty-object-type': 'off',
-      'no-var': 'warn',
-      'prefer-const': 'warn',
-      'no-useless-escape': 'warn',
-      'react-hooks/exhaustive-deps': 'warn',
-    },
+}, js.configs.recommended, ...compat.extends(
+  'plugin:@typescript-eslint/recommended',
+  'plugin:react-hooks/recommended'
+), {
+  plugins: {
+    'react-refresh': reactRefresh,
   },
-  {
-    files: ['**/*.d.ts'],
-    rules: {
-      '@typescript-eslint/no-unused-vars': 'off',
-      'no-var': 'off',
-    },
+  rules: {
+    'react-refresh/only-export-components': 'off',
+    '@typescript-eslint/no-unused-vars': ['error', {
+      argsIgnorePattern: '^_',
+      varsIgnorePattern: '^_',
+caughtErrorsIgnorePattern: '^(err|error|e|_)$'
+    }],
+    '@typescript-eslint/no-explicit-any': 'off',
+    '@typescript-eslint/triple-slash-reference': 'off',
+    '@typescript-eslint/no-empty-object-type': 'off',
+    'no-var': 'warn',
+    'prefer-const': 'warn',
+    'no-useless-escape': 'warn',
+    'react-hooks/exhaustive-deps': 'warn',
   },
-];
+}, {
+  files: ['**/*.d.ts'],
+  rules: {
+    '@typescript-eslint/no-unused-vars': 'off',
+    'no-var': 'off',
+  },
+}, ...storybook.configs["flat/recommended"]];
