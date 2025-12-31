@@ -12,7 +12,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import type { StoredCase, CaseStatusUpdateHandler } from "@/types/case";
 import { CaseStatusMenu } from "./CaseStatusMenu";
-import { ArrowDown, ArrowUp, ArrowUpDown, Eye, MoreHorizontal, Pencil, Trash2, AlertCircle, Check } from "lucide-react";
+import { ArrowDown, ArrowUp, ArrowUpDown, Eye, MoreHorizontal, Pencil, Trash2, AlertCircle } from "lucide-react";
 import type { CaseListSortDirection, CaseListSortKey } from "@/hooks/useCaseListPreferences";
 import type { AlertWithMatch } from "@/utils/alertsData";
 import { AlertsPopover } from "./AlertsPopover";
@@ -80,15 +80,13 @@ export const CaseTable = memo(function CaseTable({
   onToggleSelection,
   onToggleSelectAll,
 }: CaseTableProps) {
-  const hasCases = cases.length > 0;
-
-  const rows = useMemo(
+  // Build base case rows
+  const baseRows = useMemo(
     () =>
       cases.map(item => {
         const caseType = item.caseRecord?.caseType || "Not specified";
         const applicationDate = item.caseRecord?.applicationDate || item.createdAt;
         const updatedDate = item.updatedAt || item.caseRecord?.updatedDate || item.createdAt;
-        // Prefer phone over email for primary contact
         const phone = item.person?.phone;
         const primaryContact = phone ? getDisplayPhoneNumber(phone) : item.person?.email;
         const allCaseAlerts = alertsByCaseId?.get(item.id) ?? [];
@@ -107,6 +105,28 @@ export const CaseTable = memo(function CaseTable({
       }),
     [alertsByCaseId, cases],
   );
+
+  // When expandAlerts is true, flatten to one row per open alert
+  const rows = useMemo(() => {
+    if (!expandAlerts) {
+      return baseRows.map(row => ({ ...row, expandedAlert: null as AlertWithMatch | null }));
+    }
+
+    // Flatten: one row per open alert
+    const flattened: Array<typeof baseRows[number] & { expandedAlert: AlertWithMatch | null }> = [];
+    for (const row of baseRows) {
+      const openAlerts = row.alerts.filter(a => a.status !== "resolved");
+      if (openAlerts.length === 0) {
+        continue; // Skip cases with no open alerts in expanded view
+      }
+      for (const alert of openAlerts) {
+        flattened.push({ ...row, expandedAlert: alert });
+      }
+    }
+    return flattened;
+  }, [baseRows, expandAlerts]);
+
+  const hasRows = rows.length > 0;
 
   const renderSortIndicator = useCallback((key: CaseListSortKey) => {
     if (sortKey !== key) {
@@ -247,15 +267,15 @@ export const CaseTable = memo(function CaseTable({
           </TableRow>
         </TableHeader>
         <TableBody>
-          {!hasCases && (
+          {!hasRows && (
             <TableRow>
               <TableCell colSpan={selectionEnabled ? 10 : 9} className="py-12 text-center text-muted-foreground">
-                No cases to display
+                {expandAlerts ? "No open alerts to display" : "No cases to display"}
               </TableCell>
             </TableRow>
           )}
-          {rows.map(row => (
-            <TableRow key={row.id} className="group">
+          {rows.map((row, rowIndex) => (
+            <TableRow key={row.expandedAlert ? `${row.id}-${row.expandedAlert.id ?? rowIndex}` : row.id} className="group">
               {selectionEnabled && (
                 <TableCell className="w-[40px]">
                   <Checkbox
@@ -308,15 +328,13 @@ export const CaseTable = memo(function CaseTable({
                 />
               </TableCell>
               <TableCell>
-                {row.alerts.length > 0 ? (
-                  expandAlerts ? (
-                    <ExpandedAlertsCell alerts={row.alerts} onResolveAlert={onResolveAlert} />
-                  ) : (
-                    <AlertsPopover
-                      alerts={row.alerts}
-                      onResolveAlert={onResolveAlert}
-                    />
-                  )
+                {row.expandedAlert ? (
+                  <ExpandedAlertCell alert={row.expandedAlert} />
+                ) : row.alerts.length > 0 ? (
+                  <AlertsPopover
+                    alerts={row.alerts}
+                    onResolveAlert={onResolveAlert}
+                  />
                 ) : (
                   <span className="text-xs text-muted-foreground">None</span>
                 )}
@@ -334,27 +352,37 @@ export const CaseTable = memo(function CaseTable({
                 />
               </TableCell>
               <TableCell className="text-right">
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="icon-sm" aria-label="Case actions">
-                      <MoreHorizontal className="h-4 w-4" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuItem onSelect={() => onViewCase(row.id)}>
-                      <Eye className="mr-2 h-4 w-4" /> View case
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onSelect={() => onEditCase(row.id)}>
-                      <Pencil className="mr-2 h-4 w-4" /> Edit case
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                      onSelect={() => onDeleteCase(row.id)}
-                      className="text-destructive focus:text-destructive"
-                    >
-                      <Trash2 className="mr-2 h-4 w-4" /> Delete case
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
+                {row.expandedAlert && onResolveAlert ? (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => onResolveAlert(row.expandedAlert!)}
+                  >
+                    Resolve
+                  </Button>
+                ) : (
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" size="icon-sm" aria-label="Case actions">
+                        <MoreHorizontal className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem onSelect={() => onViewCase(row.id)}>
+                        <Eye className="mr-2 h-4 w-4" /> View case
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onSelect={() => onEditCase(row.id)}>
+                        <Pencil className="mr-2 h-4 w-4" /> Edit case
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        onSelect={() => onDeleteCase(row.id)}
+                        className="text-destructive focus:text-destructive"
+                      >
+                        <Trash2 className="mr-2 h-4 w-4" /> Delete case
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                )}
               </TableCell>
             </TableRow>
           ))}
@@ -365,81 +393,27 @@ export const CaseTable = memo(function CaseTable({
 });
 
 /**
- * ExpandedAlertsCell - Inline expanded alert details for the alerts column.
- * Shows alert descriptions with due dates and resolve buttons.
+ * ExpandedAlertCell - Shows a single alert's details inline.
+ * Used when expandAlerts is true to display one row per alert.
  */
-interface ExpandedAlertsCellProps {
-  alerts: AlertWithMatch[];
-  onResolveAlert?: (alert: AlertWithMatch) => void | Promise<void>;
+interface ExpandedAlertCellProps {
+  alert: AlertWithMatch;
 }
 
-const ExpandedAlertsCell = memo(function ExpandedAlertsCell({
-  alerts,
-  onResolveAlert,
-}: ExpandedAlertsCellProps) {
-  const openAlerts = useMemo(
-    () => alerts.filter((a) => a.status !== "resolved"),
-    [alerts]
-  );
-  const resolvedCount = alerts.length - openAlerts.length;
-
-  const handleResolve = useCallback(
-    (alert: AlertWithMatch) => {
-      void onResolveAlert?.(alert);
-    },
-    [onResolveAlert]
-  );
-
-  if (openAlerts.length === 0) {
-    return (
-      <div className="flex items-center gap-1 text-xs text-green-600">
-        <Check className="h-3 w-3" />
-        <span>{resolvedCount} resolved</span>
-      </div>
-    );
-  }
+function ExpandedAlertCell({ alert }: ExpandedAlertCellProps) {
+  const description = getAlertDisplayDescription(alert);
+  const { label: dueLabel } = getAlertDueDateInfo(alert);
 
   return (
-    <div className="space-y-2 max-w-xs">
-      {openAlerts.slice(0, 3).map((alert, idx) => {
-        const description = getAlertDisplayDescription(alert);
-        const { label: dueLabel } = getAlertDueDateInfo(alert);
-
-        return (
-          <div
-            key={alert.id ?? idx}
-            className="flex items-start gap-2 text-xs"
-          >
-            <AlertCircle className="h-3 w-3 mt-0.5 shrink-0 text-amber-500" />
-            <div className="flex-1 min-w-0">
-              <p className="font-medium text-foreground truncate">{description}</p>
-              {dueLabel && (
-                <p className="text-muted-foreground">Due {dueLabel}</p>
-              )}
-            </div>
-            {onResolveAlert && (
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-5 px-1.5 text-xs shrink-0"
-                onClick={() => handleResolve(alert)}
-              >
-                Resolve
-              </Button>
-            )}
-          </div>
-        );
-      })}
-      {openAlerts.length > 3 && (
+    <div className="flex items-start gap-2">
+      <AlertCircle className="h-4 w-4 mt-0.5 shrink-0 text-amber-500" />
+      <div className="min-w-0">
+        <p className="text-sm font-medium text-foreground">{description}</p>
         <p className="text-xs text-muted-foreground">
-          +{openAlerts.length - 3} more alert{openAlerts.length - 3 > 1 ? "s" : ""}
+          {alert.alertType || "Alert"} • Code {alert.alertCode || "—"}
+          {dueLabel && ` • Due ${dueLabel}`}
         </p>
-      )}
-      {resolvedCount > 0 && (
-        <p className="text-xs text-muted-foreground">
-          {resolvedCount} resolved
-        </p>
-      )}
+      </div>
     </div>
   );
-});
+}
