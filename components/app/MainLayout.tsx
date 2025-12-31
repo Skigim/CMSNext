@@ -56,9 +56,6 @@ export function MainLayout({
         segments.push({ label: 'Cases', view: 'list' });
         segments.push({ label: breadcrumbTitle || 'New Case' });
         break;
-      case 'reports':
-        segments.push({ label: 'Reports' });
-        break;
       case 'settings':
         segments.push({ label: 'Settings' });
         break;

@@ -5,7 +5,6 @@ import type { CaseActivityLogState } from "../../types/activityLog";
 
 // Direct imports for high-turnover components - no lazy loading for snappiness
 import Dashboard from "../app/Dashboard";
-import Reporting from "../reporting/Reporting";
 import CaseList from "../case/CaseList";
 import CaseDetails from "../case/CaseDetails";
 import { QuickCaseModal } from "../modals/QuickCaseModal";
@@ -94,14 +93,6 @@ export function ViewRenderer({
           alerts={alerts}
           activityLogState={activityLogState}
           onNewCase={handleNewCase}
-          onViewCase={handleViewCase}
-        />
-      );
-
-    case 'reports':
-      return (
-        <Reporting
-          alerts={alerts}
           onViewCase={handleViewCase}
         />
       );

@@ -194,7 +194,6 @@ export function useNavigationActions({
       case "list": backToList(); break;
       case "details": if (selectedCaseId) { setCurrentView("details"); } else { backToList(); } break;
       case "form": newCase(); break;
-      case "reports":
       case "settings": setCurrentView(view); setSelectedCaseId(null); break;
     }
     endMeasurement("navigation:navigate", { target: view });

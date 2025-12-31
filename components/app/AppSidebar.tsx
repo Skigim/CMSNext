@@ -17,7 +17,6 @@ import {
   LayoutDashboard,
   Users,
   FileText,
-  BarChart3,
   Settings,
   Plus,
 } from 'lucide-react';
@@ -53,13 +52,6 @@ export function AppSidebar({
       navigateTo: "list",
       activeViews: ["list", "details", "form"],
       id: "cases",
-    },
-    {
-      title: "Reports",
-      icon: BarChart3,
-      navigateTo: "reports",
-      activeViews: ["reports"],
-      id: "reports",
     },
     {
       title: "Settings",

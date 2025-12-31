@@ -12,7 +12,7 @@ import {
   ContextMenuSubTrigger,
   ContextMenuTrigger,
 } from "@/components/ui/context-menu";
-import { Copy, ClipboardPaste, Scissors, LayoutDashboard, List, FileText, Settings } from "lucide-react";
+import { Copy, ClipboardPaste, Scissors, LayoutDashboard, List, Settings } from "lucide-react";
 import type { AppView } from "@/types/view";
 
 interface GlobalContextMenuProps {
@@ -110,10 +110,6 @@ export function GlobalContextMenu({ children, onNavigate }: GlobalContextMenuPro
                 <ContextMenuItem onClick={() => onNavigate("list")}>
                   <List className="mr-2 h-4 w-4" />
                   Cases List
-                </ContextMenuItem>
-                <ContextMenuItem onClick={() => onNavigate("reports")}>
-                  <FileText className="mr-2 h-4 w-4" />
-                  Reports
                 </ContextMenuItem>
                 <ContextMenuItem onClick={() => onNavigate("settings")}>
                   <Settings className="mr-2 h-4 w-4" />

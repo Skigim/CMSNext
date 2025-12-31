@@ -130,9 +130,10 @@ export function CaseFiltersDialog({
           </DialogTitle>
         </DialogHeader>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          {/* Column 1: Status & Priority */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+          {/* Left column */}
           <div className="space-y-4">
+            {/* Status filter */}
             <div>
               <Label className="text-sm font-medium mb-2 block">Include status</Label>
               <div className="space-y-2">
@@ -154,6 +155,7 @@ export function CaseFiltersDialog({
               </div>
             </div>
 
+            {/* Priority filter */}
             <div className="border-t pt-3">
               <div className="flex items-center space-x-2">
                 <Checkbox
@@ -169,10 +171,34 @@ export function CaseFiltersDialog({
                 </label>
               </div>
             </div>
+
+            {/* Date range filter */}
+            <div className="border-t pt-3">
+              <Label className="text-sm font-medium mb-2 block">Date range</Label>
+              <div className="space-y-2">
+                <CalendarPicker
+                  date={filters.dateRange.from}
+                  onDateChange={(date) =>
+                    handleDateRangeChange(date, filters.dateRange.to)
+                  }
+                  label="From"
+                  className="w-full"
+                />
+                <CalendarPicker
+                  date={filters.dateRange.to}
+                  onDateChange={(date) =>
+                    handleDateRangeChange(filters.dateRange.from, date)
+                  }
+                  label="To"
+                  className="w-full"
+                />
+              </div>
+            </div>
           </div>
 
-          {/* Column 2: Exclude filters */}
+          {/* Right column */}
           <div className="space-y-4">
+            {/* Exclude filters */}
             <div>
               <Label className="text-sm font-medium mb-2 block">Exclude status</Label>
               <div className="space-y-2">
@@ -196,6 +222,7 @@ export function CaseFiltersDialog({
               </div>
             </div>
 
+            {/* Exclude priority */}
             <div className="border-t pt-3">
               <div className="flex items-center space-x-2">
                 <Checkbox
@@ -211,32 +238,8 @@ export function CaseFiltersDialog({
                 </label>
               </div>
             </div>
-          </div>
 
-          {/* Column 3: Date range & Alert description */}
-          <div className="space-y-4">
-            <div>
-              <Label className="text-sm font-medium mb-2 block">Date range</Label>
-              <div className="space-y-2">
-                <CalendarPicker
-                  date={filters.dateRange.from}
-                  onDateChange={(date) =>
-                    handleDateRangeChange(date, filters.dateRange.to)
-                  }
-                  label="From"
-                  className="w-full"
-                />
-                <CalendarPicker
-                  date={filters.dateRange.to}
-                  onDateChange={(date) =>
-                    handleDateRangeChange(filters.dateRange.from, date)
-                  }
-                  label="To"
-                  className="w-full"
-                />
-              </div>
-            </div>
-
+            {/* Alert description filter (only in alerts segment) */}
             {segment === "alerts" && alertDescriptions.length > 0 && (
               <div className="border-t pt-3">
                 <Label className="text-sm font-medium mb-2 block">
