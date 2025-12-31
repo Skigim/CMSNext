@@ -115,9 +115,8 @@ export const CaseTable = memo(function CaseTable({
       return baseRows.map(row => ({ ...row, expandedAlert: null as AlertWithMatch | null }));
     }
 
-    // Flatten: one row per open alert, respecting page range if provided
+    // Flatten: one row per open alert
     const flattened: Array<typeof baseRows[number] & { expandedAlert: AlertWithMatch | null }> = [];
-    let globalAlertIndex = 0;
 
     for (const row of baseRows) {
       const openAlerts = row.alerts.filter(a => a.status !== "resolved");
@@ -126,19 +125,39 @@ export const CaseTable = memo(function CaseTable({
       }
 
       for (const alert of openAlerts) {
-        // If we have a page range, only include alerts within the range
-        if (alertPageRange) {
-          if (globalAlertIndex >= alertPageRange.start && globalAlertIndex < alertPageRange.end) {
-            flattened.push({ ...row, expandedAlert: alert });
-          }
-        } else {
-          flattened.push({ ...row, expandedAlert: alert });
-        }
-        globalAlertIndex++;
+        flattened.push({ ...row, expandedAlert: alert });
       }
     }
-    return flattened;
-  }, [baseRows, expandAlerts, alertPageRange]);
+
+    // Sort flattened rows by alert due date (not case-level sorting)
+    const directionFactor = sortDirection === "asc" ? 1 : -1;
+    const sorted = [...flattened].sort((a, b) => {
+      if (sortKey === "updated") {
+        // Sort by alert due date (alertDate or createdAt)
+        const aRaw = a.expandedAlert?.alertDate ?? a.expandedAlert?.createdAt ?? "";
+        const bRaw = b.expandedAlert?.alertDate ?? b.expandedAlert?.createdAt ?? "";
+        const aDueDate = Date.parse(aRaw) || 0;
+        const bDueDate = Date.parse(bRaw) || 0;
+        return (aDueDate - bDueDate) * directionFactor;
+      }
+      if (sortKey === "name") {
+        return (a.name || "").localeCompare(b.name || "") * directionFactor;
+      }
+      if (sortKey === "mcn") {
+        return (a.mcn || "").localeCompare(b.mcn || "") * directionFactor;
+      }
+      if (sortKey === "status") {
+        return (a.status || "").localeCompare(b.status || "") * directionFactor;
+      }
+      return 0;
+    });
+
+    // Apply page range after sorting
+    if (alertPageRange) {
+      return sorted.slice(alertPageRange.start, alertPageRange.end);
+    }
+    return sorted;
+  }, [baseRows, expandAlerts, alertPageRange, sortKey, sortDirection]);
 
   const hasRows = rows.length > 0;
 
