@@ -1,4 +1,6 @@
 import type { Preview } from '@storybook/react-vite';
+import React from 'react';
+import { DirectionProvider } from '@radix-ui/react-direction';
 
 // Import global styles (Tailwind v4 + CSS variables)
 import '../styles/globals.css';
@@ -65,6 +67,14 @@ const preview: Preview = {
       ],
     },
   },
+  decorators: [
+    // Wrap all stories with DirectionProvider for Radix UI components
+    (Story) => (
+      <DirectionProvider dir="ltr">
+        <Story />
+      </DirectionProvider>
+    ),
+  ],
   // Theme switching can be added later with @storybook/addon-themes
   // For now, stories inherit the default 'light' theme from globals.css
 };

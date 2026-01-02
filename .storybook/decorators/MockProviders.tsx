@@ -7,6 +7,7 @@
  * @see src/test/reactTestUtils.tsx for the same pattern used in tests
  */
 import React, { type ReactNode, useMemo } from 'react';
+import { DirectionProvider } from '@radix-ui/react-direction';
 import { ThemeProvider } from '../../contexts/ThemeContext';
 import { EncryptionProvider } from '../../contexts/EncryptionContext';
 import { CategoryConfigContext } from '../../contexts/CategoryConfigContext';
@@ -94,13 +95,15 @@ export function StorybookProviders({
   categoryConfig?: PartialCategoryConfigInput;
 }) {
   return (
-    <ThemeProvider>
-      <EncryptionProvider>
-        <StorybookCategoryConfigProvider config={categoryConfig}>
-          {children}
-        </StorybookCategoryConfigProvider>
-      </EncryptionProvider>
-    </ThemeProvider>
+    <DirectionProvider dir="ltr">
+      <ThemeProvider>
+        <EncryptionProvider>
+          <StorybookCategoryConfigProvider config={categoryConfig}>
+            {children}
+          </StorybookCategoryConfigProvider>
+        </EncryptionProvider>
+      </ThemeProvider>
+    </DirectionProvider>
   );
 }
 
