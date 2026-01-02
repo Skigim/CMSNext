@@ -6,6 +6,13 @@
  */
 
 import { StoredCase, FinancialItem, Note, Relationship } from '../types/case';
+import {
+  formatRetroMonths,
+  calculateAge,
+  formatVoterStatus,
+  calculateAVSTrackingDates,
+  extractKnownInstitutions,
+} from '@/domain/cases';
 
 const SECTION_SEPARATOR = '\n-----\n';
 
@@ -178,9 +185,10 @@ function formatRelationship(rel: Relationship): string {
  * Build the Case Info section
  */
 function buildCaseInfoSection(caseRecord: StoredCase['caseRecord']): string {
+  const retroDisplay = formatRetroMonths(caseRecord.retroMonths, caseRecord.applicationDate);
   const lines = [
     `Application Date: ${formatDateMMDDYYYY(caseRecord.applicationDate)}`,
-    `Retro Requested: ${caseRecord.retroRequested || 'None Attested'}`,
+    `Retro Requested: ${retroDisplay}`,
     `Waiver Requested: ${caseRecord.withWaiver ? 'Yes' : 'No'}`,
   ];
   return lines.join('\n');
@@ -190,12 +198,18 @@ function buildCaseInfoSection(caseRecord: StoredCase['caseRecord']): string {
  * Build the Person Info section
  */
 function buildPersonInfoSection(person: StoredCase['person'], caseRecord: StoredCase['caseRecord']): string {
-  const nameLine = `${person.firstName} ${person.lastName}`;
+  // Name line with age and marital status
+  const age = calculateAge(person.dateOfBirth);
+  const ageDisplay = age !== null ? `(${age})` : '';
+  const maritalStatus = caseRecord.maritalStatus || 'Unknown';
+  const nameLine = `${person.firstName} ${person.lastName} ${ageDisplay} | ${maritalStatus}`.trim();
   
   const contactParts: string[] = [];
   if (person.email) contactParts.push(person.email);
   if (person.phone) contactParts.push(formatPhoneNumber(person.phone));
   const contactLine = contactParts.length > 0 ? contactParts.join(' | ') : 'No contact info';
+  
+  const voterDisplay = formatVoterStatus(caseRecord.voterFormStatus);
   
   const lines = [
     nameLine,
@@ -203,6 +217,7 @@ function buildPersonInfoSection(person: StoredCase['person'], caseRecord: Stored
     `Citizenship Verified: ${caseRecord.citizenshipVerified ? 'Yes' : 'No'}`,
     `Aged/Disabled Verified: ${caseRecord.agedDisabledVerified ? 'Yes' : 'No'}`,
     `Living Arrangement: ${caseRecord.livingArrangement || 'None Attested'}`,
+    `Voter: ${voterDisplay}`,
   ];
   return lines.join('\n');
 }
@@ -211,7 +226,7 @@ function buildPersonInfoSection(person: StoredCase['person'], caseRecord: Stored
  * Build the Relationships section
  */
 function buildRelationshipsSection(relationships?: Relationship[]): string {
-  const header = 'Relationships';
+  const header = 'Relationships/Representatives';
   
   if (!relationships || relationships.length === 0) {
     return `${header}\nNone Attested`;
@@ -258,6 +273,23 @@ function buildNotesSection(notes: Note[]): string {
 }
 
 /**
+ * Build the AVS Tracking section
+ */
+function buildAVSTrackingSection(caseRecord: StoredCase['caseRecord'], resources: FinancialItem[]): string {
+  const avsDates = calculateAVSTrackingDates(caseRecord.avsConsentDate);
+  const knownInstitutions = extractKnownInstitutions(resources);
+  
+  const lines = [
+    `AVS Submitted: ${avsDates.submitDate}`,
+    `Consent Date: ${avsDates.consentDate}`,
+    `5 Day: ${avsDates.fiveDayDate}`,
+    `11 Day: ${avsDates.elevenDayDate}`,
+    `Known Institutions: ${knownInstitutions}`,
+  ];
+  return lines.join('\n');
+}
+
+/**
  * Section visibility configuration for summary generation
  */
 export interface SummarySections {
@@ -268,6 +300,7 @@ export interface SummarySections {
   income: boolean;
   expenses: boolean;
   notes: boolean;
+  avsTracking: boolean;
 }
 
 /**
@@ -281,6 +314,7 @@ export const DEFAULT_SUMMARY_SECTIONS: SummarySections = {
   income: true,
   expenses: true,
   notes: true,
+  avsTracking: true,
 };
 
 /**
@@ -332,6 +366,9 @@ export function generateCaseSummary(
   }
   if (sectionConfig.expenses) {
     enabledSections.push(buildFinancialSection('Expenses', financials.expenses || [], formatExpenseItem));
+  }
+  if (sectionConfig.avsTracking) {
+    enabledSections.push(buildAVSTrackingSection(caseRecord, financials.resources || []));
   }
 
   return enabledSections.join(SECTION_SEPARATOR);

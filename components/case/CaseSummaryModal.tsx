@@ -67,6 +67,7 @@ export function CaseSummaryModal({
     income: true,
     expenses: true,
     notes: true,
+    avsTracking: true,
   });
 
   // Editable preview text
@@ -93,6 +94,7 @@ export function CaseSummaryModal({
         income: true,
         expenses: true,
         notes: true,
+        avsTracking: true,
       });
     }
   }, [open]);

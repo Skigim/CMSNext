@@ -5,6 +5,9 @@
  * Domain functions are pure (no I/O, no React, no side effects).
  */
 
+// Cases domain
+export * from "./cases";
+
 // Financials domain
 export * from "./financials";
 

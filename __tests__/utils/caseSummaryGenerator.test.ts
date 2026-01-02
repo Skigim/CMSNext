@@ -95,21 +95,22 @@ describe('generateCaseSummary', () => {
       const caseData = createMockCase({
         caseRecord: {
           ...createMockCase().caseRecord,
-          retroRequested: '3 months',
+          retroMonths: ['Jan', 'Feb', 'Mar'],
+          applicationDate: '2024-06-15',
         },
       });
 
       const summary = generateCaseSummary(caseData);
       
-      expect(summary).toContain('Retro Requested: 3 months');
+      expect(summary).toContain('Retro Requested: Yes (Jan-Mar 2024)');
     });
 
-    it('shows "None" for empty retro requested', () => {
+    it('shows "No" for empty retro requested', () => {
       const caseData = createMockCase();
 
       const summary = generateCaseSummary(caseData);
       
-      expect(summary).toContain('Retro Requested: None');
+      expect(summary).toContain('Retro Requested: No');
     });
 
     it('displays waiver requested as Yes/No', () => {
@@ -256,7 +257,7 @@ describe('generateCaseSummary', () => {
 
       const summary = generateCaseSummary(caseData);
       
-      expect(summary).toContain('Relationships\nNone');
+      expect(summary).toContain('Relationships/Representatives\nNone');
     });
 
     it('formats relationships as Type | Name | Phone', () => {
@@ -594,9 +595,9 @@ describe('generateCaseSummary', () => {
 
       const summary = generateCaseSummary(caseData);
       
-      // Should have 6 separators (between 7 sections with notes first)
+      // Should have 7 separators (between 8 sections with notes first, AVS last)
       const separatorCount = (summary.match(/\n-----\n/g) || []).length;
-      expect(separatorCount).toBe(6);
+      expect(separatorCount).toBe(7);
     });
   });
 
@@ -611,7 +612,7 @@ describe('generateCaseSummary', () => {
 
       // Should not throw
       const summary = generateCaseSummary(caseData);
-      expect(summary).toContain('Relationships\nNone');
+      expect(summary).toContain('Relationships/Representatives\nNone');
     });
 
     it('handles empty financials object', () => {
@@ -673,6 +674,7 @@ describe('generateCaseSummary', () => {
           income: false,
           expenses: false,
           notes: false,
+          avsTracking: false,
         },
       });
 
@@ -697,6 +699,7 @@ describe('generateCaseSummary', () => {
           income: false,
           expenses: false,
           notes: false,
+          avsTracking: false,
         },
       });
 
@@ -715,6 +718,7 @@ describe('generateCaseSummary', () => {
           income: false,
           expenses: false,
           notes: false,
+          avsTracking: false,
         },
       });
 
