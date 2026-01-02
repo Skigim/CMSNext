@@ -304,7 +304,12 @@ Notes system supports categorized, timestamped entries tied to cases with edit h
   - Quick-add with Ctrl/⌘+Enter keyboard shortcut
   - Expands to fit content (no fixed max height)
   - Hover-to-reveal action buttons (edit, delete with confirmation)
-- **Case Summary Generator**: Modal-based export with section toggles (Case Info, Person, Relationships, Resources, Income, Expenses, Notes), editable preview, and one-click copy to clipboard
+- **Case Summary Generator**: Modal-based export with section toggles (Case Info, Person, Relationships/Representatives, Resources, Income, Expenses, Notes, AVS Tracking), editable preview, and one-click copy to clipboard
+  - **Enhanced Person Line**: Name (age) | Marital Status format
+  - **Retro Display**: Uses retroMonths array → "Yes (Jan-Mar 2024)" format
+  - **Voter Status**: Requested/Declined/Not Answered display
+  - **AVS Tracking Section**: Submit date, consent date, 5-day, 11-day deadlines, known institutions
+  - **Known Institutions**: Auto-extracted from bank account resources
 - **Consistent Formatting**: Plain-text format optimized for emails and ticketing systems (MM/DD/YYYY dates, $1,500.00 currency, verification source display)
 
 ### Gaps / Risks
@@ -325,7 +330,8 @@ Notes system supports categorized, timestamped entries tied to cases with edit h
 ### Coverage & Telemetry
 
 - RTL suites cover notes components and ensure category filtering works; integration tests verify connection flow includes note creation
-- Case Summary Generator has 35 unit tests covering all sections, formatting, and edge cases
+- Case Summary Generator has 42 unit tests covering all sections, formatting, and edge cases
+- Domain layer formatting functions (`domain/cases/formatting.ts`) have 40 dedicated tests
 - Activity log utilities tested via `useCaseActivityLog` hook coverage
 - No telemetry yet for note creation rate or latency; candidate for future usage metrics service
 

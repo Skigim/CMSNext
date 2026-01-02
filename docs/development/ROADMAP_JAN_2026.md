@@ -75,52 +75,51 @@ _Focus: Establishing the new architectural pattern and extracting significant bu
 #### Day 1: Foundation ✅
 
 - [x] ~~Define Domain pattern (functional, not OOP)~~ See `.github/agents/DOMAIN.md`
-- [x] ~~Create domain structure~~ `domain/financials/`, `domain/validation/`
+- [x] ~~Create domain structure~~ `domain/financials/`, `domain/validation/`, `domain/cases/`
 - [x] ~~Extract `validateFinancialItem()`~~ 14 tests
 - [x] ~~Extract `findDuplicateIndices()`~~ 12 tests
 - [x] ~~Wire both editing paths~~ Modal + inline card
 - [x] ~~Update `project-structure-guidelines.md`~~ Done
+- [x] ~~Extract case summary formatting functions~~ 5 functions, 40 tests:
+  - `formatRetroMonths()` - retroMonths array → "Yes (Jan-Mar 2024)"
+  - `calculateAge()` - DOB → age
+  - `formatVoterStatus()` - status → display text
+  - `calculateAVSTrackingDates()` - consent date → submit/5-day/11-day
+  - `extractKnownInstitutions()` - resources → bank institution names
+- [x] ~~Update `caseSummaryGenerator.ts`~~ Enhanced with domain functions
 
-#### Day 2: Alerts Domain
+#### Day 2-3 (Weekend): Alerts & Cases Domain
 
 - [ ] Create `domain/alerts/` module
 - [ ] Extract `isAlertResolved()` from `alertsData.ts` (~15 lines)
 - [ ] Extract `filterOpenAlerts()` from `alertsData.ts` (~10 lines)
 - [ ] Extract `sortAlertsByDueDate()` from `AlertSection.tsx` (~15 lines)
-- [ ] Add tests for alerts domain (~20 tests)
-
-#### Day 3: Cases Domain
-
-- [ ] Create `domain/cases/` module
 - [ ] Extract `filterCases()` from `useCaseListPreferences.ts` (~60 lines)
 - [ ] Extract `sortCases()` from `useCaseListPreferences.ts` (~60 lines)
-- [ ] Add tests for cases domain (~25 tests)
+- [ ] Add tests for alerts + cases domain (~45 tests)
 
-#### Day 4: Widget Analytics
+#### Day 4-5 (Weekend): Widget Analytics & Notes
 
 - [ ] Create `domain/statistics/` module
 - [ ] Extract `calculateAverage()`, `calculateMedian()` from `widgetDataProcessors.ts` (~25 lines)
 - [ ] Extract `calculateAlertsPerDay()` from `widgetDataProcessors.ts` (~50 lines)
 - [ ] Extract `calculateCasesByStatus()` from `widgetDataProcessors.ts` (~40 lines)
-- [ ] Add tests for statistics domain (~30 tests)
-
-#### Day 5: Notes & Activity
-
 - [ ] Create `domain/notes/` and `domain/activity/` modules
 - [ ] Extract `sortNotesByDate()` from `useNotes.ts` (~5 lines)
 - [ ] Extract `filterActivitiesByDateRange()` from `useCaseActivityLog.ts` (~30 lines)
 - [ ] Extract `groupActivitiesByDay()` from `activityReport.ts` (~50 lines)
-- [ ] Add tests (~20 tests)
+- [ ] Add tests for statistics/notes/activity (~50 tests)
 
 #### Week 1 Targets
 
-| Metric                 | Target | Current |
-| ---------------------- | ------ | ------- |
-| Domain modules         | 6      | 2 ✅    |
-| Domain functions       | 15+    | 2 ✅    |
-| Domain tests           | 100+   | 26 ✅   |
-| Lines extracted        | ~400   | ~30     |
-| Hooks consuming domain | 8+     | 3 ✅    |
+| Metric                 | Target | Current    |
+| ---------------------- | ------ | ---------- |
+| Domain modules         | 6      | 3 ✅       |
+| Domain functions       | 15+    | 7 ✅       |
+| Domain tests           | 100+   | 66 ✅      |
+| Lines extracted        | ~400   | ~100       |
+| Hooks consuming domain | 8+     | 4 ✅       |
+| Test count             | —      | 638 ✅     |
 
 **Extraction Candidates (Full Audit):**
 
@@ -128,6 +127,7 @@ _Focus: Establishing the new architectural pattern and extracting significant bu
 | -------- | --------------------------- | --------------------------- | ----------------------------------- | ------- |
 | P0       | `useFinancialItemFlow.ts`   | Form validation             | `domain/financials/validation.ts`   | ✅ Done |
 | P0       | `useCategoryEditorState.ts` | Duplicate detection         | `domain/validation/duplicates.ts`   | ✅ Done |
+| P0       | `caseSummaryGenerator.ts`   | Retro/age/voter/AVS format  | `domain/cases/formatting.ts`        | ✅ Done |
 | P0       | `alertsData.ts`             | `isAlertResolved`           | `domain/alerts/status.ts`           | Pending |
 | P0       | `alertsData.ts`             | `filterOpenAlerts`          | `domain/alerts/filtering.ts`        | Pending |
 | P1       | `useCaseListPreferences.ts` | Case filtering (~60 lines)  | `domain/cases/filtering.ts`         | Pending |
