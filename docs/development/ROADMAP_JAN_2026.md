@@ -48,20 +48,30 @@ _Focus: Establishing the new architectural pattern without breaking the app._
 #### Day 1: Cleanup & Prep
 
 - [x] ~~Delete `prototypeCaseInfoForm.tsx` (1001 lines dead code)~~ Already deleted
-- [ ] Document hook overlap: `useFinancialItems.ts` vs `useFinancialItemFlow.ts`
-- [ ] Define Domain pattern (functional, not OOP)
+- [x] ~~Document hook overlap: `useFinancialItems.ts` vs `useFinancialItemFlow.ts`~~ See WEEK1 plan
+- [x] ~~Define Domain pattern (functional, not OOP)~~ See WEEK1 plan + `.github/agents/DOMAIN.md`
 
 #### Day 2-3: Domain Structure
 
-- [ ] Create `src/domain/financials/` directory
-- [ ] Extract `calculateCategoryTotal()` as first domain function
-- [ ] Add tests for new domain function
+- [x] ~~Create `domain/financials/` directory~~ Structure ready (moved from `src/domain/` to `domain/` to match `@/` alias)
+- [x] ~~Extract `validateFinancialItem()` from `useFinancialItemFlow.ts`~~ Done with 14 tests
+- [ ] Extract `findDuplicateIndices()` from `useCategoryEditorState.ts`
+- [x] ~~Add tests for new domain functions~~ 14 tests for validation
+
+**Identified Extraction Candidates (from codebase audit):**
+
+| Priority | Source File                 | Logic                       | Target                            | Status  |
+| -------- | --------------------------- | --------------------------- | --------------------------------- | ------- |
+| P0       | `useFinancialItemFlow.ts`   | Form validation rules       | `domain/financials/validation.ts` | ✅ Done |
+| P0       | `useCategoryEditorState.ts` | Duplicate detection         | `domain/validation/duplicates.ts` | Pending |
+| P1       | `useCaseListOperations.ts`  | Case filtering (~100 lines) | `domain/cases/filtering.ts`       | Pending |
+| P2       | `AlertSection.tsx`          | Alert due date sorting      | `domain/alerts/sorting.ts`        | Pending |
 
 #### Day 4-5: Integration & Documentation
 
-- [ ] Wire up one component to use Domain function
+- [x] ~~Wire `useFinancialItemFlow` to use domain validation~~ Done
 - [ ] Update `project-structure-guidelines.md` with Domain Layer rules
-- [ ] Verify no regressions (534+ tests passing)
+- [ ] Verify no regressions (586 tests passing ✅)
 
 ---
 

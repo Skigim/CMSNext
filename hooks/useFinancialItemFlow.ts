@@ -1,6 +1,7 @@
 import { useCallback, useState, useEffect } from "react";
 import { toast } from "sonner";
 import { useDataManagerSafe } from "../contexts/DataManagerContext";
+import { validateFinancialItem } from "@/domain/financials";
 import type { CaseCategory, StoredCase, FinancialItem } from "../types/case";
 
 export type ItemFormState = {
@@ -224,22 +225,22 @@ export function useFinancialItemFlow({
   }, [formErrors]);
 
   const validateForm = useCallback((): boolean => {
+    // Delegate to domain layer for pure validation logic
+    const result = validateFinancialItem({
+      description: formData.description,
+      amount: formData.amount,
+      verificationStatus: formData.verificationStatus,
+      verificationSource: formData.verificationSource,
+    });
+
+    // Convert domain errors to hook state format
     const newErrors: FinancialFormErrors = {};
-
-    if (!formData.description.trim()) {
-      newErrors.description = "Description is required";
-    }
-
-    if (formData.amount < 0) {
-      newErrors.amount = "Amount cannot be negative";
-    }
-
-    if (formData.verificationStatus === "Verified" && !formData.verificationSource.trim()) {
-      newErrors.verificationSource = "Verification source is required when status is Verified";
+    for (const [field, message] of Object.entries(result.errors)) {
+      newErrors[field] = message;
     }
 
     setFormErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
+    return result.isValid;
   }, [formData.description, formData.amount, formData.verificationStatus, formData.verificationSource]);
 
   const handleSaveItem = useCallback(async (): Promise<boolean> => {
