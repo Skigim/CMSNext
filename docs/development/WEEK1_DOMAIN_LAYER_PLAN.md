@@ -1,7 +1,7 @@
 # Week 1 Deep Dive: Domain Layer Introduction
 
-**Date:** December 22, 2025  
-**Status:** Planning  
+**Date:** January 2, 2026  
+**Status:** Active - Day 1  
 **Risk Level:** Medium-High (architectural change)
 
 ---
@@ -18,26 +18,37 @@ These items reduce noise before starting Domain Layer work:
 
    - [x] `components/forms/prototypeCaseInfoForm.tsx` (1001 lines of unused prototype) ✅ DELETED
 
-2. **Hook Consolidation Analysis** ✅ DOCUMENTED
+2. **Hook Consolidation Analysis** ✅ DOCUMENTED (Jan 2, 2026)
 
-   | Hook                      | Lines | Used By                      | Responsibility                                           |
-   | ------------------------- | ----- | ---------------------------- | -------------------------------------------------------- |
-   | `useFinancialItems.ts`    | 359   | `CaseDetails`, `CaseSection` | Data fetching, list state, CRUD mutations                |
-   | `useFinancialItemFlow.ts` | 385   | `AppContent`                 | Modal state, form state, form validation, CRUD mutations |
+   | Hook                      | Lines | Used By                      | Responsibility                                            |
+   | ------------------------- | ----- | ---------------------------- | --------------------------------------------------------- |
+   | `useFinancialItems.ts`    | 476   | `CaseDetails`, `CaseSection` | Data fetching, list state, CRUD mutations, amount history |
+   | `useFinancialItemFlow.ts` | 447   | `AppContent`                 | Modal state, form state, form validation, CRUD mutations  |
 
-   **Overlap:** Both call `dataManager.addItem`, `updateItem`, `deleteItem`
+   **Overlap Analysis:**
 
-   **Current Pattern:**
+   | Operation      | useFinancialItems                               | useFinancialItemFlow                                  |
+   | -------------- | ----------------------------------------------- | ----------------------------------------------------- |
+   | `addItem`      | ✅ via `createFinancialItem()`                  | ✅ via `handleSaveItem()` / `handleCreateItem()`      |
+   | `updateItem`   | ✅ via `updateFinancialItem()`                  | ✅ via `handleSaveItem()` / `handleBatchUpdateItem()` |
+   | `deleteItem`   | ✅ via `deleteFinancialItem()`                  | ✅ via `handleDeleteItem()`                           |
+   | Form state     | ❌                                              | ✅ (`formData`, `formErrors`, validation)             |
+   | Modal state    | ✅ basic (`financialModalOpen`)                 | ✅ rich (`itemForm` with category)                    |
+   | Amount History | ✅ full (`add/update/deleteAmountHistoryEntry`) | ❌                                                    |
+   | Auto-refresh   | ✅ listens to `dataChangeCount`                 | ❌ parent refreshes                                   |
+   | Grouped items  | ✅ (`groupedItems`)                             | ❌                                                    |
 
-   - `useFinancialItems` → Used for **list views** (fetches items, provides grouped data)
-   - `useFinancialItemFlow` → Used for **form modals** (manages form state + saves)
+   **Architectural Assessment:**
 
-   **Risk:** Low. They operate at different levels:
+   - `useFinancialItems` → **Data layer hook** - fetches/groups items, handles amount history
+   - `useFinancialItemFlow` → **Form layer hook** - manages form lifecycle and validation
 
-   - `useFinancialItems` listens to `dataChangeCount` and auto-refreshes
-   - `useFinancialItemFlow` triggers mutations, which update file, which triggers refresh
+   **Decision:** Keep both. They serve different concerns:
 
-   **Decision:** Keep both. No immediate consolidation needed.
+   1. Components needing **item data** use `useFinancialItems`
+   2. Components needing **form editing** use `useFinancialItemFlow`
+
+   The overlap in CRUD calls is intentional - both provide convenience wrappers around DataManager.
 
 ### Gemini Findings Verified
 
@@ -272,4 +283,4 @@ Each extraction follows the same pattern:
 ---
 
 **Prepared by:** GitHub Copilot  
-**Last updated:** December 22, 2025
+**Last updated:** January 2, 2026

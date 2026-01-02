@@ -1,9 +1,9 @@
 # CMSNext Roadmap - January 2026
 
-**Report Date:** December 30, 2025  
+**Report Date:** January 2, 2026  
 **Branch:** dev  
 **Focus:** Scalability, Domain Architecture, and Data Intelligence  
-**Status:** Week 0 In Progress
+**Status:** Week 0 Complete ✅ | Week 1 Starting
 
 ---
 
@@ -32,10 +32,10 @@ _Focus: Address December 2025 audit findings with low-risk extractions._
 
 #### Tasks
 
-- [ ] Extract `IndexedDBHandleStore` from `AutosaveFileService.ts`
+- [x] ~~Extract `IndexedDBHandleStore` from `AutosaveFileService.ts`~~ Done (213 lines extracted)
 - [x] ~~Extract `CaseBulkOperationsService` from `CaseService.ts`~~ Already at 761 lines
-- [ ] Add unit tests for extracted modules
-- [ ] Fix 3 lint warnings (QuickCaseModal.tsx, alertsData.ts)
+- [x] ~~Add unit tests for extracted modules~~ `IndexedDBHandleStore.test.ts` added
+- [x] ~~Fix 3 lint warnings (QuickCaseModal.tsx, alertsData.ts)~~ 0 lint warnings
 
 ---
 
@@ -48,20 +48,30 @@ _Focus: Establishing the new architectural pattern without breaking the app._
 #### Day 1: Cleanup & Prep
 
 - [x] ~~Delete `prototypeCaseInfoForm.tsx` (1001 lines dead code)~~ Already deleted
-- [ ] Document hook overlap: `useFinancialItems.ts` vs `useFinancialItemFlow.ts`
-- [ ] Define Domain pattern (functional, not OOP)
+- [x] ~~Document hook overlap: `useFinancialItems.ts` vs `useFinancialItemFlow.ts`~~ See WEEK1 plan
+- [x] ~~Define Domain pattern (functional, not OOP)~~ See WEEK1 plan + `.github/agents/DOMAIN.md`
 
 #### Day 2-3: Domain Structure
 
-- [ ] Create `src/domain/financials/` directory
-- [ ] Extract `calculateCategoryTotal()` as first domain function
-- [ ] Add tests for new domain function
+- [x] ~~Create `domain/financials/` directory~~ Structure ready (moved from `src/domain/` to `domain/` to match `@/` alias)
+- [x] ~~Extract `validateFinancialItem()` from `useFinancialItemFlow.ts`~~ Done with 14 tests
+- [ ] Extract `findDuplicateIndices()` from `useCategoryEditorState.ts`
+- [x] ~~Add tests for new domain functions~~ 14 tests for validation
+
+**Identified Extraction Candidates (from codebase audit):**
+
+| Priority | Source File                 | Logic                       | Target                            | Status  |
+| -------- | --------------------------- | --------------------------- | --------------------------------- | ------- |
+| P0       | `useFinancialItemFlow.ts`   | Form validation rules       | `domain/financials/validation.ts` | ✅ Done |
+| P0       | `useCategoryEditorState.ts` | Duplicate detection         | `domain/validation/duplicates.ts` | Pending |
+| P1       | `useCaseListOperations.ts`  | Case filtering (~100 lines) | `domain/cases/filtering.ts`       | Pending |
+| P2       | `AlertSection.tsx`          | Alert due date sorting      | `domain/alerts/sorting.ts`        | Pending |
 
 #### Day 4-5: Integration & Documentation
 
-- [ ] Wire up one component to use Domain function
+- [x] ~~Wire `useFinancialItemFlow` to use domain validation~~ Done
 - [ ] Update `project-structure-guidelines.md` with Domain Layer rules
-- [ ] Verify no regressions (534+ tests passing)
+- [ ] Verify no regressions (586 tests passing ✅)
 
 ---
 
@@ -123,16 +133,16 @@ _Focus: Integration testing and documentation._
 
 ## 📊 Success Metrics
 
-| Metric                       | Start | Week 0 | Week 1 | Week 2 | Week 3 | Target |
-| ---------------------------- | ----- | ------ | ------ | ------ | ------ | ------ |
-| Business Logic Coverage      | 100%  | 100%   |        |        |        | 100%   |
-| Max Renderable Items (60fps) | ~100  |        |        | 5000+  |        | 5000+  |
-| Logic in Components/Hooks    | High  |        | Med    | Low    | Low    | Low    |
-| New Analytics Widgets        | 0     |        |        |        | 3      | 3      |
-| Test count                   | 538   | 572    |        |        |        | 600+   |
-| AutosaveFileService.ts lines | 1875  | 1844   |        |        |        | <1200  |
-| CaseService.ts lines         | 1002  | 761 ✅ |        |        |        | <700   |
-| Lint warnings                | 3     | TBD    |        |        |        | 0      |
+| Metric                       | Start | Week 0  | Week 1 | Week 2 | Week 3 | Target |
+| ---------------------------- | ----- | ------- | ------ | ------ | ------ | ------ |
+| Business Logic Coverage      | 100%  | 100% ✅ |        |        |        | 100%   |
+| Max Renderable Items (60fps) | ~100  |         |        | 5000+  |        | 5000+  |
+| Logic in Components/Hooks    | High  |         | Med    | Low    | Low    | Low    |
+| New Analytics Widgets        | 0     |         |        |        | 3      | 3      |
+| Test count                   | 538   | 572 ✅  |        |        |        | 600+   |
+| AutosaveFileService.ts lines | 1875  | 1844    |        |        |        | <1200  |
+| CaseService.ts lines         | 1002  | 761 ✅  |        |        |        | <700   |
+| Lint warnings                | 3     | 0 ✅    |        |        |        | 0      |
 
 ---
 
@@ -238,4 +248,4 @@ Decision point: Week 2 prep work will benchmark both.
 ---
 
 **Prepared by:** GitHub Copilot  
-**Last updated:** December 30, 2025
+**Last updated:** January 2, 2026
