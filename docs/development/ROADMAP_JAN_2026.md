@@ -41,37 +41,106 @@ _Focus: Address December 2025 audit findings with low-risk extractions._
 
 ### Week 1: The Domain Core (Jan 2-8)
 
-_Focus: Establishing the new architectural pattern without breaking the app._
+_Focus: Establishing the new architectural pattern and extracting significant business logic._
 
 **Detailed plan:** [WEEK1_DOMAIN_LAYER_PLAN.md](WEEK1_DOMAIN_LAYER_PLAN.md)
 
-#### Day 1: Cleanup & Prep
+#### Codebase Analysis
 
-- [x] ~~Delete `prototypeCaseInfoForm.tsx` (1001 lines dead code)~~ Already deleted
-- [x] ~~Document hook overlap: `useFinancialItems.ts` vs `useFinancialItemFlow.ts`~~ See WEEK1 plan
-- [x] ~~Define Domain pattern (functional, not OOP)~~ See WEEK1 plan + `.github/agents/DOMAIN.md`
+**Largest Hooks (extraction targets):**
 
-#### Day 2-3: Domain Structure
+| Hook                        | Lines | Extractable Logic                |
+| --------------------------- | ----- | -------------------------------- |
+| `useFinancialItems.ts`      | 475   | Calculations, filtering          |
+| `useFinancialItemFlow.ts`   | 447   | Validation ✅, transforms        |
+| `useKeyboardShortcuts.ts`   | 370   | —                                |
+| `useCaseListPreferences.ts` | 369   | Filtering, sorting logic         |
+| `useAVSImportFlow.ts`       | 336   | AVS parsing, duplicate detection |
+| `useCategoryEditorState.ts` | 323   | Duplicate detection ✅           |
+| `useFormValidation.ts`      | 319   | Zod schemas (already pure)       |
+| `useNotes.ts`               | 318   | Note sorting                     |
+| `useWidgetData.ts`          | 269   | All widget calculations          |
+| `useCaseActivityLog.ts`     | 247   | Activity filtering, analytics    |
 
-- [x] ~~Create `domain/financials/` directory~~ Structure ready (moved from `src/domain/` to `domain/` to match `@/` alias)
-- [x] ~~Extract `validateFinancialItem()` from `useFinancialItemFlow.ts`~~ Done with 14 tests
-- [ ] Extract `findDuplicateIndices()` from `useCategoryEditorState.ts`
-- [x] ~~Add tests for new domain functions~~ 14 tests for validation
+**Largest Utils (pure logic candidates):**
 
-**Identified Extraction Candidates (from codebase audit):**
+| Util                      | Lines | Pure Logic                       |
+| ------------------------- | ----- | -------------------------------- |
+| `widgetDataProcessors.ts` | 486   | ~400 lines pure calculations     |
+| `alertsData.ts`           | 850   | Alert status, filtering, sorting |
+| `avsParser.ts`            | 200   | Pure AVS text parsing            |
+| `phoneFormatter.ts`       | 180   | Phone formatting/validation      |
+| `activityReport.ts`       | 145   | Activity analytics               |
 
-| Priority | Source File                 | Logic                       | Target                            | Status  |
-| -------- | --------------------------- | --------------------------- | --------------------------------- | ------- |
-| P0       | `useFinancialItemFlow.ts`   | Form validation rules       | `domain/financials/validation.ts` | ✅ Done |
-| P0       | `useCategoryEditorState.ts` | Duplicate detection         | `domain/validation/duplicates.ts` | Pending |
-| P1       | `useCaseListOperations.ts`  | Case filtering (~100 lines) | `domain/cases/filtering.ts`       | Pending |
-| P2       | `AlertSection.tsx`          | Alert due date sorting      | `domain/alerts/sorting.ts`        | Pending |
+#### Day 1: Foundation ✅
 
-#### Day 4-5: Integration & Documentation
+- [x] ~~Define Domain pattern (functional, not OOP)~~ See `.github/agents/DOMAIN.md`
+- [x] ~~Create domain structure~~ `domain/financials/`, `domain/validation/`
+- [x] ~~Extract `validateFinancialItem()`~~ 14 tests
+- [x] ~~Extract `findDuplicateIndices()`~~ 12 tests
+- [x] ~~Wire both editing paths~~ Modal + inline card
+- [x] ~~Update `project-structure-guidelines.md`~~ Done
 
-- [x] ~~Wire `useFinancialItemFlow` to use domain validation~~ Done
-- [ ] Update `project-structure-guidelines.md` with Domain Layer rules
-- [ ] Verify no regressions (586 tests passing ✅)
+#### Day 2: Alerts Domain
+
+- [ ] Create `domain/alerts/` module
+- [ ] Extract `isAlertResolved()` from `alertsData.ts` (~15 lines)
+- [ ] Extract `filterOpenAlerts()` from `alertsData.ts` (~10 lines)
+- [ ] Extract `sortAlertsByDueDate()` from `AlertSection.tsx` (~15 lines)
+- [ ] Add tests for alerts domain (~20 tests)
+
+#### Day 3: Cases Domain
+
+- [ ] Create `domain/cases/` module
+- [ ] Extract `filterCases()` from `useCaseListPreferences.ts` (~60 lines)
+- [ ] Extract `sortCases()` from `useCaseListPreferences.ts` (~60 lines)
+- [ ] Add tests for cases domain (~25 tests)
+
+#### Day 4: Widget Analytics
+
+- [ ] Create `domain/statistics/` module
+- [ ] Extract `calculateAverage()`, `calculateMedian()` from `widgetDataProcessors.ts` (~25 lines)
+- [ ] Extract `calculateAlertsPerDay()` from `widgetDataProcessors.ts` (~50 lines)
+- [ ] Extract `calculateCasesByStatus()` from `widgetDataProcessors.ts` (~40 lines)
+- [ ] Add tests for statistics domain (~30 tests)
+
+#### Day 5: Notes & Activity
+
+- [ ] Create `domain/notes/` and `domain/activity/` modules
+- [ ] Extract `sortNotesByDate()` from `useNotes.ts` (~5 lines)
+- [ ] Extract `filterActivitiesByDateRange()` from `useCaseActivityLog.ts` (~30 lines)
+- [ ] Extract `groupActivitiesByDay()` from `activityReport.ts` (~50 lines)
+- [ ] Add tests (~20 tests)
+
+#### Week 1 Targets
+
+| Metric                 | Target | Current |
+| ---------------------- | ------ | ------- |
+| Domain modules         | 6      | 2 ✅    |
+| Domain functions       | 15+    | 2 ✅    |
+| Domain tests           | 100+   | 26 ✅   |
+| Lines extracted        | ~400   | ~30     |
+| Hooks consuming domain | 8+     | 3 ✅    |
+
+**Extraction Candidates (Full Audit):**
+
+| Priority | Source                      | Logic                       | Target                              | Status  |
+| -------- | --------------------------- | --------------------------- | ----------------------------------- | ------- |
+| P0       | `useFinancialItemFlow.ts`   | Form validation             | `domain/financials/validation.ts`   | ✅ Done |
+| P0       | `useCategoryEditorState.ts` | Duplicate detection         | `domain/validation/duplicates.ts`   | ✅ Done |
+| P0       | `alertsData.ts`             | `isAlertResolved`           | `domain/alerts/status.ts`           | Pending |
+| P0       | `alertsData.ts`             | `filterOpenAlerts`          | `domain/alerts/filtering.ts`        | Pending |
+| P1       | `useCaseListPreferences.ts` | Case filtering (~60 lines)  | `domain/cases/filtering.ts`         | Pending |
+| P1       | `useCaseListPreferences.ts` | Case sorting (~60 lines)    | `domain/cases/sorting.ts`           | Pending |
+| P1       | `AlertSection.tsx`          | Alert due date sorting      | `domain/alerts/sorting.ts`          | Pending |
+| P2       | `widgetDataProcessors.ts`   | Average/median calculations | `domain/statistics/calculations.ts` | Pending |
+| P2       | `widgetDataProcessors.ts`   | Alerts per day              | `domain/alerts/analytics.ts`        | Pending |
+| P2       | `widgetDataProcessors.ts`   | Cases by status             | `domain/cases/analytics.ts`         | Pending |
+| P2       | `useNotes.ts`               | Note sorting                | `domain/notes/sorting.ts`           | Pending |
+| P2       | `useCaseActivityLog.ts`     | Activity date filtering     | `domain/activity/filtering.ts`      | Pending |
+| P2       | `activityReport.ts`         | Activity grouping           | `domain/activity/analytics.ts`      | Pending |
+| P3       | `avsParser.ts`              | Pure AVS parsing            | `domain/financials/avsParser.ts`    | Pending |
+| P3       | `phoneFormatter.ts`         | Phone validation/formatting | `domain/formatting/phone.ts`        | Pending |
 
 ---
 

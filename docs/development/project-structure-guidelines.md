@@ -106,7 +106,71 @@ DataManager (orchestrator)
 - Services are **stateless** - receive dependencies via constructor
 - All mutations go through `DataManager` methods
 - No direct service calls from components (use hooks)
-- No domain layer, repositories, or event bus patterns
+
+---
+
+## Domain Layer
+
+The `domain/` folder contains pure business logic extracted from hooks and services.
+
+### Structure
+
+```
+domain/
+├── financials/
+│   ├── validation.ts      # validateFinancialItem()
+│   ├── index.ts           # Public exports
+│   └── __tests__/
+│       └── validation.test.ts
+└── (future: cases/, alerts/, etc.)
+```
+
+### Core Principles
+
+1. **Pure functions only** - No side effects, no I/O, no React
+2. **No dependencies on services** - Domain logic is standalone
+3. **Types can be shared** - Import from `@/types/*` is allowed
+4. **Functional style** - No OOP, no classes, no inheritance
+
+### What Belongs in Domain
+
+| ✅ Domain Layer                  | ❌ Keep in Services/Hooks |
+| -------------------------------- | ------------------------- |
+| Validation logic                 | File I/O operations       |
+| Business rule calculations       | State management          |
+| Data transformation (pure)       | Toast notifications       |
+| Duplicate detection algorithms   | Context access            |
+| Filtering/sorting business rules | React lifecycle           |
+
+### Usage Pattern
+
+```typescript
+// In hooks - import and call domain functions
+import { validateFinancialItem } from "@/domain/financials";
+
+const handleSave = () => {
+  const result = validateFinancialItem(formData);
+  if (!result.valid) {
+    setFormErrors(result.errors);
+    return;
+  }
+  // Proceed with save via service
+};
+```
+
+### Testing Domain Functions
+
+Domain functions are tested in isolation without mocks:
+
+```typescript
+describe("validateFinancialItem", () => {
+  it("requires description", () => {
+    const result = validateFinancialItem({ description: "", amount: 100 });
+    expect(result.valid).toBe(false);
+    expect(result.errors.description).toBe("Description is required");
+  });
+});
+```
 
 ---
 

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useIsMounted } from "./useIsMounted";
+import { findDuplicateIndices } from "@/domain/validation";
 
 /**
  * Represents a single item in the category editor.
@@ -203,21 +204,11 @@ export function useCategoryEditorState<T extends EditorItem>({
     [items],
   );
 
-  // Find duplicate indices
-  const duplicateIndices = useMemo(() => {
-    const seen = new Map<string, number>();
-    const duplicates = new Set<number>();
-    itemMeta.forEach((entry, index) => {
-      if (!entry.trimmed) return;
-      if (seen.has(entry.normalized)) {
-        duplicates.add(index);
-        duplicates.add(seen.get(entry.normalized)!);
-      } else {
-        seen.set(entry.normalized, index);
-      }
-    });
-    return duplicates;
-  }, [itemMeta]);
+  // Find duplicate indices using domain function
+  const duplicateIndices = useMemo(
+    () => findDuplicateIndices(itemMeta),
+    [itemMeta],
+  );
 
   const hasEmptyValues = useMemo(
     () => itemMeta.some(entry => !entry.trimmed),
