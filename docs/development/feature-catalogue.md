@@ -2,7 +2,7 @@
 
 > Living index of marketable features, their current implementation status, quality, and future investments.
 
-**Last Updated:** December 18, 2025
+**Last Updated:** January 2, 2026
 
 ## How to Use This Document
 
@@ -16,26 +16,26 @@
 
 ---
 
-## Quick Reference (December 2025)
+## Quick Reference (January 2026)
 
-| Feature               | Rating | Trend | Notes                                        |
-| --------------------- | ------ | ----- | -------------------------------------------- |
-| Case Management       | 92     | ↑     | Retro/Waiver badges, enhanced header         |
-| Local-First Storage   | 90     | ↑     | AES-256 encryption, split login/welcome UX   |
-| Financial Operations  | 90     | ↑     | Auto-scroll on edit, date from history       |
-| Developer Enablement  | 88     | ↑     | 534 tests, Paper Cut feedback, mode-based AI |
-| Premium UI/UX         | 87     | ↑     | Stable scrollbar, instant sidebar, tooltips  |
-| VR Generator          | 88     | ↑     | Date offset syntax {field+N} for any date    |
-| Data Portability      | 82     | ↑     | AVS import with update capability            |
-| Notes & Collaboration | 84     | ↑     | Click-to-copy notes, popover UI              |
-| Configurable Statuses | 78     | →     | Recently stabilized                          |
-| Legacy Migration      | 75     | →     | Dev-only, one-way                            |
-| Autosave & Recovery   | 74     | →     | Works, telemetry pending                     |
-| Feature Flags         | 72     | →     | In-memory only                               |
-| Dashboard & Insights  | 70     | →     | Framework ready                              |
+| Feature               | Rating | Trend | Notes                                       |
+| --------------------- | ------ | ----- | ------------------------------------------- |
+| Case Management       | 92     | →     | Retro/Waiver badges, enhanced header        |
+| Local-First Storage   | 90     | →     | AES-256 encryption, split login/welcome UX  |
+| Financial Operations  | 90     | →     | Auto-scroll on edit, date from history      |
+| Developer Enablement  | 89     | ↑     | 572 tests, IndexedDBHandleStore extracted   |
+| Premium UI/UX         | 87     | →     | Stable scrollbar, instant sidebar, tooltips |
+| VR Generator          | 88     | →     | Date offset syntax {field+N} for any date   |
+| Data Portability      | 82     | →     | AVS import with update capability           |
+| Notes & Collaboration | 84     | →     | Click-to-copy notes, popover UI             |
+| Configurable Statuses | 78     | →     | Recently stabilized                         |
+| Legacy Migration      | 75     | →     | Dev-only, one-way                           |
+| Autosave & Recovery   | 75     | ↑     | IndexedDBHandleStore modularized            |
+| Feature Flags         | 72     | →     | In-memory only                              |
+| Dashboard & Insights  | 70     | →     | Framework ready                             |
 
-**Average Rating:** 83.5/100  
-**Test Status:** 534/534 passing (100%)
+**Average Rating:** 83.7/100  
+**Test Status:** 572/572 passing (100%)
 
 ---
 
@@ -121,9 +121,9 @@ Current maintainers: storage platform squad (contact via `FileStorageContext` co
 
 ### Implementation Snapshot
 
-**Rating: 74/100**
+**Rating: 75/100** _(Updated January 2, 2026)_
 
-AutosaveFileService delivers debounced writes, retry escalation, and integration with FileStorage context. Badge UX surfaces saving/saved/retrying/permission states, yet live telemetry, per-item history, and degraded-case validation are still forthcoming.
+AutosaveFileService delivers debounced writes, retry escalation, and integration with FileStorage context. Badge UX surfaces saving/saved/retrying/permission states. **January 2, 2026:** Extracted `IndexedDBHandleStore` (213 lines) as standalone module with dedicated test coverage, improving maintainability and testability.
 
 ### Strengths
 
@@ -131,6 +131,7 @@ AutosaveFileService delivers debounced writes, retry escalation, and integration
 - Retry policy escalates to recovering state and surfaces intent via Sonner toasts
 - Manual save handoff (`saveCaseWithNavigation`) aligns with autosave flows, ensuring consistent measurement logs
 - Autosave status badge available across dashboard and toolbar with clear copy documented in `error-boundary-guide.md`
+- **NEW:** `IndexedDBHandleStore` extracted as standalone module for cleaner separation of concerns
 
 ### Gaps / Risks
 
@@ -149,6 +150,7 @@ AutosaveFileService delivers debounced writes, retry escalation, and integration
 ### Coverage & Telemetry
 
 - Unit suites: `AutosaveFileService.test.ts` covers retries, failures, and lifecycle transitions
+- **NEW:** `IndexedDBHandleStore.test.ts` validates handle persistence and retrieval operations
 - Hooks: `useFileDataSync` ensures autosave triggers on incoming storage change events; `useNavigationFlow` asserts measurement metadata for `navigation:saveCase`
 - Performance: `2025-10-08-autosave-latency.json` records synthetic badge timings; pending live trace and profiler capture
 - Toast catalog documents error/resolution messaging for autosave failures

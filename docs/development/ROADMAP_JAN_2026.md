@@ -1,9 +1,9 @@
 # CMSNext Roadmap - January 2026
 
-**Report Date:** December 30, 2025  
+**Report Date:** January 2, 2026  
 **Branch:** dev  
 **Focus:** Scalability, Domain Architecture, and Data Intelligence  
-**Status:** Week 0 In Progress
+**Status:** Week 0 Complete ✅ | Week 1 Starting
 
 ---
 
@@ -32,10 +32,10 @@ _Focus: Address December 2025 audit findings with low-risk extractions._
 
 #### Tasks
 
-- [ ] Extract `IndexedDBHandleStore` from `AutosaveFileService.ts`
+- [x] ~~Extract `IndexedDBHandleStore` from `AutosaveFileService.ts`~~ Done (213 lines extracted)
 - [x] ~~Extract `CaseBulkOperationsService` from `CaseService.ts`~~ Already at 761 lines
-- [ ] Add unit tests for extracted modules
-- [ ] Fix 3 lint warnings (QuickCaseModal.tsx, alertsData.ts)
+- [x] ~~Add unit tests for extracted modules~~ `IndexedDBHandleStore.test.ts` added
+- [x] ~~Fix 3 lint warnings (QuickCaseModal.tsx, alertsData.ts)~~ 0 lint warnings
 
 ---
 
@@ -123,16 +123,16 @@ _Focus: Integration testing and documentation._
 
 ## 📊 Success Metrics
 
-| Metric                       | Start | Week 0 | Week 1 | Week 2 | Week 3 | Target |
-| ---------------------------- | ----- | ------ | ------ | ------ | ------ | ------ |
-| Business Logic Coverage      | 100%  | 100%   |        |        |        | 100%   |
-| Max Renderable Items (60fps) | ~100  |        |        | 5000+  |        | 5000+  |
-| Logic in Components/Hooks    | High  |        | Med    | Low    | Low    | Low    |
-| New Analytics Widgets        | 0     |        |        |        | 3      | 3      |
-| Test count                   | 538   | 572    |        |        |        | 600+   |
-| AutosaveFileService.ts lines | 1875  | 1844   |        |        |        | <1200  |
-| CaseService.ts lines         | 1002  | 761 ✅ |        |        |        | <700   |
-| Lint warnings                | 3     | TBD    |        |        |        | 0      |
+| Metric                       | Start | Week 0  | Week 1 | Week 2 | Week 3 | Target |
+| ---------------------------- | ----- | ------- | ------ | ------ | ------ | ------ |
+| Business Logic Coverage      | 100%  | 100% ✅ |        |        |        | 100%   |
+| Max Renderable Items (60fps) | ~100  |         |        | 5000+  |        | 5000+  |
+| Logic in Components/Hooks    | High  |         | Med    | Low    | Low    | Low    |
+| New Analytics Widgets        | 0     |         |        |        | 3      | 3      |
+| Test count                   | 538   | 572 ✅  |        |        |        | 600+   |
+| AutosaveFileService.ts lines | 1875  | 1844    |        |        |        | <1200  |
+| CaseService.ts lines         | 1002  | 761 ✅  |        |        |        | <700   |
+| Lint warnings                | 3     | 0 ✅    |        |        |        | 0      |
 
 ---
 
@@ -238,4 +238,4 @@ Decision point: Week 2 prep work will benchmark both.
 ---
 
 **Prepared by:** GitHub Copilot  
-**Last updated:** December 30, 2025
+**Last updated:** January 2, 2026
