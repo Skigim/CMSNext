@@ -8,6 +8,7 @@ import {
   getVerificationStatusInfo,
   shouldShowVerificationSource,
 } from "../../utils/verificationStatus";
+import { validateFinancialItem } from "../../domain/financials";
 
 export type VerificationStatus = string;
 
@@ -40,11 +41,15 @@ interface UseFinancialItemCardStateParams {
   initialIsEditing?: boolean;
 }
 
+/** Form validation errors keyed by field name */
+export type FormErrors = Record<string, string>;
+
 export interface UseFinancialItemCardStateResult {
   isEditing: boolean;
   confirmingDelete: boolean;
   isSaving: boolean;
   saveSuccessVisible: boolean;
+  formErrors: FormErrors;
   normalizedItem: NormalizedFinancialItem;
   normalizedFormData: NormalizedFinancialFormData;
   displayAmount: string;
@@ -89,6 +94,7 @@ export function useFinancialItemCardState({
   const [isSaving, setIsSaving] = useState(false);
   const [saveSuccessVisible, setSaveSuccessVisible] = useState(false);
   const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
+  const [formErrors, setFormErrors] = useState<FormErrors>({});
   const saveSuccessTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Get the selected month for displaying the correct amount
@@ -200,6 +206,7 @@ export function useFinancialItemCardState({
     setFormData(item);
     setIsEditing(true);
     setConfirmingDelete(false);
+    setFormErrors({});
   }, [handleCancelClick, isEditing, isSkeleton, item, onUpdate]);
 
   const handleSaveClick = useCallback(
@@ -210,6 +217,20 @@ export function useFinancialItemCardState({
         return;
       }
 
+      // Validate using domain function
+      const validationResult = validateFinancialItem({
+        description: formData.description ?? "",
+        amount: formData.amount ?? 0,
+        verificationStatus: formData.verificationStatus ?? "",
+        verificationSource: formData.verificationSource ?? "",
+      });
+
+      if (!validationResult.isValid) {
+        setFormErrors(validationResult.errors);
+        return;
+      }
+
+      setFormErrors({});
       setIsEditing(false);
       setIsSaving(true);
 
@@ -354,6 +375,7 @@ export function useFinancialItemCardState({
     confirmingDelete,
     isSaving,
     saveSuccessVisible,
+    formErrors,
     normalizedItem,
     normalizedFormData,
     displayAmount,

@@ -7,12 +7,13 @@ import { Textarea } from "../ui/textarea";
 import { Check, X, History } from "lucide-react";
 import type { CaseCategory } from "../../types/case";
 import { parseNumericInput } from "../../utils/financialFormatters";
-import type { NormalizedFinancialFormData } from "./useFinancialItemCardState";
+import type { NormalizedFinancialFormData, FormErrors } from "./useFinancialItemCardState";
 
 interface FinancialItemCardFormProps {
   itemId: string;
   itemType: CaseCategory;
   formData: NormalizedFinancialFormData;
+  formErrors?: FormErrors;
   onFieldChange: (field: string, value: string | number) => void;
   onCancel: () => void;
   onSubmit: (event: FormEvent<HTMLFormElement>) => Promise<void>;
@@ -24,6 +25,7 @@ export function FinancialItemCardForm({
   itemId,
   itemType,
   formData,
+  formErrors = {},
   onFieldChange,
   onCancel,
   onSubmit,
@@ -52,8 +54,11 @@ export function FinancialItemCardForm({
           id={descriptionFieldId}
           value={formData.description ?? ""}
           onChange={event => onFieldChange("description", event.target.value)}
-          className="w-full"
+          className={`w-full ${formErrors.description ? "border-destructive" : ""}`}
         />
+        {formErrors.description && (
+          <p className="mt-1 text-sm text-destructive">{formErrors.description}</p>
+        )}
       </div>
 
       <div className="grid grid-cols-2 gap-4">

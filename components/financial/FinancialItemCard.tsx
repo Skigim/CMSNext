@@ -51,6 +51,7 @@ export function FinancialItemCard({
     isEditing,
     isSaving,
     saveSuccessVisible,
+    formErrors,
     normalizedItem,
     normalizedFormData,
     displayAmount,
@@ -164,6 +165,7 @@ export function FinancialItemCard({
               itemId={formItemId}
               itemType={itemType}
               formData={normalizedFormData}
+              formErrors={formErrors}
               onFieldChange={handleFieldChange}
               onCancel={handleCancelClick}
               onSubmit={handleSaveClick}
