@@ -58,7 +58,8 @@ export default defineConfig({
       'node_modules/',
       'dist/',
       '.git/',
-      '.cache/'
+      '.cache/',
+      '.storybook/**',
     ]
   },
   resolve: {

@@ -93,3 +93,6 @@ PR*_*.md
 REFRESHED_PROMPTS.md
 WORK_STATUS.md
 .dev-notes/
+
+*storybook.log
+storybook-static
