@@ -1,6 +1,4 @@
 import { useMemo, useState, useCallback } from "react";
-import { Button } from "../ui/button";
-import { Plus } from "lucide-react";
 import { StoredCase, CaseStatus } from "../../types/case";
 import { type AlertsIndex } from "../../utils/alertsData";
 import type { CaseActivityLogState } from "../../types/activityLog";
