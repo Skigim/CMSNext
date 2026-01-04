@@ -1,7 +1,8 @@
-import { StoredCase, NewPersonData, NewCaseRecordData } from "../../types/case";
+import { StoredCase, NewPersonData, NewCaseRecordData, CaseStatus } from "../../types/case";
 import { AppView } from "../../types/view";
 import type { AlertsIndex, AlertWithMatch } from "../../utils/alertsData";
 import type { CaseActivityLogState } from "../../types/activityLog";
+import { exportCasesToJSON, triggerImportDialog, triggerAlertsCsvImport } from "../../utils/dataExportImport";
 
 // Direct imports for high-turnover components - no lazy loading for snappiness
 import Dashboard from "../app/Dashboard";
@@ -94,6 +95,14 @@ export function ViewRenderer({
           activityLogState={activityLogState}
           onNewCase={handleNewCase}
           onViewCase={handleViewCase}
+          onBulkStatusUpdate={(status: CaseStatus) => {
+            // Note: This is a placeholder - actual implementation would need case selection
+            // For now, this just shows the pattern. Full implementation in Phase 4.
+            console.log('Bulk status update requested:', status);
+          }}
+          onExport={() => exportCasesToJSON(cases)}
+          onImport={triggerImportDialog}
+          onImportAlerts={triggerAlertsCsvImport}
         />
       );
 

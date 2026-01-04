@@ -1,12 +1,13 @@
-import { useMemo } from "react";
+import { useMemo, useState, useCallback } from "react";
 import { Button } from "../ui/button";
 import { Plus } from "lucide-react";
-import { StoredCase } from "../../types/case";
+import { StoredCase, CaseStatus } from "../../types/case";
 import { type AlertsIndex } from "../../utils/alertsData";
 import type { CaseActivityLogState } from "../../types/activityLog";
 import { WidgetRegistry, createLazyWidget, type RegisteredWidget } from "./widgets/WidgetRegistry";
 import { useAppViewState } from "@/hooks/useAppViewState";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { QuickActionsBar } from "./QuickActionsBar";
 
 interface DashboardProps {
   cases: StoredCase[];
@@ -14,6 +15,10 @@ interface DashboardProps {
   activityLogState: CaseActivityLogState;
   onNewCase: () => void;
   onViewCase?: (caseId: string) => void;
+  onBulkStatusUpdate?: (status: CaseStatus) => void;
+  onExport?: () => void;
+  onImport?: () => void;
+  onImportAlerts?: () => void;
 }
 
 const ActivityWidgetLazy = createLazyWidget(
@@ -51,11 +56,28 @@ const AvgCaseProcessingTimeWidgetLazy = createLazyWidget(
   "AvgCaseProcessingTimeWidget",
 );
 
-export function Dashboard({ cases, alerts, activityLogState, onNewCase, onViewCase }: DashboardProps) {
-  const { featureFlags } = useAppViewState();
+export function Dashboard({ 
+  cases, 
+  alerts, 
+  activityLogState, 
+  onNewCase, 
+  onViewCase,
+  onBulkStatusUpdate,
+  onExport,
+  onImport,
+  onImportAlerts,
+}: DashboardProps) {
+  const { featureFlags, globalSearchTerm, setGlobalSearchTerm } = useAppViewState();
+  const [localSearchTerm, setLocalSearchTerm] = useState(globalSearchTerm);
 
   const allAlerts = useMemo(() => alerts.alerts ?? [], [alerts.alerts]);
   const activityEntries = useMemo(() => activityLogState.activityLog ?? [], [activityLogState.activityLog]);
+
+  // Handle search change with debouncing
+  const handleSearchChange = useCallback((term: string) => {
+    setLocalSearchTerm(term);
+    setGlobalSearchTerm(term);
+  }, [setGlobalSearchTerm]);
 
   // Create refresh keys that change whenever the actual data content changes
   // These track the length and key metrics to detect when data has been updated
@@ -171,46 +193,57 @@ export function Dashboard({ cases, alerts, activityLogState, onNewCase, onViewCa
   const analyticsWidgets = useMemo(() => widgets.filter(w => w.metadata.id !== 'activity'), [widgets]);
 
   return (
-    <div className="space-y-6" data-papercut-context="Dashboard">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-foreground">Dashboard</h1>
-          <p className="text-muted-foreground mt-1">Overview of your case management system</p>
-        </div>
-        <div className="flex gap-2">
-          <Button onClick={onNewCase} className="flex items-center gap-2">
-            <Plus className="h-4 w-4" />
-            New Case
-          </Button>
+    <div className="flex flex-col h-full" data-papercut-context="Dashboard">
+      {/* Quick Actions Bar */}
+      <QuickActionsBar
+        onNewCase={onNewCase}
+        onSearchChange={handleSearchChange}
+        searchTerm={localSearchTerm}
+        onBulkStatusUpdate={onBulkStatusUpdate}
+        onExport={onExport}
+        onImport={onImport}
+        onImportAlerts={onImportAlerts}
+        showBulkOperations={!!onBulkStatusUpdate}
+      />
+
+      {/* Main Content */}
+      <div className="flex-1 overflow-auto px-6 py-6">
+        <div className="space-y-6">
+          {/* Header */}
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-3xl font-bold text-foreground">Dashboard</h1>
+              <p className="text-muted-foreground mt-1">Overview of your case management system</p>
+            </div>
+          </div>
+
+          <Tabs defaultValue="overview" className="space-y-4">
+            <TabsList>
+              <TabsTrigger value="overview">Overview</TabsTrigger>
+              <TabsTrigger value="analytics">Analytics</TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="overview" className="space-y-6">
+              <div>
+                <h2 className="text-lg font-semibold text-foreground mb-4">Recent Activity</h2>
+                <WidgetRegistry
+                  widgets={overviewWidgets}
+                  gridClassName="grid grid-cols-1 gap-4"
+                  enabledFlags={featureFlags}
+                />
+              </div>
+            </TabsContent>
+
+            <TabsContent value="analytics" className="space-y-6">
+              <WidgetRegistry
+                widgets={analyticsWidgets}
+                gridClassName="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"
+                enabledFlags={featureFlags}
+              />
+            </TabsContent>
+          </Tabs>
         </div>
       </div>
-
-      <Tabs defaultValue="overview" className="space-y-4">
-        <TabsList>
-          <TabsTrigger value="overview">Overview</TabsTrigger>
-          <TabsTrigger value="analytics">Analytics</TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="overview" className="space-y-6">
-          <div>
-            <h2 className="text-lg font-semibold text-foreground mb-4">Recent Activity</h2>
-            <WidgetRegistry
-              widgets={overviewWidgets}
-              gridClassName="grid grid-cols-1 gap-4"
-              enabledFlags={featureFlags}
-            />
-          </div>
-        </TabsContent>
-
-        <TabsContent value="analytics" className="space-y-6">
-          <WidgetRegistry
-            widgets={analyticsWidgets}
-            gridClassName="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"
-            enabledFlags={featureFlags}
-          />
-        </TabsContent>
-      </Tabs>
     </div>
   );
 }
