@@ -100,7 +100,7 @@ export function TodaysWorkWidget({
                 return (
                   <div
                     key={caseData.id}
-                    className="flex gap-3 p-3 rounded-lg border border-border/50 bg-muted/30 hover:bg-muted/50 transition-colors"
+                    className="flex gap-3 p-3 rounded-lg border border-border/50 bg-muted/30 hover:bg-muted/50 transition-colors h-[72px]"
                   >
                     <div className="flex-shrink-0 mt-0.5">
                       <Icon 

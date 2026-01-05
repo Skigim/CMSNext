@@ -342,27 +342,20 @@ export function ActivityWidget({ activityLogState, metadata, onViewCase }: Activ
                 ))}
               </div>
             ) : items.length > 0 ? (
-              <>
-                <div className="flex items-center justify-between mb-2">
-                  <p className="text-sm text-muted-foreground">Last 7 days</p>
-                  <Badge variant="outline" className="text-xs">
-                    {items.length} recent
-                  </Badge>
-                </div>
-                <div className="space-y-2">
-                  {items.slice(0, 3).map((item) => {
-                      const Icon = item.icon;
-                      return (
-                        <div
-                          key={item.id}
-                          className="flex gap-3 p-3 rounded-lg border border-border/50 bg-muted/30 hover:bg-muted/50 transition-colors"
-                        >
-                          <div className="flex-shrink-0 mt-0.5">
-                            <Icon className="h-4 w-4 text-muted-foreground" />
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-start justify-between gap-2 mb-1">
-                              <p className="text-sm font-medium truncate">{item.title}</p>
+              <div className="space-y-2">
+                {items.slice(0, 3).map((item) => {
+                    const Icon = item.icon;
+                    return (
+                      <div
+                        key={item.id}
+                        className="flex gap-3 p-3 rounded-lg border border-border/50 bg-muted/30 hover:bg-muted/50 transition-colors h-[72px]"
+                      >
+                        <div className="flex-shrink-0 mt-0.5">
+                          <Icon className="h-4 w-4 text-muted-foreground" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-start justify-between gap-2 mb-1">
+                            <p className="text-sm font-medium truncate">{item.title}</p>
                               <Badge
                                 variant="secondary"
                                 className={`text-xs flex-shrink-0 ${item.badgeColor}`}
@@ -401,8 +394,7 @@ export function ActivityWidget({ activityLogState, metadata, onViewCase }: Activ
                         </div>
                       );
                     })}
-                </div>
-              </>
+              </div>
             ) : (
               <div className="text-center py-8">
                 <Clock className="h-8 w-8 text-muted-foreground mx-auto mb-2 opacity-50" />
