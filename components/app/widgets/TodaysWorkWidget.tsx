@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { AlertCircle, ArrowRight, CheckCircle } from 'lucide-react';
 import { CopyButton } from '@/components/common/CopyButton';
+import { PinButton } from '@/components/common/PinButton';
 import type { StoredCase } from '@/types/case';
 import type { AlertsIndex } from '@/utils/alertsData';
 import type { WidgetMetadata } from './WidgetRegistry';
@@ -127,12 +128,15 @@ export function TodaysWorkWidget({
                             <p className="text-sm font-medium truncate">{caseData.name}</p>
                           )}
                         </div>
-                        <Badge 
-                          variant="outline" 
-                          className={`text-xs flex-shrink-0 ${getPriorityBadgeClass(level)}`}
-                        >
-                          {level === 'high' ? 'High' : level === 'medium' ? 'Medium' : 'Low'}
-                        </Badge>
+                        <div className="flex items-center gap-1 flex-shrink-0">
+                          <PinButton caseId={caseData.id} size="sm" />
+                          <Badge 
+                            variant="outline" 
+                            className={`text-xs ${getPriorityBadgeClass(level)}`}
+                          >
+                            {level === 'high' ? 'High' : level === 'medium' ? 'Medium' : 'Low'}
+                          </Badge>
+                        </div>
                       </div>
                       
                       <div className="flex items-center gap-2 mb-1">

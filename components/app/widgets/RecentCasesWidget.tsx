@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Clock, History, X } from 'lucide-react';
 import { CopyButton } from '@/components/common/CopyButton';
+import { PinButton } from '@/components/common/PinButton';
 import type { StoredCase } from '@/types/case';
 import { useRecentCases } from '@/hooks/useRecentCases';
 import { useMemo } from 'react';
@@ -109,15 +110,18 @@ export function RecentCasesWidget({
                           <p className="text-sm font-medium truncate">{caseData.name}</p>
                         )}
                       </div>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
-                        onClick={() => removeFromRecent(caseData.id)}
-                        aria-label={`Remove ${caseData.name} from recent`}
-                      >
-                        <X className="h-3 w-3" />
-                      </Button>
+                      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <PinButton caseId={caseData.id} size="sm" />
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-6 w-6 p-0"
+                          onClick={() => removeFromRecent(caseData.id)}
+                          aria-label={`Remove ${caseData.name} from recent`}
+                        >
+                          <X className="h-3 w-3" />
+                        </Button>
+                      </div>
                     </div>
                     <div className="flex items-center gap-2">
                       <CopyButton

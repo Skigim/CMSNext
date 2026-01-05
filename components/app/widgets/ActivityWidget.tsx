@@ -4,6 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { CopyButton } from '@/components/common/CopyButton';
+import { PinButton } from '@/components/common/PinButton';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
@@ -392,6 +393,7 @@ export function ActivityWidget({ activityLogState, metadata, onViewCase }: Activ
                               ) : (
                                 <span className="text-xs font-medium">{item.caseName}</span>
                               )}
+                              <PinButton caseId={item.caseId} size="sm" />
                               <span className="text-xs text-muted-foreground">•</span>
                               <CopyButton
                                 value={item.caseMcn}
