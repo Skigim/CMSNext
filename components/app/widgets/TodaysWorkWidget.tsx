@@ -1,4 +1,3 @@
-import { useMemo } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -51,7 +50,6 @@ interface TodaysWorkWidgetProps {
 export function TodaysWorkWidget({ 
   cases, 
   alerts, 
-  metadata,
   onViewCase 
 }: TodaysWorkWidgetProps) {
   // Get priority cases using the hook (limit to top 10)
@@ -95,7 +93,7 @@ export function TodaysWorkWidget({
         {hasPriorityCases ? (
           <ScrollArea className="h-[400px] pr-4">
             <div className="space-y-3">
-              {priorityCases.map((priorityCase, index) => {
+              {priorityCases.map((priorityCase) => {
                 const { case: caseData, score, reason } = priorityCase;
                 const level = getPriorityLevel(score);
                 const Icon = level === 'high' ? AlertCircle : ArrowRight;
