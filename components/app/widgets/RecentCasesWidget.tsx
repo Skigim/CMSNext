@@ -1,7 +1,7 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Clock, History, X } from 'lucide-react';
+import { Clock, X } from 'lucide-react';
 import { CopyButton } from '@/components/common/CopyButton';
 import { PinButton } from '@/components/common/PinButton';
 import type { StoredCase } from '@/types/case';
@@ -59,10 +59,7 @@ export function RecentCasesWidget({
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
           <div>
-            <CardTitle className="flex items-center gap-2">
-              <History className="h-4 w-4 text-muted-foreground" />
-              Recently Viewed
-            </CardTitle>
+            <CardTitle>Recently Viewed</CardTitle>
             <CardDescription>Quick access to cases you've viewed</CardDescription>
           </div>
           <div className="flex items-center gap-2">

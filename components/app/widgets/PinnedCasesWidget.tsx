@@ -1,7 +1,7 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Pin, PinOff } from 'lucide-react';
+import { PinOff } from 'lucide-react';
 import type { StoredCase } from '@/types/case';
 import { usePinnedCases } from '@/hooks/usePinnedCases';
 import { useMemo } from 'react';
@@ -56,10 +56,7 @@ export function PinnedCasesWidget({
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
           <div>
-            <CardTitle className="flex items-center gap-2">
-              <Pin className="h-4 w-4 text-muted-foreground" />
-              Pinned Cases
-            </CardTitle>
+            <CardTitle>Pinned Cases</CardTitle>
             <CardDescription>Your favorite cases for quick access</CardDescription>
           </div>
           <Badge variant="outline" className="text-xs">

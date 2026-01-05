@@ -334,7 +334,7 @@ export function ActivityWidget({ activityLogState, metadata, onViewCase }: Activ
         </CardHeader>
         <CardContent>
           {/* Timeline Tab */}
-          <TabsContent value="timeline" className="mt-0 space-y-3">
+          <TabsContent value="timeline" className="mt-0">
             {loading && !timeline ? (
               <div className="space-y-3">
                 {Array.from({ length: 4 }).map((_, i) => (
