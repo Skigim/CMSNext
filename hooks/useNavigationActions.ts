@@ -1,5 +1,6 @@
 import { useCallback } from "react";
 import { useIsMounted } from "./useIsMounted";
+import { useRecentCases } from "./useRecentCases";
 import { NewCaseRecordData, NewPersonData, StoredCase } from "../types/case";
 import { AppView } from "../types/view";
 import { startMeasurement, endMeasurement } from "../utils/performanceTracker";
@@ -79,6 +80,7 @@ export function useNavigationActions({
   state, setters, guardCaseInteraction, isLocked, lockReason, saveCase, deleteCase,
 }: UseNavigationActionsParams) {
   const isMounted = useIsMounted();
+  const { addToRecent } = useRecentCases();
   const { currentView, selectedCaseId, showNewCaseModal, formState } = state;
   const { setCurrentView, setSelectedCaseId, setShowNewCaseModal, setFormState, setSidebarOpen, setForcedView } = setters;
 
@@ -108,8 +110,10 @@ export function useNavigationActions({
     setSelectedCaseId(caseId);
     setCurrentView("details");
     setSidebarOpen(false);
+    // Track as recently viewed
+    addToRecent(caseId);
     endMeasurement("navigation:viewCase", { caseId, blocked: false });
-  }, [currentView, formState, guardCaseInteraction, isLocked, setCurrentView, setFormState, setSelectedCaseId, setSidebarOpen]);
+  }, [addToRecent, currentView, formState, guardCaseInteraction, isLocked, setCurrentView, setFormState, setSelectedCaseId, setSidebarOpen]);
 
   const newCase = useCallback(() => {
     startMeasurement("navigation:newCase", { locked: isLocked });

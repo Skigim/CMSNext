@@ -13,12 +13,13 @@ import {
   AlertDialogTrigger,
 } from "../ui/alert-dialog";
 import type { StoredCase, CaseStatusUpdateHandler } from "../../types/case";
-import { Eye, Edit, Trash2 } from "lucide-react";
+import { Eye, Edit, Trash2, Pin, PinOff } from "lucide-react";
 import { CaseStatusMenu } from "./CaseStatusMenu";
 import type { AlertWithMatch } from "../../utils/alertsData";
 import { AlertBadge } from "@/components/alerts/AlertBadge";
 import { CopyButton } from "@/components/common/CopyButton";
 import { getDisplayPhoneNumber } from "@/utils/phoneFormatter";
+import { usePinnedCases } from "@/hooks/usePinnedCases";
 
 interface CaseCardProps {
   case: StoredCase;
@@ -37,6 +38,10 @@ export function CaseCard({
   alerts = [],
   onUpdateStatus,
 }: CaseCardProps) {
+  // Pinned cases functionality
+  const { isPinned, togglePin: togglePinCase } = usePinnedCases();
+  const caseIsPinned = isPinned(caseData.id);
+
   const formatDate = (value?: string) => {
     if (!value) {
       return "—";
@@ -133,6 +138,19 @@ export function CaseCard({
           >
             <Edit className="h-4 w-4" />
             Edit
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => togglePinCase(caseData.id)}
+            className={caseIsPinned ? "text-blue-600 hover:text-blue-700" : ""}
+            aria-label={caseIsPinned ? "Unpin case" : "Pin case"}
+          >
+            {caseIsPinned ? (
+              <Pin className="h-4 w-4 fill-current" />
+            ) : (
+              <PinOff className="h-4 w-4" />
+            )}
           </Button>
           <AlertDialog>
             <AlertDialogTrigger asChild>
