@@ -15,6 +15,7 @@ const SORT_KEY_LABELS: Record<CaseListSortKey, string> = {
   name: "Name",
   mcn: "MCN",
   status: "Status",
+  score: "Score",
   caseType: "Case Type",
   application: "Application Date",
   updated: "Last Updated",

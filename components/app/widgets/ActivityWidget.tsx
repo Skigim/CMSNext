@@ -358,7 +358,7 @@ export function ActivityWidget({ activityLogState, metadata, onViewCase }: Activ
                   </Badge>
                 </div>
                 <div className="space-y-2">
-                  {items.slice(0, 5).map((item) => {
+                  {items.slice(0, 3).map((item) => {
                       const Icon = item.icon;
                       return (
                         <div

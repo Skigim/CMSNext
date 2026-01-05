@@ -19,6 +19,7 @@ import { AlertsPopover } from "./AlertsPopover";
 import { CopyButton } from "@/components/common/CopyButton";
 import { getDisplayPhoneNumber } from "@/utils/phoneFormatter";
 import { getAlertDisplayDescription, getAlertDueDateInfo } from "@/utils/alertDisplay";
+import { calculatePriorityScore } from "@/domain/dashboard/priorityQueue";
 
 export interface CaseTableProps {
   cases: StoredCase[];
@@ -96,6 +97,8 @@ export const CaseTable = memo(function CaseTable({
         const phone = item.person?.phone;
         const primaryContact = phone ? getDisplayPhoneNumber(phone) : item.person?.email;
         const allCaseAlerts = alertsByCaseId?.get(item.id) ?? [];
+        const unresolvedAlerts = allCaseAlerts.filter(a => a.status?.toLowerCase() !== 'resolved');
+        const score = calculatePriorityScore(item, unresolvedAlerts);
         return {
           id: item.id,
           name: item.name || "Unnamed Case",
@@ -107,6 +110,7 @@ export const CaseTable = memo(function CaseTable({
           updatedDate: formatDate(updatedDate),
           primaryContact,
           alerts: allCaseAlerts,
+          score,
         };
       }),
     [alertsByCaseId, cases],
@@ -157,6 +161,9 @@ export const CaseTable = memo(function CaseTable({
       }
       if (sortKey === "status") {
         return (a.status || "").localeCompare(b.status || "") * directionFactor;
+      }
+      if (sortKey === "score") {
+        return (a.score - b.score) * directionFactor;
       }
       return 0;
     });
@@ -253,6 +260,19 @@ export const CaseTable = memo(function CaseTable({
               </button>
             </TableHead>
             <TableHead
+              aria-sort={sortKey === "score" ? (sortDirection === "asc" ? "ascending" : "descending") : "none"}
+            >
+              <button
+                type="button"
+                onClick={() => handleSortClick("score")}
+                className="flex items-center gap-1 text-left font-semibold transition-colors hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
+                aria-label={`Sort by Score. Currently ${sortKey === "score" ? (sortDirection === "asc" ? "ascending" : "descending") : "unsorted"}.`}
+              >
+                <span>Score</span>
+                {renderSortIndicator("score")}
+              </button>
+            </TableHead>
+            <TableHead
               aria-sort={sortKey === "alerts" ? (sortDirection === "asc" ? "ascending" : "descending") : "none"}
             >
               <button
@@ -311,7 +331,7 @@ export const CaseTable = memo(function CaseTable({
         <TableBody>
           {!hasRows && (
             <TableRow>
-              <TableCell colSpan={selectionEnabled ? 10 : 9} className="py-12 text-center text-muted-foreground">
+              <TableCell colSpan={selectionEnabled ? 11 : 10} className="py-12 text-center text-muted-foreground">
                 {expandAlerts ? "No open alerts to display" : "No cases to display"}
               </TableCell>
             </TableRow>
@@ -368,6 +388,11 @@ export const CaseTable = memo(function CaseTable({
                   status={row.status}
                   onUpdateStatus={onUpdateCaseStatus}
                 />
+              </TableCell>
+              <TableCell>
+                <span className={`text-sm font-medium tabular-nums ${row.score >= 500 ? 'text-red-600 dark:text-red-400' : row.score >= 200 ? 'text-amber-600 dark:text-amber-400' : 'text-muted-foreground'}`}>
+                  {row.score}
+                </span>
               </TableCell>
               <TableCell>
                 {row.expandedAlert ? (

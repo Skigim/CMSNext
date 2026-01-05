@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { CaseStatus } from "@/types/case";
 
-export type CaseListSortKey = "updated" | "name" | "mcn" | "application" | "status" | "caseType" | "alerts";
+export type CaseListSortKey = "updated" | "name" | "mcn" | "application" | "status" | "caseType" | "alerts" | "score";
 export type CaseListSortDirection = "asc" | "desc";
 export type CaseListSegment = "all" | "recent" | "priority" | "alerts";
 
