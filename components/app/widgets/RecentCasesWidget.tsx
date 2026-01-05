@@ -1,7 +1,6 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { Clock, History, X } from 'lucide-react';
 import { CopyButton } from '@/components/common/CopyButton';
 import { PinButton } from '@/components/common/PinButton';
@@ -85,9 +84,8 @@ export function RecentCasesWidget({
       </CardHeader>
       <CardContent>
         {hasRecentCases ? (
-          <ScrollArea className="h-52 pr-4">
-            <div className="space-y-2">
-              {recentCases.map((caseData) => (
+          <div className="space-y-2">
+            {recentCases.slice(0, 3).map((caseData) => (
                 <div
                   key={caseData.id}
                   className="flex gap-3 p-3 rounded-lg border border-border/50 bg-muted/30 hover:bg-muted/50 transition-colors group"
@@ -144,8 +142,7 @@ export function RecentCasesWidget({
                   </div>
                 </div>
               ))}
-            </div>
-          </ScrollArea>
+          </div>
         ) : (
           <div className="py-12 text-center text-muted-foreground">
             <History className="mx-auto mb-3 h-12 w-12 opacity-40" />
