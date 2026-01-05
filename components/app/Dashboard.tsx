@@ -24,6 +24,11 @@ const ActivityWidgetLazy = createLazyWidget(
   "ActivityWidget",
 );
 
+const TodaysWorkWidgetLazy = createLazyWidget(
+  import("./widgets/TodaysWorkWidget"),
+  "TodaysWorkWidget",
+);
+
 const AlertsClearedPerDayWidgetLazy = createLazyWidget(
   import("./widgets/AlertsClearedPerDayWidget"),
   "AlertsClearedPerDayWidget",
@@ -100,6 +105,18 @@ export function Dashboard({
    */
   const widgets = useMemo<RegisteredWidget[]>(() => {
     return [
+      {
+        metadata: {
+          id: 'todays-work',
+          title: "Today's Work",
+          description: 'Priority cases requiring attention',
+          priority: 0,
+          refreshInterval: 2 * 60 * 1000,
+          featureFlag: 'dashboard.widgets.todaysWork',
+        },
+        component: TodaysWorkWidgetLazy,
+        props: { cases, alerts, onViewCase },
+      },
       {
         metadata: {
           id: 'avg-case-processing-time',
@@ -185,10 +202,10 @@ export function Dashboard({
         props: { activityLogState, onViewCase },
       },
     ];
-  }, [cases, allAlerts, activityEntries, activityLogState, alertsRefreshKey, activityRefreshKey, onViewCase]);
+  }, [cases, alerts, allAlerts, activityEntries, activityLogState, alertsRefreshKey, activityRefreshKey, onViewCase]);
 
-  const overviewWidgets = useMemo(() => widgets.filter(w => w.metadata.id === 'activity'), [widgets]);
-  const analyticsWidgets = useMemo(() => widgets.filter(w => w.metadata.id !== 'activity'), [widgets]);
+  const overviewWidgets = useMemo(() => widgets.filter(w => w.metadata.id === 'activity' || w.metadata.id === 'todays-work'), [widgets]);
+  const analyticsWidgets = useMemo(() => widgets.filter(w => w.metadata.id !== 'activity' && w.metadata.id !== 'todays-work'), [widgets]);
 
   return (
     <div className="flex flex-col h-full" data-papercut-context="Dashboard">

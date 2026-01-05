@@ -19,6 +19,8 @@ export interface FeatureFlags {
 	"dashboard.widgets.avgAlertAge": boolean;
 	/** Controls visibility of the Avg. Case Processing Time dashboard widget. */
 	"dashboard.widgets.avgCaseProcessing": boolean;
+	/** Controls visibility of the Today's Work dashboard widget. */
+	"dashboard.widgets.todaysWork": boolean;
 	/** Placeholder for advanced reporting filters. */
 	"reports.advancedFilters": boolean;
 	/** Placeholder for case bulk actions tooling. */
@@ -41,6 +43,7 @@ const FEATURE_FLAG_DEFAULTS: FeatureFlags = {
 	"dashboard.widgets.alertsByDescription": true,
 	"dashboard.widgets.avgAlertAge": true,
 	"dashboard.widgets.avgCaseProcessing": true,
+	"dashboard.widgets.todaysWork": true,
 	"reports.advancedFilters": false,
 	"cases.bulkActions": false,
 	"settings.devTools": import.meta.env.DEV,
