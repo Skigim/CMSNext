@@ -85,7 +85,7 @@ export function RecentCasesWidget({
       </CardHeader>
       <CardContent>
         {hasRecentCases ? (
-          <ScrollArea className="h-[300px] pr-4">
+          <ScrollArea className="h-52 pr-4">
             <div className="space-y-2">
               {recentCases.map((caseData) => (
                 <div

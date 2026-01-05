@@ -101,7 +101,7 @@
 
 - [x] Reusable `PinButton` component
 - [x] Pin button on TodaysWorkWidget case items
-- [x] Pin button on RecentCasesWidget case items  
+- [x] Pin button on RecentCasesWidget case items
 - [x] Pin button on ActivityWidget case items
 - [x] Pin button on ActivityTimelineWidget case items
 - [x] Pin action available everywhere cases are displayed

@@ -79,7 +79,7 @@ export function MainLayout({
         onNewCase={onNewCase}
       />
       <SidebarInset>
-        <header className="flex h-16 shrink-0 items-center justify-between border-b px-4">
+        <header className="flex h-12 shrink-0 items-center justify-between border-b px-4">
           <div className="flex items-center gap-2">
             <SidebarTrigger className="-ml-1" />
             <Separator orientation="vertical" className="mr-2 h-4" />
@@ -112,8 +112,8 @@ export function MainLayout({
           </div>
           <AutosaveStatusBadge summary={autosaveStatus} />
         </header>
-        <div className="flex flex-1 flex-col gap-4 p-4 pt-0">
-          <div className="min-h-[100vh] flex-1 rounded-xl bg-muted/50 p-4">
+        <div className="flex flex-1 flex-col overflow-hidden">
+          <div className="flex-1 overflow-auto rounded-xl bg-muted/50">
             {children}
           </div>
         </div>

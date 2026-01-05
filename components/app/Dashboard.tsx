@@ -264,25 +264,17 @@ export function Dashboard({
       />
 
       {/* Main Content */}
-      <div className="flex-1 overflow-auto px-6 py-6">
-        <div className="space-y-6">
-          {/* Header */}
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-3xl font-bold text-foreground">Dashboard</h1>
-              <p className="text-muted-foreground mt-1">Overview of your case management system</p>
-            </div>
-          </div>
-
-          <Tabs defaultValue="overview" className="space-y-4">
+      <div className="flex-1 overflow-auto px-4 py-3">
+        <div className="space-y-3">
+          <Tabs defaultValue="overview" className="space-y-3">
             <TabsList>
               <TabsTrigger value="overview">Overview</TabsTrigger>
               <TabsTrigger value="analytics">Analytics</TabsTrigger>
             </TabsList>
 
-            <TabsContent value="overview" className="space-y-6">
+            <TabsContent value="overview" className="space-y-4">
               <div>
-                <h2 className="text-lg font-semibold text-foreground mb-4">Recent Activity</h2>
+                <h2 className="text-sm font-semibold text-muted-foreground mb-2">Recent Activity</h2>
                 <WidgetRegistry
                   widgets={overviewWidgets}
                   gridClassName="grid grid-cols-1 lg:grid-cols-2 gap-4"
@@ -291,7 +283,7 @@ export function Dashboard({
               </div>
             </TabsContent>
 
-            <TabsContent value="analytics" className="space-y-6">
+            <TabsContent value="analytics" className="space-y-4">
               <WidgetRegistry
                 widgets={analyticsWidgets}
                 gridClassName="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"

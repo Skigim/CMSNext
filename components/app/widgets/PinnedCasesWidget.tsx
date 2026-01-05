@@ -71,7 +71,7 @@ export function PinnedCasesWidget({
       </CardHeader>
       <CardContent>
         {hasPinnedCases ? (
-          <ScrollArea className="h-[300px] pr-4">
+          <ScrollArea className="h-52 pr-4">
             <div className="space-y-2">
               {pinnedCases.map((caseData) => (
                 <div

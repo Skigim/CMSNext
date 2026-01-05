@@ -101,7 +101,7 @@ export const QuickActionsBar = memo(function QuickActionsBar({
       className="sticky top-0 z-20 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80"
       data-papercut-context="QuickActionsBar"
     >
-      <div className="flex items-center gap-3 px-6 py-4">
+      <div className="flex items-center gap-3 px-4 py-2">
         {/* Global Search */}
         <div className="flex-1 max-w-md relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />

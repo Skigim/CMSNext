@@ -92,8 +92,8 @@ export function TodaysWorkWidget({
       </CardHeader>
       <CardContent>
         {hasPriorityCases ? (
-          <ScrollArea className="h-[400px] pr-4">
-            <div className="space-y-3">
+          <ScrollArea className="h-60 pr-4">
+            <div className="space-y-2">
               {priorityCases.map((priorityCase) => {
                 const { case: caseData, score, reason } = priorityCase;
                 const level = getPriorityLevel(score);
