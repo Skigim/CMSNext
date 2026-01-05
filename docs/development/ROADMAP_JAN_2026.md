@@ -1,320 +1,259 @@
 # CMSNext Roadmap - January 2026
 
-**Report Date:** January 2, 2026  
-**Branch:** dev  
-**Focus:** Scalability, Domain Architecture, and Data Intelligence  
-**Status:** Week 0 Complete ✅ | Week 1 Starting
+**Report Date:** January 5, 2026  
+**Branch:** main  
+**Focus:** Dashboard Transformation  
+**Status:** Week 1 Complete ✅ | Phase 1-2 Complete ✅
 
 ---
 
 ## 🎯 January Objectives
 
-1. **Architectural Evolution** - Establish a pure **Domain Layer** to isolate business rules from React/Persistence.
-2. **UI Scalability** - Implement virtualization for lists to support 5,000+ item datasets.
-3. **Data Intelligence** - Deploy a charting engine and "Predictive" widgets (Trends/Forecasting).
-4. **Tech Debt Reduction** - Reduce oversized files flagged in December audit.
+1. **Dashboard Transformation** - Transform the dashboard from a passive display into an active command center.
+2. **User Workflow Optimization** - Surface priority work, reduce navigation friction, enable inline actions.
+3. **Personalization** - Allow users to customize their dashboard experience.
+4. **Domain Layer Foundation** - Establish patterns for pure business logic extraction (deferred from original plan).
+
+---
+
+## 📋 Dashboard Transformation Plan
+
+### Phase 1: Quick Actions Hub ✅ COMPLETE
+
+> _Add a prominent action bar at the top of the dashboard with instant access to global search, new case creation, bulk operations, and import/export. Think of it as the "command center" where users initiate most actions._
+
+**PR:** #90  
+**Status:** Merged to main
+
+**Delivered:**
+
+- [x] `QuickActionsBar` component with search, new case, bulk ops, import/export
+- [x] Global search integration with `useAppViewState`
+- [x] Keyboard shortcut support (Ctrl+N new case, / focus search)
+- [x] Responsive design with collapsible actions on mobile
+
+---
+
+### Phase 2: Priority Task Queue ✅ COMPLETE
+
+> _Create a new "Today's Work" widget that surfaces cases requiring immediate attention—priority flags, approaching deadlines, unresolved alerts, and recent modifications. Users start their day here instead of hunting through case lists._
+
+**PR:** #93  
+**Status:** Merged to main
+
+**Delivered:**
+
+- [x] `TodaysWorkWidget` component showing prioritized cases
+- [x] `domain/dashboard/priorityQueue.ts` - Pure priority scoring logic
+  - `calculatePriorityScore()` - 100pts/alert, 75pts/priority, 50pts/24h modification
+  - `getPriorityCases()` - Returns top N priority cases
+  - `getPriorityReason()` - Human-readable reason strings
+- [x] `useTodaysWork` hook bridging UI and domain
+- [x] Priority badges (high/medium/low) with color coding
+- [x] One-click navigation to case detail
+- [x] 31 unit tests for domain logic
+- [x] Feature flag: `dashboard.widgets.todaysWork`
+- [x] 2-column layout with placeholder for Phase 3 widget
+
+---
+
+### Phase 3: Recent & Pinned Cases 🚧 IN PROGRESS
+
+> _Add widgets for "Recently Viewed Cases" (last 5-10 accessed) and "Pinned Cases" (user favorites) with one-click navigation and inline status/alert indicators. Eliminates repetitive navigation for frequently accessed cases._
+
+**Target:** Week 2 (Jan 6-12)
+
+#### Tasks
+
+- [ ] Create `domain/dashboard/recentCases.ts` - Pure logic for tracking/retrieving recent cases
+- [ ] Create `domain/dashboard/pinnedCases.ts` - Pure logic for pin/unpin operations
+- [ ] Add `recentlyViewed` array to user preferences storage
+- [ ] Add `pinnedCaseIds` array to user preferences storage
+- [ ] Create `useRecentCases` hook
+- [ ] Create `usePinnedCases` hook
+- [ ] Create `RecentCasesWidget` component
+- [ ] Create `PinnedCasesWidget` component
+- [ ] Add pin/unpin button to CaseCard and CaseDetail
+- [ ] Update 2-column layout: Today's Work + Recent/Pinned
+- [ ] Add feature flags: `dashboard.widgets.recentCases`, `dashboard.widgets.pinnedCases`
+- [ ] Write 20+ unit tests for domain logic
+
+#### Technical Notes
+
+**Storage approach:**
+
+```typescript
+// In user preferences (encrypted local file)
+interface UserDashboardPrefs {
+  recentlyViewed: Array<{ caseId: string; viewedAt: string }>; // Last 10
+  pinnedCaseIds: string[]; // User favorites
+}
+```
+
+**Widget placement:**
+
+- Replace `PlaceholderWidget` with `RecentCasesWidget`
+- Add `PinnedCasesWidget` as third widget in Overview tab
+
+---
+
+### Phase 4: Inline Quick Actions 📋 PLANNED
+
+> _Enable status updates, quick note additions, and alert resolution directly from dashboard case cards without navigating away. Every case card becomes actionable with inline dropdowns and modals._
+
+**Target:** Week 2-3 (Jan 9-15)
+
+#### Tasks
+
+- [ ] Add inline status dropdown to dashboard case cards
+- [ ] Add "Quick Note" button with popover form
+- [ ] Add "Resolve Alert" action for cases with alerts
+- [ ] Ensure all mutations trigger proper storage sync
+- [ ] Add optimistic UI updates with rollback on failure
+- [ ] Test accessibility for all inline actions
+- [ ] Write integration tests for inline workflows
+
+---
+
+### Phase 5: Dashboard Personalization 📋 PLANNED
+
+> _Allow users to show/hide widgets, reorder them, and create custom dashboard presets (e.g., "Morning Briefing" vs. "Analytics Deep Dive"). Store preferences in encrypted local files following existing filesystem architecture._
+
+**Target:** Week 3 (Jan 13-19)
+
+#### Tasks
+
+- [ ] Create `DashboardSettings` modal for widget visibility
+- [ ] Implement widget reordering with drag-and-drop
+- [ ] Create preset system (save/load dashboard configurations)
+- [ ] Wire feature flags to actual widget visibility toggles
+- [ ] Store preferences in encrypted user settings file
+- [ ] Add "Reset to Default" option
+- [ ] Write tests for preference persistence
+
+---
+
+### Phase 6: Navigation & Context Flow 📋 PLANNED
+
+> _Make the dashboard the central hub that all workflows return to—preserve scroll position, selected tabs, and widget states when navigating away and back. Add "Return to Dashboard" breadcrumbs and enhance keyboard shortcuts for dashboard-specific actions._
+
+**Target:** Week 4 (Jan 20-26)
+
+#### Tasks
+
+- [ ] Preserve dashboard scroll position on navigation
+- [ ] Preserve selected tab (Overview/Analytics) on return
+- [ ] Add "Return to Dashboard" breadcrumb to case detail views
+- [ ] Implement dashboard-specific keyboard shortcuts:
+  - `D` - Focus Today's Work widget
+  - `R` - Focus Recent Cases widget
+  - `P` - Focus Pinned Cases widget
+  - `Tab` - Cycle through widgets
+- [ ] Add widget focus indicators for keyboard navigation
+- [ ] Write E2E tests for navigation preservation
 
 ---
 
 ## 📅 Weekly Plan
 
-### Week 0: Audit Response & Quick Wins (Dec 30 - Jan 1)
+### Week 1: Foundation (Jan 2-5) ✅ COMPLETE
 
-_Focus: Address December 2025 audit findings with low-risk extractions._
-
-#### Refactoring Targets (from Audit)
-
-| File                     | Current Lines | Target | Extraction                                     |
-| ------------------------ | ------------- | ------ | ---------------------------------------------- |
-| `AutosaveFileService.ts` | 1844          | <1200  | Extract `IndexedDBHandleStore` (~100 lines)    |
-| `CaseService.ts`         | ~~1002~~ 761  | <700   | ✅ Already reduced via prior refactoring       |
-| `DataManager.ts`         | 1136          | —      | Defer (thin facade, splitting adds complexity) |
-
-#### Tasks
-
-- [x] ~~Extract `IndexedDBHandleStore` from `AutosaveFileService.ts`~~ Done (213 lines extracted)
-- [x] ~~Extract `CaseBulkOperationsService` from `CaseService.ts`~~ Already at 761 lines
-- [x] ~~Add unit tests for extracted modules~~ `IndexedDBHandleStore.test.ts` added
-- [x] ~~Fix 3 lint warnings (QuickCaseModal.tsx, alertsData.ts)~~ 0 lint warnings
+- [x] Phase 1: Quick Actions Hub (PR #90)
+- [x] Phase 2: Today's Work Widget (PR #93)
+- [x] Domain layer pattern established (`domain/dashboard/priorityQueue.ts`)
+- [x] 2-column dashboard layout implemented
+- [x] Repository memories documented (PR #91)
+- [x] 683 tests passing
 
 ---
 
-### Week 1: The Domain Core (Jan 2-8)
+### Week 2: Recent & Pinned + Inline Actions (Jan 6-12)
 
-_Focus: Establishing the new architectural pattern and extracting significant business logic._
+_Focus: Complete Phase 3 and start Phase 4_
 
-**Detailed plan:** [WEEK1_DOMAIN_LAYER_PLAN.md](WEEK1_DOMAIN_LAYER_PLAN.md)
+#### Monday-Tuesday: Recent Cases
 
-#### Codebase Analysis
+- [ ] Domain logic for recent case tracking
+- [ ] Storage integration for view history
+- [ ] `RecentCasesWidget` component
 
-**Largest Hooks (extraction targets):**
+#### Wednesday-Thursday: Pinned Cases
 
-| Hook                        | Lines | Extractable Logic                |
-| --------------------------- | ----- | -------------------------------- |
-| `useFinancialItems.ts`      | 475   | Calculations, filtering          |
-| `useFinancialItemFlow.ts`   | 447   | Validation ✅, transforms        |
-| `useKeyboardShortcuts.ts`   | 370   | —                                |
-| `useCaseListPreferences.ts` | 369   | Filtering, sorting logic         |
-| `useAVSImportFlow.ts`       | 336   | AVS parsing, duplicate detection |
-| `useCategoryEditorState.ts` | 323   | Duplicate detection ✅           |
-| `useFormValidation.ts`      | 319   | Zod schemas (already pure)       |
-| `useNotes.ts`               | 318   | Note sorting                     |
-| `useWidgetData.ts`          | 269   | All widget calculations          |
-| `useCaseActivityLog.ts`     | 247   | Activity filtering, analytics    |
+- [ ] Domain logic for pin/unpin
+- [ ] Storage integration for pins
+- [ ] `PinnedCasesWidget` component
+- [ ] Pin button on case cards
 
-**Largest Utils (pure logic candidates):**
+#### Friday-Sunday: Inline Actions Start
 
-| Util                      | Lines | Pure Logic                       |
-| ------------------------- | ----- | -------------------------------- |
-| `widgetDataProcessors.ts` | 486   | ~400 lines pure calculations     |
-| `alertsData.ts`           | 850   | Alert status, filtering, sorting |
-| `avsParser.ts`            | 200   | Pure AVS text parsing            |
-| `phoneFormatter.ts`       | 180   | Phone formatting/validation      |
-| `activityReport.ts`       | 145   | Activity analytics               |
-
-#### Day 1: Foundation ✅
-
-- [x] ~~Define Domain pattern (functional, not OOP)~~ See `.github/agents/DOMAIN.md`
-- [x] ~~Create domain structure~~ `domain/financials/`, `domain/validation/`, `domain/cases/`
-- [x] ~~Extract `validateFinancialItem()`~~ 14 tests
-- [x] ~~Extract `findDuplicateIndices()`~~ 12 tests
-- [x] ~~Wire both editing paths~~ Modal + inline card
-- [x] ~~Update `project-structure-guidelines.md`~~ Done
-- [x] ~~Extract case summary formatting functions~~ 5 functions, 40 tests:
-  - `formatRetroMonths()` - retroMonths array → "Yes (Jan-Mar 2024)"
-  - `calculateAge()` - DOB → age
-  - `formatVoterStatus()` - status → display text
-  - `calculateAVSTrackingDates()` - consent date → submit/5-day/11-day
-  - `extractKnownInstitutions()` - resources → bank institution names
-- [x] ~~Update `caseSummaryGenerator.ts`~~ Enhanced with domain functions
-
-#### Day 2-3 (Weekend): Alerts & Cases Domain
-
-- [ ] Create `domain/alerts/` module
-- [ ] Extract `isAlertResolved()` from `alertsData.ts` (~15 lines)
-- [ ] Extract `filterOpenAlerts()` from `alertsData.ts` (~10 lines)
-- [ ] Extract `sortAlertsByDueDate()` from `AlertSection.tsx` (~15 lines)
-- [ ] Extract `filterCases()` from `useCaseListPreferences.ts` (~60 lines)
-- [ ] Extract `sortCases()` from `useCaseListPreferences.ts` (~60 lines)
-- [ ] Add tests for alerts + cases domain (~45 tests)
-
-#### Day 4-5 (Weekend): Widget Analytics & Notes
-
-- [ ] Create `domain/statistics/` module
-- [ ] Extract `calculateAverage()`, `calculateMedian()` from `widgetDataProcessors.ts` (~25 lines)
-- [ ] Extract `calculateAlertsPerDay()` from `widgetDataProcessors.ts` (~50 lines)
-- [ ] Extract `calculateCasesByStatus()` from `widgetDataProcessors.ts` (~40 lines)
-- [ ] Create `domain/notes/` and `domain/activity/` modules
-- [ ] Extract `sortNotesByDate()` from `useNotes.ts` (~5 lines)
-- [ ] Extract `filterActivitiesByDateRange()` from `useCaseActivityLog.ts` (~30 lines)
-- [ ] Extract `groupActivitiesByDay()` from `activityReport.ts` (~50 lines)
-- [ ] Add tests for statistics/notes/activity (~50 tests)
-
-#### Week 1 Targets
-
-| Metric                 | Target | Current    |
-| ---------------------- | ------ | ---------- |
-| Domain modules         | 6      | 3 ✅       |
-| Domain functions       | 15+    | 7 ✅       |
-| Domain tests           | 100+   | 66 ✅      |
-| Lines extracted        | ~400   | ~100       |
-| Hooks consuming domain | 8+     | 4 ✅       |
-| Test count             | —      | 638 ✅     |
-
-**Extraction Candidates (Full Audit):**
-
-| Priority | Source                      | Logic                       | Target                              | Status  |
-| -------- | --------------------------- | --------------------------- | ----------------------------------- | ------- |
-| P0       | `useFinancialItemFlow.ts`   | Form validation             | `domain/financials/validation.ts`   | ✅ Done |
-| P0       | `useCategoryEditorState.ts` | Duplicate detection         | `domain/validation/duplicates.ts`   | ✅ Done |
-| P0       | `caseSummaryGenerator.ts`   | Retro/age/voter/AVS format  | `domain/cases/formatting.ts`        | ✅ Done |
-| P0       | `alertsData.ts`             | `isAlertResolved`           | `domain/alerts/status.ts`           | Pending |
-| P0       | `alertsData.ts`             | `filterOpenAlerts`          | `domain/alerts/filtering.ts`        | Pending |
-| P1       | `useCaseListPreferences.ts` | Case filtering (~60 lines)  | `domain/cases/filtering.ts`         | Pending |
-| P1       | `useCaseListPreferences.ts` | Case sorting (~60 lines)    | `domain/cases/sorting.ts`           | Pending |
-| P1       | `AlertSection.tsx`          | Alert due date sorting      | `domain/alerts/sorting.ts`          | Pending |
-| P2       | `widgetDataProcessors.ts`   | Average/median calculations | `domain/statistics/calculations.ts` | Pending |
-| P2       | `widgetDataProcessors.ts`   | Alerts per day              | `domain/alerts/analytics.ts`        | Pending |
-| P2       | `widgetDataProcessors.ts`   | Cases by status             | `domain/cases/analytics.ts`         | Pending |
-| P2       | `useNotes.ts`               | Note sorting                | `domain/notes/sorting.ts`           | Pending |
-| P2       | `useCaseActivityLog.ts`     | Activity date filtering     | `domain/activity/filtering.ts`      | Pending |
-| P2       | `activityReport.ts`         | Activity grouping           | `domain/activity/analytics.ts`      | Pending |
-| P3       | `avsParser.ts`              | Pure AVS parsing            | `domain/financials/avsParser.ts`    | Pending |
-| P3       | `phoneFormatter.ts`         | Phone validation/formatting | `domain/formatting/phone.ts`        | Pending |
+- [ ] Inline status dropdown on dashboard cards
+- [ ] Quick note popover
 
 ---
 
-### Week 2: UI Scalability & Virtualization (Jan 9-15)
+### Week 3: Inline Actions + Personalization (Jan 13-19)
 
-_Focus: Rendering performance for large datasets._
+_Focus: Complete Phase 4 and Phase 5_
 
-#### Prep Work
+#### Monday-Wednesday: Finish Inline Actions
 
-- [ ] Profile `CaseList` rendering time with 5,000 mock cases.
-- [ ] Audit `CaseCard` for expensive re-renders.
+- [ ] Alert resolution from dashboard
+- [ ] Optimistic updates with rollback
+- [ ] Accessibility testing
 
-#### Features
+#### Thursday-Sunday: Dashboard Personalization
 
-- [ ] **Virtualization Engine:** Implement `react-window` or `tanstack-virtual` for the main Case List.
-- [ ] **Windowing Hooks:** Create `useVirtualWindow` to manage scroll state and item measurement.
-- [ ] **Performance Monitor:** Add "Render Count" and "FPS" to the Debug/Diagnostics panel.
-
-#### Refactoring & Polish
-
-- [ ] Ensure "Bulk Actions" (multi-select) works seamlessly with virtualized items (items outside the DOM).
+- [ ] Widget visibility settings
+- [ ] Drag-and-drop reordering
+- [ ] Preset system
 
 ---
 
-### Week 3: Visual Intelligence (Jan 16-22)
+### Week 4: Navigation & Polish (Jan 20-26)
 
-_Focus: Moving from "Tracking" to "Insights"._
+_Focus: Phase 6 and final polish_
 
-#### Prep Work
-
-- [ ] Evaluate charting libraries (Recharts is recommended for React/Tailwind compatibility).
-
-#### Features
-
-- [ ] **Analytics Engine:** Create `useAnalyticsData` hook to aggregate domain data for charts.
-- [ ] **Trend Widget:** "Assets over Time" line chart (using Historical Financial Data).
-- [ ] **Distribution Widget:** "Case Status" pie/donut chart with drill-down interaction.
-- [ ] **Forecast Widget:** Simple linear projection of "Spend-down" completion dates.
-
-#### Refactoring & Polish
-
-- [ ] Add unit tests for analytics aggregators.
-- [ ] Update Feature Catalogue with new "Analytics" section.
+- [ ] Scroll/tab state preservation
+- [ ] Breadcrumb navigation
+- [ ] Dashboard keyboard shortcuts
+- [ ] E2E testing
+- [ ] Documentation updates
+- [ ] February roadmap planning
 
 ---
 
-### Week 4: Polish & Buffer (Jan 23-31)
+## 📊 Progress Metrics
 
-_Focus: Integration testing and documentation._
-
-#### Tasks
-
-- [ ] End-to-end testing of Domain → Service → UI flow.
-- [ ] Performance regression testing (ensure no slowdowns from architecture changes).
-- [ ] Documentation updates for new patterns.
-- [ ] Plan February roadmap.
+| Metric              | Current | Target |
+| ------------------- | ------- | ------ |
+| Phases complete     | 2       | 6      |
+| Dashboard widgets   | 10      | 12+    |
+| Test count          | 683     | 750+   |
+| Feature flags wired | 9       | 12     |
 
 ---
 
-## 📊 Success Metrics
+## 🗂️ Deferred Work
 
-| Metric                       | Start | Week 0  | Week 1 | Week 2 | Week 3 | Target |
-| ---------------------------- | ----- | ------- | ------ | ------ | ------ | ------ |
-| Business Logic Coverage      | 100%  | 100% ✅ |        |        |        | 100%   |
-| Max Renderable Items (60fps) | ~100  |         |        | 5000+  |        | 5000+  |
-| Logic in Components/Hooks    | High  |         | Med    | Low    | Low    | Low    |
-| New Analytics Widgets        | 0     |         |        |        | 3      | 3      |
-| Test count                   | 538   | 572 ✅  |        |        |        | 600+   |
-| AutosaveFileService.ts lines | 1875  | 1844    |        |        |        | <1200  |
-| CaseService.ts lines         | 1002  | 761 ✅  |        |        |        | <700   |
-| Lint warnings                | 3     | 0 ✅    |        |        |        | 0      |
+### Domain Layer Expansion (Moved to February)
 
----
+The domain layer pattern was successfully established in Phase 2 with `domain/dashboard/priorityQueue.ts`. Full expansion to other areas (alerts, cases, financials, statistics) is deferred to February to maintain focus on dashboard transformation.
 
-## 🔴 Priority by Week
+**Candidates for February:**
 
-### Week 1 - P0 (Architecture)
-
-1. Establish `src/domain` structure.
-2. Port first major module (Financials) to Domain pattern.
-3. Decouple Service Layer from direct logic (Service becomes coordinator).
-
-### Week 2 - P0 (Scalability)
-
-1. Virtualize Case List.
-2. Optimize bulk selection performance.
-
-### Week 3 - P0 (Insights)
-
-1. Integrate Charting Library.
-2. Ship Trend & Distribution widgets.
+- `domain/alerts/` - Alert filtering, sorting, status logic
+- `domain/cases/` - Case filtering, sorting, search logic
+- `domain/statistics/` - Widget calculation extraction
+- `domain/notes/` - Note sorting and filtering
 
 ---
 
-## 🚫 Carried Over from December
+## 📚 Related Documents
 
-- [x] ~~Dialog a11y warnings~~ - Fixed Dec 22
-- [x] ~~Password input form wrapper~~ - Fixed Dec 22
-- [ ] **File permission recovery flow** - Surface reconnect UI on permission loss
-
----
-
-## 📋 Paper Cuts Backlog (Dec 22 Export)
-
-| Issue                                          | Priority | Target Week |
-| ---------------------------------------------- | -------- | ----------- |
-| ~~Alert optimistic updates inconsistent~~      | ~~P1~~   | ✅ Done     |
-| ~~Financial item history/verification sync~~   | ~~P1~~   | ✅ Done     |
-| ~~Alerts in popover (like notes)~~             | ~~P2~~   | ✅ Done     |
-| Consolidate action log per case                | P3       | Week 3      |
-| Remove reports tab, add filtering to Case List | P3       | Week 3      |
+- [Feature Catalogue](feature-catalogue.md) - Complete feature inventory
+- [Project Structure Guidelines](project-structure-guidelines.md) - Architecture patterns
+- [December 2025 Roadmap](archive/2025/ROADMAP_DEC_2025.md) - Previous month
 
 ---
 
-## � Out of Scope (January)
-
-| Item                    | Notes                                                                                              |
-| ----------------------- | -------------------------------------------------------------------------------------------------- |
-| **PWA Infrastructure**  | Service worker, manifest, install prompt, update flow. Target Chrome/Edge only. Revisit February+. |
-| **Tauri Desktop Build** | Native app wrapper. Depends on PWA work being complete first.                                      |
-
----
-
-## �📝 Notes
-
-### The Domain Layer Shift
-
-Moving to a Domain Layer means our `Services` (e.g., `CaseService`) will transition from _containing_ logic to _orchestrating_ it.
-
-- **Before:** Service calculates eligibility and saves.
-- **After:** Service loads Entity, Entity calculates eligibility, Service saves result.
-
-This allows us to test the "Eligibility" logic in isolation without mocking the FileSystem.
-
-### Layer Responsibilities (January Target)
-
-```
-┌─────────────────────────────────────────────────────────┐
-│  UI Layer (Components)                                  │
-│  - Renders data, handles user input                     │
-│  - Calls Hooks, never Services directly                 │
-└─────────────────────────────────────────────────────────┘
-                          ↓
-┌─────────────────────────────────────────────────────────┐
-│  Hooks Layer                                            │
-│  - React state management                               │
-│  - Delegates to Services                                │
-└─────────────────────────────────────────────────────────┘
-                          ↓
-┌─────────────────────────────────────────────────────────┐
-│  Service Layer (DataManager + Services)                 │
-│  - Orchestrates operations                              │
-│  - Loads/saves via FileStorageService                   │
-│  - Delegates calculations to Domain                     │
-└─────────────────────────────────────────────────────────┘
-                          ↓
-┌─────────────────────────────────────────────────────────┐
-│  Domain Layer (NEW)                                     │
-│  - Pure business logic, no I/O                          │
-│  - Entities, Value Objects, Use Cases                   │
-│  - Fully testable without mocks                         │
-└─────────────────────────────────────────────────────────┘
-```
-
-### Virtualization Strategy
-
-For lists with 5,000+ items:
-
-1. **react-window** - Lightweight, battle-tested
-2. **@tanstack/virtual** - More features, newer API
-
-Decision point: Week 2 prep work will benchmark both.
-
----
-
-**Prepared by:** GitHub Copilot  
-**Last updated:** January 2, 2026
+_Last updated: January 5, 2026_
