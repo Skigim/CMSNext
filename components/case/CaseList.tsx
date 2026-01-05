@@ -453,13 +453,17 @@ export function CaseList({
   }, [visibleCaseIds, isSelected, cases]);
 
   return (
-    <div className="space-y-6" data-papercut-context="CaseList">
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-foreground">Case Management</h1>
-          <p className="text-muted-foreground mt-1">
-            Manage and track all cases in your workspace
-          </p>
+    <div className="space-y-3" data-papercut-context="CaseList">
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+        <div className="relative w-full max-w-md">
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            placeholder="Search cases by name or MCN..."
+            value={searchTerm}
+            onChange={handleSearchChange}
+            className="pl-10"
+            aria-label="Search cases"
+          />
         </div>
         <div className="flex items-center gap-2">
           {showDevTools && (
@@ -494,18 +498,7 @@ export function CaseList({
         </div>
       </div>
 
-      <div className="relative w-full max-w-xl">
-        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-        <Input
-          placeholder="Search cases by name or MCN..."
-          value={searchTerm}
-          onChange={handleSearchChange}
-          className="pl-10"
-          aria-label="Search cases"
-        />
-      </div>
-
-      <div className="flex flex-wrap items-center gap-3">
+      <div className="flex flex-wrap items-center gap-2">
         <CaseFilters 
           filters={filters} 
           onFiltersChange={setFilters} 

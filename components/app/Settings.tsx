@@ -129,15 +129,8 @@ export function Settings({ cases, onAlertsCsvImported }: SettingsProps) {
   };
 
   return (
-    <div className="container mx-auto py-6 px-6" data-papercut-context="Settings">
-      <div className="mb-6">
-        <h1 className="text-3xl font-bold text-foreground">Settings</h1>
-        <p className="text-muted-foreground">
-          Manage your case tracking system preferences and configuration.
-        </p>
-      </div>
-
-      <Tabs defaultValue="data" className="space-y-6">
+    <div className="container mx-auto py-3 px-4" data-papercut-context="Settings">
+      <Tabs defaultValue="data" className="space-y-4">
         <TabsList className={`grid w-full ${showDevTools ? 'grid-cols-8' : 'grid-cols-7'}`}>
           <TabsTrigger value="data" className="flex items-center gap-2">
             <Database className="h-4 w-4" />
