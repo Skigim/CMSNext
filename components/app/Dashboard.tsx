@@ -127,7 +127,7 @@ export function Dashboard({
           id: 'quick-stats',
           title: 'Quick Stats',
           description: 'At-a-glance metrics',
-          priority: 0.5,
+          priority: 2,
         },
         component: PlaceholderWidgetLazy,
         props: { title: 'Quick Stats', description: 'At-a-glance metrics coming soon' },
@@ -209,7 +209,7 @@ export function Dashboard({
           id: 'activity',
           title: 'Activity',
           description: 'Recent timeline and daily reports',
-          priority: 7,
+          priority: 1,
           refreshInterval: 2 * 60 * 1000, // 2 minutes
           featureFlag: 'dashboard.widgets.activityTimeline',
         },
