@@ -45,15 +45,28 @@
 
 - [x] `TodaysWorkWidget` component showing prioritized cases
 - [x] `domain/dashboard/priorityQueue.ts` - Pure priority scoring logic
-  - `calculatePriorityScore()` - 100pts/alert, 75pts/priority, 50pts/24h modification
+  - `calculatePriorityScore()` - Weighted scoring based on status and alert types
   - `getPriorityCases()` - Returns top N priority cases
   - `getPriorityReason()` - Human-readable reason strings
+  - Alert classification: `isAvsDay5Alert()`, `isVerificationDueAlert()`, `isMailRcvdClosedAlert()`
 - [x] `useTodaysWork` hook bridging UI and domain
 - [x] Priority badges (high/medium/low) with color coding
 - [x] One-click navigation to case detail
-- [x] 31 unit tests for domain logic
+- [x] 59 unit tests for domain logic
 - [x] Feature flag: `dashboard.widgets.todaysWork`
 - [x] 2-column layout with placeholder for Phase 3 widget
+
+**Priority Scoring Weights:**
+
+| Factor                           | Points   |
+| -------------------------------- | -------- |
+| Intake status                    | 1000     |
+| AVS Day 5 alerts                 | 500 each |
+| Verification Due / VR Due alerts | 400 each |
+| Mail on Closed alerts            | 400 each |
+| Other unresolved alerts          | 100 each |
+| Priority flag                    | 75       |
+| Modified in 24h                  | 50       |
 
 ---
 
@@ -228,7 +241,7 @@ _Focus: Phase 6 and final polish_
 | ------------------- | ------- | ------ |
 | Phases complete     | 2       | 6      |
 | Dashboard widgets   | 10      | 12+    |
-| Test count          | 683     | 750+   |
+| Test count          | 720     | 750+   |
 | Feature flags wired | 9       | 12     |
 
 ---

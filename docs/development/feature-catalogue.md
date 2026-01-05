@@ -23,19 +23,19 @@
 | Case Management       | 92     | →     | Retro/Waiver badges, enhanced header        |
 | Local-First Storage   | 90     | →     | AES-256 encryption, split login/welcome UX  |
 | Financial Operations  | 90     | →     | Auto-scroll on edit, date from history      |
-| Developer Enablement  | 89     | ↑     | 572 tests, IndexedDBHandleStore extracted   |
+| Developer Enablement  | 89     | ↑     | 720 tests, IndexedDBHandleStore extracted   |
 | Premium UI/UX         | 87     | →     | Stable scrollbar, instant sidebar, tooltips |
 | VR Generator          | 88     | →     | Date offset syntax {field+N} for any date   |
 | Data Portability      | 82     | →     | AVS import with update capability           |
 | Notes & Collaboration | 84     | →     | Click-to-copy notes, popover UI             |
 | Configurable Statuses | 78     | →     | Recently stabilized                         |
+| Dashboard & Insights  | 78     | ↑     | Quick Actions Hub + Today's Work widget     |
 | Legacy Migration      | 75     | →     | Dev-only, one-way                           |
 | Autosave & Recovery   | 75     | ↑     | IndexedDBHandleStore modularized            |
 | Feature Flags         | 72     | →     | In-memory only                              |
-| Dashboard & Insights  | 70     | →     | Framework ready                             |
 
-**Average Rating:** 83.7/100  
-**Test Status:** 572/572 passing (100%)
+**Average Rating:** 84.5/100  
+**Test Status:** 720/720 passing (100%)
 
 ---
 
@@ -391,49 +391,49 @@ Document generation feature group. Next phase: wire up template rendering to Fin
 
 ### Implementation Snapshot
 
-**Rating: 70/100** _(Updated December 3, 2025)_
+**Rating: 78/100** _(Updated January 5, 2026)_
 
-Dashboard features a production-ready widget registry framework with lazy loading, automatic error handling, and data freshness tracking. **December 3, 2025:** Streamlined Overview tab to focus on Activity Log only (AlertCenter and RecentCases widgets removed). Analytics tab provides comprehensive metrics widgets. Core metrics remain visible, and architecture scales for future expansion.
+Dashboard features a production-ready widget registry framework with lazy loading, automatic error handling, and data freshness tracking. **January 2026:** Dashboard Transformation initiative underway—Phase 1 (Quick Actions Hub) and Phase 2 (Today's Work widget) complete. Overview tab now features 2-column layout with priority task queue. Analytics tab provides comprehensive metrics widgets.
 
 ### Strengths
 
-- **Streamlined Overview**: Dashboard Overview tab focuses on Activity Log for recent activity; detailed analytics moved to dedicated Analytics tab
+- **Quick Actions Hub**: Prominent action bar with global search, new case creation, bulk operations, and import/export
+- **Today's Work Widget**: Priority task queue surfaces cases requiring immediate attention with weighted scoring
+- **Priority Scoring System**: Weighted algorithm prioritizes Intake status (1000pts), AVS Day 5 alerts (500pts), Verification/VR Due (400pts), Mail on Closed (400pts), other alerts (100pts), priority flags (75pts), recent modifications (50pts)
+- **Domain Layer Pattern**: Pure business logic in `domain/dashboard/priorityQueue.ts` with 59 unit tests
+- **Streamlined Overview**: 2-column layout with Today's Work and placeholder for upcoming widgets
 - **Widget Registry Framework**: Lazy loading via `React.lazy()` + Suspense with per-widget error boundaries prevents cascading failures
 - **Data Freshness Tracking**: All widgets display "Last updated: X minutes ago" via `useWidgetData` hook with configurable refresh intervals
 - **Responsive Grid Layout**: Widgets adapt to screen size (1 column mobile → 3 columns desktop) using shadcn grid system
 - **Real-Time Metrics**: Case Priority widget aggregates counts by urgency/status; Activity Timeline shows last 7 days of notes/status changes
 - **Performance Instrumentation**: `telemetryInstrumentation` tracks widget load times, data fetch duration, and error rates
 - **Composable Architecture**: New widgets can be added without modifying core registry; metadata-driven registration enables priority sorting
-- **Seamless Integration**: Activity log feeds data to Activity Timeline widget; case state drives Priority widget
 
 ### Gaps / Risks
 
-- No advanced analytics yet (trend lines, aging reports, predictive insights)—widgets focus on snapshot metrics only
-- Dashboard customization not supported; layout is fixed across all users
+- Dashboard customization not yet supported (Phase 5 planned); layout is fixed across all users
+- Recent Cases and Pinned Cases widgets in progress (Phase 3)
 - Widget bundle size growth uninspected; lazy loading helps but large dependencies could slow initial render
-- Accessibility testing for new widgets pending (axe-core integration); keyboard navigation not yet verified
-- Performance profiling for dashboard with 3+ widgets not yet captured
+- Accessibility testing for new widgets pending (axe-core integration)
 
-### Expansion Opportunities
+### Expansion Opportunities (Dashboard Transformation Roadmap)
 
-- Build interactive pipeline chart showing case progression through statuses
-- Add trend widget displaying workload distribution over time using lightweight visualization library
-- Support widget pinning/hiding for personal dashboard views
-- Integrate usage metrics telemetry to surface navigation hotspots and user workflows
-- Create onboarding mode with guided widget tour for new users
-- Develop alerting widget surfacing high-priority cases requiring immediate action
+- **Phase 3**: Recent & Pinned Cases widgets for quick access to frequently used cases
+- **Phase 4**: Inline quick actions (status updates, notes, alert resolution from dashboard)
+- **Phase 5**: Dashboard personalization (show/hide widgets, reorder, presets)
+- **Phase 6**: Navigation & context flow (scroll/tab preservation, keyboard shortcuts)
 
 ### Coverage & Telemetry
 
 - Integration test (`__tests__/components/Dashboard.test.tsx`) verifies widget registry rendering and error handling
+- Domain tests: `__tests__/domain/dashboard/priorityQueue.test.ts` - 59 tests for priority scoring logic
 - Hook suites: `useWidgetData` tested for data fetching, freshness tracking, and refresh intervals
-- Widget-specific tests: `__tests__/components/widgets/CasePriorityWidget.test.tsx` and `ActivityTimelineWidget.test.tsx` verify data aggregation and rendering
+- Widget-specific tests verify data aggregation and rendering
 - Performance markers tracked via `recordPerformanceMarker()` for each widget data fetch
-- Pending: manual dashboard load profiling and end-to-end performance baseline under realistic case volumes
 
 ### Owners / Notes
 
-Dashboard framework maintained by insights platform team. Widget development follows pattern documented in `docs/development/widget-development.md`. Coordinate new widgets with UX for consistent design and with platform team to validate performance impact before shipping.
+Dashboard framework maintained by insights platform team. Widget development follows pattern documented in `docs/development/widget-development.md`. Priority scoring weights configured in `domain/dashboard/priorityQueue.ts`. See January 2026 roadmap for Dashboard Transformation plan.
 
 ---
 
