@@ -330,19 +330,22 @@ export function ActivityWidget({ activityLogState, metadata, onViewCase }: Activ
 
   return (
     <Card>
-      <CardHeader className="pb-3">
-        <CardTitle>Activity</CardTitle>
-        <CardDescription>Recent timeline and daily reports</CardDescription>
-      </CardHeader>
-      <CardContent>
-        <Tabs defaultValue="timeline" className="w-full">
-          <TabsList className="grid w-full grid-cols-2 mb-4">
-            <TabsTrigger value="timeline">Timeline</TabsTrigger>
-            <TabsTrigger value="export">Export</TabsTrigger>
-          </TabsList>
-
+      <Tabs defaultValue="timeline" className="w-full">
+        <CardHeader className="pb-3">
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle>Activity</CardTitle>
+              <CardDescription>Recent timeline and daily reports</CardDescription>
+            </div>
+            <TabsList className="grid grid-cols-2">
+              <TabsTrigger value="timeline">Timeline</TabsTrigger>
+              <TabsTrigger value="export">Export</TabsTrigger>
+            </TabsList>
+          </div>
+        </CardHeader>
+        <CardContent>
           {/* Timeline Tab */}
-          <TabsContent value="timeline" className="space-y-3">
+          <TabsContent value="timeline" className="mt-0 space-y-3">
             {loading && !timeline ? (
               <div className="space-y-3">
                 {Array.from({ length: 4 }).map((_, i) => (
@@ -586,8 +589,8 @@ export function ActivityWidget({ activityLogState, metadata, onViewCase }: Activ
               </div>
             )}
           </TabsContent>
-        </Tabs>
-      </CardContent>
+        </CardContent>
+      </Tabs>
     </Card>
   );
 }
