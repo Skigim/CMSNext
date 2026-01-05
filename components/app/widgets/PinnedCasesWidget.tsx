@@ -2,16 +2,16 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Clock, History, X } from 'lucide-react';
+import { Pin, PinOff, Star } from 'lucide-react';
 import { CopyButton } from '@/components/common/CopyButton';
 import type { StoredCase } from '@/types/case';
-import { useRecentCases } from '@/hooks/useRecentCases';
+import { usePinnedCases } from '@/hooks/usePinnedCases';
 import { useMemo } from 'react';
 
 /**
- * Props for the Recent Cases Widget.
+ * Props for the Pinned Cases Widget.
  */
-interface RecentCasesWidgetProps {
+interface PinnedCasesWidgetProps {
   /** All cases from data manager (to resolve IDs to case data) */
   cases: StoredCase[];
   /** Handler to view a case */
@@ -19,40 +19,39 @@ interface RecentCasesWidgetProps {
 }
 
 /**
- * Recent Cases Widget Component
+ * Pinned Cases Widget Component
  *
- * Displays the last 10 cases the user viewed, enabling quick navigation
- * back to frequently accessed cases.
+ * Displays user's favorite/pinned cases for quick access.
  *
  * Features:
- * - Most recently viewed at top
  * - One-click navigation to case detail
- * - Clear individual entries or all history
+ * - Unpin button on each case
  * - Persists across sessions via localStorage
+ * - Maximum 20 pinned cases
  *
  * @example
  * ```tsx
- * <RecentCasesWidget 
+ * <PinnedCasesWidget 
  *   cases={cases} 
  *   onViewCase={handleViewCase}
  * />
  * ```
  */
-export function RecentCasesWidget({ 
+export function PinnedCasesWidget({ 
   cases, 
   onViewCase 
-}: RecentCasesWidgetProps) {
-  const { recentCaseIds, removeFromRecent, clearRecent } = useRecentCases();
+}: PinnedCasesWidgetProps) {
+  const { pinnedCaseIds, unpin, pinnedCount } = usePinnedCases();
 
   // Resolve case IDs to full case objects, filtering out deleted cases
-  const recentCases = useMemo(() => {
+  const pinnedCases = useMemo(() => {
     const caseMap = new Map(cases.map(c => [c.id, c]));
-    return recentCaseIds
+    return pinnedCaseIds
       .map(id => caseMap.get(id))
       .filter((c): c is StoredCase => c !== undefined);
-  }, [recentCaseIds, cases]);
+  }, [pinnedCaseIds, cases]);
 
-  const hasRecentCases = recentCases.length > 0;
+  const hasPinnedCases = pinnedCases.length > 0;
 
   return (
     <Card>
@@ -60,39 +59,27 @@ export function RecentCasesWidget({
         <div className="flex items-center justify-between">
           <div>
             <CardTitle className="flex items-center gap-2">
-              <History className="h-4 w-4 text-muted-foreground" />
-              Recently Viewed
+              <Pin className="h-4 w-4 text-muted-foreground" />
+              Pinned Cases
             </CardTitle>
-            <CardDescription>Quick access to cases you've viewed</CardDescription>
+            <CardDescription>Your favorite cases for quick access</CardDescription>
           </div>
-          <div className="flex items-center gap-2">
-            {hasRecentCases && (
-              <Button 
-                variant="ghost" 
-                size="sm" 
-                className="text-xs h-7"
-                onClick={clearRecent}
-              >
-                Clear all
-              </Button>
-            )}
-            <Badge variant="outline" className="text-xs">
-              {hasRecentCases ? `${recentCases.length} cases` : 'No history'}
-            </Badge>
-          </div>
+          <Badge variant="outline" className="text-xs">
+            {hasPinnedCases ? `${pinnedCount} pinned` : 'No pins'}
+          </Badge>
         </div>
       </CardHeader>
       <CardContent>
-        {hasRecentCases ? (
+        {hasPinnedCases ? (
           <ScrollArea className="h-[300px] pr-4">
             <div className="space-y-2">
-              {recentCases.map((caseData) => (
+              {pinnedCases.map((caseData) => (
                 <div
                   key={caseData.id}
                   className="flex gap-3 p-3 rounded-lg border border-border/50 bg-muted/30 hover:bg-muted/50 transition-colors group"
                 >
                   <div className="flex-shrink-0 mt-0.5">
-                    <Clock className="h-4 w-4 text-muted-foreground" />
+                    <Star className="h-4 w-4 text-amber-500 fill-amber-500" />
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-start justify-between gap-2 mb-1">
@@ -113,10 +100,10 @@ export function RecentCasesWidget({
                         variant="ghost"
                         size="sm"
                         className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
-                        onClick={() => removeFromRecent(caseData.id)}
-                        aria-label={`Remove ${caseData.name} from recent`}
+                        onClick={() => unpin(caseData.id)}
+                        aria-label={`Unpin ${caseData.name}`}
                       >
-                        <X className="h-3 w-3" />
+                        <PinOff className="h-3 w-3" />
                       </Button>
                     </div>
                     <div className="flex items-center gap-2">
@@ -144,9 +131,9 @@ export function RecentCasesWidget({
           </ScrollArea>
         ) : (
           <div className="py-12 text-center text-muted-foreground">
-            <History className="mx-auto mb-3 h-12 w-12 opacity-40" />
-            <p className="text-sm font-medium mb-1">No recent cases</p>
-            <p className="text-xs">Cases you view will appear here</p>
+            <Pin className="mx-auto mb-3 h-12 w-12 opacity-40" />
+            <p className="text-sm font-medium mb-1">No pinned cases</p>
+            <p className="text-xs">Pin cases from the case list for quick access</p>
           </div>
         )}
       </CardContent>
@@ -154,4 +141,4 @@ export function RecentCasesWidget({
   );
 }
 
-export default RecentCasesWidget;
+export default PinnedCasesWidget;

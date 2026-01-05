@@ -84,6 +84,12 @@ export {
   useSchemaValidation
 } from './useFormValidation';
 
+// Recent cases tracking
+export { useRecentCases } from './useRecentCases';
+
+// Pinned cases management
+export { usePinnedCases } from './usePinnedCases';
+
 /**
  * Usage examples:
  * 
