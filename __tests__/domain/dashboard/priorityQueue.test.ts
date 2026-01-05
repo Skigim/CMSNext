@@ -5,7 +5,7 @@
  * Tests cover all scoring criteria, edge cases, and sorting behavior.
  */
 
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import {
   calculatePriorityScore,
   getPriorityReason,
@@ -15,6 +15,7 @@ import {
   isMailRcvdClosedAlert,
   classifyAlert,
   getAlertScore,
+  getDaysSinceApplication,
 } from '../../../domain/dashboard/priorityQueue';
 import type { StoredCase, CaseStatus } from '../../../types/case';
 import type { AlertWithMatch } from '../../../utils/alertsData';
@@ -210,6 +211,54 @@ describe('Alert Classification Functions', () => {
       const alert = createMockAlert({ description: 'Generic Alert' });
       expect(getAlertScore(alert)).toBe(100);
     });
+  });
+});
+
+describe('getDaysSinceApplication', () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-01-05T12:00:00.000Z'));
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it('should return 0 for undefined application date', () => {
+    expect(getDaysSinceApplication(undefined)).toBe(0);
+  });
+
+  it('should return 0 for empty application date', () => {
+    expect(getDaysSinceApplication('')).toBe(0);
+  });
+
+  it('should return 0 for invalid application date', () => {
+    expect(getDaysSinceApplication('invalid-date')).toBe(0);
+  });
+
+  it('should return 0 for future application date', () => {
+    expect(getDaysSinceApplication('2026-01-10')).toBe(0);
+  });
+
+  it('should return correct days for application today', () => {
+    expect(getDaysSinceApplication('2026-01-05')).toBe(0);
+  });
+
+  it('should return correct days for application 5 days ago', () => {
+    expect(getDaysSinceApplication('2025-12-31')).toBe(5);
+  });
+
+  it('should return correct days for application 30 days ago', () => {
+    expect(getDaysSinceApplication('2025-12-06')).toBe(30);
+  });
+
+  it('should handle ISO timestamp format', () => {
+    expect(getDaysSinceApplication('2025-12-31T10:00:00.000Z')).toBe(5);
+  });
+
+  it('should accept custom now parameter for testing', () => {
+    const customNow = new Date('2026-01-10T12:00:00.000Z');
+    expect(getDaysSinceApplication('2026-01-05', customNow)).toBe(5);
   });
 });
 

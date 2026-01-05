@@ -10,12 +10,14 @@
  * 3. Verification Due / VR Due alerts (400 points each)
  * 4. Mail Rcvd on Closed alerts (400 points each)
  * 5. Other unresolved alerts (100 points each)
- * 6. Priority flags (75 points)
- * 7. Recent modifications (50 points)
+ * 6. Application age (30 points per day since application)
+ * 7. Priority flags (75 points)
+ * 8. Recent modifications (50 points)
  */
 
 import type { StoredCase } from '../../types/case';
 import type { AlertWithMatch } from '../../utils/alertsData';
+import { parseLocalDate } from '../../utils/dateFormatting';
 
 /**
  * Case with priority scoring information
@@ -90,6 +92,31 @@ export function getAlertScore(alert: AlertWithMatch): number {
 }
 
 /**
+ * Calculate days since application date.
+ * Returns 0 if application date is missing, invalid, or in the future.
+ * 
+ * @param applicationDate - Application date string (yyyy-MM-dd or ISO timestamp)
+ * @param now - Current date (for testing, defaults to now)
+ * @returns Number of days since application (0 or positive)
+ */
+export function getDaysSinceApplication(
+  applicationDate: string | undefined,
+  now: Date = new Date()
+): number {
+  if (!applicationDate) return 0;
+  
+  const appDate = parseLocalDate(applicationDate);
+  if (!appDate) return 0;
+  
+  // Calculate difference in days
+  const diffMs = now.getTime() - appDate.getTime();
+  const diffDays = Math.floor(diffMs / (24 * 60 * 60 * 1000));
+  
+  // Return 0 if application is in the future
+  return Math.max(0, diffDays);
+}
+
+/**
  * Calculate priority score for a case.
  * Higher score = higher priority.
  * 
@@ -99,6 +126,7 @@ export function getAlertScore(alert: AlertWithMatch): number {
  * - 400 points per Verification Due / VR Due alert
  * - 400 points per Mail Rcvd on Closed alert
  * - 100 points per other unresolved alert
+ * - 30 points per day since application date
  * - 75 points if marked as priority
  * - 50 points if modified in last 24 hours
  * 
@@ -121,6 +149,10 @@ export function calculatePriorityScore(
   for (const alert of caseAlerts) {
     score += getAlertScore(alert);
   }
+
+  // 30 points per day since application date
+  const daysSinceApp = getDaysSinceApplication(caseData.caseRecord?.applicationDate);
+  score += daysSinceApp * 30;
 
   // 75 points if marked as priority
   if (caseData.priority === true) {
@@ -191,12 +223,23 @@ export function getPriorityReason(
     return 'Marked as priority';
   }
 
+  // Check application age (significant if > 7 days)
+  const daysSinceApp = getDaysSinceApplication(caseData.caseRecord?.applicationDate);
+  if (daysSinceApp >= 7) {
+    return `${daysSinceApp} days since application`;
+  }
+
   // Check recent modification
   const now = new Date();
   const oneDayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
   const updatedAt = new Date(caseData.updatedAt);
   if (updatedAt >= oneDayAgo) {
     return 'Modified today';
+  }
+
+  // Application age less than 7 days
+  if (daysSinceApp > 0) {
+    return `${daysSinceApp} day${daysSinceApp === 1 ? '' : 's'} since application`;
   }
 
   // Fallback (should not happen if score > 0)
