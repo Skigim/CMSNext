@@ -1,7 +1,7 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Pin, PinOff, Star } from 'lucide-react';
+import { Pin, PinOff } from 'lucide-react';
 import type { StoredCase } from '@/types/case';
 import { usePinnedCases } from '@/hooks/usePinnedCases';
 import { useMemo } from 'react';
@@ -76,33 +76,32 @@ export function PinnedCasesWidget({
                 className="p-3 rounded-lg border border-border/50 bg-muted/30 hover:bg-muted/50 transition-colors group"
               >
                 <div className="flex items-start justify-between gap-1 mb-1">
-                  <Star className="h-3 w-3 text-amber-500 fill-amber-500 flex-shrink-0 mt-0.5" />
+                  <div className="flex-1 min-w-0">
+                    {onViewCase ? (
+                      <Button
+                        variant="link"
+                        className="h-auto p-0 text-sm font-medium text-left truncate w-full justify-start"
+                        onClick={() => onViewCase(caseData.id)}
+                      >
+                        {caseData.name}
+                      </Button>
+                    ) : (
+                      <p className="text-sm font-medium truncate">{caseData.name}</p>
+                    )}
+                  </div>
                   <Button
                     variant="ghost"
                     size="sm"
-                    className="h-5 w-5 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                    className="h-5 w-5 p-0 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity"
                     onClick={() => unpin(caseData.id)}
                     aria-label={`Unpin ${caseData.name}`}
                   >
                     <PinOff className="h-3 w-3" />
                   </Button>
                 </div>
-                <div className="min-w-0">
-                  {onViewCase ? (
-                    <Button
-                      variant="link"
-                      className="h-auto p-0 text-sm font-medium text-left truncate w-full justify-start"
-                      onClick={() => onViewCase(caseData.id)}
-                    >
-                      {caseData.name}
-                    </Button>
-                  ) : (
-                    <p className="text-sm font-medium truncate">{caseData.name}</p>
-                  )}
-                  <p className="text-xs text-muted-foreground truncate mt-0.5">
-                    {caseData.mcn || 'No MCN'}
-                  </p>
-                </div>
+                <p className="text-xs text-muted-foreground truncate">
+                  {caseData.mcn || 'No MCN'}
+                </p>
               </div>
             ))}
           </div>
