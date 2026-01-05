@@ -1,7 +1,6 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { AlertCircle, ArrowRight, CheckCircle } from 'lucide-react';
 import { CopyButton } from '@/components/common/CopyButton';
 import { PinButton } from '@/components/common/PinButton';
@@ -53,8 +52,8 @@ export function TodaysWorkWidget({
   alerts, 
   onViewCase 
 }: TodaysWorkWidgetProps) {
-  // Get priority cases using the hook (limit to top 10)
-  const priorityCases = useTodaysWork(cases, alerts, 10);
+  // Get priority cases using the hook (limit to top 3 for compact display)
+  const priorityCases = useTodaysWork(cases, alerts, 3);
 
   // Derive priority level from score for visual indicators
   const getPriorityLevel = (score: number): 'high' | 'medium' | 'low' => {
@@ -92,9 +91,8 @@ export function TodaysWorkWidget({
       </CardHeader>
       <CardContent>
         {hasPriorityCases ? (
-          <ScrollArea className="h-60 pr-4">
-            <div className="space-y-2">
-              {priorityCases.map((priorityCase) => {
+          <div className="space-y-2">
+            {priorityCases.map((priorityCase) => {
                 const { case: caseData, score, reason } = priorityCase;
                 const level = getPriorityLevel(score);
                 const Icon = level === 'high' ? AlertCircle : ArrowRight;
@@ -165,8 +163,7 @@ export function TodaysWorkWidget({
                   </div>
                 );
               })}
-            </div>
-          </ScrollArea>
+          </div>
         ) : (
           <div className="py-12 text-center text-muted-foreground">
             <CheckCircle className="mx-auto mb-3 h-12 w-12 opacity-60 text-green-500 dark:text-green-400" />

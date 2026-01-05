@@ -5,7 +5,6 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { CopyButton } from '@/components/common/CopyButton';
 import { PinButton } from '@/components/common/PinButton';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   AlertDialog,
@@ -358,9 +357,8 @@ export function ActivityWidget({ activityLogState, metadata, onViewCase }: Activ
                     {items.length} recent
                   </Badge>
                 </div>
-                <ScrollArea className="h-64 pr-4">
-                  <div className="space-y-2">
-                    {items.map((item) => {
+                <div className="space-y-2">
+                  {items.slice(0, 5).map((item) => {
                       const Icon = item.icon;
                       return (
                         <div
@@ -413,8 +411,7 @@ export function ActivityWidget({ activityLogState, metadata, onViewCase }: Activ
                         </div>
                       );
                     })}
-                  </div>
-                </ScrollArea>
+                </div>
                 <div className="text-xs text-muted-foreground text-center pt-2 border-t">
                   Last checked: {freshnessLabel}
                 </div>
