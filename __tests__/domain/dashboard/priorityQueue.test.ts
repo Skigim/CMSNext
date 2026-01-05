@@ -16,16 +16,18 @@ import {
   classifyAlert,
   getAlertScore,
 } from '../../../domain/dashboard/priorityQueue';
-import type { StoredCase } from '../../../types/case';
+import type { StoredCase, CaseStatus } from '../../../types/case';
 import type { AlertWithMatch } from '../../../utils/alertsData';
 
 // Test data factories
-function createMockCase(overrides: Partial<StoredCase> = {}): StoredCase {
+// Note: We use 'as CaseStatus' for custom statuses like 'Intake' that may exist in user data
+// but aren't in the strict enum. The domain logic handles this gracefully.
+function createMockCase(overrides: Partial<Omit<StoredCase, 'status'> & { status?: string }> = {}): StoredCase {
   return {
     id: 'case-1',
     name: 'Test Case',
     mcn: 'MCN123',
-    status: 'Active',
+    status: 'Active' as CaseStatus,
     priority: false,
     createdAt: '2024-01-01T00:00:00.000Z',
     updatedAt: '2024-01-01T00:00:00.000Z',
@@ -68,7 +70,7 @@ function createMockCase(overrides: Partial<StoredCase> = {}): StoredCase {
       updatedDate: '',
     },
     ...overrides,
-  };
+  } as StoredCase;
 }
 
 function createMockAlert(overrides: Partial<AlertWithMatch> = {}): AlertWithMatch {
@@ -146,8 +148,19 @@ describe('Alert Classification Functions', () => {
       expect(isMailRcvdClosedAlert('Mail Rcvd On Closed')).toBe(true);
     });
 
+    it('should return true for variations with mail and closed', () => {
+      expect(isMailRcvdClosedAlert('MAIL ON CLOSED CASE')).toBe(true);
+      expect(isMailRcvdClosedAlert('Closed Case - Mail Received')).toBe(true);
+      expect(isMailRcvdClosedAlert('mail closed')).toBe(true);
+    });
+
     it('should return false for unrelated alerts', () => {
       expect(isMailRcvdClosedAlert('VERIFICATION DUE')).toBe(false);
+    });
+
+    it('should return false for alerts with only mail or closed', () => {
+      expect(isMailRcvdClosedAlert('MAIL RECEIVED')).toBe(false);
+      expect(isMailRcvdClosedAlert('CASE CLOSED')).toBe(false);
     });
 
     it('should return false for undefined', () => {

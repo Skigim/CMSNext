@@ -57,11 +57,12 @@ export function isVerificationDueAlert(description: string | undefined): boolean
 
 /**
  * Check if alert description matches Mail Rcvd on Closed pattern.
+ * Matches any description containing both "mail" and "closed" (case insensitive).
  */
 export function isMailRcvdClosedAlert(description: string | undefined): boolean {
   if (!description) return false;
   const upper = description.toUpperCase();
-  return upper.includes('MAIL RCVD ON CLOSED');
+  return upper.includes('MAIL') && upper.includes('CLOSED');
 }
 
 /**
