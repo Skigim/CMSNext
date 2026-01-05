@@ -29,9 +29,14 @@ const TodaysWorkWidgetLazy = createLazyWidget(
   "TodaysWorkWidget",
 );
 
-const PlaceholderWidgetLazy = createLazyWidget(
-  import("./widgets/PlaceholderWidget"),
-  "PlaceholderWidget",
+const RecentCasesWidgetLazy = createLazyWidget(
+  import("./widgets/RecentCasesWidget"),
+  "RecentCasesWidget",
+);
+
+const PinnedCasesWidgetLazy = createLazyWidget(
+  import("./widgets/PinnedCasesWidget"),
+  "PinnedCasesWidget",
 );
 
 const AlertsClearedPerDayWidgetLazy = createLazyWidget(
@@ -124,13 +129,25 @@ export function Dashboard({
       },
       {
         metadata: {
-          id: 'quick-stats',
-          title: 'Quick Stats',
-          description: 'At-a-glance metrics',
+          id: 'recent-cases',
+          title: 'Recently Viewed',
+          description: 'Quick access to cases you have viewed',
           priority: 2,
+          featureFlag: 'dashboard.widgets.recentCases',
         },
-        component: PlaceholderWidgetLazy,
-        props: { title: 'Quick Stats', description: 'At-a-glance metrics coming soon' },
+        component: RecentCasesWidgetLazy,
+        props: { cases, onViewCase },
+      },
+      {
+        metadata: {
+          id: 'pinned-cases',
+          title: 'Pinned Cases',
+          description: 'Your favorite cases for quick access',
+          priority: 3,
+          featureFlag: 'dashboard.widgets.pinnedCases',
+        },
+        component: PinnedCasesWidgetLazy,
+        props: { cases, onViewCase },
       },
       {
         metadata: {
@@ -222,12 +239,14 @@ export function Dashboard({
   const overviewWidgets = useMemo(() => widgets.filter(w => 
     w.metadata.id === 'activity' || 
     w.metadata.id === 'todays-work' || 
-    w.metadata.id === 'quick-stats'
+    w.metadata.id === 'recent-cases' ||
+    w.metadata.id === 'pinned-cases'
   ), [widgets]);
   const analyticsWidgets = useMemo(() => widgets.filter(w => 
     w.metadata.id !== 'activity' && 
     w.metadata.id !== 'todays-work' && 
-    w.metadata.id !== 'quick-stats'
+    w.metadata.id !== 'recent-cases' &&
+    w.metadata.id !== 'pinned-cases'
   ), [widgets]);
 
   return (

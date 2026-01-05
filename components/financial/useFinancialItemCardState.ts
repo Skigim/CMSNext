@@ -2,7 +2,7 @@ import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "re
 import type { AmountHistoryEntry, CaseCategory, FinancialItem } from "../../types/case";
 import { getNormalizedFormData, getNormalizedItem } from "../../utils/dataNormalization";
 import { getDisplayAmount } from "../../utils/financialFormatters";
-import { getAmountForMonth } from "../../utils/financialHistory";
+import { getAmountForMonth, getEntryForMonth } from "../../utils/financialHistory";
 import { useSelectedMonth } from "../../contexts/SelectedMonthContext";
 import {
   getVerificationStatusInfo,
@@ -118,10 +118,25 @@ export function useFinancialItemCardState({
     () => Boolean(item.amountHistory && item.amountHistory.length > 0),
     [item.amountHistory]
   );
+
+  // Get the current entry for the selected month to extract entry-level verification source
+  const currentEntry = useMemo(
+    () => getEntryForMonth(item, selectedMonth),
+    [item, selectedMonth]
+  );
   
+  // For display (not editing): use item's verificationStatus with entry's verificationSource
+  // For editing: use formData values (user may be changing them)
   const verificationStatus = useMemo(
-    () => getVerificationStatusInfo(formData.verificationStatus, formData.verificationSource),
-    [formData.verificationStatus, formData.verificationSource],
+    () => {
+      if (isEditing) {
+        return getVerificationStatusInfo(formData.verificationStatus, formData.verificationSource);
+      }
+      // Use entry-level verificationSource if available, otherwise fall back to item-level
+      const effectiveSource = currentEntry?.verificationSource ?? item.verificationSource;
+      return getVerificationStatusInfo(item.verificationStatus, effectiveSource);
+    },
+    [isEditing, formData.verificationStatus, formData.verificationSource, currentEntry, item.verificationStatus, item.verificationSource],
   );
   const showVerificationSourceField = useMemo(
     () => shouldShowVerificationSource(item.verificationStatus, formData.verificationStatus),

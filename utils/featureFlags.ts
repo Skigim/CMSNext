@@ -21,6 +21,10 @@ export interface FeatureFlags {
 	"dashboard.widgets.avgCaseProcessing": boolean;
 	/** Controls visibility of the Today's Work dashboard widget. */
 	"dashboard.widgets.todaysWork": boolean;
+	/** Controls visibility of the Recently Viewed dashboard widget. */
+	"dashboard.widgets.recentCases": boolean;
+	/** Controls visibility of the Pinned Cases dashboard widget. */
+	"dashboard.widgets.pinnedCases": boolean;
 	/** Placeholder for advanced reporting filters. */
 	"reports.advancedFilters": boolean;
 	/** Placeholder for case bulk actions tooling. */
@@ -44,6 +48,8 @@ const FEATURE_FLAG_DEFAULTS: FeatureFlags = {
 	"dashboard.widgets.avgAlertAge": true,
 	"dashboard.widgets.avgCaseProcessing": true,
 	"dashboard.widgets.todaysWork": true,
+	"dashboard.widgets.recentCases": true,
+	"dashboard.widgets.pinnedCases": true,
 	"reports.advancedFilters": false,
 	"cases.bulkActions": false,
 	"settings.devTools": import.meta.env.DEV,
