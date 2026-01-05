@@ -11,5 +11,8 @@ export * from "./cases";
 // Financials domain
 export * from "./financials";
 
+// Dashboard domain
+export * from "./dashboard";
+
 // Validation utilities
 export * from "./validation";

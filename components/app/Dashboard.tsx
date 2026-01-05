@@ -21,6 +21,11 @@ const ActivityWidgetLazy = createLazyWidget(
   "ActivityWidget",
 );
 
+const TodaysWorkWidgetLazy = createLazyWidget(
+  import("./widgets/TodaysWorkWidget"),
+  "TodaysWorkWidget",
+);
+
 const AlertsClearedPerDayWidgetLazy = createLazyWidget(
   import("./widgets/AlertsClearedPerDayWidget"),
   "AlertsClearedPerDayWidget",
@@ -80,6 +85,18 @@ export function Dashboard({ cases, alerts, activityLogState, onNewCase, onViewCa
    */
   const widgets = useMemo<RegisteredWidget[]>(() => {
     return [
+      {
+        metadata: {
+          id: 'todays-work',
+          title: "Today's Work",
+          description: 'Priority cases requiring attention',
+          priority: 0,
+          refreshInterval: 2 * 60 * 1000,
+          featureFlag: 'dashboard.widgets.todaysWork',
+        },
+        component: TodaysWorkWidgetLazy,
+        props: { cases, alerts, onViewCase },
+      },
       {
         metadata: {
           id: 'avg-case-processing-time',
@@ -165,10 +182,10 @@ export function Dashboard({ cases, alerts, activityLogState, onNewCase, onViewCa
         props: { activityLogState, onViewCase },
       },
     ];
-  }, [cases, allAlerts, activityEntries, activityLogState, alertsRefreshKey, activityRefreshKey, onViewCase]);
+  }, [cases, alerts, allAlerts, activityEntries, activityLogState, alertsRefreshKey, activityRefreshKey, onViewCase]);
 
-  const overviewWidgets = useMemo(() => widgets.filter(w => w.metadata.id === 'activity'), [widgets]);
-  const analyticsWidgets = useMemo(() => widgets.filter(w => w.metadata.id !== 'activity'), [widgets]);
+  const overviewWidgets = useMemo(() => widgets.filter(w => w.metadata.id === 'activity' || w.metadata.id === 'todays-work'), [widgets]);
+  const analyticsWidgets = useMemo(() => widgets.filter(w => w.metadata.id !== 'activity' && w.metadata.id !== 'todays-work'), [widgets]);
 
   return (
     <div className="space-y-6" data-papercut-context="Dashboard">
@@ -194,7 +211,7 @@ export function Dashboard({ cases, alerts, activityLogState, onNewCase, onViewCa
 
         <TabsContent value="overview" className="space-y-6">
           <div>
-            <h2 className="text-lg font-semibold text-foreground mb-4">Recent Activity</h2>
+            <h2 className="text-lg font-semibold text-foreground mb-4">Today's Focus</h2>
             <WidgetRegistry
               widgets={overviewWidgets}
               gridClassName="grid grid-cols-1 gap-4"
