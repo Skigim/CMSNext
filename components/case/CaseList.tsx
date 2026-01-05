@@ -59,6 +59,7 @@ import { useCaseSelection } from "@/hooks/useCaseSelection";
 import { filterOpenAlerts, type AlertsSummary, type AlertWithMatch } from "../../utils/alertsData";
 import { useAppViewState } from "@/hooks/useAppViewState";
 import { isFeatureEnabled } from "@/utils/featureFlags";
+import { calculatePriorityScore } from "@/domain/dashboard/priorityQueue";
 
 interface CaseListProps {
   cases: StoredCase[];
@@ -295,6 +296,14 @@ export function CaseList({
             const aAlerts = openAlertsByCase.get(a.id)?.length ?? 0;
             const bAlerts = openAlertsByCase.get(b.id)?.length ?? 0;
             comparison = aAlerts - bAlerts;
+            break;
+          }
+          case "score": {
+            const aAlerts = openAlertsByCase.get(a.id) ?? [];
+            const bAlerts = openAlertsByCase.get(b.id) ?? [];
+            const aScore = calculatePriorityScore(a, aAlerts);
+            const bScore = calculatePriorityScore(b, bAlerts);
+            comparison = aScore - bScore;
             break;
           }
           case "application": {
