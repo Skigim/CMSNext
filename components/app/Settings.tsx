@@ -18,6 +18,7 @@ import { AlertsPreviewPanel } from "../alerts/AlertsPreviewPanel";
 import { PaperCutsPanel } from "../settings/PaperCutsPanel";
 import { KeyboardShortcutsPanel } from "../settings/KeyboardShortcutsPanel";
 import { useTheme } from "../../contexts/ThemeContext";
+import { toLocalDateString } from "@/utils/dateFormatting";
 import {
   Upload,
   Download,
@@ -114,7 +115,7 @@ export function Settings({ cases, onAlertsCsvImported }: SettingsProps) {
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `case-tracker-export-${new Date().toISOString().split('T')[0]}.json`;
+      a.download = `case-tracker-export-${toLocalDateString()}.json`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);

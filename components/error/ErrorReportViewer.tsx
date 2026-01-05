@@ -18,6 +18,7 @@ import {
   Tag
 } from 'lucide-react';
 import { useErrorReporting } from '@/utils/errorReporting';
+import { toLocalDateString } from '@/utils/dateFormatting';
 import { toast } from 'sonner';
 
 export function ErrorReportViewer() {
@@ -39,7 +40,7 @@ export function ErrorReportViewer() {
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `cmsnext-error-reports-${new Date().toISOString().split('T')[0]}.json`;
+      a.download = `cmsnext-error-reports-${toLocalDateString()}.json`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);

@@ -1,6 +1,33 @@
 /**
  * Utilities for date formatting between storage and UI
+ * 
+ * ## Key Principles
+ * - Date-only values (applicationDate, DOB) use LOCAL timezone
+ * - Full timestamps (createdAt, updatedAt) use UTC via toISOString()
+ * - Never use `.toISOString().split('T')[0]` for user-facing local dates
  */
+
+/**
+ * Get today's date as a YYYY-MM-DD string in local timezone.
+ *
+ * Use this for date-only fields like applicationDate, dateOfBirth, etc.
+ * Unlike `new Date().toISOString().split('T')[0]`, this won't shift
+ * to "tomorrow" for users in western timezones during evening hours.
+ *
+ * @param date - Optional date to format (defaults to now)
+ * @returns Local date string in YYYY-MM-DD format
+ *
+ * @example
+ * // User in PST at 10pm on Jan 5, 2026
+ * toLocalDateString() // Returns "2026-01-05" (correct!)
+ * new Date().toISOString().split('T')[0] // Would return "2026-01-06" (wrong!)
+ */
+export function toLocalDateString(date: Date = new Date()): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
 
 /**
  * Parse a date string as local time (no UTC conversion).

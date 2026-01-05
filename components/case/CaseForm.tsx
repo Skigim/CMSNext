@@ -10,6 +10,7 @@ import { PersonInfoForm } from "../forms/PersonInfoForm";
 import { CaseInfoForm } from "../forms/CaseInfoForm";
 import { IntakeInfoForm } from "../forms/IntakeInfoForm";
 import { useCategoryConfig } from "@/contexts/CategoryConfigContext";
+import { toLocalDateString } from "@/utils/dateFormatting";
 
 interface CaseFormProps {
   case?: StoredCase;
@@ -17,11 +18,8 @@ interface CaseFormProps {
   onCancel: () => void;
 }
 
-// Helper function to get today's date in YYYY-MM-DD format
-const getTodayDate = () => {
-  const today = new Date();
-  return today.toISOString().split('T')[0];
-};
+// Helper function to get today's date in YYYY-MM-DD format (timezone-safe)
+const getTodayDate = () => toLocalDateString();
 
 export function CaseForm({ case: existingCase, onSave, onCancel }: CaseFormProps) {
   const { config } = useCategoryConfig();

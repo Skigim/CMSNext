@@ -14,7 +14,7 @@ import { Loader2, Plus } from "lucide-react";
 import { toast } from "sonner";
 import { NewPersonData, NewCaseRecordData, CaseStatus } from "../../types/case";
 import { useCategoryConfig } from "@/contexts/CategoryConfigContext";
-import { isoToDateInputValue, dateInputValueToISO } from "@/utils/dateFormatting";
+import { isoToDateInputValue, dateInputValueToISO, toLocalDateString } from "@/utils/dateFormatting";
 
 interface QuickCaseModalProps {
   isOpen: boolean;
@@ -22,11 +22,8 @@ interface QuickCaseModalProps {
   onSave: (caseData: { person: NewPersonData; caseRecord: NewCaseRecordData }) => Promise<void>;
 }
 
-// Helper function to get today's date in YYYY-MM-DD format
-const getTodayDate = () => {
-  const today = new Date();
-  return today.toISOString().split('T')[0];
-};
+// Helper function to get today's date in YYYY-MM-DD format (timezone-safe)
+const getTodayDate = () => toLocalDateString();
 
 /**
  * QuickCaseModal - Minimal dialog for quick case creation

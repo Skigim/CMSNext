@@ -5,6 +5,7 @@ import type { CategoryConfig } from '../../types/categoryConfig';
 import type { FileStorageService, NormalizedFileData, StoredCase } from './FileStorageService';
 import { ActivityLogService } from './ActivityLogService';
 import { CaseBulkOperationsService } from './CaseBulkOperationsService';
+import { toLocalDateString } from '../dateFormatting';
 
 /**
  * Format a case display name from case data.
@@ -242,6 +243,7 @@ export class CaseService {
     }
 
     const timestamp = new Date().toISOString();
+    const todayDate = toLocalDateString(); // For date-only fields
     const caseId = uuidv4();
     const personId = uuidv4();
 
@@ -289,7 +291,7 @@ export class CaseService {
         id: uuidv4(),
         personId,
         mcn: caseData.caseRecord.mcn,
-        applicationDate: caseData.caseRecord.applicationDate || timestamp,
+        applicationDate: caseData.caseRecord.applicationDate || todayDate,
         caseType: caseData.caseRecord.caseType || 'General',
         spouseId: caseData.caseRecord.spouseId || '',
         status: caseData.caseRecord.status,
@@ -297,7 +299,7 @@ export class CaseService {
         priority: Boolean(caseData.caseRecord.priority),
         livingArrangement: caseData.caseRecord.livingArrangement || '',
         withWaiver: Boolean(caseData.caseRecord.withWaiver),
-        admissionDate: caseData.caseRecord.admissionDate || timestamp,
+        admissionDate: caseData.caseRecord.admissionDate || todayDate,
         organizationId: caseData.caseRecord.organizationId || '',
         authorizedReps: caseData.caseRecord.authorizedReps || [],
         retroRequested: caseData.caseRecord.retroRequested || '',

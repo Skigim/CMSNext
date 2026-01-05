@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import {
   parseLocalDate,
   formatDateForDisplay,
@@ -6,6 +6,7 @@ import {
   formatDateTime,
   isoToDateInputValue,
   dateInputValueToISO,
+  toLocalDateString,
 } from "@/utils/dateFormatting";
 
 describe("dateFormatting", () => {
@@ -111,6 +112,41 @@ describe("dateFormatting", () => {
       expect(dateInputValueToISO(null)).toBeNull();
       expect(dateInputValueToISO(undefined)).toBeNull();
       expect(dateInputValueToISO("")).toBeNull();
+    });
+  });
+
+  describe("toLocalDateString", () => {
+    beforeEach(() => {
+      vi.useFakeTimers();
+    });
+
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
+    it("returns date in YYYY-MM-DD format", () => {
+      vi.setSystemTime(new Date(2026, 0, 5, 10, 30, 0)); // Jan 5, 2026 10:30am local
+      expect(toLocalDateString()).toBe("2026-01-05");
+    });
+
+    it("pads single-digit months and days", () => {
+      vi.setSystemTime(new Date(2026, 0, 5)); // Jan 5
+      expect(toLocalDateString()).toBe("2026-01-05");
+
+      vi.setSystemTime(new Date(2026, 11, 25)); // Dec 25
+      expect(toLocalDateString()).toBe("2026-12-25");
+    });
+
+    it("does NOT shift to next day for evening times (unlike toISOString)", () => {
+      // This is the key fix - simulating late evening in local time
+      // In UTC this would be the next day, but local date should stay the same
+      vi.setSystemTime(new Date(2026, 0, 5, 22, 0, 0)); // Jan 5, 2026 10pm local
+      expect(toLocalDateString()).toBe("2026-01-05");
+    });
+
+    it("accepts a custom date", () => {
+      const customDate = new Date(2025, 5, 15); // June 15, 2025
+      expect(toLocalDateString(customDate)).toBe("2025-06-15");
     });
   });
 });

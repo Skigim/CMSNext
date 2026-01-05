@@ -1,5 +1,6 @@
 import { StoredCase } from "@/types/case";
 import { toast } from "sonner";
+import { toLocalDateString } from "@/utils/dateFormatting";
 
 /**
  * Export cases data to a JSON file
@@ -20,7 +21,7 @@ export function exportCasesToJSON(cases: StoredCase[]): void {
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `case-tracker-export-${new Date().toISOString().split("T")[0]}.json`;
+    a.download = `case-tracker-export-${toLocalDateString()}.json`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
