@@ -110,47 +110,26 @@ interface UserDashboardPrefs {
 
 ---
 
-### Phase 4: Inline Quick Actions 📋 PLANNED
+### Phase 4: Dashboard Quick Actions 📋 PLANNED
 
-> _Enable status updates, quick note additions, and alert resolution directly from dashboard case cards without navigating away. Every case card becomes actionable with inline dropdowns and modals._
+> _Add lightweight actions to dashboard case cards—pin cases for quick access and add notes without navigating away. Leverages existing note creation logic._
 
 **Target:** Week 2-3 (Jan 9-15)
 
 #### Tasks
 
-- [ ] Add inline status dropdown to dashboard case cards
-- [ ] Add "Quick Note" button with popover form
-- [ ] Add "Resolve Alert" action for cases with alerts
-- [ ] Ensure all mutations trigger proper storage sync
-- [ ] Add optimistic UI updates with rollback on failure
-- [ ] Test accessibility for all inline actions
-- [ ] Write integration tests for inline workflows
+- [ ] Add "Pin Case" toggle to dashboard case cards (ties into Phase 3 pinning)
+- [ ] Add "Quick Note" button with popover form (reuse existing `useNoteFlow` logic)
+- [ ] Test accessibility for inline actions
+- [ ] Write integration tests for dashboard actions
 
 ---
 
-### Phase 5: Dashboard Personalization 📋 PLANNED
-
-> _Allow users to show/hide widgets, reorder them, and create custom dashboard presets (e.g., "Morning Briefing" vs. "Analytics Deep Dive"). Store preferences in encrypted local files following existing filesystem architecture._
-
-**Target:** Week 3 (Jan 13-19)
-
-#### Tasks
-
-- [ ] Create `DashboardSettings` modal for widget visibility
-- [ ] Implement widget reordering with drag-and-drop
-- [ ] Create preset system (save/load dashboard configurations)
-- [ ] Wire feature flags to actual widget visibility toggles
-- [ ] Store preferences in encrypted user settings file
-- [ ] Add "Reset to Default" option
-- [ ] Write tests for preference persistence
-
----
-
-### Phase 6: Navigation & Context Flow 📋 PLANNED
+### Phase 5: Navigation & Context Flow 📋 PLANNED
 
 > _Make the dashboard the central hub that all workflows return to—preserve scroll position, selected tabs, and widget states when navigating away and back. Add "Return to Dashboard" breadcrumbs and enhance keyboard shortcuts for dashboard-specific actions._
 
-**Target:** Week 4 (Jan 20-26)
+**Target:** Week 3 (Jan 13-19)
 
 #### Tasks
 
@@ -180,9 +159,9 @@ interface UserDashboardPrefs {
 
 ---
 
-### Week 2: Recent & Pinned + Inline Actions (Jan 6-12)
+### Week 2: Recent & Pinned Cases (Jan 6-12)
 
-_Focus: Complete Phase 3 and start Phase 4_
+_Focus: Complete Phase 3 and Phase 4_
 
 #### Monday-Tuesday: Recent Cases
 
@@ -195,43 +174,35 @@ _Focus: Complete Phase 3 and start Phase 4_
 - [ ] Domain logic for pin/unpin
 - [ ] Storage integration for pins
 - [ ] `PinnedCasesWidget` component
-- [ ] Pin button on case cards
+- [ ] Pin button on case cards and dashboard
 
-#### Friday-Sunday: Inline Actions Start
+#### Friday-Sunday: Dashboard Quick Actions
 
-- [ ] Inline status dropdown on dashboard cards
-- [ ] Quick note popover
-
----
-
-### Week 3: Inline Actions + Personalization (Jan 13-19)
-
-_Focus: Complete Phase 4 and Phase 5_
-
-#### Monday-Wednesday: Finish Inline Actions
-
-- [ ] Alert resolution from dashboard
-- [ ] Optimistic updates with rollback
-- [ ] Accessibility testing
-
-#### Thursday-Sunday: Dashboard Personalization
-
-- [ ] Widget visibility settings
-- [ ] Drag-and-drop reordering
-- [ ] Preset system
+- [ ] Quick note popover (reuse `useNoteFlow`)
+- [ ] Integration tests
 
 ---
 
-### Week 4: Navigation & Polish (Jan 20-26)
+### Week 3: Navigation & Polish (Jan 13-19)
 
-_Focus: Phase 6 and final polish_
+_Focus: Phase 5 and final polish_
 
 - [ ] Scroll/tab state preservation
 - [ ] Breadcrumb navigation
 - [ ] Dashboard keyboard shortcuts
+- [ ] Accessibility testing
 - [ ] E2E testing
+
+---
+
+### Week 4: Buffer & Planning (Jan 20-26)
+
+_Focus: Catchup, polish, and February planning_
+
+- [ ] Address any outstanding issues
 - [ ] Documentation updates
 - [ ] February roadmap planning
+- [ ] Domain layer expansion planning
 
 ---
 
@@ -239,10 +210,10 @@ _Focus: Phase 6 and final polish_
 
 | Metric              | Current | Target |
 | ------------------- | ------- | ------ |
-| Phases complete     | 2       | 6      |
-| Dashboard widgets   | 10      | 12+    |
-| Test count          | 720     | 750+   |
-| Feature flags wired | 9       | 12     |
+| Phases complete     | 2       | 5      |
+| Dashboard widgets   | 10      | 12     |
+| Test count          | 748     | 770+   |
+| Feature flags wired | 9       | 11     |
 
 ---
 

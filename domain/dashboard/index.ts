@@ -5,3 +5,5 @@
  */
 
 export * from './priorityQueue';
+export * from './recentCases';
+export * from './pinnedCases';
