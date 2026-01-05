@@ -29,6 +29,11 @@ const TodaysWorkWidgetLazy = createLazyWidget(
   "TodaysWorkWidget",
 );
 
+const PlaceholderWidgetLazy = createLazyWidget(
+  import("./widgets/PlaceholderWidget"),
+  "PlaceholderWidget",
+);
+
 const AlertsClearedPerDayWidgetLazy = createLazyWidget(
   import("./widgets/AlertsClearedPerDayWidget"),
   "AlertsClearedPerDayWidget",
@@ -119,6 +124,16 @@ export function Dashboard({
       },
       {
         metadata: {
+          id: 'quick-stats',
+          title: 'Quick Stats',
+          description: 'At-a-glance metrics',
+          priority: 0.5,
+        },
+        component: PlaceholderWidgetLazy,
+        props: { title: 'Quick Stats', description: 'At-a-glance metrics coming soon' },
+      },
+      {
+        metadata: {
           id: 'avg-case-processing-time',
           title: 'Avg. Case Processing Time',
           description: 'Average days to resolve a case',
@@ -204,8 +219,16 @@ export function Dashboard({
     ];
   }, [cases, alerts, allAlerts, activityEntries, activityLogState, alertsRefreshKey, activityRefreshKey, onViewCase]);
 
-  const overviewWidgets = useMemo(() => widgets.filter(w => w.metadata.id === 'activity' || w.metadata.id === 'todays-work'), [widgets]);
-  const analyticsWidgets = useMemo(() => widgets.filter(w => w.metadata.id !== 'activity' && w.metadata.id !== 'todays-work'), [widgets]);
+  const overviewWidgets = useMemo(() => widgets.filter(w => 
+    w.metadata.id === 'activity' || 
+    w.metadata.id === 'todays-work' || 
+    w.metadata.id === 'quick-stats'
+  ), [widgets]);
+  const analyticsWidgets = useMemo(() => widgets.filter(w => 
+    w.metadata.id !== 'activity' && 
+    w.metadata.id !== 'todays-work' && 
+    w.metadata.id !== 'quick-stats'
+  ), [widgets]);
 
   return (
     <div className="flex flex-col h-full" data-papercut-context="Dashboard">
@@ -243,7 +266,7 @@ export function Dashboard({
                 <h2 className="text-lg font-semibold text-foreground mb-4">Recent Activity</h2>
                 <WidgetRegistry
                   widgets={overviewWidgets}
-                  gridClassName="grid grid-cols-1 gap-4"
+                  gridClassName="grid grid-cols-1 lg:grid-cols-2 gap-4"
                   enabledFlags={featureFlags}
                 />
               </div>
