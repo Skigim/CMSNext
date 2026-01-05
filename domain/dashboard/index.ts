@@ -5,5 +5,29 @@
  */
 
 export * from './priorityQueue';
-export * from './recentCases';
-export * from './pinnedCases';
+
+// Recent cases - rename pruneDeletedCases to avoid collision
+export {
+  addRecentCase,
+  removeRecentCase,
+  getRecentCaseIds,
+  pruneOldEntries,
+  isRecentCase,
+  pruneDeletedCases as pruneDeletedRecentCases,
+  type RecentCaseEntry,
+  DEFAULT_MAX_ENTRIES,
+  DEFAULT_MAX_AGE_DAYS,
+} from './recentCases';
+
+// Pinned cases - rename pruneDeletedCases to avoid collision  
+export {
+  pinCase,
+  unpinCase,
+  togglePin,
+  isPinned,
+  pruneDeletedCases as pruneDeletedPinnedCases,
+  getPinnedCount,
+  canPinMore,
+  reorderPinnedCase,
+  DEFAULT_MAX_PINS,
+} from './pinnedCases';
