@@ -247,8 +247,28 @@ export function getPriorityReason(
 }
 
 /**
+ * Statuses that should be excluded from priority queue.
+ * These cases are either completed or don't require active work.
+ */
+export const EXCLUDED_STATUSES = [
+  'denied',
+  'spenddown',
+  'closed',
+  'active',
+  'approved',
+] as const;
+
+/**
+ * Check if a case status should be excluded from the priority queue.
+ */
+export function isExcludedStatus(status: string | undefined): boolean {
+  if (!status) return false;
+  return EXCLUDED_STATUSES.includes(status.toLowerCase() as typeof EXCLUDED_STATUSES[number]);
+}
+
+/**
  * Get prioritized cases sorted by priority score.
- * Only returns cases with score > 0.
+ * Only returns cases with score > 0 and non-excluded statuses.
  * 
  * @param cases - All cases to analyze
  * @param alertsIndex - Alerts index with mapping by case ID
@@ -260,8 +280,10 @@ export function getPriorityCases(
   alertsIndex: { alertsByCaseId: Map<string, AlertWithMatch[]> },
   limit: number = 10
 ): PriorityCase[] {
-  // Calculate scores for all cases
+  // Calculate scores for all cases (excluding terminal statuses)
   const scoredCases: PriorityCase[] = cases
+    // Filter out excluded statuses first
+    .filter((caseData) => !isExcludedStatus(caseData.status))
     .map((caseData) => {
       const caseAlerts = alertsIndex.alertsByCaseId.get(caseData.id) || [];
       // Filter to only unresolved alerts

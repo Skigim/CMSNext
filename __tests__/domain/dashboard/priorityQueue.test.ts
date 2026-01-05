@@ -16,6 +16,8 @@ import {
   classifyAlert,
   getAlertScore,
   getDaysSinceApplication,
+  isExcludedStatus,
+  EXCLUDED_STATUSES,
 } from '../../../domain/dashboard/priorityQueue';
 import type { StoredCase, CaseStatus } from '../../../types/case';
 import type { AlertWithMatch } from '../../../utils/alertsData';
@@ -23,12 +25,13 @@ import type { AlertWithMatch } from '../../../utils/alertsData';
 // Test data factories
 // Note: We use 'as CaseStatus' for custom statuses like 'Intake' that may exist in user data
 // but aren't in the strict enum. The domain logic handles this gracefully.
+// Default status is 'Pending' (not 'Active') because Active is excluded from priority queue.
 function createMockCase(overrides: Partial<Omit<StoredCase, 'status'> & { status?: string }> = {}): StoredCase {
   return {
     id: 'case-1',
     name: 'Test Case',
     mcn: 'MCN123',
-    status: 'Active' as CaseStatus,
+    status: 'Pending' as CaseStatus,
     priority: false,
     createdAt: '2024-01-01T00:00:00.000Z',
     updatedAt: '2024-01-01T00:00:00.000Z',
@@ -259,6 +262,52 @@ describe('getDaysSinceApplication', () => {
   it('should accept custom now parameter for testing', () => {
     const customNow = new Date('2026-01-10T12:00:00.000Z');
     expect(getDaysSinceApplication('2026-01-05', customNow)).toBe(5);
+  });
+});
+
+describe('isExcludedStatus', () => {
+  it('should return true for Denied status', () => {
+    expect(isExcludedStatus('Denied')).toBe(true);
+    expect(isExcludedStatus('denied')).toBe(true);
+    expect(isExcludedStatus('DENIED')).toBe(true);
+  });
+
+  it('should return true for Spenddown status', () => {
+    expect(isExcludedStatus('Spenddown')).toBe(true);
+  });
+
+  it('should return true for Closed status', () => {
+    expect(isExcludedStatus('Closed')).toBe(true);
+  });
+
+  it('should return true for Active status', () => {
+    expect(isExcludedStatus('Active')).toBe(true);
+  });
+
+  it('should return true for Approved status', () => {
+    expect(isExcludedStatus('Approved')).toBe(true);
+  });
+
+  it('should return false for Intake status', () => {
+    expect(isExcludedStatus('Intake')).toBe(false);
+  });
+
+  it('should return false for Pending status', () => {
+    expect(isExcludedStatus('Pending')).toBe(false);
+  });
+
+  it('should return false for undefined/empty', () => {
+    expect(isExcludedStatus(undefined)).toBe(false);
+    expect(isExcludedStatus('')).toBe(false);
+  });
+
+  it('should include all expected statuses in EXCLUDED_STATUSES', () => {
+    expect(EXCLUDED_STATUSES).toContain('denied');
+    expect(EXCLUDED_STATUSES).toContain('spenddown');
+    expect(EXCLUDED_STATUSES).toContain('closed');
+    expect(EXCLUDED_STATUSES).toContain('active');
+    expect(EXCLUDED_STATUSES).toContain('approved');
+    expect(EXCLUDED_STATUSES).toHaveLength(5);
   });
 });
 
@@ -831,5 +880,113 @@ describe('getPriorityCases', () => {
     expect(result).toHaveLength(1);
     expect(result[0].score).toBe(75);
     expect(result[0].reason).toBe('Marked as priority');
+  });
+
+  it('should exclude cases with Denied status', () => {
+    // ARRANGE
+    const cases = [
+      createMockCase({ id: 'case-1', status: 'Denied', priority: true }),
+      createMockCase({ id: 'case-2', status: 'Pending', priority: true }),
+    ];
+    const alertsIndex = { alertsByCaseId: new Map() };
+
+    // ACT
+    const result = getPriorityCases(cases, alertsIndex);
+
+    // ASSERT
+    expect(result).toHaveLength(1);
+    expect(result[0].case.id).toBe('case-2');
+  });
+
+  it('should exclude cases with Closed status', () => {
+    // ARRANGE
+    const cases = [
+      createMockCase({ id: 'case-1', status: 'Closed', priority: true }),
+      createMockCase({ id: 'case-2', status: 'Intake' }),
+    ];
+    const alertsIndex = { alertsByCaseId: new Map() };
+
+    // ACT
+    const result = getPriorityCases(cases, alertsIndex);
+
+    // ASSERT
+    expect(result).toHaveLength(1);
+    expect(result[0].case.id).toBe('case-2');
+  });
+
+  it('should exclude cases with Active status', () => {
+    // ARRANGE
+    const cases = [
+      createMockCase({ id: 'case-1', status: 'Active', priority: true }),
+      createMockCase({ id: 'case-2', priority: true }),
+    ];
+    const alertsIndex = { alertsByCaseId: new Map() };
+
+    // ACT
+    const result = getPriorityCases(cases, alertsIndex);
+
+    // ASSERT
+    expect(result).toHaveLength(1);
+    expect(result[0].case.id).toBe('case-2');
+  });
+
+  it('should exclude cases with Approved status', () => {
+    // ARRANGE
+    const cases = [
+      createMockCase({ id: 'case-1', status: 'Approved', priority: true }),
+      createMockCase({ id: 'case-2', priority: true }),
+    ];
+    const alertsIndex = { alertsByCaseId: new Map() };
+
+    // ACT
+    const result = getPriorityCases(cases, alertsIndex);
+
+    // ASSERT
+    expect(result).toHaveLength(1);
+    expect(result[0].case.id).toBe('case-2');
+  });
+
+  it('should exclude cases with Spenddown status', () => {
+    // ARRANGE
+    const cases = [
+      createMockCase({ id: 'case-1', status: 'Spenddown', priority: true }),
+      createMockCase({ id: 'case-2', priority: true }),
+    ];
+    const alertsIndex = { alertsByCaseId: new Map() };
+
+    // ACT
+    const result = getPriorityCases(cases, alertsIndex);
+
+    // ASSERT
+    expect(result).toHaveLength(1);
+    expect(result[0].case.id).toBe('case-2');
+  });
+
+  it('should exclude all terminal statuses in mixed list', () => {
+    // ARRANGE
+    const cases = [
+      createMockCase({ id: 'case-denied', status: 'Denied', priority: true }),
+      createMockCase({ id: 'case-closed', status: 'Closed', priority: true }),
+      createMockCase({ id: 'case-active', status: 'Active', priority: true }),
+      createMockCase({ id: 'case-approved', status: 'Approved', priority: true }),
+      createMockCase({ id: 'case-spenddown', status: 'Spenddown', priority: true }),
+      createMockCase({ id: 'case-intake', status: 'Intake' }), // Should be included
+      createMockCase({ id: 'case-pending', status: 'Pending', priority: true }), // Should be included
+    ];
+    const alertsIndex = { alertsByCaseId: new Map() };
+
+    // ACT
+    const result = getPriorityCases(cases, alertsIndex);
+
+    // ASSERT
+    expect(result).toHaveLength(2);
+    const includedIds = result.map(pc => pc.case.id);
+    expect(includedIds).toContain('case-intake');
+    expect(includedIds).toContain('case-pending');
+    expect(includedIds).not.toContain('case-denied');
+    expect(includedIds).not.toContain('case-closed');
+    expect(includedIds).not.toContain('case-active');
+    expect(includedIds).not.toContain('case-approved');
+    expect(includedIds).not.toContain('case-spenddown');
   });
 });

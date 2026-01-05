@@ -11,12 +11,13 @@ import type { StoredCase } from '../../types/case';
 import type { AlertsIndex, AlertWithMatch } from '../../utils/alertsData';
 
 // Test data factories
+// Note: Default status is 'Pending' because 'Active' is excluded from priority queue
 function createMockCase(overrides: Partial<StoredCase> = {}): StoredCase {
   return {
     id: 'case-1',
     name: 'Test Case',
     mcn: 'MCN123',
-    status: 'Active',
+    status: 'Pending',
     priority: false,
     createdAt: '2024-01-01T00:00:00.000Z',
     updatedAt: '2024-01-01T00:00:00.000Z',
@@ -46,7 +47,7 @@ function createMockCase(overrides: Partial<StoredCase> = {}): StoredCase {
       caseType: '',
       personId: 'person-1',
       spouseId: '',
-      status: 'Active',
+      status: 'Pending',
       description: '',
       priority: false,
       livingArrangement: '',
