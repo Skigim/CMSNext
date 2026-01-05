@@ -3,7 +3,7 @@
 **Report Date:** January 5, 2026  
 **Branch:** main  
 **Focus:** Dashboard Transformation  
-**Status:** Week 1 Complete ✅ | Phase 1-2 Complete ✅
+**Status:** Week 1 Complete ✅ | Phase 1-4 Complete ✅
 
 ---
 
@@ -70,58 +70,45 @@
 
 ---
 
-### Phase 3: Recent & Pinned Cases 🚧 IN PROGRESS
+### Phase 3: Recent & Pinned Cases ✅ COMPLETE
 
 > _Add widgets for "Recently Viewed Cases" (last 5-10 accessed) and "Pinned Cases" (user favorites) with one-click navigation and inline status/alert indicators. Eliminates repetitive navigation for frequently accessed cases._
 
-**Target:** Week 2 (Jan 6-12)
+**Status:** Merged to main
 
-#### Tasks
+**Delivered:**
 
-- [ ] Create `domain/dashboard/recentCases.ts` - Pure logic for tracking/retrieving recent cases
-- [ ] Create `domain/dashboard/pinnedCases.ts` - Pure logic for pin/unpin operations
-- [ ] Add `recentlyViewed` array to user preferences storage
-- [ ] Add `pinnedCaseIds` array to user preferences storage
-- [ ] Create `useRecentCases` hook
-- [ ] Create `usePinnedCases` hook
-- [ ] Create `RecentCasesWidget` component
-- [ ] Create `PinnedCasesWidget` component
-- [ ] Add pin/unpin button to CaseCard and CaseDetail
-- [ ] Update 2-column layout: Today's Work + Recent/Pinned
-- [ ] Add feature flags: `dashboard.widgets.recentCases`, `dashboard.widgets.pinnedCases`
-- [ ] Write 20+ unit tests for domain logic
-
-#### Technical Notes
-
-**Storage approach:**
-
-```typescript
-// In user preferences (encrypted local file)
-interface UserDashboardPrefs {
-  recentlyViewed: Array<{ caseId: string; viewedAt: string }>; // Last 10
-  pinnedCaseIds: string[]; // User favorites
-}
-```
-
-**Widget placement:**
-
-- Replace `PlaceholderWidget` with `RecentCasesWidget`
-- Add `PinnedCasesWidget` as third widget in Overview tab
+- [x] `domain/dashboard/recentCases.ts` - Pure logic for tracking/retrieving recent cases (6 functions)
+- [x] `domain/dashboard/pinnedCases.ts` - Pure logic for pin/unpin operations (8 functions)
+- [x] `useRecentCases` hook with localStorage persistence
+- [x] `usePinnedCases` hook with localStorage persistence
+- [x] `RecentCasesWidget` component with clear/remove actions
+- [x] `PinnedCasesWidget` component with unpin action
+- [x] Pin button on CaseCard and CaseDetails
+- [x] Recently viewed tracking in navigation flow
+- [x] Feature flags: `dashboard.widgets.recentCases`, `dashboard.widgets.pinnedCases`
+- [x] 124 unit tests (79 domain + 45 hooks)
 
 ---
 
-### Phase 4: Dashboard Quick Actions 📋 PLANNED
+### Phase 4: Dashboard Quick Actions ✅ COMPLETE
 
 > _Add lightweight actions to dashboard case cards—pin cases for quick access and add notes without navigating away. Leverages existing note creation logic._
 
-**Target:** Week 2-3 (Jan 9-15)
+**Status:** Merged to main
 
-#### Tasks
+**Delivered:**
 
-- [ ] Add "Pin Case" toggle to dashboard case cards (ties into Phase 3 pinning)
-- [ ] Add "Quick Note" button with popover form (reuse existing `useNoteFlow` logic)
-- [ ] Test accessibility for inline actions
-- [ ] Write integration tests for dashboard actions
+- [x] Reusable `PinButton` component
+- [x] Pin button on TodaysWorkWidget case items
+- [x] Pin button on RecentCasesWidget case items  
+- [x] Pin button on ActivityWidget case items
+- [x] Pin button on ActivityTimelineWidget case items
+- [x] Pin action available everywhere cases are displayed
+
+**Deferred:**
+
+- [ ] Quick Note popover (can be added later using existing `useNoteFlow`)
 
 ---
 
@@ -152,46 +139,34 @@ interface UserDashboardPrefs {
 
 - [x] Phase 1: Quick Actions Hub (PR #90)
 - [x] Phase 2: Today's Work Widget (PR #93)
-- [x] Domain layer pattern established (`domain/dashboard/priorityQueue.ts`)
-- [x] 2-column dashboard layout implemented
+- [x] Phase 3: Recent & Pinned Cases
+- [x] Phase 4: Dashboard Quick Actions (pin buttons)
+- [x] Domain layer pattern established (`domain/dashboard/`)
+- [x] 4-widget dashboard layout implemented
 - [x] Repository memories documented (PR #91)
-- [x] 683 tests passing
+- [x] 872 tests passing
 
 ---
 
-### Week 2: Recent & Pinned Cases (Jan 6-12)
+### Week 2: Navigation & Polish (Jan 6-12)
 
-_Focus: Complete Phase 3 and Phase 4_
-
-#### Monday-Tuesday: Recent Cases
-
-- [ ] Domain logic for recent case tracking
-- [ ] Storage integration for view history
-- [ ] `RecentCasesWidget` component
-
-#### Wednesday-Thursday: Pinned Cases
-
-- [ ] Domain logic for pin/unpin
-- [ ] Storage integration for pins
-- [ ] `PinnedCasesWidget` component
-- [ ] Pin button on case cards and dashboard
-
-#### Friday-Sunday: Dashboard Quick Actions
-
-- [ ] Quick note popover (reuse `useNoteFlow`)
-- [ ] Integration tests
-
----
-
-### Week 3: Navigation & Polish (Jan 13-19)
-
-_Focus: Phase 5 and final polish_
+_Focus: Phase 5 and polish_
 
 - [ ] Scroll/tab state preservation
 - [ ] Breadcrumb navigation
 - [ ] Dashboard keyboard shortcuts
 - [ ] Accessibility testing
-- [ ] E2E testing
+- [ ] Quick Note popover (optional)
+
+---
+
+### Week 3: Polish & Testing (Jan 13-19)
+
+_Focus: E2E testing and refinements_
+
+- [ ] E2E tests for navigation
+- [ ] Performance optimization
+- [ ] Bug fixes from user testing
 
 ---
 
@@ -210,10 +185,10 @@ _Focus: Catchup, polish, and February planning_
 
 | Metric              | Current | Target |
 | ------------------- | ------- | ------ |
-| Phases complete     | 2       | 5      |
-| Dashboard widgets   | 10      | 12     |
-| Test count          | 748     | 770+   |
-| Feature flags wired | 9       | 11     |
+| Phases complete     | 4       | 5      |
+| Dashboard widgets   | 12      | 12     |
+| Test count          | 872     | 900+   |
+| Feature flags wired | 11      | 11     |
 
 ---
 
