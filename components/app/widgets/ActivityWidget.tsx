@@ -224,7 +224,7 @@ export function ActivityWidget({ activityLogState, metadata, onViewCase }: Activ
     return formatActivityTimeline(activityLogState.activityLog || []);
   }, [activityLogState.activityLog]);
 
-  const { data: timeline, loading, freshness } = useWidgetData(fetchTimeline, {
+  const { data: timeline, loading } = useWidgetData(fetchTimeline, {
     refreshInterval: metadata?.refreshInterval ?? 2 * 60 * 1000,
     enablePerformanceTracking: true,
   });
@@ -315,17 +315,6 @@ export function ActivityWidget({ activityLogState, metadata, onViewCase }: Activ
     [selectedActivityReport, selectedReportDate]
   );
 
-  const freshnessLabel = useMemo(() => {
-    if (!freshness.lastUpdatedAt) return 'Never updated';
-    if (freshness.minutesAgo === 0) return 'Just now';
-    if (freshness.minutesAgo === 1) return '1 minute ago';
-    if (freshness.minutesAgo && freshness.minutesAgo < 60)
-      return `${freshness.minutesAgo} minutes ago`;
-    const hoursAgo = Math.floor((freshness.minutesAgo || 0) / 60);
-    if (hoursAgo === 1) return '1 hour ago';
-    return `${hoursAgo} hours ago`;
-  }, [freshness]);
-
   const items = timeline || [];
 
   return (
@@ -366,13 +355,13 @@ export function ActivityWidget({ activityLogState, metadata, onViewCase }: Activ
                       return (
                         <div
                           key={item.id}
-                          className="flex gap-3 pb-2 border-b border-border/50 last:border-0"
+                          className="flex gap-3 p-3 rounded-lg border border-border/50 bg-muted/30 hover:bg-muted/50 transition-colors"
                         >
                           <div className="flex-shrink-0 mt-0.5">
                             <Icon className="h-4 w-4 text-muted-foreground" />
                           </div>
                           <div className="flex-1 min-w-0">
-                            <div className="flex items-start justify-between gap-2">
+                            <div className="flex items-start justify-between gap-2 mb-1">
                               <p className="text-sm font-medium truncate">{item.title}</p>
                               <Badge
                                 variant="secondary"
@@ -381,8 +370,7 @@ export function ActivityWidget({ activityLogState, metadata, onViewCase }: Activ
                                 {item.badgeText}
                               </Badge>
                             </div>
-                            <p className="text-xs text-muted-foreground mb-1">{item.description}</p>
-                            <div className="flex items-center gap-2 mt-1">
+                            <div className="flex items-center gap-2">
                               {onViewCase ? (
                                 <Button
                                   variant="link"
@@ -409,14 +397,10 @@ export function ActivityWidget({ activityLogState, metadata, onViewCase }: Activ
                                 variant="plain"
                               />
                             </div>
-                            <p className="text-xs text-muted-foreground mt-1">{item.relativeTime}</p>
                           </div>
                         </div>
                       );
                     })}
-                </div>
-                <div className="text-xs text-muted-foreground text-center pt-2 border-t">
-                  Last checked: {freshnessLabel}
                 </div>
               </>
             ) : (
