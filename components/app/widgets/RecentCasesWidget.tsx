@@ -142,7 +142,7 @@ export function RecentCasesWidget({
           </div>
         ) : (
           <div className="py-12 text-center text-muted-foreground">
-            <History className="mx-auto mb-3 h-12 w-12 opacity-40" />
+            <Clock className="mx-auto mb-3 h-12 w-12 opacity-40" />
             <p className="text-sm font-medium mb-1">No recent cases</p>
             <p className="text-xs">Cases you view will appear here</p>
           </div>

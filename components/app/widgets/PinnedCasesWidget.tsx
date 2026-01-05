@@ -104,7 +104,7 @@ export function PinnedCasesWidget({
           </div>
         ) : (
           <div className="py-12 text-center text-muted-foreground">
-            <Pin className="mx-auto mb-3 h-12 w-12 opacity-40" />
+            <PinOff className="mx-auto mb-3 h-12 w-12 opacity-40" />
             <p className="text-sm font-medium mb-1">No pinned cases</p>
             <p className="text-xs">Pin cases from the case list for quick access</p>
           </div>
