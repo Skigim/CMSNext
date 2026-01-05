@@ -205,7 +205,7 @@ describe("Dashboard", () => {
       />,
     );
 
-    // Check that Recent Activity section is displayed
-    expect(screen.getByRole("heading", { name: /recent activity/i })).toBeInTheDocument();
+    // Check that Today's Focus section is displayed
+    expect(screen.getByRole("heading", { name: /today's focus/i })).toBeInTheDocument();
   });
 });
