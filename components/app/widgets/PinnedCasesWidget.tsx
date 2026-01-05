@@ -54,7 +54,7 @@ export function PinnedCasesWidget({
   return (
     <Card>
       <CardHeader className="pb-3">
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between min-h-[40px]">
           <div>
             <CardTitle>Pinned Cases</CardTitle>
             <CardDescription>Your favorite cases for quick access</CardDescription>

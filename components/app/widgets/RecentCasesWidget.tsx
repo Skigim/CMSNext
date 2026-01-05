@@ -57,7 +57,7 @@ export function RecentCasesWidget({
   return (
     <Card>
       <CardHeader className="pb-3">
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between min-h-[40px]">
           <div>
             <CardTitle>Recently Viewed</CardTitle>
             <CardDescription>Quick access to cases you've viewed</CardDescription>

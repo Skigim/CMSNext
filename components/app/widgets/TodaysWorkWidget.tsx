@@ -79,7 +79,7 @@ export function TodaysWorkWidget({
   return (
     <Card>
       <CardHeader className="pb-3">
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between min-h-[40px]">
           <div>
             <CardTitle>Today's Work</CardTitle>
             <CardDescription>Cases requiring immediate attention</CardDescription>
