@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import type { Template, TemplateCategory } from "@/types/template";
 import { useDataManagerSafe } from "./DataManagerContext";
@@ -6,6 +6,51 @@ import { useFileStorageDataChange } from "./FileStorageContext";
 import { createLogger } from "@/utils/logger";
 
 const logger = createLogger("TemplateContext");
+
+/**
+ * Migrates legacy vrScripts from CategoryConfig to the new templates array.
+ * Only migrates scripts that don't already exist (by name).
+ * 
+ * @returns Number of templates migrated
+ */
+async function migrateVRScriptsIfNeeded(
+  dataManager: NonNullable<ReturnType<typeof useDataManagerSafe>>
+): Promise<number> {
+  try {
+    const categoryConfig = await dataManager.getCategoryConfig();
+    const existingTemplates = await dataManager.getAllTemplates();
+    
+    const vrScripts = categoryConfig.vrScripts ?? [];
+    if (vrScripts.length === 0) {
+      return 0;
+    }
+    
+    // Check which scripts need migration (by name to avoid duplicates)
+    const existingNames = new Set(existingTemplates.map(t => t.name));
+    const scriptsToMigrate = vrScripts.filter(s => !existingNames.has(s.name));
+    
+    if (scriptsToMigrate.length === 0) {
+      return 0;
+    }
+    
+    logger.info(`Migrating ${scriptsToMigrate.length} VR scripts to new template system`);
+    
+    // Migrate each script
+    for (const script of scriptsToMigrate) {
+      await dataManager.addTemplate({
+        name: script.name,
+        category: 'vr',
+        template: script.template,
+      });
+    }
+    
+    logger.info(`Successfully migrated ${scriptsToMigrate.length} VR scripts`);
+    return scriptsToMigrate.length;
+  } catch (err) {
+    logger.error("Failed to migrate VR scripts", { error: err });
+    return 0;
+  }
+}
 
 /**
  * Template context value - provides access to unified template management.
@@ -118,6 +163,7 @@ export const TemplateProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const dataChangeCount = useFileStorageDataChange();
+  const hasMigrated = useRef(false);
 
   const loadTemplates = useCallback(async () => {
     if (!dataManager) {
@@ -126,6 +172,15 @@ export const TemplateProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
     setLoading(true);
     try {
+      // Run migration once on first load
+      if (!hasMigrated.current) {
+        hasMigrated.current = true;
+        const migrated = await migrateVRScriptsIfNeeded(dataManager);
+        if (migrated > 0) {
+          toast.success(`Migrated ${migrated} VR template(s) to new system`);
+        }
+      }
+      
       const result = await dataManager.getAllTemplates();
       setTemplates(result);
       setError(null);
