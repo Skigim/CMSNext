@@ -18,6 +18,14 @@ import {
   getDaysSinceApplication,
   isExcludedStatus,
   EXCLUDED_STATUSES,
+  // Scoring constants
+  SCORE_INTAKE,
+  SCORE_AVS_DAY_5,
+  SCORE_VERIFICATION_DUE,
+  SCORE_MAIL_RCVD_CLOSED,
+  SCORE_OTHER_ALERT,
+  SCORE_PRIORITY_FLAG,
+  SCORE_RECENT_MODIFICATION,
 } from '../../../domain/dashboard/priorityQueue';
 import type { StoredCase, CaseStatus } from '../../../types/case';
 import type { AlertWithMatch } from '../../../utils/alertsData';
@@ -195,24 +203,24 @@ describe('Alert Classification Functions', () => {
   });
 
   describe('getAlertScore', () => {
-    it('should return 500 for AVS Day 5 alerts', () => {
+    it('should return SCORE_AVS_DAY_5 for AVS Day 5 alerts', () => {
       const alert = createMockAlert({ description: 'Day 5 AVS' });
-      expect(getAlertScore(alert)).toBe(500);
+      expect(getAlertScore(alert)).toBe(SCORE_AVS_DAY_5);
     });
 
-    it('should return 400 for Verification Due alerts', () => {
+    it('should return SCORE_VERIFICATION_DUE for Verification Due alerts', () => {
       const alert = createMockAlert({ description: 'VERIFICATION DUE' });
-      expect(getAlertScore(alert)).toBe(400);
+      expect(getAlertScore(alert)).toBe(SCORE_VERIFICATION_DUE);
     });
 
-    it('should return 400 for Mail Rcvd On Closed alerts', () => {
+    it('should return SCORE_MAIL_RCVD_CLOSED for Mail Rcvd On Closed alerts', () => {
       const alert = createMockAlert({ description: 'MAIL RCVD ON CLOSED' });
-      expect(getAlertScore(alert)).toBe(400);
+      expect(getAlertScore(alert)).toBe(SCORE_MAIL_RCVD_CLOSED);
     });
 
-    it('should return 100 for other alerts', () => {
+    it('should return SCORE_OTHER_ALERT for other alerts', () => {
       const alert = createMockAlert({ description: 'Generic Alert' });
-      expect(getAlertScore(alert)).toBe(100);
+      expect(getAlertScore(alert)).toBe(SCORE_OTHER_ALERT);
     });
   });
 });
@@ -340,10 +348,10 @@ describe('calculatePriorityScore', () => {
     const score = calculatePriorityScore(caseData, alerts);
 
     // ASSERT
-    expect(score).toBe(300); // 3 alerts × 100 points
+    expect(score).toBe(3 * SCORE_OTHER_ALERT);
   });
 
-  it('should add 1000 points for Intake status', () => {
+  it('should add SCORE_INTAKE points for Intake status', () => {
     // ARRANGE
     const caseData = createMockCase({
       status: 'Intake',
@@ -355,10 +363,10 @@ describe('calculatePriorityScore', () => {
     const score = calculatePriorityScore(caseData, alerts);
 
     // ASSERT
-    expect(score).toBe(1000);
+    expect(score).toBe(SCORE_INTAKE);
   });
 
-  it('should add 500 points for AVS Day 5 alerts', () => {
+  it('should add SCORE_AVS_DAY_5 points for AVS Day 5 alerts', () => {
     // ARRANGE
     const caseData = createMockCase();
     const alerts = [createMockAlert({ description: 'Day 5 AVS' })];
@@ -367,10 +375,10 @@ describe('calculatePriorityScore', () => {
     const score = calculatePriorityScore(caseData, alerts);
 
     // ASSERT
-    expect(score).toBe(500);
+    expect(score).toBe(SCORE_AVS_DAY_5);
   });
 
-  it('should add 400 points for Verification Due alerts', () => {
+  it('should add SCORE_VERIFICATION_DUE points for Verification Due alerts', () => {
     // ARRANGE
     const caseData = createMockCase();
     const alerts = [createMockAlert({ description: 'VERIFICATION DUE' })];
@@ -379,10 +387,10 @@ describe('calculatePriorityScore', () => {
     const score = calculatePriorityScore(caseData, alerts);
 
     // ASSERT
-    expect(score).toBe(400);
+    expect(score).toBe(SCORE_VERIFICATION_DUE);
   });
 
-  it('should add 400 points for Mail Rcvd On Closed alerts', () => {
+  it('should add SCORE_MAIL_RCVD_CLOSED points for Mail Rcvd On Closed alerts', () => {
     // ARRANGE
     const caseData = createMockCase();
     const alerts = [createMockAlert({ description: 'MAIL RCVD ON CLOSED' })];
@@ -391,10 +399,10 @@ describe('calculatePriorityScore', () => {
     const score = calculatePriorityScore(caseData, alerts);
 
     // ASSERT
-    expect(score).toBe(400);
+    expect(score).toBe(SCORE_MAIL_RCVD_CLOSED);
   });
 
-  it('should add 50 points if modified in last 24 hours', () => {
+  it('should add SCORE_RECENT_MODIFICATION points if modified in last 24 hours', () => {
     // ARRANGE
     const now = new Date();
     const recentUpdate = new Date(now.getTime() - 12 * 60 * 60 * 1000); // 12 hours ago
@@ -407,7 +415,7 @@ describe('calculatePriorityScore', () => {
     const score = calculatePriorityScore(caseData, alerts);
 
     // ASSERT
-    expect(score).toBe(50);
+    expect(score).toBe(SCORE_RECENT_MODIFICATION);
   });
 
   it('should NOT add points if modified more than 24 hours ago', () => {
@@ -437,7 +445,7 @@ describe('calculatePriorityScore', () => {
     const score = calculatePriorityScore(caseData, alerts);
 
     // ASSERT
-    expect(score).toBe(75);
+    expect(score).toBe(SCORE_PRIORITY_FLAG);
   });
 
   it('should combine all priority factors correctly', () => {
@@ -450,33 +458,34 @@ describe('calculatePriorityScore', () => {
       updatedAt: recentUpdate.toISOString(),
     });
     const alerts = [
-      createMockAlert({ id: 'alert-1', description: 'Day 5 AVS' }), // 500
-      createMockAlert({ id: 'alert-2', description: 'Generic Alert' }), // 100
+      createMockAlert({ id: 'alert-1', description: 'Day 5 AVS' }),
+      createMockAlert({ id: 'alert-2', description: 'Generic Alert' }),
     ];
 
     // ACT
     const score = calculatePriorityScore(caseData, alerts);
 
     // ASSERT
-    // 1000 (intake) + 500 (AVS) + 100 (other) + 75 (priority) + 50 (recent) = 1725
-    expect(score).toBe(1725);
+    const expectedScore = SCORE_INTAKE + SCORE_AVS_DAY_5 + SCORE_OTHER_ALERT + SCORE_PRIORITY_FLAG + SCORE_RECENT_MODIFICATION;
+    expect(score).toBe(expectedScore);
   });
 
   it('should handle mixed alert types correctly', () => {
     // ARRANGE
     const caseData = createMockCase();
     const alerts = [
-      createMockAlert({ description: 'Day 5 AVS' }), // 500
-      createMockAlert({ description: 'VERIFICATION DUE' }), // 400
-      createMockAlert({ description: 'MAIL RCVD ON CLOSED' }), // 400
-      createMockAlert({ description: 'Generic' }), // 100
+      createMockAlert({ description: 'Day 5 AVS' }),
+      createMockAlert({ description: 'VERIFICATION DUE' }),
+      createMockAlert({ description: 'MAIL RCVD ON CLOSED' }),
+      createMockAlert({ description: 'Generic' }),
     ];
 
     // ACT
     const score = calculatePriorityScore(caseData, alerts);
 
     // ASSERT
-    expect(score).toBe(1400); // 500 + 400 + 400 + 100
+    const expectedScore = SCORE_AVS_DAY_5 + SCORE_VERIFICATION_DUE + SCORE_MAIL_RCVD_CLOSED + SCORE_OTHER_ALERT;
+    expect(score).toBe(expectedScore);
   });
 });
 
@@ -718,10 +727,10 @@ describe('getPriorityCases', () => {
 
     // ASSERT
     expect(result).toHaveLength(2);
-    expect(result[0].case.id).toBe('case-2'); // Score: 200
-    expect(result[0].score).toBe(200);
-    expect(result[1].case.id).toBe('case-1'); // Score: 75
-    expect(result[1].score).toBe(75);
+    expect(result[0].case.id).toBe('case-2'); // Score: 2 * SCORE_OTHER_ALERT
+    expect(result[0].score).toBe(2 * SCORE_OTHER_ALERT);
+    expect(result[1].case.id).toBe('case-1'); // Score: SCORE_PRIORITY_FLAG
+    expect(result[1].score).toBe(SCORE_PRIORITY_FLAG);
   });
 
   it('should limit results to specified number', () => {
@@ -762,7 +771,7 @@ describe('getPriorityCases', () => {
 
     // ASSERT
     expect(result).toHaveLength(1);
-    expect(result[0].score).toBe(100); // Only 1 unresolved alert counted
+    expect(result[0].score).toBe(SCORE_OTHER_ALERT); // Only 1 unresolved alert counted
     expect(result[0].reason).toBe('1 unresolved alert');
   });
 
@@ -786,7 +795,7 @@ describe('getPriorityCases', () => {
 
     // ASSERT
     expect(result).toHaveLength(1);
-    expect(result[0].score).toBe(100); // Only 1 unresolved alert
+    expect(result[0].score).toBe(SCORE_OTHER_ALERT); // Only 1 unresolved alert
   });
 
   it('should sort by updatedAt when scores are equal', () => {
@@ -845,13 +854,13 @@ describe('getPriorityCases', () => {
   it('should prioritize Intake cases highest', () => {
     // ARRANGE
     const cases = [
-      createMockCase({ id: 'case-1', status: 'Intake' }), // 1000
-      createMockCase({ id: 'case-2', priority: true }), // 75
-      createMockCase({ id: 'case-3' }), // alerts score
+      createMockCase({ id: 'case-1', status: 'Intake' }),
+      createMockCase({ id: 'case-2', priority: true }),
+      createMockCase({ id: 'case-3' }),
     ];
     const alertsIndex = {
       alertsByCaseId: new Map([['case-3', [
-        createMockAlert({ description: 'Day 5 AVS' }), // 500
+        createMockAlert({ description: 'Day 5 AVS' }),
       ]]]),
     };
 
@@ -860,12 +869,12 @@ describe('getPriorityCases', () => {
 
     // ASSERT
     expect(result).toHaveLength(3);
-    expect(result[0].case.id).toBe('case-1'); // Intake: 1000
-    expect(result[0].score).toBe(1000);
-    expect(result[1].case.id).toBe('case-3'); // AVS alert: 500
-    expect(result[1].score).toBe(500);
-    expect(result[2].case.id).toBe('case-2'); // Priority: 75
-    expect(result[2].score).toBe(75);
+    expect(result[0].case.id).toBe('case-1'); // Intake: SCORE_INTAKE
+    expect(result[0].score).toBe(SCORE_INTAKE);
+    expect(result[1].case.id).toBe('case-3'); // AVS alert: SCORE_AVS_DAY_5
+    expect(result[1].score).toBe(SCORE_AVS_DAY_5);
+    expect(result[2].case.id).toBe('case-2'); // Priority: SCORE_PRIORITY_FLAG
+    expect(result[2].score).toBe(SCORE_PRIORITY_FLAG);
   });
 
   it('should handle cases with no alerts in the map', () => {
@@ -878,7 +887,7 @@ describe('getPriorityCases', () => {
 
     // ASSERT
     expect(result).toHaveLength(1);
-    expect(result[0].score).toBe(75);
+    expect(result[0].score).toBe(SCORE_PRIORITY_FLAG);
     expect(result[0].reason).toBe('Marked as priority');
   });
 

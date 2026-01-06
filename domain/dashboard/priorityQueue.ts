@@ -19,6 +19,27 @@ import type { StoredCase } from '../../types/case';
 import type { AlertWithMatch } from '../../utils/alertsData';
 import { parseLocalDate } from '../../utils/dateFormatting';
 
+// ============================================================================
+// Priority Scoring Constants
+// ============================================================================
+
+/** Points for cases with Intake status */
+export const SCORE_INTAKE = 5000;
+/** Points per AVS Day 5 alert */
+export const SCORE_AVS_DAY_5 = 500;
+/** Points per Verification Due alert */
+export const SCORE_VERIFICATION_DUE = 400;
+/** Points per Mail Rcvd on Closed alert */
+export const SCORE_MAIL_RCVD_CLOSED = 400;
+/** Points per other unresolved alert */
+export const SCORE_OTHER_ALERT = 100;
+/** Points per day since application date */
+export const SCORE_PER_DAY_SINCE_APPLICATION = 30;
+/** Points for cases marked as priority */
+export const SCORE_PRIORITY_FLAG = 75;
+/** Points for cases modified in last 24 hours */
+export const SCORE_RECENT_MODIFICATION = 50;
+
 /**
  * Case with priority scoring information
  */
@@ -84,10 +105,10 @@ export function classifyAlert(alert: AlertWithMatch): AlertPriorityType {
 export function getAlertScore(alert: AlertWithMatch): number {
   const type = classifyAlert(alert);
   switch (type) {
-    case 'avs-day-5': return 500;
-    case 'verification-due': return 400;
-    case 'mail-rcvd-closed': return 400;
-    case 'other': return 100;
+    case 'avs-day-5': return SCORE_AVS_DAY_5;
+    case 'verification-due': return SCORE_VERIFICATION_DUE;
+    case 'mail-rcvd-closed': return SCORE_MAIL_RCVD_CLOSED;
+    case 'other': return SCORE_OTHER_ALERT;
   }
 }
 
@@ -140,9 +161,9 @@ export function calculatePriorityScore(
 ): number {
   let score = 0;
 
-  // 5000 points for Intake status
+  // Intake status
   if (caseData.status?.toLowerCase() === 'intake') {
-    score += 5000;
+    score += SCORE_INTAKE;
   }
 
   // Score each alert based on type
@@ -150,21 +171,21 @@ export function calculatePriorityScore(
     score += getAlertScore(alert);
   }
 
-  // 30 points per day since application date
+  // Points per day since application date
   const daysSinceApp = getDaysSinceApplication(caseData.caseRecord?.applicationDate);
-  score += daysSinceApp * 30;
+  score += daysSinceApp * SCORE_PER_DAY_SINCE_APPLICATION;
 
-  // 75 points if marked as priority
+  // Priority flag
   if (caseData.priority === true) {
-    score += 75;
+    score += SCORE_PRIORITY_FLAG;
   }
 
-  // 50 points if modified in last 24 hours
+  // Recent modification (within 24 hours)
   const now = new Date();
   const oneDayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
   const updatedAt = new Date(caseData.updatedAt);
   if (updatedAt >= oneDayAgo) {
-    score += 50;
+    score += SCORE_RECENT_MODIFICATION;
   }
 
   return score;
