@@ -265,31 +265,33 @@ export function Dashboard({
 
       {/* Main Content */}
       <div className="flex-1 overflow-auto px-4 py-3">
-        <Tabs defaultValue="overview" className="space-y-3">
-          <div className="flex items-center justify-between">
-            <h2 className="text-sm font-semibold text-muted-foreground">Recent Activity</h2>
-            <TabsList>
-              <TabsTrigger value="overview">Overview</TabsTrigger>
-              <TabsTrigger value="analytics">Analytics</TabsTrigger>
-            </TabsList>
-          </div>
+        <div className="max-w-7xl mx-auto space-y-3">
+          <Tabs defaultValue="overview" className="space-y-3">
+            <div className="flex items-center justify-between">
+              <h2 className="text-sm font-semibold text-muted-foreground">Recent Activity</h2>
+              <TabsList>
+                <TabsTrigger value="overview">Overview</TabsTrigger>
+                <TabsTrigger value="analytics">Analytics</TabsTrigger>
+              </TabsList>
+            </div>
 
-          <TabsContent value="overview" className="mt-3">
-            <WidgetRegistry
-              widgets={overviewWidgets}
-              gridClassName="grid grid-cols-1 lg:grid-cols-2 gap-4 items-stretch"
-              enabledFlags={featureFlags}
-            />
-          </TabsContent>
+            <TabsContent value="overview" className="mt-3">
+              <WidgetRegistry
+                widgets={overviewWidgets}
+                gridClassName="grid grid-cols-1 lg:grid-cols-2 gap-4 items-stretch"
+                enabledFlags={featureFlags}
+              />
+            </TabsContent>
 
-          <TabsContent value="analytics" className="mt-3">
-            <WidgetRegistry
-              widgets={analyticsWidgets}
-              gridClassName="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"
-              enabledFlags={featureFlags}
-            />
-          </TabsContent>
-        </Tabs>
+            <TabsContent value="analytics" className="mt-3">
+              <WidgetRegistry
+                widgets={analyticsWidgets}
+                gridClassName="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"
+                enabledFlags={featureFlags}
+              />
+            </TabsContent>
+          </Tabs>
+        </div>
       </div>
     </div>
   );
