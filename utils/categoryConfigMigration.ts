@@ -89,8 +89,6 @@ export function normalizeCaseStatuses(
       .map(item => ({
         name: item.name.trim(),
         colorSlot: isValidColorSlot(item.colorSlot) ? item.colorSlot : 'slate',
-        countsAsCompleted: item.countsAsCompleted ?? false,
-        isTerminal: item.isTerminal ?? false,
       }));
   }
   

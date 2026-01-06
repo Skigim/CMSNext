@@ -401,14 +401,12 @@ function StatusCategoryEditor({
   const [draftName, setDraftName] = useState("");
   const [draftColor, setDraftColor] = useState<ColorSlot>("blue");
   const [draftCountsAsCompleted, setDraftCountsAsCompleted] = useState(false);
-  const [draftIsTerminal, setDraftIsTerminal] = useState(false);
 
   // Memoize to prevent re-creating on every render, which would reset the editor state
   const initialItems: StatusConfig[] = useMemo(() => 
     statusConfigs.map(s => ({
       ...s,
       countsAsCompleted: s.countsAsCompleted ?? false,
-      isTerminal: s.isTerminal ?? false,
     })),
     [statusConfigs]
   );
@@ -435,25 +433,21 @@ function StatusCategoryEditor({
       name,
       colorSlot: draftColor,
       countsAsCompleted: draftCountsAsCompleted,
-      isTerminal: draftIsTerminal,
     }),
     cleanItem: (item) => ({
       name: item.name.trim(),
       colorSlot: item.colorSlot,
       countsAsCompleted: item.countsAsCompleted ?? false,
-      isTerminal: item.isTerminal ?? false,
     }),
     hasItemChanged: (current, original) =>
       current.name !== original.name ||
       current.colorSlot !== original.colorSlot ||
-      current.countsAsCompleted !== (original.countsAsCompleted ?? false) ||
-      current.isTerminal !== (original.isTerminal ?? false),
+      current.countsAsCompleted !== (original.countsAsCompleted ?? false),
   });
 
   const resetDraft = () => {
     setDraftName("");
     setDraftCountsAsCompleted(false);
-    setDraftIsTerminal(false);
     // Cycle to next color
     const currentIndex = COLOR_SLOTS.indexOf(draftColor);
     setDraftColor(COLOR_SLOTS[(currentIndex + 1) % COLOR_SLOTS.length]);
@@ -471,7 +465,6 @@ function StatusCategoryEditor({
       onRevert={() => handleRevert(() => {
         setDraftName("");
         setDraftCountsAsCompleted(false);
-        setDraftIsTerminal(false);
       })}
       onSave={handleSave}
       headerContent={
@@ -485,16 +478,6 @@ function StatusCategoryEditor({
             </TooltipTrigger>
             <TooltipContent side="top" className="max-w-[200px]">
               <p>Check if this status counts toward "cases processed" metrics on the dashboard.</p>
-            </TooltipContent>
-          </Tooltip>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <span className="w-[70px] text-center cursor-help underline decoration-dotted">
-                Terminal
-              </span>
-            </TooltipTrigger>
-            <TooltipContent side="top" className="max-w-[200px]">
-              <p>Check if this status represents a final/terminal state for a case (e.g., Closed, Denied, Withdrawn).</p>
             </TooltipContent>
           </Tooltip>
           <span className="w-[52px]" />
@@ -529,14 +512,6 @@ function StatusCategoryEditor({
                   aria-label={`Mark ${status.name || 'status'} as counting toward completion`}
                 />
               </div>
-              <div className="w-[70px] flex justify-center">
-                <Checkbox
-                  checked={status.isTerminal ?? false}
-                  onCheckedChange={(checked) => handleFieldChange(index, 'isTerminal', checked === true)}
-                  disabled={isSaving || isGloballyLoading}
-                  aria-label={`Mark ${status.name || 'status'} as terminal status`}
-                />
-              </div>
               <ColorSlotPicker
                 value={status.colorSlot}
                 onChange={(color) => handleFieldChange(index, 'colorSlot', color)}
@@ -561,14 +536,6 @@ function StatusCategoryEditor({
                 onCheckedChange={(checked) => setDraftCountsAsCompleted(checked === true)}
                 disabled={isSaving || isGloballyLoading}
                 aria-label="New status counts toward completion"
-              />
-            </div>
-            <div className="w-[70px] flex justify-center">
-              <Checkbox
-                checked={draftIsTerminal}
-                onCheckedChange={(checked) => setDraftIsTerminal(checked === true)}
-                disabled={isSaving || isGloballyLoading}
-                aria-label="New status is terminal"
               />
             </div>
             <ColorSlotPicker

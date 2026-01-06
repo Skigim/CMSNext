@@ -55,7 +55,6 @@ export function CaseFiltersDialog({
     if (filters.excludeStatuses.length > 0) count++;
     if (filters.excludePriority) count++;
     if (filters.alertDescription !== "all") count++;
-    if (filters.hideTerminalStatuses) count++;
     return count;
   }, [filters]);
 
@@ -87,10 +86,6 @@ export function CaseFiltersDialog({
     onFiltersChange({ ...filters, excludePriority: !filters.excludePriority });
   }, [filters, onFiltersChange]);
 
-  const handleHideTerminalStatusesToggle = useCallback(() => {
-    onFiltersChange({ ...filters, hideTerminalStatuses: !filters.hideTerminalStatuses });
-  }, [filters, onFiltersChange]);
-
   const handleDateRangeChange = useCallback(
     (from: Date | undefined, to: Date | undefined) => {
       onFiltersChange({ ...filters, dateRange: { from, to } });
@@ -113,7 +108,6 @@ export function CaseFiltersDialog({
       excludeStatuses: [],
       excludePriority: false,
       alertDescription: "all",
-      hideTerminalStatuses: false,
     });
   }, [onFiltersChange]);
 
@@ -243,26 +237,6 @@ export function CaseFiltersDialog({
                   Hide priority cases
                 </label>
               </div>
-            </div>
-
-            {/* Hide terminal statuses */}
-            <div className="border-t pt-3">
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="hide-terminal-filter"
-                  checked={filters.hideTerminalStatuses}
-                  onCheckedChange={handleHideTerminalStatusesToggle}
-                />
-                <label
-                  htmlFor="hide-terminal-filter"
-                  className="text-sm cursor-pointer flex-1 font-medium"
-                >
-                  Hide terminal statuses
-                </label>
-              </div>
-              <p className="text-xs text-muted-foreground mt-1 ml-6">
-                Hides cases in final states (e.g., Closed, Denied, Withdrawn)
-              </p>
             </div>
 
             {/* Alert description filter (only in alerts segment) */}

@@ -24,8 +24,6 @@ export interface StatusConfig {
   colorSlot: ColorSlot;
   /** When true, transitioning to this status counts toward "cases processed" metrics */
   countsAsCompleted?: boolean;
-  /** When true, this status represents a terminal/final state for a case */
-  isTerminal?: boolean;
 }
 
 /**
@@ -185,7 +183,6 @@ const dedupeStatuses = (statuses: StatusConfig[]): StatusConfig[] => {
       name: name.trim(), 
       colorSlot: isValidColorSlot(status.colorSlot) ? status.colorSlot : 'slate',
       countsAsCompleted: status.countsAsCompleted ?? false,
-      isTerminal: status.isTerminal ?? false,
     });
   }
   return result;

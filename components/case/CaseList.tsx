@@ -60,7 +60,6 @@ import { filterOpenAlerts, type AlertsSummary, type AlertWithMatch } from "../..
 import { useAppViewState } from "@/hooks/useAppViewState";
 import { isFeatureEnabled } from "@/utils/featureFlags";
 import { calculatePriorityScore } from "@/domain/dashboard/priorityQueue";
-import { useCategoryConfig } from "@/contexts/CategoryConfigContext";
 
 interface CaseListProps {
   cases: StoredCase[];
@@ -98,7 +97,6 @@ export function CaseList({
 }: CaseListProps) {
   const { featureFlags } = useAppViewState();
   const showDevTools = isFeatureEnabled("settings.devTools", featureFlags);
-  const { config } = useCategoryConfig();
   const {
     sortKey,
     setSortKey,
@@ -154,19 +152,8 @@ export function CaseList({
     return Array.from(descriptions).sort();
   }, [openAlertsByCase]);
 
-  // Create a map of terminal statuses for efficient filtering
-  const terminalStatuses = useMemo(() => {
-    const map = new Set<string>();
-    config.caseStatuses.forEach(status => {
-      if (status.isTerminal) {
-        map.add(status.name);
-      }
-    });
-    return map;
-  }, [config.caseStatuses]);
-
   const hasCustomPreferences = useMemo(() => {
-    const hasFilters = filters.statuses.length > 0 || filters.priorityOnly || filters.dateRange.from || filters.dateRange.to || filters.hideTerminalStatuses;
+    const hasFilters = filters.statuses.length > 0 || filters.priorityOnly || filters.dateRange.from || filters.dateRange.to;
     const hasCustomSort = sortConfigs.length > 1 || sortConfigs[0]?.key !== "name" || sortConfigs[0]?.direction !== "asc";
     const hasCustomSegment = segment !== "all";
     return hasFilters || hasCustomSort || hasCustomSegment;
@@ -246,11 +233,6 @@ export function CaseList({
         return false;
       }
 
-      // Apply terminal status filter (hide terminal statuses)
-      if (filters.hideTerminalStatuses && terminalStatuses.has(caseData.status)) {
-        return false;
-      }
-
       // Apply date range filter
       if (filters.dateRange.from || filters.dateRange.to) {
         const updatedAt = Date.parse(caseData.updatedAt || caseData.caseRecord?.updatedDate || "");
@@ -282,7 +264,7 @@ export function CaseList({
 
       return true;
     });
-  }, [cases, searchTerm, segment, filters, terminalStatuses]);
+  }, [cases, searchTerm, segment, filters]);
 
   const sortedCases = useMemo(() => {
     return [...filteredCases].sort((a, b) => {

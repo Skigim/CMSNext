@@ -23,8 +23,6 @@ export interface CaseFilters {
   dateRange: DateRangeFilter;
   /** Filter alerts by description (only used in alerts segment) */
   alertDescription: string;
-  /** Hide cases with terminal statuses (e.g., Closed, Denied) */
-  hideTerminalStatuses: boolean;
 }
 
 interface CaseListPreferences {
@@ -54,7 +52,6 @@ const DEFAULT_FILTERS: CaseFilters = {
   excludePriority: false,
   dateRange: {},
   alertDescription: "all",
-  hideTerminalStatuses: false,
 };
 
 const STORAGE_KEY = "cmsnext-case-list-preferences";
@@ -73,7 +70,6 @@ interface SerializedPreferences {
       to?: string;
     };
     alertDescription?: string;
-    hideTerminalStatuses?: boolean;
   };
 }
 
@@ -120,7 +116,6 @@ function loadPreferences(): {
       alertDescription: typeof parsed.filters?.alertDescription === "string" 
         ? parsed.filters.alertDescription 
         : "all",
-      hideTerminalStatuses: Boolean(parsed.filters?.hideTerminalStatuses),
     };
 
     // Validate parsed dates (check for Invalid Date)
