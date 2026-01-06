@@ -56,6 +56,7 @@ describe("useCaseListPreferences", () => {
         excludeStatuses: [],
         excludePriority: false,
         alertDescription: "all",
+        hideTerminalStatuses: false,
       });
     });
   });
@@ -111,6 +112,7 @@ describe("useCaseListPreferences", () => {
         excludeStatuses: [],
         excludePriority: false,
         alertDescription: "all",
+        hideTerminalStatuses: false,
       };
 
       act(() => {
@@ -173,6 +175,7 @@ describe("useCaseListPreferences", () => {
         excludeStatuses: [],
         excludePriority: false,
         alertDescription: "all",
+        hideTerminalStatuses: false,
       });
     });
 
@@ -257,6 +260,7 @@ describe("useCaseListPreferences", () => {
         excludeStatuses: [],
         excludePriority: false,
         alertDescription: "all",
+        hideTerminalStatuses: false,
       });
       
       // Advance past debounce delay (300ms) to allow localStorage save

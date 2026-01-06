@@ -26,6 +26,7 @@ export function CaseFilters({ filters, onFiltersChange, segment, alertDescriptio
     if (filters.excludeStatuses.length > 0) count++;
     if (filters.excludePriority) count++;
     if (filters.alertDescription !== "all") count++;
+    if (filters.hideTerminalStatuses) count++;
     return count;
   }, [filters]);
 
@@ -51,6 +52,10 @@ export function CaseFilters({ filters, onFiltersChange, segment, alertDescriptio
 
   const handleClearAlertDescription = useCallback(() => {
     onFiltersChange({ ...filters, alertDescription: "all" });
+  }, [filters, onFiltersChange]);
+
+  const handleClearHideTerminal = useCallback(() => {
+    onFiltersChange({ ...filters, hideTerminalStatuses: false });
   }, [filters, onFiltersChange]);
 
   return (
@@ -145,6 +150,18 @@ export function CaseFilters({ filters, onFiltersChange, segment, alertDescriptio
                 onClick={handleClearAlertDescription}
                 className="ml-1 hover:bg-secondary-foreground/20 rounded-full p-0.5"
                 aria-label="Clear alert description filter"
+              >
+                <X className="h-3 w-3" />
+              </button>
+            </Badge>
+          )}
+          {filters.hideTerminalStatuses && (
+            <Badge variant="secondary" className="gap-1">
+              Hide terminal statuses
+              <button
+                onClick={handleClearHideTerminal}
+                className="ml-1 hover:bg-secondary-foreground/20 rounded-full p-0.5"
+                aria-label="Clear hide terminal filter"
               >
                 <X className="h-3 w-3" />
               </button>
