@@ -462,7 +462,7 @@ export function CaseList({
   }, [visibleCaseIds, isSelected, cases]);
 
   return (
-    <div className="space-y-3" data-papercut-context="CaseList">
+    <div className="max-w-7xl mx-auto space-y-3" data-papercut-context="CaseList">
       <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
         <div className="relative w-full max-w-md">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
