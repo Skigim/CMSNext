@@ -10,6 +10,7 @@ import {
   AlertRecord,
 } from "../types/case";
 import type { CaseActivityEntry } from "../types/activityLog";
+import type { Template } from "../types/template";
 import AutosaveFileService from './AutosaveFileService';
 import { createLogger } from './logger';
 import {
@@ -41,6 +42,7 @@ import { NotesService } from "./services/NotesService";
 import { FinancialsService } from "./services/FinancialsService";
 import { CaseService } from "./services/CaseService";
 import { AlertsService } from "./services/AlertsService";
+import { TemplateService } from "./services/TemplateService";
 
 // ============================================================================
 // Configuration & Logging
@@ -179,6 +181,8 @@ export class DataManager {
   private cases: CaseService;
   /** Alerts service for alert management and matching */
   private alerts: AlertsService;
+  /** Template service for managing templates */
+  private templates: TemplateService;
 
   /**
    * Creates a new DataManager instance.
@@ -211,6 +215,9 @@ export class DataManager {
       fileStorage: this.fileStorage,
     });
     this.alerts = new AlertsService();
+    this.templates = new TemplateService({
+      fileStorage: this.fileStorage,
+    });
   }
 
   // =============================================================================
@@ -729,6 +736,72 @@ export class DataManager {
    */
   async resetCategoryConfig(): Promise<CategoryConfig> {
     return this.categoryConfig.resetCategoryConfig();
+  }
+
+  // =============================================================================
+  // PUBLIC API - TEMPLATE OPERATIONS
+  // =============================================================================
+
+  /**
+   * Get all templates from storage.
+   * 
+   * @returns {Promise<Template[]>} Array of all templates
+   */
+  async getAllTemplates(): Promise<Template[]> {
+    return this.templates.getAllTemplates();
+  }
+
+  /**
+   * Add a new template.
+   * 
+   * @param templateData - Template data without ID and timestamps
+   * @returns The newly created template
+   */
+  async addTemplate(
+    templateData: Omit<Template, 'id' | 'createdAt' | 'updatedAt'>
+  ): Promise<Template> {
+    return this.templates.addTemplate(templateData);
+  }
+
+  /**
+   * Update an existing template.
+   * 
+   * @param id - Template ID to update
+   * @param updates - Partial template data to merge
+   * @returns The updated template, or null if not found
+   */
+  async updateTemplate(
+    id: string,
+    updates: Partial<Omit<Template, 'id' | 'createdAt' | 'updatedAt'>>
+  ): Promise<Template | null> {
+    return this.templates.updateTemplate(id, updates);
+  }
+
+  /**
+   * Delete a template by ID.
+   * 
+   * @param id - Template ID to delete
+   * @returns true if deleted, false if not found
+   */
+  async deleteTemplate(id: string): Promise<boolean> {
+    return this.templates.deleteTemplate(id);
+  }
+
+  /**
+   * Upsert a summary section template.
+   * Creates or updates the template for a specific summary section.
+   * 
+   * @param {string} sectionKey - The section key (e.g., 'caseInfo', 'personInfo')
+   * @param {string} name - Display name for the template
+   * @param {string} templateContent - Template content with {field} placeholders
+   * @returns {Promise<Template[]>} Updated array of all templates
+   */
+  async upsertSummarySectionTemplate(
+    sectionKey: string,
+    name: string,
+    templateContent: string
+  ): Promise<Template[]> {
+    return this.templates.upsertSummarySectionTemplate(sectionKey, name, templateContent);
   }
 
   // =============================================================================

@@ -3,6 +3,7 @@ import { ThemeProvider } from "@/contexts/ThemeContext";
 import { FileStorageProvider } from "@/contexts/FileStorageContext";
 import { DataManagerProvider } from "@/contexts/DataManagerContext";
 import { CategoryConfigProvider } from "@/contexts/CategoryConfigContext";
+import { TemplateProvider } from "@/contexts/TemplateContext";
 import { EncryptionProvider } from "@/contexts/EncryptionContext";
 import ErrorBoundary from "@/components/error/ErrorBoundary";
 import FileSystemErrorBoundary from "@/components/error/FileSystemErrorBoundary";
@@ -59,7 +60,9 @@ export function AppProviders({ children }: AppProvidersProps) {
             >
               <DataManagerProvider>
                 <CategoryConfigProvider>
-                  {children}
+                  <TemplateProvider>
+                    {children}
+                  </TemplateProvider>
                 </CategoryConfigProvider>
               </DataManagerProvider>
             </FileStorageProvider>

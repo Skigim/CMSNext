@@ -1,11 +1,7 @@
-import { useCallback } from "react";
 import { FileText, FileCheck, FileSignature } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../ui/card";
-import VRScriptsEditor from "../category/VRScriptsEditor";
-import { SummaryTemplateEditor } from "./SummaryTemplateEditor";
-import { useCategoryConfig } from "@/contexts/CategoryConfigContext";
-import type { VRScript } from "@/types/vr";
-import type { SummaryTemplateConfig } from "@/types/categoryConfig";
+import { TemplateEditor } from "./TemplateEditor";
+import { useTemplates } from "@/contexts/TemplateContext";
 
 /**
  * TemplatesPanel - Consolidated text generation templates management
@@ -14,24 +10,11 @@ import type { SummaryTemplateConfig } from "@/types/categoryConfig";
  * - VR (Verification Request) Scripts
  * - Case Summary Templates
  * - Narrative Templates
- * - Future: Note templates, Email templates, Letter templates
+ * 
+ * All templates use the unified Template type with {field} placeholder syntax.
  */
 export function TemplatesPanel() {
-  const { config, updateCategory, loading } = useCategoryConfig();
-
-  const handleSaveVRScripts = useCallback(
-    async (scripts: VRScript[]) => {
-      await updateCategory('vrScripts', scripts);
-    },
-    [updateCategory]
-  );
-
-  const handleSaveSummaryTemplate = useCallback(
-    async (template: SummaryTemplateConfig) => {
-      await updateCategory('summaryTemplate', template);
-    },
-    [updateCategory]
-  );
+  const { loading } = useTemplates();
 
   return (
     <div className="space-y-6">
@@ -84,9 +67,8 @@ export function TemplatesPanel() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <VRScriptsEditor
-            scripts={config.vrScripts ?? []}
-            onSave={handleSaveVRScripts}
+          <TemplateEditor
+            category="vr"
             isGloballyLoading={loading}
           />
         </CardContent>
@@ -97,17 +79,16 @@ export function TemplatesPanel() {
         <CardHeader>
           <div className="flex items-center gap-2">
             <FileCheck className="h-5 w-5 text-primary" />
-            <CardTitle>Case Summary Template</CardTitle>
+            <CardTitle>Case Summary Templates</CardTitle>
           </div>
           <CardDescription>
-            Configure the default section order and visibility for case summary exports.
-            These settings control the "Generate Case Summary" feature in case details.
+            Create templates for generating case summary sections. Each section can have
+            its own template with placeholders for case and person data.
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <SummaryTemplateEditor
-            template={config.summaryTemplate}
-            onSave={handleSaveSummaryTemplate}
+          <TemplateEditor
+            category="summary"
             isGloballyLoading={loading}
           />
         </CardContent>
@@ -126,30 +107,10 @@ export function TemplatesPanel() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="space-y-4">
-            <div className="rounded-lg border bg-muted/50 p-4">
-              <h4 className="text-sm font-medium mb-2">Available Narrative Generators</h4>
-              <p className="text-sm text-muted-foreground mb-3">
-                Some narrative templates are already integrated into the application:
-              </p>
-              <div className="text-xs text-muted-foreground">
-                <ul className="list-disc list-inside ml-2 space-y-0.5">
-                  <li>
-                    <strong>AVS Narrative</strong> - Automatically generates AVS consent date,
-                    submit date, 5-day, and 11-day tracking dates (available in Intake view)
-                  </li>
-                </ul>
-              </div>
-            </div>
-            <div className="rounded-lg border border-dashed p-4 text-center">
-              <p className="text-sm text-muted-foreground">
-                Custom narrative templates coming soon...
-              </p>
-              <p className="text-xs text-muted-foreground mt-1">
-                Future support for eligibility narratives, case action templates, and more
-              </p>
-            </div>
-          </div>
+          <TemplateEditor
+            category="narrative"
+            isGloballyLoading={loading}
+          />
         </CardContent>
       </Card>
     </div>
