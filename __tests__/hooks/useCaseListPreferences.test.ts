@@ -112,6 +112,7 @@ describe("useCaseListPreferences", () => {
         excludeStatuses: [],
         excludePriority: false,
         alertDescription: "all",
+        showCompleted: true,
       };
 
       act(() => {
