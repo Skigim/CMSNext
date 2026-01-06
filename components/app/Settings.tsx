@@ -17,6 +17,7 @@ import { CategoryManagerPanel } from "../category/CategoryManagerPanel";
 import { AlertsPreviewPanel } from "../alerts/AlertsPreviewPanel";
 import { PaperCutsPanel } from "../settings/PaperCutsPanel";
 import { KeyboardShortcutsPanel } from "../settings/KeyboardShortcutsPanel";
+import { TemplatesPanel } from "../settings/TemplatesPanel";
 import { useTheme } from "../../contexts/ThemeContext";
 import { toLocalDateString } from "@/utils/dateFormatting";
 import {
@@ -33,6 +34,7 @@ import {
   FileSpreadsheet,
   Scissors,
   Keyboard,
+  FileText,
 } from "lucide-react";
 import { StoredCase } from "../../types/case";
 import type { AlertsIndex } from "../../utils/alertsData";
@@ -131,7 +133,7 @@ export function Settings({ cases, onAlertsCsvImported }: SettingsProps) {
   return (
     <div className="container mx-auto py-3 px-4" data-papercut-context="Settings">
       <Tabs defaultValue="data" className="space-y-4">
-        <TabsList className={`grid w-full ${showDevTools ? 'grid-cols-8' : 'grid-cols-7'}`}>
+        <TabsList className={`grid w-full ${showDevTools ? 'grid-cols-9' : 'grid-cols-8'}`}>
           <TabsTrigger value="data" className="flex items-center gap-2">
             <Database className="h-4 w-4" />
             <span className="hidden sm:inline">Data</span>
@@ -147,6 +149,10 @@ export function Settings({ cases, onAlertsCsvImported }: SettingsProps) {
           <TabsTrigger value="categories" className="flex items-center gap-2">
             <ListChecks className="h-4 w-4" />
             <span className="hidden sm:inline">Categories</span>
+          </TabsTrigger>
+          <TabsTrigger value="templates" className="flex items-center gap-2">
+            <FileText className="h-4 w-4" />
+            <span className="hidden sm:inline">Templates</span>
           </TabsTrigger>
           <TabsTrigger value="papercuts" className="flex items-center gap-2">
             <Scissors className="h-4 w-4" />
@@ -405,6 +411,11 @@ export function Settings({ cases, onAlertsCsvImported }: SettingsProps) {
               )}
             />
           </div>
+        </TabsContent>
+
+        {/* Templates Tab */}
+        <TabsContent value="templates">
+          <TemplatesPanel />
         </TabsContent>
 
         {/* Development Tab - Only shown when devTools feature flag is enabled */}

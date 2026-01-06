@@ -1,8 +1,6 @@
 import { useCallback, useMemo, useState } from "react";
 import type { LucideIcon } from "lucide-react";
-import { ListChecks, Plus, RefreshCcw, Save, Undo2, X, FileText, Bell, Settings2, FileSignature } from "lucide-react";
-import VRScriptsEditor from "./VRScriptsEditor";
-import type { VRScript } from "@/types/vr";
+import { ListChecks, Plus, RefreshCcw, Save, Undo2, X, FileText, Bell, Settings2 } from "lucide-react";
 import { Button } from "../ui/button";
 import {
   Card,
@@ -729,13 +727,6 @@ export function CategoryManagerPanel({
     [updateCategory],
   );
 
-  const handleSaveVRScripts = useCallback(
-    async (scripts: VRScript[]) => {
-      await updateCategory('vrScripts', scripts as unknown as string[]);
-    },
-    [updateCategory],
-  );
-
   const handleResetAll = useCallback(async () => {
     if (!showResetButton) return;
 
@@ -781,7 +772,7 @@ export function CategoryManagerPanel({
       <CardContent className="space-y-6">
         {supportingContent ?? defaultSupportingContent}
         <Tabs defaultValue="case-config" className="space-y-4">
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="case-config" className="flex items-center gap-2">
               <FileText className="h-4 w-4" />
               <span className="hidden sm:inline">Case Config</span>
@@ -789,10 +780,6 @@ export function CategoryManagerPanel({
             <TabsTrigger value="notes-alerts" className="flex items-center gap-2">
               <Bell className="h-4 w-4" />
               <span className="hidden sm:inline">Notes & Alerts</span>
-            </TabsTrigger>
-            <TabsTrigger value="vr-scripts" className="flex items-center gap-2">
-              <FileSignature className="h-4 w-4" />
-              <span className="hidden sm:inline">VR Scripts</span>
             </TabsTrigger>
             <TabsTrigger value="other" className="flex items-center gap-2">
               <Settings2 className="h-4 w-4" />
@@ -838,18 +825,6 @@ export function CategoryManagerPanel({
                 isGloballyLoading={loading || isResetting}
               />
             </div>
-          </TabsContent>
-
-          {/* VR Scripts Tab */}
-          <TabsContent value="vr-scripts" className="space-y-4">
-            <p className="text-sm text-muted-foreground">
-              Create reusable VR (Verification Request) templates with placeholders for case and financial item data.
-            </p>
-            <VRScriptsEditor
-              scripts={config.vrScripts ?? []}
-              onSave={handleSaveVRScripts}
-              isGloballyLoading={loading || isResetting}
-            />
           </TabsContent>
 
           {/* Other Settings Tab */}
