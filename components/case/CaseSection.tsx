@@ -12,6 +12,7 @@ import {
 } from "@/utils/caseSummaryGenerator";
 
 import { useFinancialItems } from "../../hooks/useFinancialItems";
+import { calculateCategoryTotal } from "@/domain/financials";
 
 interface CaseSectionProps {
   title: string;
@@ -19,15 +20,15 @@ interface CaseSectionProps {
   caseId: string;
 }
 
-export function CaseSection({ 
-  title, 
-  category, 
+export function CaseSection({
+  title,
+  category,
   caseId
 }: CaseSectionProps) {
-  const { 
-    groupedItems, 
-    createFinancialItem, 
-    updateFinancialItem, 
+  const {
+    groupedItems,
+    createFinancialItem,
+    updateFinancialItem,
     deleteFinancialItem,
     addAmountHistoryEntry,
     updateAmountHistoryEntry,
@@ -102,12 +103,12 @@ export function CaseSection({
 
   const handleCopyCategory = useCallback(async () => {
     if (items.length === 0) return;
-    
+
     const text = items
       .map(item => formatItem(item).trim())
       .filter(Boolean)
       .join("\n");
-    
+
     await clickToCopy(text, {
       successMessage: `${title} copied to clipboard`,
     });
@@ -116,7 +117,14 @@ export function CaseSection({
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
-        <h3 className="text-lg font-medium">{title}</h3>
+        <div className="flex items-baseline gap-2">
+          <h3 className="text-lg font-medium">{title}</h3>
+          {items.length > 0 && (
+            <span className="text-sm text-muted-foreground font-normal">
+              ${calculateCategoryTotal(items).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            </span>
+          )}
+        </div>
         {items.length > 0 && (
           <Button
             variant="ghost"
@@ -143,13 +151,13 @@ export function CaseSection({
           title=""
           showActions={true}
         />
-        <Button 
-          size="sm" 
+        <Button
+          size="sm"
           onClick={() => {
             if (addSkeletonFnRef.current) {
               addSkeletonFnRef.current();
             }
-          }} 
+          }}
           className="gap-2 w-full"
           variant="outline"
         >

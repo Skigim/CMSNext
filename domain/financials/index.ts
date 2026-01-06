@@ -12,3 +12,9 @@ export {
   type FinancialValidationResult,
   type FinancialItemInput,
 } from "./validation";
+
+export {
+  calculateCategoryTotal,
+  calculateFinancialTotals,
+  type CaseCategory,
+} from "./calculations";
