@@ -5,7 +5,7 @@
  * Used by Today's Work widget to surface cases requiring immediate attention.
  * 
  * Priority Criteria (in order of weight):
- * 1. Intake status cases (1000 points)
+ * 1. Intake status cases (5000 points)
  * 2. AVS Day 5 alerts (500 points each)
  * 3. Verification Due / VR Due alerts (400 points each)
  * 4. Mail Rcvd on Closed alerts (400 points each)
@@ -121,7 +121,7 @@ export function getDaysSinceApplication(
  * Higher score = higher priority.
  * 
  * Scoring formula:
- * - 1000 points if case status is "Intake"
+ * - 5000 points if case status is "Intake"
  * - 500 points per AVS Day 5 alert
  * - 400 points per Verification Due / VR Due alert
  * - 400 points per Mail Rcvd on Closed alert
@@ -140,9 +140,9 @@ export function calculatePriorityScore(
 ): number {
   let score = 0;
 
-  // 1000 points for Intake status
+  // 5000 points for Intake status
   if (caseData.status?.toLowerCase() === 'intake') {
-    score += 1000;
+    score += 5000;
   }
 
   // Score each alert based on type
