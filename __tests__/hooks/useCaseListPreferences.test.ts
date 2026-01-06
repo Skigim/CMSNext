@@ -56,6 +56,7 @@ describe("useCaseListPreferences", () => {
         excludeStatuses: [],
         excludePriority: false,
         alertDescription: "all",
+        showCompleted: true,
       });
     });
   });
@@ -173,6 +174,7 @@ describe("useCaseListPreferences", () => {
         excludeStatuses: [],
         excludePriority: false,
         alertDescription: "all",
+        showCompleted: true,
       });
     });
 
@@ -257,6 +259,7 @@ describe("useCaseListPreferences", () => {
         excludeStatuses: [],
         excludePriority: false,
         alertDescription: "all",
+        showCompleted: true,
       });
       
       // Advance past debounce delay (300ms) to allow localStorage save

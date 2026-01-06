@@ -26,6 +26,7 @@ export function CaseFilters({ filters, onFiltersChange, segment, alertDescriptio
     if (filters.excludeStatuses.length > 0) count++;
     if (filters.excludePriority) count++;
     if (filters.alertDescription !== "all") count++;
+    if (!filters.showCompleted) count++;
     return count;
   }, [filters]);
 
@@ -51,6 +52,10 @@ export function CaseFilters({ filters, onFiltersChange, segment, alertDescriptio
 
   const handleClearAlertDescription = useCallback(() => {
     onFiltersChange({ ...filters, alertDescription: "all" });
+  }, [filters, onFiltersChange]);
+
+  const handleClearShowCompleted = useCallback(() => {
+    onFiltersChange({ ...filters, showCompleted: true });
   }, [filters, onFiltersChange]);
 
   return (
@@ -145,6 +150,18 @@ export function CaseFilters({ filters, onFiltersChange, segment, alertDescriptio
                 onClick={handleClearAlertDescription}
                 className="ml-1 hover:bg-secondary-foreground/20 rounded-full p-0.5"
                 aria-label="Clear alert description filter"
+              >
+                <X className="h-3 w-3" />
+              </button>
+            </Badge>
+          )}
+          {!filters.showCompleted && (
+            <Badge variant="secondary" className="gap-1">
+              Hide completed
+              <button
+                onClick={handleClearShowCompleted}
+                className="ml-1 hover:bg-secondary-foreground/20 rounded-full p-0.5"
+                aria-label="Clear hide completed filter"
               >
                 <X className="h-3 w-3" />
               </button>

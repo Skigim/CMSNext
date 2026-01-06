@@ -60,6 +60,7 @@ import { filterOpenAlerts, type AlertsSummary, type AlertWithMatch } from "../..
 import { useAppViewState } from "@/hooks/useAppViewState";
 import { isFeatureEnabled } from "@/utils/featureFlags";
 import { calculatePriorityScore } from "@/domain/dashboard/priorityQueue";
+import { useCategoryConfig } from "@/contexts/CategoryConfigContext";
 
 interface CaseListProps {
   cases: StoredCase[];
@@ -97,6 +98,7 @@ export function CaseList({
 }: CaseListProps) {
   const { featureFlags } = useAppViewState();
   const showDevTools = isFeatureEnabled("settings.devTools", featureFlags);
+  const { config } = useCategoryConfig();
   const {
     sortKey,
     setSortKey,
@@ -203,6 +205,13 @@ export function CaseList({
     const now = Date.now();
     const recentThreshold = now - 1000 * 60 * 60 * 24 * 14; // 14 days
 
+    // Build a Set of completed status names for efficient lookup
+    const completedStatuses = new Set(
+      config.caseStatuses
+        .filter(s => s.countsAsCompleted)
+        .map(s => s.name)
+    );
+
     return cases.filter(caseData => {
       const matchesSearch =
         normalizedSearch.length === 0 ||
@@ -210,6 +219,11 @@ export function CaseList({
         (caseData.mcn || "").toLowerCase().includes(normalizedSearch);
 
       if (!matchesSearch) {
+        return false;
+      }
+
+      // Apply showCompleted filter
+      if (!filters.showCompleted && completedStatuses.has(caseData.status)) {
         return false;
       }
 
@@ -264,7 +278,7 @@ export function CaseList({
 
       return true;
     });
-  }, [cases, searchTerm, segment, filters]);
+  }, [cases, searchTerm, segment, filters, config.caseStatuses]);
 
   const sortedCases = useMemo(() => {
     return [...filteredCases].sort((a, b) => {

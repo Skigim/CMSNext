@@ -23,6 +23,8 @@ export interface CaseFilters {
   dateRange: DateRangeFilter;
   /** Filter alerts by description (only used in alerts segment) */
   alertDescription: string;
+  /** Show cases with completed statuses (countsAsCompleted: true) */
+  showCompleted: boolean;
 }
 
 interface CaseListPreferences {
@@ -52,6 +54,7 @@ const DEFAULT_FILTERS: CaseFilters = {
   excludePriority: false,
   dateRange: {},
   alertDescription: "all",
+  showCompleted: true,
 };
 
 const STORAGE_KEY = "cmsnext-case-list-preferences";
@@ -70,6 +73,7 @@ interface SerializedPreferences {
       to?: string;
     };
     alertDescription?: string;
+    showCompleted?: boolean;
   };
 }
 
@@ -116,6 +120,9 @@ function loadPreferences(): {
       alertDescription: typeof parsed.filters?.alertDescription === "string" 
         ? parsed.filters.alertDescription 
         : "all",
+      showCompleted: parsed.filters?.showCompleted !== undefined 
+        ? Boolean(parsed.filters.showCompleted)
+        : true, // Default to showing completed cases
     };
 
     // Validate parsed dates (check for Invalid Date)

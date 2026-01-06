@@ -55,6 +55,7 @@ export function CaseFiltersDialog({
     if (filters.excludeStatuses.length > 0) count++;
     if (filters.excludePriority) count++;
     if (filters.alertDescription !== "all") count++;
+    if (!filters.showCompleted) count++;
     return count;
   }, [filters]);
 
@@ -100,6 +101,10 @@ export function CaseFiltersDialog({
     [filters, onFiltersChange]
   );
 
+  const handleShowCompletedToggle = useCallback(() => {
+    onFiltersChange({ ...filters, showCompleted: !filters.showCompleted });
+  }, [filters, onFiltersChange]);
+
   const handleClearFilters = useCallback(() => {
     onFiltersChange({
       statuses: [],
@@ -108,6 +113,7 @@ export function CaseFiltersDialog({
       excludeStatuses: [],
       excludePriority: false,
       alertDescription: "all",
+      showCompleted: true,
     });
   }, [onFiltersChange]);
 
@@ -237,6 +243,26 @@ export function CaseFiltersDialog({
                   Hide priority cases
                 </label>
               </div>
+            </div>
+
+            {/* Show completed cases */}
+            <div className="border-t pt-3">
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="show-completed-filter"
+                  checked={filters.showCompleted}
+                  onCheckedChange={handleShowCompletedToggle}
+                />
+                <label
+                  htmlFor="show-completed-filter"
+                  className="text-sm cursor-pointer flex-1 font-medium"
+                >
+                  Show completed cases
+                </label>
+              </div>
+              <p className="text-xs text-muted-foreground mt-1 ml-6">
+                Cases with statuses marked as completed will be hidden when unchecked
+              </p>
             </div>
 
             {/* Alert description filter (only in alerts segment) */}
