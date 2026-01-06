@@ -527,12 +527,6 @@ export function CaseList({
           size="sm"
           aria-label="Filter case segments"
         >
-          <ToggleGroupItem value="all" aria-label="All cases">
-            <Filter className="mr-2 h-4 w-4" /> All cases
-          </ToggleGroupItem>
-          <ToggleGroupItem value="recent" aria-label="Recently updated">
-            <Filter className="mr-2 h-4 w-4" /> Recently updated
-          </ToggleGroupItem>
           <ToggleGroupItem value="priority" aria-label="Priority cases">
             <Filter className="mr-2 h-4 w-4" /> Priority
           </ToggleGroupItem>
