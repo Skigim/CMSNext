@@ -170,8 +170,8 @@ describe("Dashboard", () => {
       />,
     );
 
-    // Check that the dashboard header is rendered
-    expect(screen.getByRole("heading", { name: /dashboard/i })).toBeInTheDocument();
+    // Check that the Recent Activity header is rendered
+    expect(screen.getByRole("heading", { name: /recent activity/i })).toBeInTheDocument();
     
     // Check that the New Case button is rendered
     expect(screen.getByRole("button", { name: /new case/i })).toBeInTheDocument();
