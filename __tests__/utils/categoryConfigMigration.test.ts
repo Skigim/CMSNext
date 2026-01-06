@@ -177,7 +177,27 @@ describe("categoryConfigMigration", () => {
         { name: "Pending", colorSlot: "blue" },
       ];
       const result = normalizeCaseStatuses(input);
-      expect(result).toEqual(input);
+      // Should normalize to include default values for optional fields
+      expect(result).toEqual([
+        { name: "Active", colorSlot: "green", countsAsCompleted: false, isTerminal: false },
+        { name: "Pending", colorSlot: "blue", countsAsCompleted: false, isTerminal: false },
+      ]);
+    });
+
+    it("preserves countsAsCompleted and isTerminal flags", () => {
+      const input: StatusConfig[] = [
+        { name: "Active", colorSlot: "green", countsAsCompleted: false, isTerminal: false },
+        { name: "Closed", colorSlot: "slate", countsAsCompleted: true, isTerminal: true },
+        { name: "Denied", colorSlot: "red", countsAsCompleted: true, isTerminal: true },
+      ];
+      const result = normalizeCaseStatuses(input);
+      expect(result).toHaveLength(3);
+      expect(result[0].countsAsCompleted).toBe(false);
+      expect(result[0].isTerminal).toBe(false);
+      expect(result[1].countsAsCompleted).toBe(true);
+      expect(result[1].isTerminal).toBe(true);
+      expect(result[2].countsAsCompleted).toBe(true);
+      expect(result[2].isTerminal).toBe(true);
     });
   });
 
