@@ -3,6 +3,7 @@ import { FileText, FileCheck, FileSignature } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../ui/card";
 import VRScriptsEditor from "../category/VRScriptsEditor";
 import { useCategoryConfig } from "@/contexts/CategoryConfigContext";
+import type { VRScript } from "@/types/vr";
 
 /**
  * TemplatesPanel - Consolidated text generation templates management
@@ -14,11 +15,11 @@ import { useCategoryConfig } from "@/contexts/CategoryConfigContext";
  * - Future: Note templates, Email templates, Letter templates
  */
 export function TemplatesPanel() {
-  const { config, updateCategory } = useCategoryConfig();
+  const { config, updateCategory, loading } = useCategoryConfig();
 
   const handleSaveVRScripts = useCallback(
-    async (scripts: Array<{ name: string; template: string }>) => {
-      await updateCategory('vrScripts', scripts as unknown as string[]);
+    async (scripts: VRScript[]) => {
+      await updateCategory('vrScripts', scripts);
     },
     [updateCategory]
   );
@@ -77,7 +78,7 @@ export function TemplatesPanel() {
           <VRScriptsEditor
             scripts={config.vrScripts ?? []}
             onSave={handleSaveVRScripts}
-            isGloballyLoading={false}
+            isGloballyLoading={loading}
           />
         </CardContent>
       </Card>
