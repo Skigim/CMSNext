@@ -8,6 +8,7 @@ import {
   type StatusConfig,
   type AlertTypeConfig,
   type PartialCategoryConfigInput,
+  type SummaryTemplateConfig,
 } from "@/types/categoryConfig";
 import type { VRScript } from "@/types/vr";
 import { useDataManagerSafe } from "./DataManagerContext";
@@ -19,10 +20,10 @@ const logger = createLogger("CategoryConfigContext");
 
 /**
  * Handler type for category updates.
- * Accepts category key and values (string array, StatusConfig array, etc.)
+ * Accepts category key and values (string array, StatusConfig array, VRScript array, or SummaryTemplateConfig)
  * @typedef {Function} UpdateHandler
  */
-type UpdateHandler = (key: CategoryKey, values: string[] | StatusConfig[] | AlertTypeConfig[] | VRScript[]) => Promise<void>;
+type UpdateHandler = (key: CategoryKey, values: string[] | StatusConfig[] | AlertTypeConfig[] | VRScript[] | SummaryTemplateConfig) => Promise<void>;
 
 /**
  * Category configuration context value - provides access to case/alert/VR configuration.
@@ -297,6 +298,23 @@ export const CategoryConfigProvider: React.FC<{ children: React.ReactNode }> = (
         } catch (err) {
           console.error("Failed to update VR scripts", err);
           toast.error("Failed to update VR scripts", { id: toastId });
+        }
+        return;
+      }
+
+      // Handle summaryTemplate specially since it uses SummaryTemplateConfig
+      if (key === 'summaryTemplate') {
+        const template = values as SummaryTemplateConfig;
+
+        const toastId = toast.loading("Saving summary template...");
+        try {
+          const updated = await dataManager.updateSummaryTemplate(template);
+          setConfig(mergeCategoryConfig(updated));
+          setError(null);
+          toast.success("Summary template updated", { id: toastId });
+        } catch (err) {
+          console.error("Failed to update summary template", err);
+          toast.error("Failed to update summary template", { id: toastId });
         }
         return;
       }

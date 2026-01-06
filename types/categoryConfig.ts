@@ -14,7 +14,8 @@ export type CategoryKey =
   | "livingArrangements"
   | "noteCategories"
   | "verificationStatuses"
-  | "vrScripts";
+  | "vrScripts"
+  | "summaryTemplate";
 
 /**
  * Configuration for a case status with its display color.
@@ -34,6 +35,29 @@ export interface AlertTypeConfig {
   colorSlot: ColorSlot;
 }
 
+/**
+ * Section ordering for case summary template
+ */
+export type SummarySectionKey = 
+  | 'notes'
+  | 'caseInfo'
+  | 'personInfo'
+  | 'relationships'
+  | 'resources'
+  | 'income'
+  | 'expenses'
+  | 'avsTracking';
+
+/**
+ * Configuration for case summary template - defines section order and default visibility
+ */
+export interface SummaryTemplateConfig {
+  /** Ordered list of sections to include in summary */
+  sectionOrder: SummarySectionKey[];
+  /** Default enabled state for each section */
+  defaultSections: Record<SummarySectionKey, boolean>;
+}
+
 export interface CategoryConfig {
   caseTypes: string[];
   caseStatuses: StatusConfig[];
@@ -43,6 +67,8 @@ export interface CategoryConfig {
   verificationStatuses: string[];
   /** VR (Verification Request) script templates */
   vrScripts: VRScript[];
+  /** Case summary template configuration */
+  summaryTemplate: SummaryTemplateConfig;
 }
 
 /**
@@ -60,6 +86,7 @@ export interface PartialCategoryConfigInput {
   noteCategories?: string[];
   verificationStatuses?: string[];
   vrScripts?: VRScript[];
+  summaryTemplate?: SummaryTemplateConfig;
 }
 
 const DEFAULT_CASE_TYPES = [
@@ -110,6 +137,21 @@ const DEFAULT_ALERT_TYPES: AlertTypeConfig[] = [];
 // No default VR scripts - users create their own
 const DEFAULT_VR_SCRIPTS: VRScript[] = [];
 
+// Default summary template - matches current hardcoded order
+const DEFAULT_SUMMARY_TEMPLATE: SummaryTemplateConfig = Object.freeze({
+  sectionOrder: ['notes', 'caseInfo', 'personInfo', 'relationships', 'resources', 'income', 'expenses', 'avsTracking'],
+  defaultSections: {
+    notes: true,
+    caseInfo: true,
+    personInfo: true,
+    relationships: true,
+    resources: true,
+    income: true,
+    expenses: true,
+    avsTracking: true,
+  },
+});
+
 export const defaultCategoryConfig: CategoryConfig = Object.freeze({
   caseTypes: DEFAULT_CASE_TYPES,
   caseStatuses: DEFAULT_CASE_STATUSES,
@@ -118,6 +160,7 @@ export const defaultCategoryConfig: CategoryConfig = Object.freeze({
   noteCategories: DEFAULT_NOTE_CATEGORIES,
   verificationStatuses: DEFAULT_VERIFICATION_STATUSES,
   vrScripts: DEFAULT_VR_SCRIPTS,
+  summaryTemplate: DEFAULT_SUMMARY_TEMPLATE,
 });
 
 export const CATEGORY_DISPLAY_METADATA: Record<
@@ -151,6 +194,10 @@ export const CATEGORY_DISPLAY_METADATA: Record<
   vrScripts: {
     label: "VR Scripts",
     description: "Create reusable templates for generating Verification Requests.",
+  },
+  summaryTemplate: {
+    label: "Summary Template",
+    description: "Configure the default section order and visibility for case summaries.",
   },
 };
 
@@ -321,6 +368,10 @@ export const mergeCategoryConfig = (
       noteCategories: [...defaultCategoryConfig.noteCategories],
       verificationStatuses: [...defaultCategoryConfig.verificationStatuses],
       vrScripts: defaultCategoryConfig.vrScripts.map(s => ({ ...s })),
+      summaryTemplate: {
+        sectionOrder: [...defaultCategoryConfig.summaryTemplate.sectionOrder],
+        defaultSections: { ...defaultCategoryConfig.summaryTemplate.defaultSections },
+      },
     };
   }
 
@@ -354,6 +405,15 @@ export const mergeCategoryConfig = (
     vrScripts: config.vrScripts?.length
       ? config.vrScripts.map(s => ({ ...s }))
       : [...defaultCategoryConfig.vrScripts],
+    summaryTemplate: config.summaryTemplate
+      ? {
+          sectionOrder: [...config.summaryTemplate.sectionOrder],
+          defaultSections: { ...config.summaryTemplate.defaultSections },
+        }
+      : {
+          sectionOrder: [...defaultCategoryConfig.summaryTemplate.sectionOrder],
+          defaultSections: { ...defaultCategoryConfig.summaryTemplate.defaultSections },
+        },
   };
 };
 
@@ -371,6 +431,10 @@ export const cloneCategoryConfig = (config?: CategoryConfig | null): CategoryCon
     noteCategories: [...source.noteCategories],
     verificationStatuses: [...source.verificationStatuses],
     vrScripts: (source.vrScripts || []).map(s => ({ ...s })),
+    summaryTemplate: {
+      sectionOrder: [...source.summaryTemplate.sectionOrder],
+      defaultSections: { ...source.summaryTemplate.defaultSections },
+    },
   };
 };
 

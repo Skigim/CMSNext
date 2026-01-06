@@ -711,6 +711,16 @@ export class DataManager {
   }
 
   /**
+   * Update case summary template configuration.
+   * 
+   * @param {SummaryTemplateConfig} template - Summary template configuration
+   * @returns {Promise<CategoryConfig>} The updated category configuration
+   */
+  async updateSummaryTemplate(template: import('@/types/categoryConfig').SummaryTemplateConfig): Promise<CategoryConfig> {
+    return this.categoryConfig.updateSummaryTemplate(template);
+  }
+
+  /**
    * Reset category configuration to defaults.
    * 
    * Clears all custom configurations and restores factory defaults.
