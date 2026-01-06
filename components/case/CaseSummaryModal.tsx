@@ -50,7 +50,7 @@ export function CaseSummaryModal({
   notes,
 }: CaseSummaryModalProps) {
   const { config } = useCategoryConfig();
-  const { sectionOrder, defaultSections } = config.summaryTemplate;
+  const { sectionOrder, defaultSections, sectionTemplates } = config.summaryTemplate;
 
   // Build section configs from template order
   const SECTION_CONFIGS: SectionConfig[] = useMemo(() => {
@@ -79,8 +79,13 @@ export function CaseSummaryModal({
 
   // Generate summary whenever sections change
   const generatedSummary = useMemo(() => {
-    return generateCaseSummary(caseData, { financials, notes, sections });
-  }, [caseData, financials, notes, sections]);
+    return generateCaseSummary(caseData, { 
+      financials, 
+      notes, 
+      sections,
+      templates: sectionTemplates 
+    });
+  }, [caseData, financials, notes, sections, sectionTemplates]);
 
   // Update preview when generated summary changes
   useEffect(() => {

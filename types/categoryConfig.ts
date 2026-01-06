@@ -49,13 +49,22 @@ export type SummarySectionKey =
   | 'avsTracking';
 
 /**
- * Configuration for case summary template - defines section order and default visibility
+ * Template string with variable placeholders
+ * Variables: {{variable_name}}
+ * Example: "Name: {{firstName}} {{lastName}} ({{age}})"
+ */
+export type SectionTemplate = string;
+
+/**
+ * Configuration for case summary template - defines section order, visibility, and content
  */
 export interface SummaryTemplateConfig {
   /** Ordered list of sections to include in summary */
   sectionOrder: SummarySectionKey[];
   /** Default enabled state for each section */
   defaultSections: Record<SummarySectionKey, boolean>;
+  /** Custom templates for each section (optional - falls back to default formatting if not provided) */
+  sectionTemplates: Partial<Record<SummarySectionKey, SectionTemplate>>;
 }
 
 export interface CategoryConfig {
@@ -150,6 +159,7 @@ const DEFAULT_SUMMARY_TEMPLATE: SummaryTemplateConfig = {
     expenses: true,
     avsTracking: true,
   },
+  sectionTemplates: {}, // Empty means use default formatting
 };
 
 export const defaultCategoryConfig: CategoryConfig = Object.freeze({
@@ -371,6 +381,7 @@ export const mergeCategoryConfig = (
       summaryTemplate: {
         sectionOrder: [...defaultCategoryConfig.summaryTemplate.sectionOrder],
         defaultSections: { ...defaultCategoryConfig.summaryTemplate.defaultSections },
+        sectionTemplates: { ...defaultCategoryConfig.summaryTemplate.sectionTemplates },
       },
     };
   }
@@ -409,10 +420,12 @@ export const mergeCategoryConfig = (
       ? {
           sectionOrder: [...config.summaryTemplate.sectionOrder],
           defaultSections: { ...config.summaryTemplate.defaultSections },
+          sectionTemplates: { ...(config.summaryTemplate.sectionTemplates || {}) },
         }
       : {
           sectionOrder: [...defaultCategoryConfig.summaryTemplate.sectionOrder],
           defaultSections: { ...defaultCategoryConfig.summaryTemplate.defaultSections },
+          sectionTemplates: { ...defaultCategoryConfig.summaryTemplate.sectionTemplates },
         },
   };
 };
@@ -434,6 +447,7 @@ export const cloneCategoryConfig = (config?: CategoryConfig | null): CategoryCon
     summaryTemplate: {
       sectionOrder: [...source.summaryTemplate.sectionOrder],
       defaultSections: { ...source.summaryTemplate.defaultSections },
+      sectionTemplates: { ...(source.summaryTemplate.sectionTemplates || {}) },
     },
   };
 };

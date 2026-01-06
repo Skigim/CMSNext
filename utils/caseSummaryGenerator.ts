@@ -13,8 +13,58 @@ import {
   calculateAVSTrackingDates,
   extractKnownInstitutions,
 } from '@/domain/cases';
+import type { SectionTemplate } from '@/types/categoryConfig';
 
 const SECTION_SEPARATOR = '\n-----\n';
+
+/**
+ * Template variable renderer - replaces {{variable}} with actual values
+ */
+function renderTemplate(template: string, variables: Record<string, string | number | boolean | null | undefined>): string {
+  return template.replace(/\{\{(\w+)\}\}/g, (_match, key) => {
+    const value = variables[key];
+    if (value === null || value === undefined) {
+      return 'None Attested';
+    }
+    return String(value);
+  });
+}
+
+/**
+ * Default templates for each section
+ */
+export const DEFAULT_SECTION_TEMPLATES = {
+  caseInfo: `Application Date: {{applicationDate}}
+Retro Requested: {{retroDisplay}}
+Waiver Requested: {{withWaiver}}`,
+  
+  personInfo: `{{fullName}} | {{maritalStatus}}
+{{contact}}
+Citizenship Verified: {{citizenshipVerified}}
+Aged/Disabled Verified: {{agedDisabledVerified}}
+Living Arrangement: {{livingArrangement}}
+Voter: {{voterStatus}}`,
+  
+  relationships: `Relationships/Representatives
+{{relationshipsList}}`,
+  
+  resources: `Resources
+{{resourcesList}}`,
+  
+  income: `Income
+{{incomeList}}`,
+  
+  expenses: `Expenses
+{{expensesList}}`,
+  
+  notes: `MLTC: {{notesList}}`,
+  
+  avsTracking: `AVS Submitted: {{avsSubmitted}}
+Consent Date: {{consentDate}}
+5 Day: {{fiveDayDate}}
+11 Day: {{elevenDayDate}}
+Known Institutions: {{knownInstitutions}}`,
+};
 
 /**
  * Format a date string to MM/DD/YYYY
@@ -184,8 +234,20 @@ function formatRelationship(rel: Relationship): string {
 /**
  * Build the Case Info section
  */
-function buildCaseInfoSection(caseRecord: StoredCase['caseRecord']): string {
+function buildCaseInfoSection(caseRecord: StoredCase['caseRecord'], template?: SectionTemplate): string {
   const retroDisplay = formatRetroMonths(caseRecord.retroMonths, caseRecord.applicationDate);
+  
+  if (template) {
+    const retroMonths = typeof caseRecord.retroMonths === 'number' ? caseRecord.retroMonths : 0;
+    return renderTemplate(template, {
+      applicationDate: formatDateMMDDYYYY(caseRecord.applicationDate),
+      retroDisplay,
+      withWaiver: caseRecord.withWaiver ? 'Yes' : 'No',
+      retroMonths,
+    });
+  }
+  
+  // Default formatting
   const lines = [
     `Application Date: ${formatDateMMDDYYYY(caseRecord.applicationDate)}`,
     `Retro Requested: ${retroDisplay}`,
@@ -197,27 +259,47 @@ function buildCaseInfoSection(caseRecord: StoredCase['caseRecord']): string {
 /**
  * Build the Person Info section
  */
-function buildPersonInfoSection(person: StoredCase['person'], caseRecord: StoredCase['caseRecord']): string {
-  // Name line with age and marital status
+function buildPersonInfoSection(person: StoredCase['person'], caseRecord: StoredCase['caseRecord'], template?: SectionTemplate): string {
+  // Prepare variables
   const age = calculateAge(person.dateOfBirth);
   const ageDisplay = age !== null ? `(${age})` : '';
   const maritalStatus = caseRecord.maritalStatus || 'Unknown';
-  const nameLine = `${person.firstName} ${person.lastName} ${ageDisplay} | ${maritalStatus}`.trim();
+  const fullName = `${person.firstName} ${person.lastName} ${ageDisplay}`.trim();
   
   const contactParts: string[] = [];
   if (person.email) contactParts.push(person.email);
   if (person.phone) contactParts.push(formatPhoneNumber(person.phone));
-  const contactLine = contactParts.length > 0 ? contactParts.join(' | ') : 'No contact info';
+  const contact = contactParts.length > 0 ? contactParts.join(' | ') : 'No contact info';
   
-  const voterDisplay = formatVoterStatus(caseRecord.voterFormStatus);
+  const voterStatus = formatVoterStatus(caseRecord.voterFormStatus);
   
+  if (template) {
+    return renderTemplate(template, {
+      firstName: person.firstName,
+      lastName: person.lastName,
+      age,
+      ageDisplay,
+      fullName,
+      maritalStatus,
+      contact,
+      email: person.email,
+      phone: formatPhoneNumber(person.phone),
+      citizenshipVerified: caseRecord.citizenshipVerified ? 'Yes' : 'No',
+      agedDisabledVerified: caseRecord.agedDisabledVerified ? 'Yes' : 'No',
+      livingArrangement: caseRecord.livingArrangement || 'None Attested',
+      voterStatus,
+    });
+  }
+  
+  // Default formatting
+  const nameLine = `${fullName} | ${maritalStatus}`;
   const lines = [
     nameLine,
-    contactLine,
+    contact,
     `Citizenship Verified: ${caseRecord.citizenshipVerified ? 'Yes' : 'No'}`,
     `Aged/Disabled Verified: ${caseRecord.agedDisabledVerified ? 'Yes' : 'No'}`,
     `Living Arrangement: ${caseRecord.livingArrangement || 'None Attested'}`,
-    `Voter: ${voterDisplay}`,
+    `Voter: ${voterStatus}`,
   ];
   return lines.join('\n');
 }
@@ -225,15 +307,25 @@ function buildPersonInfoSection(person: StoredCase['person'], caseRecord: Stored
 /**
  * Build the Relationships section
  */
-function buildRelationshipsSection(relationships?: Relationship[]): string {
+function buildRelationshipsSection(relationships?: Relationship[], template?: SectionTemplate): string {
   const header = 'Relationships/Representatives';
   
   if (!relationships || relationships.length === 0) {
+    const relationshipsList = 'None Attested';
+    if (template) {
+      return renderTemplate(template, { relationshipsList });
+    }
     return `${header}\nNone Attested`;
   }
   
   const formatted = relationships.map(formatRelationship);
-  return `${header}\n${formatted.join('\n')}`;
+  const relationshipsList = formatted.join('\n');
+  
+  if (template) {
+    return renderTemplate(template, { relationshipsList });
+  }
+  
+  return `${header}\n${relationshipsList}`;
 }
 
 /**
@@ -242,21 +334,39 @@ function buildRelationshipsSection(relationships?: Relationship[]): string {
 function buildFinancialSection(
   title: string,
   items: FinancialItem[],
-  formatter: (item: FinancialItem) => string
+  formatter: (item: FinancialItem) => string,
+  template?: SectionTemplate
 ): string {
   if (!items || items.length === 0) {
+    const listVarName = title.toLowerCase() === 'resources' ? 'resourcesList' : 
+                        title.toLowerCase() === 'income' ? 'incomeList' : 'expensesList';
+    if (template) {
+      return renderTemplate(template, { [listVarName]: 'None Attested' });
+    }
     return `${title}\nNone Attested`;
   }
   
   const formatted = items.map(formatter);
-  return `${title}\n${formatted.join('\n')}`;
+  const listContent = formatted.join('\n');
+  
+  if (template) {
+    const listVarName = title.toLowerCase() === 'resources' ? 'resourcesList' : 
+                        title.toLowerCase() === 'income' ? 'incomeList' : 'expensesList';
+    return renderTemplate(template, { [listVarName]: listContent });
+  }
+  
+  return `${title}\n${listContent}`;
 }
 
 /**
  * Build the Notes section with MLTC prefix
  */
-function buildNotesSection(notes: Note[]): string {
+function buildNotesSection(notes: Note[], template?: SectionTemplate): string {
   if (!notes || notes.length === 0) {
+    const notesList = 'None Attested';
+    if (template) {
+      return renderTemplate(template, { notesList });
+    }
     return 'MLTC: None Attested';
   }
   
@@ -267,18 +377,36 @@ function buildNotesSection(notes: Note[]): string {
     return dateA - dateB;
   });
   
-  // Full content, separated by blank lines, with MLTC prefix
+  // Full content, separated by blank lines
   const formatted = sortedNotes.map(note => note.content);
-  return `MLTC: ${formatted.join('\n\n')}`;
+  const notesList = formatted.join('\n\n');
+  
+  if (template) {
+    return renderTemplate(template, { notesList });
+  }
+  
+  // Default: MLTC prefix
+  return `MLTC: ${notesList}`;
 }
 
 /**
  * Build the AVS Tracking section
  */
-function buildAVSTrackingSection(caseRecord: StoredCase['caseRecord'], resources: FinancialItem[]): string {
+function buildAVSTrackingSection(caseRecord: StoredCase['caseRecord'], resources: FinancialItem[], template?: SectionTemplate): string {
   const avsDates = calculateAVSTrackingDates(caseRecord.avsConsentDate);
   const knownInstitutions = extractKnownInstitutions(resources);
   
+  if (template) {
+    return renderTemplate(template, {
+      avsSubmitted: avsDates.submitDate,
+      consentDate: avsDates.consentDate,
+      fiveDayDate: avsDates.fiveDayDate,
+      elevenDayDate: avsDates.elevenDayDate,
+      knownInstitutions,
+    });
+  }
+  
+  // Default formatting
   const lines = [
     `AVS Submitted: ${avsDates.submitDate}`,
     `Consent Date: ${avsDates.consentDate}`,
@@ -337,38 +465,40 @@ export function generateCaseSummary(
     financials?: { resources: FinancialItem[]; income: FinancialItem[]; expenses: FinancialItem[] };
     notes?: Note[];
     sections?: SummarySections;
+    templates?: Partial<Record<string, SectionTemplate>>;
   }
 ): string {
   const { caseRecord, person } = caseData;
   const financials = options?.financials ?? { resources: [], income: [], expenses: [] };
   const notes = options?.notes ?? [];
   const sectionConfig = options?.sections ?? DEFAULT_SUMMARY_SECTIONS;
+  const templates = options?.templates ?? {};
   
   const enabledSections: string[] = [];
   
   if (sectionConfig.notes) {
-    enabledSections.push(buildNotesSection(notes));
+    enabledSections.push(buildNotesSection(notes, templates.notes));
   }
   if (sectionConfig.caseInfo) {
-    enabledSections.push(buildCaseInfoSection(caseRecord));
+    enabledSections.push(buildCaseInfoSection(caseRecord, templates.caseInfo));
   }
   if (sectionConfig.personInfo) {
-    enabledSections.push(buildPersonInfoSection(person, caseRecord));
+    enabledSections.push(buildPersonInfoSection(person, caseRecord, templates.personInfo));
   }
   if (sectionConfig.relationships) {
-    enabledSections.push(buildRelationshipsSection(person.relationships));
+    enabledSections.push(buildRelationshipsSection(person.relationships, templates.relationships));
   }
   if (sectionConfig.resources) {
-    enabledSections.push(buildFinancialSection('Resources', financials.resources || [], formatResourceItem));
+    enabledSections.push(buildFinancialSection('Resources', financials.resources || [], formatResourceItem, templates.resources));
   }
   if (sectionConfig.income) {
-    enabledSections.push(buildFinancialSection('Income', financials.income || [], formatIncomeItem));
+    enabledSections.push(buildFinancialSection('Income', financials.income || [], formatIncomeItem, templates.income));
   }
   if (sectionConfig.expenses) {
-    enabledSections.push(buildFinancialSection('Expenses', financials.expenses || [], formatExpenseItem));
+    enabledSections.push(buildFinancialSection('Expenses', financials.expenses || [], formatExpenseItem, templates.expenses));
   }
   if (sectionConfig.avsTracking) {
-    enabledSections.push(buildAVSTrackingSection(caseRecord, financials.resources || []));
+    enabledSections.push(buildAVSTrackingSection(caseRecord, financials.resources || [], templates.avsTracking));
   }
 
   return enabledSections.join(SECTION_SEPARATOR);

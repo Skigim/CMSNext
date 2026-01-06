@@ -105,6 +105,7 @@ describe('CaseBulkOperationsService', () => {
         expenses: true,
         avsTracking: true,
       },
+      sectionTemplates: {},
     },
   };
 
@@ -531,6 +532,7 @@ describe('CaseBulkOperationsService', () => {
             expenses: true,
             avsTracking: true,
           },
+          sectionTemplates: {},
         },
       };
 

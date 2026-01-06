@@ -130,6 +130,7 @@ describe('FinancialsService', () => {
         expenses: true,
         avsTracking: true,
       },
+      sectionTemplates: {},
     },
   });
 
