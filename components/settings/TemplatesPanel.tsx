@@ -2,8 +2,10 @@ import { useCallback } from "react";
 import { FileText, FileCheck, FileSignature } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../ui/card";
 import VRScriptsEditor from "../category/VRScriptsEditor";
+import { SummaryTemplateEditor } from "./SummaryTemplateEditor";
 import { useCategoryConfig } from "@/contexts/CategoryConfigContext";
 import type { VRScript } from "@/types/vr";
+import type { SummaryTemplateConfig } from "@/types/categoryConfig";
 
 /**
  * TemplatesPanel - Consolidated text generation templates management
@@ -20,6 +22,13 @@ export function TemplatesPanel() {
   const handleSaveVRScripts = useCallback(
     async (scripts: VRScript[]) => {
       await updateCategory('vrScripts', scripts);
+    },
+    [updateCategory]
+  );
+
+  const handleSaveSummaryTemplate = useCallback(
+    async (template: SummaryTemplateConfig) => {
+      await updateCategory('summaryTemplate', template);
     },
     [updateCategory]
   );
@@ -88,47 +97,19 @@ export function TemplatesPanel() {
         <CardHeader>
           <div className="flex items-center gap-2">
             <FileCheck className="h-5 w-5 text-primary" />
-            <CardTitle>Case Summary Templates</CardTitle>
+            <CardTitle>Case Summary Template</CardTitle>
           </div>
           <CardDescription>
-            Configure default sections and formatting for case summary exports. Summaries
-            can include client information, financial details, notes, and more.
+            Configure the default section order and visibility for case summary exports.
+            These settings control the "Generate Case Summary" feature in case details.
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="space-y-4">
-            <div className="rounded-lg border bg-muted/50 p-4">
-              <h4 className="text-sm font-medium mb-2">Default Summary Sections</h4>
-              <p className="text-sm text-muted-foreground mb-3">
-                The case summary generator allows you to select which sections to include
-                when generating a summary. The current implementation uses the{" "}
-                <code className="text-xs bg-background px-1 py-0.5 rounded">
-                  Generate Case Summary
-                </code>{" "}
-                modal accessible from case details.
-              </p>
-              <div className="text-xs text-muted-foreground">
-                <p><strong>Available sections:</strong></p>
-                <ul className="list-disc list-inside ml-2 mt-1 space-y-0.5">
-                  <li>Client Information - Name, age, contact details</li>
-                  <li>Case Information - Status, dates, MCN, worker</li>
-                  <li>Household Members - Relationships and details</li>
-                  <li>Resources - Bank accounts, assets, property</li>
-                  <li>Income - Employment, benefits, other income</li>
-                  <li>Expenses - Medical, housing, other expenses</li>
-                  <li>Notes - Case notes and documentation</li>
-                </ul>
-              </div>
-            </div>
-            <div className="rounded-lg border border-dashed p-4 text-center">
-              <p className="text-sm text-muted-foreground">
-                Advanced summary template customization coming soon...
-              </p>
-              <p className="text-xs text-muted-foreground mt-1">
-                For now, use the "Generate Case Summary" button in case details to create summaries
-              </p>
-            </div>
-          </div>
+          <SummaryTemplateEditor
+            template={config.summaryTemplate}
+            onSave={handleSaveSummaryTemplate}
+            isGloballyLoading={loading}
+          />
         </CardContent>
       </Card>
 

@@ -138,8 +138,8 @@ const DEFAULT_ALERT_TYPES: AlertTypeConfig[] = [];
 const DEFAULT_VR_SCRIPTS: VRScript[] = [];
 
 // Default summary template - matches current hardcoded order
-const DEFAULT_SUMMARY_TEMPLATE: SummaryTemplateConfig = Object.freeze({
-  sectionOrder: ['notes', 'caseInfo', 'personInfo', 'relationships', 'resources', 'income', 'expenses', 'avsTracking'],
+const DEFAULT_SUMMARY_TEMPLATE: SummaryTemplateConfig = {
+  sectionOrder: ['notes', 'caseInfo', 'personInfo', 'relationships', 'resources', 'income', 'expenses', 'avsTracking'] as SummarySectionKey[],
   defaultSections: {
     notes: true,
     caseInfo: true,
@@ -150,7 +150,7 @@ const DEFAULT_SUMMARY_TEMPLATE: SummaryTemplateConfig = Object.freeze({
     expenses: true,
     avsTracking: true,
   },
-});
+};
 
 export const defaultCategoryConfig: CategoryConfig = Object.freeze({
   caseTypes: DEFAULT_CASE_TYPES,

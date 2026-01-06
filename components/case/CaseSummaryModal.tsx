@@ -22,6 +22,7 @@ import { Copy, X } from "lucide-react";
 import { StoredCase, FinancialItem, Note } from "../../types/case";
 import { generateCaseSummary, SummarySections } from "../../utils/caseSummaryGenerator";
 import { clickToCopy } from "../../utils/clipboard";
+import { useCategoryConfig } from "@/contexts/CategoryConfigContext";
 
 interface CaseSummaryModalProps {
   open: boolean;
@@ -41,16 +42,6 @@ interface SectionConfig {
   description: string;
 }
 
-const SECTION_CONFIGS: SectionConfig[] = [
-  { key: "caseInfo", label: "Case Info", description: "Application date, retro, waiver" },
-  { key: "personInfo", label: "Person Info", description: "Name, contact, verifications" },
-  { key: "relationships", label: "Relationships", description: "Related contacts" },
-  { key: "resources", label: "Resources", description: "Bank accounts, assets" },
-  { key: "income", label: "Income", description: "Income sources" },
-  { key: "expenses", label: "Expenses", description: "Monthly expenses" },
-  { key: "notes", label: "Notes", description: "Case notes" },
-];
-
 export function CaseSummaryModal({
   open,
   onOpenChange,
@@ -58,17 +49,30 @@ export function CaseSummaryModal({
   financials,
   notes,
 }: CaseSummaryModalProps) {
-  // Section toggles - all enabled by default
-  const [sections, setSections] = useState<SummarySections>({
-    caseInfo: true,
-    personInfo: true,
-    relationships: true,
-    resources: true,
-    income: true,
-    expenses: true,
-    notes: true,
-    avsTracking: true,
-  });
+  const { config } = useCategoryConfig();
+  const { sectionOrder, defaultSections } = config.summaryTemplate;
+
+  // Build section configs from template order
+  const SECTION_CONFIGS: SectionConfig[] = useMemo(() => {
+    const labels: Record<string, { label: string; description: string }> = {
+      notes: { label: "Notes", description: "Case notes" },
+      caseInfo: { label: "Case Info", description: "Application date, retro, waiver" },
+      personInfo: { label: "Person Info", description: "Name, contact, verifications" },
+      relationships: { label: "Relationships", description: "Related contacts" },
+      resources: { label: "Resources", description: "Bank accounts, assets" },
+      income: { label: "Income", description: "Income sources" },
+      expenses: { label: "Expenses", description: "Monthly expenses" },
+      avsTracking: { label: "AVS Tracking", description: "AVS submission and tracking dates" },
+    };
+    return sectionOrder.map(key => ({
+      key: key as keyof SummarySections,
+      label: labels[key].label,
+      description: labels[key].description,
+    }));
+  }, [sectionOrder]);
+
+  // Section toggles - initialize from template defaults
+  const [sections, setSections] = useState<SummarySections>(defaultSections);
 
   // Editable preview text
   const [previewText, setPreviewText] = useState("");
@@ -83,21 +87,12 @@ export function CaseSummaryModal({
     setPreviewText(generatedSummary);
   }, [generatedSummary]);
 
-  // Reset when modal opens
+  // Reset when modal opens - use template defaults
   useEffect(() => {
     if (open) {
-      setSections({
-        caseInfo: true,
-        personInfo: true,
-        relationships: true,
-        resources: true,
-        income: true,
-        expenses: true,
-        notes: true,
-        avsTracking: true,
-      });
+      setSections(defaultSections);
     }
-  }, [open]);
+  }, [open, defaultSections]);
 
   const handleSectionToggle = useCallback((key: keyof SummarySections) => {
     setSections((prev) => ({
