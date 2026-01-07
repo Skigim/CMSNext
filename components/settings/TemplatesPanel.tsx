@@ -1,12 +1,7 @@
-import { useCallback, useState } from "react";
-import { FileText, FileCheck, FileSignature, RefreshCw } from "lucide-react";
-import { toast } from "sonner";
+import { FileText, FileCheck, FileSignature } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../ui/card";
-import { Button } from "../ui/button";
 import { TemplateEditor } from "./TemplateEditor";
 import { useTemplates } from "@/contexts/TemplateContext";
-import { useCategoryConfig } from "@/contexts/CategoryConfigContext";
-import { useDataManagerSafe } from "@/contexts/DataManagerContext";
 
 /**
  * TemplatesPanel - Consolidated text generation templates management
@@ -19,91 +14,7 @@ import { useDataManagerSafe } from "@/contexts/DataManagerContext";
  * All templates use the unified Template type with {field} placeholder syntax.
  */
 export function TemplatesPanel() {
-  const { loading, templates, addTemplate, refresh } = useTemplates();
-  const { config } = useCategoryConfig();
-  const dataManager = useDataManagerSafe();
-  const [isMigrating, setIsMigrating] = useState(false);
-
-  const handleManualMigration = useCallback(async () => {
-    if (!dataManager) {
-      toast.error("DataManager not available");
-      console.error("[Migration] DataManager is null");
-      return;
-    }
-
-    setIsMigrating(true);
-    console.log("[Migration] Starting manual migration...");
-    
-    try {
-      // Get current state
-      const vrScripts = config.vrScripts ?? [];
-      console.log("[Migration] Found vrScripts in CategoryConfig:", vrScripts.length, vrScripts);
-      console.log("[Migration] Current templates:", templates.length, templates);
-
-      if (vrScripts.length === 0) {
-        toast.info("No VR scripts found in CategoryConfig to migrate");
-        console.log("[Migration] No vrScripts to migrate");
-        setIsMigrating(false);
-        return;
-      }
-
-      // Check for duplicates
-      const existingIds = new Set(templates.map(t => t.id));
-      const existingNames = new Set(templates.map(t => t.name));
-      console.log("[Migration] Existing template IDs:", [...existingIds]);
-      console.log("[Migration] Existing template names:", [...existingNames]);
-
-      const scriptsToMigrate = vrScripts.filter(s => {
-        const skipById = existingIds.has(s.id);
-        const skipByName = existingNames.has(s.name);
-        console.log(`[Migration] Script "${s.name}" (${s.id}): skipById=${skipById}, skipByName=${skipByName}`);
-        return !skipById && !skipByName;
-      });
-
-      if (scriptsToMigrate.length === 0) {
-        toast.info("All VR scripts have already been migrated");
-        console.log("[Migration] All scripts already migrated");
-        setIsMigrating(false);
-        return;
-      }
-
-      console.log("[Migration] Scripts to migrate:", scriptsToMigrate.length);
-
-      // Migrate each script
-      let migrated = 0;
-      for (const script of scriptsToMigrate) {
-        console.log(`[Migration] Migrating: "${script.name}"...`);
-        try {
-          const result = await addTemplate({
-            name: script.name,
-            category: 'vr',
-            template: script.template,
-          });
-          if (result) {
-            console.log(`[Migration] Success: "${script.name}" -> ${result.id}`);
-            migrated++;
-          } else {
-            console.error(`[Migration] Failed: "${script.name}" - addTemplate returned null`);
-          }
-        } catch (err) {
-          console.error(`[Migration] Error migrating "${script.name}":`, err);
-        }
-      }
-
-      // Refresh to see changes
-      await refresh();
-      
-      toast.success(`Migrated ${migrated} VR template(s)`);
-      console.log(`[Migration] Complete. Migrated ${migrated} templates.`);
-    } catch (err) {
-      console.error("[Migration] Unexpected error:", err);
-      toast.error("Migration failed - check console");
-    } finally {
-      setIsMigrating(false);
-    }
-  }, [dataManager, config.vrScripts, templates, addTemplate, refresh]);
-
-  const vrScriptsCount = config.vrScripts?.length ?? 0;
+  const { loading } = useTemplates();
 
   return (
     <div className="space-y-6">
@@ -139,33 +50,6 @@ export function TemplatesPanel() {
                 </ul>
               </div>
             </div>
-
-            {/* Migration Tool */}
-            {vrScriptsCount > 0 && (
-              <div className="rounded-lg border border-amber-500/50 bg-amber-500/10 p-4">
-                <h4 className="text-sm font-medium mb-2 text-amber-600 dark:text-amber-400">
-                  Legacy VR Scripts Detected
-                </h4>
-                <p className="text-sm text-muted-foreground mb-3">
-                  Found <strong>{vrScriptsCount}</strong> VR script(s) in the old CategoryConfig format.
-                  Click the button below to migrate them to the new unified template system.
-                </p>
-                <div className="flex items-center gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={handleManualMigration}
-                    disabled={isMigrating || loading}
-                  >
-                    <RefreshCw className={`h-4 w-4 mr-2 ${isMigrating ? 'animate-spin' : ''}`} />
-                    {isMigrating ? 'Migrating...' : 'Migrate VR Scripts'}
-                  </Button>
-                  <span className="text-xs text-muted-foreground">
-                    (Check browser console for detailed logs)
-                  </span>
-                </div>
-              </div>
-            )}
           </div>
         </CardContent>
       </Card>

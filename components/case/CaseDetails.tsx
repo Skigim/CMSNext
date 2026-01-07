@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react";
+import { useCallback, useState, useMemo } from "react";
 import { Button } from "../ui/button";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "../ui/alert-dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
@@ -18,7 +18,7 @@ import { VRGeneratorModal } from "./VRGeneratorModal";
 import { useFinancialItems } from "../../hooks/useFinancialItems";
 import { useNotes } from "../../hooks/useNotes";
 import { usePinnedCases } from "../../hooks/usePinnedCases";
-import { useCategoryConfig } from "@/contexts/CategoryConfigContext";
+import { useTemplates } from "@/contexts/TemplateContext";
 import { formatUSPhone } from "@/utils/phoneFormatter";
 import { formatDateForDisplay } from "@/utils/dateFormatting";
 import { clickToCopy } from "@/utils/clipboard";
@@ -69,9 +69,9 @@ export function CaseDetails({
   const { isPinned, togglePin: togglePinCase } = usePinnedCases();
   const caseIsPinned = isPinned(caseData.id);
   
-  // Get VR scripts from category config
-  const { config: categoryConfig } = useCategoryConfig();
-  const vrScripts = categoryConfig?.vrScripts ?? [];
+  // Get VR templates from unified template system
+  const { getTemplatesByCategory } = useTemplates();
+  const vrTemplates = useMemo(() => getTemplatesByCategory('vr'), [getTemplatesByCategory]);
 
   const handleResolveAlert = useCallback(
     (alert: AlertWithMatch) => {
@@ -377,7 +377,7 @@ export function CaseDetails({
         onOpenChange={setVrModalOpen}
         storedCase={caseData}
         financialItems={financialItemsList}
-        vrScripts={vrScripts}
+        vrTemplates={vrTemplates}
       />
     </div>
   );

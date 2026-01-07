@@ -31,7 +31,7 @@ import { Separator } from "../ui/separator";
 import { Copy, FileText, CheckSquare, Square, AlertCircle, Plus } from "lucide-react";
 import { toast } from "sonner";
 import type { StoredCase, StoredFinancialItem } from "@/types/case";
-import type { VRScript } from "@/types/vr";
+import type { Template } from "@/types/template";
 import { renderMultipleVRs } from "@/utils/vrGenerator";
 import { buildCaseLevelContext, renderTemplate } from "@/utils/vrGenerator";
 import { cn } from "@/lib/utils";
@@ -41,7 +41,7 @@ interface VRGeneratorModalProps {
   onOpenChange: (open: boolean) => void;
   storedCase: StoredCase;
   financialItems: StoredFinancialItem[];
-  vrScripts: VRScript[];
+  vrTemplates: Template[];
 }
 
 export function VRGeneratorModal({
@@ -49,7 +49,7 @@ export function VRGeneratorModal({
   onOpenChange,
   storedCase,
   financialItems,
-  vrScripts,
+  vrTemplates,
 }: VRGeneratorModalProps) {
   // Local state
   const [selectedScriptId, setSelectedScriptId] = useState<string | null>(null);
@@ -65,7 +65,7 @@ export function VRGeneratorModal({
     }));
   }, [financialItems, selectedItemIds]);
 
-  const selectedScript = vrScripts.find(s => s.id === selectedScriptId);
+  const selectedScript = vrTemplates.find(s => s.id === selectedScriptId);
   const totalItems = selectableItems.length;
   const selectedCount = selectableItems.filter(i => i.selected).length;
   const allSelected = selectedCount === totalItems && totalItems > 0;
@@ -77,10 +77,10 @@ export function VRGeneratorModal({
       // Select no items by default
       setSelectedItemIds(new Set());
       // Select first script if available (but don't auto-populate)
-      setSelectedScriptId(vrScripts[0]?.id ?? null);
+      setSelectedScriptId(vrTemplates[0]?.id ?? null);
       setRenderedText("");
     }
-  }, [open, vrScripts]);
+  }, [open, vrTemplates]);
 
   const handleToggleItem = useCallback((itemId: string) => {
     setSelectedItemIds(prev => {
@@ -189,12 +189,12 @@ export function VRGeneratorModal({
           </DialogDescription>
         </DialogHeader>
 
-        {vrScripts.length === 0 ? (
+        {vrTemplates.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-12 text-center">
             <AlertCircle className="h-12 w-12 text-muted-foreground mb-4" />
-            <h3 className="text-lg font-medium mb-2">No VR Scripts Configured</h3>
+            <h3 className="text-lg font-medium mb-2">No VR Templates Configured</h3>
             <p className="text-sm text-muted-foreground max-w-md">
-              Create VR scripts in Settings → Category Manager → VR Scripts tab before generating VRs.
+              Create VR templates in Settings → Templates tab before generating VRs.
             </p>
           </div>
         ) : (
@@ -213,7 +213,7 @@ export function VRGeneratorModal({
                       <SelectValue placeholder="Select a script..." />
                     </SelectTrigger>
                     <SelectContent>
-                      {vrScripts.map((script) => (
+                      {vrTemplates.map((script) => (
                         <SelectItem key={script.id} value={script.id}>
                           {script.name}
                         </SelectItem>
