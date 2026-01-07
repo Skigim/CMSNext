@@ -3,6 +3,8 @@
  * ======================
  * Generates a plain-text summary of case information for easy export/sharing.
  * Designed for copy-paste into emails, ticketing systems, or documents.
+ * 
+ * Now integrated with the Template system for customizable section rendering.
  */
 
 import { StoredCase, FinancialItem, Note, Relationship } from '../types/case';
@@ -13,77 +15,35 @@ import {
   calculateAVSTrackingDates,
   extractKnownInstitutions,
 } from '@/domain/cases';
-import type { SectionTemplate } from '@/types/categoryConfig';
+import type { Template } from '@/types/template';
+import type { SummarySectionKey } from '@/types/categoryConfig';
+import { DEFAULT_SUMMARY_SECTION_TEMPLATES } from '@/types/template';
+import { renderSummarySection } from './summarySectionRenderer';
+import { formatDateForDisplay } from '@/utils/dateFormatting';
 
 const SECTION_SEPARATOR = '\n-----\n';
 
 /**
- * Template variable renderer - replaces {{variable}} with actual values
- */
-function renderTemplate(template: string, variables: Record<string, string | number | boolean | null | undefined>): string {
-  return template.replace(/\{\{(\w+)\}\}/g, (_match, key) => {
-    const value = variables[key];
-    if (value === null || value === undefined) {
-      return 'None Attested';
-    }
-    return String(value);
-  });
-}
-
-/**
  * Default templates for each section
+ * @deprecated Use DEFAULT_SUMMARY_SECTION_TEMPLATES from @/types/template instead
  */
 export const DEFAULT_SECTION_TEMPLATES = {
-  caseInfo: `Application Date: {{applicationDate}}
-Retro Requested: {{retroDisplay}}
-Waiver Requested: {{withWaiver}}`,
-  
-  personInfo: `{{fullName}} | {{maritalStatus}}
-{{contact}}
-Citizenship Verified: {{citizenshipVerified}}
-Aged/Disabled Verified: {{agedDisabledVerified}}
-Living Arrangement: {{livingArrangement}}
-Voter: {{voterStatus}}`,
-  
-  relationships: `Relationships/Representatives
-{{relationshipsList}}`,
-  
-  resources: `Resources
-{{resourcesList}}`,
-  
-  income: `Income
-{{incomeList}}`,
-  
-  expenses: `Expenses
-{{expensesList}}`,
-  
-  notes: `MLTC: {{notesList}}`,
-  
-  avsTracking: `AVS Submitted: {{avsSubmitted}}
-Consent Date: {{consentDate}}
-5 Day: {{fiveDayDate}}
-11 Day: {{elevenDayDate}}
-Known Institutions: {{knownInstitutions}}`,
+  caseInfo: DEFAULT_SUMMARY_SECTION_TEMPLATES.caseInfo,
+  personInfo: DEFAULT_SUMMARY_SECTION_TEMPLATES.personInfo,
+  relationships: DEFAULT_SUMMARY_SECTION_TEMPLATES.relationships,
+  resources: DEFAULT_SUMMARY_SECTION_TEMPLATES.resources,
+  income: DEFAULT_SUMMARY_SECTION_TEMPLATES.income,
+  expenses: DEFAULT_SUMMARY_SECTION_TEMPLATES.expenses,
+  notes: DEFAULT_SUMMARY_SECTION_TEMPLATES.notes,
+  avsTracking: DEFAULT_SUMMARY_SECTION_TEMPLATES.avsTracking,
 };
 
 /**
- * Format a date string to MM/DD/YYYY
+ * Format a date string to MM/DD/YYYY using centralized utility
  */
 function formatDateMMDDYYYY(dateString: string | null | undefined): string {
-  if (!dateString) return 'None Attested';
-  
-  try {
-    const date = new Date(dateString);
-    if (isNaN(date.getTime())) return 'None Attested';
-    
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
-    const year = date.getFullYear();
-    
-    return `${month}/${day}/${year}`;
-  } catch {
-    return 'None Attested';
-  }
+  const result = formatDateForDisplay(dateString);
+  return result === 'None' ? 'None Attested' : result;
 }
 
 /**
@@ -234,20 +194,24 @@ function formatRelationship(rel: Relationship): string {
 /**
  * Build the Case Info section
  */
-function buildCaseInfoSection(caseRecord: StoredCase['caseRecord'], template?: SectionTemplate): string {
-  const retroDisplay = formatRetroMonths(caseRecord.retroMonths, caseRecord.applicationDate);
-  
-  if (template) {
-    const retroMonths = typeof caseRecord.retroMonths === 'number' ? caseRecord.retroMonths : 0;
-    return renderTemplate(template, {
-      applicationDate: formatDateMMDDYYYY(caseRecord.applicationDate),
-      retroDisplay,
-      withWaiver: caseRecord.withWaiver ? 'Yes' : 'No',
-      retroMonths,
-    });
+function buildCaseInfoSection(
+  caseRecord: StoredCase['caseRecord'],
+  templateContent?: string,
+  caseData?: StoredCase
+): string {
+  // Use template renderer if template and full case data provided
+  if (templateContent && caseData) {
+    return renderSummarySection(templateContent, 'caseInfo', caseData);
   }
   
-  // Default formatting
+  // Use default template if full case data provided
+  if (caseData) {
+    const defaultTemplate = DEFAULT_SUMMARY_SECTION_TEMPLATES.caseInfo;
+    return renderSummarySection(defaultTemplate, 'caseInfo', caseData);
+  }
+  
+  // Fallback: legacy formatting
+  const retroDisplay = formatRetroMonths(caseRecord.retroMonths, caseRecord.applicationDate);
   const lines = [
     `Application Date: ${formatDateMMDDYYYY(caseRecord.applicationDate)}`,
     `Retro Requested: ${retroDisplay}`,
@@ -259,12 +223,28 @@ function buildCaseInfoSection(caseRecord: StoredCase['caseRecord'], template?: S
 /**
  * Build the Person Info section
  */
-function buildPersonInfoSection(person: StoredCase['person'], caseRecord: StoredCase['caseRecord'], template?: SectionTemplate): string {
-  // Prepare variables
+function buildPersonInfoSection(
+  person: StoredCase['person'],
+  caseRecord: StoredCase['caseRecord'],
+  templateContent?: string,
+  caseData?: StoredCase
+): string {
+  // Use template renderer if template and full case data provided
+  if (templateContent && caseData) {
+    return renderSummarySection(templateContent, 'personInfo', caseData);
+  }
+  
+  // Use default template if full case data provided
+  if (caseData) {
+    const defaultTemplate = DEFAULT_SUMMARY_SECTION_TEMPLATES.personInfo;
+    return renderSummarySection(defaultTemplate, 'personInfo', caseData);
+  }
+  
+  // Fallback: legacy formatting
   const age = calculateAge(person.dateOfBirth);
   const ageDisplay = age !== null ? `(${age})` : '';
-  const maritalStatus = caseRecord.maritalStatus || 'Unknown';
   const fullName = `${person.firstName} ${person.lastName} ${ageDisplay}`.trim();
+  const maritalStatus = caseRecord.maritalStatus || 'Unknown';
   
   const contactParts: string[] = [];
   if (person.email) contactParts.push(person.email);
@@ -272,27 +252,8 @@ function buildPersonInfoSection(person: StoredCase['person'], caseRecord: Stored
   const contact = contactParts.length > 0 ? contactParts.join(' | ') : 'No contact info';
   
   const voterStatus = formatVoterStatus(caseRecord.voterFormStatus);
-  
-  if (template) {
-    return renderTemplate(template, {
-      firstName: person.firstName,
-      lastName: person.lastName,
-      age,
-      ageDisplay,
-      fullName,
-      maritalStatus,
-      contact,
-      email: person.email,
-      phone: formatPhoneNumber(person.phone),
-      citizenshipVerified: caseRecord.citizenshipVerified ? 'Yes' : 'No',
-      agedDisabledVerified: caseRecord.agedDisabledVerified ? 'Yes' : 'No',
-      livingArrangement: caseRecord.livingArrangement || 'None Attested',
-      voterStatus,
-    });
-  }
-  
-  // Default formatting
   const nameLine = `${fullName} | ${maritalStatus}`;
+  
   const lines = [
     nameLine,
     contact,
@@ -307,24 +268,31 @@ function buildPersonInfoSection(person: StoredCase['person'], caseRecord: Stored
 /**
  * Build the Relationships section
  */
-function buildRelationshipsSection(relationships?: Relationship[], template?: SectionTemplate): string {
+function buildRelationshipsSection(
+  relationships?: Relationship[],
+  templateContent?: string,
+  caseData?: StoredCase
+): string {
   const header = 'Relationships/Representatives';
   
+  // Use template renderer if template and full case data provided
+  if (templateContent && caseData) {
+    return renderSummarySection(templateContent, 'relationships', caseData);
+  }
+  
+  // Use default template if full case data provided
+  if (caseData) {
+    const defaultTemplate = DEFAULT_SUMMARY_SECTION_TEMPLATES.relationships;
+    return renderSummarySection(defaultTemplate, 'relationships', caseData);
+  }
+  
+  // Fallback: legacy formatting
   if (!relationships || relationships.length === 0) {
-    const relationshipsList = 'None Attested';
-    if (template) {
-      return renderTemplate(template, { relationshipsList });
-    }
     return `${header}\nNone Attested`;
   }
   
   const formatted = relationships.map(formatRelationship);
   const relationshipsList = formatted.join('\n');
-  
-  if (template) {
-    return renderTemplate(template, { relationshipsList });
-  }
-  
   return `${header}\n${relationshipsList}`;
 }
 
@@ -335,78 +303,92 @@ function buildFinancialSection(
   title: string,
   items: FinancialItem[],
   formatter: (item: FinancialItem) => string,
-  template?: SectionTemplate
+  templateContent?: string,
+  sectionKey?: SummarySectionKey,
+  caseData?: StoredCase,
+  financials?: { resources: FinancialItem[]; income: FinancialItem[]; expenses: FinancialItem[] }
 ): string {
+  // Use template renderer if template, section key, and full case data provided
+  if (templateContent && sectionKey && caseData) {
+    return renderSummarySection(templateContent, sectionKey, caseData, financials);
+  }
+  
+  // Use default template if section key and full case data provided
+  if (sectionKey && caseData) {
+    const defaultTemplate = DEFAULT_SUMMARY_SECTION_TEMPLATES[sectionKey];
+    return renderSummarySection(defaultTemplate, sectionKey, caseData, financials);
+  }
+  
+  // Fallback: legacy formatting
   if (!items || items.length === 0) {
-    const listVarName = title.toLowerCase() === 'resources' ? 'resourcesList' : 
-                        title.toLowerCase() === 'income' ? 'incomeList' : 'expensesList';
-    if (template) {
-      return renderTemplate(template, { [listVarName]: 'None Attested' });
-    }
     return `${title}\nNone Attested`;
   }
   
   const formatted = items.map(formatter);
   const listContent = formatted.join('\n');
-  
-  if (template) {
-    const listVarName = title.toLowerCase() === 'resources' ? 'resourcesList' : 
-                        title.toLowerCase() === 'income' ? 'incomeList' : 'expensesList';
-    return renderTemplate(template, { [listVarName]: listContent });
-  }
-  
   return `${title}\n${listContent}`;
 }
 
 /**
  * Build the Notes section with MLTC prefix
  */
-function buildNotesSection(notes: Note[], template?: SectionTemplate): string {
+function buildNotesSection(
+  notes: Note[],
+  templateContent?: string,
+  caseData?: StoredCase
+): string {
+  // Use template renderer if template and full case data provided
+  if (templateContent && caseData) {
+    return renderSummarySection(templateContent, 'notes', caseData, undefined, notes);
+  }
+  
+  // Use default template if full case data provided
+  if (caseData) {
+    const defaultTemplate = DEFAULT_SUMMARY_SECTION_TEMPLATES.notes;
+    return renderSummarySection(defaultTemplate, 'notes', caseData, undefined, notes);
+  }
+  
+  // Fallback: legacy formatting
   if (!notes || notes.length === 0) {
-    const notesList = 'None Attested';
-    if (template) {
-      return renderTemplate(template, { notesList });
-    }
     return 'MLTC: None Attested';
   }
   
-  // Sort by creation date (oldest first)
   const sortedNotes = [...notes].sort((a, b) => {
     const dateA = new Date(a.createdAt).getTime();
     const dateB = new Date(b.createdAt).getTime();
     return dateA - dateB;
   });
   
-  // Full content, separated by blank lines
   const formatted = sortedNotes.map(note => note.content);
   const notesList = formatted.join('\n\n');
-  
-  if (template) {
-    return renderTemplate(template, { notesList });
-  }
-  
-  // Default: MLTC prefix
   return `MLTC: ${notesList}`;
 }
 
 /**
  * Build the AVS Tracking section
  */
-function buildAVSTrackingSection(caseRecord: StoredCase['caseRecord'], resources: FinancialItem[], template?: SectionTemplate): string {
+function buildAVSTrackingSection(
+  caseRecord: StoredCase['caseRecord'],
+  resources: FinancialItem[],
+  templateContent?: string,
+  caseData?: StoredCase,
+  financials?: { resources: FinancialItem[]; income: FinancialItem[]; expenses: FinancialItem[] }
+): string {
+  // Use template renderer if template and full case data provided
+  if (templateContent && caseData) {
+    return renderSummarySection(templateContent, 'avsTracking', caseData, financials);
+  }
+  
+  // Use default template if full case data provided
+  if (caseData) {
+    const defaultTemplate = DEFAULT_SUMMARY_SECTION_TEMPLATES.avsTracking;
+    return renderSummarySection(defaultTemplate, 'avsTracking', caseData, financials);
+  }
+  
+  // Fallback: legacy formatting
   const avsDates = calculateAVSTrackingDates(caseRecord.avsConsentDate);
   const knownInstitutions = extractKnownInstitutions(resources);
   
-  if (template) {
-    return renderTemplate(template, {
-      avsSubmitted: avsDates.submitDate,
-      consentDate: avsDates.consentDate,
-      fiveDayDate: avsDates.fiveDayDate,
-      elevenDayDate: avsDates.elevenDayDate,
-      knownInstitutions,
-    });
-  }
-  
-  // Default formatting
   const lines = [
     `AVS Submitted: ${avsDates.submitDate}`,
     `Consent Date: ${avsDates.consentDate}`,
@@ -456,8 +438,17 @@ export const DEFAULT_SUMMARY_SECTIONS: SummarySections = {
  * - Resources
  * - Income
  * - Expenses
+ * - AVS Tracking
  * 
  * Sections separated by -----
+ * 
+ * @param caseData - Case data to generate summary from
+ * @param options - Optional configuration
+ * @param options.financials - Financial items (resources, income, expenses)
+ * @param options.notes - Case notes
+ * @param options.sections - Section visibility configuration
+ * @param options.templates - Template content strings or Template objects with .template property
+ * @param options.templateObjects - Full Template objects from TemplateService (preferred over templates)
  */
 export function generateCaseSummary(
   caseData: StoredCase, 
@@ -465,40 +456,62 @@ export function generateCaseSummary(
     financials?: { resources: FinancialItem[]; income: FinancialItem[]; expenses: FinancialItem[] };
     notes?: Note[];
     sections?: SummarySections;
-    templates?: Partial<Record<string, SectionTemplate>>;
+    templates?: Partial<Record<string, string>>;
+    templateObjects?: Partial<Record<SummarySectionKey, Template>>;
   }
 ): string {
   const { caseRecord, person } = caseData;
   const financials = options?.financials ?? { resources: [], income: [], expenses: [] };
   const notes = options?.notes ?? [];
   const sectionConfig = options?.sections ?? DEFAULT_SUMMARY_SECTIONS;
-  const templates = options?.templates ?? {};
+  
+  // Extract template content strings from either templates or templateObjects
+  const getTemplateContent = (key: SummarySectionKey): string | undefined => {
+    // Prefer templateObjects (new approach)
+    if (options?.templateObjects?.[key]) {
+      return options.templateObjects[key]?.template;
+    }
+    // Fallback to templates (legacy)
+    return options?.templates?.[key];
+  };
   
   const enabledSections: string[] = [];
   
   if (sectionConfig.notes) {
-    enabledSections.push(buildNotesSection(notes, templates.notes));
+    enabledSections.push(buildNotesSection(notes, getTemplateContent('notes'), caseData));
   }
   if (sectionConfig.caseInfo) {
-    enabledSections.push(buildCaseInfoSection(caseRecord, templates.caseInfo));
+    enabledSections.push(buildCaseInfoSection(caseRecord, getTemplateContent('caseInfo'), caseData));
   }
   if (sectionConfig.personInfo) {
-    enabledSections.push(buildPersonInfoSection(person, caseRecord, templates.personInfo));
+    enabledSections.push(buildPersonInfoSection(person, caseRecord, getTemplateContent('personInfo'), caseData));
   }
   if (sectionConfig.relationships) {
-    enabledSections.push(buildRelationshipsSection(person.relationships, templates.relationships));
+    enabledSections.push(buildRelationshipsSection(person.relationships, getTemplateContent('relationships'), caseData));
   }
   if (sectionConfig.resources) {
-    enabledSections.push(buildFinancialSection('Resources', financials.resources || [], formatResourceItem, templates.resources));
+    enabledSections.push(
+      buildFinancialSection('Resources', financials.resources || [], formatResourceItem, 
+        getTemplateContent('resources'), 'resources', caseData, financials)
+    );
   }
   if (sectionConfig.income) {
-    enabledSections.push(buildFinancialSection('Income', financials.income || [], formatIncomeItem, templates.income));
+    enabledSections.push(
+      buildFinancialSection('Income', financials.income || [], formatIncomeItem, 
+        getTemplateContent('income'), 'income', caseData, financials)
+    );
   }
   if (sectionConfig.expenses) {
-    enabledSections.push(buildFinancialSection('Expenses', financials.expenses || [], formatExpenseItem, templates.expenses));
+    enabledSections.push(
+      buildFinancialSection('Expenses', financials.expenses || [], formatExpenseItem, 
+        getTemplateContent('expenses'), 'expenses', caseData, financials)
+    );
   }
   if (sectionConfig.avsTracking) {
-    enabledSections.push(buildAVSTrackingSection(caseRecord, financials.resources || [], templates.avsTracking));
+    enabledSections.push(
+      buildAVSTrackingSection(caseRecord, financials.resources || [], 
+        getTemplateContent('avsTracking'), caseData, financials)
+    );
   }
 
   return enabledSections.join(SECTION_SEPARATOR);

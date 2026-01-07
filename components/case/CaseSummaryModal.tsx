@@ -3,6 +3,8 @@
  * ==================
  * Modal for configuring and previewing case summary before copying to clipboard.
  * Allows toggling sections and editing the preview before final copy.
+ * 
+ * Now integrated with the Template system for customizable section rendering.
  */
 
 import { useState, useCallback, useEffect, useMemo } from "react";
@@ -23,6 +25,8 @@ import { StoredCase, FinancialItem, Note } from "../../types/case";
 import { generateCaseSummary, SummarySections } from "../../utils/caseSummaryGenerator";
 import { clickToCopy } from "../../utils/clipboard";
 import { useCategoryConfig } from "@/contexts/CategoryConfigContext";
+import { useTemplates } from "@/contexts/TemplateContext";
+import type { SummarySectionKey } from "@/types/categoryConfig";
 
 interface CaseSummaryModalProps {
   open: boolean;
@@ -50,7 +54,23 @@ export function CaseSummaryModal({
   notes,
 }: CaseSummaryModalProps) {
   const { config } = useCategoryConfig();
-  const { sectionOrder, defaultSections, sectionTemplates } = config.summaryTemplate;
+  const { templates } = useTemplates();
+  const { sectionOrder, defaultSections } = config.summaryTemplate;
+
+  // Get summary templates from TemplateContext
+  const summaryTemplates = useMemo(() => {
+    const templatesBySection: Partial<Record<SummarySectionKey, any>> = {};
+    
+    templates
+      .filter(t => t.category === 'summary' && t.sectionKey)
+      .forEach(t => {
+        if (t.sectionKey) {
+          templatesBySection[t.sectionKey] = t;
+        }
+      });
+    
+    return templatesBySection;
+  }, [templates]);
 
   // Build section configs from template order
   const SECTION_CONFIGS: SectionConfig[] = useMemo(() => {
@@ -77,15 +97,15 @@ export function CaseSummaryModal({
   // Editable preview text
   const [previewText, setPreviewText] = useState("");
 
-  // Generate summary whenever sections change
+  // Generate summary whenever sections change - use Template objects
   const generatedSummary = useMemo(() => {
     return generateCaseSummary(caseData, { 
       financials, 
       notes, 
       sections,
-      templates: sectionTemplates 
+      templateObjects: summaryTemplates
     });
-  }, [caseData, financials, notes, sections, sectionTemplates]);
+  }, [caseData, financials, notes, sections, summaryTemplates]);
 
   // Update preview when generated summary changes
   useEffect(() => {

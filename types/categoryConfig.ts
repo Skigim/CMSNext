@@ -50,18 +50,28 @@ export type SummarySectionKey =
  * Template string with variable placeholders
  * Variables: {{variable_name}}
  * Example: "Name: {{firstName}} {{lastName}} ({{age}})"
+ * 
+ * @deprecated Section templates are now managed through the unified Template system.
+ * See types/template.ts and TemplateService for the new approach.
  */
 export type SectionTemplate = string;
 
 /**
  * Configuration for case summary template - defines section order, visibility, and content
+ * 
+ * @deprecated This configuration is being phased out. Section order and visibility
+ * will be managed through user preferences, and templates are handled by TemplateService.
+ * For now, this remains for backward compatibility but sectionTemplates should be empty.
  */
 export interface SummaryTemplateConfig {
   /** Ordered list of sections to include in summary */
   sectionOrder: SummarySectionKey[];
   /** Default enabled state for each section */
   defaultSections: Record<SummarySectionKey, boolean>;
-  /** Custom templates for each section (optional - falls back to default formatting if not provided) */
+  /** 
+   * Custom templates for each section (optional - falls back to default formatting if not provided)
+   * @deprecated Use Template records with category='summary' instead. See utils/summarySectionMigration.ts
+   */
   sectionTemplates: Partial<Record<SummarySectionKey, SectionTemplate>>;
 }
 
@@ -72,7 +82,10 @@ export interface CategoryConfig {
   livingArrangements: string[];
   noteCategories: string[];
   verificationStatuses: string[];
-  /** Case summary template configuration */
+  /** 
+   * Case summary template configuration
+   * @deprecated Section templates migrated to Template system. sectionTemplates should be empty.
+   */
   summaryTemplate: SummaryTemplateConfig;
 }
 

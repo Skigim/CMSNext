@@ -240,6 +240,14 @@ function isDateField(fieldName: string): boolean {
 }
 
 /**
+ * Check if a value is already a formatted date string (MM/DD/YYYY format).
+ * This prevents double-formatting when pre-formatted dates are passed.
+ */
+function isAlreadyFormattedDate(value: string): boolean {
+  return /^\d{2}\/\d{2}\/\d{4}$/.test(value);
+}
+
+/**
  * Render a template by substituting placeholders with context values.
  * 
  * Placeholders support two formats:
@@ -272,6 +280,13 @@ export function renderTemplate(template: string, context: TemplateRenderContext)
     
     // Handle date fields with optional offset
     if (isDateField(key)) {
+      const stringValue = String(value);
+      
+      // Skip re-formatting if value is already in MM/DD/YYYY format
+      if (isAlreadyFormattedDate(stringValue) && !offsetStr) {
+        return stringValue;
+      }
+      
       const offset = offsetStr ? parseInt(offsetStr, 10) : 0;
       
       // Special handling for currentDate - always use today as base
@@ -283,10 +298,10 @@ export function renderTemplate(template: string, context: TemplateRenderContext)
       
       // For other date fields, apply offset to the stored date
       if (offset !== 0) {
-        return applyDateOffset(value as string, offset);
+        return applyDateOffset(stringValue, offset);
       }
       
-      return formatDate(value as string);
+      return formatDate(stringValue);
     }
     
     // Special formatting for amount
