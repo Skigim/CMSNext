@@ -10,7 +10,6 @@ import {
   type PartialCategoryConfigInput,
   type SummaryTemplateConfig,
 } from "@/types/categoryConfig";
-import type { VRScript } from "@/types/vr";
 import { useDataManagerSafe } from "./DataManagerContext";
 import { useFileStorageDataChange } from "./FileStorageContext";
 import { LegacyFormatError } from "@/utils/services/FileStorageService";
@@ -20,10 +19,10 @@ const logger = createLogger("CategoryConfigContext");
 
 /**
  * Handler type for category updates.
- * Accepts category key and values (string array, StatusConfig array, VRScript array, or SummaryTemplateConfig)
+ * Accepts category key and values (string array, StatusConfig array, or SummaryTemplateConfig)
  * @typedef {Function} UpdateHandler
  */
-type UpdateHandler = (key: CategoryKey, values: string[] | StatusConfig[] | AlertTypeConfig[] | VRScript[] | SummaryTemplateConfig) => Promise<void>;
+type UpdateHandler = (key: CategoryKey, values: string[] | StatusConfig[] | AlertTypeConfig[] | SummaryTemplateConfig) => Promise<void>;
 
 /**
  * Category configuration context value - provides access to case/alert/VR configuration.
@@ -85,7 +84,6 @@ export { CategoryConfigContext };
  * - **casePriorities**: Case priority levels (e.g., High, Medium, Low)
  * - **alertTypes**: Alert classifications for alerts
  *   - Supports color customization via AlertTypeConfig
- * - **vrScripts**: Virtual Reality scripts configuration
  * 
  * ## Format Migration
  * 
@@ -285,23 +283,6 @@ export const CategoryConfigProvider: React.FC<{ children: React.ReactNode }> = (
         return;
       }
 
-      // Handle vrScripts specially since it uses VRScript[]
-      if (key === 'vrScripts') {
-        const scripts = values as VRScript[];
-
-        const toastId = toast.loading("Saving VR scripts...");
-        try {
-          const updated = await dataManager.updateVRScripts(scripts);
-          setConfig(mergeCategoryConfig(updated));
-          setError(null);
-          toast.success("VR scripts updated", { id: toastId });
-        } catch (err) {
-          console.error("Failed to update VR scripts", err);
-          toast.error("Failed to update VR scripts", { id: toastId });
-        }
-        return;
-      }
-
       // Handle summaryTemplate specially since it uses SummaryTemplateConfig
       if (key === 'summaryTemplate') {
         const template = values as SummaryTemplateConfig;
@@ -418,7 +399,6 @@ export const CategoryConfigProvider: React.FC<{ children: React.ReactNode }> = (
  * - `caseStatuses`: Array of StatusConfig with color slots
  * - `casePriorities`: Array of priority strings
  * - `alertTypes`: Array of AlertTypeConfig with color slots
- * - `vrScripts`: Array of VRScript configurations
  * 
  * ## Fallback Behavior
  * 

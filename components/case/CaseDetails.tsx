@@ -1,4 +1,4 @@
-import { useCallback, useState, useMemo } from "react";
+import { useState, useMemo } from "react";
 import { Button } from "../ui/button";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "../ui/alert-dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
@@ -7,7 +7,7 @@ import { NotesPopover } from "./NotesPopover";
 import { AlertsPopover } from "./AlertsPopover";
 import { CaseIntakeScreen } from "./CaseIntakeScreen";
 import type { StoredCase, NewPersonData, NewCaseRecordData } from "../../types/case";
-import { ArrowLeft, Trash2, Wallet, FileText, ClipboardCheck, Star, StarOff, Phone, Mail, FileSignature, Copy, Pin, PinOff } from "lucide-react";
+import { ArrowLeft, Trash2, Wallet, FileText, ClipboardCheck, Star, StarOff, Phone, Mail, FileSignature, Pin, PinOff } from "lucide-react";
 import { withDataErrorBoundary } from "../error/ErrorBoundaryHOC";
 import { CaseStatusMenu } from "./CaseStatusMenu";
 import { cn, interactiveHoverClasses } from "../ui/utils";
@@ -15,13 +15,13 @@ import type { AlertWithMatch } from "../../utils/alertsData";
 import { CopyButton } from "@/components/common/CopyButton";
 import { CaseSummaryModal } from "./CaseSummaryModal";
 import { VRGeneratorModal } from "./VRGeneratorModal";
+import { NarrativeGeneratorModal } from "./NarrativeGeneratorModal";
 import { useFinancialItems } from "../../hooks/useFinancialItems";
 import { useNotes } from "../../hooks/useNotes";
 import { usePinnedCases } from "../../hooks/usePinnedCases";
 import { useTemplates } from "@/contexts/TemplateContext";
 import { formatUSPhone } from "@/utils/phoneFormatter";
 import { formatDateForDisplay } from "@/utils/dateFormatting";
-import { clickToCopy } from "@/utils/clipboard";
 
 /**
  * Calculate 90 days from a date and format as tooltip text
@@ -73,54 +73,18 @@ export function CaseDetails({
   const { getTemplatesByCategory } = useTemplates();
   const vrTemplates = useMemo(() => getTemplatesByCategory('vr'), [getTemplatesByCategory]);
 
-  const handleResolveAlert = useCallback(
-    (alert: AlertWithMatch) => {
-      onResolveAlert?.(alert);
-    },
-    [onResolveAlert],
-  );
+  const handleResolveAlert = (alert: AlertWithMatch) => {
+    onResolveAlert?.(alert);
+  };
 
-  const handleTogglePriority = useCallback(async () => {
+  const handleTogglePriority = async () => {
     if (!onUpdatePriority) return;
     await onUpdatePriority([caseData.id], !caseData.priority);
-  }, [onUpdatePriority, caseData.id, caseData.priority]);
-
-  const formatDateMMDDYYYY = useCallback((date: Date): string => {
-    const month = String(date.getMonth() + 1).padStart(2, "0");
-    const day = String(date.getDate()).padStart(2, "0");
-    const year = date.getFullYear();
-    return `${month}/${day}/${year}`;
-  }, []);
-
-  const generateAVSNarrative = useCallback(() => {
-    const consentDateValue = caseData.caseRecord?.avsConsentDate;
-    const consentDateDisplay = consentDateValue ? formatDateForDisplay(consentDateValue) : "None";
-    const consentDate = consentDateDisplay !== "None" ? consentDateDisplay : "MM/DD/YYYY";
-
-    const today = new Date();
-    const submitDate = formatDateMMDDYYYY(today);
-
-    const fiveDay = new Date(today);
-    fiveDay.setDate(today.getDate() + 5);
-    const fiveDayDate = formatDateMMDDYYYY(fiveDay);
-
-    const elevenDay = new Date(today);
-    elevenDay.setDate(today.getDate() + 11);
-    const elevenDayDate = formatDateMMDDYYYY(elevenDay);
-
-    return `MLTC: AVS Submitted\nConsent Date: ${consentDate}\nSubmit Date: ${submitDate}\n5 Day: ${fiveDayDate}\n11 Day: ${elevenDayDate}`;
-  }, [caseData.caseRecord?.avsConsentDate, formatDateMMDDYYYY]);
-
-  const handleCopyAVSNarrative = useCallback(() => {
-    const narrative = generateAVSNarrative();
-    clickToCopy(narrative, {
-      successMessage: "AVS narrative copied to clipboard",
-      errorMessage: "Failed to copy narrative",
-    });
-  }, [generateAVSNarrative]);
+  };
 
   const [summaryModalOpen, setSummaryModalOpen] = useState(false);
   const [vrModalOpen, setVrModalOpen] = useState(false);
+  const [narrativeModalOpen, setNarrativeModalOpen] = useState(false);
 
   return (
     <div className="space-y-6" data-papercut-context="CaseDetails">
@@ -271,11 +235,11 @@ export function CaseDetails({
             <Button
               variant="outline"
               size="sm"
-              onClick={handleCopyAVSNarrative}
+              onClick={() => setNarrativeModalOpen(true)}
               className={interactiveHoverClasses}
             >
-              <Copy className="w-4 h-4 mr-2" />
-              Copy AVS Narrative
+              <FileText className="w-4 h-4 mr-2" />
+              Narratives
             </Button>
             <Button 
               variant="outline" 
@@ -378,6 +342,12 @@ export function CaseDetails({
         storedCase={caseData}
         financialItems={financialItemsList}
         vrTemplates={vrTemplates}
+      />
+
+      <NarrativeGeneratorModal
+        open={narrativeModalOpen}
+        onOpenChange={setNarrativeModalOpen}
+        storedCase={caseData}
       />
     </div>
   );

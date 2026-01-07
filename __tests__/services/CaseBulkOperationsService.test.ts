@@ -92,7 +92,6 @@ describe('CaseBulkOperationsService', () => {
     livingArrangements: ['Apartment/House'],
     noteCategories: ['General'],
     verificationStatuses: ['Needs VR', 'Verified'],
-    vrScripts: [],
     summaryTemplate: {
       sectionOrder: ['notes', 'caseInfo', 'personInfo', 'relationships', 'resources', 'income', 'expenses', 'avsTracking'],
       defaultSections: {
@@ -519,7 +518,6 @@ describe('CaseBulkOperationsService', () => {
         livingArrangements: ['Custom Arrangement'],
         noteCategories: ['Custom Note'],
         verificationStatuses: ['Custom VR'],
-        vrScripts: [],
         summaryTemplate: {
           sectionOrder: ['notes', 'caseInfo', 'personInfo', 'relationships', 'resources', 'income', 'expenses', 'avsTracking'],
           defaultSections: {

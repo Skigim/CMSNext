@@ -1,5 +1,4 @@
 import type { CategoryConfig, CategoryKey, StatusConfig, AlertTypeConfig } from "../../types/categoryConfig";
-import type { VRScript } from "../../types/vr";
 import { mergeCategoryConfig, sanitizeCategoryValues, sanitizeStatusConfigs, sanitizeAlertTypeConfigs } from "../../types/categoryConfig";
 import { createLogger } from "../logger";
 import type { FileStorageService, NormalizedFileData } from "./FileStorageService";
@@ -50,8 +49,7 @@ interface CategoryConfigServiceConfig {
  *   alertTypes: AlertTypeConfig[],     // { name, colorSlot }
  *   caseTypes: string[],
  *   livingArrangements: string[],
- *   contactMethods: string[],
- *   vrScripts: VRScript[]
+ *   contactMethods: string[]
  * }
  * ```
  * 
@@ -301,49 +299,6 @@ export class CategoryConfigService {
 
     logger.info("Alert types updated with colors", {
       alertTypeCount: sanitized.length,
-    });
-
-    return this.updateCategoryConfig(nextConfig);
-  }
-
-  /**
-   * Update VR (Verification Request) script templates.
-   * 
-   * VR scripts are templates for generating verification request letters.
-   * This method updates the available script templates.
-   * 
-   * **Note:** Scripts can be empty (user may not have created any yet).
-   * Scripts with missing IDs or names are filtered out during sanitization.
-   * 
-   * @param {VRScript[]} scripts - Array of VR script templates
-   * @returns {Promise<CategoryConfig>} The updated complete configuration
-   * 
-   * @example
-   * const updated = await categoryConfigService.updateVRScripts([
-   *   {
-   *     id: "vr-1",
-   *     name: "Income Verification",
-   *     template: "Please provide proof of income..."
-   *   },
-   *   {
-   *     id: "vr-2",
-   *     name: "Asset Verification",
-   *     template: "Please provide documentation of assets..."
-   *   }
-   * ]);
-   */
-  async updateVRScripts(scripts: VRScript[]): Promise<CategoryConfig> {
-    // Filter out scripts with empty/missing names or ids
-    const sanitized = scripts.filter(s => s && s.id && typeof s.name === 'string');
-
-    const currentConfig = await this.getCategoryConfig();
-    const nextConfig: CategoryConfig = {
-      ...currentConfig,
-      vrScripts: sanitized,
-    };
-
-    logger.info("VR scripts updated", {
-      scriptCount: sanitized.length,
     });
 
     return this.updateCategoryConfig(nextConfig);

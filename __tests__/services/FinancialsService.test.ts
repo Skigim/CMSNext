@@ -117,7 +117,6 @@ describe('FinancialsService', () => {
     livingArrangements: ['Apartment/House'],
     noteCategories: ['General'],
     verificationStatuses: ['Needs VR', 'Verified'],
-    vrScripts: [],
     summaryTemplate: {
       sectionOrder: ['notes', 'caseInfo', 'personInfo', 'relationships', 'resources', 'income', 'expenses', 'avsTracking'],
       defaultSections: {

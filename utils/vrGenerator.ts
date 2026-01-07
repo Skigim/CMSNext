@@ -1,31 +1,46 @@
 /**
- * VR (Verification Request) Generator Utility
+ * Template Generator Utility
  * 
- * Renders VR templates by substituting placeholders with actual data
+ * Renders templates by substituting placeholders with actual data
  * from financial items and case records.
+ * 
+ * Supports VR, Summary, and Narrative template categories.
  */
 
 import type { FinancialItem, StoredCase, Person } from "@/types/case";
-import type { VRScript, VRRenderContext, RenderedVR, VRPlaceholderField } from "@/types/vr";
-import { VR_PLACEHOLDER_FIELDS } from "@/types/vr";
+import type { 
+  Template, 
+  TemplateRenderContext, 
+  RenderedTemplate, 
+  TemplatePlaceholderField,
+
+} from "@/types/template";
+import { TEMPLATE_PLACEHOLDER_FIELDS } from "@/types/template";
+import { parseLocalDate } from "@/utils/dateFormatting";
 import { formatPhoneNumber } from "@/utils/phoneFormatter";
 
 /**
- * Format a date string for display in VR templates.
+ * Consistent long-form date formatting helper.
+ */
+function formatDisplayDate(date: Date): string {
+  return date.toLocaleDateString("en-US", {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  });
+}
+
+/**
+ * Format a date string for display in VR templates using local-time parsing
+ * to avoid UTC shifts (e.g., "2024-01-01" should not become Dec 31 in PST).
  */
 function formatDate(dateString?: string): string {
   if (!dateString) return "";
-  try {
-    const date = new Date(dateString);
-    if (isNaN(date.getTime())) return dateString;
-    return date.toLocaleDateString("en-US", {
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-    });
-  } catch {
-    return dateString;
-  }
+
+  const parsed = parseLocalDate(dateString);
+  if (!parsed) return dateString;
+
+  return formatDisplayDate(parsed);
 }
 
 /**
@@ -48,37 +63,32 @@ function formatCurrency(amount?: number): string {
  */
 function applyDateOffset(baseDate: string | Date | undefined, daysOffset: number): string {
   if (!baseDate) return "";
-  
-  let date: Date;
+
+  let date: Date | null;
+
   if (typeof baseDate === "string") {
     // Handle "now" or empty as current date
     if (baseDate === "" || baseDate === "now") {
       date = new Date();
     } else {
-      date = new Date(baseDate);
-      if (isNaN(date.getTime())) return "";
+      date = parseLocalDate(baseDate);
     }
   } else {
     date = new Date(baseDate);
   }
-  
-  date.setDate(date.getDate() + daysOffset);
-  return date.toLocaleDateString("en-US", {
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-  });
+
+  if (!date || isNaN(date.getTime())) return "";
+
+  const adjusted = new Date(date);
+  adjusted.setDate(adjusted.getDate() + daysOffset);
+  return formatDisplayDate(adjusted);
 }
 
 /**
  * Get today's date formatted for display.
  */
 function getCurrentDateFormatted(): string {
-  return new Date().toLocaleDateString("en-US", {
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-  });
+  return formatDisplayDate(new Date());
 }
 
 /**
@@ -105,7 +115,7 @@ function getLatestHistoryEntry(item: FinancialItem) {
  * Build a render context with only case-level data (no financial item data).
  * Used for rendering templates when no items are selected.
  */
-export function buildCaseLevelContext(storedCase: StoredCase): VRRenderContext {
+export function buildCaseLevelContext(storedCase: StoredCase): TemplateRenderContext {
   const { caseRecord, person } = storedCase;
 
   return {
@@ -155,7 +165,7 @@ export function buildRenderContext(
   item: FinancialItem,
   itemType: "resources" | "income" | "expenses",
   storedCase: StoredCase
-): VRRenderContext {
+): TemplateRenderContext {
   const { caseRecord, person } = storedCase;
   const latestHistory = getLatestHistoryEntry(item);
 
@@ -230,7 +240,7 @@ function isDateField(fieldName: string): boolean {
 }
 
 /**
- * Render a VR template by substituting placeholders with context values.
+ * Render a template by substituting placeholders with context values.
  * 
  * Placeholders support two formats:
  * - {fieldName} - Simple substitution
@@ -238,17 +248,17 @@ function isDateField(fieldName: string): boolean {
  * 
  * Unknown placeholders are left as-is.
  */
-export function renderTemplate(template: string, context: VRRenderContext): string {
+export function renderTemplate(template: string, context: TemplateRenderContext): string {
   // Match {fieldName} or {fieldName+N} or {fieldName-N}
   return template.replace(/\{(\w+)([+-]\d+)?\}/g, (match, fieldName, offsetStr) => {
-    const key = fieldName as VRPlaceholderField;
+    const key = fieldName as TemplatePlaceholderField;
     
     // Check if it's a valid placeholder
-    if (!(key in VR_PLACEHOLDER_FIELDS)) {
+    if (!(key in TEMPLATE_PLACEHOLDER_FIELDS)) {
       return match; // Leave unknown placeholders as-is
     }
     
-    const value = context[key as keyof VRRenderContext];
+    const value = context[key as keyof TemplateRenderContext];
     
     // Format based on field type
     if (value === undefined || value === null) {
@@ -289,64 +299,67 @@ export function renderTemplate(template: string, context: VRRenderContext): stri
 }
 
 /**
- * Render a VR for a specific financial item using a script template.
+ * Render a template for a specific financial item.
  */
 export function renderVR(
-  script: VRScript,
+  template: Template,
   item: FinancialItem,
   itemType: "resources" | "income" | "expenses",
   storedCase: StoredCase
-): RenderedVR {
+): RenderedTemplate {
   const context = buildRenderContext(item, itemType, storedCase);
-  const text = renderTemplate(script.template, context);
+  const text = renderTemplate(template.template, context);
   
   return {
+    templateId: template.id,
     itemId: item.id,
-    scriptId: script.id,
     text,
   };
 }
 
 /**
- * Render multiple VRs and combine them with a separator.
+ * Render multiple templates for financial items and combine with a separator.
  */
 export function renderMultipleVRs(
-  script: VRScript,
+  template: Template,
   items: Array<{ item: FinancialItem; type: "resources" | "income" | "expenses" }>,
   storedCase: StoredCase
 ): string {
-  const renderedVRs = items.map(({ item, type }) => 
-    renderVR(script, item, type, storedCase)
+  const renderedTemplates = items.map(({ item, type }) => 
+    renderVR(template, item, type, storedCase)
   );
   
-  return renderedVRs.map(vr => vr.text).join("\n\n-----\n\n");
+  return renderedTemplates.map(r => r.text).join("\n\n-----\n\n");
 }
 
 /**
  * Get a list of all available placeholder fields grouped by category.
+ * @deprecated Use groupPlaceholderFieldsByCategory from types/template.ts instead
  */
-export function getPlaceholdersByCategory(): Record<string, Array<{ field: VRPlaceholderField; label: string }>> {
-  const grouped: Record<string, Array<{ field: VRPlaceholderField; label: string }>> = {};
+export function getPlaceholdersByCategory(): Record<string, Array<{ field: TemplatePlaceholderField; label: string }>> {
+  const grouped: Record<string, Array<{ field: TemplatePlaceholderField; label: string }>> = {};
   
-  for (const [field, config] of Object.entries(VR_PLACEHOLDER_FIELDS)) {
-    const { category, label } = config;
-    if (!grouped[category]) {
-      grouped[category] = [];
+  for (const [field, config] of Object.entries(TEMPLATE_PLACEHOLDER_FIELDS)) {
+    const { fieldCategory, label } = config;
+    if (!grouped[fieldCategory]) {
+      grouped[fieldCategory] = [];
     }
-    grouped[category].push({ field: field as VRPlaceholderField, label });
+    grouped[fieldCategory].push({ field: field as TemplatePlaceholderField, label });
   }
   
   return grouped;
 }
 
 /**
- * Create a default VR script.
+ * Create a default template.
+ * @deprecated Use createTemplate from types/template.ts instead
  */
-export function createDefaultVRScript(name: string, template: string = ""): VRScript {
+export function createDefaultVRScript(name: string, templateContent: string = ""): Template {
   return {
     id: crypto.randomUUID(),
     name,
-    template,
+    category: 'vr',
+    template: templateContent,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   };

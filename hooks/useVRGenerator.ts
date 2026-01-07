@@ -4,13 +4,13 @@ import { useState, useCallback, useMemo, useEffect } from "react";
  * Hook for managing VR (Verification Report) generation workflow
  * 
  * Orchestrates:
- * - VR script selection from category config
+ * - Template selection from template context
  * - Financial item selection with multi-select
- * - VR template rendering from selected items
+ * - Template rendering from selected items
  * - Generated text preview with copy-to-clipboard
  * 
  * **Workflow:**
- * 1. Select VR script (template type)
+ * 1. Select VR template
  * 2. Select financial items (resources/income/expenses)
  * 3. Preview rendered text in preview area
  * 4. Copy to clipboard or save
@@ -21,15 +21,15 @@ import { useState, useCallback, useMemo, useEffect } from "react";
  * - Bulk select/deselect all
  * - Count of selected items for UI feedback
  * 
- * **Script Selection:**
- * - Choose from vrScripts array (from category config)
- * - Each script has different template/format
- * - Selected script ID tracked separately
- * - Script details provided for preview (name, description)
+ * **Template Selection:**
+ * - Choose from VR templates (from TemplateContext)
+ * - Each template has different format
+ * - Selected template ID tracked separately
+ * - Template details provided for preview (name, description)
  * 
  * **VR Generation:**
  * - Uses renderMultipleVRs() utility to generate text
- * - Takes selected script + selected items
+ * - Takes selected template + selected items
  * - Produces formatted verification report text
  * - Updates renderedText state for display
  * 
@@ -37,18 +37,6 @@ import { useState, useCallback, useMemo, useEffect } from "react";
  * - Uses modern Clipboard API (navigator.clipboard)
  * - Returns boolean: true=success, false=failed
  * - Handles browser compatibility
- * 
- * **Usage Example:**
- * ```typescript
- * const vr = useVRGenerator({\n *   storedCase: currentCase,\n *   financialItems: allItems,\n *   vrScripts: categoryConfig.vrScripts\n * });\n * 
- * // Open modal
- * vr.openModal();\n * 
- * // User selects script
- * vr.setSelectedScriptId(\"template-1\");\n * 
- * // User selects items
- * vr.selectAll();\n * vr.toggleItem(\"item-3\"); // Deselect one
- * \n * // Generate and copy
- * vr.setRenderedText(generatedText);\n * const copied = await vr.copyToClipboard();\n * if (copied) {\n *   toast.success(\"Copied to clipboard\");\n * }\n * ```
  * 
  * **Modal State:**
  * - isOpen: Boolean for modal visibility
@@ -58,12 +46,12 @@ import { useState, useCallback, useMemo, useEffect } from "react";
  * @param {UseVRGeneratorParams} params
  *   - `storedCase`: Current case (for VR generation context)
  *   - `financialItems`: All available financial items to render
- *   - `vrScripts`: Available VR script templates from config
+ *   - `vrTemplates`: Available VR templates from TemplateContext
  * 
  * @returns {UseVRGeneratorReturn} VR generation interface
  */
 import type { StoredCase, FinancialItem, StoredFinancialItem } from "@/types/case";
-import type { VRScript } from "@/types/vr";
+import type { Template } from "@/types/template";
 import { renderMultipleVRs } from "@/utils/vrGenerator";
 
 interface SelectedItem {
@@ -75,7 +63,7 @@ interface SelectedItem {
 interface UseVRGeneratorParams {
   storedCase: StoredCase | null;
   financialItems: StoredFinancialItem[];
-  vrScripts: VRScript[];
+  vrTemplates: Template[];
 }
 
 interface UseVRGeneratorReturn {
@@ -84,10 +72,10 @@ interface UseVRGeneratorReturn {
   openModal: () => void;
   closeModal: () => void;
   
-  // Script selection
-  selectedScriptId: string | null;
-  setSelectedScriptId: (id: string | null) => void;
-  selectedScript: VRScript | null;
+  // Template selection
+  selectedTemplateId: string | null;
+  setSelectedTemplateId: (id: string | null) => void;
+  selectedTemplate: Template | null;
   
   // Item selection
   selectableItems: SelectedItem[];
@@ -107,10 +95,10 @@ interface UseVRGeneratorReturn {
 export function useVRGenerator({
   storedCase,
   financialItems,
-  vrScripts,
+  vrTemplates,
 }: UseVRGeneratorParams): UseVRGeneratorReturn {
   const [isOpen, setIsOpen] = useState(false);
-  const [selectedScriptId, setSelectedScriptId] = useState<string | null>(null);
+  const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(null);
   const [selectedItemIds, setSelectedItemIds] = useState<Set<string>>(new Set());
   const [renderedText, setRenderedText] = useState("");
 
@@ -131,11 +119,11 @@ export function useVRGenerator({
     }));
   }, [allItems, selectedItemIds]);
 
-  // Currently selected script
-  const selectedScript = useMemo(() => {
-    if (!selectedScriptId) return null;
-    return vrScripts.find(s => s.id === selectedScriptId) ?? null;
-  }, [selectedScriptId, vrScripts]);
+  // Currently selected template
+  const selectedTemplate = useMemo(() => {
+    if (!selectedTemplateId) return null;
+    return vrTemplates.find(t => t.id === selectedTemplateId) ?? null;
+  }, [selectedTemplateId, vrTemplates]);
 
   // Count of selected items
   const selectedCount = useMemo(() => {
@@ -145,15 +133,15 @@ export function useVRGenerator({
   // Open modal and initialize with no items selected
   const openModal = useCallback(() => {
     setSelectedItemIds(new Set());
-    setSelectedScriptId(vrScripts[0]?.id ?? null);
+    setSelectedTemplateId(vrTemplates[0]?.id ?? null);
     setRenderedText("");
     setIsOpen(true);
-  }, [vrScripts]);
+  }, [vrTemplates]);
 
   // Close modal and reset state
   const closeModal = useCallback(() => {
     setIsOpen(false);
-    setSelectedScriptId(null);
+    setSelectedTemplateId(null);
     setSelectedItemIds(new Set());
     setRenderedText("");
   }, []);
@@ -182,9 +170,9 @@ export function useVRGenerator({
     setSelectedItemIds(new Set());
   }, []);
 
-  // Regenerate VR text when script or selection changes
+  // Regenerate VR text when template or selection changes
   const regenerateText = useCallback(() => {
-    if (!selectedScript || !storedCase) {
+    if (!selectedTemplate || !storedCase) {
       setRenderedText("");
       return;
     }
@@ -201,16 +189,16 @@ export function useVRGenerator({
     // Cast StoredCase to the expected type for renderMultipleVRs
     // The function only needs person and caseRecord fields which StoredCase has
     const text = renderMultipleVRs(
-      selectedScript, 
+      selectedTemplate, 
       selectedItems, 
       storedCase as unknown as Parameters<typeof renderMultipleVRs>[2]
     );
     setRenderedText(text);
-  }, [selectedScript, selectableItems, storedCase]);
+  }, [selectedTemplate, selectableItems, storedCase]);
 
-  // Update script selection
-  const handleSetSelectedScriptId = useCallback((id: string | null) => {
-    setSelectedScriptId(id);
+  // Update template selection
+  const handleSetSelectedTemplateId = useCallback((id: string | null) => {
+    setSelectedTemplateId(id);
   }, []);
 
   // Copy to clipboard
@@ -225,20 +213,20 @@ export function useVRGenerator({
     }
   }, [renderedText]);
 
-  // Auto-regenerate when selection or script changes
+  // Auto-regenerate when selection or template changes
   useEffect(() => {
-    if (isOpen && selectedScript && storedCase) {
+    if (isOpen && selectedTemplate && storedCase) {
       regenerateText();
     }
-  }, [isOpen, selectedScript, selectedItemIds, storedCase, regenerateText]);
+  }, [isOpen, selectedTemplate, selectedItemIds, storedCase, regenerateText]);
 
   return {
     isOpen,
     openModal,
     closeModal,
-    selectedScriptId,
-    setSelectedScriptId: handleSetSelectedScriptId,
-    selectedScript,
+    selectedTemplateId,
+    setSelectedTemplateId: handleSetSelectedTemplateId,
+    selectedTemplate,
     selectableItems,
     toggleItem,
     selectAll,
