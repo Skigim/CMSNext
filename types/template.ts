@@ -51,6 +51,11 @@ export interface Template {
    * Only used when category === 'summary'.
    */
   sectionKey?: SummarySectionKey;
+  /**
+   * Sort order for templates within a category.
+   * Lower numbers appear first. Used for drag-drop reordering.
+   */
+  sortOrder?: number;
   /** ISO timestamp when created */
   createdAt: string;
   /** ISO timestamp when last modified */

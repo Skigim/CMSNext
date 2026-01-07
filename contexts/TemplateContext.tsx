@@ -23,7 +23,7 @@ type TemplateContextValue = {
   error: string | null;
   /** Reload templates from DataManager */
   refresh: () => Promise<void>;
-  /** Get templates filtered by category */
+  /** Get templates filtered by category, sorted by sortOrder */
   getTemplatesByCategory: (category: TemplateCategory) => Template[];
   /** Get a single template by ID */
   getTemplateById: (id: string) => Template | undefined;
@@ -33,6 +33,8 @@ type TemplateContextValue = {
   updateTemplate: (id: string, updates: Partial<Omit<Template, "id" | "createdAt" | "updatedAt">>) => Promise<Template | null>;
   /** Delete a template */
   deleteTemplate: (id: string) => Promise<boolean>;
+  /** Reorder templates within a category by updating sortOrder */
+  reorderTemplates: (templateIds: string[]) => Promise<boolean>;
 };
 
 const noopAsync = async () => {
@@ -49,6 +51,7 @@ const defaultContextValue: TemplateContextValue = {
   addTemplate: async () => null,
   updateTemplate: async () => null,
   deleteTemplate: async () => false,
+  reorderTemplates: async () => false,
 };
 
 const TemplateContext = createContext<TemplateContextValue>(defaultContextValue);
@@ -149,7 +152,9 @@ export const TemplateProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
   const getTemplatesByCategory = useCallback(
     (category: TemplateCategory): Template[] => {
-      return templates.filter(t => t.category === category);
+      return templates
+        .filter(t => t.category === category)
+        .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
     },
     [templates]
   );
@@ -237,6 +242,30 @@ export const TemplateProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     [dataManager]
   );
 
+  const reorderTemplates = useCallback(
+    async (templateIds: string[]): Promise<boolean> => {
+      if (!dataManager) {
+        return false;
+      }
+
+      try {
+        // Update sortOrder for each template based on position in array
+        const updatePromises = templateIds.map((id, index) => 
+          dataManager.updateTemplate(id, { sortOrder: index })
+        );
+        
+        await Promise.all(updatePromises);
+        // Local state will be updated via dataChangeCount effect
+        return true;
+      } catch (err) {
+        logger.error("Failed to reorder templates", { error: err });
+        toast.error("Failed to save template order");
+        return false;
+      }
+    },
+    [dataManager]
+  );
+
   const value = useMemo<TemplateContextValue>(
     () => ({
       templates,
@@ -248,6 +277,7 @@ export const TemplateProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       addTemplate,
       updateTemplate,
       deleteTemplate,
+      reorderTemplates,
     }),
     [
       templates,
@@ -259,6 +289,7 @@ export const TemplateProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       addTemplate,
       updateTemplate,
       deleteTemplate,
+      reorderTemplates,
     ]
   );
 

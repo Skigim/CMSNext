@@ -449,6 +449,7 @@ export const DEFAULT_SUMMARY_SECTIONS: SummarySections = {
  * @param options.sections - Section visibility configuration
  * @param options.templates - Template content strings or Template objects with .template property
  * @param options.templateObjects - Full Template objects from TemplateService (preferred over templates)
+ * @param options.sectionOrder - Custom section order (from template sortOrder)
  */
 export function generateCaseSummary(
   caseData: StoredCase, 
@@ -458,12 +459,20 @@ export function generateCaseSummary(
     sections?: SummarySections;
     templates?: Partial<Record<string, string>>;
     templateObjects?: Partial<Record<SummarySectionKey, Template>>;
+    sectionOrder?: SummarySectionKey[];
   }
 ): string {
   const { caseRecord, person } = caseData;
   const financials = options?.financials ?? { resources: [], income: [], expenses: [] };
   const notes = options?.notes ?? [];
   const sectionConfig = options?.sections ?? DEFAULT_SUMMARY_SECTIONS;
+  
+  // Default section order
+  const defaultOrder: SummarySectionKey[] = [
+    'notes', 'caseInfo', 'personInfo', 'relationships',
+    'resources', 'income', 'expenses', 'avsTracking'
+  ];
+  const sectionOrder = options?.sectionOrder ?? defaultOrder;
   
   // Extract template content strings from either templates or templateObjects
   const getTemplateContent = (key: SummarySectionKey): string | undefined => {
@@ -475,43 +484,43 @@ export function generateCaseSummary(
     return options?.templates?.[key];
   };
   
-  const enabledSections: string[] = [];
+  // Build section by key
+  const buildSection = (key: SummarySectionKey): string | null => {
+    if (!sectionConfig[key]) return null;
+    
+    switch (key) {
+      case 'notes':
+        return buildNotesSection(notes, getTemplateContent('notes'), caseData);
+      case 'caseInfo':
+        return buildCaseInfoSection(caseRecord, getTemplateContent('caseInfo'), caseData);
+      case 'personInfo':
+        return buildPersonInfoSection(person, caseRecord, getTemplateContent('personInfo'), caseData);
+      case 'relationships':
+        return buildRelationshipsSection(person.relationships, getTemplateContent('relationships'), caseData);
+      case 'resources':
+        return buildFinancialSection('Resources', financials.resources || [], formatResourceItem, 
+          getTemplateContent('resources'), 'resources', caseData, financials);
+      case 'income':
+        return buildFinancialSection('Income', financials.income || [], formatIncomeItem, 
+          getTemplateContent('income'), 'income', caseData, financials);
+      case 'expenses':
+        return buildFinancialSection('Expenses', financials.expenses || [], formatExpenseItem, 
+          getTemplateContent('expenses'), 'expenses', caseData, financials);
+      case 'avsTracking':
+        return buildAVSTrackingSection(caseRecord, financials.resources || [], 
+          getTemplateContent('avsTracking'), caseData, financials);
+      default:
+        return null;
+    }
+  };
   
-  if (sectionConfig.notes) {
-    enabledSections.push(buildNotesSection(notes, getTemplateContent('notes'), caseData));
-  }
-  if (sectionConfig.caseInfo) {
-    enabledSections.push(buildCaseInfoSection(caseRecord, getTemplateContent('caseInfo'), caseData));
-  }
-  if (sectionConfig.personInfo) {
-    enabledSections.push(buildPersonInfoSection(person, caseRecord, getTemplateContent('personInfo'), caseData));
-  }
-  if (sectionConfig.relationships) {
-    enabledSections.push(buildRelationshipsSection(person.relationships, getTemplateContent('relationships'), caseData));
-  }
-  if (sectionConfig.resources) {
-    enabledSections.push(
-      buildFinancialSection('Resources', financials.resources || [], formatResourceItem, 
-        getTemplateContent('resources'), 'resources', caseData, financials)
-    );
-  }
-  if (sectionConfig.income) {
-    enabledSections.push(
-      buildFinancialSection('Income', financials.income || [], formatIncomeItem, 
-        getTemplateContent('income'), 'income', caseData, financials)
-    );
-  }
-  if (sectionConfig.expenses) {
-    enabledSections.push(
-      buildFinancialSection('Expenses', financials.expenses || [], formatExpenseItem, 
-        getTemplateContent('expenses'), 'expenses', caseData, financials)
-    );
-  }
-  if (sectionConfig.avsTracking) {
-    enabledSections.push(
-      buildAVSTrackingSection(caseRecord, financials.resources || [], 
-        getTemplateContent('avsTracking'), caseData, financials)
-    );
+  // Build sections in specified order
+  const enabledSections: string[] = [];
+  for (const key of sectionOrder) {
+    const section = buildSection(key);
+    if (section) {
+      enabledSections.push(section);
+    }
   }
 
   return enabledSections.join(SECTION_SEPARATOR);

@@ -2,9 +2,7 @@
  * Case Summary Modal
  * ==================
  * Modal for configuring and previewing case summary before copying to clipboard.
- * Allows toggling sections and editing the preview before final copy.
- * 
- * Now integrated with the Template system for customizable section rendering.
+ * Uses templates from TemplateContext for section order and content.
  */
 
 import { useState, useCallback, useEffect, useMemo } from "react";
@@ -24,8 +22,8 @@ import { Copy, X } from "lucide-react";
 import { StoredCase, FinancialItem, Note } from "../../types/case";
 import { generateCaseSummary, SummarySections } from "../../utils/caseSummaryGenerator";
 import { clickToCopy } from "../../utils/clipboard";
-import { useCategoryConfig } from "@/contexts/CategoryConfigContext";
 import { useTemplates } from "@/contexts/TemplateContext";
+import type { Template } from "@/types/template";
 import type { SummarySectionKey } from "@/types/categoryConfig";
 
 interface CaseSummaryModalProps {
@@ -44,7 +42,26 @@ interface SectionConfig {
   key: keyof SummarySections;
   label: string;
   description: string;
+  template?: Template;
 }
+
+// Section metadata for UI
+const SECTION_META: Record<SummarySectionKey, { label: string; description: string }> = {
+  notes: { label: "Notes", description: "Case notes" },
+  caseInfo: { label: "Case Info", description: "Application date, retro, waiver" },
+  personInfo: { label: "Person Info", description: "Name, contact, verifications" },
+  relationships: { label: "Relationships", description: "Related contacts" },
+  resources: { label: "Resources", description: "Bank accounts, assets" },
+  income: { label: "Income", description: "Income sources" },
+  expenses: { label: "Expenses", description: "Monthly expenses" },
+  avsTracking: { label: "AVS Tracking", description: "AVS submission and tracking dates" },
+};
+
+// Default section order when no templates exist
+const DEFAULT_SECTION_ORDER: SummarySectionKey[] = [
+  'notes', 'caseInfo', 'personInfo', 'relationships', 
+  'resources', 'income', 'expenses', 'avsTracking'
+];
 
 export function CaseSummaryModal({
   open,
@@ -53,66 +70,84 @@ export function CaseSummaryModal({
   financials,
   notes,
 }: CaseSummaryModalProps) {
-  const { config } = useCategoryConfig();
-  const { templates } = useTemplates();
-  const { sectionOrder, defaultSections } = config.summaryTemplate;
+  const { getTemplatesByCategory } = useTemplates();
 
-  // Get summary templates from TemplateContext
-  const summaryTemplates = useMemo(() => {
-    const templatesBySection: Partial<Record<SummarySectionKey, any>> = {};
+  // Get summary templates sorted by sortOrder from TemplateContext
+  const summaryTemplates = useMemo(() => 
+    getTemplatesByCategory('summary'),
+    [getTemplatesByCategory]
+  );
+
+  // Build template lookup and derive section order from templates
+  const { templatesBySection, sectionOrder } = useMemo(() => {
+    const bySection: Partial<Record<SummarySectionKey, Template>> = {};
+    const order: SummarySectionKey[] = [];
     
-    templates
-      .filter(t => t.category === 'summary' && t.sectionKey)
-      .forEach(t => {
-        if (t.sectionKey) {
-          templatesBySection[t.sectionKey] = t;
-        }
-      });
+    // Templates are already sorted by sortOrder from context
+    for (const t of summaryTemplates) {
+      if (t.sectionKey) {
+        bySection[t.sectionKey] = t;
+        order.push(t.sectionKey);
+      }
+    }
     
-    return templatesBySection;
-  }, [templates]);
+    // If no templates, use default order
+    const finalOrder = order.length > 0 ? order : DEFAULT_SECTION_ORDER;
+    
+    return { templatesBySection: bySection, sectionOrder: finalOrder };
+  }, [summaryTemplates]);
 
   // Build section configs from template order
   const SECTION_CONFIGS: SectionConfig[] = useMemo(() => {
-    const labels: Record<string, { label: string; description: string }> = {
-      notes: { label: "Notes", description: "Case notes" },
-      caseInfo: { label: "Case Info", description: "Application date, retro, waiver" },
-      personInfo: { label: "Person Info", description: "Name, contact, verifications" },
-      relationships: { label: "Relationships", description: "Related contacts" },
-      resources: { label: "Resources", description: "Bank accounts, assets" },
-      income: { label: "Income", description: "Income sources" },
-      expenses: { label: "Expenses", description: "Monthly expenses" },
-      avsTracking: { label: "AVS Tracking", description: "AVS submission and tracking dates" },
-    };
     return sectionOrder.map(key => ({
       key: key as keyof SummarySections,
-      label: labels[key].label,
-      description: labels[key].description,
+      label: SECTION_META[key].label,
+      description: SECTION_META[key].description,
+      template: templatesBySection[key],
     }));
-  }, [sectionOrder]);
+  }, [sectionOrder, templatesBySection]);
 
-  // Section toggles - initialize from template defaults
+  // Initialize sections - all enabled by default
+  const defaultSections = useMemo(() => {
+    const sections: SummarySections = {
+      notes: true,
+      caseInfo: true,
+      personInfo: true,
+      relationships: true,
+      resources: true,
+      income: true,
+      expenses: true,
+      avsTracking: true,
+    };
+    return sections;
+  }, []);
+
+  // Section toggles
   const [sections, setSections] = useState<SummarySections>(defaultSections);
 
   // Editable preview text
   const [previewText, setPreviewText] = useState("");
 
-  // Generate summary whenever sections change - use Template objects
+  // Generate summary using templates and their order
   const generatedSummary = useMemo(() => {
+    // Build sections config with proper order
+    const orderedSections: SummarySections = { ...sections };
+    
     return generateCaseSummary(caseData, { 
       financials, 
       notes, 
-      sections,
-      templateObjects: summaryTemplates
+      sections: orderedSections,
+      templateObjects: templatesBySection,
+      sectionOrder: sectionOrder,
     });
-  }, [caseData, financials, notes, sections, summaryTemplates]);
+  }, [caseData, financials, notes, sections, templatesBySection, sectionOrder]);
 
   // Update preview when generated summary changes
   useEffect(() => {
     setPreviewText(generatedSummary);
   }, [generatedSummary]);
 
-  // Reset when modal opens - use template defaults
+  // Reset when modal opens
   useEffect(() => {
     if (open) {
       setSections(defaultSections);

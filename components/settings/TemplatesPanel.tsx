@@ -1,106 +1,21 @@
-import { useState, useCallback, useMemo } from "react";
-import { FileText, FileCheck, FileSignature, RefreshCw, AlertCircle, CheckCircle2 } from "lucide-react";
+import { FileText, FileCheck, FileSignature } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../ui/card";
-import { Button } from "../ui/button";
-import { Alert, AlertDescription, AlertTitle } from "../ui/alert";
 import { TemplateEditor } from "./TemplateEditor";
+import { SortableSummaryTemplates } from "./SortableSummaryTemplates";
 import { useTemplates } from "@/contexts/TemplateContext";
-import { useCategoryConfig } from "@/contexts/CategoryConfigContext";
-import { 
-  generateDefaultSectionTemplates, 
-  needsSummaryTemplateMigration,
-  migrateSummaryTemplates,
-  mergeSectionTemplates,
-} from "@/utils/summarySectionMigration";
-import { toast } from "sonner";
 
 /**
  * TemplatesPanel - Consolidated text generation templates management
  * 
  * Provides a unified interface for managing all text generation templates:
  * - VR (Verification Request) Scripts
- * - Case Summary Templates
+ * - Case Summary Templates (with drag-drop ordering)
  * - Narrative Templates
  * 
  * All templates use the unified Template type with {field} placeholder syntax.
  */
 export function TemplatesPanel() {
-  const { loading, getTemplatesByCategory, addTemplate } = useTemplates();
-  const { config } = useCategoryConfig();
-  const [migrating, setMigrating] = useState(false);
-
-  // Check if summary templates exist in the Template system
-  const summaryTemplates = useMemo(() => 
-    getTemplatesByCategory('summary'),
-    [getTemplatesByCategory]
-  );
-
-  // Check if legacy templates need migration
-  const hasLegacyTemplates = useMemo(() => 
-    needsSummaryTemplateMigration(config.summaryTemplate),
-    [config.summaryTemplate]
-  );
-
-  // Determine migration state
-  const needsInitialization = summaryTemplates.length === 0;
-  const showMigrationPrompt = needsInitialization || hasLegacyTemplates;
-
-  /**
-   * Run summary template migration
-   * - If legacy templates exist in CategoryConfig, migrate those
-   * - Otherwise, generate default section templates
-   */
-  const handleMigration = useCallback(async () => {
-    setMigrating(true);
-    const loadingToast = toast.loading("Migrating summary templates...");
-
-    try {
-      let templatesToAdd;
-
-      if (hasLegacyTemplates) {
-        // Migrate from legacy CategoryConfig
-        const migrated = migrateSummaryTemplates(config.summaryTemplate);
-        templatesToAdd = mergeSectionTemplates(summaryTemplates, migrated);
-        // Filter to only new templates (not already in system)
-        templatesToAdd = templatesToAdd.filter(t => 
-          !summaryTemplates.some(existing => existing.sectionKey === t.sectionKey)
-        );
-      } else {
-        // Generate fresh defaults
-        const defaults = generateDefaultSectionTemplates();
-        templatesToAdd = defaults.filter(t => 
-          !summaryTemplates.some(existing => existing.sectionKey === t.sectionKey)
-        );
-      }
-
-      // Add each template
-      let successCount = 0;
-      for (const template of templatesToAdd) {
-        const result = await addTemplate({
-          name: template.name,
-          category: template.category,
-          template: template.template,
-          sectionKey: template.sectionKey,
-        });
-        if (result) successCount++;
-      }
-
-      toast.dismiss(loadingToast);
-      
-      if (successCount > 0) {
-        toast.success(`Migrated ${successCount} summary template${successCount > 1 ? 's' : ''}`);
-      } else if (templatesToAdd.length === 0) {
-        toast.info("All summary templates are already up to date");
-      } else {
-        toast.error("Failed to migrate templates");
-      }
-    } catch (error) {
-      toast.dismiss(loadingToast);
-      toast.error("Migration failed: " + (error instanceof Error ? error.message : "Unknown error"));
-    } finally {
-      setMigrating(false);
-    }
-  }, [hasLegacyTemplates, config.summaryTemplate, summaryTemplates, addTemplate]);
+  const { loading } = useTemplates();
 
   return (
     <div className="space-y-6">
@@ -124,8 +39,8 @@ export function TemplatesPanel() {
                 Templates are pre-written text snippets with placeholders that get replaced
                 with actual data when you generate content. For example, a VR script can
                 include <code className="text-xs bg-background px-1 py-0.5 rounded">
-                  {"{item.type}"}
-                </code> which will be replaced with the actual financial item type.
+                  {"{description}"}
+                </code> which will be replaced with the actual financial item description.
               </p>
               <div className="text-xs text-muted-foreground space-y-1">
                 <p><strong>Available template types:</strong></p>
@@ -168,58 +83,12 @@ export function TemplatesPanel() {
             <CardTitle>Case Summary Templates</CardTitle>
           </div>
           <CardDescription>
-            Create templates for generating case summary sections. Each section can have
-            its own template with placeholders for case and person data.
+            Customize each section of the case summary. Drag to reorder how sections
+            appear when generating summaries.
           </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
-          {/* Migration Prompt */}
-          {showMigrationPrompt && (
-            <Alert variant={hasLegacyTemplates ? "default" : "default"}>
-              <AlertCircle className="h-4 w-4" />
-              <AlertTitle>
-                {hasLegacyTemplates 
-                  ? "Legacy Templates Found" 
-                  : "Initialize Summary Templates"}
-              </AlertTitle>
-              <AlertDescription className="mt-2">
-                <p className="text-sm mb-3">
-                  {hasLegacyTemplates 
-                    ? "Custom summary templates were found in your category configuration. Click below to migrate them to the new Template system."
-                    : "No summary section templates found. Click below to create the default templates for all 8 case summary sections."}
-                </p>
-                <Button 
-                  onClick={handleMigration} 
-                  disabled={migrating || loading}
-                  size="sm"
-                  className="gap-2"
-                >
-                  <RefreshCw className={`h-4 w-4 ${migrating ? 'animate-spin' : ''}`} />
-                  {migrating 
-                    ? "Migrating..." 
-                    : hasLegacyTemplates 
-                      ? "Migrate Legacy Templates" 
-                      : "Generate Default Templates"}
-                </Button>
-              </AlertDescription>
-            </Alert>
-          )}
-
-          {/* Show success state if templates exist */}
-          {!showMigrationPrompt && summaryTemplates.length > 0 && (
-            <Alert>
-              <CheckCircle2 className="h-4 w-4 text-green-600" />
-              <AlertTitle className="text-green-700">Templates Ready</AlertTitle>
-              <AlertDescription>
-                {summaryTemplates.length} summary section template{summaryTemplates.length > 1 ? 's' : ''} configured.
-              </AlertDescription>
-            </Alert>
-          )}
-
-          <TemplateEditor
-            category="summary"
-            isGloballyLoading={loading}
-          />
+        <CardContent>
+          <SortableSummaryTemplates isGloballyLoading={loading} />
         </CardContent>
       </Card>
 
