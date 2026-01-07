@@ -64,13 +64,15 @@ function createMockCase(overrides: Partial<StoredCase> = {}): StoredCase {
 }
 
 function createMockAlert(overrides: Partial<AlertWithMatch> = {}): AlertWithMatch {
+  // Use today's date to avoid alert age contributing to score in tests
+  const today = new Date().toISOString().split('T')[0];
   return {
     id: 'alert-1',
     alertCode: 'TEST',
     alertType: 'Test Alert',
-    alertDate: '2024-01-01',
-    createdAt: '2024-01-01T00:00:00.000Z',
-    updatedAt: '2024-01-01T00:00:00.000Z',
+    alertDate: today,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
     status: 'new',
     matchStatus: 'matched',
     matchedCaseId: 'case-1',

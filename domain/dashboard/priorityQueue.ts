@@ -11,8 +11,9 @@
  * 4. Mail Rcvd on Closed alerts (400 points each)
  * 5. Other unresolved alerts (100 points each)
  * 6. Application age (30 points per day since application)
- * 7. Priority flags (75 points)
- * 8. Recent modifications (50 points)
+ * 7. Alert age (50 points per day since oldest alert)
+ * 8. Priority flags (75 points)
+ * 9. Recent modifications (50 points)
  */
 
 import type { StoredCase } from '../../types/case';
@@ -35,6 +36,8 @@ export const SCORE_MAIL_RCVD_CLOSED = 400;
 export const SCORE_OTHER_ALERT = 100;
 /** Points per day since application date */
 export const SCORE_PER_DAY_SINCE_APPLICATION = 30;
+/** Points per day since oldest alert date */
+export const SCORE_PER_DAY_ALERT_AGE = 50;
 /** Points for cases marked as priority */
 export const SCORE_PRIORITY_FLAG = 75;
 /** Points for cases modified in last 24 hours */
@@ -138,6 +141,62 @@ export function getDaysSinceApplication(
 }
 
 /**
+ * Get the oldest alert date from a list of alerts.
+ * Returns undefined if no alerts or all alerts have invalid dates.
+ * 
+ * @param alerts - Array of alerts to check
+ * @returns The oldest alert date string, or undefined
+ */
+export function getOldestAlertDate(
+  alerts: AlertWithMatch[]
+): string | undefined {
+  if (!alerts || alerts.length === 0) return undefined;
+  
+  let oldestDate: Date | null = null;
+  let oldestDateStr: string | undefined;
+  
+  for (const alert of alerts) {
+    const alertDate = alert.alertDate;
+    if (!alertDate) continue;
+    
+    const parsed = parseLocalDate(alertDate);
+    if (!parsed) continue;
+    
+    if (!oldestDate || parsed.getTime() < oldestDate.getTime()) {
+      oldestDate = parsed;
+      oldestDateStr = alertDate;
+    }
+  }
+  
+  return oldestDateStr;
+}
+
+/**
+ * Calculate days since the oldest alert.
+ * Only considers the oldest alert to avoid inflating scores for cases with many alerts.
+ * Returns 0 if no alerts or all alerts have invalid dates.
+ * 
+ * @param alerts - Array of alerts to check
+ * @param now - Current date (for testing, defaults to now)
+ * @returns Number of days since oldest alert (0 or positive)
+ */
+export function getDaysSinceOldestAlert(
+  alerts: AlertWithMatch[],
+  now: Date = new Date()
+): number {
+  const oldestDate = getOldestAlertDate(alerts);
+  if (!oldestDate) return 0;
+  
+  const parsed = parseLocalDate(oldestDate);
+  if (!parsed) return 0;
+  
+  const diffMs = now.getTime() - parsed.getTime();
+  const diffDays = Math.floor(diffMs / (24 * 60 * 60 * 1000));
+  
+  return Math.max(0, diffDays);
+}
+
+/**
  * Calculate priority score for a case.
  * Higher score = higher priority.
  * 
@@ -148,6 +207,7 @@ export function getDaysSinceApplication(
  * - 400 points per Mail Rcvd on Closed alert
  * - 100 points per other unresolved alert
  * - 30 points per day since application date
+ * - 50 points per day since oldest alert (uses only oldest to avoid inflating multi-alert cases)
  * - 75 points if marked as priority
  * - 50 points if modified in last 24 hours
  * 
@@ -174,6 +234,10 @@ export function calculatePriorityScore(
   // Points per day since application date
   const daysSinceApp = getDaysSinceApplication(caseData.caseRecord?.applicationDate);
   score += daysSinceApp * SCORE_PER_DAY_SINCE_APPLICATION;
+
+  // Points per day since oldest alert (use only oldest to avoid inflating multi-alert cases)
+  const daysSinceAlert = getDaysSinceOldestAlert(caseAlerts);
+  score += daysSinceAlert * SCORE_PER_DAY_ALERT_AGE;
 
   // Priority flag
   if (caseData.priority === true) {

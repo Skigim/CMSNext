@@ -16,6 +16,8 @@ import {
   classifyAlert,
   getAlertScore,
   getDaysSinceApplication,
+  getDaysSinceOldestAlert,
+  getOldestAlertDate,
   isExcludedStatus,
   EXCLUDED_STATUSES,
   // Scoring constants
@@ -26,6 +28,7 @@ import {
   SCORE_OTHER_ALERT,
   SCORE_PRIORITY_FLAG,
   SCORE_RECENT_MODIFICATION,
+  SCORE_PER_DAY_ALERT_AGE,
 } from '../../../domain/dashboard/priorityQueue';
 import type { StoredCase, CaseStatus } from '../../../types/case';
 import type { AlertWithMatch } from '../../../utils/alertsData';
@@ -86,13 +89,15 @@ function createMockCase(overrides: Partial<Omit<StoredCase, 'status'> & { status
 }
 
 function createMockAlert(overrides: Partial<AlertWithMatch> = {}): AlertWithMatch {
+  // Use today's date to avoid alert age contributing to score in tests
+  const today = new Date().toISOString().split('T')[0];
   return {
     id: 'alert-1',
     alertCode: 'TEST',
     alertType: 'Test Alert',
-    alertDate: '2024-01-01',
-    createdAt: '2024-01-01T00:00:00.000Z',
-    updatedAt: '2024-01-01T00:00:00.000Z',
+    alertDate: today,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
     status: 'new',
     matchStatus: 'matched',
     matchedCaseId: 'case-1',
@@ -270,6 +275,108 @@ describe('getDaysSinceApplication', () => {
   it('should accept custom now parameter for testing', () => {
     const customNow = new Date('2026-01-10T12:00:00.000Z');
     expect(getDaysSinceApplication('2026-01-05', customNow)).toBe(5);
+  });
+});
+
+describe('getOldestAlertDate', () => {
+  it('should return undefined for empty array', () => {
+    expect(getOldestAlertDate([])).toBeUndefined();
+  });
+
+  it('should return the only alert date for single alert', () => {
+    const alerts = [createMockAlert({ alertDate: '2025-12-01' })];
+    expect(getOldestAlertDate(alerts)).toBe('2025-12-01');
+  });
+
+  it('should return oldest date from multiple alerts', () => {
+    const alerts = [
+      createMockAlert({ id: 'a1', alertDate: '2025-12-15' }),
+      createMockAlert({ id: 'a2', alertDate: '2025-12-01' }),
+      createMockAlert({ id: 'a3', alertDate: '2025-12-10' }),
+    ];
+    expect(getOldestAlertDate(alerts)).toBe('2025-12-01');
+  });
+
+  it('should skip alerts with missing dates', () => {
+    const alerts = [
+      createMockAlert({ id: 'a1', alertDate: undefined as unknown as string }),
+      createMockAlert({ id: 'a2', alertDate: '2025-12-05' }),
+    ];
+    expect(getOldestAlertDate(alerts)).toBe('2025-12-05');
+  });
+
+  it('should return undefined if all alerts have invalid dates', () => {
+    const alerts = [
+      createMockAlert({ id: 'a1', alertDate: '' }),
+      createMockAlert({ id: 'a2', alertDate: 'invalid' }),
+    ];
+    expect(getOldestAlertDate(alerts)).toBeUndefined();
+  });
+});
+
+describe('getDaysSinceOldestAlert', () => {
+  it('should return 0 for empty array', () => {
+    expect(getDaysSinceOldestAlert([])).toBe(0);
+  });
+
+  it('should calculate days since oldest alert', () => {
+    const now = new Date('2026-01-05T12:00:00.000Z');
+    const alerts = [
+      createMockAlert({ id: 'a1', alertDate: '2025-12-25' }), // 11 days ago
+      createMockAlert({ id: 'a2', alertDate: '2025-12-30' }), // 6 days ago
+    ];
+    // Should use the oldest (2025-12-25 = 11 days ago)
+    expect(getDaysSinceOldestAlert(alerts, now)).toBe(11);
+  });
+
+  it('should return 0 for alerts in the future', () => {
+    const now = new Date('2026-01-05T12:00:00.000Z');
+    const alerts = [createMockAlert({ alertDate: '2026-01-10' })];
+    expect(getDaysSinceOldestAlert(alerts, now)).toBe(0);
+  });
+
+  it('should return 0 for alerts with invalid dates', () => {
+    const alerts = [createMockAlert({ alertDate: 'invalid-date' })];
+    expect(getDaysSinceOldestAlert(alerts)).toBe(0);
+  });
+});
+
+describe('calculatePriorityScore with alert age', () => {
+  it('should add alert age points based on oldest alert only', () => {
+    const now = new Date('2026-01-05T12:00:00.000Z');
+    vi.useFakeTimers();
+    vi.setSystemTime(now);
+
+    const caseData = createMockCase({
+      updatedAt: '2020-01-01T00:00:00.000Z', // Old update, no recent mod points
+    });
+    
+    // Create alerts with different ages
+    const alerts = [
+      createMockAlert({ id: 'a1', alertDate: '2025-12-25', description: 'Generic' }), // 11 days old
+      createMockAlert({ id: 'a2', alertDate: '2025-12-30', description: 'Generic' }), // 6 days old
+    ];
+
+    const score = calculatePriorityScore(caseData, alerts);
+
+    // Expected: 2 alerts * 100 + 11 days * 50 = 200 + 550 = 750
+    expect(score).toBe(2 * SCORE_OTHER_ALERT + 11 * SCORE_PER_DAY_ALERT_AGE);
+
+    vi.useRealTimers();
+  });
+
+  it('should not add alert age points when alerts are from today', () => {
+    const caseData = createMockCase({
+      updatedAt: '2020-01-01T00:00:00.000Z',
+    });
+    
+    // Alerts from today (default mock behavior)
+    const alerts = [createMockAlert({ description: 'Generic' })];
+
+    const score = calculatePriorityScore(caseData, alerts);
+
+    // Expected: just alert score, no age points (0 days)
+    expect(score).toBe(SCORE_OTHER_ALERT);
   });
 });
 
