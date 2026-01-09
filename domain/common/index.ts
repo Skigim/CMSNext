@@ -39,3 +39,13 @@ export {
   parseNumericInput,
   getDisplayAmount,
 } from "./formatters";
+
+export {
+  sanitizeText,
+  sanitizeHTML,
+  sanitizeURL,
+  sanitizeJSON,
+  sanitizeFormField,
+  sanitizeFormData,
+  SANITIZATION_LIMITS,
+} from "./sanitization";
