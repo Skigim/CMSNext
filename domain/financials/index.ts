@@ -41,3 +41,12 @@ export {
   createHistoryEntry,
   closePreviousOngoingEntry,
 } from "./history";
+
+export {
+  type VerificationStatus,
+  type VerificationStatusInfo,
+  getVerificationStatusDotColor,
+  getVerificationStatusInfo,
+  shouldShowVerificationSource,
+  updateVerificationStatus,
+} from "./verification";

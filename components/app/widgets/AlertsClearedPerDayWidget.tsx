@@ -8,7 +8,7 @@ import {
   calculateAlertsClearedPerDay,
   widgetDateUtils,
   type DailyAlertStats,
-} from '@/utils/widgetDataProcessors';
+} from '@/domain/dashboard';
 import type { WidgetMetadata } from './WidgetRegistry';
 
 interface AlertsClearedPerDayWidgetProps {

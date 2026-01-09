@@ -12,7 +12,7 @@ import {
 import { useWidgetData } from '@/hooks/useWidgetData';
 import { useCategoryConfig } from '@/contexts/CategoryConfigContext';
 import type { AlertWithMatch } from '@/utils/alertsData';
-import { calculateTotalAlertsByDescription, type AlertDescriptionStats } from '@/utils/widgetDataProcessors';
+import { calculateTotalAlertsByDescription, type AlertDescriptionStats } from '@/domain/dashboard';
 import { getColorSlotVar } from '@/types/colorSlots';
 import type { WidgetMetadata } from './WidgetRegistry';
 

@@ -11,7 +11,7 @@ import {
   calculateAvgAlertAge,
   calculateAvgCaseProcessingTime,
   widgetDateUtils,
-} from "@/utils/widgetDataProcessors";
+} from "../widgets";
 
 function isoLocal(year: number, monthIndex: number, day: number, hours = 0, minutes = 0, seconds = 0) {
   return new Date(year, monthIndex, day, hours, minutes, seconds).toISOString();

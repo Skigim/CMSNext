@@ -10,7 +10,7 @@ import {
   calculateCasesProcessedPerDay,
   widgetDateUtils,
   type DailyCaseStats,
-} from '@/utils/widgetDataProcessors';
+} from '@/domain/dashboard';
 import type { WidgetMetadata } from './WidgetRegistry';
 
 interface CasesProcessedPerDayWidgetProps {

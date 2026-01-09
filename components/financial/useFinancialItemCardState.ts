@@ -2,13 +2,14 @@ import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "re
 import type { AmountHistoryEntry, CaseCategory, FinancialItem } from "../../types/case";
 import { getNormalizedFormData, getNormalizedItem } from "../../utils/dataNormalization";
 import { getDisplayAmount } from "@/domain/common";
-import { getAmountForMonth, getEntryForMonth } from "@/domain/financials";
-import { useSelectedMonth } from "../../contexts/SelectedMonthContext";
 import {
+  getAmountForMonth,
+  getEntryForMonth,
   getVerificationStatusInfo,
   shouldShowVerificationSource,
-} from "../../utils/verificationStatus";
-import { validateFinancialItem } from "../../domain/financials";
+  validateFinancialItem,
+} from "@/domain/financials";
+import { useSelectedMonth } from "../../contexts/SelectedMonthContext";
 
 export type VerificationStatus = string;
 

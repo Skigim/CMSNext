@@ -7,7 +7,7 @@ import { useCategoryConfig } from '@/contexts/CategoryConfigContext';
 import { getCompletionStatusNames } from '@/types/categoryConfig';
 import type { CaseActivityEntry } from '@/types/activityLog';
 import type { StoredCase } from '@/types/case';
-import { calculateAvgCaseProcessingTime, type ProcessingTimeStats } from '@/utils/widgetDataProcessors';
+import { calculateAvgCaseProcessingTime, type ProcessingTimeStats } from '@/domain/dashboard';
 import type { WidgetMetadata } from './WidgetRegistry';
 
 interface AvgCaseProcessingTimeWidgetProps {

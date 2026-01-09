@@ -31,3 +31,20 @@ export {
   reorderPinnedCase,
   DEFAULT_MAX_PINS,
 } from './pinnedCases';
+
+// Widget data processors
+export {
+  type DailyAlertStats,
+  type DailyCaseStats,
+  type StatusBreakdown,
+  type AlertDescriptionStats,
+  type AlertAgeStats,
+  type ProcessingTimeStats,
+  calculateAlertsClearedPerDay,
+  calculateCasesProcessedPerDay,
+  calculateTotalCasesByStatus,
+  calculateTotalAlertsByDescription,
+  calculateAvgAlertAge,
+  calculateAvgCaseProcessingTime,
+  widgetDateUtils,
+} from './widgets';

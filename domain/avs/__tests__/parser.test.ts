@@ -6,7 +6,7 @@ import {
   avsAccountsToFinancialItems,
   findMatchingFinancialItem,
   KNOWN_ACCOUNT_TYPES,
-} from '../../utils/avsParser';
+} from '../parser';
 
 describe('avsParser', () => {
   describe('parseAccountBlock', () => {

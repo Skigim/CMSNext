@@ -11,7 +11,7 @@ import {
 import { useWidgetData } from '@/hooks/useWidgetData';
 import { useCategoryConfig } from '@/contexts/CategoryConfigContext';
 import type { StoredCase } from '@/types/case';
-import { calculateTotalCasesByStatus, type StatusBreakdown } from '@/utils/widgetDataProcessors';
+import { calculateTotalCasesByStatus, type StatusBreakdown } from '@/domain/dashboard';
 import { getColorSlotVar } from '@/types/colorSlots';
 import { getStatusColorSlot } from '@/utils/categoryConfigMigration';
 import type { WidgetMetadata } from './WidgetRegistry';

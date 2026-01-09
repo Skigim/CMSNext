@@ -4,7 +4,7 @@ import { describe, it, expect, vi } from "vitest";
 import type { ReactNode, MouseEvent } from "react";
 
 import { FinancialItemCardMeta } from "@/components/financial/FinancialItemCardMeta";
-import { getVerificationStatusInfo } from "@/utils/verificationStatus";
+import { getVerificationStatusInfo } from "@/domain/financials";
 import type { NormalizedFinancialItem } from "@/components/financial/useFinancialItemCardState";
 
 vi.mock("@/components/ui/dropdown-menu", () => ({

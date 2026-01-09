@@ -7,7 +7,7 @@ import {
   avsAccountToFinancialItem,
   findMatchingFinancialItem,
   type ParsedAVSAccount,
-} from "../utils/avsParser";
+} from "@/domain/avs";
 
 /**
  * Parsed AVS account with selection state and match info

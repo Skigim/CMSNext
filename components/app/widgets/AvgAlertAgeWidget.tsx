@@ -4,7 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { useWidgetData } from '@/hooks/useWidgetData';
 import type { AlertWithMatch } from '@/utils/alertsData';
-import { calculateAvgAlertAge, type AlertAgeStats } from '@/utils/widgetDataProcessors';
+import { calculateAvgAlertAge, type AlertAgeStats } from '@/domain/dashboard';
 import type { WidgetMetadata } from './WidgetRegistry';
 
 interface AvgAlertAgeWidgetProps {

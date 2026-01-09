@@ -8,9 +8,9 @@ import {
 } from "../ui/dropdown-menu";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "../ui/tooltip";
 import { formatAccountNumber } from "@/domain/common";
+import { getVerificationStatusDotColor } from "@/domain/financials";
 import { cn, interactiveHoverClasses } from "../ui/utils";
 import { useCategoryConfig } from "../../contexts/CategoryConfigContext";
-import { getVerificationStatusDotColor } from "../../utils/verificationStatus";
 import type {
   NormalizedFinancialItem,
   VerificationBadgeInfo,
