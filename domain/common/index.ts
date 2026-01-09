@@ -49,3 +49,11 @@ export {
   sanitizeFormData,
   SANITIZATION_LIMITS,
 } from "./sanitization";
+
+// Data normalization (deprecated - for legacy support)
+export {
+  type NormalizedItem,
+  type NormalizedFormData,
+  getNormalizedItem,
+  getNormalizedFormData,
+} from "./normalization";

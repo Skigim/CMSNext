@@ -33,3 +33,12 @@ export {
   parseNameFromImport,
   normalizePersonName,
 } from "./matching";
+
+// Display utilities
+export {
+  type AlertDueDateInfo,
+  getAlertDisplayDescription,
+  getAlertDueDateInfo,
+  getAlertClientName,
+  getAlertMcn,
+} from "./display";

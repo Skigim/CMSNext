@@ -48,3 +48,13 @@ export {
   calculateAvgCaseProcessingTime,
   widgetDateUtils,
 } from './widgets';
+
+// Activity report generation
+export {
+  toActivityDateKey,
+  filterActivityEntriesByDate,
+  groupActivityEntriesByDate,
+  generateDailyActivityReport,
+  getTopCasesForReport,
+  serializeDailyActivityReport,
+} from './activityReport';
