@@ -793,6 +793,27 @@ export class DataManager {
     return this.templates.upsertSummarySectionTemplate(sectionKey, name, templateContent);
   }
 
+  /**
+   * Reorder templates by updating sortOrder for each template.
+   * 
+   * Generic utility that works with any template category (vr, summary, narrative).
+   * Performs a single write operation to avoid multiple file changes and prevent
+   * infinite re-render loops from cascading state updates.
+   * 
+   * @param {string[]} templateIds - Array of template IDs in the desired order (any category)
+   * @returns {Promise<boolean>} true if successful
+   * 
+   * @example
+   * // Reorder VR templates
+   * await dataManager.reorderTemplates(['vr-id-1', 'vr-id-2']);
+   * 
+   * // Reorder summary templates  
+   * await dataManager.reorderTemplates(summaryTemplateIds);
+   */
+  async reorderTemplates(templateIds: string[]): Promise<boolean> {
+    return this.templates.reorderTemplates(templateIds);
+  }
+
   // =============================================================================
   // PUBLIC API - WRITE OPERATIONS
   // =============================================================================

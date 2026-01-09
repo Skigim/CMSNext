@@ -214,9 +214,14 @@ export function SortableSummaryTemplates({ isGloballyLoading }: SortableSummaryT
 
   // Track local order during drag operations
   const [localOrder, setLocalOrder] = useState<string[]>([]);
-  const orderedIds = localOrder.length > 0 
-    ? localOrder 
-    : summaryTemplates.map(t => t.id);
+  
+  // Memoize orderedIds to prevent unnecessary re-renders and callback recreations
+  const orderedIds = useMemo(() => 
+    localOrder.length > 0 
+      ? localOrder 
+      : summaryTemplates.map(t => t.id),
+    [localOrder, summaryTemplates]
+  );
 
   // Build ordered template list
   const orderedTemplates = useMemo(() => {

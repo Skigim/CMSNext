@@ -33,7 +33,10 @@ type TemplateContextValue = {
   updateTemplate: (id: string, updates: Partial<Omit<Template, "id" | "createdAt" | "updatedAt">>) => Promise<Template | null>;
   /** Delete a template */
   deleteTemplate: (id: string) => Promise<boolean>;
-  /** Reorder templates within a category by updating sortOrder */
+  /** 
+   * Reorder templates by updating sortOrder. Works with any category (vr, summary, narrative).
+   * Uses batch update to avoid multiple file changes and infinite re-render loops.
+   */
   reorderTemplates: (templateIds: string[]) => Promise<boolean>;
 };
 
@@ -249,12 +252,8 @@ export const TemplateProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       }
 
       try {
-        // Update sortOrder for each template based on position in array
-        const updatePromises = templateIds.map((id, index) => 
-          dataManager.updateTemplate(id, { sortOrder: index })
-        );
-        
-        await Promise.all(updatePromises);
+        // Use batch reorder to avoid multiple file changes
+        await dataManager.reorderTemplates(templateIds);
         // Local state will be updated via dataChangeCount effect
         return true;
       } catch (err) {

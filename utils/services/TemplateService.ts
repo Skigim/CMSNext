@@ -224,4 +224,54 @@ export class TemplateService {
 
     return updated;
   }
+
+  /**
+   * Reorder templates by updating sortOrder for each template in the list.
+   * 
+   * This is a generic utility that works with any template category (vr, summary, narrative).
+   * It performs a single write operation to avoid multiple file changes and prevent
+   * infinite re-render loops from cascading state updates.
+   * 
+   * @param templateIds - Array of template IDs in the desired order (can be any category)
+   * @returns true if successful
+   * 
+   * @example
+   * // Reorder VR templates
+   * await templateService.reorderTemplates(['vr-id-1', 'vr-id-2', 'vr-id-3']);
+   * 
+   * // Reorder summary section templates
+   * await templateService.reorderTemplates(summarySectionIds);
+   */
+  async reorderTemplates(templateIds: string[]): Promise<boolean> {
+    const data = await this.fileStorage.readFileData();
+    if (!data) {
+      throw new Error('No file data available');
+    }
+
+    const templates = data.templates ?? [];
+    const now = new Date().toISOString();
+
+    // Create a map of id -> new sortOrder
+    const orderMap = new Map(templateIds.map((id, index) => [id, index]));
+
+    // Update sortOrder for templates that are in the reorder list
+    const updated = templates.map((template: Template) => {
+      const newOrder = orderMap.get(template.id);
+      if (newOrder !== undefined) {
+        return {
+          ...template,
+          sortOrder: newOrder,
+          updatedAt: now,
+        };
+      }
+      return template;
+    });
+
+    await this.fileStorage.writeNormalizedData({
+      ...data,
+      templates: updated,
+    });
+
+    return true;
+  }
 }
