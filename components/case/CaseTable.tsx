@@ -17,7 +17,7 @@ import type { CaseListSortDirection, CaseListSortKey } from "@/hooks/useCaseList
 import type { AlertWithMatch } from "@/utils/alertsData";
 import { AlertsPopover } from "./AlertsPopover";
 import { CopyButton } from "@/components/common/CopyButton";
-import { getDisplayPhoneNumber } from "@/utils/phoneFormatter";
+import { getDisplayPhoneNumber } from "@/domain/common";
 import { getAlertDisplayDescription, getAlertDueDateInfo } from "@/utils/alertDisplay";
 import { calculatePriorityScore } from "@/domain/dashboard/priorityQueue";
 

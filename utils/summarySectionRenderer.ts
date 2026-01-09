@@ -8,7 +8,7 @@
 import type { StoredCase, FinancialItem, Note, Relationship } from '@/types/case';
 import type { TemplateRenderContext } from '@/types/template';
 import type { SummarySectionKey } from '@/types/categoryConfig';
-import { formatDateForDisplay } from '@/utils/dateFormatting';
+import { formatDateForDisplay } from '@/domain/common';
 import { renderTemplate } from './vrGenerator';
 import {
   formatRetroMonths,

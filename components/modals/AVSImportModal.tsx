@@ -13,7 +13,7 @@ import { Badge } from "../ui/badge";
 import { Checkbox } from "../ui/checkbox";
 import { Loader2, Upload, Trash2, CheckCircle2, AlertCircle, FileText, RefreshCw, Plus } from "lucide-react";
 import type { AVSImportState, AVSAccountWithMeta } from "../../hooks/useAVSImportFlow";
-import { formatCurrency } from "../../utils/financialFormatters";
+import { formatCurrency } from "@/domain/common";
 import { cn } from "../../lib/utils";
 
 interface AVSImportModalProps {

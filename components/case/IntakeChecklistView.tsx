@@ -19,7 +19,7 @@ import {
   Users,
 } from "lucide-react";
 import { clickToCopy } from "../../utils/clipboard";
-import { getDisplayPhoneNumber } from "../../utils/phoneFormatter";
+import { getDisplayPhoneNumber } from "@/domain/common";
 import { CopyButton } from "../common/CopyButton";
 
 interface IntakeChecklistViewProps {

@@ -60,7 +60,7 @@ The Domain Layer contains **pure business logic** isolated from React, persisten
 ```typescript
 // src/domain/financials/calculations.ts
 import type { FinancialItem, CaseCategory } from "@/types/case";
-import { getAmountForMonth } from "@/utils/financialHistory";
+import { getAmountForMonth } from "@/domain/financials";
 
 /**
  * Calculate the total value of financial items in a category.

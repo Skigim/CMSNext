@@ -9,7 +9,7 @@ import { Button } from "../ui/button";
 import { Separator } from "../ui/separator";
 import { ClipboardCheck, Shield, FileSearch, Calendar, Check, X, Copy } from "lucide-react";
 import { NewCaseRecordData, ContactMethod, VoterFormStatus } from "../../types/case";
-import { isoToDateInputValue, dateInputValueToISO } from "@/utils/dateFormatting";
+import { isoToDateInputValue, dateInputValueToISO } from "@/domain/common";
 import { clickToCopy } from "../../utils/clipboard";
 
 interface IntakeColumnProps {

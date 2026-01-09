@@ -1,11 +1,13 @@
 /**
  * Phone Number Formatting Utilities
- * 
- * Provides functions for formatting, validating, and normalizing phone numbers.
+ *
+ * Pure functions for formatting, validating, and normalizing phone numbers.
  * Supports US and international formats.
+ *
+ * @module domain/common/phone
  */
 
-export type PhoneFormat = 'us' | 'international' | 'e164';
+export type PhoneFormat = "us" | "international" | "e164";
 
 export interface PhoneFormatterOptions {
   format?: PhoneFormat;
@@ -16,7 +18,7 @@ export interface PhoneFormatterOptions {
  * Removes all non-digit characters from a phone number
  */
 export function stripPhoneNumber(phone: string): string {
-  return phone.replace(/\D/g, '');
+  return phone.replace(/\D/g, "");
 }
 
 /**
@@ -24,28 +26,28 @@ export function stripPhoneNumber(phone: string): string {
  */
 export function formatUSPhone(phone: string): string {
   const digits = stripPhoneNumber(phone);
-  
+
   if (digits.length === 0) {
-    return '';
+    return "";
   }
-  
+
   if (digits.length <= 3) {
     return `(${digits}`;
   }
-  
+
   if (digits.length <= 6) {
     return `(${digits.slice(0, 3)}) ${digits.slice(3)}`;
   }
-  
+
   if (digits.length <= 10) {
     return `(${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6)}`;
   }
-  
+
   // Handle 11 digits (with country code)
-  if (digits.length === 11 && digits[0] === '1') {
+  if (digits.length === 11 && digits[0] === "1") {
     return `+1 (${digits.slice(1, 4)}) ${digits.slice(4, 7)}-${digits.slice(7, 11)}`;
   }
-  
+
   // Return first 10 digits formatted
   return `(${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6, 10)}`;
 }
@@ -53,18 +55,18 @@ export function formatUSPhone(phone: string): string {
 /**
  * Formats a phone number in E.164 format (+1XXXXXXXXXX)
  */
-export function formatE164Phone(phone: string, countryCode = '1'): string {
+export function formatE164Phone(phone: string, countryCode = "1"): string {
   const digits = stripPhoneNumber(phone);
-  
+
   if (digits.length === 0) {
-    return '';
+    return "";
   }
-  
+
   // If already has country code, return as-is
   if (digits.startsWith(countryCode)) {
     return `+${digits}`;
   }
-  
+
   return `+${countryCode}${digits}`;
 }
 
@@ -73,11 +75,11 @@ export function formatE164Phone(phone: string, countryCode = '1'): string {
  */
 export function formatInternationalPhone(phone: string): string {
   const digits = stripPhoneNumber(phone);
-  
+
   if (digits.length === 0) {
-    return '';
+    return "";
   }
-  
+
   // If starts with country code
   if (digits.length > 10) {
     const countryCode = digits.slice(0, digits.length - 10);
@@ -86,7 +88,7 @@ export function formatInternationalPhone(phone: string): string {
     const lineNumber = digits.slice(-4);
     return `+${countryCode} ${areaCode} ${prefix} ${lineNumber}`;
   }
-  
+
   // Default to US format
   return formatUSPhone(digits);
 }
@@ -98,18 +100,18 @@ export function formatPhoneNumber(
   phone: string,
   options: PhoneFormatterOptions = {}
 ): string {
-  const { format = 'us', countryCode = '1' } = options;
-  
+  const { format = "us", countryCode = "1" } = options;
+
   if (!phone) {
-    return '';
+    return "";
   }
-  
+
   switch (format) {
-    case 'e164':
+    case "e164":
       return formatE164Phone(phone, countryCode);
-    case 'international':
+    case "international":
       return formatInternationalPhone(phone);
-    case 'us':
+    case "us":
     default:
       return formatUSPhone(phone);
   }
@@ -129,7 +131,7 @@ export function isValidPhoneNumber(phone: string, minDigits = 10): boolean {
 export function isValidUSPhoneNumber(phone: string): boolean {
   const digits = stripPhoneNumber(phone);
   // Accept 10 digits or 11 digits starting with 1
-  return digits.length === 10 || (digits.length === 11 && digits[0] === '1');
+  return digits.length === 10 || (digits.length === 11 && digits[0] === "1");
 }
 
 /**
@@ -145,19 +147,19 @@ export function formatPhoneNumberAsTyped(value: string): string {
  */
 export function getDisplayPhoneNumber(phone: string | undefined | null): string {
   if (!phone) {
-    return '';
+    return "";
   }
-  
+
   const digits = stripPhoneNumber(phone);
-  
+
   if (digits.length === 0) {
-    return '';
+    return "";
   }
-  
+
   if (digits.length < 10) {
     return phone; // Return as-is if incomplete
   }
-  
+
   return formatUSPhone(phone);
 }
 
@@ -173,14 +175,14 @@ export function normalizePhoneNumber(phone: string): string {
  */
 export function getAreaCode(phone: string): string {
   const digits = stripPhoneNumber(phone);
-  
+
   if (digits.length >= 3) {
     // Handle 11-digit numbers starting with 1
-    if (digits.length >= 10 && digits[0] === '1') {
+    if (digits.length >= 10 && digits[0] === "1") {
       return digits.slice(1, 4);
     }
     return digits.slice(0, 3);
   }
-  
-  return '';
+
+  return "";
 }

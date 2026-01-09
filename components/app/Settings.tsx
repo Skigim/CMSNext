@@ -19,7 +19,7 @@ import { PaperCutsPanel } from "../settings/PaperCutsPanel";
 import { KeyboardShortcutsPanel } from "../settings/KeyboardShortcutsPanel";
 import { TemplatesPanel } from "../settings/TemplatesPanel";
 import { useTheme } from "../../contexts/ThemeContext";
-import { toLocalDateString } from "@/utils/dateFormatting";
+import { toLocalDateString } from "@/domain/common";
 import {
   Upload,
   Download,

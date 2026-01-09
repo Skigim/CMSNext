@@ -18,7 +18,7 @@ import {
   Tag
 } from 'lucide-react';
 import { useErrorReporting } from '@/utils/errorReporting';
-import { toLocalDateString } from '@/utils/dateFormatting';
+import { toLocalDateString } from '@/domain/common';
 import { toast } from 'sonner';
 
 export function ErrorReportViewer() {

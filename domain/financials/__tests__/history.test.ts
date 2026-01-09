@@ -11,7 +11,7 @@ import {
   addHistoryEntryToItem,
   formatHistoryDate,
   formatMonthYear,
-} from "@/utils/financialHistory";
+} from "../history";
 import type { AmountHistoryEntry, FinancialItem } from "@/types/case";
 
 // Mock uuid for consistent IDs in tests

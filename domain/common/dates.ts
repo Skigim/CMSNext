@@ -1,10 +1,14 @@
 /**
- * Utilities for date formatting between storage and UI
- * 
+ * @fileoverview Pure date formatting and parsing utilities.
+ *
+ * Domain Layer - No I/O, no React, no side effects.
+ *
  * ## Key Principles
  * - Date-only values (applicationDate, DOB) use LOCAL timezone
  * - Full timestamps (createdAt, updatedAt) use UTC via toISOString()
  * - Never use `.toISOString().split('T')[0]` for user-facing local dates
+ *
+ * @module domain/common/dates
  */
 
 /**
@@ -32,27 +36,29 @@ export function toLocalDateString(date: Date = new Date()): string {
 /**
  * Parse a date string as local time (no UTC conversion).
  * Handles both yyyy-MM-dd and ISO timestamps.
- * 
+ *
  * CRITICAL: When parsing date-only strings like "2024-12-15", JavaScript's
  * Date constructor interprets them as UTC midnight. This causes dates to
  * shift backward for users in negative UTC offset timezones (Americas).
- * 
+ *
  * This function ensures dates are always parsed as LOCAL midnight.
- * 
+ *
  * @param dateString Date string (yyyy-MM-dd or ISO timestamp)
  * @returns Date object in local time, or null if invalid
  */
-export function parseLocalDate(dateString: string | null | undefined): Date | null {
+export function parseLocalDate(
+  dateString: string | null | undefined
+): Date | null {
   if (!dateString) return null;
-  
+
   try {
     // Handle yyyy-MM-dd format - parse as LOCAL time
     if (/^\d{4}-\d{2}-\d{2}$/.test(dateString)) {
-      const [year, month, day] = dateString.split('-').map(Number);
+      const [year, month, day] = dateString.split("-").map(Number);
       // Month is 0-indexed in Date constructor
       return new Date(year, month - 1, day);
     }
-    
+
     // Handle ISO timestamps - these already have timezone info
     const date = new Date(dateString);
     return isNaN(date.getTime()) ? null : date;
@@ -88,10 +94,10 @@ export function formatDateForDisplay(
  */
 export function formatShortDate(dateString: string | null | undefined): string {
   if (!dateString) return "";
-  
+
   const date = parseLocalDate(dateString);
   if (!date) return "";
-  
+
   return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
 }
 
@@ -102,10 +108,10 @@ export function formatShortDate(dateString: string | null | undefined): string {
  */
 export function formatDateTime(dateString: string | null | undefined): string {
   if (!dateString) return "";
-  
+
   const date = parseLocalDate(dateString);
   if (!date) return "";
-  
+
   return date.toLocaleDateString("en-US", {
     month: "short",
     day: "numeric",
@@ -120,59 +126,63 @@ export function formatDateTime(dateString: string | null | undefined): string {
  * @param isoDate ISO 8601 timestamp (e.g., "2025-10-29T18:07:06.766Z")
  * @returns Date string in yyyy-MM-dd format or empty string if invalid
  */
-export function isoToDateInputValue(isoDate: string | null | undefined): string {
-  if (!isoDate) return '';
-  
+export function isoToDateInputValue(
+  isoDate: string | null | undefined
+): string {
+  if (!isoDate) return "";
+
   try {
     // Handle already formatted dates
     if (/^\d{4}-\d{2}-\d{2}$/.test(isoDate)) {
       return isoDate;
     }
-    
+
     // Convert ISO to yyyy-MM-dd
     const date = new Date(isoDate);
-    if (isNaN(date.getTime())) return '';
-    
-    return date.toISOString().split('T')[0];
+    if (isNaN(date.getTime())) return "";
+
+    return date.toISOString().split("T")[0];
   } catch {
-    return '';
+    return "";
   }
 }
 
 /**
  * Convert date input value to date-only string for storage (no timezone issues)
- * 
+ *
  * NOTE: For date-only fields like dateOfBirth and admissionDate, we store dates
  * as yyyy-MM-dd strings WITHOUT time components to avoid timezone shift bugs.
- * 
+ *
  * Example: User enters "2025-11-05" → stored as "2025-11-05" (not "2025-11-05T00:00:00.000Z")
  * This prevents PST users from seeing "2025-11-04" due to UTC midnight conversion.
- * 
+ *
  * @param dateValue Date string from HTML input (yyyy-MM-dd)
  * @returns Date-only string (yyyy-MM-dd) or null if empty
  */
-export function dateInputValueToISO(dateValue: string | null | undefined): string | null {
+export function dateInputValueToISO(
+  dateValue: string | null | undefined
+): string | null {
   if (!dateValue) return null;
-  
+
   try {
     // If already in yyyy-MM-dd format, return as-is
     if (/^\d{4}-\d{2}-\d{2}$/.test(dateValue)) {
       return dateValue;
     }
-    
+
     // If it's an ISO-like timestamp (with or without offset), extract just the date part
-    if (dateValue.includes('T')) {
+    if (dateValue.includes("T")) {
       const iso = new Date(dateValue);
       if (isNaN(iso.getTime())) return null;
-      return iso.toISOString().split('T')[0];
+      return iso.toISOString().split("T")[0];
     }
-    
+
     // Parse and validate the date
-    const date = new Date(dateValue + 'T00:00:00.000Z');
+    const date = new Date(dateValue + "T00:00:00.000Z");
     if (isNaN(date.getTime())) return null;
-    
+
     // Return date-only string (no time component)
-    return date.toISOString().split('T')[0];
+    return date.toISOString().split("T")[0];
   } catch {
     return null;
   }

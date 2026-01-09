@@ -4,7 +4,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from ".
 import { Checkbox } from "../ui/checkbox";
 import { Separator } from "../ui/separator";
 import { NewCaseRecordData, ContactMethod, VoterFormStatus } from "../../types/case";
-import { isoToDateInputValue, dateInputValueToISO } from "@/utils/dateFormatting";
+import { isoToDateInputValue, dateInputValueToISO } from "@/domain/common";
 
 interface IntakeInfoFormProps {
   caseData: NewCaseRecordData;

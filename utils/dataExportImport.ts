@@ -1,6 +1,6 @@
 import { StoredCase } from "@/types/case";
 import { toast } from "sonner";
-import { toLocalDateString } from "@/utils/dateFormatting";
+import { toLocalDateString } from "@/domain/common";
 
 /**
  * Export cases data to a JSON file

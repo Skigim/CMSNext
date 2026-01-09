@@ -11,7 +11,7 @@ import {
   getDisplayPhoneNumber,
   normalizePhoneNumber,
   getAreaCode,
-} from '@/utils/phoneFormatter';
+} from '../phone';
 
 describe('phoneFormatter', () => {
   describe('stripPhoneNumber', () => {

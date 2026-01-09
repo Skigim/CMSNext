@@ -20,12 +20,12 @@ import {
 } from "../ui/table";
 import { History, Plus, Pencil, Trash2, Check, X } from "lucide-react";
 import type { AmountHistoryEntry, FinancialItem, CaseCategory } from "@/types/case";
-import { formatCurrency } from "@/utils/financialFormatters";
+import { formatCurrency } from "@/domain/common";
 import {
   sortHistoryEntries,
   formatHistoryDate,
   getFirstOfMonth,
-} from "@/utils/financialHistory";
+} from "@/domain/financials";
 
 interface AmountHistoryModalProps {
   isOpen: boolean;

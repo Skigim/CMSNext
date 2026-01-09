@@ -6,7 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from ".
 import { Textarea } from "../ui/textarea";
 import { Check, X, History } from "lucide-react";
 import type { CaseCategory } from "../../types/case";
-import { parseNumericInput } from "../../utils/financialFormatters";
+import { parseNumericInput } from "@/domain/common";
 import type { NormalizedFinancialFormData, FormErrors } from "./useFinancialItemCardState";
 
 interface FinancialItemCardFormProps {

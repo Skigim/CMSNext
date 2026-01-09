@@ -16,8 +16,8 @@ import type {
 
 } from "@/types/template";
 import { TEMPLATE_PLACEHOLDER_FIELDS } from "@/types/template";
-import { parseLocalDate } from "@/utils/dateFormatting";
-import { formatPhoneNumber } from "@/utils/phoneFormatter";
+import { parseLocalDate } from "@/domain/common";
+import { formatPhoneNumber } from "@/domain/common";
 
 /**
  * Consistent long-form date formatting helper.

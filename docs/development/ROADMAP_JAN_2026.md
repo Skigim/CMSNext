@@ -1,18 +1,18 @@
 # CMSNext Roadmap - January 2026
 
-**Report Date:** January 5, 2026  
+**Report Date:** January 9, 2026  
 **Branch:** main  
-**Focus:** Dashboard Transformation  
-**Status:** Week 1 Complete ✅ | Phase 1-4 Complete ✅
+**Focus:** Dashboard Transformation + Domain Layer Refactor  
+**Status:** Week 1 Complete ✅ | Phase 1-4 Complete ✅ | Domain Refactor In Progress 🔄
 
 ---
 
 ## 🎯 January Objectives
 
-1. **Dashboard Transformation** - Transform the dashboard from a passive display into an active command center.
-2. **User Workflow Optimization** - Surface priority work, reduce navigation friction, enable inline actions.
-3. **Personalization** - Allow users to customize their dashboard experience.
-4. **Domain Layer Foundation** - Establish patterns for pure business logic extraction (deferred from original plan).
+1. **Dashboard Transformation** - Transform the dashboard from a passive display into an active command center. ✅ PHASES 1-4 COMPLETE
+2. **User Workflow Optimization** - Surface priority work, reduce navigation friction, enable inline actions. ✅ COMPLETE
+3. **Personalization** - Allow users to customize their dashboard experience. (Phase 5 - planned)
+4. **Domain Layer Refactor** - Extract pure business logic from utils/ to domain/ layer. 🔄 IN PROGRESS
 
 ---
 
@@ -135,7 +135,7 @@
 
 ## 📅 Weekly Plan
 
-### Week 1: Foundation (Jan 2-5) ✅ COMPLETE
+### Week 1: Dashboard Foundation (Jan 2-5) ✅ COMPLETE
 
 - [x] Phase 1: Quick Actions Hub (PR #90)
 - [x] Phase 2: Today's Work Widget (PR #93)
@@ -148,25 +148,44 @@
 
 ---
 
-### Week 2: Navigation & Polish (Jan 6-12)
+### Week 2: Domain Layer - Phase A & B (Jan 6-12) 🔄 IN PROGRESS
 
-_Focus: Phase 5 and polish_
+_Focus: Foundational domain modules and standalone logic_
 
-- [ ] Scroll/tab state preservation
-- [ ] Breadcrumb navigation
-- [ ] Dashboard keyboard shortcuts
-- [ ] Accessibility testing
-- [ ] Quick Note popover (optional)
+**Phase A: Foundation (Jan 9-10)**
+
+- [ ] `domain/common/dates.ts` - Date parsing, formatting, timezone handling
+- [ ] `domain/common/phone.ts` - Phone number formatting and validation
+- [ ] `domain/common/formatters.ts` - Currency, frequency display helpers
+- [ ] `domain/common/sanitization.ts` - XSS prevention, input sanitization
+
+**Phase B: Standalone Logic (Jan 10-12)**
+
+- [ ] `domain/validation/forms.ts` - Zod schemas, form validation rules
+- [ ] `domain/financials/verification.ts` - Verification status mapping
+- [ ] `domain/avs/parser.ts` - AVS paste parsing
 
 ---
 
-### Week 3: Polish & Testing (Jan 13-19)
+### Week 3: Domain Layer - Phase C & D (Jan 13-19)
 
-_Focus: E2E testing and refinements_
+_Focus: Templates, alerts, and completion_
 
-- [ ] E2E tests for navigation
-- [ ] Performance optimization
-- [ ] Bug fixes from user testing
+**Phase C: Alerts & Templates (Jan 13-15)**
+
+- [ ] `domain/alerts/matching.ts` - MCN normalization, alert matching
+- [ ] `domain/alerts/display.ts` - Alert type colors, formatting
+- [ ] `domain/templates/vr.ts` - VR template rendering
+- [ ] `domain/templates/summary.ts` - Case summary generation
+
+**Phase D: Polish & Cleanup (Jan 16-19)**
+
+- [ ] `domain/migration/config.ts` - Category config migration logic
+- [ ] `domain/dashboard/stats.ts` - Widget statistics calculations
+- [ ] Split mixed files (alertsData.ts pure vs I/O)
+- [ ] Update agent instructions (DOMAIN.md)
+- [ ] Delete migrated `utils/` files
+- [ ] Full test suite verification (target: 950+ tests)
 
 ---
 
@@ -175,35 +194,94 @@ _Focus: E2E testing and refinements_
 _Focus: Catchup, polish, and February planning_
 
 - [ ] Address any outstanding issues
+- [ ] Phase 5: Navigation keyboard shortcuts (if time permits)
 - [ ] Documentation updates
 - [ ] February roadmap planning
-- [ ] Domain layer expansion planning
 
 ---
 
 ## 📊 Progress Metrics
 
-| Metric              | Current | Target |
-| ------------------- | ------- | ------ |
-| Phases complete     | 4       | 5      |
-| Dashboard widgets   | 12      | 12     |
-| Test count          | 872     | 900+   |
-| Feature flags wired | 11      | 11     |
+| Metric               | Current | Target |
+| -------------------- | ------- | ------ |
+| Dashboard phases     | 4       | 5      |
+| Domain modules       | 4       | 10     |
+| Test count           | 859     | 950+   |
+| Lines migrated       | ~1,500  | ~7,400 |
+| utils/ files removed | 1       | 15+    |
+
+---
+
+## 🔧 Domain Layer Refactor (Week 2-3)
+
+> **Goal:** Extract all pure business logic from `utils/` to `domain/` layer. Pure functions with no I/O, no React, fully testable.
+
+### Current Domain Structure
+
+```
+domain/
+├── cases/           ✅ COMPLETE
+│   ├── formatting.ts    # formatCaseDisplayName, formatRetroMonths, calculateAge, etc.
+│   └── index.ts
+├── dashboard/       ✅ COMPLETE
+│   ├── priorityQueue.ts # Priority scoring (94 tests)
+│   ├── recentCases.ts   # Recent case tracking (34 tests)
+│   ├── pinnedCases.ts   # Pinned case management (45 tests)
+│   └── index.ts
+├── financials/      ✅ COMPLETE
+│   ├── history.ts       # Amount history (32 tests)
+│   ├── validation.ts    # Input validation (14 tests)
+│   ├── calculations.ts  # Totals (4 tests)
+│   └── index.ts
+└── validation/      ✅ COMPLETE
+    └── duplicates.ts    # Duplicate detection (12 tests)
+```
+
+### Remaining Migrations (~2,000 lines)
+
+| Source File               | Lines | Target                              | Priority  | Dependencies                  |
+| ------------------------- | ----- | ----------------------------------- | --------- | ----------------------------- |
+| `dateFormatting.ts`       | 179   | `domain/common/dates.ts`            | 🔴 HIGH   | Foundation for all date logic |
+| `phoneFormatter.ts`       | 186   | `domain/common/phone.ts`            | 🟡 MEDIUM | Used by templates             |
+| `avsParser.ts`            | 309   | `domain/avs/parser.ts`              | 🟡 MEDIUM | Standalone                    |
+| `validation.ts`           | 335   | `domain/validation/forms.ts`        | 🟡 MEDIUM | Form validation rules         |
+| `vrGenerator.ts`          | 381   | `domain/templates/vr.ts`            | 🟢 LOW    | Depends on dates, phone       |
+| `caseSummaryGenerator.ts` | 527   | `domain/templates/summary.ts`       | 🟢 LOW    | Depends on dates, cases       |
+| `financialFormatters.ts`  | 68    | `domain/financials/formatters.ts`   | 🟢 LOW    | Small, self-contained         |
+| `verificationStatus.ts`   | 99    | `domain/financials/verification.ts` | 🟢 LOW    | Status mapping                |
+
+### Migration Strategy
+
+**Phase A: Foundation (Jan 9-10)**
+
+1. `dateFormatting.ts` → `domain/common/dates.ts` - Core date utilities used everywhere
+2. `phoneFormatter.ts` → `domain/common/phone.ts` - Phone formatting
+
+**Phase B: Standalone Logic (Jan 13-14)**  
+3. `avsParser.ts` → `domain/avs/parser.ts` - Self-contained parsing 4. `validation.ts` → `domain/validation/forms.ts` - Form validation rules
+
+**Phase C: Templates (Jan 15-17)** 5. `vrGenerator.ts` → `domain/templates/vr.ts` - VR template rendering 6. `caseSummaryGenerator.ts` → `domain/templates/summary.ts` - Summary generation
+
+**Phase D: Financial Polish (Jan 17-19)** 7. `financialFormatters.ts` → `domain/financials/formatters.ts` 8. `verificationStatus.ts` → `domain/financials/verification.ts`
+
+### Migration Checklist (per file)
+
+- [ ] Create new file in `domain/` with same exports
+- [ ] Update all imports across codebase
+- [ ] Move tests to `domain/*/__tests__/`
+- [ ] Delete original file from `utils/`
+- [ ] Run full test suite to verify
 
 ---
 
 ## 🗂️ Deferred Work
 
-### Domain Layer Expansion (Moved to February)
+### Phase 5: Navigation & Context Flow (Moved to Week 3)
 
-The domain layer pattern was successfully established in Phase 2 with `domain/dashboard/priorityQueue.ts`. Full expansion to other areas (alerts, cases, financials, statistics) is deferred to February to maintain focus on dashboard transformation.
-
-**Candidates for February:**
-
-- `domain/alerts/` - Alert filtering, sorting, status logic
-- `domain/cases/` - Case filtering, sorting, search logic
-- `domain/statistics/` - Widget calculation extraction
-- `domain/notes/` - Note sorting and filtering
+- [ ] Scroll/tab state preservation
+- [ ] Breadcrumb navigation
+- [ ] Dashboard keyboard shortcuts
+- [ ] Quick Note popover
 
 ---
 
@@ -211,8 +289,9 @@ The domain layer pattern was successfully established in Phase 2 with `domain/da
 
 - [Feature Catalogue](feature-catalogue.md) - Complete feature inventory
 - [Project Structure Guidelines](project-structure-guidelines.md) - Architecture patterns
+- [Week 1 Domain Layer Plan](WEEK1_DOMAIN_LAYER_PLAN.md) - Original domain planning
 - [December 2025 Roadmap](archive/2025/ROADMAP_DEC_2025.md) - Previous month
 
 ---
 
-_Last updated: January 5, 2026_
+_Last updated: January 9, 2026_

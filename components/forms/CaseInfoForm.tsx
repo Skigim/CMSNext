@@ -7,7 +7,7 @@ import { Separator } from "../ui/separator";
 import { useMemo } from "react";
 import { NewCaseRecordData } from "../../types/case";
 import { useCategoryConfig } from "@/contexts/CategoryConfigContext";
-import { isoToDateInputValue, dateInputValueToISO } from "@/utils/dateFormatting";
+import { isoToDateInputValue, dateInputValueToISO } from "@/domain/common";
 
 interface CaseInfoFormProps {
   caseData: NewCaseRecordData;

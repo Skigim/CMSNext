@@ -10,8 +10,8 @@ import { Separator } from "../ui/separator";
 import { User, Phone, Mail, MapPin, Calendar, Plus, Minus, Users } from "lucide-react";
 import { NewPersonData, Relationship } from "../../types/case";
 import { useCategoryConfig } from "@/contexts/CategoryConfigContext";
-import { isoToDateInputValue, dateInputValueToISO } from "@/utils/dateFormatting";
-import { formatPhoneNumberAsTyped, normalizePhoneNumber, getDisplayPhoneNumber } from "@/utils/phoneFormatter";
+import { isoToDateInputValue, dateInputValueToISO } from "@/domain/common";
+import { formatPhoneNumberAsTyped, normalizePhoneNumber, getDisplayPhoneNumber } from "@/domain/common";
 import { CopyButton } from "../common/CopyButton";
 
 // US States for address dropdowns

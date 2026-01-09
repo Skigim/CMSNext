@@ -7,9 +7,9 @@ import {
   isoToDateInputValue,
   dateInputValueToISO,
   toLocalDateString,
-} from "@/utils/dateFormatting";
+} from "../dates";
 
-describe("dateFormatting", () => {
+describe("dates", () => {
   describe("parseLocalDate", () => {
     it("parses yyyy-MM-dd as local midnight (not UTC)", () => {
       const date = parseLocalDate("2024-12-15");

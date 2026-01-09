@@ -1,5 +1,5 @@
 import { useState, useMemo, useCallback } from "react";
-import { formatShortDate } from "../../utils/dateFormatting";
+import { formatShortDate } from "@/domain/common";
 import { Button } from "../ui/button";
 import { Textarea } from "../ui/textarea";
 import {

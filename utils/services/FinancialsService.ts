@@ -5,7 +5,7 @@ import {
   createHistoryEntry,
   closePreviousOngoingEntry,
   getAmountForMonth,
-} from '../financialHistory';
+} from '../../domain/financials';
 
 /**
  * Configuration for FinancialsService initialization.

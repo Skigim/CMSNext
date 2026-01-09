@@ -10,7 +10,7 @@ import { Separator } from "../ui/separator";
 import { FileText, Calendar, Flag, Check, X } from "lucide-react";
 import { NewCaseRecordData } from "../../types/case";
 import { useCategoryConfig } from "@/contexts/CategoryConfigContext";
-import { isoToDateInputValue, dateInputValueToISO } from "@/utils/dateFormatting";
+import { isoToDateInputValue, dateInputValueToISO } from "@/domain/common";
 
 interface CaseColumnProps {
   caseData: NewCaseRecordData;

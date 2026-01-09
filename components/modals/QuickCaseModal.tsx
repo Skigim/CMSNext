@@ -14,7 +14,7 @@ import { Loader2, Plus } from "lucide-react";
 import { toast } from "sonner";
 import { NewPersonData, NewCaseRecordData, CaseStatus } from "../../types/case";
 import { useCategoryConfig } from "@/contexts/CategoryConfigContext";
-import { isoToDateInputValue, dateInputValueToISO, toLocalDateString } from "@/utils/dateFormatting";
+import { isoToDateInputValue, dateInputValueToISO, toLocalDateString } from "@/domain/common";
 
 interface QuickCaseModalProps {
   isOpen: boolean;

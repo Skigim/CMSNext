@@ -1,6 +1,6 @@
 import { Landmark, Receipt, Wallet } from "lucide-react";
 import type { CaseCategory } from "../../types/case";
-import { formatDateForDisplay } from "../../utils/dateFormatting";
+import { formatDateForDisplay } from "@/domain/common";
 
 interface FinancialItemCardHeaderProps {
   itemType: CaseCategory;

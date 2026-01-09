@@ -1,8 +1,8 @@
 import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { AmountHistoryEntry, CaseCategory, FinancialItem } from "../../types/case";
 import { getNormalizedFormData, getNormalizedItem } from "../../utils/dataNormalization";
-import { getDisplayAmount } from "../../utils/financialFormatters";
-import { getAmountForMonth, getEntryForMonth } from "../../utils/financialHistory";
+import { getDisplayAmount } from "@/domain/common";
+import { getAmountForMonth, getEntryForMonth } from "@/domain/financials";
 import { useSelectedMonth } from "../../contexts/SelectedMonthContext";
 import {
   getVerificationStatusInfo,

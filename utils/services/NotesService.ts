@@ -3,6 +3,7 @@ import type { NewNoteData } from '../../types/case';
 import type { CaseActivityEntry } from '../../types/activityLog';
 import type { FileStorageService, NormalizedFileData, StoredNote, StoredCase } from './FileStorageService';
 import { ActivityLogService } from './ActivityLogService';
+import { formatCaseDisplayName } from '../../domain/cases/formatting';
 
 /** Regular expression to detect email addresses in note content */
 const EMAIL_PATTERN = /\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/gi;
@@ -57,34 +58,6 @@ function buildNotePreview(content: string): string {
   return `${sanitized.slice(0, 157)}…`;
 }
 
-/**
- * Format a case display name from case data.
- * 
- * Priority order:
- * 1. Uses case.name if set
- * 2. Falls back to person's firstName + lastName
- * 3. Returns "Unknown Case" if no name available
- * 
- * @private
- * @param {StoredCase} caseData - The case data to format
- * @returns {string} Formatted display name
- */
-function formatCaseDisplayName(caseData: StoredCase): string {
-  const trimmedName = (caseData.name ?? "").trim();
-  if (trimmedName.length > 0) {
-    return trimmedName;
-  }
-
-  const firstName = caseData.person?.firstName?.trim() ?? "";
-  const lastName = caseData.person?.lastName?.trim() ?? "";
-  const composed = `${firstName} ${lastName}`.trim();
-
-  if (composed.length > 0) {
-    return composed;
-  }
-
-  return "Unknown Case";
-}
 
 /**
  * Configuration for NotesService initialization.

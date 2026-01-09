@@ -10,7 +10,7 @@ import { PersonInfoForm } from "../forms/PersonInfoForm";
 import { CaseInfoForm } from "../forms/CaseInfoForm";
 import { IntakeInfoForm } from "../forms/IntakeInfoForm";
 import { useCategoryConfig } from "@/contexts/CategoryConfigContext";
-import { toLocalDateString } from "@/utils/dateFormatting";
+import { toLocalDateString } from "@/domain/common";
 
 interface CaseFormProps {
   case?: StoredCase;

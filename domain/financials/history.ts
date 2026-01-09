@@ -1,21 +1,12 @@
+/**
+ * @fileoverview Domain logic for financial amount history tracking.
+ * 
+ * Pure functions for managing amount history entries, detecting changes,
+ * and querying historical amounts.
+ */
+
 import { v4 as uuidv4 } from "uuid";
 import type { AmountHistoryEntry, FinancialItem } from "@/types/case";
-
-/**
- * Financial History Tracking Utilities
- * ====================================
- * Manages financial item amount history and change tracking.
- * Records historical amounts for audit trails and trend analysis.
- * 
- * ## Features
- * 
- * - **Amount History**: Track changes to financial amounts over time
- * - **Timestamps**: Record when each change occurred
- * - **History Queries**: Get history for specific periods
- * - **Change Detection**: Identify when amounts have been modified
- * 
- * @module financialHistory
- */
 
 /**
  * Returns the first day of the given month as a date string (YYYY-MM-DD).
@@ -72,6 +63,16 @@ export function isDateInEntryRange(
 }
 
 /**
+ * Sorts history entries in reverse chronological order (most recent first).
+ */
+export function sortHistoryEntries(entries: AmountHistoryEntry[]): AmountHistoryEntry[] {
+  return [...entries].sort((a, b) => {
+    // Simple string comparison works for YYYY-MM-DD format
+    return b.startDate.localeCompare(a.startDate);
+  });
+}
+
+/**
  * Gets the applicable amount for a financial item for a given month.
  * Searches amountHistory for an entry that covers the target date.
  * Falls back to item.amount if no matching entry exists.
@@ -122,16 +123,6 @@ export function getEntryForMonth(
   }
   
   return undefined;
-}
-
-/**
- * Sorts history entries in reverse chronological order (most recent first).
- */
-export function sortHistoryEntries(entries: AmountHistoryEntry[]): AmountHistoryEntry[] {
-  return [...entries].sort((a, b) => {
-    // Simple string comparison works for YYYY-MM-DD format
-    return b.startDate.localeCompare(a.startDate);
-  });
 }
 
 /**

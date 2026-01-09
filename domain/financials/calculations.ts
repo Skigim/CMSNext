@@ -1,5 +1,5 @@
 import type { FinancialItem, Financials } from "@/types/case";
-import { getAmountForMonth } from "@/utils/financialHistory";
+import { getAmountForMonth } from "./history";
 
 export type CaseCategory = keyof Financials;
 

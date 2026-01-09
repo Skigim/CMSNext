@@ -19,7 +19,7 @@ import type { Template } from '@/types/template';
 import type { SummarySectionKey } from '@/types/categoryConfig';
 import { DEFAULT_SUMMARY_SECTION_TEMPLATES } from '@/types/template';
 import { renderSummarySection } from './summarySectionRenderer';
-import { formatDateForDisplay } from '@/utils/dateFormatting';
+import { formatDateForDisplay } from '@/domain/common';
 
 const SECTION_SEPARATOR = '\n-----\n';
 

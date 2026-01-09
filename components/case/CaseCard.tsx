@@ -18,7 +18,7 @@ import { CaseStatusMenu } from "./CaseStatusMenu";
 import type { AlertWithMatch } from "../../utils/alertsData";
 import { AlertBadge } from "@/components/alerts/AlertBadge";
 import { CopyButton } from "@/components/common/CopyButton";
-import { getDisplayPhoneNumber } from "@/utils/phoneFormatter";
+import { getDisplayPhoneNumber } from "@/domain/common";
 import { usePinnedCases } from "@/hooks/usePinnedCases";
 
 interface CaseCardProps {

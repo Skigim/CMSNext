@@ -1,7 +1,7 @@
 import { Label } from "../ui/label";
 import { Input } from "../ui/input";
 import { NewPersonData } from "../../types/case";
-import { formatPhoneNumberAsTyped, normalizePhoneNumber } from "../../utils/phoneFormatter";
+import { formatPhoneNumberAsTyped, normalizePhoneNumber } from "@/domain/common";
 import { useState, useEffect } from "react";
 
 interface ContactInfoFormProps {

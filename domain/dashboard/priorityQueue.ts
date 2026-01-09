@@ -18,7 +18,7 @@
 
 import type { StoredCase } from '../../types/case';
 import type { AlertWithMatch } from '../../utils/alertsData';
-import { parseLocalDate } from '../../utils/dateFormatting';
+import { parseLocalDate } from '../common';
 
 // ============================================================================
 // Priority Scoring Constants

@@ -18,3 +18,26 @@ export {
   calculateFinancialTotals,
   type CaseCategory,
 } from "./calculations";
+
+export {
+  getFirstOfMonth,
+  getLastOfMonth,
+  isDateInEntryRange,
+  sortHistoryEntries,
+  getAmountForMonth,
+  getEntryForMonth,
+  /**
+   * Adds a new history entry to a financial item, auto-closing previous ongoing entries.
+   */
+  addHistoryEntryToItem,
+  /**
+   * Formats a date for display in the history modal.
+   */
+  formatHistoryDate,
+  /**
+   * Formats a date as "Month YYYY" for month-based display.
+   */
+  formatMonthYear,
+  createHistoryEntry,
+  closePreviousOngoingEntry,
+} from "./history";

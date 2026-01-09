@@ -20,22 +20,22 @@
 
 | Feature               | Rating | Trend | Notes                                       |
 | --------------------- | ------ | ----- | ------------------------------------------- |
-| Case Management       | 92     | →     | Retro/Waiver badges, enhanced header        |
+| Case Management       | 94     | ↑     | Score column, priority sort, terminal flags |
 | Local-First Storage   | 90     | →     | AES-256 encryption, split login/welcome UX  |
-| Financial Operations  | 90     | →     | Auto-scroll on edit, date from history      |
+| Financial Operations  | 92     | ↑     | Domain logic extracted, extensive test cov  |
 | Developer Enablement  | 89     | ↑     | 720 tests, IndexedDBHandleStore extracted   |
 | Premium UI/UX         | 87     | →     | Stable scrollbar, instant sidebar, tooltips |
-| VR Generator          | 88     | →     | Date offset syntax {field+N} for any date   |
+| Template System       | 92     | ↑     | Unified VR/Summary/Narrative templates      |
 | Data Portability      | 82     | →     | AVS import with update capability           |
 | Notes & Collaboration | 84     | →     | Click-to-copy notes, popover UI             |
 | Configurable Statuses | 78     | →     | Recently stabilized                         |
-| Dashboard & Insights  | 78     | ↑     | Quick Actions Hub + Today's Work widget     |
+| Dashboard & Insights  | 85     | ↑     | Phases 1-4 complete (Action Hub, Priority)  |
 | Legacy Migration      | 75     | →     | Dev-only, one-way                           |
-| Autosave & Recovery   | 75     | ↑     | IndexedDBHandleStore modularized            |
+| Autosave & Recovery   | 75     | →     | IndexedDBHandleStore modularized            |
 | Feature Flags         | 72     | →     | In-memory only                              |
 
-**Average Rating:** 84.5/100  
-**Test Status:** 720/720 passing (100%)
+**Average Rating:** 86.5/100  
+**Test Status:** 720+ tests passing (100%)
 
 ---
 
@@ -165,12 +165,15 @@ Maintained by the storage + autosave working group. Align telemetry follow-ups w
 
 ### Implementation Snapshot
 
-**Rating: 92/100** _(Updated December 18, 2025)_
+**Rating: 94/100** _(Updated January 9, 2026)_
 
-Core case workflows (create, view, edit, delete) are production-ready through the refactored service architecture. CaseService handles all case CRUD operations with status tracking, import/export, and activity log integration. The hook layer (`useCaseManagement`) provides a clean facade over DataManager with optimistic updates and comprehensive test coverage. **December 18, 2025:** Added Retro/Waiver badges in case details header.
+Core case CRUD is highly mature. Recent enhancements focused on "at-a-glance" comprehension: priority scoring integration, terminal status visibility flags, and enhanced sorting options.
 
 ### Strengths
 
+- **Priority Scoring Integration**: "Score" column in Case List visualizes urgency based on alerts, status, and activity
+- **Terminal Status Flags**: Visual indicators for closed/terminal cases with option to filter them out of view
+- **Rich Metadata**: Full support for demographics, program dates, authorized reps, and living arrangements
 - **Retro/Waiver Badges**: Visual indicators in case details header when waiver requested or retro requested
 - **Pagination**: 20 items per page with "Showing X-Y of Z" count, page navigation, resets on filter changes
 - **Smart Navigation**: Creating a new case automatically navigates to the case details view
@@ -221,14 +224,15 @@ Phase 3 Cases domain refactor completed November 2, 2025. Bulk actions added Dec
 
 ### Implementation Snapshot
 
-**Rating: 90/100** _(Updated December 11, 2025)_
+**Rating: 92/100** _(Updated January 9, 2026)_
 
-Financial modules (resources, income, expenses) leverage dedicated components and hooks (`useFinancialItemFlow`, `FinancialItemCard`) with inline editing, validation, and autosave integration. Verification metadata and frequency handling cover core program requirements.
+Financial modules (resources, income, expenses) leverage dedicated components and hooks (`useFinancialItemFlow`, `FinancialItemCard`) with inline editing, validation, and autosave integration. **January 2026:** domain logic moved to pure TypeScript functions in `domain/field` for better testing and separation of concerns.
 
 **December 11, 2025:** Card date now reflects most recent history entry. Auto-migration for legacy items creates history from dateAdded. Amount 0 now valid for history creation.
 
 ### Strengths
 
+- **Domain Logic Separation**: Validation (`validateFinancialItem`) and duplicate detection now pure domain functions
 - **Smart Date Display**: Card shows most recent history entry's start date (not original dateAdded)
 - **Auto-Migration**: Legacy items without history get migrated on first load (uses dateAdded as start date, YYYY-MM-DD format)
 - **Zero Amount Support**: Financial forms accept $0 as valid amount, creating proper history entries
@@ -341,49 +345,43 @@ Collaboration feature group; capture planned enhancements in updated documentati
 
 ---
 
-## VR Generator & Templates
+## Unified Template System
 
 ### Implementation Snapshot
 
-**Rating: 88/100** _(Updated December 18, 2025)_
+**Rating: 92/100** _(Updated January 9, 2026)_
 
-VR Generator is a complete, production-ready template system for creating reusable Verification Request letter templates with dynamic placeholders. Users create scripts in CategoryManager settings with full CRUD operations, view/edit mode toggle, and real-time validation. Templates render with placeholder substitution for case and financial item data, producing copiable text ready for use. **December 18, 2025:** Added generic date offset syntax `{fieldName+N}` for any date field.
+Formerly "VR Generator," this feature has expanded into a complete **Unified Template System** managing Verification Requests, Case Summaries, and Narrative templates. It provides a centralized editor for all text-generation needs with drag-and-drop reordering, section management, and dynamic placeholder insertion.
 
 ### Strengths
 
-- **Date Offset Syntax**: Generic `{fieldName+N}` pattern supports offsets on any date field (e.g., `{applicationDate+90}`, `{currentDate-30}`)
-- **Feature Complete for Core Purpose**: Full template creation, editing, deletion, and persistence. Produces clean, copiable text output.
-- **Reusable Templates**: Create multiple scripts for different institutions or document types (e.g., "SSA Entitlement", "Bank Verification", "Asset Letter")
-- **Dynamic Placeholders**: 30+ placeholders organized by category (Case, Financial Item, Person, Amount History, System); click-to-insert in editor
-- **View/Edit Toggle**: Polished UX with saved scripts in read-only collapsed state, Edit button for switching modes, Cancel reverts changes
-- **Template Editor**: Clean textarea with placeholder palette sidebar; keyboard-friendly with visual indicators (Editing badge, blue border)
-- **Validation**: Real-time duplicate detection, non-empty name enforcement, prevents save with invalid scripts
-- **Persistence**: Scripts stored in CategoryConfig, survives autosave, page reload, and reconnection
-- **Settings Integration**: Full CRUD from CategoryManager "VR Scripts" tab alongside other category options
-- **Confirmation UX**: Delete requires confirmation; Cancel reverts unsaved changes intelligently (removes new scripts, reverts edits to saved scripts)
+- **Unified Architecture**: Single `TemplateContext` manages all template types (VR, Summary, Narrative)
+- **Drag-and-Drop Reordering**: Users can reorder template sections intuitively (Optimistic UI updates)
+- **Summary Templates**: customizable sections for the Case Summary Generator (e.g., "Medical History", "Financial Overview")
+- **Date Offset Syntax**: Generic `{fieldName+N}` pattern supports offsets on any date field
+- **Dynamic Placeholders**: Extensive library of placeholders for Case, Financial, and Person data
+- **Template Editor**: Rich text editor with placeholder palette, validation, and live preview references
+- **Persistence**: Templates stored in CategoryConfig, surviving sessions and exports
+- **Migration**: Automatic migration from legacy `vrScripts` to the new unified format
 
 ### Gaps / Risks
 
-- Feature scope is intentionally focused on template management; future letter generation/preview features will layer on top
+- Template dependency management (deleting a section used by a generator) needs robust checks
 
 ### Expansion Opportunities
 
-- Add "Generate VR" button on FinancialItemCard that uses selected template to preview/generate actual VR letter
-- Export/import templates as JSON for sharing across workspaces
-- Template versioning and audit trail
-- Conditional placeholders or template formatting options
-- Quick-access template selector when needed for generation
+- Conditional logic in templates (if/else blocks)
+- Export/Import of template packs
+- Versioning for templates
 
 ### Coverage & Telemetry
 
-- 31 new unit tests covering placeholder definitions, template rendering, CRUD operations
-- Integration tests verify scripts persist across page reload
-- VRScriptsEditor component tested with React Testing Library
-- No telemetry yet for script usage or generation frequency
+- Extensive coverage for `TemplateContext`, migration logic, and drag-and-drop interactions
+- Integration tests for UI reordering and persistence
 
 ### Owners / Notes
 
-Document generation feature group. Next phase: wire up template rendering to FinancialItemCard and CaseDetails for generating actual VR letters with live preview.
+Document generation feature group. Major refactor completed Jan 2026 to unify all text generation under one system.
 
 ---
 
@@ -391,30 +389,25 @@ Document generation feature group. Next phase: wire up template rendering to Fin
 
 ### Implementation Snapshot
 
-**Rating: 78/100** _(Updated January 5, 2026)_
+**Rating: 85/100** _(Updated January 9, 2026)_
 
-Dashboard features a production-ready widget registry framework with lazy loading, automatic error handling, and data freshness tracking. **January 2026:** Dashboard Transformation initiative underway—Phase 1 (Quick Actions Hub) and Phase 2 (Today's Work widget) complete. Overview tab now features 2-column layout with priority task queue. Analytics tab provides comprehensive metrics widgets.
+Dashboard Transformation is well underway with **Phases 1-4 Complete**. The dashboard now serves as a true command center with global quick actions, a priority task queue, and instant access to recent/pinned cases. The infrastructure is robust with a widget registry, lazy loading, and purely domain-driven data logic.
 
 ### Strengths
 
-- **Quick Actions Hub**: Prominent action bar with global search, new case creation, bulk operations, and import/export
-- **Today's Work Widget**: Priority task queue surfaces cases requiring immediate attention with weighted scoring
-- **Priority Scoring System**: Weighted algorithm prioritizes Intake status (1000pts), AVS Day 5 alerts (500pts), Verification/VR Due (400pts), Mail on Closed (400pts), other alerts (100pts), priority flags (75pts), recent modifications (50pts)
-- **Domain Layer Pattern**: Pure business logic in `domain/dashboard/priorityQueue.ts` with 59 unit tests
-- **Streamlined Overview**: 2-column layout with Today's Work and placeholder for upcoming widgets
-- **Widget Registry Framework**: Lazy loading via `React.lazy()` + Suspense with per-widget error boundaries prevents cascading failures
-- **Data Freshness Tracking**: All widgets display "Last updated: X minutes ago" via `useWidgetData` hook with configurable refresh intervals
-- **Responsive Grid Layout**: Widgets adapt to screen size (1 column mobile → 3 columns desktop) using shadcn grid system
-- **Real-Time Metrics**: Case Priority widget aggregates counts by urgency/status; Activity Timeline shows last 7 days of notes/status changes
-- **Performance Instrumentation**: `telemetryInstrumentation` tracks widget load times, data fetch duration, and error rates
-- **Composable Architecture**: New widgets can be added without modifying core registry; metadata-driven registration enables priority sorting
+- **Quick Actions Hub (Phase 1)**: Global command bar for search, new case, bulk ops, and import/export
+- **Today's Work Widget (Phase 2)**: Priority task queue using weighted scoring (Intake status 5000pts, alerts 500-100pts, age factors) to surface critical cases
+- **Recent & Pinned Cases (Phase 3)**: Dedicated widgets tracking user history and favorites with one-click navigation
+- **Card Actions (Phase 4)**: Inline actions on dashboard cards (Pin, Quick Note) without leaving the view
+- **Domain-Driven Logic**: All dashboard logic (priority, recency, pinning) resides in `domain/dashboard/*.ts` with high test coverage
+- **Performance**: Lazy loading via Suspense + error boundaries per widget; telemetry tracks load times
+- **Responsive Layout**: 2-column or 3-column grid adapting to content and screen size
+- **Empty States**: Polished empty states with "construction" or "no data" illustrations for better first-run experience
 
 ### Gaps / Risks
 
-- Dashboard customization not yet supported (Phase 5 planned); layout is fixed across all users
-- Recent Cases and Pinned Cases widgets in progress (Phase 3)
-- Widget bundle size growth uninspected; lazy loading helps but large dependencies could slow initial render
-- Accessibility testing for new widgets pending (axe-core integration)
+- Dashboard customization (Phase 5) is the next frontier - users cannot yet rearrange widgets
+- Accessibility audit for new widgets pending
 
 ### Expansion Opportunities (Dashboard Transformation Roadmap)
 
@@ -425,8 +418,8 @@ Dashboard features a production-ready widget registry framework with lazy loadin
 
 ### Coverage & Telemetry
 
-- Integration test (`__tests__/components/Dashboard.test.tsx`) verifies widget registry rendering and error handling
-- Domain tests: `__tests__/domain/dashboard/priorityQueue.test.ts` - 59 tests for priority scoring logic
+ests: `__tests__/domain/dashboard/priorityQueue.test.ts` - 59 tests for priority scoring logic
+
 - Hook suites: `useWidgetData` tested for data fetching, freshness tracking, and refresh intervals
 - Widget-specific tests verify data aggregation and rendering
 - Performance markers tracked via `recordPerformanceMarker()` for each widget data fetch

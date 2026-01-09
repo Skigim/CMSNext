@@ -8,6 +8,7 @@ export {
   formatVoterStatus,
   calculateAVSTrackingDates,
   extractKnownInstitutions,
+  formatCaseDisplayName,
 } from "./formatting";
 
 export type { VoterFormStatus, AVSTrackingDates } from "./formatting";

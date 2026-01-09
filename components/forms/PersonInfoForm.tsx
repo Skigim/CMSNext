@@ -9,8 +9,8 @@ import { NewPersonData, Relationship } from "../../types/case";
 import { AddressForm } from "./AddressForm";
 import { ContactInfoForm } from "./ContactInfoForm";
 import { useCategoryConfig } from "@/contexts/CategoryConfigContext";
-import { isoToDateInputValue, dateInputValueToISO } from "@/utils/dateFormatting";
-import { formatPhoneNumberAsTyped, normalizePhoneNumber } from "@/utils/phoneFormatter";
+import { isoToDateInputValue, dateInputValueToISO } from "@/domain/common";
+import { formatPhoneNumberAsTyped, normalizePhoneNumber } from "@/domain/common";
 
 interface PersonInfoFormProps {
   personData: NewPersonData;
