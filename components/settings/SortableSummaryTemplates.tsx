@@ -5,7 +5,7 @@
  * Allows reordering sections to control how they appear in generated summaries.
  */
 
-import { useState, useCallback, useMemo } from "react";
+import { useState, useCallback, useMemo, useEffect } from "react";
 import {
   DndContext,
   closestCenter,
@@ -212,15 +212,30 @@ export function SortableSummaryTemplates({ isGloballyLoading }: SortableSummaryT
     [getTemplatesByCategory]
   );
 
-  // Track local order during drag operations
+  // Track local order for optimistic UI updates during drag operations
   const [localOrder, setLocalOrder] = useState<string[]>([]);
+  
+  // Clear local order once context data matches (optimistic update complete)
+  // This prevents the jarring flash when clearing local state before context updates
+  const contextOrder = useMemo(() => summaryTemplates.map(t => t.id), [summaryTemplates]);
+  
+  useEffect(() => {
+    if (localOrder.length > 0) {
+      // Check if context order now matches our optimistic order
+      const matches = localOrder.length === contextOrder.length &&
+        localOrder.every((id, i) => id === contextOrder[i]);
+      if (matches) {
+        setLocalOrder([]); // Safe to clear - context has caught up
+      }
+    }
+  }, [localOrder, contextOrder]);
   
   // Memoize orderedIds to prevent unnecessary re-renders and callback recreations
   const orderedIds = useMemo(() => 
     localOrder.length > 0 
       ? localOrder 
-      : summaryTemplates.map(t => t.id),
-    [localOrder, summaryTemplates]
+      : contextOrder,
+    [localOrder, contextOrder]
   );
 
   // Build ordered template list
@@ -256,9 +271,9 @@ export function SortableSummaryTemplates({ isGloballyLoading }: SortableSummaryT
     const newOrder = arrayMove(orderedIds, oldIndex, newIndex);
     setLocalOrder(newOrder);
 
-    // Persist the new order
+    // Persist the new order - local state will be cleared automatically
+    // by the useEffect once context data matches the optimistic order
     await reorderTemplates(newOrder);
-    setLocalOrder([]); // Clear local state, let context take over
   }, [orderedIds, reorderTemplates]);
 
   const handleToggleExpand = useCallback((id: string) => {
