@@ -5,7 +5,7 @@
  * Allows reordering sections to control how they appear in generated summaries.
  */
 
-import { useState, useCallback, useMemo, useEffect } from "react";
+import { useState, useCallback, useMemo, useEffect, useRef } from "react";
 import {
   DndContext,
   closestCenter,
@@ -29,9 +29,15 @@ import { Textarea } from "../ui/textarea";
 import { Label } from "../ui/label";
 import { Badge } from "../ui/badge";
 import { Skeleton } from "../ui/skeleton";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "../ui/tooltip";
 import { cn } from "../ui/utils";
 import { useTemplates } from "@/contexts/TemplateContext";
 import type { Template } from "@/types/template";
+import { TEMPLATE_PLACEHOLDER_FIELDS } from "@/types/template";
 import type { SummarySectionKey } from "@/types/categoryConfig";
 
 // ============================================================================
@@ -55,6 +61,77 @@ const SECTION_LABELS: Record<SummarySectionKey, string> = {
 };
 
 // ============================================================================
+// Placeholder Palette Component
+// ============================================================================
+
+type PlaceholderPaletteProps = {
+  onInsert: (placeholder: string) => void;
+  disabled?: boolean;
+};
+
+function PlaceholderPalette({ onInsert, disabled }: PlaceholderPaletteProps) {
+  // Get placeholders available for summary templates
+  const placeholdersByFieldCategory = useMemo(() => {
+    const grouped: Record<string, Array<{ field: string; label: string }>> = {};
+    
+    for (const [field, config] of Object.entries(TEMPLATE_PLACEHOLDER_FIELDS)) {
+      // Only include placeholders available for summary category
+      if (!config.availableFor.includes('summary')) continue;
+      
+      const fieldCategory = config.fieldCategory;
+      if (!grouped[fieldCategory]) {
+        grouped[fieldCategory] = [];
+      }
+      grouped[fieldCategory].push({ field, label: config.label });
+    }
+    
+    return grouped;
+  }, []);
+  
+  // Order the categories in a logical way for summaries
+  const categoryOrder = ["Case", "Person", "Summary Sections", "AVS Tracking", "System"];
+  const orderedCategories = categoryOrder.filter(cat => placeholdersByFieldCategory[cat]);
+
+  return (
+    <div className="space-y-3 border-t pt-3">
+      <Label className="text-xs font-medium text-muted-foreground">
+        Click to insert placeholder
+      </Label>
+      <div className="space-y-2 max-h-[200px] overflow-y-auto pr-1">
+        {orderedCategories.map(fieldCategory => (
+          <div key={fieldCategory} className="space-y-1.5">
+            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+              {fieldCategory}
+            </p>
+            <div className="flex flex-wrap gap-1">
+              {placeholdersByFieldCategory[fieldCategory].map(({ field, label }) => (
+                <Tooltip key={field}>
+                  <TooltipTrigger asChild>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="h-6 text-xs px-2"
+                      onClick={() => onInsert(`{${field}}`)}
+                      disabled={disabled}
+                    >
+                      {label}
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <code className="text-xs">{`{${field}}`}</code>
+                  </TooltipContent>
+                </Tooltip>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ============================================================================
 // Sortable Item Component
 // ============================================================================
 
@@ -74,6 +151,7 @@ function SortableTemplateItem({
   isSaving,
 }: SortableTemplateItemProps) {
   const [editedContent, setEditedContent] = useState(template.template);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
   const hasChanges = editedContent !== template.template;
 
   const {
@@ -97,6 +175,24 @@ function SortableTemplateItem({
   const handleReset = useCallback(() => {
     setEditedContent(template.template);
   }, [template.template]);
+
+  const handleInsertPlaceholder = useCallback((placeholder: string) => {
+    const textarea = textareaRef.current;
+    if (!textarea) return;
+
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const newContent = editedContent.slice(0, start) + placeholder + editedContent.slice(end);
+    
+    setEditedContent(newContent);
+    
+    // Restore cursor position after placeholder
+    requestAnimationFrame(() => {
+      textarea.focus();
+      const newPos = start + placeholder.length;
+      textarea.setSelectionRange(newPos, newPos);
+    });
+  }, [editedContent]);
 
   const sectionLabel = template.sectionKey 
     ? SECTION_LABELS[template.sectionKey] 
@@ -162,6 +258,7 @@ function SortableTemplateItem({
               Template content (use {"{placeholder}"} syntax)
             </Label>
             <Textarea
+              ref={textareaRef}
               value={editedContent}
               onChange={(e) => setEditedContent(e.target.value)}
               className="font-mono text-xs min-h-[100px]"
@@ -191,6 +288,12 @@ function SortableTemplateItem({
               <span className="text-xs text-muted-foreground">No changes</span>
             )}
           </div>
+
+          {/* Placeholder Palette */}
+          <PlaceholderPalette
+            onInsert={handleInsertPlaceholder}
+            disabled={isSaving}
+          />
         </div>
       )}
     </div>

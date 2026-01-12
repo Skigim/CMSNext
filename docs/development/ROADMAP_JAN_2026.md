@@ -307,7 +307,13 @@ These files intentionally remain in `utils/` because they have I/O dependencies:
 
 ---
 
-## 🗂️ Deferred Work
+## �️ Audit Findings & Remediation (Jan Mid-Month)
+
+- [ ] **Security:** Update `@modelcontextprotocol/sdk` to fix ReDoS vulnerability.
+- [ ] **Security:** Update `qs` to fix DoS vulnerability.
+- [ ] **Accessibility:** Perform manual verification of keyboard navigation and screen reader support.
+
+## �🗂️ Deferred Work
 
 ### Phase 5: Navigation & Context Flow (Moved to Week 3)
 
