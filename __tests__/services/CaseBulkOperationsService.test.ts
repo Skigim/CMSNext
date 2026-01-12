@@ -4,6 +4,19 @@ import type { FileStorageService, NormalizedFileData, StoredCase } from '@/utils
 import type { Person, CaseRecord, CaseStatus } from '@/types/case';
 import type { CategoryConfig } from '@/types/categoryConfig';
 
+// Mock the logger using vi.hoisted to ensure proper initialization order
+const mockLoggerFns = vi.hoisted(() => ({
+  info: vi.fn(),
+  warn: vi.fn(),
+  error: vi.fn(),
+  lifecycle: vi.fn(),
+  debug: vi.fn(),
+}));
+
+vi.mock('@/utils/logger', () => ({
+  createLogger: () => mockLoggerFns,
+}));
+
 describe('CaseBulkOperationsService', () => {
   let service: CaseBulkOperationsService;
   let mockFileStorage: ReturnType<typeof createMockFileStorage>;
@@ -422,14 +435,17 @@ describe('CaseBulkOperationsService', () => {
       data.cases = [createMockCase('case-1')];
       mockFileStorage.setData(data);
 
-      const consoleSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+      mockLoggerFns.warn.mockClear();
 
       await service.importCases([
         createMockCase('case-1'),
         createMockCase('case-2'),
       ]);
 
-      expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining('case-1'));
+      expect(mockLoggerFns.warn).toHaveBeenCalledWith(
+        'Skipping import: case already exists',
+        expect.objectContaining({ caseId: 'case-1' })
+      );
       expect(mockFileStorage.writeNormalizedData).toHaveBeenCalledWith(
         expect.objectContaining({
           cases: expect.arrayContaining([
@@ -445,8 +461,6 @@ describe('CaseBulkOperationsService', () => {
           ]),
         })
       );
-
-      consoleSpy.mockRestore();
     });
 
     it('should not write when all cases are duplicates', async () => {
@@ -454,14 +468,14 @@ describe('CaseBulkOperationsService', () => {
       data.cases = [createMockCase('case-1')];
       mockFileStorage.setData(data);
 
-      const consoleSpy = vi.spyOn(console, 'info').mockImplementation(() => {});
+      mockLoggerFns.info.mockClear();
 
       await service.importCases([createMockCase('case-1')]);
 
-      expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining('No new cases to import'));
+      expect(mockLoggerFns.info).toHaveBeenCalledWith(
+        'No new cases to import (all IDs already exist)'
+      );
       expect(mockFileStorage.writeNormalizedData).not.toHaveBeenCalled();
-
-      consoleSpy.mockRestore();
     });
 
     it('should preserve existing cases when importing new ones', async () => {

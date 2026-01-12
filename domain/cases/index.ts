@@ -12,3 +12,8 @@ export {
 } from "./formatting";
 
 export type { VoterFormStatus, AVSTrackingDates } from "./formatting";
+
+export {
+  type GenerateAvsNarrativeOptions,
+  generateAvsNarrative,
+} from "./avsNarrativeGenerator";

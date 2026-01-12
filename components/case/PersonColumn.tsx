@@ -10,7 +10,7 @@ import { Separator } from "../ui/separator";
 import { User, Phone, Mail, MapPin, Calendar, Plus, Minus, Users } from "lucide-react";
 import { NewPersonData, Relationship } from "../../types/case";
 import { useCategoryConfig } from "@/contexts/CategoryConfigContext";
-import { isoToDateInputValue, dateInputValueToISO } from "@/domain/common";
+import { isoToDateInputValue, dateInputValueToISO, formatDateForDisplay } from "@/domain/common";
 import { formatPhoneNumberAsTyped, normalizePhoneNumber, getDisplayPhoneNumber } from "@/domain/common";
 import { CopyButton } from "../common/CopyButton";
 
@@ -91,19 +91,10 @@ export function PersonColumn({
   const { config } = useCategoryConfig();
   const livingArrangements = useMemo(() => config.livingArrangements, [config.livingArrangements]);
 
-  // Format dates for display
+  // Use domain formatDateForDisplay - returns "None" for empty values
   const formatDate = (dateString?: string) => {
-    if (!dateString) return null;
-    try {
-      const date = new Date(dateString);
-      return date.toLocaleDateString("en-US", {
-        month: "2-digit",
-        day: "2-digit",
-        year: "numeric",
-      });
-    } catch {
-      return dateString;
-    }
+    const formatted = formatDateForDisplay(dateString);
+    return formatted === "None" ? null : formatted;
   };
 
   // Full address string

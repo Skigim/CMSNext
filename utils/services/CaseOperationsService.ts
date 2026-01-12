@@ -2,6 +2,7 @@ import { NewPersonData, NewCaseRecordData, NewNoteData, StoredCase, StoredNote }
 import { DataManager } from '@/utils/DataManager';
 import { getFileStorageFlags, updateFileStorageFlags } from '@/utils/fileStorageFlags';
 import { createLogger } from '@/utils/logger';
+import { extractErrorMessage } from '@/utils/errorUtils';
 import { LegacyFormatError } from '@/utils/services/FileStorageService';
 
 const logger = createLogger('CaseOperationsService');
@@ -152,11 +153,11 @@ export class CaseOperationsService {
         // Expose this for UI layer to show appropriate message
         ...(isEmptyAndNotInFlow && { isEmpty: true }),
       } as OperationResult<StoredCase[]> & { isEmpty?: boolean };
-    } catch (err) {
-      if (err instanceof LegacyFormatError) {
-        return { success: false, error: err.message, isLegacyFormat: true };
+    } catch (error) {
+      if (error instanceof LegacyFormatError) {
+        return { success: false, error: error.message, isLegacyFormat: true };
       }
-      logger.error('Failed to load cases', { error: err instanceof Error ? err.message : String(err) });
+      logger.error('Failed to load cases', { error: extractErrorMessage(error) });
       return { success: false, error: 'Failed to load cases. Please try again.' };
     }
   }
@@ -198,9 +199,9 @@ export class CaseOperationsService {
       }
 
       return { success: true, data: savedCase };
-    } catch (err) {
+    } catch (error) {
       logger.error('Failed to save case', {
-        error: err instanceof Error ? err.message : String(err),
+        error: extractErrorMessage(error),
         isEditing,
       });
       return { 
@@ -229,9 +230,9 @@ export class CaseOperationsService {
     try {
       await this.dataManager.deleteCase(caseId);
       return { success: true, data: undefined };
-    } catch (err) {
+    } catch (error) {
       logger.error('Failed to delete case', {
-        error: err instanceof Error ? err.message : String(err),
+        error: extractErrorMessage(error),
         caseId,
       });
       return { success: false, error: 'Failed to delete case. Please try again.' };
@@ -272,10 +273,10 @@ export class CaseOperationsService {
         : await this.dataManager.addNote(caseId, noteData);
 
       return { success: true, data: savedNote };
-    } catch (err) {
+    } catch (error) {
       const action = isEditing ? 'update' : 'add';
       logger.error('Failed to save note', {
-        error: err instanceof Error ? err.message : String(err),
+        error: extractErrorMessage(error),
         caseId,
       });
       return { success: false, error: `Failed to ${action} note. Please try again.` };
@@ -309,13 +310,13 @@ export class CaseOperationsService {
     try {
       const updatedCase = await this.dataManager.updateCaseStatus(caseId, status);
       return { success: true, data: updatedCase };
-    } catch (err) {
-      if (err instanceof Error && err.name === 'AbortError') {
+    } catch (error) {
+      if (error instanceof Error && error.name === 'AbortError') {
         return { success: false, error: '', isAborted: true };
       }
 
       logger.error('Failed to update case status', {
-        error: err instanceof Error ? err.message : String(err),
+        error: extractErrorMessage(error),
         caseId,
         status,
       });
@@ -343,9 +344,9 @@ export class CaseOperationsService {
       await this.dataManager.importCases(importedCases);
       updateFileStorageFlags({ dataBaseline: true, sessionHadData: true });
       return { success: true, data: undefined };
-    } catch (err) {
+    } catch (error) {
       logger.error('Failed to import cases', {
-        error: err instanceof Error ? err.message : String(err),
+        error: extractErrorMessage(error),
         caseCount: importedCases.length,
       });
       return { success: false, error: 'Failed to import cases. Please try again.' };
@@ -376,9 +377,9 @@ export class CaseOperationsService {
       const result = await this.dataManager.deleteCases(caseIds);
       logger.info('Bulk delete completed', { deleted: result.deleted, notFound: result.notFound.length });
       return { success: true, data: result };
-    } catch (err) {
+    } catch (error) {
       logger.error('Failed to delete cases', {
-        error: err instanceof Error ? err.message : String(err),
+        error: extractErrorMessage(error),
         caseCount: caseIds.length,
       });
       return { success: false, error: 'Failed to delete cases. Please try again.' };
@@ -410,9 +411,9 @@ export class CaseOperationsService {
       const result = await this.dataManager.updateCasesStatus(caseIds, status);
       logger.info('Bulk status update completed', { updated: result.updated.length, notFound: result.notFound.length });
       return { success: true, data: result };
-    } catch (err) {
+    } catch (error) {
       logger.error('Failed to update case statuses', {
-        error: err instanceof Error ? err.message : String(err),
+        error: extractErrorMessage(error),
         caseCount: caseIds.length,
         status,
       });
@@ -445,9 +446,9 @@ export class CaseOperationsService {
       const result = await this.dataManager.updateCasesPriority(caseIds, priority);
       logger.info('Bulk priority update completed', { updated: result.updated.length, notFound: result.notFound.length });
       return { success: true, data: result };
-    } catch (err) {
+    } catch (error) {
       logger.error('Failed to update case priorities', {
-        error: err instanceof Error ? err.message : String(err),
+        error: extractErrorMessage(error),
         caseCount: caseIds.length,
         priority,
       });

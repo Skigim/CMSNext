@@ -1,7 +1,7 @@
 import { v4 as uuidv4 } from 'uuid';
 import type { NewNoteData } from '../../types/case';
 import type { CaseActivityEntry } from '../../types/activityLog';
-import type { FileStorageService, NormalizedFileData, StoredNote, StoredCase } from './FileStorageService';
+import type { FileStorageService, NormalizedFileData, StoredNote } from './FileStorageService';
 import { ActivityLogService } from './ActivityLogService';
 import { formatCaseDisplayName } from '../../domain/cases/formatting';
 
@@ -401,17 +401,6 @@ export class NotesService {
     };
 
     await this.fileStorage.writeNormalizedData(updatedData);
-  }
-
-  /**
-   * Get the case data for a note (for backward compatibility)
-   */
-  async getCaseForNote(caseId: string): Promise<StoredCase | null> {
-    const data = await this.fileStorage.readFileData();
-    if (!data) {
-      return null;
-    }
-    return this.fileStorage.getCaseById(data, caseId) ?? null;
   }
 
   /**

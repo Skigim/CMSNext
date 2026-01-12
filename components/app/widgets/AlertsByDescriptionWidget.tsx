@@ -1,6 +1,7 @@
 import { useCallback, useMemo } from 'react';
 import { Pie, PieChart, type PieLabelRenderProps } from 'recharts';
 import { ListChecks } from 'lucide-react';
+import { formatFreshnessLabel } from '@/domain/common';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -96,22 +97,7 @@ export function AlertsByDescriptionWidget({ alerts = [], metadata }: AlertsByDes
     return cfg;
   }, [stats, alertColorMap]);
 
-  const freshnessLabel = useMemo(() => {
-    if (!freshness.lastUpdatedAt) {
-      return 'Never updated';
-    }
-    if (freshness.minutesAgo === 0) {
-      return 'Just now';
-    }
-    if (freshness.minutesAgo === 1) {
-      return '1 minute ago';
-    }
-    if (freshness.minutesAgo && freshness.minutesAgo < 60) {
-      return `${freshness.minutesAgo} minutes ago`;
-    }
-    const hoursAgo = Math.floor((freshness.minutesAgo ?? 0) / 60);
-    return hoursAgo <= 1 ? '1 hour ago' : `${hoursAgo} hours ago`;
-  }, [freshness]);
+  const freshnessLabel = useMemo(() => formatFreshnessLabel(freshness), [freshness]);
 
   if (loading && !data) {
     return (

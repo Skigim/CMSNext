@@ -18,7 +18,7 @@ import { CaseStatusMenu } from "./CaseStatusMenu";
 import type { AlertWithMatch } from "../../utils/alertsData";
 import { AlertBadge } from "@/components/alerts/AlertBadge";
 import { CopyButton } from "@/components/common/CopyButton";
-import { getDisplayPhoneNumber } from "@/domain/common";
+import { getDisplayPhoneNumber, formatDateForDisplay } from "@/domain/common";
 import { usePinnedCases } from "@/hooks/usePinnedCases";
 
 interface CaseCardProps {
@@ -42,21 +42,10 @@ export function CaseCard({
   const { isPinned, togglePin: togglePinCase } = usePinnedCases();
   const caseIsPinned = isPinned(caseData.id);
 
+  // Use domain formatDateForDisplay - returns "None" for empty, we display "—"
   const formatDate = (value?: string) => {
-    if (!value) {
-      return "—";
-    }
-
-    const date = new Date(value);
-    if (Number.isNaN(date.getTime())) {
-      return value;
-    }
-
-    return new Intl.DateTimeFormat(undefined, {
-      year: "numeric",
-      month: "short",
-      day: "numeric",
-    }).format(date);
+    const formatted = formatDateForDisplay(value);
+    return formatted === "None" ? "—" : formatted;
   };
 
   const caseType = caseData.caseRecord?.caseType || "Not specified";

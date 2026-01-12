@@ -10,7 +10,7 @@ import { Separator } from "../ui/separator";
 import { FileText, Calendar, Flag, Check, X } from "lucide-react";
 import { NewCaseRecordData } from "../../types/case";
 import { useCategoryConfig } from "@/contexts/CategoryConfigContext";
-import { isoToDateInputValue, dateInputValueToISO } from "@/domain/common";
+import { isoToDateInputValue, dateInputValueToISO, formatDateForDisplay } from "@/domain/common";
 
 interface CaseColumnProps {
   caseData: NewCaseRecordData;
@@ -79,19 +79,10 @@ export function CaseColumn({
     livingArrangements: config.livingArrangements,
   }), [config]);
 
-  // Format dates for display
+  // Use domain formatDateForDisplay - returns "None" for empty values
   const formatDate = (dateString?: string) => {
-    if (!dateString) return null;
-    try {
-      const date = new Date(dateString);
-      return date.toLocaleDateString("en-US", {
-        month: "2-digit",
-        day: "2-digit",
-        year: "numeric",
-      });
-    } catch {
-      return dateString;
-    }
+    const formatted = formatDateForDisplay(dateString);
+    return formatted === "None" ? null : formatted;
   };
 
   if (!isEditing) {

@@ -19,7 +19,8 @@ import {
   Users,
 } from "lucide-react";
 import { clickToCopy } from "../../utils/clipboard";
-import { getDisplayPhoneNumber } from "@/domain/common";
+import { getDisplayPhoneNumber, formatDateForDisplay } from "@/domain/common";
+import { generateAvsNarrative } from "@/domain/cases";
 import { CopyButton } from "../common/CopyButton";
 
 interface IntakeChecklistViewProps {
@@ -89,61 +90,19 @@ const VOTER_STATUS_LABELS: Record<VoterFormStatus, string> = {
 export function IntakeChecklistView({ caseData, onEdit }: IntakeChecklistViewProps) {
   const { person, caseRecord } = caseData;
 
-  // Format dates for display
+  // Use domain formatDateForDisplay - returns "None" for empty values
   const formatDate = useCallback((dateString?: string) => {
-    if (!dateString) return null;
-    try {
-      const date = new Date(dateString);
-      return date.toLocaleDateString("en-US", {
-        month: "2-digit",
-        day: "2-digit",
-        year: "numeric",
-      });
-    } catch {
-      return dateString;
-    }
+    const formatted = formatDateForDisplay(dateString);
+    return formatted === "None" ? null : formatted;
   }, []);
 
-  // Generate AVS Narrative
-  const generateAVSNarrative = useCallback(() => {
-    const consentDate = formatDate(caseRecord.avsConsentDate) || "MM/DD/YYYY";
-    const today = new Date();
-    const submitDate = today.toLocaleDateString("en-US", {
-      month: "2-digit",
-      day: "2-digit",
-      year: "numeric",
-    });
-
-    const fiveDay = new Date(today);
-    fiveDay.setDate(today.getDate() + 5);
-    const fiveDayDate = fiveDay.toLocaleDateString("en-US", {
-      month: "2-digit",
-      day: "2-digit",
-      year: "numeric",
-    });
-
-    const elevenDay = new Date(today);
-    elevenDay.setDate(today.getDate() + 11);
-    const elevenDayDate = elevenDay.toLocaleDateString("en-US", {
-      month: "2-digit",
-      day: "2-digit",
-      year: "numeric",
-    });
-
-    return `MLTC: AVS Submitted
-Consent Date: ${consentDate}
-Submit Date: ${submitDate}
-5 Day: ${fiveDayDate}
-11 Day: ${elevenDayDate}`;
-  }, [caseRecord.avsConsentDate, formatDate]);
-
   const handleCopyNarrative = useCallback(() => {
-    const narrative = generateAVSNarrative();
+    const narrative = generateAvsNarrative({ avsConsentDate: caseRecord.avsConsentDate });
     clickToCopy(narrative, {
       successMessage: "AVS narrative copied to clipboard",
       errorMessage: "Failed to copy narrative",
     });
-  }, [generateAVSNarrative]);
+  }, [caseRecord.avsConsentDate]);
 
   // Contact methods display
   const contactMethodsDisplay = useMemo(() => {

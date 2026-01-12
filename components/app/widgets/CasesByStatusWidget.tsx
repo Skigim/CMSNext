@@ -2,6 +2,7 @@ import { useCallback, useMemo } from 'react';
 import { Pie, PieChart, type PieLabelRenderProps } from 'recharts';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { formatFreshnessLabel } from '@/domain/common';
 import {
   ChartConfig,
   ChartContainer,
@@ -33,22 +34,7 @@ export function CasesByStatusWidget({ cases = [], metadata }: CasesByStatusWidge
     enablePerformanceTracking: true,
   });
 
-  const freshnessLabel = useMemo(() => {
-    if (!freshness.lastUpdatedAt) {
-      return 'Never updated';
-    }
-    if (freshness.minutesAgo === 0) {
-      return 'Just now';
-    }
-    if (freshness.minutesAgo === 1) {
-      return '1 minute ago';
-    }
-    if (freshness.minutesAgo && freshness.minutesAgo < 60) {
-      return `${freshness.minutesAgo} minutes ago`;
-    }
-    const hoursAgo = Math.floor((freshness.minutesAgo ?? 0) / 60);
-    return hoursAgo <= 1 ? '1 hour ago' : `${hoursAgo} hours ago`;
-  }, [freshness]);
+  const freshnessLabel = useMemo(() => formatFreshnessLabel(freshness), [freshness]);
 
   const breakdown = useMemo(() => data ?? [], [data]);
   const totalCases = useMemo(() => breakdown.reduce((acc, item) => acc + item.count, 0), [breakdown]);

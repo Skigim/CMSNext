@@ -5,8 +5,9 @@ import type { CategoryConfig } from '../../types/categoryConfig';
 import type { FileStorageService, NormalizedFileData, StoredCase } from './FileStorageService';
 import { ActivityLogService } from './ActivityLogService';
 import { formatCaseDisplayName } from '../../domain/cases/formatting';
+import { createLogger } from '../logger';
 
-// formatCaseDisplayName imported from domain layer
+const logger = createLogger('CaseBulkOperationsService');
 
 /**
  * Configuration for CaseBulkOperationsService initialization.
@@ -411,7 +412,7 @@ export class CaseBulkOperationsService {
       }))
       .filter(caseItem => {
         if (existingIds.has(caseItem.id)) {
-          console.warn(`Skipping import: case with ID ${caseItem.id} already exists`);
+          logger.warn('Skipping import: case already exists', { caseId: caseItem.id });
           return false;
         }
         return true;
@@ -419,7 +420,7 @@ export class CaseBulkOperationsService {
 
     // Only proceed if there are new cases to import
     if (casesToImport.length === 0) {
-      console.info('No new cases to import (all IDs already exist)');
+      logger.info('No new cases to import (all IDs already exist)');
       return;
     }
 

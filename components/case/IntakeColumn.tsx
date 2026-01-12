@@ -9,7 +9,8 @@ import { Button } from "../ui/button";
 import { Separator } from "../ui/separator";
 import { ClipboardCheck, Shield, FileSearch, Calendar, Check, X, Copy } from "lucide-react";
 import { NewCaseRecordData, ContactMethod, VoterFormStatus } from "../../types/case";
-import { isoToDateInputValue, dateInputValueToISO } from "@/domain/common";
+import { isoToDateInputValue, dateInputValueToISO, formatDateForDisplay } from "@/domain/common";
+import { generateAvsNarrative } from "@/domain/cases";
 import { clickToCopy } from "../../utils/clipboard";
 
 interface IntakeColumnProps {
@@ -98,61 +99,19 @@ export function IntakeColumn({
   onCaseDataChange,
 }: IntakeColumnProps) {
 
-  // Format dates for display
+  // Use domain formatDateForDisplay - returns "None" for empty values
   const formatDate = useCallback((dateString?: string) => {
-    if (!dateString) return null;
-    try {
-      const date = new Date(dateString);
-      return date.toLocaleDateString("en-US", {
-        month: "2-digit",
-        day: "2-digit",
-        year: "numeric",
-      });
-    } catch {
-      return dateString;
-    }
+    const formatted = formatDateForDisplay(dateString);
+    return formatted === "None" ? null : formatted;
   }, []);
 
-  // Generate AVS Narrative
-  const generateAVSNarrative = useCallback(() => {
-    const consentDate = formatDate(caseData.avsConsentDate) || "MM/DD/YYYY";
-    const today = new Date();
-    const submitDate = today.toLocaleDateString("en-US", {
-      month: "2-digit",
-      day: "2-digit",
-      year: "numeric",
-    });
-
-    const fiveDay = new Date(today);
-    fiveDay.setDate(today.getDate() + 5);
-    const fiveDayDate = fiveDay.toLocaleDateString("en-US", {
-      month: "2-digit",
-      day: "2-digit",
-      year: "numeric",
-    });
-
-    const elevenDay = new Date(today);
-    elevenDay.setDate(today.getDate() + 11);
-    const elevenDayDate = elevenDay.toLocaleDateString("en-US", {
-      month: "2-digit",
-      day: "2-digit",
-      year: "numeric",
-    });
-
-    return `MLTC: AVS Submitted
-Consent Date: ${consentDate}
-Submit Date: ${submitDate}
-5 Day: ${fiveDayDate}
-11 Day: ${elevenDayDate}`;
-  }, [caseData.avsConsentDate, formatDate]);
-
   const handleCopyNarrative = useCallback(() => {
-    const narrative = generateAVSNarrative();
+    const narrative = generateAvsNarrative({ avsConsentDate: caseData.avsConsentDate });
     clickToCopy(narrative, {
       successMessage: "AVS narrative copied to clipboard",
       errorMessage: "Failed to copy narrative",
     });
-  }, [generateAVSNarrative]);
+  }, [caseData.avsConsentDate]);
 
   // Contact methods display
   const contactMethodsDisplay = useMemo(() => {

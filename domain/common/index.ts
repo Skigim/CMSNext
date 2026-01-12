@@ -57,3 +57,8 @@ export {
   getNormalizedItem,
   getNormalizedFormData,
 } from "./normalization";
+
+export {
+  type FreshnessData,
+  formatFreshnessLabel,
+} from "./formatFreshness";

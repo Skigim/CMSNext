@@ -1,6 +1,7 @@
 import { useCallback, useMemo } from 'react';
 import { ArrowDownRight, ArrowUpRight, Minus } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { formatFreshnessLabel } from '@/domain/common';
 import { Badge } from '@/components/ui/badge';
 import { useWidgetData } from '@/hooks/useWidgetData';
 import { useCategoryConfig } from '@/contexts/CategoryConfigContext';
@@ -53,22 +54,7 @@ export function CasesProcessedPerDayWidget({ activityLog = [], metadata, refresh
 
   const formatter = useMemo(() => new Intl.DateTimeFormat('en-US', { weekday: 'short' }), []);
 
-  const freshnessLabel = useMemo(() => {
-    if (!freshness.lastUpdatedAt) {
-      return 'Never updated';
-    }
-    if (freshness.minutesAgo === 0) {
-      return 'Just now';
-    }
-    if (freshness.minutesAgo === 1) {
-      return '1 minute ago';
-    }
-    if (freshness.minutesAgo && freshness.minutesAgo < 60) {
-      return `${freshness.minutesAgo} minutes ago`;
-    }
-    const hoursAgo = Math.floor((freshness.minutesAgo ?? 0) / 60);
-    return hoursAgo <= 1 ? '1 hour ago' : `${hoursAgo} hours ago`;
-  }, [freshness]);
+  const freshnessLabel = useMemo(() => formatFreshnessLabel(freshness), [freshness]);
 
   const trend = useMemo(() => {
     if (!data) {

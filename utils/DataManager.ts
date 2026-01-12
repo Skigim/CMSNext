@@ -13,6 +13,7 @@ import type { CaseActivityEntry } from "../types/activityLog";
 import type { Template } from "../types/template";
 import AutosaveFileService from './AutosaveFileService';
 import { createLogger } from './logger';
+import { extractErrorMessage } from './errorUtils';
 import {
   CategoryConfig,
   CategoryKey,
@@ -88,7 +89,7 @@ interface AlertsMergeSummary {
  * @param {AlertRecord} record - The alert record to convert
  * @returns {AlertWithMatch} The alert with match status information
  */
-function toAlertWithMatch(record: AlertRecord): AlertWithMatch {
+function convertToAlertWithMatch(record: AlertRecord): AlertWithMatch {
   const candidate = record as unknown as Partial<AlertWithMatch>;
   return {
     ...record,
@@ -401,7 +402,7 @@ export class DataManager {
     const cases = options.cases ?? data.cases ?? [];
     const rawAlerts = data.alerts ?? [];
     
-    const alerts: AlertWithMatch[] = rawAlerts.map(toAlertWithMatch);
+    const alerts: AlertWithMatch[] = rawAlerts.map(convertToAlertWithMatch);
 
     return this.alerts.getAlertsIndex(alerts, cases);
   }
@@ -444,7 +445,7 @@ export class DataManager {
     const cases = options.cases ?? data.cases ?? [];
     const rawAlerts = data.alerts ?? [];
     
-    const alerts: AlertWithMatch[] = rawAlerts.map(toAlertWithMatch);
+    const alerts: AlertWithMatch[] = rawAlerts.map(convertToAlertWithMatch);
 
     const updatedAlert = this.alerts.updateAlertStatus(alerts, alertId, updates, cases);
     if (!updatedAlert) {
@@ -517,7 +518,7 @@ export class DataManager {
     const cases = options.cases ?? data.cases ?? [];
     const rawAlerts = data.alerts ?? [];
     
-    const existingAlerts: AlertWithMatch[] = rawAlerts.map(toAlertWithMatch);
+    const existingAlerts: AlertWithMatch[] = rawAlerts.map(convertToAlertWithMatch);
 
     try {
       // First pass: merge alerts with existing cases
@@ -587,10 +588,10 @@ export class DataManager {
             mcn: alert.mcNumber,
             name: `${firstName} ${lastName}`.trim(),
           });
-        } catch (err) {
+        } catch (error) {
           logger.error('Failed to create skeleton case', { 
             mcn: alert.mcNumber, 
-            error: err instanceof Error ? err.message : String(err) 
+            error: extractErrorMessage(error) 
           });
         }
       }
