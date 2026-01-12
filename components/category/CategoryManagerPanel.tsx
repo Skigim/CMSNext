@@ -316,6 +316,14 @@ function SimpleCategoryEditor({
     [valuesFromConfig]
   );
 
+  // Memoize callbacks to prevent unnecessary re-renders
+  const handleOnSave = useCallback(async (cleaned: SimpleItem[]) => {
+    await onSave(cleaned.map(item => item.name));
+  }, [onSave]);
+
+  const createItem = useCallback((name: string) => ({ name }), []);
+  const cleanItem = useCallback((item: SimpleItem) => ({ name: item.name.trim() }), []);
+
   const {
     items,
     duplicateIndices,
@@ -331,17 +339,11 @@ function SimpleCategoryEditor({
     handleSave,
   } = useCategoryEditorState<SimpleItem>({
     initialItems,
-    onSave: async (cleaned) => {
-      console.log('[SimpleCategoryEditor] onSave called', { categoryKey, cleaned });
-      await onSave(cleaned.map(item => item.name));
-      console.log('[SimpleCategoryEditor] onSave completed', { categoryKey });
-    },
+    onSave: handleOnSave,
     isGloballyLoading,
-    createItem: (name) => ({ name }),
-    cleanItem: (item) => ({ name: item.name.trim() }),
+    createItem,
+    cleanItem,
   });
-
-  console.log('[SimpleCategoryEditor] State:', { categoryKey, hasChanges, disableSave, isSaving, itemCount: items.length });
 
   const resetDraft = () => setDraft("");
 
@@ -683,9 +685,7 @@ export function CategoryManagerPanel({
 
   const handleSave = useCallback(
     async (key: CategoryKey, values: string[]) => {
-      console.log('[CategoryManagerPanel] handleSave called', { key, values });
       await updateCategory(key, values);
-      console.log('[CategoryManagerPanel] handleSave completed', { key });
     },
     [updateCategory],
   );

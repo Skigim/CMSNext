@@ -290,12 +290,10 @@ export function useCategoryEditorState<T extends EditorItem>({
   );
 
   const handleSave = useCallback(async () => {
-    console.log('[useCategoryEditorState] handleSave called', { cleanedItems });
     setTouched(true);
     setIsSaving(true);
     try {
       await onSave(cleanedItems);
-      console.log('[useCategoryEditorState] handleSave completed');
     } finally {
       if (isMounted.current) {
         setIsSaving(false);

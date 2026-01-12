@@ -302,7 +302,6 @@ export const CategoryConfigProvider: React.FC<{ children: React.ReactNode }> = (
 
       // Handle other categories (string[] format)
       const sanitizedValues = sanitizeCategoryValues(values as string[]);
-      console.log("[CategoryConfigContext] updateCategory", { key, values, sanitizedValues });
       if (sanitizedValues.length === 0) {
         toast.error("Please provide at least one option.");
         return;
@@ -311,7 +310,6 @@ export const CategoryConfigProvider: React.FC<{ children: React.ReactNode }> = (
       const toastId = toast.loading("Saving options...");
       try {
         const updated = await dataManager.updateCategoryValues(key, sanitizedValues);
-        console.log("[CategoryConfigContext] updateCategoryValues returned", { key, updated });
         // mergeCategoryConfig handles migration from legacy format
         setConfig(mergeCategoryConfig(updated));
         setError(null);
