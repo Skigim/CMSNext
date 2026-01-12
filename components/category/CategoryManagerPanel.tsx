@@ -310,7 +310,11 @@ function SimpleCategoryEditor({
   const [draft, setDraft] = useState("");
 
   // Convert string[] to SimpleItem[] for the hook
-  const initialItems: SimpleItem[] = valuesFromConfig.map(name => ({ name }));
+  // Memoize to prevent infinite render loop
+  const initialItems: SimpleItem[] = useMemo(() => 
+    valuesFromConfig.map(name => ({ name })),
+    [valuesFromConfig]
+  );
 
   const {
     items,
