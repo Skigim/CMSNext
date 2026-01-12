@@ -113,16 +113,50 @@ DataManager (orchestrator)
 
 The `domain/` folder contains pure business logic extracted from hooks and services.
 
-### Structure
+### Structure (8 modules, ~6,356 lines)
 
 ```
 domain/
-├── financials/
-│   ├── validation.ts      # validateFinancialItem()
-│   ├── index.ts           # Public exports
-│   └── __tests__/
-│       └── validation.test.ts
-└── (future: cases/, alerts/, etc.)
+├── alerts/              # Alert matching, filtering, display
+│   ├── types.ts
+│   ├── matching.ts
+│   ├── display.ts
+│   └── index.ts
+├── avs/                 # AVS file parsing
+│   ├── parser.ts
+│   └── index.ts
+├── cases/               # Case formatting
+│   ├── formatting.ts
+│   └── index.ts
+├── common/              # Shared utilities
+│   ├── dates.ts         # Date parsing, formatting
+│   ├── phone.ts         # Phone number formatting
+│   ├── formatters.ts    # Currency, frequency
+│   ├── sanitization.ts  # XSS prevention
+│   ├── normalization.ts # Data normalization
+│   └── index.ts
+├── dashboard/           # Dashboard logic
+│   ├── priorityQueue.ts # Priority scoring
+│   ├── recentCases.ts   # Recent case tracking
+│   ├── pinnedCases.ts   # Pinned case management
+│   ├── widgets.ts       # Widget data processors
+│   ├── activityReport.ts # Activity reports
+│   └── index.ts
+├── financials/          # Financial logic
+│   ├── history.ts       # Amount history
+│   ├── validation.ts    # Input validation
+│   ├── calculations.ts  # Totals
+│   ├── verification.ts  # Status mapping
+│   └── index.ts
+├── templates/           # Report templates
+│   ├── vr.ts            # VR template rendering
+│   ├── summary.ts       # Case summary generation
+│   └── index.ts
+├── validation/          # Validation rules
+│   ├── forms.ts         # Zod schemas
+│   ├── duplicates.ts    # Duplicate detection
+│   └── index.ts
+└── index.ts             # Barrel export
 ```
 
 ### Core Principles
@@ -134,13 +168,16 @@ domain/
 
 ### What Belongs in Domain
 
-| ✅ Domain Layer                  | ❌ Keep in Services/Hooks |
+| ✅ Domain Layer                  | ❌ Keep in Services/Utils |
 | -------------------------------- | ------------------------- |
 | Validation logic                 | File I/O operations       |
 | Business rule calculations       | State management          |
 | Data transformation (pure)       | Toast notifications       |
 | Duplicate detection algorithms   | Context access            |
 | Filtering/sorting business rules | React lifecycle           |
+| Date/phone formatting            | CSV parsing (Papa)        |
+| Template rendering (pure)        | Clipboard API             |
+| Alert matching logic             | Encryption (Web Crypto)   |
 
 ### Usage Pattern
 

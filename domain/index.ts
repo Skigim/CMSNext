@@ -3,7 +3,12 @@
  *
  * This module exports all domain functions for use by hooks and services.
  * Domain functions are pure (no I/O, no React, no side effects).
+ *
+ * @module domain
  */
+
+// Common utilities (dates, phone, formatters, sanitization)
+export * from "./common";
 
 // Cases domain
 export * from "./cases";
@@ -20,7 +25,7 @@ export * from "./validation";
 // AVS parsing
 export * from "./avs";
 
-// Alert matching
+// Alert matching and display
 export * from "./alerts";
 
 // Template rendering

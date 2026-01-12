@@ -37,7 +37,27 @@ DataManager
 
 - Services are stateless; receive dependencies via constructor injection.
 - All mutations go through `DataManager` methods.
-- No domain layer, repositories, or event bus—those don't exist.
+- No repositories or event bus patterns.
+
+### Domain Layer
+
+**Pattern:** Pure functions with no I/O, no React, no side effects. Fully testable.
+
+```
+domain/
+├── alerts/       # Matching, filtering, display formatting
+├── avs/          # AVS file parsing
+├── cases/        # Case formatting
+├── common/       # Dates, phone, formatters, sanitization
+├── dashboard/    # Priority queue, pinned/recent, widgets, activity reports
+├── financials/   # Calculations, validation, history, verification
+├── templates/    # VR generator, case summary
+└── validation/   # Zod schemas, duplicate detection
+```
+
+- Import via `@/domain` or `@/domain/{module}`.
+- Domain functions are called by hooks and services.
+- ~6,356 lines of pure business logic.
 
 ### Storage Layer
 
@@ -131,10 +151,11 @@ interface StatusConfig {
 
 ### Layer Structure
 
-1. **Services:** Business logic in `utils/services/*` and `utils/DataManager.ts`
-2. **Hooks:** React state + service calls in `hooks/*`
-3. **Components:** UI only in `components/*`; call hooks, never services directly
-4. **Contexts:** Global state providers in `contexts/*`
+1. **Domain:** Pure business logic in `domain/*` (~6,356 lines)
+2. **Services:** Orchestration and I/O in `utils/services/*` and `utils/DataManager.ts`
+3. **Hooks:** React state + service/domain calls in `hooks/*`
+4. **Components:** UI only in `components/*`; call hooks, never services directly
+5. **Contexts:** Global state providers in `contexts/*`
 
 ### Hooks
 
@@ -167,7 +188,8 @@ interface StatusConfig {
 - ❌ Do not mutate state without notifying storage
 - ❌ Do not introduce optimistic UI that ignores autosave timing
 - ❌ Do not put business logic in React components
-- ❌ No domain layer, repositories, or event bus patterns
+- ❌ No repositories or event bus patterns
+- ❌ Do not add I/O or React dependencies to domain layer
 
 ## Development Cycle
 
@@ -216,7 +238,7 @@ Each month targets ~12-20 features across 3-4 active weeks.
 
 - **Product:** `README.md`
 - **Features:** `docs/development/feature-catalogue.md`
-- **Roadmap:** `docs/development/ROADMAP_DEC_2025.md`
+- **Roadmap:** `docs/development/ROADMAP_JAN_2026.md`
 - **Guidelines:** `docs/development/project-structure-guidelines.md`
 - **Testing:** `docs/development/testing-infrastructure.md`
 - **Deployment:** `docs/DeploymentGuide.md`

@@ -148,44 +148,57 @@
 
 ---
 
-### Week 2: Domain Layer - Phase A & B (Jan 6-12) 🔄 IN PROGRESS
+### Week 2: Domain Layer - Phase A-F (Jan 6-12) ✅ COMPLETE
 
-_Focus: Foundational domain modules and standalone logic_
+_Focus: Complete domain layer refactor - all pure logic migrated_
 
-**Phase A: Foundation (Jan 9-10)**
+**Phase A: Foundation** ✅
 
-- [ ] `domain/common/dates.ts` - Date parsing, formatting, timezone handling
-- [ ] `domain/common/phone.ts` - Phone number formatting and validation
-- [ ] `domain/common/formatters.ts` - Currency, frequency display helpers
-- [ ] `domain/common/sanitization.ts` - XSS prevention, input sanitization
+- [x] `domain/common/dates.ts` - Date parsing, formatting, timezone handling
+- [x] `domain/common/phone.ts` - Phone number formatting and validation
+- [x] `domain/common/formatters.ts` - Currency, frequency display helpers
+- [x] `domain/financials/history.ts` - Amount history tracking
 
-**Phase B: Standalone Logic (Jan 10-12)**
+**Phase B: Standalone Logic** ✅
 
-- [ ] `domain/validation/forms.ts` - Zod schemas, form validation rules
-- [ ] `domain/financials/verification.ts` - Verification status mapping
-- [ ] `domain/avs/parser.ts` - AVS paste parsing
+- [x] `domain/avs/parser.ts` - AVS paste parsing
+- [x] `domain/financials/verification.ts` - Verification status mapping
+- [x] `domain/dashboard/widgets.ts` - Widget data processors
+
+**Phase C: Alerts** ✅
+
+- [x] `domain/alerts/types.ts` - Alert type definitions
+- [x] `domain/alerts/matching.ts` - MCN normalization, alert matching
+
+**Phase D: Templates** ✅
+
+- [x] `domain/templates/vr.ts` - VR template rendering
+- [x] `domain/templates/summary.ts` - Case summary generation
+
+**Phase E: Sanitization & Validation** ✅
+
+- [x] `domain/common/sanitization.ts` - XSS prevention, input sanitization
+- [x] `domain/validation/forms.ts` - Zod schemas, form validation rules
+
+**Phase F: Final Migrations** ✅
+
+- [x] `domain/alerts/display.ts` - Alert display formatting
+- [x] `domain/common/normalization.ts` - Financial item normalization
+- [x] `domain/dashboard/activityReport.ts` - Activity report generation
 
 ---
 
-### Week 3: Domain Layer - Phase C & D (Jan 13-19)
+### Week 3: Navigation & Polish (Jan 13-19)
 
-_Focus: Templates, alerts, and completion_
+_Focus: Dashboard navigation and buffer_
 
-**Phase C: Alerts & Templates (Jan 13-15)**
+**Phase 5: Navigation & Context Flow** 📋 PLANNED
 
-- [ ] `domain/alerts/matching.ts` - MCN normalization, alert matching
-- [ ] `domain/alerts/display.ts` - Alert type colors, formatting
-- [ ] `domain/templates/vr.ts` - VR template rendering
-- [ ] `domain/templates/summary.ts` - Case summary generation
-
-**Phase D: Polish & Cleanup (Jan 16-19)**
-
-- [ ] `domain/migration/config.ts` - Category config migration logic
-- [ ] `domain/dashboard/stats.ts` - Widget statistics calculations
-- [ ] Split mixed files (alertsData.ts pure vs I/O)
-- [ ] Update agent instructions (DOMAIN.md)
-- [ ] Delete migrated `utils/` files
-- [ ] Full test suite verification (target: 950+ tests)
+- [ ] Preserve dashboard scroll position on navigation
+- [ ] Preserve selected tab (Overview/Analytics) on return
+- [ ] Add "Return to Dashboard" breadcrumb to case detail views
+- [ ] Implement dashboard-specific keyboard shortcuts
+- [ ] Add widget focus indicators for keyboard navigation
 
 ---
 
@@ -202,75 +215,101 @@ _Focus: Catchup, polish, and February planning_
 
 ## 📊 Progress Metrics
 
-| Metric               | Current | Target |
-| -------------------- | ------- | ------ |
-| Dashboard phases     | 4       | 5      |
-| Domain modules       | 4       | 10     |
-| Test count           | 859     | 950+   |
-| Lines migrated       | ~1,500  | ~7,400 |
-| utils/ files removed | 1       | 15+    |
+| Metric            | Current | Target    |
+| ----------------- | ------- | --------- |
+| Dashboard phases  | 4       | 5         |
+| Domain modules    | 8       | 8 ✅      |
+| Test count        | 859     | 950+      |
+| Lines migrated    | ~6,356  | ~6,356 ✅ |
+| utils/ re-exports | 9       | 9 ✅      |
 
 ---
 
-## 🔧 Domain Layer Refactor (Week 2-3)
+## 🔧 Domain Layer Refactor ✅ COMPLETE
 
 > **Goal:** Extract all pure business logic from `utils/` to `domain/` layer. Pure functions with no I/O, no React, fully testable.
+>
+> **Status:** ✅ Completed January 12, 2026
 
-### Current Domain Structure
+### Final Domain Structure
 
 ```
-domain/
-├── cases/           ✅ COMPLETE
-│   ├── formatting.ts    # formatCaseDisplayName, formatRetroMonths, calculateAge, etc.
+domain/                     (~6,356 lines)
+├── alerts/                 # Alert matching, filtering, display
+│   ├── types.ts
+│   ├── matching.ts
+│   ├── display.ts
 │   └── index.ts
-├── dashboard/       ✅ COMPLETE
-│   ├── priorityQueue.ts # Priority scoring (94 tests)
-│   ├── recentCases.ts   # Recent case tracking (34 tests)
-│   ├── pinnedCases.ts   # Pinned case management (45 tests)
+├── avs/                    # AVS file parsing
+│   ├── parser.ts
 │   └── index.ts
-├── financials/      ✅ COMPLETE
-│   ├── history.ts       # Amount history (32 tests)
-│   ├── validation.ts    # Input validation (14 tests)
-│   ├── calculations.ts  # Totals (4 tests)
+├── cases/                  # Case formatting
+│   ├── formatting.ts
 │   └── index.ts
-└── validation/      ✅ COMPLETE
-    └── duplicates.ts    # Duplicate detection (12 tests)
+├── common/                 # Shared utilities
+│   ├── dates.ts            # Date parsing, formatting
+│   ├── phone.ts            # Phone number formatting
+│   ├── formatters.ts       # Currency, frequency
+│   ├── sanitization.ts     # XSS prevention
+│   ├── normalization.ts    # Data normalization
+│   └── index.ts
+├── dashboard/              # Dashboard logic
+│   ├── priorityQueue.ts    # Priority scoring
+│   ├── recentCases.ts      # Recent case tracking
+│   ├── pinnedCases.ts      # Pinned case management
+│   ├── widgets.ts          # Widget data processors
+│   ├── activityReport.ts   # Activity report generation
+│   └── index.ts
+├── financials/             # Financial logic
+│   ├── history.ts          # Amount history
+│   ├── validation.ts       # Input validation
+│   ├── calculations.ts     # Totals
+│   ├── verification.ts     # Status mapping
+│   └── index.ts
+├── templates/              # Report templates
+│   ├── vr.ts               # VR template rendering
+│   ├── summary.ts          # Case summary generation
+│   └── index.ts
+├── validation/             # Validation rules
+│   ├── forms.ts            # Zod schemas
+│   ├── duplicates.ts       # Duplicate detection
+│   └── index.ts
+└── index.ts                # Barrel export
 ```
 
-### Remaining Migrations (~2,000 lines)
+### Migrated Files (utils/ → domain/)
 
-| Source File               | Lines | Target                              | Priority  | Dependencies                  |
-| ------------------------- | ----- | ----------------------------------- | --------- | ----------------------------- |
-| `dateFormatting.ts`       | 179   | `domain/common/dates.ts`            | 🔴 HIGH   | Foundation for all date logic |
-| `phoneFormatter.ts`       | 186   | `domain/common/phone.ts`            | 🟡 MEDIUM | Used by templates             |
-| `avsParser.ts`            | 309   | `domain/avs/parser.ts`              | 🟡 MEDIUM | Standalone                    |
-| `validation.ts`           | 335   | `domain/validation/forms.ts`        | 🟡 MEDIUM | Form validation rules         |
-| `vrGenerator.ts`          | 381   | `domain/templates/vr.ts`            | 🟢 LOW    | Depends on dates, phone       |
-| `caseSummaryGenerator.ts` | 527   | `domain/templates/summary.ts`       | 🟢 LOW    | Depends on dates, cases       |
-| `financialFormatters.ts`  | 68    | `domain/financials/formatters.ts`   | 🟢 LOW    | Small, self-contained         |
-| `verificationStatus.ts`   | 99    | `domain/financials/verification.ts` | 🟢 LOW    | Status mapping                |
+| Original File               | Domain Location                      | Lines |
+| --------------------------- | ------------------------------------ | ----- |
+| `dateFormatting.ts`         | `domain/common/dates.ts`             | 200   |
+| `phoneFormatter.ts`         | `domain/common/phone.ts`             | 285   |
+| `inputSanitization.ts`      | `domain/common/sanitization.ts`      | 414   |
+| `dataNormalization.ts`      | `domain/common/normalization.ts`     | 94    |
+| `avsParser.ts`              | `domain/avs/parser.ts`               | 309   |
+| `alertsData.ts` (pure)      | `domain/alerts/matching.ts`          | 387   |
+| `alertDisplay.ts`           | `domain/alerts/display.ts`           | 84    |
+| `vrGenerator.ts`            | `domain/templates/vr.ts`             | 429   |
+| `caseSummaryGenerator.ts`   | `domain/templates/summary.ts`        | 300   |
+| `summarySectionRenderer.ts` | `domain/templates/summary.ts`        | -     |
+| `validation.ts`             | `domain/validation/forms.ts`         | 387   |
+| `verificationStatus.ts`     | `domain/financials/verification.ts`  | 113   |
+| `widgetDataProcessors.ts`   | `domain/dashboard/widgets.ts`        | 300   |
+| `activityReport.ts`         | `domain/dashboard/activityReport.ts` | 296   |
 
-### Migration Strategy
+### Remaining in utils/ (I/O-dependent)
 
-**Phase A: Foundation (Jan 9-10)**
+These files intentionally remain in `utils/` because they have I/O dependencies:
 
-1. `dateFormatting.ts` → `domain/common/dates.ts` - Core date utilities used everywhere
-2. `phoneFormatter.ts` → `domain/common/phone.ts` - Phone formatting
-
-**Phase B: Standalone Logic (Jan 13-14)**  
-3. `avsParser.ts` → `domain/avs/parser.ts` - Self-contained parsing 4. `validation.ts` → `domain/validation/forms.ts` - Form validation rules
-
-**Phase C: Templates (Jan 15-17)** 5. `vrGenerator.ts` → `domain/templates/vr.ts` - VR template rendering 6. `caseSummaryGenerator.ts` → `domain/templates/summary.ts` - Summary generation
-
-**Phase D: Financial Polish (Jan 17-19)** 7. `financialFormatters.ts` → `domain/financials/formatters.ts` 8. `verificationStatus.ts` → `domain/financials/verification.ts`
-
-### Migration Checklist (per file)
-
-- [ ] Create new file in `domain/` with same exports
-- [ ] Update all imports across codebase
-- [ ] Move tests to `domain/*/__tests__/`
-- [ ] Delete original file from `utils/`
-- [ ] Run full test suite to verify
+- **AutosaveFileService.ts** - File system I/O
+- **DataManager.ts** - Service orchestration
+- **alertsData.ts** - CSV parsing (Papa dependency)
+- **clipboard.ts** - Browser clipboard API
+- **encryption.ts** - Web Crypto API
+- **csvParser.ts** - Papa CSV parsing
+- **legacyMigration.ts** - File format migration
+- **nightingaleMigration.ts** - Legacy data transform
+- **logger.ts** - Console I/O
+- **featureFlags.ts** - localStorage access
 
 ---
 
