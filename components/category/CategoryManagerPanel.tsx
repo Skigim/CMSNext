@@ -328,12 +328,16 @@ function SimpleCategoryEditor({
   } = useCategoryEditorState<SimpleItem>({
     initialItems,
     onSave: async (cleaned) => {
+      console.log('[SimpleCategoryEditor] onSave called', { categoryKey, cleaned });
       await onSave(cleaned.map(item => item.name));
+      console.log('[SimpleCategoryEditor] onSave completed', { categoryKey });
     },
     isGloballyLoading,
     createItem: (name) => ({ name }),
     cleanItem: (item) => ({ name: item.name.trim() }),
   });
+
+  console.log('[SimpleCategoryEditor] State:', { categoryKey, hasChanges, disableSave, isSaving, itemCount: items.length });
 
   const resetDraft = () => setDraft("");
 
@@ -675,7 +679,9 @@ export function CategoryManagerPanel({
 
   const handleSave = useCallback(
     async (key: CategoryKey, values: string[]) => {
+      console.log('[CategoryManagerPanel] handleSave called', { key, values });
       await updateCategory(key, values);
+      console.log('[CategoryManagerPanel] handleSave completed', { key });
     },
     [updateCategory],
   );
