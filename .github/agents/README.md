@@ -15,11 +15,13 @@ When dispatching a subagent, reference the relevant instruction file:
 | File                         | Domain           | Use For                                       |
 | ---------------------------- | ---------------- | --------------------------------------------- |
 | [NextAgent.md](NextAgent.md) | General          | Full project context, architecture overview   |
+| [DOMAIN.md](DOMAIN.md)       | Domain layer     | Pure business logic, no I/O                   |
 | [SERVICES.md](SERVICES.md)   | Data layer       | DataManager, services, CRUD operations        |
 | [STORAGE.md](STORAGE.md)     | Storage layer    | File System Access API, autosave, persistence |
 | [UI.md](UI.md)               | React components | shadcn/ui, Tailwind, accessibility            |
 | [HOOKS.md](HOOKS.md)         | Custom hooks     | State management, service integration         |
 | [TESTING.md](TESTING.md)     | Unit tests       | Vitest, RTL, mocking patterns                 |
+| [AUDIT.md](AUDIT.md)         | Quality          | Security, a11y, performance audits            |
 | [TEMPLATES.md](TEMPLATES.md) | Delegation       | Ready-to-use prompt templates                 |
 
 ## Instruction File Structure

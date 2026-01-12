@@ -9,6 +9,7 @@ This file provides high-level architecture guidance. Specialized instructions ar
 | Code Generation | `copilot-implementation.md` | Services, hooks, data flow      |
 | Code Review     | `copilot-frontend.md`       | UI components, shadcn, Tailwind |
 | Test Generation | `copilot-testing.md`        | Vitest, RTL, mocking patterns   |
+| Auditing        | `agents/AUDIT.md`           | Security, a11y, performance     |
 
 ## General Approach
 

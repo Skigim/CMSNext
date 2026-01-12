@@ -123,12 +123,6 @@
 - [ ] Preserve dashboard scroll position on navigation
 - [ ] Preserve selected tab (Overview/Analytics) on return
 - [ ] Add "Return to Dashboard" breadcrumb to case detail views
-- [ ] Implement dashboard-specific keyboard shortcuts:
-  - `D` - Focus Today's Work widget
-  - `R` - Focus Recent Cases widget
-  - `P` - Focus Pinned Cases widget
-  - `Tab` - Cycle through widgets
-- [ ] Add widget focus indicators for keyboard navigation
 - [ ] Write E2E tests for navigation preservation
 
 ---
