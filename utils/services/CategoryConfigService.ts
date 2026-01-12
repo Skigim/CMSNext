@@ -211,23 +211,29 @@ export class CategoryConfigService {
    * // Only caseTypes updated, other config preserved
    */
   async updateCategoryValues(key: CategoryKey, values: string[]): Promise<CategoryConfig> {
+    console.log("[CategoryConfigService] updateCategoryValues called", { key, values });
     const sanitizedValues = sanitizeCategoryValues(values);
+    console.log("[CategoryConfigService] sanitized", { sanitizedValues });
     if (sanitizedValues.length === 0) {
       throw new Error("At least one option is required");
     }
 
     const currentConfig = await this.getCategoryConfig();
+    console.log("[CategoryConfigService] currentConfig", { currentConfig });
     const nextConfig: CategoryConfig = {
       ...currentConfig,
       [key]: sanitizedValues,
     };
+    console.log("[CategoryConfigService] nextConfig", { nextConfig });
 
     logger.info("Category values updated", {
       key,
       valueCount: sanitizedValues.length,
     });
 
-    return this.updateCategoryConfig(nextConfig);
+    const result = await this.updateCategoryConfig(nextConfig);
+    console.log("[CategoryConfigService] updateCategoryConfig returned", { result });
+    return result;
   }
 
   /**
