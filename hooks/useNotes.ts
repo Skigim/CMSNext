@@ -3,6 +3,7 @@ import { toast } from 'sonner';
 import { Note, NewNoteData, StoredNote } from '@/types/case';
 import { useDataManagerSafe } from '@/contexts/DataManagerContext';
 import { useDataSync } from './useDataSync';
+import { guardDataManager } from '@/utils/guardUtils';
 
 /**
  * Form state for note editor.
@@ -200,10 +201,7 @@ export function useNotes(caseId?: string): UseNotesReturn {
   }, []);
 
   const addNote = useCallback(async (targetCaseId: string, noteData: NewNoteData): Promise<StoredNote | null> => {
-    if (!dataManager) {
-      toast.error('Data storage is not available');
-      return null;
-    }
+    if (!guardDataManager(dataManager)) return null;
     try {
       const note = await dataManager.addNote(targetCaseId, noteData);
       if (caseId === targetCaseId) await refreshNotes();
@@ -216,10 +214,7 @@ export function useNotes(caseId?: string): UseNotesReturn {
   }, [dataManager, caseId, refreshNotes]);
 
   const updateNote = useCallback(async (targetCaseId: string, noteId: string, noteData: NewNoteData): Promise<StoredNote | null> => {
-    if (!dataManager) {
-      toast.error('Data storage is not available');
-      return null;
-    }
+    if (!guardDataManager(dataManager)) return null;
     try {
       const note = await dataManager.updateNote(targetCaseId, noteId, noteData);
       if (caseId === targetCaseId) await refreshNotes();
@@ -266,10 +261,7 @@ export function useNotes(caseId?: string): UseNotesReturn {
    * Delete a note by ID
    */
   const deleteNote = useCallback(async (targetCaseId: string, noteId: string): Promise<void> => {
-    if (!dataManager) {
-      toast.error('Data storage is not available. Please connect to a folder first.');
-      return;
-    }
+    if (!guardDataManager(dataManager)) return;
 
     try {
       await dataManager.deleteNote(targetCaseId, noteId);
