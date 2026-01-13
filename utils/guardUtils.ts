@@ -1,23 +1,24 @@
+import { toast } from "sonner";
 import type { DataManager } from "./DataManager";
-import type { NormalizedFileData } from "./services/FileStorageService";
+
+const NOT_AVAILABLE_MSG = "Data storage is not available";
 
 /**
- * Asserts that the DataManager instance (and its loaded data) are available.
- * Throws with a contextual message when unavailable.
+ * Guard function for hook operations that need DataManager.
+ * Returns true if ready, false otherwise. Shows toast and sets error on failure.
+ * 
+ * @param manager - The DataManager instance (may be null)
+ * @param setError - Optional error state setter
+ * @returns true if DataManager is available, false otherwise
  */
-export function assertDataManagerReady(
+export function guardDataManager(
   manager: DataManager | null,
-  context: string
-): asserts manager is DataManager & { data: NormalizedFileData } {
-  const hasData = (manager as { data?: NormalizedFileData } | null)?.data;
-  if (!manager || !hasData) {
-    throw new Error(`${context}: DataManager data is not available`);
+  setError?: (error: string | null) => void
+): manager is DataManager {
+  if (!manager) {
+    setError?.(NOT_AVAILABLE_MSG);
+    toast.error(NOT_AVAILABLE_MSG);
+    return false;
   }
-}
-
-/**
- * Returns a zero-arg guard that closes over the provided manager/context.
- */
-export function createDataManagerGuard(manager: DataManager | null, context: string) {
-  return () => assertDataManagerReady(manager, context);
+  return true;
 }

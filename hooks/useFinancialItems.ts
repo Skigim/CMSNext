@@ -2,8 +2,8 @@ import { useState, useCallback } from 'react';
 import { AmountHistoryEntry, FinancialItem, NewFinancialItemData, CaseCategory, StoredFinancialItem } from '@/types/case';
 import { useDataManagerSafe } from '@/contexts/DataManagerContext';
 import { useDataSync } from './useDataSync';
-import { toast } from 'sonner';
 import { withToast } from '@/utils/withToast';
+import { guardDataManager } from '@/utils/guardUtils';
 
 /**
  * Return type for useFinancialItems hook.
@@ -236,12 +236,7 @@ export function useFinancialItems(caseId?: string): UseFinancialItemsReturn {
     category: CaseCategory,
     data: NewFinancialItemData
   ): Promise<StoredFinancialItem | null> => {
-    if (!dataManager) {
-      const errorMsg = 'Data storage is not available';
-      setError(errorMsg);
-      toast.error(errorMsg);
-      return null;
-    }
+    if (!guardDataManager(dataManager, setError)) return null;
 
     try {
       const newItem = await withToast(
@@ -272,12 +267,7 @@ export function useFinancialItems(caseId?: string): UseFinancialItemsReturn {
     itemId: string,
     data: Partial<NewFinancialItemData>
   ): Promise<StoredFinancialItem | null> => {
-    if (!dataManager) {
-      const errorMsg = 'Data storage is not available';
-      setError(errorMsg);
-      toast.error(errorMsg);
-      return null;
-    }
+    if (!guardDataManager(dataManager, setError)) return null;
 
     try {
       const updatedItem = await withToast(
@@ -307,12 +297,7 @@ export function useFinancialItems(caseId?: string): UseFinancialItemsReturn {
     category: CaseCategory,
     itemId: string
   ): Promise<boolean> => {
-    if (!dataManager) {
-      const errorMsg = 'Data storage is not available';
-      setError(errorMsg);
-      toast.error(errorMsg);
-      return false;
-    }
+    if (!guardDataManager(dataManager, setError)) return false;
 
     try {
       await withToast(
@@ -343,12 +328,7 @@ export function useFinancialItems(caseId?: string): UseFinancialItemsReturn {
     itemId: string,
     entry: Omit<AmountHistoryEntry, "id" | "createdAt">
   ): Promise<StoredFinancialItem | null> => {
-    if (!dataManager || !caseId) {
-      const errorMsg = 'Data storage is not available';
-      setError(errorMsg);
-      toast.error(errorMsg);
-      return null;
-    }
+    if (!guardDataManager(dataManager, setError) || !caseId) return null;
 
     try {
       const updatedItem = await withToast(
@@ -378,12 +358,7 @@ export function useFinancialItems(caseId?: string): UseFinancialItemsReturn {
     entryId: string,
     updates: Partial<Omit<AmountHistoryEntry, "id" | "createdAt">>
   ): Promise<StoredFinancialItem | null> => {
-    if (!dataManager || !caseId) {
-      const errorMsg = 'Data storage is not available';
-      setError(errorMsg);
-      toast.error(errorMsg);
-      return null;
-    }
+    if (!guardDataManager(dataManager, setError) || !caseId) return null;
 
     try {
       const updatedItem = await withToast(
@@ -412,12 +387,7 @@ export function useFinancialItems(caseId?: string): UseFinancialItemsReturn {
     itemId: string,
     entryId: string
   ): Promise<StoredFinancialItem | null> => {
-    if (!dataManager || !caseId) {
-      const errorMsg = 'Data storage is not available';
-      setError(errorMsg);
-      toast.error(errorMsg);
-      return null;
-    }
+    if (!guardDataManager(dataManager, setError) || !caseId) return null;
 
     try {
       const updatedItem = await withToast(
