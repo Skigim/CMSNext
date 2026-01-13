@@ -42,3 +42,16 @@ export {
   getAlertClientName,
   getAlertMcn,
 } from "./display";
+
+// Priority weight calculation
+export {
+  STATUS_WEIGHT_MAX,
+  STATUS_WEIGHT_MIN,
+  ALERT_WEIGHT_MAX,
+  ALERT_WEIGHT_MIN,
+  calculateDecayFactor,
+  calculatePositionalWeight,
+  getAlertTypeWeight,
+  getStatusWeight,
+  previewWeightDistribution,
+} from "./priority";

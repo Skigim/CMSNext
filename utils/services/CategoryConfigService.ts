@@ -6,6 +6,54 @@ import type { FileStorageService, NormalizedFileData } from "./FileStorageServic
 const logger = createLogger("CategoryConfigService");
 
 // ============================================================================
+// Sort Order Utilities
+// ============================================================================
+
+/**
+ * Assign sortOrder to statuses based on array position.
+ * Preserves existing sortOrder if present, otherwise assigns based on index.
+ */
+function assignStatusSortOrder(statuses: StatusConfig[]): StatusConfig[] {
+  return statuses.map((status, index) => ({
+    ...status,
+    sortOrder: status.sortOrder ?? index,
+  }));
+}
+
+/**
+ * Sort statuses by sortOrder (ascending), with undefined sortOrder last.
+ */
+function sortStatusesBySortOrder(statuses: StatusConfig[]): StatusConfig[] {
+  return [...statuses].sort((a, b) => {
+    const orderA = a.sortOrder ?? Number.MAX_SAFE_INTEGER;
+    const orderB = b.sortOrder ?? Number.MAX_SAFE_INTEGER;
+    return orderA - orderB;
+  });
+}
+
+/**
+ * Assign sortOrder to alert types based on array position.
+ * Preserves existing sortOrder if present, otherwise assigns based on index.
+ */
+function assignAlertTypeSortOrder(alertTypes: AlertTypeConfig[]): AlertTypeConfig[] {
+  return alertTypes.map((alertType, index) => ({
+    ...alertType,
+    sortOrder: alertType.sortOrder ?? index,
+  }));
+}
+
+/**
+ * Sort alert types by sortOrder (ascending), with undefined sortOrder last.
+ */
+function sortAlertTypesBySortOrder(alertTypes: AlertTypeConfig[]): AlertTypeConfig[] {
+  return [...alertTypes].sort((a, b) => {
+    const orderA = a.sortOrder ?? Number.MAX_SAFE_INTEGER;
+    const orderB = b.sortOrder ?? Number.MAX_SAFE_INTEGER;
+    return orderA - orderB;
+  });
+}
+
+// ============================================================================
 // Type Definitions
 // ============================================================================
 
@@ -121,6 +169,7 @@ export class CategoryConfigService {
    * 
    * Returns configuration merged with defaults to ensure all required
    * fields are present. If no configuration exists, returns defaults.
+   * Statuses and alert types are sorted by sortOrder for consistent ordering.
    * 
    * @returns {Promise<CategoryConfig>} Complete category configuration
    * 
@@ -131,7 +180,14 @@ export class CategoryConfigService {
    */
   async getCategoryConfig(): Promise<CategoryConfig> {
     const data = await this.fileStorage.readFileData();
-    return data ? mergeCategoryConfig(data.categoryConfig) : mergeCategoryConfig();
+    const config = data ? mergeCategoryConfig(data.categoryConfig) : mergeCategoryConfig();
+    
+    // Sort by sortOrder for consistent ordering
+    return {
+      ...config,
+      caseStatuses: sortStatusesBySortOrder(config.caseStatuses),
+      alertTypes: sortAlertTypesBySortOrder(config.alertTypes),
+    };
   }
 
   /**
@@ -256,14 +312,17 @@ export class CategoryConfigService {
       throw new Error("At least one status is required");
     }
 
+    // Assign sortOrder based on array position
+    const withSortOrder = assignStatusSortOrder(sanitized);
+
     const currentConfig = await this.getCategoryConfig();
     const nextConfig: CategoryConfig = {
       ...currentConfig,
-      caseStatuses: sanitized,
+      caseStatuses: withSortOrder,
     };
 
-    logger.info("Case statuses updated with colors", {
-      statusCount: sanitized.length,
+    logger.info("Case statuses updated with colors and sort order", {
+      statusCount: withSortOrder.length,
     });
 
     return this.updateCategoryConfig(nextConfig);
@@ -291,14 +350,17 @@ export class CategoryConfigService {
   async updateAlertTypes(alertTypes: AlertTypeConfig[]): Promise<CategoryConfig> {
     const sanitized = sanitizeAlertTypeConfigs(alertTypes);
 
+    // Assign sortOrder based on array position
+    const withSortOrder = assignAlertTypeSortOrder(sanitized);
+
     const currentConfig = await this.getCategoryConfig();
     const nextConfig: CategoryConfig = {
       ...currentConfig,
-      alertTypes: sanitized,
+      alertTypes: withSortOrder,
     };
 
-    logger.info("Alert types updated with colors", {
-      alertTypeCount: sanitized.length,
+    logger.info("Alert types updated with colors and sort order", {
+      alertTypeCount: withSortOrder.length,
     });
 
     return this.updateCategoryConfig(nextConfig);

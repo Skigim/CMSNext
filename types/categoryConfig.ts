@@ -23,6 +23,10 @@ export interface StatusConfig {
   colorSlot: ColorSlot;
   /** When true, transitioning to this status counts toward "cases processed" metrics */
   countsAsCompleted?: boolean;
+  /** When true, cases with this status receive priority weight in the queue */
+  priorityEnabled?: boolean;
+  /** Sort order for priority weight calculation. Lower numbers = higher priority weight */
+  sortOrder?: number;
 }
 
 /**
@@ -31,6 +35,8 @@ export interface StatusConfig {
 export interface AlertTypeConfig {
   name: string;
   colorSlot: ColorSlot;
+  /** Sort order for priority weight calculation. Lower numbers = higher priority weight */
+  sortOrder?: number;
 }
 
 /**
@@ -240,6 +246,8 @@ const dedupeStatuses = (statuses: StatusConfig[]): StatusConfig[] => {
       name: name.trim(), 
       colorSlot: isValidColorSlot(status.colorSlot) ? status.colorSlot : 'slate',
       countsAsCompleted: status.countsAsCompleted ?? false,
+      priorityEnabled: status.priorityEnabled ?? false,
+      sortOrder: status.sortOrder,
     });
   }
   return result;
@@ -258,7 +266,8 @@ const dedupeAlertTypes = (alertTypes: AlertTypeConfig[]): AlertTypeConfig[] => {
     seen.add(key);
     result.push({ 
       name: name.trim(), 
-      colorSlot: isValidColorSlot(alertType.colorSlot) ? alertType.colorSlot : 'amber' 
+      colorSlot: isValidColorSlot(alertType.colorSlot) ? alertType.colorSlot : 'amber',
+      sortOrder: alertType.sortOrder,
     });
   }
   return result;

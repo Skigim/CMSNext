@@ -5,34 +5,55 @@
  * Used by Today's Work widget to surface cases requiring immediate attention.
  * 
  * Priority Criteria (in order of weight):
- * 1. Intake status cases (5000 points)
- * 2. AVS Day 5 alerts (500 points each)
- * 3. Verification Due / VR Due alerts (400 points each)
- * 4. Mail Rcvd on Closed alerts (400 points each)
- * 5. Other unresolved alerts (100 points each)
- * 6. Application age (30 points per day since application)
- * 7. Alert age (50 points per day since oldest alert)
- * 8. Priority flags (75 points)
- * 9. Recent modifications (50 points)
+ * 1. Status-based priority (configurable, e.g., Intake = 5000 points)
+ * 2. Alert type priority (configurable via sortOrder, exponential decay from 500 to 50)
+ * 3. Application age (30 points per day since application)
+ * 4. Alert age (50 points per day since oldest alert)
+ * 5. Priority flags (75 points)
+ * 6. Recent modifications (50 points)
+ * 
+ * Weight calculation uses dynamic exponential decay based on array position,
+ * allowing users to reorder alert types and statuses to control priority.
  */
 
 import type { StoredCase } from '../../types/case';
+import type { AlertTypeConfig, StatusConfig } from '../../types/categoryConfig';
 import type { AlertWithMatch } from '../../utils/alertsData';
 import { parseLocalDate } from '../common';
+import {
+  getAlertTypeWeight,
+  getStatusWeight,
+  ALERT_WEIGHT_MIN,
+} from '../alerts/priority';
 
 // ============================================================================
 // Priority Scoring Constants
 // ============================================================================
 
-/** Points for cases with Intake status */
+/**
+ * @deprecated Use dynamic weight calculation via getStatusWeight instead.
+ * Kept for backward compatibility when no config is provided.
+ */
 export const SCORE_INTAKE = 5000;
-/** Points per AVS Day 5 alert */
+/**
+ * @deprecated Use dynamic weight calculation via getAlertTypeWeight instead.
+ * Kept for backward compatibility when no config is provided.
+ */
 export const SCORE_AVS_DAY_5 = 500;
-/** Points per Verification Due alert */
+/**
+ * @deprecated Use dynamic weight calculation via getAlertTypeWeight instead.
+ * Kept for backward compatibility when no config is provided.
+ */
 export const SCORE_VERIFICATION_DUE = 400;
-/** Points per Mail Rcvd on Closed alert */
+/**
+ * @deprecated Use dynamic weight calculation via getAlertTypeWeight instead.
+ * Kept for backward compatibility when no config is provided.
+ */
 export const SCORE_MAIL_RCVD_CLOSED = 400;
-/** Points per other unresolved alert */
+/**
+ * @deprecated Use dynamic weight calculation via getAlertTypeWeight instead.
+ * Kept for backward compatibility when no config is provided.
+ */
 export const SCORE_OTHER_ALERT = 100;
 /** Points per day since application date */
 export const SCORE_PER_DAY_SINCE_APPLICATION = 30;
@@ -42,6 +63,22 @@ export const SCORE_PER_DAY_ALERT_AGE = 50;
 export const SCORE_PRIORITY_FLAG = 75;
 /** Points for cases modified in last 24 hours */
 export const SCORE_RECENT_MODIFICATION = 50;
+
+// ============================================================================
+// Priority Configuration
+// ============================================================================
+
+/**
+ * Configuration for priority score calculation.
+ * When provided, uses dynamic weight calculation based on array order.
+ * When omitted, falls back to legacy hardcoded constants.
+ */
+export interface PriorityConfig {
+  /** Ordered alert types for weight calculation (first = highest priority) */
+  alertTypes?: AlertTypeConfig[];
+  /** Status configurations with priority flags */
+  caseStatuses?: StatusConfig[];
+}
 
 /**
  * Case with priority scoring information
@@ -93,6 +130,7 @@ export function isMailRcvdClosedAlert(description: string | undefined): boolean 
 
 /**
  * Classify an alert by priority type.
+ * @deprecated Used for legacy scoring. New system uses alert type name matching.
  */
 export function classifyAlert(alert: AlertWithMatch): AlertPriorityType {
   const desc = alert.description;
@@ -104,8 +142,26 @@ export function classifyAlert(alert: AlertWithMatch): AlertPriorityType {
 
 /**
  * Get score for an alert based on its type.
+ * 
+ * When alertTypes config is provided, uses dynamic weight calculation
+ * based on the alert's alertType field and its position in the ordered array.
+ * When no config is provided, falls back to legacy classification-based scoring.
+ * 
+ * @param alert - The alert to score
+ * @param alertTypes - Optional ordered alert type configurations
+ * @returns Priority score for this alert
  */
-export function getAlertScore(alert: AlertWithMatch): number {
+export function getAlertScore(
+  alert: AlertWithMatch,
+  alertTypes?: AlertTypeConfig[]
+): number {
+  // If config provided, use dynamic weight calculation
+  if (alertTypes && alertTypes.length > 0) {
+    // Use alertType field for matching (populated from CSV import)
+    return getAlertTypeWeight(alert.alertType, alertTypes);
+  }
+
+  // Legacy fallback: use classification-based scoring
   const type = classifyAlert(alert);
   switch (type) {
     case 'avs-day-5': return SCORE_AVS_DAY_5;
@@ -200,35 +256,47 @@ export function getDaysSinceOldestAlert(
  * Calculate priority score for a case.
  * Higher score = higher priority.
  * 
- * Scoring formula:
- * - 5000 points if case status is "Intake"
- * - 500 points per AVS Day 5 alert
- * - 400 points per Verification Due / VR Due alert
- * - 400 points per Mail Rcvd on Closed alert
- * - 100 points per other unresolved alert
+ * Scoring formula (when config provided):
+ * - Status weight based on priorityEnabled statuses and their sortOrder
+ * - Alert weight based on alertType and sortOrder (exponential decay)
  * - 30 points per day since application date
  * - 50 points per day since oldest alert (uses only oldest to avoid inflating multi-alert cases)
  * - 75 points if marked as priority
  * - 50 points if modified in last 24 hours
  * 
+ * Legacy scoring (when no config provided):
+ * - 5000 points if case status is "Intake"
+ * - 500 points per AVS Day 5 alert
+ * - 400 points per Verification Due / VR Due alert
+ * - 400 points per Mail Rcvd on Closed alert
+ * - 100 points per other unresolved alert
+ * 
  * @param caseData - The case to score
  * @param caseAlerts - Alerts associated with this case (unresolved only)
+ * @param config - Optional priority configuration for dynamic weight calculation
  * @returns Priority score (0 or higher)
  */
 export function calculatePriorityScore(
   caseData: StoredCase,
-  caseAlerts: AlertWithMatch[]
+  caseAlerts: AlertWithMatch[],
+  config?: PriorityConfig
 ): number {
   let score = 0;
 
-  // Intake status
-  if (caseData.status?.toLowerCase() === 'intake') {
-    score += SCORE_INTAKE;
+  // Status-based scoring
+  if (config?.caseStatuses && config.caseStatuses.length > 0) {
+    // Use dynamic weight calculation from config
+    score += getStatusWeight(caseData.status, config.caseStatuses);
+  } else {
+    // Legacy fallback: hardcoded Intake check
+    if (caseData.status?.toLowerCase() === 'intake') {
+      score += SCORE_INTAKE;
+    }
   }
 
   // Score each alert based on type
   for (const alert of caseAlerts) {
-    score += getAlertScore(alert);
+    score += getAlertScore(alert, config?.alertTypes);
   }
 
   // Points per day since application date
@@ -259,48 +327,87 @@ export function calculatePriorityScore(
  * Get human-readable reason for why a case is prioritized.
  * Returns the most important reason (highest priority criterion met).
  * 
+ * When config is provided, uses dynamic weight lookup to determine
+ * the highest-priority contributing factor.
+ * 
  * @param caseData - The case to analyze
  * @param caseAlerts - Alerts associated with this case (unresolved only)
+ * @param config - Optional priority configuration for dynamic weight lookup
  * @returns Human-readable priority reason
  */
 export function getPriorityReason(
   caseData: StoredCase,
-  caseAlerts: AlertWithMatch[]
+  caseAlerts: AlertWithMatch[],
+  config?: PriorityConfig
 ): string {
-  // Check Intake status first (highest priority)
-  if (caseData.status?.toLowerCase() === 'intake') {
-    return 'Intake - needs processing';
+  // Check status-based priority first (highest weight)
+  if (config?.caseStatuses && config.caseStatuses.length > 0) {
+    const statusWeight = getStatusWeight(caseData.status, config.caseStatuses);
+    if (statusWeight > 0) {
+      return `${caseData.status} - needs processing`;
+    }
+  } else {
+    // Legacy fallback: hardcoded Intake check
+    if (caseData.status?.toLowerCase() === 'intake') {
+      return 'Intake - needs processing';
+    }
   }
 
-  // Check for high-priority alert types
-  const avsDay5Count = caseAlerts.filter(a => isAvsDay5Alert(a.description)).length;
-  const verificationDueCount = caseAlerts.filter(a => isVerificationDueAlert(a.description)).length;
-  const mailRcvdCount = caseAlerts.filter(a => isMailRcvdClosedAlert(a.description)).length;
-
-  if (avsDay5Count > 0) {
-    return avsDay5Count === 1 
-      ? 'AVS Day 5 alert' 
-      : `${avsDay5Count} AVS Day 5 alerts`;
-  }
-
-  if (verificationDueCount > 0) {
-    return verificationDueCount === 1 
-      ? 'Verification due' 
-      : `${verificationDueCount} verification alerts`;
-  }
-
-  if (mailRcvdCount > 0) {
-    return mailRcvdCount === 1 
-      ? 'Mail received on closed case' 
-      : `${mailRcvdCount} mail rcvd alerts`;
-  }
-
-  // Check other unresolved alerts
-  if (caseAlerts.length > 0) {
-    const alertCount = caseAlerts.length;
-    return alertCount === 1
+  // Check for alerts - find highest priority alert type
+  if (caseAlerts.length > 0 && config?.alertTypes && config.alertTypes.length > 0) {
+    // Sort alerts by weight (highest first) and return reason for top one
+    const sortedAlerts = [...caseAlerts].sort((a, b) => {
+      const weightA = getAlertTypeWeight(a.alertType, config.alertTypes!);
+      const weightB = getAlertTypeWeight(b.alertType, config.alertTypes!);
+      return weightB - weightA;
+    });
+    
+    const topAlert = sortedAlerts[0];
+    const topWeight = getAlertTypeWeight(topAlert.alertType, config.alertTypes);
+    
+    // Only show specific alert type if it has significant weight
+    if (topWeight > ALERT_WEIGHT_MIN) {
+      const sameTypeCount = caseAlerts.filter(a => a.alertType === topAlert.alertType).length;
+      if (sameTypeCount === 1) {
+        return topAlert.alertType || 'Alert requires attention';
+      }
+      return `${sameTypeCount} ${topAlert.alertType || 'alerts'}`;
+    }
+    
+    // Generic alert count for low-priority alerts
+    return caseAlerts.length === 1
       ? '1 unresolved alert'
-      : `${alertCount} unresolved alerts`;
+      : `${caseAlerts.length} unresolved alerts`;
+  }
+  
+  // Legacy fallback: check for high-priority alert types by description
+  if (caseAlerts.length > 0) {
+    const avsDay5Count = caseAlerts.filter(a => isAvsDay5Alert(a.description)).length;
+    const verificationDueCount = caseAlerts.filter(a => isVerificationDueAlert(a.description)).length;
+    const mailRcvdCount = caseAlerts.filter(a => isMailRcvdClosedAlert(a.description)).length;
+
+    if (avsDay5Count > 0) {
+      return avsDay5Count === 1 
+        ? 'AVS Day 5 alert' 
+        : `${avsDay5Count} AVS Day 5 alerts`;
+    }
+
+    if (verificationDueCount > 0) {
+      return verificationDueCount === 1 
+        ? 'Verification due' 
+        : `${verificationDueCount} verification alerts`;
+    }
+
+    if (mailRcvdCount > 0) {
+      return mailRcvdCount === 1 
+        ? 'Mail received on closed case' 
+        : `${mailRcvdCount} mail rcvd alerts`;
+    }
+
+    // Other unresolved alerts
+    return caseAlerts.length === 1
+      ? '1 unresolved alert'
+      : `${caseAlerts.length} unresolved alerts`;
   }
 
   // Check priority flag
@@ -358,12 +465,14 @@ export function isExcludedStatus(status: string | undefined): boolean {
  * @param cases - All cases to analyze
  * @param alertsIndex - Alerts index with mapping by case ID
  * @param limit - Maximum number of cases to return (default: 10)
+ * @param config - Optional priority configuration for dynamic weight calculation
  * @returns Sorted array of priority cases (highest score first)
  */
 export function getPriorityCases(
   cases: StoredCase[],
   alertsIndex: { alertsByCaseId: Map<string, AlertWithMatch[]> },
-  limit: number = 10
+  limit: number = 10,
+  config?: PriorityConfig
 ): PriorityCase[] {
   // Calculate scores for all cases (excluding terminal statuses)
   const scoredCases: PriorityCase[] = cases
@@ -377,8 +486,8 @@ export function getPriorityCases(
           alert.status?.toLowerCase() !== 'resolved' && !alert.resolvedAt
       );
 
-      const score = calculatePriorityScore(caseData, unresolvedAlerts);
-      const reason = getPriorityReason(caseData, unresolvedAlerts);
+      const score = calculatePriorityScore(caseData, unresolvedAlerts, config);
+      const reason = getPriorityReason(caseData, unresolvedAlerts, config);
 
       return {
         case: caseData,
