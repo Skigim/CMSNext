@@ -374,9 +374,12 @@ export function SortableSummaryTemplates({ isGloballyLoading }: SortableSummaryT
     const newOrder = arrayMove(orderedIds, oldIndex, newIndex);
     setLocalOrder(newOrder);
 
-    // Persist the new order - local state will be cleared automatically
-    // by the useEffect once context data matches the optimistic order
-    await reorderTemplates(newOrder);
+    // Persist the new order - rollback on failure
+    const success = await reorderTemplates(newOrder);
+    if (!success) {
+      // Rollback to previous order on failure
+      setLocalOrder(orderedIds);
+    }
   }, [orderedIds, reorderTemplates]);
 
   const handleToggleExpand = useCallback((id: string) => {

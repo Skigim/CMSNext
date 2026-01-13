@@ -38,6 +38,8 @@ export interface AVSImportState {
   updatedCount: number;
   /** Any error that occurred during import */
   error: string | null;
+  /** Error when fetching existing items for duplicate detection failed */
+  fetchError: string | null;
 }
 
 interface UseAVSImportFlowParams {
@@ -122,6 +124,7 @@ export function useAVSImportFlow({
     importedCount: 0,
     updatedCount: 0,
     error: null,
+    fetchError: null,
   });
 
   const openImportModal = useCallback(() => {
@@ -133,6 +136,7 @@ export function useAVSImportFlow({
       importedCount: 0,
       updatedCount: 0,
       error: null,
+      fetchError: null,
     }));
   }, []);
 
@@ -144,21 +148,56 @@ export function useAVSImportFlow({
       parsedAccounts: [],
       isImporting: false,
       error: null,
+      fetchError: null,
     }));
   }, []);
 
   const handleInputChange = useCallback(async (input: string) => {
-    const parsed = parseAVSInput(input);
+    // Large input threshold (100KB) - use scheduling for performance
+    const LARGE_INPUT_THRESHOLD = 100 * 1024;
+    const isLargeInput = input.length > LARGE_INPUT_THRESHOLD;
+    
+    if (isLargeInput) {
+      // Set a temporary processing state for large inputs
+      setImportState(prev => ({
+        ...prev,
+        rawInput: input,
+        isImporting: true, // Reuse as "processing" indicator
+      }));
+    }
+
+    // Wrap parsing in a promise that uses requestIdleCallback for large inputs
+    const parseWithScheduling = (): Promise<ParsedAVSAccount[]> => {
+      return new Promise((resolve) => {
+        const doParse = () => resolve(parseAVSInput(input));
+        
+        if (isLargeInput && 'requestIdleCallback' in window) {
+          requestIdleCallback(doParse, { timeout: 2000 });
+        } else {
+          doParse();
+        }
+      });
+    };
+
+    const parsed = await parseWithScheduling();
     
     // Fetch existing resources to detect duplicates
     let existingResources: StoredFinancialItem[] = [];
+    let fetchError: string | null = null;
+    
     if (selectedCase && dataManager) {
       try {
         const allItems = await dataManager.getFinancialItemsForCase(selectedCase.id);
         existingResources = allItems.filter(item => item.category === 'resources');
       } catch (e) {
+        const errorMsg = extractErrorMessage(e);
         logger.error('Failed to fetch existing items for duplicate detection', {
-          error: extractErrorMessage(e),
+          error: errorMsg,
+        });
+        fetchError = 'Could not verify existing accounts. Duplicate detection is unavailable. Importing may create duplicates.';
+        toast.warning('Duplicate detection unavailable', {
+          description: 'Could not load existing accounts. Proceed with caution to avoid duplicates.',
+          duration: 5000,
         });
       }
     }
@@ -178,7 +217,9 @@ export function useAVSImportFlow({
       ...prev,
       rawInput: input,
       parsedAccounts: accountsWithMeta,
+      isImporting: false,
       error: null,
+      fetchError,
     }));
   }, [selectedCase, dataManager]);
 

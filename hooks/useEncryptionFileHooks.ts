@@ -187,26 +187,38 @@ export function useEncryptionFileHooks(): UseEncryptionFileHooksResult {
         // If we don't have a key yet, derive from pending password and file salt
         if (!key) {
           // Use the context method to derive key from file salt
-          key = await encryption.deriveKeyFromFileSalt(data.salt);
+          const result = await encryption.deriveKeyFromFileSalt(data.salt);
           
-          if (!key) {
-            const error = "Failed to derive key - no password available";
+          if (!result.success || !result.data) {
+            let error: string;
+            switch (result.error) {
+              case 'missing_password':
+                error = "No password available. Please log in again.";
+                break;
+              case 'system_error':
+                error = `Encryption system error: ${result.message || 'Unknown error'}`;
+                break;
+              default:
+                error = "Failed to derive encryption key";
+            }
             logger.error(error);
             lastErrorRef.current = error;
             throw new Error(error);
           }
+          
+          key = result.data;
         }
 
-        const result = await decryptWithKey<NormalizedFileData>(data, key);
+        const decryptResult = await decryptWithKey<NormalizedFileData>(data, key);
 
-        if (!result.success || !result.data) {
-          const error = result.error || "Decryption failed";
+        if (!decryptResult.success || !decryptResult.data) {
+          const error = decryptResult.error || "Decryption failed";
           lastErrorRef.current = error;
           logger.error("Decryption failed", { error });
           throw new Error(error);
         }
 
-        return result.data;
+        return decryptResult.data;
       },
 
       /**

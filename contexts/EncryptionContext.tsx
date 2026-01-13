@@ -52,6 +52,22 @@ import { createLogger } from "../utils/logger";
 
 const logger = createLogger("EncryptionContext");
 
+/** Error codes for encryption operations */
+export type EncryptionErrorCode = 
+  | 'missing_password'
+  | 'wrong_password' 
+  | 'corrupt_salt'
+  | 'system_error';
+
+/** Result type for encryption operations */
+export interface EncryptionResult<T> {
+  success: boolean;
+  data?: T;
+  error?: EncryptionErrorCode;
+  /** Only included for system_error type */
+  message?: string;
+}
+
 /**
  * Encryption context value type - provides encryption state and operations.
  * 
@@ -69,7 +85,7 @@ interface EncryptionContextValue extends EncryptionState {
   /** Generate new salt and derive key for new encrypted file */
   initializeEncryption: (password: string) => Promise<{ salt: string; key: CryptoKey } | null>;
   /** Derive key from existing file salt using pending password */
-  deriveKeyFromFileSalt: (salt: string) => Promise<CryptoKey | null>;
+  deriveKeyFromFileSalt: (salt: string) => Promise<EncryptionResult<CryptoKey>>;
   /** Clear all credentials and logout user */
   clearCredentials: () => void;
   /** Temporary password storage for key derivation (cleared after use) */
@@ -291,13 +307,14 @@ export function EncryptionProvider({ children }: EncryptionProviderProps) {
   /**
    * Derive key from file salt using pending password.
    * Called when reading encrypted file discovers salt.
+   * Returns typed result with error codes for better error handling.
    */
   const deriveKeyFromFileSalt = useCallback(
-    async (salt: string): Promise<CryptoKey | null> => {
+    async (salt: string): Promise<EncryptionResult<CryptoKey>> => {
       const password = pendingPasswordRef.current;
       if (!password) {
         logger.error("No pending password for key derivation");
-        return null;
+        return { success: false, error: 'missing_password' };
       }
 
       try {
@@ -318,12 +335,14 @@ export function EncryptionProvider({ children }: EncryptionProviderProps) {
         pendingPasswordRef.current = null;
 
         logger.info("Key derived from file salt");
-        return key;
+        return { success: true, data: key };
       } catch (error) {
-        logger.error("Failed to derive key from file salt", {
-          error: error instanceof Error ? error.message : String(error),
-        });
-        return null;
+        const message = error instanceof Error ? error.message : String(error);
+        logger.error("Failed to derive key from file salt", { error: message });
+        
+        // Key derivation failures are typically system errors
+        // Wrong password manifests as decryption failure, not derivation failure
+        return { success: false, error: 'system_error', message };
       }
     },
     []

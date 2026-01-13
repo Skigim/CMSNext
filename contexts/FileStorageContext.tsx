@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, useEffect, useCallback, useReducer, ReactNode, useMemo, useRef } from 'react';
+import { toast } from 'sonner';
 import AutosaveFileService from '@/utils/AutosaveFileService';
 import { FileStorageService } from '@/utils/services/FileStorageService';
 import { setFileService } from '@/utils/fileServiceProvider';
@@ -266,15 +267,27 @@ export function FileStorageProvider({
     }
 
     const callback = (data: unknown) => {
+      const errors: string[] = [];
+      
       dataLoadHandlersRef.current.forEach(handler => {
         try {
           handler(data);
         } catch (error) {
+          const errorMessage = error instanceof Error ? error.message : String(error);
           logger.error('Data load handler threw an error', {
-            error: error instanceof Error ? error.message : String(error),
+            error: errorMessage,
           });
+          errors.push(errorMessage);
         }
       });
+      
+      // Surface aggregated errors to user
+      if (errors.length > 0) {
+        toast.warning('Some data failed to load', {
+          description: `${errors.length} module(s) encountered errors. Check console for details.`,
+          duration: 6000,
+        });
+      }
     };
 
     service.setDataLoadCallback(callback);

@@ -203,6 +203,117 @@ export class ActivityLogService {
   }
 
   /**
+   * Archive old activity log entries beyond a cutoff date.
+   * 
+   * Moves entries older than the cutoff to a separate archive.
+   * Returns both the current (recent) entries and archived entries.
+   * The main data file is updated to only contain recent entries.
+   * 
+   * Recommended: Call with 1 year cutoff during file load for auto-archiving.
+   * Archive file naming: `activityLog-archive-{year}.json`
+   * 
+   * @param cutoffDate - Entries older than this date will be archived
+   * @returns Object with recentEntries, archivedEntries arrays, and count
+   * 
+   * @example
+   * const oneYearAgo = new Date();
+   * oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
+   * const result = await activityLogService.archiveOldEntries(oneYearAgo);
+   * console.log(`Archived ${result.archivedCount} old entries`);
+   */
+  async archiveOldEntries(cutoffDate: Date): Promise<{
+    recentEntries: CaseActivityEntry[];
+    archivedEntries: CaseActivityEntry[];
+    archivedCount: number;
+  }> {
+    const currentData = await this.fileStorage.readFileData();
+    if (!currentData) {
+      return { recentEntries: [], archivedEntries: [], archivedCount: 0 };
+    }
+
+    const { activityLog } = currentData;
+    if (!activityLog || activityLog.length === 0) {
+      return { recentEntries: [], archivedEntries: [], archivedCount: 0 };
+    }
+
+    const cutoffTime = cutoffDate.getTime();
+    const recentEntries: CaseActivityEntry[] = [];
+    const archivedEntries: CaseActivityEntry[] = [];
+
+    for (const entry of activityLog) {
+      try {
+        const entryTime = new Date(entry.timestamp).getTime();
+        if (entryTime >= cutoffTime) {
+          recentEntries.push(entry);
+        } else {
+          archivedEntries.push(entry);
+        }
+      } catch (error) {
+        // Keep entries with invalid timestamps in recent to avoid data loss
+        logger.warn("Activity entry has invalid timestamp, keeping in recent", {
+          entryId: entry.id,
+          timestamp: entry.timestamp,
+          error: extractErrorMessage(error),
+        });
+        recentEntries.push(entry);
+      }
+    }
+
+    if (archivedEntries.length === 0) {
+      return { recentEntries: activityLog, archivedEntries: [], archivedCount: 0 };
+    }
+
+    // Update the main data file with only recent entries
+    const updatedData: NormalizedFileData = {
+      ...currentData,
+      activityLog: recentEntries,
+    };
+
+    await this.fileStorage.writeNormalizedData(updatedData);
+
+    logger.info("Archived old activity log entries", {
+      recentCount: recentEntries.length,
+      archivedCount: archivedEntries.length,
+      cutoffDate: cutoffDate.toISOString(),
+    });
+
+    return {
+      recentEntries,
+      archivedEntries,
+      archivedCount: archivedEntries.length,
+    };
+  }
+
+  /**
+   * Get activity log with a maximum entry limit.
+   * 
+   * Returns the most recent entries up to the specified limit.
+   * Useful for pagination or limiting memory usage with large logs.
+   * 
+   * @param maxEntries - Maximum number of entries to return
+   * @returns Array of most recent activity entries (already sorted newest first)
+   * 
+   * @example
+   * const recent100 = await activityLogService.getActivityLogWithLimit(100);
+   */
+  async getActivityLogWithLimit(maxEntries: number): Promise<CaseActivityEntry[]> {
+    const entries = await this.getActivityLog();
+    return entries.slice(0, maxEntries);
+  }
+
+  /**
+   * Get the total count of activity log entries.
+   * 
+   * Useful for displaying pagination info or size warnings.
+   * 
+   * @returns Total number of activity log entries
+   */
+  async getActivityLogCount(): Promise<number> {
+    const entries = await this.getActivityLog();
+    return entries.length;
+  }
+
+  /**
    * Create a status change activity log entry.
    * 
    * Factory method that creates a properly typed status change entry
