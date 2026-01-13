@@ -22,3 +22,22 @@ export function guardDataManager(
   }
   return true;
 }
+
+/**
+ * Factory function that creates a throwing guard for DataManager.
+ * Use in hooks that need to call the guard in try/catch blocks.
+ * 
+ * @param manager - The DataManager instance (may be null)
+ * @param _context - Optional context name for debugging (unused, kept for API compatibility)
+ * @returns A function that throws if DataManager is not available
+ */
+export function createDataManagerGuard(
+  manager: DataManager | null,
+  _context?: string
+): () => void {
+  return () => {
+    if (!manager) {
+      throw new Error(NOT_AVAILABLE_MSG);
+    }
+  };
+}
