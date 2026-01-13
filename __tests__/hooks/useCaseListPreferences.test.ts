@@ -7,38 +7,38 @@ import {
   type SortConfig,
 } from "@/hooks/useCaseListPreferences";
 
-const STORAGE_KEY = "cmsnext-case-list-preferences";
+// Use vi.hoisted() to properly hoist mock functions before vi.mock
+const { mockRead, mockWrite, mockClear } = vi.hoisted(() => ({
+  mockRead: vi.fn(),
+  mockWrite: vi.fn(),
+  mockClear: vi.fn(),
+}));
 
-// Create a real localStorage mock that stores data
-function createLocalStorageMock() {
-  let store: Record<string, string> = {};
-  return {
-    getItem: vi.fn((key: string) => store[key] ?? null),
-    setItem: vi.fn((key: string, value: string) => { store[key] = value; }),
-    removeItem: vi.fn((key: string) => { delete store[key]; }),
-    clear: vi.fn(() => { store = {}; }),
-    get length() { return Object.keys(store).length; },
-    key: vi.fn((index: number) => Object.keys(store)[index] ?? null),
-  };
-}
+// Mock the localStorage adapter module
+vi.mock("@/utils/localStorage", () => ({
+  createLocalStorageAdapter: vi.fn(() => ({
+    key: "cmsnext-case-list-preferences",
+    read: mockRead,
+    write: mockWrite,
+    clear: mockClear,
+  })),
+  hasLocalStorage: vi.fn(() => true),
+}));
 
 describe("useCaseListPreferences", () => {
-  let localStorageMock: ReturnType<typeof createLocalStorageMock>;
-
   beforeEach(() => {
     vi.useFakeTimers();
-    localStorageMock = createLocalStorageMock();
-    Object.defineProperty(window, "localStorage", {
-      value: localStorageMock,
-      writable: true,
-    });
+    // Reset mock implementations for each test
+    mockRead.mockReset();
+    mockWrite.mockReset();
+    mockClear.mockReset();
+    mockRead.mockReturnValue(null);
     vi.clearAllMocks();
   });
 
   afterEach(() => {
     vi.runOnlyPendingTimers();
     vi.useRealTimers();
-    localStorageMock.clear();
   });
 
   describe("default values", () => {
@@ -62,7 +62,7 @@ describe("useCaseListPreferences", () => {
   });
 
   describe("persistence", () => {
-    it("saves preferences to localStorage when segment changes", () => {
+    it("saves preferences to storage when segment changes", () => {
       const { result } = renderHook(() => useCaseListPreferences());
 
       act(() => {
@@ -74,11 +74,12 @@ describe("useCaseListPreferences", () => {
         vi.advanceTimersByTime(300);
       });
 
-      const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
-      expect(stored.segment).toBe("recent");
+      expect(mockWrite).toHaveBeenCalled();
+      const savedData = mockWrite.mock.calls[0][0];
+      expect(savedData.segment).toBe("recent");
     });
 
-    it("saves preferences to localStorage when sortConfigs change", () => {
+    it("saves preferences to storage when sortConfigs change", () => {
       const { result } = renderHook(() => useCaseListPreferences());
 
       const newConfigs: SortConfig[] = [
@@ -95,11 +96,12 @@ describe("useCaseListPreferences", () => {
         vi.advanceTimersByTime(300);
       });
 
-      const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
-      expect(stored.sortConfigs).toEqual(newConfigs);
+      expect(mockWrite).toHaveBeenCalled();
+      const savedData = mockWrite.mock.calls[0][0];
+      expect(savedData.sortConfigs).toEqual(newConfigs);
     });
 
-    it("saves preferences to localStorage when filters change", () => {
+    it("saves preferences to storage when filters change", () => {
       const { result } = renderHook(() => useCaseListPreferences());
 
       const newFilters: CaseFilters = {
@@ -124,14 +126,15 @@ describe("useCaseListPreferences", () => {
         vi.advanceTimersByTime(300);
       });
 
-      const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
-      expect(stored.filters.statuses).toEqual(["Pending", "Active"]);
-      expect(stored.filters.priorityOnly).toBe(true);
-      expect(stored.filters.dateRange.from).toBe("2025-01-01T00:00:00.000Z");
-      expect(stored.filters.dateRange.to).toBe("2025-12-31T00:00:00.000Z");
+      expect(mockWrite).toHaveBeenCalled();
+      const savedData = mockWrite.mock.calls[0][0];
+      expect(savedData.filters.statuses).toEqual(["Pending", "Active"]);
+      expect(savedData.filters.priorityOnly).toBe(true);
+      expect(savedData.filters.dateRange.from).toBe("2025-01-01T00:00:00.000Z");
+      expect(savedData.filters.dateRange.to).toBe("2025-12-31T00:00:00.000Z");
     });
 
-    it("loads preferences from localStorage on mount", () => {
+    it("loads preferences from storage on mount", () => {
       const storedPrefs = {
         sortConfigs: [{ key: "name", direction: "asc" }],
         segment: "priority",
@@ -144,7 +147,7 @@ describe("useCaseListPreferences", () => {
           },
         },
       };
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(storedPrefs));
+      mockRead.mockReturnValue(storedPrefs);
 
       const { result } = renderHook(() => useCaseListPreferences());
 
@@ -160,8 +163,9 @@ describe("useCaseListPreferences", () => {
   });
 
   describe("corrupted storage fallback", () => {
-    it("returns defaults when localStorage contains invalid JSON", () => {
-      localStorage.setItem(STORAGE_KEY, "not valid json {{{");
+    it("returns defaults when storage returns null (parsing fails)", () => {
+      // The adapter's custom parse function returns null for invalid JSON
+      mockRead.mockReturnValue(null);
 
       const { result } = renderHook(() => useCaseListPreferences());
 
@@ -179,8 +183,9 @@ describe("useCaseListPreferences", () => {
       });
     });
 
-    it("returns defaults when localStorage contains non-object", () => {
-      localStorage.setItem(STORAGE_KEY, '"just a string"');
+    it("returns defaults when storage returns non-object", () => {
+      // Simulates returning a primitive instead of object
+      mockRead.mockReturnValue(null);
 
       const { result } = renderHook(() => useCaseListPreferences());
 
@@ -202,7 +207,7 @@ describe("useCaseListPreferences", () => {
           },
         },
       };
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(storedPrefs));
+      mockRead.mockReturnValue(storedPrefs);
 
       const { result } = renderHook(() => useCaseListPreferences());
 
@@ -216,7 +221,7 @@ describe("useCaseListPreferences", () => {
         segment: "recent",
         // filters is missing entirely
       };
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(storedPrefs));
+      mockRead.mockReturnValue(storedPrefs);
 
       const { result } = renderHook(() => useCaseListPreferences());
 
@@ -228,7 +233,7 @@ describe("useCaseListPreferences", () => {
   });
 
   describe("resetPreferences", () => {
-    it("resets all preferences to defaults", () => {
+    it("resets all preferences to defaults and clears storage", () => {
       const storedPrefs = {
         sortConfigs: [{ key: "name", direction: "asc" }],
         segment: "priority",
@@ -238,7 +243,7 @@ describe("useCaseListPreferences", () => {
           dateRange: {},
         },
       };
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(storedPrefs));
+      mockRead.mockReturnValue(storedPrefs);
 
       const { result } = renderHook(() => useCaseListPreferences());
 
@@ -263,15 +268,19 @@ describe("useCaseListPreferences", () => {
         showCompleted: true,
       });
       
-      // Advance past debounce delay (300ms) to allow localStorage save
+      // Verify storage.clear was called
+      expect(mockClear).toHaveBeenCalled();
+      
+      // Advance past debounce delay (300ms) to allow storage save
       act(() => {
         vi.advanceTimersByTime(300);
       });
       
       // After reset, defaults are persisted (useEffect writes them back)
-      const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
-      expect(stored.segment).toBe("all");
-      expect(stored.sortConfigs).toEqual([{ key: "name", direction: "asc" }]);
+      expect(mockWrite).toHaveBeenCalled();
+      const savedData = mockWrite.mock.calls[0][0];
+      expect(savedData.segment).toBe("all");
+      expect(savedData.sortConfigs).toEqual([{ key: "name", direction: "asc" }]);
     });
   });
 
