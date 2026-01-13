@@ -13,17 +13,11 @@
  * 
  * ## Architecture Note
  * 
- * This manages UI state flags separate from case data. Storage preferences
- * (UI view mode, etc.) use localStorage intentionally - those are separate
- * from case data managed by File Storage API. This does NOT violate "no
- * localStorage for case data" guideline since UI preferences must persist.
+ * All flags are session-only (memory-only) and reset on page refresh.
+ * No persistence to localStorage - these are transient UI states.
  * 
  * @module fileStorageFlags
  */
-
-const PERSISTENT_FLAG_KEYS = [] as const;
-type PersistentFlagKey = (typeof PERSISTENT_FLAG_KEYS)[number];
-type PersistentFlagsSnapshot = Pick<FileStorageFlags, PersistentFlagKey>;
 
 export interface FileStorageFlags {
   dataBaseline?: boolean;
@@ -35,21 +29,12 @@ export interface FileStorageFlags {
 /**
  * Manages file storage state flags.
  * 
- * ARCHITECTURE NOTE: This intentionally uses localStorage for UI preferences
- * (e.g., caseListView) which are separate from case data managed by FileStorageAPI.
- * Session flags (dataBaseline, inConnectionFlow) are memory-only and do not persist.
- * This does NOT violate the "no localStorage for case data" guideline - those
- * preferences would be lost if stored in the file system and need browser-level persistence.
+ * All flags are session-only (in-memory) and do not persist across page reloads.
+ * This is intentional - these flags track transient connection/setup state.
  */
 export class FileStorageFlagsManager {
-  private static readonly STORAGE_KEY = "cmsnext.fileStorageFlags";
-
   private flags: FileStorageFlags = {};
   private initialized = false;
-
-  constructor() {
-    this.loadPersistentFlags();
-  }
 
   getFileStorageFlags(): Readonly<FileStorageFlags> {
     return this.flags;
@@ -57,28 +42,16 @@ export class FileStorageFlagsManager {
 
   updateFileStorageFlags(updates: Partial<FileStorageFlags>): void {
     Object.assign(this.flags, updates);
-    this.persistPersistentFlags();
   }
 
   clearFileStorageFlags(...keys: (keyof FileStorageFlags)[]): void {
     keys.forEach(key => {
       delete this.flags[key];
     });
-    this.persistPersistentFlags();
   }
 
   resetFileStorageFlags(): void {
-    const preservedEntries: Partial<FileStorageFlags> = {};
-
-    PERSISTENT_FLAG_KEYS.forEach(key => {
-      const value = this.flags[key];
-      if (value !== undefined) {
-        preservedEntries[key] = value;
-      }
-    });
-
-    this.flags = { ...preservedEntries };
-    this.persistPersistentFlags();
+    this.flags = {};
     this.initialized = false;
   }
 
@@ -89,63 +62,6 @@ export class FileStorageFlagsManager {
 
     this.initialized = true;
     return true;
-  }
-
-  private loadPersistentFlags(): void {
-    if (typeof window === "undefined" || !window.localStorage) {
-      return;
-    }
-
-    try {
-      const stored = window.localStorage.getItem(FileStorageFlagsManager.STORAGE_KEY);
-      if (!stored) {
-        return;
-      }
-
-      const parsed = JSON.parse(stored) as Partial<FileStorageFlags> | null;
-      if (!parsed || typeof parsed !== "object") {
-        return;
-      }
-
-      PERSISTENT_FLAG_KEYS.forEach(key => {
-        if (key in parsed) {
-          const value = parsed[key];
-          if (value !== undefined) {
-            this.flags[key] = value as PersistentFlagsSnapshot[typeof key];
-          }
-        }
-      });
-    } catch (error) {
-      console.warn("Failed to load persistent file storage flags", error);
-    }
-  }
-
-  private persistPersistentFlags(): void {
-    if (typeof window === "undefined" || !window.localStorage) {
-      return;
-    }
-
-    try {
-      const snapshot: Partial<PersistentFlagsSnapshot> = {};
-      PERSISTENT_FLAG_KEYS.forEach(key => {
-        const value = this.flags[key];
-        if (value !== undefined) {
-          snapshot[key] = value;
-        }
-      });
-
-      if (Object.keys(snapshot).length === 0) {
-        window.localStorage.removeItem(FileStorageFlagsManager.STORAGE_KEY);
-        return;
-      }
-
-      window.localStorage.setItem(
-        FileStorageFlagsManager.STORAGE_KEY,
-        JSON.stringify(snapshot),
-      );
-    } catch (error) {
-      console.warn("Failed to persist file storage flags", error);
-    }
   }
 }
 

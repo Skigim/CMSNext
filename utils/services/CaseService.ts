@@ -1,6 +1,5 @@
 import { v4 as uuidv4 } from 'uuid';
 import type { NewPersonData, NewCaseRecordData, CaseStatus } from '../../types/case';
-import type { CaseActivityEntry } from '../../types/activityLog';
 import type { CategoryConfig } from '../../types/categoryConfig';
 import type { FileStorageService, NormalizedFileData, StoredCase } from './FileStorageService';
 import { ActivityLogService } from './ActivityLogService';
@@ -473,17 +472,17 @@ export class CaseService {
    * console.log(`Status changed to ${updated.status}`);
    */
   async updateCaseStatus(caseId: string, status: CaseStatus): Promise<StoredCase> {
-    const currentData = await this.fileStorage.readFileData();
-    if (!currentData) {
+    const caseData = await this.fileStorage.readFileData();
+    if (!caseData) {
       throw new Error("Failed to read current data");
     }
 
-    const caseIndex = currentData.cases.findIndex(c => c.id === caseId);
+    const caseIndex = caseData.cases.findIndex(c => c.id === caseId);
     if (caseIndex === -1) {
       throw new Error("Case not found");
     }
 
-    const targetCase = currentData.cases[caseIndex];
+    const targetCase = caseData.cases[caseIndex];
     const currentStatus = targetCase.caseRecord?.status ?? targetCase.status;
     
     if (currentStatus === status) {
@@ -503,31 +502,27 @@ export class CaseService {
     };
 
     // Update cases array
-    const casesWithChanges = currentData.cases.map((c, index) =>
+    const casesWithChanges = caseData.cases.map((c, index) =>
       index === caseIndex ? caseWithUpdatedStatus : c,
     );
 
     const casesWithTouchedTimestamps = this.fileStorage.touchCaseTimestamps(casesWithChanges, [caseId]);
 
-    // Create activity log entry
-    const activityEntry: CaseActivityEntry = {
-      id: uuidv4(),
-      timestamp,
+    // Create activity log entry using factory method
+    const activityEntry = ActivityLogService.createStatusChangeEntry({
       caseId: targetCase.id,
       caseName: formatCaseDisplayName(targetCase),
       caseMcn: targetCase.caseRecord?.mcn ?? targetCase.mcn ?? null,
-      type: "status-change",
-      payload: {
-        fromStatus: currentStatus,
-        toStatus: status,
-      },
-    };
+      fromStatus: currentStatus,
+      toStatus: status,
+      timestamp,
+    });
 
     // Write updated data
     const updatedData: NormalizedFileData = {
-      ...currentData,
+      ...caseData,
       cases: casesWithTouchedTimestamps,
-      activityLog: ActivityLogService.mergeActivityEntries(currentData.activityLog, [activityEntry]),
+      activityLog: ActivityLogService.mergeActivityEntries(caseData.activityLog, [activityEntry]),
     };
 
     await this.fileStorage.writeNormalizedData(updatedData);

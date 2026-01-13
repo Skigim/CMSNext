@@ -1,4 +1,5 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
+import { createLocalStorageAdapter } from '../utils/localStorage';
 
 /**
  * Theme identifier type - one of four available themes.
@@ -66,6 +67,21 @@ interface ThemeContextType {
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
 /**
+ * LocalStorage adapter for theme persistence.
+ * Uses the standardized key naming convention: cmsnext-<feature>
+ */
+const themeStorage = createLocalStorageAdapter<Theme | null>('cmsnext-theme', null, {
+  // Parse with validation - reject invalid theme values
+  parse: (s: string) => {
+    const value = JSON.parse(s) as Theme | null;
+    if (value && themeOptions.some(opt => opt.id === value)) {
+      return value;
+    }
+    return null;
+  },
+});
+
+/**
  * ThemeProvider - Manages application theme selection and persistence.
  * 
  * Provides theme switching with automatic persistence to localStorage.
@@ -122,14 +138,14 @@ const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
  */
 export function ThemeProvider({ children }: { children: ReactNode }) {
   const [theme, setTheme] = useState<Theme>(() => {
-    // Check localStorage first, then system preference
+    // Check localStorage first using adapter
+    const stored = themeStorage.read();
+    if (stored) {
+      return stored;
+    }
+    
+    // Check system preference
     if (typeof window !== 'undefined') {
-      const stored = localStorage.getItem('theme') as Theme;
-      if (stored && themeOptions.some(opt => opt.id === stored)) {
-        return stored;
-      }
-      
-      // Check system preference
       const mediaQuery = window.matchMedia?.('(prefers-color-scheme: dark)');
       if (mediaQuery?.matches) {
         return 'dark'; // Default to neutral dark
@@ -166,8 +182,8 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
       root.classList.add('dark');
     }
     
-    // Store in localStorage
-    localStorage.setItem('theme', theme);
+    // Store in localStorage using adapter
+    themeStorage.write(theme);
   }, [theme]);
 
   const isDarkTheme = theme === 'dark' || theme === 'sterling';

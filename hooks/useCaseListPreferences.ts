@@ -1,5 +1,7 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import type { CaseStatus } from "@/types/case";
+import { createLocalStorageAdapter } from "@/utils/localStorage";
+import { useDebouncedSave } from "./useDebouncedSave";
 
 export type CaseListSortKey = "updated" | "name" | "mcn" | "application" | "status" | "caseType" | "alerts" | "score";
 export type CaseListSortDirection = "asc" | "desc";
@@ -57,8 +59,6 @@ const DEFAULT_FILTERS: CaseFilters = {
   showCompleted: true,
 };
 
-const STORAGE_KEY = "cmsnext-case-list-preferences";
-
 /** Serialized format for localStorage (Dates become ISO strings) */
 interface SerializedPreferences {
   sortConfigs: SortConfig[];
@@ -77,111 +77,67 @@ interface SerializedPreferences {
   };
 }
 
-function loadPreferences(): {
+function parsePreferences(raw: string): SerializedPreferences | null {
+  try {
+    const parsed = JSON.parse(raw) as SerializedPreferences | null;
+    if (!parsed || typeof parsed !== "object") {
+      return null;
+    }
+    return parsed;
+  } catch {
+    return null;
+  }
+}
+
+function validateAndTransform(parsed: SerializedPreferences | null): {
   sortConfigs: SortConfig[];
   segment: CaseListSegment;
   filters: CaseFilters;
 } | null {
-  if (typeof window === "undefined" || !window.localStorage) {
-    return null;
+  if (!parsed) return null;
+
+  // Validate sortConfigs
+  const sortConfigs = Array.isArray(parsed.sortConfigs) && parsed.sortConfigs.length > 0
+    ? parsed.sortConfigs
+    : [{ key: DEFAULT_SORT_KEY, direction: DEFAULT_SORT_DIRECTION }];
+
+  // Validate segment
+  const segment = ["all", "recent", "priority", "alerts"].includes(parsed.segment)
+    ? parsed.segment
+    : DEFAULT_SEGMENT;
+
+  // Parse filters with Date reconstruction
+  const filters: CaseFilters = {
+    statuses: Array.isArray(parsed.filters?.statuses) ? parsed.filters.statuses : [],
+    excludeStatuses: Array.isArray(parsed.filters?.excludeStatuses) ? parsed.filters.excludeStatuses : [],
+    priorityOnly: Boolean(parsed.filters?.priorityOnly),
+    excludePriority: Boolean(parsed.filters?.excludePriority),
+    dateRange: {
+      from: parsed.filters?.dateRange?.from ? new Date(parsed.filters.dateRange.from) : undefined,
+      to: parsed.filters?.dateRange?.to ? new Date(parsed.filters.dateRange.to) : undefined,
+    },
+    alertDescription: typeof parsed.filters?.alertDescription === "string" 
+      ? parsed.filters.alertDescription 
+      : "all",
+    showCompleted: parsed.filters?.showCompleted !== undefined 
+      ? Boolean(parsed.filters.showCompleted)
+      : true, // Default to showing completed cases
+  };
+
+  // Validate parsed dates (check for Invalid Date)
+  if (filters.dateRange.from && isNaN(filters.dateRange.from.getTime())) {
+    filters.dateRange.from = undefined;
+  }
+  if (filters.dateRange.to && isNaN(filters.dateRange.to.getTime())) {
+    filters.dateRange.to = undefined;
   }
 
-  try {
-    const stored = window.localStorage.getItem(STORAGE_KEY);
-    if (!stored) {
-      return null;
-    }
-
-    const parsed = JSON.parse(stored) as SerializedPreferences | null;
-    if (!parsed || typeof parsed !== "object") {
-      return null;
-    }
-
-    // Validate sortConfigs
-    const sortConfigs = Array.isArray(parsed.sortConfigs) && parsed.sortConfigs.length > 0
-      ? parsed.sortConfigs
-      : [{ key: DEFAULT_SORT_KEY, direction: DEFAULT_SORT_DIRECTION }];
-
-    // Validate segment
-    const segment = ["all", "recent", "priority", "alerts"].includes(parsed.segment)
-      ? parsed.segment
-      : DEFAULT_SEGMENT;
-
-    // Parse filters with Date reconstruction
-    const filters: CaseFilters = {
-      statuses: Array.isArray(parsed.filters?.statuses) ? parsed.filters.statuses : [],
-      excludeStatuses: Array.isArray(parsed.filters?.excludeStatuses) ? parsed.filters.excludeStatuses : [],
-      priorityOnly: Boolean(parsed.filters?.priorityOnly),
-      excludePriority: Boolean(parsed.filters?.excludePriority),
-      dateRange: {
-        from: parsed.filters?.dateRange?.from ? new Date(parsed.filters.dateRange.from) : undefined,
-        to: parsed.filters?.dateRange?.to ? new Date(parsed.filters.dateRange.to) : undefined,
-      },
-      alertDescription: typeof parsed.filters?.alertDescription === "string" 
-        ? parsed.filters.alertDescription 
-        : "all",
-      showCompleted: parsed.filters?.showCompleted !== undefined 
-        ? Boolean(parsed.filters.showCompleted)
-        : true, // Default to showing completed cases
-    };
-
-    // Validate parsed dates (check for Invalid Date)
-    if (filters.dateRange.from && isNaN(filters.dateRange.from.getTime())) {
-      filters.dateRange.from = undefined;
-    }
-    if (filters.dateRange.to && isNaN(filters.dateRange.to.getTime())) {
-      filters.dateRange.to = undefined;
-    }
-
-    return { sortConfigs, segment, filters };
-  } catch (error) {
-    console.warn("Failed to load case list preferences", error);
-    return null;
-  }
+  return { sortConfigs, segment, filters };
 }
 
-function savePreferences(
-  sortConfigs: SortConfig[],
-  segment: CaseListSegment,
-  filters: CaseFilters,
-): void {
-  if (typeof window === "undefined" || !window.localStorage) {
-    return;
-  }
-
-  try {
-    const serialized: SerializedPreferences = {
-      sortConfigs,
-      segment,
-      filters: {
-        statuses: filters.statuses,
-        excludeStatuses: filters.excludeStatuses,
-        priorityOnly: filters.priorityOnly,
-        excludePriority: filters.excludePriority,
-        dateRange: {
-          from: filters.dateRange.from?.toISOString(),
-          to: filters.dateRange.to?.toISOString(),
-        },
-        alertDescription: filters.alertDescription,
-      },
-    };
-
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(serialized));
-  } catch (error) {
-    console.warn("Failed to save case list preferences", error);
-  }
-}
-
-function clearPreferences(): void {
-  if (typeof window === "undefined" || !window.localStorage) {
-    return;
-  }
-  try {
-    window.localStorage.removeItem(STORAGE_KEY);
-  } catch {
-    // Ignore errors on clear
-  }
-}
+const storage = createLocalStorageAdapter<SerializedPreferences | null>("cmsnext-case-list-preferences", null, {
+  parse: parsePreferences,
+});
 
 /**
  * Hook for managing case list view preferences (sorting, segmentation, filtering)
@@ -267,7 +223,7 @@ function clearPreferences(): void {
  */
 export function useCaseListPreferences(): CaseListPreferences {
   // Load preferences once during initial render
-  const [initialPrefs] = useState(() => loadPreferences());
+  const [initialPrefs] = useState(() => validateAndTransform(storage.read()));
   
   const [sortKey, setSortKeyState] = useState<CaseListSortKey>(
     initialPrefs?.sortConfigs[0]?.key ?? DEFAULT_SORT_KEY
@@ -285,26 +241,30 @@ export function useCaseListPreferences(): CaseListPreferences {
     initialPrefs?.filters ?? DEFAULT_FILTERS
   );
 
+  // Memoize save data for debounced persistence
+  const saveData = useMemo(() => ({
+    sortConfigs,
+    segment,
+    filters: {
+      statuses: filters.statuses,
+      excludeStatuses: filters.excludeStatuses,
+      priorityOnly: filters.priorityOnly,
+      excludePriority: filters.excludePriority,
+      dateRange: {
+        from: filters.dateRange.from?.toISOString(),
+        to: filters.dateRange.to?.toISOString(),
+      },
+      alertDescription: filters.alertDescription,
+      showCompleted: filters.showCompleted,
+    },
+  }), [sortConfigs, segment, filters]);
+
   // Debounced persistence to reduce main thread blocking
-  const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  
-  useEffect(() => {
-    // Clear any pending save
-    if (saveTimeoutRef.current) {
-      clearTimeout(saveTimeoutRef.current);
-    }
-    
-    // Debounce localStorage writes by 300ms
-    saveTimeoutRef.current = setTimeout(() => {
-      savePreferences(sortConfigs, segment, filters);
-    }, 300);
-    
-    return () => {
-      if (saveTimeoutRef.current) {
-        clearTimeout(saveTimeoutRef.current);
-      }
-    };
-  }, [sortConfigs, segment, filters]);
+  useDebouncedSave({
+    data: saveData,
+    onSave: (data) => storage.write(data),
+    delay: 300,
+  });
 
   const setSortKey = useCallback((key: CaseListSortKey) => {
     setSortKeyState(key);
@@ -357,7 +317,7 @@ export function useCaseListPreferences(): CaseListPreferences {
     setSegmentState(DEFAULT_SEGMENT);
     setSortConfigsState([{ key: DEFAULT_SORT_KEY, direction: DEFAULT_SORT_DIRECTION }]);
     setFiltersState(DEFAULT_FILTERS);
-    clearPreferences();
+    storage.clear();
   }, []);
 
   return {

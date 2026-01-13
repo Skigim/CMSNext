@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { recordPerformanceMarker } from '@/utils/telemetryInstrumentation';
-import { useFileStorageDataChange } from '@/contexts/FileStorageContext';
+import { useDataChangeCount } from './useDataSync';
 
 /**
  * Configuration options for useWidgetData hook.
@@ -95,7 +95,7 @@ export function useWidgetData<T>(
   const performanceMarkRef = useRef<string | null>(null);
   
   // Listen for file storage changes to trigger refresh
-  const dataChangeCount = useFileStorageDataChange();
+  const dataChangeCount = useDataChangeCount();
 
   /**
    * Update freshness information based on last update timestamp.

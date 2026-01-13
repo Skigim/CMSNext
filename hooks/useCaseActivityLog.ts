@@ -1,6 +1,6 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { useDataManagerSafe } from "../contexts/DataManagerContext";
-import { useFileStorageDataChange } from "../contexts/FileStorageContext";
+import { useDataSync } from "./useDataSync";
 import type { CaseActivityEntry, DailyActivityReport } from "../types/activityLog";
 import {
   generateDailyActivityReport,
@@ -121,9 +121,6 @@ export function useCaseActivityLog(): UseCaseActivityLogResult {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Get change counter to detect when file storage data updates
-  const dataChangeCounter = useFileStorageDataChange();
-
   const refreshActivityLog = useCallback(async () => {
     if (!dataManager) {
       setActivityLog([]);
@@ -155,11 +152,8 @@ export function useCaseActivityLog(): UseCaseActivityLogResult {
     }
   }, [dataManager]);
 
-  useEffect(() => {
-    refreshActivityLog().catch(err => {
-      console.error("Failed to refresh activity log", err);
-    });
-  }, [refreshActivityLog, dataChangeCounter]);
+  // Sync with file storage data changes
+  useDataSync({ onRefresh: refreshActivityLog });
 
   const groupedByDate = useMemo(() => groupActivityEntriesByDate(activityLog), [activityLog]);
 

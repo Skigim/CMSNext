@@ -84,11 +84,11 @@ interface FileStorageContextType {
   /** List all .json files in the connected folder */
   listDataFiles: () => Promise<string[]>;
   /** Read JSON from a specific file in the connected folder */
-  readNamedFile: (fileName: string) => Promise<any>;
+  readNamedFile: (fileName: string) => Promise<unknown>;
   /** Load existing data from the default case-tracker-data.json file */
-  loadExistingData: () => Promise<any>;
+  loadExistingData: () => Promise<unknown>;
   /** Load data from a specific file in the connected folder */
-  loadDataFromFile: (fileName: string) => Promise<any>;
+  loadDataFromFile: (fileName: string) => Promise<unknown>;
   /** Register callback for when data is loaded from file - returns cleanup function */
   registerDataLoadHandler: (handler: (data: unknown) => void) => () => void;
 }
@@ -393,7 +393,7 @@ export function FileStorageProvider({
     }
   }, [service]);
 
-  const readNamedFile = async (fileName: string): Promise<any> => {
+  const readNamedFile = async (fileName: string): Promise<unknown> => {
     logger.debug('readNamedFile called', { serviceAvailable: !!service, fileName });
     if (!service) return null;
     try {
@@ -412,12 +412,12 @@ export function FileStorageProvider({
     }
   };
 
-  const loadExistingData = async (): Promise<any> => {
+  const loadExistingData = async (): Promise<unknown> => {
     if (!service) return null;
     return await service.loadExistingData();
   };
 
-  const loadDataFromFile = useCallback(async (fileName: string): Promise<any> => {
+  const loadDataFromFile = useCallback(async (fileName: string): Promise<unknown> => {
     logger.debug('loadDataFromFile called', { serviceAvailable: !!service, fileName });
     if (!service) return null;
     try {

@@ -4,6 +4,7 @@ import type { CaseActivityEntry } from '../../types/activityLog';
 import type { FileStorageService, NormalizedFileData, StoredNote } from './FileStorageService';
 import { ActivityLogService } from './ActivityLogService';
 import { formatCaseDisplayName } from '../../domain/cases/formatting';
+import { readDataAndFindCase, readDataAndRequireCase } from '../serviceHelpers';
 
 /** Regular expression to detect email addresses in note content */
 const EMAIL_PATTERN = /\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/gi;
@@ -205,17 +206,9 @@ export class NotesService {
    * // Activity log entry created with sanitized content
    */
   async addNote(caseId: string, noteData: NewNoteData): Promise<StoredNote> {
-    // Read current data
-    const currentData = await this.fileStorage.readFileData();
-    if (!currentData) {
-      throw new Error('Failed to read current data');
-    }
-
-    // Find case (needed for activity log)
-    const targetCase = currentData.cases.find(c => c.id === caseId);
-    if (!targetCase) {
-      throw new Error('Case not found');
-    }
+    // Read and verify case exists
+    const { data: noteData_, targetCase } = await readDataAndFindCase(this.fileStorage, caseId);
+    const currentData = noteData_;
 
     // Create new note with foreign key
     const timestamp = new Date().toISOString();
@@ -291,17 +284,8 @@ export class NotesService {
    * });
    */
   async updateNote(caseId: string, noteId: string, noteData: NewNoteData): Promise<StoredNote> {
-    // Read current data
-    const currentData = await this.fileStorage.readFileData();
-    if (!currentData) {
-      throw new Error('Failed to read current data');
-    }
-
-    // Verify case exists first
-    const caseExists = currentData.cases.some(c => c.id === caseId);
-    if (!caseExists) {
-      throw new Error('Case not found');
-    }
+    // Read and verify case exists
+    const currentData = await readDataAndRequireCase(this.fileStorage, caseId);
 
     // Find note to update
     const noteIndex = currentData.notes.findIndex(
@@ -365,17 +349,8 @@ export class NotesService {
    * console.log('Note deleted');
    */
   async deleteNote(caseId: string, noteId: string): Promise<void> {
-    // Read current data
-    const currentData = await this.fileStorage.readFileData();
-    if (!currentData) {
-      throw new Error('Failed to read current data');
-    }
-
-    // Verify case exists first
-    const caseExists = currentData.cases.some(c => c.id === caseId);
-    if (!caseExists) {
-      throw new Error('Case not found');
-    }
+    // Read and verify case exists
+    const currentData = await readDataAndRequireCase(this.fileStorage, caseId);
 
     // Verify note exists
     const noteExists = currentData.notes.some(

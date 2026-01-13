@@ -6,6 +6,7 @@ import {
   closePreviousOngoingEntry,
   getAmountForMonth,
 } from '../../domain/financials';
+import { readDataAndRequireCase } from '../serviceHelpers';
 
 /**
  * Configuration for FinancialsService initialization.
@@ -191,17 +192,8 @@ export class FinancialsService {
     category: CaseCategory,
     itemData: Omit<FinancialItem, 'id' | 'createdAt' | 'updatedAt'>
   ): Promise<StoredFinancialItem> {
-    // Read current data
-    const currentData = await this.fileStorage.readFileData();
-    if (!currentData) {
-      throw new Error('Failed to read current data');
-    }
-
-    // Verify case exists
-    const caseExists = currentData.cases.some(c => c.id === caseId);
-    if (!caseExists) {
-      throw new Error('Case not found');
-    }
+    // Read and verify case exists
+    const financialData = await readDataAndRequireCase(this.fileStorage, caseId);
 
     // Auto-create history entry if amount provided but no history
     let amountHistory = itemData.amountHistory;
@@ -223,14 +215,14 @@ export class FinancialsService {
     };
 
     // Add to financials array
-    const updatedFinancials = [...currentData.financials, newItem];
+    const updatedFinancials = [...financialData.financials, newItem];
 
     // Touch case timestamp
-    const updatedCases = this.fileStorage.touchCaseTimestamps(currentData.cases, [caseId]);
+    const updatedCases = this.fileStorage.touchCaseTimestamps(financialData.cases, [caseId]);
 
     // Write updated data
     const updatedData: NormalizedFileData = {
-      ...currentData,
+      ...financialData,
       cases: updatedCases,
       financials: updatedFinancials,
     };
@@ -280,37 +272,28 @@ export class FinancialsService {
     itemId: string,
     updates: Partial<FinancialItem>,
   ): Promise<StoredFinancialItem> {
-    // Read current data
-    const currentData = await this.fileStorage.readFileData();
-    if (!currentData) {
-      throw new Error('Failed to read current data');
-    }
-
-    // Verify case exists first
-    const caseExists = currentData.cases.some(c => c.id === caseId);
-    if (!caseExists) {
-      throw new Error('Case not found');
-    }
+    // Read and verify case exists
+    const financialData = await readDataAndRequireCase(this.fileStorage, caseId);
 
     // Find item to update
-    const itemIndex = currentData.financials.findIndex(
+    const itemIndex = financialData.financials.findIndex(
       f => f.id === itemId && f.caseId === caseId && f.category === category
     );
     if (itemIndex === -1) {
       throw new Error('Item not found');
     }
 
-    const existingItem = currentData.financials[itemIndex];
+    const existingItem = financialData.financials[itemIndex];
 
     // Check if amount is changing and no explicit amountHistory update provided
-    const amountChanging = 
+    const isAmountChanging = 
       updates.amount !== undefined && 
       updates.amount !== existingItem.amount &&
       updates.amountHistory === undefined;
 
     let updatedAmountHistory = updates.amountHistory ?? existingItem.amountHistory;
 
-    if (amountChanging && updates.amount !== undefined) {
+    if (isAmountChanging && updates.amount !== undefined) {
       // Auto-create a history entry for the new amount
       const newEntry = createHistoryEntry(updates.amount);
       const existingHistory = existingItem.amountHistory ?? [];
@@ -334,16 +317,16 @@ export class FinancialsService {
     };
 
     // Update financials array
-    const updatedFinancials = currentData.financials.map((f, index) =>
+    const updatedFinancials = financialData.financials.map((f, index) =>
       index === itemIndex ? updatedItem : f
     );
 
     // Touch case timestamp
-    const updatedCases = this.fileStorage.touchCaseTimestamps(currentData.cases, [caseId]);
+    const updatedCases = this.fileStorage.touchCaseTimestamps(financialData.cases, [caseId]);
 
     // Write updated data
     const updatedData: NormalizedFileData = {
-      ...currentData,
+      ...financialData,
       cases: updatedCases,
       financials: updatedFinancials,
     };
@@ -378,20 +361,11 @@ export class FinancialsService {
    * console.log('Financial item deleted');
    */
   async deleteItem(caseId: string, category: CaseCategory, itemId: string): Promise<void> {
-    // Read current data
-    const currentData = await this.fileStorage.readFileData();
-    if (!currentData) {
-      throw new Error('Failed to read current data');
-    }
-
-    // Verify case exists first
-    const caseExists = currentData.cases.some(c => c.id === caseId);
-    if (!caseExists) {
-      throw new Error('Case not found');
-    }
+    // Read and verify case exists
+    const financialData = await readDataAndRequireCase(this.fileStorage, caseId);
 
     // Verify item exists
-    const itemExists = currentData.financials.some(
+    const itemExists = financialData.financials.some(
       f => f.id === itemId && f.caseId === caseId && f.category === category
     );
     if (!itemExists) {
@@ -399,16 +373,16 @@ export class FinancialsService {
     }
 
     // Remove from financials array
-    const updatedFinancials = currentData.financials.filter(
+    const updatedFinancials = financialData.financials.filter(
       f => !(f.id === itemId && f.caseId === caseId && f.category === category)
     );
 
     // Touch case timestamp
-    const updatedCases = this.fileStorage.touchCaseTimestamps(currentData.cases, [caseId]);
+    const updatedCases = this.fileStorage.touchCaseTimestamps(financialData.cases, [caseId]);
 
     // Write updated data
     const updatedData: NormalizedFileData = {
-      ...currentData,
+      ...financialData,
       cases: updatedCases,
       financials: updatedFinancials,
     };

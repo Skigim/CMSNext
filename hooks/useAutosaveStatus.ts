@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef } from "react";
 import { useFileStorage } from "@/contexts/FileStorageContext";
 import { recordAutosaveStateTransition } from "@/utils/telemetryInstrumentation";
+import { formatRelativeTime } from "@/utils/formatFreshness";
 import type {
   FileStorageLifecycleState,
   FileStoragePermissionState,
@@ -58,40 +59,6 @@ export interface AutosaveStatusSummary {
   showSpinner: boolean;
   /** UI tone/severity (success, warning, danger, info, muted) */
   tone: AutosaveTone;
-}
-
-function formatRelativeTime(timestamp: number | null): string | null {
-  if (!timestamp) {
-    return null;
-  }
-
-  const diffMs = Date.now() - timestamp;
-  const diffSeconds = Math.round(diffMs / 1000);
-
-  if (diffSeconds < 10) {
-    return "just now";
-  }
-
-  if (diffSeconds < 60) {
-    return `${diffSeconds}s ago`;
-  }
-
-  const diffMinutes = Math.round(diffSeconds / 60);
-  if (diffMinutes < 60) {
-    return `${diffMinutes}min ago`;
-  }
-
-  const diffHours = Math.round(diffMinutes / 60);
-  if (diffHours < 24) {
-    return `${diffHours}h ago`;
-  }
-
-  const diffDays = Math.round(diffHours / 24);
-  if (diffDays < 7) {
-    return `${diffDays}d ago`;
-  }
-
-  return new Date(timestamp).toLocaleDateString();
 }
 
 function describePendingWrites(pendingWrites: number): string | null {

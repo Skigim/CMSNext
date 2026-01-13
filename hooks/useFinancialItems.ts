@@ -1,7 +1,7 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback } from 'react';
 import { AmountHistoryEntry, FinancialItem, NewFinancialItemData, CaseCategory, StoredFinancialItem } from '@/types/case';
 import { useDataManagerSafe } from '@/contexts/DataManagerContext';
-import { useFileStorageDataChange } from '@/contexts/FileStorageContext';
+import { useDataSync } from './useDataSync';
 import { toast } from 'sonner';
 import { withToast } from '@/utils/withToast';
 
@@ -176,7 +176,6 @@ interface UseFinancialItemsReturn {
  */
 export function useFinancialItems(caseId?: string): UseFinancialItemsReturn {
   const dataManager = useDataManagerSafe();
-  const dataChangeCount = useFileStorageDataChange();
   
   const [items, setItems] = useState<StoredFinancialItem[]>([]);
   const [groupedItems, setGroupedItems] = useState<{
@@ -215,10 +214,8 @@ export function useFinancialItems(caseId?: string): UseFinancialItemsReturn {
     }
   }, [caseId, dataManager]);
 
-  // Initial fetch and refresh on data change
-  useEffect(() => {
-    refreshItems();
-  }, [refreshItems, dataChangeCount]);
+  // Sync with file storage data changes
+  useDataSync({ onRefresh: refreshItems });
 
   const openFinancialModal = useCallback((category: CaseCategory, _caseId: string, item?: FinancialItem) => {
     setFinancialCategory(category);

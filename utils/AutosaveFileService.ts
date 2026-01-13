@@ -1,6 +1,7 @@
 /// <reference path="../types/global.d.ts" />
 
 import { createLogger } from "./logger";
+import { createLocalStorageAdapter } from "./localStorage";
 import {
   getStoredDirectoryHandle,
   storeDirectoryHandle,
@@ -9,6 +10,12 @@ import {
 } from "./IndexedDBHandleStore";
 
 const logger = createLogger("AutosaveFileService");
+
+// Storage adapter for last save timestamp (used for multi-tab coordination)
+const lastSaveStorage = createLocalStorageAdapter<{ timestamp: number; tabId: string } | null>(
+  "cmsnext-last-save",
+  null
+);
 
 /**
  * Case Tracking Platform Combined Autosave & File Service v1.0
@@ -687,13 +694,10 @@ class AutosaveFileService {
       await writable.close();
 
       // Store last save timestamp
-      localStorage.setItem(
-        'case-tracker-last-save',
-        JSON.stringify({
-          timestamp: Date.now(),
-          tabId: this.tabId,
-        }),
-      );
+      lastSaveStorage.write({
+        timestamp: Date.now(),
+        tabId: this.tabId,
+      });
 
       if (!this.state.pendingSave) {
         this.state.lastSaveTime = Date.now();
