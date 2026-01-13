@@ -88,6 +88,10 @@ let eventBuffer: TelemetryEvent[] = [];
  * Check if telemetry collection is enabled.
  * Respects environment variable VITE_ENABLE_TELEMETRY or local storage flag.
  */
+import { createLocalStorageAdapter } from "@/utils/localStorage";
+
+const telemetryEnabledStorage = createLocalStorageAdapter<string | null>("cmsnext-telemetry-enabled", null);
+
 function isCollectionEnabled(): boolean {
   // Check environment variable (for dev/test environments)
   const env = typeof import.meta !== "undefined" ? (import.meta as any).env ?? {} : {};
@@ -96,15 +100,9 @@ function isCollectionEnabled(): boolean {
   }
 
   // Check localStorage for user-set preference (if available)
-  if (typeof window !== "undefined" && typeof localStorage !== "undefined") {
-    try {
-      const stored = localStorage.getItem("telemetry-enabled");
-      if (stored !== null) {
-        return stored === "true";
-      }
-    } catch {
-      // localStorage may be unavailable in some contexts
-    }
+  const stored = telemetryEnabledStorage.read();
+  if (stored !== null) {
+    return stored === "true";
   }
 
   return false;
@@ -233,13 +231,7 @@ export function setTelemetryEnabled(enabled: boolean): void {
   telemetryConfig.enabled = enabled;
 
   // Persist to localStorage if available
-  if (typeof window !== "undefined" && typeof localStorage !== "undefined") {
-    try {
-      localStorage.setItem("telemetry-enabled", enabled ? "true" : "false");
-    } catch {
-      // localStorage may be unavailable
-    }
-  }
+  telemetryEnabledStorage.write(enabled ? "true" : "false");
 
   telemetryLogger.info("Telemetry collection toggled", { enabled });
 

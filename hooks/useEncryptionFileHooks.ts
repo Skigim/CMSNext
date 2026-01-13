@@ -155,13 +155,10 @@ export function useEncryptionFileHooks(): UseEncryptionFileHooksResult {
           return data;
         }
 
-        const user = encryption.getCurrentUser();
         const result = await encryptWithKey(
           data,
           key,
-          salt,
-          {},
-          user ? [user] : undefined
+          salt
         );
 
         if (!result.success || !result.payload) {

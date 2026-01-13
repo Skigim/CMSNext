@@ -1,4 +1,5 @@
 import type { PaperCut } from "@/types/paperCut";
+import { createLocalStorageAdapter } from "@/utils/localStorage";
 
 /**
  * Paper Cut Storage Utilities
@@ -16,19 +17,7 @@ import type { PaperCut } from "@/types/paperCut";
  * @module paperCutStorage
  */
 
-const STORAGE_KEY = "papercuts";
-
-function hasLocalStorage(): boolean {
-  try {
-    return typeof window !== "undefined" && typeof window.localStorage !== "undefined";
-  } catch {
-    return false;
-  }
-}
-
-function safeParsePaperCuts(raw: string | null): PaperCut[] {
-  if (!raw) return [];
-
+function safeParsePaperCuts(raw: string): PaperCut[] {
   try {
     const parsed = JSON.parse(raw) as unknown;
     if (!Array.isArray(parsed)) return [];
@@ -50,15 +39,10 @@ function safeParsePaperCuts(raw: string | null): PaperCut[] {
   }
 }
 
-function readPaperCuts(): PaperCut[] {
-  if (!hasLocalStorage()) return [];
-  return safeParsePaperCuts(window.localStorage.getItem(STORAGE_KEY));
-}
-
-function writePaperCuts(paperCuts: PaperCut[]): void {
-  if (!hasLocalStorage()) return;
-  window.localStorage.setItem(STORAGE_KEY, JSON.stringify(paperCuts));
-}
+// Adapter with custom parse to validate paper cut array
+const storage = createLocalStorageAdapter<PaperCut[]>("cmsnext-paper-cuts", [], {
+  parse: safeParsePaperCuts,
+});
 
 function generateId(): string {
   try {
@@ -82,29 +66,28 @@ export function addPaperCut(content: string, route: string, context: string): Pa
     createdAt: nowIso,
   };
 
-  const existing = readPaperCuts();
-  writePaperCuts([next, ...existing]);
+  const existing = storage.read();
+  storage.write([next, ...existing]);
 
   return next;
 }
 
 export function getPaperCuts(): PaperCut[] {
-  return readPaperCuts();
+  return storage.read();
 }
 
 export function removePaperCut(id: string): void {
-  const existing = readPaperCuts();
+  const existing = storage.read();
   const next = existing.filter((pc) => pc.id !== id);
-  writePaperCuts(next);
+  storage.write(next);
 }
 
 export function clearPaperCuts(): void {
-  if (!hasLocalStorage()) return;
-  window.localStorage.removeItem(STORAGE_KEY);
+  storage.clear();
 }
 
 export function exportPaperCuts(): string {
-  const paperCuts = readPaperCuts();
+  const paperCuts = storage.read();
 
   if (paperCuts.length === 0) {
     return "Paper Cuts Export\n\n(no items)";

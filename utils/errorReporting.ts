@@ -1,4 +1,5 @@
 import { toast } from 'sonner';
+import { createLocalStorageAdapter } from '@/utils/localStorage';
 
 /**
  * Error Reporting Utilities
@@ -93,32 +94,22 @@ class ErrorReportingService {
     });
   }
 
-  private loadReports() {
-    if (typeof localStorage === 'undefined') return;
+  private readonly errorReportsStorage = createLocalStorageAdapter<ErrorReport[]>(
+    "cmsnext-error-reports",
+    []
+  );
 
-    try {
-      const stored = localStorage.getItem('cmsnext_error_reports');
-      if (stored) {
-        this.reports = JSON.parse(stored);
-      }
-    } catch (err) {
-      console.warn('Failed to load error reports from localStorage:', err);
-    }
+  private loadReports() {
+    this.reports = this.errorReportsStorage.read();
   }
 
   private saveReports() {
-    if (typeof localStorage === 'undefined') return;
-
-    try {
-      // Keep only the most recent reports
-      if (this.reports.length > this.maxReports) {
-        this.reports = this.reports.slice(-this.maxReports);
-      }
-      
-      localStorage.setItem('cmsnext_error_reports', JSON.stringify(this.reports));
-    } catch (err) {
-      console.warn('Failed to save error reports to localStorage:', err);
+    // Keep only the most recent reports
+    if (this.reports.length > this.maxReports) {
+      this.reports = this.reports.slice(-this.maxReports);
     }
+    
+    this.errorReportsStorage.write(this.reports);
   }
 
   private generateErrorHash(error: Error, context?: any): string {

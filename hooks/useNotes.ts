@@ -1,8 +1,8 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback } from 'react';
 import { toast } from 'sonner';
 import { Note, NewNoteData, StoredNote } from '@/types/case';
 import { useDataManagerSafe } from '@/contexts/DataManagerContext';
-import { useFileStorageDataChange } from '@/contexts/FileStorageContext';
+import { useDataSync } from './useDataSync';
 
 /**
  * Form state for note editor.
@@ -157,7 +157,6 @@ interface UseNotesReturn {
  */
 export function useNotes(caseId?: string): UseNotesReturn {
   const dataManager = useDataManagerSafe(); // Returns null if not available - safe fallback
-  const dataChangeCount = useFileStorageDataChange();
   
   const [notes, setNotes] = useState<StoredNote[]>([]);
   const [noteForm, setNoteForm] = useState<NoteFormState>({ isOpen: false });
@@ -176,10 +175,8 @@ export function useNotes(caseId?: string): UseNotesReturn {
     }
   }, [caseId, dataManager]);
 
-  // Initial fetch and refresh on data change
-  useEffect(() => {
-    refreshNotes();
-  }, [refreshNotes, dataChangeCount]);
+  // Sync with file storage data changes
+  useDataSync({ onRefresh: refreshNotes });
 
   /**
    * Open form to add a new note to a case

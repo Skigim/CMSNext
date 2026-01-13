@@ -14,7 +14,6 @@ import type {
   EncryptionResult,
   DecryptionResult,
   EncryptionConfig,
-  UserProfile,
 } from "../types/encryption";
 import { DEFAULT_ENCRYPTION_CONFIG } from "../types/encryption";
 import { createLogger } from "./logger";
@@ -101,14 +100,12 @@ export async function deriveKeyFromSaltString(
  * @param data - Data to encrypt (will be JSON serialized)
  * @param password - User password
  * @param config - Optional encryption configuration
- * @param users - Optional user profiles to include in payload
  * @returns Encrypted payload with all necessary decryption info
  */
 export async function encrypt<T>(
   data: T,
   password: string,
-  config: EncryptionConfig = {},
-  users?: UserProfile[]
+  config: EncryptionConfig = {}
 ): Promise<EncryptionResult> {
   const { iterations, saltLength, ivLength } = {
     ...DEFAULT_ENCRYPTION_CONFIG,
@@ -139,7 +136,6 @@ export async function encrypt<T>(
       ciphertext: arrayBufferToBase64(ciphertext),
       iterations,
       encryptedAt: new Date().toISOString(),
-      users,
     };
 
     logger.debug("Data encrypted successfully", {
@@ -163,14 +159,12 @@ export async function encrypt<T>(
  * @param key - Pre-derived CryptoKey
  * @param existingSalt - Salt used to derive the key (for payload)
  * @param config - Optional encryption configuration
- * @param users - Optional user profiles
  */
 export async function encryptWithKey<T>(
   data: T,
   key: CryptoKey,
   existingSalt: string,
-  config: EncryptionConfig = {},
-  users?: UserProfile[]
+  config: EncryptionConfig = {}
 ): Promise<EncryptionResult> {
   const { iterations, ivLength } = {
     ...DEFAULT_ENCRYPTION_CONFIG,
@@ -197,7 +191,6 @@ export async function encryptWithKey<T>(
       ciphertext: arrayBufferToBase64(ciphertext),
       iterations,
       encryptedAt: new Date().toISOString(),
-      users,
     };
 
     logger.debug("Data encrypted with cached key", {

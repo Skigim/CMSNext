@@ -216,19 +216,17 @@ export class CaseBulkOperationsService {
 
       updatedCases.push(updatedCase);
 
-      // Create activity log entry
-      activityEntries.push({
-        id: uuidv4(),
-        timestamp,
-        caseId: c.id,
-        caseName: formatCaseDisplayName(c),
-        caseMcn: c.caseRecord?.mcn ?? c.mcn ?? null,
-        type: "status-change",
-        payload: {
+      // Create activity log entry using factory method
+      activityEntries.push(
+        ActivityLogService.createStatusChangeEntry({
+          caseId: c.id,
+          caseName: formatCaseDisplayName(c),
+          caseMcn: c.caseRecord?.mcn ?? c.mcn ?? null,
           fromStatus: currentStatus,
           toStatus: status,
-        },
-      });
+          timestamp,
+        })
+      );
 
       return updatedCase;
     });

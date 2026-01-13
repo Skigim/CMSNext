@@ -37,6 +37,7 @@ import {
   useState,
   useCallback,
   useMemo,
+  useRef,
   type ReactNode,
 } from "react";
 import {
@@ -46,7 +47,7 @@ import {
   isEncryptionSupported,
 } from "../utils/encryption";
 import { DEFAULT_ENCRYPTION_CONFIG } from "../types/encryption";
-import type { EncryptionState, UserProfile } from "../types/encryption";
+import type { EncryptionState } from "../types/encryption";
 import { createLogger } from "../utils/logger";
 
 const logger = createLogger("EncryptionContext");
@@ -71,8 +72,6 @@ interface EncryptionContextValue extends EncryptionState {
   deriveKeyFromFileSalt: (salt: string) => Promise<CryptoKey | null>;
   /** Clear all credentials and logout user */
   clearCredentials: () => void;
-  /** Get current authenticated user profile */
-  getCurrentUser: () => UserProfile | null;
   /** Temporary password storage for key derivation (cleared after use) */
   pendingPassword: string | null;
   /** Store password temporarily for key derivation when file salt is discovered */
@@ -170,7 +169,8 @@ export function EncryptionProvider({ children }: EncryptionProviderProps) {
   });
   
   // Temporary password storage - cleared after key derivation
-  const [pendingPassword, setPendingPasswordState] = useState<string | null>(null);
+  // Using useRef instead of useState to prevent password from appearing in React DevTools
+  const pendingPasswordRef = useRef<string | null>(null);
 
   const isSupported = useMemo(() => isEncryptionSupported(), []);
   
@@ -178,7 +178,7 @@ export function EncryptionProvider({ children }: EncryptionProviderProps) {
    * Store password temporarily for key derivation when file salt is discovered.
    */
   const setPendingPassword = useCallback((password: string | null) => {
-    setPendingPasswordState(password);
+    pendingPasswordRef.current = password;
     if (password) {
       logger.debug("Pending password stored for key derivation");
     } else {
@@ -284,7 +284,7 @@ export function EncryptionProvider({ children }: EncryptionProviderProps) {
       fileIsEncrypted: false,
       currentSalt: null,
     });
-    setPendingPasswordState(null);
+    pendingPasswordRef.current = null;
     logger.lifecycle("Credentials cleared");
   }, []);
 
@@ -294,14 +294,15 @@ export function EncryptionProvider({ children }: EncryptionProviderProps) {
    */
   const deriveKeyFromFileSalt = useCallback(
     async (salt: string): Promise<CryptoKey | null> => {
-      if (!pendingPassword) {
+      const password = pendingPasswordRef.current;
+      if (!password) {
         logger.error("No pending password for key derivation");
         return null;
       }
 
       try {
         const key = await deriveKeyFromSaltString(
-          pendingPassword,
+          password,
           salt,
           DEFAULT_ENCRYPTION_CONFIG.iterations
         );
@@ -314,7 +315,7 @@ export function EncryptionProvider({ children }: EncryptionProviderProps) {
         }));
 
         // Clear password after successful derivation
-        setPendingPasswordState(null);
+        pendingPasswordRef.current = null;
 
         logger.info("Key derived from file salt");
         return key;
@@ -325,20 +326,8 @@ export function EncryptionProvider({ children }: EncryptionProviderProps) {
         return null;
       }
     },
-    [pendingPassword]
+    []
   );
-
-  /**
-   * Get current user as UserProfile.
-   */
-  const getCurrentUser = useCallback((): UserProfile | null => {
-    if (!state.isAuthenticated) return null;
-    return {
-      id: state.username,
-      name: state.username,
-      createdAt: new Date().toISOString(),
-    };
-  }, [state.isAuthenticated, state.username]);
 
   const value = useMemo<EncryptionContextValue>(
     () => ({
@@ -349,8 +338,10 @@ export function EncryptionProvider({ children }: EncryptionProviderProps) {
       initializeEncryption,
       deriveKeyFromFileSalt,
       clearCredentials,
-      getCurrentUser,
-      pendingPassword,
+      // Expose getter for pendingPassword to avoid stale ref issues in consumers
+      get pendingPassword() {
+        return pendingPasswordRef.current;
+      },
       setPendingPassword,
     }),
     [
@@ -361,8 +352,6 @@ export function EncryptionProvider({ children }: EncryptionProviderProps) {
       initializeEncryption,
       deriveKeyFromFileSalt,
       clearCredentials,
-      getCurrentUser,
-      pendingPassword,
       setPendingPassword,
     ]
   );

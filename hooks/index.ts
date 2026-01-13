@@ -61,6 +61,14 @@ export { useImportListeners } from './useImportListeners';
 // File data synchronization
 export { useFileDataSync } from './useFileDataSync';
 
+// Data sync utilities
+export { useDataSync, useDataChangeCount } from './useDataSync';
+export type { UseDataSyncOptions } from './useDataSync';
+
+// Debounced save utility
+export { useDebouncedSave } from './useDebouncedSave';
+export type { UseDebouncedSaveOptions } from './useDebouncedSave';
+
 // Alerts flow management
 export { useAlertsFlow } from './useAlertsFlow';
 

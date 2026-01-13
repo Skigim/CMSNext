@@ -2,9 +2,9 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { useIsMounted } from "./useIsMounted";
 import { useAlertResolve } from "./useAlertResolve";
+import { useDataSync } from "./useDataSync";
 import type { StoredCase } from "@/types/case";
 import type { DataManager } from "@/utils/DataManager";
-import { useFileStorageDataChange } from "@/contexts/FileStorageContext";
 import { createEmptyAlertsIndex, filterOpenAlerts, type AlertsIndex, type AlertWithMatch } from "@/utils/alertsData";
 import { ENABLE_SAMPLE_ALERTS } from "@/utils/featureFlags";
 import { createLogger } from "@/utils/logger";
@@ -114,7 +114,6 @@ export function useAlertsFlow({ selectedCase, hasLoadedData, dataManager }: UseA
   const isMounted = useIsMounted();
   const [alertsIndex, setAlertsIndex] = useState<AlertsIndex>(() => createEmptyAlertsIndex());
   const previousAlertCountsRef = useRef({ unmatched: 0, missingMcn: 0 });
-  const dataChangeCount = useFileStorageDataChange();
 
   // Use ref to break circular dependency between reloadAlerts and resolve
   const applyOverridesRef = useRef<(index: AlertsIndex) => AlertsIndex>((i) => i);
@@ -155,12 +154,8 @@ export function useAlertsFlow({ selectedCase, hasLoadedData, dataManager }: UseA
     applyOverridesRef.current = resolve.applyOverrides;
   }, [resolve.applyOverrides]);
 
-  // Reload alerts when data changes
-  useEffect(() => {
-    reloadAlerts().catch(err => {
-      logger.error("Unexpected error during alert reload", { error: err instanceof Error ? err.message : String(err) });
-    });
-  }, [reloadAlerts, dataChangeCount]);
+  // Sync with file storage data changes
+  useDataSync({ onRefresh: reloadAlerts });
 
   // Handle CSV import
   const onAlertsCsvImported = useCallback((index: AlertsIndex) => {

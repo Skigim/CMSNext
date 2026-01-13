@@ -198,14 +198,6 @@ describe("encryption utilities", () => {
       expect(result.payload?.encryptedAt).toBeDefined();
     });
 
-    it("includes user profiles in payload", async () => {
-      const users = [{ id: "user1", name: "Test User", createdAt: "2025-01-01" }];
-      const result = await encrypt(testData, "password", {}, users);
-
-      expect(result.success).toBe(true);
-      expect(result.payload?.users).toEqual(users);
-    });
-
     it("returns error on encryption failure", async () => {
       mockSubtle.encrypt.mockRejectedValue(new Error("Encryption failed"));
 

@@ -1,5 +1,6 @@
 import type { ShortcutConfig, ShortcutDefinition } from "@/types/keyboardShortcuts";
 import { DEFAULT_SHORTCUTS } from "@/utils/keyboardShortcuts";
+import { createLocalStorageAdapter } from "@/utils/localStorage";
 
 /**
  * Keyboard Shortcut Storage Utilities
@@ -16,16 +17,6 @@ import { DEFAULT_SHORTCUTS } from "@/utils/keyboardShortcuts";
  * 
  * @module shortcutStorage
  */
-
-const STORAGE_KEY = "keyboard-shortcuts";
-
-function hasLocalStorage(): boolean {
-  try {
-    return typeof window !== "undefined" && typeof window.localStorage !== "undefined";
-  } catch {
-    return false;
-  }
-}
 
 function buildDefaultConfig(definitions: ShortcutDefinition[] = DEFAULT_SHORTCUTS): ShortcutConfig {
   const shortcuts: ShortcutConfig["shortcuts"] = {};
@@ -75,18 +66,21 @@ function mergeWithDefaults(parsed: ShortcutConfig | null): ShortcutConfig {
   };
 }
 
+// Adapter with custom parse to validate config shape
+const storage = createLocalStorageAdapter<ShortcutConfig | null>("cmsnext-keyboard-shortcuts", null, {
+  parse: safeParseConfig,
+  serialize: (v) => JSON.stringify(v),
+});
+
 export function getShortcutConfig(): ShortcutConfig {
-  if (!hasLocalStorage()) return buildDefaultConfig();
-  const parsed = safeParseConfig(window.localStorage.getItem(STORAGE_KEY));
+  const parsed = storage.read();
   return mergeWithDefaults(parsed);
 }
 
 export function saveShortcutConfig(config: ShortcutConfig): void {
-  if (!hasLocalStorage()) return;
-
   // Persist only if shape is valid; otherwise fallback to defaults.
   const next = isShortcutConfig(config) ? config : buildDefaultConfig();
-  window.localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+  storage.write(next);
 }
 
 function ensureEntry(id: string, config: ShortcutConfig): void {
@@ -117,6 +111,5 @@ export function toggleShortcut(id: string, enabled: boolean): void {
 }
 
 export function resetAllShortcuts(): void {
-  if (!hasLocalStorage()) return;
-  window.localStorage.removeItem(STORAGE_KEY);
+  storage.clear();
 }

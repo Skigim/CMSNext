@@ -4,15 +4,6 @@
  */
 
 /**
- * User profile stored in encrypted files (stub for multi-user)
- */
-export interface UserProfile {
-  id: string;
-  name: string;
-  createdAt: string;
-}
-
-/**
  * Encrypted payload format stored in JSON files.
  * Contains all necessary info to decrypt (except password).
  */
@@ -31,8 +22,6 @@ export interface EncryptedPayload {
   iterations: number;
   /** Timestamp when encrypted */
   encryptedAt: string;
-  /** User profiles (stub for multi-user support) */
-  users?: UserProfile[];
 }
 
 /**

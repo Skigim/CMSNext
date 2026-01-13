@@ -1,4 +1,5 @@
-import type { CaseActivityEntry } from "../../types/activityLog";
+import { v4 as uuidv4 } from 'uuid';
+import type { CaseActivityEntry, CaseStatusChangeActivity } from "../../types/activityLog";
 import { toActivityDateKey } from "../activityReport";
 import { createLogger } from "../logger";
 import type { FileStorageService, NormalizedFileData } from "./FileStorageService";
@@ -198,6 +199,54 @@ export class ActivityLogService {
     });
 
     return removedCount;
+  }
+
+  /**
+   * Create a status change activity log entry.
+   * 
+   * Factory method that creates a properly typed status change entry
+   * with all required fields. Use this instead of manually constructing
+   * activity entries to ensure consistency across the codebase.
+   * 
+   * @static
+   * @param {Object} params - Entry parameters
+   * @param {string} params.caseId - The case ID
+   * @param {string} params.caseName - Display name of the case
+   * @param {string | null} params.caseMcn - MCN of the case (optional)
+   * @param {string | null} params.fromStatus - Previous status (optional for new cases)
+   * @param {string} params.toStatus - New status
+   * @param {string} [params.timestamp] - ISO timestamp (defaults to now)
+   * @returns {CaseStatusChangeActivity} A properly typed activity entry
+   * 
+   * @example
+   * const entry = ActivityLogService.createStatusChangeEntry({
+   *   caseId: 'case-123',
+   *   caseName: 'John Doe',
+   *   caseMcn: 'MCN-456',
+   *   fromStatus: 'Pending',
+   *   toStatus: 'Approved',
+   * });
+   */
+  static createStatusChangeEntry(params: {
+    caseId: string;
+    caseName: string;
+    caseMcn: string | null;
+    fromStatus: string | null | undefined;
+    toStatus: string;
+    timestamp?: string;
+  }): CaseStatusChangeActivity {
+    return {
+      id: uuidv4(),
+      timestamp: params.timestamp ?? new Date().toISOString(),
+      caseId: params.caseId,
+      caseName: params.caseName,
+      caseMcn: params.caseMcn,
+      type: "status-change",
+      payload: {
+        fromStatus: params.fromStatus ?? null,
+        toStatus: params.toStatus,
+      },
+    };
   }
 
   /**
