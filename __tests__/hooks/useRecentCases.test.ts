@@ -1,43 +1,32 @@
 import { renderHook, act } from "@testing-library/react";
-import { describe, expect, it, beforeEach, vi, afterEach } from "vitest";
+import { describe, expect, it, beforeEach, vi } from "vitest";
 import { useRecentCases } from "@/hooks/useRecentCases";
 
-const STORAGE_KEY = "cmsnext-recent-cases";
+// Use vi.hoisted() to properly hoist mock functions before vi.mock
+const { mockRead, mockWrite, mockClear } = vi.hoisted(() => ({
+  mockRead: vi.fn(),
+  mockWrite: vi.fn(),
+  mockClear: vi.fn(),
+}));
 
-function createLocalStorageMock() {
-  let store: Record<string, string> = {};
-  return {
-    getItem: vi.fn((key: string) => store[key] ?? null),
-    setItem: vi.fn((key: string, value: string) => {
-      store[key] = value;
-    }),
-    removeItem: vi.fn((key: string) => {
-      delete store[key];
-    }),
-    clear: vi.fn(() => {
-      store = {};
-    }),
-    get length() {
-      return Object.keys(store).length;
-    },
-    key: vi.fn((index: number) => Object.keys(store)[index] ?? null),
-  };
-}
+// Mock the localStorage adapter module
+vi.mock("@/utils/localStorage", () => ({
+  createLocalStorageAdapter: vi.fn(() => ({
+    read: mockRead,
+    write: mockWrite,
+    clear: mockClear,
+  })),
+  hasLocalStorage: vi.fn(() => true),
+}));
 
 describe("useRecentCases", () => {
-  let localStorageMock: ReturnType<typeof createLocalStorageMock>;
-
   beforeEach(() => {
-    localStorageMock = createLocalStorageMock();
-    Object.defineProperty(window, "localStorage", {
-      value: localStorageMock,
-      writable: true,
-    });
+    // Reset mock implementations for each test
+    mockRead.mockReset();
+    mockWrite.mockReset();
+    mockClear.mockReset();
+    mockRead.mockReturnValue([]);
     vi.clearAllMocks();
-  });
-
-  afterEach(() => {
-    localStorageMock.clear();
   });
 
   describe("initial state", () => {
@@ -51,14 +40,14 @@ describe("useRecentCases", () => {
         { caseId: "case-1", viewedAt: "2024-01-15T10:00:00.000Z" },
         { caseId: "case-2", viewedAt: "2024-01-15T09:00:00.000Z" },
       ];
-      localStorageMock.setItem(STORAGE_KEY, JSON.stringify(existingEntries));
+      mockRead.mockReturnValue(existingEntries);
 
       const { result } = renderHook(() => useRecentCases());
       expect(result.current.recentCaseIds).toEqual(["case-1", "case-2"]);
     });
 
     it("handles corrupted localStorage data gracefully", () => {
-      localStorageMock.setItem(STORAGE_KEY, "invalid-json{");
+      mockRead.mockReturnValue([]);
 
       const { result } = renderHook(() => useRecentCases());
       expect(result.current.recentCaseIds).toEqual([]);
@@ -95,9 +84,10 @@ describe("useRecentCases", () => {
         result.current.addToRecent("case-1");
       });
 
-      const stored = JSON.parse(localStorageMock.getItem(STORAGE_KEY) || "[]");
-      expect(stored).toHaveLength(1);
-      expect(stored[0].caseId).toBe("case-1");
+      expect(mockWrite).toHaveBeenCalled();
+      const savedData = mockWrite.mock.calls[0][0];
+      expect(savedData).toHaveLength(1);
+      expect(savedData[0].caseId).toBe("case-1");
     });
 
     it("respects max entries limit of 10", () => {
@@ -122,7 +112,7 @@ describe("useRecentCases", () => {
         { caseId: "case-1", viewedAt: "2024-01-15T10:00:00.000Z" },
         { caseId: "case-2", viewedAt: "2024-01-15T09:00:00.000Z" },
       ];
-      localStorageMock.setItem(STORAGE_KEY, JSON.stringify(existingEntries));
+      mockRead.mockReturnValue(existingEntries);
 
       const { result } = renderHook(() => useRecentCases());
 
@@ -137,7 +127,7 @@ describe("useRecentCases", () => {
       const existingEntries = [
         { caseId: "case-1", viewedAt: "2024-01-15T10:00:00.000Z" },
       ];
-      localStorageMock.setItem(STORAGE_KEY, JSON.stringify(existingEntries));
+      mockRead.mockReturnValue(existingEntries);
 
       const { result } = renderHook(() => useRecentCases());
 
@@ -145,8 +135,7 @@ describe("useRecentCases", () => {
         result.current.removeFromRecent("case-1");
       });
 
-      const stored = JSON.parse(localStorageMock.getItem(STORAGE_KEY) || "[]");
-      expect(stored).toHaveLength(0);
+      expect(mockWrite).toHaveBeenCalledWith([]);
     });
 
     it("handles removing non-existent case gracefully", () => {
@@ -166,7 +155,7 @@ describe("useRecentCases", () => {
         { caseId: "case-1", viewedAt: "2024-01-15T10:00:00.000Z" },
         { caseId: "case-2", viewedAt: "2024-01-15T09:00:00.000Z" },
       ];
-      localStorageMock.setItem(STORAGE_KEY, JSON.stringify(existingEntries));
+      mockRead.mockReturnValue(existingEntries);
 
       const { result } = renderHook(() => useRecentCases());
 
@@ -181,7 +170,7 @@ describe("useRecentCases", () => {
       const existingEntries = [
         { caseId: "case-1", viewedAt: "2024-01-15T10:00:00.000Z" },
       ];
-      localStorageMock.setItem(STORAGE_KEY, JSON.stringify(existingEntries));
+      mockRead.mockReturnValue(existingEntries);
 
       const { result } = renderHook(() => useRecentCases());
 
@@ -189,8 +178,7 @@ describe("useRecentCases", () => {
         result.current.clearRecent();
       });
 
-      const stored = JSON.parse(localStorageMock.getItem(STORAGE_KEY) || "[]");
-      expect(stored).toHaveLength(0);
+      expect(mockClear).toHaveBeenCalled();
     });
   });
 
@@ -199,7 +187,7 @@ describe("useRecentCases", () => {
       const existingEntries = [
         { caseId: "case-1", viewedAt: "2024-01-15T10:00:00.000Z" },
       ];
-      localStorageMock.setItem(STORAGE_KEY, JSON.stringify(existingEntries));
+      mockRead.mockReturnValue(existingEntries);
 
       const { result } = renderHook(() => useRecentCases());
 

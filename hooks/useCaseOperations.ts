@@ -2,6 +2,7 @@ import { useCallback, useMemo } from 'react';
 import { toast } from 'sonner';
 import { NewPersonData, NewCaseRecordData, NewNoteData, StoredCase, StoredNote } from '@/types/case';
 import { DataManager } from '@/utils/DataManager';
+import { createDataManagerGuard } from '@/utils/guardUtils';
 import { CaseOperationsService } from '@/utils/services/CaseOperationsService';
 
 const NOT_AVAILABLE_MSG = 'Data storage is not available. Please connect to a folder first.';
@@ -62,14 +63,27 @@ export function useCaseOperations(config: CaseOperationsConfig) {
     [dataManager]
   );
 
+  const guardDataManager = useMemo(
+    () => createDataManagerGuard(dataManager, "useCaseOperations"),
+    [dataManager]
+  );
+
   const guardService = useCallback(() => {
+    try {
+      guardDataManager();
+    } catch (error) {
+      setError(NOT_AVAILABLE_MSG);
+      toast.error(NOT_AVAILABLE_MSG);
+      return false;
+    }
+
     if (!service) {
       setError(NOT_AVAILABLE_MSG);
       toast.error(NOT_AVAILABLE_MSG);
       return false;
     }
     return true;
-  }, [service, setError]);
+  }, [guardDataManager, service, setError]);
 
   const loadCases = useCallback(async (): Promise<StoredCase[]> => {
     if (!guardService()) return [];

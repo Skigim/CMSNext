@@ -8,6 +8,10 @@ import {
   findMatchingFinancialItem,
   type ParsedAVSAccount,
 } from "@/domain/avs";
+import { createLogger } from "@/utils/logger";
+import { extractErrorMessage } from "@/utils/errorUtils";
+
+const logger = createLogger("useAVSImportFlow");
 
 /**
  * Parsed AVS account with selection state and match info
@@ -153,7 +157,9 @@ export function useAVSImportFlow({
         const allItems = await dataManager.getFinancialItemsForCase(selectedCase.id);
         existingResources = allItems.filter(item => item.category === 'resources');
       } catch (e) {
-        console.error('Failed to fetch existing items for duplicate detection:', e);
+        logger.error('Failed to fetch existing items for duplicate detection', {
+          error: extractErrorMessage(e),
+        });
       }
     }
     
@@ -268,7 +274,11 @@ export function useAVSImportFlow({
             newCount++;
           }
         } catch (itemError) {
-          console.error("Failed to import account:", account, itemError);
+          logger.error("Failed to import account", {
+            account: account.bankName,
+            accountType: account.accountType,
+            error: extractErrorMessage(itemError),
+          });
           const description = account.accountType !== "N/A"
             ? `${account.accountType} at ${account.bankName}`
             : account.bankName;
@@ -304,7 +314,9 @@ export function useAVSImportFlow({
         }, 1000);
       }
     } catch (error) {
-      console.error("AVS import failed:", error);
+      logger.error("AVS import failed", {
+        error: extractErrorMessage(error),
+      });
       const errorMsg = "Failed to import accounts. Please try again.";
       setImportState(prev => ({
         ...prev,

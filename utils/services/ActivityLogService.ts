@@ -2,6 +2,7 @@ import { v4 as uuidv4 } from 'uuid';
 import type { CaseActivityEntry, CaseStatusChangeActivity } from "../../types/activityLog";
 import { toActivityDateKey } from "../activityReport";
 import { createLogger } from "../logger";
+import { extractErrorMessage } from "../errorUtils";
 import type { FileStorageService, NormalizedFileData } from "./FileStorageService";
 
 const logger = createLogger("ActivityLogService");
@@ -175,7 +176,7 @@ export class ActivityLogService {
         logger.warn("Skipping activity entry with invalid timestamp during clear operation", {
           entryId: entry.id,
           timestamp: entry.timestamp,
-          error: error instanceof Error ? error.message : error,
+          error: extractErrorMessage(error),
         });
         return true;
       }

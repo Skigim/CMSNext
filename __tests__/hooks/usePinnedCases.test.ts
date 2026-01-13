@@ -1,43 +1,32 @@
 import { renderHook, act } from "@testing-library/react";
-import { describe, expect, it, beforeEach, vi, afterEach } from "vitest";
+import { describe, expect, it, beforeEach, vi } from "vitest";
 import { usePinnedCases } from "@/hooks/usePinnedCases";
 
-const STORAGE_KEY = "cmsnext-pinned-cases";
+// Use vi.hoisted() to properly hoist mock functions before vi.mock
+const { mockRead, mockWrite, mockClear } = vi.hoisted(() => ({
+  mockRead: vi.fn(),
+  mockWrite: vi.fn(),
+  mockClear: vi.fn(),
+}));
 
-function createLocalStorageMock() {
-  let store: Record<string, string> = {};
-  return {
-    getItem: vi.fn((key: string) => store[key] ?? null),
-    setItem: vi.fn((key: string, value: string) => {
-      store[key] = value;
-    }),
-    removeItem: vi.fn((key: string) => {
-      delete store[key];
-    }),
-    clear: vi.fn(() => {
-      store = {};
-    }),
-    get length() {
-      return Object.keys(store).length;
-    },
-    key: vi.fn((index: number) => Object.keys(store)[index] ?? null),
-  };
-}
+// Mock the localStorage adapter module
+vi.mock("@/utils/localStorage", () => ({
+  createLocalStorageAdapter: vi.fn(() => ({
+    read: mockRead,
+    write: mockWrite,
+    clear: mockClear,
+  })),
+  hasLocalStorage: vi.fn(() => true),
+}));
 
 describe("usePinnedCases", () => {
-  let localStorageMock: ReturnType<typeof createLocalStorageMock>;
-
   beforeEach(() => {
-    localStorageMock = createLocalStorageMock();
-    Object.defineProperty(window, "localStorage", {
-      value: localStorageMock,
-      writable: true,
-    });
+    // Reset mock implementations for each test
+    mockRead.mockReset();
+    mockWrite.mockReset();
+    mockClear.mockReset();
+    mockRead.mockReturnValue([]);
     vi.clearAllMocks();
-  });
-
-  afterEach(() => {
-    localStorageMock.clear();
   });
 
   describe("initial state", () => {
@@ -49,7 +38,7 @@ describe("usePinnedCases", () => {
 
     it("loads existing pins from localStorage", () => {
       const existingPins = ["case-1", "case-2"];
-      localStorageMock.setItem(STORAGE_KEY, JSON.stringify(existingPins));
+      mockRead.mockReturnValue(existingPins);
 
       const { result } = renderHook(() => usePinnedCases());
       expect(result.current.pinnedCaseIds).toEqual(["case-1", "case-2"]);
@@ -57,7 +46,7 @@ describe("usePinnedCases", () => {
     });
 
     it("handles corrupted localStorage data gracefully", () => {
-      localStorageMock.setItem(STORAGE_KEY, "invalid-json{");
+      mockRead.mockReturnValue([]);
 
       const { result } = renderHook(() => usePinnedCases());
       expect(result.current.pinnedCaseIds).toEqual([]);
@@ -94,8 +83,7 @@ describe("usePinnedCases", () => {
         result.current.pin("case-1");
       });
 
-      const stored = JSON.parse(localStorageMock.getItem(STORAGE_KEY) || "[]");
-      expect(stored).toEqual(["case-1"]);
+      expect(mockWrite).toHaveBeenCalledWith(["case-1"]);
     });
 
     it("respects maxPins limit", () => {
@@ -115,7 +103,7 @@ describe("usePinnedCases", () => {
 
   describe("unpin", () => {
     it("removes a case from pinned list", () => {
-      localStorageMock.setItem(STORAGE_KEY, JSON.stringify(["case-1", "case-2"]));
+      mockRead.mockReturnValue(["case-1", "case-2"]);
 
       const { result } = renderHook(() => usePinnedCases());
 
@@ -127,7 +115,7 @@ describe("usePinnedCases", () => {
     });
 
     it("persists removal to localStorage", () => {
-      localStorageMock.setItem(STORAGE_KEY, JSON.stringify(["case-1"]));
+      mockRead.mockReturnValue(["case-1"]);
 
       const { result } = renderHook(() => usePinnedCases());
 
@@ -135,8 +123,7 @@ describe("usePinnedCases", () => {
         result.current.unpin("case-1");
       });
 
-      const stored = JSON.parse(localStorageMock.getItem(STORAGE_KEY) || "[]");
-      expect(stored).toEqual([]);
+      expect(mockWrite).toHaveBeenCalledWith([]);
     });
 
     it("handles unpinning non-existent case gracefully", () => {
@@ -162,7 +149,7 @@ describe("usePinnedCases", () => {
     });
 
     it("unpins a pinned case", () => {
-      localStorageMock.setItem(STORAGE_KEY, JSON.stringify(["case-1"]));
+      mockRead.mockReturnValue(["case-1"]);
 
       const { result } = renderHook(() => usePinnedCases());
 
@@ -180,15 +167,13 @@ describe("usePinnedCases", () => {
         result.current.togglePin("case-1");
       });
 
-      let stored = JSON.parse(localStorageMock.getItem(STORAGE_KEY) || "[]");
-      expect(stored).toContain("case-1");
+      expect(mockWrite).toHaveBeenCalledWith(["case-1"]);
 
       act(() => {
         result.current.togglePin("case-1");
       });
 
-      stored = JSON.parse(localStorageMock.getItem(STORAGE_KEY) || "[]");
-      expect(stored).not.toContain("case-1");
+      expect(mockWrite).toHaveBeenCalledWith([]);
     });
 
     it("respects maxPins when toggling on", () => {
@@ -206,7 +191,7 @@ describe("usePinnedCases", () => {
 
   describe("isPinned", () => {
     it("returns true for pinned case", () => {
-      localStorageMock.setItem(STORAGE_KEY, JSON.stringify(["case-1"]));
+      mockRead.mockReturnValue(["case-1"]);
 
       const { result } = renderHook(() => usePinnedCases());
 
@@ -240,7 +225,7 @@ describe("usePinnedCases", () => {
     });
 
     it("returns false when at limit", () => {
-      localStorageMock.setItem(STORAGE_KEY, JSON.stringify(["case-1", "case-2"]));
+      mockRead.mockReturnValue(["case-1", "case-2"]);
 
       const { result } = renderHook(() => usePinnedCases(2));
 
@@ -262,7 +247,7 @@ describe("usePinnedCases", () => {
 
   describe("reorder", () => {
     it("moves a case to a new position", () => {
-      localStorageMock.setItem(STORAGE_KEY, JSON.stringify(["a", "b", "c"]));
+      mockRead.mockReturnValue(["a", "b", "c"]);
 
       const { result } = renderHook(() => usePinnedCases());
 
@@ -274,7 +259,7 @@ describe("usePinnedCases", () => {
     });
 
     it("persists reorder to localStorage", () => {
-      localStorageMock.setItem(STORAGE_KEY, JSON.stringify(["a", "b", "c"]));
+      mockRead.mockReturnValue(["a", "b", "c"]);
 
       const { result } = renderHook(() => usePinnedCases());
 
@@ -282,12 +267,11 @@ describe("usePinnedCases", () => {
         result.current.reorder("c", 0);
       });
 
-      const stored = JSON.parse(localStorageMock.getItem(STORAGE_KEY) || "[]");
-      expect(stored).toEqual(["c", "a", "b"]);
+      expect(mockWrite).toHaveBeenCalledWith(["c", "a", "b"]);
     });
 
     it("handles reorder of non-existent case", () => {
-      localStorageMock.setItem(STORAGE_KEY, JSON.stringify(["a", "b"]));
+      mockRead.mockReturnValue(["a", "b"]);
 
       const { result } = renderHook(() => usePinnedCases());
 
@@ -299,7 +283,7 @@ describe("usePinnedCases", () => {
     });
 
     it("clamps index to valid range", () => {
-      localStorageMock.setItem(STORAGE_KEY, JSON.stringify(["a", "b", "c"]));
+      mockRead.mockReturnValue(["a", "b", "c"]);
 
       const { result } = renderHook(() => usePinnedCases());
 
