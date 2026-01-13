@@ -1,3 +1,7 @@
+import { createLogger } from "@/utils/logger";
+
+const logger = createLogger("localStorage");
+
 /**
  * LocalStorage Adapter Utility
  * ============================
@@ -129,7 +133,7 @@ export function createLocalStorageAdapter<T>(
         }
         return parse(stored);
       } catch (error) {
-        console.warn(`Failed to read localStorage key "${key}"`, error);
+        logger.warn(`Failed to read localStorage key "${key}"`, { error });
         return defaultValue;
       }
     },
@@ -142,7 +146,7 @@ export function createLocalStorageAdapter<T>(
       try {
         window.localStorage.setItem(key, serialize(value));
       } catch (error) {
-        console.warn(`Failed to write localStorage key "${key}"`, error);
+        logger.warn(`Failed to write localStorage key "${key}"`, { error });
       }
     },
 
@@ -154,7 +158,7 @@ export function createLocalStorageAdapter<T>(
       try {
         window.localStorage.removeItem(key);
       } catch (error) {
-        console.warn(`Failed to clear localStorage key "${key}"`, error);
+        logger.warn(`Failed to clear localStorage key "${key}"`, { error });
       }
     },
   };

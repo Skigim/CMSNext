@@ -1,5 +1,8 @@
 import { useEffect } from "react";
 import { useFileStorageDataChange } from "@/contexts/FileStorageContext";
+import { createLogger } from "@/utils/logger";
+
+const logger = createLogger("useDataSync");
 
 /**
  * Hook for synchronizing local state with file storage changes.
@@ -71,7 +74,9 @@ export function useDataSync({ onRefresh, deps = [] }: UseDataSyncOptions): void 
     const result = onRefresh();
     if (result instanceof Promise) {
       result.catch((err) => {
-        console.error("Data sync refresh failed:", err);
+        // Silent failure - errors are expected when dataManager is null
+        // or during context initialization
+        logger.debug("Data sync refresh skipped:", err);
       });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps

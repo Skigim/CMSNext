@@ -207,8 +207,7 @@ export class NotesService {
    */
   async addNote(caseId: string, noteData: NewNoteData): Promise<StoredNote> {
     // Read and verify case exists
-    const { data: noteData_, targetCase } = await readDataAndFindCase(this.fileStorage, caseId);
-    const currentData = noteData_;
+    const { data: currentData, targetCase } = await readDataAndFindCase(this.fileStorage, caseId);
 
     // Create new note with foreign key
     const timestamp = new Date().toISOString();
