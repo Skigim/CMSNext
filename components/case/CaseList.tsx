@@ -281,13 +281,14 @@ export function CaseList({
   }, [cases, searchTerm, segment, filters, config.caseStatuses]);
 
   const sortedCases = useMemo(() => {
+    const priorityConfig = { caseStatuses: config.caseStatuses, alertTypes: config.alertTypes };
     return [...filteredCases].sort((a, b) => {
       // Apply each sort config in order
-      for (const config of sortConfigs) {
-        const directionFactor = config.direction === "asc" ? 1 : -1;
+      for (const sortConfig of sortConfigs) {
+        const directionFactor = sortConfig.direction === "asc" ? 1 : -1;
         let comparison = 0;
 
-        switch (config.key) {
+        switch (sortConfig.key) {
           case "name": {
             comparison = (a.name || "").localeCompare(b.name || "");
             break;
@@ -315,8 +316,8 @@ export function CaseList({
           case "score": {
             const aAlerts = openAlertsByCase.get(a.id) ?? [];
             const bAlerts = openAlertsByCase.get(b.id) ?? [];
-            const aScore = calculatePriorityScore(a, aAlerts);
-            const bScore = calculatePriorityScore(b, bAlerts);
+            const aScore = calculatePriorityScore(a, aAlerts, priorityConfig);
+            const bScore = calculatePriorityScore(b, bAlerts, priorityConfig);
             comparison = aScore - bScore;
             break;
           }
@@ -348,7 +349,7 @@ export function CaseList({
 
       return 0;
     });
-  }, [filteredCases, openAlertsByCase, sortConfigs]);
+  }, [filteredCases, openAlertsByCase, sortConfigs, config.caseStatuses, config.alertTypes]);
 
   // When in alerts mode, count total open alerts for pagination (respecting description filter)
   const totalAlertRows = useMemo(() => {

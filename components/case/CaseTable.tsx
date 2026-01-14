@@ -20,6 +20,7 @@ import { CopyButton } from "@/components/common/CopyButton";
 import { getDisplayPhoneNumber } from "@/domain/common";
 import { getAlertDisplayDescription, getAlertDueDateInfo } from "@/utils/alertDisplay";
 import { calculatePriorityScore } from "@/domain/dashboard/priorityQueue";
+import { useCategoryConfig } from "@/contexts/CategoryConfigContext";
 
 export interface CaseTableProps {
   cases: StoredCase[];
@@ -87,6 +88,8 @@ export const CaseTable = memo(function CaseTable({
   onToggleSelection,
   onToggleSelectAll,
 }: CaseTableProps) {
+  const { config } = useCategoryConfig();
+  
   // Build base case rows
   const baseRows = useMemo(
     () =>
@@ -98,7 +101,8 @@ export const CaseTable = memo(function CaseTable({
         const primaryContact = phone ? getDisplayPhoneNumber(phone) : item.person?.email;
         const allCaseAlerts = alertsByCaseId?.get(item.id) ?? [];
         const unresolvedAlerts = allCaseAlerts.filter(a => a.status?.toLowerCase() !== 'resolved');
-        const score = calculatePriorityScore(item, unresolvedAlerts);
+        const priorityConfig = { caseStatuses: config.caseStatuses, alertTypes: config.alertTypes };
+        const score = calculatePriorityScore(item, unresolvedAlerts, priorityConfig);
         return {
           id: item.id,
           name: item.name || "Unnamed Case",
@@ -113,7 +117,7 @@ export const CaseTable = memo(function CaseTable({
           score,
         };
       }),
-    [alertsByCaseId, cases],
+    [alertsByCaseId, cases, config.caseStatuses, config.alertTypes],
   );
 
   // When expandAlerts is true, flatten to one row per open alert
