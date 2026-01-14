@@ -5,6 +5,8 @@ import type { AppView } from "../../types/view";
 export interface AppNavigationConfig {
   currentView: AppView;
   breadcrumbTitle?: string;
+  /** The view from which the user navigated to case details (for breadcrumb context) */
+  breadcrumbSourceView?: AppView;
   sidebarOpen: boolean;
   onNavigate: (view: AppView) => void;
   onNewCase: () => void;
@@ -23,6 +25,7 @@ interface AppNavigationShellProps extends AppNavigationConfig {
 export const AppNavigationShell = memo(function AppNavigationShell({
   currentView,
   breadcrumbTitle,
+  breadcrumbSourceView,
   sidebarOpen,
   onNavigate,
   onNewCase,
@@ -35,6 +38,7 @@ export const AppNavigationShell = memo(function AppNavigationShell({
       onNavigate={onNavigate}
       onNewCase={onNewCase}
       breadcrumbTitle={breadcrumbTitle}
+      breadcrumbSourceView={breadcrumbSourceView}
       sidebarOpen={sidebarOpen}
       onSidebarOpenChange={onSidebarOpenChange}
     >

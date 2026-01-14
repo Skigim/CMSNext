@@ -1,9 +1,9 @@
 # CMSNext Roadmap - January 2026
 
-**Report Date:** January 9, 2026  
+**Report Date:** January 14, 2026  
 **Branch:** main  
-**Focus:** Dashboard Transformation + Domain Layer Refactor  
-**Status:** Week 1 Complete ✅ | Phase 1-4 Complete ✅ | Domain Refactor In Progress 🔄
+**Focus:** Dashboard Transformation + Domain Layer Refactor + Priority System Enhancements  
+**Status:** Week 1-2 Complete ✅ | Domain Refactor Complete ✅ | Week 3 In Progress 🔄
 
 ---
 
@@ -12,7 +12,8 @@
 1. **Dashboard Transformation** - Transform the dashboard from a passive display into an active command center. ✅ PHASES 1-4 COMPLETE
 2. **User Workflow Optimization** - Surface priority work, reduce navigation friction, enable inline actions. ✅ COMPLETE
 3. **Personalization** - Allow users to customize their dashboard experience. (Phase 5 - planned)
-4. **Domain Layer Refactor** - Extract pure business logic from utils/ to domain/ layer. 🔄 IN PROGRESS
+4. **Domain Layer Refactor** - Extract pure business logic from utils/ to domain/ layer. ✅ COMPLETE
+5. **Priority System Enhancements** - Dynamic weights and sortable alert priorities. ✅ COMPLETE (added mid-month)
 
 ---
 
@@ -122,7 +123,7 @@
 
 - [ ] Preserve dashboard scroll position on navigation
 - [ ] Preserve selected tab (Overview/Analytics) on return
-- [ ] Add "Return to Dashboard" breadcrumb to case detail views
+- [x] Add "Return to Dashboard" breadcrumb to case detail views ✅ (already implemented in MainLayout.tsx)
 - [ ] Write E2E tests for navigation preservation
 
 ---
@@ -184,24 +185,39 @@ _Focus: Complete domain layer refactor - all pure logic migrated_
 
 ### Week 3: Navigation & Polish (Jan 13-19)
 
-_Focus: Dashboard navigation and buffer_
+_Focus: Priority enhancements, code quality, and polish_
 
-**Phase 5: Navigation & Context Flow** 📋 PLANNED
+**Completed This Week:**
+
+- [x] Dynamic priority weight calculation for alert types and statuses
+- [x] Sortable alert types UI with shared DnD utility
+- [x] Security audit findings addressed
+- [x] `guardDataManager` utility for standardized null checks
+- [x] `createDataManagerGuard` factory function
+- [x] Code hygiene audit + refactoring (PR #95)
+- [x] SimpleCategoryEditor re-render optimization fixes
+- [x] localStorage mocking improvements in tests
+- [x] Placeholder Palette component for templates
+- [x] Sidebar open/close behavior simplified
+
+**Phase 5: Navigation & Context Flow** 📋 REMAINING
 
 - [ ] Preserve dashboard scroll position on navigation
 - [ ] Preserve selected tab (Overview/Analytics) on return
 - [ ] Add "Return to Dashboard" breadcrumb to case detail views
-- [ ] Implement dashboard-specific keyboard shortcuts
-- [ ] Add widget focus indicators for keyboard navigation
+- [ ] Dashboard-specific keyboard shortcuts
 
 ---
 
 ### Week 4: Buffer & Planning (Jan 20-26)
 
-_Focus: Catchup, polish, and February planning_
+_Focus: Polish, security fixes, and February planning_
 
-- [ ] Address any outstanding issues
-- [ ] Phase 5: Navigation keyboard shortcuts (if time permits)
+- [ ] Fix `hono` high severity vulnerability (npm audit fix)
+- [ ] Address remaining security audit findings (see Audit section)
+- [ ] Phase 5 navigation features (if not completed in Week 3)
+- [ ] Quick Note popover (deferred from Phase 4)
+- [ ] Activity log auto-archiving policy
 - [ ] Documentation updates
 - [ ] February roadmap planning
 
@@ -213,7 +229,7 @@ _Focus: Catchup, polish, and February planning_
 | ----------------- | ------- | --------- |
 | Dashboard phases  | 4       | 5         |
 | Domain modules    | 8       | 8 ✅      |
-| Test count        | 859     | 950+      |
+| Test count        | 894     | 950+      |
 | Lines migrated    | ~6,356  | ~6,356 ✅ |
 | utils/ re-exports | 9       | 9 ✅      |
 
@@ -223,7 +239,7 @@ _Focus: Catchup, polish, and February planning_
 
 > **Goal:** Extract all pure business logic from `utils/` to `domain/` layer. Pure functions with no I/O, no React, fully testable.
 >
-> **Status:** ✅ Completed January 12, 2026
+> **Status:** ✅ Completed January 9, 2026
 
 ### Final Domain Structure
 
@@ -309,18 +325,77 @@ These files intentionally remain in `utils/` because they have I/O dependencies:
 
 ## �️ Audit Findings & Remediation (Jan Mid-Month)
 
-- [ ] **Security:** Update `@modelcontextprotocol/sdk` to fix ReDoS vulnerability.
-- [ ] **Security:** Update `qs` to fix DoS vulnerability.
-- [ ] **Accessibility:** Perform manual verification of keyboard navigation and screen reader support.
+**Security Audit completed January 13, 2026** - See [SECURITY_AUDIT.md](../audit/SECURITY_AUDIT.md)
+
+### npm Vulnerabilities
+
+- [ ] **High:** `hono` JWT algorithm confusion vulnerability (fix available via `npm audit fix`)
+- [x] ~~**ReDoS:** `@modelcontextprotocol/sdk`~~ (no longer in dependencies)
+- [x] ~~**DoS:** `qs`~~ (no longer in dependencies)
+
+### Code Quality Findings
+
+| Priority | Finding                                | Status     |
+| -------- | -------------------------------------- | ---------- |
+| High     | AVS duplicate detection error handling | 📋 Planned |
+| Medium   | File storage silent load failures      | 📋 Planned |
+| Medium   | Template reorder optimistic UI         | 📋 Planned |
+| Medium   | Encryption auth error specificity      | 📋 Planned |
+| Low      | Synchronous AVS parsing                | 📋 Backlog |
+| Low      | Activity log unbounded growth          | 📋 Backlog |
+
+### Accessibility
+
+- [ ] Perform manual verification of keyboard navigation and screen reader support
 
 ## �🗂️ Deferred Work
 
-### Phase 5: Navigation & Context Flow (Moved to Week 3)
+### Phase 5: Navigation & Context Flow (Week 3-4)
 
 - [ ] Scroll/tab state preservation
 - [ ] Breadcrumb navigation
 - [ ] Dashboard keyboard shortcuts
-- [ ] Quick Note popover
+
+### Quick Note Popover (From Phase 4)
+
+- [ ] Quick Note popover using existing `useNoteFlow`
+
+---
+
+## ✅ Unplanned Work Completed
+
+The following features were delivered but not originally on the roadmap:
+
+### Unified Template System (Week 2)
+
+- [x] Unified template system implementation
+- [x] VR generation rewired to use templates
+- [x] Legacy VRScript system removed
+- [x] Case summary generator migrated to templates
+- [x] Drag-and-drop reordering for summary templates
+- [x] Summary template editor in TemplatesPanel
+- [x] Placeholder Palette component
+
+### Priority System Enhancements (Week 3)
+
+- [x] Dynamic weight calculation for alert types
+- [x] Dynamic weight calculation for statuses
+- [x] Sortable alert types UI with DnD
+- [x] Alert age scoring and oldest alert utilities
+
+### Code Quality (Week 3)
+
+- [x] `guardDataManager` utility for standardized null checks
+- [x] `createDataManagerGuard` factory function
+- [x] Console.warn/error replaced with logger
+- [x] Shared utilities extraction
+- [x] SimpleCategoryEditor re-render optimization
+- [x] localStorage adapter mocking improvements
+
+### Filters (Week 2)
+
+- [x] Show Completed Cases filter
+- [x] Case list padding improvements
 
 ---
 
@@ -333,4 +408,4 @@ These files intentionally remain in `utils/` because they have I/O dependencies:
 
 ---
 
-_Last updated: January 9, 2026_
+_Last updated: January 14, 2026_

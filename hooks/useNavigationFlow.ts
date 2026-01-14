@@ -22,6 +22,8 @@ interface NavigationHandlers {
   showNewCaseModal: boolean;
   sidebarOpen: boolean;
   breadcrumbTitle?: string;
+  /** The view from which the user navigated to case details (for breadcrumb context) */
+  detailsSourceView?: AppView;
   navigationLock: NavigationLock;
   navigate: (view: AppView) => void;
   viewCase: (caseId: string) => void;
@@ -154,6 +156,7 @@ export function useNavigationFlow({
     showNewCaseModal,
     sidebarOpen,
     breadcrumbTitle,
+    detailsSourceView: formState.detailsSourceView,
     navigationLock,
     setSidebarOpen,
     ...actions,

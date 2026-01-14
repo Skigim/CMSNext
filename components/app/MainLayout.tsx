@@ -18,6 +18,8 @@ interface MainLayoutProps {
   onNavigate: (view: AppView) => void;
   onNewCase: () => void;
   breadcrumbTitle?: string;
+  /** The view from which the user navigated to case details (for breadcrumb context) */
+  breadcrumbSourceView?: AppView;
   sidebarOpen?: boolean;
   onSidebarOpenChange?: (open: boolean) => void;
 }
@@ -28,6 +30,7 @@ export function MainLayout({
   onNavigate, 
   onNewCase,
   breadcrumbTitle,
+  breadcrumbSourceView,
   sidebarOpen,
   onSidebarOpenChange
 }: MainLayoutProps) {
@@ -49,7 +52,10 @@ export function MainLayout({
         segments.push({ label: 'Cases' });
         break;
       case 'details':
-        segments.push({ label: 'Cases', view: 'list' });
+        // Only show Cases breadcrumb if we came from the list view
+        if (breadcrumbSourceView === 'list') {
+          segments.push({ label: 'Cases', view: 'list' });
+        }
         segments.push({ label: breadcrumbTitle || 'Case Details' });
         break;
       case 'form':
