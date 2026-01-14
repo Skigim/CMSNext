@@ -1337,9 +1337,8 @@ describe('calculatePriorityScore with tiered age multipliers', () => {
 
     const score = calculatePriorityScore(caseData, []);
 
-    // 35 days * 30 base * 1x multiplier (NOT 4x) = 1050
-    // Completed cases don't get age escalation
-    expect(score).toBe(35 * SCORE_PER_DAY_SINCE_APPLICATION * 1);
+    // Completed cases get 0 points for application age
+    expect(score).toBe(0);
   });
 
   it('should apply alert age multiplier even for completed statuses', () => {
@@ -1375,12 +1374,11 @@ describe('calculatePriorityScore with tiered age multipliers', () => {
     const score = calculatePriorityScore(caseData, alerts);
 
     // Alert type: 100
-    // App age: 35 days * 30 * 1x (completed) = 1,050
+    // App age: 0 (completed cases get no application age points)
     // Alert age: 35 days * 50 * 8x = 14,000
-    // Total: 15,150
+    // Total: 14,100
     expect(score).toBe(
       SCORE_OTHER_ALERT +
-      35 * SCORE_PER_DAY_SINCE_APPLICATION * 1 +
       35 * SCORE_PER_DAY_ALERT_AGE * 8
     );
   });
@@ -1420,8 +1418,8 @@ describe('calculatePriorityScore with tiered age multipliers', () => {
 
     const score = calculatePriorityScore(caseData, [], config);
 
-    // 35 days * 30 base * 1x multiplier (countsAsCompleted=true) = 1050
-    expect(score).toBe(35 * SCORE_PER_DAY_SINCE_APPLICATION * 1);
+    // Completed cases (countsAsCompleted=true) get 0 points for application age
+    expect(score).toBe(0);
   });
 
   it('should apply age scaling when countsAsCompleted is false in config', () => {
