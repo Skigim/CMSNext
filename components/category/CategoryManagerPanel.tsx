@@ -37,6 +37,7 @@ import { COLOR_SLOTS, type ColorSlot } from "@/types/colorSlots";
 import { useCategoryConfig } from "@/contexts/CategoryConfigContext";
 import { useCategoryEditorState, useIsMounted } from "@/hooks";
 import { cn } from "../ui/utils";
+import { SortableAlertTypes } from "./SortableAlertTypes";
 
 // ============================================================================
 // Types
@@ -559,7 +560,7 @@ function StatusCategoryEditor({
 }
 
 // ============================================================================
-// Alert Type Category Editor (with color picker)
+// Alert Type Category Editor (with drag-and-drop reordering)
 // ============================================================================
 
 type AlertTypeCategoryEditorProps = {
@@ -574,93 +575,92 @@ function AlertTypeCategoryEditor({
   isGloballyLoading,
 }: AlertTypeCategoryEditorProps) {
   const metadata = CATEGORY_DISPLAY_METADATA.alertTypes;
-  const [draftName, setDraftName] = useState("");
-  const [draftColor, setDraftColor] = useState<ColorSlot>("amber");
+  const [localItems, setLocalItems] = useState<AlertTypeConfig[]>(alertTypeConfigs);
+  const [isSaving, setIsSaving] = useState(false);
 
-  const {
-    items,
-    duplicateIndices,
-    cleanedItems,
-    hasChanges,
-    disableSave,
-    isSaving,
-    touched,
-    handleNameChange,
-    handleFieldChange,
-    handleRemove,
-    handleAdd,
-    handleRevert,
-    handleSave,
-  } = useCategoryEditorState<AlertTypeConfig>({
-    initialItems: alertTypeConfigs,
-    onSave,
-    isGloballyLoading,
-    allowEmpty: true, // Alert types can be empty
-    createItem: (name) => ({ name, colorSlot: draftColor }),
-    cleanItem: (item) => ({ name: item.name.trim(), colorSlot: item.colorSlot }),
-    hasItemChanged: (current, original) =>
-      current.name !== original.name || current.colorSlot !== original.colorSlot,
-  });
+  // Sync with external changes
+  useMemo(() => {
+    setLocalItems(alertTypeConfigs);
+  }, [alertTypeConfigs]);
 
-  const resetDraft = () => {
-    setDraftName("");
-    // Cycle to next color
-    const currentIndex = COLOR_SLOTS.indexOf(draftColor);
-    setDraftColor(COLOR_SLOTS[(currentIndex + 1) % COLOR_SLOTS.length]);
-  };
+  // Check if there are unsaved changes
+  const hasChanges = useMemo(() => {
+    if (localItems.length !== alertTypeConfigs.length) return true;
+    return localItems.some((item, i) => {
+      const original = alertTypeConfigs[i];
+      if (!original) return true;
+      return (
+        item.name !== original.name ||
+        item.colorSlot !== original.colorSlot ||
+        item.sortOrder !== original.sortOrder
+      );
+    });
+  }, [localItems, alertTypeConfigs]);
+
+  // Check for duplicates
+  const hasDuplicates = useMemo(() => {
+    const seen = new Set<string>();
+    for (const item of localItems) {
+      const normalized = item.name.trim().toLowerCase();
+      if (normalized && seen.has(normalized)) return true;
+      seen.add(normalized);
+    }
+    return false;
+  }, [localItems]);
+
+  const handleChange = useCallback((items: AlertTypeConfig[]) => {
+    setLocalItems(items);
+  }, []);
+
+  const handleRevert = useCallback(() => {
+    setLocalItems(alertTypeConfigs);
+  }, [alertTypeConfigs]);
+
+  const handleSave = useCallback(async () => {
+    // Clean items before saving
+    const cleaned = localItems
+      .filter(item => item.name.trim())
+      .map((item, idx) => ({
+        name: item.name.trim(),
+        colorSlot: item.colorSlot,
+        sortOrder: idx,
+      }));
+
+    setIsSaving(true);
+    try {
+      await onSave(cleaned);
+    } finally {
+      setIsSaving(false);
+    }
+  }, [localItems, onSave]);
+
+  const cleanedCount = localItems.filter(item => item.name.trim()).length;
+  const disableSave = isSaving || isGloballyLoading || !hasChanges || hasDuplicates;
 
   return (
     <EditorShell
       label={metadata.label}
-      description={metadata.description}
-      itemCount={cleanedItems.length}
+      description={`${metadata.description} Drag to reorder priorities.`}
+      itemCount={cleanedCount}
       hasChanges={hasChanges}
       disableSave={disableSave}
       isSaving={isSaving}
       isGloballyLoading={isGloballyLoading}
-      onRevert={() => handleRevert(() => setDraftName(""))}
+      onRevert={handleRevert}
       onSave={handleSave}
       emptyMessage={
-        touched && cleanedItems.length === 0 ? (
+        cleanedCount === 0 ? (
           <p className="mt-3 text-sm text-muted-foreground">
             No alert types configured. Types will be added automatically when alerts are imported.
           </p>
         ) : null
       }
     >
-      {items.map((alertType, index) => (
-        <ItemRow
-          key={`alertType-${index}`}
-          value={alertType.name}
-          onChange={(name) => handleNameChange(index, name)}
-          onRemove={() => handleRemove(index)}
-          isDuplicate={duplicateIndices.has(index)}
-          isEmpty={!alertType.name.trim()}
-          disabled={isSaving || isGloballyLoading}
-          ariaLabel={`Alert type option ${index + 1}`}
-          extraControls={
-            <ColorSlotPicker
-              value={alertType.colorSlot}
-              onChange={(color) => handleFieldChange(index, 'colorSlot', color)}
-              disabled={isSaving || isGloballyLoading}
-            />
-          }
-        />
-      ))}
-      <AddItemRow
-        draftValue={draftName}
-        onDraftChange={setDraftName}
-        onAdd={() => handleAdd(draftName, resetDraft)}
+      <SortableAlertTypes
+        alertTypes={localItems}
+        onChange={handleChange}
         disabled={isSaving || isGloballyLoading}
-        placeholder="Add new alert type..."
-        ariaLabel="Add alert type option"
-        extraControls={
-          <ColorSlotPicker
-            value={draftColor}
-            onChange={setDraftColor}
-            disabled={isSaving || isGloballyLoading}
-          />
-        }
+        showWeights={true}
       />
     </EditorShell>
   );
