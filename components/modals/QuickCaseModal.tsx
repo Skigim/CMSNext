@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo } from "react";
+import { useState, useCallback, useMemo, useRef, useEffect } from "react";
 import {
   Dialog,
   DialogContent,
@@ -10,6 +10,7 @@ import {
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 import { Label } from "../ui/label";
+import { Checkbox } from "../ui/checkbox";
 import { Loader2, Plus } from "lucide-react";
 import { toast } from "sonner";
 import { NewPersonData, NewCaseRecordData, CaseStatus } from "../../types/case";
@@ -56,15 +57,31 @@ export function QuickCaseModal({ isOpen, onClose, onSave }: QuickCaseModalProps)
   const [mcn, setMcn] = useState("");
   const [applicationDate, setApplicationDate] = useState(getTodayDate());
   const [isSaving, setIsSaving] = useState(false);
+  const [addAnother, setAddAnother] = useState(false);
 
-  // Reset form when modal opens/closes
-  const handleClose = useCallback(() => {
+  // Ref for first name input to focus after reset
+  const firstNameRef = useRef<HTMLInputElement>(null);
+
+  // Reset addAnother when modal opens
+  useEffect(() => {
+    if (isOpen) {
+      setAddAnother(false);
+    }
+  }, [isOpen]);
+
+  // Reset form fields to initial state
+  const resetForm = useCallback(() => {
     setFirstName("");
     setLastName("");
     setMcn("");
     setApplicationDate(getTodayDate());
+  }, []);
+
+  // Reset form and close modal
+  const handleClose = useCallback(() => {
+    resetForm();
     onClose();
-  }, [onClose]);
+  }, [onClose, resetForm]);
 
   // Validation
   const isFormValid = useCallback(() => {
@@ -154,7 +171,15 @@ export function QuickCaseModal({ isOpen, onClose, onSave }: QuickCaseModalProps)
       await onSave({ person: personData, caseRecord: caseRecordData });
 
       toast.success(`Case created for ${firstName} ${lastName}`, { id: toastId });
-      handleClose();
+
+      if (addAnother) {
+        // Reset form for another case entry
+        resetForm();
+        // Focus first name input for faster data entry
+        setTimeout(() => firstNameRef.current?.focus(), 0);
+      } else {
+        handleClose();
+      }
     } catch (error) {
       toast.error(
         error instanceof Error ? error.message : "Failed to create case",
@@ -174,6 +199,8 @@ export function QuickCaseModal({ isOpen, onClose, onSave }: QuickCaseModalProps)
     defaultLivingArrangement,
     onSave,
     handleClose,
+    addAnother,
+    resetForm,
   ]);
 
   return (
@@ -195,6 +222,7 @@ export function QuickCaseModal({ isOpen, onClose, onSave }: QuickCaseModalProps)
               <div className="space-y-2">
                 <Label htmlFor="quickFirstName">First Name *</Label>
                 <Input
+                  ref={firstNameRef}
                   id="quickFirstName"
                   value={firstName}
                   onChange={(e) => setFirstName(e.target.value)}
@@ -239,7 +267,19 @@ export function QuickCaseModal({ isOpen, onClose, onSave }: QuickCaseModalProps)
             </div>
           </div>
 
-          <DialogFooter>
+          <DialogFooter className="flex-col sm:flex-row gap-4">
+            <div className="flex items-center space-x-2 mr-auto">
+              <Checkbox
+                id="addAnother"
+                checked={addAnother}
+                onCheckedChange={(checked) => setAddAnother(checked === true)}
+                disabled={isSaving}
+              />
+              <Label htmlFor="addAnother" className="text-sm font-normal cursor-pointer">
+                Add another case after saving
+              </Label>
+            </div>
+            <div className="flex gap-2">
             <Button
               type="button"
               variant="outline"
@@ -264,6 +304,7 @@ export function QuickCaseModal({ isOpen, onClose, onSave }: QuickCaseModalProps)
                 </>
               )}
             </Button>
+            </div>
           </DialogFooter>
         </form>
       </DialogContent>
