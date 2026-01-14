@@ -167,17 +167,20 @@ Maintained by the storage + autosave working group. Align telemetry follow-ups w
 
 **Rating: 95/100** _(Updated January 14, 2026)_
 
-Core case CRUD is highly mature. Recent enhancements focused on "at-a-glance" comprehension: priority scoring integration, terminal status visibility flags, enhanced sorting options, and streamlined case details UI organization.
+Core case CRUD is highly mature. Recent enhancements focused on "at-a-glance" comprehension: priority scoring integration, terminal status visibility flags, enhanced sorting options, and streamlined 2-column case details layout.
 
-**January 14, 2026:** Case details UI reorganized - retro months simplified to conditional text input (appears only when retroRequested=true), duplicate fields removed (Living Arrangement, Description), and Relationships component moved to CaseColumn for better logical grouping.
+**January 14, 2026:** Case details restructured to 2-column layout - IntakeColumn removed entirely with fields redistributed across PersonColumn (intake verification, relationships) and CaseColumn (application validated, AVS/voter fields, reviews). Internal 3-column grids optimize space utilization. Retro months input appears directly below retro requested checkbox for logical grouping.
 
 ### Strengths
 
-- **Streamlined Case Details**: Conditional retro months input (shows when retroRequested=true), removed duplicate fields, Relationships moved to CaseColumn for better organization
+- **2-Column Case Details Layout**: IntakeColumn eliminated, fields redistributed for better organization and balanced panel heights - PersonColumn handles person data and intake verification, CaseColumn manages case-specific fields and reviews
 - **Priority Scoring Integration**: "Score" column in Case List visualizes urgency based on alerts, status, and activity
 - **Terminal Status Flags**: Visual indicators for closed/terminal cases with option to filter them out of view
 - **Rich Metadata**: Full support for demographics, program dates, authorized reps, and living arrangements
 - **Retro/Waiver Badges**: Visual indicators in case details header when waiver requested or retro requested
+- **2-Column Layout**: Responsive 2-column grid (PersonColumn + CaseColumn) with internal 3-column grids for optimal space usage
+- **PersonColumn**: Person data + Contact Methods (3-col) + Pregnancy + Marital Status + Eligibility (3-col: Citizenship/Residency/Aged-Disabled) + Relationships
+- **CaseColumn**: Application Validated + Case Identification (3-col: Number/Status/SSN/AVS Consent/Voter Form) + Waiver/Retro flags + Retro months input (conditional, below retro requested) + Reviews (3-col: VRs/Budgets/Narratives/Interfaces/AVS Submitted)
 - **Pagination**: 20 items per page with "Showing X-Y of Z" count, page navigation, resets on filter changes
 - **Smart Navigation**: Creating a new case automatically navigates to the case details view
 - **Bulk Actions**: Multi-select cases for batch delete or status change with floating toolbar and confirmation dialogs
@@ -187,7 +190,7 @@ Core case CRUD is highly mature. Recent enhancements focused on "at-a-glance" co
 - **Selection Management**: `useCaseSelection` hook provides multi-select state with select-all, partial selection indicators
 - **Streamlined Hook Layer**: `useCaseManagement` provides clean React integration with toast feedback and error handling
 - **Navigation Integration**: `useNavigationFlow` ensures consistent transitions and performance measurement logging across views
-- **Comprehensive Test Coverage**: 282/282 tests passing (100%) including service tests, integration tests, and component tests
+- **Comprehensive Test Coverage**: 912/912 tests passing (100%) including service tests, integration tests, and component tests
 - **Data Model Integrity**: Normalized structures (`CaseDisplay`, `CaseRecord`, `Person`, `Relationship`) with strict TypeScript validation
 - **Import/Export**: Bulk operations with duplicate detection and progress indicators
 - **Autosave Integration**: Forms seamlessly integrate with AutosaveFileService for reliable persistence

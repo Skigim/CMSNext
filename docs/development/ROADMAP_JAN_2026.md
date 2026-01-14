@@ -190,10 +190,12 @@ _Focus: Priority enhancements, code quality, and polish_
 **Completed This Week:**
 
 - [x] **Config-Driven Priority Scoring**: Removed all hardcoded fallbacks (EXCLUDED_STATUSES, isExcludedStatus) - priority system now requires explicit config, fails open when missing (prevents silent bugs)
-- [x] **Case Details UI Reorganization**:
+- [x] **2-Column Case Details Layout**: Complete restructuring from 3-column to 2-column layout for better balance
+  - Eliminated IntakeColumn entirely (fields redistributed to PersonColumn and CaseColumn)
+  - PersonColumn: Person data + Contact Methods (3-col grid) + Pregnancy + Marital Status + Eligibility (3-col grid: Citizenship/Residency/Aged-Disabled) + Relationships
+  - CaseColumn: Application Validated + Case Identification (3-col grid: Number/Status/SSN/AVS Consent/Voter Form) + Waiver/Retro flags + Retro months input (below retro requested) + Reviews (3-col grid: VRs/Budgets/Narratives/Interfaces/AVS Submitted)
+  - Removed duplicate Living Arrangement and Description fields
   - Replaced retro months checkbox grid with conditional text input (shows when retroRequested=true)
-  - Removed duplicate Living Arrangement and Description fields from CaseColumn
-  - Moved Relationships component from PersonColumn to CaseColumn for better organization
 - [x] Dynamic priority weight calculation for alert types and statuses
 - [x] Sortable alert types UI with shared DnD utility
 - [x] Security audit findings addressed
