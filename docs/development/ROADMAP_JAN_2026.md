@@ -189,6 +189,11 @@ _Focus: Priority enhancements, code quality, and polish_
 
 **Completed This Week:**
 
+- [x] **Config-Driven Priority Scoring**: Removed all hardcoded fallbacks (EXCLUDED_STATUSES, isExcludedStatus) - priority system now requires explicit config, fails open when missing (prevents silent bugs)
+- [x] **Case Details UI Reorganization**:
+  - Replaced retro months checkbox grid with conditional text input (shows when retroRequested=true)
+  - Removed duplicate Living Arrangement and Description fields from CaseColumn
+  - Moved Relationships component from PersonColumn to CaseColumn for better organization
 - [x] Dynamic priority weight calculation for alert types and statuses
 - [x] Sortable alert types UI with shared DnD utility
 - [x] Security audit findings addressed
@@ -200,23 +205,14 @@ _Focus: Priority enhancements, code quality, and polish_
 - [x] Placeholder Palette component for templates
 - [x] Sidebar open/close behavior simplified
 
-**Phase 5: Navigation & Context Flow** 📋 REMAINING
-
-- [ ] Preserve dashboard scroll position on navigation
-- [ ] Preserve selected tab (Overview/Analytics) on return
-- [ ] Add "Return to Dashboard" breadcrumb to case detail views
-- [ ] Dashboard-specific keyboard shortcuts
-
 ---
 
 ### Week 4: Buffer & Planning (Jan 20-26)
 
 _Focus: Polish, security fixes, and February planning_
 
-- [ ] Fix `hono` high severity vulnerability (npm audit fix)
+- [x] Fix `hono` high severity vulnerability (npm audit fix)
 - [ ] Address remaining security audit findings (see Audit section)
-- [ ] Phase 5 navigation features (if not completed in Week 3)
-- [ ] Quick Note popover (deferred from Phase 4)
 - [ ] Activity log auto-archiving policy
 - [ ] Documentation updates
 - [ ] February roadmap planning
@@ -227,7 +223,7 @@ _Focus: Polish, security fixes, and February planning_
 
 | Metric            | Current | Target    |
 | ----------------- | ------- | --------- |
-| Dashboard phases  | 4       | 5         |
+| Dashboard phases  | 4       | 4 ✅      |
 | Domain modules    | 8       | 8 ✅      |
 | Test count        | 894     | 950+      |
 | Lines migrated    | ~6,356  | ~6,356 ✅ |
@@ -329,7 +325,7 @@ These files intentionally remain in `utils/` because they have I/O dependencies:
 
 ### npm Vulnerabilities
 
-- [ ] **High:** `hono` JWT algorithm confusion vulnerability (fix available via `npm audit fix`)
+- [x] **High:** `hono` JWT algorithm confusion vulnerability (fix available via `npm audit fix`)
 - [x] ~~**ReDoS:** `@modelcontextprotocol/sdk`~~ (no longer in dependencies)
 - [x] ~~**DoS:** `qs`~~ (no longer in dependencies)
 
@@ -346,19 +342,9 @@ These files intentionally remain in `utils/` because they have I/O dependencies:
 
 ### Accessibility
 
-- [ ] Perform manual verification of keyboard navigation and screen reader support
+- [x] Perform manual verification of keyboard navigation and screen reader support
 
 ## �🗂️ Deferred Work
-
-### Phase 5: Navigation & Context Flow (Week 3-4)
-
-- [ ] Scroll/tab state preservation
-- [ ] Breadcrumb navigation
-- [ ] Dashboard keyboard shortcuts
-
-### Quick Note Popover (From Phase 4)
-
-- [ ] Quick Note popover using existing `useNoteFlow`
 
 ---
 

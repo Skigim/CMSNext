@@ -6,7 +6,6 @@ import { toast } from "sonner";
 import { StoredCase, NewPersonData, NewCaseRecordData, Relationship, CaseStatus } from "../../types/case";
 import { PersonColumn } from "./PersonColumn";
 import { CaseColumn } from "./CaseColumn";
-import { IntakeColumn } from "./IntakeColumn";
 import { useCategoryConfig } from "@/contexts/CategoryConfigContext";
 import { useNavigationLock } from "@/hooks/useNavigationLock";
 import { useFileStorageLifecycleSelectors } from "@/contexts/FileStorageContext";
@@ -257,16 +256,16 @@ export function CaseIntakeScreen({ caseData, onSave }: CaseIntakeScreenProps) {
         </div>
       </div>
 
-      {/* 3-Column Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+      {/* 2-Column Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <PersonColumn
           personData={personData}
-          relationships={relationships}
+          caseData={caseRecordData}
           isEditing={isEditing}
           onPersonDataChange={handlePersonDataChange}
           onAddressChange={handleAddressChange}
           onMailingAddressChange={handleMailingAddressChange}
-          onRelationshipsChange={relationshipsHandlers}
+          onCaseDataChange={handleCaseDataChange}
         />
         <CaseColumn
           caseData={caseRecordData}
@@ -276,11 +275,6 @@ export function CaseIntakeScreen({ caseData, onSave }: CaseIntakeScreenProps) {
           onCaseDataChange={handleCaseDataChange}
           onRetroRequestedChange={handleRetroRequestedChange}
           onRelationshipsChange={relationshipsHandlers}
-        />
-        <IntakeColumn
-          caseData={caseRecordData}
-          isEditing={isEditing}
-          onCaseDataChange={handleCaseDataChange}
         />
       </div>
 

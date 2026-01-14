@@ -4,11 +4,10 @@ import { Label } from "../ui/label";
 import { Input } from "../ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
 import { Switch } from "../ui/switch";
-import { Button } from "../ui/button";
-import { Badge } from "../ui/badge";
+import { Checkbox } from "../ui/checkbox";
 import { Separator } from "../ui/separator";
-import { User, Phone, Mail, MapPin, Calendar, Plus, Minus, Users } from "lucide-react";
-import { NewPersonData, Relationship } from "../../types/case";
+import { User, Phone, Mail, MapPin, Calendar, Shield, Check, X } from "lucide-react";
+import { NewPersonData, NewCaseRecordData, ContactMethod } from "../../types/case";
 import { useCategoryConfig } from "@/contexts/CategoryConfigContext";
 import { isoToDateInputValue, dateInputValueToISO, formatDateForDisplay } from "@/domain/common";
 import { formatPhoneNumberAsTyped, normalizePhoneNumber, getDisplayPhoneNumber } from "@/domain/common";
@@ -43,18 +42,26 @@ const US_STATES = [
   { value: 'WI', label: 'Wisconsin' }, { value: 'WY', label: 'Wyoming' },
 ];
 
+const CONTACT_METHODS: { value: ContactMethod; label: string }[] = [
+  { value: "mail", label: "US Mail" },
+  { value: "text", label: "Text" },
+  { value: "email", label: "Email" },
+];
+
+const CONTACT_METHOD_LABELS: Record<ContactMethod, string> = {
+  mail: "US Mail",
+  text: "Text Message",
+  email: "Email",
+};
+
 interface PersonColumnProps {
   personData: NewPersonData;
-  relationships: Relationship[];
+  caseData: NewCaseRecordData;
   isEditing: boolean;
   onPersonDataChange: (field: keyof NewPersonData, value: unknown) => void;
   onAddressChange: (field: keyof NewPersonData['address'], value: string) => void;
   onMailingAddressChange: (field: keyof NewPersonData['mailingAddress'], value: string | boolean) => void;
-  onRelationshipsChange: {
-    add: () => void;
-    update: (index: number, field: keyof Relationship, value: string) => void;
-    remove: (index: number) => void;
-  };
+  onCaseDataChange: (field: keyof NewCaseRecordData, value: unknown) => void;
 }
 
 // Read-only info display component
@@ -79,14 +86,36 @@ function InfoItem({
   );
 }
 
+// Checklist item for read-only flags
+function ChecklistItem({
+  label,
+  checked,
+}: {
+  label: string;
+  checked?: boolean;
+}) {
+  return (
+    <div className="flex items-center gap-2">
+      {checked ? (
+        <Check className="h-4 w-4 text-green-600" />
+      ) : (
+        <X className="h-4 w-4 text-muted-foreground/50" />
+      )}
+      <span className={checked ? "text-foreground text-sm" : "text-muted-foreground text-sm"}>
+        {label}
+      </span>
+    </div>
+  );
+}
+
 export function PersonColumn({
   personData,
-  relationships,
+  caseData,
   isEditing,
   onPersonDataChange,
   onAddressChange,
   onMailingAddressChange,
-  onRelationshipsChange,
+  onCaseDataChange,
 }: PersonColumnProps) {
   const { config } = useCategoryConfig();
   const livingArrangements = useMemo(() => config.livingArrangements, [config.livingArrangements]);
@@ -95,6 +124,23 @@ export function PersonColumn({
   const formatDate = (dateString?: string) => {
     const formatted = formatDateForDisplay(dateString);
     return formatted === "None" ? null : formatted;
+  };
+
+  // Contact methods display
+  const contactMethodsDisplay = useMemo(() => {
+    const methods = caseData.contactMethods ?? [];
+    if (methods.length === 0) return null;
+    return methods.map((m) => CONTACT_METHOD_LABELS[m] || m).join(", ");
+  }, [caseData.contactMethods]);
+
+  // Handler for contact method toggle
+  const handleContactMethodToggle = (method: ContactMethod, checked: boolean) => {
+    const current = caseData.contactMethods ?? [];
+    if (checked) {
+      onCaseDataChange("contactMethods", [...current, method]);
+    } else {
+      onCaseDataChange("contactMethods", current.filter((m) => m !== method));
+    }
   };
 
   // Full address string
@@ -133,7 +179,7 @@ export function PersonColumn({
           {/* Contact Info */}
           <div className="space-y-3">
             <h4 className="text-sm font-medium text-muted-foreground">Contact</h4>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-3 gap-3">
               {personData.phone && (
                 <div className="flex items-start gap-2">
                   <Phone className="h-4 w-4 text-muted-foreground mt-0.5" />
@@ -149,6 +195,33 @@ export function PersonColumn({
                 </div>
               )}
               <InfoItem label="Email" value={personData.email} icon={Mail} />
+              <InfoItem label="Contact Methods" value={contactMethodsDisplay} />
+            </div>
+          </div>
+
+          <Separator />
+
+          {/* Intake Details */}
+          <div className="space-y-3">
+            <h4 className="text-sm font-medium text-muted-foreground">Additional Details</h4>
+            <div className="grid grid-cols-3 gap-2">
+              <ChecklistItem label="Pregnancy" checked={caseData.pregnancy} />
+              <InfoItem label="Marital Status" value={caseData.maritalStatus} />
+            </div>
+          </div>
+
+          <Separator />
+
+          {/* Eligibility Verification */}
+          <div className="space-y-3">
+            <div className="flex items-center gap-2">
+              <Shield className="h-4 w-4 text-muted-foreground" />
+              <h4 className="text-sm font-medium text-muted-foreground">Eligibility</h4>
+            </div>
+            <div className="grid grid-cols-3 gap-2">
+              <ChecklistItem label="Citizenship" checked={caseData.citizenshipVerified} />
+              <ChecklistItem label="Residency" checked={caseData.residencyVerified} />
+              <ChecklistItem label="Aged/Disabled" checked={caseData.agedDisabledVerified} />
             </div>
           </div>
 
@@ -173,46 +246,6 @@ export function PersonColumn({
             )}
           </div>
 
-          <Separator />
-
-          {/* Relationships */}
-          <div className="space-y-3">
-            <div className="flex items-center gap-2">
-              <h4 className="text-sm font-medium text-muted-foreground">Relationships</h4>
-              <Badge variant="secondary" className="text-[10px] h-5 px-1.5">
-                {relationships.length}
-              </Badge>
-            </div>
-            {relationships.length > 0 ? (
-              <div className="space-y-2">
-                {relationships.map((rel, index) => (
-                  <div key={index} className="flex flex-col gap-1 p-2 border rounded-md bg-muted/10">
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm font-medium">{rel.name}</span>
-                      <Badge variant="outline" className="text-[10px] h-5 px-1.5">
-                        {rel.type}
-                      </Badge>
-                    </div>
-                    {rel.phone && (
-                      <div className="flex items-center gap-1.5">
-                        <Phone className="h-3 w-3 text-muted-foreground" />
-                        <CopyButton
-                          value={getDisplayPhoneNumber(rel.phone)}
-                          label="Phone"
-                          showLabel={false}
-                          successMessage="Phone copied"
-                          textClassName="text-xs"
-                          buttonClassName="text-xs px-1 py-0"
-                        />
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <p className="text-sm text-muted-foreground italic">No relationships added</p>
-            )}
-          </div>
         </CardContent>
       </Card>
     );
@@ -280,7 +313,7 @@ export function PersonColumn({
         {/* Contact Info */}
         <div className="space-y-3">
           <h4 className="text-sm font-medium text-muted-foreground">Contact</h4>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-3 gap-3">
             <div className="space-y-1">
               <Label htmlFor="email" className="text-xs">Email</Label>
               <Input
@@ -302,6 +335,85 @@ export function PersonColumn({
                 placeholder="(555) 123-4567"
                 className="h-8"
               />
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs">Contact Methods</Label>
+              <div className="flex gap-2 p-2 border rounded-md bg-muted/30 h-8 items-center">
+                {CONTACT_METHODS.map(({ value, label }) => (
+                  <div key={value} className="flex items-center space-x-1">
+                    <Checkbox
+                      id={`contact-${value}`}
+                      checked={(caseData.contactMethods ?? []).includes(value)}
+                      onCheckedChange={(checked) => handleContactMethodToggle(value, checked === true)}
+                      className="h-3 w-3"
+                    />
+                    <Label htmlFor={`contact-${value}`} className="text-xs cursor-pointer">{label}</Label>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <Separator />
+
+        {/* Intake Details */}
+        <div className="space-y-3">
+          <h4 className="text-sm font-medium text-muted-foreground">Additional Details</h4>
+          <div className="grid grid-cols-3 gap-3">
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="pregnancy"
+                checked={caseData.pregnancy ?? false}
+                onCheckedChange={(checked) => onCaseDataChange("pregnancy", checked)}
+              />
+              <Label htmlFor="pregnancy" className="text-sm">Pregnancy</Label>
+            </div>
+            <div className="space-y-1 col-span-2">
+              <Label htmlFor="maritalStatus" className="text-xs">Marital Status</Label>
+              <Input
+                id="maritalStatus"
+                value={caseData.maritalStatus ?? ""}
+                onChange={(e) => onCaseDataChange("maritalStatus", e.target.value)}
+                placeholder="e.g., Single, Married"
+                className="h-8"
+              />
+            </div>
+          </div>
+        </div>
+
+        <Separator />
+
+        {/* Eligibility Verification */}
+        <div className="space-y-3">
+          <div className="flex items-center gap-2">
+            <Shield className="h-4 w-4 text-muted-foreground" />
+            <h4 className="text-sm font-medium text-muted-foreground">Eligibility</h4>
+          </div>
+          <div className="grid grid-cols-3 gap-3">
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="citizenshipVerified"
+                checked={caseData.citizenshipVerified ?? false}
+                onCheckedChange={(checked) => onCaseDataChange("citizenshipVerified", checked)}
+              />
+              <Label htmlFor="citizenshipVerified" className="text-sm">Citizenship</Label>
+            </div>
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="residencyVerified"
+                checked={caseData.residencyVerified ?? false}
+                onCheckedChange={(checked) => onCaseDataChange("residencyVerified", checked)}
+              />
+              <Label htmlFor="residencyVerified" className="text-sm">Residency</Label>
+            </div>
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="agedDisabledVerified"
+                checked={caseData.agedDisabledVerified ?? false}
+                onCheckedChange={(checked) => onCaseDataChange("agedDisabledVerified", checked)}
+              />
+              <Label htmlFor="agedDisabledVerified" className="text-sm">Aged/Disabled</Label>
             </div>
           </div>
         </div>
@@ -426,77 +538,6 @@ export function PersonColumn({
           )}
         </div>
 
-        <Separator />
-
-        {/* Relationships */}
-        <div className="space-y-3">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Users className="h-4 w-4 text-muted-foreground" />
-              <h4 className="text-sm font-medium text-muted-foreground">Relationships</h4>
-            </div>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={onRelationshipsChange.add}
-              className="h-7 px-2"
-            >
-              <Plus className="h-3 w-3 mr-1" />
-              Add
-            </Button>
-          </div>
-          <div className="space-y-2">
-            {relationships.map((rel, index) => (
-              <div key={index} className="flex flex-col gap-2 p-2 border rounded-md bg-muted/10 relative group">
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => onRelationshipsChange.remove(index)}
-                  className="absolute right-1 top-1 h-6 w-6 p-0 opacity-0 group-hover:opacity-100"
-                >
-                  <Minus className="h-3 w-3" />
-                </Button>
-                <div className="grid grid-cols-3 gap-2">
-                  <Select
-                    value={rel.type}
-                    onValueChange={(value) => onRelationshipsChange.update(index, 'type', value)}
-                  >
-                    <SelectTrigger className="h-7 text-xs">
-                      <SelectValue placeholder="Type" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="Spouse">Spouse</SelectItem>
-                      <SelectItem value="Child">Child</SelectItem>
-                      <SelectItem value="Parent">Parent</SelectItem>
-                      <SelectItem value="Sibling">Sibling</SelectItem>
-                      <SelectItem value="Guardian">Guardian</SelectItem>
-                      <SelectItem value="Authorized Representative">Auth Rep</SelectItem>
-                      <SelectItem value="Case Manager">Case Manager</SelectItem>
-                      <SelectItem value="Other">Other</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <Input
-                    value={rel.name}
-                    onChange={(e) => onRelationshipsChange.update(index, 'name', e.target.value)}
-                    placeholder="Name"
-                    className="h-7 text-xs"
-                  />
-                  <Input
-                    value={formatPhoneNumberAsTyped(rel.phone)}
-                    onChange={(e) => onRelationshipsChange.update(index, 'phone', normalizePhoneNumber(e.target.value))}
-                    placeholder="Phone"
-                    className="h-7 text-xs"
-                  />
-                </div>
-              </div>
-            ))}
-            {relationships.length === 0 && (
-              <p className="text-sm text-muted-foreground italic">No relationships added</p>
-            )}
-          </div>
-        </div>
       </CardContent>
     </Card>
   );

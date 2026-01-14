@@ -18,23 +18,23 @@
 
 ## Quick Reference (January 2026)
 
-| Feature               | Rating | Trend | Notes                                       |
-| --------------------- | ------ | ----- | ------------------------------------------- |
-| Case Management       | 94     | ↑     | Score column, priority sort, terminal flags |
-| Local-First Storage   | 90     | →     | AES-256 encryption, split login/welcome UX  |
-| Financial Operations  | 92     | ↑     | Domain logic extracted, extensive test cov  |
-| Developer Enablement  | 89     | ↑     | 720 tests, IndexedDBHandleStore extracted   |
-| Premium UI/UX         | 87     | →     | Stable scrollbar, instant sidebar, tooltips |
-| Template System       | 92     | ↑     | Unified VR/Summary/Narrative templates      |
-| Data Portability      | 82     | →     | AVS import with update capability           |
-| Notes & Collaboration | 84     | →     | Click-to-copy notes, popover UI             |
-| Configurable Statuses | 78     | →     | Recently stabilized                         |
-| Dashboard & Insights  | 85     | ↑     | Phases 1-4 complete (Action Hub, Priority)  |
-| Legacy Migration      | 75     | →     | Dev-only, one-way                           |
-| Autosave & Recovery   | 75     | →     | IndexedDBHandleStore modularized            |
-| Feature Flags         | 72     | →     | In-memory only                              |
+| Feature               | Rating | Trend | Notes                                          |
+| --------------------- | ------ | ----- | ---------------------------------------------- |
+| Case Management       | 95     | ↑     | UI reorganization, conditional retro input     |
+| Local-First Storage   | 90     | →     | AES-256 encryption, split login/welcome UX     |
+| Financial Operations  | 92     | ↑     | Domain logic extracted, extensive test cov     |
+| Developer Enablement  | 89     | ↑     | 720 tests, IndexedDBHandleStore extracted      |
+| Premium UI/UX         | 87     | →     | Stable scrollbar, instant sidebar, tooltips    |
+| Template System       | 92     | ↑     | Unified VR/Summary/Narrative templates         |
+| Dashboard & Insights  | 88     | ↑     | Config-driven priority scoring, zero fallbacks |
+| Data Portability      | 82     | →     | AVS import with update capability              |
+| Notes & Collaboration | 84     | →     | Click-to-copy notes, popover UI                |
+| Configurable Statuses | 78     | →     | Recently stabilized                            |
+| Legacy Migration      | 75     | →     | Dev-only, one-way                              |
+| Autosave & Recovery   | 75     | →     | IndexedDBHandleStore modularized               |
+| Feature Flags         | 72     | →     | In-memory only                                 |
 
-**Average Rating:** 86.5/100  
+**Average Rating:** 86.8/100  
 **Test Status:** 720+ tests passing (100%)
 
 ---
@@ -165,12 +165,15 @@ Maintained by the storage + autosave working group. Align telemetry follow-ups w
 
 ### Implementation Snapshot
 
-**Rating: 94/100** _(Updated January 9, 2026)_
+**Rating: 95/100** _(Updated January 14, 2026)_
 
-Core case CRUD is highly mature. Recent enhancements focused on "at-a-glance" comprehension: priority scoring integration, terminal status visibility flags, and enhanced sorting options.
+Core case CRUD is highly mature. Recent enhancements focused on "at-a-glance" comprehension: priority scoring integration, terminal status visibility flags, enhanced sorting options, and streamlined case details UI organization.
+
+**January 14, 2026:** Case details UI reorganized - retro months simplified to conditional text input (appears only when retroRequested=true), duplicate fields removed (Living Arrangement, Description), and Relationships component moved to CaseColumn for better logical grouping.
 
 ### Strengths
 
+- **Streamlined Case Details**: Conditional retro months input (shows when retroRequested=true), removed duplicate fields, Relationships moved to CaseColumn for better organization
 - **Priority Scoring Integration**: "Score" column in Case List visualizes urgency based on alerts, status, and activity
 - **Terminal Status Flags**: Visual indicators for closed/terminal cases with option to filter them out of view
 - **Rich Metadata**: Full support for demographics, program dates, authorized reps, and living arrangements
@@ -389,14 +392,17 @@ Document generation feature group. Major refactor completed Jan 2026 to unify al
 
 ### Implementation Snapshot
 
-**Rating: 85/100** _(Updated January 9, 2026)_
+**Rating: 88/100** _(Updated January 14, 2026)_
 
 Dashboard Transformation is well underway with **Phases 1-4 Complete**. The dashboard now serves as a true command center with global quick actions, a priority task queue, and instant access to recent/pinned cases. The infrastructure is robust with a widget registry, lazy loading, and purely domain-driven data logic.
 
+**January 14, 2026:** Priority scoring system now fully config-driven with no hardcoded fallbacks (EXCLUDED_STATUSES removed) - all scoring functions require explicit `StatusConfig.countsAsCompleted` flags and `AlertTypeConfig` weights. System fails open when config missing, preventing silent bugs from masked misconfiguration.
+
 ### Strengths
 
+- **Config-Driven Priority Scoring**: Zero hardcoded fallbacks - all priority calculations use dynamic config with explicit status completion flags and alert type weights (prevents bugs from silently falling back to defaults)
 - **Quick Actions Hub (Phase 1)**: Global command bar for search, new case, bulk ops, and import/export
-- **Today's Work Widget (Phase 2)**: Priority task queue using weighted scoring (Intake status 5000pts, alerts 500-100pts, age factors) to surface critical cases
+- **Today's Work Widget (Phase 2)**: Priority task queue using weighted scoring (Intake status 5000pts, alerts 500-100pts by type, age factors) to surface critical cases
 - **Recent & Pinned Cases (Phase 3)**: Dedicated widgets tracking user history and favorites with one-click navigation
 - **Card Actions (Phase 4)**: Inline actions on dashboard cards (Pin, Quick Note) without leaving the view
 - **Domain-Driven Logic**: All dashboard logic (priority, recency, pinning) resides in `domain/dashboard/*.ts` with high test coverage
