@@ -36,10 +36,39 @@ const mockCases = [
     priority: false,
     createdAt: "2026-01-01",
     updatedAt: "2026-01-01",
-    person: { firstName: "John", lastName: "Doe" },
-    caseRecord: { caseType: "Type A" },
+    person: { 
+      firstName: "John", 
+      lastName: "Doe",
+      middleName: "",
+      ssn: "",
+      dateOfBirth: "",
+      phone: "",
+      email: "",
+      address: "",
+      city: "",
+      state: "",
+      zip: "",
+    },
+    caseRecord: { 
+      id: "case-1",
+      mcn: "MCN001",
+      status: "Pending",
+      priority: false,
+      caseType: "Type A",
+      createdAt: "2026-01-01",
+      updatedAt: "2026-01-01",
+      createdDate: "2026-01-01",
+      updatedDate: "2026-01-01",
+      admissionDate: "",
+      livingArrangement: "",
+      description: "",
+      retroRequested: false,
+      retroFrom: "",
+      retroTo: "",
+      voterFormStatus: "" as const,
+    },
   },
-];
+] as unknown as import("@/types/case").StoredCase[];
 
 const mockAlerts: never[] = [];
 

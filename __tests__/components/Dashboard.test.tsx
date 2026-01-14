@@ -167,6 +167,7 @@ describe("Dashboard", () => {
         alerts={alertsIndex}
         activityLogState={mockActivityLogState}
         onNewCase={vi.fn()}
+        onViewCase={vi.fn()}
       />,
     );
 
@@ -202,6 +203,7 @@ describe("Dashboard", () => {
         alerts={alertsIndex}
         activityLogState={mockActivityLogState}
         onNewCase={vi.fn()}
+        onViewCase={vi.fn()}
       />,
     );
 
