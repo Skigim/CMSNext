@@ -123,11 +123,10 @@ export function getAlertAgeMultiplier(days: number): number {
  * Check if a status is marked as "completed" in the config.
  * Completed statuses skip application age scaling since they don't need urgency escalation.
  * 
- * When config is provided, uses the countsAsCompleted flag.
- * When no config is provided, falls back to hardcoded EXCLUDED_STATUSES.
+ * REQUIRES config to be passed - no fallback to hardcoded lists.
  * 
  * @param status - The case status to check
- * @param caseStatuses - Optional status configuration array
+ * @param caseStatuses - Status configuration array (required for accurate results)
  * @returns true if the status is considered completed
  */
 export function isCompletedStatus(
@@ -135,18 +134,13 @@ export function isCompletedStatus(
   caseStatuses?: StatusConfig[]
 ): boolean {
   if (!status) return false;
+  if (!caseStatuses || caseStatuses.length === 0) return false;
   
-  // Use config if provided
-  if (caseStatuses && caseStatuses.length > 0) {
-    const statusLower = status.toLowerCase();
-    const statusConfig = caseStatuses.find(
-      (s) => s.name.toLowerCase() === statusLower
-    );
-    return statusConfig?.countsAsCompleted === true;
-  }
-  
-  // Legacy fallback: use hardcoded excluded statuses
-  return isExcludedStatus(status);
+  const statusLower = status.toLowerCase();
+  const statusConfig = caseStatuses.find(
+    (s) => s.name.toLowerCase() === statusLower
+  );
+  return statusConfig?.countsAsCompleted === true;
 }
 
 // ============================================================================
@@ -532,26 +526,6 @@ export function getPriorityReason(
 }
 
 /**
- * Statuses that should be excluded from priority queue.
- * These cases are either completed or don't require active work.
- */
-export const EXCLUDED_STATUSES = [
-  'denied',
-  'spenddown',
-  'closed',
-  'active',
-  'approved',
-] as const;
-
-/**
- * Check if a case status should be excluded from the priority queue.
- */
-export function isExcludedStatus(status: string | undefined): boolean {
-  if (!status) return false;
-  return EXCLUDED_STATUSES.includes(status.toLowerCase() as typeof EXCLUDED_STATUSES[number]);
-}
-
-/**
  * Get prioritized cases sorted by priority score.
  * Only returns cases with score > 0 and non-excluded statuses.
  * 
@@ -567,10 +541,10 @@ export function getPriorityCases(
   limit: number = 10,
   config?: PriorityConfig
 ): PriorityCase[] {
-  // Calculate scores for all cases (excluding terminal statuses)
+  // Calculate scores for all cases (excluding completed statuses via config)
   const scoredCases: PriorityCase[] = cases
-    // Filter out excluded statuses first
-    .filter((caseData) => !isExcludedStatus(caseData.status))
+    // Filter out completed statuses using config
+    .filter((caseData) => !isCompletedStatus(caseData.status, config?.caseStatuses))
     .map((caseData) => {
       const caseAlerts = alertsIndex.alertsByCaseId.get(caseData.id) || [];
       // Filter to only unresolved alerts

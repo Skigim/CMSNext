@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import type { StoredCase } from '../types/case';
 import type { AlertsIndex } from '../utils/alertsData';
-import { getPriorityCases, type PriorityCase } from '../domain/dashboard/priorityQueue';
+import { getPriorityCases, type PriorityCase, type PriorityConfig } from '../domain/dashboard/priorityQueue';
 
 /**
  * Hook for Today's Work widget data.
@@ -12,22 +12,24 @@ import { getPriorityCases, type PriorityCase } from '../domain/dashboard/priorit
  * @param cases - All cases from context
  * @param alertsIndex - Alerts index with case mapping
  * @param limit - Maximum priority cases to return (default: 10)
+ * @param config - Priority config with caseStatuses for completed status filtering
  * @returns Priority cases sorted by score
  * 
  * @example
  * ```tsx
- * const priorityCases = useTodaysWork(cases, alertsIndex, 5);
+ * const priorityCases = useTodaysWork(cases, alertsIndex, 5, { caseStatuses });
  * ```
  */
 export function useTodaysWork(
   cases: StoredCase[],
   alertsIndex: AlertsIndex,
-  limit: number = 10
+  limit: number = 10,
+  config?: PriorityConfig
 ): PriorityCase[] {
   // Use domain logic to calculate priority cases
   const priorityCases = useMemo(() => {
-    return getPriorityCases(cases, alertsIndex, limit);
-  }, [cases, alertsIndex, limit]);
+    return getPriorityCases(cases, alertsIndex, limit, config);
+  }, [cases, alertsIndex, limit, config]);
 
   return priorityCases;
 }

@@ -8,6 +8,7 @@ import type { StoredCase } from '@/types/case';
 import type { AlertsIndex } from '@/utils/alertsData';
 import type { WidgetMetadata } from './WidgetRegistry';
 import { useTodaysWork } from '@/hooks/useTodaysWork';
+import { useCategoryConfig } from '@/contexts/CategoryConfigContext';
 
 /**
  * Props for the Today's Work Widget.
@@ -52,8 +53,11 @@ export function TodaysWorkWidget({
   alerts, 
   onViewCase 
 }: TodaysWorkWidgetProps) {
+  // Get category config for status-based filtering
+  const { config } = useCategoryConfig();
+  
   // Get priority cases using the hook (limit to top 3 for compact display)
-  const priorityCases = useTodaysWork(cases, alerts, 3);
+  const priorityCases = useTodaysWork(cases, alerts, 3, { caseStatuses: config.caseStatuses });
 
   // Derive priority level from score for visual indicators
   const getPriorityLevel = (score: number): 'high' | 'medium' | 'low' => {

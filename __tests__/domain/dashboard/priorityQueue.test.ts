@@ -18,9 +18,7 @@ import {
   getDaysSinceApplication,
   getDaysSinceOldestAlert,
   getOldestAlertDate,
-  isExcludedStatus,
   isCompletedStatus,
-  EXCLUDED_STATUSES,
   getApplicationAgeMultiplier,
   getAlertAgeMultiplier,
   // Scoring constants
@@ -382,52 +380,6 @@ describe('calculatePriorityScore with alert age', () => {
 
     // Expected: just alert score, no age points (0 days)
     expect(score).toBe(SCORE_OTHER_ALERT);
-  });
-});
-
-describe('isExcludedStatus', () => {
-  it('should return true for Denied status', () => {
-    expect(isExcludedStatus('Denied')).toBe(true);
-    expect(isExcludedStatus('denied')).toBe(true);
-    expect(isExcludedStatus('DENIED')).toBe(true);
-  });
-
-  it('should return true for Spenddown status', () => {
-    expect(isExcludedStatus('Spenddown')).toBe(true);
-  });
-
-  it('should return true for Closed status', () => {
-    expect(isExcludedStatus('Closed')).toBe(true);
-  });
-
-  it('should return true for Active status', () => {
-    expect(isExcludedStatus('Active')).toBe(true);
-  });
-
-  it('should return true for Approved status', () => {
-    expect(isExcludedStatus('Approved')).toBe(true);
-  });
-
-  it('should return false for Intake status', () => {
-    expect(isExcludedStatus('Intake')).toBe(false);
-  });
-
-  it('should return false for Pending status', () => {
-    expect(isExcludedStatus('Pending')).toBe(false);
-  });
-
-  it('should return false for undefined/empty', () => {
-    expect(isExcludedStatus(undefined)).toBe(false);
-    expect(isExcludedStatus('')).toBe(false);
-  });
-
-  it('should include all expected statuses in EXCLUDED_STATUSES', () => {
-    expect(EXCLUDED_STATUSES).toContain('denied');
-    expect(EXCLUDED_STATUSES).toContain('spenddown');
-    expect(EXCLUDED_STATUSES).toContain('closed');
-    expect(EXCLUDED_STATUSES).toContain('active');
-    expect(EXCLUDED_STATUSES).toContain('approved');
-    expect(EXCLUDED_STATUSES).toHaveLength(5);
   });
 });
 
@@ -1003,87 +955,114 @@ describe('getPriorityCases', () => {
     expect(result[0].reason).toBe('Marked as priority');
   });
 
-  it('should exclude cases with Denied status', () => {
+  it('should exclude cases with Denied status when marked completed in config', () => {
     // ARRANGE
     const cases = [
       createMockCase({ id: 'case-1', status: 'Denied', priority: true }),
       createMockCase({ id: 'case-2', status: 'Pending', priority: true }),
     ];
     const alertsIndex = { alertsByCaseId: new Map() };
+    const config = {
+      caseStatuses: [
+        { name: 'Denied', colorSlot: 'red' as const, countsAsCompleted: true },
+        { name: 'Pending', colorSlot: 'amber' as const },
+      ],
+    };
 
     // ACT
-    const result = getPriorityCases(cases, alertsIndex);
+    const result = getPriorityCases(cases, alertsIndex, 10, config);
 
     // ASSERT
     expect(result).toHaveLength(1);
     expect(result[0].case.id).toBe('case-2');
   });
 
-  it('should exclude cases with Closed status', () => {
+  it('should exclude cases with Closed status when marked completed in config', () => {
     // ARRANGE
     const cases = [
       createMockCase({ id: 'case-1', status: 'Closed', priority: true }),
-      createMockCase({ id: 'case-2', status: 'Intake' }),
+      createMockCase({ id: 'case-2', status: 'Intake', priority: true }),
     ];
     const alertsIndex = { alertsByCaseId: new Map() };
+    const config = {
+      caseStatuses: [
+        { name: 'Closed', colorSlot: 'slate' as const, countsAsCompleted: true },
+        { name: 'Intake', colorSlot: 'blue' as const },
+      ],
+    };
 
     // ACT
-    const result = getPriorityCases(cases, alertsIndex);
+    const result = getPriorityCases(cases, alertsIndex, 10, config);
 
     // ASSERT
     expect(result).toHaveLength(1);
     expect(result[0].case.id).toBe('case-2');
   });
 
-  it('should exclude cases with Active status', () => {
+  it('should exclude cases with Active status when marked completed in config', () => {
     // ARRANGE
     const cases = [
       createMockCase({ id: 'case-1', status: 'Active', priority: true }),
       createMockCase({ id: 'case-2', priority: true }),
     ];
     const alertsIndex = { alertsByCaseId: new Map() };
+    const config = {
+      caseStatuses: [
+        { name: 'Active', colorSlot: 'green' as const, countsAsCompleted: true },
+      ],
+    };
 
     // ACT
-    const result = getPriorityCases(cases, alertsIndex);
+    const result = getPriorityCases(cases, alertsIndex, 10, config);
 
     // ASSERT
     expect(result).toHaveLength(1);
     expect(result[0].case.id).toBe('case-2');
   });
 
-  it('should exclude cases with Approved status', () => {
+  it('should exclude cases with Approved status when marked completed in config', () => {
     // ARRANGE
     const cases = [
       createMockCase({ id: 'case-1', status: 'Approved', priority: true }),
       createMockCase({ id: 'case-2', priority: true }),
     ];
     const alertsIndex = { alertsByCaseId: new Map() };
+    const config = {
+      caseStatuses: [
+        { name: 'Approved', colorSlot: 'green' as const, countsAsCompleted: true },
+      ],
+    };
 
     // ACT
-    const result = getPriorityCases(cases, alertsIndex);
+    const result = getPriorityCases(cases, alertsIndex, 10, config);
 
     // ASSERT
     expect(result).toHaveLength(1);
     expect(result[0].case.id).toBe('case-2');
   });
 
-  it('should exclude cases with Spenddown status', () => {
+  it('should exclude cases with Spenddown status when marked completed in config', () => {
     // ARRANGE
     const cases = [
       createMockCase({ id: 'case-1', status: 'Spenddown', priority: true }),
       createMockCase({ id: 'case-2', priority: true }),
     ];
     const alertsIndex = { alertsByCaseId: new Map() };
+    const config = {
+      caseStatuses: [
+        { name: 'Spenddown', colorSlot: 'purple' as const, countsAsCompleted: true },
+      ],
+    };
 
     // ACT
-    const result = getPriorityCases(cases, alertsIndex);
+    const result = getPriorityCases(cases, alertsIndex, 10, config);
 
     // ASSERT
     expect(result).toHaveLength(1);
     expect(result[0].case.id).toBe('case-2');
   });
 
-  it('should exclude all terminal statuses in mixed list', () => {
+  it('should exclude all completed statuses in mixed list when marked in config', () => {
     // ARRANGE
     const cases = [
       createMockCase({ id: 'case-denied', status: 'Denied', priority: true }),
@@ -1091,13 +1070,24 @@ describe('getPriorityCases', () => {
       createMockCase({ id: 'case-active', status: 'Active', priority: true }),
       createMockCase({ id: 'case-approved', status: 'Approved', priority: true }),
       createMockCase({ id: 'case-spenddown', status: 'Spenddown', priority: true }),
-      createMockCase({ id: 'case-intake', status: 'Intake' }), // Should be included
+      createMockCase({ id: 'case-intake', status: 'Intake', priority: true }), // Should be included
       createMockCase({ id: 'case-pending', status: 'Pending', priority: true }), // Should be included
     ];
     const alertsIndex = { alertsByCaseId: new Map() };
+    const config = {
+      caseStatuses: [
+        { name: 'Denied', colorSlot: 'red' as const, countsAsCompleted: true },
+        { name: 'Closed', colorSlot: 'slate' as const, countsAsCompleted: true },
+        { name: 'Active', colorSlot: 'green' as const, countsAsCompleted: true },
+        { name: 'Approved', colorSlot: 'green' as const, countsAsCompleted: true },
+        { name: 'Spenddown', colorSlot: 'purple' as const, countsAsCompleted: true },
+        { name: 'Intake', colorSlot: 'blue' as const },
+        { name: 'Pending', colorSlot: 'amber' as const },
+      ],
+    };
 
     // ACT
-    const result = getPriorityCases(cases, alertsIndex);
+    const result = getPriorityCases(cases, alertsIndex, 10, config);
 
     // ASSERT
     expect(result).toHaveLength(2);
@@ -1310,7 +1300,7 @@ describe('calculatePriorityScore with tiered age multipliers', () => {
   });
 
   it('should skip application age multiplier for completed/terminal statuses', () => {
-    // 35 days old application with Approved status = 1x multiplier (no scaling)
+    // 35 days old application with Approved status = 0 points (completed cases excluded)
     const caseData = createMockCase({
       status: 'Approved',
       updatedAt: '2020-01-01T00:00:00.000Z',
@@ -1335,7 +1325,13 @@ describe('calculatePriorityScore with tiered age multipliers', () => {
       },
     });
 
-    const score = calculatePriorityScore(caseData, []);
+    const config = {
+      caseStatuses: [
+        { name: 'Approved', colorSlot: 'green' as const, countsAsCompleted: true },
+      ],
+    };
+
+    const score = calculatePriorityScore(caseData, [], config);
 
     // Completed cases get 0 points for application age
     expect(score).toBe(0);
@@ -1371,7 +1367,13 @@ describe('calculatePriorityScore with tiered age multipliers', () => {
       createMockAlert({ alertDate: '2025-12-11', description: 'Generic' }), // 35 days old = 8x
     ];
 
-    const score = calculatePriorityScore(caseData, alerts);
+    const config = {
+      caseStatuses: [
+        { name: 'Closed', colorSlot: 'slate' as const, countsAsCompleted: true },
+      ],
+    };
+
+    const score = calculatePriorityScore(caseData, alerts, config);
 
     // Alert type: 100
     // App age: 0 (completed cases get no application age points)
@@ -1488,13 +1490,11 @@ describe('isCompletedStatus', () => {
     expect(isCompletedStatus('Unknown', statuses)).toBe(false);
   });
 
-  it('should fall back to isExcludedStatus when no config provided', () => {
-    // These are in EXCLUDED_STATUSES
-    expect(isCompletedStatus('Approved')).toBe(true);
-    expect(isCompletedStatus('Denied')).toBe(true);
-    expect(isCompletedStatus('Closed')).toBe(true);
-    
-    // These are not
+  it('should return false when no config provided (no fallback)', () => {
+    // Without config, we cannot determine completed status
+    expect(isCompletedStatus('Approved')).toBe(false);
+    expect(isCompletedStatus('Denied')).toBe(false);
+    expect(isCompletedStatus('Closed')).toBe(false);
     expect(isCompletedStatus('Pending')).toBe(false);
     expect(isCompletedStatus('Intake')).toBe(false);
   });
