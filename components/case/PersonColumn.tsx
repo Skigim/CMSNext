@@ -5,9 +5,11 @@ import { Input } from "../ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
 import { Switch } from "../ui/switch";
 import { Checkbox } from "../ui/checkbox";
+import { Badge } from "../ui/badge";
+import { Button } from "../ui/button";
 import { Separator } from "../ui/separator";
-import { User, Phone, Mail, MapPin, Calendar, Shield, Check, X } from "lucide-react";
-import { NewPersonData, NewCaseRecordData, ContactMethod } from "../../types/case";
+import { User, Phone, Mail, MapPin, Calendar, Shield, Check, X, Users, Plus, Minus } from "lucide-react";
+import { NewPersonData, NewCaseRecordData, ContactMethod, Relationship } from "../../types/case";
 import { useCategoryConfig } from "@/contexts/CategoryConfigContext";
 import { isoToDateInputValue, dateInputValueToISO, formatDateForDisplay } from "@/domain/common";
 import { formatPhoneNumberAsTyped, normalizePhoneNumber, getDisplayPhoneNumber } from "@/domain/common";
@@ -57,11 +59,17 @@ const CONTACT_METHOD_LABELS: Record<ContactMethod, string> = {
 interface PersonColumnProps {
   personData: NewPersonData;
   caseData: NewCaseRecordData;
+  relationships: Relationship[];
   isEditing: boolean;
   onPersonDataChange: (field: keyof NewPersonData, value: unknown) => void;
   onAddressChange: (field: keyof NewPersonData['address'], value: string) => void;
   onMailingAddressChange: (field: keyof NewPersonData['mailingAddress'], value: string | boolean) => void;
   onCaseDataChange: (field: keyof NewCaseRecordData, value: unknown) => void;
+  onRelationshipsChange: {
+    add: () => void;
+    update: (index: number, field: keyof Relationship, value: string) => void;
+    remove: (index: number) => void;
+  };
 }
 
 // Read-only info display component
@@ -111,11 +119,13 @@ function ChecklistItem({
 export function PersonColumn({
   personData,
   caseData,
+  relationships,
   isEditing,
   onPersonDataChange,
   onAddressChange,
   onMailingAddressChange,
   onCaseDataChange,
+  onRelationshipsChange,
 }: PersonColumnProps) {
   const { config } = useCategoryConfig();
   const livingArrangements = useMemo(() => config.livingArrangements, [config.livingArrangements]);
@@ -243,6 +253,47 @@ export function PersonColumn({
               <p className="text-xs text-muted-foreground pl-6">Mailing same as physical</p>
             ) : (
               <InfoItem label="Mailing Address" value={fullMailingAddress} icon={Mail} />
+            )}
+          </div>
+
+          <Separator />
+
+          {/* Relationships */}
+          <div className="space-y-3">
+            <div className="flex items-center gap-2">
+              <h4 className="text-sm font-medium text-muted-foreground">Relationships</h4>
+              <Badge variant="secondary" className="text-[10px] h-5 px-1.5">
+                {relationships.length}
+              </Badge>
+            </div>
+            {relationships.length > 0 ? (
+              <div className="space-y-2">
+                {relationships.map((rel, index) => (
+                  <div key={index} className="flex flex-col gap-1 p-2 border rounded-md bg-muted/10">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-medium">{rel.name}</span>
+                      <Badge variant="outline" className="text-[10px] h-5 px-1.5">
+                        {rel.type}
+                      </Badge>
+                    </div>
+                    {rel.phone && (
+                      <div className="flex items-center gap-1.5">
+                        <Phone className="h-3 w-3 text-muted-foreground" />
+                        <CopyButton
+                          value={getDisplayPhoneNumber(rel.phone)}
+                          label="Phone"
+                          showLabel={false}
+                          successMessage="Phone copied"
+                          textClassName="text-xs"
+                          buttonClassName="text-xs px-1 py-0"
+                        />
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground italic">No relationships added</p>
             )}
           </div>
 
@@ -536,6 +587,78 @@ export function PersonColumn({
               </div>
             </div>
           )}
+        </div>
+
+        <Separator />
+
+        {/* Relationships */}
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Users className="h-4 w-4 text-muted-foreground" />
+              <h4 className="text-sm font-medium text-muted-foreground">Relationships</h4>
+            </div>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={onRelationshipsChange.add}
+              className="h-7 px-2"
+            >
+              <Plus className="h-3 w-3 mr-1" />
+              Add
+            </Button>
+          </div>
+          <div className="space-y-2">
+            {relationships.map((rel, index) => (
+              <div key={index} className="flex flex-col gap-2 p-2 border rounded-md bg-muted/10 relative group">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => onRelationshipsChange.remove(index)}
+                  className="absolute right-1 top-1 h-6 w-6 p-0 opacity-0 group-hover:opacity-100"
+                >
+                  <Minus className="h-3 w-3" />
+                </Button>
+                <div className="grid grid-cols-3 gap-2">
+                  <Select
+                    value={rel.type}
+                    onValueChange={(value) => onRelationshipsChange.update(index, 'type', value)}
+                  >
+                    <SelectTrigger className="h-7 text-xs">
+                      <SelectValue placeholder="Type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Spouse">Spouse</SelectItem>
+                      <SelectItem value="Child">Child</SelectItem>
+                      <SelectItem value="Parent">Parent</SelectItem>
+                      <SelectItem value="Sibling">Sibling</SelectItem>
+                      <SelectItem value="Guardian">Guardian</SelectItem>
+                      <SelectItem value="Authorized Representative">Auth Rep</SelectItem>
+                      <SelectItem value="Case Manager">Case Manager</SelectItem>
+                      <SelectItem value="Other">Other</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <Input
+                    value={rel.name}
+                    onChange={(e) => onRelationshipsChange.update(index, 'name', e.target.value)}
+                    placeholder="Name"
+                    className="h-7 text-xs"
+                  />
+                  <Input
+                    value={formatPhoneNumberAsTyped(rel.phone)}
+                    onChange={(e) => onRelationshipsChange.update(index, 'phone', normalizePhoneNumber(e.target.value))}
+                    placeholder="Phone"
+                    className="h-7 text-xs"
+                  />
+                </div>
+              </div>
+            ))}
+            {relationships.length === 0 && (
+              <p className="text-sm text-muted-foreground italic">No relationships added</p>
+            )}
+          </div>
         </div>
 
       </CardContent>

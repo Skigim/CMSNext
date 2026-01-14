@@ -261,20 +261,20 @@ export function CaseIntakeScreen({ caseData, onSave }: CaseIntakeScreenProps) {
         <PersonColumn
           personData={personData}
           caseData={caseRecordData}
+          relationships={relationships}
           isEditing={isEditing}
           onPersonDataChange={handlePersonDataChange}
           onAddressChange={handleAddressChange}
           onMailingAddressChange={handleMailingAddressChange}
           onCaseDataChange={handleCaseDataChange}
+          onRelationshipsChange={relationshipsHandlers}
         />
         <CaseColumn
           caseData={caseRecordData}
           retroRequested={retroRequested}
-          relationships={relationships}
           isEditing={isEditing}
           onCaseDataChange={handleCaseDataChange}
           onRetroRequestedChange={handleRetroRequestedChange}
-          onRelationshipsChange={relationshipsHandlers}
         />
       </div>
 

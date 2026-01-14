@@ -7,11 +7,10 @@ import { Checkbox } from "../ui/checkbox";
 import { Badge } from "../ui/badge";
 import { Button } from "../ui/button";
 import { Separator } from "../ui/separator";
-import { FileText, Calendar, Flag, Check, X, Users, Plus, Minus, Phone, FileSearch, Copy } from "lucide-react";
-import { NewCaseRecordData, Relationship, VoterFormStatus } from "../../types/case";
+import { FileText, Calendar, Flag, Check, X, FileSearch, Copy } from "lucide-react";
+import { NewCaseRecordData, VoterFormStatus } from "../../types/case";
 import { useCategoryConfig } from "@/contexts/CategoryConfigContext";
-import { isoToDateInputValue, dateInputValueToISO, formatDateForDisplay, formatPhoneNumberAsTyped, normalizePhoneNumber, getDisplayPhoneNumber } from "@/domain/common";
-import { CopyButton } from "../common/CopyButton";
+import { isoToDateInputValue, dateInputValueToISO, formatDateForDisplay } from "@/domain/common";
 import { generateAvsNarrative } from "@/domain/cases";
 import { clickToCopy } from "../../utils/clipboard";
 
@@ -32,15 +31,9 @@ const VOTER_STATUS_LABELS: Record<VoterFormStatus, string> = {
 interface CaseColumnProps {
   caseData: NewCaseRecordData;
   retroRequested: boolean;
-  relationships: Relationship[];
   isEditing: boolean;
   onCaseDataChange: (field: keyof NewCaseRecordData, value: unknown) => void;
   onRetroRequestedChange: (value: boolean) => void;
-  onRelationshipsChange: {
-    add: () => void;
-    update: (index: number, field: keyof Relationship, value: string) => void;
-    remove: (index: number) => void;
-  };
 }
 
 // Read-only info display component
@@ -90,11 +83,9 @@ function ChecklistItem({
 export function CaseColumn({
   caseData,
   retroRequested,
-  relationships,
   isEditing,
   onCaseDataChange,
   onRetroRequestedChange,
-  onRelationshipsChange,
 }: CaseColumnProps) {
   const { config } = useCategoryConfig();
 
@@ -182,47 +173,6 @@ export function CaseColumn({
               <ChecklistItem label="With Waiver" checked={caseData.withWaiver} />
               <ChecklistItem label="Retro Requested" checked={retroRequested} />
             </div>
-          </div>
-
-          <Separator />
-
-          {/* Relationships */}
-          <div className="space-y-3">
-            <div className="flex items-center gap-2">
-              <h4 className="text-sm font-medium text-muted-foreground">Relationships</h4>
-              <Badge variant="secondary" className="text-[10px] h-5 px-1.5">
-                {relationships.length}
-              </Badge>
-            </div>
-            {relationships.length > 0 ? (
-              <div className="space-y-2">
-                {relationships.map((rel, index) => (
-                  <div key={index} className="flex flex-col gap-1 p-2 border rounded-md bg-muted/10">
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm font-medium">{rel.name}</span>
-                      <Badge variant="outline" className="text-[10px] h-5 px-1.5">
-                        {rel.type}
-                      </Badge>
-                    </div>
-                    {rel.phone && (
-                      <div className="flex items-center gap-1.5">
-                        <Phone className="h-3 w-3 text-muted-foreground" />
-                        <CopyButton
-                          value={getDisplayPhoneNumber(rel.phone)}
-                          label="Phone"
-                          showLabel={false}
-                          successMessage="Phone copied"
-                          textClassName="text-xs"
-                          buttonClassName="text-xs px-1 py-0"
-                        />
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <p className="text-sm text-muted-foreground italic">No relationships added</p>
-            )}
           </div>
 
           <Separator />
@@ -403,77 +353,22 @@ export function CaseColumn({
               />
               <Label htmlFor="retroRequested" className="text-sm">Retro Requested</Label>
             </div>
-          </div>
-        </div>
-
-        <Separator />
-
-        {/* Relationships */}
-        <div className="space-y-3">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Users className="h-4 w-4 text-muted-foreground" />
-              <h4 className="text-sm font-medium text-muted-foreground">Relationships</h4>
-            </div>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={onRelationshipsChange.add}
-              className="h-7 px-2"
-            >
-              <Plus className="h-3 w-3 mr-1" />
-              Add
-            </Button>
-          </div>
-          <div className="space-y-2">
-            {relationships.map((rel, index) => (
-              <div key={index} className="flex flex-col gap-2 p-2 border rounded-md bg-muted/10 relative group">
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => onRelationshipsChange.remove(index)}
-                  className="absolute right-1 top-1 h-6 w-6 p-0 opacity-0 group-hover:opacity-100"
-                >
-                  <Minus className="h-3 w-3" />
-                </Button>
-                <div className="grid grid-cols-3 gap-2">
-                  <Select
-                    value={rel.type}
-                    onValueChange={(value) => onRelationshipsChange.update(index, 'type', value)}
-                  >
-                    <SelectTrigger className="h-7 text-xs">
-                      <SelectValue placeholder="Type" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="Spouse">Spouse</SelectItem>
-                      <SelectItem value="Child">Child</SelectItem>
-                      <SelectItem value="Parent">Parent</SelectItem>
-                      <SelectItem value="Sibling">Sibling</SelectItem>
-                      <SelectItem value="Guardian">Guardian</SelectItem>
-                      <SelectItem value="Authorized Representative">Auth Rep</SelectItem>
-                      <SelectItem value="Case Manager">Case Manager</SelectItem>
-                      <SelectItem value="Other">Other</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <Input
-                    value={rel.name}
-                    onChange={(e) => onRelationshipsChange.update(index, 'name', e.target.value)}
-                    placeholder="Name"
-                    className="h-7 text-xs"
-                  />
-                  <Input
-                    value={formatPhoneNumberAsTyped(rel.phone)}
-                    onChange={(e) => onRelationshipsChange.update(index, 'phone', normalizePhoneNumber(e.target.value))}
-                    placeholder="Phone"
-                    className="h-7 text-xs"
-                  />
-                </div>
+            {/* Retro Months Input - shown only when retro is requested */}
+            {retroRequested && (
+              <div className="space-y-1 mt-2">
+                <Label htmlFor="retroMonthsInput" className="text-xs">Retro Months</Label>
+                <Input
+                  id="retroMonthsInput"
+                  value={(caseData.retroMonths ?? []).join(", ")}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    const months = value.split(",").map(m => m.trim()).filter(m => m.length > 0);
+                    onCaseDataChange('retroMonths', months);
+                  }}
+                  placeholder="e.g., Jan, Feb, Mar"
+                  className="h-8"
+                />
               </div>
-            ))}
-            {relationships.length === 0 && (
-              <p className="text-sm text-muted-foreground italic">No relationships added</p>
             )}
           </div>
         </div>
@@ -529,27 +424,6 @@ export function CaseColumn({
             </div>
           </div>
         </div>
-
-        {/* Retro Months Input - shown only when retro is requested */}
-        {retroRequested && (
-          <>
-            <Separator />
-            <div className="space-y-1">
-              <Label htmlFor="retroMonthsInput" className="text-xs">Retro Months</Label>
-              <Input
-                id="retroMonthsInput"
-                value={(caseData.retroMonths ?? []).join(", ")}
-                onChange={(e) => {
-                  const value = e.target.value;
-                  const months = value.split(",").map(m => m.trim()).filter(m => m.length > 0);
-                  onCaseDataChange('retroMonths', months);
-                }}
-                placeholder="e.g., Jan, Feb, Mar"
-                className="h-8"
-              />
-            </div>
-          </>
-        )}
       </CardContent>
     </Card>
   );
