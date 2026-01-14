@@ -1307,4 +1307,80 @@ describe('calculatePriorityScore with tiered age multipliers', () => {
       65 * SCORE_PER_DAY_ALERT_AGE * 32
     );
   });
+
+  it('should skip application age multiplier for completed/terminal statuses', () => {
+    // 35 days old application with Approved status = 1x multiplier (no scaling)
+    const caseData = createMockCase({
+      status: 'Approved',
+      updatedAt: '2020-01-01T00:00:00.000Z',
+      caseRecord: {
+        id: 'record-1',
+        mcn: 'MCN123',
+        applicationDate: '2025-12-11', // 35 days before Jan 15
+        caseType: 'Type A',
+        personId: 'person-1',
+        spouseId: '',
+        status: 'Approved' as import('@/types/case').CaseStatus,
+        description: '',
+        priority: false,
+        livingArrangement: '',
+        withWaiver: false,
+        admissionDate: '',
+        organizationId: '',
+        authorizedReps: [],
+        retroRequested: '',
+        createdDate: '2025-12-11',
+        updatedDate: '2025-12-11',
+      },
+    });
+
+    const score = calculatePriorityScore(caseData, []);
+
+    // 35 days * 30 base * 1x multiplier (NOT 4x) = 1050
+    // Completed cases don't get age escalation
+    expect(score).toBe(35 * SCORE_PER_DAY_SINCE_APPLICATION * 1);
+  });
+
+  it('should apply alert age multiplier even for completed statuses', () => {
+    // Completed case but still has alerts that escalate
+    const caseData = createMockCase({
+      status: 'Closed',
+      updatedAt: '2020-01-01T00:00:00.000Z',
+      caseRecord: {
+        id: 'record-1',
+        mcn: 'MCN123',
+        applicationDate: '2025-12-11', // 35 days before Jan 15
+        caseType: 'Type A',
+        personId: 'person-1',
+        spouseId: '',
+        status: 'Closed' as import('@/types/case').CaseStatus,
+        description: '',
+        priority: false,
+        livingArrangement: '',
+        withWaiver: false,
+        admissionDate: '',
+        organizationId: '',
+        authorizedReps: [],
+        retroRequested: '',
+        createdDate: '2025-12-11',
+        updatedDate: '2025-12-11',
+      },
+    });
+
+    const alerts = [
+      createMockAlert({ alertDate: '2025-12-11', description: 'Generic' }), // 35 days old = 8x
+    ];
+
+    const score = calculatePriorityScore(caseData, alerts);
+
+    // Alert type: 100
+    // App age: 35 days * 30 * 1x (completed) = 1,050
+    // Alert age: 35 days * 50 * 8x = 14,000
+    // Total: 15,150
+    expect(score).toBe(
+      SCORE_OTHER_ALERT +
+      35 * SCORE_PER_DAY_SINCE_APPLICATION * 1 +
+      35 * SCORE_PER_DAY_ALERT_AGE * 8
+    );
+  });
 });

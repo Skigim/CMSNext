@@ -355,8 +355,10 @@ export function calculatePriorityScore(
   }
 
   // Points per day since application date (with tiered multiplier)
+  // Skip age scaling for completed/terminal statuses - they don't need urgency escalation
   const daysSinceApp = getDaysSinceApplication(caseData.caseRecord?.applicationDate);
-  const appAgeMultiplier = getApplicationAgeMultiplier(daysSinceApp);
+  const isCompleted = isExcludedStatus(caseData.status);
+  const appAgeMultiplier = isCompleted ? 1 : getApplicationAgeMultiplier(daysSinceApp);
   score += daysSinceApp * SCORE_PER_DAY_SINCE_APPLICATION * appAgeMultiplier;
 
   // Points per day since oldest alert (with tiered multiplier)
