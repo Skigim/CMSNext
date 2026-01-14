@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { render, screen, fireEvent } from "@testing-library/react";
 import { QuickActionsBar } from "@/components/app/QuickActionsBar";
 import { TooltipProvider } from "@/components/ui/tooltip";
 
@@ -26,10 +26,29 @@ function TestWrapper({ children }: { children: React.ReactNode }) {
   return <TooltipProvider>{children}</TooltipProvider>;
 }
 
+// Mock case and alert data for testing
+const mockCases = [
+  {
+    id: "case-1",
+    name: "John Doe",
+    mcn: "MCN001",
+    status: "Pending",
+    priority: false,
+    createdAt: "2026-01-01",
+    updatedAt: "2026-01-01",
+    person: { firstName: "John", lastName: "Doe" },
+    caseRecord: { caseType: "Type A" },
+  },
+];
+
+const mockAlerts: never[] = [];
+
 describe("QuickActionsBar", () => {
   const mockHandlers = {
     onNewCase: vi.fn(),
-    onSearchChange: vi.fn(),
+    onViewCase: vi.fn(),
+    cases: mockCases,
+    alerts: mockAlerts,
     onBulkStatusUpdate: vi.fn(),
     onExport: vi.fn(),
     onImport: vi.fn(),
@@ -47,7 +66,7 @@ describe("QuickActionsBar", () => {
       </TestWrapper>
     );
 
-    expect(screen.getByPlaceholderText("Search cases...")).toBeInTheDocument();
+    expect(screen.getByPlaceholderText("Search cases and alerts...")).toBeInTheDocument();
   });
 
   it("renders New Case button", () => {
@@ -69,32 +88,6 @@ describe("QuickActionsBar", () => {
 
     fireEvent.click(screen.getByRole("button", { name: /new case/i }));
     expect(mockHandlers.onNewCase).toHaveBeenCalledTimes(1);
-  });
-
-  it("calls onSearchChange when search input changes", async () => {
-    render(
-      <TestWrapper>
-        <QuickActionsBar {...mockHandlers} searchTerm="" />
-      </TestWrapper>
-    );
-
-    const searchInput = screen.getByPlaceholderText("Search cases...");
-    fireEvent.change(searchInput, { target: { value: "test search" } });
-
-    await waitFor(() => {
-      expect(mockHandlers.onSearchChange).toHaveBeenCalledWith("test search");
-    });
-  });
-
-  it("displays search term in input", () => {
-    render(
-      <TestWrapper>
-        <QuickActionsBar {...mockHandlers} searchTerm="existing search" />
-      </TestWrapper>
-    );
-
-    const searchInput = screen.getByPlaceholderText("Search cases...") as HTMLInputElement;
-    expect(searchInput.value).toBe("existing search");
   });
 
   it("shows bulk actions dropdown when showBulkOperations is true", () => {
@@ -155,22 +148,7 @@ describe("QuickActionsBar", () => {
     // Unit test verifies the structure is present
   });
 
-  it("event listener is registered for focus search", () => {
-    render(
-      <TestWrapper>
-        <QuickActionsBar {...mockHandlers} />
-      </TestWrapper>
-    );
-
-    // Verify the component renders with the search input
-    const searchInput = screen.getByPlaceholderText("Search cases...");
-    expect(searchInput).toBeInTheDocument();
-    
-    // Note: Full focus event testing would require jsdom setup with proper event bubbling
-    // This test verifies component renders which implies the useEffect has run
-  });
-
-  it("displays keyboard shortcut hint when search not focused", () => {
+  it("displays keyboard shortcut hint", () => {
     render(
       <TestWrapper>
         <QuickActionsBar {...mockHandlers} />
@@ -182,29 +160,6 @@ describe("QuickActionsBar", () => {
     expect(shortcutHint).toBeInTheDocument();
   });
 
-  it("hides keyboard shortcut hint when search is focused", async () => {
-    render(
-      <TestWrapper>
-        <QuickActionsBar {...mockHandlers} />
-      </TestWrapper>
-    );
-
-    const searchInput = screen.getByPlaceholderText("Search cases...");
-    
-    // Initially shortcut should be visible
-    let shortcutHint = screen.queryByText(/Ctrl\+K|⌘K/);
-    expect(shortcutHint).toBeInTheDocument();
-    
-    // Focus the input
-    fireEvent.focus(searchInput);
-
-    // After focus, shortcut hint should not be in document (removed by state change)
-    await waitFor(() => {
-      shortcutHint = screen.queryByText(/Ctrl\+K|⌘K/);
-      expect(shortcutHint).not.toBeInTheDocument();
-    });
-  });
-
   it("renders with accessibility attributes", () => {
     render(
       <TestWrapper>
@@ -212,8 +167,8 @@ describe("QuickActionsBar", () => {
       </TestWrapper>
     );
 
-    const searchInput = screen.getByPlaceholderText("Search cases...");
-    expect(searchInput).toHaveAttribute("aria-label", "Search cases");
+    const searchInput = screen.getByPlaceholderText("Search cases and alerts...");
+    expect(searchInput).toHaveAttribute("aria-label", "Search cases and alerts");
 
     const moreButton = screen.getByRole("button", { name: /more actions/i });
     expect(moreButton).toBeInTheDocument();

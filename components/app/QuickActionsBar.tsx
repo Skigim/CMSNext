@@ -1,6 +1,5 @@
-import { memo, useCallback, useRef, useEffect, useState } from "react";
+import { memo, useCallback } from "react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -15,7 +14,6 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { 
-  Search, 
   Plus, 
   MoreHorizontal,
   Download,
@@ -24,17 +22,21 @@ import {
   ChevronDown,
 } from "lucide-react";
 import { useCategoryConfig } from "@/contexts/CategoryConfigContext";
-import type { CaseStatus } from "@/types/case";
+import type { CaseStatus, StoredCase } from "@/types/case";
+import type { AlertWithMatch } from "@/utils/alertsData";
 import { Badge } from "@/components/ui/badge";
 import { getColorSlotBadgeStyle } from "@/types/colorSlots";
+import { GlobalSearchDropdown } from "./GlobalSearchDropdown";
 
 export interface QuickActionsBarProps {
   /** Handler for new case creation */
   onNewCase: () => void;
-  /** Handler for global search term changes */
-  onSearchChange?: (term: string) => void;
-  /** Current search term */
-  searchTerm?: string;
+  /** Cases available for search */
+  cases: StoredCase[];
+  /** Alerts available for search */
+  alerts: AlertWithMatch[];
+  /** Handler when a case is selected from search */
+  onViewCase: (caseId: string) => void;
   /** Handler for bulk status update */
   onBulkStatusUpdate?: (status: CaseStatus) => void;
   /** Handler for data export */
@@ -60,8 +62,9 @@ export interface QuickActionsBarProps {
  */
 export const QuickActionsBar = memo(function QuickActionsBar({
   onNewCase,
-  onSearchChange,
-  searchTerm = "",
+  cases,
+  alerts,
+  onViewCase,
   onBulkStatusUpdate,
   onExport,
   onImport,
@@ -69,32 +72,10 @@ export const QuickActionsBar = memo(function QuickActionsBar({
   showBulkOperations = true,
 }: QuickActionsBarProps) {
   const { config } = useCategoryConfig();
-  const searchInputRef = useRef<HTMLInputElement>(null);
-  const [isFocused, setIsFocused] = useState(false);
-
-  // Listen for focus search events from keyboard shortcuts
-  useEffect(() => {
-    const handleFocusSearch = () => {
-      searchInputRef.current?.focus();
-    };
-
-    window.addEventListener("app:focussearch" as any, handleFocusSearch);
-    return () => {
-      window.removeEventListener("app:focussearch" as any, handleFocusSearch);
-    };
-  }, []);
-
-  const handleSearchChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    onSearchChange?.(e.target.value);
-  }, [onSearchChange]);
 
   const handleStatusSelect = useCallback((status: string) => {
     onBulkStatusUpdate?.(status as CaseStatus);
   }, [onBulkStatusUpdate]);
-
-  // Keyboard shortcut indicator
-  const isMac = typeof navigator !== 'undefined' && /Mac/i.test(navigator.platform);
-  const searchShortcut = isMac ? "⌘K" : "Ctrl+K";
 
   return (
     <div 
@@ -102,26 +83,14 @@ export const QuickActionsBar = memo(function QuickActionsBar({
       data-papercut-context="QuickActionsBar"
     >
       <div className="flex items-center gap-3 px-4 py-2">
-        {/* Global Search */}
-        <div className="flex-1 max-w-md relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
-          <Input
-            ref={searchInputRef}
-            type="text"
-            placeholder="Search cases..."
-            value={searchTerm}
-            onChange={handleSearchChange}
-            onFocus={() => setIsFocused(true)}
-            onBlur={() => setIsFocused(false)}
-            className="pl-9 pr-16"
-            aria-label="Search cases"
-          />
-          {!isFocused && (
-            <kbd className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none inline-flex h-5 select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium text-muted-foreground opacity-100">
-              {searchShortcut}
-            </kbd>
-          )}
-        </div>
+        {/* Global Search with Fuzzy Dropdown */}
+        <GlobalSearchDropdown
+          cases={cases}
+          alerts={alerts}
+          onSelectCase={onViewCase}
+          placeholder="Search cases and alerts..."
+          className="flex-1 max-w-md"
+        />
 
         {/* Action Buttons */}
         <div className="flex items-center gap-2">

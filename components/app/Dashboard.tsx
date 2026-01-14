@@ -1,4 +1,4 @@
-import { useMemo, useState, useCallback } from "react";
+import { useMemo } from "react";
 import { StoredCase, CaseStatus } from "../../types/case";
 import { type AlertsIndex } from "../../utils/alertsData";
 import type { CaseActivityLogState } from "../../types/activityLog";
@@ -12,7 +12,7 @@ interface DashboardProps {
   alerts: AlertsIndex;
   activityLogState: CaseActivityLogState;
   onNewCase: () => void;
-  onViewCase?: (caseId: string) => void;
+  onViewCase: (caseId: string) => void;
   onBulkStatusUpdate?: (status: CaseStatus) => void;
   onExport?: () => void;
   onImport?: () => void;
@@ -80,17 +80,10 @@ export function Dashboard({
   onImport,
   onImportAlerts,
 }: DashboardProps) {
-  const { featureFlags, globalSearchTerm, setGlobalSearchTerm } = useAppViewState();
-  const [localSearchTerm, setLocalSearchTerm] = useState(globalSearchTerm);
+  const { featureFlags } = useAppViewState();
 
   const allAlerts = useMemo(() => alerts.alerts ?? [], [alerts.alerts]);
   const activityEntries = useMemo(() => activityLogState.activityLog ?? [], [activityLogState.activityLog]);
-
-  // Handle search change with debouncing
-  const handleSearchChange = useCallback((term: string) => {
-    setLocalSearchTerm(term);
-    setGlobalSearchTerm(term);
-  }, [setGlobalSearchTerm]);
 
   // Create refresh keys that change whenever the actual data content changes
   // These track the length and key metrics to detect when data has been updated
@@ -254,8 +247,9 @@ export function Dashboard({
       {/* Quick Actions Bar */}
       <QuickActionsBar
         onNewCase={onNewCase}
-        onSearchChange={handleSearchChange}
-        searchTerm={localSearchTerm}
+        cases={cases}
+        alerts={allAlerts}
+        onViewCase={onViewCase}
         onBulkStatusUpdate={onBulkStatusUpdate}
         onExport={onExport}
         onImport={onImport}

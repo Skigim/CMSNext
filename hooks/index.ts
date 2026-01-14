@@ -98,6 +98,16 @@ export { useRecentCases } from './useRecentCases';
 // Pinned cases management
 export { usePinnedCases } from './usePinnedCases';
 
+// Fuzzy search across cases and alerts
+export { useFuzzySearch } from './useFuzzySearch';
+export type { 
+  SearchResult, 
+  CaseSearchResult, 
+  AlertSearchResult, 
+  FuzzySearchResults, 
+  UseFuzzySearchOptions 
+} from './useFuzzySearch';
+
 /**
  * Usage examples:
  * 
