@@ -7,8 +7,12 @@
  * Priority Criteria (in order of weight):
  * 1. Status-based priority (configurable, e.g., Intake = 5000 points)
  * 2. Alert type priority (configurable via sortOrder, exponential decay from 500 to 50)
- * 3. Application age (30 points per day since application)
- * 4. Alert age (50 points per day since oldest alert)
+ * 3. Application age with tiered multipliers:
+ *    - 0-10 days: 1x, 11-29 days: 2x, 30-44 days: 4x, 45-59 days: 8x, 60+ days: 16x
+ *    - Formula: days × 30 × multiplier
+ * 4. Alert age with tiered multipliers (earlier escalation for deadline sensitivity):
+ *    - 0-4 days: 1x, 5-10 days: 2x, 11-29 days: 4x, 30-44 days: 8x, 45-59 days: 16x, 60+ days: 32x
+ *    - Formula: days × 50 × multiplier
  * 5. Priority flags (75 points)
  * 6. Recent modifications (50 points)
  * 
@@ -63,6 +67,57 @@ export const SCORE_PER_DAY_ALERT_AGE = 50;
 export const SCORE_PRIORITY_FLAG = 75;
 /** Points for cases modified in last 24 hours */
 export const SCORE_RECENT_MODIFICATION = 50;
+
+// ============================================================================
+// Age-Based Priority Multipliers
+// ============================================================================
+
+/**
+ * Get priority multiplier based on days since application date.
+ * Tiered thresholds to escalate urgency as cases age.
+ * 
+ * Tiers:
+ * - 0-10 days: 1x (normal)
+ * - 11-29 days: 2x (elevated)
+ * - 30-44 days: 4x (high)
+ * - 45-59 days: 8x (critical)
+ * - 60+ days: 16x (urgent)
+ * 
+ * @param days - Number of days since application
+ * @returns Multiplier for application age scoring
+ */
+export function getApplicationAgeMultiplier(days: number): number {
+  if (days < 11) return 1;
+  if (days < 30) return 2;
+  if (days < 45) return 4;
+  if (days < 60) return 8;
+  return 16;
+}
+
+/**
+ * Get priority multiplier based on days since oldest alert.
+ * Tiered thresholds with earlier escalation than application age
+ * since alerts often have shorter deadlines (e.g., 5-day AVS response).
+ * 
+ * Tiers:
+ * - 0-4 days: 1x (normal)
+ * - 5-10 days: 2x (elevated)
+ * - 11-29 days: 4x (high)
+ * - 30-44 days: 8x (critical)
+ * - 45-59 days: 16x (very critical)
+ * - 60+ days: 32x (urgent)
+ * 
+ * @param days - Number of days since oldest alert
+ * @returns Multiplier for alert age scoring
+ */
+export function getAlertAgeMultiplier(days: number): number {
+  if (days < 5) return 1;
+  if (days < 11) return 2;
+  if (days < 30) return 4;
+  if (days < 45) return 8;
+  if (days < 60) return 16;
+  return 32;
+}
 
 // ============================================================================
 // Priority Configuration
@@ -259,8 +314,8 @@ export function getDaysSinceOldestAlert(
  * Scoring formula (when config provided):
  * - Status weight based on priorityEnabled statuses and their sortOrder
  * - Alert weight based on alertType and sortOrder (exponential decay)
- * - 30 points per day since application date
- * - 50 points per day since oldest alert (uses only oldest to avoid inflating multi-alert cases)
+ * - Application age: days × 30 × tiered multiplier (1x→2x→4x→8x→16x at 11/30/45/60 days)
+ * - Alert age: days × 50 × tiered multiplier (1x→2x→4x→8x→16x→32x at 5/11/30/45/60 days)
  * - 75 points if marked as priority
  * - 50 points if modified in last 24 hours
  * 
@@ -299,13 +354,16 @@ export function calculatePriorityScore(
     score += getAlertScore(alert, config?.alertTypes);
   }
 
-  // Points per day since application date
+  // Points per day since application date (with tiered multiplier)
   const daysSinceApp = getDaysSinceApplication(caseData.caseRecord?.applicationDate);
-  score += daysSinceApp * SCORE_PER_DAY_SINCE_APPLICATION;
+  const appAgeMultiplier = getApplicationAgeMultiplier(daysSinceApp);
+  score += daysSinceApp * SCORE_PER_DAY_SINCE_APPLICATION * appAgeMultiplier;
 
-  // Points per day since oldest alert (use only oldest to avoid inflating multi-alert cases)
+  // Points per day since oldest alert (with tiered multiplier)
+  // Uses only oldest alert to avoid inflating multi-alert cases
   const daysSinceAlert = getDaysSinceOldestAlert(caseAlerts);
-  score += daysSinceAlert * SCORE_PER_DAY_ALERT_AGE;
+  const alertAgeMultiplier = getAlertAgeMultiplier(daysSinceAlert);
+  score += daysSinceAlert * SCORE_PER_DAY_ALERT_AGE * alertAgeMultiplier;
 
   // Priority flag
   if (caseData.priority === true) {

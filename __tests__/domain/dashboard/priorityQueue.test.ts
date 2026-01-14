@@ -20,6 +20,8 @@ import {
   getOldestAlertDate,
   isExcludedStatus,
   EXCLUDED_STATUSES,
+  getApplicationAgeMultiplier,
+  getAlertAgeMultiplier,
   // Scoring constants
   SCORE_INTAKE,
   SCORE_AVS_DAY_5,
@@ -29,6 +31,7 @@ import {
   SCORE_PRIORITY_FLAG,
   SCORE_RECENT_MODIFICATION,
   SCORE_PER_DAY_ALERT_AGE,
+  SCORE_PER_DAY_SINCE_APPLICATION,
 } from '../../../domain/dashboard/priorityQueue';
 import type { StoredCase, CaseStatus } from '../../../types/case';
 import type { AlertWithMatch } from '../../../utils/alertsData';
@@ -342,7 +345,7 @@ describe('getDaysSinceOldestAlert', () => {
 });
 
 describe('calculatePriorityScore with alert age', () => {
-  it('should add alert age points based on oldest alert only', () => {
+  it('should add alert age points with tiered multiplier based on oldest alert only', () => {
     const now = new Date('2026-01-05T12:00:00.000Z');
     vi.useFakeTimers();
     vi.setSystemTime(now);
@@ -359,8 +362,9 @@ describe('calculatePriorityScore with alert age', () => {
 
     const score = calculatePriorityScore(caseData, alerts);
 
-    // Expected: 2 alerts * 100 + 11 days * 50 = 200 + 550 = 750
-    expect(score).toBe(2 * SCORE_OTHER_ALERT + 11 * SCORE_PER_DAY_ALERT_AGE);
+    // 11 days old alert = 4x multiplier (11-29 day tier)
+    // Expected: 2 alerts * 100 + 11 days * 50 * 4 = 200 + 2200 = 2400
+    expect(score).toBe(2 * SCORE_OTHER_ALERT + 11 * SCORE_PER_DAY_ALERT_AGE * 4);
 
     vi.useRealTimers();
   });
@@ -1104,5 +1108,203 @@ describe('getPriorityCases', () => {
     expect(includedIds).not.toContain('case-active');
     expect(includedIds).not.toContain('case-approved');
     expect(includedIds).not.toContain('case-spenddown');
+  });
+});
+
+describe('getApplicationAgeMultiplier', () => {
+  it('should return 1x for 0-10 days', () => {
+    expect(getApplicationAgeMultiplier(0)).toBe(1);
+    expect(getApplicationAgeMultiplier(5)).toBe(1);
+    expect(getApplicationAgeMultiplier(10)).toBe(1);
+  });
+
+  it('should return 2x for 11-29 days', () => {
+    expect(getApplicationAgeMultiplier(11)).toBe(2);
+    expect(getApplicationAgeMultiplier(20)).toBe(2);
+    expect(getApplicationAgeMultiplier(29)).toBe(2);
+  });
+
+  it('should return 4x for 30-44 days', () => {
+    expect(getApplicationAgeMultiplier(30)).toBe(4);
+    expect(getApplicationAgeMultiplier(37)).toBe(4);
+    expect(getApplicationAgeMultiplier(44)).toBe(4);
+  });
+
+  it('should return 8x for 45-59 days', () => {
+    expect(getApplicationAgeMultiplier(45)).toBe(8);
+    expect(getApplicationAgeMultiplier(52)).toBe(8);
+    expect(getApplicationAgeMultiplier(59)).toBe(8);
+  });
+
+  it('should return 16x for 60+ days', () => {
+    expect(getApplicationAgeMultiplier(60)).toBe(16);
+    expect(getApplicationAgeMultiplier(90)).toBe(16);
+    expect(getApplicationAgeMultiplier(365)).toBe(16);
+  });
+});
+
+describe('getAlertAgeMultiplier', () => {
+  it('should return 1x for 0-4 days', () => {
+    expect(getAlertAgeMultiplier(0)).toBe(1);
+    expect(getAlertAgeMultiplier(2)).toBe(1);
+    expect(getAlertAgeMultiplier(4)).toBe(1);
+  });
+
+  it('should return 2x for 5-10 days', () => {
+    expect(getAlertAgeMultiplier(5)).toBe(2);
+    expect(getAlertAgeMultiplier(7)).toBe(2);
+    expect(getAlertAgeMultiplier(10)).toBe(2);
+  });
+
+  it('should return 4x for 11-29 days', () => {
+    expect(getAlertAgeMultiplier(11)).toBe(4);
+    expect(getAlertAgeMultiplier(20)).toBe(4);
+    expect(getAlertAgeMultiplier(29)).toBe(4);
+  });
+
+  it('should return 8x for 30-44 days', () => {
+    expect(getAlertAgeMultiplier(30)).toBe(8);
+    expect(getAlertAgeMultiplier(37)).toBe(8);
+    expect(getAlertAgeMultiplier(44)).toBe(8);
+  });
+
+  it('should return 16x for 45-59 days', () => {
+    expect(getAlertAgeMultiplier(45)).toBe(16);
+    expect(getAlertAgeMultiplier(52)).toBe(16);
+    expect(getAlertAgeMultiplier(59)).toBe(16);
+  });
+
+  it('should return 32x for 60+ days', () => {
+    expect(getAlertAgeMultiplier(60)).toBe(32);
+    expect(getAlertAgeMultiplier(90)).toBe(32);
+    expect(getAlertAgeMultiplier(365)).toBe(32);
+  });
+});
+
+describe('calculatePriorityScore with tiered age multipliers', () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-01-15T12:00:00.000Z'));
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it('should apply application age multiplier correctly', () => {
+    // 35 days old application = 4x multiplier
+    const caseData = createMockCase({
+      updatedAt: '2020-01-01T00:00:00.000Z', // No recent mod points
+      caseRecord: {
+        id: 'record-1',
+        mcn: 'MCN123',
+        applicationDate: '2025-12-11', // 35 days before Jan 15
+        caseType: 'Type A',
+        personId: 'person-1',
+        spouseId: '',
+        status: 'Pending' as import('@/types/case').CaseStatus,
+        description: '',
+        priority: false,
+        livingArrangement: '',
+        withWaiver: false,
+        admissionDate: '',
+        organizationId: '',
+        authorizedReps: [],
+        retroRequested: '',
+        createdDate: '2025-12-11',
+        updatedDate: '2025-12-11',
+      },
+    });
+
+    const score = calculatePriorityScore(caseData, []);
+
+    // 35 days * 30 base * 4x multiplier = 4200
+    expect(score).toBe(35 * SCORE_PER_DAY_SINCE_APPLICATION * 4);
+  });
+
+  it('should compound application age and alert age multipliers', () => {
+    // 15 days old application = 2x multiplier
+    // 7 days old alert = 2x multiplier
+    const caseData = createMockCase({
+      updatedAt: '2020-01-01T00:00:00.000Z',
+      caseRecord: {
+        id: 'record-1',
+        mcn: 'MCN123',
+        applicationDate: '2025-12-31', // 15 days before Jan 15
+        caseType: 'Type A',
+        personId: 'person-1',
+        spouseId: '',
+        status: 'Pending' as import('@/types/case').CaseStatus,
+        description: '',
+        priority: false,
+        livingArrangement: '',
+        withWaiver: false,
+        admissionDate: '',
+        organizationId: '',
+        authorizedReps: [],
+        retroRequested: '',
+        createdDate: '2025-12-31',
+        updatedDate: '2025-12-31',
+      },
+    });
+
+    const alerts = [
+      createMockAlert({ alertDate: '2026-01-08', description: 'Generic' }), // 7 days old
+    ];
+
+    const score = calculatePriorityScore(caseData, alerts);
+
+    // Alert type: 100
+    // App age: 15 days * 30 * 2x = 900
+    // Alert age: 7 days * 50 * 2x = 700
+    // Total: 1700
+    expect(score).toBe(
+      SCORE_OTHER_ALERT +
+      15 * SCORE_PER_DAY_SINCE_APPLICATION * 2 +
+      7 * SCORE_PER_DAY_ALERT_AGE * 2
+    );
+  });
+
+  it('should dramatically increase score for very old cases', () => {
+    // 65 days old application = 16x multiplier
+    // 65 days old alert = 32x multiplier
+    const caseData = createMockCase({
+      updatedAt: '2020-01-01T00:00:00.000Z',
+      caseRecord: {
+        id: 'record-1',
+        mcn: 'MCN123',
+        applicationDate: '2025-11-11', // 65 days before Jan 15
+        caseType: 'Type A',
+        personId: 'person-1',
+        spouseId: '',
+        status: 'Pending' as import('@/types/case').CaseStatus,
+        description: '',
+        priority: false,
+        livingArrangement: '',
+        withWaiver: false,
+        admissionDate: '',
+        organizationId: '',
+        authorizedReps: [],
+        retroRequested: '',
+        createdDate: '2025-11-11',
+        updatedDate: '2025-11-11',
+      },
+    });
+
+    const alerts = [
+      createMockAlert({ alertDate: '2025-11-11', description: 'Generic' }), // 65 days old
+    ];
+
+    const score = calculatePriorityScore(caseData, alerts);
+
+    // Alert type: 100
+    // App age: 65 days * 30 * 16x = 31,200
+    // Alert age: 65 days * 50 * 32x = 104,000
+    // Total: 135,300
+    expect(score).toBe(
+      SCORE_OTHER_ALERT +
+      65 * SCORE_PER_DAY_SINCE_APPLICATION * 16 +
+      65 * SCORE_PER_DAY_ALERT_AGE * 32
+    );
   });
 });
