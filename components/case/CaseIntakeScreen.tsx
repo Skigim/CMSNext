@@ -271,9 +271,11 @@ export function CaseIntakeScreen({ caseData, onSave }: CaseIntakeScreenProps) {
         <CaseColumn
           caseData={caseRecordData}
           retroRequested={retroRequested}
+          relationships={relationships}
           isEditing={isEditing}
           onCaseDataChange={handleCaseDataChange}
           onRetroRequestedChange={handleRetroRequestedChange}
+          onRelationshipsChange={relationshipsHandlers}
         />
         <IntakeColumn
           caseData={caseRecordData}

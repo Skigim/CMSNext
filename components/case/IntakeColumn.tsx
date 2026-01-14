@@ -20,9 +20,6 @@ interface IntakeColumnProps {
   onCaseDataChange: (field: keyof NewCaseRecordData, value: unknown) => void;
 }
 
-// Constants
-const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-
 const CONTACT_METHODS: { value: ContactMethod; label: string }[] = [
   { value: "mail", label: "US Mail" },
   { value: "text", label: "Text" },
@@ -154,15 +151,6 @@ export function IntakeColumn({
     }
   };
 
-  const handleRetroMonthToggle = (month: string, checked: boolean) => {
-    const current = caseData.retroMonths ?? [];
-    if (checked) {
-      onCaseDataChange("retroMonths", [...current, month]);
-    } else {
-      onCaseDataChange("retroMonths", current.filter((m) => m !== month));
-    }
-  };
-
   if (!isEditing) {
     // Read-only view
     return (
@@ -291,23 +279,6 @@ export function IntakeColumn({
                 onCheckedChange={(checked) => onCaseDataChange("pregnancy", checked)}
               />
               <Label htmlFor="pregnancy" className="text-sm">Pregnancy</Label>
-            </div>
-          </div>
-
-          {/* Retro Months Grid */}
-          <div className="space-y-1">
-            <Label className="text-xs">Retro Months</Label>
-            <div className="grid grid-cols-4 gap-1 p-2 border rounded-md bg-muted/30">
-              {MONTHS.map((month) => (
-                <div key={month} className="flex items-center space-x-1">
-                  <Checkbox
-                    id={`retro-${month}`}
-                    checked={(caseData.retroMonths ?? []).includes(month)}
-                    onCheckedChange={(checked) => handleRetroMonthToggle(month, checked === true)}
-                  />
-                  <Label htmlFor={`retro-${month}`} className="text-xs">{month}</Label>
-                </div>
-              ))}
             </div>
           </div>
         </div>

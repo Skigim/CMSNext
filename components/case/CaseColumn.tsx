@@ -2,22 +2,29 @@ import { useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
 import { Label } from "../ui/label";
 import { Input } from "../ui/input";
-import { Textarea } from "../ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
 import { Checkbox } from "../ui/checkbox";
 import { Badge } from "../ui/badge";
+import { Button } from "../ui/button";
 import { Separator } from "../ui/separator";
-import { FileText, Calendar, Flag, Check, X } from "lucide-react";
-import { NewCaseRecordData } from "../../types/case";
+import { FileText, Calendar, Flag, Check, X, Users, Plus, Minus, Phone } from "lucide-react";
+import { NewCaseRecordData, Relationship } from "../../types/case";
 import { useCategoryConfig } from "@/contexts/CategoryConfigContext";
-import { isoToDateInputValue, dateInputValueToISO, formatDateForDisplay } from "@/domain/common";
+import { isoToDateInputValue, dateInputValueToISO, formatDateForDisplay, formatPhoneNumberAsTyped, normalizePhoneNumber, getDisplayPhoneNumber } from "@/domain/common";
+import { CopyButton } from "../common/CopyButton";
 
 interface CaseColumnProps {
   caseData: NewCaseRecordData;
   retroRequested: boolean;
+  relationships: Relationship[];
   isEditing: boolean;
   onCaseDataChange: (field: keyof NewCaseRecordData, value: unknown) => void;
   onRetroRequestedChange: (value: boolean) => void;
+  onRelationshipsChange: {
+    add: () => void;
+    update: (index: number, field: keyof Relationship, value: string) => void;
+    remove: (index: number) => void;
+  };
 }
 
 // Read-only info display component
@@ -67,16 +74,17 @@ function ChecklistItem({
 export function CaseColumn({
   caseData,
   retroRequested,
+  relationships,
   isEditing,
   onCaseDataChange,
   onRetroRequestedChange,
+  onRelationshipsChange,
 }: CaseColumnProps) {
   const { config } = useCategoryConfig();
 
-  const { caseTypes, caseStatuses, livingArrangements } = useMemo(() => ({
+  const { caseTypes, caseStatuses } = useMemo(() => ({
     caseTypes: config.caseTypes,
     caseStatuses: config.caseStatuses,
-    livingArrangements: config.livingArrangements,
   }), [config]);
 
   // Use domain formatDateForDisplay - returns "None" for empty values
@@ -116,25 +124,6 @@ export function CaseColumn({
 
           <Separator />
 
-          {/* Case Details */}
-          <div className="space-y-3">
-            <h4 className="text-sm font-medium text-muted-foreground">Case Details</h4>
-            <div className="space-y-3">
-              {caseData.description && (
-                <div>
-                  <span className="text-xs text-muted-foreground">Description</span>
-                  <p className="text-sm mt-0.5">{caseData.description}</p>
-                </div>
-              )}
-              <div className="grid grid-cols-2 gap-3">
-                <InfoItem label="Living Arrangement" value={caseData.livingArrangement} />
-                <InfoItem label="Admission Date" value={formatDate(caseData.admissionDate)} icon={Calendar} />
-              </div>
-            </div>
-          </div>
-
-          <Separator />
-
           {/* Case Flags */}
           <div className="space-y-3">
             <div className="flex items-center gap-2">
@@ -146,6 +135,47 @@ export function CaseColumn({
               <ChecklistItem label="With Waiver" checked={caseData.withWaiver} />
               <ChecklistItem label="Retro Requested" checked={retroRequested} />
             </div>
+          </div>
+
+          <Separator />
+
+          {/* Relationships */}
+          <div className="space-y-3">
+            <div className="flex items-center gap-2">
+              <h4 className="text-sm font-medium text-muted-foreground">Relationships</h4>
+              <Badge variant="secondary" className="text-[10px] h-5 px-1.5">
+                {relationships.length}
+              </Badge>
+            </div>
+            {relationships.length > 0 ? (
+              <div className="space-y-2">
+                {relationships.map((rel, index) => (
+                  <div key={index} className="flex flex-col gap-1 p-2 border rounded-md bg-muted/10">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-medium">{rel.name}</span>
+                      <Badge variant="outline" className="text-[10px] h-5 px-1.5">
+                        {rel.type}
+                      </Badge>
+                    </div>
+                    {rel.phone && (
+                      <div className="flex items-center gap-1.5">
+                        <Phone className="h-3 w-3 text-muted-foreground" />
+                        <CopyButton
+                          value={getDisplayPhoneNumber(rel.phone)}
+                          label="Phone"
+                          showLabel={false}
+                          successMessage="Phone copied"
+                          textClassName="text-xs"
+                          buttonClassName="text-xs px-1 py-0"
+                        />
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground italic">No relationships added</p>
+            )}
           </div>
 
           {/* Retro Months - shown only when retro is requested */}
@@ -238,56 +268,6 @@ export function CaseColumn({
 
         <Separator />
 
-        {/* Case Details */}
-        <div className="space-y-3">
-          <h4 className="text-sm font-medium text-muted-foreground">Case Details</h4>
-          <div className="space-y-3">
-            <div className="space-y-1">
-              <Label htmlFor="description" className="text-xs">Description</Label>
-              <Textarea
-                id="description"
-                value={caseData.description}
-                onChange={(e) => onCaseDataChange('description', e.target.value)}
-                placeholder="Case description"
-                rows={2}
-                className="resize-none"
-              />
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1">
-                <Label htmlFor="caseLivingArrangement" className="text-xs">Living Arrangement</Label>
-                <Select
-                  value={caseData.livingArrangement}
-                  onValueChange={(value) => onCaseDataChange('livingArrangement', value)}
-                >
-                  <SelectTrigger className="h-8">
-                    <SelectValue placeholder="Select" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {livingArrangements.map((arrangement) => (
-                      <SelectItem key={arrangement} value={arrangement}>
-                        {arrangement}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-1">
-                <Label htmlFor="admissionDate" className="text-xs">Admission Date</Label>
-                <Input
-                  id="admissionDate"
-                  type="date"
-                  value={isoToDateInputValue(caseData.admissionDate)}
-                  onChange={(e) => onCaseDataChange('admissionDate', dateInputValueToISO(e.target.value) || '')}
-                  className="h-8"
-                />
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <Separator />
-
         {/* Case Flags */}
         <div className="space-y-3">
           <div className="flex items-center gap-2">
@@ -319,6 +299,78 @@ export function CaseColumn({
               />
               <Label htmlFor="retroRequested" className="text-sm">Retro Requested</Label>
             </div>
+          </div>
+        </div>
+
+        <Separator />
+
+        {/* Relationships */}
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Users className="h-4 w-4 text-muted-foreground" />
+              <h4 className="text-sm font-medium text-muted-foreground">Relationships</h4>
+            </div>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={onRelationshipsChange.add}
+              className="h-7 px-2"
+            >
+              <Plus className="h-3 w-3 mr-1" />
+              Add
+            </Button>
+          </div>
+          <div className="space-y-2">
+            {relationships.map((rel, index) => (
+              <div key={index} className="flex flex-col gap-2 p-2 border rounded-md bg-muted/10 relative group">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => onRelationshipsChange.remove(index)}
+                  className="absolute right-1 top-1 h-6 w-6 p-0 opacity-0 group-hover:opacity-100"
+                >
+                  <Minus className="h-3 w-3" />
+                </Button>
+                <div className="grid grid-cols-3 gap-2">
+                  <Select
+                    value={rel.type}
+                    onValueChange={(value) => onRelationshipsChange.update(index, 'type', value)}
+                  >
+                    <SelectTrigger className="h-7 text-xs">
+                      <SelectValue placeholder="Type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Spouse">Spouse</SelectItem>
+                      <SelectItem value="Child">Child</SelectItem>
+                      <SelectItem value="Parent">Parent</SelectItem>
+                      <SelectItem value="Sibling">Sibling</SelectItem>
+                      <SelectItem value="Guardian">Guardian</SelectItem>
+                      <SelectItem value="Authorized Representative">Auth Rep</SelectItem>
+                      <SelectItem value="Case Manager">Case Manager</SelectItem>
+                      <SelectItem value="Other">Other</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <Input
+                    value={rel.name}
+                    onChange={(e) => onRelationshipsChange.update(index, 'name', e.target.value)}
+                    placeholder="Name"
+                    className="h-7 text-xs"
+                  />
+                  <Input
+                    value={formatPhoneNumberAsTyped(rel.phone)}
+                    onChange={(e) => onRelationshipsChange.update(index, 'phone', normalizePhoneNumber(e.target.value))}
+                    placeholder="Phone"
+                    className="h-7 text-xs"
+                  />
+                </div>
+              </div>
+            ))}
+            {relationships.length === 0 && (
+              <p className="text-sm text-muted-foreground italic">No relationships added</p>
+            )}
           </div>
         </div>
 
