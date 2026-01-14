@@ -11,6 +11,7 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
+  useSidebar,
 } from "@/components/ui/sidebar";
 import { ThemeToggle } from './ThemeToggle';
 import {
@@ -32,6 +33,29 @@ export function AppSidebar({
   onNavigate, 
   onNewCase
 }: AppSidebarProps) {
+  const { setOpen, isMobile, setOpenMobile } = useSidebar();
+
+  // Close sidebar after navigation action
+  const handleNavigate = (view: AppView) => {
+    onNavigate(view);
+    // Close sidebar on navigation (both desktop and mobile)
+    if (isMobile) {
+      setOpenMobile(false);
+    } else {
+      setOpen(false);
+    }
+  };
+
+  // Close sidebar after new case action
+  const handleNewCase = () => {
+    onNewCase();
+    if (isMobile) {
+      setOpenMobile(false);
+    } else {
+      setOpen(false);
+    }
+  };
+
   const menuItems: Array<{
     title: string;
     icon: ComponentType<{ className?: string }>;
@@ -81,7 +105,7 @@ export function AppSidebar({
               {menuItems.map((item) => (
                 <SidebarMenuItem key={item.id}>
                   <SidebarMenuButton
-                    onClick={() => onNavigate(item.navigateTo)}
+                    onClick={() => handleNavigate(item.navigateTo)}
                     isActive={isActiveItem(item.activeViews)}
                   >
                     <item.icon className="h-4 w-4" />
@@ -98,7 +122,7 @@ export function AppSidebar({
           <SidebarGroupContent>
             <SidebarMenu>
               <SidebarMenuItem>
-                <SidebarMenuButton onClick={onNewCase}>
+                <SidebarMenuButton onClick={handleNewCase}>
                   <Plus className="h-4 w-4" />
                   <span>New Case</span>
                 </SidebarMenuButton>

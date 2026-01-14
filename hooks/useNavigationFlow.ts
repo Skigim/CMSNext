@@ -117,7 +117,7 @@ export function useNavigationFlow({
   // Navigation actions
   const actions = useNavigationActions({
     state: { currentView, selectedCaseId, showNewCaseModal, formState },
-    setters: { setCurrentView, setSelectedCaseId, setShowNewCaseModal, setFormState, setSidebarOpen, setForcedView },
+    setters: { setCurrentView, setSelectedCaseId, setShowNewCaseModal, setFormState, setForcedView },
     guardCaseInteraction,
     isLocked: navigationLock.locked,
     lockReason: navigationLock.reason,
@@ -137,7 +137,6 @@ export function useNavigationFlow({
       setCurrentView("settings");
       setSelectedCaseId(null);
       setShowNewCaseModal(false);
-      setSidebarOpen(true);
       return;
     }
 

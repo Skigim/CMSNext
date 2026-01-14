@@ -26,7 +26,6 @@ export interface NavigationStateSetters {
   setSelectedCaseId: (id: string | null) => void;
   setShowNewCaseModal: (show: boolean) => void;
   setFormState: (state: FormState) => void;
-  setSidebarOpen: (open: boolean) => void;
   setForcedView: (view: AppView | null) => void;
 }
 
@@ -82,7 +81,7 @@ export function useNavigationActions({
   const isMounted = useIsMounted();
   const { addToRecent } = useRecentCases();
   const { currentView, selectedCaseId, showNewCaseModal, formState } = state;
-  const { setCurrentView, setSelectedCaseId, setShowNewCaseModal, setFormState, setSidebarOpen, setForcedView } = setters;
+  const { setCurrentView, setSelectedCaseId, setShowNewCaseModal, setFormState, setForcedView } = setters;
 
   const backToList = useCallback(() => {
     startMeasurement("navigation:backToList");
@@ -109,11 +108,10 @@ export function useNavigationActions({
     setFormState({ ...formState, detailsSourceView: currentView });
     setSelectedCaseId(caseId);
     setCurrentView("details");
-    setSidebarOpen(false);
     // Track as recently viewed
     addToRecent(caseId);
     endMeasurement("navigation:viewCase", { caseId, blocked: false });
-  }, [addToRecent, currentView, formState, guardCaseInteraction, isLocked, setCurrentView, setFormState, setSelectedCaseId, setSidebarOpen]);
+  }, [addToRecent, currentView, formState, guardCaseInteraction, isLocked, setCurrentView, setFormState, setSelectedCaseId]);
 
   const newCase = useCallback(() => {
     startMeasurement("navigation:newCase", { locked: isLocked });
@@ -151,7 +149,6 @@ export function useNavigationActions({
       if (savedCase && showNewCaseModal) {
         setSelectedCaseId(savedCase.id);
         setCurrentView("details");
-        setSidebarOpen(false);
       }
       
       endMeasurement("navigation:saveCase", { result: showNewCaseModal ? "create" : "update" });
@@ -160,7 +157,7 @@ export function useNavigationActions({
       endMeasurement("navigation:saveCase", { result: "error" });
       throw err;
     }
-  }, [guardCaseInteraction, isMounted, lockReason, saveCase, setCurrentView, setSelectedCaseId, setShowNewCaseModal, setSidebarOpen, showNewCaseModal, state.selectedCaseId]);
+  }, [guardCaseInteraction, isMounted, lockReason, saveCase, setCurrentView, setSelectedCaseId, setShowNewCaseModal, showNewCaseModal, state.selectedCaseId]);
 
   const deleteCaseWithNavigation = useCallback(async (caseId: string) => {
     startMeasurement("navigation:deleteCase", { caseId });
@@ -187,12 +184,10 @@ export function useNavigationActions({
     startMeasurement("navigation:navigate", { view });
     if (RESTRICTED_VIEWS.includes(view) && guardCaseInteraction()) {
       setForcedView(view);
-      setSidebarOpen(true);
       setCurrentView("settings");
       setSelectedCaseId(null);
       return endMeasurement("navigation:navigate", { redirected: "settings" });
     }
-    setSidebarOpen(view !== "details" && view !== "form");
     switch (view) {
       case "dashboard": backToDashboard(); break;
       case "list": backToList(); break;
@@ -201,7 +196,7 @@ export function useNavigationActions({
       case "settings": setCurrentView(view); setSelectedCaseId(null); break;
     }
     endMeasurement("navigation:navigate", { target: view });
-  }, [backToDashboard, backToList, guardCaseInteraction, newCase, selectedCaseId, setCurrentView, setForcedView, setSelectedCaseId, setSidebarOpen]);
+  }, [backToDashboard, backToList, guardCaseInteraction, newCase, selectedCaseId, setCurrentView, setForcedView, setSelectedCaseId]);
 
   return { navigate, viewCase, newCase, closeNewCaseModal, saveCaseWithNavigation, deleteCaseWithNavigation, backToList, backToDashboard };
 }
