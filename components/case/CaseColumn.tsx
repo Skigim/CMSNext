@@ -147,6 +147,17 @@ export function CaseColumn({
               <ChecklistItem label="Retro Requested" checked={retroRequested} />
             </div>
           </div>
+
+          {/* Retro Months - shown only when retro is requested */}
+          {retroRequested && caseData.retroMonths && caseData.retroMonths.length > 0 && (
+            <>
+              <Separator />
+              <div className="space-y-1">
+                <span className="text-xs text-muted-foreground">Retro Months</span>
+                <p className="text-sm font-medium">{caseData.retroMonths.join(", ")}</p>
+              </div>
+            </>
+          )}
         </CardContent>
       </Card>
     );
@@ -310,6 +321,27 @@ export function CaseColumn({
             </div>
           </div>
         </div>
+
+        {/* Retro Months Input - shown only when retro is requested */}
+        {retroRequested && (
+          <>
+            <Separator />
+            <div className="space-y-1">
+              <Label htmlFor="retroMonthsInput" className="text-xs">Retro Months</Label>
+              <Input
+                id="retroMonthsInput"
+                value={(caseData.retroMonths ?? []).join(", ")}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  const months = value.split(",").map(m => m.trim()).filter(m => m.length > 0);
+                  onCaseDataChange('retroMonths', months);
+                }}
+                placeholder="e.g., Jan, Feb, Mar"
+                className="h-8"
+              />
+            </div>
+          </>
+        )}
       </CardContent>
     </Card>
   );
