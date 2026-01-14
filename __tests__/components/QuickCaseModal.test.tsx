@@ -69,6 +69,11 @@ describe("QuickCaseModal", () => {
 
     await waitFor(() => {
       expect(mockOnSave).toHaveBeenCalledTimes(1);
+      // Verify skipNavigation is false when "add another" is not checked
+      expect(mockOnSave).toHaveBeenCalledWith(
+        expect.any(Object),
+        { skipNavigation: false }
+      );
     });
 
     await waitFor(() => {
@@ -94,6 +99,11 @@ describe("QuickCaseModal", () => {
     // Wait for save to complete
     await waitFor(() => {
       expect(mockOnSave).toHaveBeenCalledTimes(1);
+      // Verify skipNavigation is true when "add another" is checked
+      expect(mockOnSave).toHaveBeenCalledWith(
+        expect.any(Object),
+        { skipNavigation: true }
+      );
     });
 
     // Modal should NOT close (onClose not called)

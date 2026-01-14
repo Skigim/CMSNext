@@ -126,7 +126,10 @@ export function useNavigationActions({
     endMeasurement("navigation:closeNewCaseModal", { result: "closed" });
   }, [setShowNewCaseModal]);
 
-  const saveCaseWithNavigation = useCallback(async (caseData: { person: NewPersonData; caseRecord: NewCaseRecordData }) => {
+  const saveCaseWithNavigation = useCallback(async (
+    caseData: { person: NewPersonData; caseRecord: NewCaseRecordData },
+    options?: { skipNavigation?: boolean }
+  ) => {
     startMeasurement("navigation:saveCase");
     if (guardCaseInteraction()) {
       endMeasurement("navigation:saveCase", { blocked: true });
@@ -139,6 +142,12 @@ export function useNavigationActions({
         ? await saveCase(caseData, editingCaseId)
         : await saveCase(caseData);
       if (!isMounted.current) return;
+      
+      // Skip navigation if requested (e.g., "add another" mode)
+      if (options?.skipNavigation) {
+        endMeasurement("navigation:saveCase", { result: "create-no-nav" });
+        return;
+      }
       
       // Close modal if open
       if (showNewCaseModal) {

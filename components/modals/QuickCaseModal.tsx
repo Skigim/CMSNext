@@ -20,7 +20,10 @@ import { isoToDateInputValue, dateInputValueToISO, toLocalDateString } from "@/d
 interface QuickCaseModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSave: (caseData: { person: NewPersonData; caseRecord: NewCaseRecordData }) => Promise<void>;
+  onSave: (
+    caseData: { person: NewPersonData; caseRecord: NewCaseRecordData },
+    options?: { skipNavigation?: boolean }
+  ) => Promise<void>;
 }
 
 // Helper function to get today's date in YYYY-MM-DD format (timezone-safe)
@@ -168,7 +171,10 @@ export function QuickCaseModal({ isOpen, onClose, onSave }: QuickCaseModalProps)
         voterFormStatus: '',
       };
 
-      await onSave({ person: personData, caseRecord: caseRecordData });
+      await onSave(
+        { person: personData, caseRecord: caseRecordData },
+        { skipNavigation: addAnother }
+      );
 
       toast.success(`Case created for ${firstName} ${lastName}`, { id: toastId });
 

@@ -30,7 +30,8 @@ interface NavigationHandlers {
   newCase: () => void;
   closeNewCaseModal: () => void;
   saveCaseWithNavigation: (
-    caseData: { person: NewPersonData; caseRecord: NewCaseRecordData }
+    caseData: { person: NewPersonData; caseRecord: NewCaseRecordData },
+    options?: { skipNavigation?: boolean }
   ) => Promise<void>;
   deleteCaseWithNavigation: (caseId: string) => Promise<void>;
   backToList: () => void;

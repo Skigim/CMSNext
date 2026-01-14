@@ -29,7 +29,10 @@ interface ViewRendererProps {
   handleNewCase: () => void;
   handleCloseNewCaseModal: () => void;
   handleBackToList: () => void;
-  handleSaveCase: (caseData: { person: NewPersonData; caseRecord: NewCaseRecordData }) => Promise<void>;
+  handleSaveCase: (
+    caseData: { person: NewPersonData; caseRecord: NewCaseRecordData },
+    options?: { skipNavigation?: boolean }
+  ) => Promise<void>;
   
   // Component handlers
   handleDeleteCase: (caseId: string) => Promise<void>;

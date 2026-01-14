@@ -23,7 +23,10 @@ interface CaseWorkspaceViewHandlers {
   handleNewCase: () => void;
   handleCloseNewCaseModal: () => void;
   handleBackToList: () => void;
-  handleSaveCase: (caseData: { person: NewPersonData; caseRecord: NewCaseRecordData }) => Promise<void>;
+  handleSaveCase: (
+    caseData: { person: NewPersonData; caseRecord: NewCaseRecordData },
+    options?: { skipNavigation?: boolean }
+  ) => Promise<void>;
   handleDeleteCase: (caseId: string) => Promise<void>;
   handleDeleteCases: (caseIds: string[]) => Promise<number>;
   handleUpdateCasesStatus: (caseIds: string[], status: StoredCase["status"]) => Promise<number>;
