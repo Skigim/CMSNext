@@ -19,6 +19,7 @@ import {
   getDaysSinceOldestAlert,
   getOldestAlertDate,
   isExcludedStatus,
+  isCompletedStatus,
   EXCLUDED_STATUSES,
   getApplicationAgeMultiplier,
   getAlertAgeMultiplier,
@@ -1382,5 +1383,126 @@ describe('calculatePriorityScore with tiered age multipliers', () => {
       35 * SCORE_PER_DAY_SINCE_APPLICATION * 1 +
       35 * SCORE_PER_DAY_ALERT_AGE * 8
     );
+  });
+
+  it('should use countsAsCompleted flag from config to skip age scaling', () => {
+    // Custom status "In Review" with countsAsCompleted=true
+    const config = {
+      caseStatuses: [
+        { name: 'In Review', colorSlot: 'blue' as const, countsAsCompleted: true },
+        { name: 'Pending', colorSlot: 'amber' as const, countsAsCompleted: false },
+      ],
+    };
+
+    const caseData = createMockCase({
+      status: 'In Review' as import('@/types/case').CaseStatus,
+      updatedAt: '2020-01-01T00:00:00.000Z',
+      caseRecord: {
+        id: 'record-1',
+        mcn: 'MCN123',
+        applicationDate: '2025-12-11', // 35 days before Jan 15
+        caseType: 'Type A',
+        personId: 'person-1',
+        spouseId: '',
+        status: 'In Review' as import('@/types/case').CaseStatus,
+        description: '',
+        priority: false,
+        livingArrangement: '',
+        withWaiver: false,
+        admissionDate: '',
+        organizationId: '',
+        authorizedReps: [],
+        retroRequested: '',
+        createdDate: '2025-12-11',
+        updatedDate: '2025-12-11',
+      },
+    });
+
+    const score = calculatePriorityScore(caseData, [], config);
+
+    // 35 days * 30 base * 1x multiplier (countsAsCompleted=true) = 1050
+    expect(score).toBe(35 * SCORE_PER_DAY_SINCE_APPLICATION * 1);
+  });
+
+  it('should apply age scaling when countsAsCompleted is false in config', () => {
+    const config = {
+      caseStatuses: [
+        { name: 'Processing', colorSlot: 'blue' as const, countsAsCompleted: false },
+      ],
+    };
+
+    const caseData = createMockCase({
+      status: 'Processing' as import('@/types/case').CaseStatus,
+      updatedAt: '2020-01-01T00:00:00.000Z',
+      caseRecord: {
+        id: 'record-1',
+        mcn: 'MCN123',
+        applicationDate: '2025-12-11', // 35 days before Jan 15
+        caseType: 'Type A',
+        personId: 'person-1',
+        spouseId: '',
+        status: 'Processing' as import('@/types/case').CaseStatus,
+        description: '',
+        priority: false,
+        livingArrangement: '',
+        withWaiver: false,
+        admissionDate: '',
+        organizationId: '',
+        authorizedReps: [],
+        retroRequested: '',
+        createdDate: '2025-12-11',
+        updatedDate: '2025-12-11',
+      },
+    });
+
+    const score = calculatePriorityScore(caseData, [], config);
+
+    // 35 days * 30 base * 4x multiplier (30-44 day tier) = 4200
+    expect(score).toBe(35 * SCORE_PER_DAY_SINCE_APPLICATION * 4);
+  });
+});
+
+describe('isCompletedStatus', () => {
+  it('should return true when countsAsCompleted is true in config', () => {
+    const statuses = [
+      { name: 'Done', colorSlot: 'green' as const, countsAsCompleted: true },
+      { name: 'Active', colorSlot: 'blue' as const, countsAsCompleted: false },
+    ];
+    
+    expect(isCompletedStatus('Done', statuses)).toBe(true);
+    expect(isCompletedStatus('done', statuses)).toBe(true); // case insensitive
+    expect(isCompletedStatus('DONE', statuses)).toBe(true);
+  });
+
+  it('should return false when countsAsCompleted is false in config', () => {
+    const statuses = [
+      { name: 'Active', colorSlot: 'blue' as const, countsAsCompleted: false },
+    ];
+    
+    expect(isCompletedStatus('Active', statuses)).toBe(false);
+  });
+
+  it('should return false when status not found in config', () => {
+    const statuses = [
+      { name: 'Active', colorSlot: 'blue' as const, countsAsCompleted: true },
+    ];
+    
+    expect(isCompletedStatus('Unknown', statuses)).toBe(false);
+  });
+
+  it('should fall back to isExcludedStatus when no config provided', () => {
+    // These are in EXCLUDED_STATUSES
+    expect(isCompletedStatus('Approved')).toBe(true);
+    expect(isCompletedStatus('Denied')).toBe(true);
+    expect(isCompletedStatus('Closed')).toBe(true);
+    
+    // These are not
+    expect(isCompletedStatus('Pending')).toBe(false);
+    expect(isCompletedStatus('Intake')).toBe(false);
+  });
+
+  it('should return false for undefined status', () => {
+    expect(isCompletedStatus(undefined)).toBe(false);
+    expect(isCompletedStatus(undefined, [])).toBe(false);
   });
 });

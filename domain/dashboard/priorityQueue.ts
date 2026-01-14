@@ -119,6 +119,36 @@ export function getAlertAgeMultiplier(days: number): number {
   return 32;
 }
 
+/**
+ * Check if a status is marked as "completed" in the config.
+ * Completed statuses skip application age scaling since they don't need urgency escalation.
+ * 
+ * When config is provided, uses the countsAsCompleted flag.
+ * When no config is provided, falls back to hardcoded EXCLUDED_STATUSES.
+ * 
+ * @param status - The case status to check
+ * @param caseStatuses - Optional status configuration array
+ * @returns true if the status is considered completed
+ */
+export function isCompletedStatus(
+  status: string | undefined,
+  caseStatuses?: StatusConfig[]
+): boolean {
+  if (!status) return false;
+  
+  // Use config if provided
+  if (caseStatuses && caseStatuses.length > 0) {
+    const statusLower = status.toLowerCase();
+    const statusConfig = caseStatuses.find(
+      (s) => s.name.toLowerCase() === statusLower
+    );
+    return statusConfig?.countsAsCompleted === true;
+  }
+  
+  // Legacy fallback: use hardcoded excluded statuses
+  return isExcludedStatus(status);
+}
+
 // ============================================================================
 // Priority Configuration
 // ============================================================================
@@ -315,6 +345,7 @@ export function getDaysSinceOldestAlert(
  * - Status weight based on priorityEnabled statuses and their sortOrder
  * - Alert weight based on alertType and sortOrder (exponential decay)
  * - Application age: days × 30 × tiered multiplier (1x→2x→4x→8x→16x at 11/30/45/60 days)
+ *   - Skipped (1x) for statuses with countsAsCompleted=true in config
  * - Alert age: days × 50 × tiered multiplier (1x→2x→4x→8x→16x→32x at 5/11/30/45/60 days)
  * - 75 points if marked as priority
  * - 50 points if modified in last 24 hours
@@ -355,9 +386,9 @@ export function calculatePriorityScore(
   }
 
   // Points per day since application date (with tiered multiplier)
-  // Skip age scaling for completed/terminal statuses - they don't need urgency escalation
+  // Skip age scaling for completed statuses (via config or fallback) - they don't need urgency escalation
   const daysSinceApp = getDaysSinceApplication(caseData.caseRecord?.applicationDate);
-  const isCompleted = isExcludedStatus(caseData.status);
+  const isCompleted = isCompletedStatus(caseData.status, config?.caseStatuses);
   const appAgeMultiplier = isCompleted ? 1 : getApplicationAgeMultiplier(daysSinceApp);
   score += daysSinceApp * SCORE_PER_DAY_SINCE_APPLICATION * appAgeMultiplier;
 
