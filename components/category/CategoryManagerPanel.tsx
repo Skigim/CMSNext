@@ -13,19 +13,7 @@ import {
 import { Input } from "../ui/input";
 import { Badge } from "../ui/badge";
 import { Separator } from "../ui/separator";
-import { Checkbox } from "../ui/checkbox";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
-import {
-  Select,
-  SelectContent,
-  SelectTrigger,
-  SelectValue,
-} from "../ui/select";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "../ui/tooltip";
 import {
   CATEGORY_DISPLAY_METADATA,
   CategoryKey,
@@ -33,7 +21,6 @@ import {
   type StatusConfig,
   type AlertTypeConfig,
 } from "@/types/categoryConfig";
-import { COLOR_SLOTS, type ColorSlot } from "@/types/colorSlots";
 import { useCategoryConfig } from "@/contexts/CategoryConfigContext";
 import { useCategoryEditorState, useIsMounted } from "@/hooks";
 import { cn } from "../ui/utils";
@@ -54,49 +41,6 @@ type CategoryManagerPanelProps = {
 };
 
 type SimpleItem = { name: string };
-
-// ============================================================================
-// Color Slot Picker (shared component)
-// ============================================================================
-
-type ColorSlotPickerProps = {
-  value: ColorSlot;
-  onChange: (slot: ColorSlot) => void;
-  disabled?: boolean;
-};
-
-function ColorSlotPicker({ value, onChange, disabled }: ColorSlotPickerProps) {
-  return (
-    <Select value={value} onValueChange={(v) => onChange(v as ColorSlot)} disabled={disabled}>
-      <SelectTrigger className="w-[52px] px-2" aria-label="Select color">
-        <SelectValue>
-          <span 
-            className="inline-block w-5 h-5 rounded-full ring-1 ring-inset ring-black/10"
-            style={{ backgroundColor: `var(--color-slot-${value})` }}
-          />
-        </SelectValue>
-      </SelectTrigger>
-      <SelectContent className="min-w-[160px]">
-        <div className="grid grid-cols-5 gap-1 p-1">
-          {COLOR_SLOTS.map(slot => (
-            <button
-              key={slot}
-              type="button"
-              onClick={() => onChange(slot)}
-              className={cn(
-                "w-6 h-6 rounded-full ring-1 ring-inset ring-black/10 transition-transform hover:scale-110 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2",
-                value === slot && "ring-2 ring-primary ring-offset-2"
-              )}
-              style={{ backgroundColor: `var(--color-slot-${slot})` }}
-              aria-label={slot}
-              title={slot}
-            />
-          ))}
-        </div>
-      </SelectContent>
-    </Select>
-  );
-}
 
 // ============================================================================
 // Editor Shell (shared layout component)
@@ -422,11 +366,11 @@ function StatusCategoryEditor({
 
   const {
     items,
+    setItems,
     hasChanges,
     disableSave,
     isSaving,
     touched,
-    handleChange,
     handleRevert,
     handleSave,
   } = useCategoryEditorState<StatusConfig>({
@@ -472,7 +416,7 @@ function StatusCategoryEditor({
       disableSave={finalDisableSave}
       isSaving={isSaving}
       isGloballyLoading={isGloballyLoading}
-      onRevert={handleRevert}
+      onRevert={() => handleRevert(() => {})}
       onSave={handleSave}
       emptyMessage={
         touched && items.length === 0 ? (
@@ -484,7 +428,7 @@ function StatusCategoryEditor({
     >
       <SortableStatuses
         statuses={items}
-        onChange={handleChange}
+        onChange={setItems}
         disabled={isSaving || isGloballyLoading}
         showWeights={true}
       />
