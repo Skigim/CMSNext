@@ -1,9 +1,9 @@
 # CMSNext Roadmap - January 2026
 
-**Report Date:** January 14, 2026  
+**Report Date:** January 15, 2026  
 **Branch:** main  
 **Focus:** Dashboard Transformation + Domain Layer Refactor + Priority System Enhancements  
-**Status:** Week 1-2 Complete ✅ | Domain Refactor Complete ✅ | Week 3 In Progress 🔄
+**Status:** Week 1-2 Complete ✅ | Domain Refactor Complete ✅ | Week 3 Complete ✅ | Week 4 In Progress 🔄
 
 ---
 
@@ -11,9 +11,8 @@
 
 1. **Dashboard Transformation** - Transform the dashboard from a passive display into an active command center. ✅ PHASES 1-4 COMPLETE
 2. **User Workflow Optimization** - Surface priority work, reduce navigation friction, enable inline actions. ✅ COMPLETE
-3. **Personalization** - Allow users to customize their dashboard experience. (Phase 5 - planned)
-4. **Domain Layer Refactor** - Extract pure business logic from utils/ to domain/ layer. ✅ COMPLETE
-5. **Priority System Enhancements** - Dynamic weights and sortable alert priorities. ✅ COMPLETE (added mid-month)
+3. **Domain Layer Refactor** - Extract pure business logic from utils/ to domain/ layer. ✅ COMPLETE
+4. **Priority System Enhancements** - Dynamic weights and sortable alert priorities. ✅ COMPLETE (added mid-month)
 
 ---
 
@@ -113,21 +112,6 @@
 
 ---
 
-### Phase 5: Navigation & Context Flow 📋 PLANNED
-
-> _Make the dashboard the central hub that all workflows return to—preserve scroll position, selected tabs, and widget states when navigating away and back. Add "Return to Dashboard" breadcrumbs and enhance keyboard shortcuts for dashboard-specific actions._
-
-**Target:** Week 3 (Jan 13-19)
-
-#### Tasks
-
-- [ ] Preserve dashboard scroll position on navigation
-- [ ] Preserve selected tab (Overview/Analytics) on return
-- [x] Add "Return to Dashboard" breadcrumb to case detail views ✅ (already implemented in MainLayout.tsx)
-- [ ] Write E2E tests for navigation preservation
-
----
-
 ## 📅 Weekly Plan
 
 ### Week 1: Dashboard Foundation (Jan 2-5) ✅ COMPLETE
@@ -206,17 +190,25 @@ _Focus: Priority enhancements, code quality, and polish_
 - [x] localStorage mocking improvements in tests
 - [x] Placeholder Palette component for templates
 - [x] Sidebar open/close behavior simplified
+- [x] Fix `hono` high severity vulnerability (npm audit fix)
+- [ ] Documentation updates
+- [ ] Test coverage improvements
+- [ ] Minor bug fixes and polish
 
 ---
 
-### Week 4: Buffer & Planning (Jan 20-26)
+### Week 4: Security Polish & February Planning (Jan 20-26)
 
-_Focus: Polish, security fixes, and February planning_
+_Focus: Security audit remediation and February planning_
 
-- [x] Fix `hono` high severity vulnerability (npm audit fix)
-- [ ] Address remaining security audit findings (see Audit section)
-- [ ] Activity log auto-archiving policy
-- [ ] Documentation updates
+**Security Audit Status:** 5/6 issues resolved ✅
+
+- [ ] Activity log auto-archiving implementation
+  - [ ] Auto-trigger `archiveOldEntries()` on file load (1 year cutoff)
+  - [ ] Implement archive file writing: `activityLog-archive-{year}.json`
+  - [ ] Add settings UI for manual archival and configuration
+- [ ] Performance testing for large activity logs
+- [ ] Documentation: security features and encryption model
 - [ ] February roadmap planning
 
 ---
@@ -333,14 +325,16 @@ These files intentionally remain in `utils/` because they have I/O dependencies:
 
 ### Code Quality Findings
 
-| Priority | Finding                                | Status     |
-| -------- | -------------------------------------- | ---------- |
-| High     | AVS duplicate detection error handling | 📋 Planned |
-| Medium   | File storage silent load failures      | 📋 Planned |
-| Medium   | Template reorder optimistic UI         | 📋 Planned |
-| Medium   | Encryption auth error specificity      | 📋 Planned |
-| Low      | Synchronous AVS parsing                | 📋 Backlog |
-| Low      | Activity log unbounded growth          | 📋 Backlog |
+| Priority | Finding                                | Status    |
+| -------- | -------------------------------------- | --------- |
+| High     | AVS duplicate detection error handling | ✅ FIXED  |
+| Medium   | File storage silent load failures      | ✅ FIXED  |
+| Medium   | Template reorder optimistic UI         | ✅ FIXED  |
+| Medium   | Encryption auth error specificity      | ✅ FIXED  |
+| Low      | Synchronous AVS parsing                | ✅ FIXED  |
+| Low      | Activity log unbounded growth          | 📋 Week 4 |
+
+**Progress:** 5/6 issues resolved (83%)
 
 ### Accessibility
 
