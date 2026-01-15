@@ -102,12 +102,11 @@ export function SortableStatuses({
 }: SortableStatusesProps) {
   const [draftName, setDraftName] = useState("");
   const [draftColor, setDraftColor] = useState<ColorSlot>("blue");
-  const [draftPriorityEnabled, setDraftPriorityEnabled] = useState(false);
   const [draftCountsAsCompleted, setDraftCountsAsCompleted] = useState(false);
 
-  // Calculate priority weights for display
+  // Calculate priority weights for display (non-completed statuses contribute to priority)
   const priorityStatuses = useMemo(
-    () => statuses.filter((s) => s.priorityEnabled),
+    () => statuses.filter((s) => !s.countsAsCompleted),
     [statuses]
   );
   const weights = useMemo(
@@ -133,19 +132,18 @@ export function SortableStatuses({
     const newStatus: StatusConfig = {
       name: draftName.trim(),
       colorSlot: draftColor,
-      priorityEnabled: draftPriorityEnabled,
+      priorityEnabled: true, // Default to true for backwards compatibility
       countsAsCompleted: draftCountsAsCompleted,
       sortOrder: statuses.length, // Append to end
     };
 
     onChange([...statuses, newStatus]);
     setDraftName("");
-    setDraftPriorityEnabled(false);
     setDraftCountsAsCompleted(false);
     // Cycle to next color
     const currentIndex = COLOR_SLOTS.indexOf(draftColor);
     setDraftColor(COLOR_SLOTS[(currentIndex + 1) % COLOR_SLOTS.length]);
-  }, [canAdd, draftName, draftColor, draftPriorityEnabled, draftCountsAsCompleted, statuses, onChange]);
+  }, [canAdd, draftName, draftColor, draftCountsAsCompleted, statuses, onChange]);
 
   // Remove status
   const handleRemove = useCallback(
@@ -179,10 +177,10 @@ export function SortableStatuses({
     [onChange]
   );
 
-  // Get weight for a specific status
+  // Get weight for a specific status (completed statuses don't contribute to priority)
   const getStatusWeight = useCallback(
     (status: StatusConfig): number => {
-      if (!status.priorityEnabled) return 0;
+      if (status.countsAsCompleted) return 0;
       const index = priorityStatuses.findIndex((s) => s.name === status.name);
       return index >= 0 && index < weights.length ? weights[index] : 0;
     },
@@ -204,21 +202,11 @@ export function SortableStatuses({
         <Tooltip>
           <TooltipTrigger asChild>
             <span className="w-[80px] text-center cursor-help underline decoration-dotted">
-              Priority
-            </span>
-          </TooltipTrigger>
-          <TooltipContent side="top" className="max-w-[200px]">
-            <p>Enable to include in priority queue scoring. Drag to reorder priority.</p>
-          </TooltipContent>
-        </Tooltip>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <span className="w-[80px] text-center cursor-help underline decoration-dotted">
               Completed
             </span>
           </TooltipTrigger>
           <TooltipContent side="top" className="max-w-[200px]">
-            <p>Check if this status counts toward "cases processed" metrics.</p>
+            <p>Check if this status counts toward "cases processed" metrics. Completed statuses are excluded from priority scoring.</p>
           </TooltipContent>
         </Tooltip>
         {showWeights && <span className="w-[70px] text-right">Weight</span>}
@@ -232,7 +220,7 @@ export function SortableStatuses({
           <p className="font-medium mb-1">Priority Queue Ordering</p>
           <p className="text-xs text-muted-foreground">
             Drag to reorder statuses. Position determines priority weight (first = highest).
-            Only statuses with Priority enabled contribute to the Today's Work widget.
+            Completed statuses are excluded from the Today's Work widget priority scoring.
           </p>
         </div>
       </div>
@@ -258,16 +246,6 @@ export function SortableStatuses({
                 className="flex-1"
                 aria-label={`Status name ${index + 1}`}
               />
-              <div className="w-[80px] flex justify-center">
-                <Checkbox
-                  checked={status.priorityEnabled ?? false}
-                  onCheckedChange={(checked) =>
-                    handleFieldChange(index, "priorityEnabled", checked === true)
-                  }
-                  disabled={disabled}
-                  aria-label={`Enable ${status.name} for priority queue`}
-                />
-              </div>
               <div className="w-[80px] flex justify-center">
                 <Checkbox
                   checked={status.countsAsCompleted ?? false}
@@ -327,14 +305,6 @@ export function SortableStatuses({
             className="flex-1"
             aria-label="New status name"
           />
-          <div className="w-[80px] flex justify-center">
-            <Checkbox
-              checked={draftPriorityEnabled}
-              onCheckedChange={(checked) => setDraftPriorityEnabled(checked === true)}
-              disabled={disabled}
-              aria-label="Enable new status for priority queue"
-            />
-          </div>
           <div className="w-[80px] flex justify-center">
             <Checkbox
               checked={draftCountsAsCompleted}
