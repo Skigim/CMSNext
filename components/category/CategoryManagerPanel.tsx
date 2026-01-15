@@ -38,6 +38,7 @@ import { useCategoryConfig } from "@/contexts/CategoryConfigContext";
 import { useCategoryEditorState, useIsMounted } from "@/hooks";
 import { cn } from "../ui/utils";
 import { SortableAlertTypes } from "./SortableAlertTypes";
+import { SortableStatuses } from "./SortableStatuses";
 
 // ============================================================================
 // Types
@@ -407,153 +408,85 @@ function StatusCategoryEditor({
   isGloballyLoading,
 }: StatusCategoryEditorProps) {
   const metadata = CATEGORY_DISPLAY_METADATA.caseStatuses;
-  const [draftName, setDraftName] = useState("");
-  const [draftColor, setDraftColor] = useState<ColorSlot>("blue");
-  const [draftCountsAsCompleted, setDraftCountsAsCompleted] = useState(false);
 
-  // Memoize to prevent re-creating on every render, which would reset the editor state
+  // Ensure all statuses have sortOrder assigned
   const initialItems: StatusConfig[] = useMemo(() => 
-    statusConfigs.map(s => ({
+    statusConfigs.map((s, i) => ({
       ...s,
       countsAsCompleted: s.countsAsCompleted ?? false,
+      priorityEnabled: s.priorityEnabled ?? false,
+      sortOrder: s.sortOrder ?? i,
     })),
     [statusConfigs]
   );
 
   const {
     items,
-    duplicateIndices,
-    cleanedItems,
     hasChanges,
     disableSave,
     isSaving,
     touched,
-    handleNameChange,
-    handleFieldChange,
-    handleRemove,
-    handleAdd,
+    handleChange,
     handleRevert,
     handleSave,
   } = useCategoryEditorState<StatusConfig>({
     initialItems,
     onSave,
     isGloballyLoading,
-    createItem: (name) => ({
-      name,
-      colorSlot: draftColor,
-      countsAsCompleted: draftCountsAsCompleted,
-    }),
+    createItem: (name) => ({ name, colorSlot: "blue" }),
     cleanItem: (item) => ({
       name: item.name.trim(),
       colorSlot: item.colorSlot,
       countsAsCompleted: item.countsAsCompleted ?? false,
+      priorityEnabled: item.priorityEnabled ?? false,
+      sortOrder: item.sortOrder ?? 0,
     }),
     hasItemChanged: (current, original) =>
       current.name !== original.name ||
       current.colorSlot !== original.colorSlot ||
-      current.countsAsCompleted !== (original.countsAsCompleted ?? false),
+      current.countsAsCompleted !== (original.countsAsCompleted ?? false) ||
+      current.priorityEnabled !== (original.priorityEnabled ?? false) ||
+      current.sortOrder !== (original.sortOrder ?? 0),
   });
 
-  const resetDraft = () => {
-    setDraftName("");
-    setDraftCountsAsCompleted(false);
-    // Cycle to next color
-    const currentIndex = COLOR_SLOTS.indexOf(draftColor);
-    setDraftColor(COLOR_SLOTS[(currentIndex + 1) % COLOR_SLOTS.length]);
-  };
+  // Check for duplicate names
+  const hasDuplicates = useMemo(() => {
+    const names = new Set<string>();
+    for (const status of items) {
+      const normalized = status.name.trim().toLowerCase();
+      if (normalized && names.has(normalized)) return true;
+      names.add(normalized);
+    }
+    return false;
+  }, [items]);
+
+  const hasEmptyNames = items.some(s => !s.name.trim());
+  const finalDisableSave = disableSave || hasDuplicates || hasEmptyNames;
 
   return (
     <EditorShell
       label={metadata.label}
       description={metadata.description}
-      itemCount={cleanedItems.length}
+      itemCount={items.length}
       hasChanges={hasChanges}
-      disableSave={disableSave}
+      disableSave={finalDisableSave}
       isSaving={isSaving}
       isGloballyLoading={isGloballyLoading}
-      onRevert={() => handleRevert(() => {
-        setDraftName("");
-        setDraftCountsAsCompleted(false);
-      })}
+      onRevert={handleRevert}
       onSave={handleSave}
-      headerContent={
-        <div className="flex items-center gap-2 mb-2 text-xs text-muted-foreground">
-          <span className="flex-1">Status Name</span>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <span className="w-[70px] text-center cursor-help underline decoration-dotted">
-                Completed
-              </span>
-            </TooltipTrigger>
-            <TooltipContent side="top" className="max-w-[200px]">
-              <p>Check if this status counts toward "cases processed" metrics on the dashboard.</p>
-            </TooltipContent>
-          </Tooltip>
-          <span className="w-[52px]" />
-          <span className="w-9" />
-        </div>
-      }
       emptyMessage={
-        touched && cleanedItems.length === 0 ? (
+        touched && items.length === 0 ? (
           <p className="mt-3 text-sm text-destructive">
             At least one status is required.
           </p>
         ) : null
       }
     >
-      {items.map((status, index) => (
-        <ItemRow
-          key={`status-${index}`}
-          value={status.name}
-          onChange={(name) => handleNameChange(index, name)}
-          onRemove={() => handleRemove(index)}
-          isDuplicate={duplicateIndices.has(index)}
-          isEmpty={!status.name.trim()}
-          disabled={isSaving || isGloballyLoading}
-          ariaLabel={`Status option ${index + 1}`}
-          extraControls={
-            <>
-              <div className="w-[70px] flex justify-center">
-                <Checkbox
-                  checked={status.countsAsCompleted ?? false}
-                  onCheckedChange={(checked) => handleFieldChange(index, 'countsAsCompleted', checked === true)}
-                  disabled={isSaving || isGloballyLoading}
-                  aria-label={`Mark ${status.name || 'status'} as counting toward completion`}
-                />
-              </div>
-              <ColorSlotPicker
-                value={status.colorSlot}
-                onChange={(color) => handleFieldChange(index, 'colorSlot', color)}
-                disabled={isSaving || isGloballyLoading}
-              />
-            </>
-          }
-        />
-      ))}
-      <AddItemRow
-        draftValue={draftName}
-        onDraftChange={setDraftName}
-        onAdd={() => handleAdd(draftName, resetDraft)}
+      <SortableStatuses
+        statuses={items}
+        onChange={handleChange}
         disabled={isSaving || isGloballyLoading}
-        placeholder="Add new status..."
-        ariaLabel="Add status option"
-        extraControls={
-          <>
-            <div className="w-[70px] flex justify-center">
-              <Checkbox
-                checked={draftCountsAsCompleted}
-                onCheckedChange={(checked) => setDraftCountsAsCompleted(checked === true)}
-                disabled={isSaving || isGloballyLoading}
-                aria-label="New status counts toward completion"
-              />
-            </div>
-            <ColorSlotPicker
-              value={draftColor}
-              onChange={setDraftColor}
-              disabled={isSaving || isGloballyLoading}
-            />
-          </>
-        }
+        showWeights={true}
       />
     </EditorShell>
   );
