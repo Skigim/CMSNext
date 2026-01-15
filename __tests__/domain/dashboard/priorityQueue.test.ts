@@ -1121,16 +1121,13 @@ describe('getApplicationAgeMultiplier', () => {
     expect(getApplicationAgeMultiplier(44)).toBe(4);
   });
 
-  it('should return 8x for 45-59 days', () => {
+  it('should return 8x for 45+ days', () => {
     expect(getApplicationAgeMultiplier(45)).toBe(8);
     expect(getApplicationAgeMultiplier(52)).toBe(8);
     expect(getApplicationAgeMultiplier(59)).toBe(8);
-  });
-
-  it('should return 16x for 60+ days', () => {
-    expect(getApplicationAgeMultiplier(60)).toBe(16);
-    expect(getApplicationAgeMultiplier(90)).toBe(16);
-    expect(getApplicationAgeMultiplier(365)).toBe(16);
+    expect(getApplicationAgeMultiplier(60)).toBe(8);
+    expect(getApplicationAgeMultiplier(90)).toBe(8);
+    expect(getApplicationAgeMultiplier(365)).toBe(8);
   });
 });
 
@@ -1153,22 +1150,12 @@ describe('getAlertAgeMultiplier', () => {
     expect(getAlertAgeMultiplier(29)).toBe(4);
   });
 
-  it('should return 8x for 30-44 days', () => {
+  it('should return 8x for 30+ days', () => {
     expect(getAlertAgeMultiplier(30)).toBe(8);
-    expect(getAlertAgeMultiplier(37)).toBe(8);
-    expect(getAlertAgeMultiplier(44)).toBe(8);
-  });
-
-  it('should return 16x for 45-59 days', () => {
-    expect(getAlertAgeMultiplier(45)).toBe(16);
-    expect(getAlertAgeMultiplier(52)).toBe(16);
-    expect(getAlertAgeMultiplier(59)).toBe(16);
-  });
-
-  it('should return 32x for 60+ days', () => {
-    expect(getAlertAgeMultiplier(60)).toBe(32);
-    expect(getAlertAgeMultiplier(90)).toBe(32);
-    expect(getAlertAgeMultiplier(365)).toBe(32);
+    expect(getAlertAgeMultiplier(45)).toBe(8);
+    expect(getAlertAgeMultiplier(60)).toBe(8);
+    expect(getAlertAgeMultiplier(90)).toBe(8);
+    expect(getAlertAgeMultiplier(365)).toBe(8);
   });
 });
 
@@ -1257,8 +1244,8 @@ describe('calculatePriorityScore with tiered age multipliers', () => {
   });
 
   it('should dramatically increase score for very old cases', () => {
-    // 65 days old application = 16x multiplier
-    // 65 days old alert = 32x multiplier
+    // 65 days old application = 8x multiplier
+    // 65 days old alert = 8x multiplier
     const caseData = createMockCase({
       updatedAt: '2020-01-01T00:00:00.000Z',
       caseRecord: {
@@ -1289,13 +1276,13 @@ describe('calculatePriorityScore with tiered age multipliers', () => {
     const score = calculatePriorityScore(caseData, alerts);
 
     // Alert type: 100
-    // App age: 65 days * 30 * 16x = 31,200
-    // Alert age: 65 days * 50 * 32x = 104,000
-    // Total: 135,300
+    // App age: 65 days * 30 * 8x = 15,600
+    // Alert age: 65 days * 50 * 8x = 26,000
+    // Total: 41,700
     expect(score).toBe(
       SCORE_OTHER_ALERT +
-      65 * SCORE_PER_DAY_SINCE_APPLICATION * 16 +
-      65 * SCORE_PER_DAY_ALERT_AGE * 32
+      65 * SCORE_PER_DAY_SINCE_APPLICATION * 8 +
+      65 * SCORE_PER_DAY_ALERT_AGE * 8
     );
   });
 

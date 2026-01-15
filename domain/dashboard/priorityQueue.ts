@@ -8,10 +8,10 @@
  * 1. Status-based priority (configurable, e.g., Intake = 5000 points)
  * 2. Alert type priority (configurable via sortOrder, exponential decay from 500 to 50)
  * 3. Application age with tiered multipliers:
- *    - 0-10 days: 1x, 11-29 days: 2x, 30-44 days: 4x, 45-59 days: 8x, 60+ days: 16x
+ *    - 0-10 days: 1x, 11-29 days: 2x, 30-44 days: 4x, 45+ days: 8x
  *    - Formula: days × 30 × multiplier
  * 4. Alert age with tiered multipliers (earlier escalation for deadline sensitivity):
- *    - 0-4 days: 1x, 5-10 days: 2x, 11-29 days: 4x, 30-44 days: 8x, 45-59 days: 16x, 60+ days: 32x
+ *    - 0-4 days: 1x, 5-10 days: 2x, 11-29 days: 4x, 30+ days: 8x
  *    - Formula: days × 50 × multiplier
  * 5. Priority flags (75 points)
  * 6. Recent modifications (50 points)
@@ -80,8 +80,7 @@ export const SCORE_RECENT_MODIFICATION = 50;
  * - 0-10 days: 1x (normal)
  * - 11-29 days: 2x (elevated)
  * - 30-44 days: 4x (high)
- * - 45-59 days: 8x (critical)
- * - 60+ days: 16x (urgent)
+ * - 45+ days: 8x (critical)
  * 
  * @param days - Number of days since application
  * @returns Multiplier for application age scoring
@@ -90,8 +89,7 @@ export function getApplicationAgeMultiplier(days: number): number {
   if (days < 11) return 1;
   if (days < 30) return 2;
   if (days < 45) return 4;
-  if (days < 60) return 8;
-  return 16;
+  return 8;
 }
 
 /**
@@ -103,9 +101,7 @@ export function getApplicationAgeMultiplier(days: number): number {
  * - 0-4 days: 1x (normal)
  * - 5-10 days: 2x (elevated)
  * - 11-29 days: 4x (high)
- * - 30-44 days: 8x (critical)
- * - 45-59 days: 16x (very critical)
- * - 60+ days: 32x (urgent)
+ * - 30+ days: 8x (critical)
  * 
  * @param days - Number of days since oldest alert
  * @returns Multiplier for alert age scoring
@@ -114,9 +110,7 @@ export function getAlertAgeMultiplier(days: number): number {
   if (days < 5) return 1;
   if (days < 11) return 2;
   if (days < 30) return 4;
-  if (days < 45) return 8;
-  if (days < 60) return 16;
-  return 32;
+  return 8;
 }
 
 /**
@@ -338,9 +332,9 @@ export function getDaysSinceOldestAlert(
  * Scoring formula (when config provided):
  * - Status weight based on priorityEnabled statuses and their sortOrder
  * - Alert weight based on alertType and sortOrder (exponential decay)
- * - Application age: days × 30 × tiered multiplier (1x→2x→4x→8x→16x at 11/30/45/60 days)
+ * - Application age: days × 30 × tiered multiplier (1x→2x→4x→8x at 11/30/45 days)
  *   - Skipped (1x) for statuses with countsAsCompleted=true in config
- * - Alert age: days × 50 × tiered multiplier (1x→2x→4x→8x→16x→32x at 5/11/30/45/60 days)
+ * - Alert age: days × 50 × tiered multiplier (1x→2x→4x→8x at 5/11/30 days)
  * - 75 points if marked as priority
  * - 50 points if modified in last 24 hours
  * 
