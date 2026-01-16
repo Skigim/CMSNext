@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react";
+import { useCallback, useState, useEffect, useRef } from "react";
 import {
   pinCase,
   unpinCase,
@@ -12,18 +12,47 @@ import { createLocalStorageAdapter } from "@/utils/localStorage";
 
 const storage = createLocalStorageAdapter<string[]>("cmsnext-pinned-cases", []);
 
+/** Custom event name for cross-component pin synchronization */
+const PINNED_CASES_CHANGED_EVENT = "pinned-cases-changed";
+
+/** Dispatch event to notify other hook instances of pin changes */
+function notifyPinnedCasesChanged() {
+  window.dispatchEvent(new CustomEvent(PINNED_CASES_CHANGED_EVENT));
+}
+
 /**
  * Hook for managing pinned/favorite cases.
- * Persists to localStorage.
+ * Persists to localStorage and syncs across all hook instances.
  */
 export function usePinnedCases(maxPins: number = 20) {
   const [pinnedIds, setPinnedIds] = useState<string[]>(() => storage.read());
+  // Track whether we're the source of the current update to avoid re-reading our own change
+  const isOwnUpdate = useRef(false);
+
+  // Listen for changes from other hook instances
+  useEffect(() => {
+    const handlePinnedCasesChanged = () => {
+      // Skip if we triggered this event ourselves
+      if (isOwnUpdate.current) {
+        isOwnUpdate.current = false;
+        return;
+      }
+      setPinnedIds(storage.read());
+    };
+
+    window.addEventListener(PINNED_CASES_CHANGED_EVENT, handlePinnedCasesChanged);
+    return () => {
+      window.removeEventListener(PINNED_CASES_CHANGED_EVENT, handlePinnedCasesChanged);
+    };
+  }, []);
 
   const pin = useCallback(
     (caseId: string) => {
       setPinnedIds((prev) => {
         const updated = pinCase(prev, caseId, maxPins);
         storage.write(updated);
+        isOwnUpdate.current = true;
+        notifyPinnedCasesChanged();
         return updated;
       });
     },
@@ -34,6 +63,8 @@ export function usePinnedCases(maxPins: number = 20) {
     setPinnedIds((prev) => {
       const updated = unpinCase(prev, caseId);
       storage.write(updated);
+      isOwnUpdate.current = true;
+      notifyPinnedCasesChanged();
       return updated;
     });
   }, []);
@@ -43,6 +74,8 @@ export function usePinnedCases(maxPins: number = 20) {
       setPinnedIds((prev) => {
         const updated = domainTogglePin(prev, caseId, maxPins);
         storage.write(updated);
+        isOwnUpdate.current = true;
+        notifyPinnedCasesChanged();
         return updated;
       });
     },
@@ -58,6 +91,8 @@ export function usePinnedCases(maxPins: number = 20) {
     setPinnedIds((prev) => {
       const updated = reorderPinnedCase(prev, caseId, newIndex);
       storage.write(updated);
+      isOwnUpdate.current = true;
+      notifyPinnedCasesChanged();
       return updated;
     });
   }, []);
