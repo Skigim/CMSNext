@@ -644,7 +644,7 @@ export function CategoryManagerPanel({
           {/* Case Config Tab */}
           <TabsContent value="case-config" className="space-y-4">
             <p className="text-sm text-muted-foreground">
-              Configure case types and workflow statuses. Status colors appear throughout the application.
+              Configure case types, application types, and workflow statuses. Status colors appear throughout the application.
             </p>
             <div className="grid gap-4 lg:grid-cols-2">
               <SimpleCategoryEditor
@@ -653,6 +653,14 @@ export function CategoryManagerPanel({
                 onSave={values => handleSave("caseTypes", values)}
                 isGloballyLoading={loading || isResetting}
               />
+              <SimpleCategoryEditor
+                categoryKey="applicationTypes"
+                valuesFromConfig={config.applicationTypes ?? defaultCategoryConfig.applicationTypes}
+                onSave={values => handleSave("applicationTypes", values)}
+                isGloballyLoading={loading || isResetting}
+              />
+            </div>
+            <div className="grid gap-4 lg:grid-cols-1">
               <StatusCategoryEditor
                 statusConfigs={config.caseStatuses}
                 onSave={handleSaveStatuses}

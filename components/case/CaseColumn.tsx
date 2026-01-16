@@ -89,8 +89,9 @@ export function CaseColumn({
 }: CaseColumnProps) {
   const { config } = useCategoryConfig();
 
-  const { caseTypes, caseStatuses } = useMemo(() => ({
+  const { caseTypes, applicationTypes, caseStatuses } = useMemo(() => ({
     caseTypes: config.caseTypes,
+    applicationTypes: config.applicationTypes,
     caseStatuses: config.caseStatuses,
   }), [config]);
 
@@ -143,6 +144,7 @@ export function CaseColumn({
             <div className="grid grid-cols-3 gap-3">
               <InfoItem label="MCN" value={caseData.mcn} />
               <InfoItem label="Case Type" value={caseData.caseType} />
+              <InfoItem label="App Type" value={caseData.applicationType} />
               <InfoItem label="Application Date" value={formatDate(caseData.applicationDate)} icon={Calendar} />
               <div className="flex items-start gap-2">
                 <div>
@@ -256,6 +258,24 @@ export function CaseColumn({
                 </SelectTrigger>
                 <SelectContent>
                   {caseTypes.map((type) => (
+                    <SelectItem key={type} value={type}>
+                      {type}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1">
+              <Label htmlFor="applicationType" className="text-xs">App Type</Label>
+              <Select
+                value={caseData.applicationType || ""}
+                onValueChange={(value) => onCaseDataChange('applicationType', value || undefined)}
+              >
+                <SelectTrigger className="h-8">
+                  <SelectValue placeholder="Select type" />
+                </SelectTrigger>
+                <SelectContent>
+                  {applicationTypes.map((type) => (
                     <SelectItem key={type} value={type}>
                       {type}
                     </SelectItem>

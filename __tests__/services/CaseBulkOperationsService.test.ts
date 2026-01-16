@@ -96,6 +96,7 @@ describe('CaseBulkOperationsService', () => {
 
   const defaultCategoryConfig: CategoryConfig = {
     caseTypes: ['Medicaid'],
+    applicationTypes: ['New Application'],
     caseStatuses: [
       { name: 'Pending', colorSlot: 'amber' },
       { name: 'Active', colorSlot: 'green' },
@@ -527,6 +528,7 @@ describe('CaseBulkOperationsService', () => {
     it('should write with different category config', async () => {
       const customConfig: CategoryConfig = {
         caseTypes: ['Custom Type'],
+        applicationTypes: ['Custom App Type'],
         caseStatuses: [{ name: 'Custom', colorSlot: 'purple' }],
         alertTypes: [{ name: 'CustomAlert', colorSlot: 'red' }],
         livingArrangements: ['Custom Arrangement'],

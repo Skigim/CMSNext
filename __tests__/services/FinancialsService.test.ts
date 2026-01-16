@@ -112,6 +112,7 @@ describe('FinancialsService', () => {
 
   const createMockCategoryConfig = (): CategoryConfig => ({
     caseTypes: ['Medicaid'],
+    applicationTypes: ['New Application'],
     caseStatuses: [{ name: 'Pending', colorSlot: 'blue' }],
     alertTypes: [],
     livingArrangements: ['Apartment/House'],

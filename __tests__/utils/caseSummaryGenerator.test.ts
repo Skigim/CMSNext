@@ -78,7 +78,7 @@ describe('generateCaseSummary', () => {
       expect(summary).toContain('Application Date: 12/04/2024');
     });
 
-    it('shows "None" for missing application date', () => {
+    it('shows empty value for missing application date (user corrects manually)', () => {
       const caseData = createMockCase({
         caseRecord: {
           ...createMockCase().caseRecord,
@@ -88,7 +88,8 @@ describe('generateCaseSummary', () => {
 
       const summary = generateCaseSummary(caseData);
       
-      expect(summary).toContain('Application Date: None');
+      // Empty date renders as empty string - user corrects manually
+      expect(summary).toContain('Application Date: \n');
     });
 
     it('displays retro requested value', () => {

@@ -8,6 +8,7 @@ import {
 
 export type CategoryKey =
   | "caseTypes"
+  | "applicationTypes"
   | "caseStatuses"
   | "alertTypes"
   | "livingArrangements"
@@ -83,6 +84,8 @@ export interface SummaryTemplateConfig {
 
 export interface CategoryConfig {
   caseTypes: string[];
+  /** Application type options (e.g., 'New', 'Renewal', 'Redetermination') */
+  applicationTypes: string[];
   caseStatuses: StatusConfig[];
   alertTypes: AlertTypeConfig[];
   livingArrangements: string[];
@@ -104,6 +107,8 @@ export interface CategoryConfig {
  */
 export interface PartialCategoryConfigInput {
   caseTypes?: string[];
+  /** Application type options (e.g., 'New', 'Renewal', 'Redetermination') */
+  applicationTypes?: string[];
   caseStatuses?: string[] | StatusConfig[];
   alertTypes?: string[] | AlertTypeConfig[];
   livingArrangements?: string[];
@@ -118,6 +123,18 @@ const DEFAULT_CASE_TYPES = [
   "SNAP",
   "TANF",
   "Emergency",
+  "Other",
+];
+
+/**
+ * Default application type options.
+ * Categorizes the nature of the application (new, renewal, etc.).
+ */
+const DEFAULT_APPLICATION_TYPES = [
+  "New Application",
+  "Renewal",
+  "Redetermination",
+  "Change Report",
   "Other",
 ];
 
@@ -175,6 +192,7 @@ const DEFAULT_SUMMARY_TEMPLATE: SummaryTemplateConfig = {
 
 export const defaultCategoryConfig: CategoryConfig = Object.freeze({
   caseTypes: DEFAULT_CASE_TYPES,
+  applicationTypes: DEFAULT_APPLICATION_TYPES,
   caseStatuses: DEFAULT_CASE_STATUSES,
   alertTypes: DEFAULT_ALERT_TYPES,
   livingArrangements: DEFAULT_LIVING_ARRANGEMENTS,
@@ -190,6 +208,10 @@ export const CATEGORY_DISPLAY_METADATA: Record<
   caseTypes: {
     label: "Case Types",
     description: "Manage the available program types clients can be enrolled in.",
+  },
+  applicationTypes: {
+    label: "Application Types",
+    description: "Categorize applications by their nature (new, renewal, redetermination, etc.).",
   },
   caseStatuses: {
     label: "Case Statuses",
@@ -381,6 +403,7 @@ export const mergeCategoryConfig = (
   if (!config) {
     return {
       caseTypes: [...defaultCategoryConfig.caseTypes],
+      applicationTypes: [...defaultCategoryConfig.applicationTypes],
       caseStatuses: defaultCategoryConfig.caseStatuses.map(s => ({ ...s })),
       alertTypes: defaultCategoryConfig.alertTypes.map(a => ({ ...a })),
       livingArrangements: [...defaultCategoryConfig.livingArrangements],
@@ -410,6 +433,9 @@ export const mergeCategoryConfig = (
     caseTypes: sanitizeCategoryValues(config.caseTypes).length
       ? sanitizeCategoryValues(config.caseTypes)
       : [...defaultCategoryConfig.caseTypes],
+    applicationTypes: sanitizeCategoryValues(config.applicationTypes).length
+      ? sanitizeCategoryValues(config.applicationTypes)
+      : [...defaultCategoryConfig.applicationTypes],
     caseStatuses,
     alertTypes,
     livingArrangements: sanitizeCategoryValues(config.livingArrangements).length
@@ -439,6 +465,7 @@ export const cloneCategoryConfig = (config?: CategoryConfig | null): CategoryCon
   const source = config ?? defaultCategoryConfig;
   return {
     caseTypes: [...source.caseTypes],
+    applicationTypes: [...source.applicationTypes],
     caseStatuses: source.caseStatuses.map(s => ({ 
       name: s.name, 
       colorSlot: s.colorSlot,

@@ -142,6 +142,8 @@ export interface CaseRecord {
   mcn: string;
   applicationDate: string;
   caseType: string;
+  /** Application type categorization (e.g., 'New', 'Renewal', 'Redetermination') */
+  applicationType?: string;
   personId: string;
   spouseId: string;
   status: CaseStatus;
@@ -229,6 +231,8 @@ export interface NewCaseRecordData {
   mcn: string;
   applicationDate: string;
   caseType: string;
+  /** Application type categorization (e.g., 'New', 'Renewal', 'Redetermination') */
+  applicationType?: string;
   personId: string;
   spouseId?: string;
   status: CaseStatus;
