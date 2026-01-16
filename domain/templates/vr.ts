@@ -15,7 +15,7 @@ import type {
   TemplatePlaceholderField,
 } from "@/types/template";
 import { TEMPLATE_PLACEHOLDER_FIELDS } from "@/types/template";
-import { parseLocalDate } from "@/domain/common";
+import { parseLocalDate, formatDateForDisplay } from "@/domain/common";
 import { formatPhoneNumber } from "@/domain/common";
 
 // ============================================================================
@@ -23,27 +23,23 @@ import { formatPhoneNumber } from "@/domain/common";
 // ============================================================================
 
 /**
- * Consistent long-form date formatting helper.
+ * Format a Date object as MM/DD/YYYY for template output.
+ * Uses the centralized domain formatter.
  */
-function formatDisplayDate(date: Date): string {
-  return date.toLocaleDateString("en-US", {
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-  });
+function formatDateFromObject(date: Date): string {
+  // Convert Date to ISO string and use centralized formatter
+  const result = formatDateForDisplay(date.toISOString());
+  return result === "None" ? "" : result;
 }
 
 /**
- * Format a date string for display in VR templates using local-time parsing
- * to avoid UTC shifts (e.g., "2024-01-01" should not become Dec 31 in PST).
+ * Format a date string for display in templates using centralized formatter.
+ * Returns empty string (not "None") for missing/invalid dates in template context.
  */
 function formatDate(dateString?: string): string {
   if (!dateString) return "";
-
-  const parsed = parseLocalDate(dateString);
-  if (!parsed) return dateString;
-
-  return formatDisplayDate(parsed);
+  const result = formatDateForDisplay(dateString);
+  return result === "None" ? "" : result;
 }
 
 /**
@@ -87,14 +83,14 @@ function applyDateOffset(
 
   const adjusted = new Date(date);
   adjusted.setDate(adjusted.getDate() + daysOffset);
-  return formatDisplayDate(adjusted);
+  return formatDateFromObject(adjusted);
 }
 
 /**
- * Get today's date formatted for display.
+ * Get today's date formatted for display (MM/DD/YYYY).
  */
 function getCurrentDateFormatted(): string {
-  return formatDisplayDate(new Date());
+  return formatDateFromObject(new Date());
 }
 
 // ============================================================================
