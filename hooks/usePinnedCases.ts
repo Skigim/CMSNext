@@ -22,7 +22,31 @@ function notifyPinnedCasesChanged() {
 
 /**
  * Hook for managing pinned/favorite cases.
- * Persists to localStorage and syncs across all hook instances.
+ * Persists to localStorage and syncs across all hook instances via custom events.
+ *
+ * @param maxPins - Maximum number of cases that can be pinned (default: 20)
+ * @returns Object containing:
+ *   - `pinnedCaseIds` - Array of pinned case IDs in order
+ *   - `pin` - Add a case to pins
+ *   - `unpin` - Remove a case from pins
+ *   - `togglePin` - Toggle pin state for a case
+ *   - `isPinned` - Check if a case is pinned
+ *   - `canPinMore` - Whether more cases can be pinned
+ *   - `pinnedCount` - Current number of pinned cases
+ *   - `reorder` - Move a pinned case to a new position
+ *
+ * @example
+ * ```tsx
+ * const { pinnedCaseIds, pin, unpin, isPinned } = usePinnedCases();
+ *
+ * // Pin a case
+ * pin("case-123");
+ *
+ * // Check if pinned
+ * if (isPinned("case-123")) {
+ *   unpin("case-123");
+ * }
+ * ```
  */
 export function usePinnedCases(maxPins: number = 20) {
   const [pinnedIds, setPinnedIds] = useState<string[]>(() => storage.read());

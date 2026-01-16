@@ -32,6 +32,15 @@ export interface PinnedCasesDropdownProps {
  * - Persists across sessions via localStorage
  * - Scrollable list for many pins (max 20)
  * - Empty state message when no pins
+ * - Syncs instantly across all mounted instances
+ *
+ * @example
+ * ```tsx
+ * <PinnedCasesDropdown
+ *   cases={cases}
+ *   onViewCase={(caseId) => navigateToCase(caseId)}
+ * />
+ * ```
  */
 export const PinnedCasesDropdown = memo(function PinnedCasesDropdown({
   cases,
