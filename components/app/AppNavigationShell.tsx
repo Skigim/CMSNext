@@ -1,6 +1,7 @@
 import { memo, type ReactNode } from "react";
 import { MainLayout } from "./MainLayout";
 import type { AppView } from "../../types/view";
+import type { StoredCase } from "../../types/case";
 
 export interface AppNavigationConfig {
   currentView: AppView;
@@ -11,6 +12,10 @@ export interface AppNavigationConfig {
   onNavigate: (view: AppView) => void;
   onNewCase: () => void;
   onSidebarOpenChange: (open: boolean) => void;
+  /** All cases for pinned cases dropdown */
+  cases?: StoredCase[];
+  /** Handler to view a case from pinned dropdown */
+  onViewCase?: (caseId: string) => void;
 }
 
 interface AppNavigationShellProps extends AppNavigationConfig {
@@ -30,6 +35,8 @@ export const AppNavigationShell = memo(function AppNavigationShell({
   onNavigate,
   onNewCase,
   onSidebarOpenChange,
+  cases,
+  onViewCase,
   children,
 }: AppNavigationShellProps) {
   return (
@@ -41,6 +48,8 @@ export const AppNavigationShell = memo(function AppNavigationShell({
       breadcrumbSourceView={breadcrumbSourceView}
       sidebarOpen={sidebarOpen}
       onSidebarOpenChange={onSidebarOpenChange}
+      cases={cases}
+      onViewCase={onViewCase}
     >
       {children}
     </MainLayout>

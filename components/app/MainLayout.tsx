@@ -6,6 +6,8 @@ import { Separator } from '@/components/ui/separator';
 import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from '@/components/ui/breadcrumb';
 import { useAutosaveStatus } from '@/hooks/useAutosaveStatus';
 import { AutosaveStatusBadge } from './AutosaveStatusBadge';
+import { PinnedCasesDropdown } from './PinnedCasesDropdown';
+import type { StoredCase } from '@/types/case';
 
 interface BreadcrumbSegment {
   label: string;
@@ -22,6 +24,10 @@ interface MainLayoutProps {
   breadcrumbSourceView?: AppView;
   sidebarOpen?: boolean;
   onSidebarOpenChange?: (open: boolean) => void;
+  /** All cases for pinned cases dropdown */
+  cases?: StoredCase[];
+  /** Handler to view a case from pinned dropdown */
+  onViewCase?: (caseId: string) => void;
 }
 
 export function MainLayout({ 
@@ -32,7 +38,9 @@ export function MainLayout({
   breadcrumbTitle,
   breadcrumbSourceView,
   sidebarOpen,
-  onSidebarOpenChange
+  onSidebarOpenChange,
+  cases,
+  onViewCase,
 }: MainLayoutProps) {
   const autosaveStatus = useAutosaveStatus();
 
@@ -116,7 +124,12 @@ export function MainLayout({
               </BreadcrumbList>
             </Breadcrumb>
           </div>
-          <AutosaveStatusBadge summary={autosaveStatus} />
+          <div className="flex items-center gap-2">
+            {cases && onViewCase && (
+              <PinnedCasesDropdown cases={cases} onViewCase={onViewCase} />
+            )}
+            <AutosaveStatusBadge summary={autosaveStatus} />
+          </div>
         </header>
         <div className="flex flex-1 flex-col overflow-hidden">
           <div className="flex-1 overflow-auto rounded-xl bg-muted/50">
