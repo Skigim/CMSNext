@@ -281,6 +281,26 @@ export class DataManager {
   }
 
   /**
+   * Log a case view activity.
+   * 
+   * Records that a case was viewed. Deduplicates consecutive views
+   * of the same case within 5 minutes.
+   * 
+   * @param {Object} params - Case details
+   * @param {string} params.caseId - The case ID
+   * @param {string} params.caseName - Display name of the case
+   * @param {string | null} params.caseMcn - MCN of the case (optional)
+   * @returns {Promise<boolean>} True if logged, false if deduplicated
+   */
+  async logCaseView(params: {
+    caseId: string;
+    caseName: string;
+    caseMcn: string | null;
+  }): Promise<boolean> {
+    return this.activityLog.logCaseView(params);
+  }
+
+  /**
    * Get a specific case by its ID.
    * 
    * Returns a single case in normalized format without nested relations.

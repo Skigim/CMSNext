@@ -1,5 +1,5 @@
 import { v4 as uuidv4 } from 'uuid';
-import type { CaseActivityEntry, CaseStatusChangeActivity } from "../../types/activityLog";
+import type { CaseActivityEntry, CaseStatusChangeActivity, CaseViewedActivity } from "../../types/activityLog";
 import { toActivityDateKey } from "../activityReport";
 import { createLogger } from "../logger";
 import { extractErrorMessage } from "../errorUtils";
@@ -390,5 +390,110 @@ export class ActivityLogService {
   ): CaseActivityEntry[] {
     const combined = [...(current ?? []), ...additions];
     return combined.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+  }
+
+  /**
+   * Create a case viewed activity log entry.
+   * 
+   * Factory method that creates a properly typed case viewed entry
+   * with all required fields.
+   * 
+   * @static
+   * @param {Object} params - Entry parameters
+   * @param {string} params.caseId - The case ID
+   * @param {string} params.caseName - Display name of the case
+   * @param {string | null} params.caseMcn - MCN of the case (optional)
+   * @param {string} [params.timestamp] - ISO timestamp (defaults to now)
+   * @returns {CaseViewedActivity} A properly typed activity entry
+   * 
+   * @example
+   * const entry = ActivityLogService.createCaseViewedEntry({
+   *   caseId: 'case-123',
+   *   caseName: 'John Doe',
+   *   caseMcn: 'MCN-456',
+   * });
+   */
+  static createCaseViewedEntry(params: {
+    caseId: string;
+    caseName: string;
+    caseMcn: string | null;
+    timestamp?: string;
+  }): CaseViewedActivity {
+    return {
+      id: uuidv4(),
+      timestamp: params.timestamp ?? new Date().toISOString(),
+      caseId: params.caseId,
+      caseName: params.caseName,
+      caseMcn: params.caseMcn,
+      type: "case-viewed",
+      payload: {},
+    };
+  }
+
+  /**
+   * Log a case view activity.
+   * 
+   * Records that a case was viewed. Deduplicates consecutive views
+   * of the same case within a short time window (5 minutes) to avoid
+   * spamming the activity log.
+   * 
+   * @param {Object} params - Case details
+   * @param {string} params.caseId - The case ID
+   * @param {string} params.caseName - Display name of the case
+   * @param {string | null} params.caseMcn - MCN of the case (optional)
+   * @returns {Promise<boolean>} True if logged, false if deduplicated
+   * 
+   * @example
+   * await activityLogService.logCaseView({
+   *   caseId: 'case-123',
+   *   caseName: 'John Doe',
+   *   caseMcn: 'MCN-456',
+   * });
+   */
+  async logCaseView(params: {
+    caseId: string;
+    caseName: string;
+    caseMcn: string | null;
+  }): Promise<boolean> {
+    const currentData = await this.fileStorage.readFileData();
+    if (!currentData) {
+      logger.warn("Cannot log case view - no current data");
+      return false;
+    }
+
+    const { activityLog = [] } = currentData;
+
+    // Deduplicate: skip if same case was viewed within last 5 minutes
+    const fiveMinutesAgo = Date.now() - 5 * 60 * 1000;
+    const recentViewOfSameCase = activityLog.find(
+      (entry) =>
+        entry.type === "case-viewed" &&
+        entry.caseId === params.caseId &&
+        new Date(entry.timestamp).getTime() > fiveMinutesAgo
+    );
+
+    if (recentViewOfSameCase) {
+      logger.debug("Skipping duplicate case view within 5 minutes", {
+        caseId: params.caseId,
+      });
+      return false;
+    }
+
+    const entry = ActivityLogService.createCaseViewedEntry(params);
+    const updatedLog = ActivityLogService.mergeActivityEntries(activityLog, [entry]);
+
+    const updatedData: NormalizedFileData = {
+      ...currentData,
+      activityLog: updatedLog,
+    };
+
+    await this.fileStorage.writeNormalizedData(updatedData);
+
+    logger.debug("Logged case view", {
+      caseId: params.caseId,
+      caseName: params.caseName,
+    });
+
+    return true;
   }
 }

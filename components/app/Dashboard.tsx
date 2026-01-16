@@ -29,11 +29,6 @@ const TodaysWorkWidgetLazy = createLazyWidget(
   "TodaysWorkWidget",
 );
 
-const RecentCasesWidgetLazy = createLazyWidget(
-  import("./widgets/RecentCasesWidget"),
-  "RecentCasesWidget",
-);
-
 const PinnedCasesWidgetLazy = createLazyWidget(
   import("./widgets/PinnedCasesWidget"),
   "PinnedCasesWidget",
@@ -119,17 +114,6 @@ export function Dashboard({
         },
         component: TodaysWorkWidgetLazy,
         props: { cases, alerts, onViewCase },
-      },
-      {
-        metadata: {
-          id: 'recent-cases',
-          title: 'Recently Viewed',
-          description: 'Quick access to cases you have viewed',
-          priority: 2,
-          featureFlag: 'dashboard.widgets.recentCases',
-        },
-        component: RecentCasesWidgetLazy,
-        props: { cases, onViewCase },
       },
       {
         metadata: {

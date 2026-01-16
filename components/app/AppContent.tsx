@@ -20,6 +20,7 @@ import {
 import { recordRenderProfile } from "../../utils/performanceTracker";
 import { AppContentView } from "./AppContentView";
 import { useAppContentViewModel } from "./useAppContentViewModel";
+import { formatCaseDisplayName } from "../../domain/cases";
 import type { CaseCategory, StoredCase, FinancialItem, NewNoteData } from "../../types/case";
 
 export const AppContent = memo(function AppContent() {
@@ -64,11 +65,22 @@ export const AppContent = memo(function AppContent() {
     setConfigFromFile,
   });
 
+  // Create callback for logging case views to activity log
+  const logCaseView = useCallback((caseData: StoredCase) => {
+    if (!dataManager) return;
+    dataManager.logCaseView({
+      caseId: caseData.id,
+      caseName: formatCaseDisplayName(caseData),
+      caseMcn: caseData.caseRecord?.mcn ?? caseData.mcn ?? null,
+    });
+  }, [dataManager]);
+
   const navigationFlow = useNavigationFlow({
     cases,
     connectionState,
     saveCase,
     deleteCase,
+    logCaseView,
   });
 
   const {

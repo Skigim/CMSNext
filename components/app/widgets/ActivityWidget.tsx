@@ -26,6 +26,7 @@ import {
   Trash2,
   Loader2,
   RefreshCcw,
+  Eye,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useWidgetData } from '@/hooks/useWidgetData';
@@ -165,6 +166,24 @@ function formatActivityTimeline(activityLog: CaseActivityEntry[]): TimelineItem[
           icon: Save,
           badgeColor: 'bg-amber-100 text-amber-700 dark:bg-amber-900 dark:text-amber-300',
           badgeText: 'Priority',
+        };
+      }
+
+      if (entry.type === 'case-viewed') {
+        const viewedEntry = entry as Extract<CaseActivityEntry, { type: 'case-viewed' }>;
+        return {
+          id: viewedEntry.id,
+          type: 'save',
+          title: 'Viewed case',
+          description: 'Case opened',
+          timestamp: viewedEntry.timestamp,
+          relativeTime,
+          caseId: viewedEntry.caseId,
+          caseName: viewedEntry.caseName,
+          caseMcn: viewedEntry.caseMcn,
+          icon: Eye,
+          badgeColor: 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300',
+          badgeText: 'Viewed',
         };
       }
 

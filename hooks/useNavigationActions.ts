@@ -1,6 +1,5 @@
 import { useCallback } from "react";
 import { useIsMounted } from "./useIsMounted";
-import { useRecentCases } from "./useRecentCases";
 import { NewCaseRecordData, NewPersonData, StoredCase } from "../types/case";
 import { AppView } from "../types/view";
 import { startMeasurement, endMeasurement } from "../utils/performanceTracker";
@@ -32,11 +31,14 @@ export interface NavigationStateSetters {
 export interface UseNavigationActionsParams {
   state: NavigationState;
   setters: NavigationStateSetters;
+  cases: StoredCase[];
   guardCaseInteraction: () => boolean;
   isLocked: boolean;
   lockReason: string;
   saveCase: (data: { person: NewPersonData; caseRecord: NewCaseRecordData }, editingCaseId?: string) => Promise<StoredCase | undefined>;
   deleteCase: (caseId: string) => Promise<void>;
+  /** Optional callback to log case view activity */
+  logCaseView?: (caseData: StoredCase) => void;
 }
 
 /**
@@ -76,10 +78,9 @@ export interface UseNavigationActionsParams {
  * @returns Navigation action handlers
  */
 export function useNavigationActions({
-  state, setters, guardCaseInteraction, isLocked, lockReason, saveCase, deleteCase,
+  state, setters, cases, guardCaseInteraction, isLocked, lockReason, saveCase, deleteCase, logCaseView,
 }: UseNavigationActionsParams) {
   const isMounted = useIsMounted();
-  const { addToRecent } = useRecentCases();
   const { currentView, selectedCaseId, showNewCaseModal, formState } = state;
   const { setCurrentView, setSelectedCaseId, setShowNewCaseModal, setFormState, setForcedView } = setters;
 
@@ -108,10 +109,13 @@ export function useNavigationActions({
     setFormState({ ...formState, detailsSourceView: currentView });
     setSelectedCaseId(caseId);
     setCurrentView("details");
-    // Track as recently viewed
-    addToRecent(caseId);
+    // Log case view activity (replaces localStorage-based recent cases)
+    const caseData = cases.find((c) => c.id === caseId);
+    if (caseData && logCaseView) {
+      logCaseView(caseData);
+    }
     endMeasurement("navigation:viewCase", { caseId, blocked: false });
-  }, [addToRecent, currentView, formState, guardCaseInteraction, isLocked, setCurrentView, setFormState, setSelectedCaseId]);
+  }, [cases, currentView, formState, guardCaseInteraction, isLocked, logCaseView, setCurrentView, setFormState, setSelectedCaseId]);
 
   const newCase = useCallback(() => {
     startMeasurement("navigation:newCase", { locked: isLocked });

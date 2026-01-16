@@ -13,6 +13,8 @@ interface UseNavigationFlowParams {
     editingCaseId?: string
   ) => Promise<StoredCase | undefined>;
   deleteCase: (caseId: string) => Promise<void>;
+  /** Optional callback to log case view activity */
+  logCaseView?: (caseData: StoredCase) => void;
 }
 
 interface NavigationHandlers {
@@ -87,6 +89,7 @@ export function useNavigationFlow({
   connectionState,
   saveCase,
   deleteCase,
+  logCaseView,
 }: UseNavigationFlowParams): NavigationHandlers {
   // Core navigation state
   const [currentView, setCurrentView] = useState<AppView>("dashboard");
@@ -121,11 +124,13 @@ export function useNavigationFlow({
   const actions = useNavigationActions({
     state: { currentView, selectedCaseId, showNewCaseModal, formState },
     setters: { setCurrentView, setSelectedCaseId, setShowNewCaseModal, setFormState, setForcedView },
+    cases,
     guardCaseInteraction,
     isLocked: navigationLock.locked,
     lockReason: navigationLock.reason,
     saveCase,
     deleteCase,
+    logCaseView,
   });
 
   // Auto-redirect when locked/unlocked

@@ -426,8 +426,13 @@ export class FileStorageService {
               return { ...entry, payload: { ...entry.payload } };
             } else if (entry.type === "priority-change") {
               return { ...entry, payload: { ...entry.payload } };
-            } else {
+            } else if (entry.type === "note-added") {
               return { ...entry, payload: { ...entry.payload } };
+            } else if (entry.type === "case-viewed") {
+              return { ...entry, payload: {} };
+            } else {
+              // Fallback for unknown types - preserve as-is
+              return entry;
             }
           })
           .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()),

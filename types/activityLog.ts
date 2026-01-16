@@ -1,4 +1,4 @@
-export type CaseActivityType = "status-change" | "note-added" | "priority-change";
+export type CaseActivityType = "status-change" | "note-added" | "priority-change" | "case-viewed";
 
 interface CaseActivityBase {
   id: string;
@@ -34,7 +34,12 @@ export interface CaseNoteAddedActivity extends CaseActivityBase {
   };
 }
 
-export type CaseActivityEntry = CaseStatusChangeActivity | CaseNoteAddedActivity | CasePriorityChangeActivity;
+export interface CaseViewedActivity extends CaseActivityBase {
+  type: "case-viewed";
+  payload: Record<string, never>;
+}
+
+export type CaseActivityEntry = CaseStatusChangeActivity | CaseNoteAddedActivity | CasePriorityChangeActivity | CaseViewedActivity;
 
 export interface DailyCaseActivityBreakdown {
   caseId: string;
