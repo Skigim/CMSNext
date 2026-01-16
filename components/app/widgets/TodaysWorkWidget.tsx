@@ -1,7 +1,7 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { AlertCircle, ArrowRight, CheckCircle } from 'lucide-react';
+import { ArrowRight, CheckCircle } from 'lucide-react';
 import { CopyButton } from '@/components/common/CopyButton';
 import { PinButton } from '@/components/common/PinButton';
 import type { StoredCase } from '@/types/case';
@@ -59,25 +59,6 @@ export function TodaysWorkWidget({
   // Get priority cases using the hook (limit to top 3 for compact display)
   const priorityCases = useTodaysWork(cases, alerts, 3, { caseStatuses: config.caseStatuses });
 
-  // Derive priority level from score for visual indicators
-  const getPriorityLevel = (score: number): 'high' | 'medium' | 'low' => {
-    if (score >= 200) return 'high';
-    if (score >= 100) return 'medium';
-    return 'low';
-  };
-
-  // Badge styling based on priority level
-  const getPriorityBadgeClass = (level: 'high' | 'medium' | 'low'): string => {
-    switch (level) {
-      case 'high':
-        return 'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300 border-red-200 dark:border-red-800';
-      case 'medium':
-        return 'bg-amber-100 text-amber-700 dark:bg-amber-900 dark:text-amber-300 border-amber-200 dark:border-amber-800';
-      case 'low':
-        return 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300 border-blue-200 dark:border-blue-800';
-    }
-  };
-
   const hasPriorityCases = priorityCases.length > 0;
 
   return (
@@ -98,8 +79,6 @@ export function TodaysWorkWidget({
           <div className="space-y-2">
             {priorityCases.map((priorityCase) => {
                 const { case: caseData, score, reason } = priorityCase;
-                const level = getPriorityLevel(score);
-                const Icon = level === 'high' ? AlertCircle : ArrowRight;
 
                 return (
                   <div
@@ -107,13 +86,7 @@ export function TodaysWorkWidget({
                     className="flex gap-3 p-3 rounded-lg border border-border/50 bg-muted/30 hover:bg-muted/50 transition-colors"
                   >
                     <div className="flex-shrink-0 mt-0.5">
-                      <Icon 
-                        className={`h-5 w-5 ${
-                          level === 'high' 
-                            ? 'text-red-500 dark:text-red-400' 
-                            : 'text-muted-foreground'
-                        }`} 
-                      />
+                      <ArrowRight className="h-5 w-5 text-muted-foreground" />
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-start justify-between gap-2 mb-1">
@@ -132,11 +105,8 @@ export function TodaysWorkWidget({
                         </div>
                         <div className="flex items-center gap-1 flex-shrink-0">
                           <PinButton caseId={caseData.id} size="sm" />
-                          <Badge 
-                            variant="outline" 
-                            className={`text-xs ${getPriorityBadgeClass(level)}`}
-                          >
-                            {level === 'high' ? 'High' : level === 'medium' ? 'Medium' : 'Low'}
+                          <Badge variant="secondary" className="text-xs font-mono">
+                            {score.toLocaleString()}
                           </Badge>
                         </div>
                       </div>
