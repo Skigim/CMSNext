@@ -2,6 +2,7 @@ import type { AlertRecord, StoredCase, StoredFinancialItem, StoredNote } from ".
 import type { CaseActivityEntry } from "../../types/activityLog";
 import type { CategoryConfig } from "../../types/categoryConfig";
 import type { Template } from "../../types/template";
+import type { Workflow } from "../../types/workflow";
 import { mergeCategoryConfig } from "../../types/categoryConfig";
 import { discoverStatusesFromCases, discoverAlertTypesFromAlerts } from "../categoryConfigMigration";
 import AutosaveFileService from "../AutosaveFileService";
@@ -48,6 +49,8 @@ export interface NormalizedFileData {
   activityLog: CaseActivityEntry[];
   /** Unified templates (VR, Summary, Narrative) */
   templates?: Template[];
+  /** User-defined workflows for multi-step case processing */
+  workflows?: Workflow[];
 }
 
 /**
