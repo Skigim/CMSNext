@@ -187,3 +187,42 @@ export function dateInputValueToISO(
     return null;
   }
 }
+
+/**
+ * Format a timestamp as a human-readable relative time string.
+ *
+ * Converts an ISO timestamp to phrases like "Just now", "5 minutes ago",
+ * "2 hours ago", "Yesterday", "3 days ago", or "Over a week ago".
+ *
+ * @param timestamp - ISO timestamp string (e.g., "2026-01-15T10:30:00Z")
+ * @returns Human-readable relative time string
+ *
+ * @example
+ * formatRelativeTime("2026-01-15T10:29:00Z") // "1 minute ago"
+ * formatRelativeTime("2026-01-14T10:30:00Z") // "Yesterday"
+ */
+export function formatRelativeTime(timestamp: string): string {
+  try {
+    const now = new Date();
+    const then = new Date(timestamp);
+    const secondsAgo = Math.floor((now.getTime() - then.getTime()) / 1000);
+
+    if (secondsAgo < 60) return "Just now";
+
+    const minutesAgo = Math.floor(secondsAgo / 60);
+    if (minutesAgo === 1) return "1 minute ago";
+    if (minutesAgo < 60) return `${minutesAgo} minutes ago`;
+
+    const hoursAgo = Math.floor(minutesAgo / 60);
+    if (hoursAgo === 1) return "1 hour ago";
+    if (hoursAgo < 24) return `${hoursAgo} hours ago`;
+
+    const daysAgo = Math.floor(hoursAgo / 24);
+    if (daysAgo === 1) return "Yesterday";
+    if (daysAgo < 7) return `${daysAgo} days ago`;
+
+    return "Over a week ago";
+  } catch {
+    return "Unknown time";
+  }
+}

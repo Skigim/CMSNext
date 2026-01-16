@@ -1,5 +1,6 @@
 import { useCallback, useMemo, useState } from 'react';
 import { format } from 'date-fns';
+import { formatRelativeTime } from '@/domain/common';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -69,31 +70,6 @@ interface ActivityWidgetProps {
 }
 
 /**
- * Calculate relative time string from timestamp.
- */
-function getRelativeTime(timestamp: string): string {
-  try {
-    const now = new Date();
-    const then = new Date(timestamp);
-    const secondsAgo = Math.floor((now.getTime() - then.getTime()) / 1000);
-
-    if (secondsAgo < 60) return 'Just now';
-    const minutesAgo = Math.floor(secondsAgo / 60);
-    if (minutesAgo === 1) return '1 minute ago';
-    if (minutesAgo < 60) return `${minutesAgo} minutes ago`;
-    const hoursAgo = Math.floor(minutesAgo / 60);
-    if (hoursAgo === 1) return '1 hour ago';
-    if (hoursAgo < 24) return `${hoursAgo} hours ago`;
-    const daysAgo = Math.floor(hoursAgo / 24);
-    if (daysAgo === 1) return 'Yesterday';
-    if (daysAgo < 7) return `${daysAgo} days ago`;
-    return 'Over a week ago';
-  } catch {
-    return 'Unknown time';
-  }
-}
-
-/**
  * Format activity entries into timeline items.
  */
 function formatActivityTimeline(activityLog: CaseActivityEntry[]): TimelineItem[] {
@@ -110,7 +86,7 @@ function formatActivityTimeline(activityLog: CaseActivityEntry[]): TimelineItem[
     })
     .slice(0, 10)
     .map((entry): TimelineItem => {
-      const relativeTime = getRelativeTime(entry.timestamp);
+      const relativeTime = formatRelativeTime(entry.timestamp);
 
       if (entry.type === 'note-added') {
         const noteEntry = entry as Extract<CaseActivityEntry, { type: 'note-added' }>;

@@ -14,6 +14,7 @@ export {
   formatDateTime,
   isoToDateInputValue,
   dateInputValueToISO,
+  formatRelativeTime,
 } from "./dates";
 
 export {

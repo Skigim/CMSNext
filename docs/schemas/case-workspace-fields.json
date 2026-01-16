@@ -1,0 +1,220 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "CaseWorkspace Display Fields",
+  "description": "Schema for all fields displayed in the Case Workspace (Details and Financials tabs)",
+  "definitions": {
+    "Address": {
+      "type": "object",
+      "properties": {
+        "street": { "type": "string", "description": "Street address" },
+        "city": { "type": "string", "description": "City name" },
+        "state": { "type": "string", "description": "State abbreviation" },
+        "zip": { "type": "string", "description": "ZIP/Postal code" }
+      },
+      "required": ["street", "city", "state", "zip"]
+    },
+    "MailingAddress": {
+      "allOf": [
+        { "$ref": "#/definitions/Address" },
+        {
+          "type": "object",
+          "properties": {
+            "sameAsPhysical": { "type": "boolean", "description": "Whether mailing address is same as physical address" }
+          },
+          "required": ["sameAsPhysical"]
+        }
+      ]
+    },
+    "Relationship": {
+      "type": "object",
+      "properties": {
+        "type": { "type": "string", "description": "Relationship type (e.g., Spouse, Parent, Child)" },
+        "name": { "type": "string", "description": "Full name of the related person" },
+        "phone": { "type": "string", "description": "Contact phone number" }
+      },
+      "required": ["type", "name", "phone"]
+    },
+    "AmountHistoryEntry": {
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "format": "uuid", "description": "Unique identifier" },
+        "amount": { "type": "number", "description": "Amount value for this period" },
+        "startDate": { "type": "string", "format": "date", "description": "Start date (YYYY-MM-DD)" },
+        "endDate": { "type": ["string", "null"], "format": "date", "description": "End date (null = ongoing)" },
+        "verificationSource": { "type": "string", "description": "Verification source for this entry" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "When entry was created" }
+      },
+      "required": ["id", "amount", "startDate", "createdAt"]
+    },
+    "FinancialItem": {
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "format": "uuid", "description": "Unique identifier" },
+        "description": { "type": "string", "description": "Description of the financial item" },
+        "name": { "type": "string", "description": "Legacy name field (for backward compatibility)" },
+        "location": { "type": "string", "description": "Institution or location name" },
+        "accountNumber": { "type": "string", "description": "Account number (masked for display)" },
+        "amount": { "type": "number", "description": "Current amount value" },
+        "amountHistory": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/AmountHistoryEntry" },
+          "description": "Historical amount entries"
+        },
+        "frequency": {
+          "type": "string",
+          "enum": ["monthly", "weekly", "bi-weekly", "quarterly", "annually", "one-time"],
+          "description": "Payment/income frequency"
+        },
+        "owner": { "type": "string", "description": "Owner of the account/item" },
+        "verificationStatus": {
+          "type": "string",
+          "enum": ["Verified", "Pending", "Not Required", "Unable to Verify"],
+          "description": "Verification status"
+        },
+        "verificationSource": { "type": "string", "description": "Source of verification" },
+        "notes": { "type": "string", "description": "Additional notes" },
+        "status": {
+          "type": "string",
+          "enum": ["VR Pending", "UI Pending", "Approved", "Denied", "In Progress", "Completed"],
+          "description": "Legacy status field"
+        },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "description", "amount", "verificationStatus"]
+    }
+  },
+  "type": "object",
+  "properties": {
+    "header": {
+      "type": "object",
+      "description": "Case header displayed above tabs",
+      "properties": {
+        "name": { "type": "string", "description": "Full name (firstName + lastName)" },
+        "mcn": { "type": "string", "description": "Medicaid Case Number (copy-able)" },
+        "applicationDate": { "type": "string", "format": "date", "description": "Application date (MM/DD/YYYY display, copy-able)" },
+        "status": {
+          "type": "string",
+          "enum": ["Active", "Pending", "Closed", "Archived"],
+          "description": "Case status (editable via menu)"
+        },
+        "priority": { "type": "boolean", "description": "Priority flag (star icon toggle)" },
+        "isPinned": { "type": "boolean", "description": "Pinned to dashboard (pin icon toggle)" },
+        "withWaiver": { "type": "boolean", "description": "Case has waiver (badge display)" },
+        "retroRequested": { "type": "string", "description": "Retro requested flag (badge display)" },
+        "phone": { "type": "string", "description": "Primary phone (formatted, copy-able)" },
+        "email": { "type": "string", "format": "email", "description": "Email address (copy-able)" },
+        "alertsCount": { "type": "integer", "description": "Number of matched alerts (popover trigger)" },
+        "notesCount": { "type": "integer", "description": "Number of notes (popover trigger)" }
+      },
+      "required": ["name", "mcn", "status"]
+    },
+    "detailsTab": {
+      "type": "object",
+      "description": "Fields displayed in the Details tab (CaseIntakeScreen)",
+      "properties": {
+        "personColumn": {
+          "type": "object",
+          "description": "Person information column",
+          "properties": {
+            "firstName": { "type": "string", "description": "First name" },
+            "lastName": { "type": "string", "description": "Last name" },
+            "dateOfBirth": { "type": "string", "format": "date", "description": "Date of birth (YYYY-MM-DD)" },
+            "ssn": { "type": "string", "pattern": "^\\d{3}-\\d{2}-\\d{4}$", "description": "Social Security Number" },
+            "phone": { "type": "string", "description": "Primary phone number" },
+            "email": { "type": "string", "format": "email", "description": "Email address" },
+            "livingArrangement": { "type": "string", "description": "Living arrangement type" },
+            "address": { "$ref": "#/definitions/Address" },
+            "mailingAddress": { "$ref": "#/definitions/MailingAddress" },
+            "relationships": {
+              "type": "array",
+              "items": { "$ref": "#/definitions/Relationship" },
+              "description": "Related contacts (AR, spouse, family)"
+            }
+          },
+          "required": ["firstName", "lastName"]
+        },
+        "caseColumn": {
+          "type": "object",
+          "description": "Case identification and details column",
+          "properties": {
+            "mcn": { "type": "string", "description": "Medicaid Case Number" },
+            "applicationDate": { "type": "string", "format": "date", "description": "Application date" },
+            "admissionDate": { "type": "string", "format": "date", "description": "Facility admission date" },
+            "caseType": { "type": "string", "description": "Case type classification" },
+            "status": {
+              "type": "string",
+              "enum": ["Active", "Pending", "Closed", "Archived"],
+              "description": "Case status"
+            },
+            "priority": { "type": "boolean", "description": "Priority flag" },
+            "withWaiver": { "type": "boolean", "description": "Has waiver" },
+            "retroRequested": { "type": "boolean", "description": "Retro requested" },
+            "retroMonths": {
+              "type": "array",
+              "items": { "type": "string" },
+              "description": "List of retro months requested"
+            },
+            "maritalStatus": { "type": "string", "description": "Marital status" },
+            "description": { "type": "string", "description": "Case notes/description" }
+          },
+          "required": ["mcn", "status"]
+        },
+        "intakeColumn": {
+          "type": "object",
+          "description": "Intake checklist and verification column",
+          "properties": {
+            "appValidated": { "type": "boolean", "description": "Application validated" },
+            "agedDisabledVerified": { "type": "boolean", "description": "Aged/Disabled status verified" },
+            "citizenshipVerified": { "type": "boolean", "description": "Citizenship verified" },
+            "residencyVerified": { "type": "boolean", "description": "Residency verified" },
+            "avsSubmitted": { "type": "boolean", "description": "AVS submitted" },
+            "avsConsentDate": { "type": "string", "format": "date", "description": "AVS consent date" },
+            "interfacesReviewed": { "type": "boolean", "description": "Interfaces reviewed" },
+            "reviewVRs": { "type": "boolean", "description": "VRs reviewed" },
+            "reviewPriorBudgets": { "type": "boolean", "description": "Prior budgets reviewed" },
+            "reviewPriorNarr": { "type": "boolean", "description": "Prior narratives reviewed" },
+            "pregnancy": { "type": "boolean", "description": "Pregnancy indicator" },
+            "voterFormStatus": {
+              "type": "string",
+              "enum": ["requested", "declined", "not_answered", ""],
+              "description": "Voter registration form status"
+            },
+            "contactMethods": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": ["mail", "text", "email"]
+              },
+              "description": "Preferred contact methods"
+            }
+          }
+        }
+      },
+      "required": ["personColumn", "caseColumn"]
+    },
+    "financialsTab": {
+      "type": "object",
+      "description": "Fields displayed in the Financials tab (FinancialsGridView)",
+      "properties": {
+        "resources": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/FinancialItem" },
+          "description": "Resource items (bank accounts, property, vehicles, etc.)"
+        },
+        "income": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/FinancialItem" },
+          "description": "Income items (SSA, pension, wages, etc.)"
+        },
+        "expenses": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/FinancialItem" },
+          "description": "Expense items (medical, insurance, etc.)"
+        }
+      },
+      "required": ["resources", "income", "expenses"]
+    }
+  },
+  "required": ["header", "detailsTab", "financialsTab"]
+}
