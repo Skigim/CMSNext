@@ -21,19 +21,16 @@ import { useNotes } from "../../hooks/useNotes";
 import { usePinnedCases } from "../../hooks/usePinnedCases";
 import { useTemplates } from "@/contexts/TemplateContext";
 import { formatUSPhone } from "@/domain/common";
-import { formatDateForDisplay } from "@/domain/common";
+import { formatDateForDisplay, parseLocalDate } from "@/domain/common";
 
 /**
  * Calculate 90 days from a date and format as tooltip text
  */
 function get90DayTooltip(dateStr: string): string {
-  const date = new Date(dateStr);
-  if (isNaN(date.getTime())) return "";
+  const date = parseLocalDate(dateStr);
+  if (!date) return "";
   date.setDate(date.getDate() + 90);
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-  const year = date.getFullYear();
-  return `90 Days = ${month}/${day}/${year}`;
+  return `90 Days = ${formatDateForDisplay(date.toISOString())}`;
 }
 
 interface CaseDetailsProps {
@@ -177,8 +174,7 @@ export function CaseDetails({
                 />
                 {caseData.caseRecord?.applicationDate && (
                   <CopyButton
-                    value={caseData.caseRecord.applicationDate}
-                    displayText={formatDateForDisplay(caseData.caseRecord.applicationDate)}
+                    value={formatDateForDisplay(caseData.caseRecord.applicationDate)}
                     label="App Date"
                     tooltip={get90DayTooltip(caseData.caseRecord.applicationDate)}
                     tooltipSide="bottom"
