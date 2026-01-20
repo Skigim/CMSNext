@@ -286,8 +286,9 @@ export class WorkflowService {
    * Reorder steps within a workflow.
    * 
    * @param workflowId - Workflow to reorder
-   * @param stepIds - Step IDs in new order
+   * @param stepIds - Step IDs in new order (must include all existing step IDs)
    * @returns The updated workflow, or null if workflow not found
+   * @throws Error if stepIds array is incomplete or contains unknown IDs
    */
   async reorderSteps(
     workflowId: string,
@@ -300,6 +301,24 @@ export class WorkflowService {
 
     // Create map of existing steps
     const stepMap = new Map(workflow.steps.map((s) => [s.id, s]));
+    const existingIds = new Set(workflow.steps.map((s) => s.id));
+    const providedIds = new Set(stepIds);
+
+    // Validate: check for missing step IDs
+    const missingIds = [...existingIds].filter((id) => !providedIds.has(id));
+    if (missingIds.length > 0) {
+      throw new Error(
+        `Cannot reorder: missing step IDs would be deleted: ${missingIds.join(", ")}`
+      );
+    }
+
+    // Validate: check for unknown step IDs
+    const unknownIds = stepIds.filter((id) => !existingIds.has(id));
+    if (unknownIds.length > 0) {
+      throw new Error(
+        `Cannot reorder: unknown step IDs provided: ${unknownIds.join(", ")}`
+      );
+    }
     
     // Rebuild steps array in new order
     const steps: WorkflowStep[] = [];

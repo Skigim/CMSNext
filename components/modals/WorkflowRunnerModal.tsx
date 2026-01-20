@@ -53,6 +53,7 @@ import {
   advanceWorkflowState,
   completeCurrentStep,
   skipCurrentStep,
+  markStepError,
   markChecklistComplete,
   isWorkflowComplete,
   canProceedToNext,
@@ -332,7 +333,15 @@ export function WorkflowRunnerModal({
         if (template) {
           result = renderTemplate(template.template, templateContext);
         } else {
+          // Mark step as error and halt execution
+          const errorState = markStepError(
+            executionState,
+            `Template not found: ${currentStep.templateId}`
+          );
+          onExecutionStateChange(errorState);
           toast.error(`Template not found: ${currentStep.templateId}`);
+          setIsProcessing(false);
+          return;
         }
       } else if (isNoteStep(currentStep)) {
         // Prepare note content
@@ -346,11 +355,17 @@ export function WorkflowRunnerModal({
         });
         toast.success("Note created");
       } else if (isAlertStep(currentStep)) {
-        // Create the alert
+        // Prepare alert data
         const alertData = prepareAlertData(currentStep, caseData.id);
-        // Note: Actual alert creation would go here
-        // For now, we'll just show success
-        toast.success(`Alert set for ${alertData.dueDate.toLocaleDateString()}`);
+        // TODO: Implement alert creation when DataManager.addAlert is available
+        // Currently, AlertRecord creation is handled through CSV import.
+        // To fully implement this, we need:
+        // 1. Add addAlert method to DataManager and AlertsService
+        // 2. Call: await dataManager.addAlert(caseData.id, alertData);
+        // For now, show informational message about the pending alert
+        toast.info(
+          `Alert reminder: Follow up on ${alertData.dueDate.toLocaleDateString()} - ${alertData.message}`
+        );
         result = alertData.message;
       } else if (isCopyStep(currentStep)) {
         // Get content to copy
@@ -410,14 +425,21 @@ export function WorkflowRunnerModal({
   // Handle copy to clipboard
   const handleCopy = useCallback(async () => {
     const content = getPreviousTemplateResult(executionState);
-    if (content) {
-      await navigator.clipboard.writeText(content);
-      toast.success("Copied to clipboard");
 
-      // Mark copy step as complete
-      const completed = completeCurrentStep(executionState, content);
-      onExecutionStateChange(completed);
+    // Guard against missing or empty template output
+    if (!content || !content.trim()) {
+      toast.error(
+        "No template output is available to copy yet. Complete the previous step first."
+      );
+      return;
     }
+
+    await navigator.clipboard.writeText(content);
+    toast.success("Copied to clipboard");
+
+    // Mark copy step as complete
+    const completed = completeCurrentStep(executionState, content);
+    onExecutionStateChange(completed);
   }, [executionState, onExecutionStateChange]);
 
   // Advance to next step

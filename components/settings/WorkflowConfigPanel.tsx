@@ -73,6 +73,7 @@ import type {
   CopyStep,
 } from "@/types/workflow";
 import { createStep, STEP_TYPE_LABELS } from "@/types/workflow";
+import { validateStep } from "@/domain/workflows";
 
 // =============================================================================
 // Step Type Icons
@@ -466,6 +467,18 @@ function WorkflowEditor({
     if (steps.length === 0) {
       toast.error("Add at least one step");
       return;
+    }
+
+    // Validate each step before saving
+    for (let i = 0; i < steps.length; i++) {
+      const stepErrors = validateStep(steps[i]);
+      if (stepErrors.length > 0) {
+        const firstError = stepErrors[0];
+        toast.error(`Step ${i + 1}: ${firstError.message}`);
+        // Expand the problematic step for user to fix
+        setExpandedStep(steps[i].id);
+        return;
+      }
     }
 
     onSave({

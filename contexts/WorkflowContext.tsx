@@ -461,14 +461,20 @@ export const WorkflowProvider: React.FC<{ children: ReactNode }> = ({
         return;
       }
 
-      const state = createExecutionState(workflow, caseId);
-      state.status = "running";
-      state.startedAt = new Date().toISOString();
-
-      // Mark first step as active
-      if (state.stepStates.length > 0) {
-        state.stepStates[0].status = "active";
-      }
+      const baseState = createExecutionState(workflow, caseId);
+      const state: WorkflowExecutionState = {
+        ...baseState,
+        status: "running",
+        startedAt: new Date().toISOString(),
+        // Mark first step as active (immutably)
+        stepStates:
+          baseState.stepStates.length > 0
+            ? [
+                { ...baseState.stepStates[0], status: "active" },
+                ...baseState.stepStates.slice(1),
+              ]
+            : [],
+      };
 
       setExecutionState(state);
       logger.info("Started workflow execution", {
