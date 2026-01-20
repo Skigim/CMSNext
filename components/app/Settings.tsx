@@ -18,6 +18,7 @@ import { AlertsPreviewPanel } from "../alerts/AlertsPreviewPanel";
 import { PaperCutsPanel } from "../settings/PaperCutsPanel";
 import { KeyboardShortcutsPanel } from "../settings/KeyboardShortcutsPanel";
 import { TemplatesPanel } from "../settings/TemplatesPanel";
+import { WorkflowConfigPanel } from "../settings/WorkflowConfigPanel";
 import { useTheme } from "../../contexts/ThemeContext";
 import { toLocalDateString } from "@/domain/common";
 import {
@@ -35,6 +36,7 @@ import {
   Scissors,
   Keyboard,
   FileText,
+  Play,
 } from "lucide-react";
 import { StoredCase } from "../../types/case";
 import type { AlertsIndex } from "../../utils/alertsData";
@@ -153,6 +155,10 @@ export function Settings({ cases, onAlertsCsvImported }: SettingsProps) {
           <TabsTrigger value="templates" className="flex items-center gap-2">
             <FileText className="h-4 w-4" />
             <span className="hidden sm:inline">Templates</span>
+          </TabsTrigger>
+          <TabsTrigger value="workflows" className="flex items-center gap-2">
+            <Play className="h-4 w-4" />
+            <span className="hidden sm:inline">Workflows</span>
           </TabsTrigger>
           <TabsTrigger value="papercuts" className="flex items-center gap-2">
             <Scissors className="h-4 w-4" />
@@ -416,6 +422,11 @@ export function Settings({ cases, onAlertsCsvImported }: SettingsProps) {
         {/* Templates Tab */}
         <TabsContent value="templates">
           <TemplatesPanel />
+        </TabsContent>
+
+        {/* Workflows Tab */}
+        <TabsContent value="workflows">
+          <WorkflowConfigPanel />
         </TabsContent>
 
         {/* Development Tab - Only shown when devTools feature flag is enabled */}
