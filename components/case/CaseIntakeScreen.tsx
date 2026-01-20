@@ -339,6 +339,7 @@ function initCaseRecordData(
     mcn: caseData.caseRecord.mcn || '',
     applicationDate: caseData.caseRecord.applicationDate || '',
     caseType: caseData.caseRecord.caseType || '',
+    applicationType: caseData.caseRecord.applicationType || '',
     personId: caseData.caseRecord.personId || '',
     spouseId: caseData.caseRecord.spouseId || '',
     status: (caseData.caseRecord.status || defaultCaseStatus) as CaseStatus,

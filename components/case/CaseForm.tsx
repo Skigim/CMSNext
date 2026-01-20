@@ -64,6 +64,7 @@ export function CaseForm({ case: existingCase, onSave, onCancel }: CaseFormProps
     mcn: existingCase?.caseRecord.mcn || '',
     applicationDate: existingCase?.caseRecord.applicationDate || getTodayDate(),
     caseType: existingCase?.caseRecord.caseType || defaultCaseType,
+    applicationType: existingCase?.caseRecord.applicationType || '',
     personId: existingCase?.caseRecord.personId || '',
     spouseId: existingCase?.caseRecord.spouseId || '',
     status: (existingCase?.caseRecord.status || defaultCaseStatus) as CaseStatus,
