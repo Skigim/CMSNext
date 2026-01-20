@@ -883,10 +883,7 @@ export class DataManager {
   async addWorkflow(
     workflowData: Parameters<typeof this.workflowService.addWorkflow>[0]
   ) {
-    console.log("[DataManager] addWorkflow called with:", workflowData);
-    const result = await this.workflowService.addWorkflow(workflowData);
-    console.log("[DataManager] addWorkflow result:", result);
-    return result;
+    return await this.workflowService.addWorkflow(workflowData);
   }
 
   /**

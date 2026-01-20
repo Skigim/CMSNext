@@ -78,6 +78,34 @@ interface NormalizedFileData {
 - Flat arrays with foreign keys - **no nested structures**
 - Legacy nested formats are rejected with `LegacyFormatError`
 
+## Form Data Factories
+
+When initializing form state for case/person data, use the centralized factories:
+
+```typescript
+import { createCaseRecordData, createPersonData } from "@/domain/cases";
+
+// Creating new case form state
+const [caseData, setCaseData] = useState(() =>
+  createCaseRecordData(null, {
+    caseType: config.caseTypes[0],
+    caseStatus: config.caseStatuses[0]?.name,
+    livingArrangement: config.livingArrangements[0],
+  }),
+);
+
+// Editing existing case
+const [caseData, setCaseData] = useState(() =>
+  createCaseRecordData(existingCase, { caseStatus: defaultStatus }),
+);
+```
+
+**IMPORTANT:** When adding a new field to `NewCaseRecordData` or `NewPersonData`:
+
+1. Add the field to the type in `types/case.ts`
+2. Update the factory in `domain/cases/factories.ts`
+3. That's it - all forms automatically get the new field
+
 ## Antipatterns
 
 - ❌ No localStorage/sessionStorage or network APIs
@@ -86,6 +114,7 @@ interface NormalizedFileData {
 - ❌ Do not put business logic in React components
 - ❌ No domain layer, repositories, or event bus patterns
 - ❌ Do not introduce optimistic UI that ignores autosave timing
+- ❌ **No inline form data initialization** - use `createCaseRecordData`/`createPersonData` factories
 
 ## File Locations
 

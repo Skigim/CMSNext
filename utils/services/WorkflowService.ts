@@ -112,11 +112,9 @@ export class WorkflowService {
   async addWorkflow(
     workflowData: Omit<Workflow, "id" | "createdAt" | "updatedAt">
   ): Promise<Workflow> {
-    console.log("[WorkflowService] addWorkflow called with:", workflowData);
     logger.info("addWorkflow started", { name: workflowData.name, stepCount: workflowData.steps.length });
     
     const data = await this.fileStorage.readFileData();
-    console.log("[WorkflowService] readFileData returned:", data ? "data exists" : "null");
     if (!data) {
       console.error("[WorkflowService] no file data available!");
       logger.error("addWorkflow failed: no file data available");
@@ -125,7 +123,6 @@ export class WorkflowService {
 
     const now = new Date().toISOString();
     const workflows = data.workflows ?? [];
-    console.log("[WorkflowService] existing workflows:", workflows.length);
     logger.debug("addWorkflow: existing workflows", { count: workflows.length });
 
     const newWorkflow: Workflow = {
@@ -134,17 +131,14 @@ export class WorkflowService {
       createdAt: now,
       updatedAt: now,
     };
-    console.log("[WorkflowService] created workflow object:", newWorkflow);
 
     const updatedWorkflows = [...workflows, newWorkflow];
-    console.log("[WorkflowService] writing updatedWorkflows:", updatedWorkflows.length);
     logger.debug("addWorkflow: writing data", { newCount: updatedWorkflows.length, workflowId: newWorkflow.id });
     
     await this.fileStorage.writeNormalizedData({
       ...data,
       workflows: updatedWorkflows,
     });
-    console.log("[WorkflowService] writeNormalizedData completed");
 
     logger.info("addWorkflow completed", { workflowId: newWorkflow.id, name: newWorkflow.name });
     return newWorkflow;
