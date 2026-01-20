@@ -9,6 +9,7 @@ import { CaseColumn } from "./CaseColumn";
 import { useCategoryConfig } from "@/contexts/CategoryConfigContext";
 import { useNavigationLock } from "@/hooks/useNavigationLock";
 import { useFileStorageLifecycleSelectors } from "@/contexts/FileStorageContext";
+import { createCaseRecordData, createPersonData } from "@/domain/cases";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -60,9 +61,16 @@ export function CaseIntakeScreen({ caseData, onSave }: CaseIntakeScreenProps) {
     [config.caseStatuses],
   );
 
-  // Form state - initialized from caseData
-  const [personData, setPersonData] = useState<NewPersonData>(() => initPersonData(caseData, defaultLivingArrangement));
-  const [caseRecordData, setCaseRecordData] = useState<NewCaseRecordData>(() => initCaseRecordData(caseData, defaultLivingArrangement, defaultCaseStatus));
+  // Form state - initialized from caseData using centralized factories
+  const [personData, setPersonData] = useState<NewPersonData>(() => 
+    createPersonData(caseData, { livingArrangement: defaultLivingArrangement })
+  );
+  const [caseRecordData, setCaseRecordData] = useState<NewCaseRecordData>(() => 
+    createCaseRecordData(caseData, { 
+      livingArrangement: defaultLivingArrangement, 
+      caseStatus: defaultCaseStatus 
+    })
+  );
   const [relationships, setRelationships] = useState<Relationship[]>(caseData.person.relationships || []);
   const [retroRequested, setRetroRequested] = useState<boolean>(!!caseData.caseRecord.retroRequested);
 
@@ -72,8 +80,11 @@ export function CaseIntakeScreen({ caseData, onSave }: CaseIntakeScreenProps) {
   // Reset form state when caseData changes (e.g., after save)
   useEffect(() => {
     if (!isEditing) {
-      setPersonData(initPersonData(caseData, defaultLivingArrangement));
-      setCaseRecordData(initCaseRecordData(caseData, defaultLivingArrangement, defaultCaseStatus));
+      setPersonData(createPersonData(caseData, { livingArrangement: defaultLivingArrangement }));
+      setCaseRecordData(createCaseRecordData(caseData, { 
+        livingArrangement: defaultLivingArrangement, 
+        caseStatus: defaultCaseStatus 
+      }));
       setRelationships(caseData.person.relationships || []);
       setRetroRequested(!!caseData.caseRecord.retroRequested);
       setHasChanges(false);
@@ -167,9 +178,12 @@ export function CaseIntakeScreen({ caseData, onSave }: CaseIntakeScreenProps) {
   }, [hasChanges]);
 
   const handleDiscardChanges = useCallback(() => {
-    // Reset form to original values
-    setPersonData(initPersonData(caseData, defaultLivingArrangement));
-    setCaseRecordData(initCaseRecordData(caseData, defaultLivingArrangement, defaultCaseStatus));
+    // Reset form to original values using centralized factories
+    setPersonData(createPersonData(caseData, { livingArrangement: defaultLivingArrangement }));
+    setCaseRecordData(createCaseRecordData(caseData, { 
+      livingArrangement: defaultLivingArrangement, 
+      caseStatus: defaultCaseStatus 
+    }));
     setRelationships(caseData.person.relationships || []);
     setRetroRequested(!!caseData.caseRecord.retroRequested);
     setHasChanges(false);
@@ -297,77 +311,6 @@ export function CaseIntakeScreen({ caseData, onSave }: CaseIntakeScreenProps) {
       </AlertDialog>
     </div>
   );
-}
-
-// Helper functions to initialize form state from StoredCase
-function initPersonData(caseData: StoredCase, defaultLivingArrangement: string): NewPersonData {
-  return {
-    firstName: caseData.person.firstName || '',
-    lastName: caseData.person.lastName || '',
-    email: caseData.person.email || '',
-    phone: caseData.person.phone || '',
-    dateOfBirth: caseData.person.dateOfBirth || '',
-    ssn: caseData.person.ssn || '',
-    organizationId: null,
-    livingArrangement: caseData.person.livingArrangement || defaultLivingArrangement,
-    address: {
-      street: caseData.person.address.street || '',
-      city: caseData.person.address.city || '',
-      state: caseData.person.address.state || 'NE',
-      zip: caseData.person.address.zip || '',
-    },
-    mailingAddress: {
-      street: caseData.person.mailingAddress.street || '',
-      city: caseData.person.mailingAddress.city || '',
-      state: caseData.person.mailingAddress.state || 'NE',
-      zip: caseData.person.mailingAddress.zip || '',
-      sameAsPhysical: caseData.person.mailingAddress.sameAsPhysical ?? true,
-    },
-    authorizedRepIds: caseData.person.authorizedRepIds || [],
-    familyMembers: caseData.person.familyMembers || [],
-    relationships: caseData.person.relationships || [],
-    status: caseData.person.status || 'Active',
-  };
-}
-
-function initCaseRecordData(
-  caseData: StoredCase,
-  defaultLivingArrangement: string,
-  defaultCaseStatus: CaseStatus
-): NewCaseRecordData {
-  return {
-    mcn: caseData.caseRecord.mcn || '',
-    applicationDate: caseData.caseRecord.applicationDate || '',
-    caseType: caseData.caseRecord.caseType || '',
-    applicationType: caseData.caseRecord.applicationType || '',
-    personId: caseData.caseRecord.personId || '',
-    spouseId: caseData.caseRecord.spouseId || '',
-    status: (caseData.caseRecord.status || defaultCaseStatus) as CaseStatus,
-    description: caseData.caseRecord.description || '',
-    priority: caseData.caseRecord.priority || false,
-    livingArrangement: caseData.caseRecord.livingArrangement || defaultLivingArrangement,
-    withWaiver: caseData.caseRecord.withWaiver || false,
-    admissionDate: caseData.caseRecord.admissionDate || '',
-    organizationId: '',
-    authorizedReps: caseData.caseRecord.authorizedReps || [],
-    retroRequested: caseData.caseRecord.retroRequested || '',
-    // Intake checklist fields
-    appValidated: caseData.caseRecord.appValidated ?? false,
-    retroMonths: caseData.caseRecord.retroMonths ?? [],
-    contactMethods: caseData.caseRecord.contactMethods ?? [],
-    agedDisabledVerified: caseData.caseRecord.agedDisabledVerified ?? false,
-    citizenshipVerified: caseData.caseRecord.citizenshipVerified ?? false,
-    residencyVerified: caseData.caseRecord.residencyVerified ?? false,
-    avsSubmitted: caseData.caseRecord.avsSubmitted ?? false,
-    interfacesReviewed: caseData.caseRecord.interfacesReviewed ?? false,
-    reviewVRs: caseData.caseRecord.reviewVRs ?? false,
-    reviewPriorBudgets: caseData.caseRecord.reviewPriorBudgets ?? false,
-    reviewPriorNarr: caseData.caseRecord.reviewPriorNarr ?? false,
-    pregnancy: caseData.caseRecord.pregnancy ?? false,
-    avsConsentDate: caseData.caseRecord.avsConsentDate ?? '',
-    maritalStatus: caseData.caseRecord.maritalStatus ?? '',
-    voterFormStatus: caseData.caseRecord.voterFormStatus ?? '',
-  };
 }
 
 export default CaseIntakeScreen;

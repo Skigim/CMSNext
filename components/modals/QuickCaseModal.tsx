@@ -16,6 +16,7 @@ import { toast } from "sonner";
 import { NewPersonData, NewCaseRecordData, CaseStatus } from "../../types/case";
 import { useCategoryConfig } from "@/contexts/CategoryConfigContext";
 import { isoToDateInputValue, dateInputValueToISO, toLocalDateString } from "@/domain/common";
+import { createCaseRecordData, createPersonData } from "@/domain/cases";
 
 interface QuickCaseModalProps {
   isOpen: boolean;
@@ -109,66 +110,21 @@ export function QuickCaseModal({ isOpen, onClose, onSave }: QuickCaseModalProps)
     const toastId = toast.loading("Creating case...");
 
     try {
-      // Build full case data with defaults
+      // Use centralized factories with overrides for user-entered values
       const personData: NewPersonData = {
+        ...createPersonData(null, { livingArrangement: defaultLivingArrangement }),
         firstName: firstName.trim(),
         lastName: lastName.trim(),
-        email: '',
-        phone: '',
-        dateOfBirth: '',
-        ssn: '',
-        organizationId: null,
-        livingArrangement: defaultLivingArrangement,
-        address: {
-          street: '',
-          city: '',
-          state: 'NE',
-          zip: '',
-        },
-        mailingAddress: {
-          street: '',
-          city: '',
-          state: 'NE',
-          zip: '',
-          sameAsPhysical: true,
-        },
-        authorizedRepIds: [],
-        familyMembers: [],
-        relationships: [],
-        status: 'Active',
       };
 
       const caseRecordData: NewCaseRecordData = {
+        ...createCaseRecordData(null, {
+          caseType: defaultCaseType,
+          caseStatus: defaultCaseStatus,
+          livingArrangement: defaultLivingArrangement,
+          applicationDate: applicationDate,
+        }),
         mcn: mcn.trim(),
-        applicationDate: applicationDate,
-        caseType: defaultCaseType,
-        personId: '',
-        spouseId: '',
-        status: defaultCaseStatus,
-        description: '',
-        priority: false,
-        livingArrangement: defaultLivingArrangement,
-        withWaiver: false,
-        admissionDate: '',
-        organizationId: '',
-        authorizedReps: [],
-        retroRequested: '',
-        // Intake checklist defaults
-        appValidated: false,
-        retroMonths: [],
-        contactMethods: [],
-        agedDisabledVerified: false,
-        citizenshipVerified: false,
-        residencyVerified: false,
-        avsSubmitted: false,
-        interfacesReviewed: false,
-        reviewVRs: false,
-        reviewPriorBudgets: false,
-        reviewPriorNarr: false,
-        pregnancy: false,
-        avsConsentDate: '',
-        maritalStatus: '',
-        voterFormStatus: '',
       };
 
       await onSave(

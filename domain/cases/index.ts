@@ -17,3 +17,10 @@ export {
   type GenerateAvsNarrativeOptions,
   generateAvsNarrative,
 } from "./avsNarrativeGenerator";
+
+export {
+  createCaseRecordData,
+  createPersonData,
+  type CaseRecordDefaults,
+  type PersonDefaults,
+} from "./factories";

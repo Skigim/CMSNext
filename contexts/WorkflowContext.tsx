@@ -269,7 +269,7 @@ export const WorkflowProvider: React.FC<{ children: ReactNode }> = ({
         return null;
       }
     },
-    [dataManager, loadWorkflows]
+    [dataManager, loadWorkflows, workflows.length]
   );
 
   const updateWorkflow = useCallback(

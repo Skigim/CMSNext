@@ -11,6 +11,7 @@ import { CaseInfoForm } from "../forms/CaseInfoForm";
 import { IntakeInfoForm } from "../forms/IntakeInfoForm";
 import { useCategoryConfig } from "@/contexts/CategoryConfigContext";
 import { toLocalDateString } from "@/domain/common";
+import { createCaseRecordData, createPersonData } from "@/domain/cases";
 
 interface CaseFormProps {
   case?: StoredCase;
@@ -32,67 +33,18 @@ export function CaseForm({ case: existingCase, onSave, onCancel }: CaseFormProps
   );
 
   const [activeTab, setActiveTab] = useState("person");
-  const [personData, setPersonData] = useState<NewPersonData>({
-    firstName: existingCase?.person.firstName || '',
-    lastName: existingCase?.person.lastName || '',
-    email: existingCase?.person.email || '',
-    phone: existingCase?.person.phone || '',
-    dateOfBirth: existingCase?.person.dateOfBirth || '',
-    ssn: existingCase?.person.ssn || '',
-    organizationId: null,
-    livingArrangement: existingCase?.person.livingArrangement || defaultLivingArrangement,
-    address: {
-      street: existingCase?.person.address.street || '',
-      city: existingCase?.person.address.city || '',
-      state: existingCase?.person.address.state || 'NE',
-      zip: existingCase?.person.address.zip || '',
-    },
-    mailingAddress: {
-      street: existingCase?.person.mailingAddress.street || '',
-      city: existingCase?.person.mailingAddress.city || '',
-      state: existingCase?.person.mailingAddress.state || 'NE',
-      zip: existingCase?.person.mailingAddress.zip || '',
-      sameAsPhysical: existingCase?.person.mailingAddress.sameAsPhysical ?? true,
-    },
-    authorizedRepIds: existingCase?.person.authorizedRepIds || [],
-    familyMembers: existingCase?.person.familyMembers || [],
-    relationships: existingCase?.person.relationships || [],
-    status: existingCase?.person.status || 'Active',
-  });
+  const [personData, setPersonData] = useState<NewPersonData>(() => 
+    createPersonData(existingCase, { livingArrangement: defaultLivingArrangement })
+  );
 
-  const [caseData, setCaseData] = useState<NewCaseRecordData>({
-    mcn: existingCase?.caseRecord.mcn || '',
-    applicationDate: existingCase?.caseRecord.applicationDate || getTodayDate(),
-    caseType: existingCase?.caseRecord.caseType || defaultCaseType,
-    applicationType: existingCase?.caseRecord.applicationType || '',
-    personId: existingCase?.caseRecord.personId || '',
-    spouseId: existingCase?.caseRecord.spouseId || '',
-    status: (existingCase?.caseRecord.status || defaultCaseStatus) as CaseStatus,
-    description: existingCase?.caseRecord.description || '',
-    priority: existingCase?.caseRecord.priority || false,
-    livingArrangement: existingCase?.caseRecord.livingArrangement || defaultLivingArrangement,
-    withWaiver: existingCase?.caseRecord.withWaiver || false,
-    admissionDate: existingCase?.caseRecord.admissionDate || '',
-    organizationId: '',
-    authorizedReps: existingCase?.caseRecord.authorizedReps || [],
-    retroRequested: existingCase?.caseRecord.retroRequested || '',
-    // Intake checklist fields
-    appValidated: existingCase?.caseRecord.appValidated ?? false,
-    retroMonths: existingCase?.caseRecord.retroMonths ?? [],
-    contactMethods: existingCase?.caseRecord.contactMethods ?? [],
-    agedDisabledVerified: existingCase?.caseRecord.agedDisabledVerified ?? false,
-    citizenshipVerified: existingCase?.caseRecord.citizenshipVerified ?? false,
-    residencyVerified: existingCase?.caseRecord.residencyVerified ?? false,
-    avsSubmitted: existingCase?.caseRecord.avsSubmitted ?? false,
-    interfacesReviewed: existingCase?.caseRecord.interfacesReviewed ?? false,
-    reviewVRs: existingCase?.caseRecord.reviewVRs ?? false,
-    reviewPriorBudgets: existingCase?.caseRecord.reviewPriorBudgets ?? false,
-    reviewPriorNarr: existingCase?.caseRecord.reviewPriorNarr ?? false,
-    pregnancy: existingCase?.caseRecord.pregnancy ?? false,
-    avsConsentDate: existingCase?.caseRecord.avsConsentDate ?? '',
-    maritalStatus: existingCase?.caseRecord.maritalStatus ?? '',
-    voterFormStatus: existingCase?.caseRecord.voterFormStatus ?? '',
-  });
+  const [caseData, setCaseData] = useState<NewCaseRecordData>(() => 
+    createCaseRecordData(existingCase, {
+      caseType: defaultCaseType,
+      caseStatus: defaultCaseStatus,
+      livingArrangement: defaultLivingArrangement,
+      applicationDate: getTodayDate(),
+    })
+  );
 
   // State for household information
   const [relationships, setRelationships] = useState<Relationship[]>(existingCase?.person.relationships || []);
