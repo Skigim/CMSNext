@@ -10,6 +10,9 @@
 
 import type { Workflow, WorkflowStep } from "@/types/workflow";
 import type { FileStorageService } from "./FileStorageService";
+import { createLogger } from "@/utils/logger";
+
+const logger = createLogger("WorkflowService");
 
 /**
  * Dependencies required by WorkflowService.
@@ -54,6 +57,7 @@ export class WorkflowService {
   async getAllWorkflows(): Promise<Workflow[]> {
     const data = await this.fileStorage.readFileData();
     const workflows = data?.workflows ?? [];
+    logger.debug("getAllWorkflows", { count: workflows.length });
     return this.sortWorkflows(workflows);
   }
 
@@ -108,13 +112,17 @@ export class WorkflowService {
   async addWorkflow(
     workflowData: Omit<Workflow, "id" | "createdAt" | "updatedAt">
   ): Promise<Workflow> {
+    logger.info("addWorkflow started", { name: workflowData.name, stepCount: workflowData.steps.length });
+    
     const data = await this.fileStorage.readFileData();
     if (!data) {
+      logger.error("addWorkflow failed: no file data available");
       throw new Error("No file data available");
     }
 
     const now = new Date().toISOString();
     const workflows = data.workflows ?? [];
+    logger.debug("addWorkflow: existing workflows", { count: workflows.length });
 
     const newWorkflow: Workflow = {
       ...workflowData,
@@ -123,11 +131,15 @@ export class WorkflowService {
       updatedAt: now,
     };
 
+    const updatedWorkflows = [...workflows, newWorkflow];
+    logger.debug("addWorkflow: writing data", { newCount: updatedWorkflows.length, workflowId: newWorkflow.id });
+    
     await this.fileStorage.writeNormalizedData({
       ...data,
-      workflows: [...workflows, newWorkflow],
+      workflows: updatedWorkflows,
     });
 
+    logger.info("addWorkflow completed", { workflowId: newWorkflow.id, name: newWorkflow.name });
     return newWorkflow;
   }
 

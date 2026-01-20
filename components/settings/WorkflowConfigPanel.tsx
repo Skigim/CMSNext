@@ -74,6 +74,9 @@ import type {
 } from "@/types/workflow";
 import { createStep, STEP_TYPE_LABELS } from "@/types/workflow";
 import { validateStep } from "@/domain/workflows";
+import { createLogger } from "@/utils/logger";
+
+const logger = createLogger("WorkflowConfigPanel");
 
 // =============================================================================
 // Step Type Icons
@@ -660,13 +663,28 @@ export function WorkflowConfigPanel() {
   const handleSave = async (
     workflowData: Omit<Workflow, "id" | "createdAt" | "updatedAt">
   ) => {
-    if (editingWorkflow) {
-      await updateWorkflow(editingWorkflow.id, workflowData);
-    } else {
-      await addWorkflow(workflowData);
+    logger.info("handleSave: starting", { 
+      isEditing: !!editingWorkflow, 
+      name: workflowData.name,
+      stepCount: workflowData.steps.length 
+    });
+    
+    try {
+      if (editingWorkflow) {
+        logger.debug("handleSave: updating workflow", { id: editingWorkflow.id });
+        const result = await updateWorkflow(editingWorkflow.id, workflowData);
+        logger.debug("handleSave: update result", { success: !!result });
+      } else {
+        logger.debug("handleSave: creating new workflow");
+        const result = await addWorkflow(workflowData);
+        logger.debug("handleSave: create result", { success: !!result, id: result?.id });
+      }
+      setEditingWorkflow(null);
+      setIsCreating(false);
+      logger.info("handleSave: completed successfully");
+    } catch (err) {
+      logger.error("handleSave: failed", { error: err });
     }
-    setEditingWorkflow(null);
-    setIsCreating(false);
   };
 
   const handleCancel = () => {
