@@ -30,3 +30,6 @@ export * from "./alerts";
 
 // Template rendering
 export * from "./templates";
+
+// Workflow execution
+export * from "./workflows";

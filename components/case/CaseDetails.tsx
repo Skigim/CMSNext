@@ -16,6 +16,7 @@ import { CopyButton } from "@/components/common/CopyButton";
 import { CaseSummaryModal } from "./CaseSummaryModal";
 import { VRGeneratorModal } from "./VRGeneratorModal";
 import { NarrativeGeneratorModal } from "./NarrativeGeneratorModal";
+import { WorkflowDropdown } from "./WorkflowDropdown";
 import { useFinancialItems } from "../../hooks/useFinancialItems";
 import { useNotes } from "../../hooks/useNotes";
 import { usePinnedCases } from "../../hooks/usePinnedCases";
@@ -228,6 +229,8 @@ export function CaseDetails({
               onResolveAlert={onResolveAlert ? handleResolveAlert : undefined}
             />
             <div className="w-px h-9 bg-border" />
+            {/* Workflows dropdown */}
+            <WorkflowDropdown caseData={caseData} />
             <Button
               variant="outline"
               size="sm"
