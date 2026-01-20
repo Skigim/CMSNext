@@ -441,6 +441,8 @@ export class FileStorageService {
           .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()),
         // Preserve templates array (unified template system)
         templates: data.templates ? [...data.templates] : undefined,
+        // Preserve workflows array (multi-step case processing)
+        workflows: data.workflows ? [...data.workflows.map(w => ({ ...w }))] : undefined,
       };
 
       const success = await this.fileService.writeFile(finalData);
