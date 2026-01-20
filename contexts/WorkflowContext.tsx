@@ -245,6 +245,8 @@ export const WorkflowProvider: React.FC<{ children: ReactNode }> = ({
       try {
         const newWorkflow = await dataManager.addWorkflow(workflow);
         toast.success(`Workflow "${workflow.name}" created`);
+        // Explicitly refresh to ensure UI updates
+        await loadWorkflows();
         return newWorkflow;
       } catch (err) {
         logger.error("Failed to add workflow", { error: err });
@@ -252,7 +254,7 @@ export const WorkflowProvider: React.FC<{ children: ReactNode }> = ({
         return null;
       }
     },
-    [dataManager]
+    [dataManager, loadWorkflows]
   );
 
   const updateWorkflow = useCallback(
@@ -269,6 +271,8 @@ export const WorkflowProvider: React.FC<{ children: ReactNode }> = ({
         const updated = await dataManager.updateWorkflow(id, updates);
         if (updated) {
           toast.success("Workflow updated");
+          // Explicitly refresh to ensure UI updates
+          await loadWorkflows();
           return updated;
         } else {
           toast.error("Workflow not found");
@@ -280,7 +284,7 @@ export const WorkflowProvider: React.FC<{ children: ReactNode }> = ({
         return null;
       }
     },
-    [dataManager]
+    [dataManager, loadWorkflows]
   );
 
   const deleteWorkflow = useCallback(
@@ -294,6 +298,8 @@ export const WorkflowProvider: React.FC<{ children: ReactNode }> = ({
         const deleted = await dataManager.deleteWorkflow(id);
         if (deleted) {
           toast.success("Workflow deleted");
+          // Explicitly refresh to ensure UI updates
+          await loadWorkflows();
           return true;
         } else {
           toast.error("Workflow not found");
@@ -305,7 +311,7 @@ export const WorkflowProvider: React.FC<{ children: ReactNode }> = ({
         return false;
       }
     },
-    [dataManager]
+    [dataManager, loadWorkflows]
   );
 
   const reorderWorkflows = useCallback(
