@@ -670,6 +670,8 @@ export function WorkflowConfigPanel() {
     workflowData: Omit<Workflow, "id" | "createdAt" | "updatedAt">
   ) => {
     console.log("[WorkflowConfigPanel] handleSave received:", workflowData);
+    console.log("[WorkflowConfigPanel] editingWorkflow:", editingWorkflow);
+    console.log("[WorkflowConfigPanel] addWorkflow function:", typeof addWorkflow);
     logger.info("handleSave: starting", { 
       isEditing: !!editingWorkflow, 
       name: workflowData.name,
@@ -678,18 +680,24 @@ export function WorkflowConfigPanel() {
     
     try {
       if (editingWorkflow) {
+        console.log("[WorkflowConfigPanel] calling updateWorkflow");
         logger.debug("handleSave: updating workflow", { id: editingWorkflow.id });
         const result = await updateWorkflow(editingWorkflow.id, workflowData);
+        console.log("[WorkflowConfigPanel] updateWorkflow result:", result);
         logger.debug("handleSave: update result", { success: !!result });
       } else {
+        console.log("[WorkflowConfigPanel] calling addWorkflow");
         logger.debug("handleSave: creating new workflow");
         const result = await addWorkflow(workflowData);
+        console.log("[WorkflowConfigPanel] addWorkflow result:", result);
         logger.debug("handleSave: create result", { success: !!result, id: result?.id });
       }
+      console.log("[WorkflowConfigPanel] resetting state");
       setEditingWorkflow(null);
       setIsCreating(false);
       logger.info("handleSave: completed successfully");
     } catch (err) {
+      console.error("[WorkflowConfigPanel] handleSave error:", err);
       logger.error("handleSave: failed", { error: err });
     }
   };
