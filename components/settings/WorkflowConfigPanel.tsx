@@ -463,6 +463,7 @@ function WorkflowEditor({
   };
 
   const handleSave = () => {
+    console.log("[WorkflowBuilder] handleSave clicked", { name, steps: steps.length });
     if (!name.trim()) {
       toast.error("Workflow name is required");
       return;
@@ -484,6 +485,11 @@ function WorkflowEditor({
       }
     }
 
+    console.log("[WorkflowBuilder] calling onSave with:", {
+      name: name.trim(),
+      applicationTypeFilter: applicationTypeFilter.trim() || undefined,
+      stepCount: steps.length,
+    });
     onSave({
       name: name.trim(),
       description: description.trim() || undefined,
@@ -663,6 +669,7 @@ export function WorkflowConfigPanel() {
   const handleSave = async (
     workflowData: Omit<Workflow, "id" | "createdAt" | "updatedAt">
   ) => {
+    console.log("[WorkflowConfigPanel] handleSave received:", workflowData);
     logger.info("handleSave: starting", { 
       isEditing: !!editingWorkflow, 
       name: workflowData.name,

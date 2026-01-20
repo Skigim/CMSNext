@@ -240,23 +240,30 @@ export const WorkflowProvider: React.FC<{ children: ReactNode }> = ({
     async (
       workflow: Omit<Workflow, "id" | "createdAt" | "updatedAt">
     ): Promise<Workflow | null> => {
+      console.log("[WorkflowContext] addWorkflow called with:", workflow);
       if (!dataManager) {
+        console.error("[WorkflowContext] dataManager not available!");
         logger.error("addWorkflow: dataManager not available");
         toast.error("Data manager is not available yet.");
         return null;
       }
 
+      console.log("[WorkflowContext] calling dataManager.addWorkflow");
       logger.info("addWorkflow: starting", { name: workflow.name });
       try {
         const newWorkflow = await dataManager.addWorkflow(workflow);
+        console.log("[WorkflowContext] dataManager.addWorkflow returned:", newWorkflow);
         logger.info("addWorkflow: created", { id: newWorkflow.id, name: newWorkflow.name });
         toast.success(`Workflow "${workflow.name}" created`);
         // Explicitly refresh to ensure UI updates
+        console.log("[WorkflowContext] refreshing workflow list");
         logger.debug("addWorkflow: refreshing list");
         await loadWorkflows();
+        console.log("[WorkflowContext] refresh complete, workflows:", workflows.length);
         logger.debug("addWorkflow: refresh complete");
         return newWorkflow;
       } catch (err) {
+        console.error("[WorkflowContext] addWorkflow error:", err);
         logger.error("Failed to add workflow", { error: err });
         toast.error("Failed to create workflow");
         return null;
