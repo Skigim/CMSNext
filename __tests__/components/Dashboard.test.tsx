@@ -11,7 +11,11 @@ vi.mock("@/contexts/CategoryConfigContext", async (importOriginal) => {
     ...actual,
     useCategoryConfig: () => ({
       config: {
-        caseStatuses: ["Pending", "Approved", "Denied"],
+        caseStatuses: [
+          { name: "Pending", colorSlot: "blue", countsAsCompleted: false },
+          { name: "Approved", colorSlot: "green", countsAsCompleted: true },
+          { name: "Denied", colorSlot: "red", countsAsCompleted: true },
+        ],
       },
     }),
   };

@@ -24,6 +24,11 @@ const ActivityWidgetLazy = createLazyWidget(
   "ActivityWidget",
 );
 
+const DailyStatsWidgetLazy = createLazyWidget(
+  import("./widgets/DailyStatsWidget"),
+  "DailyStatsWidget",
+);
+
 const TodaysWorkWidgetLazy = createLazyWidget(
   import("./widgets/TodaysWorkWidget"),
   "TodaysWorkWidget",
@@ -100,10 +105,22 @@ export function Dashboard({
     return [
       {
         metadata: {
+          id: 'daily-stats',
+          title: 'Daily Overview',
+          description: "Snapshot of today's priorities and throughput",
+          priority: 0,
+          refreshInterval: 60 * 1000,
+          featureFlag: 'dashboard.widgets.dailyStats',
+        },
+        component: DailyStatsWidgetLazy,
+        props: { cases, alerts, activityLog: activityEntries },
+      },
+      {
+        metadata: {
           id: 'todays-work',
           title: "Today's Work",
           description: 'Priority cases requiring attention',
-          priority: 0,
+          priority: 1,
           refreshInterval: 2 * 60 * 1000,
           featureFlag: 'dashboard.widgets.todaysWork',
         },
@@ -115,7 +132,7 @@ export function Dashboard({
           id: 'avg-case-processing-time',
           title: 'Avg. Case Processing Time',
           description: 'Average days to resolve a case',
-          priority: 1,
+          priority: 2,
           refreshInterval: 10 * 60 * 1000,
           featureFlag: 'dashboard.widgets.avgCaseProcessing',
         },
@@ -127,7 +144,7 @@ export function Dashboard({
           id: 'cases-processed-per-day',
           title: 'Cases Processed/Day',
           description: 'Daily case processing over the last 7 days',
-          priority: 2,
+          priority: 3,
           refreshInterval: 5 * 60 * 1000,
           featureFlag: 'dashboard.widgets.casesProcessed',
         },
@@ -139,7 +156,7 @@ export function Dashboard({
           id: 'total-cases-by-status',
           title: 'Total Cases by Status',
           description: 'Current status distribution across all cases',
-          priority: 3,
+          priority: 4,
           refreshInterval: 5 * 60 * 1000,
           featureFlag: 'dashboard.widgets.casesByStatus',
         },
@@ -151,7 +168,7 @@ export function Dashboard({
           id: 'avg-alert-age',
           title: 'Avg. Alert Age',
           description: 'Average age of active alerts',
-          priority: 4,
+          priority: 5,
           refreshInterval: 5 * 60 * 1000,
           featureFlag: 'dashboard.widgets.avgAlertAge',
         },
@@ -163,7 +180,7 @@ export function Dashboard({
           id: 'alerts-cleared-per-day',
           title: 'Alerts Cleared/Day',
           description: 'Alert resolution trends over the last 7 days',
-          priority: 5,
+          priority: 6,
           refreshInterval: 5 * 60 * 1000,
           featureFlag: 'dashboard.widgets.alertsCleared',
         },
@@ -175,7 +192,7 @@ export function Dashboard({
           id: 'total-alerts-by-description',
           title: 'Alerts by Description',
           description: 'Top alert types by frequency',
-          priority: 6,
+          priority: 7,
           refreshInterval: 5 * 60 * 1000,
           featureFlag: 'dashboard.widgets.alertsByDescription',
         },
@@ -187,7 +204,7 @@ export function Dashboard({
           id: 'activity',
           title: 'Activity',
           description: 'Recent timeline and daily reports',
-          priority: 1,
+          priority: 2,
           refreshInterval: 2 * 60 * 1000, // 2 minutes
           featureFlag: 'dashboard.widgets.activityTimeline',
         },
