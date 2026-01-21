@@ -316,7 +316,7 @@ export function ActivityWidget({ activityLogState, metadata, onViewCase }: Activ
     <Card>
       <Tabs defaultValue="timeline" className="w-full">
         <CardHeader className="pb-3">
-          <div className="flex items-center justify-between min-h-[40px]">
+          <div className="flex items-center justify-between">
             <div>
               <CardTitle>Activity</CardTitle>
               <CardDescription>Recent timeline and daily reports</CardDescription>

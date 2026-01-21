@@ -258,7 +258,7 @@ export function Dashboard({
             <TabsContent value="overview" className="mt-3">
               <WidgetRegistry
                 widgets={overviewWidgets}
-                gridClassName="grid grid-cols-1 lg:grid-cols-2 gap-4 items-stretch"
+                gridClassName="grid grid-cols-1 lg:grid-cols-2 gap-4"
                 enabledFlags={featureFlags}
               />
             </TabsContent>
