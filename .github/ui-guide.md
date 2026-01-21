@@ -19,6 +19,33 @@ React components, shadcn/ui, Tailwind CSS, and accessibility patterns for CMSNex
 | **Data**       | `Table`, `ScrollArea`                                        |
 | **Navigation** | `DropdownMenu`, `Command`                                    |
 
+## Critical Pattern: Bounded ScrollArea
+
+**When using `ScrollArea` for dropdowns or constrained content:**
+
+```tsx
+{
+  /* Parent container: MUST have all three properties */
+}
+<div className="overflow-hidden flex flex-col" style={{ maxHeight: "32rem" }}>
+  {/* ScrollArea: MUST have both classes */}
+  <ScrollArea className="h-full max-h-80">
+    {/* scrollable content */}
+  </ScrollArea>
+</div>;
+```
+
+**Requirements (all mandatory):**
+
+1. **Parent container** needs `overflow-hidden` → clips content at boundaries
+2. **Parent container** must use `flex flex-col` → enables proper height distribution
+3. **Inline `maxHeight`** prevents full-screen expansion → sets upper bound
+4. **ScrollArea** needs both `h-full` → fills parent AND `max-h-*` → viewport constraint
+
+**Why this matters:** Without this pattern, dropdown content will overflow beyond container boundaries instead of scrolling internally.
+
+**Example:** [GlobalSearchDropdown.tsx](../components/app/GlobalSearchDropdown.tsx#L200-L206) (fixed Jan 21, 2026)
+
 ## Component Structure
 
 ```typescript
