@@ -198,7 +198,6 @@ export function CaseIntakeScreen({ caseData, onSave }: CaseIntakeScreenProps) {
     }
 
     setIsSaving(true);
-    const toastId = toast.loading("Saving changes...");
 
     try {
       await onSave({
@@ -212,13 +211,11 @@ export function CaseIntakeScreen({ caseData, onSave }: CaseIntakeScreenProps) {
         }
       });
 
-      toast.success("Case updated successfully", { id: toastId });
       setHasChanges(false);
       setIsEditing(false);
     } catch (error) {
       toast.error(
-        error instanceof Error ? error.message : "Failed to save changes",
-        { id: toastId }
+        error instanceof Error ? error.message : "Failed to save changes"
       );
     } finally {
       setIsSaving(false);

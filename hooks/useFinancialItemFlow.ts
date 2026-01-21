@@ -365,8 +365,6 @@ export function useFinancialItemFlow({
 
         await dataManager.updateItem(selectedCase.id, category, itemId, updatedItem);
         // Don't update cases state as items are separate
-
-        toast.success("Item updated successfully", { duration: 2000 });
       } catch (err) {
         console.error("Failed to update item:", err);
 
@@ -403,8 +401,6 @@ export function useFinancialItemFlow({
 
         await dataManager.addItem(selectedCase.id, category, itemData);
         // Don't update cases state as items are separate
-
-        toast.success("Item created successfully", { duration: 2000 });
       } catch (err) {
         console.error("Failed to create item:", err);
         const errorMsg = "Failed to create item. Please try again.";

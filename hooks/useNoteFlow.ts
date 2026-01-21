@@ -134,7 +134,6 @@ export function useNoteFlow({
       try {
         setError(null);
         await dataManager.updateNote(selectedCase.id, noteId, updatedNote);
-        toast.success("Note updated successfully", { duration: 2000 });
       } catch (err) {
         console.error("[NoteFlow] Failed to update note:", err);
         const errorMsg = "Failed to update note. Please try again.";
@@ -160,7 +159,6 @@ export function useNoteFlow({
       try {
         setError(null);
         await dataManager.addNote(selectedCase.id, noteData);
-        toast.success("Note added successfully", { duration: 2000 });
       } catch (err) {
         console.error("[NoteFlow] Failed to create note:", err);
         const errorMsg = "Failed to create note. Please try again.";
