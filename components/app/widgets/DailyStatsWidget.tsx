@@ -233,7 +233,7 @@ export function DailyStatsWidget({
           </div>
         )}
 
-        <div className="mt-4 border-t border-border/60 pt-3 text-center text-xs text-muted-foreground">
+        <div className="mt-4 border-t border-border/60 pt-3 pb-0 text-center text-xs text-muted-foreground">
           Last checked: {freshnessLabel}
         </div>
       </CardContent>
