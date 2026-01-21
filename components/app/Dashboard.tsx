@@ -29,6 +29,11 @@ const TodaysWorkWidgetLazy = createLazyWidget(
   "TodaysWorkWidget",
 );
 
+const DailyStatsWidgetLazy = createLazyWidget(
+  import("./widgets/DailyStatsWidget"),
+  "DailyStatsWidget",
+);
+
 const AlertsClearedPerDayWidgetLazy = createLazyWidget(
   import("./widgets/AlertsClearedPerDayWidget"),
   "AlertsClearedPerDayWidget",
@@ -100,10 +105,22 @@ export function Dashboard({
     return [
       {
         metadata: {
+          id: 'daily-stats',
+          title: 'Daily Stats',
+          description: "Today's priority, completions, and alert progress",
+          priority: 0,
+          refreshInterval: 5 * 60 * 1000,
+          featureFlag: 'dashboard.widgets.dailyStats',
+        },
+        component: DailyStatsWidgetLazy,
+        props: { cases, alerts, activityLog: activityEntries },
+      },
+      {
+        metadata: {
           id: 'todays-work',
           title: "Today's Work",
           description: 'Priority cases requiring attention',
-          priority: 0,
+          priority: 1,
           refreshInterval: 2 * 60 * 1000,
           featureFlag: 'dashboard.widgets.todaysWork',
         },
@@ -200,6 +217,7 @@ export function Dashboard({
   const overviewWidgets = useMemo(() => widgets.filter(w => 
     w.metadata.id === 'activity' || 
     w.metadata.id === 'todays-work' || 
+    w.metadata.id === 'daily-stats' ||
     w.metadata.id === 'recent-cases' ||
     w.metadata.id === 'pinned-cases'
   ), [widgets]);
