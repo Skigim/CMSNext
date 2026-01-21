@@ -75,7 +75,7 @@ describe("DailyStatsWidget", () => {
     );
 
     expect(screen.getByText("Daily Overview")).toBeInTheDocument();
-    expect(screen.getByText(/4 active/i)).toBeInTheDocument();
+    expect(screen.getAllByText(/4 active/i)).toHaveLength(2);
     expect(screen.getByText("320")).toBeInTheDocument();
     expect(screen.getByText(/processed today/i)).toBeInTheDocument();
     expect(screen.getByText(/alerts cleared/i)).toBeInTheDocument();
@@ -104,7 +104,7 @@ describe("DailyStatsWidget", () => {
       />,
     );
 
-    expect(screen.getByText(/no active cases/i)).toBeInTheDocument();
+    expect(screen.getAllByText(/no active cases/i)).toHaveLength(2);
     expect(screen.getByText(/no active cases to score/i)).toBeInTheDocument();
     expect(screen.getByText(/no updates recorded today/i)).toBeInTheDocument();
   });
