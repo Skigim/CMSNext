@@ -36,6 +36,13 @@ export interface GlobalSearchDropdownProps {
  * - Keyboard navigation (Arrow keys, Enter, Escape)
  * - Scrollable dropdown with max height
  * - Visual indicators for result type
+ * 
+ * Implementation Notes:
+ * - Dropdown uses bounded ScrollArea pattern to prevent overflow
+ * - See: docs/development/ui-patterns/scrollable-dropdown-pattern.md
+ * - Parent container must have overflow-hidden and flex flex-col
+ * - ScrollArea needs both h-full and max-h constraints
+ * - Fixed: Jan 21, 2026 (dropdown content overflow issue)
  */
 export const GlobalSearchDropdown = memo(function GlobalSearchDropdown({
   cases,
@@ -199,10 +206,11 @@ export const GlobalSearchDropdown = memo(function GlobalSearchDropdown({
       {showDropdown && (
         <div
           ref={dropdownRef}
-          className="absolute top-full left-0 right-0 mt-1 z-50 rounded-md border bg-popover shadow-lg"
+          className="absolute top-full left-0 right-0 mt-1 z-50 rounded-md border bg-popover shadow-lg overflow-hidden flex flex-col"
           role="listbox"
+          style={{ maxHeight: '32rem' }}
         >
-          <ScrollArea className="max-h-80">
+          <ScrollArea className="h-full max-h-80">
             {isSearching ? (
               <div className="flex items-center justify-center py-6 text-muted-foreground">
                 <Loader2 className="h-4 w-4 animate-spin mr-2" />

@@ -230,6 +230,15 @@ After making UI changes:
 | Forget loading states            | Show Skeleton during loading             |
 | Ignore theme support             | Use CSS variables, not hard-coded colors |
 
+## UI Patterns
+
+For specific UI patterns and common fixes:
+
+- **Scrollable Dropdowns:** [docs/development/ui-patterns/scrollable-dropdown-pattern.md](../docs/development/ui-patterns/scrollable-dropdown-pattern.md)
+  - Proper ScrollArea usage with bounded content
+  - Prevents dropdown overflow issues
+  - Fixed in GlobalSearchDropdown (Jan 21, 2026)
+
 ## File Locations
 
 | Path                      | Purpose                                |
