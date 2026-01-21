@@ -1,15 +1,18 @@
 # CMSNext - AI Agent Instructions
 
-## Mode-Based Instructions
+## Specialized Guides
 
-This file provides high-level architecture guidance. Specialized instructions are loaded based on task type:
+This file provides high-level architecture guidance. Detailed patterns are in specialized guides:
 
-| Activity        | Instruction File            | Focus                           |
-| --------------- | --------------------------- | ------------------------------- |
-| Code Generation | `copilot-implementation.md` | Services, hooks, data flow      |
-| Code Review     | `copilot-frontend.md`       | UI components, shadcn, Tailwind |
-| Test Generation | `copilot-testing.md`        | Vitest, RTL, mocking patterns   |
-| Auditing        | `agents/AUDIT.md`           | Security, a11y, performance     |
+| Guide                     | Focus                                 |
+| ------------------------- | ------------------------------------- |
+| `implementation-guide.md` | Services, domain, hooks, data flow    |
+| `ui-guide.md`             | React components, shadcn/ui, Tailwind |
+| `testing-guide.md`        | Vitest, RTL, mocking patterns         |
+| `agents/AUDIT.md`         | Security, a11y, performance audits    |
+| `agents/STORAGE.md`       | File System Access API, autosave      |
+| `agents/HOOKS.md`         | Custom hook patterns                  |
+| `agents/TEMPLATES.md`     | Ready-to-use prompt templates         |
 
 ## General Approach
 
@@ -166,7 +169,7 @@ interface StatusConfig {
 
 ## Testing
 
-- See `.github/testing-guidelines.md` for detailed testing standards and patterns. Use these without deviation.
+- See `.github/testing-guide.md` for detailed testing standards and patterns. Use these without deviation.
 
 ### Stack
 
@@ -199,13 +202,11 @@ interface StatusConfig {
 Each week follows a consistent 3-phase pattern:
 
 1. **Prep Work** (Start of week)
-
    - Fix bugs discovered from previous week
    - Run audits (performance, accessibility)
    - Plan feature implementation approach
 
 2. **Features** (Mid-week)
-
    - Implement 3-4 new features
    - Each feature includes tests
    - Commit and push frequently
@@ -218,7 +219,7 @@ Each week follows a consistent 3-phase pattern:
 ### Monthly Roadmap
 
 - **Template:** `docs/development/ROADMAP_TEMPLATE.md`
-- **Current:** `docs/development/ROADMAP_DEC_2025.md`
+- **Current:** `docs/development/ROADMAP_JAN_2026.md`
 - **Archive:** `docs/development/archive/[YEAR]/`
 
 Each month targets ~12-20 features across 3-4 active weeks.

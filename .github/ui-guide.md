@@ -1,39 +1,25 @@
-# Agent Instructions: UI & Components
+````markdown
+# UI & Component Guide
 
-## Overview
+React components, shadcn/ui, Tailwind CSS, and accessibility patterns for CMSNext.
 
-The UI layer uses React with TypeScript. Components are purely presentational—they call hooks for state and actions, never services directly. All components use shadcn/ui primitives styled with Tailwind CSS v4.
+## Component Library
 
-## Key Files
+- **Primary:** shadcn/ui primitives from `components/ui/*`
+- **Styling:** Tailwind v4 tokens only - no divergent inline styles
+- **Performance:** Memoize expensive components and selectors
 
-| File                      | Purpose                                           |
-| ------------------------- | ------------------------------------------------- |
-| `App.tsx`                 | Root component, composes providers and routing    |
-| `components/ui/*.tsx`     | shadcn/ui primitives (Button, Card, Dialog, etc.) |
-| `components/app/*.tsx`    | Application-specific composed components          |
-| `components/case/*.tsx`   | Case-related components                           |
-| `components/modals/*.tsx` | Modal dialogs                                     |
-| `components/forms/*.tsx`  | Form components                                   |
-| `contexts/*.tsx`          | React context providers                           |
-| `styles/globals.css`      | Tailwind base styles and CSS variables            |
+## Available Components
 
-## Architecture
+| Category       | Components                                                   |
+| -------------- | ------------------------------------------------------------ |
+| **Layout**     | `Card`, `Dialog`, `Drawer`, `Sheet`, `Tabs`, `Separator`     |
+| **Forms**      | `Button`, `Input`, `Select`, `Checkbox`, `Label`, `Textarea` |
+| **Feedback**   | `Badge`, `Alert`, `Skeleton`                                 |
+| **Data**       | `Table`, `ScrollArea`                                        |
+| **Navigation** | `DropdownMenu`, `Command`                                    |
 
-```
-App.tsx
-├── Providers (Theme, FileStorage, DataManager, etc.)
-│   └── Main Application
-│       ├── Header / Navigation
-│       ├── Case List / Dashboard
-│       ├── Case Detail Views
-│       └── Modals (Dialog, Sheet, etc.)
-```
-
-**Components receive data through props and hooks. They never import services directly.**
-
-## Patterns
-
-### Component Structure
+## Component Structure
 
 ```typescript
 /**
@@ -71,8 +57,15 @@ export const MyComponent: FC<MyComponentProps> = ({ caseId, onAction }) => {
   );
 };
 ```
+````
 
-### Dialog Pattern
+### Rules
+
+- Components are **UI only** - call hooks, never services directly
+- Keep components focused and composable
+- Extract complex logic to custom hooks
+
+## Dialog Pattern
 
 ```tsx
 import {
@@ -112,7 +105,6 @@ export const EditDialog: FC<EditDialogProps> = ({
           <DialogDescription>Make changes to your item here.</DialogDescription>
         </DialogHeader>
 
-        {/* Form content */}
         <div className="space-y-4">
           <Input
             value={formData.name}
@@ -132,7 +124,7 @@ export const EditDialog: FC<EditDialogProps> = ({
 };
 ```
 
-### Notification Pattern (Sonner)
+## Notification Pattern (Sonner)
 
 ```typescript
 import { toast } from "sonner";
@@ -153,17 +145,10 @@ const handleSave = async () => {
 };
 ```
 
-## shadcn/ui Components
+### Never Use
 
-Available in `components/ui/*`:
-
-| Category       | Components                                                   |
-| -------------- | ------------------------------------------------------------ |
-| **Layout**     | `Card`, `Dialog`, `Drawer`, `Sheet`, `Tabs`, `Separator`     |
-| **Forms**      | `Button`, `Input`, `Select`, `Checkbox`, `Label`, `Textarea` |
-| **Feedback**   | `Badge`, `Alert`, `Skeleton`                                 |
-| **Data**       | `Table`, `ScrollArea`                                        |
-| **Navigation** | `DropdownMenu`, `Command`                                    |
+- ❌ `alert()`, `confirm()`, or browser dialogs
+- ❌ Custom modal implementations (use shadcn Dialog)
 
 ## Theme System
 
@@ -178,7 +163,7 @@ Available in `components/ui/*`:
 
 Access via `useTheme()` from `ThemeContext`.
 
-### Color Slots
+## Color Slots
 
 10 semantic colors for status customization:
 
@@ -198,13 +183,28 @@ type ColorSlot =
 
 CSS variables per slot: `--color-slot-{name}`, `--color-slot-{name}-bg`, `--color-slot-{name}-border`
 
+## Tailwind Patterns
+
+```tsx
+// Use cn() for conditional classes
+import { cn } from "@/lib/utils";
+
+<div
+  className={cn(
+    "p-4 rounded-lg",
+    isActive && "bg-primary text-primary-foreground",
+    isDisabled && "opacity-50 cursor-not-allowed",
+  )}
+/>;
+```
+
 ## Accessibility
 
 - All dialogs must have `DialogTitle` and `DialogDescription`
 - Use semantic HTML elements via shadcn components
 - Maintain focus management in modals
-- Test keyboard navigation paths
-- Run axe checks for new components
+- Verify keyboard navigation paths
+- Test with jest-axe (`toHaveNoViolations()`)
 
 ## Verification
 
@@ -229,3 +229,20 @@ After making UI changes:
 | Skip accessibility               | Include DialogDescription, proper ARIA   |
 | Forget loading states            | Show Skeleton during loading             |
 | Ignore theme support             | Use CSS variables, not hard-coded colors |
+
+## File Locations
+
+| Path                      | Purpose                                |
+| ------------------------- | -------------------------------------- |
+| `App.tsx`                 | Root component, provider composition   |
+| `components/ui/*.tsx`     | shadcn/ui primitives                   |
+| `components/app/*.tsx`    | Application-specific components        |
+| `components/case/*.tsx`   | Case-related components                |
+| `components/modals/*.tsx` | Modal dialogs                          |
+| `components/forms/*.tsx`  | Form components                        |
+| `contexts/*.tsx`          | React context providers                |
+| `styles/globals.css`      | Tailwind base styles and CSS variables |
+
+```
+
+```

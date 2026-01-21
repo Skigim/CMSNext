@@ -1,27 +1,26 @@
-# Agent Instructions: Testing
+````markdown
+# Testing Guide
 
-## Overview
+Comprehensive testing standards for CMSNext. This consolidates patterns from copilot-testing.md, agents/TESTING.md, and testing-guidelines.md.
 
-The project uses Vitest for unit testing with React Testing Library for components. Tests prioritize edge cases and failure scenarios over happy paths. All tests must be strictly typed—no `any` or lazy assertions.
+## Stack
 
-## Key Files
+| Tool                        | Purpose                          |
+| --------------------------- | -------------------------------- |
+| Vitest                      | Test runner (`vitest.config.ts`) |
+| React Testing Library       | Component testing                |
+| `@testing-library/jest-dom` | DOM matchers                     |
+| jest-axe                    | Accessibility testing            |
+| `__tests__/setup.test.tsx`  | Global test setup                |
 
-| File                              | Purpose                     |
-| --------------------------------- | --------------------------- |
-| `vitest.config.ts`                | Vitest configuration        |
-| `__tests__/setup.test.tsx`        | Global test setup, matchers |
-| `__tests__/services/*.test.ts`    | Service unit tests          |
-| `__tests__/hooks/*.test.ts`       | Hook unit tests             |
-| `__tests__/components/*.test.tsx` | Component tests             |
-| `__tests__/__mocks__/*.ts`        | Shared mock implementations |
-
-## Test Commands
+## Commands
 
 ```bash
-npm test           # Watch mode
-npm run test:run   # Single run (CI)
-npm run test:coverage  # With coverage report
+npm test              # Watch mode
+npm run test:run      # Single run (CI)
+npm run test:coverage # With coverage report
 ```
+````
 
 ## Core Constraints
 
@@ -56,9 +55,23 @@ const mockService = vi.mocked(CaseService);
 - **Isolation:** Tests must not rely on external state or execution order
 - **Mocking:** Explicitly mock all external dependencies
 
-## Patterns
+## AAA Pattern
 
-### Test File Structure (AAA Pattern)
+All tests follow Arrange-Act-Assert with comments:
+
+```typescript
+it("should throw an error when user is not found", async () => {
+  // ARRANGE
+  const mockRepo = vi.mocked(UserRepository);
+  mockRepo.findById.mockResolvedValue(null);
+  const service = new UserService(mockRepo);
+
+  // ACT & ASSERT
+  await expect(service.getUser("999")).rejects.toThrow("User not found");
+});
+```
+
+## Service Testing
 
 ```typescript
 import { describe, it, expect, beforeEach, vi } from "vitest";
@@ -100,14 +113,14 @@ describe("CaseService", () => {
 
       // ACT & ASSERT
       await expect(service.create({ caseNumber: "123" })).rejects.toThrow(
-        "Duplicate case number"
+        "Duplicate case number",
       );
     });
   });
 });
 ```
 
-### Component Testing
+## Component Testing
 
 ```typescript
 import { render, screen } from "@testing-library/react";
@@ -153,7 +166,7 @@ describe("MyComponent", () => {
 });
 ```
 
-### Hook Testing
+## Hook Testing
 
 ```typescript
 import { renderHook, act, waitFor } from "@testing-library/react";
@@ -196,7 +209,7 @@ describe("useCaseManagement", () => {
 });
 ```
 
-### Mocking Services
+## Mocking Services
 
 ```typescript
 // __tests__/__mocks__/mockDataManager.ts
@@ -257,3 +270,17 @@ After writing tests:
 | Forget cleanup              | Use `beforeEach` and `vi.clearAllMocks()` |
 | Skip accessibility          | Include axe check for components          |
 | Use `fireEvent`             | Use `userEvent` for interactions          |
+
+## File Locations
+
+| Path                              | Purpose                     |
+| --------------------------------- | --------------------------- |
+| `__tests__/services/*.test.ts`    | Service unit tests          |
+| `__tests__/hooks/*.test.ts`       | Hook unit tests             |
+| `__tests__/components/*.test.tsx` | Component tests             |
+| `__tests__/__mocks__/*.ts`        | Shared mock implementations |
+| `__tests__/setup.test.tsx`        | Global test setup           |
+
+```
+
+```

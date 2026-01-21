@@ -7,33 +7,28 @@ This directory contains specialized instruction files for delegating tasks to AI
 When dispatching a subagent, reference the relevant instruction file:
 
 ```
-"Read .github/agents/SERVICES.md for context, then [task description]..."
+"Read .github/agents/STORAGE.md for context, then [task description]..."
 ```
 
 ## Available Agents
 
-| File                         | Domain           | Use For                                       |
-| ---------------------------- | ---------------- | --------------------------------------------- |
-| [NextAgent.md](NextAgent.md) | General          | Full project context, architecture overview   |
-| [DOMAIN.md](DOMAIN.md)       | Domain layer     | Pure business logic, no I/O                   |
-| [SERVICES.md](SERVICES.md)   | Data layer       | DataManager, services, CRUD operations        |
-| [STORAGE.md](STORAGE.md)     | Storage layer    | File System Access API, autosave, persistence |
-| [UI.md](UI.md)               | React components | shadcn/ui, Tailwind, accessibility            |
-| [HOOKS.md](HOOKS.md)         | Custom hooks     | State management, service integration         |
-| [TESTING.md](TESTING.md)     | Unit tests       | Vitest, RTL, mocking patterns                 |
-| [AUDIT.md](AUDIT.md)         | Quality          | Security, a11y, performance audits            |
-| [TEMPLATES.md](TEMPLATES.md) | Delegation       | Ready-to-use prompt templates                 |
+| File                           | Domain        | Use For                                       |
+| ------------------------------ | ------------- | --------------------------------------------- |
+| [STORAGE.md](STORAGE.md)       | Storage layer | File System Access API, autosave, persistence |
+| [HOOKS.md](HOOKS.md)           | Custom hooks  | State management, service integration         |
+| [AUDIT.md](AUDIT.md)           | Quality       | Security, a11y, performance audits            |
+| [TEMPLATES.md](TEMPLATES.md)   | Delegation    | Ready-to-use prompt templates                 |
+| [MEMORIES.md](MEMORIES.md)     | Context       | Repository-level AI memories                  |
 
-## Instruction File Structure
+## Consolidated Guides
 
-Each instruction file follows this format:
+For major development areas, see the consolidated guides in `.github/`:
 
-1. **Overview** - What this area does and its responsibilities
-2. **Key Files** - Important files and their purposes
-3. **Architecture** - How components fit together
-4. **Patterns** - Code patterns to follow with examples
-5. **Verification** - How to verify changes work correctly
-6. **Common Pitfalls** - What to avoid
+| Guide                     | Focus                                |
+| ------------------------- | ------------------------------------ |
+| `implementation-guide.md` | Services, domain, hooks, data flow   |
+| `ui-guide.md`             | React components, shadcn/ui, Tailwind|
+| `testing-guide.md`        | Vitest, RTL, mocking patterns        |
 
 ## Quick Reference
 
