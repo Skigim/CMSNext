@@ -5,9 +5,10 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
 import { FinancialsGridView } from "./FinancialsGridView";
 import { NotesPopover } from "./NotesPopover";
 import { AlertsPopover } from "./AlertsPopover";
-import { CaseIntakeScreen } from "./CaseIntakeScreen";
+import { CaseDetailsView } from "./CaseDetailsView";
+import { CaseEditModal } from "../modals/CaseEditModal";
 import type { StoredCase, NewPersonData, NewCaseRecordData } from "../../types/case";
-import { ArrowLeft, Trash2, Wallet, FileText, ClipboardCheck, Star, StarOff, Phone, Mail, FileSignature, Pin, PinOff } from "lucide-react";
+import { ArrowLeft, Trash2, Wallet, FileText, ClipboardCheck, Star, StarOff, Phone, Mail, FileSignature, Pin, PinOff, Pencil } from "lucide-react";
 import { withDataErrorBoundary } from "../error/ErrorBoundaryHOC";
 import { CaseStatusMenu } from "./CaseStatusMenu";
 import { cn, interactiveHoverClasses } from "../ui/utils";
@@ -83,6 +84,7 @@ export function CaseDetails({
   const [summaryModalOpen, setSummaryModalOpen] = useState(false);
   const [vrModalOpen, setVrModalOpen] = useState(false);
   const [narrativeModalOpen, setNarrativeModalOpen] = useState(false);
+  const [editModalOpen, setEditModalOpen] = useState(false);
 
   return (
     <div className="space-y-6" data-papercut-context="CaseDetails">
@@ -311,10 +313,22 @@ export function CaseDetails({
             </TabsList>
           </div>
 
-          {/* Details Tab - 3-Column Inline Editing */}
+          {/* Details Tab - Read-only view with Edit button */}
           <TabsContent value="details" className="mt-0">
             <div className="p-4">
-              <CaseIntakeScreen caseData={caseData} onSave={onSave} />
+              <div className="flex items-center justify-between mb-6">
+                <h3 className="text-lg font-semibold">Case Information</h3>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setEditModalOpen(true)}
+                  className={interactiveHoverClasses}
+                >
+                  <Pencil className="w-4 h-4 mr-2" />
+                  Edit Case
+                </Button>
+              </div>
+              <CaseDetailsView caseData={caseData} />
             </div>
           </TabsContent>
 
@@ -347,6 +361,13 @@ export function CaseDetails({
         open={narrativeModalOpen}
         onOpenChange={setNarrativeModalOpen}
         storedCase={caseData}
+      />
+
+      <CaseEditModal
+        isOpen={editModalOpen}
+        onClose={() => setEditModalOpen(false)}
+        caseData={caseData}
+        onSave={onSave}
       />
     </div>
   );
