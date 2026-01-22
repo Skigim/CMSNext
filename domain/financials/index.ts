@@ -43,7 +43,6 @@ export {
 } from "./history";
 
 export {
-  type VerificationStatus,
   type VerificationStatusInfo,
   getVerificationStatusDotColor,
   getVerificationStatusInfo,

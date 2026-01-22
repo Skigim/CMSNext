@@ -10,20 +10,6 @@
 import type { FileStorageService, NormalizedFileData, StoredCase } from './services/FileStorageService';
 
 /**
- * Result of reading and verifying case data.
- * 
- * @interface VerifiedCaseResult
- */
-export interface VerifiedCaseResult {
-  /** The full normalized file data */
-  data: NormalizedFileData;
-  /** Index of the target case in the cases array */
-  caseIndex: number;
-  /** The target case object */
-  targetCase: StoredCase;
-}
-
-/**
  * Result of reading and verifying case exists (without index).
  * 
  * Use this when you only need to confirm the case exists but

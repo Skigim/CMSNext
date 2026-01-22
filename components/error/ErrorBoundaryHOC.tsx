@@ -66,31 +66,6 @@ export function withErrorBoundary<P extends object>(
   return WrappedComponent;
 }
 
-/**
- * React Hook for handling async errors that aren't caught by error boundaries
- * 
- * @param onError - Optional custom error handler
- * @returns Error handling function
- */
-export function useAsyncError(onError?: (error: Error) => void) {
-  const [, setError] = React.useState<Error | null>(null);
-
-  const handleAsyncError = React.useCallback((error: Error) => {
-    console.error('Async error caught:', error);
-    
-    if (onError) {
-      onError(error);
-    } else {
-      // Force error boundary to catch this error by updating state
-      setError(() => {
-        throw error;
-      });
-    }
-  }, [onError]);
-
-  return handleAsyncError;
-}
-
 // Pre-configured HOCs for common use cases
 export const withFileSystemErrorBoundary = <P extends object>(Component: ComponentType<P>) =>
   withErrorBoundary(Component, {

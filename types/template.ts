@@ -435,25 +435,6 @@ export interface RenderedTemplate {
 }
 
 // =============================================================================
-// Utility Functions
-// =============================================================================
-
-/**
- * Get placeholder fields available for a specific template category.
- */
-export function getPlaceholderFieldsForCategory(
-  category: TemplateCategory
-): Record<string, PlaceholderField> {
-  const result: Record<string, PlaceholderField> = {};
-  for (const [key, field] of Object.entries(TEMPLATE_PLACEHOLDER_FIELDS)) {
-    if (field.availableFor.includes(category)) {
-      result[key] = field;
-    }
-  }
-  return result;
-}
-
-// =============================================================================
 // Default Summary Section Templates
 // =============================================================================
 

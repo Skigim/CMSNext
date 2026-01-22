@@ -39,20 +39,6 @@ interface RenderProfileRecord {
   meta?: MeasurementDetail;
 }
 
-interface StorageHealthMetrics {
-  successCount: number;
-  failureCount: number;
-  totalOperations: number;
-  successRate: number;
-  totalLatencyMs: number;
-  averageLatencyMs: number;
-  minLatencyMs: number;
-  maxLatencyMs: number;
-  consecutiveFailures: number;
-  lastOperationTime: number;
-  operationTypes: Record<string, number>;
-}
-
 interface ActiveMark {
   markId: string;
   fallbackStart: number;
@@ -221,4 +207,4 @@ export function clearRenderProfiles() {
   renderProfileLog.length = 0;
 }
 
-export type { MeasurementDetail, MeasurementRecord, RenderProfileRecord, StorageHealthMetrics };
+export type { MeasurementDetail, MeasurementRecord, RenderProfileRecord };

@@ -6,8 +6,6 @@
  * @module domain/financials/verification
  */
 
-export type VerificationStatus = string;
-
 export interface VerificationStatusInfo {
   text: string;
   colorClass: string;

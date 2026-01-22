@@ -43,16 +43,6 @@ interface PerformanceMarkerPayload {
   metadata?: Record<string, unknown>;
 }
 
-interface StorageHealthMetricPayload {
-  successRate: number;
-  totalOperations: number;
-  failedOperations: number;
-  averageLatencyMs: number;
-  consecutiveFailures: number;
-  timestamp: number;
-  sessionId: string;
-}
-
 /**
  * Record a storage sync event with telemetry metadata.
  * Logs success/failure rates, operation type, duration, and data size.
@@ -106,5 +96,4 @@ export type {
   StorageSyncEventPayload,
   AutosaveStateTransitionPayload,
   PerformanceMarkerPayload,
-  StorageHealthMetricPayload,
 };
