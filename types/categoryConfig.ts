@@ -121,6 +121,8 @@ export interface PartialCategoryConfigInput {
   noteCategories?: string[];
   verificationStatuses?: string[];
   summaryTemplate?: SummaryTemplateConfig;
+  /** Case archival settings */
+  archivalSettings?: ArchivalSettings;
 }
 
 const DEFAULT_CASE_TYPES = [
@@ -464,6 +466,9 @@ export const mergeCategoryConfig = (
           defaultSections: { ...defaultCategoryConfig.summaryTemplate.defaultSections },
           sectionTemplates: { ...defaultCategoryConfig.summaryTemplate.sectionTemplates },
         },
+    archivalSettings: config.archivalSettings
+      ? { ...config.archivalSettings }
+      : undefined,
   };
 };
 
@@ -486,6 +491,9 @@ export const cloneCategoryConfig = (config?: CategoryConfig | null): CategoryCon
       defaultSections: { ...source.summaryTemplate.defaultSections },
       sectionTemplates: { ...(source.summaryTemplate.sectionTemplates || {}) },
     },
+    archivalSettings: source.archivalSettings
+      ? { ...source.archivalSettings }
+      : undefined,
   };
 };
 
