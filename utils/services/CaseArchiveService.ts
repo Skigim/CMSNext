@@ -147,20 +147,25 @@ export class CaseArchiveService {
    * 
    * Cases become eligible based on archivalSettings:
    * - Age exceeds thresholdMonths (based on updatedAt)
-   * - If archiveClosedOnly is true, status must be "Closed" or "Archived"
+   * - If archiveClosedOnly is true, status must be marked as "completed" in config
    * - Not already marked as pendingArchival
    * 
    * @param settings - Archival settings (threshold, closedOnly flag)
+   * @param completedStatuses - Set of status names that count as completed
    * @returns Result with count of newly marked cases
    * 
    * @example
-   * const result = await archiveService.refreshArchivalQueue({ thresholdMonths: 12, archiveClosedOnly: true });
+   * const result = await archiveService.refreshArchivalQueue(
+   *   { thresholdMonths: 12, archiveClosedOnly: true },
+   *   new Set(['Closed', 'Archived'])
+   * );
    * if (result.newlyMarked > 0) {
    *   toast.info(`${result.newlyMarked} cases pending archival review`);
    * }
    */
   async refreshArchivalQueue(
-    settings: ArchivalSettings = DEFAULT_ARCHIVAL_SETTINGS
+    settings: ArchivalSettings = DEFAULT_ARCHIVAL_SETTINGS,
+    completedStatuses: Set<string> = new Set()
   ): Promise<RefreshQueueResult> {
     const currentData = await this.fileStorage.readFileData();
     if (!currentData) {
@@ -168,7 +173,10 @@ export class CaseArchiveService {
     }
 
     // Find cases eligible for archival
-    const eligibility = findArchivalEligibleCases(currentData.cases, settings);
+    const eligibility = findArchivalEligibleCases(currentData.cases, {
+      settings,
+      completedStatuses,
+    });
 
     if (eligibility.eligibleCaseIds.length === 0) {
       // No new cases to mark, but count existing pending

@@ -1404,7 +1404,7 @@ export class DataManager {
    * 
    * Cases become eligible based on archivalSettings:
    * - Age exceeds thresholdMonths (based on updatedAt)
-   * - If archiveClosedOnly is true, status must be "Closed" or "Archived"
+   * - If archiveClosedOnly is true, status must be marked as "completed" in config
    * - Not already marked as pendingArchival
    * 
    * Call this on app load to auto-identify cases for archival review.
@@ -1419,12 +1419,23 @@ export class DataManager {
    * }
    */
   async refreshArchivalQueue(settings?: ArchivalSettings): Promise<RefreshQueueResult> {
-    // Get settings from category config if not provided
+    // Get settings and completed statuses from category config
+    const config = await this.categoryConfig.getCategoryConfig();
+    
     if (!settings) {
-      const config = await this.categoryConfig.getCategoryConfig();
       settings = config?.archivalSettings ?? DEFAULT_ARCHIVAL_SETTINGS;
     }
-    return this.archive.refreshArchivalQueue(settings);
+    
+    // Build completed statuses set from config
+    const completedStatuses = config 
+      ? new Set(
+          config.caseStatuses
+            .filter(s => s.countsAsCompleted)
+            .map(s => s.name)
+        )
+      : new Set<string>();
+    
+    return this.archive.refreshArchivalQueue(settings, completedStatuses);
   }
 
   /**

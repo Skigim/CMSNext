@@ -132,6 +132,8 @@ describe("findArchivalEligibleCases", () => {
     thresholdMonths: 12,
     archiveClosedOnly: true,
   };
+  
+  const completedStatuses = new Set(["Closed", "Archived"]);
 
   it("should find cases older than threshold with closed status", () => {
     const oldDate = new Date();
@@ -143,7 +145,7 @@ describe("findArchivalEligibleCases", () => {
       createTestCase({ id: "old-active", updatedAt: oldDate.toISOString(), status: "Active" }),
     ];
     
-    const result = findArchivalEligibleCases(cases, settings);
+    const result = findArchivalEligibleCases(cases, { settings, completedStatuses });
     
     expect(result.eligibleCaseIds).toHaveLength(1);
     expect(result.eligibleCaseIds).toContain("old-closed");
@@ -159,7 +161,10 @@ describe("findArchivalEligibleCases", () => {
       createTestCase({ id: "old-active", updatedAt: oldDate.toISOString(), status: "Active" }),
     ];
     
-    const result = findArchivalEligibleCases(cases, { ...settings, archiveClosedOnly: false });
+    const result = findArchivalEligibleCases(cases, { 
+      settings: { ...settings, archiveClosedOnly: false },
+      completedStatuses, 
+    });
     
     expect(result.eligibleCaseIds).toHaveLength(2);
   });
@@ -173,7 +178,7 @@ describe("findArchivalEligibleCases", () => {
       createTestCase({ id: "not-pending", updatedAt: oldDate.toISOString(), status: "Closed" }),
     ];
     
-    const result = findArchivalEligibleCases(cases, settings);
+    const result = findArchivalEligibleCases(cases, { settings, completedStatuses });
     
     expect(result.eligibleCaseIds).toHaveLength(1);
     expect(result.eligibleCaseIds).toContain("not-pending");
@@ -187,10 +192,46 @@ describe("findArchivalEligibleCases", () => {
       createTestCase({ id: "archived-case", updatedAt: oldDate.toISOString(), status: "Archived" }),
     ];
     
-    const result = findArchivalEligibleCases(cases, settings);
+    const result = findArchivalEligibleCases(cases, { settings, completedStatuses });
     
     expect(result.eligibleCaseIds).toHaveLength(1);
     expect(result.eligibleCaseIds).toContain("archived-case");
+  });
+  
+  it("should use custom completion statuses from config", () => {
+    const oldDate = new Date();
+    oldDate.setMonth(oldDate.getMonth() - 18);
+    
+    const cases: StoredCase[] = [
+      createTestCase({ id: "resolved-case", updatedAt: oldDate.toISOString(), status: "Resolved" as StoredCase["status"] }),
+      createTestCase({ id: "closed-case", updatedAt: oldDate.toISOString(), status: "Closed" }),
+    ];
+    
+    // Custom config where "Resolved" counts as completed but "Closed" does not
+    const customCompletedStatuses = new Set(["Resolved"]);
+    
+    const result = findArchivalEligibleCases(cases, { 
+      settings, 
+      completedStatuses: customCompletedStatuses,
+    });
+    
+    expect(result.eligibleCaseIds).toHaveLength(1);
+    expect(result.eligibleCaseIds).toContain("resolved-case");
+  });
+  
+  it("should fall back to all statuses when no completedStatuses provided", () => {
+    const oldDate = new Date();
+    oldDate.setMonth(oldDate.getMonth() - 18);
+    
+    const cases: StoredCase[] = [
+      createTestCase({ id: "any-status-case", updatedAt: oldDate.toISOString(), status: "Custom Status" as StoredCase["status"] }),
+    ];
+    
+    // No completedStatuses provided - should match any status when archiveClosedOnly is true
+    // but because we have no completedStatuses, nothing matches
+    const result = findArchivalEligibleCases(cases, { settings });
+    
+    expect(result.eligibleCaseIds).toHaveLength(0);
   });
 });
 

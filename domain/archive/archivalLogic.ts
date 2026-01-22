@@ -6,7 +6,7 @@
  * @module domain/archive/archivalLogic
  */
 
-import type { StoredCase, StoredFinancialItem, StoredNote, CaseStatus } from "../../types/case";
+import type { StoredCase, StoredFinancialItem, StoredNote } from "../../types/case";
 import type { CaseArchiveData, ArchivalSettings } from "../../types/archive";
 import { ARCHIVE_VERSION } from "../../types/archive";
 
@@ -35,9 +35,20 @@ export interface RelatedDataCollection {
 }
 
 /**
- * Statuses that are eligible for archival when archiveClosedOnly is true.
+ * Options for finding archival-eligible cases.
  */
-const ARCHIVABLE_STATUSES: CaseStatus[] = ["Closed", "Archived"];
+export interface FindArchivalEligibleOptions {
+  /** Archival settings (threshold, closedOnly flag) */
+  settings: ArchivalSettings;
+  /** 
+   * Set of status names that count as "completed" (for closedOnly filtering).
+   * Derived from StatusConfig.countsAsCompleted in category config.
+   * If not provided or empty and archiveClosedOnly is true, no cases will match.
+   */
+  completedStatuses?: Set<string>;
+  /** Date to calculate cutoff from (defaults to now) */
+  referenceDate?: Date;
+}
 
 /**
  * Calculate the cutoff date based on threshold months.
@@ -65,23 +76,30 @@ export function calculateCutoffDate(
  * 
  * A case is eligible if:
  * 1. Its updatedAt timestamp is before the cutoff date (based on thresholdMonths)
- * 2. If archiveClosedOnly is true, status must be "Closed" or "Archived"
+ * 2. If archiveClosedOnly is true, status must be in the completedStatuses set
+ *    (derived from StatusConfig.countsAsCompleted in category config)
  * 3. It's not already pending archival
  * 
  * @param cases - All cases to evaluate
- * @param settings - Archival settings (threshold, closedOnly flag)
- * @param referenceDate - Date to calculate cutoff from (defaults to now)
+ * @param options - Options including settings, completedStatuses, and referenceDate
  * @returns Result containing eligible cases and metadata
  * 
  * @example
- * const result = findArchivalEligibleCases(cases, { thresholdMonths: 12, archiveClosedOnly: true });
+ * // With completed statuses from config
+ * const completedStatuses = new Set(
+ *   statusConfigs.filter(s => s.countsAsCompleted).map(s => s.name)
+ * );
+ * const result = findArchivalEligibleCases(cases, {
+ *   settings: { thresholdMonths: 12, archiveClosedOnly: true },
+ *   completedStatuses,
+ * });
  * console.log(`${result.eligibleCases.length} cases eligible for archival`);
  */
 export function findArchivalEligibleCases(
   cases: StoredCase[],
-  settings: ArchivalSettings,
-  referenceDate: Date = new Date()
+  options: FindArchivalEligibleOptions
 ): ArchivalEligibilityResult {
+  const { settings, completedStatuses, referenceDate = new Date() } = options;
   const cutoffDate = calculateCutoffDate(settings.thresholdMonths, referenceDate);
   const cutoffTime = cutoffDate.getTime();
   
@@ -94,14 +112,19 @@ export function findArchivalEligibleCases(
       continue;
     }
     
-    // Check status eligibility
+    // Check status eligibility using completedStatuses from config
     if (settings.archiveClosedOnly) {
-      if (!ARCHIVABLE_STATUSES.includes(caseItem.status)) {
+      // If no completed statuses defined, nothing matches
+      if (!completedStatuses || completedStatuses.size === 0) {
+        continue;
+      }
+      if (!completedStatuses.has(caseItem.status)) {
         continue;
       }
     }
     
-    // Check age eligibility
+    // Check age eligibility based on updatedAt timestamp
+    // updatedAt is updated whenever the case record is saved (status change, edits, etc.)
     const updatedTime = new Date(caseItem.updatedAt).getTime();
     if (updatedTime >= cutoffTime) {
       continue;

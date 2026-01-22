@@ -21,5 +21,6 @@ export {
   calculateCutoffDate,
   getCasesInArchivalQueue,
   type ArchivalEligibilityResult,
+  type FindArchivalEligibleOptions,
   type RelatedDataCollection,
 } from "./archivalLogic";
