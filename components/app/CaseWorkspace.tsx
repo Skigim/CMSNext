@@ -31,6 +31,9 @@ interface CaseWorkspaceViewHandlers {
   handleDeleteCases: (caseIds: string[]) => Promise<number>;
   handleUpdateCasesStatus: (caseIds: string[], status: StoredCase["status"]) => Promise<number>;
   handleUpdateCasesPriority: (caseIds: string[], priority: boolean) => Promise<number>;
+  handleApproveArchival?: (caseIds: string[]) => Promise<unknown>;
+  handleCancelArchival?: (caseIds: string[]) => Promise<number>;
+  isArchiving?: boolean;
 }
 
 interface CaseWorkspaceFinancialFlow {
@@ -127,6 +130,9 @@ export const CaseWorkspace = memo(function CaseWorkspace({
         handleDeleteCases={viewHandlers.handleDeleteCases}
         handleUpdateCasesStatus={viewHandlers.handleUpdateCasesStatus}
         handleUpdateCasesPriority={viewHandlers.handleUpdateCasesPriority}
+        handleApproveArchival={viewHandlers.handleApproveArchival}
+        handleCancelArchival={viewHandlers.handleCancelArchival}
+        isArchiving={viewHandlers.isArchiving}
         handleUpdateCaseStatus={onUpdateCaseStatus}
         handleResolveAlert={onResolveAlert}
         onAlertsCsvImported={onAlertsCsvImported}

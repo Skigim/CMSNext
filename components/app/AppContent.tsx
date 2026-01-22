@@ -40,6 +40,7 @@ export const AppContent = memo(function AppContent() {
     updateCaseStatus,
     updateCasesStatus,
     updateCasesPriority,
+    archival,
     setCases,
     setError,
     setHasLoadedData,
@@ -303,6 +304,9 @@ export const AppContent = memo(function AppContent() {
       handleDeleteCases: deleteCases,
       handleUpdateCasesStatus: updateCasesStatus,
       handleUpdateCasesPriority: updateCasesPriority,
+      handleApproveArchival: archival.approveArchival,
+      handleCancelArchival: archival.cancelArchival,
+      isArchiving: archival.isLoading,
     }),
     [
       handleBackToList,
@@ -314,6 +318,9 @@ export const AppContent = memo(function AppContent() {
       handleNewCase,
       handleSaveCase,
       handleViewCase,
+      archival.approveArchival,
+      archival.cancelArchival,
+      archival.isLoading,
     ],
   );
 

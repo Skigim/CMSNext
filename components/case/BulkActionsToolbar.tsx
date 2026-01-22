@@ -21,7 +21,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { ChevronDown, Trash2, X } from "lucide-react";
+import { Archive, ChevronDown, Trash2, X, XCircle } from "lucide-react";
 import type { CaseStatus } from "@/types/case";
 import { useCategoryConfig } from "@/contexts/CategoryConfigContext";
 import { getColorSlotBadgeStyle } from "@/types/colorSlots";
@@ -36,6 +36,14 @@ export interface BulkActionsToolbarProps {
   isUpdating?: boolean;
   /** Priority state of selected cases: true if all are priority, false if all are not priority, null if mixed */
   selectedPriorityState?: boolean | null;
+  /** Show archival actions (for archival-review segment) */
+  showArchivalActions?: boolean;
+  /** Handler for approving archival of selected cases */
+  onApproveArchival?: () => Promise<void>;
+  /** Handler for cancelling archival of selected cases */
+  onCancelArchival?: () => Promise<void>;
+  /** Whether archival operation is in progress */
+  isArchiving?: boolean;
 }
 
 export const BulkActionsToolbar = memo(function BulkActionsToolbar({
@@ -47,9 +55,14 @@ export const BulkActionsToolbar = memo(function BulkActionsToolbar({
   isDeleting = false,
   isUpdating = false,
   selectedPriorityState = null,
+  showArchivalActions = false,
+  onApproveArchival,
+  onCancelArchival,
+  isArchiving = false,
 }: BulkActionsToolbarProps) {
   const { config } = useCategoryConfig();
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [showArchiveDialog, setShowArchiveDialog] = useState(false);
 
   const statusPalette = useMemo(() => {
     const map = new Map<string, CSSProperties>();
@@ -80,6 +93,19 @@ export const BulkActionsToolbar = memo(function BulkActionsToolbar({
     }
   }, [onPriorityToggle]);
 
+  const handleArchiveConfirm = useCallback(async () => {
+    setShowArchiveDialog(false);
+    if (onApproveArchival) {
+      await onApproveArchival();
+    }
+  }, [onApproveArchival]);
+
+  const handleCancelArchival = useCallback(async () => {
+    if (onCancelArchival) {
+      await onCancelArchival();
+    }
+  }, [onCancelArchival]);
+
   // Show priority toggle only when all selected cases have the same priority state
   const showPriorityToggle = onPriorityToggle && selectedPriorityState !== null;
 
@@ -87,7 +113,7 @@ export const BulkActionsToolbar = memo(function BulkActionsToolbar({
     return null;
   }
 
-  const isDisabled = isDeleting || isUpdating;
+  const isDisabled = isDeleting || isUpdating || isArchiving;
 
   return (
     <>
@@ -147,15 +173,44 @@ export const BulkActionsToolbar = memo(function BulkActionsToolbar({
             </>
           )}
 
-          <Button
-            variant="destructive"
-            size="sm"
-            onClick={() => setShowDeleteDialog(true)}
-            disabled={isDisabled}
-          >
-            <Trash2 className="mr-1.5 h-3.5 w-3.5" />
-            Delete
-          </Button>
+          {showArchivalActions && onApproveArchival && (
+            <>
+              <div className="h-4 w-px bg-border" />
+              <Button
+                variant="default"
+                size="sm"
+                onClick={() => setShowArchiveDialog(true)}
+                disabled={isDisabled}
+              >
+                <Archive className="mr-1.5 h-3.5 w-3.5" />
+                Approve Archive
+              </Button>
+            </>
+          )}
+
+          {showArchivalActions && onCancelArchival && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleCancelArchival}
+              disabled={isDisabled}
+            >
+              <XCircle className="mr-1.5 h-3.5 w-3.5" />
+              Cancel Archival
+            </Button>
+          )}
+
+          {!showArchivalActions && (
+            <Button
+              variant="destructive"
+              size="sm"
+              onClick={() => setShowDeleteDialog(true)}
+              disabled={isDisabled}
+            >
+              <Trash2 className="mr-1.5 h-3.5 w-3.5" />
+              Delete
+            </Button>
+          )}
 
           <div className="h-4 w-px bg-border" />
 
@@ -186,6 +241,24 @@ export const BulkActionsToolbar = memo(function BulkActionsToolbar({
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
               Delete {selectedCount} case{selectedCount === 1 ? '' : 's'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={showArchiveDialog} onOpenChange={setShowArchiveDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Archive {selectedCount} case{selectedCount === 1 ? '' : 's'}?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will move the selected case{selectedCount === 1 ? '' : 's'} to the archive file along with their notes and financial items. Archived cases can be restored later from the Archive Browser in Settings.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleArchiveConfirm}>
+              <Archive className="mr-1.5 h-3.5 w-3.5" />
+              Archive {selectedCount} case{selectedCount === 1 ? '' : 's'}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

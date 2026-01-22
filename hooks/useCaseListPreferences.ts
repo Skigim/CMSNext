@@ -5,7 +5,7 @@ import { useDebouncedSave } from "./useDebouncedSave";
 
 export type CaseListSortKey = "updated" | "name" | "mcn" | "application" | "status" | "caseType" | "alerts" | "score";
 export type CaseListSortDirection = "asc" | "desc";
-export type CaseListSegment = "all" | "recent" | "priority" | "alerts";
+export type CaseListSegment = "all" | "recent" | "priority" | "alerts" | "archival-review";
 
 export interface SortConfig {
   key: CaseListSortKey;
@@ -102,7 +102,7 @@ function validateAndTransform(parsed: SerializedPreferences | null): {
     : [{ key: DEFAULT_SORT_KEY, direction: DEFAULT_SORT_DIRECTION }];
 
   // Validate segment
-  const segment = ["all", "recent", "priority", "alerts"].includes(parsed.segment)
+  const segment = ["all", "recent", "priority", "alerts", "archival-review"].includes(parsed.segment)
     ? parsed.segment
     : DEFAULT_SEGMENT;
 

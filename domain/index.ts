@@ -33,3 +33,6 @@ export * from "./templates";
 
 // Workflow execution
 export * from "./workflows";
+
+// Archive domain
+export * from "./archive";

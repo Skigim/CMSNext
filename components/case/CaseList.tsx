@@ -23,6 +23,7 @@ import {
   Filter,
   RefreshCcw,
   RotateCcw,
+  Archive,
 } from "lucide-react";
 import { ToggleGroup, ToggleGroupItem } from "../ui/toggle-group";
 import {
@@ -78,6 +79,10 @@ interface CaseListProps {
   onDeleteCases?: (caseIds: string[]) => Promise<number>;
   onUpdateCasesStatus?: (caseIds: string[], status: CaseStatus) => Promise<number>;
   onUpdateCasesPriority?: (caseIds: string[], priority: boolean) => Promise<number>;
+  // Archival action handlers
+  onApproveArchival?: (caseIds: string[]) => Promise<unknown>;
+  onCancelArchival?: (caseIds: string[]) => Promise<unknown>;
+  isArchiving?: boolean;
 }
 
 export function CaseList({
@@ -95,6 +100,9 @@ export function CaseList({
   onDeleteCases,
   onUpdateCasesStatus,
   onUpdateCasesPriority,
+  onApproveArchival,
+  onCancelArchival,
+  isArchiving = false,
 }: CaseListProps) {
   const { featureFlags } = useAppViewState();
   const showDevTools = isFeatureEnabled("settings.devTools", featureFlags);
@@ -183,7 +191,7 @@ export function CaseList({
   }, []);
 
   const handleSegmentChange = useCallback((value: string) => {
-    if (value === "all" || value === "recent" || value === "priority" || value === "alerts") {
+    if (value === "all" || value === "recent" || value === "priority" || value === "alerts" || value === "archival-review") {
       setSegment(value as CaseListSegment);
     }
   }, [setSegment]);
@@ -274,6 +282,11 @@ export function CaseList({
       if (segment === "recent") {
         const updatedAt = Date.parse(caseData.updatedAt || caseData.caseRecord?.updatedDate || "");
         return Number.isFinite(updatedAt) && updatedAt >= recentThreshold;
+      }
+
+      // Archival review segment - show only cases pending archival
+      if (segment === "archival-review") {
+        return Boolean(caseData.pendingArchival);
       }
 
       return true;
@@ -460,6 +473,34 @@ export function CaseList({
     }
   }, [onUpdateCasesPriority, visibleCaseIds, isSelected, clearSelection]);
 
+  const handleApproveArchival = useCallback(async () => {
+    if (!onApproveArchival) return;
+
+    const idsToArchive = visibleCaseIds.filter(id => isSelected(id));
+    if (idsToArchive.length === 0) return;
+
+    try {
+      await onApproveArchival(idsToArchive);
+      clearSelection();
+    } catch {
+      // Error handling is done in the hook
+    }
+  }, [onApproveArchival, visibleCaseIds, isSelected, clearSelection]);
+
+  const handleCancelArchival = useCallback(async () => {
+    if (!onCancelArchival) return;
+
+    const idsToCancelArchival = visibleCaseIds.filter(id => isSelected(id));
+    if (idsToCancelArchival.length === 0) return;
+
+    try {
+      await onCancelArchival(idsToCancelArchival);
+      clearSelection();
+    } catch {
+      // Error handling is done in the hook
+    }
+  }, [onCancelArchival, visibleCaseIds, isSelected, clearSelection]);
+
   // Compute the priority state of selected cases: true if all priority, false if all non-priority, null if mixed
   const selectedPriorityState = useMemo<boolean | null>(() => {
     const selectedIds = visibleCaseIds.filter(id => isSelected(id));
@@ -547,6 +588,9 @@ export function CaseList({
           </ToggleGroupItem>
           <ToggleGroupItem value="alerts" aria-label="Alerts">
             <Filter className="mr-2 h-4 w-4" /> Alerts
+          </ToggleGroupItem>
+          <ToggleGroupItem value="archival-review" aria-label="Archival review">
+            <Archive className="mr-2 h-4 w-4" /> Archival
           </ToggleGroupItem>
         </ToggleGroup>
         {hasCustomPreferences && (
@@ -689,6 +733,10 @@ export function CaseList({
           isDeleting={isBulkDeleting}
           isUpdating={isBulkUpdating}
           selectedPriorityState={selectedPriorityState}
+          showArchivalActions={segment === "archival-review"}
+          onApproveArchival={onApproveArchival ? handleApproveArchival : undefined}
+          onCancelArchival={onCancelArchival ? handleCancelArchival : undefined}
+          isArchiving={isArchiving}
         />
       )}
 

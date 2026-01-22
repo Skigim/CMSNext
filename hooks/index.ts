@@ -98,6 +98,10 @@ export { useRecentCases } from './useRecentCases';
 // Pinned cases management
 export { usePinnedCases } from './usePinnedCases';
 
+// Case archival operations
+export { useCaseArchival } from './useCaseArchival';
+export type { CaseArchivalConfig, CaseArchivalState, UseCaseArchivalReturn } from './useCaseArchival';
+
 // Fuzzy search across cases and alerts
 export { useFuzzySearch } from './useFuzzySearch';
 export type { 

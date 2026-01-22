@@ -19,6 +19,7 @@ import { PaperCutsPanel } from "../settings/PaperCutsPanel";
 import { KeyboardShortcutsPanel } from "../settings/KeyboardShortcutsPanel";
 import { TemplatesPanel } from "../settings/TemplatesPanel";
 import { WorkflowConfigPanel } from "../settings/WorkflowConfigPanel";
+import { ArchivalSettingsPanel } from "../settings/ArchivalSettingsPanel";
 import { useTheme } from "../../contexts/ThemeContext";
 import { toLocalDateString } from "@/domain/common";
 import {
@@ -37,6 +38,7 @@ import {
   Keyboard,
   FileText,
   Play,
+  Archive,
 } from "lucide-react";
 import { StoredCase } from "../../types/case";
 import type { AlertsIndex } from "../../utils/alertsData";
@@ -135,7 +137,7 @@ export function Settings({ cases, onAlertsCsvImported }: SettingsProps) {
   return (
     <div className="container mx-auto py-3 px-4" data-papercut-context="Settings">
       <Tabs defaultValue="data" className="space-y-4">
-        <TabsList className={`grid w-full ${showDevTools ? 'grid-cols-9' : 'grid-cols-8'}`}>
+        <TabsList className={`grid w-full ${showDevTools ? 'grid-cols-10' : 'grid-cols-9'}`}>
           <TabsTrigger value="data" className="flex items-center gap-2">
             <Database className="h-4 w-4" />
             <span className="hidden sm:inline">Data</span>
@@ -147,6 +149,10 @@ export function Settings({ cases, onAlertsCsvImported }: SettingsProps) {
           <TabsTrigger value="storage" className="flex items-center gap-2">
             <FolderOpen className="h-4 w-4" />
             <span className="hidden sm:inline">Storage</span>
+          </TabsTrigger>
+          <TabsTrigger value="archival" className="flex items-center gap-2">
+            <Archive className="h-4 w-4" />
+            <span className="hidden sm:inline">Archival</span>
           </TabsTrigger>
           <TabsTrigger value="categories" className="flex items-center gap-2">
             <ListChecks className="h-4 w-4" />
@@ -398,6 +404,11 @@ export function Settings({ cases, onAlertsCsvImported }: SettingsProps) {
               </CardContent>
             </Card>
           </div>
+        </TabsContent>
+
+        {/* Archival Tab */}
+        <TabsContent value="archival" className="space-y-6">
+          <ArchivalSettingsPanel />
         </TabsContent>
 
         {/* Categories Tab */}

@@ -302,6 +302,8 @@ export interface CaseDisplay {
 
 export interface StoredCase extends Omit<CaseDisplay, "caseRecord" | "alerts"> {
   caseRecord: Omit<CaseRecord, "financials" | "notes">;
+  /** When true, case is pending archival review (set by auto-refresh on app load) */
+  pendingArchival?: boolean;
 }
 
 export interface StoredFinancialItem extends FinancialItem {

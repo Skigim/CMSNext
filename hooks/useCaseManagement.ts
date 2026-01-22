@@ -1,8 +1,10 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useIsMounted } from './useIsMounted';
 import { useCaseOperations } from './useCaseOperations';
+import { useCaseArchival } from './useCaseArchival';
 import { NewPersonData, NewCaseRecordData, NewNoteData, StoredCase, StoredNote } from '@/types/case';
 import { useDataManagerSafe } from '@/contexts/DataManagerContext';
+import type { UseCaseArchivalReturn } from './useCaseArchival';
 
 /**
  * Return type for useCaseManagement hook.
@@ -38,6 +40,10 @@ interface UseCaseManagementReturn {
   updateCasesStatus: (caseIds: string[], status: StoredCase["status"]) => Promise<number>;
   /** Update priority flag for multiple cases */
   updateCasesPriority: (caseIds: string[], priority: boolean) => Promise<number>;
+  
+  // Archival operations
+  /** Archival hook interface for queue management and archive operations */
+  archival: UseCaseArchivalReturn;
   
   // State setters for external control
   /** Directly update cases array (use for UI optimism) */
@@ -145,6 +151,9 @@ export function useCaseManagement(): UseCaseManagementReturn {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [hasLoadedData, setHasLoadedData] = useState(false);
+  
+  // Track if we've already triggered the archival refresh for this session
+  const hasRefreshedArchivalQueue = useRef(false);
 
   // Extract all operations to dedicated hook
   const operations = useCaseOperations({
@@ -156,6 +165,37 @@ export function useCaseManagement(): UseCaseManagementReturn {
     setCases,
     setHasLoadedData,
   });
+
+  // Callback to reload cases after archival operations
+  const handleCasesChanged = useCallback(() => {
+    operations.loadCases();
+  }, [operations]);
+
+  // Archival operations
+  const archival = useCaseArchival({
+    dataManager,
+    isMounted,
+    onCasesChanged: handleCasesChanged,
+  });
+
+  // Auto-refresh archival queue when data is first loaded
+  useEffect(() => {
+    if (
+      hasLoadedData && 
+      dataManager && 
+      !hasRefreshedArchivalQueue.current &&
+      cases.length > 0
+    ) {
+      hasRefreshedArchivalQueue.current = true;
+      // Defer to next tick to avoid blocking initial render
+      const timer = setTimeout(() => {
+        if (isMounted.current) {
+          archival.refreshQueue();
+        }
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [hasLoadedData, dataManager, cases.length, archival, isMounted]);
 
   return {
     // State
@@ -174,6 +214,9 @@ export function useCaseManagement(): UseCaseManagementReturn {
     updateCaseStatus: operations.updateCaseStatus,
     updateCasesStatus: operations.updateCasesStatus,
     updateCasesPriority: operations.updateCasesPriority,
+    
+    // Archival operations
+    archival,
     
     // State setters for external control
     setCases,

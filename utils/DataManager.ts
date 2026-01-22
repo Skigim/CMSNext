@@ -11,6 +11,8 @@ import {
 } from "../types/case";
 import type { CaseActivityEntry } from "../types/activityLog";
 import type { Template } from "../types/template";
+import type { ArchivalSettings, CaseArchiveData, ArchiveResult, RestoreResult } from "../types/archive";
+import { DEFAULT_ARCHIVAL_SETTINGS } from "../types/archive";
 import AutosaveFileService from './AutosaveFileService';
 import { createLogger } from './logger';
 import { extractErrorMessage } from './errorUtils';
@@ -44,6 +46,7 @@ import { CaseService } from "./services/CaseService";
 import { AlertsService } from "./services/AlertsService";
 import { TemplateService } from "./services/TemplateService";
 import { WorkflowService } from "./services/WorkflowService";
+import { CaseArchiveService, type RefreshQueueResult, type ArchiveFileInfo } from "./services/CaseArchiveService";
 
 // ============================================================================
 // Configuration & Logging
@@ -186,6 +189,8 @@ export class DataManager {
   private templates: TemplateService;
   /** Workflow service for managing automation workflows */
   private workflowService: WorkflowService;
+  /** Case archive service for archival operations */
+  private archive: CaseArchiveService;
 
   /**
    * Creates a new DataManager instance.
@@ -223,6 +228,10 @@ export class DataManager {
     });
     this.workflowService = new WorkflowService({
       fileStorage: this.fileStorage,
+    });
+    this.archive = new CaseArchiveService({
+      fileStorage: this.fileStorage,
+      fileService: this.fileService,
     });
   }
 
@@ -1384,6 +1393,111 @@ export class DataManager {
    */
   async migrateFinancialsWithoutHistory(): Promise<number> {
     return this.financials.migrateItemsWithoutHistory();
+  }
+
+  // =============================================================================
+  // CASE ARCHIVAL OPERATIONS
+  // =============================================================================
+
+  /**
+   * Refresh the archival queue by marking eligible cases as pending.
+   * 
+   * Cases become eligible based on archivalSettings:
+   * - Age exceeds thresholdMonths (based on updatedAt)
+   * - If archiveClosedOnly is true, status must be "Closed" or "Archived"
+   * - Not already marked as pendingArchival
+   * 
+   * Call this on app load to auto-identify cases for archival review.
+   * 
+   * @param {ArchivalSettings} [settings] - Optional settings override
+   * @returns {Promise<RefreshQueueResult>} Result with count of newly marked cases
+   * 
+   * @example
+   * const result = await dataManager.refreshArchivalQueue();
+   * if (result.newlyMarked > 0) {
+   *   toast.info(`${result.newlyMarked} cases pending archival review`);
+   * }
+   */
+  async refreshArchivalQueue(settings?: ArchivalSettings): Promise<RefreshQueueResult> {
+    // Get settings from category config if not provided
+    if (!settings) {
+      const config = await this.categoryConfig.getCategoryConfig();
+      settings = config?.archivalSettings ?? DEFAULT_ARCHIVAL_SETTINGS;
+    }
+    return this.archive.refreshArchivalQueue(settings);
+  }
+
+  /**
+   * Cancel archival for specified cases (remove from pending queue).
+   * 
+   * @param {string[]} caseIds - IDs of cases to remove from archival queue
+   * @returns {Promise<number>} Number of cases removed from queue
+   */
+  async cancelArchival(caseIds: string[]): Promise<number> {
+    return this.archive.cancelArchival(caseIds);
+  }
+
+  /**
+   * Archive approved cases to the archive file for the current year.
+   * 
+   * Moves cases along with their related financials and notes to an
+   * archive file (e.g., "archived-cases-2026.json"). Appends to existing
+   * archive file if one exists for the current year.
+   * 
+   * @param {string[]} caseIds - IDs of cases to archive
+   * @returns {Promise<ArchiveResult>} Result with count and archive filename
+   * 
+   * @example
+   * const result = await dataManager.archiveApprovedCases(['case-1', 'case-2']);
+   * toast.success(`Archived ${result.archivedCount} cases`);
+   */
+  async archiveApprovedCases(caseIds: string[]): Promise<ArchiveResult> {
+    return this.archive.archiveCases(caseIds);
+  }
+
+  /**
+   * List all available archive files.
+   * 
+   * @returns {Promise<ArchiveFileInfo[]>} Array of archive file info sorted by year (newest first)
+   */
+  async listArchiveFiles(): Promise<ArchiveFileInfo[]> {
+    return this.archive.listArchiveFiles();
+  }
+
+  /**
+   * Load archived cases from a specific archive file.
+   * 
+   * This loads the archive data for viewing/searching but does NOT
+   * merge it with the main data file.
+   * 
+   * @param {string} fileName - Archive filename to load
+   * @returns {Promise<CaseArchiveData | null>} Archive data or null if not found
+   */
+  async loadArchive(fileName: string): Promise<CaseArchiveData | null> {
+    return this.archive.loadArchivedCases(fileName);
+  }
+
+  /**
+   * Restore cases from an archive back to the main data file.
+   * 
+   * Restores cases along with their related financials and notes.
+   * Removes restored items from the archive file.
+   * 
+   * @param {string} archiveFileName - Archive file to restore from
+   * @param {string[]} caseIds - IDs of cases to restore
+   * @returns {Promise<RestoreResult>} Result with counts of restored items
+   */
+  async restoreFromArchive(archiveFileName: string, caseIds: string[]): Promise<RestoreResult> {
+    return this.archive.restoreCases(archiveFileName, caseIds);
+  }
+
+  /**
+   * Get the current pending archival count.
+   * 
+   * @returns {Promise<number>} Number of cases pending archival review
+   */
+  async getPendingArchivalCount(): Promise<number> {
+    return this.archive.getPendingCount();
   }
 }
 

@@ -1,4 +1,5 @@
 import type { ColorSlot } from './colorSlots';
+import type { ArchivalSettings } from './archive';
 import { 
   DEFAULT_STATUS_COLORS,
   DEFAULT_ALERT_COLORS,
@@ -96,6 +97,11 @@ export interface CategoryConfig {
    * @deprecated Section templates migrated to Template system. sectionTemplates should be empty.
    */
   summaryTemplate: SummaryTemplateConfig;
+  /** 
+   * Case archival settings (threshold, closed-only flag)
+   * Optional for backward compatibility - uses defaults if not present.
+   */
+  archivalSettings?: ArchivalSettings;
 }
 
 /**
