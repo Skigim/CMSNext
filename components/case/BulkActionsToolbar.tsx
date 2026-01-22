@@ -117,7 +117,7 @@ export const BulkActionsToolbar = memo(function BulkActionsToolbar({
 
   return (
     <>
-      <div className="sticky bottom-4 z-10 flex items-center justify-center">
+      <div className="fixed bottom-6 left-1/2 z-50 -translate-x-1/2">
         <div className="flex items-center gap-3 rounded-lg border bg-background/95 px-4 py-2 shadow-lg backdrop-blur supports-[backdrop-filter]:bg-background/80">
           <Badge variant="secondary" className="px-2.5 py-1 text-sm font-medium">
             {selectedCount} selected
