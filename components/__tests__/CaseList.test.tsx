@@ -166,8 +166,6 @@ describe("CaseList", () => {
       <CaseList
         cases={cases}
         onViewCase={vi.fn()}
-        onEditCase={vi.fn()}
-        onDeleteCase={vi.fn()}
         onNewCase={vi.fn()}
       />,
     );
@@ -182,8 +180,6 @@ describe("CaseList", () => {
       <CaseList
         cases={cases}
         onViewCase={vi.fn()}
-        onEditCase={vi.fn()}
-        onDeleteCase={vi.fn()}
         onNewCase={vi.fn()}
       />,
     );
@@ -212,8 +208,6 @@ describe("CaseList", () => {
       <CaseList
         cases={cases}
         onViewCase={vi.fn()}
-        onEditCase={vi.fn()}
-        onDeleteCase={vi.fn()}
         onNewCase={vi.fn()}
       />,
     );
@@ -244,8 +238,6 @@ describe("CaseList", () => {
       <CaseList
         cases={cases}
         onViewCase={vi.fn()}
-        onEditCase={vi.fn()}
-        onDeleteCase={vi.fn()}
         onNewCase={vi.fn()}
       />,
     );
@@ -280,8 +272,6 @@ describe("CaseList", () => {
       <CaseList
         cases={cases}
         onViewCase={vi.fn()}
-        onEditCase={vi.fn()}
-        onDeleteCase={vi.fn()}
         onNewCase={vi.fn()}
         alertsByCaseId={alertsByCaseId}
       />,
@@ -321,8 +311,6 @@ describe("CaseList", () => {
       <CaseList
         cases={cases}
         onViewCase={vi.fn()}
-        onEditCase={vi.fn()}
-        onDeleteCase={vi.fn()}
         onNewCase={vi.fn()}
       />,
     );
@@ -357,8 +345,6 @@ describe("CaseList", () => {
       <CaseList
         cases={[caseItem]}
         onViewCase={vi.fn()}
-        onEditCase={vi.fn()}
-        onDeleteCase={vi.fn()}
         onNewCase={vi.fn()}
         alertsByCaseId={alertsByCaseId}
         alerts={allAlerts}

@@ -34,8 +34,6 @@ describe("CaseList MCN copy accessibility", () => {
       <CaseList
         cases={[caseData]}
         onViewCase={vi.fn()}
-        onEditCase={vi.fn()}
-        onDeleteCase={vi.fn()}
         onNewCase={vi.fn()}
       />,
     );

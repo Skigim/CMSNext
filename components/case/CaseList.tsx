@@ -66,8 +66,6 @@ import { useCategoryConfig } from "@/contexts/CategoryConfigContext";
 interface CaseListProps {
   cases: StoredCase[];
   onViewCase: (caseId: string) => void;
-  onEditCase: (caseId: string) => void;
-  onDeleteCase: (caseId: string) => void;
   onNewCase: () => void;
   onRefresh?: () => void;
   alertsSummary?: AlertsSummary;
@@ -88,8 +86,6 @@ interface CaseListProps {
 export function CaseList({
   cases,
   onViewCase,
-  onEditCase,
-  onDeleteCase,
   onNewCase,
   onRefresh,
   alertsSummary: _alertsSummary,
@@ -618,8 +614,6 @@ export function CaseList({
         sortDirection={sortDirection}
         onRequestSort={handleTableSortRequest}
         onViewCase={onViewCase}
-        onEditCase={onEditCase}
-        onDeleteCase={onDeleteCase}
         alertsByCaseId={matchedAlertsByCase}
         onResolveAlert={onResolveAlert ? handleResolveAlert : undefined}
         onUpdateCaseStatus={onUpdateCaseStatus}

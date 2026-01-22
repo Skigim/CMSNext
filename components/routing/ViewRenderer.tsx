@@ -123,8 +123,6 @@ export function ViewRenderer({
           alertsByCaseId={alerts.alertsByCaseId}
           alerts={alerts.alerts}
           onViewCase={handleViewCase}
-          onEditCase={handleViewCase}
-          onDeleteCase={handleDeleteCase}
           onDeleteCases={handleDeleteCases}
           onUpdateCasesStatus={handleUpdateCasesStatus}
           onUpdateCasesPriority={handleUpdateCasesPriority}

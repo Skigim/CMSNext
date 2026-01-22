@@ -200,6 +200,21 @@ export const BulkActionsToolbar = memo(function BulkActionsToolbar({
             </Button>
           )}
 
+          {!showArchivalActions && onApproveArchival && (
+            <>
+              <div className="h-4 w-px bg-border" />
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowArchiveDialog(true)}
+                disabled={isDisabled}
+              >
+                <Archive className="mr-1.5 h-3.5 w-3.5" />
+                Archive
+              </Button>
+            </>
+          )}
+
           {!showArchivalActions && (
             <Button
               variant="destructive"

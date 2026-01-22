@@ -9,10 +9,9 @@ import {
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import type { StoredCase, CaseStatusUpdateHandler } from "@/types/case";
 import { CaseStatusMenu } from "./CaseStatusMenu";
-import { ArrowDown, ArrowUp, ArrowUpDown, Eye, MoreHorizontal, Pencil, Trash2, AlertCircle } from "lucide-react";
+import { ArrowDown, ArrowUp, ArrowUpDown, AlertCircle } from "lucide-react";
 import type { CaseListSortDirection, CaseListSortKey } from "@/hooks/useCaseListPreferences";
 import type { AlertWithMatch } from "@/utils/alertsData";
 import { AlertsPopover } from "./AlertsPopover";
@@ -28,8 +27,6 @@ export interface CaseTableProps {
   sortDirection: CaseListSortDirection;
   onRequestSort: (key: CaseListSortKey, direction: CaseListSortDirection) => void;
   onViewCase: (caseId: string) => void;
-  onEditCase: (caseId: string) => void;
-  onDeleteCase: (caseId: string) => void;
   alertsByCaseId?: Map<string, AlertWithMatch[]>;
   onResolveAlert?: (alert: AlertWithMatch) => void | Promise<void>;
   onUpdateCaseStatus?: CaseStatusUpdateHandler;
@@ -73,8 +70,6 @@ export const CaseTable = memo(function CaseTable({
   sortDirection,
   onRequestSort,
   onViewCase,
-  onEditCase,
-  onDeleteCase,
   alertsByCaseId,
   onResolveAlert,
   onUpdateCaseStatus,
@@ -329,13 +324,12 @@ export const CaseTable = memo(function CaseTable({
               </button>
             </TableHead>
             <TableHead>Contact</TableHead>
-            <TableHead className="w-0 text-right">Actions</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {!hasRows && (
             <TableRow>
-              <TableCell colSpan={selectionEnabled ? 11 : 10} className="py-12 text-center text-muted-foreground">
+              <TableCell colSpan={selectionEnabled ? 10 : 9} className="py-12 text-center text-muted-foreground">
                 {expandAlerts ? "No open alerts to display" : "No cases to display"}
               </TableCell>
             </TableRow>
@@ -425,39 +419,6 @@ export const CaseTable = memo(function CaseTable({
                   buttonClassName="max-w-[16rem]"
                   textClassName="truncate"
                 />
-              </TableCell>
-              <TableCell className="text-right">
-                {row.expandedAlert && onResolveAlert ? (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => onResolveAlert(row.expandedAlert!)}
-                  >
-                    Resolve
-                  </Button>
-                ) : (
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="icon-sm" aria-label="Case actions">
-                        <MoreHorizontal className="h-4 w-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem onSelect={() => onViewCase(row.id)}>
-                        <Eye className="mr-2 h-4 w-4" /> View case
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onSelect={() => onEditCase(row.id)}>
-                        <Pencil className="mr-2 h-4 w-4" /> Edit case
-                      </DropdownMenuItem>
-                      <DropdownMenuItem
-                        onSelect={() => onDeleteCase(row.id)}
-                        className="text-destructive focus:text-destructive"
-                      >
-                        <Trash2 className="mr-2 h-4 w-4" /> Delete case
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                )}
               </TableCell>
             </TableRow>
           ))}

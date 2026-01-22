@@ -40,8 +40,6 @@ describe("CaseList status interactions", () => {
       <CaseList
         cases={cases}
         onViewCase={vi.fn()}
-        onEditCase={vi.fn()}
-        onDeleteCase={vi.fn()}
         onNewCase={vi.fn()}
         alertsSummary={undefined}
         alertsByCaseId={new Map()}
@@ -71,8 +69,6 @@ describe("CaseList status interactions", () => {
 describe("CaseList pagination", () => {
   const defaultProps = {
     onViewCase: vi.fn(),
-    onEditCase: vi.fn(),
-    onDeleteCase: vi.fn(),
     onNewCase: vi.fn(),
     alertsSummary: undefined,
     alertsByCaseId: new Map(),
