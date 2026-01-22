@@ -1,12 +1,13 @@
 import { useState, useMemo } from "react";
 import { Button } from "../ui/button";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "../ui/alert-dialog";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "../ui/dropdown-menu";
 import { FinancialsGridView } from "./FinancialsGridView";
 import { NotesPopover } from "./NotesPopover";
 import { AlertsPopover } from "./AlertsPopover";
 import { CaseEditModal } from "../modals/CaseEditModal";
 import type { StoredCase, NewPersonData, NewCaseRecordData } from "../../types/case";
-import { ArrowLeft, Trash2, Star, StarOff, Phone, Mail, FileSignature, Pin, PinOff, Pencil, FileText } from "lucide-react";
+import { ArrowLeft, Trash2, Star, StarOff, Phone, Mail, FileSignature, Pin, PinOff, Pencil, FileText, Archive, ChevronDown } from "lucide-react";
 import { withDataErrorBoundary } from "../error/ErrorBoundaryHOC";
 import { CaseStatusMenu } from "./CaseStatusMenu";
 import { cn, interactiveHoverClasses } from "../ui/utils";
@@ -38,6 +39,8 @@ interface CaseDetailsProps {
   onBack: () => void;
   onSave: (caseData: { person: NewPersonData; caseRecord: NewCaseRecordData }) => Promise<void>;
   onDelete: () => void;
+  onArchive?: () => Promise<void>;
+  isArchiving?: boolean;
   alerts?: AlertWithMatch[];
   onUpdateStatus?: (
     caseId: string,
@@ -52,6 +55,8 @@ export function CaseDetails({
   onBack, 
   onSave,
   onDelete,
+  onArchive,
+  isArchiving = false,
   alerts = [],
   onUpdateStatus,
   onResolveAlert,
@@ -267,39 +272,91 @@ export function CaseDetails({
               <FileSignature className="w-4 h-4 mr-2" />
               Generate VRs
             </Button>
-            <AlertDialog>
-              <AlertDialogTrigger asChild>
-                <Button 
-                  variant="outline" 
-                  size="sm"
-                  className={cn(
-                    interactiveHoverClasses,
-                    "text-destructive hover:text-destructive hover:bg-destructive/10",
-                  )}
-                >
-                  <Trash2 className="w-4 h-4 mr-2" />
-                  Delete
-                </Button>
-              </AlertDialogTrigger>
-              <AlertDialogContent>
-                <AlertDialogHeader>
-                  <AlertDialogTitle>Delete Case</AlertDialogTitle>
-                  <AlertDialogDescription>
-                    Are you sure you want to delete this case for {caseData.name}? This action cannot be undone.
-                    This will permanently delete the case and all associated data including financial items and notes.
-                  </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel>Cancel</AlertDialogCancel>
-                  <AlertDialogAction 
-                    onClick={onDelete}
-                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            
+            {/* Archive/Delete split button */}
+            <div className="flex items-center">
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    disabled={isArchiving}
+                    className={cn(
+                      interactiveHoverClasses,
+                      "rounded-r-none border-r-0",
+                    )}
                   >
-                    Delete Case
-                  </AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
+                    <Archive className="w-4 h-4 mr-2" />
+                    {isArchiving ? "Archiving..." : "Archive"}
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Archive Case</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      Are you sure you want to archive this case for {caseData.name}? 
+                      The case and its data will be moved to the archive and can be restored later if needed.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction 
+                      onClick={onArchive}
+                      disabled={isArchiving || !onArchive}
+                    >
+                      Archive Case
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+              
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    className={cn(
+                      interactiveHoverClasses,
+                      "rounded-l-none px-2",
+                    )}
+                  >
+                    <ChevronDown className="w-4 h-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <DropdownMenuItem 
+                        variant="destructive"
+                        onSelect={(e) => e.preventDefault()}
+                      >
+                        <Trash2 className="w-4 h-4 mr-2" />
+                        Delete permanently
+                      </DropdownMenuItem>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Delete Case</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          Are you sure you want to permanently delete this case for {caseData.name}? 
+                          This action cannot be undone. This will permanently delete the case and all 
+                          associated data including financial items and notes.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction 
+                          onClick={onDelete}
+                          className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                        >
+                          Delete Case
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
           </div>
         </div>
       </div>

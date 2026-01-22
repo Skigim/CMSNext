@@ -52,7 +52,7 @@ export interface FindArchivalEligibleOptions {
 
 /**
  * Calculate the cutoff date based on threshold months.
- * Cases with updatedAt before this date are eligible for archival.
+ * Cases with applicationDate before this date are eligible for archival.
  * 
  * @param thresholdMonths - Number of months of inactivity before eligibility
  * @param referenceDate - Date to calculate from (defaults to now)
@@ -75,7 +75,7 @@ export function calculateCutoffDate(
  * Find cases that are eligible for archival based on settings.
  * 
  * A case is eligible if:
- * 1. Its updatedAt timestamp is before the cutoff date (based on thresholdMonths)
+ * 1. Its applicationDate is before the cutoff date (based on thresholdMonths)
  * 2. If archiveClosedOnly is true, status must be in the completedStatuses set
  *    (derived from StatusConfig.countsAsCompleted in category config)
  * 3. It's not already pending archival
@@ -123,10 +123,14 @@ export function findArchivalEligibleCases(
       }
     }
     
-    // Check age eligibility based on updatedAt timestamp
-    // updatedAt is updated whenever the case record is saved (status change, edits, etc.)
-    const updatedTime = new Date(caseItem.updatedAt).getTime();
-    if (updatedTime >= cutoffTime) {
+    // Check age eligibility based on applicationDate
+    // Uses the case's original application date for archival eligibility
+    const applicationDate = caseItem.caseRecord?.applicationDate;
+    if (!applicationDate) {
+      continue; // Skip cases without an application date
+    }
+    const applicationTime = new Date(applicationDate).getTime();
+    if (applicationTime >= cutoffTime) {
       continue;
     }
     

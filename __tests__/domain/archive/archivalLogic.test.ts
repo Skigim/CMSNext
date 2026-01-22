@@ -20,7 +20,10 @@ import type { CaseArchiveData, ArchivalSettings } from "@/types/archive";
 import { ARCHIVE_VERSION } from "@/types/archive";
 
 // Test data factory
-function createTestCase(overrides: Partial<StoredCase> = {}): StoredCase {
+function createTestCase(overrides: Partial<StoredCase> & { applicationDate?: string } = {}): StoredCase {
+  const { applicationDate, ...restOverrides } = overrides;
+  const baseApplicationDate = applicationDate ?? new Date().toISOString();
+  
   return {
     id: `case-${Math.random().toString(36).slice(2, 9)}`,
     name: "Test Case",
@@ -51,7 +54,7 @@ function createTestCase(overrides: Partial<StoredCase> = {}): StoredCase {
     caseRecord: {
       id: "case-record-1",
       mcn: "MCN-001",
-      applicationDate: new Date().toISOString(),
+      applicationDate: baseApplicationDate,
       caseType: "SNAP",
       applicationType: "New",
       personId: "person-1",
@@ -68,7 +71,7 @@ function createTestCase(overrides: Partial<StoredCase> = {}): StoredCase {
       createdDate: new Date().toISOString(),
       updatedDate: new Date().toISOString(),
     },
-    ...overrides,
+    ...restOverrides,
   };
 }
 
@@ -140,9 +143,9 @@ describe("findArchivalEligibleCases", () => {
     oldDate.setMonth(oldDate.getMonth() - 18);
     
     const cases: StoredCase[] = [
-      createTestCase({ id: "old-closed", updatedAt: oldDate.toISOString(), status: "Closed" }),
-      createTestCase({ id: "new-closed", updatedAt: new Date().toISOString(), status: "Closed" }),
-      createTestCase({ id: "old-active", updatedAt: oldDate.toISOString(), status: "Active" }),
+      createTestCase({ id: "old-closed", applicationDate: oldDate.toISOString(), status: "Closed" }),
+      createTestCase({ id: "new-closed", applicationDate: new Date().toISOString(), status: "Closed" }),
+      createTestCase({ id: "old-active", applicationDate: oldDate.toISOString(), status: "Active" }),
     ];
     
     const result = findArchivalEligibleCases(cases, { settings, completedStatuses });
@@ -157,8 +160,8 @@ describe("findArchivalEligibleCases", () => {
     oldDate.setMonth(oldDate.getMonth() - 18);
     
     const cases: StoredCase[] = [
-      createTestCase({ id: "old-closed", updatedAt: oldDate.toISOString(), status: "Closed" }),
-      createTestCase({ id: "old-active", updatedAt: oldDate.toISOString(), status: "Active" }),
+      createTestCase({ id: "old-closed", applicationDate: oldDate.toISOString(), status: "Closed" }),
+      createTestCase({ id: "old-active", applicationDate: oldDate.toISOString(), status: "Active" }),
     ];
     
     const result = findArchivalEligibleCases(cases, { 
@@ -174,8 +177,8 @@ describe("findArchivalEligibleCases", () => {
     oldDate.setMonth(oldDate.getMonth() - 18);
     
     const cases: StoredCase[] = [
-      createTestCase({ id: "already-pending", updatedAt: oldDate.toISOString(), status: "Closed", pendingArchival: true }),
-      createTestCase({ id: "not-pending", updatedAt: oldDate.toISOString(), status: "Closed" }),
+      createTestCase({ id: "already-pending", applicationDate: oldDate.toISOString(), status: "Closed", pendingArchival: true }),
+      createTestCase({ id: "not-pending", applicationDate: oldDate.toISOString(), status: "Closed" }),
     ];
     
     const result = findArchivalEligibleCases(cases, { settings, completedStatuses });
@@ -189,7 +192,7 @@ describe("findArchivalEligibleCases", () => {
     oldDate.setMonth(oldDate.getMonth() - 18);
     
     const cases: StoredCase[] = [
-      createTestCase({ id: "archived-case", updatedAt: oldDate.toISOString(), status: "Archived" }),
+      createTestCase({ id: "archived-case", applicationDate: oldDate.toISOString(), status: "Archived" }),
     ];
     
     const result = findArchivalEligibleCases(cases, { settings, completedStatuses });
@@ -203,8 +206,8 @@ describe("findArchivalEligibleCases", () => {
     oldDate.setMonth(oldDate.getMonth() - 18);
     
     const cases: StoredCase[] = [
-      createTestCase({ id: "resolved-case", updatedAt: oldDate.toISOString(), status: "Resolved" as StoredCase["status"] }),
-      createTestCase({ id: "closed-case", updatedAt: oldDate.toISOString(), status: "Closed" }),
+      createTestCase({ id: "resolved-case", applicationDate: oldDate.toISOString(), status: "Resolved" as StoredCase["status"] }),
+      createTestCase({ id: "closed-case", applicationDate: oldDate.toISOString(), status: "Closed" }),
     ];
     
     // Custom config where "Resolved" counts as completed but "Closed" does not
@@ -224,7 +227,7 @@ describe("findArchivalEligibleCases", () => {
     oldDate.setMonth(oldDate.getMonth() - 18);
     
     const cases: StoredCase[] = [
-      createTestCase({ id: "any-status-case", updatedAt: oldDate.toISOString(), status: "Custom Status" as StoredCase["status"] }),
+      createTestCase({ id: "any-status-case", applicationDate: oldDate.toISOString(), status: "Custom Status" as StoredCase["status"] }),
     ];
     
     // No completedStatuses provided - should match any status when archiveClosedOnly is true

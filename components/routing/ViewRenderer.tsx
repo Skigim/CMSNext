@@ -154,6 +154,11 @@ export function ViewRenderer({
           onBack={handleBackToList}
           onSave={handleSaveCase}
           onDelete={() => handleDeleteCase(selectedCase.id)}
+          onArchive={handleApproveArchival ? async () => {
+            await handleApproveArchival([selectedCase.id]);
+            handleBackToList();
+          } : undefined}
+          isArchiving={isArchiving}
           onUpdateStatus={handleUpdateCaseStatus}
           onResolveAlert={handleResolveAlert}
           onUpdatePriority={handleUpdateCasesPriority}
