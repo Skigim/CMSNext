@@ -1,14 +1,12 @@
 import { useState, useMemo } from "react";
 import { Button } from "../ui/button";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "../ui/alert-dialog";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
 import { FinancialsGridView } from "./FinancialsGridView";
 import { NotesPopover } from "./NotesPopover";
 import { AlertsPopover } from "./AlertsPopover";
-import { CaseDetailsView } from "./CaseDetailsView";
 import { CaseEditModal } from "../modals/CaseEditModal";
 import type { StoredCase, NewPersonData, NewCaseRecordData } from "../../types/case";
-import { ArrowLeft, Trash2, Wallet, FileText, ClipboardCheck, Star, StarOff, Phone, Mail, FileSignature, Pin, PinOff, Pencil } from "lucide-react";
+import { ArrowLeft, Trash2, Star, StarOff, Phone, Mail, FileSignature, Pin, PinOff, Pencil, FileText } from "lucide-react";
 import { withDataErrorBoundary } from "../error/ErrorBoundaryHOC";
 import { CaseStatusMenu } from "./CaseStatusMenu";
 import { cn, interactiveHoverClasses } from "../ui/utils";
@@ -236,6 +234,15 @@ export function CaseDetails({
             <Button
               variant="outline"
               size="sm"
+              onClick={() => setEditModalOpen(true)}
+              className={interactiveHoverClasses}
+            >
+              <Pencil className="w-4 h-4 mr-2" />
+              Edit Details
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
               onClick={() => setNarrativeModalOpen(true)}
               className={interactiveHoverClasses}
             >
@@ -297,48 +304,11 @@ export function CaseDetails({
         </div>
       </div>
 
-      {/* Content - Top-level Tabs */}
+      {/* Content - Financials Grid View */}
       <div className="rounded-xl border bg-card/30 shadow-lg pb-16">
-        <Tabs defaultValue="details" className="w-full">
-          <div className="border-b px-4 py-4">
-            <TabsList className="grid w-full max-w-md grid-cols-2">
-              <TabsTrigger value="details" className="flex items-center gap-2">
-                <ClipboardCheck className="w-4 h-4" />
-                Details
-              </TabsTrigger>
-              <TabsTrigger value="financials" className="flex items-center gap-2">
-                <Wallet className="w-4 h-4" />
-                Financials
-              </TabsTrigger>
-            </TabsList>
-          </div>
-
-          {/* Details Tab - Read-only view with Edit button */}
-          <TabsContent value="details" className="mt-0">
-            <div className="p-4">
-              <div className="flex items-center justify-between mb-6">
-                <h3 className="text-lg font-semibold">Case Information</h3>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setEditModalOpen(true)}
-                  className={interactiveHoverClasses}
-                >
-                  <Pencil className="w-4 h-4 mr-2" />
-                  Edit Case
-                </Button>
-              </div>
-              <CaseDetailsView caseData={caseData} />
-            </div>
-          </TabsContent>
-
-          {/* Financials Tab - Grid View */}
-          <TabsContent value="financials" className="mt-0">
-            <div className="p-4">
-              <FinancialsGridView caseId={caseData.id} selectedCase={caseData} />
-            </div>
-          </TabsContent>
-        </Tabs>
+        <div className="p-4">
+          <FinancialsGridView caseId={caseData.id} selectedCase={caseData} />
+        </div>
       </div>
 
       <CaseSummaryModal
