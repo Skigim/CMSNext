@@ -50,6 +50,28 @@ describe("categoryConfigMigration", () => {
       expect(result.find((s) => s.name === "Active")).toBeDefined();
       expect(result).toHaveLength(2);
     });
+    
+    it("sets countsAsCompleted for legacy completion statuses", () => {
+      const existing: StatusConfig[] = [];
+      const cases = [
+        { status: "Closed" },
+        { status: "Approved" },
+        { status: "Denied" },
+        { status: "Active" },
+        { status: "Pending" },
+      ];
+
+      const result = discoverStatusesFromCases(existing, cases);
+
+      // Legacy completion statuses should have countsAsCompleted = true
+      expect(result.find((s) => s.name === "Closed")?.countsAsCompleted).toBe(true);
+      expect(result.find((s) => s.name === "Approved")?.countsAsCompleted).toBe(true);
+      expect(result.find((s) => s.name === "Denied")?.countsAsCompleted).toBe(true);
+      
+      // Non-completion statuses should have countsAsCompleted = false
+      expect(result.find((s) => s.name === "Active")?.countsAsCompleted).toBe(false);
+      expect(result.find((s) => s.name === "Pending")?.countsAsCompleted).toBe(false);
+    });
   });
 
   describe("discoverAlertTypesFromAlerts", () => {

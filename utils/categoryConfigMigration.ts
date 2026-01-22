@@ -19,6 +19,12 @@ import {
 import type { StatusConfig, AlertTypeConfig } from '@/types/categoryConfig';
 
 /**
+ * Legacy statuses that should default to countsAsCompleted=true when discovered.
+ * Matches the LEGACY_COMPLETION_STATUSES in types/categoryConfig.ts.
+ */
+const LEGACY_COMPLETION_STATUSES = new Set(['approved', 'denied', 'closed', 'spenddown']);
+
+/**
  * Type guard to check if a value is a legacy string array format
  */
 export function isLegacyStatusArray(value: unknown): value is string[] {
@@ -161,7 +167,15 @@ export function discoverStatusesFromCases(
     }
     
     usedSlots.add(colorSlot);
-    discoveredStatuses.push({ name: trimmed, colorSlot });
+    
+    // Set countsAsCompleted for legacy completion statuses
+    const countsAsCompleted = LEGACY_COMPLETION_STATUSES.has(lowerName);
+    
+    discoveredStatuses.push({ 
+      name: trimmed, 
+      colorSlot,
+      countsAsCompleted,
+    });
   }
   
   if (discoveredStatuses.length > 0) {
