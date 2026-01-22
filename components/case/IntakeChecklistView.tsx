@@ -320,4 +320,3 @@ export function IntakeChecklistView({ caseData, onEdit }: IntakeChecklistViewPro
   );
 }
 
-export default IntakeChecklistView;

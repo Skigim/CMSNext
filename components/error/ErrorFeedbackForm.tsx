@@ -262,30 +262,6 @@ export function ErrorFeedbackForm({
 }
 
 /**
- * Simplified feedback button for quick issue reporting
- */
-export function QuickFeedbackButton({ 
-  className,
-  size = "sm",
-  variant = "outline" 
-}: { 
-  className?: string;
-  size?: "sm" | "default" | "lg";
-  variant?: "default" | "outline" | "secondary" | "ghost" | "link";
-}) {
-  return (
-    <ErrorFeedbackForm
-      trigger={
-        <Button variant={variant} size={size} className={className}>
-          <MessageSquare className="h-4 w-4 mr-1" />
-          Report Issue
-        </Button>
-      }
-    />
-  );
-}
-
-/**
  * Feedback collection panel for Settings page
  */
 export function FeedbackPanel() {
@@ -336,4 +312,3 @@ export function FeedbackPanel() {
   );
 }
 
-export default ErrorFeedbackForm;

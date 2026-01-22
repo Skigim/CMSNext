@@ -59,33 +59,3 @@ export function getAlertDueDateInfo(alert: AlertWithMatch): AlertDueDateInfo {
 
   return { label: mediumDateFormatter.format(date), hasDate: true };
 }
-
-/**
- * Extract client name from an alert.
- *
- * Checks personName and matchedCaseName fields. Returns the first non-empty value,
- * or null if both are empty.
- *
- * @param {AlertWithMatch} alert - Alert to extract client name from
- * @returns {string | null} Client name or null if not found
- */
-export function getAlertClientName(alert: AlertWithMatch): string | null {
-  const candidates = [alert.personName, alert.matchedCaseName];
-  const firstValid = candidates.find(
-    candidate => typeof candidate === "string" && candidate.trim().length > 0,
-  );
-  return firstValid ? firstValid.trim() : null;
-}
-
-/**
- * Extract and clean Medical Certification Number (MCN) from an alert.
- *
- * Validates that MCN is a non-empty string after trimming.
- *
- * @param {AlertWithMatch} alert - Alert to extract MCN from
- * @returns {string | null} Cleaned MCN or null if empty/invalid
- */
-export function getAlertMcn(alert: AlertWithMatch): string | null {
-  const value = typeof alert.mcNumber === "string" ? alert.mcNumber.trim() : "";
-  return value.length > 0 ? value : null;
-}

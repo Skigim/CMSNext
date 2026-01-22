@@ -83,14 +83,7 @@ export { useEncryptionFileHooks } from './useEncryptionFileHooks';
 export { useVRGenerator } from './useVRGenerator';
 
 // Form validation hooks
-export { 
-  useFormValidation,
-  usePersonValidation,
-  useCaseRecordValidation,
-  useFinancialItemValidation,
-  useNoteValidation,
-  useSchemaValidation
-} from './useFormValidation';
+export { useFormValidation } from './useFormValidation';
 
 // Recent cases tracking
 export { useRecentCases } from './useRecentCases';
@@ -100,7 +93,7 @@ export { usePinnedCases } from './usePinnedCases';
 
 // Case archival operations
 export { useCaseArchival } from './useCaseArchival';
-export type { CaseArchivalConfig, CaseArchivalState, UseCaseArchivalReturn } from './useCaseArchival';
+export type { CaseArchivalConfig, UseCaseArchivalReturn } from './useCaseArchival';
 
 // Fuzzy search across cases and alerts
 export { useFuzzySearch } from './useFuzzySearch';
@@ -111,6 +104,9 @@ export type {
   FuzzySearchResults, 
   UseFuzzySearchOptions 
 } from './useFuzzySearch';
+
+// Dead code detection utility
+export { useTombstone } from './useTombstone';
 
 /**
  * Usage examples:

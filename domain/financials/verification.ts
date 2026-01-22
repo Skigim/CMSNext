@@ -6,8 +6,6 @@
  * @module domain/financials/verification
  */
 
-import type { FinancialItem } from "@/types/case";
-
 export type VerificationStatus = string;
 
 export interface VerificationStatusInfo {
@@ -82,20 +80,4 @@ export const shouldShowVerificationSource = (
   formStatus?: string
 ): boolean => {
   return currentStatus === "Verified" || formStatus === "Verified";
-};
-
-/**
- * Create updated item with new verification status
- */
-export const updateVerificationStatus = (
-  item: FinancialItem,
-  newStatus: VerificationStatus
-): FinancialItem => {
-  return {
-    ...item,
-    verificationStatus: newStatus,
-    // Explicitly set verificationSource for clarity
-    verificationSource:
-      newStatus === "Verified" ? item.verificationSource : undefined,
-  };
 };

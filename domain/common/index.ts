@@ -43,12 +43,9 @@ export {
 
 export {
   sanitizeText,
-  sanitizeHTML,
-  sanitizeURL,
   sanitizeJSON,
   sanitizeFormField,
   sanitizeFormData,
-  SANITIZATION_LIMITS,
 } from "./sanitization";
 
 // Data normalization (deprecated - for legacy support)

@@ -327,13 +327,3 @@ export function useTemplates(): TemplateContextValue {
   }
   return context;
 }
-
-/**
- * Safe version of useTemplates that returns null if not in provider.
- * Useful for optional template access in components that may render outside provider.
- * 
- * @returns {TemplateContextValue | null} Template context value or null
- */
-export function useTemplatesSafe(): TemplateContextValue | null {
-  return useContext(TemplateContext);
-}

@@ -23,19 +23,6 @@ export interface CaseArchivalConfig {
   onCasesChanged?: () => void;
 }
 
-export interface CaseArchivalState {
-  /** Whether an archive operation is in progress */
-  isLoading: boolean;
-  /** Available archive files */
-  archiveFiles: ArchiveFileInfo[];
-  /** Currently loaded archive (for viewing) */
-  loadedArchive: CaseArchiveData | null;
-  /** Number of cases pending archival review */
-  pendingCount: number;
-  /** Last queue refresh result */
-  lastRefreshResult: RefreshQueueResult | null;
-}
-
 /**
  * React hook for case archival operations
  * 

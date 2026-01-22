@@ -231,4 +231,3 @@ export function NarrativeGeneratorModal({
   );
 }
 
-export default NarrativeGeneratorModal;

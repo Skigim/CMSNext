@@ -359,4 +359,3 @@ export function WelcomeModal({
   );
 }
 
-export default WelcomeModal;

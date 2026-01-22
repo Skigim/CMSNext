@@ -238,4 +238,3 @@ export function useVRGenerator({
   };
 }
 
-export default useVRGenerator;

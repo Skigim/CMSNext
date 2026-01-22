@@ -91,73 +91,12 @@ export function useAsyncError(onError?: (error: Error) => void) {
   return handleAsyncError;
 }
 
-/**
- * Hook for creating async-safe versions of async functions
- * Automatically catches errors and reports them
- */
-export function useAsyncSafe() {
-  const handleAsyncError = useAsyncError();
-
-  const wrapAsync = React.useCallback(
-    <T extends (...args: any[]) => Promise<any>>(asyncFn: T): T => {
-      return ((...args: any[]) => {
-        return Promise.resolve(asyncFn(...args)).catch((error) => {
-          handleAsyncError(error);
-          throw error; // Re-throw for caller to handle if needed
-        });
-      }) as T;
-    },
-    [handleAsyncError]
-  );
-
-  return { wrapAsync, handleAsyncError };
-}
-
-/**
- * Custom hook for component-level error recovery
- * 
- * @param onReset - Optional callback when component resets
- * @returns Object with error state and reset function
- */
-export function useErrorRecovery(onReset?: () => void) {
-  const [hasError, setHasError] = React.useState(false);
-  const [errorKey, setErrorKey] = React.useState(0);
-
-  const resetError = React.useCallback(() => {
-    setHasError(false);
-    setErrorKey(prev => prev + 1);
-    if (onReset) {
-      onReset();
-    }
-  }, [onReset]);
-
-  const triggerError = React.useCallback(() => {
-    setHasError(true);
-  }, []);
-
-  return {
-    hasError,
-    errorKey,
-    resetError,
-    triggerError
-  };
-}
-
 // Pre-configured HOCs for common use cases
 export const withFileSystemErrorBoundary = <P extends object>(Component: ComponentType<P>) =>
   withErrorBoundary(Component, {
     isolateComponent: true,
     onError: (error, errorInfo) => {
       console.error('File system component error:', error, errorInfo);
-    }
-  });
-
-export const withFormErrorBoundary = <P extends object>(Component: ComponentType<P>) =>
-  withErrorBoundary(Component, {
-    isolateComponent: true,
-    onError: (error, errorInfo) => {
-      console.error('Form component error:', error, errorInfo);
-      // Could add form-specific error handling here
     }
   });
 
@@ -170,4 +109,3 @@ export const withDataErrorBoundary = <P extends object>(Component: ComponentType
     }
   });
 
-export default withErrorBoundary;

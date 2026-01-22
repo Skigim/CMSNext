@@ -453,60 +453,6 @@ export function getPlaceholderFieldsForCategory(
   return result;
 }
 
-/**
- * Group placeholder fields by their field category for UI palette.
- */
-export function groupPlaceholderFieldsByCategory(
-  category: TemplateCategory
-): Record<string, { key: string; field: PlaceholderField }[]> {
-  const fields = getPlaceholderFieldsForCategory(category);
-  const grouped: Record<string, { key: string; field: PlaceholderField }[]> = {};
-  
-  for (const [key, field] of Object.entries(fields)) {
-    if (!grouped[field.fieldCategory]) {
-      grouped[field.fieldCategory] = [];
-    }
-    grouped[field.fieldCategory].push({ key, field });
-  }
-  
-  return grouped;
-}
-
-/**
- * Create a new template with generated ID and timestamps.
- */
-export function createTemplate(
-  name: string,
-  category: TemplateCategory,
-  template: string = '',
-  sectionKey?: SummarySectionKey
-): Template {
-  const now = new Date().toISOString();
-  return {
-    id: crypto.randomUUID(),
-    name,
-    category,
-    template,
-    sectionKey,
-    createdAt: now,
-    updatedAt: now,
-  };
-}
-
-/**
- * Clone a template with a new ID.
- */
-export function cloneTemplate(template: Template, newName?: string): Template {
-  const now = new Date().toISOString();
-  return {
-    ...template,
-    id: crypto.randomUUID(),
-    name: newName || `${template.name} (Copy)`,
-    createdAt: now,
-    updatedAt: now,
-  };
-}
-
 // =============================================================================
 // Default Summary Section Templates
 // =============================================================================
@@ -547,17 +493,3 @@ Consent Date: {consentDate}
 11 Day: {elevenDayDate}
 Known Institutions: {knownInstitutions}`,
 };
-
-// =============================================================================
-// Legacy Compatibility
-// =============================================================================
-
-/**
- * @deprecated Use Template instead. Will be removed in v3.0.
- */
-export type VRScript = Template;
-
-/**
- * @deprecated Use TEMPLATE_PLACEHOLDER_FIELDS instead.
- */
-export const VR_PLACEHOLDER_FIELDS = TEMPLATE_PLACEHOLDER_FIELDS;

@@ -432,4 +432,3 @@ export function ArchivalSettingsPanel() {
   );
 }
 
-export default ArchivalSettingsPanel;

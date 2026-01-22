@@ -65,20 +65,6 @@ export function getColorSlotVar(slot: ColorSlot): string {
 }
 
 /**
- * Get the CSS variable name for a color slot's background (10% opacity).
- */
-export function getColorSlotBgVar(slot: ColorSlot): string {
-  return `var(--color-slot-${slot}-bg)`;
-}
-
-/**
- * Get the CSS variable name for a color slot's border (20% opacity).
- */
-export function getColorSlotBorderVar(slot: ColorSlot): string {
-  return `var(--color-slot-${slot}-border)`;
-}
-
-/**
  * Style object for a badge using a color slot.
  * Uses inline styles to ensure CSS variables work with dynamic slot names.
  */

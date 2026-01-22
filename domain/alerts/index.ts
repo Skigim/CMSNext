@@ -21,7 +21,6 @@ export {
   isAlertResolved,
   filterOpenAlerts,
   normalizeMcn,
-  filterAlertsForCase,
   createEmptyAlertsIndex,
   buildCaseMap,
   buildAlertStorageKey,
@@ -39,8 +38,6 @@ export {
   type AlertDueDateInfo,
   getAlertDisplayDescription,
   getAlertDueDateInfo,
-  getAlertClientName,
-  getAlertMcn,
 } from "./display";
 
 // Priority weight calculation

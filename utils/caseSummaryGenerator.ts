@@ -13,5 +13,4 @@ export {
   generateCaseSummary,
   type SummarySections,
   DEFAULT_SUMMARY_SECTIONS,
-  DEFAULT_SECTION_TEMPLATES,
 } from "@/domain/templates";

@@ -67,16 +67,6 @@ export function normalizeMcn(rawMcn: string | undefined | null): string {
 }
 
 /**
- * Filter alerts for a specific case
- */
-export function filterAlertsForCase(
-  caseId: string,
-  alertsByCaseId: Map<string, AlertWithMatch[]>
-): AlertWithMatch[] {
-  return alertsByCaseId.get(caseId) ?? [];
-}
-
-/**
  * Create an empty alerts index
  */
 export function createEmptyAlertsIndex(): AlertsIndex {

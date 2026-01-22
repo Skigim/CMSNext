@@ -11,6 +11,4 @@ export {
   type AlertDueDateInfo,
   getAlertDisplayDescription,
   getAlertDueDateInfo,
-  getAlertClientName,
-  getAlertMcn,
 } from "@/domain/alerts";

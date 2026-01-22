@@ -1,6 +1,5 @@
 import React, { ReactElement } from 'react'
-import { render, RenderOptions, screen } from '@testing-library/react'
-import userEvent from '@testing-library/user-event'
+import { render, RenderOptions } from '@testing-library/react'
 import { ThemeProvider } from '@/contexts/ThemeContext'
 import { EncryptionProvider } from '@/contexts/EncryptionContext'
 import { CategoryConfigContext } from '@/contexts/CategoryConfigContext'
@@ -103,85 +102,6 @@ const customRender = (
 // Re-export everything
 export * from '@testing-library/react'
 export { customRender as render }
-
-/**
- * Helper functions for common testing scenarios
- */
-
-export const renderWithFileSystem = (
-  ui: ReactElement,
-  options: CustomRenderOptions = {}
-) => {
-  return customRender(ui, {
-    mockFileSystem: true,
-    ...options
-  })
-}
-
-export const renderWithMockData = (
-  ui: ReactElement,
-  mockDataManager: ReturnType<typeof createMockDataManager>,
-  options: CustomRenderOptions = {}
-) => {
-  return customRender(ui, {
-    mockFileSystem: true,
-    mockDataManager,
-    ...options
-  })
-}
-
-/**
- * Render with specific category config for testing components that use useCategoryConfig
- */
-export const renderWithCategoryConfig = (
-  ui: ReactElement,
-  categoryConfig: PartialCategoryConfigInput,
-  options: CustomRenderOptions = {}
-) => {
-  return customRender(ui, {
-    categoryConfig,
-    ...options
-  })
-}
-
-/**
- * Common test utilities for user interactions
- */
-
-export const userInteractions = {
-  clickButton: async (buttonText: string) => {
-    const user = userEvent.setup()
-    const button = screen.getByRole('button', { name: buttonText })
-    await user.click(button)
-    return button
-  },
-  
-  fillInput: async (labelText: string, value: string) => {
-    const user = userEvent.setup()
-    const input = screen.getByLabelText(labelText)
-    await user.clear(input)
-    await user.type(input, value)
-    return input
-  },
-  
-  selectOption: async (selectLabelText: string, optionText: string) => {
-    const user = userEvent.setup()
-    const select = screen.getByLabelText(selectLabelText)
-    await user.click(select)
-    const option = screen.getByRole('option', { name: optionText })
-    await user.click(option)
-    return { select, option }
-  },
-  
-  openModal: async (triggerText: string) => {
-    const user = userEvent.setup()
-    const trigger = screen.getByRole('button', { name: triggerText })
-    await user.click(trigger)
-    // Wait for modal to appear
-    await screen.findByRole('dialog')
-    return trigger
-  }
-}
 
 // Import screen from testing library for convenience
 export { screen } from '@testing-library/react'

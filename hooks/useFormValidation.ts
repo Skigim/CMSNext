@@ -1,10 +1,5 @@
 import { useState, useCallback, useMemo } from 'react';
-import { z } from 'zod';
 import {
-  validatePersonData,
-  validateCaseRecordData,
-  validateFinancialItemData,
-  validateNoteData,
   ValidationResult,
 } from '@/utils/validation';
 
@@ -261,60 +256,4 @@ export function useFormValidation<T>(
     // Batch validation
     validateMultiple
   };
-}
-
-// Convenience hooks for specific entity validation
-export function usePersonValidation() {
-  return useFormValidation(validatePersonData);
-}
-
-export function useCaseRecordValidation() {
-  return useFormValidation(validateCaseRecordData);
-}
-
-export function useFinancialItemValidation() {
-  return useFormValidation(validateFinancialItemData);
-}
-
-export function useNoteValidation() {
-  return useFormValidation(validateNoteData);
-}
-
-// Generic hook for any schema
-export function useSchemaValidation<T extends z.ZodSchema>(schema: T) {
-  const validator = useCallback((data: unknown) => {
-    const result = schema.safeParse(data);
-    
-    if (result.success) {
-      return {
-        isValid: true,
-        data: result.data,
-        errors: {},
-        fieldErrors: {}
-      };
-    }
-
-    const errors: Record<string, string> = {};
-    const fieldErrors: Record<string, string[]> = {};
-
-    result.error.issues.forEach(issue => {
-      const path = issue.path.join('.');
-      errors[path] = issue.message;
-      
-      const field = issue.path[0]?.toString() || 'root';
-      if (!fieldErrors[field]) {
-        fieldErrors[field] = [];
-      }
-      fieldErrors[field].push(issue.message);
-    });
-
-    return {
-      isValid: false,
-      data: null,
-      errors,
-      fieldErrors
-    };
-  }, [schema]);
-
-  return useFormValidation(validator);
 }

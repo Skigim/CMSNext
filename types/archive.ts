@@ -146,15 +146,3 @@ export interface RestoreResult {
   /** IDs of restored cases */
   restoredCaseIds: string[];
 }
-
-/**
- * Summary of archival queue status shown to user.
- */
-export interface ArchivalQueueStatus {
-  /** Number of cases currently pending archival review */
-  pendingCount: number;
-  /** Oldest case in the pending queue (for display) */
-  oldestPendingDate: string | null;
-  /** When the queue was last refreshed */
-  lastRefreshed: string | null;
-}

@@ -76,10 +76,6 @@ const DEDUPE_WINDOW_MS = 60000; // 1 minute
 const DEDUPE_SUMMARY_INTERVAL_MS = 300000; // 5 minutes
 const MAX_LOGS_PER_WINDOW = 3; // Only log same message 3 times per window
 
-export function setLogLevel(level: LogLevel) {
-  currentLevel = level;
-}
-
 function shouldLog(level: LogLevel): boolean {
   return levelPriority[level] >= levelPriority[currentLevel];
 }

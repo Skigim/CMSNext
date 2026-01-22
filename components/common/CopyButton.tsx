@@ -208,17 +208,3 @@ export const CopyButton = memo(function CopyButton({
 });
 
 CopyButton.displayName = "CopyButton";
-
-// Legacy alias for backward compatibility
-/** @deprecated Use CopyButton instead */
-export const McnCopyControl = CopyButton;
-/** @deprecated Use CopyButtonProps instead */
-export type McnCopyControlProps = CopyButtonProps;
-/** @deprecated Use CopyButtonVariant instead */
-export type McnCopyControlVariant = CopyButtonVariant;
-
-// Legacy alias for CopyableText compatibility
-/** @deprecated Use CopyButton instead */
-export const CopyableText = CopyButton;
-/** @deprecated Use CopyButtonProps instead */
-export type CopyableTextProps = CopyButtonProps;

@@ -288,4 +288,3 @@ export function ErrorReportViewer() {
   );
 }
 
-export default ErrorReportViewer;

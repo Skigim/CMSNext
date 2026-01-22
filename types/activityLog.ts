@@ -1,5 +1,3 @@
-export type CaseActivityType = "status-change" | "note-added" | "priority-change" | "case-viewed";
-
 interface CaseActivityBase {
   id: string;
   timestamp: string;

@@ -44,8 +44,6 @@ export const KNOWN_ACCOUNT_TYPES = [
   "MONEY MARKET ACCOUNT",
 ] as const;
 
-export type KnownAccountType = (typeof KNOWN_ACCOUNT_TYPES)[number];
-
 /**
  * Represents a parsed AVS account block
  */

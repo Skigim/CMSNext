@@ -19,25 +19,6 @@ const HTML_ENTITIES: Record<string, string> = {
   "=": "&#x3D;",
 };
 
-// Dangerous protocol patterns
-const DANGEROUS_PROTOCOLS = [
-  /^javascript:/i,
-  /^data:/i,
-  /^vbscript:/i,
-  /^file:/i,
-  /^ftp:/i,
-  /^tel:/i,
-  /^mailto:/i,
-];
-
-// Dangerous attribute patterns
-const DANGEROUS_ATTRIBUTES = [
-  /^on\w+/i, // Event handlers like onclick, onload, etc.
-  /^style$/i, // Style attribute can contain JavaScript
-  /^src$/i, // Source attributes need validation
-  /^href$/i, // Href attributes need validation
-];
-
 /**
  * Removes dangerous patterns from text
  */
@@ -105,135 +86,6 @@ export function sanitizeText(
 
   // Remove dangerous patterns
   sanitized = removeDangerousPatterns(sanitized);
-
-  return sanitized;
-}
-
-/**
- * Sanitizes HTML content while preserving safe formatting
- * @param html - Raw HTML input
- * @param allowedTags - List of allowed HTML tags
- * @returns Sanitized HTML
- */
-export function sanitizeHTML(
-  html: string | null | undefined,
-  allowedTags: string[] = ["b", "i", "em", "strong", "br", "p"]
-): string {
-  if (!html || typeof html !== "string") {
-    return "";
-  }
-
-  let sanitized = html;
-
-  // Remove script tags and content
-  sanitized = sanitized.replace(/<script[\s\S]*?>[\s\S]*?<\/script>/gi, "");
-
-  // Remove style tags and content
-  sanitized = sanitized.replace(/<style[\s\S]*?>[\s\S]*?<\/style>/gi, "");
-
-  // Remove dangerous tags
-  const dangerousTags = [
-    "script",
-    "style",
-    "iframe",
-    "object",
-    "embed",
-    "form",
-    "input",
-    "button",
-    "link",
-    "meta",
-  ];
-  dangerousTags.forEach((tag) => {
-    const regex = new RegExp(`<${tag}[^>]*>.*?</${tag}>`, "gi");
-    sanitized = sanitized.replace(regex, "");
-  });
-
-  // Remove tags not in allowed list
-  if (allowedTags.length > 0) {
-    const allowedPattern = allowedTags.join("|");
-    const tagRegex = new RegExp(
-      `<(?!/?(?:${allowedPattern})(?:\\s|>))[^>]+>`,
-      "gi"
-    );
-    sanitized = sanitized.replace(tagRegex, "");
-  }
-
-  // Remove dangerous attributes
-  sanitized = sanitized.replace(/<([^>]+)>/g, (_, tagContent) => {
-    const parts = tagContent.split(/\s+/);
-    const tagName = parts[0];
-    const attributes = parts.slice(1);
-
-    const safeAttributes = attributes.filter((attr: string) => {
-      const [attrName] = attr.split("=");
-      return !DANGEROUS_ATTRIBUTES.some((pattern) => pattern.test(attrName));
-    });
-
-    return `<${[tagName, ...safeAttributes].join(" ")}>`;
-  });
-
-  // Remove dangerous protocols from URLs
-  sanitized = sanitized.replace(
-    /(href|src)=["']([^"']+)["']/gi,
-    (match, attrName, url) => {
-      if (DANGEROUS_PROTOCOLS.some((pattern) => pattern.test(url))) {
-        return `${attrName}="#"`;
-      }
-      return match;
-    }
-  );
-
-  return sanitized;
-}
-
-/**
- * Sanitizes URL input to prevent malicious redirects
- * @param url - Raw URL input
- * @param allowedDomains - List of allowed domains (optional)
- * @param origin - Origin URL for relative URL resolution (defaults to empty string)
- * @returns Sanitized URL or empty string if dangerous
- */
-export function sanitizeURL(
-  url: string | null | undefined,
-  allowedDomains?: string[],
-  origin: string = ""
-): string {
-  if (!url || typeof url !== "string") {
-    return "";
-  }
-
-  let sanitized = url.trim();
-
-  // Check for dangerous protocols
-  if (DANGEROUS_PROTOCOLS.some((pattern) => pattern.test(sanitized))) {
-    return "";
-  }
-
-  // Ensure URL starts with safe protocol
-  if (!/^https?:\/\//i.test(sanitized) && !/^\//.test(sanitized)) {
-    // Relative URL or missing protocol - make it relative
-    sanitized = "/" + sanitized.replace(/^\/+/, "");
-  }
-
-  // Validate domain if allowedDomains is provided
-  if (allowedDomains && allowedDomains.length > 0 && origin) {
-    try {
-      const urlObj = new URL(sanitized, origin);
-      const hostname = urlObj.hostname;
-
-      if (
-        !allowedDomains.some(
-          (domain) => hostname === domain || hostname.endsWith("." + domain)
-        )
-      ) {
-        return "";
-      }
-    } catch {
-      // Invalid URL
-      return "";
-    }
-  }
 
   return sanitized;
 }
@@ -401,13 +253,3 @@ export function sanitizeFormData(
 
   return sanitized;
 }
-
-// Export sanitization constants for reference
-export const SANITIZATION_LIMITS = {
-  MAX_TEXT_LENGTH: 1000,
-  MAX_TEXTAREA_LENGTH: 5000,
-  MAX_EMAIL_LENGTH: 254,
-  MAX_JSON_STRING_LENGTH: 10000,
-  MAX_JSON_ARRAY_LENGTH: 1000,
-  MAX_JSON_OBJECT_KEYS: 100,
-} as const;

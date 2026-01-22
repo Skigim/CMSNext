@@ -715,4 +715,4 @@ export function CategoryManagerPanel({
   );
 }
 
-export default CategoryManagerPanel;
+

@@ -185,24 +185,6 @@ export interface WorkflowExecutionState {
 // =============================================================================
 
 /**
- * Create a new empty workflow.
- */
-export function createWorkflow(
-  name: string,
-  description?: string
-): Workflow {
-  const now = new Date().toISOString();
-  return {
-    id: crypto.randomUUID(),
-    name,
-    description,
-    steps: [],
-    createdAt: now,
-    updatedAt: now,
-  };
-}
-
-/**
  * Create a new workflow step with generated ID.
  */
 export function createStep<T extends WorkflowStep>(

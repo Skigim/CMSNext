@@ -665,21 +665,6 @@ export const DEFAULT_SUMMARY_SECTIONS: SummarySections = {
   avsTracking: true,
 };
 
-/**
- * Default templates for each section
- * @deprecated Use DEFAULT_SUMMARY_SECTION_TEMPLATES from @/types/template instead
- */
-export const DEFAULT_SECTION_TEMPLATES = {
-  caseInfo: DEFAULT_SUMMARY_SECTION_TEMPLATES.caseInfo,
-  personInfo: DEFAULT_SUMMARY_SECTION_TEMPLATES.personInfo,
-  relationships: DEFAULT_SUMMARY_SECTION_TEMPLATES.relationships,
-  resources: DEFAULT_SUMMARY_SECTION_TEMPLATES.resources,
-  income: DEFAULT_SUMMARY_SECTION_TEMPLATES.income,
-  expenses: DEFAULT_SUMMARY_SECTION_TEMPLATES.expenses,
-  notes: DEFAULT_SUMMARY_SECTION_TEMPLATES.notes,
-  avsTracking: DEFAULT_SUMMARY_SECTION_TEMPLATES.avsTracking,
-};
-
 // ============================================================================
 // Main Summary Generator
 // ============================================================================

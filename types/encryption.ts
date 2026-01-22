@@ -83,14 +83,6 @@ export function isEncryptedPayload(data: unknown): data is EncryptedPayload {
 }
 
 /**
- * Session credentials (in-memory only, never persisted)
- */
-export interface SessionCredentials {
-  username: string;
-  derivedKey: CryptoKey | null;
-}
-
-/**
  * Encryption context state
  */
 export interface EncryptionState {

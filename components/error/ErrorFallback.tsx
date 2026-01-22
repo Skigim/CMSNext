@@ -251,4 +251,3 @@ export function FileSystemErrorFallback({
   );
 }
 
-export default ErrorFallback;

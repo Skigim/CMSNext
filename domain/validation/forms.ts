@@ -327,32 +327,6 @@ export function validateNoteData(
 }
 
 /**
- * Validates complete case data (person + case record)
- * @param personData - The person data to validate
- * @param caseData - The case record data to validate
- * @returns Combined validation result
- */
-export function validateCompleteCase(personData: unknown, caseData: unknown) {
-  const personResult = validatePersonData(personData);
-  const caseResult = validateCaseRecordData(caseData);
-
-  return {
-    isValid: personResult.isValid && caseResult.isValid,
-    person: personResult,
-    case: caseResult,
-    errors: {
-      ...personResult.errors,
-      ...Object.fromEntries(
-        Object.entries(caseResult.errors).map(([key, value]) => [
-          `case.${key}`,
-          value,
-        ])
-      ),
-    },
-  };
-}
-
-/**
  * Type-safe form validation helper
  * Creates a validation function for any given schema
  */
@@ -376,12 +350,3 @@ export function createValidator<T extends z.ZodSchema>(schema: T) {
     };
   };
 }
-
-// ============================================================================
-// Pre-built Validators
-// ============================================================================
-
-export const validatePerson = createValidator(PersonSchema);
-export const validateCaseRecord = createValidator(CaseRecordSchema);
-export const validateFinancialItemForm = createValidator(FinancialItemSchema);
-export const validateNote = createValidator(NoteSchema);

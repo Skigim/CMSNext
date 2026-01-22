@@ -134,8 +134,6 @@ export const CASE_STATUS = {
 
 export type CaseStatus = typeof CASE_STATUS[keyof typeof CASE_STATUS];
 
-export const CASE_STATUS_VALUES: CaseStatus[] = Object.values(CASE_STATUS);
-
 // Case record interface
 export interface CaseRecord {
   id: string;
@@ -281,10 +279,6 @@ export interface NewNoteData {
   category: string;
   content: string;
 }
-
-// Legacy compatibility types (for gradual migration)
-export interface CaseItem extends FinancialItem {}
-export interface NewCaseItemData extends NewFinancialItemData {}
 
 // Helper interface for case display (combines case record with person data)
 export interface CaseDisplay {

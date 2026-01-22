@@ -22,15 +22,5 @@ export {
   validateCaseRecordData,
   validateFinancialItemData,
   validateNoteData,
-  validateCompleteCase,
   createValidator,
-
-  // Pre-built validators
-  validatePerson,
-  validateCaseRecord,
-  validateFinancialItemForm,
-  validateNote,
 } from "@/domain/validation";
-
-// Re-export with original name for backwards compatibility
-export { validateFinancialItemForm as validateFinancialItem } from "@/domain/validation";

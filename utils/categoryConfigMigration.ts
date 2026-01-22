@@ -286,14 +286,6 @@ function autoAssignAlertColorSlot(
 }
 
 /**
- * Extract just the status names from StatusConfig[] for compatibility
- * with code that only needs the string values.
- */
-export function getStatusNames(statuses: StatusConfig[]): string[] {
-  return statuses.map(s => s.name);
-}
-
-/**
  * Find a StatusConfig by name (case-insensitive)
  */
 export function findStatusConfig(

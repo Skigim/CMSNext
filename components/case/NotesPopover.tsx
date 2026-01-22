@@ -384,4 +384,3 @@ export function NotesPopover({ caseId, className }: NotesPopoverProps) {
   );
 }
 
-export default NotesPopover;

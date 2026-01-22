@@ -21,4 +21,4 @@ export function CategoryConfigDevPanel() {
   );
 }
 
-export default CategoryConfigDevPanel;
+

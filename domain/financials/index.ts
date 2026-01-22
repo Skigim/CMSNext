@@ -48,5 +48,4 @@ export {
   getVerificationStatusDotColor,
   getVerificationStatusInfo,
   shouldShowVerificationSource,
-  updateVerificationStatus,
 } from "./verification";

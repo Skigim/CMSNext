@@ -15,5 +15,3 @@ export const STORAGE_CONSTANTS = {
     FILE_NAME: 'data.json',
   },
 } as const;
-
-export type StorageConstants = typeof STORAGE_CONSTANTS;

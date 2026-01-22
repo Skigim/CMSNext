@@ -31,7 +31,6 @@
     "node_modules",
     "dist",
     "vite.config.ts",
-    "supabase/functions/**/*",
     "archive/**/*.ts",
     "archive/**/*.tsx",
     "scripts/**/*",

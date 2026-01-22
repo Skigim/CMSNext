@@ -41,4 +41,3 @@ export function AuthBackdrop({ isOpen, className }: AuthBackdropProps) {
   );
 }
 
-export default AuthBackdrop;

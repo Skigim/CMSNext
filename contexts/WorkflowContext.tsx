@@ -598,11 +598,3 @@ export function useWorkflows(): WorkflowContextValue {
   }
   return context;
 }
-
-/**
- * Hook to access workflow context safely (returns null if not in provider).
- * Useful for optional integration scenarios.
- */
-export function useWorkflowsSafe(): WorkflowContextValue | null {
-  return useContext(WorkflowContext) ?? null;
-}

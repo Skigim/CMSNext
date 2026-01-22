@@ -65,15 +65,7 @@ export class FileStorageFlagsManager {
   }
 }
 
-let manager: FileStorageFlagsManager = new FileStorageFlagsManager();
-
-export function setFileStorageFlagsManager(customManager: FileStorageFlagsManager): void {
-  manager = customManager;
-}
-
-export function restoreDefaultFileStorageFlagsManager(): void {
-  manager = new FileStorageFlagsManager();
-}
+const manager: FileStorageFlagsManager = new FileStorageFlagsManager();
 
 export function getFileStorageFlags(): Readonly<FileStorageFlags> {
   return manager.getFileStorageFlags();
@@ -81,10 +73,6 @@ export function getFileStorageFlags(): Readonly<FileStorageFlags> {
 
 export function updateFileStorageFlags(updates: Partial<FileStorageFlags>): void {
   manager.updateFileStorageFlags(updates);
-}
-
-export function clearFileStorageFlags(...keys: (keyof FileStorageFlags)[]): void {
-  manager.clearFileStorageFlags(...keys);
 }
 
 export function resetFileStorageFlags(): void {

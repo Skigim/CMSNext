@@ -256,4 +256,3 @@ export function useEncryptionFileHooks(): UseEncryptionFileHooksResult {
   };
 }
 
-export default useEncryptionFileHooks;

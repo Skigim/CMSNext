@@ -95,4 +95,3 @@ export function ErrorBoundaryTest() {
   );
 }
 
-export default ErrorBoundaryTest;

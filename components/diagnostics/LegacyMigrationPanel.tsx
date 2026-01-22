@@ -322,4 +322,3 @@ export function LegacyMigrationPanel({
   );
 }
 
-export default LegacyMigrationPanel;

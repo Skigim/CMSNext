@@ -28,4 +28,4 @@ export const CaseStatusMenu = memo(function CaseStatusMenu({
   );
 });
 
-export default CaseStatusMenu;
+

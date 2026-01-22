@@ -18,7 +18,6 @@ export {
   isAlertResolved,
   filterOpenAlerts,
   normalizeMcn,
-  filterAlertsForCase,
   createEmptyAlertsIndex,
   buildCaseMap,
   buildAlertStorageKey,

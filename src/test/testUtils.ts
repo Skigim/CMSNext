@@ -1,6 +1,6 @@
 import { vi } from 'vitest'
 import { CaseDisplay, FinancialItem, Note, Person, CaseRecord, CaseCategory } from '@/types/case'
-import type { StoredCase, StoredFinancialItem, StoredNote, NormalizedFileData } from '@/utils/services/FileStorageService'
+import type { StoredCase, StoredFinancialItem, StoredNote } from '@/utils/services/FileStorageService'
 import { mergeCategoryConfig } from '@/types/categoryConfig'
 
 /**
@@ -180,26 +180,6 @@ export const createMockStoredNote = (
   ...overrides
 })
 
-export const createMockNormalizedFileData = (overrides: Partial<NormalizedFileData> = {}): NormalizedFileData => {
-  const storedCase = createMockStoredCase()
-  return {
-    version: '2.0',
-    cases: [storedCase],
-    financials: [
-      createMockStoredFinancialItem('resources', storedCase.id),
-      createMockStoredFinancialItem('income', storedCase.id),
-      createMockStoredFinancialItem('expenses', storedCase.id),
-    ],
-    notes: [createMockStoredNote(storedCase.id)],
-    alerts: [],
-    exported_at: new Date().toISOString(),
-    total_cases: 1,
-    categoryConfig: mergeCategoryConfig(),
-    activityLog: [],
-    ...overrides
-  }
-}
-
 /**
  * Mock implementations for various services
  */
@@ -290,59 +270,9 @@ export const createMockCategoryConfigValue = (configOverrides?: Parameters<typeo
   setConfigFromFile: vi.fn(),
 })
 
-/**
- * Test environment utilities
- */
 
-export const mockConsoleError = () => {
-  const originalError = console.error
-  const mockError = vi.fn()
-  console.error = mockError
-  
-  return {
-    mockError,
-    restore: () => {
-      console.error = originalError
-    }
-  }
-}
 
-export const mockConsoleWarn = () => {
-  const originalWarn = console.warn
-  const mockWarn = vi.fn()
-  console.warn = mockWarn
-  
-  return {
-    mockWarn,
-    restore: () => {
-      console.warn = originalWarn
-    }
-  }
-}
 
-/**
- * Async utilities for testing
- */
-
-export const waitForNextTick = () => new Promise(resolve => setTimeout(resolve, 0))
-
-export const waitFor = (condition: () => boolean, timeout = 1000) => {
-  return new Promise<void>((resolve, reject) => {
-    const startTime = Date.now()
-    
-    const check = () => {
-      if (condition()) {
-        resolve()
-      } else if (Date.now() - startTime > timeout) {
-        reject(new Error('Timeout waiting for condition'))
-      } else {
-        setTimeout(check, 10)
-      }
-    }
-    
-    check()
-  })
-}
 
 /**
  * Component test helpers

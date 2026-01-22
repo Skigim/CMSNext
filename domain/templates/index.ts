@@ -16,10 +16,6 @@ export {
   renderTemplate,
   renderVR,
   renderMultipleVRs,
-
-  // Utility functions
-  getPlaceholdersByCategory,
-  createDefaultVRScript,
 } from "./vr";
 
 export {
@@ -27,7 +23,6 @@ export {
   generateCaseSummary,
   type SummarySections,
   DEFAULT_SUMMARY_SECTIONS,
-  DEFAULT_SECTION_TEMPLATES,
 
   // Item formatters
   formatResourceItem,

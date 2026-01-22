@@ -354,4 +354,3 @@ export function VRGeneratorModal({
   );
 }
 
-export default VRGeneratorModal;

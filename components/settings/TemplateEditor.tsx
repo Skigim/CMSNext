@@ -533,4 +533,3 @@ export function TemplateEditor({
   );
 }
 
-export default TemplateEditor;

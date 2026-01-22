@@ -241,4 +241,3 @@ export function AlertsPopover({
   );
 }
 
-export default AlertsPopover;

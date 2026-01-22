@@ -153,4 +153,3 @@ class AlertWriteQueue {
 // Singleton instance
 export const alertWriteQueue = new AlertWriteQueue();
 
-export default alertWriteQueue;

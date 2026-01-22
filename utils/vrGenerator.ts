@@ -15,6 +15,4 @@ export {
   renderTemplate,
   renderVR,
   renderMultipleVRs,
-  getPlaceholdersByCategory,
-  createDefaultVRScript,
 } from "@/domain/templates";

@@ -8,7 +8,6 @@
 
 export {
   KNOWN_ACCOUNT_TYPES,
-  type KnownAccountType,
   type ParsedAVSAccount,
   parseAccountBlock,
   parseAVSInput,

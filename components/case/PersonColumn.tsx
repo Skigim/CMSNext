@@ -666,4 +666,3 @@ export function PersonColumn({
   );
 }
 
-export default PersonColumn;

@@ -36,32 +36,6 @@ export const STATIC_NOTE_CATEGORY_COLORS: Record<string, string> = {
 };
 
 /**
- * Get category color by index in a category list.
- *
- * Used by NotesSection to assign colors to dynamically configured categories.
- * Falls back to the last color in the palette for unknown categories.
- *
- * @param category - Category name to look up
- * @param categories - List of known categories (order determines color assignment)
- * @returns Tailwind CSS class string for the category color
- *
- * @example
- * ```typescript
- * const color = getNoteCategoryColorByIndex("Important", ["General", "Important", "Urgent"]);
- * // Returns "bg-green-500/10 text-green-600 border-green-500/20" (index 1)
- * ```
- */
-export function getNoteCategoryColorByIndex(category: string, categories: string[]): string {
-  const index = categories.findIndex(
-    (entry) => entry.toLowerCase() === category.toLowerCase()
-  );
-  if (index >= 0) {
-    return NOTE_CATEGORY_COLORS[index % NOTE_CATEGORY_COLORS.length];
-  }
-  return NOTE_CATEGORY_COLORS[NOTE_CATEGORY_COLORS.length - 1];
-}
-
-/**
  * Get category color from static mapping.
  *
  * Used by NotesPopover for simple category-to-color mapping without

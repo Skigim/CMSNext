@@ -24,49 +24,6 @@ export interface VerifiedCaseResult {
 }
 
 /**
- * Read file data and verify that a case exists.
- * 
- * This helper abstracts the common pattern:
- * 1. Read current data from file
- * 2. Throw if read fails
- * 3. Find case by ID
- * 4. Throw if case not found
- * 5. Return data, index, and case
- * 
- * @param {FileStorageService} fileStorage - The file storage service instance
- * @param {string} caseId - The case ID to find and verify
- * @returns {Promise<VerifiedCaseResult>} The data, case index, and target case
- * @throws {Error} If failed to read data or case not found
- * 
- * @example
- * ```typescript
- * const { data, caseIndex, targetCase } = await readDataAndVerifyCase(
- *   this.fileStorage,
- *   caseId
- * );
- * // Now you can safely work with the data and case
- * ```
- */
-export async function readDataAndVerifyCase(
-  fileStorage: FileStorageService,
-  caseId: string
-): Promise<VerifiedCaseResult> {
-  const data = await fileStorage.readFileData();
-  if (!data) {
-    throw new Error('Failed to read current data');
-  }
-
-  const caseIndex = data.cases.findIndex(c => c.id === caseId);
-  if (caseIndex === -1) {
-    throw new Error('Case not found');
-  }
-
-  const targetCase = data.cases[caseIndex];
-
-  return { data, caseIndex, targetCase };
-}
-
-/**
  * Result of reading and verifying case exists (without index).
  * 
  * Use this when you only need to confirm the case exists but

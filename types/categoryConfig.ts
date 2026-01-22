@@ -472,68 +472,6 @@ export const mergeCategoryConfig = (
   };
 };
 
-export const cloneCategoryConfig = (config?: CategoryConfig | null): CategoryConfig => {
-  const source = config ?? defaultCategoryConfig;
-  return {
-    caseTypes: [...source.caseTypes],
-    applicationTypes: [...source.applicationTypes],
-    caseStatuses: source.caseStatuses.map(s => ({ 
-      name: s.name, 
-      colorSlot: s.colorSlot,
-      countsAsCompleted: s.countsAsCompleted ?? false,
-    })),
-    alertTypes: source.alertTypes.map(a => ({ ...a })),
-    livingArrangements: [...source.livingArrangements],
-    noteCategories: [...source.noteCategories],
-    verificationStatuses: [...source.verificationStatuses],
-    summaryTemplate: {
-      sectionOrder: [...source.summaryTemplate.sectionOrder],
-      defaultSections: { ...source.summaryTemplate.defaultSections },
-      sectionTemplates: { ...(source.summaryTemplate.sectionTemplates || {}) },
-    },
-    archivalSettings: source.archivalSettings
-      ? { ...source.archivalSettings }
-      : undefined,
-  };
-};
-
-/**
- * Ensure a category has at least one value.
- * For caseStatuses, the fallback is added with a 'slate' color.
- */
-export const ensureValueInCategory = (
-  config: CategoryConfig,
-  key: CategoryKey,
-  fallback: string,
-): CategoryConfig => {
-  if (key === 'caseStatuses') {
-    if (config.caseStatuses.length > 0) {
-      return config;
-    }
-    return {
-      ...config,
-      caseStatuses: [{ name: fallback, colorSlot: 'slate', countsAsCompleted: false }],
-    };
-  }
-
-  const values = sanitizeCategoryValues(config[key] as string[] ?? []);
-  if (values.length > 0) {
-    return config;
-  }
-
-  const updated = { ...config };
-  (updated[key] as string[]) = [fallback];
-  return updated;
-};
-
-/**
- * Helper to get status names as a string array.
- * Useful for components that only need the names.
- */
-export const getStatusNames = (config: CategoryConfig): string[] => {
-  return config.caseStatuses.map(s => s.name);
-};
-
 /**
  * Helper to get statuses that count as completed.
  * Used by dashboard widgets for "cases processed" metrics.
@@ -544,14 +482,6 @@ export const getCompletionStatusNames = (config: CategoryConfig): Set<string> =>
       .filter(s => s.countsAsCompleted)
       .map(s => s.name.toLowerCase())
   );
-};
-
-/**
- * Helper to get alert type names as a string array.
- * Useful for components that only need the names.
- */
-export const getAlertTypeNames = (config: CategoryConfig): string[] => {
-  return config.alertTypes.map(a => a.name);
 };
 
 /**

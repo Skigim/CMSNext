@@ -14,10 +14,6 @@
  * @author Case Tracking Platform Team
  */
 
-import { createLogger } from "./logger";
-
-const telemetryLogger = createLogger("Telemetry");
-
 interface StorageSyncEventPayload {
   operationType: "load" | "save" | "sync" | "import" | "export";
   success: boolean;
@@ -55,13 +51,6 @@ interface StorageHealthMetricPayload {
   consecutiveFailures: number;
   timestamp: number;
   sessionId: string;
-}
-
-// Session ID - persist for the entire user session
-let sessionId = generateSessionId();
-
-function generateSessionId(): string {
-  return `session-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
 }
 
 /**
@@ -111,37 +100,6 @@ export function recordPerformanceMarker(
 ): void {
   // Telemetry disabled
   return;
-}
-
-/**
- * Record storage health metrics snapshot.
- * Aggregates success rate, error counts, latency averages, and retry information.
- *
- * @param metrics - Storage health snapshot containing success/failure/latency data
- */
-export function recordStorageHealthMetrics(
-  _metrics: Omit<StorageHealthMetricPayload, "timestamp" | "sessionId">,
-): void {
-  // Telemetry disabled
-  return;
-}
-
-/**
- * Get the current session ID for telemetry correlation.
- *
- * @returns The current session ID
- */
-export function getSessionId(): string {
-  return sessionId;
-}
-
-/**
- * Reset the session ID (useful for testing or session transitions).
- * In production, this typically won't be called unless the user logs out/in.
- */
-export function resetSessionId(): void {
-  sessionId = generateSessionId();
-  telemetryLogger.lifecycle("Session ID reset", { newSessionId: sessionId });
 }
 
 export type {

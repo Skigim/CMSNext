@@ -3,11 +3,6 @@ import Fuse, { type IFuseOptions } from "fuse.js";
 import type { StoredCase } from "@/types/case";
 import type { AlertWithMatch } from "@/utils/alertsData";
 
-/**
- * Search result types
- */
-export type SearchResultType = "case" | "alert";
-
 export interface CaseSearchResult {
   type: "case";
   item: StoredCase;

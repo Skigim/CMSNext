@@ -449,4 +449,3 @@ export function CaseColumn({
   );
 }
 
-export default CaseColumn;

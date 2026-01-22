@@ -274,4 +274,3 @@ export function QuickCaseModal({ isOpen, onClose, onSave }: QuickCaseModalProps)
   );
 }
 
-export default QuickCaseModal;
