@@ -179,6 +179,10 @@ export function useCaseManagement(): UseCaseManagementReturn {
   });
 
   // Auto-refresh archival queue when data is first loaded
+  // Use a ref for refreshQueue to avoid re-triggering when archival object changes
+  const refreshQueueRef = useRef(archival.refreshQueue);
+  refreshQueueRef.current = archival.refreshQueue;
+  
   useEffect(() => {
     if (
       hasLoadedData && 
@@ -190,12 +194,12 @@ export function useCaseManagement(): UseCaseManagementReturn {
       // Defer to next tick to avoid blocking initial render
       const timer = setTimeout(() => {
         if (isMounted.current) {
-          archival.refreshQueue();
+          refreshQueueRef.current();
         }
       }, 100);
       return () => clearTimeout(timer);
     }
-  }, [hasLoadedData, dataManager, cases.length, archival, isMounted]);
+  }, [hasLoadedData, dataManager, cases.length, isMounted]);
 
   return {
     // State
