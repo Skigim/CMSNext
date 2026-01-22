@@ -57,8 +57,8 @@ export default defineConfig(({ command, mode }) => {
       sourcemap: true,
       rollupOptions: {
         external: (id) => {
-          // Only exclude archive directory, but include scripts for SeedDataGenerator
-          return id.includes('/archive/');
+          // Only exclude docs/development/archive directory (old roadmaps), not domain/archive or types/archive
+          return id.includes('/docs/development/archive/');
         },
         output: {
           manualChunks: {
