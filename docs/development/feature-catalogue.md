@@ -2,7 +2,7 @@
 
 > Living index of marketable features, their current implementation status, quality, and future investments.
 
-**Last Updated:** January 2, 2026
+**Last Updated:** January 22, 2026
 
 ## How to Use This Document
 
@@ -21,21 +21,22 @@
 | Feature               | Rating | Trend | Notes                                          |
 | --------------------- | ------ | ----- | ---------------------------------------------- |
 | Case Management       | 95     | ↑     | UI reorganization, conditional retro input     |
-| Local-First Storage   | 90     | →     | AES-256 encryption, split login/welcome UX     |
 | Financial Operations  | 92     | ↑     | Domain logic extracted, extensive test cov     |
-| Developer Enablement  | 89     | ↑     | 720 tests, IndexedDBHandleStore extracted      |
-| Premium UI/UX         | 87     | →     | Stable scrollbar, instant sidebar, tooltips    |
 | Template System       | 92     | ↑     | Unified VR/Summary/Narrative templates         |
+| Local-First Storage   | 90     | →     | AES-256 encryption, split login/welcome UX     |
+| Developer Enablement  | 89     | ↑     | 1081 tests, IndexedDBHandleStore extracted     |
 | Dashboard & Insights  | 88     | ↑     | Config-driven priority scoring, zero fallbacks |
-| Data Portability      | 82     | →     | AVS import with update capability              |
+| Premium UI/UX         | 87     | →     | Stable scrollbar, instant sidebar, tooltips    |
 | Notes & Collaboration | 84     | →     | Click-to-copy notes, popover UI                |
+| Case Archival         | 82     | NEW   | Separate archive files, configurable age       |
+| Data Portability      | 82     | →     | AVS import with update capability              |
 | Configurable Statuses | 78     | →     | Recently stabilized                            |
 | Legacy Migration      | 75     | →     | Dev-only, one-way                              |
 | Autosave & Recovery   | 75     | →     | IndexedDBHandleStore modularized               |
 | Feature Flags         | 72     | →     | In-memory only                                 |
 
-**Average Rating:** 86.8/100  
-**Test Status:** 720+ tests passing (100%)
+**Average Rating:** 85.1/100  
+**Test Status:** 1081 tests passing (100%)
 
 ---
 
@@ -54,16 +55,17 @@
 1. [Local-First Storage & Privacy](#local-first-storage--privacy)
 2. [Intelligent Autosave & Recovery](#intelligent-autosave--recovery)
 3. [Comprehensive Case Management](#comprehensive-case-management)
-4. [Financial Operations Suite](#financial-operations-suite)
-5. [Notes & Collaboration Aids](#notes--collaboration-aids)
-6. [VR Generator & Templates](#vr-generator--templates)
-7. [Intelligent Dashboard & Insights](#intelligent-dashboard--insights)
-8. [Data Portability & Migration](#data-portability--migration)
-9. [Premium UI/UX Layer](#premium-uiux-layer)
-10. [Developer & Operations Enablement](#developer--operations-enablement)
-11. [Feature Flags](#feature-flags)
-12. [Legacy Data Migration](#legacy-data-migration)
-13. [Configurable Completion Statuses](#configurable-completion-statuses)
+4. [Case Archival System](#case-archival-system)
+5. [Financial Operations Suite](#financial-operations-suite)
+6. [Notes & Collaboration Aids](#notes--collaboration-aids)
+7. [VR Generator & Templates](#vr-generator--templates)
+8. [Intelligent Dashboard & Insights](#intelligent-dashboard--insights)
+9. [Data Portability & Migration](#data-portability--migration)
+10. [Premium UI/UX Layer](#premium-uiux-layer)
+11. [Developer & Operations Enablement](#developer--operations-enablement)
+12. [Feature Flags](#feature-flags)
+13. [Legacy Data Migration](#legacy-data-migration)
+14. [Configurable Completion Statuses](#configurable-completion-statuses)
 
 ---
 
@@ -223,6 +225,75 @@ Phase 3 Cases domain refactor completed November 2, 2025. Bulk actions added Dec
 **December 5, 2025:** CaseDetails header enhanced with application date, phone, and email (all with click-to-copy). Priority toggle star button added. Alerts indicator moved to right side with action buttons.
 
 **December 10, 2025:** Notes button moved from floating bottom-left to header next to alerts. Alerts badge redesigned as overlay with count (amber) or green checkmark when all resolved.
+
+---
+
+## Case Archival System
+
+### Implementation Snapshot
+
+**Rating: 82/100** _(Added January 22, 2026)_
+
+A complete case archival system enables users to move old, completed cases to separate archive files, reducing main file size and improving performance. Archive files are stored in a dedicated `archive/` subfolder and can be loaded on-demand for reference. The system uses configurable age thresholds and respects user-defined completion statuses.
+
+### Strengths
+
+- **Separate Archive Files**: Cases are moved to timestamped JSON files in `archive/` folder, keeping main data file lean
+- **Configurable Age Threshold**: Users set minimum age (in months) for archival eligibility via Settings panel
+- **Completion Status Awareness**: Only cases with statuses marked `countsAsCompleted` are eligible for archival
+- **Application Date Based**: Eligibility uses `applicationDate` (when case started) rather than `updatedAt` for predictable archival timing
+- **Review Queue Workflow**: Cases are first queued for review (`pendingArchival` flag) before permanent archival
+- **Archival Review Tab**: Dedicated segment in Case List to review pending cases before approval
+- **Bulk Archive Actions**: Select multiple cases and archive via floating action toolbar
+- **Archive from Case Details**: Split button with Archive as primary action, Delete in dropdown
+- **Load on Demand**: View archived cases without loading into main data file
+- **Auto-Queue Refresh**: Eligible cases automatically queued at app startup
+- **Activity Logging**: All archival operations logged for audit trail
+
+### Architecture
+
+| Component                              | Lines | Description                               |
+| -------------------------------------- | ----- | ----------------------------------------- |
+| `domain/archive/archivalLogic.ts`      | 250   | Pure eligibility, queue, and filter logic |
+| `domain/archive/archiveTypes.ts`       | 60    | TypeScript types and interfaces           |
+| `utils/services/CaseArchiveService.ts` | 380   | File I/O, archive read/write operations   |
+| `hooks/useCaseArchival.ts`             | 414   | React integration, state management       |
+| `ArchivalSettingsPanel.tsx`            | 200   | Settings UI for configuration             |
+
+### Workflow
+
+1. **Configure**: Set minimum age threshold in Settings > Archival
+2. **Queue**: Cases meeting criteria auto-queued at startup (or manual refresh)
+3. **Review**: View queued cases in Case List "Archival" tab
+4. **Approve**: Select cases and approve archival via bulk actions
+5. **Archive**: Cases moved to archive file, removed from main data
+6. **Reference**: Load archive files from Settings when needed
+
+### Gaps / Risks
+
+- No restore from archive yet (would require re-adding to main file)
+- Archive files grow unbounded (no secondary archival or cleanup)
+- Large archive loads may impact memory for very large datasets
+- No search within archived cases
+
+### Expansion Opportunities
+
+- Add restore functionality to bring archived cases back to active
+- Implement archive file rotation or compression for very old archives
+- Add search/filter within loaded archives
+- Export archive to different formats (CSV, PDF)
+- Archive auto-cleanup after configurable retention period
+
+### Coverage & Telemetry
+
+- 14 unit tests for domain archival logic (`archivalLogic.test.ts`)
+- Archive types validation tests (`archiveTypes.test.ts`)
+- Integration tested through Settings panel and Case List flows
+- Activity log captures all archival operations
+
+### Owners / Notes
+
+Core development team. Feature implemented January 2026 as part of data management improvements.
 
 ---
 

@@ -1,9 +1,9 @@
 # CMSNext Roadmap - January 2026
 
-**Report Date:** January 15, 2026  
+**Report Date:** January 22, 2026  
 **Branch:** main  
-**Focus:** Dashboard Transformation + Domain Layer Refactor + Priority System Enhancements  
-**Status:** Week 1-2 Complete ✅ | Domain Refactor Complete ✅ | Week 3 Complete ✅ | Week 4 In Progress 🔄
+**Focus:** Dashboard Transformation + Domain Layer Refactor + Priority System Enhancements + Case Archival  
+**Status:** Week 1-2 Complete ✅ | Domain Refactor Complete ✅ | Week 3 Complete ✅ | Week 4 Complete ✅
 
 ---
 
@@ -197,18 +197,29 @@ _Focus: Priority enhancements, code quality, and polish_
 
 ---
 
-### Week 4: Security Polish & February Planning (Jan 20-26)
+### Week 4: Case Archival & February Planning (Jan 20-26)
 
-_Focus: Security audit remediation and February planning_
+_Focus: Case archival system implementation and February planning_
 
-**Security Audit Status:** 5/6 issues resolved ✅
+**Case Archival System:** ✅ COMPLETE
 
-- [ ] Activity log auto-archiving implementation
-  - [ ] Auto-trigger `archiveOldEntries()` on file load (1 year cutoff)
-  - [ ] Implement archive file writing: `activityLog-archive-{year}.json`
-  - [ ] Add settings UI for manual archival and configuration
-- [ ] Performance testing for large activity logs
-- [ ] Documentation: security features and encryption model
+- [x] **Domain Layer**: `domain/archive/archivalLogic.ts` - Pure eligibility, queue, and filter logic
+- [x] **Type Definitions**: `domain/archive/archiveTypes.ts` - Archive data structures
+- [x] **Service Layer**: `CaseArchiveService.ts` - File I/O for archive operations
+- [x] **DataManager Integration**: Archive methods on DataManager (queue, approve, load)
+- [x] **React Hook**: `useCaseArchival` - State management and callbacks
+- [x] **Settings UI**: `ArchivalSettingsPanel` - Configure age threshold, manual refresh
+- [x] **Archival Review Tab**: Case List segment for reviewing pending cases
+- [x] **Bulk Archive Actions**: FAB button for bulk archival approval
+- [x] **Case Details Archive**: Split button (Archive primary, Delete dropdown)
+- [x] **Auto-queue at Startup**: Eligible cases queued automatically on app load
+- [x] **Application Date Based**: Uses applicationDate for consistent eligibility
+- [x] **Completion Status Aware**: Respects `countsAsCompleted` from StatusConfig
+- [x] Unit tests for domain archival logic (14 tests)
+
+**Remaining:**
+
+- [ ] Activity log auto-archiving (separate feature)
 - [ ] February roadmap planning
 
 ---
@@ -218,9 +229,9 @@ _Focus: Security audit remediation and February planning_
 | Metric            | Current | Target    |
 | ----------------- | ------- | --------- |
 | Dashboard phases  | 4       | 4 ✅      |
-| Domain modules    | 8       | 8 ✅      |
-| Test count        | 894     | 950+      |
-| Lines migrated    | ~6,356  | ~6,356 ✅ |
+| Domain modules    | 9       | 9 ✅      |
+| Test count        | 1081    | 950+ ✅   |
+| Lines migrated    | ~6,606  | ~6,356 ✅ |
 | utils/ re-exports | 9       | 9 ✅      |
 
 ---
@@ -234,11 +245,15 @@ _Focus: Security audit remediation and February planning_
 ### Final Domain Structure
 
 ```
-domain/                     (~6,356 lines)
+domain/                     (~6,606 lines)
 ├── alerts/                 # Alert matching, filtering, display
 │   ├── types.ts
 │   ├── matching.ts
 │   ├── display.ts
+│   └── index.ts
+├── archive/                # Case archival logic (NEW Jan 2026)
+│   ├── archivalLogic.ts    # Eligibility, queue management
+│   ├── archiveTypes.ts     # Archive data structures
 │   └── index.ts
 ├── avs/                    # AVS file parsing
 │   ├── parser.ts
@@ -379,6 +394,21 @@ The following features were delivered but not originally on the roadmap:
 - [x] Show Completed Cases filter
 - [x] Case list padding improvements
 
+### Case Archival System (Week 4)
+
+- [x] Complete archival system for moving old cases to separate files
+- [x] Domain layer: `domain/archive/` with pure eligibility logic
+- [x] Service layer: `CaseArchiveService` for file I/O
+- [x] Hook: `useCaseArchival` for React integration
+- [x] Settings UI: Configurable age threshold
+- [x] Archival Review tab in Case List
+- [x] Bulk archive actions via FAB
+- [x] Archive button in Case Details (split button with Delete)
+- [x] Auto-queue eligible cases at app startup
+- [x] Application date-based eligibility (not updatedAt)
+- [x] Completion status awareness (countsAsCompleted)
+- [x] Removed Actions column from Case Table in favor of bulk FAB
+
 ---
 
 ## 📚 Related Documents
@@ -390,4 +420,4 @@ The following features were delivered but not originally on the roadmap:
 
 ---
 
-_Last updated: January 14, 2026_
+_Last updated: January 22, 2026_
