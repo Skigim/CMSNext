@@ -1,4 +1,5 @@
 import React, { Suspense, ReactNode, useMemo } from 'react';
+import Masonry from 'react-masonry-css';
 import { Skeleton } from '@/components/ui/skeleton';
 import type { FeatureFlagKey, FeatureFlags } from '@/utils/featureFlags';
 
@@ -35,7 +36,7 @@ export interface RegisteredWidget {
  */
 function WidgetSkeleton() {
   return (
-    <div className="rounded-lg border border-border bg-card p-4 space-y-4">
+    <div className="rounded-lg border border-border bg-card p-4 space-y-4 min-h-[200px]">
       <Skeleton className="h-6 w-32" />
       <div className="space-y-3">
         <Skeleton className="h-4 w-full" />
@@ -72,8 +73,12 @@ function WidgetSkeleton() {
 export interface WidgetRegistryProps {
   /** Array of widgets to register and render */
   widgets: RegisteredWidget[];
-  /** Optional CSS class for grid container */
+  /** Optional CSS class for grid container (used when layoutMode='grid') */
   gridClassName?: string;
+  /** Layout mode: 'grid' uses CSS Grid, 'masonry' uses true masonry packing */
+  layoutMode?: 'grid' | 'masonry';
+  /** Breakpoint configuration for masonry layout (keys are max-widths in px) */
+  masonryBreakpoints?: { [key: number]: number; default: number };
   /** Optional fallback while widgets load */
   loadingFallback?: ReactNode;
   /** Optional error message handler */
@@ -82,9 +87,17 @@ export interface WidgetRegistryProps {
   enabledFlags?: Partial<FeatureFlags>;
 }
 
+/** Default masonry breakpoints: 2 columns on lg+, 1 column on smaller screens */
+const DEFAULT_MASONRY_BREAKPOINTS = {
+  default: 2,
+  768: 1, // Below md breakpoint, single column
+};
+
 export function WidgetRegistry({
   widgets,
   gridClassName = 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4',
+  layoutMode = 'grid',
+  masonryBreakpoints = DEFAULT_MASONRY_BREAKPOINTS,
   loadingFallback = <WidgetSkeleton />,
   onError,
   enabledFlags,
@@ -117,23 +130,41 @@ export function WidgetRegistry({
     });
   }, [sortedWidgets, enabledFlags]);
 
+  // Render widget items (shared between grid and masonry modes)
+  const renderWidgets = () =>
+    visibleWidgets.map((widget) => {
+      const WidgetComponent = widget.component;
+
+      return (
+        <ErrorBoundary
+          key={widget.metadata.id}
+          widgetId={widget.metadata.id}
+          onError={onError}
+        >
+          <Suspense fallback={loadingFallback}>
+            <WidgetComponent {...widget.props} metadata={widget.metadata} />
+          </Suspense>
+        </ErrorBoundary>
+      );
+    });
+
+  // Masonry layout: uses react-masonry-css for true masonry packing
+  if (layoutMode === 'masonry') {
+    return (
+      <Masonry
+        breakpointCols={masonryBreakpoints}
+        className="flex -ml-4 w-auto"
+        columnClassName="pl-4 space-y-4 bg-clip-padding [&>*]:h-fit"
+      >
+        {renderWidgets()}
+      </Masonry>
+    );
+  }
+
+  // Default grid layout
   return (
     <div className={gridClassName}>
-      {visibleWidgets.map((widget) => {
-        const WidgetComponent = widget.component;
-
-        return (
-          <ErrorBoundary
-            key={widget.metadata.id}
-            widgetId={widget.metadata.id}
-            onError={onError}
-          >
-            <Suspense fallback={loadingFallback}>
-              <WidgetComponent {...widget.props} metadata={widget.metadata} />
-            </Suspense>
-          </ErrorBoundary>
-        );
-      })}
+      {renderWidgets()}
     </div>
   );
 }
