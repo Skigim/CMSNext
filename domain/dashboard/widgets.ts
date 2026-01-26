@@ -64,6 +64,12 @@ interface DateWindowOptions {
   days?: number;
   /** Set of lowercase status names that count as completed. Falls back to legacy defaults if not provided. */
   completionStatuses?: Set<string>;
+  /** 
+   * When true, a status change only counts as "processed" if the same case 
+   * also had a note added on the same day. Useful for filtering out 
+   * old cases being cleaned up without actual work performed.
+   */
+  requireNoteOnSameDay?: boolean;
 }
 
 interface ProcessingTimeOptions {
@@ -219,6 +225,7 @@ export function calculateCasesProcessedPerDay(
   const days = options.days && options.days > 0 ? options.days : DEFAULT_DAYS;
   const completionStatuses =
     options.completionStatuses ?? LEGACY_COMPLETION_STATUSES;
+  const requireNoteOnSameDay = options.requireNoteOnSameDay ?? false;
   const keys = buildDayBuckets(days, referenceDate);
   const start = addDays(referenceDate, -(days - 1));
 
@@ -227,6 +234,26 @@ export function calculateCasesProcessedPerDay(
 
   if (!activityLog || activityLog.length === 0) {
     return keys.map((date) => ({ date, processedCount: 0 }));
+  }
+
+  // Build an index of cases that have notes added on each day (if filtering is enabled)
+  // Map<dateKey, Set<caseId>>
+  const casesWithNotesByDay = new Map<string, Set<string>>();
+  if (requireNoteOnSameDay) {
+    activityLog.forEach((entry) => {
+      if (!entry || entry.type !== "note-added") {
+        return;
+      }
+      const timestamp = safeParseDate(entry.timestamp);
+      if (!timestamp || !isWithinRange(timestamp, start, referenceDate)) {
+        return;
+      }
+      const key = isoDateKey(timestamp);
+      if (!casesWithNotesByDay.has(key)) {
+        casesWithNotesByDay.set(key, new Set());
+      }
+      casesWithNotesByDay.get(key)!.add(entry.caseId);
+    });
   }
 
   activityLog.forEach((entry) => {
@@ -245,6 +272,14 @@ export function calculateCasesProcessedPerDay(
 
     const movedToCompletion = toStatus && completionStatuses.has(toStatus);
     const movedFromCompletion = fromStatus && completionStatuses.has(fromStatus);
+
+    // If requireNoteOnSameDay is enabled, only count if this case has a note on the same day
+    if (requireNoteOnSameDay) {
+      const notesForDay = casesWithNotesByDay.get(key);
+      if (!notesForDay || !notesForDay.has(entry.caseId)) {
+        return; // Skip: no note added for this case on this day
+      }
+    }
 
     // Net change: +1 when moving TO completion, -1 when moving FROM completion
     if (movedToCompletion && !movedFromCompletion) {

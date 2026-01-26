@@ -49,6 +49,7 @@ export function DailyStatsWidget({
     () => getCompletionStatusNames(config),
     [config]
   );
+  const requireNoteOnSameDay = config.dashboardSettings?.requireNoteForProcessedCount ?? false;
 
   const fetchData = useCallback(async (): Promise<DailyStatsData> => {
     const now = new Date();
@@ -80,6 +81,7 @@ export function DailyStatsWidget({
       referenceDate: today,
       days: 1,
       completionStatuses,
+      requireNoteOnSameDay,
     });
     const processedToday = dailyCases[0]?.processedCount ?? 0;
 
@@ -96,7 +98,7 @@ export function DailyStatsWidget({
       processedToday,
       alertsClearedToday,
     };
-  }, [cases, alerts, activityLog, completionStatuses, config.caseStatuses, config.alertTypes]);
+  }, [cases, alerts, activityLog, completionStatuses, requireNoteOnSameDay, config.caseStatuses, config.alertTypes]);
 
   const { data, loading, error, freshness } = useWidgetData<DailyStatsData>(
     fetchData,

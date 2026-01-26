@@ -31,20 +31,29 @@ const DEFAULT_WINDOW = 7;
 export function CasesProcessedPerDayWidget({ activityLog = [], metadata, refreshKey }: CasesProcessedPerDayWidgetProps) {
   const { config } = useCategoryConfig();
   const completionStatuses = useMemo(() => getCompletionStatusNames(config), [config]);
+  const requireNoteOnSameDay = config.dashboardSettings?.requireNoteForProcessedCount ?? false;
 
   const fetchData = useCallback(async () => {
     // Keep reference date in local time to match activity log timestamps
     const now = new Date();
     const reference = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    const daily = calculateCasesProcessedPerDay(activityLog, { referenceDate: reference, completionStatuses });
+    const daily = calculateCasesProcessedPerDay(activityLog, { 
+      referenceDate: reference, 
+      completionStatuses,
+      requireNoteOnSameDay,
+    });
     const total = daily.reduce((acc, item) => acc + item.processedCount, 0);
 
     const previousReference = widgetDateUtils.addDays(reference, -DEFAULT_WINDOW);
-    const previousDaily = calculateCasesProcessedPerDay(activityLog, { referenceDate: previousReference, completionStatuses });
+    const previousDaily = calculateCasesProcessedPerDay(activityLog, { 
+      referenceDate: previousReference, 
+      completionStatuses,
+      requireNoteOnSameDay,
+    });
     const previousTotal = previousDaily.reduce((acc, item) => acc + item.processedCount, 0);
 
     return { daily, total, previousTotal } satisfies CasesProcessedPerDayData;
-  }, [activityLog, completionStatuses]);
+  }, [activityLog, completionStatuses, requireNoteOnSameDay]);
 
   const { data, loading, error, freshness } = useWidgetData<CasesProcessedPerDayData>(fetchData, {
     refreshInterval: metadata?.refreshInterval ?? 5 * 60 * 1000,

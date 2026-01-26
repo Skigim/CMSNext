@@ -83,6 +83,19 @@ export interface SummaryTemplateConfig {
   sectionTemplates: Partial<Record<SummarySectionKey, SectionTemplate>>;
 }
 
+/**
+ * Dashboard display and calculation settings.
+ */
+export interface DashboardSettings {
+  /**
+   * When true, cases only count as "processed" in dashboard widgets if they
+   * have both an eligible status change AND a note added on the same day.
+   * Useful for filtering out old cases being cleaned up without actual work.
+   * @default false
+   */
+  requireNoteForProcessedCount: boolean;
+}
+
 export interface CategoryConfig {
   caseTypes: string[];
   /** Application type options (e.g., 'New', 'Renewal', 'Redetermination') */
@@ -102,6 +115,11 @@ export interface CategoryConfig {
    * Optional for backward compatibility - uses defaults if not present.
    */
   archivalSettings?: ArchivalSettings;
+  /**
+   * Dashboard calculation and display settings.
+   * Optional for backward compatibility - uses defaults if not present.
+   */
+  dashboardSettings?: DashboardSettings;
 }
 
 /**
@@ -123,6 +141,8 @@ export interface PartialCategoryConfigInput {
   summaryTemplate?: SummaryTemplateConfig;
   /** Case archival settings */
   archivalSettings?: ArchivalSettings;
+  /** Dashboard calculation settings */
+  dashboardSettings?: Partial<DashboardSettings>;
 }
 
 const DEFAULT_CASE_TYPES = [
@@ -198,6 +218,10 @@ const DEFAULT_SUMMARY_TEMPLATE: SummaryTemplateConfig = {
   sectionTemplates: {}, // Empty means use default formatting
 };
 
+export const DEFAULT_DASHBOARD_SETTINGS: DashboardSettings = Object.freeze({
+  requireNoteForProcessedCount: true,
+});
+
 export const defaultCategoryConfig: CategoryConfig = Object.freeze({
   caseTypes: DEFAULT_CASE_TYPES,
   applicationTypes: DEFAULT_APPLICATION_TYPES,
@@ -207,6 +231,7 @@ export const defaultCategoryConfig: CategoryConfig = Object.freeze({
   noteCategories: DEFAULT_NOTE_CATEGORIES,
   verificationStatuses: DEFAULT_VERIFICATION_STATUSES,
   summaryTemplate: DEFAULT_SUMMARY_TEMPLATE,
+  dashboardSettings: DEFAULT_DASHBOARD_SETTINGS,
 });
 
 export const CATEGORY_DISPLAY_METADATA: Record<
@@ -422,6 +447,7 @@ export const mergeCategoryConfig = (
         defaultSections: { ...defaultCategoryConfig.summaryTemplate.defaultSections },
         sectionTemplates: { ...defaultCategoryConfig.summaryTemplate.sectionTemplates },
       },
+      dashboardSettings: { ...DEFAULT_DASHBOARD_SETTINGS },
     };
   }
 
@@ -469,6 +495,9 @@ export const mergeCategoryConfig = (
     archivalSettings: config.archivalSettings
       ? { ...config.archivalSettings }
       : undefined,
+    dashboardSettings: config.dashboardSettings
+      ? { ...DEFAULT_DASHBOARD_SETTINGS, ...config.dashboardSettings }
+      : { ...DEFAULT_DASHBOARD_SETTINGS },
   };
 };
 
