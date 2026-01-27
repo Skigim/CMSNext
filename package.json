@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "typecheck": "tsc --noEmit",
     "build": "tsc && vite build",
     "build:pages": "tsc && vite build --base=/CMSNext/",
     "build:no-lint": "tsc && vite build",
