@@ -152,7 +152,8 @@ function StepIndicator({
       {steps.map((step, index) => {
         const isActive = step.id === currentStep;
         const isCompleted = index < currentIndex;
-        const isClickable = onStepClick && (isCompleted || index === currentIndex);
+        // All steps are clickable - validation happens in onStepClick
+        const isClickable = Boolean(onStepClick);
 
         return (
           <div key={step.id} className="flex items-center">
@@ -387,9 +388,23 @@ export function FinancialItemStepperModal({
     if (currentStep === "details") {
       if (validateDetailsStep()) {
         setCurrentStep("amounts");
+        // Auto-open add entry form if no entries exist
+        if (localHistoryEntries.length === 0) {
+          setTimeout(() => {
+            setEntryFormData({
+              amount: "",
+              startDate: isoToDateInputValue(getFirstOfMonth()),
+              endDate: "",
+              verificationStatus: "Needs VR",
+              verificationSource: "",
+            });
+            setIsAddingEntry(true);
+            setEditingEntryId(null);
+          }, 0);
+        }
       }
     }
-  }, [currentStep, validateDetailsStep]);
+  }, [currentStep, validateDetailsStep, localHistoryEntries.length]);
 
   const handleBack = useCallback(() => {
     if (currentStep === "amounts") {
@@ -399,15 +414,32 @@ export function FinancialItemStepperModal({
 
   const handleStepClick = useCallback(
     (step: Step) => {
-      if (step === "amounts" && currentStep === "details") {
+      if (step === currentStep) return; // Already on this step
+      
+      if (step === "amounts") {
         if (validateDetailsStep()) {
           setCurrentStep(step);
+          // Auto-open add entry form if no entries exist
+          if (localHistoryEntries.length === 0) {
+            // Use setTimeout to ensure state update completes first
+            setTimeout(() => {
+              setEntryFormData({
+                amount: "",
+                startDate: isoToDateInputValue(getFirstOfMonth()),
+                endDate: "",
+                verificationStatus: "Needs VR",
+                verificationSource: "",
+              });
+              setIsAddingEntry(true);
+              setEditingEntryId(null);
+            }, 0);
+          }
         }
       } else if (step === "details") {
         setCurrentStep(step);
       }
     },
-    [currentStep, validateDetailsStep]
+    [currentStep, validateDetailsStep, localHistoryEntries.length]
   );
 
   // ============================================================================
