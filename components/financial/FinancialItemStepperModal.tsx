@@ -1,7 +1,8 @@
-import { useState, useCallback, useMemo, useEffect } from "react";
+import { useState, useCallback, useMemo, useEffect, useRef } from "react";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 import { Label } from "../ui/label";
+import { Checkbox } from "../ui/checkbox";
 import {
   Select,
   SelectContent,
@@ -10,6 +11,7 @@ import {
   SelectValue,
 } from "../ui/select";
 import { Textarea } from "../ui/textarea";
+import { useAddAnother } from "@/hooks/useAddAnother";
 import {
   Dialog,
   DialogContent,
@@ -247,6 +249,30 @@ export function FinancialItemStepperModal({
     [localHistoryEntries]
   );
 
+  // Ref for description input to focus after reset
+  const descriptionInputRef = useRef<HTMLInputElement>(null);
+
+  // Reset form to initial state for "add another" flow
+  const resetFormForAddAnother = useCallback(() => {
+    setCurrentStep("details");
+    setItemFormData(emptyItemFormData);
+    setLocalHistoryEntries([]);
+    setEntryFormData(emptyEntryFormData);
+    setEditingEntryId(null);
+    setIsAddingEntry(false);
+    setFormErrors({});
+    setIsConfirmingDelete(false);
+    setDeleteConfirmId(null);
+  }, []);
+
+  // Add another hook for creating multiple items
+  const { addAnother, setAddAnother, handlePostSave: triggerPostSave } = useAddAnother({
+    isOpen,
+    itemLabel: itemType.slice(0, -1), // "resource", "income" item, "expense"
+    resetForm: resetFormForAddAnother,
+    onClose,
+  });
+
   // ============================================================================
   // Sync State When Item Prop Changes (prevents stale data)
   // ============================================================================
@@ -476,20 +502,14 @@ export function FinancialItemStepperModal({
 
       if (isEditing && item && onUpdate) {
         await onUpdate(item.id, itemData);
+        // Always close when editing (no add another for edits)
+        resetFormForAddAnother();
+        onClose();
       } else {
         await onSave(itemData);
+        // Handle add another flow for new items
+        triggerPostSave(descriptionInputRef);
       }
-
-      // Reset and close
-      setCurrentStep("details");
-      setItemFormData(emptyItemFormData);
-      setLocalHistoryEntries([]);
-      setEntryFormData(emptyEntryFormData);
-      setEditingEntryId(null);
-      setIsAddingEntry(false);
-      setFormErrors({});
-      setIsConfirmingDelete(false);
-      onClose();
     } finally {
       setIsSubmitting(false);
     }
@@ -503,6 +523,8 @@ export function FinancialItemStepperModal({
     onUpdate,
     onSave,
     onClose,
+    resetFormForAddAnother,
+    triggerPostSave,
   ]);
 
   const handleClose = useCallback(() => {
@@ -573,6 +595,7 @@ export function FinancialItemStepperModal({
               <div className="space-y-2">
                 <Label htmlFor="description">Description *</Label>
                 <Input
+                  ref={descriptionInputRef}
                   id="description"
                   value={itemFormData.description}
                   onChange={(e) => handleItemFieldChange("description", e.target.value)}
@@ -917,7 +940,21 @@ export function FinancialItemStepperModal({
 
         {/* Footer */}
         <div className="flex items-center justify-between pt-4 border-t">
-          <div>
+          <div className="flex items-center gap-4">
+            {/* Add Another checkbox - only shown for new items on step 2 */}
+            {!isEditing && currentStep === "amounts" && (
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="addAnotherItem"
+                  checked={addAnother}
+                  onCheckedChange={(checked) => setAddAnother(checked === true)}
+                  disabled={isSubmitting}
+                />
+                <Label htmlFor="addAnotherItem" className="text-sm font-normal cursor-pointer">
+                  Add another {itemType.slice(0, -1)}
+                </Label>
+              </div>
+            )}
             {isEditing && onDelete && (
               <>
                 {isConfirmingDelete ? (

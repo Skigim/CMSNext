@@ -5,6 +5,8 @@
 
 // Utility hooks
 export { useIsMounted } from './useIsMounted';
+export { useAddAnother } from './useAddAnother';
+export type { UseAddAnotherOptions, UseAddAnotherResult } from './useAddAnother';
 export { useCategoryEditorState } from './useCategoryEditorState';
 export type { 
   EditorItem, 
