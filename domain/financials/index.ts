@@ -25,6 +25,8 @@ export {
   isDateInEntryRange,
   sortHistoryEntries,
   getAmountForMonth,
+  getAmountInfoForMonth,
+  type AmountInfo,
   getEntryForMonth,
   /**
    * Adds a new history entry to a financial item, auto-closing previous ongoing entries.

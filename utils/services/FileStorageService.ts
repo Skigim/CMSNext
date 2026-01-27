@@ -5,6 +5,7 @@ import type { Template } from "../../types/template";
 import type { Workflow } from "../../types/workflow";
 import { mergeCategoryConfig } from "../../types/categoryConfig";
 import { discoverStatusesFromCases, discoverAlertTypesFromAlerts } from "../categoryConfigMigration";
+import { migrateFinancialItems, hasItemsNeedingMigration } from "../financialItemMigration";
 import AutosaveFileService from "../AutosaveFileService";
 import { createLogger } from "../logger";
 import { reportFileStorageError, type FileStorageOperation } from "../fileStorageErrorReporter";
@@ -261,6 +262,22 @@ export class FileStorageService {
       // Validate format - only v2.0 is supported
       if (isNormalizedFileData(rawData)) {
         logger.debug("Detected normalized data format (v2.0)");
+        
+        // Auto-migrate financial items without history entries
+        if (hasItemsNeedingMigration(rawData.financials)) {
+          const [migratedFinancials, count] = migrateFinancialItems(rawData.financials);
+          logger.info(`Migrated ${count} financial items to include history entries`);
+          
+          const migratedData: NormalizedFileData = {
+            ...rawData,
+            financials: migratedFinancials,
+          };
+          
+          // Write migrated data back to file
+          await this.writeNormalizedData(migratedData);
+          return migratedData;
+        }
+        
         return rawData;
       }
 

@@ -55,6 +55,7 @@ export function FinancialItemCard({
     normalizedItem,
     normalizedFormData,
     displayAmount,
+    isAmountFallback,
     verificationStatus,
     canUpdateStatus,
     // History modal
@@ -147,6 +148,7 @@ export function FinancialItemCard({
                 displayName={normalizedItem.displayName}
                 dateAdded={normalizedItem.dateAdded}
                 displayAmount={displayAmount}
+                isAmountFallback={isAmountFallback}
               />
               <FinancialItemCardMeta
                 normalizedItem={normalizedItem}

@@ -51,6 +51,10 @@ caughtErrorsIgnorePattern: '^(err|error|e|_)$'
     'prefer-const': 'warn',
     'no-useless-escape': 'warn',
     'react-hooks/exhaustive-deps': 'warn',
+    // Downgrade new react-hooks 5.x rules to warnings for gradual migration
+    'react-hooks/set-state-in-effect': 'warn',
+    'react-hooks/refs': 'warn',
+    'react-hooks/purity': 'warn',
   },
 }, {
   files: ['**/*.d.ts'],

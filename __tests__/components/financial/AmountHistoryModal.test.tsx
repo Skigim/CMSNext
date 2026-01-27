@@ -103,9 +103,9 @@ describe("AmountHistoryModal", () => {
 
       // Check table headers
       expect(screen.getByRole("columnheader", { name: "Amount" })).toBeInTheDocument();
-      expect(screen.getByRole("columnheader", { name: "Start Date" })).toBeInTheDocument();
-      expect(screen.getByRole("columnheader", { name: "End Date" })).toBeInTheDocument();
-      expect(screen.getByRole("columnheader", { name: "Verification" })).toBeInTheDocument();
+      expect(screen.getByRole("columnheader", { name: "Period" })).toBeInTheDocument();
+      expect(screen.getByRole("columnheader", { name: "Status" })).toBeInTheDocument();
+      expect(screen.getByRole("columnheader", { name: "Source" })).toBeInTheDocument();
 
       // Check table data - amounts formatted as currency
       expect(screen.getByText("$500.00")).toBeInTheDocument();
@@ -116,7 +116,7 @@ describe("AmountHistoryModal", () => {
       expect(screen.getByText("Pay Stub Nov")).toBeInTheDocument();
 
       // Ongoing entry shows "Ongoing" for end date
-      expect(screen.getByText("Ongoing")).toBeInTheDocument();
+      expect(screen.getByText(/Ongoing/i)).toBeInTheDocument();
     });
   });
 
@@ -170,6 +170,7 @@ describe("AmountHistoryModal", () => {
         amount: 750,
         startDate: "2024-12-01",
         endDate: null,
+        verificationStatus: "Needs VR", // Default status when adding new entry
         verificationSource: "Direct Deposit Statement",
       });
     });

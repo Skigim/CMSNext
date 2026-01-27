@@ -29,6 +29,8 @@ export interface AmountHistoryEntry {
   startDate: string;
   /** End date of this amount period (YYYY-MM-DD format). Null/undefined means ongoing. */
   endDate?: string | null;
+  /** Verification status for this entry (e.g., "Verified", "Needs VR", "Pending") */
+  verificationStatus?: string;
   /** Verification source for this specific entry (e.g., "Bank Statement 05/2025") */
   verificationSource?: string;
   /** When this entry was created */

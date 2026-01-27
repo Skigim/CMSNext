@@ -3,6 +3,13 @@ import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 import { Label } from "../ui/label";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "../ui/select";
+import {
   Dialog,
   DialogContent,
   DialogHeader,
@@ -46,6 +53,7 @@ interface EntryFormData {
   amount: string;
   startDate: string;
   endDate: string;
+  verificationStatus: string;
   verificationSource: string;
 }
 
@@ -53,6 +61,7 @@ const emptyFormData: EntryFormData = {
   amount: "",
   startDate: "",
   endDate: "",
+  verificationStatus: "Needs VR",
   verificationSource: "",
 };
 
@@ -113,28 +122,30 @@ export function AmountHistoryModal({
   }, [resetForm, onClose]);
 
   const handleStartAdd = useCallback(() => {
-    // Pre-fill with first of current month
+    // Pre-fill with first of current month and item's current verification status
     const firstOfMonth = getFirstOfMonth();
     setFormData({
       amount: "",
       startDate: formatDateForInput(firstOfMonth),
       endDate: "",
+      verificationStatus: item.verificationStatus ?? "Needs VR",
       verificationSource: "",
     });
     setIsAddingNew(true);
     setEditingEntryId(null);
-  }, []);
+  }, [item.verificationStatus]);
 
   const handleStartEdit = useCallback((entry: AmountHistoryEntry) => {
     setFormData({
       amount: entry.amount.toString(),
       startDate: formatDateForInput(entry.startDate),
       endDate: formatDateForInput(entry.endDate),
+      verificationStatus: entry.verificationStatus ?? item.verificationStatus ?? "Needs VR",
       verificationSource: entry.verificationSource ?? "",
     });
     setEditingEntryId(entry.id);
     setIsAddingNew(false);
-  }, []);
+  }, [item.verificationStatus]);
 
   const handleCancelEdit = useCallback(() => {
     resetForm();
@@ -167,6 +178,7 @@ export function AmountHistoryModal({
           amount,
           startDate,
           endDate,
+          verificationStatus: formData.verificationStatus || undefined,
           verificationSource: formData.verificationSource || undefined,
         });
       } else if (editingEntryId) {
@@ -174,6 +186,7 @@ export function AmountHistoryModal({
           amount,
           startDate,
           endDate,
+          verificationStatus: formData.verificationStatus || undefined,
           verificationSource: formData.verificationSource || undefined,
         });
       }
@@ -286,6 +299,28 @@ export function AmountHistoryModal({
                 </div>
 
                 <div>
+                  <Label htmlFor="history-status" className="text-sm">
+                    Verification Status
+                  </Label>
+                  <Select
+                    value={formData.verificationStatus}
+                    onValueChange={(value) => handleFieldChange("verificationStatus", value)}
+                  >
+                    <SelectTrigger id="history-status" className="mt-1">
+                      <SelectValue placeholder="Select status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Needs VR">Needs VR</SelectItem>
+                      <SelectItem value="Pending">Pending</SelectItem>
+                      <SelectItem value="Verified">Verified</SelectItem>
+                      <SelectItem value="Unable to Verify">Unable to Verify</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
                   <Label htmlFor="history-verification" className="text-sm">
                     Verification Source
                   </Label>
@@ -300,6 +335,8 @@ export function AmountHistoryModal({
                     className="mt-1"
                   />
                 </div>
+
+                <div />
               </div>
 
               <div className="grid grid-cols-2 gap-4">
@@ -364,9 +401,9 @@ export function AmountHistoryModal({
                 <TableHeader>
                   <TableRow>
                     <TableHead>Amount</TableHead>
-                    <TableHead>Start Date</TableHead>
-                    <TableHead>End Date</TableHead>
-                    <TableHead>Verification</TableHead>
+                    <TableHead>Period</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Source</TableHead>
                     <TableHead className="w-[100px]">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -376,14 +413,19 @@ export function AmountHistoryModal({
                       <TableCell className="font-medium">
                         {formatCurrency(entry.amount)}
                       </TableCell>
-                      <TableCell>{formatHistoryDate(entry.startDate)}</TableCell>
                       <TableCell>
-                        {entry.endDate ? (
-                          formatHistoryDate(entry.endDate)
-                        ) : (
-                          <span className="text-muted-foreground italic">
-                            Ongoing
-                          </span>
+                        <div className="text-sm">
+                          {formatHistoryDate(entry.startDate)}
+                          {entry.endDate ? (
+                            <> – {formatHistoryDate(entry.endDate)}</>
+                          ) : (
+                            <span className="text-muted-foreground italic"> – Ongoing</span>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        {entry.verificationStatus || (
+                          <span className="text-muted-foreground">—</span>
                         )}
                       </TableCell>
                       <TableCell>

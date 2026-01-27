@@ -73,9 +73,24 @@ export function sortHistoryEntries(entries: AmountHistoryEntry[]): AmountHistory
 }
 
 /**
+ * Result from getAmountInfoForMonth with fallback indicator.
+ */
+export interface AmountInfo {
+  /** The amount value for display */
+  amount: number;
+  /** The source entry if found */
+  entry: AmountHistoryEntry | undefined;
+  /** Whether this is a fallback to a past entry (no entry covers target date) */
+  isFallback: boolean;
+  /** Whether this falls back to item.amount (no history entries at all) */
+  isLegacyFallback: boolean;
+}
+
+/**
  * Gets the applicable amount for a financial item for a given month.
  * Searches amountHistory for an entry that covers the target date.
- * Falls back to item.amount if no matching entry exists.
+ * Falls back to most recent past entry if no exact match.
+ * Falls back to item.amount only if no history exists.
  * 
  * @param item The financial item
  * @param targetDate The date to get the amount for (defaults to current date)
@@ -85,8 +100,33 @@ export function getAmountForMonth(
   item: FinancialItem,
   targetDate: Date = new Date()
 ): number {
+  return getAmountInfoForMonth(item, targetDate).amount;
+}
+
+/**
+ * Gets detailed amount info for a financial item for a given month.
+ * Returns the amount, source entry, and whether it's a fallback.
+ * 
+ * Priority:
+ * 1. Entry that covers the target date exactly
+ * 2. Most recent past entry (with isFallback=true)
+ * 3. item.amount if no history (with isLegacyFallback=true)
+ * 
+ * @param item The financial item
+ * @param targetDate The date to get the amount for (defaults to current date)
+ * @returns AmountInfo with amount, entry, and fallback indicators
+ */
+export function getAmountInfoForMonth(
+  item: FinancialItem,
+  targetDate: Date = new Date()
+): AmountInfo {
   if (!item.amountHistory || item.amountHistory.length === 0) {
-    return item.amount;
+    return {
+      amount: item.amount,
+      entry: undefined,
+      isFallback: false,
+      isLegacyFallback: true,
+    };
   }
   
   // Find the most recent entry that covers the target date
@@ -94,12 +134,49 @@ export function getAmountForMonth(
   
   for (const entry of sortedHistory) {
     if (isDateInEntryRange(entry, targetDate)) {
-      return entry.amount;
+      return {
+        amount: entry.amount,
+        entry,
+        isFallback: false,
+        isLegacyFallback: false,
+      };
     }
   }
   
-  // No matching entry found, fall back to item.amount
-  return item.amount;
+  // No exact match - find most recent past entry
+  const targetTime = targetDate.getTime();
+  let mostRecentPastEntry: AmountHistoryEntry | undefined;
+  
+  for (const entry of sortedHistory) {
+    const entryEnd = entry.endDate 
+      ? new Date(entry.endDate + 'T23:59:59').getTime()
+      : new Date(entry.startDate + 'T12:00:00').getTime();
+    
+    if (entryEnd < targetTime) {
+      // This entry ended before target date
+      if (!mostRecentPastEntry) {
+        mostRecentPastEntry = entry;
+      }
+      break; // sortedHistory is reverse-chronological, so first past entry is most recent
+    }
+  }
+  
+  if (mostRecentPastEntry) {
+    return {
+      amount: mostRecentPastEntry.amount,
+      entry: mostRecentPastEntry,
+      isFallback: true,
+      isLegacyFallback: false,
+    };
+  }
+  
+  // No past entries found - fall back to item.amount
+  return {
+    amount: item.amount,
+    entry: undefined,
+    isFallback: false,
+    isLegacyFallback: true,
+  };
 }
 
 /**
@@ -129,13 +206,14 @@ export function getEntryForMonth(
  * Creates a new amount history entry.
  * @param amount The amount value
  * @param startDate The start date (defaults to first of current month)
- * @param options Optional end date and verification source
+ * @param options Optional end date, verification status, and verification source
  */
 export function createHistoryEntry(
   amount: number,
   startDate?: string,
   options?: {
     endDate?: string | null;
+    verificationStatus?: string;
     verificationSource?: string;
   }
 ): AmountHistoryEntry {
@@ -144,6 +222,7 @@ export function createHistoryEntry(
     amount,
     startDate: startDate ?? getFirstOfMonth(),
     endDate: options?.endDate ?? null,
+    verificationStatus: options?.verificationStatus,
     verificationSource: options?.verificationSource,
     createdAt: new Date().toISOString(),
   };

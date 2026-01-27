@@ -4,6 +4,7 @@ import {
   getLastOfMonth,
   isDateInEntryRange,
   getAmountForMonth,
+  getAmountInfoForMonth,
   getEntryForMonth,
   sortHistoryEntries,
   createHistoryEntry,
@@ -157,7 +158,7 @@ describe("financialHistory utilities", () => {
       expect(getAmountForMonth(itemWithMultipleHistory, new Date("2025-05-15"))).toBe(1000);
     });
 
-    it("falls back to item.amount when no entry covers the date", () => {
+    it("falls back to most recent past entry when no entry covers the date", () => {
       const itemWithHistory: FinancialItem = {
         ...baseItem,
         amountHistory: [
@@ -170,8 +171,62 @@ describe("financialHistory utilities", () => {
           },
         ],
       };
-      // Requesting amount for July when only June is covered
-      expect(getAmountForMonth(itemWithHistory, new Date("2025-07-15"))).toBe(500);
+      // Requesting amount for July when only June is covered - should fall back to June's amount
+      expect(getAmountForMonth(itemWithHistory, new Date("2025-07-15"))).toBe(1000);
+    });
+
+    it("falls back to item.amount when no history entries exist", () => {
+      expect(getAmountForMonth(baseItem, new Date("2025-07-15"))).toBe(500);
+    });
+  });
+
+  describe("getAmountInfoForMonth", () => {
+    const baseItem: FinancialItem = {
+      id: "item-1",
+      description: "Test Item",
+      amount: 500,
+      verificationStatus: "Verified",
+    };
+
+    it("returns isLegacyFallback=true when no history exists", () => {
+      const result = getAmountInfoForMonth(baseItem, new Date("2025-06-15"));
+      expect(result.amount).toBe(500);
+      expect(result.entry).toBeUndefined();
+      expect(result.isFallback).toBe(false);
+      expect(result.isLegacyFallback).toBe(true);
+    });
+
+    it("returns exact match with no fallback flags", () => {
+      const entry: AmountHistoryEntry = {
+        id: "1",
+        amount: 1000,
+        startDate: "2025-06-01",
+        endDate: null,
+        createdAt: "2025-06-01",
+      };
+      const itemWithHistory = { ...baseItem, amountHistory: [entry] };
+      const result = getAmountInfoForMonth(itemWithHistory, new Date("2025-06-15"));
+      expect(result.amount).toBe(1000);
+      expect(result.entry).toEqual(entry);
+      expect(result.isFallback).toBe(false);
+      expect(result.isLegacyFallback).toBe(false);
+    });
+
+    it("returns isFallback=true when using a past entry", () => {
+      const entry: AmountHistoryEntry = {
+        id: "1",
+        amount: 1000,
+        startDate: "2025-06-01",
+        endDate: "2025-06-30",
+        createdAt: "2025-06-01",
+      };
+      const itemWithHistory = { ...baseItem, amountHistory: [entry] };
+      // July 15 is after June 30 end date
+      const result = getAmountInfoForMonth(itemWithHistory, new Date("2025-07-15"));
+      expect(result.amount).toBe(1000);
+      expect(result.entry).toEqual(entry);
+      expect(result.isFallback).toBe(true);
+      expect(result.isLegacyFallback).toBe(false);
     });
   });
 

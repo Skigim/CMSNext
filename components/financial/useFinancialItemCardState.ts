@@ -3,8 +3,7 @@ import type { AmountHistoryEntry, CaseCategory, FinancialItem } from "../../type
 import { getNormalizedFormData, getNormalizedItem } from "../../utils/dataNormalization";
 import { getDisplayAmount } from "@/domain/common";
 import {
-  getAmountForMonth,
-  getEntryForMonth,
+  getAmountInfoForMonth,
   getVerificationStatusInfo,
   shouldShowVerificationSource,
   validateFinancialItem,
@@ -54,6 +53,10 @@ export interface UseFinancialItemCardStateResult {
   normalizedItem: NormalizedFinancialItem;
   normalizedFormData: NormalizedFinancialFormData;
   displayAmount: string;
+  /** True if displaying a past entry's amount (no entry covers selected month) */
+  isAmountFallback: boolean;
+  /** True if falling back to item.amount (no history entries exist) */
+  isLegacyFallback: boolean;
   verificationStatus: VerificationBadgeInfo;
   showVerificationSourceField: boolean;
   canUpdateStatus: boolean;
@@ -104,15 +107,15 @@ export function useFinancialItemCardState({
   const normalizedItem = useMemo(() => getNormalizedItem(item), [item]);
   const normalizedFormData = useMemo(() => getNormalizedFormData(formData), [formData]);
   
-  // Use getAmountForMonth to derive the display amount based on selected month
-  const currentAmount = useMemo(
-    () => getAmountForMonth(item, selectedMonth),
+  // Use getAmountInfoForMonth to derive the display amount and fallback status based on selected month
+  const amountInfo = useMemo(
+    () => getAmountInfoForMonth(item, selectedMonth),
     [item, selectedMonth]
   );
   
   const displayAmount = useMemo(
-    () => getDisplayAmount(currentAmount, normalizedItem.frequency, itemType),
-    [currentAmount, normalizedItem.frequency, itemType],
+    () => getDisplayAmount(amountInfo.amount, normalizedItem.frequency, itemType),
+    [amountInfo.amount, normalizedItem.frequency, itemType],
   );
   
   const hasAmountHistory = useMemo(
@@ -120,22 +123,20 @@ export function useFinancialItemCardState({
     [item.amountHistory]
   );
 
-  // Get the current entry for the selected month to extract entry-level verification source
-  const currentEntry = useMemo(
-    () => getEntryForMonth(item, selectedMonth),
-    [item, selectedMonth]
-  );
+  // Get the current entry for the selected month to extract entry-level verification
+  const currentEntry = amountInfo.entry;
   
-  // For display (not editing): use item's verificationStatus with entry's verificationSource
+  // For display (not editing): use entry-level verificationStatus/Source if available
   // For editing: use formData values (user may be changing them)
   const verificationStatus = useMemo(
     () => {
       if (isEditing) {
         return getVerificationStatusInfo(formData.verificationStatus, formData.verificationSource);
       }
-      // Use entry-level verificationSource if available, otherwise fall back to item-level
+      // Use entry-level verification if available, otherwise fall back to item-level
+      const effectiveStatus = currentEntry?.verificationStatus ?? item.verificationStatus;
       const effectiveSource = currentEntry?.verificationSource ?? item.verificationSource;
-      return getVerificationStatusInfo(item.verificationStatus, effectiveSource);
+      return getVerificationStatusInfo(effectiveStatus, effectiveSource);
     },
     [isEditing, formData.verificationStatus, formData.verificationSource, currentEntry, item.verificationStatus, item.verificationSource],
   );
@@ -395,6 +396,8 @@ export function useFinancialItemCardState({
     normalizedItem,
     normalizedFormData,
     displayAmount,
+    isAmountFallback: amountInfo.isFallback,
+    isLegacyFallback: amountInfo.isLegacyFallback,
     verificationStatus,
     showVerificationSourceField,
     canUpdateStatus,

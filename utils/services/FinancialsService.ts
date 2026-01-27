@@ -198,7 +198,10 @@ export class FinancialsService {
     // Auto-create history entry if amount provided but no history
     let amountHistory = itemData.amountHistory;
     if (itemData.amount !== undefined && !amountHistory) {
-      amountHistory = [createHistoryEntry(itemData.amount)];
+      amountHistory = [createHistoryEntry(itemData.amount, undefined, {
+        verificationStatus: itemData.verificationStatus,
+        verificationSource: itemData.verificationSource,
+      })];
     }
 
     // Create new item with foreign keys
@@ -294,8 +297,15 @@ export class FinancialsService {
     let updatedAmountHistory = updates.amountHistory ?? existingItem.amountHistory;
 
     if (isAmountChanging && updates.amount !== undefined) {
+      // Get verificationStatus from updates or existing item
+      const verificationStatus = updates.verificationStatus ?? existingItem.verificationStatus;
+      const verificationSource = updates.verificationSource ?? existingItem.verificationSource;
+      
       // Auto-create a history entry for the new amount
-      const newEntry = createHistoryEntry(updates.amount);
+      const newEntry = createHistoryEntry(updates.amount, undefined, {
+        verificationStatus,
+        verificationSource,
+      });
       const existingHistory = existingItem.amountHistory ?? [];
       
       // Close any previous ongoing entries
