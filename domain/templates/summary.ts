@@ -24,6 +24,7 @@ import {
   calculateAVSTrackingDates,
   extractKnownInstitutions,
 } from "@/domain/cases";
+import { getAmountInfoForMonth } from "@/domain/financials";
 import { renderTemplate } from "./vr";
 
 const SECTION_SEPARATOR = "\n-----\n";
@@ -88,9 +89,17 @@ function formatDateMMDDYYYY(dateString: string | null | undefined): string {
 /**
  * Format a resource item:
  * Description Account Number w/ Institution/Location - Amount (Verification Source or Status)
+ * @param item The financial item
+ * @param targetDate Optional date to get the amount for (defaults to current date)
  */
-export function formatResourceItem(item: FinancialItem): string {
+export function formatResourceItem(item: FinancialItem, targetDate?: Date): string {
   const parts: string[] = [];
+
+  // Get amount and verification from history entry
+  const amountInfo = getAmountInfoForMonth(item, targetDate);
+  const amount = amountInfo.amount;
+  const verificationStatus = amountInfo.entry?.verificationStatus ?? "Needs VR";
+  const verificationSource = amountInfo.entry?.verificationSource;
 
   parts.push(item.description || "Unnamed");
 
@@ -102,12 +111,12 @@ export function formatResourceItem(item: FinancialItem): string {
     parts.push(` w/ ${item.location}`);
   }
 
-  parts.push(` - ${formatCurrencyAmount(item.amount)}`);
+  parts.push(` - ${formatCurrencyAmount(amount)}`);
 
-  if (item.verificationStatus === "Verified" && item.verificationSource) {
-    parts.push(` (${item.verificationSource})`);
-  } else if (item.verificationStatus || item.status) {
-    parts.push(` (${item.verificationStatus || item.status})`);
+  if (verificationStatus === "Verified" && verificationSource) {
+    parts.push(` (${verificationSource})`);
+  } else if (verificationStatus) {
+    parts.push(` (${verificationStatus})`);
   }
 
   return parts.join("");
@@ -116,9 +125,17 @@ export function formatResourceItem(item: FinancialItem): string {
 /**
  * Format an income item:
  * Description from Institution - Amount/Frequency (Verification Source or Status)
+ * @param item The financial item
+ * @param targetDate Optional date to get the amount for (defaults to current date)
  */
-export function formatIncomeItem(item: FinancialItem): string {
+export function formatIncomeItem(item: FinancialItem, targetDate?: Date): string {
   const parts: string[] = [];
+
+  // Get amount and verification from history entry
+  const amountInfo = getAmountInfoForMonth(item, targetDate);
+  const amount = amountInfo.amount;
+  const verificationStatus = amountInfo.entry?.verificationStatus ?? "Needs VR";
+  const verificationSource = amountInfo.entry?.verificationSource;
 
   parts.push(item.description || "Unnamed");
 
@@ -127,13 +144,13 @@ export function formatIncomeItem(item: FinancialItem): string {
   }
 
   parts.push(
-    ` - ${formatCurrencyAmount(item.amount)}${formatFrequencyDisplay(item.frequency)}`
+    ` - ${formatCurrencyAmount(amount)}${formatFrequencyDisplay(item.frequency)}`
   );
 
-  if (item.verificationStatus === "Verified" && item.verificationSource) {
-    parts.push(` (${item.verificationSource})`);
-  } else if (item.verificationStatus || item.status) {
-    parts.push(` (${item.verificationStatus || item.status})`);
+  if (verificationStatus === "Verified" && verificationSource) {
+    parts.push(` (${verificationSource})`);
+  } else if (verificationStatus) {
+    parts.push(` (${verificationStatus})`);
   }
 
   return parts.join("");
@@ -142,9 +159,17 @@ export function formatIncomeItem(item: FinancialItem): string {
 /**
  * Format an expense item:
  * Description to Institution - Amount/Frequency (Verification Source or Status)
+ * @param item The financial item
+ * @param targetDate Optional date to get the amount for (defaults to current date)
  */
-export function formatExpenseItem(item: FinancialItem): string {
+export function formatExpenseItem(item: FinancialItem, targetDate?: Date): string {
   const parts: string[] = [];
+
+  // Get amount and verification from history entry
+  const amountInfo = getAmountInfoForMonth(item, targetDate);
+  const amount = amountInfo.amount;
+  const verificationStatus = amountInfo.entry?.verificationStatus ?? "Needs VR";
+  const verificationSource = amountInfo.entry?.verificationSource;
 
   parts.push(item.description || "Unnamed");
 
@@ -153,13 +178,13 @@ export function formatExpenseItem(item: FinancialItem): string {
   }
 
   parts.push(
-    ` - ${formatCurrencyAmount(item.amount)}${formatFrequencyDisplay(item.frequency)}`
+    ` - ${formatCurrencyAmount(amount)}${formatFrequencyDisplay(item.frequency)}`
   );
 
-  if (item.verificationStatus === "Verified" && item.verificationSource) {
-    parts.push(` (${item.verificationSource})`);
-  } else if (item.verificationStatus || item.status) {
-    parts.push(` (${item.verificationStatus || item.status})`);
+  if (verificationStatus === "Verified" && verificationSource) {
+    parts.push(` (${verificationSource})`);
+  } else if (verificationStatus) {
+    parts.push(` (${verificationStatus})`);
   }
 
   return parts.join("");
@@ -255,9 +280,12 @@ export function buildRelationshipsContext(
 
 /**
  * Build template render context for resources section
+ * @param resources The financial items
+ * @param targetDate Optional date for amount lookup (defaults to current date)
  */
 export function buildResourcesContext(
-  resources: FinancialItem[]
+  resources: FinancialItem[],
+  targetDate?: Date
 ): Partial<TemplateRenderContext> {
   if (!resources || resources.length === 0) {
     return {
@@ -265,7 +293,7 @@ export function buildResourcesContext(
     };
   }
 
-  const formatted = resources.map(formatResourceItem);
+  const formatted = resources.map(item => formatResourceItem(item, targetDate));
   return {
     resourcesList: formatted.join("\n"),
   };
@@ -273,9 +301,12 @@ export function buildResourcesContext(
 
 /**
  * Build template render context for income section
+ * @param income The financial items
+ * @param targetDate Optional date for amount lookup (defaults to current date)
  */
 export function buildIncomeContext(
-  income: FinancialItem[]
+  income: FinancialItem[],
+  targetDate?: Date
 ): Partial<TemplateRenderContext> {
   if (!income || income.length === 0) {
     return {
@@ -283,7 +314,7 @@ export function buildIncomeContext(
     };
   }
 
-  const formatted = income.map(formatIncomeItem);
+  const formatted = income.map(item => formatIncomeItem(item, targetDate));
   return {
     incomeList: formatted.join("\n"),
   };
@@ -291,9 +322,12 @@ export function buildIncomeContext(
 
 /**
  * Build template render context for expenses section
+ * @param expenses The financial items
+ * @param targetDate Optional date for amount lookup (defaults to current date)
  */
 export function buildExpensesContext(
-  expenses: FinancialItem[]
+  expenses: FinancialItem[],
+  targetDate?: Date
 ): Partial<TemplateRenderContext> {
   if (!expenses || expenses.length === 0) {
     return {
@@ -301,7 +335,7 @@ export function buildExpensesContext(
     };
   }
 
-  const formatted = expenses.map(formatExpenseItem);
+  const formatted = expenses.map(item => formatExpenseItem(item, targetDate));
   return {
     expensesList: formatted.join("\n"),
   };

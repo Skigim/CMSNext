@@ -330,6 +330,8 @@ export function useFinancialItemCardState({
 
   // History modal handlers
   const handleOpenHistoryModal = useCallback(() => {
+    // Close edit mode when opening history modal since dynamic data is managed there
+    setIsEditing(false);
     setIsHistoryModalOpen(true);
   }, []);
 

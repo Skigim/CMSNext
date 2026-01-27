@@ -6,7 +6,45 @@
 
 import { describe, it, expect } from 'vitest';
 import { generateCaseSummary } from '../../utils/caseSummaryGenerator';
-import { StoredCase, FinancialItem, Note } from '../../types/case';
+import { StoredCase, FinancialItem, Note, AmountHistoryEntry } from '../../types/case';
+
+/**
+ * Helper to create a financial item with proper amountHistory entry.
+ * Since amount/verification are now stored per-entry, tests need to include amountHistory.
+ */
+function createFinancialItem(data: {
+  id: string;
+  description: string;
+  amount: number;
+  verificationStatus?: string;
+  verificationSource?: string;
+  accountNumber?: string;
+  location?: string;
+  frequency?: string;
+  notes?: string;
+}): FinancialItem {
+  const entry: AmountHistoryEntry = {
+    id: `entry-${data.id}`,
+    amount: data.amount,
+    startDate: '2024-01-01',
+    endDate: null,
+    verificationStatus: data.verificationStatus,
+    verificationSource: data.verificationSource,
+    createdAt: '2024-01-01T00:00:00.000Z',
+  };
+  
+  return {
+    id: data.id,
+    description: data.description,
+    amount: 0, // Item-level amount is deprecated
+    verificationStatus: 'Needs VR', // Item-level status is deprecated
+    amountHistory: [entry],
+    accountNumber: data.accountNumber,
+    location: data.location,
+    frequency: data.frequency,
+    notes: data.notes,
+  };
+}
 
 // Helper to create a minimal valid StoredCase
 function createMockCase(overrides: Partial<StoredCase> = {}): StoredCase {
@@ -338,7 +376,7 @@ describe('generateCaseSummary', () => {
       const caseData = createMockCase();
       const financials = {
         resources: [
-          {
+          createFinancialItem({
             id: 'res-1',
             description: 'Checking Account',
             accountNumber: '1234',
@@ -346,7 +384,7 @@ describe('generateCaseSummary', () => {
             amount: 5250,
             verificationStatus: 'Verified',
             verificationSource: 'Bank Statement',
-          } as FinancialItem,
+          }),
         ],
         income: [],
         expenses: [],
@@ -361,14 +399,14 @@ describe('generateCaseSummary', () => {
       const caseData = createMockCase();
       const financials = {
         resources: [
-          {
+          createFinancialItem({
             id: 'res-1',
             description: 'Savings Account',
             accountNumber: '5678',
             location: 'Wells Fargo',
             amount: 12000,
             verificationStatus: 'Pending',
-          } as FinancialItem,
+          }),
         ],
         income: [],
         expenses: [],
@@ -383,12 +421,11 @@ describe('generateCaseSummary', () => {
       const caseData = createMockCase();
       const financials = {
         resources: [
-          {
+          createFinancialItem({
             id: 'res-1',
             description: 'Cash',
             amount: 1500.5,
-            verificationStatus: '',
-          } as FinancialItem,
+          }),
         ],
         income: [],
         expenses: [],
@@ -414,7 +451,7 @@ describe('generateCaseSummary', () => {
       const financials = {
         resources: [],
         income: [
-          {
+          createFinancialItem({
             id: 'inc-1',
             description: 'Social Security',
             location: 'SSA',
@@ -422,7 +459,7 @@ describe('generateCaseSummary', () => {
             frequency: 'monthly',
             verificationStatus: 'Verified',
             verificationSource: 'Award Letter',
-          } as FinancialItem,
+          }),
         ],
         expenses: [],
       };
@@ -437,14 +474,14 @@ describe('generateCaseSummary', () => {
       const financials = {
         resources: [],
         income: [
-          {
+          createFinancialItem({
             id: 'inc-1',
             description: 'Pension',
             location: 'State Retirement',
             amount: 750,
             frequency: 'monthly',
             verificationStatus: 'In Progress',
-          } as FinancialItem,
+          }),
         ],
         expenses: [],
       };
@@ -470,7 +507,7 @@ describe('generateCaseSummary', () => {
         resources: [],
         income: [],
         expenses: [
-          {
+          createFinancialItem({
             id: 'exp-1',
             description: 'Rent',
             location: 'Sunset Apartments',
@@ -478,7 +515,7 @@ describe('generateCaseSummary', () => {
             frequency: 'monthly',
             verificationStatus: 'Verified',
             verificationSource: 'Lease Agreement',
-          } as FinancialItem,
+          }),
         ],
       };
 
@@ -493,14 +530,14 @@ describe('generateCaseSummary', () => {
         resources: [],
         income: [],
         expenses: [
-          {
+          createFinancialItem({
             id: 'exp-1',
             description: 'Utilities',
             location: 'Power Co',
             amount: 150,
             frequency: 'monthly',
             verificationStatus: 'VR Pending',
-          } as FinancialItem,
+          }),
         ],
       };
 
@@ -626,17 +663,17 @@ describe('generateCaseSummary', () => {
       expect(summary).toContain('Expenses\nNone');
     });
 
-    it('handles financial item with status field instead of verificationStatus', () => {
+    it('handles financial item with amountHistory entry', () => {
       const caseData = createMockCase();
       const financials = {
         resources: [
-          {
+          createFinancialItem({
             id: 'res-1',
             description: 'Asset',
             amount: 1000,
-            verificationStatus: '',
-            status: 'Approved' as const,
-          } as FinancialItem,
+            verificationStatus: 'Verified',
+            verificationSource: 'Bank Statement',
+          }),
         ],
         income: [],
         expenses: [],
@@ -644,7 +681,7 @@ describe('generateCaseSummary', () => {
 
       const summary = generateCaseSummary(caseData, { financials, notes: [] });
       
-      expect(summary).toContain('Asset - $1,000.00 (Approved)');
+      expect(summary).toContain('Asset - $1,000.00 (Bank Statement)');
     });
   });
 

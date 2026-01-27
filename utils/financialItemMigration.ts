@@ -54,6 +54,7 @@ function getStartDateForMigration(item: FinancialItem | StoredFinancialItem): st
 
 /**
  * Migrate a single financial item by creating a history entry from its current amount.
+ * Clears deprecated item-level dynamic fields after migration.
  * Returns the migrated item, or the original if no migration needed.
  */
 export function migrateFinancialItem<T extends FinancialItem | StoredFinancialItem>(
@@ -75,9 +76,15 @@ export function migrateFinancialItem<T extends FinancialItem | StoredFinancialIt
     createdAt: item.createdAt ?? new Date().toISOString(),
   };
   
+  // Clear deprecated item-level dynamic fields after migrating to entry-level
   return {
     ...item,
     amountHistory: [historyEntry],
+    // Set amount to 0 since it's now stored in entries
+    amount: 0,
+    // Clear item-level verification (now per-entry)
+    verificationStatus: "Needs VR",
+    verificationSource: undefined,
   };
 }
 
