@@ -126,27 +126,25 @@ export function useFinancialItemCardState({
   // Get the current entry for the selected month to extract entry-level verification
   const currentEntry = amountInfo.entry;
   
-  // For display (not editing): use entry-level verificationStatus/Source if available
-  // For editing: use formData values (user may be changing them)
+  // Verification is ONLY stored at entry level - no fallback to item level
+  // For legacy items with no history entries, show default "Needs VR"
   const verificationStatus = useMemo(
     () => {
-      if (isEditing) {
-        return getVerificationStatusInfo(formData.verificationStatus, formData.verificationSource);
-      }
-      // Use entry-level verification if available, otherwise fall back to item-level
-      const effectiveStatus = currentEntry?.verificationStatus ?? item.verificationStatus;
-      const effectiveSource = currentEntry?.verificationSource ?? item.verificationSource;
+      // Use entry-level verification if available, otherwise default status
+      const effectiveStatus = currentEntry?.verificationStatus ?? "Needs VR";
+      const effectiveSource = currentEntry?.verificationSource ?? undefined;
       return getVerificationStatusInfo(effectiveStatus, effectiveSource);
     },
-    [isEditing, formData.verificationStatus, formData.verificationSource, currentEntry, item.verificationStatus, item.verificationSource],
+    [currentEntry],
   );
   const showVerificationSourceField = useMemo(
-    () => shouldShowVerificationSource(item.verificationStatus, formData.verificationStatus),
-    [formData.verificationStatus, item.verificationStatus],
+    () => shouldShowVerificationSource(currentEntry?.verificationStatus ?? "Needs VR", currentEntry?.verificationStatus ?? "Needs VR"),
+    [currentEntry?.verificationStatus],
   );
+  // Can only update status if there's a current entry to update
   const canUpdateStatus = useMemo(
-    () => Boolean(onUpdate && normalizedItem.safeId),
-    [onUpdate, normalizedItem.safeId],
+    () => Boolean(onUpdateHistoryEntry && normalizedItem.safeId && currentEntry),
+    [onUpdateHistoryEntry, normalizedItem.safeId, currentEntry],
   );
 
   useEffect(() => {
@@ -287,41 +285,47 @@ export function useFinancialItemCardState({
 
   const handleStatusChange = useCallback(
     async (newStatus: VerificationStatus) => {
-      const newFormData = {
-        ...formData,
-        verificationStatus: newStatus,
-        verificationSource:
-          newStatus === "Verified"
-            ? formData.verificationSource ?? ""
+      // Verification is stored per-entry, not on the item
+      // Update the current entry's verification status
+      if (!currentEntry) {
+        // No entry exists for current period - user needs to create one via history modal
+        console.warn("[FinancialItemCard] Cannot update status - no history entry for current period. Open history modal to create one.");
+        return;
+      }
+      
+      if (!onUpdateHistoryEntry || !normalizedItem.safeId) {
+        console.warn("[FinancialItemCard] Cannot update status - missing handler or item ID");
+        return;
+      }
+      
+      setIsSaving(true);
+      try {
+        const updates: Partial<Omit<AmountHistoryEntry, "id" | "createdAt">> = {
+          verificationStatus: newStatus,
+          // Clear verification source if not verified
+          verificationSource: newStatus === "Verified" 
+            ? currentEntry.verificationSource ?? "" 
             : undefined,
-      };
-      
-      setFormData(newFormData);
-      
-      // Auto-save when not in editing mode (collapsed state)
-      if (!isEditing && onUpdate && normalizedItem.safeId) {
-        setIsSaving(true);
-        try {
-          await onUpdate(itemType, normalizedItem.safeId, newFormData);
-          setIsSaving(false);
-          setSaveSuccessVisible(true);
+        };
+        
+        await onUpdateHistoryEntry(itemType, normalizedItem.safeId, currentEntry.id, updates);
+        setIsSaving(false);
+        setSaveSuccessVisible(true);
 
-          if (saveSuccessTimerRef.current) {
-            clearTimeout(saveSuccessTimerRef.current);
-          }
-
-          saveSuccessTimerRef.current = setTimeout(() => {
-            setSaveSuccessVisible(false);
-          }, 1200);
-        } catch (error) {
-          console.error("[FinancialItemCard] Failed to update status:", error);
-          setIsSaving(false);
-          setSaveSuccessVisible(false);
-          setFormData(item);
+        if (saveSuccessTimerRef.current) {
+          clearTimeout(saveSuccessTimerRef.current);
         }
+
+        saveSuccessTimerRef.current = setTimeout(() => {
+          setSaveSuccessVisible(false);
+        }, 1200);
+      } catch (error) {
+        console.error("[FinancialItemCard] Failed to update entry status:", error);
+        setIsSaving(false);
+        setSaveSuccessVisible(false);
       }
     },
-    [formData, isEditing, item, itemType, normalizedItem.safeId, onUpdate],
+    [currentEntry, itemType, normalizedItem.safeId, onUpdateHistoryEntry],
   );
 
   // History modal handlers
