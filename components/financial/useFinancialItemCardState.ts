@@ -37,8 +37,6 @@ interface UseFinancialItemCardStateParams {
     itemId: string,
     entryId: string
   ) => Promise<FinancialItem>;
-  isSkeleton?: boolean;
-  initialIsEditing?: boolean;
 }
 
 /** Form validation errors keyed by field name */
@@ -89,10 +87,8 @@ export function useFinancialItemCardState({
   onAddHistoryEntry,
   onUpdateHistoryEntry,
   onDeleteHistoryEntry,
-  isSkeleton = false,
-  initialIsEditing = false,
 }: UseFinancialItemCardStateParams): UseFinancialItemCardStateResult {
-  const [isEditing, setIsEditing] = useState(initialIsEditing);
+  const [isEditing, setIsEditing] = useState(false);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [formData, setFormData] = useState<FinancialItem>(item);
   const [isSaving, setIsSaving] = useState(false);
@@ -148,10 +144,6 @@ export function useFinancialItemCardState({
   );
 
   useEffect(() => {
-    setIsEditing(initialIsEditing);
-  }, [initialIsEditing]);
-
-  useEffect(() => {
     if (!isEditing) {
       setFormData(item);
     }
@@ -188,26 +180,14 @@ export function useFinancialItemCardState({
     }));
   }, []);
 
-  const handleSkeletonCancel = useCallback(() => {
-    if (normalizedItem.safeId) {
-      onDelete(itemType, normalizedItem.safeId);
-    }
-  }, [itemType, normalizedItem.safeId, onDelete]);
-
   const handleCancelClick = useCallback(() => {
     setConfirmingDelete(false);
-
-    if (isSkeleton) {
-      handleSkeletonCancel();
-      return;
-    }
-
     setIsEditing(false);
     setFormData(item);
-  }, [handleSkeletonCancel, isSkeleton, item]);
+  }, [item]);
 
   const handleCardClick = useCallback(() => {
-    const canEdit = Boolean(onUpdate) || isSkeleton;
+    const canEdit = Boolean(onUpdate);
 
     if (!canEdit) {
       return;
@@ -222,7 +202,7 @@ export function useFinancialItemCardState({
     setIsEditing(true);
     setConfirmingDelete(false);
     setFormErrors({});
-  }, [handleCancelClick, isEditing, isSkeleton, item, onUpdate]);
+  }, [handleCancelClick, isEditing, item, onUpdate]);
 
   const handleSaveClick = useCallback(
     async (event: FormEvent<HTMLFormElement>) => {

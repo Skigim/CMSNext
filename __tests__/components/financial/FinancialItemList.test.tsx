@@ -1,62 +1,38 @@
-import { render, screen, within } from "@testing-library/react";
-import { act } from "react";
+import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, it, expect, vi, afterEach } from "vitest";
-
-import type { CaseCategory, FinancialItem } from "@/types/case";
+import { describe, it, expect, vi, beforeEach } from "vitest";
+import { FinancialItemList } from "@/components/financial/FinancialItemList";
+import type { FinancialItem } from "@/types/case";
 import { createMockFinancialItem } from "@/src/test/testUtils";
 
-const cardPropsSpy = vi.fn();
-
+// Mock the FinancialItemCard since we just need to test the list behavior
 vi.mock("@/components/financial/FinancialItemCard", () => ({
-  FinancialItemCard: (props: {
-    item: FinancialItem;
-    itemType: CaseCategory;
-    onDelete: ((category: CaseCategory, id: string) => void) | (() => void);
-    onUpdate?: (category: CaseCategory, id: string, updated: FinancialItem) => void;
-    isSkeleton?: boolean;
-  }) => {
-    cardPropsSpy(props);
-    const { item, itemType, onDelete, onUpdate, isSkeleton } = props;
-
-    const handleDelete = () => {
-      if (isSkeleton && typeof onDelete === "function" && onDelete.length === 0) {
-        (onDelete as () => void)();
-      } else if (typeof onDelete === "function") {
-        (onDelete as (category: CaseCategory, id: string) => void)(itemType, item.id);
-      }
-    };
-
-    const handleSave = () => {
-      onUpdate?.(itemType, item.id, {
-        ...item,
-        description: isSkeleton ? "Skeleton saved" : `${item.description} updated`,
-        amount: isSkeleton ? 42 : item.amount,
-      });
-    };
-
-    return (
-      <div data-testid={`card-${item.id || "unknown"}`}>
-        <span>{item.description || "Skeleton"}</span>
-        <button type="button" onClick={handleSave}>
-          trigger-save
-        </button>
-        <button type="button" onClick={handleDelete}>
-          trigger-delete
-        </button>
-      </div>
-    );
-  },
+  FinancialItemCard: (props: { item: FinancialItem; onOpenStepperEdit: (item: FinancialItem) => void }) => (
+    <div data-testid="financial-item-card">
+      <span>{props.item.description}</span>
+      <button onClick={() => props.onOpenStepperEdit(props.item)}>Edit</button>
+    </div>
+  ),
 }));
 
-import { FinancialItemList } from "@/components/financial/FinancialItemList";
+// Mock the stepper modal
+vi.mock("@/components/financial/FinancialItemStepperModal", () => ({
+  FinancialItemStepperModal: (props: { isOpen: boolean; onClose: () => void; item?: FinancialItem }) => (
+    props.isOpen ? (
+      <div data-testid="stepper-modal">
+        <span>{props.item ? "Edit Mode" : "Add Mode"}</span>
+        <button onClick={props.onClose}>Close</button>
+      </div>
+    ) : null
+  ),
+}));
 
-afterEach(() => {
+beforeEach(() => {
   vi.clearAllMocks();
 });
 
 describe("FinancialItemList", () => {
-  it("renders empty state when no items are present", () => {
+  it("renders empty state when no items", () => {
     render(
       <FinancialItemList
         items={[]}
@@ -66,86 +42,111 @@ describe("FinancialItemList", () => {
       />
     );
 
-    expect(screen.getByText(/no resources items added yet/i)).toBeInTheDocument();
-    expect(cardPropsSpy).not.toHaveBeenCalled();
+    expect(screen.getByText("No resources items added yet")).toBeInTheDocument();
   });
 
-  it("adds a skeleton card when the add button is pressed", async () => {
+  it("renders items when provided", () => {
+    const items = [
+      createMockFinancialItem("resources", { id: "1", description: "Checking Account" }),
+      createMockFinancialItem("resources", { id: "2", description: "Savings Account" }),
+    ] as FinancialItem[];
+
+    render(
+      <FinancialItemList
+        items={items}
+        itemType="resources"
+        onDelete={vi.fn()}
+        title="Resources"
+      />
+    );
+
+    expect(screen.getByText("Checking Account")).toBeInTheDocument();
+    expect(screen.getByText("Savings Account")).toBeInTheDocument();
+  });
+
+  it("opens stepper modal in add mode when Add button is clicked", async () => {
     const user = userEvent.setup();
 
     render(
       <FinancialItemList
-        items={[createMockFinancialItem("income", { id: "income-1", description: "Paycheck" }) as FinancialItem]}
+        items={[]}
+        itemType="resources"
+        onDelete={vi.fn()}
+        onCreateItem={vi.fn()}
+        title="Resources"
+      />
+    );
+
+    // Click Add button
+    const addButton = screen.getByRole("button", { name: /add/i });
+    await user.click(addButton);
+
+    // Modal should be open in add mode
+    expect(screen.getByTestId("stepper-modal")).toBeInTheDocument();
+    expect(screen.getByText("Add Mode")).toBeInTheDocument();
+  });
+
+  it("opens stepper modal in edit mode when item edit is triggered", async () => {
+    const user = userEvent.setup();
+    const items = [
+      createMockFinancialItem("resources", { id: "1", description: "Checking Account" }),
+    ] as FinancialItem[];
+
+    render(
+      <FinancialItemList
+        items={items}
+        itemType="resources"
+        onDelete={vi.fn()}
+        onUpdate={vi.fn()}
+        title="Resources"
+      />
+    );
+
+    // Click the edit button on the card
+    const editButton = screen.getByRole("button", { name: /edit/i });
+    await user.click(editButton);
+
+    // Modal should be open in edit mode
+    expect(screen.getByTestId("stepper-modal")).toBeInTheDocument();
+    expect(screen.getByText("Edit Mode")).toBeInTheDocument();
+  });
+
+  it("closes stepper modal when close is triggered", async () => {
+    const user = userEvent.setup();
+
+    render(
+      <FinancialItemList
+        items={[]}
+        itemType="resources"
+        onDelete={vi.fn()}
+        onCreateItem={vi.fn()}
+        title="Resources"
+      />
+    );
+
+    // Open modal
+    const addButton = screen.getByRole("button", { name: /add/i });
+    await user.click(addButton);
+
+    expect(screen.getByTestId("stepper-modal")).toBeInTheDocument();
+
+    // Close modal
+    const closeButton = screen.getByRole("button", { name: /close/i });
+    await user.click(closeButton);
+
+    expect(screen.queryByTestId("stepper-modal")).not.toBeInTheDocument();
+  });
+
+  it("renders title when provided", () => {
+    render(
+      <FinancialItemList
+        items={[]}
         itemType="income"
         onDelete={vi.fn()}
-        title="Income"
+        title="Income Sources"
       />
     );
 
-    await user.click(screen.getByRole("button", { name: /add/i }));
-
-    expect(await screen.findByTestId(/card-skeleton-/i)).toBeInTheDocument();
-    expect(cardPropsSpy).toHaveBeenCalled();
-  });
-
-  it("saves skeleton cards through the creation handler", async () => {
-    const user = userEvent.setup();
-    const onCreateItem = vi.fn().mockResolvedValue(undefined);
-
-    render(
-      <FinancialItemList
-        items={[]}
-        itemType="expenses"
-        onDelete={vi.fn()}
-        onCreateItem={onCreateItem}
-        title="Expenses"
-      />
-    );
-
-    await user.click(screen.getByRole("button", { name: /add/i }));
-    const skeletonCard = await screen.findByTestId(/card-skeleton-/i);
-
-    const saveButton = within(skeletonCard).getByRole("button", { name: /trigger-save/i });
-    await user.click(saveButton);
-
-    await vi.waitFor(() => {
-      expect(onCreateItem).toHaveBeenCalledWith(
-        "expenses",
-        expect.objectContaining({ description: "Skeleton saved", amount: 42 })
-      );
-    });
-
-    await vi.waitFor(() => {
-      expect(screen.queryByTestId(/card-skeleton-/i)).not.toBeInTheDocument();
-    });
-  });
-
-  it("registers external skeleton trigger", async () => {
-    const user = userEvent.setup();
-    const register = vi.fn();
-
-    render(
-      <FinancialItemList
-        items={[]}
-        itemType="resources"
-        onDelete={vi.fn()}
-        title="Resources"
-        onAddSkeleton={register}
-      />
-    );
-
-    expect(register).toHaveBeenCalledTimes(1);
-    const addSkeletonFn = register.mock.calls[0][0] as () => void;
-
-    await act(async () => {
-      addSkeletonFn();
-    });
-
-    expect(await screen.findByTestId(/card-skeleton-/i)).toBeInTheDocument();
-
-    await user.click(screen.getByRole("button", { name: /trigger-delete/i }));
-    await vi.waitFor(() => {
-      expect(screen.queryByTestId(/card-skeleton-/i)).not.toBeInTheDocument();
-    });
+    expect(screen.getByText("Income Sources")).toBeInTheDocument();
   });
 });

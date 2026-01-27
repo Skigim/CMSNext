@@ -2,8 +2,8 @@ import { Card, CardContent, CardHeader } from "../ui/card";
 import { Button } from "../ui/button";
 import { FinancialItemList } from "../financial/FinancialItemList";
 import { AmountHistoryEntry, FinancialItem, CaseCategory } from "../../types/case";
-import { Copy, Plus } from "lucide-react";
-import { useCallback, useMemo, useRef } from "react";
+import { Copy } from "lucide-react";
+import { useCallback, useMemo } from "react";
 import { clickToCopy } from "@/utils/clipboard";
 import {
   formatResourceItem,
@@ -36,12 +36,6 @@ export function CaseSection({
   } = useFinancialItems(caseId);
 
   const items = useMemo(() => groupedItems[category] || [], [groupedItems, category]);
-
-  const addSkeletonFnRef = useRef<(() => void) | null>(null);
-
-  const handleAddSkeletonRegistration = (fn: () => void) => {
-    addSkeletonFnRef.current = fn;
-  };
 
   const handleDelete = async (cat: CaseCategory, itemId: string) => {
     await deleteFinancialItem(caseId, cat, itemId);
@@ -147,23 +141,9 @@ export function CaseSection({
           onUpdateHistoryEntry={handleUpdateHistoryEntry}
           onDeleteHistoryEntry={handleDeleteHistoryEntry}
           onCreateItem={handleCreate}
-          onAddSkeleton={handleAddSkeletonRegistration}
           title=""
           showActions={true}
         />
-        <Button
-          size="sm"
-          onClick={() => {
-            if (addSkeletonFnRef.current) {
-              addSkeletonFnRef.current();
-            }
-          }}
-          className="gap-2 w-full"
-          variant="outline"
-        >
-          <Plus className="h-4 w-4" />
-          Add {title === "Income" ? "Income" : title.slice(0, -1)}
-        </Button>
       </CardContent>
     </Card>
   );

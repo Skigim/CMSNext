@@ -27,7 +27,7 @@ import {
 } from "../ui/table";
 import { History, Plus, Pencil, Trash2, Check, X } from "lucide-react";
 import type { AmountHistoryEntry, FinancialItem, CaseCategory } from "@/types/case";
-import { formatCurrency } from "@/domain/common";
+import { formatCurrency, isoToDateInputValue } from "@/domain/common";
 import {
   sortHistoryEntries,
   formatHistoryDate,
@@ -64,19 +64,6 @@ const emptyFormData: EntryFormData = {
   verificationStatus: "Needs VR",
   verificationSource: "",
 };
-
-function formatDateForInput(dateStr: string | null | undefined): string {
-  if (!dateStr) return "";
-  // If it's already YYYY-MM-DD format, return as-is
-  if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
-    return dateStr;
-  }
-  // If it contains a timestamp portion, extract just the date part
-  if (dateStr.includes('T')) {
-    return dateStr.split('T')[0];
-  }
-  return dateStr;
-}
 
 function parseDateInput(dateStr: string): string {
   if (!dateStr) return "";
@@ -126,7 +113,7 @@ export function AmountHistoryModal({
     const firstOfMonth = getFirstOfMonth();
     setFormData({
       amount: "",
-      startDate: formatDateForInput(firstOfMonth),
+      startDate: isoToDateInputValue(firstOfMonth),
       endDate: "",
       verificationStatus: item.verificationStatus ?? "Needs VR",
       verificationSource: "",
@@ -138,8 +125,8 @@ export function AmountHistoryModal({
   const handleStartEdit = useCallback((entry: AmountHistoryEntry) => {
     setFormData({
       amount: entry.amount.toString(),
-      startDate: formatDateForInput(entry.startDate),
-      endDate: formatDateForInput(entry.endDate),
+      startDate: isoToDateInputValue(entry.startDate),
+      endDate: isoToDateInputValue(entry.endDate),
       verificationStatus: entry.verificationStatus ?? item.verificationStatus ?? "Needs VR",
       verificationSource: entry.verificationSource ?? "",
     });

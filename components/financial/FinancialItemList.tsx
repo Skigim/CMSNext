@@ -1,8 +1,9 @@
-import { useEffect, useState } from "react";
+import { useState, useCallback } from "react";
 import { Button } from "../ui/button";
 import { Plus } from "lucide-react";
 import type { AmountHistoryEntry, CaseCategory, FinancialItem } from "../../types/case";
 import { FinancialItemCard } from "./FinancialItemCard";
+import { FinancialItemStepperModal } from "./FinancialItemStepperModal";
 
 interface FinancialItemListProps {
   items: FinancialItem[];
@@ -31,7 +32,8 @@ interface FinancialItemListProps {
   ) => Promise<void>;
   title: string;
   showActions?: boolean;
-  onAddSkeleton?: (addSkeletonFn: () => void) => void;
+  /** Show owner field in stepper modal (for LTC cases) */
+  showOwnerField?: boolean;
 }
 
 export function FinancialItemList({
@@ -45,80 +47,75 @@ export function FinancialItemList({
   onCreateItem,
   title,
   showActions = true,
-  onAddSkeleton: externalOnAddSkeleton,
+  showOwnerField = false,
 }: FinancialItemListProps) {
-  const [skeletonCards, setSkeletonCards] = useState<string[]>([]);
+  const [isStepperOpen, setIsStepperOpen] = useState(false);
+  const [editingItem, setEditingItem] = useState<FinancialItem | undefined>(undefined);
 
-  const createSkeletonItem = (id: string): FinancialItem => ({
-    id,
-    description: "",
-    amount: 0,
-    verificationStatus: "Needs VR",
-    dateAdded: new Date().toISOString(),
-  });
+  // ============================================================================
+  // Stepper Modal Handlers
+  // ============================================================================
 
-  const handleAddSkeleton = () => {
-    const skeletonId = `skeleton-${Date.now()}`;
-    setSkeletonCards(prev => [...prev, skeletonId]);
-  };
+  const handleOpenStepperAdd = useCallback(() => {
+    setEditingItem(undefined);
+    setIsStepperOpen(true);
+  }, []);
 
-  useEffect(() => {
-    if (externalOnAddSkeleton) {
-      externalOnAddSkeleton(handleAddSkeleton);
-    }
-  }, [externalOnAddSkeleton]);
+  const handleOpenStepperEdit = useCallback((item: FinancialItem) => {
+    setEditingItem(item);
+    setIsStepperOpen(true);
+  }, []);
 
-  const handleSaveSkeleton = async (skeletonId: string, itemData: FinancialItem) => {
-    if (!onCreateItem) return;
+  const handleCloseStepperModal = useCallback(() => {
+    setIsStepperOpen(false);
+    setEditingItem(undefined);
+  }, []);
 
-    try {
-      const createData: Omit<FinancialItem, "id" | "createdAt" | "updatedAt"> = {
-        description: itemData.description,
-        amount: itemData.amount,
-        verificationStatus: itemData.verificationStatus,
-        dateAdded: itemData.dateAdded,
-        name: itemData.name,
-        location: itemData.location,
-        accountNumber: itemData.accountNumber,
-        frequency: itemData.frequency,
-        owner: itemData.owner,
-        verificationSource: itemData.verificationSource,
-        notes: itemData.notes,
-        status: itemData.status,
-      };
-      await onCreateItem(itemType, createData);
-      setSkeletonCards(prev => prev.filter(existingId => existingId !== skeletonId));
-    } catch (error) {
-      console.error("Failed to create item:", error);
-    }
-  };
+  const handleStepperSave = useCallback(
+    async (itemData: Omit<FinancialItem, "id" | "createdAt" | "updatedAt">) => {
+      if (!onCreateItem) return;
+      await onCreateItem(itemType, itemData);
+    },
+    [onCreateItem, itemType]
+  );
 
-  const handleCancelSkeleton = (skeletonId: string) => {
-    setSkeletonCards(prev => prev.filter(existingId => existingId !== skeletonId));
-  };
+  const handleStepperUpdate = useCallback(
+    async (itemId: string, updates: Partial<FinancialItem>) => {
+      if (!onUpdate) return;
+      const existingItem = items.find((i) => i.id === itemId);
+      if (existingItem) {
+        onUpdate(itemType, itemId, { ...existingItem, ...updates } as FinancialItem);
+      }
+    },
+    [onUpdate, itemType, items]
+  );
 
-  const allItems = [...items, ...skeletonCards.map(id => createSkeletonItem(id))];
+  const handleStepperDelete = useCallback(
+    async (itemId: string) => {
+      onDelete(itemType, itemId);
+    },
+    [onDelete, itemType]
+  );
 
   return (
     <div className={title ? "space-y-4" : ""}>
       {title && (
         <div className="flex items-center justify-between">
           <h4 className="text-lg font-medium text-foreground">{title}</h4>
-          <Button size="sm" onClick={handleAddSkeleton} className="gap-2">
+          <Button size="sm" onClick={handleOpenStepperAdd} className="gap-2">
             <Plus className="h-4 w-4" />
             Add
           </Button>
         </div>
       )}
 
-      {allItems.length === 0 ? (
+      {items.length === 0 ? (
         <div className="py-8 text-center">
           <p className="text-sm text-muted-foreground">No {itemType} items added yet</p>
         </div>
       ) : (
         <div className="space-y-2">
-          {allItems.map((item, index) => {
-            const isSkeleton = typeof item.id === "string" && item.id.startsWith("skeleton-");
+          {items.map((item, index) => {
             const itemKey = item.id || `${itemType}-${index}`;
 
             return (
@@ -126,27 +123,30 @@ export function FinancialItemList({
                 key={itemKey}
                 item={item}
                 itemType={itemType}
-                onDelete={
-                  isSkeleton && item.id
-                    ? () => handleCancelSkeleton(item.id as string)
-                    : onDelete
-                }
-                onUpdate={
-                  isSkeleton
-                    ? (_, itemId, updatedItem) => handleSaveSkeleton(itemId, updatedItem)
-                    : onUpdate
-                }
-                onAddHistoryEntry={isSkeleton ? undefined : onAddHistoryEntry}
-                onUpdateHistoryEntry={isSkeleton ? undefined : onUpdateHistoryEntry}
-                onDeleteHistoryEntry={isSkeleton ? undefined : onDeleteHistoryEntry}
+                onDelete={onDelete}
+                onUpdate={onUpdate}
+                onAddHistoryEntry={onAddHistoryEntry}
+                onUpdateHistoryEntry={onUpdateHistoryEntry}
+                onDeleteHistoryEntry={onDeleteHistoryEntry}
                 showActions={showActions}
-                isSkeleton={isSkeleton}
-                isEditing={isSkeleton}
+                onOpenStepperEdit={handleOpenStepperEdit}
               />
             );
           })}
         </div>
       )}
+
+      {/* Stepper Modal for Add/Edit */}
+      <FinancialItemStepperModal
+        isOpen={isStepperOpen}
+        onClose={handleCloseStepperModal}
+        itemType={itemType}
+        item={editingItem}
+        showOwnerField={showOwnerField}
+        onSave={handleStepperSave}
+        onUpdate={handleStepperUpdate}
+        onDelete={handleStepperDelete}
+      />
     </div>
   );
 }
