@@ -252,6 +252,9 @@ export function FinancialItemStepperModal({
   // Ref for description input to focus after reset
   const descriptionInputRef = useRef<HTMLInputElement>(null);
 
+  // Add another checkbox state (managed by component, passed to hook)
+  const [addAnother, setAddAnother] = useState(false);
+
   // Reset form to initial state for "add another" flow
   const resetFormForAddAnother = useCallback(() => {
     setCurrentStep("details");
@@ -263,11 +266,12 @@ export function FinancialItemStepperModal({
     setFormErrors({});
     setIsConfirmingDelete(false);
     setDeleteConfirmId(null);
+    setAddAnother(false);
   }, []);
 
   // Add another hook for creating multiple items
-  const { addAnother, setAddAnother, handlePostSave: triggerPostSave } = useAddAnother({
-    isOpen,
+  const { handlePostSave: triggerPostSave } = useAddAnother({
+    addAnother,
     itemLabel: itemType.slice(0, -1), // "resource", "income" item, "expense"
     resetForm: resetFormForAddAnother,
     onClose,
