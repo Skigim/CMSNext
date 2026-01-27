@@ -6,7 +6,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from ".
 import { Textarea } from "../ui/textarea";
 import { Check, X, History } from "lucide-react";
 import type { CaseCategory } from "../../types/case";
-import { parseNumericInput } from "@/domain/common";
 import type { NormalizedFinancialFormData, FormErrors } from "./useFinancialItemCardState";
 
 interface FinancialItemCardFormProps {
@@ -34,14 +33,9 @@ export function FinancialItemCardForm({
 }: FinancialItemCardFormProps) {
   const frequencyFieldId = `frequency-${itemId}`;
   const descriptionFieldId = `description-${itemId}`;
-  const amountFieldId = `amount-${itemId}`;
   const locationFieldId = `location-${itemId}`;
   const accountFieldId = `accountNumber-${itemId}`;
   const notesFieldId = `notes-${itemId}`;
-  const verificationStatusFieldId = `verificationStatus-${itemId}`;
-  const verificationSourceFieldId = `verificationSource-${itemId}`;
-
-  const isVerified = formData.verificationStatus === 'Verified';
 
   return (
     <form onSubmit={onSubmit} className="space-y-4 border-t bg-muted/20 p-4">
@@ -58,58 +52,6 @@ export function FinancialItemCardForm({
         />
         {formErrors.description && (
           <p className="mt-1 text-sm text-destructive">{formErrors.description}</p>
-        )}
-      </div>
-
-      <div className="grid grid-cols-2 gap-4">
-        <div>
-          <div className="mb-1 flex items-center justify-between">
-            <Label htmlFor={amountFieldId} className="text-sm font-medium text-foreground">
-              Amount
-            </Label>
-            {onOpenHistoryModal && (
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                onClick={onOpenHistoryModal}
-                className="h-6 px-2 text-xs text-muted-foreground hover:text-foreground"
-              >
-                <History className="mr-1 h-3 w-3" />
-                {hasAmountHistory ? "View History" : "Add History"}
-              </Button>
-            )}
-          </div>
-          <Input
-            type="number"
-            id={amountFieldId}
-            value={formData.amount ?? 0}
-            onChange={event => onFieldChange("amount", parseNumericInput(event.target.value))}
-            step="0.01"
-            className="w-full"
-          />
-        </div>
-
-        {itemType !== "resources" && (
-          <div>
-            <Label htmlFor={frequencyFieldId} className="mb-1 block text-sm font-medium text-foreground">
-              Frequency
-            </Label>
-            <Select
-              value={formData.frequency}
-              onValueChange={value => onFieldChange("frequency", value)}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select frequency" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="one-time">One-time</SelectItem>
-                <SelectItem value="weekly">Weekly</SelectItem>
-                <SelectItem value="monthly">Monthly</SelectItem>
-                <SelectItem value="yearly">Yearly</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
         )}
       </div>
 
@@ -141,6 +83,28 @@ export function FinancialItemCardForm({
         </div>
       </div>
 
+      {itemType !== "resources" && (
+        <div>
+          <Label htmlFor={frequencyFieldId} className="mb-1 block text-sm font-medium text-foreground">
+            Frequency
+          </Label>
+          <Select
+            value={formData.frequency}
+            onValueChange={value => onFieldChange("frequency", value)}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Select frequency" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="one-time">One-time</SelectItem>
+              <SelectItem value="weekly">Weekly</SelectItem>
+              <SelectItem value="monthly">Monthly</SelectItem>
+              <SelectItem value="yearly">Yearly</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      )}
+
       <div>
         <Label htmlFor={notesFieldId} className="mb-1 block text-sm font-medium text-foreground">
           Notes
@@ -154,42 +118,27 @@ export function FinancialItemCardForm({
         />
       </div>
 
-      <div className="grid grid-cols-2 gap-4">
-        <div>
-          <Label htmlFor={verificationStatusFieldId} className="mb-1 block text-sm font-medium text-foreground">
-            Verification Status
-          </Label>
-          <Select
-            value={formData.verificationStatus ?? "Needs VR"}
-            onValueChange={value => onFieldChange("verificationStatus", value)}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Select status" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="Needs VR">Needs VR</SelectItem>
-              <SelectItem value="VR Pending">VR Pending</SelectItem>
-              <SelectItem value="AVS Pending">AVS Pending</SelectItem>
-              <SelectItem value="Verified">Verified</SelectItem>
-            </SelectContent>
-          </Select>
+      {/* Amount & Verification managed via History Modal */}
+      {onOpenHistoryModal && (
+        <div className="rounded-md border border-dashed border-muted-foreground/30 bg-muted/30 p-3">
+          <div className="flex items-center justify-between">
+            <div className="text-sm text-muted-foreground">
+              <span className="font-medium text-foreground">Amount & Verification</span>
+              <p className="text-xs">Manage amounts and verification status per time period</p>
+            </div>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={onOpenHistoryModal}
+              className="flex items-center gap-2"
+            >
+              <History className="h-4 w-4" />
+              {hasAmountHistory ? "Manage History" : "Add Entry"}
+            </Button>
+          </div>
         </div>
-
-        <div>
-          <Label htmlFor={verificationSourceFieldId} className="mb-1 block text-sm font-medium text-foreground">
-            Verification Source
-          </Label>
-          <Input
-            type="text"
-            id={verificationSourceFieldId}
-            value={formData.verificationSource ?? ""}
-            onChange={event => onFieldChange("verificationSource", event.target.value)}
-            className="w-full"
-            placeholder={isVerified ? "e.g., Bank Statement, Paystub" : "Set status to Verified to enable"}
-            disabled={!isVerified}
-          />
-        </div>
-      </div>
+      )}
 
       <div className="flex justify-end gap-3 border-t pt-3">
         <Button type="button" variant="outline" onClick={onCancel} className="flex items-center gap-2">
