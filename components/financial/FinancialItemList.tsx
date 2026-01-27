@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { Button } from "../ui/button";
 import { Plus } from "lucide-react";
 import type { AmountHistoryEntry, CaseCategory, FinancialItem } from "../../types/case";
@@ -34,6 +34,8 @@ interface FinancialItemListProps {
   showActions?: boolean;
   /** Show owner field in stepper modal (for LTC cases) */
   showOwnerField?: boolean;
+  /** Callback to register the add trigger function for external use */
+  onAddTrigger?: (triggerFn: () => void) => void;
 }
 
 export function FinancialItemList({
@@ -48,6 +50,7 @@ export function FinancialItemList({
   title,
   showActions = true,
   showOwnerField = false,
+  onAddTrigger,
 }: FinancialItemListProps) {
   const [isStepperOpen, setIsStepperOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<FinancialItem | undefined>(undefined);
@@ -60,6 +63,13 @@ export function FinancialItemList({
     setEditingItem(undefined);
     setIsStepperOpen(true);
   }, []);
+
+  // Register the add trigger for external use
+  useEffect(() => {
+    if (onAddTrigger) {
+      onAddTrigger(handleOpenStepperAdd);
+    }
+  }, [onAddTrigger, handleOpenStepperAdd]);
 
   const handleOpenStepperEdit = useCallback((item: FinancialItem) => {
     setEditingItem(item);

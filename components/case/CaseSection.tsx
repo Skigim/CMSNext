@@ -2,8 +2,8 @@ import { Card, CardContent, CardHeader } from "../ui/card";
 import { Button } from "../ui/button";
 import { FinancialItemList } from "../financial/FinancialItemList";
 import { AmountHistoryEntry, FinancialItem, CaseCategory } from "../../types/case";
-import { Copy } from "lucide-react";
-import { useCallback, useMemo } from "react";
+import { Copy, Plus } from "lucide-react";
+import { useCallback, useMemo, useRef } from "react";
 import { clickToCopy } from "@/utils/clipboard";
 import {
   formatResourceItem,
@@ -36,6 +36,16 @@ export function CaseSection({
   } = useFinancialItems(caseId);
 
   const items = useMemo(() => groupedItems[category] || [], [groupedItems, category]);
+
+  const addTriggerRef = useRef<(() => void) | null>(null);
+
+  const handleAddTrigger = useCallback((triggerFn: () => void) => {
+    addTriggerRef.current = triggerFn;
+  }, []);
+
+  const handleAddClick = useCallback(() => {
+    addTriggerRef.current?.();
+  }, []);
 
   const handleDelete = async (cat: CaseCategory, itemId: string) => {
     await deleteFinancialItem(caseId, cat, itemId);
@@ -119,17 +129,28 @@ export function CaseSection({
             </span>
           )}
         </div>
-        {items.length > 0 && (
+        <div className="flex items-center gap-1">
+          {items.length > 0 && (
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={handleCopyCategory}
+              aria-label={`Copy all ${title.toLowerCase()} to clipboard`}
+              className="h-8 w-8 text-muted-foreground hover:text-foreground"
+            >
+              <Copy className="h-4 w-4" aria-hidden="true" />
+            </Button>
+          )}
           <Button
             variant="ghost"
             size="icon"
-            onClick={handleCopyCategory}
-            aria-label={`Copy all ${title.toLowerCase()} to clipboard`}
+            onClick={handleAddClick}
+            aria-label={`Add ${title.toLowerCase().slice(0, -1)}`}
             className="h-8 w-8 text-muted-foreground hover:text-foreground"
           >
-            <Copy className="h-4 w-4" aria-hidden="true" />
+            <Plus className="h-4 w-4" aria-hidden="true" />
           </Button>
-        )}
+        </div>
       </CardHeader>
       <CardContent className="pt-0 space-y-3">
         <FinancialItemList
@@ -143,6 +164,7 @@ export function CaseSection({
           onCreateItem={handleCreate}
           title=""
           showActions={true}
+          onAddTrigger={handleAddTrigger}
         />
       </CardContent>
     </Card>
