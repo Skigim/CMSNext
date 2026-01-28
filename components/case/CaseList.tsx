@@ -403,9 +403,21 @@ export function CaseList({
 
   const noMatches = segment === "alerts" ? totalAlertRows === 0 : sortedCases.length === 0;
 
-  // Selection management - operates on all filtered cases (not just current page)
-  // This allows "Select All" to select all cases matching the current filter
-  const allFilteredCaseIds = useMemo(() => sortedCases.map(c => c.id), [sortedCases]);
+  // Selection management - operates on all visible/filtered cases
+  // When in alerts view with description filter, only include cases with matching alerts
+  const allFilteredCaseIds = useMemo(() => {
+    if (segment === "alerts" && filters.alertDescription !== "all") {
+      // Only include cases that have alerts matching the description filter
+      return sortedCases
+        .filter(c => {
+          const caseAlerts = openAlertsByCase.get(c.id);
+          return caseAlerts?.some(a => a.description === filters.alertDescription);
+        })
+        .map(c => c.id);
+    }
+    return sortedCases.map(c => c.id);
+  }, [sortedCases, segment, filters.alertDescription, openAlertsByCase]);
+  
   const {
     selectedCount,
     isAllSelected,
