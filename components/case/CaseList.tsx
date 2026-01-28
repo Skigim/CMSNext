@@ -530,46 +530,47 @@ export function CaseList({
     return undefined;
   }, [segment, filters.alertDescription]);
 
-  // Compute the count of matching alerts for selected cases
-  const alertCountForSelection = useMemo(() => {
-    if (!activeAlertDescriptionFilter) return 0;
+  // Get ALL case IDs and alerts matching the active description filter
+  // This ensures bulk resolve works across all pages, not just selected cases
+  const allCaseIdsWithMatchingAlerts = useMemo(() => {
+    if (!activeAlertDescriptionFilter) return [];
     
-    let count = 0;
-    for (const caseId of selectedCaseIds) {
-      const caseAlerts = openAlertsByCase.get(caseId);
-      if (caseAlerts) {
-        count += caseAlerts.filter(a => a.description === activeAlertDescriptionFilter).length;
+    const caseIds: string[] = [];
+    openAlertsByCase.forEach((alerts, caseId) => {
+      if (alerts.some(a => a.description === activeAlertDescriptionFilter)) {
+        caseIds.push(caseId);
       }
-    }
-    return count;
-  }, [activeAlertDescriptionFilter, selectedCaseIds, openAlertsByCase]);
+    });
+    return caseIds;
+  }, [activeAlertDescriptionFilter, openAlertsByCase]);
 
-  // Get open alerts for selected cases matching the filter
-  const alertsForBulkResolve = useMemo(() => {
+  const allAlertsMatchingFilter = useMemo(() => {
     if (!activeAlertDescriptionFilter) return [];
     
     const alerts: AlertWithMatch[] = [];
-    for (const caseId of selectedCaseIds) {
-      const caseAlerts = openAlertsByCase.get(caseId);
-      if (caseAlerts) {
-        alerts.push(...caseAlerts.filter(a => a.description === activeAlertDescriptionFilter));
-      }
-    }
+    openAlertsByCase.forEach((caseAlerts) => {
+      alerts.push(...caseAlerts.filter(a => a.description === activeAlertDescriptionFilter));
+    });
     return alerts;
-  }, [activeAlertDescriptionFilter, selectedCaseIds, openAlertsByCase]);
+  }, [activeAlertDescriptionFilter, openAlertsByCase]);
+
+  // Compute the count of matching alerts (all cases with this description, not just selected)
+  const alertCountForSelection = useMemo(() => {
+    return allAlertsMatchingFilter.length;
+  }, [allAlertsMatchingFilter]);
 
   // State for bulk alert resolution
   const [isResolvingAlerts, setIsResolvingAlerts] = useState(false);
 
   const handleBulkResolveAlerts = useCallback(async () => {
     if (!onBulkResolveAlerts || !activeAlertDescriptionFilter) return;
-    if (alertsForBulkResolve.length === 0) return;
+    if (allAlertsMatchingFilter.length === 0) return;
 
     setIsResolvingAlerts(true);
     try {
       const result = await onBulkResolveAlerts(
-        selectedCaseIds,
-        alertsForBulkResolve,
+        allCaseIdsWithMatchingAlerts,
+        allAlertsMatchingFilter,
         activeAlertDescriptionFilter
       );
       clearSelection();
@@ -578,7 +579,7 @@ export function CaseList({
     } finally {
       setIsResolvingAlerts(false);
     }
-  }, [onBulkResolveAlerts, activeAlertDescriptionFilter, alertsForBulkResolve, selectedCaseIds, clearSelection]);
+  }, [onBulkResolveAlerts, activeAlertDescriptionFilter, allAlertsMatchingFilter, allCaseIdsWithMatchingAlerts, clearSelection]);
 
   // Bulk note flow
   const bulkNoteFlow = useBulkNoteFlow({
