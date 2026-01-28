@@ -212,11 +212,11 @@ export const BulkActionsToolbar = memo(function BulkActionsToolbar({
                 onClick={handleBulkResolveAlerts}
                 disabled={isDisabled || alertCountForSelection === 0}
                 title={alertCountForSelection === 0 
-                  ? "No alerts with this description" 
-                  : `Clear all ${alertCountForSelection} "${alertDescriptionFilter}" alert${alertCountForSelection === 1 ? '' : 's'} (across all cases)`}
+                  ? "No matching alerts for selected cases" 
+                  : `Clear ${alertCountForSelection} "${alertDescriptionFilter}" alert${alertCountForSelection === 1 ? '' : 's'} for selected cases`}
               >
                 <Bell className="mr-1.5 h-3.5 w-3.5" />
-                Clear All ({alertCountForSelection})
+                Clear Alerts ({alertCountForSelection})
               </Button>
             </>
           )}
