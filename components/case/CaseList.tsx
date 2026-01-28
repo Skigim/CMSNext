@@ -403,8 +403,9 @@ export function CaseList({
 
   const noMatches = segment === "alerts" ? totalAlertRows === 0 : sortedCases.length === 0;
 
-  // Selection management - operates on current page only
-  const visibleCaseIds = useMemo(() => paginatedCases.map(c => c.id), [paginatedCases]);
+  // Selection management - operates on all filtered cases (not just current page)
+  // This allows "Select All" to select all cases matching the current filter
+  const allFilteredCaseIds = useMemo(() => sortedCases.map(c => c.id), [sortedCases]);
   const {
     selectedCount,
     isAllSelected,
@@ -414,7 +415,7 @@ export function CaseList({
     deselectAll,
     clearSelection,
     isSelected,
-  } = useCaseSelection(visibleCaseIds);
+  } = useCaseSelection(allFilteredCaseIds);
 
   const selectionEnabled = !!(onDeleteCases || onUpdateCasesStatus);
   const [isBulkDeleting, setIsBulkDeleting] = useState(false);
@@ -422,16 +423,16 @@ export function CaseList({
 
   const handleToggleSelectAll = useCallback(() => {
     if (isAllSelected) {
-      deselectAll(visibleCaseIds);
+      deselectAll(allFilteredCaseIds);
     } else {
-      selectAll(visibleCaseIds);
+      selectAll(allFilteredCaseIds);
     }
-  }, [isAllSelected, visibleCaseIds, deselectAll, selectAll]);
+  }, [isAllSelected, allFilteredCaseIds, deselectAll, selectAll]);
 
   const handleBulkDelete = useCallback(async () => {
     if (!onDeleteCases) return;
     
-    const idsToDelete = visibleCaseIds.filter(id => isSelected(id));
+    const idsToDelete = allFilteredCaseIds.filter(id => isSelected(id));
     if (idsToDelete.length === 0) return;
 
     setIsBulkDeleting(true);
@@ -441,12 +442,12 @@ export function CaseList({
     } finally {
       setIsBulkDeleting(false);
     }
-  }, [onDeleteCases, visibleCaseIds, isSelected, clearSelection]);
+  }, [onDeleteCases, allFilteredCaseIds, isSelected, clearSelection]);
 
   const handleBulkStatusChange = useCallback(async (status: CaseStatus) => {
     if (!onUpdateCasesStatus) return;
 
-    const idsToUpdate = visibleCaseIds.filter(id => isSelected(id));
+    const idsToUpdate = allFilteredCaseIds.filter(id => isSelected(id));
     if (idsToUpdate.length === 0) return;
 
     setIsBulkUpdating(true);
@@ -456,12 +457,12 @@ export function CaseList({
     } finally {
       setIsBulkUpdating(false);
     }
-  }, [onUpdateCasesStatus, visibleCaseIds, isSelected, clearSelection]);
+  }, [onUpdateCasesStatus, allFilteredCaseIds, isSelected, clearSelection]);
 
   const handleBulkPriorityToggle = useCallback(async (priority: boolean) => {
     if (!onUpdateCasesPriority) return;
 
-    const idsToUpdate = visibleCaseIds.filter(id => isSelected(id));
+    const idsToUpdate = allFilteredCaseIds.filter(id => isSelected(id));
     if (idsToUpdate.length === 0) return;
 
     setIsBulkUpdating(true);
@@ -471,12 +472,12 @@ export function CaseList({
     } finally {
       setIsBulkUpdating(false);
     }
-  }, [onUpdateCasesPriority, visibleCaseIds, isSelected, clearSelection]);
+  }, [onUpdateCasesPriority, allFilteredCaseIds, isSelected, clearSelection]);
 
   const handleApproveArchival = useCallback(async () => {
     if (!onApproveArchival) return;
 
-    const idsToArchive = visibleCaseIds.filter(id => isSelected(id));
+    const idsToArchive = allFilteredCaseIds.filter(id => isSelected(id));
     if (idsToArchive.length === 0) return;
 
     try {
@@ -485,12 +486,12 @@ export function CaseList({
     } catch {
       // Error handling is done in the hook
     }
-  }, [onApproveArchival, visibleCaseIds, isSelected, clearSelection]);
+  }, [onApproveArchival, allFilteredCaseIds, isSelected, clearSelection]);
 
   const handleCancelArchival = useCallback(async () => {
     if (!onCancelArchival) return;
 
-    const idsToCancelArchival = visibleCaseIds.filter(id => isSelected(id));
+    const idsToCancelArchival = allFilteredCaseIds.filter(id => isSelected(id));
     if (idsToCancelArchival.length === 0) return;
 
     try {
@@ -499,11 +500,11 @@ export function CaseList({
     } catch {
       // Error handling is done in the hook
     }
-  }, [onCancelArchival, visibleCaseIds, isSelected, clearSelection]);
+  }, [onCancelArchival, allFilteredCaseIds, isSelected, clearSelection]);
 
   // Compute the priority state of selected cases: true if all priority, false if all non-priority, null if mixed
   const selectedPriorityState = useMemo<boolean | null>(() => {
-    const selectedIds = visibleCaseIds.filter(id => isSelected(id));
+    const selectedIds = allFilteredCaseIds.filter(id => isSelected(id));
     if (selectedIds.length === 0) return null;
 
     const caseMap = new Map(cases.map(c => [c.id, c]));
@@ -515,12 +516,12 @@ export function CaseList({
     const allSame = selectedCases.every(c => (c.priority ?? false) === firstPriority);
     
     return allSame ? firstPriority : null;
-  }, [visibleCaseIds, isSelected, cases]);
+  }, [allFilteredCaseIds, isSelected, cases]);
 
   // Compute the selected case IDs for bulk operations
   const selectedCaseIds = useMemo(() => {
-    return visibleCaseIds.filter(id => isSelected(id));
-  }, [visibleCaseIds, isSelected]);
+    return allFilteredCaseIds.filter(id => isSelected(id));
+  }, [allFilteredCaseIds, isSelected]);
 
   // Get the active alert description filter (only when in alerts segment and not "all")
   const activeAlertDescriptionFilter = useMemo(() => {
