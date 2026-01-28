@@ -39,6 +39,7 @@ interface ViewRendererProps {
   handleDeleteCases: (caseIds: string[]) => Promise<number>;
   handleUpdateCasesStatus: (caseIds: string[], status: StoredCase["status"]) => Promise<number>;
   handleUpdateCasesPriority: (caseIds: string[], priority: boolean) => Promise<number>;
+  handleBulkResolveAlerts?: (caseIds: string[], alerts: AlertWithMatch[], descriptionFilter: string) => Promise<{ resolvedCount: number; caseCount: number }>;
   handleApproveArchival?: (caseIds: string[]) => Promise<unknown>;
   handleCancelArchival?: (caseIds: string[]) => Promise<number>;
   isArchiving?: boolean;
@@ -87,6 +88,7 @@ export function ViewRenderer({
   handleDeleteCases,
   handleUpdateCasesStatus,
   handleUpdateCasesPriority,
+  handleBulkResolveAlerts,
   handleApproveArchival,
   handleCancelArchival,
   isArchiving,
@@ -126,6 +128,7 @@ export function ViewRenderer({
           onDeleteCases={handleDeleteCases}
           onUpdateCasesStatus={handleUpdateCasesStatus}
           onUpdateCasesPriority={handleUpdateCasesPriority}
+          onBulkResolveAlerts={handleBulkResolveAlerts}
           onApproveArchival={handleApproveArchival}
           onCancelArchival={handleCancelArchival}
           isArchiving={isArchiving}

@@ -1,11 +1,12 @@
 import { v4 as uuidv4 } from 'uuid';
-import type { CaseStatus } from '../../types/case';
+import type { CaseStatus, NewNoteData } from '../../types/case';
 import type { CaseActivityEntry } from '../../types/activityLog';
 import type { CategoryConfig } from '../../types/categoryConfig';
-import type { FileStorageService, NormalizedFileData, StoredCase } from './FileStorageService';
+import type { FileStorageService, NormalizedFileData, StoredCase, StoredNote } from './FileStorageService';
 import { ActivityLogService } from './ActivityLogService';
 import { formatCaseDisplayName } from '../../domain/cases/formatting';
 import { createLogger } from '../logger';
+import type { AlertWithMatch } from '@/domain/alerts';
 
 const logger = createLogger('CaseBulkOperationsService');
 
@@ -474,5 +475,202 @@ export class CaseBulkOperationsService {
     };
 
     await this.fileStorage.writeNormalizedData(emptyData);
+  }
+
+  // =============================================================================
+  // BULK ALERT OPERATIONS
+  // =============================================================================
+
+  /**
+   * Resolve alerts for multiple cases matching a description filter.
+   * 
+   * This method:
+   * 1. Filters provided alerts by caseId (must be in caseIds) and description
+   * 2. Marks all matching alerts as 'resolved' with timestamp and default note
+   * 3. Writes updated alerts back to file
+   * 
+   * **Pattern:** Read → Modify → Write (single operation)
+   * 
+   * @param {string[]} caseIds - Array of case IDs whose alerts should be resolved
+   * @param {AlertWithMatch[]} alerts - All alerts (pre-filtered for open status by caller)
+   * @param {string} descriptionFilter - Alert description to match (exact match)
+   * @returns {Promise<{resolvedCount: number, caseCount: number}>} Count of resolved alerts and affected cases
+   * 
+   * @example
+   * const result = await bulkOpsService.resolveAlertsForCases(
+   *   [caseId1, caseId2],
+   *   openAlerts,
+   *   "Court Notice"
+   * );
+   * console.log(`Resolved ${result.resolvedCount} alerts across ${result.caseCount} cases`);
+   */
+  async resolveAlertsForCases(
+    caseIds: string[],
+    alerts: AlertWithMatch[],
+    descriptionFilter: string
+  ): Promise<{ resolvedCount: number; caseCount: number }> {
+    if (caseIds.length === 0) {
+      return { resolvedCount: 0, caseCount: 0 };
+    }
+
+    const currentData = await this.fileStorage.readFileData();
+    if (!currentData) {
+      throw new Error('Failed to read current data');
+    }
+
+    const caseIdSet = new Set(caseIds);
+    const timestamp = new Date().toISOString();
+
+    // Find alerts matching the criteria
+    const alertsToResolve = alerts.filter(
+      a => a.matchedCaseId && caseIdSet.has(a.matchedCaseId) && a.description === descriptionFilter
+    );
+
+    if (alertsToResolve.length === 0) {
+      return { resolvedCount: 0, caseCount: 0 };
+    }
+
+    // Track unique case IDs affected
+    const affectedCaseIds = new Set<string>();
+    const alertIdsToResolve = new Set(alertsToResolve.map(a => a.id));
+
+    // Update alerts in the stored data
+    const updatedAlerts = currentData.alerts.map(a => {
+      if (alertIdsToResolve.has(a.id)) {
+        const matchedAlert = alertsToResolve.find(ma => ma.id === a.id);
+        if (matchedAlert?.matchedCaseId) {
+          affectedCaseIds.add(matchedAlert.matchedCaseId);
+        }
+        return {
+          ...a,
+          status: 'resolved' as const,
+          resolvedAt: timestamp,
+          resolutionNotes: 'Bulk resolved',
+        };
+      }
+      return a;
+    });
+
+    // Write updated data
+    await this.fileStorage.writeNormalizedData({
+      ...currentData,
+      alerts: updatedAlerts,
+    });
+
+    logger.info('Bulk resolved alerts', { 
+      resolvedCount: alertsToResolve.length, 
+      caseCount: affectedCaseIds.size,
+      descriptionFilter,
+    });
+
+    return { resolvedCount: alertsToResolve.length, caseCount: affectedCaseIds.size };
+  }
+
+  // =============================================================================
+  // BULK NOTE OPERATIONS
+  // =============================================================================
+
+  /**
+   * Add an identical note to multiple cases.
+   * 
+   * This method:
+   * 1. Creates a note with the same content for each case
+   * 2. Generates sanitized previews for activity logging
+   * 3. Creates activity log entries for each note addition
+   * 4. Updates case timestamps
+   * 5. Writes all changes in a single file operation
+   * 
+   * **Pattern:** Read → Modify → Write (single operation)
+   * 
+   * @param {string[]} caseIds - Array of case IDs to add notes to
+   * @param {NewNoteData} noteData - The note data (content, category)
+   * @returns {Promise<{addedCount: number}>} Count of notes added
+   * 
+   * @example
+   * const result = await bulkOpsService.addNoteToCases(
+   *   [caseId1, caseId2, caseId3],
+   *   { content: "Discussed case status with client.", category: "Client Contact" }
+   * );
+   * console.log(`Added note to ${result.addedCount} cases`);
+   */
+  async addNoteToCases(
+    caseIds: string[],
+    noteData: NewNoteData
+  ): Promise<{ addedCount: number }> {
+    if (caseIds.length === 0) {
+      return { addedCount: 0 };
+    }
+
+    const currentData = await this.fileStorage.readFileData();
+    if (!currentData) {
+      throw new Error('Failed to read current data');
+    }
+
+    const timestamp = new Date().toISOString();
+    const existingCaseIds = new Set(currentData.cases.map(c => c.id));
+    const caseMap = new Map(currentData.cases.map(c => [c.id, c]));
+
+    // Filter to only valid case IDs
+    const validCaseIds = caseIds.filter(id => existingCaseIds.has(id));
+    if (validCaseIds.length === 0) {
+      return { addedCount: 0 };
+    }
+
+    // Create notes for each case
+    const newNotes: StoredNote[] = validCaseIds.map(caseId => ({
+      id: uuidv4(),
+      caseId,
+      content: noteData.content,
+      category: noteData.category || 'General',
+      author: 'System',
+      createdAt: timestamp,
+      updatedAt: timestamp,
+    }));
+
+    // Build sanitized preview for activity log
+    const sanitizedPreview = noteData.content
+      .replace(/\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/gi, "***@***")
+      .replace(/\b\d{3}-?\d{2}-?\d{4}\b/g, "***-**-****")
+      .replace(/\b\d{10,}\b/g, "***")
+      .replace(/\s+/g, " ")
+      .trim()
+      .slice(0, 100);
+
+    // Create activity log entries
+    const activityEntries: CaseActivityEntry[] = validCaseIds.map(caseId => {
+      const caseData = caseMap.get(caseId);
+      const noteForCase = newNotes.find(n => n.caseId === caseId);
+      return {
+        id: uuidv4(),
+        timestamp,
+        caseId,
+        caseName: caseData ? formatCaseDisplayName(caseData) : 'Unknown Case',
+        caseMcn: caseData?.caseRecord?.mcn ?? caseData?.mcn ?? null,
+        type: 'note-added' as const,
+        payload: {
+          noteId: noteForCase?.id ?? '',
+          category: noteData.category || 'General',
+          preview: sanitizedPreview,
+        },
+      };
+    });
+
+    // Touch case timestamps
+    const casesWithTouchedTimestamps = this.fileStorage.touchCaseTimestamps(
+      currentData.cases,
+      validCaseIds
+    );
+
+    // Write updated data
+    await this.fileStorage.writeNormalizedData({
+      ...currentData,
+      cases: casesWithTouchedTimestamps,
+      notes: [...currentData.notes, ...newNotes],
+      activityLog: ActivityLogService.mergeActivityEntries(currentData.activityLog, activityEntries),
+    });
+
+    logger.info('Bulk added notes', { addedCount: validCaseIds.length });
+
+    return { addedCount: validCaseIds.length };
   }
 }

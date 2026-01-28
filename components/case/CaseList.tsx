@@ -57,11 +57,13 @@ import {
   type CaseListSortDirection,
 } from "@/hooks/useCaseListPreferences";
 import { useCaseSelection } from "@/hooks/useCaseSelection";
+import { useBulkNoteFlow } from "@/hooks/useBulkNoteFlow";
 import { filterOpenAlerts, type AlertsSummary, type AlertWithMatch } from "../../utils/alertsData";
 import { useAppViewState } from "@/hooks/useAppViewState";
 import { isFeatureEnabled } from "@/utils/featureFlags";
 import { calculatePriorityScore } from "@/domain/dashboard/priorityQueue";
 import { useCategoryConfig } from "@/contexts/CategoryConfigContext";
+import { BulkNoteModal } from "./BulkNoteModal";
 
 interface CaseListProps {
   cases: StoredCase[];
@@ -77,6 +79,7 @@ interface CaseListProps {
   onDeleteCases?: (caseIds: string[]) => Promise<number>;
   onUpdateCasesStatus?: (caseIds: string[], status: CaseStatus) => Promise<number>;
   onUpdateCasesPriority?: (caseIds: string[], priority: boolean) => Promise<number>;
+  onBulkResolveAlerts?: (caseIds: string[], alerts: AlertWithMatch[], descriptionFilter: string) => Promise<{ resolvedCount: number; caseCount: number }>;
   // Archival action handlers
   onApproveArchival?: (caseIds: string[]) => Promise<unknown>;
   onCancelArchival?: (caseIds: string[]) => Promise<unknown>;
@@ -96,6 +99,7 @@ export function CaseList({
   onDeleteCases,
   onUpdateCasesStatus,
   onUpdateCasesPriority,
+  onBulkResolveAlerts,
   onApproveArchival,
   onCancelArchival,
   isArchiving = false,
@@ -513,6 +517,75 @@ export function CaseList({
     return allSame ? firstPriority : null;
   }, [visibleCaseIds, isSelected, cases]);
 
+  // Compute the selected case IDs for bulk operations
+  const selectedCaseIds = useMemo(() => {
+    return visibleCaseIds.filter(id => isSelected(id));
+  }, [visibleCaseIds, isSelected]);
+
+  // Get the active alert description filter (only when in alerts segment and not "all")
+  const activeAlertDescriptionFilter = useMemo(() => {
+    if (segment === "alerts" && filters.alertDescription !== "all") {
+      return filters.alertDescription;
+    }
+    return undefined;
+  }, [segment, filters.alertDescription]);
+
+  // Compute the count of matching alerts for selected cases
+  const alertCountForSelection = useMemo(() => {
+    if (!activeAlertDescriptionFilter) return 0;
+    
+    let count = 0;
+    for (const caseId of selectedCaseIds) {
+      const caseAlerts = openAlertsByCase.get(caseId);
+      if (caseAlerts) {
+        count += caseAlerts.filter(a => a.description === activeAlertDescriptionFilter).length;
+      }
+    }
+    return count;
+  }, [activeAlertDescriptionFilter, selectedCaseIds, openAlertsByCase]);
+
+  // Get open alerts for selected cases matching the filter
+  const alertsForBulkResolve = useMemo(() => {
+    if (!activeAlertDescriptionFilter) return [];
+    
+    const alerts: AlertWithMatch[] = [];
+    for (const caseId of selectedCaseIds) {
+      const caseAlerts = openAlertsByCase.get(caseId);
+      if (caseAlerts) {
+        alerts.push(...caseAlerts.filter(a => a.description === activeAlertDescriptionFilter));
+      }
+    }
+    return alerts;
+  }, [activeAlertDescriptionFilter, selectedCaseIds, openAlertsByCase]);
+
+  // State for bulk alert resolution
+  const [isResolvingAlerts, setIsResolvingAlerts] = useState(false);
+
+  const handleBulkResolveAlerts = useCallback(async () => {
+    if (!onBulkResolveAlerts || !activeAlertDescriptionFilter) return;
+    if (alertsForBulkResolve.length === 0) return;
+
+    setIsResolvingAlerts(true);
+    try {
+      const result = await onBulkResolveAlerts(
+        selectedCaseIds,
+        alertsForBulkResolve,
+        activeAlertDescriptionFilter
+      );
+      clearSelection();
+      // Toast is handled by the parent component
+      console.log(`Resolved ${result.resolvedCount} alerts across ${result.caseCount} cases`);
+    } finally {
+      setIsResolvingAlerts(false);
+    }
+  }, [onBulkResolveAlerts, activeAlertDescriptionFilter, alertsForBulkResolve, selectedCaseIds, clearSelection]);
+
+  // Bulk note flow
+  const bulkNoteFlow = useBulkNoteFlow({
+    selectedCaseIds,
+    onSuccess: clearSelection,
+  });
+
   return (
     <div className="flex flex-col h-full bg-background" data-papercut-context="CaseList">
       <div className="sticky top-0 z-20 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80">
@@ -731,8 +804,21 @@ export function CaseList({
           onApproveArchival={onApproveArchival ? handleApproveArchival : undefined}
           onCancelArchival={onCancelArchival ? handleCancelArchival : undefined}
           isArchiving={isArchiving}
+          alertDescriptionFilter={activeAlertDescriptionFilter}
+          alertCountForSelection={alertCountForSelection}
+          onBulkResolveAlerts={onBulkResolveAlerts ? handleBulkResolveAlerts : undefined}
+          isResolvingAlerts={isResolvingAlerts}
+          onBulkAddNote={bulkNoteFlow.openModal}
         />
       )}
+
+      <BulkNoteModal
+        isOpen={bulkNoteFlow.isModalOpen}
+        onClose={bulkNoteFlow.closeModal}
+        onSubmit={bulkNoteFlow.submitBulkNote}
+        isSubmitting={bulkNoteFlow.isSubmitting}
+        selectedCount={selectedCaseIds.length}
+      />
 
       <AlertDialog open={showSampleDataDialog} onOpenChange={setShowSampleDataDialog}>
         <AlertDialogContent>

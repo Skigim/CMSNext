@@ -31,6 +31,7 @@ interface CaseWorkspaceViewHandlers {
   handleDeleteCases: (caseIds: string[]) => Promise<number>;
   handleUpdateCasesStatus: (caseIds: string[], status: StoredCase["status"]) => Promise<number>;
   handleUpdateCasesPriority: (caseIds: string[], priority: boolean) => Promise<number>;
+  handleBulkResolveAlerts?: (caseIds: string[], alerts: AlertWithMatch[], descriptionFilter: string) => Promise<{ resolvedCount: number; caseCount: number }>;
   handleApproveArchival?: (caseIds: string[]) => Promise<unknown>;
   handleCancelArchival?: (caseIds: string[]) => Promise<number>;
   isArchiving?: boolean;
@@ -130,6 +131,7 @@ export const CaseWorkspace = memo(function CaseWorkspace({
         handleDeleteCases={viewHandlers.handleDeleteCases}
         handleUpdateCasesStatus={viewHandlers.handleUpdateCasesStatus}
         handleUpdateCasesPriority={viewHandlers.handleUpdateCasesPriority}
+        handleBulkResolveAlerts={viewHandlers.handleBulkResolveAlerts}
         handleApproveArchival={viewHandlers.handleApproveArchival}
         handleCancelArchival={viewHandlers.handleCancelArchival}
         isArchiving={viewHandlers.isArchiving}

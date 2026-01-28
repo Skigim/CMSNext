@@ -22,6 +22,7 @@ import { AppContentView } from "./AppContentView";
 import { useAppContentViewModel } from "./useAppContentViewModel";
 import { formatCaseDisplayName } from "../../domain/cases";
 import type { CaseCategory, StoredCase, FinancialItem, NewNoteData } from "../../types/case";
+import type { AlertWithMatch } from "../../utils/alertsData";
 
 export const AppContent = memo(function AppContent() {
   const { isSupported, hasStoredHandle, service, fileStorageService } = useFileStorage();
@@ -220,6 +221,19 @@ export const AppContent = memo(function AppContent() {
     dataManager,
   });
 
+  const handleBulkResolveAlerts = useCallback(
+    async (caseIds: string[], alerts: AlertWithMatch[], descriptionFilter: string) => {
+      if (!dataManager) {
+        return { resolvedCount: 0, caseCount: 0 };
+      }
+      const result = await dataManager.resolveAlertsForCases(caseIds, alerts, descriptionFilter);
+      // Refresh activity log after bulk operation
+      await refreshActivityLog();
+      return result;
+    },
+    [dataManager, refreshActivityLog],
+  );
+
   const handleAddItem = useCallback(
     (category: CaseCategory) => {
       openItemForm(category);
@@ -304,6 +318,7 @@ export const AppContent = memo(function AppContent() {
       handleDeleteCases: deleteCases,
       handleUpdateCasesStatus: updateCasesStatus,
       handleUpdateCasesPriority: updateCasesPriority,
+      handleBulkResolveAlerts,
       handleApproveArchival: archival.approveArchival,
       handleCancelArchival: archival.cancelArchival,
       isArchiving: archival.isLoading,
@@ -315,6 +330,7 @@ export const AppContent = memo(function AppContent() {
       deleteCases,
       updateCasesStatus,
       updateCasesPriority,
+      handleBulkResolveAlerts,
       handleNewCase,
       handleSaveCase,
       handleViewCase,

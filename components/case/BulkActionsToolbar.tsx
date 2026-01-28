@@ -21,7 +21,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Archive, ChevronDown, Trash2, X, XCircle } from "lucide-react";
+import { Archive, Bell, ChevronDown, StickyNote, Trash2, X, XCircle } from "lucide-react";
 import type { CaseStatus } from "@/types/case";
 import { useCategoryConfig } from "@/contexts/CategoryConfigContext";
 import { getColorSlotBadgeStyle } from "@/types/colorSlots";
@@ -44,6 +44,16 @@ export interface BulkActionsToolbarProps {
   onCancelArchival?: () => Promise<void>;
   /** Whether archival operation is in progress */
   isArchiving?: boolean;
+  /** Active alert description filter (shows Clear Alerts button when set and not "all") */
+  alertDescriptionFilter?: string;
+  /** Count of alerts matching the filter for selected cases */
+  alertCountForSelection?: number;
+  /** Handler for bulk resolving alerts */
+  onBulkResolveAlerts?: () => Promise<void>;
+  /** Whether alert resolution is in progress */
+  isResolvingAlerts?: boolean;
+  /** Handler for opening bulk note modal */
+  onBulkAddNote?: () => void;
 }
 
 export const BulkActionsToolbar = memo(function BulkActionsToolbar({
@@ -59,6 +69,11 @@ export const BulkActionsToolbar = memo(function BulkActionsToolbar({
   onApproveArchival,
   onCancelArchival,
   isArchiving = false,
+  alertDescriptionFilter,
+  alertCountForSelection = 0,
+  onBulkResolveAlerts,
+  isResolvingAlerts = false,
+  onBulkAddNote,
 }: BulkActionsToolbarProps) {
   const { config } = useCategoryConfig();
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
@@ -106,14 +121,29 @@ export const BulkActionsToolbar = memo(function BulkActionsToolbar({
     }
   }, [onCancelArchival]);
 
+  const handleBulkResolveAlerts = useCallback(async () => {
+    if (onBulkResolveAlerts) {
+      await onBulkResolveAlerts();
+    }
+  }, [onBulkResolveAlerts]);
+
+  const handleBulkAddNote = useCallback(() => {
+    if (onBulkAddNote) {
+      onBulkAddNote();
+    }
+  }, [onBulkAddNote]);
+
   // Show priority toggle only when all selected cases have the same priority state
   const showPriorityToggle = onPriorityToggle && selectedPriorityState !== null;
+  
+  // Show clear alerts button when an alert description filter is active
+  const showClearAlertsButton = alertDescriptionFilter && alertDescriptionFilter !== "all" && onBulkResolveAlerts;
 
   if (selectedCount === 0) {
     return null;
   }
 
-  const isDisabled = isDeleting || isUpdating || isArchiving;
+  const isDisabled = isDeleting || isUpdating || isArchiving || isResolvingAlerts;
 
   return (
     <>
@@ -170,6 +200,39 @@ export const BulkActionsToolbar = memo(function BulkActionsToolbar({
                   Priority
                 </Label>
               </div>
+            </>
+          )}
+
+          {showClearAlertsButton && (
+            <>
+              <div className="h-4 w-px bg-border" />
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleBulkResolveAlerts}
+                disabled={isDisabled || alertCountForSelection === 0}
+                title={alertCountForSelection === 0 
+                  ? "No matching alerts for selected cases" 
+                  : `Clear ${alertCountForSelection} "${alertDescriptionFilter}" alert${alertCountForSelection === 1 ? '' : 's'}`}
+              >
+                <Bell className="mr-1.5 h-3.5 w-3.5" />
+                Clear Alerts ({alertCountForSelection})
+              </Button>
+            </>
+          )}
+
+          {onBulkAddNote && (
+            <>
+              <div className="h-4 w-px bg-border" />
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleBulkAddNote}
+                disabled={isDisabled}
+              >
+                <StickyNote className="mr-1.5 h-3.5 w-3.5" />
+                Add Note
+              </Button>
             </>
           )}
 

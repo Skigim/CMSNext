@@ -1,11 +1,12 @@
 import { v4 as uuidv4 } from 'uuid';
-import type { NewPersonData, NewCaseRecordData, CaseStatus } from '../../types/case';
+import type { NewPersonData, NewCaseRecordData, CaseStatus, NewNoteData } from '../../types/case';
 import type { CategoryConfig } from '../../types/categoryConfig';
 import type { FileStorageService, NormalizedFileData, StoredCase } from './FileStorageService';
 import { ActivityLogService } from './ActivityLogService';
 import { CaseBulkOperationsService } from './CaseBulkOperationsService';
 import { toLocalDateString } from '../../domain/common';
 import { formatCaseDisplayName } from '../../domain/cases/formatting';
+import type { AlertWithMatch } from '@/domain/alerts';
 
 // formatCaseDisplayName imported from domain layer
 
@@ -730,5 +731,39 @@ export class CaseService {
    */
   async clearAllData(categoryConfig: CategoryConfig): Promise<void> {
     return this.bulkOperations.clearAllData(categoryConfig);
+  }
+
+  // =============================================================================
+  // BULK ALERT AND NOTE OPERATIONS
+  // =============================================================================
+
+  /**
+   * Resolve alerts for multiple cases matching a description filter.
+   * 
+   * @param {string[]} caseIds - Array of case IDs whose alerts should be resolved
+   * @param {AlertWithMatch[]} alerts - All alerts (pre-filtered for open status by caller)
+   * @param {string} descriptionFilter - Alert description to match (exact match)
+   * @returns {Promise<{resolvedCount: number, caseCount: number}>} Count of resolved alerts and affected cases
+   */
+  async resolveAlertsForCases(
+    caseIds: string[],
+    alerts: AlertWithMatch[],
+    descriptionFilter: string
+  ): Promise<{ resolvedCount: number; caseCount: number }> {
+    return this.bulkOperations.resolveAlertsForCases(caseIds, alerts, descriptionFilter);
+  }
+
+  /**
+   * Add an identical note to multiple cases.
+   * 
+   * @param {string[]} caseIds - Array of case IDs to add notes to
+   * @param {NewNoteData} noteData - The note data (content, category)
+   * @returns {Promise<{addedCount: number}>} Count of notes added
+   */
+  async addNoteToCases(
+    caseIds: string[],
+    noteData: NewNoteData
+  ): Promise<{ addedCount: number }> {
+    return this.bulkOperations.addNoteToCases(caseIds, noteData);
   }
 }

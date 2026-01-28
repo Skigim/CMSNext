@@ -1101,6 +1101,40 @@ export class DataManager {
     return this.cases.updateCasesPriority(caseIds, priority);
   }
 
+  /**
+   * Resolve alerts for multiple cases matching a description filter.
+   * 
+   * Bulk operation that marks all matching alerts as 'resolved'.
+   * 
+   * @param {string[]} caseIds - Array of case IDs whose alerts should be resolved
+   * @param {AlertWithMatch[]} alerts - All alerts (pre-filtered for open status by caller)
+   * @param {string} descriptionFilter - Alert description to match (exact match)
+   * @returns {Promise<{resolvedCount: number, caseCount: number}>} Count of resolved alerts and affected cases
+   */
+  async resolveAlertsForCases(
+    caseIds: string[],
+    alerts: AlertWithMatch[],
+    descriptionFilter: string
+  ): Promise<{ resolvedCount: number; caseCount: number }> {
+    return this.cases.resolveAlertsForCases(caseIds, alerts, descriptionFilter);
+  }
+
+  /**
+   * Add an identical note to multiple cases.
+   * 
+   * Bulk operation that creates the same note for each specified case.
+   * 
+   * @param {string[]} caseIds - Array of case IDs to add notes to
+   * @param {NewNoteData} noteData - The note data (content, category)
+   * @returns {Promise<{addedCount: number}>} Count of notes added
+   */
+  async addNoteToCases(
+    caseIds: string[],
+    noteData: NewNoteData
+  ): Promise<{ addedCount: number }> {
+    return this.cases.addNoteToCases(caseIds, noteData);
+  }
+
   // =============================================================================
   // FINANCIAL ITEM OPERATIONS
   // =============================================================================
