@@ -403,6 +403,15 @@ export function evaluateApplicationTypeCondition(
     return false;
   }
 
-  // Case-insensitive comparison
-  return condition.toLowerCase() === applicationType.toLowerCase();
+  // Normalize case type
+  const normalizedCaseType = applicationType.trim().toLowerCase();
+  
+  // Support comma-separated list of types in condition
+  // e.g. "MLTC, FTP" -> ["mltc", "ftp"]
+  const allowedTypes = condition
+    .split(",")
+    .map((t) => t.trim().toLowerCase())
+    .filter((t) => t.length > 0);
+  
+  return allowedTypes.includes(normalizedCaseType);
 }

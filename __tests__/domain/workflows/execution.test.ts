@@ -769,4 +769,16 @@ describe("evaluateApplicationTypeCondition", () => {
     expect(evaluateApplicationTypeCondition("FTP", "MLTC")).toBe(false);
     expect(evaluateApplicationTypeCondition("abc", "def")).toBe(false);
   });
+
+  it("should ignore whitespace", () => {
+    expect(evaluateApplicationTypeCondition("FTP", " FTP ")).toBe(true);
+    expect(evaluateApplicationTypeCondition(" FTP ", "FTP")).toBe(true);
+  });
+
+  it("should support comma-separated list of conditions", () => {
+    expect(evaluateApplicationTypeCondition("FTP, MLTC", "FTP")).toBe(true);
+    expect(evaluateApplicationTypeCondition("FTP, MLTC", "MLTC")).toBe(true);
+    expect(evaluateApplicationTypeCondition("FTP, MLTC", "ftp")).toBe(true);
+    expect(evaluateApplicationTypeCondition("FTP, MLTC", "waiver")).toBe(false);
+  });
 });

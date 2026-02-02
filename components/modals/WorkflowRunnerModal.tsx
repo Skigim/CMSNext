@@ -534,23 +534,35 @@ export function WorkflowRunnerModal({
 
                   {/* Step-specific content */}
                   {isTemplateStep(currentStep) && (
-                    <TemplateStepContent result={currentStepState.result} />
+                    <TemplateStepContent 
+                      key={currentStep.id} 
+                      result={currentStepState.result} 
+                    />
                   )}
                   {isNoteStep(currentStep) && (
-                    <NoteStepContent step={currentStep} result={currentStepState.result} />
+                    <NoteStepContent 
+                      key={currentStep.id}
+                      step={currentStep} 
+                      result={currentStepState.result} 
+                    />
                   )}
                   {isAlertStep(currentStep) && (
-                    <AlertStepContent step={currentStep} />
+                    <AlertStepContent 
+                      key={currentStep.id}
+                      step={currentStep} 
+                    />
                   )}
                   {isChecklistStep(currentStep) && (
                     <ChecklistStepContent
+                      key={currentStep.id}
                       step={currentStep}
-                      checked={currentStepState.checked}
+                      checked={!!currentStepState.checked}
                       onCheckChange={handleChecklistChange}
                     />
                   )}
                   {isCopyStep(currentStep) && (
                     <CopyStepContent
+                      key={currentStep.id}
                       step={currentStep}
                       result={getPreviousTemplateResult(executionState)}
                       onCopy={handleCopy}
