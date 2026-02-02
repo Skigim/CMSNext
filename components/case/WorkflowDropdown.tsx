@@ -44,7 +44,18 @@ function getApplicableWorkflows(
     if (!workflow.applicationTypeFilter) {
       return true; // No filter = applies to all cases
     }
-    return appType?.toLowerCase() === workflow.applicationTypeFilter.toLowerCase();
+    
+    // Normalize case type
+    const normalizedCaseType = appType?.trim().toLowerCase() || "";
+    
+    // Support comma-separated list of types
+    // e.g. "MLTC, FTP" -> ["mltc", "ftp"]
+    const allowedTypes = workflow.applicationTypeFilter
+      .split(",")
+      .map((t) => t.trim().toLowerCase())
+      .filter((t) => t.length > 0);
+    
+    return allowedTypes.includes(normalizedCaseType);
   });
 }
 
