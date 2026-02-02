@@ -168,6 +168,14 @@ describe("calculateAVSTrackingDates", () => {
     expect(result.fiveDayDate).toBe("01/15/2026");
     expect(result.elevenDayDate).toBe("01/21/2026");
   });
+
+  it("uses provided submit date string", () => {
+    const result = calculateAVSTrackingDates("2025-12-29", "2026-01-10");
+
+    expect(result.submitDate).toBe("01/10/2026");
+    expect(result.fiveDayDate).toBe("01/15/2026");
+    expect(result.elevenDayDate).toBe("01/21/2026");
+  });
 });
 
 describe("extractKnownInstitutions", () => {

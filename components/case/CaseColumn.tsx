@@ -155,6 +155,7 @@ export function CaseColumn({
                 </div>
               </div>
               <InfoItem label="AVS Consent" value={formatDate(caseData.avsConsentDate)} icon={Calendar} />
+              <InfoItem label="AVS Submit" value={formatDate(caseData.avsSubmitDate)} icon={Calendar} />
               <InfoItem
                 label="Voter Form"
                 value={caseData.voterFormStatus ? VOTER_STATUS_LABELS[caseData.voterFormStatus] : null}
@@ -318,6 +319,16 @@ export function CaseColumn({
                 type="date"
                 value={isoToDateInputValue(caseData.avsConsentDate ?? "")}
                 onChange={(e) => onCaseDataChange("avsConsentDate", dateInputValueToISO(e.target.value) || "")}
+                className="h-8"
+              />
+            </div>
+            <div className="space-y-1">
+              <Label htmlFor="avsSubmitDate" className="text-xs">AVS Submit Date</Label>
+              <Input
+                id="avsSubmitDate"
+                type="date"
+                value={isoToDateInputValue(caseData.avsSubmitDate ?? "")}
+                onChange={(e) => onCaseDataChange("avsSubmitDate", dateInputValueToISO(e.target.value) || "")}
                 className="h-8"
               />
             </div>

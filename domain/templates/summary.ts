@@ -371,7 +371,10 @@ export function buildAVSTrackingContext(
   caseRecord: StoredCase["caseRecord"],
   resources: FinancialItem[]
 ): Partial<TemplateRenderContext> {
-  const avsDates = calculateAVSTrackingDates(caseRecord.avsConsentDate);
+  const avsDates = calculateAVSTrackingDates(
+    caseRecord.avsConsentDate,
+    caseRecord.avsSubmitDate
+  );
   const knownInstitutions = extractKnownInstitutions(resources);
 
   return {
@@ -654,7 +657,10 @@ function buildAVSTrackingSection(
   }
 
   // Fallback: legacy formatting
-  const avsDates = calculateAVSTrackingDates(caseRecord.avsConsentDate);
+  const avsDates = calculateAVSTrackingDates(
+    caseRecord.avsConsentDate,
+    caseRecord.avsSubmitDate
+  );
   const knownInstitutions = extractKnownInstitutions(resources);
 
   const lines = [

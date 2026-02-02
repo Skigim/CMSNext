@@ -168,6 +168,7 @@ export interface CaseRecord {
   citizenshipVerified?: boolean;
   residencyVerified?: boolean;
   avsSubmitted?: boolean;
+  avsSubmitDate?: string;
   interfacesReviewed?: boolean;
   reviewVRs?: boolean;
   reviewPriorBudgets?: boolean;
@@ -253,6 +254,7 @@ export interface NewCaseRecordData {
   citizenshipVerified?: boolean;
   residencyVerified?: boolean;
   avsSubmitted?: boolean;
+  avsSubmitDate?: string;
   interfacesReviewed?: boolean;
   reviewVRs?: boolean;
   reviewPriorBudgets?: boolean;

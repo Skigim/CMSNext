@@ -166,18 +166,30 @@ export interface AVSTrackingDates {
  * Calculate AVS tracking dates.
  *
  * @param consentDate - ISO date string for consent date
- * @param submitDate - Optional ISO date string for submit date (defaults to today)
+ * @param submitDate - Optional ISO date string or Date object for submit date. 
+ *                     If not provided, current date is used.
  * @returns Object with formatted date strings
- *
- * @example
- * calculateAVSTrackingDates("2025-12-29")
- * // Returns { submitDate: "01/02/2026", consentDate: "12/29/2025", fiveDayDate: "01/07/2026", elevenDayDate: "01/13/2026" }
  */
 export function calculateAVSTrackingDates(
   consentDate: string | undefined,
-  submitDate?: Date
+  submitDate?: string | Date
 ): AVSTrackingDates {
-  const submit = submitDate || new Date();
+  let submit: Date;
+  
+  if (typeof submitDate === 'string' && submitDate) {
+    // Parse ISO string (presuming YYYY-MM-DD from input)
+    // We treat it as local date to avoid timezone shifts
+    const [year, month, day] = submitDate.split('-').map(Number);
+    if (!isNaN(year) && !isNaN(month) && !isNaN(day)) {
+       submit = new Date(year, month - 1, day);
+    } else {
+       submit = new Date();
+    }
+  } else if (submitDate instanceof Date) {
+    submit = submitDate;
+  } else {
+    submit = new Date();
+  }
 
   const formatDate = (date: Date): string => {
     return date.toLocaleDateString("en-US", {
