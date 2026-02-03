@@ -297,7 +297,7 @@ if (!dataManager) {
 
 7. ~~Extract `getCategoryColor` utility~~ ✅ **COMPLETED** - `getStaticNoteCategoryColor` in `utils/styleUtils.ts`
 8. Create category update helper in CategoryConfigContext
-9. Standardize widget loading skeletons
+9. ~~Standardize widget loading skeletons~~ ✅ **COMPLETED** - `WidgetSkeleton` & `WidgetError` components (Feb 3, 2026)
 10. Rename vague variables
 
 ### Low Priority

@@ -48,7 +48,7 @@ _Focus: Clear ALL outstanding audit items from January_
 - [x] **Extract `getCategoryColor` utility** - ✅ Already exists as `getStaticNoteCategoryColor` in `utils/styleUtils.ts`
 - [x] **Create `requireDataManager()` helper** - ✅ Already exists as `guardDataManager` in `utils/guardUtils.ts`
 - [ ] **Refactor category update handlers** - Extract generic async operation helper
-- [ ] **Standardize widget loading skeletons** - Use `WidgetSkeleton` component consistently
+- [x] **Standardize widget loading skeletons** - ✅ Created `WidgetSkeleton` and `WidgetError` components, updated 7 widgets
 
 #### Low Priority - UI Audit
 
