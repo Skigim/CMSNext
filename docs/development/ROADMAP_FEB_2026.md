@@ -25,8 +25,8 @@ _Focus: Clear ALL outstanding audit items from January_
 #### High Priority - Security Audit
 
 - [ ] **AVS Duplicate Detection Error Handling** - Display error to user and halt if existing data cannot be verified
-- [ ] **File Storage Silent Load Failures** - Aggregate and display warning toast for failed handlers
-- [ ] **Template Reorder Optimistic UI** - Ensure rollback occurs on failure or display toast error
+- [x] **File Storage Silent Load Failures** - ✅ Already fixed (commit 8b2da4c) - aggregates errors and shows warning toast
+- [x] **Template Reorder Optimistic UI** - ✅ Already fixed (commit 8b2da4c) - shows toast.error on failure
 - [ ] **Encryption Auth Error Specificity** - Return error codes for wrong password vs system error
 
 #### High Priority - Hooks Audit (Console Statements)

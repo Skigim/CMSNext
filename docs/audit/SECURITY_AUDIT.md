@@ -22,23 +22,19 @@ The `handleInputChange` function attempts to fetch existing resources to detect 
 
 ### Medium Priority
 
-#### 2. Silent Failures in File Storage Data Load
+#### 2. Silent Failures in File Storage Data Load ✅ RESOLVED
 
 **Risk:** User Trust / Data Integrity
-**Location:** `contexts/FileStorageContext.tsx` lines 272-276
-**Description:**
-When data is loaded from a file, registered handlers are invoked. If a handler throws an error, it is caught and logged, but the user is not notified.
-**Impact:** A specific part of the application state (e.g., cases, alerts) might fail to load while others succeed. The user sees a partially loaded interface without warning, potentially leading them to believe data is missing or deleted.
-**Recommendation:** Aggregate loading errors and display a warning toast indicating which data modules failed to load.
+**Location:** `contexts/FileStorageContext.tsx` lines 270-287
+**Status:** ✅ **RESOLVED** (commit 8b2da4c - January 2026)
+**Resolution:** Errors are now aggregated into an array and `toast.warning('Some data failed to load', ...)` is displayed when any handlers fail. Duration set to 6000ms for visibility.
 
-#### 3. Optimistic UI Mismatch in Template Reordering
+#### 3. Optimistic UI Mismatch in Template Reordering ✅ RESOLVED
 
 **Risk:** UI/Data Consistency
-**Location:** `contexts/TemplateContext.tsx` lines 259
-**Description:**
-The `reorderTemplates` function catches errors during the reorder operation and logs them, but returns `false`.
-**Impact:** If the UI optimistically updates the order before calling this function, a silent failure means the UI stays reordered while the backing file is not. Upon reload, the order reverts.
-**Recommendation:** Ensure the UI rollback occurs if `reorderTemplates` returns false, or display a toast error to the user so they know the action failed.
+**Location:** `contexts/TemplateContext.tsx` lines 258-263
+**Status:** ✅ **RESOLVED** (commit 8b2da4c - January 2026)
+**Resolution:** `toast.error("Failed to save template order")` is now displayed in the catch block, and `false` is returned so callers can handle rollback if needed.
 
 #### 4. Authentication Failure Obscurity
 
