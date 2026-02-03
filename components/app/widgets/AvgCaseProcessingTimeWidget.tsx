@@ -10,6 +10,7 @@ import type { CaseActivityEntry } from '@/types/activityLog';
 import type { StoredCase } from '@/types/case';
 import { calculateAvgCaseProcessingTime, type ProcessingTimeStats } from '@/domain/dashboard';
 import type { WidgetMetadata } from './WidgetRegistry';
+import { WidgetSkeleton, WidgetError } from './WidgetSkeleton';
 
 interface AvgCaseProcessingTimeWidgetProps {
   activityLog: CaseActivityEntry[];
@@ -63,32 +64,22 @@ export function AvgCaseProcessingTimeWidget({
 
   if (loading && !data) {
     return (
-      <Card>
-        <CardHeader>
-          <CardTitle>Avg. Case Processing Time</CardTitle>
-          <CardDescription>Crunching case completion times...</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-3">
-            <div className="h-12 w-3/4 rounded-lg bg-muted animate-pulse" />
-            <div className="h-16 rounded-lg bg-muted animate-pulse" />
-          </div>
-        </CardContent>
-      </Card>
+      <WidgetSkeleton
+        title="Avg. Case Processing Time"
+        description="Crunching case completion times..."
+        variant="list"
+        itemCount={2}
+      />
     );
   }
 
   if (error) {
     return (
-      <Card>
-        <CardHeader>
-          <CardTitle>Avg. Case Processing Time</CardTitle>
-          <CardDescription>Unable to calculate processing metrics</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <p className="text-sm text-destructive/90">{error.message}</p>
-        </CardContent>
-      </Card>
+      <WidgetError
+        title="Avg. Case Processing Time"
+        description="Unable to calculate processing metrics"
+        message={error.message}
+      />
     );
   }
 

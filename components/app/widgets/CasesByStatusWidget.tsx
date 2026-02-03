@@ -16,6 +16,7 @@ import { calculateTotalCasesByStatus, type StatusBreakdown } from '@/domain/dash
 import { getColorSlotVar } from '@/types/colorSlots';
 import { getStatusColorSlot } from '@/utils/categoryConfigMigration';
 import type { WidgetMetadata } from './WidgetRegistry';
+import { WidgetSkeleton, WidgetError } from './WidgetSkeleton';
 
 interface CasesByStatusWidgetProps {
   cases: StoredCase[];
@@ -77,33 +78,22 @@ export function CasesByStatusWidget({ cases = [], metadata }: CasesByStatusWidge
 
   if (loading && !data) {
     return (
-      <Card>
-        <CardHeader>
-          <CardTitle>Total Cases by Status</CardTitle>
-          <CardDescription>Preparing status totals...</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-3">
-            {Array.from({ length: 4 }).map((_, index) => (
-              <div key={index} className="h-8 rounded-lg bg-muted animate-pulse" />
-            ))}
-          </div>
-        </CardContent>
-      </Card>
+      <WidgetSkeleton
+        title="Total Cases by Status"
+        description="Preparing status totals..."
+        variant="list"
+        itemCount={4}
+      />
     );
   }
 
   if (error) {
     return (
-      <Card>
-        <CardHeader>
-          <CardTitle>Total Cases by Status</CardTitle>
-          <CardDescription>Unable to compute case distribution</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <p className="text-sm text-destructive/90">{error.message}</p>
-        </CardContent>
-      </Card>
+      <WidgetError
+        title="Total Cases by Status"
+        description="Unable to compute case distribution"
+        message={error.message}
+      />
     );
   }
 

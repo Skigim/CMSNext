@@ -13,6 +13,7 @@ import {
   type DailyCaseStats,
 } from '@/domain/dashboard';
 import type { WidgetMetadata } from './WidgetRegistry';
+import { WidgetSkeleton, WidgetError } from './WidgetSkeleton';
 
 interface CasesProcessedPerDayWidgetProps {
   activityLog: CaseActivityEntry[];
@@ -88,33 +89,22 @@ export function CasesProcessedPerDayWidget({ activityLog = [], metadata, refresh
 
   if (loading && !data) {
     return (
-      <Card>
-        <CardHeader>
-          <CardTitle>Cases Processed/Day</CardTitle>
-          <CardDescription>Compiling completion trend...</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="flex items-end gap-2 h-40">
-            {Array.from({ length: DEFAULT_WINDOW }).map((_, index) => (
-              <div key={index} className="w-full rounded bg-muted animate-pulse" style={{ height: `${30 + index * 5}px` }} />
-            ))}
-          </div>
-        </CardContent>
-      </Card>
+      <WidgetSkeleton
+        title="Cases Processed/Day"
+        description="Compiling completion trend..."
+        variant="chart"
+        itemCount={DEFAULT_WINDOW}
+      />
     );
   }
 
   if (error) {
     return (
-      <Card>
-        <CardHeader>
-          <CardTitle>Cases Processed/Day</CardTitle>
-          <CardDescription>Unable to calculate case completions</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <p className="text-sm text-destructive/90">{error.message}</p>
-        </CardContent>
-      </Card>
+      <WidgetError
+        title="Cases Processed/Day"
+        description="Unable to calculate case completions"
+        message={error.message}
+      />
     );
   }
 

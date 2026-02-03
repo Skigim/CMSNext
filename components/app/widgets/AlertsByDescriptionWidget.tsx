@@ -16,6 +16,7 @@ import type { AlertWithMatch } from '@/utils/alertsData';
 import { calculateTotalAlertsByDescription, type AlertDescriptionStats } from '@/domain/dashboard';
 import { getColorSlotVar } from '@/types/colorSlots';
 import type { WidgetMetadata } from './WidgetRegistry';
+import { WidgetSkeleton, WidgetError } from './WidgetSkeleton';
 
 interface AlertsByDescriptionWidgetProps {
   alerts: AlertWithMatch[];
@@ -101,33 +102,22 @@ export function AlertsByDescriptionWidget({ alerts = [], metadata }: AlertsByDes
 
   if (loading && !data) {
     return (
-      <Card>
-        <CardHeader>
-          <CardTitle>Open Alerts by Description</CardTitle>
-          <CardDescription>Analyzing open alert descriptions...</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-3">
-            {Array.from({ length: 5 }).map((_, index) => (
-              <div key={index} className="h-8 rounded-lg bg-muted animate-pulse" />
-            ))}
-          </div>
-        </CardContent>
-      </Card>
+      <WidgetSkeleton
+        title="Open Alerts by Description"
+        description="Analyzing open alert descriptions..."
+        variant="list"
+        itemCount={5}
+      />
     );
   }
 
   if (error) {
     return (
-      <Card>
-        <CardHeader>
-          <CardTitle>Open Alerts by Description</CardTitle>
-          <CardDescription>Unable to load alert breakdown</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <p className="text-sm text-destructive/90">{error.message}</p>
-        </CardContent>
-      </Card>
+      <WidgetError
+        title="Open Alerts by Description"
+        description="Unable to load alert breakdown"
+        message={error.message}
+      />
     );
   }
 

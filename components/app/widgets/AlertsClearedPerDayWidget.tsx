@@ -11,6 +11,7 @@ import {
   type DailyAlertStats,
 } from '@/domain/dashboard';
 import type { WidgetMetadata } from './WidgetRegistry';
+import { WidgetSkeleton, WidgetError } from './WidgetSkeleton';
 
 interface AlertsClearedPerDayWidgetProps {
   alerts: AlertWithMatch[];
@@ -74,33 +75,22 @@ export function AlertsClearedPerDayWidget({ alerts = [], metadata, refreshKey }:
 
   if (loading && !data) {
     return (
-      <Card>
-        <CardHeader>
-          <CardTitle>Alerts Cleared/Day</CardTitle>
-          <CardDescription>Compiling resolution trend...</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="flex items-end gap-2 h-40">
-            {Array.from({ length: DEFAULT_WINDOW }).map((_, index) => (
-              <div key={index} className="w-full rounded bg-muted animate-pulse" style={{ height: `${30 + index * 5}px` }} />
-            ))}
-          </div>
-        </CardContent>
-      </Card>
+      <WidgetSkeleton
+        title="Alerts Cleared/Day"
+        description="Compiling resolution trend..."
+        variant="chart"
+        itemCount={DEFAULT_WINDOW}
+      />
     );
   }
 
   if (error) {
     return (
-      <Card>
-        <CardHeader>
-          <CardTitle>Alerts Cleared/Day</CardTitle>
-          <CardDescription>Unable to calculate alert resolutions</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <p className="text-sm text-destructive/90">{error.message}</p>
-        </CardContent>
-      </Card>
+      <WidgetError
+        title="Alerts Cleared/Day"
+        description="Unable to calculate alert resolutions"
+        message={error.message}
+      />
     );
   }
 

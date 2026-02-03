@@ -7,6 +7,7 @@ import { useWidgetData } from '@/hooks/useWidgetData';
 import type { AlertWithMatch } from '@/utils/alertsData';
 import { calculateAvgAlertAge, type AlertAgeStats } from '@/domain/dashboard';
 import type { WidgetMetadata } from './WidgetRegistry';
+import { WidgetSkeleton, WidgetError } from './WidgetSkeleton';
 
 interface AvgAlertAgeWidgetProps {
   alerts: AlertWithMatch[];
@@ -49,35 +50,23 @@ export function AvgAlertAgeWidget({ alerts = [], metadata }: AvgAlertAgeWidgetPr
 
   if (loading && !data) {
     return (
-      <Card>
-        <CardHeader>
-          <CardTitle>Avg. Alert Age</CardTitle>
-          <CardDescription>Calculating backlog age...</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-3">
-            <div className="h-12 rounded-lg bg-muted animate-pulse" />
-            <div className="h-20 rounded-lg bg-muted animate-pulse" />
-          </div>
-        </CardContent>
-      </Card>
+      <WidgetSkeleton
+        title="Avg. Alert Age"
+        description="Calculating backlog age..."
+        variant="list"
+        itemCount={2}
+      />
     );
   }
 
   if (error) {
     return (
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-destructive">
-            <AlertOctagon className="h-5 w-5" />
-            Avg. Alert Age
-          </CardTitle>
-          <CardDescription>Unable to load alert age metrics</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <p className="text-sm text-destructive/90">{error.message}</p>
-        </CardContent>
-      </Card>
+      <WidgetError
+        title="Avg. Alert Age"
+        description="Unable to load alert age metrics"
+        message={error.message}
+        icon={<AlertOctagon className="h-5 w-5" />}
+      />
     );
   }
 

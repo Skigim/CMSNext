@@ -23,6 +23,7 @@ import {
   isCompletedStatus,
 } from "@/domain/dashboard";
 import type { WidgetMetadata } from "./WidgetRegistry";
+import { WidgetSkeleton, WidgetError } from "./WidgetSkeleton";
 
 interface DailyStatsWidgetProps {
   cases: StoredCase[];
@@ -120,39 +121,24 @@ export function DailyStatsWidget({
 
   if (loading && !data) {
     return (
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Activity className="h-5 w-5" />
-            Daily Stats
-          </CardTitle>
-          <CardDescription>Loading today&apos;s metrics...</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="grid gap-3 sm:grid-cols-3">
-            {Array.from({ length: 3 }).map((_, i) => (
-              <div key={i} className="h-20 rounded-lg bg-muted animate-pulse" />
-            ))}
-          </div>
-        </CardContent>
-      </Card>
+      <WidgetSkeleton
+        title="Daily Stats"
+        description="Loading today's metrics..."
+        variant="stats"
+        itemCount={3}
+        icon={<Activity className="h-5 w-5" />}
+      />
     );
   }
 
   if (error) {
     return (
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-destructive">
-            <Activity className="h-5 w-5" />
-            Daily Stats
-          </CardTitle>
-          <CardDescription>Unable to load daily stats</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <p className="text-sm text-destructive/90">{error.message}</p>
-        </CardContent>
-      </Card>
+      <WidgetError
+        title="Daily Stats"
+        description="Unable to load daily stats"
+        message={error.message}
+        icon={<Activity className="h-5 w-5" />}
+      />
     );
   }
 
