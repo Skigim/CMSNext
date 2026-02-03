@@ -47,7 +47,7 @@ _Focus: Clear ALL outstanding audit items from January_
 
 - [x] **Extract `getCategoryColor` utility** - ✅ Already exists as `getStaticNoteCategoryColor` in `utils/styleUtils.ts`
 - [x] **Create `requireDataManager()` helper** - ✅ Already exists as `guardDataManager` in `utils/guardUtils.ts`
-- [ ] **Refactor category update handlers** - Extract generic async operation helper
+- [x] **Refactor category update handlers** - ✅ Extracted `withCategoryUpdate` helper, migrated 8 try/catch blocks
 - [x] **Standardize widget loading skeletons** - ✅ Created `WidgetSkeleton` and `WidgetError` components, updated 7 widgets
 
 #### Low Priority - UI Audit
@@ -55,7 +55,7 @@ _Focus: Clear ALL outstanding audit items from January_
 - [ ] **Activity Log Unbounded Growth** - Implement auto-archiving/rotation policy
 - [ ] **Synchronous AVS Parsing** - Move to worker or use chunking for large inputs
 - [ ] **Rename vague variables** - `result`, `data`, `selected` → descriptive names
-- [x] **Standardize `error` vs `err`** - ✅ Migrated 18 instances to `catch (error)` pattern
+- [x] **Standardize `error` vs `err`** - ✅ Migrated 19 instances to `catch (error)` pattern
 - [x] **Move `US_STATES` to shared constants** - ✅ Created `domain/common/usStates.ts`
 - [x] **Move `colorPalette` to module-level constant** - ✅ NotesSection.tsx no longer exists (refactored)
 - [ ] **Consolidate Error Boundary base class** - Create `BaseErrorBoundary` or use library
@@ -63,7 +63,7 @@ _Focus: Clear ALL outstanding audit items from January_
 #### Refactoring & Polish
 
 - [x] Add tests for new utilities (`requireDataManager`, `getCategoryColor`) - N/A (already exist with tests)
-- [ ] Update audit reports to mark items complete
+- [x] Update audit reports to mark items complete - ✅ UI_AUDIT_REPORT.md updated
 - [x] Verify build and all tests pass - ✅ 1118 tests passing
 
 ---

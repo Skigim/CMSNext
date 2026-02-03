@@ -14,8 +14,54 @@ import { useDataManagerSafe } from "./DataManagerContext";
 import { useFileStorageDataChange } from "./FileStorageContext";
 import { LegacyFormatError } from "@/utils/services/FileStorageService";
 import { createLogger } from "@/utils/logger";
+import { extractErrorMessage } from "@/utils/errorUtils";
 
 const logger = createLogger("CategoryConfigContext");
+
+/**
+ * Options for async category update operations.
+ */
+interface CategoryUpdateOptions<T> {
+  /** Message shown in loading toast */
+  loadingMessage: string;
+  /** Message shown on success */
+  successMessage: string;
+  /** Message shown on error (also logged) */
+  errorMessage: string;
+  /** Callback to handle successful result */
+  onSuccess: (result: T) => void;
+}
+
+/**
+ * Execute an async category update operation with standardized toast feedback.
+ * 
+ * Handles the common pattern of:
+ * 1. Show loading toast
+ * 2. Execute async operation
+ * 3. Call onSuccess callback
+ * 4. Show success/error toast
+ * 5. Log errors via logger utility
+ * 
+ * @param operation - Async function to execute
+ * @param options - Toast messages and success handler
+ * @returns Promise resolving to result or null on error
+ */
+async function withCategoryUpdate<T>(
+  operation: () => Promise<T>,
+  options: CategoryUpdateOptions<T>,
+): Promise<T | null> {
+  const toastId = toast.loading(options.loadingMessage);
+  try {
+    const result = await operation();
+    options.onSuccess(result);
+    toast.success(options.successMessage, { id: toastId });
+    return result;
+  } catch (error) {
+    logger.error(options.errorMessage, { error: extractErrorMessage(error) });
+    toast.error(options.errorMessage, { id: toastId });
+    return null;
+  }
+}
 
 /**
  * Handler type for category updates.
@@ -152,13 +198,13 @@ export const CategoryConfigProvider: React.FC<{ children: React.ReactNode }> = (
       // mergeCategoryConfig handles migration from legacy string[] format
       setConfig(mergeCategoryConfig(result));
       setError(null);
-    } catch (err) {
+    } catch (error) {
       // LegacyFormatError is expected when opening old data files - handle gracefully
-      if (err instanceof LegacyFormatError) {
-        logger.warn("Legacy format detected in category config", { message: err.message });
-        setError(err.message);
+      if (error instanceof LegacyFormatError) {
+        logger.warn("Legacy format detected in category config", { message: error.message });
+        setError(error.message);
       } else {
-        console.error("Failed to load category configuration", err);
+        logger.error("Failed to load category configuration", { error: extractErrorMessage(error) });
         setError("Unable to load category options.");
       }
     } finally {
@@ -171,8 +217,8 @@ export const CategoryConfigProvider: React.FC<{ children: React.ReactNode }> = (
       return;
     }
 
-    loadConfig().catch(err => {
-      console.error("Unexpected error loading category configuration", err);
+    loadConfig().catch(error => {
+      logger.error("Unexpected error loading category configuration", { error: extractErrorMessage(error) });
     });
   }, [dataManager, loadConfig, dataChangeCount]);
 
@@ -182,6 +228,12 @@ export const CategoryConfigProvider: React.FC<{ children: React.ReactNode }> = (
         toast.error("Data manager is not available yet.");
         return;
       }
+
+      // Common success handler for all category updates
+      const handleSuccess = (updated: PartialCategoryConfigInput) => {
+        setConfig(mergeCategoryConfig(updated));
+        setError(null);
+      };
 
       // Handle caseStatuses specially since it uses StatusConfig[]
       if (key === 'caseStatuses') {
@@ -200,16 +252,15 @@ export const CategoryConfigProvider: React.FC<{ children: React.ReactNode }> = (
             return;
           }
 
-          const toastId = toast.loading("Saving statuses...");
-          try {
-            const updated = await dataManager.updateCaseStatuses(statusConfigs);
-            setConfig(mergeCategoryConfig(updated));
-            setError(null);
-            toast.success("Statuses updated", { id: toastId });
-          } catch (err) {
-            console.error("Failed to update statuses", err);
-            toast.error("Failed to update statuses", { id: toastId });
-          }
+          await withCategoryUpdate(
+            () => dataManager.updateCaseStatuses(statusConfigs),
+            {
+              loadingMessage: "Saving statuses...",
+              successMessage: "Statuses updated",
+              errorMessage: "Failed to update statuses",
+              onSuccess: handleSuccess,
+            },
+          );
           return;
         }
         
@@ -224,16 +275,15 @@ export const CategoryConfigProvider: React.FC<{ children: React.ReactNode }> = (
           return;
         }
 
-        const toastId = toast.loading("Saving options...");
-        try {
-          const updated = await dataManager.updateCategoryValues(key, sanitizedValues);
-          setConfig(mergeCategoryConfig(updated));
-          setError(null);
-          toast.success("Options updated", { id: toastId });
-        } catch (err) {
-          console.error("Failed to update statuses", err);
-          toast.error("Failed to update options", { id: toastId });
-        }
+        await withCategoryUpdate(
+          () => dataManager.updateCategoryValues(key, sanitizedValues),
+          {
+            loadingMessage: "Saving options...",
+            successMessage: "Options updated",
+            errorMessage: "Failed to update statuses",
+            onSuccess: handleSuccess,
+          },
+        );
         return;
       }
 
@@ -250,16 +300,15 @@ export const CategoryConfigProvider: React.FC<{ children: React.ReactNode }> = (
           // New format with colors - use updateAlertTypes
           const alertTypeConfigs = inputValues as AlertTypeConfig[];
 
-          const toastId = toast.loading("Saving alert types...");
-          try {
-            const updated = await dataManager.updateAlertTypes(alertTypeConfigs);
-            setConfig(mergeCategoryConfig(updated));
-            setError(null);
-            toast.success("Alert types updated", { id: toastId });
-          } catch (err) {
-            console.error("Failed to update alert types", err);
-            toast.error("Failed to update alert types", { id: toastId });
-          }
+          await withCategoryUpdate(
+            () => dataManager.updateAlertTypes(alertTypeConfigs),
+            {
+              loadingMessage: "Saving alert types...",
+              successMessage: "Alert types updated",
+              errorMessage: "Failed to update alert types",
+              onSuccess: handleSuccess,
+            },
+          );
           return;
         }
         
@@ -270,16 +319,15 @@ export const CategoryConfigProvider: React.FC<{ children: React.ReactNode }> = (
         );
         const sanitizedValues = sanitizeCategoryValues(stringValues);
 
-        const toastId = toast.loading("Saving options...");
-        try {
-          const updated = await dataManager.updateCategoryValues(key, sanitizedValues);
-          setConfig(mergeCategoryConfig(updated));
-          setError(null);
-          toast.success("Options updated", { id: toastId });
-        } catch (err) {
-          console.error("Failed to update alert types", err);
-          toast.error("Failed to update options", { id: toastId });
-        }
+        await withCategoryUpdate(
+          () => dataManager.updateCategoryValues(key, sanitizedValues),
+          {
+            loadingMessage: "Saving options...",
+            successMessage: "Options updated",
+            errorMessage: "Failed to update alert types",
+            onSuccess: handleSuccess,
+          },
+        );
         return;
       }
 
@@ -287,16 +335,15 @@ export const CategoryConfigProvider: React.FC<{ children: React.ReactNode }> = (
       if (key === 'summaryTemplate') {
         const template = values as SummaryTemplateConfig;
 
-        const toastId = toast.loading("Saving summary template...");
-        try {
-          const updated = await dataManager.updateSummaryTemplate(template);
-          setConfig(mergeCategoryConfig(updated));
-          setError(null);
-          toast.success("Summary template updated", { id: toastId });
-        } catch (err) {
-          console.error("Failed to update summary template", err);
-          toast.error("Failed to update summary template", { id: toastId });
-        }
+        await withCategoryUpdate(
+          () => dataManager.updateSummaryTemplate(template),
+          {
+            loadingMessage: "Saving summary template...",
+            successMessage: "Summary template updated",
+            errorMessage: "Failed to update summary template",
+            onSuccess: handleSuccess,
+          },
+        );
         return;
       }
 
@@ -307,17 +354,15 @@ export const CategoryConfigProvider: React.FC<{ children: React.ReactNode }> = (
         return;
       }
 
-      const toastId = toast.loading("Saving options...");
-      try {
-        const updated = await dataManager.updateCategoryValues(key, sanitizedValues);
-        // mergeCategoryConfig handles migration from legacy format
-        setConfig(mergeCategoryConfig(updated));
-        setError(null);
-        toast.success("Options updated", { id: toastId });
-      } catch (err) {
-        console.error("Failed to update category", err);
-        toast.error("Failed to update options", { id: toastId });
-      }
+      await withCategoryUpdate(
+        () => dataManager.updateCategoryValues(key, sanitizedValues),
+        {
+          loadingMessage: "Saving options...",
+          successMessage: "Options updated",
+          errorMessage: "Failed to update category",
+          onSuccess: handleSuccess,
+        },
+      );
     },
     [dataManager],
   );
@@ -328,17 +373,18 @@ export const CategoryConfigProvider: React.FC<{ children: React.ReactNode }> = (
       return;
     }
 
-    const toastId = toast.loading("Restoring defaults...");
-    try {
-      const defaults = await dataManager.resetCategoryConfig();
-      // mergeCategoryConfig handles migration from legacy format
-      setConfig(mergeCategoryConfig(defaults));
-      setError(null);
-      toast.success("Defaults restored", { id: toastId });
-    } catch (err) {
-      console.error("Failed to reset category configuration", err);
-      toast.error("Failed to restore defaults", { id: toastId });
-    }
+    await withCategoryUpdate(
+      () => dataManager.resetCategoryConfig(),
+      {
+        loadingMessage: "Restoring defaults...",
+        successMessage: "Defaults restored",
+        errorMessage: "Failed to restore defaults",
+        onSuccess: (defaults) => {
+          setConfig(mergeCategoryConfig(defaults));
+          setError(null);
+        },
+      },
+    );
   }, [dataManager]);
 
   const setConfigFromFile = useCallback((incoming?: PartialCategoryConfigInput | null) => {

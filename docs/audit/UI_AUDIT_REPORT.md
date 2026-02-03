@@ -317,7 +317,7 @@ if (!dataManager) {
 - [x] Migrate inline `formatDate` to use `@/domain/common`
 - [x] Extract `generateAvsNarrative` to domain layer
 - [x] Extract `getCategoryColor` to shared utility - ✅ Exists as `getStaticNoteCategoryColor` in `utils/styleUtils.ts`
-- [ ] Refactor category update handlers
+- [x] Refactor category update handlers - ✅ Extracted `withCategoryUpdate` helper (Feb 3, 2026)
 - [x] Create `requireDataManager` helper - ✅ Exists as `guardDataManager` in `utils/guardUtils.ts`
 - [ ] Rename vague variables to descriptive names
 - [x] Standardize `error` vs `err` in catch blocks - ✅ Migrated 18 instances (Feb 3, 2026)
