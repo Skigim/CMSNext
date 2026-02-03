@@ -5,8 +5,15 @@ import { Badge } from "../ui/badge";
 import { Save, X, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
 import { StoredCase, NewPersonData, NewCaseRecordData, Relationship, CaseStatus } from "../../types/case";
-import { PersonColumn } from "../case/PersonColumn";
-import { CaseColumn } from "../case/CaseColumn";
+import {
+  BasicInfoSection,
+  ContactSection,
+  AddressesSection,
+  CaseIdentificationSection,
+  EligibilityDetailsSection,
+  CaseFlagsSection,
+  RelationshipsSection,
+} from "../case/CaseEditSections";
 import { useCategoryConfig } from "@/contexts/CategoryConfigContext";
 import { createCaseRecordData, createPersonData } from "@/domain/cases";
 import { ScrollArea } from "../ui/scroll-area";
@@ -29,10 +36,11 @@ interface CaseEditModalProps {
 }
 
 /**
- * CaseEditModal - Modal dialog for editing case details with 2-column grid layout
+ * CaseEditModal - Modal dialog for editing case details with section cards
  * 
  * Features:
- * - Clean 2-column responsive grid (PersonColumn | CaseColumn)
+ * - Individual section cards arranged in a 2-column responsive grid
+ * - Each section (Basic Info, Contact, Addresses, etc.) is its own card
  * - Modal-based editing flow (open → edit → save/cancel → close)
  * - Unsaved changes protection with confirmation dialog
  * - Field-level validation
@@ -224,28 +232,58 @@ export function CaseEditModal({ isOpen, onClose, caseData, onSave }: CaseEditMod
 
           <ScrollArea className="flex-1 px-6">
             <div className="py-4">
-              {/* 2-Column Responsive Grid */}
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <PersonColumn
-                  personData={personData}
-                  caseData={caseRecordData}
-                  relationships={relationships}
-                  isEditing={true}
-                  onPersonDataChange={handlePersonDataChange}
-                  onCaseDataChange={handleCaseDataChange}
-                  onRelationshipsChange={relationshipsHandlers}
-                />
-                <CaseColumn
-                  caseData={caseRecordData}
-                  retroRequested={retroRequested}
-                  isEditing={true}
-                  onCaseDataChange={handleCaseDataChange}
-                  onRetroRequestedChange={handleRetroRequestedChange}
-                  address={personData.address}
-                  mailingAddress={personData.mailingAddress}
-                  onAddressChange={handleAddressChange}
-                  onMailingAddressChange={handleMailingAddressChange}
-                />
+              {/* 2-Column Grid with Individual Section Cards */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                {/* Column 1 */}
+                <div className="space-y-4">
+                  <BasicInfoSection
+                    personData={personData}
+                    isEditing={true}
+                    onPersonDataChange={handlePersonDataChange}
+                  />
+                  <ContactSection
+                    personData={personData}
+                    caseData={caseRecordData}
+                    isEditing={true}
+                    onPersonDataChange={handlePersonDataChange}
+                    onCaseDataChange={handleCaseDataChange}
+                  />
+                  <AddressesSection
+                    address={personData.address}
+                    mailingAddress={personData.mailingAddress}
+                    isEditing={true}
+                    onAddressChange={handleAddressChange}
+                    onMailingAddressChange={handleMailingAddressChange}
+                  />
+                  <RelationshipsSection
+                    relationships={relationships}
+                    isEditing={true}
+                    onRelationshipsChange={relationshipsHandlers}
+                  />
+                </div>
+
+                {/* Column 2 */}
+                <div className="space-y-4">
+                  <CaseIdentificationSection
+                    caseData={caseRecordData}
+                    isEditing={true}
+                    onCaseDataChange={handleCaseDataChange}
+                  />
+                  <EligibilityDetailsSection
+                    personData={personData}
+                    caseData={caseRecordData}
+                    isEditing={true}
+                    onPersonDataChange={handlePersonDataChange}
+                    onCaseDataChange={handleCaseDataChange}
+                  />
+                  <CaseFlagsSection
+                    caseData={caseRecordData}
+                    retroRequested={retroRequested}
+                    isEditing={true}
+                    onCaseDataChange={handleCaseDataChange}
+                    onRetroRequestedChange={handleRetroRequestedChange}
+                  />
+                </div>
               </div>
             </div>
           </ScrollArea>
