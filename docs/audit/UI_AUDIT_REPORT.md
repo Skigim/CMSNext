@@ -295,7 +295,7 @@ if (!dataManager) {
 
 ### Medium Priority
 
-7. Extract `getCategoryColor` utility
+7. ~~Extract `getCategoryColor` utility~~ ✅ **COMPLETED** - `getStaticNoteCategoryColor` in `utils/styleUtils.ts`
 8. Create category update helper in CategoryConfigContext
 9. Standardize widget loading skeletons
 10. Rename vague variables
@@ -303,7 +303,7 @@ if (!dataManager) {
 ### Low Priority
 
 11. Consolidate error boundary base class
-12. Move constants to shared modules
+12. ~~Move constants to shared modules~~ ✅ **COMPLETED** - `US_STATES` in `domain/common/usStates.ts`
 13. Fix boolean naming (breaking change for consumers)
 
 ---
@@ -316,12 +316,12 @@ if (!dataManager) {
 - [x] Extract `formatFreshnessLabel` to domain layer
 - [x] Migrate inline `formatDate` to use `@/domain/common`
 - [x] Extract `generateAvsNarrative` to domain layer
-- [ ] Extract `getCategoryColor` to shared utility
+- [x] Extract `getCategoryColor` to shared utility - ✅ Exists as `getStaticNoteCategoryColor` in `utils/styleUtils.ts`
 - [ ] Refactor category update handlers
-- [ ] Create `requireDataManager` helper
+- [x] Create `requireDataManager` helper - ✅ Exists as `guardDataManager` in `utils/guardUtils.ts`
 - [ ] Rename vague variables to descriptive names
-- [ ] Standardize `error` vs `err` in catch blocks
-- [ ] Move `US_STATES` and `colorPalette` to shared constants
+- [x] Standardize `error` vs `err` in catch blocks - ✅ Migrated 18 instances (Feb 3, 2026)
+- [x] Move `US_STATES` and `colorPalette` to shared constants - ✅ Created `domain/common/usStates.ts`, `NotesSection.tsx` no longer exists
 
 ---
 

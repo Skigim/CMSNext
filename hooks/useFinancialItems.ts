@@ -4,6 +4,10 @@ import { useDataManagerSafe } from '@/contexts/DataManagerContext';
 import { useDataSync } from './useDataSync';
 import { withToast } from '@/utils/withToast';
 import { guardDataManager } from '@/utils/guardUtils';
+import { createLogger } from '@/utils/logger';
+import { extractErrorMessage } from '@/utils/errorUtils';
+
+const logger = createLogger('useFinancialItems');
 
 /**
  * Return type for useFinancialItems hook.
@@ -208,8 +212,8 @@ export function useFinancialItems(caseId?: string): UseFinancialItemsReturn {
       ]);
       setItems(allItems);
       setGroupedItems(grouped);
-    } catch (err) {
-      console.error('Failed to fetch financial items:', err);
+    } catch (error) {
+      logger.error('Failed to fetch financial items', { error: extractErrorMessage(error) });
       // Don't set error state here to avoid UI flashing, just log it
     }
   }, [caseId, dataManager]);

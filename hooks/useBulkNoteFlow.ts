@@ -2,6 +2,10 @@ import { useCallback, useState } from "react";
 import { toast } from "sonner";
 import { useDataManagerSafe } from "../contexts/DataManagerContext";
 import type { NewNoteData } from "../types/case";
+import { createLogger } from "@/utils/logger";
+import { extractErrorMessage } from "@/utils/errorUtils";
+
+const logger = createLogger("useBulkNoteFlow");
 
 interface UseBulkNoteFlowParams {
   /** Array of case IDs that are selected for bulk note addition */
@@ -108,8 +112,8 @@ export function useBulkNoteFlow({
         setIsModalOpen(false);
         toast.success(`Added note to ${result.addedCount} case${result.addedCount === 1 ? '' : 's'}`);
         onSuccess?.();
-      } catch (err) {
-        console.error("[BulkNoteFlow] Failed to add bulk notes:", err);
+      } catch (error) {
+        logger.error("Failed to add bulk notes", { error: extractErrorMessage(error) });
         toast.error("Failed to add notes. Please try again.");
       } finally {
         setIsSubmitting(false);

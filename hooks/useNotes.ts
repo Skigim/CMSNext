@@ -4,6 +4,10 @@ import { Note, NewNoteData, StoredNote } from '@/types/case';
 import { useDataManagerSafe } from '@/contexts/DataManagerContext';
 import { useDataSync } from './useDataSync';
 import { guardDataManager } from '@/utils/guardUtils';
+import { createLogger } from '@/utils/logger';
+import { extractErrorMessage } from '@/utils/errorUtils';
+
+const logger = createLogger('useNotes');
 
 /**
  * Form state for note editor.
@@ -171,8 +175,8 @@ export function useNotes(caseId?: string): UseNotesReturn {
     try {
       const fetchedNotes = await dataManager.getNotesForCase(caseId);
       setNotes(fetchedNotes);
-    } catch (err) {
-      console.error('Failed to fetch notes:', err);
+    } catch (error) {
+      logger.error('Failed to fetch notes', { error: extractErrorMessage(error) });
     }
   }, [caseId, dataManager]);
 
@@ -207,7 +211,7 @@ export function useNotes(caseId?: string): UseNotesReturn {
       if (caseId === targetCaseId) await refreshNotes();
       return note;
     } catch (e) {
-      console.error('Failed to add note:', e);
+      logger.error('Failed to add note', { error: extractErrorMessage(e) });
       toast.error('Failed to add note');
       return null;
     }
@@ -220,7 +224,7 @@ export function useNotes(caseId?: string): UseNotesReturn {
       if (caseId === targetCaseId) await refreshNotes();
       return note;
     } catch (e) {
-      console.error('Failed to update note:', e);
+      logger.error('Failed to update note', { error: extractErrorMessage(e) });
       toast.error('Failed to update note');
       return null;
     }
@@ -251,8 +255,8 @@ export function useNotes(caseId?: string): UseNotesReturn {
       }
       
       return savedNote;
-    } catch (err) {
-      console.error('Failed to save note:', err);
+    } catch (error) {
+      logger.error('Failed to save note', { error: extractErrorMessage(error) });
       return null;
     }
   }, [noteForm.caseId, noteForm.editingNote, addNote, updateNote]);
@@ -274,8 +278,8 @@ export function useNotes(caseId?: string): UseNotesReturn {
       }
       
       // DataManager handles file system persistence automatically
-    } catch (err) {
-      console.error('Failed to delete note:', err);
+    } catch (error) {
+      logger.error('Failed to delete note', { error: extractErrorMessage(error) });
       const errorMsg = 'Failed to delete note. Please try again.';
       toast.error(errorMsg);
     }

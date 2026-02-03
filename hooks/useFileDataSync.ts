@@ -124,8 +124,8 @@ export function useFileDataSync({
         setCases([]);
         setHasLoadedData(true);
         updateFileStorageFlags({ dataBaseline: true, sessionHadData: false });
-      } catch (err) {
-        const errorMessage = err instanceof Error ? err.message : String(err);
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : String(error);
         recordStorageSyncEvent("load", false, {
           error: errorMessage,
           metadata: { type: "exception" },

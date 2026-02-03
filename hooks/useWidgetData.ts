@@ -147,10 +147,10 @@ export function useWidgetData<T>(
           },
         });
       }
-    } catch (err) {
+    } catch (caughtError) {
       if (!mountedRef.current) return;
 
-      const error = err instanceof Error ? err : new Error(String(err));
+      const error = caughtError instanceof Error ? caughtError : new Error(String(caughtError));
       setError(error);
 
       // Record error performance marker

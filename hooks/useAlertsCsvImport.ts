@@ -3,6 +3,10 @@ import { toast } from "sonner";
 import type { DataManager } from "@/utils/DataManager";
 import type { StoredCase } from "@/types/case";
 import type { AlertsIndex } from "@/utils/alertsData";
+import { createLogger } from "@/utils/logger";
+import { extractErrorMessage } from "@/utils/errorUtils";
+
+const logger = createLogger("useAlertsCsvImport");
 
 interface UseAlertsCsvImportParams {
   dataManager: DataManager | null;
@@ -139,7 +143,7 @@ export function useAlertsCsvImport({
           });
         }
       } catch (error) {
-        console.error("Failed to import alerts from CSV:", error);
+        logger.error("Failed to import alerts from CSV", { error: extractErrorMessage(error) });
         toast.error("Failed to import alerts", {
           description: error instanceof Error ? error.message : "Please verify the file and try again.",
         });

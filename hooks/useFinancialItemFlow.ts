@@ -1,8 +1,12 @@
-import { useCallback, useState, useEffect } from "react";
+import { useCallback, useState } from "react";
 import { toast } from "sonner";
 import { useDataManagerSafe } from "../contexts/DataManagerContext";
 import { validateFinancialItem } from "@/domain/financials";
 import type { CaseCategory, StoredCase, FinancialItem } from "../types/case";
+import { createLogger } from "@/utils/logger";
+import { extractErrorMessage } from "@/utils/errorUtils";
+
+const logger = createLogger("useFinancialItemFlow");
 
 export type ItemFormState = {
   isOpen: boolean;
@@ -171,34 +175,15 @@ export function useFinancialItemFlow({
 
   const isEditing = !!itemForm.item;
 
-  // Reset form when modal opens/closes or editing item changes
-  useEffect(() => {
-    if (itemForm.isOpen && itemForm.item) {
-      setFormData(createFormDataFromItem(itemForm.item));
-    } else if (itemForm.isOpen && !itemForm.item) {
-      setFormData(createEmptyFormData());
-    }
-    setFormErrors({});
-    setAddAnother(false);
-  }, [itemForm.isOpen, itemForm.item]);
-
-  const ensureCaseAndManager = useCallback(() => {
-    if (!selectedCase) return false;
-
-    if (!dataManager) {
-        const errorMsg = "Data storage is not available. Please check your connection.";
-        setError(errorMsg);
-        toast.error(errorMsg);
-        return false;
-    }
-    return true;
-  }, [dataManager, selectedCase, setError]);
-
   const openItemForm = useCallback(
     (category: CaseCategory, item?: FinancialItem) => {
       if (!selectedCase) {
         return;
       }
+      // Initialize form state when opening (avoids setState in useEffect)
+      setFormData(item ? createFormDataFromItem(item) : createEmptyFormData());
+      setFormErrors({});
+      setAddAnother(false);
       setItemForm({
         isOpen: true,
         category,
@@ -212,6 +197,18 @@ export function useFinancialItemFlow({
   const closeItemForm = useCallback(() => {
     setItemForm({ isOpen: false });
   }, []);
+
+  const ensureCaseAndManager = useCallback(() => {
+    if (!selectedCase) return false;
+
+    if (!dataManager) {
+        const errorMsg = "Data storage is not available. Please check your connection.";
+        setError(errorMsg);
+        toast.error(errorMsg);
+        return false;
+    }
+    return true;
+  }, [dataManager, selectedCase, setError]);
 
   const updateFormField = useCallback(<K extends keyof FinancialFormData>(
     field: K,
@@ -263,7 +260,7 @@ export function useFinancialItemFlow({
         const caseExists = allCases.find((c: StoredCase) => c.id === selectedCase.id);
 
         if (!caseExists) {
-          console.error("❌ Case not found in data manager:", {
+          logger.error("Case not found in data manager", {
             requestedCaseId: selectedCase.id,
             availableCaseIds: allCases.map((c: StoredCase) => c.id),
             totalCases: allCases.length,
@@ -272,7 +269,7 @@ export function useFinancialItemFlow({
           return false;
         }
       } catch (checkError) {
-        console.error("❌ Error checking case existence:", checkError);
+        logger.error("Error checking case existence", { error: extractErrorMessage(checkError) });
         setFormErrors({ general: "Error verifying case data. Please try again." });
         return false;
       }
@@ -314,7 +311,7 @@ export function useFinancialItemFlow({
       closeItemForm();
       return true;
     } catch (error) {
-      console.error("Failed to save financial item:", error);
+      logger.error("Failed to save financial item", { error: extractErrorMessage(error) });
       const errorMsg = `Failed to ${isEditing ? "update" : "save"} item. Please try again.`;
       setFormErrors({ general: errorMsg });
       toast.error(errorMsg);
@@ -344,8 +341,8 @@ export function useFinancialItemFlow({
         // Don't update cases state as items are separate
 
         toast.success(`${category.charAt(0).toUpperCase() + category.slice(1)} item deleted successfully`);
-      } catch (err) {
-        console.error("Failed to delete item:", err);
+      } catch (error) {
+        logger.error("Failed to delete item", { error: extractErrorMessage(error) });
         const errorMsg = "Failed to delete item. Please try again.";
         setError(errorMsg);
         toast.error(errorMsg);
@@ -365,18 +362,18 @@ export function useFinancialItemFlow({
 
         await dataManager.updateItem(selectedCase.id, category, itemId, updatedItem);
         // Don't update cases state as items are separate
-      } catch (err) {
-        console.error("Failed to update item:", err);
+      } catch (error) {
+        logger.error("Failed to update item", { error: extractErrorMessage(error) });
 
         let errorMsg = "Failed to update item. Please try again.";
-        if (err instanceof Error) {
-          if (err.message.includes("File was modified by another process")) {
+        if (error instanceof Error) {
+          if (error.message.includes("File was modified by another process")) {
             errorMsg = "File was modified by another process. Your changes were not saved. Please refresh and try again.";
-          } else if (err.message.includes("Permission denied")) {
+          } else if (error.message.includes("Permission denied")) {
             errorMsg = "Permission denied. Please check that you have write access to the data folder.";
           } else if (
-            err.message.includes("state cached in an interface object") ||
-            err.message.includes("state had changed")
+            error.message.includes("state cached in an interface object") ||
+            error.message.includes("state had changed")
           ) {
             errorMsg = "Data sync issue detected. Please refresh the page and try again.";
           }
@@ -384,7 +381,7 @@ export function useFinancialItemFlow({
 
         setError(errorMsg);
         toast.error(errorMsg, { duration: 5000 });
-        throw err;
+        throw error;
       }
     },
     [dataManager, ensureCaseAndManager, selectedCase, setError],
@@ -401,12 +398,12 @@ export function useFinancialItemFlow({
 
         await dataManager.addItem(selectedCase.id, category, itemData);
         // Don't update cases state as items are separate
-      } catch (err) {
-        console.error("Failed to create item:", err);
+      } catch (error) {
+        logger.error("Failed to create item", { error: extractErrorMessage(error) });
         const errorMsg = "Failed to create item. Please try again.";
         setError(errorMsg);
         toast.error(errorMsg);
-        throw err;
+        throw error;
       }
     },
     [dataManager, ensureCaseAndManager, selectedCase, setError],

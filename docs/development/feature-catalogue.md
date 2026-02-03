@@ -486,15 +486,12 @@ Dashboard Transformation is well underway with **Phases 1-4 Complete**. The dash
 
 ### Gaps / Risks
 
-- Dashboard customization (Phase 5) is the next frontier - users cannot yet rearrange widgets
 - Accessibility audit for new widgets pending
 
-### Expansion Opportunities (Dashboard Transformation Roadmap)
+### Expansion Opportunities
 
-- **Phase 3**: Recent & Pinned Cases widgets for quick access to frequently used cases
-- **Phase 4**: Inline quick actions (status updates, notes, alert resolution from dashboard)
-- **Phase 5**: Dashboard personalization (show/hide widgets, reorder, presets)
-- **Phase 6**: Navigation & context flow (scroll/tab preservation, keyboard shortcuts)
+- **Keyboard Navigation**: Chord navigation (`Ctrl+G` → view shortcuts) for power users
+- **Quick Note Popover**: Add notes from dashboard cards without navigation (deferred from Phase 4)
 
 ### Coverage & Telemetry
 
@@ -739,7 +736,7 @@ Feature flag infrastructure lives in `utils/featureFlags.ts` with immutable defa
 
 | Flag                      | Default | Intended Purpose                                   |
 | ------------------------- | ------- | -------------------------------------------------- |
-| `dashboard.widgets.*` (8) | `true`  | Dashboard widget customization (future feature)    |
+| `dashboard.widgets.*` (8) | `true`  | Widget registry metadata (currently all visible)   |
 | `reports.advancedFilters` | `false` | Advanced reporting filters (future feature)        |
 | `cases.bulkActions`       | `false` | Was placeholder; bulk actions shipped without flag |
 
@@ -748,16 +745,17 @@ Feature flag infrastructure lives in `utils/featureFlags.ts` with immutable defa
 - Type-safe `FeatureFlagKey` union prevents magic strings
 - `DEFAULT_FLAGS` provides reproducible defaults for tests
 - Runtime toggling via `useAppViewState().setFeatureFlags`
-- Widget registry supports `metadata.featureFlag` for future dashboard customization
+- Widget registry supports `metadata.featureFlag` for conditional rendering
 
-### Future: Dashboard Customization
+### Gaps / Risks
 
-When building dashboard customization:
+- Unused flags (`reports.advancedFilters`, `cases.bulkActions`) should be cleaned up
+- No persistence layer for flag overrides (in-memory only)
 
-1. Wire `dashboard.widgets.*` flags to actual widget visibility
-2. Add persistence (localStorage or file) for user preferences
-3. Build settings UI to toggle widgets on/off
-4. Consider removing unused flags (`reports.advancedFilters`, `cases.bulkActions`)
+### Expansion Opportunities
+
+- Add flag persistence to localStorage or file
+- Create admin UI for flag management in dev mode
 
 ### Coverage
 

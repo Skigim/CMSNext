@@ -3,6 +3,10 @@ import { toast } from "sonner";
 import { useDataManagerSafe } from "../contexts/DataManagerContext";
 import type { StoredCase, NewNoteData } from "../types/case";
 import { useNotes } from "./useNotes";
+import { createLogger } from "@/utils/logger";
+import { extractErrorMessage } from "@/utils/errorUtils";
+
+const logger = createLogger("useNoteFlow");
 
 interface UseNoteFlowParams {
   selectedCase: StoredCase | null;
@@ -86,7 +90,7 @@ export function useNoteFlow({
       // But useNotes.openEditNote expects a Note object.
       // For now, we might need to fetch it or change how this works.
       // Since this flow seems unused by CaseDetails, we'll just log a warning or try to find it if we had notes.
-      console.warn("handleEditNote in useNoteFlow is not fully supported with StoredCase");
+      logger.warn("handleEditNote in useNoteFlow is not fully supported with StoredCase");
     },
     [selectedCase],
   );
@@ -96,9 +100,9 @@ export function useNoteFlow({
       try {
         await saveNote(noteData);
         setError(null);
-      } catch (err) {
-        console.error("[NoteFlow] Failed to save note:", err);
-        throw err;
+      } catch (error) {
+        logger.error("Failed to save note", { error: extractErrorMessage(error) });
+        throw error;
       }
     },
     [saveNote, setError],
@@ -113,8 +117,8 @@ export function useNoteFlow({
       try {
         await deleteNote(selectedCase.id, noteId);
         setError(null);
-      } catch (err) {
-        console.error("[NoteFlow] Failed to delete note:", err);
+      } catch (error) {
+        logger.error("Failed to delete note", { error: extractErrorMessage(error) });
       }
     },
     [deleteNote, selectedCase, setError],
@@ -134,12 +138,12 @@ export function useNoteFlow({
       try {
         setError(null);
         await dataManager.updateNote(selectedCase.id, noteId, updatedNote);
-      } catch (err) {
-        console.error("[NoteFlow] Failed to update note:", err);
+      } catch (error) {
+        logger.error("Failed to update note", { error: extractErrorMessage(error) });
         const errorMsg = "Failed to update note. Please try again.";
         setError(errorMsg);
         toast.error(errorMsg);
-        throw err;
+        throw error;
       }
     },
     [dataManager, selectedCase, setError],
@@ -159,12 +163,12 @@ export function useNoteFlow({
       try {
         setError(null);
         await dataManager.addNote(selectedCase.id, noteData);
-      } catch (err) {
-        console.error("[NoteFlow] Failed to create note:", err);
+      } catch (error) {
+        logger.error("Failed to create note", { error: extractErrorMessage(error) });
         const errorMsg = "Failed to create note. Please try again.";
         setError(errorMsg);
         toast.error(errorMsg);
-        throw err;
+        throw error;
       }
     },
     [dataManager, selectedCase, setError],

@@ -3,6 +3,10 @@ import { useIsMounted } from "./useIsMounted";
 import { NewCaseRecordData, NewPersonData, StoredCase } from "../types/case";
 import { AppView } from "../types/view";
 import { startMeasurement, endMeasurement } from "../utils/performanceTracker";
+import { createLogger } from "@/utils/logger";
+import { extractErrorMessage } from "@/utils/errorUtils";
+
+const logger = createLogger("useNavigationActions");
 
 const RESTRICTED_VIEWS: readonly AppView[] = ["list", "details", "form"];
 
@@ -165,10 +169,10 @@ export function useNavigationActions({
       }
       
       endMeasurement("navigation:saveCase", { result: showNewCaseModal ? "create" : "update" });
-    } catch (err) {
-      console.error("Failed to save case:", err);
+    } catch (error) {
+      logger.error("Failed to save case", { error: extractErrorMessage(error) });
       endMeasurement("navigation:saveCase", { result: "error" });
-      throw err;
+      throw error;
     }
   }, [guardCaseInteraction, isMounted, lockReason, saveCase, setCurrentView, setSelectedCaseId, setShowNewCaseModal, showNewCaseModal, state.selectedCaseId]);
 
@@ -186,10 +190,10 @@ export function useNavigationActions({
         setSelectedCaseId(null);
       }
       endMeasurement("navigation:deleteCase", { result: "deleted" });
-    } catch (err) {
-      console.error("Failed to delete case:", err);
+    } catch (error) {
+      logger.error("Failed to delete case", { error: extractErrorMessage(error) });
       endMeasurement("navigation:deleteCase", { result: "error" });
-      throw err;
+      throw error;
     }
   }, [deleteCase, guardCaseInteraction, isMounted, lockReason, selectedCaseId, setCurrentView, setSelectedCaseId]);
 

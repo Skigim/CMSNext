@@ -128,8 +128,8 @@ export function useConnectionFlow({
         ? `Connected and loaded ${loadedCases.length} cases` 
         : "Connected successfully - ready to start!";
       toast.success(msg, { id: "connection-success" });
-    } catch (err) {
-      const message = err instanceof Error ? err.message : "Unknown error";
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Unknown error";
       setError(`Failed to load cases: ${message}`);
       toast.error(`Failed to load cases: ${message}`, { id: "connection-error" });
     }

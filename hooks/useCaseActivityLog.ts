@@ -133,18 +133,18 @@ export function useCaseActivityLog(): UseCaseActivityLogResult {
       const entries = await dataManager.getActivityLog();
       setActivityLog(entries);
       setError(null);
-    } catch (err) {
+    } catch (error) {
       // LegacyFormatError is expected when opening old data files - handle gracefully
-      if (err instanceof LegacyFormatError) {
-        logger.warn("Legacy format detected in activity log", { message: err.message });
-        setError(err.message);
+      if (error instanceof LegacyFormatError) {
+        logger.warn("Legacy format detected in activity log", { message: error.message });
+        setError(error.message);
       } else {
-        console.error("Failed to load activity log", err);
+        logger.error("Failed to load activity log", { error: error instanceof Error ? error.message : String(error) });
         // Only set error if it's not a permission issue (which is expected when not connected)
-        const isPermissionError = err instanceof Error && 
-          (err.message.includes('permission') || err.message.includes('requested file could not be read'));
+        const isPermissionError = error instanceof Error && 
+          (error.message.includes('permission') || error.message.includes('requested file could not be read'));
         if (!isPermissionError) {
-          setError(err instanceof Error ? err.message : "Failed to load activity log");
+          setError(error instanceof Error ? error.message : "Failed to load activity log");
         }
       }
     } finally {
