@@ -1,15 +1,28 @@
 # Security and Quality Audit
 
-**Date:** January 13, 2026
+**Date:** January 13, 2026  
+**Last Updated:** February 3, 2026  
 **Auditor:** GitHub Copilot (Security & QA Agent)
+
+## Next Session Focus
+
+**2 High Priority items remain open:**
+
+1. **AVS Duplicate Detection** (`useAVSImportFlow.ts`) - When fetching existing resources fails, the import proceeds with an empty list, risking duplicate entries. Needs: error state + halt import flow + user-facing toast.
+
+2. **Encryption Error Specificity** (`EncryptionContext.tsx`) - All auth failures return generic `false`/`null`. Users can't distinguish wrong password from corrupt data. Needs: typed error codes (`WRONG_PASSWORD`, `CORRUPT_SALT`, `SYSTEM_ERROR`) + UI updates to display specific messages.
+
+---
 
 ## Executive Summary
 
 A review of the CMSNext codebase has identified several areas for improvement regarding error handling and data integrity. While no critical security vulnerabilities like hardcoded secrets were found, there are significant risks related to "swallowed errors" that could lead to data duplication or silent failures in the UI.
 
+**Status:** 2 of 4 High/Medium priority items resolved. 2 remain open.
+
 ## Findings
 
-### High Priority
+### High Priority - OPEN
 
 #### 1. Swallowed Error in AVS Duplicate Detection
 
@@ -20,7 +33,20 @@ The `handleInputChange` function attempts to fetch existing resources to detect 
 **Impact:** `findMatchingFinancialItem` will fail to find existing items, causing the import logic to create duplicates of existing accounts instead of updating them.
 **Recommendation:** Display an error to the user and halt the duplicate detection/import preparation process if existing data cannot be verified.
 
-### Medium Priority
+### High Priority - OPEN
+
+#### 4. Authentication Failure Obscurity
+
+**Risk:** User Experience
+**Location:** `contexts/EncryptionContext.tsx` methods `verifyPassword`, `initializeEncryption`
+**Description:**
+Errors during key derivation or verification are caught and logged, returning generic `false` or `null`.
+**Impact:** Users cannot distinguish between "wrong password", "corrupt salt", or "system error".
+**Recommendation:** Return an error code or message to the UI to provide more specific feedback where appropriate.
+
+---
+
+### Medium Priority - RESOLVED
 
 #### 2. Silent Failures in File Storage Data Load ✅ RESOLVED
 
@@ -36,14 +62,7 @@ The `handleInputChange` function attempts to fetch existing resources to detect 
 **Status:** ✅ **RESOLVED** (commit 8b2da4c - January 2026)
 **Resolution:** `toast.error("Failed to save template order")` is now displayed in the catch block, and `false` is returned so callers can handle rollback if needed.
 
-#### 4. Authentication Failure Obscurity
-
-**Risk:** User Experience
-**Location:** `contexts/EncryptionContext.tsx` methods `verifyPassword`, `initializeEncryption`
-**Description:**
-Errors during key derivation or verification are caught and logged, returning generic `false` or `null`.
-**Impact:** Users cannot distinguish between "wrong password", "corrupt salt", or "system error".
-**Recommendation:** Return an error code or message to the UI to provide more specific feedback where appropriate.
+---
 
 ### Low Priority / Stability Checks
 
