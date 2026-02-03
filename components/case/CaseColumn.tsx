@@ -4,13 +4,14 @@ import { Label } from "../ui/label";
 import { Input } from "../ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
 import { Checkbox } from "../ui/checkbox";
+import { Switch } from "../ui/switch";
 import { Badge } from "../ui/badge";
 import { Button } from "../ui/button";
 import { Separator } from "../ui/separator";
-import { FileText, Calendar, Flag, Check, X, FileSearch, Copy } from "lucide-react";
-import { NewCaseRecordData, VoterFormStatus } from "../../types/case";
+import { FileText, Calendar, Flag, Check, X, Copy, MapPin, Mail } from "lucide-react";
+import { NewCaseRecordData, VoterFormStatus, Address, MailingAddress } from "../../types/case";
 import { useCategoryConfig } from "@/contexts/CategoryConfigContext";
-import { isoToDateInputValue, dateInputValueToISO, formatDateForDisplay } from "@/domain/common";
+import { isoToDateInputValue, dateInputValueToISO, formatDateForDisplay, US_STATES } from "@/domain/common";
 import { generateAvsNarrative } from "@/domain/cases";
 import { clickToCopy } from "../../utils/clipboard";
 
@@ -34,6 +35,11 @@ interface CaseColumnProps {
   isEditing: boolean;
   onCaseDataChange: (field: keyof NewCaseRecordData, value: unknown) => void;
   onRetroRequestedChange: (value: boolean) => void;
+  // Address props
+  address: Address;
+  mailingAddress: MailingAddress;
+  onAddressChange: (field: keyof Address, value: string) => void;
+  onMailingAddressChange: (field: keyof MailingAddress, value: string | boolean) => void;
 }
 
 // Read-only info display component
@@ -86,6 +92,10 @@ export function CaseColumn({
   isEditing,
   onCaseDataChange,
   onRetroRequestedChange,
+  address,
+  mailingAddress,
+  onAddressChange,
+  onMailingAddressChange,
 }: CaseColumnProps) {
   const { config } = useCategoryConfig();
 
@@ -100,6 +110,15 @@ export function CaseColumn({
     const formatted = formatDateForDisplay(dateString);
     return formatted === "None" ? null : formatted;
   };
+
+  // Full address strings
+  const fullAddress = address.street
+    ? `${address.street}, ${address.city}, ${address.state} ${address.zip}`
+    : null;
+
+  const fullMailingAddress = !mailingAddress.sameAsPhysical && mailingAddress.street
+    ? `${mailingAddress.street}, ${mailingAddress.city}, ${mailingAddress.state} ${mailingAddress.zip}`
+    : null;
 
   const handleCopyNarrative = useCallback(() => {
     const narrative = generateAvsNarrative({ avsConsentDate: caseData.avsConsentDate });
@@ -131,6 +150,19 @@ export function CaseColumn({
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
+          {/* Addresses */}
+          <div className="space-y-3">
+            <h4 className="text-sm font-medium text-muted-foreground">Addresses</h4>
+            <InfoItem label="Physical Address" value={fullAddress} icon={MapPin} />
+            {mailingAddress.sameAsPhysical ? (
+              <p className="text-xs text-muted-foreground pl-6">Mailing same as physical</p>
+            ) : (
+              <InfoItem label="Mailing Address" value={fullMailingAddress} icon={Mail} />
+            )}
+          </div>
+
+          <Separator />
+
           {/* Application Validated */}
           <div className="space-y-2">
             <ChecklistItem label="Application Validated" checked={caseData.appValidated} />
@@ -178,23 +210,6 @@ export function CaseColumn({
             </div>
           </div>
 
-          <Separator />
-
-          {/* Verification Reviews */}
-          <div className="space-y-3">
-            <div className="flex items-center gap-2">
-              <FileSearch className="h-4 w-4 text-muted-foreground" />
-              <h4 className="text-sm font-medium text-muted-foreground">Reviews</h4>
-            </div>
-            <div className="grid grid-cols-3 gap-2">
-              <ChecklistItem label="VRs" checked={caseData.reviewVRs} />
-              <ChecklistItem label="Prior Budgets" checked={caseData.reviewPriorBudgets} />
-              <ChecklistItem label="Prior Narratives" checked={caseData.reviewPriorNarr} />
-              <ChecklistItem label="Interfaces" checked={caseData.interfacesReviewed} />
-              <ChecklistItem label="AVS Submitted" checked={caseData.avsSubmitted} />
-            </div>
-          </div>
-
           {/* Retro Months - shown only when retro is requested */}
           {retroRequested && caseData.retroMonths && caseData.retroMonths.length > 0 && (
             <>
@@ -220,6 +235,104 @@ export function CaseColumn({
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
+        {/* Physical Address */}
+        <div className="space-y-3">
+          <h4 className="text-sm font-medium text-muted-foreground">Physical Address</h4>
+          <div className="space-y-2">
+            <Input
+              value={address.street}
+              onChange={(e) => onAddressChange('street', e.target.value)}
+              placeholder="Street address"
+              className="h-8"
+            />
+            <div className="grid grid-cols-3 gap-2">
+              <Input
+                value={address.city}
+                onChange={(e) => onAddressChange('city', e.target.value)}
+                placeholder="City"
+                className="h-8"
+              />
+              <Select
+                value={address.state}
+                onValueChange={(value) => onAddressChange('state', value)}
+              >
+                <SelectTrigger className="h-8">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {US_STATES.map((state) => (
+                    <SelectItem key={state.value} value={state.value}>
+                      {state.value}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Input
+                value={address.zip}
+                onChange={(e) => onAddressChange('zip', e.target.value)}
+                placeholder="ZIP"
+                className="h-8"
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Mailing Address */}
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <h4 className="text-sm font-medium text-muted-foreground">Mailing Address</h4>
+            <div className="flex items-center gap-2">
+              <Label htmlFor="sameAsPhysical" className="text-xs">Same as physical</Label>
+              <Switch
+                id="sameAsPhysical"
+                checked={mailingAddress.sameAsPhysical}
+                onCheckedChange={(checked) => onMailingAddressChange('sameAsPhysical', checked)}
+              />
+            </div>
+          </div>
+          {!mailingAddress.sameAsPhysical && (
+            <div className="space-y-2">
+              <Input
+                value={mailingAddress.street}
+                onChange={(e) => onMailingAddressChange('street', e.target.value)}
+                placeholder="Street address"
+                className="h-8"
+              />
+              <div className="grid grid-cols-3 gap-2">
+                <Input
+                  value={mailingAddress.city}
+                  onChange={(e) => onMailingAddressChange('city', e.target.value)}
+                  placeholder="City"
+                  className="h-8"
+                />
+                <Select
+                  value={mailingAddress.state}
+                  onValueChange={(value) => onMailingAddressChange('state', value)}
+                >
+                  <SelectTrigger className="h-8">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {US_STATES.map((state) => (
+                      <SelectItem key={state.value} value={state.value}>
+                        {state.value}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Input
+                  value={mailingAddress.zip}
+                  onChange={(e) => onMailingAddressChange('zip', e.target.value)}
+                  placeholder="ZIP"
+                  className="h-8"
+                />
+              </div>
+            </div>
+          )}
+        </div>
+
+        <Separator />
+
         {/* Application Validated */}
         <div className="space-y-2">
           <div className="flex items-center space-x-2">
@@ -404,57 +517,6 @@ export function CaseColumn({
           </div>
         </div>
 
-        <Separator />
-
-        {/* Verification Reviews */}
-        <div className="space-y-3">
-          <div className="flex items-center gap-2">
-            <FileSearch className="h-4 w-4 text-muted-foreground" />
-            <h4 className="text-sm font-medium text-muted-foreground">Reviews</h4>
-          </div>
-          <div className="grid grid-cols-3 gap-3">
-            <div className="flex items-center space-x-2">
-              <Checkbox
-                id="reviewVRs"
-                checked={caseData.reviewVRs ?? false}
-                onCheckedChange={(checked) => onCaseDataChange("reviewVRs", checked)}
-              />
-              <Label htmlFor="reviewVRs" className="text-sm">VRs</Label>
-            </div>
-            <div className="flex items-center space-x-2">
-              <Checkbox
-                id="reviewPriorBudgets"
-                checked={caseData.reviewPriorBudgets ?? false}
-                onCheckedChange={(checked) => onCaseDataChange("reviewPriorBudgets", checked)}
-              />
-              <Label htmlFor="reviewPriorBudgets" className="text-sm">Prior Budgets</Label>
-            </div>
-            <div className="flex items-center space-x-2">
-              <Checkbox
-                id="reviewPriorNarr"
-                checked={caseData.reviewPriorNarr ?? false}
-                onCheckedChange={(checked) => onCaseDataChange("reviewPriorNarr", checked)}
-              />
-              <Label htmlFor="reviewPriorNarr" className="text-sm">Prior Narratives</Label>
-            </div>
-            <div className="flex items-center space-x-2">
-              <Checkbox
-                id="interfacesReviewed"
-                checked={caseData.interfacesReviewed ?? false}
-                onCheckedChange={(checked) => onCaseDataChange("interfacesReviewed", checked)}
-              />
-              <Label htmlFor="interfacesReviewed" className="text-sm">Interfaces</Label>
-            </div>
-            <div className="flex items-center space-x-2">
-              <Checkbox
-                id="avsSubmitted"
-                checked={caseData.avsSubmitted ?? false}
-                onCheckedChange={(checked) => onCaseDataChange("avsSubmitted", checked)}
-              />
-              <Label htmlFor="avsSubmitted" className="text-sm">AVS Submitted</Label>
-            </div>
-          </div>
-        </div>
       </CardContent>
     </Card>
   );

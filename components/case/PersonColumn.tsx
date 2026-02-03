@@ -3,15 +3,15 @@ import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
 import { Label } from "../ui/label";
 import { Input } from "../ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
-import { Switch } from "../ui/switch";
+
 import { Checkbox } from "../ui/checkbox";
 import { Badge } from "../ui/badge";
 import { Button } from "../ui/button";
 import { Separator } from "../ui/separator";
-import { User, Phone, Mail, MapPin, Calendar, Shield, Check, X, Users, Plus, Minus } from "lucide-react";
+import { User, Phone, Mail, Calendar, Shield, Check, X, Users, Plus, Minus } from "lucide-react";
 import { NewPersonData, NewCaseRecordData, ContactMethod, Relationship } from "../../types/case";
 import { useCategoryConfig } from "@/contexts/CategoryConfigContext";
-import { isoToDateInputValue, dateInputValueToISO, formatDateForDisplay, US_STATES } from "@/domain/common";
+import { isoToDateInputValue, dateInputValueToISO, formatDateForDisplay } from "@/domain/common";
 import { formatPhoneNumberAsTyped, normalizePhoneNumber, getDisplayPhoneNumber } from "@/domain/common";
 import { CopyButton } from "../common/CopyButton";
 
@@ -33,8 +33,6 @@ interface PersonColumnProps {
   relationships: Relationship[];
   isEditing: boolean;
   onPersonDataChange: (field: keyof NewPersonData, value: unknown) => void;
-  onAddressChange: (field: keyof NewPersonData['address'], value: string) => void;
-  onMailingAddressChange: (field: keyof NewPersonData['mailingAddress'], value: string | boolean) => void;
   onCaseDataChange: (field: keyof NewCaseRecordData, value: unknown) => void;
   onRelationshipsChange: {
     add: () => void;
@@ -93,8 +91,6 @@ export function PersonColumn({
   relationships,
   isEditing,
   onPersonDataChange,
-  onAddressChange,
-  onMailingAddressChange,
   onCaseDataChange,
   onRelationshipsChange,
 }: PersonColumnProps) {
@@ -123,15 +119,6 @@ export function PersonColumn({
       onCaseDataChange("contactMethods", current.filter((m) => m !== method));
     }
   };
-
-  // Full address string
-  const fullAddress = personData.address.street
-    ? `${personData.address.street}, ${personData.address.city}, ${personData.address.state} ${personData.address.zip}`
-    : null;
-
-  const fullMailingAddress = !personData.mailingAddress.sameAsPhysical && personData.mailingAddress.street
-    ? `${personData.mailingAddress.street}, ${personData.mailingAddress.city}, ${personData.mailingAddress.state} ${personData.mailingAddress.zip}`
-    : null;
 
   if (!isEditing) {
     // Read-only view
@@ -212,19 +199,6 @@ export function PersonColumn({
           <div className="space-y-3">
             <h4 className="text-sm font-medium text-muted-foreground">Living Arrangement</h4>
             <InfoItem label="Arrangement" value={personData.livingArrangement} />
-          </div>
-
-          <Separator />
-
-          {/* Addresses */}
-          <div className="space-y-3">
-            <h4 className="text-sm font-medium text-muted-foreground">Addresses</h4>
-            <InfoItem label="Physical Address" value={fullAddress} icon={MapPin} />
-            {personData.mailingAddress.sameAsPhysical ? (
-              <p className="text-xs text-muted-foreground pl-6">Mailing same as physical</p>
-            ) : (
-              <InfoItem label="Mailing Address" value={fullMailingAddress} icon={Mail} />
-            )}
           </div>
 
           <Separator />
@@ -460,104 +434,6 @@ export function PersonColumn({
               ))}
             </SelectContent>
           </Select>
-        </div>
-
-        <Separator />
-
-        {/* Physical Address */}
-        <div className="space-y-3">
-          <h4 className="text-sm font-medium text-muted-foreground">Physical Address</h4>
-          <div className="space-y-2">
-            <Input
-              value={personData.address.street}
-              onChange={(e) => onAddressChange('street', e.target.value)}
-              placeholder="Street address"
-              className="h-8"
-            />
-            <div className="grid grid-cols-3 gap-2">
-              <Input
-                value={personData.address.city}
-                onChange={(e) => onAddressChange('city', e.target.value)}
-                placeholder="City"
-                className="h-8"
-              />
-              <Select
-                value={personData.address.state}
-                onValueChange={(value) => onAddressChange('state', value)}
-              >
-                <SelectTrigger className="h-8">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {US_STATES.map((state) => (
-                    <SelectItem key={state.value} value={state.value}>
-                      {state.value}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <Input
-                value={personData.address.zip}
-                onChange={(e) => onAddressChange('zip', e.target.value)}
-                placeholder="ZIP"
-                className="h-8"
-              />
-            </div>
-          </div>
-        </div>
-
-        {/* Mailing Address */}
-        <div className="space-y-3">
-          <div className="flex items-center justify-between">
-            <h4 className="text-sm font-medium text-muted-foreground">Mailing Address</h4>
-            <div className="flex items-center gap-2">
-              <Label htmlFor="sameAsPhysical" className="text-xs">Same as physical</Label>
-              <Switch
-                id="sameAsPhysical"
-                checked={personData.mailingAddress.sameAsPhysical}
-                onCheckedChange={(checked) => onMailingAddressChange('sameAsPhysical', checked)}
-              />
-            </div>
-          </div>
-          {!personData.mailingAddress.sameAsPhysical && (
-            <div className="space-y-2">
-              <Input
-                value={personData.mailingAddress.street}
-                onChange={(e) => onMailingAddressChange('street', e.target.value)}
-                placeholder="Street address"
-                className="h-8"
-              />
-              <div className="grid grid-cols-3 gap-2">
-                <Input
-                  value={personData.mailingAddress.city}
-                  onChange={(e) => onMailingAddressChange('city', e.target.value)}
-                  placeholder="City"
-                  className="h-8"
-                />
-                <Select
-                  value={personData.mailingAddress.state}
-                  onValueChange={(value) => onMailingAddressChange('state', value)}
-                >
-                  <SelectTrigger className="h-8">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {US_STATES.map((state) => (
-                      <SelectItem key={state.value} value={state.value}>
-                        {state.value}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <Input
-                  value={personData.mailingAddress.zip}
-                  onChange={(e) => onMailingAddressChange('zip', e.target.value)}
-                  placeholder="ZIP"
-                  className="h-8"
-                />
-              </div>
-            </div>
-          )}
         </div>
 
         <Separator />
