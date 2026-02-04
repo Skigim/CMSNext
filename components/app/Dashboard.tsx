@@ -277,5 +277,3 @@ export function Dashboard({
     </div>
   );
 }
-
-export default Dashboard;

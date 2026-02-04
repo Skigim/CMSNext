@@ -1,5 +1,5 @@
 import { useContext, createContext, ReactNode, useMemo, useEffect, useRef } from 'react';
-import DataManager from '@/utils/DataManager';
+import { DataManager } from '@/utils/DataManager';
 import { useFileStorage } from '@/contexts/FileStorageContext';
 import { createLogger } from '@/utils/logger';
 

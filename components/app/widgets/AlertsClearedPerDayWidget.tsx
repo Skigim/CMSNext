@@ -155,5 +155,3 @@ export function AlertsClearedPerDayWidget({ alerts = [], metadata, refreshKey }:
     </Card>
   );
 }
-
-export default AlertsClearedPerDayWidget;

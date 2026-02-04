@@ -16,7 +16,7 @@ interface ConnectToExistingModalProps {
  * - LoginModal: For returning users with a stored directory handle
  * - WelcomeModal: For first-time users without a stored handle
  */
-export function ConnectToExistingModal({
+function ConnectToExistingModal({
   isOpen,
   isSupported,
   onConnectionComplete,

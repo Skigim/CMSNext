@@ -5,11 +5,11 @@ import type { CaseActivityLogState } from "../../types/activityLog";
 import { exportCasesToJSON, triggerImportDialog, triggerAlertsCsvImport } from "../../utils/dataExportImport";
 
 // Direct imports for high-turnover components - no lazy loading for snappiness
-import Dashboard from "../app/Dashboard";
-import CaseList from "../case/CaseList";
+import { Dashboard } from "../app/Dashboard";
+import { CaseList } from "../case/CaseList";
 import CaseDetails from "../case/CaseDetails";
 import { QuickCaseModal } from "../modals/QuickCaseModal";
-import Settings from "../app/Settings";
+import { Settings } from "../app/Settings";
 
 export type View = AppView;
 

@@ -149,5 +149,3 @@ export function TodaysWorkWidget({
     </Card>
   );
 }
-
-export default TodaysWorkWidget;

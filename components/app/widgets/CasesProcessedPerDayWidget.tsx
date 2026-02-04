@@ -169,5 +169,3 @@ export function CasesProcessedPerDayWidget({ activityLog = [], metadata, refresh
     </Card>
   );
 }
-
-export default CasesProcessedPerDayWidget;

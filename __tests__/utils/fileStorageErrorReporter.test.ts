@@ -26,7 +26,7 @@ import {
   type FileStorageErrorNotification,
 } from "../../utils/fileStorageErrorReporter";
 
-import errorReporting from "../../utils/errorReporting";
+import { errorReporting } from "../../utils/errorReporting";
 
 describe("fileStorageErrorReporter", () => {
   beforeEach(() => {

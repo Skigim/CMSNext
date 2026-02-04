@@ -228,5 +228,3 @@ export function DailyStatsWidget({
     </Card>
   );
 }
-
-export default DailyStatsWidget;

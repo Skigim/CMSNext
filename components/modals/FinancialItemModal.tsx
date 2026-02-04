@@ -26,7 +26,7 @@ interface FinancialItemModalProps {
   onAddAnotherChange: (value: boolean) => void;
 }
 
-export function FinancialItemModal({
+function FinancialItemModal({
   isOpen,
   onClose,
   onSave,

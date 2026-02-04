@@ -5,9 +5,8 @@ import { DataManagerProvider } from "@/contexts/DataManagerContext";
 import { CategoryConfigProvider } from "@/contexts/CategoryConfigContext";
 import { TemplateProvider } from "@/contexts/TemplateContext";
 import { EncryptionProvider } from "@/contexts/EncryptionContext";
-import { WorkflowProvider } from "@/contexts/WorkflowContext";
-import ErrorBoundary from "@/components/error/ErrorBoundary";
-import FileSystemErrorBoundary from "@/components/error/FileSystemErrorBoundary";
+import { ErrorBoundary } from "@/components/error/ErrorBoundary";
+import { FileSystemErrorBoundary } from "@/components/error/FileSystemErrorBoundary";
 import { getFileStorageFlags } from "@/utils/fileStorageFlags";
 import { createLogger } from "@/utils/logger";
 
@@ -62,9 +61,7 @@ export function AppProviders({ children }: AppProvidersProps) {
               <DataManagerProvider>
                 <CategoryConfigProvider>
                   <TemplateProvider>
-                    <WorkflowProvider>
-                      {children}
-                    </WorkflowProvider>
+                    {children}
                   </TemplateProvider>
                 </CategoryConfigProvider>
               </DataManagerProvider>

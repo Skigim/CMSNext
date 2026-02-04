@@ -565,5 +565,3 @@ export function ActivityWidget({ activityLogState, metadata, onViewCase }: Activ
     </Card>
   );
 }
-
-export default ActivityWidget;

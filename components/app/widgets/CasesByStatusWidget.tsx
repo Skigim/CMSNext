@@ -165,5 +165,3 @@ export function CasesByStatusWidget({ cases = [], metadata }: CasesByStatusWidge
     </Card>
   );
 }
-
-export default CasesByStatusWidget;

@@ -45,7 +45,6 @@ import { FinancialsService } from "./services/FinancialsService";
 import { CaseService } from "./services/CaseService";
 import { AlertsService } from "./services/AlertsService";
 import { TemplateService } from "./services/TemplateService";
-import { WorkflowService } from "./services/WorkflowService";
 import { CaseArchiveService, type RefreshQueueResult, type ArchiveFileInfo } from "./services/CaseArchiveService";
 
 // ============================================================================
@@ -187,8 +186,6 @@ export class DataManager {
   private alerts: AlertsService;
   /** Template service for managing templates */
   private templates: TemplateService;
-  /** Workflow service for managing automation workflows */
-  private workflowService: WorkflowService;
   /** Case archive service for archival operations */
   private archive: CaseArchiveService;
 
@@ -224,9 +221,6 @@ export class DataManager {
     });
     this.alerts = new AlertsService();
     this.templates = new TemplateService({
-      fileStorage: this.fileStorage,
-    });
-    this.workflowService = new WorkflowService({
       fileStorage: this.fileStorage,
     });
     this.archive = new CaseArchiveService({
@@ -851,139 +845,6 @@ export class DataManager {
   }
 
   // =============================================================================
-  // PUBLIC API - WORKFLOW OPERATIONS
-  // =============================================================================
-
-  /**
-   * Get all workflows from storage.
-   * 
-   * @returns Array of all workflows, sorted by sortOrder
-   */
-  async getAllWorkflows() {
-    return this.workflowService.getAllWorkflows();
-  }
-
-  /**
-   * Get a workflow by ID.
-   * 
-   * @param id - Workflow ID to find
-   * @returns The workflow if found, null otherwise
-   */
-  async getWorkflowById(id: string) {
-    return this.workflowService.getWorkflowById(id);
-  }
-
-  /**
-   * Get workflows available for a specific application type.
-   * 
-   * @param applicationType - The case's application type (optional)
-   * @returns Workflows that match or have no filter
-   */
-  async getWorkflowsForApplicationType(applicationType?: string) {
-    return this.workflowService.getWorkflowsForApplicationType(applicationType);
-  }
-
-  /**
-   * Add a new workflow.
-   * 
-   * @param workflowData - Workflow data without ID and timestamps
-   * @returns The newly created workflow
-   */
-  async addWorkflow(
-    workflowData: Parameters<typeof this.workflowService.addWorkflow>[0]
-  ) {
-    return await this.workflowService.addWorkflow(workflowData);
-  }
-
-  /**
-   * Update an existing workflow.
-   * 
-   * @param id - Workflow ID to update
-   * @param updates - Partial workflow data to merge
-   * @returns The updated workflow, or null if not found
-   */
-  async updateWorkflow(
-    id: string,
-    updates: Parameters<typeof this.workflowService.updateWorkflow>[1]
-  ) {
-    return this.workflowService.updateWorkflow(id, updates);
-  }
-
-  /**
-   * Delete a workflow by ID.
-   * 
-   * @param id - Workflow ID to delete
-   * @returns true if deleted, false if not found
-   */
-  async deleteWorkflow(id: string) {
-    return this.workflowService.deleteWorkflow(id);
-  }
-
-  /**
-   * Add a step to a workflow.
-   * 
-   * @param workflowId - Workflow to add step to
-   * @param step - Step to add (must have ID already)
-   * @param index - Optional position to insert at (defaults to end)
-   * @returns The updated workflow, or null if workflow not found
-   */
-  async addWorkflowStep(
-    ...args: Parameters<typeof this.workflowService.addStep>
-  ) {
-    return this.workflowService.addStep(...args);
-  }
-
-  /**
-   * Update a step within a workflow.
-   * 
-   * @param workflowId - Workflow containing the step
-   * @param stepId - Step ID to update
-   * @param updates - Partial step data to merge
-   * @returns The updated workflow, or null if not found
-   */
-  async updateWorkflowStep(
-    ...args: Parameters<typeof this.workflowService.updateStep>
-  ) {
-    return this.workflowService.updateStep(...args);
-  }
-
-  /**
-   * Remove a step from a workflow.
-   * 
-   * @param workflowId - Workflow containing the step
-   * @param stepId - Step ID to remove
-   * @returns The updated workflow, or null if workflow not found
-   */
-  async removeWorkflowStep(
-    ...args: Parameters<typeof this.workflowService.removeStep>
-  ) {
-    return this.workflowService.removeStep(...args);
-  }
-
-  /**
-   * Reorder steps within a workflow.
-   * 
-   * @param workflowId - Workflow to reorder
-   * @param stepIds - Step IDs in new order
-   * @returns The updated workflow, or null if workflow not found
-   */
-  async reorderWorkflowSteps(
-    ...args: Parameters<typeof this.workflowService.reorderSteps>
-  ) {
-    return this.workflowService.reorderSteps(...args);
-  }
-
-  /**
-   * Reorder workflows by updating sortOrder.
-   * 
-   * @param workflowIds - Workflow IDs in desired order
-   * @returns true if successful
-   */
-  async reorderWorkflows(workflowIds: string[]) {
-    return this.workflowService.reorderWorkflows(workflowIds);
-  }
-
-  // =============================================================================
   // PUBLIC API - WRITE OPERATIONS
   // =============================================================================
 
@@ -1545,5 +1406,3 @@ export class DataManager {
     return this.archive.getPendingCount();
   }
 }
-
-export default DataManager;

@@ -192,5 +192,3 @@ export function AlertsByDescriptionWidget({ alerts = [], metadata }: AlertsByDes
     </Card>
   );
 }
-
-export default AlertsByDescriptionWidget;

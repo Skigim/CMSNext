@@ -1,6 +1,6 @@
 import { toast } from "sonner";
 
-import errorReporting from "./errorReporting";
+import { errorReporting } from "./errorReporting";
 
 /**
  * File Storage Error Reporting

@@ -363,4 +363,3 @@ export function useErrorReporting() {
   };
 }
 
-export default errorReporting;

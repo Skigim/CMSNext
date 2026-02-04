@@ -1,5 +1,5 @@
 import React, { ComponentType } from 'react';
-import ErrorBoundary from './ErrorBoundary';
+import { ErrorBoundary } from './ErrorBoundary';
 import { FileSystemErrorFallback } from './ErrorFallback';
 
 interface WithErrorBoundaryOptions {

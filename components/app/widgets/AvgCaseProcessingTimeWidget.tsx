@@ -190,5 +190,3 @@ export function AvgCaseProcessingTimeWidget({
     </Card>
   );
 }
-
-export default AvgCaseProcessingTimeWidget;

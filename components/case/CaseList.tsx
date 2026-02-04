@@ -852,5 +852,3 @@ export function CaseList({
     </div>
   );
 }
-
-export default CaseList;

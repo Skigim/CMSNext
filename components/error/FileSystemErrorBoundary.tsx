@@ -299,5 +299,3 @@ export class FileSystemErrorBoundary extends Component<
     return this.props.children;
   }
 }
-
-export default FileSystemErrorBoundary;

@@ -134,5 +134,3 @@ export function AvgAlertAgeWidget({ alerts = [], metadata }: AvgAlertAgeWidgetPr
     </Card>
   );
 }
-
-export default AvgAlertAgeWidget;
