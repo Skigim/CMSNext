@@ -158,7 +158,12 @@ export function useEncryptionFileHooks(): UseEncryptionFileHooksResult {
         const result = await encryptWithKey(
           data,
           key,
-          salt
+          salt,
+          // Use the iterations that were used to derive the cached key
+          // so the payload metadata matches the actual key derivation params
+          encryption.currentIterations
+            ? { iterations: encryption.currentIterations }
+            : {}
         );
 
         if (!result.success || !result.payload) {
@@ -187,7 +192,9 @@ export function useEncryptionFileHooks(): UseEncryptionFileHooksResult {
         // If we don't have a key yet, derive from pending password and file salt
         if (!key) {
           // Use the context method to derive key from file salt
-          const result = await encryption.deriveKeyFromFileSalt(data.salt);
+          // Pass the payload's iteration count so files encrypted with older
+          // iteration settings can still be decrypted correctly
+          const result = await encryption.deriveKeyFromFileSalt(data.salt, data.iterations);
           
           if (!result.success || !result.data) {
             let error: string;

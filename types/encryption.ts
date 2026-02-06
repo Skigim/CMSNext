@@ -102,4 +102,6 @@ export interface EncryptionState {
   fileIsEncrypted: boolean;
   /** Salt from current encrypted file (needed for key derivation) */
   currentSalt: string | null;
+  /** PBKDF2 iterations used to derive the cached key (must match on encrypt/decrypt) */
+  currentIterations: number | null;
 }

@@ -85,7 +85,7 @@ interface EncryptionContextValue extends EncryptionState {
   /** Generate new salt and derive key for new encrypted file */
   initializeEncryption: (password: string) => Promise<{ salt: string; key: CryptoKey } | null>;
   /** Derive key from existing file salt using pending password */
-  deriveKeyFromFileSalt: (salt: string) => Promise<EncryptionResult<CryptoKey>>;
+  deriveKeyFromFileSalt: (salt: string, iterations?: number) => Promise<EncryptionResult<CryptoKey>>;
   /** Clear all credentials and logout user */
   clearCredentials: () => void;
   /** Temporary password storage for key derivation (cleared after use) */
@@ -182,6 +182,7 @@ export function EncryptionProvider({ children }: EncryptionProviderProps) {
     derivedKey: null,
     fileIsEncrypted: false,
     currentSalt: null,
+    currentIterations: null,
   });
   
   // Temporary password storage - cleared after key derivation
@@ -231,6 +232,7 @@ export function EncryptionProvider({ children }: EncryptionProviderProps) {
           username,
           derivedKey,
           currentSalt: salt ?? null,
+          currentIterations: salt ? DEFAULT_ENCRYPTION_CONFIG.iterations : null,
         }));
 
         return true;
@@ -275,6 +277,7 @@ export function EncryptionProvider({ children }: EncryptionProviderProps) {
           derivedKey: key,
           currentSalt: salt,
           fileIsEncrypted: true,
+          currentIterations: DEFAULT_ENCRYPTION_CONFIG.iterations,
         }));
 
         logger.info("Encryption initialized with new salt");
@@ -299,6 +302,7 @@ export function EncryptionProvider({ children }: EncryptionProviderProps) {
       derivedKey: null,
       fileIsEncrypted: false,
       currentSalt: null,
+      currentIterations: null,
     });
     pendingPasswordRef.current = null;
     logger.lifecycle("Credentials cleared");
@@ -310,7 +314,7 @@ export function EncryptionProvider({ children }: EncryptionProviderProps) {
    * Returns typed result with error codes for better error handling.
    */
   const deriveKeyFromFileSalt = useCallback(
-    async (salt: string): Promise<EncryptionResult<CryptoKey>> => {
+    async (salt: string, iterations?: number): Promise<EncryptionResult<CryptoKey>> => {
       const password = pendingPasswordRef.current;
       if (!password) {
         logger.error("No pending password for key derivation");
@@ -318,10 +322,11 @@ export function EncryptionProvider({ children }: EncryptionProviderProps) {
       }
 
       try {
+        const effectiveIterations = iterations ?? DEFAULT_ENCRYPTION_CONFIG.iterations;
         const key = await deriveKeyFromSaltString(
           password,
           salt,
-          DEFAULT_ENCRYPTION_CONFIG.iterations
+          effectiveIterations
         );
 
         setState((prev) => ({
@@ -329,6 +334,7 @@ export function EncryptionProvider({ children }: EncryptionProviderProps) {
           derivedKey: key,
           currentSalt: salt,
           fileIsEncrypted: true,
+          currentIterations: effectiveIterations,
         }));
 
         // Clear password after successful derivation
