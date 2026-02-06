@@ -3,7 +3,7 @@ import { toast } from "sonner";
 import type { StoredCase } from "../types/case";
 import type AutosaveFileService from "../utils/AutosaveFileService";
 import type { FileStorageService } from "@/utils/services/FileStorageService";
-import type DataManager from "../utils/DataManager";
+import type { DataManager } from "../utils/DataManager";
 import type { FileStorageLifecycleSelectors } from "../contexts/FileStorageContext";
 
 interface UseConnectionFlowParams {
