@@ -101,6 +101,7 @@ function FinancialItemModal({
               <Label htmlFor="description">Item Name *</Label>
               <Input
                 id="description"
+                autoFocus
                 value={formData.description}
                 onChange={(e) => onFormFieldChange('description', e.target.value)}
                 placeholder={placeholders.description}

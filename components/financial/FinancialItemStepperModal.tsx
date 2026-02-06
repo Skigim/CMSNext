@@ -249,8 +249,12 @@ export function FinancialItemStepperModal({
     [localHistoryEntries]
   );
 
-  // Ref for description input to focus after reset
+  // Refs for focus management
   const descriptionInputRef = useRef<HTMLInputElement>(null);
+  const entryAmountRef = useRef<HTMLInputElement>(null);
+  const addEntryButtonRef = useRef<HTMLButtonElement>(null);
+  const deleteConfirmRef = useRef<HTMLButtonElement>(null);
+  const itemDeleteConfirmRef = useRef<HTMLButtonElement>(null);
 
   // Add another checkbox state (managed by component, passed to hook)
   const [addAnother, setAddAnother] = useState(false);
@@ -306,6 +310,59 @@ export function FinancialItemStepperModal({
       setDeleteConfirmId(null);
     }
   }, [isOpen, item]);
+
+  // Derived state (declared before effects that depend on it)
+  const isEntryEditing = isAddingEntry || editingEntryId !== null;
+
+  // ============================================================================
+  // Focus Management
+  // ============================================================================
+
+  // Focus first input when step changes
+  useEffect(() => {
+    if (!isOpen) return;
+    // Small delay to allow the step content to render
+    const timer = setTimeout(() => {
+      if (currentStep === "details") {
+        descriptionInputRef.current?.focus();
+      } else if (currentStep === "amounts" && isEntryEditing) {
+        entryAmountRef.current?.focus();
+      }
+    }, 50);
+    return () => clearTimeout(timer);
+  // Only trigger on step changes, not on isEntryEditing
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen, currentStep]);
+
+  // Focus entry amount input when entry form opens
+  useEffect(() => {
+    if (isEntryEditing) {
+      const timer = setTimeout(() => {
+        entryAmountRef.current?.focus();
+      }, 50);
+      return () => clearTimeout(timer);
+    }
+  }, [isEntryEditing]);
+
+  // Focus confirm button when delete confirmation appears (entry-level)
+  useEffect(() => {
+    if (deleteConfirmId) {
+      const timer = setTimeout(() => {
+        deleteConfirmRef.current?.focus();
+      }, 50);
+      return () => clearTimeout(timer);
+    }
+  }, [deleteConfirmId]);
+
+  // Focus confirm button when item-level delete confirmation appears
+  useEffect(() => {
+    if (isConfirmingDelete) {
+      const timer = setTimeout(() => {
+        itemDeleteConfirmRef.current?.focus();
+      }, 50);
+      return () => clearTimeout(timer);
+    }
+  }, [isConfirmingDelete]);
 
   // ============================================================================
   // Handlers - Item Form
@@ -370,6 +427,8 @@ export function FinancialItemStepperModal({
     setEntryFormData(emptyEntryFormData);
     setEditingEntryId(null);
     setIsAddingEntry(false);
+    // Restore focus to the Add Entry button
+    setTimeout(() => addEntryButtonRef.current?.focus(), 50);
   }, []);
 
   const handleSaveEntry = useCallback(() => {
@@ -564,7 +623,6 @@ export function FinancialItemStepperModal({
     }
   }, [item, onDelete, onClose]);
 
-  const isEntryEditing = isAddingEntry || editingEntryId !== null;
   const canSave = itemFormData.description.trim() && localHistoryEntries.length > 0;
 
   // ============================================================================
@@ -702,6 +760,7 @@ export function FinancialItemStepperModal({
                     : `${localHistoryEntries.length} entry${localHistoryEntries.length !== 1 ? "ies" : ""}`}
                 </p>
                 <Button
+                  ref={addEntryButtonRef}
                   type="button"
                   variant="outline"
                   size="sm"
@@ -726,6 +785,7 @@ export function FinancialItemStepperModal({
                       Amount *
                     </Label>
                     <Input
+                      ref={entryAmountRef}
                       id="entry-amount"
                       type="number"
                       step="0.01"
@@ -886,6 +946,7 @@ export function FinancialItemStepperModal({
                           {deleteConfirmId === entry.id ? (
                             <div className="flex items-center gap-1">
                               <Button
+                                ref={deleteConfirmId === entry.id ? deleteConfirmRef : undefined}
                                 type="button"
                                 variant="destructive"
                                 size="icon"
@@ -965,6 +1026,7 @@ export function FinancialItemStepperModal({
                   <div className="flex items-center gap-2">
                     <span className="text-sm text-destructive">Delete this item?</span>
                     <Button
+                      ref={itemDeleteConfirmRef}
                       type="button"
                       variant="destructive"
                       size="sm"
