@@ -60,6 +60,13 @@ _Focus: Clear ALL outstanding audit items from January_
 - [x] **Move `colorPalette` to module-level constant** - ✅ NotesSection.tsx no longer exists (refactored)
 - [ ] **Consolidate Error Boundary base class** - Create `BaseErrorBoundary` or use library
 
+#### Paper Cuts (Added Feb 6)
+
+- [ ] **Better Focus Lock in Financial Item Modal** - Improve focus trap/tab navigation within the financial item modal dialog
+- [ ] **Add Apt Field to Address Schema** - Add apartment/unit field to address validation schema
+- [ ] **Archive Panel Search Bar** - Add search/filter bar to the archival panel in Settings
+- [ ] **Tune AVS Import Current Item Matching** - Refine matching logic for AVS Import → Current Item flow
+
 #### Refactoring & Polish
 
 - [x] Add tests for new utilities (`requireDataManager`, `getCategoryColor`) - N/A (already exist with tests)

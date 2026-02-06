@@ -74,7 +74,15 @@ export function WelcomeModal({
       const status = await service?.checkFileEncryptionStatus();
       logger.info("File status in chosen folder", { status });
 
-      if (status?.exists && status.encrypted) {
+      if (status === null || status === undefined) {
+        // Could not verify encryption status — do not allow password creation
+        setError(
+          "Could not verify the contents of this folder. Please try again or choose a different folder."
+        );
+        return;
+      }
+
+      if (status.exists && status.encrypted) {
         // User chose a folder with existing encrypted data
         setError(
           "This folder already has encrypted data. Choose a different folder or use the login screen."

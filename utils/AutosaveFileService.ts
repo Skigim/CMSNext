@@ -8,6 +8,7 @@ import {
   clearStoredDirectoryHandle,
   type IndexedDBHandleStoreConfig,
 } from "./IndexedDBHandleStore";
+import { isEncryptedPayload } from "@/types/encryption";
 
 const logger = createLogger("AutosaveFileService");
 
@@ -1831,7 +1832,8 @@ class AutosaveFileService {
       }
       
       const rawData = JSON.parse(contents);
-      const encrypted = this.encryptionHooks?.isEncrypted(rawData) ?? false;
+      // Use standalone type guard — hooks may not be set pre-authentication
+      const encrypted = isEncryptedPayload(rawData) || (this.encryptionHooks?.isEncrypted(rawData) ?? false);
       
       return { exists: true, encrypted };
     } catch (err) {

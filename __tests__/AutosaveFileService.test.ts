@@ -415,4 +415,100 @@ describe('AutosaveFileService', () => {
       }).not.toThrow()
     })
   })
+
+  describe('checkFileEncryptionStatus', () => {
+    /**
+     * Helper to set up the service for checkFileEncryptionStatus tests.
+     * Sets directory handle directly and stubs checkPermission to avoid
+     * needing the full File System Access API mock.
+     */
+    function prepareForEncryptionCheck(svc: AutosaveFileService) {
+      (svc as any).directoryHandle = mockDirectoryHandle;
+      vi.spyOn(svc, 'checkPermission').mockResolvedValue('granted');
+    }
+
+    it('should return null when no directory handle is set', async () => {
+      const result = await service.checkFileEncryptionStatus()
+      expect(result).toBeNull()
+    })
+
+    it('should detect encrypted files without encryption hooks set', async () => {
+      prepareForEncryptionCheck(service)
+
+      // Mock reading an encrypted file (EncryptedPayload shape)
+      const encryptedPayload = JSON.stringify({
+        version: 1,
+        algorithm: 'AES-256-GCM',
+        salt: 'dGVzdHNhbHQ=',
+        iv: 'dGVzdGl2',
+        ciphertext: 'ZW5jcnlwdGVkZGF0YQ==',
+        iterations: 100000,
+        encryptedAt: '2026-01-01T00:00:00.000Z',
+      })
+
+      const mockFile = { text: vi.fn().mockResolvedValue(encryptedPayload) }
+      const mockFileHandle = { getFile: vi.fn().mockResolvedValue(mockFile) }
+      mockDirectoryHandle.getFileHandle.mockResolvedValue(mockFileHandle)
+
+      // No encryption hooks set (pre-auth scenario — the vulnerability)
+      service.setEncryptionHooks(null)
+
+      const result = await service.checkFileEncryptionStatus()
+      expect(result).toEqual({ exists: true, encrypted: true })
+    })
+
+    it('should detect unencrypted files correctly', async () => {
+      prepareForEncryptionCheck(service)
+
+      const normalData = JSON.stringify({
+        cases: [],
+        financials: [],
+        notes: [],
+      })
+
+      const mockFile = { text: vi.fn().mockResolvedValue(normalData) }
+      const mockFileHandle = { getFile: vi.fn().mockResolvedValue(mockFile) }
+      mockDirectoryHandle.getFileHandle.mockResolvedValue(mockFileHandle)
+
+      service.setEncryptionHooks(null)
+
+      const result = await service.checkFileEncryptionStatus()
+      expect(result).toEqual({ exists: true, encrypted: false })
+    })
+
+    it('should return exists:false when file not found', async () => {
+      prepareForEncryptionCheck(service)
+
+      const notFoundError = new Error('File not found')
+      notFoundError.name = 'NotFoundError'
+      mockDirectoryHandle.getFileHandle.mockRejectedValue(notFoundError)
+
+      const result = await service.checkFileEncryptionStatus()
+      expect(result).toEqual({ exists: false, encrypted: false })
+    })
+
+    it('should detect encrypted files using hooks as secondary check', async () => {
+      prepareForEncryptionCheck(service)
+
+      // Custom encryption format that isEncryptedPayload won't match
+      const customEncrypted = JSON.stringify({
+        customFormat: true,
+        data: 'encrypted-blob',
+      })
+
+      const mockFile = { text: vi.fn().mockResolvedValue(customEncrypted) }
+      const mockFileHandle = { getFile: vi.fn().mockResolvedValue(mockFile) }
+      mockDirectoryHandle.getFileHandle.mockResolvedValue(mockFileHandle)
+
+      // Set hooks that recognize this custom format
+      service.setEncryptionHooks({
+        encrypt: vi.fn(),
+        decrypt: vi.fn(),
+        isEncrypted: (data: any) => data?.customFormat === true,
+      })
+
+      const result = await service.checkFileEncryptionStatus()
+      expect(result).toEqual({ exists: true, encrypted: true })
+    })
+  })
 })
