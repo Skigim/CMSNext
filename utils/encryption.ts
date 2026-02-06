@@ -4,8 +4,8 @@
  *
  * Security features:
  * - AES-256-GCM authenticated encryption (confidentiality + integrity)
- * - PBKDF2 with 100k+ iterations for key derivation
- * - Random salt and IV per encryption
+ * - PBKDF2 with 600k iterations for key derivation (OWASP 2023)
+ * - Random salt and IV per encryption via CSPRNG (crypto.getRandomValues)
  * - Derived key cached in memory (non-extractable)
  */
 

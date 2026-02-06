@@ -261,7 +261,7 @@ describe("encryption utilities", () => {
       salt: btoa(String.fromCharCode(...new Uint8Array(16))),
       iv: btoa(String.fromCharCode(...new Uint8Array(12))),
       ciphertext: btoa(String.fromCharCode(...new Uint8Array(32))),
-      iterations: 100000,
+      iterations: DEFAULT_ENCRYPTION_CONFIG.iterations,
       encryptedAt: new Date().toISOString(),
     });
 
@@ -311,7 +311,7 @@ describe("encryption utilities", () => {
       salt: btoa(String.fromCharCode(...new Uint8Array(16))),
       iv: btoa(String.fromCharCode(...new Uint8Array(12))),
       ciphertext: btoa(String.fromCharCode(...new Uint8Array(32))),
-      iterations: 100000,
+      iterations: DEFAULT_ENCRYPTION_CONFIG.iterations,
       encryptedAt: new Date().toISOString(),
     });
 

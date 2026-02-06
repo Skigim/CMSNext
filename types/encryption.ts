@@ -56,9 +56,15 @@ export interface EncryptionConfig {
 
 /**
  * Default encryption configuration
+ * 
+ * PBKDF2 iterations set to 600,000 per OWASP 2023 recommendation
+ * for PBKDF2-HMAC-SHA256. This provides strong brute-force resistance
+ * while keeping key derivation under ~1s on modern hardware.
+ * 
+ * @see https://cheatsheetseries.owasp.org/cheatsheets/Password_Storage_Cheat_Sheet.html
  */
 export const DEFAULT_ENCRYPTION_CONFIG: Required<EncryptionConfig> = {
-  iterations: 100_000,
+  iterations: 600_000,
   saltLength: 16,
   ivLength: 12,
 };

@@ -442,7 +442,7 @@ describe('AutosaveFileService', () => {
         salt: 'dGVzdHNhbHQ=',
         iv: 'dGVzdGl2',
         ciphertext: 'ZW5jcnlwdGVkZGF0YQ==',
-        iterations: 100000,
+        iterations: 600000,
         encryptedAt: '2026-01-01T00:00:00.000Z',
       })
 
