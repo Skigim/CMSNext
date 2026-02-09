@@ -44,6 +44,8 @@ import {
   formatHistoryDate,
   getFirstOfMonth,
   createHistoryEntry,
+  updateHistoryEntry,
+  deleteHistoryEntry,
 } from "@/domain/financials";
 import { cn } from "../ui/utils";
 
@@ -438,7 +440,6 @@ export function FinancialItemStepperModal({
     }
 
     if (isAddingEntry) {
-      // Use domain function for proper UUID generation
       const newEntry = createHistoryEntry(amount, entryFormData.startDate, {
         endDate: entryFormData.endDate || null,
         verificationStatus: entryFormData.verificationStatus || undefined,
@@ -446,18 +447,14 @@ export function FinancialItemStepperModal({
       });
       setLocalHistoryEntries((prev) => [...prev, newEntry]);
     } else if (editingEntryId) {
-      // For edits, preserve the existing ID
-      const updatedEntry: AmountHistoryEntry = {
-        id: editingEntryId,
-        amount,
-        startDate: entryFormData.startDate,
-        endDate: entryFormData.endDate || null,
-        verificationStatus: entryFormData.verificationStatus || undefined,
-        verificationSource: entryFormData.verificationSource || undefined,
-        createdAt: new Date().toISOString(),
-      };
       setLocalHistoryEntries((prev) =>
-        prev.map((e) => (e.id === editingEntryId ? updatedEntry : e))
+        updateHistoryEntry(prev, editingEntryId, {
+          amount,
+          startDate: entryFormData.startDate,
+          endDate: entryFormData.endDate || null,
+          verificationStatus: entryFormData.verificationStatus || undefined,
+          verificationSource: entryFormData.verificationSource || undefined,
+        })
       );
     }
 
@@ -465,7 +462,7 @@ export function FinancialItemStepperModal({
   }, [entryFormData, editingEntryId, isAddingEntry, handleCancelEntryEdit]);
 
   const handleDeleteEntry = useCallback((entryId: string) => {
-    setLocalHistoryEntries((prev) => prev.filter((e) => e.id !== entryId));
+    setLocalHistoryEntries((prev) => deleteHistoryEntry(prev, entryId));
     setDeleteConfirmId(null);
   }, []);
 

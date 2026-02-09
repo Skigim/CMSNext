@@ -299,6 +299,45 @@ export function addHistoryEntryToItem(
 }
 
 /**
+ * Updates an existing history entry in a financial item's amountHistory.
+ * Preserves the entry's original ID and createdAt timestamp.
+ * 
+ * @param history The current history entries array
+ * @param entryId The ID of the entry to update
+ * @param updates Partial updates to apply to the entry
+ * @returns Updated history array, or the original if entryId was not found
+ */
+export function updateHistoryEntry(
+  history: AmountHistoryEntry[],
+  entryId: string,
+  updates: Partial<Omit<AmountHistoryEntry, "id" | "createdAt">>
+): AmountHistoryEntry[] {
+  let found = false;
+  const updated = history.map((entry) => {
+    if (entry.id === entryId) {
+      found = true;
+      return { ...entry, ...updates };
+    }
+    return entry;
+  });
+  return found ? updated : history;
+}
+
+/**
+ * Removes a history entry from a history array by ID.
+ * 
+ * @param history The current history entries array
+ * @param entryId The ID of the entry to remove
+ * @returns Updated history array without the deleted entry
+ */
+export function deleteHistoryEntry(
+  history: AmountHistoryEntry[],
+  entryId: string
+): AmountHistoryEntry[] {
+  return history.filter((entry) => entry.id !== entryId);
+}
+
+/**
  * Formats a date for display in the history modal.
  * @param dateStr Date string in YYYY-MM-DD format
  */

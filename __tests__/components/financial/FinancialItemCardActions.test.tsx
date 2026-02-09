@@ -26,19 +26,7 @@ describe("FinancialItemCardActions", () => {
     expect(screen.getByRole("button", { name: /copy financial item to clipboard/i })).toBeInTheDocument();
   });
 
-  it("should render calendar button when onHistoryClick is provided", () => {
-    render(
-      <FinancialItemCardActions
-        onHistoryClick={vi.fn()}
-        item={mockItem}
-        itemType={mockItemType}
-      />
-    );
-
-    expect(screen.getByRole("button", { name: /view amount history/i })).toBeInTheDocument();
-  });
-
-  it("should not render calendar button when onHistoryClick is not provided", () => {
+  it("should not render calendar button anymore", () => {
     render(
       <FinancialItemCardActions
         item={mockItem}
@@ -49,35 +37,15 @@ describe("FinancialItemCardActions", () => {
     expect(screen.queryByRole("button", { name: /view amount history/i })).not.toBeInTheDocument();
   });
 
-  it("should call onHistoryClick when calendar button is clicked", async () => {
-    const user = userEvent.setup();
-    const onHistoryClick = vi.fn();
-
-    render(
-      <FinancialItemCardActions
-        onHistoryClick={onHistoryClick}
-        item={mockItem}
-        itemType={mockItemType}
-      />
-    );
-
-    await user.click(screen.getByRole("button", { name: /view amount history/i }));
-    expect(onHistoryClick).toHaveBeenCalledTimes(1);
-  });
-
   it("should have proper ARIA labels on buttons", () => {
     render(
       <FinancialItemCardActions
-        onHistoryClick={vi.fn()}
         item={mockItem}
         itemType={mockItemType}
       />
     );
 
-    const historyButton = screen.getByRole("button", { name: /view amount history/i });
     const copyButton = screen.getByRole("button", { name: /copy financial item to clipboard/i });
-    
-    expect(historyButton).toHaveAttribute("aria-label");
     expect(copyButton).toHaveAttribute("aria-label");
   });
 

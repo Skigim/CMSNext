@@ -1,5 +1,5 @@
 import { Button } from "../ui/button";
-import { Copy, CalendarDays } from "lucide-react";
+import { Copy } from "lucide-react";
 import type { CaseCategory, FinancialItem } from "../../types/case";
 import { clickToCopy } from "../../utils/clipboard";
 import {
@@ -9,7 +9,6 @@ import {
 } from "../../utils/caseSummaryGenerator";
 
 interface FinancialItemCardActionsProps {
-  onHistoryClick?: () => void;
   item: FinancialItem;
   itemType: CaseCategory;
 }
@@ -28,7 +27,6 @@ function formatFinancialItem(item: FinancialItem, itemType: CaseCategory): strin
 }
 
 export function FinancialItemCardActions({
-  onHistoryClick,
   item,
   itemType,
 }: FinancialItemCardActionsProps) {
@@ -42,20 +40,6 @@ export function FinancialItemCardActions({
 
   return (
     <div className="flex gap-1">
-      {onHistoryClick && (
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={event => {
-            event.stopPropagation();
-            onHistoryClick();
-          }}
-          aria-label="View amount history"
-          className="h-8 w-8 text-muted-foreground hover:bg-muted hover:text-foreground"
-        >
-          <CalendarDays className="h-4 w-4" aria-hidden="true" />
-        </Button>
-      )}
       <Button
         variant="ghost"
         size="icon"

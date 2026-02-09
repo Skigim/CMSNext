@@ -33,6 +33,14 @@ export {
    */
   addHistoryEntryToItem,
   /**
+   * Updates an existing history entry in a history array.
+   */
+  updateHistoryEntry,
+  /**
+   * Removes a history entry from a history array by ID.
+   */
+  deleteHistoryEntry,
+  /**
    * Formats a date for display in the history modal.
    */
   formatHistoryDate,

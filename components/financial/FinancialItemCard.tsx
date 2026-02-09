@@ -1,10 +1,9 @@
 import { useRef } from "react";
 import { Card, CardHeader } from "../ui/card";
-import type { AmountHistoryEntry, FinancialItem, CaseCategory } from "../../types/case";
+import type { FinancialItem, CaseCategory } from "../../types/case";
 import { FinancialItemCardHeader } from "./FinancialItemCardHeader";
 import { FinancialItemCardMeta } from "./FinancialItemCardMeta";
 import { FinancialItemCardActions } from "./FinancialItemCardActions";
-import { AmountHistoryModal } from "./AmountHistoryModal";
 import { useFinancialItemCardState } from "./useFinancialItemCardState";
 
 interface FinancialItemCardProps {
@@ -12,22 +11,6 @@ interface FinancialItemCardProps {
   itemType: CaseCategory;
   onDelete: (category: CaseCategory, itemId: string) => void;
   onUpdate?: (category: CaseCategory, itemId: string, updatedItem: FinancialItem) => void;
-  onAddHistoryEntry?: (
-    category: CaseCategory,
-    itemId: string,
-    entry: Omit<AmountHistoryEntry, "id" | "createdAt">
-  ) => Promise<FinancialItem>;
-  onUpdateHistoryEntry?: (
-    category: CaseCategory,
-    itemId: string,
-    entryId: string,
-    updates: Partial<Omit<AmountHistoryEntry, "id" | "createdAt">>
-  ) => Promise<FinancialItem>;
-  onDeleteHistoryEntry?: (
-    category: CaseCategory,
-    itemId: string,
-    entryId: string
-  ) => Promise<FinancialItem>;
   showActions?: boolean;
   /** Opens stepper modal for editing */
   onOpenStepperEdit: (item: FinancialItem) => void;
@@ -38,9 +21,6 @@ export function FinancialItemCard({
   itemType,
   onDelete,
   onUpdate,
-  onAddHistoryEntry,
-  onUpdateHistoryEntry,
-  onDeleteHistoryEntry,
   showActions = true,
   onOpenStepperEdit,
 }: FinancialItemCardProps) {
@@ -50,22 +30,12 @@ export function FinancialItemCard({
     normalizedItem,
     displayAmount,
     isAmountFallback,
-    // History modal
-    isHistoryModalOpen,
-    handleOpenHistoryModal,
-    handleCloseHistoryModal,
-    handleAddHistoryEntry,
-    handleUpdateHistoryEntry,
-    handleDeleteHistoryEntry,
     handleStatusChange,
   } = useFinancialItemCardState({
     item,
     itemType,
     onDelete,
     onUpdate,
-    onAddHistoryEntry,
-    onUpdateHistoryEntry,
-    onDeleteHistoryEntry,
   });
 
   const cardRef = useRef<HTMLDivElement>(null);
@@ -86,7 +56,6 @@ export function FinancialItemCard({
             className="absolute -right-2 -top-2 z-20 opacity-0 transition-opacity group-hover:opacity-100 focus-within:opacity-100 rounded-md bg-background border shadow-sm"
           >
             <FinancialItemCardActions
-              onHistoryClick={onAddHistoryEntry ? handleOpenHistoryModal : undefined}
               item={item}
               itemType={itemType}
             />
@@ -124,22 +93,6 @@ export function FinancialItemCard({
           </div>
         </CardHeader>
       </Card>
-
-      {/* Amount History Modal */}
-      {onAddHistoryEntry && (
-        <AmountHistoryModal
-          isOpen={isHistoryModalOpen}
-          onClose={handleCloseHistoryModal}
-          item={item}
-          itemType={itemType}
-          onAddEntry={handleAddHistoryEntry}
-          onUpdateEntry={handleUpdateHistoryEntry}
-          onDeleteEntry={handleDeleteHistoryEntry}
-          onDeleteItem={async () => {
-            onDelete(itemType, normalizedItem.safeId);
-          }}
-        />
-      )}
     </>
   );
 }

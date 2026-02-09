@@ -10,6 +10,8 @@ import {
   createHistoryEntry,
   closePreviousOngoingEntry,
   addHistoryEntryToItem,
+  updateHistoryEntry,
+  deleteHistoryEntry,
   formatHistoryDate,
   formatMonthYear,
 } from "../history";
@@ -400,6 +402,106 @@ describe("financialHistory utilities", () => {
       const updated = addHistoryEntryToItem(item, newEntry);
       expect(updated.amountHistory).toHaveLength(2);
       expect(updated.amountHistory![0].endDate).toContain("2025-05-31");
+    });
+  });
+
+  describe("updateHistoryEntry", () => {
+    const history: AmountHistoryEntry[] = [
+      {
+        id: "entry-1",
+        amount: 500,
+        startDate: "2025-05-01",
+        endDate: "2025-05-31",
+        verificationStatus: "Needs VR",
+        createdAt: "2025-05-01T00:00:00.000Z",
+      },
+      {
+        id: "entry-2",
+        amount: 1000,
+        startDate: "2025-06-01",
+        endDate: null,
+        verificationStatus: "Verified",
+        createdAt: "2025-06-01T00:00:00.000Z",
+      },
+    ];
+
+    it("updates the amount of a matching entry", () => {
+      const updated = updateHistoryEntry(history, "entry-2", { amount: 1500 });
+      expect(updated).toHaveLength(2);
+      expect(updated[1].amount).toBe(1500);
+      // Other fields unchanged
+      expect(updated[1].startDate).toBe("2025-06-01");
+      expect(updated[1].verificationStatus).toBe("Verified");
+    });
+
+    it("preserves the entry id and createdAt", () => {
+      const updated = updateHistoryEntry(history, "entry-1", {
+        amount: 750,
+        verificationStatus: "Verified",
+      });
+      expect(updated[0].id).toBe("entry-1");
+      expect(updated[0].createdAt).toBe("2025-05-01T00:00:00.000Z");
+      expect(updated[0].amount).toBe(750);
+      expect(updated[0].verificationStatus).toBe("Verified");
+    });
+
+    it("returns the original array if entryId not found", () => {
+      const updated = updateHistoryEntry(history, "nonexistent", { amount: 999 });
+      expect(updated).toBe(history);
+    });
+
+    it("does not mutate the original array", () => {
+      const updated = updateHistoryEntry(history, "entry-1", { amount: 999 });
+      expect(history[0].amount).toBe(500);
+      expect(updated[0].amount).toBe(999);
+    });
+  });
+
+  describe("deleteHistoryEntry", () => {
+    const history: AmountHistoryEntry[] = [
+      {
+        id: "entry-1",
+        amount: 500,
+        startDate: "2025-05-01",
+        endDate: "2025-05-31",
+        createdAt: "2025-05-01T00:00:00.000Z",
+      },
+      {
+        id: "entry-2",
+        amount: 1000,
+        startDate: "2025-06-01",
+        endDate: null,
+        createdAt: "2025-06-01T00:00:00.000Z",
+      },
+    ];
+
+    it("removes the entry with matching id", () => {
+      const updated = deleteHistoryEntry(history, "entry-1");
+      expect(updated).toHaveLength(1);
+      expect(updated[0].id).toBe("entry-2");
+    });
+
+    it("returns all entries when id not found", () => {
+      const updated = deleteHistoryEntry(history, "nonexistent");
+      expect(updated).toHaveLength(2);
+    });
+
+    it("does not mutate the original array", () => {
+      const updated = deleteHistoryEntry(history, "entry-1");
+      expect(history).toHaveLength(2);
+      expect(updated).toHaveLength(1);
+    });
+
+    it("returns empty array when deleting the only entry", () => {
+      const single: AmountHistoryEntry[] = [{
+        id: "only",
+        amount: 100,
+        startDate: "2025-01-01",
+        endDate: null,
+        createdAt: "2025-01-01T00:00:00.000Z",
+      }];
+      const updated = deleteHistoryEntry(single, "only");
+      expect(updated).toHaveLength(0);
     });
   });
 

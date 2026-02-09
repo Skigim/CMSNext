@@ -1,5 +1,5 @@
 import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import type { AmountHistoryEntry, CaseCategory, FinancialItem } from "../../types/case";
+import type { CaseCategory, FinancialItem } from "../../types/case";
 import { getNormalizedFormData, getNormalizedItem } from "../../utils/dataNormalization";
 import { getDisplayAmount } from "@/domain/common";
 import {
@@ -21,22 +21,6 @@ interface UseFinancialItemCardStateParams {
   itemType: CaseCategory;
   onDelete: (category: CaseCategory, itemId: string) => void;
   onUpdate?: (category: CaseCategory, itemId: string, updatedItem: FinancialItem) => void;
-  onAddHistoryEntry?: (
-    category: CaseCategory,
-    itemId: string,
-    entry: Omit<AmountHistoryEntry, "id" | "createdAt">
-  ) => Promise<FinancialItem>;
-  onUpdateHistoryEntry?: (
-    category: CaseCategory,
-    itemId: string,
-    entryId: string,
-    updates: Partial<Omit<AmountHistoryEntry, "id" | "createdAt">>
-  ) => Promise<FinancialItem>;
-  onDeleteHistoryEntry?: (
-    category: CaseCategory,
-    itemId: string,
-    entryId: string
-  ) => Promise<FinancialItem>;
 }
 
 /** Form validation errors keyed by field name */
@@ -58,17 +42,6 @@ export interface UseFinancialItemCardStateResult {
   verificationStatus: VerificationBadgeInfo;
   showVerificationSourceField: boolean;
   canUpdateStatus: boolean;
-  // History modal
-  isHistoryModalOpen: boolean;
-  hasAmountHistory: boolean;
-  handleOpenHistoryModal: () => void;
-  handleCloseHistoryModal: () => void;
-  handleAddHistoryEntry: (entry: Omit<AmountHistoryEntry, "id" | "createdAt">) => Promise<void>;
-  handleUpdateHistoryEntry: (
-    entryId: string,
-    updates: Partial<Omit<AmountHistoryEntry, "id" | "createdAt">>
-  ) => Promise<void>;
-  handleDeleteHistoryEntry: (entryId: string) => Promise<void>;
   // Card actions
   handleCardClick: () => void;
   handleCancelClick: () => void;
@@ -84,16 +57,12 @@ export function useFinancialItemCardState({
   itemType,
   onDelete,
   onUpdate,
-  onAddHistoryEntry,
-  onUpdateHistoryEntry,
-  onDeleteHistoryEntry,
 }: UseFinancialItemCardStateParams): UseFinancialItemCardStateResult {
   const [isEditing, setIsEditing] = useState(false);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [formData, setFormData] = useState<FinancialItem>(item);
   const [isSaving, setIsSaving] = useState(false);
   const [saveSuccessVisible, setSaveSuccessVisible] = useState(false);
-  const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
   const [formErrors, setFormErrors] = useState<FormErrors>({});
   const saveSuccessTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -112,11 +81,6 @@ export function useFinancialItemCardState({
   const displayAmount = useMemo(
     () => getDisplayAmount(amountInfo.amount, normalizedItem.frequency, itemType),
     [amountInfo.amount, normalizedItem.frequency, itemType],
-  );
-  
-  const hasAmountHistory = useMemo(
-    () => Boolean(item.amountHistory && item.amountHistory.length > 0),
-    [item.amountHistory]
   );
 
   // Get the current entry for the selected month to extract entry-level verification
@@ -139,8 +103,8 @@ export function useFinancialItemCardState({
   );
   // Can only update status if there's a current entry to update
   const canUpdateStatus = useMemo(
-    () => Boolean(onUpdateHistoryEntry && normalizedItem.safeId && currentEntry),
-    [onUpdateHistoryEntry, normalizedItem.safeId, currentEntry],
+    () => Boolean(normalizedItem.safeId && currentEntry),
+    [normalizedItem.safeId, currentEntry],
   );
 
   useEffect(() => {
@@ -148,24 +112,6 @@ export function useFinancialItemCardState({
       setFormData(item);
     }
   }, [item, isEditing]);
-
-  // Sync amountHistory even while editing to prevent history modal changes from being overwritten
-  // when the form saves. Other fields (description, amount, etc.) should NOT sync while editing
-  // to preserve user's in-progress edits.
-  useEffect(() => {
-    if (isEditing) {
-      setFormData(prev => {
-        // Only update if the history actually changed (by reference)
-        if (prev.amountHistory !== item.amountHistory) {
-          return {
-            ...prev,
-            amountHistory: item.amountHistory,
-          };
-        }
-        return prev;
-      });
-    }
-  }, [item.amountHistory, isEditing]);
 
   useEffect(() => () => {
     if (saveSuccessTimerRef.current) {
@@ -268,27 +214,35 @@ export function useFinancialItemCardState({
       // Verification is stored per-entry, not on the item
       // Update the current entry's verification status
       if (!currentEntry) {
-        // No entry exists for current period - user needs to create one via history modal
-        console.warn("[FinancialItemCard] Cannot update status - no history entry for current period. Open history modal to create one.");
+        // No entry exists for current period - user needs to open edit modal to create one
+        console.warn("[FinancialItemCard] Cannot update status - no history entry for current period. Open edit modal to manage history.");
         return;
       }
       
-      if (!onUpdateHistoryEntry || !normalizedItem.safeId) {
-        console.warn("[FinancialItemCard] Cannot update status - missing handler or item ID");
+      if (!normalizedItem.safeId) {
+        console.warn("[FinancialItemCard] Cannot update status - missing item ID");
         return;
       }
       
       setIsSaving(true);
       try {
-        const updates: Partial<Omit<AmountHistoryEntry, "id" | "createdAt">> = {
-          verificationStatus: newStatus,
-          // Clear verification source if not verified
-          verificationSource: newStatus === "Verified" 
-            ? currentEntry.verificationSource ?? "" 
-            : undefined,
+        const updatedItem: FinancialItem = {
+          ...item,
+          amountHistory: item.amountHistory?.map(entry =>
+            entry.id === currentEntry.id
+              ? {
+                  ...entry,
+                  verificationStatus: newStatus,
+                  // Clear verification source if not verified
+                  verificationSource: newStatus === "Verified" 
+                    ? entry.verificationSource ?? "" 
+                    : undefined,
+                }
+              : entry
+          ) || []
         };
-        
-        await onUpdateHistoryEntry(itemType, normalizedItem.safeId, currentEntry.id, updates);
+
+        await onUpdate?.(itemType, normalizedItem.safeId, updatedItem);
         setIsSaving(false);
         setSaveSuccessVisible(true);
 
@@ -305,72 +259,7 @@ export function useFinancialItemCardState({
         setSaveSuccessVisible(false);
       }
     },
-    [currentEntry, itemType, normalizedItem.safeId, onUpdateHistoryEntry],
-  );
-
-  // History modal handlers
-  const handleOpenHistoryModal = useCallback(() => {
-    // Close edit mode when opening history modal since dynamic data is managed there
-    setIsEditing(false);
-    setIsHistoryModalOpen(true);
-  }, []);
-
-  const handleCloseHistoryModal = useCallback(() => {
-    setIsHistoryModalOpen(false);
-  }, []);
-
-  const handleAddHistoryEntry = useCallback(
-    async (entry: Omit<AmountHistoryEntry, "id" | "createdAt">) => {
-      if (!onAddHistoryEntry || !normalizedItem.safeId) {
-        console.warn("[FinancialItemCard] Cannot add history entry - missing handler or item ID");
-        return;
-      }
-      
-      try {
-        await onAddHistoryEntry(itemType, normalizedItem.safeId, entry);
-      } catch (error) {
-        console.error("[FinancialItemCard] Failed to add history entry:", error);
-        throw error;
-      }
-    },
-    [itemType, normalizedItem.safeId, onAddHistoryEntry]
-  );
-
-  const handleUpdateHistoryEntry = useCallback(
-    async (
-      entryId: string,
-      updates: Partial<Omit<AmountHistoryEntry, "id" | "createdAt">>
-    ) => {
-      if (!onUpdateHistoryEntry || !normalizedItem.safeId) {
-        console.warn("[FinancialItemCard] Cannot update history entry - missing handler or item ID");
-        return;
-      }
-      
-      try {
-        await onUpdateHistoryEntry(itemType, normalizedItem.safeId, entryId, updates);
-      } catch (error) {
-        console.error("[FinancialItemCard] Failed to update history entry:", error);
-        throw error;
-      }
-    },
-    [itemType, normalizedItem.safeId, onUpdateHistoryEntry]
-  );
-
-  const handleDeleteHistoryEntry = useCallback(
-    async (entryId: string) => {
-      if (!onDeleteHistoryEntry || !normalizedItem.safeId) {
-        console.warn("[FinancialItemCard] Cannot delete history entry - missing handler or item ID");
-        return;
-      }
-      
-      try {
-        await onDeleteHistoryEntry(itemType, normalizedItem.safeId, entryId);
-      } catch (error) {
-        console.error("[FinancialItemCard] Failed to delete history entry:", error);
-        throw error;
-      }
-    },
-    [itemType, normalizedItem.safeId, onDeleteHistoryEntry]
+    [currentEntry, itemType, normalizedItem.safeId, onUpdate, item],
   );
 
   return {
@@ -387,14 +276,6 @@ export function useFinancialItemCardState({
     verificationStatus,
     showVerificationSourceField,
     canUpdateStatus,
-    // History modal
-    isHistoryModalOpen,
-    hasAmountHistory,
-    handleOpenHistoryModal,
-    handleCloseHistoryModal,
-    handleAddHistoryEntry,
-    handleUpdateHistoryEntry,
-    handleDeleteHistoryEntry,
     // Card actions
     handleCardClick,
     handleCancelClick,

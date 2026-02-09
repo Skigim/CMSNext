@@ -160,9 +160,6 @@ describe("FinancialItemCard", () => {
         itemType="income"
         onDelete={vi.fn()}
         onUpdate={onUpdate}
-        onAddHistoryEntry={vi.fn()}
-        onUpdateHistoryEntry={vi.fn()}
-        onDeleteHistoryEntry={vi.fn()}
         onOpenStepperEdit={onOpenStepperEdit}
       />
     );
