@@ -12,7 +12,7 @@
  */
 
 import { useCallback, useEffect, useState, useMemo } from "react";
-import { Archive, RefreshCw, FolderOpen, RotateCcw, Loader2 } from "lucide-react";
+import { Archive, RefreshCw, FolderOpen, RotateCcw, Loader2, X } from "lucide-react";
 import { toast } from "sonner";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../ui/card";
 import { Button } from "../ui/button";
@@ -39,9 +39,16 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "../ui/alert-dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "../ui/select";
 import { useDataManagerSafe } from "@/contexts/DataManagerContext";
 import { useCategoryConfig } from "@/contexts/CategoryConfigContext";
-import { useCaseArchival } from "@/hooks";
+import { useCaseArchival, useFuzzySearch } from "@/hooks";
 import type { ArchiveFileInfo } from "@/utils/services/CaseArchiveService";
 import type { CaseArchiveData, ArchivalSettings } from "@/types/archive";
 import { DEFAULT_ARCHIVAL_SETTINGS } from "@/types/archive";
@@ -68,6 +75,14 @@ export function ArchivalSettingsPanel() {
   const [selectedArchiveFileName, setSelectedArchiveFileName] = useState<string | null>(null);
   const [selectedCasesToRestore, setSelectedCasesToRestore] = useState<Set<string>>(new Set());
   const [showRestoreDialog, setShowRestoreDialog] = useState(false);
+  const [statusFilter, setStatusFilter] = useState<string>("");
+  
+  // Fuzzy search for archive cases
+  const { query: searchQuery, setQuery: setSearchQuery, results: searchResults, clearSearch } = useFuzzySearch({
+    cases: selectedArchive?.cases ?? [],
+    alerts: [],
+    options: { maxResults: 100, minChars: 1 },
+  });
   
   // Use archival hook
   const archival = useCaseArchival({
@@ -145,7 +160,9 @@ export function ArchivalSettingsPanel() {
     setSelectedArchive(null);
     setSelectedArchiveFileName(null);
     setSelectedCasesToRestore(new Set());
-  }, []);
+    setStatusFilter("");
+    clearSearch();
+  }, [clearSearch]);
   
   const handleToggleCaseSelection = useCallback((caseId: string) => {
     setSelectedCasesToRestore(prev => {
@@ -183,8 +200,37 @@ export function ArchivalSettingsPanel() {
       const updated = await archival.loadArchive(selectedArchiveFileName);
       setSelectedArchive(updated);
       setSelectedCasesToRestore(new Set());
+      setStatusFilter("");
+      clearSearch();
     }
-  }, [selectedArchiveFileName, selectedCasesToRestore, archival]);
+  }, [selectedArchiveFileName, selectedCasesToRestore, archival, clearSearch]);
+  
+  // Get unique statuses from archive for filter dropdown
+  const archiveStatuses = useMemo(() => {
+    if (!selectedArchive) return [];
+    return Array.from(new Set(selectedArchive.cases.map(c => c.status))).sort();
+  }, [selectedArchive]);
+  
+  // Compute filtered cases based on search and status filter
+  const filteredCases = useMemo(() => {
+    if (!selectedArchive) return [];
+    
+    const searchMatchIds = new Set(searchResults.cases.map(r => r.item.id));
+    
+    let cases = selectedArchive.cases;
+    
+    // Apply search filter if query exists
+    if (searchQuery.trim().length > 0) {
+      cases = cases.filter(c => searchMatchIds.has(c.id));
+    }
+    
+    // Apply status filter if selected
+    if (statusFilter) {
+      cases = cases.filter(c => c.status === statusFilter);
+    }
+    
+    return cases;
+  }, [selectedArchive, searchResults, searchQuery, statusFilter]);
   
   if (!dataManager) {
     return (
@@ -319,6 +365,9 @@ export function ArchivalSettingsPanel() {
                       <Badge variant="secondary">
                         {selectedArchive.cases.length} cases
                       </Badge>
+                      <Badge variant="outline" className="text-xs">
+                        {new Date(selectedArchive.archivedAt).toLocaleDateString()}
+                      </Badge>
                     </div>
                     <div className="flex items-center gap-2">
                       {selectedCasesToRestore.size > 0 && (
@@ -340,24 +389,75 @@ export function ArchivalSettingsPanel() {
                     </div>
                   </div>
                   
-                  <div className="flex items-center gap-2 text-sm">
-                    <Button
-                      variant="link"
-                      size="sm"
-                      className="h-auto p-0"
-                      onClick={handleSelectAllCases}
-                    >
-                      Select All
-                    </Button>
-                    <span className="text-muted-foreground">|</span>
-                    <Button
-                      variant="link"
-                      size="sm"
-                      className="h-auto p-0"
-                      onClick={handleDeselectAllCases}
-                    >
-                      Deselect All
-                    </Button>
+                  <Separator />
+                  
+                  <div className="space-y-3">
+                    <div className="grid gap-3 sm:grid-cols-2">
+                      <div className="space-y-2">
+                        <Label htmlFor="archive-search" className="text-sm">
+                          Search Cases
+                        </Label>
+                        <div className="relative">
+                          <Input
+                            id="archive-search"
+                            placeholder="Search by name, MCN, or description..."
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            className="pr-8"
+                          />
+                          {searchQuery && (
+                            <button
+                              onClick={clearSearch}
+                              className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                            >
+                              <X className="h-4 w-4" />
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                      
+                      <div className="space-y-2">
+                        <Label htmlFor="archive-status-filter" className="text-sm">
+                          Filter by Status
+                        </Label>
+                        <Select value={statusFilter} onValueChange={setStatusFilter}>
+                          <SelectTrigger id="archive-status-filter">
+                            <SelectValue placeholder="All statuses" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="">All statuses</SelectItem>
+                            {archiveStatuses.map(status => (
+                              <SelectItem key={status} value={status}>
+                                {status}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+                    
+                    <div className="flex items-center gap-2 text-sm">
+                      <Button
+                        variant="link"
+                        size="sm"
+                        className="h-auto p-0"
+                        onClick={handleSelectAllCases}
+                      >
+                        Select All
+                      </Button>
+                      <span className="text-muted-foreground">|</span>
+                      <Button
+                        variant="link"
+                        size="sm"
+                        className="h-auto p-0"
+                        onClick={handleDeselectAllCases}
+                      >
+                        Deselect All
+                      </Button>
+                      <span className="ml-auto text-xs text-muted-foreground">
+                        {filteredCases.length} of {selectedArchive.cases.length} cases
+                      </span>
+                    </div>
                   </div>
                   
                   <div className="border rounded-md">
@@ -372,32 +472,40 @@ export function ArchivalSettingsPanel() {
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {selectedArchive.cases.map(caseItem => (
-                          <TableRow
-                            key={caseItem.id}
-                            className="cursor-pointer"
-                            onClick={() => handleToggleCaseSelection(caseItem.id)}
-                          >
-                            <TableCell>
-                              <input
-                                type="checkbox"
-                                checked={selectedCasesToRestore.has(caseItem.id)}
-                                onChange={() => handleToggleCaseSelection(caseItem.id)}
-                                className="h-4 w-4"
-                              />
-                            </TableCell>
-                            <TableCell className="font-medium">
-                              {caseItem.name || `${caseItem.person?.firstName} ${caseItem.person?.lastName}`}
-                            </TableCell>
-                            <TableCell>{caseItem.mcn || caseItem.caseRecord?.mcn || "—"}</TableCell>
-                            <TableCell>
-                              <Badge variant="outline">{caseItem.status}</Badge>
-                            </TableCell>
-                            <TableCell className="text-muted-foreground">
-                              {new Date(caseItem.updatedAt).toLocaleDateString()}
+                        {filteredCases.length === 0 ? (
+                          <TableRow>
+                            <TableCell colSpan={5} className="text-center py-4 text-sm text-muted-foreground">
+                              {selectedArchive.cases.length === 0 ? "No cases in archive" : "No cases match your search"}
                             </TableCell>
                           </TableRow>
-                        ))}
+                        ) : (
+                          filteredCases.map(caseItem => (
+                            <TableRow
+                              key={caseItem.id}
+                              className="cursor-pointer"
+                              onClick={() => handleToggleCaseSelection(caseItem.id)}
+                            >
+                              <TableCell>
+                                <input
+                                  type="checkbox"
+                                  checked={selectedCasesToRestore.has(caseItem.id)}
+                                  onChange={() => handleToggleCaseSelection(caseItem.id)}
+                                  className="h-4 w-4"
+                                />
+                              </TableCell>
+                              <TableCell className="font-medium">
+                                {caseItem.name || `${caseItem.person?.firstName} ${caseItem.person?.lastName}`}
+                              </TableCell>
+                              <TableCell>{caseItem.mcn || caseItem.caseRecord?.mcn || "—"}</TableCell>
+                              <TableCell>
+                                <Badge variant="outline">{caseItem.status}</Badge>
+                              </TableCell>
+                              <TableCell className="text-muted-foreground">
+                                {new Date(caseItem.updatedAt).toLocaleDateString()}
+                              </TableCell>
+                            </TableRow>
+                          ))
+                        )}
                       </TableBody>
                     </Table>
                   </div>
