@@ -1,5 +1,5 @@
 import { Button } from "../ui/button";
-import { Copy, Pencil, CalendarDays } from "lucide-react";
+import { Copy, CalendarDays } from "lucide-react";
 import type { CaseCategory, FinancialItem } from "../../types/case";
 import { clickToCopy } from "../../utils/clipboard";
 import {
@@ -9,7 +9,6 @@ import {
 } from "../../utils/caseSummaryGenerator";
 
 interface FinancialItemCardActionsProps {
-  onEditClick?: () => void;
   onHistoryClick?: () => void;
   item: FinancialItem;
   itemType: CaseCategory;
@@ -29,7 +28,6 @@ function formatFinancialItem(item: FinancialItem, itemType: CaseCategory): strin
 }
 
 export function FinancialItemCardActions({
-  onEditClick,
   onHistoryClick,
   item,
   itemType,
@@ -56,20 +54,6 @@ export function FinancialItemCardActions({
           className="h-8 w-8 text-muted-foreground hover:bg-muted hover:text-foreground"
         >
           <CalendarDays className="h-4 w-4" aria-hidden="true" />
-        </Button>
-      )}
-      {onEditClick && (
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={event => {
-            event.stopPropagation();
-            onEditClick();
-          }}
-          aria-label="Edit financial item"
-          className="h-8 w-8 text-muted-foreground hover:bg-muted hover:text-foreground"
-        >
-          <Pencil className="h-4 w-4" aria-hidden="true" />
         </Button>
       )}
       <Button

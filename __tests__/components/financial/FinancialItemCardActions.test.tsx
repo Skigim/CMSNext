@@ -26,19 +26,19 @@ describe("FinancialItemCardActions", () => {
     expect(screen.getByRole("button", { name: /copy financial item to clipboard/i })).toBeInTheDocument();
   });
 
-  it("should render edit button when onEditClick is provided", () => {
+  it("should render calendar button when onHistoryClick is provided", () => {
     render(
       <FinancialItemCardActions
-        onEditClick={vi.fn()}
+        onHistoryClick={vi.fn()}
         item={mockItem}
         itemType={mockItemType}
       />
     );
 
-    expect(screen.getByRole("button", { name: /edit financial item/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /view amount history/i })).toBeInTheDocument();
   });
 
-  it("should not render edit button when onEditClick is not provided", () => {
+  it("should not render calendar button when onHistoryClick is not provided", () => {
     render(
       <FinancialItemCardActions
         item={mockItem}
@@ -46,38 +46,38 @@ describe("FinancialItemCardActions", () => {
       />
     );
 
-    expect(screen.queryByRole("button", { name: /edit financial item/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /view amount history/i })).not.toBeInTheDocument();
   });
 
-  it("should call onEditClick when edit button is clicked", async () => {
+  it("should call onHistoryClick when calendar button is clicked", async () => {
     const user = userEvent.setup();
-    const onEditClick = vi.fn();
+    const onHistoryClick = vi.fn();
 
     render(
       <FinancialItemCardActions
-        onEditClick={onEditClick}
+        onHistoryClick={onHistoryClick}
         item={mockItem}
         itemType={mockItemType}
       />
     );
 
-    await user.click(screen.getByRole("button", { name: /edit financial item/i }));
-    expect(onEditClick).toHaveBeenCalledTimes(1);
+    await user.click(screen.getByRole("button", { name: /view amount history/i }));
+    expect(onHistoryClick).toHaveBeenCalledTimes(1);
   });
 
   it("should have proper ARIA labels on buttons", () => {
     render(
       <FinancialItemCardActions
-        onEditClick={vi.fn()}
+        onHistoryClick={vi.fn()}
         item={mockItem}
         itemType={mockItemType}
       />
     );
 
-    const editButton = screen.getByRole("button", { name: /edit financial item/i });
+    const historyButton = screen.getByRole("button", { name: /view amount history/i });
     const copyButton = screen.getByRole("button", { name: /copy financial item to clipboard/i });
     
-    expect(editButton).toHaveAttribute("aria-label");
+    expect(historyButton).toHaveAttribute("aria-label");
     expect(copyButton).toHaveAttribute("aria-label");
   });
 
@@ -111,23 +111,5 @@ describe("FinancialItemCardActions", () => {
       writable: true,
       configurable: true,
     });
-  });
-
-  it("should support keyboard navigation for edit action", async () => {
-    const onEditClick = vi.fn();
-
-    render(
-      <FinancialItemCardActions
-        onEditClick={onEditClick}
-        item={mockItem}
-        itemType={mockItemType}
-      />
-    );
-
-    const editButton = screen.getByRole("button", { name: /edit financial item/i });
-    
-    // Simulate Tab to focus
-    editButton.focus();
-    expect(editButton).toHaveFocus();
   });
 });

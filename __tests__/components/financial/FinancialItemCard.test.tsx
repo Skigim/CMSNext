@@ -143,7 +143,7 @@ describe("FinancialItemCard", () => {
     expect(screen.getByText("$5,000.00")).toBeInTheDocument();
   });
 
-  it("calls onOpenStepperEdit when edit button is clicked", async () => {
+  it("calls onOpenStepperEdit when card is clicked", async () => {
     // ARRANGE
     const user = userEvent.setup();
     const item = createMockFinancialItem("income", {
@@ -167,9 +167,9 @@ describe("FinancialItemCard", () => {
       />
     );
 
-    // ACT - find and click the edit button
-    const editButton = screen.getByRole("button", { name: /edit/i });
-    await user.click(editButton);
+    // ACT - click on the card itself to open edit
+    const cardContent = screen.getByText(/Test Item/);
+    await user.click(cardContent);
 
     // ASSERT
     expect(onOpenStepperEdit).toHaveBeenCalledWith(item);

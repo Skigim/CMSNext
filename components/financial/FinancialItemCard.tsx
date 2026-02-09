@@ -86,7 +86,6 @@ export function FinancialItemCard({
             className="absolute -right-2 -top-2 z-20 opacity-0 transition-opacity group-hover:opacity-100 focus-within:opacity-100 rounded-md bg-background border shadow-sm"
           >
             <FinancialItemCardActions
-              onEditClick={handleEditAction}
               onHistoryClick={onAddHistoryEntry ? handleOpenHistoryModal : undefined}
               item={item}
               itemType={itemType}
