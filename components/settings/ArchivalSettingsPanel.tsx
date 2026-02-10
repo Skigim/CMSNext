@@ -12,7 +12,7 @@
  */
 
 import { useCallback, useEffect, useState, useMemo } from "react";
-import { Archive, RefreshCw, FolderOpen, RotateCcw, Loader2, X } from "lucide-react";
+import { Archive, RefreshCw, FolderOpen, RotateCcw, Loader2, X, FileSpreadsheet } from "lucide-react";
 import { toast } from "sonner";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../ui/card";
 import { Button } from "../ui/button";
@@ -48,15 +48,17 @@ import {
 } from "../ui/select";
 import { useDataManagerSafe } from "@/contexts/DataManagerContext";
 import { useCategoryConfig } from "@/contexts/CategoryConfigContext";
-import { useCaseArchival, useFuzzySearch } from "@/hooks";
+import { useCaseArchival, useFuzzySearch, usePositionAssignmentsImport } from "@/hooks";
+import { PositionAssignmentsReviewModal } from "@/components/modals/PositionAssignmentsReviewModal";
 import type { ArchiveFileInfo } from "@/utils/services/CaseArchiveService";
 import type { CaseArchiveData, ArchivalSettings } from "@/types/archive";
 import { DEFAULT_ARCHIVAL_SETTINGS } from "@/types/archive";
+import type { StoredCase } from "@/types/case";
 
 /**
  * ArchivalSettingsPanel - Configure and manage case archival
  */
-export function ArchivalSettingsPanel() {
+export function ArchivalSettingsPanel({ cases }: { cases: StoredCase[] }) {
   const dataManager = useDataManagerSafe();
   const { config, refresh: refreshConfig } = useCategoryConfig();
   const isMountedRef = { current: true };
@@ -88,6 +90,14 @@ export function ArchivalSettingsPanel() {
   const archival = useCaseArchival({
     dataManager,
     isMounted: isMountedRef,
+  });
+  
+  // Position assignments import
+  const positionImport = usePositionAssignmentsImport({
+    cases,
+    onCasesUpdated: () => {
+      archival.refreshPendingCount();
+    },
   });
   
   // Sync settings from config
@@ -321,6 +331,61 @@ export function ArchivalSettingsPanel() {
           </div>
         </CardContent>
       </Card>
+      
+      {/* Position Assignments Import Card */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <FileSpreadsheet className="h-5 w-5" />
+            Position Assignments Check
+          </CardTitle>
+          <CardDescription>
+            Import your N-FOCUS &quot;List Position Assignments&quot; export to identify cases
+            no longer on your assignment list. Unmatched cases will be flagged for archival review.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-center gap-4">
+            <input
+              ref={positionImport.fileInputRef}
+              type="file"
+              accept=".csv"
+              onChange={positionImport.handleFileSelected}
+              hidden
+            />
+            <Button
+              variant="outline"
+              onClick={positionImport.handleButtonClick}
+              disabled={positionImport.importState.phase !== "idle"}
+            >
+              {positionImport.importState.phase === "parsing" ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Parsing…
+                </>
+              ) : (
+                <>
+                  <FileSpreadsheet className="mr-2 h-4 w-4" />
+                  Import Position Assignments
+                </>
+              )}
+            </Button>
+            <p className="text-xs text-muted-foreground">
+              Accepts CSV exports from the N-FOCUS position assignments screen.
+            </p>
+          </div>
+        </CardContent>
+      </Card>
+      
+      {/* Position Assignments Review Modal */}
+      <PositionAssignmentsReviewModal
+        importState={positionImport.importState}
+        onClose={positionImport.closePreview}
+        onConfirm={positionImport.confirmFlagForArchival}
+        onToggleCase={positionImport.toggleCaseSelection}
+        onToggleAll={positionImport.toggleAllCases}
+        canConfirm={positionImport.canConfirm}
+      />
       
       {/* Archive Browser Card */}
       <Card>

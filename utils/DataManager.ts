@@ -1406,4 +1406,17 @@ export class DataManager {
   async getPendingArchivalCount(): Promise<number> {
     return this.archive.getPendingCount();
   }
+
+  /**
+   * Mark arbitrary cases as pending archival review.
+   * 
+   * Used by the position assignments import to flag cases not found
+   * on a worker's active assignment list.
+   * 
+   * @param {string[]} caseIds - IDs of cases to mark for archival
+   * @returns {Promise<{ markedCount: number; markedIds: string[] }>} Result
+   */
+  async markCasesForArchivalByIds(caseIds: string[]): Promise<{ markedCount: number; markedIds: string[] }> {
+    return this.archive.markForArchival(caseIds);
+  }
 }

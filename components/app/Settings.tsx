@@ -402,7 +402,7 @@ export function Settings({ cases, onAlertsCsvImported }: SettingsProps) {
 
         {/* Archival Tab */}
         <TabsContent value="archival" className="space-y-6">
-          <ArchivalSettingsPanel />
+          <ArchivalSettingsPanel cases={cases} />
         </TabsContent>
 
         {/* Categories Tab */}

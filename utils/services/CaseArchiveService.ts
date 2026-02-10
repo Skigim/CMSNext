@@ -252,6 +252,62 @@ export class CaseArchiveService {
     return caseIds.length;
   }
 
+  /**
+   * Mark arbitrary cases as pending archival review.
+   * 
+   * Unlike `refreshArchivalQueue()` which uses age/status-based eligibility,
+   * this method marks any specified cases directly. Used by the position
+   * assignments import to flag cases not found on a worker's assignment list.
+   * 
+   * @param caseIds - IDs of cases to mark as pending archival
+   * @returns Object with count and IDs of newly marked cases
+   */
+  async markForArchival(caseIds: string[]): Promise<{ markedCount: number; markedIds: string[] }> {
+    if (caseIds.length === 0) {
+      return { markedCount: 0, markedIds: [] };
+    }
+
+    const currentData = await this.fileStorage.readFileData();
+    if (!currentData) {
+      return { markedCount: 0, markedIds: [] };
+    }
+
+    // Dedupe input and intersect with existing case IDs, excluding already-pending
+    const uniqueRequestedIds = [...new Set(caseIds)];
+    const caseIdSet = new Set(currentData.cases.map(c => c.id));
+    const alreadyPending = new Set(
+      currentData.cases.filter(c => c.pendingArchival).map(c => c.id)
+    );
+    const newIds = uniqueRequestedIds.filter(
+      id => caseIdSet.has(id) && !alreadyPending.has(id)
+    );
+
+    if (newIds.length === 0) {
+      return { markedCount: 0, markedIds: [] };
+    }
+
+    const updatedCases = markCasesForArchival(currentData.cases, newIds);
+
+    // Count actual changes by comparing before/after
+    const markedIds = updatedCases
+      .filter(c => c.pendingArchival && !alreadyPending.has(c.id) && newIds.includes(c.id))
+      .map(c => c.id);
+
+    const updatedData: NormalizedFileData = {
+      ...currentData,
+      cases: updatedCases,
+    };
+
+    await this.fileStorage.writeNormalizedData(updatedData);
+
+    logger.info("Marked cases for archival via position assignments", {
+      markedCount: markedIds.length,
+      markedIds,
+    });
+
+    return { markedCount: markedIds.length, markedIds };
+  }
+
   // ==========================================================================
   // Archive Operations
   // ==========================================================================

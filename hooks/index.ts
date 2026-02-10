@@ -101,6 +101,10 @@ export type {
   UseFuzzySearchOptions 
 } from './useFuzzySearch';
 
+// Position assignments import for archival flagging
+export { usePositionAssignmentsImport } from './usePositionAssignmentsImport';
+export type { PositionAssignmentsImportState } from './usePositionAssignmentsImport';
+
 // Dead code detection utility
 export { useTombstone } from './useTombstone';
 
