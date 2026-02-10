@@ -127,11 +127,11 @@ export function useWidgetData<T>(
       setLoading(true);
       setError(null);
 
-      const result = await dataFetcherRef.current();
+      const fetchedData = await dataFetcherRef.current();
 
       if (!mountedRef.current) return;
 
-  setData(result);
+  setData(fetchedData);
       const timestamp = Date.now();
       lastUpdateRef.current = timestamp;
       updateFreshness(timestamp);
@@ -143,7 +143,7 @@ export function useWidgetData<T>(
           duration,
           metadata: {
             widgetType: 'custom',
-            dataSize: typeof result === 'object' ? JSON.stringify(result).length : 0,
+            dataSize: typeof fetchedData === 'object' ? JSON.stringify(fetchedData).length : 0,
           },
         });
       }

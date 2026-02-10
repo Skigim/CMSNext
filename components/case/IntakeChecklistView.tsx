@@ -19,7 +19,7 @@ import {
   Users,
 } from "lucide-react";
 import { clickToCopy } from "../../utils/clipboard";
-import { getDisplayPhoneNumber, formatDateForDisplay } from "@/domain/common";
+import { getDisplayPhoneNumber, formatDateForDisplay, formatAddress } from "@/domain/common";
 import { generateAvsNarrative } from "@/domain/cases";
 import { CopyButton } from "../common/CopyButton";
 
@@ -193,11 +193,7 @@ export function IntakeChecklistView({ caseData, onEdit }: IntakeChecklistViewPro
           <InfoItem label="Email" value={person.email} icon={Mail} />
           <InfoItem
             label="Address"
-            value={
-              person.address.street
-                ? `${person.address.street}, ${person.address.city}, ${person.address.state} ${person.address.zip}`
-                : null
-            }
+            value={formatAddress(person.address)}
             icon={MapPin}
           />
           <InfoItem label="Living Arrangement" value={caseRecord.livingArrangement} />

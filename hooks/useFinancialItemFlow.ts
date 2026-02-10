@@ -223,7 +223,7 @@ export function useFinancialItemFlow({
 
   const validateForm = useCallback((): boolean => {
     // Delegate to domain layer for pure validation logic
-    const result = validateFinancialItem({
+    const validationResult = validateFinancialItem({
       description: formData.description,
       amount: formData.amount,
       verificationStatus: formData.verificationStatus,
@@ -232,12 +232,12 @@ export function useFinancialItemFlow({
 
     // Convert domain errors to hook state format
     const newErrors: FinancialFormErrors = {};
-    for (const [field, message] of Object.entries(result.errors)) {
+    for (const [field, message] of Object.entries(validationResult.errors)) {
       newErrors[field] = message;
     }
 
     setFormErrors(newErrors);
-    return result.isValid;
+    return validationResult.isValid;
   }, [formData.description, formData.amount, formData.verificationStatus, formData.verificationSource]);
 
   const handleSaveItem = useCallback(async (): Promise<boolean> => {

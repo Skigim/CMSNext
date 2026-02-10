@@ -2,6 +2,8 @@ import { describe, it, expect } from 'vitest';
 import {
   parseAccountBlock,
   parseAVSInput,
+  parseAVSInputAsync,
+  splitAVSBlocks,
   avsAccountToFinancialItem,
   avsAccountsToFinancialItems,
   findMatchingFinancialItem,
@@ -291,11 +293,12 @@ Balance as of 01/01/2025 - $1,000.00`;
       { id: '3', accountNumber: '****1234', description: 'Savings' }, // Same number, different type
     ];
 
-    it('finds matching item by accountNumber and description', () => {
+    it('finds exact match by accountNumber and description', () => {
       const newItem = { accountNumber: '****1234', description: 'Checking' };
       const match = findMatchingFinancialItem(newItem, existingItems);
       expect(match).toBeDefined();
-      expect(match?.id).toBe('1');
+      expect(match?.item.id).toBe('1');
+      expect(match?.confidence).toBe('exact');
     });
 
     it('returns undefined when no match found', () => {
@@ -304,19 +307,21 @@ Balance as of 01/01/2025 - $1,000.00`;
       expect(match).toBeUndefined();
     });
 
-    it('does not match if only accountNumber matches', () => {
+    it('matches with medium confidence when only accountNumber matches', () => {
       const newItem = { accountNumber: '****1234', description: 'Money Market' };
       const match = findMatchingFinancialItem(newItem, existingItems);
-      expect(match).toBeUndefined();
+      // Now returns medium confidence (account number match, different description)
+      expect(match).toBeDefined();
+      expect(match?.confidence).toBe('medium');
     });
 
-    it('does not match if only description matches', () => {
+    it('does not match if only description matches (with account number present)', () => {
       const newItem = { accountNumber: '****0000', description: 'Checking' };
       const match = findMatchingFinancialItem(newItem, existingItems);
       expect(match).toBeUndefined();
     });
 
-    it('returns undefined when newItem has no accountNumber', () => {
+    it('returns undefined when newItem has no accountNumber and no location match', () => {
       const newItem = { description: 'Checking' };
       const match = findMatchingFinancialItem(newItem, existingItems);
       expect(match).toBeUndefined();
@@ -329,8 +334,82 @@ Balance as of 01/01/2025 - $1,000.00`;
       const checkingMatch = findMatchingFinancialItem(checkingItem, existingItems);
       const savingsMatch = findMatchingFinancialItem(savingsItem, existingItems);
       
-      expect(checkingMatch?.id).toBe('1');
-      expect(savingsMatch?.id).toBe('3');
+      // Exact match takes priority over medium confidence
+      expect(checkingMatch?.item.id).toBe('1');
+      expect(checkingMatch?.confidence).toBe('exact');
+      expect(savingsMatch?.item.id).toBe('3');
+      expect(savingsMatch?.confidence).toBe('exact');
+    });
+
+    it('matches with high confidence when descriptions normalize to same value', () => {
+      const items = [
+        { id: '10', accountNumber: '****9876', description: 'Checking Account' },
+      ];
+      const newItem = { accountNumber: '****9876', description: 'Checking' };
+      const match = findMatchingFinancialItem(newItem, items);
+      expect(match).toBeDefined();
+      expect(match?.item.id).toBe('10');
+      expect(match?.confidence).toBe('high');
+    });
+
+    it('matches with low confidence by description + location when no account number', () => {
+      const items = [
+        { id: '20', accountNumber: undefined, description: 'Savings', location: 'First National Bank' },
+      ];
+      const newItem = { description: 'Savings' };
+      const match = findMatchingFinancialItem(newItem, items, 'First National Bank');
+      expect(match).toBeDefined();
+      expect(match?.item.id).toBe('20');
+      expect(match?.confidence).toBe('low');
+    });
+
+    it('returns undefined for low confidence when location does not match', () => {
+      const items = [
+        { id: '20', accountNumber: undefined, description: 'Savings', location: 'First National Bank' },
+      ];
+      const newItem = { description: 'Savings' };
+      const match = findMatchingFinancialItem(newItem, items, 'Other Bank');
+      expect(match).toBeUndefined();
+    });
+  });
+
+  describe('splitAVSBlocks', () => {
+    it('splits blocks separated by blank lines', () => {
+      const input = 'Owner1 CHECKING\nBank1 - (1234)\n\nOwner2 SAVINGS\nBank2 - (5678)';
+      const blocks = splitAVSBlocks(input);
+      expect(blocks).toHaveLength(2);
+    });
+
+    it('splits blocks by Account Owner markers', () => {
+      const input = 'Account Owner: John Doe CHECKING\nBank - (1234)\nAccount Owner: Jane SAVINGS\nBank2 - (5678)';
+      const blocks = splitAVSBlocks(input);
+      expect(blocks).toHaveLength(2);
+    });
+
+    it('returns empty array for empty input', () => {
+      expect(splitAVSBlocks('')).toHaveLength(0);
+    });
+  });
+
+  describe('parseAVSInputAsync', () => {
+    it('returns same results as synchronous parser for small inputs', async () => {
+      const input = `John Doe CHECKING
+First National Bank - (123456789)
+123 Main Street
+Anytown, ST 12345
+Balance as of 12/01/2025 - $5,432.10
+Refresh Date: 12/01/2025`;
+
+      const syncResult = parseAVSInput(input);
+      const asyncResult = await parseAVSInputAsync(input);
+
+      expect(asyncResult).toEqual(syncResult);
+      expect(asyncResult).toHaveLength(1);
+    });
+
+    it('returns empty array for empty input', async () => {
+      expect(await parseAVSInputAsync('')).toEqual([]);
+      expect(await parseAVSInputAsync(null as unknown as string)).toEqual([]);
     });
   });
 });

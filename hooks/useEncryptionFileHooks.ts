@@ -133,15 +133,15 @@ export function useEncryptionFileHooks(): UseEncryptionFileHooksResult {
         // If no key yet (unencrypted file), initialize encryption with pending password
         if (!key || !salt) {
           if (encryption.pendingPassword) {
-            const result = await encryption.initializeEncryption(encryption.pendingPassword);
-            if (!result) {
+            const initResult = await encryption.initializeEncryption(encryption.pendingPassword);
+            if (!initResult) {
               logger.error("Failed to initialize encryption");
               setLastError("Failed to initialize encryption");
               return data; // Return unencrypted on failure
             }
             // Use the returned key/salt directly (state update is async)
-            key = result.key;
-            salt = result.salt;
+            key = initResult.key;
+            salt = initResult.salt;
             // Clear pending password after use
             encryption.setPendingPassword(null);
             logger.info("Encryption initialized for new file");
@@ -159,7 +159,7 @@ export function useEncryptionFileHooks(): UseEncryptionFileHooksResult {
           return data;
         }
 
-        const result = await encryptWithKey(
+        const encryptResult = await encryptWithKey(
           data,
           key,
           salt,
@@ -170,13 +170,13 @@ export function useEncryptionFileHooks(): UseEncryptionFileHooksResult {
             : {}
         );
 
-        if (!result.success || !result.payload) {
-          setLastError(result.error || "Encryption failed");
-          logger.error("Encryption failed", { error: result.error });
+        if (!encryptResult.success || !encryptResult.payload) {
+          setLastError(encryptResult.error || "Encryption failed");
+          logger.error("Encryption failed", { error: encryptResult.error });
           return data; // Return unencrypted on failure
         }
 
-        return result.payload;
+        return encryptResult.payload;
       },
 
       /**
@@ -198,13 +198,13 @@ export function useEncryptionFileHooks(): UseEncryptionFileHooksResult {
           // Use the context method to derive key from file salt
           // Pass the payload's iteration count so files encrypted with older
           // iteration settings can still be decrypted correctly
-          const result = await encryption.deriveKeyFromFileSalt(data.salt, data.iterations);
+          const keyDerivationResult = await encryption.deriveKeyFromFileSalt(data.salt, data.iterations);
           
-          if (!result.success || !result.data) {
+          if (!keyDerivationResult.success || !keyDerivationResult.data) {
             // Validate error code against known values
             const validCodes = ['missing_password', 'wrong_password', 'corrupt_salt', 'system_error'] as const;
-            const errorCode: EncryptionErrorCode = validCodes.includes(result.error as any)
-              ? (result.error as EncryptionErrorCode)
+            const errorCode: EncryptionErrorCode = validCodes.includes(keyDerivationResult.error as any)
+              ? (keyDerivationResult.error as EncryptionErrorCode)
               : 'system_error';
             let errorMsg: string;
             
@@ -219,7 +219,7 @@ export function useEncryptionFileHooks(): UseEncryptionFileHooksResult {
                 errorMsg = "File is corrupted or damaged. Cannot decrypt.";
                 break;
               case 'system_error':
-                errorMsg = `Encryption system error: ${result.message || 'Unknown error'}`;
+                errorMsg = `Encryption system error: ${keyDerivationResult.message || 'Unknown error'}`;
                 break;
               default:
                 errorMsg = "Failed to derive encryption key";
@@ -230,7 +230,7 @@ export function useEncryptionFileHooks(): UseEncryptionFileHooksResult {
             throw new EncryptionError(errorCode, errorMsg);
           }
           
-          key = result.data;
+          key = keyDerivationResult.data;
         }
 
         const decryptResult = await decryptWithKey<NormalizedFileData>(data, key);

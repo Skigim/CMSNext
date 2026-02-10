@@ -120,7 +120,7 @@ export function useAlertsCsvImport({
           return;
         }
 
-        const result = await dataManager.mergeAlertsFromCsvContent(csvText, {
+        const mergeResult = await dataManager.mergeAlertsFromCsvContent(csvText, {
           cases,
           sourceFileName: file.name,
         });
@@ -128,18 +128,18 @@ export function useAlertsCsvImport({
         const refreshedIndex = await dataManager.getAlertsIndex({ cases });
         onAlertsCsvImported?.(refreshedIndex);
 
-        if (result.added === 0 && result.updated === 0) {
+        if (mergeResult.added === 0 && mergeResult.updated === 0) {
           toast.info("No new alerts found", {
-            description: `${file.name} didn't include new or updated alerts. Still tracking ${result.total} alerts.`,
+            description: `${file.name} didn't include new or updated alerts. Still tracking ${mergeResult.total} alerts.`,
           });
         } else {
           const descriptionParts = [
-            result.added > 0 ? `${result.added} new` : null,
-            result.updated > 0 ? `${result.updated} updated` : null,
+            mergeResult.added > 0 ? `${mergeResult.added} new` : null,
+            mergeResult.updated > 0 ? `${mergeResult.updated} updated` : null,
           ].filter(Boolean) as string[];
 
           toast.success("Alerts updated", {
-            description: `${descriptionParts.join(" · ")} • ${result.total} total alerts saved`,
+            description: `${descriptionParts.join(" · ")} • ${mergeResult.total} total alerts saved`,
           });
         }
       } catch (error) {

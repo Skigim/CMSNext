@@ -3,7 +3,7 @@
 **Report Date:** February 3, 2026  
 **Branch:** main  
 **Focus:** Audit Remediation + Archive Completion + UX Improvements  
-**Status:** Week 1 In Progress
+**Status:** Week 1 Complete
 
 ---
 
@@ -53,19 +53,19 @@ _Focus: Clear ALL outstanding audit items from January_
 #### Low Priority - UI Audit
 
 - [x] **Activity Log Unbounded Growth** - ✅ Auto-archive entries older than 90 days to yearly archive files
-- [ ] **Synchronous AVS Parsing** - Move to worker or use chunking for large inputs
-- [ ] **Rename vague variables** - `result`, `data`, `selected` → descriptive names
+- [x] **Synchronous AVS Parsing** - ✅ Implemented chunked async parsing (`parseAVSInputAsync`) with configurable chunk size
+- [x] **Rename vague variables** - ✅ Renamed 20+ `result` → descriptive names across 10 hook files
 - [x] **Standardize `error` vs `err`** - ✅ Migrated 19 instances to `catch (error)` pattern
 - [x] **Move `US_STATES` to shared constants** - ✅ Created `domain/common/usStates.ts`
 - [x] **Move `colorPalette` to module-level constant** - ✅ NotesSection.tsx no longer exists (refactored)
-- [ ] **Consolidate Error Boundary base class** - Create `BaseErrorBoundary` or use library
+- [x] **Consolidate Error Boundary base class** - ✅ Created `BaseErrorBoundary` abstract class; both boundaries now extend it
 
 #### Paper Cuts (Added Feb 6)
 
-- [ ] **Better Focus Lock in Financial Item Modal** - Improve focus trap/tab navigation within the financial item modal dialog
-- [ ] **Add Apt Field to Address Schema** - Add apartment/unit field to address validation schema
-- [ ] **Archive Panel Search Bar** - Add search/filter bar to the archival panel in Settings
-- [ ] **Tune AVS Import Current Item Matching** - Refine matching logic for AVS Import → Current Item flow
+- [x] **Better Focus Lock in Financial Item Modal** - ✅ Already complete via Radix Dialog built-in focus trap
+- [x] **Add Apt Field to Address Schema** - ✅ Added optional `apt` field to Address/MailingAddress types, Zod schemas, and form inputs
+- [x] **Archive Panel Search Bar** - ✅ Already complete with fuzzy search + status filter
+- [x] **Tune AVS Import Current Item Matching** - ✅ Tiered matching with confidence levels (exact/high/medium/low), normalized descriptions, partial account number matching
 
 #### Refactoring & Polish
 

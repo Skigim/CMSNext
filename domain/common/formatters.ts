@@ -1,10 +1,12 @@
 /**
- * Financial Formatting Utilities
+ * Financial & Address Formatting Utilities
  *
- * Pure functions for formatting currency, frequency, and account numbers.
+ * Pure functions for formatting currency, frequency, account numbers, and addresses.
  *
  * @module domain/common/formatters
  */
+
+import type { Address, MailingAddress } from "@/types/case";
 
 /**
  * Format currency amounts using US locale
@@ -68,4 +70,34 @@ export const getDisplayAmount = (
   }
 
   return baseAmount;
+};
+
+/**
+ * Format an address to a single-line display string.
+ *
+ * Includes the optional apt/unit field when present.
+ * Returns `null` if the address has no street value.
+ *
+ * @example
+ * formatAddress({ street: "123 Main St", apt: "4B", city: "NY", state: "NY", zip: "10001" })
+ * // "123 Main St, Apt 4B, NY, NY 10001"
+ */
+export const formatAddress = (
+  address: Address | MailingAddress,
+): string | null => {
+  if (!address.street) return null;
+  const parts = [address.street];
+  if (address.apt) parts.push(`Apt ${address.apt}`);
+  parts.push(`${address.city}, ${address.state} ${address.zip}`);
+  return parts.join(", ");
+};
+
+/**
+ * Format a mailing address, returning `null` when "same as physical" is checked.
+ */
+export const formatMailingAddress = (
+  mailingAddress: MailingAddress,
+): string | null => {
+  if (mailingAddress.sameAsPhysical) return null;
+  return formatAddress(mailingAddress);
 };

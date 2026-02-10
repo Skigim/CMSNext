@@ -11,7 +11,7 @@ import { Separator } from "../ui/separator";
 import { FileText, Calendar, Flag, Check, X, Copy, MapPin, Mail } from "lucide-react";
 import { NewCaseRecordData, VoterFormStatus, Address, MailingAddress } from "../../types/case";
 import { useCategoryConfig } from "@/contexts/CategoryConfigContext";
-import { isoToDateInputValue, dateInputValueToISO, formatDateForDisplay, US_STATES } from "@/domain/common";
+import { isoToDateInputValue, dateInputValueToISO, formatDateForDisplay, formatAddress, formatMailingAddress, US_STATES } from "@/domain/common";
 import { generateAvsNarrative } from "@/domain/cases";
 import { clickToCopy } from "../../utils/clipboard";
 
@@ -112,13 +112,8 @@ export function CaseColumn({
   };
 
   // Full address strings
-  const fullAddress = address.street
-    ? `${address.street}, ${address.city}, ${address.state} ${address.zip}`
-    : null;
-
-  const fullMailingAddress = !mailingAddress.sameAsPhysical && mailingAddress.street
-    ? `${mailingAddress.street}, ${mailingAddress.city}, ${mailingAddress.state} ${mailingAddress.zip}`
-    : null;
+  const fullAddress = formatAddress(address);
+  const fullMailingAddress = formatMailingAddress(mailingAddress);
 
   const handleCopyNarrative = useCallback(() => {
     const narrative = generateAvsNarrative({ avsConsentDate: caseData.avsConsentDate });
@@ -239,12 +234,20 @@ export function CaseColumn({
         <div className="space-y-3">
           <h4 className="text-sm font-medium text-muted-foreground">Physical Address</h4>
           <div className="space-y-2">
-            <Input
-              value={address.street}
-              onChange={(e) => onAddressChange('street', e.target.value)}
-              placeholder="Street address"
-              className="h-8"
-            />
+            <div className="grid grid-cols-[1fr_auto] gap-2">
+              <Input
+                value={address.street}
+                onChange={(e) => onAddressChange('street', e.target.value)}
+                placeholder="Street address"
+                className="h-8"
+              />
+              <Input
+                value={address.apt || ''}
+                onChange={(e) => onAddressChange('apt', e.target.value)}
+                placeholder="Apt/Unit"
+                className="h-8 w-24"
+              />
+            </div>
             <div className="grid grid-cols-3 gap-2">
               <Input
                 value={address.city}
@@ -292,12 +295,20 @@ export function CaseColumn({
           </div>
           {!mailingAddress.sameAsPhysical && (
             <div className="space-y-2">
-              <Input
-                value={mailingAddress.street}
-                onChange={(e) => onMailingAddressChange('street', e.target.value)}
-                placeholder="Street address"
-                className="h-8"
-              />
+              <div className="grid grid-cols-[1fr_auto] gap-2">
+                <Input
+                  value={mailingAddress.street}
+                  onChange={(e) => onMailingAddressChange('street', e.target.value)}
+                  placeholder="Street address"
+                  className="h-8"
+                />
+                <Input
+                  value={mailingAddress.apt || ''}
+                  onChange={(e) => onMailingAddressChange('apt', e.target.value)}
+                  placeholder="Apt/Unit"
+                  className="h-8 w-24"
+                />
+              </div>
               <div className="grid grid-cols-3 gap-2">
                 <Input
                   value={mailingAddress.city}

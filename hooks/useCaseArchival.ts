@@ -95,17 +95,17 @@ export function useCaseArchival(config: CaseArchivalConfig) {
     setIsLoading(true);
 
     try {
-      const result = await dataManager.refreshArchivalQueue();
+      const queueResult = await dataManager.refreshArchivalQueue();
 
       if (!isMounted.current) {
         return { newlyMarked: 0, totalPending: 0, newlyMarkedIds: [] };
       }
 
-      setPendingCount(result.totalPending);
-      setLastRefreshResult(result);
+      setPendingCount(queueResult.totalPending);
+      setLastRefreshResult(queueResult);
 
-      if (result.newlyMarked > 0) {
-        toast.info(`${result.newlyMarked} case${result.newlyMarked === 1 ? '' : 's'} pending archival review`, {
+      if (queueResult.newlyMarked > 0) {
+        toast.info(`${queueResult.newlyMarked} case${queueResult.newlyMarked === 1 ? '' : 's'} pending archival review`, {
           description: 'Review in the Archival Review tab',
           action: {
             label: 'View',
@@ -117,7 +117,7 @@ export function useCaseArchival(config: CaseArchivalConfig) {
         onCasesChanged?.();
       }
 
-      return result;
+      return queueResult;
     } catch (error) {
       if (isMounted.current) {
         const message = error instanceof Error ? error.message : 'Failed to refresh archival queue';
@@ -148,13 +148,13 @@ export function useCaseArchival(config: CaseArchivalConfig) {
     const loadingId = toast.loading(`Archiving ${caseIds.length} case${caseIds.length === 1 ? '' : 's'}...`);
 
     try {
-      const result = await dataManager.archiveApprovedCases(caseIds);
+      const archiveResult = await dataManager.archiveApprovedCases(caseIds);
 
       if (!isMounted.current) return null;
 
       toast.dismiss(loadingId);
-      toast.success(`Archived ${result.archivedCount} case${result.archivedCount === 1 ? '' : 's'}`, {
-        description: `Saved to ${result.archiveFileName}`,
+      toast.success(`Archived ${archiveResult.archivedCount} case${archiveResult.archivedCount === 1 ? '' : 's'}`, {
+        description: `Saved to ${archiveResult.archiveFileName}`,
       });
 
       // Update pending count
@@ -170,7 +170,7 @@ export function useCaseArchival(config: CaseArchivalConfig) {
         setArchiveFiles(files);
       }
 
-      return result;
+      return archiveResult;
     } catch (error) {
       toast.dismiss(loadingId);
       if (isMounted.current) {
@@ -312,13 +312,13 @@ export function useCaseArchival(config: CaseArchivalConfig) {
     const loadingId = toast.loading(`Restoring ${caseIds.length} case${caseIds.length === 1 ? '' : 's'}...`);
 
     try {
-      const result = await dataManager.restoreFromArchive(archiveFileName, caseIds);
+      const restoreResult = await dataManager.restoreFromArchive(archiveFileName, caseIds);
 
       if (!isMounted.current) return null;
 
       toast.dismiss(loadingId);
-      toast.success(`Restored ${result.restoredCount} case${result.restoredCount === 1 ? '' : 's'}`, {
-        description: `${result.financialsRestored} financials, ${result.notesRestored} notes`,
+      toast.success(`Restored ${restoreResult.restoredCount} case${restoreResult.restoredCount === 1 ? '' : 's'}`, {
+        description: `${restoreResult.financialsRestored} financials, ${restoreResult.notesRestored} notes`,
       });
 
       // Notify parent to refresh case list
@@ -336,7 +336,7 @@ export function useCaseArchival(config: CaseArchivalConfig) {
         setLoadedArchive(updatedArchive);
       }
 
-      return result;
+      return restoreResult;
     } catch (error) {
       toast.dismiss(loadingId);
       if (isMounted.current) {

@@ -91,30 +91,30 @@ export function useCaseOperations(config: CaseOperationsConfig) {
     setLoading(true);
     setError(null);
 
-    const result = await service!.loadCases();
+    const loadResult = await service!.loadCases();
 
     if (!isMounted.current) return [];
 
     setLoading(false);
 
-    if (!result.success) {
-      setError(result.error);
-      toast.error(result.error, { duration: result.isLegacyFormat ? 8000 : undefined });
+    if (!loadResult.success) {
+      setError(loadResult.error);
+      toast.error(loadResult.error, { duration: loadResult.isLegacyFormat ? 8000 : undefined });
       return [];
     }
 
-    setCases(result.data);
+    setCases(loadResult.data);
     setHasLoadedData(true);
 
     // Show empty state message if applicable
-    if ('isEmpty' in result && result.isEmpty) {
+    if ('isEmpty' in loadResult && loadResult.isEmpty) {
       toast.success('Connected successfully - ready to start fresh', {
         id: 'connected-empty',
         duration: 3000,
       });
     }
 
-    return result.data;
+    return loadResult.data;
   }, [guardService, service, isMounted, setError, setLoading, setCases, setHasLoadedData]);
 
   const saveCase = useCallback(async (
@@ -127,14 +127,14 @@ export function useCaseOperations(config: CaseOperationsConfig) {
     const toastId = toast.loading(isEditing ? "Updating case..." : "Creating case...");
     setError(null);
 
-    const result = await service!.saveCase(caseData, editingCaseId);
+    const saveResult = await service!.saveCase(caseData, editingCaseId);
 
     if (!isMounted.current) return undefined;
 
-    if (!result.success) {
-      setError(result.error);
-      toast.error(result.error, { id: toastId });
-      throw new Error(result.error);
+    if (!saveResult.success) {
+      setError(saveResult.error);
+      toast.error(saveResult.error, { id: toastId });
+      throw new Error(saveResult.error);
     }
 
     toast.success(
@@ -142,7 +142,7 @@ export function useCaseOperations(config: CaseOperationsConfig) {
       { id: toastId }
     );
 
-    return result.data;
+    return saveResult.data;
   }, [guardService, service, isMounted, setError]);
 
   const deleteCase = useCallback(async (caseId: string) => {
@@ -155,14 +155,14 @@ export function useCaseOperations(config: CaseOperationsConfig) {
 
     setError(null);
 
-    const result = await service!.deleteCase(caseId);
+    const deleteResult = await service!.deleteCase(caseId);
 
     if (!isMounted.current) return;
 
-    if (!result.success) {
-      setError(result.error);
-      toast.error(result.error);
-      throw new Error(result.error);
+    if (!deleteResult.success) {
+      setError(deleteResult.error);
+      toast.error(deleteResult.error);
+      throw new Error(deleteResult.error);
     }
 
     toast.success(`${name} case deleted successfully`);
@@ -177,16 +177,16 @@ export function useCaseOperations(config: CaseOperationsConfig) {
 
     setError(null);
 
-    const result = await service!.saveNote(noteData, caseId, editingNote?.id);
+    const noteResult = await service!.saveNote(noteData, caseId, editingNote?.id);
 
-    if (!result.success) {
-      setError(result.error);
-      toast.error(result.error);
+    if (!noteResult.success) {
+      setError(noteResult.error);
+      toast.error(noteResult.error);
       return null;
     }
 
     toast.success(editingNote ? "Note updated successfully" : "Note added successfully");
-    return result.data;
+    return noteResult.data;
   }, [guardService, service, setError]);
 
   const updateCaseStatus = useCallback(async (
@@ -198,22 +198,22 @@ export function useCaseOperations(config: CaseOperationsConfig) {
     const toastId = toast.loading('Updating case status...');
     setError(null);
 
-    const result = await service!.updateCaseStatus(caseId, status);
+    const statusResult = await service!.updateCaseStatus(caseId, status);
 
     if (!isMounted.current) return null;
 
-    if (!result.success) {
-      if (result.isAborted) {
+    if (!statusResult.success) {
+      if (statusResult.isAborted) {
         toast.dismiss(toastId);
         return null;
       }
-      setError(result.error);
-      toast.error(result.error, { id: toastId });
+      setError(statusResult.error);
+      toast.error(statusResult.error, { id: toastId });
       return null;
     }
 
     toast.success(`Status updated to ${status}`, { id: toastId, duration: 2000 });
-    return result.data;
+    return statusResult.data;
   }, [guardService, service, isMounted, setError]);
 
   const importCases = useCallback(async (importedCases: StoredCase[]) => {
@@ -221,14 +221,14 @@ export function useCaseOperations(config: CaseOperationsConfig) {
 
     setError(null);
 
-    const result = await service!.importCases(importedCases);
+    const importResult = await service!.importCases(importedCases);
 
     if (!isMounted.current) return;
 
-    if (!result.success) {
-      setError(result.error);
-      toast.error(result.error);
-      throw new Error(result.error);
+    if (!importResult.success) {
+      setError(importResult.error);
+      toast.error(importResult.error);
+      throw new Error(importResult.error);
     }
 
     setHasLoadedData(true);
@@ -241,17 +241,17 @@ export function useCaseOperations(config: CaseOperationsConfig) {
     const toastId = toast.loading(`Deleting ${caseIds.length} case${caseIds.length === 1 ? '' : 's'}...`);
     setError(null);
 
-    const result = await service!.deleteCases(caseIds);
+    const bulkDeleteResult = await service!.deleteCases(caseIds);
 
     if (!isMounted.current) return 0;
 
-    if (!result.success) {
-      setError(result.error);
-      toast.error(result.error, { id: toastId });
+    if (!bulkDeleteResult.success) {
+      setError(bulkDeleteResult.error);
+      toast.error(bulkDeleteResult.error, { id: toastId });
       return 0;
     }
 
-    const { deleted } = result.data;
+    const { deleted } = bulkDeleteResult.data;
     toast.success(`Deleted ${deleted} case${deleted === 1 ? '' : 's'}`, { id: toastId });
     return deleted;
   }, [guardService, service, isMounted, setError]);
@@ -265,17 +265,17 @@ export function useCaseOperations(config: CaseOperationsConfig) {
     const toastId = toast.loading(`Updating ${caseIds.length} case${caseIds.length === 1 ? '' : 's'}...`);
     setError(null);
 
-    const result = await service!.updateCasesStatus(caseIds, status);
+    const bulkStatusResult = await service!.updateCasesStatus(caseIds, status);
 
     if (!isMounted.current) return 0;
 
-    if (!result.success) {
-      setError(result.error);
-      toast.error(result.error, { id: toastId });
+    if (!bulkStatusResult.success) {
+      setError(bulkStatusResult.error);
+      toast.error(bulkStatusResult.error, { id: toastId });
       return 0;
     }
 
-    const { updated } = result.data;
+    const { updated } = bulkStatusResult.data;
     toast.success(`Updated ${updated.length} case${updated.length === 1 ? '' : 's'} to ${status}`, { id: toastId, duration: 2000 });
     return updated.length;
   }, [guardService, service, isMounted, setError]);
@@ -290,17 +290,17 @@ export function useCaseOperations(config: CaseOperationsConfig) {
     const toastId = toast.loading(`Updating ${caseIds.length} case${caseIds.length === 1 ? '' : 's'}...`);
     setError(null);
 
-    const result = await service!.updateCasesPriority(caseIds, priority);
+    const priorityResult = await service!.updateCasesPriority(caseIds, priority);
 
     if (!isMounted.current) return 0;
 
-    if (!result.success) {
-      setError(result.error);
-      toast.error(result.error, { id: toastId });
+    if (!priorityResult.success) {
+      setError(priorityResult.error);
+      toast.error(priorityResult.error, { id: toastId });
       return 0;
     }
 
-    const { updated } = result.data;
+    const { updated } = priorityResult.data;
     toast.success(`Updated ${updated.length} case${updated.length === 1 ? '' : 's'} to ${label}`, { id: toastId, duration: 2000 });
     return updated.length;
   }, [guardService, service, isMounted, setError]);

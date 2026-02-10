@@ -71,9 +71,9 @@ export function useDataSync({ onRefresh, deps = [] }: UseDataSyncOptions): void 
 
   useEffect(() => {
     // Call refresh and handle both sync and async functions
-    const result = onRefresh();
-    if (result instanceof Promise) {
-      result.catch((err) => {
+    const refreshOutcome = onRefresh();
+    if (refreshOutcome instanceof Promise) {
+      refreshOutcome.catch((err) => {
         // Silent failure - errors are expected when dataManager is null
         // or during context initialization
         logger.debug("Data sync refresh skipped:", err);

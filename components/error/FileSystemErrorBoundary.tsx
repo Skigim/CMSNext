@@ -1,29 +1,31 @@
-import React, { Component, ReactNode } from 'react';
+import React from 'react';
 import { toast } from 'sonner';
-import { errorReporting } from '@/utils/errorReporting';
+import {
+  BaseErrorBoundary,
+  type BaseErrorBoundaryProps,
+  type BaseErrorBoundaryState,
+} from './BaseErrorBoundary';
 
-interface FileSystemErrorBoundaryProps {
-  children: ReactNode;
-  fallback?: ReactNode;
-  onError?: (error: Error, errorInfo: React.ErrorInfo) => void;
+interface FileSystemErrorBoundaryProps extends BaseErrorBoundaryProps {
   onRetry?: () => void;
-  resetOnPropsChange?: boolean;
-  resetKeys?: Array<string | number>;
 }
 
-interface FileSystemErrorBoundaryState {
-  hasError: boolean;
-  error: Error | null;
-  errorInfo: React.ErrorInfo | null;
+interface FileSystemErrorBoundaryState extends BaseErrorBoundaryState {
   isFileSystemError: boolean;
 }
 
-export class FileSystemErrorBoundary extends Component<
+/**
+ * Error boundary specialised for File System Access API errors.
+ *
+ * Extends {@link BaseErrorBoundary} and adds:
+ * - File-system error detection (permission, quota, security, abort)
+ * - User-friendly error messages & descriptions
+ * - Optional `onRetry` callback
+ */
+export class FileSystemErrorBoundary extends BaseErrorBoundary<
   FileSystemErrorBoundaryProps,
   FileSystemErrorBoundaryState
 > {
-  private resetTimeoutId: number | null = null;
-
   constructor(props: FileSystemErrorBoundaryProps) {
     super(props);
     this.state = {
@@ -35,267 +37,168 @@ export class FileSystemErrorBoundary extends Component<
   }
 
   static getDerivedStateFromError(error: Error): Partial<FileSystemErrorBoundaryState> {
-    const isFileSystemError = FileSystemErrorBoundary.isFileSystemRelatedError(error);
-    
     return {
       hasError: true,
       error,
-      isFileSystemError,
+      isFileSystemError: FileSystemErrorBoundary.isFileSystemRelatedError(error),
     };
   }
 
   static isFileSystemRelatedError(error: Error): boolean {
-    const fileSystemErrorPatterns = [
-      /file system/i,
-      /filesystem/i,
-      /permission denied/i,
-      /access denied/i,
-      /not supported/i,
-      /quota exceeded/i,
-      /security error/i,
-      /user cancelled/i,
-      /user aborted/i,
-      /AbortError/i,
-      /NotAllowedError/i,
-      /SecurityError/i,
+    const patterns = [
+      /file system/i, /filesystem/i, /permission denied/i, /access denied/i,
+      /not supported/i, /quota exceeded/i, /security error/i, /user cancelled/i,
+      /user aborted/i, /AbortError/i, /NotAllowedError/i, /SecurityError/i,
       /QuotaExceededError/i,
     ];
 
-    const errorMessage = error.message || error.toString();
-    const errorName = error.name || '';
-    const errorStack = error.stack || '';
-
-    return fileSystemErrorPatterns.some(pattern => 
-      pattern.test(errorMessage) || 
-      pattern.test(errorName) || 
-      pattern.test(errorStack)
-    );
+    const text = [error.message, error.name, error.stack].filter(Boolean).join(' ');
+    return patterns.some((p) => p.test(text));
   }
 
-  componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
-    console.error('FileSystemErrorBoundary caught an error:', error, errorInfo);
-    
-    this.setState({
-      errorInfo,
+  // -- BaseErrorBoundary hooks -----------------------------------------------
+
+  protected getReportingContext() {
+    const isFsError = this.state.isFileSystemError;
+    return {
+      type: 'filesystem-error-boundary',
+      isFileSystemError: isFsError,
+      severity: (isFsError ? 'medium' : 'high') as 'medium' | 'high',
+      tags: isFsError
+        ? ['filesystem', 'error-boundary', 'user-action']
+        : ['error-boundary', 'react'],
+    };
+  }
+
+  protected shouldShowToast(): boolean {
+    return this.state.isFileSystemError;
+  }
+
+  protected showToast(): void {
+    toast.error('File system error occurred', {
+      description:
+        'There was a problem accessing the file system. Please check permissions and try again.',
+      duration: 5000,
     });
-
-    // Only report if we haven't reported this error recently
-    // The global error handler might have already caught this
-    const shouldReport = this.state.isFileSystemError || 
-                        !error.stack?.includes('ErrorBoundaryTest'); // Don't duplicate test errors
-
-    if (shouldReport) {
-      // Report error to error reporting service
-      errorReporting.reportError(error, {
-        componentStack: errorInfo.componentStack || undefined,
-        context: {
-          type: 'filesystem-error-boundary',
-          isFileSystemError: this.state.isFileSystemError,
-          componentStack: errorInfo.componentStack || undefined,
-        },
-        severity: this.state.isFileSystemError ? 'medium' : 'high',
-        tags: this.state.isFileSystemError 
-          ? ['filesystem', 'error-boundary', 'user-action']
-          : ['error-boundary', 'react'],
-      });
-    }
-
-    // Call custom error handler if provided
-    if (this.props.onError) {
-      this.props.onError(error, errorInfo);
-    }
-
-    // Show appropriate toast based on error type (only for filesystem errors)
-    if (this.state.isFileSystemError) {
-      toast.error('File system error occurred', {
-        description: 'There was a problem accessing the file system. Please check permissions and try again.',
-        duration: 5000,
-      });
-    }
-    // Don't show toast for general React errors - let ErrorBoundary handle those
   }
 
-  componentDidUpdate(prevProps: FileSystemErrorBoundaryProps) {
-    const { resetOnPropsChange, resetKeys } = this.props;
-    const { hasError } = this.state;
-
-    if (hasError && resetOnPropsChange && resetKeys) {
-      const hasResetKeyChanged = resetKeys.some(
-        (key, index) => prevProps.resetKeys?.[index] !== key
-      );
-
-      if (hasResetKeyChanged) {
-        this.resetErrorBoundary();
-      }
-    }
-  }
-
-  resetErrorBoundary = () => {
-    if (this.resetTimeoutId) {
-      clearTimeout(this.resetTimeoutId);
-    }
-
-    this.setState({
-      hasError: false,
-      error: null,
-      errorInfo: null,
-      isFileSystemError: false,
-    });
-  };
+  // -- Retry override --------------------------------------------------------
 
   handleRetry = () => {
-    // Call custom retry handler if provided
-    if (this.props.onRetry) {
-      this.props.onRetry();
-    }
-
-    // Reset error boundary
+    this.props.onRetry?.();
     this.resetTimeoutId = window.setTimeout(() => {
       this.resetErrorBoundary();
     }, 100);
   };
 
-  getErrorMessage(): string {
-    if (!this.state.error) return 'An unexpected error occurred';
+  // -- User-friendly messages ------------------------------------------------
 
+  private getErrorMessage(): string {
     const error = this.state.error;
-    
-    // Handle specific file system errors with user-friendly messages
-    if (error.name === 'AbortError') {
-      return 'File operation was cancelled';
-    }
-    
-    if (error.name === 'NotAllowedError' || error.message.includes('permission')) {
+    if (!error) return 'An unexpected error occurred';
+    if (error.name === 'AbortError') return 'File operation was cancelled';
+    if (error.name === 'NotAllowedError' || error.message.includes('permission'))
       return 'Permission denied to access the file system';
-    }
-    
-    if (error.name === 'SecurityError') {
+    if (error.name === 'SecurityError')
       return 'Security restriction prevented file system access';
-    }
-    
-    if (error.name === 'QuotaExceededError') {
-      return 'Storage quota exceeded';
-    }
-    
-    if (error.message.includes('not supported')) {
+    if (error.name === 'QuotaExceededError') return 'Storage quota exceeded';
+    if (error.message.includes('not supported'))
       return 'File system access is not supported in this browser';
-    }
-
     return 'A file system error occurred';
   }
 
-  getErrorDescription(): string {
-    if (!this.state.error) return 'Please try again or contact support.';
-
+  private getErrorDescription(): string {
     const error = this.state.error;
-    
-    if (error.name === 'AbortError') {
+    if (!error) return 'Please try again or contact support.';
+    if (error.name === 'AbortError')
       return 'The file operation was cancelled. You can try again if needed.';
-    }
-    
-    if (error.name === 'NotAllowedError' || error.message.includes('permission')) {
+    if (error.name === 'NotAllowedError' || error.message.includes('permission'))
       return 'The browser blocked access to the file system. Please check your browser settings and try again.';
-    }
-    
-    if (error.name === 'SecurityError') {
-      return 'Your browser\'s security settings prevented access to the file system.';
-    }
-    
-    if (error.name === 'QuotaExceededError') {
-      return 'Your browser\'s storage quota has been exceeded. Please free up some space and try again.';
-    }
-    
-    if (error.message.includes('not supported')) {
-      return 'This browser doesn\'t support the File System Access API. Please use Chrome, Edge, or Opera.';
-    }
-
+    if (error.name === 'SecurityError')
+      return "Your browser's security settings prevented access to the file system.";
+    if (error.name === 'QuotaExceededError')
+      return "Your browser's storage quota has been exceeded. Please free up some space and try again.";
+    if (error.message.includes('not supported'))
+      return "This browser doesn't support the File System Access API. Please use Chrome, Edge, or Opera.";
     return 'There was a problem with the file system operation. Please try again.';
   }
 
-  render() {
-    if (this.state.hasError) {
-      // Custom fallback UI
-      if (this.props.fallback) {
-        return this.props.fallback;
-      }
+  // -- Fallback UI -----------------------------------------------------------
 
-      // File system specific fallback UI
-      return (
-        <div className="min-h-[200px] flex items-center justify-center p-6">
-          <div className="max-w-md w-full p-6 bg-card border border-border rounded-lg shadow-sm">
-            <div className="text-center">
-              <div className="w-12 h-12 mx-auto mb-4 bg-amber-100 dark:bg-amber-900/20 rounded-full flex items-center justify-center">
-                <svg
-                  className="w-6 h-6 text-amber-600 dark:text-amber-400"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2H5a2 2 0 00-2-2z"
-                  />
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M8 5v4M16 5v4"
-                  />
-                </svg>
-              </div>
-              
-              <h3 className="text-lg font-semibold text-foreground mb-2">
-                {this.getErrorMessage()}
-              </h3>
-              
-              <p className="text-muted-foreground mb-6 text-sm">
-                {this.getErrorDescription()}
-              </p>
+  protected renderFallback(): React.ReactNode {
+    return (
+      <div className="min-h-[200px] flex items-center justify-center p-6">
+        <div className="max-w-md w-full p-6 bg-card border border-border rounded-lg shadow-sm">
+          <div className="text-center">
+            <div className="w-12 h-12 mx-auto mb-4 bg-amber-100 dark:bg-amber-900/20 rounded-full flex items-center justify-center">
+              <svg
+                className="w-6 h-6 text-amber-600 dark:text-amber-400"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2H5a2 2 0 00-2-2z"
+                />
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M8 5v4M16 5v4"
+                />
+              </svg>
+            </div>
 
-              <div className="space-y-3">
+            <h3 className="text-lg font-semibold text-foreground mb-2">
+              {this.getErrorMessage()}
+            </h3>
+
+            <p className="text-muted-foreground mb-6 text-sm">
+              {this.getErrorDescription()}
+            </p>
+
+            <div className="space-y-3">
+              <button
+                onClick={this.handleRetry}
+                className="w-full px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors text-sm"
+              >
+                Try Again
+              </button>
+
+              {this.state.isFileSystemError && (
                 <button
-                  onClick={this.handleRetry}
-                  className="w-full px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors text-sm"
+                  onClick={() => window.location.reload()}
+                  className="w-full px-4 py-2 bg-secondary text-secondary-foreground rounded-md hover:bg-secondary/90 transition-colors text-sm"
                 >
-                  Try Again
+                  Refresh Page
                 </button>
-                
-                {this.state.isFileSystemError && (
-                  <button
-                    onClick={() => window.location.reload()}
-                    className="w-full px-4 py-2 bg-secondary text-secondary-foreground rounded-md hover:bg-secondary/90 transition-colors text-sm"
-                  >
-                    Refresh Page
-                  </button>
-                )}
-              </div>
-
-              {/* Development error details */}
-              {process.env.NODE_ENV === 'development' && this.state.error && (
-                <details className="mt-4 text-left">
-                  <summary className="cursor-pointer text-xs text-muted-foreground hover:text-foreground">
-                    Error Details (Development)
-                  </summary>
-                  <div className="mt-2 p-2 bg-muted rounded text-xs font-mono overflow-auto max-h-24">
-                    <div className="text-destructive font-semibold mb-1">
-                      {this.state.error.name}: {this.state.error.message}
-                    </div>
-                    {this.state.error.stack && (
-                      <pre className="whitespace-pre-wrap text-muted-foreground text-xs">
-                        {this.state.error.stack.slice(0, 200)}...
-                      </pre>
-                    )}
-                  </div>
-                </details>
               )}
             </div>
+
+            {/* Development error details */}
+            {process.env.NODE_ENV === 'development' && this.state.error && (
+              <details className="mt-4 text-left">
+                <summary className="cursor-pointer text-xs text-muted-foreground hover:text-foreground">
+                  Error Details (Development)
+                </summary>
+                <div className="mt-2 p-2 bg-muted rounded text-xs font-mono overflow-auto max-h-24">
+                  <div className="text-destructive font-semibold mb-1">
+                    {this.state.error.name}: {this.state.error.message}
+                  </div>
+                  {this.state.error.stack && (
+                    <pre className="whitespace-pre-wrap text-muted-foreground text-xs">
+                      {this.state.error.stack.slice(0, 200)}...
+                    </pre>
+                  )}
+                </div>
+              </details>
+            )}
           </div>
         </div>
-      );
-    }
-
-    return this.props.children;
+      </div>
+    );
   }
 }

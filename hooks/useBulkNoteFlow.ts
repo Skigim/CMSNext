@@ -107,10 +107,10 @@ export function useBulkNoteFlow({
 
       setIsSubmitting(true);
       try {
-        const result = await dataManager.addNoteToCases(selectedCaseIds, noteData);
+        const bulkNoteResult = await dataManager.addNoteToCases(selectedCaseIds, noteData);
         
         setIsModalOpen(false);
-        toast.success(`Added note to ${result.addedCount} case${result.addedCount === 1 ? '' : 's'}`);
+        toast.success(`Added note to ${bulkNoteResult.addedCount} case${bulkNoteResult.addedCount === 1 ? '' : 's'}`);
         onSuccess?.();
       } catch (error) {
         logger.error("Failed to add bulk notes", { error: extractErrorMessage(error) });

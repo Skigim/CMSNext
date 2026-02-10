@@ -39,6 +39,8 @@ export {
   formatAccountNumber,
   parseNumericInput,
   getDisplayAmount,
+  formatAddress,
+  formatMailingAddress,
 } from "./formatters";
 
 export {

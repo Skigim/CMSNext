@@ -49,6 +49,8 @@ import {
   formatPhoneNumberAsTyped,
   normalizePhoneNumber,
   getDisplayPhoneNumber,
+  formatAddress,
+  formatMailingAddress,
 } from "@/domain/common";
 import { CopyButton } from "../common/CopyButton";
 import { generateAvsNarrative } from "@/domain/cases";
@@ -315,14 +317,8 @@ export function AddressesSection({
   onAddressChange,
   onMailingAddressChange,
 }: AddressesSectionProps) {
-  const fullAddress = address.street
-    ? `${address.street}, ${address.city}, ${address.state} ${address.zip}`
-    : null;
-
-  const fullMailingAddress =
-    !mailingAddress.sameAsPhysical && mailingAddress.street
-      ? `${mailingAddress.street}, ${mailingAddress.city}, ${mailingAddress.state} ${mailingAddress.zip}`
-      : null;
+  const fullAddress = formatAddress(address);
+  const fullMailingAddress = formatMailingAddress(mailingAddress);
 
   return (
     <Card>
@@ -338,12 +334,20 @@ export function AddressesSection({
             {/* Physical Address */}
             <div className="space-y-2">
               <h4 className="text-sm font-medium text-muted-foreground">Physical Address</h4>
-              <Input
-                value={address.street}
-                onChange={(e) => onAddressChange("street", e.target.value)}
-                placeholder="Street address"
-                className="h-8"
-              />
+              <div className="grid grid-cols-[1fr_auto] gap-2">
+                <Input
+                  value={address.street}
+                  onChange={(e) => onAddressChange("street", e.target.value)}
+                  placeholder="Street address"
+                  className="h-8"
+                />
+                <Input
+                  value={address.apt || ''}
+                  onChange={(e) => onAddressChange("apt", e.target.value)}
+                  placeholder="Apt/Unit"
+                  className="h-8 w-24"
+                />
+              </div>
               <div className="grid grid-cols-3 gap-2">
                 <Input
                   value={address.city}
@@ -387,12 +391,20 @@ export function AddressesSection({
               </div>
               {!mailingAddress.sameAsPhysical && (
                 <>
-                  <Input
-                    value={mailingAddress.street}
-                    onChange={(e) => onMailingAddressChange("street", e.target.value)}
-                    placeholder="Street address"
-                    className="h-8"
-                  />
+                  <div className="grid grid-cols-[1fr_auto] gap-2">
+                    <Input
+                      value={mailingAddress.street}
+                      onChange={(e) => onMailingAddressChange("street", e.target.value)}
+                      placeholder="Street address"
+                      className="h-8"
+                    />
+                    <Input
+                      value={mailingAddress.apt || ''}
+                      onChange={(e) => onMailingAddressChange("apt", e.target.value)}
+                      placeholder="Apt/Unit"
+                      className="h-8 w-24"
+                    />
+                  </div>
                   <div className="grid grid-cols-3 gap-2">
                     <Input
                       value={mailingAddress.city}

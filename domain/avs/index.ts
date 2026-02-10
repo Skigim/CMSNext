@@ -9,8 +9,12 @@
 export {
   KNOWN_ACCOUNT_TYPES,
   type ParsedAVSAccount,
+  type MatchConfidence,
+  type MatchResult,
   parseAccountBlock,
   parseAVSInput,
+  parseAVSInputAsync,
+  splitAVSBlocks,
   avsAccountToFinancialItem,
   avsAccountsToFinancialItems,
   findMatchingFinancialItem,

@@ -300,12 +300,12 @@ export function usePositionAssignmentsImport({
 
     try {
       const caseIds = Array.from(importState.selectedCaseIds);
-      const result = await dataManager.markCasesForArchivalByIds(caseIds);
+      const archivalResult = await dataManager.markCasesForArchivalByIds(caseIds);
 
       onCasesUpdated?.();
 
       toast.success("Cases flagged for archival", {
-        description: `${result.markedCount} case${result.markedCount === 1 ? "" : "s"} moved to the archival review queue.`,
+        description: `${archivalResult.markedCount} case${archivalResult.markedCount === 1 ? "" : "s"} moved to the archival review queue.`,
       });
 
       setImportState(INITIAL_STATE);

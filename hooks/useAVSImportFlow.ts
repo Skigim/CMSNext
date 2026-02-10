@@ -4,9 +4,11 @@ import { useDataManagerSafe } from "../contexts/DataManagerContext";
 import type { StoredCase, FinancialItem, StoredFinancialItem } from "../types/case";
 import {
   parseAVSInput,
+  parseAVSInputAsync,
   avsAccountToFinancialItem,
   findMatchingFinancialItem,
   type ParsedAVSAccount,
+  type MatchConfidence,
 } from "@/domain/avs";
 import { createLogger } from "@/utils/logger";
 import { extractErrorMessage } from "@/utils/errorUtils";
@@ -21,6 +23,8 @@ export interface AVSAccountWithMeta extends ParsedAVSAccount {
   selected: boolean;
   /** ID of existing item if this would update (undefined = new) */
   existingItemId?: string;
+  /** How confident the match is (undefined = no match / new item) */
+  matchConfidence?: MatchConfidence;
 }
 
 export interface AVSImportState {
@@ -153,7 +157,7 @@ export function useAVSImportFlow({
   }, []);
 
   const handleInputChange = useCallback(async (input: string) => {
-    // Large input threshold (100KB) - use scheduling for performance
+    // Large input threshold (100KB) - use async chunked parsing for performance
     const LARGE_INPUT_THRESHOLD = 100 * 1024;
     const isLargeInput = input.length > LARGE_INPUT_THRESHOLD;
     
@@ -166,20 +170,10 @@ export function useAVSImportFlow({
       }));
     }
 
-    // Wrap parsing in a promise that uses requestIdleCallback for large inputs
-    const parseWithScheduling = (): Promise<ParsedAVSAccount[]> => {
-      return new Promise((resolve) => {
-        const doParse = () => resolve(parseAVSInput(input));
-        
-        if (isLargeInput && 'requestIdleCallback' in window) {
-          requestIdleCallback(doParse, { timeout: 2000 });
-        } else {
-          doParse();
-        }
-      });
-    };
-
-    const parsed = await parseWithScheduling();
+    // Use chunked async parser for large inputs to avoid blocking the main thread
+    const parsed = isLargeInput
+      ? await parseAVSInputAsync(input)
+      : parseAVSInput(input);
     
     // Fetch existing resources to detect duplicates
     let existingResources: StoredFinancialItem[] = [];
@@ -206,11 +200,16 @@ export function useAVSImportFlow({
     // Mark each parsed account with selection state and match status
     const accountsWithMeta: AVSAccountWithMeta[] = parsed.map(account => {
       const itemData = avsAccountToFinancialItem(account);
-      const match = findMatchingFinancialItem(itemData, existingResources);
+      const matchResult = findMatchingFinancialItem(
+        itemData,
+        existingResources,
+        account.bankName,
+      );
       return {
         ...account,
         selected: true, // Selected by default
-        existingItemId: match?.id,
+        existingItemId: matchResult?.item.id,
+        matchConfidence: matchResult?.confidence,
       };
     });
     

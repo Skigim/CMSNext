@@ -14,7 +14,7 @@ const toastWarning = toast.warning as ReturnType<typeof vi.fn>;
 const toastError = toast.error as ReturnType<typeof vi.fn>;
 
 vi.mock("../../utils/errorReporting", () => ({
-  default: {
+  errorReporting: {
     isReportingEnabled: () => true,
     reportError: vi.fn(),
   },

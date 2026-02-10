@@ -41,6 +41,7 @@ const nonNegativeNumber = z.number().min(0, "Amount must be non-negative");
  */
 export const AddressSchema = z.object({
   street: stringRequired("Street address"),
+  apt: z.string().max(20, "Apt/Unit must be less than 20 characters").optional(),
   city: stringRequired("City"),
   state: z.string().length(2, "State must be 2 characters").toUpperCase(),
   zip: zipSchema,
@@ -52,6 +53,7 @@ export const AddressSchema = z.object({
 export const MailingAddressSchema = z
   .object({
     street: z.string(),
+    apt: z.string().max(20, "Apt/Unit must be less than 20 characters").optional(),
     city: z.string(),
     state: z
       .string()
