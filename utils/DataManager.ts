@@ -207,6 +207,7 @@ export class DataManager {
     });
     this.activityLog = new ActivityLogService({
       fileStorage: this.fileStorage,
+      fileService: this.fileService,
     });
     this.categoryConfig = new CategoryConfigService({
       fileStorage: this.fileStorage,
@@ -308,6 +309,18 @@ export class DataManager {
     caseMcn: string | null;
   }): Promise<boolean> {
     return this.activityLog.logCaseView(params);
+  }
+
+  /**
+   * Auto-archive old activity log entries.
+   * 
+   * Moves entries older than retentionDays to yearly archive files.
+   * 
+   * @param {number} retentionDays - Days to retain (default: 90)
+   * @returns Archive result with counts and file name
+   */
+  async archiveOldActivityEntries(retentionDays?: number) {
+    return this.activityLog.autoArchive(retentionDays);
   }
 
   /**

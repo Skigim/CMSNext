@@ -130,6 +130,23 @@ export function useCaseActivityLog(): UseCaseActivityLogResult {
 
     setLoading(true);
     try {
+      // Auto-archive on load — the service itself serializes concurrent calls
+      try {
+        const archiveResult = await dataManager.archiveOldActivityEntries();
+          if (archiveResult.archivedCount > 0) {
+            logger.info("Auto-archived old activity log entries", {
+              archivedCount: archiveResult.archivedCount,
+              retainedCount: archiveResult.retainedCount,
+              archiveFileNames: archiveResult.archiveFileNames,
+            });
+          }
+        } catch (archiveError) {
+          // Non-fatal — log but don't block loading the activity log
+          logger.warn("Failed to auto-archive activity log entries", {
+            error: archiveError instanceof Error ? archiveError.message : String(archiveError),
+          });
+        }
+
       const entries = await dataManager.getActivityLog();
       setActivityLog(entries);
       setError(null);

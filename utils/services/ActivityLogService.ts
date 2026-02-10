@@ -4,6 +4,7 @@ import { toActivityDateKey } from "../activityReport";
 import { createLogger } from "../logger";
 import { extractErrorMessage } from "../errorUtils";
 import type { FileStorageService, NormalizedFileData } from "./FileStorageService";
+import type AutosaveFileService from "../AutosaveFileService";
 
 const logger = createLogger("ActivityLogService");
 
@@ -18,6 +19,21 @@ const logger = createLogger("ActivityLogService");
 interface ActivityLogServiceConfig {
   /** File storage service for reading/writing activity log data */
   fileStorage: FileStorageService;
+  /** Optional file service for writing archive files */
+  fileService?: AutosaveFileService;
+}
+
+/** Default number of days to retain activity entries before archiving */
+export const DEFAULT_ACTIVITY_RETENTION_DAYS = 90;
+
+/** Result from an auto-archive operation */
+export interface ActivityArchiveResult {
+  /** Number of entries archived */
+  archivedCount: number;
+  /** Number of entries retained in the main file */
+  retainedCount: number;
+  /** Names of the archive files written (empty if none) */
+  archiveFileNames: string[];
 }
 
 // ============================================================================
@@ -99,15 +115,21 @@ interface ActivityLogServiceConfig {
 export class ActivityLogService {
   /** File storage service for data persistence */
   private fileStorage: FileStorageService;
+  /** Optional file service for writing named archive files */
+  private fileService: AutosaveFileService | null;
+  /** In-flight auto-archive promise to prevent concurrent runs */
+  private autoArchiveInFlight: Promise<ActivityArchiveResult> | null = null;
 
   /**
    * Create a new ActivityLogService instance.
    * 
    * @param {ActivityLogServiceConfig} config - Configuration object
    * @param {FileStorageService} config.fileStorage - File storage service instance
+   * @param {AutosaveFileService} [config.fileService] - Optional file service for archive writes
    */
   constructor(config: ActivityLogServiceConfig) {
     this.fileStorage = config.fileStorage;
+    this.fileService = config.fileService ?? null;
   }
 
   /**
@@ -285,6 +307,111 @@ export class ActivityLogService {
   }
 
   /**
+   * Auto-archive old activity entries to a separate file.
+   * 
+   * Archives entries older than `retentionDays` to a yearly JSON archive file
+   * named `activityLog-archive-{year}.json`. If an archive file already exists
+   * for the year, new entries are merged in (deduplicated by ID).
+   * 
+   * Requires `fileService` to be set for writing archive files.
+   * 
+   * @param retentionDays - How many days of entries to keep (default: 90)
+   * @returns Archive result with counts and file name
+   * 
+   * @example
+   * const result = await activityLogService.autoArchive();
+   * if (result.archivedCount > 0) {
+   *   console.log(`Archived ${result.archivedCount} entries to ${result.archiveFileNames.join(', ')}`);
+   * }
+   */
+  async autoArchive(retentionDays: number = DEFAULT_ACTIVITY_RETENTION_DAYS): Promise<ActivityArchiveResult> {
+    // Serialize: if an archive is already in flight, return its result
+    if (this.autoArchiveInFlight) {
+      return this.autoArchiveInFlight;
+    }
+
+    this.autoArchiveInFlight = this._doAutoArchive(retentionDays);
+    try {
+      return await this.autoArchiveInFlight;
+    } finally {
+      this.autoArchiveInFlight = null;
+    }
+  }
+
+  /**
+   * Internal implementation of auto-archive.
+   * @private
+   */
+  private async _doAutoArchive(retentionDays: number): Promise<ActivityArchiveResult> {
+    if (!Number.isFinite(retentionDays) || retentionDays < 1) {
+      throw new Error(`Invalid retentionDays: ${retentionDays}. Must be a finite number >= 1.`);
+    }
+
+    if (!this.fileService) {
+      logger.warn("Cannot auto-archive activity log: no fileService configured");
+      return { archivedCount: 0, retainedCount: 0, archiveFileNames: [] };
+    }
+
+    const cutoffDate = new Date();
+    cutoffDate.setDate(cutoffDate.getDate() - retentionDays);
+
+    const result = await this.archiveOldEntries(cutoffDate);
+
+    if (result.archivedCount === 0) {
+      return { archivedCount: 0, retainedCount: result.recentEntries.length, archiveFileNames: [] };
+    }
+
+    // Group archived entries by year
+    const byYear = new Map<number, CaseActivityEntry[]>();
+    for (const entry of result.archivedEntries) {
+      const year = new Date(entry.timestamp).getFullYear();
+      if (!byYear.has(year)) byYear.set(year, []);
+      byYear.get(year)!.push(entry);
+    }
+
+    const archiveFileNames: string[] = [];
+
+    for (const [year, entries] of byYear) {
+      const fileName = `activityLog-archive-${year}.json`;
+      archiveFileNames.push(fileName);
+
+      // Read existing archive if present
+      let existingEntries: CaseActivityEntry[] = [];
+      try {
+        const existing = await this.fileService.readNamedFile(fileName);
+        if (existing && Array.isArray((existing as { entries?: unknown }).entries)) {
+          existingEntries = (existing as { entries: CaseActivityEntry[] }).entries;
+        }
+      } catch {
+        // File doesn't exist yet — that's fine
+      }
+
+      // Merge, deduplicate by ID, sort by precomputed timestamps
+      const existingIds = new Set(existingEntries.map(e => e.id));
+      const merged = [...existingEntries, ...entries.filter(e => !existingIds.has(e.id))];
+      const timeCache = new Map<string, number>(merged.map(e => [e.id, Date.parse(e.timestamp)]));
+      merged.sort((a, b) => (timeCache.get(b.id) ?? 0) - (timeCache.get(a.id) ?? 0));
+
+      const archivePayload = {
+        type: 'activityLog-archive' as const,
+        year,
+        entryCount: merged.length,
+        archivedAt: new Date().toISOString(),
+        entries: merged,
+      };
+
+      await this.fileService.writeNamedFile(fileName, archivePayload);
+      logger.info("Wrote activity log archive file", { fileName, entryCount: merged.length, newEntries: entries.length });
+    }
+
+    return {
+      archivedCount: result.archivedCount,
+      retainedCount: result.recentEntries.length,
+      archiveFileNames,
+    };
+  }
+
+  /**
    * Get activity log with a maximum entry limit.
    * 
    * Returns the most recent entries up to the specified limit.
@@ -389,7 +516,8 @@ export class ActivityLogService {
     additions: CaseActivityEntry[],
   ): CaseActivityEntry[] {
     const combined = [...(current ?? []), ...additions];
-    return combined.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+    const timeCache = new Map<string, number>(combined.map(e => [e.id, Date.parse(e.timestamp)]));
+    return combined.sort((a, b) => (timeCache.get(b.id) ?? 0) - (timeCache.get(a.id) ?? 0));
   }
 
   /**

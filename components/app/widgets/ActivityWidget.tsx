@@ -28,6 +28,8 @@ import {
   Loader2,
   RefreshCcw,
   Eye,
+  ChevronDown,
+  ChevronUp,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useWidgetData } from '@/hooks/useWidgetData';
@@ -38,6 +40,14 @@ import {
   serializeDailyActivityReport,
   toActivityDateKey,
 } from '@/utils/activityReport';
+import { createLogger } from '@/utils/logger';
+
+const logger = createLogger('ActivityWidget');
+
+/** Number of timeline items shown when collapsed */
+const COLLAPSED_ITEM_COUNT = 3;
+/** Maximum timeline items shown when expanded */
+const EXPANDED_ITEM_COUNT = 10;
 
 /**
  * Activity timeline item with type and formatting.
@@ -205,6 +215,7 @@ export function ActivityWidget({ activityLogState, metadata, onViewCase }: Activ
   const [selectedReportDate, setSelectedReportDate] = useState<Date>(() => new Date());
   const [clearDialogOpen, setClearDialogOpen] = useState(false);
   const [isClearing, setIsClearing] = useState(false);
+  const [isTimelineExpanded, setIsTimelineExpanded] = useState(false);
 
   const {
     loading: activityLogLoading,
@@ -249,7 +260,7 @@ export function ActivityWidget({ activityLogState, metadata, onViewCase }: Activ
       await refreshActivityLog();
       toast.success('Activity log refreshed');
     } catch (error) {
-      console.error('Failed to refresh activity log', error);
+      logger.error('Failed to refresh activity log', { error: String(error) });
       toast.error('Unable to refresh the activity log.');
     }
   }, [refreshActivityLog]);
@@ -273,7 +284,7 @@ export function ActivityWidget({ activityLogState, metadata, onViewCase }: Activ
       }
       setClearDialogOpen(false);
     } catch (error) {
-      console.error('Failed to clear activity log for date', error);
+      logger.error('Failed to clear activity log for date', { error: String(error) });
       toast.error('Unable to clear the activity log for this date.', { id: toastId });
     } finally {
       setIsClearing(false);
@@ -303,7 +314,7 @@ export function ActivityWidget({ activityLogState, metadata, onViewCase }: Activ
         URL.revokeObjectURL(url);
         toast.success(`Exported ${extension.toUpperCase()} activity report.`);
       } catch (error) {
-        console.error('Failed to export activity report', error);
+        logger.error('Failed to export activity report', { error: String(error) });
         toast.error('Unable to export the activity report.');
       }
     },
@@ -337,8 +348,8 @@ export function ActivityWidget({ activityLogState, metadata, onViewCase }: Activ
                 ))}
               </div>
             ) : items.length > 0 ? (
-              <div className="space-y-2">
-                {items.slice(0, 3).map((item) => {
+              <div id="activity-timeline-list" className="space-y-2">
+                {items.slice(0, isTimelineExpanded ? EXPANDED_ITEM_COUNT : COLLAPSED_ITEM_COUNT).map((item) => {
                     const Icon = item.icon;
                     return (
                       <div
@@ -389,6 +400,28 @@ export function ActivityWidget({ activityLogState, metadata, onViewCase }: Activ
                         </div>
                       );
                     })}
+                {items.length > COLLAPSED_ITEM_COUNT && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="w-full text-xs text-muted-foreground"
+                    onClick={() => setIsTimelineExpanded((prev) => !prev)}
+                    aria-expanded={isTimelineExpanded}
+                    aria-controls="activity-timeline-list"
+                  >
+                    {isTimelineExpanded ? (
+                      <>
+                        <ChevronUp className="h-3 w-3 mr-1" aria-hidden="true" />
+                        Show less
+                      </>
+                    ) : (
+                      <>
+                        <ChevronDown className="h-3 w-3 mr-1" aria-hidden="true" />
+                        Show more ({Math.min(items.length, EXPANDED_ITEM_COUNT) - COLLAPSED_ITEM_COUNT} more)
+                      </>
+                    )}
+                  </Button>
+                )}
               </div>
             ) : (
               <div className="text-center py-8">

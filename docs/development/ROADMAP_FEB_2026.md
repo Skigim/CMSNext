@@ -52,7 +52,7 @@ _Focus: Clear ALL outstanding audit items from January_
 
 #### Low Priority - UI Audit
 
-- [ ] **Activity Log Unbounded Growth** - Implement auto-archiving/rotation policy
+- [x] **Activity Log Unbounded Growth** - ✅ Auto-archive entries older than 90 days to yearly archive files
 - [ ] **Synchronous AVS Parsing** - Move to worker or use chunking for large inputs
 - [ ] **Rename vague variables** - `result`, `data`, `selected` → descriptive names
 - [x] **Standardize `error` vs `err`** - ✅ Migrated 19 instances to `catch (error)` pattern
@@ -89,7 +89,7 @@ _Focus: Complete archive system and data management improvements_
 - [ ] **Restore from Archive** - Bring archived cases back to active file
 - [ ] **Search within Archives** - Filter/search loaded archive files
 - [ ] **Archive File Metadata** - Display creation date, case count in UI
-- [ ] **Activity Log Auto-Archiving** - Rotate old entries to archive files
+- [x] **Activity Log Auto-Archiving** - ✅ Implemented with expandable timeline UI (3→10 entries)
 
 #### Refactoring & Polish
 
