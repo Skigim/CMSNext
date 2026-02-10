@@ -1,11 +1,15 @@
-import { useEffect, useCallback, useMemo, useRef } from "react";
+import { useEffect, useCallback, useMemo, useState } from "react";
 import { useEncryption } from "@/contexts/EncryptionContext";
 import { useFileStorage } from "@/contexts/FileStorageContext";
 import {
   encryptWithKey,
   decryptWithKey,
 } from "@/utils/encryption";
-import { isEncryptedPayload } from "@/types/encryption";
+import {
+  isEncryptedPayload,
+  EncryptionError,
+  type EncryptionErrorCode,
+} from "@/types/encryption";
 import type { EncryptedPayload } from "@/types/encryption";
 import type { NormalizedFileData } from "@/utils/services/FileStorageService";
 import { createLogger } from "@/utils/logger";
@@ -93,7 +97,7 @@ interface UseEncryptionFileHooksResult {
 export function useEncryptionFileHooks(): UseEncryptionFileHooksResult {
   const encryption = useEncryption();
   const { service } = useFileStorage();
-  const lastErrorRef = useRef<string | null>(null);
+  const [lastError, setLastError] = useState<string | null>(null);
 
   // Expose storePassword as a pass-through to context
   const storePassword = useCallback((password: string) => {
@@ -102,7 +106,7 @@ export function useEncryptionFileHooks(): UseEncryptionFileHooksResult {
 
   // Clear error helper
   const clearError = useCallback(() => {
-    lastErrorRef.current = null;
+    setLastError(null);
   }, []);
 
   // Create encryption hooks for the file service
@@ -132,7 +136,7 @@ export function useEncryptionFileHooks(): UseEncryptionFileHooksResult {
             const result = await encryption.initializeEncryption(encryption.pendingPassword);
             if (!result) {
               logger.error("Failed to initialize encryption");
-              lastErrorRef.current = "Failed to initialize encryption";
+              setLastError("Failed to initialize encryption");
               return data; // Return unencrypted on failure
             }
             // Use the returned key/salt directly (state update is async)
@@ -167,7 +171,7 @@ export function useEncryptionFileHooks(): UseEncryptionFileHooksResult {
         );
 
         if (!result.success || !result.payload) {
-          lastErrorRef.current = result.error || "Encryption failed";
+          setLastError(result.error || "Encryption failed");
           logger.error("Encryption failed", { error: result.error });
           return data; // Return unencrypted on failure
         }
@@ -197,20 +201,33 @@ export function useEncryptionFileHooks(): UseEncryptionFileHooksResult {
           const result = await encryption.deriveKeyFromFileSalt(data.salt, data.iterations);
           
           if (!result.success || !result.data) {
-            let error: string;
-            switch (result.error) {
+            // Validate error code against known values
+            const validCodes = ['missing_password', 'wrong_password', 'corrupt_salt', 'system_error'] as const;
+            const errorCode: EncryptionErrorCode = validCodes.includes(result.error as any)
+              ? (result.error as EncryptionErrorCode)
+              : 'system_error';
+            let errorMsg: string;
+            
+            switch (errorCode) {
               case 'missing_password':
-                error = "No password available. Please log in again.";
+                errorMsg = "No password available. Please log in again.";
+                break;
+              case 'wrong_password':
+                errorMsg = "Incorrect password.";
+                break;
+              case 'corrupt_salt':
+                errorMsg = "File is corrupted or damaged. Cannot decrypt.";
                 break;
               case 'system_error':
-                error = `Encryption system error: ${result.message || 'Unknown error'}`;
+                errorMsg = `Encryption system error: ${result.message || 'Unknown error'}`;
                 break;
               default:
-                error = "Failed to derive encryption key";
+                errorMsg = "Failed to derive encryption key";
             }
-            logger.error(error);
-            lastErrorRef.current = error;
-            throw new Error(error);
+            
+            logger.error(errorMsg);
+            setLastError(errorMsg);
+            throw new EncryptionError(errorCode, errorMsg);
           }
           
           key = result.data;
@@ -220,7 +237,7 @@ export function useEncryptionFileHooks(): UseEncryptionFileHooksResult {
 
         if (!decryptResult.success || !decryptResult.data) {
           const error = decryptResult.error || "Decryption failed";
-          lastErrorRef.current = error;
+          setLastError(error);
           logger.error("Decryption failed", { error });
           throw new Error(error);
         }
@@ -257,7 +274,7 @@ export function useEncryptionFileHooks(): UseEncryptionFileHooksResult {
 
   return {
     isActive: !!encryptionHooks,
-    lastError: lastErrorRef.current,
+    lastError,
     clearError,
     storePassword,
   };

@@ -47,17 +47,10 @@ import {
   isEncryptionSupported,
 } from "../utils/encryption";
 import { DEFAULT_ENCRYPTION_CONFIG } from "../types/encryption";
-import type { EncryptionState } from "../types/encryption";
+import type { EncryptionState, EncryptionErrorCode } from "../types/encryption";
 import { createLogger } from "../utils/logger";
 
 const logger = createLogger("EncryptionContext");
-
-/** Error codes for encryption operations */
-export type EncryptionErrorCode = 
-  | 'missing_password'
-  | 'wrong_password' 
-  | 'corrupt_salt'
-  | 'system_error';
 
 /** Result type for encryption operations */
 export interface EncryptionResult<T> {

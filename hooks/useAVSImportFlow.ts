@@ -37,9 +37,9 @@ export interface AVSImportState {
   /** Number of updated existing items */
   updatedCount: number;
   /** Any error that occurred during import */
-  error: string | null;
-  /** Error when fetching existing items for duplicate detection failed */
-  fetchError: string | null;
+  error: null | string;
+  /** Error when fetching existing items for duplicate detection failed; null = no error */
+  fetchError: null | string;
 }
 
 interface UseAVSImportFlowParams {
@@ -183,20 +183,21 @@ export function useAVSImportFlow({
     
     // Fetch existing resources to detect duplicates
     let existingResources: StoredFinancialItem[] = [];
-    let fetchError: string | null = null;
+    let fetchError: null | string = null;
     
     if (selectedCase && dataManager) {
       try {
         const allItems = await dataManager.getFinancialItemsForCase(selectedCase.id);
         existingResources = allItems.filter(item => item.category === 'resources');
+        fetchError = null; // Explicitly set to null on success
       } catch (e) {
         const errorMsg = extractErrorMessage(e);
         logger.error('Failed to fetch existing items for duplicate detection', {
           error: errorMsg,
         });
-        fetchError = 'Could not verify existing accounts. Duplicate detection is unavailable. Importing may create duplicates.';
-        toast.warning('Duplicate detection unavailable', {
-          description: 'Could not load existing accounts. Proceed with caution to avoid duplicates.',
+        fetchError = 'Duplicate detection error - cannot verify existing accounts. Import halted to prevent duplicates.';
+        toast.error('Import Unavailable', {
+          description: 'Could not load existing accounts to check for duplicates. Please try again.',
           duration: 5000,
         });
       }
@@ -373,7 +374,8 @@ export function useAVSImportFlow({
     !!selectedCase &&
     !!dataManager &&
     importState.parsedAccounts.some(a => a.selected) &&
-    !importState.isImporting;
+    !importState.isImporting &&
+    importState.fetchError === null;
 
   return {
     importState,

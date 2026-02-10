@@ -24,10 +24,10 @@ _Focus: Clear ALL outstanding audit items from January_
 
 #### High Priority - Security Audit
 
-- [ ] **AVS Duplicate Detection Error Handling** - Display error to user and halt if existing data cannot be verified
+- [x] **AVS Duplicate Detection Error Handling** - ✅ Fixed halts import on failure (useAVSImportFlow.ts)
 - [x] **File Storage Silent Load Failures** - ✅ Already fixed (commit 8b2da4c) - aggregates errors and shows warning toast
 - [x] **Template Reorder Optimistic UI** - ✅ Already fixed (commit 8b2da4c) - shows toast.error on failure
-- [ ] **Encryption Auth Error Specificity** - Return error codes for wrong password vs system error
+- [x] **Encryption Auth Error Specificity** - ✅ Fixed with typed EncryptionError (EncryptionContext.tsx)
 
 #### High Priority - Hooks Audit (Console Statements)
 

@@ -16,6 +16,7 @@ import { useEncryption } from "@/contexts/EncryptionContext";
 import { useFileStorage } from "@/contexts/FileStorageContext";
 import { createLogger } from "@/utils/logger";
 import { AuthBackdrop } from "./AuthBackdrop";
+import { EncryptionError } from "@/types/encryption";
 
 const logger = createLogger("LoginModal");
 
@@ -83,6 +84,8 @@ export function LoginModal({
   }, [isOpen]);
 
   const isDecryptionError = (error: unknown): boolean => {
+    if (error instanceof EncryptionError) return true;
+    
     const message = error instanceof Error ? error.message : String(error);
     return (
       message.includes("Invalid password") ||
@@ -126,8 +129,32 @@ export function LoginModal({
       logger.info("Login successful");
       onLoginComplete();
     } catch (err) {
-      if (isDecryptionError(err)) {
-        logger.warn("Decryption failed - wrong password");
+      if (err instanceof EncryptionError) {
+        encryption.setPendingPassword(null);
+        
+        // Handle specific error codes
+        switch (err.code) {
+          case 'wrong_password':
+            logger.warn("Decryption failed - wrong password");
+            encryption.clearCredentials();
+            setPassword("");
+            setError("Incorrect password. Please try again.");
+            break;
+          case 'corrupt_salt':
+            logger.error("Decryption failed - corrupt salt");
+            setError("Data file appears corrupted (invalid salt). Cannot decrypt.");
+            break;
+          case 'system_error':
+            logger.error("Decryption failed - system error");
+            setError(`System error: ${err.message}`);
+            break;
+          default:
+            logger.error("Decryption failed - unknown code", { code: err.code });
+            setError(err.message);
+        }
+      } else if (isDecryptionError(err)) {
+        // Fallback for non-typed errors
+        logger.warn("Decryption failed - wrong password (generic mismatch)");
         encryption.setPendingPassword(null);
         encryption.clearCredentials();
         setPassword("");

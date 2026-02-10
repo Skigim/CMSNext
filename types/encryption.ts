@@ -54,6 +54,28 @@ export interface EncryptionConfig {
   ivLength?: number;
 }
 
+/** Error codes for encryption operations */
+export type EncryptionErrorCode = 
+  | 'missing_password'
+  | 'wrong_password' 
+  | 'corrupt_salt'
+  | 'system_error';
+
+/**
+ * Custom error class for encryption failures with specific codes
+ */
+export class EncryptionError extends Error {
+  constructor(
+    public code: EncryptionErrorCode,
+    message: string
+  ) {
+    super(message);
+    this.name = 'EncryptionError';
+    // Ensure prototype chain is correct for instanceof checks
+    Object.setPrototypeOf(this, EncryptionError.prototype);
+  }
+}
+
 /**
  * Default encryption configuration
  * 
