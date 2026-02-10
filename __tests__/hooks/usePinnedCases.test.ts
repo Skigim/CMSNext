@@ -337,4 +337,60 @@ describe("usePinnedCases", () => {
       expect(result.current.pinnedCount).toBe(1);
     });
   });
+
+  describe("pruneStale", () => {
+    it("removes pinned IDs not present in the valid set", () => {
+      mockRead.mockReturnValue(["case-1", "case-2", "case-3"]);
+
+      const { result } = renderHook(() => usePinnedCases());
+
+      act(() => {
+        result.current.pruneStale(["case-1", "case-3"]);
+      });
+
+      expect(result.current.pinnedCaseIds).toEqual(["case-1", "case-3"]);
+      expect(result.current.pinnedCount).toBe(2);
+      expect(mockWrite).toHaveBeenCalledWith(["case-1", "case-3"]);
+    });
+
+    it("does not write to storage when nothing is stale", () => {
+      mockRead.mockReturnValue(["case-1", "case-2"]);
+
+      const { result } = renderHook(() => usePinnedCases());
+
+      act(() => {
+        result.current.pruneStale(["case-1", "case-2", "case-3"]);
+      });
+
+      expect(result.current.pinnedCaseIds).toEqual(["case-1", "case-2"]);
+      expect(mockWrite).not.toHaveBeenCalled();
+    });
+
+    it("removes all pins when valid set is empty", () => {
+      mockRead.mockReturnValue(["case-1", "case-2"]);
+
+      const { result } = renderHook(() => usePinnedCases());
+
+      act(() => {
+        result.current.pruneStale([]);
+      });
+
+      expect(result.current.pinnedCaseIds).toEqual([]);
+      expect(result.current.pinnedCount).toBe(0);
+      expect(mockWrite).toHaveBeenCalledWith([]);
+    });
+
+    it("is a no-op when pinned list is already empty", () => {
+      mockRead.mockReturnValue([]);
+
+      const { result } = renderHook(() => usePinnedCases());
+
+      act(() => {
+        result.current.pruneStale(["case-1"]);
+      });
+
+      expect(result.current.pinnedCaseIds).toEqual([]);
+      expect(mockWrite).not.toHaveBeenCalled();
+    });
+  });
 });

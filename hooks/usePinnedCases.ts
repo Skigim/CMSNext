@@ -7,6 +7,7 @@ import {
   canPinMore as domainCanPinMore,
   getPinnedCount,
   reorderPinnedCase,
+  pruneDeletedCases,
 } from "@/domain/dashboard/pinnedCases";
 import { createLocalStorageAdapter } from "@/utils/localStorage";
 
@@ -121,6 +122,23 @@ export function usePinnedCases(maxPins: number = 20) {
     });
   }, []);
 
+  /**
+   * Remove pinned IDs that no longer exist in the given valid set.
+   * Call this after archival, deletion, or any operation that removes cases.
+   */
+  const pruneStale = useCallback((validCaseIds: string[]) => {
+    setPinnedIds((prev) => {
+      const updated = pruneDeletedCases(prev, validCaseIds);
+      if (updated.length === prev.length) {
+        return prev; // No stale entries — skip write
+      }
+      storage.write(updated);
+      isOwnUpdate.current = true;
+      notifyPinnedCasesChanged();
+      return updated;
+    });
+  }, []);
+
   return {
     pinnedCaseIds: pinnedIds,
     pin,
@@ -130,5 +148,6 @@ export function usePinnedCases(maxPins: number = 20) {
     canPinMore: domainCanPinMore(pinnedIds, maxPins),
     pinnedCount: getPinnedCount(pinnedIds),
     reorder,
+    pruneStale,
   };
 }

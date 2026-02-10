@@ -1,4 +1,4 @@
-import { memo, useMemo } from "react";
+import { memo, useEffect, useMemo } from "react";
 import { Pin, PinOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -46,9 +46,9 @@ export const PinnedCasesDropdown = memo(function PinnedCasesDropdown({
   cases,
   onViewCase,
 }: PinnedCasesDropdownProps) {
-  const { pinnedCaseIds, unpin, pinnedCount } = usePinnedCases();
+  const { pinnedCaseIds, unpin, pruneStale } = usePinnedCases();
 
-  // Resolve case IDs to full case objects, filtering out deleted cases
+  // Resolve case IDs to full case objects, filtering out archived/deleted cases
   const pinnedCases = useMemo(() => {
     const caseMap = new Map(cases.map((c) => [c.id, c]));
     return pinnedCaseIds
@@ -56,7 +56,17 @@ export const PinnedCasesDropdown = memo(function PinnedCasesDropdown({
       .filter((c): c is StoredCase => c !== undefined);
   }, [pinnedCaseIds, cases]);
 
-  const hasPinnedCases = pinnedCases.length > 0;
+  // Auto-prune stale pinned IDs (e.g. archived or deleted cases)
+  useEffect(() => {
+    if (pinnedCaseIds.length > 0 && pinnedCases.length < pinnedCaseIds.length) {
+      const validIds = cases.map((c) => c.id);
+      pruneStale(validIds);
+    }
+  }, [pinnedCaseIds.length, pinnedCases.length, cases, pruneStale]);
+
+  // Use resolved count so the badge always matches visible items
+  const resolvedCount = pinnedCases.length;
+  const hasPinnedCases = resolvedCount > 0;
 
   return (
     <DropdownMenu>
@@ -65,7 +75,7 @@ export const PinnedCasesDropdown = memo(function PinnedCasesDropdown({
           variant="ghost"
           size="icon"
           className="relative h-9 w-9"
-          aria-label={`Pinned cases${hasPinnedCases ? ` (${pinnedCount})` : ""}`}
+          aria-label={`Pinned cases${hasPinnedCases ? ` (${resolvedCount})` : ""}`}
         >
           <Pin className="h-4 w-4" />
           {hasPinnedCases && (
@@ -73,7 +83,7 @@ export const PinnedCasesDropdown = memo(function PinnedCasesDropdown({
               variant="secondary"
               className="absolute -top-1 -right-1 h-4 min-w-4 p-0 text-[10px] flex items-center justify-center"
             >
-              {pinnedCount}
+              {resolvedCount}
             </Badge>
           )}
         </Button>
