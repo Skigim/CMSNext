@@ -10,7 +10,7 @@
  * @module hooks/usePositionAssignmentsImport
  */
 
-import { useCallback, useRef, useState, type ChangeEvent, type RefObject } from "react";
+import { useCallback, useMemo, useRef, useState, type ChangeEvent, type RefObject } from "react";
 import { toast } from "sonner";
 import { useDataManagerSafe } from "@/contexts/DataManagerContext";
 import type { StoredCase } from "@/types/case";
@@ -47,6 +47,8 @@ export interface PositionAssignmentsImportState {
   selectedCaseIds: Set<string>;
   /** The source filename for display */
   sourceFileName: string | null;
+  /** Status filter — only cases with these statuses are shown */
+  statusFilter: Set<string>;
 }
 
 interface UsePositionAssignmentsImportParams {
@@ -71,8 +73,14 @@ interface UsePositionAssignmentsImportReturn {
   confirmFlagForArchival: () => Promise<void>;
   /** Toggle selection of a single case */
   toggleCaseSelection: (caseId: string) => void;
-  /** Toggle all cases selection */
+  /** Toggle all visible cases selection (respects status filter) */
   toggleAllCases: () => void;
+  /** Toggle a status in the status filter */
+  toggleStatusFilter: (status: string) => void;
+  /** Unique statuses present in unmatched cases */
+  availableStatuses: string[];
+  /** Unmatched cases after applying status filter */
+  filteredUnmatchedCases: StoredCase[];
   /** Whether the confirm action is possible */
   canConfirm: boolean;
 }
@@ -89,6 +97,7 @@ const INITIAL_STATE: PositionAssignmentsImportState = {
   parseResult: null,
   selectedCaseIds: new Set(),
   sourceFileName: null,
+  statusFilter: new Set(),
 };
 
 // ============================================================================
@@ -201,6 +210,7 @@ export function usePositionAssignmentsImport({
 
         // Open preview with all unmatched cases pre-selected
         const selectedIds = new Set(unmatchedCases.map(c => c.id));
+        const uniqueStatuses = new Set(unmatchedCases.map(c => c.status));
 
         setImportState({
           phase: "preview",
@@ -210,6 +220,7 @@ export function usePositionAssignmentsImport({
           parseResult,
           selectedCaseIds: selectedIds,
           sourceFileName: file.name,
+          statusFilter: uniqueStatuses,
         });
       } catch (error) {
         logger.error("Failed to parse position assignments", {
@@ -244,13 +255,31 @@ export function usePositionAssignmentsImport({
     });
   }, []);
 
-  // ---- Toggle all cases ----
+  // ---- Toggle status filter ----
+  const toggleStatusFilter = useCallback((status: string) => {
+    setImportState(prev => {
+      const next = new Set(prev.statusFilter);
+      if (next.has(status)) {
+        // Don't allow deselecting the last filter
+        if (next.size > 1) next.delete(status);
+      } else {
+        next.add(status);
+      }
+      return { ...prev, statusFilter: next };
+    });
+  }, []);
+
+  // ---- Toggle all visible cases (respects status filter) ----
   const toggleAllCases = useCallback(() => {
     setImportState(prev => {
-      const allSelected = prev.selectedCaseIds.size === prev.unmatchedCases.length;
-      const next = allSelected
-        ? new Set<string>()
-        : new Set(prev.unmatchedCases.map(c => c.id));
+      const visibleCases = prev.unmatchedCases.filter(c => prev.statusFilter.has(c.status));
+      const allVisibleSelected = visibleCases.length > 0 && visibleCases.every(c => prev.selectedCaseIds.has(c.id));
+      const next = new Set(prev.selectedCaseIds);
+      if (allVisibleSelected) {
+        for (const c of visibleCases) next.delete(c.id);
+      } else {
+        for (const c of visibleCases) next.add(c.id);
+      }
       return { ...prev, selectedCaseIds: next };
     });
   }, []);
@@ -284,6 +313,16 @@ export function usePositionAssignmentsImport({
   }, [dataManager, importState.selectedCaseIds, onCasesUpdated]);
 
   // ---- Derived state ----
+  const availableStatuses = useMemo(() => {
+    const statuses = new Set(importState.unmatchedCases.map(c => c.status));
+    return Array.from(statuses).sort();
+  }, [importState.unmatchedCases]);
+
+  const filteredUnmatchedCases = useMemo(
+    () => importState.unmatchedCases.filter(c => importState.statusFilter.has(c.status)),
+    [importState.unmatchedCases, importState.statusFilter]
+  );
+
   const canConfirm =
     importState.phase === "preview" && importState.selectedCaseIds.size > 0;
 
@@ -296,6 +335,9 @@ export function usePositionAssignmentsImport({
     confirmFlagForArchival,
     toggleCaseSelection,
     toggleAllCases,
+    toggleStatusFilter,
+    availableStatuses,
+    filteredUnmatchedCases,
     canConfirm,
   };
 }

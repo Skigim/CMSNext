@@ -50,10 +50,16 @@ interface PositionAssignmentsReviewModalProps {
   onConfirm: () => Promise<void>;
   /** Toggle a single case selection */
   onToggleCase: (caseId: string) => void;
-  /** Toggle all cases selection */
+  /** Toggle all visible cases selection */
   onToggleAll: () => void;
+  /** Toggle a status filter */
+  onToggleStatus: (status: string) => void;
   /** Whether the confirm action is possible */
   canConfirm: boolean;
+  /** Unique statuses available for filtering */
+  availableStatuses: string[];
+  /** Unmatched cases after status filter applied */
+  filteredUnmatchedCases: StoredCase[];
 }
 
 // ============================================================================
@@ -153,23 +159,34 @@ export function PositionAssignmentsReviewModal({
   onConfirm,
   onToggleCase,
   onToggleAll,
+  onToggleStatus,
   canConfirm,
+  availableStatuses,
+  filteredUnmatchedCases,
 }: PositionAssignmentsReviewModalProps) {
-  const { isOpen, unmatchedCases, selectedCaseIds, phase, sourceFileName } =
+  const { isOpen, selectedCaseIds, phase, sourceFileName } =
     importState;
 
   const isApplying = phase === "applying";
 
-  const allSelected = useMemo(
+  const allVisibleSelected = useMemo(
     () =>
-      unmatchedCases.length > 0 &&
-      selectedCaseIds.size === unmatchedCases.length,
-    [unmatchedCases.length, selectedCaseIds.size]
+      filteredUnmatchedCases.length > 0 &&
+      filteredUnmatchedCases.every(c => selectedCaseIds.has(c.id)),
+    [filteredUnmatchedCases, selectedCaseIds]
   );
 
-  const someSelected = useMemo(
-    () => selectedCaseIds.size > 0 && selectedCaseIds.size < unmatchedCases.length,
-    [selectedCaseIds.size, unmatchedCases.length]
+  const someVisibleSelected = useMemo(
+    () => {
+      const visibleSelectedCount = filteredUnmatchedCases.filter(c => selectedCaseIds.has(c.id)).length;
+      return visibleSelectedCount > 0 && visibleSelectedCount < filteredUnmatchedCases.length;
+    },
+    [filteredUnmatchedCases, selectedCaseIds]
+  );
+
+  const visibleSelectedCount = useMemo(
+    () => filteredUnmatchedCases.filter(c => selectedCaseIds.has(c.id)).length,
+    [filteredUnmatchedCases, selectedCaseIds]
   );
 
   return (
@@ -181,7 +198,7 @@ export function PositionAssignmentsReviewModal({
         }
       }}
     >
-      <DialogContent className="max-w-xl max-h-[85vh] flex flex-col">
+      <DialogContent className="max-w-2xl max-h-[85vh] flex flex-col gap-4">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Archive className="h-5 w-5" />
@@ -202,29 +219,56 @@ export function PositionAssignmentsReviewModal({
         {/* Summary Stats */}
         <ImportSummary importState={importState} />
 
+        {/* Status Filter */}
+        {availableStatuses.length > 1 && (
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-xs text-muted-foreground font-medium shrink-0">Status:</span>
+            {availableStatuses.map(status => {
+              const count = importState.unmatchedCases.filter(c => c.status === status).length;
+              const isActive = importState.statusFilter.has(status);
+              return (
+                <Badge
+                  key={status}
+                  variant={isActive ? "default" : "outline"}
+                  className={cn(
+                    "cursor-pointer select-none transition-opacity",
+                    !isActive && "opacity-50"
+                  )}
+                  onClick={() => onToggleStatus(status)}
+                >
+                  {status} ({count})
+                </Badge>
+              );
+            })}
+          </div>
+        )}
+
         {/* Select All / Deselect All */}
-        <div className="flex items-center justify-between px-1">
+        <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Checkbox
-              checked={someSelected ? "indeterminate" : allSelected}
+              checked={someVisibleSelected ? "indeterminate" : allVisibleSelected}
               onCheckedChange={onToggleAll}
               disabled={isApplying}
-              aria-label="Select all cases"
+              aria-label="Select all visible cases"
             />
             <span className="text-sm text-muted-foreground">
-              {selectedCaseIds.size} of {unmatchedCases.length} selected
+              {visibleSelectedCount} of {filteredUnmatchedCases.length} selected
+              {filteredUnmatchedCases.length < importState.unmatchedCases.length && (
+                <span className="text-xs ml-1">({importState.unmatchedCases.length} total)</span>
+              )}
             </span>
           </div>
           {importState.summary && importState.summary.archivedExcluded > 0 && (
             <span className="text-xs text-muted-foreground">
-              {importState.summary.archivedExcluded} archived cases excluded
+              {importState.summary.archivedExcluded} archived excluded
             </span>
           )}
         </div>
 
         {/* Case List */}
         <div className="flex-1 overflow-y-auto space-y-2 min-h-0 pr-1">
-          {unmatchedCases.length === 0 ? (
+          {filteredUnmatchedCases.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-8 text-center">
               <CheckCircle2 className="h-8 w-8 text-green-500 mb-2" />
               <p className="text-sm font-medium">All cases accounted for</p>
@@ -233,7 +277,7 @@ export function PositionAssignmentsReviewModal({
               </p>
             </div>
           ) : (
-            unmatchedCases.map((caseItem) => (
+            filteredUnmatchedCases.map((caseItem) => (
               <CasePreviewRow
                 key={caseItem.id}
                 caseItem={caseItem}
@@ -246,8 +290,8 @@ export function PositionAssignmentsReviewModal({
         </div>
 
         {/* Info banner */}
-        {unmatchedCases.length > 0 && (
-          <div className="flex items-start gap-2 rounded-md bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 p-2.5 text-xs text-amber-800 dark:text-amber-200">
+        {importState.unmatchedCases.length > 0 && (
+          <div className="flex items-start gap-2 rounded-md bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 p-3 text-xs text-amber-800 dark:text-amber-200">
             <AlertTriangle className="h-3.5 w-3.5 shrink-0 mt-0.5" />
             <span>
               Flagged cases will appear in the <strong>Archival Review</strong>{" "}
@@ -256,7 +300,7 @@ export function PositionAssignmentsReviewModal({
           </div>
         )}
 
-        <DialogFooter className="gap-2 sm:gap-0">
+        <DialogFooter>
           <Button variant="outline" onClick={onClose} disabled={isApplying}>
             Cancel
           </Button>

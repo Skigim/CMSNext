@@ -384,7 +384,10 @@ export function ArchivalSettingsPanel({ cases }: { cases: StoredCase[] }) {
         onConfirm={positionImport.confirmFlagForArchival}
         onToggleCase={positionImport.toggleCaseSelection}
         onToggleAll={positionImport.toggleAllCases}
+        onToggleStatus={positionImport.toggleStatusFilter}
         canConfirm={positionImport.canConfirm}
+        availableStatuses={positionImport.availableStatuses}
+        filteredUnmatchedCases={positionImport.filteredUnmatchedCases}
       />
       
       {/* Archive Browser Card */}
