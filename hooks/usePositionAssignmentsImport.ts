@@ -258,14 +258,22 @@ export function usePositionAssignmentsImport({
   // ---- Toggle status filter ----
   const toggleStatusFilter = useCallback((status: string) => {
     setImportState(prev => {
-      const next = new Set(prev.statusFilter);
-      if (next.has(status)) {
+      const nextFilter = new Set(prev.statusFilter);
+      if (nextFilter.has(status)) {
         // Don't allow deselecting the last filter
-        if (next.size > 1) next.delete(status);
+        if (nextFilter.size > 1) nextFilter.delete(status);
+        else return prev;
       } else {
-        next.add(status);
+        nextFilter.add(status);
       }
-      return { ...prev, statusFilter: next };
+      // Recompute selection to only include cases visible under new filter
+      const nextSelected = new Set<string>();
+      for (const c of prev.unmatchedCases) {
+        if (nextFilter.has(c.status) && prev.selectedCaseIds.has(c.id)) {
+          nextSelected.add(c.id);
+        }
+      }
+      return { ...prev, statusFilter: nextFilter, selectedCaseIds: nextSelected };
     });
   }, []);
 
