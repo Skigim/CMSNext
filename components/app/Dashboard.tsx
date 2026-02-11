@@ -113,7 +113,7 @@ export function Dashboard({
           featureFlag: 'dashboard.widgets.dailyStats',
         },
         component: DailyStatsWidgetLazy,
-        props: { cases, alerts, activityLog: activityEntries },
+        props: { cases, alerts, activityLog: activityEntries, refreshKey: `${alertsRefreshKey}-${activityRefreshKey}` },
       },
       {
         metadata: {

@@ -200,6 +200,54 @@ describe("DailyStatsWidget", () => {
     expect(screen.getAllByText("No active cases")).toHaveLength(2);
   });
 
+  it("passes refreshKey to useWidgetData for forced refresh", () => {
+    mockUseWidgetData.mockReturnValue({
+      data: {
+        averagePriority: 300,
+        activeCaseCount: 3,
+        processedToday: 1,
+        alertsClearedToday: 1,
+      },
+      loading: false,
+      error: null,
+      freshness,
+      refresh: vi.fn(),
+    });
+
+    const { rerender } = render(
+      <DailyStatsWidget
+        cases={cases}
+        alerts={alertsIndex}
+        activityLog={activityLog}
+        metadata={metadata}
+        refreshKey="key-1"
+      />
+    );
+
+    // Verify refreshKey is passed through in options
+    expect(mockUseWidgetData).toHaveBeenCalledWith(
+      expect.any(Function),
+      expect.objectContaining({ refreshKey: "key-1" })
+    );
+
+    mockUseWidgetData.mockClear();
+
+    rerender(
+      <DailyStatsWidget
+        cases={cases}
+        alerts={alertsIndex}
+        activityLog={activityLog}
+        metadata={metadata}
+        refreshKey="key-2"
+      />
+    );
+
+    expect(mockUseWidgetData).toHaveBeenCalledWith(
+      expect.any(Function),
+      expect.objectContaining({ refreshKey: "key-2" })
+    );
+  });
+
   it("has no accessibility violations", async () => {
     mockUseWidgetData.mockReturnValue({
       data: {

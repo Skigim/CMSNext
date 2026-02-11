@@ -30,6 +30,7 @@ interface DailyStatsWidgetProps {
   alerts: AlertsIndex;
   activityLog: CaseActivityEntry[];
   metadata?: WidgetMetadata;
+  refreshKey?: unknown;
 }
 
 interface DailyStatsData {
@@ -44,6 +45,7 @@ export function DailyStatsWidget({
   alerts,
   activityLog = [],
   metadata,
+  refreshKey,
 }: DailyStatsWidgetProps) {
   const { config } = useCategoryConfig();
   const completionStatuses = useMemo(
@@ -106,6 +108,7 @@ export function DailyStatsWidget({
     {
       refreshInterval: metadata?.refreshInterval ?? 5 * 60 * 1000,
       enablePerformanceTracking: true,
+      refreshKey,
     }
   );
 
