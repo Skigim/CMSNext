@@ -297,7 +297,10 @@ export function NotesPopover({ caseId, className }: NotesPopoverProps) {
                     <div className="flex items-start justify-between gap-2">
                       <div 
                         className="flex-1 min-w-0 cursor-pointer"
+                        role="button"
+                        tabIndex={0}
                         onClick={() => handleStartEdit(note)}
+                        onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); handleStartEdit(note); } }}
                       >
                         <div className="flex items-center gap-2 mb-1">
                           <Badge 

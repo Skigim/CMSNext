@@ -175,9 +175,12 @@ export function ErrorReportViewer() {
                 >
                   <div
                     className="flex items-center justify-between cursor-pointer"
+                    role="button"
+                    tabIndex={0}
                     onClick={() => setExpandedReport(
                       expandedReport === report.id ? null : report.id
                     )}
+                    onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setExpandedReport(expandedReport === report.id ? null : report.id); } }}
                   >
                     <div className="flex items-center gap-3 flex-1">
                       {getSeverityIcon(report.severity)}

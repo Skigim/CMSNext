@@ -5,7 +5,7 @@ import { LoginModal } from "./LoginModal";
 interface ConnectToExistingModalProps {
   isOpen: boolean;
   isSupported: boolean;
-  onConnectionComplete: () => void;
+  onConnectionComplete: () => void | Promise<void>;
   onGoToSettings: () => void;
   permissionStatus?: string;
   hasStoredHandle?: boolean;

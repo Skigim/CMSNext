@@ -61,7 +61,7 @@ interface UseAVSImportFlowResult {
   /** Close the import modal and reset state */
   closeImportModal: () => void;
   /** Update the raw input and parse accounts */
-  handleInputChange: (input: string) => void;
+  handleInputChange: (input: string) => void | Promise<void>;
   /** Clear the input and parsed accounts */
   clearInput: () => void;
   /** Import all parsed accounts as financial resources */

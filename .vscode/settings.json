@@ -97,5 +97,9 @@
   ],
 
   // Disable Copilot terminal quick fixes popup
-  "github.copilot.chat.runCommand.enabled": false
+  "github.copilot.chat.runCommand.enabled": false,
+  "sonarlint.connectedMode.project": {
+    "connectionId": "skigim",
+    "projectKey": "Skigim_CMSNext"
+  }
 }

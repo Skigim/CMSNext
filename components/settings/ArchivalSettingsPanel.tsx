@@ -218,7 +218,7 @@ export function ArchivalSettingsPanel({ cases }: { cases: StoredCase[] }) {
   // Get unique statuses from archive for filter dropdown
   const archiveStatuses = useMemo(() => {
     if (!selectedArchive) return [];
-    return Array.from(new Set(selectedArchive.cases.map(c => c.status))).sort();
+    return Array.from(new Set(selectedArchive.cases.map(c => c.status))).sort((a, b) => a.localeCompare(b));
   }, [selectedArchive]);
   
   // Compute filtered cases based on search and status filter

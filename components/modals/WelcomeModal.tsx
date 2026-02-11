@@ -35,7 +35,7 @@ type WelcomeStep = "welcome" | "password";
 interface WelcomeModalProps {
   isOpen: boolean;
   isSupported: boolean;
-  onSetupComplete: () => void;
+  onSetupComplete: () => void | Promise<void>;
   onGoToSettings: () => void;
 }
 

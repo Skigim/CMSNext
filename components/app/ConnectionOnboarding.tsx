@@ -10,7 +10,7 @@ interface ConnectionOnboardingProps {
   isSupported: boolean;
   permissionStatus?: string;
   hasStoredHandle?: boolean;
-  onConnectionComplete: () => void;
+  onConnectionComplete: () => void | Promise<void>;
   onGoToSettings: () => void;
 }
 

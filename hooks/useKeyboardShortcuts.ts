@@ -71,7 +71,7 @@ function isEditableTarget(target: EventTarget | null): boolean {
 }
 
 function bindingPrefix(modifiers: string[], chordKey: string): string {
-  const mods = modifiers.map((m) => m.toLowerCase()).sort();
+  const mods = modifiers.map((m) => m.toLowerCase()).sort((a, b) => a.localeCompare(b));
   return `${mods.join("+")}+${chordKey.toLowerCase()}`.replace(/^\+/, "");
 }
 

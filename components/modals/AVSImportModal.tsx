@@ -20,7 +20,7 @@ interface AVSImportModalProps {
   /** Current import state */
   importState: AVSImportState;
   /** Called when input changes */
-  onInputChange: (input: string) => void;
+  onInputChange: (input: string) => void | Promise<void>;
   /** Called to clear input */
   onClear: () => void;
   /** Called to import all accounts */

@@ -22,7 +22,7 @@ const logger = createLogger("LoginModal");
 
 interface LoginModalProps {
   isOpen: boolean;
-  onLoginComplete: () => void;
+  onLoginComplete: () => void | Promise<void>;
   onChooseDifferentFolder: () => void;
 }
 

@@ -5,7 +5,7 @@ import type { CaseWorkspaceProps } from "./CaseWorkspace";
 import type { FileStorageLifecycleState } from "../../contexts/FileStorageContext";
 
 interface ConnectionHandlers {
-  onConnectionComplete: () => void;
+  onConnectionComplete: () => void | Promise<void>;
   onGoToSettings: () => void;
 }
 

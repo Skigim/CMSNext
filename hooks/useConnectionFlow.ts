@@ -21,7 +21,7 @@ interface UseConnectionFlowParams {
 
 interface UseConnectionFlowResult {
   showConnectModal: boolean;
-  handleConnectionComplete: () => void;
+  handleConnectionComplete: () => void | Promise<void>;
   dismissConnectModal: () => void;
 }
 

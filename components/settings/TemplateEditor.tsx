@@ -171,7 +171,7 @@ function TemplateViewRow({
             )}
           </div>
         </div>
-        <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()} onKeyDown={(e) => e.stopPropagation()}>
           <Tooltip>
             <TooltipTrigger asChild>
               <Button

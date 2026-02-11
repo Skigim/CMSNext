@@ -159,7 +159,7 @@ export function CaseList({
         }
       }
     });
-    return Array.from(descriptions).sort();
+    return Array.from(descriptions).sort((a, b) => a.localeCompare(b));
   }, [openAlertsByCase]);
 
   const hasCustomPreferences = useMemo(() => {

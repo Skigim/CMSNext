@@ -323,7 +323,7 @@ export function usePositionAssignmentsImport({
   // ---- Derived state ----
   const availableStatuses = useMemo(() => {
     const statuses = new Set(importState.unmatchedCases.map(c => c.status));
-    return Array.from(statuses).sort();
+    return Array.from(statuses).sort((a, b) => a.localeCompare(b));
   }, [importState.unmatchedCases]);
 
   const filteredUnmatchedCases = useMemo(
