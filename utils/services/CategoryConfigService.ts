@@ -152,7 +152,7 @@ interface CategoryConfigServiceConfig {
  */
 export class CategoryConfigService {
   /** File storage service for data persistence */
-  private fileStorage: FileStorageService;
+  private readonly fileStorage: FileStorageService;
 
   /**
    * Create a new CategoryConfigService instance.
@@ -361,44 +361,6 @@ export class CategoryConfigService {
 
     logger.info("Alert types updated with colors and sort order", {
       alertTypeCount: withSortOrder.length,
-    });
-
-    return this.updateCategoryConfig(nextConfig);
-  }
-
-  /**
-   * Update case summary template configuration.
-   * 
-   * Configures the default section order and visibility for case summaries.
-   * This affects the "Generate Case Summary" feature.
-   * 
-   * @param {SummaryTemplateConfig} template - Summary template configuration
-   * @returns {Promise<CategoryConfig>} Updated configuration
-   * 
-   * @example
-   * const updated = await categoryConfigService.updateSummaryTemplate({
-   *   sectionOrder: ['notes', 'caseInfo', 'personInfo', 'resources'],
-   *   defaultSections: {
-   *     notes: true,
-   *     caseInfo: true,
-   *     personInfo: true,
-   *     relationships: false,
-   *     resources: true,
-   *     income: false,
-   *     expenses: false,
-   *     avsTracking: false,
-   *   }
-   * });
-   */
-  async updateSummaryTemplate(template: import('@/types/categoryConfig').SummaryTemplateConfig): Promise<CategoryConfig> {
-    const currentConfig = await this.getCategoryConfig();
-    const nextConfig: CategoryConfig = {
-      ...currentConfig,
-      summaryTemplate: template,
-    };
-
-    logger.info("Summary template updated", {
-      sectionCount: template.sectionOrder.length,
     });
 
     return this.updateCategoryConfig(nextConfig);

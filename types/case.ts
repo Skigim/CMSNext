@@ -38,6 +38,12 @@ export interface AmountHistoryEntry {
   createdAt: string;
 }
 
+/** 
+ * Data required to create a new amount history entry.
+ * Excludes system-generated fields.
+ */
+export type NewAmountHistoryEntryData = Omit<AmountHistoryEntry, "id" | "createdAt">;
+
 // Person interface
 export interface Person {
   id: string;
@@ -80,6 +86,12 @@ export interface FinancialItem {
   createdAt?: string;
   updatedAt?: string;
 }
+
+/**
+ * Data required to create a new financial item.
+ * Excludes system-generated fields.
+ */
+export type NewFinancialItemData = Omit<FinancialItem, 'id' | 'createdAt' | 'updatedAt'>;
 
 // Note interface
 export interface Note {
@@ -264,20 +276,6 @@ export interface NewCaseRecordData {
   avsConsentDate?: string;
   maritalStatus?: string;
   voterFormStatus?: VoterFormStatus;
-}
-
-export interface NewFinancialItemData {
-  name?: string; // For backward compatibility
-  description: string;
-  location?: string;
-  accountNumber?: string;
-  amount: number;
-  frequency?: string;
-  owner?: string;
-  verificationStatus: FinancialItem['verificationStatus'];
-  verificationSource?: string;
-  notes?: string;
-  status?: FinancialItem['status']; // For backward compatibility
 }
 
 export interface NewNoteData {

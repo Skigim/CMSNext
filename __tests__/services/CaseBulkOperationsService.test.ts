@@ -106,20 +106,6 @@ describe('CaseBulkOperationsService', () => {
     livingArrangements: ['Apartment/House'],
     noteCategories: ['General'],
     verificationStatuses: ['Needs VR', 'Verified'],
-    summaryTemplate: {
-      sectionOrder: ['notes', 'caseInfo', 'personInfo', 'relationships', 'resources', 'income', 'expenses', 'avsTracking'],
-      defaultSections: {
-        notes: true,
-        caseInfo: true,
-        personInfo: true,
-        relationships: true,
-        resources: true,
-        income: true,
-        expenses: true,
-        avsTracking: true,
-      },
-      sectionTemplates: {},
-    },
   };
 
   const createEmptyNormalizedData = (): NormalizedFileData => ({
@@ -534,20 +520,6 @@ describe('CaseBulkOperationsService', () => {
         livingArrangements: ['Custom Arrangement'],
         noteCategories: ['Custom Note'],
         verificationStatuses: ['Custom VR'],
-        summaryTemplate: {
-          sectionOrder: ['notes', 'caseInfo', 'personInfo', 'relationships', 'resources', 'income', 'expenses', 'avsTracking'],
-          defaultSections: {
-            notes: true,
-            caseInfo: true,
-            personInfo: true,
-            relationships: true,
-            resources: true,
-            income: true,
-            expenses: true,
-            avsTracking: true,
-          },
-          sectionTemplates: {},
-        },
       };
 
       await service.clearAllData(customConfig);

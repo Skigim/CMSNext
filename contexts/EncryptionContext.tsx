@@ -168,7 +168,7 @@ interface EncryptionProviderProps {
  * @see {@link useEncryption} to access encryption context
  * @see {@link DEFAULT_ENCRYPTION_CONFIG} for PBKDF2 settings
  */
-export function EncryptionProvider({ children }: EncryptionProviderProps) {
+export function EncryptionProvider({ children }: Readonly<EncryptionProviderProps>) {
   const [state, setState] = useState<EncryptionState>({
     isAuthenticated: false,
     username: DEFAULT_USERNAME,
@@ -258,7 +258,7 @@ export function EncryptionProvider({ children }: EncryptionProviderProps) {
     async (password: string): Promise<{ salt: string; key: CryptoKey } | null> => {
       try {
         const salt = generateSalt();
-        const saltBuffer = Uint8Array.from(atob(salt), (c) => c.charCodeAt(0)).buffer;
+        const saltBuffer = Uint8Array.from(atob(salt), (c) => c.codePointAt(0)!).buffer;
         const key = await deriveKey(
           password,
           saltBuffer,

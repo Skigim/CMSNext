@@ -4,6 +4,8 @@ import {
   CaseCategory,
   CaseStatus,
   FinancialItem,
+  NewFinancialItemData,
+  NewAmountHistoryEntryData,
   NewPersonData,
   NewCaseRecordData,
   NewNoteData,
@@ -11,7 +13,7 @@ import {
   AlertRecord,
 } from "../types/case";
 import type { CaseActivityEntry } from "../types/activityLog";
-import type { Template } from "../types/template";
+import type { Template, NewTemplateData } from "../types/template";
 import type { ArchivalSettings, CaseArchiveData, ArchiveResult, RestoreResult } from "../types/archive";
 import { DEFAULT_ARCHIVAL_SETTINGS } from "../types/archive";
 import AutosaveFileService from './AutosaveFileService';
@@ -170,25 +172,25 @@ function convertToAlertWithMatch(record: AlertRecord): AlertWithMatch {
  */
 export class DataManager {
   /** File service instance for file system operations and autosave */
-  private fileService: AutosaveFileService;
+  private readonly fileService: AutosaveFileService;
   /** File storage service for low-level I/O operations */
-  private fileStorage: FileStorageService;
+  private readonly fileStorage: FileStorageService;
   /** Activity log service for tracking case operations */
-  private activityLog: ActivityLogService;
+  private readonly activityLog: ActivityLogService;
   /** Category configuration service for managing statuses and categories */
-  private categoryConfig: CategoryConfigService;
+  private readonly categoryConfig: CategoryConfigService;
   /** Notes service for note operations */
-  private notes: NotesService;
+  private readonly notes: NotesService;
   /** Financials service for financial item operations */
-  private financials: FinancialsService;
+  private readonly financials: FinancialsService;
   /** Case service for case CRUD operations */
-  private cases: CaseService;
+  private readonly cases: CaseService;
   /** Alerts service for alert management and matching */
-  private alerts: AlertsService;
+  private readonly alerts: AlertsService;
   /** Template service for managing templates */
-  private templates: TemplateService;
+  private readonly templates: TemplateService;
   /** Case archive service for archival operations */
-  private archive: CaseArchiveService;
+  private readonly archive: CaseArchiveService;
 
   /**
    * Creates a new DataManager instance.
@@ -567,77 +569,8 @@ export class DataManager {
       // First pass: merge alerts with existing cases
       const result = await this.alerts.mergeAlertsFromCsvContent(csvContent, existingAlerts, cases);
 
-      // Find unmatched alerts that have MCNs - these need skeleton cases
-      // Also exclude alerts that already have a caseId (already linked to a case)
-      const unmatchedWithMcn = result.alerts.filter(
-        alert => alert.matchStatus === "unmatched" && alert.mcNumber && !alert.caseId
-      );
-
-      // Group by normalized MCN to avoid duplicate case creation
-      const mcnToAlerts = new Map<string, AlertWithMatch[]>();
-      for (const alert of unmatchedWithMcn) {
-        const normalizedMcn = normalizeMcn(alert.mcNumber);
-        if (normalizedMcn) {
-          const existing = mcnToAlerts.get(normalizedMcn) ?? [];
-          existing.push(alert);
-          mcnToAlerts.set(normalizedMcn, existing);
-        }
-      }
-
-      // Create skeleton cases for each unique MCN
-      const createdCases: StoredCase[] = [];
-      for (const [, alerts] of mcnToAlerts) {
-        // Use the first alert's data for case creation
-        const alert = alerts[0];
-        // Use rawName from metadata (original "LASTNAME, FIRSTNAME" format) for proper parsing
-        const rawName = alert.metadata?.rawName as string | undefined;
-        const { firstName, lastName } = parseNameFromImport(rawName);
-        
-        // Only create if we have at least a name or MCN
-        if (!firstName && !lastName) {
-          logger.warn('Skipping skeleton case creation: no name available', { mcn: alert.mcNumber });
-          continue;
-        }
-
-        try {
-          const skeletonCase = await this.cases.createCompleteCase({
-            person: {
-              firstName: firstName || "",
-              lastName: lastName || "",
-              email: "",
-              phone: "",
-              dateOfBirth: "",
-              ssn: "",
-              livingArrangement: "",
-              address: { street: "", city: "", state: "", zip: "" },
-              mailingAddress: { street: "", city: "", state: "", zip: "", sameAsPhysical: true },
-              status: "Active",
-            },
-            caseRecord: {
-              mcn: alert.mcNumber ?? "",
-              status: "Active" as CaseStatus,
-              applicationDate: new Date().toISOString(),
-              caseType: "",
-              personId: "",
-              description: "Auto-created from alert import",
-              livingArrangement: "",
-              admissionDate: "",
-              organizationId: "",
-            },
-          });
-          createdCases.push(skeletonCase);
-          logger.info('Created skeleton case from unmatched alert', { 
-            caseId: skeletonCase.id, 
-            mcn: alert.mcNumber,
-            name: `${firstName} ${lastName}`.trim(),
-          });
-        } catch (error) {
-          logger.error('Failed to create skeleton case', { 
-            mcn: alert.mcNumber, 
-            error: extractErrorMessage(error) 
-          });
-        }
-      }
+      // Extract unmatched alerts that need skeleton cases
+      const createdCases = await this.createSkeletonCasesForUnmatchedAlerts(result.alerts);
 
       // If we created any cases, re-match the alerts against all cases
       if (createdCases.length > 0) {
@@ -688,6 +621,91 @@ export class DataManager {
         error: error instanceof Error ? error.message : String(error) 
       };
     }
+  }
+
+  /**
+   * Identifies unmatched alerts with MCNs and creates skeleton cases for them.
+   * Internal helper for mergeAlertsFromCsvContent to reduce cognitive complexity.
+   * 
+   * @param {AlertWithMatch[]} alerts - Current state of alerts after initial merge
+   * @returns {Promise<StoredCase[]>} Array of newly created skeleton cases
+   * @private
+   */
+  private async createSkeletonCasesForUnmatchedAlerts(alerts: AlertWithMatch[]): Promise<StoredCase[]> {
+    // Find unmatched alerts that have MCNs - these need skeleton cases
+    // Also exclude alerts that already have a caseId (already linked to a case)
+    const unmatchedWithMcn = alerts.filter(
+      alert => alert.matchStatus === "unmatched" && alert.mcNumber && !alert.caseId
+    );
+
+    if (unmatchedWithMcn.length === 0) {
+      return [];
+    }
+
+    // Group by normalized MCN to avoid duplicate case creation
+    const mcnToAlerts = new Map<string, AlertWithMatch[]>();
+    for (const alert of unmatchedWithMcn) {
+      const normalizedMcn = normalizeMcn(alert.mcNumber);
+      if (normalizedMcn) {
+        const existing = mcnToAlerts.get(normalizedMcn) ?? [];
+        existing.push(alert);
+        mcnToAlerts.set(normalizedMcn, existing);
+      }
+    }
+
+    const createdCases: StoredCase[] = [];
+    for (const [, groupAlerts] of mcnToAlerts) {
+      // Use the first alert's data for case creation
+      const alert = groupAlerts[0];
+      const rawName = alert.metadata?.rawName;
+      const { firstName, lastName } = parseNameFromImport(rawName);
+      
+      if (!firstName && !lastName) {
+        logger.warn('Skipping skeleton case creation: no name available', { mcn: alert.mcNumber });
+        continue;
+      }
+
+      try {
+        const skeletonCase = await this.cases.createCompleteCase({
+          person: {
+            firstName: firstName || "",
+            lastName: lastName || "",
+            email: "",
+            phone: "",
+            dateOfBirth: "",
+            ssn: "",
+            livingArrangement: "",
+            address: { street: "", city: "", state: "", zip: "" },
+            mailingAddress: { street: "", city: "", state: "", zip: "", sameAsPhysical: true },
+            status: "Active",
+          },
+          caseRecord: {
+            mcn: alert.mcNumber ?? "",
+            status: "Active" as CaseStatus,
+            applicationDate: new Date().toISOString(),
+            caseType: "",
+            personId: "",
+            description: "Auto-created from alert import",
+            livingArrangement: "",
+            admissionDate: "",
+            organizationId: "",
+          },
+        });
+        createdCases.push(skeletonCase);
+        logger.info('Created skeleton case from unmatched alert', { 
+          caseId: skeletonCase.id, 
+          mcn: alert.mcNumber, 
+          name: `${firstName} ${lastName}`.trim(),
+        });
+      } catch (error) {
+        logger.error('Failed to create skeleton case', { 
+          mcn: alert.mcNumber, 
+          error: extractErrorMessage(error) 
+        });
+      }
+    }
+
+    return createdCases;
   }
 
   // =============================================================================
@@ -751,16 +769,6 @@ export class DataManager {
   }
 
   /**
-   * Update case summary template configuration.
-   * 
-   * @param {SummaryTemplateConfig} template - Summary template configuration
-   * @returns {Promise<CategoryConfig>} The updated category configuration
-   */
-  async updateSummaryTemplate(template: import('@/types/categoryConfig').SummaryTemplateConfig): Promise<CategoryConfig> {
-    return this.categoryConfig.updateSummaryTemplate(template);
-  }
-
-  /**
    * Reset category configuration to defaults.
    * 
    * Clears all custom configurations and restores factory defaults.
@@ -791,7 +799,7 @@ export class DataManager {
    * @returns The newly created template
    */
   async addTemplate(
-    templateData: Omit<Template, 'id' | 'createdAt' | 'updatedAt'>
+    templateData: NewTemplateData
   ): Promise<Template> {
     return this.templates.addTemplate(templateData);
   }
@@ -805,7 +813,7 @@ export class DataManager {
    */
   async updateTemplate(
     id: string,
-    updates: Partial<Omit<Template, 'id' | 'createdAt' | 'updatedAt'>>
+    updates: Partial<NewTemplateData>
   ): Promise<Template | null> {
     return this.templates.updateTemplate(id, updates);
   }
@@ -1022,7 +1030,7 @@ export class DataManager {
    * 
    * @param {string} caseId - The ID of the case to add the item to
    * @param {CaseCategory} category - The category ('resources', 'income', or 'expenses')
-   * @param {Omit<FinancialItem, 'id' | 'createdAt' | 'updatedAt'>} itemData - The financial item data
+   * @param {NewFinancialItemData} itemData - The financial item data
    * @returns {Promise<StoredFinancialItem>} The created financial item with caseId and category
    * @example
    * const item = await dataManager.addItem(caseId, 'resources', {
@@ -1032,7 +1040,7 @@ export class DataManager {
    *   verified: true
    * });
    */
-  async addItem(caseId: string, category: CaseCategory, itemData: Omit<FinancialItem, 'id' | 'createdAt' | 'updatedAt'>): Promise<StoredFinancialItem> {
+  async addItem(caseId: string, category: CaseCategory, itemData: NewFinancialItemData): Promise<StoredFinancialItem> {
     return this.financials.addItem(caseId, category, itemData);
   }
 
@@ -1079,14 +1087,14 @@ export class DataManager {
    * @param {string} caseId - The ID of the case
    * @param {CaseCategory} category - The category of the item
    * @param {string} itemId - The ID of the financial item
-   * @param {Omit<AmountHistoryEntry, "id" | "createdAt">} entry - The history entry data
+   * @param {NewAmountHistoryEntryData} entry - The history entry data
    * @returns {Promise<StoredFinancialItem>} The updated financial item with new history entry
    */
   async addAmountHistoryEntry(
     caseId: string,
     category: CaseCategory,
     itemId: string,
-    entry: Omit<import("../types/case").AmountHistoryEntry, "id" | "createdAt">
+    entry: NewAmountHistoryEntryData
   ): Promise<StoredFinancialItem> {
     return this.financials.addAmountHistoryEntry(caseId, category, itemId, entry);
   }
@@ -1100,7 +1108,7 @@ export class DataManager {
    * @param {CaseCategory} category - The category of the item
    * @param {string} itemId - The ID of the financial item
    * @param {string} entryId - The ID of the history entry to update
-   * @param {Partial<Omit<AmountHistoryEntry, "id" | "createdAt">>} updates - The fields to update
+   * @param {Partial<NewAmountHistoryEntryData>} updates - The fields to update
    * @returns {Promise<StoredFinancialItem>} The updated financial item
    */
   async updateAmountHistoryEntry(
@@ -1108,7 +1116,7 @@ export class DataManager {
     category: CaseCategory,
     itemId: string,
     entryId: string,
-    updates: Partial<Omit<import("../types/case").AmountHistoryEntry, "id" | "createdAt">>
+    updates: Partial<NewAmountHistoryEntryData>
   ): Promise<StoredFinancialItem> {
     return this.financials.updateAmountHistoryEntry(caseId, category, itemId, entryId, updates);
   }
@@ -1260,9 +1268,9 @@ export class DataManager {
    * **Warning:** This method should only be used by migration tools.
    * Normal application code should use the standard read methods.
    * 
-   * @returns {Promise<unknown | null>} Raw file data or null if no file exists
+   * @returns {Promise<unknown>} Raw file data or null if no file exists
    */
-  async readRawFileData(): Promise<unknown | null> {
+  async readRawFileData(): Promise<unknown> {
     return this.fileStorage.readRawFileData();
   }
 
@@ -1331,9 +1339,7 @@ export class DataManager {
     // Get settings and completed statuses from category config
     const config = await this.categoryConfig.getCategoryConfig();
     
-    if (!settings) {
-      settings = config?.archivalSettings ?? DEFAULT_ARCHIVAL_SETTINGS;
-    }
+    settings ??= config?.archivalSettings ?? DEFAULT_ARCHIVAL_SETTINGS;
     
     // Build completed statuses set from config
     const completedStatuses = config 

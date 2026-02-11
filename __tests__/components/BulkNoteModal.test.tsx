@@ -13,20 +13,6 @@ const mockCategoryConfig: CategoryConfig = {
   noteCategories: ['General', 'Important', 'Follow-up'],
   alertTypes: [{ name: 'Court Notice', colorSlot: 'red' }, { name: 'Income Verification', colorSlot: 'amber' }],
   verificationStatuses: ['Needs VR', 'Verified'],
-  summaryTemplate: {
-    sectionOrder: ['notes', 'caseInfo', 'personInfo', 'relationships', 'resources', 'income', 'expenses', 'avsTracking'],
-    defaultSections: {
-      notes: true,
-      caseInfo: true,
-      personInfo: true,
-      relationships: true,
-      resources: true,
-      income: true,
-      expenses: true,
-      avsTracking: true,
-    },
-    sectionTemplates: {},
-  },
 };
 
 const mockContextValue = {

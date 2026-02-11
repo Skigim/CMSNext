@@ -118,20 +118,6 @@ describe('FinancialsService', () => {
     livingArrangements: ['Apartment/House'],
     noteCategories: ['General'],
     verificationStatuses: ['Needs VR', 'Verified'],
-    summaryTemplate: {
-      sectionOrder: ['notes', 'caseInfo', 'personInfo', 'relationships', 'resources', 'income', 'expenses', 'avsTracking'],
-      defaultSections: {
-        notes: true,
-        caseInfo: true,
-        personInfo: true,
-        relationships: true,
-        resources: true,
-        income: true,
-        expenses: true,
-        avsTracking: true,
-      },
-      sectionTemplates: {},
-    },
   });
 
   const createBaseMockData = (): NormalizedFileData => ({

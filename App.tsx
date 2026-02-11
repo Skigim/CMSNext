@@ -18,19 +18,19 @@ const FOCUS_SEARCH_EVENT = "app:focussearch";
 const TOGGLE_SIDEBAR_EVENT = "app:togglesidebar";
 
 export function dispatchNavigationEvent(path: string) {
-  window.dispatchEvent(new CustomEvent(NAVIGATION_EVENT, { detail: { path } }));
+  globalThis.dispatchEvent(new CustomEvent(NAVIGATION_EVENT, { detail: { path } }));
 }
 
 export function dispatchNewCaseEvent() {
-  window.dispatchEvent(new CustomEvent(NEW_CASE_EVENT));
+  globalThis.dispatchEvent(new CustomEvent(NEW_CASE_EVENT));
 }
 
 export function dispatchFocusSearchEvent() {
-  window.dispatchEvent(new CustomEvent(FOCUS_SEARCH_EVENT));
+  globalThis.dispatchEvent(new CustomEvent(FOCUS_SEARCH_EVENT));
 }
 
 export function dispatchToggleSidebarEvent() {
-  window.dispatchEvent(new CustomEvent(TOGGLE_SIDEBAR_EVENT));
+  globalThis.dispatchEvent(new CustomEvent(TOGGLE_SIDEBAR_EVENT));
 }
 
 export default function App() {

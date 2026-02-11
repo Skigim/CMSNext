@@ -62,6 +62,12 @@ export interface Template {
   updatedAt: string;
 }
 
+/**
+ * Data required to create a new template.
+ * Excludes system-generated fields.
+ */
+export type NewTemplateData = Omit<Template, 'id' | 'createdAt' | 'updatedAt'>;
+
 // =============================================================================
 // Placeholder Fields
 // =============================================================================

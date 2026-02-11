@@ -8,13 +8,14 @@ import {
   type StatusConfig,
   type AlertTypeConfig,
   type PartialCategoryConfigInput,
-  type SummaryTemplateConfig,
 } from "@/types/categoryConfig";
 import { useDataManagerSafe } from "./DataManagerContext";
 import { useFileStorageDataChange } from "./FileStorageContext";
 import { LegacyFormatError } from "@/utils/services/FileStorageService";
 import { createLogger } from "@/utils/logger";
 import { extractErrorMessage } from "@/utils/errorUtils";
+
+import type { DataManager } from "@/utils/DataManager";
 
 const logger = createLogger("CategoryConfigContext");
 
@@ -65,10 +66,10 @@ async function withCategoryUpdate<T>(
 
 /**
  * Handler type for category updates.
- * Accepts category key and values (string array, StatusConfig array, or SummaryTemplateConfig)
+ * Accepts category key and values (string array, StatusConfig array, or AlertTypeConfig array)
  * @typedef {Function} UpdateHandler
  */
-type UpdateHandler = (key: CategoryKey, values: string[] | StatusConfig[] | AlertTypeConfig[] | SummaryTemplateConfig) => Promise<void>;
+type UpdateHandler = (key: CategoryKey, values: string[] | StatusConfig[] | AlertTypeConfig[]) => Promise<void>;
 
 /**
  * Category configuration context value - provides access to case/alert/VR configuration.
@@ -115,6 +116,93 @@ const CategoryConfigContext = createContext<CategoryConfigContextValue | null>(n
 
 // Export context for test utilities - allows direct context injection in tests
 export { CategoryConfigContext };
+
+type SuccessHandler = (result: PartialCategoryConfigInput) => void;
+
+/** Check if values contain typed config objects (with colorSlot property) */
+function hasTypedColorConfig(values: (string | { colorSlot?: string })[]): boolean {
+  return values.length > 0 && typeof values[0] === 'object' && 'colorSlot' in values[0];
+}
+
+/** Extract string names from a mixed array of strings and config objects */
+function extractNames(values: (string | { name: string })[]): string[] {
+  return values.map(v => typeof v === 'string' ? v : v.name);
+}
+
+/** Handle caseStatuses category updates (StatusConfig[] or legacy string[]) */
+async function handleCaseStatusesUpdate(
+  dataManager: DataManager,
+  inputValues: (string | StatusConfig)[],
+  handleSuccess: SuccessHandler,
+): Promise<void> {
+  if (hasTypedColorConfig(inputValues)) {
+    const statusConfigs = inputValues as StatusConfig[];
+    if (statusConfigs.length === 0) {
+      toast.error("Please provide at least one status.");
+      return;
+    }
+    await withCategoryUpdate(
+      () => dataManager.updateCaseStatuses(statusConfigs),
+      {
+        loadingMessage: "Saving statuses...",
+        successMessage: "Statuses updated",
+        errorMessage: "Failed to update statuses",
+        onSuccess: handleSuccess,
+      },
+    );
+    return;
+  }
+
+  // Legacy string[] format - colors auto-assigned on next load
+  const sanitizedValues = sanitizeCategoryValues(extractNames(inputValues));
+  if (sanitizedValues.length === 0) {
+    toast.error("Please provide at least one option.");
+    return;
+  }
+  await withCategoryUpdate(
+    () => dataManager.updateCategoryValues('caseStatuses', sanitizedValues),
+    {
+      loadingMessage: "Saving options...",
+      successMessage: "Options updated",
+      errorMessage: "Failed to update statuses",
+      onSuccess: handleSuccess,
+    },
+  );
+}
+
+/** Handle alertTypes category updates (AlertTypeConfig[] or legacy string[]) */
+async function handleAlertTypesUpdate(
+  dataManager: DataManager,
+  key: CategoryKey,
+  inputValues: (string | AlertTypeConfig)[],
+  handleSuccess: SuccessHandler,
+): Promise<void> {
+  if (hasTypedColorConfig(inputValues)) {
+    const alertTypeConfigs = inputValues as AlertTypeConfig[];
+    await withCategoryUpdate(
+      () => dataManager.updateAlertTypes(alertTypeConfigs),
+      {
+        loadingMessage: "Saving alert types...",
+        successMessage: "Alert types updated",
+        errorMessage: "Failed to update alert types",
+        onSuccess: handleSuccess,
+      },
+    );
+    return;
+  }
+
+  // Legacy string[] format - colors auto-assigned on next load
+  const sanitizedValues = sanitizeCategoryValues(extractNames(inputValues));
+  await withCategoryUpdate(
+    () => dataManager.updateCategoryValues(key, sanitizedValues),
+    {
+      loadingMessage: "Saving options...",
+      successMessage: "Options updated",
+      errorMessage: "Failed to update alert types",
+      onSuccess: handleSuccess,
+    },
+  );
+}
 
 /**
  * CategoryConfigProvider - Manages case statuses, priorities, alert types, and VR scripts.
@@ -237,113 +325,13 @@ export const CategoryConfigProvider: React.FC<{ children: React.ReactNode }> = (
 
       // Handle caseStatuses specially since it uses StatusConfig[]
       if (key === 'caseStatuses') {
-        const inputValues = values as (string | StatusConfig)[];
-        
-        // Check if we have StatusConfig objects (with colorSlot)
-        const hasColorInfo = inputValues.length > 0 && 
-          typeof inputValues[0] === 'object' && 
-          'colorSlot' in inputValues[0];
-        
-        if (hasColorInfo) {
-          // New format with colors - use updateCaseStatuses
-          const statusConfigs = inputValues as StatusConfig[];
-          if (statusConfigs.length === 0) {
-            toast.error("Please provide at least one status.");
-            return;
-          }
-
-          await withCategoryUpdate(
-            () => dataManager.updateCaseStatuses(statusConfigs),
-            {
-              loadingMessage: "Saving statuses...",
-              successMessage: "Statuses updated",
-              errorMessage: "Failed to update statuses",
-              onSuccess: handleSuccess,
-            },
-          );
-          return;
-        }
-        
-        // Legacy string[] format - normalize and save as strings
-        // Colors will be auto-assigned on next load
-        const stringValues: string[] = inputValues.map(v => 
-          typeof v === 'string' ? v : v.name
-        );
-        const sanitizedValues = sanitizeCategoryValues(stringValues);
-        if (sanitizedValues.length === 0) {
-          toast.error("Please provide at least one option.");
-          return;
-        }
-
-        await withCategoryUpdate(
-          () => dataManager.updateCategoryValues(key, sanitizedValues),
-          {
-            loadingMessage: "Saving options...",
-            successMessage: "Options updated",
-            errorMessage: "Failed to update statuses",
-            onSuccess: handleSuccess,
-          },
-        );
+        await handleCaseStatusesUpdate(dataManager, values as (string | StatusConfig)[], handleSuccess);
         return;
       }
 
       // Handle alertTypes specially since it uses AlertTypeConfig[]
       if (key === 'alertTypes') {
-        const inputValues = values as (string | AlertTypeConfig)[];
-        
-        // Check if we have AlertTypeConfig objects (with colorSlot)
-        const hasColorInfo = inputValues.length > 0 && 
-          typeof inputValues[0] === 'object' && 
-          'colorSlot' in inputValues[0];
-        
-        if (hasColorInfo) {
-          // New format with colors - use updateAlertTypes
-          const alertTypeConfigs = inputValues as AlertTypeConfig[];
-
-          await withCategoryUpdate(
-            () => dataManager.updateAlertTypes(alertTypeConfigs),
-            {
-              loadingMessage: "Saving alert types...",
-              successMessage: "Alert types updated",
-              errorMessage: "Failed to update alert types",
-              onSuccess: handleSuccess,
-            },
-          );
-          return;
-        }
-        
-        // Legacy string[] format - normalize and save as strings
-        // Colors will be auto-assigned on next load
-        const stringValues: string[] = inputValues.map(v => 
-          typeof v === 'string' ? v : v.name
-        );
-        const sanitizedValues = sanitizeCategoryValues(stringValues);
-
-        await withCategoryUpdate(
-          () => dataManager.updateCategoryValues(key, sanitizedValues),
-          {
-            loadingMessage: "Saving options...",
-            successMessage: "Options updated",
-            errorMessage: "Failed to update alert types",
-            onSuccess: handleSuccess,
-          },
-        );
-        return;
-      }
-
-      // Handle summaryTemplate specially since it uses SummaryTemplateConfig
-      if (key === 'summaryTemplate') {
-        const template = values as SummaryTemplateConfig;
-
-        await withCategoryUpdate(
-          () => dataManager.updateSummaryTemplate(template),
-          {
-            loadingMessage: "Saving summary template...",
-            successMessage: "Summary template updated",
-            errorMessage: "Failed to update summary template",
-            onSuccess: handleSuccess,
-          },
-        );
+        await handleAlertTypesUpdate(dataManager, key, values as (string | AlertTypeConfig)[], handleSuccess);
         return;
       }
 

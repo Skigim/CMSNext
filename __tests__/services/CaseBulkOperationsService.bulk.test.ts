@@ -41,20 +41,6 @@ const defaultCategoryConfig: CategoryConfig = {
   livingArrangements: ['Apartment/House'],
   noteCategories: ['General', 'Important'],
   verificationStatuses: ['Needs VR', 'Verified'],
-  summaryTemplate: {
-    sectionOrder: ['notes', 'caseInfo', 'personInfo', 'relationships', 'resources', 'income', 'expenses', 'avsTracking'],
-    defaultSections: {
-      notes: true,
-      caseInfo: true,
-      personInfo: true,
-      relationships: true,
-      resources: true,
-      income: true,
-      expenses: true,
-      avsTracking: true,
-    },
-    sectionTemplates: {},
-  },
 };
 
 const createMockPerson = (id: string): Person => ({

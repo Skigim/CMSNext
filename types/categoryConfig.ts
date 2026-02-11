@@ -14,8 +14,7 @@ export type CategoryKey =
   | "alertTypes"
   | "livingArrangements"
   | "noteCategories"
-  | "verificationStatuses"
-  | "summaryTemplate";
+  | "verificationStatuses";
 
 /**
  * Configuration for a case status with its display color.
@@ -55,35 +54,6 @@ export type SummarySectionKey =
   | 'avsTracking';
 
 /**
- * Template string with variable placeholders
- * Variables: {{variable_name}}
- * Example: "Name: {{firstName}} {{lastName}} ({{age}})"
- * 
- * @deprecated Section templates are now managed through the unified Template system.
- * See types/template.ts and TemplateService for the new approach.
- */
-export type SectionTemplate = string;
-
-/**
- * Configuration for case summary template - defines section order, visibility, and content
- * 
- * @deprecated This configuration is being phased out. Section order and visibility
- * will be managed through user preferences, and templates are handled by TemplateService.
- * For now, this remains for backward compatibility but sectionTemplates should be empty.
- */
-export interface SummaryTemplateConfig {
-  /** Ordered list of sections to include in summary */
-  sectionOrder: SummarySectionKey[];
-  /** Default enabled state for each section */
-  defaultSections: Record<SummarySectionKey, boolean>;
-  /** 
-   * Custom templates for each section (optional - falls back to default formatting if not provided)
-   * @deprecated Use Template records with category='summary' instead. See utils/summarySectionMigration.ts
-   */
-  sectionTemplates: Partial<Record<SummarySectionKey, SectionTemplate>>;
-}
-
-/**
  * Dashboard display and calculation settings.
  */
 export interface DashboardSettings {
@@ -105,11 +75,6 @@ export interface CategoryConfig {
   livingArrangements: string[];
   noteCategories: string[];
   verificationStatuses: string[];
-  /** 
-   * Case summary template configuration
-   * @deprecated Section templates migrated to Template system. sectionTemplates should be empty.
-   */
-  summaryTemplate: SummaryTemplateConfig;
   /** 
    * Case archival settings (threshold, closed-only flag)
    * Optional for backward compatibility - uses defaults if not present.
@@ -138,7 +103,6 @@ export interface PartialCategoryConfigInput {
   livingArrangements?: string[];
   noteCategories?: string[];
   verificationStatuses?: string[];
-  summaryTemplate?: SummaryTemplateConfig;
   /** Case archival settings */
   archivalSettings?: ArchivalSettings;
   /** Dashboard calculation settings */
@@ -202,22 +166,6 @@ const DEFAULT_VERIFICATION_STATUSES = [
 // No default alert types - populated from incoming alert data
 const DEFAULT_ALERT_TYPES: AlertTypeConfig[] = [];
 
-// Default summary template - matches current hardcoded order
-const DEFAULT_SUMMARY_TEMPLATE: SummaryTemplateConfig = {
-  sectionOrder: ['notes', 'caseInfo', 'personInfo', 'relationships', 'resources', 'income', 'expenses', 'avsTracking'] as SummarySectionKey[],
-  defaultSections: {
-    notes: true,
-    caseInfo: true,
-    personInfo: true,
-    relationships: true,
-    resources: true,
-    income: true,
-    expenses: true,
-    avsTracking: true,
-  },
-  sectionTemplates: {}, // Empty means use default formatting
-};
-
 export const DEFAULT_DASHBOARD_SETTINGS: DashboardSettings = Object.freeze({
   requireNoteForProcessedCount: true,
 });
@@ -230,7 +178,6 @@ export const defaultCategoryConfig: CategoryConfig = Object.freeze({
   livingArrangements: DEFAULT_LIVING_ARRANGEMENTS,
   noteCategories: DEFAULT_NOTE_CATEGORIES,
   verificationStatuses: DEFAULT_VERIFICATION_STATUSES,
-  summaryTemplate: DEFAULT_SUMMARY_TEMPLATE,
   dashboardSettings: DEFAULT_DASHBOARD_SETTINGS,
 });
 
@@ -265,10 +212,6 @@ export const CATEGORY_DISPLAY_METADATA: Record<
   verificationStatuses: {
     label: "Verification Statuses",
     description: "Define the workflow stages for verifying financial items.",
-  },
-  summaryTemplate: {
-    label: "Summary Template",
-    description: "Configure the default section order and visibility for case summaries.",
   },
 };
 
@@ -415,7 +358,7 @@ export const sanitizeCategoryValues = (values: string[] | undefined | null): str
   if (!Array.isArray(values)) {
     return [];
   }
-  return dedupe(values.map(value => String(value)));
+  return dedupe(values.map(String));
 };
 
 export const sanitizeStatusConfigs = (statuses: StatusConfig[] | undefined | null): StatusConfig[] => {
@@ -442,11 +385,6 @@ export const mergeCategoryConfig = (
       livingArrangements: [...defaultCategoryConfig.livingArrangements],
       noteCategories: [...defaultCategoryConfig.noteCategories],
       verificationStatuses: [...defaultCategoryConfig.verificationStatuses],
-      summaryTemplate: {
-        sectionOrder: [...defaultCategoryConfig.summaryTemplate.sectionOrder],
-        defaultSections: { ...defaultCategoryConfig.summaryTemplate.defaultSections },
-        sectionTemplates: { ...defaultCategoryConfig.summaryTemplate.sectionTemplates },
-      },
       dashboardSettings: { ...DEFAULT_DASHBOARD_SETTINGS },
     };
   }
@@ -481,17 +419,6 @@ export const mergeCategoryConfig = (
     verificationStatuses: sanitizeCategoryValues(config.verificationStatuses).length
       ? sanitizeCategoryValues(config.verificationStatuses)
       : [...defaultCategoryConfig.verificationStatuses],
-    summaryTemplate: config.summaryTemplate
-      ? {
-          sectionOrder: [...config.summaryTemplate.sectionOrder],
-          defaultSections: { ...config.summaryTemplate.defaultSections },
-          sectionTemplates: { ...(config.summaryTemplate.sectionTemplates || {}) },
-        }
-      : {
-          sectionOrder: [...defaultCategoryConfig.summaryTemplate.sectionOrder],
-          defaultSections: { ...defaultCategoryConfig.summaryTemplate.defaultSections },
-          sectionTemplates: { ...defaultCategoryConfig.summaryTemplate.sectionTemplates },
-        },
     archivalSettings: config.archivalSettings
       ? { ...config.archivalSettings }
       : undefined,

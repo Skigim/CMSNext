@@ -237,9 +237,9 @@ Both share error state management, loading state patterns, password handling, an
 
 #### Category Update Handlers
 
-`contexts/CategoryConfigContext.tsx` lines 186-320 contain 4 nearly identical if-else blocks for `statuses`, `noteCategories`, `summaryTemplate`, and default handler.
+`contexts/CategoryConfigContext.tsx` contains handler branches for `statuses`, `noteCategories`, and other category keys, with helper functions extracted to reduce cognitive complexity.
 
-**Recommendation:** Create generic async operation helper and use handler registry.
+**Recommendation:** Consider a generic async operation helper and handler registry for further simplification.
 
 ---
 
