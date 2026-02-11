@@ -26,6 +26,37 @@
         "--timeout-action=5000",
         "--timeout-navigation=60000"
       ]
+    },
+    "sonarqube": {
+      "command": "docker",
+      "args": [
+        "run",
+        "-i",
+        "--rm",
+        "-e",
+        "SONARQUBE_TOKEN",
+        "-e",
+        "SONARQUBE_ORG",
+        "mcp/sonarqube"
+      ],
+      "env": {
+        "SONARQUBE_TOKEN": "${input:sonarqubeToken}",
+        "SONARQUBE_ORG": "${input:sonarqubeOrg}"
+      }
     }
-  }
+  },
+  "inputs": [
+    {
+      "id": "sonarqubeToken",
+      "type": "promptString",
+      "description": "SonarQube Cloud User Token (from sonarcloud.io → My Account → Security)",
+      "password": true
+    },
+    {
+      "id": "sonarqubeOrg",
+      "type": "promptString",
+      "description": "SonarQube Cloud Organization Key (e.g., your GitHub username)",
+      "default": "Skigim"
+    }
+  ]
 }
