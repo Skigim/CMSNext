@@ -101,5 +101,7 @@
   "sonarlint.connectedMode.project": {
     "connectionId": "skigim",
     "projectKey": "Skigim_CMSNext"
-  }
+  },
+  "python-envs.defaultEnvManager": "ms-python.python:system",
+  "python-envs.pythonProjects": []
 }
