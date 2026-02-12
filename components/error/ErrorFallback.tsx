@@ -29,7 +29,7 @@ export function ErrorFallback({
   showDetails = true,
 }: ErrorFallbackProps) {
   const handleReload = () => {
-    window.location.reload();
+    globalThis.location.reload();
   };
 
   return (
@@ -178,7 +178,7 @@ export function FileSystemErrorFallback({
   };
 
   const handleReload = () => {
-    window.location.reload();
+    globalThis.location.reload();
   };
 
   return (

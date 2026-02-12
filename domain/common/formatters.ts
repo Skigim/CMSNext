@@ -37,7 +37,7 @@ export const formatFrequency = (frequency?: string): string => {
  */
 export const formatAccountNumber = (accountNumber?: string): string => {
   if (!accountNumber) return "";
-  const digits = accountNumber.replace(/\D/g, ""); // Remove non-digits
+  const digits = accountNumber.replaceAll(/\D/g, ""); // Remove non-digits
 
   if (digits.length < 4) {
     // For short account numbers, show as-is to avoid confusion

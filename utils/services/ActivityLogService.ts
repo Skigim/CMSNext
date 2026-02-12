@@ -114,9 +114,9 @@ export interface ActivityArchiveResult {
  */
 export class ActivityLogService {
   /** File storage service for data persistence */
-  private fileStorage: FileStorageService;
+  private readonly fileStorage: FileStorageService;
   /** Optional file service for writing named archive files */
-  private fileService: AutosaveFileService | null;
+  private readonly fileService: AutosaveFileService | null;
   /** In-flight auto-archive promise to prevent concurrent runs */
   private autoArchiveInFlight: Promise<ActivityArchiveResult> | null = null;
 

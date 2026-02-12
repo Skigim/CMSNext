@@ -118,7 +118,7 @@ export abstract class BaseErrorBoundary<
   };
 
   handleRetry = () => {
-    this.resetTimeoutId = window.setTimeout(() => {
+    this.resetTimeoutId = globalThis.setTimeout(() => {
       this.resetErrorBoundary();
     }, 100);
   };

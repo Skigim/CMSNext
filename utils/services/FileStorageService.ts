@@ -223,7 +223,7 @@ interface FileStorageServiceConfig {
  */
 export class FileStorageService {
   /** The underlying file service for I/O operations */
-  private fileService: AutosaveFileService;
+  private readonly fileService: AutosaveFileService;
 
   /**
    * Create a new FileStorageService instance.

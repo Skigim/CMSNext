@@ -91,7 +91,7 @@ export async function getStoredDirectoryHandle(
  * 
  * @example
  * ```typescript
- * const handle = await window.showDirectoryPicker();
+ * const handle = await globalThis.showDirectoryPicker();
  * await storeDirectoryHandle(handle);
  * ```
  */

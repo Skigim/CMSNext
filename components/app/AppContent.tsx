@@ -126,16 +126,16 @@ export const AppContent = memo(function AppContent() {
       setSidebarOpen(!sidebarOpen);
     };
 
-    window.addEventListener("app:navigate", handleNavigationEvent);
-    window.addEventListener("app:newcase", handleNewCaseEvent);
-    window.addEventListener("app:focussearch", handleFocusSearchEvent);
-    window.addEventListener("app:togglesidebar", handleToggleSidebarEvent);
+    globalThis.addEventListener("app:navigate", handleNavigationEvent);
+    globalThis.addEventListener("app:newcase", handleNewCaseEvent);
+    globalThis.addEventListener("app:focussearch", handleFocusSearchEvent);
+    globalThis.addEventListener("app:togglesidebar", handleToggleSidebarEvent);
 
     return () => {
-      window.removeEventListener("app:navigate", handleNavigationEvent);
-      window.removeEventListener("app:newcase", handleNewCaseEvent);
-      window.removeEventListener("app:focussearch", handleFocusSearchEvent);
-      window.removeEventListener("app:togglesidebar", handleToggleSidebarEvent);
+      globalThis.removeEventListener("app:navigate", handleNavigationEvent);
+      globalThis.removeEventListener("app:newcase", handleNewCaseEvent);
+      globalThis.removeEventListener("app:focussearch", handleFocusSearchEvent);
+      globalThis.removeEventListener("app:togglesidebar", handleToggleSidebarEvent);
     };
   }, [handleNavigate, handleNewCase, setSidebarOpen, sidebarOpen]);
 

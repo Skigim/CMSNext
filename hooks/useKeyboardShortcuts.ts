@@ -353,7 +353,7 @@ export function useKeyboardShortcuts(options: UseKeyboardShortcutsOptions): {
     setPendingModifier(null);
 
     if (chordTimerRef.current) {
-      window.clearTimeout(chordTimerRef.current);
+      globalThis.clearTimeout(chordTimerRef.current);
       chordTimerRef.current = null;
     }
   }, []);
@@ -370,10 +370,10 @@ export function useKeyboardShortcuts(options: UseKeyboardShortcutsOptions): {
       setPendingModifier(prefix);
 
       if (chordTimerRef.current) {
-        window.clearTimeout(chordTimerRef.current);
+        globalThis.clearTimeout(chordTimerRef.current);
       }
 
-      chordTimerRef.current = window.setTimeout(() => {
+      chordTimerRef.current = globalThis.setTimeout(() => {
         clearChord();
       }, CHORD_TIMEOUT_MS);
     },
@@ -398,16 +398,16 @@ export function useKeyboardShortcuts(options: UseKeyboardShortcutsOptions): {
       tryDirectShortcut(enabled, event, isMac, options);
     };
 
-    window.addEventListener("keydown", onKeyDown);
+    globalThis.addEventListener("keydown", onKeyDown);
     return () => {
-      window.removeEventListener("keydown", onKeyDown);
+      globalThis.removeEventListener("keydown", onKeyDown);
     };
   }, [clearChord, isMac, options, startChord]);
 
   useEffect(() => {
     return () => {
       if (chordTimerRef.current) {
-        window.clearTimeout(chordTimerRef.current);
+        globalThis.clearTimeout(chordTimerRef.current);
         chordTimerRef.current = null;
       }
     };

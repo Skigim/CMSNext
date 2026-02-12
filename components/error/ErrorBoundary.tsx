@@ -73,7 +73,7 @@ export class ErrorBoundary extends BaseErrorBoundary<
       stack: error.stack,
       componentStack: errorInfo?.componentStack,
       userAgent: navigator.userAgent,
-      url: window.location.href,
+      url: globalThis.location.href,
     };
 
     const errorText = JSON.stringify(errorDetails, null, 2);
@@ -135,7 +135,7 @@ export class ErrorBoundary extends BaseErrorBoundary<
               </button>
 
               <button
-                onClick={() => window.location.reload()}
+                onClick={() => globalThis.location.reload()}
                 className="w-full px-4 py-2 bg-secondary text-secondary-foreground rounded-md hover:bg-secondary/90 transition-colors"
               >
                 Reload Page

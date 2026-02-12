@@ -206,7 +206,7 @@ function getEntryDetail(entry: CaseActivityEntry): string {
     return `Priority changed from ${from} to ${to}`;
   }
 
-  const preview = entry.payload.preview.replace(/\s+/g, " ").trim();
+  const preview = entry.payload.preview.replaceAll(/\s+/g, " ").trim();
   const snippet =
     preview.length > NOTE_PREVIEW_MAX_LENGTH
       ? `${preview.slice(0, NOTE_PREVIEW_MAX_LENGTH - 3)}…`
@@ -230,10 +230,10 @@ function formatCsv(report: DailyActivityReport): string {
   const rows = report.entries.map(entry => {
     const values = [
       new Date(entry.timestamp).toISOString(),
-      entry.caseName.replace(/"/g, '""'),
-      entry.caseMcn ? String(entry.caseMcn).replace(/"/g, '""') : "",
+      entry.caseName.replaceAll('"', '""'),
+      entry.caseMcn ? String(entry.caseMcn).replaceAll('"', '""') : "",
       entry.type,
-      getEntryDetail(entry).replace(/"/g, '""'),
+      getEntryDetail(entry).replaceAll('"', '""'),
     ];
 
     return values.map(value => `"${value}"`).join(",");
@@ -243,7 +243,7 @@ function formatCsv(report: DailyActivityReport): string {
 }
 
 function normalizeWhitespace(value: string): string {
-  return value.replace(/\s+/g, " ").trim();
+  return value.replaceAll(/\s+/g, " ").trim();
 }
 
 function formatMcn(mcn?: string | null): string {

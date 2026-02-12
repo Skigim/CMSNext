@@ -23,7 +23,7 @@ interface AlertsByDescriptionWidgetProps {
   metadata?: WidgetMetadata;
 }
 
-export function AlertsByDescriptionWidget({ alerts = [], metadata }: AlertsByDescriptionWidgetProps) {
+export function AlertsByDescriptionWidget({ alerts = [], metadata }: Readonly<AlertsByDescriptionWidgetProps>) {
   const { config } = useCategoryConfig();
   
   const fetchData = useCallback(async () => {
@@ -89,7 +89,7 @@ export function AlertsByDescriptionWidget({ alerts = [], metadata }: AlertsByDes
       },
     };
     stats.slice(0, 10).forEach((item) => {
-      const key = item.description.toLowerCase().replace(/[^a-z0-9]/g, '_');
+      const key = item.description.toLowerCase().replaceAll(/[^a-z0-9]/g, '_');
       cfg[key] = {
         label: item.description,
         color: alertColorMap[item.description] || 'var(--muted)',

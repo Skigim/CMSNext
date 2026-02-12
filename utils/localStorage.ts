@@ -39,8 +39,8 @@ export function hasLocalStorage(): boolean {
 
   try {
     const testKey = "__localStorage_test__";
-    window.localStorage.setItem(testKey, "1");
-    window.localStorage.removeItem(testKey);
+    globalThis.localStorage.setItem(testKey, "1");
+    globalThis.localStorage.removeItem(testKey);
     return true;
   } catch {
     // localStorage disabled (e.g., incognito in some browsers)
@@ -127,7 +127,7 @@ export function createLocalStorageAdapter<T>(
       }
 
       try {
-        const stored = window.localStorage.getItem(key);
+        const stored = globalThis.localStorage.getItem(key);
         if (stored === null) {
           return defaultValue;
         }
@@ -144,7 +144,7 @@ export function createLocalStorageAdapter<T>(
       }
 
       try {
-        window.localStorage.setItem(key, serialize(value));
+        globalThis.localStorage.setItem(key, serialize(value));
       } catch (error) {
         logger.warn(`Failed to write localStorage key "${key}"`, { error });
       }
@@ -156,7 +156,7 @@ export function createLocalStorageAdapter<T>(
       }
 
       try {
-        window.localStorage.removeItem(key);
+        globalThis.localStorage.removeItem(key);
       } catch (error) {
         logger.warn(`Failed to clear localStorage key "${key}"`, { error });
       }

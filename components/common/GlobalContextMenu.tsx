@@ -59,13 +59,13 @@ export function GlobalContextMenu({ children, onNavigate }: GlobalContextMenuPro
   const handleOpenChange = useCallback((open: boolean) => {
     if (open) {
       // Check if there's selected text when menu opens
-      const selection = window.getSelection();
+      const selection = globalThis.getSelection();
       setHasSelection(Boolean(selection && selection.toString().trim().length > 0));
     }
   }, []);
 
   const handleCut = useCallback(async () => {
-    const selection = window.getSelection();
+    const selection = globalThis.getSelection();
     if (selection && selection.toString()) {
       await navigator.clipboard.writeText(selection.toString());
       // Note: We can't actually delete the selection in non-editable content
@@ -75,7 +75,7 @@ export function GlobalContextMenu({ children, onNavigate }: GlobalContextMenuPro
   }, []);
 
   const handleCopy = useCallback(async () => {
-    const selection = window.getSelection();
+    const selection = globalThis.getSelection();
     if (selection && selection.toString()) {
       await navigator.clipboard.writeText(selection.toString());
     }

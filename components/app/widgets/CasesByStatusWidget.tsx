@@ -67,7 +67,7 @@ export function CasesByStatusWidget({ cases = [], metadata }: CasesByStatusWidge
       },
     };
     breakdown.forEach((item) => {
-      const statusKey = item.status.toLowerCase().replace(/\s+/g, '_');
+      const statusKey = item.status.toLowerCase().replaceAll(/\s+/g, '_');
       cfg[statusKey] = {
         label: item.status,
         color: statusColorMap[item.status] || 'var(--muted)',

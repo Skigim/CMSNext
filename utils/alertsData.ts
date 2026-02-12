@@ -75,7 +75,7 @@ function normalizeAlertDate(rawDate: string | undefined): string {
     return "";
   }
 
-  const sanitized = trimmed.replace(/\//g, "-");
+  const sanitized = trimmed.replaceAll("/", "-");
   const match = DATE_VALUE_REGEX.exec(sanitized);
   if (!match) {
     return sanitized;

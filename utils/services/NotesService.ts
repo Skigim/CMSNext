@@ -32,7 +32,7 @@ function sanitizeNoteContent(content: string): string {
     .replace(EMAIL_PATTERN, "***@***")
     .replace(SSN_PATTERN, "***-**-****")
     .replace(LONG_NUMBER_PATTERN, "***")
-    .replace(/\s+/g, " ")
+    .replaceAll(/\s+/g, " ")
     .trim();
 }
 
@@ -141,7 +141,7 @@ interface NotesServiceConfig {
  */
 export class NotesService {
   /** File storage service for data persistence */
-  private fileStorage: FileStorageService;
+  private readonly fileStorage: FileStorageService;
 
   /**
    * Create a new NotesService instance.

@@ -41,8 +41,8 @@ interface UseImportListenersParams {
  * **Usage Example:**
  * ```typescript
  * useImportListeners({\n *   loadCases: async () => {\n *     const cases = await dataManager.getAllCases();\n *     setCases(cases);\n *   },\n *   setError,\n *   isStorageReady: connectionState.isReady\n * });\n * \n * // Somewhere else in app:
- * // After file import completes:\n * window.dispatchEvent(new Event(\"file-imported\"));\n * // Or on error:
- * window.dispatchEvent(new CustomEvent(\"file-import-error\", {\n *   detail: \"CSV file has invalid format\"\n * }));\n * ```
+ * // After file import completes:\n * globalThis.dispatchEvent(new Event(\"file-imported\"));\n * // Or on error:
+ * globalThis.dispatchEvent(new CustomEvent(\"file-import-error\", {\n *   detail: \"CSV file has invalid format\"\n * }));\n * ```
  * 
  * @param {UseImportListenersParams} params
  *   - `loadCases`: Async function to fetch and set cases
@@ -55,7 +55,7 @@ export function useImportListeners({ loadCases, setError, isStorageReady }: UseI
   useEffect(() => {
     const handleFileImported = () => {
       // Skip automatic reloads during the connect-to-existing flow
-      if (window.location.hash === "#connect-to-existing") {
+      if (globalThis.location.hash === "#connect-to-existing") {
         return;
       }
 
@@ -85,12 +85,12 @@ export function useImportListeners({ loadCases, setError, isStorageReady }: UseI
       setError(notification?.message ?? detailMessage ?? fallbackMessage);
     };
 
-    window.addEventListener("fileDataImported", handleFileImported);
-    window.addEventListener("fileImportError", handleFileImportError as EventListener);
+    globalThis.addEventListener("fileDataImported", handleFileImported);
+    globalThis.addEventListener("fileImportError", handleFileImportError as EventListener);
 
     return () => {
-      window.removeEventListener("fileDataImported", handleFileImported);
-      window.removeEventListener("fileImportError", handleFileImportError as EventListener);
+      globalThis.removeEventListener("fileDataImported", handleFileImported);
+      globalThis.removeEventListener("fileImportError", handleFileImportError as EventListener);
     };
   }, [isStorageReady, loadCases, setError]);
 }

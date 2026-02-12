@@ -62,7 +62,7 @@ class ErrorReportingService {
     if (typeof window === 'undefined') return;
 
     // Handle unhandled promise rejections
-    window.addEventListener('unhandledrejection', (event) => {
+    globalThis.addEventListener('unhandledrejection', (event) => {
       this.reportError(
         new Error(`Unhandled Promise Rejection: ${event.reason}`),
         {
@@ -77,7 +77,7 @@ class ErrorReportingService {
     });
 
     // Handle global JavaScript errors
-    window.addEventListener('error', (event) => {
+    globalThis.addEventListener('error', (event) => {
       this.reportError(
         event.error || new Error(event.message),
         {
@@ -237,7 +237,7 @@ class ErrorReportingService {
         componentStack: options.componentStack,
         props: options.context?.props,
         userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : 'unknown',
-        url: typeof window !== 'undefined' ? window.location.href : 'unknown',
+        url: typeof window !== 'undefined' ? globalThis.location.href : 'unknown',
         ...options.context,
       },
       severity: options.severity || this.determineSeverity(error, options.context),

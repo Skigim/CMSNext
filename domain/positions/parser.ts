@@ -77,7 +77,7 @@ const NAME_OFFSET = 15;
  */
 function normalizeField(value: string | undefined | null): string {
   if (!value) return "";
-  return value.replace(/[\r\n]+/g, " ").trim();
+  return value.replaceAll(/[\r\n]+/g, " ").trim();
 }
 
 /**

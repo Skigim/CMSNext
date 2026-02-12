@@ -78,10 +78,10 @@ export function sanitizeText(
   // Handle line breaks
   if (options.preserveLineBreaks) {
     // Convert line breaks to safe HTML
-    sanitized = sanitized.replace(/\r?\n/g, "<br>");
+    sanitized = sanitized.replaceAll(/\r?\n/g, "<br>");
   } else {
     // Remove line breaks
-    sanitized = sanitized.replace(/\r?\n/g, " ");
+    sanitized = sanitized.replaceAll(/\r?\n/g, " ");
   }
 
   // Remove dangerous patterns
@@ -185,15 +185,15 @@ export function sanitizeFormField(
 
     case "phone":
       // Remove non-numeric characters except parentheses, hyphens, and spaces
-      return stringValue.replace(/[^\d\s\-()]/g, "").trim();
+      return stringValue.replaceAll(/[^\d\s\-()]/g, "").trim();
 
     case "ssn":
       // Remove non-numeric characters except hyphens
-      return stringValue.replace(/[^\d-]/g, "").trim();
+      return stringValue.replaceAll(/[^\d-]/g, "").trim();
 
     case "number":
       // Keep only digits, decimal points, and minus signs
-      return stringValue.replace(/[^\d.-]/g, "").trim();
+      return stringValue.replaceAll(/[^\d.-]/g, "").trim();
 
     case "textarea":
       return sanitizeText(stringValue, {
@@ -203,7 +203,7 @@ export function sanitizeFormField(
 
     case "select":
       // For select fields, only allow alphanumeric and basic punctuation
-      return stringValue.replace(/[^a-zA-Z0-9\s\-_]/g, "").trim();
+      return stringValue.replaceAll(/[^a-zA-Z0-9\s\-_]/g, "").trim();
 
     case "text":
     default:

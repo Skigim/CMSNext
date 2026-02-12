@@ -67,7 +67,7 @@ interface CaseBulkOperationsServiceConfig {
  */
 export class CaseBulkOperationsService {
   /** File storage service for data persistence */
-  private fileStorage: FileStorageService;
+  private readonly fileStorage: FileStorageService;
 
   /**
    * Create a new CaseBulkOperationsService instance.
@@ -629,10 +629,10 @@ export class CaseBulkOperationsService {
 
     // Build sanitized preview for activity log
     const sanitizedPreview = noteData.content
-      .replace(/\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/gi, "***@***")
-      .replace(/\b\d{3}-?\d{2}-?\d{4}\b/g, "***-**-****")
-      .replace(/\b\d{10,}\b/g, "***")
-      .replace(/\s+/g, " ")
+      .replaceAll(/\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/gi, "***@***")
+      .replaceAll(/\b\d{3}-?\d{2}-?\d{4}\b/g, "***-**-****")
+      .replaceAll(/\b\d{10,}\b/g, "***")
+      .replaceAll(/\s+/g, " ")
       .trim()
       .slice(0, 100);
 

@@ -93,7 +93,7 @@ interface FinancialsServiceConfig {
  */
 export class FinancialsService {
   /** File storage service for data persistence */
-  private fileStorage: FileStorageService;
+  private readonly fileStorage: FileStorageService;
 
   /**
    * Create a new FinancialsService instance.

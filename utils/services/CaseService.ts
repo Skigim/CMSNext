@@ -96,9 +96,9 @@ interface CaseServiceConfig {
  */
 export class CaseService {
   /** File storage service for data persistence */
-  private fileStorage: FileStorageService;
+  private readonly fileStorage: FileStorageService;
   /** Bulk operations service for batch operations */
-  private bulkOperations: CaseBulkOperationsService;
+  private readonly bulkOperations: CaseBulkOperationsService;
 
   /**
    * Create a new CaseService instance.

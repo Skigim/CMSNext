@@ -93,9 +93,9 @@ export const GlobalSearchDropdown = memo(function GlobalSearchDropdown({
       setIsOpen(true);
     };
 
-    window.addEventListener("app:focussearch" as keyof WindowEventMap, handleFocusSearch);
+    globalThis.addEventListener("app:focussearch" as keyof WindowEventMap, handleFocusSearch);
     return () => {
-      window.removeEventListener("app:focussearch" as keyof WindowEventMap, handleFocusSearch);
+      globalThis.removeEventListener("app:focussearch" as keyof WindowEventMap, handleFocusSearch);
     };
   }, []);
 

@@ -146,7 +146,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     
     // Check system preference
     if (typeof window !== 'undefined') {
-      const mediaQuery = window.matchMedia?.('(prefers-color-scheme: dark)');
+      const mediaQuery = globalThis.matchMedia?.('(prefers-color-scheme: dark)');
       if (mediaQuery?.matches) {
         return 'dark'; // Default to neutral dark
       }
@@ -166,7 +166,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   };
 
   useEffect(() => {
-    const root = window.document.documentElement;
+    const root = globalThis.document.documentElement;
     
     // Remove all theme classes including legacy ones
     const allThemeClasses = ['light', 'dark', 'paperwhite', 'sterling', 'slate', 'stone', 'zinc'];

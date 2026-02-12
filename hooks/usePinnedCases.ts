@@ -18,7 +18,7 @@ const PINNED_CASES_CHANGED_EVENT = "pinned-cases-changed";
 
 /** Dispatch event to notify other hook instances of pin changes */
 function notifyPinnedCasesChanged() {
-  window.dispatchEvent(new CustomEvent(PINNED_CASES_CHANGED_EVENT));
+  globalThis.dispatchEvent(new CustomEvent(PINNED_CASES_CHANGED_EVENT));
 }
 
 /**
@@ -65,9 +65,9 @@ export function usePinnedCases(maxPins: number = 20) {
       setPinnedIds(storage.read());
     };
 
-    window.addEventListener(PINNED_CASES_CHANGED_EVENT, handlePinnedCasesChanged);
+    globalThis.addEventListener(PINNED_CASES_CHANGED_EVENT, handlePinnedCasesChanged);
     return () => {
-      window.removeEventListener(PINNED_CASES_CHANGED_EVENT, handlePinnedCasesChanged);
+      globalThis.removeEventListener(PINNED_CASES_CHANGED_EVENT, handlePinnedCasesChanged);
     };
   }, []);
 

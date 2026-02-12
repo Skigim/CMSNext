@@ -368,12 +368,12 @@ function toProperCase(str: string): string {
 
   return str
     .toLowerCase()
-    .replace(/\b\w/g, (char) => char.toUpperCase())
-    .replace(
+    .replaceAll(/\b\w/g, (char) => char.toUpperCase())
+    .replaceAll(
       /\b(Mc|Mac)([a-z])/g,
       (_, prefix, letter) => prefix + letter.toUpperCase()
     )
-    .replace(/\bO'([a-z])/g, (_, letter) => "O'" + letter.toUpperCase());
+    .replaceAll(/\bO'([a-z])/g, (_, letter) => "O'" + letter.toUpperCase());
 }
 
 /**
@@ -387,7 +387,7 @@ export function parseNameFromImport(rawName: string | undefined): {
     return { firstName: "", lastName: "" };
   }
 
-  const normalizedWhitespace = rawName.replace(/\s+/g, " ").trim();
+  const normalizedWhitespace = rawName.replaceAll(/\s+/g, " ").trim();
   if (!normalizedWhitespace) {
     return { firstName: "", lastName: "" };
   }
@@ -429,7 +429,7 @@ export function normalizePersonName(rawName: string | undefined): string {
     return "";
   }
 
-  const normalizedWhitespace = rawName.replace(/\s+/g, " ").trim();
+  const normalizedWhitespace = rawName.replaceAll(/\s+/g, " ").trim();
   if (!normalizedWhitespace) {
     return "";
   }
@@ -455,5 +455,5 @@ export function normalizePersonName(rawName: string | undefined): string {
     return baseName;
   }
 
-  return `${baseName} ${suffix}`.replace(/\s+/g, " ").trim();
+  return `${baseName} ${suffix}`.replaceAll(/\s+/g, " ").trim();
 }

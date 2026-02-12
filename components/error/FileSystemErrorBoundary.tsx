@@ -86,7 +86,7 @@ export class FileSystemErrorBoundary extends BaseErrorBoundary<
 
   handleRetry = () => {
     this.props.onRetry?.();
-    this.resetTimeoutId = window.setTimeout(() => {
+    this.resetTimeoutId = globalThis.setTimeout(() => {
       this.resetErrorBoundary();
     }, 100);
   };
@@ -170,7 +170,7 @@ export class FileSystemErrorBoundary extends BaseErrorBoundary<
 
               {this.state.isFileSystemError && (
                 <button
-                  onClick={() => window.location.reload()}
+                  onClick={() => globalThis.location.reload()}
                   className="w-full px-4 py-2 bg-secondary text-secondary-foreground rounded-md hover:bg-secondary/90 transition-colors text-sm"
                 >
                   Refresh Page

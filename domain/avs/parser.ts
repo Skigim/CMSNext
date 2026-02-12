@@ -91,7 +91,7 @@ function parseBalance(balanceStr: string): number {
     return 0;
   }
   // Remove currency symbols, commas, and whitespace
-  const cleaned = balanceStr.replace(/[$,\s]/g, "");
+  const cleaned = balanceStr.replaceAll(/[$,\s]/g, "");
   const parsed = parseFloat(cleaned);
   return isNaN(parsed) ? 0 : parsed;
 }
@@ -187,7 +187,7 @@ export function parseAccountBlock(block: string): ParsedAVSAccount | null {
  */
 export function splitAVSBlocks(input: string): string[] {
   // Normalize line endings
-  const normalized = input.replace(/\r\n/g, "\n").replace(/\r/g, "\n");
+  const normalized = input.replaceAll("\r\n", "\n").replaceAll("\r", "\n");
 
   // Strategy 1: Try to detect "Account Owner:" markers (bank-specific format)
   const hasAccountOwnerMarkers = normalized.includes("Account Owner:");
@@ -367,7 +367,7 @@ function normalizeDescription(desc: string): string {
   return desc
     .toLowerCase()
     .replace(/\baccount\b/gi, "")
-    .replace(/\s+/g, " ")
+    .replaceAll(/\s+/g, " ")
     .trim();
 }
 

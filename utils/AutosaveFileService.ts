@@ -423,7 +423,7 @@ class AutosaveFileService {
    * @returns {boolean} true if supported, false otherwise
    */
   isSupported(): boolean {
-    return 'showDirectoryPicker' in window;
+    return 'showDirectoryPicker' in globalThis;
   }
 
   /**
@@ -458,7 +458,7 @@ class AutosaveFileService {
     }
 
     try {
-      this.directoryHandle = await window.showDirectoryPicker();
+      this.directoryHandle = await globalThis.showDirectoryPicker();
       const permissionGranted = await this.requestPermission();
 
       if (permissionGranted) {
@@ -849,7 +849,7 @@ class AutosaveFileService {
    * }
    */
   async backupAndWrite(data: any): Promise<{ backupCreated: boolean; written: boolean; backupName: string }> {
-    const ts = new Date().toISOString().replace(/[:]/g, '-');
+    const ts = new Date().toISOString().replaceAll(':', '-');
     const backupName = `case-tracker-data.backup-${ts}.json`;
 
     const backupCreated = await this.writeNamedFile(backupName, data);

@@ -18,7 +18,7 @@ export interface PhoneFormatterOptions {
  * Removes all non-digit characters from a phone number
  */
 export function stripPhoneNumber(phone: string): string {
-  return phone.replace(/\D/g, "");
+  return phone.replaceAll(/\D/g, "");
 }
 
 /**

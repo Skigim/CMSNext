@@ -125,8 +125,8 @@ export interface ArchiveFileInfo {
  * @class CaseArchiveService
  */
 export class CaseArchiveService {
-  private fileStorage: FileStorageService;
-  private fileService: AutosaveFileService;
+  private readonly fileStorage: FileStorageService;
+  private readonly fileService: AutosaveFileService;
 
   /**
    * Create a new CaseArchiveService instance.

@@ -12,7 +12,7 @@ interface UsePaperCutCaptureResult {
 
 function getCurrentRoute(): string {
   if (typeof window === "undefined") return "";
-  return window.location.pathname;
+  return globalThis.location.pathname;
 }
 
 function getNearestContext(): string {
