@@ -80,7 +80,7 @@ describe("CopyButton", () => {
     render(<CopyButton value="test" label="test" variant="plain" />);
     const button = screen.getByRole("button");
     // Plain variant doesn't have bg-muted
-    expect(button.className).not.toMatch(/bg-muted\s|bg-muted$/);
+    expect(button.className).not.toMatch(/bg-muted(?:\s|$)/);
   });
 
   it("respects interactive prop for hover styling", () => {

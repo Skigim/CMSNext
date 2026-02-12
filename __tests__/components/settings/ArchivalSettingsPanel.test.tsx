@@ -131,7 +131,7 @@ describe("ArchivalSettingsPanel - Archive Search/Filter Features", () => {
     it("displays status filter dropdown when archive loaded", () => {
       const archiveStatuses = Array.from(
         new Set(mockArchiveData.cases.map((c) => c.status))
-      ).sort();
+      ).sort((a, b) => a.localeCompare(b));
       expect(archiveStatuses.length).toBeGreaterThan(0);
     });
   });
