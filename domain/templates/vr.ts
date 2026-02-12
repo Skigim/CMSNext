@@ -269,6 +269,28 @@ function isAlreadyFormattedDate(value: string): boolean {
   return /^\d{2}\/\d{2}\/\d{4}$/.test(value);
 }
 
+/** Resolve a null/undefined placeholder value, handling currentDate+offset. */
+function resolveNullPlaceholder(key: string, offsetStr: string | undefined): string {
+  if (key === "currentDate" && offsetStr) {
+    return applyDateOffset(new Date(), parseInt(offsetStr, 10));
+  }
+  return "";
+}
+
+/** Format a date-type placeholder value with optional offset. */
+function resolveDatePlaceholder(key: string, value: unknown, offsetStr: string | undefined): string {
+  const stringValue = String(value);
+  if (isAlreadyFormattedDate(stringValue) && !offsetStr) return stringValue;
+
+  const offset = offsetStr ? parseInt(offsetStr, 10) : 0;
+
+  if (key === "currentDate") {
+    return offset === 0 ? getCurrentDateFormatted() : applyDateOffset(new Date(), offset);
+  }
+  if (offset !== 0) return applyDateOffset(stringValue, offset);
+  return formatDate(stringValue);
+}
+
 /**
  * Render a template by substituting placeholders with context values.
  *
@@ -282,59 +304,22 @@ export function renderTemplate(
   template: string,
   context: TemplateRenderContext
 ): string {
-  // Match {fieldName} or {fieldName+N} or {fieldName-N}
   return template.replace(
     /\{(\w+)([+-]\d+)?\}/g,
     (match, fieldName, offsetStr) => {
       const key = fieldName as TemplatePlaceholderField;
 
-      // Check if it's a valid placeholder
-      if (!(key in TEMPLATE_PLACEHOLDER_FIELDS)) {
-        return match; // Leave unknown placeholders as-is
-      }
+      if (!(key in TEMPLATE_PLACEHOLDER_FIELDS)) return match;
 
       const value = context[key as keyof TemplateRenderContext];
 
-      // Format based on field type
       if (value === undefined || value === null) {
-        // Special case: currentDate with offset but no base value
-        if (key === "currentDate" && offsetStr) {
-          const offset = parseInt(offsetStr, 10);
-          return applyDateOffset(new Date(), offset);
-        }
-        return "";
+        return resolveNullPlaceholder(key, offsetStr);
       }
 
-      // Handle date fields with optional offset
-      if (isDateField(key)) {
-        const stringValue = String(value);
+      if (isDateField(key)) return resolveDatePlaceholder(key, value, offsetStr);
 
-        // Skip re-formatting if value is already in MM/DD/YYYY format
-        if (isAlreadyFormattedDate(stringValue) && !offsetStr) {
-          return stringValue;
-        }
-
-        const offset = offsetStr ? parseInt(offsetStr, 10) : 0;
-
-        // Special handling for currentDate - always use today as base
-        if (key === "currentDate") {
-          return offset === 0
-            ? getCurrentDateFormatted()
-            : applyDateOffset(new Date(), offset);
-        }
-
-        // For other date fields, apply offset to the stored date
-        if (offset !== 0) {
-          return applyDateOffset(stringValue, offset);
-        }
-
-        return formatDate(stringValue);
-      }
-
-      // Special formatting for amount
-      if (key === "amount") {
-        return formatCurrency(value as number);
-      }
+      if (key === "amount") return formatCurrency(value as number);
 
       return String(value);
     }

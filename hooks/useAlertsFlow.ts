@@ -43,6 +43,20 @@ interface UseAlertsFlowResult {
 const logger = createLogger("AlertsFlow");
 
 /**
+ * Build a user-facing notification message for alert match status changes.
+ * Returns null if no actionable alerts exist.
+ */
+function buildAlertStatusMessage(unmatched: number, missingMcn: number): string | null {
+  if (unmatched === 0 && missingMcn === 0) return null;
+  const parts: string[] = [];
+  if (unmatched > 0)
+    parts.push(`${unmatched} alert${unmatched === 1 ? "" : "s"} need${unmatched === 1 ? "s" : ""} a case match`);
+  if (missingMcn > 0)
+    parts.push(`${missingMcn} alert${missingMcn === 1 ? "" : "s"} missing an MCN`);
+  return `Heads up: ${parts.join(" and ")}`;
+}
+
+/**
  * Alerts management workflow hook.
  * 
  * Manages the complete alerts system: loading, filtering, resolving, and matching.
@@ -172,11 +186,9 @@ export function useAlertsFlow({ selectedCase, hasLoadedData, dataManager }: UseA
     const { unmatched, missingMcn } = alertsIndex.summary;
     const prev = previousAlertCountsRef.current;
 
-    if ((unmatched > 0 || missingMcn > 0) && (unmatched !== prev.unmatched || missingMcn !== prev.missingMcn)) {
-      const parts: string[] = [];
-      if (unmatched > 0) parts.push(`${unmatched} alert${unmatched === 1 ? "" : "s"} need${unmatched === 1 ? "s" : ""} a case match`);
-      if (missingMcn > 0) parts.push(`${missingMcn} alert${missingMcn === 1 ? "" : "s"} missing an MCN`);
-      toast.warning(`Heads up: ${parts.join(" and ")}`, { id: "alerts-match-status" });
+    if (unmatched !== prev.unmatched || missingMcn !== prev.missingMcn) {
+      const message = buildAlertStatusMessage(unmatched, missingMcn);
+      if (message) toast.warning(message, { id: "alerts-match-status" });
     }
 
     previousAlertCountsRef.current = { unmatched, missingMcn };

@@ -55,6 +55,7 @@ import {
   type CaseListSegment,
   type CaseListSortKey,
   type CaseListSortDirection,
+  type CaseFilters as CaseFilterState,
 } from "@/hooks/useCaseListPreferences";
 import { useCaseSelection } from "@/hooks/useCaseSelection";
 import { useBulkNoteFlow } from "@/hooks/useBulkNoteFlow";
@@ -64,6 +65,128 @@ import { isFeatureEnabled } from "@/utils/featureFlags";
 import { calculatePriorityScore } from "@/domain/dashboard/priorityQueue";
 import { useCategoryConfig } from "@/contexts/CategoryConfigContext";
 import { BulkNoteModal } from "./BulkNoteModal";
+
+// ============================================================================
+// Pure helpers extracted to reduce component cognitive complexity
+// ============================================================================
+
+/** Check if a case passes the basic property filters (status, priority, completion). */
+function casePassesPropertyFilters(
+  caseData: StoredCase,
+  filters: CaseFilterState,
+  completedStatuses: Set<string>,
+): boolean {
+  if (!filters.showCompleted && completedStatuses.has(caseData.status)) return false;
+  if (filters.statuses.length > 0 && !filters.statuses.includes(caseData.status)) return false;
+  if (filters.excludeStatuses.length > 0 && filters.excludeStatuses.includes(caseData.status)) return false;
+  if (filters.priorityOnly && !caseData.priority) return false;
+  if (filters.excludePriority && caseData.priority) return false;
+  return true;
+}
+
+/** Check if a case falls within the active date range filter. */
+function casePassesDateFilter(caseData: StoredCase, filters: CaseFilterState): boolean {
+  if (!filters.dateRange.from && !filters.dateRange.to) return true;
+  const updatedAt = Date.parse(caseData.updatedAt || caseData.caseRecord?.updatedDate || "");
+  if (!Number.isFinite(updatedAt)) return true;
+  const caseDate = new Date(updatedAt);
+  if (filters.dateRange.from && caseDate < filters.dateRange.from) return false;
+  if (filters.dateRange.to) {
+    const endOfDay = new Date(filters.dateRange.to);
+    endOfDay.setHours(23, 59, 59, 999);
+    if (caseDate > endOfDay) return false;
+  }
+  return true;
+}
+
+/** Check if a case matches the active list segment. */
+function caseMatchesSegment(
+  caseData: StoredCase,
+  segment: CaseListSegment,
+  recentThreshold: number,
+): boolean {
+  if (segment === "priority") return Boolean(caseData.priority);
+  if (segment === "archival-review") return Boolean(caseData.pendingArchival);
+  if (segment === "recent") {
+    const updatedAt = Date.parse(caseData.updatedAt || caseData.caseRecord?.updatedDate || "");
+    return Number.isFinite(updatedAt) && updatedAt >= recentThreshold;
+  }
+  return true;
+}
+
+/** Check if a case passes all active filters. */
+function casePassesFilters(
+  caseData: StoredCase,
+  normalizedSearch: string,
+  filters: CaseFilterState,
+  completedStatuses: Set<string>,
+  segment: CaseListSegment,
+  recentThreshold: number,
+): boolean {
+  if (
+    normalizedSearch.length > 0 &&
+    !(caseData.name || "").toLowerCase().includes(normalizedSearch) &&
+    !(caseData.mcn || "").toLowerCase().includes(normalizedSearch)
+  ) {
+    return false;
+  }
+  if (!casePassesPropertyFilters(caseData, filters, completedStatuses)) return false;
+  if (!casePassesDateFilter(caseData, filters)) return false;
+  return caseMatchesSegment(caseData, segment, recentThreshold);
+}
+
+/** Parse a date value from a case, returning 0 for invalid dates. */
+function parseCaseDate(raw: string | undefined): number {
+  if (!raw) return 0;
+  const ts = Date.parse(raw);
+  return Number.isFinite(ts) ? ts : 0;
+}
+
+/** Multi-key sort comparator for cases. */
+function compareCases(
+  a: StoredCase,
+  b: StoredCase,
+  sortConfigs: { key: CaseListSortKey; direction: CaseListSortDirection }[],
+  openAlertsByCase: Map<string, AlertWithMatch[]>,
+  priorityConfig: { caseStatuses: any[]; alertTypes?: any[] },
+): number {
+  for (const sortConfig of sortConfigs) {
+    const dir = sortConfig.direction === "asc" ? 1 : -1;
+    let cmp = 0;
+
+    switch (sortConfig.key) {
+      case "name": cmp = (a.name || "").localeCompare(b.name || ""); break;
+      case "mcn": cmp = (a.mcn || "").localeCompare(b.mcn || ""); break;
+      case "status": cmp = (a.status || "").localeCompare(b.status || ""); break;
+      case "caseType": cmp = (a.caseRecord?.caseType || "").localeCompare(b.caseRecord?.caseType || ""); break;
+      case "alerts": {
+        cmp = (openAlertsByCase.get(a.id)?.length ?? 0) - (openAlertsByCase.get(b.id)?.length ?? 0);
+        break;
+      }
+      case "score": {
+        const aScore = calculatePriorityScore(a, openAlertsByCase.get(a.id) ?? [], priorityConfig);
+        const bScore = calculatePriorityScore(b, openAlertsByCase.get(b.id) ?? [], priorityConfig);
+        cmp = aScore - bScore;
+        break;
+      }
+      case "application": {
+        cmp = parseCaseDate(a.caseRecord?.applicationDate || a.createdAt) -
+              parseCaseDate(b.caseRecord?.applicationDate || b.createdAt);
+        break;
+      }
+      case "updated":
+      default: {
+        cmp = parseCaseDate(a.updatedAt || a.caseRecord?.updatedDate || a.createdAt) -
+              parseCaseDate(b.updatedAt || b.caseRecord?.updatedDate || b.createdAt);
+        break;
+      }
+    }
+
+    const result = cmp * dir;
+    if (result !== 0) return result;
+  }
+  return 0;
+}
 
 interface CaseListProps {
   cases: StoredCase[];
@@ -220,148 +343,16 @@ export function CaseList({
         .map(s => s.name)
     );
 
-    return cases.filter(caseData => {
-      const matchesSearch =
-        normalizedSearch.length === 0 ||
-        (caseData.name || "").toLowerCase().includes(normalizedSearch) ||
-        (caseData.mcn || "").toLowerCase().includes(normalizedSearch);
-
-      if (!matchesSearch) {
-        return false;
-      }
-
-      // Apply showCompleted filter
-      if (!filters.showCompleted && completedStatuses.has(caseData.status)) {
-        return false;
-      }
-
-      // Apply status filter (include)
-      if (filters.statuses.length > 0 && !filters.statuses.includes(caseData.status)) {
-        return false;
-      }
-
-      // Apply status anti-filter (exclude)
-      if (filters.excludeStatuses.length > 0 && filters.excludeStatuses.includes(caseData.status)) {
-        return false;
-      }
-
-      // Apply priority filter (show only priority)
-      if (filters.priorityOnly && !caseData.priority) {
-        return false;
-      }
-
-      // Apply priority anti-filter (hide priority)
-      if (filters.excludePriority && caseData.priority) {
-        return false;
-      }
-
-      // Apply date range filter
-      if (filters.dateRange.from || filters.dateRange.to) {
-        const updatedAt = Date.parse(caseData.updatedAt || caseData.caseRecord?.updatedDate || "");
-        if (Number.isFinite(updatedAt)) {
-          const caseDate = new Date(updatedAt);
-          if (filters.dateRange.from && caseDate < filters.dateRange.from) {
-            return false;
-          }
-          if (filters.dateRange.to) {
-            // Include the entire end date by checking if before end of day
-            const endOfDay = new Date(filters.dateRange.to);
-            endOfDay.setHours(23, 59, 59, 999);
-            if (caseDate > endOfDay) {
-              return false;
-            }
-          }
-        }
-      }
-
-      // Legacy segment filter (kept for backward compatibility)
-      if (segment === "priority") {
-        return Boolean(caseData.priority);
-      }
-
-      if (segment === "recent") {
-        const updatedAt = Date.parse(caseData.updatedAt || caseData.caseRecord?.updatedDate || "");
-        return Number.isFinite(updatedAt) && updatedAt >= recentThreshold;
-      }
-
-      // Archival review segment - show only cases pending archival
-      if (segment === "archival-review") {
-        return Boolean(caseData.pendingArchival);
-      }
-
-      return true;
-    });
+    return cases.filter(caseData =>
+      casePassesFilters(caseData, normalizedSearch, filters, completedStatuses, segment, recentThreshold)
+    );
   }, [cases, searchTerm, segment, filters, config.caseStatuses]);
 
   const sortedCases = useMemo(() => {
     const priorityConfig = { caseStatuses: config.caseStatuses, alertTypes: config.alertTypes };
-    return [...filteredCases].sort((a, b) => {
-      // Apply each sort config in order
-      for (const sortConfig of sortConfigs) {
-        const directionFactor = sortConfig.direction === "asc" ? 1 : -1;
-        let comparison = 0;
-
-        switch (sortConfig.key) {
-          case "name": {
-            comparison = (a.name || "").localeCompare(b.name || "");
-            break;
-          }
-          case "mcn": {
-            comparison = (a.mcn || "").localeCompare(b.mcn || "");
-            break;
-          }
-          case "status": {
-            comparison = (a.status || "").localeCompare(b.status || "");
-            break;
-          }
-          case "caseType": {
-            const aType = a.caseRecord?.caseType || "";
-            const bType = b.caseRecord?.caseType || "";
-            comparison = aType.localeCompare(bType);
-            break;
-          }
-          case "alerts": {
-            const aAlerts = openAlertsByCase.get(a.id)?.length ?? 0;
-            const bAlerts = openAlertsByCase.get(b.id)?.length ?? 0;
-            comparison = aAlerts - bAlerts;
-            break;
-          }
-          case "score": {
-            const aAlerts = openAlertsByCase.get(a.id) ?? [];
-            const bAlerts = openAlertsByCase.get(b.id) ?? [];
-            const aScore = calculatePriorityScore(a, aAlerts, priorityConfig);
-            const bScore = calculatePriorityScore(b, bAlerts, priorityConfig);
-            comparison = aScore - bScore;
-            break;
-          }
-          case "application": {
-            const aApplicationRaw = Date.parse(a.caseRecord?.applicationDate || a.createdAt);
-            const bApplicationRaw = Date.parse(b.caseRecord?.applicationDate || b.createdAt);
-            const aApplication = Number.isFinite(aApplicationRaw) ? aApplicationRaw : 0;
-            const bApplication = Number.isFinite(bApplicationRaw) ? bApplicationRaw : 0;
-            comparison = aApplication - bApplication;
-            break;
-          }
-          case "updated":
-          default: {
-            const aUpdatedRaw = Date.parse(a.updatedAt || a.caseRecord?.updatedDate || a.createdAt);
-            const bUpdatedRaw = Date.parse(b.updatedAt || b.caseRecord?.updatedDate || b.createdAt);
-            const aUpdated = Number.isFinite(aUpdatedRaw) ? aUpdatedRaw : 0;
-            const bUpdated = Number.isFinite(bUpdatedRaw) ? bUpdatedRaw : 0;
-            comparison = aUpdated - bUpdated;
-            break;
-          }
-        }
-
-        const result = comparison * directionFactor;
-        if (result !== 0) {
-          return result;
-        }
-        // If equal, continue to next sort config
-      }
-
-      return 0;
-    });
+    return [...filteredCases].sort((a, b) =>
+      compareCases(a, b, sortConfigs, openAlertsByCase, priorityConfig)
+    );
   }, [filteredCases, openAlertsByCase, sortConfigs, config.caseStatuses, config.alertTypes]);
 
   // When in alerts mode, count total open alerts for pagination (respecting description filter)

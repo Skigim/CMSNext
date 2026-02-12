@@ -176,7 +176,7 @@ export function useFinancialItemCardState({
       setIsSaving(true);
 
       try {
-        await onUpdate(itemType, normalizedItem.safeId, formData);
+        await Promise.resolve(onUpdate(itemType, normalizedItem.safeId, formData));
         setIsSaving(false);
         setSaveSuccessVisible(true);
 
@@ -242,7 +242,7 @@ export function useFinancialItemCardState({
           ) || []
         };
 
-        await onUpdate?.(itemType, normalizedItem.safeId, updatedItem);
+        if (onUpdate) await Promise.resolve(onUpdate(itemType, normalizedItem.safeId, updatedItem));
         setIsSaving(false);
         setSaveSuccessVisible(true);
 

@@ -115,6 +115,30 @@ function eventMatchesBinding(event: KeyboardEvent, binding: string, isMac: boole
   return normalizeKey(event.key) === normalizeKey(parsed.key);
 }
 
+/**
+ * Check that the event's modifier state exactly matches the required set,
+ * accounting for macOS Cmd↔Ctrl swaps.
+ */
+function modifiersMatchExactly(
+  event: KeyboardEvent,
+  requiredMods: string[],
+  isMac: boolean,
+): boolean {
+  if (event.shiftKey !== requiredMods.includes("shift")) return false;
+  if (event.altKey !== requiredMods.includes("alt")) return false;
+
+  const metaRequired = requiredMods.includes("meta");
+  const ctrlRequired = requiredMods.includes("ctrl");
+  const ctrlActive = isMac ? event.metaKey : event.ctrlKey;
+
+  if (metaRequired && !event.metaKey) return false;
+  if (!metaRequired && event.metaKey && !(ctrlRequired && isMac)) return false;
+  if (ctrlRequired && !ctrlActive) return false;
+  if (!ctrlRequired && ctrlActive && !(metaRequired && !isMac)) return false;
+
+  return true;
+}
+
 function eventMatchesChordPrefix(event: KeyboardEvent, shortcut: ResolvedShortcut, isMac: boolean): string | null {
   const parsed = parseBinding(shortcut.binding);
   if (!parsed.isChord || !parsed.chordKey) return null;
@@ -124,24 +148,88 @@ function eventMatchesChordPrefix(event: KeyboardEvent, shortcut: ResolvedShortcu
     if (!modifierMatches(mod, event, isMac)) return null;
   }
 
-  // Require exact modifier set for prefix to avoid collisions.
-  if (event.shiftKey !== requiredMods.includes("shift")) return null;
-  if (event.altKey !== requiredMods.includes("alt")) return null;
-
-  const metaRequired = requiredMods.includes("meta");
-  const ctrlRequired = requiredMods.includes("ctrl");
-
-  const ctrlActive = isMac ? event.metaKey : event.ctrlKey;
-  const metaActive = event.metaKey;
-
-  if (metaRequired && !metaActive) return null;
-  if (!metaRequired && metaActive && !(ctrlRequired && isMac)) return null;
-  if (ctrlRequired && !ctrlActive) return null;
-  if (!ctrlRequired && ctrlActive && !(metaRequired && !isMac)) return null;
+  if (!modifiersMatchExactly(event, requiredMods, isMac)) return null;
 
   if (normalizeKey(event.key) !== normalizeKey(parsed.chordKey)) return null;
 
   return bindingPrefix(parsed.modifiers, parsed.chordKey);
+}
+
+/**
+ * Attempt to complete a pending chord sequence.
+ * @returns true if the event was consumed (chord ended), false otherwise.
+ */
+function tryCompleteChord(
+  pending: PendingChord,
+  enabled: ResolvedShortcut[],
+  event: KeyboardEvent,
+  options: UseKeyboardShortcutsOptions,
+  clearChord: () => void,
+): boolean {
+  const elapsed = Date.now() - pending.startedAt;
+  if (elapsed > CHORD_TIMEOUT_MS) {
+    clearChord();
+    return true;
+  }
+
+  const secondKey = normalizeKey(event.key);
+  const match = enabled.find((s) => {
+    const parsed = parseBinding(s.binding);
+    if (!parsed.isChord || !parsed.chordKey) return false;
+    const prefix = bindingPrefix(parsed.modifiers, parsed.chordKey);
+    return prefix === pending.prefix && normalizeKey(parsed.key) === secondKey;
+  });
+
+  clearChord();
+  if (!match) return true;
+
+  const factory = actionForShortcutId(match.id);
+  if (!factory) return true;
+
+  event.preventDefault();
+  factory(options);
+  return true;
+}
+
+/**
+ * Attempt to start a chord prefix from the current event.
+ * @returns true if a chord was initiated.
+ */
+function tryStartChord(
+  enabled: ResolvedShortcut[],
+  event: KeyboardEvent,
+  isMac: boolean,
+  startChord: (prefix: string) => void,
+): boolean {
+  for (const s of enabled) {
+    const prefix = eventMatchesChordPrefix(event, s, isMac);
+    if (!prefix) continue;
+    event.preventDefault();
+    startChord(prefix);
+    return true;
+  }
+  return false;
+}
+
+/**
+ * Attempt to fire a direct (non-chord) shortcut.
+ * @returns true if a shortcut was matched and executed.
+ */
+function tryDirectShortcut(
+  enabled: ResolvedShortcut[],
+  event: KeyboardEvent,
+  isMac: boolean,
+  options: UseKeyboardShortcutsOptions,
+): boolean {
+  const direct = enabled.find((s) => eventMatchesBinding(event, s.binding, isMac));
+  if (!direct) return false;
+
+  const factory = actionForShortcutId(direct.id);
+  if (!factory) return false;
+
+  event.preventDefault();
+  factory(options);
+  return true;
 }
 
 function actionForShortcutId(id: string): ((opts: UseKeyboardShortcutsOptions) => void) | null {
@@ -301,54 +389,13 @@ export function useKeyboardShortcuts(options: UseKeyboardShortcutsOptions): {
       const enabled = shortcutsRef.current.filter((s) => s.enabled);
       const pending = pendingChordRef.current;
 
-      // If currently waiting for chord completion
       if (pending) {
-        const elapsed = Date.now() - pending.startedAt;
-        if (elapsed > CHORD_TIMEOUT_MS) {
-          clearChord();
-          return;
-        }
-
-        const secondKey = normalizeKey(event.key);
-
-        const match = enabled.find((s) => {
-          const parsed = parseBinding(s.binding);
-          if (!parsed.isChord || !parsed.chordKey) return false;
-          const prefix = bindingPrefix(parsed.modifiers, parsed.chordKey);
-          return prefix === pending.prefix && normalizeKey(parsed.key) === secondKey;
-        });
-
-        clearChord();
-
-        if (!match) return;
-
-        const actionFactory = actionForShortcutId(match.id);
-        if (!actionFactory) return;
-
-        event.preventDefault();
-        actionFactory(options);
+        tryCompleteChord(pending, enabled, event, options, clearChord);
         return;
       }
 
-      // First check: chord prefix initiation (e.g. ctrl+g)
-      for (const s of enabled) {
-        const prefix = eventMatchesChordPrefix(event, s, isMac);
-        if (!prefix) continue;
-
-        event.preventDefault();
-        startChord(prefix);
-        return;
-      }
-
-      // Second check: non-chord shortcuts
-      const direct = enabled.find((s) => eventMatchesBinding(event, s.binding, isMac));
-      if (!direct) return;
-
-      const actionFactory = actionForShortcutId(direct.id);
-      if (!actionFactory) return;
-
-      event.preventDefault();
-      actionFactory(options);
+      if (tryStartChord(enabled, event, isMac, startChord)) return;
+      tryDirectShortcut(enabled, event, isMac, options);
     };
 
     window.addEventListener("keydown", onKeyDown);

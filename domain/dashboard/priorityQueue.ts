@@ -361,11 +361,9 @@ export function calculatePriorityScore(
   if (config?.caseStatuses && config.caseStatuses.length > 0) {
     // Use dynamic weight calculation from config
     score += getStatusWeight(caseData.status, config.caseStatuses);
-  } else {
+  } else if (caseData.status?.toLowerCase() === 'intake') {
     // Legacy fallback: hardcoded Intake check
-    if (caseData.status?.toLowerCase() === 'intake') {
-      score += SCORE_INTAKE;
-    }
+    score += SCORE_INTAKE;
   }
 
   // Score each alert based on type

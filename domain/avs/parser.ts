@@ -96,6 +96,42 @@ function parseBalance(balanceStr: string): number {
   return isNaN(parsed) ? 0 : parsed;
 }
 
+/** Sort known types longest-first so "CHECKING ACCOUNT" matches before "CHECKING". */
+const SORTED_ACCOUNT_TYPES = [...KNOWN_ACCOUNT_TYPES].sort((a, b) => b.length - a.length);
+
+/** Extract account type and owner(s) from the first line of an account block. */
+function extractAccountTypeAndOwners(rawLine: string): { accountType: string; owners: string } {
+  let firstLine = rawLine.trim();
+  if (firstLine.toUpperCase().startsWith("ACCOUNT OWNER:")) {
+    firstLine = firstLine.slice("Account Owner:".length).trim();
+  }
+
+  for (const type of SORTED_ACCOUNT_TYPES) {
+    if (firstLine.toUpperCase().endsWith(type.toUpperCase())) {
+      return { accountType: type, owners: firstLine.slice(0, -type.length).trim() };
+    }
+  }
+  return { accountType: "N/A", owners: firstLine };
+}
+
+/** Collect address lines and locate the balance line index. */
+function collectAddressAndBalance(lines: string[], startIndex: number): { address: string; balanceLineIndex: number } {
+  const addressLines: string[] = [];
+  for (let i = startIndex; i < lines.length; i++) {
+    if (lines[i].toLowerCase().includes("balance as of")) {
+      return { address: addressLines.join(" "), balanceLineIndex: i };
+    }
+    addressLines.push(lines[i].trim());
+  }
+  return { address: addressLines.join(" "), balanceLineIndex: -1 };
+}
+
+/** Mask an account number to its last 4 digits. */
+function maskAccountNumber(raw: string): string {
+  if (raw === "N/A" || raw.length <= 4) return raw;
+  return raw.slice(-4);
+}
+
 /**
  * Parse a single account block from AVS data
  *
@@ -104,89 +140,36 @@ function parseBalance(balanceStr: string): number {
  */
 export function parseAccountBlock(block: string): ParsedAVSAccount | null {
   const lines = block.split("\n").filter((line) => line.trim() !== "");
+  if (lines.length < 2) return null;
 
-  if (lines.length < 2) {
-    return null;
-  }
+  const { accountType, owners } = extractAccountTypeAndOwners(lines[0]);
 
-  let firstLine = lines[0].trim();
-
-  // Strip "Account Owner:" prefix if present (common bank format)
-  if (firstLine.toUpperCase().startsWith("ACCOUNT OWNER:")) {
-    firstLine = firstLine.slice("Account Owner:".length).trim();
-  }
-
-  let accountType = "N/A";
-  let owners = "N/A";
-
-  // Try to extract account type from end of first line
-  // Sort by length (longest first) to match "CHECKING ACCOUNT" before "CHECKING"
-  const sortedTypes = [...KNOWN_ACCOUNT_TYPES].sort(
-    (a, b) => b.length - a.length
-  );
-  for (const type of sortedTypes) {
-    if (firstLine.toUpperCase().endsWith(type.toUpperCase())) {
-      accountType = type;
-      owners = firstLine.slice(0, -type.length).trim();
-      break;
-    }
-  }
-
-  // If no account type found, entire first line is owners
-  if (accountType === "N/A") {
-    owners = firstLine;
-  }
-
-  // Convert semicolon-separated owners to comma-separated
   const ownerList = owners
     .split(";")
     .map((o) => o.trim())
     .filter((o) => o.length > 0)
     .join(", ");
 
-  // Parse bank name and account number from second line
   const bankLine = lines[1] || "";
   const bankNameMatch = bankLine.match(/([^\n]+) - \(/);
   const accountNumberMatch = bankLine.match(/ - \((\d+)\)/);
 
-  // Collect address lines (everything between bank line and balance line)
-  const addressLines: string[] = [];
-  let balanceLineIndex = -1;
+  const { address, balanceLineIndex } = collectAddressAndBalance(lines, 2);
 
-  for (let i = 2; i < lines.length; i++) {
-    if (lines[i].toLowerCase().includes("balance as of")) {
-      balanceLineIndex = i;
-      break;
-    }
-    addressLines.push(lines[i].trim());
-  }
-
-  const address = addressLines.join(" ");
-
-  // Extract balance
   const balanceLine = balanceLineIndex !== -1 ? lines[balanceLineIndex] : "";
   const balanceMatch = balanceLine.match(/Balance as of .* - (.*)/);
   const balance = balanceMatch ? balanceMatch[1].trim() : "N/A";
 
-  // Extract refresh date
-  const refreshDateLine = lines.find((l) =>
-    l.toLowerCase().startsWith("refresh date:")
-  );
-  const refreshDateMatch = refreshDateLine
-    ? refreshDateLine.match(/Refresh Date: ([^\n]+)/)
-    : null;
+  const refreshDateLine = lines.find((l) => l.toLowerCase().startsWith("refresh date:"));
+  const refreshDateMatch = refreshDateLine?.match(/Refresh Date: ([^\n]+)/) ?? null;
 
-  // Extract and mask account number (last 4 digits only)
-  let accountNumber = accountNumberMatch ? accountNumberMatch[1].trim() : "N/A";
-  if (accountNumber !== "N/A" && accountNumber.length > 4) {
-    accountNumber = accountNumber.slice(-4);
-  }
+  const rawAccountNumber = accountNumberMatch ? accountNumberMatch[1].trim() : "N/A";
 
   return {
     accountOwner: ownerList || "N/A",
     accountType,
     bankName: bankNameMatch ? bankNameMatch[1].trim() : "N/A",
-    accountNumber,
+    accountNumber: maskAccountNumber(rawAccountNumber),
     address,
     balance,
     balanceAmount: parseBalance(balance),
@@ -439,6 +422,54 @@ export interface MatchResult<T> {
  * @param newItemBankName  Optional bank name from the parsed AVS account (used for low-confidence fallback)
  * @returns Match result with the item and confidence, or `undefined` if no match
  */
+/**
+ * Match by account number (Tiers 1-3): exact > high > medium.
+ * Returns undefined if no account-number-based match found.
+ */
+function matchByAccountNumber<
+  T extends { id: string; accountNumber?: string; description: string; location?: string },
+>(
+  newItem: { accountNumber: string; description: string },
+  existingItems: T[],
+  newDesc: string,
+): MatchResult<T> | undefined {
+  let mediumMatch: MatchResult<T> | undefined;
+
+  for (const existing of existingItems) {
+    if (!existing.accountNumber) continue;
+    if (!accountNumbersMatch(newItem.accountNumber, existing.accountNumber)) continue;
+
+    if (existing.description === newItem.description) {
+      return { item: existing, confidence: "exact" };
+    }
+    if (normalizeDescription(existing.description) === newDesc) {
+      return { item: existing, confidence: "high" };
+    }
+    if (!mediumMatch) {
+      mediumMatch = { item: existing, confidence: "medium" };
+    }
+  }
+
+  return mediumMatch;
+}
+
+/**
+ * Match by description + location (Tier 4 fallback).
+ */
+function matchByDescriptionLocation<
+  T extends { id: string; accountNumber?: string; description: string; location?: string },
+>(existingItems: T[], newDesc: string, bankNameLower: string | undefined): MatchResult<T> | undefined {
+  if (!bankNameLower) return undefined;
+
+  for (const existing of existingItems) {
+    if (normalizeDescription(existing.description) !== newDesc) continue;
+    if (existing.location?.toLowerCase() === bankNameLower) {
+      return { item: existing, confidence: "low" };
+    }
+  }
+  return undefined;
+}
+
 export function findMatchingFinancialItem<
   T extends { id: string; accountNumber?: string; description: string; location?: string },
 >(
@@ -448,47 +479,13 @@ export function findMatchingFinancialItem<
 ): MatchResult<T> | undefined {
   const newDesc = normalizeDescription(newItem.description);
 
-  // Tier 1 & 2 & 3: match by account number
-  // Scan all items first for exact/high matches before falling back to medium
   if (newItem.accountNumber) {
-    let mediumMatch: MatchResult<T> | undefined;
-
-    for (const existing of existingItems) {
-      if (!existing.accountNumber) continue;
-      if (!accountNumbersMatch(newItem.accountNumber, existing.accountNumber)) continue;
-
-      // Account numbers match — determine description confidence
-      if (existing.description === newItem.description) {
-        return { item: existing, confidence: "exact" };
-      }
-      if (normalizeDescription(existing.description) === newDesc) {
-        return { item: existing, confidence: "high" };
-      }
-      // Account matches but description differs — hold as fallback
-      if (!mediumMatch) {
-        mediumMatch = { item: existing, confidence: "medium" };
-      }
-    }
-
-    if (mediumMatch) {
-      return mediumMatch;
-    }
+    const acctMatch = matchByAccountNumber(newItem as { accountNumber: string; description: string }, existingItems, newDesc);
+    if (acctMatch) return acctMatch;
   }
 
-  // Tier 4: fallback — no account number, match by description + location
   if (!newItem.accountNumber || newItem.accountNumber === "N/A") {
-    const bankNameLower = newItemBankName?.toLowerCase();
-    for (const existing of existingItems) {
-      if (normalizeDescription(existing.description) !== newDesc) continue;
-      // Description matches; check if location/bankName also matches
-      if (
-        bankNameLower &&
-        existing.location &&
-        existing.location.toLowerCase() === bankNameLower
-      ) {
-        return { item: existing, confidence: "low" };
-      }
-    }
+    return matchByDescriptionLocation(existingItems, newDesc, newItemBankName?.toLowerCase());
   }
 
   return undefined;

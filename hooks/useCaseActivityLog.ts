@@ -12,6 +12,43 @@ import { createLogger } from "../utils/logger";
 
 const logger = createLogger("useCaseActivityLog");
 
+/** Attempt to auto-archive old entries; non-fatal on failure. */
+async function attemptAutoArchive(dataManager: { archiveOldActivityEntries: () => Promise<{ archivedCount: number; retainedCount: number; archiveFileNames: string[] }> }): Promise<void> {
+  try {
+    const result = await dataManager.archiveOldActivityEntries();
+    if (result.archivedCount > 0) {
+      logger.info("Auto-archived old activity log entries", {
+        archivedCount: result.archivedCount,
+        retainedCount: result.retainedCount,
+        archiveFileNames: result.archiveFileNames,
+      });
+    }
+  } catch (archiveError) {
+    logger.warn("Failed to auto-archive activity log entries", {
+      error: archiveError instanceof Error ? archiveError.message : String(archiveError),
+    });
+  }
+}
+
+/** Classify an activity log load error into a user-displayable string or null. */
+function classifyActivityLogError(error: unknown): string | null {
+  if (error instanceof LegacyFormatError) {
+    logger.warn("Legacy format detected in activity log", { message: error.message });
+    return error.message;
+  }
+
+  logger.error("Failed to load activity log", {
+    error: error instanceof Error ? error.message : String(error),
+  });
+
+  // Permission errors are expected when not connected - suppress them
+  if (error instanceof Error && (error.message.includes('permission') || error.message.includes('requested file could not be read'))) {
+    return null;
+  }
+
+  return error instanceof Error ? error.message : "Failed to load activity log";
+}
+
 /**
  * Return type for useCaseActivityLog hook.
  * @interface UseCaseActivityLogResult
@@ -130,40 +167,13 @@ export function useCaseActivityLog(): UseCaseActivityLogResult {
 
     setLoading(true);
     try {
-      // Auto-archive on load — the service itself serializes concurrent calls
-      try {
-        const archiveResult = await dataManager.archiveOldActivityEntries();
-          if (archiveResult.archivedCount > 0) {
-            logger.info("Auto-archived old activity log entries", {
-              archivedCount: archiveResult.archivedCount,
-              retainedCount: archiveResult.retainedCount,
-              archiveFileNames: archiveResult.archiveFileNames,
-            });
-          }
-        } catch (archiveError) {
-          // Non-fatal — log but don't block loading the activity log
-          logger.warn("Failed to auto-archive activity log entries", {
-            error: archiveError instanceof Error ? archiveError.message : String(archiveError),
-          });
-        }
+      await attemptAutoArchive(dataManager);
 
       const entries = await dataManager.getActivityLog();
       setActivityLog(entries);
       setError(null);
     } catch (error) {
-      // LegacyFormatError is expected when opening old data files - handle gracefully
-      if (error instanceof LegacyFormatError) {
-        logger.warn("Legacy format detected in activity log", { message: error.message });
-        setError(error.message);
-      } else {
-        logger.error("Failed to load activity log", { error: error instanceof Error ? error.message : String(error) });
-        // Only set error if it's not a permission issue (which is expected when not connected)
-        const isPermissionError = error instanceof Error && 
-          (error.message.includes('permission') || error.message.includes('requested file could not be read'));
-        if (!isPermissionError) {
-          setError(error instanceof Error ? error.message : "Failed to load activity log");
-        }
-      }
+      setError(classifyActivityLogError(error));
     } finally {
       setLoading(false);
     }

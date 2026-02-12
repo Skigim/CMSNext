@@ -61,6 +61,54 @@ export interface AutosaveStatusSummary {
   tone: AutosaveTone;
 }
 
+interface StatusDisplayInfo {
+  state: AutosaveStatusState;
+  displayLabel: string;
+  detailText: string;
+  tone: AutosaveTone;
+  showSpinner: boolean;
+}
+
+/** Append pending-writes description if available. */
+function withPending(text: string, pending: string | null): string {
+  return pending ? `${text} (${pending})` : text;
+}
+
+/** Map raw service inputs to display properties. */
+function deriveStatusDisplay(
+  rawStatus: string,
+  message: string | null,
+  pendingDescription: string | null,
+  consecutiveFailures: number,
+  lastSavedAt: number | null,
+  lastSavedRelative: string | null,
+  isSupported: boolean | undefined,
+  lifecycle: FileStorageLifecycleState,
+  permissionStatus: FileStoragePermissionState,
+): StatusDisplayInfo {
+  const defaultDetail = message ?? (lastSavedRelative ? `Last saved ${lastSavedRelative}` : "Autosave is standing by.");
+
+  if (isSupported === false) {
+    return { state: "unsupported", displayLabel: "Not available", detailText: "File System Access API is not supported in this browser.", tone: "muted", showSpinner: false };
+  }
+  if (lifecycle === "error" || rawStatus === "error") {
+    return { state: "error", displayLabel: "Save failed", detailText: withPending(message ?? "Autosave encountered an error.", pendingDescription), tone: "danger", showSpinner: false };
+  }
+  if (permissionStatus !== "granted" || rawStatus === "waiting") {
+    return { state: "permission-required", displayLabel: "Permission required", detailText: withPending(message ?? "Allow folder access to resume autosave.", pendingDescription), tone: "warning", showSpinner: false };
+  }
+  if (rawStatus === "retrying") {
+    return { state: "retrying", displayLabel: "Retrying save…", detailText: withPending(message ?? `Autosave retrying (attempt ${consecutiveFailures + 1})`, pendingDescription), tone: "warning", showSpinner: true };
+  }
+  if (rawStatus === "saving" || (pendingDescription !== null)) {
+    return { state: "saving", displayLabel: "Saving…", detailText: withPending(message ?? "Writing changes to your folder…", pendingDescription), tone: "info", showSpinner: true };
+  }
+  if (lastSavedAt) {
+    return { state: "saved", displayLabel: "All changes saved", detailText: lastSavedRelative ? `Last saved ${lastSavedRelative}` : "Last save completed successfully.", tone: "success", showSpinner: false };
+  }
+  return { state: "idle", displayLabel: message ?? "Autosave ready", detailText: withPending(defaultDetail, pendingDescription), tone: "muted", showSpinner: false };
+}
+
 function describePendingWrites(pendingWrites: number): string | null {
   if (pendingWrites <= 0) {
     return null;
@@ -176,71 +224,10 @@ export function useAutosaveStatus(): AutosaveStatusSummary {
     const message = statusSnapshot?.message ?? null;
     const pendingDescription = describePendingWrites(pendingWrites);
 
-    let state: AutosaveStatusState = "idle";
-    let displayLabel = "Autosave ready";
-    let detailText =
-      message ??
-      (lastSavedRelative ? `Last saved ${lastSavedRelative}` : "Autosave is standing by.");
-    let tone: AutosaveTone = "muted";
-    let showSpinner = false;
-
-    if (isSupported === false) {
-      state = "unsupported";
-      displayLabel = "Not available";
-      detailText = "File System Access API is not supported in this browser.";
-      tone = "muted";
-    } else if (lifecycle === "error" || rawStatus === "error") {
-      state = "error";
-      displayLabel = "Save failed";
-      detailText = message ?? "Autosave encountered an error.";
-      if (pendingDescription) {
-        detailText += ` (${pendingDescription})`;
-      }
-      tone = "danger";
-    } else if (permissionStatus !== "granted" || rawStatus === "waiting") {
-      state = "permission-required";
-      displayLabel = "Permission required";
-      detailText = message ?? "Allow folder access to resume autosave.";
-      if (pendingDescription) {
-        detailText += ` (${pendingDescription})`;
-      }
-      tone = "warning";
-    } else if (rawStatus === "retrying") {
-      state = "retrying";
-      displayLabel = "Retrying save…";
-      detailText =
-  message ??
-  `Autosave retrying (attempt ${consecutiveFailures + 1})`;
-      if (pendingDescription) {
-        detailText += ` (${pendingDescription})`;
-      }
-      tone = "warning";
-      showSpinner = true;
-    } else if (rawStatus === "saving" || pendingWrites > 0) {
-      state = "saving";
-      displayLabel = "Saving…";
-      detailText = message ?? "Writing changes to your folder…";
-      if (pendingDescription) {
-        detailText += ` (${pendingDescription})`;
-      }
-      tone = "info";
-      showSpinner = true;
-    } else if (lastSavedAt) {
-      state = "saved";
-      displayLabel = "All changes saved";
-      detailText = lastSavedRelative
-        ? `Last saved ${lastSavedRelative}`
-        : "Last save completed successfully.";
-      tone = "success";
-    } else {
-      state = "idle";
-      displayLabel = message ?? "Autosave ready";
-      detailText = message ?? "Autosave is standing by.";
-      if (pendingDescription) {
-        detailText += ` (${pendingDescription})`;
-      }
-      tone = "muted";
-    }
+    const { state, displayLabel, detailText, tone, showSpinner } = deriveStatusDisplay(
+      rawStatus, message, pendingDescription, consecutiveFailures,
+      lastSavedAt, lastSavedRelative, isSupported, lifecycle, permissionStatus,
+    );
 
     return {
       state,

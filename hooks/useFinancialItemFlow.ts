@@ -8,6 +8,53 @@ import { extractErrorMessage } from "@/utils/errorUtils";
 
 const logger = createLogger("useFinancialItemFlow");
 
+/**
+ * Verify that a case still exists in the data manager.
+ * @returns error message string if not found, or null on success.
+ */
+async function verifyCaseExists(
+  dataManager: { getAllCases: () => Promise<StoredCase[]> },
+  caseId: string,
+): Promise<string | null> {
+  try {
+    const allCases = await dataManager.getAllCases();
+    const found = allCases.find((c: StoredCase) => c.id === caseId);
+    if (!found) {
+      logger.error("Case not found in data manager", {
+        requestedCaseId: caseId,
+        availableCaseIds: allCases.map((c: StoredCase) => c.id),
+        totalCases: allCases.length,
+      });
+      return `Case not found in data storage. Case ID: ${caseId}`;
+    }
+    return null;
+  } catch (checkError) {
+    logger.error("Error checking case existence", { error: extractErrorMessage(checkError) });
+    return "Error verifying case data. Please try again.";
+  }
+}
+
+/**
+ * Classify a batch update error into a user-facing message.
+ */
+function classifyBatchUpdateError(error: unknown): string {
+  if (error instanceof Error) {
+    if (error.message.includes("File was modified by another process")) {
+      return "File was modified by another process. Your changes were not saved. Please refresh and try again.";
+    }
+    if (error.message.includes("Permission denied")) {
+      return "Permission denied. Please check that you have write access to the data folder.";
+    }
+    if (
+      error.message.includes("state cached in an interface object") ||
+      error.message.includes("state had changed")
+    ) {
+      return "Data sync issue detected. Please refresh the page and try again.";
+    }
+  }
+  return "Failed to update item. Please try again.";
+}
+
 export type ItemFormState = {
   isOpen: boolean;
   category?: CaseCategory;
@@ -255,22 +302,9 @@ export function useFinancialItemFlow({
 
     // Verify case exists in data manager before proceeding
     if (isEditing && formData.id) {
-      try {
-        const allCases = await dataManager.getAllCases();
-        const caseExists = allCases.find((c: StoredCase) => c.id === selectedCase.id);
-
-        if (!caseExists) {
-          logger.error("Case not found in data manager", {
-            requestedCaseId: selectedCase.id,
-            availableCaseIds: allCases.map((c: StoredCase) => c.id),
-            totalCases: allCases.length,
-          });
-          setFormErrors({ general: `Case not found in data storage. Case ID: ${selectedCase.id}` });
-          return false;
-        }
-      } catch (checkError) {
-        logger.error("Error checking case existence", { error: extractErrorMessage(checkError) });
-        setFormErrors({ general: "Error verifying case data. Please try again." });
+      const verifyError = await verifyCaseExists(dataManager, selectedCase.id);
+      if (verifyError) {
+        setFormErrors({ general: verifyError });
         return false;
       }
     }
@@ -364,20 +398,7 @@ export function useFinancialItemFlow({
         // Don't update cases state as items are separate
       } catch (error) {
         logger.error("Failed to update item", { error: extractErrorMessage(error) });
-
-        let errorMsg = "Failed to update item. Please try again.";
-        if (error instanceof Error) {
-          if (error.message.includes("File was modified by another process")) {
-            errorMsg = "File was modified by another process. Your changes were not saved. Please refresh and try again.";
-          } else if (error.message.includes("Permission denied")) {
-            errorMsg = "Permission denied. Please check that you have write access to the data folder.";
-          } else if (
-            error.message.includes("state cached in an interface object") ||
-            error.message.includes("state had changed")
-          ) {
-            errorMsg = "Data sync issue detected. Please refresh the page and try again.";
-          }
-        }
+        const errorMsg = classifyBatchUpdateError(error);
 
         setError(errorMsg);
         toast.error(errorMsg, { duration: 5000 });

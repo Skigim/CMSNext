@@ -15,6 +15,62 @@ import { extractErrorMessage } from "@/utils/errorUtils";
 
 const logger = createLogger("useAVSImportFlow");
 
+/** Result of importing a single AVS account. */
+interface SingleImportResult {
+  outcome: "new" | "updated" | "error";
+  errorDescription?: string;
+}
+
+/**
+ * Import one account: update if matched, otherwise create new.
+ * @returns outcome with optional error description.
+ */
+async function importSingleAccount(
+  account: AVSAccountWithMeta,
+  dataManager: NonNullable<ReturnType<typeof useDataManagerSafe>>,
+  caseId: string,
+): Promise<SingleImportResult> {
+  try {
+    const itemData = avsAccountToFinancialItem(account);
+    if (account.existingItemId) {
+      await dataManager.updateItem(caseId, "resources", account.existingItemId, itemData as Partial<FinancialItem>);
+      return { outcome: "updated" };
+    }
+    await dataManager.addItem(caseId, "resources", itemData as Omit<FinancialItem, "id" | "createdAt" | "updatedAt">);
+    return { outcome: "new" };
+  } catch (itemError) {
+    logger.error("Failed to import account", {
+      account: account.bankName,
+      accountType: account.accountType,
+      error: extractErrorMessage(itemError),
+    });
+    const description = account.accountType !== "N/A"
+      ? `${account.accountType} at ${account.bankName}`
+      : account.bankName;
+    return { outcome: "error", errorDescription: description };
+  }
+}
+
+/**
+ * Show appropriate toast based on import results.
+ */
+function showImportResultToast(
+  newCount: number,
+  updateCount: number,
+  errors: string[],
+  toastId: string | number,
+): void {
+  const messageParts: string[] = [];
+  if (newCount > 0) messageParts.push(`${newCount} new`);
+  if (updateCount > 0) messageParts.push(`${updateCount} updated`);
+
+  if (errors.length > 0) {
+    toast.warning(`Imported ${messageParts.join(", ")}. ${errors.length} failed.`, { id: toastId, duration: 5000 });
+  } else {
+    toast.success(`Successfully imported: ${messageParts.join(", ")}`, { id: toastId, duration: 3000 });
+  }
+}
+
 /**
  * Parsed AVS account with selection state and match info
  */
@@ -291,40 +347,11 @@ export function useAVSImportFlow({
     const errors: string[] = [];
 
     try {
-      // Import each account sequentially to avoid race conditions
       for (const account of selectedAccounts) {
-        try {
-          const itemData = avsAccountToFinancialItem(account);
-          
-          if (account.existingItemId) {
-            // Update existing item
-            await dataManager.updateItem(
-              selectedCase.id,
-              "resources",
-              account.existingItemId,
-              itemData as Partial<FinancialItem>
-            );
-            updateCount++;
-          } else {
-            // Add new item
-            await dataManager.addItem(
-              selectedCase.id,
-              "resources",
-              itemData as Omit<FinancialItem, "id" | "createdAt" | "updatedAt">
-            );
-            newCount++;
-          }
-        } catch (itemError) {
-          logger.error("Failed to import account", {
-            account: account.bankName,
-            accountType: account.accountType,
-            error: extractErrorMessage(itemError),
-          });
-          const description = account.accountType !== "N/A"
-            ? `${account.accountType} at ${account.bankName}`
-            : account.bankName;
-          errors.push(description);
-        }
+        const result = await importSingleAccount(account, dataManager, selectedCase.id);
+        if (result.outcome === "new") newCount++;
+        else if (result.outcome === "updated") updateCount++;
+        else if (result.errorDescription) errors.push(result.errorDescription);
       }
 
       setImportState(prev => ({
@@ -334,22 +361,9 @@ export function useAVSImportFlow({
         updatedCount: updateCount,
       }));
 
-      // Build success message
-      const messageParts: string[] = [];
-      if (newCount > 0) messageParts.push(`${newCount} new`);
-      if (updateCount > 0) messageParts.push(`${updateCount} updated`);
+      showImportResultToast(newCount, updateCount, errors, toastId);
 
-      if (errors.length > 0) {
-        toast.warning(
-          `Imported ${messageParts.join(', ')}. ${errors.length} failed.`,
-          { id: toastId, duration: 5000 }
-        );
-      } else {
-        toast.success(
-          `Successfully imported: ${messageParts.join(', ')}`,
-          { id: toastId, duration: 3000 }
-        );
-        // Close modal on full success after a brief delay
+      if (errors.length === 0) {
         setTimeout(() => {
           closeImportModal();
         }, 1000);

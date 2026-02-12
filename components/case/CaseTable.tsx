@@ -21,6 +21,68 @@ import { getAlertDisplayDescription, getAlertDueDateInfo } from "@/utils/alertDi
 import { calculatePriorityScore } from "@/domain/dashboard/priorityQueue";
 import { useCategoryConfig } from "@/contexts/CategoryConfigContext";
 
+/** Compare two expanded rows for sorting. */
+function compareExpandedRows(
+  a: { name: string; mcn: string | null; status: string; score: number; expandedAlert: AlertWithMatch | null },
+  b: { name: string; mcn: string | null; status: string; score: number; expandedAlert: AlertWithMatch | null },
+  sortKey: CaseListSortKey,
+  directionFactor: number,
+): number {
+  switch (sortKey) {
+    case "updated": {
+      const aRaw = a.expandedAlert?.alertDate ?? a.expandedAlert?.createdAt ?? "";
+      const bRaw = b.expandedAlert?.alertDate ?? b.expandedAlert?.createdAt ?? "";
+      return ((Date.parse(aRaw) || 0) - (Date.parse(bRaw) || 0)) * directionFactor;
+    }
+    case "name":
+      return (a.name || "").localeCompare(b.name || "") * directionFactor;
+    case "mcn":
+      return (a.mcn || "").localeCompare(b.mcn || "") * directionFactor;
+    case "status":
+      return (a.status || "").localeCompare(b.status || "") * directionFactor;
+    case "score":
+      return (a.score - b.score) * directionFactor;
+    default:
+      return 0;
+  }
+}
+
+/** Reusable sortable table header. */
+function SortableTableHead({
+  label,
+  sortKeyValue,
+  activeSortKey,
+  sortDirection,
+  onSortClick,
+  renderIndicator,
+}: {
+  label: string;
+  sortKeyValue: CaseListSortKey;
+  activeSortKey: CaseListSortKey;
+  sortDirection: CaseListSortDirection;
+  onSortClick: (key: CaseListSortKey) => void;
+  renderIndicator: (key: CaseListSortKey) => React.ReactNode;
+}) {
+  const ariaSortValue = activeSortKey === sortKeyValue
+    ? (sortDirection === "asc" ? "ascending" as const : "descending" as const)
+    : "none" as const;
+  const ariaLabel = `Sort by ${label}. Currently ${activeSortKey === sortKeyValue ? (sortDirection === "asc" ? "ascending" : "descending") : "unsorted"}.`;
+
+  return (
+    <TableHead aria-sort={ariaSortValue}>
+      <button
+        type="button"
+        onClick={() => onSortClick(sortKeyValue)}
+        className="flex items-center gap-1 text-left font-semibold transition-colors hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
+        aria-label={ariaLabel}
+      >
+        <span>{label}</span>
+        {renderIndicator(sortKeyValue)}
+      </button>
+    </TableHead>
+  );
+}
+
 export interface CaseTableProps {
   cases: StoredCase[];
   sortKey: CaseListSortKey;
@@ -143,29 +205,9 @@ export const CaseTable = memo(function CaseTable({
 
     // Sort flattened rows by alert due date (not case-level sorting)
     const directionFactor = sortDirection === "asc" ? 1 : -1;
-    const sorted = [...flattened].sort((a, b) => {
-      if (sortKey === "updated") {
-        // Sort by alert due date (alertDate or createdAt)
-        const aRaw = a.expandedAlert?.alertDate ?? a.expandedAlert?.createdAt ?? "";
-        const bRaw = b.expandedAlert?.alertDate ?? b.expandedAlert?.createdAt ?? "";
-        const aDueDate = Date.parse(aRaw) || 0;
-        const bDueDate = Date.parse(bRaw) || 0;
-        return (aDueDate - bDueDate) * directionFactor;
-      }
-      if (sortKey === "name") {
-        return (a.name || "").localeCompare(b.name || "") * directionFactor;
-      }
-      if (sortKey === "mcn") {
-        return (a.mcn || "").localeCompare(b.mcn || "") * directionFactor;
-      }
-      if (sortKey === "status") {
-        return (a.status || "").localeCompare(b.status || "") * directionFactor;
-      }
-      if (sortKey === "score") {
-        return (a.score - b.score) * directionFactor;
-      }
-      return 0;
-    });
+    const sorted = [...flattened].sort((a, b) =>
+      compareExpandedRows(a, b, sortKey, directionFactor),
+    );
 
     // Apply page range after sorting
     if (alertPageRange) {
@@ -219,110 +261,14 @@ export const CaseTable = memo(function CaseTable({
                 />
               </TableHead>
             )}
-            <TableHead
-              aria-sort={sortKey === "name" ? (sortDirection === "asc" ? "ascending" : "descending") : "none"}
-            >
-              <button
-                type="button"
-                onClick={() => handleSortClick("name")}
-                className="flex items-center gap-1 text-left font-semibold transition-colors hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
-                aria-label={`Sort by Name. Currently ${sortKey === "name" ? (sortDirection === "asc" ? "ascending" : "descending") : "unsorted"}.`}
-              >
-                <span>Name</span>
-                {renderSortIndicator("name")}
-              </button>
-            </TableHead>
-            <TableHead
-              aria-sort={sortKey === "mcn" ? (sortDirection === "asc" ? "ascending" : "descending") : "none"}
-            >
-              <button
-                type="button"
-                onClick={() => handleSortClick("mcn")}
-                className="flex items-center gap-1 text-left font-semibold transition-colors hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
-                aria-label={`Sort by MCN. Currently ${sortKey === "mcn" ? (sortDirection === "asc" ? "ascending" : "descending") : "unsorted"}.`}
-              >
-                <span>MCN</span>
-                {renderSortIndicator("mcn")}
-              </button>
-            </TableHead>
-            <TableHead
-              aria-sort={sortKey === "status" ? (sortDirection === "asc" ? "ascending" : "descending") : "none"}
-            >
-              <button
-                type="button"
-                onClick={() => handleSortClick("status")}
-                className="flex items-center gap-1 text-left font-semibold transition-colors hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
-                aria-label={`Sort by Status. Currently ${sortKey === "status" ? (sortDirection === "asc" ? "ascending" : "descending") : "unsorted"}.`}
-              >
-                <span>Status</span>
-                {renderSortIndicator("status")}
-              </button>
-            </TableHead>
-            <TableHead
-              aria-sort={sortKey === "score" ? (sortDirection === "asc" ? "ascending" : "descending") : "none"}
-            >
-              <button
-                type="button"
-                onClick={() => handleSortClick("score")}
-                className="flex items-center gap-1 text-left font-semibold transition-colors hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
-                aria-label={`Sort by Score. Currently ${sortKey === "score" ? (sortDirection === "asc" ? "ascending" : "descending") : "unsorted"}.`}
-              >
-                <span>Score</span>
-                {renderSortIndicator("score")}
-              </button>
-            </TableHead>
-            <TableHead
-              aria-sort={sortKey === "alerts" ? (sortDirection === "asc" ? "ascending" : "descending") : "none"}
-            >
-              <button
-                type="button"
-                onClick={() => handleSortClick("alerts")}
-                className="flex items-center gap-1 text-left font-semibold transition-colors hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
-                aria-label={`Sort by Alerts. Currently ${sortKey === "alerts" ? (sortDirection === "asc" ? "ascending" : "descending") : "unsorted"}.`}
-              >
-                <span>Alerts</span>
-                {renderSortIndicator("alerts")}
-              </button>
-            </TableHead>
-            <TableHead
-              aria-sort={sortKey === "caseType" ? (sortDirection === "asc" ? "ascending" : "descending") : "none"}
-            >
-              <button
-                type="button"
-                onClick={() => handleSortClick("caseType")}
-                className="flex items-center gap-1 text-left font-semibold transition-colors hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
-                aria-label={`Sort by Case type. Currently ${sortKey === "caseType" ? (sortDirection === "asc" ? "ascending" : "descending") : "unsorted"}.`}
-              >
-                <span>Case type</span>
-                {renderSortIndicator("caseType")}
-              </button>
-            </TableHead>
-            <TableHead
-              aria-sort={sortKey === "application" ? (sortDirection === "asc" ? "ascending" : "descending") : "none"}
-            >
-              <button
-                type="button"
-                onClick={() => handleSortClick("application")}
-                className="flex items-center gap-1 text-left font-semibold transition-colors hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
-                aria-label={`Sort by Application Date. Currently ${sortKey === "application" ? (sortDirection === "asc" ? "ascending" : "descending") : "unsorted"}.`}
-              >
-                <span>Application</span>
-                {renderSortIndicator("application")}
-              </button>
-            </TableHead>
-            <TableHead
-              aria-sort={sortKey === "updated" ? (sortDirection === "asc" ? "ascending" : "descending") : "none"}
-            >
-              <button
-                type="button"
-                onClick={() => handleSortClick("updated")}
-                className="flex items-center gap-1 text-left font-semibold transition-colors hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
-                aria-label={`Sort by ${expandAlerts ? "Due Date" : "Last updated"}. Currently ${sortKey === "updated" ? (sortDirection === "asc" ? "ascending" : "descending") : "unsorted"}.`}
-              >
-                <span>{expandAlerts ? "Due Date" : "Last updated"}</span>
-                {renderSortIndicator("updated")}
-              </button>
-            </TableHead>
+            <SortableTableHead label="Name" sortKeyValue="name" activeSortKey={sortKey} sortDirection={sortDirection} onSortClick={handleSortClick} renderIndicator={renderSortIndicator} />
+            <SortableTableHead label="MCN" sortKeyValue="mcn" activeSortKey={sortKey} sortDirection={sortDirection} onSortClick={handleSortClick} renderIndicator={renderSortIndicator} />
+            <SortableTableHead label="Status" sortKeyValue="status" activeSortKey={sortKey} sortDirection={sortDirection} onSortClick={handleSortClick} renderIndicator={renderSortIndicator} />
+            <SortableTableHead label="Score" sortKeyValue="score" activeSortKey={sortKey} sortDirection={sortDirection} onSortClick={handleSortClick} renderIndicator={renderSortIndicator} />
+            <SortableTableHead label="Alerts" sortKeyValue="alerts" activeSortKey={sortKey} sortDirection={sortDirection} onSortClick={handleSortClick} renderIndicator={renderSortIndicator} />
+            <SortableTableHead label="Case type" sortKeyValue="caseType" activeSortKey={sortKey} sortDirection={sortDirection} onSortClick={handleSortClick} renderIndicator={renderSortIndicator} />
+            <SortableTableHead label="Application" sortKeyValue="application" activeSortKey={sortKey} sortDirection={sortDirection} onSortClick={handleSortClick} renderIndicator={renderSortIndicator} />
+            <SortableTableHead label={expandAlerts ? "Due Date" : "Last updated"} sortKeyValue="updated" activeSortKey={sortKey} sortDirection={sortDirection} onSortClick={handleSortClick} renderIndicator={renderSortIndicator} />
             <TableHead>Contact</TableHead>
           </TableRow>
         </TableHeader>
