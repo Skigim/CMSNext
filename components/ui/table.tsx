@@ -11,7 +11,7 @@ function Table({ className, ...props }: React.ComponentProps<"table">) {
       className="relative w-full overflow-x-auto"
       role="presentation"
     >
-      <table
+      <table // NOSONAR - headers are provided by consumers via TableHeader/TableHead children
         data-slot="table"
         className={cn("w-full caption-bottom text-sm", className)}
         {...props}

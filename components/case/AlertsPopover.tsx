@@ -12,6 +12,7 @@
  * @module components/case/AlertsPopover
  */
 import { useState, useMemo, useCallback } from "react";
+import { toast } from "sonner";
 import { Button } from "../ui/button";
 import {
   Popover,
@@ -57,6 +58,7 @@ export function AlertsPopover({
   onResolveAlert,
 }: AlertsPopoverProps) {
   const [isOpen, setIsOpen] = useState(false);
+  const [resolvingIds, setResolvingIds] = useState<Set<string>>(new Set());
 
   const { openAlerts, resolvedAlerts, totalCount, openCount } = useMemo(() => {
     const openList: AlertWithMatch[] = [];
@@ -81,10 +83,25 @@ export function AlertsPopover({
   const hasOpenAlerts = openCount > 0;
 
   const handleResolve = useCallback(
-    (alert: AlertWithMatch) => {
-      void onResolveAlert?.(alert);
+    async (alert: AlertWithMatch) => {
+      if (!onResolveAlert || resolvingIds.has(alert.id)) return;
+
+      setResolvingIds((prev) => new Set(prev).add(alert.id));
+      const isResolving = alert.status !== "resolved";
+      try {
+        await onResolveAlert(alert);
+        toast.success(isResolving ? "Alert resolved" : "Alert reopened");
+      } catch {
+        toast.error(isResolving ? "Failed to resolve alert" : "Failed to reopen alert");
+      } finally {
+        setResolvingIds((prev) => {
+          const next = new Set(prev);
+          next.delete(alert.id);
+          return next;
+        });
+      }
     },
-    [onResolveAlert],
+    [onResolveAlert, resolvingIds],
   );
 
   // Don't render if no alerts
@@ -165,9 +182,9 @@ export function AlertsPopover({
                           size="sm"
                           className="h-7 px-2 shrink-0"
                           onClick={() => handleResolve(alert)}
-                          disabled={!onResolveAlert}
+                          disabled={!onResolveAlert || resolvingIds.has(alert.id)}
                         >
-                          Resolve
+                          {resolvingIds.has(alert.id) ? "Resolving…" : "Resolve"}
                         </Button>
                       </div>
                     </div>
@@ -219,9 +236,9 @@ export function AlertsPopover({
                           variant="outline"
                           className="h-7 px-2 shrink-0"
                           onClick={() => handleResolve(alert)}
-                          disabled={!onResolveAlert}
+                          disabled={!onResolveAlert || resolvingIds.has(alert.id)}
                         >
-                          Reopen
+                          {resolvingIds.has(alert.id) ? "Reopening…" : "Reopen"}
                         </Button>
                       </div>
                     </div>

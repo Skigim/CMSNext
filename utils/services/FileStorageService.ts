@@ -12,6 +12,36 @@ import { reportFileStorageError, type FileStorageOperation } from "../fileStorag
 const logger = createLogger("FileStorageService");
 const NORMALIZED_VERSION = "2.0";
 
+/**
+ * Deep-copy a single activity log entry, ensuring payload objects are new references.
+ */
+function deepCopyActivityEntry(entry: CaseActivityEntry): CaseActivityEntry {
+  if ('payload' in entry && entry.payload && typeof entry.payload === 'object') {
+    return { ...entry, payload: { ...entry.payload } } as CaseActivityEntry;
+  }
+  return { ...entry };
+}
+
+/**
+ * Classify a write error into a user-friendly message.
+ */
+function classifyWriteError(error: unknown): string {
+  if (!(error instanceof Error)) return "Unknown error";
+  if (error.name === "AbortError") {
+    return "Operation cancelled.";
+  }
+  if (
+    error.message.includes("state cached in an interface object") ||
+    error.message.includes("state had changed")
+  ) {
+    return "File was modified by another process. Please try again.";
+  }
+  if (error.message.includes("permission")) {
+    return "Permission denied. Please check file permissions.";
+  }
+  return error.message;
+}
+
 // ============================================================================
 // Type Definitions
 // ============================================================================
@@ -438,20 +468,7 @@ export class FileStorageService {
         total_cases: data.cases.length,
         categoryConfig,
         activityLog: [...(data.activityLog ?? [])]
-          .map((entry): CaseActivityEntry => {
-            if (entry.type === "status-change") {
-              return { ...entry, payload: { ...entry.payload } };
-            } else if (entry.type === "priority-change") {
-              return { ...entry, payload: { ...entry.payload } };
-            } else if (entry.type === "note-added") {
-              return { ...entry, payload: { ...entry.payload } };
-            } else if (entry.type === "case-viewed") {
-              return { ...entry, payload: {} };
-            } else {
-              // Fallback for unknown types - preserve as-is
-              return entry;
-            }
-          })
+          .map(deepCopyActivityEntry)
           .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()),
         // Preserve templates array (unified template system)
         templates: data.templates ? [...data.templates] : undefined,
@@ -477,19 +494,7 @@ export class FileStorageService {
         error: error instanceof Error ? error.message : "Unknown error",
       });
 
-      let errorMessage = "Unknown error";
-      if (error instanceof Error) {
-        if (
-          error.message.includes("state cached in an interface object") ||
-          error.message.includes("state had changed")
-        ) {
-          errorMessage = "File was modified by another process. Please try again.";
-        } else if (error.message.includes("permission")) {
-          errorMessage = "Permission denied. Please check file permissions.";
-        } else {
-          errorMessage = error.message;
-        }
-      }
+      const errorMessage = classifyWriteError(error);
 
       this.reportStorageError("writeData", error, {
         method: "writeNormalizedData",

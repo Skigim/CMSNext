@@ -82,7 +82,7 @@
   },
   
   // CodeRabbit settings
-  "coderabbit.agentType": "Codex CLI",
+  "coderabbit.agentType": "Native",
   "coderabbit.autoReviewMode": "auto",
 
   // GitHub Copilot mode-based instructions

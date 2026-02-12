@@ -81,6 +81,10 @@ function computeHasStoredHandle(status: FileStorageStatus, permissionStatus: Fil
   return permissionStatus === 'granted' || permissionStatus === 'prompt';
 }
 
+function isReadyState(baseState: FileStorageMachineState, permissionStatus: FileStoragePermissionState): boolean {
+  return baseState.explicitlyConnected && permissionStatus === 'granted';
+}
+
 function deriveLifecycle(
   baseState: FileStorageMachineState,
   status: FileStorageStatus,
@@ -90,30 +94,24 @@ function deriveLifecycle(
     return 'unsupported';
   }
 
+  const ready = isReadyState(baseState, permissionStatus);
+
   switch (status.status) {
     case 'initialized':
     case 'stopped':
-      return baseState.explicitlyConnected && permissionStatus === 'granted' ? 'ready' : 'idle';
+      return ready ? 'ready' : 'idle';
     case 'connected':
       return 'ready';
     case 'running':
-      return baseState.explicitlyConnected && permissionStatus === 'granted'
-        ? 'ready'
-        : baseState.lifecycle === 'requestingPermission'
-          ? 'requestingPermission'
-          : 'idle';
+      if (ready) return 'ready';
+      return baseState.lifecycle === 'requestingPermission' ? 'requestingPermission' : 'idle';
     case 'waiting':
-      if (permissionStatus === 'denied') {
-        return 'blocked';
-      }
-      return baseState.explicitlyConnected && permissionStatus === 'granted' ? 'ready' : 'idle';
+      if (permissionStatus === 'denied') return 'blocked';
+      return ready ? 'ready' : 'idle';
     case 'saving':
       return 'saving';
     case 'retrying':
-      if (permissionStatus === 'denied') {
-        return 'blocked';
-      }
-      return 'recovering';
+      return permissionStatus === 'denied' ? 'blocked' : 'recovering';
     case 'disconnected':
       return 'idle';
     case 'error':
@@ -146,6 +144,40 @@ function deriveConnectionState(
     isConnected,
     hasStoredHandle: computeHasStoredHandle(status, permissionStatus),
   };
+}
+
+function applyStatusChange(state: FileStorageMachineState, status: FileStorageStatus): FileStorageMachineState {
+  const permissionStatus = normalizePermissionStatus(status.permissionStatus);
+  const { explicitlyConnected, isConnected, hasStoredHandle } = deriveConnectionState(
+    state,
+    status,
+    permissionStatus,
+  );
+
+  const baseState: FileStorageMachineState = {
+    ...state,
+    explicitlyConnected,
+    hasStoredHandle,
+  };
+
+  const lifecycle = deriveLifecycle(baseState, status, permissionStatus);
+
+  const nextState: FileStorageMachineState = {
+    ...baseState,
+    lifecycle,
+    permissionStatus,
+    isConnected,
+    statusSnapshot: status,
+    lastSaveTime: status.lastSaveTime ?? null,
+    consecutiveFailures: status.consecutiveFailures ?? 0,
+    pendingWrites: status.pendingWrites ?? 0,
+  };
+
+  if (status.status !== 'error' && state.lastError) {
+    nextState.lastError = null;
+  }
+
+  return nextState;
 }
 
 export function reduceFileStorageState(state: FileStorageMachineState, action: FileStorageAction): FileStorageMachineState {
@@ -203,39 +235,8 @@ export function reduceFileStorageState(state: FileStorageMachineState, action: F
         lastError: action.error,
         lifecycle: action.error.type === 'warning' ? state.lifecycle : 'error',
       };
-    case 'STATUS_CHANGED': {
-      const permissionStatus = normalizePermissionStatus(action.status.permissionStatus);
-      const { explicitlyConnected, isConnected, hasStoredHandle } = deriveConnectionState(
-        state,
-        action.status,
-        permissionStatus,
-      );
-
-      const baseState: FileStorageMachineState = {
-        ...state,
-        explicitlyConnected,
-        hasStoredHandle,
-      };
-
-      const lifecycle = deriveLifecycle(baseState, action.status, permissionStatus);
-
-      const nextState: FileStorageMachineState = {
-        ...baseState,
-        lifecycle,
-        permissionStatus,
-        isConnected,
-        statusSnapshot: action.status,
-        lastSaveTime: action.status.lastSaveTime ?? null,
-        consecutiveFailures: action.status.consecutiveFailures ?? 0,
-        pendingWrites: action.status.pendingWrites ?? 0,
-      };
-
-      if (action.status.status !== 'error' && state.lastError) {
-        nextState.lastError = null;
-      }
-
-      return nextState;
-    }
+    case 'STATUS_CHANGED':
+      return applyStatusChange(state, action.status);
     default:
       return state;
   }

@@ -89,6 +89,17 @@ export function groupActivityEntriesByDate(
  * @param {CaseActivityEntry[]} entries - Entries for a single day
  * @returns {DailyCaseActivityBreakdown[]} Cases sorted by activity volume (descending)
  */
+const NOTE_PREVIEW_MAX_LENGTH = 80;
+
+/** Map activity type to the counter field it increments. */
+const ACTIVITY_TYPE_COUNTER: Record<string, keyof Pick<DailyCaseActivityBreakdown, 'statusChanges' | 'priorityChanges' | 'notesAdded'>> = {
+  "status-change": "statusChanges",
+  "priority-change": "priorityChanges",
+  "note-added": "notesAdded",
+};
+
+/** JSDoc comment for summarizeCaseEntries function */
+// ... rest of the code
 function summarizeCaseEntries(entries: CaseActivityEntry[]): DailyCaseActivityBreakdown[] {
   const caseMap = new Map<string, DailyCaseActivityBreakdown>();
 
@@ -107,12 +118,9 @@ function summarizeCaseEntries(entries: CaseActivityEntry[]): DailyCaseActivityBr
       continue;
     }
 
-    if (entry.type === "status-change") {
-      existing.statusChanges += 1;
-    } else if (entry.type === "priority-change") {
-      existing.priorityChanges += 1;
-    } else if (entry.type === "note-added") {
-      existing.notesAdded += 1;
+    const counterField = ACTIVITY_TYPE_COUNTER[entry.type];
+    if (counterField) {
+      existing[counterField] += 1;
     }
     existing.entries.push(entry);
   }

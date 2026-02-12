@@ -205,7 +205,7 @@ export function CaseList({
     if (!onResolveAlert) {
       return;
     }
-    void onResolveAlert(alert);
+    onResolveAlert(alert);
   }, [onResolveAlert]);
 
   const filteredCases = useMemo(() => {

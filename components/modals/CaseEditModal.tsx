@@ -139,24 +139,30 @@ export function CaseEditModal({ isOpen, onClose, caseData, onSave }: CaseEditMod
     setHasChanges(true);
   }, []);
 
+  const addRelationship = useCallback(() => {
+    setRelationships(prev => [...prev, { type: '', name: '', phone: '' }]);
+    setHasChanges(true);
+  }, []);
+
+  const updateRelationship = useCallback((index: number, field: keyof Relationship, value: string) => {
+    setRelationships(prev =>
+      prev.map((rel, i) => (i === index ? { ...rel, [field]: value } : rel)),
+    );
+    setHasChanges(true);
+  }, []);
+
+  const removeRelationship = useCallback((index: number) => {
+    setRelationships(prev => prev.filter((_, i) => i !== index));
+    setHasChanges(true);
+  }, []);
+
   const relationshipsHandlers = useMemo(
     () => ({
-      add: () => {
-        setRelationships(prev => [...prev, { type: '', name: '', phone: '' }]);
-        setHasChanges(true);
-      },
-      update: (index: number, field: keyof Relationship, value: string) => {
-        setRelationships(prev =>
-          prev.map((rel, i) => (i === index ? { ...rel, [field]: value } : rel)),
-        );
-        setHasChanges(true);
-      },
-      remove: (index: number) => {
-        setRelationships(prev => prev.filter((_, i) => i !== index));
-        setHasChanges(true);
-      },
+      add: addRelationship,
+      update: updateRelationship,
+      remove: removeRelationship,
     }),
-    [],
+    [addRelationship, updateRelationship, removeRelationship],
   );
 
   const isFormValid = useCallback((): boolean => {

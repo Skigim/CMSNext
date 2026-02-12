@@ -171,6 +171,16 @@ export function useWidgetData<T>(
     }
   }, [updateFreshness, enablePerformanceTracking]);
 
+  /** Schedule the next auto-refresh after a fetch completes. */
+  const scheduleRefresh = useCallback((interval: number) => {
+    if (!mountedRef.current) return;
+    refreshTimeoutRef.current = setTimeout(() => {
+      if (mountedRef.current) {
+        fetchData().then(() => scheduleRefresh(interval));
+      }
+    }, interval);
+  }, [fetchData]);
+
   /**
    * Refresh data manually.
    */
@@ -180,23 +190,8 @@ export function useWidgetData<T>(
     }
     await fetchData();
     // Re-schedule the auto-refresh timer after manual refresh completes
-    if (mountedRef.current) {
-      refreshTimeoutRef.current = setTimeout(() => {
-        if (mountedRef.current) {
-          fetchData().then(() => {
-            // Re-schedule after this refresh too
-            if (mountedRef.current) {
-              refreshTimeoutRef.current = setTimeout(() => {
-                if (mountedRef.current) {
-                  // This will be handled by the main effect loop
-                }
-              }, refreshInterval);
-            }
-          });
-        }
-      }, refreshInterval);
-    }
-  }, [fetchData, refreshInterval]);
+    scheduleRefresh(refreshInterval);
+  }, [fetchData, refreshInterval, scheduleRefresh]);
 
   useEffect(() => {
     dataFetcherRef.current = dataFetcher;
@@ -210,24 +205,9 @@ export function useWidgetData<T>(
     fetchData();
 
     // Set up refresh interval (disabled in test environment to prevent infinite loops with fake timers)
-    const setupRefreshInterval = () => {
-      // Skip auto-refresh in test environment
-      if (import.meta.env.MODE === 'test') {
-        return;
-      }
-      
-      if (refreshTimeoutRef.current) {
-        clearTimeout(refreshTimeoutRef.current);
-      }
-
-      refreshTimeoutRef.current = setTimeout(() => {
-        if (mountedRef.current) {
-          fetchData().then(() => setupRefreshInterval());
-        }
-      }, refreshInterval);
-    };
-
-    setupRefreshInterval();
+    if (import.meta.env.MODE !== 'test') {
+      scheduleRefresh(refreshInterval);
+    }
 
     // Freshness update interval (update "X minutes ago" every minute)
     // Skip in test environment for better test isolation

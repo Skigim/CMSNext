@@ -13,8 +13,8 @@ interface AlertsPreviewPanelProps {
   cases: StoredCase[];
 }
 
-export const AlertsPreviewPanel = memo(function AlertsPreviewPanel({ cases }: AlertsPreviewPanelProps) {
-  void cases;
+export const AlertsPreviewPanel = memo(function AlertsPreviewPanel({ cases: _cases }: AlertsPreviewPanelProps) {
+  // TODO: Re-enable alerts preview when runtime loading is fixed
 
   return (
     <Card>

@@ -360,16 +360,7 @@ export class CaseArchiveService {
     const archiveFileName = buildArchiveFileName(archiveYear);
 
     // Read existing archive (if any)
-    let existingArchive: CaseArchiveData | null = null;
-    try {
-      const existingData = await this.fileService.readNamedFile(archiveFileName);
-      if (existingData && isCaseArchiveData(existingData)) {
-        existingArchive = existingData;
-      }
-    } catch (error) {
-      // File doesn't exist yet, that's fine
-      logger.debug("No existing archive file", { archiveFileName });
-    }
+    const existingArchive = await this.readExistingArchive(archiveFileName);
 
     // Remove pendingArchival flag from cases before archiving
     const cleanedCases = casesToArchive.map(c => {
@@ -393,43 +384,17 @@ export class CaseArchiveService {
     }
 
     // Remove archived data from main file
-    const remainingCases = currentData.cases.filter(c => !caseIdSet.has(c.id));
-    const remainingFinancials = currentData.financials.filter(f => !caseIdSet.has(f.caseId));
-    const remainingNotes = currentData.notes.filter(n => !caseIdSet.has(n.caseId));
-
     const updatedData: NormalizedFileData = {
       ...currentData,
-      cases: remainingCases,
-      financials: remainingFinancials,
-      notes: remainingNotes,
+      cases: currentData.cases.filter(c => !caseIdSet.has(c.id)),
+      financials: currentData.financials.filter(f => !caseIdSet.has(f.caseId)),
+      notes: currentData.notes.filter(n => !caseIdSet.has(n.caseId)),
     };
 
     try {
       await this.fileStorage.writeNormalizedData(updatedData);
     } catch (mainWriteError) {
-      // ROLLBACK: Restore the original archive file to prevent duplicate data
-      logger.warn("Main file write failed, rolling back archive write", {
-        archiveFileName,
-        error: mainWriteError instanceof Error ? mainWriteError.message : "Unknown error",
-      });
-      
-      try {
-        if (existingArchive) {
-          // Restore the previous archive state
-          await this.fileService.writeNamedFile(archiveFileName, existingArchive);
-        } else {
-          // Archive file was newly created - we can't easily delete it,
-          // but the merge logic handles duplicates, so this is safe.
-          // Cases will be cleaned up on next successful archive operation.
-          logger.warn("Cannot delete newly created archive file on rollback - duplicates may exist temporarily");
-        }
-      } catch (rollbackError) {
-        logger.error("Failed to rollback archive file after main write failure", {
-          archiveFileName,
-          rollbackError: rollbackError instanceof Error ? rollbackError.message : "Unknown error",
-        });
-      }
-      
+      await this.rollbackArchiveWrite(archiveFileName, existingArchive);
       throw mainWriteError;
     }
 
@@ -445,6 +410,43 @@ export class CaseArchiveService {
       archiveFileName,
       archivedCaseIds,
     };
+  }
+
+  /**
+   * Attempt to read an existing archive file, returning null if not found.
+   */
+  private async readExistingArchive(archiveFileName: string): Promise<CaseArchiveData | null> {
+    try {
+      const existingData = await this.fileService.readNamedFile(archiveFileName);
+      if (existingData && isCaseArchiveData(existingData)) {
+        return existingData;
+      }
+    } catch {
+      logger.debug("No existing archive file", { archiveFileName });
+    }
+    return null;
+  }
+
+  /**
+   * Rollback an archive write by restoring the previous archive state.
+   */
+  private async rollbackArchiveWrite(
+    archiveFileName: string,
+    existingArchive: CaseArchiveData | null
+  ): Promise<void> {
+    logger.warn("Main file write failed, rolling back archive write", { archiveFileName });
+    try {
+      if (existingArchive) {
+        await this.fileService.writeNamedFile(archiveFileName, existingArchive);
+      } else {
+        logger.warn("Cannot delete newly created archive file on rollback - duplicates may exist temporarily");
+      }
+    } catch (rollbackError) {
+      logger.error("Failed to rollback archive file after main write failure", {
+        archiveFileName,
+        rollbackError: rollbackError instanceof Error ? rollbackError.message : "Unknown error",
+      });
+    }
   }
 
   // ==========================================================================
@@ -538,14 +540,8 @@ export class CaseArchiveService {
     archiveFileName: string,
     caseIds: string[]
   ): Promise<RestoreResult> {
-    if (caseIds.length === 0) {
-      return { 
-        restoredCount: 0, 
-        financialsRestored: 0, 
-        notesRestored: 0,
-        restoredCaseIds: [] 
-      };
-    }
+    const emptyResult: RestoreResult = { restoredCount: 0, financialsRestored: 0, notesRestored: 0, restoredCaseIds: [] };
+    if (caseIds.length === 0) return emptyResult;
 
     // Load archive
     const archive = await this.loadArchivedCases(archiveFileName);
@@ -556,23 +552,11 @@ export class CaseArchiveService {
     // Extract cases to restore
     const caseIdSet = new Set(caseIds);
     const casesToRestore = archive.cases.filter(c => caseIdSet.has(c.id));
-
-    if (casesToRestore.length === 0) {
-      return { 
-        restoredCount: 0, 
-        financialsRestored: 0, 
-        notesRestored: 0,
-        restoredCaseIds: [] 
-      };
-    }
+    if (casesToRestore.length === 0) return emptyResult;
 
     // Collect related financials and notes from archive
     const restoredCaseIds = casesToRestore.map(c => c.id);
-    const related = collectRelatedData(
-      restoredCaseIds,
-      archive.financials,
-      archive.notes
-    );
+    const related = collectRelatedData(restoredCaseIds, archive.financials, archive.notes);
 
     // Load current main data
     const currentData = await this.fileStorage.readFileData();
@@ -580,14 +564,10 @@ export class CaseArchiveService {
       throw new Error("Failed to read current data for restoration");
     }
 
-    // Add restored data to main file (avoid duplicates by ID)
-    const existingCaseIds = new Set(currentData.cases.map(c => c.id));
-    const existingFinancialIds = new Set(currentData.financials.map(f => f.id));
-    const existingNoteIds = new Set(currentData.notes.map(n => n.id));
-
-    const newCases = casesToRestore.filter(c => !existingCaseIds.has(c.id));
-    const newFinancials = related.financials.filter(f => !existingFinancialIds.has(f.id));
-    const newNotes = related.notes.filter(n => !existingNoteIds.has(n.id));
+    // Deduplicate and merge into main file
+    const { newCases, newFinancials, newNotes } = this.deduplicateForRestore(
+      casesToRestore, related.financials, related.notes, currentData
+    );
 
     const updatedData: NormalizedFileData = {
       ...currentData,
@@ -599,49 +579,11 @@ export class CaseArchiveService {
     // Write main file first with restored cases
     await this.fileStorage.writeNormalizedData(updatedData);
 
-    // Update archive file (remove restored cases)
-    const updatedArchive = removeCasesFromArchive(archive, restoredCaseIds);
+    // Derive actually-restored IDs from the deduplicated set
+    const actualRestoredCaseIds = newCases.map(c => c.id);
 
-    try {
-      if (updatedArchive === null) {
-        // Archive is now empty, we could delete it but for safety just leave it
-        // with empty arrays. User can manually clean up if desired.
-        const emptyArchive: CaseArchiveData = {
-          ...archive,
-          archivedAt: new Date().toISOString(),
-          cases: [],
-          financials: [],
-          notes: [],
-        };
-        const archiveWriteSuccess = await this.fileService.writeNamedFile(archiveFileName, emptyArchive);
-        if (!archiveWriteSuccess) {
-          throw new Error("Archive write returned false");
-        }
-      } else {
-        const archiveWriteSuccess = await this.fileService.writeNamedFile(archiveFileName, updatedArchive);
-        if (!archiveWriteSuccess) {
-          throw new Error("Archive write returned false");
-        }
-      }
-    } catch (archiveWriteError) {
-      // ROLLBACK: Remove the restored cases from main file to prevent duplicates
-      logger.warn("Archive file update failed, rolling back main file restore", {
-        archiveFileName,
-        error: archiveWriteError instanceof Error ? archiveWriteError.message : "Unknown error",
-      });
-      
-      try {
-        // Restore the original main file state (without the restored cases)
-        await this.fileStorage.writeNormalizedData(currentData);
-      } catch (rollbackError) {
-        logger.error("Failed to rollback main file after archive write failure - duplicates may exist", {
-          archiveFileName,
-          rollbackError: rollbackError instanceof Error ? rollbackError.message : "Unknown error",
-        });
-      }
-      
-      throw new Error(`Failed to update archive file after restore: ${archiveWriteError instanceof Error ? archiveWriteError.message : "Unknown error"}`);
-    }
+    // Update archive file (remove restored cases)
+    await this.updateArchiveAfterRestore(archive, archiveFileName, actualRestoredCaseIds, currentData);
 
     logger.info("Restored cases from archive", {
       archiveFileName,
@@ -654,8 +596,70 @@ export class CaseArchiveService {
       restoredCount: newCases.length,
       financialsRestored: newFinancials.length,
       notesRestored: newNotes.length,
-      restoredCaseIds,
+      restoredCaseIds: actualRestoredCaseIds,
     };
+  }
+
+  /**
+   * Deduplicate restored items against the current main data.
+   */
+  private deduplicateForRestore(
+    casesToRestore: StoredCase[],
+    financials: NormalizedFileData['financials'],
+    notes: NormalizedFileData['notes'],
+    currentData: NormalizedFileData
+  ) {
+    const existingCaseIds = new Set(currentData.cases.map(c => c.id));
+    const existingFinancialIds = new Set(currentData.financials.map(f => f.id));
+    const existingNoteIds = new Set(currentData.notes.map(n => n.id));
+
+    return {
+      newCases: casesToRestore.filter(c => !existingCaseIds.has(c.id)),
+      newFinancials: financials.filter(f => !existingFinancialIds.has(f.id)),
+      newNotes: notes.filter(n => !existingNoteIds.has(n.id)),
+    };
+  }
+
+  /**
+   * Update the archive file after restoring cases, rolling back main file on failure.
+   */
+  private async updateArchiveAfterRestore(
+    archive: CaseArchiveData,
+    archiveFileName: string,
+    restoredCaseIds: string[],
+    originalMainData: NormalizedFileData
+  ): Promise<void> {
+    const updatedArchive = removeCasesFromArchive(archive, restoredCaseIds);
+
+    try {
+      const archiveToWrite = updatedArchive ?? {
+        ...archive,
+        archivedAt: new Date().toISOString(),
+        cases: [],
+        financials: [],
+        notes: [],
+      };
+      const archiveWriteSuccess = await this.fileService.writeNamedFile(archiveFileName, archiveToWrite);
+      if (!archiveWriteSuccess) {
+        throw new Error("Archive write returned false");
+      }
+    } catch (archiveWriteError) {
+      logger.warn("Archive file update failed, rolling back main file restore", {
+        archiveFileName,
+        error: archiveWriteError instanceof Error ? archiveWriteError.message : "Unknown error",
+      });
+      
+      try {
+        await this.fileStorage.writeNormalizedData(originalMainData);
+      } catch (rollbackError) {
+        logger.error("Failed to rollback main file after archive write failure - duplicates may exist", {
+          archiveFileName,
+          rollbackError: rollbackError instanceof Error ? rollbackError.message : "Unknown error",
+        });
+      }
+      
+      throw new Error(`Failed to update archive file after restore: ${archiveWriteError instanceof Error ? archiveWriteError.message : "Unknown error"}`);
+    }
   }
 
   /**

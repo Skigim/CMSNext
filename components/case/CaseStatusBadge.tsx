@@ -85,7 +85,7 @@ export const CaseStatusBadge = memo(function CaseStatusBadge({ status, onStatusC
             if (!onStatusChange || value === effectiveStatus) {
               return;
             }
-            void onStatusChange(value as CaseDisplay["status"]);
+            onStatusChange(value as CaseDisplay["status"]);
           }}
         >
           {statusNames.map(statusName => (

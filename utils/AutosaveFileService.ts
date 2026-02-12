@@ -235,6 +235,24 @@ interface EncryptionHooks {
  * - **Permission Flow**: Check → Prompt → Grant → Store Handle → Auto-restore
  * - **Write Serialization**: All writes go through queue to prevent conflicts
  * - **Bulk Detection**: Rapid changes trigger longer debounce delays
+/** Classify data format from its shape. */
+function detectDataFormat(data: any, alertCount: number): string {
+  if (data.cases) return 'transformed';
+  if (data.caseRecords) return 'raw';
+  if (alertCount > 0) return 'alerts';
+  return 'unknown';
+}
+
+/**
+ * Case Tracking Platform Combined Autosave & File Service v1.0
+ *
+ * Combines file system operations with autosave functionality to eliminate
+ * service coordination complexity and timing issues.
+ *
+ * Features:
+ * - File System Access API with IndexedDB persistence
+ * - Intelligent autosave with permission awareness
+ * - Single service initialization (no dependency injection)
  * - **Handle Refresh**: Clears cached state to resolve write conflicts
  * 
  * @class AutosaveFileService
@@ -350,8 +368,8 @@ class AutosaveFileService {
     };
     this.dataLoadCallback = null;
 
-    // Auto-initialize
-    this.initialize();
+    // Auto-initialize (scheduled to avoid async operation in constructor)
+    queueMicrotask(() => this.initialize());
   }
 
   /**
@@ -501,59 +519,54 @@ class AutosaveFileService {
     }
 
     if (!this.directoryHandle) {
-      // Try to restore the handle first
       const { handle } = await this.restoreLastDirectoryAccess();
       if (!handle) {
         this.updateStatus('error', 'No stored directory handle found');
         return false;
       }
-      // Ensure the handle is properly assigned
       this.directoryHandle = handle;
     }
 
     try {
-      // Request permission for the existing handle (requires user gesture)
       const permissionGranted = await this.requestPermission();
-
-      if (permissionGranted) {
-        this.state.permissionStatus = 'granted';
-        this.updateStatus('connected', 'Connected to data folder');
-
-        logger.info('Connected to existing directory', {
-          directoryName: this.directoryHandle?.name,
-        });
-
-        // Validate that we can actually access the directory
-        try {
-          // Test the connection by checking if we can access the directory
-          const testPermission = await this.checkPermission();
-          if (testPermission !== 'granted') {
-            throw new Error(`Permission check failed: ${testPermission}`);
-          }
-          logger.info('Directory access validated');
-        } catch (testError) {
-          logger.error('Directory access validation failed', {
-            error: testError instanceof Error ? testError.message : String(testError),
-          });
-          this.directoryHandle = null;
-          this.updateStatus('error', 'Failed to validate directory access');
-          return false;
-        }
-
-        // Start autosave if not already running
-        if (this.config.enabled && !this.state.isRunning) {
-          this.startAutosave();
-        }
-
-        return true;
-      } else {
+      if (!permissionGranted) {
         this.updateStatus('waiting', 'Permission denied for existing directory');
         return false;
       }
+
+      this.state.permissionStatus = 'granted';
+      this.updateStatus('connected', 'Connected to data folder');
+      logger.info('Connected to existing directory', { directoryName: this.directoryHandle?.name });
+
+      if (!await this.validateDirectoryAccess()) return false;
+
+      if (this.config.enabled && !this.state.isRunning) {
+        this.startAutosave();
+      }
+      return true;
     } catch (err) {
       if (err instanceof Error && err.name !== 'AbortError') {
         this.updateStatus('error', 'Failed to connect to existing folder');
       }
+      return false;
+    }
+  }
+
+  /** Verify the directory handle is still accessible after permission grant. */
+  private async validateDirectoryAccess(): Promise<boolean> {
+    try {
+      const testPermission = await this.checkPermission();
+      if (testPermission !== 'granted') {
+        throw new Error(`Permission check failed: ${testPermission}`);
+      }
+      logger.info('Directory access validated');
+      return true;
+    } catch (testError) {
+      logger.error('Directory access validation failed', {
+        error: testError instanceof Error ? testError.message : String(testError),
+      });
+      this.directoryHandle = null;
+      this.updateStatus('error', 'Failed to validate directory access');
       return false;
     }
   }
@@ -660,20 +673,7 @@ class AutosaveFileService {
   }
 
   private async _performWrite(data: any, retryCount: number = 0): Promise<boolean> {
-    const maxRetries = 4; // Increased from 3 to allow for handle refresh attempts
-    const retryDelay = 150; // Increased from 100ms to allow concurrent operations to complete
-
-    // Check if we have a directory handle and permissions
-    if (!this.directoryHandle) {
-      return false;
-    }
-
-    const permission = await this.checkPermission();
-    this.state.permissionStatus = permission;
-    if (permission !== 'granted') {
-      this.updateStatus('waiting', 'Permission required to save changes');
-      return false;
-    }
+    if (!await this.ensureDirectoryPermission()) return false;
 
     try {
       // Encrypt data if encryption hooks are available
@@ -684,12 +684,11 @@ class AutosaveFileService {
       }
 
       // Get a fresh file handle each time to avoid cached state issues
-      const fileHandleWrite = await this.directoryHandle.getFileHandle(
+      const fileHandleWrite = await this.directoryHandle!.getFileHandle(
         this.fileName,
         { create: true },
       );
       
-      // Use keepExistingData: false to ensure we're creating a fresh writable stream
       const writable = await fileHandleWrite.createWritable({ keepExistingData: false });
       await writable.write(JSON.stringify(dataToWrite, null, 2));
       await writable.close();
@@ -708,44 +707,14 @@ class AutosaveFileService {
 
       return true;
     } catch (err) {
+      const retried = await this.retryWriteOnTransientError(
+        err, retryCount, 4, 150,
+        (rc) => this._performWrite(data, rc),
+        this.fileName
+      );
+      if (retried !== null) return retried;
+
       const errorMessage = err instanceof Error ? err.message : 'Unknown error';
-      
-      // Check if this is a state-related error that we can retry
-      const isRetryableError = errorMessage.includes('state cached in an interface object') ||
-                              errorMessage.includes('state had changed') ||
-                              errorMessage.includes('InvalidStateError');
-
-      if (isRetryableError && retryCount < maxRetries) {
-        const logMessage = `[AutosaveFileService] Write attempt ${retryCount + 1}/${maxRetries + 1} hit a transient state change. Retrying with a fresh handle… (${errorMessage})`;
-        if (retryCount === 0) {
-          logger.info(logMessage);
-        } else {
-          logger.warn(logMessage);
-        }
-
-        // Wait to let concurrent operations complete
-        await new Promise(resolve => setTimeout(resolve, retryDelay * (retryCount + 1)));
-        
-        // CRITICAL FIX: Refresh the directory handle from IndexedDB to clear cached state
-        try {
-          const refreshed = await this.refreshDirectoryHandle();
-          if (refreshed) {
-            logger.debug('Directory handle refreshed, retrying write', { attempt: retryCount + 1 });
-            return await this._performWrite(data, retryCount + 1);
-          } else {
-            // Fall back to permission check if refresh fails
-            const permission = await this.checkPermission();
-            if (permission === 'granted') {
-              return await this._performWrite(data, retryCount + 1);
-            }
-          }
-        } catch (refreshError) {
-          logger.warn('Failed to refresh handle for write retry', {
-            error: refreshError instanceof Error ? refreshError.message : 'Unknown error',
-          });
-        }
-      }
-
       this.errorCallback({
         message: `Error writing file "${this.fileName}": ${errorMessage}`,
         type: 'error',
@@ -757,75 +726,99 @@ class AutosaveFileService {
   }
 
   /**
-   * Write JSON data to an arbitrary file name in the connected directory.
-   * Returns true on success, false otherwise.
+   * Check directory handle and permission, updating status if denied.
+   * @returns true if ready to perform I/O
    */
-  async writeNamedFile(fileName: string, data: any, retryCount: number = 0): Promise<boolean> {
-    const maxRetries = 4; // Increased from 3 to allow for handle refresh attempts
-    const retryDelay = 150; // Increased from 100ms to allow concurrent operations to complete
-
-    if (!this.directoryHandle) {
-      return false;
-    }
-
+  private async ensureDirectoryPermission(): Promise<boolean> {
+    if (!this.directoryHandle) return false;
     const permission = await this.checkPermission();
     this.state.permissionStatus = permission;
     if (permission !== 'granted') {
       this.updateStatus('waiting', 'Permission required to save changes');
       return false;
     }
+    return true;
+  }
+
+  /**
+   * Determine if a write error is a transient state error that can be retried.
+   */
+  private isRetryableWriteError(err: unknown): boolean {
+    const msg = err instanceof Error ? err.message : '';
+    return msg.includes('state cached in an interface object') ||
+           msg.includes('state had changed') ||
+           msg.includes('InvalidStateError');
+  }
+
+  /**
+   * Attempt to retry a write operation after a transient error by refreshing the directory handle.
+   * Returns null if no retry was attempted (caller should handle fallback error reporting).
+   */
+  private async retryWriteOnTransientError(
+    err: unknown,
+    retryCount: number,
+    maxRetries: number,
+    retryDelay: number,
+    retryFn: (nextRetryCount: number) => Promise<boolean>,
+    fileName: string
+  ): Promise<boolean | null> {
+    if (!this.isRetryableWriteError(err) || retryCount >= maxRetries) return null;
+
+    const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+    const logMessage = `[AutosaveFileService] Write attempt ${retryCount + 1}/${maxRetries + 1} hit a transient state change. Retrying… (${errorMessage})`;
+    if (retryCount === 0) { logger.info(logMessage); } else { logger.warn(logMessage); }
+
+    await new Promise(resolve => setTimeout(resolve, retryDelay * (retryCount + 1)));
 
     try {
-      // Get a fresh file handle each time to avoid cached state issues
-      const fileHandle = await this.directoryHandle.getFileHandle(fileName, {
-        create: true,
+      const refreshed = await this.refreshDirectoryHandle();
+      if (refreshed) {
+        logger.debug('Directory handle refreshed, retrying write', { fileName, attempt: retryCount + 1 });
+        return await retryFn(retryCount + 1);
+      }
+      // Refresh failed — only retry if we still have a valid handle with granted permission
+      if (this.directoryHandle) {
+        const permission = await this.checkPermission();
+        if (permission === 'granted') {
+          logger.debug('Handle refresh failed but permission still granted, retrying write', { fileName, attempt: retryCount + 1 });
+          return await retryFn(retryCount + 1);
+        }
+      }
+      logger.warn('Cannot retry write: directory handle refresh failed and no valid handle available', {
+        fileName,
+        hasDirectoryHandle: !!this.directoryHandle,
       });
-      
-      // Use keepExistingData: false to ensure we're creating a fresh writable stream
+    } catch (refreshError) {
+      logger.warn('Failed to refresh handle for write retry', {
+        fileName,
+        error: refreshError instanceof Error ? refreshError.message : 'Unknown error',
+      });
+    }
+    return null;
+  }
+
+  /**
+   * Write JSON data to an arbitrary file name in the connected directory.
+   * Returns true on success, false otherwise.
+   */
+  async writeNamedFile(fileName: string, data: any, retryCount: number = 0): Promise<boolean> {
+    if (!await this.ensureDirectoryPermission()) return false;
+
+    try {
+      const fileHandle = await this.directoryHandle!.getFileHandle(fileName, { create: true });
       const writable = await fileHandle.createWritable({ keepExistingData: false });
       await writable.write(JSON.stringify(data, null, 2));
       await writable.close();
       return true;
     } catch (err) {
+      const retried = await this.retryWriteOnTransientError(
+        err, retryCount, 4, 150,
+        (rc) => this.writeNamedFile(fileName, data, rc),
+        fileName
+      );
+      if (retried !== null) return retried;
+
       const errorMessage = err instanceof Error ? err.message : 'Unknown error';
-      
-      // Check if this is a state-related error that we can retry
-      const isRetryableError = errorMessage.includes('state cached in an interface object') ||
-                              errorMessage.includes('state had changed') ||
-                              errorMessage.includes('InvalidStateError');
-
-      if (isRetryableError && retryCount < maxRetries) {
-        const logMessage = `[AutosaveFileService] Named write attempt ${retryCount + 1}/${maxRetries + 1} hit a transient state change. Retrying with a fresh handle… (${errorMessage})`;
-        if (retryCount === 0) {
-          logger.info(logMessage);
-        } else {
-          logger.warn(logMessage);
-        }
-
-        // Wait to let concurrent operations complete
-        await new Promise(resolve => setTimeout(resolve, retryDelay * (retryCount + 1)));
-        
-        // CRITICAL FIX: Refresh the directory handle from IndexedDB to clear cached state
-        try {
-          const refreshed = await this.refreshDirectoryHandle();
-          if (refreshed) {
-            logger.debug('Directory handle refreshed, retrying write', { fileName, attempt: retryCount + 1 });
-            return await this.writeNamedFile(fileName, data, retryCount + 1);
-          } else {
-            // Fall back to permission check if refresh fails
-            const permission = await this.checkPermission();
-            if (permission === 'granted') {
-              return await this.writeNamedFile(fileName, data, retryCount + 1);
-            }
-          }
-        } catch (refreshError) {
-          logger.warn('Failed to refresh handle for named write retry', {
-            fileName,
-            error: refreshError instanceof Error ? refreshError.message : 'Unknown error',
-          });
-        }
-      }
-
       this.errorCallback({
         message: `Error writing file "${fileName}": ${errorMessage}`,
         type: 'error',
@@ -948,25 +941,12 @@ class AutosaveFileService {
       const data = await this.readFile();
       
       if (data) {
-        // Log appropriate count based on data format
         const caseCount = Array.isArray(data.cases) ? data.cases.length : 0;
         const recordCount = Array.isArray(data.caseRecords) ? data.caseRecords.length : 0;
         const alertCount = Array.isArray((data as any).alerts) ? (data as any).alerts.length : 0;
-        const format = data.cases
-          ? 'transformed'
-          : data.caseRecords
-            ? 'raw'
-            : alertCount > 0
-              ? 'alerts'
-              : 'unknown';
-        logger.info('Existing data loaded', {
-          format,
-          caseCount,
-          recordCount,
-          alertCount,
-        });
+        const format = detectDataFormat(data, alertCount);
+        logger.info('Existing data loaded', { format, caseCount, recordCount, alertCount });
         
-        // Call data load callback if set
         if (this.dataLoadCallback) {
           this.dataLoadCallback(data);
         }
@@ -1074,49 +1054,16 @@ class AutosaveFileService {
       return null;
     }
 
-    const maxRetries = 3;
+    const contents = await this.readWithRetry(fileName, 'readNamedFile');
+    if (contents === null) return null;
 
-    for (let attempt = 1; attempt <= maxRetries; attempt++) {
-      try {
-        const fileHandle = await this.directoryHandle.getFileHandle(fileName);
-        const file = await fileHandle.getFile();
-        const contents = await file.text();
-        const rawData = JSON.parse(contents);
-
-        logger.debug('Successfully read data file', {
-          fileName,
-          caseCount: Array.isArray(rawData.cases) ? rawData.cases.length : 0,
-          alertCount: Array.isArray(rawData.alerts) ? rawData.alerts.length : 0,
-        });
-        
-        return rawData;
-      } catch (err) {
-        if (err instanceof Error && err.name === 'NotFoundError') {
-          // File doesn't exist - no point retrying
-          logger.debug('Named file not found', { fileName });
-          return null;
-        }
-        
-        if (err instanceof Error && err.name === 'NotReadableError') {
-          // File is locked or stale handle - retry
-          if (attempt < maxRetries) {
-            logger.debug(`NotReadableError on attempt ${attempt}/${maxRetries}, retrying...`, { fileName });
-            await new Promise(resolve => setTimeout(resolve, 100 * attempt)); // exponential backoff
-            continue;
-          }
-          // Max retries reached
-          logger.warn('Failed to read file after retries (NotReadableError)', { fileName, attempts: maxRetries });
-          return null;
-        }
-
-        // Other errors
-        logger.error('Failed to read named data file', {
-          fileName,
-          error: err instanceof Error ? err.message : String(err),
-        });
-        throw err;
-      }
-    }
+    const rawData = JSON.parse(contents);
+    logger.debug('Successfully read data file', {
+      fileName,
+      caseCount: Array.isArray(rawData.cases) ? rawData.cases.length : 0,
+      alertCount: Array.isArray(rawData.alerts) ? rawData.alerts.length : 0,
+    });
+    return rawData;
   }
 
   async readTextFile(fileName: string): Promise<string | null> {
@@ -1131,46 +1078,52 @@ class AutosaveFileService {
       return null;
     }
 
-    const maxRetries = 3;
+    return this.readWithRetry(fileName, 'readTextFile');
+  }
 
+  /**
+   * Shared read-with-retry logic for readNamedFile and readTextFile.
+   * Retries on NotReadableError with exponential backoff.
+   * @returns file text contents, or null if not found / unreadable after retries
+   */
+  private async readWithRetry(
+    fileName: string,
+    operation: string,
+    maxRetries: number = 3,
+  ): Promise<string | null> {
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
       try {
-        const fileHandle = await this.directoryHandle.getFileHandle(fileName);
+        const fileHandle = await this.directoryHandle!.getFileHandle(fileName);
         const file = await fileHandle.getFile();
         return await file.text();
       } catch (err) {
         if (err instanceof Error && err.name === 'NotFoundError') {
-          // File doesn't exist - no point retrying
-          logger.debug('Text file not found', { fileName });
+          logger.debug(`${operation}: file not found`, { fileName });
           return null;
         }
 
         if (err instanceof Error && err.name === 'NotReadableError') {
-          // File is locked or stale handle - retry
           if (attempt < maxRetries) {
             logger.debug(`NotReadableError on attempt ${attempt}/${maxRetries}, retrying...`, { fileName });
-            await new Promise(resolve => setTimeout(resolve, 100 * attempt)); // exponential backoff
+            await new Promise(resolve => setTimeout(resolve, 100 * attempt));
             continue;
           }
-          // Max retries reached
-          logger.warn('Failed to read text file after retries (NotReadableError)', { fileName, attempts: maxRetries });
+          logger.warn(`Failed to read file after retries (NotReadableError)`, { fileName, attempts: maxRetries });
           return null;
         }
 
-        // Other errors
         const message = err instanceof Error ? err.message : 'Unknown error';
-        logger.error('Failed to read text file', { fileName, error: message });
+        logger.error(`Failed to ${operation}`, { fileName, error: message });
         this.errorCallback({
           message: `Error reading file "${fileName}": ${message}`,
           type: 'error',
           error: err,
-          context: { operation: 'readTextFile', fileName },
+          context: { operation, fileName },
         });
         throw err;
       }
     }
-
-    return null; // Should never reach here, but TypeScript needs it
+    return null;
   }
 
   /**

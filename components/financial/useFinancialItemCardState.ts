@@ -20,7 +20,7 @@ interface UseFinancialItemCardStateParams {
   item: FinancialItem;
   itemType: CaseCategory;
   onDelete: (category: CaseCategory, itemId: string) => void;
-  onUpdate?: (category: CaseCategory, itemId: string, updatedItem: FinancialItem) => void;
+  onUpdate?: (category: CaseCategory, itemId: string, updatedItem: FinancialItem) => void | Promise<void>;
 }
 
 /** Form validation errors keyed by field name */

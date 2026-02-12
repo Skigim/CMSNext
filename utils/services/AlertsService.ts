@@ -356,16 +356,58 @@ export class AlertsService {
 
     const existing = existingAlerts;
 
-    // If no existing alerts and no incoming, nothing to do
     if (incoming.length === 0 && existing.length === 0) {
       logger.info('No alerts to merge from CSV and no existing alerts');
       return { alerts: [], added: 0, updated: 0, total: 0 };
     }
 
+    // Build lookup maps for efficient matching
+    const { strongCandidates, fallbackCandidates } = this.buildCandidateMaps(existing);
+
+    const usedIndices = new Set<number>();
+    const merged: AlertWithMatch[] = [];
     let added = 0;
     let updated = 0;
 
-    // Build lookup maps for efficient matching
+    // Match incoming alerts against existing
+    for (const incomingAlert of incoming) {
+      const { matchedIndex, matchedExisting } = this.findBestMatch(
+        incomingAlert, existing, strongCandidates, fallbackCandidates, usedIndices
+      );
+
+      if (matchedExisting) {
+        usedIndices.add(matchedIndex);
+        const { alert: mergedAlert, changed } = this.mergeAndTrackChange(matchedExisting, incomingAlert);
+        if (changed) updated += 1;
+        merged.push(mergedAlert);
+      } else {
+        merged.push(this.createNewAlertEntry(incomingAlert));
+        added += 1;
+      }
+    }
+
+    // Auto-resolve unmatched existing alerts
+    const { alerts: unmatchedAlerts, updatedCount } = this.processUnmatchedExisting(existing, usedIndices);
+    merged.push(...unmatchedAlerts);
+    updated += updatedCount;
+
+    const rematchedAlerts = this.rematchAlertsForCases(merged, cases);
+
+    return {
+      alerts: rematchedAlerts,
+      added,
+      updated,
+      total: rematchedAlerts.length,
+    };
+  }
+
+  /**
+   * Build candidate lookup maps from existing alerts for efficient dedup matching.
+   */
+  private buildCandidateMaps(existing: AlertWithMatch[]): {
+    strongCandidates: Map<string, number[]>;
+    fallbackCandidates: Map<string, number[]>;
+  } {
     const strongCandidates = new Map<string, number[]>();
     const fallbackCandidates = new Map<string, number[]>();
 
@@ -381,128 +423,126 @@ export class AlertsService {
       });
     });
 
-    const usedIndices = new Set<number>();
-    const merged: AlertWithMatch[] = [];
+    return { strongCandidates, fallbackCandidates };
+  }
 
-    incoming.forEach(incomingAlert => {
-      const candidates = this.buildAlertLookupCandidates(incomingAlert);
-      const incomingStrongKeys = candidates
-        .filter(c => !c.fallback)
-        .map(c => c.key);
+  /**
+   * Find the best existing match for an incoming alert using strong then fallback strategies.
+   */
+  private findBestMatch(
+    incomingAlert: AlertWithMatch,
+    existing: AlertWithMatch[],
+    strongCandidates: Map<string, number[]>,
+    fallbackCandidates: Map<string, number[]>,
+    usedIndices: Set<number>
+  ): { matchedIndex: number; matchedExisting: AlertWithMatch | null } {
+    const candidates = this.buildAlertLookupCandidates(incomingAlert);
+    const incomingStrongKeys = candidates.filter(c => !c.fallback).map(c => c.key);
 
-      let matchedIndex = -1;
-      let matchedExisting: AlertWithMatch | null = null;
+    // Try strong key matching first
+    const strongResult = this.findFirstUnusedMatch(
+      candidates.filter(c => !c.fallback),
+      strongCandidates,
+      existing,
+      usedIndices
+    );
+    if (strongResult.matchedExisting) return strongResult;
 
-      // Try strong key matching first
-      for (const { key: candidate, fallback } of candidates) {
-        if (fallback) {
-          continue;
-        }
+    // Fall back to broader matching with validation
+    for (const { key: candidate } of candidates) {
+      const indices = fallbackCandidates.get(candidate);
+      if (!indices?.length) continue;
 
-        const indices = strongCandidates.get(candidate);
-        if (!indices?.length) {
-          continue;
-        }
-
-        for (const index of indices) {
-          if (usedIndices.has(index)) {
-            continue;
-          }
-
-          matchedIndex = index;
-          matchedExisting = existing[index];
-          break;
-        }
-
-        if (matchedExisting) {
-          break;
-        }
-      }
-
-      // If no strong match, try fallback matching with validation
-      if (matchedIndex === -1) {
-        for (const { key: candidate } of candidates) {
-          const indices = fallbackCandidates.get(candidate);
-          if (!indices?.length) {
-            continue;
-          }
-
-          for (const index of indices) {
-            if (usedIndices.has(index)) {
-              continue;
-            }
-
-            const candidateExisting = existing[index];
-            if (this.shouldMatchUsingFallback(incomingAlert, candidateExisting, incomingStrongKeys)) {
-              matchedIndex = index;
-              matchedExisting = candidateExisting;
-              break;
-            }
-          }
-
-          if (matchedExisting) {
-            break;
-          }
+      for (const index of indices) {
+        if (usedIndices.has(index)) continue;
+        if (this.shouldMatchUsingFallback(incomingAlert, existing[index], incomingStrongKeys)) {
+          return { matchedIndex: index, matchedExisting: existing[index] };
         }
       }
+    }
 
-      // Merge or add new alert
-      if (matchedExisting) {
-        usedIndices.add(matchedIndex);
-        const beforeMerge = JSON.stringify(matchedExisting);
-        const mergedAlert = this.mergeAlertDetails(matchedExisting, incomingAlert);
-        const afterMerge = JSON.stringify(mergedAlert);
-        
-        if (beforeMerge !== afterMerge) {
-          updated += 1;
+    return { matchedIndex: -1, matchedExisting: null };
+  }
+
+  /**
+   * Search candidate maps for the first unused match.
+   */
+  private findFirstUnusedMatch(
+    candidates: AlertLookupCandidate[],
+    candidateMap: Map<string, number[]>,
+    existing: AlertWithMatch[],
+    usedIndices: Set<number>
+  ): { matchedIndex: number; matchedExisting: AlertWithMatch | null } {
+    for (const { key: candidate } of candidates) {
+      const indices = candidateMap.get(candidate);
+      if (!indices?.length) continue;
+
+      for (const index of indices) {
+        if (!usedIndices.has(index)) {
+          return { matchedIndex: index, matchedExisting: existing[index] };
         }
-        merged.push(mergedAlert);
-      } else {
-        // New alert - auto-resolve if no MCN
-        const normalized = normalizeMcn(incomingAlert.mcNumber ?? null);
-        if (!normalized) {
-          merged.push({
-            ...incomingAlert,
-            status: 'resolved',
-            resolvedAt: new Date().toISOString(),
-            resolutionNotes: 'Auto-resolved: Missing MCN',
-          });
-        } else {
-          merged.push(incomingAlert);
-        }
-        added += 1;
       }
-    });
+    }
+    return { matchedIndex: -1, matchedExisting: null };
+  }
 
-    // Add unmatched existing alerts (auto-resolve if not already resolved)
+  /**
+   * Merge an incoming alert into an existing one and track whether it changed.
+   */
+  private mergeAndTrackChange(
+    matchedExisting: AlertWithMatch,
+    incomingAlert: AlertWithMatch
+  ): { alert: AlertWithMatch; changed: boolean } {
+    const beforeMerge = JSON.stringify(matchedExisting);
+    const mergedAlert = this.mergeAlertDetails(matchedExisting, incomingAlert);
+    const changed = beforeMerge !== JSON.stringify(mergedAlert);
+    return { alert: mergedAlert, changed };
+  }
+
+  /**
+   * Create a new alert entry, auto-resolving if MCN is missing.
+   */
+  private createNewAlertEntry(alert: AlertWithMatch): AlertWithMatch {
+    const normalized = normalizeMcn(alert.mcNumber ?? null);
+    if (!normalized) {
+      return {
+        ...alert,
+        status: 'resolved',
+        resolvedAt: new Date().toISOString(),
+        resolutionNotes: 'Auto-resolved: Missing MCN',
+      };
+    }
+    return alert;
+  }
+
+  /**
+   * Process existing alerts that weren't matched to any incoming alert.
+   */
+  private processUnmatchedExisting(
+    existing: AlertWithMatch[],
+    usedIndices: Set<number>
+  ): { alerts: AlertWithMatch[]; updatedCount: number } {
+    const alerts: AlertWithMatch[] = [];
+    let updatedCount = 0;
+
     existing.forEach((alert, index) => {
-      if (!usedIndices.has(index)) {
-        if (alert.status !== 'resolved') {
-          // Auto-resolve alerts missing from latest import
-          const now = new Date().toISOString();
-          merged.push({
-            ...alert,
-            status: 'resolved',
-            resolvedAt: alert.resolvedAt || now,
-            updatedAt: now,
-          });
-          updated += 1;
-        } else {
-          // Already resolved, keep as-is
-          merged.push(alert);
-        }
+      if (usedIndices.has(index)) return;
+
+      if (alert.status !== 'resolved') {
+        const now = new Date().toISOString();
+        alerts.push({
+          ...alert,
+          status: 'resolved',
+          resolvedAt: alert.resolvedAt || now,
+          updatedAt: now,
+        });
+        updatedCount += 1;
+      } else {
+        alerts.push(alert);
       }
     });
 
-    // Rematch all with current cases
-    const rematchedAlerts = this.rematchAlertsForCases(merged, cases);
-
-    return {
-      alerts: rematchedAlerts,
-      added,
-      updated,
-      total: rematchedAlerts.length,
-    };
+    return { alerts, updatedCount };
   }
 
   // =============================================================================

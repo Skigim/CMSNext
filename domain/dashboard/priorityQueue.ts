@@ -404,6 +404,54 @@ export function calculatePriorityScore(
   return score;
 }
 
+/** Build a reason string from configured alert types. */
+function getConfiguredAlertReason(
+  caseAlerts: AlertWithMatch[],
+  alertTypes: NonNullable<PriorityConfig['alertTypes']>,
+): string {
+  const sortedAlerts = [...caseAlerts].sort((a, b) => {
+    const weightA = getAlertTypeWeight(a.alertType, alertTypes);
+    const weightB = getAlertTypeWeight(b.alertType, alertTypes);
+    return weightB - weightA;
+  });
+
+  const topAlert = sortedAlerts[0];
+  const topWeight = getAlertTypeWeight(topAlert.alertType, alertTypes);
+
+  if (topWeight > ALERT_WEIGHT_MIN) {
+    const sameTypeCount = caseAlerts.filter(a => a.alertType === topAlert.alertType).length;
+    return sameTypeCount === 1
+      ? (topAlert.alertType || 'Alert requires attention')
+      : `${sameTypeCount} ${topAlert.alertType || 'alerts'}`;
+  }
+
+  return caseAlerts.length === 1
+    ? '1 unresolved alert'
+    : `${caseAlerts.length} unresolved alerts`;
+}
+
+/** Build a reason string from legacy alert description heuristics. */
+function getLegacyAlertReason(caseAlerts: AlertWithMatch[]): string {
+  const avsDay5Count = caseAlerts.filter(a => isAvsDay5Alert(a.description)).length;
+  if (avsDay5Count > 0) {
+    return avsDay5Count === 1 ? 'AVS Day 5 alert' : `${avsDay5Count} AVS Day 5 alerts`;
+  }
+
+  const verificationDueCount = caseAlerts.filter(a => isVerificationDueAlert(a.description)).length;
+  if (verificationDueCount > 0) {
+    return verificationDueCount === 1 ? 'Verification due' : `${verificationDueCount} verification alerts`;
+  }
+
+  const mailRcvdCount = caseAlerts.filter(a => isMailRcvdClosedAlert(a.description)).length;
+  if (mailRcvdCount > 0) {
+    return mailRcvdCount === 1 ? 'Mail received on closed case' : `${mailRcvdCount} mail rcvd alerts`;
+  }
+
+  return caseAlerts.length === 1
+    ? '1 unresolved alert'
+    : `${caseAlerts.length} unresolved alerts`;
+}
+
 /**
  * Get human-readable reason for why a case is prioritized.
  * Returns the most important reason (highest priority criterion met).
@@ -427,82 +475,29 @@ export function getPriorityReason(
     if (statusWeight > 0) {
       return `${caseData.status} - needs processing`;
     }
-  } else {
-    // Legacy fallback: hardcoded Intake check
-    if (caseData.status?.toLowerCase() === 'intake') {
-      return 'Intake - needs processing';
-    }
+  } else if (caseData.status?.toLowerCase() === 'intake') {
+    return 'Intake - needs processing';
   }
 
-  // Check for alerts - find highest priority alert type
+  // Check for alerts with configured types
   if (caseAlerts.length > 0 && config?.alertTypes && config.alertTypes.length > 0) {
-    // Sort alerts by weight (highest first) and return reason for top one
-    const sortedAlerts = [...caseAlerts].sort((a, b) => {
-      const weightA = getAlertTypeWeight(a.alertType, config.alertTypes!);
-      const weightB = getAlertTypeWeight(b.alertType, config.alertTypes!);
-      return weightB - weightA;
-    });
-    
-    const topAlert = sortedAlerts[0];
-    const topWeight = getAlertTypeWeight(topAlert.alertType, config.alertTypes);
-    
-    // Only show specific alert type if it has significant weight
-    if (topWeight > ALERT_WEIGHT_MIN) {
-      const sameTypeCount = caseAlerts.filter(a => a.alertType === topAlert.alertType).length;
-      if (sameTypeCount === 1) {
-        return topAlert.alertType || 'Alert requires attention';
-      }
-      return `${sameTypeCount} ${topAlert.alertType || 'alerts'}`;
-    }
-    
-    // Generic alert count for low-priority alerts
-    return caseAlerts.length === 1
-      ? '1 unresolved alert'
-      : `${caseAlerts.length} unresolved alerts`;
+    return getConfiguredAlertReason(caseAlerts, config.alertTypes);
   }
-  
+
   // Legacy fallback: check for high-priority alert types by description
   if (caseAlerts.length > 0) {
-    const avsDay5Count = caseAlerts.filter(a => isAvsDay5Alert(a.description)).length;
-    const verificationDueCount = caseAlerts.filter(a => isVerificationDueAlert(a.description)).length;
-    const mailRcvdCount = caseAlerts.filter(a => isMailRcvdClosedAlert(a.description)).length;
-
-    if (avsDay5Count > 0) {
-      return avsDay5Count === 1 
-        ? 'AVS Day 5 alert' 
-        : `${avsDay5Count} AVS Day 5 alerts`;
-    }
-
-    if (verificationDueCount > 0) {
-      return verificationDueCount === 1 
-        ? 'Verification due' 
-        : `${verificationDueCount} verification alerts`;
-    }
-
-    if (mailRcvdCount > 0) {
-      return mailRcvdCount === 1 
-        ? 'Mail received on closed case' 
-        : `${mailRcvdCount} mail rcvd alerts`;
-    }
-
-    // Other unresolved alerts
-    return caseAlerts.length === 1
-      ? '1 unresolved alert'
-      : `${caseAlerts.length} unresolved alerts`;
+    return getLegacyAlertReason(caseAlerts);
   }
 
-  // Check priority flag
   if (caseData.priority === true) {
     return 'Marked as priority';
   }
 
-  // Check application age (significant if > 7 days)
   const daysSinceApp = getDaysSinceApplication(caseData.caseRecord?.applicationDate);
   if (daysSinceApp >= 7) {
     return `${daysSinceApp} days since application`;
   }
 
-  // Check recent modification
   const now = new Date();
   const oneDayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
   const updatedAt = new Date(caseData.updatedAt);
@@ -510,12 +505,10 @@ export function getPriorityReason(
     return 'Modified today';
   }
 
-  // Application age less than 7 days
   if (daysSinceApp > 0) {
     return `${daysSinceApp} day${daysSinceApp === 1 ? '' : 's'} since application`;
   }
 
-  // Fallback (should not happen if score > 0)
   return 'Needs attention';
 }
 
