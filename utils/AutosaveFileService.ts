@@ -263,23 +263,23 @@ class AutosaveFileService {
   /** Handle to the directory selected by the user, or null if not connected */
   private directoryHandle: FileSystemDirectoryHandle | null = null;
   /** Name of the primary data file */
-  private fileName: string;
+  private readonly fileName: string;
   /** Callback for error notifications */
-  private errorCallback: (options: ErrorCallbackOptions) => void;
+  private readonly errorCallback: (options: ErrorCallbackOptions) => void;
   /** Unique identifier for this browser tab instance */
-  private tabId: string;
+  private readonly tabId: string;
   
   // IndexedDB configuration for handle persistence
   /** Name of the IndexedDB database */
-  private dbName: string = 'CaseTrackingFileAccess';
+  private readonly dbName: string = 'CaseTrackingFileAccess';
   /** Name of the object store within the database */
-  private storeName: string = 'directoryHandles';
+  private readonly storeName: string = 'directoryHandles';
   /** Key used to store/retrieve the directory handle */
-  private dbKey: string = 'caseTrackingDirectory';
+  private readonly dbKey: string = 'caseTrackingDirectory';
 
   // Write operation queue to prevent race conditions
   /** Queue of pending write operations to process serially */
-  private writeQueue: WriteQueueItem[] = [];
+  private readonly writeQueue: WriteQueueItem[] = [];
   /** Flag indicating whether a write operation is currently in progress */
   private isWriting: boolean = false;
 
@@ -289,15 +289,15 @@ class AutosaveFileService {
 
   // Autosave properties
   /** Combined configuration options (required fields only) */
-  private config: Required<Omit<AutosaveConfig, 'errorCallback' | 'sanitizeFn' | 'statusCallback'>>;
+  private readonly config: Required<Omit<AutosaveConfig, 'errorCallback' | 'sanitizeFn' | 'statusCallback'>>;
   /** Current service state */
-  private state: ServiceState;
+  private readonly state: ServiceState;
   /** Callback for status update notifications */
   private statusCallback: ((status: StatusUpdate) => void) | null;
   /** Function that provides current data to save */
   private dataProvider: (() => any) | null = null;
   /** Active timer references for cleanup */
-  private timers: Timers;
+  private readonly timers: Timers;
   /** Alternative data provider (legacy) */
   private getFullData: (() => any) | null = null;
   /** Callback triggered when data is loaded from file */
@@ -392,8 +392,10 @@ class AutosaveFileService {
         if (navigator?.storage?.persist) {
           await navigator.storage.persist();
         }
-      } catch (_) {
-        // non-fatal
+      } catch (error_) {
+        logger.debug('Storage persistence request failed (non-fatal)', {
+          error: error_ instanceof Error ? error_.message : String(error_),
+        });
       }
 
       // Try to restore previous directory access
@@ -458,7 +460,7 @@ class AutosaveFileService {
     }
 
     try {
-      this.directoryHandle = await globalThis.showDirectoryPicker();
+      this.directoryHandle = await (globalThis as unknown as { showDirectoryPicker: () => Promise<FileSystemDirectoryHandle> }).showDirectoryPicker();
       const permissionGranted = await this.requestPermission();
 
       if (permissionGranted) {
@@ -943,7 +945,7 @@ class AutosaveFileService {
       if (data) {
         const caseCount = Array.isArray(data.cases) ? data.cases.length : 0;
         const recordCount = Array.isArray(data.caseRecords) ? data.caseRecords.length : 0;
-        const alertCount = Array.isArray((data as any).alerts) ? (data as any).alerts.length : 0;
+        const alertCount = Array.isArray(data.alerts) ? data.alerts.length : 0;
         const format = detectDataFormat(data, alertCount);
         logger.info('Existing data loaded', { format, caseCount, recordCount, alertCount });
         
@@ -973,7 +975,7 @@ class AutosaveFileService {
         logger.info('Loaded data from file', {
           fileName,
           caseCount: Array.isArray(data.cases) ? data.cases.length : 0,
-          alertCount: Array.isArray((data as any).alerts) ? (data as any).alerts.length : 0,
+          alertCount: Array.isArray(data.alerts) ? data.alerts.length : 0,
         });
         
         // Call data load callback if set
@@ -1097,33 +1099,52 @@ class AutosaveFileService {
         const file = await fileHandle.getFile();
         return await file.text();
       } catch (err) {
-        if (err instanceof Error && err.name === 'NotFoundError') {
-          logger.debug(`${operation}: file not found`, { fileName });
-          return null;
+        const result = this.handleReadError(err, fileName, operation, attempt, maxRetries);
+        if (result === 'retry') {
+          await new Promise(resolve => setTimeout(resolve, 100 * attempt));
+          continue;
         }
-
-        if (err instanceof Error && err.name === 'NotReadableError') {
-          if (attempt < maxRetries) {
-            logger.debug(`NotReadableError on attempt ${attempt}/${maxRetries}, retrying...`, { fileName });
-            await new Promise(resolve => setTimeout(resolve, 100 * attempt));
-            continue;
-          }
-          logger.warn(`Failed to read file after retries (NotReadableError)`, { fileName, attempts: maxRetries });
-          return null;
-        }
-
-        const message = err instanceof Error ? err.message : 'Unknown error';
-        logger.error(`Failed to ${operation}`, { fileName, error: message });
-        this.errorCallback({
-          message: `Error reading file "${fileName}": ${message}`,
-          type: 'error',
-          error: err,
-          context: { operation, fileName },
-        });
+        if (result === 'not-found' || result === 'exhausted') return null;
         throw err;
       }
     }
     return null;
+  }
+
+  /**
+   * Classify a read error and take appropriate action.
+   * @returns 'not-found' | 'retry' | 'exhausted' | 'fatal'
+   */
+  private handleReadError(
+    err: unknown,
+    fileName: string,
+    operation: string,
+    attempt: number,
+    maxRetries: number,
+  ): 'not-found' | 'retry' | 'exhausted' | 'fatal' {
+    if (err instanceof Error && err.name === 'NotFoundError') {
+      logger.debug(`${operation}: file not found`, { fileName });
+      return 'not-found';
+    }
+
+    if (err instanceof Error && err.name === 'NotReadableError') {
+      if (attempt < maxRetries) {
+        logger.debug(`NotReadableError on attempt ${attempt}/${maxRetries}, retrying...`, { fileName });
+        return 'retry';
+      }
+      logger.warn(`Failed to read file after retries (NotReadableError)`, { fileName, attempts: maxRetries });
+      return 'exhausted';
+    }
+
+    const message = err instanceof Error ? err.message : 'Unknown error';
+    logger.error(`Failed to ${operation}`, { fileName, error: message });
+    this.errorCallback({
+      message: `Error reading file "${fileName}": ${message}`,
+      type: 'error',
+      error: err,
+      context: { operation, fileName },
+    });
+    return 'fatal';
   }
 
   /**
@@ -1229,7 +1250,10 @@ class AutosaveFileService {
       }
       this.updateStatus('waiting', 'Permission required to save changes');
       return false;
-    } catch (_) {
+    } catch (error_) {
+      logger.debug('Permission query failed, treating as needing re-prompt', {
+        error: error_ instanceof Error ? error_.message : String(error_),
+      });
       this.updateStatus('waiting', 'Permission required to save changes');
       return false;
     }
@@ -1351,7 +1375,7 @@ class AutosaveFileService {
    *   );
    * }, [fullData]);
    */
-  initializeWithReactState(getFullData: () => any, statusCallback?: (status: StatusUpdate) => void): AutosaveFileService {
+  initializeWithReactState(getFullData: () => any, statusCallback?: (status: StatusUpdate) => void): this {
     // Store the data getter for future updates
     this.getFullData = getFullData;
 
@@ -1648,6 +1672,9 @@ class AutosaveFileService {
         this.updateStatus('running', this.state.lastSaveTime ? 'All changes saved' : 'Autosave active');
       }
     } catch (error) {
+      logger.debug('Permission check failed, treating as needing re-prompt', {
+        error: error instanceof Error ? error.message : String(error),
+      });
       this.state.permissionStatus = 'prompt';
       this.updateStatus('waiting', 'Permission required to save changes');
     }

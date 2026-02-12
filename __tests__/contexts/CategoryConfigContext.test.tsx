@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, act, waitFor } from "@testing-library/react";
-import { CategoryConfigProvider, useCategoryConfig, CategoryConfigContext } from "@/contexts/CategoryConfigContext";
+import { render, act, waitFor } from "@testing-library/react";
+import { CategoryConfigProvider, useCategoryConfig } from "@/contexts/CategoryConfigContext";
 import { mergeCategoryConfig, type StatusConfig, type AlertTypeConfig, type CategoryConfig } from "@/types/categoryConfig";
 
 // ============================================================================
@@ -65,7 +65,7 @@ vi.mock("@/utils/services/FileStorageService", () => ({
 // Test helper component
 // ============================================================================
 
-function TestConsumer({ onReady }: { onReady: (ctx: ReturnType<typeof useCategoryConfig>) => void }) {
+function TestConsumer({ onReady }: Readonly<{ onReady: (ctx: ReturnType<typeof useCategoryConfig>) => void }>) {
   const ctx = useCategoryConfig();
   onReady(ctx);
   return <div data-testid="config">{JSON.stringify(ctx.config.caseStatuses?.length ?? 0)}</div>;

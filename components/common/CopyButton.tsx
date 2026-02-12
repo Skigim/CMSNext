@@ -98,12 +98,11 @@ export const CopyButton = memo(function CopyButton({
   }, [value, successMessage, label]);
 
   const resolvedLabel = label?.trim();
-  const labelWithSuffix =
-    resolvedLabel && showLabel
-      ? resolvedLabel.endsWith(":")
-        ? resolvedLabel
-        : `${resolvedLabel}:`
-      : null;
+  const formatLabelWithSuffix = (lbl: string) =>
+    lbl.endsWith(":") ? lbl : `${lbl}:`;
+  const labelWithSuffix = resolvedLabel && showLabel
+    ? formatLabelWithSuffix(resolvedLabel)
+    : null;
 
   const wrapperClasses = cn("inline-flex items-center gap-2", className);
 

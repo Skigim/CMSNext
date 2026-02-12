@@ -44,7 +44,7 @@ export abstract class BaseErrorBoundary<
   P extends BaseErrorBoundaryProps = BaseErrorBoundaryProps,
   S extends BaseErrorBoundaryState = BaseErrorBoundaryState,
 > extends Component<P, S> {
-  protected resetTimeoutId: number | null = null;
+  protected resetTimeoutId: ReturnType<typeof setTimeout> | null = null;
 
   // -- Lifecycle -------------------------------------------------------------
 
@@ -117,7 +117,8 @@ export abstract class BaseErrorBoundary<
     } as S);
   };
 
-  handleRetry = () => {
+  // Used by subclasses (ErrorBoundary, FileSystemErrorBoundary) in their render methods
+  handleRetry = () => { // NOSONAR — inherited by subclasses
     this.resetTimeoutId = globalThis.setTimeout(() => {
       this.resetErrorBoundary();
     }, 100);

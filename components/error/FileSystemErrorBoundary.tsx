@@ -60,10 +60,11 @@ export class FileSystemErrorBoundary extends BaseErrorBoundary<
 
   protected getReportingContext() {
     const isFsError = this.state.isFileSystemError;
+    const severity: 'medium' | 'high' = isFsError ? 'medium' : 'high';
     return {
       type: 'filesystem-error-boundary',
       isFileSystemError: isFsError,
-      severity: (isFsError ? 'medium' : 'high') as 'medium' | 'high',
+      severity,
       tags: isFsError
         ? ['filesystem', 'error-boundary', 'user-action']
         : ['error-boundary', 'react'],

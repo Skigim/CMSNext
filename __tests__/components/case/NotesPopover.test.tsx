@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { render } from "@testing-library/react";
 
 // ============================================================================
 // Mocks - must be before component imports

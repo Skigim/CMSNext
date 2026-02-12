@@ -157,7 +157,7 @@ function eventMatchesChordPrefix(event: KeyboardEvent, shortcut: ResolvedShortcu
 
 /**
  * Attempt to complete a pending chord sequence.
- * @returns true if the event was consumed (chord ended), false otherwise.
+ * Always consumes the event (returns void) to end the chord.
  */
 function tryCompleteChord(
   pending: PendingChord,
@@ -165,11 +165,10 @@ function tryCompleteChord(
   event: KeyboardEvent,
   options: UseKeyboardShortcutsOptions,
   clearChord: () => void,
-): boolean {
-  const elapsed = Date.now() - pending.startedAt;
-  if (elapsed > CHORD_TIMEOUT_MS) {
+): void {
+  if (Date.now() - pending.startedAt > CHORD_TIMEOUT_MS) {
     clearChord();
-    return true;
+    return;
   }
 
   const secondKey = normalizeKey(event.key);
@@ -181,14 +180,13 @@ function tryCompleteChord(
   });
 
   clearChord();
-  if (!match) return true;
+  if (!match) return;
 
   const factory = actionForShortcutId(match.id);
-  if (!factory) return true;
+  if (!factory) return;
 
   event.preventDefault();
   factory(options);
-  return true;
 }
 
 /**
@@ -334,15 +332,15 @@ export function useKeyboardShortcuts(options: UseKeyboardShortcutsOptions): {
 } {
   const isMac = useMemo(() => isMacPlatform(), []);
 
-  const [shortcuts, setShortcuts] = useState<ResolvedShortcut[]>([]);
+  const [shortcuts] = useState<ResolvedShortcut[]>(() => resolveShortcuts(getShortcutConfig()));
 
-  const shortcutsRef = useRef<ResolvedShortcut[]>([]);
+  const shortcutsRef = useRef<ResolvedShortcut[]>(shortcuts);
   useEffect(() => {
     shortcutsRef.current = shortcuts;
   }, [shortcuts]);
 
   const pendingChordRef = useRef<PendingChord | null>(null);
-  const chordTimerRef = useRef<number | null>(null);
+  const chordTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const [chordPending, setChordPending] = useState(false);
   const [pendingModifier, setPendingModifier] = useState<string | null>(null);
@@ -356,11 +354,6 @@ export function useKeyboardShortcuts(options: UseKeyboardShortcutsOptions): {
       globalThis.clearTimeout(chordTimerRef.current);
       chordTimerRef.current = null;
     }
-  }, []);
-
-  useEffect(() => {
-    const config = getShortcutConfig();
-    setShortcuts(resolveShortcuts(config));
   }, []);
 
   const startChord = useCallback(

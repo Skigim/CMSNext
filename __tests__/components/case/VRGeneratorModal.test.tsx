@@ -46,7 +46,7 @@ vi.mock("@/utils/logger", () => ({
 }));
 
 import { VRGeneratorModal } from "@/components/case/VRGeneratorModal";
-import type { StoredCase, FinancialItem } from "@/types/case";
+import type { StoredCase, StoredFinancialItem } from "@/types/case";
 import type { Template } from "@/types/template";
 
 const mockCase: StoredCase = {
@@ -83,17 +83,17 @@ const mockCase: StoredCase = {
   },
 } as StoredCase;
 
-const mockFinancialItems: FinancialItem[] = [
+const mockFinancialItems: StoredFinancialItem[] = [
   {
     id: "fin-1",
     caseId: "case-1",
-    type: "income",
+    category: "income",
     description: "Wages",
     amount: 1000,
     verificationStatus: "verified",
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
-  } as FinancialItem,
+  },
 ];
 
 const mockTemplates: Template[] = [
