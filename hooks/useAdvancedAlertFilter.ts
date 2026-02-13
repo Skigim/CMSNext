@@ -2,12 +2,13 @@ import { useCallback, useMemo, useState } from "react";
 import { createLocalStorageAdapter } from "@/utils/localStorage";
 import {
   createEmptyAdvancedFilter,
-  createEmptyFilterCriterion,
   isAdvancedFilterActive,
   deserializeAdvancedFilter,
   type AdvancedAlertFilter,
   type FilterCriterion,
 } from "@/domain/alerts";
+import { safeNotifyFileStorageChange } from "../utils/fileStorageNotify";
+import { AdvancedAlertFilterService } from "@/utils/services/AdvancedAlertFilterService";
 import { useDebouncedSave } from "./useDebouncedSave";
 
 interface UseAdvancedAlertFilterResult {
@@ -29,44 +30,44 @@ const storage = createLocalStorageAdapter<AdvancedAlertFilter | null>(
   },
 );
 
+const advancedAlertFilterService = new AdvancedAlertFilterService();
+
 export function useAdvancedAlertFilter(): UseAdvancedAlertFilterResult {
   const [filter, setFilter] = useState<AdvancedAlertFilter>(() => storage.read() ?? createEmptyAdvancedFilter());
 
   useDebouncedSave({
     data: filter,
-    onSave: (value) => storage.write(value),
+    onSave: (value) => {
+      storage.write(value);
+      safeNotifyFileStorageChange();
+    },
     delay: 300,
   });
 
   const addCriterion = useCallback((item?: FilterCriterion) => {
-    setFilter((prev) => ({ ...prev, criteria: [...prev.criteria, item ?? createEmptyFilterCriterion()] }));
+    setFilter((prev) => advancedAlertFilterService.addCriterion(prev, item));
   }, []);
 
   const updateCriterion = useCallback((id: string, updates: Partial<Omit<FilterCriterion, "id">>) => {
-    setFilter((prev) => ({
-      ...prev,
-      criteria: prev.criteria.map((item) => (item.id === id ? { ...item, ...updates } : item)),
-    }));
+    setFilter((prev) => advancedAlertFilterService.updateCriterion(prev, id, updates));
   }, []);
 
   const removeCriterion = useCallback((id: string) => {
-    setFilter((prev) => ({ ...prev, criteria: prev.criteria.filter((item) => item.id !== id) }));
+    setFilter((prev) => advancedAlertFilterService.removeCriterion(prev, id));
   }, []);
 
   const toggleNegate = useCallback((id: string) => {
-    setFilter((prev) => ({
-      ...prev,
-      criteria: prev.criteria.map((item) => (item.id === id ? { ...item, negate: !item.negate } : item)),
-    }));
+    setFilter((prev) => advancedAlertFilterService.toggleNegate(prev, id));
   }, []);
 
   const setLogic = useCallback((logic: "and" | "or") => {
-    setFilter((prev) => ({ ...prev, logic }));
+    setFilter((prev) => advancedAlertFilterService.setLogic(prev, logic));
   }, []);
 
   const resetFilter = useCallback(() => {
     setFilter(createEmptyAdvancedFilter());
     storage.clear();
+    safeNotifyFileStorageChange();
   }, []);
 
   const hasActiveAdvancedFilters = useMemo(() => isAdvancedFilterActive(filter), [filter]);
