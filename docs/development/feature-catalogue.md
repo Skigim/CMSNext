@@ -2,7 +2,7 @@
 
 > Living index of marketable features, their current implementation status, quality, and future investments.
 
-**Last Updated:** January 22, 2026
+**Last Updated:** February 13, 2026
 
 ## How to Use This Document
 
@@ -16,7 +16,7 @@
 
 ---
 
-## Quick Reference (January 2026)
+## Quick Reference (February 2026)
 
 | Feature               | Rating | Trend | Notes                                          |
 | --------------------- | ------ | ----- | ---------------------------------------------- |
@@ -24,19 +24,19 @@
 | Financial Operations  | 92     | ↑     | Domain logic extracted, extensive test cov     |
 | Template System       | 92     | ↑     | Unified VR/Summary/Narrative templates         |
 | Local-First Storage   | 90     | →     | AES-256 encryption, split login/welcome UX     |
-| Developer Enablement  | 89     | ↑     | 1081 tests, IndexedDBHandleStore extracted     |
+| Developer Enablement  | 89     | ↑     | 1117 tests, IndexedDBHandleStore extracted     |
 | Dashboard & Insights  | 88     | ↑     | Config-driven priority scoring, zero fallbacks |
 | Premium UI/UX         | 87     | →     | Stable scrollbar, instant sidebar, tooltips    |
 | Notes & Collaboration | 84     | →     | Click-to-copy notes, popover UI                |
-| Case Archival         | 82     | NEW   | Separate archive files, configurable age       |
+| Case Archival         | 88     | ↑     | Restore flow, archive search/filter, metadata  |
 | Data Portability      | 82     | →     | AVS import with update capability              |
 | Configurable Statuses | 78     | →     | Recently stabilized                            |
 | Legacy Migration      | 75     | →     | Dev-only, one-way                              |
 | Autosave & Recovery   | 75     | →     | IndexedDBHandleStore modularized               |
 | Feature Flags         | 72     | →     | In-memory only                                 |
 
-**Average Rating:** 85.1/100  
-**Test Status:** 1081 tests passing (100%)
+**Average Rating:** 85.5/100  
+**Test Status:** 1117 tests passing
 
 ---
 
