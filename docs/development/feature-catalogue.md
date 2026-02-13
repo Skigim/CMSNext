@@ -232,9 +232,9 @@ Phase 3 Cases domain refactor completed November 2, 2025. Bulk actions added Dec
 
 ### Implementation Snapshot
 
-**Rating: 82/100** _(Added January 22, 2026)_
+**Rating: 88/100** _(Updated February 13, 2026)_
 
-A complete case archival system enables users to move old, completed cases to separate archive files, reducing main file size and improving performance. Archive files are stored in a dedicated `archive/` subfolder and can be loaded on-demand for reference. The system uses configurable age thresholds and respects user-defined completion statuses.
+A complete case archival system enables users to move old, completed cases to separate archive files, reducing main file size and improving performance. Archive files are stored in a dedicated `archive/` subfolder, can be loaded on-demand, searched/filtered in-app, and selected cases can be restored to the active dataset with related notes and financials.
 
 ### Strengths
 
@@ -247,6 +247,9 @@ A complete case archival system enables users to move old, completed cases to se
 - **Bulk Archive Actions**: Select multiple cases and archive via floating action toolbar
 - **Archive from Case Details**: Split button with Archive as primary action, Delete in dropdown
 - **Load on Demand**: View archived cases without loading into main data file
+- **Restore from Archive**: Multi-select restore with confirmation dialog returns cases, notes, and financials to active data
+- **Archive Search & Status Filter**: Loaded archive files support text search and status filtering
+- **Archive Metadata Visibility**: Archive browser shows archive date and case count badges for quick context
 - **Auto-Queue Refresh**: Eligible cases automatically queued at app startup
 - **Activity Logging**: All archival operations logged for audit trail
 
@@ -271,16 +274,13 @@ A complete case archival system enables users to move old, completed cases to se
 
 ### Gaps / Risks
 
-- No restore from archive yet (would require re-adding to main file)
 - Archive files grow unbounded (no secondary archival or cleanup)
 - Large archive loads may impact memory for very large datasets
-- No search within archived cases
+- Restore operations currently have service-level coverage but still need additional integration/UI interaction coverage
 
 ### Expansion Opportunities
 
-- Add restore functionality to bring archived cases back to active
 - Implement archive file rotation or compression for very old archives
-- Add search/filter within loaded archives
 - Export archive to different formats (CSV, PDF)
 - Archive auto-cleanup after configurable retention period
 
@@ -288,6 +288,7 @@ A complete case archival system enables users to move old, completed cases to se
 
 - 14 unit tests for domain archival logic (`archivalLogic.test.ts`)
 - Archive types validation tests (`archiveTypes.test.ts`)
+- Restore operation service tests (`CaseArchiveService.restoreCases.test.ts`)
 - Integration tested through Settings panel and Case List flows
 - Activity log captures all archival operations
 
