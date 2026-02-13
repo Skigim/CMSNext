@@ -107,7 +107,7 @@ describe('IndexedDBHandleStore', () => {
 
   beforeEach(() => {
     mockIndexedDB = createMockIndexedDB();
-    Object.defineProperty(global, 'indexedDB', {
+    Object.defineProperty(globalThis, 'indexedDB', {
       value: mockIndexedDB,
       writable: true,
       configurable: true,

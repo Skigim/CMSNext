@@ -12,21 +12,32 @@ const mockDirectoryHandle = {
   entries: vi.fn()
 }
 
+function prepareForEncryptionCheck(svc: AutosaveFileService) {
+  (svc as any).directoryHandle = mockDirectoryHandle;
+  vi.spyOn(svc, 'checkPermission').mockResolvedValue('granted');
+}
+
 // Global mocks setup
 beforeEach(() => {
   // Reset all mocks
   vi.clearAllMocks()
 
   // Mock window.showDirectoryPicker
-  Object.defineProperty(global, 'window', {
+  Object.defineProperty(globalThis, 'window', {
     value: {
       showDirectoryPicker: mockShowDirectoryPicker
     },
     writable: true
   })
 
+  Object.defineProperty(globalThis, 'showDirectoryPicker', {
+    value: mockShowDirectoryPicker,
+    writable: true,
+    configurable: true,
+  })
+
   // Mock navigator
-  Object.defineProperty(global, 'navigator', {
+  Object.defineProperty(globalThis, 'navigator', {
     value: {
       storage: {
         persist: vi.fn().mockResolvedValue(true)
@@ -42,13 +53,13 @@ beforeEach(() => {
     removeItem: vi.fn(),
     clear: vi.fn()
   }
-  Object.defineProperty(global, 'localStorage', {
+  Object.defineProperty(globalThis, 'localStorage', {
     value: localStorageMock,
     writable: true
   })
 
   // Mock indexedDB
-  Object.defineProperty(global, 'indexedDB', {
+  Object.defineProperty(globalThis, 'indexedDB', {
     value: {
       open: vi.fn().mockImplementation(() => ({
         onsuccess: null,
@@ -123,7 +134,7 @@ describe('AutosaveFileService', () => {
       expect(service.isSupported()).toBe(true)
       
       // Test unsupported scenario
-      delete (global.window as any).showDirectoryPicker
+      delete (globalThis as any).showDirectoryPicker
       expect(service.isSupported()).toBe(false)
     })
 
@@ -142,7 +153,7 @@ describe('AutosaveFileService', () => {
     })
 
     it('should handle missing navigator.storage gracefully', () => {
-      Object.defineProperty(global.navigator, 'storage', {
+      Object.defineProperty(globalThis.navigator, 'storage', {
         value: undefined,
         writable: true
       })
@@ -189,7 +200,7 @@ describe('AutosaveFileService', () => {
 
   describe('error handling and edge cases', () => {
     it('should handle unsupported browser for connect', async () => {
-      delete (global.window as any).showDirectoryPicker
+      delete (globalThis as any).showDirectoryPicker
       
       const result = await service.connect()
       
@@ -243,7 +254,7 @@ describe('AutosaveFileService', () => {
     })
 
     it('should handle connectToExisting with unsupported browser', async () => {
-      delete (global.window as any).showDirectoryPicker
+      delete (globalThis as any).showDirectoryPicker
       
       const result = await service.connectToExisting()
       expect(result).toBe(false)
@@ -417,16 +428,6 @@ describe('AutosaveFileService', () => {
   })
 
   describe('checkFileEncryptionStatus', () => {
-    /**
-     * Helper to set up the service for checkFileEncryptionStatus tests.
-     * Sets directory handle directly and stubs checkPermission to avoid
-     * needing the full File System Access API mock.
-     */
-    function prepareForEncryptionCheck(svc: AutosaveFileService) {
-      (svc as any).directoryHandle = mockDirectoryHandle;
-      vi.spyOn(svc, 'checkPermission').mockResolvedValue('granted');
-    }
-
     it('should return null when no directory handle is set', async () => {
       const result = await service.checkFileEncryptionStatus()
       expect(result).toBeNull()

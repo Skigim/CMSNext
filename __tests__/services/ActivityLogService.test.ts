@@ -305,7 +305,7 @@ describe('ActivityLogService', () => {
       expect(result.retainedCount).toBe(1);
     });
 
-    it.each([0, -1, NaN, Infinity, -Infinity])('should reject invalid retentionDays: %s', async (days) => {
+    it.each([0, -1, Number.NaN, Infinity, -Infinity])('should reject invalid retentionDays: %s', async (days) => {
       const fileStorage = createMockFileStorage([]);
       const fileService = createMockFileService();
       const service = new ActivityLogService({

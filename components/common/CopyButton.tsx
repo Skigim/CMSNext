@@ -49,6 +49,19 @@ export interface CopyButtonProps {
 
 const DEFAULT_MISSING_LABEL = "Not provided";
 
+const resolveLabelWithSuffix = (
+  label: string | undefined,
+  showLabel: boolean,
+): string | null => {
+  const resolvedLabel = label?.trim();
+
+  if (!resolvedLabel || !showLabel) {
+    return null;
+  }
+
+  return resolvedLabel.endsWith(":") ? resolvedLabel : `${resolvedLabel}:`;
+};
+
 /**
  * A reusable component for displaying text with a copy-to-clipboard button.
  * Supports multiple visual variants and optional label display.
@@ -97,12 +110,18 @@ export const CopyButton = memo(function CopyButton({
     });
   }, [value, successMessage, label]);
 
-  const resolvedLabel = label?.trim();
-  const formatLabelWithSuffix = (lbl: string) =>
-    lbl.endsWith(":") ? lbl : `${lbl}:`;
-  const labelWithSuffix = resolvedLabel && showLabel
-    ? formatLabelWithSuffix(resolvedLabel)
-    : null;
+  const labelWithSuffix = resolveLabelWithSuffix(label, showLabel);
+  const labelElement = labelWithSuffix ? (
+    <span
+      aria-hidden
+      className={cn(
+        "text-sm font-medium text-muted-foreground",
+        labelClassName,
+      )}
+    >
+      {labelWithSuffix}
+    </span>
+  ) : null;
 
   const wrapperClasses = cn("inline-flex items-center gap-2", className);
 
@@ -137,17 +156,7 @@ export const CopyButton = memo(function CopyButton({
       : missingLabel;
     return (
       <span className={wrapperClasses}>
-        {labelWithSuffix && (
-          <span
-            aria-hidden
-            className={cn(
-              "text-sm font-medium text-muted-foreground",
-              labelClassName,
-            )}
-          >
-            {labelWithSuffix}
-          </span>
-        )}
+        {labelElement}
         <span className="sr-only">{accessibleMissing}</span>
         <span
           className={cn(
@@ -182,17 +191,7 @@ export const CopyButton = memo(function CopyButton({
 
   return (
     <span className={wrapperClasses}>
-      {labelWithSuffix && (
-        <span
-          aria-hidden
-          className={cn(
-            "text-sm font-medium text-muted-foreground",
-            labelClassName,
-          )}
-        >
-          {labelWithSuffix}
-        </span>
-      )}
+      {labelElement}
       <span className="sr-only">{accessibleLabel}</span>
       {tooltip ? (
         <Tooltip>

@@ -2,7 +2,6 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { createMockFinancialItem } from "@/src/test/testUtils";
-import type { FinancialItem } from "@/types/case";
 import { FinancialItemCard } from "@/components/financial/FinancialItemCard";
 
 // Mock sonner toast
@@ -38,7 +37,7 @@ describe("FinancialItemCard", () => {
       description: "Monthly Paycheck",
       amount: 2500,
       verificationStatus: "Verified",
-    }) as FinancialItem;
+    });
     const onOpenStepperEdit = vi.fn();
 
     // ACT
@@ -64,7 +63,7 @@ describe("FinancialItemCard", () => {
       id: "item-1",
       description: "Paycheck",
       verificationStatus: "Needs VR",
-    }) as FinancialItem;
+    });
     const onOpenStepperEdit = vi.fn();
 
     const { container } = render(
@@ -91,7 +90,7 @@ describe("FinancialItemCard", () => {
       description: "Rent Payment",
       amount: 1200,
       verificationStatus: "Needs VR",
-    }) as FinancialItem;
+    });
     const onOpenStepperEdit = vi.fn();
 
     // ACT
@@ -125,7 +124,7 @@ describe("FinancialItemCard", () => {
           createdAt: "2025-01-01T00:00:00.000Z",
         },
       ],
-    }) as FinancialItem;
+    });
     const onOpenStepperEdit = vi.fn();
 
     // ACT
@@ -150,7 +149,7 @@ describe("FinancialItemCard", () => {
       id: "item-1",
       description: "Test Item",
       verificationStatus: "Needs VR",
-    }) as FinancialItem;
+    });
     const onOpenStepperEdit = vi.fn();
     const onUpdate = vi.fn();
 
@@ -188,7 +187,7 @@ describe("FinancialItemCard", () => {
           createdAt: "2025-01-01T00:00:00.000Z",
         },
       ],
-    }) as FinancialItem;
+    });
     const onOpenStepperEdit = vi.fn();
 
     // ACT

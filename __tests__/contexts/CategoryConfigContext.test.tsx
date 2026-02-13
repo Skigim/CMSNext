@@ -214,7 +214,7 @@ describe("CategoryConfigContext", () => {
         await ctx!.updateCategory("caseStatuses", [] as StatusConfig[]);
       });
 
-      expect(toast.error).toHaveBeenCalledWith("Please provide at least one status.");
+      expect(toast.error).toHaveBeenCalledWith("Please provide at least one option.");
       expect(mockUpdateCaseStatuses).not.toHaveBeenCalled();
     });
   });

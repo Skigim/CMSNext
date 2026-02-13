@@ -12,7 +12,7 @@ afterEach(() => {
 })
 
 // Mock matchMedia for ThemeContext
-Object.defineProperty(window, 'matchMedia', {
+Object.defineProperty(globalThis, 'matchMedia', {
   writable: true,
   value: vi.fn().mockImplementation(query => ({
     matches: false,
@@ -33,19 +33,22 @@ const mockFileSystemAccessAPI = {
   showSaveFilePicker: vi.fn(),
 }
 
-Object.defineProperty(window, 'showDirectoryPicker', {
+Object.defineProperty(globalThis, 'showDirectoryPicker', {
   value: mockFileSystemAccessAPI.showDirectoryPicker,
   writable: true,
+  configurable: true,
 })
 
-Object.defineProperty(window, 'showOpenFilePicker', {
+Object.defineProperty(globalThis, 'showOpenFilePicker', {
   value: mockFileSystemAccessAPI.showOpenFilePicker,
   writable: true,
+  configurable: true,
 })
 
-Object.defineProperty(window, 'showSaveFilePicker', {
+Object.defineProperty(globalThis, 'showSaveFilePicker', {
   value: mockFileSystemAccessAPI.showSaveFilePicker,
   writable: true,
+  configurable: true,
 })
 
 // Mock navigator.userAgent for browser detection tests
@@ -64,13 +67,13 @@ const localStorageMock = {
   key: vi.fn(),
 }
 
-Object.defineProperty(window, 'localStorage', {
+Object.defineProperty(globalThis, 'localStorage', {
   value: localStorageMock,
   writable: true,
 })
 
 // Mock sessionStorage
-Object.defineProperty(window, 'sessionStorage', {
+Object.defineProperty(globalThis, 'sessionStorage', {
   value: localStorageMock,
   writable: true,
 })
@@ -91,13 +94,10 @@ class MutationObserverMock {
   observe = vi.fn()
   disconnect = vi.fn()
   takeRecords = vi.fn(() => [])
-  constructor(_callback: MutationCallback) {
-    // Store callback but don't execute it
-  }
 }
 
 (globalThis as any).MutationObserver = MutationObserverMock
-Object.defineProperty(window, 'MutationObserver', {
+Object.defineProperty(globalThis, 'MutationObserver', {
   value: MutationObserverMock as unknown as typeof MutationObserver,
   writable: true,
   configurable: true,
@@ -111,7 +111,7 @@ class ResizeObserverMock {
 }
 
 (globalThis as any).ResizeObserver = ResizeObserverMock
-Object.defineProperty(window, 'ResizeObserver', {
+Object.defineProperty(globalThis, 'ResizeObserver', {
   value: ResizeObserverMock as unknown as ResizeObserver,
   writable: true,
   configurable: true,
@@ -125,7 +125,7 @@ class IntersectionObserverMock {
 }
 
 (globalThis as any).IntersectionObserver = IntersectionObserverMock
-Object.defineProperty(window, 'IntersectionObserver', {
+Object.defineProperty(globalThis, 'IntersectionObserver', {
   value: IntersectionObserverMock as unknown as IntersectionObserver,
   writable: true,
   configurable: true,

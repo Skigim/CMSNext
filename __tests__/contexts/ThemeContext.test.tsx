@@ -33,7 +33,7 @@ describe('ThemeContext', () => {
   
   beforeAll(() => {
     // Mock matchMedia before any tests run
-    Object.defineProperty(window, 'matchMedia', {
+    Object.defineProperty(globalThis, 'matchMedia', {
       writable: true,
       value: vi.fn().mockImplementation(query => ({
         matches: false,

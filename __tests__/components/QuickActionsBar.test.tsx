@@ -22,7 +22,7 @@ vi.mock("@/contexts/CategoryConfigContext", () => ({
 }));
 
 // Wrapper component with providers
-function TestWrapper({ children }: { children: React.ReactNode }) {
+function TestWrapper({ children }: { readonly children: React.ReactNode }) {
   return <TooltipProvider>{children}</TooltipProvider>;
 }
 
@@ -137,17 +137,6 @@ describe("QuickActionsBar", () => {
     );
 
     expect(screen.queryByRole("button", { name: /bulk actions/i })).not.toBeInTheDocument();
-  });
-
-  it("shows more actions menu", () => {
-    render(
-      <TestWrapper>
-        <QuickActionsBar {...mockHandlers} />
-      </TestWrapper>
-    );
-
-    const moreButton = screen.getByRole("button", { name: /more actions/i });
-    expect(moreButton).toBeInTheDocument();
   });
 
   it("shows more actions menu button", () => {

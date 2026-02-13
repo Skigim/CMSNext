@@ -36,6 +36,16 @@ import {
 import { isEncryptedPayload, DEFAULT_ENCRYPTION_CONFIG } from "@/types/encryption";
 
 describe("encryption utilities", () => {
+  const createPayload = () => ({
+    version: 1 as const,
+    algorithm: "AES-256-GCM" as const,
+    salt: btoa(String.fromCodePoint(...new Uint8Array(16))),
+    iv: btoa(String.fromCodePoint(...new Uint8Array(12))),
+    ciphertext: btoa(String.fromCodePoint(...new Uint8Array(32))),
+    iterations: DEFAULT_ENCRYPTION_CONFIG.iterations,
+    encryptedAt: new Date().toISOString(),
+  });
+
   // Mock CryptoKey for testing
   const mockCryptoKey = {
     type: "secret",
@@ -70,13 +80,13 @@ describe("encryption utilities", () => {
     });
 
     it("returns false when crypto is undefined", () => {
-      const originalCrypto = global.crypto;
+      const originalCrypto = globalThis.crypto;
       // @ts-expect-error Testing undefined crypto
-      global.crypto = undefined;
+      globalThis.crypto = undefined;
 
       expect(isEncryptionSupported()).toBe(false);
 
-      global.crypto = originalCrypto;
+      globalThis.crypto = originalCrypto;
     });
   });
 
@@ -165,7 +175,7 @@ describe("encryption utilities", () => {
   describe("deriveKeyFromSaltString", () => {
     it("converts base64 salt and derives key", async () => {
       const password = "test-password";
-      const saltBase64 = btoa(String.fromCharCode(...new Uint8Array(16)));
+      const saltBase64 = btoa(String.fromCodePoint(...new Uint8Array(16)));
 
       await deriveKeyFromSaltString(password, saltBase64);
 
@@ -220,7 +230,7 @@ describe("encryption utilities", () => {
 
   describe("encryptWithKey", () => {
     const testData = { foo: "bar" };
-    const existingSalt = btoa(String.fromCharCode(...new Uint8Array(16)));
+    const existingSalt = btoa(String.fromCodePoint(...new Uint8Array(16)));
 
     beforeEach(() => {
       mockSubtle.encrypt.mockResolvedValue(
@@ -255,16 +265,6 @@ describe("encryption utilities", () => {
   });
 
   describe("decrypt", () => {
-    const createPayload = () => ({
-      version: 1 as const,
-      algorithm: "AES-256-GCM" as const,
-      salt: btoa(String.fromCharCode(...new Uint8Array(16))),
-      iv: btoa(String.fromCharCode(...new Uint8Array(12))),
-      ciphertext: btoa(String.fromCharCode(...new Uint8Array(32))),
-      iterations: DEFAULT_ENCRYPTION_CONFIG.iterations,
-      encryptedAt: new Date().toISOString(),
-    });
-
     beforeEach(() => {
       mockSubtle.decrypt.mockResolvedValue(
         new TextEncoder().encode(JSON.stringify({ decrypted: true })).buffer
@@ -305,16 +305,6 @@ describe("encryption utilities", () => {
   });
 
   describe("decryptWithKey", () => {
-    const createPayload = () => ({
-      version: 1 as const,
-      algorithm: "AES-256-GCM" as const,
-      salt: btoa(String.fromCharCode(...new Uint8Array(16))),
-      iv: btoa(String.fromCharCode(...new Uint8Array(12))),
-      ciphertext: btoa(String.fromCharCode(...new Uint8Array(32))),
-      iterations: DEFAULT_ENCRYPTION_CONFIG.iterations,
-      encryptedAt: new Date().toISOString(),
-    });
-
     beforeEach(() => {
       mockSubtle.decrypt.mockResolvedValue(
         new TextEncoder().encode(JSON.stringify({ data: "test" })).buffer

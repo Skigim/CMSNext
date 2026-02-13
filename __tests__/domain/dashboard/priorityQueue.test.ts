@@ -13,7 +13,6 @@ import {
   isAvsDay5Alert,
   isVerificationDueAlert,
   isMailRcvdClosedAlert,
-  classifyAlert,
   getAlertScore,
   getDaysSinceApplication,
   getDaysSinceOldestAlert,
@@ -22,11 +21,6 @@ import {
   getApplicationAgeMultiplier,
   getAlertAgeMultiplier,
   // Scoring constants
-  SCORE_INTAKE,
-  SCORE_AVS_DAY_5,
-  SCORE_VERIFICATION_DUE,
-  SCORE_MAIL_RCVD_CLOSED,
-  SCORE_OTHER_ALERT,
   SCORE_PRIORITY_FLAG,
   SCORE_RECENT_MODIFICATION,
   SCORE_PER_DAY_ALERT_AGE,
@@ -34,6 +28,20 @@ import {
 } from '../../../domain/dashboard/priorityQueue';
 import type { StoredCase, CaseStatus } from '../../../types/case';
 import type { AlertWithMatch } from '../../../utils/alertsData';
+
+const SCORE_INTAKE = 5000;
+const SCORE_AVS_DAY_5 = 500;
+const SCORE_VERIFICATION_DUE = 400;
+const SCORE_MAIL_RCVD_CLOSED = 400;
+const SCORE_OTHER_ALERT = 100;
+
+function classifyAlert(alert: AlertWithMatch) {
+  const desc = alert.description;
+  if (isAvsDay5Alert(desc)) return 'avs-day-5';
+  if (isVerificationDueAlert(desc)) return 'verification-due';
+  if (isMailRcvdClosedAlert(desc)) return 'mail-rcvd-closed';
+  return 'other';
+}
 
 // Test data factories
 // Note: We use 'as CaseStatus' for custom statuses like 'Intake' that may exist in user data

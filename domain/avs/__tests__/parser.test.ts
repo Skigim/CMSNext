@@ -29,7 +29,7 @@ Refresh Date: 12/01/2025`;
       expect(result?.accountNumber).toBe('6789');
       expect(result?.address).toBe('123 Main Street Anytown, ST 12345');
       expect(result?.balance).toBe('$5,432.10');
-      expect(result?.balanceAmount).toBe(5432.10);
+      expect(result?.balanceAmount).toBe(5432.1);
       expect(result?.refreshDate).toBe('12/01/2025');
     });
 

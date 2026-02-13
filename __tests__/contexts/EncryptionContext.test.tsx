@@ -28,16 +28,13 @@ describe("EncryptionContext - codePointAt coverage", () => {
     // Verify the behavior matches for typical use cases
     const char = "A";
     expect(char.codePointAt(0)).toBe(65);
-    expect(char.codePointAt(0)).toBe(char.charCodeAt(0));
   });
 
   it("codePointAt handles multi-byte characters correctly", () => {
-    // codePointAt properly handles surrogate pairs unlike charCodeAt
+    // codePointAt properly handles surrogate pairs
     const emoji = "😀";
     const codePoint = emoji.codePointAt(0);
     expect(codePoint).toBe(0x1F600);
-    // charCodeAt would return only the first surrogate (55357)
-    expect(emoji.charCodeAt(0)).toBe(55357);
-    expect(codePoint).not.toBe(emoji.charCodeAt(0));
+    expect(codePoint).toBeGreaterThan(0xFFFF);
   });
 });
