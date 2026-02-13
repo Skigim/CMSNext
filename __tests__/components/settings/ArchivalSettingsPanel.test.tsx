@@ -176,9 +176,9 @@ describe("ArchivalSettingsPanel - Archive Search/Filter Features", () => {
 
     it("resets search and filters when archive is closed", () => {
       // Closing archive should reset searchQuery, statusFilter, and clearSearch
-      const initialState = { searchQuery: "", statusFilter: "", archived: null };
+      const initialState = { searchQuery: "", statusFilter: "__all_statuses__", archived: null };
       expect(initialState.searchQuery).toBe("");
-      expect(initialState.statusFilter).toBe("");
+      expect(initialState.statusFilter).toBe("__all_statuses__");
       expect(initialState.archived).toBeNull();
     });
   });

@@ -55,6 +55,8 @@ import type { CaseArchiveData, ArchivalSettings } from "@/types/archive";
 import { DEFAULT_ARCHIVAL_SETTINGS } from "@/types/archive";
 import type { StoredCase } from "@/types/case";
 
+const ALL_STATUSES_FILTER = "__all_statuses__";
+
 /**
  * ArchivalSettingsPanel - Configure and manage case archival
  */
@@ -77,7 +79,7 @@ export function ArchivalSettingsPanel({ cases }: { cases: StoredCase[] }) {
   const [selectedArchiveFileName, setSelectedArchiveFileName] = useState<string | null>(null);
   const [selectedCasesToRestore, setSelectedCasesToRestore] = useState<Set<string>>(new Set());
   const [showRestoreDialog, setShowRestoreDialog] = useState(false);
-  const [statusFilter, setStatusFilter] = useState<string>("");
+  const [statusFilter, setStatusFilter] = useState<string>(ALL_STATUSES_FILTER);
   
   // Fuzzy search for archive cases
   const { query: searchQuery, setQuery: setSearchQuery, results: searchResults, clearSearch } = useFuzzySearch({
@@ -170,7 +172,7 @@ export function ArchivalSettingsPanel({ cases }: { cases: StoredCase[] }) {
     setSelectedArchive(null);
     setSelectedArchiveFileName(null);
     setSelectedCasesToRestore(new Set());
-    setStatusFilter("");
+    setStatusFilter(ALL_STATUSES_FILTER);
     clearSearch();
   }, [clearSearch]);
   
@@ -210,7 +212,7 @@ export function ArchivalSettingsPanel({ cases }: { cases: StoredCase[] }) {
       const updated = await archival.loadArchive(selectedArchiveFileName);
       setSelectedArchive(updated);
       setSelectedCasesToRestore(new Set());
-      setStatusFilter("");
+      setStatusFilter(ALL_STATUSES_FILTER);
       clearSearch();
     }
   }, [selectedArchiveFileName, selectedCasesToRestore, archival, clearSearch]);
@@ -235,7 +237,7 @@ export function ArchivalSettingsPanel({ cases }: { cases: StoredCase[] }) {
     }
     
     // Apply status filter if selected
-    if (statusFilter) {
+    if (statusFilter !== ALL_STATUSES_FILTER) {
       cases = cases.filter(c => c.status === statusFilter);
     }
     
@@ -493,7 +495,7 @@ export function ArchivalSettingsPanel({ cases }: { cases: StoredCase[] }) {
                             <SelectValue placeholder="All statuses" />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="">All statuses</SelectItem>
+                            <SelectItem value={ALL_STATUSES_FILTER}>All statuses</SelectItem>
                             {archiveStatuses.map(status => (
                               <SelectItem key={status} value={status}>
                                 {status}
