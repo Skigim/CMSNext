@@ -33,9 +33,9 @@ vi.mock("@/utils/AutosaveFileService", () => {
 
   class MockAutosaveFileService {
     private status: StatusShape;
-    private statusCallback?: (status: StatusShape) => void;
+    private readonly statusCallback?: (status: StatusShape) => void;
     private isRunning = false;
-    private driverToken = Symbol("autosave-driver");
+    private readonly driverToken = Symbol("autosave-driver");
 
     constructor(config: { statusCallback?: (status: StatusShape) => void } = {}) {
       this.statusCallback = config.statusCallback;
@@ -86,7 +86,9 @@ vi.mock("@/utils/AutosaveFileService", () => {
       };
     }
 
-    updateConfig() {}
+    updateConfig() {
+      // No-op for integration test mock.
+    }
 
     startAutosave() {
       this.isRunning = true;
@@ -102,9 +104,13 @@ vi.mock("@/utils/AutosaveFileService", () => {
       return this;
     }
 
-    setDataLoadCallback() {}
+    setDataLoadCallback() {
+      // No-op for integration test mock.
+    }
 
-    notifyDataChange() {}
+    notifyDataChange() {
+      // No-op for integration test mock.
+    }
 
     connect() {
       this.emit({ status: "connected", message: "Connected", permissionStatus: "granted" });
@@ -152,7 +158,9 @@ vi.mock("@/utils/AutosaveFileService", () => {
       return Promise.resolve(null);
     }
 
-    updateReactState() {}
+    updateReactState() {
+      // No-op for integration test mock.
+    }
 
     writeFile() {
       return Promise.resolve(true);
@@ -178,17 +186,17 @@ function AutosaveStatusHarness() {
   return <AutosaveStatusBadge summary={summary} showDetail data-testid="autosave-badge" />;
 }
 
-describe("Autosave status indicator", () => {
-  function emitStatus(update: Partial<StatusShape>) {
-    const driver = (globalThis as any).__autosaveTestDriver as
-      | { emit: (update: Partial<StatusShape>) => void }
-      | undefined;
-    if (!driver) {
-      throw new Error("Autosave test driver is not available");
-    }
-    driver.emit(update);
+function emitStatus(update: Partial<StatusShape>) {
+  const driver = (globalThis as any).__autosaveTestDriver as
+    | { emit: (update: Partial<StatusShape>) => void }
+    | undefined;
+  if (!driver) {
+    throw new Error("Autosave test driver is not available");
   }
+  driver.emit(update);
+}
 
+describe("Autosave status indicator", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });

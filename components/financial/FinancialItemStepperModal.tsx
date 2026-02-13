@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo, useEffect, useRef } from "react";
+import { useState, useCallback, useMemo, useEffect, useRef, type Dispatch, type SetStateAction } from "react";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 import { Label } from "../ui/label";
@@ -136,6 +136,111 @@ function getPlaceholders(itemType: CaseCategory) {
   return placeholders[itemType] || placeholders.resources;
 }
 
+function getInitialItemFormData(item?: FinancialItem): ItemFormData {
+  if (!item) {
+    return emptyItemFormData;
+  }
+
+  return {
+    description: item.description || item.name || "",
+    location: item.location || "",
+    accountNumber: item.accountNumber || "",
+    frequency: item.frequency || "monthly",
+    owner: item.owner || "applicant",
+    notes: item.notes || "",
+  };
+}
+
+function getDefaultEntryFormData(): EntryFormData {
+  return {
+    amount: "",
+    startDate: isoToDateInputValue(getFirstOfMonth()),
+    endDate: "",
+    verificationStatus: "Needs VR",
+    verificationSource: "",
+  };
+}
+
+function openAddEntryForm(
+  setEntryFormData: Dispatch<SetStateAction<EntryFormData>>,
+  setIsAddingEntry: Dispatch<SetStateAction<boolean>>,
+  setEditingEntryId: Dispatch<SetStateAction<string | null>>,
+): void {
+  setEntryFormData(getDefaultEntryFormData());
+  setIsAddingEntry(true);
+  setEditingEntryId(null);
+}
+
+function resetFormState({
+  setCurrentStep,
+  setItemFormData,
+  setLocalHistoryEntries,
+  setEntryFormData,
+  setEditingEntryId,
+  setIsAddingEntry,
+  setFormErrors,
+  setIsConfirmingDelete,
+  setDeleteConfirmId,
+  setAddAnother,
+}: {
+  setCurrentStep: Dispatch<SetStateAction<Step>>;
+  setItemFormData: Dispatch<SetStateAction<ItemFormData>>;
+  setLocalHistoryEntries: Dispatch<SetStateAction<AmountHistoryEntry[]>>;
+  setEntryFormData: Dispatch<SetStateAction<EntryFormData>>;
+  setEditingEntryId: Dispatch<SetStateAction<string | null>>;
+  setIsAddingEntry: Dispatch<SetStateAction<boolean>>;
+  setFormErrors: Dispatch<SetStateAction<FormErrors>>;
+  setIsConfirmingDelete: Dispatch<SetStateAction<boolean>>;
+  setDeleteConfirmId?: Dispatch<SetStateAction<string | null>>;
+  setAddAnother?: Dispatch<SetStateAction<boolean>>;
+}): void {
+  setCurrentStep("details");
+  setItemFormData(emptyItemFormData);
+  setLocalHistoryEntries([]);
+  setEntryFormData(emptyEntryFormData);
+  setEditingEntryId(null);
+  setIsAddingEntry(false);
+  setFormErrors({});
+  setIsConfirmingDelete(false);
+  setDeleteConfirmId?.(null);
+  setAddAnother?.(false);
+}
+
+function openAmountsStep(
+  localHistoryEntriesLength: number,
+  setCurrentStep: Dispatch<SetStateAction<Step>>,
+  setEntryFormData: Dispatch<SetStateAction<EntryFormData>>,
+  setIsAddingEntry: Dispatch<SetStateAction<boolean>>,
+  setEditingEntryId: Dispatch<SetStateAction<string | null>>,
+): void {
+  setCurrentStep("amounts");
+  if (localHistoryEntriesLength !== 0) {
+    return;
+  }
+  setTimeout(() => {
+    openAddEntryForm(setEntryFormData, setIsAddingEntry, setEditingEntryId);
+  }, 0);
+}
+
+function getEntryCountMessage(localHistoryEntriesLength: number): string {
+  if (localHistoryEntriesLength === 0) {
+    return "Add at least one amount entry to continue.";
+  }
+
+  const suffix = localHistoryEntriesLength === 1 ? "y" : "ies";
+  return `${localHistoryEntriesLength} entr${suffix}`;
+}
+
+function getSaveButtonLabel(isSubmitting: boolean, isEditing: boolean): string {
+  if (isSubmitting) {
+    return "Saving...";
+  }
+  if (isEditing) {
+    return "Update Item";
+  }
+  return "Save Item";
+}
+
 // ============================================================================
 // Sub-Components
 // ============================================================================
@@ -144,11 +249,11 @@ function StepIndicator({
   steps,
   currentStep,
   onStepClick,
-}: {
+}: Readonly<{
   steps: typeof STEPS;
   currentStep: Step;
   onStepClick?: (step: Step) => void;
-}) {
+}>) {
   const currentIndex = steps.findIndex((s) => s.id === currentStep);
 
   return (
@@ -209,7 +314,7 @@ export function FinancialItemStepperModal({
   onSave,
   onUpdate,
   onDelete,
-}: FinancialItemStepperModalProps) {
+}: Readonly<FinancialItemStepperModalProps>) {
   const isEditing = Boolean(item);
 
   // Step state
@@ -217,16 +322,7 @@ export function FinancialItemStepperModal({
 
   // Form data
   const [itemFormData, setItemFormData] = useState<ItemFormData>(() =>
-    item
-      ? {
-          description: item.description || item.name || "",
-          location: item.location || "",
-          accountNumber: item.accountNumber || "",
-          frequency: item.frequency || "monthly",
-          owner: item.owner || "applicant",
-          notes: item.notes || "",
-        }
-      : emptyItemFormData
+    getInitialItemFormData(item)
   );
 
   // History entries (local state for new items, derived from item for editing)
@@ -263,16 +359,18 @@ export function FinancialItemStepperModal({
 
   // Reset form to initial state for "add another" flow
   const resetFormForAddAnother = useCallback(() => {
-    setCurrentStep("details");
-    setItemFormData(emptyItemFormData);
-    setLocalHistoryEntries([]);
-    setEntryFormData(emptyEntryFormData);
-    setEditingEntryId(null);
-    setIsAddingEntry(false);
-    setFormErrors({});
-    setIsConfirmingDelete(false);
-    setDeleteConfirmId(null);
-    setAddAnother(false);
+    resetFormState({
+      setCurrentStep,
+      setItemFormData,
+      setLocalHistoryEntries,
+      setEntryFormData,
+      setEditingEntryId,
+      setIsAddingEntry,
+      setFormErrors,
+      setIsConfirmingDelete,
+      setDeleteConfirmId,
+      setAddAnother,
+    });
   }, []);
 
   // Add another hook for creating multiple items
@@ -291,18 +389,7 @@ export function FinancialItemStepperModal({
     if (isOpen) {
       // Reset form state when modal opens or item changes
       setCurrentStep("details");
-      setItemFormData(
-        item
-          ? {
-              description: item.description || item.name || "",
-              location: item.location || "",
-              accountNumber: item.accountNumber || "",
-              frequency: item.frequency || "monthly",
-              owner: item.owner || "applicant",
-              notes: item.notes || "",
-            }
-          : emptyItemFormData
-      );
+      setItemFormData(getInitialItemFormData(item));
       setLocalHistoryEntries(item?.amountHistory ?? []);
       setEntryFormData(emptyEntryFormData);
       setEditingEntryId(null);
@@ -402,15 +489,7 @@ export function FinancialItemStepperModal({
   );
 
   const handleStartAddEntry = useCallback(() => {
-    setEntryFormData({
-      amount: "",
-      startDate: isoToDateInputValue(getFirstOfMonth()),
-      endDate: "",
-      verificationStatus: "Needs VR",
-      verificationSource: "",
-    });
-    setIsAddingEntry(true);
-    setEditingEntryId(null);
+    openAddEntryForm(setEntryFormData, setIsAddingEntry, setEditingEntryId);
   }, []);
 
   const handleStartEditEntry = useCallback((entry: AmountHistoryEntry) => {
@@ -434,7 +513,7 @@ export function FinancialItemStepperModal({
   }, []);
 
   const handleSaveEntry = useCallback(() => {
-    const amount = parseFloat(entryFormData.amount);
+    const amount = Number.parseFloat(entryFormData.amount);
     if (Number.isNaN(amount) || !entryFormData.startDate) {
       return;
     }
@@ -471,25 +550,19 @@ export function FinancialItemStepperModal({
   // ============================================================================
 
   const handleNext = useCallback(() => {
-    if (currentStep === "details") {
-      if (validateDetailsStep()) {
-        setCurrentStep("amounts");
-        // Auto-open add entry form if no entries exist
-        if (localHistoryEntries.length === 0) {
-          setTimeout(() => {
-            setEntryFormData({
-              amount: "",
-              startDate: isoToDateInputValue(getFirstOfMonth()),
-              endDate: "",
-              verificationStatus: "Needs VR",
-              verificationSource: "",
-            });
-            setIsAddingEntry(true);
-            setEditingEntryId(null);
-          }, 0);
-        }
-      }
+    if (currentStep !== "details") {
+      return;
     }
+    if (!validateDetailsStep()) {
+      return;
+    }
+    openAmountsStep(
+      localHistoryEntries.length,
+      setCurrentStep,
+      setEntryFormData,
+      setIsAddingEntry,
+      setEditingEntryId,
+    );
   }, [currentStep, validateDetailsStep, localHistoryEntries.length]);
 
   const handleBack = useCallback(() => {
@@ -501,28 +574,20 @@ export function FinancialItemStepperModal({
   const handleStepClick = useCallback(
     (step: Step) => {
       if (step === currentStep) return; // Already on this step
-      
-      if (step === "amounts") {
-        if (validateDetailsStep()) {
-          setCurrentStep(step);
-          // Auto-open add entry form if no entries exist
-          if (localHistoryEntries.length === 0) {
-            // Use setTimeout to ensure state update completes first
-            setTimeout(() => {
-              setEntryFormData({
-                amount: "",
-                startDate: isoToDateInputValue(getFirstOfMonth()),
-                endDate: "",
-                verificationStatus: "Needs VR",
-                verificationSource: "",
-              });
-              setIsAddingEntry(true);
-              setEditingEntryId(null);
-            }, 0);
-          }
-        }
-      } else if (step === "details") {
+
+      if (step === "details") {
         setCurrentStep(step);
+        return;
+      }
+
+      if (validateDetailsStep()) {
+        openAmountsStep(
+          localHistoryEntries.length,
+          setCurrentStep,
+          setEntryFormData,
+          setIsAddingEntry,
+          setEditingEntryId,
+        );
       }
     },
     [currentStep, validateDetailsStep, localHistoryEntries.length]
@@ -588,15 +653,16 @@ export function FinancialItemStepperModal({
   ]);
 
   const handleClose = useCallback(() => {
-    // Reset state
-    setCurrentStep("details");
-    setItemFormData(emptyItemFormData);
-    setLocalHistoryEntries([]);
-    setEntryFormData(emptyEntryFormData);
-    setEditingEntryId(null);
-    setIsAddingEntry(false);
-    setFormErrors({});
-    setIsConfirmingDelete(false);
+    resetFormState({
+      setCurrentStep,
+      setItemFormData,
+      setLocalHistoryEntries,
+      setEntryFormData,
+      setEditingEntryId,
+      setIsAddingEntry,
+      setFormErrors,
+      setIsConfirmingDelete,
+    });
     onClose();
   }, [onClose]);
 
@@ -606,14 +672,16 @@ export function FinancialItemStepperModal({
     try {
       await onDelete(item.id);
       // Reset and close
-      setCurrentStep("details");
-      setItemFormData(emptyItemFormData);
-      setLocalHistoryEntries([]);
-      setEntryFormData(emptyEntryFormData);
-      setEditingEntryId(null);
-      setIsAddingEntry(false);
-      setFormErrors({});
-      setIsConfirmingDelete(false);
+      resetFormState({
+        setCurrentStep,
+        setItemFormData,
+        setLocalHistoryEntries,
+        setEntryFormData,
+        setEditingEntryId,
+        setIsAddingEntry,
+        setFormErrors,
+        setIsConfirmingDelete,
+      });
       onClose();
     } finally {
       setIsSubmitting(false);
@@ -752,9 +820,7 @@ export function FinancialItemStepperModal({
             {!isEntryEditing && (
               <div className="flex justify-between items-center">
                 <p className="text-sm text-muted-foreground">
-                  {localHistoryEntries.length === 0
-                    ? "Add at least one amount entry to continue."
-                    : `${localHistoryEntries.length} entry${localHistoryEntries.length !== 1 ? "ies" : ""}`}
+                  {getEntryCountMessage(localHistoryEntries.length)}
                 </p>
                 <Button
                   ref={addEntryButtonRef}
@@ -1080,11 +1146,7 @@ export function FinancialItemStepperModal({
                   onClick={handleSave}
                   disabled={isSubmitting || !canSave}
                 >
-                  {isSubmitting
-                    ? "Saving..."
-                    : isEditing
-                      ? "Update Item"
-                      : "Save Item"}
+                  {getSaveButtonLabel(isSubmitting, isEditing)}
                 </Button>
               </>
             )}

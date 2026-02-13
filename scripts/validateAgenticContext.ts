@@ -1,8 +1,8 @@
 #!/usr/bin/env npx tsx
 
-import { promises as fs } from 'fs';
-import path from 'path';
-import process from 'process';
+import { promises as fs } from 'node:fs';
+import path from 'node:path';
+import process from 'node:process';
 
 interface ValidationResult {
   file: string;
@@ -80,15 +80,11 @@ async function validateSection(
   let allValid = true;
 
   for (const result of results) {
-    const icon = result.readable ? '✅' : required ? '❌' : '⚠️';
+    const icon = getValidationIcon(result.readable, required);
     console.log(`${icon} ${result.file}`);
 
     if (!result.readable) {
-      if (result.exists && result.error) {
-        console.log(`   └─ ${result.error}`);
-      } else if (!result.exists) {
-        console.log(`   └─ File not found`);
-      }
+      logValidationIssue(result);
 
       if (required) {
         allValid = false;
@@ -97,6 +93,26 @@ async function validateSection(
   }
 
   return allValid;
+}
+
+function logValidationIssue(result: ValidationResult): void {
+  if (result.exists && result.error) {
+    console.log(`   └─ ${result.error}`);
+    return;
+  }
+  if (!result.exists) {
+    console.log('   └─ File not found');
+  }
+}
+
+function getValidationIcon(readable: boolean, required: boolean): string {
+  if (readable) {
+    return '✅';
+  }
+  if (required) {
+    return '❌';
+  }
+  return '⚠️';
 }
 
 async function checkMCPConfig(): Promise<void> {
@@ -175,8 +191,9 @@ async function generateReport(): Promise<void> {
   }
 }
 
-// Run validation
-generateReport().catch((error) => {
+try {
+  await generateReport();
+} catch (error) {
   console.error('❌ Validation failed:', error instanceof Error ? error.message : error);
   process.exit(1);
-});
+}

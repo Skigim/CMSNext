@@ -18,6 +18,13 @@ interface AvgCaseProcessingTimeWidgetProps {
   metadata?: WidgetMetadata;
 }
 
+type TrendDirection = 'up' | 'down' | 'flat';
+
+interface TrendData {
+  delta: number | null;
+  direction: TrendDirection;
+}
+
 function formatDays(value: number | null, formatter: Intl.NumberFormat): string {
   if (value == null || Number.isNaN(value)) {
     return '--';
@@ -25,11 +32,63 @@ function formatDays(value: number | null, formatter: Intl.NumberFormat): string 
   return `${formatter.format(value)} days`;
 }
 
+function getTrendData(data: ProcessingTimeStats | null | undefined): TrendData {
+  const average = data?.averageDays ?? null;
+  const previous = data?.previousAverageDays ?? null;
+
+  if (average == null || previous == null) {
+    return { delta: null, direction: 'flat' };
+  }
+
+  const delta = average - previous;
+  if (delta > 0) {
+    return { delta, direction: 'up' };
+  }
+  if (delta < 0) {
+    return { delta, direction: 'down' };
+  }
+  return { delta: 0, direction: 'flat' };
+}
+
+function getTrendTextColorClass(trend: TrendData): string {
+  if (trend.delta == null) {
+    return 'text-muted-foreground';
+  }
+  if (trend.direction === 'down') {
+    return 'text-emerald-500 font-medium';
+  }
+  if (trend.direction === 'up') {
+    return 'text-destructive font-medium';
+  }
+  return 'text-muted-foreground';
+}
+
+function getTrendLabel(trend: TrendData, formatter: Intl.NumberFormat): string {
+  if (trend.delta == null) {
+    return 'No prior baseline';
+  }
+  if (trend.delta === 0) {
+    return 'No change';
+  }
+  const sign = trend.delta > 0 ? '+' : '-';
+  return `${sign}${formatter.format(Math.abs(trend.delta))} days`;
+}
+
+function TrendIcon({ trend }: Readonly<{ trend: TrendData }>) {
+  if (trend.delta == null || trend.direction === 'flat') {
+    return <Minus className="h-4 w-4 text-muted-foreground" aria-hidden />;
+  }
+  if (trend.direction === 'up') {
+    return <ArrowUpRight className="h-4 w-4 text-destructive" aria-hidden />;
+  }
+  return <ArrowDownRight className="h-4 w-4 text-emerald-500" aria-hidden />;
+}
+
 export function AvgCaseProcessingTimeWidget({
   activityLog = [],
   cases = [],
   metadata,
-}: AvgCaseProcessingTimeWidgetProps) {
+}: Readonly<AvgCaseProcessingTimeWidgetProps>) {
   const { config } = useCategoryConfig();
   const completionStatuses = useMemo(() => getCompletionStatusNames(config), [config]);
 
@@ -46,21 +105,7 @@ export function AvgCaseProcessingTimeWidget({
 
   const freshnessLabel = useMemo(() => formatFreshnessLabel(freshness), [freshness]);
 
-  const trend = useMemo(() => {
-    const average = data?.averageDays ?? null;
-    const previous = data?.previousAverageDays ?? null;
-    if (average == null || previous == null) {
-      return { delta: null, direction: 'flat' as const };
-    }
-    const delta = average - previous;
-    if (delta > 0) {
-      return { delta, direction: 'up' as const };
-    }
-    if (delta < 0) {
-      return { delta, direction: 'down' as const };
-    }
-    return { delta: 0, direction: 'flat' as const };
-  }, [data]);
+  const trend = useMemo(() => getTrendData(data), [data]);
 
   if (loading && !data) {
     return (
@@ -85,6 +130,33 @@ export function AvgCaseProcessingTimeWidget({
 
   const hasSample = Boolean(data && data.sampleSize > 0 && data.averageDays != null);
 
+  if (!hasSample) {
+    return (
+      <Card>
+        <CardHeader className="pb-3">
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle>Avg. Case Processing Time</CardTitle>
+              <CardDescription>Average days from creation to completion (last 30 days)</CardDescription>
+            </div>
+            <Badge variant="outline" className="text-xs">
+              {data?.sampleSize ? `${data.sampleSize} cases` : 'No samples'}
+            </Badge>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <div className="py-8 text-center text-muted-foreground">
+            <Timer className="mx-auto mb-3 h-8 w-8 opacity-60" />
+            <p className="text-sm">No completed cases in the last 30 days.</p>
+          </div>
+          <div className="mt-4 border-t border-border/60 pt-3 text-center text-xs text-muted-foreground">
+            Last checked: {freshnessLabel}
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
   return (
     <Card>
       <CardHeader className="pb-3">
@@ -99,13 +171,7 @@ export function AvgCaseProcessingTimeWidget({
         </div>
       </CardHeader>
       <CardContent>
-        {!hasSample ? (
-          <div className="py-8 text-center text-muted-foreground">
-            <Timer className="mx-auto mb-3 h-8 w-8 opacity-60" />
-            <p className="text-sm">No completed cases in the last 30 days.</p>
-          </div>
-        ) : (
-          <div className="space-y-5">
+        <div className="space-y-5">
             <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
               <div>
                 <p className="text-4xl font-semibold text-foreground">
@@ -114,74 +180,54 @@ export function AvgCaseProcessingTimeWidget({
                 <p className="text-sm text-muted-foreground">Average time to complete a case</p>
               </div>
               <div className="flex items-center gap-2 rounded-full border border-border/60 px-3 py-1.5 text-xs">
-                {trend.delta == null && <Minus className="h-4 w-4 text-muted-foreground" aria-hidden />}
-                {trend.delta != null && trend.direction === 'flat' && <Minus className="h-4 w-4 text-muted-foreground" aria-hidden />}
-                {trend.delta != null && trend.direction === 'up' && (
-                  <ArrowUpRight className="h-4 w-4 text-destructive" aria-hidden />
-                )}
-                {trend.delta != null && trend.direction === 'down' && (
-                  <ArrowDownRight className="h-4 w-4 text-emerald-500" aria-hidden />
-                )}
+                <TrendIcon trend={trend} />
                 <span
-                  className={
-                    trend.delta == null
-                      ? 'text-muted-foreground'
-                      : trend.direction === 'down'
-                        ? 'text-emerald-500 font-medium'
-                        : trend.direction === 'up'
-                          ? 'text-destructive font-medium'
-                          : 'text-muted-foreground'
-                  }
+                  className={getTrendTextColorClass(trend)}
                 >
-                  {trend.delta == null
-                    ? 'No prior baseline'
-                    : trend.delta === 0
-                      ? 'No change'
-              : `${trend.delta > 0 ? '+' : '-'}${formatter.format(Math.abs(trend.delta))} days`}
+                  {getTrendLabel(trend, formatter)}
                 </span>
                 <span className="text-muted-foreground">vs. previous 30 days</span>
               </div>
             </div>
 
-            <div className="grid gap-4 sm:grid-cols-3">
-              <div className="rounded-lg border border-border/60 p-3">
-                <p className="text-xs uppercase tracking-wide text-muted-foreground">Median</p>
-                <p className="text-lg font-medium text-foreground">
-                  {formatDays(data?.medianDays ?? null, formatter)}
-                </p>
-              </div>
-              <div className="rounded-lg border border-border/60 p-3">
-                <p className="text-xs uppercase tracking-wide text-muted-foreground">Sample size</p>
-                <p className="text-lg font-medium text-foreground">{data?.sampleSize ?? 0}</p>
-              </div>
-              <div className="rounded-lg border border-border/60 p-3">
-                <p className="text-xs uppercase tracking-wide text-muted-foreground">Previous avg.</p>
-                <p className="text-lg font-medium text-foreground">
-                  {formatDays(data?.previousAverageDays ?? null, formatter)}
-                </p>
+          <div className="grid gap-4 sm:grid-cols-3">
+            <div className="rounded-lg border border-border/60 p-3">
+              <p className="text-xs uppercase tracking-wide text-muted-foreground">Median</p>
+              <p className="text-lg font-medium text-foreground">
+                {formatDays(data?.medianDays ?? null, formatter)}
+              </p>
+            </div>
+            <div className="rounded-lg border border-border/60 p-3">
+              <p className="text-xs uppercase tracking-wide text-muted-foreground">Sample size</p>
+              <p className="text-lg font-medium text-foreground">{data?.sampleSize ?? 0}</p>
+            </div>
+            <div className="rounded-lg border border-border/60 p-3">
+              <p className="text-xs uppercase tracking-wide text-muted-foreground">Previous avg.</p>
+              <p className="text-lg font-medium text-foreground">
+                {formatDays(data?.previousAverageDays ?? null, formatter)}
+              </p>
+            </div>
+          </div>
+
+          {data && Object.keys(data.byStatus).length > 0 && (
+            <div className="space-y-3">
+              <p className="text-xs uppercase tracking-wide text-muted-foreground">By status</p>
+              <div className="space-y-2">
+                {Object.entries(data.byStatus)
+                  .sort((a, b) => a[0].localeCompare(b[0]))
+                  .map(([status, avg]) => (
+                    <div
+                      key={status}
+                      className="flex items-center justify-between rounded border border-border/40 bg-muted/40 px-3 py-2 text-sm"
+                    >
+                      <span className="font-medium text-foreground">{status}</span>
+                      <span className="text-muted-foreground">{formatDays(avg, formatter)}</span>
+                    </div>
+                  ))}
               </div>
             </div>
-
-            {data && Object.keys(data.byStatus).length > 0 && (
-              <div className="space-y-3">
-                <p className="text-xs uppercase tracking-wide text-muted-foreground">By status</p>
-                <div className="space-y-2">
-                  {Object.entries(data.byStatus)
-                    .sort((a, b) => a[0].localeCompare(b[0]))
-                    .map(([status, avg]) => (
-                      <div
-                        key={status}
-                        className="flex items-center justify-between rounded border border-border/40 bg-muted/40 px-3 py-2 text-sm"
-                      >
-                        <span className="font-medium text-foreground">{status}</span>
-                        <span className="text-muted-foreground">{formatDays(avg, formatter)}</span>
-                      </div>
-                    ))}
-                </div>
-              </div>
-            )}
-          </div>
-        )}
+          )}
+        </div>
 
         <div className="mt-4 border-t border-border/60 pt-3 text-center text-xs text-muted-foreground">
           Last checked: {freshnessLabel}

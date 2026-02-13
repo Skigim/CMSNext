@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState, type Dispatch, type SetStateAction } from "react";
 import { toastPromise } from "@/utils/withToast";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
@@ -188,6 +188,209 @@ function compareCases(
   return 0;
 }
 
+function getSelectedCaseIdsFromFilter(
+  allFilteredCaseIds: string[],
+  isSelected: (id: string) => boolean,
+): string[] {
+  return allFilteredCaseIds.filter((id) => isSelected(id));
+}
+
+async function runBulkCaseAction({
+  allFilteredCaseIds,
+  isSelected,
+  clearSelection,
+  action,
+  setPending,
+}: {
+  allFilteredCaseIds: string[];
+  isSelected: (id: string) => boolean;
+  clearSelection: () => void;
+  action: (caseIds: string[]) => Promise<unknown>;
+  setPending?: (pending: boolean) => void;
+}): Promise<void> {
+  const selectedCaseIds = getSelectedCaseIdsFromFilter(allFilteredCaseIds, isSelected);
+  if (selectedCaseIds.length === 0) {
+    return;
+  }
+
+  setPending?.(true);
+  try {
+    await action(selectedCaseIds);
+    clearSelection();
+  } finally {
+    setPending?.(false);
+  }
+}
+
+function getFilteredCases(
+  cases: StoredCase[],
+  searchTerm: string,
+  filters: CaseFilterState,
+  segment: CaseListSegment,
+  caseStatuses: Array<{ name: string; countsAsCompleted?: boolean }>,
+): StoredCase[] {
+  const normalizedSearch = searchTerm.trim().toLowerCase();
+  const now = Date.now();
+  const recentThreshold = now - 1000 * 60 * 60 * 24 * 14;
+  const completedStatuses = new Set(
+    caseStatuses
+      .filter((status) => status.countsAsCompleted)
+      .map((status) => status.name)
+  );
+
+  return cases.filter((caseData) =>
+    casePassesFilters(caseData, normalizedSearch, filters, completedStatuses, segment, recentThreshold)
+  );
+}
+
+function isValidCaseListSegment(value: string): value is CaseListSegment {
+  return value === "all"
+    || value === "recent"
+    || value === "priority"
+    || value === "alerts"
+    || value === "archival-review";
+}
+
+function resolveAlert(
+  onResolveAlert: ((alert: AlertWithMatch) => void | Promise<void>) | undefined,
+  alert: AlertWithMatch,
+): void {
+  onResolveAlert?.(alert);
+}
+
+async function resolveBulkAlerts({
+  onBulkResolveAlerts,
+  activeAlertDescriptionFilter,
+  alertsForBulkResolve,
+  selectedCaseIds,
+  clearSelection,
+  setIsResolvingAlerts,
+}: {
+  onBulkResolveAlerts: ((caseIds: string[], alerts: AlertWithMatch[], descriptionFilter: string) => Promise<{ resolvedCount: number; caseCount: number }>) | undefined;
+  activeAlertDescriptionFilter: string | undefined;
+  alertsForBulkResolve: AlertWithMatch[];
+  selectedCaseIds: string[];
+  clearSelection: () => void;
+  setIsResolvingAlerts: (value: boolean) => void;
+}): Promise<void> {
+  if (!onBulkResolveAlerts || !activeAlertDescriptionFilter) {
+    return;
+  }
+  if (alertsForBulkResolve.length === 0) {
+    return;
+  }
+
+  setIsResolvingAlerts(true);
+  try {
+    const result = await onBulkResolveAlerts(
+      selectedCaseIds,
+      alertsForBulkResolve,
+      activeAlertDescriptionFilter,
+    );
+    clearSelection();
+    console.log(`Resolved ${result.resolvedCount} alerts across ${result.caseCount} cases`);
+  } finally {
+    setIsResolvingAlerts(false);
+  }
+}
+
+function CaseListPagination({
+  totalItems,
+  startIndex,
+  endIndex,
+  segment,
+  totalPages,
+  currentPage,
+  setCurrentPage,
+}: Readonly<{
+  totalItems: number;
+  startIndex: number;
+  endIndex: number;
+  segment: CaseListSegment;
+  totalPages: number;
+  currentPage: number;
+  setCurrentPage: Dispatch<SetStateAction<number>>;
+}>) {
+  if (totalItems <= 0) {
+    return null;
+  }
+
+  return (
+    <div className="flex flex-col items-center gap-4 sm:flex-row sm:justify-between">
+      <p className="text-sm text-muted-foreground">
+        Showing {startIndex + 1}–{Math.min(endIndex, totalItems)} of {totalItems} {segment === "alerts" ? "alerts" : "cases"}
+      </p>
+      {totalPages > 1 && (
+        <Pagination>
+          <PaginationContent>
+            <PaginationItem>
+              <PaginationPrevious
+                onClick={() => setCurrentPage((page) => Math.max(1, page - 1))}
+                aria-disabled={currentPage === 1}
+                className={currentPage === 1 ? "pointer-events-none opacity-50" : "cursor-pointer"}
+              />
+            </PaginationItem>
+            <PaginationItem>
+              <PaginationLink
+                onClick={() => setCurrentPage(1)}
+                isActive={currentPage === 1}
+                className="cursor-pointer"
+              >
+                1
+              </PaginationLink>
+            </PaginationItem>
+            {currentPage > 3 && totalPages > 5 && (
+              <PaginationItem>
+                <PaginationEllipsis />
+              </PaginationItem>
+            )}
+            {Array.from({ length: totalPages }, (_, index) => index + 1)
+              .filter((page) => {
+                if (page === 1 || page === totalPages) return false;
+                if (totalPages <= 5) return true;
+                return Math.abs(page - currentPage) <= 1;
+              })
+              .map((page) => (
+                <PaginationItem key={page}>
+                  <PaginationLink
+                    onClick={() => setCurrentPage(page)}
+                    isActive={currentPage === page}
+                    className="cursor-pointer"
+                  >
+                    {page}
+                  </PaginationLink>
+                </PaginationItem>
+              ))}
+            {currentPage < totalPages - 2 && totalPages > 5 && (
+              <PaginationItem>
+                <PaginationEllipsis />
+              </PaginationItem>
+            )}
+            {totalPages > 1 && (
+              <PaginationItem>
+                <PaginationLink
+                  onClick={() => setCurrentPage(totalPages)}
+                  isActive={currentPage === totalPages}
+                  className="cursor-pointer"
+                >
+                  {totalPages}
+                </PaginationLink>
+              </PaginationItem>
+            )}
+            <PaginationItem>
+              <PaginationNext
+                onClick={() => setCurrentPage((page) => Math.min(totalPages, page + 1))}
+                aria-disabled={currentPage === totalPages}
+                className={currentPage === totalPages ? "pointer-events-none opacity-50" : "cursor-pointer"}
+              />
+            </PaginationItem>
+          </PaginationContent>
+        </Pagination>
+      )}
+    </div>
+  );
+}
+
 interface CaseListProps {
   cases: StoredCase[];
   onViewCase: (caseId: string) => void;
@@ -209,6 +412,7 @@ interface CaseListProps {
   isArchiving?: boolean;
 }
 
+// NOSONAR - Component intentionally coordinates list state, selection, and pagination in one container.
 export function CaseList({
   cases,
   onViewCase,
@@ -226,7 +430,7 @@ export function CaseList({
   onApproveArchival,
   onCancelArchival,
   isArchiving = false,
-}: CaseListProps) {
+}: Readonly<CaseListProps>) {
   const { featureFlags } = useAppViewState();
   const showDevTools = isFeatureEnabled("settings.devTools", featureFlags);
   const { config } = useCategoryConfig();
@@ -314,8 +518,8 @@ export function CaseList({
   }, []);
 
   const handleSegmentChange = useCallback((value: string) => {
-    if (value === "all" || value === "recent" || value === "priority" || value === "alerts" || value === "archival-review") {
-      setSegment(value as CaseListSegment);
+    if (isValidCaseListSegment(value)) {
+      setSegment(value);
     }
   }, [setSegment]);
 
@@ -325,26 +529,16 @@ export function CaseList({
   }, [setSortKey, setSortDirection]);
 
   const handleResolveAlert = useCallback((alert: AlertWithMatch) => {
-    if (!onResolveAlert) {
-      return;
-    }
-    onResolveAlert(alert);
+    resolveAlert(onResolveAlert, alert);
   }, [onResolveAlert]);
 
   const filteredCases = useMemo(() => {
-    const normalizedSearch = searchTerm.trim().toLowerCase();
-    const now = Date.now();
-    const recentThreshold = now - 1000 * 60 * 60 * 24 * 14; // 14 days
-
-    // Build a Set of completed status names for efficient lookup
-    const completedStatuses = new Set(
-      config.caseStatuses
-        .filter(s => s.countsAsCompleted)
-        .map(s => s.name)
-    );
-
-    return cases.filter(caseData =>
-      casePassesFilters(caseData, normalizedSearch, filters, completedStatuses, segment, recentThreshold)
+    return getFilteredCases(
+      cases,
+      searchTerm,
+      filters,
+      segment,
+      config.caseStatuses as Array<{ name: string; countsAsCompleted?: boolean }>,
     );
   }, [cases, searchTerm, segment, filters, config.caseStatuses]);
 
@@ -361,7 +555,12 @@ export function CaseList({
       return 0;
     }
     let count = 0;
-    const descFilter = filters.alertDescription !== "all" ? filters.alertDescription : null;
+    let descFilter: string | null = null;
+    if (filters.alertDescription === "all") {
+      descFilter = null;
+    } else {
+      descFilter = filters.alertDescription;
+    }
     for (const caseData of sortedCases) {
       const openAlerts = openAlertsByCase.get(caseData.id);
       if (openAlerts) {
@@ -434,58 +633,50 @@ export function CaseList({
 
   const handleBulkDelete = useCallback(async () => {
     if (!onDeleteCases) return;
-    
-    const idsToDelete = allFilteredCaseIds.filter(id => isSelected(id));
-    if (idsToDelete.length === 0) return;
 
-    setIsBulkDeleting(true);
-    try {
-      await onDeleteCases(idsToDelete);
-      clearSelection();
-    } finally {
-      setIsBulkDeleting(false);
-    }
+    await runBulkCaseAction({
+      allFilteredCaseIds,
+      isSelected,
+      clearSelection,
+      action: onDeleteCases,
+      setPending: setIsBulkDeleting,
+    });
   }, [onDeleteCases, allFilteredCaseIds, isSelected, clearSelection]);
 
   const handleBulkStatusChange = useCallback(async (status: CaseStatus) => {
     if (!onUpdateCasesStatus) return;
 
-    const idsToUpdate = allFilteredCaseIds.filter(id => isSelected(id));
-    if (idsToUpdate.length === 0) return;
-
-    setIsBulkUpdating(true);
-    try {
-      await onUpdateCasesStatus(idsToUpdate, status);
-      clearSelection();
-    } finally {
-      setIsBulkUpdating(false);
-    }
+    await runBulkCaseAction({
+      allFilteredCaseIds,
+      isSelected,
+      clearSelection,
+      action: (caseIds) => onUpdateCasesStatus(caseIds, status),
+      setPending: setIsBulkUpdating,
+    });
   }, [onUpdateCasesStatus, allFilteredCaseIds, isSelected, clearSelection]);
 
   const handleBulkPriorityToggle = useCallback(async (priority: boolean) => {
     if (!onUpdateCasesPriority) return;
 
-    const idsToUpdate = allFilteredCaseIds.filter(id => isSelected(id));
-    if (idsToUpdate.length === 0) return;
-
-    setIsBulkUpdating(true);
-    try {
-      await onUpdateCasesPriority(idsToUpdate, priority);
-      clearSelection();
-    } finally {
-      setIsBulkUpdating(false);
-    }
+    await runBulkCaseAction({
+      allFilteredCaseIds,
+      isSelected,
+      clearSelection,
+      action: (caseIds) => onUpdateCasesPriority(caseIds, priority),
+      setPending: setIsBulkUpdating,
+    });
   }, [onUpdateCasesPriority, allFilteredCaseIds, isSelected, clearSelection]);
 
   const handleApproveArchival = useCallback(async () => {
     if (!onApproveArchival) return;
 
-    const idsToArchive = allFilteredCaseIds.filter(id => isSelected(id));
-    if (idsToArchive.length === 0) return;
-
     try {
-      await onApproveArchival(idsToArchive);
-      clearSelection();
+      await runBulkCaseAction({
+        allFilteredCaseIds,
+        isSelected,
+        clearSelection,
+        action: onApproveArchival,
+      });
     } catch {
       // Error handling is done in the hook
     }
@@ -494,12 +685,13 @@ export function CaseList({
   const handleCancelArchival = useCallback(async () => {
     if (!onCancelArchival) return;
 
-    const idsToCancelArchival = allFilteredCaseIds.filter(id => isSelected(id));
-    if (idsToCancelArchival.length === 0) return;
-
     try {
-      await onCancelArchival(idsToCancelArchival);
-      clearSelection();
+      await runBulkCaseAction({
+        allFilteredCaseIds,
+        isSelected,
+        clearSelection,
+        action: onCancelArchival,
+      });
     } catch {
       // Error handling is done in the hook
     }
@@ -523,7 +715,7 @@ export function CaseList({
 
   // Compute the selected case IDs for bulk operations
   const selectedCaseIds = useMemo(() => {
-    return allFilteredCaseIds.filter(id => isSelected(id));
+    return getSelectedCaseIdsFromFilter(allFilteredCaseIds, isSelected);
   }, [allFilteredCaseIds, isSelected]);
 
   // Get the active alert description filter (only when in alerts segment and not "all")
@@ -566,22 +758,14 @@ export function CaseList({
   const [isResolvingAlerts, setIsResolvingAlerts] = useState(false);
 
   const handleBulkResolveAlerts = useCallback(async () => {
-    if (!onBulkResolveAlerts || !activeAlertDescriptionFilter) return;
-    if (alertsForBulkResolve.length === 0) return;
-
-    setIsResolvingAlerts(true);
-    try {
-      const result = await onBulkResolveAlerts(
-        selectedCaseIds,
-        alertsForBulkResolve,
-        activeAlertDescriptionFilter
-      );
-      clearSelection();
-      // Toast is handled by the parent component
-      console.log(`Resolved ${result.resolvedCount} alerts across ${result.caseCount} cases`);
-    } finally {
-      setIsResolvingAlerts(false);
-    }
+    await resolveBulkAlerts({
+      onBulkResolveAlerts,
+      activeAlertDescriptionFilter,
+      alertsForBulkResolve,
+      selectedCaseIds,
+      clearSelection,
+      setIsResolvingAlerts,
+    });
   }, [onBulkResolveAlerts, activeAlertDescriptionFilter, alertsForBulkResolve, selectedCaseIds, clearSelection]);
 
   // Bulk note flow
@@ -711,86 +895,15 @@ export function CaseList({
         </div>
       )}
 
-          {/* Pagination */}
-          {totalItems > 0 && (
-            <div className="flex flex-col items-center gap-4 sm:flex-row sm:justify-between">
-              <p className="text-sm text-muted-foreground">
-                Showing {startIndex + 1}–{Math.min(endIndex, totalItems)} of {totalItems} {segment === "alerts" ? "alerts" : "cases"}
-              </p>
-              {totalPages > 1 && (
-                <Pagination>
-                  <PaginationContent>
-                    <PaginationItem>
-                      <PaginationPrevious
-                        onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                        aria-disabled={currentPage === 1}
-                        className={currentPage === 1 ? "pointer-events-none opacity-50" : "cursor-pointer"}
-                      />
-                    </PaginationItem>
-                    {/* First page */}
-                    <PaginationItem>
-                      <PaginationLink
-                        onClick={() => setCurrentPage(1)}
-                        isActive={currentPage === 1}
-                        className="cursor-pointer"
-                      >
-                        1
-                      </PaginationLink>
-                    </PaginationItem>
-                    {/* Ellipsis after first if needed */}
-                    {currentPage > 3 && totalPages > 5 && (
-                      <PaginationItem>
-                        <PaginationEllipsis />
-                      </PaginationItem>
-                    )}
-                    {/* Middle pages */}
-                    {Array.from({ length: totalPages }, (_, i) => i + 1)
-                      .filter(page => {
-                        if (page === 1 || page === totalPages) return false;
-                        if (totalPages <= 5) return true;
-                        return Math.abs(page - currentPage) <= 1;
-                      })
-                      .map(page => (
-                        <PaginationItem key={page}>
-                          <PaginationLink
-                            onClick={() => setCurrentPage(page)}
-                            isActive={currentPage === page}
-                            className="cursor-pointer"
-                          >
-                            {page}
-                          </PaginationLink>
-                        </PaginationItem>
-                      ))}
-                    {/* Ellipsis before last if needed */}
-                    {currentPage < totalPages - 2 && totalPages > 5 && (
-                      <PaginationItem>
-                        <PaginationEllipsis />
-                      </PaginationItem>
-                    )}
-                    {/* Last page (if more than 1 page) */}
-                    {totalPages > 1 && (
-                      <PaginationItem>
-                        <PaginationLink
-                          onClick={() => setCurrentPage(totalPages)}
-                          isActive={currentPage === totalPages}
-                          className="cursor-pointer"
-                        >
-                          {totalPages}
-                        </PaginationLink>
-                      </PaginationItem>
-                    )}
-                    <PaginationItem>
-                      <PaginationNext
-                        onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                        aria-disabled={currentPage === totalPages}
-                        className={currentPage === totalPages ? "pointer-events-none opacity-50" : "cursor-pointer"}
-                      />
-                    </PaginationItem>
-                  </PaginationContent>
-                </Pagination>
-              )}
-            </div>
-          )}
+          <CaseListPagination
+            totalItems={totalItems}
+            startIndex={startIndex}
+            endIndex={endIndex}
+            segment={segment}
+            totalPages={totalPages}
+            currentPage={currentPage}
+            setCurrentPage={setCurrentPage}
+          />
         </div>
       </div>
 

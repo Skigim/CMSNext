@@ -5,8 +5,8 @@
  * then extracts key metrics and generates a report.
  */
 
-import { writeFile, mkdir } from 'fs/promises';
-import { join } from 'path';
+import { writeFile, mkdir } from 'node:fs/promises';
+import { join } from 'node:path';
 
 interface PerformanceMetrics {
   url: string;
@@ -47,7 +47,7 @@ async function analyzePerformance(url: string): Promise<PerformanceMetrics> {
   
   // Enable performance tracking
   await page.evaluateOnNewDocument(() => {
-    (window as any).__performanceMetrics = {
+    (globalThis as any).__performanceMetrics = {
       longTasks: [],
       marks: {},
     };
@@ -81,29 +81,26 @@ async function analyzePerformance(url: string): Promise<PerformanceMetrics> {
   }
 
   // Collect Web Vitals
-  const metrics = await page.evaluate(() => {
-    return new Promise((resolve) => {
-      const observer = new PerformanceObserver((list) => {
-        const entries = list.getEntries();
-        const vitals: any = {};
-        
-        entries.forEach((entry) => {
-          if (entry.entryType === 'largest-contentful-paint') {
-            vitals.lcp = entry.startTime;
-          }
-          if (entry.entryType === 'paint' && entry.name === 'first-contentful-paint') {
-            vitals.fcp = entry.startTime;
-          }
-        });
-        
-        resolve(vitals);
-      });
-      
-      observer.observe({ entryTypes: ['paint', 'largest-contentful-paint'] });
-      
-      // Fallback timeout
-      setTimeout(() => resolve({}), 5000);
+  const metrics = await page.evaluate(async () => {
+    const vitals: { fcp?: number; lcp?: number } = {};
+    const observer = new PerformanceObserver((list) => {
+      for (const entry of list.getEntries()) {
+        if (entry.entryType === 'largest-contentful-paint') {
+          vitals.lcp = entry.startTime;
+        }
+        if (entry.entryType === 'paint' && entry.name === 'first-contentful-paint') {
+          vitals.fcp = entry.startTime;
+        }
+      }
     });
+
+    observer.observe({ entryTypes: ['paint', 'largest-contentful-paint'] });
+    await new Promise<void>((resolve) => {
+      setTimeout(resolve, 5000);
+    });
+    observer.disconnect();
+
+    return vitals;
   });
 
   // Get additional metrics
@@ -198,4 +195,4 @@ async function main() {
   }
 }
 
-main();
+await main();
