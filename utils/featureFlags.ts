@@ -29,6 +29,8 @@ export interface FeatureFlags {
 	"dashboard.widgets.pinnedCases": boolean;
 	/** Placeholder for advanced reporting filters. */
 	"reports.advancedFilters": boolean;
+	/** Enables advanced alert filtering and anti-filtering in alerts segment. */
+	"alerts.advancedFilters": boolean;
 	/** Placeholder for case bulk actions tooling. */
 	"cases.bulkActions": boolean;
 	/** Controls visibility of developer tools in Settings. */
@@ -54,6 +56,7 @@ const FEATURE_FLAG_DEFAULTS: FeatureFlags = {
 	"dashboard.widgets.recentCases": true,
 	"dashboard.widgets.pinnedCases": true,
 	"reports.advancedFilters": false,
+	"alerts.advancedFilters": false,
 	"cases.bulkActions": false,
 	"settings.devTools": import.meta.env.DEV,
 	"settings.legacyMigration": import.meta.env.DEV,
@@ -102,3 +105,6 @@ export function getEnabledFeatures(flags?: Partial<FeatureFlags>): FeatureFlagKe
 
 /** Temporary toggle for demo alerts data while the dataset stabilizes. */
 export const ENABLE_SAMPLE_ALERTS = false;
+
+/** Feature flag key for advanced alert filtering in the case-list alerts segment. */
+export const ENABLE_ADVANCED_ALERT_FILTERS: FeatureFlagKey = "alerts.advancedFilters";

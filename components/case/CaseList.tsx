@@ -58,11 +58,13 @@ import {
   type CaseListSortDirection,
   type CaseFilters as CaseFilterState,
 } from "@/hooks/useCaseListPreferences";
+import { useAdvancedAlertFilter } from "@/hooks";
 import { useCaseSelection } from "@/hooks/useCaseSelection";
 import { useBulkNoteFlow } from "@/hooks/useBulkNoteFlow";
+import { applyAdvancedFilter } from "@/domain/alerts";
 import { filterOpenAlerts, type AlertsSummary, type AlertWithMatch } from "../../utils/alertsData";
 import { useAppViewState } from "@/hooks/useAppViewState";
-import { isFeatureEnabled } from "@/utils/featureFlags";
+import { ENABLE_ADVANCED_ALERT_FILTERS, isFeatureEnabled } from "@/utils/featureFlags";
 import { calculatePriorityScore } from "@/domain/dashboard/priorityQueue";
 import { useCategoryConfig } from "@/contexts/CategoryConfigContext";
 import { BulkNoteModal } from "./BulkNoteModal";
@@ -434,7 +436,9 @@ export function CaseList({
 }: Readonly<CaseListProps>) {
   const { featureFlags } = useAppViewState();
   const showDevTools = isFeatureEnabled("settings.devTools", featureFlags);
+  const enableAdvancedAlertFilters = isFeatureEnabled(ENABLE_ADVANCED_ALERT_FILTERS, featureFlags);
   const { config } = useCategoryConfig();
+  const { filter: advancedAlertFilter, hasActiveAdvancedFilters } = useAdvancedAlertFilter();
   const {
     sortKey,
     setSortKey,
@@ -476,6 +480,46 @@ export function CaseList({
 
     return map;
   }, [matchedAlertsByCase]);
+
+  const filteredAlertsByCase = useMemo(() => {
+    if (segment !== "alerts") {
+      return openAlertsByCase;
+    }
+
+    const shouldApplyAdvanced = enableAdvancedAlertFilters && hasActiveAdvancedFilters;
+    const shouldApplyDescription = filters.alertDescription !== "all";
+
+    if (!shouldApplyAdvanced && !shouldApplyDescription) {
+      return openAlertsByCase;
+    }
+
+    const next = new Map<string, AlertWithMatch[]>();
+
+    for (const [caseId, caseAlerts] of openAlertsByCase.entries()) {
+      let filtered = caseAlerts;
+
+      if (shouldApplyAdvanced) {
+        filtered = applyAdvancedFilter(filtered, advancedAlertFilter);
+      }
+
+      if (shouldApplyDescription) {
+        filtered = filtered.filter((alert) => alert.description === filters.alertDescription);
+      }
+
+      if (filtered.length > 0) {
+        next.set(caseId, filtered);
+      }
+    }
+
+    return next;
+  }, [
+    segment,
+    openAlertsByCase,
+    enableAdvancedAlertFilters,
+    hasActiveAdvancedFilters,
+    advancedAlertFilter,
+    filters.alertDescription,
+  ]);
 
   // Get unique alert descriptions for the filter dropdown
   const uniqueAlertDescriptions = useMemo(() => {
@@ -556,24 +600,14 @@ export function CaseList({
       return 0;
     }
     let count = 0;
-    let descFilter: string | null = null;
-    if (filters.alertDescription === "all") {
-      descFilter = null;
-    } else {
-      descFilter = filters.alertDescription;
-    }
     for (const caseData of sortedCases) {
-      const openAlerts = openAlertsByCase.get(caseData.id);
+      const openAlerts = filteredAlertsByCase.get(caseData.id);
       if (openAlerts) {
-        if (descFilter) {
-          count += openAlerts.filter(a => a.description === descFilter).length;
-        } else {
-          count += openAlerts.length;
-        }
+        count += openAlerts.length;
       }
     }
     return count;
-  }, [segment, sortedCases, openAlertsByCase, filters.alertDescription]);
+  }, [segment, sortedCases, filteredAlertsByCase]);
 
   // Pagination computed values - use alert count when in alerts mode
   const totalItems = segment === "alerts" ? totalAlertRows : sortedCases.length;
@@ -594,20 +628,26 @@ export function CaseList({
 
   const noMatches = segment === "alerts" ? totalAlertRows === 0 : sortedCases.length === 0;
 
+  const alertDescriptionFilterForTable = useMemo(() => {
+    if (segment === "alerts") {
+      return undefined;
+    }
+    if (filters.alertDescription === "all") {
+      return undefined;
+    }
+    return filters.alertDescription;
+  }, [segment, filters.alertDescription]);
+
   // Selection management - operates on all visible/filtered cases
   // When in alerts view with description filter, only include cases with matching alerts
   const allFilteredCaseIds = useMemo(() => {
-    if (segment === "alerts" && filters.alertDescription !== "all") {
-      // Only include cases that have alerts matching the description filter
+    if (segment === "alerts") {
       return sortedCases
-        .filter(c => {
-          const caseAlerts = openAlertsByCase.get(c.id);
-          return caseAlerts?.some(a => a.description === filters.alertDescription);
-        })
-        .map(c => c.id);
+        .filter((caseData) => (filteredAlertsByCase.get(caseData.id)?.length ?? 0) > 0)
+        .map((caseData) => caseData.id);
     }
     return sortedCases.map(c => c.id);
-  }, [sortedCases, segment, filters.alertDescription, openAlertsByCase]);
+  }, [sortedCases, segment, filteredAlertsByCase]);
   
   const {
     selectedCount,
@@ -733,13 +773,13 @@ export function CaseList({
     
     let count = 0;
     for (const caseId of selectedCaseIds) {
-      const caseAlerts = openAlertsByCase.get(caseId);
+      const caseAlerts = filteredAlertsByCase.get(caseId);
       if (caseAlerts) {
-        count += caseAlerts.filter(a => a.description === activeAlertDescriptionFilter).length;
+        count += caseAlerts.length;
       }
     }
     return count;
-  }, [activeAlertDescriptionFilter, selectedCaseIds, openAlertsByCase]);
+  }, [activeAlertDescriptionFilter, selectedCaseIds, filteredAlertsByCase]);
 
   // Get alerts for SELECTED cases matching the filter
   const alertsForBulkResolve = useMemo(() => {
@@ -747,13 +787,13 @@ export function CaseList({
     
     const alerts: AlertWithMatch[] = [];
     for (const caseId of selectedCaseIds) {
-      const caseAlerts = openAlertsByCase.get(caseId);
+      const caseAlerts = filteredAlertsByCase.get(caseId);
       if (caseAlerts) {
-        alerts.push(...caseAlerts.filter(a => a.description === activeAlertDescriptionFilter));
+        alerts.push(...caseAlerts);
       }
     }
     return alerts;
-  }, [activeAlertDescriptionFilter, selectedCaseIds, openAlertsByCase]);
+  }, [activeAlertDescriptionFilter, selectedCaseIds, filteredAlertsByCase]);
 
   // State for bulk alert resolution
   const [isResolvingAlerts, setIsResolvingAlerts] = useState(false);
@@ -876,12 +916,12 @@ export function CaseList({
         sortDirection={sortDirection}
         onRequestSort={handleTableSortRequest}
         onViewCase={onViewCase}
-        alertsByCaseId={matchedAlertsByCase}
+        alertsByCaseId={segment === "alerts" ? filteredAlertsByCase : matchedAlertsByCase}
         onResolveAlert={onResolveAlert ? handleResolveAlert : undefined}
         onUpdateCaseStatus={onUpdateCaseStatus}
         expandAlerts={segment === "alerts"}
         alertPageRange={segment === "alerts" ? { start: startIndex, end: endIndex } : undefined}
-        alertDescriptionFilter={segment === "alerts" && filters.alertDescription !== "all" ? filters.alertDescription : undefined}
+        alertDescriptionFilter={alertDescriptionFilterForTable}
         selectionEnabled={selectionEnabled}
         isSelected={isSelected}
         isAllSelected={isAllSelected}

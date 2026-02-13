@@ -38,6 +38,7 @@ export { useCaseListPreferences } from './useCaseListPreferences';
 // Alert list preferences
 export { useAlertListPreferences } from './useAlertListPreferences';
 export type { AlertFilters, AlertSortConfig, AlertListSortKey, AlertListSortDirection } from './useAlertListPreferences';
+export { useAdvancedAlertFilter } from './useAdvancedAlertFilter';
 
 // Alerts CSV import
 export { useAlertsCsvImport } from './useAlertsCsvImport';

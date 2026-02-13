@@ -33,6 +33,24 @@ export {
   normalizePersonName,
 } from "./matching";
 
+// Advanced filtering
+export {
+  type FilterOperator,
+  type FilterableField,
+  type FilterableFieldType,
+  type FilterCriterion,
+  type AdvancedAlertFilter,
+  evaluateCriterion,
+  applyAdvancedFilter,
+  isAdvancedFilterActive,
+  createEmptyFilterCriterion,
+  createEmptyAdvancedFilter,
+  getOperatorsForField,
+  getFilterableFields,
+  serializeAdvancedFilter,
+  deserializeAdvancedFilter,
+} from "./filtering";
+
 // Display utilities
 export {
   type AlertDueDateInfo,

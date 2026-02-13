@@ -12,6 +12,7 @@ describe('featureFlags', () => {
   it('exposes immutable default configuration', () => {
     expect(DEFAULT_FLAGS['dashboard.widgets.casePriority']).toBe(true);
     expect(DEFAULT_FLAGS['reports.advancedFilters']).toBe(false);
+    expect(DEFAULT_FLAGS['alerts.advancedFilters']).toBe(false);
     expect(Object.isFrozen(DEFAULT_FLAGS)).toBe(true);
   });
 
