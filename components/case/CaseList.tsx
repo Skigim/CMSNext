@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState, type Dispatch, type SetStateAction } from "react";
 import { toastPromise } from "@/utils/withToast";
+import { toast } from "sonner";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 import {
@@ -288,7 +289,7 @@ async function resolveBulkAlerts({
       activeAlertDescriptionFilter,
     );
     clearSelection();
-    console.log(`Resolved ${result.resolvedCount} alerts across ${result.caseCount} cases`);
+    toast.success(`Resolved ${result.resolvedCount} alerts across ${result.caseCount} cases`);
   } finally {
     setIsResolvingAlerts(false);
   }

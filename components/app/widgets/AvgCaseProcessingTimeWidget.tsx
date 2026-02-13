@@ -146,7 +146,7 @@ export function AvgCaseProcessingTimeWidget({
         </CardHeader>
         <CardContent>
           <div className="py-8 text-center text-muted-foreground">
-            <Timer className="mx-auto mb-3 h-8 w-8 opacity-60" />
+            <Timer className="mx-auto mb-3 h-8 w-8 opacity-60" aria-hidden="true" />
             <p className="text-sm">No completed cases in the last 30 days.</p>
           </div>
           <div className="mt-4 border-t border-border/60 pt-3 text-center text-xs text-muted-foreground">

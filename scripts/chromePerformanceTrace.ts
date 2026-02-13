@@ -83,6 +83,26 @@ async function analyzePerformance(url: string): Promise<PerformanceMetrics> {
   // Collect Web Vitals
   const metrics = await page.evaluate(async () => {
     const vitals: { fcp?: number; lcp?: number } = {};
+
+    const updateFromPaintEntries = () => {
+      const paintEntries = performance.getEntriesByType('paint') as PerformanceEntry[];
+      const firstContentfulPaint = paintEntries.find((entry) => entry.name === 'first-contentful-paint');
+      if (firstContentfulPaint) {
+        vitals.fcp = firstContentfulPaint.startTime;
+      }
+    };
+
+    const updateFromLcpEntries = () => {
+      const lcpEntries = performance.getEntriesByType('largest-contentful-paint') as PerformanceEntry[];
+      const latestLcp = lcpEntries[lcpEntries.length - 1];
+      if (latestLcp) {
+        vitals.lcp = latestLcp.startTime;
+      }
+    };
+
+    updateFromPaintEntries();
+    updateFromLcpEntries();
+
     const observer = new PerformanceObserver((list) => {
       for (const entry of list.getEntries()) {
         if (entry.entryType === 'largest-contentful-paint') {
@@ -94,11 +114,19 @@ async function analyzePerformance(url: string): Promise<PerformanceMetrics> {
       }
     });
 
-    observer.observe({ entryTypes: ['paint', 'largest-contentful-paint'] });
+    observer.observe({ type: 'paint', buffered: true });
+    observer.observe({ type: 'largest-contentful-paint', buffered: true });
     await new Promise<void>((resolve) => {
       setTimeout(resolve, 5000);
     });
     observer.disconnect();
+
+    if (vitals.fcp == null) {
+      updateFromPaintEntries();
+    }
+    if (vitals.lcp == null) {
+      updateFromLcpEntries();
+    }
 
     return vitals;
   });
