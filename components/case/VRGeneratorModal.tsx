@@ -32,8 +32,7 @@ import { Copy, FileText, CheckSquare, Square, AlertCircle, Plus } from "lucide-r
 import { toast } from "sonner";
 import type { StoredCase, StoredFinancialItem } from "@/types/case";
 import type { Template } from "@/types/template";
-import { renderMultipleVRs } from "@/utils/vrGenerator";
-import { buildCaseLevelContext, renderTemplate } from "@/utils/vrGenerator";
+import { renderMultipleVRs, buildCaseLevelContext, renderTemplate } from "@/utils/vrGenerator";
 import { cn } from "@/lib/utils";
 
 interface VRGeneratorModalProps {
@@ -50,7 +49,7 @@ export function VRGeneratorModal({
   storedCase,
   financialItems,
   vrTemplates,
-}: VRGeneratorModalProps) {
+}: Readonly<VRGeneratorModalProps>) {
   // Local state
   const [selectedScriptId, setSelectedScriptId] = useState<string | null>(null);
   const [selectedItemIds, setSelectedItemIds] = useState<Set<string>>(new Set());
@@ -274,15 +273,19 @@ export function VRGeneratorModal({
                       selectableItems.map(({ item, type, selected }) => (
                         <div
                           key={item.id}
-                          role="checkbox"
-                          aria-checked={selected}
-                          tabIndex={0}
                           className={cn(
                             "flex items-start gap-2 p-2 rounded-md cursor-pointer hover:bg-muted/50 transition-colors",
                             selected && "bg-muted"
                           )}
                           onClick={() => handleToggleItem(item.id)}
-                          onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); handleToggleItem(item.id); } }}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter" || e.key === " ") {
+                              e.preventDefault();
+                              handleToggleItem(item.id);
+                            }
+                          }}
+                          tabIndex={0}
+                          aria-checked={selected}
                         >
                           <Checkbox
                             checked={selected}
@@ -334,9 +337,9 @@ export function VRGeneratorModal({
                 value={renderedText}
                 onChange={(e) => setRenderedText(e.target.value)}
                 placeholder={
-                  !selectedScriptId
-                    ? "Select a script and click + to add it here..."
-                    : "Click + to add the selected script, or select items to auto-fill placeholders..."
+                  selectedScriptId
+                    ? "Click + to add the selected script, or select items to auto-fill placeholders..."
+                    : "Select a script and click + to add it here..."
                 }
                 className="flex-1 min-h-[300px] font-mono text-sm resize-none"
               />

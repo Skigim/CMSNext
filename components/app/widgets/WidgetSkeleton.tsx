@@ -26,14 +26,27 @@ export interface WidgetSkeletonProps {
   className?: string;
 }
 
+function buildSkeletonKeys(prefix: string, count: number): string[] {
+  return Array.from({ length: count }, (_, position) => `${prefix}-${position + 1}`);
+}
+
+function buildChartBars(count: number): Array<{ key: string; height: number }> {
+  const chartHeights = [30, 50, 70, 90, 110];
+
+  return buildSkeletonKeys("chart", count).map((key, position) => ({
+    key,
+    height: chartHeights[position % chartHeights.length],
+  }));
+}
+
 /**
  * List skeleton - horizontal bars of varying widths
  */
-function ListSkeleton({ count }: { count: number }) {
+function ListSkeleton({ count }: Readonly<{ count: number }>) {
   return (
     <div className="space-y-3">
-      {Array.from({ length: count }).map((_, index) => (
-        <div key={index} className="h-8 rounded-lg bg-muted animate-pulse" />
+      {buildSkeletonKeys("list", count).map((key) => (
+        <div key={key} className="h-8 rounded-lg bg-muted animate-pulse" />
       ))}
     </div>
   );
@@ -42,11 +55,11 @@ function ListSkeleton({ count }: { count: number }) {
 /**
  * Stats skeleton - boxes for stat cards
  */
-function StatsSkeleton({ count }: { count: number }) {
+function StatsSkeleton({ count }: Readonly<{ count: number }>) {
   return (
     <div className="grid gap-3 sm:grid-cols-3">
-      {Array.from({ length: count }).map((_, i) => (
-        <div key={i} className="h-20 rounded-lg bg-muted animate-pulse" />
+      {buildSkeletonKeys("stats", count).map((key) => (
+        <div key={key} className="h-20 rounded-lg bg-muted animate-pulse" />
       ))}
     </div>
   );
@@ -55,14 +68,14 @@ function StatsSkeleton({ count }: { count: number }) {
 /**
  * Chart skeleton - bar chart with varying heights
  */
-function ChartSkeleton({ count }: { count: number }) {
+function ChartSkeleton({ count }: Readonly<{ count: number }>) {
   return (
     <div className="flex items-end gap-2 h-40">
-      {Array.from({ length: count }).map((_, index) => (
+      {buildChartBars(count).map((bar) => (
         <div
-          key={index}
+          key={bar.key}
           className="w-full rounded bg-muted animate-pulse"
-          style={{ height: `${30 + (index % 5) * 20}px` }}
+          style={{ height: `${bar.height}px` }}
         />
       ))}
     </div>
@@ -126,7 +139,7 @@ export function WidgetSkeleton({
   variant = 'default',
   itemCount = 4,
   className,
-}: WidgetSkeletonProps) {
+}: Readonly<WidgetSkeletonProps>) {
   return (
     <Card className={cn(className)}>
       <CardHeader>
@@ -170,7 +183,7 @@ export function WidgetError({
   message,
   icon,
   className,
-}: WidgetErrorProps) {
+}: Readonly<WidgetErrorProps>) {
   return (
     <Card className={cn(className)}>
       <CardHeader>

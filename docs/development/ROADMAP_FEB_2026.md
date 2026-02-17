@@ -283,6 +283,7 @@ _9 Critical + 108 Major production code issues_
 - [x] Targeted readonly-prop and accessibility cleanups in `CaseTable`, `AVSImportModal`, and widget files
 - [x] `S4325` type-assertion cleanup completed for `utils/alertsData.ts`
 - [x] `S7753` `findIndex`→`indexOf` cleanup completed for `utils/alertsData.ts`
+- [x] `S6479` stable-key remediation pass completed for listed component key hotspots
 - [ ] Continue Wave 1 major sweep for any remaining files still surfaced by live diagnostics/Sonar re-scan
 
 ##### Critical (9 issues → 0)
@@ -305,7 +306,7 @@ _9 Critical + 108 Major production code issues_
 
 ##### Major — Array Index Keys S6479 (15 prod issues)
 
-- [ ] **Component keys** - Add stable keys in `CaseEditSections` (2), `WidgetSkeleton` (3), `PersonColumn` (2), `KeyboardShortcutsHelp`, `KeyboardShortcutsPanel` (2), `ActivityWidget`, `IntakeChecklistView`, `LegacyMigrationPanel`, `MultiSortConfig` (2)
+- [x] **Component keys** - ✅ Added stable keys in `CaseEditSections`, `WidgetSkeleton`, `PersonColumn`, `KeyboardShortcutsHelp`, `KeyboardShortcutsPanel`, `IntakeChecklistView`, `LegacyMigrationPanel`, and `MultiSortConfig`; `ActivityWidget` already uses stable item keys
 
 ##### Major — Other Rules
 

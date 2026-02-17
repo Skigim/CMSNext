@@ -68,7 +68,7 @@ const DEFAULT_LEVEL: LogLevel = (() => {
   return env?.DEV ? "info" : "warn";
 })();
 
-let currentLevel: LogLevel = DEFAULT_LEVEL;
+const currentLevel: LogLevel = DEFAULT_LEVEL;
 
 // Deduplication tracking for repetitive logs
 const logDedupeCache = new Map<string, { count: number; lastLogged: number; firstSeen: number }>();

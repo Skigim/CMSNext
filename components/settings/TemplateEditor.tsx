@@ -49,12 +49,12 @@ type PlaceholderPaletteProps = {
   disabled?: boolean;
 };
 
-function PlaceholderPalette({ 
-  category, 
-  customPlaceholders, 
-  onInsert, 
-  disabled 
-}: PlaceholderPaletteProps) {
+function PlaceholderPalette({
+  category,
+  customPlaceholders,
+  onInsert,
+  disabled,
+}: Readonly<PlaceholderPaletteProps>) {
   // Get placeholders available for this category
   const placeholdersByFieldCategory = useMemo(() => {
     const fields = customPlaceholders ?? TEMPLATE_PLACEHOLDER_FIELDS;
@@ -137,7 +137,7 @@ function TemplateViewRow({
   disabled,
   isExpanded,
   onToggleExpand,
-}: TemplateViewRowProps) {
+}: Readonly<TemplateViewRowProps>) {
   const hasContent = (template.template ?? "").trim().length > 0;
 
   return (
@@ -171,14 +171,17 @@ function TemplateViewRow({
             )}
           </div>
         </div>
-        <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()} onKeyDown={(e) => e.stopPropagation()}>
+        <div className="flex items-center gap-1">
           <Tooltip>
             <TooltipTrigger asChild>
               <Button
                 variant="ghost"
                 size="sm"
                 className="h-7 w-7 p-0"
-                onClick={onEdit}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onEdit();
+                }}
                 disabled={disabled}
               >
                 <Pencil className="h-3.5 w-3.5" />
@@ -193,7 +196,10 @@ function TemplateViewRow({
                 variant="ghost"
                 size="sm"
                 className="h-7 w-7 p-0 text-destructive hover:text-destructive"
-                onClick={onDelete}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onDelete();
+                }}
                 disabled={disabled}
               >
                 <Trash2 className="h-3.5 w-3.5" />
@@ -239,7 +245,7 @@ function TemplateEditRow({
   onCancel,
   disabled,
   isNew,
-}: TemplateEditRowProps) {
+}: Readonly<TemplateEditRowProps>) {
   const [name, setName] = useState(template.name);
   const [content, setContent] = useState(template.template);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -363,7 +369,7 @@ export function TemplateEditor({
   category,
   customPlaceholders,
   isGloballyLoading = false,
-}: TemplateEditorProps) {
+}: Readonly<TemplateEditorProps>) {
   const { templates, loading, addTemplate, updateTemplate, deleteTemplate } = useTemplates();
   
   // Filter templates by category
@@ -383,7 +389,7 @@ export function TemplateEditor({
 
   // Reset editing state when templates change
   useEffect(() => {
-    if (!categoryTemplates.find(t => t.id === editingId)) {
+    if (!categoryTemplates.some(t => t.id === editingId)) {
       setEditingId(null);
     }
   }, [categoryTemplates, editingId]);

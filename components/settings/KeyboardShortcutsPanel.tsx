@@ -46,7 +46,23 @@ interface ShortcutEditorProps {
   onCancel: () => void;
 }
 
-function ShortcutEditor({ shortcut, isMac, allShortcuts, onSave, onCancel }: ShortcutEditorProps) {
+function tokenizeBindingForDisplay(display: string): Array<{ key: string; value: string }> {
+  const counts = new Map<string, number>();
+
+  return display.split(" ").map((part) => {
+    const nextCount = (counts.get(part) ?? 0) + 1;
+    counts.set(part, nextCount);
+    return { key: `${part}-${nextCount}`, value: part };
+  });
+}
+
+function ShortcutEditor({
+  shortcut,
+  isMac,
+  allShortcuts,
+  onSave,
+  onCancel,
+}: Readonly<ShortcutEditorProps>) {
   const [currentBinding, setCurrentBinding] = useState<string | null>(null);
   const [conflict, setConflict] = useState<string | null>(null);
 
@@ -106,8 +122,8 @@ function ShortcutEditor({ shortcut, isMac, allShortcuts, onSave, onCancel }: Sho
       <div className="flex items-center justify-center h-20 border rounded-md bg-muted/50">
         {currentBinding ? (
           <div className="flex gap-1">
-            {formatBindingForDisplay(currentBinding, isMac).split(" ").map((part, i) => (
-              <Kbd key={i} className="bg-background">{part}</Kbd>
+            {tokenizeBindingForDisplay(formatBindingForDisplay(currentBinding, isMac)).map((token) => (
+              <Kbd key={token.key} className="bg-background">{token.value}</Kbd>
             ))}
           </div>
         ) : (
@@ -144,7 +160,7 @@ export function KeyboardShortcutsPanel() {
 
   const isMac = useMemo(() => {
     if (typeof navigator === "undefined") return false;
-    return /Mac|iPhone|iPad|iPod/i.test(navigator.platform ?? navigator.userAgent ?? "");
+    return /Mac|iPhone|iPad|iPod/i.test(navigator.userAgent || "");
   }, []);
 
   useEffect(() => {
@@ -257,7 +273,11 @@ export function KeyboardShortcutsPanel() {
                         onCheckedChange={(checked) => handleToggle(shortcut.id, checked)}
                         aria-label={`Enable ${shortcut.label}`}
                       />
-                      <span className={`text-sm font-medium ${!shortcut.enabled ? "opacity-50 line-through" : ""}`}>
+                      <span
+                        className={`text-sm font-medium ${
+                          shortcut.enabled ? "" : "opacity-50 line-through"
+                        }`}
+                      >
                         {shortcut.label}
                       </span>
                     </div>
@@ -271,8 +291,8 @@ export function KeyboardShortcutsPanel() {
                             className="h-8 min-w-[100px] font-normal justify-start px-2 gap-2"
                             disabled={!shortcut.enabled}
                           >
-                            {display.split(" ").map((part, i) => (
-                              <Kbd key={i} className="bg-muted-foreground/10">{part}</Kbd>
+                            {tokenizeBindingForDisplay(display).map((token) => (
+                              <Kbd key={token.key} className="bg-muted-foreground/10">{token.value}</Kbd>
                             ))}
                             <Pencil className="ml-auto h-3 w-3 opacity-50" />
                           </Button>

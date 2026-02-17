@@ -33,11 +33,11 @@ function ChecklistItem({
   label,
   checked,
   className,
-}: {
+}: Readonly<{
   label: string;
   checked?: boolean;
   className?: string;
-}) {
+}>) {
   return (
     <div className={`flex items-center gap-2 ${className ?? ""}`}>
       {checked ? (
@@ -57,11 +57,11 @@ function InfoItem({
   label,
   value,
   icon: Icon,
-}: {
+}: Readonly<{
   label: string;
   value?: string | null;
   icon?: React.ComponentType<{ className?: string }>;
-}) {
+}>) {
   if (!value) return null;
   return (
     <div className="flex items-start gap-2">
@@ -87,8 +87,28 @@ const VOTER_STATUS_LABELS: Record<VoterFormStatus, string> = {
   "": "Not Set",
 };
 
-export function IntakeChecklistView({ caseData, onEdit }: IntakeChecklistViewProps) {
+function buildRelationshipKeys(
+  relationships: Array<{ type: string; name: string; phone: string }>,
+): string[] {
+  const counts = new Map<string, number>();
+
+  return relationships.map((relationship) => {
+    const baseKey = `${relationship.type}-${relationship.name}-${relationship.phone}`;
+    const nextCount = (counts.get(baseKey) ?? 0) + 1;
+    counts.set(baseKey, nextCount);
+    return `${baseKey}-${nextCount}`;
+  });
+}
+
+export function IntakeChecklistView({
+  caseData,
+  onEdit,
+}: Readonly<IntakeChecklistViewProps>) {
   const { person, caseRecord } = caseData;
+  const relationshipKeys = useMemo(
+    () => buildRelationshipKeys(person.relationships ?? []),
+    [person.relationships],
+  );
 
   // Use domain formatDateForDisplay - returns "None" for empty values
   const formatDate = useCallback((dateString?: string) => {
@@ -216,7 +236,7 @@ export function IntakeChecklistView({ caseData, onEdit }: IntakeChecklistViewPro
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 pl-6">
           {person.relationships && person.relationships.length > 0 ? (
             person.relationships.map((rel, index) => (
-              <div key={index} className="flex flex-col gap-1 p-3 border rounded-md bg-muted/10">
+              <div key={relationshipKeys[index]} className="flex flex-col gap-1 p-3 border rounded-md bg-muted/10">
                 <div className="flex items-center justify-between">
                   <span className="font-medium text-sm">{rel.name}</span>
                   <Badge variant="outline" className="text-[10px] h-5 px-1.5">

@@ -19,14 +19,24 @@ interface KeyboardShortcutsHelpProps {
   onCustomize?: () => void;
 }
 
+function tokenizeBindingForDisplay(display: string): Array<{ key: string; value: string }> {
+  const counts = new Map<string, number>();
+
+  return display.split(" ").map((part) => {
+    const nextCount = (counts.get(part) ?? 0) + 1;
+    counts.set(part, nextCount);
+    return { key: `${part}-${nextCount}`, value: part };
+  });
+}
+
 export function KeyboardShortcutsHelp({
   open,
   onOpenChange,
   onCustomize,
-}: KeyboardShortcutsHelpProps) {
+}: Readonly<KeyboardShortcutsHelpProps>) {
   const isMac = useMemo(() => {
     if (typeof navigator === "undefined") return false;
-    return /Mac|iPhone|iPad|iPod/i.test(navigator.platform ?? navigator.userAgent ?? "");
+    return /Mac|iPhone|iPad|iPod/i.test(navigator.userAgent || "");
   }, []);
 
   const [shortcuts, setShortcuts] = useState<ResolvedShortcut[]>([]);
@@ -86,15 +96,15 @@ export function KeyboardShortcutsHelp({
                       <div
                         key={shortcut.id}
                         className={`flex items-center justify-between text-sm ${
-                          !shortcut.enabled ? "opacity-50" : ""
+                          shortcut.enabled ? "" : "opacity-50"
                         }`}
                       >
-                        <span className={!shortcut.enabled ? "line-through" : ""}>
+                        <span className={shortcut.enabled ? "" : "line-through"}>
                           {shortcut.label}
                         </span>
                         <div className="flex items-center gap-1">
-                          {display.split(" ").map((part, i) => (
-                            <Kbd key={i}>{part}</Kbd>
+                          {tokenizeBindingForDisplay(display).map((token) => (
+                            <Kbd key={token.key}>{token.value}</Kbd>
                           ))}
                         </div>
                       </div>

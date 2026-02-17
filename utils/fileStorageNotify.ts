@@ -7,5 +7,8 @@ export function safeNotifyFileStorageChange(): void {
 
   try {
     globalThis.window.dispatchEvent(new CustomEvent(FILE_STORAGE_CHANGE_EVENT));
-  } catch {}
+  } catch (error) {
+    // Notification is best-effort; ignore failures so the application keeps running.
+    globalThis.console?.warn?.("Failed to dispatch file storage event", error);
+  }
 }

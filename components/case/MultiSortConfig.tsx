@@ -1,4 +1,4 @@
-import { useCallback } from "react";
+import { useCallback, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -22,7 +22,21 @@ const SORT_KEY_LABELS: Record<CaseListSortKey, string> = {
   alerts: "Alerts",
 };
 
-export function MultiSortConfig({ sortConfigs, onSortConfigsChange }: MultiSortConfigProps) {
+function buildSortConfigKeys(sortConfigs: SortConfig[]): string[] {
+  const counts = new Map<string, number>();
+
+  return sortConfigs.map((config) => {
+    const baseKey = `${config.key}-${config.direction}`;
+    const nextCount = (counts.get(baseKey) ?? 0) + 1;
+    counts.set(baseKey, nextCount);
+    return `${baseKey}-${nextCount}`;
+  });
+}
+
+export function MultiSortConfig({
+  sortConfigs,
+  onSortConfigsChange,
+}: Readonly<MultiSortConfigProps>) {
   const handleAddSort = useCallback(() => {
     // Add a new sort config with a key that's not already used
     const usedKeys = new Set(sortConfigs.map(c => c.key));
@@ -55,6 +69,7 @@ export function MultiSortConfig({ sortConfigs, onSortConfigsChange }: MultiSortC
   }, [sortConfigs, onSortConfigsChange]);
 
   const hasMultipleSorts = sortConfigs.length > 1;
+  const sortConfigKeys = useMemo(() => buildSortConfigKeys(sortConfigs), [sortConfigs]);
 
   return (
     <div className="flex items-center gap-2">
@@ -89,7 +104,7 @@ export function MultiSortConfig({ sortConfigs, onSortConfigsChange }: MultiSortC
 
             <div className="space-y-2">
               {sortConfigs.map((config, index) => (
-                <div key={index} className="flex items-center gap-2">
+                <div key={sortConfigKeys[index]} className="flex items-center gap-2">
                   <div className="flex-1">
                     <Select
                       value={config.key}
@@ -151,7 +166,7 @@ export function MultiSortConfig({ sortConfigs, onSortConfigsChange }: MultiSortC
       {hasMultipleSorts && (
         <div className="text-xs text-muted-foreground">
           {sortConfigs.map((config, index) => (
-            <span key={index}>
+            <span key={`summary-${sortConfigKeys[index]}`}>
               {index > 0 && " → "}
               {SORT_KEY_LABELS[config.key]}
             </span>

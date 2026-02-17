@@ -316,9 +316,8 @@ export function ActivityWidget({ activityLogState, metadata, onViewCase }: Reado
     [selectedActivityReport, selectedReportDate]
   );
 
-  const items = timeline || [];
-
   const timelineContent = useMemo(() => {
+    const items = timeline || [];
     if (loading && !timeline) {
       return (
         <div className="space-y-3">
@@ -415,7 +414,7 @@ export function ActivityWidget({ activityLogState, metadata, onViewCase }: Reado
         )}
       </div>
     );
-  }, [isTimelineExpanded, items, loading, onViewCase, timeline]);
+  }, [isTimelineExpanded, timeline, loading, onViewCase]);
 
   return (
     <Card>

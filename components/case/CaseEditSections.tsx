@@ -4,7 +4,7 @@
  * Each section is its own Card component, allowing flexible 2-column layout.
  * All sections support both read-only and edit modes.
  */
-import { useMemo, useCallback } from "react";
+import { useMemo, useCallback, type ComponentType } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
 import { Label } from "../ui/label";
 import { Input } from "../ui/input";
@@ -44,8 +44,6 @@ import {
   dateInputValueToISO,
   formatDateForDisplay,
   US_STATES,
-} from "@/domain/common";
-import {
   formatPhoneNumberAsTyped,
   normalizePhoneNumber,
   getDisplayPhoneNumber,
@@ -64,11 +62,11 @@ function InfoItem({
   label,
   value,
   icon: Icon,
-}: {
+}: Readonly<{
   label: string;
   value?: string | null;
-  icon?: React.ComponentType<{ className?: string }>;
-}) {
+  icon?: ComponentType<{ className?: string }>;
+}>) {
   if (!value) return null;
   return (
     <div className="flex items-start gap-2">
@@ -81,7 +79,13 @@ function InfoItem({
   );
 }
 
-function ChecklistItem({ label, checked }: { label: string; checked?: boolean }) {
+function ChecklistItem({
+  label,
+  checked,
+}: Readonly<{
+  label: string;
+  checked?: boolean;
+}>) {
   return (
     <div className="flex items-center gap-2">
       {checked ? (
@@ -111,7 +115,7 @@ export function BasicInfoSection({
   personData,
   isEditing,
   onPersonDataChange,
-}: BasicInfoSectionProps) {
+}: Readonly<BasicInfoSectionProps>) {
   const formatDate = (dateString?: string) => {
     const formatted = formatDateForDisplay(dateString);
     return formatted === "None" ? null : formatted;
@@ -211,7 +215,7 @@ export function ContactSection({
   isEditing,
   onPersonDataChange,
   onCaseDataChange,
-}: ContactSectionProps) {
+}: Readonly<ContactSectionProps>) {
   const contactMethodsDisplay = useMemo(() => {
     const methods = caseData.contactMethods ?? [];
     if (methods.length === 0) return null;
@@ -316,7 +320,7 @@ export function AddressesSection({
   isEditing,
   onAddressChange,
   onMailingAddressChange,
-}: AddressesSectionProps) {
+}: Readonly<AddressesSectionProps>) {
   const fullAddress = formatAddress(address);
   const fullMailingAddress = formatMailingAddress(mailingAddress);
 
@@ -478,7 +482,7 @@ export function CaseIdentificationSection({
   caseData,
   isEditing,
   onCaseDataChange,
-}: CaseIdentificationSectionProps) {
+}: Readonly<CaseIdentificationSectionProps>) {
   const { config } = useCategoryConfig();
   const { caseTypes, applicationTypes, caseStatuses } = useMemo(
     () => ({
@@ -664,7 +668,7 @@ export function EligibilityDetailsSection({
   isEditing,
   onPersonDataChange,
   onCaseDataChange,
-}: EligibilityDetailsSectionProps) {
+}: Readonly<EligibilityDetailsSectionProps>) {
   const { config } = useCategoryConfig();
   const livingArrangements = useMemo(() => config.livingArrangements, [config.livingArrangements]);
 
@@ -810,7 +814,7 @@ export function CaseFlagsSection({
   isEditing,
   onCaseDataChange,
   onRetroRequestedChange,
-}: CaseFlagsSectionProps) {
+}: Readonly<CaseFlagsSectionProps>) {
   return (
     <Card>
       <CardHeader className="pb-3">
@@ -896,11 +900,24 @@ interface RelationshipsSectionProps {
   };
 }
 
+function buildRelationshipKeys(relationships: Relationship[]): string[] {
+  const counts = new Map<string, number>();
+
+  return relationships.map((relationship) => {
+    const baseKey = `${relationship.type}-${relationship.name}-${relationship.phone}`;
+    const nextCount = (counts.get(baseKey) ?? 0) + 1;
+    counts.set(baseKey, nextCount);
+    return `${baseKey}-${nextCount}`;
+  });
+}
+
 export function RelationshipsSection({
   relationships,
   isEditing,
   onRelationshipsChange,
-}: RelationshipsSectionProps) {
+}: Readonly<RelationshipsSectionProps>) {
+  const relationshipKeys = useMemo(() => buildRelationshipKeys(relationships), [relationships]);
+
   return (
     <Card>
       <CardHeader className="pb-3">
@@ -930,7 +947,7 @@ export function RelationshipsSection({
         {isEditing ? (
           <div className="space-y-2">
             {relationships.map((rel, index) => (
-              <div key={index} className="flex flex-col gap-2 p-2 border rounded-md bg-muted/10 relative group">
+              <div key={relationshipKeys[index]} className="flex flex-col gap-2 p-2 border rounded-md bg-muted/10 relative group">
                 <Button
                   type="button"
                   variant="ghost"
@@ -980,38 +997,34 @@ export function RelationshipsSection({
               <p className="text-sm text-muted-foreground italic">No relationships added</p>
             )}
           </div>
-        ) : (
-          <>
-            {relationships.length > 0 ? (
-              <div className="space-y-2">
-                {relationships.map((rel, index) => (
-                  <div key={index} className="flex flex-col gap-1 p-2 border rounded-md bg-muted/10">
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm font-medium">{rel.name}</span>
-                      <Badge variant="outline" className="text-[10px] h-5 px-1.5">
-                        {rel.type}
-                      </Badge>
-                    </div>
-                    {rel.phone && (
-                      <div className="flex items-center gap-1.5">
-                        <Phone className="h-3 w-3 text-muted-foreground" />
-                        <CopyButton
-                          value={getDisplayPhoneNumber(rel.phone)}
-                          label="Phone"
-                          showLabel={false}
-                          successMessage="Phone copied"
-                          textClassName="text-xs"
-                          buttonClassName="text-xs px-1 py-0"
-                        />
-                      </div>
-                    )}
+        ) : relationships.length > 0 ? (
+          <div className="space-y-2">
+            {relationships.map((rel, index) => (
+              <div key={relationshipKeys[index]} className="flex flex-col gap-1 p-2 border rounded-md bg-muted/10">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium">{rel.name}</span>
+                  <Badge variant="outline" className="text-[10px] h-5 px-1.5">
+                    {rel.type}
+                  </Badge>
+                </div>
+                {rel.phone && (
+                  <div className="flex items-center gap-1.5">
+                    <Phone className="h-3 w-3 text-muted-foreground" />
+                    <CopyButton
+                      value={getDisplayPhoneNumber(rel.phone)}
+                      label="Phone"
+                      showLabel={false}
+                      successMessage="Phone copied"
+                      textClassName="text-xs"
+                      buttonClassName="text-xs px-1 py-0"
+                    />
                   </div>
-                ))}
+                )}
               </div>
-            ) : (
-              <p className="text-sm text-muted-foreground italic">No relationships added</p>
-            )}
-          </>
+            ))}
+          </div>
+        ) : (
+          <p className="text-sm text-muted-foreground italic">No relationships added</p>
         )}
       </CardContent>
     </Card>

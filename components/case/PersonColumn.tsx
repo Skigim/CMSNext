@@ -11,8 +11,14 @@ import { Separator } from "../ui/separator";
 import { User, Phone, Mail, Calendar, Shield, Check, X, Users, Plus, Minus } from "lucide-react";
 import { NewPersonData, NewCaseRecordData, ContactMethod, Relationship } from "../../types/case";
 import { useCategoryConfig } from "@/contexts/CategoryConfigContext";
-import { isoToDateInputValue, dateInputValueToISO, formatDateForDisplay } from "@/domain/common";
-import { formatPhoneNumberAsTyped, normalizePhoneNumber, getDisplayPhoneNumber } from "@/domain/common";
+import {
+  isoToDateInputValue,
+  dateInputValueToISO,
+  formatDateForDisplay,
+  formatPhoneNumberAsTyped,
+  normalizePhoneNumber,
+  getDisplayPhoneNumber,
+} from "@/domain/common";
 import { CopyButton } from "../common/CopyButton";
 
 const CONTACT_METHODS: { value: ContactMethod; label: string }[] = [
@@ -41,16 +47,27 @@ interface PersonColumnProps {
   };
 }
 
+function buildRelationshipKeys(relationships: Relationship[]): string[] {
+  const counts = new Map<string, number>();
+
+  return relationships.map((relationship) => {
+    const baseKey = `${relationship.type}-${relationship.name}-${relationship.phone}`;
+    const nextCount = (counts.get(baseKey) ?? 0) + 1;
+    counts.set(baseKey, nextCount);
+    return `${baseKey}-${nextCount}`;
+  });
+}
+
 // Read-only info display component
 function InfoItem({
   label,
   value,
   icon: Icon,
-}: {
+}: Readonly<{
   label: string;
   value?: string | null;
   icon?: React.ComponentType<{ className?: string }>;
-}) {
+}>) {
   if (!value) return null;
   return (
     <div className="flex items-start gap-2">
@@ -67,10 +84,10 @@ function InfoItem({
 function ChecklistItem({
   label,
   checked,
-}: {
+}: Readonly<{
   label: string;
   checked?: boolean;
-}) {
+}>) {
   return (
     <div className="flex items-center gap-2">
       {checked ? (
@@ -93,7 +110,9 @@ export function PersonColumn({
   onPersonDataChange,
   onCaseDataChange,
   onRelationshipsChange,
-}: PersonColumnProps) {
+}: Readonly<PersonColumnProps>) {
+  const relationshipKeys = useMemo(() => buildRelationshipKeys(relationships), [relationships]);
+
   const { config } = useCategoryConfig();
   const livingArrangements = useMemo(() => config.livingArrangements, [config.livingArrangements]);
 
@@ -214,7 +233,7 @@ export function PersonColumn({
             {relationships.length > 0 ? (
               <div className="space-y-2">
                 {relationships.map((rel, index) => (
-                  <div key={index} className="flex flex-col gap-1 p-2 border rounded-md bg-muted/10">
+                  <div key={relationshipKeys[index]} className="flex flex-col gap-1 p-2 border rounded-md bg-muted/10">
                     <div className="flex items-center justify-between">
                       <span className="text-sm font-medium">{rel.name}</span>
                       <Badge variant="outline" className="text-[10px] h-5 px-1.5">
@@ -458,7 +477,7 @@ export function PersonColumn({
           </div>
           <div className="space-y-2">
             {relationships.map((rel, index) => (
-              <div key={index} className="flex flex-col gap-2 p-2 border rounded-md bg-muted/10 relative group">
+              <div key={relationshipKeys[index]} className="flex flex-col gap-2 p-2 border rounded-md bg-muted/10 relative group">
                 <Button
                   type="button"
                   variant="ghost"

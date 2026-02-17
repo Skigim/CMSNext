@@ -23,7 +23,7 @@ export function FinancialItemCard({
   onUpdate,
   showActions = true,
   onOpenStepperEdit,
-}: FinancialItemCardProps) {
+}: Readonly<FinancialItemCardProps>) {
   const {
     verificationStatus,
     canUpdateStatus,
@@ -44,55 +44,45 @@ export function FinancialItemCard({
   const handleEditAction = () => onOpenStepperEdit(item);
 
   return (
-    <>
-      <Card
-        ref={cardRef}
-        data-papercut-context="FinancialItemCard"
-        className="group relative overflow-visible transition-shadow hover:shadow-md"
-      >
-        {/* Floating action buttons - top right corner overlapping card edge */}
-        {showActions && (
-          <div 
-            className="absolute -right-2 -top-2 z-20 opacity-0 transition-opacity group-hover:opacity-100 focus-within:opacity-100 rounded-md bg-background border shadow-sm"
-          >
-            <FinancialItemCardActions
-              item={item}
-              itemType={itemType}
-            />
-          </div>
-        )}
+    <Card
+      ref={cardRef}
+      data-papercut-context="FinancialItemCard"
+      className="group relative overflow-visible transition-shadow hover:shadow-md"
+    >
+      {/* Floating action buttons - top right corner overlapping card edge */}
+      {showActions && (
+        <div 
+          className="absolute -right-2 -top-2 z-20 opacity-0 transition-opacity group-hover:opacity-100 focus-within:opacity-100 rounded-md bg-background border shadow-sm"
+        >
+          <FinancialItemCardActions
+            item={item}
+            itemType={itemType}
+          />
+        </div>
+      )}
 
-        {/* Display mode - card is always in display mode now */}
-        <CardHeader className="!block pb-2">
-          <div
-            className="min-w-0 cursor-pointer space-y-4"
-            onClick={handleEditAction}
-            role="button"
-            tabIndex={0}
-            onKeyDown={event => {
-              if (event.target !== event.currentTarget) return;
-              if (event.key === "Enter" || event.key === " ") {
-                event.preventDefault();
-                handleEditAction();
-              }
-            }}
-          >
-            <FinancialItemCardHeader
-              itemType={itemType}
-              displayName={normalizedItem.displayName}
-              dateAdded={normalizedItem.dateAdded}
-              displayAmount={displayAmount}
-              isAmountFallback={isAmountFallback}
-            />
-            <FinancialItemCardMeta
-              normalizedItem={normalizedItem}
-              verificationStatus={verificationStatus}
-              canUpdateStatus={canUpdateStatus}
-              onStatusChange={handleStatusChange}
-            />
-          </div>
-        </CardHeader>
-      </Card>
-    </>
+      {/* Display mode - card is always in display mode now */}
+      <CardHeader className="!block pb-2">
+        <button
+          type="button"
+          className="w-full text-left bg-transparent border-none p-0 min-w-0 cursor-pointer space-y-4 focus:outline-none focus:ring-2 focus:ring-primary rounded-md"
+          onClick={handleEditAction}
+        >
+          <FinancialItemCardHeader
+            itemType={itemType}
+            displayName={normalizedItem.displayName}
+            dateAdded={normalizedItem.dateAdded}
+            displayAmount={displayAmount}
+            isAmountFallback={isAmountFallback}
+          />
+          <FinancialItemCardMeta
+            normalizedItem={normalizedItem}
+            verificationStatus={verificationStatus}
+            canUpdateStatus={canUpdateStatus}
+            onStatusChange={handleStatusChange}
+          />
+        </button>
+      </CardHeader>
+    </Card>
   );
 }

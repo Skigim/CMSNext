@@ -228,7 +228,7 @@ export function useWidgetData<T>(
         clearInterval(freshnessInterval);
       }
     };
-  }, [fetchData, refreshInterval, updateFreshness, dataFetcher, refreshKey, dataChangeCount]);
+  }, [fetchData, refreshInterval, updateFreshness, dataFetcher, refreshKey, dataChangeCount, scheduleRefresh]);
 
   /**
    * Cleanup on unmount.

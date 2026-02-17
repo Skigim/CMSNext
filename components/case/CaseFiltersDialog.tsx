@@ -263,13 +263,10 @@ export function CaseFiltersDialog({
       />
     );
   }, [
-    alertDescriptions,
-    alertTypeOptions,
     getDropdownValuesForField,
     getFieldType,
     isDateOperator,
     matchStatusOptions,
-    programOptions,
     renderDateInput,
     renderSelectInput,
     statusOptions,

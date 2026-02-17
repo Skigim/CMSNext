@@ -33,10 +33,20 @@ type MigrationState =
   | { status: "success"; result: MigrationResult }
   | { status: "error"; error: string };
 
+function buildErrorKeys(errors: string[]): string[] {
+  const counts = new Map<string, number>();
+
+  return errors.map((message) => {
+    const nextCount = (counts.get(message) ?? 0) + 1;
+    counts.set(message, nextCount);
+    return `${message}-${nextCount}`;
+  });
+}
+
 export function LegacyMigrationPanel({
   className,
   onMigrationComplete,
-}: LegacyMigrationPanelProps) {
+}: Readonly<LegacyMigrationPanelProps>) {
   const dataManager = useDataManagerSafe();
   const [state, setState] = useState<MigrationState>({ status: "idle" });
 
@@ -283,8 +293,8 @@ export function LegacyMigrationPanel({
                 <AlertDescription>
                   {state.result.errors.length} item(s) had issues during migration:
                   <ul className="list-disc pl-4 mt-2">
-                    {state.result.errors.slice(0, 5).map((err, i) => (
-                      <li key={i} className="text-sm">
+                    {state.result.errors.slice(0, 5).map((err, index) => (
+                      <li key={buildErrorKeys(state.result.errors.slice(0, 5))[index]} className="text-sm">
                         {err}
                       </li>
                     ))}

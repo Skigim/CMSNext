@@ -5,7 +5,7 @@
  * User selects a template, previews the rendered content, and copies to clipboard.
  */
 
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useCallback, useMemo } from "react";
 import {
   Dialog,
   DialogContent,
@@ -41,7 +41,7 @@ export function NarrativeGeneratorModal({
   open,
   onOpenChange,
   storedCase,
-}: NarrativeGeneratorModalProps) {
+}: Readonly<NarrativeGeneratorModalProps>) {
   // Get narrative templates from unified template system
   const { getTemplatesByCategory } = useTemplates();
   const narrativeTemplates = useMemo(
@@ -52,16 +52,17 @@ export function NarrativeGeneratorModal({
   // Local state
   const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(null);
   const [renderedText, setRenderedText] = useState("");
+  const [prevOpen, setPrevOpen] = useState(open);
 
-  const selectedTemplate = narrativeTemplates.find(t => t.id === selectedTemplateId);
-
-  // Reset state when modal opens
-  useEffect(() => {
+  if (open !== prevOpen) {
+    setPrevOpen(open);
     if (open) {
       setSelectedTemplateId(narrativeTemplates[0]?.id ?? null);
       setRenderedText("");
     }
-  }, [open, narrativeTemplates]);
+  }
+
+  const selectedTemplate = narrativeTemplates.find(t => t.id === selectedTemplateId);
 
   const handleAddTemplate = useCallback(() => {
     if (!selectedTemplate) {
