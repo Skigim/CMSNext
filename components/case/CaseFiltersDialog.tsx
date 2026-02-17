@@ -71,6 +71,11 @@ export function CaseFiltersDialog({
     () => config.caseStatuses.map((s) => s.name),
     [config.caseStatuses]
   );
+  const alertTypeOptions = useMemo(
+    () => config.alertTypes.map((alertType) => alertType.name),
+    [config.alertTypes],
+  );
+  const programOptions = useMemo(() => config.caseTypes, [config.caseTypes]);
   const filterableFields = useMemo(() => getFilterableFields(), []);
   const matchStatusOptions = useMemo(() => ["matched", "unmatched", "missing-mcn"] as const, []);
 
@@ -166,6 +171,67 @@ export function CaseFiltersDialog({
     [updateCriterion],
   );
 
+  const renderSelectInput = useCallback((criterion: FilterCriterion, values: string[]) => {
+    return (
+      <Select
+        value={typeof criterion.value === "string" ? criterion.value : ""}
+        onValueChange={(value) => updateCriterion(criterion.id, { value })}
+      >
+        <SelectTrigger>
+          <SelectValue placeholder="Select value" />
+        </SelectTrigger>
+        <SelectContent>
+          {values.map((value) => (
+            <SelectItem key={value} value={value}>
+              {value}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    );
+  }, [updateCriterion]);
+
+  const getDropdownValuesForField = useCallback((field: FilterableField): string[] => {
+    if (field === "description") {
+      return alertDescriptions;
+    }
+    if (field === "alertType") {
+      return alertTypeOptions;
+    }
+    if (field === "program") {
+      return programOptions;
+    }
+    return [];
+  }, [alertDescriptions, alertTypeOptions, programOptions]);
+
+  const renderDateInput = useCallback((criterion: FilterCriterion) => {
+    if (criterion.operator === "between") {
+      const values = Array.isArray(criterion.value) ? criterion.value : ["", ""];
+      return (
+        <div className="grid grid-cols-2 gap-2">
+          <Input
+            type="date"
+            value={values[0] ?? ""}
+            onChange={(event) => updateCriterion(criterion.id, { value: [event.target.value, values[1] ?? ""] })}
+          />
+          <Input
+            type="date"
+            value={values[1] ?? ""}
+            onChange={(event) => updateCriterion(criterion.id, { value: [values[0] ?? "", event.target.value] })}
+          />
+        </div>
+      );
+    }
+
+    return (
+      <Input
+        type="date"
+        value={typeof criterion.value === "string" ? criterion.value : ""}
+        onChange={(event) => updateCriterion(criterion.id, { value: event.target.value })}
+      />
+    );
+  }, [updateCriterion]);
+
   const renderCriterionValueInput = useCallback((criterion: FilterCriterion) => {
     const fieldType = getFieldType(criterion.field);
     const operator = criterion.operator;
@@ -176,51 +242,17 @@ export function CaseFiltersDialog({
 
     if (fieldType === "enum") {
       const values = criterion.field === "status" ? statusOptions : [...matchStatusOptions];
-      return (
-        <Select
-          value={typeof criterion.value === "string" ? criterion.value : ""}
-          onValueChange={(value) => updateCriterion(criterion.id, { value })}
-        >
-          <SelectTrigger>
-            <SelectValue placeholder="Select value" />
-          </SelectTrigger>
-          <SelectContent>
-            {values.map((value) => (
-              <SelectItem key={value} value={value}>
-                {value}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      );
+      return renderSelectInput(criterion, values);
+    }
+
+    const dropdownValues = getDropdownValuesForField(criterion.field);
+
+    if (dropdownValues.length > 0) {
+      return renderSelectInput(criterion, dropdownValues);
     }
 
     if (fieldType === "date" || isDateOperator(operator)) {
-      if (operator === "between") {
-        const values = Array.isArray(criterion.value) ? criterion.value : ["", ""];
-        return (
-          <div className="grid grid-cols-2 gap-2">
-            <Input
-              type="date"
-              value={values[0] ?? ""}
-              onChange={(event) => updateCriterion(criterion.id, { value: [event.target.value, values[1] ?? ""] })}
-            />
-            <Input
-              type="date"
-              value={values[1] ?? ""}
-              onChange={(event) => updateCriterion(criterion.id, { value: [values[0] ?? "", event.target.value] })}
-            />
-          </div>
-        );
-      }
-
-      return (
-        <Input
-          type="date"
-          value={typeof criterion.value === "string" ? criterion.value : ""}
-          onChange={(event) => updateCriterion(criterion.id, { value: event.target.value })}
-        />
-      );
+      return renderDateInput(criterion);
     }
 
     return (
@@ -230,7 +262,19 @@ export function CaseFiltersDialog({
         placeholder="Enter value"
       />
     );
-  }, [getFieldType, isDateOperator, matchStatusOptions, statusOptions, updateCriterion]);
+  }, [
+    alertDescriptions,
+    alertTypeOptions,
+    getDropdownValuesForField,
+    getFieldType,
+    isDateOperator,
+    matchStatusOptions,
+    programOptions,
+    renderDateInput,
+    renderSelectInput,
+    statusOptions,
+    updateCriterion,
+  ]);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>

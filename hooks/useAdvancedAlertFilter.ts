@@ -7,7 +7,7 @@ import {
   type AdvancedAlertFilter,
   type FilterCriterion,
 } from "@/domain/alerts";
-import { safeNotifyFileStorageChange } from "../utils/fileStorageNotify";
+import { safeNotifyFileStorageChange } from "@/utils/fileStorageNotify";
 import { AdvancedAlertFilterService } from "@/utils/services/AdvancedAlertFilterService";
 import { useDebouncedSave } from "./useDebouncedSave";
 
@@ -32,15 +32,22 @@ const storage = createLocalStorageAdapter<AdvancedAlertFilter | null>(
 
 const advancedAlertFilterService = new AdvancedAlertFilterService();
 
+function persistAdvancedFilter(value: AdvancedAlertFilter): void {
+  storage.write(value);
+  safeNotifyFileStorageChange();
+}
+
+function clearPersistedAdvancedFilter(): void {
+  storage.clear();
+  safeNotifyFileStorageChange();
+}
+
 export function useAdvancedAlertFilter(): UseAdvancedAlertFilterResult {
   const [filter, setFilter] = useState<AdvancedAlertFilter>(() => storage.read() ?? createEmptyAdvancedFilter());
 
   useDebouncedSave({
     data: filter,
-    onSave: (value) => {
-      storage.write(value);
-      safeNotifyFileStorageChange();
-    },
+    onSave: persistAdvancedFilter,
     delay: 300,
   });
 
@@ -66,8 +73,7 @@ export function useAdvancedAlertFilter(): UseAdvancedAlertFilterResult {
 
   const resetFilter = useCallback(() => {
     setFilter(createEmptyAdvancedFilter());
-    storage.clear();
-    safeNotifyFileStorageChange();
+    clearPersistedAdvancedFilter();
   }, []);
 
   const hasActiveAdvancedFilters = useMemo(() => isAdvancedFilterActive(filter), [filter]);
