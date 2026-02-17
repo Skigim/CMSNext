@@ -111,6 +111,16 @@ interface FileStorageProviderProps {
   getDataFunction?: () => any;
 }
 
+function mapSeverityFromType(type?: string): 'error' | 'warning' | 'info' {
+  if (type === 'warning') {
+    return 'warning';
+  }
+  if (type === 'info') {
+    return 'info';
+  }
+  return 'error';
+}
+
 /**
  * FileStorageProvider - Manages file system access and autosave functionality.
  * 
@@ -181,7 +191,7 @@ export function FileStorageProvider({
   children, 
   enabled = true,
   getDataFunction
-}: FileStorageProviderProps) {
+}: Readonly<FileStorageProviderProps>) {
   const [service, setService] = useState<AutosaveFileService | null>(null);
   const [fileStorageService, setFileStorageService] = useState<FileStorageService | null>(null);
   const [state, dispatch] = useReducer(reduceFileStorageState, initialMachineState);
@@ -205,7 +215,7 @@ export function FileStorageProvider({
           operation,
           error,
           messageOverride: message,
-          severity: type === 'warning' ? 'warning' : type === 'info' ? 'info' : 'error',
+          severity: mapSeverityFromType(type),
           toast: false,
           context,
           source: 'AutosaveFileService',
@@ -293,7 +303,7 @@ export function FileStorageProvider({
     service.setDataLoadCallback(callback);
 
     return () => {
-      service.setDataLoadCallback(undefined);
+      service.setDataLoadCallback();
     };
   }, [service]);
 
@@ -449,7 +459,7 @@ export function FileStorageProvider({
     }
   }, [service]);
 
-  const contextValue: FileStorageContextType = {
+  const contextValue: FileStorageContextType = useMemo(() => ({
     service,
     fileStorageService,
     isSupported: state.isSupported,
@@ -470,7 +480,28 @@ export function FileStorageProvider({
     loadExistingData,
     loadDataFromFile,
     registerDataLoadHandler,
-  };
+  }), [
+    connectToExisting,
+    connectToFolder,
+    disconnect,
+    ensurePermission,
+    fileStorageService,
+    listDataFiles,
+    loadDataFromFile,
+    loadExistingData,
+    readNamedFile,
+    registerDataLoadHandler,
+    saveNow,
+    service,
+    state.hasStoredHandle,
+    state.isConnected,
+    state.isSupported,
+    state.lastError,
+    state.lifecycle,
+    state.permissionStatus,
+    state.statusSnapshot,
+    updateSettings,
+  ]);
 
   return (
     <FileStorageContext.Provider value={contextValue}>

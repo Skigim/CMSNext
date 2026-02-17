@@ -144,6 +144,13 @@ export const BulkActionsToolbar = memo(function BulkActionsToolbar({
   }
 
   const isDisabled = isDeleting || isUpdating || isArchiving || isResolvingAlerts;
+  const clearAlertsTitle = (() => {
+    if (alertCountForSelection === 0) {
+      return "No matching alerts for selected cases";
+    }
+    const suffix = alertCountForSelection === 1 ? "" : "s";
+    return `Clear ${alertCountForSelection} "${alertDescriptionFilter}" alert${suffix} for selected cases`;
+  })();
 
   return (
     <>
@@ -211,9 +218,7 @@ export const BulkActionsToolbar = memo(function BulkActionsToolbar({
                 size="sm"
                 onClick={handleBulkResolveAlerts}
                 disabled={isDisabled || alertCountForSelection === 0}
-                title={alertCountForSelection === 0 
-                  ? "No matching alerts for selected cases" 
-                  : `Clear ${alertCountForSelection} "${alertDescriptionFilter}" alert${alertCountForSelection === 1 ? '' : 's'} for selected cases`}
+                title={clearAlertsTitle}
               >
                 <Bell className="mr-1.5 h-3.5 w-3.5" />
                 Clear Alerts ({alertCountForSelection})

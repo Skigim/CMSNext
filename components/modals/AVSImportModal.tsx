@@ -35,6 +35,26 @@ interface AVSImportModalProps {
   canImport: boolean;
 }
 
+function hasKnownValue(value: string): boolean {
+  return value !== "N/A";
+}
+
+function formatPlural(count: number): string {
+  return count === 1 ? "" : "s";
+}
+
+function getPreviewLabel(hasParsedAccounts: boolean, parsedAccountsLength: number): string {
+  if (!hasParsedAccounts) {
+    return "No accounts found";
+  }
+  return `Preview (${parsedAccountsLength} account${formatPlural(parsedAccountsLength)} found)`;
+}
+
+function getImportButtonLabel(hasParsedAccounts: boolean, parsedAccountsLength: number): string {
+  const countPrefix = hasParsedAccounts ? `${parsedAccountsLength} ` : "";
+  return `Import ${countPrefix}Resource${formatPlural(parsedAccountsLength)}`;
+}
+
 /**
  * Preview card for a single parsed AVS account
  */
@@ -43,12 +63,12 @@ function AccountPreviewCard({
   index,
   onToggle,
   disabled,
-}: { 
+}: Readonly<{ 
   account: AVSAccountWithMeta; 
   index: number;
   onToggle: () => void;
   disabled?: boolean;
-}) {
+}>) {
   const isUpdate = !!account.existingItemId;
   
   return (
@@ -69,7 +89,7 @@ function AccountPreviewCard({
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
             <span className="text-xs text-muted-foreground">#{index + 1}</span>
-            {account.accountType !== "N/A" && (
+            {hasKnownValue(account.accountType) && (
               <Badge variant="secondary" className="text-xs">
                 {account.accountType}
               </Badge>
@@ -88,21 +108,21 @@ function AccountPreviewCard({
             )}
           </div>
           <p className="font-medium text-sm mt-1 truncate">
-            {account.bankName !== "N/A" ? account.bankName : "Unknown Institution"}
+            {hasKnownValue(account.bankName) ? account.bankName : "Unknown Institution"}
           </p>
         </div>
         <div className="text-right shrink-0">
           <p className="font-semibold text-sm">
             {formatCurrency(account.balanceAmount)}
           </p>
-          {account.accountNumber !== "N/A" && (
+          {hasKnownValue(account.accountNumber) && (
             <p className="text-xs text-muted-foreground">
               ****{account.accountNumber}
             </p>
           )}
         </div>
       </div>
-      {account.accountOwner !== "N/A" && (
+      {hasKnownValue(account.accountOwner) && (
         <p className="text-xs text-muted-foreground truncate">
           Owner: {account.accountOwner}
         </p>
@@ -123,7 +143,7 @@ function AccountPreviewCard({
 /**
  * Summary of accounts to be imported
  */
-function ImportSummary({ accounts }: { accounts: AVSAccountWithMeta[] }) {
+function ImportSummary({ accounts }: Readonly<{ accounts: AVSAccountWithMeta[] }>) {
   const selected = useMemo(() => accounts.filter(a => a.selected), [accounts]);
   const newCount = useMemo(() => selected.filter(a => !a.existingItemId).length, [selected]);
   const updateCount = useMemo(() => selected.filter(a => !!a.existingItemId).length, [selected]);
@@ -136,7 +156,7 @@ function ImportSummary({ accounts }: { accounts: AVSAccountWithMeta[] }) {
   const accountTypes = useMemo(() => {
     const types = new Map<string, number>();
     selected.forEach(acc => {
-      const type = acc.accountType !== "N/A" ? acc.accountType : "Other";
+      const type = hasKnownValue(acc.accountType) ? acc.accountType : "Other";
       types.set(type, (types.get(type) || 0) + 1);
     });
     return Array.from(types.entries());
@@ -192,7 +212,7 @@ export function AVSImportModal({
   onToggleAccount,
   onToggleAll,
   canImport,
-}: AVSImportModalProps) {
+}: Readonly<AVSImportModalProps>) {
   const { isOpen, rawInput, parsedAccounts, isImporting, importedCount, updatedCount, error } = importState;
 
   const hasInput = rawInput.trim().length > 0;
@@ -264,9 +284,7 @@ Refresh Date: 12/01/2025`}
             <div className="flex-1 overflow-hidden flex flex-col gap-2">
               <div className="flex items-center justify-between">
                 <span className="text-sm font-medium">
-                  {hasParsedAccounts
-                    ? `Preview (${parsedAccounts.length} account${parsedAccounts.length !== 1 ? "s" : ""} found)`
-                    : "No accounts found"}
+                  {getPreviewLabel(hasParsedAccounts, parsedAccounts.length)}
                 </span>
                 {hasParsedAccounts && (
                   <Button
@@ -340,8 +358,7 @@ Refresh Date: 12/01/2025`}
             ) : (
               <>
                 <Upload className="h-4 w-4 mr-2" />
-                Import {hasParsedAccounts ? parsedAccounts.length : ""} Resource
-                {parsedAccounts.length !== 1 ? "s" : ""}
+                {getImportButtonLabel(hasParsedAccounts, parsedAccounts.length)}
               </>
             )}
           </Button>

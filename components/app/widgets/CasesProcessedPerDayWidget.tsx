@@ -29,7 +29,25 @@ interface CasesProcessedPerDayData {
 
 const DEFAULT_WINDOW = 7;
 
-export function CasesProcessedPerDayWidget({ activityLog = [], metadata, refreshKey }: CasesProcessedPerDayWidgetProps) {
+function getTrendTextClass(direction: 'up' | 'down' | 'flat'): string {
+  if (direction === 'down') {
+    return 'text-destructive font-medium';
+  }
+  if (direction === 'up') {
+    return 'text-emerald-500 font-medium';
+  }
+  return 'text-muted-foreground';
+}
+
+function getTrendLabel(delta: number): string {
+  if (delta === 0) {
+    return 'No change';
+  }
+  const prefix = delta > 0 ? '+' : '';
+  return `${prefix}${delta}`;
+}
+
+export function CasesProcessedPerDayWidget({ activityLog = [], metadata, refreshKey }: Readonly<CasesProcessedPerDayWidgetProps>) {
   const { config } = useCategoryConfig();
   const completionStatuses = useMemo(() => getCompletionStatusNames(config), [config]);
   const requireNoteOnSameDay = config.dashboardSettings?.requireNoteForProcessedCount ?? false;
@@ -134,8 +152,8 @@ export function CasesProcessedPerDayWidget({ activityLog = [], metadata, refresh
                 {trend.direction === 'up' && <ArrowUpRight className="h-4 w-4 text-emerald-500" aria-hidden />}
                 {trend.direction === 'down' && <ArrowDownRight className="h-4 w-4 text-destructive" aria-hidden />}
                 {trend.direction === 'flat' && <Minus className="h-4 w-4 text-muted-foreground" aria-hidden />}
-                <span className={trend.direction === 'down' ? 'text-destructive font-medium' : trend.direction === 'up' ? 'text-emerald-500 font-medium' : 'text-muted-foreground'}>
-                  {trend.delta === 0 ? 'No change' : `${trend.delta > 0 ? '+' : ''}${trend.delta}`}
+                <span className={getTrendTextClass(trend.direction)}>
+                  {getTrendLabel(trend.delta)}
                 </span>
                 <span className="text-muted-foreground">vs. prior week</span>
               </div>

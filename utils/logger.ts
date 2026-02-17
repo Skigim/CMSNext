@@ -58,7 +58,7 @@ const consoleMap: Record<LogLevel, ConsoleMethod> = {
 };
 
 const DEFAULT_LEVEL: LogLevel = (() => {
-  const env = typeof import.meta !== "undefined" ? (import.meta as any).env ?? {} : {};
+  const env = (import.meta as ImportMeta & { env?: Record<string, unknown> }).env ?? {};
   const explicitLevel = (env?.VITE_LOG_LEVEL ?? env?.LOG_LEVEL ?? "").toLowerCase();
   if (explicitLevel && explicitLevel in levelPriority) {
     return explicitLevel as LogLevel;
@@ -125,7 +125,7 @@ function shouldLogDeduplicated(scope: string, level: LogLevel, message: string):
 }
 
 function resolveCallSite(skip: number = 4): string | null {
-  const err = new Error();
+  const err = new Error("resolveCallSite");
   if (!err.stack) {
     return null;
   }
@@ -151,7 +151,11 @@ function logWithLevel(scope: string, level: LogLevel, message: string, context?:
 
   const consoleFn = consoleMap[level];
   const timestamp = new Date().toISOString();
-  const callSite = options?.includeCallSite ?? level !== "debug" ? resolveCallSite(options?.includeCallSite === false ? Number.POSITIVE_INFINITY : 5) : null;
+  const includeCallSiteOption = options?.includeCallSite;
+  let callSite: string | null = null;
+  if (includeCallSiteOption !== false && (includeCallSiteOption === true || level !== "debug")) {
+    callSite = resolveCallSite(5);
+  }
   const parts: unknown[] = [`[${timestamp}]`, `[${scope}]`, message];
 
   if (context && Object.keys(context).length > 0) {
