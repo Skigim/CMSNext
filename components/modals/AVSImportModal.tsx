@@ -50,9 +50,9 @@ function getPreviewLabel(hasParsedAccounts: boolean, parsedAccountsLength: numbe
   return `Preview (${parsedAccountsLength} account${formatPlural(parsedAccountsLength)} found)`;
 }
 
-function getImportButtonLabel(hasParsedAccounts: boolean, parsedAccountsLength: number): string {
-  const countPrefix = hasParsedAccounts ? `${parsedAccountsLength} ` : "";
-  return `Import ${countPrefix}Resource${formatPlural(parsedAccountsLength)}`;
+function getImportButtonLabel(hasParsedAccounts: boolean, selectedCount: number): string {
+  const countPrefix = hasParsedAccounts ? `${selectedCount} ` : "";
+  return `Import ${countPrefix}Resource${formatPlural(selectedCount)}`;
 }
 
 /**
@@ -358,7 +358,7 @@ Refresh Date: 12/01/2025`}
             ) : (
               <>
                 <Upload className="h-4 w-4 mr-2" />
-                {getImportButtonLabel(hasParsedAccounts, parsedAccounts.length)}
+                {getImportButtonLabel(hasParsedAccounts, selectedCount)}
               </>
             )}
           </Button>

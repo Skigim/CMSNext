@@ -1,0 +1,51 @@
+# CMSNext (Case Tracking Platform)
+
+> Local-first case management app built with React + TypeScript. This file provides a fast index for LLM-based review tools.
+
+## Project Summary
+
+- App type: local-first SPA (no backend required)
+- Storage: File System Access API via provider/service stack
+- Architecture: domain (pure) -> services -> hooks -> components -> contexts
+- Testing: Vitest + RTL
+
+## Start Here
+
+- README.md
+- .github/copilot-instructions.md
+- docs/development/ROADMAP_FEB_2026.md
+
+## Architecture Guides
+
+- .github/implementation-guide.md
+- .github/ui-guide.md
+- .github/testing-guide.md
+- .github/agents/STORAGE.md
+- .github/agents/HOOKS.md
+
+## Core Entry Points
+
+- App.tsx
+- components/providers/AppProviders.tsx
+- contexts/FileStorageContext.tsx
+- contexts/DataManagerContext.tsx
+- utils/DataManager.ts
+
+## Domain and Services
+
+- domain/
+- utils/services/
+
+## Active Quality/Remediation Context
+
+- docs/audit/sonarcloud-cloud-issues-summary.md
+- docs/audit/sonarcloud-open-issues.json
+- docs/development/ROADMAP_FEB_2026.md
+
+## Review Priorities
+
+1. Preserve provider dependency order and context contracts.
+2. Keep domain layer pure (no React, no I/O).
+3. Route mutations through DataManager/services.
+4. Maintain local-first storage behavior and notifications.
+5. Keep changes test-covered and build-clean.

@@ -1,5 +1,9 @@
 # Case Tracking Platform
 
+## LLM Review Index
+
+- See [llms.txt](llms.txt) for a machine-readable repository index optimized for external LLM/code-review tools.
+
 A modern, filesystem-based case tracking application built with React, TypeScript, and Tailwind CSS v4. This application provides a comprehensive solution for managing individual cases with full CRUD capabilities, financial tracking, and note management—all stored locally on your device.
 
 <!-- Force rebuild: 2025-09-23 -->
