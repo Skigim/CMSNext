@@ -47,6 +47,34 @@ function compareExpandedRows(
   }
 }
 
+function getAriaSortDirection(sortDirection: CaseListSortDirection): "ascending" | "descending" {
+  return sortDirection === "asc" ? "ascending" : "descending";
+}
+
+function getSortStatusLabel(
+  isActiveSort: boolean,
+  sortDirection: CaseListSortDirection,
+): "ascending" | "descending" | "unsorted" {
+  if (!isActiveSort) {
+    return "unsorted";
+  }
+  return getAriaSortDirection(sortDirection);
+}
+
+function getNextSortDirection(
+  isActiveSort: boolean,
+  sortDirection: CaseListSortDirection,
+  key: CaseListSortKey,
+): CaseListSortDirection {
+  if (isActiveSort) {
+    return sortDirection === "asc" ? "desc" : "asc";
+  }
+  if (key === "updated" || key === "application" || key === "alerts") {
+    return "desc";
+  }
+  return "asc";
+}
+
 /** Reusable sortable table header. */
 function SortableTableHead({
   label,
@@ -55,18 +83,18 @@ function SortableTableHead({
   sortDirection,
   onSortClick,
   renderIndicator,
-}: {
+}: Readonly<{
   label: string;
   sortKeyValue: CaseListSortKey;
   activeSortKey: CaseListSortKey;
   sortDirection: CaseListSortDirection;
   onSortClick: (key: CaseListSortKey) => void;
   renderIndicator: (key: CaseListSortKey) => React.ReactNode;
-}) {
-  const ariaSortValue = activeSortKey === sortKeyValue
-    ? (sortDirection === "asc" ? "ascending" as const : "descending" as const)
-    : "none" as const;
-  const ariaLabel = `Sort by ${label}. Currently ${activeSortKey === sortKeyValue ? (sortDirection === "asc" ? "ascending" : "descending") : "unsorted"}.`;
+}>) {
+  const isActiveSort = activeSortKey === sortKeyValue;
+  const sortStatusLabel = getSortStatusLabel(isActiveSort, sortDirection);
+  const ariaSortValue = sortStatusLabel === "unsorted" ? "none" : sortStatusLabel;
+  const ariaLabel = `Sort by ${label}. Currently ${sortStatusLabel}.`;
 
   return (
     <TableHead aria-sort={ariaSortValue}>
@@ -124,6 +152,34 @@ function formatDate(value?: string | null): string {
   }
 
   return formatter.format(date);
+}
+
+function getScoreTextClass(score: number): string {
+  if (score >= 500) {
+    return "text-sm font-medium tabular-nums text-red-600 dark:text-red-400";
+  }
+  if (score >= 200) {
+    return "text-sm font-medium tabular-nums text-amber-600 dark:text-amber-400";
+  }
+  return "text-sm font-medium tabular-nums text-muted-foreground";
+}
+
+function renderAlertsCell(
+  row: { expandedAlert: AlertWithMatch | null; alerts: AlertWithMatch[] },
+  onResolveAlert?: (alert: AlertWithMatch) => void | Promise<void>,
+): React.ReactNode {
+  if (row.expandedAlert) {
+    return <ExpandedAlertCell alert={row.expandedAlert} />;
+  }
+  if (row.alerts.length > 0) {
+    return (
+      <AlertsPopover
+        alerts={row.alerts}
+        onResolveAlert={onResolveAlert}
+      />
+    );
+  }
+  return <span className="text-xs text-muted-foreground">None</span>;
 }
 
 export const CaseTable = memo(function CaseTable({
@@ -232,11 +288,7 @@ export const CaseTable = memo(function CaseTable({
 
   const handleSortClick = useCallback((key: CaseListSortKey) => {
     const isActive = sortKey === key;
-    const nextDirection: CaseListSortDirection = isActive
-      ? (sortDirection === "asc" ? "desc" : "asc")
-      : key === "updated" || key === "application" || key === "alerts"
-        ? "desc"
-        : "asc";
+    const nextDirection = getNextSortDirection(isActive, sortDirection, key);
 
     onRequestSort(key, nextDirection);
   }, [onRequestSort, sortDirection, sortKey]);
@@ -302,12 +354,13 @@ export const CaseTable = memo(function CaseTable({
                       {row.name}
                     </Button>
                     {row.priority && (
-                      <span
-                        className="inline-flex h-2.5 w-2.5 rounded-full bg-red-500"
-                        role="img"
-                        aria-label="High priority case"
-                        title="High priority case"
-                      />
+                      <>
+                        <span
+                          className="inline-flex h-2.5 w-2.5 rounded-full bg-red-500"
+                          aria-hidden
+                        />
+                        <span className="sr-only">High priority case</span>
+                      </>
                     )}
                   </div>
                 </div>
@@ -334,21 +387,12 @@ export const CaseTable = memo(function CaseTable({
                 />
               </TableCell>
               <TableCell>
-                <span className={`text-sm font-medium tabular-nums ${row.score >= 500 ? 'text-red-600 dark:text-red-400' : row.score >= 200 ? 'text-amber-600 dark:text-amber-400' : 'text-muted-foreground'}`}>
+                <span className={getScoreTextClass(row.score)}>
                   {row.score}
                 </span>
               </TableCell>
               <TableCell>
-                {row.expandedAlert ? (
-                  <ExpandedAlertCell alert={row.expandedAlert} />
-                ) : row.alerts.length > 0 ? (
-                  <AlertsPopover
-                    alerts={row.alerts}
-                    onResolveAlert={onResolveAlert}
-                  />
-                ) : (
-                  <span className="text-xs text-muted-foreground">None</span>
-                )}
+                {renderAlertsCell(row, onResolveAlert)}
               </TableCell>
               <TableCell>{row.caseType}</TableCell>
               <TableCell>{row.applicationDate}</TableCell>
@@ -382,7 +426,7 @@ interface ExpandedAlertCellProps {
   alert: AlertWithMatch;
 }
 
-function ExpandedAlertCell({ alert }: ExpandedAlertCellProps) {
+function ExpandedAlertCell({ alert }: Readonly<ExpandedAlertCellProps>) {
   const description = getAlertDisplayDescription(alert);
   const { label: dueLabel } = getAlertDueDateInfo(alert);
 

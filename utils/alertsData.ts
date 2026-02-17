@@ -58,6 +58,19 @@ type RawAlertCsvRow = {
   alertNumber: string;
 };
 
+function resolveMatchStatus(
+  normalizedMcnValue: string,
+  matchedCase: CaseForAlertMatching | undefined,
+): "missing-mcn" | "matched" | "unmatched" {
+  if (normalizedMcnValue.length === 0) {
+    return "missing-mcn";
+  }
+  if (matchedCase) {
+    return "matched";
+  }
+  return "unmatched";
+}
+
 function isLikelyDate(value: string | undefined): boolean {
   if (!value) {
     return false;
@@ -264,6 +277,8 @@ export function parseStackedAlerts(
       metadata.dueDateIso = dueDateIso;
     }
 
+    const matchStatus = resolveMatchStatus(normalizedMcnValue, matchedCase);
+
     const alert: AlertWithMatch = {
       id: alertId,
       reportId: alertNumber || undefined,
@@ -284,11 +299,7 @@ export function parseStackedAlerts(
       resolvedAt: null,
       resolutionNotes: undefined,
       metadata,
-      matchStatus: !normalizedMcnValue
-        ? "missing-mcn"
-        : matchedCase
-          ? "matched"
-          : "unmatched",
+      matchStatus,
       matchedCaseId: matchedCase?.id,
       matchedCaseName: matchedCase?.name,
       matchedCaseStatus: matchedCase?.status,
@@ -334,7 +345,7 @@ function parseGenericCsvAlerts(
 
   const findKey = (aliases: string[]) => {
     for (const alias of aliases) {
-      const idx = headerKeys.findIndex((h) => h === alias.toLowerCase());
+      const idx = headerKeys.indexOf(alias.toLowerCase());
       if (idx !== -1) return Object.keys(rows[0])[idx];
     }
     for (const alias of aliases) {
@@ -369,13 +380,13 @@ function parseGenericCsvAlerts(
   rows.forEach((raw) => {
     const get = (k?: string) => (k ? (raw[k] ?? "") : "");
 
-    const dueDate = (get(keyDue) as string) || "";
-    const mcNumber = (get(keyMcn) as string) || "";
-    const name = (get(keyName) as string) || "";
-    const program = (get(keyProgram) as string) || "";
-    const type = (get(keyType) as string) || "";
-    const description = (get(keyDescription) as string) || "";
-    const alertNumber = (get(keyAlertNumber) as string) || "";
+    const dueDate = get(keyDue) || "";
+    const mcNumber = get(keyMcn) || "";
+    const name = get(keyName) || "";
+    const program = get(keyProgram) || "";
+    const type = get(keyType) || "";
+    const description = get(keyDescription) || "";
+    const alertNumber = get(keyAlertNumber) || "";
 
     const normalizedMcnValue = normalizeMcn(mcNumber);
     const matchedCase = normalizedMcnValue
@@ -406,6 +417,8 @@ function parseGenericCsvAlerts(
       alertNumber: alertNumber || undefined,
     };
 
+    const matchStatus = resolveMatchStatus(normalizedMcnValue, matchedCase);
+
     const alert: AlertWithMatch = {
       id: alertId,
       reportId: alertNumber || undefined,
@@ -426,11 +439,7 @@ function parseGenericCsvAlerts(
       resolvedAt: null,
       resolutionNotes: undefined,
       metadata,
-      matchStatus: !normalizedMcnValue
-        ? "missing-mcn"
-        : matchedCase
-          ? "matched"
-          : "unmatched",
+      matchStatus,
       matchedCaseId: matchedCase?.id,
       matchedCaseName: matchedCase?.name,
       matchedCaseStatus: matchedCase?.status,
