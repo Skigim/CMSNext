@@ -56,7 +56,7 @@ const FEATURE_FLAG_DEFAULTS: FeatureFlags = {
 	"dashboard.widgets.recentCases": true,
 	"dashboard.widgets.pinnedCases": true,
 	"reports.advancedFilters": false,
-	"alerts.advancedFilters": false,
+	"alerts.advancedFilters": true,
 	"cases.bulkActions": false,
 	"settings.devTools": import.meta.env.DEV,
 	"settings.legacyMigration": import.meta.env.DEV,
