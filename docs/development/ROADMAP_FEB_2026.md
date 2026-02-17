@@ -2,10 +2,10 @@
 
 <!-- Retrigger review -->
 
-**Report Date:** February 13, 2026  
+**Report Date:** February 17, 2026  
 **Branch:** main  
 **Focus:** Audit Remediation + Archive Completion + SonarCloud Remediation  
-**Status:** Week 2 Complete
+**Status:** Week 3 In Progress
 
 ---
 
@@ -266,12 +266,31 @@ _9 Critical + 108 Major production code issues_
 
 > **GPT:** Start each rule group by querying `docs/audit/sonarcloud-open-issues.json` for exact file:line locations. Commit per rule family. Run `npm test` after each commit.
 
+##### Session Progress Update (Feb 17)
+
+- [x] Restored clean build after interim refactors (`npm run build` green)
+- [x] `S3358` nested ternary remediation pass completed in:
+  - [x] `components/case/CaseTable.tsx`
+  - [x] `utils/alertsData.ts`
+  - [x] `components/case/BulkActionsToolbar.tsx`
+  - [x] `components/modals/AVSImportModal.tsx`
+  - [x] `components/app/widgets/ActivityWidget.tsx`
+  - [x] `components/app/widgets/AlertsClearedPerDayWidget.tsx`
+  - [x] `components/app/widgets/CasesProcessedPerDayWidget.tsx`
+  - [x] `utils/logger.ts`
+  - [x] `utils/fileStorageErrorReporter.ts`
+  - [x] `contexts/FileStorageContext.tsx`
+- [x] Targeted readonly-prop and accessibility cleanups in `CaseTable`, `AVSImportModal`, and widget files
+- [x] `S4325` type-assertion cleanup completed for `utils/alertsData.ts`
+- [x] `S7753` `findIndex`→`indexOf` cleanup completed for `utils/alertsData.ts`
+- [ ] Continue Wave 1 major sweep for any remaining files still surfaced by live diagnostics/Sonar re-scan
+
 ##### Critical (9 issues → 0)
 
-- [ ] **Cognitive Complexity S3776** (3 prod) - Refactor `CaseList.tsx:212`, `FinancialItemStepperModal.tsx:203`, `AvgCaseProcessingTimeWidget.tsx:28`
-- [ ] **Empty Methods S1186** (4 test) - Add no-op comments or implementations in `autosaveStatus.test.tsx`
-- [ ] **Nested Functions S2004** (1 script) - Flatten `chromePerformanceTrace.ts:90`
-- [ ] **validateAgenticContext S3776** (1 script) - Reduce complexity in `scripts/validateAgenticContext.ts:72`
+- [x] **Cognitive Complexity S3776** (3 prod) - ✅ Refactored `CaseList.tsx`, `FinancialItemStepperModal.tsx`, and `AvgCaseProcessingTimeWidget.tsx`
+- [x] **Empty Methods S1186** (4 test) - ✅ Added explicit no-op statements in `__tests__/integration/autosaveStatus.test.tsx`
+- [x] **Nested Functions S2004** (1 script) - ✅ Flattened nested callback depth in `scripts/chromePerformanceTrace.ts`
+- [x] **validateAgenticContext S3776** (1 script) - ✅ Reduced complexity by extracting section validation/report helpers
 
 ##### Major — Nested Ternaries S3358 (27 prod issues)
 
@@ -471,7 +490,7 @@ _Focus: Ship deferred UX features, final polish, and March planning_
 
 ---
 
-_Last updated: February 13, 2026 (Week 2 archive updates)_
+_Last updated: February 17, 2026 (Week 3 remediation progress)_
 
 ---
 
@@ -506,4 +525,4 @@ Every change must:
 
 **Prepared by:** Claude Opus 4.6 (Project Manager)  
 **Executed by:** GPT 5.3 Codex (Lead Developer)  
-**Last updated:** February 13, 2026 (Week 2 archive updates)
+**Last updated:** February 17, 2026 (Week 3 remediation progress)

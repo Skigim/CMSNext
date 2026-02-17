@@ -145,6 +145,39 @@ function parseCaseDate(raw: string | undefined): number {
   return Number.isFinite(ts) ? ts : 0;
 }
 
+function getCaseSortComparison(
+  a: StoredCase,
+  b: StoredCase,
+  sortKey: CaseListSortKey,
+  openAlertsByCase: Map<string, AlertWithMatch[]>,
+  priorityConfig: { caseStatuses: any[]; alertTypes?: any[] },
+): number {
+  switch (sortKey) {
+    case "name":
+      return (a.name || "").localeCompare(b.name || "");
+    case "mcn":
+      return (a.mcn || "").localeCompare(b.mcn || "");
+    case "status":
+      return (a.status || "").localeCompare(b.status || "");
+    case "caseType":
+      return (a.caseRecord?.caseType || "").localeCompare(b.caseRecord?.caseType || "");
+    case "alerts":
+      return (openAlertsByCase.get(a.id)?.length ?? 0) - (openAlertsByCase.get(b.id)?.length ?? 0);
+    case "score": {
+      const aScore = calculatePriorityScore(a, openAlertsByCase.get(a.id) ?? [], priorityConfig);
+      const bScore = calculatePriorityScore(b, openAlertsByCase.get(b.id) ?? [], priorityConfig);
+      return aScore - bScore;
+    }
+    case "application":
+      return parseCaseDate(a.caseRecord?.applicationDate || a.createdAt) -
+        parseCaseDate(b.caseRecord?.applicationDate || b.createdAt);
+    case "updated":
+    default:
+      return parseCaseDate(a.updatedAt || a.caseRecord?.updatedDate || a.createdAt) -
+        parseCaseDate(b.updatedAt || b.caseRecord?.updatedDate || b.createdAt);
+  }
+}
+
 /** Multi-key sort comparator for cases. */
 function compareCases(
   a: StoredCase,
@@ -155,35 +188,7 @@ function compareCases(
 ): number {
   for (const sortConfig of sortConfigs) {
     const dir = sortConfig.direction === "asc" ? 1 : -1;
-    let cmp = 0;
-
-    switch (sortConfig.key) {
-      case "name": cmp = (a.name || "").localeCompare(b.name || ""); break;
-      case "mcn": cmp = (a.mcn || "").localeCompare(b.mcn || ""); break;
-      case "status": cmp = (a.status || "").localeCompare(b.status || ""); break;
-      case "caseType": cmp = (a.caseRecord?.caseType || "").localeCompare(b.caseRecord?.caseType || ""); break;
-      case "alerts": {
-        cmp = (openAlertsByCase.get(a.id)?.length ?? 0) - (openAlertsByCase.get(b.id)?.length ?? 0);
-        break;
-      }
-      case "score": {
-        const aScore = calculatePriorityScore(a, openAlertsByCase.get(a.id) ?? [], priorityConfig);
-        const bScore = calculatePriorityScore(b, openAlertsByCase.get(b.id) ?? [], priorityConfig);
-        cmp = aScore - bScore;
-        break;
-      }
-      case "application": {
-        cmp = parseCaseDate(a.caseRecord?.applicationDate || a.createdAt) -
-              parseCaseDate(b.caseRecord?.applicationDate || b.createdAt);
-        break;
-      }
-      case "updated":
-      default: {
-        cmp = parseCaseDate(a.updatedAt || a.caseRecord?.updatedDate || a.createdAt) -
-              parseCaseDate(b.updatedAt || b.caseRecord?.updatedDate || b.createdAt);
-        break;
-      }
-    }
+    const cmp = getCaseSortComparison(a, b, sortConfig.key, openAlertsByCase, priorityConfig);
 
     const result = cmp * dir;
     if (result !== 0) return result;

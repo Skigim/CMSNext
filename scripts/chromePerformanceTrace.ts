@@ -83,6 +83,7 @@ async function analyzePerformance(url: string): Promise<PerformanceMetrics> {
   // Collect Web Vitals
   const metrics = await page.evaluate(async () => {
     const vitals: { fcp?: number; lcp?: number } = {};
+    const wait = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
 
     const updateFromPaintEntries = () => {
       const paintEntries = performance.getEntriesByType('paint') as PerformanceEntry[];
@@ -100,11 +101,8 @@ async function analyzePerformance(url: string): Promise<PerformanceMetrics> {
       }
     };
 
-    updateFromPaintEntries();
-    updateFromLcpEntries();
-
-    const observer = new PerformanceObserver((list) => {
-      for (const entry of list.getEntries()) {
+    const updateFromObservedEntries = (entries: PerformanceEntry[]) => {
+      for (const entry of entries) {
         if (entry.entryType === 'largest-contentful-paint') {
           vitals.lcp = entry.startTime;
         }
@@ -112,13 +110,18 @@ async function analyzePerformance(url: string): Promise<PerformanceMetrics> {
           vitals.fcp = entry.startTime;
         }
       }
+    };
+
+    updateFromPaintEntries();
+    updateFromLcpEntries();
+
+    const observer = new PerformanceObserver((list) => {
+      updateFromObservedEntries(list.getEntries());
     });
 
     observer.observe({ type: 'paint', buffered: true });
     observer.observe({ type: 'largest-contentful-paint', buffered: true });
-    await new Promise<void>((resolve) => {
-      setTimeout(resolve, 5000);
-    });
+    await wait(5000);
     observer.disconnect();
 
     if (vitals.fcp == null) {

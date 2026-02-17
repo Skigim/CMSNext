@@ -145,38 +145,23 @@ async function checkMCPConfig(): Promise<void> {
   }
 }
 
-async function generateReport(): Promise<void> {
-  console.log('🤖 CMSNext Agentic Context Validation');
-  console.log('═'.repeat(50));
+async function validateRequiredSections(): Promise<boolean> {
+  const requiredSections: Array<{ name: string; files: string[] }> = [
+    { name: 'Architecture Documentation', files: REQUIRED_FILES.architecture },
+    { name: 'Development Guidelines', files: REQUIRED_FILES.development },
+    { name: 'Configuration Files', files: REQUIRED_FILES.config },
+  ];
 
   let allValid = true;
+  for (const section of requiredSections) {
+    const isSectionValid = await validateSection(section.name, section.files, true);
+    allValid = isSectionValid && allValid;
+  }
 
-  // Validate required files
-  allValid =
-    (await validateSection(
-      'Architecture Documentation',
-      REQUIRED_FILES.architecture,
-      true
-    )) && allValid;
+  return allValid;
+}
 
-  allValid =
-    (await validateSection(
-      'Development Guidelines',
-      REQUIRED_FILES.development,
-      true
-    )) && allValid;
-
-  allValid =
-    (await validateSection('Configuration Files', REQUIRED_FILES.config, true)) &&
-    allValid;
-
-  // Validate optional files
-  await validateSection('Optional Context', OPTIONAL_FILES, false);
-
-  // Check MCP configuration
-  await checkMCPConfig();
-
-  // Final report
+function logFinalReport(allValid: boolean): void {
   console.log('\n' + '═'.repeat(50));
   if (allValid) {
     console.log('✅ All required agentic context files are valid');
@@ -184,11 +169,27 @@ async function generateReport(): Promise<void> {
     console.log('   1. Review .github/AGENTIC_PROMPTS_GUIDE.md for prompt templates');
     console.log('   2. Ensure AI agents read .github/copilot-instructions.md');
     console.log('   3. Use conventional commits from .github/COMMIT_STYLE.md');
-  } else {
-    console.log('❌ Some required files are missing or invalid');
-    console.log('\n💡 Fix missing files and run this script again');
-    process.exit(1);
+    return;
   }
+
+  console.log('❌ Some required files are missing or invalid');
+  console.log('\n💡 Fix missing files and run this script again');
+  process.exit(1);
+}
+
+async function generateReport(): Promise<void> {
+  console.log('🤖 CMSNext Agentic Context Validation');
+  console.log('═'.repeat(50));
+
+  const allValid = await validateRequiredSections();
+
+  // Validate optional files
+  await validateSection('Optional Context', OPTIONAL_FILES, false);
+
+  // Check MCP configuration
+  await checkMCPConfig();
+
+  logFinalReport(allValid);
 }
 
 try {

@@ -241,6 +241,68 @@ function getSaveButtonLabel(isSubmitting: boolean, isEditing: boolean): string {
   return "Save Item";
 }
 
+function getStepButtonClassName(isActive: boolean, isCompleted: boolean, isClickable: boolean): string {
+  return cn(
+    "flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium transition-colors",
+    isActive && "bg-primary text-primary-foreground",
+    isCompleted && "bg-primary/20 text-primary hover:bg-primary/30",
+    !isActive && !isCompleted && "bg-muted text-muted-foreground",
+    isClickable && "cursor-pointer",
+    !isClickable && "cursor-default"
+  );
+}
+
+function getStepBadgeClassName(isActive: boolean, isCompleted: boolean): string {
+  return cn(
+    "flex h-6 w-6 items-center justify-center rounded-full text-xs font-bold",
+    isActive && "bg-primary-foreground text-primary",
+    isCompleted && "bg-primary text-primary-foreground",
+    !isActive && !isCompleted && "bg-muted-foreground/30 text-muted-foreground"
+  );
+}
+
+function StepIndicatorItem({
+  step,
+  index,
+  isActive,
+  isCompleted,
+  isLast,
+  isClickable,
+  onStepClick,
+}: Readonly<{
+  step: (typeof STEPS)[number];
+  index: number;
+  isActive: boolean;
+  isCompleted: boolean;
+  isLast: boolean;
+  isClickable: boolean;
+  onStepClick?: (step: Step) => void;
+}>) {
+  const handleClick = () => {
+    if (!isClickable) {
+      return;
+    }
+    onStepClick?.(step.id);
+  };
+
+  return (
+    <div key={step.id} className="flex items-center">
+      <button
+        type="button"
+        onClick={handleClick}
+        disabled={!isClickable}
+        className={getStepButtonClassName(isActive, isCompleted, isClickable)}
+      >
+        <span className={getStepBadgeClassName(isActive, isCompleted)}>
+          {isCompleted ? <Check className="h-3 w-3" /> : index + 1}
+        </span>
+        <span className="hidden sm:inline">{step.label}</span>
+      </button>
+      {!isLast && <ChevronRight className="mx-2 h-4 w-4 text-muted-foreground" />}
+    </div>
+  );
+}
+
 // ============================================================================
 // Sub-Components
 // ============================================================================
@@ -255,46 +317,25 @@ function StepIndicator({
   onStepClick?: (step: Step) => void;
 }>) {
   const currentIndex = steps.findIndex((s) => s.id === currentStep);
+  const isClickable = Boolean(onStepClick);
 
   return (
     <div className="flex items-center justify-center gap-2 py-4">
       {steps.map((step, index) => {
         const isActive = step.id === currentStep;
         const isCompleted = index < currentIndex;
-        // All steps are clickable - validation happens in onStepClick
-        const isClickable = Boolean(onStepClick);
 
         return (
-          <div key={step.id} className="flex items-center">
-            <button
-              type="button"
-              onClick={() => isClickable && onStepClick?.(step.id)}
-              disabled={!isClickable}
-              className={cn(
-                "flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium transition-colors",
-                isActive && "bg-primary text-primary-foreground",
-                isCompleted && "bg-primary/20 text-primary hover:bg-primary/30",
-                !isActive && !isCompleted && "bg-muted text-muted-foreground",
-                isClickable && "cursor-pointer",
-                !isClickable && "cursor-default"
-              )}
-            >
-              <span
-                className={cn(
-                  "flex h-6 w-6 items-center justify-center rounded-full text-xs font-bold",
-                  isActive && "bg-primary-foreground text-primary",
-                  isCompleted && "bg-primary text-primary-foreground",
-                  !isActive && !isCompleted && "bg-muted-foreground/30 text-muted-foreground"
-                )}
-              >
-                {isCompleted ? <Check className="h-3 w-3" /> : index + 1}
-              </span>
-              <span className="hidden sm:inline">{step.label}</span>
-            </button>
-            {index < steps.length - 1 && (
-              <ChevronRight className="mx-2 h-4 w-4 text-muted-foreground" />
-            )}
-          </div>
+          <StepIndicatorItem
+            key={step.id}
+            step={step}
+            index={index}
+            isActive={isActive}
+            isCompleted={isCompleted}
+            isLast={index === steps.length - 1}
+            isClickable={isClickable}
+            onStepClick={onStepClick}
+          />
         );
       })}
     </div>

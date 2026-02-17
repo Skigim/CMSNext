@@ -25,6 +25,10 @@ interface TrendData {
   direction: TrendDirection;
 }
 
+function getSampleBadgeLabel(sampleSize: number | undefined): string {
+  return sampleSize ? `${sampleSize} cases` : 'No samples';
+}
+
 function formatDays(value: number | null, formatter: Intl.NumberFormat): string {
   if (value == null || Number.isNaN(value)) {
     return '--';
@@ -84,6 +88,49 @@ function TrendIcon({ trend }: Readonly<{ trend: TrendData }>) {
   return <ArrowDownRight className="h-4 w-4 text-emerald-500" aria-hidden />;
 }
 
+function AvgCaseProcessingTimeWidgetHeader({ sampleSize }: Readonly<{ sampleSize: number | undefined }>) {
+  return (
+    <CardHeader className="pb-3">
+      <div className="flex items-center justify-between">
+        <div>
+          <CardTitle>Avg. Case Processing Time</CardTitle>
+          <CardDescription>Average days from creation to completion (last 30 days)</CardDescription>
+        </div>
+        <Badge variant="outline" className="text-xs">
+          {getSampleBadgeLabel(sampleSize)}
+        </Badge>
+      </div>
+    </CardHeader>
+  );
+}
+
+function renderNoSampleCard(freshnessLabel: string, sampleSize: number | undefined) {
+  return (
+    <Card>
+      <AvgCaseProcessingTimeWidgetHeader sampleSize={sampleSize} />
+      <CardContent>
+        <div className="py-8 text-center text-muted-foreground">
+          <Timer className="mx-auto mb-3 h-8 w-8 opacity-60" aria-hidden="true" />
+          <p className="text-sm">No completed cases in the last 30 days.</p>
+        </div>
+        <div className="mt-4 border-t border-border/60 pt-3 text-center text-xs text-muted-foreground">
+          Last checked: {freshnessLabel}
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+function renderErrorCard(errorMessage: string) {
+  return (
+    <WidgetError
+      title="Avg. Case Processing Time"
+      description="Unable to calculate processing metrics"
+      message={errorMessage}
+    />
+  );
+}
+
 export function AvgCaseProcessingTimeWidget({
   activityLog = [],
   cases = [],
@@ -106,6 +153,8 @@ export function AvgCaseProcessingTimeWidget({
   const freshnessLabel = useMemo(() => formatFreshnessLabel(freshness), [freshness]);
 
   const trend = useMemo(() => getTrendData(data), [data]);
+  const sampleSize = data?.sampleSize;
+  const hasSample = Boolean(data && data.sampleSize > 0 && data.averageDays != null);
 
   if (loading && !data) {
     return (
@@ -119,57 +168,16 @@ export function AvgCaseProcessingTimeWidget({
   }
 
   if (error) {
-    return (
-      <WidgetError
-        title="Avg. Case Processing Time"
-        description="Unable to calculate processing metrics"
-        message={error.message}
-      />
-    );
+    return renderErrorCard(error.message);
   }
 
-  const hasSample = Boolean(data && data.sampleSize > 0 && data.averageDays != null);
-
   if (!hasSample) {
-    return (
-      <Card>
-        <CardHeader className="pb-3">
-          <div className="flex items-center justify-between">
-            <div>
-              <CardTitle>Avg. Case Processing Time</CardTitle>
-              <CardDescription>Average days from creation to completion (last 30 days)</CardDescription>
-            </div>
-            <Badge variant="outline" className="text-xs">
-              {data?.sampleSize ? `${data.sampleSize} cases` : 'No samples'}
-            </Badge>
-          </div>
-        </CardHeader>
-        <CardContent>
-          <div className="py-8 text-center text-muted-foreground">
-            <Timer className="mx-auto mb-3 h-8 w-8 opacity-60" aria-hidden="true" />
-            <p className="text-sm">No completed cases in the last 30 days.</p>
-          </div>
-          <div className="mt-4 border-t border-border/60 pt-3 text-center text-xs text-muted-foreground">
-            Last checked: {freshnessLabel}
-          </div>
-        </CardContent>
-      </Card>
-    );
+    return renderNoSampleCard(freshnessLabel, sampleSize);
   }
 
   return (
     <Card>
-      <CardHeader className="pb-3">
-        <div className="flex items-center justify-between">
-          <div>
-            <CardTitle>Avg. Case Processing Time</CardTitle>
-            <CardDescription>Average days from creation to completion (last 30 days)</CardDescription>
-          </div>
-          <Badge variant="outline" className="text-xs">
-            {data?.sampleSize ? `${data.sampleSize} cases` : 'No samples'}
-          </Badge>
-        </div>
-      </CardHeader>
+      <AvgCaseProcessingTimeWidgetHeader sampleSize={sampleSize} />
       <CardContent>
         <div className="space-y-5">
             <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">

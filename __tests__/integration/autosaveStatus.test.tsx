@@ -87,7 +87,7 @@ vi.mock("@/utils/AutosaveFileService", () => {
     }
 
     updateConfig() {
-      // No-op for integration test mock.
+      void 0;
     }
 
     startAutosave() {
@@ -105,11 +105,11 @@ vi.mock("@/utils/AutosaveFileService", () => {
     }
 
     setDataLoadCallback() {
-      // No-op for integration test mock.
+      void 0;
     }
 
     notifyDataChange() {
-      // No-op for integration test mock.
+      void 0;
     }
 
     connect() {
@@ -159,7 +159,7 @@ vi.mock("@/utils/AutosaveFileService", () => {
     }
 
     updateReactState() {
-      // No-op for integration test mock.
+      void 0;
     }
 
     writeFile() {
