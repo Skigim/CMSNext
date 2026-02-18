@@ -284,6 +284,8 @@ _9 Critical + 108 Major production code issues_
 - [x] `S4325` type-assertion cleanup completed for `utils/alertsData.ts`
 - [x] `S7753` `findIndex`→`indexOf` cleanup completed for `utils/alertsData.ts`
 - [x] `S6479` stable-key remediation pass completed for listed component key hotspots
+- [x] `S6564` redundant type alias fix completed in `useFinancialItemCardState.ts`
+- [~] `S6582` optional chaining sweep started (`Settings.tsx`, `GlobalContextMenu.tsx`, `domain/dashboard/widgets.ts`, `FinancialsService.ts`)
 - [ ] Continue Wave 1 major sweep for any remaining files still surfaced by live diagnostics/Sonar re-scan
 
 ##### Critical (9 issues → 0)

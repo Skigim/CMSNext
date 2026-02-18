@@ -44,10 +44,10 @@ export interface ErrorReport {
 
 class ErrorReportingService {
   private reports: ErrorReport[] = [];
-  private maxReports = 100; // Keep last 100 error reports
+  private readonly maxReports = 100; // Keep last 100 error reports
   private isEnabled = true;
-  private recentErrors: Map<string, number> = new Map(); // Track recent errors for deduplication
-  private deduplicationWindow = 1000; // 1 second window for deduplication
+  private readonly recentErrors: Map<string, number> = new Map(); // Track recent errors for deduplication
+  private readonly deduplicationWindow = 1000; // 1 second window for deduplication
 
   constructor() {
     // Load existing reports from localStorage

@@ -14,14 +14,13 @@ import { useCategoryConfig } from "../../contexts/CategoryConfigContext";
 import type {
   NormalizedFinancialItem,
   VerificationBadgeInfo,
-  VerificationStatus,
 } from "./useFinancialItemCardState";
 
 interface FinancialItemCardMetaProps {
   normalizedItem: NormalizedFinancialItem;
   verificationStatus: VerificationBadgeInfo;
   canUpdateStatus: boolean;
-  onStatusChange: (status: VerificationStatus) => Promise<void> | void;
+  onStatusChange: (status: string) => Promise<void> | void;
 }
 
 export function FinancialItemCardMeta({

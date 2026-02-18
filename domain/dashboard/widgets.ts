@@ -252,7 +252,7 @@ export function calculateCasesProcessedPerDay(
       if (!casesWithNotesByDay.has(key)) {
         casesWithNotesByDay.set(key, new Set());
       }
-      casesWithNotesByDay.get(key)!.add(entry.caseId);
+      casesWithNotesByDay.get(key)?.add(entry.caseId);
     });
   }
 
@@ -270,8 +270,8 @@ export function calculateCasesProcessedPerDay(
     const toStatus = entry.payload?.toStatus?.toLowerCase();
     const fromStatus = entry.payload?.fromStatus?.toLowerCase();
 
-    const movedToCompletion = toStatus && completionStatuses.has(toStatus);
-    const movedFromCompletion = fromStatus && completionStatuses.has(fromStatus);
+    const movedToCompletion = toStatus ? completionStatuses.has(toStatus) : false;
+    const movedFromCompletion = fromStatus ? completionStatuses.has(fromStatus) : false;
 
     // If requireNoteOnSameDay is enabled, only count if this case has a note on the same day
     if (requireNoteOnSameDay) {
@@ -489,7 +489,7 @@ export function calculateAvgCaseProcessingTime(
     }
 
     const toStatus = entry.payload?.toStatus;
-    if (!toStatus || !completionStatuses.has(toStatus.toLowerCase())) {
+    if (!completionStatuses.has(toStatus?.toLowerCase() ?? "")) {
       return;
     }
 

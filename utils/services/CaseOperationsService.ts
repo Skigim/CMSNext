@@ -105,7 +105,7 @@ export class CaseOperationsService {
    * 
    * @param {DataManager} dataManager - The data manager instance for operations
    */
-  constructor(private dataManager: DataManager) {}
+  constructor(private readonly dataManager: DataManager) {}
 
   /**
    * Load all cases from storage.

@@ -75,7 +75,7 @@ export function Settings({ cases, onAlertsCsvImported }: SettingsProps) {
 
   // Helper function to safely count valid cases
   const getValidCasesCount = () => {
-    return cases.filter(c => c && c.caseRecord && typeof c.caseRecord === 'object').length;
+    return cases.filter(c => c?.caseRecord && typeof c.caseRecord === 'object').length;
   };
 
   const activeStatuses = useMemo(() => {
@@ -96,12 +96,12 @@ export function Settings({ cases, onAlertsCsvImported }: SettingsProps) {
     }
 
     return cases.filter(
-      c => c && c.caseRecord && activeStatuses.includes(c.caseRecord.status),
+      c => c?.caseRecord && activeStatuses.includes(c.caseRecord.status),
     ).length;
   };
 
   const getInvalidCasesCount = () => {
-    return cases.filter(c => !c || !c.caseRecord || typeof c.caseRecord !== 'object').length;
+    return cases.filter(c => !c?.caseRecord || typeof c.caseRecord !== 'object').length;
   };
 
   const handleExportData = () => {
@@ -540,7 +540,7 @@ export function Settings({ cases, onAlertsCsvImported }: SettingsProps) {
                             console.log(`Invalid cases: ${getInvalidCasesCount()}`);
                             
                             // Log invalid cases for debugging
-                            const invalidCases = cases.filter(c => !c || !c.caseRecord || typeof c.caseRecord !== 'object');
+                            const invalidCases = cases.filter(c => !c?.caseRecord || typeof c.caseRecord !== 'object');
                             console.log('Invalid cases:', invalidCases);
                           }}
                           className="text-xs h-7 text-orange-700 dark:text-orange-300 border-orange-300"

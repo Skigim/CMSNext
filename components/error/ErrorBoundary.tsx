@@ -61,7 +61,7 @@ export class ErrorBoundary extends BaseErrorBoundary<
 
   // -- Copy error details ----------------------------------------------------
 
-  private handleCopyError = () => {
+  private readonly handleCopyError = () => {
     const { error, errorInfo, errorId } = this.state;
     if (!error) return;
 

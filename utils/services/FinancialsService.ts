@@ -708,7 +708,7 @@ export class FinancialsService {
     let migratedCount = 0;
     const updatedFinancials = currentData.financials.map(item => {
       // Check if item has history that needs date format normalization
-      if (item.amountHistory && item.amountHistory.length > 0) {
+      if (item.amountHistory?.length) {
         const needsNormalization = item.amountHistory.some(
           e => e.startDate && e.startDate.includes('T')
         );

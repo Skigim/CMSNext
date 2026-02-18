@@ -30,8 +30,8 @@ interface WriteQueueCallbacks {
  * - Notifies callbacks on success/failure
  */
 class AlertWriteQueue {
-  private queues = new Map<string, QueuedWrite<void>[]>();
-  private processing = new Set<string>();
+  private readonly queues = new Map<string, QueuedWrite<void>[]>();
+  private readonly processing = new Set<string>();
   private callbacks: WriteQueueCallbacks = {};
 
   /**

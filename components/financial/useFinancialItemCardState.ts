@@ -10,8 +10,6 @@ import {
 } from "@/domain/financials";
 import { useSelectedMonth } from "../../contexts/SelectedMonthContext";
 
-export type VerificationStatus = string;
-
 export type NormalizedFinancialItem = ReturnType<typeof getNormalizedItem>;
 export type NormalizedFinancialFormData = ReturnType<typeof getNormalizedFormData>;
 export type VerificationBadgeInfo = ReturnType<typeof getVerificationStatusInfo>;
@@ -49,7 +47,7 @@ export interface UseFinancialItemCardStateResult {
   handleDeleteClick: () => void;
   handleDeleteConfirm: () => void;
   handleFieldChange: (field: string, value: string | number) => void;
-  handleStatusChange: (newStatus: VerificationStatus) => Promise<void>;
+  handleStatusChange: (newStatus: string) => Promise<void>;
 }
 
 export function useFinancialItemCardState({
@@ -204,7 +202,7 @@ export function useFinancialItemCardState({
   }, [itemType, normalizedItem.safeId, onDelete]);
 
   const handleStatusChange = useCallback(
-    async (newStatus: VerificationStatus) => {
+    async (newStatus: string) => {
       // Verification is stored per-entry, not on the item
       // Update the current entry's verification status
       if (!currentEntry) {
