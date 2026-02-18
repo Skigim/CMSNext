@@ -122,6 +122,8 @@ export function LegacyMigrationPanel({
   }, []);
 
   const isConnected = dataManager?.isConnected() ?? false;
+  const displayedErrors = state.status === "success" ? state.result.errors.slice(0, 5) : [];
+  const displayedErrorKeys = buildErrorKeys(displayedErrors);
 
   return (
     <Card className={className}>
@@ -293,8 +295,8 @@ export function LegacyMigrationPanel({
                 <AlertDescription>
                   {state.result.errors.length} item(s) had issues during migration:
                   <ul className="list-disc pl-4 mt-2">
-                    {state.result.errors.slice(0, 5).map((err, index) => (
-                      <li key={buildErrorKeys(state.result.errors.slice(0, 5))[index]} className="text-sm">
+                    {displayedErrors.map((err, index) => (
+                      <li key={displayedErrorKeys[index]} className="text-sm">
                         {err}
                       </li>
                     ))}

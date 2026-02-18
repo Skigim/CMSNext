@@ -79,7 +79,7 @@ export function useDataSync({ onRefresh, deps = [] }: UseDataSyncOptions): void 
         logger.debug("Data sync refresh skipped:", err);
       });
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- deps is a caller-provided dynamic spread; explicit listing here is intentional and validated by hook contract
   }, [onRefresh, dataChangeCount, ...deps]);
 }
 

@@ -49,7 +49,7 @@ export function CaseSection({
   };
 
   const handleUpdate = async (cat: CaseCategory, itemId: string, updatedItem: FinancialItem) => {
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars -- ID and timestamps are immutable persistence fields and must be stripped from update payloads
     const { id, createdAt, updatedAt, ...data } = updatedItem;
     await updateFinancialItem(caseId, cat, itemId, data);
   };

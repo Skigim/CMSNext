@@ -4,6 +4,7 @@ import globals from 'globals';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import reactRefresh from 'eslint-plugin-react-refresh';
+import eslintComments from 'eslint-plugin-eslint-comments';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -24,6 +25,10 @@ export default [{
     'docs/development/performance/**/*.html',
   ],
 }, {
+  linterOptions: {
+    reportUnusedDisableDirectives: 'error',
+  },
+}, {
   languageOptions: {
     globals: {
       ...globals.browser,
@@ -36,6 +41,7 @@ export default [{
 ), {
   plugins: {
     'react-refresh': reactRefresh,
+    'eslint-comments': eslintComments,
   },
   rules: {
     'react-refresh/only-export-components': 'off',
@@ -55,6 +61,13 @@ caughtErrorsIgnorePattern: '^(err|error|e|_)$'
     'react-hooks/set-state-in-effect': 'warn',
     'react-hooks/refs': 'warn',
     'react-hooks/purity': 'warn',
+    'eslint-comments/require-description': ['error', {
+      ignore: [],
+    }],
+    'eslint-comments/no-use': ['error', {
+      allow: ['eslint-disable-next-line', 'eslint-disable-line'],
+    }],
+    'eslint-comments/no-unlimited-disable': 'error',
   },
 }, {
   files: ['**/*.d.ts'],

@@ -117,9 +117,10 @@ export function useFuzzySearch({
   options?: UseFuzzySearchOptions;
 }) {
   const opts = { ...DEFAULT_OPTIONS, ...options };
-  const [query, setQueryState] = useState("");
+  const [query, setQuery] = useState("");
   const [debouncedQuery, setDebouncedQuery] = useState("");
   const [isSearching, setIsSearching] = useState(false);
+  const [hasSearched, setHasSearched] = useState(false);
   const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Create Fuse instances with memoization
@@ -137,8 +138,8 @@ export function useFuzzySearch({
     });
   }, [alerts, opts.threshold]);
 
-  const setQuery = useCallback((nextQuery: string) => {
-    setQueryState(nextQuery);
+  const updateQuery = useCallback((nextQuery: string) => {
+    setQuery(nextQuery);
 
     if (debounceTimerRef.current) {
       clearTimeout(debounceTimerRef.current);
@@ -147,13 +148,16 @@ export function useFuzzySearch({
     if (nextQuery.length < opts.minChars) {
       setDebouncedQuery("");
       setIsSearching(false);
+      setHasSearched(false);
       return;
     }
 
+    setHasSearched(false);
     setIsSearching(true);
     debounceTimerRef.current = setTimeout(() => {
       setDebouncedQuery(nextQuery);
       setIsSearching(false);
+      setHasSearched(true);
     }, opts.debounceMs);
   }, [opts.debounceMs, opts.minChars]);
 
@@ -204,9 +208,10 @@ export function useFuzzySearch({
 
   // Clear search
   const clearSearch = useCallback(() => {
-    setQueryState("");
+    setQuery("");
     setDebouncedQuery("");
     setIsSearching(false);
+    setHasSearched(false);
     if (debounceTimerRef.current) {
       clearTimeout(debounceTimerRef.current);
     }
@@ -216,13 +221,15 @@ export function useFuzzySearch({
     /** Current search query */
     query,
     /** Update search query */
-    setQuery,
+    setQuery: updateQuery,
     /** Clear the search */
     clearSearch,
     /** Search results */
     results,
     /** Whether search is in progress (debouncing) */
     isSearching,
+    /** Whether at least one search has completed for current query */
+    hasSearched,
     /** Whether there are any results */
     hasResults: results.totalCount > 0,
     /** Whether the query is long enough to search */

@@ -152,14 +152,15 @@ export function useNavigationFlow({
 
     if (!navigationLock.locked && forcedViewRef.current) {
       const returnView = forcedViewRef.current === "form" ? "list" : forcedViewRef.current;
+      forcedViewRef.current = null;
       const frameId = globalThis.requestAnimationFrame(() => {
         setCurrentView(returnView);
-        forcedViewRef.current = null;
       });
-      return () => globalThis.cancelAnimationFrame(frameId);
+      return () => {
+        globalThis.cancelAnimationFrame(frameId);
+        forcedViewRef.current = null;
+      };
     }
-
-    return;
   }, [currentView, navigationLock.locked]);
 
   return {

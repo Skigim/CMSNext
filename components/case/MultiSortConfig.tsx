@@ -23,14 +23,7 @@ const SORT_KEY_LABELS: Record<CaseListSortKey, string> = {
 };
 
 function buildSortConfigKeys(sortConfigs: SortConfig[]): string[] {
-  const counts = new Map<string, number>();
-
-  return sortConfigs.map((config) => {
-    const baseKey = `${config.key}-${config.direction}`;
-    const nextCount = (counts.get(baseKey) ?? 0) + 1;
-    counts.set(baseKey, nextCount);
-    return `${baseKey}-${nextCount}`;
-  });
+  return sortConfigs.map((_, index) => index.toString());
 }
 
 export function MultiSortConfig({

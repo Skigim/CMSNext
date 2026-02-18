@@ -65,8 +65,9 @@ export function FinancialItemCard({
       <CardHeader className="!block pb-2">
         <button
           type="button"
-          className="w-full text-left bg-transparent border-none p-0 min-w-0 cursor-pointer space-y-4 focus:outline-none focus:ring-2 focus:ring-primary rounded-md"
+          className="w-full text-left bg-transparent border-none p-0 min-w-0 cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary rounded-md"
           onClick={handleEditAction}
+          aria-label={`Edit ${normalizedItem.displayName || "financial item"}`}
         >
           <FinancialItemCardHeader
             itemType={itemType}
@@ -75,13 +76,13 @@ export function FinancialItemCard({
             displayAmount={displayAmount}
             isAmountFallback={isAmountFallback}
           />
-          <FinancialItemCardMeta
-            normalizedItem={normalizedItem}
-            verificationStatus={verificationStatus}
-            canUpdateStatus={canUpdateStatus}
-            onStatusChange={handleStatusChange}
-          />
         </button>
+        <FinancialItemCardMeta
+          normalizedItem={normalizedItem}
+          verificationStatus={verificationStatus}
+          canUpdateStatus={canUpdateStatus}
+          onStatusChange={handleStatusChange}
+        />
       </CardHeader>
     </Card>
   );

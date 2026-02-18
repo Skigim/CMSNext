@@ -116,7 +116,7 @@ export function ArchivalSettingsPanel({ cases }: { cases: StoredCase[] }) {
   useEffect(() => {
     archival.refreshArchiveList();
     archival.refreshPendingCount();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- initial archive cache bootstrap should run once on panel mount
   }, []);
   
   const hasUnsavedChanges = useMemo(() => {

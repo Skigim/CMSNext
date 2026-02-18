@@ -461,7 +461,7 @@ export function FinancialItemStepperModal({
     }, 50);
     return () => clearTimeout(timer);
   // Only trigger on step changes, not on isEntryEditing
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- focusing is intentionally keyed to visible step transitions to prevent focus jitter while editing entries
   }, [isOpen, currentStep]);
 
   // Focus entry amount input when entry form opens

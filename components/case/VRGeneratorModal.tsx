@@ -280,6 +280,7 @@ export function VRGeneratorModal({
                             "flex items-start gap-2 p-2 rounded-md cursor-pointer hover:bg-muted/50 transition-colors",
                             selected && "bg-muted"
                           )}
+                          role="checkbox"
                           onClick={() => handleToggleItem(item.id)}
                           onKeyDown={(e) => {
                             if (e.key === "Enter" || e.key === " ") {

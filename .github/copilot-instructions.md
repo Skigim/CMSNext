@@ -195,6 +195,13 @@ interface StatusConfig {
 - ❌ No repositories or event bus patterns
 - ❌ Do not add I/O or React dependencies to domain layer
 
+## Lint Enforcement for Agents
+
+- Treat all lint warnings as build blockers (`--max-warnings 0` in CI/local checks).
+- Use inline disables only (`eslint-disable-next-line` or `eslint-disable-line`), never file-wide disables unless absolutely unavoidable.
+- Every inline disable must include a clear justification comment.
+- Prefer fixing the rule violation over disabling it; disables are last resort and must be narrowly scoped.
+
 ## Development Cycle
 
 ### Weekly Structure

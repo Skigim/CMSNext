@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useCallback } from "react";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
@@ -13,37 +13,50 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Trash2, Copy, Scissors } from "lucide-react";
-import { getPaperCuts, removePaperCut, clearPaperCuts, exportPaperCuts } from "@/utils/paperCutStorage";
 import { clickToCopy } from "@/utils/clipboard";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Kbd } from "@/components/ui/kbd";
+import { usePaperCuts } from "@/hooks/usePaperCuts";
 
 export function PaperCutsPanel() {
-  const [paperCuts, setPaperCuts] = useState(() => getPaperCuts());
-
-  const reloadPaperCuts = useCallback(() => {
-    setPaperCuts(getPaperCuts());
-  }, []);
+  const {
+    paperCuts,
+    loading,
+    error,
+    deletePaperCut,
+    clearAllPaperCuts,
+    exportPaperCuts,
+  } = usePaperCuts();
 
   const handleDelete = useCallback((id: string) => {
-    removePaperCut(id);
-    reloadPaperCuts();
-    toast.success("Paper cut removed");
-  }, [reloadPaperCuts]);
+    const deleted = deletePaperCut(id);
+    if (deleted) {
+      toast.success("Paper cut removed");
+    } else {
+      toast.error("Failed to remove paper cut");
+    }
+  }, [deletePaperCut]);
 
   const handleClearAll = useCallback(() => {
-    clearPaperCuts();
-    reloadPaperCuts();
-    toast.success("All paper cuts cleared");
-  }, [reloadPaperCuts]);
+    const cleared = clearAllPaperCuts();
+    if (cleared) {
+      toast.success("All paper cuts cleared");
+    } else {
+      toast.error("Failed to clear paper cuts");
+    }
+  }, [clearAllPaperCuts]);
 
   const handleExport = useCallback(async () => {
     const text = exportPaperCuts();
+    if (!text) {
+      toast.error("Failed to export paper cuts");
+      return;
+    }
     await clickToCopy(text, {
       successMessage: "Paper cuts exported to clipboard",
     });
-  }, []);
+  }, [exportPaperCuts]);
 
   return (
     <div className="space-y-6" data-papercut-context="PaperCutsSettings">
@@ -53,16 +66,17 @@ export function PaperCutsPanel() {
           <p className="text-sm text-muted-foreground">
             Review and manage captured friction points and feedback.
           </p>
+          {error && <p className="text-sm text-destructive mt-1">{error}</p>}
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" size="sm" onClick={handleExport} disabled={paperCuts.length === 0}>
+          <Button variant="outline" size="sm" onClick={handleExport} disabled={loading || paperCuts.length === 0}>
             <Copy className="mr-2 h-4 w-4" />
             Export
           </Button>
           
           <AlertDialog>
             <AlertDialogTrigger asChild>
-              <Button variant="destructive" size="sm" disabled={paperCuts.length === 0}>
+              <Button variant="destructive" size="sm" disabled={loading || paperCuts.length === 0}>
                 <Trash2 className="mr-2 h-4 w-4" />
                 Clear All
               </Button>

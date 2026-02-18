@@ -1,4 +1,4 @@
-import { memo, useCallback, useRef, useEffect, useState } from "react";
+import { memo, useCallback, useRef, useEffect, useState, useId } from "react";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -55,10 +55,11 @@ export const GlobalSearchDropdown = memo(function GlobalSearchDropdown({
   const { config } = useCategoryConfig();
   const inputRef = useRef<HTMLInputElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const dropdownId = useId();
   const [isOpen, setIsOpen] = useState(false);
   const [selectedIndex, setSelectedIndex] = useState(0);
 
-  const { query, setQuery, clearSearch, results, isSearching, hasResults, isQueryValid } = useFuzzySearch({
+  const { query, setQuery, clearSearch, results, isSearching, hasResults, isQueryValid, hasSearched } = useFuzzySearch({
     cases,
     alerts,
     options: { debounceMs: 500, maxResults: 10 },
@@ -112,6 +113,10 @@ export const GlobalSearchDropdown = memo(function GlobalSearchDropdown({
     ? Math.min(selectedIndex, results.all.length - 1)
     : 0;
 
+  const activeOptionId = hasResults
+    ? `${dropdownId}-option-${clampedSelectedIndex}`
+    : undefined;
+
   const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLInputElement>) => {
     if (!isOpen || !hasResults) {
       if (e.key === "ArrowDown" && isQueryValid) {
@@ -155,7 +160,7 @@ export const GlobalSearchDropdown = memo(function GlobalSearchDropdown({
   const isMac = typeof navigator !== "undefined" && /(Mac|iPhone|iPad|iPod)/i.test(navigator.userAgent);
   const searchShortcut = isMac ? "⌘K" : "Ctrl+K";
 
-  const showDropdown = isOpen && isQueryValid && (hasResults || isSearching);
+  const showDropdown = isOpen && isQueryValid && (hasResults || isSearching || hasSearched);
 
   const renderDropdownContent = () => {
     if (isSearching) {
@@ -179,6 +184,7 @@ export const GlobalSearchDropdown = memo(function GlobalSearchDropdown({
               {results.cases.map((result, index) => (
                 <CaseResultItem
                   key={result.item.id}
+                  optionId={`${dropdownId}-option-${index}`}
                   result={result}
                   isSelected={clampedSelectedIndex === index}
                   onSelect={() => handleSelectResult(result)}
@@ -197,6 +203,7 @@ export const GlobalSearchDropdown = memo(function GlobalSearchDropdown({
               {results.alerts.map((result, index) => (
                 <AlertResultItem
                   key={`${result.item.id}-${index}`}
+                  optionId={`${dropdownId}-option-${results.cases.length + index}`}
                   result={result}
                   isSelected={clampedSelectedIndex === results.cases.length + index}
                   onSelect={() => handleSelectResult(result)}
@@ -232,7 +239,10 @@ export const GlobalSearchDropdown = memo(function GlobalSearchDropdown({
           className="pl-9 pr-16"
           aria-label="Search cases and alerts"
           aria-expanded={showDropdown}
-          aria-haspopup="dialog"
+          role="combobox"
+          aria-haspopup="listbox"
+          aria-controls={dropdownId}
+          aria-activedescendant={showDropdown && hasResults ? activeOptionId : undefined}
         />
         {query ? (
           <button
@@ -253,8 +263,12 @@ export const GlobalSearchDropdown = memo(function GlobalSearchDropdown({
       {showDropdown && (
         <div
           ref={dropdownRef}
-          className="absolute top-full left-0 right-0 mt-1 z-50 rounded-md border bg-popover shadow-lg overflow-hidden flex flex-col"
-          style={{ maxHeight: '32rem' }}
+          id={dropdownId}
+          role="listbox"
+          className={cn(
+            "absolute top-full left-0 right-0 mt-1 z-50 rounded-md border bg-popover shadow-lg overflow-hidden flex flex-col",
+            "max-h-96"
+          )}
         >
           <ScrollArea className="h-full max-h-80">
             {renderDropdownContent()}
@@ -276,11 +290,13 @@ export const GlobalSearchDropdown = memo(function GlobalSearchDropdown({
  * Case result item component
  */
 const CaseResultItem = memo(function CaseResultItem({
+  optionId,
   result,
   isSelected,
   onSelect,
   getStatusStyle,
 }: {
+  optionId: string;
   result: CaseSearchResult;
   isSelected: boolean;
   onSelect: () => void;
@@ -290,11 +306,14 @@ const CaseResultItem = memo(function CaseResultItem({
 
   return (
     <button
+      id={optionId}
       onClick={onSelect}
       className={cn(
         "w-full px-3 py-2 flex items-center gap-3 text-left hover:bg-accent transition-colors",
         isSelected && "bg-accent"
       )}
+      role="option"
+      aria-selected={isSelected}
     >
       <div className="flex-shrink-0">
         <User className="h-4 w-4 text-muted-foreground" />
@@ -319,10 +338,12 @@ const CaseResultItem = memo(function CaseResultItem({
  * Alert result item component
  */
 const AlertResultItem = memo(function AlertResultItem({
+  optionId,
   result,
   isSelected,
   onSelect,
 }: {
+  optionId: string;
   result: AlertSearchResult;
   isSelected: boolean;
   onSelect: () => void;
@@ -331,11 +352,14 @@ const AlertResultItem = memo(function AlertResultItem({
 
   return (
     <button
+      id={optionId}
       onClick={onSelect}
       className={cn(
         "w-full px-3 py-2 flex items-center gap-3 text-left hover:bg-accent transition-colors",
         isSelected && "bg-accent"
       )}
+      role="option"
+      aria-selected={isSelected}
     >
       <div className="flex-shrink-0">
         <AlertCircle className="h-4 w-4 text-amber-500" />

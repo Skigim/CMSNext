@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback, useEffect } from "react";
+import { useState, useMemo, useCallback, useEffect, useRef } from "react";
 import {
   Dialog,
   DialogContent,
@@ -57,11 +57,13 @@ export function BulkNoteModal({
   onSubmit,
   isSubmitting,
   selectedCount,
-}: BulkNoteModalProps) {
+}: Readonly<BulkNoteModalProps>) {
   const { config } = useCategoryConfig();
   
   const [content, setContent] = useState("");
   const [category, setCategory] = useState("");
+  const hasResetRef = useRef(false);
+  const defaultCategoryRef = useRef("General");
 
   const noteCategories = useMemo(() => {
     return config?.noteCategories ?? ["General", "Important", "Follow Up", "Contact"];
@@ -71,16 +73,24 @@ export function BulkNoteModal({
     return noteCategories[0] ?? "General";
   }, [noteCategories]);
 
+  useEffect(() => {
+    defaultCategoryRef.current = defaultCategory;
+  }, [defaultCategory]);
+
   // Reset form when modal opens
   useEffect(() => {
-    if (isOpen) {
-      const frameId = globalThis.requestAnimationFrame(() => {
-        setContent("");
-        setCategory(defaultCategory);
-      });
-      return () => globalThis.cancelAnimationFrame(frameId);
+    if (!isOpen) {
+      hasResetRef.current = false;
+      return;
     }
-  }, [isOpen, defaultCategory]);
+
+    if (!hasResetRef.current) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- modal must reset immediately on open to avoid stale values and match expected UX/tests
+      setContent("");
+      setCategory(defaultCategoryRef.current);
+      hasResetRef.current = true;
+    }
+  }, [isOpen]);
 
   const isFormValid = useMemo(() => {
     return content.trim().length > 0 && category.length > 0;
