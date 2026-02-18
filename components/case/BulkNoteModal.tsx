@@ -74,8 +74,11 @@ export function BulkNoteModal({
   // Reset form when modal opens
   useEffect(() => {
     if (isOpen) {
-      setContent("");
-      setCategory(defaultCategory);
+      const frameId = globalThis.requestAnimationFrame(() => {
+        setContent("");
+        setCategory(defaultCategory);
+      });
+      return () => globalThis.cancelAnimationFrame(frameId);
     }
   }, [isOpen, defaultCategory]);
 

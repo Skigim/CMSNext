@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import type { StoredCase } from "../types/case";
 import type AutosaveFileService from "../utils/AutosaveFileService";
@@ -94,7 +94,7 @@ export function useConnectionFlow({
   setError,
   setHasLoadedData,
 }: UseConnectionFlowParams): UseConnectionFlowResult {
-  const [showConnectModal, setShowConnectModal] = useState(false);
+  const [dismissedModalKey, setDismissedModalKey] = useState<string | null>(null);
   const lastErrorRef = useRef<number | null>(null);
 
   const {
@@ -109,6 +109,43 @@ export function useConnectionFlow({
     lastError,
   } = connectionState;
 
+  const modalStateKey = useMemo(
+    () => [
+      isSupported,
+      lifecycle,
+      permissionStatus,
+      isReady,
+      isBlocked,
+      isAwaitingUserChoice,
+      isConnected,
+      hasLoadedData,
+    ].join("|"),
+    [hasLoadedData, isAwaitingUserChoice, isBlocked, isConnected, isReady, isSupported, lifecycle, permissionStatus],
+  );
+
+  const showConnectModal = useMemo(() => {
+    if (isSupported === false) {
+      return false;
+    }
+
+    if (isSupported === undefined || lifecycle === "uninitialized") {
+      return false;
+    }
+
+    if (isBlocked) {
+      return true;
+    }
+
+    const shouldPromptConnection = !isReady || !isConnected || isAwaitingUserChoice;
+    const needsDataLoad = isConnected && !hasLoadedData;
+
+    if (!hasLoadedData && (shouldPromptConnection || needsDataLoad)) {
+      return dismissedModalKey !== modalStateKey;
+    }
+
+    return false;
+  }, [dismissedModalKey, hasLoadedData, isAwaitingUserChoice, isBlocked, isConnected, isReady, isSupported, lifecycle, modalStateKey]);
+
   // Called by modal when connection + password is complete
   const handleConnectionComplete = useCallback(async () => {
     try {
@@ -116,7 +153,7 @@ export function useConnectionFlow({
       const loadedCases = await loadCases();
       setCases(loadedCases);
       setHasLoadedData(true);
-      setShowConnectModal(false);
+      setDismissedModalKey(null);
       setError(null);
       
       // Start autosave if not already running
@@ -139,7 +176,6 @@ export function useConnectionFlow({
   useEffect(() => {
     if (isSupported === false) {
       setError("File System Access API is not supported in this browser. Please use a modern browser like Chrome, Edge, or Opera.");
-      setShowConnectModal(false);
       return;
     }
 
@@ -151,7 +187,6 @@ export function useConnectionFlow({
           ? "Permission denied for the selected directory. Please allow access to continue."
           : "Directory access is currently blocked. Please review permissions and try again."
       );
-      setShowConnectModal(true);
       return;
     }
 
@@ -161,14 +196,6 @@ export function useConnectionFlow({
       setError(null);
     }
 
-    const shouldPromptConnection = !isReady || !isConnected || isAwaitingUserChoice;
-    const needsDataLoad = isConnected && !hasLoadedData;
-
-    if (!hasLoadedData && (shouldPromptConnection || needsDataLoad)) {
-      setShowConnectModal(true);
-    } else if (isReady && hasLoadedData) {
-      setShowConnectModal(false);
-    }
   }, [hasLoadedData, isAwaitingUserChoice, isBlocked, isConnected, isErrored, isReady, isSupported, lastError, lifecycle, permissionStatus, setError]);
 
   // Error toast effect
@@ -191,7 +218,9 @@ export function useConnectionFlow({
     }
   }, [isRecovering]);
 
-  const dismissConnectModal = useCallback(() => setShowConnectModal(false), []);
+  const dismissConnectModal = useCallback(() => {
+    setDismissedModalKey(modalStateKey);
+  }, [modalStateKey]);
 
   return { showConnectModal, handleConnectionComplete, dismissConnectModal };
 }

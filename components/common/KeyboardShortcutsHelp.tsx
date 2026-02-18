@@ -43,8 +43,11 @@ export function KeyboardShortcutsHelp({
 
   useEffect(() => {
     if (open) {
-      const config = getShortcutConfig();
-      setShortcuts(resolveShortcuts(config));
+      const frameId = globalThis.requestAnimationFrame(() => {
+        const config = getShortcutConfig();
+        setShortcuts(resolveShortcuts(config));
+      });
+      return () => globalThis.cancelAnimationFrame(frameId);
     }
   }, [open]);
 

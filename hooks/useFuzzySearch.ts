@@ -117,7 +117,7 @@ export function useFuzzySearch({
   options?: UseFuzzySearchOptions;
 }) {
   const opts = { ...DEFAULT_OPTIONS, ...options };
-  const [query, setQuery] = useState("");
+  const [query, setQueryState] = useState("");
   const [debouncedQuery, setDebouncedQuery] = useState("");
   const [isSearching, setIsSearching] = useState(false);
   const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -137,13 +137,14 @@ export function useFuzzySearch({
     });
   }, [alerts, opts.threshold]);
 
-  // Debounce the query
-  useEffect(() => {
+  const setQuery = useCallback((nextQuery: string) => {
+    setQueryState(nextQuery);
+
     if (debounceTimerRef.current) {
       clearTimeout(debounceTimerRef.current);
     }
 
-    if (query.length < opts.minChars) {
+    if (nextQuery.length < opts.minChars) {
       setDebouncedQuery("");
       setIsSearching(false);
       return;
@@ -151,16 +152,16 @@ export function useFuzzySearch({
 
     setIsSearching(true);
     debounceTimerRef.current = setTimeout(() => {
-      setDebouncedQuery(query);
+      setDebouncedQuery(nextQuery);
       setIsSearching(false);
     }, opts.debounceMs);
+  }, [opts.debounceMs, opts.minChars]);
 
-    return () => {
-      if (debounceTimerRef.current) {
-        clearTimeout(debounceTimerRef.current);
-      }
-    };
-  }, [query, opts.debounceMs, opts.minChars]);
+  useEffect(() => () => {
+    if (debounceTimerRef.current) {
+      clearTimeout(debounceTimerRef.current);
+    }
+  }, []);
 
   // Perform the search
   const results = useMemo<FuzzySearchResults>(() => {
@@ -203,7 +204,7 @@ export function useFuzzySearch({
 
   // Clear search
   const clearSearch = useCallback(() => {
-    setQuery("");
+    setQueryState("");
     setDebouncedQuery("");
     setIsSearching(false);
     if (debounceTimerRef.current) {

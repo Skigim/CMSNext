@@ -181,7 +181,10 @@ export function useCaseManagement(): UseCaseManagementReturn {
   // Auto-refresh archival queue when data is first loaded
   // Use a ref for refreshQueue to avoid re-triggering when archival object changes
   const refreshQueueRef = useRef(archival.refreshQueue);
-  refreshQueueRef.current = archival.refreshQueue;
+
+  useEffect(() => {
+    refreshQueueRef.current = archival.refreshQueue;
+  }, [archival.refreshQueue]);
   
   useEffect(() => {
     if (

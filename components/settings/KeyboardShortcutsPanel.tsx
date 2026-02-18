@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback } from "react";
 import {
   Card,
   CardContent,
@@ -154,19 +154,16 @@ function ShortcutEditor({
 }
 
 export function KeyboardShortcutsPanel() {
-  const [refreshKey, setRefreshKey] = useState(0);
   const [openPopoverId, setOpenPopoverId] = useState<string | null>(null);
-  const [shortcuts, setShortcuts] = useState<ResolvedShortcut[]>([]);
+  const [shortcuts, setShortcuts] = useState<ResolvedShortcut[]>(() => {
+    const config = getShortcutConfig();
+    return resolveShortcuts(config);
+  });
 
   const isMac = useMemo(() => {
     if (typeof navigator === "undefined") return false;
     return /Mac|iPhone|iPad|iPod/i.test(navigator.userAgent || "");
   }, []);
-
-  useEffect(() => {
-    const config = getShortcutConfig();
-    setShortcuts(resolveShortcuts(config));
-  }, [refreshKey]);
 
   const groupedShortcuts = useMemo(() => {
     const groups: Record<string, typeof shortcuts> = {};
@@ -186,31 +183,32 @@ export function KeyboardShortcutsPanel() {
     ui: "Interface",
   };
 
-  const handleRefresh = useCallback(() => {
-    setRefreshKey((prev) => prev + 1);
+  const reloadShortcuts = useCallback(() => {
+    const config = getShortcutConfig();
+    setShortcuts(resolveShortcuts(config));
   }, []);
 
   const handleToggle = (id: string, enabled: boolean) => {
     toggleShortcut(id, enabled);
-    handleRefresh();
+    reloadShortcuts();
   };
 
   const handleReset = (id: string) => {
     updateShortcutBinding(id, null);
-    handleRefresh();
+    reloadShortcuts();
     toast.success("Shortcut reset to default");
   };
 
   const handleResetAll = () => {
     resetAllShortcuts();
-    handleRefresh();
+    reloadShortcuts();
     toast.success("All shortcuts reset to defaults");
   };
 
   const handleSaveBinding = (id: string, binding: string) => {
     updateShortcutBinding(id, binding);
     setOpenPopoverId(null);
-    handleRefresh();
+    reloadShortcuts();
     toast.success("Shortcut updated");
   };
 

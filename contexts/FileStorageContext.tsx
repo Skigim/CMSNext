@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, useCallback, useReducer, ReactNode, useMemo, useRef } from 'react';
+import { createContext, useContext, useEffect, useCallback, useReducer, ReactNode, useMemo, useRef } from 'react';
 import { toast } from 'sonner';
 import AutosaveFileService from '@/utils/AutosaveFileService';
 import { FileStorageService } from '@/utils/services/FileStorageService';
@@ -192,64 +192,62 @@ export function FileStorageProvider({
   enabled = true,
   getDataFunction
 }: Readonly<FileStorageProviderProps>) {
-  const [service, setService] = useState<AutosaveFileService | null>(null);
-  const [fileStorageService, setFileStorageService] = useState<FileStorageService | null>(null);
   const [state, dispatch] = useReducer(reduceFileStorageState, initialMachineState);
   const dataLoadHandlersRef = useRef(new Set<(data: unknown) => void>());
+
+  const service = useMemo(() => new AutosaveFileService({
+    fileName: 'case-tracker-data.json',
+    enabled: true,
+    saveInterval: 120000,
+    debounceDelay: 5000,
+    maxRetries: 3,
+    statusCallback: (statusUpdate) => {
+      dispatch({ type: 'STATUS_CHANGED', status: statusUpdate });
+    },
+    errorCallback: ({ message, type, error, context }) => {
+      const operation = (context?.operation as FileStorageOperation) ?? 'unknown';
+      const notification = reportFileStorageError({
+        operation,
+        error,
+        messageOverride: message,
+        severity: mapSeverityFromType(type),
+        toast: false,
+        context,
+        source: 'AutosaveFileService',
+      });
+
+      if (notification) {
+        dispatch({
+          type: 'ERROR_REPORTED',
+          error: {
+            message: notification.message,
+            type: notification.type,
+            timestamp: notification.timestamp,
+          },
+        });
+      }
+    }
+  }), [dispatch]);
+
+  const fileStorageService = useMemo(
+    () => new FileStorageService({ fileService: service }),
+    [service],
+  );
 
   // Initialize the service - only once per component mount
   useEffect(() => {
     logger.lifecycle('Creating AutosaveFileService instance');
-    const fileService = new AutosaveFileService({
-      fileName: 'case-tracker-data.json',
-      enabled: true, // Always start enabled, we'll control it separately
-      saveInterval: 120000, // 2 minutes
-      debounceDelay: 5000,   // 5 seconds
-      maxRetries: 3,
-      statusCallback: (statusUpdate) => {
-        dispatch({ type: 'STATUS_CHANGED', status: statusUpdate });
-      },
-      errorCallback: ({ message, type, error, context }) => {
-        const operation = (context?.operation as FileStorageOperation) ?? 'unknown';
-        const notification = reportFileStorageError({
-          operation,
-          error,
-          messageOverride: message,
-          severity: mapSeverityFromType(type),
-          toast: false,
-          context,
-          source: 'AutosaveFileService',
-        });
 
-        if (notification) {
-          dispatch({
-            type: 'ERROR_REPORTED',
-            error: {
-              message: notification.message,
-              type: notification.type,
-              timestamp: notification.timestamp,
-            },
-          });
-        }
-      }
-    });
-
-    const storageService = new FileStorageService({
-      fileService,
-    });
-
-    dispatch({ type: 'SERVICE_INITIALIZED', supported: fileService.isSupported() });
-    setService(fileService);
-    setFileStorageService(storageService);
-    setFileService(fileService);
+    dispatch({ type: 'SERVICE_INITIALIZED', supported: service.isSupported() });
+    setFileService(service);
 
     return () => {
       logger.lifecycle('Destroying AutosaveFileService instance');
-      fileService.destroy();
+      service.destroy();
       setFileService(null);
       dispatch({ type: 'SERVICE_RESET' });
     };
-  }, [dispatch]); // No dependencies - create only once per component mount
+  }, [dispatch, service]); // No dependencies - create only once per component mount
 
   // Handle enabled setting separately to avoid service recreation
   useEffect(() => {
@@ -379,17 +377,17 @@ export function FileStorageProvider({
     dispatch({ type: 'DISCONNECTED' });
   }, [dispatch, service]);
 
-  const saveNow = async (): Promise<void> => {
+  const saveNow = useCallback(async (): Promise<void> => {
     if (!service) return;
     await service.save();
-  };
+  }, [service]);
 
-  const ensurePermission = async (): Promise<boolean> => {
+  const ensurePermission = useCallback(async (): Promise<boolean> => {
     if (!service) return false;
     return await service.ensurePermission();
-  };
+  }, [service]);
 
-  const updateSettings = (settings: { enabled: boolean; saveInterval: number; debounceDelay: number }) => {
+  const updateSettings = useCallback((settings: { enabled: boolean; saveInterval: number; debounceDelay: number }) => {
     if (!service) return;
     
     service.updateConfig(settings);
@@ -399,7 +397,7 @@ export function FileStorageProvider({
     } else if (!settings.enabled && service.getStatus().isRunning) {
       service.stopAutosave();
     }
-  };
+  }, [service]);
 
   const listDataFiles = useCallback(async (): Promise<string[]> => {
     logger.debug('listDataFiles called', { serviceAvailable: !!service });
@@ -416,7 +414,7 @@ export function FileStorageProvider({
     }
   }, [service]);
 
-  const readNamedFile = async (fileName: string): Promise<unknown> => {
+  const readNamedFile = useCallback(async (fileName: string): Promise<unknown> => {
     logger.debug('readNamedFile called', { serviceAvailable: !!service, fileName });
     if (!service) return null;
     try {
@@ -433,12 +431,12 @@ export function FileStorageProvider({
       });
       return null;
     }
-  };
+  }, [service]);
 
-  const loadExistingData = async (): Promise<unknown> => {
+  const loadExistingData = useCallback(async (): Promise<unknown> => {
     if (!service) return null;
     return await service.loadExistingData();
-  };
+  }, [service]);
 
   const loadDataFromFile = useCallback(async (fileName: string): Promise<unknown> => {
     logger.debug('loadDataFromFile called', { serviceAvailable: !!service, fileName });

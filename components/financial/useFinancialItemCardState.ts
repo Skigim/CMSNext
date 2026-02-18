@@ -1,4 +1,4 @@
-import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { FormEvent, useCallback, useMemo, useRef, useState } from "react";
 import type { CaseCategory, FinancialItem } from "../../types/case";
 import { getNormalizedFormData, getNormalizedItem } from "../../utils/dataNormalization";
 import { getDisplayAmount } from "@/domain/common";
@@ -106,12 +106,6 @@ export function useFinancialItemCardState({
     () => Boolean(normalizedItem.safeId && currentEntry),
     [normalizedItem.safeId, currentEntry],
   );
-
-  useEffect(() => {
-    if (!isEditing) {
-      setFormData(item);
-    }
-  }, [item, isEditing]);
 
   useEffect(() => () => {
     if (saveSuccessTimerRef.current) {

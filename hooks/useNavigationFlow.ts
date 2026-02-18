@@ -142,17 +142,24 @@ export function useNavigationFlow({
       if (!forcedViewRef.current) {
         forcedViewRef.current = currentView;
       }
-      setCurrentView("settings");
-      setSelectedCaseId(null);
-      setShowNewCaseModal(false);
-      return;
+      const frameId = globalThis.requestAnimationFrame(() => {
+        setCurrentView("settings");
+        setSelectedCaseId(null);
+        setShowNewCaseModal(false);
+      });
+      return () => globalThis.cancelAnimationFrame(frameId);
     }
 
     if (!navigationLock.locked && forcedViewRef.current) {
       const returnView = forcedViewRef.current === "form" ? "list" : forcedViewRef.current;
-      setCurrentView(returnView);
-      forcedViewRef.current = null;
+      const frameId = globalThis.requestAnimationFrame(() => {
+        setCurrentView(returnView);
+        forcedViewRef.current = null;
+      });
+      return () => globalThis.cancelAnimationFrame(frameId);
     }
+
+    return;
   }, [currentView, navigationLock.locked]);
 
   return {

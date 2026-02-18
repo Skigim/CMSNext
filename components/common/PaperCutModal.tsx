@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useMemo, useCallback } from "react";
 import {
   Dialog,
   DialogContent,
@@ -34,12 +34,12 @@ export function PaperCutModal({
     return /Mac|iPhone|iPad|iPod/i.test(navigator.platform ?? navigator.userAgent ?? "");
   }, []);
 
-  // Reset content when modal opens
-  useEffect(() => {
-    if (open) {
+  const handleOpenChange = useCallback((nextOpen: boolean) => {
+    if (nextOpen) {
       setContent("");
     }
-  }, [open]);
+    onOpenChange(nextOpen);
+  }, [onOpenChange]);
 
   const handleSubmit = () => {
     if (!content.trim()) return;
@@ -55,7 +55,7 @@ export function PaperCutModal({
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
           <DialogTitle>Report a Paper Cut</DialogTitle>

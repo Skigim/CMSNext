@@ -67,7 +67,10 @@ export function useCaseStatusMenu({
     if (externalStatusRef.current !== externalStatus) {
       externalStatusRef.current = externalStatus;
       committedStatusRef.current = externalStatus;
-      setOptimisticStatus(externalStatus);
+      const frameId = globalThis.requestAnimationFrame(() => {
+        setOptimisticStatus(externalStatus);
+      });
+      return () => globalThis.cancelAnimationFrame(frameId);
     }
   }, [externalStatus]);
 

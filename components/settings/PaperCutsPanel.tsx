@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useCallback } from "react";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
@@ -16,33 +16,27 @@ import { Trash2, Copy, Scissors } from "lucide-react";
 import { getPaperCuts, removePaperCut, clearPaperCuts, exportPaperCuts } from "@/utils/paperCutStorage";
 import { clickToCopy } from "@/utils/clipboard";
 import { toast } from "sonner";
-import type { PaperCut } from "@/types/paperCut";
 import { Badge } from "@/components/ui/badge";
 import { Kbd } from "@/components/ui/kbd";
 
 export function PaperCutsPanel() {
-  const [paperCuts, setPaperCuts] = useState<PaperCut[]>([]);
-  const [refreshKey, setRefreshKey] = useState(0);
+  const [paperCuts, setPaperCuts] = useState(() => getPaperCuts());
 
-  useEffect(() => {
+  const reloadPaperCuts = useCallback(() => {
     setPaperCuts(getPaperCuts());
-  }, [refreshKey]);
-
-  const handleRefresh = useCallback(() => {
-    setRefreshKey((prev) => prev + 1);
   }, []);
 
   const handleDelete = useCallback((id: string) => {
     removePaperCut(id);
-    handleRefresh();
+    reloadPaperCuts();
     toast.success("Paper cut removed");
-  }, [handleRefresh]);
+  }, [reloadPaperCuts]);
 
   const handleClearAll = useCallback(() => {
     clearPaperCuts();
-    handleRefresh();
+    reloadPaperCuts();
     toast.success("All paper cuts cleared");
-  }, [handleRefresh]);
+  }, [reloadPaperCuts]);
 
   const handleExport = useCallback(async () => {
     const text = exportPaperCuts();

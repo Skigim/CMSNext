@@ -73,11 +73,14 @@ export function VRGeneratorModal({
   // Reset state when modal opens
   useEffect(() => {
     if (open) {
-      // Select no items by default
-      setSelectedItemIds(new Set());
-      // Select first script if available (but don't auto-populate)
-      setSelectedScriptId(vrTemplates[0]?.id ?? null);
-      setRenderedText("");
+      const frameId = globalThis.requestAnimationFrame(() => {
+        // Select no items by default
+        setSelectedItemIds(new Set());
+        // Select first script if available (but don't auto-populate)
+        setSelectedScriptId(vrTemplates[0]?.id ?? null);
+        setRenderedText("");
+      });
+      return () => globalThis.cancelAnimationFrame(frameId);
     }
   }, [open, vrTemplates]);
 
