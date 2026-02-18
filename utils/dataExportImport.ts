@@ -24,7 +24,7 @@ export function exportCasesToJSON(cases: StoredCase[]): void {
     a.download = `case-tracker-export-${toLocalDateString()}.json`;
     document.body.appendChild(a);
     a.click();
-    document.body.removeChild(a);
+    a.remove();
     URL.revokeObjectURL(url);
 
     toast.success(`Successfully exported ${cases.length} cases to JSON file`);

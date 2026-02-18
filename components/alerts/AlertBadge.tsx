@@ -55,15 +55,14 @@ export const AlertBadge = memo(function AlertBadge({ alerts, className, size = "
   };
 
   const badge = (
-    <span
-      tabIndex={0}
+    <button
+      type="button"
       className={cn(
         "inline-flex cursor-pointer select-none items-center gap-1 rounded-full border border-amber-400/40 bg-amber-400/10 text-amber-700 font-medium transition-all hover:border-amber-400/60 hover:bg-amber-400/20 hover:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500/40 focus-visible:ring-offset-2 focus-visible:ring-offset-background",
         sizeClasses,
         className,
       )}
       aria-label={`${count} alert${count === 1 ? "" : "s"}`}
-      role="button"
       aria-haspopup="dialog"
       onClick={onClick}
       onKeyDown={handleKeyDown}
@@ -71,7 +70,7 @@ export const AlertBadge = memo(function AlertBadge({ alerts, className, size = "
       <span className="inline-flex h-2 w-2 rounded-full bg-current opacity-70" aria-hidden />
       <span>{count}</span>
       {showLabel && <span className="uppercase tracking-wide">Alerts</span>}
-    </span>
+    </button>
   );
 
   return (

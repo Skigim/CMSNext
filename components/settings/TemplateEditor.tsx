@@ -143,15 +143,13 @@ function TemplateViewRow({
   return (
     <div className="rounded-lg border border-border/50 bg-background/60 overflow-hidden">
       {/* Header Row */}
-      <div 
+      <button
+        type="button"
         className={cn(
-          "flex items-center gap-2 p-3 cursor-pointer hover:bg-muted/50 transition-colors",
+          "w-full flex items-center gap-2 p-3 cursor-pointer hover:bg-muted/50 transition-colors text-left bg-transparent border-0",
           isExpanded && "border-b border-border/50"
         )}
         onClick={onToggleExpand}
-        role="button"
-        tabIndex={0}
-        onKeyDown={(e) => e.key === "Enter" && onToggleExpand()}
       >
         <div className="text-muted-foreground">
           {isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
@@ -209,7 +207,7 @@ function TemplateViewRow({
             <TooltipContent>Delete template</TooltipContent>
           </Tooltip>
         </div>
-      </div>
+      </button>
 
       {/* Expanded Content */}
       {isExpanded && hasContent && (

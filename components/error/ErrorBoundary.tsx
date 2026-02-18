@@ -89,7 +89,7 @@ export class ErrorBoundary extends BaseErrorBoundary<
         document.body.appendChild(textArea);
         textArea.select();
         document.execCommand('copy');
-        document.body.removeChild(textArea);
+        textArea.remove();
         toast.success('Error details copied to clipboard');
       });
   };

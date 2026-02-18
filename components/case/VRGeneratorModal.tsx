@@ -274,21 +274,15 @@ export function VRGeneratorModal({
                       </p>
                     ) : (
                       selectableItems.map(({ item, type, selected }) => (
-                        <div
+                        <button
+                          type="button"
                           key={item.id}
                           className={cn(
-                            "flex items-start gap-2 p-2 rounded-md cursor-pointer hover:bg-muted/50 transition-colors",
+                            "w-full flex items-start gap-2 p-2 rounded-md cursor-pointer hover:bg-muted/50 transition-colors text-left bg-transparent border-0",
                             selected && "bg-muted"
                           )}
                           role="checkbox"
                           onClick={() => handleToggleItem(item.id)}
-                          onKeyDown={(e) => {
-                            if (e.key === "Enter" || e.key === " ") {
-                              e.preventDefault();
-                              handleToggleItem(item.id);
-                            }
-                          }}
-                          tabIndex={0}
                           aria-checked={selected}
                         >
                           <Checkbox
@@ -310,7 +304,7 @@ export function VRGeneratorModal({
                               {formatAmount(item.amount)}
                             </div>
                           </div>
-                        </div>
+                        </button>
                       ))
                     )}
                   </div>

@@ -74,18 +74,30 @@ function withPending(text: string, pending: string | null): string {
   return pending ? `${text} (${pending})` : text;
 }
 
+interface DeriveStatusDisplayOptions {
+  rawStatus: string;
+  message: string | null;
+  pendingDescription: string | null;
+  consecutiveFailures: number;
+  lastSavedAt: number | null;
+  lastSavedRelative: string | null;
+  isSupported: boolean | undefined;
+  lifecycle: FileStorageLifecycleState;
+  permissionStatus: FileStoragePermissionState;
+}
+
 /** Map raw service inputs to display properties. */
-function deriveStatusDisplay(
-  rawStatus: string,
-  message: string | null,
-  pendingDescription: string | null,
-  consecutiveFailures: number,
-  lastSavedAt: number | null,
-  lastSavedRelative: string | null,
-  isSupported: boolean | undefined,
-  lifecycle: FileStorageLifecycleState,
-  permissionStatus: FileStoragePermissionState,
-): StatusDisplayInfo {
+function deriveStatusDisplay({
+  rawStatus,
+  message,
+  pendingDescription,
+  consecutiveFailures,
+  lastSavedAt,
+  lastSavedRelative,
+  isSupported,
+  lifecycle,
+  permissionStatus,
+}: DeriveStatusDisplayOptions): StatusDisplayInfo {
   const defaultDetail = message ?? (lastSavedRelative ? `Last saved ${lastSavedRelative}` : "Autosave is standing by.");
 
   if (isSupported === false) {
@@ -224,10 +236,10 @@ export function useAutosaveStatus(): AutosaveStatusSummary {
     const message = statusSnapshot?.message ?? null;
     const pendingDescription = describePendingWrites(pendingWrites);
 
-    const { state, displayLabel, detailText, tone, showSpinner } = deriveStatusDisplay(
+    const { state, displayLabel, detailText, tone, showSpinner } = deriveStatusDisplay({
       rawStatus, message, pendingDescription, consecutiveFailures,
       lastSavedAt, lastSavedRelative, isSupported, lifecycle, permissionStatus,
-    );
+    });
 
     return {
       state,

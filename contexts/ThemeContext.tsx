@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
+import { createContext, useContext, useEffect, useState, useCallback, useMemo, ReactNode } from 'react';
 import { createLocalStorageAdapter } from '../utils/localStorage';
 
 /**
@@ -154,16 +154,16 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     return 'light';
   });
 
-  const toggleTheme = () => {
+  const toggleTheme = useCallback(() => {
     const currentIndex = themeOptions.findIndex(option => option.id === theme);
     const nextIndex = currentIndex >= 0 ? (currentIndex + 1) % themeOptions.length : 0;
     const nextTheme = themeOptions[nextIndex]?.id ?? 'light';
     setTheme(nextTheme);
-  };
+  }, [theme, themeOptions]);
 
-  const handleSetTheme = (newTheme: Theme) => {
+  const handleSetTheme = useCallback((newTheme: Theme) => {
     setTheme(newTheme);
-  };
+  }, []);
 
   useEffect(() => {
     const root = globalThis.document.documentElement;
@@ -189,17 +189,13 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   const isDarkTheme = theme === 'dark' || theme === 'sterling';
   const tone: ThemeTone = isDarkTheme ? 'dark' : 'light';
 
+  const contextValue = useMemo(
+    () => ({ theme, tone, isDark: isDarkTheme, toggleTheme, setTheme: handleSetTheme, themeOptions }),
+    [theme, tone, isDarkTheme, toggleTheme, handleSetTheme, themeOptions]
+  );
+
   return (
-    <ThemeContext.Provider
-      value={{
-        theme,
-        tone,
-        isDark: isDarkTheme,
-        toggleTheme,
-        setTheme: handleSetTheme,
-        themeOptions,
-      }}
-    >
+    <ThemeContext.Provider value={contextValue}>
       {children}
     </ThemeContext.Provider>
   );

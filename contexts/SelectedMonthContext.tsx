@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useCallback, type ReactNode } from "react";
+import { createContext, useContext, useState, useCallback, useMemo, type ReactNode } from "react";
 
 /**
  * Selected month context value - provides month selection state and navigation.
@@ -137,16 +137,13 @@ export function SelectedMonthProvider({
     });
   }, []);
 
+  const contextValue = useMemo(
+    () => ({ selectedMonth, setSelectedMonth, resetToCurrentMonth, previousMonth, nextMonth }),
+    [selectedMonth, setSelectedMonth, resetToCurrentMonth, previousMonth, nextMonth]
+  );
+
   return (
-    <SelectedMonthContext.Provider 
-      value={{
-        selectedMonth,
-        setSelectedMonth,
-        resetToCurrentMonth,
-        previousMonth,
-        nextMonth,
-      }}
-    >
+    <SelectedMonthContext.Provider value={contextValue}>
       {children}
     </SelectedMonthContext.Provider>
   );

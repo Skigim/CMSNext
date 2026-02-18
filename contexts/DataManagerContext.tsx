@@ -124,8 +124,10 @@ export function DataManagerProvider({ children }: DataManagerProviderProps) {
     });
   }, [dataManager, isConnected]);
 
+  const contextValue = useMemo(() => ({ dataManager }), [dataManager]);
+
   return (
-    <DataManagerContext.Provider value={{ dataManager }}>
+    <DataManagerContext.Provider value={contextValue}>
       {children}
     </DataManagerContext.Provider>
   );

@@ -75,7 +75,7 @@ export const PinnedCasesDropdown = memo(function PinnedCasesDropdown({
           variant="ghost"
           size="icon"
           className="relative h-9 w-9"
-          aria-label={`Pinned cases${hasPinnedCases ? ` (${resolvedCount})` : ""}`}
+          aria-label={hasPinnedCases ? `Pinned cases (${resolvedCount})` : "Pinned cases"}
         >
           <Pin className="h-4 w-4" />
           {hasPinnedCases && (

@@ -95,7 +95,7 @@ export function CaseFilters({ filters, onFiltersChange, segment, alertDescriptio
           )}
           {filters.priorityOnly && (
             <Badge variant="secondary" className="gap-1">
-              Priority only
+              Priority only{" "}
               <button
                 onClick={handleClearPriority}
                 className="ml-1 hover:bg-secondary-foreground/20 rounded-full p-0.5"
@@ -133,7 +133,7 @@ export function CaseFilters({ filters, onFiltersChange, segment, alertDescriptio
           )}
           {filters.excludePriority && (
             <Badge variant="secondary" className="gap-1">
-              Hide priority
+              Hide priority{" "}
               <button
                 onClick={handleClearExcludePriority}
                 className="ml-1 hover:bg-secondary-foreground/20 rounded-full p-0.5"
@@ -157,7 +157,7 @@ export function CaseFilters({ filters, onFiltersChange, segment, alertDescriptio
           )}
           {!filters.showCompleted && (
             <Badge variant="secondary" className="gap-1">
-              Hide completed
+              Hide completed{" "}
               <button
                 onClick={handleClearShowCompleted}
                 className="ml-1 hover:bg-secondary-foreground/20 rounded-full p-0.5"

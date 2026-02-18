@@ -95,7 +95,7 @@ function writeWithExecCommand(text: string): boolean {
     successful = false;
   }
 
-  document.body.removeChild(textarea);
+  textarea.remove();
   return successful;
 }
 

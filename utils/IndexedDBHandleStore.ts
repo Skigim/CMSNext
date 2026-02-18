@@ -53,7 +53,7 @@ export async function getStoredDirectoryHandle(
   return new Promise((resolve, reject) => {
     const request = indexedDB.open(dbName, 1);
     
-    request.onerror = () => reject(request.error);
+    request.onerror = () => reject(new Error(String(request.error)));
     
     request.onsuccess = () => {
       const db = request.result;
@@ -108,7 +108,7 @@ export async function storeDirectoryHandle(
   return new Promise((resolve, reject) => {
     const request = indexedDB.open(dbName, 1);
     
-    request.onerror = (e) => reject(e);
+    request.onerror = (e) => reject(e instanceof Error ? e : new Error(String(e)));
     
     request.onsuccess = () => {
       const db = request.result;
@@ -122,7 +122,7 @@ export async function storeDirectoryHandle(
       };
       putRequest.onerror = (e) => {
         db.close();
-        reject(e);
+        reject(e instanceof Error ? e : new Error(String(e)));
       };
     };
     
