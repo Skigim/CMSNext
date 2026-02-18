@@ -15,7 +15,7 @@ interface CaseFiltersProps {
   alertDescriptions?: string[];
 }
 
-export function CaseFilters({ filters, onFiltersChange, segment, alertDescriptions = [] }: CaseFiltersProps) {
+export function CaseFilters({ filters, onFiltersChange, segment, alertDescriptions = [] }: Readonly<CaseFiltersProps>) {
   const [dialogOpen, setDialogOpen] = useState(false);
 
   const activeFilterCount = useMemo(() => {
@@ -83,8 +83,9 @@ export function CaseFilters({ filters, onFiltersChange, segment, alertDescriptio
         <div className="flex items-center gap-2 flex-wrap">
           {filters.statuses.length > 0 && (
             <Badge variant="secondary" className="gap-1">
-              Status: {filters.statuses.join(", ")}
+              Status: {filters.statuses.join(", ")}{" "}
               <button
+                type="button"
                 onClick={handleClearStatus}
                 className="ml-1 hover:bg-secondary-foreground/20 rounded-full p-0.5"
                 aria-label="Clear status filter"
@@ -97,6 +98,7 @@ export function CaseFilters({ filters, onFiltersChange, segment, alertDescriptio
             <Badge variant="secondary" className="gap-1">
               Priority only{" "}
               <button
+                type="button"
                 onClick={handleClearPriority}
                 className="ml-1 hover:bg-secondary-foreground/20 rounded-full p-0.5"
                 aria-label="Clear priority filter"
@@ -109,8 +111,9 @@ export function CaseFilters({ filters, onFiltersChange, segment, alertDescriptio
             <Badge variant="secondary" className="gap-1">
               {filters.dateRange.from && format(filters.dateRange.from, "MMM d, yyyy")}
               {filters.dateRange.from && filters.dateRange.to && " - "}
-              {filters.dateRange.to && format(filters.dateRange.to, "MMM d, yyyy")}
+              {filters.dateRange.to && format(filters.dateRange.to, "MMM d, yyyy")}{" "}
               <button
+                type="button"
                 onClick={handleClearDateRange}
                 className="ml-1 hover:bg-secondary-foreground/20 rounded-full p-0.5"
                 aria-label="Clear date range filter"
@@ -121,8 +124,9 @@ export function CaseFilters({ filters, onFiltersChange, segment, alertDescriptio
           )}
           {filters.excludeStatuses.length > 0 && (
             <Badge variant="secondary" className="gap-1">
-              Exclude: {filters.excludeStatuses.join(", ")}
+              Exclude: {filters.excludeStatuses.join(", ")}{" "}
               <button
+                type="button"
                 onClick={handleClearExcludeStatuses}
                 className="ml-1 hover:bg-secondary-foreground/20 rounded-full p-0.5"
                 aria-label="Clear exclude status filter"
@@ -135,6 +139,7 @@ export function CaseFilters({ filters, onFiltersChange, segment, alertDescriptio
             <Badge variant="secondary" className="gap-1">
               Hide priority{" "}
               <button
+                type="button"
                 onClick={handleClearExcludePriority}
                 className="ml-1 hover:bg-secondary-foreground/20 rounded-full p-0.5"
                 aria-label="Clear hide priority filter"
@@ -145,8 +150,9 @@ export function CaseFilters({ filters, onFiltersChange, segment, alertDescriptio
           )}
           {filters.alertDescription !== "all" && (
             <Badge variant="secondary" className="gap-1">
-              Description: {filters.alertDescription}
+              Description: {filters.alertDescription}{" "}
               <button
+                type="button"
                 onClick={handleClearAlertDescription}
                 className="ml-1 hover:bg-secondary-foreground/20 rounded-full p-0.5"
                 aria-label="Clear alert description filter"
@@ -159,6 +165,7 @@ export function CaseFilters({ filters, onFiltersChange, segment, alertDescriptio
             <Badge variant="secondary" className="gap-1">
               Hide completed{" "}
               <button
+                type="button"
                 onClick={handleClearShowCompleted}
                 className="ml-1 hover:bg-secondary-foreground/20 rounded-full p-0.5"
                 aria-label="Clear hide completed filter"

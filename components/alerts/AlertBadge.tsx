@@ -1,4 +1,4 @@
-import { memo, type KeyboardEvent } from "react";
+import { memo } from "react";
 import { cn } from "@/components/ui/utils";
 import { filterOpenAlerts, type AlertWithMatch } from "@/utils/alertsData";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -43,17 +43,6 @@ export const AlertBadge = memo(function AlertBadge({ alerts, className, size = "
     ? "text-[11px] px-2 py-0.5"
     : "text-sm px-3 py-1";
 
-  const handleKeyDown = (event: KeyboardEvent<HTMLSpanElement>) => {
-    if (!onClick) {
-      return;
-    }
-
-    if (event.key === "Enter" || event.key === " ") {
-      event.preventDefault();
-      onClick();
-    }
-  };
-
   const badge = (
     <button
       type="button"
@@ -65,7 +54,6 @@ export const AlertBadge = memo(function AlertBadge({ alerts, className, size = "
       aria-label={`${count} alert${count === 1 ? "" : "s"}`}
       aria-haspopup="dialog"
       onClick={onClick}
-      onKeyDown={handleKeyDown}
     >
       <span className="inline-flex h-2 w-2 rounded-full bg-current opacity-70" aria-hidden />
       <span>{count}</span>

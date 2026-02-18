@@ -82,7 +82,7 @@ export function formatInternationalPhone(phone: string): string {
 
   // If starts with country code
   if (digits.length > 10) {
-    const countryCode = digits.slice(0, digits.length - 10);
+    const countryCode = digits.slice(0, -10);
     const areaCode = digits.slice(-10, -7);
     const prefix = digits.slice(-7, -4);
     const lineNumber = digits.slice(-4);
@@ -178,7 +178,7 @@ export function getAreaCode(phone: string): string {
 
   if (digits.length >= 3) {
     // Handle 11-digit numbers starting with 1
-    if (digits.length >= 10 && digits.startsWith("1")) {
+    if (digits.length === 11 && digits.startsWith("1")) {
       return digits.slice(1, 4);
     }
     return digits.slice(0, 3);

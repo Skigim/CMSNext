@@ -143,33 +143,38 @@ function TemplateViewRow({
   return (
     <div className="rounded-lg border border-border/50 bg-background/60 overflow-hidden">
       {/* Header Row */}
-      <button
-        type="button"
+      <div
         className={cn(
-          "w-full flex items-center gap-2 p-3 cursor-pointer hover:bg-muted/50 transition-colors text-left bg-transparent border-0",
+          "flex items-center gap-2 hover:bg-muted/50 transition-colors",
           isExpanded && "border-b border-border/50"
         )}
-        onClick={onToggleExpand}
       >
-        <div className="text-muted-foreground">
-          {isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
-        </div>
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2">
-            <span className="font-medium text-sm truncate">{template.name}</span>
-            {hasContent && (
-              <Badge variant="secondary" className="text-xs shrink-0">
-                {template.template.length} chars
-              </Badge>
-            )}
-            {!hasContent && (
-              <Badge variant="outline" className="text-xs text-muted-foreground shrink-0">
-                No content
-              </Badge>
-            )}
+        <button
+          type="button"
+          className="flex flex-1 items-center gap-2 p-3 cursor-pointer text-left bg-transparent border-0 min-w-0"
+          onClick={onToggleExpand}
+          aria-expanded={isExpanded}
+        >
+          <div className="text-muted-foreground">
+            {isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
           </div>
-        </div>
-        <div className="flex items-center gap-1">
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2">
+              <span className="font-medium text-sm truncate">{template.name}</span>
+              {hasContent && (
+                <Badge variant="secondary" className="text-xs shrink-0">
+                  {template.template.length} chars
+                </Badge>
+              )}
+              {!hasContent && (
+                <Badge variant="outline" className="text-xs text-muted-foreground shrink-0">
+                  No content
+                </Badge>
+              )}
+            </div>
+          </div>
+        </button>
+        <div className="flex items-center gap-1 pr-3">
           <Tooltip>
             <TooltipTrigger asChild>
               <Button
@@ -207,7 +212,7 @@ function TemplateViewRow({
             <TooltipContent>Delete template</TooltipContent>
           </Tooltip>
         </div>
-      </button>
+      </div>
 
       {/* Expanded Content */}
       {isExpanded && hasContent && (

@@ -286,7 +286,7 @@ _9 Critical + 108 Major production code issues_
 - [x] `S6479` stable-key remediation pass completed for listed component key hotspots
 - [x] `S6564` redundant type alias fix completed in `useFinancialItemCardState.ts`
 - [x] `S6582` optional chaining sweep completed (`Settings.tsx`, `GlobalContextMenu.tsx`, `domain/dashboard/widgets.ts`, `FinancialsService.ts`)
-- [x] **Wave 1 complete (Feb 18 session)** — S6582, S2933, S6481, S7762, S6671, S6557, S3358 (remaining), S6819, S4624, S107, S6772, S6848, S6478 all resolved; 1141 tests passing
+- [x] **Wave 1 complete (Feb 18 session)** — S6582, S2933, S6481, S7762, S6671, S6557, S3358 (remaining), S6819, S4624, S107, S6772, S6848, S6478 all resolved; S7760 and S4662 deferred to Wave 2; 1141 tests passing
 
 ##### Critical (9 issues → 0)
 
@@ -427,15 +427,15 @@ _Focus: Ship deferred UX features, final polish, and March planning_
 
 ## 📊 Success Metrics
 
-| Metric                      | Start | Week 1 | Week 2  | Week 3 | Target |
-| --------------------------- | ----- | ------ | ------- | ------ | ------ |
+| Metric                      | Start | Week 1 | Week 2  | Week 3  | Target |
+| --------------------------- | ----- | ------ | ------- | ------- | ------ |
 | Test count                  | 1118  | 1118   | 1117 ✅ | 1141 ✅ | 1200+  |
 | Average feature rating      | 85.1  |        | 85.5    |         | 87+    |
 | Open audit findings         | 18    | 17     | 17      |         | 0      |
 | Console statements in hooks | 22    | 0 ✅   | 0 ✅    | 0 ✅    | 0      |
 | SonarCloud open issues      | 614   | —      | —       | ~440 🔄 | < 50   |
-| SonarCloud critical issues  | 9     | —      | —       | ~0 🔄  | 0      |
-| SonarCloud major issues     | 130   | —      | —       | ~0 🔄  | 0      |
+| SonarCloud critical issues  | 9     | —      | —       | ~0 🔄   | 0      |
+| SonarCloud major issues     | 130   | —      | —       | ~0 🔄   | 0      |
 | Case Archival rating        | 82    |        | 88 ✅   |         | 88     |
 | New features shipped        | -     |        | 4       |         | 8-10   |
 
@@ -493,7 +493,7 @@ _Focus: Ship deferred UX features, final polish, and March planning_
 
 ---
 
-_Last updated: February 17, 2026 (Week 3 remediation progress)_
+_Last updated: February 18, 2026 (Wave 1 complete)_
 
 ---
 
@@ -528,4 +528,4 @@ Every change must:
 
 **Prepared by:** Claude Opus 4.6 (Project Manager)  
 **Executed by:** GPT 5.3 Codex (Lead Developer)  
-**Last updated:** February 17, 2026 (Week 3 remediation progress)
+**Last updated:** February 18, 2026 (Wave 1 complete)

@@ -46,7 +46,7 @@ export function ErrorReportViewer() {
       a.remove();
       URL.revokeObjectURL(url);
       toast.success('Error reports exported');
-    } catch (err) {
+    } catch {
       toast.error('Failed to export error reports');
     }
   };
@@ -176,6 +176,7 @@ export function ErrorReportViewer() {
                   <button
                     type="button"
                     className="w-full flex items-center justify-between cursor-pointer bg-transparent border-0 p-0 text-left"
+                    aria-expanded={expandedReport === report.id}
                     onClick={() => setExpandedReport(
                       expandedReport === report.id ? null : report.id
                     )}

@@ -15,7 +15,6 @@ import {
   DialogFooter,
 } from "../ui/dialog";
 import { Button } from "../ui/button";
-import { Checkbox } from "../ui/checkbox";
 import { Label } from "../ui/label";
 import { Textarea } from "../ui/textarea";
 import {
@@ -281,15 +280,12 @@ export function VRGeneratorModal({
                             "w-full flex items-start gap-2 p-2 rounded-md cursor-pointer hover:bg-muted/50 transition-colors text-left bg-transparent border-0",
                             selected && "bg-muted"
                           )}
-                          role="checkbox"
+                          aria-pressed={selected}
                           onClick={() => handleToggleItem(item.id)}
-                          aria-checked={selected}
                         >
-                          <Checkbox
-                            checked={selected}
-                            onCheckedChange={() => handleToggleItem(item.id)}
-                            className="mt-0.5"
-                          />
+                          <span className="mt-0.5 text-muted-foreground" aria-hidden>
+                            {selected ? <CheckSquare className="h-4 w-4" /> : <Square className="h-4 w-4" />}
+                          </span>
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2">
                               <span className="text-sm font-medium truncate">
