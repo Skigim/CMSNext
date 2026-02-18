@@ -318,14 +318,12 @@ _9 Critical + 108 Major production code issues_
 - [x] **childNode.remove() S7762** - ✅ All 6 occurrences modernized: `ActivityWidget`, `ErrorBoundary`, `ErrorReportViewer`, `Settings`, `clipboard`, `dataExportImport`
 - [x] **Promise rejection errors S6671** - ✅ All 3 occurrences wrapped in `new Error()` in `IndexedDBHandleStore.ts`
 - [x] **String#startsWith S6557** - ✅ `digits[0] === '1'` replaced with `digits.startsWith('1')` in `phone.ts` (3 occurrences)
-- [ ] **Default parameters S7760** (1) - Use default params in `alerts/matching.ts:196`
 - [x] `S6564` redundant type alias fix completed in `useFinancialItemCardState.ts`
 - [x] **Nested template literals S4624** - ✅ Flattened in `PinnedCasesDropdown.tsx`
 - [x] **Too many parameters S107** - ✅ `deriveStatusDisplay` in `useAutosaveStatus.ts` refactored to accept `DeriveStatusDisplayOptions` object
 - [x] **Ambiguous spacing S6772** - ✅ Added `{' '}` separators in `CaseFilters.tsx` (3 occurrences)
 - [x] **Non-native interactive S6848** - ✅ `TemplateEditor.tsx` header div replaced with `<button type="button">`
 - [x] **Calendar inner components S6478** - ✅ `CalendarRoot`, `CalendarChevron`, `CalendarWeekNumber` extracted to module scope in `calendar.tsx`
-- [ ] **CSS @plugin rule S4662** (2) - Suppress or configure for Tailwind v4 in `globals.css`
 
 #### Wave 2: High-Volume Minor Rule Sweeps (Wed-Thu)
 
@@ -356,6 +354,8 @@ _Tackle the top 5 rules by count across production code_
 
 ##### Remaining Minor Rules (prod)
 
+- [ ] **Default parameters S7760** (1) - Use default params in `alerts/matching.ts:196` ← deferred from Wave 1
+- [ ] **CSS @plugin rule S4662** (2) - Suppress or configure for Tailwind v4 in `globals.css` ← deferred from Wave 1
 - [ ] **S3863** (14) - Resolve ambiguous union/intersection type expressions — add explicit parentheses or type aliases
 - [ ] **S2486** (11) - Empty catch blocks — add error handling, logging via `createLogger()`, or `// intentionally empty` comments
 - [ ] **S4325** (10) - Remove unnecessary type assertions (`as Type`) — use type narrowing or `satisfies` instead

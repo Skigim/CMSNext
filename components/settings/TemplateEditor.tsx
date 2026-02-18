@@ -145,35 +145,36 @@ function TemplateViewRow({
       {/* Header Row */}
       <div
         className={cn(
-          "flex items-center gap-2 hover:bg-muted/50 transition-colors",
+          "flex items-center gap-2 hover:bg-muted/50 focus-within:bg-muted/50 transition-colors",
           isExpanded && "border-b border-border/50"
         )}
       >
-        <button
+        <Button
           type="button"
-          className="flex flex-1 items-center gap-2 p-3 cursor-pointer text-left bg-transparent border-0 min-w-0"
+          variant="ghost"
+          className="flex flex-1 items-center gap-2 p-3 cursor-pointer text-left bg-transparent border-0 min-w-0 h-auto"
           onClick={onToggleExpand}
           aria-expanded={isExpanded}
         >
           <div className="text-muted-foreground">
-            {isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+        {isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
           </div>
           <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2">
-              <span className="font-medium text-sm truncate">{template.name}</span>
-              {hasContent && (
-                <Badge variant="secondary" className="text-xs shrink-0">
-                  {template.template.length} chars
-                </Badge>
-              )}
-              {!hasContent && (
-                <Badge variant="outline" className="text-xs text-muted-foreground shrink-0">
-                  No content
-                </Badge>
-              )}
-            </div>
+        <div className="flex items-center gap-2">
+          <span className="font-medium text-sm truncate">{template.name}</span>
+          {hasContent && (
+            <Badge variant="secondary" className="text-xs shrink-0">
+          {template.template.length} chars
+            </Badge>
+          )}
+          {!hasContent && (
+            <Badge variant="outline" className="text-xs text-muted-foreground shrink-0">
+          No content
+            </Badge>
+          )}
+        </div>
           </div>
-        </button>
+        </Button>
         <div className="flex items-center gap-1 pr-3">
           <Tooltip>
             <TooltipTrigger asChild>

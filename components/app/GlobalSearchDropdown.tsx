@@ -264,7 +264,6 @@ export const GlobalSearchDropdown = memo(function GlobalSearchDropdown({
         <div
           ref={dropdownRef}
           id={dropdownId}
-          role="listbox" // NOSONAR - div with role="listbox" is correct for the ARIA combobox dropdown container
           className={cn(
             "absolute top-full left-0 right-0 mt-1 z-50 rounded-md border bg-popover shadow-lg overflow-hidden flex flex-col",
             "max-h-96"
@@ -312,8 +311,7 @@ const CaseResultItem = memo(function CaseResultItem({
         "w-full px-3 py-2 flex items-center gap-3 text-left hover:bg-accent transition-colors",
         isSelected && "bg-accent"
       )}
-      role="option" // NOSONAR - correct ARIA option role for combobox items
-      aria-selected={isSelected}
+      aria-current={isSelected || undefined}
     >
       <div className="flex-shrink-0">
         <User className="h-4 w-4 text-muted-foreground" />
@@ -358,8 +356,7 @@ const AlertResultItem = memo(function AlertResultItem({
         "w-full px-3 py-2 flex items-center gap-3 text-left hover:bg-accent transition-colors",
         isSelected && "bg-accent"
       )}
-      role="option" // NOSONAR - correct ARIA option role for combobox items
-      aria-selected={isSelected}
+      aria-current={isSelected || undefined}
     >
       <div className="flex-shrink-0">
         <AlertCircle className="h-4 w-4 text-amber-500" />
