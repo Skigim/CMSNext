@@ -43,10 +43,10 @@ export function ErrorReportViewer() {
       a.download = `cmsnext-error-reports-${toLocalDateString()}.json`;
       document.body.appendChild(a);
       a.click();
-      document.body.removeChild(a);
+      a.remove();
       URL.revokeObjectURL(url);
       toast.success('Error reports exported');
-    } catch (err) {
+    } catch {
       toast.error('Failed to export error reports');
     }
   };
@@ -173,14 +173,13 @@ export function ErrorReportViewer() {
                   key={report.id}
                   className="border border-border rounded-lg p-3 bg-card"
                 >
-                  <div
-                    className="flex items-center justify-between cursor-pointer"
-                    role="button"
-                    tabIndex={0}
+                  <button
+                    type="button"
+                    className="w-full flex items-center justify-between cursor-pointer bg-transparent border-0 p-0 text-left"
+                    aria-expanded={expandedReport === report.id}
                     onClick={() => setExpandedReport(
                       expandedReport === report.id ? null : report.id
                     )}
-                    onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setExpandedReport(expandedReport === report.id ? null : report.id); } }}
                   >
                     <div className="flex items-center gap-3 flex-1">
                       {getSeverityIcon(report.severity)}
@@ -217,7 +216,7 @@ export function ErrorReportViewer() {
                     ) : (
                       <ChevronRight className="h-4 w-4" />
                     )}
-                  </div>
+                  </button>
 
                   {expandedReport === report.id && (
                     <>

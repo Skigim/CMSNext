@@ -37,7 +37,7 @@ export const AutosaveStatusBadge = memo(function AutosaveStatusBadge({
 
   return (
     <div
-      role="status"
+      role="status" // NOSONAR - role="status" is a valid live-region ARIA role; no native equivalent for div-based live regions
       aria-live="polite"
       className={cn("flex items-center gap-2", className)}
       {...rest}

@@ -209,11 +209,11 @@ describe("Settings", () => {
     const originalCreateElement = document.createElement.bind(document);
     const createElementSpy = vi.spyOn(document, "createElement");
     const appendChildSpy = vi.spyOn(document.body, "appendChild");
-    const removeChildSpy = vi.spyOn(document.body, "removeChild");
     const revokeObjectURLSpy = vi.spyOn(URL, "revokeObjectURL");
 
     const anchor = originalCreateElement("a");
     const clickSpy = vi.spyOn(anchor, "click").mockImplementation(() => {});
+    const removeSpy = vi.spyOn(anchor, "remove").mockImplementation(() => {});
 
     createElementSpy.mockImplementation((tagName: string) => {
       if (tagName === "a") {
@@ -231,7 +231,7 @@ describe("Settings", () => {
 
     expect(appendChildSpy).toHaveBeenCalledWith(anchor);
     expect(clickSpy).toHaveBeenCalled();
-    expect(removeChildSpy).toHaveBeenCalledWith(anchor);
+    expect(removeSpy).toHaveBeenCalled();
     expect(revokeObjectURLSpy).toHaveBeenCalled();
     expect(mocks.toastSuccess).toHaveBeenCalledWith(
       `Successfully exported ${testCases.length} cases to JSON file`,
@@ -239,7 +239,7 @@ describe("Settings", () => {
 
     createElementSpy.mockRestore();
     appendChildSpy.mockRestore();
-    removeChildSpy.mockRestore();
+    removeSpy.mockRestore();
     revokeObjectURLSpy.mockRestore();
     clickSpy.mockRestore();
   });

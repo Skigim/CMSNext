@@ -295,12 +295,10 @@ export function NotesPopover({ caseId, className }: NotesPopoverProps) {
                   ) : (
                     /* View Mode */
                     <div className="flex items-start justify-between gap-2">
-                      <div 
-                        className="flex-1 min-w-0 cursor-pointer"
-                        role="button"
-                        tabIndex={0}
+                      <button
+                        type="button"
+                        className="flex-1 min-w-0 cursor-pointer text-left bg-transparent border-0 p-0"
                         onClick={() => handleStartEdit(note)}
-                        onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); handleStartEdit(note); } }}
                       >
                         <div className="flex items-center gap-2 mb-1">
                           <Badge 
@@ -316,9 +314,7 @@ export function NotesPopover({ caseId, className }: NotesPopoverProps) {
                         <p className="text-sm whitespace-pre-wrap break-words">
                           {note.content}
                         </p>
-                      </div>
-                      
-                      {/* Action buttons */}
+                      </button>
                       <div className="opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity flex gap-1">
                         <Button
                           variant="ghost"

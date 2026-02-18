@@ -80,11 +80,7 @@ interface DataManagerProviderProps {
  * @see {@link useDataManager} to access DataManager instance
  * @see {@link DataManager} for available operations
  */
-interface DataManagerProviderProps {
-  children: ReactNode;
-}
-
-export function DataManagerProvider({ children }: DataManagerProviderProps) {
+export function DataManagerProvider({ children }: Readonly<DataManagerProviderProps>) {
   const { service, fileStorageService, isConnected, status } = useFileStorage();
   const hasMigrated = useRef(false);
   
@@ -124,8 +120,10 @@ export function DataManagerProvider({ children }: DataManagerProviderProps) {
     });
   }, [dataManager, isConnected]);
 
+  const contextValue = useMemo(() => ({ dataManager }), [dataManager]);
+
   return (
-    <DataManagerContext.Provider value={{ dataManager }}>
+    <DataManagerContext.Provider value={contextValue}>
       {children}
     </DataManagerContext.Provider>
   );

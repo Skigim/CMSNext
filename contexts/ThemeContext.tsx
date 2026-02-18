@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
+import { createContext, useContext, useEffect, useState, useCallback, useMemo, ReactNode } from 'react';
 import { createLocalStorageAdapter } from '../utils/localStorage';
 
 /**
@@ -136,7 +136,7 @@ const themeStorage = createLocalStorageAdapter<Theme | null>('cmsnext-theme', nu
  * @param {ReactNode} props.children - Child components
  * @returns {ReactNode} Provider wrapping children
  */
-export function ThemeProvider({ children }: { children: ReactNode }) {
+export function ThemeProvider({ children }: Readonly<{ children: ReactNode }>) {
   const [theme, setTheme] = useState<Theme>(() => {
     // Check localStorage first using adapter
     const stored = themeStorage.read();
@@ -145,7 +145,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     }
     
     // Check system preference
-    if (typeof window !== 'undefined') {
+    if (globalThis.window !== undefined) {
       const mediaQuery = globalThis.matchMedia?.('(prefers-color-scheme: dark)');
       if (mediaQuery?.matches) {
         return 'dark'; // Default to neutral dark
@@ -154,16 +154,17 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     return 'light';
   });
 
-  const toggleTheme = () => {
-    const currentIndex = themeOptions.findIndex(option => option.id === theme);
-    const nextIndex = currentIndex >= 0 ? (currentIndex + 1) % themeOptions.length : 0;
-    const nextTheme = themeOptions[nextIndex]?.id ?? 'light';
-    setTheme(nextTheme);
-  };
+  const toggleTheme = useCallback(() => {
+    setTheme((previousTheme) => {
+      const currentIndex = themeOptions.findIndex(option => option.id === previousTheme);
+      const nextIndex = currentIndex >= 0 ? (currentIndex + 1) % themeOptions.length : 0;
+      return themeOptions[nextIndex]?.id ?? 'light';
+    });
+  }, []);
 
-  const handleSetTheme = (newTheme: Theme) => {
+  const handleSetTheme = useCallback((newTheme: Theme) => {
     setTheme(newTheme);
-  };
+  }, []);
 
   useEffect(() => {
     const root = globalThis.document.documentElement;
@@ -189,17 +190,13 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   const isDarkTheme = theme === 'dark' || theme === 'sterling';
   const tone: ThemeTone = isDarkTheme ? 'dark' : 'light';
 
+  const contextValue = useMemo(
+    () => ({ theme, tone, isDark: isDarkTheme, toggleTheme, setTheme: handleSetTheme, themeOptions }),
+    [theme, tone, isDarkTheme, toggleTheme, handleSetTheme]
+  );
+
   return (
-    <ThemeContext.Provider
-      value={{
-        theme,
-        tone,
-        isDark: isDarkTheme,
-        toggleTheme,
-        setTheme: handleSetTheme,
-        themeOptions,
-      }}
-    >
+    <ThemeContext.Provider value={contextValue}>
       {children}
     </ThemeContext.Provider>
   );

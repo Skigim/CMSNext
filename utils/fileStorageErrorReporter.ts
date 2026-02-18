@@ -278,8 +278,16 @@ function logError(
 
   if (errorReporting?.isReportingEnabled?.()) {
     try {
+      let severity: "low" | "medium" | "high";
+      if (notification.type === "info") {
+        severity = "low";
+      } else if (notification.type === "warning") {
+        severity = "medium";
+      } else {
+        severity = "high";
+      }
       errorReporting.reportError?.(new Error(notification.message), {
-        severity: notification.type === "info" ? "low" : notification.type === "warning" ? "medium" : "high",
+        severity,
         context: {
           operation: options.operation,
           ...options.context,
