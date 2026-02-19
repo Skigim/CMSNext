@@ -421,7 +421,10 @@ _Focus: Ship deferred UX features, final polish, and March planning_
 
 #### Prep Work
 
-- [ ] Fix any bugs or regressions from Week 3 remediation
+- [x] Fix any bugs or regressions from Week 3 remediation - ✅ Pre-release soak fixes (Feb 19):
+  - [x] Breadcrumb DOM nesting warning (`<li>` inside `<li>`) resolved via separator element update
+  - [x] Checkbox ref warning resolved by converting `components/ui/checkbox.tsx` to `React.forwardRef`
+  - [x] FinancialItemCard ref warning resolved by removing unused `ref` passed to `Card`
 - [ ] Run full audit cycle (SonarCloud re-scan)
 - [ ] Verify SonarCloud issue count reduction targets met
 
