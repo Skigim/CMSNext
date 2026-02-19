@@ -1,4 +1,4 @@
-import type { CaseStatus } from '../../types/case';
+import type { CaseStatus, AlertWorkflowStatus } from '../../types/case';
 import type {
   AlertWithMatch,
   AlertsIndex,
@@ -10,7 +10,6 @@ import {
   normalizeMcn,
 } from '../alertsData';
 import { createLogger } from '../logger';
-import type { AlertWorkflowStatus } from '../../types/case';
 
 const logger = createLogger('AlertsService');
 

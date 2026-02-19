@@ -15,8 +15,7 @@ import type {
   TemplatePlaceholderField,
 } from "@/types/template";
 import { TEMPLATE_PLACEHOLDER_FIELDS } from "@/types/template";
-import { parseLocalDate, formatDateForDisplay } from "@/domain/common";
-import { formatPhoneNumber } from "@/domain/common";
+import { parseLocalDate, formatDateForDisplay, formatPhoneNumber } from "@/domain/common";
 
 // ============================================================================
 // Date Formatting Helpers
