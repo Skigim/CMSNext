@@ -251,8 +251,8 @@ export function mergeDuplicateAlerts(
   }
 
   const mergedMetadata = {
-    ...(fallback.metadata ?? {}),
-    ...(winner.metadata ?? {}),
+    ...fallback.metadata,
+    ...winner.metadata,
   };
 
   return {

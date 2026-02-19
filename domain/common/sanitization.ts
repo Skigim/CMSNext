@@ -176,6 +176,11 @@ export function sanitizeFormField(
     return "";
   }
 
+  // Handle non-primitive types
+  if (typeof value === "object") {
+    return "";
+  }
+
   const stringValue = String(value);
 
   switch (fieldType) {

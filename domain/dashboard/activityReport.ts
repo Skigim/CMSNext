@@ -19,7 +19,7 @@ const NOTE_PREVIEW_MAX_LENGTH = 80;
 
 function parseDateInput(targetDate: string | Date): Date {
   if (targetDate instanceof Date) {
-    return new Date(targetDate.getTime());
+    return new Date(targetDate);
   }
 
   return new Date(targetDate);
@@ -36,7 +36,7 @@ function parseDateInput(targetDate: string | Date): Date {
 export function toActivityDateKey(targetDate: string | Date): string {
   const date = parseDateInput(targetDate);
   if (Number.isNaN(date.getTime())) {
-    throw new Error("Invalid date provided to toActivityDateKey");
+    throw new TypeError("Invalid date provided to toActivityDateKey");
   }
 
   const year = date.getFullYear();

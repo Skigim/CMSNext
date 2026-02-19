@@ -445,9 +445,7 @@ function matchByAccountNumber<
     if (normalizeDescription(existing.description) === newDesc) {
       return { item: existing, confidence: "high" };
     }
-    if (!mediumMatch) {
-      mediumMatch = { item: existing, confidence: "medium" };
-    }
+    mediumMatch ??= { item: existing, confidence: "medium" };
   }
 
   return mediumMatch;

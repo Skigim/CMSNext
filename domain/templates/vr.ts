@@ -175,11 +175,16 @@ export function buildCaseLevelContext(
 }
 
 /**
+ * Financial item type for VR templates
+ */
+type VRItemType = "resources" | "income" | "expenses";
+
+/**
  * Build the render context from a financial item and case data.
  */
 export function buildRenderContext(
   item: FinancialItem,
-  itemType: "resources" | "income" | "expenses",
+  itemType: VRItemType,
   storedCase: StoredCase
 ): TemplateRenderContext {
   const { caseRecord, person } = storedCase;

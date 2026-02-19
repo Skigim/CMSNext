@@ -18,6 +18,11 @@ import { createLocalStorageAdapter } from '@/utils/localStorage';
  * @module errorReporting
  */
 
+/**
+ * Error severity levels
+ */
+export type ErrorSeverity = 'low' | 'medium' | 'high' | 'critical';
+
 export interface ErrorReport {
   id: string;
   timestamp: string;
@@ -33,7 +38,7 @@ export interface ErrorReport {
     url: string;
     userId?: string;
   };
-  severity: 'low' | 'medium' | 'high' | 'critical';
+  severity: ErrorSeverity;
   tags: string[];
   userFeedback?: {
     description: string;
