@@ -100,6 +100,7 @@ export function useCaseStatusMenu({
       try {
         updatePromise = Promise.resolve(onUpdateStatus(caseId, nextStatus));
       } catch (error) {
+        // Synchronous error during promise creation; roll back optimistic update
         committedStatusRef.current = committedStatus;
         setOptimisticStatus(committedStatus);
         setIsUpdating(false);

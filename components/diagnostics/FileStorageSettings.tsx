@@ -112,6 +112,7 @@ export function FileStorageSettings() {
         toast.error("Failed to connect to folder");
       }
     } catch (error) {
+      // Connection errors already handled by underlying service; show user message
       toast.error("Error connecting to folder");
     } finally {
       setIsConnecting(false);
@@ -123,6 +124,7 @@ export function FileStorageSettings() {
       await disconnect();
       toast.success("Disconnected from folder");
     } catch (error) {
+      // Disconnect errors are rare; show user message
       toast.error("Error disconnecting from folder");
     }
   };
@@ -133,6 +135,7 @@ export function FileStorageSettings() {
       await saveNow();
       toast.success("Data saved to file successfully");
     } catch (error) {
+      // Save errors already logged by service; show user message
       toast.error("Failed to save data to file");
     } finally {
       setIsManualSaving(false);
@@ -179,6 +182,7 @@ export function FileStorageSettings() {
         toast.success("Autosave settings updated");
       }
     } catch (error) {
+      // Settings update errors already logged by service; show user message
       toast.error("Failed to update autosave settings");
     }
   };

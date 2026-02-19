@@ -77,6 +77,7 @@ export function useCaseArchival(config: CaseArchivalConfig) {
     try {
       guardDataManager();
     } catch (error) {
+      // Error already logged by guard; show user message
       toast.error(NOT_AVAILABLE_MSG);
       return false;
     }
