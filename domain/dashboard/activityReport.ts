@@ -272,20 +272,20 @@ function formatTxt(report: DailyActivityReport): string {
       }
 
       const lines: string[] = [];
-      lines.push(formatCaseHeading(breakdown.caseMcn ?? null, breakdown.caseName));
-      lines.push("");
+      lines.push(
+        formatCaseHeading(breakdown.caseMcn ?? null, breakdown.caseName),
+        ""
+      );
       noteEntries.forEach((entry, index) => {
         const category = entry.payload.category?.trim() || "General";
         const content = normalizeWhitespace(entry.payload.content ?? entry.payload.preview);
-        lines.push(category);
-        lines.push(`* ${content}`);
+        lines.push(category, `* ${content}`);
         if (index < noteEntries.length - 1) {
           lines.push("");
         }
       });
 
-      lines.push("");
-      lines.push("-----");
+      lines.push("", "-----");
 
       return lines.join("\n");
     })
