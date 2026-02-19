@@ -75,35 +75,43 @@ function generateAnalysis(report: NavigationReport): string {
   const lines: string[] = [];
 
   // Header
-  lines.push(`# Navigation Trace Analysis`);
-  lines.push('');
-  lines.push(`**Captured:** ${new Date(capturedAt).toLocaleString()}`);
-  lines.push(`**Browser:** ${browser}`);
-  lines.push(`**Iterations:** ${totalIterations}`);
-  lines.push('');
+  lines.push(
+    `# Navigation Trace Analysis`,
+    '',
+    `**Captured:** ${new Date(capturedAt).toLocaleString()}`,
+    `**Browser:** ${browser}`,
+    `**Iterations:** ${totalIterations}`,
+    ''
+  );
 
   // Overview
-  lines.push(`## Overview`);
-  lines.push('');
-  lines.push(`Analysis of real user navigation through CMSNext application across ${totalIterations} complete workflows.`);
-  lines.push('');
+  lines.push(
+    `## Overview`,
+    '',
+    `Analysis of real user navigation through CMSNext application across ${totalIterations} complete workflows.`,
+    ''
+  );
 
   // Navigation Steps
-  lines.push(`## Navigation Workflow`);
-  lines.push('');
-  lines.push('1. **Dashboard Load** - Initial page load');
-  lines.push('2. **Navigate to List** - Click "View All Cases"');
-  lines.push('3. **List Loaded** - Case list rendered');
-  lines.push('4. **Navigate to Detail** - Click first case');
-  lines.push('5. **Detail Loaded** - Case details rendered');
-  lines.push('6. **Navigate Back** - Return to dashboard');
-  lines.push('');
+  lines.push(
+    `## Navigation Workflow`,
+    '',
+    '1. **Dashboard Load** - Initial page load',
+    '2. **Navigate to List** - Click "View All Cases"',
+    '3. **List Loaded** - Case list rendered',
+    '4. **Navigate to Detail** - Click first case',
+    '5. **Detail Loaded** - Case details rendered',
+    '6. **Navigate Back** - Return to dashboard',
+    ''
+  );
 
   // Performance Summary Table
-  lines.push(`## Performance Summary`);
-  lines.push('');
-  lines.push('| Step | Count | Avg (ms) | Min (ms) | Max (ms) | Median (ms) | P95 (ms) |');
-  lines.push('|------|-------|----------|----------|----------|-------------|----------|');
+  lines.push(
+    `## Performance Summary`,
+    '',
+    '| Step | Count | Avg (ms) | Min (ms) | Max (ms) | Median (ms) | P95 (ms) |',
+    '|------|-------|----------|----------|----------|-------------|----------|'
+  );
 
   Object.entries(summary).forEach(([stepName, stats]) => {
     const label = getStepLabel(stepName);
@@ -113,8 +121,7 @@ function generateAnalysis(report: NavigationReport): string {
   lines.push('');
 
   // Key Findings
-  lines.push(`## Key Findings`);
-  lines.push('');
+  lines.push(`## Key Findings`, '');
 
   const findings = generateFindings(summary, traces);
   findings.forEach(finding => lines.push(finding));
@@ -122,29 +129,29 @@ function generateAnalysis(report: NavigationReport): string {
 
   // Memory Analysis
   if (traces.some(t => t.memory)) {
-    lines.push(`## Memory Analysis`);
-    lines.push('');
+    lines.push(`## Memory Analysis`, '');
     const memoryAnalysis = analyzeMemory(traces);
     memoryAnalysis.forEach(line => lines.push(line));
     lines.push('');
   }
 
   // Detailed Traces
-  lines.push(`## Detailed Trace Data`);
-  lines.push('');
-  lines.push('<details>');
-  lines.push('<summary>Click to expand full trace data</summary>');
-  lines.push('');
-  lines.push('```json');
-  lines.push(JSON.stringify(traces, null, 2));
-  lines.push('```');
-  lines.push('');
-  lines.push('</details>');
-  lines.push('');
+  lines.push(
+    `## Detailed Trace Data`,
+    '',
+    '<details>',
+    '<summary>Click to expand full trace data</summary>',
+    '',
+    '```json',
+    JSON.stringify(traces, null, 2),
+    '```',
+    '',
+    '</details>',
+    ''
+  );
 
   // Recommendations
-  lines.push(`## Recommendations`);
-  lines.push('');
+  lines.push(`## Recommendations`, '');
   const recommendations = generateRecommendations(summary);
   recommendations.forEach(rec => lines.push(rec));
   lines.push('');
@@ -177,9 +184,11 @@ function generateFindings(summary: NavigationReport['summary'], traces: Navigati
     }
   });
 
-  findings.push(`### Slowest Navigation Step`);
-  findings.push(`**${getStepLabel(slowestStep)}** - Average: ${slowestAvg.toFixed(2)}ms`);
-  findings.push('');
+  findings.push(
+    `### Slowest Navigation Step`,
+    `**${getStepLabel(slowestStep)}** - Average: ${slowestAvg.toFixed(2)}ms`,
+    ''
+  );
 
   // Find fastest step
   let fastestStep = '';
@@ -191,9 +200,11 @@ function generateFindings(summary: NavigationReport['summary'], traces: Navigati
     }
   });
 
-  findings.push(`### Fastest Navigation Step`);
-  findings.push(`**${getStepLabel(fastestStep)}** - Average: ${fastestAvg.toFixed(2)}ms`);
-  findings.push('');
+  findings.push(
+    `### Fastest Navigation Step`,
+    `**${getStepLabel(fastestStep)}** - Average: ${fastestAvg.toFixed(2)}ms`,
+    ''
+  );
 
   // Variance analysis
   findings.push(`### Consistency Analysis`);
@@ -220,10 +231,12 @@ function analyzeMemory(traces: NavigationTrace[]): string[] {
   const deltaMemory = lastMemory - firstMemory;
   const deltaMB = deltaMemory / 1024 / 1024;
 
-  lines.push(`**Initial Memory:** ${(firstMemory / 1024 / 1024).toFixed(2)} MB`);
-  lines.push(`**Final Memory:** ${(lastMemory / 1024 / 1024).toFixed(2)} MB`);
-  lines.push(`**Memory Delta:** ${deltaMB > 0 ? '+' : ''}${deltaMB.toFixed(2)} MB`);
-  lines.push('');
+  lines.push(
+    `**Initial Memory:** ${(firstMemory / 1024 / 1024).toFixed(2)} MB`,
+    `**Final Memory:** ${(lastMemory / 1024 / 1024).toFixed(2)} MB`,
+    `**Memory Delta:** ${deltaMB > 0 ? '+' : ''}${deltaMB.toFixed(2)} MB`,
+    ''
+  );
 
   if (deltaMB > 5) {
     lines.push(`⚠️ **Potential memory leak detected**: Memory increased by ${deltaMB.toFixed(2)} MB over ${traces.length} navigation steps.`);
@@ -257,9 +270,11 @@ function generateRecommendations(summary: NavigationReport['summary']): string[]
 
   // General recommendations
   if (recommendations.length === 0) {
-    recommendations.push(`- ✅ Navigation performance is within acceptable thresholds.`);
-    recommendations.push(`- 💡 Consider code-splitting to further reduce initial load times.`);
-    recommendations.push(`- 💡 Implement route preloading for frequently accessed paths.`);
+    recommendations.push(
+      `- ✅ Navigation performance is within acceptable thresholds.`,
+      `- 💡 Consider code-splitting to further reduce initial load times.`,
+      `- 💡 Implement route preloading for frequently accessed paths.`
+    );
   }
 
   return recommendations;

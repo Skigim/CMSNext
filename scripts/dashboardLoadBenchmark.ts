@@ -217,23 +217,29 @@ async function runBenchmark(): Promise<BenchmarkReport> {
 function generateMarkdownReport(report: BenchmarkReport): string {
   const lines: string[] = [];
 
-  lines.push('# Dashboard Load Performance Benchmark');
-  lines.push('');
-  lines.push(`**Date:** ${new Date(report.timestamp).toLocaleString()}`);
-  lines.push(`**Status:** ${report.summary.overallPassed ? '✅ PASSED' : '❌ FAILED'}`);
-  lines.push('');
+  lines.push(
+    '# Dashboard Load Performance Benchmark',
+    '',
+    `**Date:** ${new Date(report.timestamp).toLocaleString()}`,
+    `**Status:** ${report.summary.overallPassed ? '✅ PASSED' : '❌ FAILED'}`,
+    ''
+  );
 
-  lines.push('## Summary');
-  lines.push('');
-  lines.push(`- Total Tests: ${report.summary.totalTests}`);
-  lines.push(`- Passed: ${report.summary.passed}`);
-  lines.push(`- Failed: ${report.summary.failed}`);
-  lines.push('');
+  lines.push(
+    '## Summary',
+    '',
+    `- Total Tests: ${report.summary.totalTests}`,
+    `- Passed: ${report.summary.passed}`,
+    `- Failed: ${report.summary.failed}`,
+    ''
+  );
 
-  lines.push('## Results');
-  lines.push('');
-  lines.push('| Scenario | Cases | Iterations | Avg (ms) | Min (ms) | Max (ms) | P95 (ms) | Threshold (ms) | Result |');
-  lines.push('|----------|-------|------------|----------|----------|----------|----------|----------------|--------|');
+  lines.push(
+    '## Results',
+    '',
+    '| Scenario | Cases | Iterations | Avg (ms) | Min (ms) | Max (ms) | P95 (ms) | Threshold (ms) | Result |',
+    '|----------|-------|------------|----------|----------|----------|----------|----------------|--------|'
+  );
 
   report.results.forEach(result => {
     const status = result.passed ? '✅ PASS' : '❌ FAIL';
@@ -244,43 +250,52 @@ function generateMarkdownReport(report: BenchmarkReport): string {
 
   lines.push('');
 
-  lines.push('## Analysis');
-  lines.push('');
+  lines.push('## Analysis', '');
 
   if (report.summary.overallPassed) {
-    lines.push('✅ **All dashboard load operations completed within acceptable thresholds.**');
-    lines.push('');
-    lines.push('Dashboard widgets are performant across all dataset sizes tested.');
+    lines.push(
+      '✅ **All dashboard load operations completed within acceptable thresholds.**',
+      '',
+      'Dashboard widgets are performant across all dataset sizes tested.'
+    );
   } else {
-    lines.push('❌ **Some dashboard load operations exceeded performance thresholds.**');
-    lines.push('');
-    lines.push('**Failed scenarios:**');
+    lines.push(
+      '❌ **Some dashboard load operations exceeded performance thresholds.**',
+      '',
+      '**Failed scenarios:**'
+    );
     report.results
       .filter(r => !r.passed)
       .forEach(r => {
-        lines.push(`- **${r.scenario}**: Average ${r.avg.toFixed(2)}ms (threshold: ${r.threshold}ms)`);
-        lines.push(`  - Exceeded by ${(r.avg - r.threshold).toFixed(2)}ms`);
+        lines.push(
+          `- **${r.scenario}**: Average ${r.avg.toFixed(2)}ms (threshold: ${r.threshold}ms)`,
+          `  - Exceeded by ${(r.avg - r.threshold).toFixed(2)}ms`
+        );
       });
-    lines.push('');
-    lines.push('**Recommendations:**');
-    lines.push('- Optimize widget calculations with memoization');
-    lines.push('- Consider lazy loading for non-critical widgets');
-    lines.push('- Implement data aggregation caching');
-    lines.push('- Profile widget rendering with React DevTools');
+    lines.push(
+      '',
+      '**Recommendations:**',
+      '- Optimize widget calculations with memoization',
+      '- Consider lazy loading for non-critical widgets',
+      '- Implement data aggregation caching',
+      '- Profile widget rendering with React DevTools'
+    );
   }
 
   lines.push('');
 
-  lines.push('## Widget Performance Breakdown');
-  lines.push('');
-  lines.push('The dashboard includes 4 primary widgets:');
-  lines.push('1. **Status Distribution** - Aggregates cases by status');
-  lines.push('2. **Priority Breakdown** - Aggregates cases by priority');
-  lines.push('3. **Recent Activity** - Sorts and displays recent cases');
-  lines.push('4. **Financial Summary** - Sums financial items across all cases');
-  lines.push('');
-  lines.push('All calculations run synchronously on the main thread during initial render.');
-  lines.push('');
+  lines.push(
+    '## Widget Performance Breakdown',
+    '',
+    'The dashboard includes 4 primary widgets:',
+    '1. **Status Distribution** - Aggregates cases by status',
+    '2. **Priority Breakdown** - Aggregates cases by priority',
+    '3. **Recent Activity** - Sorts and displays recent cases',
+    '4. **Financial Summary** - Sums financial items across all cases',
+    '',
+    'All calculations run synchronously on the main thread during initial render.',
+    ''
+  );
 
   return lines.join('\n');
 }
