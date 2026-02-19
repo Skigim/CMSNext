@@ -187,11 +187,7 @@ export function calculateAVSTrackingDates(
        submit = new Date();
     }
   } else if (submitDate instanceof Date) {
-    submit = new Date(
-      submitDate.getUTCFullYear(),
-      submitDate.getUTCMonth(),
-      submitDate.getUTCDate()
-    );
+    submit = submitDate;
   } else {
     submit = new Date();
   }
