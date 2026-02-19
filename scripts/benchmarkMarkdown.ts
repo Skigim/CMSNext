@@ -8,6 +8,12 @@ export interface BenchmarkSummary {
   overallPassed: boolean;
 }
 
+export interface BenchmarkReport<T> {
+  timestamp: string;
+  results: T[];
+  summary: BenchmarkSummary;
+}
+
 export interface BenchmarkStats {
   avg: number;
   min: number;
@@ -136,4 +142,39 @@ export async function writeBenchmarkReports(
   await writeFile(markdownFile, markdown, 'utf-8');
 
   return { jsonFile, markdownFile };
+}
+
+export function collectScenarioTimings(iterations: number, measure: () => number): number[] {
+  const timings: number[] = [];
+  for (let i = 0; i < iterations; i++) {
+    timings.push(measure());
+    if ((i + 1) % 10 === 0 || i === iterations - 1) {
+      process.stdout.write(`   Progress: ${i + 1}/${iterations}\r`);
+    }
+  }
+  return timings;
+}
+
+export function logScenarioCompletion(avg: number, threshold: number, passed: boolean): void {
+  console.log('   ✅ Completed');
+  console.log(`   Average: ${avg.toFixed(2)}ms (threshold: ${threshold}ms)`);
+  console.log(`   Result: ${passed ? '✅ PASS' : '❌ FAIL'}\n`);
+}
+
+export function logBenchmarkComplete(summary: BenchmarkSummary): void {
+  console.log('');
+  console.log('✨ Benchmark complete!');
+  console.log('');
+  console.log(`📊 Overall: ${summary.overallPassed ? '✅ PASSED' : '❌ FAILED'}`);
+  console.log(`   Passed: ${summary.passed}/${summary.totalTests}`);
+  console.log('');
+}
+
+export function runBenchmarkScript(main: () => Promise<void>): void {
+  main()
+    .then(() => process.exit(0))
+    .catch((error) => {
+      console.error('❌ Error:', error);
+      process.exit(1);
+    });
 }

@@ -20,10 +20,15 @@
 
 import { performance } from 'node:perf_hooks';
 import {
+  BenchmarkReport,
   buildFailedScenarioLines,
   calculateBenchmarkStats,
+  collectScenarioTimings,
   createBenchmarkSummary,
   generateBenchmarkMarkdown,
+  logBenchmarkComplete,
+  logScenarioCompletion,
+  runBenchmarkScript,
   writeBenchmarkReports,
 } from './benchmarkMarkdown';
 
@@ -39,17 +44,6 @@ interface BenchmarkResult {
   p95: number;
   passed: boolean;
   threshold: number;
-}
-
-interface BenchmarkReport {
-  timestamp: string;
-  results: BenchmarkResult[];
-  summary: {
-    totalTests: number;
-    passed: number;
-    failed: number;
-    overallPassed: boolean;
-  };
 }
 
 // Simulate dashboard computation
@@ -132,7 +126,7 @@ function calculateFinancialSummary(cases: any[]): {
   return { totalAmount, itemCount };
 }
 
-async function runBenchmark(): Promise<BenchmarkReport> {
+async function runBenchmark(): Promise<BenchmarkReport<BenchmarkResult>> {
   console.log('📊 Dashboard Load Benchmark');
   console.log('═══════════════════════════════════════\n');
 
@@ -150,17 +144,7 @@ async function runBenchmark(): Promise<BenchmarkReport> {
     console.log(`🔄 Running: ${scenario.name}`);
     console.log(`   Cases: ${scenario.caseCount}, Iterations: ${scenario.iterations}`);
 
-    const timings: number[] = [];
-
-    for (let i = 0; i < scenario.iterations; i++) {
-      const timing = simulateDashboardLoad(scenario.caseCount);
-      timings.push(timing);
-
-      // Progress indicator
-      if ((i + 1) % 10 === 0 || i === scenario.iterations - 1) {
-        process.stdout.write(`   Progress: ${i + 1}/${scenario.iterations}\r`);
-      }
-    }
+    const timings = collectScenarioTimings(scenario.iterations, () => simulateDashboardLoad(scenario.caseCount));
 
     const stats = calculateBenchmarkStats(timings);
     const passed = stats.avg < scenario.threshold;
@@ -175,9 +159,7 @@ async function runBenchmark(): Promise<BenchmarkReport> {
       threshold: scenario.threshold,
     });
 
-    console.log(`   ✅ Completed`);
-    console.log(`   Average: ${stats.avg.toFixed(2)}ms (threshold: ${scenario.threshold}ms)`);
-    console.log(`   Result: ${passed ? '✅ PASS' : '❌ FAIL'}\n`);
+    logScenarioCompletion(stats.avg, scenario.threshold, passed);
   }
 
   return {
@@ -187,7 +169,7 @@ async function runBenchmark(): Promise<BenchmarkReport> {
   };
 }
 
-function generateMarkdownReport(report: BenchmarkReport): string {
+function generateMarkdownReport(report: BenchmarkReport<BenchmarkResult>): string {
   const resultRows = report.results.map((result) => {
     const status = result.passed ? '✅ PASS' : '❌ FAIL';
     return `| ${result.scenario} | ${result.caseCount} | ${result.iterations} | ${result.avg.toFixed(2)} | ${result.min.toFixed(2)} | ${result.max.toFixed(2)} | ${result.p95.toFixed(2)} | ${result.threshold} | ${status} |`;
@@ -233,18 +215,7 @@ async function main() {
   const report = await runBenchmark();
   const markdown = generateMarkdownReport(report);
   await writeBenchmarkReports('dashboard-load-benchmark', report, markdown);
-
-  console.log('');
-  console.log('✨ Benchmark complete!');
-  console.log('');
-  console.log(`📊 Overall: ${report.summary.overallPassed ? '✅ PASSED' : '❌ FAILED'}`);
-  console.log(`   Passed: ${report.summary.passed}/${report.summary.totalTests}`);
-  console.log('');
+  logBenchmarkComplete(report.summary);
 }
 
-main()
-  .then(() => process.exit(0))
-  .catch((error) => {
-    console.error('❌ Error:', error);
-    process.exit(1);
-  });
+runBenchmarkScript(main);
