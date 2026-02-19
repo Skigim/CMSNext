@@ -469,9 +469,9 @@ export const validateSeedData = (data: CaseData): { isValid: boolean; errors: st
 // Command-line interface for direct execution
 export const runGenerateSeedData = async () => {
   const args = process.argv.slice(2);
-  const numCases = args[0] ? parseInt(args[0], 10) : 50;
+  const numCases = args[0] ? Number.parseInt(args[0], 10) : 50;
   
-  if (isNaN(numCases) || numCases <= 0) {
+  if (Number.isNaN(numCases) || numCases <= 0) {
     console.error('❌ Please provide a valid number of cases to generate');
     process.exit(1);
   }

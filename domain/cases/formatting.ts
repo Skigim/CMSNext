@@ -48,7 +48,7 @@ export function formatRetroMonths(
   if (applicationDate) {
     try {
       const date = new Date(applicationDate);
-      if (!isNaN(date.getTime())) {
+      if (!Number.isNaN(date.getTime())) {
         year = date.getFullYear();
       } else {
         year = new Date().getFullYear();
@@ -104,7 +104,7 @@ export function calculateAge(dateOfBirth: string | undefined): number | null {
 
   try {
     const dob = new Date(dateOfBirth);
-    if (isNaN(dob.getTime())) return null;
+    if (Number.isNaN(dob.getTime())) return null;
 
     const today = new Date();
     let age = today.getFullYear() - dob.getFullYear();
@@ -180,7 +180,7 @@ export function calculateAVSTrackingDates(
     // Parse ISO string (presuming YYYY-MM-DD from input)
     // We treat it as local date to avoid timezone shifts
     const [year, month, day] = submitDate.split('-').map(Number);
-    if (!isNaN(year) && !isNaN(month) && !isNaN(day)) {
+    if (!Number.isNaN(year) && !Number.isNaN(month) && !Number.isNaN(day)) {
        submit = new Date(year, month - 1, day);
     } else {
        submit = new Date();
@@ -203,7 +203,7 @@ export function calculateAVSTrackingDates(
     if (!dateStr) return "MM/DD/YYYY";
     try {
       const date = new Date(dateStr);
-      if (isNaN(date.getTime())) return "MM/DD/YYYY";
+      if (Number.isNaN(date.getTime())) return "MM/DD/YYYY";
       return formatDate(date);
     } catch {
       return "MM/DD/YYYY";

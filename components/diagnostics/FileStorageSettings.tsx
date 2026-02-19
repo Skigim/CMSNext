@@ -407,7 +407,7 @@ export function FileStorageSettings() {
                     min="30"
                     max="600"
                     value={localSettings.saveInterval}
-                    onChange={(e) => handleSettingsChange('saveInterval', parseInt(e.target.value) || 120)}
+                    onChange={(e) => handleSettingsChange('saveInterval', Number.parseInt(e.target.value) || 120)}
                   />
                   <p className="text-xs text-muted-foreground">
                     How often to automatically save (30-600 seconds)
@@ -422,7 +422,7 @@ export function FileStorageSettings() {
                     min="1"
                     max="30"
                     value={localSettings.debounceDelay}
-                    onChange={(e) => handleSettingsChange('debounceDelay', parseInt(e.target.value) || 5)}
+                    onChange={(e) => handleSettingsChange('debounceDelay', Number.parseInt(e.target.value) || 5)}
                   />
                   <p className="text-xs text-muted-foreground">
                     Wait time after changes before saving (1-30 seconds)

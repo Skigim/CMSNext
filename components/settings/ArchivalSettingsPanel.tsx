@@ -283,7 +283,7 @@ export function ArchivalSettingsPanel({ cases }: { cases: StoredCase[] }) {
                 min={1}
                 max={120}
                 value={thresholdMonths}
-                onChange={(e) => setThresholdMonths(parseInt(e.target.value) || 12)}
+                onChange={(e) => setThresholdMonths(Number.parseInt(e.target.value) || 12)}
               />
               <p className="text-xs text-muted-foreground">
                 Cases inactive for this many months will appear in the archival review queue.

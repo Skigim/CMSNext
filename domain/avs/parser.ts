@@ -92,8 +92,8 @@ function parseBalance(balanceStr: string): number {
   }
   // Remove currency symbols, commas, and whitespace
   const cleaned = balanceStr.replaceAll(/[$,\s]/g, "");
-  const parsed = parseFloat(cleaned);
-  return isNaN(parsed) ? 0 : parsed;
+  const parsed = Number.parseFloat(cleaned);
+  return Number.isNaN(parsed) ? 0 : parsed;
 }
 
 /** Sort known types longest-first so "CHECKING ACCOUNT" matches before "CHECKING". */

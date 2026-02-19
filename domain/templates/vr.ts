@@ -79,7 +79,7 @@ function applyDateOffset(
     date = new Date(baseDate);
   }
 
-  if (!date || isNaN(date.getTime())) return "";
+  if (!date || Number.isNaN(date.getTime())) return "";
 
   const adjusted = new Date(date);
   adjusted.setDate(adjusted.getDate() + daysOffset);
@@ -272,7 +272,7 @@ function isAlreadyFormattedDate(value: string): boolean {
 /** Resolve a null/undefined placeholder value, handling currentDate+offset. */
 function resolveNullPlaceholder(key: string, offsetStr: string | undefined): string {
   if (key === "currentDate" && offsetStr) {
-    return applyDateOffset(new Date(), parseInt(offsetStr, 10));
+    return applyDateOffset(new Date(), Number.parseInt(offsetStr, 10));
   }
   return "";
 }
@@ -282,7 +282,7 @@ function resolveDatePlaceholder(key: string, value: unknown, offsetStr: string |
   const stringValue = String(value);
   if (isAlreadyFormattedDate(stringValue) && !offsetStr) return stringValue;
 
-  const offset = offsetStr ? parseInt(offsetStr, 10) : 0;
+  const offset = offsetStr ? Number.parseInt(offsetStr, 10) : 0;
 
   if (key === "currentDate") {
     return offset === 0 ? getCurrentDateFormatted() : applyDateOffset(new Date(), offset);
