@@ -21,6 +21,7 @@ import { performance } from 'node:perf_hooks';
 import { writeFile, mkdir } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { Buffer } from 'node:buffer';
+import { generateBenchmarkMarkdown } from './benchmarkMarkdown';
 
 interface BenchmarkResult {
   scenario: string;
@@ -189,75 +190,38 @@ async function runBenchmark(): Promise<BenchmarkReport> {
 }
 
 function generateMarkdownReport(report: BenchmarkReport): string {
-  const lines: string[] = [];
-
-  lines.push(
-    '# Autosave Performance Benchmark',
-    '',
-    `**Date:** ${new Date(report.timestamp).toLocaleString()}`,
-    `**Status:** ${report.summary.overallPassed ? '✅ PASSED' : '❌ FAILED'}`,
-    ''
-  );
-
-  lines.push(
-    '## Summary',
-    '',
-    `- Total Tests: ${report.summary.totalTests}`,
-    `- Passed: ${report.summary.passed}`,
-    `- Failed: ${report.summary.failed}`,
-    ''
-  );
-
-  lines.push(
-    '## Results',
-    '',
-    '| Scenario | Payload | Iterations | Avg (ms) | Min (ms) | Max (ms) | P95 (ms) | Threshold (ms) | Result |',
-    '|----------|---------|------------|----------|----------|----------|----------|----------------|--------|'
-  );
-
-  report.results.forEach(result => {
+  const resultRows = report.results.map((result) => {
     const status = result.passed ? '✅ PASS' : '❌ FAIL';
-    lines.push(
-      `| ${result.scenario} | ${result.payloadSize}KB | ${result.iterations} | ${result.avg.toFixed(2)} | ${result.min.toFixed(2)} | ${result.max.toFixed(2)} | ${result.p95.toFixed(2)} | ${result.threshold} | ${status} |`
-    );
+    return `| ${result.scenario} | ${result.payloadSize}KB | ${result.iterations} | ${result.avg.toFixed(2)} | ${result.min.toFixed(2)} | ${result.max.toFixed(2)} | ${result.p95.toFixed(2)} | ${result.threshold} | ${status} |`;
   });
 
-  lines.push('');
+  const failedScenarioLines = report.results
+    .filter((result) => !result.passed)
+    .flatMap((result) => [
+      `- **${result.scenario}**: Average ${result.avg.toFixed(2)}ms (threshold: ${result.threshold}ms)`,
+      `  - Exceeded by ${(result.avg - result.threshold).toFixed(2)}ms`,
+    ]);
 
-  lines.push('## Analysis', '');
-
-  if (report.summary.overallPassed) {
-    lines.push(
+  return generateBenchmarkMarkdown({
+    title: '# Autosave Performance Benchmark',
+    timestamp: report.timestamp,
+    summary: report.summary,
+    tableHeader: '| Scenario | Payload | Iterations | Avg (ms) | Min (ms) | Max (ms) | P95 (ms) | Threshold (ms) | Result |',
+    tableDivider: '|----------|---------|------------|----------|----------|----------|----------|----------------|--------|',
+    resultRows,
+    successLines: [
       '✅ **All autosave operations completed within acceptable thresholds.**',
       '',
-      'The 5-second debounce window provides sufficient time for autosave completion across all payload sizes.'
-    );
-  } else {
-    lines.push(
-      '❌ **Some autosave operations exceeded performance thresholds.**',
-      '',
-      '**Failed scenarios:**'
-    );
-    report.results
-      .filter(r => !r.passed)
-      .forEach(r => {
-        lines.push(
-          `- **${r.scenario}**: Average ${r.avg.toFixed(2)}ms (threshold: ${r.threshold}ms)`,
-          `  - Exceeded by ${(r.avg - r.threshold).toFixed(2)}ms`
-        );
-      });
-    lines.push(
-      '',
-      '**Recommendations:**',
+      'The 5-second debounce window provides sufficient time for autosave completion across all payload sizes.',
+    ],
+    failureHeading: '❌ **Some autosave operations exceeded performance thresholds.**',
+    failedScenarioLines,
+    recommendations: [
       '- Consider increasing debounce delay for large payloads',
       '- Investigate serialization optimizations',
-      '- Implement progressive saving for very large datasets'
-    );
-  }
-
-  lines.push('');
-
-  return lines.join('\n');
+      '- Implement progressive saving for very large datasets',
+    ],
+  });
 }
 
 async function main() {
