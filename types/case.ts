@@ -13,6 +13,7 @@ export interface MailingAddress extends Address {
 }
 
 export interface Relationship {
+  id?: string;
   type: string;
   name: string;
   phone: string;

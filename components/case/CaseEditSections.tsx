@@ -825,50 +825,48 @@ export function CaseFlagsSection({
       </CardHeader>
       <CardContent className="space-y-3">
         {isEditing ? (
-          <>
-            <div className="space-y-3">
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="priority"
-                  checked={caseData.priority ?? false}
-                  onCheckedChange={(checked) => onCaseDataChange("priority", checked)}
-                />
-                <Label htmlFor="priority" className="text-sm">Priority Case</Label>
-              </div>
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="withWaiver"
-                  checked={caseData.withWaiver ?? false}
-                  onCheckedChange={(checked) => onCaseDataChange("withWaiver", checked)}
-                />
-                <Label htmlFor="withWaiver" className="text-sm">With Waiver</Label>
-              </div>
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="retroRequested"
-                  checked={retroRequested}
-                  onCheckedChange={(checked) => onRetroRequestedChange(checked === true)}
-                />
-                <Label htmlFor="retroRequested" className="text-sm">Retro Requested</Label>
-              </div>
-              {retroRequested && (
-                <div className="space-y-1 mt-2 pl-6">
-                  <Label htmlFor="retroMonthsInput" className="text-xs">Retro Months</Label>
-                  <Input
-                    id="retroMonthsInput"
-                    value={(caseData.retroMonths ?? []).join(", ")}
-                    onChange={(e) => {
-                      const value = e.target.value;
-                      const months = value.split(",").map((m) => m.trim()).filter((m) => m.length > 0);
-                      onCaseDataChange("retroMonths", months);
-                    }}
-                    placeholder="e.g., Jan, Feb, Mar"
-                    className="h-8"
-                  />
-                </div>
-              )}
+          <div className="space-y-3">
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="priority"
+                checked={caseData.priority ?? false}
+                onCheckedChange={(checked) => onCaseDataChange("priority", checked)}
+              />
+              <Label htmlFor="priority" className="text-sm">Priority Case</Label>
             </div>
-          </>
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="withWaiver"
+                checked={caseData.withWaiver ?? false}
+                onCheckedChange={(checked) => onCaseDataChange("withWaiver", checked)}
+              />
+              <Label htmlFor="withWaiver" className="text-sm">With Waiver</Label>
+            </div>
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="retroRequested"
+                checked={retroRequested}
+                onCheckedChange={(checked) => onRetroRequestedChange(checked === true)}
+              />
+              <Label htmlFor="retroRequested" className="text-sm">Retro Requested</Label>
+            </div>
+            {retroRequested && (
+              <div className="space-y-1 mt-2 pl-6">
+                <Label htmlFor="retroMonthsInput" className="text-xs">Retro Months</Label>
+                <Input
+                  id="retroMonthsInput"
+                  value={(caseData.retroMonths ?? []).join(", ")}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    const months = value.split(",").map((m) => m.trim()).filter((m) => m.length > 0);
+                    onCaseDataChange("retroMonths", months);
+                  }}
+                  placeholder="e.g., Jan, Feb, Mar"
+                  className="h-8"
+                />
+              </div>
+            )}
+          </div>
         ) : (
           <>
             <div className="grid grid-cols-1 gap-2">
@@ -895,20 +893,9 @@ interface RelationshipsSectionProps {
   isEditing: boolean;
   onRelationshipsChange: {
     add: () => void;
-    update: (index: number, field: keyof Relationship, value: string) => void;
+    update: (index: number, field: "type" | "name" | "phone", value: string) => void;
     remove: (index: number) => void;
   };
-}
-
-function buildRelationshipKeys(relationships: Relationship[]): string[] {
-  const counts = new Map<string, number>();
-
-  return relationships.map((relationship) => {
-    const baseKey = `${relationship.type}-${relationship.name}-${relationship.phone}`;
-    const nextCount = (counts.get(baseKey) ?? 0) + 1;
-    counts.set(baseKey, nextCount);
-    return `${baseKey}-${nextCount}`;
-  });
 }
 
 export function RelationshipsSection({
@@ -916,7 +903,39 @@ export function RelationshipsSection({
   isEditing,
   onRelationshipsChange,
 }: Readonly<RelationshipsSectionProps>) {
-  const relationshipKeys = useMemo(() => buildRelationshipKeys(relationships), [relationships]);
+  const renderReadOnlyRelationships = () => {
+    if (relationships.length === 0) {
+      return <p className="text-sm text-muted-foreground italic">No relationships added</p>;
+    }
+
+    return (
+      <div className="space-y-2">
+        {relationships.map((rel) => (
+          <div key={rel.id ?? `relationship-readonly-${rel.type}-${rel.name}-${rel.phone}`} className="flex flex-col gap-1 p-2 border rounded-md bg-muted/10">
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-medium">{rel.name}</span>
+              <Badge variant="outline" className="text-[10px] h-5 px-1.5">
+                {rel.type}
+              </Badge>
+            </div>
+            {rel.phone && (
+              <div className="flex items-center gap-1.5">
+                <Phone className="h-3 w-3 text-muted-foreground" />
+                <CopyButton
+                  value={getDisplayPhoneNumber(rel.phone)}
+                  label="Phone"
+                  showLabel={false}
+                  successMessage="Phone copied"
+                  textClassName="text-xs"
+                  buttonClassName="text-xs px-1 py-0"
+                />
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+    );
+  };
 
   return (
     <Card>
@@ -947,7 +966,7 @@ export function RelationshipsSection({
         {isEditing ? (
           <div className="space-y-2">
             {relationships.map((rel, index) => (
-              <div key={relationshipKeys[index]} className="flex flex-col gap-2 p-2 border rounded-md bg-muted/10 relative group">
+              <div key={rel.id ?? `relationship-edit-${rel.type}-${rel.name}-${rel.phone}`} className="flex flex-col gap-2 p-2 border rounded-md bg-muted/10 relative group">
                 <Button
                   type="button"
                   variant="ghost"
@@ -997,34 +1016,8 @@ export function RelationshipsSection({
               <p className="text-sm text-muted-foreground italic">No relationships added</p>
             )}
           </div>
-        ) : relationships.length > 0 ? (
-          <div className="space-y-2">
-            {relationships.map((rel, index) => (
-              <div key={relationshipKeys[index]} className="flex flex-col gap-1 p-2 border rounded-md bg-muted/10">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium">{rel.name}</span>
-                  <Badge variant="outline" className="text-[10px] h-5 px-1.5">
-                    {rel.type}
-                  </Badge>
-                </div>
-                {rel.phone && (
-                  <div className="flex items-center gap-1.5">
-                    <Phone className="h-3 w-3 text-muted-foreground" />
-                    <CopyButton
-                      value={getDisplayPhoneNumber(rel.phone)}
-                      label="Phone"
-                      showLabel={false}
-                      successMessage="Phone copied"
-                      textClassName="text-xs"
-                      buttonClassName="text-xs px-1 py-0"
-                    />
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
         ) : (
-          <p className="text-sm text-muted-foreground italic">No relationships added</p>
+          renderReadOnlyRelationships()
         )}
       </CardContent>
     </Card>

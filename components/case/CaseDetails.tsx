@@ -59,7 +59,7 @@ export function CaseDetails({
   onUpdateStatus,
   onResolveAlert,
   onUpdatePriority,
-}: CaseDetailsProps) {
+}: Readonly<CaseDetailsProps>) {
   
   // Fetch financials and notes for case summary generation
   const { groupedItems: financials, items: financialItemsList } = useFinancialItems(caseData.id);

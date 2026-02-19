@@ -35,6 +35,19 @@ interface CaseEditModalProps {
   onSave: (caseData: { person: NewPersonData; caseRecord: NewCaseRecordData }) => Promise<void>;
 }
 
+const createRelationshipId = (): string => {
+  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+    return crypto.randomUUID();
+  }
+
+  return `rel-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+};
+
+const ensureRelationshipIds = (relationships: Relationship[]): Relationship[] =>
+  relationships.map((relationship) =>
+    relationship.id ? relationship : { ...relationship, id: createRelationshipId() },
+  );
+
 /**
  * CaseEditModal - Modal dialog for editing case details with section cards
  * 
@@ -46,7 +59,7 @@ interface CaseEditModalProps {
  * - Field-level validation
  * - Toast notifications for save success/failure
  */
-export function CaseEditModal({ isOpen, onClose, caseData, onSave }: CaseEditModalProps) {
+export function CaseEditModal({ isOpen, onClose, caseData, onSave }: Readonly<CaseEditModalProps>) {
   const { config } = useCategoryConfig();
 
   const [isSaving, setIsSaving] = useState(false);
@@ -72,7 +85,9 @@ export function CaseEditModal({ isOpen, onClose, caseData, onSave }: CaseEditMod
       caseStatus: defaultCaseStatus 
     })
   );
-  const [relationships, setRelationships] = useState<Relationship[]>(caseData.person.relationships || []);
+  const [relationships, setRelationships] = useState<Relationship[]>(
+    () => ensureRelationshipIds(caseData.person.relationships || []),
+  );
   const [retroRequested, setRetroRequested] = useState<boolean>(!!caseData.caseRecord.retroRequested);
 
   // Track if form has changes
@@ -86,7 +101,7 @@ export function CaseEditModal({ isOpen, onClose, caseData, onSave }: CaseEditMod
         livingArrangement: defaultLivingArrangement, 
         caseStatus: defaultCaseStatus 
       }));
-      setRelationships(caseData.person.relationships || []);
+      setRelationships(ensureRelationshipIds(caseData.person.relationships || []));
       setRetroRequested(!!caseData.caseRecord.retroRequested);
       setHasChanges(false);
     }
@@ -140,11 +155,11 @@ export function CaseEditModal({ isOpen, onClose, caseData, onSave }: CaseEditMod
   }, []);
 
   const addRelationship = useCallback(() => {
-    setRelationships(prev => [...prev, { type: '', name: '', phone: '' }]);
+    setRelationships(prev => [...prev, { id: createRelationshipId(), type: '', name: '', phone: '' }]);
     setHasChanges(true);
   }, []);
 
-  const updateRelationship = useCallback((index: number, field: keyof Relationship, value: string) => {
+  const updateRelationship = useCallback((index: number, field: "type" | "name" | "phone", value: string) => {
     setRelationships(prev =>
       prev.map((rel, i) => (i === index ? { ...rel, [field]: value } : rel)),
     );
@@ -196,7 +211,9 @@ export function CaseEditModal({ isOpen, onClose, caseData, onSave }: CaseEditMod
       await onSave({
         person: {
           ...personData,
-          relationships: relationships.filter(rel => rel.name.trim() !== ''),
+          relationships: relationships
+            .filter(rel => rel.name.trim() !== '')
+            .map(({ type, name, phone }) => ({ type, name, phone })),
         },
         caseRecord: {
           ...caseRecordData,
