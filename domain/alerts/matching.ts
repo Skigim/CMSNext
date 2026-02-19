@@ -192,9 +192,8 @@ export function sortAlerts(alerts: AlertWithMatch[]): AlertWithMatch[] {
 /**
  * Get workflow priority for alert status
  */
-function getWorkflowPriority(status: AlertWithMatch["status"]): number {
-  const normalized = status ?? "new";
-  const index = workflowPriorityOrder.indexOf(normalized);
+function getWorkflowPriority(status: AlertWithMatch["status"] = "new"): number {
+  const index = workflowPriorityOrder.indexOf(status);
   return index === -1 ? 0 : index;
 }
 
