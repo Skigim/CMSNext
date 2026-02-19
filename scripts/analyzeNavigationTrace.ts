@@ -11,8 +11,8 @@
  *   npx tsx scripts/analyzeNavigationTrace.ts reports/performance/navigation-trace-2025-10-17.json
  */
 
-import { readFile, writeFile } from 'fs/promises';
-import { resolve } from 'path';
+import { readFile, writeFile } from 'node:fs/promises';
+import { resolve } from 'node:path';
 
 interface NavigationTrace {
   iteration: number;

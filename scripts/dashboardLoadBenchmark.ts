@@ -18,9 +18,9 @@
  *   reports/performance/dashboard-load-benchmark-YYYY-MM-DD.md
  */
 
-import { performance } from 'perf_hooks';
-import { writeFile, mkdir } from 'fs/promises';
-import { resolve } from 'path';
+import { performance } from 'node:perf_hooks';
+import { writeFile, mkdir } from 'node:fs/promises';
+import { resolve } from 'node:path';
 
 interface BenchmarkResult {
   scenario: string;

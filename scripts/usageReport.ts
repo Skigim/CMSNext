@@ -1,8 +1,8 @@
 #!/usr/bin/env npx tsx
 
-import { promises as fs } from "fs";
-import path from "path";
-import process from "process";
+import { promises as fs } from "node:fs";
+import path from "node:path";
+import process from "node:process";
 
 interface UsageEvent {
   id: string;
@@ -41,14 +41,14 @@ function parseArgs(argv: string[]): CliOptions {
       case "-i":
         if (next) {
           options.inputPath = path.resolve(process.cwd(), next);
-          i += 1;
+          i = i + 1;
         }
         break;
       case "--output":
       case "-o":
         if (next) {
           options.outputPath = path.resolve(process.cwd(), next);
-          i += 1;
+          i = i + 1;
         }
         break;
       case "--help":
@@ -84,7 +84,7 @@ async function loadSnapshot(filePath: string): Promise<UsageSnapshot | null> {
 
 function escapeCsv(value: string): string {
   if (value.includes("\"") || value.includes(",") || value.includes("\n")) {
-    return `"${value.replace(/"/g, '""')}"`;
+    return `"${value.replaceAll("\"", '""')}"`;
   }
   return value;
 }

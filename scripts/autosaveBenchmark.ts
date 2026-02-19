@@ -17,9 +17,9 @@
  *   reports/performance/autosave-benchmark-YYYY-MM-DD.md
  */
 
-import { performance } from 'perf_hooks';
-import { writeFile, mkdir } from 'fs/promises';
-import { resolve } from 'path';
+import { performance } from 'node:perf_hooks';
+import { writeFile, mkdir } from 'node:fs/promises';
+import { resolve } from 'node:path';
 import { Buffer } from 'node:buffer';
 
 interface BenchmarkResult {
@@ -54,8 +54,8 @@ function simulateAutosave(payload: unknown): number {
   // Simulate data serialization (JSON.stringify is typically the bottleneck)
   const serialized = JSON.stringify(payload);
 
-  // Simulate some processing
-  const parsed = JSON.parse(serialized);
+  // Parse to simulate processing
+  JSON.parse(serialized);
 
   const end = performance.now();
   return end - start;
