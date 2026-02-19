@@ -365,8 +365,8 @@ _Tackle the top 5 rules by count across production code_
 - [ ] **S6594** (4) - Use `RegExp.exec()` instead of `String.match()` for regex results (includes `domain/avs/parser.ts` ×3)
 - [ ] **S6767** (4) - Prefer `for...of` over index-based loops
 - [ ] **S7741** (4) - Remove unnecessary `await` on non-Promise expressions
-- [ ] **S7758** (4) - Prefer `using` declarations for disposable resources
-- [ ] **S7772** (4) - Remove unnecessary type arguments that can be inferred
+- [ ] **S7758** (4) - Prefer `String.fromCodePoint()` over `String.fromCharCode()` and `String#codePointAt()` over `String#charCodeAt()` (Unicode code point handling)
+- [ ] **S7772** (4) - Prefer `node:path` over `path` and similar `node:` protocol-prefixed imports
 
 ##### Domain-Layer Gap Issues (9 issues — added Feb 18)
 
