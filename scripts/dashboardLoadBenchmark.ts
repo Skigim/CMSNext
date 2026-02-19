@@ -19,9 +19,13 @@
  */
 
 import { performance } from 'node:perf_hooks';
-import { writeFile, mkdir } from 'node:fs/promises';
-import { resolve } from 'node:path';
-import { generateBenchmarkMarkdown } from './benchmarkMarkdown';
+import {
+  buildFailedScenarioLines,
+  calculateBenchmarkStats,
+  createBenchmarkSummary,
+  generateBenchmarkMarkdown,
+  writeBenchmarkReports,
+} from './benchmarkMarkdown';
 
 interface BenchmarkResult {
   scenario: string;
@@ -128,31 +132,6 @@ function calculateFinancialSummary(cases: any[]): {
   return { totalAmount, itemCount };
 }
 
-function calculateStats(timings: number[]): {
-  avg: number;
-  min: number;
-  max: number;
-  median: number;
-  p95: number;
-} {
-  const sorted = [...timings].sort((a, b) => a - b);
-  const sum = timings.reduce((acc, val) => acc + val, 0);
-  const len = sorted.length;
-  const median = len % 2 === 0
-    ? (sorted[len / 2 - 1] + sorted[len / 2]) / 2
-    : sorted[Math.floor(len / 2)];
-  const p95Index = Math.min(Math.ceil(len * 0.95) - 1, len - 1);
-  const p95 = sorted[Math.max(p95Index, 0)];
-
-  return {
-    avg: sum / timings.length,
-    min: sorted[0],
-    max: sorted[sorted.length - 1],
-    median,
-    p95,
-  };
-}
-
 async function runBenchmark(): Promise<BenchmarkReport> {
   console.log('📊 Dashboard Load Benchmark');
   console.log('═══════════════════════════════════════\n');
@@ -183,7 +162,7 @@ async function runBenchmark(): Promise<BenchmarkReport> {
       }
     }
 
-    const stats = calculateStats(timings);
+    const stats = calculateBenchmarkStats(timings);
     const passed = stats.avg < scenario.threshold;
 
     results.push({
@@ -201,17 +180,10 @@ async function runBenchmark(): Promise<BenchmarkReport> {
     console.log(`   Result: ${passed ? '✅ PASS' : '❌ FAIL'}\n`);
   }
 
-  const summary = {
-    totalTests: results.length,
-    passed: results.filter(r => r.passed).length,
-    failed: results.filter(r => !r.passed).length,
-    overallPassed: results.every(r => r.passed),
-  };
-
   return {
     timestamp: new Date().toISOString(),
     results,
-    summary,
+    summary: createBenchmarkSummary(results),
   };
 }
 
@@ -221,12 +193,7 @@ function generateMarkdownReport(report: BenchmarkReport): string {
     return `| ${result.scenario} | ${result.caseCount} | ${result.iterations} | ${result.avg.toFixed(2)} | ${result.min.toFixed(2)} | ${result.max.toFixed(2)} | ${result.p95.toFixed(2)} | ${result.threshold} | ${status} |`;
   });
 
-  const failedScenarioLines = report.results
-    .filter((result) => !result.passed)
-    .flatMap((result) => [
-      `- **${result.scenario}**: Average ${result.avg.toFixed(2)}ms (threshold: ${result.threshold}ms)`,
-      `  - Exceeded by ${(result.avg - result.threshold).toFixed(2)}ms`,
-    ]);
+  const failedScenarioLines = buildFailedScenarioLines(report.results);
 
   return generateBenchmarkMarkdown({
     title: '# Dashboard Load Performance Benchmark',
@@ -263,26 +230,9 @@ function generateMarkdownReport(report: BenchmarkReport): string {
 }
 
 async function main() {
-  // Ensure reports directory exists
-  const reportsDir = resolve(process.cwd(), 'reports', 'performance');
-  await mkdir(reportsDir, { recursive: true });
-
-  // Run benchmark
   const report = await runBenchmark();
-
-  // Generate filenames
-  const date = new Date().toISOString().split('T')[0];
-  const jsonFile = resolve(reportsDir, `dashboard-load-benchmark-${date}.json`);
-  const mdFile = resolve(reportsDir, `dashboard-load-benchmark-${date}.md`);
-
-  // Write JSON report
-  console.log(`💾 Writing JSON report: ${jsonFile}`);
-  await writeFile(jsonFile, JSON.stringify(report, null, 2), 'utf-8');
-
-  // Write markdown report
   const markdown = generateMarkdownReport(report);
-  console.log(`📝 Writing Markdown report: ${mdFile}`);
-  await writeFile(mdFile, markdown, 'utf-8');
+  await writeBenchmarkReports('dashboard-load-benchmark', report, markdown);
 
   console.log('');
   console.log('✨ Benchmark complete!');
