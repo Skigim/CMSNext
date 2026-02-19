@@ -26,18 +26,18 @@ function removeDangerousPatterns(text: string): string {
   return (
     text
       // Remove potential script injection patterns
-      .replace(/javascript:/gi, "")
-      .replace(/vbscript:/gi, "")
-      .replace(/data:text\/html/gi, "")
-      .replace(/data:application\/javascript/gi, "")
+      .replaceAll(/javascript:/gi, "")
+      .replaceAll(/vbscript:/gi, "")
+      .replaceAll(/data:text\/html/gi, "")
+      .replaceAll(/data:application\/javascript/gi, "")
       // Remove event handler patterns
-      .replace(/on\w+\s*=/gi, "")
+      .replaceAll(/on\w+\s*=/gi, "")
       // Remove expression() patterns (IE CSS expressions)
-      .replace(/expression\s*\(/gi, "")
+      .replaceAll(/expression\s*\(/gi, "")
       // Remove import statements
-      .replace(/@import/gi, "")
+      .replaceAll(/@import/gi, "")
       // Remove CSS url() with javascript
-      .replace(/url\s*\(\s*["']?javascript:/gi, "")
+      .replaceAll(/url\s*\(\s*["']?javascript:/gi, "")
   );
 }
 
@@ -70,7 +70,7 @@ export function sanitizeText(
   }
 
   // HTML entity encoding
-  sanitized = sanitized.replace(
+  sanitized = sanitized.replaceAll(
     /[&<>"'`=/]/g,
     (match) => HTML_ENTITIES[match] || match
   );

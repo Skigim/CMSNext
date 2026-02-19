@@ -366,7 +366,7 @@ export function avsAccountsToFinancialItems(
 function normalizeDescription(desc: string): string {
   return desc
     .toLowerCase()
-    .replace(/\baccount\b/gi, "")
+    .replaceAll(/\baccount\b/gi, "")
     .replaceAll(/\s+/g, " ")
     .trim();
 }
@@ -383,7 +383,7 @@ function normalizeDescription(desc: string): string {
  */
 function accountNumbersMatch(a: string, b: string): boolean {
   if (a === b) return true;
-  const stripMask = (s: string) => s.replace(/[*x]/gi, "");
+  const stripMask = (s: string) => s.replaceAll(/[*x]/gi, "");
   const aDigits = stripMask(a);
   const bDigits = stripMask(b);
   if (aDigits.length === 0 || bDigits.length === 0) return false;

@@ -304,7 +304,7 @@ export function renderTemplate(
   template: string,
   context: TemplateRenderContext
 ): string {
-  return template.replace(
+  return template.replaceAll(
     /\{(\w+)([+-]\d+)?\}/g,
     (match, fieldName, offsetStr) => {
       const key = fieldName as TemplatePlaceholderField;

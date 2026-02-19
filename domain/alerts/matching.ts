@@ -63,7 +63,7 @@ export function normalizeMcn(rawMcn: string | undefined | null): string {
   if (!rawMcn) {
     return "";
   }
-  return rawMcn.replace(/[^a-z0-9]/gi, "").trim().toUpperCase();
+  return rawMcn.replaceAll(/[^a-z0-9]/gi, "").trim().toUpperCase();
 }
 
 /**

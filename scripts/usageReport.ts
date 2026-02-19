@@ -84,7 +84,7 @@ async function loadSnapshot(filePath: string): Promise<UsageSnapshot | null> {
 
 function escapeCsv(value: string): string {
   if (value.includes("\"") || value.includes(",") || value.includes("\n")) {
-    return `"${value.replace(/"/g, '""')}"`;
+    return `"${value.replaceAll(/"/g, '""')}"`;
   }
   return value;
 }

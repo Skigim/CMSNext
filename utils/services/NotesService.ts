@@ -29,9 +29,9 @@ const SSN_PATTERN = /\b\d{3}-?\d{2}-?\d{4}\b/g;
  */
 function sanitizeNoteContent(content: string): string {
   return content
-    .replace(EMAIL_PATTERN, "***@***")
-    .replace(SSN_PATTERN, "***-**-****")
-    .replace(LONG_NUMBER_PATTERN, "***")
+    .replaceAll(EMAIL_PATTERN, "***@***")
+    .replaceAll(SSN_PATTERN, "***-**-****")
+    .replaceAll(LONG_NUMBER_PATTERN, "***")
     .replaceAll(/\s+/g, " ")
     .trim();
 }
