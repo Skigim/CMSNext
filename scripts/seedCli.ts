@@ -40,23 +40,23 @@ const parseArgs = (args: string[]): CliOptions => {
     switch (arg) {
       case '--cases':
       case '-c':
-        if (nextArg && !isNaN(Number(nextArg))) {
+        if (nextArg && !Number.isNaN(Number(nextArg))) {
           options.cases = Number(nextArg);
-          i++; // Skip next argument
+          i = i + 1; // Skip next argument
         }
         break;
       case '--output':
       case '-o':
         if (nextArg) {
           options.output = nextArg;
-          i++; // Skip next argument
+          i = i + 1; // Skip next argument
         }
         break;
       case '--preset':
       case '-p':
         if (nextArg) {
           options.preset = nextArg;
-          i++; // Skip next argument
+          i = i + 1; // Skip next argument
         }
         break;
       case '--help':
@@ -139,8 +139,8 @@ const generateSeedData = (options: CliOptions): CaseData => {
 };
 
 const saveToFile = async (data: CaseData, outputPath: string): Promise<void> => {
-  const fs = await import('fs');
-  const path = await import('path');
+  const fs = await import('node:fs');
+  const path = await import('node:path');
   
   // Ensure directory exists
   const dir = path.dirname(outputPath);

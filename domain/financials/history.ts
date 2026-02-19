@@ -154,9 +154,7 @@ export function getAmountInfoForMonth(
     
     if (entryEnd < targetTime) {
       // This entry ended before target date
-      if (!mostRecentPastEntry) {
-        mostRecentPastEntry = entry;
-      }
+      mostRecentPastEntry ??= entry;
       break; // sortedHistory is reverse-chronological, so first past entry is most recent
     }
   }

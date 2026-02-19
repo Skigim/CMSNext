@@ -1,4 +1,3 @@
-import { useRef } from "react";
 import { Card, CardHeader } from "../ui/card";
 import type { FinancialItem, CaseCategory } from "../../types/case";
 import { FinancialItemCardHeader } from "./FinancialItemCardHeader";
@@ -38,14 +37,11 @@ export function FinancialItemCard({
     onUpdate,
   });
 
-  const cardRef = useRef<HTMLDivElement>(null);
-
   // Click handler opens the stepper modal
   const handleEditAction = () => onOpenStepperEdit(item);
 
   return (
     <Card
-      ref={cardRef}
       data-papercut-context="FinancialItemCard"
       className="group relative overflow-visible transition-shadow hover:shadow-md"
     >

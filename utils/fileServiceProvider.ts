@@ -26,7 +26,7 @@ export function setFileService(service: any) {
         (globalThis as Record<string, unknown>).__cmsAutosaveService = fileServiceInstance;
       }
     } catch (_) {
-      // Ignore inability to assign for non-browser contexts
+      // Intentionally empty - ignore inability to assign for non-browser contexts
     }
   try {
     if (service && typeof document !== 'undefined') {
@@ -35,7 +35,7 @@ export function setFileService(service: any) {
       );
     }
   } catch (_) {
-    // Silently ignore if CustomEvent unsupported
+    // Intentionally empty - silently ignore if CustomEvent unsupported
   }
 }
 

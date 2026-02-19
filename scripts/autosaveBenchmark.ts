@@ -17,10 +17,20 @@
  *   reports/performance/autosave-benchmark-YYYY-MM-DD.md
  */
 
-import { performance } from 'perf_hooks';
-import { writeFile, mkdir } from 'fs/promises';
-import { resolve } from 'path';
+import { performance } from 'node:perf_hooks';
 import { Buffer } from 'node:buffer';
+import {
+  BenchmarkReport,
+  buildFailedScenarioLines,
+  calculateBenchmarkStats,
+  collectScenarioTimings,
+  createBenchmarkSummary,
+  generateBenchmarkMarkdown,
+  logBenchmarkComplete,
+  logScenarioCompletion,
+  runBenchmarkScript,
+  writeBenchmarkReports,
+} from './benchmarkMarkdown';
 
 interface BenchmarkResult {
   scenario: string;
@@ -36,17 +46,6 @@ interface BenchmarkResult {
   threshold: number;
 }
 
-interface BenchmarkReport {
-  timestamp: string;
-  results: BenchmarkResult[];
-  summary: {
-    totalTests: number;
-    passed: number;
-    failed: number;
-    overallPassed: boolean;
-  };
-}
-
 // Simulate autosave operations
 function simulateAutosave(payload: unknown): number {
   const start = performance.now();
@@ -54,8 +53,8 @@ function simulateAutosave(payload: unknown): number {
   // Simulate data serialization (JSON.stringify is typically the bottleneck)
   const serialized = JSON.stringify(payload);
 
-  // Simulate some processing
-  const parsed = JSON.parse(serialized);
+  // Parse to simulate processing
+  JSON.parse(serialized);
 
   const end = performance.now();
   return end - start;
@@ -97,33 +96,7 @@ function generatePayload(sizeKB: number): { cases: Array<Record<string, unknown>
   return { cases };
 }
 
-function calculateStats(timings: number[]): {
-  avg: number;
-  min: number;
-  max: number;
-  median: number;
-  p95: number;
-} {
-  const sorted = [...timings].sort((a, b) => a - b);
-  const sum = timings.reduce((acc, val) => acc + val, 0);
-
-  const len = sorted.length;
-  const median = len % 2 === 0
-    ? (sorted[len / 2 - 1] + sorted[len / 2]) / 2
-    : sorted[Math.floor(len / 2)];
-  const p95Index = Math.min(Math.ceil(len * 0.95) - 1, len - 1);
-  const p95 = sorted[Math.max(p95Index, 0)];
-
-  return {
-    avg: sum / timings.length,
-    min: sorted[0],
-    max: sorted[sorted.length - 1],
-    median,
-    p95,
-  };
-}
-
-async function runBenchmark(): Promise<BenchmarkReport> {
+async function runBenchmark(): Promise<BenchmarkReport<BenchmarkResult>> {
   console.log('⚡ Autosave Benchmark');
   console.log('═══════════════════════════════════════\n');
 
@@ -144,19 +117,9 @@ async function runBenchmark(): Promise<BenchmarkReport> {
     console.log(`🔄 Running: ${scenario.name}`);
     console.log(`   Payload: ~${payloadSizeKB}KB (target ${scenario.sizeKB}KB), Iterations: ${scenario.iterations}`);
 
-    const timings: number[] = [];
+    const timings = collectScenarioTimings(scenario.iterations, () => simulateAutosave(payload));
 
-    for (let i = 0; i < scenario.iterations; i++) {
-      const timing = simulateAutosave(payload);
-      timings.push(timing);
-
-      // Progress indicator
-      if ((i + 1) % 10 === 0 || i === scenario.iterations - 1) {
-        process.stdout.write(`   Progress: ${i + 1}/${scenario.iterations}\r`);
-      }
-    }
-
-    const stats = calculateStats(timings);
+    const stats = calculateBenchmarkStats(timings);
     const passed = stats.avg < scenario.threshold;
 
     results.push({
@@ -169,117 +132,51 @@ async function runBenchmark(): Promise<BenchmarkReport> {
       threshold: scenario.threshold,
     });
 
-    console.log(`   ✅ Completed`);
-    console.log(`   Average: ${stats.avg.toFixed(2)}ms (threshold: ${scenario.threshold}ms)`);
-    console.log(`   Result: ${passed ? '✅ PASS' : '❌ FAIL'}\n`);
+    logScenarioCompletion(stats.avg, scenario.threshold, passed);
   }
-
-  const summary = {
-    totalTests: results.length,
-    passed: results.filter(r => r.passed).length,
-    failed: results.filter(r => !r.passed).length,
-    overallPassed: results.every(r => r.passed),
-  };
 
   return {
     timestamp: new Date().toISOString(),
     results,
-    summary,
+    summary: createBenchmarkSummary(results),
   };
 }
 
-function generateMarkdownReport(report: BenchmarkReport): string {
-  const lines: string[] = [];
-
-  lines.push('# Autosave Performance Benchmark');
-  lines.push('');
-  lines.push(`**Date:** ${new Date(report.timestamp).toLocaleString()}`);
-  lines.push(`**Status:** ${report.summary.overallPassed ? '✅ PASSED' : '❌ FAILED'}`);
-  lines.push('');
-
-  lines.push('## Summary');
-  lines.push('');
-  lines.push(`- Total Tests: ${report.summary.totalTests}`);
-  lines.push(`- Passed: ${report.summary.passed}`);
-  lines.push(`- Failed: ${report.summary.failed}`);
-  lines.push('');
-
-  lines.push('## Results');
-  lines.push('');
-  lines.push('| Scenario | Payload | Iterations | Avg (ms) | Min (ms) | Max (ms) | P95 (ms) | Threshold (ms) | Result |');
-  lines.push('|----------|---------|------------|----------|----------|----------|----------|----------------|--------|');
-
-  report.results.forEach(result => {
+function generateMarkdownReport(report: BenchmarkReport<BenchmarkResult>): string {
+  const resultRows = report.results.map((result) => {
     const status = result.passed ? '✅ PASS' : '❌ FAIL';
-    lines.push(
-      `| ${result.scenario} | ${result.payloadSize}KB | ${result.iterations} | ${result.avg.toFixed(2)} | ${result.min.toFixed(2)} | ${result.max.toFixed(2)} | ${result.p95.toFixed(2)} | ${result.threshold} | ${status} |`
-    );
+    return `| ${result.scenario} | ${result.payloadSize}KB | ${result.iterations} | ${result.avg.toFixed(2)} | ${result.min.toFixed(2)} | ${result.max.toFixed(2)} | ${result.p95.toFixed(2)} | ${result.threshold} | ${status} |`;
   });
 
-  lines.push('');
+  const failedScenarioLines = buildFailedScenarioLines(report.results);
 
-  lines.push('## Analysis');
-  lines.push('');
-
-  if (report.summary.overallPassed) {
-    lines.push('✅ **All autosave operations completed within acceptable thresholds.**');
-    lines.push('');
-    lines.push('The 5-second debounce window provides sufficient time for autosave completion across all payload sizes.');
-  } else {
-    lines.push('❌ **Some autosave operations exceeded performance thresholds.**');
-    lines.push('');
-    lines.push('**Failed scenarios:**');
-    report.results
-      .filter(r => !r.passed)
-      .forEach(r => {
-        lines.push(`- **${r.scenario}**: Average ${r.avg.toFixed(2)}ms (threshold: ${r.threshold}ms)`);
-        lines.push(`  - Exceeded by ${(r.avg - r.threshold).toFixed(2)}ms`);
-      });
-    lines.push('');
-    lines.push('**Recommendations:**');
-    lines.push('- Consider increasing debounce delay for large payloads');
-    lines.push('- Investigate serialization optimizations');
-    lines.push('- Implement progressive saving for very large datasets');
-  }
-
-  lines.push('');
-
-  return lines.join('\n');
+  return generateBenchmarkMarkdown({
+    title: '# Autosave Performance Benchmark',
+    timestamp: report.timestamp,
+    summary: report.summary,
+    tableHeader: '| Scenario | Payload | Iterations | Avg (ms) | Min (ms) | Max (ms) | P95 (ms) | Threshold (ms) | Result |',
+    tableDivider: '|----------|---------|------------|----------|----------|----------|----------|----------------|--------|',
+    resultRows,
+    successLines: [
+      '✅ **All autosave operations completed within acceptable thresholds.**',
+      '',
+      'The 5-second debounce window provides sufficient time for autosave completion across all payload sizes.',
+    ],
+    failureHeading: '❌ **Some autosave operations exceeded performance thresholds.**',
+    failedScenarioLines,
+    recommendations: [
+      '- Consider increasing debounce delay for large payloads',
+      '- Investigate serialization optimizations',
+      '- Implement progressive saving for very large datasets',
+    ],
+  });
 }
 
 async function main() {
-  // Ensure reports directory exists
-  const reportsDir = resolve(process.cwd(), 'reports', 'performance');
-  await mkdir(reportsDir, { recursive: true });
-
-  // Run benchmark
   const report = await runBenchmark();
-
-  // Generate filenames
-  const date = new Date().toISOString().split('T')[0];
-  const jsonFile = resolve(reportsDir, `autosave-benchmark-${date}.json`);
-  const mdFile = resolve(reportsDir, `autosave-benchmark-${date}.md`);
-
-  // Write JSON report
-  console.log(`💾 Writing JSON report: ${jsonFile}`);
-  await writeFile(jsonFile, JSON.stringify(report, null, 2), 'utf-8');
-
-  // Write markdown report
   const markdown = generateMarkdownReport(report);
-  console.log(`📝 Writing Markdown report: ${mdFile}`);
-  await writeFile(mdFile, markdown, 'utf-8');
-
-  console.log('');
-  console.log('✨ Benchmark complete!');
-  console.log('');
-  console.log(`📊 Overall: ${report.summary.overallPassed ? '✅ PASSED' : '❌ FAILED'}`);
-  console.log(`   Passed: ${report.summary.passed}/${report.summary.totalTests}`);
-  console.log('');
+  await writeBenchmarkReports('autosave-benchmark', report, markdown);
+  logBenchmarkComplete(report.summary);
 }
 
-main()
-  .then(() => process.exit(0))
-  .catch((error) => {
-    console.error('❌ Error:', error);
-    process.exit(1);
-  });
+runBenchmarkScript(main);

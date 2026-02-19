@@ -61,7 +61,7 @@ export function parseLocalDate(
 
     // Handle ISO timestamps - these already have timezone info
     const date = new Date(dateString);
-    return isNaN(date.getTime()) ? null : date;
+    return Number.isNaN(date.getTime()) ? null : date;
   } catch {
     return null;
   }
@@ -139,7 +139,7 @@ export function isoToDateInputValue(
 
     // Convert ISO to yyyy-MM-dd
     const date = new Date(isoDate);
-    if (isNaN(date.getTime())) return "";
+    if (Number.isNaN(date.getTime())) return "";
 
     return date.toISOString().split("T")[0];
   } catch {
@@ -173,13 +173,13 @@ export function dateInputValueToISO(
     // If it's an ISO-like timestamp (with or without offset), extract just the date part
     if (dateValue.includes("T")) {
       const iso = new Date(dateValue);
-      if (isNaN(iso.getTime())) return null;
+      if (Number.isNaN(iso.getTime())) return null;
       return iso.toISOString().split("T")[0];
     }
 
     // Parse and validate the date
     const date = new Date(dateValue + "T00:00:00.000Z");
-    if (isNaN(date.getTime())) return null;
+    if (Number.isNaN(date.getTime())) return null;
 
     // Return date-only string (no time component)
     return date.toISOString().split("T")[0];

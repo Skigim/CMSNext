@@ -314,7 +314,7 @@ export function useFinancialItemFlow({
       name: formData.description, // For backward compatibility
       location: formData.location,
       accountNumber: formData.accountNumber,
-      amount: parseFloat(formData.amount.toString()) || 0,
+      amount: Number.parseFloat(formData.amount.toString()) || 0,
       frequency: formData.frequency,
       owner: formData.owner,
       verificationStatus: formData.verificationStatus as "Needs VR" | "VR Pending" | "AVS Pending" | "Verified",

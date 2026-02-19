@@ -9,6 +9,7 @@
 import type { StoredCase, StoredFinancialItem, StoredNote } from "../../types/case";
 import type { CaseArchiveData, ArchivalSettings } from "../../types/archive";
 import { ARCHIVE_VERSION } from "../../types/archive";
+import { parseLocalDate } from "../common/dates";
 
 /**
  * Result of finding archival-eligible cases.
@@ -129,7 +130,11 @@ export function findArchivalEligibleCases(
     if (!applicationDate) {
       continue; // Skip cases without an application date
     }
-    const applicationTime = new Date(applicationDate).getTime();
+    const parsedApplicationDate = parseLocalDate(applicationDate);
+    if (!parsedApplicationDate) {
+      continue;
+    }
+    const applicationTime = parsedApplicationDate.getTime();
     if (applicationTime >= cutoffTime) {
       continue;
     }

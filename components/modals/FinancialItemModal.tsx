@@ -148,7 +148,7 @@ function FinancialItemModal({
                 id="amount"
                 type="number"
                 value={formData.amount}
-                onChange={(e) => onFormFieldChange('amount', parseFloat(e.target.value) || 0)}
+                onChange={(e) => onFormFieldChange('amount', Number.parseFloat(e.target.value) || 0)}
                 min="0"
                 step="0.01"
                 className={formErrors.amount ? 'border-destructive' : ''}

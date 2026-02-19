@@ -92,8 +92,8 @@ function parseBalance(balanceStr: string): number {
   }
   // Remove currency symbols, commas, and whitespace
   const cleaned = balanceStr.replaceAll(/[$,\s]/g, "");
-  const parsed = parseFloat(cleaned);
-  return isNaN(parsed) ? 0 : parsed;
+  const parsed = Number.parseFloat(cleaned);
+  return Number.isNaN(parsed) ? 0 : parsed;
 }
 
 /** Sort known types longest-first so "CHECKING ACCOUNT" matches before "CHECKING". */
@@ -366,7 +366,7 @@ export function avsAccountsToFinancialItems(
 function normalizeDescription(desc: string): string {
   return desc
     .toLowerCase()
-    .replace(/\baccount\b/gi, "")
+    .replaceAll(/\baccount\b/gi, "")
     .replaceAll(/\s+/g, " ")
     .trim();
 }
@@ -383,7 +383,7 @@ function normalizeDescription(desc: string): string {
  */
 function accountNumbersMatch(a: string, b: string): boolean {
   if (a === b) return true;
-  const stripMask = (s: string) => s.replace(/[*x]/gi, "");
+  const stripMask = (s: string) => s.replaceAll(/[*x]/gi, "");
   const aDigits = stripMask(a);
   const bDigits = stripMask(b);
   if (aDigits.length === 0 || bDigits.length === 0) return false;
@@ -445,9 +445,7 @@ function matchByAccountNumber<
     if (normalizeDescription(existing.description) === newDesc) {
       return { item: existing, confidence: "high" };
     }
-    if (!mediumMatch) {
-      mediumMatch = { item: existing, confidence: "medium" };
-    }
+    mediumMatch ??= { item: existing, confidence: "medium" };
   }
 
   return mediumMatch;

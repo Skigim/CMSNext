@@ -15,8 +15,8 @@
  *   Creates .speedscope.json file that can be uploaded to https://www.speedscope.app/
  */
 
-import { readFile, writeFile } from 'fs/promises';
-import { resolve } from 'path';
+import { readFile, writeFile } from 'node:fs/promises';
+import { resolve } from 'node:path';
 
 interface ProfilerDataEntry {
   id: string;

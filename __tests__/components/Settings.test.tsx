@@ -174,11 +174,11 @@ const createCase = (overrides: Partial<CaseDisplay> = {}): CaseDisplay => {
     ...overrides,
     person: {
       ...base.person,
-      ...(overrides.person ?? {}),
+      ...overrides.person,
     },
     caseRecord: {
       ...base.caseRecord,
-      ...(overrides.caseRecord ?? {}),
+      ...overrides.caseRecord,
     },
   };
 };
@@ -217,7 +217,7 @@ describe("Settings", () => {
 
     createElementSpy.mockImplementation((tagName: string) => {
       if (tagName === "a") {
-        return anchor as HTMLAnchorElement;
+        return anchor;
       }
       return originalCreateElement(tagName);
     });

@@ -51,7 +51,7 @@ export const formatAccountNumber = (accountNumber?: string): string => {
  * Safe numeric input parsing with fallback
  */
 export const parseNumericInput = (value: string): number => {
-  return parseFloat(value) || 0;
+  return Number.parseFloat(value) || 0;
 };
 
 /**

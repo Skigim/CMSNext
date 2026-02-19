@@ -47,6 +47,7 @@ export function ErrorReportViewer() {
       URL.revokeObjectURL(url);
       toast.success('Error reports exported');
     } catch {
+      // Intentionally minimal - export failures are non-critical
       toast.error('Failed to export error reports');
     }
   };

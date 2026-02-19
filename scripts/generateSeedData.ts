@@ -208,8 +208,14 @@ const generateFinancialItems = (
   category: 'resources' | 'income' | 'expenses',
   itemId: { current: number }
 ): FinancialItem[] => {
-  const itemTypes = category === 'resources' ? RESOURCE_TYPES :
-                   category === 'income' ? INCOME_TYPES : EXPENSE_TYPES;
+  let itemTypes: typeof RESOURCE_TYPES;
+  if (category === 'resources') {
+    itemTypes = RESOURCE_TYPES;
+  } else if (category === 'income') {
+    itemTypes = INCOME_TYPES;
+  } else {
+    itemTypes = EXPENSE_TYPES;
+  }
   
   const numItems = randomRange(0, Math.min(3, itemTypes.length));
   const selectedTypes = [...itemTypes].sort(() => 0.5 - Math.random()).slice(0, numItems);
@@ -469,9 +475,9 @@ export const validateSeedData = (data: CaseData): { isValid: boolean; errors: st
 // Command-line interface for direct execution
 export const runGenerateSeedData = async () => {
   const args = process.argv.slice(2);
-  const numCases = args[0] ? parseInt(args[0], 10) : 50;
+  const numCases = args[0] ? Number.parseInt(args[0], 10) : 50;
   
-  if (isNaN(numCases) || numCases <= 0) {
+  if (Number.isNaN(numCases) || numCases <= 0) {
     console.error('❌ Please provide a valid number of cases to generate');
     process.exit(1);
   }
@@ -487,8 +493,8 @@ export const runGenerateSeedData = async () => {
     }
     
     const filename = `cmsNext-seed-data-${numCases}-cases.json`;
-    const fs = await import('fs');
-    const path = await import('path');
+    const fs = await import('node:fs');
+    const path = await import('node:path');
     
     const outputPath = path.join(process.cwd(), 'data', filename);
     

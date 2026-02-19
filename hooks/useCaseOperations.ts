@@ -72,6 +72,7 @@ export function useCaseOperations(config: CaseOperationsConfig) {
     try {
       guardDataManager();
     } catch (error) {
+      // Error already logged by guard; show user message
       setError(NOT_AVAILABLE_MSG);
       toast.error(NOT_AVAILABLE_MSG);
       return false;

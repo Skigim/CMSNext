@@ -22,7 +22,8 @@ describe("performanceTracker", () => {
     const measurements = getRecordedMeasurements();
     expect(measurements.length).toBeGreaterThan(0);
 
-  const latest = measurements[measurements.length - 1]!;
+    const latest = measurements[measurements.length - 1];
+    expect(latest).toBeDefined();
     expect(latest.name).toBe("navigation:test");
     expect(latest.duration).toBeGreaterThanOrEqual(0);
     expect(latest.detail).toMatchObject({ view: "dashboard", result: "list" });

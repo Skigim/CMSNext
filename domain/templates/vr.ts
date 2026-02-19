@@ -15,8 +15,7 @@ import type {
   TemplatePlaceholderField,
 } from "@/types/template";
 import { TEMPLATE_PLACEHOLDER_FIELDS } from "@/types/template";
-import { parseLocalDate, formatDateForDisplay } from "@/domain/common";
-import { formatPhoneNumber } from "@/domain/common";
+import { parseLocalDate, formatDateForDisplay, formatPhoneNumber } from "@/domain/common";
 
 // ============================================================================
 // Date Formatting Helpers
@@ -79,7 +78,7 @@ function applyDateOffset(
     date = new Date(baseDate);
   }
 
-  if (!date || isNaN(date.getTime())) return "";
+  if (!date || Number.isNaN(date.getTime())) return "";
 
   const adjusted = new Date(date);
   adjusted.setDate(adjusted.getDate() + daysOffset);
@@ -175,11 +174,16 @@ export function buildCaseLevelContext(
 }
 
 /**
+ * Financial item type for VR templates
+ */
+export type VRItemType = "resources" | "income" | "expenses";
+
+/**
  * Build the render context from a financial item and case data.
  */
 export function buildRenderContext(
   item: FinancialItem,
-  itemType: "resources" | "income" | "expenses",
+  itemType: VRItemType,
   storedCase: StoredCase
 ): TemplateRenderContext {
   const { caseRecord, person } = storedCase;
@@ -205,7 +209,7 @@ export function buildRenderContext(
     verificationSource: item.verificationSource || "",
     dateAdded: item.dateAdded || "",
     itemNotes: item.notes || "",
-    itemType: itemType.charAt(0).toUpperCase() + itemType.slice(1, -1), // "resources" -> "Resource"
+    itemType: ({ resources: "Resource", income: "Income", expenses: "Expense" } as const)[itemType],
 
     // Amount history fields
     lastUpdated: lastUpdatedDate || "",
@@ -272,7 +276,7 @@ function isAlreadyFormattedDate(value: string): boolean {
 /** Resolve a null/undefined placeholder value, handling currentDate+offset. */
 function resolveNullPlaceholder(key: string, offsetStr: string | undefined): string {
   if (key === "currentDate" && offsetStr) {
-    return applyDateOffset(new Date(), parseInt(offsetStr, 10));
+    return applyDateOffset(new Date(), Number.parseInt(offsetStr, 10));
   }
   return "";
 }
@@ -282,7 +286,7 @@ function resolveDatePlaceholder(key: string, value: unknown, offsetStr: string |
   const stringValue = String(value);
   if (isAlreadyFormattedDate(stringValue) && !offsetStr) return stringValue;
 
-  const offset = offsetStr ? parseInt(offsetStr, 10) : 0;
+  const offset = offsetStr ? Number.parseInt(offsetStr, 10) : 0;
 
   if (key === "currentDate") {
     return offset === 0 ? getCurrentDateFormatted() : applyDateOffset(new Date(), offset);
@@ -304,7 +308,7 @@ export function renderTemplate(
   template: string,
   context: TemplateRenderContext
 ): string {
-  return template.replace(
+  return template.replaceAll(
     /\{(\w+)([+-]\d+)?\}/g,
     (match, fieldName, offsetStr) => {
       const key = fieldName as TemplatePlaceholderField;
@@ -332,7 +336,7 @@ export function renderTemplate(
 export function renderVR(
   template: Template,
   item: FinancialItem,
-  itemType: "resources" | "income" | "expenses",
+  itemType: VRItemType,
   storedCase: StoredCase
 ): RenderedTemplate {
   const context = buildRenderContext(item, itemType, storedCase);
@@ -350,7 +354,7 @@ export function renderVR(
  */
 export function renderMultipleVRs(
   template: Template,
-  items: Array<{ item: FinancialItem; type: "resources" | "income" | "expenses" }>,
+  items: Array<{ item: FinancialItem; type: VRItemType }>,
   storedCase: StoredCase
 ): string {
   const renderedTemplates = items.map(({ item, type }) =>

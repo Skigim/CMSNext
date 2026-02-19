@@ -94,9 +94,11 @@ export function exportPaperCuts(): string {
   }
 
   const lines: string[] = [];
-  lines.push("Paper Cuts Export");
-  lines.push(`Exported: ${new Date().toISOString()}`);
-  lines.push("");
+  lines.push(
+    "Paper Cuts Export",
+    `Exported: ${new Date().toISOString()}`,
+    ""
+  );
 
   for (const pc of paperCuts) {
     lines.push(`- ${pc.createdAt} | ${pc.route}`);
