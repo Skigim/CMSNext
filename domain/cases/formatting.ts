@@ -5,6 +5,7 @@
  */
 
 import type { FinancialItem, StoredCase } from "@/types/case";
+import { parseLocalDate } from "../common/dates";
 
 /**
  * Bank account type keywords for institution extraction.
@@ -47,8 +48,8 @@ export function formatRetroMonths(
   let year: number;
   if (applicationDate) {
     try {
-      const date = new Date(applicationDate);
-      if (!isNaN(date.getTime())) {
+      const date = parseLocalDate(applicationDate);
+      if (date) {
         year = date.getFullYear();
       } else {
         year = new Date().getFullYear();
@@ -103,8 +104,8 @@ export function calculateAge(dateOfBirth: string | undefined): number | null {
   if (!dateOfBirth) return null;
 
   try {
-    const dob = new Date(dateOfBirth);
-    if (isNaN(dob.getTime())) return null;
+    const dob = parseLocalDate(dateOfBirth);
+    if (!dob) return null;
 
     const today = new Date();
     let age = today.getFullYear() - dob.getFullYear();
@@ -186,7 +187,11 @@ export function calculateAVSTrackingDates(
        submit = new Date();
     }
   } else if (submitDate instanceof Date) {
-    submit = submitDate;
+    submit = new Date(
+      submitDate.getUTCFullYear(),
+      submitDate.getUTCMonth(),
+      submitDate.getUTCDate()
+    );
   } else {
     submit = new Date();
   }
@@ -202,8 +207,8 @@ export function calculateAVSTrackingDates(
   const formatConsentDate = (dateStr: string | undefined): string => {
     if (!dateStr) return "MM/DD/YYYY";
     try {
-      const date = new Date(dateStr);
-      if (isNaN(date.getTime())) return "MM/DD/YYYY";
+      const date = parseLocalDate(dateStr);
+      if (!date) return "MM/DD/YYYY";
       return formatDate(date);
     } catch {
       return "MM/DD/YYYY";

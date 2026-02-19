@@ -103,7 +103,7 @@ function createTestNote(caseId: string, overrides: Partial<StoredNote> = {}): St
 
 describe("calculateCutoffDate", () => {
   it("should calculate correct cutoff date for given months", () => {
-    const referenceDate = new Date("2026-01-22");
+    const referenceDate = new Date(2026, 0, 22);
     const cutoff = calculateCutoffDate(12, referenceDate);
     
     expect(cutoff.getFullYear()).toBe(2025);
@@ -112,7 +112,7 @@ describe("calculateCutoffDate", () => {
   });
 
   it("should handle cutoff that spans year boundary", () => {
-    const referenceDate = new Date("2026-03-15");
+    const referenceDate = new Date(2026, 2, 15);
     const cutoff = calculateCutoffDate(6, referenceDate);
     
     expect(cutoff.getFullYear()).toBe(2025);

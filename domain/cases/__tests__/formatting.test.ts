@@ -8,6 +8,9 @@ import {
 } from "../formatting";
 import type { FinancialItem } from "@/types/case";
 
+const localDate = (year: number, month: number, day: number): Date =>
+  new Date(year, month - 1, day);
+
 describe("formatRetroMonths", () => {
   describe("empty/undefined handling", () => {
     it("returns 'No' for undefined retroMonths", () => {
@@ -72,7 +75,7 @@ describe("calculateAge", () => {
   beforeEach(() => {
     // Mock current date to January 2, 2026
     vi.useFakeTimers();
-    vi.setSystemTime(new Date("2026-01-02"));
+    vi.setSystemTime(localDate(2026, 1, 2));
   });
 
   afterEach(() => {
@@ -131,7 +134,7 @@ describe("formatVoterStatus", () => {
 describe("calculateAVSTrackingDates", () => {
   beforeEach(() => {
     vi.useFakeTimers();
-    vi.setSystemTime(new Date("2026-01-02"));
+    vi.setSystemTime(localDate(2026, 1, 2));
   });
 
   afterEach(() => {
@@ -161,7 +164,7 @@ describe("calculateAVSTrackingDates", () => {
   });
 
   it("uses provided submit date", () => {
-    const customSubmitDate = new Date("2026-01-10");
+    const customSubmitDate = localDate(2026, 1, 10);
     const result = calculateAVSTrackingDates("2025-12-29", customSubmitDate);
 
     expect(result.submitDate).toBe("01/10/2026");

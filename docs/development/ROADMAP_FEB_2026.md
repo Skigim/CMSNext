@@ -336,33 +336,49 @@ _Tackle the top 5 rules by count across production code_
 - [ ] **Batch extraction** - Extract inline component definitions to module-level named components (see _S6759 Extraction Strategy_ in Architectural Context above)
 - [ ] Prioritize `CaseEditSections.tsx` (14 issues), `ActivityWidget.tsx` (10), `CaseTable.tsx` (9), `WidgetSkeleton.tsx` (8), `AVSImportModal.tsx` (8)
 
-##### S7735 — Unnecessary Boolean Comparison (35 issues)
+##### S7735 — Unexpected Negated Condition (35 issues)
 
-- [ ] **Sweep across prod files** - Replace `x === true` / `x === false` with direct boolean expressions or negation
+- [ ] **Sweep across prod files** - Flip if/else branches for negated conditions; replace `x === true` / `x === false` with direct boolean expressions or negation
 
 ##### S1874 — Deprecated API Usage (27 issues)
 
 - [ ] **Update deprecated calls** - Replace deprecated APIs with current equivalents. Check if any are domain-layer (should have no side-effect impact) vs service-layer (may need integration re-testing)
 
-##### S7773 — Unnecessary Non-Null Assertion (26 issues)
+##### S7773 — Prefer `Number.isNaN`/`parseInt`/`parseFloat` (26 issues)
 
-- [ ] **Batch fix** - Replace `!` assertions with proper null checks or optional chaining. If the value genuinely cannot be null, add a type guard or use `satisfies` narrowing instead
+- [ ] **Batch fix** - Replace global `isNaN()`, `parseInt()`, `parseFloat()` with `Number.isNaN()`, `Number.parseInt()`, `Number.parseFloat()`. Domain-heavy: 16 of 26 issues are in `domain/` (dates.ts ×4, formatting.ts ×6, vr.ts ×3, parser.ts ×2, formatters.ts ×1)
 
-##### S7781 — Unnecessary Semicolon (16 issues)
+##### S7781 — Prefer `String#replaceAll()` (16 issues)
 
-- [ ] **Batch fix** - Remove extra semicolons. Pure formatting — safe for bulk commit
+- [ ] **Batch fix** - Replace `.replace(/…/g, …)` with `.replaceAll(…, …)`. Domain-heavy: 13 of 16 issues are in `domain/` (sanitization.ts ×9, parser.ts ×2, vr.ts ×1, matching.ts ×1). Pure formatting — safe for bulk commit
 
 ##### Remaining Minor Rules (prod)
 
 - [ ] **Default parameters S7760** (1) - Use default params in `alerts/matching.ts:196` ← deferred from Wave 1
 - [ ] **CSS @plugin rule S4662** (2) - Suppress or configure for Tailwind v4 in `globals.css` ← deferred from Wave 1
-- [ ] **S3863** (14) - Resolve ambiguous union/intersection type expressions — add explicit parentheses or type aliases
+- [ ] **S3863** (14) - Merge duplicate imports — consolidate multiple imports from the same module (includes `domain/templates/vr.ts` ×2)
 - [ ] **S2486** (11) - Empty catch blocks — add error handling, logging via `createLogger()`, or `// intentionally empty` comments
 - [ ] **S4325** (10) - Remove unnecessary type assertions (`as Type`) — use type narrowing or `satisfies` instead
 - [ ] **S6754** (9) - Fix React hook dependency arrays — add missing deps or extract values to stable refs
-- [ ] **S7778** (7) - Unnecessary type constraint — remove redundant `extends` clauses
+- [ ] **S7778** (7) - Batch `Array#push()` calls — combine multiple sequential `.push()` into single call with spread/multiple args (includes `domain/dashboard/activityReport.ts` ×3)
 - [ ] **S7764** (6) - Prefer `Array.isArray()` over `instanceof Array`
-- [ ] **S6594** (4) - Use `#private` syntax, **S6767** (4) - Prefer `for...of`, **S7741** (4) - Unnecessary `await`, **S7758** (4) - Prefer `using` declarations, **S7772** (4) - Unnecessary type arguments — batch minor fixes
+- [ ] **S6594** (4) - Use `RegExp.exec()` instead of `String.match()` for regex results (includes `domain/avs/parser.ts` ×3)
+- [ ] **S6767** (4) - Prefer `for...of` over index-based loops
+- [ ] **S7741** (4) - Remove unnecessary `await` on non-Promise expressions
+- [ ] **S7758** (4) - Prefer `using` declarations for disposable resources
+- [ ] **S7772** (4) - Remove unnecessary type arguments that can be inferred
+
+##### Domain-Layer Gap Issues (9 issues — added Feb 18)
+
+> These domain-layer issues were discovered during cross-referencing SonarCloud data against the roadmap. All MINOR severity, all mechanical single-line fixes in pure domain functions.
+
+- [ ] **S6606** (2) - Prefer nullish coalescing assignment (`??=`) — `domain/avs/parser.ts:448`, `domain/financials/history.ts:157`
+- [ ] **S7744** (2) - Remove useless empty object in spread — `domain/alerts/matching.ts:254-255`
+- [ ] **S4323** (1) - Extract union type to named type alias — `domain/templates/vr.ts:182`
+- [ ] **S6551** (1) - Fix object default stringification — `domain/common/sanitization.ts:179`
+- [ ] **S7719** (1) - Remove unnecessary `.getTime()` call — `domain/dashboard/activityReport.ts:22`
+- [ ] **S7786** (1) - Use `TypeError` instead of generic `Error` — `domain/dashboard/activityReport.ts:39`
+- [ ] **S7771** (1) - Prefer negative index for `slice` — `domain/common/phone.ts:85`
 
 #### Wave 3: Scripts & Test Files (Thu-Fri)
 

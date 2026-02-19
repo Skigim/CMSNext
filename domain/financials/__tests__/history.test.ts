@@ -22,6 +22,9 @@ vi.mock("uuid", () => ({
   v4: () => "test-uuid-1234",
 }));
 
+const localDate = (year: number, month: number, day: number): Date =>
+  new Date(year, month - 1, day);
+
 describe("financialHistory utilities", () => {
   describe("getFirstOfMonth", () => {
     it("returns the first day of the current month", () => {
@@ -67,27 +70,27 @@ describe("financialHistory utilities", () => {
     };
 
     it("returns true for date within range", () => {
-      const targetDate = new Date("2025-06-15");
+      const targetDate = localDate(2025, 6, 15);
       expect(isDateInEntryRange(entry, targetDate)).toBe(true);
     });
 
     it("returns true for date on start boundary", () => {
-      const targetDate = new Date("2025-06-01");
+      const targetDate = localDate(2025, 6, 1);
       expect(isDateInEntryRange(entry, targetDate)).toBe(true);
     });
 
     it("returns true for date on end boundary", () => {
-      const targetDate = new Date("2025-06-30");
+      const targetDate = localDate(2025, 6, 30);
       expect(isDateInEntryRange(entry, targetDate)).toBe(true);
     });
 
     it("returns false for date before range", () => {
-      const targetDate = new Date("2025-05-31");
+      const targetDate = localDate(2025, 5, 31);
       expect(isDateInEntryRange(entry, targetDate)).toBe(false);
     });
 
     it("returns false for date after range", () => {
-      const targetDate = new Date("2025-07-01");
+      const targetDate = localDate(2025, 7, 1);
       expect(isDateInEntryRange(entry, targetDate)).toBe(false);
     });
 
@@ -99,7 +102,7 @@ describe("financialHistory utilities", () => {
         endDate: null,
         createdAt: "2025-06-01",
       };
-      expect(isDateInEntryRange(ongoingEntry, new Date("2025-12-15"))).toBe(true);
+      expect(isDateInEntryRange(ongoingEntry, localDate(2025, 12, 15))).toBe(true);
     });
   });
 
@@ -112,12 +115,12 @@ describe("financialHistory utilities", () => {
     };
 
     it("returns item.amount when no amountHistory exists", () => {
-      expect(getAmountForMonth(baseItem, new Date("2025-06-15"))).toBe(500);
+      expect(getAmountForMonth(baseItem, localDate(2025, 6, 15))).toBe(500);
     });
 
     it("returns item.amount when amountHistory is empty", () => {
       const itemWithEmptyHistory = { ...baseItem, amountHistory: [] };
-      expect(getAmountForMonth(itemWithEmptyHistory, new Date("2025-06-15"))).toBe(500);
+      expect(getAmountForMonth(itemWithEmptyHistory, localDate(2025, 6, 15))).toBe(500);
     });
 
     it("returns matching entry amount when history exists", () => {
@@ -133,7 +136,7 @@ describe("financialHistory utilities", () => {
           },
         ],
       };
-      expect(getAmountForMonth(itemWithHistory, new Date("2025-06-15"))).toBe(1000);
+      expect(getAmountForMonth(itemWithHistory, localDate(2025, 6, 15))).toBe(1000);
     });
 
     it("returns most recent applicable entry for multiple entries", () => {
@@ -156,8 +159,8 @@ describe("financialHistory utilities", () => {
           },
         ],
       };
-      expect(getAmountForMonth(itemWithMultipleHistory, new Date("2025-06-15"))).toBe(1500);
-      expect(getAmountForMonth(itemWithMultipleHistory, new Date("2025-05-15"))).toBe(1000);
+      expect(getAmountForMonth(itemWithMultipleHistory, localDate(2025, 6, 15))).toBe(1500);
+      expect(getAmountForMonth(itemWithMultipleHistory, localDate(2025, 5, 15))).toBe(1000);
     });
 
     it("falls back to most recent past entry when no entry covers the date", () => {
@@ -174,11 +177,11 @@ describe("financialHistory utilities", () => {
         ],
       };
       // Requesting amount for July when only June is covered - should fall back to June's amount
-      expect(getAmountForMonth(itemWithHistory, new Date("2025-07-15"))).toBe(1000);
+      expect(getAmountForMonth(itemWithHistory, localDate(2025, 7, 15))).toBe(1000);
     });
 
     it("falls back to item.amount when no history entries exist", () => {
-      expect(getAmountForMonth(baseItem, new Date("2025-07-15"))).toBe(500);
+      expect(getAmountForMonth(baseItem, localDate(2025, 7, 15))).toBe(500);
     });
   });
 
@@ -191,7 +194,7 @@ describe("financialHistory utilities", () => {
     };
 
     it("returns isLegacyFallback=true when no history exists", () => {
-      const result = getAmountInfoForMonth(baseItem, new Date("2025-06-15"));
+      const result = getAmountInfoForMonth(baseItem, localDate(2025, 6, 15));
       expect(result.amount).toBe(500);
       expect(result.entry).toBeUndefined();
       expect(result.isFallback).toBe(false);
@@ -207,7 +210,7 @@ describe("financialHistory utilities", () => {
         createdAt: "2025-06-01",
       };
       const itemWithHistory = { ...baseItem, amountHistory: [entry] };
-      const result = getAmountInfoForMonth(itemWithHistory, new Date("2025-06-15"));
+      const result = getAmountInfoForMonth(itemWithHistory, localDate(2025, 6, 15));
       expect(result.amount).toBe(1000);
       expect(result.entry).toEqual(entry);
       expect(result.isFallback).toBe(false);
@@ -224,7 +227,7 @@ describe("financialHistory utilities", () => {
       };
       const itemWithHistory = { ...baseItem, amountHistory: [entry] };
       // July 15 is after June 30 end date
-      const result = getAmountInfoForMonth(itemWithHistory, new Date("2025-07-15"));
+      const result = getAmountInfoForMonth(itemWithHistory, localDate(2025, 7, 15));
       expect(result.amount).toBe(1000);
       expect(result.entry).toEqual(entry);
       expect(result.isFallback).toBe(true);
@@ -241,7 +244,7 @@ describe("financialHistory utilities", () => {
     };
 
     it("returns undefined when no amountHistory exists", () => {
-      expect(getEntryForMonth(baseItem, new Date("2025-06-15"))).toBeUndefined();
+      expect(getEntryForMonth(baseItem, localDate(2025, 6, 15))).toBeUndefined();
     });
 
     it("returns the matching entry", () => {
@@ -253,7 +256,7 @@ describe("financialHistory utilities", () => {
         createdAt: "2025-06-01",
       };
       const itemWithHistory = { ...baseItem, amountHistory: [entry] };
-      expect(getEntryForMonth(itemWithHistory, new Date("2025-06-15"))).toEqual(entry);
+      expect(getEntryForMonth(itemWithHistory, localDate(2025, 6, 15))).toEqual(entry);
     });
   });
 
@@ -286,7 +289,7 @@ describe("financialHistory utilities", () => {
   describe("createHistoryEntry", () => {
     beforeEach(() => {
       vi.useFakeTimers();
-      vi.setSystemTime(new Date("2025-06-15"));
+      vi.setSystemTime(localDate(2025, 6, 15));
     });
 
     it("creates entry with provided amount and default startDate", () => {
@@ -525,7 +528,7 @@ describe("financialHistory utilities", () => {
 
   describe("formatMonthYear", () => {
     it("formats date as 'Month YYYY'", () => {
-      const date = new Date("2025-06-15");
+      const date = localDate(2025, 6, 15);
       const formatted = formatMonthYear(date);
       expect(formatted).toContain("June");
       expect(formatted).toContain("2025");
