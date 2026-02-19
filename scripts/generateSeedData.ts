@@ -208,8 +208,14 @@ const generateFinancialItems = (
   category: 'resources' | 'income' | 'expenses',
   itemId: { current: number }
 ): FinancialItem[] => {
-  const itemTypes = category === 'resources' ? RESOURCE_TYPES :
-                   category === 'income' ? INCOME_TYPES : EXPENSE_TYPES;
+  let itemTypes: typeof RESOURCE_TYPES;
+  if (category === 'resources') {
+    itemTypes = RESOURCE_TYPES;
+  } else if (category === 'income') {
+    itemTypes = INCOME_TYPES;
+  } else {
+    itemTypes = EXPENSE_TYPES;
+  }
   
   const numItems = randomRange(0, Math.min(3, itemTypes.length));
   const selectedTypes = [...itemTypes].sort(() => 0.5 - Math.random()).slice(0, numItems);
@@ -487,8 +493,8 @@ export const runGenerateSeedData = async () => {
     }
     
     const filename = `cmsNext-seed-data-${numCases}-cases.json`;
-    const fs = await import('fs');
-    const path = await import('path');
+    const fs = await import('node:fs');
+    const path = await import('node:path');
     
     const outputPath = path.join(process.cwd(), 'data', filename);
     

@@ -3,7 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { describe, expect, it, beforeAll, afterAll, afterEach, vi } from "vitest";
 
 const originalNodeEnv = process.env.NODE_ENV;
-const originalLocation = window.location;
+const originalLocation = globalThis.location;
 
 describe("ErrorFallback", () => {
   beforeAll(() => {
@@ -15,7 +15,7 @@ describe("ErrorFallback", () => {
   });
 
   afterEach(() => {
-    Object.defineProperty(window, "location", {
+    Object.defineProperty(globalThis, "location", {
       configurable: true,
       enumerable: true,
       value: originalLocation,
@@ -25,7 +25,7 @@ describe("ErrorFallback", () => {
   it("renders default messaging with Card component and supports retry", async () => {
     const resetError = vi.fn();
     const reloadSpy = vi.fn();
-    Object.defineProperty(window, "location", {
+    Object.defineProperty(globalThis, "location", {
       configurable: true,
       enumerable: true,
       value: {

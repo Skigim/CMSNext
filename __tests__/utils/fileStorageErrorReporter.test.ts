@@ -9,9 +9,9 @@ vi.mock("sonner", () => ({
 }));
 
 import { toast } from "sonner";
-const toastInfo = toast.info as ReturnType<typeof vi.fn>;
-const toastWarning = toast.warning as ReturnType<typeof vi.fn>;
-const toastError = toast.error as ReturnType<typeof vi.fn>;
+const toastInfo = vi.mocked(toast.info);
+const toastWarning = vi.mocked(toast.warning);
+const toastError = vi.mocked(toast.error);
 
 vi.mock("../../utils/errorReporting", () => ({
   errorReporting: {
@@ -37,9 +37,9 @@ describe("fileStorageErrorReporter", () => {
   });
 
   it("skips abort errors without toasting", () => {
-    const abortError = typeof DOMException !== "undefined"
-      ? new DOMException("", "AbortError")
-      : Object.assign(new Error("aborted"), { name: "AbortError" });
+    const abortError = typeof DOMException === "undefined"
+      ? Object.assign(new Error("aborted"), { name: "AbortError" })
+      : new DOMException("", "AbortError");
     const notification = reportFileStorageError({
       operation: "connect",
       error: abortError,

@@ -18,7 +18,7 @@ const getClipboard = () => navigator.clipboard as unknown as {
 
 describe("clickToCopy", () => {
   let execCommandMock: ReturnType<typeof vi.fn>;
-  let originalExecCommand: typeof document.execCommand;
+  let originalExecCommand: (typeof document.execCommand) | undefined;
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -30,8 +30,7 @@ describe("clickToCopy", () => {
       configurable: true,
     });
 
-    originalExecCommand = document.execCommand ??
-      ((() => false) as typeof document.execCommand);
+    originalExecCommand = document.execCommand;
     execCommandMock = vi.fn().mockReturnValue(true);
     Object.defineProperty(document, "execCommand", {
       value: execCommandMock,

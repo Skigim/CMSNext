@@ -25,7 +25,7 @@ describe("CaseList MCN copy accessibility", () => {
     const user = userEvent.setup();
     const caseData = createMockCaseDisplay();
 
-    window.localStorage.setItem(
+    globalThis.localStorage.setItem(
       "cmsnext.fileStorageFlags",
       JSON.stringify({ caseListView: "table" }),
     );
