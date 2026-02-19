@@ -18,7 +18,7 @@ function callHandler(handler: AsyncButtonHandler | undefined): Promise<unknown> 
   return Promise.resolve(result);
 }
 
-export default function ConnectToExistingModalStub(props: ConnectToExistingModalStubProps) {
+export default function ConnectToExistingModalStub(props: Readonly<ConnectToExistingModalStubProps>) {
   const {
     isOpen,
     isSupported,
@@ -34,26 +34,26 @@ export default function ConnectToExistingModalStub(props: ConnectToExistingModal
 
   if (!isSupported) {
     return (
-      <div
-        role="dialog"
+      <dialog
         aria-modal="true"
         aria-label="Browser Not Supported"
         data-testid="connect-modal"
+        open
       >
         <p>Browser Not Supported</p>
         <button type="button" onClick={() => callHandler(onGoToSettings)}>
           Go to Settings
         </button>
-      </div>
+      </dialog>
     );
   }
 
   return (
-    <div
-      role="dialog"
+    <dialog
       aria-modal="true"
       aria-label="Connect to Your Data"
       data-testid="connect-modal"
+      open
     >
       {permissionStatus === "denied" && (
         <p>Permission was previously denied. You'll need to grant permission to continue.</p>
@@ -72,6 +72,6 @@ export default function ConnectToExistingModalStub(props: ConnectToExistingModal
       <button type="button" onClick={() => callHandler(onGoToSettings)}>
         Go to Settings
       </button>
-    </div>
+    </dialog>
   );
 }

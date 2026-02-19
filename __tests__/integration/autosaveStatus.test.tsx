@@ -87,7 +87,7 @@ vi.mock("@/utils/AutosaveFileService", () => {
     }
 
     updateConfig() {
-      void 0;
+      /* intentionally empty - mock does not need config updates */
     }
 
     startAutosave() {
@@ -105,11 +105,11 @@ vi.mock("@/utils/AutosaveFileService", () => {
     }
 
     setDataLoadCallback() {
-      void 0;
+      /* intentionally empty - mock does not track callbacks */
     }
 
     notifyDataChange() {
-      void 0;
+      /* intentionally empty - mock does not propagate changes */
     }
 
     connect() {
@@ -159,7 +159,7 @@ vi.mock("@/utils/AutosaveFileService", () => {
     }
 
     updateReactState() {
-      void 0;
+      /* intentionally empty - mock does not update React state */
     }
 
     writeFile() {
