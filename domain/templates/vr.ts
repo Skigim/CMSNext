@@ -176,7 +176,7 @@ export function buildCaseLevelContext(
 /**
  * Financial item type for VR templates
  */
-type VRItemType = "resources" | "income" | "expenses";
+export type VRItemType = "resources" | "income" | "expenses";
 
 /**
  * Build the render context from a financial item and case data.
@@ -209,7 +209,7 @@ export function buildRenderContext(
     verificationSource: item.verificationSource || "",
     dateAdded: item.dateAdded || "",
     itemNotes: item.notes || "",
-    itemType: itemType.charAt(0).toUpperCase() + itemType.slice(1, -1), // "resources" -> "Resource"
+    itemType: ({ resources: "Resource", income: "Income", expenses: "Expense" } as const)[itemType],
 
     // Amount history fields
     lastUpdated: lastUpdatedDate || "",
@@ -336,7 +336,7 @@ export function renderTemplate(
 export function renderVR(
   template: Template,
   item: FinancialItem,
-  itemType: "resources" | "income" | "expenses",
+  itemType: VRItemType,
   storedCase: StoredCase
 ): RenderedTemplate {
   const context = buildRenderContext(item, itemType, storedCase);
@@ -354,7 +354,7 @@ export function renderVR(
  */
 export function renderMultipleVRs(
   template: Template,
-  items: Array<{ item: FinancialItem; type: "resources" | "income" | "expenses" }>,
+  items: Array<{ item: FinancialItem; type: VRItemType }>,
   storedCase: StoredCase
 ): string {
   const renderedTemplates = items.map(({ item, type }) =>
