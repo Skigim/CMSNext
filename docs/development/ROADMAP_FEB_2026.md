@@ -259,6 +259,7 @@ _Focus: Complete archive system and data management improvements_
 _Focus: Resolve all SonarCloud issues — 614 open (434 prod, 155 scripts, 25 tests)_
 
 > **Source:** [sonarcloud-cloud-issues-summary.md](../audit/sonarcloud-cloud-issues-summary.md) snapshot from 2026-02-13
+> **Latest refresh:** 2026-02-19T21:49:35Z — 206 open (1 critical, 24 major, 179 minor, 2 info)
 
 #### Wave 1: Critical & Major Severity (Mon-Tue)
 
@@ -452,9 +453,9 @@ _Focus: Ship deferred UX features, final polish, and March planning_
 | Average feature rating      | 85.1  |        | 85.5    |         | 87+    |
 | Open audit findings         | 18    | 17     | 17      |         | 0      |
 | Console statements in hooks | 22    | 0 ✅   | 0 ✅    | 0 ✅    | 0      |
-| SonarCloud open issues      | 614   | —      | —       | ~440 🔄 | < 50   |
-| SonarCloud critical issues  | 9     | —      | —       | ~0 🔄   | 0      |
-| SonarCloud major issues     | 130   | —      | —       | ~0 🔄   | 0      |
+| SonarCloud open issues      | 614   | —      | —       | 206 🔄  | < 50   |
+| SonarCloud critical issues  | 9     | —      | —       | 1 🔄    | 0      |
+| SonarCloud major issues     | 130   | —      | —       | 24 🔄   | 0      |
 | Case Archival rating        | 82    |        | 88 ✅   |         | 88     |
 | New features shipped        | -     |        | 4       |         | 8-10   |
 
@@ -478,8 +479,8 @@ _Focus: Ship deferred UX features, final polish, and March planning_
 
 ### Week 3 - P0 (SonarCloud Remediation)
 
-1. All 9 Critical issues resolved (cognitive complexity, empty methods)
-2. All 108 Major production issues resolved (ternaries, a11y, keys, optional chaining)
+1. Reduce critical issues from 9 to 1 and clear remaining critical finding
+2. Continue major-issue reduction (currently 24 major remaining)
 3. High-volume minor rule sweeps: S6759 (117), S7735 (35), S1874 (27), S7773 (26)
 4. Scripts cleanup (155 issues across 3 files) + test file fixes (25 issues)
 
@@ -506,13 +507,13 @@ _Focus: Ship deferred UX features, final polish, and March planning_
 - [UI Audit Report](../audit/UI_AUDIT_REPORT.md) - Outstanding UI items
 - [Hooks Audit](../audit/HOOKS_AUDIT.md) - Console statement findings
 - [Security Audit](../audit/SECURITY_AUDIT.md) - Error handling findings
-- [SonarCloud Issues Summary](../audit/sonarcloud-cloud-issues-summary.md) - Issue snapshot (614 open)
+- [SonarCloud Issues Summary](../audit/sonarcloud-cloud-issues-summary.md) - Issue snapshot (206 open)
 - [SonarCloud Open Issues](../audit/sonarcloud-open-issues.json) - Full issue detail
 - [SonarCloud Hotspots](../audit/sonarcloud-hotspots.json) - Security hotspot review
 
 ---
 
-_Last updated: February 18, 2026 (Wave 1 complete)_
+_Last updated: February 19, 2026 (Live Sonar snapshot refreshed)_
 
 ---
 
@@ -547,4 +548,4 @@ Every change must:
 
 **Prepared by:** Claude Opus 4.6 (Project Manager)  
 **Executed by:** GPT 5.3 Codex (Lead Developer)  
-**Last updated:** February 18, 2026 (Wave 1 complete)
+**Last updated:** February 19, 2026 (Live Sonar snapshot refreshed)

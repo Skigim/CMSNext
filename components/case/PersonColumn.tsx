@@ -48,14 +48,7 @@ interface PersonColumnProps {
 }
 
 function buildRelationshipKeys(relationships: Relationship[]): string[] {
-  const counts = new Map<string, number>();
-
-  return relationships.map((relationship) => {
-    const baseKey = `${relationship.type}-${relationship.name}-${relationship.phone}`;
-    const nextCount = (counts.get(baseKey) ?? 0) + 1;
-    counts.set(baseKey, nextCount);
-    return `${baseKey}-${nextCount}`;
-  });
+  return relationships.map((_, index) => `relationship-${index}`);
 }
 
 // Read-only info display component
