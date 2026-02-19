@@ -37,7 +37,7 @@ export function getFreshnessLabel(timestamp: number | string | null | undefined)
   const timestampMs = typeof timestamp === "string" ? new Date(timestamp).getTime() : timestamp;
 
   // Handle invalid dates
-  if (isNaN(timestampMs)) {
+  if (Number.isNaN(timestampMs)) {
     return null;
   }
 

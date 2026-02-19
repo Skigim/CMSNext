@@ -48,6 +48,9 @@ import {
 } from "../ui/select";
 import { useDataManagerSafe } from "@/contexts/DataManagerContext";
 import { useCategoryConfig } from "@/contexts/CategoryConfigContext";
+import { createLogger } from "@/utils/logger";
+
+const logger = createLogger("ArchivalSettingsPanel");
 import { useCaseArchival, useFuzzySearch, usePositionAssignmentsImport } from "@/hooks";
 import { PositionAssignmentsReviewModal } from "@/components/modals/PositionAssignmentsReviewModal";
 import type { ArchiveFileInfo } from "@/utils/services/CaseArchiveService";
@@ -149,6 +152,7 @@ export function ArchivalSettingsPanel({ cases }: { cases: StoredCase[] }) {
       
       toast.success("Archival settings saved");
     } catch (error) {
+      logger.error("Failed to save archival settings", { error });
       toast.error("Failed to save settings");
     } finally {
       setIsSaving(false);
@@ -283,7 +287,7 @@ export function ArchivalSettingsPanel({ cases }: { cases: StoredCase[] }) {
                 min={1}
                 max={120}
                 value={thresholdMonths}
-                onChange={(e) => setThresholdMonths(parseInt(e.target.value) || 12)}
+                onChange={(e) => setThresholdMonths(Number.parseInt(e.target.value) || 12)}
               />
               <p className="text-xs text-muted-foreground">
                 Cases inactive for this many months will appear in the archival review queue.

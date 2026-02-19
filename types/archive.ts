@@ -118,7 +118,7 @@ export function parseArchiveYear(fileName: string): number | null {
   if (!match) {
     return null;
   }
-  return parseInt(match[1], 10);
+  return Number.parseInt(match[1], 10);
 }
 
 /**

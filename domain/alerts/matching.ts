@@ -63,7 +63,7 @@ export function normalizeMcn(rawMcn: string | undefined | null): string {
   if (!rawMcn) {
     return "";
   }
-  return rawMcn.replace(/[^a-z0-9]/gi, "").trim().toUpperCase();
+  return rawMcn.replaceAll(/[^a-z0-9]/gi, "").trim().toUpperCase();
 }
 
 /**
@@ -192,9 +192,8 @@ export function sortAlerts(alerts: AlertWithMatch[]): AlertWithMatch[] {
 /**
  * Get workflow priority for alert status
  */
-function getWorkflowPriority(status: AlertWithMatch["status"]): number {
-  const normalized = status ?? "new";
-  const index = workflowPriorityOrder.indexOf(normalized);
+function getWorkflowPriority(status: AlertWithMatch["status"] = "new"): number {
+  const index = workflowPriorityOrder.indexOf(status);
   return index === -1 ? 0 : index;
 }
 
@@ -251,8 +250,8 @@ export function mergeDuplicateAlerts(
   }
 
   const mergedMetadata = {
-    ...(fallback.metadata ?? {}),
-    ...(winner.metadata ?? {}),
+    ...fallback.metadata,
+    ...winner.metadata,
   };
 
   return {

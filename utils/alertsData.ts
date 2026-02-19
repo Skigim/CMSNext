@@ -139,6 +139,10 @@ function extractAlertRows(csvContent: string): RawAlertCsvRow[] {
     if (value == null) {
       return "";
     }
+    // Handle non-primitive types
+    if (typeof value === "object") {
+      return "";
+    }
     return String(value).trim();
   };
 

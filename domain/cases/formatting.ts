@@ -181,7 +181,7 @@ export function calculateAVSTrackingDates(
     // Parse ISO string (presuming YYYY-MM-DD from input)
     // We treat it as local date to avoid timezone shifts
     const [year, month, day] = submitDate.split('-').map(Number);
-    if (!isNaN(year) && !isNaN(month) && !isNaN(day)) {
+    if (!Number.isNaN(year) && !Number.isNaN(month) && !Number.isNaN(day)) {
        submit = new Date(year, month - 1, day);
     } else {
        submit = new Date();

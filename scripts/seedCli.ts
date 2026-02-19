@@ -40,7 +40,7 @@ const parseArgs = (args: string[]): CliOptions => {
     switch (arg) {
       case '--cases':
       case '-c':
-        if (nextArg && !isNaN(Number(nextArg))) {
+        if (nextArg && !Number.isNaN(Number(nextArg))) {
           options.cases = Number(nextArg);
           i++; // Skip next argument
         }

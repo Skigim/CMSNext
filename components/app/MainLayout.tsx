@@ -67,8 +67,10 @@ export function MainLayout({
         segments.push({ label: breadcrumbTitle || 'Case Details' });
         break;
       case 'form':
-        segments.push({ label: 'Cases', view: 'list' });
-        segments.push({ label: breadcrumbTitle || 'New Case' });
+        segments.push(
+          { label: 'Cases', view: 'list' },
+          { label: breadcrumbTitle || 'New Case' }
+        );
         break;
       case 'settings':
         segments.push({ label: 'Settings' });

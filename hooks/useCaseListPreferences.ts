@@ -125,10 +125,10 @@ function validateAndTransform(parsed: SerializedPreferences | null): {
   };
 
   // Validate parsed dates (check for Invalid Date)
-  if (filters.dateRange.from && isNaN(filters.dateRange.from.getTime())) {
+  if (filters.dateRange.from && Number.isNaN(filters.dateRange.from.getTime())) {
     filters.dateRange.from = undefined;
   }
-  if (filters.dateRange.to && isNaN(filters.dateRange.to.getTime())) {
+  if (filters.dateRange.to && Number.isNaN(filters.dateRange.to.getTime())) {
     filters.dateRange.to = undefined;
   }
 

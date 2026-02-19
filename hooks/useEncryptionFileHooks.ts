@@ -9,8 +9,8 @@ import {
   isEncryptedPayload,
   EncryptionError,
   type EncryptionErrorCode,
+  type EncryptedPayload,
 } from "@/types/encryption";
-import type { EncryptedPayload } from "@/types/encryption";
 import type { NormalizedFileData } from "@/utils/services/FileStorageService";
 import { createLogger } from "@/utils/logger";
 

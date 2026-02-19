@@ -20,8 +20,7 @@ import { useFinancialItems } from "../../hooks/useFinancialItems";
 import { useNotes } from "../../hooks/useNotes";
 import { usePinnedCases } from "../../hooks/usePinnedCases";
 import { useTemplates } from "@/contexts/TemplateContext";
-import { formatUSPhone } from "@/domain/common";
-import { formatDateForDisplay, parseLocalDate } from "@/domain/common";
+import { formatUSPhone, formatDateForDisplay, parseLocalDate } from "@/domain/common";
 
 /**
  * Calculate 90 days from a date and format as tooltip text
