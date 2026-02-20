@@ -102,6 +102,52 @@ describe("useAdvancedAlertFilter", () => {
     expect(result.current.filter.criteria).toHaveLength(0);
   });
 
+  it("adds exclude criterion with negate forced true", () => {
+    const { result } = renderHook(() => useAdvancedAlertFilter());
+
+    act(() => {
+      result.current.addExcludeCriterion({
+        id: "exclude-1",
+        field: "description",
+        operator: "contains",
+        value: "mail",
+        negate: false,
+      });
+    });
+
+    expect(result.current.filter.criteria).toHaveLength(1);
+    expect(result.current.filter.criteria[0]).toEqual(
+      expect.objectContaining({
+        id: "exclude-1",
+        negate: true,
+      }),
+    );
+  });
+
+  it("partitions include and exclude criteria", () => {
+    const { result } = renderHook(() => useAdvancedAlertFilter());
+
+    act(() => {
+      result.current.addCriterion({
+        id: "include-1",
+        field: "description",
+        operator: "contains",
+        value: "AVS",
+        negate: false,
+      });
+      result.current.addExcludeCriterion({
+        id: "exclude-1",
+        field: "status",
+        operator: "equals",
+        value: "resolved",
+        negate: false,
+      });
+    });
+
+    expect(result.current.includeCriteria.map((item) => item.id)).toEqual(["include-1"]);
+    expect(result.current.excludeCriteria.map((item) => item.id)).toEqual(["exclude-1"]);
+  });
+
   it("sets top-level logic", () => {
     const { result } = renderHook(() => useAdvancedAlertFilter());
 

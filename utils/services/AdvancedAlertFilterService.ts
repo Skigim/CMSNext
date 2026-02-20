@@ -12,6 +12,14 @@ export class AdvancedAlertFilterService {
     };
   }
 
+  addExcludeCriterion(filter: AdvancedAlertFilter, criterion?: FilterCriterion): AdvancedAlertFilter {
+    const baseCriterion = criterion ?? createEmptyFilterCriterion();
+    return {
+      ...filter,
+      criteria: [...filter.criteria, { ...baseCriterion, negate: true }],
+    };
+  }
+
   updateCriterion(
     filter: AdvancedAlertFilter,
     id: string,

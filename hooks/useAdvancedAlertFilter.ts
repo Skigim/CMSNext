@@ -3,6 +3,7 @@ import { createLocalStorageAdapter } from "@/utils/localStorage";
 import {
   createEmptyAdvancedFilter,
   isAdvancedFilterActive,
+  partitionCriteria,
   deserializeAdvancedFilter,
   type AdvancedAlertFilter,
   type FilterCriterion,
@@ -13,7 +14,10 @@ import { useDebouncedSave } from "./useDebouncedSave";
 
 interface UseAdvancedAlertFilterResult {
   filter: AdvancedAlertFilter;
+  includeCriteria: FilterCriterion[];
+  excludeCriteria: FilterCriterion[];
   addCriterion: (criterion?: FilterCriterion) => void;
+  addExcludeCriterion: (criterion?: FilterCriterion) => void;
   updateCriterion: (id: string, updates: Partial<Omit<FilterCriterion, "id">>) => void;
   removeCriterion: (id: string) => void;
   toggleNegate: (id: string) => void;
@@ -55,6 +59,10 @@ export function useAdvancedAlertFilter(): UseAdvancedAlertFilterResult {
     setFilter((prev) => advancedAlertFilterService.addCriterion(prev, item));
   }, []);
 
+  const addExcludeCriterion = useCallback((item?: FilterCriterion) => {
+    setFilter((prev) => advancedAlertFilterService.addExcludeCriterion(prev, item));
+  }, []);
+
   const updateCriterion = useCallback((id: string, updates: Partial<Omit<FilterCriterion, "id">>) => {
     setFilter((prev) => advancedAlertFilterService.updateCriterion(prev, id, updates));
   }, []);
@@ -77,10 +85,17 @@ export function useAdvancedAlertFilter(): UseAdvancedAlertFilterResult {
   }, []);
 
   const hasActiveAdvancedFilters = useMemo(() => isAdvancedFilterActive(filter), [filter]);
+  const { include: includeCriteria, exclude: excludeCriteria } = useMemo(
+    () => partitionCriteria(filter.criteria),
+    [filter.criteria],
+  );
 
   return {
     filter,
+    includeCriteria,
+    excludeCriteria,
     addCriterion,
+    addExcludeCriterion,
     updateCriterion,
     removeCriterion,
     toggleNegate,

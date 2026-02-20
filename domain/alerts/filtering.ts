@@ -286,6 +286,20 @@ export function isAdvancedFilterActive(filter: AdvancedAlertFilter): boolean {
   return filter.criteria.some(hasUsableValue);
 }
 
+export function partitionCriteria(criteria: FilterCriterion[]): {
+  include: FilterCriterion[];
+  exclude: FilterCriterion[];
+} {
+  const include: FilterCriterion[] = [];
+  const exclude: FilterCriterion[] = [];
+
+  for (const criterion of criteria) {
+    (criterion.negate ? exclude : include).push(criterion);
+  }
+
+  return { include, exclude };
+}
+
 export function createEmptyFilterCriterion(field: FilterableField = "description"): FilterCriterion {
   const fieldType = getFieldType(field);
   let operator: FilterOperator = "contains";

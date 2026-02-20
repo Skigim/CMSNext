@@ -23,7 +23,6 @@ import type { CaseStatus } from "@/types/case";
 import { useCategoryConfig } from "@/contexts/CategoryConfigContext";
 import { useAppViewState } from "@/hooks/useAppViewState";
 import {
-  createEmptyFilterCriterion,
   getFilterableFields,
   getOperatorsForField,
   type FilterCriterion,
@@ -57,10 +56,12 @@ export function CaseFiltersDialog({
   const { config } = useCategoryConfig();
   const {
     filter: advancedFilter,
+    includeCriteria,
+    excludeCriteria,
     addCriterion,
+    addExcludeCriterion,
     updateCriterion,
     removeCriterion,
-    toggleNegate,
     setLogic,
     resetFilter,
     hasActiveAdvancedFilters,
@@ -273,6 +274,62 @@ export function CaseFiltersDialog({
     updateCriterion,
   ]);
 
+  const renderCriterionCard = useCallback((item: FilterCriterion) => {
+    return (
+      <div key={item.id} className="space-y-2 rounded-md border p-3">
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+          <Select
+            value={item.field}
+            onValueChange={(value: FilterableField) => handleCriterionFieldChange(item.id, value)}
+          >
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {filterableFields.map((fieldMeta) => (
+                <SelectItem key={fieldMeta.field} value={fieldMeta.field}>
+                  {fieldMeta.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          <Select
+            value={item.operator}
+            onValueChange={(value: FilterOperator) => {
+              const nextValue = value === "between" ? ["", ""] : "";
+              updateCriterion(item.id, { operator: value, value: nextValue });
+            }}
+          >
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {getOperatorsForField(item.field).map((operator) => (
+                <SelectItem key={operator} value={operator}>
+                  {operator}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        {renderCriterionValueInput(item)}
+
+        <div className="flex justify-end">
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={() => removeCriterion(item.id)}
+          >
+            <Trash2 className="h-4 w-4" />
+          </Button>
+        </div>
+      </div>
+    );
+  }, [filterableFields, handleCriterionFieldChange, removeCriterion, renderCriterionValueInput, updateCriterion]);
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-2xl">
@@ -425,18 +482,7 @@ export function CaseFiltersDialog({
             {segment === "alerts" && enableAdvancedAlertFilters && (
               <div className="border-t pt-3">
                 <div className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <Label className="text-sm font-medium">Advanced alert filters</Label>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => addCriterion(createEmptyFilterCriterion())}
-                    >
-                      <Plus className="h-4 w-4" />
-                      Add criterion
-                    </Button>
-                  </div>
+                  <Label className="text-sm font-medium">Advanced alert filters</Label>
 
                   <div className="space-y-2">
                     <Label className="text-xs text-muted-foreground">Logic</Label>
@@ -451,74 +497,45 @@ export function CaseFiltersDialog({
                     </Select>
                   </div>
 
-                  {advancedFilter.criteria.length === 0 && (
-                    <p className="text-xs text-muted-foreground">No advanced criteria configured.</p>
-                  )}
-
-                  {advancedFilter.criteria.map((item) => (
-                    <div key={item.id} className="space-y-2 rounded-md border p-3">
-                      <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-                        <Select
-                          value={item.field}
-                          onValueChange={(value: FilterableField) => handleCriterionFieldChange(item.id, value)}
-                        >
-                          <SelectTrigger>
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {filterableFields.map((fieldMeta) => (
-                              <SelectItem key={fieldMeta.field} value={fieldMeta.field}>
-                                {fieldMeta.label}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-
-                        <Select
-                          value={item.operator}
-                          onValueChange={(value: FilterOperator) => {
-                            const nextValue = value === "between" ? ["", ""] : "";
-                            updateCriterion(item.id, { operator: value, value: nextValue });
-                          }}
-                        >
-                          <SelectTrigger>
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {getOperatorsForField(item.field).map((operator) => (
-                              <SelectItem key={operator} value={operator}>
-                                {operator}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-
-                      {renderCriterionValueInput(item)}
-
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <Checkbox
-                            checked={item.negate}
-                            onCheckedChange={() => toggleNegate(item.id)}
-                            id={`exclude-${item.id}`}
-                          />
-                          <label htmlFor={`exclude-${item.id}`} className="text-sm cursor-pointer">
-                            Exclude matching alerts
-                          </label>
-                        </div>
-
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => removeCriterion(item.id)}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <Label className="text-sm font-medium">Include criteria</Label>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => addCriterion()}
+                      >
+                        <Plus className="h-4 w-4" />
+                        Add
+                      </Button>
                     </div>
-                  ))}
+                    {includeCriteria.length === 0 ? (
+                      <p className="text-xs text-muted-foreground">No include criteria configured.</p>
+                    ) : (
+                      includeCriteria.map((item) => renderCriterionCard(item))
+                    )}
+                  </div>
+
+                  <div className="space-y-2 border-t pt-3">
+                    <div className="flex items-center justify-between">
+                      <Label className="text-sm font-medium">Exclude criteria</Label>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => addExcludeCriterion()}
+                      >
+                        <Plus className="h-4 w-4" />
+                        Add
+                      </Button>
+                    </div>
+                    {excludeCriteria.length === 0 ? (
+                      <p className="text-xs text-muted-foreground">No exclude criteria configured.</p>
+                    ) : (
+                      excludeCriteria.map((item) => renderCriterionCard(item))
+                    )}
+                  </div>
                 </div>
               </div>
             )}
