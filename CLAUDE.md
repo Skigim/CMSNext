@@ -44,7 +44,7 @@ npm run seed:large     # Seed large preset
 
 The application follows a strict **4-layer architecture**. Never skip layers.
 
-```
+```text
 ┌─────────────────────────────────────────────────────────┐
 │ 1. Domain Layer  (domain/*)                             │
 │    Pure functions, no I/O, no React, no side effects    │
@@ -76,7 +76,7 @@ The application follows a strict **4-layer architecture**. Never skip layers.
 
 ## Directory Structure
 
-```
+```text
 CMSNext/
 ├── App.tsx                     # Root component; registers keyboard shortcuts + cross-component events
 ├── main.tsx                    # Vite entry point
@@ -105,7 +105,7 @@ CMSNext/
 │   ├── SelectedMonthContext.tsx
 │   └── TemplateContext.tsx
 │
-├── domain/                     # Pure business logic (no React, no I/O)
+├── domain/                     # Pure business logic (no React, no I/O); domain tests co-located as **/*.test.ts
 │   ├── alerts/                 # Alert matching, filtering, display formatting
 │   ├── avs/                    # AVS file parsing
 │   ├── cases/                  # Case formatting
@@ -176,9 +176,6 @@ CMSNext/
 │   ├── domain/                 # Domain function tests
 │   ├── integration/            # Integration tests
 │   └── utils/                  # Utility tests
-│
-├── domain/                     # Domain test files alongside source
-│   └── **/*.test.ts
 │
 ├── scripts/                    # Dev tooling (seed, benchmarks, analysis)
 ├── docs/                       # Development documentation
@@ -294,7 +291,7 @@ interface NormalizedFileData {
 
 ### Storage Flow
 
-```
+```text
 FileStorageContext (handles/permissions)
     ↓
 AutosaveFileService (debouncing + write queue)
@@ -316,7 +313,7 @@ File System Access API (browser native)
 
 ### DataManager Services
 
-```
+```text
 DataManager (orchestrator, ~461 lines)
 ├── FileStorageService    # File I/O, format validation
 ├── CaseService           # Case CRUD operations
@@ -368,7 +365,7 @@ export class EntityService {
 - Fully testable without mocks
 - Domain functions are called by hooks and services, not by components directly
 
-```
+```text
 domain/
 ├── alerts/       # Matching, filtering, display formatting
 ├── avs/          # AVS file parsing
@@ -434,7 +431,7 @@ export function useFeature(caseId: string) {
 
 ```tsx
 {/* Parent: all three properties required */}
-<div className="overflow-hidden flex flex-col" style={{ maxHeight: "32rem" }}>
+<div className="overflow-hidden flex flex-col max-h-[32rem]">
   {/* ScrollArea: both classes required */}
   <ScrollArea className="h-full max-h-80">
     {/* scrollable content */}
@@ -577,7 +574,7 @@ git push origin main
 
 ### Commit Message Format (Conventional Commits)
 
-```
+```text
 <type>: <short description>
 
 • <change 1>
@@ -632,9 +629,14 @@ The File System Access API is **Chromium-only**:
 - ❌ Firefox (not supported)
 - ❌ Safari (not supported)
 
-Always check `fileDataProvider.getAPI()` before file operations; return early with a compatibility message if `null`.
+Always check `fileDataProvider.isSupported` before calling `fileDataProvider.getAPI()`, then return early with a compatibility message if either check fails.
 
 ```typescript
+if (!fileDataProvider.isSupported) {
+  showCompatibilityMessage();
+  return;
+}
+
 const api = fileDataProvider.getAPI();
 if (!api) {
   showCompatibilityMessage();
