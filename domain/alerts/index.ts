@@ -43,6 +43,7 @@ export {
   evaluateCriterion,
   applyAdvancedFilter,
   isAdvancedFilterActive,
+  partitionCriteria,
   createEmptyFilterCriterion,
   createEmptyAdvancedFilter,
   getOperatorsForField,

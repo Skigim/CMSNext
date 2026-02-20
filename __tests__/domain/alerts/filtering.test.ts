@@ -8,6 +8,7 @@ import {
   getFilterableFields,
   getOperatorsForField,
   isAdvancedFilterActive,
+  partitionCriteria,
   serializeAdvancedFilter,
   type AdvancedAlertFilter,
   type AlertWithMatch,
@@ -277,5 +278,36 @@ describe("helpers", () => {
     expect(deserializeAdvancedFilter("not-json")).toBeNull();
     expect(deserializeAdvancedFilter(JSON.stringify({ logic: "xor", criteria: [] }))).toBeNull();
     expect(deserializeAdvancedFilter(JSON.stringify({ logic: "and", criteria: "bad" }))).toBeNull();
+  });
+
+  it("partitions criteria by negate flag", () => {
+    const criteria: FilterCriterion[] = [
+      criterion({ id: "include-1", negate: false }),
+      criterion({ id: "exclude-1", negate: true }),
+      criterion({ id: "include-2", negate: false }),
+    ];
+
+    const { include, exclude } = partitionCriteria(criteria);
+
+    expect(include.map((item) => item.id)).toEqual(["include-1", "include-2"]);
+    expect(exclude.map((item) => item.id)).toEqual(["exclude-1"]);
+  });
+
+  it("handles empty and uniform partition scenarios", () => {
+    expect(partitionCriteria([])).toEqual({ include: [], exclude: [] });
+
+    const allInclude = partitionCriteria([
+      criterion({ id: "include-only-1", negate: false }),
+      criterion({ id: "include-only-2", negate: false }),
+    ]);
+    expect(allInclude.include.map((item) => item.id)).toEqual(["include-only-1", "include-only-2"]);
+    expect(allInclude.exclude).toEqual([]);
+
+    const allExclude = partitionCriteria([
+      criterion({ id: "exclude-only-1", negate: true }),
+      criterion({ id: "exclude-only-2", negate: true }),
+    ]);
+    expect(allExclude.include).toEqual([]);
+    expect(allExclude.exclude.map((item) => item.id)).toEqual(["exclude-only-1", "exclude-only-2"]);
   });
 });
