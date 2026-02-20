@@ -8,7 +8,6 @@ import {
 } from "@/components/ui/dialog";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
-import { Input } from "@/components/ui/input";
 import { CalendarPicker } from "@/components/ui/calendar-picker";
 import {
   Select,
@@ -23,14 +22,10 @@ import type { CaseStatus } from "@/types/case";
 import { useCategoryConfig } from "@/contexts/CategoryConfigContext";
 import { useAppViewState } from "@/hooks/useAppViewState";
 import {
-  getFilterableFields,
-  getOperatorsForField,
+  createEmptyFilterCriterion,
   type FilterCriterion,
-  type FilterableField,
-  type FilterOperator,
 } from "@/domain/alerts";
 import { ENABLE_ADVANCED_ALERT_FILTERS, isFeatureEnabled } from "@/utils/featureFlags";
-import { Plus, Trash2 } from "lucide-react";
 
 interface CaseFiltersDialogProps {
   open: boolean;
@@ -56,13 +51,10 @@ export function CaseFiltersDialog({
   const { config } = useCategoryConfig();
   const {
     filter: advancedFilter,
-    includeCriteria,
-    excludeCriteria,
     addCriterion,
     addExcludeCriterion,
     updateCriterion,
     removeCriterion,
-    setLogic,
     resetFilter,
     hasActiveAdvancedFilters,
   } = useAdvancedAlertFilter();
@@ -72,13 +64,28 @@ export function CaseFiltersDialog({
     () => config.caseStatuses.map((s) => s.name),
     [config.caseStatuses]
   );
-  const alertTypeOptions = useMemo(
-    () => config.alertTypes.map((alertType) => alertType.name),
-    [config.alertTypes],
-  );
-  const programOptions = useMemo(() => config.caseTypes, [config.caseTypes]);
-  const filterableFields = useMemo(() => getFilterableFields(), []);
-  const matchStatusOptions = useMemo(() => ["matched", "unmatched", "missing-mcn"] as const, []);
+  const isManagedDescriptionCriterion = useCallback((criterion: FilterCriterion, negate: boolean) => {
+    return criterion.field === "description" && criterion.negate === negate;
+  }, []);
+
+  const toValueList = useCallback((value: string | string[]): string[] => {
+    if (Array.isArray(value)) {
+      return value.filter((item) => item.trim().length > 0);
+    }
+    return value.trim().length > 0 ? [value] : [];
+  }, []);
+
+  const includeDescriptionValues = useMemo(() => {
+    return advancedFilter.criteria
+      .filter((criterion) => isManagedDescriptionCriterion(criterion, false))
+      .flatMap((criterion) => toValueList(criterion.value));
+  }, [advancedFilter.criteria, isManagedDescriptionCriterion, toValueList]);
+
+  const excludeDescriptionValues = useMemo(() => {
+    return advancedFilter.criteria
+      .filter((criterion) => isManagedDescriptionCriterion(criterion, true))
+      .flatMap((criterion) => toValueList(criterion.value));
+  }, [advancedFilter.criteria, isManagedDescriptionCriterion, toValueList]);
 
   const activeFilterCount = useMemo(() => {
     let count = 0;
@@ -154,181 +161,62 @@ export function CaseFiltersDialog({
     }
   }, [onFiltersChange, segment, enableAdvancedAlertFilters, resetFilter]);
 
-  const isDateOperator = useCallback((operator: FilterOperator) => {
-    return operator === "before" || operator === "after" || operator === "between";
-  }, []);
-
-  const getFieldType = useCallback((field: FilterableField) => {
-    return filterableFields.find((entry) => entry.field === field)?.type ?? "text";
-  }, [filterableFields]);
-
-  const handleCriterionFieldChange = useCallback(
-    (criterionId: string, field: FilterableField) => {
-      const operators = getOperatorsForField(field);
-      const nextOperator = operators[0] ?? "contains";
-      const nextValue = nextOperator === "between" ? ["", ""] : "";
-      updateCriterion(criterionId, { field, operator: nextOperator, value: nextValue });
-    },
-    [updateCriterion],
-  );
-
-  const renderSelectInput = useCallback((criterion: FilterCriterion, values: string[]) => {
-    return (
-      <Select
-        value={typeof criterion.value === "string" ? criterion.value : ""}
-        onValueChange={(value) => updateCriterion(criterion.id, { value })}
-      >
-        <SelectTrigger>
-          <SelectValue placeholder="Select value" />
-        </SelectTrigger>
-        <SelectContent>
-          {values.map((value) => (
-            <SelectItem key={value} value={value}>
-              {value}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
+  const toggleDescriptionCriterion = useCallback((description: string, negate: boolean) => {
+    const matchingCriteria = advancedFilter.criteria.filter((criterion) =>
+      isManagedDescriptionCriterion(criterion, negate),
     );
-  }, [updateCriterion]);
 
-  const getDropdownValuesForField = useCallback((field: FilterableField): string[] => {
-    if (field === "description") {
-      return alertDescriptions;
-    }
-    if (field === "alertType") {
-      return alertTypeOptions;
-    }
-    if (field === "program") {
-      return programOptions;
-    }
-    return [];
-  }, [alertDescriptions, alertTypeOptions, programOptions]);
+    const primaryCriterion = matchingCriteria[0];
+    const selectedValues = matchingCriteria.flatMap((criterion) => toValueList(criterion.value));
+    const isChecked = selectedValues.includes(description);
+    const nextValues = isChecked
+      ? selectedValues.filter((value) => value !== description)
+      : [...selectedValues, description];
 
-  const renderDateInput = useCallback((criterion: FilterCriterion) => {
-    if (criterion.operator === "between") {
-      const values = Array.isArray(criterion.value) ? criterion.value : ["", ""];
-      return (
-        <div className="grid grid-cols-2 gap-2">
-          <Input
-            type="date"
-            value={values[0] ?? ""}
-            onChange={(event) => updateCriterion(criterion.id, { value: [event.target.value, values[1] ?? ""] })}
-          />
-          <Input
-            type="date"
-            value={values[1] ?? ""}
-            onChange={(event) => updateCriterion(criterion.id, { value: [values[0] ?? "", event.target.value] })}
-          />
-        </div>
-      );
+    if (!primaryCriterion) {
+      if (nextValues.length === 0) {
+        return;
+      }
+
+      const newCriterion = {
+        ...createEmptyFilterCriterion("description"),
+        operator: "equals" as const,
+        value: nextValues,
+        negate,
+      };
+
+      if (negate) {
+        addExcludeCriterion(newCriterion);
+      } else {
+        addCriterion(newCriterion);
+      }
+      return;
     }
 
-    return (
-      <Input
-        type="date"
-        value={typeof criterion.value === "string" ? criterion.value : ""}
-        onChange={(event) => updateCriterion(criterion.id, { value: event.target.value })}
-      />
-    );
-  }, [updateCriterion]);
-
-  const renderCriterionValueInput = useCallback((criterion: FilterCriterion) => {
-    const fieldType = getFieldType(criterion.field);
-    const operator = criterion.operator;
-
-    if (operator === "is-empty" || operator === "is-not-empty") {
-      return <p className="text-xs text-muted-foreground">No value required</p>;
+    for (const duplicateCriterion of matchingCriteria.slice(1)) {
+      removeCriterion(duplicateCriterion.id);
     }
 
-    if (fieldType === "enum") {
-      const values = criterion.field === "status" ? statusOptions : [...matchStatusOptions];
-      return renderSelectInput(criterion, values);
+    if (nextValues.length === 0) {
+      removeCriterion(primaryCriterion.id);
+      return;
     }
 
-    const dropdownValues = getDropdownValuesForField(criterion.field);
-
-    if (dropdownValues.length > 0) {
-      return renderSelectInput(criterion, dropdownValues);
-    }
-
-    if (fieldType === "date" || isDateOperator(operator)) {
-      return renderDateInput(criterion);
-    }
-
-    return (
-      <Input
-        value={typeof criterion.value === "string" ? criterion.value : ""}
-        onChange={(event) => updateCriterion(criterion.id, { value: event.target.value })}
-        placeholder="Enter value"
-      />
-    );
+    updateCriterion(primaryCriterion.id, {
+      field: "description",
+      operator: "equals",
+      value: nextValues,
+      negate,
+    });
   }, [
-    getDropdownValuesForField,
-    getFieldType,
-    isDateOperator,
-    matchStatusOptions,
-    renderDateInput,
-    renderSelectInput,
-    statusOptions,
+    addCriterion,
+    addExcludeCriterion,
+    advancedFilter.criteria,
+    isManagedDescriptionCriterion,
+    removeCriterion,
+    toValueList,
     updateCriterion,
   ]);
-
-  const renderCriterionCard = useCallback((item: FilterCriterion) => {
-    return (
-      <div key={item.id} className="space-y-2 rounded-md border p-3">
-        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-          <Select
-            value={item.field}
-            onValueChange={(value: FilterableField) => handleCriterionFieldChange(item.id, value)}
-          >
-            <SelectTrigger>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {filterableFields.map((fieldMeta) => (
-                <SelectItem key={fieldMeta.field} value={fieldMeta.field}>
-                  {fieldMeta.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-
-          <Select
-            value={item.operator}
-            onValueChange={(value: FilterOperator) => {
-              const nextValue = value === "between" ? ["", ""] : "";
-              updateCriterion(item.id, { operator: value, value: nextValue });
-            }}
-          >
-            <SelectTrigger>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {getOperatorsForField(item.field).map((operator) => (
-                <SelectItem key={operator} value={operator}>
-                  {operator}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-
-        {renderCriterionValueInput(item)}
-
-        <div className="flex justify-end">
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            onClick={() => removeCriterion(item.id)}
-          >
-            <Trash2 className="h-4 w-4" />
-          </Button>
-        </div>
-      </div>
-    );
-  }, [filterableFields, handleCriterionFieldChange, removeCriterion, renderCriterionValueInput, updateCriterion]);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -485,55 +373,52 @@ export function CaseFiltersDialog({
                   <Label className="text-sm font-medium">Advanced alert filters</Label>
 
                   <div className="space-y-2">
-                    <Label className="text-xs text-muted-foreground">Logic</Label>
-                    <Select value={advancedFilter.logic} onValueChange={(value: "and" | "or") => setLogic(value)}>
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="and">Match all criteria (AND)</SelectItem>
-                        <SelectItem value="or">Match any criterion (OR)</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <Label className="text-sm font-medium">Include criteria</Label>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => addCriterion()}
-                      >
-                        <Plus className="h-4 w-4" />
-                        Add
-                      </Button>
-                    </div>
-                    {includeCriteria.length === 0 ? (
-                      <p className="text-xs text-muted-foreground">No include criteria configured.</p>
+                    <Label className="text-sm font-medium mb-2 block">Include criteria</Label>
+                    {alertDescriptions.length === 0 ? (
+                      <p className="text-xs text-muted-foreground">No include criteria available.</p>
                     ) : (
-                      includeCriteria.map((item) => renderCriterionCard(item))
+                      <div className="space-y-2">
+                        {alertDescriptions.map((description) => (
+                          <div key={`include-alert-${description}`} className="flex items-center space-x-2">
+                            <Checkbox
+                              id={`include-alert-${description}`}
+                              checked={includeDescriptionValues.includes(description)}
+                              onCheckedChange={() => toggleDescriptionCriterion(description, false)}
+                            />
+                            <label
+                              htmlFor={`include-alert-${description}`}
+                              className="text-sm cursor-pointer flex-1"
+                            >
+                              {description}
+                            </label>
+                          </div>
+                        ))}
+                      </div>
                     )}
                   </div>
 
                   <div className="space-y-2 border-t pt-3">
-                    <div className="flex items-center justify-between">
-                      <Label className="text-sm font-medium">Exclude criteria</Label>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => addExcludeCriterion()}
-                      >
-                        <Plus className="h-4 w-4" />
-                        Add
-                      </Button>
-                    </div>
-                    {excludeCriteria.length === 0 ? (
-                      <p className="text-xs text-muted-foreground">No exclude criteria configured.</p>
+                    <Label className="text-sm font-medium mb-2 block">Exclude criteria</Label>
+                    {alertDescriptions.length === 0 ? (
+                      <p className="text-xs text-muted-foreground">No exclude criteria available.</p>
                     ) : (
-                      excludeCriteria.map((item) => renderCriterionCard(item))
+                      <div className="space-y-2">
+                        {alertDescriptions.map((description) => (
+                          <div key={`exclude-alert-${description}`} className="flex items-center space-x-2">
+                            <Checkbox
+                              id={`exclude-alert-${description}`}
+                              checked={excludeDescriptionValues.includes(description)}
+                              onCheckedChange={() => toggleDescriptionCriterion(description, true)}
+                            />
+                            <label
+                              htmlFor={`exclude-alert-${description}`}
+                              className="text-sm cursor-pointer flex-1"
+                            >
+                              {description}
+                            </label>
+                          </div>
+                        ))}
+                      </div>
                     )}
                   </div>
                 </div>

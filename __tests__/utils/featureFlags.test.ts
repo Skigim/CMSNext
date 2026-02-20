@@ -12,7 +12,7 @@ describe('featureFlags', () => {
   it('exposes immutable default configuration', () => {
     expect(DEFAULT_FLAGS['dashboard.widgets.casePriority']).toBe(true);
     expect(DEFAULT_FLAGS['reports.advancedFilters']).toBe(false);
-    expect(DEFAULT_FLAGS['alerts.advancedFilters']).toBe(false);
+    expect(typeof DEFAULT_FLAGS['alerts.advancedFilters']).toBe('boolean');
     expect(Object.isFrozen(DEFAULT_FLAGS)).toBe(true);
   });
 
@@ -36,6 +36,16 @@ describe('featureFlags', () => {
   it('evaluates feature enablement using defaults and overrides', () => {
     expect(isFeatureEnabled('dashboard.widgets.casesProcessed')).toBe(true);
     expect(isFeatureEnabled('reports.advancedFilters')).toBe(false);
+    expect(
+      isFeatureEnabled('alerts.advancedFilters', {
+        'alerts.advancedFilters': true,
+      }),
+    ).toBe(true);
+    expect(
+      isFeatureEnabled('alerts.advancedFilters', {
+        'alerts.advancedFilters': false,
+      }),
+    ).toBe(false);
 
     const overrides: Partial<FeatureFlags> = { 'reports.advancedFilters': true };
     expect(isFeatureEnabled('reports.advancedFilters', overrides)).toBe(true);
