@@ -33,7 +33,8 @@ const parseArgs = (args: string[]): CliOptions => {
     help: false
   };
   
-  for (let i = 0; i < args.length; i++) {
+  let i = 0;
+  while (i < args.length) {
     const arg = args[i];
     const nextArg = args[i + 1];
     
@@ -42,21 +43,24 @@ const parseArgs = (args: string[]): CliOptions => {
       case '-c':
         if (nextArg && !Number.isNaN(Number(nextArg))) {
           options.cases = Number(nextArg);
-          i = i + 1; // Skip next argument
+          i += 2;
+          continue;
         }
         break;
       case '--output':
       case '-o':
         if (nextArg) {
           options.output = nextArg;
-          i = i + 1; // Skip next argument
+          i += 2;
+          continue;
         }
         break;
       case '--preset':
       case '-p':
         if (nextArg) {
           options.preset = nextArg;
-          i = i + 1; // Skip next argument
+          i += 2;
+          continue;
         }
         break;
       case '--help':
@@ -64,6 +68,8 @@ const parseArgs = (args: string[]): CliOptions => {
         options.help = true;
         break;
     }
+
+    i += 1;
   }
   
   return options;
@@ -161,7 +167,7 @@ const saveToFile = async (data: CaseData, outputPath: string): Promise<void> => 
 
 const printStats = (data: CaseData): void => {
   const statusSet = new Set<string>([
-    ...defaultCategoryConfig.caseStatuses,
+    ...defaultCategoryConfig.caseStatuses.map(statusConfig => statusConfig.name),
     ...data.caseRecords.map((record: CaseRecord) => record.status),
   ]);
 
@@ -241,6 +247,10 @@ const main = async () => {
 };
 
 // Execute if run directly
-main().catch(console.error);
+try {
+  await main();
+} catch (error) {
+  console.error(error);
+}
 
 export { main as runSeedCli };
