@@ -5,6 +5,7 @@ import type { FileStorageService, NormalizedFileData, StoredNote } from './FileS
 import { ActivityLogService } from './ActivityLogService';
 import { formatCaseDisplayName } from '../../domain/cases/formatting';
 import { readDataAndFindCase, readDataAndRequireCase } from '../serviceHelpers';
+import { resolveNoteCategories } from '../noteCategories';
 
 /** Regular expression to detect email addresses in note content */
 const EMAIL_PATTERN = /\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/gi;
@@ -58,7 +59,6 @@ function buildNotePreview(content: string): string {
   }
   return `${sanitized.slice(0, 157)}…`;
 }
-
 
 /**
  * Configuration for NotesService initialization.
@@ -209,12 +209,15 @@ export class NotesService {
     // Read and verify case exists
     const { data: currentData, targetCase } = await readDataAndFindCase(this.fileStorage, caseId);
 
+    const categories = resolveNoteCategories(noteData, 'General');
+
     // Create new note with foreign key
     const timestamp = new Date().toISOString();
     const newNote: StoredNote = {
       id: uuidv4(),
       caseId,
-      category: noteData.category || 'General',
+      category: categories[0],
+      categories,
       content: noteData.content,
       createdAt: timestamp,
       updatedAt: timestamp
@@ -295,11 +298,14 @@ export class NotesService {
     }
 
     const existingNote = currentData.notes[noteIndex];
+    const fallbackCategory = existingNote.categories?.[0] || existingNote.category || 'General';
+    const categories = resolveNoteCategories(noteData, fallbackCategory);
 
     // Update note
     const updatedNote: StoredNote = {
       ...existingNote,
-      category: noteData.category || existingNote.category,
+      category: categories[0],
+      categories,
       content: noteData.content,
       updatedAt: new Date().toISOString()
     };

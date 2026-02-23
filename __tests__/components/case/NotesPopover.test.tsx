@@ -1,5 +1,6 @@
 import { describe, it, expect, vi } from "vitest";
-import { render } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 
 // ============================================================================
 // Mocks - must be before component imports
@@ -31,6 +32,7 @@ vi.mock("@/hooks/useNotes", () => ({
       {
         id: "note-1",
         category: "General",
+        categories: ["General", "Important"],
         content: "Test note content",
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
@@ -77,5 +79,15 @@ describe("NotesPopover - keyboard accessibility", () => {
     
     // The component renders a trigger button at minimum
     expect(container).toBeTruthy();
+  });
+
+  it("shows all note categories when a note has multiple categories", async () => {
+    const user = userEvent.setup();
+    render(<NotesPopover caseId="case-1" />);
+
+    await user.click(screen.getByRole("button", { name: /notes/i }));
+
+    expect(await screen.findByText("General")).toBeInTheDocument();
+    expect(await screen.findByText("Important")).toBeInTheDocument();
   });
 });
