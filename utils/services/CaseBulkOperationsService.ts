@@ -6,6 +6,7 @@ import type { FileStorageService, NormalizedFileData, StoredCase, StoredNote } f
 import { ActivityLogService } from './ActivityLogService';
 import { formatCaseDisplayName } from '../../domain/cases/formatting';
 import { createLogger } from '../logger';
+import { resolveNoteCategories } from '../noteCategories';
 import type { AlertWithMatch } from '@/domain/alerts';
 
 const logger = createLogger('CaseBulkOperationsService');
@@ -616,14 +617,8 @@ export class CaseBulkOperationsService {
       return { addedCount: 0 };
     }
 
-    const categories = Array.from(
-      new Set(
-        (noteData.categories ?? (noteData.category ? [noteData.category] : []))
-          .map(category => category.trim())
-          .filter(Boolean)
-      )
-    );
-    const primaryCategory = categories[0] ?? 'General';
+    const categories = resolveNoteCategories(noteData, 'General');
+    const primaryCategory = categories[0];
 
     // Create notes for each case
     const newNotes: StoredNote[] = validCaseIds.map(caseId => ({
@@ -631,7 +626,7 @@ export class CaseBulkOperationsService {
       caseId,
       content: noteData.content,
       category: primaryCategory,
-      categories: categories.length > 0 ? categories : [primaryCategory],
+      categories,
       author: 'System',
       createdAt: timestamp,
       updatedAt: timestamp,

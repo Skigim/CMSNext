@@ -5,6 +5,7 @@ import type { FileStorageService, NormalizedFileData, StoredNote } from './FileS
 import { ActivityLogService } from './ActivityLogService';
 import { formatCaseDisplayName } from '../../domain/cases/formatting';
 import { readDataAndFindCase, readDataAndRequireCase } from '../serviceHelpers';
+import { resolveNoteCategories } from '../noteCategories';
 
 /** Regular expression to detect email addresses in note content */
 const EMAIL_PATTERN = /\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/gi;
@@ -58,16 +59,6 @@ function buildNotePreview(content: string): string {
   }
   return `${sanitized.slice(0, 157)}…`;
 }
-
-function resolveNoteCategories(noteData: NewNoteData, fallbackCategory: string): string[] {
-  const rawCategories = noteData.categories ?? (noteData.category ? [noteData.category] : []);
-  const categories = Array.from(
-    new Set(rawCategories.map(category => category.trim()).filter(Boolean))
-  );
-
-  return categories.length > 0 ? categories : [fallbackCategory];
-}
-
 
 /**
  * Configuration for NotesService initialization.
