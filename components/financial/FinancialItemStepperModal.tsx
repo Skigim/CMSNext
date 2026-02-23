@@ -1,4 +1,13 @@
-import { useState, useCallback, useMemo, useEffect, useRef, type Dispatch, type SetStateAction } from "react";
+import {
+  useState,
+  useCallback,
+  useMemo,
+  useEffect,
+  useRef,
+  type Dispatch,
+  type SetStateAction,
+  type KeyboardEvent as ReactKeyboardEvent,
+} from "react";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 import { Label } from "../ui/label";
@@ -731,13 +740,52 @@ export function FinancialItemStepperModal({
 
   const canSave = itemFormData.description.trim() && localHistoryEntries.length > 0;
 
+  const handleCtrlEnter = useCallback(
+    (event: ReactKeyboardEvent<HTMLDivElement>) => {
+      if (event.key !== "Enter" || (!event.ctrlKey && !event.metaKey)) {
+        return;
+      }
+
+      if (currentStep === "details") {
+        event.preventDefault();
+        handleNext();
+        return;
+      }
+
+      if (isEntryEditing) {
+        if (!entryFormData.amount || !entryFormData.startDate) {
+          return;
+        }
+        event.preventDefault();
+        handleSaveEntry();
+        return;
+      }
+
+      if (canSave && !isSubmitting) {
+        event.preventDefault();
+        void handleSave();
+      }
+    },
+    [
+      currentStep,
+      handleNext,
+      isEntryEditing,
+      entryFormData.amount,
+      entryFormData.startDate,
+      handleSaveEntry,
+      canSave,
+      isSubmitting,
+      handleSave,
+    ]
+  );
+
   // ============================================================================
   // Render
   // ============================================================================
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && handleClose()}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto" onKeyDown={handleCtrlEnter}>
         <DialogHeader>
           <DialogTitle>
             {isEditing ? "Edit" : "Add"}{" "}
