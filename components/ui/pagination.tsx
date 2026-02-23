@@ -46,11 +46,19 @@ function PaginationLink({
   className,
   isActive,
   size = "icon",
+  children,
+  "aria-label": ariaLabel,
+  "aria-labelledby": ariaLabelledBy,
   ...props
 }: PaginationLinkProps) {
+  const hasAccessibleContent =
+    React.Children.count(children) > 0 || Boolean(ariaLabel) || Boolean(ariaLabelledBy);
+
   return (
     <a
       aria-current={isActive ? "page" : undefined}
+      aria-label={ariaLabel}
+      aria-labelledby={ariaLabelledBy}
       data-slot="pagination-link"
       data-active={isActive}
       className={cn(
@@ -61,7 +69,10 @@ function PaginationLink({
         className,
       )}
       {...props}
-    />
+    >
+      {children}
+      {hasAccessibleContent ? null : <span className="sr-only">Pagination link</span>}
+    </a>
   );
 }
 

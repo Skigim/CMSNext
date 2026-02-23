@@ -32,7 +32,8 @@ function parseArgs(argv: string[]): CliOptions {
     help: false,
   };
 
-  for (let i = 0; i < argv.length; i += 1) {
+  let i = 0;
+  while (i < argv.length) {
     const arg = argv[i];
     const next = argv[i + 1];
 
@@ -41,14 +42,16 @@ function parseArgs(argv: string[]): CliOptions {
       case "-i":
         if (next) {
           options.inputPath = path.resolve(process.cwd(), next);
-          i = i + 1;
+          i += 2;
+          continue;
         }
         break;
       case "--output":
       case "-o":
         if (next) {
           options.outputPath = path.resolve(process.cwd(), next);
-          i = i + 1;
+          i += 2;
+          continue;
         }
         break;
       case "--help":
@@ -58,6 +61,8 @@ function parseArgs(argv: string[]): CliOptions {
       default:
         break;
     }
+
+    i += 1;
   }
 
   return options;
@@ -157,7 +162,9 @@ async function main(): Promise<void> {
   }
 }
 
-main().catch(error => {
+try {
+  await main();
+} catch (error) {
   console.error("❌ Failed to generate usage report:", error instanceof Error ? error.message : error);
   process.exit(1);
-});
+}
