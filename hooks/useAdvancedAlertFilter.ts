@@ -12,7 +12,7 @@ import { safeNotifyFileStorageChange } from "@/utils/fileStorageNotify";
 import { AdvancedAlertFilterService } from "@/utils/services/AdvancedAlertFilterService";
 import { useDebouncedSave } from "./useDebouncedSave";
 
-interface UseAdvancedAlertFilterResult {
+export interface UseAdvancedAlertFilterResult {
   filter: AdvancedAlertFilter;
   includeCriteria: FilterCriterion[];
   excludeCriteria: FilterCriterion[];

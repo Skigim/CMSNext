@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Filter, X } from "lucide-react";
 import type { CaseFilters as CaseFiltersType, CaseListSegment } from "@/hooks/useCaseListPreferences";
+import type { UseAdvancedAlertFilterResult } from "@/hooks/useAdvancedAlertFilter";
 import { format } from "date-fns";
 import { CaseFiltersDialog } from "./CaseFiltersDialog";
 
@@ -13,9 +14,17 @@ interface CaseFiltersProps {
   segment?: CaseListSegment;
   /** List of unique alert descriptions for filter dropdown (only used in alerts segment) */
   alertDescriptions?: string[];
+  /** Shared advanced alert filter state from CaseList for immediate list refresh. */
+  advancedAlertFilterState: UseAdvancedAlertFilterResult;
 }
 
-export function CaseFilters({ filters, onFiltersChange, segment, alertDescriptions = [] }: Readonly<CaseFiltersProps>) {
+export function CaseFilters({
+  filters,
+  onFiltersChange,
+  segment,
+  alertDescriptions = [],
+  advancedAlertFilterState,
+}: Readonly<CaseFiltersProps>) {
   const [dialogOpen, setDialogOpen] = useState(false);
 
   const activeFilterCount = useMemo(() => {
@@ -77,6 +86,7 @@ export function CaseFilters({ filters, onFiltersChange, segment, alertDescriptio
         onFiltersChange={onFiltersChange}
         segment={segment}
         alertDescriptions={alertDescriptions}
+        advancedAlertFilterState={advancedAlertFilterState}
       />
 
       {activeFilterCount > 0 && (
