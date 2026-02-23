@@ -98,6 +98,7 @@ export type NewFinancialItemData = Omit<FinancialItem, 'id' | 'createdAt' | 'upd
 export interface Note {
   id: string;
   category: string;
+  categories?: string[];
   content: string;
   createdAt: string;
   updatedAt: string;
@@ -280,7 +281,8 @@ export interface NewCaseRecordData {
 }
 
 export interface NewNoteData {
-  category: string;
+  category?: string;
+  categories?: string[];
   content: string;
 }
 

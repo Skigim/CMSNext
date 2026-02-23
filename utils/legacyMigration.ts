@@ -286,10 +286,12 @@ function extractNotes(legacyCase: LegacyCaseDisplay, caseId: string): StoredNote
   }
 
   for (const note of caseNotes) {
+    const category = note.category || "General";
     notes.push({
       id: note.id || generateMigrationId("note"),
       caseId,
-      category: note.category || "General",
+      category,
+      categories: [category],
       content: note.content || "",
       createdAt: note.createdAt || new Date().toISOString(),
       updatedAt: note.updatedAt || new Date().toISOString(),

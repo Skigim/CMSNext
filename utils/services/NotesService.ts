@@ -59,6 +59,15 @@ function buildNotePreview(content: string): string {
   return `${sanitized.slice(0, 157)}…`;
 }
 
+function resolveNoteCategories(noteData: NewNoteData, fallbackCategory: string): string[] {
+  const rawCategories = noteData.categories ?? (noteData.category ? [noteData.category] : []);
+  const categories = Array.from(
+    new Set(rawCategories.map(category => category.trim()).filter(Boolean))
+  );
+
+  return categories.length > 0 ? categories : [fallbackCategory];
+}
+
 
 /**
  * Configuration for NotesService initialization.
@@ -209,12 +218,15 @@ export class NotesService {
     // Read and verify case exists
     const { data: currentData, targetCase } = await readDataAndFindCase(this.fileStorage, caseId);
 
+    const categories = resolveNoteCategories(noteData, 'General');
+
     // Create new note with foreign key
     const timestamp = new Date().toISOString();
     const newNote: StoredNote = {
       id: uuidv4(),
       caseId,
-      category: noteData.category || 'General',
+      category: categories[0],
+      categories,
       content: noteData.content,
       createdAt: timestamp,
       updatedAt: timestamp
@@ -295,11 +307,14 @@ export class NotesService {
     }
 
     const existingNote = currentData.notes[noteIndex];
+    const fallbackCategory = existingNote.categories?.[0] || existingNote.category || 'General';
+    const categories = resolveNoteCategories(noteData, fallbackCategory);
 
     // Update note
     const updatedNote: StoredNote = {
       ...existingNote,
-      category: noteData.category || existingNote.category,
+      category: categories[0],
+      categories,
       content: noteData.content,
       updatedAt: new Date().toISOString()
     };
