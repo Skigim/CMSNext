@@ -443,7 +443,8 @@ export function CaseList({
   const showDevTools = isFeatureEnabled("settings.devTools", featureFlags);
   const enableAdvancedAlertFilters = isFeatureEnabled(ENABLE_ADVANCED_ALERT_FILTERS, featureFlags);
   const { config } = useCategoryConfig();
-  const { filter: advancedAlertFilter, hasActiveAdvancedFilters } = useAdvancedAlertFilter();
+  const advancedAlertFilterState = useAdvancedAlertFilter();
+  const { filter: advancedAlertFilter, hasActiveAdvancedFilters } = advancedAlertFilterState;
   const {
     sortKey,
     setSortKey,
@@ -876,6 +877,7 @@ export function CaseList({
           onFiltersChange={setFilters} 
           segment={segment}
           alertDescriptions={uniqueAlertDescriptions}
+          advancedAlertFilterState={advancedAlertFilterState}
         />
         <MultiSortConfig sortConfigs={sortConfigs} onSortConfigsChange={setSortConfigs} />
         <ToggleGroup
