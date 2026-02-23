@@ -61,7 +61,7 @@ import {
 import { useAdvancedAlertFilter } from "@/hooks";
 import { useCaseSelection } from "@/hooks/useCaseSelection";
 import { useBulkNoteFlow } from "@/hooks/useBulkNoteFlow";
-import { applyAdvancedFilter } from "@/domain/alerts";
+import { applyAdvancedFilter, hasAnyExcludedAlert } from "@/domain/alerts";
 import { filterOpenAlerts, type AlertsSummary, type AlertWithMatch } from "../../utils/alertsData";
 import { useAppViewState } from "@/hooks/useAppViewState";
 import { ENABLE_ADVANCED_ALERT_FILTERS, isFeatureEnabled } from "@/utils/featureFlags";
@@ -502,6 +502,10 @@ export function CaseList({
     const next = new Map<string, AlertWithMatch[]>();
 
     for (const [caseId, caseAlerts] of openAlertsByCase.entries()) {
+      if (shouldApplyAdvanced && hasAnyExcludedAlert(caseAlerts, advancedAlertFilter)) {
+        continue;
+      }
+
       let filtered = caseAlerts;
 
       if (shouldApplyAdvanced) {

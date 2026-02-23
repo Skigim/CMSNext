@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   applyAdvancedFilter,
+  hasAnyExcludedAlert,
   createEmptyAdvancedFilter,
   createEmptyFilterCriterion,
   deserializeAdvancedFilter,
@@ -210,6 +211,37 @@ describe("applyAdvancedFilter", () => {
 
     const result = applyAdvancedFilter(alerts, filter);
     expect(result.map((item) => item.id)).toEqual(["1", "2"]);
+  });
+});
+
+describe("hasAnyExcludedAlert", () => {
+  const alerts = [
+    createAlert({ id: "1", description: "AVS Day 5" }),
+    createAlert({ id: "2", description: "Verification Due" }),
+  ];
+
+  it("returns true when any case alert matches an exclude criterion", () => {
+    const filter: AdvancedAlertFilter = {
+      logic: "and",
+      criteria: [criterion({ field: "description", operator: "equals", value: "AVS Day 5", negate: true })],
+    };
+
+    expect(hasAnyExcludedAlert(alerts, filter)).toBe(true);
+  });
+
+  it("returns false when exclude criteria do not match any alert", () => {
+    const filter: AdvancedAlertFilter = {
+      logic: "and",
+      criteria: [criterion({ field: "description", operator: "equals", value: "Mail Rcvd Closed", negate: true })],
+    };
+
+    expect(hasAnyExcludedAlert(alerts, filter)).toBe(false);
+  });
+
+  it("returns false for empty alerts, empty criteria, or include-only criteria", () => {
+    expect(hasAnyExcludedAlert([], { logic: "and", criteria: [criterion({ negate: true })] })).toBe(false);
+    expect(hasAnyExcludedAlert(alerts, { logic: "and", criteria: [] })).toBe(false);
+    expect(hasAnyExcludedAlert(alerts, { logic: "and", criteria: [criterion({ negate: false })] })).toBe(false);
   });
 });
 
