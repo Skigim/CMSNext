@@ -42,6 +42,7 @@ export {
   type AdvancedAlertFilter,
   evaluateCriterion,
   applyAdvancedFilter,
+  hasAnyExcludedAlert,
   isAdvancedFilterActive,
   partitionCriteria,
   createEmptyFilterCriterion,

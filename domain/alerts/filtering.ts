@@ -282,6 +282,25 @@ export function applyAdvancedFilter(
   return alerts.filter((alert) => usableCriteria.every((criterion) => evaluateCriterion(alert, criterion)));
 }
 
+export function hasAnyExcludedAlert(
+  alerts: AlertWithMatch[],
+  filter: AdvancedAlertFilter,
+): boolean {
+  const usableExcludeCriteria = filter.criteria.filter(
+    (criterion) => criterion.negate && hasUsableValue(criterion),
+  );
+
+  if (usableExcludeCriteria.length === 0 || alerts.length === 0) {
+    return false;
+  }
+
+  return alerts.some((alert) =>
+    usableExcludeCriteria.some((criterion) =>
+      evaluateCriterion(alert, { ...criterion, negate: false }),
+    ),
+  );
+}
+
 export function isAdvancedFilterActive(filter: AdvancedAlertFilter): boolean {
   return filter.criteria.some(hasUsableValue);
 }
