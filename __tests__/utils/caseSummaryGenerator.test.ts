@@ -625,6 +625,26 @@ describe('generateCaseSummary', () => {
       
       expect(summary).toContain('MLTC: Note one content\n\nNote two content');
     });
+
+    it('separates multi-category note labels with commas', () => {
+      const caseData = createMockCase();
+      const notes: Note[] = [
+        {
+          id: 'note-1',
+          category: 'General',
+          categories: ['General', 'Follow Up', 'Important'],
+          content: 'Multi-category note content',
+          createdAt: '2024-06-01T10:00:00.000Z',
+          updatedAt: '2024-06-01T10:00:00.000Z',
+        },
+      ];
+
+      const summary = generateCaseSummary(caseData, { notes });
+
+      expect(summary).toContain(
+        'MLTC: Category: General, Follow Up, Important\nMulti-category note content'
+      );
+    });
   });
 
   describe('Section Separators', () => {

@@ -358,7 +358,13 @@ export function buildNotesContext(notes: Note[]): Partial<TemplateRenderContext>
     return dateA - dateB;
   });
 
-  const formatted = sortedNotes.map((note) => note.content);
+  const formatted = sortedNotes.map((note) => {
+    const categories = note.categories?.filter(Boolean) ?? [];
+    if (categories.length > 1) {
+      return `Category: ${categories.join(", ")}\n${note.content}`;
+    }
+    return note.content;
+  });
   return {
     notesList: formatted.join("\n\n"),
   };
@@ -628,7 +634,13 @@ function buildNotesSection(
     return dateA - dateB;
   });
 
-  const formatted = sortedNotes.map((note) => note.content);
+  const formatted = sortedNotes.map((note) => {
+    const categories = note.categories?.filter(Boolean) ?? [];
+    if (categories.length > 1) {
+      return `Category: ${categories.join(", ")}\n${note.content}`;
+    }
+    return note.content;
+  });
   const notesList = formatted.join("\n\n");
   return `MLTC: ${notesList}`;
 }
