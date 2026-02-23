@@ -740,7 +740,7 @@ export function FinancialItemStepperModal({
 
   const canSave = itemFormData.description.trim() && localHistoryEntries.length > 0;
 
-  const handleCtrlEnter = useCallback(
+  const handleSubmitShortcut = useCallback(
     (event: ReactKeyboardEvent<HTMLDivElement>) => {
       if (event.key !== "Enter" || (!event.ctrlKey && !event.metaKey)) {
         return;
@@ -785,7 +785,7 @@ export function FinancialItemStepperModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && handleClose()}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto" onKeyDown={handleCtrlEnter}>
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto" onKeyDown={handleSubmitShortcut}>
         <DialogHeader>
           <DialogTitle>
             {isEditing ? "Edit" : "Add"}{" "}

@@ -1,7 +1,10 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import { axe, toHaveNoViolations } from "jest-axe";
 import { FinancialItemStepperModal } from "@/components/financial/FinancialItemStepperModal";
+
+expect.extend(toHaveNoViolations);
 
 describe("FinancialItemStepperModal", () => {
   const mockOnClose = vi.fn();
@@ -21,6 +24,12 @@ describe("FinancialItemStepperModal", () => {
       />
     );
 
+  it("has no accessibility violations on the details step", async () => {
+    const { container } = renderModal();
+    const results = await axe(container);
+    expect(results).toHaveNoViolations();
+  });
+
   it("uses Ctrl+Enter on details step to continue to amount setup", async () => {
     const user = userEvent.setup();
     renderModal();
@@ -38,7 +47,8 @@ describe("FinancialItemStepperModal", () => {
 
     await user.type(screen.getByLabelText(/Description \*/i), "Savings");
     await user.click(screen.getByRole("button", { name: /^Next$/i }));
-    await user.type(screen.getByLabelText(/Amount \*/i), "123.45");
+    const amountInput = await screen.findByLabelText(/Amount \*/i);
+    await user.type(amountInput, "123.45");
     await user.keyboard("{Control>}{Enter}{/Control}");
 
     expect(await screen.findByText("$123.45")).toBeInTheDocument();
