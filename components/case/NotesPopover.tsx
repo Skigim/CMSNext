@@ -195,7 +195,9 @@ export function NotesPopover({ caseId, className }: NotesPopoverProps) {
                     size="sm"
                     className="h-7 rounded-r-none pr-2"
                   >
-                    {newNoteCategories.length > 0 ? `${newNoteCategories.length} categories` : defaultCategory}
+                    {newNoteCategories.length > 0
+                      ? `${newNoteCategories.length} ${newNoteCategories.length === 1 ? "category" : "categories"}`
+                      : defaultCategory}
                   </Button>
                   <PopoverTrigger asChild>
                     <Button
@@ -220,7 +222,7 @@ export function NotesPopover({ caseId, className }: NotesPopoverProps) {
                           variant={isSelected ? "secondary" : "ghost"}
                           size="sm"
                           className="h-7 w-full justify-start text-xs"
-                          onClick={() => setNewNoteCategories(categories => toggleCategory(categories, cat))}
+                          onClick={() => setNewNoteCategories(currentCategories => toggleCategory(currentCategories, cat))}
                         >
                           {cat}
                         </Button>
@@ -285,7 +287,9 @@ export function NotesPopover({ caseId, className }: NotesPopoverProps) {
                               size="sm"
                               className="h-6 rounded-r-none px-2 text-xs"
                             >
-                              {editCategories.length > 0 ? `${editCategories.length} categories` : getNoteCategories(note)[0]}
+                              {editCategories.length > 0
+                                ? `${editCategories.length} ${editCategories.length === 1 ? "category" : "categories"}`
+                                : getNoteCategories(note)[0]}
                             </Button>
                             <PopoverTrigger asChild>
                               <Button
@@ -310,7 +314,7 @@ export function NotesPopover({ caseId, className }: NotesPopoverProps) {
                                     variant={isSelected ? "secondary" : "ghost"}
                                     size="sm"
                                     className="h-7 w-full justify-start text-xs"
-                                    onClick={() => setEditCategories(categories => toggleCategory(categories, cat))}
+                                    onClick={() => setEditCategories(currentCategories => toggleCategory(currentCategories, cat))}
                                   >
                                     {cat}
                                   </Button>
