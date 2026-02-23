@@ -1,9 +1,5 @@
 @import "tailwindcss";
 
-@plugin "tailwindcss-animate";
-
-@custom-variant dark (&:is(.dark *));
-
 /* ============================================
    Shadcn Base Colors - 4 Distinct Themes
    ============================================

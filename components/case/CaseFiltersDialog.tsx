@@ -17,7 +17,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import type { CaseFilters, CaseListSegment } from "@/hooks/useCaseListPreferences";
-import { useAdvancedAlertFilter } from "@/hooks";
+import type { UseAdvancedAlertFilterResult } from "@/hooks/useAdvancedAlertFilter";
 import type { CaseStatus } from "@/types/case";
 import { useCategoryConfig } from "@/contexts/CategoryConfigContext";
 import { useAppViewState } from "@/hooks/useAppViewState";
@@ -36,6 +36,8 @@ interface CaseFiltersDialogProps {
   segment?: CaseListSegment;
   /** List of unique alert descriptions for filter dropdown (only used in alerts segment) */
   alertDescriptions?: string[];
+  /** Shared advanced alert filter state from CaseList. */
+  advancedAlertFilterState: UseAdvancedAlertFilterResult;
 }
 
 export function CaseFiltersDialog({
@@ -45,6 +47,7 @@ export function CaseFiltersDialog({
   onFiltersChange,
   segment,
   alertDescriptions = [],
+  advancedAlertFilterState,
 }: Readonly<CaseFiltersDialogProps>) {
   const { featureFlags } = useAppViewState();
   const enableAdvancedAlertFilters = isFeatureEnabled(ENABLE_ADVANCED_ALERT_FILTERS, featureFlags);
@@ -57,7 +60,7 @@ export function CaseFiltersDialog({
     removeCriterion,
     resetFilter,
     hasActiveAdvancedFilters,
-  } = useAdvancedAlertFilter();
+  } = advancedAlertFilterState;
 
   // Extract status names from StatusConfig[] for UI display
   const statusOptions = useMemo(
@@ -218,6 +221,43 @@ export function CaseFiltersDialog({
     updateCriterion,
   ]);
 
+  const renderDescriptionCriteriaSection = useCallback((options: {
+    label: string;
+    idPrefix: string;
+    checkedValues: string[];
+    negate: boolean;
+  }) => {
+    const { label, idPrefix, checkedValues, negate } = options;
+    const checkedSet = new Set(checkedValues);
+
+    return (
+      <div>
+        <Label className="text-sm font-medium mb-2 block">{label}</Label>
+        {alertDescriptions.length === 0 ? (
+          <p className="text-xs text-muted-foreground">No criteria available.</p>
+        ) : (
+          <div className="space-y-2">
+            {alertDescriptions.map((description) => {
+              const checkboxId = `${idPrefix}-${description}`;
+              return (
+                <div key={checkboxId} className="flex items-center space-x-2">
+                  <Checkbox
+                    id={checkboxId}
+                    checked={checkedSet.has(description)}
+                    onCheckedChange={() => toggleDescriptionCriterion(description, negate)}
+                  />
+                  <label htmlFor={checkboxId} className="text-sm cursor-pointer flex-1">
+                    {description}
+                  </label>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    );
+  }, [alertDescriptions, toggleDescriptionCriterion]);
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-2xl">
@@ -366,65 +406,6 @@ export function CaseFiltersDialog({
               </p>
             </div>
 
-            {/* Advanced alert filters (feature-flagged in alerts segment) */}
-            {segment === "alerts" && enableAdvancedAlertFilters && (
-              <div className="border-t pt-3">
-                <div className="space-y-3">
-                  <Label className="text-sm font-medium">Advanced alert filters</Label>
-
-                  <div className="space-y-2">
-                    <Label className="text-sm font-medium mb-2 block">Include criteria</Label>
-                    {alertDescriptions.length === 0 ? (
-                      <p className="text-xs text-muted-foreground">No include criteria available.</p>
-                    ) : (
-                      <div className="space-y-2">
-                        {alertDescriptions.map((description) => (
-                          <div key={`include-alert-${description}`} className="flex items-center space-x-2">
-                            <Checkbox
-                              id={`include-alert-${description}`}
-                              checked={includeDescriptionValues.includes(description)}
-                              onCheckedChange={() => toggleDescriptionCriterion(description, false)}
-                            />
-                            <label
-                              htmlFor={`include-alert-${description}`}
-                              className="text-sm cursor-pointer flex-1"
-                            >
-                              {description}
-                            </label>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="space-y-2 border-t pt-3">
-                    <Label className="text-sm font-medium mb-2 block">Exclude criteria</Label>
-                    {alertDescriptions.length === 0 ? (
-                      <p className="text-xs text-muted-foreground">No exclude criteria available.</p>
-                    ) : (
-                      <div className="space-y-2">
-                        {alertDescriptions.map((description) => (
-                          <div key={`exclude-alert-${description}`} className="flex items-center space-x-2">
-                            <Checkbox
-                              id={`exclude-alert-${description}`}
-                              checked={excludeDescriptionValues.includes(description)}
-                              onCheckedChange={() => toggleDescriptionCriterion(description, true)}
-                            />
-                            <label
-                              htmlFor={`exclude-alert-${description}`}
-                              className="text-sm cursor-pointer flex-1"
-                            >
-                              {description}
-                            </label>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-            )}
-
             {/* Alert description quick filter (alerts segment) */}
             {segment === "alerts" && alertDescriptions.length > 0 && (
               <div className="border-t pt-3">
@@ -446,6 +427,26 @@ export function CaseFiltersDialog({
             )}
           </div>
         </div>
+
+        {/* Advanced alert filters (feature-flagged in alerts segment) */}
+        {segment === "alerts" && enableAdvancedAlertFilters && (
+          <div className="border-t pt-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+              {renderDescriptionCriteriaSection({
+                label: "Include criteria",
+                idPrefix: "include-alert",
+                checkedValues: includeDescriptionValues,
+                negate: false,
+              })}
+              {renderDescriptionCriteriaSection({
+                label: "Exclude criteria",
+                idPrefix: "exclude-alert",
+                checkedValues: excludeDescriptionValues,
+                negate: true,
+              })}
+            </div>
+          </div>
+        )}
       </DialogContent>
     </Dialog>
   );
