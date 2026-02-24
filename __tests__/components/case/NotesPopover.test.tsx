@@ -101,8 +101,7 @@ describe("NotesPopover - keyboard accessibility", () => {
     const popoverContent = document.querySelector('[data-papercut-context="NotesPopover"]');
     expect(popoverContent?.className).toContain("w-96");
 
-    const saveButton = screen.getByRole("button", { name: /^save$/i });
-    const quickAddActionsRow = saveButton.closest("div")?.parentElement;
-    expect(quickAddActionsRow?.className).toContain("flex-wrap");
+    const quickAddActionsRow = screen.getByTestId("notes-quick-add-actions");
+    expect(quickAddActionsRow.className).toContain("flex-wrap");
   });
 });
