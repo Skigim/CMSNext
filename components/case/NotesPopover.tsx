@@ -152,7 +152,7 @@ export function NotesPopover({ caseId, className }: NotesPopoverProps) {
 
       <PopoverContent 
         data-papercut-context="NotesPopover"
-        className="w-80 p-0" 
+        className="w-96 p-0" 
         align="start"
         sideOffset={8}
       >
@@ -186,7 +186,7 @@ export function NotesPopover({ caseId, className }: NotesPopoverProps) {
               className="min-h-[80px] text-sm resize-none"
               autoFocus
             />
-            <div className="flex items-center gap-2">
+            <div data-testid="notes-quick-add-actions" className="flex flex-wrap items-center gap-2">
               <Popover>
                 <ButtonGroup className="h-7">
                   <Button

@@ -65,7 +65,7 @@ vi.mock("@/utils/logger", () => ({
 
 import { NotesPopover } from "@/components/case/NotesPopover";
 
-describe("NotesPopover - keyboard accessibility", () => {
+describe("NotesPopover", () => {
   it("renders without error", () => {
     render(<NotesPopover caseId="case-1" />);
     // The popover trigger should be rendered
@@ -89,5 +89,19 @@ describe("NotesPopover - keyboard accessibility", () => {
 
     expect(await screen.findByText("General")).toBeInTheDocument();
     expect(await screen.findByText("Important")).toBeInTheDocument();
+  });
+
+  it("layout containment: keeps quick add controls within a wider popover", async () => {
+    const user = userEvent.setup();
+    render(<NotesPopover caseId="case-1" />);
+
+    await user.click(screen.getByRole("button", { name: /notes/i }));
+    await user.click(screen.getByRole("button", { name: /add/i }));
+
+    const popoverContent = await screen.findByRole("dialog");
+    expect(popoverContent.className).toContain("w-96");
+
+    const quickAddActionsRow = screen.getByTestId("notes-quick-add-actions");
+    expect(quickAddActionsRow.className).toContain("flex-wrap");
   });
 });
