@@ -1,3 +1,5 @@
+import AutosaveFileService from './AutosaveFileService';
+
 /**
  * MockFileService — E2E Testing Mock for AutosaveFileService
  *
@@ -9,7 +11,6 @@
  * production builds.
  */
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 type AnyFn = (...args: any[]) => any;
 
 interface MockStatus {
@@ -26,11 +27,19 @@ interface MockStatus {
 /** Delay before emitting the initial status callback, matching real service async init. */
 const INITIAL_STATUS_DELAY_MS = 100;
 
-export class MockFileService {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  constructor(config: any) {
+export class MockFileService extends AutosaveFileService {
+  constructor(config: ConstructorParameters<typeof AutosaveFileService>[0] = {}) {
+    super(config);
     setTimeout(() => {
-      config.statusCallback?.({ isRunning: true, lastSaveTime: Date.now(), saveCount: 0 });
+      config.statusCallback?.({
+        status: 'running',
+        message: 'Mock service ready',
+        timestamp: Date.now(),
+        permissionStatus: 'granted',
+        lastSaveTime: Date.now(),
+        consecutiveFailures: 0,
+        pendingWrites: 0,
+      });
     }, INITIAL_STATUS_DELAY_MS);
   }
 
@@ -81,7 +90,6 @@ export class MockFileService {
     return sampleData;
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   async readFile(): Promise<any> {
     const { default: sampleData } = await import('../sample-data.json');
     return sampleData;
@@ -91,12 +99,10 @@ export class MockFileService {
     return null;
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   async readNamedFile(_fileName: string): Promise<any> {
     return null;
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   async writeFile(_data: any): Promise<boolean> {
     return true;
   }
@@ -141,17 +147,14 @@ export class MockFileService {
     }
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   initializeWithReactState(_getFullData: () => any, _statusCallback?: AnyFn): this {
     return this;
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   updateReactState(_getFullData: () => any): void {
     // no-op
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   setDataProvider(_dataProvider: () => any): void {
     // no-op
   }
@@ -160,7 +163,6 @@ export class MockFileService {
     // no-op
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   broadcastDataUpdate(_data: any): void {
     // no-op
   }
@@ -177,7 +179,6 @@ export class MockFileService {
     // no-op
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   setEncryptionHooks(_hooks: any): void {
     // no-op
   }
