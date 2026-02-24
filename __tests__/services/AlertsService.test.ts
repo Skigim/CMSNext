@@ -202,6 +202,64 @@ describe('AlertsService', () => {
     });
   });
 
+  describe('pruneResolvedAlerts', () => {
+    const now = new Date('2026-02-24T00:00:00.000Z');
+    const retentionDays = 14;
+    const runPrune = (alerts: AlertWithMatch[], customRetentionDays = retentionDays) =>
+      service.pruneResolvedAlerts(alerts, customRetentionDays, now);
+
+    it.each([
+      {
+        testName: 'keeps open alerts regardless of age',
+        alerts: [{ ...createMockAlert('open-old', 'MCN-123'), status: 'new' as const, resolvedAt: '2020-01-01T00:00:00.000Z' }],
+        expectedPruned: 0,
+        expectedIds: ['open-old'],
+      },
+      {
+        testName: 'keeps resolved alerts resolved fewer than 14 days ago',
+        alerts: [{ ...createMockAlert('resolved-recent', 'MCN-123'), status: 'resolved' as const, resolvedAt: '2026-02-11T00:00:00.000Z' }],
+        expectedPruned: 0,
+        expectedIds: ['resolved-recent'],
+      },
+      {
+        testName: 'prunes resolved alerts resolved exactly 14 days ago',
+        alerts: [{ ...createMockAlert('resolved-boundary', 'MCN-123'), status: 'resolved' as const, resolvedAt: '2026-02-10T00:00:00.000Z' }],
+        expectedPruned: 1,
+        expectedIds: [],
+      },
+      {
+        testName: 'prunes resolved alerts resolved more than 14 days ago',
+        alerts: [{ ...createMockAlert('resolved-old', 'MCN-123'), status: 'resolved' as const, resolvedAt: '2026-02-09T00:00:00.000Z' }],
+        expectedPruned: 1,
+        expectedIds: [],
+      },
+      {
+        testName: 'keeps resolved alerts with null resolvedAt',
+        alerts: [{ ...createMockAlert('resolved-no-date', 'MCN-123'), status: 'resolved' as const, resolvedAt: null }],
+        expectedPruned: 0,
+        expectedIds: ['resolved-no-date'],
+      },
+    ])('$testName', ({ alerts, expectedPruned, expectedIds }) => {
+      const result = runPrune(alerts);
+
+      expect(result.pruned).toBe(expectedPruned);
+      expect(result.alerts.map(alert => alert.id)).toEqual(expectedIds);
+    });
+
+    it('respects custom retentionDays values', () => {
+      const alerts: AlertWithMatch[] = [
+        { ...createMockAlert('resolved-31-days', 'MCN-123'), status: 'resolved', resolvedAt: '2026-01-24T00:00:00.000Z' },
+        { ...createMockAlert('resolved-29-days', 'MCN-123'), status: 'resolved', resolvedAt: '2026-01-26T00:00:00.000Z' },
+      ];
+
+      const result = runPrune(alerts, 30);
+
+      expect(result.pruned).toBe(1);
+      expect(result.alerts).toHaveLength(1);
+      expect(result.alerts[0].id).toBe('resolved-29-days');
+    });
+  });
+
   describe('mergeAlertsFromCsvContent', () => {
     it('should merge new alerts from CSV', async () => {
       const existingAlert = createMockAlert('alert-1', 'MCN-123');

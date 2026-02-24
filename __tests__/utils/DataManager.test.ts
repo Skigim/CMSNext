@@ -2,21 +2,23 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { DataManager } from "@/utils/DataManager";
 import type AutosaveFileService from "@/utils/AutosaveFileService";
 import { FileStorageService, type NormalizedFileData } from "@/utils/services/FileStorageService";
-import type { StoredCase } from "@/types/case";
+import type { AlertRecord, StoredCase } from "@/types/case";
 import { mergeCategoryConfig } from "@/types/categoryConfig";
 
 // ============================================================================
 // Mocks
 // ============================================================================
 
+const mockLogger = vi.hoisted(() => ({
+  info: vi.fn(),
+  warn: vi.fn(),
+  error: vi.fn(),
+  debug: vi.fn(),
+  lifecycle: vi.fn(),
+}));
+
 vi.mock("@/utils/logger", () => ({
-  createLogger: () => ({
-    info: vi.fn(),
-    warn: vi.fn(),
-    error: vi.fn(),
-    debug: vi.fn(),
-    lifecycle: vi.fn(),
-  }),
+  createLogger: () => mockLogger,
 }));
 
 vi.mock("@/utils/errorUtils", () => ({
@@ -31,6 +33,8 @@ function createMockFileService(): AutosaveFileService {
   return {
     readData: vi.fn().mockResolvedValue(null),
     writeData: vi.fn().mockResolvedValue(undefined),
+    readTextFile: vi.fn().mockResolvedValue(""),
+    deleteFile: vi.fn().mockResolvedValue(true),
     getDirectoryHandle: vi.fn(),
     setDirectoryHandle: vi.fn(),
     initializeWithReactState: vi.fn(),
@@ -52,6 +56,19 @@ function createMockNormalizedData(overrides: Partial<NormalizedFileData> = {}): 
     total_cases: 0,
     categoryConfig: mergeCategoryConfig(),
     activityLog: [],
+    ...overrides,
+  };
+}
+
+function createMockAlertRecord(id: string, overrides: Partial<AlertRecord> = {}): AlertRecord {
+  return {
+    id,
+    alertCode: `CODE-${id}`,
+    alertType: "Test Alert",
+    alertDate: "2026-01-01",
+    createdAt: "2026-01-01T00:00:00.000Z",
+    updatedAt: "2026-01-01T00:00:00.000Z",
+    status: "new",
     ...overrides,
   };
 }
@@ -79,6 +96,50 @@ describe("DataManager", () => {
     dataManager = new DataManager({
       fileService: mockFileService,
       fileStorageService: mockFileStorageService,
+    });
+  });
+
+  describe("getAlertsIndex - pruning integration", () => {
+    it("prunes old resolved alerts, writes pruned data, and returns pruned index", async () => {
+      const oldResolved = createMockAlertRecord("old-resolved", {
+        status: "resolved",
+        resolvedAt: "2026-01-01T00:00:00.000Z",
+      });
+      const openAlert = createMockAlertRecord("open-alert", {
+        status: "new",
+      });
+
+      const mockData = createMockNormalizedData({ alerts: [oldResolved, openAlert] });
+      (mockFileStorageService.readFileData as ReturnType<typeof vi.fn>).mockResolvedValue(mockData);
+
+      const result = await dataManager.getAlertsIndex({
+        cases: [],
+      });
+
+      expect(mockFileStorageService.writeNormalizedData).toHaveBeenCalledTimes(1);
+      const writtenData = (mockFileStorageService.writeNormalizedData as ReturnType<typeof vi.fn>).mock.calls[0][0];
+      expect(writtenData.alerts).toHaveLength(1);
+      expect(writtenData.alerts[0].id).toBe("open-alert");
+      expect(result.alerts).toHaveLength(1);
+      expect(result.alerts[0].id).toBe("open-alert");
+      expect(mockLogger.info).toHaveBeenCalledWith(
+        "Pruned 1 resolved alert(s) older than 14 days"
+      );
+    });
+
+    it("does not write when no alerts are pruned", async () => {
+      const recentResolved = createMockAlertRecord("recent-resolved", {
+        status: "resolved",
+        resolvedAt: new Date().toISOString(),
+      });
+      const mockData = createMockNormalizedData({ alerts: [recentResolved] });
+      (mockFileStorageService.readFileData as ReturnType<typeof vi.fn>).mockResolvedValue(mockData);
+
+      await dataManager.getAlertsIndex({
+        cases: [],
+      });
+
+      expect(mockFileStorageService.writeNormalizedData).not.toHaveBeenCalled();
     });
   });
 
