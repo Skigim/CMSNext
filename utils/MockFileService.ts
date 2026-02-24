@@ -28,10 +28,11 @@ interface MockStatus {
 const INITIAL_STATUS_DELAY_MS = 100;
 
 export class MockFileService extends AutosaveFileService {
-  constructor(config: ConstructorParameters<typeof AutosaveFileService>[0] = {}) {
-    super(config);
+  constructor(config: ConstructorParameters<typeof AutosaveFileService>[0]) {
+    const resolvedConfig = config ?? {};
+    super(resolvedConfig);
     setTimeout(() => {
-      config.statusCallback?.({
+      resolvedConfig.statusCallback?.({
         status: 'running',
         message: 'Mock service ready',
         timestamp: Date.now(),
@@ -90,7 +91,7 @@ export class MockFileService extends AutosaveFileService {
     return sampleData;
   }
 
-  async readFile(): Promise<any> {
+  async readFile(): Promise<unknown> {
     const { default: sampleData } = await import('../sample-data.json');
     return sampleData;
   }
@@ -99,11 +100,11 @@ export class MockFileService extends AutosaveFileService {
     return null;
   }
 
-  async readNamedFile(_fileName: string): Promise<any> {
+  async readNamedFile(_fileName: string): Promise<unknown> {
     return null;
   }
 
-  async writeFile(_data: any): Promise<boolean> {
+  async writeFile(_data: unknown): Promise<boolean> {
     return true;
   }
 
@@ -163,7 +164,7 @@ export class MockFileService extends AutosaveFileService {
     // no-op
   }
 
-  broadcastDataUpdate(_data: any): void {
+  broadcastDataUpdate(_data: unknown): void {
     // no-op
   }
 
@@ -179,7 +180,7 @@ export class MockFileService extends AutosaveFileService {
     // no-op
   }
 
-  setEncryptionHooks(_hooks: any): void {
+  setEncryptionHooks(_hooks: unknown): void {
     // no-op
   }
 
