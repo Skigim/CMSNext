@@ -46,6 +46,14 @@ export function LoginModal({
 
   const hasCheckedRef = useRef(false);
 
+  // E2E Mock Mode: bypass login entirely
+  useEffect(() => {
+    if (isOpen && import.meta.env.VITE_E2E_MOCK_MODE === 'true') {
+      logger.info("E2E Mock Mode: Bypassing login");
+      loadExistingData().then(() => onLoginComplete());
+    }
+  }, [isOpen, loadExistingData, onLoginComplete]);
+
   // Check if file exists on mount
   useEffect(() => {
     if (!isOpen || hasCheckedRef.current) return;

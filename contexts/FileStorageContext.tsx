@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useCallback, useReducer, ReactNode, useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import AutosaveFileService from '@/utils/AutosaveFileService';
+import { MockFileService } from '@/utils/MockFileService';
 import { FileStorageService } from '@/utils/services/FileStorageService';
 import { setFileService } from '@/utils/fileServiceProvider';
 import {
@@ -195,16 +196,11 @@ export function FileStorageProvider({
   const [state, dispatch] = useReducer(reduceFileStorageState, initialMachineState);
   const dataLoadHandlersRef = useRef(new Set<(data: unknown) => void>());
 
-  const service = useMemo(() => new AutosaveFileService({
-    fileName: 'case-tracker-data.json',
-    enabled: true,
-    saveInterval: 120000,
-    debounceDelay: 5000,
-    maxRetries: 3,
-    statusCallback: (statusUpdate) => {
+  const service = useMemo(() => {
+    const statusCallback = (statusUpdate: FileStorageStatus) => {
       dispatch({ type: 'STATUS_CHANGED', status: statusUpdate });
-    },
-    errorCallback: ({ message, type, error, context }) => {
+    };
+    const errorCallback = ({ message, type, error, context }: { message: string; type?: string; error?: unknown; context?: Record<string, unknown> }) => {
       const operation = (context?.operation as FileStorageOperation) ?? 'unknown';
       const notification = reportFileStorageError({
         operation,
@@ -226,8 +222,23 @@ export function FileStorageProvider({
           },
         });
       }
+    };
+    const baseConfig = {
+      fileName: 'case-tracker-data.json',
+      enabled: true,
+      saveInterval: 120000,
+      debounceDelay: 5000,
+      maxRetries: 3,
+      statusCallback,
+      errorCallback,
+    };
+
+    if (import.meta.env.VITE_E2E_MOCK_MODE === 'true') {
+      return new MockFileService(baseConfig) as AutosaveFileService;
     }
-  }), [dispatch]);
+
+    return new AutosaveFileService(baseConfig);
+  }, [dispatch]);
 
   const fileStorageService = useMemo(
     () => new FileStorageService({ fileService: service }),
