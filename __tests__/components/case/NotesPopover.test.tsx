@@ -90,4 +90,19 @@ describe("NotesPopover - keyboard accessibility", () => {
     expect(await screen.findByText("General")).toBeInTheDocument();
     expect(await screen.findByText("Important")).toBeInTheDocument();
   });
+
+  it("keeps quick add controls contained within a wider popover layout", async () => {
+    const user = userEvent.setup();
+    render(<NotesPopover caseId="case-1" />);
+
+    await user.click(screen.getByRole("button", { name: /notes/i }));
+    await user.click(screen.getByRole("button", { name: /add/i }));
+
+    const popoverContent = document.querySelector('[data-papercut-context="NotesPopover"]');
+    expect(popoverContent?.className).toContain("w-96");
+
+    const saveButton = screen.getByRole("button", { name: /^save$/i });
+    const quickAddActionsRow = saveButton.closest("div")?.parentElement;
+    expect(quickAddActionsRow?.className).toContain("flex-wrap");
+  });
 });
