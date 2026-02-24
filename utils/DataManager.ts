@@ -450,12 +450,14 @@ export class DataManager {
     const retentionDays = DEFAULT_RESOLVED_ALERT_RETENTION_DAYS;
     
     const alerts: AlertWithMatch[] = rawAlerts.map(convertToAlertWithMatch);
+    // Intentionally lazy: prune when alerts are loaded to keep storage clean without a scheduler.
+    // writeNormalizedData only runs when at least one alert is pruned.
     const { alerts: prunedAlerts, pruned } = this.alerts.pruneResolvedAlerts(alerts, retentionDays);
     if (pruned > 0) {
       logger.info(`Pruned ${pruned} resolved alert(s) older than ${retentionDays} days`);
       await this.fileStorage.writeNormalizedData({
         ...data,
-        alerts: prunedAlerts as unknown as AlertRecord[],
+        alerts: prunedAlerts,
       });
     }
 
