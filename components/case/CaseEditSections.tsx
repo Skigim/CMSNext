@@ -967,7 +967,7 @@ export function RelationshipsSection({
           <div className="space-y-2">
             {relationships.map((rel, index) => (
               <div key={rel.id ?? `relationship-edit-${rel.type}-${rel.name}-${rel.phone}`} className="flex flex-col gap-2 p-2 border rounded-md bg-muted/10">
-                <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_auto] items-center gap-2">
+                <div className="grid grid-cols-[repeat(3,minmax(0,1fr))_auto] items-center gap-2">
                   <Select
                     value={rel.type}
                     onValueChange={(value) => onRelationshipsChange.update(index, "type", value)}

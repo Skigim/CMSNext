@@ -25,12 +25,18 @@ describe("RelationshipsSection", () => {
     const nameInput = screen.getByPlaceholderText("Name");
     const phoneInput = screen.getByPlaceholderText("Phone");
     const removeButton = screen.getByRole("button", { name: /remove relationship 1/i });
+    const rowGrid = removeButton.parentElement;
 
     expect(typeSelect).toHaveClass("h-8");
     expect(nameInput).toHaveClass("h-8");
     expect(phoneInput).toHaveClass("h-8");
     expect(removeButton).toHaveClass("h-8");
     expect(removeButton).not.toHaveClass("absolute");
-    expect(nameInput.closest("div")).toContainElement(removeButton);
+    expect(rowGrid).toBeTruthy();
+    expect(rowGrid).toHaveClass("grid-cols-[repeat(3,minmax(0,1fr))_auto]");
+    expect(rowGrid?.lastElementChild).toBe(removeButton);
+    expect(rowGrid).toContainElement(typeSelect);
+    expect(rowGrid).toContainElement(nameInput);
+    expect(rowGrid).toContainElement(phoneInput);
   });
 });
