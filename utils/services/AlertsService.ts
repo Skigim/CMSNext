@@ -180,6 +180,43 @@ export class AlertsService {
   }
 
   /**
+   * Remove resolved alerts that have been resolved for 14+ days.
+   *
+   * Only alerts with status === 'resolved' AND a valid `resolvedAt` timestamp
+   * older than `retentionDays` are pruned. Alerts missing `resolvedAt` are kept.
+   *
+   * @param {AlertWithMatch[]} alerts - Current alerts list
+   * @param {number} [retentionDays=14] - Days after resolution before deletion
+   * @param {Date} [now=new Date()] - Reference time (injectable for testing)
+   * @returns {{ alerts: AlertWithMatch[]; pruned: number }}
+   */
+  pruneResolvedAlerts(
+    alerts: AlertWithMatch[],
+    retentionDays = 14,
+    now: Date = new Date()
+  ): { alerts: AlertWithMatch[]; pruned: number } {
+    const cutoff = new Date(now);
+    cutoff.setDate(cutoff.getDate() - retentionDays);
+
+    const kept: AlertWithMatch[] = [];
+    let pruned = 0;
+
+    for (const alert of alerts) {
+      if (
+        alert.status === 'resolved' &&
+        alert.resolvedAt != null &&
+        new Date(alert.resolvedAt) <= cutoff
+      ) {
+        pruned++;
+      } else {
+        kept.push(alert);
+      }
+    }
+
+    return { alerts: kept, pruned };
+  }
+
+  /**
    * Update alert status with workflow management.
    * 
    * This method:

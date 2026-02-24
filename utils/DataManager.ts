@@ -448,8 +448,16 @@ export class DataManager {
     const rawAlerts = data.alerts ?? [];
     
     const alerts: AlertWithMatch[] = rawAlerts.map(convertToAlertWithMatch);
+    const { alerts: prunedAlerts, pruned } = this.alerts.pruneResolvedAlerts(alerts);
+    if (pruned > 0) {
+      logger.info(`Pruned ${pruned} resolved alert(s) older than 14 days`);
+      await this.fileStorage.writeNormalizedData({
+        ...data,
+        alerts: prunedAlerts as unknown as AlertRecord[],
+      });
+    }
 
-    return this.alerts.getAlertsIndex(alerts, cases);
+    return this.alerts.getAlertsIndex(prunedAlerts, cases);
   }
 
   /**

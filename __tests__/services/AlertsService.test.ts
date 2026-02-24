@@ -202,6 +202,81 @@ describe('AlertsService', () => {
     });
   });
 
+  describe('pruneResolvedAlerts', () => {
+    const now = new Date('2026-02-24T00:00:00.000Z');
+
+    it('keeps open alerts regardless of age', () => {
+      const alerts: AlertWithMatch[] = [
+        { ...createMockAlert('open-old', 'MCN-123'), status: 'new', resolvedAt: '2020-01-01T00:00:00.000Z' },
+      ];
+
+      const result = service.pruneResolvedAlerts(alerts, 14, now);
+
+      expect(result.pruned).toBe(0);
+      expect(result.alerts).toHaveLength(1);
+      expect(result.alerts[0].id).toBe('open-old');
+    });
+
+    it('keeps resolved alerts resolved fewer than 14 days ago', () => {
+      const alerts: AlertWithMatch[] = [
+        { ...createMockAlert('resolved-recent', 'MCN-123'), status: 'resolved', resolvedAt: '2026-02-11T00:00:00.000Z' },
+      ];
+
+      const result = service.pruneResolvedAlerts(alerts, 14, now);
+
+      expect(result.pruned).toBe(0);
+      expect(result.alerts).toHaveLength(1);
+      expect(result.alerts[0].id).toBe('resolved-recent');
+    });
+
+    it('prunes resolved alerts resolved exactly 14 days ago', () => {
+      const alerts: AlertWithMatch[] = [
+        { ...createMockAlert('resolved-boundary', 'MCN-123'), status: 'resolved', resolvedAt: '2026-02-10T00:00:00.000Z' },
+      ];
+
+      const result = service.pruneResolvedAlerts(alerts, 14, now);
+
+      expect(result.pruned).toBe(1);
+      expect(result.alerts).toHaveLength(0);
+    });
+
+    it('prunes resolved alerts resolved more than 14 days ago', () => {
+      const alerts: AlertWithMatch[] = [
+        { ...createMockAlert('resolved-old', 'MCN-123'), status: 'resolved', resolvedAt: '2026-02-09T00:00:00.000Z' },
+      ];
+
+      const result = service.pruneResolvedAlerts(alerts, 14, now);
+
+      expect(result.pruned).toBe(1);
+      expect(result.alerts).toHaveLength(0);
+    });
+
+    it('keeps resolved alerts with null resolvedAt', () => {
+      const alerts: AlertWithMatch[] = [
+        { ...createMockAlert('resolved-no-date', 'MCN-123'), status: 'resolved', resolvedAt: null },
+      ];
+
+      const result = service.pruneResolvedAlerts(alerts, 14, now);
+
+      expect(result.pruned).toBe(0);
+      expect(result.alerts).toHaveLength(1);
+      expect(result.alerts[0].id).toBe('resolved-no-date');
+    });
+
+    it('respects custom retentionDays values', () => {
+      const alerts: AlertWithMatch[] = [
+        { ...createMockAlert('resolved-31-days', 'MCN-123'), status: 'resolved', resolvedAt: '2026-01-24T00:00:00.000Z' },
+        { ...createMockAlert('resolved-29-days', 'MCN-123'), status: 'resolved', resolvedAt: '2026-01-26T00:00:00.000Z' },
+      ];
+
+      const result = service.pruneResolvedAlerts(alerts, 30, now);
+
+      expect(result.pruned).toBe(1);
+      expect(result.alerts).toHaveLength(1);
+      expect(result.alerts[0].id).toBe('resolved-29-days');
+    });
+  });
+
   describe('mergeAlertsFromCsvContent', () => {
     it('should merge new alerts from CSV', async () => {
       const existingAlert = createMockAlert('alert-1', 'MCN-123');
