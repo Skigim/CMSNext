@@ -66,6 +66,7 @@ interface DataManagerConfig {
 }
 
 const logger = createLogger('DataManager');
+const DEFAULT_RESOLVED_ALERT_RETENTION_DAYS = 14;
 
 // ============================================================================
 // Type Definitions
@@ -446,11 +447,12 @@ export class DataManager {
 
     const cases = options.cases ?? data.cases ?? [];
     const rawAlerts = data.alerts ?? [];
+    const retentionDays = DEFAULT_RESOLVED_ALERT_RETENTION_DAYS;
     
     const alerts: AlertWithMatch[] = rawAlerts.map(convertToAlertWithMatch);
-    const { alerts: prunedAlerts, pruned } = this.alerts.pruneResolvedAlerts(alerts);
+    const { alerts: prunedAlerts, pruned } = this.alerts.pruneResolvedAlerts(alerts, retentionDays);
     if (pruned > 0) {
-      logger.info(`Pruned ${pruned} resolved alert(s) older than 14 days`);
+      logger.info(`Pruned ${pruned} resolved alert(s) older than ${retentionDays} days`);
       await this.fileStorage.writeNormalizedData({
         ...data,
         alerts: prunedAlerts as unknown as AlertRecord[],

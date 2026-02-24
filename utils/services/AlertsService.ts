@@ -180,7 +180,7 @@ export class AlertsService {
   }
 
   /**
-   * Remove resolved alerts that have been resolved for 14+ days.
+   * Remove resolved alerts that have been resolved for the retention period.
    *
    * Only alerts with status === 'resolved' AND a valid `resolvedAt` timestamp
    * older than `retentionDays` are pruned. Alerts missing `resolvedAt` are kept.
