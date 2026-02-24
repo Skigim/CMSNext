@@ -18,8 +18,11 @@ export default defineConfig({
     },
   ],
   webServer: {
-    command: 'VITE_E2E_MOCK_MODE=true npm run dev',
+    command: 'npm run dev',
     url: 'http://localhost:5173',
     reuseExistingServer: !process.env.CI,
+    env: {
+      VITE_E2E_MOCK_MODE: 'true',
+    },
   },
 });
