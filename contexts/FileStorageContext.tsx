@@ -233,8 +233,8 @@ export function FileStorageProvider({
       errorCallback,
     };
 
-    if (import.meta.env.VITE_E2E_MOCK_MODE === 'true') {
-      return new MockFileService(baseConfig) as AutosaveFileService;
+    if (import.meta.env.DEV && import.meta.env.VITE_E2E_MOCK_MODE === 'true') {
+      return new MockFileService(baseConfig);
     }
 
     return new AutosaveFileService(baseConfig);
