@@ -966,22 +966,13 @@ export function RelationshipsSection({
         {isEditing ? (
           <div className="space-y-2">
             {relationships.map((rel, index) => (
-              <div key={rel.id ?? `relationship-edit-${rel.type}-${rel.name}-${rel.phone}`} className="flex flex-col gap-2 p-2 border rounded-md bg-muted/10 relative group">
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => onRelationshipsChange.remove(index)}
-                  className="absolute right-1 top-1 h-6 w-6 p-0 opacity-0 group-hover:opacity-100"
-                >
-                  <Minus className="h-3 w-3" />
-                </Button>
-                <div className="grid grid-cols-3 gap-2">
+              <div key={rel.id ?? `relationship-edit-${rel.type}-${rel.name}-${rel.phone}`} className="flex flex-col gap-2 p-2 border rounded-md bg-muted/10">
+                <div className="grid grid-cols-[repeat(3,minmax(0,1fr))_auto] items-center gap-2">
                   <Select
                     value={rel.type}
                     onValueChange={(value) => onRelationshipsChange.update(index, "type", value)}
                   >
-                    <SelectTrigger className="h-7 text-xs">
+                    <SelectTrigger className="h-8 text-xs">
                       <SelectValue placeholder="Type" />
                     </SelectTrigger>
                     <SelectContent>
@@ -999,7 +990,7 @@ export function RelationshipsSection({
                     value={rel.name}
                     onChange={(e) => onRelationshipsChange.update(index, "name", e.target.value)}
                     placeholder="Name"
-                    className="h-7 text-xs"
+                    className="h-8 text-xs"
                   />
                   <Input
                     value={formatPhoneNumberAsTyped(rel.phone)}
@@ -1007,8 +998,18 @@ export function RelationshipsSection({
                       onRelationshipsChange.update(index, "phone", normalizePhoneNumber(e.target.value))
                     }
                     placeholder="Phone"
-                    className="h-7 text-xs"
+                    className="h-8 text-xs"
                   />
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => onRelationshipsChange.remove(index)}
+                    className="h-8 w-8 p-0 shrink-0"
+                    aria-label={`Remove relationship ${index + 1}`}
+                  >
+                    <Minus className="h-3 w-3" />
+                  </Button>
                 </div>
               </div>
             ))}
