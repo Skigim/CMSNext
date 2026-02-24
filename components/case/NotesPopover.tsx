@@ -152,7 +152,6 @@ export function NotesPopover({ caseId, className }: NotesPopoverProps) {
 
       <PopoverContent 
         data-papercut-context="NotesPopover"
-        data-testid="notes-popover-content"
         className="w-96 p-0" 
         align="start"
         sideOffset={8}

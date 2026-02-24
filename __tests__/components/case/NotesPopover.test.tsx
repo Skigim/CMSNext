@@ -66,46 +66,42 @@ vi.mock("@/utils/logger", () => ({
 import { NotesPopover } from "@/components/case/NotesPopover";
 
 describe("NotesPopover", () => {
-  describe("keyboard accessibility", () => {
-    it("renders without error", () => {
-      render(<NotesPopover caseId="case-1" />);
-      // The popover trigger should be rendered
-      expect(document.body).toBeTruthy();
-    });
-
-    it("note view mode elements have role=button, tabIndex, and onKeyDown", () => {
-      // Render the component - the popover content is only shown when open
-      // We test that the attributes exist on the interactive elements
-      const { container } = render(<NotesPopover caseId="case-1" />);
-      
-      // The component renders a trigger button at minimum
-      expect(container).toBeTruthy();
-    });
-
-    it("shows all note categories when a note has multiple categories", async () => {
-      const user = userEvent.setup();
-      render(<NotesPopover caseId="case-1" />);
-
-      await user.click(screen.getByRole("button", { name: /notes/i }));
-
-      expect(await screen.findByText("General")).toBeInTheDocument();
-      expect(await screen.findByText("Important")).toBeInTheDocument();
-    });
+  it("renders without error", () => {
+    render(<NotesPopover caseId="case-1" />);
+    // The popover trigger should be rendered
+    expect(document.body).toBeTruthy();
   });
 
-  describe("layout containment", () => {
-    it("keeps quick add controls contained within a wider popover layout", async () => {
-      const user = userEvent.setup();
-      render(<NotesPopover caseId="case-1" />);
+  it("note view mode elements have role=button, tabIndex, and onKeyDown", () => {
+    // Render the component - the popover content is only shown when open
+    // We test that the attributes exist on the interactive elements
+    const { container } = render(<NotesPopover caseId="case-1" />);
+    
+    // The component renders a trigger button at minimum
+    expect(container).toBeTruthy();
+  });
 
-      await user.click(screen.getByRole("button", { name: /notes/i }));
-      await user.click(screen.getByRole("button", { name: /add/i }));
+  it("shows all note categories when a note has multiple categories", async () => {
+    const user = userEvent.setup();
+    render(<NotesPopover caseId="case-1" />);
 
-      const popoverContent = await screen.findByTestId("notes-popover-content");
-      expect(popoverContent.className).toContain("w-96");
+    await user.click(screen.getByRole("button", { name: /notes/i }));
 
-      const quickAddActionsRow = screen.getByTestId("notes-quick-add-actions");
-      expect(quickAddActionsRow.className).toContain("flex-wrap");
-    });
+    expect(await screen.findByText("General")).toBeInTheDocument();
+    expect(await screen.findByText("Important")).toBeInTheDocument();
+  });
+
+  it("layout containment: keeps quick add controls within a wider popover", async () => {
+    const user = userEvent.setup();
+    render(<NotesPopover caseId="case-1" />);
+
+    await user.click(screen.getByRole("button", { name: /notes/i }));
+    await user.click(screen.getByRole("button", { name: /add/i }));
+
+    const popoverContent = await screen.findByRole("dialog");
+    expect(popoverContent.className).toContain("w-96");
+
+    const quickAddActionsRow = screen.getByTestId("notes-quick-add-actions");
+    expect(quickAddActionsRow.className).toContain("flex-wrap");
   });
 });
