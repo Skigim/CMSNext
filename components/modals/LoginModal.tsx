@@ -46,6 +46,27 @@ export function LoginModal({
 
   const hasCheckedRef = useRef(false);
 
+  // E2E Mock Mode: bypass login entirely
+  useEffect(() => {
+    if (
+      !isOpen ||
+      import.meta.env.VITE_E2E_MOCK_MODE !== "true" ||
+      hasCheckedRef.current
+    ) {
+      return;
+    }
+
+    hasCheckedRef.current = true;
+    setIsCheckingFile(false);
+    logger.info("E2E Mock Mode: Bypassing login");
+
+    loadExistingData()
+      .then(() => onLoginComplete())
+      .catch((error) => {
+        logger.error("E2E Mock Mode: Failed to load data", { error });
+      });
+  }, [isOpen, loadExistingData, onLoginComplete]);
+
   // Check if file exists on mount
   useEffect(() => {
     if (!isOpen || hasCheckedRef.current) return;
