@@ -68,7 +68,7 @@ function ColorSlotPicker({
           )}
           style={{
             backgroundColor: `var(--color-slot-${color})`,
-            borderColor: `var(--color-slot-${color}-border)`,
+            borderColor: `color-mix(in srgb, var(--color-slot-${color}) 25%, transparent)`,
           }}
           aria-label={`Select ${color} color`}
         />

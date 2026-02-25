@@ -64,27 +64,18 @@ export function getColorSlotVar(slot: ColorSlot): string {
   return `var(--color-slot-${slot})`;
 }
 
-/**
- * Style object for a badge using a color slot.
- * Uses inline styles to ensure CSS variables work with dynamic slot names.
- */
-export interface ColorSlotBadgeStyle {
-  backgroundColor: string;
-  color: string;
-  borderColor: string;
-}
-
-/**
- * Get inline style object for a badge using a color slot.
- * Returns a style object with CSS variable references.
- */
-export function getColorSlotBadgeStyle(slot: ColorSlot): ColorSlotBadgeStyle {
-  return {
-    backgroundColor: `var(--color-slot-${slot}-bg)`,
-    color: `var(--color-slot-${slot})`,
-    borderColor: `var(--color-slot-${slot}-border)`,
-  };
-}
+export const slotClassMap: Record<ColorSlot, string> = {
+  blue: "bg-slot-blue/10 text-slot-blue border-slot-blue/20",
+  green: "bg-slot-green/10 text-slot-green border-slot-green/20",
+  red: "bg-slot-red/10 text-slot-red border-slot-red/20",
+  amber: "bg-slot-amber/10 text-slot-amber border-slot-amber/20",
+  purple: "bg-slot-purple/10 text-slot-purple border-slot-purple/20",
+  slate: "bg-slot-slate/10 text-slot-slate border-slot-slate/20",
+  teal: "bg-slot-teal/10 text-slot-teal border-slot-teal/20",
+  rose: "bg-slot-rose/10 text-slot-rose border-slot-rose/20",
+  orange: "bg-slot-orange/10 text-slot-orange border-slot-orange/20",
+  cyan: "bg-slot-cyan/10 text-slot-cyan border-slot-cyan/20",
+};
 
 /**
  * Auto-assign a color slot to a status that doesn't have one.

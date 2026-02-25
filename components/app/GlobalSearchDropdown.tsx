@@ -7,7 +7,7 @@ import { cn } from "@/components/ui/utils";
 import { useFuzzySearch, type SearchResult, type CaseSearchResult, type AlertSearchResult } from "@/hooks/useFuzzySearch";
 import type { StoredCase } from "@/types/case";
 import type { AlertWithMatch } from "@/utils/alertsData";
-import { getColorSlotBadgeStyle } from "@/types/colorSlots";
+import { slotClassMap } from "@/types/colorSlots";
 import { useCategoryConfig } from "@/contexts/CategoryConfigContext";
 
 export interface GlobalSearchDropdownProps {
@@ -148,12 +148,12 @@ export const GlobalSearchDropdown = memo(function GlobalSearchDropdown({
     }
   }, [isOpen, hasResults, isQueryValid, results.all, clampedSelectedIndex, handleSelectResult]);
 
-  const getStatusStyle = useCallback((status: string) => {
+  const getStatusClass = useCallback((status: string) => {
     const statusConfig = config.caseStatuses.find(s => s.name === status);
     if (statusConfig) {
-      return getColorSlotBadgeStyle(statusConfig.colorSlot);
+      return slotClassMap[statusConfig.colorSlot];
     }
-    return {};
+    return "";
   }, [config.caseStatuses]);
 
   // Keyboard shortcut indicator
@@ -188,7 +188,7 @@ export const GlobalSearchDropdown = memo(function GlobalSearchDropdown({
                   result={result}
                   isSelected={clampedSelectedIndex === index}
                   onSelect={() => handleSelectResult(result)}
-                  getStatusStyle={getStatusStyle}
+                  getStatusClass={getStatusClass}
                 />
               ))}
             </div>
@@ -293,13 +293,13 @@ const CaseResultItem = memo(function CaseResultItem({
   result,
   isSelected,
   onSelect,
-  getStatusStyle,
+  getStatusClass,
 }: {
   optionId: string;
   result: CaseSearchResult;
   isSelected: boolean;
   onSelect: () => void;
-  getStatusStyle: (status: string) => React.CSSProperties;
+  getStatusClass: (status: string) => string;
 }) {
   const caseData = result.item;
 
@@ -319,7 +319,10 @@ const CaseResultItem = memo(function CaseResultItem({
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2">
           <span className="font-medium truncate">{caseData.name}</span>
-          <Badge variant="outline" className="text-xs shrink-0" style={getStatusStyle(caseData.status)}>
+          <Badge
+            variant="outline"
+            className={cn("text-xs shrink-0 border", getStatusClass(caseData.status))}
+          >
             {caseData.status}
           </Badge>
         </div>
