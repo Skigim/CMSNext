@@ -25,7 +25,8 @@ import { useCategoryConfig } from "@/contexts/CategoryConfigContext";
 import type { CaseStatus, StoredCase } from "@/types/case";
 import type { AlertWithMatch } from "@/utils/alertsData";
 import { Badge } from "@/components/ui/badge";
-import { getColorSlotBadgeStyle } from "@/types/colorSlots";
+import { slotClassMap } from "@/types/colorSlots";
+import { cn } from "@/components/ui/utils";
 import { GlobalSearchDropdown } from "./GlobalSearchDropdown";
 
 export interface QuickActionsBarProps {
@@ -122,7 +123,6 @@ export const QuickActionsBar = memo(function QuickActionsBar({
                 <DropdownMenuLabel>Update Status</DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 {config.caseStatuses.map((statusConfig) => {
-                  const style = getColorSlotBadgeStyle(statusConfig.colorSlot);
                   return (
                     <DropdownMenuItem
                       key={statusConfig.name}
@@ -130,8 +130,7 @@ export const QuickActionsBar = memo(function QuickActionsBar({
                       className="cursor-pointer"
                     >
                       <Badge
-                        className="mr-2 border text-xs"
-                        style={style}
+                        className={cn("mr-2 border text-xs", slotClassMap[statusConfig.colorSlot])}
                       >
                         {statusConfig.name}
                       </Badge>

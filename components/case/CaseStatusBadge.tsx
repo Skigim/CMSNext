@@ -1,4 +1,4 @@
-import { memo, useMemo, type CSSProperties } from "react";
+import { memo, useMemo } from "react";
 import { ChevronDown } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -12,7 +12,7 @@ import {
 import { cn } from "@/components/ui/utils";
 import type { CaseDisplay } from "@/types/case";
 import { useCategoryConfig } from "@/contexts/CategoryConfigContext";
-import { getColorSlotBadgeStyle } from "@/types/colorSlots";
+import { slotClassMap } from "@/types/colorSlots";
 import { getStatusColorSlot } from "@/utils/categoryConfigMigration";
 
 export interface CaseStatusBadgeProps {
@@ -28,11 +28,10 @@ export const CaseStatusBadge = memo(function CaseStatusBadge({ status, onStatusC
   const { config } = useCategoryConfig();
 
   const statusPalette = useMemo(() => {
-    const map = new Map<string, CSSProperties>();
+    const map = new Map<string, string>();
     
     config.caseStatuses.forEach((statusConfig) => {
-      const style = getColorSlotBadgeStyle(statusConfig.colorSlot);
-      map.set(statusConfig.name, style);
+      map.set(statusConfig.name, slotClassMap[statusConfig.colorSlot]);
     });
 
     return map;
@@ -42,15 +41,15 @@ export const CaseStatusBadge = memo(function CaseStatusBadge({ status, onStatusC
   const effectiveStatus: CaseDisplay["status"] = status ?? fallbackStatus;
   
   // Get style from the palette, or derive from colorSlot lookup
-  const badgeStyle = statusPalette.get(effectiveStatus) 
-    ?? getColorSlotBadgeStyle(getStatusColorSlot(config.caseStatuses, effectiveStatus));
+  const badgeClass = statusPalette.get(effectiveStatus)
+    ?? slotClassMap[getStatusColorSlot(config.caseStatuses, effectiveStatus)];
 
   const canChangeStatus = onStatusChange && config.caseStatuses.length > 1;
   const statusNames = config.caseStatuses.map(s => s.name);
 
   if (!canChangeStatus) {
     return (
-      <Badge className="border" style={badgeStyle} role="status">
+      <Badge className={cn("border", badgeClass)} role="status">
         {effectiveStatus}
       </Badge>
     );
@@ -63,8 +62,8 @@ export const CaseStatusBadge = memo(function CaseStatusBadge({ status, onStatusC
           asChild
           className={cn(
             "border cursor-pointer select-none pr-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
+            badgeClass,
           )}
-          style={badgeStyle}
         >
           <button
             type="button"

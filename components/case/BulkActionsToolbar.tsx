@@ -1,4 +1,4 @@
-import { memo, useCallback, useMemo, useState, type CSSProperties } from "react";
+import { memo, useCallback, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
@@ -24,7 +24,8 @@ import {
 import { Archive, Bell, ChevronDown, StickyNote, Trash2, X, XCircle } from "lucide-react";
 import type { CaseStatus } from "@/types/case";
 import { useCategoryConfig } from "@/contexts/CategoryConfigContext";
-import { getColorSlotBadgeStyle } from "@/types/colorSlots";
+import { slotClassMap } from "@/types/colorSlots";
+import { cn } from "@/components/ui/utils";
 
 export interface BulkActionsToolbarProps {
   selectedCount: number;
@@ -80,10 +81,9 @@ export const BulkActionsToolbar = memo(function BulkActionsToolbar({
   const [showArchiveDialog, setShowArchiveDialog] = useState(false);
 
   const statusPalette = useMemo(() => {
-    const map = new Map<string, CSSProperties>();
+    const map = new Map<string, string>();
     config.caseStatuses.forEach((statusConfig) => {
-      const style = getColorSlotBadgeStyle(statusConfig.colorSlot);
-      map.set(statusConfig.name, style);
+      map.set(statusConfig.name, slotClassMap[statusConfig.colorSlot]);
     });
     return map;
   }, [config.caseStatuses]);
@@ -179,8 +179,7 @@ export const BulkActionsToolbar = memo(function BulkActionsToolbar({
                     className="cursor-pointer"
                   >
                     <Badge
-                      className="mr-2 border"
-                      style={statusPalette.get(status)}
+                      className={cn("mr-2 border", statusPalette.get(status))}
                     >
                       {status}
                     </Badge>
