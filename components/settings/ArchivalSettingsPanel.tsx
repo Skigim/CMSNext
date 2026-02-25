@@ -355,7 +355,7 @@ export function ArchivalSettingsPanel({ cases }: { cases: StoredCase[] }) {
             <input
               ref={positionImport.fileInputRef}
               type="file"
-              accept=".csv"
+              accept=".xml,text/xml,application/xml"
               onChange={positionImport.handleFileSelected}
               hidden
             />
@@ -377,7 +377,7 @@ export function ArchivalSettingsPanel({ cases }: { cases: StoredCase[] }) {
               )}
             </Button>
             <p className="text-xs text-muted-foreground">
-              Accepts CSV exports from the N-FOCUS position assignments screen.
+              Accepts XML exports from the N-FOCUS position assignments screen.
             </p>
           </div>
         </CardContent>
@@ -613,4 +613,3 @@ export function ArchivalSettingsPanel({ cases }: { cases: StoredCase[] }) {
     </div>
   );
 }
-

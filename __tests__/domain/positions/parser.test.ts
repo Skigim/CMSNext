@@ -1,11 +1,12 @@
 /**
  * @fileoverview Tests for Position Assignments Parser
  *
- * Tests the parsing of N-FOCUS "List Position Assignments" CSV exports.
+ * Tests the parsing of N-FOCUS "List Position Assignments" XML exports.
  */
 
 import { describe, it, expect } from "vitest";
 import {
+  parseCrystalReportXML,
   parsePositionAssignments,
 } from "@/domain/positions/parser";
 
@@ -14,56 +15,30 @@ import {
 // ============================================================================
 
 /**
- * Build a single CSV row matching the N-FOCUS export format.
- * Each row contains header metadata followed by the case data fields.
+ * Build a single XML section matching the Crystal Reports export format.
  */
-function buildRow(mcn: string, name: string): string {
-  return [
-    '"Position: "',
-    '"List Position Assignments - Program Case\nTAYLOR HARRIS, GENEVA - ELIGIBILITY OPERATIONS\nView by Master Case"',
-    '"61704790"',
-    '"Page -1 of 1"',
-    '"Sort:"',
-    '"None"',
-    '"Filter:"',
-    '"None"',
-    '"Assignments"',
-    '"Mst Case"',        // sentinel — index 9
-    '"Program"',         // +1
-    '"Program Case Name\n"', // +2
-    '"St"',              // +3
-    '"Status Dt"',       // +4
-    '"Rev/Recrt"',       // +5
-    '"Appl Rcvd"',       // +6
-    '"Days \nPndg "',    // +7
-    '"Exp"',             // +8
-    '"Assistance"',      // +9
-    '"Language"',        // +10
-    '"Wrkr Role"',       // +11
-    '"Assign\nBeg. Dt"', // +12
-    mcn,                 // +13 = MCN value
-    '"MEDICAID"',        // +14
-    `"${name}"`,         // +15 = case name value
-    '"PE"',
-    '01-01-2026',
-    '',
-    '"01-02-2026"',
-    '39',
-    '',
-    '"Non-MAGI"',
-    '',
-    '"PW"',
-    '01-09-2026',
-    '"Total Master Cases:"',
-    '"96"',
-    '"N-FOCUS: NFO6371L01"',
-    '"DEPARTMENT OF HEALTH AND HUMAN SERVICES"',
-    '02-10-2026   9:09:15 AM',
-  ].join(",");
+function buildSection(mcn: string, name: string, overrides?: { daysPending?: string; expedited?: string }): string {
+  return `
+    <Section>
+      <Field Name="Mst Case"><FormattedValue>${mcn}</FormattedValue></Field>
+      <Field Name="Program"><FormattedValue>MEDICAID</FormattedValue></Field>
+      <Field Name="Program Case Name"><FormattedValue>${name}</FormattedValue></Field>
+      <Field Name="St"><FormattedValue>PE</FormattedValue></Field>
+      <Field Name="Status Dt"><FormattedValue>01-01-2026</FormattedValue></Field>
+      <Field Name="Rev/Recrt"><FormattedValue>01-02-2026</FormattedValue></Field>
+      <Field Name="Appl Rcvd"><FormattedValue>01-09-2026</FormattedValue></Field>
+      <Field Name="Days Pndg"><FormattedValue>${overrides?.daysPending ?? "39"}</FormattedValue></Field>
+      <Field Name="Exp"><FormattedValue>${overrides?.expedited ?? ""}</FormattedValue></Field>
+      <Field Name="Assistance"><FormattedValue>Non-MAGI</FormattedValue></Field>
+      <Field Name="Language"><FormattedValue>EN</FormattedValue></Field>
+      <Field Name="Wrkr Role"><FormattedValue>PW</FormattedValue></Field>
+      <Field Name="Assign Beg. Dt"><FormattedValue>01-09-2026</FormattedValue></Field>
+    </Section>
+  `;
 }
 
-function buildCsv(rows: string[]): string {
-  return rows.join("\n");
+function buildXml(sections: string[]): string {
+  return `<Report><Details>${sections.join("")}</Details></Report>`;
 }
 
 // ============================================================================
@@ -72,9 +47,9 @@ function buildCsv(rows: string[]): string {
 
 describe("parsePositionAssignments", () => {
   describe("basic parsing", () => {
-    it("should parse a single valid row", () => {
-      const csv = buildCsv([buildRow("123456", "SMITH, JOHN A")]);
-      const result = parsePositionAssignments(csv);
+    it("should parse a single valid section", () => {
+      const xml = buildXml([buildSection("123456", "SMITH, JOHN A")]);
+      const result = parsePositionAssignments(xml);
 
       expect(result.entries).toHaveLength(1);
       expect(result.entries[0]).toEqual({
@@ -85,13 +60,13 @@ describe("parsePositionAssignments", () => {
       expect(result.duplicatesRemoved).toBe(0);
     });
 
-    it("should parse multiple rows", () => {
-      const csv = buildCsv([
-        buildRow("100001", "DOE, JANE M"),
-        buildRow("100002", "JONES, BOB"),
-        buildRow("100003", "WILLIAMS, ANN R"),
+    it("should parse multiple sections", () => {
+      const xml = buildXml([
+        buildSection("100001", "DOE, JANE M"),
+        buildSection("100002", "JONES, BOB"),
+        buildSection("100003", "WILLIAMS, ANN R"),
       ]);
-      const result = parsePositionAssignments(csv);
+      const result = parsePositionAssignments(xml);
 
       expect(result.entries).toHaveLength(3);
       expect(result.entries[0].mcn).toBe("100001");
@@ -100,8 +75,8 @@ describe("parsePositionAssignments", () => {
     });
 
     it("should extract names correctly", () => {
-      const csv = buildCsv([buildRow("999999", "LASTNAME, FIRSTNAME MI")]);
-      const result = parsePositionAssignments(csv);
+      const xml = buildXml([buildSection("999999", "LASTNAME, FIRSTNAME MI")]);
+      const result = parsePositionAssignments(xml);
 
       expect(result.entries[0].name).toBe("LASTNAME, FIRSTNAME MI");
     });
@@ -109,12 +84,12 @@ describe("parsePositionAssignments", () => {
 
   describe("deduplication", () => {
     it("should deduplicate by MCN (first occurrence wins)", () => {
-      const csv = buildCsv([
-        buildRow("123456", "SMITH, JOHN"),
-        buildRow("123456", "SMITH, JOHN A"),
-        buildRow("789012", "DOE, JANE"),
+      const xml = buildXml([
+        buildSection("123456", "SMITH, JOHN"),
+        buildSection("123456", "SMITH, JOHN A"),
+        buildSection("789012", "DOE, JANE"),
       ]);
-      const result = parsePositionAssignments(csv);
+      const result = parsePositionAssignments(xml);
 
       expect(result.entries).toHaveLength(2);
       expect(result.entries[0]).toEqual({ mcn: "123456", name: "SMITH, JOHN" });
@@ -125,22 +100,22 @@ describe("parsePositionAssignments", () => {
 
   describe("statistics", () => {
     it("should report correct totalRows", () => {
-      const csv = buildCsv([
-        buildRow("100001", "DOE, JANE"),
-        buildRow("100002", "SMITH, BOB"),
+      const xml = buildXml([
+        buildSection("100001", "DOE, JANE"),
+        buildSection("100002", "SMITH, BOB"),
       ]);
-      const result = parsePositionAssignments(csv);
+      const result = parsePositionAssignments(xml);
 
       expect(result.totalRows).toBe(2);
     });
 
     it("should report skippedRows for invalid rows", () => {
-      const csv = buildCsv([
-        buildRow("100001", "DOE, JANE"),
-        '"just","some","garbage","data"',
-        buildRow("100002", "SMITH, BOB"),
+      const xml = buildXml([
+        buildSection("100001", "DOE, JANE"),
+        "<Section><Field Name=\"Program\"><FormattedValue>MEDICAID</FormattedValue></Field></Section>",
+        buildSection("100002", "SMITH, BOB"),
       ]);
-      const result = parsePositionAssignments(csv);
+      const result = parsePositionAssignments(xml);
 
       expect(result.entries).toHaveLength(2);
       expect(result.skippedRows).toBe(1);
@@ -172,32 +147,32 @@ describe("parsePositionAssignments", () => {
 
     it("should skip rows without a valid numeric MCN", () => {
       // Non-numeric MCN
-      const csv = buildCsv([buildRow('"ABC"', "SMITH, JOHN")]);
-      const result = parsePositionAssignments(csv);
+      const xml = buildXml([buildSection("ABC", "SMITH, JOHN")]);
+      const result = parsePositionAssignments(xml);
 
       expect(result.entries).toHaveLength(0);
       expect(result.skippedRows).toBe(1);
     });
 
     it("should skip rows without the Mst Case sentinel", () => {
-      const csv = '"No","Mst","Case","sentinel","here"';
-      const result = parsePositionAssignments(csv);
+      const xml = "<Report><Details><Section><Field Name=\"Program\"><FormattedValue>MEDICAID</FormattedValue></Field></Section></Details></Report>";
+      const result = parsePositionAssignments(xml);
 
       expect(result.entries).toHaveLength(0);
       expect(result.skippedRows).toBe(1);
     });
 
     it("should set name to Unknown when name field is empty", () => {
-      const csv = buildCsv([buildRow("111111", "")]);
-      const result = parsePositionAssignments(csv);
+      const xml = buildXml([buildSection("111111", "")]);
+      const result = parsePositionAssignments(xml);
 
       expect(result.entries).toHaveLength(1);
       expect(result.entries[0].name).toBe("Unknown");
     });
 
     it("should handle large MCN numbers", () => {
-      const csv = buildCsv([buildRow("9999999999", "BIG, NUMBER")]);
-      const result = parsePositionAssignments(csv);
+      const xml = buildXml([buildSection("9999999999", "BIG, NUMBER")]);
+      const result = parsePositionAssignments(xml);
 
       expect(result.entries).toHaveLength(1);
       expect(result.entries[0].mcn).toBe("9999999999");
@@ -205,25 +180,21 @@ describe("parsePositionAssignments", () => {
   });
 
   describe("real-world format", () => {
-    it("should parse the actual N-FOCUS export format", () => {
-      // This mirrors the exact format from the user's sample
-      const rawRow = `"Position: ","List Position Assignments - Program Case
-TAYLOR HARRIS, GENEVA - ELIGIBILITY OPERATIONS
-View by Master Case","61704790","Page -1 of 1","Sort:","None","Filter:","None","Assignments","Mst Case","Program","Program Case Name
+    it("should map Crystal Reports fields to CaseRecord shape", () => {
+      const xml = buildXml([buildSection("123456", "LASTNAME, FIRSTNAME MI", { daysPending: "39", expedited: "Y" })]);
+      const records = parseCrystalReportXML(xml);
 
-","St","Status Dt","Rev/Recrt","Appl Rcvd","Days 
+      expect(records).toHaveLength(1);
+      expect(records[0]).toMatchObject({
+        masterCaseId: "123456",
+        caseName: "LASTNAME, FIRSTNAME MI",
+        daysPending: 39,
+        isExpedited: true,
+      });
+    });
 
-Pndg ","Exp","Assistance","Language","Wrkr Role","Assign
-
-Beg. Dt",123456,"MEDICAID","LASTNAME, FIRSTNAME MI","PE",01-01-2026,,"01-02-2026",39,,"Non-MAGI",,"PW",01-09-2026,"Total Master Cases:","96","N-FOCUS: NFO6371L01","DEPARTMENT OF HEALTH AND HUMAN SERVICES",02-10-2026   9:09:15 AM`;
-
-      const csv = [rawRow, rawRow.replace("123456", "789012")].join("\n");
-      const result = parsePositionAssignments(csv);
-
-      expect(result.entries.length).toBeGreaterThanOrEqual(1);
-      // At minimum, we should find MCN 123456
-      const mcns = result.entries.map((e) => e.mcn);
-      expect(mcns).toContain("123456");
+    it("should throw on invalid XML", () => {
+      expect(() => parseCrystalReportXML("<Report><Details>")).toThrow("Invalid XML document format.");
     });
   });
 });
