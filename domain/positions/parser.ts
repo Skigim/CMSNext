@@ -109,6 +109,45 @@ function toArray<T>(value: T | T[] | undefined): T[] {
   return Array.isArray(value) ? value : [value];
 }
 
+function stripNamespace(name: string): string {
+  const parts = name.split(":");
+  return parts[parts.length - 1] ?? name;
+}
+
+function matchesLocalName(name: string, localName: string): boolean {
+  return stripNamespace(name).toLowerCase() === localName.toLowerCase();
+}
+
+function getPropertyByLocalName(record: Record<string, unknown>, localName: string): unknown {
+  for (const [key, value] of Object.entries(record)) {
+    if (matchesLocalName(key, localName)) {
+      return value;
+    }
+  }
+  return undefined;
+}
+
+function getObjectChildrenByLocalName(node: unknown, localName: string): Record<string, unknown>[] {
+  if (!node || typeof node !== "object") return [];
+  if (Array.isArray(node)) {
+    return node.flatMap(item => getObjectChildrenByLocalName(item, localName));
+  }
+
+  const record = node as Record<string, unknown>;
+  const matchingChildren: Record<string, unknown>[] = [];
+
+  for (const [key, value] of Object.entries(record)) {
+    if (!matchesLocalName(key, localName)) continue;
+    for (const child of toArray(value)) {
+      if (child && typeof child === "object" && !Array.isArray(child)) {
+        matchingChildren.push(child as Record<string, unknown>);
+      }
+    }
+  }
+
+  return matchingChildren;
+}
+
 function findDetailNodes(node: unknown): Record<string, unknown>[] {
   if (!node || typeof node !== "object") return [];
   if (Array.isArray(node)) {
@@ -116,7 +155,7 @@ function findDetailNodes(node: unknown): Record<string, unknown>[] {
   }
 
   const record = node as Record<string, unknown>;
-  const details = toArray(record.Details as Record<string, unknown> | Record<string, unknown>[] | undefined);
+  const details = getObjectChildrenByLocalName(record, "Details");
   if (details.length > 0) return details;
 
   return Object.values(record).flatMap(findDetailNodes);
@@ -142,12 +181,12 @@ function extractFieldValue(node: unknown): string {
   const record = node as Record<string, unknown>;
   const preferredKeys = ["FormattedValue", "Value", "Text", "#text", "_text"];
   for (const key of preferredKeys) {
-    const value = extractFieldValue(record[key]);
+    const value = extractFieldValue(getPropertyByLocalName(record, key));
     if (value) return normalizeField(value);
   }
 
   for (const [key, value] of Object.entries(record)) {
-    if (key === "Name") continue;
+    if (matchesLocalName(key, "Name")) continue;
     const extracted = extractFieldValue(value);
     if (extracted) return normalizeField(extracted);
   }
@@ -193,14 +232,15 @@ export function parseCrystalReportXML(xmlString: string): CaseRecord[] {
   const parsedRecords: CaseRecord[] = [];
 
   for (const detail of details) {
-    const sections = toArray((detail as Record<string, unknown>)?.Section);
+    const sections = getObjectChildrenByLocalName(detail, "Section");
     for (const section of sections) {
-      const fields = toArray((section as Record<string, unknown>)?.Field);
+      const fields = getObjectChildrenByLocalName(section, "Field");
       const record: Partial<CaseRecord> = {};
 
       for (const field of fields) {
         const fieldRecord = field as Record<string, unknown>;
-        const name = normalizeField(String(fieldRecord.Name ?? ""));
+        const rawName = getPropertyByLocalName(fieldRecord, "Name");
+        const name = normalizeField(String(rawName ?? ""));
         if (!name) continue;
 
         const value = extractFieldValue(fieldRecord);

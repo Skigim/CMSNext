@@ -193,6 +193,42 @@ describe("parsePositionAssignments", () => {
       });
     });
 
+    it("should parse namespaced XML tags", () => {
+      const xml = `
+        <cr:Report xmlns:cr="urn:crystal-report">
+          <cr:Details>
+            <cr:Section>
+              <cr:Field Name="Mst Case"><cr:FormattedValue>123456</cr:FormattedValue></cr:Field>
+              <cr:Field Name="Program Case Name"><cr:FormattedValue>SMITH, JOHN A</cr:FormattedValue></cr:Field>
+            </cr:Section>
+          </cr:Details>
+        </cr:Report>
+      `;
+
+      const result = parsePositionAssignments(xml);
+
+      expect(result.entries).toHaveLength(1);
+      expect(result.entries[0]).toEqual({ mcn: "123456", name: "SMITH, JOHN A" });
+    });
+
+    it("should parse field name attribute regardless of case", () => {
+      const xml = `
+        <Report>
+          <Details>
+            <Section>
+              <Field name="Mst Case"><FormattedValue>456789</FormattedValue></Field>
+              <Field name="Program Case Name"><FormattedValue>DOE, JANE</FormattedValue></Field>
+            </Section>
+          </Details>
+        </Report>
+      `;
+
+      const result = parsePositionAssignments(xml);
+
+      expect(result.entries).toHaveLength(1);
+      expect(result.entries[0]).toEqual({ mcn: "456789", name: "DOE, JANE" });
+    });
+
     it("should throw on invalid XML", () => {
       expect(() => parseCrystalReportXML("<Report><Details>")).toThrow("Invalid XML document format.");
     });
