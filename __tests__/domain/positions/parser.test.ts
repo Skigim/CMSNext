@@ -17,7 +17,7 @@ import {
 /**
  * Build a single XML section matching the Crystal Reports export format.
  */
-function buildSection(mcn: string, name: string, overrides?: { daysPending?: string; expedited?: string }): string {
+function buildSection(mcn: string, name: string): string {
   return `
     <Section>
       <Field Name="Mst Case"><FormattedValue>${mcn}</FormattedValue></Field>
@@ -27,8 +27,8 @@ function buildSection(mcn: string, name: string, overrides?: { daysPending?: str
       <Field Name="Status Dt"><FormattedValue>01-01-2026</FormattedValue></Field>
       <Field Name="Rev/Recrt"><FormattedValue>01-02-2026</FormattedValue></Field>
       <Field Name="Appl Rcvd"><FormattedValue>01-09-2026</FormattedValue></Field>
-      <Field Name="Days Pndg"><FormattedValue>${overrides?.daysPending ?? "39"}</FormattedValue></Field>
-      <Field Name="Exp"><FormattedValue>${overrides?.expedited ?? ""}</FormattedValue></Field>
+      <Field Name="Days Pndg"><FormattedValue>39</FormattedValue></Field>
+      <Field Name="Exp"><FormattedValue></FormattedValue></Field>
       <Field Name="Assistance"><FormattedValue>Non-MAGI</FormattedValue></Field>
       <Field Name="Language"><FormattedValue>EN</FormattedValue></Field>
       <Field Name="Wrkr Role"><FormattedValue>PW</FormattedValue></Field>
@@ -181,15 +181,13 @@ describe("parsePositionAssignments", () => {
 
   describe("real-world format", () => {
     it("should map Crystal Reports fields to CaseRecord shape", () => {
-      const xml = buildXml([buildSection("123456", "LASTNAME, FIRSTNAME MI", { daysPending: "39", expedited: "Y" })]);
+      const xml = buildXml([buildSection("123456", "LASTNAME, FIRSTNAME MI")]);
       const records = parseCrystalReportXML(xml);
 
       expect(records).toHaveLength(1);
       expect(records[0]).toMatchObject({
         masterCaseId: "123456",
         caseName: "LASTNAME, FIRSTNAME MI",
-        daysPending: 39,
-        isExpedited: true,
       });
     });
 
@@ -227,6 +225,54 @@ describe("parsePositionAssignments", () => {
 
       expect(result.entries).toHaveLength(1);
       expect(result.entries[0]).toEqual({ mcn: "456789", name: "DOE, JANE" });
+    });
+
+    it("should parse MCN when export uses 'Master Case' label", () => {
+      const xml = `
+        <Report>
+          <Details>
+            <Section>
+              <Field Name="Master Case"><FormattedValue>777888</FormattedValue></Field>
+              <Field Name="Program Case Name"><FormattedValue>PUBLIC, TEST</FormattedValue></Field>
+            </Section>
+          </Details>
+        </Report>
+      `;
+
+      const result = parsePositionAssignments(xml);
+
+      expect(result.entries).toHaveLength(1);
+      expect(result.entries[0]).toEqual({ mcn: "777888", name: "PUBLIC, TEST" });
+    });
+
+    it("should parse SF* Name/FieldName variant from production export", () => {
+      const xml = `
+        <Report>
+          <Details Level="1">
+            <Section SectionNumber="0">
+              <Field Name="SFMasterCaseIdNbr1" FieldName="{Gen_View.SF_Master_Case}">
+                <FormattedValue>123456</FormattedValue>
+              </Field>
+              <Field Name="SFPcNameOrOwner1" FieldName="{Gen_View.SF_Program_Case_Name}">
+                <FormattedValue>SMITH, JOHN A</FormattedValue>
+              </Field>
+              <Field Name="SFApplicationReceivedDateorText1" FieldName="{Gen_View.Application_Received_Date_or_Text}">
+                <FormattedValue>01-09-2026</FormattedValue>
+              </Field>
+              <Field Name="SFStatusCode1" FieldName="{Gen_View.SF_Status}">
+                <FormattedValue>PE</FormattedValue>
+              </Field>
+            </Section>
+          </Details>
+        </Report>
+      `;
+
+      const result = parsePositionAssignments(xml);
+      const records = parseCrystalReportXML(xml);
+
+      expect(result.entries).toHaveLength(1);
+      expect(result.entries[0]).toEqual({ mcn: "123456", name: "SMITH, JOHN A" });
+      expect(records[0]?.applicationDate).toBe("01-09-2026");
     });
 
     it("should throw on invalid XML", () => {

@@ -20,20 +20,10 @@ import { XMLParser, XMLValidator } from "fast-xml-parser";
 // Types
 // ============================================================================
 
-export interface CaseRecord {
+export interface PositionAssignmentRecord {
   masterCaseId: string;
-  program?: string;
   caseName?: string;
-  status?: string;
-  statusDate?: string;
-  reviewRecertDate?: string;
-  isExpedited?: boolean;
-  assistanceType?: string;
-  primaryLanguage?: string;
-  caseworkerRole?: string;
-  assignmentBeginDate?: string;
-  applicationReceivedDate?: string;
-  daysPending?: number | string;
+  applicationDate?: string;
 }
 
 /**
@@ -64,20 +54,22 @@ export interface PositionParseResult {
 // Constants
 // ============================================================================
 
-const XML_FIELD_MAP: Record<string, keyof CaseRecord> = {
+const XML_FIELD_MAP: Record<string, keyof PositionAssignmentRecord> = {
   mstcase: "masterCaseId",
-  program: "program",
+  mastercase: "masterCaseId",
+  mastercasenumber: "masterCaseId",
+  mastercaseno: "masterCaseId",
+  mastercaseid: "masterCaseId",
+  mcn: "masterCaseId",
+  sfmastercaseidnbr: "masterCaseId",
+  genviewsfmastercase: "masterCaseId",
   programcasename: "caseName",
-  st: "status",
-  statusdt: "statusDate",
-  revrecrt: "reviewRecertDate",
-  exp: "isExpedited",
-  assistance: "assistanceType",
-  language: "primaryLanguage",
-  wrkrrole: "caseworkerRole",
-  assignbegdt: "assignmentBeginDate",
-  applrcvd: "applicationReceivedDate",
-  dayspndg: "daysPending",
+  casename: "caseName",
+  clientname: "caseName",
+  sfpcnameorowner: "caseName",
+  genviewsfprogramcasename: "caseName",
+  sfapplicationreceiveddateortext: "applicationDate",
+  genviewapplicationreceiveddateortext: "applicationDate",
 };
 
 // ============================================================================
@@ -94,6 +86,10 @@ function normalizeField(value: string | undefined | null): string {
 
 function normalizeFieldName(value: string): string {
   return normalizeField(value).toLowerCase().replaceAll(/[^a-z0-9]/g, "");
+}
+
+function normalizeFieldKey(value: string): string {
+  return normalizeFieldName(value).replaceAll(/\d+$/g, "");
 }
 
 /**
@@ -194,26 +190,21 @@ function extractFieldValue(node: unknown): string {
   return "";
 }
 
-function mapFieldToRecord(record: Partial<CaseRecord>, fieldName: string, fieldValue: string): void {
-  const mappedKey = XML_FIELD_MAP[normalizeFieldName(fieldName)];
+function mapFieldToRecord(
+  record: Partial<PositionAssignmentRecord>,
+  fieldName: string,
+  fieldValue: string,
+  fieldSource?: string
+): void {
+  const mappedKey = XML_FIELD_MAP[normalizeFieldKey(fieldName)]
+    ?? (fieldSource ? XML_FIELD_MAP[normalizeFieldKey(fieldSource)] : undefined);
+
   if (!mappedKey) return;
-
-  if (mappedKey === "isExpedited") {
-    const normalized = fieldValue.toLowerCase();
-    record.isExpedited = ["y", "yes", "true", "1"].includes(normalized);
-    return;
-  }
-
-  if (mappedKey === "daysPending") {
-    const numericValue = Number(fieldValue);
-    record.daysPending = Number.isFinite(numericValue) ? numericValue : fieldValue;
-    return;
-  }
 
   record[mappedKey] = fieldValue;
 }
 
-export function parseCrystalReportXML(xmlString: string): CaseRecord[] {
+export function parseCrystalReportXML(xmlString: string): PositionAssignmentRecord[] {
   if (!xmlString.trim()) return [];
   const validation = XMLValidator.validate(xmlString);
   if (validation !== true) {
@@ -229,24 +220,26 @@ export function parseCrystalReportXML(xmlString: string): CaseRecord[] {
   const parsed = parser.parse(xmlString) as Record<string, unknown>;
 
   const details = findDetailNodes(parsed);
-  const parsedRecords: CaseRecord[] = [];
+  const parsedRecords: PositionAssignmentRecord[] = [];
 
   for (const detail of details) {
     const sections = getObjectChildrenByLocalName(detail, "Section");
     for (const section of sections) {
       const fields = getObjectChildrenByLocalName(section, "Field");
-      const record: Partial<CaseRecord> = {};
+      const record: Partial<PositionAssignmentRecord> = {};
 
       for (const field of fields) {
         const fieldRecord = field as Record<string, unknown>;
         const rawName = getPropertyByLocalName(fieldRecord, "Name");
+        const rawFieldName = getPropertyByLocalName(fieldRecord, "FieldName");
         const name = normalizeField(String(rawName ?? ""));
-        if (!name) continue;
+        const fieldSource = normalizeField(String(rawFieldName ?? ""));
+        if (!name && !fieldSource) continue;
 
         const value = extractFieldValue(fieldRecord);
         if (!value) continue;
 
-        mapFieldToRecord(record, name, value);
+        mapFieldToRecord(record, name, value, fieldSource);
       }
 
       parsedRecords.push({ masterCaseId: "", ...record });
