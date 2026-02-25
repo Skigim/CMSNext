@@ -1,7 +1,7 @@
 /**
  * @fileoverview Position Assignments Import Hook
  *
- * Orchestrates the flow for importing an N-FOCUS position assignments CSV:
+ * Orchestrates the flow for importing an N-FOCUS position assignments XML export:
  * File picker → Parse → Compare against stored cases → Preview → Bulk flag for archival
  *
  * Combines patterns from `useAlertsCsvImport` (file picker via hidden input)
@@ -122,7 +122,7 @@ const INITIAL_STATE: PositionAssignmentsImportState = {
  * } = usePositionAssignmentsImport({ cases, onCasesUpdated: refreshCases });
  *
  * // Render hidden file input
- * <input ref={fileInputRef} type="file" accept=".csv" onChange={handleFileSelected} hidden />
+  * <input ref={fileInputRef} type="file" accept=".xml,text/xml,application/xml" onChange={handleFileSelected} hidden />
  *
  * // Render trigger button
  * <Button onClick={handleButtonClick}>Import Position Assignments</Button>
@@ -176,9 +176,9 @@ export function usePositionAssignmentsImport({
       }));
 
       try {
-        const csvText = await file.text();
+        const xmlText = await file.text();
 
-        if (!csvText.trim()) {
+        if (!xmlText.trim()) {
           toast.info("Empty file", {
             description: `${file.name} contains no data.`,
           });
@@ -187,7 +187,7 @@ export function usePositionAssignmentsImport({
         }
 
         // Parse the position assignments file
-        const parseResult = parsePositionAssignments(csvText);
+        const parseResult = parsePositionAssignments(xmlText);
 
         if (parseResult.entries.length === 0) {
           toast.error("No valid entries found", {

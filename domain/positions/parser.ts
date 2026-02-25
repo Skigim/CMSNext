@@ -2,34 +2,39 @@
  * @fileoverview Position Assignments Parser
  *
  * Pure function to parse N-FOCUS "List Position Assignments - Program Case"
- * CSV exports. Extracts Master Case Number (MCN) and case name from each row.
+ * XML exports. Extracts Master Case Number (MCN) and case name from each record.
  *
  * ## File Format
  *
- * Each CSV row represents a single case embedded in repeated header/footer
- * metadata. The row contains column headers ("Mst Case", "Program", etc.)
- * followed by their corresponding values. The parser locates the "Mst Case"
- * sentinel in each row and extracts the MCN and name at known field offsets.
- *
- * ## Row Structure (field positions relative to "Mst Case" sentinel):
- *
- * ```
- * "Mst Case","Program","Program Case Name\n","St","Status Dt","Rev/Recrt",
- * "Appl Rcvd","Days\nPndg","Exp","Assistance","Language","Wrkr Role",
- * "Assign\nBeg. Dt", <MCN>, "MEDICAID", "<LASTNAME, FIRSTNAME MI>", ...
- * ```
- *
- * The MCN appears 13 fields after the "Mst Case" header, and the name
- * appears 15 fields after (i.e., 2 after the MCN).
+ * Crystal Reports XML exports include repeated `<Details><Section><Field ...>`
+ * nodes. Each field stores values by display name, including "Mst Case" and
+ * "Program Case Name". The parser maps these fields to a normalized record
+ * shape and extracts MCN/name from each record.
  *
  * @module domain/positions/parser
  */
 
-import Papa from "papaparse";
+import { XMLParser, XMLValidator } from "fast-xml-parser";
 
 // ============================================================================
 // Types
 // ============================================================================
+
+export interface CaseRecord {
+  masterCaseId: string;
+  program?: string;
+  caseName?: string;
+  status?: string;
+  statusDate?: string;
+  reviewRecertDate?: string;
+  isExpedited?: boolean;
+  assistanceType?: string;
+  primaryLanguage?: string;
+  caseworkerRole?: string;
+  assignmentBeginDate?: string;
+  applicationReceivedDate?: string;
+  daysPending?: number | string;
+}
 
 /**
  * A single parsed position assignment entry.
@@ -59,14 +64,21 @@ export interface PositionParseResult {
 // Constants
 // ============================================================================
 
-/** Sentinel value to locate the column header section within each row */
-const MST_CASE_SENTINEL = "Mst Case";
-
-/** Offset from "Mst Case" sentinel to the MCN value field */
-const MCN_OFFSET = 13;
-
-/** Offset from "Mst Case" sentinel to the case name value field */
-const NAME_OFFSET = 15;
+const XML_FIELD_MAP: Record<string, keyof CaseRecord> = {
+  mstcase: "masterCaseId",
+  program: "program",
+  programcasename: "caseName",
+  st: "status",
+  statusdt: "statusDate",
+  revrecrt: "reviewRecertDate",
+  exp: "isExpedited",
+  assistance: "assistanceType",
+  language: "primaryLanguage",
+  wrkrrole: "caseworkerRole",
+  assignbegdt: "assignmentBeginDate",
+  applrcvd: "applicationReceivedDate",
+  dayspndg: "daysPending",
+};
 
 // ============================================================================
 // Parser
@@ -80,6 +92,10 @@ function normalizeField(value: string | undefined | null): string {
   return value.replaceAll(/[\r\n]+/g, " ").trim();
 }
 
+function normalizeFieldName(value: string): string {
+  return normalizeField(value).toLowerCase().replaceAll(/[^a-z0-9]/g, "");
+}
+
 /**
  * Check if a value looks like a valid numeric MCN.
  * MCNs from N-FOCUS are numeric strings (e.g., "123456").
@@ -88,62 +104,125 @@ function isValidMcn(value: string): boolean {
   return /^\d{3,}$/.test(value);
 }
 
-/**
- * Find the index of the "Mst Case" sentinel within a row's fields.
- * Handles whitespace/newlines in the header value.
- *
- * @param fields - Array of field values from the CSV row
- * @returns Index of the sentinel, or -1 if not found
- */
-function findSentinelIndex(fields: string[]): number {
-  for (let i = 0; i < fields.length; i++) {
-    const normalized = normalizeField(fields[i]);
-    if (normalized === MST_CASE_SENTINEL) {
-      return i;
+function toArray<T>(value: T | T[] | undefined): T[] {
+  if (!value) return [];
+  return Array.isArray(value) ? value : [value];
+}
+
+function findDetailNodes(node: unknown): Record<string, unknown>[] {
+  if (!node || typeof node !== "object") return [];
+  if (Array.isArray(node)) {
+    return node.flatMap(findDetailNodes);
+  }
+
+  const record = node as Record<string, unknown>;
+  const details = toArray(record.Details as Record<string, unknown> | Record<string, unknown>[] | undefined);
+  if (details.length > 0) return details;
+
+  return Object.values(record).flatMap(findDetailNodes);
+}
+
+function extractFieldValue(node: unknown): string {
+  if (typeof node === "string" || typeof node === "number" || typeof node === "boolean") {
+    return String(node);
+  }
+
+  if (!node || typeof node !== "object") {
+    return "";
+  }
+
+  if (Array.isArray(node)) {
+    for (const item of node) {
+      const value = extractFieldValue(item);
+      if (value) return value;
+    }
+    return "";
+  }
+
+  const record = node as Record<string, unknown>;
+  const preferredKeys = ["FormattedValue", "Value", "Text", "#text", "_text"];
+  for (const key of preferredKeys) {
+    const value = extractFieldValue(record[key]);
+    if (value) return normalizeField(value);
+  }
+
+  for (const [key, value] of Object.entries(record)) {
+    if (key === "Name") continue;
+    const extracted = extractFieldValue(value);
+    if (extracted) return normalizeField(extracted);
+  }
+
+  return "";
+}
+
+function mapFieldToRecord(record: Partial<CaseRecord>, fieldName: string, fieldValue: string): void {
+  const mappedKey = XML_FIELD_MAP[normalizeFieldName(fieldName)];
+  if (!mappedKey) return;
+
+  if (mappedKey === "isExpedited") {
+    const normalized = fieldValue.toLowerCase();
+    record.isExpedited = ["y", "yes", "true", "1"].includes(normalized);
+    return;
+  }
+
+  if (mappedKey === "daysPending") {
+    const numericValue = Number(fieldValue);
+    record.daysPending = Number.isFinite(numericValue) ? numericValue : fieldValue;
+    return;
+  }
+
+  record[mappedKey] = fieldValue;
+}
+
+export function parseCrystalReportXML(xmlString: string): CaseRecord[] {
+  if (!xmlString.trim()) return [];
+  const validation = XMLValidator.validate(xmlString);
+  if (validation !== true) {
+    throw new Error("Invalid XML document format.");
+  }
+
+  const parser = new XMLParser({
+    ignoreAttributes: false,
+    attributeNamePrefix: "",
+    trimValues: true,
+    parseTagValue: false,
+  });
+  const parsed = parser.parse(xmlString) as Record<string, unknown>;
+
+  const details = findDetailNodes(parsed);
+  const parsedRecords: CaseRecord[] = [];
+
+  for (const detail of details) {
+    const sections = toArray((detail as Record<string, unknown>)?.Section);
+    for (const section of sections) {
+      const fields = toArray((section as Record<string, unknown>)?.Field);
+      const record: Partial<CaseRecord> = {};
+
+      for (const field of fields) {
+        const fieldRecord = field as Record<string, unknown>;
+        const name = normalizeField(String(fieldRecord.Name ?? ""));
+        if (!name) continue;
+
+        const value = extractFieldValue(fieldRecord);
+        if (!value) continue;
+
+        mapFieldToRecord(record, name, value);
+      }
+
+      parsedRecords.push({ masterCaseId: "", ...record });
     }
   }
-  return -1;
+
+  return parsedRecords;
 }
 
 /**
- * Parse a single CSV row to extract position assignment data.
+ * Parse an N-FOCUS "List Position Assignments" XML export.
  *
- * @param fields - Array of field values from the row
- * @returns Parsed entry, or null if the row doesn't contain valid data
- */
-function parseRow(fields: string[]): ParsedPositionEntry | null {
-  const sentinelIdx = findSentinelIndex(fields);
-  if (sentinelIdx === -1) {
-    return null;
-  }
-
-  const mcnIdx = sentinelIdx + MCN_OFFSET;
-  const nameIdx = sentinelIdx + NAME_OFFSET;
-
-  if (mcnIdx >= fields.length || nameIdx >= fields.length) {
-    return null;
-  }
-
-  const rawMcn = normalizeField(fields[mcnIdx]);
-  const rawName = normalizeField(fields[nameIdx]);
-
-  if (!isValidMcn(rawMcn)) {
-    return null;
-  }
-
-  return {
-    mcn: rawMcn,
-    name: rawName || "Unknown",
-  };
-}
-
-/**
- * Parse an N-FOCUS "List Position Assignments" CSV export.
- *
- * Extracts MCN and case name from each row. Deduplicates by MCN
+ * Extracts MCN and case name from each record. Deduplicates by MCN
  * (first occurrence wins). Skips rows without a valid MCN.
  *
- * @param csvText - Raw text content of the CSV file
+ * @param xmlText - Raw text content of the XML file
  * @returns Parse result with entries and statistics
  *
  * @example
@@ -151,34 +230,27 @@ function parseRow(fields: string[]): ParsedPositionEntry | null {
  * console.log(`Parsed ${result.entries.length} unique cases`);
  * console.log(`Skipped ${result.skippedRows} invalid rows`);
  */
-export function parsePositionAssignments(csvText: string): PositionParseResult {
-  if (!csvText.trim()) {
+export function parsePositionAssignments(xmlText: string): PositionParseResult {
+  if (!xmlText.trim()) {
     return { entries: [], totalRows: 0, skippedRows: 0, duplicatesRemoved: 0 };
   }
-
-  // Parse without headers — each row is a flat array of fields
-  const parsed = Papa.parse<string[]>(csvText, {
-    header: false,
-    skipEmptyLines: "greedy",
-    dynamicTyping: false,
-  });
+  const records = parseCrystalReportXML(xmlText);
 
   const seenMcns = new Set<string>();
   const entries: ParsedPositionEntry[] = [];
   let skippedRows = 0;
   let duplicatesRemoved = 0;
 
-  for (const row of parsed.data) {
-    if (!Array.isArray(row) || row.length === 0) {
+  for (const record of records) {
+    const rawMcn = normalizeField(record.masterCaseId);
+    const rawName = normalizeField(record.caseName);
+
+    if (!isValidMcn(rawMcn)) {
       skippedRows++;
       continue;
     }
 
-    const entry = parseRow(row);
-    if (!entry) {
-      skippedRows++;
-      continue;
-    }
+    const entry: ParsedPositionEntry = { mcn: rawMcn, name: rawName || "Unknown" };
 
     if (seenMcns.has(entry.mcn)) {
       duplicatesRemoved++;
@@ -191,7 +263,7 @@ export function parsePositionAssignments(csvText: string): PositionParseResult {
 
   return {
     entries,
-    totalRows: parsed.data.length,
+    totalRows: records.length,
     skippedRows,
     duplicatesRemoved,
   };
