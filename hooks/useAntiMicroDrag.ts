@@ -1,53 +1,18 @@
 import { useEffect } from "react";
 
 /**
- * Prevents accidental text selection from micro-drags.
- * When the mouse is pressed, selection is temporarily disabled.
- * If the user moves the mouse beyond a small threshold, it is treated
- * as an intentional drag/selection and selection is re-enabled.
+ * Prevents accidental text selection from micro-drags (sloppy clicks).
+ * Real text selections and double-click selections are preserved.
  */
 export function useAntiMicroDrag(threshold = 5) {
   useEffect(() => {
     let startX = 0;
     let startY = 0;
     let isMouseDown = false;
-    let isSelectionDisabled = false;
-
-    // A style element to inject our disabling CSS
-    const styleId = "anti-micro-drag-style";
-
-    const disableSelection = () => {
-      if (!document.getElementById(styleId)) {
-        const style = document.createElement("style");
-        style.id = styleId;
-        // Apply strictly to body, but allow inputs/textareas
-        style.innerHTML = `
-          body {
-            -webkit-user-select: none !important;
-            user-select: none !important;
-          }
-          input, textarea, [contenteditable="true"] {
-            -webkit-user-select: auto !important;
-            user-select: auto !important;
-          }
-        `;
-        document.head.appendChild(style);
-        isSelectionDisabled = true;
-      }
-    };
-
-    const enableSelection = () => {
-      if (isSelectionDisabled) {
-        const style = document.getElementById(styleId);
-        if (style) {
-          style.remove();
-        }
-        isSelectionDisabled = false;
-      }
-    };
+    let hasMovedEnough = false;
+    let clickCount = 0;
 
     const onMouseDown = (e: MouseEvent) => {
-      // Ignore right clicks or if the target is an input/textarea
       if (e.button !== 0) return;
       const target = e.target;
       if (
@@ -61,24 +26,35 @@ export function useAntiMicroDrag(threshold = 5) {
       startX = e.clientX;
       startY = e.clientY;
       isMouseDown = true;
-      disableSelection();
+      hasMovedEnough = false;
+      clickCount = e.detail;
     };
 
     const onMouseMove = (e: MouseEvent) => {
-      if (!isMouseDown || !isSelectionDisabled) return;
+      if (!isMouseDown || hasMovedEnough) return;
 
       const deltaX = Math.abs(e.clientX - startX);
       const deltaY = Math.abs(e.clientY - startY);
 
       if (deltaX > threshold || deltaY > threshold) {
-        // User has dragged sufficiently, re-enable selection
-        enableSelection();
+        hasMovedEnough = true;
+      }
+    };
+
+    const onSelectionChange = () => {
+      // If we are dragging but haven't surpassed the sloppy-click threshold,
+      // and it's not a double-click (which legitimately selects text instantly),
+      // we immediately empty the selection before it paints.
+      if (isMouseDown && !hasMovedEnough && clickCount < 2) {
+        const selection = globalThis.getSelection();
+        if (selection && !selection.isCollapsed) {
+          selection.removeAllRanges();
+        }
       }
     };
 
     const onMouseUp = () => {
       isMouseDown = false;
-      enableSelection();
     };
 
     globalThis.addEventListener("mousedown", onMouseDown, { passive: true });
@@ -86,6 +62,7 @@ export function useAntiMicroDrag(threshold = 5) {
     globalThis.addEventListener("mouseup", onMouseUp, { passive: true });
     globalThis.addEventListener("dragend", onMouseUp, { passive: true });
     globalThis.addEventListener("blur", onMouseUp, { passive: true });
+    globalThis.document.addEventListener("selectionchange", onSelectionChange, { passive: true });
 
     return () => {
       globalThis.removeEventListener("mousedown", onMouseDown);
@@ -93,7 +70,7 @@ export function useAntiMicroDrag(threshold = 5) {
       globalThis.removeEventListener("mouseup", onMouseUp);
       globalThis.removeEventListener("dragend", onMouseUp);
       globalThis.removeEventListener("blur", onMouseUp);
-      enableSelection();
+      globalThis.document.removeEventListener("selectionchange", onSelectionChange);
     };
   }, [threshold]);
 }
