@@ -81,18 +81,18 @@ export function useAntiMicroDrag(threshold = 5) {
       enableSelection();
     };
 
-    window.addEventListener("mousedown", onMouseDown, { passive: true });
-    window.addEventListener("mousemove", onMouseMove, { passive: true });
-    window.addEventListener("mouseup", onMouseUp, { passive: true });
-    window.addEventListener("dragend", onMouseUp, { passive: true });
-    window.addEventListener("blur", onMouseUp, { passive: true });
+    globalThis.addEventListener("mousedown", onMouseDown, { passive: true });
+    globalThis.addEventListener("mousemove", onMouseMove, { passive: true });
+    globalThis.addEventListener("mouseup", onMouseUp, { passive: true });
+    globalThis.addEventListener("dragend", onMouseUp, { passive: true });
+    globalThis.addEventListener("blur", onMouseUp, { passive: true });
 
     return () => {
-      window.removeEventListener("mousedown", onMouseDown);
-      window.removeEventListener("mousemove", onMouseMove);
-      window.removeEventListener("mouseup", onMouseUp);
-      window.removeEventListener("dragend", onMouseUp);
-      window.removeEventListener("blur", onMouseUp);
+      globalThis.removeEventListener("mousedown", onMouseDown);
+      globalThis.removeEventListener("mousemove", onMouseMove);
+      globalThis.removeEventListener("mouseup", onMouseUp);
+      globalThis.removeEventListener("dragend", onMouseUp);
+      globalThis.removeEventListener("blur", onMouseUp);
       enableSelection();
     };
   }, [threshold]);

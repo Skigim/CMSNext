@@ -194,6 +194,7 @@ interface StatusConfig {
 - ❌ Do not put business logic in React components
 - ❌ No repositories or event bus patterns
 - ❌ Do not add I/O or React dependencies to domain layer
+- ❌ Do not use `window.` for global objects; prefer `globalThis.` for consistency and linting rules
 
 ## Lint Enforcement for Agents
 

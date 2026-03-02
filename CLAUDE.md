@@ -34,6 +34,7 @@ npm run seed:large     # Seed large preset
 ```
 
 **Quality gates (must pass before committing):**
+
 1. `npm run typecheck` — zero errors
 2. `npm run lint` — zero warnings
 3. `npm run test:run` — all tests pass
@@ -222,12 +223,12 @@ CMSNext/
 
 ### Naming Conventions
 
-| Pattern | Rule |
-|---------|------|
-| Booleans | Must use `is`, `has`, `should`, `can` prefixes (`isLoading`, `hasError`) |
-| Variables | Explicit names (`caseData` not `data`, `fileContent` not `content`) |
-| Error variables | Always named `error` (never `err`, `e`) |
-| LocalStorage keys | Must follow `cmsnext-[feature-name]` pattern |
+| Pattern           | Rule                                                                     |
+| ----------------- | ------------------------------------------------------------------------ |
+| Booleans          | Must use `is`, `has`, `should`, `can` prefixes (`isLoading`, `hasError`) |
+| Variables         | Explicit names (`caseData` not `data`, `fileContent` not `content`)      |
+| Error variables   | Always named `error` (never `err`, `e`)                                  |
+| LocalStorage keys | Must follow `cmsnext-[feature-name]` pattern                             |
 
 ### Logging (Zero Console Policy)
 
@@ -250,7 +251,10 @@ logger.error("Failed", { error });
 ```typescript
 // ✅ Required pattern
 import { createLocalStorageAdapter } from "@/utils/localStorage";
-const adapter = createLocalStorageAdapter<MyType>("cmsnext-my-feature", defaultValue);
+const adapter = createLocalStorageAdapter<MyType>(
+  "cmsnext-my-feature",
+  defaultValue,
+);
 ```
 
 ---
@@ -264,10 +268,10 @@ All data is stored in a flat, normalized JSON format. No nested case-level struc
 ```typescript
 interface NormalizedFileData {
   version: "2.0";
-  cases: StoredCase[];          // id, caseNumber, status, etc.
+  cases: StoredCase[]; // id, caseNumber, status, etc.
   financials: StoredFinancialItem[]; // id, caseId (FK), amount, type, etc.
-  notes: StoredNote[];          // id, caseId (FK), content, etc.
-  alerts: AlertRecord[];        // id, caseId (FK), message, severity, etc.
+  notes: StoredNote[]; // id, caseId (FK), content, etc.
+  alerts: AlertRecord[]; // id, caseId (FK), message, severity, etc.
   activityLog: CaseActivityEntry[];
   categoryConfig: CategoryConfig;
 }
@@ -430,13 +434,15 @@ export function useFeature(caseId: string) {
 ### ScrollArea Pattern (mandatory for constrained dropdowns)
 
 ```tsx
-{/* Parent: all three properties required */}
+{
+  /* Parent: all three properties required */
+}
 <div className="overflow-hidden flex flex-col max-h-[32rem]">
   {/* ScrollArea: both classes required */}
   <ScrollArea className="h-full max-h-80">
     {/* scrollable content */}
   </ScrollArea>
-</div>
+</div>;
 ```
 
 ### Cross-Component Communication
@@ -445,10 +451,10 @@ Use custom DOM events (not prop drilling or context for ephemeral events):
 
 ```typescript
 // Dispatchers (in App.tsx)
-dispatchNavigationEvent(path)   // "app:navigate"
-dispatchNewCaseEvent()          // "app:newcase"
-dispatchFocusSearchEvent()      // "app:focussearch"
-dispatchToggleSidebarEvent()    // "app:togglesidebar"
+dispatchNavigationEvent(path); // "app:navigate"
+dispatchNewCaseEvent(); // "app:newcase"
+dispatchFocusSearchEvent(); // "app:focussearch"
+dispatchToggleSidebarEvent(); // "app:togglesidebar"
 ```
 
 ---
@@ -457,18 +463,27 @@ dispatchToggleSidebarEvent()    // "app:togglesidebar"
 
 8 themes in 4 families:
 
-| Family  | Light         | Dark          |
-|---------|---------------|---------------|
-| Neutral | `light`       | `dark`        |
-| Slate   | `slate-light` | `slate-dark`  |
-| Stone   | `stone-light` | `stone-dark`  |
-| Zinc    | `zinc-light`  | `zinc-dark`   |
+| Family  | Light         | Dark         |
+| ------- | ------------- | ------------ |
+| Neutral | `light`       | `dark`       |
+| Slate   | `slate-light` | `slate-dark` |
+| Stone   | `stone-light` | `stone-dark` |
+| Zinc    | `zinc-light`  | `zinc-dark`  |
 
 Access via `ThemeContext`. 10 semantic **color slots** for status customization:
 
 ```typescript
-type ColorSlot = "blue" | "green" | "red" | "amber" | "purple" |
-                 "slate" | "teal" | "rose" | "orange" | "cyan";
+type ColorSlot =
+  | "blue"
+  | "green"
+  | "red"
+  | "amber"
+  | "purple"
+  | "slate"
+  | "teal"
+  | "rose"
+  | "orange"
+  | "cyan";
 ```
 
 CSS variables: `--color-slot-{name}`, `--color-slot-{name}-bg`, `--color-slot-{name}-border`
@@ -479,13 +494,13 @@ CSS variables: `--color-slot-{name}`, `--color-slot-{name}-bg`, `--color-slot-{n
 
 ### Stack
 
-| Tool | Purpose |
-|------|---------|
-| Vitest | Test runner (`vitest.config.ts`) |
-| React Testing Library | Component testing |
-| `@testing-library/jest-dom` | DOM matchers |
-| jest-axe | Accessibility testing |
-| `src/test/setup.ts` | Global test setup |
+| Tool                        | Purpose                          |
+| --------------------------- | -------------------------------- |
+| Vitest                      | Test runner (`vitest.config.ts`) |
+| React Testing Library       | Component testing                |
+| `@testing-library/jest-dom` | DOM matchers                     |
+| jest-axe                    | Accessibility testing            |
+| `src/test/setup.ts`         | Global test setup                |
 
 ### Test File Locations
 
@@ -584,16 +599,16 @@ git push origin main
 <optional additional context>
 ```
 
-| Type | Use |
-|------|-----|
-| `feat:` | New feature or enhancement |
-| `fix:` | Bug fix |
+| Type        | Use                                  |
+| ----------- | ------------------------------------ |
+| `feat:`     | New feature or enhancement           |
+| `fix:`      | Bug fix                              |
 | `refactor:` | Code improvement, no behavior change |
-| `perf:` | Performance optimization |
-| `test:` | Adding or updating tests |
-| `docs:` | Documentation only |
-| `chore:` | Build, dependencies, maintenance |
-| `style:` | Formatting, no logic change |
+| `perf:`     | Performance optimization             |
+| `test:`     | Adding or updating tests             |
+| `docs:`     | Documentation only                   |
+| `chore:`    | Build, dependencies, maintenance     |
+| `style:`    | Formatting, no logic change          |
 
 Breaking changes: append `!` and include `BREAKING CHANGE:` in body.
 
@@ -601,23 +616,24 @@ Breaking changes: append `!` and include `BREAKING CHANGE:` in body.
 
 ## Antipatterns (Strictly Forbidden)
 
-| Antipattern | Reason |
-|-------------|--------|
-| `localStorage`/`sessionStorage` direct access | Use `createLocalStorageAdapter` |
-| `window.localStorage` anywhere in code | Same as above |
-| Network API calls (`fetch`, `axios`, etc.) | App is 100% local-first |
-| Direct filesystem calls outside provider stack | Must flow through `AutosaveFileService` |
-| Business logic in React components | Belongs in domain layer |
-| Business logic in hooks | Belongs in service layer; hooks only manage UI state |
-| `console.log/warn/error` in production code | Use `createLogger` |
-| `alert()` / `confirm()` / browser dialogs | Use Sonner toasts |
-| `toBeTruthy` / `toBeDefined` in tests | Use strict equality assertions |
-| `as any` in test mocks | Use typed `vi.fn<[Args], Return>()` |
-| Repositories or event bus patterns | Not part of this architecture |
-| Optimistic UI that ignores autosave timing | Could cause data loss |
-| Long-lived feature branches | Ship small slices with tests |
-| File-wide `eslint-disable` comments | Inline + justified only |
-| `err` or `e` as error variable names | Must be `error` |
+| Antipattern                                    | Reason                                                  |
+| ---------------------------------------------- | ------------------------------------------------------- |
+| `localStorage`/`sessionStorage` direct access  | Use `createLocalStorageAdapter`                         |
+| `window.localStorage` anywhere in code         | Same as above                                           |
+| Network API calls (`fetch`, `axios`, etc.)     | App is 100% local-first                                 |
+| Direct filesystem calls outside provider stack | Must flow through `AutosaveFileService`                 |
+| Business logic in React components             | Belongs in domain layer                                 |
+| Business logic in hooks                        | Belongs in service layer; hooks only manage UI state    |
+| `console.log/warn/error` in production code    | Use `createLogger`                                      |
+| `alert()` / `confirm()` / browser dialogs      | Use Sonner toasts                                       |
+| `toBeTruthy` / `toBeDefined` in tests          | Use strict equality assertions                          |
+| `as any` in test mocks                         | Use typed `vi.fn<[Args], Return>()`                     |
+| Repositories or event bus patterns             | Not part of this architecture                           |
+| Optimistic UI that ignores autosave timing     | Could cause data loss                                   |
+| Long-lived feature branches                    | Ship small slices with tests                            |
+| File-wide `eslint-disable` comments            | Inline + justified only                                 |
+| `err` or `e` as error variable names           | Must be `error`                                         |
+| `window.*` for global objects                  | Prefer `globalThis.*` for consistency and linting rules |
 
 ---
 
@@ -648,18 +664,18 @@ if (!api) {
 
 ## Key Documentation
 
-| Resource | Location |
-|----------|----------|
-| Architecture overview | `.github/copilot-instructions.md` |
-| Service/domain/hook patterns | `.github/implementation-guide.md` |
-| Component and Tailwind patterns | `.github/ui-guide.md` |
-| Testing standards | `.github/testing-guide.md` |
-| Storage layer guide | `.github/agents/STORAGE.md` |
-| Hook patterns | `.github/agents/HOOKS.md` |
-| Repository memories | `.github/agents/MEMORIES.md` |
-| Prompt templates | `.github/agents/TEMPLATES.md` |
-| Current roadmap | `docs/development/ROADMAP_FEB_2026.md` |
-| Feature catalogue | `docs/development/feature-catalogue.md` |
-| Deployment | `docs/DeploymentGuide.md` |
-| SonarCloud issues | `docs/audit/sonarcloud-open-issues.json` |
-| LLM index | `llms.txt` |
+| Resource                        | Location                                 |
+| ------------------------------- | ---------------------------------------- |
+| Architecture overview           | `.github/copilot-instructions.md`        |
+| Service/domain/hook patterns    | `.github/implementation-guide.md`        |
+| Component and Tailwind patterns | `.github/ui-guide.md`                    |
+| Testing standards               | `.github/testing-guide.md`               |
+| Storage layer guide             | `.github/agents/STORAGE.md`              |
+| Hook patterns                   | `.github/agents/HOOKS.md`                |
+| Repository memories             | `.github/agents/MEMORIES.md`             |
+| Prompt templates                | `.github/agents/TEMPLATES.md`            |
+| Current roadmap                 | `docs/development/ROADMAP_FEB_2026.md`   |
+| Feature catalogue               | `docs/development/feature-catalogue.md`  |
+| Deployment                      | `docs/DeploymentGuide.md`                |
+| SonarCloud issues               | `docs/audit/sonarcloud-open-issues.json` |
+| LLM index                       | `llms.txt`                               |
