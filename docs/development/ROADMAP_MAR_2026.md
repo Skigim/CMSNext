@@ -69,7 +69,7 @@ _To be determined while we think through the codebase and what we can improve._
 This roadmap reflects our accelerated development pace with direct AI assistance:
 
 - **Traditional estimate:** 1-2 features per week
-- **AI-assisted reality:** 4+ features per week with full test coverage
+- **AI-assisted reality:** 3-4 features per week with full test coverage
 - **Each week includes:** prep work, features, then refactoring/polish
 
 ### Quality Gates

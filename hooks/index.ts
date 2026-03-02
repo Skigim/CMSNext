@@ -119,4 +119,8 @@ export { useTombstone } from './useTombstone';
  * 
  * // Use:
  * import { useCaseManagement, useNotes, useFinancialItems } from '../hooks';
- */export { useAntiMicroDrag } from './useAntiMicroDrag';
+ */
+
+// UX / UI interactions
+export { useAntiMicroDrag } from './useAntiMicroDrag';
+
