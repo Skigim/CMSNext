@@ -11,8 +11,8 @@
 ## 🎯 March Objectives
 
 1. **UX and Personalization** - Keyboard shortcut configuration, dashboard widgets.
-2. **Codebase Evaluation** - Reviewing and planning the next phase of architectural improvements.
-3. **TBD** - Future features to be drafted post-evaluation.
+2. **Database Normalization** - Decoupling `Person` entities from `Case` objects and instituting native relational storage for families and individuals.
+3. **Data Hydration & UI Overhaul** - Restructuring the orchestrator and UI flows (like Case Creation and Household views) to support normalized people data.
 
 ---
 
@@ -23,6 +23,7 @@
 #### Prep Work
 
 - [x] Fix any remaining bugs inherited from February.
+- [x] Implement global anti-micro-drag logic to improve UI interactions.
 - [ ] Run full audit cycle (performance and accessibility).
 
 #### Features
@@ -38,9 +39,62 @@
 
 ---
 
-### Weeks 2-4: TBD Phase
+### Week 2: Data Model & Storage Refactoring (March 9-15)
 
-_To be determined while we think through the codebase and what we can improve._
+#### Prep Work
+
+- [ ] Plan exact schema modifications for `Person` and `CaseRecord`.
+- [ ] Diagram hydration logic requirements for `DataManager`.
+
+#### Features
+
+- [ ] Update `NormalizedFileData` to track `people: Person[]` globally.
+- [ ] Build v2.0-to-v2.1 storage migration to extract embedded people to the root array.
+- [ ] Create `PersonService` for independent people CRUD operations.
+
+#### Refactoring & Polish
+
+- [ ] Add unit tests for `PersonService` and the migration handlers.
+- [ ] Clean up redundant type properties during schema transitions.
+
+---
+
+### Week 3: Hydration & Service Layer Updates (March 16-22)
+
+#### Prep Work
+
+- [ ] Map out all consumers of `CaseDisplay` / `StoredCase` to prevent UI regressions.
+
+#### Features
+
+- [ ] Modify `DataManager.ts` and `CaseService.ts` to hydrate Cases with People dynamically.
+- [ ] Update domain logic (`domain/cases/`) to handle uncoupled people patterns.
+- [ ] Enable robust relational linking inside the `Person` structure (spouses/dependents).
+
+#### Refactoring & Polish
+
+- [ ] Thoroughly test hydration and mapping performance.
+- [ ] Resolve any strict type-checking violations caused by schema changes.
+
+---
+
+### Week 4: UI & Workflow Overhaul (March 23-31)
+
+#### Prep Work
+
+- [ ] Identify all modal forms, creation pipelines, and tabs creating or editing `Person` records.
+
+#### Features
+
+- [ ] Rework Case Creation Flow: Search for existing person before creation, pass references instead of bodies.
+- [ ] Update Household View (`HouseholdTab`) components to render family units from relational links natively.
+- [ ] Ensure person updates reflect across all linked cases seamlessly.
+
+#### Refactoring & Polish
+
+- [ ] Finalize unit testing for the new data handling pipelines.
+- [ ] Create March changelog.
+- [ ] Update feature catalogue and finalize the April roadmap.
 
 ---
 
