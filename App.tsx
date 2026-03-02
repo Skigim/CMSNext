@@ -8,6 +8,7 @@ import { usePaperCutCapture } from "@/hooks/usePaperCutCapture";
 import { PaperCutModal } from "@/components/common/PaperCutModal";
 import { KeyboardShortcutsHelp } from "@/components/common/KeyboardShortcutsHelp";
 import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
+import { useAntiMicroDrag } from "@/hooks/useAntiMicroDrag";
 
 const logger = createLogger("App");
 
@@ -35,6 +36,7 @@ export function dispatchToggleSidebarEvent() {
 
 export default function App() {
   logger.lifecycle("Rendering main App component");
+  useAntiMicroDrag(); // Prevent accidental text selection on micro-drags
   const paperCut = usePaperCutCapture();
   const [isShortcutsHelpOpen, setIsShortcutsHelpOpen] = useState(false);
 
