@@ -114,10 +114,7 @@ function ShortcutEditor({
         } else {
           fullBinding = `${currentBinding} ${binding}`;
           setCurrentBinding(fullBinding);
-          // Don't reset chordStep to 1, we want to stay finished unless they toggle mode
-          // or we could reset if we want them to re-start the recording?
-          // Actually, let's keep it complete. They can just try again which will overwrite it.
-          // Let's reset it to 1 so the next keypress starts a new chord.
+          // Reset chordStep to 1 so the next keypress begins a new chord
           setChordStep(1);
         }
       } else {
@@ -266,7 +263,7 @@ export function KeyboardShortcutsPanel() {
     <div className="space-y-6" data-papercut-context="KeyboardShortcutsSettings">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-lg font-medium">Keyboard Shortcuts</h2>
+          <h3 className="text-lg font-medium">Keyboard Shortcuts</h3>
           <p className="text-sm text-muted-foreground">
             Customize keyboard shortcuts for your workflow.
           </p>
@@ -338,6 +335,7 @@ export function KeyboardShortcutsPanel() {
                             size="sm"
                             className="h-8 min-w-[100px] font-normal justify-start px-2 gap-2"
                             disabled={!shortcut.enabled}
+                            aria-label={`Edit ${shortcut.label} shortcut`}
                           >
                             {tokenizeBindingForDisplay(display).map((token) => (
                               <Kbd key={token.key} className="bg-muted-foreground/10">{token.value}</Kbd>

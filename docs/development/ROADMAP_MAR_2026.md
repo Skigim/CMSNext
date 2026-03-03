@@ -34,8 +34,8 @@
 
 #### Refactoring & Polish
 
-- [ ] Add unit tests for Week 1 features.
-- [ ] Ensure focus management in new modals.
+- [x] Add unit tests for Week 1 features (Keyboard Shortcut Customizer test coverage met).
+- [x] Ensure focus management in new modals (Verified accessible tab sequences in Settings hooks).
 
 ---
 
