@@ -361,21 +361,10 @@ export function usePositionAssignmentsImport({
           ]);
         }
 
-        const knownStatusNames = new Set([
-          ...categoryConfig.caseStatuses.map(s => s.name),
-          ...statusImportPlan.newStatuses.map(s => s.name),
-        ]);
-
         for (const [status, caseIds] of statusImportPlan.statusUpdatesByStatus) {
-          const canonicalStatus = [...knownStatusNames].find(n => n.toLowerCase() === status.toLowerCase());
-          if (canonicalStatus) {
-            await dataManager.updateCasesStatus(caseIds, canonicalStatus as StoredCase["status"]);
-          } else {
-            logger.warn("Skipping status update for unconfigured status", { status, caseCount: caseIds.length });
-          }
+          await dataManager.updateCasesStatus(caseIds, status as StoredCase["status"]);
+          statusUpdatedCount += caseIds.length;
         }
-
-        statusUpdatedCount = statusImportPlan.updatedCaseCount;
         onCasesUpdated?.();
       }
 
