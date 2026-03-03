@@ -18,4 +18,5 @@ export {
   buildAssignmentMcnSet,
   type AssignmentsSummary,
   type AssignmentsCompareResult,
+  type CaseStatusUpdate,
 } from "./matching";

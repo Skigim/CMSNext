@@ -71,8 +71,8 @@ function createTestCase(
   };
 }
 
-function createEntry(mcn: string, name = "TEST, NAME"): ParsedPositionEntry {
-  return { mcn, name };
+function createEntry(mcn: string, name = "TEST, NAME", status?: string): ParsedPositionEntry {
+  return status !== undefined ? { mcn, name, status } : { mcn, name };
 }
 
 // ============================================================================
@@ -243,6 +243,75 @@ describe("compareAssignments", () => {
     });
   });
 
+  describe("status change detection", () => {
+    it("should populate matchedWithStatusChange when imported status differs", () => {
+      const cases: StoredCase[] = [
+        createTestCase({ id: "c1", mcn: "100001", status: "Active" }),
+      ];
+      const entries = [createEntry("100001", "DOE, JOHN", "Pending")];
+
+      const result = compareAssignments(cases, entries);
+
+      expect(result.matchedWithStatusChange).toHaveLength(1);
+      expect(result.matchedWithStatusChange[0]).toMatchObject({
+        importedStatus: "Pending",
+        currentStatus: "Active",
+      });
+      expect(result.matchedWithStatusChange[0].case.id).toBe("c1");
+      expect(result.summary.statusUpdateCandidates).toBe(1);
+    });
+
+    it("should not add to matchedWithStatusChange when imported status matches", () => {
+      const cases: StoredCase[] = [
+        createTestCase({ id: "c1", mcn: "100001", status: "Active" }),
+      ];
+      const entries = [createEntry("100001", "DOE, JOHN", "Active")];
+
+      const result = compareAssignments(cases, entries);
+
+      expect(result.matchedWithStatusChange).toHaveLength(0);
+      expect(result.summary.statusUpdateCandidates).toBe(0);
+    });
+
+    it("should treat status comparison as case-insensitive", () => {
+      const cases: StoredCase[] = [
+        createTestCase({ id: "c1", mcn: "100001", status: "Active" }),
+      ];
+      const entries = [createEntry("100001", "DOE, JOHN", "active")];
+
+      const result = compareAssignments(cases, entries);
+
+      // "active" vs "Active" — same status, no update needed
+      expect(result.matchedWithStatusChange).toHaveLength(0);
+    });
+
+    it("should not add to matchedWithStatusChange when entry has no status", () => {
+      const cases: StoredCase[] = [
+        createTestCase({ id: "c1", mcn: "100001", status: "Active" }),
+      ];
+      // No status field in entry
+      const entries = [createEntry("100001")];
+
+      const result = compareAssignments(cases, entries);
+
+      expect(result.matchedWithStatusChange).toHaveLength(0);
+      expect(result.summary.statusUpdateCandidates).toBe(0);
+    });
+
+    it("should still count a status-update case as matched", () => {
+      const cases: StoredCase[] = [
+        createTestCase({ id: "c1", mcn: "100001", status: "Active" }),
+      ];
+      const entries = [createEntry("100001", "DOE, JOHN", "Closed")];
+
+      const result = compareAssignments(cases, entries);
+
+      expect(result.summary.matched).toBe(1);
+      expect(result.unmatchedCases).toHaveLength(0);
+      expect(result.matchedWithStatusChange).toHaveLength(1);
+    });
+  });
+
   describe("summary statistics", () => {
     it("should provide accurate summary", () => {
       const cases: StoredCase[] = [
@@ -263,10 +332,11 @@ describe("compareAssignments", () => {
 
       expect(result.summary).toEqual({
         totalParsed: 3,
-        matched: 2,        // c1, c5
-        unmatched: 1,       // c2
-        alreadyFlagged: 1,  // c4
-        archivedExcluded: 1, // c3
+        matched: 2,               // c1, c5
+        statusUpdateCandidates: 0, // no status fields in entries
+        unmatched: 1,              // c2
+        alreadyFlagged: 1,         // c4
+        archivedExcluded: 1,       // c3
       });
     });
   });

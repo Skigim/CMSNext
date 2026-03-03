@@ -2,10 +2,11 @@
  * @fileoverview Position Assignments Import Hook
  *
  * Orchestrates the flow for importing an N-FOCUS position assignments XML export:
- * File picker → Parse → Compare against stored cases → Preview → Bulk flag for archival
+ * File picker → Parse → Compare against stored cases → Preview → Apply changes
  *
- * Combines patterns from `useAlertsCsvImport` (file picker via hidden input)
- * and `useAVSImportFlow` (preview + selection state machine).
+ * On import, two actions can be taken:
+ * 1. Cases on the assignment list whose status differs from the XML → status updated
+ * 2. Cases NOT on the assignment list → flagged for archival review
  *
  * @module hooks/usePositionAssignmentsImport
  */
@@ -13,11 +14,14 @@
 import { useCallback, useMemo, useRef, useState, type ChangeEvent, type RefObject } from "react";
 import { toast } from "sonner";
 import { useDataManagerSafe } from "@/contexts/DataManagerContext";
-import type { StoredCase } from "@/types/case";
+import type { CaseStatus, StoredCase } from "@/types/case";
+import type { CategoryConfig, StatusConfig } from "@/types/categoryConfig";
+import { autoAssignColorSlot, type ColorSlot } from "@/types/colorSlots";
 import {
   parsePositionAssignments,
   compareAssignments,
   type AssignmentsSummary,
+  type CaseStatusUpdate,
   type PositionParseResult,
 } from "@/domain/positions";
 import { createLogger } from "@/utils/logger";
@@ -39,22 +43,28 @@ export interface PositionAssignmentsImportState {
   isOpen: boolean;
   /** Cases not found on the assignment list */
   unmatchedCases: StoredCase[];
+  /** Matched cases whose status in the XML differs from their current status */
+  matchedWithStatusChange: CaseStatusUpdate[];
   /** Summary statistics from the comparison */
   summary: AssignmentsSummary | null;
   /** Parse result statistics */
   parseResult: PositionParseResult | null;
   /** IDs of cases selected for archival flagging */
   selectedCaseIds: Set<string>;
+  /** IDs of matched cases selected for status updates */
+  selectedStatusUpdateIds: Set<string>;
   /** The source filename for display */
   sourceFileName: string | null;
-  /** Status filter — only cases with these statuses are shown */
+  /** Status filter — only cases with these statuses are shown in the archival section */
   statusFilter: Set<string>;
 }
 
 interface UsePositionAssignmentsImportParams {
   /** All stored cases for comparison */
   cases: StoredCase[];
-  /** Called after successful flagging to refresh case data */
+  /** Current category config — used to check/add statuses on import */
+  categoryConfig: CategoryConfig;
+  /** Called after successful changes to refresh case data */
   onCasesUpdated?: () => void;
 }
 
@@ -69,14 +79,18 @@ interface UsePositionAssignmentsImportReturn {
   handleFileSelected: (event: ChangeEvent<HTMLInputElement>) => Promise<void>;
   /** Close the preview modal and reset state */
   closePreview: () => void;
-  /** Confirm and apply archival flags to selected cases */
+  /** Confirm and apply status updates and/or archival flags */
   confirmFlagForArchival: () => Promise<void>;
-  /** Toggle selection of a single case */
+  /** Toggle selection of a single archival candidate */
   toggleCaseSelection: (caseId: string) => void;
-  /** Toggle all visible cases selection (respects status filter) */
+  /** Toggle all visible archival candidates (respects status filter) */
   toggleAllCases: () => void;
-  /** Toggle a status in the status filter */
+  /** Toggle a status in the archival section status filter */
   toggleStatusFilter: (status: string) => void;
+  /** Toggle selection of a single status-update candidate */
+  toggleStatusUpdateSelection: (caseId: string) => void;
+  /** Toggle all status-update candidates */
+  toggleAllStatusUpdates: () => void;
   /** Unique statuses present in unmatched cases */
   availableStatuses: string[];
   /** Unmatched cases after applying status filter */
@@ -93,9 +107,11 @@ const INITIAL_STATE: PositionAssignmentsImportState = {
   phase: "idle",
   isOpen: false,
   unmatchedCases: [],
+  matchedWithStatusChange: [],
   summary: null,
   parseResult: null,
   selectedCaseIds: new Set(),
+  selectedStatusUpdateIds: new Set(),
   sourceFileName: null,
   statusFilter: new Set(),
 };
@@ -105,7 +121,11 @@ const INITIAL_STATE: PositionAssignmentsImportState = {
 // ============================================================================
 
 /**
- * Hook for managing position assignments import and archival flagging flow.
+ * Hook for managing position assignments import.
+ *
+ * Handles two complementary actions from one XML import:
+ * - Status updates: matched cases whose XML status differs from their stored status
+ * - Archival flagging: unmatched cases (not on the assignment list)
  *
  * @example
  * ```typescript
@@ -118,28 +138,15 @@ const INITIAL_STATE: PositionAssignmentsImportState = {
  *   confirmFlagForArchival,
  *   toggleCaseSelection,
  *   toggleAllCases,
+ *   toggleStatusUpdateSelection,
+ *   toggleAllStatusUpdates,
  *   canConfirm,
- * } = usePositionAssignmentsImport({ cases, onCasesUpdated: refreshCases });
- *
- * // Render hidden file input
-  * <input ref={fileInputRef} type="file" accept=".xml,text/xml,application/xml" onChange={handleFileSelected} hidden />
- *
- * // Render trigger button
- * <Button onClick={handleButtonClick}>Import Position Assignments</Button>
- *
- * // Render review modal
- * <PositionAssignmentsReviewModal
- *   importState={importState}
- *   onClose={closePreview}
- *   onConfirm={confirmFlagForArchival}
- *   onToggleCase={toggleCaseSelection}
- *   onToggleAll={toggleAllCases}
- *   canConfirm={canConfirm}
- * />
+ * } = usePositionAssignmentsImport({ cases, categoryConfig, onCasesUpdated: refreshCases });
  * ```
  */
 export function usePositionAssignmentsImport({
   cases,
+  categoryConfig,
   onCasesUpdated,
 }: UsePositionAssignmentsImportParams): UsePositionAssignmentsImportReturn {
   const dataManager = useDataManagerSafe();
@@ -198,27 +205,33 @@ export function usePositionAssignmentsImport({
         }
 
         // Compare against stored cases
-        const { unmatchedCases, summary } = compareAssignments(cases, parseResult.entries);
+        const { unmatchedCases, matchedWithStatusChange, summary } = compareAssignments(
+          cases,
+          parseResult.entries
+        );
 
-        if (unmatchedCases.length === 0) {
+        if (unmatchedCases.length === 0 && matchedWithStatusChange.length === 0) {
           toast.success("All cases accounted for", {
-            description: `All ${summary.matched} active cases were found on the assignment list. No archival flagging needed.`,
+            description: `All ${summary.matched} active cases were found on the assignment list with matching statuses. No changes needed.`,
           });
           setImportState(INITIAL_STATE);
           return;
         }
 
-        // Open preview with all unmatched cases pre-selected
+        // Open preview with all candidates pre-selected
         const selectedIds = new Set(unmatchedCases.map(c => c.id));
+        const selectedStatusUpdateIds = new Set(matchedWithStatusChange.map(u => u.case.id));
         const uniqueStatuses = new Set(unmatchedCases.map(c => c.status));
 
         setImportState({
           phase: "preview",
           isOpen: true,
           unmatchedCases,
+          matchedWithStatusChange,
           summary,
           parseResult,
           selectedCaseIds: selectedIds,
+          selectedStatusUpdateIds,
           sourceFileName: file.name,
           statusFilter: uniqueStatuses,
         });
@@ -242,7 +255,7 @@ export function usePositionAssignmentsImport({
     setImportState(INITIAL_STATE);
   }, []);
 
-  // ---- Toggle individual case selection ----
+  // ---- Toggle individual archival case selection ----
   const toggleCaseSelection = useCallback((caseId: string) => {
     setImportState(prev => {
       const next = new Set(prev.selectedCaseIds);
@@ -255,7 +268,7 @@ export function usePositionAssignmentsImport({
     });
   }, []);
 
-  // ---- Toggle status filter ----
+  // ---- Toggle status filter (archival section) ----
   const toggleStatusFilter = useCallback((status: string) => {
     setImportState(prev => {
       const nextFilter = new Set(prev.statusFilter);
@@ -277,7 +290,7 @@ export function usePositionAssignmentsImport({
     });
   }, []);
 
-  // ---- Toggle all visible cases (respects status filter) ----
+  // ---- Toggle all visible archival cases (respects status filter) ----
   const toggleAllCases = useCallback(() => {
     setImportState(prev => {
       const visibleCases = prev.unmatchedCases.filter(c => prev.statusFilter.has(c.status));
@@ -292,33 +305,136 @@ export function usePositionAssignmentsImport({
     });
   }, []);
 
-  // ---- Confirm: flag selected cases for archival ----
+  // ---- Toggle individual status-update selection ----
+  const toggleStatusUpdateSelection = useCallback((caseId: string) => {
+    setImportState(prev => {
+      const next = new Set(prev.selectedStatusUpdateIds);
+      if (next.has(caseId)) {
+        next.delete(caseId);
+      } else {
+        next.add(caseId);
+      }
+      return { ...prev, selectedStatusUpdateIds: next };
+    });
+  }, []);
+
+  // ---- Toggle all status-update candidates ----
+  const toggleAllStatusUpdates = useCallback(() => {
+    setImportState(prev => {
+      const allSelected =
+        prev.matchedWithStatusChange.length > 0 &&
+        prev.matchedWithStatusChange.every(u => prev.selectedStatusUpdateIds.has(u.case.id));
+      const next = allSelected
+        ? new Set<string>()
+        : new Set(prev.matchedWithStatusChange.map(u => u.case.id));
+      return { ...prev, selectedStatusUpdateIds: next };
+    });
+  }, []);
+
+  // ---- Confirm: apply status updates and/or flag for archival ----
   const confirmFlagForArchival = useCallback(async () => {
-    if (!dataManager || importState.selectedCaseIds.size === 0) return;
+    if (
+      !dataManager ||
+      (importState.selectedCaseIds.size === 0 && importState.selectedStatusUpdateIds.size === 0)
+    ) {
+      return;
+    }
 
     setImportState(prev => ({ ...prev, phase: "applying" }));
 
     try {
-      const caseIds = Array.from(importState.selectedCaseIds);
-      const archivalResult = await dataManager.markCasesForArchivalByIds(caseIds);
+      let statusUpdatedCount = 0;
+      let archivalMarkedCount = 0;
+
+      // ---- 1. Apply status updates ----
+      const selectedUpdates = importState.matchedWithStatusChange.filter(u =>
+        importState.selectedStatusUpdateIds.has(u.case.id)
+      );
+
+      if (selectedUpdates.length > 0) {
+        // Ensure every imported status exists in categoryConfig.caseStatuses
+        const existingNames = new Set(
+          categoryConfig.caseStatuses.map(s => s.name.toLowerCase())
+        );
+        const usedSlots = new Set<ColorSlot>(categoryConfig.caseStatuses.map(s => s.colorSlot));
+        const newStatuses: StatusConfig[] = [];
+
+        for (const update of selectedUpdates) {
+          if (!existingNames.has(update.importedStatus.toLowerCase())) {
+            existingNames.add(update.importedStatus.toLowerCase());
+            const colorSlot = autoAssignColorSlot(update.importedStatus, usedSlots);
+            usedSlots.add(colorSlot);
+            newStatuses.push({ name: update.importedStatus, colorSlot });
+          }
+        }
+
+        if (newStatuses.length > 0) {
+          await dataManager.updateCaseStatuses([
+            ...categoryConfig.caseStatuses,
+            ...newStatuses,
+          ]);
+        }
+
+        // Group by imported status and bulk-update each group
+        const statusGroups = new Map<string, string[]>();
+        for (const update of selectedUpdates) {
+          const ids = statusGroups.get(update.importedStatus) ?? [];
+          ids.push(update.case.id);
+          statusGroups.set(update.importedStatus, ids);
+        }
+
+        for (const [status, caseIds] of statusGroups) {
+          await dataManager.updateCasesStatus(caseIds, status as CaseStatus);
+        }
+
+        statusUpdatedCount = selectedUpdates.length;
+      }
+
+      // ---- 2. Flag unmatched cases for archival ----
+      if (importState.selectedCaseIds.size > 0) {
+        const archivalResult = await dataManager.markCasesForArchivalByIds(
+          Array.from(importState.selectedCaseIds)
+        );
+        archivalMarkedCount = archivalResult.markedCount;
+      }
 
       onCasesUpdated?.();
 
-      toast.success("Cases flagged for archival", {
-        description: `${archivalResult.markedCount} case${archivalResult.markedCount === 1 ? "" : "s"} moved to the archival review queue.`,
+      // Build a combined toast message
+      const parts: string[] = [];
+      if (statusUpdatedCount > 0) {
+        parts.push(
+          `${statusUpdatedCount} case${statusUpdatedCount === 1 ? "" : "s"} updated to imported status`
+        );
+      }
+      if (archivalMarkedCount > 0) {
+        parts.push(
+          `${archivalMarkedCount} case${archivalMarkedCount === 1 ? "" : "s"} flagged for archival review`
+        );
+      }
+
+      toast.success("Import applied", {
+        description: parts.join("; ") + ".",
       });
 
       setImportState(INITIAL_STATE);
     } catch (error) {
-      logger.error("Failed to flag cases for archival", {
+      logger.error("Failed to apply position assignments import", {
         error: extractErrorMessage(error),
       });
-      toast.error("Failed to flag cases", {
+      toast.error("Failed to apply changes", {
         description: error instanceof Error ? error.message : "An unexpected error occurred.",
       });
       setImportState(prev => ({ ...prev, phase: "preview" }));
     }
-  }, [dataManager, importState.selectedCaseIds, onCasesUpdated]);
+  }, [
+    dataManager,
+    categoryConfig,
+    importState.selectedCaseIds,
+    importState.selectedStatusUpdateIds,
+    importState.matchedWithStatusChange,
+    onCasesUpdated,
+  ]);
 
   // ---- Derived state ----
   const availableStatuses = useMemo(() => {
@@ -332,7 +448,8 @@ export function usePositionAssignmentsImport({
   );
 
   const canConfirm =
-    importState.phase === "preview" && importState.selectedCaseIds.size > 0;
+    importState.phase === "preview" &&
+    (importState.selectedCaseIds.size > 0 || importState.selectedStatusUpdateIds.size > 0);
 
   return {
     importState,
@@ -344,6 +461,8 @@ export function usePositionAssignmentsImport({
     toggleCaseSelection,
     toggleAllCases,
     toggleStatusFilter,
+    toggleStatusUpdateSelection,
+    toggleAllStatusUpdates,
     availableStatuses,
     filteredUnmatchedCases,
     canConfirm,

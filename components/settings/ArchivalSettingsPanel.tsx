@@ -100,6 +100,7 @@ export function ArchivalSettingsPanel({ cases }: { cases: StoredCase[] }) {
   // Position assignments import
   const positionImport = usePositionAssignmentsImport({
     cases,
+    categoryConfig: config,
     onCasesUpdated: () => {
       archival.refreshPendingCount();
     },
@@ -391,6 +392,8 @@ export function ArchivalSettingsPanel({ cases }: { cases: StoredCase[] }) {
         onToggleCase={positionImport.toggleCaseSelection}
         onToggleAll={positionImport.toggleAllCases}
         onToggleStatus={positionImport.toggleStatusFilter}
+        onToggleStatusUpdate={positionImport.toggleStatusUpdateSelection}
+        onToggleAllStatusUpdates={positionImport.toggleAllStatusUpdates}
         canConfirm={positionImport.canConfirm}
         availableStatuses={positionImport.availableStatuses}
         filteredUnmatchedCases={positionImport.filteredUnmatchedCases}
