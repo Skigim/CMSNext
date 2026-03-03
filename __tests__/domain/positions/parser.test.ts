@@ -279,4 +279,77 @@ describe("parsePositionAssignments", () => {
       expect(() => parseCrystalReportXML("<Report><Details>")).toThrow("Invalid XML document format.");
     });
   });
+
+  describe("case status field parsing", () => {
+    it("should parse Case Status field by name", () => {
+      const xml = buildXml([`
+        <Section>
+          <Field Name="Mst Case"><FormattedValue>123456</FormattedValue></Field>
+          <Field Name="Program Case Name"><FormattedValue>SMITH, JOHN A</FormattedValue></Field>
+          <Field Name="Case Status"><FormattedValue>Pending</FormattedValue></Field>
+        </Section>
+      `]);
+      const result = parsePositionAssignments(xml);
+
+      expect(result.entries).toHaveLength(1);
+      expect(result.entries[0].status).toBe("Pending");
+    });
+
+    it("should parse SF Case Status field name variant", () => {
+      const xml = `
+        <Report>
+          <Details>
+            <Section>
+              <Field FieldName="SFCaseStatus"><FormattedValue>Closed</FormattedValue></Field>
+              <Field FieldName="SFMasterCaseIdNbr"><FormattedValue>789012</FormattedValue></Field>
+              <Field FieldName="SFPCNameOrOwner"><FormattedValue>DOE, JANE</FormattedValue></Field>
+            </Section>
+          </Details>
+        </Report>
+      `;
+      const result = parsePositionAssignments(xml);
+
+      expect(result.entries).toHaveLength(1);
+      expect(result.entries[0].status).toBe("Closed");
+    });
+
+    it("should omit status from entry when no Case Status field is present", () => {
+      const xml = buildXml([buildSection("111111", "PUBLIC, TEST")]);
+      const result = parsePositionAssignments(xml);
+
+      expect(result.entries).toHaveLength(1);
+      expect(result.entries[0].status).toBeUndefined();
+    });
+
+    it("should omit status from entry when Case Status field is empty", () => {
+      const xml = buildXml([`
+        <Section>
+          <Field Name="Mst Case"><FormattedValue>555555</FormattedValue></Field>
+          <Field Name="Program Case Name"><FormattedValue>JONES, BOB</FormattedValue></Field>
+          <Field Name="Case Status"><FormattedValue></FormattedValue></Field>
+        </Section>
+      `]);
+      const result = parsePositionAssignments(xml);
+
+      expect(result.entries).toHaveLength(1);
+      expect(result.entries[0].status).toBeUndefined();
+    });
+
+    it("should include status alongside mcn and name", () => {
+      const xml = buildXml([`
+        <Section>
+          <Field Name="Mst Case"><FormattedValue>999888</FormattedValue></Field>
+          <Field Name="Program Case Name"><FormattedValue>LAST, FIRST</FormattedValue></Field>
+          <Field Name="Case Status"><FormattedValue>Active</FormattedValue></Field>
+        </Section>
+      `]);
+      const result = parsePositionAssignments(xml);
+
+      expect(result.entries[0]).toEqual({
+        mcn: "999888",
+        name: "LAST, FIRST",
+        status: "Active",
+      });
+    });
+  });
 });

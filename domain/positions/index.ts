@@ -15,7 +15,12 @@ export {
 
 export {
   compareAssignments,
-  buildAssignmentMcnSet,
   type AssignmentsSummary,
   type AssignmentsCompareResult,
+  type CaseStatusUpdate,
 } from "./matching";
+
+export {
+  buildStatusImportPlan,
+  type StatusImportPlan,
+} from "./importStatusHelpers";

@@ -24,6 +24,7 @@ export interface PositionAssignmentRecord {
   masterCaseId: string;
   caseName?: string;
   applicationDate?: string;
+  caseStatus?: string;
 }
 
 /**
@@ -34,6 +35,8 @@ export interface ParsedPositionEntry {
   mcn: string;
   /** Case name as "LASTNAME, FIRSTNAME MI" from the export */
   name: string;
+  /** Case status as recorded in the export (exact value from the XML) */
+  status?: string;
 }
 
 /**
@@ -70,6 +73,8 @@ const XML_FIELD_MAP: Record<string, keyof PositionAssignmentRecord> = {
   genviewsfprogramcasename: "caseName",
   sfapplicationreceiveddateortext: "applicationDate",
   genviewapplicationreceiveddateortext: "applicationDate",
+  casestatus: "caseStatus",
+  sfcasestatus: "caseStatus",
 };
 
 // ============================================================================
@@ -277,13 +282,18 @@ export function parsePositionAssignments(xmlText: string): PositionParseResult {
   for (const record of records) {
     const rawMcn = normalizeField(record.masterCaseId);
     const rawName = normalizeField(record.caseName);
+    const rawStatus = normalizeField(record.caseStatus);
 
     if (!isValidMcn(rawMcn)) {
       skippedRows++;
       continue;
     }
 
-    const entry: ParsedPositionEntry = { mcn: rawMcn, name: rawName || "Unknown" };
+    const entry: ParsedPositionEntry = {
+      mcn: rawMcn,
+      name: rawName || "Unknown",
+      ...(rawStatus ? { status: rawStatus } : {}),
+    };
 
     if (seenMcns.has(entry.mcn)) {
       duplicatesRemoved++;
