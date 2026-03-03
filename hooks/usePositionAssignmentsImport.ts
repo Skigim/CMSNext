@@ -14,7 +14,7 @@
 import { useCallback, useMemo, useRef, useState, type ChangeEvent, type RefObject } from "react";
 import { toast } from "sonner";
 import { useDataManagerSafe } from "@/contexts/DataManagerContext";
-import type { CaseStatus, StoredCase } from "@/types/case";
+import type { StoredCase } from "@/types/case";
 import type { CategoryConfig } from "@/types/categoryConfig";
 import {
   parsePositionAssignments,
@@ -361,11 +361,22 @@ export function usePositionAssignmentsImport({
           ]);
         }
 
+        const knownStatusNames = new Set([
+          ...categoryConfig.caseStatuses.map(s => s.name),
+          ...statusImportPlan.newStatuses.map(s => s.name),
+        ]);
+
         for (const [status, caseIds] of statusImportPlan.statusUpdatesByStatus) {
-          await dataManager.updateCasesStatus(caseIds, status as CaseStatus);
+          const canonicalStatus = [...knownStatusNames].find(n => n.toLowerCase() === status.toLowerCase());
+          if (canonicalStatus) {
+            await dataManager.updateCasesStatus(caseIds, canonicalStatus as StoredCase["status"]);
+          } else {
+            logger.warn("Skipping status update for unconfigured status", { status, caseCount: caseIds.length });
+          }
         }
 
         statusUpdatedCount = statusImportPlan.updatedCaseCount;
+        onCasesUpdated?.();
       }
 
       // ---- 2. Flag unmatched cases for archival ----
@@ -374,9 +385,8 @@ export function usePositionAssignmentsImport({
           Array.from(importState.selectedCaseIds)
         );
         archivalMarkedCount = archivalResult.markedCount;
+        onCasesUpdated?.();
       }
-
-      onCasesUpdated?.();
 
       // Build a combined toast message
       const parts: string[] = [];
