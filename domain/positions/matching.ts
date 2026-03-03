@@ -65,23 +65,6 @@ export interface AssignmentsCompareResult {
 // ============================================================================
 
 /**
- * Build a Set of normalized MCNs from parsed position assignment entries.
- *
- * @param entries - Parsed entries from the position assignments file
- * @returns Set of normalized MCN strings for O(1) lookup
- */
-export function buildAssignmentMcnSet(entries: ParsedPositionEntry[]): Set<string> {
-  const mcnSet = new Set<string>();
-  for (const entry of entries) {
-    const normalized = normalizeMcn(entry.mcn);
-    if (normalized) {
-      mcnSet.add(normalized);
-    }
-  }
-  return mcnSet;
-}
-
-/**
  * Build a Map from normalized MCN to its parsed entry, for O(1) status lookup.
  * First occurrence of each MCN wins (matches deduplication in the parser).
  */

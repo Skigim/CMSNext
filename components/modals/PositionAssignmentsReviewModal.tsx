@@ -275,10 +275,10 @@ export function PositionAssignmentsReviewModal({
     const updateCount = selectedStatusUpdateIds.size;
     const archivalCount = selectedCaseIds.size;
     if (updateCount > 0 && archivalCount > 0) {
-      return `Update ${updateCount} Status${updateCount === 1 ? "" : "es"} & Flag ${archivalCount} for Archival`;
+      return `Update status for ${updateCount} Case${updateCount === 1 ? "" : "s"} & Flag ${archivalCount} Case${archivalCount === 1 ? "" : "s"} for Archival`;
     }
     if (updateCount > 0) {
-      return `Update ${updateCount} Status${updateCount === 1 ? "" : "es"}`;
+      return `Update status for ${updateCount} Case${updateCount === 1 ? "" : "s"}`;
     }
     return `Flag ${archivalCount} Case${archivalCount === 1 ? "" : "s"} for Archival`;
   }, [selectedStatusUpdateIds, selectedCaseIds]);
@@ -364,17 +364,20 @@ export function PositionAssignmentsReviewModal({
                     const count = importState.unmatchedCases.filter(c => c.status === status).length;
                     const isActive = importState.statusFilter.has(status);
                     return (
-                      <Badge
+                      <Button
                         key={status}
-                        variant={isActive ? "default" : "outline"}
+                        type="button"
+                        size="sm"
+                        variant={isActive ? "secondary" : "outline"}
+                        aria-pressed={isActive}
                         className={cn(
-                          "cursor-pointer select-none transition-opacity",
+                          "h-6 px-2 text-xs transition-opacity",
                           !isActive && "opacity-50"
                         )}
                         onClick={() => onToggleStatus(status)}
                       >
                         {status} ({count})
-                      </Badge>
+                      </Button>
                     );
                   })}
                 </div>
