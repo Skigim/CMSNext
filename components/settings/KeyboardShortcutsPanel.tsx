@@ -65,6 +65,15 @@ function ShortcutEditor({
 }: Readonly<ShortcutEditorProps>) {
   const [currentBinding, setCurrentBinding] = useState<string | null>(null);
   const [conflict, setConflict] = useState<string | null>(null);
+  const [isChordMode, setIsChordMode] = useState(false);
+  const [chordStep, setChordStep] = useState<1 | 2>(1);
+
+  const handleToggleChordMode = (checked: boolean) => {
+    setIsChordMode(checked);
+    setCurrentBinding(null);
+    setChordStep(1);
+    setConflict(null);
+  };
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -74,6 +83,11 @@ function ShortcutEditor({
       // Cancel on Escape
       if (e.key === "Escape") {
         onCancel();
+        return;
+      }
+
+      // Allow accessibility tab navigation without intercepting
+      if (e.key === "Tab") {
         return;
       }
 
@@ -89,10 +103,29 @@ function ShortcutEditor({
       if (["control", "meta", "alt", "shift"].includes(key)) return;
 
       const binding = [...modifiers, key].join("+");
-      setCurrentBinding(binding);
+      let fullBinding = binding;
+
+      if (isChordMode) {
+        if (chordStep === 1) {
+          setCurrentBinding(binding);
+          setChordStep(2);
+          setConflict(null); // Clear conflict until chord finishes
+          return;
+        } else {
+          fullBinding = `${currentBinding} ${binding}`;
+          setCurrentBinding(fullBinding);
+          // Don't reset chordStep to 1, we want to stay finished unless they toggle mode
+          // or we could reset if we want them to re-start the recording?
+          // Actually, let's keep it complete. They can just try again which will overwrite it.
+          // Let's reset it to 1 so the next keypress starts a new chord.
+          setChordStep(1);
+        }
+      } else {
+        setCurrentBinding(binding);
+      }
 
       // Check for conflicts
-      const conflictFound = allShortcuts.find(s => s.binding === binding && s.id !== shortcut.id && s.enabled);
+      const conflictFound = allShortcuts.find(s => s.binding === fullBinding && s.id !== shortcut.id && s.enabled);
       if (conflictFound) {
         setConflict(conflictFound.label);
       } else {
@@ -102,10 +135,14 @@ function ShortcutEditor({
 
     globalThis.addEventListener("keydown", handleKeyDown);
     return () => globalThis.removeEventListener("keydown", handleKeyDown);
-  }, [allShortcuts, shortcut.id, onCancel]);
+  }, [allShortcuts, shortcut.id, onCancel, isChordMode, chordStep, currentBinding]);
 
   const handleSave = () => {
     if (currentBinding) {
+      // Prevent saving if chord is halfway done
+      if (isChordMode && chordStep === 2) {
+         return;
+      }
       onSave(currentBinding);
     }
   };
@@ -119,12 +156,25 @@ function ShortcutEditor({
         </p>
       </div>
       
+      <div className="flex items-center space-x-2">
+        <Switch id="chord-mode" checked={isChordMode} onCheckedChange={handleToggleChordMode} />
+        <label htmlFor="chord-mode" className="text-sm font-medium leading-none cursor-pointer">
+          Record as two-step chord
+        </label>
+      </div>
+
       <div className="flex items-center justify-center h-20 border rounded-md bg-muted/50">
         {currentBinding ? (
-          <div className="flex gap-1">
+          <div className="flex gap-1 items-center">
             {tokenizeBindingForDisplay(formatBindingForDisplay(currentBinding, isMac)).map((token) => (
               <Kbd key={token.key} className="bg-background">{token.value}</Kbd>
             ))}
+            {isChordMode && chordStep === 2 && (
+              <>
+                <span className="text-muted-foreground mx-1 text-sm font-medium">→</span>
+                <span className="text-sm text-muted-foreground animate-pulse ml-1">Press second key...</span>
+              </>
+            )}
           </div>
         ) : (
           <span className="text-sm text-muted-foreground animate-pulse">Press keys...</span>
@@ -144,7 +194,7 @@ function ShortcutEditor({
         <Button 
           size="sm" 
           onClick={handleSave} 
-          disabled={!currentBinding || !!conflict}
+          disabled={!currentBinding || !!conflict || (isChordMode && chordStep === 2)}
         >
           Save
         </Button>

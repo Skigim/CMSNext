@@ -28,7 +28,7 @@
 
 #### Features
 
-- [ ] Keyboard Shortcut Customization (Settings panel for rebinding).
+- [x] Keyboard Shortcut Customization (Settings panel for rebinding).
 - [ ] Dashboard widget personalization (show/hide, reorder).
 - [ ] Virtual scrolling for 1k+ datasets.
 
