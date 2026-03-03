@@ -388,7 +388,7 @@ export function ArchivalSettingsPanel({ cases }: { cases: StoredCase[] }) {
       <PositionAssignmentsReviewModal
         importState={positionImport.importState}
         onClose={positionImport.closePreview}
-        onConfirm={positionImport.confirmFlagForArchival}
+        onConfirm={positionImport.applyImportChanges}
         onToggleCase={positionImport.toggleCaseSelection}
         onToggleAll={positionImport.toggleAllCases}
         onToggleStatus={positionImport.toggleStatusFilter}

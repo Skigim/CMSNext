@@ -15,11 +15,11 @@ import { useCallback, useMemo, useRef, useState, type ChangeEvent, type RefObjec
 import { toast } from "sonner";
 import { useDataManagerSafe } from "@/contexts/DataManagerContext";
 import type { CaseStatus, StoredCase } from "@/types/case";
-import type { CategoryConfig, StatusConfig } from "@/types/categoryConfig";
-import { autoAssignColorSlot, type ColorSlot } from "@/types/colorSlots";
+import type { CategoryConfig } from "@/types/categoryConfig";
 import {
   parsePositionAssignments,
   compareAssignments,
+  buildStatusImportPlan,
   type AssignmentsSummary,
   type CaseStatusUpdate,
   type PositionParseResult,
@@ -80,7 +80,7 @@ interface UsePositionAssignmentsImportReturn {
   /** Close the preview modal and reset state */
   closePreview: () => void;
   /** Confirm and apply status updates and/or archival flags */
-  confirmFlagForArchival: () => Promise<void>;
+  applyImportChanges: () => Promise<void>;
   /** Toggle selection of a single archival candidate */
   toggleCaseSelection: (caseId: string) => void;
   /** Toggle all visible archival candidates (respects status filter) */
@@ -135,7 +135,7 @@ const INITIAL_STATE: PositionAssignmentsImportState = {
  *   handleButtonClick,
  *   handleFileSelected,
  *   closePreview,
- *   confirmFlagForArchival,
+ *   applyImportChanges,
  *   toggleCaseSelection,
  *   toggleAllCases,
  *   toggleStatusUpdateSelection,
@@ -332,7 +332,7 @@ export function usePositionAssignmentsImport({
   }, []);
 
   // ---- Confirm: apply status updates and/or flag for archival ----
-  const confirmFlagForArchival = useCallback(async () => {
+  const applyImportChanges = useCallback(async () => {
     if (
       !dataManager ||
       (importState.selectedCaseIds.size === 0 && importState.selectedStatusUpdateIds.size === 0)
@@ -352,42 +352,20 @@ export function usePositionAssignmentsImport({
       );
 
       if (selectedUpdates.length > 0) {
-        // Ensure every imported status exists in categoryConfig.caseStatuses
-        const existingNames = new Set(
-          categoryConfig.caseStatuses.map(s => s.name.toLowerCase())
-        );
-        const usedSlots = new Set<ColorSlot>(categoryConfig.caseStatuses.map(s => s.colorSlot));
-        const newStatuses: StatusConfig[] = [];
+        const statusImportPlan = buildStatusImportPlan(selectedUpdates, categoryConfig.caseStatuses);
 
-        for (const update of selectedUpdates) {
-          if (!existingNames.has(update.importedStatus.toLowerCase())) {
-            existingNames.add(update.importedStatus.toLowerCase());
-            const colorSlot = autoAssignColorSlot(update.importedStatus, usedSlots);
-            usedSlots.add(colorSlot);
-            newStatuses.push({ name: update.importedStatus, colorSlot });
-          }
-        }
-
-        if (newStatuses.length > 0) {
+        if (statusImportPlan.newStatuses.length > 0) {
           await dataManager.updateCaseStatuses([
             ...categoryConfig.caseStatuses,
-            ...newStatuses,
+            ...statusImportPlan.newStatuses,
           ]);
         }
 
-        // Group by imported status and bulk-update each group
-        const statusGroups = new Map<string, string[]>();
-        for (const update of selectedUpdates) {
-          const ids = statusGroups.get(update.importedStatus) ?? [];
-          ids.push(update.case.id);
-          statusGroups.set(update.importedStatus, ids);
-        }
-
-        for (const [status, caseIds] of statusGroups) {
+        for (const [status, caseIds] of statusImportPlan.statusUpdatesByStatus) {
           await dataManager.updateCasesStatus(caseIds, status as CaseStatus);
         }
 
-        statusUpdatedCount = selectedUpdates.length;
+        statusUpdatedCount = statusImportPlan.updatedCaseCount;
       }
 
       // ---- 2. Flag unmatched cases for archival ----
@@ -413,9 +391,13 @@ export function usePositionAssignmentsImport({
         );
       }
 
-      toast.success("Import applied", {
-        description: parts.join("; ") + ".",
-      });
+      if (parts.length > 0) {
+        toast.success("Import applied", {
+          description: `${parts.join("; ")}.`,
+        });
+      } else {
+        toast.info("No changes applied.");
+      }
 
       setImportState(INITIAL_STATE);
     } catch (error) {
@@ -457,7 +439,7 @@ export function usePositionAssignmentsImport({
     handleButtonClick,
     handleFileSelected,
     closePreview,
-    confirmFlagForArchival,
+    applyImportChanges,
     toggleCaseSelection,
     toggleAllCases,
     toggleStatusFilter,

@@ -8,7 +8,6 @@
 import { describe, it, expect } from "vitest";
 import {
   compareAssignments,
-  buildAssignmentMcnSet,
 } from "@/domain/positions/matching";
 import type { ParsedPositionEntry } from "@/domain/positions/parser";
 import type { StoredCase } from "@/types/case";
@@ -78,33 +77,6 @@ function createEntry(mcn: string, name = "TEST, NAME", status?: string): ParsedP
 // ============================================================================
 // Tests
 // ============================================================================
-
-describe("buildAssignmentMcnSet", () => {
-  it("should build a set of normalized MCNs", () => {
-    const entries = [createEntry("100001"), createEntry("200002"), createEntry("300003")];
-    const set = buildAssignmentMcnSet(entries);
-
-    expect(set.size).toBe(3);
-    expect(set.has("100001")).toBe(true);
-    expect(set.has("200002")).toBe(true);
-    expect(set.has("300003")).toBe(true);
-  });
-
-  it("should skip entries with empty MCN", () => {
-    const entries = [createEntry("100001"), createEntry("")];
-    const set = buildAssignmentMcnSet(entries);
-
-    expect(set.size).toBe(1);
-  });
-
-  it("should normalize MCN values", () => {
-    const entries = [createEntry("MCN-100001")];
-    const set = buildAssignmentMcnSet(entries);
-
-    // normalizeMcn strips non-alphanumeric and uppercases
-    expect(set.has("MCN100001")).toBe(true);
-  });
-});
 
 describe("compareAssignments", () => {
   describe("basic matching", () => {
