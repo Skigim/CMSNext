@@ -282,6 +282,44 @@ describe("compareAssignments", () => {
       expect(result.unmatchedCases).toHaveLength(0);
       expect(result.matchedWithStatusChange).toHaveLength(1);
     });
+
+    it("should map XML status abbreviations to full status labels", () => {
+      const statusPairs = [
+        { abbreviation: "PE", fullStatus: "Pending" },
+        { abbreviation: "AC", fullStatus: "Approved" },
+        { abbreviation: "SP", fullStatus: "Spenddown" },
+        { abbreviation: "CL", fullStatus: "Closed" },
+        { abbreviation: "DE", fullStatus: "Denied" },
+      ];
+
+      for (const { abbreviation, fullStatus } of statusPairs) {
+        const caseId = `c-${abbreviation.toLowerCase()}`;
+        const cases: StoredCase[] = [
+          createTestCase({ id: caseId, mcn: "100001", status: "Active" }),
+        ];
+        const entries = [createEntry("100001", "DOE, JOHN", abbreviation)];
+
+        const result = compareAssignments(cases, entries);
+
+        expect(result.matchedWithStatusChange).toHaveLength(1);
+        expect(result.matchedWithStatusChange[0]).toMatchObject({
+          importedStatus: fullStatus,
+          currentStatus: "Active",
+        });
+      }
+    });
+
+    it("should treat mapped abbreviation status as equal when labels match", () => {
+      const cases: StoredCase[] = [
+        createTestCase({ id: "c1", mcn: "100001", status: "Pending" }),
+      ];
+      const entries = [createEntry("100001", "DOE, JOHN", "PE")];
+
+      const result = compareAssignments(cases, entries);
+
+      expect(result.matchedWithStatusChange).toHaveLength(0);
+      expect(result.summary.statusUpdateCandidates).toBe(0);
+    });
   });
 
   describe("summary statistics", () => {

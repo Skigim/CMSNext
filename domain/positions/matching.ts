@@ -14,6 +14,19 @@ import type { StoredCase } from "../../types/case";
 import type { ParsedPositionEntry } from "./parser";
 import { normalizeMcn } from "../alerts/matching";
 
+const IMPORTED_STATUS_ABBREVIATIONS: Readonly<Record<string, string>> = {
+  PE: "Pending",
+  AC: "Approved",
+  SP: "Spenddown",
+  CL: "Closed",
+  DE: "Denied",
+};
+
+function normalizeImportedStatus(rawStatus: string): string {
+  const trimmedStatus = rawStatus.trim();
+  return IMPORTED_STATUS_ABBREVIATIONS[trimmedStatus.toUpperCase()] ?? trimmedStatus;
+}
+
 // ============================================================================
 // Types
 // ============================================================================
@@ -131,7 +144,9 @@ export function compareAssignments(
     const matchedEntry = assignmentMcnMap.get(caseMcn);
     if (matchedEntry) {
       matched++;
-      const importedStatus = matchedEntry.status?.trim();
+      const importedStatus = matchedEntry.status
+        ? normalizeImportedStatus(matchedEntry.status)
+        : undefined;
       if (
         importedStatus &&
         importedStatus.toLowerCase() !== caseItem.status.toLowerCase()
