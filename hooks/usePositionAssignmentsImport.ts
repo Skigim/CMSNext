@@ -14,6 +14,7 @@
 import { useCallback, useMemo, useRef, useState, type ChangeEvent, type RefObject } from "react";
 import { toast } from "sonner";
 import { useDataManagerSafe } from "@/contexts/DataManagerContext";
+import type { DataManager } from "@/utils/DataManager";
 import type { StoredCase } from "@/types/case";
 import type { CategoryConfig } from "@/types/categoryConfig";
 import {
@@ -28,6 +29,62 @@ import { createLogger } from "@/utils/logger";
 import { extractErrorMessage } from "@/utils/errorUtils";
 
 const logger = createLogger("usePositionAssignmentsImport");
+
+// ============================================================================
+// Private helpers
+// ============================================================================
+
+/**
+ * Applies selected status updates via DataManager.
+ * Returns the total count of cases whose status was changed.
+ */
+async function applyStatusUpdates(
+  dataManager: DataManager,
+  selectedUpdates: CaseStatusUpdate[],
+  categoryConfig: CategoryConfig,
+  onCasesUpdated?: () => void,
+): Promise<number> {
+  if (selectedUpdates.length === 0) return 0;
+
+  const plan = buildStatusImportPlan(selectedUpdates, categoryConfig.caseStatuses);
+
+  if (plan.newStatuses.length > 0) {
+    await dataManager.updateCaseStatuses([
+      ...categoryConfig.caseStatuses,
+      ...plan.newStatuses,
+    ]);
+  }
+
+  let count = 0;
+  for (const [status, caseIds] of plan.statusUpdatesByStatus) {
+    await dataManager.updateCasesStatus(caseIds, status as StoredCase["status"]);
+    count += caseIds.length;
+  }
+  onCasesUpdated?.();
+  return count;
+}
+
+/**
+ * Builds the success toast description from apply-result counts.
+ * Returns null when nothing was applied.
+ */
+function buildImportSuccessMessage(
+  statusUpdatedCount: number,
+  archivalMarkedCount: number,
+): string | null {
+  const parts: string[] = [];
+  if (statusUpdatedCount > 0) {
+    parts.push(
+      `${statusUpdatedCount} case${statusUpdatedCount === 1 ? "" : "s"} updated to imported status`,
+    );
+  }
+  if (archivalMarkedCount > 0) {
+    parts.push(
+      `${archivalMarkedCount} case${archivalMarkedCount === 1 ? "" : "s"} flagged for archival review`,
+    );
+  }
+  return parts.length > 0 ? `${parts.join("; ")}.` : null;
+}
 
 // ============================================================================
 // Types
@@ -378,32 +435,14 @@ export function usePositionAssignmentsImport({
     setImportState(prev => ({ ...prev, phase: "applying" }));
 
     try {
-      let statusUpdatedCount = 0;
-      let archivalMarkedCount = 0;
-
-      // ---- 1. Apply status updates ----
+      // 1. Apply status updates
       const selectedUpdates = importState.matchedWithStatusChange.filter(u =>
         importState.selectedStatusUpdateIds.has(u.case.id)
       );
+      const statusUpdatedCount = await applyStatusUpdates(dataManager, selectedUpdates, categoryConfig, onCasesUpdated);
 
-      if (selectedUpdates.length > 0) {
-        const statusImportPlan = buildStatusImportPlan(selectedUpdates, categoryConfig.caseStatuses);
-
-        if (statusImportPlan.newStatuses.length > 0) {
-          await dataManager.updateCaseStatuses([
-            ...categoryConfig.caseStatuses,
-            ...statusImportPlan.newStatuses,
-          ]);
-        }
-
-        for (const [status, caseIds] of statusImportPlan.statusUpdatesByStatus) {
-          await dataManager.updateCasesStatus(caseIds, status as StoredCase["status"]);
-          statusUpdatedCount += caseIds.length;
-        }
-        onCasesUpdated?.();
-      }
-
-      // ---- 2. Flag unmatched cases for archival ----
+      // 2. Flag unmatched cases for archival
+      let archivalMarkedCount = 0;
       if (importState.selectedCaseIds.size > 0) {
         const archivalResult = await dataManager.markCasesForArchivalByIds(
           Array.from(importState.selectedCaseIds)
@@ -412,23 +451,9 @@ export function usePositionAssignmentsImport({
         onCasesUpdated?.();
       }
 
-      // Build a combined toast message
-      const parts: string[] = [];
-      if (statusUpdatedCount > 0) {
-        parts.push(
-          `${statusUpdatedCount} case${statusUpdatedCount === 1 ? "" : "s"} updated to imported status`
-        );
-      }
-      if (archivalMarkedCount > 0) {
-        parts.push(
-          `${archivalMarkedCount} case${archivalMarkedCount === 1 ? "" : "s"} flagged for archival review`
-        );
-      }
-
-      if (parts.length > 0) {
-        toast.success("Import applied", {
-          description: `${parts.join("; ")}.`,
-        });
+      const successMessage = buildImportSuccessMessage(statusUpdatedCount, archivalMarkedCount);
+      if (successMessage) {
+        toast.success("Import applied", { description: successMessage });
       } else {
         toast.info("No changes applied.");
       }
