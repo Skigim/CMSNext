@@ -339,15 +339,15 @@ export function useKeyboardShortcuts(options: UseKeyboardShortcutsOptions): {
       setShortcuts(resolveShortcuts(getShortcutConfig()));
     }
 
-    if (typeof window !== "undefined") {
-      window.addEventListener("cmsnext:shortcuts:changed", handleShortcutsChanged);
-      window.addEventListener("storage", handleShortcutsChanged);
+    if (globalThis.window !== undefined) {
+      globalThis.window.addEventListener("cmsnext:shortcuts:changed", handleShortcutsChanged);
+      globalThis.window.addEventListener("storage", handleShortcutsChanged);
     }
 
     return () => {
-      if (typeof window !== "undefined") {
-        window.removeEventListener("cmsnext:shortcuts:changed", handleShortcutsChanged);
-        window.removeEventListener("storage", handleShortcutsChanged);
+      if (globalThis.window !== undefined) {
+        globalThis.window.removeEventListener("cmsnext:shortcuts:changed", handleShortcutsChanged);
+        globalThis.window.removeEventListener("storage", handleShortcutsChanged);
       }
     };
   }, []);

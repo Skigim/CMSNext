@@ -36,7 +36,7 @@ function isShortcutConfig(value: unknown): value is ShortcutConfig {
     if (!entry || typeof entry !== "object") return false;
     const e = entry as Record<string, unknown>;
     if (typeof e.enabled !== "boolean") return false;
-    if (typeof e.customBinding !== "undefined" && typeof e.customBinding !== "string") return false;
+    if (e.customBinding !== undefined && typeof e.customBinding !== "string") return false;
   }
 
   return true;
@@ -81,8 +81,8 @@ export function saveShortcutConfig(config: ShortcutConfig): void {
   // Persist only if shape is valid; otherwise fallback to defaults.
   const next = isShortcutConfig(config) ? config : buildDefaultConfig();
   storage.write(next);
-  if (typeof window !== "undefined") {
-    window.dispatchEvent(new CustomEvent("cmsnext:shortcuts:changed"));
+  if (globalThis.window !== undefined) {
+    globalThis.window.dispatchEvent(new CustomEvent("cmsnext:shortcuts:changed"));
   }
 }
 
@@ -115,7 +115,7 @@ export function toggleShortcut(id: string, enabled: boolean): void {
 
 export function resetAllShortcuts(): void {
   storage.clear();
-  if (typeof window !== "undefined") {
-    window.dispatchEvent(new CustomEvent("cmsnext:shortcuts:changed"));
+  if (globalThis.window !== undefined) {
+    globalThis.window.dispatchEvent(new CustomEvent("cmsnext:shortcuts:changed"));
   }
 }

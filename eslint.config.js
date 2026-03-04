@@ -19,6 +19,7 @@ const compat = new FlatCompat({
 export default [{
   ignores: [
     'dist',
+    'coverage/',
     'scripts/',
     'supabase/',
     'archive/',
