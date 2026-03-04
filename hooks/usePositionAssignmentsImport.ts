@@ -210,6 +210,24 @@ export function usePositionAssignmentsImport({
           parseResult.entries
         );
 
+        logger.info("Assignment comparison complete", {
+          totalParsed: summary.totalParsed,
+          matched: summary.matched,
+          statusUpdateCandidates: summary.statusUpdateCandidates,
+          unmatched: summary.unmatched,
+          alreadyFlagged: summary.alreadyFlagged,
+        });
+
+        if (matchedWithStatusChange.length > 0) {
+          logger.info("Status updates detected from XML import", {
+            updates: matchedWithStatusChange.map(u => ({
+              mcn: u.case.mcn,
+              from: u.currentStatus,
+              to: u.importedStatus,
+            })),
+          });
+        }
+
         if (unmatchedCases.length === 0 && matchedWithStatusChange.length === 0) {
           toast.success("All cases accounted for", {
             description: `All ${summary.matched} active cases were found on the assignment list with matching statuses. No changes needed.`,
@@ -222,6 +240,23 @@ export function usePositionAssignmentsImport({
         const selectedIds = new Set(unmatchedCases.map(c => c.id));
         const selectedStatusUpdateIds = new Set(matchedWithStatusChange.map(u => u.case.id));
         const uniqueStatuses = new Set(unmatchedCases.map(c => c.status));
+
+        if (matchedWithStatusChange.length > 0) {
+          const updateLines = matchedWithStatusChange
+            .slice(0, 3)
+            .map(u => `${u.case.mcn}: ${u.currentStatus} → ${u.importedStatus}`)
+            .join(", ");
+          const extraCount = matchedWithStatusChange.length - 3;
+          toast.info(
+            `${matchedWithStatusChange.length} status update${matchedWithStatusChange.length === 1 ? "" : "s"} detected`,
+            {
+              description:
+                matchedWithStatusChange.length <= 3
+                  ? updateLines
+                  : `${updateLines}, +${extraCount} more`,
+            }
+          );
+        }
 
         setImportState({
           phase: "preview",
