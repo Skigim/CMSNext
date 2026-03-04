@@ -332,7 +332,25 @@ export function useKeyboardShortcuts(options: UseKeyboardShortcutsOptions): {
 } {
   const isMac = useMemo(() => isMacPlatform(), []);
 
-  const [shortcuts] = useState<ResolvedShortcut[]>(() => resolveShortcuts(getShortcutConfig()));
+  const [shortcuts, setShortcuts] = useState<ResolvedShortcut[]>(() => resolveShortcuts(getShortcutConfig()));
+
+  useEffect(() => {
+    function handleShortcutsChanged() {
+      setShortcuts(resolveShortcuts(getShortcutConfig()));
+    }
+
+    if (typeof window !== "undefined") {
+      window.addEventListener("cmsnext:shortcuts:changed", handleShortcutsChanged);
+      window.addEventListener("storage", handleShortcutsChanged);
+    }
+
+    return () => {
+      if (typeof window !== "undefined") {
+        window.removeEventListener("cmsnext:shortcuts:changed", handleShortcutsChanged);
+        window.removeEventListener("storage", handleShortcutsChanged);
+      }
+    };
+  }, []);
 
   const shortcutsRef = useRef<ResolvedShortcut[]>(shortcuts);
   useEffect(() => {

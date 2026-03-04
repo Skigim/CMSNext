@@ -81,6 +81,9 @@ export function saveShortcutConfig(config: ShortcutConfig): void {
   // Persist only if shape is valid; otherwise fallback to defaults.
   const next = isShortcutConfig(config) ? config : buildDefaultConfig();
   storage.write(next);
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(new CustomEvent("cmsnext:shortcuts:changed"));
+  }
 }
 
 function ensureEntry(id: string, config: ShortcutConfig): void {
@@ -112,4 +115,7 @@ export function toggleShortcut(id: string, enabled: boolean): void {
 
 export function resetAllShortcuts(): void {
   storage.clear();
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(new CustomEvent("cmsnext:shortcuts:changed"));
+  }
 }
