@@ -37,6 +37,45 @@ function buildSection(mcn: string, name: string): string {
   `;
 }
 
+/**
+ * Build a header/summary row that carries only MCN (no status field).
+ * Simulates Crystal Reports group-header rows that share an MCN with a
+ * subsequent detail row.
+ */
+function buildHeaderSection(mcn: string): string {
+  return `
+    <Section>
+      <Field Name="Mst Case"><FormattedValue>${mcn}</FormattedValue></Field>
+      <Field Name="Program"><FormattedValue>MEDICAID</FormattedValue></Field>
+    </Section>
+  `;
+}
+
+/**
+ * Build a section using the real N-FOCUS SF_* field names and FieldName
+ * attribute (e.g. SFMasterCaseIdNbr1 / {Gen_View.SF_Master_Case}).
+ */
+function buildNFocusSection(mcn: string, name: string, status: string): string {
+  return `
+    <Details Level="1">
+      <Section SectionNumber="0">
+        <Field Name="SFMasterCaseIdNbr1" FieldName="{Gen_View.SF_Master_Case}">
+          <FormattedValue>${mcn}</FormattedValue>
+          <Value>${mcn}</Value>
+        </Field>
+        <Field Name="SFPcNameOrOwner1" FieldName="{Gen_View.SF_Program_Case_Name}">
+          <FormattedValue>${name}</FormattedValue>
+          <Value>${name}</Value>
+        </Field>
+        <Field Name="SFStatusCode1" FieldName="{Gen_View.SF_Status}">
+          <FormattedValue>${status}</FormattedValue>
+          <Value>${status}</Value>
+        </Field>
+      </Section>
+    </Details>
+  `;
+}
+
 function buildXml(sections: string[]): string {
   return `<Report><Details>${sections.join("")}</Details></Report>`;
 }
@@ -55,6 +94,7 @@ describe("parsePositionAssignments", () => {
       expect(result.entries[0]).toEqual({
         mcn: "123456",
         name: "SMITH, JOHN A",
+        status: "PE",
       });
       expect(result.skippedRows).toBe(0);
       expect(result.duplicatesRemoved).toBe(0);
@@ -92,9 +132,35 @@ describe("parsePositionAssignments", () => {
       const result = parsePositionAssignments(xml);
 
       expect(result.entries).toHaveLength(2);
-      expect(result.entries[0]).toEqual({ mcn: "123456", name: "SMITH, JOHN" });
-      expect(result.entries[1]).toEqual({ mcn: "789012", name: "DOE, JANE" });
+      expect(result.entries[0]).toEqual({ mcn: "123456", name: "SMITH, JOHN", status: "PE" });
+      expect(result.entries[1]).toEqual({ mcn: "789012", name: "DOE, JANE", status: "PE" });
       expect(result.duplicatesRemoved).toBe(1);
+    });
+
+    it("should backfill status from a later row when the first row has none", () => {
+      // Simulates a Crystal Reports group-header row followed by a detail row
+      // for the same MCN. The header has MCN but no status; the detail row has
+      // both. Without backfill, the status would be silently dropped and status
+      // matching would never fire for this case.
+      const xml = buildXml([
+        buildHeaderSection("123456"),   // first row: MCN only, no status
+        buildSection("123456", "SMITH, JOHN"),  // detail row: MCN + status
+      ]);
+      const result = parsePositionAssignments(xml);
+
+      expect(result.entries).toHaveLength(1);
+      expect(result.entries[0]).toMatchObject({ mcn: "123456", status: "PE" });
+      expect(result.duplicatesRemoved).toBe(1);
+    });
+
+    it("should not overwrite an existing status with a later empty value", () => {
+      const xml = buildXml([
+        buildSection("123456", "SMITH, JOHN"),  // has status PE
+        buildHeaderSection("123456"),            // no status (later row)
+      ]);
+      const result = parsePositionAssignments(xml);
+
+      expect(result.entries[0]).toMatchObject({ mcn: "123456", status: "PE" });
     });
   });
 
@@ -271,7 +337,8 @@ describe("parsePositionAssignments", () => {
       const records = parseCrystalReportXML(xml);
 
       expect(result.entries).toHaveLength(1);
-      expect(result.entries[0]).toEqual({ mcn: "123456", name: "SMITH, JOHN A" });
+      // SFStatusCode1 normalizes to sfstatuscode → mapped to caseStatus
+      expect(result.entries[0]).toEqual({ mcn: "123456", name: "SMITH, JOHN A", status: "PE" });
       expect(records[0]?.applicationDate).toBe("01-09-2026");
     });
 
@@ -314,7 +381,12 @@ describe("parsePositionAssignments", () => {
     });
 
     it("should omit status from entry when no Case Status field is present", () => {
-      const xml = buildXml([buildSection("111111", "PUBLIC, TEST")]);
+      const xml = buildXml([`
+        <Section>
+          <Field Name="Mst Case"><FormattedValue>111111</FormattedValue></Field>
+          <Field Name="Program Case Name"><FormattedValue>PUBLIC, TEST</FormattedValue></Field>
+        </Section>
+      `]);
       const result = parsePositionAssignments(xml);
 
       expect(result.entries).toHaveLength(1);

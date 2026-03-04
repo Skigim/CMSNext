@@ -197,7 +197,7 @@ function extractFieldValue(node: unknown): string {
     return "";
   }
 
-  // eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- TypeScript narrows to `object` here, not Record; assertion is required for property access
+   
   const record = node as Record<string, unknown>;
   const byPreferred = extractByPreferredKeys(record);
   if (byPreferred) return byPreferred;
@@ -258,7 +258,7 @@ export function parseCrystalReportXML(xmlString: string): PositionAssignmentReco
     trimValues: true,
     parseTagValue: false,
   });
-  // eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- fast-xml-parser returns `unknown`; cast required to traverse the tree
+   
   const parsed = parser.parse(xmlString) as Record<string, unknown>;
 
   const details = findDetailNodes(parsed);
