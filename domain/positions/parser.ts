@@ -73,8 +73,13 @@ const XML_FIELD_MAP: Record<string, keyof PositionAssignmentRecord> = {
   genviewsfprogramcasename: "caseName",
   sfapplicationreceiveddateortext: "applicationDate",
   genviewapplicationreceiveddateortext: "applicationDate",
+  // Status field — N-FOCUS Crystal Reports uses abbreviated column name "St"
+  st: "caseStatus",
   casestatus: "caseStatus",
   sfcasestatus: "caseStatus",
+  sfstatus: "caseStatus",
+  sfstatuscode: "caseStatus",
+  genviewsfstatus: "caseStatus",
 };
 
 // ============================================================================
@@ -128,6 +133,13 @@ function getPropertyByLocalName(record: Record<string, unknown>, localName: stri
   return undefined;
 }
 
+function collectObjectChildren(value: unknown): Record<string, unknown>[] {
+  return toArray(value).filter(
+    (child): child is Record<string, unknown> =>
+      child !== null && typeof child === "object" && !Array.isArray(child),
+  );
+}
+
 function getObjectChildrenByLocalName(node: unknown, localName: string): Record<string, unknown>[] {
   if (!node || typeof node !== "object") return [];
   if (Array.isArray(node)) {
@@ -139,11 +151,7 @@ function getObjectChildrenByLocalName(node: unknown, localName: string): Record<
 
   for (const [key, value] of Object.entries(record)) {
     if (!matchesLocalName(key, localName)) continue;
-    for (const child of toArray(value)) {
-      if (child && typeof child === "object" && !Array.isArray(child)) {
-        matchingChildren.push(child as Record<string, unknown>);
-      }
-    }
+    matchingChildren.push(...collectObjectChildren(value));
   }
 
   return matchingChildren;
@@ -160,6 +168,16 @@ function findDetailNodes(node: unknown): Record<string, unknown>[] {
   if (details.length > 0) return details;
 
   return Object.values(record).flatMap(findDetailNodes);
+}
+
+const PREFERRED_VALUE_KEYS = ["FormattedValue", "Value", "Text", "#text", "_text"] as const;
+
+function extractByPreferredKeys(record: Record<string, unknown>): string {
+  for (const key of PREFERRED_VALUE_KEYS) {
+    const value = extractFieldValue(getPropertyByLocalName(record, key));
+    if (value) return normalizeField(value);
+  }
+  return "";
 }
 
 function extractFieldValue(node: unknown): string {
@@ -179,12 +197,10 @@ function extractFieldValue(node: unknown): string {
     return "";
   }
 
+  // eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- TypeScript narrows to `object` here, not Record; assertion is required for property access
   const record = node as Record<string, unknown>;
-  const preferredKeys = ["FormattedValue", "Value", "Text", "#text", "_text"];
-  for (const key of preferredKeys) {
-    const value = extractFieldValue(getPropertyByLocalName(record, key));
-    if (value) return normalizeField(value);
-  }
+  const byPreferred = extractByPreferredKeys(record);
+  if (byPreferred) return byPreferred;
 
   for (const [key, value] of Object.entries(record)) {
     if (matchesLocalName(key, "Name")) continue;
@@ -209,6 +225,26 @@ function mapFieldToRecord(
   record[mappedKey] = fieldValue;
 }
 
+function processSectionFields(section: Record<string, unknown>): PositionAssignmentRecord {
+  const fields = getObjectChildrenByLocalName(section, "Field");
+  const record: Partial<PositionAssignmentRecord> = {};
+
+  for (const field of fields) {
+    const rawName = getPropertyByLocalName(field, "Name");
+    const rawFieldName = getPropertyByLocalName(field, "FieldName");
+    const name = normalizeField(String(rawName ?? ""));
+    const fieldSource = normalizeField(String(rawFieldName ?? ""));
+    if (!name && !fieldSource) continue;
+
+    const value = extractFieldValue(field);
+    if (!value) continue;
+
+    mapFieldToRecord(record, name, value, fieldSource);
+  }
+
+  return { masterCaseId: "", ...record };
+}
+
 export function parseCrystalReportXML(xmlString: string): PositionAssignmentRecord[] {
   if (!xmlString.trim()) return [];
   const validation = XMLValidator.validate(xmlString);
@@ -222,6 +258,7 @@ export function parseCrystalReportXML(xmlString: string): PositionAssignmentReco
     trimValues: true,
     parseTagValue: false,
   });
+  // eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- fast-xml-parser returns `unknown`; cast required to traverse the tree
   const parsed = parser.parse(xmlString) as Record<string, unknown>;
 
   const details = findDetailNodes(parsed);
@@ -230,24 +267,7 @@ export function parseCrystalReportXML(xmlString: string): PositionAssignmentReco
   for (const detail of details) {
     const sections = getObjectChildrenByLocalName(detail, "Section");
     for (const section of sections) {
-      const fields = getObjectChildrenByLocalName(section, "Field");
-      const record: Partial<PositionAssignmentRecord> = {};
-
-      for (const field of fields) {
-        const fieldRecord = field as Record<string, unknown>;
-        const rawName = getPropertyByLocalName(fieldRecord, "Name");
-        const rawFieldName = getPropertyByLocalName(fieldRecord, "FieldName");
-        const name = normalizeField(String(rawName ?? ""));
-        const fieldSource = normalizeField(String(rawFieldName ?? ""));
-        if (!name && !fieldSource) continue;
-
-        const value = extractFieldValue(fieldRecord);
-        if (!value) continue;
-
-        mapFieldToRecord(record, name, value, fieldSource);
-      }
-
-      parsedRecords.push({ masterCaseId: "", ...record });
+      parsedRecords.push(processSectionFields(section));
     }
   }
 
@@ -257,8 +277,10 @@ export function parseCrystalReportXML(xmlString: string): PositionAssignmentReco
 /**
  * Parse an N-FOCUS "List Position Assignments" XML export.
  *
- * Extracts MCN and case name from each record. Deduplicates by MCN
- * (first occurrence wins). Skips rows without a valid MCN.
+ * Extracts MCN and case name from each record. Deduplicates by MCN —
+ * later rows for the same MCN can backfill missing fields (e.g. a group
+ * header row that carries the MCN but no status will be completed by the
+ * detail row that follows it).  Skips rows without a valid MCN.
  *
  * @param xmlText - Raw text content of the XML file
  * @returns Parse result with entries and statistics
@@ -274,8 +296,7 @@ export function parsePositionAssignments(xmlText: string): PositionParseResult {
   }
   const records = parseCrystalReportXML(xmlText);
 
-  const seenMcns = new Set<string>();
-  const entries: ParsedPositionEntry[] = [];
+  const entriesByMcn = new Map<string, ParsedPositionEntry>();
   let skippedRows = 0;
   let duplicatesRemoved = 0;
 
@@ -289,20 +310,24 @@ export function parsePositionAssignments(xmlText: string): PositionParseResult {
       continue;
     }
 
-    const entry: ParsedPositionEntry = {
-      mcn: rawMcn,
-      name: rawName || "Unknown",
-      ...(rawStatus ? { status: rawStatus } : {}),
-    };
-
-    if (seenMcns.has(entry.mcn)) {
+    const existing = entriesByMcn.get(rawMcn);
+    if (existing) {
+      // Backfill fields the first-seen row was missing (e.g. a group
+      // header carries MCN but no status; the detail row has both).
+      if (!existing.status && rawStatus) existing.status = rawStatus;
+      if (existing.name === "Unknown" && rawName) existing.name = rawName;
       duplicatesRemoved++;
       continue;
     }
 
-    seenMcns.add(entry.mcn);
-    entries.push(entry);
+    entriesByMcn.set(rawMcn, {
+      mcn: rawMcn,
+      name: rawName || "Unknown",
+      ...(rawStatus ? { status: rawStatus } : {}),
+    });
   }
+
+  const entries = Array.from(entriesByMcn.values());
 
   return {
     entries,
