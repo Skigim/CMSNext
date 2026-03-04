@@ -117,7 +117,7 @@ function toArray<T>(value: T | T[] | undefined): T[] {
 
 function stripNamespace(name: string): string {
   const parts = name.split(":");
-  return parts[parts.length - 1] ?? name;
+  return parts[parts.length - 1] ?? name; // NOSONAR typescript:S7755 — Array.at() requires ES2022; project targets ES2021
 }
 
 function matchesLocalName(name: string, localName: string): boolean {
@@ -275,6 +275,16 @@ export function parseCrystalReportXML(xmlString: string): PositionAssignmentReco
 }
 
 /**
+ * Backfill missing fields on an already-seen entry from a subsequent row
+ * for the same MCN (e.g. a group-header row carries MCN but no status;
+ * the detail row that follows has both).
+ */
+function backfillEntry(entry: ParsedPositionEntry, rawName: string, rawStatus: string): void {
+  if (!entry.status && rawStatus) entry.status = rawStatus;
+  if (entry.name === "Unknown" && rawName) entry.name = rawName;
+}
+
+/**
  * Parse an N-FOCUS "List Position Assignments" XML export.
  *
  * Extracts MCN and case name from each record. Deduplicates by MCN —
@@ -314,8 +324,7 @@ export function parsePositionAssignments(xmlText: string): PositionParseResult {
     if (existing) {
       // Backfill fields the first-seen row was missing (e.g. a group
       // header carries MCN but no status; the detail row has both).
-      if (!existing.status && rawStatus) existing.status = rawStatus;
-      if (existing.name === "Unknown" && rawName) existing.name = rawName;
+      backfillEntry(existing, rawName, rawStatus);
       duplicatesRemoved++;
       continue;
     }
