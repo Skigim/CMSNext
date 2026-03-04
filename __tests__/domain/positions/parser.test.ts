@@ -51,31 +51,6 @@ function buildHeaderSection(mcn: string): string {
   `;
 }
 
-/**
- * Build a section using the real N-FOCUS SF_* field names and FieldName
- * attribute (e.g. SFMasterCaseIdNbr1 / {Gen_View.SF_Master_Case}).
- */
-function buildNFocusSection(mcn: string, name: string, status: string): string {
-  return `
-    <Details Level="1">
-      <Section SectionNumber="0">
-        <Field Name="SFMasterCaseIdNbr1" FieldName="{Gen_View.SF_Master_Case}">
-          <FormattedValue>${mcn}</FormattedValue>
-          <Value>${mcn}</Value>
-        </Field>
-        <Field Name="SFPcNameOrOwner1" FieldName="{Gen_View.SF_Program_Case_Name}">
-          <FormattedValue>${name}</FormattedValue>
-          <Value>${name}</Value>
-        </Field>
-        <Field Name="SFStatusCode1" FieldName="{Gen_View.SF_Status}">
-          <FormattedValue>${status}</FormattedValue>
-          <Value>${status}</Value>
-        </Field>
-      </Section>
-    </Details>
-  `;
-}
-
 function buildXml(sections: string[]): string {
   return `<Report><Details>${sections.join("")}</Details></Report>`;
 }
