@@ -258,7 +258,10 @@ export function closePreviousOngoingEntry(
     if (!entry.endDate) {
       const entryStart = new Date(entry.startDate + 'T12:00:00');
       if (!Number.isNaN(entryStart.getTime()) && entryStart < newStart) {
-        return { ...entry, endDate: endDateStr };
+        // Clamp: endDate must not be earlier than the entry's own startDate
+        // (can happen when new entry starts in the same month as the existing entry)
+        const clampedEndDate = endDateStr < entry.startDate ? entry.startDate : endDateStr;
+        return { ...entry, endDate: clampedEndDate };
       }
     }
     return entry;

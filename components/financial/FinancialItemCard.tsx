@@ -43,6 +43,8 @@ export function FinancialItemCard({
 
   const handleKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
     if (event.key === "Enter" || event.key === " ") {
+      // Only handle when the card itself is focused, not a nested interactive element
+      if (event.target !== event.currentTarget) return;
       event.preventDefault();
       handleEditAction();
     }

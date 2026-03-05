@@ -82,6 +82,64 @@ describe("FinancialItemCard", () => {
     expect(onOpenStepperEdit).toHaveBeenCalledWith(item);
   });
 
+  it("calls onOpenStepperEdit when card is activated with Enter key", async () => {
+    // ARRANGE
+    const user = userEvent.setup();
+    const item = createMockFinancialItem("income", {
+      id: "item-1",
+      description: "Paycheck",
+      verificationStatus: "Needs VR",
+    });
+    const onOpenStepperEdit = vi.fn();
+
+    render(
+      <FinancialItemCard
+        item={item}
+        itemType="income"
+        onDelete={vi.fn()}
+        onOpenStepperEdit={onOpenStepperEdit}
+      />
+    );
+
+    const card = screen.getByRole("button", { name: /edit paycheck/i });
+    card.focus();
+
+    // ACT - activate via Enter key
+    await user.keyboard("{Enter}");
+
+    // ASSERT
+    expect(onOpenStepperEdit).toHaveBeenCalledWith(item);
+  });
+
+  it("calls onOpenStepperEdit when card is activated with Space key", async () => {
+    // ARRANGE
+    const user = userEvent.setup();
+    const item = createMockFinancialItem("income", {
+      id: "item-1",
+      description: "Paycheck",
+      verificationStatus: "Needs VR",
+    });
+    const onOpenStepperEdit = vi.fn();
+
+    render(
+      <FinancialItemCard
+        item={item}
+        itemType="income"
+        onDelete={vi.fn()}
+        onOpenStepperEdit={onOpenStepperEdit}
+      />
+    );
+
+    const card = screen.getByRole("button", { name: /edit paycheck/i });
+    card.focus();
+
+    // ACT - activate via Space key
+    await user.keyboard(" ");
+
+    // ASSERT
+    expect(onOpenStepperEdit).toHaveBeenCalledWith(item);
+  });
+
   it("renders correctly with expense item type", () => {
     // ARRANGE
     const item = createMockFinancialItem("expenses", {

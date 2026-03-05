@@ -344,6 +344,12 @@ describe("financialHistory utilities", () => {
         newEntryStart: "2025-01-01", // January 2025 → prior month is December 2024
         expectedEndDate: "2024-12-31",
       },
+      {
+        label: "clamps end date to entry start date when new entry is in the same month",
+        startDate: "2025-10-01",
+        newEntryStart: "2025-10-15", // same month → prior-month-end (09/30) < startDate (10/01) → clamp
+        expectedEndDate: "2025-10-01",
+      },
     ])("$label", ({ startDate, newEntryStart, expectedEndDate }) => {
       const history: AmountHistoryEntry[] = [
         { id: "1", amount: 1000, startDate, endDate: null, createdAt: startDate },

@@ -44,8 +44,10 @@ const defaultCategoryConfig: CategoryConfig = {
 };
 
 // Helper to create test cases
-const createTestCase = (id: string, name = 'Test Case', mcn = 'MCN-001'): StoredCase =>
-  createMockStoredCase({ id, name, mcn });
+const createTestCase = (id: string, name = 'Test Case', mcn = 'MCN-001'): StoredCase => {
+  const base = createMockStoredCase({ id, name, mcn });
+  return { ...base, caseRecord: { ...base.caseRecord, id, mcn } };
+};
 
 // Helper to create test alerts
 const createTestAlert = (id: string, caseId: string, description: string): AlertWithMatch => ({
