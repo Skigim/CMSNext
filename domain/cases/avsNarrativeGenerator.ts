@@ -7,24 +7,21 @@
  * @module domain/cases/avsNarrativeGenerator
  */
 
+import { parseLocalDate } from "@/domain/common";
+
 /**
- * Formats a date string for display in US format (MM/DD/YYYY).
+ * Formats a Date object for display in US format (MM/DD/YYYY).
  *
- * @param dateString - ISO date string or undefined
- * @returns Formatted date string or null if invalid
+ * @param date - Date object, or null/undefined
+ * @returns Formatted date string or null if no date provided
  */
-function formatDateForNarrative(dateString?: string): string | null {
-  if (!dateString) return null;
-  try {
-    const date = new Date(dateString);
-    return date.toLocaleDateString("en-US", {
-      month: "2-digit",
-      day: "2-digit",
-      year: "numeric",
-    });
-  } catch {
-    return dateString;
-  }
+function formatDateForNarrative(date: Date | null | undefined): string | null {
+  if (!date) return null;
+  return date.toLocaleDateString("en-US", {
+    month: "2-digit",
+    day: "2-digit",
+    year: "numeric",
+  });
 }
 
 /**
@@ -59,26 +56,13 @@ export interface GenerateAvsNarrativeOptions {
 export function generateAvsNarrative(options: GenerateAvsNarrativeOptions): string {
   const { avsConsentDate, avsSubmitDate, referenceDate = new Date() } = options;
 
-  const consentDate = formatDateForNarrative(avsConsentDate) || "MM/DD/YYYY";
+  // Parse date-only strings as local time to avoid UTC midnight offset in negative-offset
+  // timezones (e.g. America/Los_Angeles shifts "2026-01-10" to Jan 9 when parsed as UTC).
+  const consentDate = formatDateForNarrative(parseLocalDate(avsConsentDate)) ?? "MM/DD/YYYY";
 
   // Use the explicitly saved AVS submit date when available; fall back to referenceDate.
-  let submitRef: Date;
-  if (avsSubmitDate) {
-    const parsed = formatDateForNarrative(avsSubmitDate);
-    if (parsed) {
-      // Re-parse the formatted string back to a Date for milestone calculations.
-      const [month, day, year] = parsed.split("/").map(Number);
-      if (Number.isFinite(month) && Number.isFinite(day) && Number.isFinite(year)) {
-        submitRef = new Date(year, month - 1, day);
-      } else {
-        submitRef = referenceDate;
-      }
-    } else {
-      submitRef = referenceDate;
-    }
-  } else {
-    submitRef = referenceDate;
-  }
+  // Parse directly via parseLocalDate — no format→split→rebuild roundtrip.
+  const submitRef: Date = (avsSubmitDate ? parseLocalDate(avsSubmitDate) : null) ?? referenceDate;
 
   const submitDate = submitRef.toLocaleDateString("en-US", {
     month: "2-digit",
