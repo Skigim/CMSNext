@@ -9,10 +9,10 @@ This file provides high-level architecture guidance. Detailed patterns are in sp
 | `implementation-guide.md` | Services, domain, hooks, data flow    |
 | `ui-guide.md`             | React components, shadcn/ui, Tailwind |
 | `testing-guide.md`        | Vitest, RTL, mocking patterns         |
-| `agents/AUDIT.md`         | Security, a11y, performance audits    |
-| `agents/STORAGE.md`       | File System Access API, autosave      |
-| `agents/HOOKS.md`         | Custom hook patterns                  |
-| `agents/TEMPLATES.md`     | Ready-to-use prompt templates         |
+| `agents/audit.agent.md`         | Security, a11y, performance audits    |
+| `agents/storage.agent.md`       | File System Access API, autosave      |
+| `agents/hooks.agent.md`         | Custom hook patterns                  |
+| `agents/templates.agent.md`     | Ready-to-use prompt templates         |
 
 ## General Approach
 

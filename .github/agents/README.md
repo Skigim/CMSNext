@@ -4,21 +4,21 @@ This directory contains specialized instruction files for delegating tasks to AI
 
 ## Usage
 
-When dispatching a subagent, reference the relevant instruction file:
+When dispatching a subagent, reference the relevant `*.agent.md` instruction file:
 
 ```
-"Read .github/agents/STORAGE.md for context, then [task description]..."
+"Read .github/agents/storage.agent.md for context, then [task description]..."
 ```
 
 ## Available Agents
 
 | File                           | Domain        | Use For                                       |
 | ------------------------------ | ------------- | --------------------------------------------- |
-| [STORAGE.md](STORAGE.md)       | Storage layer | File System Access API, autosave, persistence |
-| [HOOKS.md](HOOKS.md)           | Custom hooks  | State management, service integration         |
-| [AUDIT.md](AUDIT.md)           | Quality       | Security, a11y, performance audits            |
-| [TEMPLATES.md](TEMPLATES.md)   | Delegation    | Ready-to-use prompt templates                 |
-| [MEMORIES.md](MEMORIES.md)     | Context       | Repository-level AI memories                  |
+| [storage.agent.md](storage.agent.md)       | Storage layer | File System Access API, autosave, persistence |
+| [hooks.agent.md](hooks.agent.md)           | Custom hooks  | State management, service integration         |
+| [audit.agent.md](audit.agent.md)           | Quality       | Security, a11y, performance audits            |
+| [templates.agent.md](templates.agent.md)   | Delegation    | Ready-to-use prompt templates                 |
+| [memories.agent.md](memories.agent.md)     | Context       | Repository-level AI memories                  |
 
 ## Consolidated Guides
 
