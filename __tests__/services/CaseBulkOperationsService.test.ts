@@ -1,8 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { CaseBulkOperationsService } from '@/utils/services/CaseBulkOperationsService';
 import type { FileStorageService, NormalizedFileData, StoredCase } from '@/utils/services/FileStorageService';
-import type { Person, CaseRecord, CaseStatus } from '@/types/case';
+import type { CaseStatus } from '@/types/case';
 import type { CategoryConfig } from '@/types/categoryConfig';
+import { createMockStoredCase } from '@/src/test/testUtils';
 
 // Mock the logger using vi.hoisted to ensure proper initialization order
 const mockLoggerFns = vi.hoisted(() => ({
@@ -39,60 +40,17 @@ describe('CaseBulkOperationsService', () => {
     };
   };
 
-  const createMockPerson = (id: string): Person => ({
-    id,
-    firstName: 'John',
-    lastName: 'Doe',
-    name: 'John Doe',
-    email: 'john@example.com',
-    phone: '555-0100',
-    dateOfBirth: '1980-01-01',
-    ssn: '123-45-6789',
-    organizationId: null,
-    livingArrangement: 'Apartment/House',
-    address: { street: '123 Main St', city: 'Anytown', state: 'ST', zip: '12345' },
-    mailingAddress: { street: '123 Main St', city: 'Anytown', state: 'ST', zip: '12345', sameAsPhysical: true },
-    authorizedRepIds: [],
-    familyMembers: [],
-    status: 'active',
-    createdAt: '2024-01-15T10:00:00Z',
-    dateAdded: '2024-01-15T10:00:00Z',
-  });
-
-  const createMockCaseRecord = (id: string, mcn: string): Omit<CaseRecord, 'financials' | 'notes'> => ({
-    id,
-    mcn,
-    applicationDate: '2024-01-15',
-    caseType: 'Medicaid',
-    personId: 'person-1',
-    spouseId: '',
-    status: 'Pending',
-    description: '',
-    priority: false,
-    livingArrangement: 'Apartment/House',
-    withWaiver: false,
-    admissionDate: '',
-    organizationId: '',
-    authorizedReps: [],
-    retroRequested: '',
-    createdDate: '2024-01-15T10:00:00Z',
-    updatedDate: '2024-01-15T10:00:00Z',
-  });
-
-  const createMockCase = (id: string, status: CaseStatus = 'Pending'): StoredCase => ({
-    id,
-    name: `Case ${id}`,
-    mcn: `MCN-${id}`,
-    status,
-    priority: false,
-    createdAt: '2024-01-15T10:00:00Z',
-    updatedAt: '2024-01-15T10:00:00Z',
-    person: createMockPerson('person-1'),
-    caseRecord: {
-      ...createMockCaseRecord(id, `MCN-${id}`),
-      status, // Ensure caseRecord status matches
-    },
-  });
+  const createMockCase = (id: string, status: CaseStatus = 'Pending'): StoredCase => {
+    const base = createMockStoredCase();
+    return {
+      ...base,
+      id,
+      name: `Case ${id}`,
+      mcn: `MCN-${id}`,
+      status,
+      caseRecord: { ...base.caseRecord, id, mcn: `MCN-${id}`, status },
+    };
+  };
 
   const defaultCategoryConfig: CategoryConfig = {
     caseTypes: ['Medicaid'],

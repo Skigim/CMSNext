@@ -4,7 +4,7 @@ import type { FileStorageService, NormalizedFileData, StoredCase } from '../../u
 import type { AlertWithMatch } from '@/domain/alerts';
 import type { CaseActivityEntry } from '../../types/activityLog';
 import type { CategoryConfig } from '../../types/categoryConfig';
-import type { Person, CaseRecord } from '../../types/case';
+import { createMockStoredCase } from '@/src/test/testUtils';
 
 // Mock FileStorageService
 const createMockFileStorage = (data: NormalizedFileData | null = null) => ({
@@ -43,58 +43,9 @@ const defaultCategoryConfig: CategoryConfig = {
   verificationStatuses: ['Needs VR', 'Verified'],
 };
 
-const createMockPerson = (id: string): Person => ({
-  id,
-  firstName: 'Test',
-  lastName: 'User',
-  name: 'Test User',
-  email: 'test@example.com',
-  phone: '555-0100',
-  dateOfBirth: '1990-01-01',
-  ssn: '',
-  organizationId: null,
-  livingArrangement: 'Apartment/House',
-  address: { street: '123 Main St', city: 'Anytown', state: 'ST', zip: '12345' },
-  mailingAddress: { street: '123 Main St', city: 'Anytown', state: 'ST', zip: '12345', sameAsPhysical: true },
-  authorizedRepIds: [],
-  familyMembers: [],
-  status: 'active',
-  createdAt: '2024-01-01T00:00:00.000Z',
-  dateAdded: '2024-01-01T00:00:00.000Z',
-});
-
-const createMockCaseRecord = (id: string, mcn: string): Omit<CaseRecord, 'financials' | 'notes'> => ({
-  id,
-  mcn,
-  applicationDate: '2024-01-01',
-  caseType: 'Medicaid',
-  personId: 'person-1',
-  spouseId: '',
-  status: 'Active',
-  description: '',
-  priority: false,
-  livingArrangement: 'Apartment/House',
-  withWaiver: false,
-  admissionDate: '',
-  organizationId: '',
-  authorizedReps: [],
-  retroRequested: '',
-  createdDate: '2024-01-01T00:00:00.000Z',
-  updatedDate: '2024-01-01T00:00:00.000Z',
-});
-
 // Helper to create test cases
-const createTestCase = (id: string, name = 'Test Case', mcn = 'MCN-001'): StoredCase => ({
-  id,
-  name,
-  mcn,
-  status: 'Active',
-  priority: false,
-  createdAt: '2024-01-01T00:00:00.000Z',
-  updatedAt: '2024-01-01T00:00:00.000Z',
-  person: createMockPerson('person-1'),
-  caseRecord: createMockCaseRecord(id, mcn),
-});
+const createTestCase = (id: string, name = 'Test Case', mcn = 'MCN-001'): StoredCase =>
+  createMockStoredCase({ id, name, mcn });
 
 // Helper to create test alerts
 const createTestAlert = (id: string, caseId: string, description: string): AlertWithMatch => ({
