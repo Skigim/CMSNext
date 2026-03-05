@@ -331,36 +331,25 @@ describe("financialHistory utilities", () => {
       expect(updated[0].endDate).toContain("2025-05-31");
     });
 
-    it("sets end date to last day of month prior to new entry start month", () => {
+    it.each([
+      {
+        label: "sets end date to last day of month prior to new entry start month",
+        startDate: "2025-09-01",
+        newEntryStart: "2025-10-15", // mid-October → prior month is September → 09/30
+        expectedEndDate: "2025-09-30",
+      },
+      {
+        label: "handles year boundary correctly (new entry in January)",
+        startDate: "2024-12-01",
+        newEntryStart: "2025-01-01", // January 2025 → prior month is December 2024
+        expectedEndDate: "2024-12-31",
+      },
+    ])("$label", ({ startDate, newEntryStart, expectedEndDate }) => {
       const history: AmountHistoryEntry[] = [
-        {
-          id: "1",
-          amount: 1000,
-          startDate: "2025-09-01",
-          endDate: null,
-          createdAt: "2025-09-01",
-        },
+        { id: "1", amount: 1000, startDate, endDate: null, createdAt: startDate },
       ];
-
-      // New entry starts mid-October → prior month is September → 09/30
-      const updated = closePreviousOngoingEntry(history, "2025-10-15");
-      expect(updated[0].endDate).toBe("2025-09-30");
-    });
-
-    it("handles year boundary correctly (new entry in January)", () => {
-      const history: AmountHistoryEntry[] = [
-        {
-          id: "1",
-          amount: 1000,
-          startDate: "2024-12-01",
-          endDate: null,
-          createdAt: "2024-12-01",
-        },
-      ];
-
-      // New entry starts January 2025 → prior month is December 2024
-      const updated = closePreviousOngoingEntry(history, "2025-01-01");
-      expect(updated[0].endDate).toBe("2024-12-31");
+      const updated = closePreviousOngoingEntry(history, newEntryStart);
+      expect(updated[0].endDate).toBe(expectedEndDate);
     });
 
     it("does not modify entries that already have endDate", () => {
