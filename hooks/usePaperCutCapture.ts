@@ -3,6 +3,8 @@ import { addPaperCut } from "@/utils/paperCutStorage";
 
 interface UsePaperCutCaptureResult {
   isOpen: boolean;
+  /** Increments on every openModal() call. Use as a `key` prop to reset modal state. */
+  openCount: number;
   openModal: () => void;
   closeModal: () => void;
   submitPaperCut: (content: string) => void;
@@ -18,12 +20,31 @@ function getCurrentRoute(): string {
 function getNearestContext(): string {
   if (typeof document === "undefined") return "";
 
+  // Try from active element first (button click / focused-element scenario)
   const start = document.activeElement;
-  if (!start || !(start instanceof HTMLElement)) return "";
+  if (start instanceof HTMLElement) {
+    const el = start.closest<HTMLElement>("[data-papercut-context]");
+    if (el) return el.getAttribute("data-papercut-context") ?? "";
 
-  const el = start.closest<HTMLElement>("[data-papercut-context]");
-  const ctx = el?.getAttribute("data-papercut-context");
-  return ctx ?? "";
+    // Fallback: scan the DOM for the first visible [data-papercut-context] element.
+    // This handles the global hotkey scenario where focus is on document.body or
+    // another element outside any context container.
+    const all = Array.from(document.querySelectorAll<HTMLElement>("[data-papercut-context]"));
+    const visible = all.find((candidate) => {
+      const rect = candidate.getBoundingClientRect();
+      return (
+        rect.width > 0 &&
+        rect.height > 0 &&
+        rect.top < globalThis.innerHeight &&
+        rect.bottom > 0 &&
+        rect.left < globalThis.innerWidth &&
+        rect.right > 0
+      );
+    });
+    return visible?.getAttribute("data-papercut-context") ?? "";
+  }
+
+  return "";
 }
 
 /**
@@ -66,12 +87,14 @@ function getNearestContext(): string {
  */
 export function usePaperCutCapture(): UsePaperCutCaptureResult {
   const [isOpen, setIsOpen] = useState(false);
+  const [openCount, setOpenCount] = useState(0);
   const [currentContext, setCurrentContext] = useState("");
   const [currentRoute, setCurrentRoute] = useState("");
 
   const openModal = useCallback(() => {
     setCurrentRoute(getCurrentRoute());
     setCurrentContext(getNearestContext());
+    setOpenCount((c) => c + 1);
     setIsOpen(true);
   }, []);
 
@@ -87,5 +110,5 @@ export function usePaperCutCapture(): UsePaperCutCaptureResult {
     setIsOpen(false);
   }, [currentContext, currentRoute]);
 
-  return { isOpen, openModal, closeModal, submitPaperCut, currentContext, currentRoute };
+  return { isOpen, openCount, openModal, closeModal, submitPaperCut, currentContext, currentRoute };
 }

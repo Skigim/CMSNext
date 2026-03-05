@@ -78,6 +78,7 @@ export default function App() {
       <FileStorageIntegrator>
         <AppContent />
         <PaperCutModal
+          key={paperCut.openCount}
           open={paperCut.isOpen}
           onOpenChange={(open) => (open ? paperCut.openModal() : paperCut.closeModal())}
           route={paperCut.currentRoute}

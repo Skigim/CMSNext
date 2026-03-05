@@ -117,12 +117,15 @@ export function IntakeChecklistView({
   }, []);
 
   const handleCopyNarrative = useCallback(() => {
-    const narrative = generateAvsNarrative({ avsConsentDate: caseRecord.avsConsentDate });
+    const narrative = generateAvsNarrative({
+      avsConsentDate: caseRecord.avsConsentDate,
+      avsSubmitDate: caseRecord.avsSubmitDate,
+    });
     clickToCopy(narrative, {
       successMessage: "AVS narrative copied to clipboard",
       errorMessage: "Failed to copy narrative",
     });
-  }, [caseRecord.avsConsentDate]);
+  }, [caseRecord.avsConsentDate, caseRecord.avsSubmitDate]);
 
   // Contact methods display
   const contactMethodsDisplay = useMemo(() => {

@@ -33,7 +33,13 @@ async function importSingleAccount(
   try {
     const itemData = avsAccountToFinancialItem(account);
     if (account.existingItemId) {
-      await dataManager.updateItem(caseId, "resources", account.existingItemId, itemData as Partial<FinancialItem>);
+      // Explicitly set verification fields for updates to ensure AVS-imported
+      // items are always marked as verified by AVS, regardless of prior status.
+      await dataManager.updateItem(caseId, "resources", account.existingItemId, {
+        ...itemData,
+        verificationStatus: "Verified",
+        verificationSource: "AVS",
+      } as Partial<FinancialItem>);
       return { outcome: "updated" };
     }
     await dataManager.addItem(caseId, "resources", itemData as Omit<FinancialItem, "id" | "createdAt" | "updatedAt">);

@@ -27,7 +27,7 @@ export const DEFAULT_SHORTCUTS: ShortcutDefinition[] = [
   { id: "goToSettings", label: "Go to Settings", category: "navigation", defaultBinding: "ctrl+g s", enabled: true },
 
   // Actions
-  { id: "newCase", label: "New Case", category: "actions", defaultBinding: "ctrl+n", enabled: true },
+  { id: "newCase", label: "New Case", category: "actions", defaultBinding: "ctrl+alt+n", enabled: true },
   { id: "focusSearch", label: "Focus Search", category: "actions", defaultBinding: "/", enabled: true },
   { id: "paperCut", label: "Report Paper Cut", category: "actions", defaultBinding: "ctrl+shift+b", enabled: true },
   { id: "showHelp", label: "Show Keyboard Shortcuts", category: "actions", defaultBinding: "?", enabled: true },

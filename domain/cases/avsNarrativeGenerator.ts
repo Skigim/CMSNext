@@ -7,24 +7,21 @@
  * @module domain/cases/avsNarrativeGenerator
  */
 
+import { parseLocalDate } from "@/domain/common";
+
 /**
- * Formats a date string for display in US format (MM/DD/YYYY).
+ * Formats a Date object for display in US format (MM/DD/YYYY).
  *
- * @param dateString - ISO date string or undefined
- * @returns Formatted date string or null if invalid
+ * @param date - Date object, or null/undefined
+ * @returns Formatted date string or null if no date provided
  */
-function formatDateForNarrative(dateString?: string): string | null {
-  if (!dateString) return null;
-  try {
-    const date = new Date(dateString);
-    return date.toLocaleDateString("en-US", {
-      month: "2-digit",
-      day: "2-digit",
-      year: "numeric",
-    });
-  } catch {
-    return dateString;
-  }
+function formatDateForNarrative(date: Date | null | undefined): string | null {
+  if (!date) return null;
+  return date.toLocaleDateString("en-US", {
+    month: "2-digit",
+    day: "2-digit",
+    year: "numeric",
+  });
 }
 
 /**
@@ -33,7 +30,9 @@ function formatDateForNarrative(dateString?: string): string | null {
 export interface GenerateAvsNarrativeOptions {
   /** The consent date in ISO format */
   avsConsentDate?: string;
-  /** Optional reference date (defaults to today) */
+  /** The AVS submit date in ISO format. When provided, overrides `referenceDate`. */
+  avsSubmitDate?: string;
+  /** Optional reference date used as the submit date (defaults to today). Ignored when `avsSubmitDate` is provided. */
   referenceDate?: Date;
 }
 
@@ -55,26 +54,32 @@ export interface GenerateAvsNarrativeOptions {
  * ```
  */
 export function generateAvsNarrative(options: GenerateAvsNarrativeOptions): string {
-  const { avsConsentDate, referenceDate = new Date() } = options;
+  const { avsConsentDate, avsSubmitDate, referenceDate = new Date() } = options;
 
-  const consentDate = formatDateForNarrative(avsConsentDate) || "MM/DD/YYYY";
+  // Parse date-only strings as local time to avoid UTC midnight offset in negative-offset
+  // timezones (e.g. America/Los_Angeles shifts "2026-01-10" to Jan 9 when parsed as UTC).
+  const consentDate = formatDateForNarrative(parseLocalDate(avsConsentDate)) ?? "MM/DD/YYYY";
 
-  const submitDate = referenceDate.toLocaleDateString("en-US", {
+  // Use the explicitly saved AVS submit date when available; fall back to referenceDate.
+  // Parse directly via parseLocalDate — no format→split→rebuild roundtrip.
+  const submitRef: Date = (avsSubmitDate ? parseLocalDate(avsSubmitDate) : null) ?? referenceDate;
+
+  const submitDate = submitRef.toLocaleDateString("en-US", {
     month: "2-digit",
     day: "2-digit",
     year: "numeric",
   });
 
-  const fiveDay = new Date(referenceDate);
-  fiveDay.setDate(referenceDate.getDate() + 5);
+  const fiveDay = new Date(submitRef);
+  fiveDay.setDate(submitRef.getDate() + 5);
   const fiveDayDate = fiveDay.toLocaleDateString("en-US", {
     month: "2-digit",
     day: "2-digit",
     year: "numeric",
   });
 
-  const elevenDay = new Date(referenceDate);
-  elevenDay.setDate(referenceDate.getDate() + 11);
+  const elevenDay = new Date(submitRef);
+  elevenDay.setDate(submitRef.getDate() + 11);
   const elevenDayDate = elevenDay.toLocaleDateString("en-US", {
     month: "2-digit",
     day: "2-digit",

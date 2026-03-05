@@ -499,12 +499,15 @@ export function CaseIdentificationSection({
   };
 
   const handleCopyNarrative = useCallback(() => {
-    const narrative = generateAvsNarrative({ avsConsentDate: caseData.avsConsentDate });
+    const narrative = generateAvsNarrative({
+      avsConsentDate: caseData.avsConsentDate,
+      avsSubmitDate: caseData.avsSubmitDate,
+    });
     clickToCopy(narrative, {
       successMessage: "AVS narrative copied to clipboard",
       errorMessage: "Failed to copy narrative",
     });
-  }, [caseData.avsConsentDate]);
+  }, [caseData.avsConsentDate, caseData.avsSubmitDate]);
 
   return (
     <Card>
