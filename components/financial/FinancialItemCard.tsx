@@ -1,3 +1,4 @@
+import type { KeyboardEvent } from "react";
 import { Card, CardHeader } from "../ui/card";
 import type { FinancialItem, CaseCategory } from "../../types/case";
 import { FinancialItemCardHeader } from "./FinancialItemCardHeader";
@@ -40,10 +41,24 @@ export function FinancialItemCard({
   // Click handler opens the stepper modal
   const handleEditAction = () => onOpenStepperEdit(item);
 
+  const handleKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
+    if (event.key === "Enter" || event.key === " ") {
+      // Only handle when the card itself is focused, not a nested interactive element
+      if (event.target !== event.currentTarget) return;
+      event.preventDefault();
+      handleEditAction();
+    }
+  };
+
   return (
     <Card
       data-papercut-context="FinancialItemCard"
-      className="group relative overflow-visible transition-shadow hover:shadow-md"
+      className="group relative overflow-visible transition-shadow hover:shadow-md cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+      role="button"
+      tabIndex={0}
+      aria-label={`Edit ${normalizedItem.displayName || "financial item"}`}
+      onClick={handleEditAction}
+      onKeyDown={handleKeyDown}
     >
       {/* Floating action buttons - top right corner overlapping card edge */}
       {showActions && (
@@ -59,20 +74,13 @@ export function FinancialItemCard({
 
       {/* Display mode - card is always in display mode now */}
       <CardHeader className="!block pb-2">
-        <button
-          type="button"
-          className="w-full text-left bg-transparent border-none p-0 min-w-0 cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary rounded-md"
-          onClick={handleEditAction}
-          aria-label={`Edit ${normalizedItem.displayName || "financial item"}`}
-        >
-          <FinancialItemCardHeader
-            itemType={itemType}
-            displayName={normalizedItem.displayName}
-            dateAdded={normalizedItem.dateAdded}
-            displayAmount={displayAmount}
-            isAmountFallback={isAmountFallback}
-          />
-        </button>
+        <FinancialItemCardHeader
+          itemType={itemType}
+          displayName={normalizedItem.displayName}
+          dateAdded={normalizedItem.dateAdded}
+          displayAmount={displayAmount}
+          isAmountFallback={isAmountFallback}
+        />
         <FinancialItemCardMeta
           normalizedItem={normalizedItem}
           verificationStatus={verificationStatus}

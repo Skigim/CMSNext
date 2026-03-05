@@ -8,64 +8,11 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { CaseArchiveService } from "@/utils/services/CaseArchiveService";
 import type { StoredCase } from "@/types/case";
+import { createMockStoredCase } from "@/src/test/testUtils";
 
 // ============================================================================
 // Mocks
 // ============================================================================
-
-function createTestCase(
-  overrides: Partial<StoredCase> = {}
-): StoredCase {
-  return {
-    id: `case-${Math.random().toString(36).slice(2, 9)}`,
-    name: "Test Case",
-    mcn: "100001",
-    status: "Active",
-    priority: false,
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-    person: {
-      id: "person-1",
-      firstName: "John",
-      lastName: "Doe",
-      name: "John Doe",
-      email: "",
-      phone: "",
-      dateOfBirth: "",
-      ssn: "",
-      organizationId: null,
-      livingArrangement: "Alone",
-      address: { street: "", city: "", state: "", zip: "" },
-      mailingAddress: { street: "", city: "", state: "", zip: "", sameAsPhysical: true },
-      authorizedRepIds: [],
-      familyMembers: [],
-      status: "active",
-      createdAt: new Date().toISOString(),
-      dateAdded: new Date().toISOString(),
-    },
-    caseRecord: {
-      id: "record-1",
-      mcn: "100001",
-      applicationDate: new Date().toISOString(),
-      caseType: "SNAP",
-      applicationType: "New",
-      personId: "person-1",
-      spouseId: "",
-      status: "Active",
-      description: "",
-      priority: false,
-      livingArrangement: "Alone",
-      withWaiver: false,
-      admissionDate: new Date().toISOString(),
-      organizationId: "",
-      authorizedReps: [],
-      retroRequested: "",
-      createdDate: new Date().toISOString(),
-      updatedDate: new Date().toISOString(),
-    },
-    ...overrides,
-  };
-}
 
 function createMockFileStorage(cases: StoredCase[]) {
   return {
@@ -99,9 +46,9 @@ describe("CaseArchiveService.markForArchival", () => {
 
   beforeEach(() => {
     const cases = [
-      createTestCase({ id: "c1", mcn: "100001" }),
-      createTestCase({ id: "c2", mcn: "200002" }),
-      createTestCase({ id: "c3", mcn: "300003", pendingArchival: true }),
+      createMockStoredCase({ id: "c1", mcn: "100001" }),
+      createMockStoredCase({ id: "c2", mcn: "200002" }),
+      createMockStoredCase({ id: "c3", mcn: "300003", pendingArchival: true }),
     ];
     mockFileStorage = createMockFileStorage(cases);
 

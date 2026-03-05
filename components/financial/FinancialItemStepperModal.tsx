@@ -55,6 +55,7 @@ import {
   createHistoryEntry,
   updateHistoryEntry,
   deleteHistoryEntry,
+  closePreviousOngoingEntry,
 } from "@/domain/financials";
 import { cn } from "../ui/utils";
 
@@ -574,7 +575,10 @@ export function FinancialItemStepperModal({
         verificationStatus: entryFormData.verificationStatus || undefined,
         verificationSource: entryFormData.verificationSource || undefined,
       });
-      setLocalHistoryEntries((prev) => [...prev, newEntry]);
+      setLocalHistoryEntries((prev) => {
+        const closedPrev = closePreviousOngoingEntry(prev, entryFormData.startDate);
+        return [...closedPrev, newEntry];
+      });
     } else if (editingEntryId) {
       setLocalHistoryEntries((prev) =>
         updateHistoryEntry(prev, editingEntryId, {

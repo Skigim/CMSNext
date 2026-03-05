@@ -66,7 +66,7 @@ describe("FinancialItemCard", () => {
     });
     const onOpenStepperEdit = vi.fn();
 
-    const { container } = render(
+    render(
       <FinancialItemCard
         item={item}
         itemType="income"
@@ -75,11 +75,68 @@ describe("FinancialItemCard", () => {
       />
     );
 
-    // ACT
-    const clickableArea = container.querySelector(".cursor-pointer") as HTMLElement;
-    await user.click(clickableArea);
+    // ACT - the Card itself is the interactive region (role="button")
+    await user.click(screen.getByRole("button", { name: /edit paycheck/i }));
 
-    // ASSERT - should call stepper edit handler with item
+    // ASSERT
+    expect(onOpenStepperEdit).toHaveBeenCalledWith(item);
+  });
+
+  it("calls onOpenStepperEdit when card is activated with Enter key", async () => {
+    // ARRANGE
+    const user = userEvent.setup();
+    const item = createMockFinancialItem("income", {
+      id: "item-1",
+      description: "Paycheck",
+      verificationStatus: "Needs VR",
+    });
+    const onOpenStepperEdit = vi.fn();
+
+    render(
+      <FinancialItemCard
+        item={item}
+        itemType="income"
+        onDelete={vi.fn()}
+        onOpenStepperEdit={onOpenStepperEdit}
+      />
+    );
+
+    const card = screen.getByRole("button", { name: /edit paycheck/i });
+    card.focus();
+
+    // ACT - activate via Enter key
+    await user.keyboard("{Enter}");
+
+    // ASSERT
+    expect(onOpenStepperEdit).toHaveBeenCalledWith(item);
+  });
+
+  it("calls onOpenStepperEdit when card is activated with Space key", async () => {
+    // ARRANGE
+    const user = userEvent.setup();
+    const item = createMockFinancialItem("income", {
+      id: "item-1",
+      description: "Paycheck",
+      verificationStatus: "Needs VR",
+    });
+    const onOpenStepperEdit = vi.fn();
+
+    render(
+      <FinancialItemCard
+        item={item}
+        itemType="income"
+        onDelete={vi.fn()}
+        onOpenStepperEdit={onOpenStepperEdit}
+      />
+    );
+
+    const card = screen.getByRole("button", { name: /edit paycheck/i });
+    card.focus();
+
+    // ACT - activate via Space key
+    await user.keyboard(" ");
+
+    // ASSERT
     expect(onOpenStepperEdit).toHaveBeenCalledWith(item);
   });
 
@@ -140,35 +197,6 @@ describe("FinancialItemCard", () => {
 
     // ASSERT - should show amount from history entry
     expect(screen.getByText("$5,000.00")).toBeInTheDocument();
-  });
-
-  it("calls onOpenStepperEdit when card is clicked", async () => {
-    // ARRANGE
-    const user = userEvent.setup();
-    const item = createMockFinancialItem("income", {
-      id: "item-1",
-      description: "Test Item",
-      verificationStatus: "Needs VR",
-    });
-    const onOpenStepperEdit = vi.fn();
-    const onUpdate = vi.fn();
-
-    render(
-      <FinancialItemCard
-        item={item}
-        itemType="income"
-        onDelete={vi.fn()}
-        onUpdate={onUpdate}
-        onOpenStepperEdit={onOpenStepperEdit}
-      />
-    );
-
-    // ACT - click on the card itself to open edit
-    const cardContent = screen.getByText(/Test Item/);
-    await user.click(cardContent);
-
-    // ASSERT
-    expect(onOpenStepperEdit).toHaveBeenCalledWith(item);
   });
 
   it("displays verification status badge", () => {
