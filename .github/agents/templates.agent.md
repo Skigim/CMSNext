@@ -11,7 +11,7 @@ Ready-to-use prompt templates for delegating tasks to subagents. Copy and custom
 ```
 TASK: Research only - do not make changes.
 
-Read .github/agents/[AREA].md for context.
+Read .github/agents/[AREA].agent.md for context.
 
 Search the codebase for all usages of [PATTERN/FUNCTION/CLASS].
 
@@ -33,7 +33,7 @@ There is a bug where [DESCRIPTION].
 
 Steps to investigate:
 1. Search for related code using keywords: [KEYWORDS]
-2. Read .github/agents/[AREA].md for expected patterns
+2. Read .github/agents/[AREA].agent.md for expected patterns
 3. Trace the data flow from [START] to [END]
 4. Identify where the bug might originate
 5. List potential fixes
@@ -65,7 +65,7 @@ Return:
 ```
 TASK: Implement a new service method.
 
-Read .github/agents/SERVICES.md for patterns.
+Read .github/implementation-guide.md for patterns.
 
 Add to [SERVICE_NAME]:
 - Method: [METHOD_NAME]
@@ -88,7 +88,7 @@ Return the method implementation.
 ```
 TASK: Create a new custom hook.
 
-Read .github/agents/HOOKS.md for patterns.
+Read .github/agents/hooks.agent.md for patterns.
 
 Hook: use[FEATURE_NAME]
 Location: hooks/use[FEATURE_NAME].ts
@@ -108,7 +108,7 @@ Return the hook implementation.
 ```
 TASK: Write unit tests for [MODULE].
 
-Read .github/agents/TESTING.md for patterns.
+Read .github/testing-guide.md for patterns.
 
 Target file: [SOURCE_FILE]
 Test file: [TEST_FILE]
@@ -132,7 +132,7 @@ Return test file content.
 ```
 TASK: Write component tests for [COMPONENT].
 
-Read .github/agents/TESTING.md for patterns.
+Read .github/testing-guide.md for patterns.
 
 Component: [COMPONENT_PATH]
 Test file: [TEST_FILE_PATH]
@@ -161,7 +161,7 @@ Return test file content.
 ```
 TASK: Create a new React component.
 
-Read .github/agents/UI.md for patterns.
+Read .github/ui-guide.md for patterns.
 
 Component: [NAME]
 Location: components/[FOLDER]/[NAME].tsx
@@ -185,7 +185,7 @@ Return the component implementation.
 ```
 TASK: Create a new modal dialog.
 
-Read .github/agents/UI.md for Dialog patterns.
+Read .github/ui-guide.md for Dialog patterns.
 
 Modal: [NAME]Dialog
 Location: components/modals/[NAME]Dialog.tsx
@@ -210,7 +210,7 @@ Return the component implementation.
 ```
 TASK: Create a form component.
 
-Read .github/agents/UI.md for patterns.
+Read .github/ui-guide.md for patterns.
 
 Form: [NAME]Form
 Location: components/forms/[NAME]Form.tsx
@@ -238,7 +238,7 @@ Return the component implementation.
 ```
 TASK: Refactor code to follow updated pattern.
 
-Read .github/agents/[AREA].md for target patterns.
+Read .github/agents/[AREA].agent.md for target patterns.
 
 Current pattern: [OLD_PATTERN]
 Target pattern: [NEW_PATTERN]
@@ -261,7 +261,7 @@ Return summary of changes.
 ```
 TASK: Extract logic from component into custom hook.
 
-Read .github/agents/HOOKS.md for patterns.
+Read .github/agents/hooks.agent.md for patterns.
 
 Component: [COMPONENT_PATH]
 New hook: hooks/use[FEATURE].ts
@@ -290,7 +290,7 @@ VERIFICATION:
 - [ ] npm run build passes
 - [ ] npm test passes
 - [ ] npx tsc --noEmit shows no errors
-- [ ] Code follows patterns in .github/agents/[AREA].md
+- [ ] Code follows patterns in .github/agents/[AREA].agent.md
 - [ ] JSDoc comments on public APIs
 
 Return verification status.
@@ -330,7 +330,7 @@ Return the documented code.
 ```
 TASK: Review [FILE] for pattern compliance.
 
-Read .github/agents/[AREA].md for expected patterns.
+Read .github/agents/[AREA].agent.md for expected patterns.
 
 Check:
 - Follows architectural patterns

@@ -20,8 +20,8 @@
 - .github/implementation-guide.md
 - .github/ui-guide.md
 - .github/testing-guide.md
-- .github/agents/STORAGE.md
-- .github/agents/HOOKS.md
+- .github/agents/storage.agent.md
+- .github/agents/hooks.agent.md
 
 ## Core Entry Points
 

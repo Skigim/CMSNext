@@ -192,10 +192,10 @@ CMSNext/
 │   ├── BRANCHING.md            # Git workflow
 │   ├── COMMIT_STYLE.md         # Commit message format
 │   └── agents/                 # Specialized agent guides
-│       ├── STORAGE.md          # File System Access API patterns
-│       ├── HOOKS.md            # Custom hook patterns
-│       ├── MEMORIES.md         # Repository memory index
-│       └── TEMPLATES.md        # Ready-to-use prompt templates
+│       ├── storage.agent.md    # File System Access API patterns
+│       ├── hooks.agent.md      # Custom hook patterns
+│       ├── memories.agent.md   # Repository memory index
+│       └── templates.agent.md  # Ready-to-use prompt templates
 │
 ├── styles/                     # Global CSS, theme definitions
 ├── public/                     # Static assets
@@ -670,10 +670,10 @@ if (!api) {
 | Service/domain/hook patterns    | `.github/implementation-guide.md`        |
 | Component and Tailwind patterns | `.github/ui-guide.md`                    |
 | Testing standards               | `.github/testing-guide.md`               |
-| Storage layer guide             | `.github/agents/STORAGE.md`              |
-| Hook patterns                   | `.github/agents/HOOKS.md`                |
-| Repository memories             | `.github/agents/MEMORIES.md`             |
-| Prompt templates                | `.github/agents/TEMPLATES.md`            |
+| Storage layer guide             | `.github/agents/storage.agent.md`              |
+| Hook patterns                   | `.github/agents/hooks.agent.md`                |
+| Repository memories             | `.github/agents/memories.agent.md`             |
+| Prompt templates                | `.github/agents/templates.agent.md`            |
 | Current roadmap                 | `docs/development/ROADMAP_FEB_2026.md`   |
 | Feature catalogue               | `docs/development/feature-catalogue.md`  |
 | Deployment                      | `docs/DeploymentGuide.md`                |
