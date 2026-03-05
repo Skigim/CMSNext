@@ -331,6 +331,38 @@ describe("financialHistory utilities", () => {
       expect(updated[0].endDate).toContain("2025-05-31");
     });
 
+    it("sets end date to last day of month prior to new entry start month", () => {
+      const history: AmountHistoryEntry[] = [
+        {
+          id: "1",
+          amount: 1000,
+          startDate: "2025-09-01",
+          endDate: null,
+          createdAt: "2025-09-01",
+        },
+      ];
+
+      // New entry starts mid-October → prior month is September → 09/30
+      const updated = closePreviousOngoingEntry(history, "2025-10-15");
+      expect(updated[0].endDate).toBe("2025-09-30");
+    });
+
+    it("handles year boundary correctly (new entry in January)", () => {
+      const history: AmountHistoryEntry[] = [
+        {
+          id: "1",
+          amount: 1000,
+          startDate: "2024-12-01",
+          endDate: null,
+          createdAt: "2024-12-01",
+        },
+      ];
+
+      // New entry starts January 2025 → prior month is December 2024
+      const updated = closePreviousOngoingEntry(history, "2025-01-01");
+      expect(updated[0].endDate).toBe("2024-12-31");
+    });
+
     it("does not modify entries that already have endDate", () => {
       const history: AmountHistoryEntry[] = [
         {

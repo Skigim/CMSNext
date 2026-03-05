@@ -228,7 +228,8 @@ export function createHistoryEntry(
 
 /**
  * Finds and closes the previous ongoing entry when adding a new one.
- * Sets the previous entry's endDate to the day before the new entry's startDate.
+ * Sets the previous entry's endDate to the last day of the month prior to the
+ * new entry's start month (e.g., new entry starts 10/01 → end date = 09/30).
  * 
  * @param history The current amount history array
  * @param newEntryStartDate The start date of the new entry being added (YYYY-MM-DD)
@@ -248,10 +249,9 @@ export function closePreviousOngoingEntry(
     return history;
   }
   
-  // Calculate day before new start date
-  const dayBefore = new Date(newStart);
-  dayBefore.setDate(dayBefore.getDate() - 1);
-  const endDateStr = `${dayBefore.getFullYear()}-${String(dayBefore.getMonth() + 1).padStart(2, '0')}-${String(dayBefore.getDate()).padStart(2, '0')}`;
+  // Calculate the last day of the month prior to the new entry's start month
+  const firstDayOfPriorMonth = new Date(newStart.getFullYear(), newStart.getMonth() - 1, 1);
+  const endDateStr = getLastOfMonth(firstDayOfPriorMonth);
   
   return history.map(entry => {
     // Only close entries that are ongoing (no endDate) and start before new entry
