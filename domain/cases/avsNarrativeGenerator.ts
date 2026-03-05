@@ -33,7 +33,9 @@ function formatDateForNarrative(dateString?: string): string | null {
 export interface GenerateAvsNarrativeOptions {
   /** The consent date in ISO format */
   avsConsentDate?: string;
-  /** Optional reference date (defaults to today) */
+  /** The AVS submit date in ISO format. When provided, overrides `referenceDate`. */
+  avsSubmitDate?: string;
+  /** Optional reference date used as the submit date (defaults to today). Ignored when `avsSubmitDate` is provided. */
   referenceDate?: Date;
 }
 
@@ -55,26 +57,45 @@ export interface GenerateAvsNarrativeOptions {
  * ```
  */
 export function generateAvsNarrative(options: GenerateAvsNarrativeOptions): string {
-  const { avsConsentDate, referenceDate = new Date() } = options;
+  const { avsConsentDate, avsSubmitDate, referenceDate = new Date() } = options;
 
   const consentDate = formatDateForNarrative(avsConsentDate) || "MM/DD/YYYY";
 
-  const submitDate = referenceDate.toLocaleDateString("en-US", {
+  // Use the explicitly saved AVS submit date when available; fall back to referenceDate.
+  let submitRef: Date;
+  if (avsSubmitDate) {
+    const parsed = formatDateForNarrative(avsSubmitDate);
+    if (parsed) {
+      // Re-parse the formatted string back to a Date for milestone calculations.
+      const [month, day, year] = parsed.split("/").map(Number);
+      if (Number.isFinite(month) && Number.isFinite(day) && Number.isFinite(year)) {
+        submitRef = new Date(year, month - 1, day);
+      } else {
+        submitRef = referenceDate;
+      }
+    } else {
+      submitRef = referenceDate;
+    }
+  } else {
+    submitRef = referenceDate;
+  }
+
+  const submitDate = submitRef.toLocaleDateString("en-US", {
     month: "2-digit",
     day: "2-digit",
     year: "numeric",
   });
 
-  const fiveDay = new Date(referenceDate);
-  fiveDay.setDate(referenceDate.getDate() + 5);
+  const fiveDay = new Date(submitRef);
+  fiveDay.setDate(submitRef.getDate() + 5);
   const fiveDayDate = fiveDay.toLocaleDateString("en-US", {
     month: "2-digit",
     day: "2-digit",
     year: "numeric",
   });
 
-  const elevenDay = new Date(referenceDate);
-  elevenDay.setDate(referenceDate.getDate() + 11);
+  const elevenDay = new Date(submitRef);
+  elevenDay.setDate(submitRef.getDate() + 11);
   const elevenDayDate = elevenDay.toLocaleDateString("en-US", {
     month: "2-digit",
     day: "2-digit",
