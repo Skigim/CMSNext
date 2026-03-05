@@ -101,7 +101,7 @@ Keyboard shortcuts: `Ctrl+G` leader system.
 
 ### Testing Strategy
 * **Unit:** Vitest + React Testing Library.
-* **Mocks:** Do not mock `localStorage` manually; mock the adapter or use the provided test setup.
+* **Mocks:** Do not mock functions or storage inline; mock the adapters or use/extend the provided shared mocking factory.
 * **Accessibility:** Use `jest-axe`.
 * **Forbidden:** `toBeTruthy`, `any`.
 
