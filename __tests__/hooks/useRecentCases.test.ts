@@ -4,8 +4,7 @@ import { useRecentCases } from "@/hooks/useRecentCases";
 import {
   asTypedLocalStorageAdapterMock,
 } from "@/src/test/localStorageAdapterMock";
-
-type RecentCaseEntry = { caseId: string; viewedAt: string };
+import type { RecentCaseEntry } from "@/domain/dashboard/recentCases";
 const storageMock = asTypedLocalStorageAdapterMock<RecentCaseEntry[]>();
 
 vi.mock("@/utils/localStorage", async () => {
