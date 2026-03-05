@@ -4,7 +4,7 @@ import {
   useAdvancedAlertFilter,
 } from "@/hooks/useAdvancedAlertFilter";
 import type { AdvancedAlertFilter, FilterCriterion } from "@/domain/alerts";
-import { localStorageAdapterMock } from "@/src/test/localStorageAdapterMock";
+import { asTypedLocalStorageAdapterMock } from "@/src/test/localStorageAdapterMock";
 
 vi.mock("@/utils/localStorage", async () => {
   const { localStorageAdapterModuleMock } = await import(
@@ -13,10 +13,12 @@ vi.mock("@/utils/localStorage", async () => {
   return localStorageAdapterModuleMock;
 });
 
+const storageMock = asTypedLocalStorageAdapterMock<AdvancedAlertFilter | null>();
+
 describe("useAdvancedAlertFilter", () => {
   beforeEach(() => {
     vi.useFakeTimers();
-    localStorageAdapterMock.reset(null);
+    storageMock.reset(null);
     vi.clearAllMocks();
   });
 
@@ -46,7 +48,7 @@ describe("useAdvancedAlertFilter", () => {
         },
       ],
     };
-    localStorageAdapterMock.mockRead.mockReturnValue(stored);
+    storageMock.mockRead.mockReturnValue(stored);
 
     const { result } = renderHook(() => useAdvancedAlertFilter());
 
@@ -165,7 +167,7 @@ describe("useAdvancedAlertFilter", () => {
       vi.advanceTimersByTime(300);
     });
 
-    expect(localStorageAdapterMock.mockWrite).toHaveBeenCalledWith(
+    expect(storageMock.mockWrite).toHaveBeenCalledWith(
       expect.objectContaining({
         logic: "and",
         criteria: expect.arrayContaining([
@@ -188,7 +190,7 @@ describe("useAdvancedAlertFilter", () => {
         },
       ],
     };
-    localStorageAdapterMock.mockRead.mockReturnValue(stored);
+    storageMock.mockRead.mockReturnValue(stored);
 
     const { result } = renderHook(() => useAdvancedAlertFilter());
 
@@ -199,6 +201,6 @@ describe("useAdvancedAlertFilter", () => {
     expect(result.current.filter.criteria).toEqual([]);
     expect(result.current.filter.logic).toBe("and");
     expect(result.current.hasActiveAdvancedFilters).toBe(false);
-    expect(localStorageAdapterMock.mockClear).toHaveBeenCalled();
+    expect(storageMock.mockClear).toHaveBeenCalled();
   });
 });

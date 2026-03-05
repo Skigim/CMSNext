@@ -1,7 +1,7 @@
 import { renderHook, act } from "@testing-library/react";
 import { describe, expect, it, beforeEach, vi } from "vitest";
 import { usePinnedCases } from "@/hooks/usePinnedCases";
-import { localStorageAdapterMock } from "@/src/test/localStorageAdapterMock";
+import { asTypedLocalStorageAdapterMock } from "@/src/test/localStorageAdapterMock";
 
 vi.mock("@/utils/localStorage", async () => {
   const { localStorageAdapterModuleMock } = await import(
@@ -10,9 +10,11 @@ vi.mock("@/utils/localStorage", async () => {
   return localStorageAdapterModuleMock;
 });
 
+const storageMock = asTypedLocalStorageAdapterMock<string[]>();
+
 describe("usePinnedCases", () => {
   beforeEach(() => {
-    localStorageAdapterMock.reset([]);
+    storageMock.reset([]);
     vi.clearAllMocks();
   });
 
@@ -25,7 +27,7 @@ describe("usePinnedCases", () => {
 
     it("loads existing pins from localStorage", () => {
       const existingPins = ["case-1", "case-2"];
-      localStorageAdapterMock.mockRead.mockReturnValue(existingPins);
+      storageMock.mockRead.mockReturnValue(existingPins);
 
       const { result } = renderHook(() => usePinnedCases());
       expect(result.current.pinnedCaseIds).toEqual(["case-1", "case-2"]);
@@ -33,7 +35,7 @@ describe("usePinnedCases", () => {
     });
 
     it("handles corrupted localStorage data gracefully", () => {
-      localStorageAdapterMock.mockRead.mockReturnValue([]);
+      storageMock.mockRead.mockReturnValue([]);
 
       const { result } = renderHook(() => usePinnedCases());
       expect(result.current.pinnedCaseIds).toEqual([]);
@@ -70,7 +72,7 @@ describe("usePinnedCases", () => {
         result.current.pin("case-1");
       });
 
-      expect(localStorageAdapterMock.mockWrite).toHaveBeenCalledWith(["case-1"]);
+      expect(storageMock.mockWrite).toHaveBeenCalledWith(["case-1"]);
     });
 
     it("respects maxPins limit", () => {
@@ -90,7 +92,7 @@ describe("usePinnedCases", () => {
 
   describe("unpin", () => {
     it("removes a case from pinned list", () => {
-      localStorageAdapterMock.mockRead.mockReturnValue(["case-1", "case-2"]);
+      storageMock.mockRead.mockReturnValue(["case-1", "case-2"]);
 
       const { result } = renderHook(() => usePinnedCases());
 
@@ -102,7 +104,7 @@ describe("usePinnedCases", () => {
     });
 
     it("persists removal to localStorage", () => {
-      localStorageAdapterMock.mockRead.mockReturnValue(["case-1"]);
+      storageMock.mockRead.mockReturnValue(["case-1"]);
 
       const { result } = renderHook(() => usePinnedCases());
 
@@ -110,7 +112,7 @@ describe("usePinnedCases", () => {
         result.current.unpin("case-1");
       });
 
-      expect(localStorageAdapterMock.mockWrite).toHaveBeenCalledWith([]);
+      expect(storageMock.mockWrite).toHaveBeenCalledWith([]);
     });
 
     it("handles unpinning non-existent case gracefully", () => {
@@ -136,7 +138,7 @@ describe("usePinnedCases", () => {
     });
 
     it("unpins a pinned case", () => {
-      localStorageAdapterMock.mockRead.mockReturnValue(["case-1"]);
+      storageMock.mockRead.mockReturnValue(["case-1"]);
 
       const { result } = renderHook(() => usePinnedCases());
 
@@ -154,13 +156,13 @@ describe("usePinnedCases", () => {
         result.current.togglePin("case-1");
       });
 
-      expect(localStorageAdapterMock.mockWrite).toHaveBeenCalledWith(["case-1"]);
+      expect(storageMock.mockWrite).toHaveBeenCalledWith(["case-1"]);
 
       act(() => {
         result.current.togglePin("case-1");
       });
 
-      expect(localStorageAdapterMock.mockWrite).toHaveBeenCalledWith([]);
+      expect(storageMock.mockWrite).toHaveBeenCalledWith([]);
     });
 
     it("respects maxPins when toggling on", () => {
@@ -178,7 +180,7 @@ describe("usePinnedCases", () => {
 
   describe("isPinned", () => {
     it("returns true for pinned case", () => {
-      localStorageAdapterMock.mockRead.mockReturnValue(["case-1"]);
+      storageMock.mockRead.mockReturnValue(["case-1"]);
 
       const { result } = renderHook(() => usePinnedCases());
 
@@ -212,7 +214,7 @@ describe("usePinnedCases", () => {
     });
 
     it("returns false when at limit", () => {
-      localStorageAdapterMock.mockRead.mockReturnValue(["case-1", "case-2"]);
+      storageMock.mockRead.mockReturnValue(["case-1", "case-2"]);
 
       const { result } = renderHook(() => usePinnedCases(2));
 
@@ -234,7 +236,7 @@ describe("usePinnedCases", () => {
 
   describe("reorder", () => {
     it("moves a case to a new position", () => {
-      localStorageAdapterMock.mockRead.mockReturnValue(["a", "b", "c"]);
+      storageMock.mockRead.mockReturnValue(["a", "b", "c"]);
 
       const { result } = renderHook(() => usePinnedCases());
 
@@ -246,7 +248,7 @@ describe("usePinnedCases", () => {
     });
 
     it("persists reorder to localStorage", () => {
-      localStorageAdapterMock.mockRead.mockReturnValue(["a", "b", "c"]);
+      storageMock.mockRead.mockReturnValue(["a", "b", "c"]);
 
       const { result } = renderHook(() => usePinnedCases());
 
@@ -254,11 +256,11 @@ describe("usePinnedCases", () => {
         result.current.reorder("c", 0);
       });
 
-      expect(localStorageAdapterMock.mockWrite).toHaveBeenCalledWith(["c", "a", "b"]);
+      expect(storageMock.mockWrite).toHaveBeenCalledWith(["c", "a", "b"]);
     });
 
     it("handles reorder of non-existent case", () => {
-      localStorageAdapterMock.mockRead.mockReturnValue(["a", "b"]);
+      storageMock.mockRead.mockReturnValue(["a", "b"]);
 
       const { result } = renderHook(() => usePinnedCases());
 
@@ -270,7 +272,7 @@ describe("usePinnedCases", () => {
     });
 
     it("clamps index to valid range", () => {
-      localStorageAdapterMock.mockRead.mockReturnValue(["a", "b", "c"]);
+      storageMock.mockRead.mockReturnValue(["a", "b", "c"]);
 
       const { result } = renderHook(() => usePinnedCases());
 
@@ -327,7 +329,7 @@ describe("usePinnedCases", () => {
 
   describe("pruneStale", () => {
     it("removes pinned IDs not present in the valid set", () => {
-      localStorageAdapterMock.mockRead.mockReturnValue(["case-1", "case-2", "case-3"]);
+      storageMock.mockRead.mockReturnValue(["case-1", "case-2", "case-3"]);
 
       const { result } = renderHook(() => usePinnedCases());
 
@@ -337,11 +339,11 @@ describe("usePinnedCases", () => {
 
       expect(result.current.pinnedCaseIds).toEqual(["case-1", "case-3"]);
       expect(result.current.pinnedCount).toBe(2);
-      expect(localStorageAdapterMock.mockWrite).toHaveBeenCalledWith(["case-1", "case-3"]);
+      expect(storageMock.mockWrite).toHaveBeenCalledWith(["case-1", "case-3"]);
     });
 
     it("does not write to storage when nothing is stale", () => {
-      localStorageAdapterMock.mockRead.mockReturnValue(["case-1", "case-2"]);
+      storageMock.mockRead.mockReturnValue(["case-1", "case-2"]);
 
       const { result } = renderHook(() => usePinnedCases());
 
@@ -350,11 +352,11 @@ describe("usePinnedCases", () => {
       });
 
       expect(result.current.pinnedCaseIds).toEqual(["case-1", "case-2"]);
-      expect(localStorageAdapterMock.mockWrite).not.toHaveBeenCalled();
+      expect(storageMock.mockWrite).not.toHaveBeenCalled();
     });
 
     it("removes all pins when valid set is empty", () => {
-      localStorageAdapterMock.mockRead.mockReturnValue(["case-1", "case-2"]);
+      storageMock.mockRead.mockReturnValue(["case-1", "case-2"]);
 
       const { result } = renderHook(() => usePinnedCases());
 
@@ -364,11 +366,11 @@ describe("usePinnedCases", () => {
 
       expect(result.current.pinnedCaseIds).toEqual([]);
       expect(result.current.pinnedCount).toBe(0);
-      expect(localStorageAdapterMock.mockWrite).toHaveBeenCalledWith([]);
+      expect(storageMock.mockWrite).toHaveBeenCalledWith([]);
     });
 
     it("is a no-op when pinned list is already empty", () => {
-      localStorageAdapterMock.mockRead.mockReturnValue([]);
+      storageMock.mockRead.mockReturnValue([]);
 
       const { result } = renderHook(() => usePinnedCases());
 
@@ -377,7 +379,7 @@ describe("usePinnedCases", () => {
       });
 
       expect(result.current.pinnedCaseIds).toEqual([]);
-      expect(localStorageAdapterMock.mockWrite).not.toHaveBeenCalled();
+      expect(storageMock.mockWrite).not.toHaveBeenCalled();
     });
   });
 });

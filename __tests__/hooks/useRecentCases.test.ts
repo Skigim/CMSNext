@@ -1,9 +1,12 @@
 import { renderHook, act } from "@testing-library/react";
 import { describe, expect, it, beforeEach, vi } from "vitest";
 import { useRecentCases } from "@/hooks/useRecentCases";
-import { localStorageAdapterMock } from "@/src/test/localStorageAdapterMock";
+import {
+  asTypedLocalStorageAdapterMock,
+} from "@/src/test/localStorageAdapterMock";
 
 type RecentCaseEntry = { caseId: string; viewedAt: string };
+const storageMock = asTypedLocalStorageAdapterMock<RecentCaseEntry[]>();
 
 vi.mock("@/utils/localStorage", async () => {
   const { localStorageAdapterModuleMock } = await import(
@@ -14,7 +17,7 @@ vi.mock("@/utils/localStorage", async () => {
 
 describe("useRecentCases", () => {
   beforeEach(() => {
-    localStorageAdapterMock.reset([] as RecentCaseEntry[]);
+    storageMock.reset([]);
     vi.clearAllMocks();
   });
 
@@ -29,14 +32,14 @@ describe("useRecentCases", () => {
         { caseId: "case-1", viewedAt: "2024-01-15T10:00:00.000Z" },
         { caseId: "case-2", viewedAt: "2024-01-15T09:00:00.000Z" },
       ];
-      localStorageAdapterMock.mockRead.mockReturnValue(existingEntries);
+      storageMock.mockRead.mockReturnValue(existingEntries);
 
       const { result } = renderHook(() => useRecentCases());
       expect(result.current.recentCaseIds).toEqual(["case-1", "case-2"]);
     });
 
     it("handles corrupted localStorage data gracefully", () => {
-      localStorageAdapterMock.mockRead.mockReturnValue([]);
+      storageMock.mockRead.mockReturnValue([]);
 
       const { result } = renderHook(() => useRecentCases());
       expect(result.current.recentCaseIds).toEqual([]);
@@ -73,8 +76,12 @@ describe("useRecentCases", () => {
         result.current.addToRecent("case-1");
       });
 
-      expect(localStorageAdapterMock.mockWrite).toHaveBeenCalled();
-      const savedData = localStorageAdapterMock.mockWrite.mock.calls[0][0] as RecentCaseEntry[];
+      expect(storageMock.mockWrite).toHaveBeenCalled();
+      const savedData = storageMock.getLastWrite();
+      expect(savedData).not.toBeUndefined();
+      if (!savedData) {
+        throw new Error("Expected persisted recent cases");
+      }
       expect(savedData).toHaveLength(1);
       expect(savedData[0].caseId).toBe("case-1");
     });
@@ -101,7 +108,7 @@ describe("useRecentCases", () => {
         { caseId: "case-1", viewedAt: "2024-01-15T10:00:00.000Z" },
         { caseId: "case-2", viewedAt: "2024-01-15T09:00:00.000Z" },
       ];
-      localStorageAdapterMock.mockRead.mockReturnValue(existingEntries);
+      storageMock.mockRead.mockReturnValue(existingEntries);
 
       const { result } = renderHook(() => useRecentCases());
 
@@ -116,7 +123,7 @@ describe("useRecentCases", () => {
       const existingEntries = [
         { caseId: "case-1", viewedAt: "2024-01-15T10:00:00.000Z" },
       ];
-      localStorageAdapterMock.mockRead.mockReturnValue(existingEntries);
+      storageMock.mockRead.mockReturnValue(existingEntries);
 
       const { result } = renderHook(() => useRecentCases());
 
@@ -124,7 +131,7 @@ describe("useRecentCases", () => {
         result.current.removeFromRecent("case-1");
       });
 
-      expect(localStorageAdapterMock.mockWrite).toHaveBeenCalledWith([]);
+      expect(storageMock.mockWrite).toHaveBeenCalledWith([]);
     });
 
     it("handles removing non-existent case gracefully", () => {
@@ -144,7 +151,7 @@ describe("useRecentCases", () => {
         { caseId: "case-1", viewedAt: "2024-01-15T10:00:00.000Z" },
         { caseId: "case-2", viewedAt: "2024-01-15T09:00:00.000Z" },
       ];
-      localStorageAdapterMock.mockRead.mockReturnValue(existingEntries);
+      storageMock.mockRead.mockReturnValue(existingEntries);
 
       const { result } = renderHook(() => useRecentCases());
 
@@ -159,7 +166,7 @@ describe("useRecentCases", () => {
       const existingEntries = [
         { caseId: "case-1", viewedAt: "2024-01-15T10:00:00.000Z" },
       ];
-      localStorageAdapterMock.mockRead.mockReturnValue(existingEntries);
+      storageMock.mockRead.mockReturnValue(existingEntries);
 
       const { result } = renderHook(() => useRecentCases());
 
@@ -167,7 +174,7 @@ describe("useRecentCases", () => {
         result.current.clearRecent();
       });
 
-      expect(localStorageAdapterMock.mockClear).toHaveBeenCalled();
+      expect(storageMock.mockClear).toHaveBeenCalled();
     });
   });
 
@@ -176,7 +183,7 @@ describe("useRecentCases", () => {
       const existingEntries = [
         { caseId: "case-1", viewedAt: "2024-01-15T10:00:00.000Z" },
       ];
-      localStorageAdapterMock.mockRead.mockReturnValue(existingEntries);
+      storageMock.mockRead.mockReturnValue(existingEntries);
 
       const { result } = renderHook(() => useRecentCases());
 
