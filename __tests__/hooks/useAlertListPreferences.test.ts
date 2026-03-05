@@ -6,32 +6,19 @@ import {
   type AlertFilters,
   type AlertSortConfig,
 } from "@/hooks/useAlertListPreferences";
+import { localStorageAdapterMock } from "@/src/test/localStorageAdapterMock";
 
-// Use vi.hoisted() to properly hoist mock functions before vi.mock
-const { mockRead, mockWrite, mockClear } = vi.hoisted(() => ({
-  mockRead: vi.fn(),
-  mockWrite: vi.fn(),
-  mockClear: vi.fn(),
-}));
-
-// Mock the localStorage adapter module
-vi.mock("@/utils/localStorage", () => ({
-  createLocalStorageAdapter: vi.fn(() => ({
-    read: mockRead,
-    write: mockWrite,
-    clear: mockClear,
-  })),
-  hasLocalStorage: vi.fn(() => true),
-}));
+vi.mock("@/utils/localStorage", async () => {
+  const { localStorageAdapterModuleMock } = await import(
+    "@/src/test/localStorageAdapterMock"
+  );
+  return localStorageAdapterModuleMock;
+});
 
 describe("useAlertListPreferences", () => {
   beforeEach(() => {
     vi.useFakeTimers();
-    // Reset mock implementations for each test
-    mockRead.mockReset();
-    mockWrite.mockReset();
-    mockClear.mockReset();
-    mockRead.mockReturnValue(null);
+    localStorageAdapterMock.reset(null);
     vi.clearAllMocks();
   });
 
@@ -69,7 +56,7 @@ describe("useAlertListPreferences", () => {
         vi.advanceTimersByTime(300);
       });
 
-      expect(mockWrite).toHaveBeenCalledWith(
+      expect(localStorageAdapterMock.mockWrite).toHaveBeenCalledWith(
         expect.objectContaining({
           sortConfig: newConfig,
         })
@@ -95,7 +82,7 @@ describe("useAlertListPreferences", () => {
         vi.advanceTimersByTime(300);
       });
 
-      expect(mockWrite).toHaveBeenCalledWith(
+      expect(localStorageAdapterMock.mockWrite).toHaveBeenCalledWith(
         expect.objectContaining({
           filters: expect.objectContaining({
             searchTerm: "test search",
@@ -117,7 +104,7 @@ describe("useAlertListPreferences", () => {
           matchStatus: "unmatched",
         },
       };
-      mockRead.mockReturnValue(storedPrefs);
+      localStorageAdapterMock.mockRead.mockReturnValue(storedPrefs);
 
       const { result } = renderHook(() => useAlertListPreferences());
 
@@ -131,7 +118,7 @@ describe("useAlertListPreferences", () => {
 
   describe("corrupted storage fallback", () => {
     it("returns defaults when localStorage contains invalid JSON", () => {
-      mockRead.mockReturnValue(null);
+      localStorageAdapterMock.mockRead.mockReturnValue(null);
 
       const { result } = renderHook(() => useAlertListPreferences());
 
@@ -145,7 +132,7 @@ describe("useAlertListPreferences", () => {
     });
 
     it("returns defaults when localStorage contains non-object", () => {
-      mockRead.mockReturnValue(null);
+      localStorageAdapterMock.mockRead.mockReturnValue(null);
 
       const { result } = renderHook(() => useAlertListPreferences());
 
@@ -163,7 +150,7 @@ describe("useAlertListPreferences", () => {
           matchStatus: "all",
         },
       };
-      mockRead.mockReturnValue(storedPrefs);
+      localStorageAdapterMock.mockRead.mockReturnValue(storedPrefs);
 
       const { result } = renderHook(() => useAlertListPreferences());
 
@@ -181,7 +168,7 @@ describe("useAlertListPreferences", () => {
           matchStatus: "all",
         },
       };
-      mockRead.mockReturnValue(storedPrefs);
+      localStorageAdapterMock.mockRead.mockReturnValue(storedPrefs);
 
       const { result } = renderHook(() => useAlertListPreferences());
 
@@ -194,7 +181,7 @@ describe("useAlertListPreferences", () => {
         sortConfig: { key: "description", direction: "desc" },
         // filters is missing entirely
       };
-      mockRead.mockReturnValue(storedPrefs);
+      localStorageAdapterMock.mockRead.mockReturnValue(storedPrefs);
 
       const { result } = renderHook(() => useAlertListPreferences());
 
@@ -215,7 +202,7 @@ describe("useAlertListPreferences", () => {
           matchStatus: "invalid-status",
         },
       };
-      mockRead.mockReturnValue(storedPrefs);
+      localStorageAdapterMock.mockRead.mockReturnValue(storedPrefs);
 
       const { result } = renderHook(() => useAlertListPreferences());
 
@@ -234,7 +221,7 @@ describe("useAlertListPreferences", () => {
           matchStatus: "matched",
         },
       };
-      mockRead.mockReturnValue(storedPrefs);
+      localStorageAdapterMock.mockRead.mockReturnValue(storedPrefs);
 
       const { result } = renderHook(() => useAlertListPreferences());
 
@@ -265,7 +252,7 @@ describe("useAlertListPreferences", () => {
           matchStatus: "all",
         },
       };
-      mockRead.mockReturnValue(storedPrefs);
+      localStorageAdapterMock.mockRead.mockReturnValue(storedPrefs);
 
       const { result } = renderHook(() => useAlertListPreferences());
 
@@ -274,7 +261,7 @@ describe("useAlertListPreferences", () => {
       });
 
       // The clear() call removes from localStorage
-      expect(mockClear).toHaveBeenCalled();
+      expect(localStorageAdapterMock.mockClear).toHaveBeenCalled();
     });
   });
 

@@ -4,29 +4,19 @@ import {
   useAdvancedAlertFilter,
 } from "@/hooks/useAdvancedAlertFilter";
 import type { AdvancedAlertFilter, FilterCriterion } from "@/domain/alerts";
+import { localStorageAdapterMock } from "@/src/test/localStorageAdapterMock";
 
-const { mockRead, mockWrite, mockClear } = vi.hoisted(() => ({
-  mockRead: vi.fn(),
-  mockWrite: vi.fn(),
-  mockClear: vi.fn(),
-}));
-
-vi.mock("@/utils/localStorage", () => ({
-  createLocalStorageAdapter: vi.fn(() => ({
-    read: mockRead,
-    write: mockWrite,
-    clear: mockClear,
-  })),
-  hasLocalStorage: vi.fn(() => true),
-}));
+vi.mock("@/utils/localStorage", async () => {
+  const { localStorageAdapterModuleMock } = await import(
+    "@/src/test/localStorageAdapterMock"
+  );
+  return localStorageAdapterModuleMock;
+});
 
 describe("useAdvancedAlertFilter", () => {
   beforeEach(() => {
     vi.useFakeTimers();
-    mockRead.mockReset();
-    mockWrite.mockReset();
-    mockClear.mockReset();
-    mockRead.mockReturnValue(null);
+    localStorageAdapterMock.reset(null);
     vi.clearAllMocks();
   });
 
@@ -56,7 +46,7 @@ describe("useAdvancedAlertFilter", () => {
         },
       ],
     };
-    mockRead.mockReturnValue(stored);
+    localStorageAdapterMock.mockRead.mockReturnValue(stored);
 
     const { result } = renderHook(() => useAdvancedAlertFilter());
 
@@ -175,7 +165,7 @@ describe("useAdvancedAlertFilter", () => {
       vi.advanceTimersByTime(300);
     });
 
-    expect(mockWrite).toHaveBeenCalledWith(
+    expect(localStorageAdapterMock.mockWrite).toHaveBeenCalledWith(
       expect.objectContaining({
         logic: "and",
         criteria: expect.arrayContaining([
@@ -198,7 +188,7 @@ describe("useAdvancedAlertFilter", () => {
         },
       ],
     };
-    mockRead.mockReturnValue(stored);
+    localStorageAdapterMock.mockRead.mockReturnValue(stored);
 
     const { result } = renderHook(() => useAdvancedAlertFilter());
 
@@ -209,6 +199,6 @@ describe("useAdvancedAlertFilter", () => {
     expect(result.current.filter.criteria).toEqual([]);
     expect(result.current.filter.logic).toBe("and");
     expect(result.current.hasActiveAdvancedFilters).toBe(false);
-    expect(mockClear).toHaveBeenCalled();
+    expect(localStorageAdapterMock.mockClear).toHaveBeenCalled();
   });
 });

@@ -6,33 +6,19 @@ import {
   type CaseFilters,
   type SortConfig,
 } from "@/hooks/useCaseListPreferences";
+import { localStorageAdapterMock } from "@/src/test/localStorageAdapterMock";
 
-// Use vi.hoisted() to properly hoist mock functions before vi.mock
-const { mockRead, mockWrite, mockClear } = vi.hoisted(() => ({
-  mockRead: vi.fn(),
-  mockWrite: vi.fn(),
-  mockClear: vi.fn(),
-}));
-
-// Mock the localStorage adapter module
-vi.mock("@/utils/localStorage", () => ({
-  createLocalStorageAdapter: vi.fn(() => ({
-    key: "cmsnext-case-list-preferences",
-    read: mockRead,
-    write: mockWrite,
-    clear: mockClear,
-  })),
-  hasLocalStorage: vi.fn(() => true),
-}));
+vi.mock("@/utils/localStorage", async () => {
+  const { localStorageAdapterModuleMock } = await import(
+    "@/src/test/localStorageAdapterMock"
+  );
+  return localStorageAdapterModuleMock;
+});
 
 describe("useCaseListPreferences", () => {
   beforeEach(() => {
     vi.useFakeTimers();
-    // Reset mock implementations for each test
-    mockRead.mockReset();
-    mockWrite.mockReset();
-    mockClear.mockReset();
-    mockRead.mockReturnValue(null);
+    localStorageAdapterMock.reset(null);
     vi.clearAllMocks();
   });
 
@@ -74,8 +60,8 @@ describe("useCaseListPreferences", () => {
         vi.advanceTimersByTime(300);
       });
 
-      expect(mockWrite).toHaveBeenCalled();
-      const savedData = mockWrite.mock.calls[0][0];
+      expect(localStorageAdapterMock.mockWrite).toHaveBeenCalled();
+      const savedData = localStorageAdapterMock.mockWrite.mock.calls[0][0] as { segment: string };
       expect(savedData.segment).toBe("recent");
     });
 
@@ -96,8 +82,8 @@ describe("useCaseListPreferences", () => {
         vi.advanceTimersByTime(300);
       });
 
-      expect(mockWrite).toHaveBeenCalled();
-      const savedData = mockWrite.mock.calls[0][0];
+      expect(localStorageAdapterMock.mockWrite).toHaveBeenCalled();
+      const savedData = localStorageAdapterMock.mockWrite.mock.calls[0][0] as { sortConfigs: SortConfig[] };
       expect(savedData.sortConfigs).toEqual(newConfigs);
     });
 
@@ -126,8 +112,14 @@ describe("useCaseListPreferences", () => {
         vi.advanceTimersByTime(300);
       });
 
-      expect(mockWrite).toHaveBeenCalled();
-      const savedData = mockWrite.mock.calls[0][0];
+      expect(localStorageAdapterMock.mockWrite).toHaveBeenCalled();
+      const savedData = localStorageAdapterMock.mockWrite.mock.calls[0][0] as {
+        filters: {
+          statuses: string[];
+          priorityOnly: boolean;
+          dateRange: { from: string; to: string };
+        };
+      };
       expect(savedData.filters.statuses).toEqual(["Pending", "Active"]);
       expect(savedData.filters.priorityOnly).toBe(true);
       expect(savedData.filters.dateRange.from).toBe("2025-01-01T00:00:00.000Z");
@@ -147,7 +139,7 @@ describe("useCaseListPreferences", () => {
           },
         },
       };
-      mockRead.mockReturnValue(storedPrefs);
+      localStorageAdapterMock.mockRead.mockReturnValue(storedPrefs);
 
       const { result } = renderHook(() => useCaseListPreferences());
 
@@ -165,7 +157,7 @@ describe("useCaseListPreferences", () => {
   describe("corrupted storage fallback", () => {
     it("returns defaults when storage returns null (parsing fails)", () => {
       // The adapter's custom parse function returns null for invalid JSON
-      mockRead.mockReturnValue(null);
+      localStorageAdapterMock.mockRead.mockReturnValue(null);
 
       const { result } = renderHook(() => useCaseListPreferences());
 
@@ -185,7 +177,7 @@ describe("useCaseListPreferences", () => {
 
     it("returns defaults when storage returns non-object", () => {
       // Simulates returning a primitive instead of object
-      mockRead.mockReturnValue(null);
+      localStorageAdapterMock.mockRead.mockReturnValue(null);
 
       const { result } = renderHook(() => useCaseListPreferences());
 
@@ -207,7 +199,7 @@ describe("useCaseListPreferences", () => {
           },
         },
       };
-      mockRead.mockReturnValue(storedPrefs);
+      localStorageAdapterMock.mockRead.mockReturnValue(storedPrefs);
 
       const { result } = renderHook(() => useCaseListPreferences());
 
@@ -221,7 +213,7 @@ describe("useCaseListPreferences", () => {
         segment: "recent",
         // filters is missing entirely
       };
-      mockRead.mockReturnValue(storedPrefs);
+      localStorageAdapterMock.mockRead.mockReturnValue(storedPrefs);
 
       const { result } = renderHook(() => useCaseListPreferences());
 
@@ -243,7 +235,7 @@ describe("useCaseListPreferences", () => {
           dateRange: {},
         },
       };
-      mockRead.mockReturnValue(storedPrefs);
+      localStorageAdapterMock.mockRead.mockReturnValue(storedPrefs);
 
       const { result } = renderHook(() => useCaseListPreferences());
 
@@ -269,7 +261,7 @@ describe("useCaseListPreferences", () => {
       });
       
       // Verify storage.clear was called
-      expect(mockClear).toHaveBeenCalled();
+      expect(localStorageAdapterMock.mockClear).toHaveBeenCalled();
       
       // Advance past debounce delay (300ms) to allow storage save
       act(() => {
@@ -277,8 +269,11 @@ describe("useCaseListPreferences", () => {
       });
       
       // After reset, defaults are persisted (useEffect writes them back)
-      expect(mockWrite).toHaveBeenCalled();
-      const savedData = mockWrite.mock.calls[0][0];
+      expect(localStorageAdapterMock.mockWrite).toHaveBeenCalled();
+      const savedData = localStorageAdapterMock.mockWrite.mock.calls[0][0] as {
+        segment: string;
+        sortConfigs: SortConfig[];
+      };
       expect(savedData.segment).toBe("all");
       expect(savedData.sortConfigs).toEqual([{ key: "name", direction: "asc" }]);
     });
