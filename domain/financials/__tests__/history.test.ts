@@ -365,6 +365,15 @@ describe("financialHistory utilities", () => {
       // Same start date → not a "later" entry → null
       expect(getAutoEndDateForNewEntry(history, "2025-09-01")).toBeNull();
     });
+
+    it("clamps end date to newEntryStartDate when earliest later entry is in the same month on a later day", () => {
+      const history = [
+        createMockAmountHistoryEntry({ startDate: "2025-09-20", createdAt: "2025-09-20" }),
+      ];
+      // New entry starts 09/15, later entry starts 09/20 (same month)
+      // Prior month end = 08/31, but 08/31 < 09/15 → clamped to 09/15
+      expect(getAutoEndDateForNewEntry(history, "2025-09-15")).toBe("2025-09-15");
+    });
   });
 
   describe("addHistoryEntryToItem", () => {

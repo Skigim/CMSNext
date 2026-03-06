@@ -307,7 +307,10 @@ export function getAutoEndDateForNewEntry(
 
   // End date = last day of month prior to earliest later entry's start month
   const priorMonthFirst = new Date(earliestLaterStart.getFullYear(), earliestLaterStart.getMonth() - 1, 1);
-  return getLastOfMonth(priorMonthFirst);
+  const candidateEnd = getLastOfMonth(priorMonthFirst);
+
+  // Clamp so we never return an end date earlier than the new entry's start
+  return candidateEnd < newEntryStartDate ? newEntryStartDate : candidateEnd;
 }
 
 /**
