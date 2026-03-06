@@ -370,6 +370,49 @@ describe("useIntakeWorkflow", () => {
       expect(mockToast.error).toHaveBeenCalled();
     });
 
+    it("blocks submission when optional fields fail intake schema validation", async () => {
+      const { result } = renderIntakeHook();
+
+      act(() => {
+        result.current.updateField("firstName", "Alice");
+        result.current.updateField("lastName", "Smith");
+        result.current.updateField("mcn", "12345");
+        result.current.updateField("applicationDate", "2026-01-01");
+        result.current.updateField("email", "not-an-email");
+      });
+
+      await act(async () => {
+        await result.current.submit();
+      });
+
+      expect(result.current.error).toContain("Invalid email address");
+      expect(mockDataManager.createCompleteCase).not.toHaveBeenCalled();
+    });
+
+    it("normalizes phone numbers before saving the created person", async () => {
+      const { result } = renderIntakeHook();
+
+      act(() => {
+        result.current.updateField("firstName", "Alice");
+        result.current.updateField("lastName", "Smith");
+        result.current.updateField("mcn", "12345");
+        result.current.updateField("applicationDate", "2026-01-01");
+        result.current.updateField("phone", "(555) 123-4567");
+      });
+
+      await act(async () => {
+        await result.current.submit();
+      });
+
+      expect(mockDataManager.createCompleteCase).toHaveBeenCalledWith(
+        expect.objectContaining({
+          person: expect.objectContaining({
+            phone: "5551234567",
+          }),
+        }),
+      );
+    });
+
     it("resets the form on successful submission", async () => {
       const { result } = renderIntakeHook();
 

@@ -41,7 +41,7 @@ export function MainLayout({
   onSidebarOpenChange,
   cases,
   onViewCase,
-}: MainLayoutProps) {
+}: Readonly<MainLayoutProps>) {
   const autosaveStatus = useAutosaveStatus();
 
   const getBreadcrumbs = (): BreadcrumbSegment[] => {
@@ -67,6 +67,7 @@ export function MainLayout({
         segments.push({ label: breadcrumbTitle || 'Case Details' });
         break;
       case 'form':
+      case 'intake':
         segments.push(
           { label: 'Cases', view: 'list' },
           { label: breadcrumbTitle || 'New Case' }

@@ -24,6 +24,7 @@ export {
   IntakeCaseDetailsSchema,
   IntakeChecklistSchema,
   IntakeFormSchema,
+  validateIntakeForm,
   createBlankIntakeForm,
   type IntakeApplicantData,
   type IntakeContactData,

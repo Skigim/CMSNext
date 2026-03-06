@@ -20,12 +20,14 @@ import {
   type SetStateAction,
 } from "react";
 import { toast } from "sonner";
+import { normalizePhoneNumber } from "@/domain/common";
 import { useDataManagerSafe } from "../contexts/DataManagerContext";
 import { useCategoryConfig } from "../contexts/CategoryConfigContext";
 import { INTAKE_STEPS, isStepComplete, isStepReachable } from "../domain/cases/intake-steps";
 import {
   createBlankIntakeForm,
   type IntakeFormData,
+  validateIntakeForm,
 } from "../domain/validation/intake.schema";
 import type { CaseStatus, NewCaseRecordData, NewPersonData, StoredCase } from "../types/case";
 import { createLogger } from "../utils/logger";
@@ -208,6 +210,18 @@ export function useIntakeWorkflow({
       return;
     }
 
+    const validationResult = validateIntakeForm(formData);
+    if (!validationResult.isValid || !validationResult.data) {
+      const msg =
+        Object.values(validationResult.errors)[0] ??
+        "Please correct the intake form before submitting.";
+      setError(msg);
+      toast.error(msg);
+      return;
+    }
+
+    const validatedFormData = validationResult.data;
+
     setIsSubmitting(true);
     setError(null);
 
@@ -216,29 +230,29 @@ export function useIntakeWorkflow({
     try {
       // Build NewPersonData from form draft
       const person: NewPersonData = {
-        firstName: formData.firstName,
-        lastName: formData.lastName,
-        dateOfBirth: formData.dateOfBirth ?? "",
-        ssn: formData.ssn ?? "",
-        email: formData.email ?? "",
-        phone: formData.phone ?? "",
-        organizationId: formData.organizationId ?? null,
+        firstName: validatedFormData.firstName,
+        lastName: validatedFormData.lastName,
+        dateOfBirth: validatedFormData.dateOfBirth ?? "",
+        ssn: validatedFormData.ssn ?? "",
+        email: validatedFormData.email ?? "",
+        phone: normalizePhoneNumber(validatedFormData.phone ?? ""),
+        organizationId: validatedFormData.organizationId ?? null,
         livingArrangement:
-          formData.livingArrangement || config.livingArrangements[0] || "",
+          validatedFormData.livingArrangement || config.livingArrangements[0] || "",
         address: {
-          street: formData.address.street ?? "",
-          apt: formData.address.apt,
-          city: formData.address.city ?? "",
-          state: formData.address.state ?? "NE",
-          zip: formData.address.zip ?? "",
+          street: validatedFormData.address.street ?? "",
+          apt: validatedFormData.address.apt,
+          city: validatedFormData.address.city ?? "",
+          state: validatedFormData.address.state ?? "NE",
+          zip: validatedFormData.address.zip ?? "",
         },
         mailingAddress: {
-          street: formData.mailingAddress.street ?? "",
-          apt: formData.mailingAddress.apt,
-          city: formData.mailingAddress.city ?? "",
-          state: formData.mailingAddress.state ?? "NE",
-          zip: formData.mailingAddress.zip ?? "",
-          sameAsPhysical: formData.mailingAddress.sameAsPhysical,
+          street: validatedFormData.mailingAddress.street ?? "",
+          apt: validatedFormData.mailingAddress.apt,
+          city: validatedFormData.mailingAddress.city ?? "",
+          state: validatedFormData.mailingAddress.state ?? "NE",
+          zip: validatedFormData.mailingAddress.zip ?? "",
+          sameAsPhysical: validatedFormData.mailingAddress.sameAsPhysical,
         },
         authorizedRepIds: [],
         familyMembers: [],
@@ -253,35 +267,35 @@ export function useIntakeWorkflow({
 
       // Build NewCaseRecordData from form draft
       const caseRecord: NewCaseRecordData = {
-        mcn: formData.mcn,
-        applicationDate: formData.applicationDate,
-        caseType: formData.caseType || config.caseTypes[0] || "",
-        applicationType: formData.applicationType ?? "",
+        mcn: validatedFormData.mcn,
+        applicationDate: validatedFormData.applicationDate,
+        caseType: validatedFormData.caseType || config.caseTypes[0] || "",
+        applicationType: validatedFormData.applicationType ?? "",
         personId: "", // assigned by DataManager after person creation
         status: defaultStatus,
         description: "",
         priority: false,
         livingArrangement:
-          formData.livingArrangement || config.livingArrangements[0] || "",
-        withWaiver: formData.withWaiver ?? false,
-        admissionDate: formData.admissionDate ?? "",
-        organizationId: formData.organizationId ?? "",
+          validatedFormData.livingArrangement || config.livingArrangements[0] || "",
+        withWaiver: validatedFormData.withWaiver ?? false,
+        admissionDate: validatedFormData.admissionDate ?? "",
+        organizationId: validatedFormData.organizationId ?? "",
         authorizedReps: [],
-        retroRequested: formData.retroRequested ?? "",
+        retroRequested: validatedFormData.retroRequested ?? "",
         // Intake checklist fields
-        appValidated: formData.appValidated ?? false,
-        agedDisabledVerified: formData.agedDisabledVerified ?? false,
-        citizenshipVerified: formData.citizenshipVerified ?? false,
-        residencyVerified: formData.residencyVerified ?? false,
-        contactMethods: (formData.contactMethods ?? []) as NonNullable<
+        appValidated: validatedFormData.appValidated ?? false,
+        agedDisabledVerified: validatedFormData.agedDisabledVerified ?? false,
+        citizenshipVerified: validatedFormData.citizenshipVerified ?? false,
+        residencyVerified: validatedFormData.residencyVerified ?? false,
+        contactMethods: (validatedFormData.contactMethods ?? []) as NonNullable<
           NewCaseRecordData["contactMethods"]
         >,
-        voterFormStatus: (formData.voterFormStatus ?? "") as NonNullable<
+        voterFormStatus: (validatedFormData.voterFormStatus ?? "") as NonNullable<
           NewCaseRecordData["voterFormStatus"]
         >,
-        pregnancy: formData.pregnancy ?? false,
-        avsConsentDate: formData.avsConsentDate ?? "",
-        maritalStatus: formData.maritalStatus ?? "",
+        pregnancy: validatedFormData.pregnancy ?? false,
+        avsConsentDate: validatedFormData.avsConsentDate ?? "",
+        maritalStatus: validatedFormData.maritalStatus ?? "",
       };
 
       const createdCase = await dataManager.createCompleteCase({

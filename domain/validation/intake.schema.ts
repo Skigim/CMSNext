@@ -7,6 +7,8 @@
  * @module domain/validation/intake.schema
  */
 
+import { isValidUSPhoneNumber } from "@/domain/common/phone";
+import type { ValidationResult } from "@/domain/validation/forms";
 import { z } from "zod";
 
 // ============================================================================
@@ -15,12 +17,17 @@ import { z } from "zod";
 
 const stringRequired = (field: string) =>
   z.string().min(1, `${field} is required`);
-const emailSchema = z.string().email("Invalid email address").or(z.literal(""));
+const emailSchema = z
+  .string()
+  .refine(
+    (value) => value === "" || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value),
+    "Invalid email address",
+  );
 const phoneSchema = z
   .string()
-  .regex(
-    /^\(\d{3}\) \d{3}-\d{4}$|^$/,
-    "Phone must be in format (XXX) XXX-XXXX or empty",
+  .refine(
+    (value) => value === "" || isValidUSPhoneNumber(value),
+    "Phone must be a complete US phone number or empty",
   );
 const ssnSchema = z
   .string()
@@ -134,11 +141,51 @@ export type IntakeChecklistData = z.infer<typeof IntakeChecklistSchema>;
  * Combined schema for the entire intake form.
  * Merges all four step schemas into a single flat object.
  */
-export const IntakeFormSchema = IntakeApplicantSchema.merge(IntakeContactSchema)
-  .merge(IntakeCaseDetailsSchema)
-  .merge(IntakeChecklistSchema);
+export const IntakeFormSchema = z.object({
+  ...IntakeApplicantSchema.shape,
+  ...IntakeContactSchema.shape,
+  ...IntakeCaseDetailsSchema.shape,
+  ...IntakeChecklistSchema.shape,
+});
 
 export type IntakeFormData = z.infer<typeof IntakeFormSchema>;
+
+/**
+ * Validates an intake form using the full schema.
+ */
+export function validateIntakeForm(
+  data: Partial<IntakeFormData>,
+): ValidationResult<IntakeFormData> {
+  const result = IntakeFormSchema.safeParse(data);
+
+  if (result.success) {
+    return {
+      isValid: true,
+      data: result.data,
+      errors: {},
+      fieldErrors: {},
+    };
+  }
+
+  const errors: Record<string, string> = {};
+  const fieldErrors: Record<string, string[]> = {};
+
+  for (const issue of result.error.issues) {
+    const field = issue.path[0]?.toString() ?? "form";
+    fieldErrors[field] = [...(fieldErrors[field] ?? []), issue.message];
+
+    if (!(field in errors)) {
+      errors[field] = issue.message;
+    }
+  }
+
+  return {
+    isValid: false,
+    data: null,
+    errors,
+    fieldErrors,
+  };
+}
 
 /**
  * Returns a blank intake form with all fields at their defaults.
