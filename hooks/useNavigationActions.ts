@@ -8,7 +8,7 @@ import { extractErrorMessage } from "@/utils/errorUtils";
 
 const logger = createLogger("useNavigationActions");
 
-const RESTRICTED_VIEWS: readonly AppView[] = ["list", "details", "form"];
+const RESTRICTED_VIEWS: readonly AppView[] = ["list", "details", "form", "intake"];
 
 export interface FormState {
   previousView: AppView;
@@ -124,9 +124,9 @@ export function useNavigationActions({
   const newCase = useCallback(() => {
     startMeasurement("navigation:newCase", { locked: isLocked });
     if (guardCaseInteraction()) return endMeasurement("navigation:newCase", { blocked: true });
-    setShowNewCaseModal(true);
-    endMeasurement("navigation:newCase", { result: "modal" });
-  }, [guardCaseInteraction, isLocked, setShowNewCaseModal]);
+    setCurrentView("intake");
+    endMeasurement("navigation:newCase", { result: "intake" });
+  }, [guardCaseInteraction, isLocked, setCurrentView]);
 
   const closeNewCaseModal = useCallback(() => {
     startMeasurement("navigation:closeNewCaseModal");
@@ -144,8 +144,13 @@ export function useNavigationActions({
       throw new Error(lockReason);
     }
     try {
+      // Creating a new case: either via the new intake workflow view or the legacy
+      // QuickCaseModal (showNewCaseModal).  Both paths produce a new case and
+      // navigate to its details.  The QuickCaseModal path is retained for
+      // programmatic use (e.g. tests, "Add Another" flow) until fully replaced.
+      const isCreating = showNewCaseModal || currentView === "intake";
       // Pass selectedCaseId if editing, otherwise omit for create
-      const editingCaseId = !showNewCaseModal ? state.selectedCaseId ?? undefined : undefined;
+      const editingCaseId = !isCreating ? state.selectedCaseId ?? undefined : undefined;
       const savedCase = editingCaseId !== undefined 
         ? await saveCase(caseData, editingCaseId)
         : await saveCase(caseData);
@@ -163,18 +168,18 @@ export function useNavigationActions({
       }
       
       // If we created a new case, navigate to it
-      if (savedCase && showNewCaseModal) {
+      if (savedCase && isCreating) {
         setSelectedCaseId(savedCase.id);
         setCurrentView("details");
       }
       
-      endMeasurement("navigation:saveCase", { result: showNewCaseModal ? "create" : "update" });
+      endMeasurement("navigation:saveCase", { result: isCreating ? "create" : "update" });
     } catch (error) {
       logger.error("Failed to save case", { error: extractErrorMessage(error) });
       endMeasurement("navigation:saveCase", { result: "error" });
       throw error;
     }
-  }, [guardCaseInteraction, isMounted, lockReason, saveCase, setCurrentView, setSelectedCaseId, setShowNewCaseModal, showNewCaseModal, state.selectedCaseId]);
+  }, [currentView, guardCaseInteraction, isMounted, lockReason, saveCase, setCurrentView, setSelectedCaseId, setShowNewCaseModal, showNewCaseModal, state.selectedCaseId]);
 
   const deleteCaseWithNavigation = useCallback(async (caseId: string) => {
     startMeasurement("navigation:deleteCase", { caseId });

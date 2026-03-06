@@ -24,3 +24,11 @@ export {
   type CaseRecordDefaults,
   type PersonDefaults,
 } from "./factories";
+
+export {
+  INTAKE_STEPS,
+  isStepComplete,
+  isStepReachable,
+  firstIncompleteStep,
+  type IntakeStep,
+} from "./intake-steps";

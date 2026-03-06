@@ -128,7 +128,7 @@ describe("useNavigationFlow", () => {
     );
   });
 
-  it("opens and closes the new case modal", async () => {
+  it("navigates to intake view when newCase is called", async () => {
     const existingCase = createMockStoredCase({ id: "case-edit" });
     const saveCase = vi.fn().mockResolvedValue(existingCase);
     const deleteCase = vi.fn().mockResolvedValue(undefined);
@@ -146,31 +146,26 @@ describe("useNavigationFlow", () => {
       },
     });
 
-    // Initially modal should be closed
+    // Initially on dashboard
+    expect(result.current.currentView).toBe("dashboard");
     expect(result.current.showNewCaseModal).toBe(false);
 
-    // Open new case modal
+    // Trigger new case
     act(() => {
       result.current.newCase();
     });
 
-    expect(result.current.showNewCaseModal).toBe(true);
+    // Should navigate to intake view (not open modal)
+    expect(result.current.currentView).toBe("intake");
+    expect(result.current.showNewCaseModal).toBe(false);
     expect(startMeasurementMock).toHaveBeenCalledWith(
       "navigation:newCase",
       expect.objectContaining({ locked: false }),
     );
     expect(endMeasurementMock).toHaveBeenCalledWith(
       "navigation:newCase",
-      expect.objectContaining({ result: "modal" }),
+      expect.objectContaining({ result: "intake" }),
     );
-
-    // Close the modal
-    act(() => {
-      result.current.closeNewCaseModal();
-    });
-
-    expect(result.current.showNewCaseModal).toBe(false);
-    expect(startMeasurementMock).toHaveBeenCalledWith("navigation:closeNewCaseModal");
   });
 
   it("navigates to case details after creating a new case", async () => {
@@ -191,12 +186,13 @@ describe("useNavigationFlow", () => {
       },
     });
 
-    // Open new case modal first
+    // newCase() now navigates to intake, not the modal
     act(() => {
       result.current.newCase();
     });
 
-    expect(result.current.showNewCaseModal).toBe(true);
+    expect(result.current.currentView).toBe("intake");
+    expect(result.current.showNewCaseModal).toBe(false);
 
     const personForm: NewPersonData = {
       firstName: "Casey",
@@ -254,7 +250,7 @@ describe("useNavigationFlow", () => {
       caseRecord: caseRecordForm,
     });
 
-    // Modal should be closed after save
+    // Modal should remain closed after save
     expect(result.current.showNewCaseModal).toBe(false);
     // Should navigate to the new case details
     expect(result.current.currentView).toBe("details");
