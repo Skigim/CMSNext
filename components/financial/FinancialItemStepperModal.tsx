@@ -56,6 +56,7 @@ import {
   updateHistoryEntry,
   deleteHistoryEntry,
   closePreviousOngoingEntry,
+  getAutoEndDateForNewEntry,
 } from "@/domain/financials";
 import { cn } from "../ui/utils";
 
@@ -121,7 +122,7 @@ const emptyItemFormData: ItemFormData = {
 };
 
 const emptyEntryFormData: EntryFormData = {
-  amount: "",
+  amount: "0",
   startDate: "",
   endDate: "",
   verificationStatus: "Needs VR",
@@ -163,7 +164,7 @@ function getInitialItemFormData(item?: FinancialItem): ItemFormData {
 
 function getDefaultEntryFormData(): EntryFormData {
   return {
-    amount: "",
+    amount: "0",
     startDate: isoToDateInputValue(getFirstOfMonth()),
     endDate: "",
     verificationStatus: "Needs VR",
@@ -570,13 +571,17 @@ export function FinancialItemStepperModal({
     }
 
     if (isAddingEntry) {
-      const newEntry = createHistoryEntry(amount, entryFormData.startDate, {
-        endDate: entryFormData.endDate || null,
-        verificationStatus: entryFormData.verificationStatus || undefined,
-        verificationSource: entryFormData.verificationSource || undefined,
-      });
       setLocalHistoryEntries((prev) => {
         const closedPrev = closePreviousOngoingEntry(prev, entryFormData.startDate);
+        // When the user leaves end date blank, auto-compute it as the last day of the
+        // month prior to the next existing entry's start (supports inserting historical entries).
+        const endDate = entryFormData.endDate
+          || getAutoEndDateForNewEntry(closedPrev, entryFormData.startDate);
+        const newEntry = createHistoryEntry(amount, entryFormData.startDate, {
+          endDate,
+          verificationStatus: entryFormData.verificationStatus || undefined,
+          verificationSource: entryFormData.verificationSource || undefined,
+        });
         return [...closedPrev, newEntry];
       });
     } else if (editingEntryId) {

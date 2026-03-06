@@ -269,6 +269,48 @@ export function closePreviousOngoingEntry(
 }
 
 /**
+ * Computes the automatic end date for a new entry based on subsequent entries.
+ * If there are existing entries that start after the new entry's start date,
+ * returns the last day of the month prior to the earliest such entry's start date.
+ * Returns null if no later entries exist (new entry stays ongoing).
+ *
+ * @param history The current amount history array
+ * @param newEntryStartDate The start date of the new entry being added (YYYY-MM-DD)
+ * @returns End date string (YYYY-MM-DD) or null if the entry should remain ongoing
+ */
+export function getAutoEndDateForNewEntry(
+  history: AmountHistoryEntry[],
+  newEntryStartDate: string
+): string | null {
+  if (!history || history.length === 0) {
+    return null;
+  }
+
+  const newStart = new Date(newEntryStartDate + 'T12:00:00');
+  if (Number.isNaN(newStart.getTime())) {
+    return null;
+  }
+
+  // Find all entries that start strictly after the new entry's start date
+  const laterEntries = history.filter(entry => {
+    const entryStart = new Date(entry.startDate + 'T12:00:00');
+    return !Number.isNaN(entryStart.getTime()) && entryStart > newStart;
+  });
+
+  if (laterEntries.length === 0) {
+    return null;
+  }
+
+  // Sort ascending to find the earliest later entry
+  const sorted = [...laterEntries].sort((a, b) => a.startDate.localeCompare(b.startDate));
+  const earliestLaterStart = new Date(sorted[0].startDate + 'T12:00:00');
+
+  // End date = last day of month prior to earliest later entry's start month
+  const priorMonthFirst = new Date(earliestLaterStart.getFullYear(), earliestLaterStart.getMonth() - 1, 1);
+  return getLastOfMonth(priorMonthFirst);
+}
+
+/**
  * Adds a new history entry to a financial item, auto-closing previous ongoing entries.
  * Also updates the item's top-level amount if the new entry is the most recent.
  * 

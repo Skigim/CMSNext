@@ -50,6 +50,7 @@ export {
   formatMonthYear,
   createHistoryEntry,
   closePreviousOngoingEntry,
+  getAutoEndDateForNewEntry,
 } from "./history";
 
 export {

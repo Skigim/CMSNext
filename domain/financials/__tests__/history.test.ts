@@ -9,6 +9,7 @@ import {
   sortHistoryEntries,
   createHistoryEntry,
   closePreviousOngoingEntry,
+  getAutoEndDateForNewEntry,
   addHistoryEntryToItem,
   updateHistoryEntry,
   deleteHistoryEntry,
@@ -375,6 +376,59 @@ describe("financialHistory utilities", () => {
 
     it("returns empty array for empty input", () => {
       expect(closePreviousOngoingEntry([], "2025-06-01")).toEqual([]);
+    });
+  });
+
+  describe("getAutoEndDateForNewEntry", () => {
+    it("returns null when history is empty", () => {
+      expect(getAutoEndDateForNewEntry([], "2025-09-01")).toBeNull();
+    });
+
+    it("returns null when no entries start after the new entry's start date", () => {
+      const history: AmountHistoryEntry[] = [
+        { id: "1", amount: 1000, startDate: "2025-08-01", endDate: null, createdAt: "2025-08-01" },
+      ];
+      expect(getAutoEndDateForNewEntry(history, "2025-09-01")).toBeNull();
+    });
+
+    it("returns last day of month prior to earliest later entry", () => {
+      const history: AmountHistoryEntry[] = [
+        { id: "1", amount: 1000, startDate: "2025-10-01", endDate: null, createdAt: "2025-10-01" },
+      ];
+      // New entry starts 09/01 → next entry is 10/01 → auto end = 09/30
+      expect(getAutoEndDateForNewEntry(history, "2025-09-01")).toBe("2025-09-30");
+    });
+
+    it("picks the earliest later entry when multiple later entries exist", () => {
+      const history: AmountHistoryEntry[] = [
+        { id: "1", amount: 1000, startDate: "2025-11-01", endDate: null, createdAt: "2025-11-01" },
+        { id: "2", amount: 1200, startDate: "2025-10-01", endDate: null, createdAt: "2025-10-01" },
+      ];
+      // New entry starts 09/01 → earliest later is 10/01 → auto end = 09/30
+      expect(getAutoEndDateForNewEntry(history, "2025-09-01")).toBe("2025-09-30");
+    });
+
+    it("handles year boundary correctly", () => {
+      const history: AmountHistoryEntry[] = [
+        { id: "1", amount: 1000, startDate: "2025-01-01", endDate: null, createdAt: "2025-01-01" },
+      ];
+      // New entry starts 12/01/2024 → next entry is 01/01/2025 → auto end = 12/31/2024
+      expect(getAutoEndDateForNewEntry(history, "2024-12-01")).toBe("2024-12-31");
+    });
+
+    it("returns null for an invalid new entry start date", () => {
+      const history: AmountHistoryEntry[] = [
+        { id: "1", amount: 1000, startDate: "2025-10-01", endDate: null, createdAt: "2025-10-01" },
+      ];
+      expect(getAutoEndDateForNewEntry(history, "not-a-date")).toBeNull();
+    });
+
+    it("does not consider entries with the same start date as 'later'", () => {
+      const history: AmountHistoryEntry[] = [
+        { id: "1", amount: 1000, startDate: "2025-09-01", endDate: null, createdAt: "2025-09-01" },
+      ];
+      // Same start date → not a "later" entry → null
+      expect(getAutoEndDateForNewEntry(history, "2025-09-01")).toBeNull();
     });
   });
 
