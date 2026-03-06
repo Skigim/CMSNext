@@ -7,7 +7,7 @@
  * @module domain/cases/intake-steps
  */
 
-import type { IntakeFormData } from "../validation/intake.schema";
+import type { IntakeFormData } from "@/domain/validation/intake.schema";
 
 // ============================================================================
 // Step Configuration

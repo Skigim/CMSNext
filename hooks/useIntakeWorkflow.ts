@@ -10,7 +10,15 @@
  * @module hooks/useIntakeWorkflow
  */
 
-import { useCallback, useMemo, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type Dispatch,
+  type SetStateAction,
+} from "react";
 import { toast } from "sonner";
 import { useDataManagerSafe } from "../contexts/DataManagerContext";
 import { useCategoryConfig } from "../contexts/CategoryConfigContext";
@@ -53,7 +61,7 @@ export interface UseIntakeWorkflowReturn {
     value: IntakeFormData[K],
   ) => void;
   /** Replace entire form data (e.g. when prefilling from an existing draft) */
-  setFormData: (data: IntakeFormData) => void;
+  setFormData: Dispatch<SetStateAction<IntakeFormData>>;
   /** Navigate to the next step (no-op if already on last step) */
   goNext: () => void;
   /** Navigate to the previous step (no-op if on step 0) */
@@ -94,11 +102,12 @@ export interface UseIntakeWorkflowReturn {
 export function useIntakeWorkflow({
   onSuccess,
 }: UseIntakeWorkflowOptions = {}): UseIntakeWorkflowReturn {
-  const { dataManager } = useDataManagerSafe() ?? {};
+  const dataManager = useDataManagerSafe();
   const { config } = useCategoryConfig();
 
   // ---- State ----------------------------------------------------------------
   const [currentStep, setCurrentStep] = useState(0);
+  const currentStepRef = useRef(currentStep);
   const [visitedSteps, setVisitedSteps] = useState<Set<number>>(
     () => new Set([0]),
   );
@@ -107,6 +116,10 @@ export function useIntakeWorkflow({
   );
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    currentStepRef.current = currentStep;
+  }, [currentStep]);
 
   // ---- Derived values -------------------------------------------------------
   const isCurrentStepComplete = useMemo(
@@ -138,20 +151,20 @@ export function useIntakeWorkflow({
   }, []);
 
   const goNext = useCallback(() => {
-    setCurrentStep((prev) => {
-      if (prev >= INTAKE_STEPS.length - 1) return prev;
-      const next = prev + 1;
-      markVisited(next);
-      return next;
-    });
+    const next = Math.min(
+      currentStepRef.current + 1,
+      INTAKE_STEPS.length - 1,
+    );
+    currentStepRef.current = next;
+    setCurrentStep(next);
+    markVisited(next);
     setError(null);
   }, [markVisited]);
 
   const goPrev = useCallback(() => {
-    setCurrentStep((prev) => {
-      if (prev <= 0) return prev;
-      return prev - 1;
-    });
+    const next = Math.max(currentStepRef.current - 1, 0);
+    currentStepRef.current = next;
+    setCurrentStep(next);
     setError(null);
   }, []);
 
@@ -159,6 +172,7 @@ export function useIntakeWorkflow({
     (index: number) => {
       if (index < 0 || index >= INTAKE_STEPS.length) return;
       if (!isStepReachable(index, formData)) return;
+      currentStepRef.current = index;
       markVisited(index);
       setCurrentStep(index);
       setError(null);
@@ -168,6 +182,7 @@ export function useIntakeWorkflow({
 
   // ---- Reset ----------------------------------------------------------------
   const reset = useCallback(() => {
+    currentStepRef.current = 0;
     setCurrentStep(0);
     setVisitedSteps(new Set([0]));
     setFormData(createBlankIntakeForm());
@@ -176,7 +191,8 @@ export function useIntakeWorkflow({
   }, []);
 
   // ---- Submit ---------------------------------------------------------------
-  const submit = useCallback(async () => {    if (!dataManager) {
+  const submit = useCallback(async () => {
+    if (!dataManager) {
       const msg =
         "Data storage is not available. Please connect to a folder first.";
       setError(msg);

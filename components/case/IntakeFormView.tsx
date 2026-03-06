@@ -7,21 +7,21 @@
  * Wires to useIntakeWorkflow for all state and persistence.
  */
 
-import { useCallback, useEffect } from "react";
-import { Button } from "../ui/button";
-import { Input } from "../ui/input";
-import { Label } from "../ui/label";
+import { useCallback, useEffect, useRef } from "react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "../ui/select";
-import { Checkbox } from "../ui/checkbox";
-import { RadioGroup, RadioGroupItem } from "../ui/radio-group";
-import { Badge } from "../ui/badge";
-import { Separator } from "../ui/separator";
+} from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
 import {
   User,
   Phone,
@@ -33,14 +33,14 @@ import {
   Loader2,
   ArrowLeft,
 } from "lucide-react";
-import { cn } from "../ui/utils";
-import { useCategoryConfig } from "../../contexts/CategoryConfigContext";
-import { INTAKE_STEPS, isStepComplete } from "../../domain/cases/intake-steps";
-import type { IntakeFormData } from "../../domain/validation/intake.schema";
+import { cn } from "@/components/ui/utils";
+import { useCategoryConfig } from "@/contexts/CategoryConfigContext";
+import { INTAKE_STEPS, isStepComplete } from "@/domain/cases/intake-steps";
+import type { IntakeFormData } from "@/domain/validation/intake.schema";
 import {
   useIntakeWorkflow,
   type UseIntakeWorkflowOptions,
-} from "../../hooks/useIntakeWorkflow";
+} from "@/hooks/useIntakeWorkflow";
 import {
   isoToDateInputValue,
   dateInputValueToISO,
@@ -48,7 +48,7 @@ import {
   US_STATES,
   formatPhoneNumberAsTyped,
   normalizePhoneNumber,
-} from "../../domain/common";
+} from "@/domain/common";
 
 // ============================================================================
 // Step icons
@@ -888,6 +888,7 @@ export function IntakeFormView({
   onSuccess,
   onCancel,
 }: Readonly<IntakeFormViewProps>) {
+  const hasSeededInitialData = useRef(false);
   const {
     currentStep,
     visitedSteps,
@@ -906,12 +907,11 @@ export function IntakeFormView({
 
   // Pre-fill form when initialData is provided (e.g. loading a draft)
   useEffect(() => {
-    if (initialData) {
-      setFormData({ ...formData, ...initialData });
-    }
-    // Only run on mount – formData intentionally omitted to seed once, not on every change
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- seed-on-mount only
-  }, []);
+    if (!initialData || hasSeededInitialData.current) return;
+
+    hasSeededInitialData.current = true;
+    setFormData((prev) => ({ ...prev, ...initialData }));
+  }, [initialData, setFormData]);
 
   const isLastStep = currentStep === INTAKE_STEPS.length - 1;
   const isFirstStep = currentStep === 0;

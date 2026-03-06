@@ -16,7 +16,7 @@ const mockDataManager = {
 };
 
 vi.mock("@/contexts/DataManagerContext", () => ({
-  useDataManagerSafe: () => ({ dataManager: mockDataManager }),
+  useDataManagerSafe: () => mockDataManager,
 }));
 
 const mockCategoryConfig = {
@@ -176,13 +176,20 @@ describe("useIntakeWorkflow", () => {
       expect(result.current.currentStep).toBe(INTAKE_STEPS.length - 1);
     });
 
-    it("clears error on advance", () => {
+    it("clears error on advance", async () => {
       const { result } = renderIntakeHook();
 
-      // Force an error state
       act(() => {
-        result.current.updateField("firstName", "");
+        result.current.updateField("firstName", "Alice");
       });
+
+      expect(result.current.canSubmit).toBe(false);
+
+      await act(async () => {
+        await result.current.submit();
+      });
+
+      expect(result.current.error).not.toBeNull();
 
       act(() => {
         result.current.goNext();
