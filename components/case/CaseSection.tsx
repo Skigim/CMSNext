@@ -18,12 +18,15 @@ interface CaseSectionProps {
   title: string;
   category: CaseCategory;
   caseId: string;
+  /** Case application date — used to default new entry start dates */
+  applicationDate?: string;
 }
 
 export function CaseSection({
   title,
   category,
-  caseId
+  caseId,
+  applicationDate,
 }: CaseSectionProps) {
   const {
     groupedItems,
@@ -128,6 +131,7 @@ export function CaseSection({
           title=""
           showActions={true}
           onAddTrigger={handleAddTrigger}
+          applicationDate={applicationDate}
         />
       </CardContent>
     </Card>

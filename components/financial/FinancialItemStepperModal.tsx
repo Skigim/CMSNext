@@ -72,6 +72,8 @@ interface FinancialItemStepperModalProps {
   item?: FinancialItem;
   /** For LTC cases that need owner field */
   showOwnerField?: boolean;
+  /** Case application date — used to default new entry start dates to the first of its month */
+  applicationDate?: string;
   // Callbacks
   onSave: (itemData: Omit<FinancialItem, "id" | "createdAt" | "updatedAt">) => Promise<void>;
   onUpdate?: (itemId: string, updates: Partial<FinancialItem>) => Promise<void>;
@@ -162,10 +164,19 @@ function getInitialItemFormData(item?: FinancialItem): ItemFormData {
   };
 }
 
-function getDefaultEntryFormData(): EntryFormData {
+function getDefaultEntryFormData(applicationDate?: string): EntryFormData {
+  let startDate: string;
+  if (applicationDate) {
+    const parsed = new Date(applicationDate + (applicationDate.includes("T") ? "" : "T12:00:00"));
+    startDate = Number.isNaN(parsed.getTime())
+      ? isoToDateInputValue(getFirstOfMonth())
+      : isoToDateInputValue(getFirstOfMonth(parsed));
+  } else {
+    startDate = isoToDateInputValue(getFirstOfMonth());
+  }
   return {
     amount: "0",
-    startDate: isoToDateInputValue(getFirstOfMonth()),
+    startDate,
     endDate: "",
     verificationStatus: "Needs VR",
     verificationSource: "",
@@ -176,8 +187,9 @@ function openAddEntryForm(
   setEntryFormData: Dispatch<SetStateAction<EntryFormData>>,
   setIsAddingEntry: Dispatch<SetStateAction<boolean>>,
   setEditingEntryId: Dispatch<SetStateAction<string | null>>,
+  applicationDate?: string,
 ): void {
-  setEntryFormData(getDefaultEntryFormData());
+  setEntryFormData(getDefaultEntryFormData(applicationDate));
   setIsAddingEntry(true);
   setEditingEntryId(null);
 }
@@ -223,13 +235,14 @@ function openAmountsStep(
   setEntryFormData: Dispatch<SetStateAction<EntryFormData>>,
   setIsAddingEntry: Dispatch<SetStateAction<boolean>>,
   setEditingEntryId: Dispatch<SetStateAction<string | null>>,
+  applicationDate?: string,
 ): void {
   setCurrentStep("amounts");
   if (localHistoryEntriesLength !== 0) {
     return;
   }
   setTimeout(() => {
-    openAddEntryForm(setEntryFormData, setIsAddingEntry, setEditingEntryId);
+    openAddEntryForm(setEntryFormData, setIsAddingEntry, setEditingEntryId, applicationDate);
   }, 0);
 }
 
@@ -363,6 +376,7 @@ export function FinancialItemStepperModal({
   itemType,
   item,
   showOwnerField = false,
+  applicationDate,
   onSave,
   onUpdate,
   onDelete,
@@ -541,8 +555,8 @@ export function FinancialItemStepperModal({
   );
 
   const handleStartAddEntry = useCallback(() => {
-    openAddEntryForm(setEntryFormData, setIsAddingEntry, setEditingEntryId);
-  }, []);
+    openAddEntryForm(setEntryFormData, setIsAddingEntry, setEditingEntryId, applicationDate);
+  }, [applicationDate]);
 
   const handleStartEditEntry = useCallback((entry: AmountHistoryEntry) => {
     setEntryFormData({
@@ -621,8 +635,9 @@ export function FinancialItemStepperModal({
       setEntryFormData,
       setIsAddingEntry,
       setEditingEntryId,
+      applicationDate,
     );
-  }, [currentStep, validateDetailsStep, localHistoryEntries.length]);
+  }, [currentStep, validateDetailsStep, localHistoryEntries.length, applicationDate]);
 
   const handleBack = useCallback(() => {
     if (currentStep === "amounts") {
@@ -646,10 +661,11 @@ export function FinancialItemStepperModal({
           setEntryFormData,
           setIsAddingEntry,
           setEditingEntryId,
+          applicationDate,
         );
       }
     },
-    [currentStep, validateDetailsStep, localHistoryEntries.length]
+    [currentStep, validateDetailsStep, localHistoryEntries.length, applicationDate]
   );
 
   // ============================================================================

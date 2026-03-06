@@ -14,13 +14,14 @@ describe("FinancialItemStepperModal", () => {
     vi.clearAllMocks();
   });
 
-  const renderModal = () =>
+  const renderModal = (props?: { applicationDate?: string }) =>
     render(
       <FinancialItemStepperModal
         isOpen={true}
         onClose={mockOnClose}
         itemType="resources"
         onSave={mockOnSave}
+        {...props}
       />
     );
 
@@ -52,5 +53,29 @@ describe("FinancialItemStepperModal", () => {
     await user.keyboard("{Control>}{Enter}{/Control}");
 
     expect(await screen.findByText("$123.45")).toBeInTheDocument();
+  });
+
+  it("defaults start date to first of application date month when applicationDate is provided", async () => {
+    const user = userEvent.setup();
+    renderModal({ applicationDate: "2025-06-15" });
+
+    await user.type(screen.getByLabelText(/Description \*/i), "Test Item");
+    await user.click(screen.getByRole("button", { name: /^Next$/i }));
+
+    const startDateInput = await screen.findByLabelText(/Effective From \*/i);
+    expect(startDateInput).toHaveValue("2025-06-01");
+  });
+
+  it("defaults start date to first of current month when no applicationDate is provided", async () => {
+    const user = userEvent.setup();
+    renderModal();
+
+    await user.type(screen.getByLabelText(/Description \*/i), "Test Item");
+    await user.click(screen.getByRole("button", { name: /^Next$/i }));
+
+    const startDateInput = await screen.findByLabelText(/Effective From \*/i);
+    const now = new Date();
+    const expectedDate = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-01`;
+    expect(startDateInput).toHaveValue(expectedDate);
   });
 });
