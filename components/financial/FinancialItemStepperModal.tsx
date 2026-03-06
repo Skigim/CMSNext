@@ -164,8 +164,27 @@ function getInitialItemFormData(item?: FinancialItem): ItemFormData {
   };
 }
 
+/**
+ * Normalize a date string so month calculations are stable across timezones.
+ * If the string starts with YYYY-MM-DD (e.g., "2026-03-01T00:00:00.000Z"),
+ * return just that leading date portion; otherwise return the original string.
+ */
+function normalizeToDateOnly(applicationDate?: string): string | undefined {
+  if (!applicationDate) {
+    return undefined;
+  }
+
+  const match = applicationDate.match(/^(\d{4}-\d{2}-\d{2})/);
+  if (match) {
+    return match[1];
+  }
+
+  return applicationDate;
+}
+
 function getDefaultEntryFormData(applicationDate?: string): EntryFormData {
-  const parsed = applicationDate ? parseLocalDate(applicationDate) : null;
+  const normalized = normalizeToDateOnly(applicationDate);
+  const parsed = normalized ? parseLocalDate(normalized) : null;
   const startDate = isoToDateInputValue(getFirstOfMonth(parsed ?? undefined));
   return {
     amount: "0",
