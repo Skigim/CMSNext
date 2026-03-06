@@ -67,15 +67,26 @@ describe("FinancialItemStepperModal", () => {
   });
 
   it("defaults start date to first of current month when no applicationDate is provided", async () => {
-    const user = userEvent.setup();
-    renderModal();
+    // Pin system time so component and test share a deterministic "current" date.
+    const fixedNow = new Date("2025-02-15T12:00:00.000Z");
+    vi.useFakeTimers();
+    vi.setSystemTime(fixedNow);
 
-    await user.type(screen.getByLabelText(/Description \*/i), "Test Item");
-    await user.click(screen.getByRole("button", { name: /^Next$/i }));
+    try {
+      const user = userEvent.setup();
+      renderModal();
 
-    const startDateInput = await screen.findByLabelText(/Effective From \*/i);
-    const now = new Date();
-    const expectedDate = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-01`;
-    expect(startDateInput).toHaveValue(expectedDate);
+      await user.type(screen.getByLabelText(/Description \*/i), "Test Item");
+      await user.click(screen.getByRole("button", { name: /^Next$/i }));
+
+      // Ensure any timeouts used by the modal are flushed under fake timers.
+      await vi.runAllTimersAsync();
+
+      const startDateInput = await screen.findByLabelText(/Effective From \*/i);
+      // With system time pinned to mid-February 2025, the first of the month is 2025-02-01.
+      expect(startDateInput).toHaveValue("2025-02-01");
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });
