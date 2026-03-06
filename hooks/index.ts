@@ -124,3 +124,7 @@ export { useTombstone } from './useTombstone';
 // UX / UI interactions
 export { useAntiMicroDrag } from './useAntiMicroDrag';
 
+// Intake workflow
+export { useIntakeWorkflow } from './useIntakeWorkflow';
+export type { UseIntakeWorkflowOptions, UseIntakeWorkflowReturn } from './useIntakeWorkflow';
+

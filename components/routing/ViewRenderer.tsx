@@ -10,6 +10,7 @@ import { CaseList } from "../case/CaseList";
 import CaseDetails from "../case/CaseDetails";
 import { QuickCaseModal } from "../modals/QuickCaseModal";
 import { Settings } from "../app/Settings";
+import { IntakeFormView } from "../case/IntakeFormView";
 
 export type View = AppView;
 
@@ -33,6 +34,8 @@ interface ViewRendererProps {
     caseData: { person: NewPersonData; caseRecord: NewCaseRecordData },
     options?: { skipNavigation?: boolean }
   ) => Promise<void>;
+  /** Navigate to a named view */
+  navigate?: (view: AppView) => void;
   
   // Component handlers
   handleDeleteCase: (caseId: string) => Promise<void>;
@@ -82,6 +85,7 @@ export function ViewRenderer({
   handleCloseNewCaseModal: _handleCloseNewCaseModal,
   handleBackToList,
   handleSaveCase,
+  navigate,
   
   // Component handlers
   handleDeleteCase,
@@ -166,6 +170,17 @@ export function ViewRenderer({
         />
       ) : (
         <div className="text-center p-8">Case not found</div>
+      );
+
+    case 'intake':
+      return (
+        <IntakeFormView
+          onSuccess={(createdCase) => {
+            navigate?.('details');
+            handleViewCase(createdCase.id);
+          }}
+          onCancel={() => navigate?.('dashboard')}
+        />
       );
 
     default:

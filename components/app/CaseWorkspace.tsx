@@ -127,6 +127,7 @@ export const CaseWorkspace = memo(function CaseWorkspace({
         handleCloseNewCaseModal={viewHandlers.handleCloseNewCaseModal}
         handleBackToList={viewHandlers.handleBackToList}
         handleSaveCase={viewHandlers.handleSaveCase}
+        navigate={navigation.onNavigate}
         handleDeleteCase={viewHandlers.handleDeleteCase}
         handleDeleteCases={viewHandlers.handleDeleteCases}
         handleUpdateCasesStatus={viewHandlers.handleUpdateCasesStatus}
