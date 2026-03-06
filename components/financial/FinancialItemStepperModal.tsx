@@ -47,7 +47,7 @@ import {
   AlertCircle,
 } from "lucide-react";
 import type { AmountHistoryEntry, FinancialItem, CaseCategory } from "@/types/case";
-import { formatCurrency, isoToDateInputValue } from "@/domain/common";
+import { formatCurrency, isoToDateInputValue, parseLocalDate } from "@/domain/common";
 import {
   sortHistoryEntries,
   formatHistoryDate,
@@ -165,15 +165,8 @@ function getInitialItemFormData(item?: FinancialItem): ItemFormData {
 }
 
 function getDefaultEntryFormData(applicationDate?: string): EntryFormData {
-  let startDate: string;
-  if (applicationDate) {
-    const parsed = new Date(applicationDate + (applicationDate.includes("T") ? "" : "T12:00:00"));
-    startDate = Number.isNaN(parsed.getTime())
-      ? isoToDateInputValue(getFirstOfMonth())
-      : isoToDateInputValue(getFirstOfMonth(parsed));
-  } else {
-    startDate = isoToDateInputValue(getFirstOfMonth());
-  }
+  const parsed = applicationDate ? parseLocalDate(applicationDate) : null;
+  const startDate = isoToDateInputValue(getFirstOfMonth(parsed ?? undefined));
   return {
     amount: "0",
     startDate,
