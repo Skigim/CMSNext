@@ -1,11 +1,20 @@
 import { vi } from 'vitest'
-import { CaseDisplay, FinancialItem, Note, Person, CaseRecord, CaseCategory } from '@/types/case'
+import { AmountHistoryEntry, CaseDisplay, FinancialItem, Note, Person, CaseRecord, CaseCategory } from '@/types/case'
 import type { StoredCase, StoredFinancialItem, StoredNote } from '@/utils/services/FileStorageService'
 import { mergeCategoryConfig } from '@/types/categoryConfig'
 
 /**
  * Test data factories for creating mock data objects
  */
+
+export const createMockAmountHistoryEntry = (overrides: Partial<AmountHistoryEntry> = {}): AmountHistoryEntry => ({
+  id: 'entry-test-1',
+  amount: 1000,
+  startDate: '2025-06-01',
+  endDate: null,
+  createdAt: '2025-06-01T00:00:00.000Z',
+  ...overrides,
+})
 
 export const createMockPerson = (overrides: Partial<Person> = {}): Person => ({
   id: 'person-test-1',
