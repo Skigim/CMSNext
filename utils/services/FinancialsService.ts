@@ -304,6 +304,7 @@ export class FinancialsService {
       // Get verificationStatus from updates or existing item
       const verificationStatus = updates.verificationStatus ?? existingItem.verificationStatus;
       const verificationSource = updates.verificationSource ?? existingItem.verificationSource;
+      const nextAmount = updates.amount;
       
       const currentMonthStart = getFirstOfMonth();
 
@@ -312,7 +313,7 @@ export class FinancialsService {
           entry.id === currentEntry.id
             ? {
                 ...entry,
-                amount: updates.amount,
+                amount: nextAmount,
                 verificationStatus,
                 verificationSource,
               }
@@ -320,7 +321,7 @@ export class FinancialsService {
         );
       } else {
         // Auto-create a history entry for the new amount
-        const newEntry = createHistoryEntry(updates.amount, undefined, {
+        const newEntry = createHistoryEntry(nextAmount, undefined, {
           verificationStatus,
           verificationSource,
         });
