@@ -207,7 +207,7 @@ export class FinancialsService {
     }
 
     const normalizedAmount = amountHistory
-      ? getAmountForMonth({ ...itemData, amountHistory })
+      ? getAmountForMonth({ ...itemData, amountHistory } as FinancialItem)
       : itemData.amount;
 
     // Create new item with foreign keys

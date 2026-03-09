@@ -395,6 +395,7 @@ export function useFinancialItemFlow({
     dataManager,
     selectedCase,
     itemForm.category,
+    itemForm.item,
     isEditing,
     formData,
     addAnother,
