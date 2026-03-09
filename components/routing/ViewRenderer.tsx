@@ -28,14 +28,14 @@ interface ViewRendererProps {
   // Navigation handlers
   handleViewCase: (caseId: string) => void;
   handleNewCase: () => void;
+  handleCancelNewCase: () => void;
+  handleCompleteNewCase: (caseId: string) => void;
   handleCloseNewCaseModal: () => void;
   handleBackToList: () => void;
   handleSaveCase: (
     caseData: { person: NewPersonData; caseRecord: NewCaseRecordData },
     options?: { skipNavigation?: boolean }
   ) => Promise<void>;
-  /** Navigate to a named view */
-  navigate?: (view: AppView) => void;
   
   // Component handlers
   handleDeleteCase: (caseId: string) => Promise<void>;
@@ -82,10 +82,11 @@ export function ViewRenderer({
   // Navigation handlers
   handleViewCase,
   handleNewCase,
+  handleCancelNewCase,
+  handleCompleteNewCase,
   handleCloseNewCaseModal: _handleCloseNewCaseModal,
   handleBackToList,
   handleSaveCase,
-  navigate,
   
   // Component handlers
   handleDeleteCase,
@@ -99,7 +100,7 @@ export function ViewRenderer({
   handleUpdateCaseStatus,
   handleResolveAlert,
   onAlertsCsvImported,
-}: ViewRendererProps) {
+}: Readonly<ViewRendererProps>) {
   
   switch (currentView) {
     case 'dashboard':
@@ -176,10 +177,9 @@ export function ViewRenderer({
       return (
         <IntakeFormView
           onSuccess={(createdCase) => {
-            navigate?.('details');
-            handleViewCase(createdCase.id);
+            handleCompleteNewCase(createdCase.id);
           }}
-          onCancel={() => navigate?.('dashboard')}
+          onCancel={handleCancelNewCase}
         />
       );
 
@@ -191,7 +191,7 @@ export function ViewRenderer({
 /**
  * Wrapper component that renders ViewRenderer plus the QuickCaseModal overlay
  */
-export function ViewRendererWithModal(props: ViewRendererProps) {
+export function ViewRendererWithModal(props: Readonly<ViewRendererProps>) {
   return (
     <>
       <ViewRenderer {...props} />

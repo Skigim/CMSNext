@@ -228,10 +228,14 @@ export function useIntakeWorkflow({
     const toastId = toast.loading("Creating case…");
 
     try {
+      const trimmedFirstName = validatedFormData.firstName.trim();
+      const trimmedLastName = validatedFormData.lastName.trim();
+      const trimmedMcn = validatedFormData.mcn.trim();
+
       // Build NewPersonData from form draft
       const person: NewPersonData = {
-        firstName: validatedFormData.firstName,
-        lastName: validatedFormData.lastName,
+        firstName: trimmedFirstName,
+        lastName: trimmedLastName,
         dateOfBirth: validatedFormData.dateOfBirth ?? "",
         ssn: validatedFormData.ssn ?? "",
         email: validatedFormData.email ?? "",
@@ -267,7 +271,7 @@ export function useIntakeWorkflow({
 
       // Build NewCaseRecordData from form draft
       const caseRecord: NewCaseRecordData = {
-        mcn: validatedFormData.mcn,
+        mcn: trimmedMcn,
         applicationDate: validatedFormData.applicationDate,
         caseType: validatedFormData.caseType || config.caseTypes[0] || "",
         applicationType: validatedFormData.applicationType ?? "",

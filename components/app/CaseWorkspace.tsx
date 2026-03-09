@@ -21,6 +21,8 @@ const FinancialItemModal = lazy(() => import("../modals/FinancialItemModal"));
 interface CaseWorkspaceViewHandlers {
   handleViewCase: (caseId: string) => void;
   handleNewCase: () => void;
+  handleCancelNewCase: () => void;
+  handleCompleteNewCase: (caseId: string) => void;
   handleCloseNewCaseModal: () => void;
   handleBackToList: () => void;
   handleSaveCase: (
@@ -124,10 +126,11 @@ export const CaseWorkspace = memo(function CaseWorkspace({
         alerts={alerts}
         handleViewCase={viewHandlers.handleViewCase}
         handleNewCase={viewHandlers.handleNewCase}
+        handleCancelNewCase={viewHandlers.handleCancelNewCase}
+        handleCompleteNewCase={viewHandlers.handleCompleteNewCase}
         handleCloseNewCaseModal={viewHandlers.handleCloseNewCaseModal}
         handleBackToList={viewHandlers.handleBackToList}
         handleSaveCase={viewHandlers.handleSaveCase}
-        navigate={navigation.onNavigate}
         handleDeleteCase={viewHandlers.handleDeleteCase}
         handleDeleteCases={viewHandlers.handleDeleteCases}
         handleUpdateCasesStatus={viewHandlers.handleUpdateCasesStatus}

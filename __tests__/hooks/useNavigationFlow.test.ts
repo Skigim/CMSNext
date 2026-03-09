@@ -164,8 +164,106 @@ describe("useNavigationFlow", () => {
     );
     expect(endMeasurementMock).toHaveBeenCalledWith(
       "navigation:newCase",
-      expect.objectContaining({ result: "intake" }),
+      expect.objectContaining({ result: "intake", source: "dashboard" }),
     );
+  });
+
+  it("returns to the originating details view when intake is canceled", () => {
+    const existingCase = createMockStoredCase({ id: "case-origin" });
+    const saveCase = vi.fn().mockResolvedValue(undefined);
+    const deleteCase = vi.fn().mockResolvedValue(undefined);
+
+    const { result } = renderHook(({ connectionState }) =>
+      useNavigationFlow({
+        cases: [existingCase],
+        connectionState,
+        saveCase,
+        deleteCase,
+      }),
+    {
+      initialProps: {
+        connectionState: createConnectionState(),
+      },
+    });
+
+    act(() => {
+      result.current.viewCase(existingCase.id);
+    });
+
+    expect(result.current.currentView).toBe("details");
+    expect(result.current.selectedCaseId).toBe(existingCase.id);
+
+    act(() => {
+      result.current.newCase();
+    });
+
+    expect(result.current.currentView).toBe("intake");
+    expect(result.current.selectedCaseId).toBeNull();
+
+    act(() => {
+      result.current.cancelNewCase();
+    });
+
+    expect(result.current.currentView).toBe("details");
+    expect(result.current.selectedCaseId).toBe(existingCase.id);
+
+    const lastMeasurement = getLastMeasurementMetadata("navigation:cancelNewCase");
+    expect(lastMeasurement).toMatchObject({ result: "details" });
+  });
+
+  it("returns to the prior non-intake source after opening a created case", () => {
+    const existingCase = createMockStoredCase({ id: "case-origin" });
+    const createdCase = createMockStoredCase({ id: "case-created" });
+    const saveCase = vi.fn().mockResolvedValue(undefined);
+    const deleteCase = vi.fn().mockResolvedValue(undefined);
+
+    const { result } = renderHook(({ connectionState }) =>
+      useNavigationFlow({
+        cases: [existingCase, createdCase],
+        connectionState,
+        saveCase,
+        deleteCase,
+      }),
+    {
+      initialProps: {
+        connectionState: createConnectionState(),
+      },
+    });
+
+    act(() => {
+      result.current.navigate("list");
+    });
+
+    expect(result.current.currentView).toBe("list");
+
+    act(() => {
+      result.current.viewCase(existingCase.id);
+    });
+
+    act(() => {
+      result.current.newCase();
+    });
+
+    act(() => {
+      result.current.completeNewCase(createdCase.id);
+    });
+
+    expect(result.current.currentView).toBe("details");
+    expect(result.current.selectedCaseId).toBe(createdCase.id);
+
+    act(() => {
+      result.current.backToList();
+    });
+
+    expect(result.current.currentView).toBe("list");
+    expect(result.current.selectedCaseId).toBeNull();
+
+    const lastMeasurement = getLastMeasurementMetadata("navigation:completeNewCase");
+    expect(lastMeasurement).toMatchObject({
+      caseId: createdCase.id,
+      result: "details",
+      source: "list",
+    });
   });
 
   it("navigates to case details after creating a new case", async () => {
@@ -258,5 +356,94 @@ describe("useNavigationFlow", () => {
 
     const lastMeasurement = getLastMeasurementMetadata("navigation:saveCase");
     expect(lastMeasurement).toMatchObject({ result: "create" });
+  });
+
+  it("uses the originating source when saveCaseWithNavigation creates a case from intake", async () => {
+    const existingCase = createMockStoredCase({ id: "case-origin" });
+    const newCase = createMockStoredCase({ id: "new-case-id" });
+    const saveCase = vi.fn().mockResolvedValue(newCase);
+    const deleteCase = vi.fn().mockResolvedValue(undefined);
+
+    const { result } = renderHook(({ connectionState }) =>
+      useNavigationFlow({
+        cases: [existingCase, newCase],
+        connectionState,
+        saveCase,
+        deleteCase,
+      }),
+    {
+      initialProps: {
+        connectionState: createConnectionState(),
+      },
+    });
+
+    act(() => {
+      result.current.navigate("list");
+    });
+
+    act(() => {
+      result.current.viewCase(existingCase.id);
+    });
+
+    act(() => {
+      result.current.newCase();
+    });
+
+    await act(async () => {
+      await result.current.saveCaseWithNavigation({
+        person: {
+          firstName: "Casey",
+          lastName: "Tester",
+          email: "casey@example.com",
+          phone: "555-0101",
+          dateOfBirth: "1990-01-01",
+          ssn: "123-45-6789",
+          livingArrangement: "Home",
+          status: "Active",
+          address: {
+            street: "123 Main St",
+            city: "Test City",
+            state: "TC",
+            zip: "12345",
+          },
+          mailingAddress: {
+            street: "123 Main St",
+            city: "Test City",
+            state: "TC",
+            zip: "12345",
+            sameAsPhysical: true,
+          },
+          organizationId: null,
+          authorizedRepIds: [],
+          familyMembers: [],
+        },
+        caseRecord: {
+          mcn: "MCN-0001",
+          applicationDate: "2024-01-01",
+          caseType: "Sample",
+          personId: "temp-person-id",
+          spouseId: "",
+          status: "Pending",
+          description: "Test case",
+          priority: false,
+          livingArrangement: "Home",
+          withWaiver: false,
+          admissionDate: "2024-01-05",
+          organizationId: "org-1",
+          authorizedReps: [],
+          retroRequested: "",
+        },
+      });
+    });
+
+    expect(result.current.currentView).toBe("details");
+    expect(result.current.selectedCaseId).toBe(newCase.id);
+
+    act(() => {
+      result.current.backToList();
+    });
+
+    expect(result.current.currentView).toBe("list");
+    expect(result.current.selectedCaseId).toBeNull();
   });
 });

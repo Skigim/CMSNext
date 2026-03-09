@@ -335,6 +335,33 @@ describe("useIntakeWorkflow", () => {
       );
     });
 
+    it("trims required identity fields before saving", async () => {
+      const { result } = renderIntakeHook();
+
+      act(() => {
+        result.current.updateField("firstName", "  Alice  ");
+        result.current.updateField("lastName", "  Smith  ");
+        result.current.updateField("mcn", "  12345  ");
+        result.current.updateField("applicationDate", "2026-01-01");
+      });
+
+      await act(async () => {
+        await result.current.submit();
+      });
+
+      expect(mockDataManager.createCompleteCase).toHaveBeenCalledWith(
+        expect.objectContaining({
+          person: expect.objectContaining({
+            firstName: "Alice",
+            lastName: "Smith",
+          }),
+          caseRecord: expect.objectContaining({
+            mcn: "12345",
+          }),
+        }),
+      );
+    });
+
     it("shows an error when canSubmit is false", async () => {
       const { result } = renderIntakeHook();
 
