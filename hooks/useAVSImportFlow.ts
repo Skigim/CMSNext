@@ -10,6 +10,7 @@ import {
   type ParsedAVSAccount,
   type MatchConfidence,
 } from "@/domain/avs";
+import { getEntryForMonth, getFirstOfMonth } from "@/domain/financials";
 import { createLogger } from "@/utils/logger";
 import { extractErrorMessage } from "@/utils/errorUtils";
 
@@ -29,17 +30,48 @@ async function importSingleAccount(
   account: AVSAccountWithMeta,
   dataManager: NonNullable<ReturnType<typeof useDataManagerSafe>>,
   caseId: string,
+  existingItemsById: ReadonlyMap<string, StoredFinancialItem>,
 ): Promise<SingleImportResult> {
   try {
     const itemData = avsAccountToFinancialItem(account);
+    const updatePayload: Partial<FinancialItem> = {
+      ...itemData,
+      verificationStatus: "Verified",
+      verificationSource: "AVS",
+    };
+
     if (account.existingItemId) {
-      // Explicitly set verification fields for updates to ensure AVS-imported
-      // items are always marked as verified by AVS, regardless of prior status.
-      await dataManager.updateItem(caseId, "resources", account.existingItemId, {
-        ...itemData,
-        verificationStatus: "Verified",
+      const existingItem = existingItemsById.get(account.existingItemId);
+
+      if (!existingItem) {
+        throw new Error(`Matched AVS item with ID '${account.existingItemId}' was not found during import`);
+      }
+
+      const currentEntry = getEntryForMonth(existingItem);
+      const currentMonthStart = getFirstOfMonth();
+      const historyPayload = {
+        amount: itemData.amount,
+        verificationStatus: "Verified" as const,
         verificationSource: "AVS",
-      } as Partial<FinancialItem>);
+      };
+
+      if (currentEntry?.startDate === currentMonthStart) {
+        await dataManager.updateAmountHistoryEntry(
+          caseId,
+          "resources",
+          account.existingItemId,
+          currentEntry.id,
+          historyPayload,
+        );
+      } else {
+        await dataManager.addAmountHistoryEntry(caseId, "resources", account.existingItemId, {
+          ...historyPayload,
+          startDate: currentMonthStart,
+        });
+      }
+
+      const { amount: _amount, ...nonHistoryUpdates } = updatePayload;
+      await dataManager.updateItem(caseId, "resources", account.existingItemId, nonHistoryUpdates);
       return { outcome: "updated" };
     }
     await dataManager.addItem(caseId, "resources", itemData as Omit<FinancialItem, "id" | "createdAt" | "updatedAt">);
@@ -353,8 +385,12 @@ export function useAVSImportFlow({
     const errors: string[] = [];
 
     try {
+      const existingItemsById = new Map(
+        (await dataManager.getFinancialItemsForCase(selectedCase.id)).map((item) => [item.id, item]),
+      );
+
       for (const account of selectedAccounts) {
-        const result = await importSingleAccount(account, dataManager, selectedCase.id);
+        const result = await importSingleAccount(account, dataManager, selectedCase.id, existingItemsById);
         if (result.outcome === "new") newCount++;
         else if (result.outcome === "updated") updateCount++;
         else if (result.errorDescription) errors.push(result.errorDescription);

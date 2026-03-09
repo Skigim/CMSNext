@@ -1,7 +1,12 @@
 import { useCallback, useState } from "react";
 import { toast } from "sonner";
 import { useDataManagerSafe } from "../contexts/DataManagerContext";
-import { validateFinancialItem } from "@/domain/financials";
+import {
+  getAmountForMonth,
+  getEntryForMonth,
+  getFirstOfMonth,
+  validateFinancialItem,
+} from "@/domain/financials";
 import type { CaseCategory, StoredCase, FinancialItem } from "../types/case";
 import { createLogger } from "@/utils/logger";
 import { extractErrorMessage } from "@/utils/errorUtils";
@@ -94,19 +99,23 @@ const createEmptyFormData = (): FinancialFormData => ({
   dateAdded: new Date().toISOString(),
 });
 
-const createFormDataFromItem = (item: FinancialItem): FinancialFormData => ({
+const createFormDataFromItem = (item: FinancialItem): FinancialFormData => {
+  const currentEntry = getEntryForMonth(item);
+
+  return {
   id: item.id,
   description: item.description || item.name || "",
   location: item.location || "",
   accountNumber: item.accountNumber || "",
-  amount: item.amount || 0,
+  amount: getAmountForMonth(item),
   frequency: item.frequency || "monthly",
   owner: item.owner || "applicant",
-  verificationStatus: item.verificationStatus || "Needs VR",
-  verificationSource: item.verificationSource || "",
+  verificationStatus: currentEntry?.verificationStatus ?? item.verificationStatus ?? "Needs VR",
+  verificationSource: currentEntry?.verificationSource ?? item.verificationSource ?? "",
   notes: item.notes || "",
   dateAdded: item.dateAdded || new Date().toISOString(),
-});
+  };
+};
 
 interface UseFinancialItemFlowParams {
   selectedCase: StoredCase | null;
@@ -326,8 +335,42 @@ export function useFinancialItemFlow({
     try {
       const categoryLabel = itemForm.category.charAt(0).toUpperCase() + itemForm.category.slice(1);
 
-      if (isEditing && formData.id) {
-        await dataManager.updateItem(selectedCase.id, itemForm.category, formData.id, itemData);
+      if (isEditing && formData.id && itemForm.item) {
+        const currentEntry = getEntryForMonth(itemForm.item);
+        const currentAmount = getAmountForMonth(itemForm.item);
+        const currentVerificationStatus = currentEntry?.verificationStatus ?? itemForm.item.verificationStatus ?? "Needs VR";
+        const currentVerificationSource = currentEntry?.verificationSource ?? itemForm.item.verificationSource ?? "";
+        const shouldUpdateHistory =
+          itemData.amount !== currentAmount ||
+          itemData.verificationStatus !== currentVerificationStatus ||
+          itemData.verificationSource !== currentVerificationSource;
+
+        if (shouldUpdateHistory) {
+          const historyPayload = {
+            amount: itemData.amount,
+            verificationStatus: itemData.verificationStatus,
+            verificationSource: itemData.verificationSource,
+          };
+          const currentMonthStart = getFirstOfMonth();
+
+          if (currentEntry?.startDate === currentMonthStart) {
+            await dataManager.updateAmountHistoryEntry(
+              selectedCase.id,
+              itemForm.category,
+              formData.id,
+              currentEntry.id,
+              historyPayload,
+            );
+          } else {
+            await dataManager.addAmountHistoryEntry(selectedCase.id, itemForm.category, formData.id, {
+              ...historyPayload,
+              startDate: currentMonthStart,
+            });
+          }
+        }
+
+        const { amount: _amount, ...nonHistoryUpdates } = itemData;
+        await dataManager.updateItem(selectedCase.id, itemForm.category, formData.id, nonHistoryUpdates);
         toast.success(`${categoryLabel} item updated successfully`);
       } else {
         await dataManager.addItem(selectedCase.id, itemForm.category, itemData);
@@ -356,6 +399,7 @@ export function useFinancialItemFlow({
     dataManager,
     selectedCase,
     itemForm.category,
+    itemForm.item,
     isEditing,
     formData,
     addAnother,
