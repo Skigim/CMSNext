@@ -44,8 +44,7 @@ async function importSingleAccount(
       const existingItem = existingItems.find((item) => item.id === account.existingItemId);
 
       if (!existingItem) {
-        await dataManager.updateItem(caseId, "resources", account.existingItemId, updatePayload);
-        return { outcome: "updated" };
+        throw new Error(`Matched AVS item with ID '${account.existingItemId}' was not found during import`);
       }
 
       const currentEntry = getEntryForMonth(existingItem);
@@ -71,7 +70,8 @@ async function importSingleAccount(
         });
       }
 
-      const { amount: _ignoredAmount, ...nonHistoryUpdates } = updatePayload;
+      const { amount: excludedAmount, ...nonHistoryUpdates } = updatePayload;
+      void excludedAmount;
       await dataManager.updateItem(caseId, "resources", account.existingItemId, nonHistoryUpdates);
       return { outcome: "updated" };
     }

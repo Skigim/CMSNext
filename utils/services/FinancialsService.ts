@@ -19,6 +19,8 @@ interface FinancialsServiceConfig {
   fileStorage: FileStorageService;
 }
 
+const PENDING_ITEM_ID = 'pending-item';
+
 /**
  * FinancialsService - Financial item operations and amount history management
  * 
@@ -207,7 +209,11 @@ export class FinancialsService {
     }
 
     const normalizedAmount = amountHistory
-      ? getAmountForMonth({ ...itemData, amountHistory } as FinancialItem)
+      ? getAmountForMonth({
+          id: PENDING_ITEM_ID,
+          ...itemData,
+          amountHistory,
+        })
       : itemData.amount;
 
     // Create new item with foreign keys

@@ -365,7 +365,8 @@ export function useFinancialItemFlow({
           }
         }
 
-        const { amount: _ignoredAmount, ...nonHistoryUpdates } = itemData;
+        const { amount: excludedAmount, ...nonHistoryUpdates } = itemData;
+        void excludedAmount;
         await dataManager.updateItem(selectedCase.id, itemForm.category, formData.id, nonHistoryUpdates);
         toast.success(`${categoryLabel} item updated successfully`);
       } else {
