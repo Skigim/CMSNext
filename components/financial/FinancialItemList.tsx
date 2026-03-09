@@ -20,6 +20,8 @@ interface FinancialItemListProps {
   showOwnerField?: boolean;
   /** Callback to register the add trigger function for external use */
   onAddTrigger?: (triggerFn: () => void) => void;
+  /** Case application date — used to default new entry start dates */
+  applicationDate?: string;
 }
 
 export function FinancialItemList({
@@ -32,6 +34,7 @@ export function FinancialItemList({
   showActions = true,
   showOwnerField = false,
   onAddTrigger,
+  applicationDate,
 }: FinancialItemListProps) {
   const [isStepperOpen, setIsStepperOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<FinancialItem | undefined>(undefined);
@@ -131,6 +134,7 @@ export function FinancialItemList({
         itemType={itemType}
         item={editingItem}
         showOwnerField={showOwnerField}
+        applicationDate={applicationDate}
         onSave={handleStepperSave}
         onUpdate={handleStepperUpdate}
         onDelete={handleStepperDelete}

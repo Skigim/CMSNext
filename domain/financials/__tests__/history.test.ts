@@ -9,13 +9,15 @@ import {
   sortHistoryEntries,
   createHistoryEntry,
   closePreviousOngoingEntry,
+  getAutoEndDateForNewEntry,
   addHistoryEntryToItem,
   updateHistoryEntry,
   deleteHistoryEntry,
   formatHistoryDate,
   formatMonthYear,
 } from "../history";
-import type { AmountHistoryEntry, FinancialItem } from "@/types/case";
+import type { FinancialItem } from "@/types/case";
+import { createMockAmountHistoryEntry } from "@/src/test/testUtils";
 
 // Mock uuid for consistent IDs in tests
 vi.mock("uuid", () => ({
@@ -24,6 +26,14 @@ vi.mock("uuid", () => ({
 
 const localDate = (year: number, month: number, day: number): Date =>
   new Date(year, month - 1, day);
+
+// Shared base financial item used across multiple describe blocks
+const baseItem: FinancialItem = {
+  id: "item-1",
+  description: "Test Item",
+  amount: 500,
+  verificationStatus: "Verified",
+};
 
 describe("financialHistory utilities", () => {
   describe("getFirstOfMonth", () => {
@@ -61,13 +71,11 @@ describe("financialHistory utilities", () => {
   });
 
   describe("isDateInEntryRange", () => {
-    const entry: AmountHistoryEntry = {
-      id: "1",
-      amount: 1000,
+    const entry = createMockAmountHistoryEntry({
       startDate: "2025-06-01",
       endDate: "2025-06-30",
       createdAt: "2025-06-01",
-    };
+    });
 
     it("returns true for date within range", () => {
       const targetDate = localDate(2025, 6, 15);
@@ -95,25 +103,17 @@ describe("financialHistory utilities", () => {
     });
 
     it("returns true for ongoing entry (no endDate) if date >= startDate", () => {
-      const ongoingEntry: AmountHistoryEntry = {
+      const ongoingEntry = createMockAmountHistoryEntry({
         id: "2",
         amount: 2000,
         startDate: "2025-06-01",
-        endDate: null,
         createdAt: "2025-06-01",
-      };
+      });
       expect(isDateInEntryRange(ongoingEntry, localDate(2025, 12, 15))).toBe(true);
     });
   });
 
   describe("getAmountForMonth", () => {
-    const baseItem: FinancialItem = {
-      id: "item-1",
-      description: "Test Item",
-      amount: 500, // fallback amount
-      verificationStatus: "Verified",
-    };
-
     it("returns item.amount when no amountHistory exists", () => {
       expect(getAmountForMonth(baseItem, localDate(2025, 6, 15))).toBe(500);
     });
@@ -127,13 +127,7 @@ describe("financialHistory utilities", () => {
       const itemWithHistory: FinancialItem = {
         ...baseItem,
         amountHistory: [
-          {
-            id: "1",
-            amount: 1000,
-            startDate: "2025-06-01",
-            endDate: null,
-            createdAt: "2025-06-01",
-          },
+          createMockAmountHistoryEntry({ startDate: "2025-06-01", createdAt: "2025-06-01" }),
         ],
       };
       expect(getAmountForMonth(itemWithHistory, localDate(2025, 6, 15))).toBe(1000);
@@ -143,20 +137,8 @@ describe("financialHistory utilities", () => {
       const itemWithMultipleHistory: FinancialItem = {
         ...baseItem,
         amountHistory: [
-          {
-            id: "1",
-            amount: 1000,
-            startDate: "2025-05-01",
-            endDate: "2025-05-31",
-            createdAt: "2025-05-01",
-          },
-          {
-            id: "2",
-            amount: 1500,
-            startDate: "2025-06-01",
-            endDate: null,
-            createdAt: "2025-06-01",
-          },
+          createMockAmountHistoryEntry({ startDate: "2025-05-01", endDate: "2025-05-31", createdAt: "2025-05-01" }),
+          createMockAmountHistoryEntry({ id: "entry-test-2", amount: 1500, startDate: "2025-06-01", createdAt: "2025-06-01" }),
         ],
       };
       expect(getAmountForMonth(itemWithMultipleHistory, localDate(2025, 6, 15))).toBe(1500);
@@ -167,13 +149,7 @@ describe("financialHistory utilities", () => {
       const itemWithHistory: FinancialItem = {
         ...baseItem,
         amountHistory: [
-          {
-            id: "1",
-            amount: 1000,
-            startDate: "2025-06-01",
-            endDate: "2025-06-30",
-            createdAt: "2025-06-01",
-          },
+          createMockAmountHistoryEntry({ startDate: "2025-06-01", endDate: "2025-06-30", createdAt: "2025-06-01" }),
         ],
       };
       // Requesting amount for July when only June is covered - should fall back to June's amount
@@ -186,13 +162,6 @@ describe("financialHistory utilities", () => {
   });
 
   describe("getAmountInfoForMonth", () => {
-    const baseItem: FinancialItem = {
-      id: "item-1",
-      description: "Test Item",
-      amount: 500,
-      verificationStatus: "Verified",
-    };
-
     it("returns isLegacyFallback=true when no history exists", () => {
       const result = getAmountInfoForMonth(baseItem, localDate(2025, 6, 15));
       expect(result.amount).toBe(500);
@@ -202,13 +171,7 @@ describe("financialHistory utilities", () => {
     });
 
     it("returns exact match with no fallback flags", () => {
-      const entry: AmountHistoryEntry = {
-        id: "1",
-        amount: 1000,
-        startDate: "2025-06-01",
-        endDate: null,
-        createdAt: "2025-06-01",
-      };
+      const entry = createMockAmountHistoryEntry({ startDate: "2025-06-01", createdAt: "2025-06-01" });
       const itemWithHistory = { ...baseItem, amountHistory: [entry] };
       const result = getAmountInfoForMonth(itemWithHistory, localDate(2025, 6, 15));
       expect(result.amount).toBe(1000);
@@ -218,13 +181,11 @@ describe("financialHistory utilities", () => {
     });
 
     it("returns isFallback=true when using a past entry", () => {
-      const entry: AmountHistoryEntry = {
-        id: "1",
-        amount: 1000,
+      const entry = createMockAmountHistoryEntry({
         startDate: "2025-06-01",
         endDate: "2025-06-30",
         createdAt: "2025-06-01",
-      };
+      });
       const itemWithHistory = { ...baseItem, amountHistory: [entry] };
       // July 15 is after June 30 end date
       const result = getAmountInfoForMonth(itemWithHistory, localDate(2025, 7, 15));
@@ -236,25 +197,12 @@ describe("financialHistory utilities", () => {
   });
 
   describe("getEntryForMonth", () => {
-    const baseItem: FinancialItem = {
-      id: "item-1",
-      description: "Test Item",
-      amount: 500,
-      verificationStatus: "Verified",
-    };
-
     it("returns undefined when no amountHistory exists", () => {
       expect(getEntryForMonth(baseItem, localDate(2025, 6, 15))).toBeUndefined();
     });
 
     it("returns the matching entry", () => {
-      const entry: AmountHistoryEntry = {
-        id: "1",
-        amount: 1000,
-        startDate: "2025-06-01",
-        endDate: null,
-        createdAt: "2025-06-01",
-      };
+      const entry = createMockAmountHistoryEntry({ startDate: "2025-06-01", createdAt: "2025-06-01" });
       const itemWithHistory = { ...baseItem, amountHistory: [entry] };
       expect(getEntryForMonth(itemWithHistory, localDate(2025, 6, 15))).toEqual(entry);
     });
@@ -262,27 +210,27 @@ describe("financialHistory utilities", () => {
 
   describe("sortHistoryEntries", () => {
     it("sorts entries by startDate in descending order (most recent first)", () => {
-      const entries: AmountHistoryEntry[] = [
-        { id: "1", amount: 100, startDate: "2025-04-01", createdAt: "" },
-        { id: "2", amount: 200, startDate: "2025-06-01", createdAt: "" },
-        { id: "3", amount: 300, startDate: "2025-05-01", createdAt: "" },
+      const entries = [
+        createMockAmountHistoryEntry({ id: "entry-test-1", amount: 100, startDate: "2025-04-01", createdAt: "" }),
+        createMockAmountHistoryEntry({ id: "entry-test-2", amount: 200, startDate: "2025-06-01", createdAt: "" }),
+        createMockAmountHistoryEntry({ id: "entry-test-3", amount: 300, startDate: "2025-05-01", createdAt: "" }),
       ];
 
       const sorted = sortHistoryEntries(entries);
-      expect(sorted[0].id).toBe("2"); // June
-      expect(sorted[1].id).toBe("3"); // May
-      expect(sorted[2].id).toBe("1"); // April
+      expect(sorted[0].id).toBe("entry-test-2"); // June
+      expect(sorted[1].id).toBe("entry-test-3"); // May
+      expect(sorted[2].id).toBe("entry-test-1"); // April
     });
 
     it("does not mutate the original array", () => {
-      const entries: AmountHistoryEntry[] = [
-        { id: "1", amount: 100, startDate: "2025-04-01", createdAt: "" },
-        { id: "2", amount: 200, startDate: "2025-06-01", createdAt: "" },
+      const entries = [
+        createMockAmountHistoryEntry({ id: "entry-test-1", amount: 100, startDate: "2025-04-01", createdAt: "" }),
+        createMockAmountHistoryEntry({ id: "entry-test-2", amount: 200, startDate: "2025-06-01", createdAt: "" }),
       ];
 
       const sorted = sortHistoryEntries(entries);
-      expect(entries[0].id).toBe("1"); // Original unchanged
-      expect(sorted[0].id).toBe("2");
+      expect(entries[0].id).toBe("entry-test-1"); // Original unchanged
+      expect(sorted[0].id).toBe("entry-test-2");
     });
   });
 
@@ -317,14 +265,8 @@ describe("financialHistory utilities", () => {
 
   describe("closePreviousOngoingEntry", () => {
     it("closes ongoing entries that start before new entry", () => {
-      const history: AmountHistoryEntry[] = [
-        {
-          id: "1",
-          amount: 1000,
-          startDate: "2025-05-01",
-          endDate: null,
-          createdAt: "2025-05-01",
-        },
+      const history = [
+        createMockAmountHistoryEntry({ startDate: "2025-05-01", createdAt: "2025-05-01" }),
       ];
 
       const updated = closePreviousOngoingEntry(history, "2025-06-01");
@@ -351,22 +293,16 @@ describe("financialHistory utilities", () => {
         expectedEndDate: "2025-10-01",
       },
     ])("$label", ({ startDate, newEntryStart, expectedEndDate }) => {
-      const history: AmountHistoryEntry[] = [
-        { id: "1", amount: 1000, startDate, endDate: null, createdAt: startDate },
+      const history = [
+        createMockAmountHistoryEntry({ startDate, endDate: null, createdAt: startDate }),
       ];
       const updated = closePreviousOngoingEntry(history, newEntryStart);
       expect(updated[0].endDate).toBe(expectedEndDate);
     });
 
     it("does not modify entries that already have endDate", () => {
-      const history: AmountHistoryEntry[] = [
-        {
-          id: "1",
-          amount: 1000,
-          startDate: "2025-05-01",
-          endDate: "2025-05-15",
-          createdAt: "2025-05-01",
-        },
+      const history = [
+        createMockAmountHistoryEntry({ startDate: "2025-05-01", endDate: "2025-05-15", createdAt: "2025-05-01" }),
       ];
 
       const updated = closePreviousOngoingEntry(history, "2025-06-01");
@@ -375,6 +311,68 @@ describe("financialHistory utilities", () => {
 
     it("returns empty array for empty input", () => {
       expect(closePreviousOngoingEntry([], "2025-06-01")).toEqual([]);
+    });
+  });
+
+  describe("getAutoEndDateForNewEntry", () => {
+    it("returns null when history is empty", () => {
+      expect(getAutoEndDateForNewEntry([], "2025-09-01")).toBeNull();
+    });
+
+    it("returns null when no entries start after the new entry's start date", () => {
+      const history = [
+        createMockAmountHistoryEntry({ startDate: "2025-08-01", createdAt: "2025-08-01" }),
+      ];
+      expect(getAutoEndDateForNewEntry(history, "2025-09-01")).toBeNull();
+    });
+
+    it("returns last day of month prior to earliest later entry", () => {
+      const history = [
+        createMockAmountHistoryEntry({ startDate: "2025-10-01", createdAt: "2025-10-01" }),
+      ];
+      // New entry starts 09/01 → next entry is 10/01 → auto end = 09/30
+      expect(getAutoEndDateForNewEntry(history, "2025-09-01")).toBe("2025-09-30");
+    });
+
+    it("picks the earliest later entry when multiple later entries exist", () => {
+      const history = [
+        createMockAmountHistoryEntry({ id: "entry-test-1", startDate: "2025-11-01", createdAt: "2025-11-01" }),
+        createMockAmountHistoryEntry({ id: "entry-test-2", amount: 1200, startDate: "2025-10-01", createdAt: "2025-10-01" }),
+      ];
+      // New entry starts 09/01 → earliest later is 10/01 → auto end = 09/30
+      expect(getAutoEndDateForNewEntry(history, "2025-09-01")).toBe("2025-09-30");
+    });
+
+    it("handles year boundary correctly", () => {
+      const history = [
+        createMockAmountHistoryEntry({ startDate: "2025-01-01", createdAt: "2025-01-01" }),
+      ];
+      // New entry starts 12/01/2024 → next entry is 01/01/2025 → auto end = 12/31/2024
+      expect(getAutoEndDateForNewEntry(history, "2024-12-01")).toBe("2024-12-31");
+    });
+
+    it("returns null for an invalid new entry start date", () => {
+      const history = [
+        createMockAmountHistoryEntry({ startDate: "2025-10-01", createdAt: "2025-10-01" }),
+      ];
+      expect(getAutoEndDateForNewEntry(history, "not-a-date")).toBeNull();
+    });
+
+    it("does not consider entries with the same start date as 'later'", () => {
+      const history = [
+        createMockAmountHistoryEntry({ startDate: "2025-09-01", createdAt: "2025-09-01" }),
+      ];
+      // Same start date → not a "later" entry → null
+      expect(getAutoEndDateForNewEntry(history, "2025-09-01")).toBeNull();
+    });
+
+    it("clamps end date to newEntryStartDate when earliest later entry is in the same month on a later day", () => {
+      const history = [
+        createMockAmountHistoryEntry({ startDate: "2025-09-20", createdAt: "2025-09-20" }),
+      ];
+      // New entry starts 09/15, later entry starts 09/20 (same month)
+      // Prior month end = 08/31, but 08/31 < 09/15 → clamped to 09/15
+      expect(getAutoEndDateForNewEntry(history, "2025-09-15")).toBe("2025-09-15");
     });
   });
 
@@ -391,13 +389,7 @@ describe("financialHistory utilities", () => {
         verificationStatus: "Verified",
       };
 
-      const newEntry: AmountHistoryEntry = {
-        id: "entry-1",
-        amount: 1000,
-        startDate: "2025-06-01",
-        endDate: null,
-        createdAt: "2025-06-01",
-      };
+      const newEntry = createMockAmountHistoryEntry({ id: "entry-1", startDate: "2025-06-01", createdAt: "2025-06-01" });
 
       const updated = addHistoryEntryToItem(item, newEntry);
       expect(updated.amountHistory).toHaveLength(1);
@@ -411,23 +403,11 @@ describe("financialHistory utilities", () => {
         amount: 500,
         verificationStatus: "Verified",
         amountHistory: [
-          {
-            id: "old-entry",
-            amount: 800,
-            startDate: "2025-05-01",
-            endDate: null,
-            createdAt: "2025-05-01",
-          },
+          createMockAmountHistoryEntry({ id: "old-entry", amount: 800, startDate: "2025-05-01", createdAt: "2025-05-01" }),
         ],
       };
 
-      const newEntry: AmountHistoryEntry = {
-        id: "new-entry",
-        amount: 1000,
-        startDate: "2025-06-01",
-        endDate: null,
-        createdAt: "2025-06-01",
-      };
+      const newEntry = createMockAmountHistoryEntry({ id: "new-entry", startDate: "2025-06-01", createdAt: "2025-06-01" });
 
       const updated = addHistoryEntryToItem(item, newEntry);
       expect(updated.amountHistory).toHaveLength(2);
@@ -436,23 +416,21 @@ describe("financialHistory utilities", () => {
   });
 
   describe("updateHistoryEntry", () => {
-    const history: AmountHistoryEntry[] = [
-      {
+    const history = [
+      createMockAmountHistoryEntry({
         id: "entry-1",
         amount: 500,
         startDate: "2025-05-01",
         endDate: "2025-05-31",
         verificationStatus: "Needs VR",
         createdAt: "2025-05-01T00:00:00.000Z",
-      },
-      {
+      }),
+      createMockAmountHistoryEntry({
         id: "entry-2",
-        amount: 1000,
         startDate: "2025-06-01",
-        endDate: null,
         verificationStatus: "Verified",
         createdAt: "2025-06-01T00:00:00.000Z",
-      },
+      }),
     ];
 
     it("updates the amount of a matching entry", () => {
@@ -488,21 +466,19 @@ describe("financialHistory utilities", () => {
   });
 
   describe("deleteHistoryEntry", () => {
-    const history: AmountHistoryEntry[] = [
-      {
+    const history = [
+      createMockAmountHistoryEntry({
         id: "entry-1",
         amount: 500,
         startDate: "2025-05-01",
         endDate: "2025-05-31",
         createdAt: "2025-05-01T00:00:00.000Z",
-      },
-      {
+      }),
+      createMockAmountHistoryEntry({
         id: "entry-2",
-        amount: 1000,
         startDate: "2025-06-01",
-        endDate: null,
         createdAt: "2025-06-01T00:00:00.000Z",
-      },
+      }),
     ];
 
     it("removes the entry with matching id", () => {
@@ -523,13 +499,14 @@ describe("financialHistory utilities", () => {
     });
 
     it("returns empty array when deleting the only entry", () => {
-      const single: AmountHistoryEntry[] = [{
-        id: "only",
-        amount: 100,
-        startDate: "2025-01-01",
-        endDate: null,
-        createdAt: "2025-01-01T00:00:00.000Z",
-      }];
+      const single = [
+        createMockAmountHistoryEntry({
+          id: "only",
+          amount: 100,
+          startDate: "2025-01-01",
+          createdAt: "2025-01-01T00:00:00.000Z",
+        }),
+      ];
       const updated = deleteHistoryEntry(single, "only");
       expect(updated).toHaveLength(0);
     });

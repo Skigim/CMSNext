@@ -44,9 +44,9 @@ export function FinancialsGridView({ caseId, selectedCase }: FinancialsGridViewP
 
       {/* Financial Sections Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-        <CaseSection title="Resources" category="resources" caseId={caseId} />
-        <CaseSection title="Income" category="income" caseId={caseId} />
-        <CaseSection title="Expenses" category="expenses" caseId={caseId} />
+        <CaseSection title="Resources" category="resources" caseId={caseId} applicationDate={selectedCase?.caseRecord.applicationDate} />
+        <CaseSection title="Income" category="income" caseId={caseId} applicationDate={selectedCase?.caseRecord.applicationDate} />
+        <CaseSection title="Expenses" category="expenses" caseId={caseId} applicationDate={selectedCase?.caseRecord.applicationDate} />
       </div>
 
       {/* AVS Import Modal */}

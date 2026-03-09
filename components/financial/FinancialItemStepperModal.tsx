@@ -47,7 +47,7 @@ import {
   AlertCircle,
 } from "lucide-react";
 import type { AmountHistoryEntry, FinancialItem, CaseCategory } from "@/types/case";
-import { formatCurrency, isoToDateInputValue } from "@/domain/common";
+import { formatCurrency, isoToDateInputValue, parseLocalDate } from "@/domain/common";
 import {
   sortHistoryEntries,
   formatHistoryDate,
@@ -56,6 +56,7 @@ import {
   updateHistoryEntry,
   deleteHistoryEntry,
   closePreviousOngoingEntry,
+  getAutoEndDateForNewEntry,
 } from "@/domain/financials";
 import { cn } from "../ui/utils";
 
@@ -71,6 +72,8 @@ interface FinancialItemStepperModalProps {
   item?: FinancialItem;
   /** For LTC cases that need owner field */
   showOwnerField?: boolean;
+  /** Case application date — used to default new entry start dates to the first of its month */
+  applicationDate?: string;
   // Callbacks
   onSave: (itemData: Omit<FinancialItem, "id" | "createdAt" | "updatedAt">) => Promise<void>;
   onUpdate?: (itemId: string, updates: Partial<FinancialItem>) => Promise<void>;
@@ -121,7 +124,7 @@ const emptyItemFormData: ItemFormData = {
 };
 
 const emptyEntryFormData: EntryFormData = {
-  amount: "",
+  amount: "0",
   startDate: "",
   endDate: "",
   verificationStatus: "Needs VR",
@@ -161,10 +164,31 @@ function getInitialItemFormData(item?: FinancialItem): ItemFormData {
   };
 }
 
-function getDefaultEntryFormData(): EntryFormData {
+/**
+ * Normalize a date string so month calculations are stable across timezones.
+ * If the string starts with YYYY-MM-DD (e.g., "2026-03-01T00:00:00.000Z"),
+ * return just that leading date portion; otherwise return the original string.
+ */
+function normalizeToDateOnly(applicationDate?: string): string | undefined {
+  if (!applicationDate) {
+    return undefined;
+  }
+
+  const match = applicationDate.match(/^(\d{4}-\d{2}-\d{2})/);
+  if (match) {
+    return match[1];
+  }
+
+  return applicationDate;
+}
+
+function getDefaultEntryFormData(applicationDate?: string): EntryFormData {
+  const normalized = normalizeToDateOnly(applicationDate);
+  const parsed = normalized ? parseLocalDate(normalized) : null;
+  const startDate = isoToDateInputValue(getFirstOfMonth(parsed ?? undefined));
   return {
-    amount: "",
-    startDate: isoToDateInputValue(getFirstOfMonth()),
+    amount: "0",
+    startDate,
     endDate: "",
     verificationStatus: "Needs VR",
     verificationSource: "",
@@ -175,8 +199,9 @@ function openAddEntryForm(
   setEntryFormData: Dispatch<SetStateAction<EntryFormData>>,
   setIsAddingEntry: Dispatch<SetStateAction<boolean>>,
   setEditingEntryId: Dispatch<SetStateAction<string | null>>,
+  applicationDate?: string,
 ): void {
-  setEntryFormData(getDefaultEntryFormData());
+  setEntryFormData(getDefaultEntryFormData(applicationDate));
   setIsAddingEntry(true);
   setEditingEntryId(null);
 }
@@ -222,13 +247,14 @@ function openAmountsStep(
   setEntryFormData: Dispatch<SetStateAction<EntryFormData>>,
   setIsAddingEntry: Dispatch<SetStateAction<boolean>>,
   setEditingEntryId: Dispatch<SetStateAction<string | null>>,
+  applicationDate?: string,
 ): void {
   setCurrentStep("amounts");
   if (localHistoryEntriesLength !== 0) {
     return;
   }
   setTimeout(() => {
-    openAddEntryForm(setEntryFormData, setIsAddingEntry, setEditingEntryId);
+    openAddEntryForm(setEntryFormData, setIsAddingEntry, setEditingEntryId, applicationDate);
   }, 0);
 }
 
@@ -362,6 +388,7 @@ export function FinancialItemStepperModal({
   itemType,
   item,
   showOwnerField = false,
+  applicationDate,
   onSave,
   onUpdate,
   onDelete,
@@ -540,8 +567,8 @@ export function FinancialItemStepperModal({
   );
 
   const handleStartAddEntry = useCallback(() => {
-    openAddEntryForm(setEntryFormData, setIsAddingEntry, setEditingEntryId);
-  }, []);
+    openAddEntryForm(setEntryFormData, setIsAddingEntry, setEditingEntryId, applicationDate);
+  }, [applicationDate]);
 
   const handleStartEditEntry = useCallback((entry: AmountHistoryEntry) => {
     setEntryFormData({
@@ -570,13 +597,17 @@ export function FinancialItemStepperModal({
     }
 
     if (isAddingEntry) {
-      const newEntry = createHistoryEntry(amount, entryFormData.startDate, {
-        endDate: entryFormData.endDate || null,
-        verificationStatus: entryFormData.verificationStatus || undefined,
-        verificationSource: entryFormData.verificationSource || undefined,
-      });
       setLocalHistoryEntries((prev) => {
         const closedPrev = closePreviousOngoingEntry(prev, entryFormData.startDate);
+        // When the user leaves end date blank, auto-compute it as the last day of the
+        // month prior to the next existing entry's start (supports inserting historical entries).
+        const endDate = entryFormData.endDate
+          || getAutoEndDateForNewEntry(closedPrev, entryFormData.startDate);
+        const newEntry = createHistoryEntry(amount, entryFormData.startDate, {
+          endDate,
+          verificationStatus: entryFormData.verificationStatus || undefined,
+          verificationSource: entryFormData.verificationSource || undefined,
+        });
         return [...closedPrev, newEntry];
       });
     } else if (editingEntryId) {
@@ -616,8 +647,9 @@ export function FinancialItemStepperModal({
       setEntryFormData,
       setIsAddingEntry,
       setEditingEntryId,
+      applicationDate,
     );
-  }, [currentStep, validateDetailsStep, localHistoryEntries.length]);
+  }, [currentStep, validateDetailsStep, localHistoryEntries.length, applicationDate]);
 
   const handleBack = useCallback(() => {
     if (currentStep === "amounts") {
@@ -641,10 +673,11 @@ export function FinancialItemStepperModal({
           setEntryFormData,
           setIsAddingEntry,
           setEditingEntryId,
+          applicationDate,
         );
       }
     },
-    [currentStep, validateDetailsStep, localHistoryEntries.length]
+    [currentStep, validateDetailsStep, localHistoryEntries.length, applicationDate]
   );
 
   // ============================================================================

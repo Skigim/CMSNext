@@ -4,6 +4,8 @@ import type { FileStorageService, NormalizedFileData, StoredFinancialItem, Store
 import {
   createHistoryEntry,
   closePreviousOngoingEntry,
+  getFirstOfMonth,
+  getEntryForMonth,
   getAmountForMonth,
 } from '../../domain/financials';
 import { readDataAndRequireCase } from '../serviceHelpers';
@@ -16,6 +18,8 @@ interface FinancialsServiceConfig {
   /** File storage service for reading/writing financial data */
   fileStorage: FileStorageService;
 }
+
+const PENDING_ITEM_ID = 'pending-item';
 
 /**
  * FinancialsService - Financial item operations and amount history management
@@ -204,10 +208,19 @@ export class FinancialsService {
       })];
     }
 
+    const normalizedAmount = amountHistory
+      ? getAmountForMonth({
+          id: PENDING_ITEM_ID,
+          ...itemData,
+          amountHistory,
+        })
+      : itemData.amount;
+
     // Create new item with foreign keys
     const timestamp = new Date().toISOString();
     const newItem: StoredFinancialItem = {
       ...itemData,
+      amount: normalizedAmount,
       amountHistory,
       id: uuidv4(),
       caseId,
@@ -287,11 +300,13 @@ export class FinancialsService {
     }
 
     const existingItem = financialData.financials[itemIndex];
+    const currentAmount = getAmountForMonth(existingItem);
+    const currentEntry = getEntryForMonth(existingItem);
 
     // Check if amount is changing and no explicit amountHistory update provided
     const isAmountChanging = 
       updates.amount !== undefined && 
-      updates.amount !== existingItem.amount &&
+      updates.amount !== currentAmount &&
       updates.amountHistory === undefined;
 
     let updatedAmountHistory = updates.amountHistory ?? existingItem.amountHistory;
@@ -300,24 +315,45 @@ export class FinancialsService {
       // Get verificationStatus from updates or existing item
       const verificationStatus = updates.verificationStatus ?? existingItem.verificationStatus;
       const verificationSource = updates.verificationSource ?? existingItem.verificationSource;
+      const nextAmount = updates.amount;
       
-      // Auto-create a history entry for the new amount
-      const newEntry = createHistoryEntry(updates.amount, undefined, {
-        verificationStatus,
-        verificationSource,
-      });
-      const existingHistory = existingItem.amountHistory ?? [];
-      
-      // Close any previous ongoing entries
-      const closedHistory = closePreviousOngoingEntry(existingHistory, newEntry.startDate);
-      
-      updatedAmountHistory = [...closedHistory, newEntry];
+      const currentMonthStart = getFirstOfMonth();
+
+      if (currentEntry?.startDate === currentMonthStart) {
+        updatedAmountHistory = (existingItem.amountHistory ?? []).map((entry) =>
+          entry.id === currentEntry.id
+            ? {
+                ...entry,
+                amount: nextAmount,
+                verificationStatus,
+                verificationSource,
+              }
+            : entry,
+        );
+      } else {
+        // Auto-create a history entry for the new amount
+        const newEntry = createHistoryEntry(nextAmount, undefined, {
+          verificationStatus,
+          verificationSource,
+        });
+        const existingHistory = existingItem.amountHistory ?? [];
+        
+        // Close any previous ongoing entries
+        const closedHistory = closePreviousOngoingEntry(existingHistory, newEntry.startDate);
+        
+        updatedAmountHistory = [...closedHistory, newEntry];
+      }
     }
+
+    const normalizedAmount = updatedAmountHistory
+      ? getAmountForMonth({ ...existingItem, ...updates, amountHistory: updatedAmountHistory })
+      : updates.amount ?? existingItem.amount;
 
     // Update item
     const updatedItem: StoredFinancialItem = {
       ...existingItem,
       ...updates,
+      amount: normalizedAmount,
       amountHistory: updatedAmountHistory,
       id: itemId, // Preserve ID
       caseId, // Preserve foreign key

@@ -217,6 +217,28 @@ describe('FinancialsService', () => {
       // ASSERT
       expect(result.amountHistory).toEqual(customHistory);
     });
+
+    it('should derive the top-level amount from explicit amountHistory when provided', async () => {
+      const mockData = createBaseMockData();
+      mockFileStorage.setData(mockData);
+
+      const result = await service.addItem('case-1', 'income', {
+        name: 'History-backed income',
+        description: 'Monthly salary',
+        amount: 0,
+        verificationStatus: 'Needs VR',
+        amountHistory: [
+          {
+            id: 'custom-id',
+            amount: 300,
+            startDate: '2024-12-01',
+            createdAt: '2024-12-01T10:00:00Z',
+          },
+        ],
+      });
+
+      expect(result.amount).toBe(300);
+    });
   });
 
   describe('updateItem', () => {
@@ -276,6 +298,63 @@ describe('FinancialsService', () => {
       expect(result.amountHistory![1].endDate).toBeFalsy();
     });
 
+    it('should compare amount updates against the current history-derived amount', async () => {
+      const mockData = createBaseMockData();
+      const itemWithStaleTopLevelAmount = createMockFinancialItem('item-1', 'case-1', 'income', 100);
+      itemWithStaleTopLevelAmount.amountHistory = [
+        {
+          id: 'entry-1',
+          amount: 200,
+          startDate: '2024-11-01',
+          createdAt: '2024-11-01T10:00:00Z',
+        },
+      ];
+      mockData.financials = [itemWithStaleTopLevelAmount];
+      mockFileStorage.setData(mockData);
+
+      const result = await service.updateItem('case-1', 'income', 'item-1', {
+        amount: 200,
+        name: 'Updated Name',
+      });
+
+      expect(result.name).toBe('Updated Name');
+      expect(result.amount).toBe(200);
+      expect(result.amountHistory).toHaveLength(1);
+      expect(result.amountHistory![0].id).toBe('entry-1');
+    });
+
+    it('should update the current month history entry in place when amount changes', async () => {
+      const mockData = createBaseMockData();
+      const itemWithCurrentMonthHistory = createMockFinancialItem('item-1', 'case-1', 'income', 100);
+      itemWithCurrentMonthHistory.amountHistory = [
+        {
+          id: 'entry-1',
+          amount: 200,
+          startDate: '2024-12-01',
+          createdAt: '2024-12-01T10:00:00Z',
+          verificationStatus: 'Needs VR',
+        },
+      ];
+      mockData.financials = [itemWithCurrentMonthHistory];
+      mockFileStorage.setData(mockData);
+
+      const result = await service.updateItem('case-1', 'income', 'item-1', {
+        amount: 300,
+        verificationStatus: 'Verified',
+        verificationSource: 'AVS',
+      });
+
+      expect(result.amount).toBe(300);
+      expect(result.amountHistory).toHaveLength(1);
+      expect(result.amountHistory![0]).toMatchObject({
+        id: 'entry-1',
+        amount: 300,
+        startDate: '2024-12-01',
+        verificationStatus: 'Verified',
+        verificationSource: 'AVS',
+      });
+    });
+
     it('should not auto-create history when explicit amountHistory provided', async () => {
       const mockData = createBaseMockData();
       mockData.financials = [createMockFinancialItem('item-1', 'case-1', 'income', 100)];
@@ -297,6 +376,7 @@ describe('FinancialsService', () => {
 
       expect(result.amountHistory).toHaveLength(1);
       expect(result.amountHistory![0].id).toBe('custom-entry');
+      expect(result.amount).toBe(200);
     });
 
     it('should throw error if item not found', async () => {
