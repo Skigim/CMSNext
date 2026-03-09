@@ -8,13 +8,21 @@ import { extractErrorMessage } from "@/utils/errorUtils";
 
 const logger = createLogger("useNavigationActions");
 
-const RESTRICTED_VIEWS: readonly AppView[] = ["list", "details", "form"];
+const RESTRICTED_VIEWS: readonly AppView[] = ["list", "details", "form", "intake"];
 
 export interface FormState {
   previousView: AppView;
   returnToCaseId?: string;
   /** Tracks which view we came from when viewing case details (for back navigation) */
   detailsSourceView?: AppView;
+}
+
+function resolveCreatedCaseSourceView(formState: FormState): AppView {
+  if (formState.previousView === "details") {
+    return formState.detailsSourceView ?? "list";
+  }
+
+  return formState.previousView;
 }
 
 export interface NavigationState {
@@ -91,7 +99,9 @@ export function useNavigationActions({
   const backToList = useCallback(() => {
     startMeasurement("navigation:backToList");
     // If we have a tracked source view, return there; otherwise default to list
-    const targetView = formState.detailsSourceView ?? "list";
+    const targetView = formState.detailsSourceView === "details"
+      ? "list"
+      : (formState.detailsSourceView ?? "list");
     setCurrentView(targetView);
     setSelectedCaseId(null);
     // Clear the source view after navigating back
@@ -124,9 +134,53 @@ export function useNavigationActions({
   const newCase = useCallback(() => {
     startMeasurement("navigation:newCase", { locked: isLocked });
     if (guardCaseInteraction()) return endMeasurement("navigation:newCase", { blocked: true });
-    setShowNewCaseModal(true);
-    endMeasurement("navigation:newCase", { result: "modal" });
-  }, [guardCaseInteraction, isLocked, setShowNewCaseModal]);
+
+    setFormState({
+      ...formState,
+      previousView: currentView,
+      returnToCaseId: currentView === "details" ? selectedCaseId ?? undefined : undefined,
+    });
+    setSelectedCaseId(null);
+    setCurrentView("intake");
+    endMeasurement("navigation:newCase", { result: "intake", source: currentView });
+  }, [currentView, formState, guardCaseInteraction, isLocked, selectedCaseId, setCurrentView, setFormState, setSelectedCaseId]);
+
+  const cancelNewCase = useCallback(() => {
+    startMeasurement("navigation:cancelNewCase");
+
+    if (formState.previousView === "details" && formState.returnToCaseId) {
+      setSelectedCaseId(formState.returnToCaseId);
+      setCurrentView("details");
+      endMeasurement("navigation:cancelNewCase", { result: "details" });
+      return;
+    }
+
+    setSelectedCaseId(null);
+    setCurrentView(formState.previousView);
+    setFormState({ ...formState, detailsSourceView: undefined });
+    endMeasurement("navigation:cancelNewCase", { result: formState.previousView });
+  }, [formState, setCurrentView, setFormState, setSelectedCaseId]);
+
+  const completeNewCase = useCallback((caseId: string) => {
+    startMeasurement("navigation:completeNewCase", { caseId });
+
+    const detailsSourceView = resolveCreatedCaseSourceView(formState);
+
+    setFormState({
+      ...formState,
+      detailsSourceView,
+      previousView: detailsSourceView,
+      returnToCaseId: undefined,
+    });
+    setSelectedCaseId(caseId);
+    setCurrentView("details");
+
+    endMeasurement("navigation:completeNewCase", {
+      caseId,
+      result: "details",
+      source: detailsSourceView,
+    });
+  }, [formState, setCurrentView, setFormState, setSelectedCaseId]);
 
   const closeNewCaseModal = useCallback(() => {
     startMeasurement("navigation:closeNewCaseModal");
@@ -144,11 +198,16 @@ export function useNavigationActions({
       throw new Error(lockReason);
     }
     try {
+      // Creating a new case: either via the new intake workflow view or the legacy
+      // QuickCaseModal (showNewCaseModal).  Both paths produce a new case and
+      // navigate to its details.  The QuickCaseModal path is retained for
+      // programmatic use (e.g. tests, "Add Another" flow) until fully replaced.
+      const isCreating = showNewCaseModal || currentView === "intake";
       // Pass selectedCaseId if editing, otherwise omit for create
-      const editingCaseId = !showNewCaseModal ? state.selectedCaseId ?? undefined : undefined;
-      const savedCase = editingCaseId !== undefined 
-        ? await saveCase(caseData, editingCaseId)
-        : await saveCase(caseData);
+      const editingCaseId = isCreating ? undefined : (state.selectedCaseId ?? undefined);
+      const savedCase = editingCaseId === undefined
+        ? await saveCase(caseData)
+        : await saveCase(caseData, editingCaseId);
       if (!isMounted.current) return;
       
       // Skip navigation if requested (e.g., "add another" mode)
@@ -163,18 +222,17 @@ export function useNavigationActions({
       }
       
       // If we created a new case, navigate to it
-      if (savedCase && showNewCaseModal) {
-        setSelectedCaseId(savedCase.id);
-        setCurrentView("details");
+      if (savedCase && isCreating) {
+        completeNewCase(savedCase.id);
       }
       
-      endMeasurement("navigation:saveCase", { result: showNewCaseModal ? "create" : "update" });
+      endMeasurement("navigation:saveCase", { result: isCreating ? "create" : "update" });
     } catch (error) {
       logger.error("Failed to save case", { error: extractErrorMessage(error) });
       endMeasurement("navigation:saveCase", { result: "error" });
       throw error;
     }
-  }, [guardCaseInteraction, isMounted, lockReason, saveCase, setCurrentView, setSelectedCaseId, setShowNewCaseModal, showNewCaseModal, state.selectedCaseId]);
+  }, [completeNewCase, currentView, guardCaseInteraction, isMounted, lockReason, saveCase, setShowNewCaseModal, showNewCaseModal, state.selectedCaseId]);
 
   const deleteCaseWithNavigation = useCallback(async (caseId: string) => {
     startMeasurement("navigation:deleteCase", { caseId });
@@ -210,12 +268,13 @@ export function useNavigationActions({
       case "list": backToList(); break;
       case "details": if (selectedCaseId) { setCurrentView("details"); } else { backToList(); } break;
       case "form": newCase(); break;
+      case "intake": newCase(); break;
       case "settings": setCurrentView(view); setSelectedCaseId(null); break;
     }
     endMeasurement("navigation:navigate", { target: view });
   }, [backToDashboard, backToList, guardCaseInteraction, newCase, selectedCaseId, setCurrentView, setForcedView, setSelectedCaseId]);
 
-  return { navigate, viewCase, newCase, closeNewCaseModal, saveCaseWithNavigation, deleteCaseWithNavigation, backToList, backToDashboard };
+  return { navigate, viewCase, newCase, cancelNewCase, completeNewCase, closeNewCaseModal, saveCaseWithNavigation, deleteCaseWithNavigation, backToList, backToDashboard };
 }
 
 export { RESTRICTED_VIEWS };

@@ -1,442 +1,286 @@
-# Case Tracking Platform
+# CMSNext
 
-## LLM Review Index
+Local-first case management software built with React, TypeScript, and the File System Access API.
 
-- See [llms.txt](llms.txt) for a machine-readable repository index optimized for external LLM/code-review tools.
+- Machine-readable repo index for external review tools: [llms.txt](llms.txt)
+- Architecture and implementation guidance: [.github/copilot-instructions.md](.github/copilot-instructions.md)
+- Current planning and feature inventory: [docs/development/ROADMAP_FEB_2026.md](docs/development/ROADMAP_FEB_2026.md), [docs/development/feature-catalogue.md](docs/development/feature-catalogue.md)
 
-A modern, filesystem-based case tracking application built with React, TypeScript, and Tailwind CSS v4. This application provides a comprehensive solution for managing individual cases with full CRUD capabilities, financial tracking, and note management—all stored locally on your device.
+## Overview
 
-<!-- Force rebuild: 2025-09-23 -->
+CMSNext is a single-page application for running a case workspace entirely from a user-chosen local folder. The app is local-first by design: there is no backend, no cloud sync, and no account system. Case data lives in JSON files on disk, is encrypted at rest, and is accessed through the browser's File System Access API.
 
-## ✨ Key Features
+The current app combines:
 
-### 🗂️ **Filesystem-Only Storage**
+- Case creation and editing workflows, including a step-based intake flow
+- Financial tracking with amount history and verification metadata
+- Notes, alerts, dashboard widgets, and activity logging
+- Text-generation templates for VR, summary, and narrative output
+- Archive and restore workflows for completed or older cases
+- Local import/export and storage diagnostics
 
-- **Local-first architecture** using the File System Access API
-- **No database or authentication** required—works out of the box
-- **Intelligent autosave** with debouncing and conflict resolution
-- **Automatic backups** with timestamped versions
-- **100% offline capability** once connected to a directory
+## Implemented Today
 
-### 📋 **Advanced Case Management**
+### Case workspace
 
-- **Full CRUD operations** for cases, financial items, and notes
-- **Smart navigation** with breadcrumb trails and back functionality
-- **Real-time search and filtering** across all case data
-- **Bulk operations** for efficient data management
-- **Priority flagging** and status tracking systems
+- Dashboard, case list, case details, intake, and settings views are all wired into the main workspace shell.
+- Cases support status tracking, priority flags, pagination, multi-sort, fuzzy search, and bulk actions.
+- Global search can search across cases and alerts from the quick actions bar.
 
-### 💰 **Comprehensive Financial Tracking**
+### Step-based intake
 
-- **Resources**: Assets, bank accounts, property, investments
-- **Income**: Employment, benefits, support with frequency tracking
-- **Expenses**: Bills, debts, recurring costs
-- **Verification status**: VR (Verified), AVS (Applied/Verified/Stopped), etc.
-- **Smart categorization** with customizable types
+- The intake workflow is implemented as a five-step flow: Applicant, Contact, Case Details, Checklist, and Review.
+- Completing intake creates a full case record through the same DataManager/service stack used by the rest of the app.
+- Users can still create or edit cases through the standard case flows as well.
 
-### 📝 **Rich Notes System**
+### Financials, notes, and alerts
 
-- **Categorized notes**: General, VR Update, Client Contact, Follow-up, and more
-- **Timestamps and edit history** for full audit trails
-- **Rich text support** with proper formatting
-- **Quick add/edit/delete** functionality with keyboard shortcuts
+- Financial items are organized by category such as resources, income, and expenses.
+- Financial entries support amount history, verification status, verification source, and inline editing.
+- Notes support categories and bulk note workflows.
+- Alerts support workflow states, filtering, bulk resolution, and CSV import/merge.
 
-### 🎨 **Premium UI/UX Experience**
+### Dashboard and productivity
 
-- **6 beautiful themes**: Light, Dark, Soft Dark, Warm, Blue, Paper
-- **Monday.com-inspired** workflow and interaction patterns
-- **Fully responsive design** optimized for desktop, tablet, and mobile
-- **Comprehensive toast notifications** using Sonner for user feedback
-- **Accessibility-first** design with proper ARIA labels and keyboard navigation
+- The dashboard includes quick actions, today's work, activity, and analytics widgets.
+- Activity logging is built into the data layer and feeds dashboard reporting.
+- Keyboard shortcuts, sidebar navigation events, and search shortcuts are implemented in the app shell.
 
-### 📊 **Intelligent Dashboard**
+### Templates and generated text
 
-- **Case overview statistics** with visual indicators
-- **Priority case highlighting** for urgent attention
-- **Recent activity tracking** with quick access
-- **Smart widgets** showing case distribution and trends
+- The app includes a unified template system for three categories: VR, summary, and narrative.
+- Templates support placeholder replacement using case, person, and financial data.
+- Summary templates support drag-and-drop ordering.
 
-### ⚙️ **Advanced Data Management**
+### Archival and data lifecycle
 
-- **JSON import/export** with comprehensive validation
-- **Data migration tools** for legacy formats
-- **Bulk import capabilities** with progress indicators
-- **Data integrity checks** and automatic recovery
-- **File management** with directory browsing and file loading
+- Cases can be queued for archival review, archived into yearly archive files, browsed later, searched, and restored.
+- Archive files use the naming pattern `archived-cases-YYYY.json`.
+- JSON import/export tooling is available from Settings, along with alerts CSV import and storage diagnostics.
 
-## 🌐 Browser Compatibility
+### Appearance and settings
 
-This application requires the **File System Access API** for local file operations:
+- Four built-in themes are currently implemented: Light, Paperwhite, Sterling, and Dark.
+- Settings include appearance, storage, archival, categories, templates, keyboard shortcuts, paper cuts, and system diagnostics.
 
-| Browser        | Support       | Version | Notes               |
-| -------------- | ------------- | ------- | ------------------- |
-| ✅ **Chrome**  | Full Support  | 86+     | Recommended         |
-| ✅ **Edge**    | Full Support  | 86+     | Recommended         |
-| ✅ **Opera**   | Full Support  | 72+     | Full compatibility  |
-| ❌ **Firefox** | Not Supported | -       | API not implemented |
-| ❌ **Safari**  | Not Supported | -       | API not implemented |
+## Storage Model
 
-**Note**: For unsupported browsers, the application will show a compatibility message with alternative browser recommendations.
+CMSNext keeps case data local and uses a small number of storage layers for different concerns:
 
-## 🚀 Getting Started
+- Case data: JSON files in a folder selected by the user
+- Folder-handle persistence: IndexedDB
+- UI preferences: localStorage
+- Encryption secret material: in-memory session state
 
-### 1. **Initial Setup** (First Time)
+### Primary data file
 
-1. **Open the application** in a supported browser (Chrome/Edge recommended)
-2. **Connect to Directory**: Click "Connect to Folder" when prompted
-3. **Choose a location**: Select or create a dedicated folder for your case data
-4. **Grant permissions**: Allow read/write access to the selected directory
-5. **Ready to go**: The application will initialize automatically
+The main workspace file is:
 
-### 2. **First Case Creation**
-
-- Click the **"New Case"** button in the sidebar or dashboard
-- Fill in the **person details** (name, MCN, contact info)
-- Add **case information** (status, priority, dates)
-- **Save** to create your first case
-
-### 3. **Existing Users**
-
-- **Automatic recognition**: The app detects previous directory connections
-- **One-click restore**: Click "Connect to Existing" to reconnect
-- **Data loading**: Choose from available data files in your directory
-
-### 4. **Data Import** (Optional)
-
-- Navigate to **Settings → Data Management**
-- **Upload JSON files** from other case management systems
-- **Automatic validation** ensures data integrity
-- **Bulk import** with progress tracking and error handling
-
-## 📁 File Structure
-
-When you connect to a directory, the application creates and manages:
-
-```
-your-chosen-directory/
-├── case-tracker-data.json                    # Main case data file
-├── case-tracker-data.backup-[timestamp].json # Automatic timestamped backups
-├── imported-data-[timestamp].json            # Imported data files
-└── [custom-filename].json                    # Any additional data files
+```text
+case-tracker-data.json
 ```
 
-### **File Management Features**
+The app currently uses a normalized v2.0 format with flat collections and foreign keys:
 
-- **Automatic backups** created before major operations
-- **Timestamped files** for easy chronological tracking
-- **Smart file detection** displays all JSON files in your directory
-- **File browser** lets you load data from any available file
-- **Data validation** ensures file integrity before loading
-
-## 💾 Data Format
-
-Case data is stored in a **normalized v2.0 JSON format** optimized for performance and data integrity. The format separates cases, financials, notes, and alerts into flat arrays with foreign key relationships:
-
-```json
-{
-  "version": "2.0",
-  "exported_at": "2025-11-26T15:30:00.000Z",
-  "total_cases": 1,
-  "cases": [
-    {
-      "id": "550e8400-e29b-41d4-a716-446655440001",
-      "name": "John Doe",
-      "mcn": "MC001234",
-      "status": "Pending",
-      "priority": false,
-      "createdAt": "2025-11-01T10:00:00.000Z",
-      "updatedAt": "2025-11-26T15:30:00.000Z",
-      "person": {
-        "id": "person_001",
-        "firstName": "John",
-        "lastName": "Doe",
-        "name": "John Doe",
-        "dateOfBirth": "1985-03-15",
-        "ssn": "***-**-1234",
-        "email": "john.doe@email.com",
-        "phone": "(555) 123-4567",
-        "livingArrangement": "Own Home",
-        "address": {
-          "street": "123 Main St",
-          "city": "Springfield",
-          "state": "NE",
-          "zip": "68501"
-        },
-        "mailingAddress": {
-          "street": "123 Main St",
-          "city": "Springfield",
-          "state": "NE",
-          "zip": "68501",
-          "sameAsPhysical": true
-        }
-      },
-      "caseRecord": {
-        "id": "case_001",
-        "mcn": "MC001234",
-        "applicationDate": "2025-11-01",
-        "caseType": "Initial Application",
-        "status": "Pending",
-        "priority": false,
-        "description": "New application for benefits"
-      }
-    }
-  ],
-  "financials": [
-    {
-      "id": "fin_001",
-      "caseId": "550e8400-e29b-41d4-a716-446655440001",
-      "category": "resources",
-      "description": "Checking Account",
-      "amount": 2500.0,
-      "verificationStatus": "VR",
-      "dateAdded": "2025-11-01T10:00:00.000Z"
-    },
-    {
-      "id": "fin_002",
-      "caseId": "550e8400-e29b-41d4-a716-446655440001",
-      "category": "income",
-      "description": "Employment - Acme Corp",
-      "amount": 3200.0,
-      "frequency": "monthly",
-      "verificationStatus": "VR",
-      "dateAdded": "2025-11-01T10:00:00.000Z"
-    }
-  ],
-  "notes": [
-    {
-      "id": "note_001",
-      "caseId": "550e8400-e29b-41d4-a716-446655440001",
-      "category": "General",
-      "content": "Initial intake completed. Client provided all required documentation.",
-      "createdAt": "2025-11-01T10:00:00.000Z",
-      "updatedAt": "2025-11-01T10:00:00.000Z"
-    }
-  ],
-  "alerts": [],
-  "activityLog": [],
-  "categoryConfig": {
-    "caseTypes": ["Initial Application", "Renewal", "Change Report"],
-    "caseStatuses": [
-      { "name": "Pending", "colorSlot": "amber" },
-      { "name": "Active", "colorSlot": "green" },
-      { "name": "Closed", "colorSlot": "slate" }
-    ],
-    "livingArrangements": ["Own Home", "Rental", "Family Member"],
-    "noteCategories": ["General", "VR Update", "Client Contact"],
-    "verificationStatuses": ["Needs VR", "VR Pending", "Verified"]
-  }
+```ts
+interface NormalizedFileData {
+  version: "2.0";
+  cases: StoredCase[];
+  financials: StoredFinancialItem[];
+  notes: StoredNote[];
+  alerts: AlertRecord[];
+  activityLog: CaseActivityEntry[];
+  categoryConfig: CategoryConfig;
+  templates?: Template[];
 }
 ```
 
-### **Data Validation**
+Legacy nested formats are rejected rather than silently migrated in the normal app flow.
 
-- **v2.0 format required** - Legacy formats are rejected with helpful error messages
-- **Schema validation** ensures data consistency
-- **Type checking** prevents data corruption
-- **Backup creation** before any destructive operations
+### Additional files you may see
 
-## 🛠️ Technology Stack
+Depending on which workflows you use, the same folder can also contain files such as:
 
-### **Core Technologies**
-
-- **React 18** with TypeScript for type-safe component development
-- **Tailwind CSS v4** for utility-first styling with custom design tokens
-- **File System Access API** for native filesystem integration
-- **Vite** for lightning-fast development and optimized builds
-
-### **UI & Design System**
-
-- **shadcn/ui** - High-quality, accessible component library
-- **Lucide React** - Beautiful, consistent iconography
-- **Sonner** - Elegant toast notifications with stacking
-- **Custom theme system** - 6 carefully crafted themes with smooth transitions
-
-### **State Management & Data**
-
-- **React Context** for global state management
-- **Custom hooks** for encapsulated business logic
-- **Intelligent autosave** with debouncing and conflict resolution
-- **File-based persistence** with automatic backup and recovery
-
-### **Developer Experience**
-
-- **TypeScript strict mode** for maximum type safety
-- **Component-driven architecture** with clear separation of concerns
-- **Custom utilities** for data transformation and validation
-- **Comprehensive error handling** with user-friendly messaging
-
-## 🏗️ Architecture
-
-The application follows a **clean, filesystem-only architecture** designed for privacy, performance, and simplicity:
-
-### **Core Principles**
-
-- **🔒 Privacy-First**: All data remains on your local device
-- **⚡ Performance-Optimized**: No network requests, instant responses
-- **🎯 Single Responsibility**: Each component has a clear, focused purpose
-- **🔄 Reactive Design**: Real-time UI updates with efficient state management
-
-### **Architecture Layers**
-
-```
-┌─────────────────────────────────────────┐
-│              Presentation Layer          │
-│  ┌─────────────┐ ┌─────────────────────┐ │
-│  │  UI Components │ │  Theme System      │ │
-│  │  (shadcn/ui)   │ │  (6 Themes)        │ │
-│  └─────────────┘ └─────────────────────┘ │
-└─────────────────────────────────────────┘
-┌─────────────────────────────────────────┐
-│               Business Layer             │
-│  ┌─────────────┐ ┌─────────────────────┐ │
-│  │ Custom Hooks  │ │  State Management  │ │
-│  │ (useCases)    │ │  (React Context)   │ │
-│  └─────────────┘ └─────────────────────┘ │
-└─────────────────────────────────────────┘
-┌─────────────────────────────────────────┐
-│                Data Layer                │
-│  ┌─────────────┐ ┌─────────────────────┐ │
-│  │ FileStorageAPI│ │  AutosaveService   │ │
-│  │ (CRUD Ops)    │ │  (File Management) │ │
-│  └─────────────┘ └─────────────────────┘ │
-└─────────────────────────────────────────┘
-┌─────────────────────────────────────────┐
-│              Storage Layer               │
-│  ┌─────────────────────────────────────┐ │
-│  │      File System Access API         │ │
-│  │     (Browser Native Storage)        │ │
-│  └─────────────────────────────────────┘ │
-└─────────────────────────────────────────┘
+```text
+case-tracker-data.json
+archived-cases-2026.json
+case-tracker-export-YYYY-MM-DD.json
 ```
 
-### **Key Architectural Decisions**
+The main data file remains the source of truth for the active workspace. Archive files are used for archived cases, and exported JSON files are portable snapshots produced from Settings.
 
-- **No Authentication Required**: Direct access without login complexity
-- **No Database Dependencies**: Eliminates server infrastructure needs
-- **No Network Requests**: Pure client-side application for maximum privacy
-- **Browser-Native Storage**: Leverages modern web platform capabilities
+## Privacy and Security
 
-## 💻 Development
+- No backend, no remote API, and no cloud account requirement
+- AES-256-GCM encryption for data at rest
+- PBKDF2 key derivation with 100,000 iterations
+- Password is never stored; it exists only for the active session
+- No password recovery flow by design
+- Autosave is built into the local file service
 
-The application is designed for **zero-configuration development** with no server setup required:
+Autosave behavior in the current app:
 
-### **Quick Start**
+- Standard edits debounce to roughly 5 seconds
+- Bulk operations use a longer debounce window of roughly 15 seconds
+- The storage layer also includes named backup support, but the app's normal persistence model is the main data file plus archive/export files rather than a separate database or sync service
+
+## Browser Support
+
+CMSNext depends on the File System Access API for its primary workflow.
+
+| Browser | Support       | Minimum Version |
+| ------- | ------------- | --------------- |
+| Chrome  | Supported     | 86+             |
+| Edge    | Supported     | 86+             |
+| Opera   | Supported     | 72+             |
+| Firefox | Not supported | N/A             |
+| Safari  | Not supported | N/A             |
+
+Unsupported browsers are shown an onboarding message rather than a degraded cloud fallback, because the application is intentionally file-system based.
+
+## Getting Started
+
+### First run
+
+1. Install dependencies with `npm install`.
+2. Start the app with `npm run dev`.
+3. Open the app in a supported Chromium-based browser.
+4. Choose a folder when prompted.
+5. Create a password for encrypted local storage.
+
+### Returning users
+
+1. Open the app.
+2. Reconnect to the previously stored folder handle.
+3. Enter the password to unlock encrypted data.
+
+### First workflow to try
+
+After setup, you can either:
+
+- create a case from the standard case flow, or
+- use the step-based intake workflow to create a case from a guided form
+
+## Tech Stack
+
+- React 18
+- TypeScript in strict mode
+- Vite
+- Tailwind CSS v4
+- shadcn/ui and Radix primitives
+- Sonner for toasts
+- Recharts for dashboard charts
+- Zod for validation
+- Vitest, React Testing Library, and jest-axe for testing
+
+## Architecture
+
+The repository follows a layered architecture:
+
+```text
+domain -> services/DataManager -> hooks -> components
+```
+
+### Layers
+
+- `domain/`: pure business logic, no React, no I/O
+- `utils/services/` and `utils/DataManager.ts`: orchestration and file-backed mutations
+- `hooks/`: React state and workflow hooks
+- `components/`: UI rendering and interaction
+- `contexts/`: provider-based application state
+
+### Provider stack
+
+At app startup, the provider tree is layered in this order:
+
+```text
+ErrorBoundary
+  ThemeProvider
+    EncryptionProvider
+      FileSystemErrorBoundary
+        FileStorageProvider
+          DataManagerProvider
+            CategoryConfigProvider
+              TemplateProvider
+```
+
+## Repository Layout
+
+The current repository is organized at the root rather than under a single `src/` folder:
+
+```text
+components/     UI components and screens
+contexts/       React providers and app-wide state
+domain/         Pure business logic
+hooks/          Feature and workflow hooks
+utils/          DataManager, services, storage, helpers
+types/          Shared TypeScript types
+__tests__/      Component, hook, service, and integration tests
+docs/           Product, roadmap, audit, and development docs
+styles/         Global styles and theme definitions
+```
+
+## Development
+
+### Common commands
 
 ```bash
-# Clone and install dependencies
 npm install
-
-# Start development server
 npm run dev
-
-# Open in browser (Chrome/Edge recommended)
-# Navigate to http://localhost:5173
+npm run typecheck
+npm run lint
+npm run test:run
+npm run build
 ```
 
-### **Development Features**
+### Other useful commands
 
-- **⚡ Hot Module Replacement** - Instant updates during development
-- **🔍 TypeScript Integration** - Full type checking and IntelliSense
-- **🎨 Tailwind CSS v4** - Utility-first styling with custom design tokens
-- **📱 Responsive Testing** - Built-in device simulation
-- **🧪 Component Preview** - Individual component development and testing
-
-### **Project Structure**
-
-```
-/src
-├── /components          # Reusable UI components
-│   ├── /ui             # shadcn/ui base components
-│   └── /modals         # Modal dialogs and overlays
-├── /contexts           # React Context providers
-├── /hooks              # Custom React hooks (future refactoring)
-├── /types              # TypeScript type definitions
-├── /utils              # Utility functions and services
-└── /styles             # Global CSS and theme definitions
+```bash
+npm run build:pages
+npm run test:coverage
+npm run test:ui
+npm run seed
+npm run seed:demo
+npm run seed:small
+npm run seed:large
+npm run analyze
+npm run dead-code
 ```
 
-### **Code Quality**
+### Quality gates
 
-- **TypeScript Strict Mode** enabled for maximum type safety
-- **Component-driven architecture** with clear separation of concerns
-- **Custom hooks pattern** ready for business logic extraction
-- **Comprehensive error handling** with user-friendly messaging
+The intended verification flow for code changes is:
 
-## 🔒 Privacy & Security
+```bash
+npm run typecheck
+npm run lint
+npm run test:run
+npm run build
+```
 
-This application is built with **privacy-by-design** principles and **military-grade encryption**:
+## Testing and Quality
 
-### **Data Privacy Guarantees**
+The repo includes automated coverage across domain logic, services, hooks, contexts, components, and integration flows.
 
-- **🏠 100% Local Storage**: All case data remains on your device
-- **🚫 No Cloud Uploads**: Zero data transmission to external servers
-- **🔍 No Tracking**: No analytics, cookies, or user behavior monitoring
-- **📡 Offline Capable**: Full functionality without internet connection
-- **🔐 Password Protected**: Your data is encrypted and only accessible with your password
+- Test runner: Vitest
+- UI/component tests: React Testing Library
+- Accessibility checks: jest-axe
+- Coverage threshold: 70%
+- Lint policy: zero warnings
+- TypeScript: strict mode
 
-### **Encryption & Security**
+## Notes and Constraints
 
-- **AES-256-GCM Encryption**: Industry-standard authenticated encryption for all stored data
-- **PBKDF2 Key Derivation**: 100,000 iterations with unique salt per file — resistant to brute-force attacks
-- **Zero-Knowledge Design**: Password never stored; derived key exists only in memory during your session
-- **No Recovery Backdoor**: By design, forgotten passwords cannot be recovered (your data stays private)
-- **Browser-native Security**: Leverages File System Access API permissions for folder access control
-- **Data Validation**: Input sanitization and type checking throughout
-- **Automatic Backups**: Protection against data loss with timestamped backups
+- The application is intentionally local-first and browser-file-system based.
+- There is no server-side fallback for unsupported browsers.
+- If a password is forgotten, encrypted data cannot be recovered.
+- The active branch also contains the ongoing step-based intake workflow work, and the README reflects the code currently present in this repository.
 
-### **How It Works**
+## Further Reading
 
-1. **First Launch**: Choose a folder and create a password — your data file is immediately encrypted
-2. **Returning**: Enter your password to decrypt and access your data
-3. **During Use**: All changes auto-save and re-encrypt transparently
-4. **Password Never Leaves Device**: Encryption/decryption happens entirely in your browser
-
-## 📋 Current Status
-
-- **✅ Core Features**: Complete CRUD operations for cases, financial items, and notes
-- **✅ Encryption**: AES-256-GCM encryption with PBKDF2 key derivation — all data encrypted at rest
-- **✅ File Storage**: Robust autosave with File System Access API integration
-- **✅ UI/UX**: 6 polished themes with responsive design, 100% shadcn/ui migration complete
-- **✅ Data Management**: Import/export with validation and migration
-- **✅ Testing Infrastructure**: 506 tests passing across 51 test files with vitest + axe accessibility checks
-- **✅ Telemetry & Performance**: Production-ready observability and performance tracking
-- **✅ Service Extraction**: Clean DataManager + 7 Services architecture with dependency injection
-- **✅ Storage Normalization**: v2.0 format only (legacy formats rejected with user-friendly error)
-
-### Architecture
-
-**Current Structure:**
-
-- **DataManager** (461 lines): Thin orchestration layer coordinating 7 focused services
-- **Services** (dependency injection pattern):
-  - FileStorageService: Core I/O operations with v2.0 normalized format
-  - AlertsService: Alert management and CSV import
-  - CaseService: Complete case CRUD operations
-  - NotesService: Note management per case
-  - FinancialsService: Financial item CRUD
-  - ActivityLogService: Activity tracking
-  - CategoryConfigService: Category configuration
-- **Hooks**: React integration layer calling DataManager methods
-- **Components**: UI-only with shadcn/ui primitives
-
-See `docs/development/ROADMAP_STATUS_NOV_2025.md` for detailed status.
-
-## 🆘 Support & Compatibility
-
-### **Recommended Setup**
-
-- **Browser**: Chrome 86+ or Edge 86+ (File System Access API required)
-- **Platform**: Windows, macOS, or Linux desktop
-- **Storage**: Local directory with read/write permissions
-
-### **Troubleshooting**
-
-- **Permission Issues**: Ensure your browser allows file system access
-- **Performance**: For large datasets (1000+ cases), consider data archival
-- **Browser Support**: Check [File System Access API compatibility](https://caniuse.com/native-filesystem-api)
-
----
-
-## 🎯 Vision
-
-This application demonstrates the power of **local-first software**—providing professional-grade case management while keeping your data completely under your control. No accounts, no servers, no compromises on privacy.
+- [CLAUDE.md](CLAUDE.md)
+- [.github/implementation-guide.md](.github/implementation-guide.md)
+- [.github/ui-guide.md](.github/ui-guide.md)
+- [.github/testing-guide.md](.github/testing-guide.md)
+- [docs/DeploymentGuide.md](docs/DeploymentGuide.md)
+- [docs/development/feature-catalogue.md](docs/development/feature-catalogue.md)

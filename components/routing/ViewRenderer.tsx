@@ -10,6 +10,7 @@ import { CaseList } from "../case/CaseList";
 import CaseDetails from "../case/CaseDetails";
 import { QuickCaseModal } from "../modals/QuickCaseModal";
 import { Settings } from "../app/Settings";
+import { IntakeFormView } from "../case/IntakeFormView";
 
 export type View = AppView;
 
@@ -27,6 +28,8 @@ interface ViewRendererProps {
   // Navigation handlers
   handleViewCase: (caseId: string) => void;
   handleNewCase: () => void;
+  handleCancelNewCase: () => void;
+  handleCompleteNewCase: (caseId: string) => void;
   handleCloseNewCaseModal: () => void;
   handleBackToList: () => void;
   handleSaveCase: (
@@ -79,6 +82,8 @@ export function ViewRenderer({
   // Navigation handlers
   handleViewCase,
   handleNewCase,
+  handleCancelNewCase,
+  handleCompleteNewCase,
   handleCloseNewCaseModal: _handleCloseNewCaseModal,
   handleBackToList,
   handleSaveCase,
@@ -95,7 +100,7 @@ export function ViewRenderer({
   handleUpdateCaseStatus,
   handleResolveAlert,
   onAlertsCsvImported,
-}: ViewRendererProps) {
+}: Readonly<ViewRendererProps>) {
   
   switch (currentView) {
     case 'dashboard':
@@ -168,6 +173,16 @@ export function ViewRenderer({
         <div className="text-center p-8">Case not found</div>
       );
 
+    case 'intake':
+      return (
+        <IntakeFormView
+          onSuccess={(createdCase) => {
+            handleCompleteNewCase(createdCase.id);
+          }}
+          onCancel={handleCancelNewCase}
+        />
+      );
+
     default:
       return <div>Unknown view: {currentView}</div>;
   }
@@ -176,7 +191,7 @@ export function ViewRenderer({
 /**
  * Wrapper component that renders ViewRenderer plus the QuickCaseModal overlay
  */
-export function ViewRendererWithModal(props: ViewRendererProps) {
+export function ViewRendererWithModal(props: Readonly<ViewRendererProps>) {
   return (
     <>
       <ViewRenderer {...props} />
