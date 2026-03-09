@@ -4,6 +4,8 @@ import type { FileStorageService, NormalizedFileData, StoredFinancialItem, Store
 import {
   createHistoryEntry,
   closePreviousOngoingEntry,
+  getFirstOfMonth,
+  getEntryForMonth,
   getAmountForMonth,
 } from '../../domain/financials';
 import { readDataAndRequireCase } from '../serviceHelpers';
@@ -287,11 +289,13 @@ export class FinancialsService {
     }
 
     const existingItem = financialData.financials[itemIndex];
+    const currentAmount = getAmountForMonth(existingItem);
+    const currentEntry = getEntryForMonth(existingItem);
 
     // Check if amount is changing and no explicit amountHistory update provided
     const isAmountChanging = 
       updates.amount !== undefined && 
-      updates.amount !== existingItem.amount &&
+      updates.amount !== currentAmount &&
       updates.amountHistory === undefined;
 
     let updatedAmountHistory = updates.amountHistory ?? existingItem.amountHistory;
@@ -301,17 +305,32 @@ export class FinancialsService {
       const verificationStatus = updates.verificationStatus ?? existingItem.verificationStatus;
       const verificationSource = updates.verificationSource ?? existingItem.verificationSource;
       
-      // Auto-create a history entry for the new amount
-      const newEntry = createHistoryEntry(updates.amount, undefined, {
-        verificationStatus,
-        verificationSource,
-      });
-      const existingHistory = existingItem.amountHistory ?? [];
-      
-      // Close any previous ongoing entries
-      const closedHistory = closePreviousOngoingEntry(existingHistory, newEntry.startDate);
-      
-      updatedAmountHistory = [...closedHistory, newEntry];
+      const currentMonthStart = getFirstOfMonth();
+
+      if (currentEntry && currentEntry.startDate === currentMonthStart) {
+        updatedAmountHistory = (existingItem.amountHistory ?? []).map((entry) =>
+          entry.id === currentEntry.id
+            ? {
+                ...entry,
+                amount: updates.amount,
+                verificationStatus,
+                verificationSource,
+              }
+            : entry,
+        );
+      } else {
+        // Auto-create a history entry for the new amount
+        const newEntry = createHistoryEntry(updates.amount, undefined, {
+          verificationStatus,
+          verificationSource,
+        });
+        const existingHistory = existingItem.amountHistory ?? [];
+        
+        // Close any previous ongoing entries
+        const closedHistory = closePreviousOngoingEntry(existingHistory, newEntry.startDate);
+        
+        updatedAmountHistory = [...closedHistory, newEntry];
+      }
     }
 
     // Update item

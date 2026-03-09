@@ -1,7 +1,7 @@
 import { useCallback, useState } from "react";
 import { toast } from "sonner";
 import { useDataManagerSafe } from "../contexts/DataManagerContext";
-import { validateFinancialItem } from "@/domain/financials";
+import { getAmountForMonth, validateFinancialItem } from "@/domain/financials";
 import type { CaseCategory, StoredCase, FinancialItem } from "../types/case";
 import { createLogger } from "@/utils/logger";
 import { extractErrorMessage } from "@/utils/errorUtils";
@@ -99,7 +99,7 @@ const createFormDataFromItem = (item: FinancialItem): FinancialFormData => ({
   description: item.description || item.name || "",
   location: item.location || "",
   accountNumber: item.accountNumber || "",
-  amount: item.amount || 0,
+  amount: getAmountForMonth(item),
   frequency: item.frequency || "monthly",
   owner: item.owner || "applicant",
   verificationStatus: item.verificationStatus || "Needs VR",
