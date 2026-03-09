@@ -1,7 +1,12 @@
 import { useCallback, useState } from "react";
 import { toast } from "sonner";
 import { useDataManagerSafe } from "../contexts/DataManagerContext";
-import { getAmountForMonth, validateFinancialItem } from "@/domain/financials";
+import {
+  getAmountForMonth,
+  getEntryForMonth,
+  getFirstOfMonth,
+  validateFinancialItem,
+} from "@/domain/financials";
 import type { CaseCategory, StoredCase, FinancialItem } from "../types/case";
 import { createLogger } from "@/utils/logger";
 import { extractErrorMessage } from "@/utils/errorUtils";
@@ -326,8 +331,42 @@ export function useFinancialItemFlow({
     try {
       const categoryLabel = itemForm.category.charAt(0).toUpperCase() + itemForm.category.slice(1);
 
-      if (isEditing && formData.id) {
-        await dataManager.updateItem(selectedCase.id, itemForm.category, formData.id, itemData);
+      if (isEditing && formData.id && itemForm.item) {
+        const currentEntry = getEntryForMonth(itemForm.item);
+        const currentAmount = getAmountForMonth(itemForm.item);
+        const currentVerificationStatus = currentEntry?.verificationStatus ?? itemForm.item.verificationStatus ?? "Needs VR";
+        const currentVerificationSource = currentEntry?.verificationSource ?? itemForm.item.verificationSource ?? "";
+        const shouldUpdateHistory =
+          itemData.amount !== currentAmount ||
+          itemData.verificationStatus !== currentVerificationStatus ||
+          itemData.verificationSource !== currentVerificationSource;
+
+        if (shouldUpdateHistory) {
+          const historyPayload = {
+            amount: itemData.amount,
+            verificationStatus: itemData.verificationStatus,
+            verificationSource: itemData.verificationSource,
+          };
+          const currentMonthStart = getFirstOfMonth();
+
+          if (currentEntry && currentEntry.startDate === currentMonthStart) {
+            await dataManager.updateAmountHistoryEntry(
+              selectedCase.id,
+              itemForm.category,
+              formData.id,
+              currentEntry.id,
+              historyPayload,
+            );
+          } else {
+            await dataManager.addAmountHistoryEntry(selectedCase.id, itemForm.category, formData.id, {
+              ...historyPayload,
+              startDate: currentMonthStart,
+            });
+          }
+        }
+
+        const { amount: _ignoredAmount, ...nonHistoryUpdates } = itemData;
+        await dataManager.updateItem(selectedCase.id, itemForm.category, formData.id, nonHistoryUpdates);
         toast.success(`${categoryLabel} item updated successfully`);
       } else {
         await dataManager.addItem(selectedCase.id, itemForm.category, itemData);

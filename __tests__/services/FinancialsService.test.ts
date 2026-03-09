@@ -217,6 +217,28 @@ describe('FinancialsService', () => {
       // ASSERT
       expect(result.amountHistory).toEqual(customHistory);
     });
+
+    it('should derive the top-level amount from explicit amountHistory when provided', async () => {
+      const mockData = createBaseMockData();
+      mockFileStorage.setData(mockData);
+
+      const result = await service.addItem('case-1', 'income', {
+        name: 'History-backed income',
+        description: 'Monthly salary',
+        amount: 0,
+        verificationStatus: 'Needs VR',
+        amountHistory: [
+          {
+            id: 'custom-id',
+            amount: 300,
+            startDate: '2024-12-01',
+            createdAt: '2024-12-01T10:00:00Z',
+          },
+        ],
+      });
+
+      expect(result.amount).toBe(300);
+    });
   });
 
   describe('updateItem', () => {
@@ -354,6 +376,7 @@ describe('FinancialsService', () => {
 
       expect(result.amountHistory).toHaveLength(1);
       expect(result.amountHistory![0].id).toBe('custom-entry');
+      expect(result.amount).toBe(200);
     });
 
     it('should throw error if item not found', async () => {

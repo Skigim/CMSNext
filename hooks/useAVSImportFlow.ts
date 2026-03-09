@@ -10,6 +10,7 @@ import {
   type ParsedAVSAccount,
   type MatchConfidence,
 } from "@/domain/avs";
+import { getEntryForMonth, getFirstOfMonth } from "@/domain/financials";
 import { createLogger } from "@/utils/logger";
 import { extractErrorMessage } from "@/utils/errorUtils";
 
@@ -32,14 +33,46 @@ async function importSingleAccount(
 ): Promise<SingleImportResult> {
   try {
     const itemData = avsAccountToFinancialItem(account);
+    const updatePayload: Partial<FinancialItem> = {
+      ...itemData,
+      verificationStatus: "Verified",
+      verificationSource: "AVS",
+    };
+
     if (account.existingItemId) {
-      // Explicitly set verification fields for updates to ensure AVS-imported
-      // items are always marked as verified by AVS, regardless of prior status.
-      await dataManager.updateItem(caseId, "resources", account.existingItemId, {
-        ...itemData,
-        verificationStatus: "Verified",
+      const existingItems = await dataManager.getFinancialItemsForCase(caseId);
+      const existingItem = existingItems.find((item) => item.id === account.existingItemId);
+
+      if (!existingItem) {
+        await dataManager.updateItem(caseId, "resources", account.existingItemId, updatePayload);
+        return { outcome: "updated" };
+      }
+
+      const currentEntry = getEntryForMonth(existingItem);
+      const currentMonthStart = getFirstOfMonth();
+      const historyPayload = {
+        amount: itemData.amount,
+        verificationStatus: "Verified" as const,
         verificationSource: "AVS",
-      } as Partial<FinancialItem>);
+      };
+
+      if (currentEntry && currentEntry.startDate === currentMonthStart) {
+        await dataManager.updateAmountHistoryEntry(
+          caseId,
+          "resources",
+          account.existingItemId,
+          currentEntry.id,
+          historyPayload,
+        );
+      } else {
+        await dataManager.addAmountHistoryEntry(caseId, "resources", account.existingItemId, {
+          ...historyPayload,
+          startDate: currentMonthStart,
+        });
+      }
+
+      const { amount: _ignoredAmount, ...nonHistoryUpdates } = updatePayload;
+      await dataManager.updateItem(caseId, "resources", account.existingItemId, nonHistoryUpdates);
       return { outcome: "updated" };
     }
     await dataManager.addItem(caseId, "resources", itemData as Omit<FinancialItem, "id" | "createdAt" | "updatedAt">);

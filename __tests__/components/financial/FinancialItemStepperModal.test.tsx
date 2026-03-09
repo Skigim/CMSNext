@@ -69,11 +69,11 @@ describe("FinancialItemStepperModal", () => {
   it("defaults start date to first of current month when no applicationDate is provided", async () => {
     // Pin system time so component and test share a deterministic "current" date.
     const fixedNow = new Date("2025-02-15T12:00:00.000Z");
-    vi.useFakeTimers();
-    vi.setSystemTime(fixedNow);
+    const user = userEvent.setup();
 
     try {
-      const user = userEvent.setup();
+      vi.useFakeTimers();
+      vi.setSystemTime(fixedNow);
       renderModal();
 
       await user.type(screen.getByLabelText(/Description \*/i), "Test Item");

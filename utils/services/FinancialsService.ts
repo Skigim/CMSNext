@@ -206,10 +206,15 @@ export class FinancialsService {
       })];
     }
 
+    const normalizedAmount = amountHistory
+      ? getAmountForMonth({ ...itemData, amountHistory })
+      : itemData.amount;
+
     // Create new item with foreign keys
     const timestamp = new Date().toISOString();
     const newItem: StoredFinancialItem = {
       ...itemData,
+      amount: normalizedAmount,
       amountHistory,
       id: uuidv4(),
       caseId,
@@ -334,10 +339,15 @@ export class FinancialsService {
       }
     }
 
+    const normalizedAmount = updatedAmountHistory
+      ? getAmountForMonth({ ...existingItem, ...updates, amountHistory: updatedAmountHistory })
+      : updates.amount ?? existingItem.amount;
+
     // Update item
     const updatedItem: StoredFinancialItem = {
       ...existingItem,
       ...updates,
+      amount: normalizedAmount,
       amountHistory: updatedAmountHistory,
       id: itemId, // Preserve ID
       caseId, // Preserve foreign key
