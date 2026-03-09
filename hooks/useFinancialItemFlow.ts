@@ -369,7 +369,7 @@ export function useFinancialItemFlow({
           }
         }
 
-        const nonHistoryUpdates = (({ amount: _amount, ...rest }) => rest)(itemData);
+        const { amount: _amount, ...nonHistoryUpdates } = itemData;
         await dataManager.updateItem(selectedCase.id, itemForm.category, formData.id, nonHistoryUpdates);
         toast.success(`${categoryLabel} item updated successfully`);
       } else {

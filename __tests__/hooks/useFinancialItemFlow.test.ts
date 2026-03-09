@@ -53,4 +53,40 @@ describe("useFinancialItemFlow", () => {
     expect(result.current.formData.verificationStatus).toBe("Verified");
     expect(result.current.formData.verificationSource).toBe("AVS");
   });
+
+  it("falls back to item-level verification fields when no current history entry exists", () => {
+    const selectedCase = createMockStoredCase({ id: "case-1" });
+    const setError = vi.fn();
+    const item = createMockFinancialItem("resources", {
+      id: "resource-2",
+      amount: 250,
+      verificationStatus: "VR Pending",
+      verificationSource: "Case note",
+      amountHistory: [
+        createMockAmountHistoryEntry({
+          id: "entry-2",
+          amount: 100,
+          startDate: "2025-05-01",
+          endDate: "2025-05-31",
+          verificationStatus: "Verified",
+          verificationSource: "AVS",
+        }),
+      ],
+    });
+
+    const { result } = renderHook(() =>
+      useFinancialItemFlow({
+        selectedCase,
+        setError,
+      }),
+    );
+
+    act(() => {
+      result.current.openItemForm("resources", item);
+    });
+
+    expect(result.current.formData.amount).toBe(100);
+    expect(result.current.formData.verificationStatus).toBe("VR Pending");
+    expect(result.current.formData.verificationSource).toBe("Case note");
+  });
 });

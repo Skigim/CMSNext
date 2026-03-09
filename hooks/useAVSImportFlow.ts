@@ -70,7 +70,7 @@ async function importSingleAccount(
         });
       }
 
-      const nonHistoryUpdates = (({ amount: _amount, ...rest }: Partial<FinancialItem>) => rest)(updatePayload);
+      const { amount: _amount, ...nonHistoryUpdates } = updatePayload;
       await dataManager.updateItem(caseId, "resources", account.existingItemId, nonHistoryUpdates);
       return { outcome: "updated" };
     }
@@ -386,7 +386,7 @@ export function useAVSImportFlow({
 
     try {
       const existingItemsById = new Map(
-        (await dataManager.getFinancialItemsForCase(selectedCase.id)).map((item) => [item.id, item] as const),
+        (await dataManager.getFinancialItemsForCase(selectedCase.id)).map((item) => [item.id, item]),
       );
 
       for (const account of selectedAccounts) {
