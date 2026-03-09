@@ -30,6 +30,7 @@ async function importSingleAccount(
   account: AVSAccountWithMeta,
   dataManager: NonNullable<ReturnType<typeof useDataManagerSafe>>,
   caseId: string,
+  existingItemsById: ReadonlyMap<string, StoredFinancialItem>,
 ): Promise<SingleImportResult> {
   try {
     const itemData = avsAccountToFinancialItem(account);
@@ -40,8 +41,7 @@ async function importSingleAccount(
     };
 
     if (account.existingItemId) {
-      const existingItems = await dataManager.getFinancialItemsForCase(caseId);
-      const existingItem = existingItems.find((item) => item.id === account.existingItemId);
+      const existingItem = existingItemsById.get(account.existingItemId);
 
       if (!existingItem) {
         throw new Error(`Matched AVS item with ID '${account.existingItemId}' was not found during import`);
@@ -70,8 +70,7 @@ async function importSingleAccount(
         });
       }
 
-      const { amount: excludedAmount, ...nonHistoryUpdates } = updatePayload;
-      void excludedAmount;
+      const nonHistoryUpdates = (({ amount: _amount, ...rest }: Partial<FinancialItem>) => rest)(updatePayload);
       await dataManager.updateItem(caseId, "resources", account.existingItemId, nonHistoryUpdates);
       return { outcome: "updated" };
     }
@@ -386,8 +385,12 @@ export function useAVSImportFlow({
     const errors: string[] = [];
 
     try {
+      const existingItemsById = new Map(
+        (await dataManager.getFinancialItemsForCase(selectedCase.id)).map((item) => [item.id, item] as const),
+      );
+
       for (const account of selectedAccounts) {
-        const result = await importSingleAccount(account, dataManager, selectedCase.id);
+        const result = await importSingleAccount(account, dataManager, selectedCase.id, existingItemsById);
         if (result.outcome === "new") newCount++;
         else if (result.outcome === "updated") updateCount++;
         else if (result.errorDescription) errors.push(result.errorDescription);

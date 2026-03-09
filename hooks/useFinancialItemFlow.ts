@@ -99,7 +99,10 @@ const createEmptyFormData = (): FinancialFormData => ({
   dateAdded: new Date().toISOString(),
 });
 
-const createFormDataFromItem = (item: FinancialItem): FinancialFormData => ({
+const createFormDataFromItem = (item: FinancialItem): FinancialFormData => {
+  const currentEntry = getEntryForMonth(item);
+
+  return {
   id: item.id,
   description: item.description || item.name || "",
   location: item.location || "",
@@ -107,11 +110,12 @@ const createFormDataFromItem = (item: FinancialItem): FinancialFormData => ({
   amount: getAmountForMonth(item),
   frequency: item.frequency || "monthly",
   owner: item.owner || "applicant",
-  verificationStatus: item.verificationStatus || "Needs VR",
-  verificationSource: item.verificationSource || "",
+  verificationStatus: currentEntry?.verificationStatus ?? item.verificationStatus ?? "Needs VR",
+  verificationSource: currentEntry?.verificationSource ?? item.verificationSource ?? "",
   notes: item.notes || "",
   dateAdded: item.dateAdded || new Date().toISOString(),
-});
+  };
+};
 
 interface UseFinancialItemFlowParams {
   selectedCase: StoredCase | null;
@@ -365,8 +369,7 @@ export function useFinancialItemFlow({
           }
         }
 
-        const { amount: excludedAmount, ...nonHistoryUpdates } = itemData;
-        void excludedAmount;
+        const nonHistoryUpdates = (({ amount: _amount, ...rest }) => rest)(itemData);
         await dataManager.updateItem(selectedCase.id, itemForm.category, formData.id, nonHistoryUpdates);
         toast.success(`${categoryLabel} item updated successfully`);
       } else {
