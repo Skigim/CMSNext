@@ -353,7 +353,7 @@ export function useFinancialItemFlow({
           };
           const currentMonthStart = getFirstOfMonth();
 
-          if (currentEntry && currentEntry.startDate === currentMonthStart) {
+          if (currentEntry?.startDate === currentMonthStart) {
             await dataManager.updateAmountHistoryEntry(
               selectedCase.id,
               itemForm.category,

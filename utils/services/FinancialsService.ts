@@ -319,7 +319,7 @@ export class FinancialsService {
       
       const currentMonthStart = getFirstOfMonth();
 
-      if (currentEntry && currentEntry.startDate === currentMonthStart) {
+      if (currentEntry?.startDate === currentMonthStart) {
         updatedAmountHistory = (existingItem.amountHistory ?? []).map((entry) =>
           entry.id === currentEntry.id
             ? {

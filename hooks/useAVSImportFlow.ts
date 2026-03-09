@@ -55,7 +55,7 @@ async function importSingleAccount(
         verificationSource: "AVS",
       };
 
-      if (currentEntry && currentEntry.startDate === currentMonthStart) {
+      if (currentEntry?.startDate === currentMonthStart) {
         await dataManager.updateAmountHistoryEntry(
           caseId,
           "resources",

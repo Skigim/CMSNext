@@ -74,6 +74,7 @@ describe("FinancialItemStepperModal", () => {
       renderModal();
 
       await act(async () => {
+        // fireEvent avoids the fake-timer/userEvent deadlock this test previously hit.
         fireEvent.change(screen.getByLabelText(/Description \*/i), {
           target: { value: "Test Item" },
         });
