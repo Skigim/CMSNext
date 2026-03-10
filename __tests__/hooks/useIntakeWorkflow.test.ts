@@ -259,6 +259,36 @@ describe("useIntakeWorkflow", () => {
       expect(result.current.currentStep).toBe(0);
     });
 
+    it("allows navigation back to a visited step even when an earlier required field was cleared", () => {
+      const { result } = renderIntakeHook();
+
+      // Fill step 0 required fields and advance to step 1 (visits step 1)
+      act(() => {
+        result.current.updateField("firstName", "Alice");
+        result.current.updateField("lastName", "Smith");
+      });
+      act(() => {
+        result.current.goNext(); // now on step 1, step 0 was visited
+      });
+      act(() => {
+        result.current.goNext(); // advance to step 2
+      });
+
+      // Go back to step 0 and clear a required field — step 2 is no longer
+      // reachable via isStepReachable, but it IS visited.
+      act(() => {
+        result.current.goToStep(0);
+        result.current.updateField("firstName", "");
+      });
+
+      // Step 2 should still be navigable since it was previously visited.
+      act(() => {
+        result.current.goToStep(2);
+      });
+
+      expect(result.current.currentStep).toBe(2);
+    });
+
     it("ignores out-of-range indices", () => {
       const { result } = renderIntakeHook();
 

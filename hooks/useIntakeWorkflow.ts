@@ -179,13 +179,16 @@ export function useIntakeWorkflow({
   const goToStep = useCallback(
     (index: number) => {
       if (index < 0 || index >= INTAKE_STEPS.length) return;
-      if (!isStepReachable(index, formData)) return;
+      // Allow navigation to any previously-visited step (the sidebar shows those
+      // as enabled) even if an earlier required field has since been cleared.
+      // Non-visited steps still require every preceding step to be reachable.
+      if (!visitedSteps.has(index) && !isStepReachable(index, formData)) return;
       currentStepRef.current = index;
       markVisited(index);
       setCurrentStep(index);
       setError(null);
     },
-    [formData, markVisited],
+    [formData, visitedSteps, markVisited],
   );
 
   // ---- Reset ----------------------------------------------------------------

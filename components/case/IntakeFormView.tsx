@@ -692,8 +692,9 @@ function ChecklistStep({
       <Separator />
 
       <div className="space-y-3">
-        <h3 className="text-sm font-medium">Voter Registration Form</h3>
+        <h3 id="voter-form-status-label" className="text-sm font-medium">Voter Registration Form</h3>
         <RadioGroup
+          aria-labelledby="voter-form-status-label"
           value={(formData.voterFormStatus as VoterFormStatusOption) ?? ""}
           onValueChange={(v) =>
             onChange("voterFormStatus", v as VoterFormStatusOption)
