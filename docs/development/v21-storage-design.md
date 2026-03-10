@@ -283,6 +283,13 @@ export interface StoredCase {
    * Must contain at least one entry; exactly one must have isPrimary: true.
    */
   people: CasePersonRef[];
+  /**
+   * NOTE (v2.1): Case-person relationships are authoritative via `people[]` above.
+   * Any `personId` / `spouseId` fields that still exist on `CaseRecord` are
+   * legacy, backward-compatibility data and MUST NOT be used as the source of
+   * truth by new code.  A future migration (v2.2) may deprecate or remove these
+   * fields from `CaseRecord` entirely.  See §5.5 open question on `CaseRecord` cleanup.
+   */
   caseRecord: Omit<CaseRecord, "financials" | "notes">;
   pendingArchival?: boolean;
 }
@@ -295,7 +302,7 @@ export interface StoredCase {
 
 ### 5.5 `CaseDisplay` — hydrated runtime model
 
-`CaseDisplay` retains its existing scalar fields (`id`, `name`, `mcn`, `status`, `priority`, `createdAt`, `updatedAt`) unchanged so existing UI components continue to compile.  The difference is that `person` is now resolved from the primary `CasePersonRef` at read time by `CaseService.hydrate()`, and a new optional `linkedPeople` field exposes all linked persons for v2.1 household views.
+`CaseDisplay` retains its existing scalar fields (`id`, `name`, `mcn`, `status`, `priority`, `createdAt`, `updatedAt`) unchanged so existing UI components continue to compile.  The difference is that `person` is now resolved from the primary `CasePersonRef` at read time by `CaseService.hydrate()`, and a new `linkedPeople` field exposes all linked persons for v2.1 household views.  `linkedPeople` is always populated by `hydrate()` so it is **required** (non-optional) on the runtime model.
 
 ```typescript
 // Runtime/UI view model — not stored on disk
@@ -348,31 +355,43 @@ export interface CaseDisplay {
 
 ```
 function migrateV20ToV21(v20: NormalizedFileData_v20): NormalizedFileData_v21
+
+  // --- Pass 1: Collect and deduplicate all persons from all cases ---
   1. Collect every embedded person from v20.cases[].person
-  2. For each person:
+  2. For each collected person (build people[] — no relationship resolution yet):
        a. If person.id already exists in seen_ids → reuse; record that this
           case and the earlier case share the same person.
        b. If person.id is absent or empty → generate a new UUID and assign it.
        c. Merge into global people[] array (deduplicate by id only — see §9.3).
        d. Set updatedAt = createdAt if updatedAt is absent.
-       e. Normalize relationships:
-            - For each legacy Relationship entry: set type from relationship.type;
-              if **exactly one** Person with a matching name exists in people[], set
-              targetPersonId; if zero matches or more than one match (ambiguous),
-              set targetPersonId = null and copy name → displayNameFallback
-              (ambiguous matches are treated as unresolved to prevent mis-linking).
-            - Preserve relationship.phone → PersonRelationship.legacyPhone on every entry.
-            - Replace null/absent id with a new UUID.
-       f. Rename familyMembers → familyMemberIds:
+       e. Rename familyMembers → familyMemberIds:
             - Values that pass UUID validation: keep in familyMemberIds[].
             - Values that fail validation (free-text names): move to
               Person.legacyFamilyMemberNames[]; write migration warning to activityLog.
-       g. Set relationships to [] if absent (was optional; now required).
-  3. Rewrite each case:
+       f. Ensure relationships array is present:
+            - If relationships is absent or null → set relationships = []
+              (was optional; now required).
+            - Replace null/absent relationship.id values with new UUIDs.
+            - Copy relationship.phone → PersonRelationship.legacyPhone on every entry.
+            - Leave targetPersonId unresolved for now (resolved in Pass 2).
+
+  // --- Pass 2: Resolve relationship names against the COMPLETE people[] array ---
+  //     Running this as a second pass ensures resolution is order-independent
+  //     and idempotent regardless of case ordering in the input.
+  3. For each person in people[]:
+       For each relationship entry:
+         - If **exactly one** Person with a matching name exists in people[], set
+           targetPersonId to that Person.id.
+         - If zero matches or more than one match (ambiguous), set
+           targetPersonId = null and copy name → displayNameFallback
+           (ambiguous matches are treated as unresolved to prevent mis-linking).
+
+  // --- Pass 3: Rewrite cases ---
+  4. Rewrite each case:
        a. Replace inline person with people: [{ personId: person.id, role: "applicant", isPrimary: true }]
        b. Preserve all other case fields unchanged
-  4. Set version = "2.1"
-  5. Return new object (do not mutate input)
+  5. Set version = "2.1"
+  6. Return new object (do not mutate input)
 ```
 
 ### 6.3 Migration module location
@@ -495,7 +514,7 @@ dehydrate(display: CaseDisplay): StoredCase {
 
 `DataManager` methods that currently return `StoredCase[]` should return `CaseDisplay[]` after hydration.  Methods that accept user input and write to disk call `CaseService.dehydrate()` before persisting.
 
-> **Storage notification:** Every write path in `DataManager` must call `safeNotifyFileStorageChange()` after a successful `writeNormalizedData()` call.  This is the existing pattern for all storage mutations and triggers UI re-renders across all subscribed hooks.  New v2.1 write paths (`PersonService` mutations, `linkPersonToCase`, etc.) must follow the same convention.
+> **Storage notification:** All file-based write paths in `DataManager` must persist via `FileStorageService.writeNormalizedData()`.  That method already handles UI notification internally by calling `this.fileService.broadcastDataUpdate(finalData)`, so no additional notification helper is needed for file storage mutations.  New v2.1 write paths (`PersonService` mutations, `linkPersonToCase`, etc.) must also route through `writeNormalizedData()` to participate in this mechanism.  Use `safeNotifyFileStorageChange()` **only** for non-file-storage mutations (e.g., localStorage-based hooks) that cannot go through `FileStorageService`.
 
 Key touch points:
 
@@ -785,7 +804,7 @@ This plan maps directly to the March 2026 roadmap weeks.
 - [ ] Update `NormalizedFileData` to v2.1 shape (add `people: Person[]`; bump version literal).
 - [ ] Update `isNormalizedFileData` type guard.
 - [ ] **Upgrade `writeNormalizedData` to v2.1** (prerequisite before enabling migration — see §6.4).
-- [ ] Ensure upgraded `writeNormalizedData` calls `safeNotifyFileStorageChange()` after every successful write to trigger UI updates (existing pattern — must be preserved in the new v2.1 code path).
+- [ ] Verify that all v2.1 write paths go through `writeNormalizedData()` so that `broadcastDataUpdate()` fires automatically after successful writes (no additional notification helper needed — see §7.4).
 - [ ] Implement `utils/storageV21Migration.ts` (pure function; no I/O).
 - [ ] Wire migration into `FileStorageService.readFileData()`.
 - [ ] Implement `PersonService` with full API (§8.3), using config object constructor.
@@ -804,7 +823,7 @@ This plan maps directly to the March 2026 roadmap weeks.
 **Implementation**
 - [ ] Add `CaseService.hydrate()` and `CaseService.dehydrate()`.
 - [ ] Update `DataManager` read methods to call `hydrateAll` before returning.
-- [ ] Update `DataManager` write methods to call `dehydrate` before persisting; verify each write method calls `safeNotifyFileStorageChange()` after the file is written.
+- [ ] Update `DataManager` write methods to call `dehydrate` before persisting; verify each write method goes through `FileStorageService.writeNormalizedData()` (which handles `broadcastDataUpdate()` internally — see §7.4).
 - [ ] Update `domain/cases/` formatting utilities that assume embedded `Person`.
 - [ ] Enable `PersonRelationship` relational linking (§5.3).
 - [ ] Pre-write integrity check in `FileStorageService.writeNormalizedData()`.
@@ -860,6 +879,10 @@ This plan maps directly to the March 2026 roadmap weeks.
   "alerts": []
 }
 ```
+
+> **Note:** The v2.0 example above omits `categoryConfig`, `activityLog`, `exported_at`, and
+> `total_cases` for brevity. See §4.1 for the complete v2.0 `NormalizedFileData` shape.
+> Person objects are also truncated; see §5.2 for all required fields.
 
 ### v2.1 (proposed)
 
@@ -936,7 +959,9 @@ This plan maps directly to the March 2026 roadmap weeks.
 > **Note:** The example above shows only the `people` and `cases` arrays for brevity.
 > A complete v2.1 file also includes `categoryConfig`, `activityLog`, `templates`,
 > `exported_at` (snake_case — intentional, matches the v2.0 schema convention), and `total_cases`
-> as documented in §5.1.
+> as documented in §5.1.  Person objects are also truncated; required fields not shown include
+> `organizationId`, `livingArrangement`, `address`, `mailingAddress`, and `status` — see §5.2 for
+> the complete `Person` interface.
 
 ---
 
