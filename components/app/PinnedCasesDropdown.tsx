@@ -46,7 +46,7 @@ export interface PinnedCasesDropdownProps {
  */
 export const PinnedCasesDropdown = memo(function PinnedCasesDropdown({
   cases,
-  hasLoadedData = false,
+  hasLoadedData = true,
   onViewCase,
 }: PinnedCasesDropdownProps) {
   const { pinnedCaseIds, unpin, pruneStale } = usePinnedCases();
