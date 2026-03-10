@@ -304,9 +304,10 @@ export const AppContent = memo(function AppContent() {
       onNewCase: handleNewCase,
       onSidebarOpenChange: handleSidebarOpenChange,
       cases,
+      hasLoadedData,
       onViewCase: handleViewCase,
     }),
-    [breadcrumbTitle, cases, currentView, detailsSourceView, handleNavigate, handleNewCase, handleSidebarOpenChange, handleViewCase, sidebarOpen],
+    [breadcrumbTitle, cases, currentView, detailsSourceView, handleNavigate, handleNewCase, handleSidebarOpenChange, handleViewCase, hasLoadedData, sidebarOpen],
   );
 
   const viewHandlers = useMemo(

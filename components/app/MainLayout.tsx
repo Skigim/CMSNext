@@ -26,6 +26,8 @@ interface MainLayoutProps {
   onSidebarOpenChange?: (open: boolean) => void;
   /** All cases for pinned cases dropdown */
   cases?: StoredCase[];
+  /** Whether case data has finished loading */
+  hasLoadedData?: boolean;
   /** Handler to view a case from pinned dropdown */
   onViewCase?: (caseId: string) => void;
 }
@@ -40,6 +42,7 @@ export function MainLayout({
   sidebarOpen,
   onSidebarOpenChange,
   cases,
+  hasLoadedData,
   onViewCase,
 }: Readonly<MainLayoutProps>) {
   const autosaveStatus = useAutosaveStatus();
@@ -129,7 +132,11 @@ export function MainLayout({
           </div>
           <div className="flex items-center gap-2">
             {cases && onViewCase && (
-              <PinnedCasesDropdown cases={cases} onViewCase={onViewCase} />
+              <PinnedCasesDropdown
+                cases={cases}
+                hasLoadedData={hasLoadedData}
+                onViewCase={onViewCase}
+              />
             )}
             <AutosaveStatusBadge summary={autosaveStatus} />
           </div>
