@@ -40,6 +40,16 @@ function renderIntakeHook(options: Parameters<typeof useIntakeWorkflow>[0] = {})
   return renderHook(() => useIntakeWorkflow(options));
 }
 
+/** Fills the four fields required to make the intake form submittable. */
+function fillMinimumRequiredFields(result: ReturnType<typeof renderIntakeHook>["result"]) {
+  act(() => {
+    result.current.updateField("firstName", "Alice");
+    result.current.updateField("lastName", "Smith");
+    result.current.updateField("mcn", "12345");
+    result.current.updateField("applicationDate", "2026-01-01");
+  });
+}
+
 // ---- Tests ------------------------------------------------------------------
 
 describe("useIntakeWorkflow", () => {
@@ -289,12 +299,7 @@ describe("useIntakeWorkflow", () => {
       const onSuccess = vi.fn();
       const { result } = renderIntakeHook({ onSuccess });
 
-      act(() => {
-        result.current.updateField("firstName", "Alice");
-        result.current.updateField("lastName", "Smith");
-        result.current.updateField("mcn", "12345");
-        result.current.updateField("applicationDate", "2026-01-01");
-      });
+      fillMinimumRequiredFields(result);
 
       await act(async () => {
         await result.current.submit();
@@ -310,12 +315,7 @@ describe("useIntakeWorkflow", () => {
     it("calls dataManager.createCompleteCase with mapped data", async () => {
       const { result } = renderIntakeHook();
 
-      act(() => {
-        result.current.updateField("firstName", "Alice");
-        result.current.updateField("lastName", "Smith");
-        result.current.updateField("mcn", "12345");
-        result.current.updateField("applicationDate", "2026-01-01");
-      });
+      fillMinimumRequiredFields(result);
 
       await act(async () => {
         await result.current.submit();
@@ -380,12 +380,7 @@ describe("useIntakeWorkflow", () => {
 
       const { result } = renderIntakeHook();
 
-      act(() => {
-        result.current.updateField("firstName", "Alice");
-        result.current.updateField("lastName", "Smith");
-        result.current.updateField("mcn", "12345");
-        result.current.updateField("applicationDate", "2026-01-01");
-      });
+      fillMinimumRequiredFields(result);
 
       await act(async () => {
         await result.current.submit();
@@ -400,11 +395,8 @@ describe("useIntakeWorkflow", () => {
     it("blocks submission when optional fields fail intake schema validation", async () => {
       const { result } = renderIntakeHook();
 
+      fillMinimumRequiredFields(result);
       act(() => {
-        result.current.updateField("firstName", "Alice");
-        result.current.updateField("lastName", "Smith");
-        result.current.updateField("mcn", "12345");
-        result.current.updateField("applicationDate", "2026-01-01");
         result.current.updateField("email", "not-an-email");
       });
 
@@ -419,11 +411,8 @@ describe("useIntakeWorkflow", () => {
     it("normalizes phone numbers before saving the created person", async () => {
       const { result } = renderIntakeHook();
 
+      fillMinimumRequiredFields(result);
       act(() => {
-        result.current.updateField("firstName", "Alice");
-        result.current.updateField("lastName", "Smith");
-        result.current.updateField("mcn", "12345");
-        result.current.updateField("applicationDate", "2026-01-01");
         result.current.updateField("phone", "(555) 123-4567");
       });
 
@@ -443,12 +432,7 @@ describe("useIntakeWorkflow", () => {
     it("resets the form on successful submission", async () => {
       const { result } = renderIntakeHook();
 
-      act(() => {
-        result.current.updateField("firstName", "Alice");
-        result.current.updateField("lastName", "Smith");
-        result.current.updateField("mcn", "12345");
-        result.current.updateField("applicationDate", "2026-01-01");
-      });
+      fillMinimumRequiredFields(result);
 
       await act(async () => {
         await result.current.submit();

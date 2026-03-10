@@ -14,18 +14,12 @@ import { IntakeFormView } from "../case/IntakeFormView";
 
 export type View = AppView;
 
-interface ViewRendererProps {
-  // View state
-  currentView: View;
-  selectedCase: StoredCase | null | undefined;
-  showNewCaseModal: boolean;
-
-  // Data props
-  cases: StoredCase[];
-  alerts: AlertsIndex;
-  activityLogState: CaseActivityLogState;
-  
-  // Navigation handlers
+/**
+ * The shared case-management action handlers used by both ViewRenderer and
+ * CaseWorkspace.  Exporting this type allows CaseWorkspace to reference it
+ * instead of duplicating the same 15 signatures.
+ */
+export interface CaseViewHandlers {
   handleViewCase: (caseId: string) => void;
   handleNewCase: () => void;
   handleCancelNewCase: () => void;
@@ -36,8 +30,6 @@ interface ViewRendererProps {
     caseData: { person: NewPersonData; caseRecord: NewCaseRecordData },
     options?: { skipNavigation?: boolean }
   ) => Promise<void>;
-  
-  // Component handlers
   handleDeleteCase: (caseId: string) => Promise<void>;
   handleDeleteCases: (caseIds: string[]) => Promise<number>;
   handleUpdateCasesStatus: (caseIds: string[], status: StoredCase["status"]) => Promise<number>;
@@ -46,6 +38,20 @@ interface ViewRendererProps {
   handleApproveArchival?: (caseIds: string[]) => Promise<unknown>;
   handleCancelArchival?: (caseIds: string[]) => Promise<number>;
   isArchiving?: boolean;
+}
+
+interface ViewRendererProps extends CaseViewHandlers {
+  // View state
+  currentView: View;
+  selectedCase: StoredCase | null | undefined;
+  showNewCaseModal: boolean;
+
+  // Data props
+  cases: StoredCase[];
+  alerts: AlertsIndex;
+  activityLogState: CaseActivityLogState;
+
+  // Extended handlers not needed by CaseWorkspace directly
   handleUpdateCaseStatus?: (caseId: string, status: StoredCase["status"]) =>
     | Promise<StoredCase | null>
     | StoredCase

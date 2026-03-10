@@ -3,12 +3,11 @@ import { AlertCircle } from "lucide-react";
 import type { AppNavigationConfig } from "./AppNavigationShell";
 import { AppNavigationShell } from "./AppNavigationShell";
 import { ViewRendererWithModal } from "../routing/ViewRenderer";
+import type { CaseViewHandlers } from "../routing/ViewRenderer";
 import type {
   StoredCase,
   CaseCategory,
   FinancialItem,
-  NewCaseRecordData,
-  NewPersonData,
 } from "../../types/case";
 import type { ItemFormState, FinancialFormData, FinancialFormErrors } from "../../hooks/useFinancialItemFlow";
 import type { AlertsIndex, AlertWithMatch } from "../../utils/alertsData";
@@ -18,26 +17,8 @@ import { Button } from "../ui/button";
 
 const FinancialItemModal = lazy(() => import("../modals/FinancialItemModal"));
 
-interface CaseWorkspaceViewHandlers {
-  handleViewCase: (caseId: string) => void;
-  handleNewCase: () => void;
-  handleCancelNewCase: () => void;
-  handleCompleteNewCase: (caseId: string) => void;
-  handleCloseNewCaseModal: () => void;
-  handleBackToList: () => void;
-  handleSaveCase: (
-    caseData: { person: NewPersonData; caseRecord: NewCaseRecordData },
-    options?: { skipNavigation?: boolean }
-  ) => Promise<void>;
-  handleDeleteCase: (caseId: string) => Promise<void>;
-  handleDeleteCases: (caseIds: string[]) => Promise<number>;
-  handleUpdateCasesStatus: (caseIds: string[], status: StoredCase["status"]) => Promise<number>;
-  handleUpdateCasesPriority: (caseIds: string[], priority: boolean) => Promise<number>;
-  handleBulkResolveAlerts?: (caseIds: string[], alerts: AlertWithMatch[], descriptionFilter: string) => Promise<{ resolvedCount: number; caseCount: number }>;
-  handleApproveArchival?: (caseIds: string[]) => Promise<unknown>;
-  handleCancelArchival?: (caseIds: string[]) => Promise<number>;
-  isArchiving?: boolean;
-}
+/** Handler props surfaced to CaseWorkspace – identical to the shared CaseViewHandlers set. */
+type CaseWorkspaceViewHandlers = CaseViewHandlers;
 
 interface CaseWorkspaceFinancialFlow {
   itemForm: ItemFormState;
