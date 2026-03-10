@@ -71,7 +71,7 @@ export interface IntakeFormViewProps extends UseIntakeWorkflowOptions {
 
 interface SidebarProps {
   currentStep: number;
-  visitedSteps: Set<number>;
+  visitedSteps: ReadonlySet<number>;
   formData: IntakeFormData;
   onGoToStep: (index: number) => void;
 }
@@ -616,7 +616,9 @@ function ChecklistStep({
     (method: ContactMethodOption, checked: boolean) => {
       const current = (formData.contactMethods ?? []) as ContactMethodOption[];
       if (checked) {
-        onChange("contactMethods", [...current, method] as IntakeFormData["contactMethods"]);
+        if (!current.includes(method)) {
+          onChange("contactMethods", [...current, method] as IntakeFormData["contactMethods"]);
+        }
       } else {
         onChange(
           "contactMethods",
@@ -900,6 +902,7 @@ export function IntakeFormView({
     goNext,
     goPrev,
     goToStep,
+    cancel,
     submit,
     isCurrentStepComplete,
     canSubmit,
@@ -924,7 +927,7 @@ export function IntakeFormView({
           <Button
             variant="ghost"
             size="sm"
-            onClick={onCancel}
+            onClick={cancel}
             className="flex items-center gap-1 text-muted-foreground"
           >
             <ArrowLeft className="h-4 w-4" />

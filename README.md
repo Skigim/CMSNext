@@ -113,7 +113,7 @@ The main data file remains the source of truth for the active workspace. Archive
 
 - No backend, no remote API, and no cloud account requirement
 - AES-256-GCM encryption for data at rest
-- PBKDF2 key derivation with 100,000 iterations
+- PBKDF2 key derivation with 600,000 iterations
 - Password is never stored; it exists only for the active session
 - No password recovery flow by design
 - Autosave is built into the local file service

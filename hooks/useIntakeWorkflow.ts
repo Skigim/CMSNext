@@ -50,7 +50,7 @@ export interface UseIntakeWorkflowReturn {
   /** Current step index (0-based, matches INTAKE_STEPS) */
   currentStep: number;
   /** Set of step indices the user has previously visited */
-  visitedSteps: Set<number>;
+  visitedSteps: ReadonlySet<number>;
   /** Live form data draft */
   formData: IntakeFormData;
   /** Whether a submission is in progress */
@@ -72,6 +72,11 @@ export interface UseIntakeWorkflowReturn {
   goToStep: (index: number) => void;
   /** Reset the entire workflow back to step 0 with a blank form */
   reset: () => void;
+  /**
+   * Cancel the intake workflow: resets state to step 0 and calls the
+   * onCancel callback provided to the hook (if any).
+   */
+  cancel: () => void;
   /** Submit the completed intake form */
   submit: () => Promise<void>;
   /** Whether the current step passes completion criteria */
@@ -103,6 +108,7 @@ export interface UseIntakeWorkflowReturn {
  */
 export function useIntakeWorkflow({
   onSuccess,
+  onCancel,
 }: UseIntakeWorkflowOptions = {}): UseIntakeWorkflowReturn {
   const dataManager = useDataManagerSafe();
   const { config } = useCategoryConfig();
@@ -191,6 +197,12 @@ export function useIntakeWorkflow({
     setError(null);
     setIsSubmitting(false);
   }, []);
+
+  // ---- Cancel ---------------------------------------------------------------
+  const cancel = useCallback(() => {
+    reset();
+    onCancel?.();
+  }, [reset, onCancel]);
 
   // ---- Submit ---------------------------------------------------------------
   const submit = useCallback(async () => {
@@ -329,11 +341,6 @@ export function useIntakeWorkflow({
     onSuccess,
   ]);
 
-  // ---- Cancel ---------------------------------------------------------------
-  // onCancel is called directly by the component (passed in via options) – the hook
-  // exposes `reset()` separately so the component can reset state without navigating.
-  // The cancel action itself is wired in IntakeFormView.
-
   return {
     currentStep,
     visitedSteps,
@@ -346,6 +353,7 @@ export function useIntakeWorkflow({
     goPrev,
     goToStep,
     reset,
+    cancel,
     submit,
     isCurrentStepComplete,
     canSubmit,

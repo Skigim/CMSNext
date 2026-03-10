@@ -270,6 +270,44 @@ describe("useIntakeWorkflow", () => {
     });
   });
 
+  // --- cancel ---------------------------------------------------------------
+
+  describe("cancel", () => {
+    it("resets state and calls onCancel", () => {
+      const onCancel = vi.fn();
+      const { result } = renderIntakeHook({ onCancel });
+
+      act(() => {
+        result.current.updateField("firstName", "Alice");
+        result.current.goNext();
+      });
+
+      act(() => {
+        result.current.cancel();
+      });
+
+      expect(result.current.currentStep).toBe(0);
+      expect(result.current.formData.firstName).toBe("");
+      expect(onCancel).toHaveBeenCalledTimes(1);
+    });
+
+    it("resets state without error when no onCancel provided", () => {
+      const { result } = renderIntakeHook();
+
+      act(() => {
+        result.current.updateField("firstName", "Alice");
+        result.current.goNext();
+      });
+
+      act(() => {
+        result.current.cancel();
+      });
+
+      expect(result.current.currentStep).toBe(0);
+      expect(result.current.formData.firstName).toBe("");
+    });
+  });
+
   // --- reset ----------------------------------------------------------------
 
   describe("reset", () => {

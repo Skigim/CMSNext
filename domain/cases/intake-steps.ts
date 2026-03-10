@@ -133,9 +133,10 @@ export function isStepComplete(
 /**
  * Determine whether the user can navigate to a given step.
  *
- * A step is reachable when every preceding step is either complete
- * OR the user has already visited it (visited tracking is handled
- * by the hook layer).
+ * A step is reachable when all preceding required-field steps are complete.
+ * Visited-step tracking (which allows jumping back to any previously visited
+ * step regardless of form state) is handled separately in the hook layer and
+ * is not an input to this function.
  *
  * This pure function only checks the "required fields" gate:
  * the step is reachable if all steps before it are complete.
