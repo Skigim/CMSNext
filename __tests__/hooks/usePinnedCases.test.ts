@@ -110,6 +110,22 @@ describe("usePinnedCases", () => {
       });
     });
 
+    it("clamps overlong reasons before persisting", () => {
+      const { result } = renderHook(() => usePinnedCases());
+      // 240 matches the shared product limit for persisted pin reasons.
+      const overlongReason = "x".repeat(300);
+
+      act(() => {
+        result.current.pin("case-1", overlongReason);
+      });
+
+      // Persisted values should honor the same 240-character clamp used by the UI.
+      expect(result.current.getPinReason("case-1")).toHaveLength(240);
+      expect(pinReasonStorageMock.mockWrite).toHaveBeenCalledWith({
+        "case-1": "x".repeat(240),
+      });
+    });
+
     it("does not store an empty reason", () => {
       const { result } = renderHook(() => usePinnedCases());
 

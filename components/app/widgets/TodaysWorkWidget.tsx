@@ -15,13 +15,13 @@ import { useCategoryConfig } from '@/contexts/CategoryConfigContext';
  */
 interface TodaysWorkWidgetProps {
   /** All cases from data manager */
-  cases: StoredCase[];
+  readonly cases: StoredCase[];
   /** Alerts index with case mapping */
-  alerts: AlertsIndex;
+  readonly alerts: AlertsIndex;
   /** Widget metadata (injected by WidgetRegistry) */
-  metadata?: WidgetMetadata;
+  readonly metadata?: WidgetMetadata;
   /** Handler to view a case */
-  onViewCase?: (caseId: string) => void;
+  readonly onViewCase?: (caseId: string) => void;
 }
 
 /**
@@ -51,6 +51,7 @@ interface TodaysWorkWidgetProps {
 export function TodaysWorkWidget({ 
   cases, 
   alerts, 
+  metadata,
   onViewCase 
 }: TodaysWorkWidgetProps) {
   // Get category config for status-based filtering
@@ -58,6 +59,8 @@ export function TodaysWorkWidget({
   
   // Get priority cases using the hook (limit to top 3 for compact display)
   const priorityCases = useTodaysWork(cases, alerts, 3, { caseStatuses: config.caseStatuses });
+  const title = metadata?.title ?? "Today's Work";
+  const description = metadata?.description ?? 'Cases requiring immediate attention';
 
   const hasPriorityCases = priorityCases.length > 0;
 
@@ -66,8 +69,8 @@ export function TodaysWorkWidget({
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
           <div>
-            <CardTitle>Today's Work</CardTitle>
-            <CardDescription>Cases requiring immediate attention</CardDescription>
+            <CardTitle>{title}</CardTitle>
+            <CardDescription>{description}</CardDescription>
           </div>
           <Badge variant="outline" className="text-xs">
             {hasPriorityCases ? `${priorityCases.length} cases` : 'All clear'}

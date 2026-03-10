@@ -18,10 +18,10 @@ import {
 import { Pin, PinOff } from "lucide-react";
 import { usePinnedCases } from "@/hooks/usePinnedCases";
 import { cn } from "@/lib/utils";
+import { MAX_PIN_REASON_LENGTH } from "@/utils/pinnedCaseReason";
 
-// Keep pin reasons short enough to display cleanly in tooltips and the pinned cases dropdown.
-const MAX_PIN_REASON_LENGTH = 240;
 const MAX_ACCESSIBLE_PIN_REASON_LENGTH = 80;
+const PIN_LIMIT_REACHED_MESSAGE = "Pin limit reached";
 
 function buildPinButtonLabel(isPinned: boolean, pinReason?: string): string {
   if (!isPinned) {
@@ -41,13 +41,13 @@ function buildPinButtonLabel(isPinned: boolean, pinReason?: string): string {
 
 interface PinButtonProps {
   /** Case ID to pin/unpin */
-  caseId: string;
+  readonly caseId: string;
   /** Optional case name for dialog copy */
-  caseName?: string;
+  readonly caseName?: string;
   /** Optional size variant */
-  size?: "sm" | "default";
+  readonly size?: "sm" | "default";
   /** Optional additional className */
-  className?: string;
+  readonly className?: string;
 }
 
 /**
@@ -61,12 +61,24 @@ interface PinButtonProps {
  * <PinButton caseId={case.id} size="sm" />
  * ```
  */
-export function PinButton({ caseId, caseName, size = "sm", className }: PinButtonProps) {
-  const { getPinReason, isPinned, pin, unpin } = usePinnedCases();
+export function PinButton({
+  caseId,
+  caseName,
+  size = "sm",
+  className,
+}: Readonly<PinButtonProps>) {
+  const { canPinMore, getPinReason, isPinned, pin, unpin } = usePinnedCases();
   const pinned = isPinned(caseId);
   const pinReason = getPinReason(caseId);
   const [isReasonDialogOpen, setIsReasonDialogOpen] = useState(false);
   const [reason, setReason] = useState("");
+  const isPinActionDisabled = !pinned && !canPinMore;
+  let tooltipContent: string | null = null;
+  if (pinned && pinReason) {
+    tooltipContent = pinReason;
+  } else if (isPinActionDisabled) {
+    tooltipContent = PIN_LIMIT_REACHED_MESSAGE;
+  }
 
   const dialogTitle = useMemo(() => {
     if (!caseName?.trim()) {
@@ -91,11 +103,13 @@ export function PinButton({ caseId, caseName, size = "sm", className }: PinButto
         setReason("");
         setIsReasonDialogOpen(true);
       }}
+      disabled={isPinActionDisabled}
       className={cn(
         size === "sm" ? "h-6 w-6 p-0" : "h-8 w-8 p-0",
         pinned
           ? "text-blue-600 hover:text-blue-700"
           : "text-muted-foreground hover:text-foreground",
+        isPinActionDisabled && "opacity-50 cursor-not-allowed hover:text-muted-foreground",
         className
       )}
       aria-label={buildPinButtonLabel(pinned, pinReason)}
@@ -112,11 +126,13 @@ export function PinButton({ caseId, caseName, size = "sm", className }: PinButto
 
   return (
     <>
-      {pinned && pinReason ? (
+      {tooltipContent ? (
         <Tooltip>
-          <TooltipTrigger asChild>{button}</TooltipTrigger>
+          <TooltipTrigger asChild>
+            <span className="inline-flex">{button}</span>
+          </TooltipTrigger>
           <TooltipContent className="max-w-xs whitespace-pre-wrap break-words">
-            {pinReason}
+            {tooltipContent}
           </TooltipContent>
         </Tooltip>
       ) : (

@@ -10,9 +10,10 @@ interface AdapterMockState {
 
 const adapterStates = new Map<string, AdapterMockState>();
 let lastRequestedKey = "cmsnext-test-key";
+let defaultReadValue: unknown = null;
 
 function createAdapterState(key: string): AdapterMockState {
-  const mockRead = vi.fn<() => unknown>(() => null);
+  const mockRead = vi.fn<() => unknown>(() => defaultReadValue);
   const mockWrite = vi.fn<(value: unknown) => void>();
   const mockClear = vi.fn<() => void>();
 
@@ -44,10 +45,12 @@ function getDefaultAdapterState(): AdapterMockState {
   return getAdapterState(lastRequestedKey);
 }
 
-const createLocalStorageAdapterMock = vi.fn((key: string) => {
+const createLocalStorageAdapterMock = vi.fn(
+  (key: string, _defaultValue?: unknown, _options?: unknown) => {
   lastRequestedKey = key;
   return getAdapterState(key).adapter;
-});
+  }
+);
 
 const hasLocalStorageMock = vi.fn(() => true);
 
@@ -72,21 +75,31 @@ export const localStorageAdapterMock = {
   createLocalStorageAdapterMock,
   hasLocalStorageMock,
   reset(nextReadValue: unknown, key?: string): void {
-    const targetState = key ? getAdapterState(key) : getDefaultAdapterState();
-    targetState.mockRead.mockReset();
-    targetState.mockWrite.mockReset();
-    targetState.mockClear.mockReset();
-    targetState.mockRead.mockReturnValue(nextReadValue);
-    createLocalStorageAdapterMock.mockClear();
-    hasLocalStorageMock.mockReset();
-    hasLocalStorageMock.mockReturnValue(true);
+    if (key) {
+      const targetState = getAdapterState(key);
+      targetState.mockRead.mockReset();
+      targetState.mockWrite.mockReset();
+      targetState.mockClear.mockReset();
+      targetState.mockRead.mockReturnValue(nextReadValue);
+    } else {
+      defaultReadValue = nextReadValue;
+
+      for (const state of adapterStates.values()) {
+        state.mockRead.mockReset();
+        state.mockWrite.mockReset();
+        state.mockClear.mockReset();
+        state.mockRead.mockReturnValue(nextReadValue);
+      }
+
+      createLocalStorageAdapterMock.mockClear();
+      hasLocalStorageMock.mockReset();
+      hasLocalStorageMock.mockReturnValue(true);
+    }
   },
   resetAll(): void {
-    for (const state of adapterStates.values()) {
-      state.mockRead.mockReset();
-      state.mockWrite.mockReset();
-      state.mockClear.mockReset();
-    }
+    adapterStates.clear();
+    defaultReadValue = null;
+    lastRequestedKey = "cmsnext-test-key";
     createLocalStorageAdapterMock.mockClear();
     hasLocalStorageMock.mockReset();
     hasLocalStorageMock.mockReturnValue(true);
@@ -121,12 +134,11 @@ export const asTypedLocalStorageAdapterMock = <T>(
       return getState().mockClear;
     },
     reset: (nextReadValue: T) => {
-      const targetKey = key ?? lastRequestedKey;
-      localStorageAdapterMock.reset(nextReadValue, targetKey);
+      localStorageAdapterMock.reset(nextReadValue, key);
     },
     getLastWrite: () => {
       const { calls } = getState().mockWrite.mock;
-      const lastCall = calls[calls.length - 1];
+      const [lastCall] = calls.slice(-1);
       return lastCall?.[0] as T | undefined;
     },
   };

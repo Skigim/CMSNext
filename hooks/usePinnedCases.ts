@@ -10,6 +10,7 @@ import {
 } from "@/domain/dashboard/pinnedCases";
 import { createLocalStorageAdapter } from "@/utils/localStorage";
 import { createLogger } from "@/utils/logger";
+import { sanitizePinReason } from "@/utils/pinnedCaseReason";
 
 const logger = createLogger("usePinnedCases");
 const storage = createLocalStorageAdapter<string[]>("cmsnext-pinned-cases", []);
@@ -42,13 +43,13 @@ const pinReasonStorage = createLocalStorageAdapter<Record<string, string>>(
             return [];
           }
 
-          const trimmedReason = reason.trim();
-          if (!trimmedReason) {
+          const normalizedReason = sanitizePinReason(reason);
+          if (!normalizedReason) {
             filteredReasonCount += 1;
             return [];
           }
 
-          return [[caseId, trimmedReason]];
+          return [[caseId, normalizedReason]];
         })
       );
 
@@ -74,11 +75,6 @@ interface PinnedCasesState {
 /** Dispatch event to notify other hook instances of pin changes */
 function notifyPinnedCasesChanged() {
   globalThis.dispatchEvent(new CustomEvent(PINNED_CASES_CHANGED_EVENT));
-}
-
-function sanitizePinReason(reason?: string): string | undefined {
-  const trimmedReason = reason?.trim();
-  return trimmedReason ? trimmedReason : undefined;
 }
 
 function readPinnedCasesState(): PinnedCasesState {
