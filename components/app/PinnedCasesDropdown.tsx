@@ -17,6 +17,8 @@ import type { StoredCase } from "@/types/case";
 export interface PinnedCasesDropdownProps {
   /** All cases from data manager (to resolve IDs to case data) */
   cases: StoredCase[];
+  /** Whether case data has finished loading */
+  hasLoadedData?: boolean;
   /** Handler to view a case */
   onViewCase: (caseId: string) => void;
 }
@@ -44,6 +46,7 @@ export interface PinnedCasesDropdownProps {
  */
 export const PinnedCasesDropdown = memo(function PinnedCasesDropdown({
   cases,
+  hasLoadedData = false,
   onViewCase,
 }: PinnedCasesDropdownProps) {
   const { pinnedCaseIds, unpin, pruneStale } = usePinnedCases();
@@ -58,11 +61,15 @@ export const PinnedCasesDropdown = memo(function PinnedCasesDropdown({
 
   // Auto-prune stale pinned IDs (e.g. archived or deleted cases)
   useEffect(() => {
+    if (!hasLoadedData) {
+      return;
+    }
+
     if (pinnedCaseIds.length > 0 && pinnedCases.length < pinnedCaseIds.length) {
       const validIds = cases.map((c) => c.id);
       pruneStale(validIds);
     }
-  }, [pinnedCaseIds.length, pinnedCases.length, cases, pruneStale]);
+  }, [cases, hasLoadedData, pinnedCaseIds.length, pinnedCases.length, pruneStale]);
 
   // Use resolved count so the badge always matches visible items
   const resolvedCount = pinnedCases.length;
@@ -131,4 +138,3 @@ export const PinnedCasesDropdown = memo(function PinnedCasesDropdown({
     </DropdownMenu>
   );
 });
-

@@ -14,6 +14,8 @@ export interface AppNavigationConfig {
   onSidebarOpenChange: (open: boolean) => void;
   /** All cases for pinned cases dropdown */
   cases?: StoredCase[];
+  /** Whether case data has finished loading */
+  hasLoadedData?: boolean;
   /** Handler to view a case from pinned dropdown */
   onViewCase?: (caseId: string) => void;
 }
@@ -36,6 +38,7 @@ export const AppNavigationShell = memo(function AppNavigationShell({
   onNewCase,
   onSidebarOpenChange,
   cases,
+  hasLoadedData,
   onViewCase,
   children,
 }: AppNavigationShellProps) {
@@ -49,6 +52,7 @@ export const AppNavigationShell = memo(function AppNavigationShell({
       sidebarOpen={sidebarOpen}
       onSidebarOpenChange={onSidebarOpenChange}
       cases={cases}
+      hasLoadedData={hasLoadedData}
       onViewCase={onViewCase}
     >
       {children}
