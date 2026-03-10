@@ -19,6 +19,26 @@ import { Pin, PinOff } from "lucide-react";
 import { usePinnedCases } from "@/hooks/usePinnedCases";
 import { cn } from "@/lib/utils";
 
+// Keep pin reasons short enough to display cleanly in tooltips and the pinned cases dropdown.
+const MAX_PIN_REASON_LENGTH = 240;
+const MAX_ACCESSIBLE_PIN_REASON_LENGTH = 80;
+
+function buildPinButtonLabel(isPinned: boolean, pinReason?: string): string {
+  if (!isPinned) {
+    return "Pin case";
+  }
+
+  if (!pinReason) {
+    return "Unpin case";
+  }
+
+  const accessibleReason =
+    pinReason.length > MAX_ACCESSIBLE_PIN_REASON_LENGTH
+      ? `${pinReason.slice(0, MAX_ACCESSIBLE_PIN_REASON_LENGTH)}…`
+      : pinReason;
+  return `Unpin case. Pin reason: ${accessibleReason}`;
+}
+
 interface PinButtonProps {
   /** Case ID to pin/unpin */
   caseId: string;
@@ -78,7 +98,7 @@ export function PinButton({ caseId, caseName, size = "sm", className }: PinButto
           : "text-muted-foreground hover:text-foreground",
         className
       )}
-      aria-label={pinned ? "Unpin case" : "Pin case"}
+      aria-label={buildPinButtonLabel(pinned, pinReason)}
     >
       {pinned ? (
         <Pin
@@ -112,10 +132,13 @@ export function PinButton({ caseId, caseName, size = "sm", className }: PinButto
           }
         }}
       >
-        <DialogContent className="sm:max-w-md">
+        <DialogContent
+          className="sm:max-w-md"
+          aria-describedby={`pin-reason-description-${caseId}`}
+        >
           <DialogHeader>
             <DialogTitle>{dialogTitle}</DialogTitle>
-            <DialogDescription>
+            <DialogDescription id={`pin-reason-description-${caseId}`}>
               Add an optional reason for pinning this case. This stays attached to the pin
               only and does not create a note.
             </DialogDescription>
@@ -138,7 +161,8 @@ export function PinButton({ caseId, caseName, size = "sm", className }: PinButto
                 onChange={(event) => setReason(event.target.value)}
                 placeholder="Add an optional reason for pinning this case"
                 className="min-h-24"
-                maxLength={240}
+                maxLength={MAX_PIN_REASON_LENGTH}
+                aria-describedby={`pin-reason-description-${caseId}`}
                 autoFocus
               />
             </div>

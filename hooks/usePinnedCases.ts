@@ -9,28 +9,56 @@ import {
   pruneDeletedCases,
 } from "@/domain/dashboard/pinnedCases";
 import { createLocalStorageAdapter } from "@/utils/localStorage";
+import { createLogger } from "@/utils/logger";
 
+const logger = createLogger("usePinnedCases");
 const storage = createLocalStorageAdapter<string[]>("cmsnext-pinned-cases", []);
 const pinReasonStorage = createLocalStorageAdapter<Record<string, string>>(
   "cmsnext-pinned-case-reasons",
   {},
   {
     parse: (value) => {
-      const parsedValue = JSON.parse(value);
-      if (!parsedValue || typeof parsedValue !== "object" || Array.isArray(parsedValue)) {
+      let parsedValue: unknown;
+
+      try {
+        parsedValue = JSON.parse(value);
+      } catch (error) {
+        logger.warn("Failed to parse pinned case reasons from localStorage", { error });
         return {};
       }
 
-      return Object.fromEntries(
+      if (!parsedValue || typeof parsedValue !== "object" || Array.isArray(parsedValue)) {
+        logger.warn("Discarded invalid pinned case reasons payload from localStorage", {
+          parsedValueType: Array.isArray(parsedValue) ? "array" : typeof parsedValue,
+        });
+        return {};
+      }
+
+      let filteredReasonCount = 0;
+      const parsedReasons = Object.fromEntries(
         Object.entries(parsedValue).flatMap(([caseId, reason]) => {
           if (typeof reason !== "string") {
+            filteredReasonCount += 1;
             return [];
           }
 
           const trimmedReason = reason.trim();
-          return trimmedReason ? [[caseId, trimmedReason]] : [];
+          if (!trimmedReason) {
+            filteredReasonCount += 1;
+            return [];
+          }
+
+          return [[caseId, trimmedReason]];
         })
       );
+
+      if (filteredReasonCount > 0) {
+        logger.warn("Discarded invalid pinned case reasons from localStorage", {
+          filteredReasonCount,
+        });
+      }
+
+      return parsedReasons;
     },
   }
 );
@@ -58,6 +86,42 @@ function readPinnedCasesState(): PinnedCasesState {
     pinnedIds: storage.read(),
     pinReasons: pinReasonStorage.read(),
   };
+}
+
+function updatePinReason(
+  pinReasons: Record<string, string>,
+  caseId: string,
+  reason?: string
+): Record<string, string> {
+  const nextReason = sanitizePinReason(reason);
+  return nextReason
+    ? { ...pinReasons, [caseId]: nextReason }
+    : removePinReason(pinReasons, caseId);
+}
+
+function buildPinnedStateForPin(
+  prev: PinnedCasesState,
+  caseId: string,
+  maxPins: number,
+  reason?: string
+): PinnedCasesState | null {
+  const updatedIds = pinCase(prev.pinnedIds, caseId, maxPins);
+  const wasPinned = domainIsPinned(prev.pinnedIds, caseId);
+  const isNowPinned = domainIsPinned(updatedIds, caseId);
+
+  if (wasPinned || !isNowPinned) {
+    return null;
+  }
+
+  return {
+    pinnedIds: updatedIds,
+    pinReasons: updatePinReason(prev.pinReasons, caseId, reason),
+  };
+}
+
+function persistPinnedCasesState(state: PinnedCasesState): void {
+  storage.write(state.pinnedIds);
+  pinReasonStorage.write(state.pinReasons);
 }
 
 function removePinReason(
@@ -127,27 +191,15 @@ export function usePinnedCases(maxPins: number = 20) {
   const pin = useCallback(
     (caseId: string, reason?: string) => {
       setState((prev) => {
-        const updatedIds = pinCase(prev.pinnedIds, caseId, maxPins);
-        const wasPinned = domainIsPinned(prev.pinnedIds, caseId);
-        const isNowPinned = domainIsPinned(updatedIds, caseId);
-
-        if (wasPinned || !isNowPinned) {
+        const nextState = buildPinnedStateForPin(prev, caseId, maxPins, reason);
+        if (!nextState) {
           return prev;
         }
 
-        const nextReason = sanitizePinReason(reason);
-        const updatedReasons = nextReason
-          ? { ...prev.pinReasons, [caseId]: nextReason }
-          : removePinReason(prev.pinReasons, caseId);
-
-        storage.write(updatedIds);
-        pinReasonStorage.write(updatedReasons);
+        persistPinnedCasesState(nextState);
         isOwnUpdate.current = true;
         notifyPinnedCasesChanged();
-        return {
-          pinnedIds: updatedIds,
-          pinReasons: updatedReasons,
-        };
+        return nextState;
       });
     },
     [maxPins]
@@ -162,8 +214,10 @@ export function usePinnedCases(maxPins: number = 20) {
       const updatedIds = unpinCase(prev.pinnedIds, caseId);
       const updatedReasons = removePinReason(prev.pinReasons, caseId);
 
-      storage.write(updatedIds);
-      pinReasonStorage.write(updatedReasons);
+      persistPinnedCasesState({
+        pinnedIds: updatedIds,
+        pinReasons: updatedReasons,
+      });
       isOwnUpdate.current = true;
       notifyPinnedCasesChanged();
       return {
@@ -180,8 +234,10 @@ export function usePinnedCases(maxPins: number = 20) {
           const updatedIds = unpinCase(prev.pinnedIds, caseId);
           const updatedReasons = removePinReason(prev.pinReasons, caseId);
 
-          storage.write(updatedIds);
-          pinReasonStorage.write(updatedReasons);
+          persistPinnedCasesState({
+            pinnedIds: updatedIds,
+            pinReasons: updatedReasons,
+          });
           isOwnUpdate.current = true;
           notifyPinnedCasesChanged();
           return {
@@ -190,24 +246,15 @@ export function usePinnedCases(maxPins: number = 20) {
           };
         }
 
-        const updatedIds = pinCase(prev.pinnedIds, caseId, maxPins);
-        if (!domainIsPinned(updatedIds, caseId)) {
+        const nextState = buildPinnedStateForPin(prev, caseId, maxPins, reason);
+        if (!nextState) {
           return prev;
         }
 
-        const nextReason = sanitizePinReason(reason);
-        const updatedReasons = nextReason
-          ? { ...prev.pinReasons, [caseId]: nextReason }
-          : removePinReason(prev.pinReasons, caseId);
-
-        storage.write(updatedIds);
-        pinReasonStorage.write(updatedReasons);
+        persistPinnedCasesState(nextState);
         isOwnUpdate.current = true;
         notifyPinnedCasesChanged();
-        return {
-          pinnedIds: updatedIds,
-          pinReasons: updatedReasons,
-        };
+        return nextState;
       });
     },
     [maxPins]
@@ -230,8 +277,10 @@ export function usePinnedCases(maxPins: number = 20) {
         return prev;
       }
 
-      storage.write(updatedIds);
-      pinReasonStorage.write(prev.pinReasons);
+      persistPinnedCasesState({
+        pinnedIds: updatedIds,
+        pinReasons: prev.pinReasons,
+      });
       isOwnUpdate.current = true;
       notifyPinnedCasesChanged();
       return {
@@ -260,8 +309,10 @@ export function usePinnedCases(maxPins: number = 20) {
         return prev; // No stale entries — skip write
       }
 
-      storage.write(updatedIds);
-      pinReasonStorage.write(updatedReasons);
+      persistPinnedCasesState({
+        pinnedIds: updatedIds,
+        pinReasons: updatedReasons,
+      });
       isOwnUpdate.current = true;
       notifyPinnedCasesChanged();
       return {

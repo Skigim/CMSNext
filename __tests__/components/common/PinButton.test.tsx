@@ -49,7 +49,7 @@ describe("PinButton", () => {
     expect(pin).toHaveBeenCalledWith("case-1", "Pending morning triage");
   });
 
-  it("unpinned dialog can be submitted without a reason", () => {
+  it("pin dialog can be submitted without a reason", () => {
     const pin = vi.fn();
 
     usePinnedCasesMock.mockReturnValue({
@@ -75,7 +75,7 @@ describe("PinButton", () => {
     expect(pin).toHaveBeenCalledWith("case-1", "");
   });
 
-  it("unpinned button is not shown when unpinning an already pinned case", () => {
+  it("does not show the dialog when unpinning an already pinned case", () => {
     const unpin = vi.fn();
 
     usePinnedCasesMock.mockReturnValue({
@@ -93,7 +93,7 @@ describe("PinButton", () => {
 
     const { getByRole, queryByRole } = render(<PinButton caseId="case-1" />);
 
-    fireEvent.click(getByRole("button", { name: "Unpin case" }));
+    fireEvent.click(getByRole("button", { name: /Unpin case/ }));
 
     expect(unpin).toHaveBeenCalledWith("case-1");
     expect(queryByRole("dialog")).not.toBeInTheDocument();
