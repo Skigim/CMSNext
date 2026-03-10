@@ -104,7 +104,7 @@ export function TodaysWorkWidget({
                           )}
                         </div>
                         <div className="flex items-center gap-1 flex-shrink-0">
-                          <PinButton caseId={caseData.id} size="sm" />
+                          <PinButton caseId={caseData.id} caseName={caseData.name} size="sm" />
                           <Badge variant="secondary" className="text-xs font-mono">
                             {score.toLocaleString()}
                           </Badge>

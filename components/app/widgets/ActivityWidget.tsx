@@ -371,7 +371,7 @@ export function ActivityWidget({ activityLogState, metadata, onViewCase }: Reado
                   ) : (
                     <span className="text-xs font-medium">{item.caseName}</span>
                   )}
-                  <PinButton caseId={item.caseId} size="sm" />
+                  <PinButton caseId={item.caseId} caseName={item.caseName} size="sm" />
                   <span className="text-xs text-muted-foreground">•</span>
                   <CopyButton
                     value={item.caseMcn}

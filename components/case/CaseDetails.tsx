@@ -7,18 +7,18 @@ import { NotesPopover } from "./NotesPopover";
 import { AlertsPopover } from "./AlertsPopover";
 import { CaseEditModal } from "../modals/CaseEditModal";
 import type { StoredCase, NewPersonData, NewCaseRecordData } from "../../types/case";
-import { ArrowLeft, Trash2, Star, StarOff, Phone, Mail, FileSignature, Pin, PinOff, Pencil, FileText, Archive, ChevronDown } from "lucide-react";
+import { ArrowLeft, Trash2, Star, StarOff, Phone, Mail, FileSignature, Pencil, FileText, Archive, ChevronDown } from "lucide-react";
 import { withDataErrorBoundary } from "../error/ErrorBoundaryHOC";
 import { CaseStatusMenu } from "./CaseStatusMenu";
 import { cn, interactiveHoverClasses } from "../ui/utils";
 import type { AlertWithMatch } from "../../utils/alertsData";
 import { CopyButton } from "@/components/common/CopyButton";
+import { PinButton } from "@/components/common/PinButton";
 import { CaseSummaryModal } from "./CaseSummaryModal";
 import { VRGeneratorModal } from "./VRGeneratorModal";
 import { NarrativeGeneratorModal } from "./NarrativeGeneratorModal";
 import { useFinancialItems } from "../../hooks/useFinancialItems";
 import { useNotes } from "../../hooks/useNotes";
-import { usePinnedCases } from "../../hooks/usePinnedCases";
 import { useTemplates } from "@/contexts/TemplateContext";
 import { formatUSPhone, formatDateForDisplay, parseLocalDate } from "@/domain/common";
 
@@ -64,10 +64,6 @@ export function CaseDetails({
   // Fetch financials and notes for case summary generation
   const { groupedItems: financials, items: financialItemsList } = useFinancialItems(caseData.id);
   const { notes } = useNotes(caseData.id);
-  
-  // Pinned cases functionality
-  const { isPinned, togglePin: togglePinCase } = usePinnedCases();
-  const caseIsPinned = isPinned(caseData.id);
   
   // Get VR templates from unified template system
   const { getTemplatesByCategory } = useTemplates();
@@ -133,24 +129,12 @@ export function CaseDetails({
                   </Button>
                 )}
                 {/* Pin button */}
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => togglePinCase(caseData.id)}
-                  className={cn(
-                    "h-7 px-2",
-                    caseIsPinned 
-                      ? "text-blue-600 hover:text-blue-700" 
-                      : "text-muted-foreground hover:text-foreground"
-                  )}
-                  aria-label={caseIsPinned ? "Unpin case" : "Pin case"}
-                >
-                  {caseIsPinned ? (
-                    <Pin className="h-4 w-4 fill-current" />
-                  ) : (
-                    <PinOff className="h-4 w-4" />
-                  )}
-                </Button>
+                <PinButton
+                  caseId={caseData.id}
+                  caseName={caseData.name}
+                  size="default"
+                  className="h-7 w-auto px-2"
+                />
                 {/* Retro/Waiver indicators */}
                 {caseData.caseRecord?.withWaiver && (
                   <span className="inline-flex items-center rounded-full bg-purple-100 px-2 py-0.5 text-xs font-medium text-purple-700 dark:bg-purple-900/30 dark:text-purple-300">

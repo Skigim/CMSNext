@@ -49,7 +49,7 @@ export const PinnedCasesDropdown = memo(function PinnedCasesDropdown({
   hasLoadedData = true,
   onViewCase,
 }: PinnedCasesDropdownProps) {
-  const { pinnedCaseIds, unpin, pruneStale } = usePinnedCases();
+  const { getPinReason, pinnedCaseIds, unpin, pruneStale } = usePinnedCases();
 
   // Resolve case IDs to full case objects, filtering out archived/deleted cases
   const pinnedCases = useMemo(() => {
@@ -99,34 +99,43 @@ export const PinnedCasesDropdown = memo(function PinnedCasesDropdown({
         <DropdownMenuLabel>Pinned Cases</DropdownMenuLabel>
         <DropdownMenuSeparator />
         {hasPinnedCases ? (
-          <ScrollArea className="max-h-64">
-            {pinnedCases.map((caseData) => (
-              <DropdownMenuItem
-                key={caseData.id}
-                className="flex items-center justify-between gap-2 cursor-pointer"
-                onSelect={() => onViewCase(caseData.id)}
-              >
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium truncate">{caseData.name}</p>
-                  <p className="text-xs text-muted-foreground truncate">
-                    {caseData.mcn || "No MCN"}
-                  </p>
-                </div>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-6 w-6 p-0 flex-shrink-0 hover:bg-destructive/10"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    unpin(caseData.id);
-                  }}
-                  aria-label={`Unpin ${caseData.name}`}
-                >
-                  <PinOff className="h-3 w-3" />
-                </Button>
-              </DropdownMenuItem>
-            ))}
-          </ScrollArea>
+            <ScrollArea className="max-h-64">
+              {pinnedCases.map((caseData) => {
+                const pinReason = getPinReason(caseData.id);
+
+                return (
+                  <DropdownMenuItem
+                    key={caseData.id}
+                    className="flex items-center justify-between gap-2 cursor-pointer"
+                    onSelect={() => onViewCase(caseData.id)}
+                  >
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium truncate">{caseData.name}</p>
+                      <p className="text-xs text-muted-foreground truncate">
+                        {caseData.mcn || "No MCN"}
+                      </p>
+                      {pinReason ? (
+                        <p className="text-xs text-muted-foreground line-clamp-2 mt-1">
+                          {pinReason}
+                        </p>
+                      ) : null}
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-6 w-6 p-0 flex-shrink-0 hover:bg-destructive/10"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        unpin(caseData.id);
+                      }}
+                      aria-label={`Unpin ${caseData.name}`}
+                    >
+                      <PinOff className="h-3 w-3" />
+                    </Button>
+                  </DropdownMenuItem>
+                );
+              })}
+            </ScrollArea>
         ) : (
           <div className="py-6 text-center text-muted-foreground">
             <PinOff className="mx-auto mb-2 h-8 w-8 opacity-40" />
