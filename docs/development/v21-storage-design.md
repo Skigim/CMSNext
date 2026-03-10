@@ -357,8 +357,10 @@ function migrateV20ToV21(v20: NormalizedFileData_v20): NormalizedFileData_v21
        d. Set updatedAt = createdAt if updatedAt is absent.
        e. Normalize relationships:
             - For each legacy Relationship entry: set type from relationship.type;
-              if a Person with a matching name exists in people[], set targetPersonId;
-              else set targetPersonId = null and copy name → displayNameFallback.
+              if **exactly one** Person with a matching name exists in people[], set
+              targetPersonId; if zero matches or more than one match (ambiguous),
+              set targetPersonId = null and copy name → displayNameFallback
+              (ambiguous matches are treated as unresolved to prevent mis-linking).
             - Preserve relationship.phone → PersonRelationship.legacyPhone on every entry.
             - Replace null/absent id with a new UUID.
        f. Rename familyMembers → familyMemberIds:
@@ -493,6 +495,8 @@ dehydrate(display: CaseDisplay): StoredCase {
 
 `DataManager` methods that currently return `StoredCase[]` should return `CaseDisplay[]` after hydration.  Methods that accept user input and write to disk call `CaseService.dehydrate()` before persisting.
 
+> **Storage notification:** Every write path in `DataManager` must call `safeNotifyFileStorageChange()` after a successful `writeNormalizedData()` call.  This is the existing pattern for all storage mutations and triggers UI re-renders across all subscribed hooks.  New v2.1 write paths (`PersonService` mutations, `linkPersonToCase`, etc.) must follow the same convention.
+
 Key touch points:
 
 | DataManager method | Change |
@@ -586,8 +590,11 @@ removeRelationship(personId: string, relId: string): Promise<Person>
 > - Existing optional fields remain optional to avoid breaking current call sites.
 
 ```typescript
-// Conceptual helper — the existing NewPersonData interface will be updated to match this
-type PersonWithoutSystemFields = Omit<Person, "id" | "createdAt" | "updatedAt">;
+// Conceptual helper — the existing NewPersonData interface will be updated to match this.
+// Omits all system-generated/derived fields: id (stable UUID), name (derived from
+// firstName+lastName per §11.2), createdAt/updatedAt (timestamps), and dateAdded
+// (audit date — see existing NewPersonData in types/case.ts).
+type PersonWithoutSystemFields = Omit<Person, "id" | "name" | "createdAt" | "updatedAt" | "dateAdded">;
 ```
 
 ### 8.5 Custom errors
@@ -675,7 +682,7 @@ Encryption of `ssn` at-rest is already handled by the existing AES-256-GCM encry
 
 | Unit | What to test | Test location |
 |---|---|---|
-| `migrateV20ToV21` | Happy path; duplicate persons; missing IDs; partial persons; idempotency; `legacyPhone` preservation | `__tests__/utils/storageV21Migration.test.ts` |
+| `migrateV20ToV21` | Happy path; duplicate persons; missing IDs; partial persons; idempotency; `legacyPhone` preservation; ambiguous relationship name match | `__tests__/utils/storageV21Migration.test.ts` |
 | `PersonService.createPerson` | Creates record; generates ID; timestamps correct | `__tests__/services/PersonService.test.ts` |
 | `PersonService.deletePerson` | Blocks when linked to case; succeeds when unlinked; forceDelete removes links | same |
 | `PersonService.addRelationship` | Validates targetPersonId; prevents self-link; returns updated Person | same |
@@ -691,7 +698,8 @@ Encryption of `ssn` at-rest is already handled by the existing AES-256-GCM encry
 | Two cases sharing the same person.id | Single Person in `people[]`; both cases reference it via their `people[]` |
 | Person with no id | New UUID assigned; warning logged; person added to `people[]` |
 | Person with all blank fields | Partial record created with generated ID; migration warning written to `activityLog` (proposed — see §11.7) |
-| Case with `Relationship` entries (name-based) | Name resolved to matching Person if possible; else `targetPersonId = null`, `displayNameFallback` set; `legacyPhone` always copied |
+| Case with `Relationship` entries (name-based) | Name resolved to matching Person if possible (exact one match); else `targetPersonId = null`, `displayNameFallback` set; `legacyPhone` always copied |
+| Case with `Relationship` entry whose name matches multiple persons | `targetPersonId = null`, `displayNameFallback` set; ambiguous-match warning emitted |
 | `familyMembers` containing UUID strings | Renamed to `familyMemberIds`; validated against `people[]` |
 | `familyMembers` containing free-text names | Stored in `Person.legacyFamilyMemberNames[]` (not discarded); warning written to `activityLog` |
 | Already-migrated v2.1 file passed to migration | Returns input unchanged (idempotency) |
@@ -777,13 +785,14 @@ This plan maps directly to the March 2026 roadmap weeks.
 - [ ] Update `NormalizedFileData` to v2.1 shape (add `people: Person[]`; bump version literal).
 - [ ] Update `isNormalizedFileData` type guard.
 - [ ] **Upgrade `writeNormalizedData` to v2.1** (prerequisite before enabling migration — see §6.4).
+- [ ] Ensure upgraded `writeNormalizedData` calls `safeNotifyFileStorageChange()` after every successful write to trigger UI updates (existing pattern — must be preserved in the new v2.1 code path).
 - [ ] Implement `utils/storageV21Migration.ts` (pure function; no I/O).
 - [ ] Wire migration into `FileStorageService.readFileData()`.
 - [ ] Implement `PersonService` with full API (§8.3), using config object constructor.
 - [ ] Register `PersonService` in `DataManager`.
 
 **Tests**
-- [ ] Unit tests for `migrateV20ToV21` covering the full test matrix (§10.2) — all 11 scenarios.
+- [ ] Unit tests for `migrateV20ToV21` covering the full test matrix (§10.2) — all 12 scenarios.
 - [ ] Unit tests for `PersonService` (§10.1).
 
 ### Week 3 (March 16–22): Hydration & Service Layer Updates
@@ -795,7 +804,7 @@ This plan maps directly to the March 2026 roadmap weeks.
 **Implementation**
 - [ ] Add `CaseService.hydrate()` and `CaseService.dehydrate()`.
 - [ ] Update `DataManager` read methods to call `hydrateAll` before returning.
-- [ ] Update `DataManager` write methods to call `dehydrate` before persisting.
+- [ ] Update `DataManager` write methods to call `dehydrate` before persisting; verify each write method calls `safeNotifyFileStorageChange()` after the file is written.
 - [ ] Update `domain/cases/` formatting utilities that assume embedded `Person`.
 - [ ] Enable `PersonRelationship` relational linking (§5.3).
 - [ ] Pre-write integrity check in `FileStorageService.writeNormalizedData()`.
@@ -822,8 +831,12 @@ This plan maps directly to the March 2026 roadmap weeks.
   "cases": [
     {
       "id": "case-001",
-      "caseNumber": "2025-0042",
+      "name": "Doe, Jane — 2025-0042",
+      "mcn": "2025-0042",
       "status": "Active",
+      "priority": false,
+      "createdAt": "2025-01-10T09:00:00.000Z",
+      "updatedAt": "2025-01-10T09:00:00.000Z",
       "person": {
         "id": "person-abc",
         "firstName": "Jane",
@@ -917,9 +930,13 @@ This plan maps directly to the March 2026 roadmap weeks.
   "financials": [],
   "notes": [],
   "alerts": []
-  // ... categoryConfig, activityLog, templates, exported_at (snake_case — intentional, matches v2.0 schema), total_cases omitted for brevity
 }
 ```
+
+> **Note:** The example above shows only the `people` and `cases` arrays for brevity.
+> A complete v2.1 file also includes `categoryConfig`, `activityLog`, `templates`,
+> `exported_at` (snake_case — intentional, matches the v2.0 schema convention), and `total_cases`
+> as documented in §5.1.
 
 ---
 
