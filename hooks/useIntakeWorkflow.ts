@@ -20,7 +20,7 @@ import {
   type SetStateAction,
 } from "react";
 import { toast } from "sonner";
-import { normalizePhoneNumber } from "@/domain/common";
+import { dateInputValueToISO, normalizePhoneNumber } from "@/domain/common";
 import { useDataManagerSafe } from "../contexts/DataManagerContext";
 import { useCategoryConfig } from "../contexts/CategoryConfigContext";
 import { INTAKE_STEPS, isStepComplete, isStepReachable } from "../domain/cases/intake-steps";
@@ -246,12 +246,24 @@ export function useIntakeWorkflow({
       const trimmedFirstName = validatedFormData.firstName.trim();
       const trimmedLastName = validatedFormData.lastName.trim();
       const trimmedMcn = validatedFormData.mcn.trim();
+      const normalizedDateOfBirth = dateInputValueToISO(
+        validatedFormData.dateOfBirth,
+      );
+      const normalizedApplicationDate = dateInputValueToISO(
+        validatedFormData.applicationDate,
+      );
+      const normalizedAdmissionDate = dateInputValueToISO(
+        validatedFormData.admissionDate,
+      );
+      const normalizedAvsConsentDate = dateInputValueToISO(
+        validatedFormData.avsConsentDate,
+      );
 
       // Build NewPersonData from form draft
       const person: NewPersonData = {
         firstName: trimmedFirstName,
         lastName: trimmedLastName,
-        dateOfBirth: validatedFormData.dateOfBirth ?? "",
+        dateOfBirth: normalizedDateOfBirth ?? "",
         ssn: validatedFormData.ssn ?? "",
         email: validatedFormData.email ?? "",
         phone: normalizePhoneNumber(validatedFormData.phone ?? ""),
@@ -287,7 +299,8 @@ export function useIntakeWorkflow({
       // Build NewCaseRecordData from form draft
       const caseRecord: NewCaseRecordData = {
         mcn: trimmedMcn,
-        applicationDate: validatedFormData.applicationDate,
+        applicationDate:
+          normalizedApplicationDate ?? validatedFormData.applicationDate,
         caseType: validatedFormData.caseType || config.caseTypes[0] || "",
         applicationType: validatedFormData.applicationType ?? "",
         personId: "", // assigned by DataManager after person creation
@@ -297,7 +310,7 @@ export function useIntakeWorkflow({
         livingArrangement:
           validatedFormData.livingArrangement || config.livingArrangements[0] || "",
         withWaiver: validatedFormData.withWaiver ?? false,
-        admissionDate: validatedFormData.admissionDate ?? "",
+        admissionDate: normalizedAdmissionDate ?? "",
         organizationId: validatedFormData.organizationId ?? "",
         authorizedReps: [],
         retroRequested: validatedFormData.retroRequested ?? "",
@@ -313,7 +326,7 @@ export function useIntakeWorkflow({
           NewCaseRecordData["voterFormStatus"]
         >,
         pregnancy: validatedFormData.pregnancy ?? false,
-        avsConsentDate: validatedFormData.avsConsentDate ?? "",
+        avsConsentDate: normalizedAvsConsentDate ?? "",
         maritalStatus: validatedFormData.maritalStatus ?? "",
       };
 

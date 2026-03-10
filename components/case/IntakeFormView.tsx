@@ -47,6 +47,7 @@ import {
   formatDateForDisplay,
   US_STATES,
   formatPhoneNumberAsTyped,
+  getDisplayPhoneNumber,
   normalizePhoneNumber,
 } from "@/domain/common";
 
@@ -284,10 +285,8 @@ function ContactStep({ formData, onChange }: Readonly<ContactStepProps>) {
           <Label htmlFor="intake-phone">Phone</Label>
           <Input
             id="intake-phone"
-            value={formData.phone}
-            onChange={(e) =>
-              onChange("phone", formatPhoneNumberAsTyped(e.target.value))
-            }
+            value={formatPhoneNumberAsTyped(formData.phone)}
+            onChange={(e) => onChange("phone", normalizePhoneNumber(e.target.value))}
             onBlur={(e) => onChange("phone", normalizePhoneNumber(e.target.value))}
             placeholder="(XXX) XXX-XXXX"
           />
@@ -774,7 +773,7 @@ function ReviewStep({ formData, onGoToStep }: Readonly<ReviewStepProps>) {
       title: "Contact",
       stepIndex: 1,
       rows: [
-        { label: "Phone", value: formData.phone },
+        { label: "Phone", value: getDisplayPhoneNumber(formData.phone) },
         { label: "Email", value: formData.email },
         {
           label: "Address",
