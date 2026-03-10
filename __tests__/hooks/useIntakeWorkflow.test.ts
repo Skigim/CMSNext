@@ -497,6 +497,35 @@ describe("useIntakeWorkflow", () => {
       );
     });
 
+    it("normalizes date fields before saving the created case", async () => {
+      const { result } = renderIntakeHook();
+
+      fillMinimumRequiredFields(result);
+      act(() => {
+        result.current.updateField("dateOfBirth", "2026-02-03T14:30:00.000Z");
+        result.current.updateField("applicationDate", "2026-01-01T10:15:00.000Z");
+        result.current.updateField("admissionDate", "2026-01-05T08:45:00.000Z");
+        result.current.updateField("avsConsentDate", "2026-01-10T12:00:00.000Z");
+      });
+
+      await act(async () => {
+        await result.current.submit();
+      });
+
+      expect(mockDataManager.createCompleteCase).toHaveBeenCalledWith(
+        expect.objectContaining({
+          person: expect.objectContaining({
+            dateOfBirth: "2026-02-03",
+          }),
+          caseRecord: expect.objectContaining({
+            applicationDate: "2026-01-01",
+            admissionDate: "2026-01-05",
+            avsConsentDate: "2026-01-10",
+          }),
+        }),
+      );
+    });
+
     it("resets the form on successful submission", async () => {
       const { result } = renderIntakeHook();
 

@@ -118,6 +118,43 @@ describe("IntakeFormView", () => {
     });
   });
 
+  describe("formatters", () => {
+    it("formats stored phone digits for the contact input", () => {
+      withHookState({
+        currentStep: 1,
+        visitedSteps: new Set([0, 1]) as ReadonlySet<number>,
+        formData: {
+          ...createBlankIntakeForm(),
+          phone: "5551234567",
+        },
+      });
+
+      renderIntakeFormView();
+
+      expect(screen.getByLabelText("Phone")).toHaveValue("(555) 123-4567");
+    });
+
+    it("formats stored phone digits on the review step", () => {
+      withHookState({
+        currentStep: INTAKE_STEPS.length - 1,
+        visitedSteps: new Set(INTAKE_STEPS.map((_, i) => i)),
+        canSubmit: true,
+        formData: {
+          ...createBlankIntakeForm(),
+          firstName: "Alice",
+          lastName: "Smith",
+          mcn: "12345",
+          applicationDate: "2026-01-01",
+          phone: "5551234567",
+        },
+      });
+
+      renderIntakeFormView();
+
+      expect(screen.getByText("(555) 123-4567")).toBeInTheDocument();
+    });
+  });
+
   // --- Cancel wiring --------------------------------------------------------
 
   describe("cancel wiring", () => {
