@@ -10,10 +10,37 @@ import { CaseList } from "../case/CaseList";
 import CaseDetails from "../case/CaseDetails";
 import { QuickCaseModal } from "../modals/QuickCaseModal";
 import { Settings } from "../app/Settings";
+import { IntakeFormView } from "../case/IntakeFormView";
 
 export type View = AppView;
 
-interface ViewRendererProps {
+/**
+ * The shared case-management action handlers used by both ViewRenderer and
+ * CaseWorkspace.  Exporting this type allows CaseWorkspace to reference it
+ * instead of duplicating the same 15 signatures.
+ */
+export interface CaseViewHandlers {
+  handleViewCase: (caseId: string) => void;
+  handleNewCase: () => void;
+  handleCancelNewCase: () => void;
+  handleCompleteNewCase: (caseId: string) => void;
+  handleCloseNewCaseModal: () => void;
+  handleBackToList: () => void;
+  handleSaveCase: (
+    caseData: { person: NewPersonData; caseRecord: NewCaseRecordData },
+    options?: { skipNavigation?: boolean }
+  ) => Promise<void>;
+  handleDeleteCase: (caseId: string) => Promise<void>;
+  handleDeleteCases: (caseIds: string[]) => Promise<number>;
+  handleUpdateCasesStatus: (caseIds: string[], status: StoredCase["status"]) => Promise<number>;
+  handleUpdateCasesPriority: (caseIds: string[], priority: boolean) => Promise<number>;
+  handleBulkResolveAlerts?: (caseIds: string[], alerts: AlertWithMatch[], descriptionFilter: string) => Promise<{ resolvedCount: number; caseCount: number }>;
+  handleApproveArchival?: (caseIds: string[]) => Promise<unknown>;
+  handleCancelArchival?: (caseIds: string[]) => Promise<number>;
+  isArchiving?: boolean;
+}
+
+interface ViewRendererProps extends CaseViewHandlers {
   // View state
   currentView: View;
   selectedCase: StoredCase | null | undefined;
@@ -23,26 +50,8 @@ interface ViewRendererProps {
   cases: StoredCase[];
   alerts: AlertsIndex;
   activityLogState: CaseActivityLogState;
-  
-  // Navigation handlers
-  handleViewCase: (caseId: string) => void;
-  handleNewCase: () => void;
-  handleCloseNewCaseModal: () => void;
-  handleBackToList: () => void;
-  handleSaveCase: (
-    caseData: { person: NewPersonData; caseRecord: NewCaseRecordData },
-    options?: { skipNavigation?: boolean }
-  ) => Promise<void>;
-  
-  // Component handlers
-  handleDeleteCase: (caseId: string) => Promise<void>;
-  handleDeleteCases: (caseIds: string[]) => Promise<number>;
-  handleUpdateCasesStatus: (caseIds: string[], status: StoredCase["status"]) => Promise<number>;
-  handleUpdateCasesPriority: (caseIds: string[], priority: boolean) => Promise<number>;
-  handleBulkResolveAlerts?: (caseIds: string[], alerts: AlertWithMatch[], descriptionFilter: string) => Promise<{ resolvedCount: number; caseCount: number }>;
-  handleApproveArchival?: (caseIds: string[]) => Promise<unknown>;
-  handleCancelArchival?: (caseIds: string[]) => Promise<number>;
-  isArchiving?: boolean;
+
+  // Extended handlers not needed by CaseWorkspace directly
   handleUpdateCaseStatus?: (caseId: string, status: StoredCase["status"]) =>
     | Promise<StoredCase | null>
     | StoredCase
@@ -79,6 +88,8 @@ export function ViewRenderer({
   // Navigation handlers
   handleViewCase,
   handleNewCase,
+  handleCancelNewCase,
+  handleCompleteNewCase,
   handleCloseNewCaseModal: _handleCloseNewCaseModal,
   handleBackToList,
   handleSaveCase,
@@ -95,7 +106,7 @@ export function ViewRenderer({
   handleUpdateCaseStatus,
   handleResolveAlert,
   onAlertsCsvImported,
-}: ViewRendererProps) {
+}: Readonly<ViewRendererProps>) {
   
   switch (currentView) {
     case 'dashboard':
@@ -168,6 +179,16 @@ export function ViewRenderer({
         <div className="text-center p-8">Case not found</div>
       );
 
+    case 'intake':
+      return (
+        <IntakeFormView
+          onSuccess={(createdCase) => {
+            handleCompleteNewCase(createdCase.id);
+          }}
+          onCancel={handleCancelNewCase}
+        />
+      );
+
     default:
       return <div>Unknown view: {currentView}</div>;
   }
@@ -176,7 +197,7 @@ export function ViewRenderer({
 /**
  * Wrapper component that renders ViewRenderer plus the QuickCaseModal overlay
  */
-export function ViewRendererWithModal(props: ViewRendererProps) {
+export function ViewRendererWithModal(props: Readonly<ViewRendererProps>) {
   return (
     <>
       <ViewRenderer {...props} />

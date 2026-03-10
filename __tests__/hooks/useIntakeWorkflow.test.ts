@@ -1,0 +1,514 @@
+import { act, renderHook, waitFor } from "@testing-library/react";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { toast as mockToast } from "@/src/test/testUtils";
+import { createBlankIntakeForm } from "@/domain/validation/intake.schema";
+import { INTAKE_STEPS } from "@/domain/cases/intake-steps";
+
+// ---- Mocks -----------------------------------------------------------------
+
+vi.mock("@/utils/performanceTracker", () => ({
+  startMeasurement: vi.fn(),
+  endMeasurement: vi.fn(),
+}));
+
+const mockDataManager = {
+  createCompleteCase: vi.fn(),
+};
+
+vi.mock("@/contexts/DataManagerContext", () => ({
+  useDataManagerSafe: () => mockDataManager,
+}));
+
+const mockCategoryConfig = {
+  caseTypes: ["Medicaid"],
+  caseStatuses: [{ name: "Intake", colorSlot: "blue" }],
+  livingArrangements: ["Community"],
+  groups: [],
+  caseCategories: [],
+};
+
+vi.mock("@/contexts/CategoryConfigContext", () => ({
+  useCategoryConfig: () => ({ config: mockCategoryConfig }),
+}));
+
+// Import after mocks
+import { useIntakeWorkflow } from "@/hooks/useIntakeWorkflow";
+
+// ---- Helpers ----------------------------------------------------------------
+
+function renderIntakeHook(options: Parameters<typeof useIntakeWorkflow>[0] = {}) {
+  return renderHook(() => useIntakeWorkflow(options));
+}
+
+/** Fills the four fields required to make the intake form submittable. */
+function fillMinimumRequiredFields(result: ReturnType<typeof renderIntakeHook>["result"]) {
+  act(() => {
+    result.current.updateField("firstName", "Alice");
+    result.current.updateField("lastName", "Smith");
+    result.current.updateField("mcn", "12345");
+    result.current.updateField("applicationDate", "2026-01-01");
+  });
+}
+
+// ---- Tests ------------------------------------------------------------------
+
+describe("useIntakeWorkflow", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockDataManager.createCompleteCase.mockResolvedValue({
+      id: "case-new-1",
+      name: "Alice Smith",
+      mcn: "12345",
+      status: "Intake",
+      priority: false,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    });
+  });
+
+  // --- Initial state --------------------------------------------------------
+
+  describe("initial state", () => {
+    it("starts on step 0", () => {
+      const { result } = renderIntakeHook();
+      expect(result.current.currentStep).toBe(0);
+    });
+
+    it("has step 0 in visited set", () => {
+      const { result } = renderIntakeHook();
+      expect(result.current.visitedSteps.has(0)).toBe(true);
+    });
+
+    it("starts with a blank form", () => {
+      const { result } = renderIntakeHook();
+      expect(result.current.formData).toEqual(createBlankIntakeForm());
+    });
+
+    it("is not submitting", () => {
+      const { result } = renderIntakeHook();
+      expect(result.current.isSubmitting).toBe(false);
+    });
+
+    it("has no error", () => {
+      const { result } = renderIntakeHook();
+      expect(result.current.error).toBeNull();
+    });
+
+    it("current step is not complete (names are empty)", () => {
+      const { result } = renderIntakeHook();
+      expect(result.current.isCurrentStepComplete).toBe(false);
+    });
+
+    it("canSubmit is false initially", () => {
+      const { result } = renderIntakeHook();
+      expect(result.current.canSubmit).toBe(false);
+    });
+  });
+
+  // --- updateField ----------------------------------------------------------
+
+  describe("updateField", () => {
+    it("updates a scalar field", () => {
+      const { result } = renderIntakeHook();
+
+      act(() => {
+        result.current.updateField("firstName", "Alice");
+      });
+
+      expect(result.current.formData.firstName).toBe("Alice");
+    });
+
+    it("marks step 0 complete after both names are filled", () => {
+      const { result } = renderIntakeHook();
+
+      act(() => {
+        result.current.updateField("firstName", "Alice");
+        result.current.updateField("lastName", "Smith");
+      });
+
+      expect(result.current.isCurrentStepComplete).toBe(true);
+    });
+  });
+
+  // --- setFormData ----------------------------------------------------------
+
+  describe("setFormData", () => {
+    it("replaces the entire form data", () => {
+      const { result } = renderIntakeHook();
+      const newData = {
+        ...createBlankIntakeForm(),
+        firstName: "Bob",
+        lastName: "Jones",
+      };
+
+      act(() => {
+        result.current.setFormData(newData);
+      });
+
+      expect(result.current.formData.firstName).toBe("Bob");
+      expect(result.current.formData.lastName).toBe("Jones");
+    });
+  });
+
+  // --- Navigation -----------------------------------------------------------
+
+  describe("goNext", () => {
+    it("advances to step 1", () => {
+      const { result } = renderIntakeHook();
+
+      act(() => {
+        result.current.goNext();
+      });
+
+      expect(result.current.currentStep).toBe(1);
+    });
+
+    it("marks the new step as visited", () => {
+      const { result } = renderIntakeHook();
+
+      act(() => {
+        result.current.goNext();
+      });
+
+      expect(result.current.visitedSteps.has(1)).toBe(true);
+    });
+
+    it("does not advance past the last step", () => {
+      const { result } = renderIntakeHook();
+
+      // Advance to the last step
+      act(() => {
+        for (let i = 0; i < INTAKE_STEPS.length + 2; i++) {
+          result.current.goNext();
+        }
+      });
+
+      expect(result.current.currentStep).toBe(INTAKE_STEPS.length - 1);
+    });
+
+    it("clears error on advance", async () => {
+      const { result } = renderIntakeHook();
+
+      act(() => {
+        result.current.updateField("firstName", "Alice");
+      });
+
+      expect(result.current.canSubmit).toBe(false);
+
+      await act(async () => {
+        await result.current.submit();
+      });
+
+      expect(result.current.error).not.toBeNull();
+
+      act(() => {
+        result.current.goNext();
+      });
+
+      expect(result.current.error).toBeNull();
+    });
+  });
+
+  describe("goPrev", () => {
+    it("goes back one step", () => {
+      const { result } = renderIntakeHook();
+
+      act(() => {
+        result.current.goNext();
+      });
+      act(() => {
+        result.current.goPrev();
+      });
+
+      expect(result.current.currentStep).toBe(0);
+    });
+
+    it("does not go below step 0", () => {
+      const { result } = renderIntakeHook();
+
+      act(() => {
+        result.current.goPrev();
+      });
+
+      expect(result.current.currentStep).toBe(0);
+    });
+  });
+
+  describe("goToStep", () => {
+    it("jumps to a previously visited step", () => {
+      const { result } = renderIntakeHook();
+
+      act(() => {
+        result.current.goNext(); // visits step 1
+      });
+      act(() => {
+        result.current.goToStep(0);
+      });
+
+      expect(result.current.currentStep).toBe(0);
+    });
+
+    it("does not jump to an unvisited unreachable step", () => {
+      const { result } = renderIntakeHook();
+
+      // Step 4 is not visited and form is blank (not reachable)
+      act(() => {
+        result.current.goToStep(4);
+      });
+
+      expect(result.current.currentStep).toBe(0);
+    });
+
+    it("allows navigation back to a visited step even when an earlier required field was cleared", () => {
+      const { result } = renderIntakeHook();
+
+      // Fill step 0 required fields and advance to step 1 (visits step 1)
+      act(() => {
+        result.current.updateField("firstName", "Alice");
+        result.current.updateField("lastName", "Smith");
+      });
+      act(() => {
+        result.current.goNext(); // now on step 1, step 0 was visited
+      });
+      act(() => {
+        result.current.goNext(); // advance to step 2
+      });
+
+      // Go back to step 0 and clear a required field — step 2 is no longer
+      // reachable via isStepReachable, but it IS visited.
+      act(() => {
+        result.current.goToStep(0);
+        result.current.updateField("firstName", "");
+      });
+
+      // Step 2 should still be navigable since it was previously visited.
+      act(() => {
+        result.current.goToStep(2);
+      });
+
+      expect(result.current.currentStep).toBe(2);
+    });
+
+    it("ignores out-of-range indices", () => {
+      const { result } = renderIntakeHook();
+
+      act(() => {
+        result.current.goToStep(99);
+      });
+
+      expect(result.current.currentStep).toBe(0);
+    });
+  });
+
+  // --- cancel ---------------------------------------------------------------
+
+  describe("cancel", () => {
+    it("resets state and calls onCancel", () => {
+      const onCancel = vi.fn();
+      const { result } = renderIntakeHook({ onCancel });
+
+      act(() => {
+        result.current.updateField("firstName", "Alice");
+        result.current.goNext();
+      });
+
+      act(() => {
+        result.current.cancel();
+      });
+
+      expect(result.current.currentStep).toBe(0);
+      expect(result.current.formData.firstName).toBe("");
+      expect(onCancel).toHaveBeenCalledTimes(1);
+    });
+
+    it("resets state without error when no onCancel provided", () => {
+      const { result } = renderIntakeHook();
+
+      act(() => {
+        result.current.updateField("firstName", "Alice");
+        result.current.goNext();
+      });
+
+      act(() => {
+        result.current.cancel();
+      });
+
+      expect(result.current.currentStep).toBe(0);
+      expect(result.current.formData.firstName).toBe("");
+    });
+  });
+
+  // --- reset ----------------------------------------------------------------
+
+  describe("reset", () => {
+    it("resets step to 0 and clears form", () => {
+      const { result } = renderIntakeHook();
+
+      act(() => {
+        result.current.updateField("firstName", "Alice");
+        result.current.goNext();
+      });
+
+      act(() => {
+        result.current.reset();
+      });
+
+      expect(result.current.currentStep).toBe(0);
+      expect(result.current.formData.firstName).toBe("");
+      expect(result.current.visitedSteps.size).toBe(1);
+      expect(result.current.visitedSteps.has(0)).toBe(true);
+    });
+  });
+
+  // --- submit ---------------------------------------------------------------
+
+  describe("submit", () => {
+    it("calls onSuccess with the created case on success", async () => {
+      const onSuccess = vi.fn();
+      const { result } = renderIntakeHook({ onSuccess });
+
+      fillMinimumRequiredFields(result);
+
+      await act(async () => {
+        await result.current.submit();
+      });
+
+      await waitFor(() => {
+        expect(onSuccess).toHaveBeenCalledWith(
+          expect.objectContaining({ id: "case-new-1" }),
+        );
+      });
+    });
+
+    it("calls dataManager.createCompleteCase with mapped data", async () => {
+      const { result } = renderIntakeHook();
+
+      fillMinimumRequiredFields(result);
+
+      await act(async () => {
+        await result.current.submit();
+      });
+
+      expect(mockDataManager.createCompleteCase).toHaveBeenCalledWith(
+        expect.objectContaining({
+          person: expect.objectContaining({
+            firstName: "Alice",
+            lastName: "Smith",
+          }),
+          caseRecord: expect.objectContaining({
+            mcn: "12345",
+            applicationDate: "2026-01-01",
+          }),
+        }),
+      );
+    });
+
+    it("trims required identity fields before saving", async () => {
+      const { result } = renderIntakeHook();
+
+      act(() => {
+        result.current.updateField("firstName", "  Alice  ");
+        result.current.updateField("lastName", "  Smith  ");
+        result.current.updateField("mcn", "  12345  ");
+        result.current.updateField("applicationDate", "2026-01-01");
+      });
+
+      await act(async () => {
+        await result.current.submit();
+      });
+
+      expect(mockDataManager.createCompleteCase).toHaveBeenCalledWith(
+        expect.objectContaining({
+          person: expect.objectContaining({
+            firstName: "Alice",
+            lastName: "Smith",
+          }),
+          caseRecord: expect.objectContaining({
+            mcn: "12345",
+          }),
+        }),
+      );
+    });
+
+    it("shows an error when canSubmit is false", async () => {
+      const { result } = renderIntakeHook();
+
+      await act(async () => {
+        await result.current.submit();
+      });
+
+      expect(result.current.error).not.toBeNull();
+      expect(mockDataManager.createCompleteCase).not.toHaveBeenCalled();
+    });
+
+    it("shows an error and calls toast.error on dataManager failure", async () => {
+      mockDataManager.createCompleteCase.mockRejectedValue(
+        new Error("Storage unavailable"),
+      );
+
+      const { result } = renderIntakeHook();
+
+      fillMinimumRequiredFields(result);
+
+      await act(async () => {
+        await result.current.submit();
+      });
+
+      await waitFor(() => {
+        expect(result.current.error).toContain("Storage unavailable");
+      });
+      expect(mockToast.error).toHaveBeenCalled();
+    });
+
+    it("blocks submission when optional fields fail intake schema validation", async () => {
+      const { result } = renderIntakeHook();
+
+      fillMinimumRequiredFields(result);
+      act(() => {
+        result.current.updateField("email", "not-an-email");
+      });
+
+      await act(async () => {
+        await result.current.submit();
+      });
+
+      expect(result.current.error).toContain("Invalid email address");
+      expect(mockDataManager.createCompleteCase).not.toHaveBeenCalled();
+    });
+
+    it("normalizes phone numbers before saving the created person", async () => {
+      const { result } = renderIntakeHook();
+
+      fillMinimumRequiredFields(result);
+      act(() => {
+        result.current.updateField("phone", "(555) 123-4567");
+      });
+
+      await act(async () => {
+        await result.current.submit();
+      });
+
+      expect(mockDataManager.createCompleteCase).toHaveBeenCalledWith(
+        expect.objectContaining({
+          person: expect.objectContaining({
+            phone: "5551234567",
+          }),
+        }),
+      );
+    });
+
+    it("resets the form on successful submission", async () => {
+      const { result } = renderIntakeHook();
+
+      fillMinimumRequiredFields(result);
+
+      await act(async () => {
+        await result.current.submit();
+      });
+
+      await waitFor(() => {
+        expect(result.current.formData.firstName).toBe("");
+      });
+    });
+  });
+});

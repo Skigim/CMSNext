@@ -13,20 +13,20 @@ import { z } from "zod";
 // Common Validation Patterns
 // ============================================================================
 
-const stringRequired = (field: string) =>
+export const stringRequired = (field: string) =>
   z.string().min(1, `${field} is required`);
 const stringOptional = z.string().optional();
-const emailSchema = z.string().email("Invalid email address").or(z.literal(""));
+export const emailSchema = z.string().email("Invalid email address").or(z.literal(""));
 const phoneSchema = z
   .string()
   .regex(
     /^\(\d{3}\) \d{3}-\d{4}$|^$/,
     "Phone must be in format (XXX) XXX-XXXX or empty"
   );
-const ssnSchema = z
+export const ssnSchema = z
   .string()
   .regex(/^\d{3}-\d{2}-\d{4}$|^$/, "SSN must be in format XXX-XX-XXXX or empty");
-const zipSchema = z
+export const zipSchema = z
   .string()
   .regex(/^\d{5}(-\d{4})?$|^$/, "ZIP code must be in format XXXXX or XXXXX-XXXX");
 const dateSchema = z.string().datetime().or(z.literal(""));

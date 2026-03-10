@@ -32,7 +32,7 @@ export function AppSidebar({
   currentView, 
   onNavigate, 
   onNewCase
-}: AppSidebarProps) {
+}: Readonly<AppSidebarProps>) {
   const { setOpen, isMobile, setOpenMobile } = useSidebar();
 
   // Close sidebar after navigation action
@@ -74,7 +74,7 @@ export function AppSidebar({
       title: "Cases",
       icon: Users,
       navigateTo: "list",
-      activeViews: ["list", "details", "form"],
+      activeViews: ["list", "details", "form", "intake"],
       id: "cases",
     },
     {
