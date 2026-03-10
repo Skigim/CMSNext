@@ -288,7 +288,7 @@ export interface StoredCase {
    * Any `personId` / `spouseId` fields that still exist on `CaseRecord` are
    * legacy, backward-compatibility data and MUST NOT be used as the source of
    * truth by new code.  A future migration (v2.2) may deprecate or remove these
-   * fields from `CaseRecord` entirely.  See §5.5 open question on `CaseRecord` cleanup.
+   * fields from `CaseRecord` entirely.  See open question §11.8.
    */
   caseRecord: Omit<CaseRecord, "financials" | "notes">;
   pendingArchival?: boolean;
@@ -487,7 +487,7 @@ hydrate(storedCase: StoredCase, people: Person[]): CaseDisplay {
     ...storedCase,
     person: primaryPerson,
     linkedPeople,
-    caseRecord: { ...storedCase.caseRecord, financials: emptyFinancials, notes: [] },
+    caseRecord: { ...storedCase.caseRecord, financials: { resources: [], income: [], expenses: [] }, notes: [] },
   };
 }
 
@@ -746,8 +746,8 @@ Follow the existing service test pattern — mock `FileStorageService` with type
 
 ```typescript
 const mockFileService = {
-  readFileData: vi.fn<[], Promise<NormalizedFileData>>(),
-  writeNormalizedData: vi.fn<[NormalizedFileData], Promise<NormalizedFileData>>(),
+  readFileData: vi.fn<() => Promise<NormalizedFileData>>(),
+  writeNormalizedData: vi.fn<(data: NormalizedFileData) => Promise<NormalizedFileData>>(),
 };
 const service = new PersonService({ fileStorage: mockFileService } as unknown as PersonServiceConfig);
 ```
@@ -784,6 +784,13 @@ const service = new PersonService({ fileStorage: mockFileService } as unknown as
 ### 11.7 `_migrationWarning` field
 - **Q:** Is a metadata flag on `Person` the right place to surface migration warnings, or should warnings be written to `activityLog` instead?
 - **Recommendation (proposed):** Write to `activityLog` (more visible, no schema pollution); skip the `_migrationWarning` field.
+
+### 11.8 `CaseRecord.personId` / `spouseId` disposition in v2.1
+- **Q:** The v2.1 `StoredCase.caseRecord` is typed as `Omit<CaseRecord, "financials" | "notes">`, which means `CaseRecord.personId` and `CaseRecord.spouseId` are still persisted inside `caseRecord` even though `StoredCase.people[]` is now the authoritative person-link.  Which approach should v2.1 take?
+- **Options:**
+  - (A) Leave both fields in `CaseRecord` for v2.1 and document them as legacy/read-only; a v2.2 migration removes them.
+  - (B) Expand the `Omit` to `Omit<CaseRecord, "financials" | "notes" | "personId" | "spouseId">` immediately and migrate the data in `migrateV20ToV21`.
+- **Recommendation (proposed):** Option (A) for v2.1 — remove in v2.2.  New code must never write these fields; `CaseService.dehydrate()` should explicitly omit them.
 
 ---
 
@@ -881,7 +888,8 @@ This plan maps directly to the March 2026 roadmap weeks.
 ```
 
 > **Note:** The v2.0 example above omits `categoryConfig`, `activityLog`, `exported_at`, and
-> `total_cases` for brevity. See §4.1 for the complete v2.0 `NormalizedFileData` shape.
+> `total_cases` for brevity. See `NormalizedFileData` in `utils/services/FileStorageService.ts`
+> for the complete current v2.0 shape.
 > Person objects are also truncated; see §5.2 for all required fields.
 
 ### v2.1 (proposed)
@@ -889,6 +897,14 @@ This plan maps directly to the March 2026 roadmap weeks.
 > **Note on `name` field:** The example below retains `name` to reflect the current `Person` type.
 > Open question §11.2 proposes removing it in favour of computing `"${firstName} ${lastName}"` at hydration time.
 > The decision is pending review.
+
+> **Note on this example:** The v2.0 source has a single case whose embedded `person` is Jane Doe.
+> The migration (§6.2 Pass 1) extracts only persons from `cases[].person`, so only Jane Doe enters
+> `people[]`.  John Doe appears only as a `Relationship.name` string in the v2.0 data and is NOT
+> extracted as a new `Person` record.  Pass 2 resolves names against the complete `people[]` — since
+> no `Person` named "John Doe" exists, the relationship is left unresolved (`targetPersonId: null`,
+> `displayNameFallback: "John Doe"`).  To see a fully-resolved relationship, the v2.0 data would
+> need a second case whose embedded `person` is John Doe.
 
 ```json
 {
@@ -907,28 +923,12 @@ This plan maps directly to the March 2026 roadmap weeks.
         {
           "id": "rel-1",
           "type": "spouse",
-          "targetPersonId": "person-jdoe",
-          "displayNameFallback": null,
+          "targetPersonId": null,
+          "displayNameFallback": "John Doe",
           "legacyPhone": "555-0101"
         }
       ],
       "familyMemberIds": ["person-xyz"],
-      "authorizedRepIds": [],
-      "createdAt": "2025-01-10T09:00:00.000Z",
-      "updatedAt": "2025-01-10T09:00:00.000Z",
-      "dateAdded": "2025-01-10"
-    },
-    {
-      "id": "person-jdoe",
-      "firstName": "John",
-      "lastName": "Doe",
-      "name": "John Doe",
-      "email": "",
-      "phone": "555-0101",
-      "dateOfBirth": "",
-      "ssn": "",
-      "relationships": [],
-      "familyMemberIds": [],
       "authorizedRepIds": [],
       "createdAt": "2025-01-10T09:00:00.000Z",
       "updatedAt": "2025-01-10T09:00:00.000Z",
