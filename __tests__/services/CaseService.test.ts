@@ -7,10 +7,29 @@ import { CaseService } from "@/utils/services/CaseService";
 import type { PersistedCase } from "@/types/case";
 
 function toPersistedCase(storedCase: ReturnType<typeof createMockStoredCase>): PersistedCase {
-  const { person: _person, ...persistedCase } = storedCase;
+  const runtimeCase = storedCase as ReturnType<typeof createMockStoredCase> & {
+    alerts?: unknown;
+    caseRecord: typeof storedCase.caseRecord & {
+      financials?: unknown;
+      notes?: unknown;
+    };
+  };
+  const {
+    person: _person,
+    linkedPeople: _linkedPeople,
+    alerts: _alerts,
+    caseRecord,
+    ...persistedCase
+  } = runtimeCase;
+  const {
+    financials: _financials,
+    notes: _notes,
+    ...persistedCaseRecord
+  } = caseRecord;
 
   return {
     ...persistedCase,
+    caseRecord: persistedCaseRecord,
     people: storedCase.people ?? [],
   };
 }
@@ -117,18 +136,28 @@ describe("CaseService hydration seam", () => {
     ]);
   });
 
-  it("fails to hydrate when no primary person reference exists", () => {
+  it("falls back to the case record person reference when no primary flag exists", () => {
     const primaryPerson = createMockPerson({ id: "person-1" });
     const storedCase = createMockStoredCase({
       id: "case-1",
       people: [{ personId: "person-1", role: "applicant", isPrimary: false }],
+      caseRecord: {
+        ...createMockStoredCase().caseRecord,
+        personId: "person-1",
+      },
       person: primaryPerson,
     });
     const persistedCaseData = toPersistedCase(storedCase);
 
-    expect(() => caseService.hydrate(persistedCaseData, [primaryPerson])).toThrow(
-      "Case case-1 has no primary person reference",
-    );
+    const result = caseService.hydrate(persistedCaseData, [primaryPerson]);
+
+    expect(result.person).toMatchObject({ id: "person-1" });
+    expect(result.linkedPeople).toEqual([
+      {
+        ref: { personId: "person-1", role: "applicant", isPrimary: false },
+        person: expect.objectContaining({ id: "person-1" }),
+      },
+    ]);
   });
 
   it("fails to hydrate when a referenced person is missing", () => {
@@ -158,6 +187,31 @@ describe("CaseService hydration seam", () => {
     expect(result).not.toHaveProperty("alerts");
     expect(result.caseRecord).not.toHaveProperty("financials");
     expect(result.caseRecord).not.toHaveProperty("notes");
+    expect(result.people).toEqual([
+      { personId: "person-1", role: "applicant", isPrimary: true },
+      { personId: "person-2", role: "household_member", isPrimary: false },
+    ]);
+  });
+
+  it("rebuilds persisted people refs from linkedPeople when people is missing", () => {
+    const { primaryPerson, linkedPerson, runtimeCase } = createLinkedRuntimeCase();
+
+    const result = caseService.dehydrate({
+      ...runtimeCase,
+      people: undefined,
+      person: primaryPerson,
+      linkedPeople: [
+        {
+          ref: { personId: "person-1", role: "applicant", isPrimary: true },
+          person: primaryPerson,
+        },
+        {
+          ref: { personId: "person-2", role: "household_member", isPrimary: false },
+          person: linkedPerson,
+        },
+      ],
+    });
+
     expect(result.people).toEqual([
       { personId: "person-1", role: "applicant", isPrimary: true },
       { personId: "person-2", role: "household_member", isPrimary: false },

@@ -502,9 +502,18 @@ export class FileStorageService {
    * - Deep cloned to prevent reference issues
    * - Sorted by timestamp (newest first)
    * 
-   * @param {NormalizedFileData | PersistedNormalizedFileDataV21} data - Runtime-ready
-   *   or persisted-style v2.1 data to write through the canonical storage path
- * @returns {Promise<NormalizedFileData>} The written data after enrichment
+   * The `data` argument can be provided in three closely related shapes:
+   * - `NormalizedFileData`: runtime-ready normalized data used throughout the app.
+   * - `PersistedNormalizedFileDataV21`: hydrated persisted v2.1 storage shape.
+   * - `CaseDehydratedNormalizedFileData`: normalized data where cases have been
+   *   "dehydrated" to their persisted form (typically produced by
+   *   `dehydrateNormalizedData` for efficient writes/broadcasts and usually not
+   *   hand-authored by callers).
+   *
+   * @param {NormalizedFileData | PersistedNormalizedFileDataV21 | CaseDehydratedNormalizedFileData} data - Normalized
+   *   runtime data, persisted-style v2.1 data, or case-dehydrated normalized data
+   *   to write through the canonical storage path
+   * @returns {Promise<NormalizedFileData>} The written data after enrichment
    * @throws {Error} If write operation fails
    * 
    * @example

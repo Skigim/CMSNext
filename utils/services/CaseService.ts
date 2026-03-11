@@ -19,6 +19,7 @@ import { PersonService } from './PersonService';
 import { toLocalDateString } from '../../domain/common';
 import { formatCaseDisplayName } from '../../domain/cases/formatting';
 import type { AlertWithMatch } from '@/domain/alerts';
+import { dehydrateStoredCase, hydrateStoredCase } from '../storageV21Migration';
 
 // formatCaseDisplayName imported from domain layer
 const PRIMARY_CASE_PERSON_ROLE: CasePersonRole = 'applicant';
@@ -138,39 +139,13 @@ export class CaseService {
    * @param {PersistedCase} caseItem - Stored-style case data with people references
    * @param {Person[]} people - Global people registry used to resolve references
    * @returns {StoredCase} Hydrated runtime case data with primary person and linked people
-   * @throws {Error} If no primary reference exists or a referenced person cannot be found
+   * Delegates to the canonical v2.1 storage hydrator so all read boundaries
+   * resolve primary person references consistently.
+   *
+   * @throws {Error} If no linked people exist or a referenced person cannot be found
    */
   hydrate(caseItem: PersistedCase, people: Person[]): StoredCase {
-    const peopleById = new Map(people.map((person) => [person.id, person] as const));
-    const primaryRef = caseItem.people.find((ref) => ref.isPrimary);
-
-    if (!primaryRef) {
-      throw new Error(`Case ${caseItem.id} has no primary person reference`);
-    }
-
-    const linkedPeople = caseItem.people.map((ref) => {
-      const person = peopleById.get(ref.personId);
-      if (!person) {
-        throw new Error(`Person ${ref.personId} not found for case ${caseItem.id}`);
-      }
-
-      return {
-        ref: { ...ref },
-        person,
-      };
-    });
-
-    const primaryPerson = peopleById.get(primaryRef.personId);
-    if (!primaryPerson) {
-      throw new Error(`Person ${primaryRef.personId} not found for case ${caseItem.id}`);
-    }
-
-    return {
-      ...caseItem,
-      people: caseItem.people.map((ref) => ({ ...ref })),
-      person: primaryPerson,
-      linkedPeople,
-    };
+    return hydrateStoredCase(caseItem, people);
   }
 
   /**
@@ -203,8 +178,12 @@ export class CaseService {
       caseRecord,
       ...rest
     } = caseItem;
-    const casePeople = caseItem.people?.length
-      ? caseItem.people
+    const {
+      alerts: _dehydratedAlerts,
+      ...dehydratedCase
+    } = dehydrateStoredCase(caseItem) as PersistedCase & { alerts?: AlertRecord[] };
+    const casePeople = dehydratedCase.people?.length
+      ? dehydratedCase.people
       : caseItem.person
         ? [{ personId: caseItem.person.id, role: PRIMARY_CASE_PERSON_ROLE, isPrimary: true }]
         : null;
@@ -218,6 +197,7 @@ export class CaseService {
       caseRecordWithRuntimeFields;
 
     return {
+      ...dehydratedCase,
       ...rest,
       people: casePeople.map((ref) => ({ ...ref })),
       caseRecord: storedCaseRecord,
