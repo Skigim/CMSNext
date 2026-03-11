@@ -1,3 +1,4 @@
+import { useId, useMemo } from "react";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 import { Label } from "../ui/label";
@@ -7,6 +8,7 @@ import { Checkbox } from "../ui/checkbox";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "../ui/dialog";
 import { CaseCategory, StoredCase } from "../../types/case";
 import { AlertCircle } from "lucide-react";
+import { useSubmitShortcut } from "@/hooks/useSubmitShortcut";
 import type { FinancialFormData, FinancialFormErrors } from "../../hooks/useFinancialItemFlow";
 
 
@@ -39,6 +41,7 @@ function FinancialItemModal({
   onFormFieldChange,
   onAddAnotherChange,
 }: FinancialItemModalProps) {
+  const formId = useId();
   const isSimpCase = caseData.caseRecord.caseType === 'LTC'; // LTC cases need owner field
 
   const getPlaceholders = () => {
@@ -60,11 +63,27 @@ function FinancialItemModal({
   };
 
   const placeholders = getPlaceholders();
+  const isFormValid = useMemo(
+    () =>
+      Boolean(formData.description.trim()) &&
+      formData.amount >= 0 &&
+      (formData.verificationStatus !== "Verified" || Boolean(formData.verificationSource.trim())),
+    [formData.amount, formData.description, formData.verificationSource, formData.verificationStatus],
+  );
+
+  const handleSave = async () => {
+    await onSave();
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    await onSave();
+    await handleSave();
   };
+
+  const handleSubmitShortcut = useSubmitShortcut<HTMLFormElement>({
+    onSubmit: handleSave,
+    canSubmit: isFormValid,
+  });
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => {
@@ -87,7 +106,7 @@ function FinancialItemModal({
           </DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-6">
+        <form id={formId} onSubmit={handleSubmit} onKeyDown={handleSubmitShortcut} className="space-y-6">
           {formErrors.general && (
             <div className="flex items-center gap-2 text-sm text-destructive bg-destructive/10 p-3 rounded-md">
               <AlertCircle className="h-4 w-4" />
@@ -275,12 +294,12 @@ function FinancialItemModal({
             </div>
           )}
         </form>
-
+ 
         <DialogFooter>
           <Button type="button" variant="outline" onClick={onClose}>
             Cancel
           </Button>
-          <Button type="submit" onClick={onSave}>
+          <Button type="submit" form={formId} disabled={!isFormValid}>
             {isEditing ? 'Update Item' : 'Save Item'}
           </Button>
         </DialogFooter>

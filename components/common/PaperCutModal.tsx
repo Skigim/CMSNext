@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback } from "react";
 import {
   Dialog,
   DialogContent,
@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Kbd } from "@/components/ui/kbd";
+import { useSubmitShortcut } from "@/hooks/useSubmitShortcut";
 
 interface PaperCutModalProps {
   open: boolean;
@@ -47,12 +48,10 @@ export function PaperCutModal({
     onOpenChange(false);
   };
 
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if ((e.ctrlKey || e.metaKey) && e.key === "Enter") {
-      e.preventDefault();
-      handleSubmit();
-    }
-  };
+  const handleSubmitShortcut = useSubmitShortcut<HTMLTextAreaElement>({
+    onSubmit: handleSubmit,
+    canSubmit: Boolean(content.trim()),
+  });
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
@@ -86,7 +85,7 @@ export function PaperCutModal({
               className="min-h-[100px]"
               value={content}
               onChange={(e) => setContent(e.target.value)}
-              onKeyDown={handleKeyDown}
+              onKeyDown={handleSubmitShortcut}
               autoFocus
             />
             <p className="text-xs text-muted-foreground text-right">

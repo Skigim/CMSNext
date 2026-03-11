@@ -17,6 +17,7 @@ import { NewPersonData, NewCaseRecordData, CaseStatus } from "../../types/case";
 import { useCategoryConfig } from "@/contexts/CategoryConfigContext";
 import { isoToDateInputValue, dateInputValueToISO, toLocalDateString } from "@/domain/common";
 import { createCaseRecordData, createPersonData } from "@/domain/cases";
+import { useSubmitShortcut } from "@/hooks/useSubmitShortcut";
 
 interface QuickCaseModalProps {
   isOpen: boolean;
@@ -87,21 +88,18 @@ export function QuickCaseModal({ isOpen, onClose, onSave }: QuickCaseModalProps)
     onClose();
   }, [onClose, resetForm]);
 
-  // Validation
-  const isFormValid = useCallback(() => {
-    return (
-      firstName.trim() !== '' &&
-      lastName.trim() !== '' &&
-      mcn.trim() !== '' &&
-      applicationDate !== ''
-    );
-  }, [firstName, lastName, mcn, applicationDate]);
+  const isFormValid = useMemo(
+    () =>
+      firstName.trim() !== "" &&
+      lastName.trim() !== "" &&
+      mcn.trim() !== "" &&
+      applicationDate !== "",
+    [firstName, lastName, mcn, applicationDate],
+  );
 
   // Submit handler
-  const handleSubmit = useCallback(async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (!isFormValid()) {
+  const submitCase = useCallback(async () => {
+    if (!isFormValid) {
       toast.error("Please fill in all required fields");
       return;
     }
@@ -165,10 +163,20 @@ export function QuickCaseModal({ isOpen, onClose, onSave }: QuickCaseModalProps)
     resetForm,
   ]);
 
+  const handleSubmit = useCallback((e: React.FormEvent) => {
+    e.preventDefault();
+    void submitCase();
+  }, [submitCase]);
+
+  const handleSubmitShortcut = useSubmitShortcut<HTMLFormElement>({
+    onSubmit: submitCase,
+    canSubmit: isFormValid && !isSaving,
+  });
+
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && handleClose()}>
       <DialogContent className="sm:max-w-md">
-        <form onSubmit={handleSubmit}>
+        <form onSubmit={handleSubmit} onKeyDown={handleSubmitShortcut}>
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Plus className="h-5 w-5" />
@@ -252,7 +260,7 @@ export function QuickCaseModal({ isOpen, onClose, onSave }: QuickCaseModalProps)
             </Button>
             <Button
               type="submit"
-              disabled={isSaving || !isFormValid()}
+               disabled={isSaving || !isFormValid}
             >
               {isSaving ? (
                 <>
@@ -273,4 +281,3 @@ export function QuickCaseModal({ isOpen, onClose, onSave }: QuickCaseModalProps)
     </Dialog>
   );
 }
-
