@@ -10,7 +10,11 @@
  * - Flat arrays with foreign keys: cases[], financials[], notes[], alerts[]
  */
 
-import type { NormalizedFileData } from "./services/FileStorageService";
+import {
+  type NormalizedFileData,
+  isNormalizedFileData,
+  isNormalizedFileDataV20,
+} from "./services/FileStorageService";
 import type {
   StoredCase,
   StoredFinancialItem,
@@ -348,24 +352,30 @@ export function migrateLegacyData(rawData: unknown): MigrationResult {
     logger.info("Starting legacy data migration", { format });
 
      if (format === "v2.1") {
+       if (!isNormalizedFileData(rawData)) {
+         throw new Error("Detected v2.1 data is not in the expected persisted format");
+       }
        logger.info("Data is already in v2.1 format, no migration needed");
        return {
          success: true,
-         data: hydrateNormalizedData(rawData as Parameters<typeof hydrateNormalizedData>[0]),
+         data: hydrateNormalizedData(rawData),
          stats,
          errors,
-       };
+        };
       }
 
-     if (format === "v2.0") {
-       logger.info("Data is in v2.0 format, migrating to v2.1");
-       return {
-         success: true,
-         data: hydrateNormalizedData(migrateV20ToV21(rawData as Parameters<typeof migrateV20ToV21>[0])),
-         stats,
-         errors,
-       };
-     }
+      if (format === "v2.0") {
+        if (!isNormalizedFileDataV20(rawData)) {
+          throw new Error("Detected v2.0 data is not in the expected normalized format");
+        }
+        logger.info("Data is in v2.0 format, migrating to v2.1");
+        return {
+          success: true,
+          data: hydrateNormalizedData(migrateV20ToV21(rawData)),
+          stats,
+          errors,
+        };
+      }
 
     if (format === "unknown") {
       errors.push("Unknown data format - cannot migrate");

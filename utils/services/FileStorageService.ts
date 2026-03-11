@@ -1,11 +1,9 @@
 import type {
   AlertRecord,
   Person,
-  PersistedCase,
   StoredCase,
   StoredFinancialItem,
   StoredNote,
-  StoredPerson,
 } from "../../types/case";
 import type { CaseActivityEntry } from "../../types/activityLog";
 import type { CategoryConfig } from "../../types/categoryConfig";
@@ -62,7 +60,13 @@ function classifyWriteError(error: unknown): string {
 // ============================================================================
 
 // Re-export types from types/case.ts for convenience
-export type { PersistedCase, StoredCase, StoredFinancialItem, StoredNote, StoredPerson };
+export type {
+  PersistedCase,
+  StoredCase,
+  StoredFinancialItem,
+  StoredNote,
+  StoredPerson,
+} from "../../types/case";
 
 /**
  * Normalized file data format (v2.1 runtime shape).
@@ -380,10 +384,10 @@ export class FileStorageService {
    * 
    * Normal application code should use readFileData() which enforces v2.0 format.
    * 
-   * @returns {Promise<unknown | null>} Raw file data or null if no file exists
+   * @returns {Promise<unknown>} Raw file data or null if no file exists
    * @throws {Error} If file read fails
    */
-  async readRawFileData(): Promise<unknown | null> {
+  async readRawFileData(): Promise<unknown> {
     try {
       const rawData = await this.fileService.readFile();
       return rawData;
