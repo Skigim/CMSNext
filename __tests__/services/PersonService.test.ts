@@ -86,6 +86,37 @@ describe("PersonService", () => {
     expect(person.updatedAt).toBe(person.createdAt);
   });
 
+  it("trims and deduplicates family members when building a new person", () => {
+    const person = service.buildNewPerson({
+      firstName: "Jane",
+      lastName: "Doe",
+      email: "",
+      phone: "",
+      dateOfBirth: "",
+      ssn: "",
+      livingArrangement: "Home",
+      address: { street: "", city: "", state: "", zip: "" },
+      mailingAddress: { street: "", city: "", state: "", zip: "", sameAsPhysical: true },
+      familyMembers: [
+        " 11111111-1111-4111-8111-111111111111 ",
+        "11111111-1111-4111-8111-111111111111",
+        "  Grandma Doe  ",
+        "Grandma Doe",
+        "   ",
+      ],
+      status: "Active",
+    });
+
+    expect(person.familyMembers).toEqual([
+      "11111111-1111-4111-8111-111111111111",
+      "Grandma Doe",
+    ]);
+    expect(person.familyMemberIds).toEqual([
+      "11111111-1111-4111-8111-111111111111",
+    ]);
+    expect(person.legacyFamilyMemberNames).toEqual(["Grandma Doe"]);
+  });
+
   it("upserts a person into the root people registry", () => {
     const baseData = createBaseData();
     const updatedPerson = {

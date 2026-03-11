@@ -73,6 +73,7 @@ describe("storageV21Migration", () => {
     expect(migrated.cases[0].people).toEqual([
       { personId: primaryPerson.id, role: "applicant", isPrimary: true },
     ]);
+    expect(migrated.cases[0].caseRecord.personId).toBe(primaryPerson.id);
   });
 
   it("hydrates the primary person using the explicit primary ref and preserves linked people", () => {

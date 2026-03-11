@@ -20,11 +20,17 @@ function splitFamilyMembers(familyMembers: string[] | undefined): {
   familyMemberIds: string[];
   legacyFamilyMemberNames: string[];
 } {
-  const normalizedFamilyMembers = familyMembers ?? [];
-  const familyMemberIds = normalizedFamilyMembers.filter((member) => UUID_PATTERN.test(member.trim()));
-  const legacyFamilyMemberNames = normalizedFamilyMembers
-    .map((member) => member.trim())
-    .filter((member) => member.length > 0 && !UUID_PATTERN.test(member));
+  const normalizedFamilyMembers = Array.from(
+    new Set(
+      (familyMembers ?? [])
+        .map((member) => member.trim())
+        .filter((member) => member.length > 0),
+    ),
+  );
+  const familyMemberIds = normalizedFamilyMembers.filter((member) => UUID_PATTERN.test(member));
+  const legacyFamilyMemberNames = normalizedFamilyMembers.filter(
+    (member) => !UUID_PATTERN.test(member),
+  );
 
   return {
     familyMembers: normalizedFamilyMembers,

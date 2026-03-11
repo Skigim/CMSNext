@@ -504,24 +504,32 @@ export function migrateV20ToV21(data: NormalizedFileDataV20): PersistedNormalize
   return {
     version: "2.1",
     people: resolvedPeople,
-    cases: data.cases.map((caseItem) => ({
-      id: caseItem.id,
-      name: caseItem.name,
-      mcn: caseItem.mcn,
-      status: caseItem.status,
-      priority: caseItem.priority,
-      createdAt: caseItem.createdAt,
-      updatedAt: caseItem.updatedAt,
-      people: [
-        {
-          personId: casePersonIds.get(caseItem.id) ?? caseItem.caseRecord.personId ?? uuidv4(),
-          role: "applicant",
-          isPrimary: true,
+    cases: data.cases.map((caseItem) => {
+      const migratedPersonId =
+        casePersonIds.get(caseItem.id) ?? caseItem.caseRecord.personId ?? uuidv4();
+
+      return {
+        id: caseItem.id,
+        name: caseItem.name,
+        mcn: caseItem.mcn,
+        status: caseItem.status,
+        priority: caseItem.priority,
+        createdAt: caseItem.createdAt,
+        updatedAt: caseItem.updatedAt,
+        people: [
+          {
+            personId: migratedPersonId,
+            role: "applicant",
+            isPrimary: true,
+          },
+        ],
+        caseRecord: {
+          ...caseItem.caseRecord,
+          personId: migratedPersonId,
         },
-      ],
-      caseRecord: { ...caseItem.caseRecord },
-      pendingArchival: caseItem.pendingArchival,
-    })),
+        pendingArchival: caseItem.pendingArchival,
+      };
+    }),
     financials: data.financials.map((financial) => ({ ...financial })),
     notes: data.notes.map((note) => ({ ...note })),
     alerts: data.alerts.map((alert) => ({ ...alert })),

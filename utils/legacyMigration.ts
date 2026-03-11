@@ -351,7 +351,7 @@ export function migrateLegacyData(rawData: unknown): MigrationResult {
        logger.info("Data is already in v2.1 format, no migration needed");
        return {
          success: true,
-         data: rawData as NormalizedFileData,
+         data: hydrateNormalizedData(rawData as Parameters<typeof hydrateNormalizedData>[0]),
          stats,
          errors: ["Data is already in v2.1 format"],
        };
