@@ -6,6 +6,7 @@ import type {
   CaseStatus,
   NewNoteData,
   CaseRecord,
+  AlertRecord,
   Person,
   PersistedCase,
   StoredCase,
@@ -131,6 +132,14 @@ export class CaseService {
     });
   }
 
+  /**
+   * Resolve persisted case person references into the runtime case model.
+   *
+   * @param {PersistedCase} caseItem - Stored-style case data with people references
+   * @param {Person[]} people - Global people registry used to resolve references
+   * @returns {StoredCase} Hydrated runtime case data with primary person and linked people
+   * @throws {Error} If no primary reference exists or a referenced person cannot be found
+   */
   hydrate(caseItem: PersistedCase, people: Person[]): StoredCase {
     const peopleById = new Map(people.map((person) => [person.id, person] as const));
     const primaryRef = caseItem.people.find((ref) => ref.isPrimary);
@@ -164,11 +173,29 @@ export class CaseService {
     };
   }
 
+  /**
+   * Hydrate multiple persisted cases using the shared people registry.
+   *
+   * @param {PersistedCase[]} caseItems - Cases to hydrate
+   * @param {Person[]} people - Global people registry used for all resolutions
+   * @returns {StoredCase[]} Hydrated runtime cases
+   * @throws {Error} Propagates any single-case hydration failure
+   */
   hydrateAll(caseItems: PersistedCase[], people: Person[]): StoredCase[] {
     return caseItems.map((caseItem) => this.hydrate(caseItem, people));
   }
 
-  dehydrate(caseItem: StoredCase & { alerts?: unknown }): PersistedCase {
+  /**
+   * Strip runtime-only fields from a hydrated case before persistence.
+   *
+   * The optional alerts field is accepted because some runtime call sites carry
+   * transient alert enrichments that must never be written to case storage.
+   *
+   * @param {StoredCase & { alerts?: AlertRecord[] }} caseItem - Runtime case data
+   * @returns {PersistedCase} Persisted-style case data suitable for storage writes
+   * @throws {Error} If neither linked people nor a primary person is available
+   */
+  dehydrate(caseItem: StoredCase & { alerts?: AlertRecord[] }): PersistedCase {
     const {
       person: _person,
       linkedPeople: _linkedPeople,
@@ -178,7 +205,13 @@ export class CaseService {
     } = caseItem;
     const casePeople = caseItem.people?.length
       ? caseItem.people
-      : [{ personId: caseItem.person.id, role: PRIMARY_CASE_PERSON_ROLE, isPrimary: true }];
+      : caseItem.person
+        ? [{ personId: caseItem.person.id, role: PRIMARY_CASE_PERSON_ROLE, isPrimary: true }]
+        : null;
+
+    if (!casePeople) {
+      throw new Error(`Case ${caseItem.id} cannot be dehydrated without linked people or a primary person`);
+    }
     const caseRecordWithRuntimeFields:
       StoredCase["caseRecord"] & Partial<Pick<CaseRecord, "financials" | "notes">> = caseRecord;
     const { financials: _financials, notes: _notes, ...storedCaseRecord } =

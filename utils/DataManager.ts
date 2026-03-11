@@ -252,24 +252,44 @@ export class DataManager {
    * Always reads fresh data from disk - no caching.
    * 
    * @private
-   * @returns {Promise<NormalizedFileData | null>} Hydrated normalized file data, or null if no file exists
+   * @returns {Promise<NormalizedFileData | null>} The normalized file data, or null if no file exists
    * @throws {LegacyFormatError} If file contains legacy (pre-v2.0) format data
    */
   private async readFileData(): Promise<NormalizedFileData | null> {
-    const data = await this.fileStorage.readFileData();
+    return this.fileStorage.readFileData();
+  }
+
+  /**
+   * Read normalized data and ensure case entries are hydrated for DataManager consumers.
+   *
+   * FileStorageService already returns runtime-ready data, but this helper re-runs the
+   * CaseService hydration boundary only for case records missing linked runtime data so
+   * DataManager reads stay consistent without broad consumer refactors.
+   */
+  private async readHydratedCaseData(): Promise<NormalizedFileData | null> {
+    const data = await this.readFileData();
     if (!data) {
       return null;
     }
 
     return {
       ...data,
-      cases: this.cases.hydrateAll(
-        data.cases.map((caseItem) => this.cases.dehydrate(caseItem)),
-        data.people,
-      ),
+      cases: data.cases.map((caseItem) => {
+        if (caseItem.person && caseItem.linkedPeople?.length === (caseItem.people?.length ?? 0)) {
+          return caseItem;
+        }
+
+        return this.cases.hydrate(this.cases.dehydrate(caseItem), data.people);
+      }),
     };
   }
 
+  /**
+   * Strip runtime-only case fields before delegating persistence to FileStorageService.
+   *
+   * This keeps DataManager writes aligned with the v2.1 CaseService/DataManager boundary
+   * while still routing the final file operation through the canonical writeNormalizedData path.
+   */
   private dehydrateCaseData(
     data: NormalizedFileData,
   ): CaseDehydratedNormalizedFileData {
@@ -295,7 +315,7 @@ export class DataManager {
    * console.log(`Found ${cases.length} cases`);
    */
   async getAllCases(): Promise<StoredCase[]> {
-    const data = await this.readFileData();
+    const data = await this.readHydratedCaseData();
     return data?.cases ?? [];
   }
 
@@ -377,7 +397,7 @@ export class DataManager {
    * }
    */
   async getCaseById(caseId: string): Promise<StoredCase | null> {
-    const data = await this.readFileData();
+    const data = await this.readHydratedCaseData();
     if (!data) {
       return null;
     }

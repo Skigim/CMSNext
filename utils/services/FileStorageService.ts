@@ -121,6 +121,8 @@ function isRuntimeNormalizedWriteData(
     return "familyMembers" in firstPerson;
   }
 
+  // Empty datasets are shape-compatible across runtime and persisted forms, so
+  // treat them as runtime input and let the canonical writer normalize them.
   return true;
 }
 
@@ -128,7 +130,12 @@ function isCaseDehydratedNormalizedWriteData(
   data: NormalizedFileData | PersistedNormalizedFileDataV21 | CaseDehydratedNormalizedFileData,
 ): data is CaseDehydratedNormalizedFileData {
   const firstCase = data.cases[0];
-  return Boolean(firstCase && !("person" in firstCase) && data.people.some((person) => "familyMembers" in person));
+  if (!firstCase || "person" in firstCase) {
+    return false;
+  }
+
+  const firstPerson = data.people[0];
+  return firstPerson ? "familyMembers" in firstPerson : false;
 }
 
 /**

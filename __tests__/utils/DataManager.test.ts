@@ -369,13 +369,10 @@ describe("DataManager", () => {
       expect(mockFileStorageService.writeNormalizedData).toHaveBeenCalledTimes(1);
       const writtenData = (mockFileStorageService.writeNormalizedData as ReturnType<typeof vi.fn>).mock
         .calls[0][0];
-      expect(writtenData.cases).toEqual([
-        expect.not.objectContaining({
-          person: expect.anything(),
-          linkedPeople: expect.anything(),
-          alerts: expect.anything(),
-        }),
-      ]);
+      expect(writtenData.cases).toHaveLength(1);
+      expect(writtenData.cases[0]).not.toHaveProperty("person");
+      expect(writtenData.cases[0]).not.toHaveProperty("linkedPeople");
+      expect(writtenData.cases[0]).not.toHaveProperty("alerts");
       expect(writtenData.cases[0].caseRecord).not.toHaveProperty("financials");
       expect(writtenData.cases[0].caseRecord).not.toHaveProperty("notes");
       expect(writtenData.cases[0].people).toEqual([
