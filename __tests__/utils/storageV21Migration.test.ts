@@ -267,6 +267,13 @@ describe("storageV21Migration", () => {
 
     expect(roundTripped.version).toBe("2.1");
     expect(roundTripped.people).toHaveLength(2);
+    expect(roundTrippedPrimaryPerson).toMatchObject({
+      id: "person-1",
+      name: "Primary Person",
+    });
+    if (!roundTrippedPrimaryPerson) {
+      throw new Error("Expected round-tripped people registry to include person-1");
+    }
     expect(roundTripped.cases[0].person.id).toBe("person-1");
     expect(roundTripped.cases[0].linkedPeople).toEqual([
       {
@@ -284,7 +291,7 @@ describe("storageV21Migration", () => {
         ref: { personId: "person-2", role: "contact", isPrimary: false },
       },
     ]);
-    expect(roundTrippedPrimaryPerson?.normalizedRelationships).toEqual([
+    expect(roundTrippedPrimaryPerson.normalizedRelationships).toEqual([
       expect.objectContaining({
         type: "spouse",
         targetPersonId: "person-2",

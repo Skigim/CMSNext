@@ -74,7 +74,7 @@ export type {
  * This is the current runtime-ready data format used for file operations.
  * It uses a normalized structure with flat arrays and foreign key references
  * instead of nested objects.
- * 
+ *
  * @interface NormalizedFileData
  */
 export interface NormalizedFileData {
