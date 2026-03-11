@@ -75,7 +75,8 @@ describe('FinancialsService', () => {
   });
 
   const createBaseMockData = (): NormalizedFileData => ({
-    version: '2.0',
+    version: '2.1',
+    people: [],
     cases: [createMockCase('case-1')],
     financials: [],
     notes: [],

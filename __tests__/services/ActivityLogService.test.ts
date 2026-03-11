@@ -31,13 +31,14 @@ function daysAgo(days: number): string {
 
 function createMockFileStorage(activityLog: CaseActivityEntry[] = []): FileStorageService {
   let storedData = {
+    people: [],
     cases: [],
     financials: [],
     notes: [],
     alerts: [],
     categoryConfig: { statuses: [], noteCategories: [] },
     activityLog,
-    version: '2.0',
+    version: '2.1',
     exported_at: new Date().toISOString(),
     total_cases: 0,
   } as unknown as NormalizedFileData;

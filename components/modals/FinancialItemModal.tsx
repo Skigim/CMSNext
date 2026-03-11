@@ -1,4 +1,4 @@
-import { useId, useMemo } from "react";
+import { useCallback, useId, useState } from "react";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 import { Label } from "../ui/label";
@@ -42,6 +42,7 @@ function FinancialItemModal({
   onAddAnotherChange,
 }: FinancialItemModalProps) {
   const formId = useId();
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const isSimpCase = caseData.caseRecord.caseType === 'LTC'; // LTC cases need owner field
 
   const getPlaceholders = () => {
@@ -63,26 +64,28 @@ function FinancialItemModal({
   };
 
   const placeholders = getPlaceholders();
-  const isFormValid = useMemo(
-    () =>
-      Boolean(formData.description.trim()) &&
-      formData.amount >= 0 &&
-      (formData.verificationStatus !== "Verified" || Boolean(formData.verificationSource.trim())),
-    [formData.amount, formData.description, formData.verificationSource, formData.verificationStatus],
-  );
 
-  const handleSave = async () => {
-    await onSave();
-  };
+  const handleSave = useCallback(async () => {
+    if (isSubmitting) {
+      return;
+    }
 
-  const handleSubmit = async (e: React.FormEvent) => {
+    setIsSubmitting(true);
+    try {
+      await onSave();
+    } finally {
+      setIsSubmitting(false);
+    }
+  }, [isSubmitting, onSave]);
+
+  const handleSubmit = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
     await handleSave();
-  };
+  }, [handleSave]);
 
   const handleSubmitShortcut = useSubmitShortcut<HTMLFormElement>({
     onSubmit: handleSave,
-    canSubmit: isFormValid,
+    canSubmit: !isSubmitting,
   });
 
   return (
@@ -124,6 +127,7 @@ function FinancialItemModal({
                 value={formData.description}
                 onChange={(e) => onFormFieldChange('description', e.target.value)}
                 placeholder={placeholders.description}
+                disabled={isSubmitting}
                 className={formErrors.description ? 'border-destructive' : ''}
               />
               {formErrors.description && (
@@ -141,6 +145,7 @@ function FinancialItemModal({
                 value={formData.location}
                 onChange={(e) => onFormFieldChange('location', e.target.value)}
                 placeholder={placeholders.location}
+                disabled={isSubmitting}
               />
             </div>
           </div>
@@ -158,6 +163,7 @@ function FinancialItemModal({
                 value={formData.accountNumber}
                 onChange={(e) => onFormFieldChange('accountNumber', e.target.value)}
                 placeholder="Last 4 digits: 1234"
+                disabled={isSubmitting}
               />
             </div>
 
@@ -170,6 +176,7 @@ function FinancialItemModal({
                 onChange={(e) => onFormFieldChange('amount', Number.parseFloat(e.target.value) || 0)}
                 min="0"
                 step="0.01"
+                disabled={isSubmitting}
                 className={formErrors.amount ? 'border-destructive' : ''}
               />
               {formErrors.amount && (
@@ -186,6 +193,7 @@ function FinancialItemModal({
                 <Select
                   value={formData.frequency}
                   onValueChange={(value) => onFormFieldChange('frequency', value)}
+                  disabled={isSubmitting}
                 >
                   <SelectTrigger>
                     <SelectValue />
@@ -209,6 +217,7 @@ function FinancialItemModal({
               <Select
                 value={formData.verificationStatus}
                 onValueChange={(value) => onFormFieldChange('verificationStatus', value)}
+                disabled={isSubmitting}
               >
                 <SelectTrigger>
                   <SelectValue />
@@ -229,7 +238,7 @@ function FinancialItemModal({
                 value={formData.verificationSource}
                 onChange={(e) => onFormFieldChange('verificationSource', e.target.value)}
                 placeholder="e.g., Bank Statement 05/2025, Award Letter"
-                disabled={formData.verificationStatus !== 'Verified'}
+                disabled={formData.verificationStatus !== 'Verified' || isSubmitting}
                 className={`${
                   formData.verificationStatus !== 'Verified' 
                     ? 'opacity-50 cursor-not-allowed' 
@@ -253,6 +262,7 @@ function FinancialItemModal({
                 <Select
                   value={formData.owner}
                   onValueChange={(value) => onFormFieldChange('owner', value)}
+                  disabled={isSubmitting}
                 >
                   <SelectTrigger>
                     <SelectValue />
@@ -277,6 +287,7 @@ function FinancialItemModal({
               onChange={(e) => onFormFieldChange('notes', e.target.value)}
               placeholder="Additional notes about this item..."
               rows={3}
+              disabled={isSubmitting}
             />
           </div>
 
@@ -287,6 +298,7 @@ function FinancialItemModal({
                 id="addAnother"
                 checked={addAnother}
                 onCheckedChange={(checked) => onAddAnotherChange(checked === true)}
+                disabled={isSubmitting}
               />
               <Label htmlFor="addAnother">
                 Add another item after saving
@@ -296,10 +308,10 @@ function FinancialItemModal({
         </form>
  
         <DialogFooter>
-          <Button type="button" variant="outline" onClick={onClose}>
+          <Button type="button" variant="outline" onClick={onClose} disabled={isSubmitting}>
             Cancel
           </Button>
-          <Button type="submit" form={formId} disabled={!isFormValid}>
+          <Button type="submit" form={formId} disabled={isSubmitting}>
             {isEditing ? 'Update Item' : 'Save Item'}
           </Button>
         </DialogFooter>

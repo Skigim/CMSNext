@@ -124,7 +124,7 @@ const emptyItemFormData: ItemFormData = {
 };
 
 const emptyEntryFormData: EntryFormData = {
-  amount: "0",
+  amount: "",
   startDate: "",
   endDate: "",
   verificationStatus: "Needs VR",
@@ -187,12 +187,30 @@ function getDefaultEntryFormData(applicationDate?: string): EntryFormData {
   const parsed = normalized ? parseLocalDate(normalized) : null;
   const startDate = isoToDateInputValue(getFirstOfMonth(parsed ?? undefined));
   return {
-    amount: "0",
+    amount: "",
     startDate,
     endDate: "",
     verificationStatus: "Needs VR",
     verificationSource: "",
   };
+}
+
+/**
+ * Normalizes the amount input from the history modal entry form.
+ * Empty or whitespace-only input is treated as an intentional blank value and
+ * converted to 0 for persistence, while non-numeric input returns null so save is blocked.
+ * @param value - The amount string from the entry form input.
+ * @returns The parsed amount as a number, 0 for empty input, or null for invalid input.
+ */
+function parseEntryAmount(value: string): number | null {
+  const normalizedValue = value.trim();
+
+  if (!normalizedValue) {
+    return 0;
+  }
+
+  const amount = Number(normalizedValue);
+  return Number.isFinite(amount) ? amount : null;
 }
 
 function openAddEntryForm(
@@ -591,8 +609,8 @@ export function FinancialItemStepperModal({
   }, []);
 
   const handleSaveEntry = useCallback(() => {
-    const amount = Number.parseFloat(entryFormData.amount);
-    if (Number.isNaN(amount) || !entryFormData.startDate) {
+    const amount = parseEntryAmount(entryFormData.amount);
+    if (amount === null || !entryFormData.startDate) {
       return;
     }
 
@@ -1065,7 +1083,11 @@ export function FinancialItemStepperModal({
                     type="button"
                     size="sm"
                     onClick={handleSaveEntry}
-                    disabled={!entryFormData.amount || !entryFormData.startDate}
+                    disabled={
+                      !entryFormData.startDate ||
+                      (typeof (entryFormData as any).amount === "string" &&
+                        parseEntryAmount((entryFormData as any).amount) === null)
+                    }
                   >
                     <Check className="h-4 w-4 mr-1" />
                     {isAddingEntry ? "Add" : "Save"}

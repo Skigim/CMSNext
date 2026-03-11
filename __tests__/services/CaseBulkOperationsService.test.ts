@@ -67,7 +67,8 @@ describe('CaseBulkOperationsService', () => {
   };
 
   const createEmptyNormalizedData = (): NormalizedFileData => ({
-    version: '2.0',
+    version: '2.1',
+    people: [],
     cases: [],
     financials: [],
     notes: [],
@@ -458,7 +459,8 @@ describe('CaseBulkOperationsService', () => {
 
       expect(mockFileStorage.writeNormalizedData).toHaveBeenCalledWith(
         expect.objectContaining({
-          version: '2.0',
+          version: '2.1',
+          people: [],
           cases: [],
           financials: [],
           notes: [],

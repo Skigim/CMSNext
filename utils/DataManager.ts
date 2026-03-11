@@ -46,6 +46,7 @@ import { CategoryConfigService } from "./services/CategoryConfigService";
 import { NotesService } from "./services/NotesService";
 import { FinancialsService } from "./services/FinancialsService";
 import { CaseService } from "./services/CaseService";
+import { PersonService } from "./services/PersonService";
 import { AlertsService } from "./services/AlertsService";
 import { TemplateService } from "./services/TemplateService";
 import { CaseArchiveService, type RefreshQueueResult, type ArchiveFileInfo } from "./services/CaseArchiveService";
@@ -186,6 +187,8 @@ export class DataManager {
   private readonly financials: FinancialsService;
   /** Case service for case CRUD operations */
   private readonly cases: CaseService;
+  /** Person service for normalized people operations */
+  private readonly people: PersonService;
   /** Alerts service for alert management and matching */
   private readonly alerts: AlertsService;
   /** Template service for managing templates */
@@ -219,6 +222,9 @@ export class DataManager {
       fileStorage: this.fileStorage,
     });
     this.financials = new FinancialsService({
+      fileStorage: this.fileStorage,
+    });
+    this.people = new PersonService({
       fileStorage: this.fileStorage,
     });
     this.cases = new CaseService({
@@ -269,6 +275,14 @@ export class DataManager {
    */
   async getAllCases(): Promise<StoredCase[]> {
     return this.cases.getAllCases();
+  }
+
+  async getAllPeople() {
+    return this.people.getAllPeople();
+  }
+
+  async getPersonById(personId: string) {
+    return this.people.getPersonById(personId);
   }
 
   /**
