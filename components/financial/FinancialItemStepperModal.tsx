@@ -195,6 +195,13 @@ function getDefaultEntryFormData(applicationDate?: string): EntryFormData {
   };
 }
 
+/**
+ * Normalizes the amount input from the history modal entry form.
+ * Empty or whitespace-only input is treated as an intentional blank value and
+ * converted to 0 for persistence, while non-numeric input returns null so save is blocked.
+ * @param value - The amount string from the entry form input.
+ * @returns The parsed amount as a number, 0 for empty input, or null for invalid input.
+ */
 function parseEntryAmount(value: string): number | null {
   if (!value.trim()) {
     return 0;

@@ -66,7 +66,7 @@ describe("FinancialItemStepperModal", () => {
     expect(startDateInput).toHaveValue("2025-06-01");
   });
 
-  it("allows a blank amount entry and saves it as zero", async () => {
+  it("normalizes blank amount input to zero when saving entry", async () => {
     const user = userEvent.setup();
     renderModal({ applicationDate: "2025-06-15" });
 
@@ -74,7 +74,7 @@ describe("FinancialItemStepperModal", () => {
     await user.click(screen.getByRole("button", { name: /^Next$/i }));
 
     const amountInput = await screen.findByLabelText(/Amount \*/i);
-    expect(amountInput).toHaveValue(null);
+    expect((amountInput as HTMLInputElement).value).toBe("");
 
     const addEntryButton = screen.getByRole("button", { name: /^Add$/i });
     expect(addEntryButton).toBeEnabled();
