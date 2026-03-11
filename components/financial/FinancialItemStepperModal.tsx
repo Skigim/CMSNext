@@ -124,7 +124,7 @@ const emptyItemFormData: ItemFormData = {
 };
 
 const emptyEntryFormData: EntryFormData = {
-  amount: "0",
+  amount: "",
   startDate: "",
   endDate: "",
   verificationStatus: "Needs VR",
@@ -187,12 +187,21 @@ function getDefaultEntryFormData(applicationDate?: string): EntryFormData {
   const parsed = normalized ? parseLocalDate(normalized) : null;
   const startDate = isoToDateInputValue(getFirstOfMonth(parsed ?? undefined));
   return {
-    amount: "0",
+    amount: "",
     startDate,
     endDate: "",
     verificationStatus: "Needs VR",
     verificationSource: "",
   };
+}
+
+function parseEntryAmount(value: string): number | null {
+  if (!value.trim()) {
+    return 0;
+  }
+
+  const amount = Number.parseFloat(value);
+  return Number.isNaN(amount) ? null : amount;
 }
 
 function openAddEntryForm(
@@ -591,8 +600,8 @@ export function FinancialItemStepperModal({
   }, []);
 
   const handleSaveEntry = useCallback(() => {
-    const amount = Number.parseFloat(entryFormData.amount);
-    if (Number.isNaN(amount) || !entryFormData.startDate) {
+    const amount = parseEntryAmount(entryFormData.amount);
+    if (amount === null || !entryFormData.startDate) {
       return;
     }
 
@@ -790,7 +799,7 @@ export function FinancialItemStepperModal({
       }
 
       if (isEntryEditing) {
-        if (!entryFormData.amount || !entryFormData.startDate) {
+        if (!entryFormData.startDate) {
           return;
         }
         event.preventDefault();
@@ -807,7 +816,6 @@ export function FinancialItemStepperModal({
       currentStep,
       handleNext,
       isEntryEditing,
-      entryFormData.amount,
       entryFormData.startDate,
       handleSaveEntry,
       canSave,
@@ -1072,7 +1080,7 @@ export function FinancialItemStepperModal({
                     type="button"
                     size="sm"
                     onClick={handleSaveEntry}
-                    disabled={!entryFormData.amount || !entryFormData.startDate}
+                    disabled={!entryFormData.startDate}
                   >
                     <Check className="h-4 w-4 mr-1" />
                     {isAddingEntry ? "Add" : "Save"}

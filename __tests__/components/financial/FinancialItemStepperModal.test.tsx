@@ -66,6 +66,37 @@ describe("FinancialItemStepperModal", () => {
     expect(startDateInput).toHaveValue("2025-06-01");
   });
 
+  it("allows a blank amount entry and saves it as zero", async () => {
+    const user = userEvent.setup();
+    renderModal({ applicationDate: "2025-06-15" });
+
+    await user.type(screen.getByLabelText(/Description \*/i), "Test Item");
+    await user.click(screen.getByRole("button", { name: /^Next$/i }));
+
+    const amountInput = await screen.findByLabelText(/Amount \*/i);
+    expect(amountInput).toHaveValue(null);
+
+    const addEntryButton = screen.getByRole("button", { name: /^Add$/i });
+    expect(addEntryButton).toBeEnabled();
+    await user.click(addEntryButton);
+
+    expect(await screen.findByText("$0.00")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: /Save Item/i }));
+
+    expect(mockOnSave).toHaveBeenCalledWith(
+      expect.objectContaining({
+        amount: 0,
+        amountHistory: [
+          expect.objectContaining({
+            amount: 0,
+            startDate: "2025-06-01",
+          }),
+        ],
+      }),
+    );
+  });
+
   it("defaults start date to first of current month when no applicationDate is provided", async () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2025-02-15T12:00:00.000Z"));
