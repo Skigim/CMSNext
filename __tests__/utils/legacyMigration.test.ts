@@ -6,7 +6,7 @@ import { dehydrateNormalizedData } from "@/utils/storageV21Migration";
 import { mergeCategoryConfig } from "@/types/categoryConfig";
 
 describe("legacyMigration", () => {
-  it("hydrates persisted v2.1 data before returning it", () => {
+  it("hydrates persisted v2.1 data before returning it without success-path errors", () => {
     const runtimeCase = createMockStoredCase({
       id: "case-1",
       person: createMockPerson({
@@ -34,10 +34,24 @@ describe("legacyMigration", () => {
     const result = migrateLegacyData(persistedV21);
 
     expect(result.success).toBe(true);
+    expect(result.errors).toEqual([]);
     expect(result.data?.version).toBe("2.1");
     expect(result.data?.cases[0].person.name).toBe("Hydrated Person");
     expect(result.data?.cases[0].people).toEqual([
       { personId: "person-1", role: "applicant", isPrimary: true },
+    ]);
+    expect(result.data?.cases[0].linkedPeople).toEqual([
+      {
+        person: expect.objectContaining({
+          id: "person-1",
+          name: "Hydrated Person",
+        }),
+        ref: {
+          personId: "person-1",
+          role: "applicant",
+          isPrimary: true,
+        },
+      },
     ]);
   });
 });

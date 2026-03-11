@@ -353,9 +353,9 @@ export function migrateLegacyData(rawData: unknown): MigrationResult {
          success: true,
          data: hydrateNormalizedData(rawData as Parameters<typeof hydrateNormalizedData>[0]),
          stats,
-         errors: ["Data is already in v2.1 format"],
+         errors,
        };
-     }
+      }
 
      if (format === "v2.0") {
        logger.info("Data is in v2.0 format, migrating to v2.1");
