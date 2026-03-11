@@ -1,7 +1,9 @@
 import { vi } from 'vitest'
-import { AmountHistoryEntry, CaseDisplay, FinancialItem, Note, Person, CaseRecord, CaseCategory } from '@/types/case'
+import { AmountHistoryEntry, CaseDisplay, FinancialItem, Note, Person, CaseRecord, CaseCategory, NewPersonData, NewCaseRecordData } from '@/types/case'
 import type { StoredCase, StoredFinancialItem, StoredNote } from '@/utils/services/FileStorageService'
+import type { FileStorageLifecycleSelectors } from '@/contexts/FileStorageContext'
 import { mergeCategoryConfig } from '@/types/categoryConfig'
+import { createCaseRecordData, createPersonData } from '@/domain/cases/factories'
 
 /**
  * Test data factories for creating mock data objects
@@ -160,6 +162,77 @@ export const createMockStoredCase = (overrides: Partial<StoredCase> = {}): Store
     ...overrides
   }
 }
+
+export const createMockNewPersonData = (overrides: Partial<NewPersonData> = {}): NewPersonData => ({
+  ...createPersonData(undefined, {
+    livingArrangement: 'Home',
+    defaultState: 'TC',
+  }),
+  firstName: 'Casey',
+  lastName: 'Tester',
+  email: 'casey@example.com',
+  phone: '555-0101',
+  dateOfBirth: '1990-01-01',
+  ssn: '123-45-6789',
+  organizationId: null,
+  livingArrangement: 'Home',
+  address: {
+    street: '123 Main St',
+    city: 'Test City',
+    state: 'TC',
+    zip: '12345',
+  },
+  mailingAddress: {
+    street: '123 Main St',
+    city: 'Test City',
+    state: 'TC',
+    zip: '12345',
+    sameAsPhysical: true,
+  },
+  authorizedRepIds: [],
+  familyMembers: [],
+  relationships: [],
+  status: 'Active',
+  ...overrides,
+})
+
+export const createMockNewCaseRecordData = (overrides: Partial<NewCaseRecordData> = {}): NewCaseRecordData => ({
+  ...createCaseRecordData(undefined, {
+    applicationDate: '2024-01-01',
+    caseType: 'Sample',
+    caseStatus: 'Pending',
+    livingArrangement: 'Home',
+  }),
+  mcn: 'MCN-0001',
+  personId: 'temp-person-id',
+  spouseId: '',
+  status: 'Pending',
+  description: 'Test case',
+  priority: false,
+  livingArrangement: 'Home',
+  withWaiver: false,
+  admissionDate: '2024-01-05',
+  organizationId: 'org-1',
+  authorizedReps: [],
+  retroRequested: '',
+  ...overrides,
+})
+
+export const createMockFileStorageLifecycleSelectors = (
+  overrides: Partial<FileStorageLifecycleSelectors> = {},
+): FileStorageLifecycleSelectors => ({
+  lifecycle: 'ready',
+  permissionStatus: 'granted',
+  isReady: true,
+  isBlocked: false,
+  isErrored: false,
+  isRecovering: false,
+  isAwaitingUserChoice: false,
+  hasStoredHandle: true,
+  isConnected: true,
+  lastError: null,
+  ...overrides,
+})
 
 export const createMockStoredFinancialItem = (
   category: CaseCategory, 
