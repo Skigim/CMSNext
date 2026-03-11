@@ -205,4 +205,97 @@ describe("storageV21Migration", () => {
 
     expect(migrated.people[0].updatedAt).toBe(explicitUpdatedAt);
   });
+
+  it("round-trips runtime v2.1 data through dehydration and hydration without losing linked people", () => {
+    const secondaryPerson = createMockPerson({
+      id: "person-2",
+      firstName: "Linked",
+      lastName: "Person",
+      name: "Linked Person",
+      createdAt: "2026-01-01T00:00:00.000Z",
+      updatedAt: "2026-01-02T00:00:00.000Z",
+      dateAdded: "2026-01-01T00:00:00.000Z",
+    });
+    const primaryPerson = createMockPerson({
+      id: "person-1",
+      firstName: "Primary",
+      lastName: "Person",
+      name: "Primary Person",
+      relationships: [{ type: "spouse", name: "Linked Person", phone: secondaryPerson.phone }],
+      createdAt: "2026-01-01T00:00:00.000Z",
+      updatedAt: "2026-01-02T00:00:00.000Z",
+      dateAdded: "2026-01-01T00:00:00.000Z",
+    });
+    const runtimeData = {
+      version: "2.1" as const,
+      people: [primaryPerson, secondaryPerson],
+      cases: [
+        createMockStoredCase({
+          id: "case-1",
+          person: primaryPerson,
+          linkedPeople: [
+            {
+              ref: { personId: "person-1", role: "applicant", isPrimary: true },
+              person: primaryPerson,
+            },
+            {
+              ref: { personId: "person-2", role: "contact", isPrimary: false },
+              person: secondaryPerson,
+            },
+          ],
+          people: [
+            { personId: "person-1", role: "applicant", isPrimary: true },
+            { personId: "person-2", role: "contact", isPrimary: false },
+          ],
+          caseRecord: {
+            ...createMockStoredCase().caseRecord,
+            personId: "person-1",
+          },
+        }),
+      ],
+      financials: [],
+      notes: [],
+      alerts: [],
+      exported_at: "2026-03-01T00:00:00.000Z",
+      total_cases: 1,
+      categoryConfig: mergeCategoryConfig(),
+      activityLog: [],
+    };
+
+    const roundTripped = hydrateNormalizedData(dehydrateNormalizedData(runtimeData));
+    const roundTrippedPrimaryPerson = roundTripped.people.find((person) => person.id === "person-1");
+
+    expect(roundTripped.version).toBe("2.1");
+    expect(roundTripped.people).toHaveLength(2);
+    expect(roundTrippedPrimaryPerson).toMatchObject({
+      id: "person-1",
+      name: "Primary Person",
+    });
+    if (!roundTrippedPrimaryPerson) {
+      throw new Error("Expected round-tripped people registry to include person-1");
+    }
+    expect(roundTripped.cases[0].person.id).toBe("person-1");
+    expect(roundTripped.cases[0].linkedPeople).toEqual([
+      {
+        person: expect.objectContaining({
+          id: "person-1",
+          name: "Primary Person",
+        }),
+        ref: { personId: "person-1", role: "applicant", isPrimary: true },
+      },
+      {
+        person: expect.objectContaining({
+          id: "person-2",
+          name: "Linked Person",
+        }),
+        ref: { personId: "person-2", role: "contact", isPrimary: false },
+      },
+    ]);
+    expect(roundTrippedPrimaryPerson.normalizedRelationships).toEqual([
+      expect.objectContaining({
+        type: "spouse",
+        targetPersonId: "person-2",
+      }),
+    ]);
+  });
 });
