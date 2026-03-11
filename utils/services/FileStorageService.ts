@@ -70,8 +70,8 @@ export type {
 
 /**
  * Normalized file data format (v2.1 runtime shape).
- * 
- * This is the current data format used for all file operations.
+ *
+ * This is the current runtime-ready data format used for file operations.
  * It uses a normalized structure with flat arrays and foreign key references
  * instead of nested objects.
  * 
@@ -270,19 +270,20 @@ export class FileStorageService {
   }
 
   /**
-   * Read current data from file system in normalized v2.0 format.
-   * 
+ * Read current data from file system in canonical normalized v2.1 runtime format.
+ *
    * This is the primary read method that:
    * 1. Reads file via AutosaveFileService
    * 2. Validates format version
-   * 3. Returns normalized data or creates empty structure
-   * 4. Rejects legacy formats with LegacyFormatError
-   * 
+ * 3. Hydrates persisted v2.1 data for runtime consumers
+ * 4. Migrates persisted v2.0 data to v2.1, writes it back, and returns hydrated data
+ * 5. Rejects legacy formats with LegacyFormatError
+ *
    * **Behavior:**
    * - Returns empty structure if no file exists (first run)
-   * - Throws LegacyFormatError for pre-v2.0 formats
-   * - Throws Error for other read failures
-   * 
+ * - Throws LegacyFormatError for pre-v2.0 formats
+ * - Throws Error for other read failures
+ *
    * @returns {Promise<NormalizedFileData | null>} Normalized data or null
    * @throws {LegacyFormatError} If file contains legacy (pre-v2.0) format
    * @throws {Error} If file read fails for other reasons
@@ -379,11 +380,11 @@ export class FileStorageService {
   /**
    * Read raw data from file system without format validation.
    * 
-   * This method bypasses format validation and returns the raw file contents.
+ * This method bypasses format validation and returns the raw persisted file contents.
    * **Only for use by migration utilities** that need to read legacy formats.
    * 
-   * Normal application code should use readFileData() which enforces v2.0 format.
-   * 
+ * Normal application code should use readFileData() which enforces v2.1 format.
+ *
    * @returns {Promise<unknown>} Raw file data or null if no file exists
    * @throws {Error} If file read fails
    */
@@ -465,8 +466,8 @@ export class FileStorageService {
    * - Deep cloned to prevent reference issues
    * - Sorted by timestamp (newest first)
    * 
-   * @param {NormalizedFileData} data - The data to write in normalized v2.0 format
-   * @returns {Promise<NormalizedFileData>} The written data after enrichment
+ * @param {NormalizedFileData} data - The runtime-ready v2.1 data to write
+ * @returns {Promise<NormalizedFileData>} The written data after enrichment
    * @throws {Error} If write operation fails
    * 
    * @example
@@ -529,6 +530,7 @@ export class FileStorageService {
       };
 
       const persistedData = dehydrateNormalizedData(finalData);
+      const writtenData = hydrateNormalizedData(persistedData);
       const success = await this.fileService.writeFile(persistedData);
 
       if (!success) {
@@ -536,9 +538,9 @@ export class FileStorageService {
       }
 
       // Notify listeners that data has changed
-      this.fileService.broadcastDataUpdate(finalData);
+      this.fileService.broadcastDataUpdate(writtenData);
 
-      return finalData;
+      return writtenData;
     } catch (error) {
       // ROLLBACK: If write failed, broadcast previous data to resync UI with file state
       if (previousData) {
