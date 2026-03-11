@@ -351,11 +351,13 @@ export function migrateLegacyData(rawData: unknown): MigrationResult {
     const format = detectDataFormat(rawData);
     logger.info("Starting legacy data migration", { format });
 
-     if (format === "v2.1") {
+      if (format === "v2.1") {
        if (!isNormalizedFileData(rawData)) {
-         throw new Error("Detected v2.1 data is not in the expected persisted format");
+         throw new Error(
+           "Detected v2.1 data is missing the required persisted arrays for people or cases",
+         );
        }
-       logger.info("Data is already in v2.1 format, no migration needed");
+        logger.info("Data is already in v2.1 format, no migration needed");
        return {
          success: true,
          data: hydrateNormalizedData(rawData),
@@ -366,7 +368,9 @@ export function migrateLegacyData(rawData: unknown): MigrationResult {
 
       if (format === "v2.0") {
         if (!isNormalizedFileDataV20(rawData)) {
-          throw new Error("Detected v2.0 data is not in the expected normalized format");
+          throw new Error(
+            "Detected v2.0 data is missing the required normalized arrays for cases or financials",
+          );
         }
         logger.info("Data is in v2.0 format, migrating to v2.1");
         return {
