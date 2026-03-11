@@ -25,6 +25,13 @@ function resolveCreatedCaseSourceView(formState: FormState): AppView {
   return formState.previousView;
 }
 
+function clearDetailsSourceView(formState: FormState): FormState {
+  return {
+    ...formState,
+    detailsSourceView: undefined,
+  };
+}
+
 export interface NavigationState {
   currentView: AppView;
   selectedCaseId: string | null;
@@ -105,7 +112,7 @@ export function useNavigationActions({
     setCurrentView(targetView);
     setSelectedCaseId(null);
     // Clear the source view after navigating back
-    setFormState({ ...formState, detailsSourceView: undefined });
+    setFormState(clearDetailsSourceView(formState));
     endMeasurement("navigation:backToList", { result: targetView });
   }, [formState, setCurrentView, setFormState, setSelectedCaseId]);
 
@@ -157,7 +164,7 @@ export function useNavigationActions({
 
     setSelectedCaseId(null);
     setCurrentView(formState.previousView);
-    setFormState({ ...formState, detailsSourceView: undefined });
+    setFormState(clearDetailsSourceView(formState));
     endMeasurement("navigation:cancelNewCase", { result: formState.previousView });
   }, [formState, setCurrentView, setFormState, setSelectedCaseId]);
 
@@ -265,14 +272,18 @@ export function useNavigationActions({
     }
     switch (view) {
       case "dashboard": backToDashboard(); break;
-      case "list": backToList(); break;
+      case "list":
+        setCurrentView("list");
+        setSelectedCaseId(null);
+        setFormState(clearDetailsSourceView(formState));
+        break;
       case "details": if (selectedCaseId) { setCurrentView("details"); } else { backToList(); } break;
       case "form": newCase(); break;
       case "intake": newCase(); break;
       case "settings": setCurrentView(view); setSelectedCaseId(null); break;
     }
     endMeasurement("navigation:navigate", { target: view });
-  }, [backToDashboard, backToList, guardCaseInteraction, newCase, selectedCaseId, setCurrentView, setForcedView, setSelectedCaseId]);
+  }, [backToDashboard, backToList, formState, guardCaseInteraction, newCase, selectedCaseId, setCurrentView, setForcedView, setFormState, setSelectedCaseId]);
 
   return { navigate, viewCase, newCase, cancelNewCase, completeNewCase, closeNewCaseModal, saveCaseWithNavigation, deleteCaseWithNavigation, backToList, backToDashboard };
 }

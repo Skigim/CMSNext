@@ -1,8 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { act, renderHook, waitFor } from "@testing-library/react";
-import type { FileStorageLifecycleSelectors } from "@/contexts/FileStorageContext";
-import type { NewCaseRecordData, NewPersonData } from "@/types/case";
-import { createMockStoredCase, toast as mockToast } from "@/src/test/testUtils";
+import {
+  createMockFileStorageLifecycleSelectors,
+  createMockNewCaseRecordData,
+  createMockNewPersonData,
+  createMockStoredCase,
+  toast as mockToast,
+} from "@/src/test/testUtils";
 
 vi.mock("@/utils/performanceTracker", () => ({
   startMeasurement: vi.fn(),
@@ -14,21 +18,38 @@ import { startMeasurement, endMeasurement } from "@/utils/performanceTracker";
 const startMeasurementMock = vi.mocked(startMeasurement);
 const endMeasurementMock = vi.mocked(endMeasurement);
 
-function createConnectionState(
-  overrides: Partial<FileStorageLifecycleSelectors> = {},
-): FileStorageLifecycleSelectors {
+function createSaveCaseMock(resolvedValue?: ReturnType<typeof createMockStoredCase>) {
+  return vi.fn().mockResolvedValue(resolvedValue);
+}
+
+function createDeleteCaseMock() {
+  return vi.fn().mockResolvedValue(undefined);
+}
+
+function renderNavigationFlow({
+  cases = [],
+  connectionState = createMockFileStorageLifecycleSelectors(),
+  saveCase = createSaveCaseMock(),
+  deleteCase = createDeleteCaseMock(),
+}: {
+  cases?: ReturnType<typeof createMockStoredCase>[];
+  connectionState?: ReturnType<typeof createMockFileStorageLifecycleSelectors>;
+  saveCase?: ReturnType<typeof createSaveCaseMock>;
+  deleteCase?: ReturnType<typeof createDeleteCaseMock>;
+} = {}) {
+  const renderResult = renderHook(() =>
+    useNavigationFlow({
+      cases,
+      connectionState,
+      saveCase,
+      deleteCase,
+    }),
+  );
+
   return {
-    lifecycle: "ready",
-    permissionStatus: "granted",
-    isReady: true,
-    isBlocked: false,
-    isErrored: false,
-    isRecovering: false,
-    isAwaitingUserChoice: false,
-    hasStoredHandle: true,
-    isConnected: true,
-    lastError: null,
-    ...overrides,
+    ...renderResult,
+    saveCase,
+    deleteCase,
   };
 }
 
@@ -45,20 +66,8 @@ describe("useNavigationFlow", () => {
 
   it("navigates to case details and records measurements", () => {
     const existingCase = createMockStoredCase({ id: "case-1" });
-    const saveCase = vi.fn().mockResolvedValue(undefined);
-    const deleteCase = vi.fn().mockResolvedValue(undefined);
-
-    const { result } = renderHook(({ connectionState }) =>
-      useNavigationFlow({
-        cases: [existingCase],
-        connectionState,
-        saveCase,
-        deleteCase,
-      }),
-    {
-      initialProps: {
-        connectionState: createConnectionState(),
-      },
+    const { result } = renderNavigationFlow({
+      cases: [existingCase],
     });
 
     expect(result.current.currentView).toBe("dashboard");
@@ -81,24 +90,13 @@ describe("useNavigationFlow", () => {
 
   it("blocks restricted navigation when storage is locked", async () => {
     const existingCase = createMockStoredCase({ id: "case-locked" });
-    const saveCase = vi.fn().mockResolvedValue(undefined);
-    const deleteCase = vi.fn().mockResolvedValue(undefined);
-
-    const { result } = renderHook(({ connectionState }) =>
-      useNavigationFlow({
-        cases: [existingCase],
-        connectionState,
-        saveCase,
-        deleteCase,
+    const { result } = renderNavigationFlow({
+      cases: [existingCase],
+      connectionState: createMockFileStorageLifecycleSelectors({
+        isBlocked: true,
+        isReady: false,
+        permissionStatus: "denied",
       }),
-    {
-      initialProps: {
-        connectionState: createConnectionState({
-          isBlocked: true,
-          isReady: false,
-          permissionStatus: "denied",
-        }),
-      },
     });
 
     await waitFor(() => {
@@ -120,8 +118,8 @@ describe("useNavigationFlow", () => {
       expect.objectContaining({ locked: true }),
     );
 
-  const lastMeasurement = getLastMeasurementMetadata("navigation:newCase");
-  expect(lastMeasurement).toMatchObject({ blocked: true });
+    const lastMeasurement = getLastMeasurementMetadata("navigation:newCase");
+    expect(lastMeasurement).toMatchObject({ blocked: true });
     expect(mockToast.error).toHaveBeenCalledWith(
       expect.stringContaining("Permission to the data folder was denied"),
       expect.any(Object),
@@ -130,20 +128,9 @@ describe("useNavigationFlow", () => {
 
   it("navigates to intake view when newCase is called", async () => {
     const existingCase = createMockStoredCase({ id: "case-edit" });
-    const saveCase = vi.fn().mockResolvedValue(existingCase);
-    const deleteCase = vi.fn().mockResolvedValue(undefined);
-
-    const { result } = renderHook(({ connectionState }) =>
-      useNavigationFlow({
-        cases: [existingCase],
-        connectionState,
-        saveCase,
-        deleteCase,
-      }),
-    {
-      initialProps: {
-        connectionState: createConnectionState(),
-      },
+    const { result } = renderNavigationFlow({
+      cases: [existingCase],
+      saveCase: createSaveCaseMock(existingCase),
     });
 
     // Initially on dashboard
@@ -170,20 +157,8 @@ describe("useNavigationFlow", () => {
 
   it("returns to the originating details view when intake is canceled", () => {
     const existingCase = createMockStoredCase({ id: "case-origin" });
-    const saveCase = vi.fn().mockResolvedValue(undefined);
-    const deleteCase = vi.fn().mockResolvedValue(undefined);
-
-    const { result } = renderHook(({ connectionState }) =>
-      useNavigationFlow({
-        cases: [existingCase],
-        connectionState,
-        saveCase,
-        deleteCase,
-      }),
-    {
-      initialProps: {
-        connectionState: createConnectionState(),
-      },
+    const { result } = renderNavigationFlow({
+      cases: [existingCase],
     });
 
     act(() => {
@@ -214,20 +189,8 @@ describe("useNavigationFlow", () => {
   it("returns to the prior non-intake source after opening a created case", () => {
     const existingCase = createMockStoredCase({ id: "case-origin" });
     const createdCase = createMockStoredCase({ id: "case-created" });
-    const saveCase = vi.fn().mockResolvedValue(undefined);
-    const deleteCase = vi.fn().mockResolvedValue(undefined);
-
-    const { result } = renderHook(({ connectionState }) =>
-      useNavigationFlow({
-        cases: [existingCase, createdCase],
-        connectionState,
-        saveCase,
-        deleteCase,
-      }),
-    {
-      initialProps: {
-        connectionState: createConnectionState(),
-      },
+    const { result } = renderNavigationFlow({
+      cases: [existingCase, createdCase],
     });
 
     act(() => {
@@ -266,22 +229,40 @@ describe("useNavigationFlow", () => {
     });
   });
 
+  it("navigates to list even when details source state is stale from dashboard", () => {
+    const existingCase = createMockStoredCase({ id: "case-1" });
+    const { result } = renderNavigationFlow({
+      cases: [existingCase],
+    });
+
+    act(() => {
+      result.current.viewCase(existingCase.id);
+    });
+
+    expect(result.current.currentView).toBe("details");
+
+    act(() => {
+      result.current.navigate("dashboard");
+    });
+
+    expect(result.current.currentView).toBe("dashboard");
+    expect(result.current.detailsSourceView).toBe("dashboard");
+
+    act(() => {
+      result.current.navigate("list");
+    });
+
+    expect(result.current.currentView).toBe("list");
+    expect(result.current.detailsSourceView).toBeUndefined();
+    expect(result.current.selectedCaseId).toBeNull();
+  });
+
   it("navigates to case details after creating a new case", async () => {
     const newCase = createMockStoredCase({ id: "new-case-id" });
-    const saveCase = vi.fn().mockResolvedValue(newCase);
-    const deleteCase = vi.fn().mockResolvedValue(undefined);
-
-    const { result } = renderHook(({ connectionState }) =>
-      useNavigationFlow({
-        cases: [],
-        connectionState,
-        saveCase,
-        deleteCase,
-      }),
-    {
-      initialProps: {
-        connectionState: createConnectionState(),
-      },
+    const personForm = createMockNewPersonData();
+    const caseRecordForm = createMockNewCaseRecordData();
+    const { result, saveCase } = renderNavigationFlow({
+      saveCase: createSaveCaseMock(newCase),
     });
 
     // newCase() now navigates to intake, not the modal
@@ -291,50 +272,6 @@ describe("useNavigationFlow", () => {
 
     expect(result.current.currentView).toBe("intake");
     expect(result.current.showNewCaseModal).toBe(false);
-
-    const personForm: NewPersonData = {
-      firstName: "Casey",
-      lastName: "Tester",
-      email: "casey@example.com",
-      phone: "555-0101",
-      dateOfBirth: "1990-01-01",
-      ssn: "123-45-6789",
-      livingArrangement: "Home",
-      status: "Active",
-      address: {
-        street: "123 Main St",
-        city: "Test City",
-        state: "TC",
-        zip: "12345",
-      },
-      mailingAddress: {
-        street: "123 Main St",
-        city: "Test City",
-        state: "TC",
-        zip: "12345",
-        sameAsPhysical: true,
-      },
-      organizationId: null,
-      authorizedRepIds: [],
-      familyMembers: [],
-    };
-
-    const caseRecordForm: NewCaseRecordData = {
-      mcn: "MCN-0001",
-      applicationDate: "2024-01-01",
-      caseType: "Sample",
-      personId: "temp-person-id",
-      spouseId: "",
-      status: "Pending",
-      description: "Test case",
-      priority: false,
-      livingArrangement: "Home",
-      withWaiver: false,
-      admissionDate: "2024-01-05",
-      organizationId: "org-1",
-      authorizedReps: [],
-      retroRequested: "",
-    };
 
     await act(async () => {
       await result.current.saveCaseWithNavigation({
@@ -361,20 +298,11 @@ describe("useNavigationFlow", () => {
   it("uses the originating source when saveCaseWithNavigation creates a case from intake", async () => {
     const existingCase = createMockStoredCase({ id: "case-origin" });
     const newCase = createMockStoredCase({ id: "new-case-id" });
-    const saveCase = vi.fn().mockResolvedValue(newCase);
-    const deleteCase = vi.fn().mockResolvedValue(undefined);
-
-    const { result } = renderHook(({ connectionState }) =>
-      useNavigationFlow({
-        cases: [existingCase, newCase],
-        connectionState,
-        saveCase,
-        deleteCase,
-      }),
-    {
-      initialProps: {
-        connectionState: createConnectionState(),
-      },
+    const personForm = createMockNewPersonData();
+    const caseRecordForm = createMockNewCaseRecordData();
+    const { result } = renderNavigationFlow({
+      cases: [existingCase, newCase],
+      saveCase: createSaveCaseMock(newCase),
     });
 
     act(() => {
@@ -391,48 +319,8 @@ describe("useNavigationFlow", () => {
 
     await act(async () => {
       await result.current.saveCaseWithNavigation({
-        person: {
-          firstName: "Casey",
-          lastName: "Tester",
-          email: "casey@example.com",
-          phone: "555-0101",
-          dateOfBirth: "1990-01-01",
-          ssn: "123-45-6789",
-          livingArrangement: "Home",
-          status: "Active",
-          address: {
-            street: "123 Main St",
-            city: "Test City",
-            state: "TC",
-            zip: "12345",
-          },
-          mailingAddress: {
-            street: "123 Main St",
-            city: "Test City",
-            state: "TC",
-            zip: "12345",
-            sameAsPhysical: true,
-          },
-          organizationId: null,
-          authorizedRepIds: [],
-          familyMembers: [],
-        },
-        caseRecord: {
-          mcn: "MCN-0001",
-          applicationDate: "2024-01-01",
-          caseType: "Sample",
-          personId: "temp-person-id",
-          spouseId: "",
-          status: "Pending",
-          description: "Test case",
-          priority: false,
-          livingArrangement: "Home",
-          withWaiver: false,
-          admissionDate: "2024-01-05",
-          organizationId: "org-1",
-          authorizedReps: [],
-          retroRequested: "",
-        },
+        person: personForm,
+        caseRecord: caseRecordForm,
       });
     });
 
