@@ -15,9 +15,7 @@ import type {
 import type { CaseActivityEntry } from "@/types/activityLog";
 import type { CategoryConfig } from "@/types/categoryConfig";
 import type { Template } from "@/types/template";
-
-const UUID_PATTERN =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+import { splitFamilyMembers } from "@/utils/personNormalization";
 
 export interface NormalizedFileDataV20 {
   version: "2.0";
@@ -58,10 +56,6 @@ export interface RuntimeNormalizedFileDataV21 {
   categoryConfig: CategoryConfig;
   activityLog: CaseActivityEntry[];
   templates?: Template[];
-}
-
-function isUuid(value: string): boolean {
-  return UUID_PATTERN.test(value.trim());
 }
 
 function normalizeName(value: string): string {
@@ -176,31 +170,6 @@ function buildStoredRelationships(
       legacyPhone: relationship.phone || undefined,
     };
   });
-}
-
-function splitFamilyMembers(
-  familyMembers: string[] | undefined,
-): { familyMemberIds: string[]; legacyFamilyMemberNames: string[] } {
-  const familyMemberIds: string[] = [];
-  const legacyFamilyMemberNames: string[] = [];
-
-  for (const member of familyMembers ?? []) {
-    const trimmed = member.trim();
-    if (!trimmed) {
-      continue;
-    }
-
-    if (isUuid(trimmed)) {
-      familyMemberIds.push(trimmed);
-    } else {
-      legacyFamilyMemberNames.push(trimmed);
-    }
-  }
-
-  return {
-    familyMemberIds: Array.from(new Set(familyMemberIds)),
-    legacyFamilyMemberNames: Array.from(new Set(legacyFamilyMemberNames)),
-  };
 }
 
 export function toStoredPerson(person: Person, allPeople: Person[]): StoredPerson {
@@ -505,8 +474,10 @@ export function migrateV20ToV21(data: NormalizedFileDataV20): PersistedNormalize
     version: "2.1",
     people: resolvedPeople,
     cases: data.cases.map((caseItem) => {
-      const migratedPersonId =
-        casePersonIds.get(caseItem.id) ?? caseItem.caseRecord.personId ?? uuidv4();
+      const migratedPersonId = casePersonIds.get(caseItem.id);
+      if (!migratedPersonId) {
+        throw new Error(`Missing migrated person ID for case ${caseItem.id}`);
+      }
 
       return {
         id: caseItem.id,

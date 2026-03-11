@@ -3,40 +3,14 @@ import { v4 as uuidv4 } from "uuid";
 import type { NewPersonData, Person } from "@/types/case";
 import type { FileStorageService, NormalizedFileData } from "./FileStorageService";
 import { readDataAndFindCase } from "@/utils/serviceHelpers";
+import { splitFamilyMembers } from "@/utils/personNormalization";
 
 interface PersonServiceConfig {
   fileStorage: FileStorageService;
 }
 
-const UUID_PATTERN =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-
 function buildDisplayName(firstName: string, lastName: string): string {
   return `${firstName} ${lastName}`.trim();
-}
-
-function splitFamilyMembers(familyMembers: string[] | undefined): {
-  familyMembers: string[];
-  familyMemberIds: string[];
-  legacyFamilyMemberNames: string[];
-} {
-  const normalizedFamilyMembers = Array.from(
-    new Set(
-      (familyMembers ?? [])
-        .map((member) => member.trim())
-        .filter((member) => member.length > 0),
-    ),
-  );
-  const familyMemberIds = normalizedFamilyMembers.filter((member) => UUID_PATTERN.test(member));
-  const legacyFamilyMemberNames = normalizedFamilyMembers.filter(
-    (member) => !UUID_PATTERN.test(member),
-  );
-
-  return {
-    familyMembers: normalizedFamilyMembers,
-    familyMemberIds,
-    legacyFamilyMemberNames,
-  };
 }
 
 export class PersonService {
@@ -94,7 +68,7 @@ export class PersonService {
         sameAsPhysical: true,
       },
       authorizedRepIds: personData.authorizedRepIds || [],
-      familyMembers: familyMembers.familyMembers,
+      familyMembers: familyMembers.normalizedFamilyMembers,
       familyMemberIds: familyMembers.familyMemberIds,
       legacyFamilyMemberNames: familyMembers.legacyFamilyMemberNames,
       relationships: personData.relationships || [],
@@ -123,7 +97,7 @@ export class PersonService {
       address: personData.address || existingPerson.address,
       mailingAddress: personData.mailingAddress || existingPerson.mailingAddress,
       authorizedRepIds: personData.authorizedRepIds || [],
-      familyMembers: familyMembers.familyMembers,
+      familyMembers: familyMembers.normalizedFamilyMembers,
       familyMemberIds: familyMembers.familyMemberIds,
       legacyFamilyMemberNames: familyMembers.legacyFamilyMemberNames,
       relationships: personData.relationships || [],
