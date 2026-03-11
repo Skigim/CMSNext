@@ -265,14 +265,18 @@ export function useNavigationActions({
     }
     switch (view) {
       case "dashboard": backToDashboard(); break;
-      case "list": backToList(); break;
+      case "list":
+        setCurrentView("list");
+        setSelectedCaseId(null);
+        setFormState({ ...formState, detailsSourceView: undefined });
+        break;
       case "details": if (selectedCaseId) { setCurrentView("details"); } else { backToList(); } break;
       case "form": newCase(); break;
       case "intake": newCase(); break;
       case "settings": setCurrentView(view); setSelectedCaseId(null); break;
     }
     endMeasurement("navigation:navigate", { target: view });
-  }, [backToDashboard, backToList, guardCaseInteraction, newCase, selectedCaseId, setCurrentView, setForcedView, setSelectedCaseId]);
+  }, [backToDashboard, backToList, formState, guardCaseInteraction, newCase, selectedCaseId, setCurrentView, setForcedView, setFormState, setSelectedCaseId]);
 
   return { navigate, viewCase, newCase, cancelNewCase, completeNewCase, closeNewCaseModal, saveCaseWithNavigation, deleteCaseWithNavigation, backToList, backToDashboard };
 }

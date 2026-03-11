@@ -266,6 +266,44 @@ describe("useNavigationFlow", () => {
     });
   });
 
+  it("navigates to list even when details source state is stale from dashboard", () => {
+    const existingCase = createMockStoredCase({ id: "case-1" });
+    const saveCase = vi.fn().mockResolvedValue(undefined);
+    const deleteCase = vi.fn().mockResolvedValue(undefined);
+
+    const { result } = renderHook(({ connectionState }) =>
+      useNavigationFlow({
+        cases: [existingCase],
+        connectionState,
+        saveCase,
+        deleteCase,
+      }),
+    {
+      initialProps: {
+        connectionState: createConnectionState(),
+      },
+    });
+
+    act(() => {
+      result.current.viewCase(existingCase.id);
+    });
+
+    expect(result.current.currentView).toBe("details");
+
+    act(() => {
+      result.current.navigate("dashboard");
+    });
+
+    expect(result.current.currentView).toBe("dashboard");
+
+    act(() => {
+      result.current.navigate("list");
+    });
+
+    expect(result.current.currentView).toBe("list");
+    expect(result.current.selectedCaseId).toBeNull();
+  });
+
   it("navigates to case details after creating a new case", async () => {
     const newCase = createMockStoredCase({ id: "new-case-id" });
     const saveCase = vi.fn().mockResolvedValue(newCase);
