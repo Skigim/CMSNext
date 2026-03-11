@@ -246,12 +246,14 @@ describe("useNavigationFlow", () => {
     });
 
     expect(result.current.currentView).toBe("dashboard");
+    expect(result.current.detailsSourceView).toBe("dashboard");
 
     act(() => {
       result.current.navigate("list");
     });
 
     expect(result.current.currentView).toBe("list");
+    expect(result.current.detailsSourceView).toBeUndefined();
     expect(result.current.selectedCaseId).toBeNull();
   });
 

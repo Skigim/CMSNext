@@ -3,7 +3,6 @@ import { AmountHistoryEntry, CaseDisplay, FinancialItem, Note, Person, CaseRecor
 import type { StoredCase, StoredFinancialItem, StoredNote } from '@/utils/services/FileStorageService'
 import type { FileStorageLifecycleSelectors } from '@/contexts/FileStorageContext'
 import { mergeCategoryConfig } from '@/types/categoryConfig'
-import { createCaseRecordData, createPersonData } from '@/domain/cases/factories'
 
 /**
  * Test data factories for creating mock data objects
@@ -164,10 +163,6 @@ export const createMockStoredCase = (overrides: Partial<StoredCase> = {}): Store
 }
 
 export const createMockNewPersonData = (overrides: Partial<NewPersonData> = {}): NewPersonData => ({
-  ...createPersonData(undefined, {
-    livingArrangement: 'Home',
-    defaultState: 'TC',
-  }),
   firstName: 'Casey',
   lastName: 'Tester',
   email: 'casey@example.com',
@@ -197,13 +192,9 @@ export const createMockNewPersonData = (overrides: Partial<NewPersonData> = {}):
 })
 
 export const createMockNewCaseRecordData = (overrides: Partial<NewCaseRecordData> = {}): NewCaseRecordData => ({
-  ...createCaseRecordData(undefined, {
-    applicationDate: '2024-01-01',
-    caseType: 'Sample',
-    caseStatus: 'Pending',
-    livingArrangement: 'Home',
-  }),
   mcn: 'MCN-0001',
+  applicationDate: '2024-01-01',
+  caseType: 'Sample',
   personId: 'temp-person-id',
   spouseId: '',
   status: 'Pending',
