@@ -47,7 +47,8 @@ function createMockFileService(): AutosaveFileService {
 
 function createMockNormalizedData(overrides: Partial<NormalizedFileData> = {}): NormalizedFileData {
   return {
-    version: "2.0",
+    version: "2.1",
+    people: [],
     cases: [],
     financials: [],
     notes: [],

@@ -1,4 +1,12 @@
-import type { AlertRecord, StoredCase, StoredFinancialItem, StoredNote } from "../../types/case";
+import type {
+  AlertRecord,
+  Person,
+  PersistedCase,
+  StoredCase,
+  StoredFinancialItem,
+  StoredNote,
+  StoredPerson,
+} from "../../types/case";
 import type { CaseActivityEntry } from "../../types/activityLog";
 import type { CategoryConfig } from "../../types/categoryConfig";
 import type { Template } from "../../types/template";
@@ -8,9 +16,16 @@ import { migrateFinancialItems, hasItemsNeedingMigration } from "../financialIte
 import AutosaveFileService from "../AutosaveFileService";
 import { createLogger } from "../logger";
 import { reportFileStorageError, type FileStorageOperation } from "../fileStorageErrorReporter";
+import {
+  dehydrateNormalizedData,
+  hydrateNormalizedData,
+  migrateV20ToV21,
+  type NormalizedFileDataV20,
+  type PersistedNormalizedFileDataV21,
+} from "../storageV21Migration";
 
 const logger = createLogger("FileStorageService");
-const NORMALIZED_VERSION = "2.0";
+const NORMALIZED_VERSION = "2.1";
 
 /**
  * Deep-copy a single activity log entry, ensuring payload objects are new references.
@@ -47,10 +62,10 @@ function classifyWriteError(error: unknown): string {
 // ============================================================================
 
 // Re-export types from types/case.ts for convenience
-export type { StoredCase, StoredFinancialItem, StoredNote };
+export type { PersistedCase, StoredCase, StoredFinancialItem, StoredNote, StoredPerson };
 
 /**
- * Normalized file data format (v2.0).
+ * Normalized file data format (v2.1 runtime shape).
  * 
  * This is the current data format used for all file operations.
  * It uses a normalized structure with flat arrays and foreign key references
@@ -59,9 +74,11 @@ export type { StoredCase, StoredFinancialItem, StoredNote };
  * @interface NormalizedFileData
  */
 export interface NormalizedFileData {
-  /** Data format version (always "2.0") */
-  version: "2.0";
-  /** Flat array of cases without nested relations */
+  /** Data format version (always "2.1") */
+  version: "2.1";
+  /** Global people registry available to services and future UI flows */
+  people: Person[];
+  /** Runtime-hydrated cases */
   cases: StoredCase[];
   /** Flat array of financial items with caseId foreign keys */
   financials: StoredFinancialItem[];
@@ -82,17 +99,30 @@ export interface NormalizedFileData {
 }
 
 /**
- * Type guard to check if data matches the normalized v2.0 format.
+ * Type guard to check if data matches the persisted normalized v2.1 format.
  * 
  * @param {unknown} data - Data to check
  * @returns {boolean} true if data is NormalizedFileData
  */
-export function isNormalizedFileData(data: unknown): data is NormalizedFileData {
+export function isNormalizedFileData(data: unknown): data is PersistedNormalizedFileDataV21 {
   return (
     data !== null &&
     typeof data === "object" &&
     "version" in data &&
-    (data as { version: unknown }).version === NORMALIZED_VERSION
+    (data as { version: unknown }).version === NORMALIZED_VERSION &&
+    Array.isArray((data as { people?: unknown }).people) &&
+    Array.isArray((data as { cases?: unknown }).cases)
+  );
+}
+
+export function isNormalizedFileDataV20(data: unknown): data is NormalizedFileDataV20 {
+  return (
+    data !== null &&
+    typeof data === "object" &&
+    "version" in data &&
+    (data as { version: unknown }).version === "2.0" &&
+    Array.isArray((data as { cases?: unknown }).cases) &&
+    Array.isArray((data as { financials?: unknown }).financials)
   );
 }
 
@@ -274,7 +304,8 @@ export class FileStorageService {
       if (!rawData) {
         // No file exists yet - return empty normalized structure
         return {
-          version: NORMALIZED_VERSION as "2.0",
+          version: NORMALIZED_VERSION as "2.1",
+          people: [],
           cases: [],
           financials: [],
           notes: [],
@@ -286,26 +317,39 @@ export class FileStorageService {
         };
       }
 
-      // Validate format - only v2.0 is supported
+      // Validate format - v2.1 is current and v2.0 is auto-migrated
       if (isNormalizedFileData(rawData)) {
-        logger.debug("Detected normalized data format (v2.0)");
-        
+        logger.debug("Detected normalized data format (v2.1)");
+
+        const hydratedData = hydrateNormalizedData(rawData);
+
         // Auto-migrate financial items without history entries
-        if (hasItemsNeedingMigration(rawData.financials)) {
-          const [migratedFinancials, count] = migrateFinancialItems(rawData.financials);
+        if (hasItemsNeedingMigration(hydratedData.financials)) {
+          const [migratedFinancials, count] = migrateFinancialItems(hydratedData.financials);
           logger.info(`Migrated ${count} financial items to include history entries`);
-          
+
           const migratedData: NormalizedFileData = {
-            ...rawData,
+            ...hydratedData,
             financials: migratedFinancials,
           };
-          
+
           // Write migrated data back to file
           await this.writeNormalizedData(migratedData);
           return migratedData;
         }
-        
-        return rawData;
+
+        return hydratedData;
+      }
+
+      if (isNormalizedFileDataV20(rawData)) {
+        logger.info("Detected normalized data format (v2.0), migrating to v2.1");
+
+        const migratedPersistedData = migrateV20ToV21(rawData);
+        const hydratedMigratedData = hydrateNormalizedData(migratedPersistedData);
+
+        await this.writeNormalizedData(hydratedMigratedData);
+
+        return hydratedMigratedData;
       }
 
       // Detect legacy format and throw user-friendly error
@@ -439,7 +483,12 @@ export class FileStorageService {
     // Capture previous state for potential rollback
     let previousData: NormalizedFileData | null = null;
     try {
-      previousData = await this.fileService.readFile();
+      const previousRawData = await this.fileService.readFile();
+      if (isNormalizedFileData(previousRawData)) {
+        previousData = hydrateNormalizedData(previousRawData);
+      } else if (isNormalizedFileDataV20(previousRawData)) {
+        previousData = hydrateNormalizedData(migrateV20ToV21(previousRawData));
+      }
     } catch {
       // If we can't read previous state, rollback won't be possible
       // but we should still attempt the write
@@ -459,7 +508,8 @@ export class FileStorageService {
 
       // Validate and clean data before writing
       const finalData: NormalizedFileData = {
-        version: NORMALIZED_VERSION as "2.0",
+        version: NORMALIZED_VERSION as "2.1",
+        people: data.people.map((person) => ({ ...person })),
         cases: data.cases.map(c => ({ ...c })),
         financials: data.financials.map(f => ({ ...f })),
         notes: data.notes.map(n => ({ ...n })),
@@ -474,7 +524,8 @@ export class FileStorageService {
         templates: data.templates ? [...data.templates] : undefined,
       };
 
-      const success = await this.fileService.writeFile(finalData);
+      const persistedData = dehydrateNormalizedData(finalData);
+      const success = await this.fileService.writeFile(persistedData);
 
       if (!success) {
         throw new Error("File write operation failed");
@@ -486,7 +537,7 @@ export class FileStorageService {
       return finalData;
     } catch (error) {
       // ROLLBACK: If write failed, broadcast previous data to resync UI with file state
-      if (previousData && isNormalizedFileData(previousData)) {
+      if (previousData) {
         logger.warn("Write failed, broadcasting previous state to resync UI");
         this.fileService.broadcastDataUpdate(previousData);
       }

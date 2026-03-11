@@ -19,6 +19,26 @@ export interface Relationship {
   phone: string;
 }
 
+export interface PersonRelationship {
+  id: string;
+  type: string;
+  targetPersonId: string | null;
+  displayNameFallback?: string;
+  legacyPhone?: string;
+}
+
+export type CasePersonRole =
+  | 'applicant'
+  | 'household_member'
+  | 'dependent'
+  | 'contact';
+
+export interface CasePersonRef {
+  personId: string;
+  role: CasePersonRole;
+  isPrimary: boolean;
+}
+
 /**
  * Represents a historical amount entry for a financial item.
  * Tracks amount values over time with date ranges and verification.
@@ -61,10 +81,20 @@ export interface Person {
   mailingAddress: MailingAddress;
   authorizedRepIds: string[];
   familyMembers: string[];
+  familyMemberIds?: string[];
+  legacyFamilyMemberNames?: string[];
   relationships?: Relationship[];
+  normalizedRelationships?: PersonRelationship[];
   status: string;
   createdAt: string;
+  updatedAt?: string;
   dateAdded: string;
+}
+
+export interface StoredPerson extends Omit<Person, 'familyMembers' | 'relationships' | 'normalizedRelationships'> {
+  familyMemberIds: string[];
+  relationships: PersonRelationship[];
+  updatedAt: string;
 }
 
 // Financial item interface (resources, income, expenses)
@@ -295,7 +325,9 @@ export interface CaseDisplay {
   priority: boolean;
   createdAt: string;
   updatedAt: string;
+  people?: CasePersonRef[];
   person: Person;
+  linkedPeople?: Array<{ ref: CasePersonRef; person: Person }>;
   caseRecord: CaseRecord;
   alerts?: AlertRecord[];
 }
@@ -304,6 +336,10 @@ export interface StoredCase extends Omit<CaseDisplay, "caseRecord" | "alerts"> {
   caseRecord: Omit<CaseRecord, "financials" | "notes">;
   /** When true, case is pending archival review (set by auto-refresh on app load) */
   pendingArchival?: boolean;
+}
+
+export interface PersistedCase extends Omit<StoredCase, 'person' | 'linkedPeople'> {
+  people: CasePersonRef[];
 }
 
 export interface StoredFinancialItem extends FinancialItem {

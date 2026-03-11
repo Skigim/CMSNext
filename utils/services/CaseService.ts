@@ -4,6 +4,7 @@ import type { CategoryConfig } from '../../types/categoryConfig';
 import type { FileStorageService, NormalizedFileData, StoredCase } from './FileStorageService';
 import { ActivityLogService } from './ActivityLogService';
 import { CaseBulkOperationsService } from './CaseBulkOperationsService';
+import { PersonService } from './PersonService';
 import { toLocalDateString } from '../../domain/common';
 import { formatCaseDisplayName } from '../../domain/cases/formatting';
 import type { AlertWithMatch } from '@/domain/alerts';
@@ -99,6 +100,8 @@ export class CaseService {
   private readonly fileStorage: FileStorageService;
   /** Bulk operations service for batch operations */
   private readonly bulkOperations: CaseBulkOperationsService;
+  /** Person service for runtime person normalization */
+  private readonly people: PersonService;
 
   /**
    * Create a new CaseService instance.
@@ -109,6 +112,9 @@ export class CaseService {
   constructor(config: CaseServiceConfig) {
     this.fileStorage = config.fileStorage;
     this.bulkOperations = new CaseBulkOperationsService({
+      fileStorage: config.fileStorage,
+    });
+    this.people = new PersonService({
       fileStorage: config.fileStorage,
     });
   }
@@ -220,47 +226,19 @@ export class CaseService {
     const todayDate = toLocalDateString(); // For date-only fields
     const caseId = uuidv4();
     const personId = uuidv4();
+    const createdPerson = this.people.buildNewPerson(caseData.person, { personId, timestamp });
 
     // Create new case (StoredCase - without nested financials/notes)
     const newCase: StoredCase = {
       id: caseId,
-      name: `${caseData.person.firstName} ${caseData.person.lastName}`.trim(),
+      name: createdPerson.name,
       mcn: caseData.caseRecord.mcn,
       status: caseData.caseRecord.status,
       priority: Boolean(caseData.caseRecord.priority),
       createdAt: timestamp,
       updatedAt: timestamp,
-      person: {
-        id: personId,
-        firstName: caseData.person.firstName,
-        lastName: caseData.person.lastName,
-        name: `${caseData.person.firstName} ${caseData.person.lastName}`.trim(),
-        dateOfBirth: caseData.person.dateOfBirth || '',
-        ssn: caseData.person.ssn || '',
-        phone: caseData.person.phone || '',
-        email: caseData.person.email || '',
-        organizationId: caseData.person.organizationId || null,
-        livingArrangement: caseData.person.livingArrangement || '',
-        address: caseData.person.address || {
-          street: '',
-          city: '',
-          state: '',
-          zip: ''
-        },
-        mailingAddress: caseData.person.mailingAddress || {
-          street: '',
-          city: '',
-          state: '',
-          zip: '',
-          sameAsPhysical: true
-        },
-        authorizedRepIds: caseData.person.authorizedRepIds || [],
-        familyMembers: caseData.person.familyMembers || [],
-        relationships: caseData.person.relationships || [],
-        status: caseData.person.status || 'Active',
-        dateAdded: timestamp,
-        createdAt: timestamp
-      },
+      people: [{ personId, role: 'applicant', isPrimary: true }],
+      person: createdPerson,
       caseRecord: {
         id: uuidv4(),
         personId,
@@ -307,6 +285,7 @@ export class CaseService {
     // Write updated data
     const updatedData: NormalizedFileData = {
       ...currentData,
+      people: [...currentData.people, createdPerson],
       cases: casesWithTouchedTimestamps,
     };
 
@@ -365,24 +344,7 @@ export class CaseService {
     const timestamp = new Date().toISOString();
 
     // Update person data
-    const updatedPerson = {
-      ...existingCase.person,
-      firstName: caseData.person.firstName,
-      lastName: caseData.person.lastName,
-      name: `${caseData.person.firstName} ${caseData.person.lastName}`.trim(),
-      dateOfBirth: caseData.person.dateOfBirth || '',
-      ssn: caseData.person.ssn || '',
-      phone: caseData.person.phone || '',
-      email: caseData.person.email || '',
-      organizationId: caseData.person.organizationId || null,
-      livingArrangement: caseData.person.livingArrangement || '',
-      address: caseData.person.address || existingCase.person.address,
-      mailingAddress: caseData.person.mailingAddress || existingCase.person.mailingAddress,
-      authorizedRepIds: caseData.person.authorizedRepIds || [],
-      familyMembers: caseData.person.familyMembers || [],
-      relationships: caseData.person.relationships || [],
-      status: caseData.person.status || 'Active'
-    };
+    const updatedPerson = this.people.mergePerson(existingCase.person, caseData.person, timestamp);
 
     // Update case record data (without financials/notes - they're stored separately)
     const updatedCaseRecord = {
@@ -440,6 +402,9 @@ export class CaseService {
     // Write updated data
     const updatedData: NormalizedFileData = {
       ...currentData,
+      people: currentData.people.some((person) => person.id === updatedPerson.id)
+        ? currentData.people.map((person) => (person.id === updatedPerson.id ? updatedPerson : person))
+        : [...currentData.people, updatedPerson],
       cases: casesWithTouchedTimestamps,
     };
 

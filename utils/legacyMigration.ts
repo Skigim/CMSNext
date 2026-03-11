@@ -23,6 +23,7 @@ import type { CategoryConfig } from "@/types/categoryConfig";
 import { mergeCategoryConfig } from "@/types/categoryConfig";
 import { discoverStatusesFromCases, discoverAlertTypesFromAlerts } from "./categoryConfigMigration";
 import { createLogger } from "./logger";
+import { hydrateNormalizedData, migrateV20ToV21 } from "./storageV21Migration";
 
 const logger = createLogger("LegacyMigration");
 
@@ -131,7 +132,7 @@ export interface MigrationResult {
  */
 export function detectDataFormat(
   data: unknown,
-): "v2.0" | "v1.x-nested" | "nightingale-raw" | "unknown" {
+): "v2.0" | "v2.1" | "v1.x-nested" | "nightingale-raw" | "unknown" {
   if (!data || typeof data !== "object") {
     return "unknown";
   }
@@ -141,6 +142,10 @@ export function detectDataFormat(
   // Check for v2.0 normalized format
   if (obj.version === "2.0" && Array.isArray(obj.cases) && Array.isArray(obj.financials)) {
     return "v2.0";
+  }
+
+  if (obj.version === "2.1" && Array.isArray(obj.cases) && Array.isArray(obj.people)) {
+    return "v2.1";
   }
 
   // Check for Nightingale raw format
@@ -342,15 +347,25 @@ export function migrateLegacyData(rawData: unknown): MigrationResult {
     const format = detectDataFormat(rawData);
     logger.info("Starting legacy data migration", { format });
 
-    if (format === "v2.0") {
-      logger.info("Data is already in v2.0 format, no migration needed");
-      return {
-        success: true,
-        data: rawData as NormalizedFileData,
-        stats,
-        errors: ["Data is already in v2.0 format"],
-      };
-    }
+     if (format === "v2.1") {
+       logger.info("Data is already in v2.1 format, no migration needed");
+       return {
+         success: true,
+         data: rawData as NormalizedFileData,
+         stats,
+         errors: ["Data is already in v2.1 format"],
+       };
+     }
+
+     if (format === "v2.0") {
+       logger.info("Data is in v2.0 format, migrating to v2.1");
+       return {
+         success: true,
+         data: hydrateNormalizedData(migrateV20ToV21(rawData as Parameters<typeof migrateV20ToV21>[0])),
+         stats,
+         errors,
+       };
+     }
 
     if (format === "unknown") {
       errors.push("Unknown data format - cannot migrate");
@@ -411,7 +426,8 @@ export function migrateLegacyData(rawData: unknown): MigrationResult {
 
     // Build normalized data
     const normalizedData: NormalizedFileData = {
-      version: "2.0",
+      version: "2.1",
+      people: cases.map((caseItem) => caseItem.person),
       cases,
       financials,
       notes,
@@ -454,7 +470,9 @@ export function migrateLegacyData(rawData: unknown): MigrationResult {
 export function getFormatDescription(format: ReturnType<typeof detectDataFormat>): string {
   switch (format) {
     case "v2.0":
-      return "v2.0 Normalized Format (current)";
+      return "v2.0 Normalized Format";
+    case "v2.1":
+      return "v2.1 Normalized Format (current)";
     case "v1.x-nested":
       return "v1.x Nested Format (legacy)";
     case "nightingale-raw":
