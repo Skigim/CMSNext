@@ -1,5 +1,5 @@
 import { v4 as uuidv4 } from 'uuid';
-import type { NewPersonData, NewCaseRecordData, CaseStatus, NewNoteData } from '../../types/case';
+import type { CasePersonRole, NewPersonData, NewCaseRecordData, CaseStatus, NewNoteData } from '../../types/case';
 import type { CategoryConfig } from '../../types/categoryConfig';
 import type { FileStorageService, NormalizedFileData, StoredCase } from './FileStorageService';
 import { ActivityLogService } from './ActivityLogService';
@@ -10,6 +10,7 @@ import { formatCaseDisplayName } from '../../domain/cases/formatting';
 import type { AlertWithMatch } from '@/domain/alerts';
 
 // formatCaseDisplayName imported from domain layer
+const PRIMARY_CASE_PERSON_ROLE: CasePersonRole = 'applicant';
 
 /**
  * Configuration for CaseService initialization.
@@ -237,7 +238,7 @@ export class CaseService {
       priority: Boolean(caseData.caseRecord.priority),
       createdAt: timestamp,
       updatedAt: timestamp,
-      people: [{ personId, role: 'applicant', isPrimary: true }],
+      people: [{ personId, role: PRIMARY_CASE_PERSON_ROLE, isPrimary: true }],
       person: createdPerson,
       caseRecord: {
         id: uuidv4(),
@@ -402,13 +403,12 @@ export class CaseService {
     // Write updated data
     const updatedData: NormalizedFileData = {
       ...currentData,
-      people: currentData.people.some((person) => person.id === updatedPerson.id)
-        ? currentData.people.map((person) => (person.id === updatedPerson.id ? updatedPerson : person))
-        : [...currentData.people, updatedPerson],
       cases: casesWithTouchedTimestamps,
     };
 
-    await this.fileStorage.writeNormalizedData(updatedData);
+    const normalizedUpdatedData = this.people.upsertPerson(updatedData, updatedPerson);
+
+    await this.fileStorage.writeNormalizedData(normalizedUpdatedData);
 
     return casesWithTouchedTimestamps[caseIndex];
   }

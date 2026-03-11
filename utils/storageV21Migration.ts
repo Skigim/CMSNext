@@ -79,14 +79,24 @@ function buildCasePeopleRefs(caseItem: Pick<StoredCase, "people" | "person" | "c
     }));
   }
 
-  const fallbackPersonId = caseItem.person.id || caseItem.caseRecord.personId || uuidv4();
   return [
     {
-      personId: fallbackPersonId,
+      personId: caseItem.person.id,
       role: "applicant",
       isPrimary: true,
     },
   ];
+}
+
+function resolvePersonTimestamps(person: Pick<Person, "createdAt" | "updatedAt" | "dateAdded">): {
+  createdAt: string;
+  updatedAt: string;
+} {
+  const createdAt = person.createdAt || person.updatedAt || person.dateAdded || new Date().toISOString();
+  return {
+    createdAt,
+    updatedAt: person.updatedAt || createdAt,
+  };
 }
 
 function projectNormalizedRelationshipToLegacy(
@@ -202,8 +212,7 @@ export function toStoredPerson(person: Person, allPeople: Person[]): StoredPerso
   const legacyFamilyMemberNames = Array.from(
     new Set([...(person.legacyFamilyMemberNames ?? []), ...splitMembers.legacyFamilyMemberNames]),
   );
-  const createdAt = person.createdAt || person.updatedAt || person.dateAdded || new Date().toISOString();
-  const updatedAt = person.updatedAt || createdAt;
+  const { createdAt, updatedAt } = resolvePersonTimestamps(person);
 
   return {
     id: person.id || uuidv4(),
@@ -288,6 +297,10 @@ function resolvePrimaryPersonRef(
   caseItem: PersistedCase,
   peopleById: Map<string, Person>,
 ): CasePersonRef {
+  if (caseItem.people.length === 0) {
+    throw new Error(`Case ${caseItem.id} has no linked people`);
+  }
+
   return (
     caseItem.people.find((ref) => ref.isPrimary) ??
     caseItem.people.find((ref) => ref.personId === caseItem.caseRecord.personId && peopleById.has(ref.personId)) ??
@@ -414,7 +427,12 @@ export function migrateV20ToV21(data: NormalizedFileDataV20): PersistedNormalize
     }
 
     const { familyMemberIds, legacyFamilyMemberNames } = splitFamilyMembers(sourcePerson.familyMembers);
-    const createdAt = sourcePerson.createdAt || caseItem.createdAt;
+    const fallbackCreatedAt = sourcePerson.createdAt || caseItem.createdAt;
+    const { createdAt, updatedAt } = resolvePersonTimestamps({
+      createdAt: fallbackCreatedAt,
+      updatedAt: sourcePerson.updatedAt,
+      dateAdded: sourcePerson.dateAdded || fallbackCreatedAt,
+    });
 
     peopleById.set(personId, {
       id: personId,
@@ -450,7 +468,7 @@ export function migrateV20ToV21(data: NormalizedFileDataV20): PersistedNormalize
         .filter((relationship): relationship is PersonRelationship => relationship !== null),
       status: sourcePerson.status,
       createdAt,
-      updatedAt: sourcePerson.updatedAt || createdAt,
+      updatedAt,
       dateAdded: sourcePerson.dateAdded || createdAt,
     });
   }

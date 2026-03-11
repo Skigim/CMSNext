@@ -8,8 +8,29 @@ interface PersonServiceConfig {
   fileStorage: FileStorageService;
 }
 
+const UUID_PATTERN =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
 function buildDisplayName(firstName: string, lastName: string): string {
   return `${firstName} ${lastName}`.trim();
+}
+
+function splitFamilyMembers(familyMembers: string[] | undefined): {
+  familyMembers: string[];
+  familyMemberIds: string[];
+  legacyFamilyMemberNames: string[];
+} {
+  const normalizedFamilyMembers = familyMembers ?? [];
+  const familyMemberIds = normalizedFamilyMembers.filter((member) => UUID_PATTERN.test(member.trim()));
+  const legacyFamilyMemberNames = normalizedFamilyMembers
+    .map((member) => member.trim())
+    .filter((member) => member.length > 0 && !UUID_PATTERN.test(member));
+
+  return {
+    familyMembers: normalizedFamilyMembers,
+    familyMemberIds,
+    legacyFamilyMemberNames,
+  };
 }
 
 export class PersonService {
@@ -40,6 +61,7 @@ export class PersonService {
 
   buildNewPerson(personData: NewPersonData, options?: { personId?: string; timestamp?: string }): Person {
     const timestamp = options?.timestamp ?? new Date().toISOString();
+    const familyMembers = splitFamilyMembers(personData.familyMembers);
 
     return {
       id: options?.personId ?? uuidv4(),
@@ -66,9 +88,9 @@ export class PersonService {
         sameAsPhysical: true,
       },
       authorizedRepIds: personData.authorizedRepIds || [],
-      familyMembers: personData.familyMembers || [],
-      familyMemberIds: personData.familyMembers || [],
-      legacyFamilyMemberNames: [],
+      familyMembers: familyMembers.familyMembers,
+      familyMemberIds: familyMembers.familyMemberIds,
+      legacyFamilyMemberNames: familyMembers.legacyFamilyMemberNames,
       relationships: personData.relationships || [],
       normalizedRelationships: [],
       status: personData.status || "Active",
@@ -79,6 +101,8 @@ export class PersonService {
   }
 
   mergePerson(existingPerson: Person, personData: NewPersonData, timestamp = new Date().toISOString()): Person {
+    const familyMembers = splitFamilyMembers(personData.familyMembers);
+
     return {
       ...existingPerson,
       firstName: personData.firstName,
@@ -93,9 +117,9 @@ export class PersonService {
       address: personData.address || existingPerson.address,
       mailingAddress: personData.mailingAddress || existingPerson.mailingAddress,
       authorizedRepIds: personData.authorizedRepIds || [],
-      familyMembers: personData.familyMembers || [],
-      familyMemberIds: personData.familyMembers || existingPerson.familyMemberIds || [],
-      legacyFamilyMemberNames: existingPerson.legacyFamilyMemberNames ?? [],
+      familyMembers: familyMembers.familyMembers,
+      familyMemberIds: familyMembers.familyMemberIds,
+      legacyFamilyMemberNames: familyMembers.legacyFamilyMemberNames,
       relationships: personData.relationships || [],
       normalizedRelationships: existingPerson.normalizedRelationships ?? [],
       status: personData.status || "Active",

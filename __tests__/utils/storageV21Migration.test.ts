@@ -11,7 +11,8 @@ import { mergeCategoryConfig } from "@/types/categoryConfig";
 
 describe("storageV21Migration", () => {
   it("migrates v2.0 embedded person data into a root people registry without losing legacy family member names", () => {
-    const familyMemberId = "11111111-1111-4111-8111-111111111111";
+    const primaryPersonId = "11111111-1111-4111-8111-111111111111";
+    const familyMemberId = "33333333-3333-4333-8333-333333333333";
     const relatedPerson = createMockPerson({
       id: "22222222-2222-4222-8222-222222222222",
       firstName: "Jane",
@@ -22,7 +23,7 @@ describe("storageV21Migration", () => {
       updatedAt: undefined,
     });
     const primaryPerson = createMockPerson({
-      id: "11111111-1111-4111-8111-111111111111",
+      id: primaryPersonId,
       firstName: "John",
       lastName: "Doe",
       name: "John Doe",
@@ -146,8 +147,8 @@ describe("storageV21Migration", () => {
         cases: [
           createMockStoredCase({
             id: "case-1",
-            person: createMockPerson({
-              id: "person-1",
+      person: createMockPerson({
+        id: "person-1",
               familyMembers: [
                 "33333333-3333-4333-8333-333333333333",
                 "Unresolved Child",
@@ -174,5 +175,33 @@ describe("storageV21Migration", () => {
       "33333333-3333-4333-8333-333333333333",
     ]);
     expect(dehydrated.people[0].legacyFamilyMemberNames).toEqual(["Unresolved Child"]);
+  });
+
+  it("preserves an explicit updatedAt value during migration", () => {
+    const explicitUpdatedAt = "2026-02-01T12:00:00.000Z";
+
+    const migrated = migrateV20ToV21({
+      version: "2.0",
+      cases: [
+        createMockStoredCase({
+          id: "case-1",
+          person: createMockPerson({
+            id: "person-1",
+            createdAt: "2026-01-01T00:00:00.000Z",
+            updatedAt: explicitUpdatedAt,
+          }),
+          people: undefined,
+        }),
+      ],
+      financials: [],
+      notes: [],
+      alerts: [],
+      exported_at: "2026-03-01T00:00:00.000Z",
+      total_cases: 1,
+      categoryConfig: mergeCategoryConfig(),
+      activityLog: [],
+    });
+
+    expect(migrated.people[0].updatedAt).toBe(explicitUpdatedAt);
   });
 });
