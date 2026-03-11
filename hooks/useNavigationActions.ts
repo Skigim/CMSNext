@@ -25,6 +25,13 @@ function resolveCreatedCaseSourceView(formState: FormState): AppView {
   return formState.previousView;
 }
 
+function clearDetailsSourceView(formState: FormState): FormState {
+  return {
+    ...formState,
+    detailsSourceView: undefined,
+  };
+}
+
 export interface NavigationState {
   currentView: AppView;
   selectedCaseId: string | null;
@@ -105,7 +112,7 @@ export function useNavigationActions({
     setCurrentView(targetView);
     setSelectedCaseId(null);
     // Clear the source view after navigating back
-    setFormState({ ...formState, detailsSourceView: undefined });
+    setFormState(clearDetailsSourceView(formState));
     endMeasurement("navigation:backToList", { result: targetView });
   }, [formState, setCurrentView, setFormState, setSelectedCaseId]);
 
@@ -157,7 +164,7 @@ export function useNavigationActions({
 
     setSelectedCaseId(null);
     setCurrentView(formState.previousView);
-    setFormState({ ...formState, detailsSourceView: undefined });
+    setFormState(clearDetailsSourceView(formState));
     endMeasurement("navigation:cancelNewCase", { result: formState.previousView });
   }, [formState, setCurrentView, setFormState, setSelectedCaseId]);
 
@@ -268,7 +275,7 @@ export function useNavigationActions({
       case "list":
         setCurrentView("list");
         setSelectedCaseId(null);
-        setFormState({ ...formState, detailsSourceView: undefined });
+        setFormState(clearDetailsSourceView(formState));
         break;
       case "details": if (selectedCaseId) { setCurrentView("details"); } else { backToList(); } break;
       case "form": newCase(); break;
