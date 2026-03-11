@@ -75,6 +75,53 @@ function createMockAlertRecord(id: string, overrides: Partial<AlertRecord> = {})
   };
 }
 
+function createHydratedStoredCase(id: string, personId: string, name: string): {
+  person: ReturnType<typeof createMockPerson>;
+  caseItem: StoredCase;
+} {
+  const person = createMockPerson({ id: personId, name });
+
+  return {
+    person,
+    caseItem: createMockStoredCase({
+      id,
+      name,
+      person,
+      people: [{ personId, role: "applicant", isPrimary: true }],
+      linkedPeople: undefined,
+    }),
+  };
+}
+
+function createLinkedRuntimeWriteData(): NormalizedFileData {
+  const primaryPerson = createMockPerson({ id: "person-1" });
+  const linkedPerson = createMockPerson({ id: "person-2" });
+  const runtimeCase = createMockCaseDisplay({
+    id: "case-1",
+    people: [
+      { personId: "person-1", role: "applicant", isPrimary: true },
+      { personId: "person-2", role: "household_member", isPrimary: false },
+    ],
+    person: primaryPerson,
+    linkedPeople: [
+      {
+        ref: { personId: "person-1", role: "applicant", isPrimary: true },
+        person: primaryPerson,
+      },
+      {
+        ref: { personId: "person-2", role: "household_member", isPrimary: false },
+        person: linkedPerson,
+      },
+    ],
+    alerts: [createMockAlertRecord("alert-1")],
+  });
+
+  return createMockNormalizedData({
+    people: [primaryPerson, linkedPerson],
+    cases: [runtimeCase],
+  });
+}
+
 // ============================================================================
 // Tests
 // ============================================================================
@@ -272,19 +319,10 @@ describe("DataManager", () => {
     });
 
     it("returns cases from file data", async () => {
-      const primaryPerson = createMockPerson({ id: "person-1", name: "Case 1" });
-      const mockCases = [
-        createMockStoredCase({
-          id: "c1",
-          name: "Case 1",
-          person: primaryPerson,
-          people: [{ personId: "person-1", role: "applicant", isPrimary: true }],
-          linkedPeople: undefined,
-        }),
-      ];
+      const { person: primaryPerson, caseItem } = createHydratedStoredCase("c1", "person-1", "Case 1");
       const mockData = createMockNormalizedData({
         people: [primaryPerson],
-        cases: mockCases,
+        cases: [caseItem],
       });
       (mockFileStorageService.readFileData as ReturnType<typeof vi.fn>).mockResolvedValue(mockData);
 
@@ -305,18 +343,15 @@ describe("DataManager", () => {
 
   describe("getCaseById", () => {
     it("hydrates the returned case", async () => {
-      const primaryPerson = createMockPerson({ id: "person-1", name: "Hydrated Case" });
-      const mockCase = createMockStoredCase({
-        id: "case-1",
-        name: "Hydrated Case",
-        person: primaryPerson,
-        people: [{ personId: "person-1", role: "applicant", isPrimary: true }],
-        linkedPeople: undefined,
-      });
+      const { person: primaryPerson, caseItem } = createHydratedStoredCase(
+        "case-1",
+        "person-1",
+        "Hydrated Case",
+      );
       (mockFileStorageService.readFileData as ReturnType<typeof vi.fn>).mockResolvedValue(
         createMockNormalizedData({
           people: [primaryPerson],
-          cases: [mockCase],
+          cases: [caseItem],
         }),
       );
 
@@ -335,33 +370,7 @@ describe("DataManager", () => {
 
   describe("writeNormalizedData", () => {
     it("dehydrates case runtime fields before calling the canonical file storage writer", async () => {
-      const primaryPerson = createMockPerson({ id: "person-1" });
-      const linkedPerson = createMockPerson({ id: "person-2" });
-      const runtimeCase = createMockCaseDisplay({
-        id: "case-1",
-        people: [
-          { personId: "person-1", role: "applicant", isPrimary: true },
-          { personId: "person-2", role: "household_member", isPrimary: false },
-        ],
-        person: primaryPerson,
-        linkedPeople: [
-          {
-            ref: { personId: "person-1", role: "applicant", isPrimary: true },
-            person: primaryPerson,
-          },
-          {
-            ref: { personId: "person-2", role: "household_member", isPrimary: false },
-            person: linkedPerson,
-          },
-        ],
-        alerts: [
-          createMockAlertRecord("alert-1"),
-        ],
-      });
-      const runtimeData = createMockNormalizedData({
-        people: [primaryPerson, linkedPerson],
-        cases: [runtimeCase],
-      });
+      const runtimeData = createLinkedRuntimeWriteData();
       (mockFileStorageService.writeNormalizedData as ReturnType<typeof vi.fn>).mockResolvedValue(runtimeData);
 
       await dataManager.writeNormalizedData(runtimeData);

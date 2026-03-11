@@ -6,6 +6,53 @@ import { FileStorageService } from "@/utils/services/FileStorageService";
 import { CaseService } from "@/utils/services/CaseService";
 import type { PersistedCase } from "@/types/case";
 
+function toPersistedCase(storedCase: ReturnType<typeof createMockStoredCase>): PersistedCase {
+  const { person: _person, ...persistedCase } = storedCase;
+
+  return {
+    ...persistedCase,
+    people: storedCase.people ?? [],
+  };
+}
+
+function createLinkedRuntimeCase() {
+  const primaryPerson = createMockPerson({ id: "person-1" });
+  const linkedPerson = createMockPerson({ id: "person-2" });
+
+  return {
+    primaryPerson,
+    linkedPerson,
+    runtimeCase: createMockCaseDisplay({
+      id: "case-1",
+      people: [
+        { personId: "person-1", role: "applicant", isPrimary: true },
+        { personId: "person-2", role: "household_member", isPrimary: false },
+      ],
+      person: primaryPerson,
+      linkedPeople: [
+        {
+          ref: { personId: "person-1", role: "applicant", isPrimary: true },
+          person: primaryPerson,
+        },
+        {
+          ref: { personId: "person-2", role: "household_member", isPrimary: false },
+          person: linkedPerson,
+        },
+      ],
+      alerts: [
+        {
+          id: "alert-1",
+          alertCode: "CODE-1",
+          alertType: "Test Alert",
+          alertDate: "2026-01-01",
+          createdAt: "2026-01-01T00:00:00.000Z",
+          updatedAt: "2026-01-01T00:00:00.000Z",
+        },
+      ],
+    }),
+  };
+}
+
 describe("CaseService hydration seam", () => {
   let caseService: CaseService;
 
@@ -50,11 +97,7 @@ describe("CaseService hydration seam", () => {
       },
       person: primaryPerson,
     });
-    const { person: _person, ...persistedCase } = storedCase;
-    const persistedCaseData: PersistedCase = {
-      ...persistedCase,
-      people: storedCase.people ?? [],
-    };
+    const persistedCaseData = toPersistedCase(storedCase);
 
     const result = caseService.hydrate(persistedCaseData, [primaryPerson, householdMember]);
 
@@ -81,11 +124,7 @@ describe("CaseService hydration seam", () => {
       people: [{ personId: "person-1", role: "applicant", isPrimary: false }],
       person: primaryPerson,
     });
-    const { person: _person, ...persistedCase } = storedCase;
-    const persistedCaseData: PersistedCase = {
-      ...persistedCase,
-      people: storedCase.people ?? [],
-    };
+    const persistedCaseData = toPersistedCase(storedCase);
 
     expect(() => caseService.hydrate(persistedCaseData, [primaryPerson])).toThrow(
       "Case case-1 has no primary person reference",
@@ -102,11 +141,7 @@ describe("CaseService hydration seam", () => {
       ],
       person: primaryPerson,
     });
-    const { person: _person, ...persistedCase } = storedCase;
-    const persistedCaseData: PersistedCase = {
-      ...persistedCase,
-      people: storedCase.people ?? [],
-    };
+    const persistedCaseData = toPersistedCase(storedCase);
 
     expect(() => caseService.hydrate(persistedCaseData, [primaryPerson])).toThrow(
       "Person person-2 not found for case case-1",
@@ -114,36 +149,7 @@ describe("CaseService hydration seam", () => {
   });
 
   it("dehydrates runtime-only case fields before persistence", () => {
-    const primaryPerson = createMockPerson({ id: "person-1" });
-    const linkedPerson = createMockPerson({ id: "person-2" });
-    const runtimeCase = createMockCaseDisplay({
-      id: "case-1",
-      people: [
-        { personId: "person-1", role: "applicant", isPrimary: true },
-        { personId: "person-2", role: "household_member", isPrimary: false },
-      ],
-      person: primaryPerson,
-      linkedPeople: [
-        {
-          ref: { personId: "person-1", role: "applicant", isPrimary: true },
-          person: primaryPerson,
-        },
-        {
-          ref: { personId: "person-2", role: "household_member", isPrimary: false },
-          person: linkedPerson,
-        },
-      ],
-      alerts: [
-        {
-          id: "alert-1",
-          alertCode: "CODE-1",
-          alertType: "Test Alert",
-          alertDate: "2026-01-01",
-          createdAt: "2026-01-01T00:00:00.000Z",
-          updatedAt: "2026-01-01T00:00:00.000Z",
-        },
-      ],
-    });
+    const { runtimeCase } = createLinkedRuntimeCase();
 
     const result = caseService.dehydrate(runtimeCase);
 
