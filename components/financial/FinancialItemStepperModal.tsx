@@ -819,13 +819,25 @@ export function FinancialItemStepperModal({
       }
 
       if (isEntryEditing) {
-        handleSaveEntry();
-        return;
-      }
+const handleSubmitShortcut = useSubmitShortcut<HTMLDivElement>({
+    canSubmit: canSubmitCurrentStep,
+    onSubmit: () => {
+      if (currentStep === "details") {
+        handleNext();
+        return;
+      }
 
-      void handleSave();
-    },
-  });
+      if (isEntryEditing) {
+        if (!entryFormData.startDate) {
+          return;
+        }
+        handleSaveEntry();
+        return;
+      }
+
+      void handleSave();
+    },
+  });
 
   // ============================================================================
   // Render
