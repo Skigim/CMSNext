@@ -530,7 +530,7 @@ export class FileStorageService {
       };
 
       const persistedData = dehydrateNormalizedData(finalData);
-      const writtenData = hydrateNormalizedData(persistedData);
+      const canonicalRuntimeData = hydrateNormalizedData(persistedData);
       const success = await this.fileService.writeFile(persistedData);
 
       if (!success) {
@@ -538,9 +538,9 @@ export class FileStorageService {
       }
 
       // Notify listeners that data has changed
-      this.fileService.broadcastDataUpdate(writtenData);
+      this.fileService.broadcastDataUpdate(canonicalRuntimeData);
 
-      return writtenData;
+      return canonicalRuntimeData;
     } catch (error) {
       // ROLLBACK: If write failed, broadcast previous data to resync UI with file state
       if (previousData) {

@@ -239,13 +239,13 @@ describe("storageV21Migration", () => {
               person: primaryPerson,
             },
             {
-              ref: { personId: "person-2", role: "spouse", isPrimary: false },
+              ref: { personId: "person-2", role: "contact", isPrimary: false },
               person: secondaryPerson,
             },
           ],
           people: [
             { personId: "person-1", role: "applicant", isPrimary: true },
-            { personId: "person-2", role: "spouse", isPrimary: false },
+            { personId: "person-2", role: "contact", isPrimary: false },
           ],
           caseRecord: {
             ...createMockStoredCase().caseRecord,
@@ -280,7 +280,7 @@ describe("storageV21Migration", () => {
           id: "person-2",
           name: "Linked Person",
         }),
-        ref: { personId: "person-2", role: "spouse", isPrimary: false },
+        ref: { personId: "person-2", role: "contact", isPrimary: false },
       },
     ]);
     expect(roundTripped.people[0].normalizedRelationships).toEqual([
