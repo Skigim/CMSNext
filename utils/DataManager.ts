@@ -36,6 +36,7 @@ import {
 } from "./alertsData";
 import { 
   FileStorageService, 
+  type CaseDehydratedNormalizedFileData,
   type NormalizedFileData, 
   type StoredCase, 
   type StoredFinancialItem, 
@@ -245,17 +246,37 @@ export class DataManager {
   // =============================================================================
 
   /**
-   * Read current data from file system in normalized v2.0 format.
+   * Read current data from file system in normalized v2.1 runtime format.
    * 
    * This is a private helper method that delegates to FileStorageService.
    * Always reads fresh data from disk - no caching.
    * 
    * @private
-   * @returns {Promise<NormalizedFileData | null>} The normalized file data, or null if no file exists
+   * @returns {Promise<NormalizedFileData | null>} Hydrated normalized file data, or null if no file exists
    * @throws {LegacyFormatError} If file contains legacy (pre-v2.0) format data
    */
   private async readFileData(): Promise<NormalizedFileData | null> {
-    return this.fileStorage.readFileData();
+    const data = await this.fileStorage.readFileData();
+    if (!data) {
+      return null;
+    }
+
+    return {
+      ...data,
+      cases: this.cases.hydrateAll(
+        data.cases.map((caseItem) => this.cases.dehydrate(caseItem)),
+        data.people,
+      ),
+    };
+  }
+
+  private dehydrateCaseData(
+    data: NormalizedFileData,
+  ): CaseDehydratedNormalizedFileData {
+    return {
+      ...data,
+      cases: data.cases.map((caseItem) => this.cases.dehydrate(caseItem)),
+    };
   }
 
   // =============================================================================
@@ -265,8 +286,8 @@ export class DataManager {
   /**
    * Get all cases from the file system.
    * 
-   * Returns cases in normalized format (StoredCase[]) without nested
-   * financials or notes. Always reads fresh data from disk.
+   * Returns runtime-hydrated cases in normalized format (StoredCase[]) without
+   * nested financials or notes. Always reads fresh data from disk.
    * 
    * @returns {Promise<StoredCase[]>} Array of all cases, or empty array if no data exists
    * @example
@@ -274,7 +295,8 @@ export class DataManager {
    * console.log(`Found ${cases.length} cases`);
    */
   async getAllCases(): Promise<StoredCase[]> {
-    return this.cases.getAllCases();
+    const data = await this.readFileData();
+    return data?.cases ?? [];
   }
 
   async getAllPeople() {
@@ -343,7 +365,7 @@ export class DataManager {
   /**
    * Get a specific case by its ID.
    * 
-   * Returns a single case in normalized format without nested relations.
+   * Returns a single runtime-hydrated case in normalized format without nested relations.
    * Always reads fresh data from disk.
    * 
    * @param {string} caseId - The unique identifier of the case
@@ -355,7 +377,12 @@ export class DataManager {
    * }
    */
   async getCaseById(caseId: string): Promise<StoredCase | null> {
-    return this.cases.getCaseById(caseId);
+    const data = await this.readFileData();
+    if (!data) {
+      return null;
+    }
+
+    return data.cases.find((caseItem) => caseItem.id === caseId) ?? null;
   }
 
   /**
@@ -469,7 +496,7 @@ export class DataManager {
     const { alerts: prunedAlerts, pruned } = this.alerts.pruneResolvedAlerts(alerts, retentionDays);
     if (pruned > 0) {
       logger.info(`Pruned ${pruned} resolved alert(s) older than ${retentionDays} days`);
-      await this.fileStorage.writeNormalizedData({
+      await this.writeNormalizedData({
         ...data,
         alerts: prunedAlerts,
       });
@@ -543,7 +570,7 @@ export class DataManager {
 
     // Save updated alerts to storage using normalized format
     // Note: writeNormalizedData handles broadcasting data changes
-    await this.fileStorage.writeNormalizedData({
+    await this.writeNormalizedData({
       ...data,
       alerts: newAlerts,
     });
@@ -611,7 +638,7 @@ export class DataManager {
         // Just need to update alerts
         const freshData = await this.readFileData();
         if (freshData) {
-          await this.fileStorage.writeNormalizedData({
+          await this.writeNormalizedData({
             ...freshData,
             alerts: rematchedResult.alerts,
           });
@@ -627,7 +654,7 @@ export class DataManager {
 
       if (result.added > 0 || result.updated > 0) {
         // Note: writeNormalizedData handles broadcasting data changes
-        await this.fileStorage.writeNormalizedData({
+        await this.writeNormalizedData({
           ...data,
           alerts: result.alerts,
         });
@@ -1303,8 +1330,8 @@ export class DataManager {
   /**
    * Write normalized data to file system.
    * 
-   * This method writes data in the normalized v2.0 format directly to disk.
-   * Used by migration utilities to save converted data.
+   * This method writes data through the canonical v2.1 persistence path after
+   * dehydrating runtime-only case fields.
    * 
    * **Warning:** This method bypasses normal service operations and should
    * only be used by migration tools.
@@ -1313,7 +1340,7 @@ export class DataManager {
    * @returns {Promise<NormalizedFileData>} The written data after enrichment
    */
   async writeNormalizedData(data: NormalizedFileData): Promise<NormalizedFileData> {
-    return this.fileStorage.writeNormalizedData(data);
+    return this.fileStorage.writeNormalizedData(this.dehydrateCaseData(data));
   }
 
   // =============================================================================

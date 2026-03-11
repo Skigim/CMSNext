@@ -1,7 +1,17 @@
 import { v4 as uuidv4 } from 'uuid';
-import type { CasePersonRole, NewPersonData, NewCaseRecordData, CaseStatus, NewNoteData } from '../../types/case';
+import type {
+  CasePersonRole,
+  NewPersonData,
+  NewCaseRecordData,
+  CaseStatus,
+  NewNoteData,
+  CaseRecord,
+  Person,
+  PersistedCase,
+  StoredCase,
+} from '../../types/case';
 import type { CategoryConfig } from '../../types/categoryConfig';
-import type { FileStorageService, NormalizedFileData, StoredCase } from './FileStorageService';
+import type { FileStorageService, NormalizedFileData } from './FileStorageService';
 import { ActivityLogService } from './ActivityLogService';
 import { CaseBulkOperationsService } from './CaseBulkOperationsService';
 import { PersonService } from './PersonService';
@@ -24,7 +34,7 @@ interface CaseServiceConfig {
 /**
  * CaseService - Case CRUD operations and lifecycle management
  * 
- * This service handles all case-related operations in the normalized v2.0 format.
+ * This service handles all case-related operations in the normalized v2.1 format.
  * It maintains the separation between cases, financials, and notes using foreign
  * key references instead of nested structures.
  * 
@@ -40,7 +50,8 @@ interface CaseServiceConfig {
  * 
  * ## Data Format
  * 
- * Cases are stored in a flat array without nested relations:
+ * Cases are stored in a flat array without nested relations and hydrated at the
+ * service boundary:
  * 
  * ```typescript
  * {
@@ -118,6 +129,66 @@ export class CaseService {
     this.people = new PersonService({
       fileStorage: config.fileStorage,
     });
+  }
+
+  hydrate(caseItem: PersistedCase, people: Person[]): StoredCase {
+    const peopleById = new Map(people.map((person) => [person.id, person] as const));
+    const primaryRef = caseItem.people.find((ref) => ref.isPrimary);
+
+    if (!primaryRef) {
+      throw new Error(`Case ${caseItem.id} has no primary person reference`);
+    }
+
+    const linkedPeople = caseItem.people.map((ref) => {
+      const person = peopleById.get(ref.personId);
+      if (!person) {
+        throw new Error(`Person ${ref.personId} not found for case ${caseItem.id}`);
+      }
+
+      return {
+        ref: { ...ref },
+        person,
+      };
+    });
+
+    const primaryPerson = peopleById.get(primaryRef.personId);
+    if (!primaryPerson) {
+      throw new Error(`Person ${primaryRef.personId} not found for case ${caseItem.id}`);
+    }
+
+    return {
+      ...caseItem,
+      people: caseItem.people.map((ref) => ({ ...ref })),
+      person: primaryPerson,
+      linkedPeople,
+    };
+  }
+
+  hydrateAll(caseItems: PersistedCase[], people: Person[]): StoredCase[] {
+    return caseItems.map((caseItem) => this.hydrate(caseItem, people));
+  }
+
+  dehydrate(caseItem: StoredCase & { alerts?: unknown }): PersistedCase {
+    const {
+      person: _person,
+      linkedPeople: _linkedPeople,
+      alerts: _alerts,
+      caseRecord,
+      ...rest
+    } = caseItem;
+    const casePeople = caseItem.people?.length
+      ? caseItem.people
+      : [{ personId: caseItem.person.id, role: PRIMARY_CASE_PERSON_ROLE, isPrimary: true }];
+    const caseRecordWithRuntimeFields:
+      StoredCase["caseRecord"] & Partial<Pick<CaseRecord, "financials" | "notes">> = caseRecord;
+    const { financials: _financials, notes: _notes, ...storedCaseRecord } =
+      caseRecordWithRuntimeFields;
+
+    return {
+      ...rest,
+      people: casePeople.map((ref) => ({ ...ref })),
+      caseRecord: storedCaseRecord,
+    };
   }
 
   // =============================================================================
