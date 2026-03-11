@@ -209,8 +209,8 @@ function parseEntryAmount(value: string): number | null {
     return 0;
   }
 
-  const amount = Number.parseFloat(normalizedValue);
-  return Number.isNaN(amount) ? null : amount;
+  const amount = Number(normalizedValue);
+  return Number.isFinite(amount) ? amount : null;
 }
 
 function openAddEntryForm(
