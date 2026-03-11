@@ -10,11 +10,15 @@ vi.mock("@/utils/localStorage", async () => {
   return localStorageAdapterModuleMock;
 });
 
-const storageMock = asTypedLocalStorageAdapterMock<string[]>();
+const storageMock = asTypedLocalStorageAdapterMock<string[]>("cmsnext-pinned-cases");
+const pinReasonStorageMock = asTypedLocalStorageAdapterMock<Record<string, string>>(
+  "cmsnext-pinned-case-reasons"
+);
 
 describe("usePinnedCases", () => {
   beforeEach(() => {
     storageMock.reset([]);
+    pinReasonStorageMock.reset({});
     vi.clearAllMocks();
   });
 
@@ -23,6 +27,7 @@ describe("usePinnedCases", () => {
       const { result } = renderHook(() => usePinnedCases());
       expect(result.current.pinnedCaseIds).toEqual([]);
       expect(result.current.pinnedCount).toBe(0);
+      expect(result.current.getPinReason("case-1")).toBeUndefined();
     });
 
     it("loads existing pins from localStorage", () => {
@@ -73,6 +78,7 @@ describe("usePinnedCases", () => {
       });
 
       expect(storageMock.mockWrite).toHaveBeenCalledWith(["case-1"]);
+      expect(pinReasonStorageMock.mockWrite).toHaveBeenCalledWith({});
     });
 
     it("respects maxPins limit", () => {
@@ -87,6 +93,48 @@ describe("usePinnedCases", () => {
 
       expect(result.current.pinnedCaseIds).toHaveLength(3);
       expect(result.current.pinnedCaseIds).not.toContain("case-4");
+    });
+
+    it("stores a trimmed reason separately from pinned IDs", () => {
+      const { result } = renderHook(() => usePinnedCases());
+
+      act(() => {
+        result.current.pin("case-1", "  Pending morning triage  ");
+      });
+
+      expect(result.current.pinnedCaseIds).toEqual(["case-1"]);
+      expect(result.current.getPinReason("case-1")).toBe("Pending morning triage");
+      expect(storageMock.mockWrite).toHaveBeenCalledWith(["case-1"]);
+      expect(pinReasonStorageMock.mockWrite).toHaveBeenCalledWith({
+        "case-1": "Pending morning triage",
+      });
+    });
+
+    it("clamps overlong reasons before persisting", () => {
+      const { result } = renderHook(() => usePinnedCases());
+      // 240 matches the shared product limit for persisted pin reasons.
+      const overlongReason = "x".repeat(300);
+
+      act(() => {
+        result.current.pin("case-1", overlongReason);
+      });
+
+      // Persisted values should honor the same 240-character clamp used by the UI.
+      expect(result.current.getPinReason("case-1")).toHaveLength(240);
+      expect(pinReasonStorageMock.mockWrite).toHaveBeenCalledWith({
+        "case-1": "x".repeat(240),
+      });
+    });
+
+    it("does not store an empty reason", () => {
+      const { result } = renderHook(() => usePinnedCases());
+
+      act(() => {
+        result.current.pin("case-1", "   ");
+      });
+
+      expect(result.current.getPinReason("case-1")).toBeUndefined();
+      expect(pinReasonStorageMock.mockWrite).toHaveBeenCalledWith({});
     });
   });
 
@@ -113,6 +161,7 @@ describe("usePinnedCases", () => {
       });
 
       expect(storageMock.mockWrite).toHaveBeenCalledWith([]);
+      expect(pinReasonStorageMock.mockWrite).toHaveBeenCalledWith({});
     });
 
     it("handles unpinning non-existent case gracefully", () => {
@@ -123,6 +172,23 @@ describe("usePinnedCases", () => {
       });
 
       expect(result.current.pinnedCaseIds).toEqual([]);
+    });
+
+    it("removes the associated reason when a case is unpinned", () => {
+      storageMock.mockRead.mockReturnValue(["case-1"]);
+      pinReasonStorageMock.mockRead.mockReturnValue({
+        "case-1": "Pending morning triage",
+      });
+
+      const { result } = renderHook(() => usePinnedCases());
+
+      act(() => {
+        result.current.unpin("case-1");
+      });
+
+      expect(result.current.pinnedCaseIds).toEqual([]);
+      expect(result.current.getPinReason("case-1")).toBeUndefined();
+      expect(pinReasonStorageMock.mockWrite).toHaveBeenCalledWith({});
     });
   });
 
@@ -157,12 +223,14 @@ describe("usePinnedCases", () => {
       });
 
       expect(storageMock.mockWrite).toHaveBeenCalledWith(["case-1"]);
+      expect(pinReasonStorageMock.mockWrite).toHaveBeenCalledWith({});
 
       act(() => {
         result.current.togglePin("case-1");
       });
 
       expect(storageMock.mockWrite).toHaveBeenCalledWith([]);
+      expect(pinReasonStorageMock.mockWrite).toHaveBeenCalledWith({});
     });
 
     it("respects maxPins when toggling on", () => {
@@ -175,6 +243,35 @@ describe("usePinnedCases", () => {
       });
 
       expect(result.current.pinnedCaseIds).toEqual(["case-1", "case-2"]);
+    });
+
+    it("stores the reason when toggling a case on", () => {
+      const { result } = renderHook(() => usePinnedCases());
+
+      act(() => {
+        result.current.togglePin("case-1", "Ready for tomorrow");
+      });
+
+      expect(result.current.getPinReason("case-1")).toBe("Ready for tomorrow");
+      expect(pinReasonStorageMock.mockWrite).toHaveBeenCalledWith({
+        "case-1": "Ready for tomorrow",
+      });
+    });
+
+    it("removes the reason when toggling a case off", () => {
+      storageMock.mockRead.mockReturnValue(["case-1"]);
+      pinReasonStorageMock.mockRead.mockReturnValue({
+        "case-1": "Ready for tomorrow",
+      });
+
+      const { result } = renderHook(() => usePinnedCases());
+
+      act(() => {
+        result.current.togglePin("case-1");
+      });
+
+      expect(result.current.getPinReason("case-1")).toBeUndefined();
+      expect(pinReasonStorageMock.mockWrite).toHaveBeenCalledWith({});
     });
   });
 
@@ -203,6 +300,25 @@ describe("usePinnedCases", () => {
       });
 
       expect(result.current.isPinned("case-1")).toBe(true);
+    });
+  });
+
+  describe("getPinReason", () => {
+    it("returns the stored reason for a pinned case", () => {
+      storageMock.mockRead.mockReturnValue(["case-1"]);
+      pinReasonStorageMock.mockRead.mockReturnValue({
+        "case-1": "Needs supervisor review",
+      });
+
+      const { result } = renderHook(() => usePinnedCases());
+
+      expect(result.current.getPinReason("case-1")).toBe("Needs supervisor review");
+    });
+
+    it("returns undefined when no reason exists", () => {
+      const { result } = renderHook(() => usePinnedCases());
+
+      expect(result.current.getPinReason("case-1")).toBeUndefined();
     });
   });
 
@@ -340,6 +456,7 @@ describe("usePinnedCases", () => {
       expect(result.current.pinnedCaseIds).toEqual(["case-1", "case-3"]);
       expect(result.current.pinnedCount).toBe(2);
       expect(storageMock.mockWrite).toHaveBeenCalledWith(["case-1", "case-3"]);
+      expect(pinReasonStorageMock.mockWrite).toHaveBeenCalledWith({});
     });
 
     it("does not write to storage when nothing is stale", () => {
@@ -367,6 +484,7 @@ describe("usePinnedCases", () => {
       expect(result.current.pinnedCaseIds).toEqual([]);
       expect(result.current.pinnedCount).toBe(0);
       expect(storageMock.mockWrite).toHaveBeenCalledWith([]);
+      expect(pinReasonStorageMock.mockWrite).toHaveBeenCalledWith({});
     });
 
     it("is a no-op when pinned list is already empty", () => {
@@ -380,6 +498,27 @@ describe("usePinnedCases", () => {
 
       expect(result.current.pinnedCaseIds).toEqual([]);
       expect(storageMock.mockWrite).not.toHaveBeenCalled();
+    });
+
+    it("removes stale pin reasons alongside stale pinned IDs", () => {
+      storageMock.mockRead.mockReturnValue(["case-1", "case-2"]);
+      pinReasonStorageMock.mockRead.mockReturnValue({
+        "case-1": "Keep",
+        "case-2": "Remove",
+      });
+
+      const { result } = renderHook(() => usePinnedCases());
+
+      act(() => {
+        result.current.pruneStale(["case-1"]);
+      });
+
+      expect(result.current.pinnedCaseIds).toEqual(["case-1"]);
+      expect(result.current.getPinReason("case-1")).toBe("Keep");
+      expect(result.current.getPinReason("case-2")).toBeUndefined();
+      expect(pinReasonStorageMock.mockWrite).toHaveBeenCalledWith({
+        "case-1": "Keep",
+      });
     });
   });
 });

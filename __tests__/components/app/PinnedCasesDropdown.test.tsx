@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { render } from "@/src/test/reactTestUtils";
+import { fireEvent, render } from "@/src/test/reactTestUtils";
 import { PinnedCasesDropdown } from "@/components/app/PinnedCasesDropdown";
 import { usePinnedCases } from "@/hooks/usePinnedCases";
 import { createMockStoredCase } from "@/src/test/testUtils";
@@ -24,6 +24,7 @@ describe("PinnedCasesDropdown", () => {
       unpin: vi.fn(),
       togglePin: vi.fn(),
       isPinned: vi.fn(),
+      getPinReason: vi.fn(),
       canPinMore: true,
       pinnedCount: 1,
       reorder: vi.fn(),
@@ -60,6 +61,7 @@ describe("PinnedCasesDropdown", () => {
       unpin: vi.fn(),
       togglePin: vi.fn(),
       isPinned: vi.fn(),
+      getPinReason: vi.fn(),
       canPinMore: true,
       pinnedCount: 2,
       reorder: vi.fn(),
@@ -75,5 +77,34 @@ describe("PinnedCasesDropdown", () => {
     );
 
     expect(pruneStale).toHaveBeenCalledWith(["case-1"]);
+  });
+
+  it("shows the stored pin reason with the pinned case", async () => {
+    usePinnedCasesMock.mockReturnValue({
+      pinnedCaseIds: ["case-1"],
+      pin: vi.fn(),
+      unpin: vi.fn(),
+      togglePin: vi.fn(),
+      isPinned: vi.fn(),
+      getPinReason: vi.fn((caseId: string) =>
+        caseId === "case-1" ? "Pending morning triage" : undefined
+      ),
+      canPinMore: true,
+      pinnedCount: 1,
+      reorder: vi.fn(),
+      pruneStale: vi.fn(),
+    });
+
+    const { getByRole, findByText } = render(
+      <PinnedCasesDropdown
+        cases={[createMockStoredCase({ id: "case-1", name: "Case One" })]}
+        hasLoadedData={true}
+        onViewCase={vi.fn()}
+      />,
+    );
+
+    fireEvent.pointerDown(getByRole("button", { name: "Pinned cases (1)" }));
+
+    expect(await findByText("Pending morning triage")).toBeInTheDocument();
   });
 });
