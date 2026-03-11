@@ -42,8 +42,12 @@ export const createMockPerson = (overrides: Partial<Person> = {}): Person => ({
   livingArrangement: 'Home',
   authorizedRepIds: [],
   familyMembers: [],
+  familyMemberIds: [],
+  legacyFamilyMemberNames: [],
+  normalizedRelationships: [],
   status: 'Active',
   createdAt: new Date().toISOString(),
+  updatedAt: new Date().toISOString(),
   dateAdded: new Date().toISOString(),
   ...overrides
 })
@@ -132,6 +136,7 @@ export const createMockStoredCase = (overrides: Partial<StoredCase> = {}): Store
     priority: false,
     createdAt: timestamp,
     updatedAt: timestamp,
+    people: [{ personId: person.id, role: 'applicant', isPrimary: true }],
     person,
     caseRecord: {
       id: 'case-record-test-1',
