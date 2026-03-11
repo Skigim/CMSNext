@@ -1089,7 +1089,11 @@ export function FinancialItemStepperModal({
                     type="button"
                     size="sm"
                     onClick={handleSaveEntry}
-                    disabled={!entryFormData.startDate}
+                    disabled={
+                      !entryFormData.startDate ||
+                      (typeof (entryFormData as any).amount === "string" &&
+                        parseEntryAmount((entryFormData as any).amount) === null)
+                    }
                   >
                     <Check className="h-4 w-4 mr-1" />
                     {isAddingEntry ? "Add" : "Save"}
