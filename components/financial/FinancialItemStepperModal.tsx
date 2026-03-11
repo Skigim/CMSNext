@@ -203,11 +203,13 @@ function getDefaultEntryFormData(applicationDate?: string): EntryFormData {
  * @returns The parsed amount as a number, 0 for empty input, or null for invalid input.
  */
 function parseEntryAmount(value: string): number | null {
-  if (!value.trim()) {
+  const normalizedValue = value.trim();
+
+  if (!normalizedValue) {
     return 0;
   }
 
-  const amount = Number.parseFloat(value);
+  const amount = Number.parseFloat(normalizedValue);
   return Number.isNaN(amount) ? null : amount;
 }
 
