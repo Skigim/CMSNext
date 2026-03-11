@@ -6,7 +6,6 @@ import {
   useRef,
   type Dispatch,
   type SetStateAction,
-  type KeyboardEvent as ReactKeyboardEvent,
 } from "react";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
@@ -21,6 +20,7 @@ import {
 } from "../ui/select";
 import { Textarea } from "../ui/textarea";
 import { useAddAnother } from "@/hooks/useAddAnother";
+import { useSubmitShortcut } from "@/hooks/useSubmitShortcut";
 import {
   Dialog,
   DialogContent,
@@ -793,45 +793,51 @@ export function FinancialItemStepperModal({
     }
   }, [item, onDelete, onClose]);
 
-  const canSave = itemFormData.description.trim() && localHistoryEntries.length > 0;
+  const canSave = Boolean(itemFormData.description.trim()) && localHistoryEntries.length > 0;
+  const canSubmitCurrentStep = useMemo(
+    () =>
+      currentStep === "details" ||
+      (isEntryEditing
+        ? Boolean(entryFormData.amount && entryFormData.startDate)
+        : canSave && !isSubmitting),
+    [
+      canSave,
+      currentStep,
+      entryFormData.amount,
+      entryFormData.startDate,
+      isEntryEditing,
+      isSubmitting,
+    ],
+  );
 
-  const handleSubmitShortcut = useCallback(
-    (event: ReactKeyboardEvent<HTMLDivElement>) => {
-      if (event.key !== "Enter" || (!event.ctrlKey && !event.metaKey)) {
-        return;
-      }
-
+  const handleSubmitShortcut = useSubmitShortcut<HTMLDivElement>({
+    canSubmit: canSubmitCurrentStep,
+    onSubmit: () => {
       if (currentStep === "details") {
-        event.preventDefault();
         handleNext();
         return;
       }
 
       if (isEntryEditing) {
-        if (!entryFormData.startDate) {
-          return;
-        }
-        event.preventDefault();
-        handleSaveEntry();
-        return;
-      }
+const handleSubmitShortcut = useSubmitShortcut<HTMLDivElement>({
+    canSubmit: canSubmitCurrentStep,
+    onSubmit: () => {
+      if (currentStep === "details") {
+        handleNext();
+        return;
+      }
 
-      if (canSave && !isSubmitting) {
-        event.preventDefault();
-        void handleSave();
-      }
-    },
-    [
-      currentStep,
-      handleNext,
-      isEntryEditing,
-      entryFormData.startDate,
-      handleSaveEntry,
-      canSave,
-      isSubmitting,
-      handleSave,
-    ]
-  );
+      if (isEntryEditing) {
+        if (!entryFormData.startDate) {
+          return;
+        }
+        handleSaveEntry();
+        return;
+      }
+
+      void handleSave();
+    },
+  });
 
   // ============================================================================
   // Render

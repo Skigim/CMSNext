@@ -15,6 +15,7 @@ import { AlertCircle, Loader2, Lock, KeyRound, FolderOpen } from "lucide-react";
 import { useEncryption } from "@/contexts/EncryptionContext";
 import { useFileStorage } from "@/contexts/FileStorageContext";
 import { createLogger } from "@/utils/logger";
+import { useSubmitShortcut } from "@/hooks/useSubmitShortcut";
 import { AuthBackdrop } from "./AuthBackdrop";
 import { EncryptionError } from "@/types/encryption";
 
@@ -190,6 +191,11 @@ export function LoginModal({
     }
   }, [password, connectToExisting, encryption, loadExistingData, onLoginComplete]);
 
+  const handleSubmitShortcut = useSubmitShortcut<HTMLFormElement>({
+    onSubmit: handleLogin,
+    canSubmit: !isLoading && Boolean(password.trim()),
+  });
+
   // Loading state while checking file
   if (isCheckingFile) {
     return (
@@ -265,9 +271,10 @@ export function LoginModal({
           onSubmit={(e) => {
             e.preventDefault();
             if (!isLoading && password.trim()) {
-              handleLogin();
+              void handleLogin();
             }
           }}
+          onKeyDown={handleSubmitShortcut}
           className="space-y-4 py-2"
         >
           <div className="space-y-2">
@@ -335,4 +342,3 @@ export function LoginModal({
     </>
   );
 }
-

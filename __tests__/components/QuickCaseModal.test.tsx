@@ -81,6 +81,21 @@ describe("QuickCaseModal", () => {
     });
   });
 
+  it("submits the form with Ctrl+Enter", async () => {
+    const user = userEvent.setup();
+    renderModal();
+
+    await user.type(screen.getByLabelText(/First Name/), "John");
+    await user.type(screen.getByLabelText(/Last Name/), "Doe");
+    await user.type(screen.getByLabelText(/MCN/), "MCN123");
+    await user.keyboard("{Control>}{Enter}{/Control}");
+
+    await waitFor(() => {
+      expect(mockOnSave).toHaveBeenCalledTimes(1);
+      expect(mockOnSave).toHaveBeenCalledWith(expect.any(Object), { skipNavigation: false });
+    });
+  });
+
   it("resets form and keeps modal open when add another is checked", async () => {
     const user = userEvent.setup();
     renderModal();

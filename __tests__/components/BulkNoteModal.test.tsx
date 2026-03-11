@@ -101,6 +101,24 @@ describe('BulkNoteModal', () => {
     });
   });
 
+  it('should submit with Ctrl+Enter when the form is valid', async () => {
+    const user = userEvent.setup();
+    const onSubmit = vi.fn().mockResolvedValue(undefined);
+
+    renderWithContext(<BulkNoteModal {...defaultProps} onSubmit={onSubmit} />);
+
+    const textarea = screen.getByPlaceholderText(/enter note content/i);
+    await user.type(textarea, 'Shortcut note');
+    await user.keyboard('{Control>}{Enter}{/Control}');
+
+    await waitFor(() => {
+      expect(onSubmit).toHaveBeenCalledWith({
+        content: 'Shortcut note',
+        category: 'General',
+      });
+    });
+  });
+
   it('should disable submit button when content is empty', () => {
     renderWithContext(<BulkNoteModal {...defaultProps} />);
     

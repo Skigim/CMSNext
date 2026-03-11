@@ -22,6 +22,7 @@ import {
 import { useEncryption } from "@/contexts/EncryptionContext";
 import { useFileStorage } from "@/contexts/FileStorageContext";
 import { createLogger } from "@/utils/logger";
+import { useSubmitShortcut } from "@/hooks/useSubmitShortcut";
 import { AuthBackdrop } from "./AuthBackdrop";
 
 const logger = createLogger("WelcomeModal");
@@ -151,6 +152,16 @@ export function WelcomeModal({
     encryption.clearCredentials();
   }, [encryption]);
 
+  const handleChooseFolderShortcut = useSubmitShortcut<HTMLDivElement>({
+    onSubmit: handleChooseFolder,
+    canSubmit: !isConnecting,
+  });
+
+  const handleCreatePasswordShortcut = useSubmitShortcut<HTMLFormElement>({
+    onSubmit: handleCreatePassword,
+    canSubmit: !isProcessingPassword && Boolean(password.trim() && confirmPassword.trim()),
+  });
+
   // Browser not supported
   if (!isSupported) {
     return (
@@ -207,9 +218,10 @@ export function WelcomeModal({
               onSubmit={(e) => {
                 e.preventDefault();
                 if (!isProcessingPassword && password.trim() && confirmPassword.trim()) {
-                  handleCreatePassword();
+                  void handleCreatePassword();
                 }
               }}
+              onKeyDown={handleCreatePasswordShortcut}
               className="space-y-4 py-2"
             >
               <div className="space-y-2">
@@ -297,7 +309,11 @@ export function WelcomeModal({
     <>
       <AuthBackdrop isOpen={isOpen} />
       <Dialog open={isOpen}>
-        <DialogContent hideCloseButton className="sm:max-w-md">
+        <DialogContent
+          hideCloseButton
+          className="sm:max-w-md"
+          onKeyDown={handleChooseFolderShortcut}
+        >
           <DialogHeader className="text-center sm:text-center">
             <div className="mx-auto w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center mb-2">
               <Sparkles className="w-6 h-6 text-primary" />
@@ -366,4 +382,3 @@ export function WelcomeModal({
     </>
   );
 }
-

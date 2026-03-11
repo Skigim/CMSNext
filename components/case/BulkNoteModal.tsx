@@ -19,6 +19,7 @@ import {
 } from "../ui/select";
 import { Loader2, StickyNote } from "lucide-react";
 import { useCategoryConfig } from "@/contexts/CategoryConfigContext";
+import { useSubmitShortcut } from "@/hooks/useSubmitShortcut";
 import type { NewNoteData } from "@/types/case";
 
 interface BulkNoteModalProps {
@@ -105,12 +106,10 @@ export function BulkNoteModal({
     });
   }, [isFormValid, onSubmit, content, category]);
 
-  const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
-    if (e.key === "Enter" && (e.metaKey || e.ctrlKey) && isFormValid && !isSubmitting) {
-      e.preventDefault();
-      handleSubmit();
-    }
-  }, [handleSubmit, isFormValid, isSubmitting]);
+  const handleSubmitShortcut = useSubmitShortcut<HTMLTextAreaElement>({
+    onSubmit: handleSubmit,
+    canSubmit: isFormValid && !isSubmitting,
+  });
 
   const handleClose = useCallback(() => {
     if (!isSubmitting) {
@@ -155,7 +154,7 @@ export function BulkNoteModal({
               placeholder="Enter note content..."
               value={content}
               onChange={(e) => setContent(e.target.value)}
-              onKeyDown={handleKeyDown}
+              onKeyDown={handleSubmitShortcut}
               disabled={isSubmitting}
               rows={4}
               className="resize-none"

@@ -16,6 +16,7 @@ import {
 } from "../case/CaseEditSections";
 import { useCategoryConfig } from "@/contexts/CategoryConfigContext";
 import { createCaseRecordData, createPersonData } from "@/domain/cases";
+import { useSubmitShortcut } from "@/hooks/useSubmitShortcut";
 import { ScrollArea } from "../ui/scroll-area";
 import {
   AlertDialog,
@@ -180,13 +181,12 @@ export function CaseEditModal({ isOpen, onClose, caseData, onSave }: Readonly<Ca
     [addRelationship, updateRelationship, removeRelationship],
   );
 
-  const isFormValid = useCallback((): boolean => {
-    if (!personData.firstName?.trim() || !personData.lastName?.trim()) {
-      toast.error("First name and last name are required");
-      return false;
-    }
-    return true;
-  }, [personData.firstName, personData.lastName]);
+  const hasRequiredNames = useMemo(
+    () => Boolean(personData.firstName?.trim() && personData.lastName?.trim()),
+    [personData.firstName, personData.lastName],
+  );
+
+  const canSave = hasRequiredNames && !isSaving;
 
   const handleClose = useCallback(() => {
     if (hasChanges) {
@@ -203,7 +203,10 @@ export function CaseEditModal({ isOpen, onClose, caseData, onSave }: Readonly<Ca
   }, [onClose]);
 
   const handleSave = useCallback(async () => {
-    if (!isFormValid()) return;
+    if (!hasRequiredNames) {
+      toast.error("First name and last name are required");
+      return;
+    }
 
     setIsSaving(true);
 
@@ -231,12 +234,17 @@ export function CaseEditModal({ isOpen, onClose, caseData, onSave }: Readonly<Ca
     } finally {
       setIsSaving(false);
     }
-  }, [isFormValid, onSave, personData, relationships, caseRecordData, retroRequested, onClose]);
+  }, [hasRequiredNames, onSave, personData, relationships, caseRecordData, retroRequested, onClose]);
+
+  const handleSubmitShortcut = useSubmitShortcut<HTMLDivElement>({
+    onSubmit: handleSave,
+    canSubmit: canSave,
+  });
 
   return (
     <>
       <Dialog open={isOpen} onOpenChange={handleClose}>
-        <DialogContent className="max-w-7xl max-h-[90vh] p-0">
+        <DialogContent className="max-w-7xl max-h-[90vh] p-0" onKeyDown={handleSubmitShortcut}>
           <DialogHeader className="px-6 pt-6 pb-4 border-b">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
@@ -322,7 +330,7 @@ export function CaseEditModal({ isOpen, onClose, caseData, onSave }: Readonly<Ca
             </Button>
             <Button
               onClick={handleSave}
-              disabled={isSaving || !isFormValid()}
+              disabled={!canSave}
             >
               <Save className="h-4 w-4 mr-2" />
               {isSaving ? "Saving..." : "Save Changes"}
