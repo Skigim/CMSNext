@@ -530,12 +530,13 @@ export class FileStorageService {
       };
 
       const persistedData = dehydrateNormalizedData(finalData);
-      const canonicalRuntimeData = hydrateNormalizedData(persistedData);
       const success = await this.fileService.writeFile(persistedData);
 
       if (!success) {
         throw new Error("File write operation failed");
       }
+
+      const canonicalRuntimeData = hydrateNormalizedData(persistedData);
 
       // Notify listeners that data has changed
       this.fileService.broadcastDataUpdate(canonicalRuntimeData);

@@ -263,6 +263,7 @@ describe("storageV21Migration", () => {
     };
 
     const roundTripped = hydrateNormalizedData(dehydrateNormalizedData(runtimeData));
+    const roundTrippedPrimaryPerson = roundTripped.people.find((person) => person.id === "person-1");
 
     expect(roundTripped.version).toBe("2.1");
     expect(roundTripped.people).toHaveLength(2);
@@ -283,7 +284,7 @@ describe("storageV21Migration", () => {
         ref: { personId: "person-2", role: "contact", isPrimary: false },
       },
     ]);
-    expect(roundTripped.people[0].normalizedRelationships).toEqual([
+    expect(roundTrippedPrimaryPerson?.normalizedRelationships).toEqual([
       expect.objectContaining({
         type: "spouse",
         targetPersonId: "person-2",
