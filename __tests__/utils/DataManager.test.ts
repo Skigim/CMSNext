@@ -4,6 +4,7 @@ import type AutosaveFileService from "@/utils/AutosaveFileService";
 import { FileStorageService, type NormalizedFileData } from "@/utils/services/FileStorageService";
 import type { AlertRecord, StoredCase } from "@/types/case";
 import { mergeCategoryConfig } from "@/types/categoryConfig";
+import { createMockCaseDisplay, createMockPerson, createMockStoredCase } from "@/src/test/testUtils";
 
 // ============================================================================
 // Mocks
@@ -72,6 +73,53 @@ function createMockAlertRecord(id: string, overrides: Partial<AlertRecord> = {})
     status: "new",
     ...overrides,
   };
+}
+
+function createHydratedStoredCase(id: string, personId: string, name: string): {
+  person: ReturnType<typeof createMockPerson>;
+  caseItem: StoredCase;
+} {
+  const person = createMockPerson({ id: personId, name });
+
+  return {
+    person,
+    caseItem: createMockStoredCase({
+      id,
+      name,
+      person,
+      people: [{ personId, role: "applicant", isPrimary: true }],
+      linkedPeople: undefined,
+    }),
+  };
+}
+
+function createLinkedRuntimeWriteData(): NormalizedFileData {
+  const primaryPerson = createMockPerson({ id: "person-1" });
+  const linkedPerson = createMockPerson({ id: "person-2" });
+  const runtimeCase = createMockCaseDisplay({
+    id: "case-1",
+    people: [
+      { personId: "person-1", role: "applicant", isPrimary: true },
+      { personId: "person-2", role: "household_member", isPrimary: false },
+    ],
+    person: primaryPerson,
+    linkedPeople: [
+      {
+        ref: { personId: "person-1", role: "applicant", isPrimary: true },
+        person: primaryPerson,
+      },
+      {
+        ref: { personId: "person-2", role: "household_member", isPrimary: false },
+        person: linkedPerson,
+      },
+    ],
+    alerts: [createMockAlertRecord("alert-1")],
+  });
+
+  return createMockNormalizedData({
+    people: [primaryPerson, linkedPerson],
+    cases: [runtimeCase],
+  });
 }
 
 // ============================================================================
@@ -271,14 +319,75 @@ describe("DataManager", () => {
     });
 
     it("returns cases from file data", async () => {
-      const mockCases = [
-        { id: "c1", name: "Case 1", status: "Active" },
-      ] as StoredCase[];
-      const mockData = createMockNormalizedData({ cases: mockCases });
+      const { person: primaryPerson, caseItem } = createHydratedStoredCase("c1", "person-1", "Case 1");
+      const mockData = createMockNormalizedData({
+        people: [primaryPerson],
+        cases: [caseItem],
+      });
       (mockFileStorageService.readFileData as ReturnType<typeof vi.fn>).mockResolvedValue(mockData);
 
       const cases = await dataManager.getAllCases();
-      expect(cases).toEqual(mockCases);
+      expect(cases).toHaveLength(1);
+      expect(cases[0]).toMatchObject({
+        id: "c1",
+        person: expect.objectContaining({ id: "person-1" }),
+      });
+      expect(cases[0].linkedPeople).toEqual([
+        {
+          ref: { personId: "person-1", role: "applicant", isPrimary: true },
+          person: expect.objectContaining({ id: "person-1" }),
+        },
+      ]);
+    });
+  });
+
+  describe("getCaseById", () => {
+    it("hydrates the returned case", async () => {
+      const { person: primaryPerson, caseItem } = createHydratedStoredCase(
+        "case-1",
+        "person-1",
+        "Hydrated Case",
+      );
+      (mockFileStorageService.readFileData as ReturnType<typeof vi.fn>).mockResolvedValue(
+        createMockNormalizedData({
+          people: [primaryPerson],
+          cases: [caseItem],
+        }),
+      );
+
+      const result = await dataManager.getCaseById("case-1");
+
+      expect(result).not.toBeNull();
+      expect(result?.person).toMatchObject({ id: "person-1", name: "Hydrated Case" });
+      expect(result?.linkedPeople).toEqual([
+        {
+          ref: { personId: "person-1", role: "applicant", isPrimary: true },
+          person: expect.objectContaining({ id: "person-1" }),
+        },
+      ]);
+    });
+  });
+
+  describe("writeNormalizedData", () => {
+    it("dehydrates case runtime fields before calling the canonical file storage writer", async () => {
+      const runtimeData = createLinkedRuntimeWriteData();
+      (mockFileStorageService.writeNormalizedData as ReturnType<typeof vi.fn>).mockResolvedValue(runtimeData);
+
+      await dataManager.writeNormalizedData(runtimeData);
+
+      expect(mockFileStorageService.writeNormalizedData).toHaveBeenCalledTimes(1);
+      const writtenData = (mockFileStorageService.writeNormalizedData as ReturnType<typeof vi.fn>).mock
+        .calls[0][0];
+      expect(writtenData.cases).toHaveLength(1);
+      expect(writtenData.cases[0]).not.toHaveProperty("person");
+      expect(writtenData.cases[0]).not.toHaveProperty("linkedPeople");
+      expect(writtenData.cases[0]).not.toHaveProperty("alerts");
+      expect(writtenData.cases[0].caseRecord).not.toHaveProperty("financials");
+      expect(writtenData.cases[0].caseRecord).not.toHaveProperty("notes");
+      expect(writtenData.cases[0].people).toEqual([
+        { personId: "person-1", role: "applicant", isPrimary: true },
+        { personId: "person-2", role: "household_member", isPrimary: false },
+      ]);
     });
   });
 

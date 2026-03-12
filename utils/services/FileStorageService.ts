@@ -1,6 +1,7 @@
 import type {
   AlertRecord,
   Person,
+  PersistedCase,
   StoredCase,
   StoredFinancialItem,
   StoredNote,
@@ -17,6 +18,7 @@ import { reportFileStorageError, type FileStorageOperation } from "../fileStorag
 import {
   dehydrateNormalizedData,
   hydrateNormalizedData,
+  hydrateStoredCase,
   migrateV20ToV21,
   type NormalizedFileDataV20,
   type PersistedNormalizedFileDataV21,
@@ -100,6 +102,40 @@ export interface NormalizedFileData {
   activityLog: CaseActivityEntry[];
   /** Unified templates (VR, Summary, Narrative) */
   templates?: Template[];
+}
+
+export interface CaseDehydratedNormalizedFileData extends Omit<NormalizedFileData, "cases"> {
+  cases: PersistedCase[];
+}
+
+function isRuntimeNormalizedWriteData(
+  data: NormalizedFileData | PersistedNormalizedFileDataV21 | CaseDehydratedNormalizedFileData,
+): data is NormalizedFileData {
+  const firstCase = data.cases[0];
+  if (firstCase) {
+    return "person" in firstCase;
+  }
+
+  const firstPerson = data.people[0];
+  if (firstPerson) {
+    return "familyMembers" in firstPerson;
+  }
+
+  // Empty datasets are shape-compatible across runtime and persisted forms, so
+  // treat them as runtime input and let the canonical writer normalize them.
+  return true;
+}
+
+function isCaseDehydratedNormalizedWriteData(
+  data: NormalizedFileData | PersistedNormalizedFileDataV21 | CaseDehydratedNormalizedFileData,
+): data is CaseDehydratedNormalizedFileData {
+  const firstCase = data.cases[0];
+  if (!firstCase || "person" in firstCase) {
+    return false;
+  }
+
+  const firstPerson = data.people[0];
+  return firstPerson ? "familyMembers" in firstPerson : false;
 }
 
 /**
@@ -466,8 +502,18 @@ export class FileStorageService {
    * - Deep cloned to prevent reference issues
    * - Sorted by timestamp (newest first)
    * 
- * @param {NormalizedFileData} data - The runtime-ready v2.1 data to write
- * @returns {Promise<NormalizedFileData>} The written data after enrichment
+   * The `data` argument can be provided in three closely related shapes:
+   * - `NormalizedFileData`: runtime-ready normalized data used throughout the app.
+   * - `PersistedNormalizedFileDataV21`: hydrated persisted v2.1 storage shape.
+   * - `CaseDehydratedNormalizedFileData`: normalized data where cases have been
+   *   "dehydrated" to their persisted form (typically produced by
+   *   `dehydrateNormalizedData` for efficient writes/broadcasts and usually not
+   *   hand-authored by callers).
+   *
+   * @param {NormalizedFileData | PersistedNormalizedFileDataV21 | CaseDehydratedNormalizedFileData} data - Normalized
+   *   runtime data, persisted-style v2.1 data, or case-dehydrated normalized data
+   *   to write through the canonical storage path
+   * @returns {Promise<NormalizedFileData>} The written data after enrichment
    * @throws {Error} If write operation fails
    * 
    * @example
@@ -484,7 +530,9 @@ export class FileStorageService {
    *   // UI already rolled back to previous state
    * }
    */
-  async writeNormalizedData(data: NormalizedFileData): Promise<NormalizedFileData> {
+  async writeNormalizedData(
+    data: NormalizedFileData | PersistedNormalizedFileDataV21 | CaseDehydratedNormalizedFileData,
+  ): Promise<NormalizedFileData> {
     // Capture previous state for potential rollback
     let previousData: NormalizedFileData | null = null;
     try {
@@ -501,10 +549,22 @@ export class FileStorageService {
     }
 
     try {
+      const runtimeData = isRuntimeNormalizedWriteData(data)
+        ? data
+        : isCaseDehydratedNormalizedWriteData(data)
+          ? {
+              ...data,
+              cases: data.cases.map((caseItem) => hydrateStoredCase(caseItem, data.people)),
+            }
+          : hydrateNormalizedData(data);
+
       // Merge category config and discover any statuses/alert types from data
-      const mergedConfig = mergeCategoryConfig(data.categoryConfig);
-      const enrichedStatuses = discoverStatusesFromCases(mergedConfig.caseStatuses, data.cases);
-      const enrichedAlertTypes = discoverAlertTypesFromAlerts(mergedConfig.alertTypes ?? [], data.alerts);
+      const mergedConfig = mergeCategoryConfig(runtimeData.categoryConfig);
+      const enrichedStatuses = discoverStatusesFromCases(mergedConfig.caseStatuses, runtimeData.cases);
+      const enrichedAlertTypes = discoverAlertTypesFromAlerts(
+        mergedConfig.alertTypes ?? [],
+        runtimeData.alerts,
+      );
       const categoryConfig: CategoryConfig = {
         ...mergedConfig,
         caseStatuses: enrichedStatuses,
@@ -514,19 +574,19 @@ export class FileStorageService {
       // Validate and clean data before writing
       const finalData: NormalizedFileData = {
         version: NORMALIZED_VERSION as "2.1",
-        people: data.people.map((person) => ({ ...person })),
-        cases: data.cases.map(c => ({ ...c })),
-        financials: data.financials.map(f => ({ ...f })),
-        notes: data.notes.map(n => ({ ...n })),
-        alerts: data.alerts.map(a => ({ ...a })),
+        people: runtimeData.people.map((person) => ({ ...person })),
+        cases: runtimeData.cases.map((caseItem) => ({ ...caseItem })),
+        financials: runtimeData.financials.map((financial) => ({ ...financial })),
+        notes: runtimeData.notes.map((note) => ({ ...note })),
+        alerts: runtimeData.alerts.map((alert) => ({ ...alert })),
         exported_at: new Date().toISOString(),
-        total_cases: data.cases.length,
+        total_cases: runtimeData.cases.length,
         categoryConfig,
-        activityLog: [...(data.activityLog ?? [])]
+        activityLog: [...(runtimeData.activityLog ?? [])]
           .map(deepCopyActivityEntry)
           .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()),
         // Preserve templates array (unified template system)
-        templates: data.templates ? [...data.templates] : undefined,
+        templates: runtimeData.templates ? [...runtimeData.templates] : undefined,
       };
 
       const persistedData = dehydrateNormalizedData(finalData);

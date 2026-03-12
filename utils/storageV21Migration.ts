@@ -62,11 +62,23 @@ function normalizeName(value: string): string {
   return value.trim().replace(/\s+/g, " ").toLowerCase();
 }
 
-function buildCasePeopleRefs(caseItem: Pick<StoredCase, "people" | "person" | "caseRecord">): CasePersonRef[] {
+function buildCasePeopleRefs(
+  caseItem: Pick<StoredCase, "people" | "linkedPeople" | "person" | "caseRecord">,
+): CasePersonRef[] {
   const existingPeople = caseItem.people?.filter((ref) => Boolean(ref.personId)) ?? [];
   if (existingPeople.length > 0) {
     const hasPrimary = existingPeople.some((ref) => ref.isPrimary);
     return existingPeople.map((ref, index) => ({
+      ...ref,
+      role: ref.role ?? "applicant",
+      isPrimary: hasPrimary ? ref.isPrimary : index === 0,
+    }));
+  }
+
+  const linkedPeopleRefs = caseItem.linkedPeople?.map(({ ref }) => ref) ?? [];
+  if (linkedPeopleRefs.length > 0) {
+    const hasPrimary = linkedPeopleRefs.some((ref) => ref.isPrimary);
+    return linkedPeopleRefs.map((ref, index) => ({
       ...ref,
       role: ref.role ?? "applicant",
       isPrimary: hasPrimary ? ref.isPrimary : index === 0,

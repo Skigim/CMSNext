@@ -36,6 +36,7 @@ import {
 } from "./alertsData";
 import { 
   FileStorageService, 
+  type CaseDehydratedNormalizedFileData,
   type NormalizedFileData, 
   type StoredCase, 
   type StoredFinancialItem, 
@@ -245,7 +246,7 @@ export class DataManager {
   // =============================================================================
 
   /**
-   * Read current data from file system in normalized v2.0 format.
+   * Read current data from file system in normalized v2.1 runtime format.
    * 
    * This is a private helper method that delegates to FileStorageService.
    * Always reads fresh data from disk - no caching.
@@ -258,6 +259,83 @@ export class DataManager {
     return this.fileStorage.readFileData();
   }
 
+  /**
+   * Read normalized data and ensure case entries are hydrated for DataManager consumers.
+   *
+   * FileStorageService already returns runtime-ready data, but this helper re-runs the
+   * CaseService hydration boundary only for case records missing linked runtime data so
+   * DataManager reads stay consistent without broad consumer refactors.
+   */
+  private async readHydratedCaseData(): Promise<NormalizedFileData | null> {
+    const data = await this.readFileData();
+    if (!data) {
+      return null;
+    }
+
+    return {
+      ...data,
+      cases: data.cases.map((caseItem) => {
+        if (caseItem.person && caseItem.linkedPeople?.length === (caseItem.people?.length ?? 0)) {
+          return caseItem;
+        }
+
+        return this.cases.hydrate(this.cases.dehydrate(caseItem), data.people);
+      }),
+    };
+  }
+
+  /**
+   * Strip runtime-only case fields before delegating persistence to FileStorageService.
+   *
+   * This keeps DataManager writes aligned with the v2.1 CaseService/DataManager boundary
+   * while still routing the final file operation through the canonical writeNormalizedData path.
+   *
+   * Additionally, ensure the global people registry includes all people referenced by cases
+   * (case.person and case.linkedPeople[].person) before dehydration so newly introduced
+   * people are persisted correctly.
+   */
+  private dehydrateCaseData(
+    data: NormalizedFileData,
+  ): CaseDehydratedNormalizedFileData {
+    // Merge existing people registry with any person objects referenced on cases.
+    const peopleById = new Map<string, (typeof data.people)[number]>();
+
+    // Seed map with existing global people entries (if any).
+    if (Array.isArray(data.people)) {
+      for (const person of data.people) {
+        if (person && typeof person.id === "string") {
+          peopleById.set(person.id, person);
+        }
+      }
+    }
+
+    // Collect people referenced directly on cases and linkedPeople.
+    for (const caseItem of data.cases) {
+      const primaryPerson = (caseItem as any).person;
+      if (primaryPerson && typeof primaryPerson.id === "string") {
+        peopleById.set(primaryPerson.id, primaryPerson);
+      }
+
+      const linkedPeople = (caseItem as any).linkedPeople as Array<{ person?: { id?: string } }> | undefined;
+      if (Array.isArray(linkedPeople)) {
+        for (const linked of linkedPeople) {
+          const linkedPerson = linked?.person as { id?: string } | undefined;
+          if (linkedPerson && typeof linkedPerson.id === "string") {
+            peopleById.set(linkedPerson.id, linkedPerson as (typeof data.people)[number]);
+          }
+        }
+      }
+    }
+
+    const mergedPeople = Array.from(peopleById.values());
+
+    return {
+      ...data,
+      people: mergedPeople,
+      cases: data.cases.map((caseItem) => this.cases.dehydrate(caseItem)),
+    };
+  }
+
   // =============================================================================
   // PUBLIC API - READ OPERATIONS
   // =============================================================================
@@ -265,8 +343,8 @@ export class DataManager {
   /**
    * Get all cases from the file system.
    * 
-   * Returns cases in normalized format (StoredCase[]) without nested
-   * financials or notes. Always reads fresh data from disk.
+   * Returns runtime-hydrated cases in normalized format (StoredCase[]) without
+   * nested financials or notes. Always reads fresh data from disk.
    * 
    * @returns {Promise<StoredCase[]>} Array of all cases, or empty array if no data exists
    * @example
@@ -274,7 +352,8 @@ export class DataManager {
    * console.log(`Found ${cases.length} cases`);
    */
   async getAllCases(): Promise<StoredCase[]> {
-    return this.cases.getAllCases();
+    const data = await this.readHydratedCaseData();
+    return data?.cases ?? [];
   }
 
   async getAllPeople() {
@@ -343,7 +422,7 @@ export class DataManager {
   /**
    * Get a specific case by its ID.
    * 
-   * Returns a single case in normalized format without nested relations.
+   * Returns a single runtime-hydrated case in normalized format without nested relations.
    * Always reads fresh data from disk.
    * 
    * @param {string} caseId - The unique identifier of the case
@@ -355,7 +434,12 @@ export class DataManager {
    * }
    */
   async getCaseById(caseId: string): Promise<StoredCase | null> {
-    return this.cases.getCaseById(caseId);
+    const data = await this.readHydratedCaseData();
+    if (!data) {
+      return null;
+    }
+
+    return data.cases.find((caseItem) => caseItem.id === caseId) ?? null;
   }
 
   /**
@@ -469,7 +553,7 @@ export class DataManager {
     const { alerts: prunedAlerts, pruned } = this.alerts.pruneResolvedAlerts(alerts, retentionDays);
     if (pruned > 0) {
       logger.info(`Pruned ${pruned} resolved alert(s) older than ${retentionDays} days`);
-      await this.fileStorage.writeNormalizedData({
+      await this.writeNormalizedData({
         ...data,
         alerts: prunedAlerts,
       });
@@ -543,7 +627,7 @@ export class DataManager {
 
     // Save updated alerts to storage using normalized format
     // Note: writeNormalizedData handles broadcasting data changes
-    await this.fileStorage.writeNormalizedData({
+    await this.writeNormalizedData({
       ...data,
       alerts: newAlerts,
     });
@@ -611,7 +695,7 @@ export class DataManager {
         // Just need to update alerts
         const freshData = await this.readFileData();
         if (freshData) {
-          await this.fileStorage.writeNormalizedData({
+          await this.writeNormalizedData({
             ...freshData,
             alerts: rematchedResult.alerts,
           });
@@ -627,7 +711,7 @@ export class DataManager {
 
       if (result.added > 0 || result.updated > 0) {
         // Note: writeNormalizedData handles broadcasting data changes
-        await this.fileStorage.writeNormalizedData({
+        await this.writeNormalizedData({
           ...data,
           alerts: result.alerts,
         });
@@ -1303,8 +1387,8 @@ export class DataManager {
   /**
    * Write normalized data to file system.
    * 
-   * This method writes data in the normalized v2.0 format directly to disk.
-   * Used by migration utilities to save converted data.
+   * This method writes data through the canonical v2.1 persistence path after
+   * dehydrating runtime-only case fields.
    * 
    * **Warning:** This method bypasses normal service operations and should
    * only be used by migration tools.
@@ -1313,7 +1397,7 @@ export class DataManager {
    * @returns {Promise<NormalizedFileData>} The written data after enrichment
    */
   async writeNormalizedData(data: NormalizedFileData): Promise<NormalizedFileData> {
-    return this.fileStorage.writeNormalizedData(data);
+    return this.fileStorage.writeNormalizedData(this.dehydrateCaseData(data));
   }
 
   // =============================================================================

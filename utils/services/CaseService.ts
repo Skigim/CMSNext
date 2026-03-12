@@ -1,13 +1,25 @@
 import { v4 as uuidv4 } from 'uuid';
-import type { CasePersonRole, NewPersonData, NewCaseRecordData, CaseStatus, NewNoteData } from '../../types/case';
+import type {
+  CasePersonRole,
+  NewPersonData,
+  NewCaseRecordData,
+  CaseStatus,
+  NewNoteData,
+  CaseRecord,
+  AlertRecord,
+  Person,
+  PersistedCase,
+  StoredCase,
+} from '../../types/case';
 import type { CategoryConfig } from '../../types/categoryConfig';
-import type { FileStorageService, NormalizedFileData, StoredCase } from './FileStorageService';
+import type { FileStorageService, NormalizedFileData } from './FileStorageService';
 import { ActivityLogService } from './ActivityLogService';
 import { CaseBulkOperationsService } from './CaseBulkOperationsService';
 import { PersonService } from './PersonService';
 import { toLocalDateString } from '../../domain/common';
 import { formatCaseDisplayName } from '../../domain/cases/formatting';
 import type { AlertWithMatch } from '@/domain/alerts';
+import { dehydrateStoredCase, hydrateStoredCase } from '../storageV21Migration';
 
 // formatCaseDisplayName imported from domain layer
 const PRIMARY_CASE_PERSON_ROLE: CasePersonRole = 'applicant';
@@ -24,7 +36,7 @@ interface CaseServiceConfig {
 /**
  * CaseService - Case CRUD operations and lifecycle management
  * 
- * This service handles all case-related operations in the normalized v2.0 format.
+ * This service handles all case-related operations in the normalized v2.1 format.
  * It maintains the separation between cases, financials, and notes using foreign
  * key references instead of nested structures.
  * 
@@ -40,7 +52,8 @@ interface CaseServiceConfig {
  * 
  * ## Data Format
  * 
- * Cases are stored in a flat array without nested relations:
+ * Cases are stored in a flat array without nested relations and hydrated at the
+ * service boundary:
  * 
  * ```typescript
  * {
@@ -118,6 +131,77 @@ export class CaseService {
     this.people = new PersonService({
       fileStorage: config.fileStorage,
     });
+  }
+
+  /**
+   * Resolve persisted case person references into the runtime case model.
+   *
+   * @param {PersistedCase} caseItem - Stored-style case data with people references
+   * @param {Person[]} people - Global people registry used to resolve references
+   * @returns {StoredCase} Hydrated runtime case data with primary person and linked people
+   * Delegates to the canonical v2.1 storage hydrator so all read boundaries
+   * resolve primary person references consistently.
+   *
+   * @throws {Error} If no linked people exist or a referenced person cannot be found
+   */
+  hydrate(caseItem: PersistedCase, people: Person[]): StoredCase {
+    return hydrateStoredCase(caseItem, people);
+  }
+
+  /**
+   * Hydrate multiple persisted cases using the shared people registry.
+   *
+   * @param {PersistedCase[]} caseItems - Cases to hydrate
+   * @param {Person[]} people - Global people registry used for all resolutions
+   * @returns {StoredCase[]} Hydrated runtime cases
+   * @throws {Error} Propagates any single-case hydration failure
+   */
+  hydrateAll(caseItems: PersistedCase[], people: Person[]): StoredCase[] {
+    return caseItems.map((caseItem) => this.hydrate(caseItem, people));
+  }
+
+  /**
+   * Strip runtime-only fields from a hydrated case before persistence.
+   *
+   * The optional alerts field is accepted because some runtime call sites carry
+   * transient alert enrichments that must never be written to case storage.
+   *
+   * @param {StoredCase & { alerts?: AlertRecord[] }} caseItem - Runtime case data
+   * @returns {PersistedCase} Persisted-style case data suitable for storage writes
+   * @throws {Error} If neither linked people nor a primary person is available
+   */
+  dehydrate(caseItem: StoredCase & { alerts?: AlertRecord[] }): PersistedCase {
+    const {
+      person: _person,
+      linkedPeople: _linkedPeople,
+      alerts: _alerts,
+      caseRecord,
+      ...rest
+    } = caseItem;
+    const {
+      alerts: _dehydratedAlerts,
+      ...dehydratedCase
+    } = dehydrateStoredCase(caseItem) as PersistedCase & { alerts?: AlertRecord[] };
+    const casePeople = dehydratedCase.people?.length
+      ? dehydratedCase.people
+      : caseItem.person
+        ? [{ personId: caseItem.person.id, role: PRIMARY_CASE_PERSON_ROLE, isPrimary: true }]
+        : null;
+
+    if (!casePeople) {
+      throw new Error(`Case ${caseItem.id} cannot be dehydrated without linked people or a primary person`);
+    }
+    const caseRecordWithRuntimeFields:
+      StoredCase["caseRecord"] & Partial<Pick<CaseRecord, "financials" | "notes">> = caseRecord;
+    const { financials: _financials, notes: _notes, ...storedCaseRecord } =
+      caseRecordWithRuntimeFields;
+
+    return {
+      ...dehydratedCase,
+      ...rest,
+      people: casePeople.map((ref) => ({ ...ref })),
+      caseRecord: storedCaseRecord,
+    };
   }
 
   // =============================================================================
