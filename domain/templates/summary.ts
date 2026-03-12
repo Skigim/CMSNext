@@ -23,6 +23,7 @@ import {
   formatVoterStatus,
   calculateAVSTrackingDates,
   extractKnownInstitutions,
+  getPersonRelationships,
 } from "@/domain/cases";
 import { getAmountInfoForMonth } from "@/domain/financials";
 import { renderTemplate } from "./vr";
@@ -418,7 +419,7 @@ export function buildSectionContext(
 
     case "relationships":
       return buildRelationshipsContext(
-        person.relationships
+        getPersonRelationships(person, caseData)
       ) as TemplateRenderContext;
 
     case "resources":
@@ -810,7 +811,7 @@ export function generateCaseSummary(
         );
       case "relationships":
         return buildRelationshipsSection(
-          person.relationships,
+          getPersonRelationships(person, caseData),
           getTemplateContent("relationships"),
           caseData
         );

@@ -5,8 +5,10 @@ import {
   formatVoterStatus,
   calculateAVSTrackingDates,
   extractKnownInstitutions,
+  formatCaseDisplayName,
 } from "../formatting";
 import type { FinancialItem } from "@/types/case";
+import { createMockPerson, createMockStoredCase } from "@/src/test/testUtils";
 
 const localDate = (year: number, month: number, day: number): Date =>
   new Date(year, month - 1, day);
@@ -300,5 +302,87 @@ describe("extractKnownInstitutions", () => {
       const resources = [{ ...createResource("Checking Account", ""), location: undefined }];
       expect(extractKnownInstitutions(resources as FinancialItem[])).toBe("None Attested");
     });
+  });
+});
+
+describe("formatCaseDisplayName", () => {
+  it("uses the hydrated primary person name for legacy single-person cases", () => {
+    const caseData = createMockStoredCase({
+      name: "",
+      person: createMockPerson({
+        firstName: "Legacy",
+        lastName: "Applicant",
+      }),
+    });
+
+    expect(formatCaseDisplayName(caseData)).toBe("Legacy Applicant");
+  });
+
+  it("falls back to the linked primary person when case.person is unavailable", () => {
+    const caseData = {
+      ...createMockStoredCase({
+        name: "",
+        caseRecord: {
+          ...createMockStoredCase().caseRecord,
+          personId: "person-2",
+        },
+      }),
+      linkedPeople: [
+        {
+          ref: { personId: "person-1", role: "household_member" as const, isPrimary: false },
+          person: createMockPerson({
+            id: "person-1",
+            firstName: "Linked",
+            lastName: "Member",
+          }),
+        },
+        {
+          ref: { personId: "person-2", role: "applicant" as const, isPrimary: true },
+          person: createMockPerson({
+            id: "person-2",
+            firstName: "Primary",
+            lastName: "Applicant",
+          }),
+        },
+      ],
+    };
+
+    Reflect.deleteProperty(caseData, "person");
+
+    expect(formatCaseDisplayName(caseData)).toBe("Primary Applicant");
+  });
+
+  it("uses the case record person reference when linked people are transitional and not flagged primary", () => {
+    const caseData = {
+      ...createMockStoredCase({
+        name: "",
+        caseRecord: {
+          ...createMockStoredCase().caseRecord,
+          personId: "person-2",
+        },
+      }),
+      linkedPeople: [
+        {
+          ref: { personId: "person-1", role: "household_member" as const, isPrimary: false },
+          person: createMockPerson({
+            id: "person-1",
+            firstName: "Linked",
+            lastName: "Member",
+          }),
+        },
+        {
+          ref: { personId: "person-2", role: "applicant" as const, isPrimary: false },
+          person: createMockPerson({
+            id: "person-2",
+            firstName: "Referenced",
+            lastName: "Applicant",
+          }),
+        },
+      ],
+    };
+
+    Reflect.deleteProperty(caseData, "person");
+
+    expect(formatCaseDisplayName(caseData)).toBe("Referenced Applicant");
   });
 });

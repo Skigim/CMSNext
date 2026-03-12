@@ -1,0 +1,85 @@
+import { describe, expect, it } from "vitest";
+
+import { createMockPerson, createMockStoredCase } from "@/src/test/testUtils";
+import type { StoredCase } from "@/types/case";
+
+import { createPersonData } from "../factories";
+
+describe("createPersonData", () => {
+  it("falls back to the primary linked person when the hydrated primary person is unavailable", () => {
+    const primaryPerson = createMockPerson({
+      id: "person-1",
+      firstName: "Primary",
+      lastName: "Applicant",
+      email: "primary@example.com",
+      livingArrangement: "Assisted Living",
+      address: {
+        street: "100 Main St",
+        city: "Omaha",
+        state: "NE",
+        zip: "68102",
+      },
+      mailingAddress: {
+        street: "PO Box 1",
+        city: "Omaha",
+        state: "NE",
+        zip: "68101",
+        sameAsPhysical: false,
+      },
+    });
+    const linkedPerson = createMockPerson({
+      id: "person-2",
+      firstName: "Linked",
+      lastName: "Person",
+    });
+    const existingCase = {
+      ...createMockStoredCase({
+        caseRecord: {
+          ...createMockStoredCase().caseRecord,
+          personId: "person-1",
+        },
+        people: [
+          { personId: "person-1", role: "applicant", isPrimary: true },
+          { personId: "person-2", role: "household_member", isPrimary: false },
+        ],
+      }),
+      linkedPeople: [
+        {
+          ref: { personId: "person-1", role: "applicant", isPrimary: true },
+          person: primaryPerson,
+        },
+        {
+          ref: { personId: "person-2", role: "household_member", isPrimary: false },
+          person: linkedPerson,
+        },
+      ],
+    };
+
+    Reflect.deleteProperty(existingCase, "person");
+
+    const result = createPersonData(existingCase as StoredCase, {
+      livingArrangement: "Home",
+      defaultState: "IA",
+    });
+
+    expect(result).toMatchObject({
+      firstName: "Primary",
+      lastName: "Applicant",
+      email: "primary@example.com",
+      livingArrangement: "Assisted Living",
+      address: {
+        street: "100 Main St",
+        city: "Omaha",
+        state: "NE",
+        zip: "68102",
+      },
+      mailingAddress: {
+        street: "PO Box 1",
+        city: "Omaha",
+        state: "NE",
+        zip: "68101",
+        sameAsPhysical: false,
+      },
+    });
+  });
+});
