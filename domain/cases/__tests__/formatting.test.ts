@@ -7,11 +7,60 @@ import {
   extractKnownInstitutions,
   formatCaseDisplayName,
 } from "../formatting";
-import type { FinancialItem } from "@/types/case";
+import type { CasePersonRole, FinancialItem, StoredCase } from "@/types/case";
 import { createMockPerson, createMockStoredCase } from "@/src/test/testUtils";
 
 const localDate = (year: number, month: number, day: number): Date =>
   new Date(year, month - 1, day);
+
+function createCaseWithLinkedPeopleDisplayName(options: {
+  primaryPersonId: string;
+  primaryFirstName: string;
+  primaryLastName: string;
+  isPrimaryFlagged: boolean;
+}): StoredCase {
+  const linkedPeople: NonNullable<StoredCase["linkedPeople"]> = [
+    {
+      ref: {
+        personId: "person-1",
+        role: "household_member" satisfies CasePersonRole,
+        isPrimary: false,
+      },
+      person: createMockPerson({
+        id: "person-1",
+        firstName: "Linked",
+        lastName: "Member",
+      }),
+    },
+    {
+      ref: {
+        personId: options.primaryPersonId,
+        role: "applicant" satisfies CasePersonRole,
+        isPrimary: options.isPrimaryFlagged,
+      },
+      person: createMockPerson({
+        id: options.primaryPersonId,
+        firstName: options.primaryFirstName,
+        lastName: options.primaryLastName,
+      }),
+    },
+  ];
+
+  const caseData = {
+    ...createMockStoredCase({
+      name: "",
+      caseRecord: {
+        ...createMockStoredCase().caseRecord,
+        personId: options.primaryPersonId,
+      },
+    }),
+    linkedPeople,
+  };
+
+  Reflect.deleteProperty(caseData, "person");
+
+  return caseData;
+}
 
 describe("formatRetroMonths", () => {
   describe("empty/undefined handling", () => {
@@ -319,69 +368,23 @@ describe("formatCaseDisplayName", () => {
   });
 
   it("falls back to the linked primary person when case.person is unavailable", () => {
-    const caseData = {
-      ...createMockStoredCase({
-        name: "",
-        caseRecord: {
-          ...createMockStoredCase().caseRecord,
-          personId: "person-2",
-        },
-      }),
-      linkedPeople: [
-        {
-          ref: { personId: "person-1", role: "household_member" as const, isPrimary: false },
-          person: createMockPerson({
-            id: "person-1",
-            firstName: "Linked",
-            lastName: "Member",
-          }),
-        },
-        {
-          ref: { personId: "person-2", role: "applicant" as const, isPrimary: true },
-          person: createMockPerson({
-            id: "person-2",
-            firstName: "Primary",
-            lastName: "Applicant",
-          }),
-        },
-      ],
-    };
-
-    Reflect.deleteProperty(caseData, "person");
+    const caseData = createCaseWithLinkedPeopleDisplayName({
+      primaryPersonId: "person-2",
+      primaryFirstName: "Primary",
+      primaryLastName: "Applicant",
+      isPrimaryFlagged: true,
+    });
 
     expect(formatCaseDisplayName(caseData)).toBe("Primary Applicant");
   });
 
   it("uses the case record person reference when linked people are transitional and not flagged primary", () => {
-    const caseData = {
-      ...createMockStoredCase({
-        name: "",
-        caseRecord: {
-          ...createMockStoredCase().caseRecord,
-          personId: "person-2",
-        },
-      }),
-      linkedPeople: [
-        {
-          ref: { personId: "person-1", role: "household_member" as const, isPrimary: false },
-          person: createMockPerson({
-            id: "person-1",
-            firstName: "Linked",
-            lastName: "Member",
-          }),
-        },
-        {
-          ref: { personId: "person-2", role: "applicant" as const, isPrimary: false },
-          person: createMockPerson({
-            id: "person-2",
-            firstName: "Referenced",
-            lastName: "Applicant",
-          }),
-        },
-      ],
-    };
-
-    Reflect.deleteProperty(caseData, "person");
+    const caseData = createCaseWithLinkedPeopleDisplayName({
+      primaryPersonId: "person-2",
+      primaryFirstName: "Referenced",
+      primaryLastName: "Applicant",
+      isPrimaryFlagged: false,
+    });
 
     expect(formatCaseDisplayName(caseData)).toBe("Referenced Applicant");
   });
