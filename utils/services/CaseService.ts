@@ -327,7 +327,7 @@ export class CaseService {
       });
     const personId = primaryPerson.id;
 
-    const newCase = {
+    const newCase: PersistedCase = {
       id: caseId,
       name: primaryPerson.name,
       mcn: caseData.caseRecord.mcn,
@@ -376,18 +376,18 @@ export class CaseService {
     };
 
     // Write updated data
-    const updatedData = {
+    const updatedPeople = existingPerson ? currentData.people : [...currentData.people, primaryPerson];
+    const createdRuntimeCase = this.hydrate(newCase, updatedPeople);
+
+    const updatedData: NormalizedFileData = {
       ...currentData,
-      people: existingPerson ? currentData.people : [...currentData.people, primaryPerson],
-      cases: [
-        ...currentData.cases.map((caseItem) => this.dehydrate(caseItem)),
-        newCase,
-      ],
+      people: updatedPeople,
+      cases: [...currentData.cases, createdRuntimeCase],
     };
 
     const writtenData = await this.fileStorage.writeNormalizedData(updatedData);
 
-    return writtenData.cases.find((caseItem) => caseItem.id === caseId) ?? this.hydrate(newCase, updatedData.people);
+    return writtenData.cases.find((caseItem) => caseItem.id === caseId) ?? createdRuntimeCase;
   }
 
   /**
