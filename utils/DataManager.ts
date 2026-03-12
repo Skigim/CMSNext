@@ -289,12 +289,49 @@ export class DataManager {
    *
    * This keeps DataManager writes aligned with the v2.1 CaseService/DataManager boundary
    * while still routing the final file operation through the canonical writeNormalizedData path.
+   *
+   * Additionally, ensure the global people registry includes all people referenced by cases
+   * (case.person and case.linkedPeople[].person) before dehydration so newly introduced
+   * people are persisted correctly.
    */
   private dehydrateCaseData(
     data: NormalizedFileData,
   ): CaseDehydratedNormalizedFileData {
+    // Merge existing people registry with any person objects referenced on cases.
+    const peopleById = new Map<string, (typeof data.people)[number]>();
+
+    // Seed map with existing global people entries (if any).
+    if (Array.isArray(data.people)) {
+      for (const person of data.people) {
+        if (person && typeof person.id === "string") {
+          peopleById.set(person.id, person);
+        }
+      }
+    }
+
+    // Collect people referenced directly on cases and linkedPeople.
+    for (const caseItem of data.cases) {
+      const primaryPerson = (caseItem as any).person;
+      if (primaryPerson && typeof primaryPerson.id === "string") {
+        peopleById.set(primaryPerson.id, primaryPerson);
+      }
+
+      const linkedPeople = (caseItem as any).linkedPeople as Array<{ person?: { id?: string } }> | undefined;
+      if (Array.isArray(linkedPeople)) {
+        for (const linked of linkedPeople) {
+          const linkedPerson = linked?.person as { id?: string } | undefined;
+          if (linkedPerson && typeof linkedPerson.id === "string") {
+            peopleById.set(linkedPerson.id, linkedPerson as (typeof data.people)[number]);
+          }
+        }
+      }
+    }
+
+    const mergedPeople = Array.from(peopleById.values());
+
     return {
       ...data,
+      people: mergedPeople,
       cases: data.cases.map((caseItem) => this.cases.dehydrate(caseItem)),
     };
   }
