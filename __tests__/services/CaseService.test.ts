@@ -1,10 +1,18 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { createMockCaseDisplay, createMockPerson, createMockStoredCase } from "@/src/test/testUtils";
+import {
+  createMockCaseDisplay,
+  createMockNewCaseRecordData,
+  createMockNewPersonData,
+  createMockPerson,
+  createMockStoredCase,
+} from "@/src/test/testUtils";
 import type AutosaveFileService from "@/utils/AutosaveFileService";
 import { FileStorageService } from "@/utils/services/FileStorageService";
 import { CaseService } from "@/utils/services/CaseService";
 import type { PersistedCase } from "@/types/case";
+import { mergeCategoryConfig } from "@/types/categoryConfig";
+import { dehydrateNormalizedData } from "@/utils/storageV21Migration";
 
 function toPersistedCase(storedCase: ReturnType<typeof createMockStoredCase>): PersistedCase {
   const runtimeCase = storedCase as ReturnType<typeof createMockStoredCase> & {
@@ -72,11 +80,30 @@ function createLinkedRuntimeCase() {
   };
 }
 
+function createPersistedNormalizedData(
+  overrides: Partial<Parameters<typeof dehydrateNormalizedData>[0]> = {},
+) {
+  return dehydrateNormalizedData({
+    version: "2.1",
+    people: [],
+    cases: [],
+    financials: [],
+    notes: [],
+    alerts: [],
+    exported_at: "2026-01-01T00:00:00.000Z",
+    total_cases: 0,
+    categoryConfig: mergeCategoryConfig(),
+    activityLog: [],
+    ...overrides,
+  });
+}
+
 describe("CaseService hydration seam", () => {
   let caseService: CaseService;
+  let mockFileService: AutosaveFileService;
 
   beforeEach(() => {
-    const mockFileService = {
+    mockFileService = {
       readFile: vi.fn(),
       writeFile: vi.fn(),
       broadcastDataUpdate: vi.fn(),
@@ -216,5 +243,122 @@ describe("CaseService hydration seam", () => {
       { personId: "person-1", role: "applicant", isPrimary: true },
       { personId: "person-2", role: "household_member", isPrimary: false },
     ]);
+  });
+
+  describe("createCompleteCase", () => {
+    it("writes a normalized case/person link for newly created people", async () => {
+      // ARRANGE
+      const newPersonData = createMockNewPersonData({
+        firstName: "Taylor",
+        lastName: "Applicant",
+      });
+      const newCaseRecordData = createMockNewCaseRecordData({
+        mcn: "MCN-1000",
+        personId: "",
+      });
+      vi.mocked(mockFileService.readFile).mockResolvedValue(createPersistedNormalizedData());
+      vi.mocked(mockFileService.writeFile).mockResolvedValue(true);
+
+      // ACT
+      const result = await caseService.createCompleteCase({
+        person: newPersonData,
+        caseRecord: newCaseRecordData,
+      });
+
+      // ASSERT
+      expect(mockFileService.writeFile).toHaveBeenCalledTimes(1);
+      const writtenData = vi.mocked(mockFileService.writeFile).mock.calls[0][0];
+      expect(writtenData.people).toHaveLength(1);
+      expect(writtenData.cases).toHaveLength(1);
+      expect(writtenData.cases[0]).not.toHaveProperty("person");
+      expect(writtenData.cases[0]).not.toHaveProperty("linkedPeople");
+      expect(writtenData.cases[0].people).toEqual([
+        {
+          personId: writtenData.people[0].id,
+          role: "applicant",
+          isPrimary: true,
+        },
+      ]);
+      expect(writtenData.cases[0].caseRecord.personId).toBe(writtenData.people[0].id);
+      expect(result.person).toMatchObject({
+        id: writtenData.people[0].id,
+        firstName: "Taylor",
+        lastName: "Applicant",
+      });
+      expect(result.linkedPeople).toEqual([
+        {
+          ref: {
+            personId: writtenData.people[0].id,
+            role: "applicant",
+            isPrimary: true,
+          },
+          person: expect.objectContaining({ id: writtenData.people[0].id }),
+        },
+      ]);
+    });
+
+    it("reuses an existing person reference instead of creating a duplicate", async () => {
+      // ARRANGE
+      const existingPerson = createMockPerson({
+        id: "person-existing-1",
+        firstName: "Existing",
+        lastName: "Person",
+        name: "Existing Person",
+      });
+      vi.mocked(mockFileService.readFile).mockResolvedValue(
+        createPersistedNormalizedData({
+          people: [existingPerson],
+        }),
+      );
+      vi.mocked(mockFileService.writeFile).mockResolvedValue(true);
+
+      // ACT
+      const result = await caseService.createCompleteCase({
+        person: createMockNewPersonData({
+          firstName: "Ignored",
+          lastName: "Duplicate",
+        }),
+        caseRecord: createMockNewCaseRecordData({
+          mcn: "MCN-2000",
+          personId: "person-existing-1",
+        }),
+      });
+
+      // ASSERT
+      expect(mockFileService.writeFile).toHaveBeenCalledTimes(1);
+      const writtenData = vi.mocked(mockFileService.writeFile).mock.calls[0][0];
+      expect(writtenData.people).toHaveLength(1);
+      expect(writtenData.people[0].id).toBe("person-existing-1");
+      expect(writtenData.cases[0].people).toEqual([
+        {
+          personId: "person-existing-1",
+          role: "applicant",
+          isPrimary: true,
+        },
+      ]);
+      expect(writtenData.cases[0].caseRecord.personId).toBe("person-existing-1");
+      expect(result.name).toBe("Existing Person");
+      expect(result.person).toMatchObject({
+        id: "person-existing-1",
+        firstName: "Existing",
+        lastName: "Person",
+      });
+    });
+
+    it("fails when create-case input references a missing person", async () => {
+      // ARRANGE
+      vi.mocked(mockFileService.readFile).mockResolvedValue(createPersistedNormalizedData());
+
+      // ACT & ASSERT
+      await expect(
+        caseService.createCompleteCase({
+          person: createMockNewPersonData(),
+          caseRecord: createMockNewCaseRecordData({
+            personId: "missing-person",
+          }),
+        }),
+      ).rejects.toThrow("Person missing-person not found");
+      expect(mockFileService.writeFile).not.toHaveBeenCalled();
+    });
   });
 });

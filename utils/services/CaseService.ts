@@ -263,12 +263,12 @@ export class CaseService {
    * 
    * This method:
    * 1. Reads current data from file
-   * 2. Generates UUIDs for case, person, and case record
-   * 3. Creates a complete StoredCase object with all required fields
-   * 4. Adds to cases array
-   * 5. Updates timestamps
-   * 6. Writes back to file
-   * 7. Returns the created case
+   * 2. Resolves the primary person either by existing personId reference or by
+   *    creating a new global person record
+   * 3. Creates a persisted case linked through normalized person references
+   * 4. Adds the case and any newly created person to the normalized data
+   * 5. Writes back through the canonical storage seam
+   * 6. Returns the hydrated created case
    * 
    * **Pattern:** Read → Modify → Write
    * 
@@ -310,20 +310,32 @@ export class CaseService {
     const timestamp = new Date().toISOString();
     const todayDate = toLocalDateString(); // For date-only fields
     const caseId = uuidv4();
-    const personId = uuidv4();
-    const createdPerson = this.people.buildNewPerson(caseData.person, { personId, timestamp });
+    const requestedPersonId = caseData.caseRecord.personId.trim();
+    const existingPerson = requestedPersonId
+      ? currentData.people.find((person) => person.id === requestedPersonId) ?? null
+      : null;
 
-    // Create new case (StoredCase - without nested financials/notes)
-    const newCase: StoredCase = {
+    if (requestedPersonId && !existingPerson) {
+      throw new Error(`Person ${requestedPersonId} not found`);
+    }
+
+    const primaryPerson =
+      existingPerson ??
+      this.people.buildNewPerson(caseData.person, {
+        personId: uuidv4(),
+        timestamp,
+      });
+    const personId = primaryPerson.id;
+
+    const newCase = {
       id: caseId,
-      name: createdPerson.name,
+      name: primaryPerson.name,
       mcn: caseData.caseRecord.mcn,
       status: caseData.caseRecord.status,
       priority: Boolean(caseData.caseRecord.priority),
       createdAt: timestamp,
       updatedAt: timestamp,
       people: [{ personId, role: PRIMARY_CASE_PERSON_ROLE, isPrimary: true }],
-      person: createdPerson,
       caseRecord: {
         id: uuidv4(),
         personId,
@@ -363,20 +375,19 @@ export class CaseService {
       }
     };
 
-    // Add to cases array
-    const updatedCases = [...currentData.cases, newCase];
-    const casesWithTouchedTimestamps = this.fileStorage.touchCaseTimestamps(updatedCases, [caseId]);
-
     // Write updated data
-    const updatedData: NormalizedFileData = {
+    const updatedData = {
       ...currentData,
-      people: [...currentData.people, createdPerson],
-      cases: casesWithTouchedTimestamps,
+      people: existingPerson ? currentData.people : [...currentData.people, primaryPerson],
+      cases: [
+        ...currentData.cases.map((caseItem) => this.dehydrate(caseItem)),
+        newCase,
+      ],
     };
 
-    await this.fileStorage.writeNormalizedData(updatedData);
+    const writtenData = await this.fileStorage.writeNormalizedData(updatedData);
 
-    return casesWithTouchedTimestamps.find(c => c.id === caseId) ?? newCase;
+    return writtenData.cases.find((caseItem) => caseItem.id === caseId) ?? this.hydrate(newCase, updatedData.people);
   }
 
   /**

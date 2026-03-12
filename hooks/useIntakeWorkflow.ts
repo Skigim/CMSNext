@@ -303,7 +303,7 @@ export function useIntakeWorkflow({
           normalizedApplicationDate ?? validatedFormData.applicationDate,
         caseType: validatedFormData.caseType || config.caseTypes[0] || "",
         applicationType: validatedFormData.applicationType ?? "",
-        personId: "", // assigned by DataManager after person creation
+        personId: "", // blank means create a new primary person; existing-person linking can pass an id
         status: defaultStatus,
         description: "",
         priority: false,
