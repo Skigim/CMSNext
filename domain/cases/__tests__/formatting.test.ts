@@ -7,23 +7,33 @@ import {
   extractKnownInstitutions,
   formatCaseDisplayName,
 } from "../formatting";
-import type { CasePersonRole, FinancialItem, StoredCase } from "@/types/case";
-import { createMockPerson, createMockStoredCase } from "@/src/test/testUtils";
+import type { FinancialItem, StoredCase } from "@/types/case";
+import { createMockPerson, createMockStoredCase, omitHydratedPerson } from "@/src/test/testUtils";
 
 const localDate = (year: number, month: number, day: number): Date =>
   new Date(year, month - 1, day);
 
-function createCaseWithLinkedPeopleDisplayName(options: {
+type TransitionalStoredCase = Omit<StoredCase, "person"> & {
+  linkedPeople: NonNullable<StoredCase["linkedPeople"]>;
+};
+
+function formatTransitionalCaseDisplayName(caseData: TransitionalStoredCase): string {
+  // Intentional: migration-era runtime data can temporarily lack hydrated `person`,
+  // and this test verifies the fallback path against the production signature.
+  return formatCaseDisplayName(caseData as StoredCase);
+}
+
+function createCaseWithLinkedPeople(options: {
   primaryPersonId: string;
   primaryFirstName: string;
   primaryLastName: string;
   isPrimaryFlagged: boolean;
-}): StoredCase {
+}): TransitionalStoredCase {
   const linkedPeople: NonNullable<StoredCase["linkedPeople"]> = [
     {
       ref: {
         personId: "person-1",
-        role: "household_member" satisfies CasePersonRole,
+        role: "household_member",
         isPrimary: false,
       },
       person: createMockPerson({
@@ -35,7 +45,7 @@ function createCaseWithLinkedPeopleDisplayName(options: {
     {
       ref: {
         personId: options.primaryPersonId,
-        role: "applicant" satisfies CasePersonRole,
+        role: "applicant",
         isPrimary: options.isPrimaryFlagged,
       },
       person: createMockPerson({
@@ -47,17 +57,17 @@ function createCaseWithLinkedPeopleDisplayName(options: {
   ];
 
   const caseData = {
-    ...createMockStoredCase({
-      name: "",
-      caseRecord: {
-        ...createMockStoredCase().caseRecord,
-        personId: options.primaryPersonId,
-      },
-    }),
+    ...omitHydratedPerson(
+      createMockStoredCase({
+        name: "",
+        caseRecord: {
+          ...createMockStoredCase().caseRecord,
+          personId: options.primaryPersonId,
+        },
+      })
+    ),
     linkedPeople,
   };
-
-  Reflect.deleteProperty(caseData, "person");
 
   return caseData;
 }
@@ -368,24 +378,24 @@ describe("formatCaseDisplayName", () => {
   });
 
   it("falls back to the linked primary person when case.person is unavailable", () => {
-    const caseData = createCaseWithLinkedPeopleDisplayName({
+    const caseData = createCaseWithLinkedPeople({
       primaryPersonId: "person-2",
       primaryFirstName: "Primary",
       primaryLastName: "Applicant",
       isPrimaryFlagged: true,
     });
 
-    expect(formatCaseDisplayName(caseData)).toBe("Primary Applicant");
+    expect(formatTransitionalCaseDisplayName(caseData)).toBe("Primary Applicant");
   });
 
   it("uses the case record person reference when linked people are transitional and not flagged primary", () => {
-    const caseData = createCaseWithLinkedPeopleDisplayName({
+    const caseData = createCaseWithLinkedPeople({
       primaryPersonId: "person-2",
       primaryFirstName: "Referenced",
       primaryLastName: "Applicant",
       isPrimaryFlagged: false,
     });
 
-    expect(formatCaseDisplayName(caseData)).toBe("Referenced Applicant");
+    expect(formatTransitionalCaseDisplayName(caseData)).toBe("Referenced Applicant");
   });
 });

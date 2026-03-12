@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { createMockPerson, createMockStoredCase } from "@/src/test/testUtils";
+import { createMockPerson, createMockStoredCase, omitHydratedPerson } from "@/src/test/testUtils";
 import type { StoredCase } from "@/types/case";
 
 import { createPersonData } from "../factories";
@@ -32,17 +32,19 @@ describe("createPersonData", () => {
       firstName: "Linked",
       lastName: "Person",
     });
-    const existingCase = {
-      ...createMockStoredCase({
-        caseRecord: {
-          ...createMockStoredCase().caseRecord,
-          personId: "person-1",
-        },
-        people: [
-          { personId: "person-1", role: "applicant", isPrimary: true },
-          { personId: "person-2", role: "household_member", isPrimary: false },
-        ],
-      }),
+    const caseWithoutHydratedPerson = {
+      ...omitHydratedPerson(
+        createMockStoredCase({
+          caseRecord: {
+            ...createMockStoredCase().caseRecord,
+            personId: "person-1",
+          },
+          people: [
+            { personId: "person-1", role: "applicant", isPrimary: true },
+            { personId: "person-2", role: "household_member", isPrimary: false },
+          ],
+        })
+      ),
       linkedPeople: [
         {
           ref: { personId: "person-1", role: "applicant", isPrimary: true },
@@ -55,9 +57,11 @@ describe("createPersonData", () => {
       ],
     };
 
-    Reflect.deleteProperty(existingCase, "person");
+    // Intentional: this test exercises the migration fallback when the hydrated
+    // primary person is temporarily unavailable on the case object.
+    const existingCase = caseWithoutHydratedPerson as StoredCase;
 
-    const result = createPersonData(existingCase as StoredCase, {
+    const result = createPersonData(existingCase, {
       livingArrangement: "Home",
       defaultState: "IA",
     });
