@@ -14,6 +14,11 @@ export {
 export type { VoterFormStatus, AVSTrackingDates } from "./formatting";
 
 export {
+  getPrimaryCasePerson,
+  getPersonRelationships,
+} from "./people";
+
+export {
   type GenerateAvsNarrativeOptions,
   generateAvsNarrative,
 } from "./avsNarrativeGenerator";

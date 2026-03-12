@@ -6,6 +6,7 @@
 
 import type { FinancialItem, StoredCase } from "@/types/case";
 import { parseLocalDate } from "../common/dates";
+import { getPrimaryCasePerson } from "./people";
 
 /**
  * Bank account type keywords for institution extraction.
@@ -288,8 +289,9 @@ export function formatCaseDisplayName(caseData: StoredCase): string {
     return trimmedName;
   }
 
-  const firstName = caseData.person?.firstName?.trim() ?? "";
-  const lastName = caseData.person?.lastName?.trim() ?? "";
+  const primaryPerson = getPrimaryCasePerson(caseData);
+  const firstName = primaryPerson?.firstName?.trim() ?? "";
+  const lastName = primaryPerson?.lastName?.trim() ?? "";
   const composed = `${firstName} ${lastName}`.trim();
 
   if (composed.length > 0) {

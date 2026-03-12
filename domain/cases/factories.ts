@@ -15,6 +15,7 @@ import {
   CaseStatus, 
   StoredCase 
 } from "@/types/case";
+import { getPrimaryCasePerson } from "./people";
 
 /**
  * Options for creating case record data.
@@ -122,7 +123,7 @@ export function createPersonData(
   existingCase?: StoredCase | null,
   defaults: PersonDefaults = {}
 ): NewPersonData {
-  const person = existingCase?.person;
+  const person = existingCase ? getPrimaryCasePerson(existingCase) : null;
   const defaultState = defaults.defaultState ?? "NE";
   
   return {

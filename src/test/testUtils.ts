@@ -162,6 +162,11 @@ export const createMockStoredCase = (overrides: Partial<StoredCase> = {}): Store
   }
 }
 
+export const omitHydratedPerson = <T extends StoredCase>({
+  person: _omittedPerson,
+  ...caseWithoutHydratedPerson
+}: T): Omit<T, 'person'> => caseWithoutHydratedPerson;
+
 export const createMockNewPersonData = (overrides: Partial<NewPersonData> = {}): NewPersonData => ({
   firstName: 'Casey',
   lastName: 'Tester',

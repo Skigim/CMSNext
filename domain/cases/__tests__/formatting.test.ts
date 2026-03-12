@@ -5,11 +5,72 @@ import {
   formatVoterStatus,
   calculateAVSTrackingDates,
   extractKnownInstitutions,
+  formatCaseDisplayName,
 } from "../formatting";
-import type { FinancialItem } from "@/types/case";
+import type { FinancialItem, StoredCase } from "@/types/case";
+import { createMockPerson, createMockStoredCase, omitHydratedPerson } from "@/src/test/testUtils";
 
 const localDate = (year: number, month: number, day: number): Date =>
   new Date(year, month - 1, day);
+
+type TransitionalStoredCase = Omit<StoredCase, "person"> & {
+  linkedPeople: NonNullable<StoredCase["linkedPeople"]>;
+};
+
+function formatTransitionalCaseDisplayName(caseData: TransitionalStoredCase): string {
+  // Intentional: migration-era runtime data can temporarily lack hydrated `person`,
+  // and this test verifies the fallback path against the production signature.
+  return formatCaseDisplayName(caseData as StoredCase);
+}
+
+function createCaseWithLinkedPeople(options: {
+  primaryPersonId: string;
+  primaryFirstName: string;
+  primaryLastName: string;
+  isPrimaryFlagged: boolean;
+}): TransitionalStoredCase {
+  const linkedPeople: NonNullable<StoredCase["linkedPeople"]> = [
+    {
+      ref: {
+        personId: "person-1",
+        role: "household_member",
+        isPrimary: false,
+      },
+      person: createMockPerson({
+        id: "person-1",
+        firstName: "Linked",
+        lastName: "Member",
+      }),
+    },
+    {
+      ref: {
+        personId: options.primaryPersonId,
+        role: "applicant",
+        isPrimary: options.isPrimaryFlagged,
+      },
+      person: createMockPerson({
+        id: options.primaryPersonId,
+        firstName: options.primaryFirstName,
+        lastName: options.primaryLastName,
+      }),
+    },
+  ];
+
+  const caseData = {
+    ...omitHydratedPerson(
+      createMockStoredCase({
+        name: "",
+        caseRecord: {
+          ...createMockStoredCase().caseRecord,
+          personId: options.primaryPersonId,
+        },
+      })
+    ),
+    linkedPeople,
+  };
+
+  return caseData;
+}
 
 describe("formatRetroMonths", () => {
   describe("empty/undefined handling", () => {
@@ -300,5 +361,41 @@ describe("extractKnownInstitutions", () => {
       const resources = [{ ...createResource("Checking Account", ""), location: undefined }];
       expect(extractKnownInstitutions(resources as FinancialItem[])).toBe("None Attested");
     });
+  });
+});
+
+describe("formatCaseDisplayName", () => {
+  it("uses the hydrated primary person name for legacy single-person cases", () => {
+    const caseData = createMockStoredCase({
+      name: "",
+      person: createMockPerson({
+        firstName: "Legacy",
+        lastName: "Applicant",
+      }),
+    });
+
+    expect(formatCaseDisplayName(caseData)).toBe("Legacy Applicant");
+  });
+
+  it("falls back to the linked primary person when case.person is unavailable", () => {
+    const caseData = createCaseWithLinkedPeople({
+      primaryPersonId: "person-2",
+      primaryFirstName: "Primary",
+      primaryLastName: "Applicant",
+      isPrimaryFlagged: true,
+    });
+
+    expect(formatTransitionalCaseDisplayName(caseData)).toBe("Primary Applicant");
+  });
+
+  it("uses the case record person reference when linked people are transitional and not flagged primary", () => {
+    const caseData = createCaseWithLinkedPeople({
+      primaryPersonId: "person-2",
+      primaryFirstName: "Referenced",
+      primaryLastName: "Applicant",
+      isPrimaryFlagged: false,
+    });
+
+    expect(formatTransitionalCaseDisplayName(caseData)).toBe("Referenced Applicant");
   });
 });
