@@ -7,6 +7,7 @@ import { createPersonData } from "../factories";
 
 describe("createPersonData", () => {
   it("falls back to the primary linked person when the hydrated primary person is unavailable", () => {
+    // Arrange
     const primaryPerson = createMockPerson({
       id: "person-1",
       firstName: "Primary",
@@ -61,11 +62,13 @@ describe("createPersonData", () => {
     // primary person is temporarily unavailable on the case object.
     const existingCase = caseWithoutHydratedPerson as StoredCase;
 
+    // Act
     const result = createPersonData(existingCase, {
       livingArrangement: "Home",
       defaultState: "IA",
     });
 
+    // Assert
     expect(result).toMatchObject({
       firstName: "Primary",
       lastName: "Applicant",

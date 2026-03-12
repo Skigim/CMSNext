@@ -5,6 +5,7 @@ import { generateCaseSummary } from "@/domain/templates";
 
 describe("generateCaseSummary relationships compatibility", () => {
   it("renders linked and standalone normalized relationships for the primary person", () => {
+    // Arrange
     const linkedSpouse = createMockPerson({
       id: "person-2",
       firstName: "Jordan",
@@ -34,6 +35,7 @@ describe("generateCaseSummary relationships compatibility", () => {
       ],
     });
 
+    // Act
     const summary = generateCaseSummary({
       ...createMockStoredCase({
         person: primaryPerson,
@@ -54,6 +56,7 @@ describe("generateCaseSummary relationships compatibility", () => {
       ],
     });
 
+    // Assert
     expect(summary).toContain("Relationships/Representatives");
     expect(summary).toContain("Spouse | Jordan Spouse | (555) 444-3333");
     expect(summary).toContain("Authorized Rep | Pat Advocate | (555) 222-1111");

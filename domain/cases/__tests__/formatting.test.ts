@@ -56,14 +56,12 @@ function createCaseWithLinkedPeople(options: {
     },
   ];
 
-  const defaults = createMockStoredCase();
-
   const caseData = {
     ...omitHydratedPerson(
       createMockStoredCase({
         name: "",
         caseRecord: {
-          ...defaults.caseRecord,
+          ...createMockStoredCase().caseRecord,
           personId: options.primaryPersonId,
         },
       })
