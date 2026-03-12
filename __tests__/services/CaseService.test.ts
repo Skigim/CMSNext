@@ -14,6 +14,8 @@ import type { PersistedCase } from "@/types/case";
 import { mergeCategoryConfig } from "@/types/categoryConfig";
 import { dehydrateNormalizedData } from "@/utils/storageV21Migration";
 
+type MockAutosaveFileService = Pick<AutosaveFileService, "readFile" | "writeFile" | "broadcastDataUpdate">;
+
 function toPersistedCase(storedCase: ReturnType<typeof createMockStoredCase>): PersistedCase {
   const runtimeCase = storedCase as ReturnType<typeof createMockStoredCase> & {
     alerts?: unknown;
@@ -100,17 +102,17 @@ function createPersistedNormalizedData(
 
 describe("CaseService hydration seam", () => {
   let caseService: CaseService;
-  let mockFileService: AutosaveFileService;
+  let mockFileService: MockAutosaveFileService;
 
   beforeEach(() => {
     mockFileService = {
       readFile: vi.fn(),
       writeFile: vi.fn(),
       broadcastDataUpdate: vi.fn(),
-    } as unknown as AutosaveFileService;
+    } as MockAutosaveFileService;
 
     const fileStorage = new FileStorageService({
-      fileService: mockFileService,
+      fileService: mockFileService as unknown as AutosaveFileService,
     });
 
     caseService = new CaseService({

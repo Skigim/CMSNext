@@ -310,7 +310,7 @@ export class CaseService {
     const timestamp = new Date().toISOString();
     const todayDate = toLocalDateString(); // For date-only fields
     const caseId = uuidv4();
-    const requestedPersonId = caseData.caseRecord.personId.trim();
+    const requestedPersonId = caseData.caseRecord.personId?.trim() ?? "";
     const existingPerson = requestedPersonId
       ? currentData.people.find((person) => person.id === requestedPersonId) ?? null
       : null;
