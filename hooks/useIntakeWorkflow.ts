@@ -27,12 +27,12 @@ import {
   createCaseRecordData,
   createIntakeFormData,
   createPersonData,
-} from "../domain/cases";
-import { INTAKE_STEPS, isStepComplete, isStepReachable } from "../domain/cases/intake-steps";
+} from "@/domain/cases";
+import { INTAKE_STEPS, isStepComplete, isStepReachable } from "@/domain/cases/intake-steps";
 import {
   type IntakeFormData,
   validateIntakeForm,
-} from "../domain/validation/intake.schema";
+} from "@/domain/validation/intake.schema";
 import type { CaseStatus, NewCaseRecordData, NewPersonData, StoredCase } from "../types/case";
 import { createLogger } from "../utils/logger";
 import { extractErrorMessage } from "../utils/errorUtils";
