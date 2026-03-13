@@ -10,6 +10,7 @@ const mockIntakeFormView = vi.fn();
 const mockSavedIntakeCase = createMockStoredCase({
   id: "case-saved-1",
   name: "Updated Intake Case",
+  updatedAt: "2026-03-13T18:00:00.000Z",
   person: createMockPerson({
     id: "person-saved-1",
     firstName: "Updated",
@@ -272,6 +273,7 @@ describe("CaseDetails linked people rendering", () => {
     const originalCase = createMockStoredCase({
       id: "case-saved-1",
       name: "Original Intake Case",
+      updatedAt: "2026-03-13T17:00:00.000Z",
       person: createMockPerson({
         id: "person-original-1",
         firstName: "Original",
@@ -295,8 +297,8 @@ describe("CaseDetails linked people rendering", () => {
 
     await user.click(screen.getByRole("button", { name: /Edit Details/i }));
 
-    const latestIntakeProps = mockIntakeFormView.mock.lastCall?.[0];
-    expect(latestIntakeProps).toEqual(
+    const reopenedIntakeProps = mockIntakeFormView.mock.lastCall?.[0];
+    expect(reopenedIntakeProps).toEqual(
       expect.objectContaining({
         existingCase: expect.objectContaining({
           id: "case-saved-1",

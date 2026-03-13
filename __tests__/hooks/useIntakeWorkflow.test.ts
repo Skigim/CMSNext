@@ -481,6 +481,8 @@ describe("useIntakeWorkflow", () => {
       expect(result.current.formData.lastName).toBe("Applicant");
       expect(result.current.formData.mcn).toBe("MCN-SAVED");
       expect(result.current.formData.applicationDate).toBe("2026-05-20");
+      // Edit-mode reset should restore the fully visited "editing an existing
+      // case" state, not the create-mode single-step visited set.
       expect(result.current.visitedSteps).toEqual(
         new Set(INTAKE_STEPS.map((_, index) => index)),
       );

@@ -132,6 +132,8 @@ export function useIntakeWorkflow({
   const isEditing = existingCase !== undefined;
   // Keep the latest saved edit payload as the preservation source so repeated
   // saves in one session do not fall back to stale unsupported field values.
+  // The ref gives reset() immediate access to the freshest saved case, while
+  // state keeps render-time derivations in sync after successful saves.
   const editSourceCaseRef = useRef<StoredCase | undefined>(existingCase);
   const [editSourceCase, setEditSourceCase] = useState<StoredCase | undefined>(
     existingCase,
@@ -161,6 +163,14 @@ export function useIntakeWorkflow({
     setError(null);
     setIsSubmitting(false);
   }, [existingCase]);
+
+  const selectFreshestSourceCase = useCallback(
+    // editSourceCaseRef is intentionally read imperatively here: refs do not
+    // participate in React dependency tracking, and reset() must see the most
+    // recent saved case even before a render commits updated state.
+    () => editSourceCaseRef.current ?? editSourceCase ?? existingCase,
+    [editSourceCase, existingCase],
+  );
 
   useEffect(() => {
     currentStepRef.current = currentStep;
@@ -234,8 +244,10 @@ export function useIntakeWorkflow({
 
   // ---- Reset ----------------------------------------------------------------
   const reset = useCallback(() => {
-    initializeWorkflowState(editSourceCaseRef.current ?? editSourceCase ?? existingCase);
-  }, [editSourceCase, existingCase, initializeWorkflowState]);
+    // Prefer the freshest saved edit payload, then fall back to render-state,
+    // then finally the current prop before any local edit snapshot exists.
+    initializeWorkflowState(selectFreshestSourceCase());
+  }, [initializeWorkflowState, selectFreshestSourceCase]);
 
   // ---- Cancel ---------------------------------------------------------------
   const cancel = useCallback(() => {
