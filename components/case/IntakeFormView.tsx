@@ -7,7 +7,7 @@
  * Wires to useIntakeWorkflow for all state and persistence.
  */
 
-import { useCallback, useEffect, useMemo, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -28,7 +28,9 @@ import {
   ClipboardList,
   FileText,
   CheckCircle2,
+  ChevronDown,
   ChevronRight,
+  ChevronUp,
   ChevronLeft,
   Loader2,
   ArrowLeft,
@@ -38,6 +40,7 @@ import { cn } from "@/components/ui/utils";
 import { useCategoryConfig } from "@/contexts/CategoryConfigContext";
 import {
   createBlankHouseholdMemberData,
+  formatHouseholdMemberAccordionSummary,
   formatHouseholdMemberName,
   INTAKE_STEPS,
   isHouseholdMemberPopulated,
@@ -769,6 +772,22 @@ function HouseholdStep({ formData, onChange }: Readonly<HouseholdStepProps>) {
     () => (formData.householdMembers ?? []) as HouseholdMemberData[],
     [formData.householdMembers],
   );
+  const defaultExpandedMemberIndex = useMemo(() => {
+    const firstIncompleteMemberIndex = householdMembers.findIndex(
+      (member) => !isHouseholdMemberPopulated(member),
+    );
+
+    return firstIncompleteMemberIndex >= 0 ? firstIncompleteMemberIndex : null;
+  }, [householdMembers]);
+  const [expandedMemberIndex, setExpandedMemberIndex] = useState<number | null>(
+    defaultExpandedMemberIndex,
+  );
+  const activeExpandedMemberIndex = useMemo(() => {
+    return expandedMemberIndex !== null && expandedMemberIndex < householdMembers.length
+      ? expandedMemberIndex
+      : null;
+  }, [expandedMemberIndex, householdMembers.length]);
+
   const updateHouseholdMembers = useCallback(
     (nextMembers: HouseholdMemberData[]) => {
       onChange(
@@ -779,6 +798,7 @@ function HouseholdStep({ formData, onChange }: Readonly<HouseholdStepProps>) {
     [onChange],
   );
   const handleAdd = useCallback(() => {
+    const nextIndex = householdMembers.length;
     updateHouseholdMembers([
       ...householdMembers,
       createBlankHouseholdMemberData({
@@ -786,6 +806,7 @@ function HouseholdStep({ formData, onChange }: Readonly<HouseholdStepProps>) {
         defaultState: formData.address.state || "NE",
       }),
     ]);
+    setExpandedMemberIndex(nextIndex);
   }, [formData.address.state, formData.livingArrangement, householdMembers, updateHouseholdMembers]);
 
   const updateMember = useCallback(
@@ -802,6 +823,17 @@ function HouseholdStep({ formData, onChange }: Readonly<HouseholdStepProps>) {
   const handleRemove = useCallback(
     (index: number) => {
       updateHouseholdMembers(householdMembers.filter((_, memberIndex) => memberIndex !== index));
+      setExpandedMemberIndex((currentIndex) => {
+        if (currentIndex === null || currentIndex === undefined) {
+          return null;
+        }
+
+        if (currentIndex === index) {
+          return null;
+        }
+
+        return currentIndex > index ? currentIndex - 1 : currentIndex;
+      });
     },
     [householdMembers, updateHouseholdMembers],
   );
@@ -827,21 +859,39 @@ function HouseholdStep({ formData, onChange }: Readonly<HouseholdStepProps>) {
       ) : (
         <div className="space-y-4">
           {householdMembers.map((member, index) => (
-            <div
+            <section
               key={member.personId ?? `household-member-${index}`}
-              className="space-y-4 rounded-lg border bg-card p-4 shadow-sm"
+              className="rounded-lg border bg-card shadow-sm"
             >
-              <div className="flex items-center justify-between gap-3">
-                <div className="space-y-1">
-                  <h4 className="font-medium">
-                    {member.firstName || member.lastName
-                      ? formatHouseholdMemberName(member)
-                      : `Household Member ${index + 1}`}
-                  </h4>
-                  <p className="text-xs text-muted-foreground">
-                    Linked as {member.role.replace("_", " ")}
-                  </p>
-                </div>
+              <div className="flex items-center gap-3 px-4 py-3">
+                <button
+                  type="button"
+                  className="flex flex-1 items-center justify-between gap-3 text-left"
+                  aria-expanded={activeExpandedMemberIndex === index}
+                  aria-controls={`household-member-panel-${index}`}
+                  onClick={() =>
+                    setExpandedMemberIndex((currentIndex) =>
+                      currentIndex === index ? null : index,
+                    )
+                  }
+                >
+                  <div className="space-y-1">
+                    <h4 className="font-medium">
+                      {isHouseholdMemberPopulated(member)
+                        ? (formatHouseholdMemberAccordionSummary(member)
+                            || `Household Member ${index + 1}`)
+                        : `Household Member ${index + 1}`}
+                    </h4>
+                    <p className="text-xs text-muted-foreground">
+                      Linked as {member.role.replace("_", " ")}
+                    </p>
+                  </div>
+                  {activeExpandedMemberIndex === index ? (
+                    <ChevronUp className="h-4 w-4 text-muted-foreground" aria-hidden />
+                  ) : (
+                    <ChevronDown className="h-4 w-4 text-muted-foreground" aria-hidden />
+                  )}
+                </button>
                 <Button
                   type="button"
                   variant="ghost"
@@ -852,7 +902,23 @@ function HouseholdStep({ formData, onChange }: Readonly<HouseholdStepProps>) {
                 </Button>
               </div>
 
-              <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+              {activeExpandedMemberIndex === index && (
+                <div
+                  id={`household-member-panel-${index}`}
+                  className="space-y-4 border-t px-4 py-4"
+                >
+                  <div className="flex justify-end">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setExpandedMemberIndex(null)}
+                    >
+                      Done
+                    </Button>
+                  </div>
+
+                  <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
                 <div className="space-y-1.5">
                   <Label htmlFor={`household-relationshipType-${index}`}>Relationship</Label>
                   <Select
@@ -1024,11 +1090,11 @@ function HouseholdStep({ formData, onChange }: Readonly<HouseholdStepProps>) {
                     </SelectContent>
                   </Select>
                 </div>
-              </div>
+                  </div>
 
-              <div className="space-y-3">
-                <h5 className="text-sm font-medium">Physical Address</h5>
-                <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
+                  <div className="space-y-3">
+                    <h5 className="text-sm font-medium">Physical Address</h5>
+                    <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
                   <div className="space-y-1.5 xl:col-span-2">
                     <Label htmlFor={`household-street-${index}`}>Street</Label>
                     <Input
@@ -1108,141 +1174,143 @@ function HouseholdStep({ formData, onChange }: Readonly<HouseholdStepProps>) {
                       placeholder="ZIP"
                     />
                   </div>
-                </div>
-              </div>
+                  </div>
+                  </div>
 
-              <div className="space-y-3">
-                <div className="flex items-center gap-3">
-                  <h5 className="text-sm font-medium">Mailing Address</h5>
-                  <div className="flex items-center gap-2">
-                    <Checkbox
-                      id={`household-sameAsPhysical-${index}`}
-                      checked={member.mailingAddress.sameAsPhysical}
-                      onCheckedChange={(checked) =>
-                        updateMember(index, (currentMember) => ({
-                          ...currentMember,
-                          mailingAddress:
-                            checked === true
-                              ? {
-                                  ...currentMember.address,
-                                  sameAsPhysical: true,
-                                }
-                              : {
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-3">
+                      <h5 className="text-sm font-medium">Mailing Address</h5>
+                      <div className="flex items-center gap-2">
+                        <Checkbox
+                          id={`household-sameAsPhysical-${index}`}
+                          checked={member.mailingAddress.sameAsPhysical}
+                          onCheckedChange={(checked) =>
+                            updateMember(index, (currentMember) => ({
+                              ...currentMember,
+                              mailingAddress:
+                                checked === true
+                                  ? {
+                                      ...currentMember.address,
+                                      sameAsPhysical: true,
+                                    }
+                                  : {
+                                      ...currentMember.mailingAddress,
+                                      sameAsPhysical: false,
+                                    },
+                            }))
+                          }
+                        />
+                        <Label
+                          htmlFor={`household-sameAsPhysical-${index}`}
+                          className="cursor-pointer text-sm font-normal"
+                        >
+                          Same as physical
+                        </Label>
+                      </div>
+                    </div>
+
+                    {!member.mailingAddress.sameAsPhysical && (
+                      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
+                        <div className="space-y-1.5 xl:col-span-2">
+                          <Label htmlFor={`household-mailStreet-${index}`}>Street</Label>
+                          <Input
+                            id={`household-mailStreet-${index}`}
+                            value={member.mailingAddress.street}
+                            onChange={(e) =>
+                              updateMember(index, (currentMember) => ({
+                                ...currentMember,
+                                mailingAddress: {
                                   ...currentMember.mailingAddress,
-                                  sameAsPhysical: false,
+                                  street: e.target.value,
                                 },
-                        }))
-                      }
-                    />
-                    <Label
-                      htmlFor={`household-sameAsPhysical-${index}`}
-                      className="cursor-pointer text-sm font-normal"
-                    >
-                      Same as physical
-                    </Label>
+                              }))
+                            }
+                            placeholder="PO Box or street"
+                          />
+                        </div>
+                        <div className="space-y-1.5">
+                          <Label htmlFor={`household-mailApt-${index}`}>Apt</Label>
+                          <Input
+                            id={`household-mailApt-${index}`}
+                            value={member.mailingAddress.apt ?? ""}
+                            onChange={(e) =>
+                              updateMember(index, (currentMember) => ({
+                                ...currentMember,
+                                mailingAddress: {
+                                  ...currentMember.mailingAddress,
+                                  apt: e.target.value,
+                                },
+                              }))
+                            }
+                            placeholder="Apt"
+                          />
+                        </div>
+                        <div className="space-y-1.5">
+                          <Label htmlFor={`household-mailCity-${index}`}>City</Label>
+                          <Input
+                            id={`household-mailCity-${index}`}
+                            value={member.mailingAddress.city}
+                            onChange={(e) =>
+                              updateMember(index, (currentMember) => ({
+                                ...currentMember,
+                                mailingAddress: {
+                                  ...currentMember.mailingAddress,
+                                  city: e.target.value,
+                                },
+                              }))
+                            }
+                            placeholder="City"
+                          />
+                        </div>
+                        <div className="space-y-1.5">
+                          <Label htmlFor={`household-mailState-${index}`}>State</Label>
+                          <Select
+                            value={member.mailingAddress.state || "NE"}
+                            onValueChange={(value) =>
+                              updateMember(index, (currentMember) => ({
+                                ...currentMember,
+                                mailingAddress: {
+                                  ...currentMember.mailingAddress,
+                                  state: value,
+                                },
+                              }))
+                            }
+                          >
+                            <SelectTrigger id={`household-mailState-${index}`}>
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {US_STATES.map((stateOption) => (
+                                <SelectItem key={stateOption.value} value={stateOption.value}>
+                                  {stateOption.value}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="space-y-1.5">
+                          <Label htmlFor={`household-mailZip-${index}`}>ZIP</Label>
+                          <Input
+                            id={`household-mailZip-${index}`}
+                            value={member.mailingAddress.zip}
+                            onChange={(e) =>
+                              updateMember(index, (currentMember) => ({
+                                ...currentMember,
+                                mailingAddress: {
+                                  ...currentMember.mailingAddress,
+                                  zip: e.target.value,
+                                },
+                              }))
+                            }
+                            placeholder="ZIP"
+                          />
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
-
-                {!member.mailingAddress.sameAsPhysical && (
-                  <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
-                    <div className="space-y-1.5 xl:col-span-2">
-                      <Label htmlFor={`household-mailStreet-${index}`}>Street</Label>
-                      <Input
-                        id={`household-mailStreet-${index}`}
-                        value={member.mailingAddress.street}
-                        onChange={(e) =>
-                          updateMember(index, (currentMember) => ({
-                            ...currentMember,
-                            mailingAddress: {
-                              ...currentMember.mailingAddress,
-                              street: e.target.value,
-                            },
-                          }))
-                        }
-                        placeholder="PO Box or street"
-                      />
-                    </div>
-                    <div className="space-y-1.5">
-                      <Label htmlFor={`household-mailApt-${index}`}>Apt</Label>
-                      <Input
-                        id={`household-mailApt-${index}`}
-                        value={member.mailingAddress.apt ?? ""}
-                        onChange={(e) =>
-                          updateMember(index, (currentMember) => ({
-                            ...currentMember,
-                            mailingAddress: {
-                              ...currentMember.mailingAddress,
-                              apt: e.target.value,
-                            },
-                          }))
-                        }
-                        placeholder="Apt"
-                      />
-                    </div>
-                    <div className="space-y-1.5">
-                      <Label htmlFor={`household-mailCity-${index}`}>City</Label>
-                      <Input
-                        id={`household-mailCity-${index}`}
-                        value={member.mailingAddress.city}
-                        onChange={(e) =>
-                          updateMember(index, (currentMember) => ({
-                            ...currentMember,
-                            mailingAddress: {
-                              ...currentMember.mailingAddress,
-                              city: e.target.value,
-                            },
-                          }))
-                        }
-                        placeholder="City"
-                      />
-                    </div>
-                    <div className="space-y-1.5">
-                      <Label htmlFor={`household-mailState-${index}`}>State</Label>
-                      <Select
-                        value={member.mailingAddress.state || "NE"}
-                        onValueChange={(value) =>
-                          updateMember(index, (currentMember) => ({
-                            ...currentMember,
-                            mailingAddress: {
-                              ...currentMember.mailingAddress,
-                              state: value,
-                            },
-                          }))
-                        }
-                      >
-                        <SelectTrigger id={`household-mailState-${index}`}>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {US_STATES.map((stateOption) => (
-                            <SelectItem key={stateOption.value} value={stateOption.value}>
-                              {stateOption.value}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="space-y-1.5">
-                      <Label htmlFor={`household-mailZip-${index}`}>ZIP</Label>
-                      <Input
-                        id={`household-mailZip-${index}`}
-                        value={member.mailingAddress.zip}
-                        onChange={(e) =>
-                          updateMember(index, (currentMember) => ({
-                            ...currentMember,
-                            mailingAddress: {
-                              ...currentMember.mailingAddress,
-                              zip: e.target.value,
-                            },
-                          }))
-                        }
-                        placeholder="ZIP"
-                      />
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
+              )}
+            </section>
           ))}
         </div>
       )}

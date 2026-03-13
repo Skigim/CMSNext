@@ -28,6 +28,7 @@ export {
 } from "./avsNarrativeGenerator";
 
 export {
+  formatHouseholdMemberAccordionSummary,
   formatHouseholdMemberName,
   isHouseholdMemberPopulated,
   normalizeHouseholdMemberDraft,

@@ -335,7 +335,7 @@ describe("IntakeFormView", () => {
       expect(results).toHaveNoViolations();
     });
 
-    it("shows existing household members on the household step", () => {
+    it("shows existing household members as collapsed accordion summaries", () => {
       withHookState({
         currentStep: 4,
         visitedSteps: new Set([0, 1, 2, 3, 4]) as ReadonlySet<number>,
@@ -351,8 +351,38 @@ describe("IntakeFormView", () => {
         },
       });
       renderIntakeFormView();
+      expect(screen.getByRole("button", { name: /Spouse · Jordan Tester · 5559876543/i })).toBeInTheDocument();
+      expect(screen.queryByDisplayValue("Jordan")).not.toBeInTheDocument();
+      expect(screen.queryByDisplayValue("Tester")).not.toBeInTheDocument();
+    });
+
+    it("expands and collapses a household member accordion entry", async () => {
+      const user = userEvent.setup();
+
+      withHookState({
+        currentStep: 4,
+        visitedSteps: new Set([0, 1, 2, 3, 4]) as ReadonlySet<number>,
+        formData: {
+          ...createBlankIntakeForm(),
+          householdMembers: [
+            createMockHouseholdMemberData({
+              personId: "person-2",
+              firstName: "Jordan",
+              lastName: "Tester",
+            }),
+          ],
+        },
+      });
+
+      renderIntakeFormView();
+
+      await user.click(screen.getByRole("button", { name: /Spouse · Jordan Tester · 5559876543/i }));
       expect(screen.getByDisplayValue("Jordan")).toBeInTheDocument();
       expect(screen.getByDisplayValue("Tester")).toBeInTheDocument();
+
+      await user.click(screen.getByRole("button", { name: /Done/i }));
+      expect(screen.queryByDisplayValue("Jordan")).not.toBeInTheDocument();
+      expect(screen.queryByDisplayValue("Tester")).not.toBeInTheDocument();
     });
   });
 

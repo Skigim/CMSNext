@@ -85,3 +85,15 @@ export function normalizeHouseholdMemberForSave(
 export function formatHouseholdMemberName(member: HouseholdMemberData): string {
   return `${member.firstName} ${member.lastName}`.trim();
 }
+
+export function formatHouseholdMemberAccordionSummary(
+  member: HouseholdMemberData,
+): string {
+  return [
+    member.relationshipType?.trim() ?? "",
+    formatHouseholdMemberName(member),
+    normalizePhoneNumber(member.phone ?? ""),
+  ]
+    .filter((value) => value.length > 0)
+    .join(" · ");
+}
