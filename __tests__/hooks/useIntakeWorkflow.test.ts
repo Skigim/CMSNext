@@ -410,6 +410,83 @@ describe("useIntakeWorkflow", () => {
       expect(result.current.visitedSteps.size).toBe(1);
       expect(result.current.visitedSteps.has(0)).toBe(true);
     });
+
+    it("resets edit mode to the latest saved case data after a successful save", async () => {
+      // Arrange
+      const existingCase = createMockStoredCase({
+        id: "case-edit-1",
+        name: "Original Applicant",
+        mcn: "MCN-ORIGINAL",
+        person: createMockPerson({
+          id: "person-edit-1",
+          firstName: "Original",
+          lastName: "Applicant",
+          name: "Original Applicant",
+          phone: "5551234567",
+          ssn: "",
+        }),
+        caseRecord: {
+          ...createMockStoredCase().caseRecord,
+          personId: "person-edit-1",
+          mcn: "MCN-ORIGINAL",
+          applicationDate: "2026-03-01",
+        },
+      });
+      const savedCase = createMockStoredCase({
+        id: "case-edit-1",
+        name: "Latest Applicant",
+        mcn: "MCN-SAVED",
+        person: createMockPerson({
+          id: "person-edit-1",
+          firstName: "Latest",
+          lastName: "Applicant",
+          name: "Latest Applicant",
+          phone: "5551234567",
+          ssn: "",
+        }),
+        caseRecord: {
+          ...existingCase.caseRecord,
+          mcn: "MCN-SAVED",
+          applicationDate: "2026-05-20",
+        },
+      });
+      mockDataManager.updateCompleteCase.mockResolvedValue(savedCase);
+      const { result } = renderIntakeHook({ existingCase });
+
+      act(() => {
+        result.current.updateField("firstName", "Submitted");
+        result.current.updateField("lastName", "Applicant");
+        result.current.updateField("mcn", "MCN-SUBMITTED");
+        result.current.updateField("applicationDate", "2026-04-15");
+      });
+
+      // Act
+      await act(async () => {
+        await result.current.submit();
+      });
+
+      await waitFor(() => {
+        expect(result.current.formData.firstName).toBe("Latest");
+      });
+
+      act(() => {
+        result.current.updateField("firstName", "Unsaved");
+        result.current.goNext();
+        result.current.reset();
+      });
+
+      // Assert
+      expect(result.current.currentStep).toBe(0);
+      expect(result.current.formData.firstName).toBe("Latest");
+      expect(result.current.formData.lastName).toBe("Applicant");
+      expect(result.current.formData.mcn).toBe("MCN-SAVED");
+      expect(result.current.formData.applicationDate).toBe("2026-05-20");
+      // Edit-mode reset should restore the fully visited "editing an existing
+      // case" state, not the create-mode single-step visited set.
+      expect(result.current.visitedSteps).toEqual(
+        new Set(INTAKE_STEPS.map((_, index) => index)),
+      );
+    });
   });
 
   // --- submit ---------------------------------------------------------------

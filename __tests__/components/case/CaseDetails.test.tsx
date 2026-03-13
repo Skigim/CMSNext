@@ -6,6 +6,24 @@ import type { ComponentType } from "react";
 
 import { createMockPerson, createMockStoredCase } from "@/src/test/testUtils";
 
+const mockIntakeFormView = vi.fn();
+const mockSavedIntakeCase = createMockStoredCase({
+  id: "case-saved-1",
+  name: "Updated Intake Case",
+  updatedAt: "2026-03-13T18:00:00.000Z",
+  person: createMockPerson({
+    id: "person-saved-1",
+    firstName: "Updated",
+    lastName: "Applicant",
+    name: "Updated Applicant",
+  }),
+  caseRecord: {
+    ...createMockStoredCase().caseRecord,
+    personId: "person-saved-1",
+    mcn: "UPDATED-MCN",
+  },
+});
+
 vi.mock("@/hooks/useFinancialItems", () => ({
   useFinancialItems: () => ({
     groupedItems: {
@@ -42,7 +60,27 @@ vi.mock("@/components/case/AlertsPopover", () => ({
 }));
 
 vi.mock("@/components/case/IntakeFormView", () => ({
-  IntakeFormView: () => <div data-testid="intake-form-view">Edit Intake</div>,
+  IntakeFormView: (props: {
+    existingCase?: StoredCase;
+    onSuccess?: (savedCase: StoredCase) => void;
+    onCancel?: () => void;
+  }) => {
+    mockIntakeFormView(props);
+    return (
+      <div data-testid="intake-form-view">
+        <div data-testid="intake-case-name">{props.existingCase?.name}</div>
+        <button
+          type="button"
+          onClick={() => props.onSuccess?.(mockSavedIntakeCase)}
+        >
+          Save Intake
+        </button>
+        <button type="button" onClick={() => props.onCancel?.()}>
+          Cancel Intake
+        </button>
+      </div>
+    );
+  },
 }));
 
 vi.mock("@/components/case/CaseSummaryModal", () => ({
@@ -87,6 +125,7 @@ function renderCaseDetails(caseData: StoredCase) {
 describe("CaseDetails linked people rendering", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockIntakeFormView.mockClear();
   });
 
   it("has no accessibility violations", async () => {
@@ -226,6 +265,53 @@ describe("CaseDetails linked people rendering", () => {
 
     // Assert
     expect(screen.getByTestId("intake-form-view")).toBeInTheDocument();
+  });
+
+  it("reopens IntakeFormView with the saved case after a successful intake edit", async () => {
+    // Arrange
+    const user = userEvent.setup();
+    const originalCase = createMockStoredCase({
+      id: "case-saved-1",
+      name: "Original Intake Case",
+      updatedAt: "2026-03-13T17:00:00.000Z",
+      person: createMockPerson({
+        id: "person-original-1",
+        firstName: "Original",
+        lastName: "Applicant",
+        name: "Original Applicant",
+      }),
+      caseRecord: {
+        ...createMockStoredCase().caseRecord,
+        personId: "person-original-1",
+        mcn: "ORIGINAL-MCN",
+      },
+    });
+
+    // Act
+    renderCaseDetails(originalCase);
+    await user.click(screen.getByRole("button", { name: /Edit Details/i }));
+    await user.click(screen.getByRole("button", { name: /Save Intake/i }));
+
+    // Assert
+    expect(screen.getByText("Updated Intake Case")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: /Edit Details/i }));
+
+    const reopenedIntakeProps = mockIntakeFormView.mock.lastCall?.[0];
+    expect(reopenedIntakeProps).toEqual(
+      expect.objectContaining({
+        existingCase: expect.objectContaining({
+          id: "case-saved-1",
+          name: "Updated Intake Case",
+          caseRecord: expect.objectContaining({
+            mcn: "UPDATED-MCN",
+          }),
+        }),
+      }),
+    );
+    expect(screen.getByTestId("intake-case-name")).toHaveTextContent(
+      "Updated Intake Case",
+    );
   });
 
   it("prioritizes the normalized primary person over a stale case.person", () => {
