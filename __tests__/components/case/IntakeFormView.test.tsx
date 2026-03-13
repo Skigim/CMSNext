@@ -216,7 +216,25 @@ describe("IntakeFormView", () => {
 
       // ASSERT
       await waitFor(() => {
-        expect(screen.getByLabelText("MCN *")).toHaveFocus();
+        expect(screen.getByLabelText(/MCN/i)).toHaveFocus();
+      });
+    });
+
+    it("focuses the review step container when no review-field input is available", async () => {
+      // ARRANGE
+      withHookState({
+        currentStep: INTAKE_STEPS.length - 1,
+        visitedSteps: new Set(INTAKE_STEPS.map((_, i) => i)),
+        canSubmit: true,
+      });
+
+      // ACT
+      renderIntakeFormView();
+      const stepContent = screen.getByTestId("intake-step-content");
+
+      // ASSERT
+      await waitFor(() => {
+        expect(stepContent).toHaveFocus();
       });
     });
   });

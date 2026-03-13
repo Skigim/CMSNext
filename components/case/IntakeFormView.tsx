@@ -927,17 +927,31 @@ export function IntakeFormView({
   }, [initialData, setFormData]);
 
   useEffect(() => {
-    const focusTimer = globalThis.setTimeout(() => {
+    const focusStepContent = () => {
+      const stepContent = stepContentRef.current;
+      if (!stepContent) {
+        return;
+      }
+
       const firstField =
-        stepContentRef.current?.querySelector<HTMLElement>(
+        stepContent.querySelector<HTMLElement>(
           STEP_FOCUSABLE_SELECTOR,
-        ) ?? null;
+        ) ?? stepContent;
 
       firstField?.focus();
-    }, 0);
+    };
+
+    if (
+      globalThis.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches
+    ) {
+      focusStepContent();
+      return undefined;
+    }
+
+    const focusFrame = globalThis.requestAnimationFrame(focusStepContent);
 
     return () => {
-      globalThis.clearTimeout(focusTimer);
+      globalThis.cancelAnimationFrame(focusFrame);
     };
   }, [currentStep]);
 
@@ -996,7 +1010,11 @@ export function IntakeFormView({
             </div>
 
             {/* Step form */}
-            <div ref={stepContentRef}>
+            <div
+              ref={stepContentRef}
+              tabIndex={-1}
+              data-testid="intake-step-content"
+            >
               {currentStep === 0 && (
                 <ApplicantStep formData={formData} onChange={updateField} />
               )}
