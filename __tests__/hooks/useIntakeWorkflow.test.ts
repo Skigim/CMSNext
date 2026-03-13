@@ -635,6 +635,33 @@ describe("useIntakeWorkflow", () => {
       );
     });
 
+    it("filters blank draft relationships before saving", async () => {
+      const { result } = renderIntakeHook();
+
+      act(() => {
+        result.current.updateField("firstName", "Alice");
+        result.current.updateField("lastName", "Smith");
+        result.current.updateField("mcn", "12345");
+        result.current.updateField("applicationDate", "2026-01-01");
+        result.current.updateField("relationships", [
+          { type: "Spouse", name: "Jamie Smith", phone: "5550001111" },
+          { type: " ", name: " ", phone: " " },
+        ]);
+      });
+
+      await act(async () => {
+        await result.current.submit();
+      });
+
+      expect(mockDataManager.createCompleteCase).toHaveBeenCalledWith(
+        expect.objectContaining({
+          person: expect.objectContaining({
+            relationships: [{ type: "Spouse", name: "Jamie Smith", phone: "5550001111" }],
+          }),
+        }),
+      );
+    });
+
     it("shows an error when canSubmit is false", async () => {
       const { result } = renderIntakeHook();
 

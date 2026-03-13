@@ -51,6 +51,7 @@ import {
   getDisplayPhoneNumber,
   normalizePhoneNumber,
 } from "@/domain/common";
+import { isRelationshipPopulated } from "@/domain/cases/relationships";
 import { RelationshipsSection } from "@/components/case/CaseEditSections";
 import type { Relationship } from "@/types/case";
 
@@ -760,7 +761,6 @@ function HouseholdStep({ formData, onChange }: Readonly<HouseholdStepProps>) {
     () => (formData.relationships ?? []) as Relationship[],
     [formData.relationships],
   );
-
   const handleAdd = useCallback(() => {
     const newRel: Relationship = {
       id: crypto.randomUUID(),
@@ -814,6 +814,10 @@ interface ReviewStepProps {
 }
 
 function ReviewStep({ formData, onGoToStep }: Readonly<ReviewStepProps>) {
+  const populatedRelationships = useMemo(
+    () => ((formData.relationships ?? []) as Relationship[]).filter(isRelationshipPopulated),
+    [formData.relationships],
+  );
   const sections: {
     title: string;
     stepIndex: number;
@@ -955,12 +959,12 @@ function ReviewStep({ formData, onGoToStep }: Readonly<ReviewStepProps>) {
           </Button>
         </div>
         <div className="rounded-md border bg-muted/20 px-4 py-3 space-y-2">
-          {(formData.relationships ?? []).length === 0 ? (
+          {populatedRelationships.length === 0 ? (
             <p className="text-xs text-muted-foreground italic">
               No relationships added
             </p>
           ) : (
-            (formData.relationships as Relationship[]).map((rel, i) => (
+            populatedRelationships.map((rel, i) => (
               <SummaryRow
                 key={rel.id ?? `review-rel-${i}`}
                 label={rel.type || "Relationship"}

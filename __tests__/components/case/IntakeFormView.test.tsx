@@ -323,13 +323,15 @@ describe("IntakeFormView", () => {
   // --- Household step -------------------------------------------------------
 
   describe("Household step", () => {
-    it("renders the Relationships section on step 4", () => {
+    it("renders the Relationships section on step 4", async () => {
       withHookState({
         currentStep: 4,
         visitedSteps: new Set([0, 1, 2, 3, 4]) as ReadonlySet<number>,
       });
-      renderIntakeFormView();
+      const { container } = renderIntakeFormView();
+      const results = await axe(container);
       expect(screen.getByText("Relationships")).toBeInTheDocument();
+      expect(results).toHaveNoViolations();
     });
 
     it("shows existing relationships on the household step", () => {
@@ -369,7 +371,7 @@ describe("IntakeFormView", () => {
       expect(screen.getByText("No relationships added")).toBeInTheDocument();
     });
 
-    it("shows relationship names in the review summary", () => {
+    it("shows relationship names in the review summary", async () => {
       withHookState({
         currentStep: INTAKE_STEPS.length - 1,
         visitedSteps: new Set(INTAKE_STEPS.map((_, i) => i)),
@@ -385,8 +387,32 @@ describe("IntakeFormView", () => {
           ],
         },
       });
-      renderIntakeFormView();
+      const { container } = renderIntakeFormView();
+      const results = await axe(container);
       expect(screen.getByText(/Jordan Tester/)).toBeInTheDocument();
+      expect(results).toHaveNoViolations();
+    });
+
+    it("ignores blank draft relationships in the review summary", async () => {
+      withHookState({
+        currentStep: INTAKE_STEPS.length - 1,
+        visitedSteps: new Set(INTAKE_STEPS.map((_, i) => i)),
+        canSubmit: true,
+        formData: {
+          ...createBlankIntakeForm(),
+          firstName: "Alice",
+          lastName: "Smith",
+          mcn: "12345",
+          applicationDate: "2026-01-01",
+          relationships: [{ id: "rel-blank", type: " ", name: " ", phone: " " }],
+        },
+      });
+
+      const { container } = renderIntakeFormView();
+      const results = await axe(container);
+
+      expect(screen.getByText("No relationships added")).toBeInTheDocument();
+      expect(results).toHaveNoViolations();
     });
   });
 
