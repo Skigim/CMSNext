@@ -39,10 +39,31 @@ export function getPrimaryCasePersonRef(
   source: CasePeopleSource,
 ): NonNullable<StoredCase["linkedPeople"]>[number]["ref"] | null {
   const linkedPeople = getLinkedPeople(source);
+  const sourcePersonId = source.person?.id;
 
   return (
     linkedPeople.find(({ ref }) => ref.isPrimary)?.ref ??
     linkedPeople.find(({ ref }) => ref.personId === source.caseRecord?.personId)?.ref ??
+    linkedPeople.find(({ ref }) => ref.personId === sourcePersonId)?.ref ??
+    linkedPeople[0]?.ref ??
+    null
+  );
+}
+
+export function getPrimaryCasePersonForDisplay(source: CasePeopleSource): Person | null {
+  const linkedPeople = getLinkedPeople(source);
+  const primaryLinkedPerson =
+    linkedPeople.find(({ ref }) => ref.isPrimary) ??
+    linkedPeople.find(({ ref }) => ref.personId === source.caseRecord?.personId);
+  const sourceLinkedPerson = source.person
+    ? linkedPeople.find(({ person }) => person.id === source.person?.id)
+    : undefined;
+
+  return (
+    primaryLinkedPerson?.person ??
+    sourceLinkedPerson?.person ??
+    source.person ??
+    linkedPeople[0]?.person ??
     null
   );
 }
@@ -54,8 +75,8 @@ export function getPrimaryCasePerson(source: CasePeopleSource): Person | null {
     linkedPeople.find(({ ref }) => ref.personId === source.caseRecord?.personId);
 
   return (
-    primaryLinkedPerson?.person ??
     source.person ??
+    primaryLinkedPerson?.person ??
     linkedPeople[0]?.person ??
     null
   );

@@ -1,5 +1,6 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
 import { render, screen } from "@testing-library/react";
+import { axe } from "jest-axe";
 import type { ComponentType } from "react";
 
 import { createMockPerson, createMockStoredCase } from "@/src/test/testUtils";
@@ -87,6 +88,36 @@ function renderCaseDetails(caseData: StoredCase) {
 describe("CaseDetails linked people rendering", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+  });
+
+  it("has no accessibility violations", async () => {
+    // Arrange
+    const primaryPerson = createMockPerson({
+      id: "person-a11y",
+      firstName: "A11y",
+      lastName: "Applicant",
+      name: "A11y Applicant",
+    });
+    const caseData = createMockStoredCase({
+      person: primaryPerson,
+      linkedPeople: [
+        {
+          ref: { personId: primaryPerson.id, role: "applicant", isPrimary: true },
+          person: primaryPerson,
+        },
+      ],
+      caseRecord: {
+        ...createMockStoredCase().caseRecord,
+        personId: primaryPerson.id,
+      },
+    });
+
+    // Act
+    const { container } = renderCaseDetails(caseData);
+    const results = await axe(container);
+
+    // Assert
+    expect(results).toHaveNoViolations();
   });
 
   it("renders a single-person case without regressing primary contact details", () => {

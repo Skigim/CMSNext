@@ -17,6 +17,7 @@ export {
   formatCasePersonDisplayName,
   getCasePersonRoleLabel,
   getPrimaryCasePerson,
+  getPrimaryCasePersonForDisplay,
   getPrimaryCasePersonRef,
   getPersonRelationships,
 } from "./people";

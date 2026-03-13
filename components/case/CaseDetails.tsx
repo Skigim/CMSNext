@@ -23,7 +23,7 @@ import { useTemplates } from "@/contexts/TemplateContext";
 import {
   formatCasePersonDisplayName,
   getCasePersonRoleLabel,
-  getPrimaryCasePerson,
+  getPrimaryCasePersonForDisplay,
   getPrimaryCasePersonRef,
 } from "@/domain/cases";
 import { formatUSPhone, formatDateForDisplay, parseLocalDate } from "@/domain/common";
@@ -74,10 +74,11 @@ export function CaseDetails({
   // Get VR templates from unified template system
   const { getTemplatesByCategory } = useTemplates();
   const vrTemplates = useMemo(() => getTemplatesByCategory('vr'), [getTemplatesByCategory]);
-  const primaryPerson = getPrimaryCasePerson(caseData);
+  const primaryPerson = getPrimaryCasePersonForDisplay(caseData);
   const primaryPersonRef = getPrimaryCasePersonRef(caseData);
+  const resolvedPrimaryPersonId = primaryPersonRef?.personId ?? primaryPerson?.id;
   const additionalLinkedPeople =
-    caseData.linkedPeople?.filter(({ ref }) => ref.personId !== primaryPersonRef?.personId) ?? [];
+    caseData.linkedPeople?.filter(({ ref }) => ref.personId !== resolvedPrimaryPersonId) ?? [];
 
   const handleResolveAlert = (alert: AlertWithMatch) => {
     onResolveAlert?.(alert);
@@ -328,6 +329,7 @@ export function CaseDetails({
                   <Button 
                     variant="outline" 
                     size="sm"
+                    aria-label="Open case actions menu"
                     className={cn(
                       interactiveHoverClasses,
                       "rounded-l-none px-2",
