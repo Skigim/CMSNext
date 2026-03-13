@@ -92,7 +92,6 @@ export function ViewRenderer({
   handleCompleteNewCase,
   handleCloseNewCaseModal: _handleCloseNewCaseModal,
   handleBackToList,
-  handleSaveCase,
   
   // Component handlers
   handleDeleteCase,
@@ -164,7 +163,6 @@ export function ViewRenderer({
           case={selectedCase}
           alerts={alerts.alertsByCaseId.get(selectedCase.id) ?? []}
           onBack={handleBackToList}
-          onSave={handleSaveCase}
           onDelete={() => handleDeleteCase(selectedCase.id)}
           onArchive={handleApproveArchival ? async () => {
             await handleApproveArchival([selectedCase.id]);

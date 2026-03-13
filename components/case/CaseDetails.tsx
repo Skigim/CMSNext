@@ -5,8 +5,8 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { FinancialsGridView } from "./FinancialsGridView";
 import { NotesPopover } from "./NotesPopover";
 import { AlertsPopover } from "./AlertsPopover";
-import { CaseEditModal } from "../modals/CaseEditModal";
-import type { StoredCase, NewPersonData, NewCaseRecordData } from "../../types/case";
+import { IntakeFormView } from "./IntakeFormView";
+import type { StoredCase } from "../../types/case";
 import { ArrowLeft, Trash2, Star, StarOff, Phone, Mail, FileSignature, Pencil, FileText, Archive, ChevronDown } from "lucide-react";
 import { withDataErrorBoundary } from "../error/ErrorBoundaryHOC";
 import { CaseStatusMenu } from "./CaseStatusMenu";
@@ -41,7 +41,6 @@ function get90DayTooltip(dateStr: string): string {
 interface CaseDetailsProps {
   case: StoredCase;
   onBack: () => void;
-  onSave: (caseData: { person: NewPersonData; caseRecord: NewCaseRecordData }) => Promise<void>;
   onDelete: () => void;
   onArchive?: () => Promise<void>;
   isArchiving?: boolean;
@@ -54,18 +53,18 @@ interface CaseDetailsProps {
   onUpdatePriority?: (caseIds: string[], priority: boolean) => Promise<number>;
 }
 
-export function CaseDetails({ 
-  case: caseData, 
-  onBack, 
-  onSave,
-  onDelete,
-  onArchive,
-  isArchiving = false,
-  alerts = [],
-  onUpdateStatus,
-  onResolveAlert,
-  onUpdatePriority,
-}: Readonly<CaseDetailsProps>) {
+export function CaseDetails(props: Readonly<CaseDetailsProps>) {
+  const {
+    case: caseData,
+    onBack,
+    onDelete,
+    onArchive,
+    isArchiving = false,
+    alerts = [],
+    onUpdateStatus,
+    onResolveAlert,
+    onUpdatePriority,
+  } = props;
   
   // Fetch financials and notes for case summary generation
   const { groupedItems: financials, items: financialItemsList } = useFinancialItems(caseData.id);
@@ -93,6 +92,16 @@ export function CaseDetails({
   const [vrModalOpen, setVrModalOpen] = useState(false);
   const [narrativeModalOpen, setNarrativeModalOpen] = useState(false);
   const [editModalOpen, setEditModalOpen] = useState(false);
+
+  if (editModalOpen) {
+    return (
+      <IntakeFormView
+        existingCase={caseData}
+        onSuccess={() => setEditModalOpen(false)}
+        onCancel={() => setEditModalOpen(false)}
+      />
+    );
+  }
 
   return (
     <div className="space-y-6" data-papercut-context="CaseDetails">
@@ -403,13 +412,6 @@ export function CaseDetails({
         open={narrativeModalOpen}
         onOpenChange={setNarrativeModalOpen}
         storedCase={caseData}
-      />
-
-      <CaseEditModal
-        isOpen={editModalOpen}
-        onClose={() => setEditModalOpen(false)}
-        caseData={caseData}
-        onSave={onSave}
       />
     </div>
   );

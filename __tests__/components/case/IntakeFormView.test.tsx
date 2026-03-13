@@ -36,6 +36,7 @@ const hookState = {
   currentStep: 0,
   visitedSteps: new Set([0]) as ReadonlySet<number>,
   formData: createBlankIntakeForm(),
+  isEditing: false,
   isSubmitting: false,
   error: null as string | null,
   updateField: mockUpdateField,
@@ -82,6 +83,7 @@ describe("IntakeFormView", () => {
       currentStep: 0,
       visitedSteps: new Set([0]) as ReadonlySet<number>,
       formData: createBlankIntakeForm(),
+      isEditing: false,
       isSubmitting: false,
       error: null,
       updateField: mockUpdateField,
@@ -115,6 +117,20 @@ describe("IntakeFormView", () => {
       for (const step of INTAKE_STEPS) {
         expect(screen.getAllByText(step.label).length).toBeGreaterThan(0);
       }
+    });
+
+    it("switches the title and submit affordance in edit mode", () => {
+      withHookState({
+        isEditing: true,
+        currentStep: INTAKE_STEPS.length - 1,
+        visitedSteps: new Set(INTAKE_STEPS.map((_, i) => i)),
+        canSubmit: true,
+      });
+
+      renderIntakeFormView();
+
+      expect(screen.getByText("Edit Case")).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: /Save Changes/i })).toBeInTheDocument();
     });
   });
 

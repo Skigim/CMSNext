@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { toast as mockToast } from "@/src/test/testUtils";
 import { createBlankIntakeForm } from "@/domain/validation/intake.schema";
 import { INTAKE_STEPS } from "@/domain/cases/intake-steps";
+import { createMockPerson, createMockStoredCase } from "@/src/test/testUtils";
 
 // ---- Mocks -----------------------------------------------------------------
 
@@ -13,6 +14,7 @@ vi.mock("@/utils/performanceTracker", () => ({
 
 const mockDataManager = {
   createCompleteCase: vi.fn(),
+  updateCompleteCase: vi.fn(),
 };
 
 vi.mock("@/contexts/DataManagerContext", () => ({
@@ -61,6 +63,15 @@ describe("useIntakeWorkflow", () => {
       mcn: "12345",
       status: "Intake",
       priority: false,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    });
+    mockDataManager.updateCompleteCase.mockResolvedValue({
+      id: "case-edit-1",
+      name: "Alice Smith",
+      mcn: "12345",
+      status: "Pending",
+      priority: true,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     });
@@ -401,6 +412,82 @@ describe("useIntakeWorkflow", () => {
           }),
         }),
       );
+      expect(mockDataManager.updateCompleteCase).not.toHaveBeenCalled();
+    });
+
+    it("updates an existing case in edit mode while preserving unsupported fields", async () => {
+      // Arrange
+      const existingCase = createMockStoredCase({
+        id: "case-edit-1",
+        caseRecord: {
+          ...createMockStoredCase().caseRecord,
+          personId: "person-edit-1",
+          status: "Pending",
+          priority: true,
+          description: "Keep me",
+          retroMonths: ["Jan", "Feb"],
+          avsSubmitted: true,
+          avsSubmitDate: "2026-01-15",
+          interfacesReviewed: true,
+          reviewVRs: true,
+          reviewPriorBudgets: true,
+          reviewPriorNarr: true,
+          authorizedReps: ["rep-1"],
+        },
+        person: createMockPerson({
+          id: "person-edit-1",
+          phone: "5551234567",
+          ssn: "",
+          authorizedRepIds: ["rep-1"],
+          familyMembers: ["family-1"],
+          relationships: [{ type: "Spouse", name: "Jamie Smith", phone: "5550001111" }],
+          status: "Archived",
+        }),
+      });
+      const { result } = renderIntakeHook({ existingCase });
+
+      act(() => {
+        result.current.updateField("firstName", "Edited");
+        result.current.updateField("lastName", "Applicant");
+        result.current.updateField("mcn", "MCN-EDITED");
+        result.current.updateField("applicationDate", "2026-04-01");
+      });
+
+      // Act
+      await act(async () => {
+        await result.current.submit();
+      });
+
+      // Assert
+      expect(mockDataManager.updateCompleteCase).toHaveBeenCalledWith(
+        "case-edit-1",
+        expect.objectContaining({
+          person: expect.objectContaining({
+            firstName: "Edited",
+            lastName: "Applicant",
+            authorizedRepIds: ["rep-1"],
+            familyMembers: ["family-1"],
+            relationships: [{ type: "Spouse", name: "Jamie Smith", phone: "5550001111" }],
+            status: "Archived",
+          }),
+          caseRecord: expect.objectContaining({
+            mcn: "MCN-EDITED",
+            applicationDate: "2026-04-01",
+            status: "Pending",
+            priority: true,
+            description: "Keep me",
+            retroMonths: ["Jan", "Feb"],
+            avsSubmitted: true,
+            avsSubmitDate: "2026-01-15",
+            interfacesReviewed: true,
+            reviewVRs: true,
+            reviewPriorBudgets: true,
+            reviewPriorNarr: true,
+            authorizedReps: ["rep-1"],
+          }),
+        }),
+      );
+      expect(mockDataManager.createCompleteCase).not.toHaveBeenCalled();
     });
 
     it("trims required identity fields before saving", async () => {

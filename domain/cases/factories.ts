@@ -15,6 +15,10 @@ import {
   CaseStatus, 
   StoredCase 
 } from "@/types/case";
+import {
+  createBlankIntakeForm,
+  type IntakeFormData,
+} from "@/domain/validation/intake.schema";
 import { getPrimaryCasePerson } from "./people";
 
 /**
@@ -88,6 +92,7 @@ export function createCaseRecordData(
     citizenshipVerified: record?.citizenshipVerified ?? false,
     residencyVerified: record?.residencyVerified ?? false,
     avsSubmitted: record?.avsSubmitted ?? false,
+    avsSubmitDate: record?.avsSubmitDate ?? "",
     interfacesReviewed: record?.interfacesReviewed ?? false,
     reviewVRs: record?.reviewVRs ?? false,
     reviewPriorBudgets: record?.reviewPriorBudgets ?? false,
@@ -152,5 +157,80 @@ export function createPersonData(
     familyMembers: person?.familyMembers ?? [],
     relationships: person?.relationships ?? [],
     status: person?.status ?? "Active",
+  };
+}
+
+/**
+ * Creates intake-form data from an existing stored case.
+ *
+ * Supported intake fields are copied so the workflow can act as the canonical
+ * create/edit authoring surface, while unsupported fields stay on the source
+ * case and are preserved by the edit submit path.
+ */
+export function createIntakeFormData(
+  existingCase?: StoredCase | null,
+): IntakeFormData {
+  const blankForm = createBlankIntakeForm();
+  const person = existingCase ? getPrimaryCasePerson(existingCase) : null;
+  const record = existingCase?.caseRecord;
+
+  if (!existingCase || !record) {
+    return blankForm;
+  }
+
+  return {
+    ...blankForm,
+    firstName: person?.firstName ?? "",
+    lastName: person?.lastName ?? "",
+    dateOfBirth: person?.dateOfBirth ?? "",
+    ssn: person?.ssn ?? "",
+    maritalStatus: record.maritalStatus ?? "",
+    phone: person?.phone ?? "",
+    email: person?.email ?? "",
+    address: {
+      ...blankForm.address,
+      street: person?.address?.street ?? "",
+      apt: person?.address?.apt ?? "",
+      city: person?.address?.city ?? "",
+      state: person?.address?.state ?? blankForm.address.state,
+      zip: person?.address?.zip ?? "",
+    },
+    mailingAddress: {
+      ...blankForm.mailingAddress,
+      street: person?.mailingAddress?.street ?? "",
+      apt: person?.mailingAddress?.apt ?? "",
+      city: person?.mailingAddress?.city ?? "",
+      state: person?.mailingAddress?.state ?? blankForm.mailingAddress.state,
+      zip: person?.mailingAddress?.zip ?? "",
+      sameAsPhysical: person?.mailingAddress?.sameAsPhysical ?? true,
+    },
+    mcn: record.mcn ?? "",
+    applicationDate: record.applicationDate ?? "",
+    caseType: record.caseType ?? "",
+    applicationType: record.applicationType ?? "",
+    livingArrangement:
+      record.livingArrangement ?? person?.livingArrangement ?? "",
+    withWaiver: record.withWaiver ?? false,
+    admissionDate: record.admissionDate ?? "",
+    organizationId:
+      record.organizationId ?? person?.organizationId ?? blankForm.organizationId,
+    // Older edit paths stored retro details either as structured retroMonths or
+    // as the free-text retroRequested string. Intake edit mode uses the text
+    // field, so prefer the user-entered retroRequested text when present and
+    // only fall back to formatted retroMonths when the text is empty.
+    retroRequested:
+      record.retroRequested && record.retroRequested.trim().length > 0
+        ? record.retroRequested
+        : record.retroMonths && record.retroMonths.length > 0
+          ? record.retroMonths.join(", ")
+          : "",
+    appValidated: record.appValidated ?? false,
+    agedDisabledVerified: record.agedDisabledVerified ?? false,
+    citizenshipVerified: record.citizenshipVerified ?? false,
+    residencyVerified: record.residencyVerified ?? false,
+    contactMethods: record.contactMethods ?? [],
+    voterFormStatus: record.voterFormStatus ?? "",
+    pregnancy: record.pregnancy ?? false,
+    avsConsentDate: record.avsConsentDate ?? "",
   };
 }
