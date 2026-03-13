@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { createMockPerson, createMockStoredCase } from "@/src/test/testUtils";
+import { createMockPerson, createMockStoredCase, omitHydratedPerson } from "@/src/test/testUtils";
 
 import {
   getPrimaryCasePerson,
@@ -42,6 +42,36 @@ describe("case people helpers", () => {
 
     // Assert
     expect(result).toMatchObject({ id: "person-2", name: "Legacy Hydrated" });
+  });
+
+  it("falls back to the normalized primary person when the hydrated person is missing", () => {
+    // Arrange
+    const normalizedPrimaryPerson = createMockPerson({
+      id: "person-1",
+      firstName: "Fallback",
+      lastName: "Primary",
+      name: "Fallback Primary",
+    });
+    const caseData = omitHydratedPerson(
+      createMockStoredCase({
+        linkedPeople: [
+          {
+            ref: { personId: normalizedPrimaryPerson.id, role: "applicant", isPrimary: true },
+            person: normalizedPrimaryPerson,
+          },
+        ],
+        caseRecord: {
+          ...createMockStoredCase().caseRecord,
+          personId: normalizedPrimaryPerson.id,
+        },
+      }),
+    );
+
+    // Act
+    const result = getPrimaryCasePerson(caseData);
+
+    // Assert
+    expect(result).toMatchObject({ id: "person-1", name: "Fallback Primary" });
   });
 
   it("prefers the normalized primary person for display callers", () => {
