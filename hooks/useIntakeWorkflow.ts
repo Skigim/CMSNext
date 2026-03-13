@@ -27,7 +27,7 @@ import {
   createCaseRecordData,
   createIntakeFormData,
   createPersonData,
-} from "../domain/cases";
+} from "@/domain/cases";
 import { INTAKE_STEPS, isStepComplete, isStepReachable } from "../domain/cases/intake-steps";
 import {
   type IntakeFormData,
