@@ -28,7 +28,16 @@ export {
 } from "./avsNarrativeGenerator";
 
 export {
+  formatHouseholdMemberAccordionSummary,
+  formatHouseholdMemberName,
+  isHouseholdMemberPopulated,
+  normalizeHouseholdMemberDraft,
+  normalizeHouseholdMemberForSave,
+} from "./householdMembers";
+
+export {
   createCaseRecordData,
+  createBlankHouseholdMemberData,
   createIntakeFormData,
   createPersonData,
   type CaseRecordDefaults,

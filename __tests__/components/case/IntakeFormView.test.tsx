@@ -4,6 +4,7 @@ import { axe, toHaveNoViolations } from "jest-axe";
 import { describe, expect, it, vi, beforeEach } from "vitest";
 import { createBlankIntakeForm } from "@/domain/validation/intake.schema";
 import { INTAKE_STEPS } from "@/domain/cases/intake-steps";
+import { createMockHouseholdMemberData } from "@/src/test/testUtils";
 
 expect.extend(toHaveNoViolations);
 
@@ -323,37 +324,72 @@ describe("IntakeFormView", () => {
   // --- Household step -------------------------------------------------------
 
   describe("Household step", () => {
-    it("renders the Relationships section on step 4", async () => {
+    it("renders the household members section on step 4", async () => {
       withHookState({
         currentStep: 4,
         visitedSteps: new Set([0, 1, 2, 3, 4]) as ReadonlySet<number>,
       });
       const { container } = renderIntakeFormView();
       const results = await axe(container);
-      expect(screen.getByText("Relationships")).toBeInTheDocument();
+      expect(screen.getByText("Household Members")).toBeInTheDocument();
       expect(results).toHaveNoViolations();
     });
 
-    it("shows existing relationships on the household step", () => {
+    it("shows existing household members as collapsed accordion summaries", () => {
       withHookState({
         currentStep: 4,
         visitedSteps: new Set([0, 1, 2, 3, 4]) as ReadonlySet<number>,
         formData: {
           ...createBlankIntakeForm(),
-          relationships: [
-            { id: "rel-1", type: "Spouse", name: "Jordan Tester", phone: "5559876543" },
+          householdMembers: [
+            createMockHouseholdMemberData({
+              personId: "person-2",
+              firstName: "Jordan",
+              lastName: "Tester",
+            }),
           ],
         },
       });
       renderIntakeFormView();
-      expect(screen.getByDisplayValue("Jordan Tester")).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: /Spouse · Jordan Tester · 5559876543/i })).toBeInTheDocument();
+      expect(screen.queryByDisplayValue("Jordan")).not.toBeInTheDocument();
+      expect(screen.queryByDisplayValue("Tester")).not.toBeInTheDocument();
+    });
+
+    it("expands and collapses a household member accordion entry", async () => {
+      const user = userEvent.setup();
+
+      withHookState({
+        currentStep: 4,
+        visitedSteps: new Set([0, 1, 2, 3, 4]) as ReadonlySet<number>,
+        formData: {
+          ...createBlankIntakeForm(),
+          householdMembers: [
+            createMockHouseholdMemberData({
+              personId: "person-2",
+              firstName: "Jordan",
+              lastName: "Tester",
+            }),
+          ],
+        },
+      });
+
+      renderIntakeFormView();
+
+      await user.click(screen.getByRole("button", { name: /Spouse · Jordan Tester · 5559876543/i }));
+      expect(screen.getByDisplayValue("Jordan")).toBeInTheDocument();
+      expect(screen.getByDisplayValue("Tester")).toBeInTheDocument();
+
+      await user.click(screen.getByRole("button", { name: /Done/i }));
+      expect(screen.queryByDisplayValue("Jordan")).not.toBeInTheDocument();
+      expect(screen.queryByDisplayValue("Tester")).not.toBeInTheDocument();
     });
   });
 
   // --- Review step household summary ----------------------------------------
 
   describe("Review step household summary", () => {
-    it("shows 'No relationships added' when relationships are empty", () => {
+    it("shows 'No household members added' when household members are empty", () => {
       withHookState({
         currentStep: INTAKE_STEPS.length - 1,
         visitedSteps: new Set(INTAKE_STEPS.map((_, i) => i)),
@@ -368,10 +404,10 @@ describe("IntakeFormView", () => {
         },
       });
       renderIntakeFormView();
-      expect(screen.getByText("No relationships added")).toBeInTheDocument();
+      expect(screen.getByText("No household members added")).toBeInTheDocument();
     });
 
-    it("shows relationship names in the review summary", async () => {
+    it("shows household member details in the review summary", async () => {
       withHookState({
         currentStep: INTAKE_STEPS.length - 1,
         visitedSteps: new Set(INTAKE_STEPS.map((_, i) => i)),
@@ -382,18 +418,23 @@ describe("IntakeFormView", () => {
           lastName: "Smith",
           mcn: "12345",
           applicationDate: "2026-01-01",
-          relationships: [
-            { id: "rel-1", type: "Spouse", name: "Jordan Tester", phone: "5559876543" },
+          householdMembers: [
+            createMockHouseholdMemberData({
+              personId: "person-2",
+              firstName: "Jordan",
+              lastName: "Tester",
+            }),
           ],
         },
       });
       const { container } = renderIntakeFormView();
       const results = await axe(container);
       expect(screen.getByText(/Jordan Tester/)).toBeInTheDocument();
+      expect(screen.getByText(/jordan@example.com/)).toBeInTheDocument();
       expect(results).toHaveNoViolations();
     });
 
-    it("ignores blank draft relationships in the review summary", async () => {
+    it("ignores blank draft household members in the review summary", async () => {
       withHookState({
         currentStep: INTAKE_STEPS.length - 1,
         visitedSteps: new Set(INTAKE_STEPS.map((_, i) => i)),
@@ -404,14 +445,24 @@ describe("IntakeFormView", () => {
           lastName: "Smith",
           mcn: "12345",
           applicationDate: "2026-01-01",
-          relationships: [{ id: "rel-blank", type: " ", name: " ", phone: " " }],
+          householdMembers: [
+            createMockHouseholdMemberData({
+              relationshipType: " ",
+              firstName: " ",
+              lastName: " ",
+              phone: "",
+              email: "",
+              dateOfBirth: "",
+              livingArrangement: "",
+            }),
+          ],
         },
       });
 
       const { container } = renderIntakeFormView();
       const results = await axe(container);
 
-      expect(screen.getByText("No relationships added")).toBeInTheDocument();
+      expect(screen.getByText("No household members added")).toBeInTheDocument();
       expect(results).toHaveNoViolations();
     });
   });

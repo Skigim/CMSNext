@@ -300,6 +300,111 @@ describe("CaseService hydration seam", () => {
       ]);
     });
 
+    it("creates additional household members as standalone linked people", async () => {
+      // ARRANGE
+      vi.mocked(mockFileService.readFile).mockResolvedValue(createPersistedNormalizedData());
+      vi.mocked(mockFileService.writeFile).mockResolvedValue(true);
+
+      // ACT
+      const result = await caseService.createCompleteCase({
+        person: createMockNewPersonData({
+          firstName: "Taylor",
+          lastName: "Applicant",
+        }),
+        caseRecord: createMockNewCaseRecordData({
+          mcn: "MCN-1001",
+          personId: "",
+        }),
+        householdMembers: [
+          {
+            personId: undefined,
+            relationshipType: "Spouse",
+            role: "household_member",
+            firstName: "Jordan",
+            lastName: "Applicant",
+            email: "jordan@example.com",
+            phone: "5552223333",
+            dateOfBirth: "1988-04-05",
+            ssn: "222-33-4444",
+            organizationId: "org-1",
+            livingArrangement: "Community",
+            address: {
+              street: "456 Oak St",
+              apt: "",
+              city: "Omaha",
+              state: "NE",
+              zip: "68102",
+            },
+            mailingAddress: {
+              street: "",
+              apt: "",
+              city: "",
+              state: "NE",
+              zip: "",
+              sameAsPhysical: true,
+            },
+            authorizedRepIds: [],
+            familyMembers: [],
+            relationships: [],
+            status: "Active",
+          },
+        ],
+      });
+
+      // ASSERT
+      const writtenData = vi.mocked(mockFileService.writeFile).mock.calls[0][0];
+      expect(writtenData.people).toHaveLength(2);
+      expect(writtenData.cases[0].people).toEqual([
+        {
+          personId: writtenData.people[0].id,
+          role: "applicant",
+          isPrimary: true,
+        },
+        {
+          personId: writtenData.people[1].id,
+          role: "household_member",
+          isPrimary: false,
+        },
+      ]);
+      expect(writtenData.people[0]).toMatchObject({
+        familyMemberIds: [writtenData.people[1].id],
+        relationships: [
+          expect.objectContaining({
+            type: "Spouse",
+            targetPersonId: writtenData.people[1].id,
+          }),
+        ],
+      });
+      expect(writtenData.people[1]).toMatchObject({
+        firstName: "Jordan",
+        lastName: "Applicant",
+        email: "jordan@example.com",
+        phone: "5552223333",
+        dateOfBirth: "1988-04-05",
+      });
+      expect(result.linkedPeople).toEqual([
+        expect.objectContaining({
+          ref: expect.objectContaining({
+            personId: writtenData.people[0].id,
+            role: "applicant",
+            isPrimary: true,
+          }),
+        }),
+        expect.objectContaining({
+          ref: expect.objectContaining({
+            personId: writtenData.people[1].id,
+            role: "household_member",
+            isPrimary: false,
+          }),
+          person: expect.objectContaining({
+            id: writtenData.people[1].id,
+            name: "Jordan Applicant",
+            email: "jordan@example.com",
+          }),
+        }),
+      ]);
+    });
+
     it("reuses an existing person reference instead of creating a duplicate", async () => {
       // ARRANGE
       const existingPerson = createMockPerson({

@@ -24,8 +24,11 @@ import { dateInputValueToISO, normalizePhoneNumber } from "@/domain/common";
 import { useDataManagerSafe } from "../contexts/DataManagerContext";
 import { useCategoryConfig } from "../contexts/CategoryConfigContext";
 import {
+  createBlankHouseholdMemberData,
   createCaseRecordData,
+  isHouseholdMemberPopulated,
   createIntakeFormData,
+  normalizeHouseholdMemberForSave,
   createPersonData,
 } from "@/domain/cases";
 import { isRelationshipPopulated } from "@/domain/cases/relationships";
@@ -36,6 +39,7 @@ import {
 } from "@/domain/validation/intake.schema";
 import type {
   CaseStatus,
+  HouseholdMemberData,
   NewCaseRecordData,
   NewPersonData,
   StoredCase,
@@ -293,6 +297,16 @@ export function useIntakeWorkflow({
     const populatedRelationships = (validatedFormData.relationships ?? []).filter(
       isRelationshipPopulated,
     );
+    const defaultHouseholdMember = createBlankHouseholdMemberData({
+      livingArrangement: validatedFormData.livingArrangement || config.livingArrangements[0] || "",
+      defaultState: validatedFormData.address.state || "NE",
+    });
+    const populatedHouseholdMembers = (validatedFormData.householdMembers ?? []).filter(
+      isHouseholdMemberPopulated,
+    );
+    const normalizedHouseholdMembers = populatedHouseholdMembers.map((member) =>
+      normalizeHouseholdMemberForSave(member, defaultHouseholdMember, validatedFormData),
+    );
 
     setIsSubmitting(true);
     setError(null);
@@ -358,7 +372,17 @@ export function useIntakeWorkflow({
           zip: validatedFormData.mailingAddress.zip ?? "",
           sameAsPhysical: validatedFormData.mailingAddress.sameAsPhysical,
         },
-        relationships: populatedRelationships,
+        familyMembers: normalizedHouseholdMembers
+          .filter((member): member is HouseholdMemberData & { personId: string } => Boolean(member.personId))
+          .map((member) => member.personId),
+        relationships:
+          normalizedHouseholdMembers.length > 0
+            ? normalizedHouseholdMembers.map((member) => ({
+                type: member.relationshipType,
+                name: `${member.firstName} ${member.lastName}`.trim(),
+                phone: member.phone,
+              }))
+            : populatedRelationships,
       };
 
       const caseRecord: NewCaseRecordData = {
@@ -403,10 +427,12 @@ export function useIntakeWorkflow({
         ? await dataManager.updateCompleteCase(activeExistingCase.id, {
             person,
             caseRecord,
+            householdMembers: normalizedHouseholdMembers,
           })
         : await dataManager.createCompleteCase({
             person,
             caseRecord,
+            householdMembers: normalizedHouseholdMembers,
           });
 
       logger.info(`Intake case ${isEditing ? "updated" : "created"}`, {

@@ -132,11 +132,39 @@ const intakeRelationshipSchema = z.object({
   phone: z.string().default(""),
 });
 
+const householdMemberRoleSchema = z.enum([
+  "household_member",
+  "dependent",
+  "contact",
+]);
+
+const intakeHouseholdMemberSchema = z.object({
+  personId: z.string().optional(),
+  relationshipId: z.string().optional(),
+  relationshipType: z.string().default(""),
+  role: householdMemberRoleSchema.default("household_member"),
+  firstName: z.string().default(""),
+  lastName: z.string().default(""),
+  email: emailSchema.optional().default(""),
+  phone: phoneSchema.optional().default(""),
+  dateOfBirth: z.string().optional().default(""),
+  ssn: ssnSchema.optional().default(""),
+  organizationId: z.string().nullable().optional().default(null),
+  livingArrangement: z.string().default(""),
+  address: AddressStepSchema,
+  mailingAddress: MailingAddressStepSchema,
+  authorizedRepIds: z.array(z.string()).optional().default([]),
+  familyMembers: z.array(z.string()).optional().default([]),
+  relationships: z.array(intakeRelationshipSchema).optional().default([]),
+  status: z.string().default("Active"),
+});
+
 /**
  * Schema for the Household & Relationships step.
  */
 export const IntakeHouseholdSchema = z.object({
   relationships: z.array(intakeRelationshipSchema).optional().default([]),
+  householdMembers: z.array(intakeHouseholdMemberSchema).optional().default([]),
 });
 
 export type IntakeHouseholdData = z.infer<typeof IntakeHouseholdSchema>;
@@ -242,5 +270,6 @@ export function createBlankIntakeForm(): IntakeFormData {
     avsConsentDate: "",
     // Household
     relationships: [],
+    householdMembers: [],
   };
 }

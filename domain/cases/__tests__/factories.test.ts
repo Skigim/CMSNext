@@ -188,16 +188,85 @@ describe("createIntakeFormData", () => {
     });
   });
 
-  it("prefills relationships from the existing case person", () => {
+  it("prefills household members from linked people", () => {
+    // Arrange
+    const linkedHouseholdMember = createMockPerson({
+      id: "person-2",
+      firstName: "Jordan",
+      lastName: "Tester",
+      name: "Jordan Tester",
+      phone: "5559876543",
+      email: "jordan@example.com",
+      dateOfBirth: "1985-02-03",
+      livingArrangement: "Community",
+      address: {
+        street: "10 Main St",
+        city: "Omaha",
+        state: "NE",
+        zip: "68102",
+      },
+      mailingAddress: {
+        street: "PO Box 7",
+        city: "Omaha",
+        state: "NE",
+        zip: "68101",
+        sameAsPhysical: false,
+      },
+    });
+    const existingCase = createMockStoredCase({
+      person: createMockPerson({
+        firstName: "Sam",
+        lastName: "Tester",
+        normalizedRelationships: [
+          { id: "rel-1", type: "Spouse", targetPersonId: "person-2" },
+        ],
+      }),
+      people: [
+        { personId: "person-test-1", role: "applicant", isPrimary: true },
+        { personId: "person-2", role: "household_member", isPrimary: false },
+      ],
+      linkedPeople: [
+        {
+          ref: { personId: "person-test-1", role: "applicant", isPrimary: true },
+          person: createMockPerson({
+            id: "person-test-1",
+            firstName: "Sam",
+            lastName: "Tester",
+            name: "Sam Tester",
+          }),
+        },
+        {
+          ref: { personId: "person-2", role: "household_member", isPrimary: false },
+          person: linkedHouseholdMember,
+        },
+      ],
+    });
+
+    // Act
+    const result = createIntakeFormData(existingCase);
+
+    // Assert
+    expect(result.householdMembers).toEqual([
+      expect.objectContaining({
+        personId: "person-2",
+        relationshipType: "Spouse",
+        role: "household_member",
+        firstName: "Jordan",
+        lastName: "Tester",
+        phone: "5559876543",
+        email: "jordan@example.com",
+        dateOfBirth: "1985-02-03",
+      }),
+    ]);
+  });
+
+  it("falls back to legacy relationships when linked people are unavailable", () => {
     // Arrange
     const existingCase = createMockStoredCase({
       person: createMockPerson({
         firstName: "Sam",
         lastName: "Tester",
-        relationships: [
-          { id: "rel-1", type: "Spouse", name: "Jordan Tester", phone: "5559876543" },
-          { id: "rel-2", type: "Child", name: "Casey Tester", phone: "" },
-        ],
+        relationships: [{ id: "rel-1", type: "Child", name: "Casey Tester", phone: "" }],
       }),
     });
 
@@ -205,22 +274,12 @@ describe("createIntakeFormData", () => {
     const result = createIntakeFormData(existingCase);
 
     // Assert
-    expect(result.relationships).toEqual([
-      { id: "rel-1", type: "Spouse", name: "Jordan Tester", phone: "5559876543" },
-      { id: "rel-2", type: "Child", name: "Casey Tester", phone: "" },
+    expect(result.householdMembers).toEqual([
+      expect.objectContaining({
+        relationshipType: "Child",
+        firstName: "Casey",
+        lastName: "Tester",
+      }),
     ]);
-  });
-
-  it("returns an empty relationships array when the person has no relationships", () => {
-    // Arrange
-    const existingCase = createMockStoredCase({
-      person: createMockPerson({ firstName: "Sam", lastName: "Tester" }),
-    });
-
-    // Act
-    const result = createIntakeFormData(existingCase);
-
-    // Assert
-    expect(result.relationships).toEqual([]);
   });
 });

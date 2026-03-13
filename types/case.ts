@@ -33,6 +33,8 @@ export type CasePersonRole =
   | 'dependent'
   | 'contact';
 
+export type LinkedCasePersonRole = Exclude<CasePersonRole, "applicant">;
+
 export interface CasePersonRef {
   personId: string;
   role: CasePersonRole;
@@ -271,6 +273,17 @@ export interface NewPersonData {
   familyMembers?: string[];
   relationships?: Relationship[];
   status: string;
+}
+
+export interface HouseholdMemberData extends NewPersonData {
+  personId?: string;
+  relationshipId?: string;
+  relationshipType: string;
+  role: LinkedCasePersonRole;
+  organizationId: string | null;
+  authorizedRepIds: string[];
+  familyMembers: string[];
+  relationships: Relationship[];
 }
 
 export interface NewCaseRecordData {

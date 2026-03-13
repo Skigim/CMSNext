@@ -3,7 +3,11 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { toast as mockToast } from "@/src/test/testUtils";
 import { createBlankIntakeForm } from "@/domain/validation/intake.schema";
 import { INTAKE_STEPS } from "@/domain/cases/intake-steps";
-import { createMockPerson, createMockStoredCase } from "@/src/test/testUtils";
+import {
+  createMockHouseholdMemberData,
+  createMockPerson,
+  createMockStoredCase,
+} from "@/src/test/testUtils";
 
 // ---- Mocks -----------------------------------------------------------------
 
@@ -584,10 +588,17 @@ describe("useIntakeWorkflow", () => {
             firstName: "Edited",
             lastName: "Applicant",
             authorizedRepIds: ["rep-1"],
-            familyMembers: ["family-1"],
             relationships: [{ type: "Spouse", name: "Jamie Smith", phone: "5550001111" }],
             status: "Archived",
           }),
+          householdMembers: [
+            expect.objectContaining({
+              relationshipType: "Spouse",
+              firstName: "Jamie",
+              lastName: "Smith",
+              phone: "5550001111",
+            }),
+          ],
           caseRecord: expect.objectContaining({
             mcn: "MCN-EDITED",
             applicationDate: "2026-04-01",
@@ -635,7 +646,7 @@ describe("useIntakeWorkflow", () => {
       );
     });
 
-    it("filters blank draft relationships before saving", async () => {
+    it("maps household members into linked-person save payloads", async () => {
       const { result } = renderIntakeHook();
 
       act(() => {
@@ -643,9 +654,32 @@ describe("useIntakeWorkflow", () => {
         result.current.updateField("lastName", "Smith");
         result.current.updateField("mcn", "12345");
         result.current.updateField("applicationDate", "2026-01-01");
-        result.current.updateField("relationships", [
-          { type: "Spouse", name: "Jamie Smith", phone: "5550001111" },
-          { type: " ", name: " ", phone: " " },
+        result.current.updateField("householdMembers", [
+          createMockHouseholdMemberData({
+            firstName: "Jamie",
+            lastName: "Smith",
+            phone: "(555) 123-1111",
+            email: "jamie@example.com",
+            dateOfBirth: "1987-03-04",
+            ssn: "123-45-6789",
+            address: {
+              street: "123 Main St",
+              apt: "",
+              city: "Omaha",
+              state: "NE",
+              zip: "68102",
+            },
+          }),
+          createMockHouseholdMemberData({
+            relationshipType: " ",
+            firstName: " ",
+            lastName: " ",
+            phone: "",
+            email: "",
+            dateOfBirth: "",
+            ssn: "",
+            livingArrangement: "",
+          }),
         ]);
       });
 
@@ -656,8 +690,19 @@ describe("useIntakeWorkflow", () => {
       expect(mockDataManager.createCompleteCase).toHaveBeenCalledWith(
         expect.objectContaining({
           person: expect.objectContaining({
-            relationships: [{ type: "Spouse", name: "Jamie Smith", phone: "5550001111" }],
+            relationships: [{ type: "Spouse", name: "Jamie Smith", phone: "5551231111" }],
           }),
+          householdMembers: [
+            expect.objectContaining({
+              relationshipType: "Spouse",
+              firstName: "Jamie",
+              lastName: "Smith",
+              phone: "5551231111",
+              email: "jamie@example.com",
+              dateOfBirth: "1987-03-04",
+              organizationId: null,
+            }),
+          ],
         }),
       );
     });
