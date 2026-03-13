@@ -12,7 +12,6 @@ import {
 function createPrimaryLinkedCase(options: {
   primaryPerson: Person;
   hydratedPerson?: Person;
-  omitHydrated?: boolean;
 }) {
   const caseData = createMockStoredCase({
     ...(options.hydratedPerson ? { person: options.hydratedPerson } : {}),
@@ -28,7 +27,11 @@ function createPrimaryLinkedCase(options: {
     },
   });
 
-  return options.omitHydrated ? omitHydratedPerson(caseData) : caseData;
+  return caseData;
+}
+
+function createPrimaryLinkedCaseWithoutHydratedPerson(primaryPerson: Person) {
+  return omitHydratedPerson(createPrimaryLinkedCase({ primaryPerson }));
 }
 
 function createLinkedPerson(
@@ -82,10 +85,7 @@ describe("case people helpers", () => {
       lastName: "Primary",
       name: "Fallback Primary",
     });
-    const caseData = createPrimaryLinkedCase({
-      primaryPerson: normalizedPrimaryPerson,
-      omitHydrated: true,
-    });
+    const caseData = createPrimaryLinkedCaseWithoutHydratedPerson(normalizedPrimaryPerson);
 
     // Act
     const result = getPrimaryCasePerson(caseData);
