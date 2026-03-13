@@ -1,5 +1,6 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
 import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { axe } from "jest-axe";
 import type { ComponentType } from "react";
 
@@ -40,8 +41,8 @@ vi.mock("@/components/case/AlertsPopover", () => ({
   AlertsPopover: () => <div data-testid="alerts-popover" />,
 }));
 
-vi.mock("@/components/modals/CaseEditModal", () => ({
-  CaseEditModal: () => null,
+vi.mock("@/components/case/IntakeFormView", () => ({
+  IntakeFormView: () => <div data-testid="intake-form-view">Edit Intake</div>,
 }));
 
 vi.mock("@/components/case/CaseSummaryModal", () => ({
@@ -214,6 +215,19 @@ describe("CaseDetails linked people rendering", () => {
     expect(screen.getByText("Devon Dependent")).toBeInTheDocument();
     expect(screen.getByText("Household member")).toBeInTheDocument();
     expect(screen.getByText("Dependent")).toBeInTheDocument();
+  });
+
+  it("swaps into IntakeFormView when edit details is opened", async () => {
+    // Arrange
+    const user = userEvent.setup();
+    const caseData = createMockStoredCase();
+
+    // Act
+    renderCaseDetails(caseData);
+    await user.click(screen.getByRole("button", { name: /Edit Details/i }));
+
+    // Assert
+    expect(screen.getByTestId("intake-form-view")).toBeInTheDocument();
   });
 
   it("prioritizes the normalized primary person over a stale case.person", () => {

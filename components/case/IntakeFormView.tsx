@@ -448,7 +448,6 @@ function CaseDetailsStep({
   onChange,
 }: Readonly<CaseDetailsStepProps>) {
   const { config } = useCategoryConfig();
-  const APPLICATION_TYPES = ["New", "Renewal", "Redetermination", "Change"];
 
   return (
     <div className="space-y-4">
@@ -511,7 +510,7 @@ function CaseDetailsStep({
               <SelectValue placeholder="Select type" />
             </SelectTrigger>
             <SelectContent>
-              {APPLICATION_TYPES.map((t) => (
+              {config.applicationTypes.map((t) => (
                 <SelectItem key={t} value={t}>
                   {t}
                 </SelectItem>
@@ -886,6 +885,7 @@ function ReviewStep({ formData, onGoToStep }: Readonly<ReviewStepProps>) {
  *   When provided the form is seeded with these values on first mount.
  */
 export function IntakeFormView({
+  existingCase,
   initialData,
   onSuccess,
   onCancel,
@@ -895,6 +895,7 @@ export function IntakeFormView({
     currentStep,
     visitedSteps,
     formData,
+    isEditing,
     isSubmitting,
     error,
     updateField,
@@ -906,7 +907,7 @@ export function IntakeFormView({
     submit,
     isCurrentStepComplete,
     canSubmit,
-  } = useIntakeWorkflow({ onSuccess, onCancel });
+  } = useIntakeWorkflow({ existingCase, onSuccess, onCancel });
 
   // Pre-fill form when initialData is provided (e.g. loading a draft)
   useEffect(() => {
@@ -935,7 +936,9 @@ export function IntakeFormView({
           </Button>
         )}
         <div className="flex-1">
-          <h1 className="text-lg font-semibold">New Case Intake</h1>
+          <h1 className="text-lg font-semibold">
+            {isEditing ? "Edit Case" : "New Case Intake"}
+          </h1>
           <p className="text-sm text-muted-foreground">
             Step {currentStep + 1} of {INTAKE_STEPS.length} –{" "}
             {INTAKE_STEPS[currentStep].label}
@@ -1015,10 +1018,10 @@ export function IntakeFormView({
                   {isSubmitting ? (
                     <>
                       <Loader2 className="h-4 w-4 animate-spin" />
-                      Creating…
+                      {isEditing ? "Saving…" : "Creating…"}
                     </>
                   ) : (
-                    "Submit Case"
+                    (isEditing ? "Save Changes" : "Submit Case")
                   )}
                 </Button>
               ) : (

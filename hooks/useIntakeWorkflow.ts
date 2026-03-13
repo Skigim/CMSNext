@@ -23,9 +23,13 @@ import { toast } from "sonner";
 import { dateInputValueToISO, normalizePhoneNumber } from "@/domain/common";
 import { useDataManagerSafe } from "../contexts/DataManagerContext";
 import { useCategoryConfig } from "../contexts/CategoryConfigContext";
+import {
+  createCaseRecordData,
+  createIntakeFormData,
+  createPersonData,
+} from "../domain/cases";
 import { INTAKE_STEPS, isStepComplete, isStepReachable } from "../domain/cases/intake-steps";
 import {
-  createBlankIntakeForm,
   type IntakeFormData,
   validateIntakeForm,
 } from "../domain/validation/intake.schema";
@@ -40,8 +44,10 @@ const logger = createLogger("useIntakeWorkflow");
 // ============================================================================
 
 export interface UseIntakeWorkflowOptions {
-  /** Called with the newly-created case on successful submission */
-  onSuccess?: (createdCase: StoredCase) => void;
+  /** Existing case to edit; omitted for create mode */
+  existingCase?: StoredCase;
+  /** Called with the saved case on successful submission */
+  onSuccess?: (savedCase: StoredCase) => void;
   /** Called when the user cancels the intake workflow */
   onCancel?: () => void;
 }
@@ -53,6 +59,8 @@ export interface UseIntakeWorkflowReturn {
   visitedSteps: ReadonlySet<number>;
   /** Live form data draft */
   formData: IntakeFormData;
+  /** Whether the workflow is editing an existing case */
+  isEditing: boolean;
   /** Whether a submission is in progress */
   isSubmitting: boolean;
   /** Most recent error message, or null */
@@ -107,11 +115,13 @@ export interface UseIntakeWorkflowReturn {
  * ```
  */
 export function useIntakeWorkflow({
+  existingCase,
   onSuccess,
   onCancel,
 }: UseIntakeWorkflowOptions = {}): UseIntakeWorkflowReturn {
   const dataManager = useDataManagerSafe();
   const { config } = useCategoryConfig();
+  const isEditing = existingCase !== undefined;
 
   // ---- State ----------------------------------------------------------------
   const [currentStep, setCurrentStep] = useState(0);
@@ -120,7 +130,7 @@ export function useIntakeWorkflow({
     () => new Set([0]),
   );
   const [formData, setFormData] = useState<IntakeFormData>(() =>
-    createBlankIntakeForm(),
+    createIntakeFormData(existingCase),
   );
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -128,6 +138,15 @@ export function useIntakeWorkflow({
   useEffect(() => {
     currentStepRef.current = currentStep;
   }, [currentStep]);
+
+  useEffect(() => {
+    currentStepRef.current = 0;
+    setCurrentStep(0);
+    setVisitedSteps(new Set([0]));
+    setFormData(createIntakeFormData(existingCase));
+    setError(null);
+    setIsSubmitting(false);
+  }, [existingCase]);
 
   // ---- Derived values -------------------------------------------------------
   const isCurrentStepComplete = useMemo(
@@ -196,10 +215,10 @@ export function useIntakeWorkflow({
     currentStepRef.current = 0;
     setCurrentStep(0);
     setVisitedSteps(new Set([0]));
-    setFormData(createBlankIntakeForm());
+    setFormData(createIntakeFormData(existingCase));
     setError(null);
     setIsSubmitting(false);
-  }, []);
+  }, [existingCase]);
 
   // ---- Cancel ---------------------------------------------------------------
   const cancel = useCallback(() => {
@@ -240,7 +259,7 @@ export function useIntakeWorkflow({
     setIsSubmitting(true);
     setError(null);
 
-    const toastId = toast.loading("Creating case…");
+    const toastId = toast.loading(isEditing ? "Saving changes…" : "Creating case…");
 
     try {
       const trimmedFirstName = validatedFormData.firstName.trim();
@@ -258,9 +277,21 @@ export function useIntakeWorkflow({
       const normalizedAvsConsentDate = dateInputValueToISO(
         validatedFormData.avsConsentDate,
       );
+      const defaultLivingArrangement = config.livingArrangements[0] || "";
+      const personBase = createPersonData(existingCase, {
+        livingArrangement: defaultLivingArrangement,
+      });
+      const defaultStatus =
+        (config.caseStatuses[0]?.name as CaseStatus | undefined) ??
+        ("Intake" as CaseStatus);
+      const caseRecordBase = createCaseRecordData(existingCase, {
+        caseType: config.caseTypes[0],
+        caseStatus: existingCase?.caseRecord.status ?? defaultStatus,
+        livingArrangement: defaultLivingArrangement,
+      });
 
-      // Build NewPersonData from form draft
       const person: NewPersonData = {
+        ...personBase,
         firstName: trimmedFirstName,
         lastName: trimmedLastName,
         dateOfBirth: normalizedDateOfBirth ?? "",
@@ -269,52 +300,51 @@ export function useIntakeWorkflow({
         phone: normalizePhoneNumber(validatedFormData.phone ?? ""),
         organizationId: validatedFormData.organizationId ?? null,
         livingArrangement:
-          validatedFormData.livingArrangement || config.livingArrangements[0] || "",
+          validatedFormData.livingArrangement ||
+          personBase.livingArrangement ||
+          defaultLivingArrangement,
         address: {
+          ...personBase.address,
           street: validatedFormData.address.street ?? "",
-          apt: validatedFormData.address.apt,
+          apt: validatedFormData.address.apt ?? "",
           city: validatedFormData.address.city ?? "",
           state: validatedFormData.address.state ?? "NE",
           zip: validatedFormData.address.zip ?? "",
         },
         mailingAddress: {
+          ...personBase.mailingAddress,
           street: validatedFormData.mailingAddress.street ?? "",
-          apt: validatedFormData.mailingAddress.apt,
+          apt: validatedFormData.mailingAddress.apt ?? "",
           city: validatedFormData.mailingAddress.city ?? "",
           state: validatedFormData.mailingAddress.state ?? "NE",
           zip: validatedFormData.mailingAddress.zip ?? "",
           sameAsPhysical: validatedFormData.mailingAddress.sameAsPhysical,
         },
-        authorizedRepIds: [],
-        familyMembers: [],
-        relationships: [],
-        status: "Active",
       };
 
-      // Derive a default status from config if available
-      const defaultStatus =
-        (config.caseStatuses[0]?.name as CaseStatus | undefined) ??
-        ("Intake" as CaseStatus);
-
-      // Build NewCaseRecordData from form draft
       const caseRecord: NewCaseRecordData = {
+        ...caseRecordBase,
         mcn: trimmedMcn,
         applicationDate:
-          normalizedApplicationDate ?? validatedFormData.applicationDate,
-        caseType: validatedFormData.caseType || config.caseTypes[0] || "",
-        applicationType: validatedFormData.applicationType ?? "",
-        personId: "", // blank means create a new primary person; existing-person linking can pass an id
-        status: defaultStatus,
-        description: "",
-        priority: false,
+          normalizedApplicationDate ??
+          validatedFormData.applicationDate ??
+          caseRecordBase.applicationDate,
+        caseType:
+          validatedFormData.caseType || caseRecordBase.caseType || config.caseTypes[0] || "",
+        applicationType:
+          validatedFormData.applicationType ?? caseRecordBase.applicationType ?? "",
+        personId: caseRecordBase.personId,
+        status: caseRecordBase.status || defaultStatus,
         livingArrangement:
-          validatedFormData.livingArrangement || config.livingArrangements[0] || "",
+          validatedFormData.livingArrangement ||
+          caseRecordBase.livingArrangement ||
+          defaultLivingArrangement,
         withWaiver: validatedFormData.withWaiver ?? false,
-        admissionDate: normalizedAdmissionDate ?? "",
-        organizationId: validatedFormData.organizationId ?? "",
-        authorizedReps: [],
-        retroRequested: validatedFormData.retroRequested ?? "",
-        // Intake checklist fields
+        admissionDate: normalizedAdmissionDate ?? caseRecordBase.admissionDate ?? "",
+        organizationId:
+          validatedFormData.organizationId ?? caseRecordBase.organizationId ?? "",
+        retroRequested:
+          validatedFormData.retroRequested ?? caseRecordBase.retroRequested ?? "",
         appValidated: validatedFormData.appValidated ?? false,
         agedDisabledVerified: validatedFormData.agedDisabledVerified ?? false,
         citizenshipVerified: validatedFormData.citizenshipVerified ?? false,
@@ -326,33 +356,50 @@ export function useIntakeWorkflow({
           NewCaseRecordData["voterFormStatus"]
         >,
         pregnancy: validatedFormData.pregnancy ?? false,
-        avsConsentDate: normalizedAvsConsentDate ?? "",
+        avsConsentDate: normalizedAvsConsentDate ?? caseRecordBase.avsConsentDate ?? "",
         maritalStatus: validatedFormData.maritalStatus ?? "",
       };
 
-      const createdCase = await dataManager.createCompleteCase({
-        person,
-        caseRecord,
+      const savedCase = isEditing
+        ? await dataManager.updateCompleteCase(existingCase.id, {
+            person,
+            caseRecord,
+          })
+        : await dataManager.createCompleteCase({
+            person,
+            caseRecord,
+          });
+
+      logger.info(`Intake case ${isEditing ? "updated" : "created"}`, {
+        caseId: savedCase.id,
       });
+      toast.success(
+        isEditing ? "Case updated successfully!" : "Case created successfully!",
+        { id: toastId },
+      );
 
-      logger.info("Intake case created", { caseId: createdCase.id });
-      toast.success("Case created successfully!", { id: toastId });
-
-      reset();
-      onSuccess?.(createdCase);
+      if (!isEditing) {
+        reset();
+      }
+      onSuccess?.(savedCase);
     } catch (caughtError) {
       const msg = extractErrorMessage(caughtError);
       logger.error("Intake submission failed", { error: msg });
       setError(msg);
-      toast.error(`Failed to create case: ${msg}`, { id: toastId });
+      toast.error(
+        `Failed to ${isEditing ? "save changes" : "create case"}: ${msg}`,
+        { id: toastId },
+      );
     } finally {
       setIsSubmitting(false);
     }
   }, [
+    existingCase,
     dataManager,
     canSubmit,
     formData,
     config,
+    isEditing,
     reset,
     onSuccess,
   ]);
@@ -361,6 +408,7 @@ export function useIntakeWorkflow({
     currentStep,
     visitedSteps,
     formData,
+    isEditing,
     isSubmitting,
     error,
     updateField,

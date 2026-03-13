@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { createMockPerson, createMockStoredCase, omitHydratedPerson } from "@/src/test/testUtils";
 import type { StoredCase } from "@/types/case";
 
-import { createPersonData } from "../factories";
+import { createIntakeFormData, createPersonData } from "../factories";
 
 describe("createPersonData", () => {
   it("falls back to the primary linked person when the hydrated primary person is unavailable", () => {
@@ -87,6 +87,104 @@ describe("createPersonData", () => {
         zip: "68101",
         sameAsPhysical: false,
       },
+    });
+  });
+});
+
+describe("createIntakeFormData", () => {
+  it("prefills supported intake fields from an existing stored case", () => {
+    // Arrange
+    const existingCase = createMockStoredCase({
+      caseRecord: {
+        ...createMockStoredCase().caseRecord,
+        mcn: "MCN-EDIT-1",
+        applicationDate: "2026-02-01",
+        caseType: "ABD Medicaid",
+        applicationType: "Renewal",
+        livingArrangement: "Assisted Living",
+        withWaiver: true,
+        admissionDate: "2026-02-10",
+        organizationId: "org-edit",
+        retroRequested: "Jan, Feb",
+        appValidated: true,
+        agedDisabledVerified: true,
+        citizenshipVerified: true,
+        residencyVerified: true,
+        contactMethods: ["mail", "email"],
+        voterFormStatus: "requested",
+        pregnancy: true,
+        avsConsentDate: "2026-02-12",
+        maritalStatus: "Married",
+      },
+      person: createMockPerson({
+        firstName: "Pat",
+        lastName: "Editor",
+        phone: "5551234567",
+        email: "pat@example.com",
+        dateOfBirth: "1980-03-04",
+        ssn: "123-45-6789",
+        address: {
+          street: "100 Main St",
+          apt: "Apt 3",
+          city: "Omaha",
+          state: "NE",
+          zip: "68102",
+        },
+        mailingAddress: {
+          street: "PO Box 12",
+          apt: "Suite 5",
+          city: "Omaha",
+          state: "NE",
+          zip: "68101",
+          sameAsPhysical: false,
+        },
+      }),
+    });
+
+    // Act
+    const result = createIntakeFormData(existingCase);
+
+    // Assert
+    expect(result).toMatchObject({
+      firstName: "Pat",
+      lastName: "Editor",
+      phone: "5551234567",
+      email: "pat@example.com",
+      dateOfBirth: "1980-03-04",
+      ssn: "123-45-6789",
+      maritalStatus: "Married",
+      address: {
+        street: "100 Main St",
+        apt: "Apt 3",
+        city: "Omaha",
+        state: "NE",
+        zip: "68102",
+      },
+      mailingAddress: {
+        street: "PO Box 12",
+        apt: "Suite 5",
+        city: "Omaha",
+        state: "NE",
+        zip: "68101",
+        sameAsPhysical: false,
+      },
+      mcn: "MCN-EDIT-1",
+      applicationDate: "2026-02-01",
+      caseType: "ABD Medicaid",
+      applicationType: "Renewal",
+      livingArrangement: "Assisted Living",
+      withWaiver: true,
+      admissionDate: "2026-02-10",
+      organizationId: "org-edit",
+      retroRequested: "Jan, Feb",
+      appValidated: true,
+      agedDisabledVerified: true,
+      citizenshipVerified: true,
+      residencyVerified: true,
+      contactMethods: ["mail", "email"],
+      voterFormStatus: "requested",
+      pregnancy: true,
+      avsConsentDate: "2026-02-12",
     });
   });
 });
