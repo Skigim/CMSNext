@@ -51,6 +51,14 @@ import {
   normalizePhoneNumber,
 } from "@/domain/common";
 
+const STEP_FOCUSABLE_SELECTOR = [
+  'input:not([type="hidden"]):not([disabled])',
+  'textarea:not([disabled])',
+  '[role="combobox"]:not([aria-disabled="true"])',
+  '[role="checkbox"]:not([aria-disabled="true"])',
+  '[role="radio"]:not([aria-disabled="true"])',
+].join(", ");
+
 // ============================================================================
 // Step icons
 // ============================================================================
@@ -891,6 +899,7 @@ export function IntakeFormView({
   onCancel,
 }: Readonly<IntakeFormViewProps>) {
   const hasSeededInitialData = useRef(false);
+  const stepContentRef = useRef<HTMLDivElement>(null);
   const {
     currentStep,
     visitedSteps,
@@ -916,6 +925,21 @@ export function IntakeFormView({
     hasSeededInitialData.current = true;
     setFormData((prev) => ({ ...prev, ...initialData }));
   }, [initialData, setFormData]);
+
+  useEffect(() => {
+    const focusTimer = globalThis.setTimeout(() => {
+      const firstField =
+        stepContentRef.current?.querySelector<HTMLElement>(
+          STEP_FOCUSABLE_SELECTOR,
+        ) ?? null;
+
+      firstField?.focus();
+    }, 0);
+
+    return () => {
+      globalThis.clearTimeout(focusTimer);
+    };
+  }, [currentStep]);
 
   const isLastStep = currentStep === INTAKE_STEPS.length - 1;
   const isFirstStep = currentStep === 0;
@@ -972,21 +996,23 @@ export function IntakeFormView({
             </div>
 
             {/* Step form */}
-            {currentStep === 0 && (
-              <ApplicantStep formData={formData} onChange={updateField} />
-            )}
-            {currentStep === 1 && (
-              <ContactStep formData={formData} onChange={updateField} />
-            )}
-            {currentStep === 2 && (
-              <CaseDetailsStep formData={formData} onChange={updateField} />
-            )}
-            {currentStep === 3 && (
-              <ChecklistStep formData={formData} onChange={updateField} />
-            )}
-            {currentStep === 4 && (
-              <ReviewStep formData={formData} onGoToStep={goToStep} />
-            )}
+            <div ref={stepContentRef}>
+              {currentStep === 0 && (
+                <ApplicantStep formData={formData} onChange={updateField} />
+              )}
+              {currentStep === 1 && (
+                <ContactStep formData={formData} onChange={updateField} />
+              )}
+              {currentStep === 2 && (
+                <CaseDetailsStep formData={formData} onChange={updateField} />
+              )}
+              {currentStep === 3 && (
+                <ChecklistStep formData={formData} onChange={updateField} />
+              )}
+              {currentStep === 4 && (
+                <ReviewStep formData={formData} onGoToStep={goToStep} />
+              )}
+            </div>
 
             {/* Error */}
             {error && (
