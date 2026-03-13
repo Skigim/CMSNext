@@ -208,6 +208,25 @@ describe("CaseDetails linked people rendering", () => {
       firstName: "Morgan",
       lastName: "Member",
       name: "Morgan Member",
+      phone: "5550002222",
+      email: "morgan@example.com",
+      dateOfBirth: "1984-02-03",
+      ssn: "123-45-6789",
+      livingArrangement: "Community",
+      address: {
+        street: "10 Oak St",
+        city: "Omaha",
+        state: "NE",
+        zip: "68102",
+      },
+      mailingAddress: {
+        street: "PO Box 8",
+        city: "Omaha",
+        state: "NE",
+        zip: "68101",
+        sameAsPhysical: false,
+      },
+      status: "Active",
     });
     const dependentPerson = createMockPerson({
       id: "person-3",
@@ -248,10 +267,16 @@ describe("CaseDetails linked people rendering", () => {
 
     // Assert
     expect(screen.getByText("Primary Applicant")).toBeInTheDocument();
-    expect(screen.getByText("Morgan Member")).toBeInTheDocument();
-    expect(screen.getByText("Devon Dependent")).toBeInTheDocument();
-    expect(screen.getByText("Household member")).toBeInTheDocument();
-    expect(screen.getByText("Dependent")).toBeInTheDocument();
+    expect(screen.getAllByText("Morgan Member")).toHaveLength(2);
+    expect(screen.getAllByText("Devon Dependent")).toHaveLength(2);
+    expect(screen.getAllByText("Household member")).toHaveLength(2);
+    expect(screen.getAllByText("Dependent")).toHaveLength(2);
+    expect(screen.getByRole("button", { name: "Copy Morgan Member phone 5550002222" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Copy Morgan Member email morgan@example.com" })).toBeInTheDocument();
+    expect(screen.getByText("DOB: 02/03/1984")).toBeInTheDocument();
+    expect(screen.getByText("SSN: •••-••-6789")).toBeInTheDocument();
+    expect(screen.getByText(/Physical: 10 Oak St, Omaha, NE, 68102/)).toBeInTheDocument();
+    expect(screen.getByText(/Mailing: PO Box 8, Omaha, NE, 68101/)).toBeInTheDocument();
   });
 
   it("swaps into IntakeFormView when edit details is opened", async () => {
@@ -370,8 +395,8 @@ describe("CaseDetails linked people rendering", () => {
     expect(screen.getByText("Primary Applicant")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Copy Phone 5550001111" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Copy Email primary@example.com" })).toBeInTheDocument();
-    expect(screen.getByText("Secondary Person")).toBeInTheDocument();
-    expect(screen.getByText("Household member")).toBeInTheDocument();
+    expect(screen.getAllByText("Secondary Person")).toHaveLength(2);
+    expect(screen.getAllByText("Household member")).toHaveLength(2);
     expect(screen.queryByRole("button", { name: "Copy Phone 5550002222" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Copy Email secondary@example.com" })).not.toBeInTheDocument();
   });

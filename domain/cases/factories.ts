@@ -12,6 +12,7 @@
 import { 
   NewCaseRecordData, 
   NewPersonData, 
+  HouseholdMemberData,
   CaseStatus, 
   StoredCase 
 } from "@/types/case";
@@ -19,7 +20,7 @@ import {
   createBlankIntakeForm,
   type IntakeFormData,
 } from "@/domain/validation/intake.schema";
-import { getPrimaryCasePerson } from "./people";
+import { getPersonRelationships, getPrimaryCasePerson } from "./people";
 
 /**
  * Options for creating case record data.
@@ -114,6 +115,58 @@ export interface PersonDefaults {
   defaultState?: string;
 }
 
+function splitDisplayName(name: string): Pick<HouseholdMemberData, "firstName" | "lastName"> {
+  const trimmedName = name.trim();
+  if (!trimmedName) {
+    return { firstName: "", lastName: "" };
+  }
+
+  const [firstName = "", ...lastNameParts] = trimmedName.split(/\s+/);
+  return {
+    firstName,
+    lastName: lastNameParts.join(" "),
+  };
+}
+
+export function createBlankHouseholdMemberData(
+  defaults: PersonDefaults = {},
+): HouseholdMemberData {
+  const defaultState = defaults.defaultState ?? "NE";
+
+  return {
+    personId: undefined,
+    relationshipType: "",
+    role: "household_member",
+    firstName: "",
+    lastName: "",
+    email: "",
+    phone: "",
+    dateOfBirth: "",
+    ssn: "",
+    organizationId: null,
+    livingArrangement: defaults.livingArrangement ?? "",
+    address: {
+      street: "",
+      apt: "",
+      city: "",
+      state: defaultState,
+      zip: "",
+    },
+    mailingAddress: {
+      street: "",
+      apt: "",
+      city: "",
+      state: defaultState,
+      zip: "",
+      sameAsPhysical: true,
+    },
+    authorizedRepIds: [],
+    familyMembers: [],
+    relationships: [],
+    status: "Active",
+  };
+}
+
 /**
  * Creates a new NewPersonData object with all fields initialized.
  * 
@@ -155,7 +208,7 @@ export function createPersonData(
     },
     authorizedRepIds: person?.authorizedRepIds ?? [],
     familyMembers: person?.familyMembers ?? [],
-    relationships: person?.relationships ?? [],
+    relationships: getPersonRelationships(person, existingCase ?? undefined),
     status: person?.status ?? "Active",
   };
 }
@@ -173,10 +226,71 @@ export function createIntakeFormData(
   const blankForm = createBlankIntakeForm();
   const person = existingCase ? getPrimaryCasePerson(existingCase) : null;
   const record = existingCase?.caseRecord;
+  const relationships = getPersonRelationships(person, existingCase ?? undefined);
+  const relationshipTypeByPersonId = new Map(
+    (person?.normalizedRelationships ?? [])
+      .filter((relationship) => relationship.targetPersonId)
+      .map((relationship) => [relationship.targetPersonId as string, relationship.type] as const),
+  );
+  const householdMembers = (existingCase?.linkedPeople ?? [])
+    .filter(({ ref }) => !ref.isPrimary)
+    .map(({ ref, person: linkedPerson }) => ({
+      ...createBlankHouseholdMemberData({
+        livingArrangement: blankForm.livingArrangement,
+        defaultState: blankForm.address.state,
+      }),
+      personId: linkedPerson.id,
+      relationshipType:
+        relationshipTypeByPersonId.get(linkedPerson.id)
+        ?? relationships.find((relationship) => relationship.name === linkedPerson.name)?.type
+        ?? "",
+      role: ref.role === "applicant" ? "household_member" : ref.role,
+      firstName: linkedPerson.firstName ?? "",
+      lastName: linkedPerson.lastName ?? "",
+      email: linkedPerson.email ?? "",
+      phone: linkedPerson.phone ?? "",
+      dateOfBirth: linkedPerson.dateOfBirth ?? "",
+      ssn: linkedPerson.ssn ?? "",
+      organizationId: linkedPerson.organizationId ?? null,
+      livingArrangement: linkedPerson.livingArrangement ?? "",
+      address: {
+        street: linkedPerson.address?.street ?? "",
+        apt: linkedPerson.address?.apt ?? "",
+        city: linkedPerson.address?.city ?? "",
+        state: linkedPerson.address?.state ?? blankForm.address.state,
+        zip: linkedPerson.address?.zip ?? "",
+      },
+      mailingAddress: {
+        street: linkedPerson.mailingAddress?.street ?? "",
+        apt: linkedPerson.mailingAddress?.apt ?? "",
+        city: linkedPerson.mailingAddress?.city ?? "",
+        state: linkedPerson.mailingAddress?.state ?? blankForm.mailingAddress.state,
+        zip: linkedPerson.mailingAddress?.zip ?? "",
+        sameAsPhysical: linkedPerson.mailingAddress?.sameAsPhysical ?? true,
+      },
+      status: linkedPerson.status ?? "Active",
+    }));
 
   if (!existingCase || !record) {
     return blankForm;
   }
+
+  const fallbackHouseholdMembers = relationships.map((relationship) => {
+    const { firstName, lastName } = splitDisplayName(relationship.name);
+
+    return {
+      ...createBlankHouseholdMemberData({
+        livingArrangement: blankForm.livingArrangement,
+        defaultState: blankForm.address.state,
+      }),
+      relationshipType: relationship.type,
+      firstName,
+      lastName,
+      phone: relationship.phone,
+      organizationId: record.organizationId ?? null,
+      livingArrangement: record.livingArrangement ?? "",
+    };
+  });
 
   return {
     ...blankForm,
@@ -233,6 +347,18 @@ export function createIntakeFormData(
     pregnancy: record.pregnancy ?? false,
     avsConsentDate: record.avsConsentDate ?? "",
     // Household
-    relationships: person?.relationships ?? [],
+    relationships,
+    householdMembers: (householdMembers.length > 0 ? householdMembers : fallbackHouseholdMembers)
+      .map((member) => ({
+        ...member,
+        address: {
+          ...member.address,
+          apt: member.address.apt ?? "",
+        },
+        mailingAddress: {
+          ...member.mailingAddress,
+          apt: member.mailingAddress.apt ?? "",
+        },
+      })) as IntakeFormData["householdMembers"],
   };
 }

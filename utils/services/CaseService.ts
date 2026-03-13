@@ -1,6 +1,7 @@
 import { v4 as uuidv4 } from 'uuid';
 import type {
   CasePersonRole,
+  HouseholdMemberData,
   NewPersonData,
   NewCaseRecordData,
   CaseStatus,
@@ -8,6 +9,8 @@ import type {
   CaseRecord,
   AlertRecord,
   Person,
+  PersonRelationship,
+  Relationship,
   PersistedCase,
   StoredCase,
 } from '../../types/case';
@@ -23,6 +26,36 @@ import { dehydrateStoredCase, hydrateStoredCase } from '../storageV21Migration';
 
 // formatCaseDisplayName imported from domain layer
 const PRIMARY_CASE_PERSON_ROLE: CasePersonRole = 'applicant';
+
+interface CompleteCaseData {
+  person: NewPersonData;
+  caseRecord: NewCaseRecordData;
+  householdMembers?: HouseholdMemberData[];
+}
+
+interface ResolvedHouseholdMember {
+  ref: PersistedCase["people"][number];
+  person: Person;
+  relationship: Relationship;
+  normalizedRelationship: PersonRelationship;
+}
+
+function normalizeRole(role?: HouseholdMemberData["role"]): CasePersonRole {
+  return role ?? "household_member";
+}
+
+function syncMailingAddress<T extends Pick<HouseholdMemberData, "address" | "mailingAddress">>(
+  personData: T,
+): T["mailingAddress"] {
+  if (personData.mailingAddress.sameAsPhysical) {
+    return {
+      ...personData.address,
+      sameAsPhysical: true,
+    };
+  }
+
+  return personData.mailingAddress;
+}
 
 /**
  * Configuration for CaseService initialization.
@@ -131,6 +164,65 @@ export class CaseService {
     this.people = new PersonService({
       fileStorage: config.fileStorage,
     });
+  }
+
+  private resolveHouseholdMembers(
+    currentData: NormalizedFileData,
+    householdMembers: HouseholdMemberData[] | undefined,
+    timestamp: string,
+  ): ResolvedHouseholdMember[] {
+    return (householdMembers ?? []).map((member) => {
+      const requestedPersonId = member.personId?.trim() ?? "";
+      const existingPerson = requestedPersonId
+        ? currentData.people.find((person) => person.id === requestedPersonId) ?? null
+        : null;
+
+      if (requestedPersonId && !existingPerson) {
+        throw new Error(`Person ${requestedPersonId} not found`);
+      }
+
+      const normalizedMember: HouseholdMemberData = {
+        ...member,
+        mailingAddress: syncMailingAddress(member),
+      };
+      const person = existingPerson
+        ? this.people.mergePerson(existingPerson, normalizedMember, timestamp)
+        : this.people.buildNewPerson(normalizedMember, {
+            personId: uuidv4(),
+            timestamp,
+          });
+      const relationship: Relationship = {
+        type: member.relationshipType,
+        name: person.name,
+        phone: person.phone,
+      };
+
+      return {
+        ref: {
+          personId: person.id,
+          role: normalizeRole(member.role),
+          isPrimary: false,
+        },
+        person,
+        relationship,
+        normalizedRelationship: {
+          id: uuidv4(),
+          type: member.relationshipType,
+          targetPersonId: person.id,
+          legacyPhone: person.phone || undefined,
+        },
+      };
+    });
+  }
+
+  private mergePeopleRegistry(
+    currentData: NormalizedFileData,
+    people: Person[],
+  ): NormalizedFileData {
+    return people.reduce(
+      (data, person) => this.people.upsertPerson(data, person),
+      currentData,
+    );
   }
 
   /**
@@ -300,7 +392,7 @@ export class CaseService {
    *   }
    * });
    */
-  async createCompleteCase(caseData: { person: NewPersonData; caseRecord: NewCaseRecordData }): Promise<StoredCase> {
+  async createCompleteCase(caseData: CompleteCaseData): Promise<StoredCase> {
     // Read current data
     const currentData = await this.fileStorage.readFileData();
     if (!currentData) {
@@ -319,12 +411,28 @@ export class CaseService {
       throw new Error(`Person ${requestedPersonId} not found`);
     }
 
-    const primaryPerson =
+    const primaryPersonBase =
       existingPerson ??
       this.people.buildNewPerson(caseData.person, {
         personId: uuidv4(),
         timestamp,
       });
+    const resolvedHouseholdMembers = this.resolveHouseholdMembers(
+      currentData,
+      caseData.householdMembers,
+      timestamp,
+    );
+    const primaryPerson: Person = {
+      ...primaryPersonBase,
+      familyMembers: resolvedHouseholdMembers.map(({ person }) => person.id),
+      familyMemberIds: resolvedHouseholdMembers.map(({ person }) => person.id),
+      legacyFamilyMemberNames: [],
+      relationships: resolvedHouseholdMembers.map(({ relationship }) => ({ ...relationship })),
+      normalizedRelationships: resolvedHouseholdMembers.map(
+        ({ normalizedRelationship }) => ({ ...normalizedRelationship }),
+      ),
+      updatedAt: timestamp,
+    };
     const personId = primaryPerson.id;
 
     const newCase: PersistedCase = {
@@ -335,7 +443,10 @@ export class CaseService {
       priority: Boolean(caseData.caseRecord.priority),
       createdAt: timestamp,
       updatedAt: timestamp,
-      people: [{ personId, role: PRIMARY_CASE_PERSON_ROLE, isPrimary: true }],
+      people: [
+        { personId, role: PRIMARY_CASE_PERSON_ROLE, isPrimary: true },
+        ...resolvedHouseholdMembers.map(({ ref }) => ref),
+      ],
       caseRecord: {
         id: uuidv4(),
         personId,
@@ -376,11 +487,15 @@ export class CaseService {
     };
 
     // Write updated data
-    const updatedPeople = existingPerson ? currentData.people : [...currentData.people, primaryPerson];
+    const updatedDataWithPeople = this.mergePeopleRegistry(currentData, [
+      primaryPerson,
+      ...resolvedHouseholdMembers.map(({ person }) => person),
+    ]);
+    const updatedPeople = updatedDataWithPeople.people;
     const createdRuntimeCase = this.hydrate(newCase, updatedPeople);
 
     const updatedData: NormalizedFileData = {
-      ...currentData,
+      ...updatedDataWithPeople,
       people: updatedPeople,
       cases: [...currentData.cases, createdRuntimeCase],
     };
@@ -423,7 +538,7 @@ export class CaseService {
    *   }
    * });
    */
-  async updateCompleteCase(caseId: string, caseData: { person: NewPersonData; caseRecord: NewCaseRecordData }): Promise<StoredCase> {
+  async updateCompleteCase(caseId: string, caseData: CompleteCaseData): Promise<StoredCase> {
     // Read current data
     const currentData = await this.fileStorage.readFileData();
     if (!currentData) {
@@ -440,7 +555,22 @@ export class CaseService {
     const timestamp = new Date().toISOString();
 
     // Update person data
-    const updatedPerson = this.people.mergePerson(existingCase.person, caseData.person, timestamp);
+    const resolvedHouseholdMembers = this.resolveHouseholdMembers(
+      currentData,
+      caseData.householdMembers,
+      timestamp,
+    );
+    const updatedPersonBase = this.people.mergePerson(existingCase.person, caseData.person, timestamp);
+    const updatedPerson: Person = {
+      ...updatedPersonBase,
+      familyMembers: resolvedHouseholdMembers.map(({ person }) => person.id),
+      familyMemberIds: resolvedHouseholdMembers.map(({ person }) => person.id),
+      legacyFamilyMemberNames: [],
+      relationships: resolvedHouseholdMembers.map(({ relationship }) => ({ ...relationship })),
+      normalizedRelationships: resolvedHouseholdMembers.map(
+        ({ normalizedRelationship }) => ({ ...normalizedRelationship }),
+      ),
+    };
 
     // Update case record data (without financials/notes - they're stored separately)
     const updatedCaseRecord = {
@@ -484,7 +614,26 @@ export class CaseService {
       mcn: updatedCaseRecord.mcn,
       status: updatedCaseRecord.status,
       priority: updatedCaseRecord.priority,
+      people: [
+        {
+          personId: updatedPerson.id,
+          role: PRIMARY_CASE_PERSON_ROLE,
+          isPrimary: true,
+        },
+        ...resolvedHouseholdMembers.map(({ ref }) => ref),
+      ],
       person: updatedPerson,
+      linkedPeople: [
+        {
+          ref: {
+            personId: updatedPerson.id,
+            role: PRIMARY_CASE_PERSON_ROLE,
+            isPrimary: true,
+          },
+          person: updatedPerson,
+        },
+        ...resolvedHouseholdMembers.map(({ ref, person }) => ({ ref, person })),
+      ],
       caseRecord: updatedCaseRecord,
     };
 
@@ -496,14 +645,15 @@ export class CaseService {
     const casesWithTouchedTimestamps = this.fileStorage.touchCaseTimestamps(casesWithChanges, [caseId]);
 
     // Write updated data
-    const updatedData: NormalizedFileData = {
-      ...currentData,
-      cases: casesWithTouchedTimestamps,
-    };
+    const updatedData = this.mergePeopleRegistry(
+      {
+        ...currentData,
+        cases: casesWithTouchedTimestamps,
+      },
+      [updatedPerson, ...resolvedHouseholdMembers.map(({ person }) => person)],
+    );
 
-    const normalizedUpdatedData = this.people.upsertPerson(updatedData, updatedPerson);
-
-    await this.fileStorage.writeNormalizedData(normalizedUpdatedData);
+    await this.fileStorage.writeNormalizedData(updatedData);
 
     return casesWithTouchedTimestamps[caseIndex];
   }

@@ -29,6 +29,7 @@ export {
 
 export {
   createCaseRecordData,
+  createBlankHouseholdMemberData,
   createIntakeFormData,
   createPersonData,
   type CaseRecordDefaults,

@@ -323,37 +323,63 @@ describe("IntakeFormView", () => {
   // --- Household step -------------------------------------------------------
 
   describe("Household step", () => {
-    it("renders the Relationships section on step 4", async () => {
+    it("renders the household members section on step 4", async () => {
       withHookState({
         currentStep: 4,
         visitedSteps: new Set([0, 1, 2, 3, 4]) as ReadonlySet<number>,
       });
       const { container } = renderIntakeFormView();
       const results = await axe(container);
-      expect(screen.getByText("Relationships")).toBeInTheDocument();
+      expect(screen.getByText("Household Members")).toBeInTheDocument();
       expect(results).toHaveNoViolations();
     });
 
-    it("shows existing relationships on the household step", () => {
+    it("shows existing household members on the household step", () => {
       withHookState({
         currentStep: 4,
         visitedSteps: new Set([0, 1, 2, 3, 4]) as ReadonlySet<number>,
         formData: {
           ...createBlankIntakeForm(),
-          relationships: [
-            { id: "rel-1", type: "Spouse", name: "Jordan Tester", phone: "5559876543" },
+          householdMembers: [
+            {
+              personId: "person-2",
+              relationshipType: "Spouse",
+              role: "household_member",
+              firstName: "Jordan",
+              lastName: "Tester",
+              phone: "5559876543",
+              email: "jordan@example.com",
+              dateOfBirth: "1985-02-03",
+              ssn: "",
+              organizationId: null,
+              livingArrangement: "Community",
+              address: { street: "", apt: "", city: "", state: "NE", zip: "" },
+              mailingAddress: {
+                street: "",
+                apt: "",
+                city: "",
+                state: "NE",
+                zip: "",
+                sameAsPhysical: true,
+              },
+              authorizedRepIds: [],
+              familyMembers: [],
+              relationships: [],
+              status: "Active",
+            },
           ],
         },
       });
       renderIntakeFormView();
-      expect(screen.getByDisplayValue("Jordan Tester")).toBeInTheDocument();
+      expect(screen.getByDisplayValue("Jordan")).toBeInTheDocument();
+      expect(screen.getByDisplayValue("Tester")).toBeInTheDocument();
     });
   });
 
   // --- Review step household summary ----------------------------------------
 
   describe("Review step household summary", () => {
-    it("shows 'No relationships added' when relationships are empty", () => {
+    it("shows 'No household members added' when household members are empty", () => {
       withHookState({
         currentStep: INTAKE_STEPS.length - 1,
         visitedSteps: new Set(INTAKE_STEPS.map((_, i) => i)),
@@ -368,10 +394,10 @@ describe("IntakeFormView", () => {
         },
       });
       renderIntakeFormView();
-      expect(screen.getByText("No relationships added")).toBeInTheDocument();
+      expect(screen.getByText("No household members added")).toBeInTheDocument();
     });
 
-    it("shows relationship names in the review summary", async () => {
+    it("shows household member details in the review summary", async () => {
       withHookState({
         currentStep: INTAKE_STEPS.length - 1,
         visitedSteps: new Set(INTAKE_STEPS.map((_, i) => i)),
@@ -382,18 +408,44 @@ describe("IntakeFormView", () => {
           lastName: "Smith",
           mcn: "12345",
           applicationDate: "2026-01-01",
-          relationships: [
-            { id: "rel-1", type: "Spouse", name: "Jordan Tester", phone: "5559876543" },
+          householdMembers: [
+            {
+              personId: "person-2",
+              relationshipType: "Spouse",
+              role: "household_member",
+              firstName: "Jordan",
+              lastName: "Tester",
+              phone: "5559876543",
+              email: "jordan@example.com",
+              dateOfBirth: "1985-02-03",
+              ssn: "",
+              organizationId: null,
+              livingArrangement: "Community",
+              address: { street: "", apt: "", city: "", state: "NE", zip: "" },
+              mailingAddress: {
+                street: "",
+                apt: "",
+                city: "",
+                state: "NE",
+                zip: "",
+                sameAsPhysical: true,
+              },
+              authorizedRepIds: [],
+              familyMembers: [],
+              relationships: [],
+              status: "Active",
+            },
           ],
         },
       });
       const { container } = renderIntakeFormView();
       const results = await axe(container);
       expect(screen.getByText(/Jordan Tester/)).toBeInTheDocument();
+      expect(screen.getByText(/jordan@example.com/)).toBeInTheDocument();
       expect(results).toHaveNoViolations();
     });
 
-    it("ignores blank draft relationships in the review summary", async () => {
+    it("ignores blank draft household members in the review summary", async () => {
       withHookState({
         currentStep: INTAKE_STEPS.length - 1,
         visitedSteps: new Set(INTAKE_STEPS.map((_, i) => i)),
@@ -404,14 +456,41 @@ describe("IntakeFormView", () => {
           lastName: "Smith",
           mcn: "12345",
           applicationDate: "2026-01-01",
-          relationships: [{ id: "rel-blank", type: " ", name: " ", phone: " " }],
+          householdMembers: [
+            {
+              personId: undefined,
+              relationshipType: " ",
+              role: "household_member",
+              firstName: " ",
+              lastName: " ",
+              phone: " ",
+              email: "",
+              dateOfBirth: "",
+              ssn: "",
+              organizationId: null,
+              livingArrangement: "",
+              address: { street: "", apt: "", city: "", state: "NE", zip: "" },
+              mailingAddress: {
+                street: "",
+                apt: "",
+                city: "",
+                state: "NE",
+                zip: "",
+                sameAsPhysical: true,
+              },
+              authorizedRepIds: [],
+              familyMembers: [],
+              relationships: [],
+              status: "Active",
+            },
+          ],
         },
       });
 
       const { container } = renderIntakeFormView();
       const results = await axe(container);
 
-      expect(screen.getByText("No relationships added")).toBeInTheDocument();
+      expect(screen.getByText("No household members added")).toBeInTheDocument();
       expect(results).toHaveNoViolations();
     });
   });

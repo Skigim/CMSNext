@@ -36,7 +36,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/components/ui/utils";
 import { useCategoryConfig } from "@/contexts/CategoryConfigContext";
-import { INTAKE_STEPS, isStepComplete } from "@/domain/cases/intake-steps";
+import { createBlankHouseholdMemberData, INTAKE_STEPS, isStepComplete } from "@/domain/cases";
 import type { IntakeFormData } from "@/domain/validation/intake.schema";
 import {
   useIntakeWorkflow,
@@ -53,7 +53,7 @@ import {
 } from "@/domain/common";
 import { isRelationshipPopulated } from "@/domain/cases/relationships";
 import { RelationshipsSection } from "@/components/case/CaseEditSections";
-import type { Relationship } from "@/types/case";
+import type { HouseholdMemberData, Relationship } from "@/types/case";
 
 const STEP_FOCUSABLE_SELECTOR = [
   'input:not([type="hidden"]):not([disabled])',
@@ -757,52 +757,510 @@ interface HouseholdStepProps {
 }
 
 function HouseholdStep({ formData, onChange }: Readonly<HouseholdStepProps>) {
-  const relationships = useMemo(
-    () => (formData.relationships ?? []) as Relationship[],
-    [formData.relationships],
+  const { config } = useCategoryConfig();
+  const householdMembers = useMemo(
+    () => (formData.householdMembers ?? []) as HouseholdMemberData[],
+    [formData.householdMembers],
   );
-  const handleAdd = useCallback(() => {
-    const newRel: Relationship = {
-      id: crypto.randomUUID(),
-      type: "",
-      name: "",
-      phone: "",
-    };
-    onChange("relationships", [...relationships, newRel]);
-  }, [relationships, onChange]);
-
-  const handleUpdate = useCallback(
-    (index: number, field: "type" | "name" | "phone", value: string) => {
+  const updateHouseholdMembers = useCallback(
+    (nextMembers: HouseholdMemberData[]) => {
       onChange(
-        "relationships",
-        relationships.map((rel, i) => (i === index ? { ...rel, [field]: value } : rel)),
+        "householdMembers",
+        nextMembers.map((member) => ({
+          ...member,
+          address: {
+            ...member.address,
+            apt: member.address.apt ?? "",
+          },
+          mailingAddress: {
+            ...member.mailingAddress,
+            apt: member.mailingAddress.apt ?? "",
+          },
+        })) as IntakeFormData["householdMembers"],
       );
     },
-    [relationships, onChange],
+    [onChange],
+  );
+  const handleAdd = useCallback(() => {
+    updateHouseholdMembers([
+      ...householdMembers,
+      createBlankHouseholdMemberData({
+        livingArrangement: formData.livingArrangement,
+        defaultState: formData.address.state || "NE",
+      }),
+    ]);
+  }, [formData.address.state, formData.livingArrangement, householdMembers, updateHouseholdMembers]);
+
+  const updateMember = useCallback(
+    (index: number, updater: (member: HouseholdMemberData) => HouseholdMemberData) => {
+      updateHouseholdMembers(
+        householdMembers.map((member, memberIndex) =>
+          memberIndex === index ? updater(member) : member,
+        ),
+      );
+    },
+    [householdMembers, updateHouseholdMembers],
   );
 
   const handleRemove = useCallback(
     (index: number) => {
-      onChange(
-        "relationships",
-        relationships.filter((_, i) => i !== index),
-      );
+      updateHouseholdMembers(householdMembers.filter((_, memberIndex) => memberIndex !== index));
     },
-    [relationships, onChange],
-  );
-
-  const handlers = useMemo(
-    () => ({ add: handleAdd, update: handleUpdate, remove: handleRemove }),
-    [handleAdd, handleUpdate, handleRemove],
+    [householdMembers, updateHouseholdMembers],
   );
 
   return (
     <div className="space-y-4">
-      <RelationshipsSection
-        relationships={relationships}
-        isEditing={true}
-        onRelationshipsChange={handlers}
-      />
+      <div className="flex items-center justify-between">
+        <div>
+          <h3 className="text-base font-semibold">Household Members</h3>
+          <p className="text-sm text-muted-foreground">
+            Add each household member as a linked person record.
+          </p>
+        </div>
+        <Button type="button" variant="outline" size="sm" onClick={handleAdd}>
+          Add Household Member
+        </Button>
+      </div>
+
+      {householdMembers.length === 0 ? (
+        <div className="rounded-md border border-dashed bg-muted/10 px-4 py-6 text-sm text-muted-foreground">
+          No household members added
+        </div>
+      ) : (
+        <div className="space-y-4">
+          {householdMembers.map((member, index) => (
+            <div
+              key={member.personId ?? `household-member-${index}`}
+              className="space-y-4 rounded-lg border bg-card p-4 shadow-sm"
+            >
+              <div className="flex items-center justify-between gap-3">
+                <div className="space-y-1">
+                  <h4 className="font-medium">
+                    {member.firstName || member.lastName
+                      ? `${member.firstName} ${member.lastName}`.trim()
+                      : `Household Member ${index + 1}`}
+                  </h4>
+                  <p className="text-xs text-muted-foreground">
+                    Linked as {member.role.replace("_", " ")}
+                  </p>
+                </div>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => handleRemove(index)}
+                >
+                  Remove
+                </Button>
+              </div>
+
+              <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+                <div className="space-y-1.5">
+                  <Label htmlFor={`household-relationshipType-${index}`}>Relationship</Label>
+                  <Select
+                    value={member.relationshipType}
+                    onValueChange={(value) =>
+                      updateMember(index, (currentMember) => ({
+                        ...currentMember,
+                        relationshipType: value,
+                      }))
+                    }
+                  >
+                    <SelectTrigger id={`household-relationshipType-${index}`}>
+                      <SelectValue placeholder="Select relationship" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {[
+                        "Spouse",
+                        "Child",
+                        "Parent",
+                        "Sibling",
+                        "Guardian",
+                        "Authorized Representative",
+                        "Case Manager",
+                        "Other",
+                      ].map((option) => (
+                        <SelectItem key={option} value={option}>
+                          {option}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label htmlFor={`household-firstName-${index}`}>First Name</Label>
+                  <Input
+                    id={`household-firstName-${index}`}
+                    value={member.firstName}
+                    onChange={(e) =>
+                      updateMember(index, (currentMember) => ({
+                        ...currentMember,
+                        firstName: e.target.value,
+                      }))
+                    }
+                    placeholder="First name"
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label htmlFor={`household-lastName-${index}`}>Last Name</Label>
+                  <Input
+                    id={`household-lastName-${index}`}
+                    value={member.lastName}
+                    onChange={(e) =>
+                      updateMember(index, (currentMember) => ({
+                        ...currentMember,
+                        lastName: e.target.value,
+                      }))
+                    }
+                    placeholder="Last name"
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label htmlFor={`household-status-${index}`}>Status</Label>
+                  <Select
+                    value={member.status}
+                    onValueChange={(value) =>
+                      updateMember(index, (currentMember) => ({
+                        ...currentMember,
+                        status: value,
+                      }))
+                    }
+                  >
+                    <SelectTrigger id={`household-status-${index}`}>
+                      <SelectValue placeholder="Select status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {config.caseStatuses.map((statusOption) => (
+                        <SelectItem key={statusOption.name} value={statusOption.name}>
+                          {statusOption.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label htmlFor={`household-dob-${index}`}>Date of Birth</Label>
+                  <Input
+                    id={`household-dob-${index}`}
+                    type="date"
+                    value={isoToDateInputValue(member.dateOfBirth)}
+                    onChange={(e) =>
+                      updateMember(index, (currentMember) => ({
+                        ...currentMember,
+                        dateOfBirth: dateInputValueToISO(e.target.value) ?? "",
+                      }))
+                    }
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label htmlFor={`household-ssn-${index}`}>SSN</Label>
+                  <Input
+                    id={`household-ssn-${index}`}
+                    value={member.ssn}
+                    onChange={(e) =>
+                      updateMember(index, (currentMember) => ({
+                        ...currentMember,
+                        ssn: e.target.value,
+                      }))
+                    }
+                    placeholder="XXX-XX-XXXX"
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label htmlFor={`household-phone-${index}`}>Phone</Label>
+                  <Input
+                    id={`household-phone-${index}`}
+                    value={formatPhoneNumberAsTyped(member.phone)}
+                    onChange={(e) =>
+                      updateMember(index, (currentMember) => ({
+                        ...currentMember,
+                        phone: normalizePhoneNumber(e.target.value),
+                      }))
+                    }
+                    placeholder="(XXX) XXX-XXXX"
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label htmlFor={`household-email-${index}`}>Email</Label>
+                  <Input
+                    id={`household-email-${index}`}
+                    type="email"
+                    value={member.email}
+                    onChange={(e) =>
+                      updateMember(index, (currentMember) => ({
+                        ...currentMember,
+                        email: e.target.value,
+                      }))
+                    }
+                    placeholder="email@example.com"
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label htmlFor={`household-livingArrangement-${index}`}>Living Arrangement</Label>
+                  <Select
+                    value={member.livingArrangement}
+                    onValueChange={(value) =>
+                      updateMember(index, (currentMember) => ({
+                        ...currentMember,
+                        livingArrangement: value,
+                      }))
+                    }
+                  >
+                    <SelectTrigger id={`household-livingArrangement-${index}`}>
+                      <SelectValue placeholder="Select arrangement" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {config.livingArrangements.map((arrangement) => (
+                        <SelectItem key={arrangement} value={arrangement}>
+                          {arrangement}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                <h5 className="text-sm font-medium">Physical Address</h5>
+                <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
+                  <div className="space-y-1.5 xl:col-span-2">
+                    <Label htmlFor={`household-street-${index}`}>Street</Label>
+                    <Input
+                      id={`household-street-${index}`}
+                      value={member.address.street}
+                      onChange={(e) =>
+                        updateMember(index, (currentMember) => ({
+                          ...currentMember,
+                          address: { ...currentMember.address, street: e.target.value },
+                        }))
+                      }
+                      placeholder="123 Main St"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor={`household-apt-${index}`}>Apt</Label>
+                    <Input
+                      id={`household-apt-${index}`}
+                      value={member.address.apt ?? ""}
+                      onChange={(e) =>
+                        updateMember(index, (currentMember) => ({
+                          ...currentMember,
+                          address: { ...currentMember.address, apt: e.target.value },
+                        }))
+                      }
+                      placeholder="Apt"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor={`household-city-${index}`}>City</Label>
+                    <Input
+                      id={`household-city-${index}`}
+                      value={member.address.city}
+                      onChange={(e) =>
+                        updateMember(index, (currentMember) => ({
+                          ...currentMember,
+                          address: { ...currentMember.address, city: e.target.value },
+                        }))
+                      }
+                      placeholder="City"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor={`household-state-${index}`}>State</Label>
+                    <Select
+                      value={member.address.state || "NE"}
+                      onValueChange={(value) =>
+                        updateMember(index, (currentMember) => ({
+                          ...currentMember,
+                          address: { ...currentMember.address, state: value },
+                        }))
+                      }
+                    >
+                      <SelectTrigger id={`household-state-${index}`}>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {US_STATES.map((stateOption) => (
+                          <SelectItem key={stateOption.value} value={stateOption.value}>
+                            {stateOption.value}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor={`household-zip-${index}`}>ZIP</Label>
+                    <Input
+                      id={`household-zip-${index}`}
+                      value={member.address.zip}
+                      onChange={(e) =>
+                        updateMember(index, (currentMember) => ({
+                          ...currentMember,
+                          address: { ...currentMember.address, zip: e.target.value },
+                        }))
+                      }
+                      placeholder="ZIP"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                <div className="flex items-center gap-3">
+                  <h5 className="text-sm font-medium">Mailing Address</h5>
+                  <div className="flex items-center gap-2">
+                    <Checkbox
+                      id={`household-sameAsPhysical-${index}`}
+                      checked={member.mailingAddress.sameAsPhysical}
+                      onCheckedChange={(checked) =>
+                        updateMember(index, (currentMember) => ({
+                          ...currentMember,
+                          mailingAddress:
+                            checked === true
+                              ? {
+                                  ...currentMember.address,
+                                  sameAsPhysical: true,
+                                }
+                              : {
+                                  ...currentMember.mailingAddress,
+                                  sameAsPhysical: false,
+                                },
+                        }))
+                      }
+                    />
+                    <Label
+                      htmlFor={`household-sameAsPhysical-${index}`}
+                      className="cursor-pointer text-sm font-normal"
+                    >
+                      Same as physical
+                    </Label>
+                  </div>
+                </div>
+
+                {!member.mailingAddress.sameAsPhysical && (
+                  <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
+                    <div className="space-y-1.5 xl:col-span-2">
+                      <Label htmlFor={`household-mailStreet-${index}`}>Street</Label>
+                      <Input
+                        id={`household-mailStreet-${index}`}
+                        value={member.mailingAddress.street}
+                        onChange={(e) =>
+                          updateMember(index, (currentMember) => ({
+                            ...currentMember,
+                            mailingAddress: {
+                              ...currentMember.mailingAddress,
+                              street: e.target.value,
+                            },
+                          }))
+                        }
+                        placeholder="PO Box or street"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label htmlFor={`household-mailApt-${index}`}>Apt</Label>
+                      <Input
+                        id={`household-mailApt-${index}`}
+                        value={member.mailingAddress.apt ?? ""}
+                        onChange={(e) =>
+                          updateMember(index, (currentMember) => ({
+                            ...currentMember,
+                            mailingAddress: {
+                              ...currentMember.mailingAddress,
+                              apt: e.target.value,
+                            },
+                          }))
+                        }
+                        placeholder="Apt"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label htmlFor={`household-mailCity-${index}`}>City</Label>
+                      <Input
+                        id={`household-mailCity-${index}`}
+                        value={member.mailingAddress.city}
+                        onChange={(e) =>
+                          updateMember(index, (currentMember) => ({
+                            ...currentMember,
+                            mailingAddress: {
+                              ...currentMember.mailingAddress,
+                              city: e.target.value,
+                            },
+                          }))
+                        }
+                        placeholder="City"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label htmlFor={`household-mailState-${index}`}>State</Label>
+                      <Select
+                        value={member.mailingAddress.state || "NE"}
+                        onValueChange={(value) =>
+                          updateMember(index, (currentMember) => ({
+                            ...currentMember,
+                            mailingAddress: {
+                              ...currentMember.mailingAddress,
+                              state: value,
+                            },
+                          }))
+                        }
+                      >
+                        <SelectTrigger id={`household-mailState-${index}`}>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {US_STATES.map((stateOption) => (
+                            <SelectItem key={stateOption.value} value={stateOption.value}>
+                              {stateOption.value}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label htmlFor={`household-mailZip-${index}`}>ZIP</Label>
+                      <Input
+                        id={`household-mailZip-${index}`}
+                        value={member.mailingAddress.zip}
+                        onChange={(e) =>
+                          updateMember(index, (currentMember) => ({
+                            ...currentMember,
+                            mailingAddress: {
+                              ...currentMember.mailingAddress,
+                              zip: e.target.value,
+                            },
+                          }))
+                        }
+                        placeholder="ZIP"
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {householdMembers.length === 0 && formData.relationships.length > 0 && (
+        <RelationshipsSection
+          relationships={(formData.relationships ?? []) as Relationship[]}
+          isEditing={false}
+          onRelationshipsChange={{
+            add: () => undefined,
+            update: () => undefined,
+            remove: () => undefined,
+          }}
+        />
+      )}
     </div>
   );
 }
@@ -817,6 +1275,20 @@ function ReviewStep({ formData, onGoToStep }: Readonly<ReviewStepProps>) {
   const populatedRelationships = useMemo(
     () => ((formData.relationships ?? []) as Relationship[]).filter(isRelationshipPopulated),
     [formData.relationships],
+  );
+  const populatedHouseholdMembers = useMemo(
+    () =>
+      ((formData.householdMembers ?? []) as HouseholdMemberData[]).filter((member) =>
+        [
+          member.relationshipType,
+          member.firstName,
+          member.lastName,
+          member.phone,
+          member.email,
+          member.dateOfBirth,
+        ].some((value) => (value ?? "").trim().length > 0),
+      ),
+    [formData.householdMembers],
   );
   const sections: {
     title: string;
@@ -959,20 +1431,51 @@ function ReviewStep({ formData, onGoToStep }: Readonly<ReviewStepProps>) {
           </Button>
         </div>
         <div className="rounded-md border bg-muted/20 px-4 py-3 space-y-2">
-          {populatedRelationships.length === 0 ? (
+          {populatedHouseholdMembers.length === 0 && populatedRelationships.length === 0 ? (
             <p className="text-xs text-muted-foreground italic">
-              No relationships added
+              No household members added
             </p>
           ) : (
-            populatedRelationships.map((rel, i) => (
-              <SummaryRow
-                key={rel.id ?? `review-rel-${i}`}
-                label={rel.type || "Relationship"}
-                value={[rel.name, getDisplayPhoneNumber(rel.phone)]
-                  .filter(Boolean)
-                  .join(" · ")}
-              />
-            ))
+            <>
+              {populatedHouseholdMembers.map((member, index) => (
+                <div
+                  key={member.personId ?? `review-household-member-${index}`}
+                  className="space-y-1 rounded-md border bg-background/80 px-3 py-2"
+                >
+                  <SummaryRow
+                    label={member.relationshipType || "Relationship"}
+                    value={`${member.firstName} ${member.lastName}`.trim() || "Unnamed member"}
+                  />
+                  <SummaryRow
+                    label="Contact"
+                    value={[getDisplayPhoneNumber(member.phone), member.email]
+                      .filter(Boolean)
+                      .join(" · ")}
+                  />
+                  <SummaryRow
+                    label="DOB / Status"
+                    value={[
+                      formatDateForDisplay(member.dateOfBirth) === "None"
+                        ? undefined
+                        : formatDateForDisplay(member.dateOfBirth),
+                      member.status,
+                    ]
+                      .filter(Boolean)
+                      .join(" · ")}
+                  />
+                </div>
+              ))}
+              {populatedHouseholdMembers.length === 0 &&
+                populatedRelationships.map((rel, i) => (
+                  <SummaryRow
+                    key={rel.id ?? `review-rel-${i}`}
+                    label={rel.type || "Relationship"}
+                    value={[rel.name, getDisplayPhoneNumber(rel.phone)]
+                      .filter(Boolean)
+                      .join(" · ")}
+                  />
+                ))}
+            </>
           )}
         </div>
       </div>

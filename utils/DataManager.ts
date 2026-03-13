@@ -6,6 +6,7 @@ import {
   FinancialItem,
   NewFinancialItemData,
   NewAmountHistoryEntryData,
+  HouseholdMemberData,
   NewPersonData,
   NewCaseRecordData,
   NewNoteData,
@@ -1010,7 +1011,11 @@ export class DataManager {
    *   }
    * });
    */
-  async createCompleteCase(caseData: { person: NewPersonData; caseRecord: NewCaseRecordData }): Promise<StoredCase> {
+  async createCompleteCase(caseData: {
+    person: NewPersonData;
+    caseRecord: NewCaseRecordData;
+    householdMembers?: HouseholdMemberData[];
+  }): Promise<StoredCase> {
     return this.cases.createCompleteCase(caseData);
   }
 
@@ -1026,7 +1031,11 @@ export class DataManager {
    * @param {NewCaseRecordData} caseData.caseRecord - Updated case record information
    * @returns {Promise<StoredCase>} The updated case in normalized format
    */
-  async updateCompleteCase(caseId: string, caseData: { person: NewPersonData; caseRecord: NewCaseRecordData }): Promise<StoredCase> {
+  async updateCompleteCase(caseId: string, caseData: {
+    person: NewPersonData;
+    caseRecord: NewCaseRecordData;
+    householdMembers?: HouseholdMemberData[];
+  }): Promise<StoredCase> {
     return this.cases.updateCompleteCase(caseId, caseData);
   }
 
