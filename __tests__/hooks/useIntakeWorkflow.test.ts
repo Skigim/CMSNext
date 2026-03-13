@@ -95,6 +95,19 @@ describe("useIntakeWorkflow", () => {
       expect(result.current.formData).toEqual(createBlankIntakeForm());
     });
 
+    it("marks every step as visited when editing an existing case", () => {
+      // Arrange
+      const existingCase = createMockStoredCase();
+
+      // Act
+      const { result } = renderIntakeHook({ existingCase });
+
+      // Assert
+      expect(result.current.visitedSteps).toEqual(
+        new Set(INTAKE_STEPS.map((_, index) => index)),
+      );
+    });
+
     it("is not submitting", () => {
       const { result } = renderIntakeHook();
       expect(result.current.isSubmitting).toBe(false);
@@ -298,6 +311,34 @@ describe("useIntakeWorkflow", () => {
       });
 
       expect(result.current.currentStep).toBe(2);
+    });
+
+    it("allows full step navigation when editing an existing case", () => {
+      // Arrange
+      const baseCase = createMockStoredCase();
+      const existingCase = createMockStoredCase({
+        person: createMockPerson({
+          firstName: "",
+          lastName: "",
+          name: "",
+        }),
+        caseRecord: {
+          ...baseCase.caseRecord,
+          mcn: "",
+          applicationDate: "",
+        },
+        mcn: "",
+        name: "",
+      });
+      const { result } = renderIntakeHook({ existingCase });
+
+      // Act
+      act(() => {
+        result.current.goToStep(INTAKE_STEPS.length - 1);
+      });
+
+      // Assert
+      expect(result.current.currentStep).toBe(INTAKE_STEPS.length - 1);
     });
 
     it("ignores out-of-range indices", () => {

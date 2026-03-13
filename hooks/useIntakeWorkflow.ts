@@ -39,6 +39,14 @@ import { extractErrorMessage } from "../utils/errorUtils";
 
 const logger = createLogger("useIntakeWorkflow");
 
+function createInitialVisitedSteps(existingCase?: StoredCase): Set<number> {
+  if (!existingCase) {
+    return new Set([0]);
+  }
+
+  return new Set(INTAKE_STEPS.map((_, index) => index));
+}
+
 // ============================================================================
 // Types
 // ============================================================================
@@ -133,7 +141,7 @@ export function useIntakeWorkflow({
   const [currentStep, setCurrentStep] = useState(0);
   const currentStepRef = useRef(currentStep);
   const [visitedSteps, setVisitedSteps] = useState<Set<number>>(
-    () => new Set([0]),
+    () => createInitialVisitedSteps(existingCase),
   );
   const [formData, setFormData] = useState<IntakeFormData>(() =>
     createIntakeFormData(activeExistingCase),
@@ -144,7 +152,7 @@ export function useIntakeWorkflow({
   const initializeWorkflowState = useCallback(() => {
     currentStepRef.current = 0;
     setCurrentStep(0);
-    setVisitedSteps(new Set([0]));
+    setVisitedSteps(createInitialVisitedSteps(existingCase));
     setEditSourceCase(existingCase);
     setFormData(createIntakeFormData(existingCase));
     setError(null);
