@@ -72,7 +72,6 @@ vi.mock("@/components/error/ErrorBoundaryHOC", () => ({
 import { CaseDetails } from "@/components/case/CaseDetails";
 import type { StoredCase } from "@/types/case";
 
-const noOpAsync = vi.fn(async () => undefined);
 const noOp = vi.fn();
 
 function renderCaseDetails(caseData: StoredCase) {
@@ -80,7 +79,6 @@ function renderCaseDetails(caseData: StoredCase) {
     <CaseDetails
       case={caseData}
       onBack={noOp}
-      onSave={noOpAsync}
       onDelete={noOp}
     />,
   );

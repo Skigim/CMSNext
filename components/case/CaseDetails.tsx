@@ -6,7 +6,7 @@ import { FinancialsGridView } from "./FinancialsGridView";
 import { NotesPopover } from "./NotesPopover";
 import { AlertsPopover } from "./AlertsPopover";
 import { IntakeFormView } from "./IntakeFormView";
-import type { StoredCase, NewPersonData, NewCaseRecordData } from "../../types/case";
+import type { StoredCase } from "../../types/case";
 import { ArrowLeft, Trash2, Star, StarOff, Phone, Mail, FileSignature, Pencil, FileText, Archive, ChevronDown } from "lucide-react";
 import { withDataErrorBoundary } from "../error/ErrorBoundaryHOC";
 import { CaseStatusMenu } from "./CaseStatusMenu";
@@ -41,7 +41,6 @@ function get90DayTooltip(dateStr: string): string {
 interface CaseDetailsProps {
   case: StoredCase;
   onBack: () => void;
-  onSave: (caseData: { person: NewPersonData; caseRecord: NewCaseRecordData }) => Promise<void>;
   onDelete: () => void;
   onArchive?: () => Promise<void>;
   isArchiving?: boolean;

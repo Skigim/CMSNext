@@ -122,6 +122,12 @@ export function useIntakeWorkflow({
   const dataManager = useDataManagerSafe();
   const { config } = useCategoryConfig();
   const isEditing = existingCase !== undefined;
+  // Keep the latest saved edit payload as the preservation source so repeated
+  // saves in one session do not fall back to stale unsupported field values.
+  const [editSourceCase, setEditSourceCase] = useState<StoredCase | undefined>(
+    existingCase,
+  );
+  const activeExistingCase = editSourceCase ?? existingCase;
 
   // ---- State ----------------------------------------------------------------
   const [currentStep, setCurrentStep] = useState(0);
@@ -130,23 +136,28 @@ export function useIntakeWorkflow({
     () => new Set([0]),
   );
   const [formData, setFormData] = useState<IntakeFormData>(() =>
-    createIntakeFormData(existingCase),
+    createIntakeFormData(activeExistingCase),
   );
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const initializeWorkflowState = useCallback(() => {
+    currentStepRef.current = 0;
+    setCurrentStep(0);
+    setVisitedSteps(new Set([0]));
+    setEditSourceCase(existingCase);
+    setFormData(createIntakeFormData(existingCase));
+    setError(null);
+    setIsSubmitting(false);
+  }, [existingCase]);
 
   useEffect(() => {
     currentStepRef.current = currentStep;
   }, [currentStep]);
 
   useEffect(() => {
-    currentStepRef.current = 0;
-    setCurrentStep(0);
-    setVisitedSteps(new Set([0]));
-    setFormData(createIntakeFormData(existingCase));
-    setError(null);
-    setIsSubmitting(false);
-  }, [existingCase]);
+    initializeWorkflowState();
+  }, [initializeWorkflowState]);
 
   // ---- Derived values -------------------------------------------------------
   const isCurrentStepComplete = useMemo(
@@ -212,13 +223,8 @@ export function useIntakeWorkflow({
 
   // ---- Reset ----------------------------------------------------------------
   const reset = useCallback(() => {
-    currentStepRef.current = 0;
-    setCurrentStep(0);
-    setVisitedSteps(new Set([0]));
-    setFormData(createIntakeFormData(existingCase));
-    setError(null);
-    setIsSubmitting(false);
-  }, [existingCase]);
+    initializeWorkflowState();
+  }, [initializeWorkflowState]);
 
   // ---- Cancel ---------------------------------------------------------------
   const cancel = useCallback(() => {
@@ -278,15 +284,15 @@ export function useIntakeWorkflow({
         validatedFormData.avsConsentDate,
       );
       const defaultLivingArrangement = config.livingArrangements[0] || "";
-      const personBase = createPersonData(existingCase, {
+      const personBase = createPersonData(activeExistingCase, {
         livingArrangement: defaultLivingArrangement,
       });
       const defaultStatus =
         (config.caseStatuses[0]?.name as CaseStatus | undefined) ??
         ("Intake" as CaseStatus);
-      const caseRecordBase = createCaseRecordData(existingCase, {
+      const caseRecordBase = createCaseRecordData(activeExistingCase, {
         caseType: config.caseTypes[0],
-        caseStatus: existingCase?.caseRecord.status ?? defaultStatus,
+        caseStatus: activeExistingCase?.caseRecord.status ?? defaultStatus,
         livingArrangement: defaultLivingArrangement,
       });
 
@@ -306,7 +312,7 @@ export function useIntakeWorkflow({
         address: {
           ...personBase.address,
           street: validatedFormData.address.street ?? "",
-          apt: validatedFormData.address.apt ?? "",
+          apt: validatedFormData.address.apt ?? undefined,
           city: validatedFormData.address.city ?? "",
           state: validatedFormData.address.state ?? "NE",
           zip: validatedFormData.address.zip ?? "",
@@ -314,7 +320,7 @@ export function useIntakeWorkflow({
         mailingAddress: {
           ...personBase.mailingAddress,
           street: validatedFormData.mailingAddress.street ?? "",
-          apt: validatedFormData.mailingAddress.apt ?? "",
+          apt: validatedFormData.mailingAddress.apt ?? undefined,
           city: validatedFormData.mailingAddress.city ?? "",
           state: validatedFormData.mailingAddress.state ?? "NE",
           zip: validatedFormData.mailingAddress.zip ?? "",
@@ -360,8 +366,8 @@ export function useIntakeWorkflow({
         maritalStatus: validatedFormData.maritalStatus ?? "",
       };
 
-      const savedCase = isEditing
-        ? await dataManager.updateCompleteCase(existingCase.id, {
+      const savedCase = isEditing && activeExistingCase
+        ? await dataManager.updateCompleteCase(activeExistingCase.id, {
             person,
             caseRecord,
           })
@@ -378,7 +384,10 @@ export function useIntakeWorkflow({
         { id: toastId },
       );
 
-      if (!isEditing) {
+      if (isEditing) {
+        setEditSourceCase(savedCase);
+        setFormData(createIntakeFormData(savedCase));
+      } else {
         reset();
       }
       onSuccess?.(savedCase);
@@ -394,7 +403,7 @@ export function useIntakeWorkflow({
       setIsSubmitting(false);
     }
   }, [
-    existingCase,
+    activeExistingCase,
     dataManager,
     canSubmit,
     formData,

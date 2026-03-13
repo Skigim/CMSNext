@@ -214,6 +214,10 @@ export function createIntakeFormData(
     admissionDate: record.admissionDate ?? "",
     organizationId:
       record.organizationId ?? person?.organizationId ?? blankForm.organizationId,
+    // Older edit paths stored retro details either as structured retroMonths or
+    // as the free-text retroRequested string. Intake edit mode uses the text
+    // field, so prefer formatted retroMonths when present and otherwise keep
+    // the original string representation.
     retroRequested:
       record.retroMonths && record.retroMonths.length > 0
         ? record.retroMonths.join(", ")
