@@ -944,13 +944,13 @@ export function RelationshipsSection({
     <Card>
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
-          <CardTitle className="text-base flex items-center gap-2">
+          <h3 className="text-base font-semibold flex items-center gap-2">
             <Users className="h-4 w-4" />
             Relationships
             <Badge variant="secondary" className="text-[10px] h-5 px-1.5">
               {relationships.length}
             </Badge>
-          </CardTitle>
+          </h3>
           {isEditing && (
             <Button
               type="button"

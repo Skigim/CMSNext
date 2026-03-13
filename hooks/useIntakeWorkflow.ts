@@ -33,11 +33,23 @@ import {
   type IntakeFormData,
   validateIntakeForm,
 } from "@/domain/validation/intake.schema";
-import type { CaseStatus, NewCaseRecordData, NewPersonData, StoredCase } from "../types/case";
+import type {
+  CaseStatus,
+  NewCaseRecordData,
+  NewPersonData,
+  Relationship,
+  StoredCase,
+} from "../types/case";
 import { createLogger } from "../utils/logger";
 import { extractErrorMessage } from "../utils/errorUtils";
 
 const logger = createLogger("useIntakeWorkflow");
+
+function isRelationshipPopulated(relationship: Relationship): boolean {
+  return [relationship.type, relationship.name, relationship.phone].some((value) =>
+    value.trim().length > 0,
+  );
+}
 
 function createInitialVisitedSteps(existingCase?: StoredCase): Set<number> {
   if (!existingCase) {
@@ -284,6 +296,9 @@ export function useIntakeWorkflow({
     }
 
     const validatedFormData = validationResult.data;
+    const populatedRelationships = (validatedFormData.relationships ?? []).filter(
+      isRelationshipPopulated,
+    );
 
     setIsSubmitting(true);
     setError(null);
@@ -349,7 +364,7 @@ export function useIntakeWorkflow({
           zip: validatedFormData.mailingAddress.zip ?? "",
           sameAsPhysical: validatedFormData.mailingAddress.sameAsPhysical,
         },
-        relationships: validatedFormData.relationships ?? [],
+        relationships: populatedRelationships,
       };
 
       const caseRecord: NewCaseRecordData = {

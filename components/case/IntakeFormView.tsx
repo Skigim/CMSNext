@@ -62,6 +62,12 @@ const STEP_FOCUSABLE_SELECTOR = [
   '[role="radio"]:not([aria-disabled="true"])',
 ].join(", ");
 
+function isRelationshipPopulated(relationship: Relationship): boolean {
+  return [relationship.type, relationship.name, relationship.phone].some((value) =>
+    value.trim().length > 0,
+  );
+}
+
 // ============================================================================
 // Step icons
 // ============================================================================
@@ -760,6 +766,10 @@ function HouseholdStep({ formData, onChange }: Readonly<HouseholdStepProps>) {
     () => (formData.relationships ?? []) as Relationship[],
     [formData.relationships],
   );
+  const populatedRelationships = useMemo(
+    () => relationships.filter(isRelationshipPopulated),
+    [relationships],
+  );
 
   const handleAdd = useCallback(() => {
     const newRel: Relationship = {
@@ -768,8 +778,8 @@ function HouseholdStep({ formData, onChange }: Readonly<HouseholdStepProps>) {
       name: "",
       phone: "",
     };
-    onChange("relationships", [...relationships, newRel]);
-  }, [relationships, onChange]);
+    onChange("relationships", [...populatedRelationships, newRel]);
+  }, [onChange, populatedRelationships]);
 
   const handleUpdate = useCallback(
     (index: number, field: "type" | "name" | "phone", value: string) => {
@@ -814,6 +824,10 @@ interface ReviewStepProps {
 }
 
 function ReviewStep({ formData, onGoToStep }: Readonly<ReviewStepProps>) {
+  const populatedRelationships = useMemo(
+    () => ((formData.relationships ?? []) as Relationship[]).filter(isRelationshipPopulated),
+    [formData.relationships],
+  );
   const sections: {
     title: string;
     stepIndex: number;
@@ -955,12 +969,12 @@ function ReviewStep({ formData, onGoToStep }: Readonly<ReviewStepProps>) {
           </Button>
         </div>
         <div className="rounded-md border bg-muted/20 px-4 py-3 space-y-2">
-          {(formData.relationships ?? []).length === 0 ? (
+          {populatedRelationships.length === 0 ? (
             <p className="text-xs text-muted-foreground italic">
               No relationships added
             </p>
           ) : (
-            (formData.relationships as Relationship[]).map((rel, i) => (
+            populatedRelationships.map((rel, i) => (
               <SummaryRow
                 key={rel.id ?? `review-rel-${i}`}
                 label={rel.type || "Relationship"}
