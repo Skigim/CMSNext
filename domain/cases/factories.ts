@@ -115,6 +115,16 @@ export interface PersonDefaults {
   defaultState?: string;
 }
 
+/**
+ * Splits a legacy free-form display name into first/last draft fields.
+ *
+ * Legacy relationship-only entries store one name string. Intake now prefers
+ * structured first/last fields, so this uses a simple first-token / remaining
+ * tokens fallback when upgrading older records into household-member drafts.
+ *
+ * @param name - Free-form display name from a legacy relationship entry
+ * @returns Draft first/last name fields derived from the legacy name
+ */
 function splitDisplayName(name: string): Pick<HouseholdMemberData, "firstName" | "lastName"> {
   const trimmedName = name.trim();
   if (!trimmedName) {
@@ -128,6 +138,12 @@ function splitDisplayName(name: string): Pick<HouseholdMemberData, "firstName" |
   };
 }
 
+/**
+ * Creates a blank household-member draft for intake/edit forms.
+ *
+ * @param defaults - Default living arrangement and address state values
+ * @returns A fully initialized household member draft
+ */
 export function createBlankHouseholdMemberData(
   defaults: PersonDefaults = {},
 ): HouseholdMemberData {
@@ -135,6 +151,7 @@ export function createBlankHouseholdMemberData(
 
   return {
     personId: undefined,
+    relationshipId: undefined,
     relationshipType: "",
     role: "household_member",
     firstName: "",
@@ -165,6 +182,27 @@ export function createBlankHouseholdMemberData(
     relationships: [],
     status: "Active",
   };
+}
+
+function buildRelationshipTypeMap(
+  normalizedRelationships: NonNullable<NonNullable<StoredCase["person"]>["normalizedRelationships"]>,
+): Map<string, { type: string; relationshipId?: string }> {
+  return new Map(
+    normalizedRelationships
+      .filter(
+        (
+          relationship,
+        ): relationship is typeof relationship & { targetPersonId: string } =>
+          relationship.targetPersonId !== null,
+      )
+      .map((relationship) => [
+        relationship.targetPersonId,
+        {
+          type: relationship.type,
+          relationshipId: relationship.id,
+        },
+      ] as const),
+  );
 }
 
 /**
@@ -227,10 +265,8 @@ export function createIntakeFormData(
   const person = existingCase ? getPrimaryCasePerson(existingCase) : null;
   const record = existingCase?.caseRecord;
   const relationships = getPersonRelationships(person, existingCase ?? undefined);
-  const relationshipTypeByPersonId = new Map(
-    (person?.normalizedRelationships ?? [])
-      .filter((relationship) => relationship.targetPersonId)
-      .map((relationship) => [relationship.targetPersonId as string, relationship.type] as const),
+  const relationshipTypeByPersonId = buildRelationshipTypeMap(
+    person?.normalizedRelationships ?? [],
   );
   const householdMembers = (existingCase?.linkedPeople ?? [])
     .filter(({ ref }) => !ref.isPrimary)
@@ -240,8 +276,9 @@ export function createIntakeFormData(
         defaultState: blankForm.address.state,
       }),
       personId: linkedPerson.id,
+      relationshipId: relationshipTypeByPersonId.get(linkedPerson.id)?.relationshipId,
       relationshipType:
-        relationshipTypeByPersonId.get(linkedPerson.id)
+        relationshipTypeByPersonId.get(linkedPerson.id)?.type
         ?? relationships.find((relationship) => relationship.name === linkedPerson.name)?.type
         ?? "",
       role: ref.role === "applicant" ? "household_member" : ref.role,

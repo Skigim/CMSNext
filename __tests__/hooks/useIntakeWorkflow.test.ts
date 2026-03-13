@@ -3,7 +3,11 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { toast as mockToast } from "@/src/test/testUtils";
 import { createBlankIntakeForm } from "@/domain/validation/intake.schema";
 import { INTAKE_STEPS } from "@/domain/cases/intake-steps";
-import { createMockPerson, createMockStoredCase } from "@/src/test/testUtils";
+import {
+  createMockHouseholdMemberData,
+  createMockPerson,
+  createMockStoredCase,
+} from "@/src/test/testUtils";
 
 // ---- Mocks -----------------------------------------------------------------
 
@@ -651,58 +655,31 @@ describe("useIntakeWorkflow", () => {
         result.current.updateField("mcn", "12345");
         result.current.updateField("applicationDate", "2026-01-01");
         result.current.updateField("householdMembers", [
-          {
-            personId: undefined,
-            relationshipType: "Spouse",
-            role: "household_member",
+          createMockHouseholdMemberData({
             firstName: "Jamie",
             lastName: "Smith",
             phone: "(555) 123-1111",
             email: "jamie@example.com",
             dateOfBirth: "1987-03-04",
             ssn: "123-45-6789",
-            organizationId: null,
-            livingArrangement: "Community",
-            address: { street: "123 Main St", apt: "", city: "Omaha", state: "NE", zip: "68102" },
-            mailingAddress: {
-              street: "",
+            address: {
+              street: "123 Main St",
               apt: "",
-              city: "",
+              city: "Omaha",
               state: "NE",
-              zip: "",
-              sameAsPhysical: true,
+              zip: "68102",
             },
-            authorizedRepIds: [],
-            familyMembers: [],
-            relationships: [],
-            status: "Active",
-          },
-          {
-            personId: undefined,
+          }),
+          createMockHouseholdMemberData({
             relationshipType: " ",
-            role: "household_member",
             firstName: " ",
             lastName: " ",
             phone: "",
             email: "",
             dateOfBirth: "",
             ssn: "",
-            organizationId: null,
             livingArrangement: "",
-            address: { street: "", apt: "", city: "", state: "NE", zip: "" },
-            mailingAddress: {
-              street: "",
-              apt: "",
-              city: "",
-              state: "NE",
-              zip: "",
-              sameAsPhysical: true,
-            },
-            authorizedRepIds: [],
-            familyMembers: [],
-            relationships: [],
-            status: "Active",
-          },
+          }),
         ]);
       });
 
@@ -723,7 +700,7 @@ describe("useIntakeWorkflow", () => {
               phone: "5551231111",
               email: "jamie@example.com",
               dateOfBirth: "1987-03-04",
-              organizationId: "",
+              organizationId: null,
             }),
           ],
         }),

@@ -61,7 +61,7 @@ function formatPersonAddress(
 
 function maskSsn(ssn: string | null | undefined): string | null {
   const digits = (ssn ?? "").replace(/\D/g, "");
-  if (digits.length < 4) {
+  if (digits.length !== 9) {
     return null;
   }
 

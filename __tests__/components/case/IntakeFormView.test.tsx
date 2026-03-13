@@ -4,6 +4,7 @@ import { axe, toHaveNoViolations } from "jest-axe";
 import { describe, expect, it, vi, beforeEach } from "vitest";
 import { createBlankIntakeForm } from "@/domain/validation/intake.schema";
 import { INTAKE_STEPS } from "@/domain/cases/intake-steps";
+import { createMockHouseholdMemberData } from "@/src/test/testUtils";
 
 expect.extend(toHaveNoViolations);
 
@@ -341,32 +342,11 @@ describe("IntakeFormView", () => {
         formData: {
           ...createBlankIntakeForm(),
           householdMembers: [
-            {
+            createMockHouseholdMemberData({
               personId: "person-2",
-              relationshipType: "Spouse",
-              role: "household_member",
               firstName: "Jordan",
               lastName: "Tester",
-              phone: "5559876543",
-              email: "jordan@example.com",
-              dateOfBirth: "1985-02-03",
-              ssn: "",
-              organizationId: null,
-              livingArrangement: "Community",
-              address: { street: "", apt: "", city: "", state: "NE", zip: "" },
-              mailingAddress: {
-                street: "",
-                apt: "",
-                city: "",
-                state: "NE",
-                zip: "",
-                sameAsPhysical: true,
-              },
-              authorizedRepIds: [],
-              familyMembers: [],
-              relationships: [],
-              status: "Active",
-            },
+            }),
           ],
         },
       });
@@ -409,32 +389,11 @@ describe("IntakeFormView", () => {
           mcn: "12345",
           applicationDate: "2026-01-01",
           householdMembers: [
-            {
+            createMockHouseholdMemberData({
               personId: "person-2",
-              relationshipType: "Spouse",
-              role: "household_member",
               firstName: "Jordan",
               lastName: "Tester",
-              phone: "5559876543",
-              email: "jordan@example.com",
-              dateOfBirth: "1985-02-03",
-              ssn: "",
-              organizationId: null,
-              livingArrangement: "Community",
-              address: { street: "", apt: "", city: "", state: "NE", zip: "" },
-              mailingAddress: {
-                street: "",
-                apt: "",
-                city: "",
-                state: "NE",
-                zip: "",
-                sameAsPhysical: true,
-              },
-              authorizedRepIds: [],
-              familyMembers: [],
-              relationships: [],
-              status: "Active",
-            },
+            }),
           ],
         },
       });
@@ -457,32 +416,15 @@ describe("IntakeFormView", () => {
           mcn: "12345",
           applicationDate: "2026-01-01",
           householdMembers: [
-            {
-              personId: undefined,
+            createMockHouseholdMemberData({
               relationshipType: " ",
-              role: "household_member",
               firstName: " ",
               lastName: " ",
-              phone: " ",
+              phone: "",
               email: "",
               dateOfBirth: "",
-              ssn: "",
-              organizationId: null,
               livingArrangement: "",
-              address: { street: "", apt: "", city: "", state: "NE", zip: "" },
-              mailingAddress: {
-                street: "",
-                apt: "",
-                city: "",
-                state: "NE",
-                zip: "",
-                sameAsPhysical: true,
-              },
-              authorizedRepIds: [],
-              familyMembers: [],
-              relationships: [],
-              status: "Active",
-            },
+            }),
           ],
         },
       });

@@ -277,6 +277,7 @@ export interface NewPersonData {
 
 export interface HouseholdMemberData extends NewPersonData {
   personId?: string;
+  relationshipId?: string;
   relationshipType: string;
   role: LinkedCasePersonRole;
   organizationId: string | null;

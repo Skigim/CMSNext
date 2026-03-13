@@ -47,6 +47,13 @@ function normalizeRole(role?: HouseholdMemberData["role"]): CasePersonRole {
 function syncMailingAddress<T extends Pick<HouseholdMemberData, "address" | "mailingAddress">>(
   personData: T,
 ): T["mailingAddress"] {
+  if (!personData.mailingAddress) {
+    return {
+      ...personData.address,
+      sameAsPhysical: true,
+    };
+  }
+
   if (personData.mailingAddress.sameAsPhysical) {
     return {
       ...personData.address,
@@ -186,7 +193,11 @@ export class CaseService {
         mailingAddress: syncMailingAddress(member),
       };
       const person = existingPerson
-        ? this.people.mergePerson(existingPerson, normalizedMember, timestamp)
+        ? this.people.mergePerson(
+            existingPerson,
+            normalizedMember,
+            timestamp,
+          )
         : this.people.buildNewPerson(normalizedMember, {
             personId: uuidv4(),
             timestamp,
@@ -206,7 +217,7 @@ export class CaseService {
         person,
         relationship,
         normalizedRelationship: {
-          id: uuidv4(),
+          id: member.relationshipId ?? uuidv4(),
           type: member.relationshipType,
           targetPersonId: person.id,
           legacyPhone: person.phone || undefined,

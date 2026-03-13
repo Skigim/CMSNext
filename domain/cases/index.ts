@@ -28,6 +28,13 @@ export {
 } from "./avsNarrativeGenerator";
 
 export {
+  formatHouseholdMemberName,
+  isHouseholdMemberPopulated,
+  normalizeHouseholdMemberDraft,
+  normalizeHouseholdMemberForSave,
+} from "./householdMembers";
+
+export {
   createCaseRecordData,
   createBlankHouseholdMemberData,
   createIntakeFormData,

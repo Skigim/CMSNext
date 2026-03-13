@@ -26,7 +26,9 @@ import { useCategoryConfig } from "../contexts/CategoryConfigContext";
 import {
   createBlankHouseholdMemberData,
   createCaseRecordData,
+  isHouseholdMemberPopulated,
   createIntakeFormData,
+  normalizeHouseholdMemberForSave,
   createPersonData,
 } from "@/domain/cases";
 import { isRelationshipPopulated } from "@/domain/cases/relationships";
@@ -46,24 +48,6 @@ import { createLogger } from "../utils/logger";
 import { extractErrorMessage } from "../utils/errorUtils";
 
 const logger = createLogger("useIntakeWorkflow");
-
-function isHouseholdMemberPopulated(member: HouseholdMemberData): boolean {
-  return [
-    member.relationshipType,
-    member.firstName,
-    member.lastName,
-    member.phone,
-    member.email,
-    member.dateOfBirth,
-    member.ssn,
-    member.address.street,
-    member.address.city,
-    member.address.zip,
-    member.mailingAddress.street,
-    member.mailingAddress.city,
-    member.mailingAddress.zip,
-  ].some((value) => (value ?? "").trim().length > 0);
-}
 
 function createInitialVisitedSteps(existingCase?: StoredCase): Set<number> {
   if (!existingCase) {
@@ -320,6 +304,9 @@ export function useIntakeWorkflow({
     const populatedHouseholdMembers = (validatedFormData.householdMembers ?? []).filter(
       isHouseholdMemberPopulated,
     );
+    const normalizedHouseholdMembers = populatedHouseholdMembers.map((member) =>
+      normalizeHouseholdMemberForSave(member, defaultHouseholdMember, validatedFormData),
+    );
 
     setIsSubmitting(true);
     setError(null);
@@ -385,15 +372,15 @@ export function useIntakeWorkflow({
           zip: validatedFormData.mailingAddress.zip ?? "",
           sameAsPhysical: validatedFormData.mailingAddress.sameAsPhysical,
         },
-        familyMembers: populatedHouseholdMembers.flatMap((member) =>
-          member.personId ? [member.personId] : [],
-        ),
+        familyMembers: normalizedHouseholdMembers
+          .filter((member): member is HouseholdMemberData & { personId: string } => Boolean(member.personId))
+          .map((member) => member.personId),
         relationships:
-          populatedHouseholdMembers.length > 0
-            ? populatedHouseholdMembers.map((member) => ({
+          normalizedHouseholdMembers.length > 0
+            ? normalizedHouseholdMembers.map((member) => ({
                 type: member.relationshipType,
                 name: `${member.firstName} ${member.lastName}`.trim(),
-                phone: normalizePhoneNumber(member.phone ?? ""),
+                phone: member.phone,
               }))
             : populatedRelationships,
       };
@@ -440,82 +427,12 @@ export function useIntakeWorkflow({
         ? await dataManager.updateCompleteCase(activeExistingCase.id, {
             person,
             caseRecord,
-            householdMembers: populatedHouseholdMembers.map((member) => {
-              const normalizedAddress = {
-                ...defaultHouseholdMember.address,
-                ...member.address,
-                apt: member.address.apt ?? undefined,
-              };
-              const normalizedMailingAddress = member.mailingAddress.sameAsPhysical
-                ? {
-                    ...normalizedAddress,
-                    sameAsPhysical: true,
-                  }
-                : {
-                    ...defaultHouseholdMember.mailingAddress,
-                    ...member.mailingAddress,
-                    apt: member.mailingAddress.apt ?? undefined,
-                  };
-
-              return {
-                ...defaultHouseholdMember,
-                ...member,
-                firstName: member.firstName.trim(),
-                lastName: member.lastName.trim(),
-                phone: normalizePhoneNumber(member.phone ?? ""),
-                email: member.email.trim(),
-                dateOfBirth: dateInputValueToISO(member.dateOfBirth) ?? "",
-                ssn: member.ssn.trim(),
-                organizationId: member.organizationId ?? validatedFormData.organizationId ?? null,
-                livingArrangement:
-                  member.livingArrangement
-                  || validatedFormData.livingArrangement
-                  || defaultHouseholdMember.livingArrangement,
-                address: normalizedAddress,
-                mailingAddress: normalizedMailingAddress,
-                status: member.status || "Active",
-              };
-            }),
+            householdMembers: normalizedHouseholdMembers,
           })
         : await dataManager.createCompleteCase({
             person,
             caseRecord,
-            householdMembers: populatedHouseholdMembers.map((member) => {
-              const normalizedAddress = {
-                ...defaultHouseholdMember.address,
-                ...member.address,
-                apt: member.address.apt ?? undefined,
-              };
-              const normalizedMailingAddress = member.mailingAddress.sameAsPhysical
-                ? {
-                    ...normalizedAddress,
-                    sameAsPhysical: true,
-                  }
-                : {
-                    ...defaultHouseholdMember.mailingAddress,
-                    ...member.mailingAddress,
-                    apt: member.mailingAddress.apt ?? undefined,
-                  };
-
-              return {
-                ...defaultHouseholdMember,
-                ...member,
-                firstName: member.firstName.trim(),
-                lastName: member.lastName.trim(),
-                phone: normalizePhoneNumber(member.phone ?? ""),
-                email: member.email.trim(),
-                dateOfBirth: dateInputValueToISO(member.dateOfBirth) ?? "",
-                ssn: member.ssn.trim(),
-                organizationId: member.organizationId ?? validatedFormData.organizationId ?? null,
-                livingArrangement:
-                  member.livingArrangement
-                  || validatedFormData.livingArrangement
-                  || defaultHouseholdMember.livingArrangement,
-                address: normalizedAddress,
-                mailingAddress: normalizedMailingAddress,
-                status: member.status || "Active",
-              };
-            }),
+            householdMembers: normalizedHouseholdMembers,
           });
 
       logger.info(`Intake case ${isEditing ? "updated" : "created"}`, {

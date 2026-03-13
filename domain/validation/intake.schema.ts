@@ -140,6 +140,7 @@ const householdMemberRoleSchema = z.enum([
 
 const intakeHouseholdMemberSchema = z.object({
   personId: z.string().optional(),
+  relationshipId: z.string().optional(),
   relationshipType: z.string().default(""),
   role: householdMemberRoleSchema.default("household_member"),
   firstName: z.string().default(""),

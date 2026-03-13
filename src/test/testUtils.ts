@@ -1,8 +1,10 @@
 import { vi } from 'vitest'
-import { AmountHistoryEntry, CaseDisplay, FinancialItem, Note, Person, CaseRecord, CaseCategory, NewPersonData, NewCaseRecordData } from '@/types/case'
+import { AmountHistoryEntry, CaseDisplay, FinancialItem, Note, Person, CaseRecord, CaseCategory, NewPersonData, NewCaseRecordData, type HouseholdMemberData } from '@/types/case'
 import type { StoredCase, StoredFinancialItem, StoredNote } from '@/utils/services/FileStorageService'
 import type { FileStorageLifecycleSelectors } from '@/contexts/FileStorageContext'
 import { mergeCategoryConfig } from '@/types/categoryConfig'
+import { createBlankHouseholdMemberData, normalizeHouseholdMemberDraft } from '@/domain/cases'
+import type { IntakeFormData } from '@/domain/validation/intake.schema'
 
 /**
  * Test data factories for creating mock data objects
@@ -195,6 +197,39 @@ export const createMockNewPersonData = (overrides: Partial<NewPersonData> = {}):
   status: 'Active',
   ...overrides,
 })
+
+export const createMockHouseholdMemberData = (
+  overrides: Partial<HouseholdMemberData> = {},
+): IntakeFormData["householdMembers"][number] =>
+  normalizeHouseholdMemberDraft({
+    ...createBlankHouseholdMemberData({
+      livingArrangement: 'Community',
+      defaultState: 'NE',
+    }),
+    firstName: 'Jordan',
+    lastName: 'Tester',
+    relationshipType: 'Spouse',
+    role: 'household_member',
+    phone: '5559876543',
+    email: 'jordan@example.com',
+    dateOfBirth: '1985-02-03',
+    address: {
+      street: '',
+      apt: '',
+      city: '',
+      state: 'NE',
+      zip: '',
+    },
+    mailingAddress: {
+      street: '',
+      apt: '',
+      city: '',
+      state: 'NE',
+      zip: '',
+      sameAsPhysical: true,
+    },
+    ...overrides,
+  }) as IntakeFormData["householdMembers"][number]
 
 export const createMockNewCaseRecordData = (overrides: Partial<NewCaseRecordData> = {}): NewCaseRecordData => ({
   mcn: 'MCN-0001',

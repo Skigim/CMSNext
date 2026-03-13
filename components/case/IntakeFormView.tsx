@@ -36,7 +36,14 @@ import {
 } from "lucide-react";
 import { cn } from "@/components/ui/utils";
 import { useCategoryConfig } from "@/contexts/CategoryConfigContext";
-import { createBlankHouseholdMemberData, INTAKE_STEPS, isStepComplete } from "@/domain/cases";
+import {
+  createBlankHouseholdMemberData,
+  formatHouseholdMemberName,
+  INTAKE_STEPS,
+  isHouseholdMemberPopulated,
+  isStepComplete,
+  normalizeHouseholdMemberDraft,
+} from "@/domain/cases";
 import type { IntakeFormData } from "@/domain/validation/intake.schema";
 import {
   useIntakeWorkflow,
@@ -766,17 +773,7 @@ function HouseholdStep({ formData, onChange }: Readonly<HouseholdStepProps>) {
     (nextMembers: HouseholdMemberData[]) => {
       onChange(
         "householdMembers",
-        nextMembers.map((member) => ({
-          ...member,
-          address: {
-            ...member.address,
-            apt: member.address.apt ?? "",
-          },
-          mailingAddress: {
-            ...member.mailingAddress,
-            apt: member.mailingAddress.apt ?? "",
-          },
-        })) as IntakeFormData["householdMembers"],
+        nextMembers.map(normalizeHouseholdMemberDraft) as IntakeFormData["householdMembers"],
       );
     },
     [onChange],
@@ -838,7 +835,7 @@ function HouseholdStep({ formData, onChange }: Readonly<HouseholdStepProps>) {
                 <div className="space-y-1">
                   <h4 className="font-medium">
                     {member.firstName || member.lastName
-                      ? `${member.firstName} ${member.lastName}`.trim()
+                      ? formatHouseholdMemberName(member)
                       : `Household Member ${index + 1}`}
                   </h4>
                   <p className="text-xs text-muted-foreground">
@@ -1277,17 +1274,7 @@ function ReviewStep({ formData, onGoToStep }: Readonly<ReviewStepProps>) {
     [formData.relationships],
   );
   const populatedHouseholdMembers = useMemo(
-    () =>
-      ((formData.householdMembers ?? []) as HouseholdMemberData[]).filter((member) =>
-        [
-          member.relationshipType,
-          member.firstName,
-          member.lastName,
-          member.phone,
-          member.email,
-          member.dateOfBirth,
-        ].some((value) => (value ?? "").trim().length > 0),
-      ),
+    () => ((formData.householdMembers ?? []) as HouseholdMemberData[]).filter(isHouseholdMemberPopulated),
     [formData.householdMembers],
   );
   const sections: {
@@ -1444,7 +1431,7 @@ function ReviewStep({ formData, onGoToStep }: Readonly<ReviewStepProps>) {
                 >
                   <SummaryRow
                     label={member.relationshipType || "Relationship"}
-                    value={`${member.firstName} ${member.lastName}`.trim() || "Unnamed member"}
+                    value={formatHouseholdMemberName(member) || "Unnamed member"}
                   />
                   <SummaryRow
                     label="Contact"
