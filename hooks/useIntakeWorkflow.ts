@@ -132,6 +132,7 @@ export function useIntakeWorkflow({
   const isEditing = existingCase !== undefined;
   // Keep the latest saved edit payload as the preservation source so repeated
   // saves in one session do not fall back to stale unsupported field values.
+  const editSourceCaseRef = useRef<StoredCase | undefined>(existingCase);
   const [editSourceCase, setEditSourceCase] = useState<StoredCase | undefined>(
     existingCase,
   );
@@ -149,12 +150,14 @@ export function useIntakeWorkflow({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const initializeWorkflowState = useCallback(() => {
+  const initializeWorkflowState = useCallback((sourceCase?: StoredCase) => {
+    const nextSourceCase = sourceCase ?? existingCase;
+    editSourceCaseRef.current = nextSourceCase;
     currentStepRef.current = 0;
     setCurrentStep(0);
-    setVisitedSteps(createInitialVisitedSteps(existingCase));
-    setEditSourceCase(existingCase);
-    setFormData(createIntakeFormData(existingCase));
+    setVisitedSteps(createInitialVisitedSteps(nextSourceCase));
+    setEditSourceCase(nextSourceCase);
+    setFormData(createIntakeFormData(nextSourceCase));
     setError(null);
     setIsSubmitting(false);
   }, [existingCase]);
@@ -164,8 +167,8 @@ export function useIntakeWorkflow({
   }, [currentStep]);
 
   useEffect(() => {
-    initializeWorkflowState();
-  }, [initializeWorkflowState]);
+    initializeWorkflowState(existingCase);
+  }, [existingCase, initializeWorkflowState]);
 
   // ---- Derived values -------------------------------------------------------
   const isCurrentStepComplete = useMemo(
@@ -231,8 +234,8 @@ export function useIntakeWorkflow({
 
   // ---- Reset ----------------------------------------------------------------
   const reset = useCallback(() => {
-    initializeWorkflowState();
-  }, [initializeWorkflowState]);
+    initializeWorkflowState(editSourceCaseRef.current ?? editSourceCase ?? existingCase);
+  }, [editSourceCase, existingCase, initializeWorkflowState]);
 
   // ---- Cancel ---------------------------------------------------------------
   const cancel = useCallback(() => {
@@ -393,6 +396,7 @@ export function useIntakeWorkflow({
       );
 
       if (isEditing) {
+        editSourceCaseRef.current = savedCase;
         setEditSourceCase(savedCase);
         setFormData(createIntakeFormData(savedCase));
       } else {

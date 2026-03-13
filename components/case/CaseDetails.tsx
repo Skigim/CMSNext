@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Button } from "../ui/button";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "../ui/alert-dialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "../ui/dropdown-menu";
@@ -55,7 +55,7 @@ interface CaseDetailsProps {
 
 export function CaseDetails(props: Readonly<CaseDetailsProps>) {
   const {
-    case: caseData,
+    case: initialCase,
     onBack,
     onDelete,
     onArchive,
@@ -65,6 +65,11 @@ export function CaseDetails(props: Readonly<CaseDetailsProps>) {
     onResolveAlert,
     onUpdatePriority,
   } = props;
+  const [caseData, setCaseData] = useState(initialCase);
+
+  useEffect(() => {
+    setCaseData(initialCase);
+  }, [initialCase]);
   
   // Fetch financials and notes for case summary generation
   const { groupedItems: financials, items: financialItemsList } = useFinancialItems(caseData.id);
@@ -97,7 +102,10 @@ export function CaseDetails(props: Readonly<CaseDetailsProps>) {
     return (
       <IntakeFormView
         existingCase={caseData}
-        onSuccess={() => setEditModalOpen(false)}
+        onSuccess={(savedCase) => {
+          setCaseData(savedCase);
+          setEditModalOpen(false);
+        }}
         onCancel={() => setEditModalOpen(false)}
       />
     );
