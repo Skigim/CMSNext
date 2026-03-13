@@ -62,8 +62,8 @@ export function getPrimaryCasePersonForDisplay(source: CasePeopleSource): Person
   return (
     primaryLinkedPerson?.person ??
     sourceLinkedPerson?.person ??
-    source.person ??
     linkedPeople[0]?.person ??
+    source.person ??
     null
   );
 }
