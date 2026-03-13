@@ -20,6 +20,7 @@ import { NarrativeGeneratorModal } from "./NarrativeGeneratorModal";
 import { useFinancialItems } from "../../hooks/useFinancialItems";
 import { useNotes } from "../../hooks/useNotes";
 import { useTemplates } from "@/contexts/TemplateContext";
+import { getPrimaryCasePerson } from "@/domain/cases";
 import { formatUSPhone, formatDateForDisplay, parseLocalDate } from "@/domain/common";
 
 /**
@@ -30,6 +31,18 @@ function get90DayTooltip(dateStr: string): string {
   if (!date) return "";
   date.setDate(date.getDate() + 90);
   return `90 Days = ${formatDateForDisplay(date.toISOString())}`;
+}
+
+const CASE_PERSON_ROLE_LABELS = {
+  applicant: "Applicant",
+  household_member: "Household member",
+  dependent: "Dependent",
+  contact: "Contact",
+} as const;
+
+function getPersonDisplayName(casePerson: StoredCase["person"] | null | undefined): string {
+  const composedName = `${casePerson?.firstName ?? ""} ${casePerson?.lastName ?? ""}`.trim();
+  return casePerson?.name?.trim() || composedName || "Unnamed Person";
 }
 
 interface CaseDetailsProps {
@@ -68,6 +81,25 @@ export function CaseDetails({
   // Get VR templates from unified template system
   const { getTemplatesByCategory } = useTemplates();
   const vrTemplates = useMemo(() => getTemplatesByCategory('vr'), [getTemplatesByCategory]);
+  const primaryPerson = getPrimaryCasePerson(caseData);
+  const primaryPersonRef =
+    caseData.linkedPeople?.find(({ ref }) => ref.isPrimary) ??
+    caseData.linkedPeople?.find(({ ref }) => ref.personId === caseData.caseRecord.personId) ??
+    (primaryPerson
+      ? {
+          ref:
+            caseData.people?.find((personRef) => personRef.isPrimary) ??
+            caseData.people?.find((personRef) => personRef.personId === caseData.caseRecord.personId) ??
+            {
+              personId: primaryPerson.id,
+              role: "applicant",
+              isPrimary: true,
+            },
+          person: primaryPerson,
+        }
+      : null);
+  const additionalLinkedPeople =
+    caseData.linkedPeople?.filter(({ person }) => person.id !== primaryPerson?.id) ?? [];
 
   const handleResolveAlert = (alert: AlertWithMatch) => {
     onResolveAlert?.(alert);
@@ -177,12 +209,12 @@ export function CaseDetails({
 
               {/* Contact info */}
               <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm">
-                {caseData.person?.phone && (
+                {primaryPerson?.phone && (
                   <span className="inline-flex items-center gap-1.5 text-muted-foreground">
                     <Phone className="h-3.5 w-3.5" aria-hidden />
                     <CopyButton
-                      value={caseData.person.phone}
-                      displayText={formatUSPhone(caseData.person.phone)}
+                      value={primaryPerson.phone}
+                      displayText={formatUSPhone(primaryPerson.phone)}
                       label="Phone"
                       showLabel={false}
                       buttonClassName={interactiveHoverClasses}
@@ -190,11 +222,11 @@ export function CaseDetails({
                     />
                   </span>
                 )}
-                {caseData.person?.email && (
+                {primaryPerson?.email && (
                   <span className="inline-flex items-center gap-1.5 text-muted-foreground">
                     <Mail className="h-3.5 w-3.5" aria-hidden />
                     <CopyButton
-                      value={caseData.person.email}
+                      value={primaryPerson.email}
                       label="Email"
                       showLabel={false}
                       buttonClassName={interactiveHoverClasses}
@@ -203,6 +235,31 @@ export function CaseDetails({
                   </span>
                 )}
               </div>
+              {(primaryPerson || additionalLinkedPeople.length > 0) && (
+                <div className="flex flex-wrap items-center gap-2 text-sm">
+                  {primaryPerson && (
+                    <span className="inline-flex items-center gap-1.5 rounded-full border bg-muted/40 px-2 py-0.5 text-muted-foreground">
+                      <span className="font-medium text-foreground">
+                        {getPersonDisplayName(primaryPerson)}
+                      </span>
+                      <span>
+                        {CASE_PERSON_ROLE_LABELS[primaryPersonRef?.ref.role ?? "applicant"]}
+                      </span>
+                    </span>
+                  )}
+                  {additionalLinkedPeople.map(({ ref, person }) => (
+                    <span
+                      key={`${ref.personId}-${ref.role}`}
+                      className="inline-flex items-center gap-1.5 rounded-full border bg-muted/40 px-2 py-0.5 text-muted-foreground"
+                    >
+                      <span className="font-medium text-foreground">
+                        {getPersonDisplayName(person)}
+                      </span>
+                      <span>{CASE_PERSON_ROLE_LABELS[ref.role]}</span>
+                    </span>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
           <div className="flex gap-2 items-start flex-wrap">

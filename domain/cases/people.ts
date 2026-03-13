@@ -7,15 +7,12 @@ function getLinkedPeople(source?: CasePeopleSource): NonNullable<StoredCase["lin
 }
 
 export function getPrimaryCasePerson(source: CasePeopleSource): Person | null {
-  if (source.person) {
-    return source.person;
-  }
-
   const linkedPeople = getLinkedPeople(source);
 
   return (
     linkedPeople.find(({ ref }) => ref.isPrimary)?.person ??
     linkedPeople.find(({ ref }) => ref.personId === source.caseRecord?.personId)?.person ??
+    source.person ??
     linkedPeople[0]?.person ??
     null
   );
