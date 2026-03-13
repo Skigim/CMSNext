@@ -70,16 +70,16 @@ vi.mock("@/components/error/ErrorBoundaryHOC", () => ({
 import { CaseDetails } from "@/components/case/CaseDetails";
 import type { StoredCase } from "@/types/case";
 
-const noopAsync = vi.fn(async () => undefined);
-const noop = vi.fn();
+const noOpAsync = vi.fn(async () => undefined);
+const noOp = vi.fn();
 
 function renderCaseDetails(caseData: StoredCase) {
   return render(
     <CaseDetails
       case={caseData}
-      onBack={noop}
-      onSave={noopAsync}
-      onDelete={noop}
+      onBack={noOp}
+      onSave={noOpAsync}
+      onDelete={noOp}
     />,
   );
 }
@@ -185,7 +185,7 @@ describe("CaseDetails linked people rendering", () => {
     expect(screen.getByText("Dependent")).toBeInTheDocument();
   });
 
-  it("selects the normalized primary person from linked refs instead of a stale case.person", () => {
+  it("prioritizes the normalized primary person over a stale case.person", () => {
     // Arrange
     const staleHydratedPerson = createMockPerson({
       id: "person-2",
@@ -232,7 +232,7 @@ describe("CaseDetails linked people rendering", () => {
         ...createMockStoredCase().caseRecord,
         personId: normalizedPrimaryPerson.id,
       },
-    }) as StoredCase;
+    });
 
     // Act
     renderCaseDetails(caseData);

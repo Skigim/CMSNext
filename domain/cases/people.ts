@@ -2,16 +2,59 @@ import type { Person, Relationship, StoredCase } from "@/types/case";
 
 type CasePeopleSource = Partial<Pick<StoredCase, "person" | "linkedPeople" | "caseRecord">>;
 
+const CASE_PERSON_ROLE_LABELS = {
+  applicant: "Applicant",
+  household_member: "Household member",
+  dependent: "Dependent",
+  contact: "Contact",
+} as const;
+
 function getLinkedPeople(source?: CasePeopleSource): NonNullable<StoredCase["linkedPeople"]> {
   return source?.linkedPeople ?? [];
 }
 
-export function getPrimaryCasePerson(source: CasePeopleSource): Person | null {
+export function formatCasePersonDisplayName(person: Person | null | undefined): string {
+  const explicitName = person?.name?.trim();
+  if (explicitName) {
+    return explicitName;
+  }
+
+  const firstName = person?.firstName?.trim() ?? "";
+  const lastName = person?.lastName?.trim() ?? "";
+  const composedName = firstName && lastName ? `${firstName} ${lastName}` : firstName || lastName;
+  return composedName || "Unnamed Person";
+}
+
+/**
+ * Defaults to the applicant label for backward-compatible single-person cases
+ * that do not have normalized role metadata available at render time.
+ */
+export function getCasePersonRoleLabel(
+  role?: keyof typeof CASE_PERSON_ROLE_LABELS,
+): string {
+  return (role && CASE_PERSON_ROLE_LABELS[role]) ?? CASE_PERSON_ROLE_LABELS.applicant;
+}
+
+export function getPrimaryCasePersonRef(
+  source: CasePeopleSource,
+): NonNullable<StoredCase["linkedPeople"]>[number]["ref"] | null {
   const linkedPeople = getLinkedPeople(source);
 
   return (
-    linkedPeople.find(({ ref }) => ref.isPrimary)?.person ??
-    linkedPeople.find(({ ref }) => ref.personId === source.caseRecord?.personId)?.person ??
+    linkedPeople.find(({ ref }) => ref.isPrimary)?.ref ??
+    linkedPeople.find(({ ref }) => ref.personId === source.caseRecord?.personId)?.ref ??
+    null
+  );
+}
+
+export function getPrimaryCasePerson(source: CasePeopleSource): Person | null {
+  const linkedPeople = getLinkedPeople(source);
+  const primaryLinkedPerson =
+    linkedPeople.find(({ ref }) => ref.isPrimary) ??
+    linkedPeople.find(({ ref }) => ref.personId === source.caseRecord?.personId);
+
+  return (
+    primaryLinkedPerson?.person ??
     source.person ??
     linkedPeople[0]?.person ??
     null

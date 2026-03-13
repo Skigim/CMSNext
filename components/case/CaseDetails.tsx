@@ -20,7 +20,12 @@ import { NarrativeGeneratorModal } from "./NarrativeGeneratorModal";
 import { useFinancialItems } from "../../hooks/useFinancialItems";
 import { useNotes } from "../../hooks/useNotes";
 import { useTemplates } from "@/contexts/TemplateContext";
-import { getPrimaryCasePerson } from "@/domain/cases";
+import {
+  formatCasePersonDisplayName,
+  getCasePersonRoleLabel,
+  getPrimaryCasePerson,
+  getPrimaryCasePersonRef,
+} from "@/domain/cases";
 import { formatUSPhone, formatDateForDisplay, parseLocalDate } from "@/domain/common";
 
 /**
@@ -31,18 +36,6 @@ function get90DayTooltip(dateStr: string): string {
   if (!date) return "";
   date.setDate(date.getDate() + 90);
   return `90 Days = ${formatDateForDisplay(date.toISOString())}`;
-}
-
-const CASE_PERSON_ROLE_LABELS = {
-  applicant: "Applicant",
-  household_member: "Household member",
-  dependent: "Dependent",
-  contact: "Contact",
-} as const;
-
-function getPersonDisplayName(casePerson: StoredCase["person"] | null | undefined): string {
-  const composedName = `${casePerson?.firstName ?? ""} ${casePerson?.lastName ?? ""}`.trim();
-  return casePerson?.name?.trim() || composedName || "Unnamed Person";
 }
 
 interface CaseDetailsProps {
@@ -82,24 +75,9 @@ export function CaseDetails({
   const { getTemplatesByCategory } = useTemplates();
   const vrTemplates = useMemo(() => getTemplatesByCategory('vr'), [getTemplatesByCategory]);
   const primaryPerson = getPrimaryCasePerson(caseData);
-  const primaryPersonRef =
-    caseData.linkedPeople?.find(({ ref }) => ref.isPrimary) ??
-    caseData.linkedPeople?.find(({ ref }) => ref.personId === caseData.caseRecord.personId) ??
-    (primaryPerson
-      ? {
-          ref:
-            caseData.people?.find((personRef) => personRef.isPrimary) ??
-            caseData.people?.find((personRef) => personRef.personId === caseData.caseRecord.personId) ??
-            {
-              personId: primaryPerson.id,
-              role: "applicant",
-              isPrimary: true,
-            },
-          person: primaryPerson,
-        }
-      : null);
+  const primaryPersonRef = getPrimaryCasePersonRef(caseData);
   const additionalLinkedPeople =
-    caseData.linkedPeople?.filter(({ person }) => person.id !== primaryPerson?.id) ?? [];
+    caseData.linkedPeople?.filter(({ ref }) => ref.personId !== primaryPersonRef?.personId) ?? [];
 
   const handleResolveAlert = (alert: AlertWithMatch) => {
     onResolveAlert?.(alert);
@@ -240,11 +218,9 @@ export function CaseDetails({
                   {primaryPerson && (
                     <span className="inline-flex items-center gap-1.5 rounded-full border bg-muted/40 px-2 py-0.5 text-muted-foreground">
                       <span className="font-medium text-foreground">
-                        {getPersonDisplayName(primaryPerson)}
+                        {formatCasePersonDisplayName(primaryPerson)}
                       </span>
-                      <span>
-                        {CASE_PERSON_ROLE_LABELS[primaryPersonRef?.ref.role ?? "applicant"]}
-                      </span>
+                      <span>{getCasePersonRoleLabel(primaryPersonRef?.role)}</span>
                     </span>
                   )}
                   {additionalLinkedPeople.map(({ ref, person }) => (
@@ -253,9 +229,9 @@ export function CaseDetails({
                       className="inline-flex items-center gap-1.5 rounded-full border bg-muted/40 px-2 py-0.5 text-muted-foreground"
                     >
                       <span className="font-medium text-foreground">
-                        {getPersonDisplayName(person)}
+                        {formatCasePersonDisplayName(person)}
                       </span>
-                      <span>{CASE_PERSON_ROLE_LABELS[ref.role]}</span>
+                      <span>{getCasePersonRoleLabel(ref.role)}</span>
                     </span>
                   ))}
                 </div>
