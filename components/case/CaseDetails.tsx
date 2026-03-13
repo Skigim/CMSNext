@@ -20,6 +20,12 @@ import { NarrativeGeneratorModal } from "./NarrativeGeneratorModal";
 import { useFinancialItems } from "../../hooks/useFinancialItems";
 import { useNotes } from "../../hooks/useNotes";
 import { useTemplates } from "@/contexts/TemplateContext";
+import {
+  formatCasePersonDisplayName,
+  getCasePersonRoleLabel,
+  getPrimaryCasePersonForDisplay,
+  getPrimaryCasePersonRef,
+} from "@/domain/cases";
 import { formatUSPhone, formatDateForDisplay, parseLocalDate } from "@/domain/common";
 
 /**
@@ -68,6 +74,11 @@ export function CaseDetails({
   // Get VR templates from unified template system
   const { getTemplatesByCategory } = useTemplates();
   const vrTemplates = useMemo(() => getTemplatesByCategory('vr'), [getTemplatesByCategory]);
+  const primaryPerson = getPrimaryCasePersonForDisplay(caseData);
+  const primaryPersonRef = getPrimaryCasePersonRef(caseData);
+  const resolvedPrimaryPersonId = primaryPersonRef?.personId ?? primaryPerson?.id;
+  const additionalLinkedPeople =
+    caseData.linkedPeople?.filter(({ ref }) => ref.personId !== resolvedPrimaryPersonId) ?? [];
 
   const handleResolveAlert = (alert: AlertWithMatch) => {
     onResolveAlert?.(alert);
@@ -177,12 +188,12 @@ export function CaseDetails({
 
               {/* Contact info */}
               <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm">
-                {caseData.person?.phone && (
+                {primaryPerson?.phone && (
                   <span className="inline-flex items-center gap-1.5 text-muted-foreground">
                     <Phone className="h-3.5 w-3.5" aria-hidden />
                     <CopyButton
-                      value={caseData.person.phone}
-                      displayText={formatUSPhone(caseData.person.phone)}
+                      value={primaryPerson.phone}
+                      displayText={formatUSPhone(primaryPerson.phone)}
                       label="Phone"
                       showLabel={false}
                       buttonClassName={interactiveHoverClasses}
@@ -190,11 +201,11 @@ export function CaseDetails({
                     />
                   </span>
                 )}
-                {caseData.person?.email && (
+                {primaryPerson?.email && (
                   <span className="inline-flex items-center gap-1.5 text-muted-foreground">
                     <Mail className="h-3.5 w-3.5" aria-hidden />
                     <CopyButton
-                      value={caseData.person.email}
+                      value={primaryPerson.email}
                       label="Email"
                       showLabel={false}
                       buttonClassName={interactiveHoverClasses}
@@ -203,6 +214,29 @@ export function CaseDetails({
                   </span>
                 )}
               </div>
+              {(primaryPerson || additionalLinkedPeople.length > 0) && (
+                <div className="flex flex-wrap items-center gap-2 text-sm">
+                  {primaryPerson && (
+                    <span className="inline-flex items-center gap-1.5 rounded-full border bg-muted/40 px-2 py-0.5 text-muted-foreground">
+                      <span className="font-medium text-foreground">
+                        {formatCasePersonDisplayName(primaryPerson)}
+                      </span>
+                      <span>{getCasePersonRoleLabel(primaryPersonRef?.role)}</span>
+                    </span>
+                  )}
+                  {additionalLinkedPeople.map(({ ref, person }) => (
+                    <span
+                      key={`${ref.personId}-${ref.role}`}
+                      className="inline-flex items-center gap-1.5 rounded-full border bg-muted/40 px-2 py-0.5 text-muted-foreground"
+                    >
+                      <span className="font-medium text-foreground">
+                        {formatCasePersonDisplayName(person)}
+                      </span>
+                      <span>{getCasePersonRoleLabel(ref.role)}</span>
+                    </span>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
           <div className="flex gap-2 items-start flex-wrap">
@@ -295,6 +329,7 @@ export function CaseDetails({
                   <Button 
                     variant="outline" 
                     size="sm"
+                    aria-label="Open case actions menu"
                     className={cn(
                       interactiveHoverClasses,
                       "rounded-l-none px-2",

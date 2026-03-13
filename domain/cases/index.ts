@@ -14,7 +14,11 @@ export {
 export type { VoterFormStatus, AVSTrackingDates } from "./formatting";
 
 export {
+  formatCasePersonDisplayName,
+  getCasePersonRoleLabel,
   getPrimaryCasePerson,
+  getPrimaryCasePersonForDisplay,
+  getPrimaryCasePersonRef,
   getPersonRelationships,
 } from "./people";
 
