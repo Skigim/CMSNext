@@ -21,8 +21,8 @@ function partial(overrides: Partial<IntakeFormData>): Partial<IntakeFormData> {
 // ---------------------------------------------------------------------------
 
 describe("INTAKE_STEPS", () => {
-  it("has exactly 5 steps", () => {
-    expect(INTAKE_STEPS).toHaveLength(5);
+  it("has exactly 6 steps", () => {
+    expect(INTAKE_STEPS).toHaveLength(6);
   });
 
   it("step ids are unique", () => {
@@ -37,8 +37,12 @@ describe("INTAKE_STEPS", () => {
     }
   });
 
+  it("step 4 is 'household'", () => {
+    expect(INTAKE_STEPS[4].id).toBe("household");
+  });
+
   it("last step is 'review'", () => {
-    expect(INTAKE_STEPS[4].id).toBe("review");
+    expect(INTAKE_STEPS[5].id).toBe("review");
   });
 });
 
@@ -114,15 +118,25 @@ describe("isStepComplete", () => {
     });
   });
 
-  describe("step 4 – Review", () => {
+  describe("step 4 – Household", () => {
+    it("always returns true (no required fields)", () => {
+      expect(isStepComplete(4, partial({}))).toBe(true);
+    });
+
+    it("returns true even with a blank form", () => {
+      expect(isStepComplete(4, createBlankIntakeForm())).toBe(true);
+    });
+  });
+
+  describe("step 5 – Review", () => {
     it("returns false when no data is present", () => {
-      expect(isStepComplete(4, partial({}))).toBe(false);
+      expect(isStepComplete(5, partial({}))).toBe(false);
     });
 
     it("returns false when only applicant data is present", () => {
       expect(
         isStepComplete(
-          4,
+          5,
           partial({ firstName: "Alice", lastName: "Smith" }),
         ),
       ).toBe(false);
@@ -131,7 +145,7 @@ describe("isStepComplete", () => {
     it("returns false when only case details are present", () => {
       expect(
         isStepComplete(
-          4,
+          5,
           partial({ mcn: "12345", applicationDate: "2026-01-01" }),
         ),
       ).toBe(false);
@@ -140,7 +154,7 @@ describe("isStepComplete", () => {
     it("returns true when both applicant and case-details steps are complete", () => {
       expect(
         isStepComplete(
-          4,
+          5,
           partial({
             firstName: "Alice",
             lastName: "Smith",
@@ -188,14 +202,14 @@ describe("isStepReachable", () => {
     expect(isStepReachable(2, partial({}))).toBe(false);
   });
 
-  it("review step (4) requires all required-field steps to be complete", () => {
+  it("review step (5) requires all required-field steps to be complete", () => {
     const allRequired = partial({
       firstName: "Alice",
       lastName: "Smith",
       mcn: "12345",
       applicationDate: "2026-01-01",
     });
-    expect(isStepReachable(4, allRequired)).toBe(true);
+    expect(isStepReachable(5, allRequired)).toBe(true);
   });
 });
 

@@ -349,6 +349,7 @@ export function useIntakeWorkflow({
           zip: validatedFormData.mailingAddress.zip ?? "",
           sameAsPhysical: validatedFormData.mailingAddress.sameAsPhysical,
         },
+        relationships: validatedFormData.relationships ?? [],
       };
 
       const caseRecord: NewCaseRecordData = {

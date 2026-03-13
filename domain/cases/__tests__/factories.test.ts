@@ -187,4 +187,40 @@ describe("createIntakeFormData", () => {
       avsConsentDate: "2026-02-12",
     });
   });
+
+  it("prefills relationships from the existing case person", () => {
+    // Arrange
+    const existingCase = createMockStoredCase({
+      person: createMockPerson({
+        firstName: "Sam",
+        lastName: "Tester",
+        relationships: [
+          { id: "rel-1", type: "Spouse", name: "Jordan Tester", phone: "5559876543" },
+          { id: "rel-2", type: "Child", name: "Casey Tester", phone: "" },
+        ],
+      }),
+    });
+
+    // Act
+    const result = createIntakeFormData(existingCase);
+
+    // Assert
+    expect(result.relationships).toEqual([
+      { id: "rel-1", type: "Spouse", name: "Jordan Tester", phone: "5559876543" },
+      { id: "rel-2", type: "Child", name: "Casey Tester", phone: "" },
+    ]);
+  });
+
+  it("returns an empty relationships array when the person has no relationships", () => {
+    // Arrange
+    const existingCase = createMockStoredCase({
+      person: createMockPerson({ firstName: "Sam", lastName: "Tester" }),
+    });
+
+    // Act
+    const result = createIntakeFormData(existingCase);
+
+    // Assert
+    expect(result.relationships).toEqual([]);
+  });
 });

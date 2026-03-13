@@ -232,5 +232,7 @@ export function createIntakeFormData(
     voterFormStatus: record.voterFormStatus ?? "",
     pregnancy: record.pregnancy ?? false,
     avsConsentDate: record.avsConsentDate ?? "",
+    // Household
+    relationships: person?.relationships ?? [],
   };
 }
