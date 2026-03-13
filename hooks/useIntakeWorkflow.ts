@@ -28,6 +28,7 @@ import {
   createIntakeFormData,
   createPersonData,
 } from "@/domain/cases";
+import { isRelationshipPopulated } from "@/domain/cases/relationships";
 import { INTAKE_STEPS, isStepComplete, isStepReachable } from "@/domain/cases/intake-steps";
 import {
   type IntakeFormData,
@@ -37,19 +38,12 @@ import type {
   CaseStatus,
   NewCaseRecordData,
   NewPersonData,
-  Relationship,
   StoredCase,
 } from "../types/case";
 import { createLogger } from "../utils/logger";
 import { extractErrorMessage } from "../utils/errorUtils";
 
 const logger = createLogger("useIntakeWorkflow");
-
-function isRelationshipPopulated(relationship: Relationship): boolean {
-  return [relationship.type, relationship.name, relationship.phone].some((value) =>
-    value.trim().length > 0,
-  );
-}
 
 function createInitialVisitedSteps(existingCase?: StoredCase): Set<number> {
   if (!existingCase) {

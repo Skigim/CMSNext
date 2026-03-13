@@ -51,6 +51,7 @@ import {
   getDisplayPhoneNumber,
   normalizePhoneNumber,
 } from "@/domain/common";
+import { isRelationshipPopulated } from "@/domain/cases/relationships";
 import { RelationshipsSection } from "@/components/case/CaseEditSections";
 import type { Relationship } from "@/types/case";
 
@@ -61,12 +62,6 @@ const STEP_FOCUSABLE_SELECTOR = [
   '[role="checkbox"]:not([aria-disabled="true"])',
   '[role="radio"]:not([aria-disabled="true"])',
 ].join(", ");
-
-function isRelationshipPopulated(relationship: Relationship): boolean {
-  return [relationship.type, relationship.name, relationship.phone].some((value) =>
-    value.trim().length > 0,
-  );
-}
 
 // ============================================================================
 // Step icons
@@ -766,11 +761,6 @@ function HouseholdStep({ formData, onChange }: Readonly<HouseholdStepProps>) {
     () => (formData.relationships ?? []) as Relationship[],
     [formData.relationships],
   );
-  const populatedRelationships = useMemo(
-    () => relationships.filter(isRelationshipPopulated),
-    [relationships],
-  );
-
   const handleAdd = useCallback(() => {
     const newRel: Relationship = {
       id: crypto.randomUUID(),
@@ -778,8 +768,8 @@ function HouseholdStep({ formData, onChange }: Readonly<HouseholdStepProps>) {
       name: "",
       phone: "",
     };
-    onChange("relationships", [...populatedRelationships, newRel]);
-  }, [onChange, populatedRelationships]);
+    onChange("relationships", [...relationships, newRel]);
+  }, [relationships, onChange]);
 
   const handleUpdate = useCallback(
     (index: number, field: "type" | "name" | "phone", value: string) => {

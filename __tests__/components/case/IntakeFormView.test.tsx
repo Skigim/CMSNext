@@ -393,7 +393,7 @@ describe("IntakeFormView", () => {
       expect(results).toHaveNoViolations();
     });
 
-    it("ignores blank draft relationships in the review summary", () => {
+    it("ignores blank draft relationships in the review summary", async () => {
       withHookState({
         currentStep: INTAKE_STEPS.length - 1,
         visitedSteps: new Set(INTAKE_STEPS.map((_, i) => i)),
@@ -408,9 +408,11 @@ describe("IntakeFormView", () => {
         },
       });
 
-      renderIntakeFormView();
+      const { container } = renderIntakeFormView();
+      const results = await axe(container);
 
       expect(screen.getByText("No relationships added")).toBeInTheDocument();
+      expect(results).toHaveNoViolations();
     });
   });
 
