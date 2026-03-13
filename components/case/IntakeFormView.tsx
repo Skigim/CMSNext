@@ -51,6 +51,14 @@ import {
   normalizePhoneNumber,
 } from "@/domain/common";
 
+const STEP_FOCUSABLE_SELECTOR = [
+  'input:not([type="hidden"]):not([disabled])',
+  'textarea:not([disabled])',
+  '[role="combobox"]:not([aria-disabled="true"])',
+  '[role="checkbox"]:not([aria-disabled="true"])',
+  '[role="radio"]:not([aria-disabled="true"])',
+].join(", ");
+
 // ============================================================================
 // Step icons
 // ============================================================================
@@ -891,6 +899,7 @@ export function IntakeFormView({
   onCancel,
 }: Readonly<IntakeFormViewProps>) {
   const hasSeededInitialData = useRef(false);
+  const stepContentRef = useRef<HTMLDivElement>(null);
   const {
     currentStep,
     visitedSteps,
@@ -916,6 +925,35 @@ export function IntakeFormView({
     hasSeededInitialData.current = true;
     setFormData((prev) => ({ ...prev, ...initialData }));
   }, [initialData, setFormData]);
+
+  useEffect(() => {
+    const focusStepContent = () => {
+      const stepContent = stepContentRef.current;
+      if (!stepContent) {
+        return;
+      }
+
+      const firstField =
+        stepContent.querySelector<HTMLElement>(
+          STEP_FOCUSABLE_SELECTOR,
+        ) ?? stepContent;
+
+      firstField?.focus();
+    };
+
+    if (
+      globalThis.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches
+    ) {
+      focusStepContent();
+      return undefined;
+    }
+
+    const focusFrame = globalThis.requestAnimationFrame(focusStepContent);
+
+    return () => {
+      globalThis.cancelAnimationFrame(focusFrame);
+    };
+  }, [currentStep]);
 
   const isLastStep = currentStep === INTAKE_STEPS.length - 1;
   const isFirstStep = currentStep === 0;
@@ -972,21 +1010,27 @@ export function IntakeFormView({
             </div>
 
             {/* Step form */}
-            {currentStep === 0 && (
-              <ApplicantStep formData={formData} onChange={updateField} />
-            )}
-            {currentStep === 1 && (
-              <ContactStep formData={formData} onChange={updateField} />
-            )}
-            {currentStep === 2 && (
-              <CaseDetailsStep formData={formData} onChange={updateField} />
-            )}
-            {currentStep === 3 && (
-              <ChecklistStep formData={formData} onChange={updateField} />
-            )}
-            {currentStep === 4 && (
-              <ReviewStep formData={formData} onGoToStep={goToStep} />
-            )}
+            <div
+              ref={stepContentRef}
+              tabIndex={-1}
+              data-testid="intake-step-content"
+            >
+              {currentStep === 0 && (
+                <ApplicantStep formData={formData} onChange={updateField} />
+              )}
+              {currentStep === 1 && (
+                <ContactStep formData={formData} onChange={updateField} />
+              )}
+              {currentStep === 2 && (
+                <CaseDetailsStep formData={formData} onChange={updateField} />
+              )}
+              {currentStep === 3 && (
+                <ChecklistStep formData={formData} onChange={updateField} />
+              )}
+              {currentStep === 4 && (
+                <ReviewStep formData={formData} onGoToStep={goToStep} />
+              )}
+            </div>
 
             {/* Error */}
             {error && (

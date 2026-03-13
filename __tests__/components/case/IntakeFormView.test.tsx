@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { axe, toHaveNoViolations } from "jest-axe";
 import { describe, expect, it, vi, beforeEach } from "vitest";
@@ -168,6 +168,74 @@ describe("IntakeFormView", () => {
       renderIntakeFormView();
 
       expect(screen.getByText("(555) 123-4567")).toBeInTheDocument();
+    });
+  });
+
+  describe("focus management", () => {
+    it("focuses the first available field for the active step", async () => {
+      // ARRANGE
+      withHookState({
+        currentStep: 1,
+        visitedSteps: new Set([0, 1]) as ReadonlySet<number>,
+      });
+
+      // ACT
+      renderIntakeFormView();
+
+      // ASSERT
+      await waitFor(() => {
+        expect(screen.getByLabelText("Phone")).toHaveFocus();
+      });
+    });
+
+    it("moves focus to the next step's first field when the step changes", async () => {
+      // ARRANGE
+      withHookState({
+        currentStep: 1,
+        visitedSteps: new Set([0, 1]) as ReadonlySet<number>,
+      });
+
+      const { rerender } = renderIntakeFormView();
+
+      await waitFor(() => {
+        expect(screen.getByLabelText("Phone")).toHaveFocus();
+      });
+
+      withHookState({
+        currentStep: 2,
+        visitedSteps: new Set([0, 1, 2]) as ReadonlySet<number>,
+      });
+
+      // ACT
+      rerender(
+        <IntakeFormView
+          onSuccess={vi.fn()}
+          onCancel={undefined}
+        />,
+      );
+
+      // ASSERT
+      await waitFor(() => {
+        expect(screen.getByLabelText(/MCN/i)).toHaveFocus();
+      });
+    });
+
+    it("focuses the review step container when no review-field input is available", async () => {
+      // ARRANGE
+      withHookState({
+        currentStep: INTAKE_STEPS.length - 1,
+        visitedSteps: new Set(INTAKE_STEPS.map((_, i) => i)),
+        canSubmit: true,
+      });
+
+      // ACT
+      renderIntakeFormView();
+      const stepContent = screen.getByTestId("intake-step-content");
+
+      // ASSERT
+      await waitFor(() => {
+        expect(stepContent).toHaveFocus();
+      });
     });
   });
 
