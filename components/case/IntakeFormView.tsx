@@ -7,7 +7,7 @@
  * Wires to useIntakeWorkflow for all state and persistence.
  */
 
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -32,6 +32,7 @@ import {
   ChevronLeft,
   Loader2,
   ArrowLeft,
+  Users,
 } from "lucide-react";
 import { cn } from "@/components/ui/utils";
 import { useCategoryConfig } from "@/contexts/CategoryConfigContext";
@@ -50,6 +51,8 @@ import {
   getDisplayPhoneNumber,
   normalizePhoneNumber,
 } from "@/domain/common";
+import { RelationshipsSection } from "@/components/case/CaseEditSections";
+import type { Relationship } from "@/types/case";
 
 const STEP_FOCUSABLE_SELECTOR = [
   'input:not([type="hidden"]):not([disabled])',
@@ -63,7 +66,7 @@ const STEP_FOCUSABLE_SELECTOR = [
 // Step icons
 // ============================================================================
 
-const STEP_ICONS = [User, Phone, FileText, ClipboardList, CheckCircle2];
+const STEP_ICONS = [User, Phone, FileText, ClipboardList, Users, CheckCircle2];
 
 // ============================================================================
 // Props
@@ -743,7 +746,68 @@ function ChecklistStep({
   );
 }
 
-// --- Step 4: Review ---
+// --- Step 4: Household ---
+interface HouseholdStepProps {
+  formData: IntakeFormData;
+  onChange: <K extends keyof IntakeFormData>(
+    field: K,
+    value: IntakeFormData[K],
+  ) => void;
+}
+
+function HouseholdStep({ formData, onChange }: Readonly<HouseholdStepProps>) {
+  const relationships = useMemo(
+    () => (formData.relationships ?? []) as Relationship[],
+    [formData.relationships],
+  );
+
+  const handleAdd = useCallback(() => {
+    const newRel: Relationship = {
+      id: crypto.randomUUID(),
+      type: "",
+      name: "",
+      phone: "",
+    };
+    onChange("relationships", [...relationships, newRel]);
+  }, [relationships, onChange]);
+
+  const handleUpdate = useCallback(
+    (index: number, field: "type" | "name" | "phone", value: string) => {
+      onChange(
+        "relationships",
+        relationships.map((rel, i) => (i === index ? { ...rel, [field]: value } : rel)),
+      );
+    },
+    [relationships, onChange],
+  );
+
+  const handleRemove = useCallback(
+    (index: number) => {
+      onChange(
+        "relationships",
+        relationships.filter((_, i) => i !== index),
+      );
+    },
+    [relationships, onChange],
+  );
+
+  const handlers = useMemo(
+    () => ({ add: handleAdd, update: handleUpdate, remove: handleRemove }),
+    [handleAdd, handleUpdate, handleRemove],
+  );
+
+  return (
+    <div className="space-y-4">
+      <RelationshipsSection
+        relationships={relationships}
+        isEditing={true}
+        onRelationshipsChange={handlers}
+      />
+    </div>
+  );
+}
+
+// --- Step 5: Review ---
 interface ReviewStepProps {
   formData: IntakeFormData;
   onGoToStep: (index: number) => void;
@@ -875,6 +939,39 @@ function ReviewStep({ formData, onGoToStep }: Readonly<ReviewStepProps>) {
           </div>
         </div>
       ))}
+
+      {/* Household / Relationships */}
+      <div className="space-y-2">
+        <div className="flex items-center justify-between">
+          <h3 className="text-sm font-semibold text-foreground">Household</h3>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="h-7 text-xs text-muted-foreground"
+            onClick={() => onGoToStep(4)}
+          >
+            Edit
+          </Button>
+        </div>
+        <div className="rounded-md border bg-muted/20 px-4 py-3 space-y-2">
+          {(formData.relationships ?? []).length === 0 ? (
+            <p className="text-xs text-muted-foreground italic">
+              No relationships added
+            </p>
+          ) : (
+            (formData.relationships as Relationship[]).map((rel, i) => (
+              <SummaryRow
+                key={rel.id ?? `review-rel-${i}`}
+                label={rel.type || "Relationship"}
+                value={[rel.name, getDisplayPhoneNumber(rel.phone)]
+                  .filter(Boolean)
+                  .join(" · ")}
+              />
+            ))
+          )}
+        </div>
+      </div>
     </div>
   );
 }
@@ -1028,6 +1125,9 @@ export function IntakeFormView({
                 <ChecklistStep formData={formData} onChange={updateField} />
               )}
               {currentStep === 4 && (
+                <HouseholdStep formData={formData} onChange={updateField} />
+              )}
+              {currentStep === 5 && (
                 <ReviewStep formData={formData} onGoToStep={goToStep} />
               )}
             </div>

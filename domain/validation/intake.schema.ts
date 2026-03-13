@@ -101,6 +101,7 @@ export type IntakeCaseDetailsData = z.infer<typeof IntakeCaseDetailsSchema>;
 // Step 4 – Checklist / Documents
 // ============================================================================
 
+
 const contactMethodSchema = z.enum(["mail", "text", "email"]);
 const voterFormStatusSchema = z.enum(["requested", "declined", "not_answered", ""]);
 
@@ -121,18 +122,39 @@ export const IntakeChecklistSchema = z.object({
 export type IntakeChecklistData = z.infer<typeof IntakeChecklistSchema>;
 
 // ============================================================================
+// Step 5 – Household / Relationships
+// ============================================================================
+
+const intakeRelationshipSchema = z.object({
+  id: z.string().optional(),
+  type: z.string().default(""),
+  name: z.string().default(""),
+  phone: z.string().default(""),
+});
+
+/**
+ * Schema for the Household & Relationships step.
+ */
+export const IntakeHouseholdSchema = z.object({
+  relationships: z.array(intakeRelationshipSchema).optional().default([]),
+});
+
+export type IntakeHouseholdData = z.infer<typeof IntakeHouseholdSchema>;
+
+// ============================================================================
 // Full Intake Form Data (union of all steps)
 // ============================================================================
 
 /**
  * Combined schema for the entire intake form.
- * Merges all four step schemas into a single flat object.
+ * Merges all five step schemas into a single flat object.
  */
 export const IntakeFormSchema = z.object({
   ...IntakeApplicantSchema.shape,
   ...IntakeContactSchema.shape,
   ...IntakeCaseDetailsSchema.shape,
   ...IntakeChecklistSchema.shape,
+  ...IntakeHouseholdSchema.shape,
 });
 
 export type IntakeFormData = z.infer<typeof IntakeFormSchema>;
@@ -218,5 +240,7 @@ export function createBlankIntakeForm(): IntakeFormData {
     voterFormStatus: "",
     pregnancy: false,
     avsConsentDate: "",
+    // Household
+    relationships: [],
   };
 }

@@ -320,6 +320,76 @@ describe("IntakeFormView", () => {
     });
   });
 
+  // --- Household step -------------------------------------------------------
+
+  describe("Household step", () => {
+    it("renders the Relationships section on step 4", () => {
+      withHookState({
+        currentStep: 4,
+        visitedSteps: new Set([0, 1, 2, 3, 4]) as ReadonlySet<number>,
+      });
+      renderIntakeFormView();
+      expect(screen.getByText("Relationships")).toBeInTheDocument();
+    });
+
+    it("shows existing relationships on the household step", () => {
+      withHookState({
+        currentStep: 4,
+        visitedSteps: new Set([0, 1, 2, 3, 4]) as ReadonlySet<number>,
+        formData: {
+          ...createBlankIntakeForm(),
+          relationships: [
+            { id: "rel-1", type: "Spouse", name: "Jordan Tester", phone: "5559876543" },
+          ],
+        },
+      });
+      renderIntakeFormView();
+      expect(screen.getByDisplayValue("Jordan Tester")).toBeInTheDocument();
+    });
+  });
+
+  // --- Review step household summary ----------------------------------------
+
+  describe("Review step household summary", () => {
+    it("shows 'No relationships added' when relationships are empty", () => {
+      withHookState({
+        currentStep: INTAKE_STEPS.length - 1,
+        visitedSteps: new Set(INTAKE_STEPS.map((_, i) => i)),
+        canSubmit: true,
+        formData: {
+          ...createBlankIntakeForm(),
+          firstName: "Alice",
+          lastName: "Smith",
+          mcn: "12345",
+          applicationDate: "2026-01-01",
+          relationships: [],
+        },
+      });
+      renderIntakeFormView();
+      expect(screen.getByText("No relationships added")).toBeInTheDocument();
+    });
+
+    it("shows relationship names in the review summary", () => {
+      withHookState({
+        currentStep: INTAKE_STEPS.length - 1,
+        visitedSteps: new Set(INTAKE_STEPS.map((_, i) => i)),
+        canSubmit: true,
+        formData: {
+          ...createBlankIntakeForm(),
+          firstName: "Alice",
+          lastName: "Smith",
+          mcn: "12345",
+          applicationDate: "2026-01-01",
+          relationships: [
+            { id: "rel-1", type: "Spouse", name: "Jordan Tester", phone: "5559876543" },
+          ],
+        },
+      });
+      renderIntakeFormView();
+      expect(screen.getByText(/Jordan Tester/)).toBeInTheDocument();
+    });
+  });
+
   // --- Error display --------------------------------------------------------
 
   describe("error display", () => {

@@ -29,7 +29,7 @@ export interface IntakeStep {
 
 /**
  * Ordered list of intake steps.
- * The review/submit step is index 4 and requires no additional fields.
+ * The review/submit step is index 5 and requires no additional fields.
  */
 export const INTAKE_STEPS: IntakeStep[] = [
   {
@@ -76,6 +76,12 @@ export const INTAKE_STEPS: IntakeStep[] = [
     ],
   },
   {
+    id: "household",
+    label: "Household",
+    description: "Relationships and household members",
+    fields: ["relationships"],
+  },
+  {
     id: "review",
     label: "Review",
     description: "Review and submit",
@@ -95,7 +101,8 @@ export const INTAKE_STEPS: IntakeStep[] = [
  * - Step 1 (Contact): no required fields – always considered "reachable"
  * - Step 2 (Case Details): mcn + applicationDate
  * - Step 3 (Checklist): no required fields – always considered "reachable"
- * - Step 4 (Review): requires steps 0 and 2 to be complete
+ * - Step 4 (Household): no required fields – always considered "reachable"
+ * - Step 5 (Review): requires steps 0 and 2 to be complete
  *
  * @param stepIndex - Zero-based index into INTAKE_STEPS
  * @param formData  - Current draft form data
@@ -123,6 +130,9 @@ export function isStepComplete(
       // Checklist items are all optional – step is always completable
       return true;
     case 4:
+      // Household relationships are optional – step is always completable
+      return true;
+    case 5:
       // Review step: all required prior steps must be complete
       return isStepComplete(0, formData) && isStepComplete(2, formData);
     default:
@@ -153,8 +163,8 @@ export function isStepReachable(
   // Every preceding required-field step must pass
   for (let i = 0; i < stepIndex; i++) {
     if (!isStepComplete(i, formData)) {
-      // Steps 1 and 3 have no required fields, so they never block
-      if (i !== 1 && i !== 3) return false;
+      // Steps 1, 3, and 4 have no required fields, so they never block
+      if (i !== 1 && i !== 3 && i !== 4) return false;
     }
   }
   return true;
