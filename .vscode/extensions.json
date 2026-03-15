@@ -4,7 +4,11 @@
     "dbaeumer.vscode-eslint",
     "esbenp.prettier-vscode",
     "vitest.explorer",
-    "msjsdiag.debugger-for-chrome",
-    "ms-vscode.vscode-typescript-next"
+    "sonarsource.sonarlint-vscode",
+    "coderabbit.coderabbit-vscode",
+    "github.vscode-pull-request-github"
+  ],
+  "unwantedRecommendations": [
+    "msjsdiag.debugger-for-chrome"
   ]
 }

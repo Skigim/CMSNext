@@ -3,6 +3,7 @@
 ## Current Status
 
 ### ✅ Installed & Configured
+
 - **Tailwind CSS IntelliSense Extension** (`bradlc.vscode-tailwindcss`)
   - Provides autocomplete for Tailwind classes
   - Shows warnings for unknown/invalid classes
@@ -10,11 +11,12 @@
   - Configured to work with `cn()` utility and className props
 
 ### ⚠️ Not Compatible
+
 - **eslint-plugin-tailwindcss** - Cannot be installed
   - Requires Tailwind CSS v3.x
   - This project uses Tailwind CSS v4.x
   - Peer dependency conflict prevents installation
-  
+
 ### 🔧 Configuration Files Added
 
 1. **`.vscode/settings.json`**
@@ -32,6 +34,9 @@
    - Recommends Tailwind CSS IntelliSense extension
    - Recommends ESLint extension
    - Recommends Prettier extension
+
+- Also recommends Vitest, SonarQube for IDE, CodeRabbit, and GitHub Pull Requests for this repository workflow
+- Marks the retired Chrome debugger extension as unwanted
 
 ## How It Works Now
 
@@ -51,8 +56,9 @@ npm install -D eslint-plugin-tailwindcss
 ```
 
 Then add to `eslint.config.js`:
+
 ```javascript
-import tailwindcss from 'eslint-plugin-tailwindcss';
+import tailwindcss from "eslint-plugin-tailwindcss";
 
 export default [
   // ... existing config
@@ -61,9 +67,9 @@ export default [
       tailwindcss,
     },
     rules: {
-      'tailwindcss/classnames-order': 'warn',
-      'tailwindcss/no-custom-classname': 'warn',
-      'tailwindcss/no-contradicting-classname': 'error',
+      "tailwindcss/classnames-order": "warn",
+      "tailwindcss/no-custom-classname": "warn",
+      "tailwindcss/no-contradicting-classname": "error",
     },
   },
 ];
@@ -74,6 +80,7 @@ This would catch invalid classes at lint/build time, not just in the editor.
 ## Reload Required
 
 After these changes, reload VS Code window to activate all settings:
+
 - Press `Ctrl+Shift+P` (or `Cmd+Shift+P` on Mac)
 - Type "Reload Window"
 - Press Enter
