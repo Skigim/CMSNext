@@ -13,6 +13,9 @@ import {
   NewCaseRecordData, 
   NewPersonData, 
   HouseholdMemberData,
+  Person,
+  PersonRelationship,
+  Relationship,
   CaseStatus, 
   StoredCase 
 } from "@/types/case";
@@ -204,6 +207,63 @@ function buildRelationshipTypeMap(
   );
 }
 
+function normalizeRelationshipDisplayName(value: string | undefined): string {
+  return (value ?? "").trim().replace(/\s+/g, " ").toLowerCase();
+}
+
+function getLinkedPersonDisplayName(linkedPerson: Person): string {
+  const explicitName = normalizeRelationshipDisplayName(linkedPerson.name);
+  if (explicitName) {
+    return explicitName;
+  }
+
+  return normalizeRelationshipDisplayName(
+    [linkedPerson.firstName, linkedPerson.lastName].filter(Boolean).join(" "),
+  );
+}
+
+function resolveHouseholdRelationship(
+  linkedPerson: Person,
+  normalizedRelationships: PersonRelationship[],
+  relationships: Relationship[],
+  relationshipTypeByPersonId: Map<string, { type: string; relationshipId?: string }>,
+): { type: string; relationshipId?: string } | null {
+  const directMatch = relationshipTypeByPersonId.get(linkedPerson.id);
+  if (directMatch) {
+    return directMatch;
+  }
+
+  const structuredPhoneMatch =
+    linkedPerson.phone.trim().length > 0
+      ? normalizedRelationships.filter(
+          (relationship) => relationship.legacyPhone === linkedPerson.phone,
+        )
+      : [];
+  if (structuredPhoneMatch.length === 1) {
+    return {
+      type: structuredPhoneMatch[0].type,
+      relationshipId: structuredPhoneMatch[0].id,
+    };
+  }
+
+  const normalizedDisplayName = getLinkedPersonDisplayName(linkedPerson);
+  if (!normalizedDisplayName) {
+    return null;
+  }
+
+  const displayNameMatch = relationships.find(
+    (relationship) =>
+      normalizeRelationshipDisplayName(relationship.name) === normalizedDisplayName,
+  );
+
+  return displayNameMatch
+    ? {
+        type: displayNameMatch.type,
+        relationshipId: displayNameMatch.id,
+      }
+    : null;
+}
+
 /**
  * Creates a new NewPersonData object with all fields initialized.
  * 
@@ -262,23 +322,29 @@ export function createIntakeFormData(
   const blankForm = createBlankIntakeForm();
   const person = existingCase ? getPrimaryCasePerson(existingCase) : null;
   const record = existingCase?.caseRecord;
+  const normalizedRelationships = person?.normalizedRelationships ?? [];
   const relationships = getPersonRelationships(person, existingCase ?? undefined);
   const relationshipTypeByPersonId = buildRelationshipTypeMap(
-    person?.normalizedRelationships ?? [],
+    normalizedRelationships,
   );
   const householdMembers = (existingCase?.linkedPeople ?? [])
     .filter(({ ref }) => !ref.isPrimary)
-    .map(({ ref, person: linkedPerson }) => ({
+    .map(({ ref, person: linkedPerson }) => {
+      const resolvedRelationship = resolveHouseholdRelationship(
+        linkedPerson,
+        normalizedRelationships,
+        relationships,
+        relationshipTypeByPersonId,
+      );
+
+      return {
       ...createBlankHouseholdMemberData({
         livingArrangement: blankForm.livingArrangement,
         defaultState: blankForm.address.state,
       }),
       personId: linkedPerson.id,
-      relationshipId: relationshipTypeByPersonId.get(linkedPerson.id)?.relationshipId,
-      relationshipType:
-        relationshipTypeByPersonId.get(linkedPerson.id)?.type
-        ?? relationships.find((relationship) => relationship.name === linkedPerson.name)?.type
-        ?? "",
+      relationshipId: resolvedRelationship?.relationshipId,
+      relationshipType: resolvedRelationship?.type ?? "",
       role: ref.role === "applicant" ? "household_member" : ref.role,
       firstName: linkedPerson.firstName ?? "",
       lastName: linkedPerson.lastName ?? "",
@@ -303,7 +369,8 @@ export function createIntakeFormData(
         zip: linkedPerson.mailingAddress?.zip ?? "",
         sameAsPhysical: linkedPerson.mailingAddress?.sameAsPhysical ?? true,
       },
-    }));
+    };
+    });
 
   if (!existingCase || !record) {
     return blankForm;

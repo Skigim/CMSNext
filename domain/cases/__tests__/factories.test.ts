@@ -190,7 +190,7 @@ describe("createIntakeFormData", () => {
     expect(result).not.toHaveProperty("status");
   });
 
-  it("prefills household members from linked people", () => {
+  it("hydrates household relationshipType from a normalized relationship target match in edit mode", () => {
     // Arrange
     const linkedHouseholdMember = createMockPerson({
       id: "person-2",
@@ -260,7 +260,65 @@ describe("createIntakeFormData", () => {
         dateOfBirth: "1985-02-03",
       }),
     ]);
+    expect(result.householdMembers[0]?.relationshipType).toBe("Spouse");
     expect(result.householdMembers[0]).not.toHaveProperty("status");
+  });
+
+  it("falls back to a linked person's first and last name when display-name hydration is needed", () => {
+    // Arrange
+    const linkedHouseholdMember = createMockPerson({
+      id: "person-2",
+      firstName: "Jordan",
+      lastName: "Tester",
+      name: "",
+      phone: "5559876543",
+    });
+    const existingCase = createMockStoredCase({
+      person: createMockPerson({
+        firstName: "Sam",
+        lastName: "Tester",
+        normalizedRelationships: [
+          {
+            id: "rel-1",
+            type: "Spouse",
+            targetPersonId: null,
+            displayNameFallback: " Jordan   Tester ",
+          },
+        ],
+      }),
+      people: [
+        { personId: "person-test-1", role: "applicant", isPrimary: true },
+        { personId: "person-2", role: "household_member", isPrimary: false },
+      ],
+      linkedPeople: [
+        {
+          ref: { personId: "person-test-1", role: "applicant", isPrimary: true },
+          person: createMockPerson({
+            id: "person-test-1",
+            firstName: "Sam",
+            lastName: "Tester",
+            name: "Sam Tester",
+          }),
+        },
+        {
+          ref: { personId: "person-2", role: "household_member", isPrimary: false },
+          person: linkedHouseholdMember,
+        },
+      ],
+    });
+
+    // Act
+    const result = createIntakeFormData(existingCase);
+
+    // Assert
+    expect(result.householdMembers[0]?.relationshipType).toBe("Spouse");
+    expect(result.householdMembers[0]).toEqual(
+      expect.objectContaining({
+        personId: "person-2",
+        firstName: "Jordan",
+        lastName: "Tester",
+      }),
+    );
   });
 
   it("falls back to legacy relationships when linked people are unavailable", () => {
