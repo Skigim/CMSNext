@@ -1,254 +1,63 @@
-# CMSNext - AI Agent Instructions
-
-## Specialized Guides
-
-This file provides high-level architecture guidance. Detailed patterns are in specialized guides:
-
-| Guide                     | Focus                                 |
-| ------------------------- | ------------------------------------- |
-| `implementation-guide.md` | Services, domain, hooks, data flow    |
-| `ui-guide.md`             | React components, shadcn/ui, Tailwind |
-| `testing-guide.md`        | Vitest, RTL, mocking patterns         |
-| `agents/audit.agent.md`         | Security, a11y, performance audits    |
-| `agents/storage.agent.md`       | File System Access API, autosave      |
-| `agents/hooks.agent.md`         | Custom hook patterns                  |
-| `agents/templates.agent.md`     | Ready-to-use prompt templates         |
-
 ## General Approach
 
-- For every action, check for existing patterns and documentation first - do not invent new solutions until certain one does not already exist.
-- Prioritize clarity and maintainability over cleverness.
-- Break complex work into logical steps; track via todo lists.
-- Surface blockers immediately rather than proceeding with incomplete information.
-- Run full test suite and build after significant changes; fix before committing.
+- [Existing bullets]
+
+## Environment and Validation
+
+### Startup Checklist
+
+Before making changes, establish the repo environment using this sequence:
+
+1. Read `README.md` for product, architecture, and command overview.
+2. Read `.github/implementation-guide.md`, `.github/ui-guide.md`, and `.github/testing-guide.md` before introducing new patterns.
+3. Use `npm` for all package management and script execution.
+4. Install dependencies with `npm ci` when lockfile fidelity matters; otherwise use `npm install` only if necessary.
+5. Prefer existing scripts over ad hoc shell commands.
+
+### Standard Validation Commands
+
+For meaningful code changes, run the full verification flow:
+
+```bash
+npm run typecheck
+npm run lint
+npm run test:run
+npm run build
+```
+
+Treat failures in any step as blockers before considering the work complete.
+
+### Runtime Assumptions
+
+- This is a local-first React + TypeScript + Vite application.
+- There is no backend, no remote API, and no cloud sync layer.
+- Primary persistence depends on the File System Access API.
+- Browser-specific flows should assume a supported Chromium-based environment for full functionality.
+- Unsupported browsers should receive compatibility handling, not fake fallback behavior.
+
+### Implementation Constraints for Agents
+
+- Do not introduce backend, authentication, database, repository, cache, or event-bus patterns.
+- Route mutations through `DataManager` and existing services.
+- Keep domain logic pure and free of React or I/O dependencies.
+- Do not bypass `AutosaveFileService` or file storage notifications.
+- Preserve provider ordering and context contracts.
+
+### Testing Expectations
+
+- Add or update tests when changing business logic, hooks, services, or UI behavior.
+- Use existing Vitest and React Testing Library patterns already documented in `.github/testing-guide.md`.
+- Include accessibility coverage for new interactive UI where applicable.
+- Do not consider a task done if tests or build are failing.
+
+### Agent Workflow Preference
+
+When starting a task, prefer this order:
+
+1. Inspect existing docs and patterns.
+2. Find the nearest existing implementation.
+3. Make the smallest coherent change.
+4. Validate with the standard command sequence.
+5. Update documentation only when behavior or workflow meaningfully changes.
 
 ## Architecture
-
-### Data Layer
-
-**Pattern:** `DataManager` orchestrates stateless services. File system is single source of truth—no caching.
-
-```
-DataManager
-├── FileStorageService    # File I/O, format validation
-├── CaseService           # Case CRUD operations
-├── FinancialsService     # Financial item management
-├── NotesService          # Note management
-├── ActivityLogService    # Activity logging
-├── CategoryConfigService # Status/category configuration
-└── AlertsService         # Alert management
-```
-
-- Services are stateless; receive dependencies via constructor injection.
-- All mutations go through `DataManager` methods.
-- No repositories or event bus patterns.
-
-### Domain Layer
-
-**Pattern:** Pure functions with no I/O, no React, no side effects. Fully testable.
-
-```
-domain/
-├── alerts/       # Matching, filtering, display formatting
-├── avs/          # AVS file parsing
-├── cases/        # Case formatting
-├── common/       # Dates, phone, formatters, sanitization
-├── dashboard/    # Priority queue, pinned/recent, widgets, activity reports
-├── financials/   # Calculations, validation, history, verification
-├── templates/    # VR generator, case summary
-└── validation/   # Zod schemas, duplicate detection
-```
-
-- Import via `@/domain` or `@/domain/{module}`.
-- Domain functions are called by hooks and services.
-- ~6,356 lines of pure business logic.
-
-### Storage Layer
-
-**Flow:** `FileStorageContext` (handles/permissions) → `AutosaveFileService` → File System Access API
-
-- **Validate:** Call `fileDataProvider.getAPI()`; halt if `null`.
-- **Mutations:** After writes, call `safeNotifyFileStorageChange()` to trigger UI updates.
-- **Debounce:** Autosave is 5s (15s during bulk operations). Do not bypass `AutosaveFileService`.
-- **No auth:** All access is local-first and permission-based.
-
-### Data Format (v2.0 Normalized)
-
-```typescript
-interface NormalizedFileData {
-  cases: Case[]; // id, caseNumber, status, createdAt, etc.
-  financials: Financial[]; // id, caseId (FK), amount, type, etc.
-  notes: Note[]; // id, caseId (FK), content, createdAt, etc.
-  alerts: Alert[]; // id, caseId (FK), message, severity, etc.
-  categoryConfig: CategoryConfig;
-  activityLog: ActivityLogEntry[];
-}
-```
-
-- Flat arrays with foreign keys—no nested structures.
-- Legacy nested formats are rejected with `LegacyFormatError`.
-- Migration: use `discoverStatusesFromCases()` to auto-add statuses from case data.
-
-### Theme System
-
-8 themes in 4 families:
-
-| Family  | Light         | Dark         |
-| ------- | ------------- | ------------ |
-| Neutral | `light`       | `dark`       |
-| Slate   | `slate-light` | `slate-dark` |
-| Stone   | `stone-light` | `stone-dark` |
-| Zinc    | `zinc-light`  | `zinc-dark`  |
-
-Access via `ThemeContext`. Theme affects all CSS variables including color slots.
-
-### Color Slots
-
-10 semantic colors for status customization:
-
-```typescript
-type ColorSlot =
-  | "blue"
-  | "green"
-  | "red"
-  | "amber"
-  | "purple"
-  | "slate"
-  | "teal"
-  | "rose"
-  | "orange"
-  | "cyan";
-```
-
-CSS variables per slot: `--color-slot-{name}`, `--color-slot-{name}-bg`, `--color-slot-{name}-border`
-
-Status configuration:
-
-```typescript
-interface StatusConfig {
-  name: string;
-  colorSlot: ColorSlot;
-}
-```
-
-### Browser Compatibility
-
-- Check `isSupported` before accessing File System API.
-- Surface compatibility prompt when API unavailable.
-- Treat `AbortError` as user cancellation, not failure.
-
-## UI Standards
-
-### Component Library
-
-- **Primary:** shadcn/ui primitives from `components/ui/*`
-- **Styling:** Tailwind v4 tokens only; no divergent inline styles.
-- **Performance:** Memoize expensive components and selectors.
-
-### Feedback
-
-- **Notifications:** Sonner toasts with loading → success/error transitions.
-- **Never use:** `alert()`, `confirm()`, or browser dialogs.
-- **Accessibility:** Maintain focus management in modals; verify keyboard paths.
-
-## Code Organization
-
-### Layer Structure
-
-1. **Domain:** Pure business logic in `domain/*` (~6,356 lines)
-2. **Services:** Orchestration and I/O in `utils/services/*` and `utils/DataManager.ts`
-3. **Hooks:** React state + service/domain calls in `hooks/*`
-4. **Components:** UI only in `components/*`; call hooks, never services directly
-5. **Contexts:** Global state providers in `contexts/*`
-
-### Hooks
-
-- Maintain local React state for UI.
-- Delegate all business logic to services.
-- Target: ~40-50 lines max per hook.
-
-## Testing
-
-- See `.github/testing-guide.md` for detailed testing standards and patterns. Use these without deviation.
-
-### Stack
-
-- **Runner:** Vitest (`vitest.config.ts`)
-- **Components:** React Testing Library + `@testing-library/jest-dom`
-- **Accessibility:** jest-axe with `toHaveNoViolations()` matcher
-- **Setup:** `__tests__/setup.test.tsx`
-
-### Patterns
-
-- Run full suite after migrations or significant refactors.
-- Add axe checks for new UI components.
-- Mock services consistently in tests.
-
-## Antipatterns
-
-- ❌ No localStorage/sessionStorage or network APIs
-- ❌ No direct filesystem calls outside the provider stack
-- ❌ No long-lived feature branches; ship small slices with tests
-- ❌ Do not mutate state without notifying storage
-- ❌ Do not introduce optimistic UI that ignores autosave timing
-- ❌ Do not put business logic in React components
-- ❌ No repositories or event bus patterns
-- ❌ Do not add I/O or React dependencies to domain layer
-- ❌ Do not use `window.` for global objects; prefer `globalThis.` for consistency and linting rules
-
-## Lint Enforcement for Agents
-
-- Treat all lint warnings as build blockers (`--max-warnings 0` in CI/local checks).
-- Use inline disables only (`eslint-disable-next-line` or `eslint-disable-line`), never file-wide disables unless absolutely unavoidable.
-- Every inline disable must include a clear justification comment.
-- Prefer fixing the rule violation over disabling it; disables are last resort and must be narrowly scoped.
-
-## Development Cycle
-
-### Weekly Structure
-
-Each week follows a consistent 3-phase pattern:
-
-1. **Prep Work** (Start of week)
-   - Fix bugs discovered from previous week
-   - Run audits (performance, accessibility)
-   - Plan feature implementation approach
-
-2. **Features** (Mid-week)
-   - Implement 3-4 new features
-   - Each feature includes tests
-   - Commit and push frequently
-
-3. **Refactoring & Polish** (End of week)
-   - Add/improve unit tests for week's features
-   - Clean up code, optimize performance
-   - Update documentation and feature catalogue
-
-### Monthly Roadmap
-
-- **Template:** `docs/development/ROADMAP_TEMPLATE.md`
-- **Current:** `docs/development/ROADMAP_JAN_2026.md`
-- **Archive:** `docs/development/archive/[YEAR]/`
-
-Each month targets ~12-20 features across 3-4 active weeks.
-
-### AI-Assisted Pace
-
-- **Traditional:** 1-2 features per week
-- **AI-assisted:** 4+ features per week with full test coverage
-- Maintain quality gates: all tests pass, patterns followed, docs updated
-
-## Git Workflow
-
-- **Branch:** Work directly on `main` for small changes; use `dev` for larger features.
-- **Commits:** Follow `COMMIT_STYLE.md` format.
-- **Tests:** Ensure all tests and build pass before pushing.
-
-## Documentation
-
-- **Product:** `README.md`
-- **Features:** `docs/development/feature-catalogue.md`
-- **Roadmap:** `docs/development/ROADMAP_JAN_2026.md`
-- **Guidelines:** `docs/development/project-structure-guidelines.md`
-- **Testing:** `docs/development/testing-infrastructure.md`
-- **Deployment:** `docs/DeploymentGuide.md`
