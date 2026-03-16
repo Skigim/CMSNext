@@ -4,6 +4,15 @@ import { formatRelativeTime } from '@/domain/common';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { CopyButton } from '@/components/common/CopyButton';
 import { PinButton } from '@/components/common/PinButton';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -33,7 +42,11 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useWidgetData } from '@/hooks/useWidgetData';
-import type { CaseActivityLogState, CaseActivityEntry, ActivityReportFormat } from '@/types/activityLog';
+import type {
+  CaseActivityLogState,
+  CaseActivityEntry,
+  ActivityReportFormat,
+} from '@/types/activityLog';
 import type { WidgetMetadata } from './WidgetRegistry';
 import {
   getTopCasesForReport,
@@ -55,6 +68,7 @@ const TIMELINE_SKELETON_KEYS = ['timeline-skeleton-1', 'timeline-skeleton-2', 't
  */
 interface TimelineItem {
   id: string;
+  entryType: CaseActivityEntry['type'];
   type: 'note' | 'save' | 'import' | 'unknown';
   title: string;
   description: string;
@@ -63,6 +77,22 @@ interface TimelineItem {
   caseId: string;
   caseName: string;
   caseMcn?: string | null;
+  icon: typeof FileText;
+  badgeColor: string;
+  badgeText: string;
+}
+
+interface CaseTimelineItem {
+  id: string;
+  title: string;
+  description: string;
+  timestamp: string;
+  relativeTime: string;
+  caseId: string;
+  caseName: string;
+  caseMcn?: string | null;
+  entryCount: number;
+  entries: TimelineItem[];
   icon: typeof FileText;
   badgeColor: string;
   badgeText: string;
@@ -84,6 +114,129 @@ function assertUnreachable(value: never): never {
   throw new Error(`Unexpected activity entry: ${JSON.stringify(value)}`);
 }
 
+function formatActivityEntry(entry: CaseActivityEntry): TimelineItem {
+  const relativeTime = formatRelativeTime(entry.timestamp);
+
+  if (entry.type === 'note-added') {
+    return {
+      id: entry.id,
+      entryType: entry.type,
+      type: 'note',
+      title: 'Note added',
+      description: entry.payload.preview || 'New case note',
+      timestamp: entry.timestamp,
+      relativeTime,
+      caseId: entry.caseId,
+      caseName: entry.caseName,
+      caseMcn: entry.caseMcn,
+      icon: FileText,
+      badgeColor: 'bg-primary/20 text-primary',
+      badgeText: 'Note',
+    };
+  }
+
+  if (entry.type === 'status-change') {
+    const fromStatus = entry.payload.fromStatus || 'Unknown';
+    const toStatus = entry.payload.toStatus || 'Unknown';
+    return {
+      id: entry.id,
+      entryType: entry.type,
+      type: 'save',
+      title: `Status: ${fromStatus} → ${toStatus}`,
+      description: 'Status updated',
+      timestamp: entry.timestamp,
+      relativeTime,
+      caseId: entry.caseId,
+      caseName: entry.caseName,
+      caseMcn: entry.caseMcn,
+      icon: Save,
+      badgeColor: 'bg-accent text-accent-foreground',
+      badgeText: 'Status',
+    };
+  }
+
+  if (entry.type === 'priority-change') {
+    const action = entry.payload.toPriority ? 'marked as priority' : 'unmarked as priority';
+    return {
+      id: entry.id,
+      entryType: entry.type,
+      type: 'save',
+      title: `Priority ${action}`,
+      description: 'Priority updated',
+      timestamp: entry.timestamp,
+      relativeTime,
+      caseId: entry.caseId,
+      caseName: entry.caseName,
+      caseMcn: entry.caseMcn,
+      icon: Save,
+      badgeColor: 'bg-amber-100 text-amber-700 dark:bg-amber-900 dark:text-amber-300',
+      badgeText: 'Priority',
+    };
+  }
+
+  if (entry.type === 'case-viewed') {
+    return {
+      id: entry.id,
+      entryType: entry.type,
+      type: 'save',
+      title: 'Case viewed',
+      description: 'Case opened',
+      timestamp: entry.timestamp,
+      relativeTime,
+      caseId: entry.caseId,
+      caseName: entry.caseName,
+      caseMcn: entry.caseMcn,
+      icon: Eye,
+      badgeColor: 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300',
+      badgeText: 'Viewed',
+    };
+  }
+
+  return assertUnreachable(entry);
+}
+
+function getCaseTimelineDescription(entries: TimelineItem[]): string {
+  const counts = entries.reduce(
+    (totals, entry) => {
+      if (entry.entryType === 'case-viewed') {
+        totals.views += 1;
+      }
+      if (entry.entryType === 'status-change') {
+        totals.statusChanges += 1;
+      }
+      if (entry.entryType === 'priority-change') {
+        totals.priorityChanges += 1;
+      }
+      if (entry.entryType === 'note-added') {
+        totals.notesAdded += 1;
+      }
+      return totals;
+    },
+    { views: 0, statusChanges: 0, priorityChanges: 0, notesAdded: 0 }
+  );
+
+  const summaryParts: string[] = [];
+
+  if (counts.views > 0) {
+    summaryParts.push(`${counts.views} view${counts.views === 1 ? '' : 's'}`);
+  }
+  if (counts.statusChanges > 0) {
+    summaryParts.push(`${counts.statusChanges} status${counts.statusChanges === 1 ? '' : 'es'}`);
+  }
+  if (counts.priorityChanges > 0) {
+    summaryParts.push(`${counts.priorityChanges} priorit${counts.priorityChanges === 1 ? 'y' : 'ies'}`);
+  }
+  if (counts.notesAdded > 0) {
+    summaryParts.push(`${counts.notesAdded} note${counts.notesAdded === 1 ? '' : 's'}`);
+  }
+
+  if (summaryParts.length === 0) {
+    return `${entries.length} action${entries.length === 1 ? '' : 's'} recorded`;
+  }
+
+  return summaryParts.join(' · ');
+}
+
 function getReportExportConfig(format: ActivityReportFormat): { mimeType: string; extension: string } {
   if (format === 'json') {
     return { mimeType: 'application/json', extension: 'json' };
@@ -97,95 +250,80 @@ function getReportExportConfig(format: ActivityReportFormat): { mimeType: string
 /**
  * Format activity entries into timeline items.
  */
-function formatActivityTimeline(activityLog: CaseActivityEntry[]): TimelineItem[] {
+function formatActivityTimeline(activityLog: CaseActivityEntry[]): CaseTimelineItem[] {
   const sevenDaysAgo = new Date();
   sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
 
-  return activityLog
-    .filter((entry) => {
-      try {
-        return new Date(entry.timestamp) >= sevenDaysAgo;
-      } catch {
-        return false;
-      }
+  const groupedTimeline = activityLog.reduce<Map<string, CaseTimelineItem>>((timelineMap, entry) => {
+    const entryTimestamp = new Date(entry.timestamp).getTime();
+    if (Number.isNaN(entryTimestamp) || entryTimestamp < sevenDaysAgo.getTime()) {
+      return timelineMap;
+    }
+
+    const existingItem = timelineMap.get(entry.caseId);
+    const formattedEntry = formatActivityEntry(entry);
+
+    if (!existingItem) {
+      timelineMap.set(entry.caseId, {
+        id: entry.caseId,
+        title: formattedEntry.title,
+        description: '',
+        timestamp: entry.timestamp,
+        relativeTime: formattedEntry.relativeTime,
+        caseId: entry.caseId,
+        caseName: entry.caseName,
+        caseMcn: entry.caseMcn,
+        entryCount: 1,
+        entries: [formattedEntry],
+        icon: formattedEntry.icon,
+        badgeColor: formattedEntry.badgeColor,
+        badgeText: formattedEntry.badgeText,
+      });
+      return timelineMap;
+    }
+
+    existingItem.entries.push(formattedEntry);
+    existingItem.entryCount += 1;
+    const existingTimestamp = new Date(existingItem.timestamp).getTime();
+
+    if (Number.isNaN(existingTimestamp) || entryTimestamp > existingTimestamp) {
+      existingItem.timestamp = entry.timestamp;
+      existingItem.relativeTime = formattedEntry.relativeTime;
+      existingItem.caseName = entry.caseName;
+      existingItem.caseMcn = entry.caseMcn;
+      existingItem.title = formattedEntry.title;
+      existingItem.icon = formattedEntry.icon;
+      existingItem.badgeColor = formattedEntry.badgeColor;
+      existingItem.badgeText = formattedEntry.badgeText;
+    }
+
+    return timelineMap;
+  }, new Map());
+
+  return Array.from(groupedTimeline.values())
+    .map((item) => {
+      const entries = [...item.entries].sort(
+        (firstEntry, secondEntry) =>
+          new Date(secondEntry.timestamp).getTime() - new Date(firstEntry.timestamp).getTime()
+      );
+      const latestEntry = entries[0];
+
+      return {
+        ...item,
+        entries,
+        title: latestEntry.title,
+        icon: latestEntry.icon,
+        badgeColor: latestEntry.badgeColor,
+        badgeText: latestEntry.badgeText,
+        description: getCaseTimelineDescription(entries),
+        relativeTime: formatRelativeTime(item.timestamp),
+      };
     })
-    .slice(0, 10)
-    .map((entry): TimelineItem => {
-      const relativeTime = formatRelativeTime(entry.timestamp);
-
-      if (entry.type === 'note-added') {
-        return {
-          id: entry.id,
-          type: 'note',
-          title: `Note added`,
-          description: entry.payload.preview || 'New case note',
-          timestamp: entry.timestamp,
-          relativeTime,
-          caseId: entry.caseId,
-          caseName: entry.caseName,
-          caseMcn: entry.caseMcn,
-          icon: FileText,
-          badgeColor: 'bg-primary/20 text-primary',
-          badgeText: 'Note',
-        };
-      }
-
-      if (entry.type === 'status-change') {
-        const fromStatus = entry.payload.fromStatus || 'Unknown';
-        const toStatus = entry.payload.toStatus || 'Unknown';
-        return {
-          id: entry.id,
-          type: 'save',
-          title: `Status: ${fromStatus} → ${toStatus}`,
-          description: `Status updated`,
-          timestamp: entry.timestamp,
-          relativeTime,
-          caseId: entry.caseId,
-          caseName: entry.caseName,
-          caseMcn: entry.caseMcn,
-          icon: Save,
-          badgeColor: 'bg-accent text-accent-foreground',
-          badgeText: 'Status',
-        };
-      }
-
-      if (entry.type === 'priority-change') {
-        const action = entry.payload.toPriority ? 'marked as priority' : 'unmarked as priority';
-        return {
-          id: entry.id,
-          type: 'save',
-          title: `Priority ${action}`,
-          description: `Priority updated`,
-          timestamp: entry.timestamp,
-          relativeTime,
-          caseId: entry.caseId,
-          caseName: entry.caseName,
-          caseMcn: entry.caseMcn,
-          icon: Save,
-          badgeColor: 'bg-amber-100 text-amber-700 dark:bg-amber-900 dark:text-amber-300',
-          badgeText: 'Priority',
-        };
-      }
-
-      if (entry.type === 'case-viewed') {
-        return {
-          id: entry.id,
-          type: 'save',
-          title: 'Viewed case',
-          description: 'Case opened',
-          timestamp: entry.timestamp,
-          relativeTime,
-          caseId: entry.caseId,
-          caseName: entry.caseName,
-          caseMcn: entry.caseMcn,
-          icon: Eye,
-          badgeColor: 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300',
-          badgeText: 'Viewed',
-        };
-      }
-
-      return assertUnreachable(entry);
-    });
+    .sort(
+      (firstItem, secondItem) =>
+        new Date(secondItem.timestamp).getTime() - new Date(firstItem.timestamp).getTime()
+    )
+    .slice(0, EXPANDED_ITEM_COUNT);
 }
 
 /**
@@ -213,6 +351,7 @@ export function ActivityWidget({ activityLogState, metadata, onViewCase }: Reado
   const [clearDialogOpen, setClearDialogOpen] = useState(false);
   const [isClearing, setIsClearing] = useState(false);
   const [isTimelineExpanded, setIsTimelineExpanded] = useState(false);
+  const [selectedTimelineItem, setSelectedTimelineItem] = useState<CaseTimelineItem | null>(null);
 
   const {
     loading: activityLogLoading,
@@ -316,6 +455,25 @@ export function ActivityWidget({ activityLogState, metadata, onViewCase }: Reado
     [selectedActivityReport, selectedReportDate]
   );
 
+  const handleOpenTimelineItem = useCallback((item: CaseTimelineItem) => {
+    setSelectedTimelineItem(item);
+  }, []);
+
+  const handleTimelineDialogOpenChange = useCallback((open: boolean) => {
+    if (!open) {
+      setSelectedTimelineItem(null);
+    }
+  }, []);
+
+  const handleViewSelectedCase = useCallback(() => {
+    if (!selectedTimelineItem || !onViewCase) {
+      return;
+    }
+
+    onViewCase(selectedTimelineItem.caseId);
+    setSelectedTimelineItem(null);
+  }, [onViewCase, selectedTimelineItem]);
+
   const timelineContent = useMemo(() => {
     const items = timeline || [];
     if (loading && !timeline) {
@@ -344,48 +502,54 @@ export function ActivityWidget({ activityLogState, metadata, onViewCase }: Reado
           return (
             <div
               key={item.id}
-              className="flex gap-3 p-3 rounded-lg border border-border/50 bg-muted/30 hover:bg-muted/50 transition-colors"
+              className="flex items-center gap-2 rounded-lg border border-border/50 bg-muted/30 transition-colors"
             >
-              <div className="flex-shrink-0 mt-0.5">
-                <Icon className="h-4 w-4 text-muted-foreground" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-start justify-between gap-2 mb-1">
-                  <p className="text-sm font-medium truncate">{item.title}</p>
-                  <Badge
-                    variant="secondary"
-                    className={`text-xs flex-shrink-0 ${item.badgeColor}`}
-                  >
-                    {item.badgeText}
-                  </Badge>
+              <Button
+                variant="ghost"
+                className="h-auto flex-1 justify-start rounded-lg px-3 py-3 text-left hover:bg-muted/50"
+                onClick={() => handleOpenTimelineItem(item)}
+                aria-label={`View activity for ${item.caseName}`}
+              >
+                <div className="flex w-full gap-3">
+                  <div className="flex-shrink-0 mt-0.5">
+                    <Icon className="h-4 w-4 text-muted-foreground" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-start justify-between gap-2 mb-1">
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium truncate">{item.title}</p>
+                        <p className="text-xs font-medium truncate">{item.caseName}</p>
+                      </div>
+                      <div className="flex flex-col items-end gap-1">
+                        <Badge
+                          variant="secondary"
+                          className={`text-xs flex-shrink-0 ${item.badgeColor}`}
+                        >
+                          {item.badgeText}
+                        </Badge>
+                        <span className="text-xs text-muted-foreground">{item.relativeTime}</span>
+                      </div>
+                    </div>
+                    <p className="text-xs text-muted-foreground truncate">
+                      {item.entryCount} action{item.entryCount === 1 ? '' : 's'} · {item.description}
+                    </p>
+                  </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  {onViewCase ? (
-                    <Button
-                      variant="link"
-                      className="h-auto p-0 text-xs font-medium"
-                      onClick={() => onViewCase(item.caseId)}
-                    >
-                      {item.caseName}
-                    </Button>
-                  ) : (
-                    <span className="text-xs font-medium">{item.caseName}</span>
-                  )}
-                  <PinButton caseId={item.caseId} caseName={item.caseName} size="sm" />
-                  <span className="text-xs text-muted-foreground">•</span>
-                  <CopyButton
-                    value={item.caseMcn}
-                    label="MCN"
-                    showLabel={false}
-                    mono
-                    className="text-muted-foreground"
-                    buttonClassName="text-xs"
-                    textClassName="text-xs"
-                    missingLabel="No MCN"
-                    missingClassName="text-xs text-muted-foreground"
-                    variant="plain"
-                  />
-                </div>
+              </Button>
+              <div className="flex items-center gap-2 pr-3">
+                <PinButton caseId={item.caseId} caseName={item.caseName} size="sm" />
+                <CopyButton
+                  value={item.caseMcn}
+                  label="MCN"
+                  showLabel={false}
+                  mono
+                  className="text-muted-foreground"
+                  buttonClassName="text-xs"
+                  textClassName="text-xs"
+                  missingLabel="No MCN"
+                  missingClassName="text-xs text-muted-foreground"
+                  variant="plain"
+                />
               </div>
             </div>
           );
@@ -414,7 +578,7 @@ export function ActivityWidget({ activityLogState, metadata, onViewCase }: Reado
         )}
       </div>
     );
-  }, [isTimelineExpanded, timeline, loading, onViewCase]);
+  }, [handleOpenTimelineItem, isTimelineExpanded, timeline, loading]);
 
   return (
     <Card>
@@ -601,6 +765,86 @@ export function ActivityWidget({ activityLogState, metadata, onViewCase }: Reado
           </TabsContent>
         </CardContent>
       </Tabs>
+      <Dialog open={selectedTimelineItem !== null} onOpenChange={handleTimelineDialogOpenChange}>
+        <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col">
+          <DialogHeader>
+            <DialogTitle>
+              {selectedTimelineItem ? `Activity for ${selectedTimelineItem.caseName}` : 'Case activity'}
+            </DialogTitle>
+            <DialogDescription>
+              {selectedTimelineItem
+                ? `${selectedTimelineItem.entryCount} recorded action${selectedTimelineItem.entryCount === 1 ? '' : 's'} in the last 7 days.`
+                : 'Review recent case activity.'}
+            </DialogDescription>
+          </DialogHeader>
+
+          {selectedTimelineItem && (
+            <div className="space-y-4">
+              <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                <CopyButton
+                  value={selectedTimelineItem.caseMcn}
+                  label="MCN"
+                  showLabel={false}
+                  mono
+                  className="text-muted-foreground"
+                  buttonClassName="text-xs"
+                  textClassName="text-xs"
+                  missingLabel="No MCN"
+                  missingClassName="text-xs text-muted-foreground"
+                  variant="plain"
+                />
+                <span>•</span>
+                <span>Latest activity {selectedTimelineItem.relativeTime}</span>
+              </div>
+
+              <div className="overflow-hidden flex flex-col max-h-[32rem]">
+                <ScrollArea className="h-full max-h-80">
+                  <div className="space-y-2 pr-3">
+                    {selectedTimelineItem.entries.map((entry) => {
+                      const Icon = entry.icon;
+                      return (
+                        <div
+                          key={entry.id}
+                          className="rounded-lg border border-border/60 bg-muted/20 p-3"
+                        >
+                          <div className="flex items-start gap-3">
+                            <div className="mt-0.5 flex-shrink-0">
+                              <Icon className="h-4 w-4 text-muted-foreground" />
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <div className="flex items-start justify-between gap-2">
+                                <div className="min-w-0">
+                                  <p className="text-sm font-medium">{entry.title}</p>
+                                  <p className="text-xs text-muted-foreground break-words">
+                                    {entry.description}
+                                  </p>
+                                </div>
+                                <Badge
+                                  variant="secondary"
+                                  className={`text-xs flex-shrink-0 ${entry.badgeColor}`}
+                                >
+                                  {entry.badgeText}
+                                </Badge>
+                              </div>
+                              <p className="mt-2 text-xs text-muted-foreground">{entry.relativeTime}</p>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </ScrollArea>
+              </div>
+            </div>
+          )}
+
+          <DialogFooter>
+            {onViewCase && selectedTimelineItem ? (
+              <Button onClick={handleViewSelectedCase}>Open case</Button>
+            ) : null}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Card>
   );
 }
