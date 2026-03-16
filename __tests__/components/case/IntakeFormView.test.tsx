@@ -484,7 +484,11 @@ describe("IntakeFormView", () => {
       expect(screen.getByText("Linked as Dependent")).toBeInTheDocument();
     });
 
-    it("shows Child relationship type for household_member role", () => {
+    it.each([
+      { name: "shows Child for household_member role", relationshipType: "Child", expectedLabel: "Linked as Child" },
+      { name: "shows Spouse for household_member role", relationshipType: "Spouse", expectedLabel: "Linked as Spouse" },
+      { name: "falls back to 'Household member' when relationshipType is empty", relationshipType: "", expectedLabel: "Linked as Household member" },
+    ])("$name", ({ relationshipType, expectedLabel }) => {
       // ARRANGE
       withHouseholdStepState({
         formData: {
@@ -492,7 +496,7 @@ describe("IntakeFormView", () => {
           householdMembers: [
             createMockHouseholdMemberData({
               role: "household_member",
-              relationshipType: "Child",
+              relationshipType,
             }),
           ],
         },
@@ -502,49 +506,7 @@ describe("IntakeFormView", () => {
       renderIntakeFormView();
 
       // ASSERT
-      expect(screen.getByText("Linked as Child")).toBeInTheDocument();
-    });
-
-    it("shows Spouse relationship type for household_member role", () => {
-      // ARRANGE
-      withHouseholdStepState({
-        formData: {
-          ...createBlankIntakeForm(),
-          householdMembers: [
-            createMockHouseholdMemberData({
-              role: "household_member",
-              relationshipType: "Spouse",
-            }),
-          ],
-        },
-      });
-
-      // ACT
-      renderIntakeFormView();
-
-      // ASSERT
-      expect(screen.getByText("Linked as Spouse")).toBeInTheDocument();
-    });
-
-    it("falls back to 'Household member' when relationshipType is empty", () => {
-      // ARRANGE
-      withHouseholdStepState({
-        formData: {
-          ...createBlankIntakeForm(),
-          householdMembers: [
-            createMockHouseholdMemberData({
-              role: "household_member",
-              relationshipType: "",
-            }),
-          ],
-        },
-      });
-
-      // ACT
-      renderIntakeFormView();
-
-      // ASSERT
-      expect(screen.getByText("Linked as Household member")).toBeInTheDocument();
+      expect(screen.getByText(expectedLabel)).toBeInTheDocument();
     });
 
     it("expands and collapses a household member accordion entry", async () => {
