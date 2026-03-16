@@ -10,16 +10,18 @@ expect.extend(toHaveNoViolations);
 
 // ---- Mocks ---------------------------------------------------------------
 
+const mockCategoryConfig = {
+  caseTypes: ["Medicaid"],
+  caseStatuses: [{ name: "Intake", colorSlot: "blue" }],
+  livingArrangements: ["Community"],
+  applicationTypes: ["New", "Renewal"],
+  groups: [],
+  caseCategories: [],
+};
+
 vi.mock("@/contexts/CategoryConfigContext", () => ({
   useCategoryConfig: () => ({
-    config: {
-      caseTypes: ["Medicaid"],
-      caseStatuses: [{ name: "Intake", colorSlot: "blue" }],
-      livingArrangements: ["Community"],
-      applicationTypes: ["New", "Renewal"],
-      groups: [],
-      caseCategories: [],
-    },
+    config: mockCategoryConfig,
   }),
 }));
 
@@ -61,8 +63,53 @@ import { IntakeFormView } from "@/components/case/IntakeFormView";
 
 // ---- Helpers -------------------------------------------------------------
 
+const HOUSEHOLD_STEP_INDEX = 4;
+const REVIEW_STEP_INDEX = INTAKE_STEPS.length - 1;
+const HOUSEHOLD_MEMBER_SUMMARY = /Spouse · Jordan Tester · 5559876543/i;
+
+function createVisitedStepsThrough(stepIndex: number): ReadonlySet<number> {
+  return new Set(Array.from({ length: stepIndex + 1 }, (_, index) => index));
+}
+
+function createReviewFormData(overrides: Partial<typeof hookState.formData> = {}) {
+  return {
+    ...createBlankIntakeForm(),
+    firstName: "Alice",
+    lastName: "Smith",
+    mcn: "12345",
+    applicationDate: "2026-01-01",
+    ...overrides,
+  };
+}
+
+function createJordanHouseholdMember() {
+  return createMockHouseholdMemberData({
+    personId: "person-2",
+    firstName: "Jordan",
+    lastName: "Tester",
+  });
+}
+
 function withHookState(overrides: Partial<typeof hookState>) {
   Object.assign(hookState, overrides);
+}
+
+function withReviewStepState(overrides: Partial<typeof hookState> = {}) {
+  withHookState({
+    currentStep: REVIEW_STEP_INDEX,
+    visitedSteps: createVisitedStepsThrough(REVIEW_STEP_INDEX),
+    canSubmit: true,
+    formData: createReviewFormData(),
+    ...overrides,
+  });
+}
+
+function withHouseholdStepState(overrides: Partial<typeof hookState> = {}) {
+  withHookState({
+    currentStep: HOUSEHOLD_STEP_INDEX,
+    visitedSteps: createVisitedStepsThrough(HOUSEHOLD_STEP_INDEX),
+    ...overrides,
+  });
 }
 
 function renderIntakeFormView(props: { onSuccess?: () => void; onCancel?: () => void } = {}) {
@@ -121,17 +168,18 @@ describe("IntakeFormView", () => {
     });
 
     it("switches the title and submit affordance in edit mode", () => {
-      withHookState({
+      withReviewStepState({
         isEditing: true,
-        currentStep: INTAKE_STEPS.length - 1,
-        visitedSteps: new Set(INTAKE_STEPS.map((_, i) => i)),
-        canSubmit: true,
       });
 
       renderIntakeFormView();
 
       expect(screen.getByText("Edit Case")).toBeInTheDocument();
       expect(screen.getByRole("button", { name: /Save Changes/i })).toBeInTheDocument();
+    });
+
+    it("keeps case-level status options configured for the intake flow", () => {
+      expect(mockCategoryConfig.caseStatuses.map((status) => status.name)).toEqual(["Intake"]);
     });
   });
 
@@ -152,18 +200,10 @@ describe("IntakeFormView", () => {
     });
 
     it("formats stored phone digits on the review step", () => {
-      withHookState({
-        currentStep: INTAKE_STEPS.length - 1,
-        visitedSteps: new Set(INTAKE_STEPS.map((_, i) => i)),
-        canSubmit: true,
-        formData: {
-          ...createBlankIntakeForm(),
-          firstName: "Alice",
-          lastName: "Smith",
-          mcn: "12345",
-          applicationDate: "2026-01-01",
+      withReviewStepState({
+        formData: createReviewFormData({
           phone: "5551234567",
-        },
+        }),
       });
 
       renderIntakeFormView();
@@ -224,8 +264,8 @@ describe("IntakeFormView", () => {
     it("focuses the review step container when no review-field input is available", async () => {
       // ARRANGE
       withHookState({
-        currentStep: INTAKE_STEPS.length - 1,
-        visitedSteps: new Set(INTAKE_STEPS.map((_, i) => i)),
+        currentStep: REVIEW_STEP_INDEX,
+        visitedSteps: createVisitedStepsThrough(REVIEW_STEP_INDEX),
         canSubmit: true,
       });
 
@@ -288,21 +328,13 @@ describe("IntakeFormView", () => {
 
   describe("Submit button", () => {
     it("shows 'Submit Case' on the last step", () => {
-      withHookState({
-        currentStep: INTAKE_STEPS.length - 1,
-        visitedSteps: new Set(INTAKE_STEPS.map((_, i) => i)),
-        canSubmit: true,
-      });
+      withReviewStepState();
       renderIntakeFormView();
       expect(screen.getByRole("button", { name: /Submit Case/i })).toBeInTheDocument();
     });
 
     it("is disabled when canSubmit is false on the last step", () => {
-      withHookState({
-        currentStep: INTAKE_STEPS.length - 1,
-        visitedSteps: new Set(INTAKE_STEPS.map((_, i) => i)),
-        canSubmit: false,
-      });
+      withReviewStepState({ canSubmit: false });
       renderIntakeFormView();
       expect(screen.getByRole("button", { name: /Submit Case/i })).toBeDisabled();
     });
@@ -310,11 +342,7 @@ describe("IntakeFormView", () => {
     it("calls submit when clicked", async () => {
       const user = userEvent.setup();
       mockSubmit.mockResolvedValue(undefined);
-      withHookState({
-        currentStep: INTAKE_STEPS.length - 1,
-        visitedSteps: new Set(INTAKE_STEPS.map((_, i) => i)),
-        canSubmit: true,
-      });
+      withReviewStepState();
       renderIntakeFormView();
       await user.click(screen.getByRole("button", { name: /Submit Case/i }));
       expect(mockSubmit).toHaveBeenCalledTimes(1);
@@ -325,10 +353,7 @@ describe("IntakeFormView", () => {
 
   describe("Household step", () => {
     it("renders the household members section on step 4", async () => {
-      withHookState({
-        currentStep: 4,
-        visitedSteps: new Set([0, 1, 2, 3, 4]) as ReadonlySet<number>,
-      });
+      withHouseholdStepState();
       const { container } = renderIntakeFormView();
       const results = await axe(container);
       expect(screen.getByText("Household Members")).toBeInTheDocument();
@@ -336,22 +361,14 @@ describe("IntakeFormView", () => {
     });
 
     it("shows existing household members as collapsed accordion summaries", () => {
-      withHookState({
-        currentStep: 4,
-        visitedSteps: new Set([0, 1, 2, 3, 4]) as ReadonlySet<number>,
+      withHouseholdStepState({
         formData: {
           ...createBlankIntakeForm(),
-          householdMembers: [
-            createMockHouseholdMemberData({
-              personId: "person-2",
-              firstName: "Jordan",
-              lastName: "Tester",
-            }),
-          ],
+          householdMembers: [createJordanHouseholdMember()],
         },
       });
       renderIntakeFormView();
-      expect(screen.getByRole("button", { name: /Spouse · Jordan Tester · 5559876543/i })).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: HOUSEHOLD_MEMBER_SUMMARY })).toBeInTheDocument();
       expect(screen.queryByDisplayValue("Jordan")).not.toBeInTheDocument();
       expect(screen.queryByDisplayValue("Tester")).not.toBeInTheDocument();
     });
@@ -359,24 +376,16 @@ describe("IntakeFormView", () => {
     it("expands and collapses a household member accordion entry", async () => {
       const user = userEvent.setup();
 
-      withHookState({
-        currentStep: 4,
-        visitedSteps: new Set([0, 1, 2, 3, 4]) as ReadonlySet<number>,
+      withHouseholdStepState({
         formData: {
           ...createBlankIntakeForm(),
-          householdMembers: [
-            createMockHouseholdMemberData({
-              personId: "person-2",
-              firstName: "Jordan",
-              lastName: "Tester",
-            }),
-          ],
+          householdMembers: [createJordanHouseholdMember()],
         },
       });
 
       renderIntakeFormView();
 
-      await user.click(screen.getByRole("button", { name: /Spouse · Jordan Tester · 5559876543/i }));
+      await user.click(screen.getByRole("button", { name: HOUSEHOLD_MEMBER_SUMMARY }));
       expect(screen.getByDisplayValue("Jordan")).toBeInTheDocument();
       expect(screen.getByDisplayValue("Tester")).toBeInTheDocument();
 
@@ -388,24 +397,16 @@ describe("IntakeFormView", () => {
     it("does not render a household status selector", async () => {
       const user = userEvent.setup();
 
-      withHookState({
-        currentStep: 4,
-        visitedSteps: new Set([0, 1, 2, 3, 4]) as ReadonlySet<number>,
+      withHouseholdStepState({
         formData: {
           ...createBlankIntakeForm(),
-          householdMembers: [
-            createMockHouseholdMemberData({
-              personId: "person-2",
-              firstName: "Jordan",
-              lastName: "Tester",
-            }),
-          ],
+          householdMembers: [createJordanHouseholdMember()],
         },
       });
 
       renderIntakeFormView();
 
-      await user.click(screen.getByRole("button", { name: /Spouse · Jordan Tester · 5559876543/i }));
+      await user.click(screen.getByRole("button", { name: HOUSEHOLD_MEMBER_SUMMARY }));
 
       expect(screen.queryByLabelText("Status")).not.toBeInTheDocument();
     });
@@ -415,42 +416,20 @@ describe("IntakeFormView", () => {
 
   describe("Review step household summary", () => {
     it("shows 'No household members added' when household members are empty", () => {
-      withHookState({
-        currentStep: INTAKE_STEPS.length - 1,
-        visitedSteps: new Set(INTAKE_STEPS.map((_, i) => i)),
-        canSubmit: true,
-        formData: {
-          ...createBlankIntakeForm(),
-          firstName: "Alice",
-          lastName: "Smith",
-          mcn: "12345",
-          applicationDate: "2026-01-01",
+      withReviewStepState({
+        formData: createReviewFormData({
           relationships: [],
-        },
+        }),
       });
       renderIntakeFormView();
       expect(screen.getByText("No household members added")).toBeInTheDocument();
     });
 
     it("shows household member details in the review summary", async () => {
-      withHookState({
-        currentStep: INTAKE_STEPS.length - 1,
-        visitedSteps: new Set(INTAKE_STEPS.map((_, i) => i)),
-        canSubmit: true,
-        formData: {
-          ...createBlankIntakeForm(),
-          firstName: "Alice",
-          lastName: "Smith",
-          mcn: "12345",
-          applicationDate: "2026-01-01",
-          householdMembers: [
-            createMockHouseholdMemberData({
-              personId: "person-2",
-              firstName: "Jordan",
-              lastName: "Tester",
-            }),
-          ],
-        },
+      withReviewStepState({
+        formData: createReviewFormData({
+          householdMembers: [createJordanHouseholdMember()],
+        }),
       });
       const { container } = renderIntakeFormView();
       const results = await axe(container);
@@ -462,16 +441,8 @@ describe("IntakeFormView", () => {
     });
 
     it("ignores blank draft household members in the review summary", async () => {
-      withHookState({
-        currentStep: INTAKE_STEPS.length - 1,
-        visitedSteps: new Set(INTAKE_STEPS.map((_, i) => i)),
-        canSubmit: true,
-        formData: {
-          ...createBlankIntakeForm(),
-          firstName: "Alice",
-          lastName: "Smith",
-          mcn: "12345",
-          applicationDate: "2026-01-01",
+      withReviewStepState({
+        formData: createReviewFormData({
           householdMembers: [
             createMockHouseholdMemberData({
               relationshipType: " ",
@@ -483,7 +454,7 @@ describe("IntakeFormView", () => {
               livingArrangement: "",
             }),
           ],
-        },
+        }),
       });
 
       const { container } = renderIntakeFormView();
