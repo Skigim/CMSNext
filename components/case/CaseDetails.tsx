@@ -14,6 +14,11 @@ import { cn, interactiveHoverClasses } from "../ui/utils";
 import type { AlertWithMatch } from "../../utils/alertsData";
 import { CopyButton } from "@/components/common/CopyButton";
 import { PinButton } from "@/components/common/PinButton";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { CaseSummaryModal } from "./CaseSummaryModal";
 import { VRGeneratorModal } from "./VRGeneratorModal";
 import { NarrativeGeneratorModal } from "./NarrativeGeneratorModal";
@@ -27,6 +32,7 @@ import {
   getPrimaryCasePersonRef,
 } from "@/domain/cases";
 import { formatUSPhone, formatDateForDisplay, parseLocalDate } from "@/domain/common";
+import { clickToCopy } from "@/utils/clipboard";
 
 /**
  * Calculate 90 days from a date and format as tooltip text
@@ -38,33 +44,16 @@ function get90DayTooltip(dateStr: string): string {
   return `90 Days = ${formatDateForDisplay(date.toISOString())}`;
 }
 
-function formatPersonAddress(
-  address: {
-    street?: string;
-    apt?: string;
-    city?: string;
-    state?: string;
-    zip?: string;
-  } | null | undefined,
-): string | null {
-  const parts = [
-    address?.street,
-    address?.apt,
-    address?.city,
-    address?.state,
-    address?.zip,
-  ].filter(Boolean);
+function getLinkedPersonChipLabel(
+  person: NonNullable<StoredCase["linkedPeople"]>[number]["person"],
+  role: NonNullable<StoredCase["linkedPeople"]>[number]["ref"]["role"],
+): string {
+  const roleLabel = getCasePersonRoleLabel(role);
+  const firstName = person.firstName?.trim();
+  const lastName = person.lastName?.trim();
+  const nameParts = [firstName, lastName].filter(Boolean);
 
-  return parts.length > 0 ? parts.join(", ") : null;
-}
-
-function maskSsn(ssn: string | null | undefined): string | null {
-  const digits = (ssn ?? "").replace(/\D/g, "");
-  if (digits.length !== 9) {
-    return null;
-  }
-
-  return `•••-••-${digits.slice(-4)}`;
+  return [roleLabel, ...(nameParts.length > 0 ? nameParts : [formatCasePersonDisplayName(person)])].join(" / ");
 }
 
 interface CaseDetailsProps {
@@ -278,91 +267,41 @@ export function CaseDetails(props: Readonly<CaseDetailsProps>) {
                     </span>
                   )}
                   {additionalLinkedPeople.map(({ ref, person }) => (
-                    <span
-                      key={`${ref.personId}-${ref.role}`}
-                      className="inline-flex items-center gap-1.5 rounded-full border bg-muted/40 px-2 py-0.5 text-muted-foreground"
-                    >
-                      <span className="font-medium text-foreground">
-                        {formatCasePersonDisplayName(person)}
-                      </span>
-                      <span>{getCasePersonRoleLabel(ref.role)}</span>
-                    </span>
+                    <Tooltip key={`${ref.personId}-${ref.role}`}>
+                      <TooltipTrigger asChild>
+                        {person.phone ? (
+                          <button
+                            type="button"
+                            className={cn(
+                              "inline-flex items-center rounded-full border bg-muted/40 px-2.5 py-1 text-xs font-medium text-foreground transition-colors",
+                              interactiveHoverClasses,
+                            )}
+                            aria-label={`Copy ${formatCasePersonDisplayName(person)} phone ${person.phone}`}
+                            onClick={() =>
+                              clickToCopy(person.phone, {
+                                successMessage: "Phone number copied",
+                              })
+                            }
+                          >
+                            {getLinkedPersonChipLabel(person, ref.role)}
+                          </button>
+                        ) : (
+                          <span
+                            className="inline-flex items-center rounded-full border bg-muted/40 px-2.5 py-1 text-xs font-medium text-foreground"
+                            tabIndex={0}
+                          >
+                            {getLinkedPersonChipLabel(person, ref.role)}
+                          </span>
+                        )}
+                      </TooltipTrigger>
+                      <TooltipContent side="bottom">
+                        <div className="space-y-1">
+                          <p>Phone: {person.phone ? formatUSPhone(person.phone) : "Not provided"}</p>
+                          <p>Email: {person.email?.trim() || "Not provided"}</p>
+                        </div>
+                      </TooltipContent>
+                    </Tooltip>
                   ))}
-                </div>
-              )}
-              {additionalLinkedPeople.length > 0 && (
-                <div className="grid gap-3 pt-1 md:grid-cols-2">
-                  {additionalLinkedPeople.map(({ ref, person }) => {
-                    const physicalAddress = formatPersonAddress(person.address);
-                    const mailingAddress = person.mailingAddress.sameAsPhysical
-                      ? null
-                      : formatPersonAddress(person.mailingAddress);
-
-                    return (
-                      <div
-                        key={`${ref.personId}-${ref.role}-details`}
-                        className="rounded-lg border bg-muted/20 px-3 py-2.5"
-                      >
-                        <div className="flex items-start justify-between gap-3">
-                          <div>
-                            <p className="font-medium text-foreground">
-                              {formatCasePersonDisplayName(person)}
-                            </p>
-                            <p className="text-xs text-muted-foreground">
-                              {getCasePersonRoleLabel(ref.role)}
-                            </p>
-                          </div>
-                        </div>
-
-                        <div className="mt-2 space-y-1.5 text-sm">
-                          {person.phone && (
-                            <div className="flex items-center gap-1.5 text-muted-foreground">
-                              <Phone className="h-3.5 w-3.5" aria-hidden />
-                              <CopyButton
-                                value={person.phone}
-                                displayText={formatUSPhone(person.phone)}
-                                label={`${person.name} phone`}
-                                showLabel={false}
-                                buttonClassName={interactiveHoverClasses}
-                                variant="plain"
-                              />
-                            </div>
-                          )}
-                          {person.email && (
-                            <div className="flex items-center gap-1.5 text-muted-foreground">
-                              <Mail className="h-3.5 w-3.5" aria-hidden />
-                              <CopyButton
-                                value={person.email}
-                                label={`${person.name} email`}
-                                showLabel={false}
-                                buttonClassName={interactiveHoverClasses}
-                                variant="plain"
-                              />
-                            </div>
-                          )}
-                          <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
-                            {person.dateOfBirth && (
-                              <span>DOB: {formatDateForDisplay(person.dateOfBirth)}</span>
-                            )}
-                            {maskSsn(person.ssn) && <span>SSN: {maskSsn(person.ssn)}</span>}
-                            {person.livingArrangement && (
-                              <span>Living: {person.livingArrangement}</span>
-                            )}
-                          </div>
-                          {physicalAddress && (
-                            <p className="text-xs text-muted-foreground">
-                              Physical: {physicalAddress}
-                            </p>
-                          )}
-                          {mailingAddress && (
-                            <p className="text-xs text-muted-foreground">
-                              Mailing: {mailingAddress}
-                            </p>
-                          )}
-                        </div>
-                      </div>
-                    );
-                  })}
                 </div>
               )}
             </div>
