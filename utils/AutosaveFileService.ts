@@ -897,7 +897,44 @@ class AutosaveFileService {
 
     const contents = await this.readWithRetry(this.fileName, 'readFile');
     if (contents === null) {
-      return null;
+      // Distinguish between "file missing" and "file unreadable after retries"
+      try {
+        // If the file handle cannot be obtained due to NotFoundError, treat as "no file"
+        await this.directoryHandle.getFileHandle(this.fileName, { create: false });
+      } catch (existenceError) {
+        if (existenceError instanceof DOMException && existenceError.name === 'NotFoundError') {
+          logger.debug('Primary data file not found during readFile', {
+            fileName: this.fileName,
+          });
+          return null;
+        }
+
+        const message =
+          existenceError instanceof Error ? existenceError.message : 'Unknown error';
+        logger.error('Failed to verify primary data file existence', {
+          fileName: this.fileName,
+          error: message,
+        });
+        this.errorCallback({
+          message: `Error checking existence of file "${this.fileName}": ${message}`,
+          type: 'error',
+          error: existenceError,
+          context: { operation: 'readData', fileName: this.fileName },
+        });
+        throw existenceError;
+      }
+
+      const message = `Unable to read file "${this.fileName}" after multiple attempts.`;
+      logger.error('Failed to read primary data file after retries', {
+        fileName: this.fileName,
+      });
+      this.errorCallback({
+        message,
+        type: 'error',
+        error: new Error(message),
+        context: { operation: 'readData', fileName: this.fileName },
+      });
+      throw new Error(message);
     }
 
     try {
