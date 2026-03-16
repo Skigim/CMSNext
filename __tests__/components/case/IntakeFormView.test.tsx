@@ -464,6 +464,26 @@ describe("IntakeFormView", () => {
       expectJordanHouseholdFieldsToBeCollapsed();
     });
 
+    it("formats stored household member roles with the shared role label helper", () => {
+      // ARRANGE
+      withHouseholdStepState({
+        formData: {
+          ...createBlankIntakeForm(),
+          householdMembers: [
+            createMockHouseholdMemberData({
+              role: "dependent",
+            }),
+          ],
+        },
+      });
+
+      // ACT
+      renderIntakeFormView();
+
+      // ASSERT
+      expect(screen.getByText("Linked as Dependent")).toBeInTheDocument();
+    });
+
     it("expands and collapses a household member accordion entry", async () => {
       // ARRANGE
       const user = userEvent.setup();
