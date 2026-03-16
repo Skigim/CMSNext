@@ -295,4 +295,54 @@ describe("case people helpers", () => {
     // Assert
     expect(result).toBe("Former Guardian");
   });
+
+  it("matches household relationship labels through normalized display-name fallback", () => {
+    // Arrange
+    const primaryPerson = createMockPerson({
+      id: "person-1",
+      name: "Primary Applicant",
+      normalizedRelationships: [
+        {
+          id: "rel-1",
+          type: "Adult Child",
+          targetPersonId: null,
+          displayNameFallback: "  MORGAN   MEMBER  ",
+        },
+      ],
+    });
+    const linkedHouseholdPerson = createMockPerson({
+      id: "person-2",
+      name: " Morgan   Member ",
+      firstName: "",
+      lastName: "",
+      phone: "",
+    });
+    const caseData = createMockStoredCase({
+      person: primaryPerson,
+      linkedPeople: [
+        {
+          ref: { personId: primaryPerson.id, role: "applicant", isPrimary: true },
+          person: primaryPerson,
+        },
+        {
+          ref: { personId: linkedHouseholdPerson.id, role: "household_member", isPrimary: false },
+          person: linkedHouseholdPerson,
+        },
+      ],
+      caseRecord: {
+        ...createMockStoredCase().caseRecord,
+        personId: primaryPerson.id,
+      },
+    });
+
+    // Act
+    const result = getLinkedCasePersonRoleLabel(
+      caseData,
+      linkedHouseholdPerson,
+      "household_member",
+    );
+
+    // Assert
+    expect(result).toBe("Adult Child");
+  });
 });

@@ -36,10 +36,20 @@ export function getCasePersonRoleLabel(
   return (role && CASE_PERSON_ROLE_LABELS[role]) ?? CASE_PERSON_ROLE_LABELS.applicant;
 }
 
+/**
+ * Normalizes relationship display names for resilient case-insensitive matching.
+ *
+ * Trims surrounding whitespace, collapses repeated internal spacing, and
+ * lowercases the result so legacy fallback comparisons stay stable.
+ */
 function normalizeRelationshipDisplayName(value: string | undefined): string {
   return (value ?? "").trim().replace(/\s+/g, " ").toLowerCase();
 }
 
+/**
+ * Returns the normalized display name for a linked person using the shared
+ * person formatting helper before applying relationship-name normalization.
+ */
 function getLinkedPersonDisplayName(person: Person): string {
   return normalizeRelationshipDisplayName(formatCasePersonDisplayName(person));
 }
@@ -128,6 +138,14 @@ export function getPersonRelationships(
   });
 }
 
+/**
+ * Resolves the best display label for a linked case person role.
+ *
+ * Household members prefer hydrated relationship metadata from the primary
+ * person using a stable fallback sequence: direct target-person match, unique
+ * normalized phone match, unique normalized display-name match, and finally the
+ * generic role label. Non-household roles always use the shared role label map.
+ */
 export function getLinkedCasePersonRoleLabel(
   source: CasePeopleSource,
   linkedPerson: Person,
