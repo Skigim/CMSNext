@@ -1,254 +1,134 @@
-# CMSNext - AI Agent Instructions
-
-## Specialized Guides
-
-This file provides high-level architecture guidance. Detailed patterns are in specialized guides:
-
-| Guide                     | Focus                                 |
-| ------------------------- | ------------------------------------- |
-| `implementation-guide.md` | Services, domain, hooks, data flow    |
-| `ui-guide.md`             | React components, shadcn/ui, Tailwind |
-| `testing-guide.md`        | Vitest, RTL, mocking patterns         |
-| `agents/audit.agent.md`         | Security, a11y, performance audits    |
-| `agents/storage.agent.md`       | File System Access API, autosave      |
-| `agents/hooks.agent.md`         | Custom hook patterns                  |
-| `agents/templates.agent.md`     | Ready-to-use prompt templates         |
-
 ## General Approach
 
-- For every action, check for existing patterns and documentation first - do not invent new solutions until certain one does not already exist.
+- For every action, check for existing patterns and documentation first — do not invent new solutions until certain one does not already exist.
 - Prioritize clarity and maintainability over cleverness.
 - Break complex work into logical steps; track via todo lists.
 - Surface blockers immediately rather than proceeding with incomplete information.
 - Run full test suite and build after significant changes; fix before committing.
 
+## Environment and Validation
+
+### Startup Checklist
+
+Before making changes, establish the repo environment using this sequence:
+
+1. Read `README.md` for product, architecture, and command overview.
+2. Read `.github/implementation-guide.md`, `.github/ui-guide.md`, and `.github/testing-guide.md` before introducing new patterns.
+3. Use `npm` for all package management and script execution.
+4. Install dependencies with `npm ci` when lockfile fidelity matters; otherwise use `npm install` only if necessary.
+5. Prefer existing scripts over ad hoc shell commands.
+
+### Standard Validation Commands
+
+For meaningful code changes, run the full verification flow:
+
+```bash
+npm run typecheck
+npm run lint
+npm run test:run
+npm run build
+```
+
+Treat failures in any step as blockers before considering the work complete.
+
+### Runtime Assumptions
+
+- This is a local-first React + TypeScript + Vite application.
+- There is no backend, no remote API, and no cloud sync layer.
+- Primary persistence depends on the File System Access API.
+- Browser-specific flows should assume a supported Chromium-based environment for full functionality.
+- Unsupported browsers should receive compatibility handling, not fake fallback behavior.
+
+### Implementation Constraints for Agents
+
+- Do not introduce backend, authentication, database, repository, cache, or event-bus patterns.
+- Route mutations through `DataManager` and existing services.
+- Keep domain logic pure and free of React or I/O dependencies.
+- Do not bypass `AutosaveFileService` or file storage notifications.
+- Preserve provider ordering and context contracts.
+
+### Testing Expectations
+
+- Add or update tests when changing business logic, hooks, services, or UI behavior.
+- Use existing Vitest and React Testing Library patterns already documented in `.github/testing-guide.md`.
+- Include accessibility coverage for new interactive UI where applicable.
+- Do not consider a task done if tests or build are failing.
+
+### Agent Workflow Preference
+
+When starting a task, prefer this order:
+
+1. Inspect existing docs and patterns.
+2. Find the nearest existing implementation.
+3. Make the smallest coherent change.
+4. Validate with the standard command sequence.
+5. Update documentation only when behavior or workflow meaningfully changes.
+
 ## Architecture
+
+The application follows a layered, local-first architecture designed to keep business logic pure, storage concerns isolated, and React code focused on UI and state orchestration.
 
 ### Data Layer
 
-**Pattern:** `DataManager` orchestrates stateless services. File system is single source of truth—no caching.
-
-```
-DataManager
-├── FileStorageService    # File I/O, format validation
-├── CaseService           # Case CRUD operations
-├── FinancialsService     # Financial item management
-├── NotesService          # Note management
-├── ActivityLogService    # Activity logging
-├── CategoryConfigService # Status/category configuration
-└── AlertsService         # Alert management
-```
-
-- Services are stateless; receive dependencies via constructor injection.
-- All mutations go through `DataManager` methods.
-- No repositories or event bus patterns.
+- **Coordinator:** `DataManager` is the central entry point for all data mutations and read flows.
+- **Services:** Stateless services live under `utils/services/*` (e.g., `CaseService`, `FinancialsService`, `NotesService`, `AlertsService`, `CategoryConfigService`, `ActivityLogService`, `FileStorageService`).
+- **File as source of truth:** The file on disk is the single source of truth; do not introduce in-memory caches or repository/event-bus layers.
+- **Mutation rule:** All writes must go through `DataManager`, which in turn delegates to services. Do not mutate file data directly from hooks or components.
+- **Dependencies:** Services receive their dependencies via constructor injection; they remain stateless and side-effectful only through their collaborators.
 
 ### Domain Layer
 
-**Pattern:** Pure functions with no I/O, no React, no side effects. Fully testable.
-
-```
-domain/
-├── alerts/       # Matching, filtering, display formatting
-├── avs/          # AVS file parsing
-├── cases/        # Case formatting
-├── common/       # Dates, phone, formatters, sanitization
-├── dashboard/    # Priority queue, pinned/recent, widgets, activity reports
-├── financials/   # Calculations, validation, history, verification
-├── templates/    # VR generator, case summary
-└── validation/   # Zod schemas, duplicate detection
-```
-
-- Import via `@/domain` or `@/domain/{module}`.
-- Domain functions are called by hooks and services.
-- ~6,356 lines of pure business logic.
+- **Purity:** Domain modules contain pure, side-effect-free functions only—no React, no I/O, no direct access to browser APIs.
+- **Structure:** Organized by feature under `domain/*` (e.g., `alerts`, `avs`, `cases`, `common`, `dashboard`, `financials`, `templates`, `validation`).
+- **Imports:** Prefer `@/domain` or `@/domain/{module}` imports from hooks and services; do not import domain code directly into React components.
+- **Responsibility:** Domain functions perform calculations, formatting, validation, and transformation. They should be trivial to unit-test in isolation.
 
 ### Storage Layer
 
-**Flow:** `FileStorageContext` (handles/permissions) → `AutosaveFileService` → File System Access API
-
-- **Validate:** Call `fileDataProvider.getAPI()`; halt if `null`.
-- **Mutations:** After writes, call `safeNotifyFileStorageChange()` to trigger UI updates.
-- **Debounce:** Autosave is 5s (15s during bulk operations). Do not bypass `AutosaveFileService`.
-- **No auth:** All access is local-first and permission-based.
+- **Flow:** `FileStorageContext` (handles + permissions) → `AutosaveFileService` → File System Access API.
+- **API guard:** Always check `fileDataProvider.getAPI()` (or equivalent helper) before accessing the File System Access API; treat `null` as unsupported.
+- **Autosave:** Do not bypass `AutosaveFileService` for file writes. It manages debounced saves (≈5s normally, ≈15s for bulk operations) and consistency guarantees.
+- **Notifications:** After successful writes, call the appropriate `safeNotifyFileStorageChange()` helper to inform the rest of the app about data changes.
+- **Assumptions:** There is no backend, no remote sync, and no auth layer. Access is permission-based and local-first.
 
 ### Data Format (v2.0 Normalized)
 
-```typescript
-interface NormalizedFileData {
-  cases: Case[]; // id, caseNumber, status, createdAt, etc.
-  financials: Financial[]; // id, caseId (FK), amount, type, etc.
-  notes: Note[]; // id, caseId (FK), content, createdAt, etc.
-  alerts: Alert[]; // id, caseId (FK), message, severity, etc.
-  categoryConfig: CategoryConfig;
-  activityLog: ActivityLogEntry[];
-}
-```
+- The current file format is a **flat, normalized** structure:
+  - `cases: Case[]`
+  - `financials: Financial[]` (FK: `caseId`)
+  - `notes: Note[]` (FK: `caseId`)
+  - `alerts: Alert[]` (FK: `caseId`)
+  - `categoryConfig: CategoryConfig`
+  - `activityLog: ActivityLogEntry[]`
+- Avoid introducing nested or denormalized structures; new fields should extend existing records, not embed cross-cutting data.
+- Legacy nested formats should be rejected or migrated via existing helpers (for example, functions that discover statuses from legacy case data).
 
-- Flat arrays with foreign keys—no nested structures.
-- Legacy nested formats are rejected with `LegacyFormatError`.
-- Migration: use `discoverStatusesFromCases()` to auto-add statuses from case data.
+### UI, Themes, and Color System
 
-### Theme System
+- **Components:** UI lives under `components/*` and should be built from shadcn/ui primitives in `components/ui/*` plus Tailwind utility classes.
+- **Hooks:** React hooks under `hooks/*` own local UI state and call services/domain functions; they must not talk to the filesystem or `DataManager` directly from components.
+- **Themes:** A small, fixed set of theme families (light/dark variants) is exposed via `ThemeContext`. New UI should consume theme tokens instead of hard-coded colors.
+- **Color slots:** Status and category colors use a fixed semantic slot set (e.g., `"blue"`, `"green"`, `"red"`, `"amber"`, `"purple"`, `"slate"`, `"teal"`, `"rose"`, `"orange"`, `"cyan"`). Use the existing CSS variables for foreground, background, and border styling.
 
-8 themes in 4 families:
+### Layered Code Organization
 
-| Family  | Light         | Dark         |
-| ------- | ------------- | ------------ |
-| Neutral | `light`       | `dark`       |
-| Slate   | `slate-light` | `slate-dark` |
-| Stone   | `stone-light` | `stone-dark` |
-| Zinc    | `zinc-light`  | `zinc-dark`  |
+The overall layering model is:
 
-Access via `ThemeContext`. Theme affects all CSS variables including color slots.
+1. **Domain** – Pure business logic (`domain/*`).
+2. **Services** – Orchestration and I/O (`utils/services/*`, `utils/DataManager.ts`).
+3. **Hooks** – React state and coordination (`hooks/*`), calling services and domain functions.
+4. **Components** – Presentational UI (`components/*`), using hooks but never services directly.
+5. **Contexts** – Shared application state and providers (`contexts/*`), including file storage and theming.
 
-### Color Slots
+When implementing new features:
 
-10 semantic colors for status customization:
+- Start from the domain layer (pure logic), then add or extend services, then create hooks, and finally add components.
+- Keep business rules out of React components and contexts.
+- Respect existing provider ordering and contracts when modifying or introducing contexts.
 
-```typescript
-type ColorSlot =
-  | "blue"
-  | "green"
-  | "red"
-  | "amber"
-  | "purple"
-  | "slate"
-  | "teal"
-  | "rose"
-  | "orange"
-  | "cyan";
-```
+### Testing at the Architecture Level
 
-CSS variables per slot: `--color-slot-{name}`, `--color-slot-{name}-bg`, `--color-slot-{name}-border`
-
-Status configuration:
-
-```typescript
-interface StatusConfig {
-  name: string;
-  colorSlot: ColorSlot;
-}
-```
-
-### Browser Compatibility
-
-- Check `isSupported` before accessing File System API.
-- Surface compatibility prompt when API unavailable.
-- Treat `AbortError` as user cancellation, not failure.
-
-## UI Standards
-
-### Component Library
-
-- **Primary:** shadcn/ui primitives from `components/ui/*`
-- **Styling:** Tailwind v4 tokens only; no divergent inline styles.
-- **Performance:** Memoize expensive components and selectors.
-
-### Feedback
-
-- **Notifications:** Sonner toasts with loading → success/error transitions.
-- **Never use:** `alert()`, `confirm()`, or browser dialogs.
-- **Accessibility:** Maintain focus management in modals; verify keyboard paths.
-
-## Code Organization
-
-### Layer Structure
-
-1. **Domain:** Pure business logic in `domain/*` (~6,356 lines)
-2. **Services:** Orchestration and I/O in `utils/services/*` and `utils/DataManager.ts`
-3. **Hooks:** React state + service/domain calls in `hooks/*`
-4. **Components:** UI only in `components/*`; call hooks, never services directly
-5. **Contexts:** Global state providers in `contexts/*`
-
-### Hooks
-
-- Maintain local React state for UI.
-- Delegate all business logic to services.
-- Target: ~40-50 lines max per hook.
-
-## Testing
-
-- See `.github/testing-guide.md` for detailed testing standards and patterns. Use these without deviation.
-
-### Stack
-
-- **Runner:** Vitest (`vitest.config.ts`)
-- **Components:** React Testing Library + `@testing-library/jest-dom`
-- **Accessibility:** jest-axe with `toHaveNoViolations()` matcher
-- **Setup:** `__tests__/setup.test.tsx`
-
-### Patterns
-
-- Run full suite after migrations or significant refactors.
-- Add axe checks for new UI components.
-- Mock services consistently in tests.
-
-## Antipatterns
-
-- ❌ No localStorage/sessionStorage or network APIs
-- ❌ No direct filesystem calls outside the provider stack
-- ❌ No long-lived feature branches; ship small slices with tests
-- ❌ Do not mutate state without notifying storage
-- ❌ Do not introduce optimistic UI that ignores autosave timing
-- ❌ Do not put business logic in React components
-- ❌ No repositories or event bus patterns
-- ❌ Do not add I/O or React dependencies to domain layer
-- ❌ Do not use `window.` for global objects; prefer `globalThis.` for consistency and linting rules
-
-## Lint Enforcement for Agents
-
-- Treat all lint warnings as build blockers (`--max-warnings 0` in CI/local checks).
-- Use inline disables only (`eslint-disable-next-line` or `eslint-disable-line`), never file-wide disables unless absolutely unavoidable.
-- Every inline disable must include a clear justification comment.
-- Prefer fixing the rule violation over disabling it; disables are last resort and must be narrowly scoped.
-
-## Development Cycle
-
-### Weekly Structure
-
-Each week follows a consistent 3-phase pattern:
-
-1. **Prep Work** (Start of week)
-   - Fix bugs discovered from previous week
-   - Run audits (performance, accessibility)
-   - Plan feature implementation approach
-
-2. **Features** (Mid-week)
-   - Implement 3-4 new features
-   - Each feature includes tests
-   - Commit and push frequently
-
-3. **Refactoring & Polish** (End of week)
-   - Add/improve unit tests for week's features
-   - Clean up code, optimize performance
-   - Update documentation and feature catalogue
-
-### Monthly Roadmap
-
-- **Template:** `docs/development/ROADMAP_TEMPLATE.md`
-- **Current:** `docs/development/ROADMAP_JAN_2026.md`
-- **Archive:** `docs/development/archive/[YEAR]/`
-
-Each month targets ~12-20 features across 3-4 active weeks.
-
-### AI-Assisted Pace
-
-- **Traditional:** 1-2 features per week
-- **AI-assisted:** 4+ features per week with full test coverage
-- Maintain quality gates: all tests pass, patterns followed, docs updated
-
-## Git Workflow
-
-- **Branch:** Work directly on `main` for small changes; use `dev` for larger features.
-- **Commits:** Follow `COMMIT_STYLE.md` format.
-- **Tests:** Ensure all tests and build pass before pushing.
-
-## Documentation
-
-- **Product:** `README.md`
-- **Features:** `docs/development/feature-catalogue.md`
-- **Roadmap:** `docs/development/ROADMAP_JAN_2026.md`
-- **Guidelines:** `docs/development/project-structure-guidelines.md`
-- **Testing:** `docs/development/testing-infrastructure.md`
-- **Deployment:** `docs/DeploymentGuide.md`
+- **Domain:** Should be covered by fast, isolated unit tests (Vitest).
+- **Services + DataManager:** Test orchestration and integration of domain logic with storage; mock filesystem and context dependencies.
+- **Hooks + Components:** Use React Testing Library for behavior tests and jest-axe for accessibility where relevant.
+- Treat any failing tests, type errors, or lints as blockers before shipping architectural changes.
