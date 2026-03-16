@@ -122,7 +122,7 @@ describe("ActivityWidget", () => {
     await user.click(jamieRow);
 
     const dialog = await screen.findByRole("dialog");
-    expect(within(dialog).getByText("Jamie Rivera")).toBeInTheDocument();
+    expect(within(dialog).getByText("Activity for Jamie Rivera")).toBeInTheDocument();
     expect(within(dialog).getByText("Status: Pending → Approved")).toBeInTheDocument();
     expect(within(dialog).getByText("Note added")).toBeInTheDocument();
     expect(within(dialog).getByText("Case viewed")).toBeInTheDocument();

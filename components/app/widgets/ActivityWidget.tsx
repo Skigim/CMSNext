@@ -68,7 +68,7 @@ const TIMELINE_SKELETON_KEYS = ['timeline-skeleton-1', 'timeline-skeleton-2', 't
  */
 interface TimelineItem {
   id: string;
-  activityType: CaseActivityEntry['type'];
+  entryType: CaseActivityEntry['type'];
   type: 'note' | 'save' | 'import' | 'unknown';
   title: string;
   description: string;
@@ -117,7 +117,7 @@ function formatActivityEntry(entry: CaseActivityEntry): TimelineItem {
   if (entry.type === 'note-added') {
     return {
       id: entry.id,
-      activityType: entry.type,
+      entryType: entry.type,
       type: 'note',
       title: 'Note added',
       description: entry.payload.preview || 'New case note',
@@ -137,7 +137,7 @@ function formatActivityEntry(entry: CaseActivityEntry): TimelineItem {
     const toStatus = entry.payload.toStatus || 'Unknown';
     return {
       id: entry.id,
-      activityType: entry.type,
+      entryType: entry.type,
       type: 'save',
       title: `Status: ${fromStatus} → ${toStatus}`,
       description: 'Status updated',
@@ -156,7 +156,7 @@ function formatActivityEntry(entry: CaseActivityEntry): TimelineItem {
     const action = entry.payload.toPriority ? 'marked as priority' : 'unmarked as priority';
     return {
       id: entry.id,
-      activityType: entry.type,
+      entryType: entry.type,
       type: 'save',
       title: `Priority ${action}`,
       description: 'Priority updated',
@@ -174,7 +174,7 @@ function formatActivityEntry(entry: CaseActivityEntry): TimelineItem {
   if (entry.type === 'case-viewed') {
     return {
       id: entry.id,
-      activityType: entry.type,
+      entryType: entry.type,
       type: 'save',
       title: 'Case viewed',
       description: 'Case opened',
@@ -193,24 +193,38 @@ function formatActivityEntry(entry: CaseActivityEntry): TimelineItem {
 }
 
 function getCaseTimelineDescription(entries: TimelineItem[]): string {
-  const views = entries.filter((entry) => entry.activityType === 'case-viewed').length;
-  const statusChanges = entries.filter((entry) => entry.activityType === 'status-change').length;
-  const priorityChanges = entries.filter((entry) => entry.activityType === 'priority-change').length;
-  const notesAdded = entries.filter((entry) => entry.activityType === 'note-added').length;
+  const counts = entries.reduce(
+    (totals, entry) => {
+      if (entry.entryType === 'case-viewed') {
+        totals.views += 1;
+      }
+      if (entry.entryType === 'status-change') {
+        totals.statusChanges += 1;
+      }
+      if (entry.entryType === 'priority-change') {
+        totals.priorityChanges += 1;
+      }
+      if (entry.entryType === 'note-added') {
+        totals.notesAdded += 1;
+      }
+      return totals;
+    },
+    { views: 0, statusChanges: 0, priorityChanges: 0, notesAdded: 0 }
+  );
 
   const summaryParts: string[] = [];
 
-  if (views > 0) {
-    summaryParts.push(`${views} view${views === 1 ? '' : 's'}`);
+  if (counts.views > 0) {
+    summaryParts.push(`${counts.views} view${counts.views === 1 ? '' : 's'}`);
   }
-  if (statusChanges > 0) {
-    summaryParts.push(`${statusChanges} status`);
+  if (counts.statusChanges > 0) {
+    summaryParts.push(`${counts.statusChanges} status${counts.statusChanges === 1 ? '' : 'es'}`);
   }
-  if (priorityChanges > 0) {
-    summaryParts.push(`${priorityChanges} priority`);
+  if (counts.priorityChanges > 0) {
+    summaryParts.push(`${counts.priorityChanges} priorit${counts.priorityChanges === 1 ? 'y' : 'ies'}`);
   }
-  if (notesAdded > 0) {
-    summaryParts.push(`${notesAdded} note${notesAdded === 1 ? '' : 's'}`);
+  if (counts.notesAdded > 0) {
+    summaryParts.push(`${counts.notesAdded} note${counts.notesAdded === 1 ? '' : 's'}`);
   }
 
   if (summaryParts.length === 0) {
@@ -264,8 +278,9 @@ function formatActivityTimeline(activityLog: CaseActivityEntry[]): CaseTimelineI
 
     existingItem.entries.push(formattedEntry);
     existingItem.entryCount += 1;
+    const existingTimestamp = new Date(existingItem.timestamp).getTime();
 
-    if (entryTimestamp > new Date(existingItem.timestamp).getTime()) {
+    if (Number.isNaN(existingTimestamp) || entryTimestamp > existingTimestamp) {
       existingItem.timestamp = entry.timestamp;
       existingItem.relativeTime = formattedEntry.relativeTime;
     }
@@ -730,7 +745,9 @@ export function ActivityWidget({ activityLogState, metadata, onViewCase }: Reado
       <Dialog open={selectedTimelineItem !== null} onOpenChange={handleTimelineDialogOpenChange}>
         <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col">
           <DialogHeader>
-            <DialogTitle>{selectedTimelineItem?.caseName ?? 'Case activity'}</DialogTitle>
+            <DialogTitle>
+              {selectedTimelineItem ? `Activity for ${selectedTimelineItem.caseName}` : 'Case activity'}
+            </DialogTitle>
             <DialogDescription>
               {selectedTimelineItem
                 ? `${selectedTimelineItem.entryCount} recorded action${selectedTimelineItem.entryCount === 1 ? '' : 's'} in the last 7 days.`
