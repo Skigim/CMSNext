@@ -2,7 +2,7 @@ import { describe, expect, it, vi, beforeEach } from "vitest";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { axe } from "jest-axe";
-import type { ComponentType } from "react";
+import type { ComponentType, ReactNode } from "react";
 
 import { createMockPerson, createMockStoredCase } from "@/src/test/testUtils";
 
@@ -107,8 +107,22 @@ vi.mock("@/components/error/ErrorBoundaryHOC", () => ({
   withDataErrorBoundary: <T extends object>(Component: ComponentType<T>) => Component,
 }));
 
+vi.mock("@/components/ui/tooltip", () => ({
+  TooltipProvider: ({ children }: { children: ReactNode }) => <>{children}</>,
+  Tooltip: ({ children }: { children: ReactNode }) => <>{children}</>,
+  TooltipTrigger: ({ children }: { children: ReactNode }) => <>{children}</>,
+  TooltipContent: ({ children }: { children: ReactNode }) => (
+    <div data-testid="tooltip-content">{children}</div>
+  ),
+}));
+
+vi.mock("@/utils/clipboard", () => ({
+  clickToCopy: vi.fn(),
+}));
+
 import { CaseDetails } from "@/components/case/CaseDetails";
 import type { StoredCase } from "@/types/case";
+import { clickToCopy } from "@/utils/clipboard";
 
 const noOp = vi.fn();
 
@@ -195,8 +209,9 @@ describe("CaseDetails linked people rendering", () => {
     expect(screen.queryByText("Household member")).not.toBeInTheDocument();
   });
 
-  it("renders additional linked people with their role labels", () => {
+  it("renders compact linked people chips with hover details and phone copy", async () => {
     // Arrange
+    const user = userEvent.setup();
     const primaryPerson = createMockPerson({
       id: "person-1",
       firstName: "Primary",
@@ -232,6 +247,8 @@ describe("CaseDetails linked people rendering", () => {
       firstName: "Devon",
       lastName: "Dependent",
       name: "Devon Dependent",
+      phone: "",
+      email: "devon@example.com",
     });
     const caseData = createMockStoredCase({
       name: "Household Case",
@@ -263,19 +280,29 @@ describe("CaseDetails linked people rendering", () => {
 
     // Act
     renderCaseDetails(caseData);
+    const householdChip = screen.getByRole("button", {
+      name: "Copy Morgan Member phone (555) 000-2222",
+    });
+    await user.click(householdChip);
 
     // Assert
     expect(screen.getByText("Primary Applicant")).toBeInTheDocument();
-    expect(screen.getAllByText("Morgan Member")).toHaveLength(2);
-    expect(screen.getAllByText("Devon Dependent")).toHaveLength(2);
-    expect(screen.getAllByText("Household member")).toHaveLength(2);
-    expect(screen.getAllByText("Dependent")).toHaveLength(2);
-    expect(screen.getByRole("button", { name: "Copy Morgan Member phone 5550002222" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Copy Morgan Member email morgan@example.com" })).toBeInTheDocument();
-    expect(screen.getByText("DOB: 02/03/1984")).toBeInTheDocument();
-    expect(screen.getByText("SSN: •••-••-6789")).toBeInTheDocument();
-    expect(screen.getByText(/Physical: 10 Oak St, Omaha, NE, 68102/)).toBeInTheDocument();
-    expect(screen.getByText(/Mailing: PO Box 8, Omaha, NE, 68101/)).toBeInTheDocument();
+    expect(householdChip).toHaveTextContent("Household member / Morgan / Member");
+    const dependentChip = screen.getByRole("button", {
+      name: "Dependent / Devon / Dependent",
+    });
+    expect(dependentChip).toHaveAttribute("aria-disabled", "true");
+    await user.click(dependentChip);
+    expect(screen.getByText("(555) 000-2222")).toBeInTheDocument();
+    expect(screen.getByText("morgan@example.com")).toBeInTheDocument();
+    expect(clickToCopy).toHaveBeenCalledWith("5550002222", {
+      successMessage: "Phone number copied",
+    });
+    expect(clickToCopy).toHaveBeenCalledTimes(1);
+    expect(screen.queryByText("DOB: 02/03/1984")).not.toBeInTheDocument();
+    expect(screen.queryByText("SSN: •••-••-6789")).not.toBeInTheDocument();
+    expect(screen.queryByText(/Physical: 10 Oak St, Omaha, NE, 68102/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Mailing: PO Box 8, Omaha, NE, 68101/)).not.toBeInTheDocument();
   });
 
   it("swaps into IntakeFormView when edit details is opened", async () => {
@@ -338,8 +365,9 @@ describe("CaseDetails linked people rendering", () => {
     );
   });
 
-  it("prioritizes the normalized primary person over a stale case.person", () => {
+  it("prioritizes the normalized primary person over a stale case.person", async () => {
     // Arrange
+    const user = userEvent.setup();
     const staleHydratedPerson = createMockPerson({
       id: "person-2",
       firstName: "Secondary",
@@ -389,14 +417,20 @@ describe("CaseDetails linked people rendering", () => {
 
     // Act
     renderCaseDetails(caseData);
+    const secondaryChip = screen.getByRole("button", {
+      name: "Copy Secondary Person phone (555) 000-2222",
+    });
+    await user.click(secondaryChip);
 
     // Assert
     expect(screen.getByText("Primary Applicant")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Copy Phone 5550001111" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Copy Email primary@example.com" })).toBeInTheDocument();
-    expect(screen.getAllByText("Secondary Person")).toHaveLength(2);
-    expect(screen.getAllByText("Household member")).toHaveLength(2);
-    expect(screen.queryByRole("button", { name: "Copy Phone 5550002222" })).not.toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Copy Email secondary@example.com" })).not.toBeInTheDocument();
+    expect(secondaryChip).toHaveTextContent("Household member / Secondary / Person");
+    expect(screen.getByText("(555) 000-2222")).toBeInTheDocument();
+    expect(screen.getByText("secondary@example.com")).toBeInTheDocument();
+    expect(clickToCopy).toHaveBeenCalledWith("5550002222", {
+      successMessage: "Phone number copied",
+    });
   });
 });
