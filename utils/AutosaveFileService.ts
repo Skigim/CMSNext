@@ -889,16 +889,55 @@ class AutosaveFileService {
       return null;
     }
 
-    try {
-      // Double-check the handle hasn't become null between checks
-      if (!this.directoryHandle) {
-        logger.warn('Directory handle became null during readFile execution');
-        return null;
+    // Double-check the handle hasn't become null between checks
+    if (!this.directoryHandle) {
+      logger.warn('Directory handle became null during readFile execution');
+      return null;
+    }
+
+    const contents = await this.readWithRetry(this.fileName, 'readFile');
+    if (contents === null) {
+      // Distinguish between "file missing" and "file unreadable after retries"
+      try {
+        // If the file handle cannot be obtained due to NotFoundError, treat as "no file"
+        await this.directoryHandle.getFileHandle(this.fileName, { create: false });
+      } catch (existenceError) {
+        if (existenceError instanceof DOMException && existenceError.name === 'NotFoundError') {
+          logger.debug('Primary data file not found during readFile', {
+            fileName: this.fileName,
+          });
+          return null;
+        }
+
+        const message =
+          existenceError instanceof Error ? existenceError.message : 'Unknown error';
+        logger.error('Failed to verify primary data file existence', {
+          fileName: this.fileName,
+          error: message,
+        });
+        this.errorCallback({
+          message: `Error checking existence of file "${this.fileName}": ${message}`,
+          type: 'error',
+          error: existenceError,
+          context: { operation: 'readData', fileName: this.fileName },
+        });
+        throw existenceError;
       }
-      
-      const fileHandle = await this.directoryHandle.getFileHandle(this.fileName);
-      const file = await fileHandle.getFile();
-      const contents = await file.text();
+
+      const message = `Unable to read file "${this.fileName}" after multiple attempts.`;
+      logger.error('Failed to read primary data file after retries', {
+        fileName: this.fileName,
+      });
+      this.errorCallback({
+        message,
+        type: 'error',
+        error: new Error(message),
+        context: { operation: 'readData', fileName: this.fileName },
+      });
+      throw new Error(message);
+    }
+
+    try {
       const rawData = JSON.parse(contents);
 
       // Check if data is encrypted and decrypt if hooks are available
@@ -909,23 +948,19 @@ class AutosaveFileService {
       }
 
       return rawData;
-    } catch (err) {
-      if (err instanceof Error && err.name === 'NotFoundError') {
-        return null;
-      } else {
-        const message = err instanceof Error ? err.message : 'Unknown error';
-        logger.error('Failed to read primary data file', {
-          fileName: this.fileName,
-          error: message,
-        });
-        this.errorCallback({
-          message: `Error reading file "${this.fileName}": ${message}`,
-          type: 'error',
-          error: err,
-          context: { operation: 'readData', fileName: this.fileName },
-        });
-        throw err;
-      }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      logger.error('Failed to read primary data file', {
+        fileName: this.fileName,
+        error: message,
+      });
+      this.errorCallback({
+        message: `Error reading file "${this.fileName}": ${message}`,
+        type: 'error',
+        error,
+        context: { operation: 'readData', fileName: this.fileName },
+      });
+      throw error;
     }
   }
 
