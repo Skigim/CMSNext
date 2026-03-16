@@ -793,7 +793,7 @@ function HouseholdStep({ formData, onChange }: Readonly<HouseholdStepProps>) {
 
   useEffect(() => {
     const previousHouseholdMembers = previousHouseholdMembersRef.current;
-    const previousMembersNeededInitialSync =
+    const previousMembersWereUnpopulated =
       previousHouseholdMembers.length === 0
       || previousHouseholdMembers.every((member) => !isHouseholdMemberPopulated(member));
     const householdMembersChangedMeaningfully =
@@ -814,10 +814,10 @@ function HouseholdStep({ formData, onChange }: Readonly<HouseholdStepProps>) {
 
     if (
       !hasResyncedExpandedMemberIndexRef.current
-      && previousMembersNeededInitialSync
+      && previousMembersWereUnpopulated
       && householdMembersChangedMeaningfully
     ) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- household accordion state must resync once when seeded edit data hydrates after mount.
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- household accordion state must resync once when seeded edit data hydrates after mount, and the ref guard prevents repeat updates.
       setExpandedMemberIndex(defaultExpandedMemberIndex);
       hasResyncedExpandedMemberIndexRef.current = true;
     }
