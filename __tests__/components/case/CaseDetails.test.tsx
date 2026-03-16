@@ -247,6 +247,8 @@ describe("CaseDetails linked people rendering", () => {
       firstName: "Devon",
       lastName: "Dependent",
       name: "Devon Dependent",
+      phone: "",
+      email: "devon@example.com",
     });
     const caseData = createMockStoredCase({
       name: "Household Case",
@@ -286,7 +288,11 @@ describe("CaseDetails linked people rendering", () => {
     // Assert
     expect(screen.getByText("Primary Applicant")).toBeInTheDocument();
     expect(householdChip).toHaveTextContent("Household member / Morgan / Member");
-    expect(screen.getByText("Dependent / Devon / Dependent")).toBeInTheDocument();
+    const dependentChip = screen.getByRole("button", {
+      name: "Dependent / Devon / Dependent",
+    });
+    expect(dependentChip).toHaveAttribute("aria-disabled", "true");
+    await user.click(dependentChip);
     expect(screen.getByText("(555) 000-2222")).toBeInTheDocument();
     expect(screen.getByText("morgan@example.com")).toBeInTheDocument();
     expect(clickToCopy).toHaveBeenCalledWith("5550002222", {

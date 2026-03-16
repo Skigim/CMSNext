@@ -293,12 +293,14 @@ export function CaseDetails(props: Readonly<CaseDetailsProps>) {
                               {chipLabel}
                             </button>
                           ) : (
-                            <span
-                              className="inline-flex items-center rounded-full border bg-muted/40 px-2.5 py-1 text-xs font-medium text-foreground"
+                            <button
+                              type="button"
+                              aria-disabled="true"
+                              className="inline-flex items-center rounded-full border bg-muted/40 px-2.5 py-1 text-xs font-medium text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
                               aria-label={chipLabel}
                             >
                               {chipLabel}
-                            </span>
+                            </button>
                           )}
                         </TooltipTrigger>
                         <TooltipContent side="bottom">
