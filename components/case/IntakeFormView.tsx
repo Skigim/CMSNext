@@ -1485,11 +1485,7 @@ function ReviewStep({ formData, onGoToStep }: Readonly<ReviewStepProps>) {
                   />
                   <SummaryRow
                     label="Date of Birth"
-                    value={
-                      formatDateForDisplay(member.dateOfBirth) === "None"
-                        ? ""
-                        : formatDateForDisplay(member.dateOfBirth)
-                    }
+                    value={formatDateForDisplay(member.dateOfBirth)}
                   />
                 </div>
               ))}
