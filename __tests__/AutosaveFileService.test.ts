@@ -12,9 +12,43 @@ const mockDirectoryHandle = {
   entries: vi.fn()
 }
 
+type MockStatusUpdate = {
+  status?: string
+  permissionStatus?: string
+}
+
+type MockStatusCallback = {
+  mock: {
+    calls: MockStatusUpdate[][]
+  }
+}
+
 function prepareForEncryptionCheck(svc: AutosaveFileService) {
   (svc as any).directoryHandle = mockDirectoryHandle;
   vi.spyOn(svc, 'checkPermission').mockResolvedValue('granted');
+}
+
+function getLatestStatusUpdate(mockStatusCallback: MockStatusCallback): MockStatusUpdate | null {
+  const latestCall = mockStatusCallback.mock.calls[
+    mockStatusCallback.mock.calls.length - 1
+  ] as [MockStatusUpdate] | undefined
+  return latestCall?.[0] ?? null
+}
+
+function hasStatusUpdate(mockStatusCallback: MockStatusCallback, status: string): boolean {
+  return mockStatusCallback.mock.calls.some(call => {
+    const [statusUpdate] = call as [MockStatusUpdate]
+    return statusUpdate.status === status
+  })
+}
+
+function isCustomEncryptedPayload(data: unknown): data is { customFormat: boolean } {
+  return (
+    typeof data === 'object' &&
+    data !== null &&
+    'customFormat' in data &&
+    typeof data.customFormat === 'boolean'
+  )
 }
 
 // Global mocks setup
@@ -431,13 +465,12 @@ describe('AutosaveFileService', () => {
 
       // ASSERT
       expect(result).toBe(false)
-      expect(mockStatusCallback.mock.calls.some(call => call[0].status === 'waiting')).toBe(true)
-      const latestCall = mockStatusCallback.mock.calls[mockStatusCallback.mock.calls.length - 1]
-      const latestStatus = latestCall ? latestCall[0] : null
+      expect(hasStatusUpdate(mockStatusCallback, 'waiting')).toBe(true)
+      const latestStatus = getLatestStatusUpdate(mockStatusCallback)
       expect(latestStatus?.permissionStatus).toBe('denied')
     })
 
-    it('emits retrying then error after repeated autosave failures', async () => {
+    it('emits retrying after the first autosave failure', async () => {
       // ARRANGE
       mockStatusCallback.mockClear()
       ;(service as any).state.isRunning = true
@@ -452,21 +485,29 @@ describe('AutosaveFileService', () => {
       await (service as any).performAutosave('interval')
 
       // ASSERT
-      expect(
-        mockStatusCallback.mock.calls.some(call => call[0].status === 'retrying'),
-      ).toBe(true)
+      expect(hasStatusUpdate(mockStatusCallback, 'retrying')).toBe(true)
       expect((service as any).state.consecutiveFailures).toBe(1)
 
-      // ARRANGE (second scenario)
+      writeSpy.mockRestore()
+    })
+
+    it('emits error after reaching the autosave failure limit', async () => {
+      // ARRANGE
       mockStatusCallback.mockClear()
+      ;(service as any).state.isRunning = true
+      ;(service as any).dataProvider = () => ({ cases: [] })
+      ;(service as any).config.maxRetries = 2
+      ;(service as any).state.consecutiveFailures = 1
+
+      const writeSpy = vi
+        .spyOn(service as any, 'writeFile')
+        .mockResolvedValue(false)
 
       // ACT
       await (service as any).performAutosave('interval')
 
       // ASSERT
-      expect(
-        mockStatusCallback.mock.calls.some(call => call[0].status === 'error'),
-      ).toBe(true)
+      expect(hasStatusUpdate(mockStatusCallback, 'error')).toBe(true)
       expect((service as any).state.consecutiveFailures).toBe(2)
 
       writeSpy.mockRestore()
@@ -660,7 +701,8 @@ describe('AutosaveFileService', () => {
       service.setEncryptionHooks({
         encrypt: vi.fn(),
         decrypt: vi.fn(),
-        isEncrypted: (data: any) => data?.customFormat === true,
+        isEncrypted: (data: unknown) =>
+          isCustomEncryptedPayload(data) && data.customFormat === true,
       })
 
       // ACT
