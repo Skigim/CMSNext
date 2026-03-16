@@ -484,6 +484,31 @@ describe("IntakeFormView", () => {
       expect(screen.getByText("Linked as Dependent")).toBeInTheDocument();
     });
 
+    it.each([
+      { name: "shows Child for household_member role", relationshipType: "Child", expectedLabel: "Linked as Child" },
+      { name: "shows Spouse for household_member role", relationshipType: "Spouse", expectedLabel: "Linked as Spouse" },
+      { name: "falls back to 'Household member' when relationshipType is empty", relationshipType: "", expectedLabel: "Linked as Household member" },
+    ])("$name", ({ relationshipType, expectedLabel }) => {
+      // ARRANGE
+      withHouseholdStepState({
+        formData: {
+          ...createBlankIntakeForm(),
+          householdMembers: [
+            createMockHouseholdMemberData({
+              role: "household_member",
+              relationshipType,
+            }),
+          ],
+        },
+      });
+
+      // ACT
+      renderIntakeFormView();
+
+      // ASSERT
+      expect(screen.getByText(expectedLabel)).toBeInTheDocument();
+    });
+
     it("expands and collapses a household member accordion entry", async () => {
       // ARRANGE
       const user = userEvent.setup();
