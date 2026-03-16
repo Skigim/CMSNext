@@ -49,11 +49,12 @@ function getLinkedPersonChipLabel(
   role: NonNullable<StoredCase["linkedPeople"]>[number]["ref"]["role"],
 ): string {
   const roleLabel = getCasePersonRoleLabel(role);
-  const firstName = person.firstName?.trim();
-  const lastName = person.lastName?.trim();
-  const nameParts = [firstName, lastName].filter(Boolean);
+  const nameParts = [person.firstName?.trim(), person.lastName?.trim()].filter(Boolean);
+  const name = nameParts.length > 0
+    ? nameParts.join(" / ")
+    : formatCasePersonDisplayName(person);
 
-  return [roleLabel, ...(nameParts.length > 0 ? nameParts : [formatCasePersonDisplayName(person)])].join(" / ");
+  return [roleLabel, name].join(" / ");
 }
 
 interface CaseDetailsProps {
@@ -266,42 +267,55 @@ export function CaseDetails(props: Readonly<CaseDetailsProps>) {
                       <span>{getCasePersonRoleLabel(primaryPersonRef?.role)}</span>
                     </span>
                   )}
-                  {additionalLinkedPeople.map(({ ref, person }) => (
-                    <Tooltip key={`${ref.personId}-${ref.role}`}>
-                      <TooltipTrigger asChild>
-                        {person.phone ? (
-                          <button
-                            type="button"
-                            className={cn(
-                              "inline-flex items-center rounded-full border bg-muted/40 px-2.5 py-1 text-xs font-medium text-foreground transition-colors",
-                              interactiveHoverClasses,
-                            )}
-                            aria-label={`Copy ${formatCasePersonDisplayName(person)} phone ${person.phone}`}
-                            onClick={() =>
-                              clickToCopy(person.phone, {
-                                successMessage: "Phone number copied",
-                              })
-                            }
-                          >
-                            {getLinkedPersonChipLabel(person, ref.role)}
-                          </button>
-                        ) : (
-                          <span
-                            className="inline-flex items-center rounded-full border bg-muted/40 px-2.5 py-1 text-xs font-medium text-foreground"
-                            tabIndex={0}
-                          >
-                            {getLinkedPersonChipLabel(person, ref.role)}
-                          </span>
-                        )}
-                      </TooltipTrigger>
-                      <TooltipContent side="bottom">
-                        <div className="space-y-1">
-                          <p>Phone: {person.phone ? formatUSPhone(person.phone) : "Not provided"}</p>
-                          <p>Email: {person.email?.trim() || "Not provided"}</p>
-                        </div>
-                      </TooltipContent>
-                    </Tooltip>
-                  ))}
+                  {additionalLinkedPeople.map(({ ref, person }) => {
+                    const phone = person.phone?.trim() || null;
+                    const email = person.email?.trim() || null;
+                    const chipLabel = getLinkedPersonChipLabel(person, ref.role);
+                    const formattedPhone = phone ? formatUSPhone(phone) : null;
+
+                    return (
+                      <Tooltip key={`${ref.personId}-${ref.role}`}>
+                        <TooltipTrigger asChild>
+                          {phone ? (
+                            <button
+                              type="button"
+                              className={cn(
+                                "inline-flex items-center rounded-full border bg-muted/40 px-2.5 py-1 text-xs font-medium text-foreground transition-colors",
+                                interactiveHoverClasses,
+                              )}
+                              aria-label={`Copy ${formatCasePersonDisplayName(person)} phone ${formattedPhone}`}
+                              onClick={() =>
+                                clickToCopy(phone, {
+                                  successMessage: "Phone number copied",
+                                })
+                              }
+                            >
+                              {chipLabel}
+                            </button>
+                          ) : (
+                            <span
+                              className="inline-flex items-center rounded-full border bg-muted/40 px-2.5 py-1 text-xs font-medium text-foreground"
+                              aria-label={chipLabel}
+                            >
+                              {chipLabel}
+                            </span>
+                          )}
+                        </TooltipTrigger>
+                        <TooltipContent side="bottom">
+                          <dl className="space-y-1">
+                            <div className="flex gap-1">
+                              <dt className="font-medium">Phone:</dt>
+                              <dd>{formattedPhone || "Not provided"}</dd>
+                            </div>
+                            <div className="flex gap-1">
+                              <dt className="font-medium">Email:</dt>
+                              <dd>{email || "Not provided"}</dd>
+                            </div>
+                          </dl>
+                        </TooltipContent>
+                      </Tooltip>
+                    );
+                  })}
                 </div>
               )}
             </div>

@@ -279,7 +279,7 @@ describe("CaseDetails linked people rendering", () => {
     // Act
     renderCaseDetails(caseData);
     const householdChip = screen.getByRole("button", {
-      name: "Copy Morgan Member phone 5550002222",
+      name: "Copy Morgan Member phone (555) 000-2222",
     });
     await user.click(householdChip);
 
@@ -287,11 +287,12 @@ describe("CaseDetails linked people rendering", () => {
     expect(screen.getByText("Primary Applicant")).toBeInTheDocument();
     expect(householdChip).toHaveTextContent("Household member / Morgan / Member");
     expect(screen.getByText("Dependent / Devon / Dependent")).toBeInTheDocument();
-    expect(screen.getByText("Phone: (555) 000-2222")).toBeInTheDocument();
-    expect(screen.getByText("Email: morgan@example.com")).toBeInTheDocument();
+    expect(screen.getByText("(555) 000-2222")).toBeInTheDocument();
+    expect(screen.getByText("morgan@example.com")).toBeInTheDocument();
     expect(clickToCopy).toHaveBeenCalledWith("5550002222", {
       successMessage: "Phone number copied",
     });
+    expect(clickToCopy).toHaveBeenCalledTimes(1);
     expect(screen.queryByText("DOB: 02/03/1984")).not.toBeInTheDocument();
     expect(screen.queryByText("SSN: •••-••-6789")).not.toBeInTheDocument();
     expect(screen.queryByText(/Physical: 10 Oak St, Omaha, NE, 68102/)).not.toBeInTheDocument();
@@ -358,8 +359,9 @@ describe("CaseDetails linked people rendering", () => {
     );
   });
 
-  it("prioritizes the normalized primary person over a stale case.person", () => {
+  it("prioritizes the normalized primary person over a stale case.person", async () => {
     // Arrange
+    const user = userEvent.setup();
     const staleHydratedPerson = createMockPerson({
       id: "person-2",
       firstName: "Secondary",
@@ -409,14 +411,20 @@ describe("CaseDetails linked people rendering", () => {
 
     // Act
     renderCaseDetails(caseData);
+    const secondaryChip = screen.getByRole("button", {
+      name: "Copy Secondary Person phone (555) 000-2222",
+    });
+    await user.click(secondaryChip);
 
     // Assert
     expect(screen.getByText("Primary Applicant")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Copy Phone 5550001111" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Copy Email primary@example.com" })).toBeInTheDocument();
-    expect(
-      screen.getByRole("button", { name: "Copy Secondary Person phone 5550002222" }),
-    ).toHaveTextContent("Household member / Secondary / Person");
-    expect(screen.queryByRole("button", { name: "Copy Email secondary@example.com" })).not.toBeInTheDocument();
+    expect(secondaryChip).toHaveTextContent("Household member / Secondary / Person");
+    expect(screen.getByText("(555) 000-2222")).toBeInTheDocument();
+    expect(screen.getByText("secondary@example.com")).toBeInTheDocument();
+    expect(clickToCopy).toHaveBeenCalledWith("5550002222", {
+      successMessage: "Phone number copied",
+    });
   });
 });
