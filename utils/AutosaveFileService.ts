@@ -889,16 +889,18 @@ class AutosaveFileService {
       return null;
     }
 
+    // Double-check the handle hasn't become null between checks
+    if (!this.directoryHandle) {
+      logger.warn('Directory handle became null during readFile execution');
+      return null;
+    }
+
+    const contents = await this.readWithRetry(this.fileName, 'readFile');
+    if (contents === null) {
+      return null;
+    }
+
     try {
-      // Double-check the handle hasn't become null between checks
-      if (!this.directoryHandle) {
-        logger.warn('Directory handle became null during readFile execution');
-        return null;
-      }
-      
-      const fileHandle = await this.directoryHandle.getFileHandle(this.fileName);
-      const file = await fileHandle.getFile();
-      const contents = await file.text();
       const rawData = JSON.parse(contents);
 
       // Check if data is encrypted and decrypt if hooks are available
@@ -909,11 +911,11 @@ class AutosaveFileService {
       }
 
       return rawData;
-    } catch (err) {
-      if (err instanceof Error && err.name === 'NotFoundError') {
+    } catch (error) {
+      if (error instanceof Error && error.name === 'NotFoundError') {
         return null;
       } else {
-        const message = err instanceof Error ? err.message : 'Unknown error';
+        const message = error instanceof Error ? error.message : 'Unknown error';
         logger.error('Failed to read primary data file', {
           fileName: this.fileName,
           error: message,
@@ -921,10 +923,10 @@ class AutosaveFileService {
         this.errorCallback({
           message: `Error reading file "${this.fileName}": ${message}`,
           type: 'error',
-          error: err,
+          error,
           context: { operation: 'readData', fileName: this.fileName },
         });
-        throw err;
+        throw error;
       }
     }
   }

@@ -388,6 +388,41 @@ describe('AutosaveFileService', () => {
 
       writeSpy.mockRestore()
     })
+
+    it('retries transient primary file read failures after permission checks pass', async () => {
+      // ARRANGE
+      const primaryFileService = new AutosaveFileService({
+        errorCallback: mockErrorCallback,
+        enabled: false,
+      })
+      ;(primaryFileService as any).directoryHandle = mockDirectoryHandle
+      vi.spyOn(primaryFileService, 'checkPermission').mockResolvedValue('granted')
+
+      const notReadableError = new Error('The file is temporarily unavailable')
+      notReadableError.name = 'NotReadableError'
+
+      const mockFile = {
+        text: vi.fn().mockResolvedValue(JSON.stringify({ cases: [] })),
+      }
+      const mockFileHandle = {
+        getFile: vi.fn()
+          .mockRejectedValueOnce(notReadableError)
+          .mockResolvedValueOnce(mockFile),
+      }
+
+      mockDirectoryHandle.getFileHandle.mockResolvedValue(mockFileHandle)
+
+      // ACT
+      const result = await primaryFileService.readFile()
+
+      // ASSERT
+      expect(result).toEqual({ cases: [] })
+      expect(mockDirectoryHandle.getFileHandle).toHaveBeenCalledWith('case-tracker-data.json')
+      expect(mockFileHandle.getFile).toHaveBeenCalledTimes(2)
+      expect(mockErrorCallback).not.toHaveBeenCalled()
+
+      primaryFileService.destroy()
+    })
   })
 
   describe('service lifecycle', () => {
