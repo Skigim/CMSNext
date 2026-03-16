@@ -528,6 +528,43 @@ describe("IntakeFormView", () => {
       expectJordanHouseholdFieldsToBeCollapsed();
     });
 
+    it("re-syncs the household accordion after seeded edit data replaces the initial draft state", async () => {
+      // ARRANGE
+      withHouseholdStepState({
+        formData: {
+          ...createBlankIntakeForm(),
+          householdMembers: [
+            createMockHouseholdMemberData({
+              relationshipType: "",
+              firstName: "",
+              lastName: "",
+              phone: "",
+              email: "",
+              dateOfBirth: "",
+              ssn: "",
+            }),
+          ],
+        },
+      });
+
+      const { rerender } = renderIntakeFormView();
+
+      expect(screen.getByLabelText("Relationship")).toBeInTheDocument();
+
+      // ACT
+      withJordanHouseholdStepState();
+      rerender(<IntakeFormView onSuccess={vi.fn()} />);
+
+      // ASSERT
+      await waitFor(() => {
+        expect(
+          screen.getByRole("button", { name: HOUSEHOLD_MEMBER_SUMMARY }),
+        ).toHaveAttribute("aria-expanded", "false");
+      });
+      expect(screen.queryByLabelText("Relationship")).not.toBeInTheDocument();
+      expectJordanHouseholdFieldsToBeCollapsed();
+    });
+
     it("does not render a household status selector", async () => {
       // ARRANGE
       const user = userEvent.setup();

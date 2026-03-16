@@ -783,11 +783,47 @@ function HouseholdStep({ formData, onChange }: Readonly<HouseholdStepProps>) {
   const [expandedMemberIndex, setExpandedMemberIndex] = useState<number | null>(
     defaultExpandedMemberIndex,
   );
+  const hasResyncedExpandedMemberIndexRef = useRef(false);
+  const previousHouseholdMembersRef = useRef(householdMembers);
   const activeExpandedMemberIndex = useMemo(() => {
     return expandedMemberIndex !== null && expandedMemberIndex < householdMembers.length
       ? expandedMemberIndex
       : null;
   }, [expandedMemberIndex, householdMembers.length]);
+
+  useEffect(() => {
+    const previousHouseholdMembers = previousHouseholdMembersRef.current;
+    const previousMembersNeededInitialSync =
+      previousHouseholdMembers.length === 0
+      || previousHouseholdMembers.every((member) => !isHouseholdMemberPopulated(member));
+    const householdMembersChangedMeaningfully =
+      previousHouseholdMembers.length !== householdMembers.length
+      || previousHouseholdMembers.some((member, index) => {
+        const nextMember = householdMembers[index];
+
+        if (!nextMember) {
+          return true;
+        }
+
+        return (
+          member.personId !== nextMember.personId
+          || member.relationshipType !== nextMember.relationshipType
+          || isHouseholdMemberPopulated(member) !== isHouseholdMemberPopulated(nextMember)
+        );
+      });
+
+    if (
+      !hasResyncedExpandedMemberIndexRef.current
+      && previousMembersNeededInitialSync
+      && householdMembersChangedMeaningfully
+    ) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- household accordion state must resync once when seeded edit data hydrates after mount.
+      setExpandedMemberIndex(defaultExpandedMemberIndex);
+      hasResyncedExpandedMemberIndexRef.current = true;
+    }
+
+    previousHouseholdMembersRef.current = householdMembers;
+  }, [defaultExpandedMemberIndex, householdMembers]);
 
   const updateHouseholdMembers = useCallback(
     (nextMembers: HouseholdMemberData[]) => {
