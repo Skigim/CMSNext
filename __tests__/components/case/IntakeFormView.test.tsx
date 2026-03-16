@@ -186,8 +186,16 @@ describe("IntakeFormView", () => {
 
   describe("render", () => {
     it("displays the first step label", () => {
+      // ARRANGE
       renderIntakeFormView();
-      expect(screen.getAllByText(INTAKE_STEPS[0].label).length).toBeGreaterThan(0);
+
+      // ASSERT
+      expect(
+        screen.getByRole("heading", {
+          name: INTAKE_STEPS[0].label,
+          level: 2,
+        }),
+      ).toBeInTheDocument();
     });
 
     it("shows the step counter in the header", () => {

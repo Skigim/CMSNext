@@ -1,5 +1,6 @@
 import { describe, it, expect, vi } from "vitest";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 
 // ============================================================================
 // Mocks
@@ -48,7 +49,11 @@ vi.mock("@/utils/logger", () => ({
 import { VRGeneratorModal } from "@/components/case/VRGeneratorModal";
 import type { StoredCase, StoredFinancialItem } from "@/types/case";
 import type { Template } from "@/types/template";
-import { createMockPerson, createMockStoredCase } from "@/src/test/testUtils";
+import {
+  createMockCaseRecord,
+  createMockPerson,
+  createMockStoredCase,
+} from "@/src/test/testUtils";
 
 const mockCase: StoredCase = createMockStoredCase({
   id: "case-1",
@@ -67,8 +72,7 @@ const mockCase: StoredCase = createMockStoredCase({
     address: { street: "", city: "", state: "", zip: "" },
     mailingAddress: { street: "", city: "", state: "", zip: "", sameAsPhysical: true },
   }),
-  caseRecord: {
-    ...createMockStoredCase().caseRecord,
+  caseRecord: createMockCaseRecord({
     mcn: "MCN001",
     status: "Active",
     personId: "person-test-1",
@@ -79,7 +83,7 @@ const mockCase: StoredCase = createMockStoredCase({
     admissionDate: "",
     organizationId: "",
     updatedDate: "",
-  },
+  }),
 });
 
 const mockFinancialItems: StoredFinancialItem[] = [
@@ -108,84 +112,63 @@ const mockTemplates: Template[] = [
 ];
 
 describe("VRGeneratorModal - keyboard accessibility", () => {
+  function renderVRGeneratorModal() {
+    return render(
+      <VRGeneratorModal
+        open={true}
+        onOpenChange={vi.fn()}
+        storedCase={mockCase}
+        financialItems={mockFinancialItems}
+        vrTemplates={mockTemplates}
+      />,
+    );
+  }
+
   it("renders the modal when open", () => {
-    render(
-      <VRGeneratorModal
-        open={true}
-        onOpenChange={vi.fn()}
-        storedCase={mockCase}
-        financialItems={mockFinancialItems}
-        vrTemplates={mockTemplates}
-      />,
-    );
+    // ARRANGE
+    renderVRGeneratorModal();
 
-    // Modal should be open with content visible
-    expect(document.body).toBeTruthy();
+    // ASSERT
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: "Generate Verification Requests" }),
+    ).toBeInTheDocument();
   });
 
-  it("checkbox items are keyboard accessible with Enter key", () => {
-    render(
-      <VRGeneratorModal
-        open={true}
-        onOpenChange={vi.fn()}
-        storedCase={mockCase}
-        financialItems={mockFinancialItems}
-        vrTemplates={mockTemplates}
-      />,
-    );
+  it("financial item toggle buttons are keyboard accessible with Enter", async () => {
+    // ARRANGE
+    const user = userEvent.setup();
+    renderVRGeneratorModal();
+    const itemToggle = screen.getByRole("button", { name: /Wages/i });
 
-    // Find elements with role=checkbox (the financial items)
-    const checkboxes = screen.queryAllByRole("checkbox");
-    
-    if (checkboxes.length > 0) {
-      // Test Enter key toggles
-      fireEvent.keyDown(checkboxes[0], { key: "Enter" });
-      expect(checkboxes[0]).toBeDefined();
+    expect(itemToggle).toHaveAttribute("aria-pressed", "false");
+    itemToggle.focus();
 
-      // Test Space key toggles
-      fireEvent.keyDown(checkboxes[0], { key: " " });
-      expect(checkboxes[0]).toBeDefined();
-    }
+    // ACT
+    await user.keyboard("{Enter}");
+
+    // ASSERT
+    expect(itemToggle).toHaveAttribute("aria-pressed", "true");
   });
 
-  it("checkbox items have proper aria-checked attribute", () => {
-    render(
-      <VRGeneratorModal
-        open={true}
-        onOpenChange={vi.fn()}
-        storedCase={mockCase}
-        financialItems={mockFinancialItems}
-        vrTemplates={mockTemplates}
-      />,
-    );
+  it("financial item toggle buttons expose aria-pressed state", () => {
+    // ARRANGE
+    renderVRGeneratorModal();
+    const itemToggle = screen.getByRole("button", { name: /Wages/i });
 
-    const checkboxes = screen.queryAllByRole("checkbox");
-    for (const cb of checkboxes) {
-      // All checkboxes should have aria-checked
-      const ariaChecked = cb.getAttribute("aria-checked");
-      if (ariaChecked !== null) {
-        expect(["true", "false"]).toContain(ariaChecked);
-      }
-    }
+    // ASSERT
+    expect(itemToggle).toHaveAttribute("aria-pressed", "false");
   });
 
-  it("checkbox items have tabIndex for keyboard focus", () => {
-    render(
-      <VRGeneratorModal
-        open={true}
-        onOpenChange={vi.fn()}
-        storedCase={mockCase}
-        financialItems={mockFinancialItems}
-        vrTemplates={mockTemplates}
-      />,
-    );
+  it("financial item toggle buttons are focusable for keyboard interaction", () => {
+    // ARRANGE
+    renderVRGeneratorModal();
+    const itemToggle = screen.getByRole("button", { name: /Wages/i });
 
-    const checkboxes = screen.queryAllByRole("checkbox");
-    for (const cb of checkboxes) {
-      const tabIndex = cb.getAttribute("tabindex");
-      if (tabIndex !== null) {
-        expect(Number(tabIndex)).toBeGreaterThanOrEqual(0);
-      }
-    }
+    // ACT
+    itemToggle.focus();
+
+    // ASSERT
+    expect(itemToggle).toHaveFocus();
   });
 });
