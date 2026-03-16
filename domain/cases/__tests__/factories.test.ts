@@ -1,9 +1,57 @@
 import { describe, expect, it } from "vitest";
 
 import { createMockPerson, createMockStoredCase, omitHydratedPerson } from "@/src/test/testUtils";
-import type { StoredCase } from "@/types/case";
+import type { Person, PersonRelationship, StoredCase } from "@/types/case";
 
 import { createIntakeFormData, createPersonData } from "../factories";
+
+function createPrimaryLinkedPerson() {
+  return createMockPerson({
+    id: "person-test-1",
+    firstName: "Sam",
+    lastName: "Tester",
+    name: "Sam Tester",
+  });
+}
+
+function createHouseholdHydrationCase(options: {
+  linkedHouseholdMember: Person;
+  normalizedRelationships: PersonRelationship[];
+}) {
+  return createMockStoredCase({
+    person: createMockPerson({
+      firstName: "Sam",
+      lastName: "Tester",
+      normalizedRelationships: options.normalizedRelationships,
+    }),
+    people: [
+      { personId: "person-test-1", role: "applicant", isPrimary: true },
+      { personId: "person-2", role: "household_member", isPrimary: false },
+    ],
+    linkedPeople: [
+      {
+        ref: { personId: "person-test-1", role: "applicant", isPrimary: true },
+        person: createPrimaryLinkedPerson(),
+      },
+      {
+        ref: { personId: "person-2", role: "household_member", isPrimary: false },
+        person: options.linkedHouseholdMember,
+      },
+    ],
+  });
+}
+
+function createStructuredPhoneRelationship(
+  overrides: Partial<PersonRelationship> = {},
+): PersonRelationship {
+  return {
+    id: "rel-phone-1",
+    type: "Spouse",
+    targetPersonId: null,
+    legacyPhone: "5559876543",
+    ...overrides,
+  };
+}
 
 describe("createPersonData", () => {
   it("falls back to the primary linked person when the hydrated primary person is unavailable", () => {
@@ -190,7 +238,7 @@ describe("createIntakeFormData", () => {
     expect(result).not.toHaveProperty("status");
   });
 
-  it("prefills household members from linked people", () => {
+  it("hydrates relationshipType from a normalized target match", () => {
     // Arrange
     const linkedHouseholdMember = createMockPerson({
       id: "person-2",
@@ -215,32 +263,10 @@ describe("createIntakeFormData", () => {
         sameAsPhysical: false,
       },
     });
-    const existingCase = createMockStoredCase({
-      person: createMockPerson({
-        firstName: "Sam",
-        lastName: "Tester",
-        normalizedRelationships: [
-          { id: "rel-1", type: "Spouse", targetPersonId: "person-2" },
-        ],
-      }),
-      people: [
-        { personId: "person-test-1", role: "applicant", isPrimary: true },
-        { personId: "person-2", role: "household_member", isPrimary: false },
-      ],
-      linkedPeople: [
-        {
-          ref: { personId: "person-test-1", role: "applicant", isPrimary: true },
-          person: createMockPerson({
-            id: "person-test-1",
-            firstName: "Sam",
-            lastName: "Tester",
-            name: "Sam Tester",
-          }),
-        },
-        {
-          ref: { personId: "person-2", role: "household_member", isPrimary: false },
-          person: linkedHouseholdMember,
-        },
+    const existingCase = createHouseholdHydrationCase({
+      linkedHouseholdMember,
+      normalizedRelationships: [
+        { id: "rel-1", type: "Spouse", targetPersonId: "person-2" },
       ],
     });
 
@@ -260,7 +286,135 @@ describe("createIntakeFormData", () => {
         dateOfBirth: "1985-02-03",
       }),
     ]);
+    expect(result.householdMembers[0]?.relationshipType).toBe("Spouse");
     expect(result.householdMembers[0]).not.toHaveProperty("status");
+  });
+
+  it("falls back to a linked person's first and last name when display-name hydration is needed", () => {
+    // Arrange
+    const linkedHouseholdMember = createMockPerson({
+      id: "person-2",
+      firstName: "Jordan",
+      lastName: "Tester",
+      name: "",
+      phone: "5559876543",
+    });
+    const existingCase = createHouseholdHydrationCase({
+      linkedHouseholdMember,
+      normalizedRelationships: [
+        {
+          id: "rel-1",
+          type: "Spouse",
+          targetPersonId: null,
+          displayNameFallback: " Jordan   Tester ",
+        },
+      ],
+    });
+
+    // Act
+    const result = createIntakeFormData(existingCase);
+
+    // Assert
+    expect(result.householdMembers[0]?.relationshipType).toBe("Spouse");
+    expect(result.householdMembers[0]).toEqual(
+      expect.objectContaining({
+        personId: "person-2",
+        firstName: "Jordan",
+        lastName: "Tester",
+      }),
+    );
+  });
+
+  it("hydrates relationshipType from a unique normalized phone fallback", () => {
+    // Arrange
+    const linkedHouseholdMember = createMockPerson({
+      id: "person-2",
+      firstName: "Jordan",
+      lastName: "Tester",
+      phone: "(555) 987-6543",
+    });
+    // Intentional: stored and linked phone values use different formatting so
+    // the test exercises normalizePhoneNumber()-based fallback matching.
+    const existingCase = createHouseholdHydrationCase({
+      linkedHouseholdMember,
+      normalizedRelationships: [
+        createStructuredPhoneRelationship({
+          legacyPhone: "555-987-6543",
+        }),
+      ],
+    });
+
+    // Act
+    const result = createIntakeFormData(existingCase);
+
+    // Assert
+    expect(result.householdMembers[0]?.relationshipType).toBe("Spouse");
+    expect(result.householdMembers[0]?.relationshipId).toBe("rel-phone-1");
+  });
+
+  it("does not hydrate relationshipType from an ambiguous normalized phone fallback", () => {
+    // Arrange
+    const linkedHouseholdMember = createMockPerson({
+      id: "person-2",
+      firstName: "Jordan",
+      lastName: "Tester",
+      phone: "(555) 987-6543",
+    });
+    const existingCase = createHouseholdHydrationCase({
+      linkedHouseholdMember,
+      normalizedRelationships: [
+        createStructuredPhoneRelationship(),
+        // Intentional: both legacy phone variants normalize to the same digits,
+        // so no unique structured fallback should be selected.
+        createStructuredPhoneRelationship({
+          id: "rel-phone-2",
+          type: "Child",
+          legacyPhone: "555-987-6543",
+        }),
+      ],
+    });
+
+    // Act
+    const result = createIntakeFormData(existingCase);
+
+    // Assert
+    expect(result.householdMembers[0]?.relationshipType).toBe("");
+    expect(result.householdMembers[0]?.relationshipId).toBeUndefined();
+  });
+
+  it("does not hydrate relationshipType from an ambiguous display-name fallback", () => {
+    // Arrange
+    const linkedHouseholdMember = createMockPerson({
+      id: "person-2",
+      firstName: "Jordan",
+      lastName: "Tester",
+      name: "",
+      phone: "",
+    });
+    const existingCase = createHouseholdHydrationCase({
+      linkedHouseholdMember,
+      normalizedRelationships: [
+        {
+          id: "rel-name-1",
+          type: "Spouse",
+          targetPersonId: null,
+          displayNameFallback: "Jordan Tester",
+        },
+        {
+          id: "rel-name-2",
+          type: "Child",
+          targetPersonId: null,
+          displayNameFallback: " Jordan   Tester ",
+        },
+      ],
+    });
+
+    // Act
+    const result = createIntakeFormData(existingCase);
+
+    // Assert
+    expect(result.householdMembers[0]?.relationshipType).toBe("");
+    expect(result.householdMembers[0]?.relationshipId).toBeUndefined();
   });
 
   it("falls back to legacy relationships when linked people are unavailable", () => {
