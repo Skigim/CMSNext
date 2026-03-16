@@ -87,7 +87,6 @@ export interface Person {
   legacyFamilyMemberNames?: string[];
   relationships?: Relationship[];
   normalizedRelationships?: PersonRelationship[];
-  status: string;
   createdAt: string;
   updatedAt?: string;
   dateAdded: string;
@@ -272,7 +271,6 @@ export interface NewPersonData {
   authorizedRepIds?: string[];
   familyMembers?: string[];
   relationships?: Relationship[];
-  status: string;
 }
 
 export interface HouseholdMemberData extends NewPersonData {

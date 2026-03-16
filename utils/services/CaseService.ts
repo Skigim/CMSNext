@@ -386,15 +386,14 @@ export class CaseService {
    * 
    * @example
    * const newCase = await caseService.createCompleteCase({
-   *   person: {
-   *     firstName: "John",
-   *     lastName: "Doe",
-   *     email: "john@example.com",
-   *     phone: "555-1234",
-   *     dateOfBirth: "1990-01-01",
-   *     status: "Active",
-   *     address: { street: "123 Main St", city: "Anytown", state: "CA", zip: "12345" }
-   *   },
+    *   person: {
+    *     firstName: "John",
+    *     lastName: "Doe",
+    *     email: "john@example.com",
+    *     phone: "555-1234",
+    *     dateOfBirth: "1990-01-01",
+    *     address: { street: "123 Main St", city: "Anytown", state: "CA", zip: "12345" }
+    *   },
    *   caseRecord: {
    *     mcn: "12345",
    *     status: "Active",

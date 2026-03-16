@@ -1,6 +1,5 @@
 import { useMemo, useState } from "react";
 import { Button } from "../ui/button";
-import { Badge } from "../ui/badge";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "../ui/alert-dialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "../ui/dropdown-menu";
 import { FinancialsGridView } from "./FinancialsGridView";
@@ -313,11 +312,6 @@ export function CaseDetails(props: Readonly<CaseDetailsProps>) {
                               {getCasePersonRoleLabel(ref.role)}
                             </p>
                           </div>
-                          {person.status && (
-                            <Badge variant="outline" className="shrink-0">
-                              {person.status}
-                            </Badge>
-                          )}
                         </div>
 
                         <div className="mt-2 space-y-1.5 text-sm">

@@ -48,18 +48,17 @@ vi.mock("@/utils/logger", () => ({
 import { VRGeneratorModal } from "@/components/case/VRGeneratorModal";
 import type { StoredCase, StoredFinancialItem } from "@/types/case";
 import type { Template } from "@/types/template";
+import { createMockPerson, createMockStoredCase } from "@/src/test/testUtils";
 
-const mockCase: StoredCase = {
+const mockCase: StoredCase = createMockStoredCase({
   id: "case-1",
   name: "Test Case",
   mcn: "MCN001",
   status: "Active",
-  priority: false,
-  createdAt: new Date().toISOString(),
-  updatedAt: new Date().toISOString(),
-  person: {
+  person: createMockPerson({
     firstName: "John",
     lastName: "Doe",
+    name: "John Doe",
     email: "",
     phone: "",
     dateOfBirth: "",
@@ -67,21 +66,21 @@ const mockCase: StoredCase = {
     livingArrangement: "",
     address: { street: "", city: "", state: "", zip: "" },
     mailingAddress: { street: "", city: "", state: "", zip: "", sameAsPhysical: true },
-    status: "Active",
-  },
+  }),
   caseRecord: {
+    ...createMockStoredCase().caseRecord,
     mcn: "MCN001",
     status: "Active",
+    personId: "person-test-1",
     applicationDate: "",
     caseType: "",
-    personId: "",
     description: "",
     livingArrangement: "",
     admissionDate: "",
     organizationId: "",
     updatedDate: "",
   },
-} as StoredCase;
+});
 
 const mockFinancialItems: StoredFinancialItem[] = [
   {

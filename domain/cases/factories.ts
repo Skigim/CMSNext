@@ -180,7 +180,6 @@ export function createBlankHouseholdMemberData(
     authorizedRepIds: [],
     familyMembers: [],
     relationships: [],
-    status: "Active",
   };
 }
 
@@ -247,7 +246,6 @@ export function createPersonData(
     authorizedRepIds: person?.authorizedRepIds ?? [],
     familyMembers: person?.familyMembers ?? [],
     relationships: getPersonRelationships(person, existingCase ?? undefined),
-    status: person?.status ?? "Active",
   };
 }
 
@@ -305,7 +303,6 @@ export function createIntakeFormData(
         zip: linkedPerson.mailingAddress?.zip ?? "",
         sameAsPhysical: linkedPerson.mailingAddress?.sameAsPhysical ?? true,
       },
-      status: linkedPerson.status ?? "Active",
     }));
 
   if (!existingCase || !record) {

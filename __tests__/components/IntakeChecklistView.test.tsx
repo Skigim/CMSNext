@@ -42,7 +42,6 @@ function createCaseWithPhone(phone: string): StoredCase {
       },
       authorizedRepIds: [],
       familyMembers: [],
-      status: "Active",
       createdAt: "2025-01-01T00:00:00.000Z",
       dateAdded: "2025-01-01T00:00:00.000Z",
     },

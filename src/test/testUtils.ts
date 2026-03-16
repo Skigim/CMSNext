@@ -48,7 +48,6 @@ export const createMockPerson = (overrides: Partial<Person> = {}): Person => ({
   familyMemberIds: [],
   legacyFamilyMemberNames: [],
   normalizedRelationships: [],
-  status: 'Active',
   createdAt: new Date().toISOString(),
   updatedAt: new Date().toISOString(),
   dateAdded: new Date().toISOString(),
@@ -194,7 +193,6 @@ export const createMockNewPersonData = (overrides: Partial<NewPersonData> = {}):
   authorizedRepIds: [],
   familyMembers: [],
   relationships: [],
-  status: 'Active',
   ...overrides,
 })
 

@@ -88,6 +88,7 @@ describe("createPersonData", () => {
         sameAsPhysical: false,
       },
     });
+    expect(result).not.toHaveProperty("status");
   });
 });
 
@@ -186,6 +187,7 @@ describe("createIntakeFormData", () => {
       pregnancy: true,
       avsConsentDate: "2026-02-12",
     });
+    expect(result).not.toHaveProperty("status");
   });
 
   it("prefills household members from linked people", () => {
@@ -258,6 +260,7 @@ describe("createIntakeFormData", () => {
         dateOfBirth: "1985-02-03",
       }),
     ]);
+    expect(result.householdMembers[0]).not.toHaveProperty("status");
   });
 
   it("falls back to legacy relationships when linked people are unavailable", () => {

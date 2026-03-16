@@ -384,6 +384,31 @@ describe("IntakeFormView", () => {
       expect(screen.queryByDisplayValue("Jordan")).not.toBeInTheDocument();
       expect(screen.queryByDisplayValue("Tester")).not.toBeInTheDocument();
     });
+
+    it("does not render a household status selector", async () => {
+      const user = userEvent.setup();
+
+      withHookState({
+        currentStep: 4,
+        visitedSteps: new Set([0, 1, 2, 3, 4]) as ReadonlySet<number>,
+        formData: {
+          ...createBlankIntakeForm(),
+          householdMembers: [
+            createMockHouseholdMemberData({
+              personId: "person-2",
+              firstName: "Jordan",
+              lastName: "Tester",
+            }),
+          ],
+        },
+      });
+
+      renderIntakeFormView();
+
+      await user.click(screen.getByRole("button", { name: /Spouse · Jordan Tester · 5559876543/i }));
+
+      expect(screen.queryByLabelText("Status")).not.toBeInTheDocument();
+    });
   });
 
   // --- Review step household summary ----------------------------------------
@@ -431,6 +456,8 @@ describe("IntakeFormView", () => {
       const results = await axe(container);
       expect(screen.getByText(/Jordan Tester/)).toBeInTheDocument();
       expect(screen.getByText(/jordan@example.com/)).toBeInTheDocument();
+      expect(screen.getByText("Date of Birth")).toBeInTheDocument();
+      expect(screen.queryByText("DOB / Status")).not.toBeInTheDocument();
       expect(results).toHaveNoViolations();
     });
 

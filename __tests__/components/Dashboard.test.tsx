@@ -83,7 +83,6 @@ const baseCase: CaseDisplay = {
     },
     authorizedRepIds: [],
     familyMembers: [],
-    status: "Active",
     createdAt: "2025-09-01T00:00:00.000Z",
     dateAdded: "2025-09-01T00:00:00.000Z",
   },

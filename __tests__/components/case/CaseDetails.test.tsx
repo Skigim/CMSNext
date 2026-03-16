@@ -226,7 +226,6 @@ describe("CaseDetails linked people rendering", () => {
         zip: "68101",
         sameAsPhysical: false,
       },
-      status: "Active",
     });
     const dependentPerson = createMockPerson({
       id: "person-3",
@@ -277,6 +276,7 @@ describe("CaseDetails linked people rendering", () => {
     expect(screen.getByText("SSN: •••-••-6789")).toBeInTheDocument();
     expect(screen.getByText(/Physical: 10 Oak St, Omaha, NE, 68102/)).toBeInTheDocument();
     expect(screen.getByText(/Mailing: PO Box 8, Omaha, NE, 68101/)).toBeInTheDocument();
+    expect(screen.queryByText("Active")).not.toBeInTheDocument();
   });
 
   it("swaps into IntakeFormView when edit details is opened", async () => {
