@@ -42,6 +42,7 @@ import {
   createBlankHouseholdMemberData,
   formatHouseholdMemberAccordionSummary,
   formatHouseholdMemberName,
+  getCasePersonRoleLabel,
   INTAKE_STEPS,
   isHouseholdMemberPopulated,
   isStepComplete,
@@ -883,7 +884,7 @@ function HouseholdStep({ formData, onChange }: Readonly<HouseholdStepProps>) {
                         : `Household Member ${index + 1}`}
                     </h4>
                     <p className="text-xs text-muted-foreground">
-                      Linked as {member.role.replace("_", " ")}
+                      Linked as {getCasePersonRoleLabel(member.role)}
                     </p>
                   </div>
                   {activeExpandedMemberIndex === index ? (
