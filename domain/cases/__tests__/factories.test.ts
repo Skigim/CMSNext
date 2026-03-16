@@ -190,7 +190,7 @@ describe("createIntakeFormData", () => {
     expect(result).not.toHaveProperty("status");
   });
 
-  it("hydrates household relationshipType from a normalized relationship target match in edit mode", () => {
+  it("hydrates relationshipType from a normalized target match", () => {
     // Arrange
     const linkedHouseholdMember = createMockPerson({
       id: "person-2",

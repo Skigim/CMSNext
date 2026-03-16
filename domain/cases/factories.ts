@@ -207,10 +207,29 @@ function buildRelationshipTypeMap(
   );
 }
 
+/**
+ * Normalizes a relationship display name for resilient matching.
+ *
+ * Trims outer whitespace, collapses repeated internal spacing, and lowercases
+ * the final value so legacy fallback comparisons are case-insensitive.
+ *
+ * @param value - Raw display-name value from stored relationship data
+ * @returns Normalized display name suitable for equality checks
+ */
 function normalizeRelationshipDisplayName(value: string | undefined): string {
   return (value ?? "").trim().replace(/\s+/g, " ").toLowerCase();
 }
 
+/**
+ * Produces the best available normalized display name for a linked person.
+ *
+ * Prefers the explicit `name` field when present, then falls back to a
+ * composed first-name/last-name value so edit hydration still works when the
+ * stored display name is blank.
+ *
+ * @param linkedPerson - Linked person being hydrated into an intake draft
+ * @returns Normalized display name, or an empty string when no usable name exists
+ */
 function getLinkedPersonDisplayName(linkedPerson: Person): string {
   const explicitName = normalizeRelationshipDisplayName(linkedPerson.name);
   if (explicitName) {
@@ -222,6 +241,20 @@ function getLinkedPersonDisplayName(linkedPerson: Person): string {
   );
 }
 
+/**
+ * Resolves the relationship metadata for a linked household member.
+ *
+ * Matching intentionally prefers stable structured data before legacy display
+ * text: direct normalized relationship target-person matches first, then a
+ * unique phone-based structured fallback when available, and only then a
+ * normalized display-name fallback. Returns null when no safe match exists.
+ *
+ * @param linkedPerson - Linked household member being hydrated
+ * @param normalizedRelationships - Normalized relationship records from the primary person
+ * @param relationships - Legacy-compatible relationship views for name fallback
+ * @param relationshipTypeByPersonId - Precomputed direct target-person lookup map
+ * @returns Resolved relationship type metadata, or null when no match can be made
+ */
 function resolveHouseholdRelationship(
   linkedPerson: Person,
   normalizedRelationships: PersonRelationship[],
@@ -233,10 +266,11 @@ function resolveHouseholdRelationship(
     return directMatch;
   }
 
+  const normalizedLinkedPhone = (linkedPerson.phone ?? "").trim();
   const structuredPhoneMatch =
-    linkedPerson.phone.trim().length > 0
+    normalizedLinkedPhone.length > 0
       ? normalizedRelationships.filter(
-          (relationship) => relationship.legacyPhone === linkedPerson.phone,
+          (relationship) => relationship.legacyPhone?.trim() === normalizedLinkedPhone,
         )
       : [];
   if (structuredPhoneMatch.length === 1) {
