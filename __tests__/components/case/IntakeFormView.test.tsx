@@ -34,7 +34,7 @@ const mockUpdateField = vi.fn();
 const mockSetFormData = vi.fn();
 const mockReset = vi.fn();
 
-function createDefaultHookState() {
+function createDefaultTestHookState() {
   return {
     currentStep: 0,
     visitedSteps: new Set([0]) as ReadonlySet<number>,
@@ -56,7 +56,7 @@ function createDefaultHookState() {
 }
 
 // Shared state object that tests override per-test via Object.assign
-const hookState = createDefaultHookState();
+const hookState = createDefaultTestHookState();
 
 vi.mock("@/hooks/useIntakeWorkflow", () => ({
   useIntakeWorkflow: () => hookState,
@@ -101,7 +101,7 @@ function createReviewFormData(overrides: Partial<typeof hookState.formData> = {}
  * Creates the shared populated household-member fixture used by the accordion
  * and review-summary tests.
  */
-function createJordanHouseholdMember() {
+function createPopulatedHouseholdMember() {
   return createMockHouseholdMemberData({
     personId: "person-2",
     firstName: "Jordan",
@@ -113,7 +113,7 @@ function createJordanHouseholdMember() {
 function createJordanHouseholdFormData() {
   return {
     ...createBlankIntakeForm(),
-    householdMembers: [createJordanHouseholdMember()],
+    householdMembers: [createPopulatedHouseholdMember()],
   };
 }
 
@@ -179,7 +179,7 @@ function renderIntakeFormView(props: { onSuccess?: () => void; onCancel?: () => 
 describe("IntakeFormView", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    Object.assign(hookState, createDefaultHookState());
+    Object.assign(hookState, createDefaultTestHookState());
   });
 
   // --- Smoke / render -------------------------------------------------------
@@ -505,7 +505,7 @@ describe("IntakeFormView", () => {
     it("shows household member details in the review summary", async () => {
       withReviewStepState({
         formData: createReviewFormData({
-          householdMembers: [createJordanHouseholdMember()],
+          householdMembers: [createPopulatedHouseholdMember()],
         }),
       });
       const { container } = renderIntakeFormView();
