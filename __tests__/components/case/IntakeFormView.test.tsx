@@ -484,6 +484,69 @@ describe("IntakeFormView", () => {
       expect(screen.getByText("Linked as Dependent")).toBeInTheDocument();
     });
 
+    it("shows Child relationship type for household_member role", () => {
+      // ARRANGE
+      withHouseholdStepState({
+        formData: {
+          ...createBlankIntakeForm(),
+          householdMembers: [
+            createMockHouseholdMemberData({
+              role: "household_member",
+              relationshipType: "Child",
+            }),
+          ],
+        },
+      });
+
+      // ACT
+      renderIntakeFormView();
+
+      // ASSERT
+      expect(screen.getByText("Linked as Child")).toBeInTheDocument();
+    });
+
+    it("shows Spouse relationship type for household_member role", () => {
+      // ARRANGE
+      withHouseholdStepState({
+        formData: {
+          ...createBlankIntakeForm(),
+          householdMembers: [
+            createMockHouseholdMemberData({
+              role: "household_member",
+              relationshipType: "Spouse",
+            }),
+          ],
+        },
+      });
+
+      // ACT
+      renderIntakeFormView();
+
+      // ASSERT
+      expect(screen.getByText("Linked as Spouse")).toBeInTheDocument();
+    });
+
+    it("falls back to 'Household member' when relationshipType is empty", () => {
+      // ARRANGE
+      withHouseholdStepState({
+        formData: {
+          ...createBlankIntakeForm(),
+          householdMembers: [
+            createMockHouseholdMemberData({
+              role: "household_member",
+              relationshipType: "",
+            }),
+          ],
+        },
+      });
+
+      // ACT
+      renderIntakeFormView();
+
+      // ASSERT
+      expect(screen.getByText("Linked as Household member")).toBeInTheDocument();
+    });
+
     it("expands and collapses a household member accordion entry", async () => {
       // ARRANGE
       const user = userEvent.setup();

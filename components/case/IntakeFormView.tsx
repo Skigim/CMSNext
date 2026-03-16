@@ -884,7 +884,10 @@ function HouseholdStep({ formData, onChange }: Readonly<HouseholdStepProps>) {
                         : `Household Member ${index + 1}`}
                     </h4>
                     <p className="text-xs text-muted-foreground">
-                      Linked as {getCasePersonRoleLabel(member.role)}
+                      Linked as{" "}
+                      {member.role === "household_member"
+                        ? (member.relationshipType?.trim() || "Household member")
+                        : getCasePersonRoleLabel(member.role)}
                     </p>
                   </div>
                   {activeExpandedMemberIndex === index ? (
