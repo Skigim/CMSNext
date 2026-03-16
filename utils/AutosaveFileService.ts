@@ -912,22 +912,18 @@ class AutosaveFileService {
 
       return rawData;
     } catch (error) {
-      if (error instanceof Error && error.name === 'NotFoundError') {
-        return null;
-      } else {
-        const message = error instanceof Error ? error.message : 'Unknown error';
-        logger.error('Failed to read primary data file', {
-          fileName: this.fileName,
-          error: message,
-        });
-        this.errorCallback({
-          message: `Error reading file "${this.fileName}": ${message}`,
-          type: 'error',
-          error,
-          context: { operation: 'readData', fileName: this.fileName },
-        });
-        throw error;
-      }
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      logger.error('Failed to read primary data file', {
+        fileName: this.fileName,
+        error: message,
+      });
+      this.errorCallback({
+        message: `Error reading file "${this.fileName}": ${message}`,
+        type: 'error',
+        error,
+        context: { operation: 'readData', fileName: this.fileName },
+      });
+      throw error;
     }
   }
 
