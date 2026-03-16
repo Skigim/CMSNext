@@ -133,6 +133,51 @@ describe("ActivityWidget", () => {
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });
 
+  it("uses the latest entry metadata for grouped rows even when there are no view events", async () => {
+    // ARRANGE
+    const now = Date.now();
+    const activityLog: CaseActivityEntry[] = [
+      {
+        id: "older-status",
+        timestamp: new Date(now - 90 * 60 * 1000).toISOString(),
+        caseId: "case-3",
+        caseName: "Old Name",
+        caseMcn: "OLD123",
+        type: "status-change",
+        payload: {
+          fromStatus: "Pending",
+          toStatus: "In Progress",
+        },
+      },
+      {
+        id: "newer-note",
+        timestamp: new Date(now - 5 * 60 * 1000).toISOString(),
+        caseId: "case-3",
+        caseName: "Updated Name",
+        caseMcn: "NEW456",
+        type: "note-added",
+        payload: {
+          noteId: "note-3",
+          category: "General",
+          preview: "Most recent activity is a note.",
+        },
+      },
+    ];
+
+    render(<ActivityWidget activityLogState={createActivityLogState(activityLog)} onViewCase={vi.fn()} />);
+
+    // ACT
+    const groupedRow = await screen.findByRole("button", { name: "View activity for Updated Name" });
+
+    // ASSERT
+    expect(groupedRow).toBeInTheDocument();
+    expect(within(groupedRow).getByText("Note added")).toBeInTheDocument();
+    expect(within(groupedRow).getByText("Updated Name")).toBeInTheDocument();
+    expect(within(groupedRow).getByText("2 actions · 1 status · 1 note")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Copy MCN NEW456" })).toBeInTheDocument();
+    expect(screen.getByText("Note")).toBeInTheDocument();
+  });
+
   it("has no accessibility violations", async () => {
     // ARRANGE
     const now = Date.now();

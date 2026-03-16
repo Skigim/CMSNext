@@ -93,6 +93,9 @@ interface CaseTimelineItem {
   caseMcn?: string | null;
   entryCount: number;
   entries: TimelineItem[];
+  icon: typeof FileText;
+  badgeColor: string;
+  badgeText: string;
 }
 
 /**
@@ -263,7 +266,7 @@ function formatActivityTimeline(activityLog: CaseActivityEntry[]): CaseTimelineI
     if (!existingItem) {
       timelineMap.set(entry.caseId, {
         id: entry.caseId,
-        title: 'Case viewed',
+        title: formattedEntry.title,
         description: '',
         timestamp: entry.timestamp,
         relativeTime: formattedEntry.relativeTime,
@@ -272,6 +275,9 @@ function formatActivityTimeline(activityLog: CaseActivityEntry[]): CaseTimelineI
         caseMcn: entry.caseMcn,
         entryCount: 1,
         entries: [formattedEntry],
+        icon: formattedEntry.icon,
+        badgeColor: formattedEntry.badgeColor,
+        badgeText: formattedEntry.badgeText,
       });
       return timelineMap;
     }
@@ -283,6 +289,12 @@ function formatActivityTimeline(activityLog: CaseActivityEntry[]): CaseTimelineI
     if (Number.isNaN(existingTimestamp) || entryTimestamp > existingTimestamp) {
       existingItem.timestamp = entry.timestamp;
       existingItem.relativeTime = formattedEntry.relativeTime;
+      existingItem.caseName = entry.caseName;
+      existingItem.caseMcn = entry.caseMcn;
+      existingItem.title = formattedEntry.title;
+      existingItem.icon = formattedEntry.icon;
+      existingItem.badgeColor = formattedEntry.badgeColor;
+      existingItem.badgeText = formattedEntry.badgeText;
     }
 
     return timelineMap;
@@ -291,17 +303,27 @@ function formatActivityTimeline(activityLog: CaseActivityEntry[]): CaseTimelineI
   return Array.from(groupedTimeline.values())
     .map((item) => {
       const entries = [...item.entries].sort(
-        (left, right) => new Date(right.timestamp).getTime() - new Date(left.timestamp).getTime()
+        (firstEntry, secondEntry) =>
+          new Date(secondEntry.timestamp).getTime() - new Date(firstEntry.timestamp).getTime()
       );
+      const latestEntry = entries[0];
 
       return {
         ...item,
         entries,
+        title: latestEntry.title,
+        icon: latestEntry.icon,
+        badgeColor: latestEntry.badgeColor,
+        badgeText: latestEntry.badgeText,
         description: getCaseTimelineDescription(entries),
         relativeTime: formatRelativeTime(item.timestamp),
       };
     })
-    .sort((left, right) => new Date(right.timestamp).getTime() - new Date(left.timestamp).getTime());
+    .sort(
+      (firstItem, secondItem) =>
+        new Date(secondItem.timestamp).getTime() - new Date(firstItem.timestamp).getTime()
+    )
+    .slice(0, EXPANDED_ITEM_COUNT);
 }
 
 /**
@@ -476,6 +498,7 @@ export function ActivityWidget({ activityLogState, metadata, onViewCase }: Reado
     return (
       <div id="activity-timeline-list" className="space-y-2">
         {items.slice(0, isTimelineExpanded ? EXPANDED_ITEM_COUNT : COLLAPSED_ITEM_COUNT).map((item) => {
+          const Icon = item.icon;
           return (
             <div
               key={item.id}
@@ -489,7 +512,7 @@ export function ActivityWidget({ activityLogState, metadata, onViewCase }: Reado
               >
                 <div className="flex w-full gap-3">
                   <div className="flex-shrink-0 mt-0.5">
-                    <Eye className="h-4 w-4 text-muted-foreground" />
+                    <Icon className="h-4 w-4 text-muted-foreground" />
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-start justify-between gap-2 mb-1">
@@ -500,9 +523,9 @@ export function ActivityWidget({ activityLogState, metadata, onViewCase }: Reado
                       <div className="flex flex-col items-end gap-1">
                         <Badge
                           variant="secondary"
-                          className="text-xs flex-shrink-0 bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300"
+                          className={`text-xs flex-shrink-0 ${item.badgeColor}`}
                         >
-                          Viewed
+                          {item.badgeText}
                         </Badge>
                         <span className="text-xs text-muted-foreground">{item.relativeTime}</span>
                       </div>
