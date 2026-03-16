@@ -138,7 +138,6 @@ const createCase = (overrides: Partial<CaseDisplay> = {}): CaseDisplay => {
       },
       authorizedRepIds: [],
       familyMembers: [],
-      status: "Active",
       createdAt: "2024-01-01T00:00:00.000Z",
       dateAdded: "2024-01-01T00:00:00.000Z",
     },

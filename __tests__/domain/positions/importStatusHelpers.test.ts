@@ -28,7 +28,6 @@ function createCase(id: string, status: CaseStatus = "Active"): StoredCase {
       mailingAddress: { street: "", city: "", state: "", zip: "", sameAsPhysical: true },
       authorizedRepIds: [],
       familyMembers: [],
-      status: "active",
       createdAt: new Date().toISOString(),
       dateAdded: new Date().toISOString(),
     },

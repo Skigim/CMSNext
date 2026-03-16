@@ -78,7 +78,6 @@ export function normalizeHouseholdMemberForSave(
       || defaults.livingArrangement,
     address: normalizedAddress,
     mailingAddress: normalizedMailingAddress,
-    status: normalizedMember.status || "Active",
   };
 }
 

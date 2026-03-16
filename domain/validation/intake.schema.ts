@@ -156,7 +156,6 @@ const intakeHouseholdMemberSchema = z.object({
   authorizedRepIds: z.array(z.string()).optional().default([]),
   familyMembers: z.array(z.string()).optional().default([]),
   relationships: z.array(intakeRelationshipSchema).optional().default([]),
-  status: z.string().default("Active"),
 });
 
 /**

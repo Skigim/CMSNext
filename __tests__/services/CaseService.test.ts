@@ -346,7 +346,6 @@ describe("CaseService hydration seam", () => {
             authorizedRepIds: [],
             familyMembers: [],
             relationships: [],
-            status: "Active",
           },
         ],
       });

@@ -788,7 +788,6 @@ export class DataManager {
             livingArrangement: "",
             address: { street: "", city: "", state: "", zip: "" },
             mailingAddress: { street: "", city: "", state: "", zip: "", sameAsPhysical: true },
-            status: "Active",
           },
           caseRecord: {
             mcn: alert.mcNumber ?? "",
@@ -1000,7 +999,6 @@ export class DataManager {
    *     phone: "555-1234",
    *     dateOfBirth: "1990-01-01",
    *     ssn: "123-45-6789",
-   *     status: "Active",
    *     address: { street: "123 Main St", city: "Anytown", state: "CA", zip: "12345" }
    *   },
    *   caseRecord: {

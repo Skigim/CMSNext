@@ -73,7 +73,6 @@ export class PersonService {
       legacyFamilyMemberNames: familyMembers.legacyFamilyMemberNames,
       relationships: personData.relationships || [],
       normalizedRelationships: [],
-      status: personData.status || "Active",
       createdAt: timestamp,
       updatedAt: timestamp,
       dateAdded: timestamp,
@@ -102,7 +101,6 @@ export class PersonService {
       legacyFamilyMemberNames: familyMembers.legacyFamilyMemberNames,
       relationships: personData.relationships || [],
       normalizedRelationships: existingPerson.normalizedRelationships ?? [],
-      status: personData.status || "Active",
       updatedAt: timestamp,
     };
   }

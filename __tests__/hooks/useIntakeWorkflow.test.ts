@@ -563,7 +563,6 @@ describe("useIntakeWorkflow", () => {
           authorizedRepIds: ["rep-1"],
           familyMembers: ["family-1"],
           relationships: [{ type: "Spouse", name: "Jamie Smith", phone: "5550001111" }],
-          status: "Archived",
         }),
       });
       const { result } = renderIntakeHook({ existingCase });
@@ -589,7 +588,6 @@ describe("useIntakeWorkflow", () => {
             lastName: "Applicant",
             authorizedRepIds: ["rep-1"],
             relationships: [{ type: "Spouse", name: "Jamie Smith", phone: "5550001111" }],
-            status: "Archived",
           }),
           householdMembers: [
             expect.objectContaining({
@@ -616,6 +614,9 @@ describe("useIntakeWorkflow", () => {
           }),
         }),
       );
+      const updatePayload = mockDataManager.updateCompleteCase.mock.calls[0]?.[1];
+      expect(updatePayload.person).not.toHaveProperty("status");
+      expect(updatePayload.householdMembers[0]).not.toHaveProperty("status");
       expect(mockDataManager.createCompleteCase).not.toHaveBeenCalled();
     });
 
@@ -705,6 +706,9 @@ describe("useIntakeWorkflow", () => {
           ],
         }),
       );
+      const createPayload = mockDataManager.createCompleteCase.mock.calls[0]?.[0];
+      expect(createPayload.person).not.toHaveProperty("status");
+      expect(createPayload.householdMembers[0]).not.toHaveProperty("status");
     });
 
     it("shows an error when canSubmit is false", async () => {

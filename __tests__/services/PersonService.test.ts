@@ -76,7 +76,6 @@ describe("PersonService", () => {
       livingArrangement: "Home",
       address: { street: "", city: "", state: "", zip: "" },
       mailingAddress: { street: "", city: "", state: "", zip: "", sameAsPhysical: true },
-      status: "Active",
     });
 
     expect(person.familyMembers).toEqual([]);
@@ -84,6 +83,7 @@ describe("PersonService", () => {
     expect(person.legacyFamilyMemberNames).toEqual([]);
     expect(person.normalizedRelationships).toEqual([]);
     expect(person.updatedAt).toBe(person.createdAt);
+    expect(person).not.toHaveProperty("status");
   });
 
   it("trims and deduplicates family members when building a new person", () => {
@@ -104,7 +104,6 @@ describe("PersonService", () => {
         "Grandma Doe",
         "   ",
       ],
-      status: "Active",
     });
 
     expect(person.familyMembers).toEqual([
@@ -115,6 +114,7 @@ describe("PersonService", () => {
       "11111111-1111-4111-8111-111111111111",
     ]);
     expect(person.legacyFamilyMemberNames).toEqual(["Grandma Doe"]);
+    expect(person).not.toHaveProperty("status");
   });
 
   it("upserts a person into the root people registry", () => {

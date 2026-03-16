@@ -226,7 +226,6 @@ describe("CaseDetails linked people rendering", () => {
         zip: "68101",
         sameAsPhysical: false,
       },
-      status: "Active",
     });
     const dependentPerson = createMockPerson({
       id: "person-3",

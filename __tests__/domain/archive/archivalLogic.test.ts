@@ -47,7 +47,6 @@ function createTestCase(overrides: Partial<StoredCase> & { applicationDate?: str
       mailingAddress: { street: "", city: "", state: "", zip: "", sameAsPhysical: true },
       authorizedRepIds: [],
       familyMembers: [],
-      status: "active",
       createdAt: new Date().toISOString(),
       dateAdded: new Date().toISOString(),
     },

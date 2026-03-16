@@ -36,7 +36,6 @@ function createMockCase(overrides: Partial<StoredCase> = {}): StoredCase {
       mailingAddress: { street: '', city: '', state: '', zip: '', sameAsPhysical: true },
       authorizedRepIds: [],
       familyMembers: [],
-      status: '',
       createdAt: '',
       dateAdded: '',
     },

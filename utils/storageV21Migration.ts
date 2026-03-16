@@ -225,7 +225,6 @@ export function toStoredPerson(person: Person, allPeople: Person[]): StoredPerso
     familyMemberIds,
     legacyFamilyMemberNames: legacyFamilyMemberNames.length > 0 ? legacyFamilyMemberNames : undefined,
     relationships: buildStoredRelationships(person, peopleById),
-    status: person.status,
     createdAt,
     updatedAt,
     dateAdded: person.dateAdded || createdAt,
@@ -267,7 +266,6 @@ export function toRuntimePerson(person: StoredPerson, allPeople: StoredPerson[])
       : undefined,
     relationships,
     normalizedRelationships: person.relationships.map((relationship) => ({ ...relationship })),
-    status: person.status,
     createdAt: person.createdAt,
     updatedAt: person.updatedAt,
     dateAdded: person.dateAdded,
@@ -447,7 +445,6 @@ export function migrateV20ToV21(data: NormalizedFileDataV20): PersistedNormalize
       relationships: (sourcePerson.relationships ?? [])
         .map((relationship) => migrateRelationship(relationship))
         .filter((relationship): relationship is PersonRelationship => relationship !== null),
-      status: sourcePerson.status,
       createdAt,
       updatedAt,
       dateAdded: sourcePerson.dateAdded || createdAt,

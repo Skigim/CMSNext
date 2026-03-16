@@ -70,6 +70,7 @@ describe("storageV21Migration", () => {
       targetPersonId: relatedPerson.id,
       legacyPhone: "(555) 222-2222",
     });
+    expect(migratedPrimaryPerson).not.toHaveProperty("status");
     expect(migrated.cases[0].people).toEqual([
       { personId: primaryPerson.id, role: "applicant", isPrimary: true },
     ]);
@@ -274,6 +275,7 @@ describe("storageV21Migration", () => {
     if (!roundTrippedPrimaryPerson) {
       throw new Error("Expected round-tripped people registry to include person-1");
     }
+    expect(roundTrippedPrimaryPerson).not.toHaveProperty("status");
     expect(roundTripped.cases[0].person.id).toBe("person-1");
     expect(roundTripped.cases[0].linkedPeople).toEqual([
       {

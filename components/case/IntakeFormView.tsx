@@ -983,30 +983,6 @@ function HouseholdStep({ formData, onChange }: Readonly<HouseholdStepProps>) {
                 </div>
 
                 <div className="space-y-1.5">
-                  <Label htmlFor={`household-status-${index}`}>Status</Label>
-                  <Select
-                    value={member.status}
-                    onValueChange={(value) =>
-                      updateMember(index, (currentMember) => ({
-                        ...currentMember,
-                        status: value,
-                      }))
-                    }
-                  >
-                    <SelectTrigger id={`household-status-${index}`}>
-                      <SelectValue placeholder="Select status" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {config.caseStatuses.map((statusOption) => (
-                        <SelectItem key={statusOption.name} value={statusOption.name}>
-                          {statusOption.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-1.5">
                   <Label htmlFor={`household-dob-${index}`}>Date of Birth</Label>
                   <Input
                     id={`household-dob-${index}`}
@@ -1508,15 +1484,8 @@ function ReviewStep({ formData, onGoToStep }: Readonly<ReviewStepProps>) {
                       .join(" · ")}
                   />
                   <SummaryRow
-                    label="DOB / Status"
-                    value={[
-                      formatDateForDisplay(member.dateOfBirth) === "None"
-                        ? undefined
-                        : formatDateForDisplay(member.dateOfBirth),
-                      member.status,
-                    ]
-                      .filter(Boolean)
-                      .join(" · ")}
+                    label="Date of Birth"
+                    value={formatDateForDisplay(member.dateOfBirth)}
                   />
                 </div>
               ))}
