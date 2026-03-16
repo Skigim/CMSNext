@@ -1,9 +1,45 @@
 import { describe, expect, it } from "vitest";
 
 import { createMockPerson, createMockStoredCase, omitHydratedPerson } from "@/src/test/testUtils";
-import type { StoredCase } from "@/types/case";
+import type { Person, PersonRelationship, StoredCase } from "@/types/case";
 
 import { createIntakeFormData, createPersonData } from "../factories";
+
+function createPrimaryLinkedPerson() {
+  return createMockPerson({
+    id: "person-test-1",
+    firstName: "Sam",
+    lastName: "Tester",
+    name: "Sam Tester",
+  });
+}
+
+function createHouseholdHydrationCase(options: {
+  linkedHouseholdMember: Person;
+  normalizedRelationships: PersonRelationship[];
+}) {
+  return createMockStoredCase({
+    person: createMockPerson({
+      firstName: "Sam",
+      lastName: "Tester",
+      normalizedRelationships: options.normalizedRelationships,
+    }),
+    people: [
+      { personId: "person-test-1", role: "applicant", isPrimary: true },
+      { personId: "person-2", role: "household_member", isPrimary: false },
+    ],
+    linkedPeople: [
+      {
+        ref: { personId: "person-test-1", role: "applicant", isPrimary: true },
+        person: createPrimaryLinkedPerson(),
+      },
+      {
+        ref: { personId: "person-2", role: "household_member", isPrimary: false },
+        person: options.linkedHouseholdMember,
+      },
+    ],
+  });
+}
 
 describe("createPersonData", () => {
   it("falls back to the primary linked person when the hydrated primary person is unavailable", () => {
@@ -215,32 +251,10 @@ describe("createIntakeFormData", () => {
         sameAsPhysical: false,
       },
     });
-    const existingCase = createMockStoredCase({
-      person: createMockPerson({
-        firstName: "Sam",
-        lastName: "Tester",
-        normalizedRelationships: [
-          { id: "rel-1", type: "Spouse", targetPersonId: "person-2" },
-        ],
-      }),
-      people: [
-        { personId: "person-test-1", role: "applicant", isPrimary: true },
-        { personId: "person-2", role: "household_member", isPrimary: false },
-      ],
-      linkedPeople: [
-        {
-          ref: { personId: "person-test-1", role: "applicant", isPrimary: true },
-          person: createMockPerson({
-            id: "person-test-1",
-            firstName: "Sam",
-            lastName: "Tester",
-            name: "Sam Tester",
-          }),
-        },
-        {
-          ref: { personId: "person-2", role: "household_member", isPrimary: false },
-          person: linkedHouseholdMember,
-        },
+    const existingCase = createHouseholdHydrationCase({
+      linkedHouseholdMember,
+      normalizedRelationships: [
+        { id: "rel-1", type: "Spouse", targetPersonId: "person-2" },
       ],
     });
 
@@ -273,36 +287,14 @@ describe("createIntakeFormData", () => {
       name: "",
       phone: "5559876543",
     });
-    const existingCase = createMockStoredCase({
-      person: createMockPerson({
-        firstName: "Sam",
-        lastName: "Tester",
-        normalizedRelationships: [
-          {
-            id: "rel-1",
-            type: "Spouse",
-            targetPersonId: null,
-            displayNameFallback: " Jordan   Tester ",
-          },
-        ],
-      }),
-      people: [
-        { personId: "person-test-1", role: "applicant", isPrimary: true },
-        { personId: "person-2", role: "household_member", isPrimary: false },
-      ],
-      linkedPeople: [
+    const existingCase = createHouseholdHydrationCase({
+      linkedHouseholdMember,
+      normalizedRelationships: [
         {
-          ref: { personId: "person-test-1", role: "applicant", isPrimary: true },
-          person: createMockPerson({
-            id: "person-test-1",
-            firstName: "Sam",
-            lastName: "Tester",
-            name: "Sam Tester",
-          }),
-        },
-        {
-          ref: { personId: "person-2", role: "household_member", isPrimary: false },
-          person: linkedHouseholdMember,
+          id: "rel-1",
+          type: "Spouse",
+          targetPersonId: null,
+          displayNameFallback: " Jordan   Tester ",
         },
       ],
     });
