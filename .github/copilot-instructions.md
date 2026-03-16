@@ -65,3 +65,70 @@ When starting a task, prefer this order:
 5. Update documentation only when behavior or workflow meaningfully changes.
 
 ## Architecture
+
+The application follows a layered, local-first architecture designed to keep business logic pure, storage concerns isolated, and React code focused on UI and state orchestration.
+
+### Data Layer
+
+- **Coordinator:** `DataManager` is the central entry point for all data mutations and read flows.
+- **Services:** Stateless services live under `utils/services/*` (e.g., `CaseService`, `FinancialsService`, `NotesService`, `AlertsService`, `CategoryConfigService`, `ActivityLogService`, `FileStorageService`).
+- **File as source of truth:** The file on disk is the single source of truth; do not introduce in-memory caches or repository/event-bus layers.
+- **Mutation rule:** All writes must go through `DataManager`, which in turn delegates to services. Do not mutate file data directly from hooks or components.
+- **Dependencies:** Services receive their dependencies via constructor injection; they remain stateless and side-effectful only through their collaborators.
+
+### Domain Layer
+
+- **Purity:** Domain modules contain pure, side-effect-free functions only—no React, no I/O, no direct access to browser APIs.
+- **Structure:** Organized by feature under `domain/*` (e.g., `alerts`, `avs`, `cases`, `common`, `dashboard`, `financials`, `templates`, `validation`).
+- **Imports:** Prefer `@/domain` or `@/domain/{module}` imports from hooks and services; do not import domain code directly into React components.
+- **Responsibility:** Domain functions perform calculations, formatting, validation, and transformation. They should be trivial to unit-test in isolation.
+
+### Storage Layer
+
+- **Flow:** `FileStorageContext` (handles + permissions) → `AutosaveFileService` → File System Access API.
+- **API guard:** Always check `fileDataProvider.getAPI()` (or equivalent helper) before accessing the File System Access API; treat `null` as unsupported.
+- **Autosave:** Do not bypass `AutosaveFileService` for file writes. It manages debounced saves (≈5s normally, ≈15s for bulk operations) and consistency guarantees.
+- **Notifications:** After successful writes, call the appropriate `safeNotifyFileStorageChange()` helper to inform the rest of the app about data changes.
+- **Assumptions:** There is no backend, no remote sync, and no auth layer. Access is permission-based and local-first.
+
+### Data Format (v2.0 Normalized)
+
+- The current file format is a **flat, normalized** structure:
+  - `cases: Case[]`
+  - `financials: Financial[]` (FK: `caseId`)
+  - `notes: Note[]` (FK: `caseId`)
+  - `alerts: Alert[]` (FK: `caseId`)
+  - `categoryConfig: CategoryConfig`
+  - `activityLog: ActivityLogEntry[]`
+- Avoid introducing nested or denormalized structures; new fields should extend existing records, not embed cross-cutting data.
+- Legacy nested formats should be rejected or migrated via existing helpers (for example, functions that discover statuses from legacy case data).
+
+### UI, Themes, and Color System
+
+- **Components:** UI lives under `components/*` and should be built from shadcn/ui primitives in `components/ui/*` plus Tailwind utility classes.
+- **Hooks:** React hooks under `hooks/*` own local UI state and call services/domain functions; they must not talk to the filesystem or `DataManager` directly from components.
+- **Themes:** A small, fixed set of theme families (light/dark variants) is exposed via `ThemeContext`. New UI should consume theme tokens instead of hard-coded colors.
+- **Color slots:** Status and category colors use a fixed semantic slot set (e.g., `"blue"`, `"green"`, `"red"`, `"amber"`, `"purple"`, `"slate"`, `"teal"`, `"rose"`, `"orange"`, `"cyan"`). Use the existing CSS variables for foreground, background, and border styling.
+
+### Layered Code Organization
+
+The overall layering model is:
+
+1. **Domain** – Pure business logic (`domain/*`).
+2. **Services** – Orchestration and I/O (`utils/services/*`, `utils/DataManager.ts`).
+3. **Hooks** – React state and coordination (`hooks/*`), calling services and domain functions.
+4. **Components** – Presentational UI (`components/*`), using hooks but never services directly.
+5. **Contexts** – Shared application state and providers (`contexts/*`), including file storage and theming.
+
+When implementing new features:
+
+- Start from the domain layer (pure logic), then add or extend services, then create hooks, and finally add components.
+- Keep business rules out of React components and contexts.
+- Respect existing provider ordering and contracts when modifying or introducing contexts.
+
+### Testing at the Architecture Level
+
+- **Domain:** Should be covered by fast, isolated unit tests (Vitest).
+- **Services + DataManager:** Test orchestration and integration of domain logic with storage; mock filesystem and context dependencies.
+- **Hooks + Components:** Use React Testing Library for behavior tests and jest-axe for accessibility where relevant.
+- Treat any failing tests, type errors, or lints as blockers before shipping architectural changes.
