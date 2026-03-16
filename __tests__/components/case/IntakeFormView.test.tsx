@@ -82,11 +82,16 @@ function createReviewFormData(overrides: Partial<typeof hookState.formData> = {}
   };
 }
 
+/**
+ * Creates the shared populated household-member fixture used by the accordion
+ * and review-summary tests.
+ */
 function createJordanHouseholdMember() {
   return createMockHouseholdMemberData({
     personId: "person-2",
     firstName: "Jordan",
     lastName: "Tester",
+    phone: "5559876543",
   });
 }
 
