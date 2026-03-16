@@ -5,6 +5,7 @@ import type { Person, StoredCase } from "@/types/case";
 
 import {
   getPrimaryCasePerson,
+  getLinkedCasePersonRoleLabel,
   getPrimaryCasePersonForDisplay,
   getPrimaryCasePersonRef,
 } from "../people";
@@ -150,5 +151,148 @@ describe("case people helpers", () => {
       role: "household_member",
       isPrimary: false,
     });
+  });
+
+  it("uses the hydrated household relationship type for linked household labels", () => {
+    // Arrange
+    const primaryPerson = createMockPerson({
+      id: "person-1",
+      name: "Primary Applicant",
+      normalizedRelationships: [
+        {
+          id: "rel-1",
+          type: "Spouse",
+          targetPersonId: "person-2",
+        },
+      ],
+    });
+    const linkedHouseholdPerson = createMockPerson({
+      id: "person-2",
+      name: "Morgan Member",
+    });
+    const caseData = createMockStoredCase({
+      person: primaryPerson,
+      linkedPeople: [
+        {
+          ref: { personId: primaryPerson.id, role: "applicant", isPrimary: true },
+          person: primaryPerson,
+        },
+        {
+          ref: { personId: linkedHouseholdPerson.id, role: "household_member", isPrimary: false },
+          person: linkedHouseholdPerson,
+        },
+      ],
+      caseRecord: {
+        ...createMockStoredCase().caseRecord,
+        personId: primaryPerson.id,
+      },
+    });
+
+    // Act
+    const result = getLinkedCasePersonRoleLabel(
+      caseData,
+      linkedHouseholdPerson,
+      "household_member",
+    );
+
+    // Assert
+    expect(result).toBe("Spouse");
+  });
+
+  it("falls back to the generic household label when relationship type is missing", () => {
+    // Arrange
+    const primaryPerson = createMockPerson({
+      id: "person-1",
+      name: "Primary Applicant",
+      normalizedRelationships: [
+        {
+          id: "rel-1",
+          type: " ",
+          targetPersonId: "person-2",
+        },
+      ],
+    });
+    const linkedHouseholdPerson = createMockPerson({
+      id: "person-2",
+      name: "Morgan Member",
+    });
+    const caseData = createMockStoredCase({
+      person: primaryPerson,
+      linkedPeople: [
+        {
+          ref: { personId: primaryPerson.id, role: "applicant", isPrimary: true },
+          person: primaryPerson,
+        },
+        {
+          ref: { personId: linkedHouseholdPerson.id, role: "household_member", isPrimary: false },
+          person: linkedHouseholdPerson,
+        },
+      ],
+      caseRecord: {
+        ...createMockStoredCase().caseRecord,
+        personId: primaryPerson.id,
+      },
+    });
+
+    // Act
+    const result = getLinkedCasePersonRoleLabel(
+      caseData,
+      linkedHouseholdPerson,
+      "household_member",
+    );
+
+    // Assert
+    expect(result).toBe("Household member");
+  });
+
+  it("preserves unusual relationship types instead of replacing them with the generic label", () => {
+    // Arrange
+    const primaryPerson = createMockPerson({
+      id: "person-1",
+      name: "Primary Applicant",
+      normalizedRelationships: [
+        {
+          id: "rel-1",
+          type: "Former Guardian",
+          targetPersonId: null,
+          legacyPhone: "5550002222",
+          displayNameFallback: "Morgan Member",
+        },
+      ],
+    });
+    const linkedHouseholdPerson = createMockPerson({
+      id: "person-2",
+      firstName: "Morgan",
+      lastName: "Member",
+      name: "Morgan Member",
+      phone: "5550002222",
+    });
+    const caseData = createMockStoredCase({
+      person: primaryPerson,
+      linkedPeople: [
+        {
+          ref: { personId: primaryPerson.id, role: "applicant", isPrimary: true },
+          person: primaryPerson,
+        },
+        {
+          ref: { personId: linkedHouseholdPerson.id, role: "household_member", isPrimary: false },
+          person: linkedHouseholdPerson,
+        },
+      ],
+      caseRecord: {
+        ...createMockStoredCase().caseRecord,
+        personId: primaryPerson.id,
+      },
+    });
+
+    // Act
+    const result = getLinkedCasePersonRoleLabel(
+      caseData,
+      linkedHouseholdPerson,
+      "household_member",
+    );
+
+    // Assert
+    expect(result).toBe("Former Guardian");
   });
 });
