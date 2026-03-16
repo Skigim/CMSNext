@@ -130,17 +130,25 @@ describe('AutosaveFileService', () => {
   })
 
   describe('browser support and initialization', () => {
-    it('should check if File System Access API is supported', () => {
+    it('should return true when File System Access API is supported', () => {
       // ARRANGE
 
       // ACT
-      expect(service.isSupported()).toBe(true)
-      
-      // Test unsupported scenario
-      delete (globalThis as any).showDirectoryPicker
+      const isSupported = service.isSupported()
 
       // ASSERT
-      expect(service.isSupported()).toBe(false)
+      expect(isSupported).toBe(true)
+    })
+
+    it('should return false when File System Access API is not supported', () => {
+      // ARRANGE
+      delete (globalThis as any).showDirectoryPicker
+
+      // ACT
+      const isSupported = service.isSupported()
+
+      // ASSERT
+      expect(isSupported).toBe(false)
     })
 
     it('should initialize with default configuration', () => {
@@ -318,12 +326,11 @@ describe('AutosaveFileService', () => {
 
       // ACT
       const writeResult = await service.writeFile({ test: 'data' })
-      expect(writeResult).toBe(false)
-      
       const readResult = await service.readFile()
       const files = await service.listDataFiles()
 
       // ASSERT
+      expect(writeResult).toBe(false)
       expect(readResult).toBe(null)
       expect(files).toEqual([])
     })
@@ -450,8 +457,10 @@ describe('AutosaveFileService', () => {
       ).toBe(true)
       expect((service as any).state.consecutiveFailures).toBe(1)
 
-      // ACT
+      // ARRANGE (second scenario)
       mockStatusCallback.mockClear()
+
+      // ACT
       await (service as any).performAutosave('interval')
 
       // ASSERT
