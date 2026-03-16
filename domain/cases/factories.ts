@@ -23,6 +23,7 @@ import {
   createBlankIntakeForm,
   type IntakeFormData,
 } from "@/domain/validation/intake.schema";
+import { normalizePhoneNumber } from "@/domain/common/phone";
 import { getPersonRelationships, getPrimaryCasePerson } from "./people";
 
 /**
@@ -266,11 +267,12 @@ function resolveHouseholdRelationship(
     return directMatch;
   }
 
-  const normalizedLinkedPhone = (linkedPerson.phone ?? "").trim();
+  const normalizedLinkedPhone = normalizePhoneNumber(linkedPerson.phone ?? "");
   const structuredPhoneMatch =
     normalizedLinkedPhone.length > 0
       ? normalizedRelationships.filter(
-          (relationship) => relationship.legacyPhone?.trim() === normalizedLinkedPhone,
+          (relationship) =>
+            normalizePhoneNumber(relationship.legacyPhone ?? "") === normalizedLinkedPhone,
         )
       : [];
   if (structuredPhoneMatch.length === 1) {
@@ -285,15 +287,14 @@ function resolveHouseholdRelationship(
     return null;
   }
 
-  const displayNameMatch = relationships.find(
-    (relationship) =>
-      normalizeRelationshipDisplayName(relationship.name) === normalizedDisplayName,
+  const displayNameMatches = relationships.filter(
+    (relationship) => normalizeRelationshipDisplayName(relationship.name) === normalizedDisplayName,
   );
 
-  return displayNameMatch
+  return displayNameMatches.length === 1
     ? {
-        type: displayNameMatch.type,
-        relationshipId: displayNameMatch.id,
+        type: displayNameMatches[0].type,
+        relationshipId: displayNameMatches[0].id,
       }
     : null;
 }
