@@ -46,6 +46,19 @@ describe("FinancialItemStepperModal", () => {
     expect(results).toHaveNoViolations();
   });
 
+  it("has no accessibility violations on the amounts step", async () => {
+    // ARRANGE
+    const user = userEvent.setup();
+    const { container } = renderModal({ applicationDate: "2025-06-15" });
+
+    // ACT
+    await goToAmountsStep(user, "Test Item");
+    const results = await axe(container);
+
+    // ASSERT
+    expect(results).toHaveNoViolations();
+  });
+
   it("uses Ctrl+Enter on details step to continue to amount setup", async () => {
     // ARRANGE
     const user = userEvent.setup();
