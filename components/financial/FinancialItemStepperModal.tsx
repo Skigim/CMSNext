@@ -235,6 +235,7 @@ function resetFormState({
   setIsConfirmingDelete,
   setDeleteConfirmId,
   setAddAnother,
+  resetAddAnother = true,
 }: {
   setCurrentStep: Dispatch<SetStateAction<Step>>;
   setItemFormData: Dispatch<SetStateAction<ItemFormData>>;
@@ -246,6 +247,7 @@ function resetFormState({
   setIsConfirmingDelete: Dispatch<SetStateAction<boolean>>;
   setDeleteConfirmId?: Dispatch<SetStateAction<string | null>>;
   setAddAnother?: Dispatch<SetStateAction<boolean>>;
+  resetAddAnother?: boolean;
 }): void {
   setCurrentStep("details");
   setItemFormData(emptyItemFormData);
@@ -256,7 +258,9 @@ function resetFormState({
   setFormErrors({});
   setIsConfirmingDelete(false);
   setDeleteConfirmId?.(null);
-  setAddAnother?.(false);
+  if (resetAddAnother) {
+    setAddAnother?.(false);
+  }
 }
 
 function openAmountsStep(
@@ -466,6 +470,7 @@ export function FinancialItemStepperModal({
       setIsConfirmingDelete,
       setDeleteConfirmId,
       setAddAnother,
+      resetAddAnother: false,
     });
   }, []);
 
