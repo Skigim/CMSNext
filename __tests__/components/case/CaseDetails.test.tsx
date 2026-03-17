@@ -1,5 +1,5 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { axe } from "jest-axe";
 import type { ComponentType, ReactNode } from "react";
@@ -210,7 +210,7 @@ describe("CaseDetails linked people rendering", () => {
   });
 
   it("renders compact linked people chips with hydrated relationship labels, hover details, and phone copy", async () => {
-    // Arrange
+    // ARRANGE
     const user = userEvent.setup();
     const primaryPerson = createMockPerson({
       id: "person-1",
@@ -287,20 +287,24 @@ describe("CaseDetails linked people rendering", () => {
       },
     });
 
-    // Act
+    // ACT
     renderCaseDetails(caseData);
     const householdChip = screen.getByRole("button", {
       name: "Copy Morgan Member phone (555) 000-2222",
     });
     await user.click(householdChip);
 
-    // Assert
+    // ASSERT
     expect(screen.getByText("Primary Applicant")).toBeInTheDocument();
-    expect(householdChip).toHaveTextContent("Spouse / Morgan / Member");
+    expect(within(householdChip).getByText("Morgan Member")).toBeInTheDocument();
+    expect(within(householdChip).getByText("Spouse")).toBeInTheDocument();
+    expect(householdChip).not.toHaveTextContent("Spouse / Morgan / Member");
     const dependentChip = screen.getByRole("button", {
-      name: "Dependent / Devon / Dependent",
+      name: "Devon Dependent Dependent",
     });
     expect(dependentChip).toHaveAttribute("aria-disabled", "true");
+    expect(within(dependentChip).getByText("Devon Dependent")).toBeInTheDocument();
+    expect(within(dependentChip).getByText("Dependent")).toBeInTheDocument();
     await user.click(dependentChip);
     expect(screen.getByText("(555) 000-2222")).toBeInTheDocument();
     expect(screen.getByText("morgan@example.com")).toBeInTheDocument();
@@ -442,7 +446,8 @@ describe("CaseDetails linked people rendering", () => {
     expect(screen.getByText("Primary Applicant")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Copy Phone 5550001111" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Copy Email primary@example.com" })).toBeInTheDocument();
-    expect(secondaryChip).toHaveTextContent("Spouse / Secondary / Person");
+    expect(within(secondaryChip).getByText("Secondary Person")).toBeInTheDocument();
+    expect(within(secondaryChip).getByText("Spouse")).toBeInTheDocument();
     expect(screen.getByText("(555) 000-2222")).toBeInTheDocument();
     expect(screen.getByText("secondary@example.com")).toBeInTheDocument();
     expect(clickToCopy).toHaveBeenCalledWith("5550002222", {
@@ -491,10 +496,10 @@ describe("CaseDetails linked people rendering", () => {
     renderCaseDetails(caseData);
 
     // Assert
-    expect(
-      screen.getByRole("button", {
-        name: /Copy Morgan Member phone/i,
-      }),
-    ).toHaveTextContent("Household member / Morgan / Member");
+    const householdChip = screen.getByRole("button", {
+      name: /Copy Morgan Member phone/i,
+    });
+    expect(within(householdChip).getByText("Morgan Member")).toBeInTheDocument();
+    expect(within(householdChip).getByText("Household member")).toBeInTheDocument();
   });
 });
