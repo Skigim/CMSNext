@@ -11,8 +11,7 @@ describe("FinancialItemStepperModal", () => {
   const mockOnSave = vi.fn().mockResolvedValue(undefined);
 
   beforeEach(() => {
-    mockOnClose.mockClear();
-    mockOnSave.mockClear();
+    vi.clearAllMocks();
   });
 
   const renderModal = (props?: { applicationDate?: string }) =>
