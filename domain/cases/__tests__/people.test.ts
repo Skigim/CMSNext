@@ -149,6 +149,8 @@ describe("case people helpers", () => {
       expectedPerson: { id: "person-1", name: "Normalized Primary" },
     },
   ])("$title", ({ caseData, resolver, expectedPerson }) => {
+    // Arrange (scenario parameters are defined in the table above)
+
     // Act
     const result = resolver(caseData);
 
