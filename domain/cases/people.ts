@@ -56,7 +56,7 @@ function getLinkedPersonDisplayName(person: Person): string {
 
 export function getPrimaryCasePersonRef(
   source: CasePeopleSource,
-): NonNullable<StoredCase["linkedPeople"]>[number]["ref"] | null {
+): NonNullable<StoredCase["linkedPeople"][number]["ref"]> | null {
   const linkedPeople = getLinkedPeople(source);
   const sourcePersonId = source.person?.id;
 
@@ -132,7 +132,7 @@ export function getPersonRelationships(
     return {
       id: relationship.id,
       type: relationship.type,
-      name: relationship.displayNameFallback ?? targetPerson?.name ?? "",
+      name: relationship.displayNameFallback ?? formatCasePersonDisplayName(targetPerson) ?? "",
       phone: relationship.legacyPhone ?? targetPerson?.phone ?? "",
     };
   });
@@ -190,12 +190,7 @@ export function getLinkedCasePersonRoleLabel(
         return false;
       }
 
-      // Build a normalized display name for the relationship using the same
-      // person display-name logic used for the linked person, so that cases
-      // where `name` is empty but first/last are populated still match.
-      const relationshipDisplayName = relationship.targetPerson
-        ? formatCasePersonDisplayName(relationship.targetPerson)
-        : relationship.name;
+      const relationshipDisplayName = relationship.name;
 
       return (
         !!relationshipDisplayName
