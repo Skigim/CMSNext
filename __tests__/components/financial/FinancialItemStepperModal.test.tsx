@@ -177,6 +177,8 @@ describe("FinancialItemStepperModal", () => {
     await user.click(screen.getByLabelText(/Add another resource/i));
     await user.click(screen.getByRole("button", { name: /close/i }));
 
+    expect(screen.getByLabelText(/Description \*/i)).toBeInTheDocument();
+    expect(screen.queryByLabelText(/Add another resource/i)).not.toBeInTheDocument();
     expect(mockOnClose).toHaveBeenCalledOnce();
 
     rerender(
