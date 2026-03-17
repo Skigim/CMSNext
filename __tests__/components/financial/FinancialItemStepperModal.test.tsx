@@ -11,7 +11,8 @@ describe("FinancialItemStepperModal", () => {
   const mockOnSave = vi.fn().mockResolvedValue(undefined);
 
   beforeEach(() => {
-    vi.clearAllMocks();
+    mockOnClose.mockClear();
+    mockOnSave.mockClear();
   });
 
   const renderModal = (props?: { applicationDate?: string }) =>
@@ -177,9 +178,13 @@ describe("FinancialItemStepperModal", () => {
     await user.click(screen.getByLabelText(/Add another resource/i));
     await user.click(screen.getByRole("button", { name: /close/i }));
 
-    expect(screen.getByLabelText(/Description \*/i)).toBeInTheDocument();
-    expect(screen.queryByLabelText(/Add another resource/i)).not.toBeInTheDocument();
     expect(mockOnClose).toHaveBeenCalledOnce();
+    await waitFor(() => {
+      // The dialog stays mounted until the controlled isOpen prop changes, so the
+      // reset state is still observable immediately after requesting close.
+      expect(screen.getByLabelText(/Description \*/i)).toBeInTheDocument();
+      expect(screen.queryByLabelText(/Add another resource/i)).not.toBeInTheDocument();
+    });
 
     rerender(
       <FinancialItemStepperModal
