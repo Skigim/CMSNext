@@ -28,6 +28,8 @@ describe("FinancialItemStepperModal", () => {
   const goToAmountsStep = async (user: ReturnType<typeof userEvent.setup>, description: string) => {
     await user.type(screen.getByLabelText(/Description \*/i), description);
     await user.click(screen.getByRole("button", { name: /^Next$/i }));
+    // Wait for the amounts step to be fully rendered before continuing
+    await screen.findByLabelText(/Amount \*/i);
   };
 
   const addAmountEntry = async (user: ReturnType<typeof userEvent.setup>, amount: string) => {
