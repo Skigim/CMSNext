@@ -301,7 +301,7 @@ describe("CaseDetails linked people rendering", () => {
     expect(householdChip).not.toHaveTextContent("Spouse / Morgan / Member");
     expect(householdChip).not.toHaveTextContent("/");
     const dependentChip = screen.getByRole("button", {
-      name: "Devon Dependent Dependent",
+      name: "Dependent: Devon Dependent",
     });
     expect(dependentChip).toHaveAttribute("aria-disabled", "true");
     expect(within(dependentChip).getByText("Devon Dependent")).toBeInTheDocument();

@@ -270,7 +270,7 @@ export function CaseDetails(props: Readonly<CaseDetailsProps>) {
                     const phone = person.phone?.trim() || null;
                     const email = person.email?.trim() || null;
                     const { name, roleLabel } = getLinkedPersonChipContent(caseData, person, ref.role);
-                    const accessibleLabel = `${name} ${roleLabel}`;
+                    const accessibleLabel = `${roleLabel}: ${name}`;
                     const formattedPhone = phone ? formatUSPhone(phone) : null;
 
                     return (
