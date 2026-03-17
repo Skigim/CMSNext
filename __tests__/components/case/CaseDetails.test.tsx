@@ -209,7 +209,7 @@ describe("CaseDetails linked people rendering", () => {
     expect(screen.queryByText("Household member")).not.toBeInTheDocument();
   });
 
-  it("renders compact linked people chips with hover details and phone copy", async () => {
+  it("renders compact linked people chips with hydrated relationship labels, hover details, and phone copy", async () => {
     // Arrange
     const user = userEvent.setup();
     const primaryPerson = createMockPerson({
@@ -253,15 +253,19 @@ describe("CaseDetails linked people rendering", () => {
     const caseData = createMockStoredCase({
       name: "Household Case",
       person: primaryPerson,
-      people: [
-        { personId: primaryPerson.id, role: "applicant", isPrimary: true },
-        { personId: householdMember.id, role: "household_member", isPrimary: false },
-        { personId: dependentPerson.id, role: "dependent", isPrimary: false },
-      ],
       linkedPeople: [
         {
           ref: { personId: primaryPerson.id, role: "applicant", isPrimary: true },
-          person: primaryPerson,
+          person: createMockPerson({
+            ...primaryPerson,
+            normalizedRelationships: [
+              {
+                id: "rel-1",
+                type: "Spouse",
+                targetPersonId: householdMember.id,
+              },
+            ],
+          }),
         },
         {
           ref: { personId: householdMember.id, role: "household_member", isPrimary: false },
@@ -271,6 +275,11 @@ describe("CaseDetails linked people rendering", () => {
           ref: { personId: dependentPerson.id, role: "dependent", isPrimary: false },
           person: dependentPerson,
         },
+      ],
+      people: [
+        { personId: primaryPerson.id, role: "applicant", isPrimary: true },
+        { personId: householdMember.id, role: "household_member", isPrimary: false },
+        { personId: dependentPerson.id, role: "dependent", isPrimary: false },
       ],
       caseRecord: {
         ...createMockStoredCase().caseRecord,
@@ -287,7 +296,7 @@ describe("CaseDetails linked people rendering", () => {
 
     // Assert
     expect(screen.getByText("Primary Applicant")).toBeInTheDocument();
-    expect(householdChip).toHaveTextContent("Household member / Morgan / Member");
+    expect(householdChip).toHaveTextContent("Spouse / Morgan / Member");
     const dependentChip = screen.getByRole("button", {
       name: "Dependent / Devon / Dependent",
     });
@@ -383,6 +392,13 @@ describe("CaseDetails linked people rendering", () => {
       name: "Primary Applicant",
       phone: "5550001111",
       email: "primary@example.com",
+      normalizedRelationships: [
+        {
+          id: "rel-1",
+          type: "Spouse",
+          targetPersonId: "person-2",
+        },
+      ],
     });
     const secondaryLinkedPerson = createMockPerson({
       id: "person-2",
@@ -426,11 +442,59 @@ describe("CaseDetails linked people rendering", () => {
     expect(screen.getByText("Primary Applicant")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Copy Phone 5550001111" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Copy Email primary@example.com" })).toBeInTheDocument();
-    expect(secondaryChip).toHaveTextContent("Household member / Secondary / Person");
+    expect(secondaryChip).toHaveTextContent("Spouse / Secondary / Person");
     expect(screen.getByText("(555) 000-2222")).toBeInTheDocument();
     expect(screen.getByText("secondary@example.com")).toBeInTheDocument();
     expect(clickToCopy).toHaveBeenCalledWith("5550002222", {
       successMessage: "Phone number copied",
     });
+  });
+
+  it("falls back to the generic household label when the relationship type is unavailable", () => {
+    // Arrange
+    const primaryPerson = createMockPerson({
+      id: "person-1",
+      firstName: "Primary",
+      lastName: "Applicant",
+      name: "Primary Applicant",
+    });
+    const householdMember = createMockPerson({
+      id: "person-2",
+      firstName: "Morgan",
+      lastName: "Member",
+      name: "Morgan Member",
+    });
+    const caseData = createMockStoredCase({
+      name: "Household Case",
+      person: primaryPerson,
+      people: [
+        { personId: primaryPerson.id, role: "applicant", isPrimary: true },
+        { personId: householdMember.id, role: "household_member", isPrimary: false },
+      ],
+      linkedPeople: [
+        {
+          ref: { personId: primaryPerson.id, role: "applicant", isPrimary: true },
+          person: primaryPerson,
+        },
+        {
+          ref: { personId: householdMember.id, role: "household_member", isPrimary: false },
+          person: householdMember,
+        },
+      ],
+      caseRecord: {
+        ...createMockStoredCase().caseRecord,
+        personId: primaryPerson.id,
+      },
+    });
+
+    // Act
+    renderCaseDetails(caseData);
+
+    // Assert
+    expect(
+      screen.getByRole("button", {
+        name: /Copy Morgan Member phone/i,
+      }),
+    ).toHaveTextContent("Household member / Morgan / Member");
   });
 });

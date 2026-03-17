@@ -1,3 +1,4 @@
+import { normalizePhoneNumber } from "@/domain/common";
 import type { Person, Relationship, StoredCase } from "@/types/case";
 
 type CasePeopleSource = Partial<Pick<StoredCase, "person" | "linkedPeople" | "caseRecord">>;
@@ -33,6 +34,24 @@ export function getCasePersonRoleLabel(
   role?: keyof typeof CASE_PERSON_ROLE_LABELS,
 ): string {
   return (role && CASE_PERSON_ROLE_LABELS[role]) ?? CASE_PERSON_ROLE_LABELS.applicant;
+}
+
+/**
+ * Normalizes relationship display names for resilient case-insensitive matching.
+ *
+ * Trims surrounding whitespace, collapses repeated internal spacing, and
+ * lowercases the result so legacy fallback comparisons stay stable.
+ */
+function normalizeRelationshipDisplayName(value: string | undefined): string {
+  return (value ?? "").trim().replace(/\s+/g, " ").toLowerCase();
+}
+
+/**
+ * Returns the normalized display name for a linked person using the shared
+ * person formatting helper before applying relationship-name normalization.
+ */
+function getLinkedPersonDisplayName(person: Person): string {
+  return normalizeRelationshipDisplayName(formatCasePersonDisplayName(person));
 }
 
 export function getPrimaryCasePersonRef(
@@ -117,4 +136,75 @@ export function getPersonRelationships(
       phone: relationship.legacyPhone ?? targetPerson?.phone ?? "",
     };
   });
+}
+
+/**
+ * Resolves the best display label for a linked case person role.
+ *
+ * Household members prefer hydrated relationship metadata from the primary
+ * person using a stable fallback sequence: direct target-person match, unique
+ * normalized phone match, unique normalized display-name match, and finally the
+ * generic role label. Non-household roles always use the shared role label map.
+ */
+export function getLinkedCasePersonRoleLabel(
+  source: CasePeopleSource,
+  linkedPerson: Person,
+  role?: keyof typeof CASE_PERSON_ROLE_LABELS,
+): string {
+  if (role !== "household_member") {
+    return getCasePersonRoleLabel(role);
+  }
+
+  const primaryPerson = getPrimaryCasePersonForDisplay(source);
+  const normalizedRelationships = primaryPerson?.normalizedRelationships ?? [];
+  const directMatch = normalizedRelationships.find(
+    (relationship) =>
+      relationship.targetPersonId === linkedPerson.id
+      && relationship.type.trim().length > 0,
+  );
+  if (directMatch) {
+    return directMatch.type.trim();
+  }
+
+  const normalizedLinkedPhone = normalizePhoneNumber(linkedPerson.phone ?? "");
+  const phoneMatches =
+    normalizedLinkedPhone.length > 0
+      ? normalizedRelationships.filter(
+          (relationship) =>
+            relationship.type.trim().length > 0
+            && normalizePhoneNumber(relationship.legacyPhone ?? "") === normalizedLinkedPhone,
+        )
+      : [];
+  if (phoneMatches.length === 1) {
+    return phoneMatches[0].type.trim();
+  }
+
+  const normalizedDisplayName = getLinkedPersonDisplayName(linkedPerson);
+  if (!normalizedDisplayName) {
+    return getCasePersonRoleLabel(role);
+  }
+
+  const relationshipMatches = getPersonRelationships(primaryPerson, source).filter(
+    (relationship) => {
+      if (relationship.type.trim().length === 0) {
+        return false;
+      }
+
+      // Build a normalized display name for the relationship using the same
+      // person display-name logic used for the linked person, so that cases
+      // where `name` is empty but first/last are populated still match.
+      const relationshipDisplayName = relationship.targetPerson
+        ? formatCasePersonDisplayName(relationship.targetPerson)
+        : relationship.name;
+
+      return (
+        !!relationshipDisplayName
+        && normalizeRelationshipDisplayName(relationshipDisplayName) === normalizedDisplayName
+      );
+    },
+  );
+
+  return relationshipMatches.length === 1
+    ? relationshipMatches[0].type.trim()
+    : getCasePersonRoleLabel(role);
 }

@@ -27,6 +27,7 @@ import { useNotes } from "../../hooks/useNotes";
 import { useTemplates } from "@/contexts/TemplateContext";
 import {
   formatCasePersonDisplayName,
+  getLinkedCasePersonRoleLabel,
   getCasePersonRoleLabel,
   getPrimaryCasePersonForDisplay,
   getPrimaryCasePersonRef,
@@ -45,10 +46,11 @@ function get90DayTooltip(dateStr: string): string {
 }
 
 function getLinkedPersonChipLabel(
+  caseData: StoredCase,
   person: NonNullable<StoredCase["linkedPeople"]>[number]["person"],
   role: NonNullable<StoredCase["linkedPeople"]>[number]["ref"]["role"],
 ): string {
-  const roleLabel = getCasePersonRoleLabel(role);
+  const roleLabel = getLinkedCasePersonRoleLabel(caseData, person, role);
   const nameParts = [person.firstName?.trim(), person.lastName?.trim()].filter(Boolean);
   const name = nameParts.length > 0
     ? nameParts.join(" / ")
@@ -270,7 +272,7 @@ export function CaseDetails(props: Readonly<CaseDetailsProps>) {
                   {additionalLinkedPeople.map(({ ref, person }) => {
                     const phone = person.phone?.trim() || null;
                     const email = person.email?.trim() || null;
-                    const chipLabel = getLinkedPersonChipLabel(person, ref.role);
+                    const chipLabel = getLinkedPersonChipLabel(caseData, person, ref.role);
                     const formattedPhone = phone ? formatUSPhone(phone) : null;
 
                     return (
