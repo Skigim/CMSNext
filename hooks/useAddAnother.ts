@@ -2,7 +2,7 @@
  * @fileoverview useAddAnother Hook
  * 
  * Provides reusable "Add Another" pattern for modals that create multiple items.
- * Used by QuickCaseModal and FinancialItemStepperModal.
+ * Currently used by creation modals such as FinancialItemStepperModal.
  * 
  * Pattern:
  * - Component manages checkbox state externally
