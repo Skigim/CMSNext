@@ -45,18 +45,15 @@ function get90DayTooltip(dateStr: string): string {
   return `90 Days = ${formatDateForDisplay(date.toISOString())}`;
 }
 
-function getLinkedPersonChipLabel(
+function getLinkedPersonChipContent(
   caseData: StoredCase,
   person: NonNullable<StoredCase["linkedPeople"]>[number]["person"],
   role: NonNullable<StoredCase["linkedPeople"]>[number]["ref"]["role"],
-): string {
-  const roleLabel = getLinkedCasePersonRoleLabel(caseData, person, role);
-  const nameParts = [person.firstName?.trim(), person.lastName?.trim()].filter(Boolean);
-  const name = nameParts.length > 0
-    ? nameParts.join(" / ")
-    : formatCasePersonDisplayName(person);
-
-  return [roleLabel, name].join(" / ");
+): { name: string; roleLabel: string } {
+  return {
+    name: formatCasePersonDisplayName(person),
+    roleLabel: getLinkedCasePersonRoleLabel(caseData, person, role),
+  };
 }
 
 interface CaseDetailsProps {
@@ -272,7 +269,8 @@ export function CaseDetails(props: Readonly<CaseDetailsProps>) {
                   {additionalLinkedPeople.map(({ ref, person }) => {
                     const phone = person.phone?.trim() || null;
                     const email = person.email?.trim() || null;
-                    const chipLabel = getLinkedPersonChipLabel(caseData, person, ref.role);
+                    const { name, roleLabel } = getLinkedPersonChipContent(caseData, person, ref.role);
+                    const accessibleLabel = `${roleLabel}: ${name}`;
                     const formattedPhone = phone ? formatUSPhone(phone) : null;
 
                     return (
@@ -292,16 +290,18 @@ export function CaseDetails(props: Readonly<CaseDetailsProps>) {
                                 })
                               }
                             >
-                              {chipLabel}
+                              <span className="font-medium text-foreground">{name}</span>
+                              <span className="ml-1 text-muted-foreground">{roleLabel}</span>
                             </button>
                           ) : (
                             <button
                               type="button"
                               aria-disabled="true"
                               className="inline-flex items-center rounded-full border bg-muted/40 px-2.5 py-1 text-xs font-medium text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
-                              aria-label={chipLabel}
+                              aria-label={accessibleLabel}
                             >
-                              {chipLabel}
+                              <span className="font-medium text-foreground">{name}</span>
+                              <span className="ml-1 text-muted-foreground">{roleLabel}</span>
                             </button>
                           )}
                         </TooltipTrigger>
