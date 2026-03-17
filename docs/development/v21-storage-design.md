@@ -849,7 +849,7 @@ This plan maps directly to the March 2026 roadmap weeks.
 
 ## Appendix A: Before/After JSON Example
 
-### v2.0 (current)
+### v2.0 (legacy input)
 
 ```json
 {
@@ -888,11 +888,11 @@ This plan maps directly to the March 2026 roadmap weeks.
 ```
 
 > **Note:** The v2.0 example above omits `categoryConfig`, `activityLog`, `exported_at`, and
-> `total_cases` for brevity. See `NormalizedFileData` in `utils/services/FileStorageService.ts`
-> for the complete current v2.0 shape.
+> `total_cases` for brevity. See `NormalizedFileDataV20` in `utils/storageV21Migration.ts`
+> for the complete persisted legacy v2.0 shape.
 > Person objects are also truncated; see §5.2 for all required fields.
 
-### v2.1 (proposed)
+### v2.1 (current)
 
 > **Note on `name` field:** The example below retains `name` to reflect the current `Person` type.
 > Open question §11.2 proposes removing it in favour of computing `"${firstName} ${lastName}"` at hydration time.

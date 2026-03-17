@@ -37,7 +37,7 @@ Always use `createLocalStorageAdapter<T>(key, default)` from `utils/localStorage
 * **Safety:** Adapter handles SSR (`window` checks) and JSON parsing errors.
 
 ### File Storage
-Uses v2.0 normalized data format. Main file: `case-tracker-data.json`.
+Uses v2.1 normalized data format with a global `people` registry. Main file: `case-tracker-data.json`.
 Automatic backups created before major operations. Autosave has 5s debounce.
 
 ### Data Writes

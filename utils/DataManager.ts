@@ -134,19 +134,23 @@ function convertToAlertWithMatch(record: AlertRecord): AlertWithMatch {
  * 2. **File System as Source of Truth**: All operations read fresh data from disk
  * 3. **Read-Modify-Write Pattern**: Every mutation follows: read file → modify → write file
  * 4. **Service Delegation**: Business logic is delegated to specialized services
- * 5. **Normalized Data Format**: Uses v2.0 normalized format with flat arrays and foreign keys
+ * 5. **Normalized Data Format**: Uses v2.1 normalized format with flat arrays, a global people registry, and foreign keys
  * 
- * ## Data Format (v2.0 Normalized)
+ * ## Data Format (v2.1 Normalized)
  * 
  * ```typescript
  * {
- *   version: "2.0",
- *   cases: StoredCase[],        // Flat array without nested relations
+ *   version: "2.1",
+ *   people: Person[],           // Global people registry
+ *   cases: StoredCase[],        // Runtime-hydrated cases
  *   financials: StoredFinancialItem[],  // With caseId foreign key
  *   notes: StoredNote[],        // With caseId foreign key
  *   alerts: AlertRecord[],      // Flat array
+ *   exported_at: string,
+ *   total_cases: number,
  *   categoryConfig: CategoryConfig,
- *   activityLog: CaseActivityEntry[]
+ *   activityLog: CaseActivityEntry[],
+ *   templates?: Template[]
  * }
  * ```
  * 

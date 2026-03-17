@@ -270,21 +270,27 @@ export function useFinancialSummary(caseId: string) {
 }
 ```
 
-## Data Format (v2.0 Normalized)
+## Data Format (v2.1 Normalized)
 
 ```typescript
 interface NormalizedFileData {
-  cases: Case[]; // id, caseNumber, status, createdAt, etc.
+  version: "2.1";
+  people: Person[]; // Global people registry
+  cases: StoredCase[]; // Runtime-hydrated cases
   financials: Financial[]; // id, caseId (FK), amount, type, etc.
   notes: Note[]; // id, caseId (FK), content, createdAt, etc.
   alerts: Alert[]; // id, caseId (FK), message, severity, etc.
+  exported_at: string;
+  total_cases: number;
   categoryConfig: CategoryConfig;
   activityLog: ActivityLogEntry[];
+  templates?: Template[];
 }
 ```
 
 - Flat arrays with foreign keys - **no nested structures**
-- Legacy nested formats are rejected with `LegacyFormatError`
+- Persisted v2.1 data is hydrated/dehydrated through the existing storage helpers
+- Legacy v2.0 files are auto-migrated to v2.1 on read; pre-v2.0 formats surface `LegacyFormatError`
 
 ## Form Data Factories
 

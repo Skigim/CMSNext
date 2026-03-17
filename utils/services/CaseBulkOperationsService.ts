@@ -23,7 +23,7 @@ interface CaseBulkOperationsServiceConfig {
 /**
  * CaseBulkOperationsService - Batch and bulk case operations
  * 
- * This service handles all bulk case-related operations in the normalized v2.0 format.
+ * This service handles all bulk case-related operations in the normalized v2.1 format.
  * It is optimized for batch operations that affect multiple cases at once.
  * 
  * ## Architecture

@@ -35,7 +35,7 @@ export interface FeatureFlags {
 	"cases.bulkActions": boolean;
 	/** Controls visibility of developer tools in Settings. */
 	"settings.devTools": boolean;
-	/** Enables legacy v1.x to v2.0 data migration utility in Settings. */
+	/** Enables the legacy migration utility in Settings (v1.x and v2.0 inputs end up in v2.1). */
 	"settings.legacyMigration": boolean;
 }
 

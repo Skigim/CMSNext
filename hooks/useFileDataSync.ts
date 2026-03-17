@@ -30,14 +30,18 @@ type FileDataPayload = {
  * to the appropriate React state setters.
  * 
  * **Data Normalization:**
- * File format is v2.0 normalized (flat arrays with foreign keys):
+ * File format is v2.1 normalized (flat arrays with foreign keys plus a global people registry):
  * ```json
  * {
+ *   "version": "2.1",
+ *   "people": [ { "id": "p1", "firstName": "Jane", "lastName": "Doe", ... } ],
  *   "cases": [ { "id": "c1", "caseNumber": "2024-001", ... }, ... ],
  *   "categoryConfig": { "statuses": [ { "name": "Active", "colorSlot": "blue" } ], ... },
  *   "financials": [ ... ],
  *   "notes": [ ... ],
- *   "alerts": [ ... ]
+ *   "alerts": [ ... ],
+ *   "exported_at": "2026-03-17T00:00:00.000Z",
+ *   "total_cases": 1
  * }
  * ```
  * 

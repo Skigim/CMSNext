@@ -73,7 +73,7 @@ interface NotesServiceConfig {
  * NotesService - Note operations with PII protection
  * 
  * This service handles all operations related to case notes in the normalized
- * v2.0 format. Notes are stored separately from cases with foreign key references.
+ * v2.1 format. Notes are stored separately from cases with foreign key references.
  * 
  * ## Architecture
  * 

@@ -165,20 +165,25 @@ try {
 
 ## Data Format
 
-All data uses the v2.0 normalized format:
+All current data uses the v2.1 normalized format:
 
 ```typescript
 interface NormalizedFileData {
-  cases: Case[];
+  version: "2.1";
+  people: Person[];
+  cases: StoredCase[];
   financials: Financial[];
   notes: Note[];
   alerts: Alert[];
+  exported_at: string;
+  total_cases: number;
   categoryConfig: CategoryConfig;
   activityLog: ActivityLogEntry[];
+  templates?: Template[];
 }
 ```
 
-**Legacy nested formats are rejected.** The app requires migration for old data files.
+**Legacy v2.0 files are auto-migrated on read.** Pre-v2.0 nested formats still require explicit migration support.
 
 ## Autosave Timing
 
@@ -210,5 +215,5 @@ After making storage changes:
 | Use localStorage/sessionStorage        | Use File System Access API only            |
 | Skip permission checks                 | Always verify handle permissions           |
 | Cache file data                        | Always read fresh from file                |
-| Use nested data format                 | Use normalized v2.0 format only            |
+| Use nested data format                 | Use normalized v2.1 format only            |
 | Support Firefox/Safari                 | Chromium only (show compatibility message) |

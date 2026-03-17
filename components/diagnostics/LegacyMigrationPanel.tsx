@@ -69,8 +69,8 @@ export function LegacyMigrationPanel({
       const format = detectDataFormat(rawData);
       setState({ status: "detected", format, rawData });
 
-      if (format === "v2.0") {
-        toast.info("Data is already in the current v2.0 format. No migration needed.");
+      if (format === "v2.0" || format === "v2.1") {
+        toast.info("Data is already in the current v2.1 format, or will be auto-migrated on read. No manual migration needed.");
       } else if (format === "v1.x-nested") {
         toast.warning("Legacy v1.x format detected. Migration is available.");
       } else {
@@ -89,7 +89,7 @@ export function LegacyMigrationPanel({
     }
 
     setState({ status: "migrating" });
-    const toastId = toast.loading("Migrating data to v2.0 format...");
+    const toastId = toast.loading("Migrating data to v2.1 format...");
 
     try {
       const result = migrateLegacyData(state.rawData);
@@ -133,7 +133,7 @@ export function LegacyMigrationPanel({
           Legacy Data Migration
         </CardTitle>
         <CardDescription>
-          Migrate data from legacy v1.x format to the current v2.0 normalized format
+          Inspect legacy v1.x or v2.0 data and bring it into the current v2.1 normalized format when needed
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -177,19 +177,25 @@ export function LegacyMigrationPanel({
                 </p>
               </div>
               <Badge
-                variant={state.format === "v2.0" ? "default" : "secondary"}
+                variant={state.format === "v2.0" || state.format === "v2.1" ? "default" : "secondary"}
                 className={state.format === "v1.x-nested" ? "bg-amber-500 text-white" : ""}
               >
-                {state.format === "v2.0" ? "Current" : "Legacy"}
+                {state.format === "v2.1"
+                  ? "Current"
+                  : state.format === "v2.0"
+                    ? "Compatible"
+                    : "Legacy"}
               </Badge>
             </div>
 
-            {state.format === "v2.0" && (
+            {(state.format === "v2.0" || state.format === "v2.1") && (
               <Alert>
                 <Check className="h-4 w-4" />
                 <AlertTitle>Already Current</AlertTitle>
                 <AlertDescription>
-                  Your data is already in the v2.0 format. No migration is needed.
+                  {state.format === "v2.1"
+                    ? "Your data is already in the v2.1 format. No migration is needed."
+                    : "Your data is in the legacy v2.0 format and will auto-migrate to v2.1 on read. No manual migration is needed."}
                 </AlertDescription>
               </Alert>
             )}
@@ -202,7 +208,7 @@ export function LegacyMigrationPanel({
                     Migration Required
                   </AlertTitle>
                   <AlertDescription className="text-amber-700 dark:text-amber-300">
-                    Your data uses the legacy v1.x nested format. Click below to migrate to v2.0.
+                    Your data uses the legacy v1.x nested format. Click below to migrate to v2.1.
                     <br />
                     <strong>A backup will be created automatically before migration.</strong>
                   </AlertDescription>
@@ -214,13 +220,13 @@ export function LegacyMigrationPanel({
                   </Badge>
                   <ArrowRight className="h-5 w-5 text-muted-foreground" />
                   <Badge variant="default" className="text-base px-4 py-2">
-                    v2.0
+                    v2.1
                   </Badge>
                 </div>
 
                 <Button onClick={handleMigrate} className="w-full" size="lg">
                   <RefreshCw className="mr-2 h-4 w-4" />
-                  Migrate to v2.0
+                  Migrate to v2.1
                 </Button>
               </>
             )}
@@ -265,7 +271,7 @@ export function LegacyMigrationPanel({
                 Migration Successful
               </AlertTitle>
               <AlertDescription className="text-green-700 dark:text-green-300">
-                Your data has been migrated to v2.0 format.
+                Your data has been migrated to v2.1 format.
               </AlertDescription>
             </Alert>
 
@@ -333,4 +339,3 @@ export function LegacyMigrationPanel({
     </Card>
   );
 }
-

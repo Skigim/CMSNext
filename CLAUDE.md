@@ -139,7 +139,7 @@ CMSNext/
 │   ├── featureFlags.ts         # Feature flag system
 │   ├── performanceTracker.ts   # Telemetry
 │   ├── services/               # Stateless service classes
-│   │   ├── FileStorageService.ts       # File I/O, v2.0 format validation
+│   │   ├── FileStorageService.ts       # File I/O, v2.1 format validation + v2.0 migration
 │   │   ├── CaseService.ts             # Case CRUD
 │   │   ├── FinancialsService.ts       # Financial items CRUD
 │   │   ├── NotesService.ts            # Note management
@@ -261,24 +261,29 @@ const adapter = createLocalStorageAdapter<MyType>(
 
 ## Data Layer
 
-### v2.0 Normalized Format
+### v2.1 Normalized Format
 
 All data is stored in a flat, normalized JSON format. No nested case-level structures.
 
 ```typescript
 interface NormalizedFileData {
-  version: "2.0";
-  cases: StoredCase[]; // id, caseNumber, status, etc.
+  version: "2.1";
+  people: Person[]; // Global people registry
+  cases: StoredCase[]; // Runtime-hydrated cases
   financials: StoredFinancialItem[]; // id, caseId (FK), amount, type, etc.
   notes: StoredNote[]; // id, caseId (FK), content, etc.
   alerts: AlertRecord[]; // id, caseId (FK), message, severity, etc.
+  exported_at: string;
+  total_cases: number;
   activityLog: CaseActivityEntry[];
   categoryConfig: CategoryConfig;
+  templates?: Template[];
 }
 ```
 
 - Flat arrays with foreign keys — no nested structures
-- Legacy nested formats trigger `LegacyFormatError` (never silently migrate)
+- Persisted v2.1 data is hydrated/dehydrated through the storage migration helpers
+- Legacy v2.0 files auto-migrate to v2.1 on read; pre-v2.0 nested formats trigger `LegacyFormatError`
 - Main file: `case-tracker-data.json`
 
 ### Storage Hierarchy (3 tiers)
@@ -300,7 +305,7 @@ FileStorageContext (handles/permissions)
     ↓
 AutosaveFileService (debouncing + write queue)
     ↓
-FileStorageService (read/write + v2.0 validation)
+FileStorageService (read/write + v2.1 validation, v2.0 auto-migration)
     ↓
 File System Access API (browser native)
 ```
