@@ -185,9 +185,23 @@ export function getLinkedCasePersonRoleLabel(
   }
 
   const relationshipMatches = getPersonRelationships(primaryPerson, source).filter(
-    (relationship) =>
-      relationship.type.trim().length > 0
-      && normalizeRelationshipDisplayName(relationship.name) === normalizedDisplayName,
+    (relationship) => {
+      if (relationship.type.trim().length === 0) {
+        return false;
+      }
+
+      // Build a normalized display name for the relationship using the same
+      // person display-name logic used for the linked person, so that cases
+      // where `name` is empty but first/last are populated still match.
+      const relationshipDisplayName = relationship.targetPerson
+        ? formatCasePersonDisplayName(relationship.targetPerson)
+        : relationship.name;
+
+      return (
+        !!relationshipDisplayName
+        && normalizeRelationshipDisplayName(relationshipDisplayName) === normalizedDisplayName
+      );
+    },
   );
 
   return relationshipMatches.length === 1
