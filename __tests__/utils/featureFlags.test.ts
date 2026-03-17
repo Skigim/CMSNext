@@ -3,6 +3,7 @@ import {
   DEFAULT_FLAGS,
   createFeatureFlagContext,
   getEnabledFeatures,
+  isEncryptionTemporarilyDisabled,
   isFeatureEnabled,
   type FeatureFlags,
 } from '@/utils/featureFlags';
@@ -62,5 +63,19 @@ describe('featureFlags', () => {
     expect(enabled).toContain('dashboard.widgets.casePriority');
     expect(enabled).not.toContain('dashboard.widgets.avgAlertAge');
     expect(enabled).toContain('cases.bulkActions');
+  });
+
+  it('treats temporary encryption bypass as an explicit feature flag', () => {
+    expect(isEncryptionTemporarilyDisabled()).toBeTypeOf('boolean');
+    expect(
+      isEncryptionTemporarilyDisabled({
+        'storage.disableEncryption': true,
+      }),
+    ).toBe(true);
+    expect(
+      isEncryptionTemporarilyDisabled({
+        'storage.disableEncryption': false,
+      }),
+    ).toBe(false);
   });
 });

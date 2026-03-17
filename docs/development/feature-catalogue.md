@@ -525,7 +525,7 @@ JSON import/export flows are stable with schema validation, autosave-aware backu
 - Automatic backups (`case-tracker-data.backup-[timestamp].json`) protect against destructive imports
 - Exported data includes metadata (exported_at, totals) ensuring compatibility across environments
 - `JsonUploader` component provides guided UX with progress feedback
-- Seed scripts and `sample-alerts.json` accelerate demos and testing
+- Seed scripts and `samples/sample-alerts.json` accelerate demos and testing
 
 ### Gaps / Risks
 

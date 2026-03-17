@@ -9,6 +9,8 @@ import { PaperCutModal } from "@/components/common/PaperCutModal";
 import { KeyboardShortcutsHelp } from "@/components/common/KeyboardShortcutsHelp";
 import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
 import { useAntiMicroDrag } from "@/hooks/useAntiMicroDrag";
+import { Badge } from "@/components/ui/badge";
+import { isEncryptionTemporarilyDisabled } from "@/utils/featureFlags";
 
 const logger = createLogger("App");
 
@@ -39,6 +41,7 @@ export default function App() {
   useAntiMicroDrag(); // Prevent accidental text selection on micro-drags
   const paperCut = usePaperCutCapture();
   const [isShortcutsHelpOpen, setIsShortcutsHelpOpen] = useState(false);
+  const showDevNoEncryptionBadge = import.meta.env.DEV && isEncryptionTemporarilyDisabled();
 
   const handleNavigate = useCallback((path: string) => {
     dispatchNavigationEvent(path);
@@ -93,6 +96,14 @@ export default function App() {
             dispatchNavigationEvent("/settings");
           }}
         />
+        {showDevNoEncryptionBadge && (
+          <Badge
+            variant="secondary"
+            className="fixed right-4 top-4 z-50 border border-amber-300 bg-amber-100 text-amber-900 shadow-sm dark:border-amber-800 dark:bg-amber-950 dark:text-amber-200"
+          >
+            DEV: No Encryption
+          </Badge>
+        )}
         {chordPending && (
           <div className="fixed bottom-4 right-4 bg-background/95 border rounded-md px-3 py-2 text-sm shadow-lg z-50">
             Waiting for next key...

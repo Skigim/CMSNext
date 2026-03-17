@@ -40,6 +40,8 @@ declare global {
   var FileService: unknown;
 
   interface ImportMetaEnv {
+    readonly VITE_DISABLE_ENCRYPTION?: string;
+    readonly VITE_E2E_MOCK_MODE?: string;
     readonly VITE_PERSIST_NORMALIZATION_FIXES?: string;
   }
 

@@ -1,0 +1,60 @@
+{
+  "version": "2.1",
+  "people": [],
+  "cases": [],
+  "financials": [],
+  "notes": [],
+  "alerts": [],
+  "exported_at": "2026-03-17T00:00:00.000Z",
+  "total_cases": 0,
+  "categoryConfig": {
+    "caseTypes": [
+      "LTC",
+      "Medicaid",
+      "SNAP",
+      "TANF",
+      "Emergency",
+      "Other"
+    ],
+    "applicationTypes": [
+      "New Application",
+      "Renewal",
+      "Redetermination",
+      "Change Report",
+      "Other"
+    ],
+    "caseStatuses": [],
+    "alertTypes": [],
+    "livingArrangements": [
+      "Apartment/House",
+      "Assisted Living",
+      "Nursing Home",
+      "Group Home",
+      "Family Home",
+      "Independent Living",
+      "Other"
+    ],
+    "noteCategories": [
+      "General",
+      "VR Update",
+      "Client Contact",
+      "Case Review",
+      "Document Request",
+      "Follow-up Required",
+      "Important",
+      "Medical Update",
+      "Financial Update",
+      "Other"
+    ],
+    "verificationStatuses": [
+      "Needs VR",
+      "VR Pending",
+      "AVS Pending",
+      "Verified"
+    ],
+    "dashboardSettings": {
+      "requireNoteForProcessedCount": true
+    }
+  },
+  "activityLog": []
+}

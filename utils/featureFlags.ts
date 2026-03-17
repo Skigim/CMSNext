@@ -37,6 +37,8 @@ export interface FeatureFlags {
 	"settings.devTools": boolean;
 	/** Enables the legacy migration utility in Settings (v1.x and v2.0 inputs end up in v2.1). */
 	"settings.legacyMigration": boolean;
+	/** Dev-only toggle to bypass encryption setup for unencrypted local files. */
+	"storage.disableEncryption": boolean;
 }
 
 /** All known feature flag keys. */
@@ -60,6 +62,7 @@ const FEATURE_FLAG_DEFAULTS: FeatureFlags = {
 	"cases.bulkActions": false,
 	"settings.devTools": import.meta.env.DEV,
 	"settings.legacyMigration": import.meta.env.DEV,
+	"storage.disableEncryption": import.meta.env.DEV && import.meta.env.VITE_DISABLE_ENCRYPTION === "true",
 };
 
 /** Immutable default feature flag configuration. */
@@ -108,3 +111,11 @@ export const ENABLE_SAMPLE_ALERTS = false;
 
 /** Feature flag key for advanced alert filtering in the case-list alerts segment. */
 export const ENABLE_ADVANCED_ALERT_FILTERS: FeatureFlagKey = "alerts.advancedFilters";
+
+/**
+ * Dev-only bypass for file encryption.
+ * Only applies to unencrypted files. Existing encrypted files still require password-based access.
+ */
+export function isEncryptionTemporarilyDisabled(flags?: Partial<FeatureFlags>): boolean {
+	return isFeatureEnabled("storage.disableEncryption", flags);
+}

@@ -1,0 +1,242 @@
+{
+  "version": "2.1",
+  "people": [],
+  "cases": [],
+  "financials": [],
+  "notes": [],
+  "alerts": [
+    {
+      "id": "AL-228",
+      "reportId": "AL-228",
+      "alertCode": "AL-228",
+      "alertType": "Overdue Documentation",
+      "alertDate": "2025-09-24T00:00:00.000Z",
+      "createdAt": "2025-09-24T00:00:00.000Z",
+      "updatedAt": "2025-09-24T00:00:00.000Z",
+      "mcNumber": "MCN642115",
+      "personName": "William King",
+      "program": "Medicaid",
+      "region": "",
+      "state": "",
+      "source": "Import",
+      "description": "Request outstanding medical forms",
+      "status": "new",
+      "resolvedAt": null,
+      "metadata": {
+        "rawType": "Overdue Documentation",
+        "rawProgram": "Medicaid",
+        "rawDescription": "Request outstanding medical forms",
+        "rawName": "William King",
+        "alertNumber": "AL-228",
+        "matchStatus": "unmatched"
+      }
+    },
+    {
+      "id": "AL-512",
+      "reportId": "AL-512",
+      "alertCode": "AL-512",
+      "alertType": "Case Closure Notice",
+      "alertDate": "2025-09-22T00:00:00.000Z",
+      "createdAt": "2025-09-22T00:00:00.000Z",
+      "updatedAt": "2025-09-22T00:00:00.000Z",
+      "mcNumber": "MCN999999",
+      "personName": "Evelyn Harper",
+      "program": "Medicaid",
+      "region": "",
+      "state": "",
+      "source": "Import",
+      "description": "MCN not found in workspace",
+      "status": "new",
+      "resolvedAt": null,
+      "metadata": {
+        "rawType": "Case Closure Notice",
+        "rawProgram": "Medicaid",
+        "rawDescription": "MCN not found in workspace",
+        "rawName": "Evelyn Harper",
+        "alertNumber": "AL-512",
+        "matchStatus": "unmatched"
+      }
+    },
+    {
+      "id": "AL-101",
+      "reportId": "AL-101",
+      "alertCode": "AL-101",
+      "alertType": "Recertification Due",
+      "alertDate": "2025-09-20T00:00:00.000Z",
+      "createdAt": "2025-09-20T00:00:00.000Z",
+      "updatedAt": "2025-09-20T00:00:00.000Z",
+      "mcNumber": "MCN326765",
+      "personName": "Donna Lewis",
+      "program": "Medicaid",
+      "region": "",
+      "state": "",
+      "source": "Import",
+      "description": "Recertification interview due within 10 days",
+      "status": "new",
+      "resolvedAt": null,
+      "metadata": {
+        "rawType": "Recertification Due",
+        "rawProgram": "Medicaid",
+        "rawDescription": "Recertification interview due within 10 days",
+        "rawName": "Donna Lewis",
+        "alertNumber": "AL-101",
+        "matchStatus": "unmatched"
+      }
+    },
+    {
+      "id": "AL-214",
+      "reportId": "AL-214",
+      "alertCode": "AL-214",
+      "alertType": "Income Verification",
+      "alertDate": "2025-09-18T00:00:00.000Z",
+      "createdAt": "2025-09-18T00:00:00.000Z",
+      "updatedAt": "2025-09-18T00:00:00.000Z",
+      "mcNumber": "MCN785792",
+      "personName": "Karen Thompson",
+      "program": "Medicaid",
+      "region": "",
+      "state": "",
+      "source": "Import",
+      "description": "Pending employer verification documents",
+      "status": "new",
+      "resolvedAt": null,
+      "metadata": {
+        "rawType": "Income Verification",
+        "rawProgram": "Medicaid",
+        "rawDescription": "Pending employer verification documents",
+        "rawName": "Karen Thompson",
+        "alertNumber": "AL-214",
+        "matchStatus": "unmatched"
+      }
+    },
+    {
+      "id": "AL-330",
+      "reportId": "AL-330",
+      "alertCode": "AL-330",
+      "alertType": "Residency Confirmation",
+      "alertDate": "2025-09-16T00:00:00.000Z",
+      "createdAt": "2025-09-16T00:00:00.000Z",
+      "updatedAt": "2025-09-16T00:00:00.000Z",
+      "mcNumber": "MCN877054",
+      "personName": "Kenneth Rodriguez",
+      "program": "SNAP",
+      "region": "",
+      "state": "",
+      "source": "Import",
+      "description": "Confirm new address provided",
+      "status": "new",
+      "resolvedAt": null,
+      "metadata": {
+        "rawType": "Residency Confirmation",
+        "rawProgram": "SNAP",
+        "rawDescription": "Confirm new address provided",
+        "rawName": "Kenneth Rodriguez",
+        "alertNumber": "AL-330",
+        "matchStatus": "unmatched"
+      }
+    },
+    {
+      "id": "AL-405",
+      "reportId": "AL-405",
+      "alertCode": "AL-405",
+      "alertType": "Asset Threshold",
+      "alertDate": "2025-09-10T00:00:00.000Z",
+      "createdAt": "2025-09-10T00:00:00.000Z",
+      "updatedAt": "2025-09-10T00:00:00.000Z",
+      "mcNumber": null,
+      "personName": "Dana Wells",
+      "program": "Medicaid",
+      "region": "",
+      "state": "",
+      "source": "Import",
+      "description": "Manual review required - missing MCN",
+      "status": "new",
+      "resolvedAt": null,
+      "metadata": {
+        "rawType": "Asset Threshold",
+        "rawProgram": "Medicaid",
+        "rawDescription": "Manual review required - missing MCN",
+        "rawName": "Dana Wells",
+        "alertNumber": "AL-405",
+        "matchStatus": "missing-mcn"
+      }
+    }
+  ],
+  "exported_at": "2026-03-17T00:00:00.000Z",
+  "total_cases": 0,
+  "categoryConfig": {
+    "caseTypes": [
+      "LTC",
+      "Medicaid",
+      "SNAP",
+      "TANF",
+      "Emergency",
+      "Other"
+    ],
+    "applicationTypes": [
+      "New Application",
+      "Renewal",
+      "Redetermination",
+      "Change Report",
+      "Other"
+    ],
+    "caseStatuses": [],
+    "alertTypes": [
+      {
+        "name": "Overdue Documentation",
+        "colorSlot": "red"
+      },
+      {
+        "name": "Case Closure Notice",
+        "colorSlot": "amber"
+      },
+      {
+        "name": "Recertification Due",
+        "colorSlot": "orange"
+      },
+      {
+        "name": "Income Verification",
+        "colorSlot": "blue"
+      },
+      {
+        "name": "Residency Confirmation",
+        "colorSlot": "teal"
+      },
+      {
+        "name": "Asset Threshold",
+        "colorSlot": "purple"
+      }
+    ],
+    "livingArrangements": [
+      "Apartment/House",
+      "Assisted Living",
+      "Nursing Home",
+      "Group Home",
+      "Family Home",
+      "Independent Living",
+      "Other"
+    ],
+    "noteCategories": [
+      "General",
+      "VR Update",
+      "Client Contact",
+      "Case Review",
+      "Document Request",
+      "Follow-up Required",
+      "Important",
+      "Medical Update",
+      "Financial Update",
+      "Other"
+    ],
+    "verificationStatuses": [
+      "Needs VR",
+      "VR Pending",
+      "AVS Pending",
+      "Verified"
+    ],
+    "dashboardSettings": {
+      "requireNoteForProcessedCount": true
+    }
+  },
+  "activityLog": []
+}

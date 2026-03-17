@@ -7,7 +7,7 @@ import AutosaveFileService from './AutosaveFileService';
  * Bypasses the native File System Access API so headless Playwright tests
  * run deterministically without OS dialog blockers.
  *
- * Uses dynamic imports for sample-data.json so it is never bundled into
+ * Uses dynamic imports for samples/sample-data.json so it is never bundled into
  * production builds.
  */
 
@@ -82,17 +82,17 @@ export class MockFileService extends AutosaveFileService {
 
   async loadExistingData(): Promise<unknown> {
     // Dynamic import prevents bundle bloat in production
-    const { default: sampleData } = await import('../sample-data.json');
+    const { default: sampleData } = await import('../samples/sample-data.json');
     return sampleData;
   }
 
   async loadDataFromFile(_fileName: string): Promise<unknown> {
-    const { default: sampleData } = await import('../sample-data.json');
+    const { default: sampleData } = await import('../samples/sample-data.json');
     return sampleData;
   }
 
   async readFile(): Promise<unknown> {
-    const { default: sampleData } = await import('../sample-data.json');
+    const { default: sampleData } = await import('../samples/sample-data.json');
     return sampleData;
   }
 
@@ -144,7 +144,7 @@ export class MockFileService extends AutosaveFileService {
 
   setDataLoadCallback(cb?: ((data: unknown) => void) | null): void {
     if (cb) {
-      import('../sample-data.json').then(({ default: sampleData }) => cb(sampleData));
+      import('../samples/sample-data.json').then(({ default: sampleData }) => cb(sampleData));
     }
   }
 

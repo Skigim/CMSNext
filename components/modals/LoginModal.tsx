@@ -15,9 +15,9 @@ import { AlertCircle, Loader2, Lock, KeyRound, FolderOpen } from "lucide-react";
 import { useEncryption } from "@/contexts/EncryptionContext";
 import { useFileStorage } from "@/contexts/FileStorageContext";
 import { createLogger } from "@/utils/logger";
-import { useSubmitShortcut } from "@/hooks/useSubmitShortcut";
 import { AuthBackdrop } from "./AuthBackdrop";
 import { EncryptionError } from "@/types/encryption";
+import { isEncryptionTemporarilyDisabled } from "@/utils/featureFlags";
 
 const logger = createLogger("LoginModal");
 
@@ -35,15 +35,17 @@ export function LoginModal({
   isOpen,
   onLoginComplete,
   onChooseDifferentFolder,
-}: LoginModalProps) {
+}: Readonly<LoginModalProps>) {
   const encryption = useEncryption();
   const { service, connectToExisting, loadExistingData } = useFileStorage();
+  const encryptionDisabled = isEncryptionTemporarilyDisabled();
 
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isCheckingFile, setIsCheckingFile] = useState(true);
   const [fileExists, setFileExists] = useState(true);
+  const [fileEncrypted, setFileEncrypted] = useState(false);
 
   const hasCheckedRef = useRef(false);
 
@@ -79,9 +81,17 @@ export function LoginModal({
         const status = await service?.checkFileEncryptionStatus();
         logger.info("File check on login", { status });
 
-        if (!status?.exists) {
+        if (status?.exists === false) {
           // No file exists - shouldn't be on login screen
           setFileExists(false);
+        } else if (status) {
+          setFileEncrypted(status.encrypted);
+          if (encryptionDisabled && !status.encrypted) {
+            logger.info("Encryption temporarily disabled, bypassing login for unencrypted file");
+            await loadExistingData();
+            await onLoginComplete();
+            return;
+          }
         }
       } catch (err) {
         logger.warn("File check failed", { error: String(err) });
@@ -91,7 +101,7 @@ export function LoginModal({
     };
 
     checkFile();
-  }, [isOpen, service]);
+  }, [encryptionDisabled, isOpen, loadExistingData, onLoginComplete, service]);
 
   // Reset state when modal closes
   useEffect(() => {
@@ -102,6 +112,7 @@ export function LoginModal({
       setIsLoading(false);
       setIsCheckingFile(true);
       setFileExists(true);
+      setFileEncrypted(false);
     }
   }, [isOpen]);
 
@@ -191,10 +202,10 @@ export function LoginModal({
     }
   }, [password, connectToExisting, encryption, loadExistingData, onLoginComplete]);
 
-  const handleSubmitShortcut = useSubmitShortcut<HTMLFormElement>({
-    onSubmit: handleLogin,
-    canSubmit: !isLoading && Boolean(password.trim()),
-  });
+  let loginHelpText = "Your data is encrypted locally using AES-256. Your sign-in secret never leaves your device.";
+  if (!fileEncrypted && encryptionDisabled) {
+    loginHelpText = "Dev mode bypass is enabled, but this file still requires your sign-in secret when it is encrypted.";
+  }
 
   // Loading state while checking file
   if (isCheckingFile) {
@@ -274,7 +285,6 @@ export function LoginModal({
               void handleLogin();
             }
           }}
-          onKeyDown={handleSubmitShortcut}
           className="space-y-4 py-2"
         >
           <div className="space-y-2">
@@ -305,7 +315,7 @@ export function LoginModal({
           )}
 
           <p className="text-xs text-muted-foreground">
-            Your data is encrypted locally using AES-256. The password never leaves your device.
+            {loginHelpText}
           </p>
         </form>
 

@@ -22,8 +22,8 @@ import {
 import { useEncryption } from "@/contexts/EncryptionContext";
 import { useFileStorage } from "@/contexts/FileStorageContext";
 import { createLogger } from "@/utils/logger";
-import { useSubmitShortcut } from "@/hooks/useSubmitShortcut";
 import { AuthBackdrop } from "./AuthBackdrop";
+import { isEncryptionTemporarilyDisabled } from "@/utils/featureFlags";
 
 const logger = createLogger("WelcomeModal");
 
@@ -37,16 +37,16 @@ interface WelcomeModalProps {
   isOpen: boolean;
   isSupported: boolean;
   onSetupComplete: () => void | Promise<void>;
-  onGoToSettings: () => void;
 }
 
 export function WelcomeModal({
   isOpen,
   isSupported,
   onSetupComplete,
-}: WelcomeModalProps) {
+}: Readonly<WelcomeModalProps>) {
   const encryption = useEncryption();
   const { service, connectToFolder, loadExistingData } = useFileStorage();
+  const encryptionDisabled = isEncryptionTemporarilyDisabled();
 
   const [step, setStep] = useState<WelcomeStep>("welcome");
   const [isConnecting, setIsConnecting] = useState(false);
@@ -91,6 +91,13 @@ export function WelcomeModal({
         return;
       }
 
+      if (encryptionDisabled) {
+        await loadExistingData();
+        logger.info("Setup complete with encryption temporarily disabled");
+        onSetupComplete();
+        return;
+      }
+
       // New folder or unencrypted - proceed to password creation
       setStep("password");
     } catch (err) {
@@ -99,7 +106,7 @@ export function WelcomeModal({
     } finally {
       setIsConnecting(false);
     }
-  }, [connectToFolder, service]);
+  }, [connectToFolder, encryptionDisabled, loadExistingData, onSetupComplete, service]);
 
   // Handle password creation
   const handleCreatePassword = useCallback(async () => {
@@ -151,16 +158,6 @@ export function WelcomeModal({
     setError(null);
     encryption.clearCredentials();
   }, [encryption]);
-
-  const handleChooseFolderShortcut = useSubmitShortcut<HTMLDivElement>({
-    onSubmit: handleChooseFolder,
-    canSubmit: !isConnecting,
-  });
-
-  const handleCreatePasswordShortcut = useSubmitShortcut<HTMLFormElement>({
-    onSubmit: handleCreatePassword,
-    canSubmit: !isProcessingPassword && Boolean(password.trim() && confirmPassword.trim()),
-  });
 
   // Browser not supported
   if (!isSupported) {
@@ -221,7 +218,6 @@ export function WelcomeModal({
                   void handleCreatePassword();
                 }
               }}
-              onKeyDown={handleCreatePasswordShortcut}
               className="space-y-4 py-2"
             >
               <div className="space-y-2">
@@ -309,11 +305,7 @@ export function WelcomeModal({
     <>
       <AuthBackdrop isOpen={isOpen} />
       <Dialog open={isOpen}>
-        <DialogContent
-          hideCloseButton
-          className="sm:max-w-md"
-          onKeyDown={handleChooseFolderShortcut}
-        >
+        <DialogContent hideCloseButton className="sm:max-w-md">
           <DialogHeader className="text-center sm:text-center">
             <div className="mx-auto w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center mb-2">
               <Sparkles className="w-6 h-6 text-primary" />
@@ -338,6 +330,11 @@ export function WelcomeModal({
                   <p className="text-xs text-muted-foreground">
                     AES-256 encryption keeps your data safe on your computer
                   </p>
+                  {encryptionDisabled && (
+                    <p className="text-xs text-amber-600 dark:text-amber-400">
+                      Dev mode: encryption is temporarily disabled for unencrypted files.
+                    </p>
+                  )}
                 </div>
               </div>
 

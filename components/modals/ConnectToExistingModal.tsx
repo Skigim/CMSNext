@@ -20,9 +20,10 @@ function ConnectToExistingModal({
   isOpen,
   isSupported,
   onConnectionComplete,
-  onGoToSettings,
+  onGoToSettings: _onGoToSettings,
+  permissionStatus: _permissionStatus,
   hasStoredHandle = false,
-}: ConnectToExistingModalProps) {
+}: Readonly<ConnectToExistingModalProps>) {
   // Track if user wants to switch to a different folder
   const [forcedWelcome, setForcedWelcome] = useState(false);
 
@@ -55,7 +56,6 @@ function ConnectToExistingModal({
       isOpen={isOpen}
       isSupported={isSupported}
       onSetupComplete={handleConnectionComplete}
-      onGoToSettings={onGoToSettings}
     />
   );
 }

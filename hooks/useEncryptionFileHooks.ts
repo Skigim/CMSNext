@@ -13,6 +13,7 @@ import {
 } from "@/types/encryption";
 import type { NormalizedFileData } from "@/utils/services/FileStorageService";
 import { createLogger } from "@/utils/logger";
+import { isEncryptionTemporarilyDisabled } from "@/utils/featureFlags";
 
 const logger = createLogger("useEncryptionFileHooks");
 
@@ -98,6 +99,7 @@ export function useEncryptionFileHooks(): UseEncryptionFileHooksResult {
   const encryption = useEncryption();
   const { service } = useFileStorage();
   const [lastError, setLastError] = useState<string | null>(null);
+  const encryptionDisabled = isEncryptionTemporarilyDisabled();
 
   // Expose storePassword as a pass-through to context
   const storePassword = useCallback((password: string) => {
@@ -111,6 +113,10 @@ export function useEncryptionFileHooks(): UseEncryptionFileHooksResult {
 
   // Create encryption hooks for the file service
   const encryptionHooks = useMemo(() => {
+    if (encryptionDisabled) {
+      return null;
+    }
+
     if (!encryption.isAuthenticated) {
       return null;
     }
@@ -252,7 +258,7 @@ export function useEncryptionFileHooks(): UseEncryptionFileHooksResult {
         return isEncryptedPayload(data);
       },
     };
-  }, [encryption]);
+  }, [encryption, encryptionDisabled]);
 
   // Set/clear encryption hooks on service when they change
   useEffect(() => {
@@ -262,7 +268,9 @@ export function useEncryptionFileHooks(): UseEncryptionFileHooksResult {
       logger.lifecycle("Setting encryption hooks on file service");
       service.setEncryptionHooks(encryptionHooks);
     } else {
-      logger.lifecycle("Clearing encryption hooks from file service");
+      logger.lifecycle("Clearing encryption hooks from file service", {
+        disabledByFlag: encryptionDisabled,
+      });
       service.setEncryptionHooks(null);
     }
 
@@ -270,7 +278,7 @@ export function useEncryptionFileHooks(): UseEncryptionFileHooksResult {
     return () => {
       service.setEncryptionHooks(null);
     };
-  }, [service, encryptionHooks]);
+  }, [service, encryptionDisabled, encryptionHooks]);
 
   return {
     isActive: !!encryptionHooks,
