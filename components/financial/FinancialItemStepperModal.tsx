@@ -498,6 +498,7 @@ export function FinancialItemStepperModal({
       setFormErrors({});
       setIsConfirmingDelete(false);
       setDeleteConfirmId(null);
+      setAddAnother(false);
     }
   }, [isOpen, item]);
 
@@ -772,6 +773,7 @@ export function FinancialItemStepperModal({
       setIsAddingEntry,
       setFormErrors,
       setIsConfirmingDelete,
+      setAddAnother,
     });
     onClose();
   }, [onClose]);
@@ -791,6 +793,7 @@ export function FinancialItemStepperModal({
         setIsAddingEntry,
         setFormErrors,
         setIsConfirmingDelete,
+        setAddAnother,
       });
       onClose();
     } finally {

@@ -159,6 +159,50 @@ describe("FinancialItemStepperModal", () => {
     expect(screen.getByLabelText(/Add another resource/i)).toBeChecked();
   });
 
+  it("resets Add another after closing and reopening the modal", async () => {
+    // ARRANGE
+    const user = userEvent.setup();
+    const { rerender } = render(
+      <FinancialItemStepperModal
+        isOpen={true}
+        onClose={mockOnClose}
+        itemType="resources"
+        onSave={mockOnSave}
+        applicationDate="2025-06-15"
+      />,
+    );
+
+    // ACT
+    await goToAmountsStep(user, "Test Item");
+    await user.click(screen.getByLabelText(/Add another resource/i));
+    await user.click(screen.getByRole("button", { name: /close/i }));
+
+    expect(mockOnClose).toHaveBeenCalledOnce();
+
+    rerender(
+      <FinancialItemStepperModal
+        isOpen={false}
+        onClose={mockOnClose}
+        itemType="resources"
+        onSave={mockOnSave}
+        applicationDate="2025-06-15"
+      />,
+    );
+    rerender(
+      <FinancialItemStepperModal
+        isOpen={true}
+        onClose={mockOnClose}
+        itemType="resources"
+        onSave={mockOnSave}
+        applicationDate="2025-06-15"
+      />,
+    );
+    await goToAmountsStep(user, "Reopened Item");
+
+    // ASSERT
+    expect(screen.getByLabelText(/Add another resource/i)).not.toBeChecked();
+  });
+
   it("defaults start date to first of current month when no applicationDate is provided", async () => {
     // ARRANGE
     vi.useFakeTimers();
