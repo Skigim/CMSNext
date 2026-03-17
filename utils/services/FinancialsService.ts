@@ -25,7 +25,7 @@ const PENDING_ITEM_ID = 'pending-item';
  * FinancialsService - Financial item operations and amount history management
  * 
  * This service handles all operations related to financial items (resources,
- * income, expenses) in the normalized v2.0 format. Financial items are stored
+ * income, expenses) in the normalized v2.1 format. Financial items are stored
  * separately from cases with foreign key references.
  * 
  * ## Architecture

@@ -80,22 +80,25 @@ The main workspace file is:
 case-tracker-data.json
 ```
 
-The app currently uses a normalized v2.0 format with flat collections and foreign keys:
+The app currently uses a normalized v2.1 format with flat collections and foreign keys:
 
 ```ts
 interface NormalizedFileData {
-  version: "2.0";
+  version: "2.1";
+  people: Person[];
   cases: StoredCase[];
   financials: StoredFinancialItem[];
   notes: StoredNote[];
   alerts: AlertRecord[];
+  exported_at: string;
+  total_cases: number;
   activityLog: CaseActivityEntry[];
   categoryConfig: CategoryConfig;
   templates?: Template[];
 }
 ```
 
-Legacy nested formats are rejected rather than silently migrated in the normal app flow.
+Persisted v2.1 data is hydrated and dehydrated through the storage migration helpers, and legacy v2.0 files are automatically migrated to v2.1 on read. Pre-v2.0 nested formats are rejected rather than silently migrated in the normal app flow.
 
 ### Additional files you may see
 

@@ -1,13 +1,13 @@
 /**
  * Legacy Data Migration Utility
  * =============================
- * Transforms legacy v1.x nested data format to v2.0 normalized format.
+ * Transforms legacy v1.x nested data format into the current v2.1 normalized format.
  *
  * Legacy v1.x format:
  * - cases[] with nested person, caseRecord containing financials and notes
  *
- * v2.0 Normalized format:
- * - Flat arrays with foreign keys: cases[], financials[], notes[], alerts[]
+ * Current v2.1 normalized format:
+ * - Global people registry plus flat arrays with foreign keys: people[], cases[], financials[], notes[], alerts[]
  */
 
 import {
@@ -335,7 +335,7 @@ function extractAlerts(legacyCases: LegacyCaseDisplay[]): AlertRecord[] {
 }
 
 /**
- * Migrate legacy v1.x data to v2.0 normalized format
+ * Migrate legacy v1.x data to the current v2.1 normalized format
  */
 export function migrateLegacyData(rawData: unknown): MigrationResult {
   const errors: string[] = [];

@@ -91,17 +91,23 @@ The application follows a layered, local-first architecture designed to keep bus
 - **Notifications:** After successful writes, call the appropriate `safeNotifyFileStorageChange()` helper to inform the rest of the app about data changes.
 - **Assumptions:** There is no backend, no remote sync, and no auth layer. Access is permission-based and local-first.
 
-### Data Format (v2.0 Normalized)
+### Data Format (v2.1 Normalized)
 
 - The current file format is a **flat, normalized** structure:
-  - `cases: Case[]`
+  - `version: "2.1"`
+  - `people: Person[]`
+  - `cases: StoredCase[]`
   - `financials: Financial[]` (FK: `caseId`)
   - `notes: Note[]` (FK: `caseId`)
   - `alerts: Alert[]` (FK: `caseId`)
+  - `exported_at: string`
+  - `total_cases: number`
   - `categoryConfig: CategoryConfig`
   - `activityLog: ActivityLogEntry[]`
+  - `templates?: Template[]`
 - Avoid introducing nested or denormalized structures; new fields should extend existing records, not embed cross-cutting data.
-- Legacy nested formats should be rejected or migrated via existing helpers (for example, functions that discover statuses from legacy case data).
+- Persisted v2.1 data is hydrated/dehydrated through the existing storage migration helpers.
+- Legacy v2.0 data should be handled through automatic migration to v2.1 on read; older nested formats remain legacy/unsupported unless an explicit migration helper applies.
 
 ### UI, Themes, and Color System
 

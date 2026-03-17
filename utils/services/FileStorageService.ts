@@ -225,7 +225,7 @@ interface FileStorageServiceConfig {
  * ## Core Responsibilities
  * 
  * ### Data Format Management
- * - **Version Control**: Enforces v2.0 normalized format
+ * - **Version Control**: Enforces the current v2.1 normalized format
  * - **Legacy Detection**: Identifies and rejects pre-v2.0 formats
  * - **Format Validation**: Ensures data integrity before writes
  * - **Auto-enrichment**: Discovers statuses and alert types from data
@@ -248,19 +248,23 @@ interface FileStorageServiceConfig {
  * - Timestamp updates for modified cases
  * - Data access helpers for normalized format
  * 
- * ## Data Format (v2.0 Normalized)
+ * ## Data Format (v2.1 Normalized)
  * 
  * The service enforces a normalized data structure:
  * 
  * ```typescript
  * {
- *   version: "2.0",
- *   cases: StoredCase[],              // No nested relations
+ *   version: "2.1",
+ *   people: Person[],                 // Global people registry
+ *   cases: StoredCase[],              // Runtime-hydrated cases
  *   financials: StoredFinancialItem[], // Foreign key: caseId
  *   notes: StoredNote[],               // Foreign key: caseId
  *   alerts: AlertRecord[],             // Flat array
+ *   exported_at: string,
+ *   total_cases: number,
  *   categoryConfig: CategoryConfig,
- *   activityLog: CaseActivityEntry[]
+ *   activityLog: CaseActivityEntry[],
+ *   templates?: Template[]
  * }
  * ```
  * 

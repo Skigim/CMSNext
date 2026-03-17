@@ -617,7 +617,7 @@ Tooling stack (Vitest, ESLint 9 flat config, Tailwind v4 pipeline) covers day-to
 - **Comprehensive test harness**: 340 tests passing across unit, RTL, integration, and performance scripts with coverage reporting
 - **Service Architecture**: DataManager (461 lines) + 7 focused services totaling 2,265 lines
 - **Dependency Injection**: Clean service composition with focused responsibilities
-- **Storage Normalization**: v2.0 normalized format with automatic migration from legacy formats
+- **Storage Normalization**: v2.1 normalized format with automatic migration from v2.0 and older legacy formats
 - **Dev container** and documented setup enable consistent onboarding
 - **CLI utilities** (`scripts/`) generate sample data, run performance baselines, and capture usage reports
 - **Linting/formatting** standardized via ESLint 9 + Prettier; zero warning baseline
@@ -771,11 +771,11 @@ Feature flag infrastructure lives in `utils/featureFlags.ts` with immutable defa
 
 **Rating: 75/100** _(Added November 26, 2025)_
 
-A dedicated migration utility (`utils/legacyMigration.ts`) enables users with v1.x data files to migrate to the v2.0 normalized format. The utility is accessible through Settings when the `settings.legacyMigration` feature flag is enabled.
+A dedicated migration utility (`utils/legacyMigration.ts`) enables users with v1.x data files to migrate to the current v2.1 normalized format. The utility is accessible through Settings when the `settings.legacyMigration` feature flag is enabled.
 
 ### Strengths
 
-- **Comprehensive Transformation**: Migrates nested v1.x format (cases with embedded financials/notes) to flat v2.0 relational format
+- **Comprehensive Transformation**: Migrates nested v1.x format (cases with embedded financials/notes) to the flat v2.1 relational format with a global `people` registry
 - **Safe Migration Flow**: Preview before apply, with detailed statistics on what will be migrated
 - **Category Discovery**: Auto-discovers statuses and alert types from legacy data and merges with existing config
 - **User-Friendly UI**: `LegacyMigrationPanel` component provides guided migration with progress feedback
@@ -792,7 +792,7 @@ A dedicated migration utility (`utils/legacyMigration.ts`) enables users with v1
 
 ### Migration Flow
 
-1. **Read Raw File**: Uses `readRawFileData()` to bypass v2.0 validation
+1. **Read Raw File**: Uses `readRawFileData()` to bypass canonical v2.1 validation
 2. **Detect Format**: Identifies legacy v1.x format vs already-normalized data
 3. **Preview Statistics**: Shows case/financial/note/alert counts before migration
 4. **Apply Migration**: Transforms data and writes to file storage

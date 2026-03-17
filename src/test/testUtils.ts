@@ -123,7 +123,7 @@ export const createMockCaseDisplay = (overrides: Partial<CaseDisplay> = {}): Cas
 }
 
 /**
- * Normalized data factories for v2.0 storage format
+ * Normalized data factories for v2.1 storage format
  */
 
 export const createMockStoredCase = (overrides: Partial<StoredCase> = {}): StoredCase => {
