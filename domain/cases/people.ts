@@ -2,6 +2,7 @@ import { normalizePhoneNumber } from "@/domain/common";
 import type { Person, Relationship, StoredCase } from "@/types/case";
 
 type CasePeopleSource = Partial<Pick<StoredCase, "person" | "linkedPeople" | "caseRecord">>;
+type LinkedPersonRef = NonNullable<StoredCase["linkedPeople"]>[number]["ref"];
 
 const CASE_PERSON_ROLE_LABELS = {
   applicant: "Applicant",
@@ -56,7 +57,7 @@ function getLinkedPersonDisplayName(person: Person): string {
 
 export function getPrimaryCasePersonRef(
   source: CasePeopleSource,
-): NonNullable<StoredCase["linkedPeople"][number]["ref"]> | null {
+): LinkedPersonRef | null {
   const linkedPeople = getLinkedPeople(source);
   const sourcePersonId = source.person?.id;
 
@@ -132,7 +133,7 @@ export function getPersonRelationships(
     return {
       id: relationship.id,
       type: relationship.type,
-      name: relationship.displayNameFallback ?? formatCasePersonDisplayName(targetPerson) ?? "",
+      name: relationship.displayNameFallback ?? formatCasePersonDisplayName(targetPerson),
       phone: relationship.legacyPhone ?? targetPerson?.phone ?? "",
     };
   });
