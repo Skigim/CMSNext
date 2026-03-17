@@ -299,6 +299,7 @@ describe("CaseDetails linked people rendering", () => {
     expect(within(householdChip).getByText("Morgan Member")).toBeInTheDocument();
     expect(within(householdChip).getByText("Spouse")).toBeInTheDocument();
     expect(householdChip).not.toHaveTextContent("Spouse / Morgan / Member");
+    expect(householdChip).not.toHaveTextContent("/");
     const dependentChip = screen.getByRole("button", {
       name: "Devon Dependent Dependent",
     });

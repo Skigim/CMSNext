@@ -270,7 +270,7 @@ export function CaseDetails(props: Readonly<CaseDetailsProps>) {
                     const phone = person.phone?.trim() || null;
                     const email = person.email?.trim() || null;
                     const { name, roleLabel } = getLinkedPersonChipContent(caseData, person, ref.role);
-                    const chipLabel = `${name} ${roleLabel}`;
+                    const accessibleLabel = `${name} ${roleLabel}`;
                     const formattedPhone = phone ? formatUSPhone(phone) : null;
 
                     return (
@@ -298,7 +298,7 @@ export function CaseDetails(props: Readonly<CaseDetailsProps>) {
                               type="button"
                               aria-disabled="true"
                               className="inline-flex items-center rounded-full border bg-muted/40 px-2.5 py-1 text-xs font-medium text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
-                              aria-label={chipLabel}
+                              aria-label={accessibleLabel}
                             >
                               <span className="font-medium text-foreground">{name}</span>
                               <span className="ml-1 text-muted-foreground">{roleLabel}</span>
