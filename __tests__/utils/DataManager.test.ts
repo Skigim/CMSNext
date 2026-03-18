@@ -356,13 +356,21 @@ describe("DataManager", () => {
       expect(result.files).toHaveLength(2);
       expect(result.files[0]).toMatchObject({
         fileName: MAIN_WORKSPACE_FILE_NAME,
-        disposition: "skipped",
+        fileKind: "workspace",
+        disposition: "failed",
+        message: "Workspace folder is not connected or permission has not been granted.",
       });
       expect(result.files[1]).toMatchObject({
         fileName: "archived-cases-*.json",
         fileKind: "archive",
         disposition: "failed",
         message: "Workspace folder is not connected or permission has not been granted.",
+      });
+      expect(result.summary).toEqual({
+        migrated: 0,
+        alreadyV21: 0,
+        failed: 2,
+        skipped: 0,
       });
       expect(mockFileService.listDataFiles).not.toHaveBeenCalled();
     });

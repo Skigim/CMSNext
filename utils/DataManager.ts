@@ -1454,7 +1454,7 @@ export class DataManager {
     const files: WorkspaceMigrationFileReport[] = [];
     const disconnectedMainReport: WorkspaceMigrationFileReport = {
       fileName: MAIN_WORKSPACE_FILE_NAME,
-      fileKind: "main",
+      fileKind: "workspace",
       disposition: "failed",
       sourceVersion: null,
       counts: createEmptyMigrationCounts(),
