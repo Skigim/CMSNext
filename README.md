@@ -3,8 +3,8 @@
 Local-first case management software built with React, TypeScript, and the File System Access API.
 
 - Machine-readable repo index for external review tools: [llms.txt](llms.txt)
-- Architecture and implementation guidance: [.github/copilot-instructions.md](.github/copilot-instructions.md)
-- Current planning and feature inventory: [docs/development/ROADMAP_FEB_2026.md](docs/development/ROADMAP_FEB_2026.md), [docs/development/feature-catalogue.md](docs/development/feature-catalogue.md)
+- Architecture and implementation guidance: [.github/copilot-instructions.md](.github/copilot-instructions.md), [.github/instructions/](.github/instructions/)
+- Current planning and feature inventory: [docs/development/ROADMAP_MAR_2026.md](docs/development/ROADMAP_MAR_2026.md), [docs/development/feature-catalogue.md](docs/development/feature-catalogue.md)
 
 ## Overview
 

@@ -668,15 +668,16 @@ Friction-logging infrastructure for capturing UX pain points during development 
 | `components/common/PaperCutModal.tsx`    | Capture modal with platform hints    |
 | `components/settings/PaperCutsPanel.tsx` | Settings tab for review/export/clear |
 
-### Mode-Based AI Instructions (December 2025)
+### Scoped Copilot Instructions (March 2026)
 
-Copilot instruction files specialized by task type for multi-model workflows:
+Repository-wide and path-scoped Copilot instruction files now follow GitHub's current custom-instructions layout:
 
-| File                                | Activity        | Focus                           |
-| ----------------------------------- | --------------- | ------------------------------- |
-| `.github/copilot-implementation.md` | Code Generation | Services, hooks, data flow      |
-| `.github/copilot-frontend.md`       | Code Review     | UI components, shadcn, Tailwind |
-| `.github/copilot-testing.md`        | Test Generation | Vitest, RTL, mocking patterns   |
+| File                                               | Scope             | Focus                           |
+| -------------------------------------------------- | ----------------- | ------------------------------- |
+| `.github/copilot-instructions.md`                  | Repository-wide   | Architecture, validation, constraints |
+| `.github/instructions/implementation.instructions.md` | Path-scoped    | Services, hooks, domain, data flow |
+| `.github/instructions/frontend.instructions.md`    | Path-scoped       | UI components, shadcn, Tailwind |
+| `.github/instructions/testing.instructions.md`     | Path-scoped       | Vitest, RTL, mocking patterns   |
 
 ### Keyboard Shortcuts (Planned - December 2025)
 

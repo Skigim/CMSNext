@@ -19,27 +19,35 @@ interface ContextConfig {
 
 const REQUIRED_FILES: ContextConfig = {
   architecture: [
+    'README.md',
+    'llms.txt',
     '.github/copilot-instructions.md',
+    '.github/instructions/implementation.instructions.md',
+    '.github/instructions/frontend.instructions.md',
+    '.github/instructions/testing.instructions.md',
     'docs/development/feature-catalogue.md',
-    'docs/development/actionable-roadmap.md',
+    'docs/development/ROADMAP_MAR_2026.md',
   ],
   development: [
     '.github/COMMIT_STYLE.md',
-    'docs/development/testing-infrastructure.md',
+    '.github/implementation-guide.md',
+    '.github/ui-guide.md',
+    '.github/testing-guide.md',
   ],
   config: [
+    'package.json',
     'vite.config.ts',
     'vitest.config.ts',
     'eslint.config.js',
-    'tailwind.config.js',
+    'components.json',
   ],
 };
 
 const OPTIONAL_FILES = [
-  'docs/development/claude-codex-workflow.md',
-  'docs/development/performance-metrics.md',
+  '.github/README.md',
+  '.github/BRANCHING.md',
   '.github/copilot-prebuild.yml',
-  '.github/AGENTIC_PROMPTS_GUIDE.md',
+  'docs/development/ROADMAP_FEB_2026.md',
 ];
 
 async function validateFile(filePath: string): Promise<ValidationResult> {
@@ -166,8 +174,8 @@ function logFinalReport(allValid: boolean): void {
   if (allValid) {
     console.log('✅ All required agentic context files are valid');
     console.log('\n💡 Next steps:');
-    console.log('   1. Review .github/AGENTIC_PROMPTS_GUIDE.md for prompt templates');
-    console.log('   2. Ensure AI agents read .github/copilot-instructions.md');
+    console.log('   1. Review .github/copilot-instructions.md and any matching .github/instructions/*.instructions.md files');
+    console.log('   2. Review README.md and .github/README.md for repo entry points and workflow docs');
     console.log('   3. Use conventional commits from .github/COMMIT_STYLE.md');
     return;
   }

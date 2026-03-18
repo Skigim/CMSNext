@@ -23,18 +23,30 @@ context:
     - path: .github/copilot-instructions.md
       priority: high
       description: Primary AI agent instructions and architecture patterns
+
+    - path: .github/instructions/implementation.instructions.md
+      priority: high
+      description: Path-scoped implementation instructions for domain, services, hooks, and contexts
+
+    - path: .github/instructions/frontend.instructions.md
+      priority: high
+      description: Path-scoped frontend instructions for components and app shell work
+
+    - path: .github/instructions/testing.instructions.md
+      priority: high
+      description: Path-scoped testing instructions for Vitest, RTL, and shared test helpers
     
     - path: docs/development/feature-catalogue.md
       priority: high
       description: Complete feature inventory and implementation status
     
-    - path: docs/development/actionable-roadmap.md
+    - path: docs/development/ROADMAP_MAR_2026.md
       priority: medium
-      description: Development roadmap and planned features
+      description: Current roadmap and planned features
     
-    - path: docs/development/EXECUTION_SUMMARY.md
+    - path: README.md
       priority: medium
-      description: Architecture refactor plan and key metrics
+      description: Product overview, architecture summary, and command reference
   
   # Development guidelines
   development:
@@ -42,13 +54,17 @@ context:
       priority: high
       description: Commit message conventions and examples
     
-    - path: docs/development/testing-infrastructure.md
+    - path: .github/implementation-guide.md
       priority: high
-      description: Testing stack, patterns, and best practices
+      description: Service, domain, hook, and data flow implementation patterns
     
-    - path: docs/development/claude-codex-workflow.md
+    - path: .github/testing-guide.md
       priority: medium
-      description: Claude-Codex workflow integration
+      description: Testing stack, patterns, and strict assertion guidance
+
+    - path: .github/ui-guide.md
+      priority: medium
+      description: UI component, accessibility, and Tailwind guidance
   
   # Configuration files
   config:
@@ -64,9 +80,9 @@ context:
       priority: medium
       description: Linting rules (ESLint 9 flat config)
     
-    - path: tailwind.config.js
+    - path: components.json
       priority: medium
-      description: Tailwind CSS v4 configuration
+      description: shadcn/ui component registry and alias configuration
   
   # Core patterns and utilities
   patterns:
@@ -255,14 +271,17 @@ performance:
 # Development workflow
 workflow:
   setup:
-    - npm install
+    - "npm ci (preferred for fresh clones and CI; use npm install only when intentionally updating dependencies)"
     - "Review .github/copilot-instructions.md"
+    - "Review matching files in .github/instructions/"
     - "Run .github/setup-commit-template.sh"
   
   development:
-    - npm run dev
-    - npm run test
+    - npm run typecheck
     - npm run lint
+    - npm run test:run
+    - npm run build
+    - npm run dev
   
   production:
     - npm run build:pages
@@ -290,4 +309,4 @@ documentation:
   
   feature_tracking:
     - "Update docs/development/feature-catalogue.md"
-    - "Add to docs/development/actionable-roadmap.md when planning"
+    - "Update the active docs/development/ROADMAP_*.md file when planning"
