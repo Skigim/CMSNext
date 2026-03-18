@@ -271,7 +271,7 @@ performance:
 # Development workflow
 workflow:
   setup:
-    - npm ci
+    - "npm ci (preferred for fresh clones and CI; use npm install only when intentionally updating dependencies)"
     - "Review .github/copilot-instructions.md"
     - "Review matching files in .github/instructions/"
     - "Run .github/setup-commit-template.sh"

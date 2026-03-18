@@ -1,5 +1,5 @@
 ---
-applyTo: "__tests__/**/*.ts,__tests__/**/*.tsx,domain/**/*.test.ts,src/test/**/*.ts,src/test/**/*.tsx"
+applyTo: "__tests__/**/*.ts,__tests__/**/*.tsx,domain/**/*.test.ts,domain/**/*.test.tsx,src/test/**/*.ts,src/test/**/*.tsx"
 ---
 
 # Testing Instructions
