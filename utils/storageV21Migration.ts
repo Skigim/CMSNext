@@ -72,7 +72,7 @@ type NormalizedDataShapeCandidate = {
   templates?: unknown;
 };
 
-function asNormalizedDataShapeCandidate(data: unknown): NormalizedDataShapeCandidate | null {
+function toNormalizedDataShapeCandidate(data: unknown): NormalizedDataShapeCandidate | null {
   if (data === null || typeof data !== "object" || Array.isArray(data)) {
     return null;
   }
@@ -106,11 +106,10 @@ function hasNormalizedCollectionsAndMetadata(candidate: NormalizedDataShapeCandi
  * recognize legacy-but-migratable persisted files after the normal runtime
  * read path became strict v2.1-only.
  *
- * @param {unknown} data - Raw persisted data to inspect
- * @returns {boolean} True when the payload has the required persisted v2.0 shape
+ * @param data - Raw persisted data to inspect
  */
 export function isPersistedNormalizedFileDataV20(data: unknown): data is NormalizedFileDataV20 {
-  const candidate = asNormalizedDataShapeCandidate(data);
+  const candidate = toNormalizedDataShapeCandidate(data);
 
   return candidate?.version === "2.0" && hasNormalizedCollectionsAndMetadata(candidate);
 }
@@ -121,11 +120,10 @@ export function isPersistedNormalizedFileDataV20(data: unknown): data is Normali
  * This is shared by runtime readers and migration tooling so that the persisted
  * v2.1 envelope is validated consistently in one place.
  *
- * @param {unknown} data - Raw persisted data to inspect
- * @returns {boolean} True when the payload has the required persisted v2.1 shape
+ * @param data - Raw persisted data to inspect
  */
 export function isPersistedNormalizedFileDataV21(data: unknown): data is PersistedNormalizedFileDataV21 {
-  const candidate = asNormalizedDataShapeCandidate(data);
+  const candidate = toNormalizedDataShapeCandidate(data);
 
   return (
     candidate?.version === "2.1" &&

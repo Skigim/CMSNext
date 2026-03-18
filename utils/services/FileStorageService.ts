@@ -25,6 +25,8 @@ import {
 
 const logger = createLogger("FileStorageService");
 const NORMALIZED_VERSION = "2.1";
+const LEGACY_FORMAT_V2_0 = "v2.0";
+const INVALID_V2_1_FORMAT_PREFIX = "invalid v2.1 workspace";
 
 /**
  * Deep-copy a single activity log entry, ensuring payload objects are new references.
@@ -167,7 +169,8 @@ export class LegacyFormatError extends Error {
    */
   constructor(detectedFormat: string) {
     const migrationGuidance =
-      detectedFormat === "v2.0" || detectedFormat.startsWith("invalid v2.1 workspace")
+      detectedFormat === LEGACY_FORMAT_V2_0 ||
+      detectedFormat.startsWith(INVALID_V2_1_FORMAT_PREFIX)
         ? `Use the persisted v${NORMALIZED_VERSION} migration tool in Settings → Diagnostics, then reopen the workspace.`
         : `Use the available migration tooling or contact support for assistance moving this data to v${NORMALIZED_VERSION}.`;
 
@@ -363,7 +366,7 @@ export class FileStorageService {
             error instanceof Error && error.message.trim().length > 0
               ? error.message
               : "unknown hydration error";
-          throw new LegacyFormatError(`invalid v2.1 workspace: ${hydrationError}`);
+          throw new LegacyFormatError(`${INVALID_V2_1_FORMAT_PREFIX}: ${hydrationError}`);
         }
 
         // Auto-migrate financial items without history entries
@@ -455,8 +458,8 @@ export class FileStorageService {
     }
 
     // Check for old version numbers
-    if ("version" in obj && obj.version === "2.0") {
-      return "v2.0";
+    if ("version" in obj && obj.version === LEGACY_FORMAT_V2_0) {
+      return LEGACY_FORMAT_V2_0;
     }
 
     // By the time we reach this branch, canonical v2.1 payloads have already been
@@ -465,7 +468,7 @@ export class FileStorageService {
     // missing required root collections/metadata or carrying malformed persisted
     // references that prevent successful canonical hydration.
     if ("version" in obj && obj.version === NORMALIZED_VERSION) {
-      return "invalid v2.1 workspace";
+      return INVALID_V2_1_FORMAT_PREFIX;
     }
 
     if ("version" in obj && obj.version !== NORMALIZED_VERSION) {

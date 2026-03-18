@@ -118,7 +118,38 @@ describe("FileStorageService v2.1", () => {
     expect(mockFileService.writeFile).not.toHaveBeenCalled();
   });
 
-  it("preserves hydration behavior for manually migrated v2.1 workspaces", async () => {
+  it("rejects invalid persisted v2.1 payloads that fail hydration", async () => {
+    // ARRANGE
+    const invalidPersistedData = createMockPersistedNormalizedFileData({
+      cases: [
+        createMockStoredCase({
+          id: "case-invalid",
+          person: createMockPerson({ id: "person-missing" }),
+          people: [{ personId: "person-missing", role: "applicant", isPrimary: true }],
+          caseRecord: {
+            ...createMockStoredCase().caseRecord,
+            personId: "person-missing",
+          },
+        }),
+      ],
+      exported_at: "2026-03-01T00:00:00.000Z",
+      total_cases: 1,
+    });
+    mockFileService.readFile.mockResolvedValue({
+      ...invalidPersistedData,
+      people: [],
+    });
+
+    // ACT & ASSERT
+    const readPromise = fileStorage.readFileData();
+    await expect(readPromise).rejects.toThrow(LegacyFormatError);
+    await expect(readPromise).rejects.toThrow("invalid v2.1 workspace");
+    await expect(readPromise).rejects.toThrow(
+      "Use the persisted v2.1 migration tool in Settings → Diagnostics",
+    );
+  });
+
+  it("hydrates v2.1 workspaces that were migrated from v2.0", async () => {
     // ARRANGE
     const migratedPersistedData = migrateV20ToV21({
       ...createMockNormalizedFileDataV20(),
