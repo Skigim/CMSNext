@@ -1452,6 +1452,15 @@ export class DataManager {
    */
   async migrateWorkspaceToV21(): Promise<WorkspaceMigrationReport> {
     const files: WorkspaceMigrationFileReport[] = [];
+    const disconnectedMainReport: WorkspaceMigrationFileReport = {
+      fileName: MAIN_WORKSPACE_FILE_NAME,
+      fileKind: "main",
+      disposition: "failed",
+      sourceVersion: null,
+      counts: createEmptyMigrationCounts(),
+      validationErrors: [],
+      message: "Workspace folder is not connected or permission has not been granted.",
+    };
     const disconnectedArchiveReport: WorkspaceMigrationFileReport = {
       fileName: "archived-cases-*.json",
       fileKind: "archive",
@@ -1462,12 +1471,13 @@ export class DataManager {
       message: "Workspace folder is not connected or permission has not been granted.",
     };
 
-    files.push(await this.migratePrimaryWorkspaceFile());
-
     if (!this.isConnected()) {
+      files.push(disconnectedMainReport);
       files.push(disconnectedArchiveReport);
       return buildWorkspaceMigrationReport(files);
     }
+
+    files.push(await this.migratePrimaryWorkspaceFile());
 
     let archiveFileNames: string[] = [];
     try {
