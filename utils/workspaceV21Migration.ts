@@ -163,25 +163,86 @@ export function hydratePersistedArchiveDataV21(data: PersistedCaseArchiveDataV21
 }
 
 export function validatePersistedV21Data(
-  data: PersistedNormalizedFileDataV21,
+  data: unknown,
 ): { counts: WorkspaceMigrationCounts; validationErrors: string[] } {
   const validationErrors: string[] = [];
 
-  if (data.version !== "2.1") {
-    validationErrors.push(`Expected version "2.1" but found "${String(data.version)}".`);
+  if (data === null || typeof data !== "object" || Array.isArray(data)) {
+    return {
+      counts: createEmptyMigrationCounts(),
+      validationErrors: ['Expected a persisted v2.1 object but found a non-object value.'],
+    };
   }
 
-  if (!Array.isArray(data.people)) {
+  const counts = summarizeUnknownCounts(data);
+  const candidate = data as Record<string, unknown>;
+
+  if (candidate.version !== "2.1") {
+    validationErrors.push(`Expected version "2.1" but found "${String(candidate.version)}".`);
+  }
+
+  if (!Array.isArray(candidate.people)) {
     validationErrors.push("Root people[] registry is missing.");
   }
 
-  const peopleById = new Set(
-    data.people
-      .filter((person) => typeof person?.id === "string" && person.id.length > 0)
-      .map((person) => person.id),
-  );
+  if (!Array.isArray(candidate.cases)) {
+    validationErrors.push("Root cases[] collection is missing.");
+  }
 
-  data.cases.forEach((caseItem: PersistedCase, index) => {
+  if (!Array.isArray(candidate.financials)) {
+    validationErrors.push("Root financials[] collection is missing.");
+  }
+
+  if (!Array.isArray(candidate.notes)) {
+    validationErrors.push("Root notes[] collection is missing.");
+  }
+
+  if (!Array.isArray(candidate.alerts)) {
+    validationErrors.push("Root alerts[] collection is missing.");
+  }
+
+  if (typeof candidate.exported_at !== "string") {
+    validationErrors.push("Root exported_at timestamp is missing.");
+  }
+
+  if (typeof candidate.total_cases !== "number") {
+    validationErrors.push("Root total_cases count is missing.");
+  }
+
+  if (!candidate.categoryConfig || typeof candidate.categoryConfig !== "object") {
+    validationErrors.push("Root categoryConfig object is missing.");
+  }
+
+  if (!Array.isArray(candidate.activityLog)) {
+    validationErrors.push("Root activityLog[] collection is missing.");
+  }
+
+  const people = Array.isArray(candidate.people) ? candidate.people : [];
+  const cases = Array.isArray(candidate.cases) ? candidate.cases : [];
+
+  const peopleById = new Set<string>();
+  people.forEach((person, index) => {
+    if (!person || typeof person !== "object") {
+      validationErrors.push(`people[${index}] is not a valid person object.`);
+      return;
+    }
+
+    const personId = (person as { id?: unknown }).id;
+    if (typeof personId !== "string" || personId.length === 0) {
+      validationErrors.push(`people[${index}] is missing id.`);
+      return;
+    }
+
+    peopleById.add(personId);
+  });
+
+  cases.forEach((caseValue, index) => {
+    if (!caseValue || typeof caseValue !== "object") {
+      validationErrors.push(`cases[${index}] is not a valid case object.`);
+      return;
+    }
+
+    const caseItem = caseValue as PersistedCase;
     const caseLabel = caseItem.id || `case-index-${index}`;
 
     if (!Array.isArray(caseItem.people)) {
@@ -211,16 +272,21 @@ export function validatePersistedV21Data(
     }
   });
 
-  try {
-    hydrateNormalizedData(data);
-  } catch (error) {
-    validationErrors.push(
-      `Canonical hydration failed: ${error instanceof Error ? error.message : String(error)}`,
-    );
+  if (validationErrors.length === 0) {
+    try {
+      // At this point the required root collections/metadata exist and every
+      // case/person link has passed explicit integrity checks, so hydration is
+      // safe to use as the final canonical validation step.
+      hydrateNormalizedData(data as PersistedNormalizedFileDataV21);
+    } catch (error) {
+      validationErrors.push(
+        `Canonical hydration failed: ${error instanceof Error ? error.message : String(error)}`,
+      );
+    }
   }
 
   return {
-    counts: summarizePersistedCounts(data),
+    counts,
     validationErrors,
   };
 }
@@ -232,6 +298,7 @@ export function migrateArchiveDataToPersistedV21(
   data: PersistedCaseArchiveDataV21 | null;
   sourceVersion: string | null;
   error: string | null;
+  needsWrite: boolean;
 } {
   const archiveYear = parseArchiveYear(fileName);
   if (archiveYear === null) {
@@ -239,6 +306,7 @@ export function migrateArchiveDataToPersistedV21(
       data: null,
       sourceVersion: null,
       error: `Unsupported archive file name: ${fileName}`,
+      needsWrite: false,
     };
   }
 
@@ -247,6 +315,7 @@ export function migrateArchiveDataToPersistedV21(
       data: rawData,
       sourceVersion: rawData.version,
       error: null,
+      needsWrite: false,
     };
   }
 
@@ -260,6 +329,7 @@ export function migrateArchiveDataToPersistedV21(
       },
       sourceVersion: rawData.version,
       error: null,
+      needsWrite: true,
     };
   }
 
@@ -273,6 +343,7 @@ export function migrateArchiveDataToPersistedV21(
       },
       sourceVersion: rawData.version,
       error: null,
+      needsWrite: true,
     };
   }
 
@@ -281,6 +352,7 @@ export function migrateArchiveDataToPersistedV21(
       data: buildPersistedArchiveDataV21(rawData),
       sourceVersion: rawData.version,
       error: null,
+      needsWrite: true,
     };
   }
 
@@ -288,6 +360,7 @@ export function migrateArchiveDataToPersistedV21(
     data: null,
     sourceVersion: null,
     error: `Unsupported archive data format in ${fileName}.`,
+    needsWrite: false,
   };
 }
 

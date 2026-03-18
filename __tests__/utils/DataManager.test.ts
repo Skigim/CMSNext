@@ -418,6 +418,43 @@ describe("DataManager", () => {
       expect(mockFileService.writeNamedFile).not.toHaveBeenCalled();
     });
 
+    it("writes canonical archive metadata for normalized v2.1 archive files missing archive fields", async () => {
+      // ARRANGE
+      const nonCanonicalArchive = dehydrateNormalizedData({
+        ...createLinkedRuntimeWriteData(),
+        exported_at: "2026-03-01T00:00:00.000Z",
+      });
+
+      (mockFileStorageService.readRawFileData as ReturnType<typeof vi.fn>).mockResolvedValue(null);
+      (mockFileService.listDataFiles as ReturnType<typeof vi.fn>).mockResolvedValue([
+        "archived-cases-2026.json",
+      ]);
+      (mockFileService.readNamedFile as ReturnType<typeof vi.fn>).mockResolvedValue(nonCanonicalArchive);
+
+      // ACT
+      const result = await dataManager.migrateWorkspaceToV21();
+
+      // ASSERT
+      expect(result.summary).toEqual({
+        migrated: 1,
+        alreadyV21: 0,
+        failed: 0,
+        skipped: 1,
+      });
+      expect(result.files[1]).toMatchObject({
+        fileName: "archived-cases-2026.json",
+        disposition: "migrated",
+        sourceVersion: "2.1",
+      });
+      expect(mockFileService.writeNamedFile).toHaveBeenCalledTimes(1);
+      expect((mockFileService.writeNamedFile as ReturnType<typeof vi.fn>).mock.calls[0][1]).toMatchObject({
+        version: "2.1",
+        archiveType: "cases",
+        archiveYear: 2026,
+        archivedAt: "2026-03-01T00:00:00.000Z",
+      });
+    });
+
     it("reports validation failures for invalid persisted v2.1 files", async () => {
       // ARRANGE
       const invalidWorkspace = {
@@ -464,7 +501,6 @@ describe("DataManager", () => {
       expect(result.files[0].validationErrors).toEqual([
         'Case case-invalid people[0] references missing personId "person-missing".',
         'Case case-invalid caseRecord.personId "person-missing" does not resolve to a person record.',
-        'Canonical hydration failed: Person person-missing not found for case case-invalid',
       ]);
       expect(mockFileStorageService.writeNormalizedData).not.toHaveBeenCalled();
     });

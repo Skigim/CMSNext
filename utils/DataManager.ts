@@ -1739,8 +1739,7 @@ export class DataManager {
         };
       }
 
-      const isAlreadyV21 = migratedArchive.sourceVersion === "2.1";
-      if (!isAlreadyV21) {
+      if (migratedArchive.needsWrite) {
         const writeSucceeded = await this.fileService.writeNamedFile(fileName, migratedArchive.data);
         if (!writeSucceeded) {
           return {
@@ -1758,13 +1757,13 @@ export class DataManager {
       return {
         fileName,
         fileKind: "archive",
-        disposition: isAlreadyV21 ? "already-v2.1" : "migrated",
+        disposition: migratedArchive.needsWrite ? "migrated" : "already-v2.1",
         sourceVersion: migratedArchive.sourceVersion,
         counts: validation.counts,
         validationErrors: [],
-        message: isAlreadyV21
-          ? "Already persisted as v2.1."
-          : "Migrated archive file to persisted v2.1.",
+        message: migratedArchive.needsWrite
+          ? "Migrated archive file to persisted v2.1."
+          : "Already persisted as v2.1.",
       };
     } catch (error) {
       return {

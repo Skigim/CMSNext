@@ -61,6 +61,11 @@ interface CaseArchiveServiceConfig {
   fileService: AutosaveFileService;
 }
 
+interface ExistingArchiveSnapshot {
+  normalizedArchive: CaseArchiveData | null;
+  rawArchiveData: unknown;
+}
+
 /**
  * Result of refreshing the archival queue.
  */
@@ -383,7 +388,7 @@ export class CaseArchiveService {
 
     // Merge with existing archive
     const mergedArchive = mergeArchiveData(
-      existingArchive,
+      existingArchive.normalizedArchive,
       cleanedCases,
       related.financials,
       related.notes,
@@ -428,14 +433,20 @@ export class CaseArchiveService {
   /**
    * Attempt to read an existing archive file, returning null if not found.
    */
-  private async readExistingArchive(archiveFileName: string): Promise<CaseArchiveData | null> {
+  private async readExistingArchive(archiveFileName: string): Promise<ExistingArchiveSnapshot> {
     try {
       const existingData = await this.fileService.readNamedFile(archiveFileName);
-      return this.normalizeArchiveData(existingData, archiveFileName);
+      return {
+        normalizedArchive: this.normalizeArchiveData(existingData, archiveFileName),
+        rawArchiveData: existingData,
+      };
     } catch {
       logger.debug("No existing archive file", { archiveFileName });
     }
-    return null;
+    return {
+      normalizedArchive: null,
+      rawArchiveData: null,
+    };
   }
 
   /**
@@ -443,12 +454,12 @@ export class CaseArchiveService {
    */
   private async rollbackArchiveWrite(
     archiveFileName: string,
-    existingArchive: CaseArchiveData | null
+    existingArchive: ExistingArchiveSnapshot
   ): Promise<void> {
     logger.warn("Main file write failed, rolling back archive write", { archiveFileName });
     try {
-      if (existingArchive) {
-        await this.writeArchiveFile(archiveFileName, existingArchive);
+      if (existingArchive.rawArchiveData !== null) {
+        await this.fileService.writeNamedFile(archiveFileName, existingArchive.rawArchiveData);
       } else {
         logger.warn("Cannot delete newly created archive file on rollback - duplicates may exist temporarily");
       }
