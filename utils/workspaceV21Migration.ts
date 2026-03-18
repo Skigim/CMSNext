@@ -291,9 +291,9 @@ export function validatePersistedV21Data(
     } else if (primaryRefs.length === 1) {
       const [primaryRef] = primaryRefs;
       if (primaryRef.personId !== caseRecordPersonId) {
-      validationErrors.push(
+        validationErrors.push(
           `Case ${caseLabel} caseRecord.personId "${caseRecordPersonId}" does not match primary people[] ref "${primaryRef.personId}".`,
-      );
+        );
       }
     }
   });

@@ -285,11 +285,6 @@ export class CaseService {
       alerts: _dehydratedAlerts,
       ...dehydratedCase
     } = dehydrateStoredCase(caseItem) as PersistedCase & { alerts?: AlertRecord[] };
-    const casePeople = dehydratedCase.people;
-
-    if (!casePeople?.length) {
-      throw new Error(`Case ${caseItem.id} cannot be dehydrated without canonical people[] refs`);
-    }
     const caseRecordWithRuntimeFields:
       StoredCase["caseRecord"] & Partial<Pick<CaseRecord, "financials" | "notes">> = caseRecord;
     const { financials: _financials, notes: _notes, ...storedCaseRecord } =
@@ -298,7 +293,7 @@ export class CaseService {
     return {
       ...dehydratedCase,
       ...rest,
-      people: casePeople.map((ref) => ({ ...ref })),
+      people: dehydratedCase.people.map((ref) => ({ ...ref })),
       caseRecord: storedCaseRecord,
     };
   }

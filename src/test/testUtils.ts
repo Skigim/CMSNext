@@ -131,11 +131,19 @@ export const createMockStoredCase = (overrides: Partial<StoredCase> = {}): Store
   const basePerson = createMockPerson()
   const person = overrides.person ?? basePerson
   const timestamp = new Date().toISOString()
-  const people = overrides.people ?? [{ personId: person.id, role: 'applicant', isPrimary: true }]
+  const providedPeople = overrides.people ?? [{ personId: person.id, role: 'applicant', isPrimary: true }]
   const primaryRefForPerson =
-    people.find((ref) => ref.personId === person.id && ref.isPrimary) ??
-    people.find((ref) => ref.personId === person.id) ??
+    providedPeople.find((ref) => ref.personId === person.id && ref.isPrimary) ??
+    providedPeople.find((ref) => ref.personId === person.id) ??
     { personId: person.id, role: 'applicant' as const, isPrimary: true }
+  const people = providedPeople.some(
+    (ref) =>
+      ref.personId === primaryRefForPerson.personId &&
+      ref.role === primaryRefForPerson.role &&
+      ref.isPrimary === primaryRefForPerson.isPrimary,
+  )
+    ? providedPeople
+    : [primaryRefForPerson, ...providedPeople]
   const linkedPeople = overrides.linkedPeople ?? [
     {
       ref: primaryRefForPerson,
