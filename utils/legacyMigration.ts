@@ -13,7 +13,6 @@
 import {
   type NormalizedFileData,
   isNormalizedFileData,
-  isNormalizedFileDataV20,
 } from "./services/FileStorageService";
 import type {
   StoredCase,
@@ -30,6 +29,24 @@ import { createLogger } from "./logger";
 import { hydrateNormalizedData, migrateV20ToV21 } from "./storageV21Migration";
 
 const logger = createLogger("LegacyMigration");
+
+function isMigratableV20Data(data: unknown): data is {
+  version: "2.0";
+  cases: unknown[];
+  financials: unknown[];
+  notes: unknown[];
+  alerts: unknown[];
+} {
+  return (
+    data !== null &&
+    typeof data === "object" &&
+    (data as { version?: unknown }).version === "2.0" &&
+    Array.isArray((data as { cases?: unknown }).cases) &&
+    Array.isArray((data as { financials?: unknown }).financials) &&
+    Array.isArray((data as { notes?: unknown }).notes) &&
+    Array.isArray((data as { alerts?: unknown }).alerts)
+  );
+}
 
 /**
  * Legacy v1.x case structure (for type reference)
@@ -367,9 +384,9 @@ export function migrateLegacyData(rawData: unknown): MigrationResult {
       }
 
       if (format === "v2.0") {
-        if (!isNormalizedFileDataV20(rawData)) {
+        if (!isMigratableV20Data(rawData)) {
           throw new Error(
-            "Detected v2.0 data is missing the required normalized arrays for cases or financials",
+            "Detected v2.0 data is missing the required normalized arrays for cases, financials, notes, or alerts",
           );
         }
         logger.info("Data is in v2.0 format, migrating to v2.1");

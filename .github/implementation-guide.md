@@ -290,7 +290,7 @@ interface NormalizedFileData {
 
 - Flat arrays with foreign keys - **no nested structures**
 - Persisted v2.1 data is hydrated/dehydrated through the existing storage helpers
-- Legacy v2.0 files are auto-migrated to v2.1 on read; pre-v2.0 formats surface `LegacyFormatError`
+- Normal runtime reads accept only canonical persisted v2.1 files; use the explicit migration tooling for v2.0 workspaces, while pre-v2.0 formats surface `LegacyFormatError`
 
 ## Form Data Factories
 

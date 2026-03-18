@@ -285,13 +285,9 @@ export class CaseService {
       alerts: _dehydratedAlerts,
       ...dehydratedCase
     } = dehydrateStoredCase(caseItem) as PersistedCase & { alerts?: AlertRecord[] };
-    const casePeople = dehydratedCase.people?.length
-      ? dehydratedCase.people
-      : caseItem.person
-        ? [{ personId: caseItem.person.id, role: PRIMARY_CASE_PERSON_ROLE, isPrimary: true }]
-        : null;
+    const casePeople = dehydratedCase.people;
 
-    if (!casePeople) {
+    if (!casePeople?.length) {
       throw new Error(`Case ${caseItem.id} cannot be dehydrated without linked people or a primary person`);
     }
     const caseRecordWithRuntimeFields:

@@ -98,7 +98,7 @@ interface NormalizedFileData {
 }
 ```
 
-Persisted v2.1 data is hydrated and dehydrated through the storage migration helpers, and legacy v2.0 files are automatically migrated to v2.1 on read. Pre-v2.0 nested formats are rejected rather than silently migrated in the normal app flow.
+Persisted v2.1 data is hydrated and dehydrated through the storage helpers. Normal runtime reads now accept only canonical persisted v2.1 workspaces; legacy v2.0 and older formats must be upgraded first with the explicit migration tooling.
 
 ### Additional files you may see
 

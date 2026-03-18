@@ -99,7 +99,12 @@ function createHydratedStoredCase(id: string, personId: string, name: string): {
       name,
       person,
       people: [{ personId, role: "applicant", isPrimary: true }],
-      linkedPeople: undefined,
+      linkedPeople: [
+        {
+          ref: { personId, role: "applicant", isPrimary: true },
+          person,
+        },
+      ],
     }),
   };
 }

@@ -19,8 +19,6 @@ import {
   dehydrateNormalizedData,
   hydrateNormalizedData,
   hydrateStoredCase,
-  migrateV20ToV21,
-  type NormalizedFileDataV20,
   type PersistedNormalizedFileDataV21,
 } from "../storageV21Migration";
 
@@ -151,27 +149,31 @@ export function isNormalizedFileData(data: unknown): data is PersistedNormalized
     "version" in data &&
     (data as { version: unknown }).version === NORMALIZED_VERSION &&
     Array.isArray((data as { people?: unknown }).people) &&
-    Array.isArray((data as { cases?: unknown }).cases)
-  );
-}
-
-export function isNormalizedFileDataV20(data: unknown): data is NormalizedFileDataV20 {
-  return (
-    data !== null &&
-    typeof data === "object" &&
-    "version" in data &&
-    (data as { version: unknown }).version === "2.0" &&
     Array.isArray((data as { cases?: unknown }).cases) &&
-    Array.isArray((data as { financials?: unknown }).financials)
+    Array.isArray((data as { financials?: unknown }).financials) &&
+    Array.isArray((data as { notes?: unknown }).notes) &&
+    Array.isArray((data as { alerts?: unknown }).alerts) &&
+    typeof (data as { exported_at?: unknown }).exported_at === "string" &&
+    typeof (data as { total_cases?: unknown }).total_cases === "number" &&
+    (data as { categoryConfig?: unknown }).categoryConfig !== null &&
+    typeof (data as { categoryConfig?: unknown }).categoryConfig === "object" &&
+    Array.isArray((data as { activityLog?: unknown }).activityLog) &&
+    (
+      !("templates" in data) ||
+      (data as { templates?: unknown }).templates === undefined ||
+      Array.isArray((data as { templates?: unknown }).templates)
+    )
   );
 }
 
 /**
- * Error thrown when attempting to load a legacy (pre-v2.0) data file.
+ * Error thrown when attempting to load a workspace file outside the canonical
+ * persisted v2.1 format accepted by the normal app runtime.
  * 
- * This error is thrown when the file format is detected as a legacy version
- * that is no longer supported. It provides a user-friendly message instructing
- * users to contact support for migration assistance.
+ * This error is thrown when the file format is detected as legacy, v2.0, or an
+ * invalid/non-canonical v2.1 payload. It provides a user-facing message that
+ * points users toward the explicit migration tooling instead of silently
+ * rewriting the workspace during normal reads.
  * 
  * @class LegacyFormatError
  * @extends Error
@@ -183,9 +185,13 @@ export class LegacyFormatError extends Error {
    * @param {string} detectedFormat - The detected legacy format version
    */
   constructor(detectedFormat: string) {
+    const migrationGuidance =
+      detectedFormat === "v2.0" || detectedFormat === "invalid v2.1 workspace"
+        ? `Use the persisted v${NORMALIZED_VERSION} migration tool in Settings → Diagnostics, then reopen the workspace.`
+        : `Use the available migration tooling or contact support for assistance moving this data to v${NORMALIZED_VERSION}.`;
+
     super(
-      `This data file uses a legacy format (${detectedFormat}) that is no longer supported. ` +
-        `Please contact support for assistance migrating your data to the current format (v${NORMALIZED_VERSION}).`
+      `This workspace file uses an unsupported format (${detectedFormat}) for normal runtime reads. ${migrationGuidance}`,
     );
     this.name = "LegacyFormatError";
   }
@@ -226,7 +232,7 @@ interface FileStorageServiceConfig {
  * 
  * ### Data Format Management
  * - **Version Control**: Enforces the current v2.1 normalized format
- * - **Legacy Detection**: Identifies and rejects pre-v2.0 formats
+ * - **Format Enforcement**: Rejects v2.0, older legacy files, and invalid v2.1 payloads
  * - **Format Validation**: Ensures data integrity before writes
  * - **Auto-enrichment**: Discovers statuses and alert types from data
  * 
@@ -270,7 +276,7 @@ interface FileStorageServiceConfig {
  * 
  * ## Error Handling
  * 
- * - **LegacyFormatError**: Thrown for pre-v2.0 data files
+ * - **LegacyFormatError**: Thrown for any non-canonical runtime read payload
  * - **Write Failures**: Rolls back UI to previous state
  * - **Permission Errors**: Provides user-friendly error messages
  * - **State Conflicts**: Detected and reported
@@ -316,16 +322,16 @@ export class FileStorageService {
    * 1. Reads file via AutosaveFileService
    * 2. Validates format version
  * 3. Hydrates persisted v2.1 data for runtime consumers
- * 4. Migrates persisted v2.0 data to v2.1, writes it back, and returns hydrated data
- * 5. Rejects legacy formats with LegacyFormatError
+  * 4. Rejects v2.0/legacy/non-canonical payloads with LegacyFormatError
+  * 5. Keeps manual migration tooling on the explicit migration path only
  *
    * **Behavior:**
    * - Returns empty structure if no file exists (first run)
- * - Throws LegacyFormatError for pre-v2.0 formats
+  * - Throws LegacyFormatError for v2.0, pre-v2.0, or invalid persisted v2.1 formats
  * - Throws Error for other read failures
  *
    * @returns {Promise<NormalizedFileData | null>} Normalized data or null
-   * @throws {LegacyFormatError} If file contains legacy (pre-v2.0) format
+   * @throws {LegacyFormatError} If file is not canonical persisted v2.1 data
    * @throws {Error} If file read fails for other reasons
    * 
    * @example
@@ -362,11 +368,18 @@ export class FileStorageService {
         };
       }
 
-      // Validate format - v2.1 is current and v2.0 is auto-migrated
+      // Validate format - only canonical persisted v2.1 is accepted at runtime.
       if (isNormalizedFileData(rawData)) {
         logger.debug("Detected normalized data format (v2.1)");
-
-        const hydratedData = hydrateNormalizedData(rawData);
+        let hydratedData: NormalizedFileData;
+        try {
+          hydratedData = hydrateNormalizedData(rawData);
+        } catch (error) {
+          logger.error("Persisted v2.1 data failed canonical hydration", {
+            error: error instanceof Error ? error.message : "Unknown error",
+          });
+          throw new LegacyFormatError("invalid v2.1 workspace");
+        }
 
         // Auto-migrate financial items without history entries
         if (hasItemsNeedingMigration(hydratedData.financials)) {
@@ -384,17 +397,6 @@ export class FileStorageService {
         }
 
         return hydratedData;
-      }
-
-      if (isNormalizedFileDataV20(rawData)) {
-        logger.info("Detected normalized data format (v2.0), migrating to v2.1");
-
-        const migratedPersistedData = migrateV20ToV21(rawData);
-        const hydratedMigratedData = hydrateNormalizedData(migratedPersistedData);
-
-        await this.writeNormalizedData(hydratedMigratedData);
-
-        return hydratedMigratedData;
       }
 
       // Detect legacy format and throw user-friendly error
@@ -468,6 +470,14 @@ export class FileStorageService {
     }
 
     // Check for old version numbers
+    if ("version" in obj && obj.version === "2.0") {
+      return "v2.0";
+    }
+
+    if ("version" in obj && obj.version === NORMALIZED_VERSION) {
+      return "invalid v2.1 workspace";
+    }
+
     if ("version" in obj && obj.version !== NORMALIZED_VERSION) {
       return `v${obj.version}`;
     }
@@ -543,8 +553,6 @@ export class FileStorageService {
       const previousRawData = await this.fileService.readFile();
       if (isNormalizedFileData(previousRawData)) {
         previousData = hydrateNormalizedData(previousRawData);
-      } else if (isNormalizedFileDataV20(previousRawData)) {
-        previousData = hydrateNormalizedData(migrateV20ToV21(previousRawData));
       }
     } catch {
       // If we can't read previous state, rollback won't be possible

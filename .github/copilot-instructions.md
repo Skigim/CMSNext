@@ -107,7 +107,7 @@ The application follows a layered, local-first architecture designed to keep bus
   - `templates?: Template[]`
 - Avoid introducing nested or denormalized structures; new fields should extend existing records, not embed cross-cutting data.
 - Persisted v2.1 data is hydrated/dehydrated through the existing storage migration helpers.
-- Legacy v2.0 data should be handled through automatic migration to v2.1 on read; older nested formats remain legacy/unsupported unless an explicit migration helper applies.
+- Legacy v2.0 data must be upgraded through the explicit migration tooling before normal runtime reads; older nested formats remain legacy/unsupported unless an explicit migration helper applies.
 
 ### UI, Themes, and Color System
 

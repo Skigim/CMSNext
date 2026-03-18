@@ -139,7 +139,7 @@ CMSNext/
 │   ├── featureFlags.ts         # Feature flag system
 │   ├── performanceTracker.ts   # Telemetry
 │   ├── services/               # Stateless service classes
-│   │   ├── FileStorageService.ts       # File I/O, v2.1 format validation + v2.0 migration
+│   │   ├── FileStorageService.ts       # File I/O, canonical v2.1 validation
 │   │   ├── CaseService.ts             # Case CRUD
 │   │   ├── FinancialsService.ts       # Financial items CRUD
 │   │   ├── NotesService.ts            # Note management
@@ -283,7 +283,7 @@ interface NormalizedFileData {
 
 - Flat arrays with foreign keys — no nested structures
 - Persisted v2.1 data is hydrated/dehydrated through the storage migration helpers
-- Legacy v2.0 files auto-migrate to v2.1 on read; pre-v2.0 nested formats trigger `LegacyFormatError`
+- Normal runtime reads accept only canonical persisted v2.1 workspaces; use the explicit migration tooling for v2.0 files, while pre-v2.0 nested formats trigger `LegacyFormatError`
 - Main file: `case-tracker-data.json`
 
 ### Storage Hierarchy (3 tiers)
@@ -305,7 +305,7 @@ FileStorageContext (handles/permissions)
     ↓
 AutosaveFileService (debouncing + write queue)
     ↓
-FileStorageService (read/write + v2.1 validation, v2.0 auto-migration)
+FileStorageService (read/write + canonical v2.1 validation)
     ↓
 File System Access API (browser native)
 ```

@@ -69,8 +69,10 @@ export function LegacyMigrationPanel({
       const format = detectDataFormat(rawData);
       setState({ status: "detected", format, rawData });
 
-      if (format === "v2.0" || format === "v2.1") {
-        toast.info("Data is already in the current v2.1 format, or will be auto-migrated on read. No manual migration needed.");
+      if (format === "v2.1") {
+        toast.info("Data is already in the current v2.1 format. No migration is needed.");
+      } else if (format === "v2.0") {
+        toast.warning("Legacy v2.0 format detected. Run the migration before opening this workspace normally.");
       } else if (format === "v1.x-nested") {
         toast.warning("Legacy v1.x format detected. Migration is available.");
       } else {
@@ -177,13 +179,13 @@ export function LegacyMigrationPanel({
                 </p>
               </div>
               <Badge
-                variant={state.format === "v2.0" || state.format === "v2.1" ? "default" : "secondary"}
+                variant={state.format === "v2.1" ? "default" : "secondary"}
                 className={state.format === "v1.x-nested" ? "bg-amber-500 text-white" : ""}
               >
                 {state.format === "v2.1"
                   ? "Current"
                   : state.format === "v2.0"
-                    ? "Compatible"
+                    ? "Migration Required"
                     : "Legacy"}
               </Badge>
             </div>
@@ -191,11 +193,13 @@ export function LegacyMigrationPanel({
             {(state.format === "v2.0" || state.format === "v2.1") && (
               <Alert>
                 <Check className="h-4 w-4" />
-                <AlertTitle>Already Current</AlertTitle>
+                <AlertTitle>
+                  {state.format === "v2.1" ? "Already Current" : "Migration Required"}
+                </AlertTitle>
                 <AlertDescription>
                   {state.format === "v2.1"
                     ? "Your data is already in the v2.1 format. No migration is needed."
-                    : "Your data is in the legacy v2.0 format and will auto-migrate to v2.1 on read. No manual migration is needed."}
+                    : "Your data is in the legacy v2.0 format. Run this migration before opening the workspace in the normal app flow."}
                 </AlertDescription>
               </Alert>
             )}

@@ -11,7 +11,6 @@ import {
 import { isCaseArchiveData, parseArchiveYear } from "@/types/archive";
 import {
   isNormalizedFileData,
-  isNormalizedFileDataV20,
   type NormalizedFileData,
 } from "@/utils/services/FileStorageService";
 
@@ -56,6 +55,18 @@ export interface PersistedCaseArchiveDataV21 extends PersistedNormalizedFileData
   archiveType: "cases";
   archiveYear: number;
   archivedAt: string;
+}
+
+function isMigratableV20Data(data: unknown): data is NormalizedFileDataV20 {
+  return (
+    data !== null &&
+    typeof data === "object" &&
+    (data as { version?: unknown }).version === "2.0" &&
+    Array.isArray((data as { cases?: unknown }).cases) &&
+    Array.isArray((data as { financials?: unknown }).financials) &&
+    Array.isArray((data as { notes?: unknown }).notes) &&
+    Array.isArray((data as { alerts?: unknown }).alerts)
+  );
 }
 
 export function createEmptyMigrationCounts(): WorkspaceMigrationCounts {
@@ -346,10 +357,10 @@ export function migrateArchiveDataToPersistedV21(
     };
   }
 
-  if (isNormalizedFileDataV20(rawData)) {
+  if (isMigratableV20Data(rawData)) {
     return {
       data: {
-        ...migrateV20ToV21(rawData as NormalizedFileDataV20),
+        ...migrateV20ToV21(rawData),
         archiveType: "cases",
         archiveYear,
         archivedAt: rawData.exported_at,

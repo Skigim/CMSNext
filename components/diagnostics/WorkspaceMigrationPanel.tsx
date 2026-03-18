@@ -77,7 +77,7 @@ export function WorkspaceMigrationPanel() {
         </CardTitle>
         <CardDescription>
           Explicitly upgrade the connected workspace and supported archive files to persisted v2.1,
-          then validate each file before runtime v2.0 migration support is removed.
+          then validate each file so normal runtime reads stay strictly v2.1-only.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">

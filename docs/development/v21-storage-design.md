@@ -17,7 +17,7 @@ The goal is to reach agreement on:
 - How `Person` entities are extracted from cases and stored globally
 - How `DataManager` and `CaseService` hydrate/dehydrate at runtime
 - What `PersonService` owns
-- How the v2.0 → v2.1 migration runs
+- How the explicit v2.0 → v2.1 migration runs
 - Which risks need mitigation before coding starts
 
 ---
@@ -79,7 +79,7 @@ This means relationship targets cannot be looked up, validated, or kept in sync.
 5. Write path dehydrates back to normalized form (ID refs only).
 6. A new `PersonService` owns all person CRUD and case-linking operations.
 7. A pure migration function converts any v2.0 file to v2.1 without discarding user data.
-8. Archive files (same v2.0 schema) are handled explicitly — either migrated on load or kept separate.
+8. Archive files (same v2.0 schema) are handled explicitly through the migration tooling or kept separate until upgraded.
 
 ### Non-Goals (this iteration)
 
@@ -408,26 +408,18 @@ utils/storageV21Migration.ts    # pure migration function and related types
 
 ### 6.4 Where migration is triggered
 
-`FileStorageService.readFileData()` currently checks the version field:
+Migration should run from an **explicit workspace/archive upgrader**, not from
+`FileStorageService.readFileData()`.
 
-```typescript
-// Proposed change (Week 2)
-if (isNormalizedFileData_v20(rawData)) {
-  const migrated = migrateV20ToV21(rawData);
-  // write migrated data back to disk so next open is already v2.1
-  await this.writeNormalizedData(migrated);
-  return migrated;
-}
-```
+Normal runtime reads should:
 
-Migration is applied **on first read** of a v2.0 file and written back immediately so the file is not migrated twice.
+- accept only canonical persisted v2.1 data,
+- hydrate it for in-app use, and
+- reject v2.0 or older files with a user-facing error that points users to the
+  migration tooling.
 
-> **⚠️ Prerequisite — upgrade the write path first.**  The current `writeNormalizedData`
-> implementation hardcodes `version: "2.0"` and only copies v2.0 collections.  If migration is
-> enabled before the writer is updated, the write-back will strip the new `people[]` array and
-> downgrade the file back to v2.0.  The write path **must** be upgraded to handle v2.1
-> (writing `version: "2.1"` and serialising all v2.1 fields including `people[]`) as a
-> **Week 2 prerequisite** before enabling lazy migration in `readFileData()`.
+That keeps the day-to-day app path strict and avoids silently rewriting
+workspace files during reads.
 
 ### 6.5 Archive file compatibility
 
@@ -722,13 +714,13 @@ Encryption of `ssn` at-rest is already handled by the existing AES-256-GCM encry
 | `familyMembers` containing UUID strings | Renamed to `familyMemberIds`; validated against `people[]` |
 | `familyMembers` containing free-text names | Stored in `Person.legacyFamilyMemberNames[]` (not discarded); warning written to `activityLog` |
 | Already-migrated v2.1 file passed to migration | Returns input unchanged (idempotency) |
-| File with missing `people` property | Treated as v2.0; migration runs |
+| File with missing `people` property | Rejected by runtime reads; explicit migration can upgrade it if it is valid v2.0 |
 | Archive file with v2.0 schema | Migrated identically to main file |
 | Two cases with persons sharing the same name + DOB but different IDs | Both persons kept as separate entries; structured warning emitted (see §9.3) |
 
 ### 10.3 Integration test scope
 
-- Open a v2.0 file → app triggers migration → file is v2.1 on disk after save.
+- Open a v2.0 file in the normal app flow → user-facing error instructs running migration first.
 - Create a case → `PersonService.createPerson` called → person appears in `people[]`.
 - Link a second person to a case → case has two entries in `people[]`; one `isPrimary: true`.
 - Update a person → all cases hydrate with updated person data on next read.
@@ -837,7 +829,7 @@ This plan maps directly to the March 2026 roadmap weeks.
 
 **Tests**
 - [ ] Unit tests for `CaseService.hydrate` / `dehydrate` (§10.1).
-- [ ] Integration test: v2.0 file open → auto-migrated → v2.1 on disk.
+- [ ] Integration test: v2.0 file open in normal runtime path → rejected with migration guidance.
 - [ ] Performance test: 500-case hydration < 50 ms (§10.4).
 - [ ] Ensure all existing 1141+ tests pass with zero regressions.
 
