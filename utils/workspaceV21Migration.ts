@@ -255,9 +255,22 @@ export function validatePersistedV21Data(
     }
 
     caseItem.people.forEach((personRef, refIndex) => {
-      if (!peopleById.has(personRef.personId)) {
+      if (
+        !personRef ||
+        typeof personRef !== "object" ||
+        typeof (personRef as { personId?: unknown }).personId !== "string" ||
+        ((personRef as { personId: string }).personId as string).length === 0
+      ) {
         validationErrors.push(
-          `Case ${caseLabel} people[${refIndex}] references missing personId "${personRef.personId}".`,
+          `Case ${caseLabel} people[${refIndex}] is not a valid person reference (missing or invalid personId).`,
+        );
+        return;
+      }
+
+      const personId = (personRef as { personId: string }).personId;
+      if (!peopleById.has(personId)) {
+        validationErrors.push(
+          `Case ${caseLabel} people[${refIndex}] references missing personId "${personId}".`,
         );
       }
     });
