@@ -52,6 +52,19 @@ import { PersonService } from "./services/PersonService";
 import { AlertsService } from "./services/AlertsService";
 import { TemplateService } from "./services/TemplateService";
 import { CaseArchiveService, type RefreshQueueResult, type ArchiveFileInfo } from "./services/CaseArchiveService";
+import {
+  MAIN_WORKSPACE_FILE_NAME,
+  buildWorkspaceMigrationReport,
+  createEmptyMigrationCounts,
+  migrateArchiveDataToPersistedV21,
+  summarizeUnknownCounts,
+  validatePersistedV21Data,
+  type WorkspaceMigrationFileReport,
+  type WorkspaceMigrationReport,
+} from "./workspaceV21Migration";
+import { parseArchiveYear } from "@/types/archive";
+import { isNormalizedFileData, isNormalizedFileDataV20 } from "./services/FileStorageService";
+import { hydrateNormalizedData, migrateV20ToV21 } from "./storageV21Migration";
 
 // ============================================================================
 // Configuration & Logging
@@ -1433,6 +1446,66 @@ export class DataManager {
     return this.financials.migrateItemsWithoutHistory();
   }
 
+  /**
+   * Explicitly migrate the current workspace and supported archive files to
+   * persisted v2.1 format and validate the resulting data.
+   */
+  async migrateWorkspaceToV21(): Promise<WorkspaceMigrationReport> {
+    const files: WorkspaceMigrationFileReport[] = [];
+    const disconnectedMainReport: WorkspaceMigrationFileReport = {
+      fileName: MAIN_WORKSPACE_FILE_NAME,
+      fileKind: "workspace",
+      disposition: "failed",
+      sourceVersion: null,
+      counts: createEmptyMigrationCounts(),
+      validationErrors: [],
+      message: "Workspace folder is not connected or permission has not been granted.",
+    };
+    const disconnectedArchiveReport: WorkspaceMigrationFileReport = {
+      fileName: "archived-cases-*.json",
+      fileKind: "archive",
+      disposition: "failed",
+      sourceVersion: null,
+      counts: createEmptyMigrationCounts(),
+      validationErrors: [],
+      message: "Workspace folder is not connected or permission has not been granted.",
+    };
+
+    if (!this.isConnected()) {
+      files.push(disconnectedMainReport);
+      files.push(disconnectedArchiveReport);
+      return buildWorkspaceMigrationReport(files);
+    }
+
+    files.push(await this.migratePrimaryWorkspaceFile());
+
+    let archiveFileNames: string[] = [];
+    try {
+      archiveFileNames = (await this.fileService.listDataFiles()).filter(
+        (fileName) => parseArchiveYear(fileName) !== null,
+      );
+    } catch (error) {
+      files.push({
+        fileName: "archived-cases-*.json",
+        fileKind: "archive",
+        disposition: "failed",
+        sourceVersion: null,
+        counts: createEmptyMigrationCounts(),
+        validationErrors: [],
+        message: extractErrorMessage(error),
+      });
+      return buildWorkspaceMigrationReport(files);
+    }
+
+    archiveFileNames.sort((left, right) => left.localeCompare(right));
+
+    for (const fileName of archiveFileNames) {
+      files.push(await this.migrateArchiveFile(fileName));
+    }
+
+    return buildWorkspaceMigrationReport(files);
+  }
+
   // =============================================================================
   // CASE ARCHIVAL OPERATIONS
   // =============================================================================
@@ -1558,5 +1631,174 @@ export class DataManager {
    */
   async markCasesForArchivalByIds(caseIds: string[]): Promise<{ markedCount: number; markedIds: string[] }> {
     return this.archive.markForArchival(caseIds);
+  }
+
+  private async migratePrimaryWorkspaceFile(): Promise<WorkspaceMigrationFileReport> {
+    try {
+      const rawData = await this.fileStorage.readRawFileData();
+
+      if (!rawData) {
+        return {
+          fileName: MAIN_WORKSPACE_FILE_NAME,
+          fileKind: "workspace",
+          disposition: "skipped",
+          sourceVersion: null,
+          counts: createEmptyMigrationCounts(),
+          validationErrors: [],
+          message: "No workspace data file was found.",
+        };
+      }
+
+      if (isNormalizedFileData(rawData)) {
+        const validation = validatePersistedV21Data(rawData);
+        return {
+          fileName: MAIN_WORKSPACE_FILE_NAME,
+          fileKind: "workspace",
+          disposition: validation.validationErrors.length === 0 ? "already-v2.1" : "failed",
+          sourceVersion: rawData.version,
+          counts: validation.counts,
+          validationErrors: validation.validationErrors,
+          message:
+            validation.validationErrors.length === 0
+              ? "Already persisted as v2.1."
+              : "Persisted v2.1 validation failed.",
+        };
+      }
+
+      if (isNormalizedFileDataV20(rawData)) {
+        const migratedData = migrateV20ToV21(rawData);
+        const validation = validatePersistedV21Data(migratedData);
+
+        if (validation.validationErrors.length > 0) {
+          return {
+            fileName: MAIN_WORKSPACE_FILE_NAME,
+            fileKind: "workspace",
+            disposition: "failed",
+            sourceVersion: rawData.version,
+            counts: validation.counts,
+            validationErrors: validation.validationErrors,
+            message: "Migration produced integrity errors.",
+          };
+        }
+
+        await this.fileStorage.writeNormalizedData(hydrateNormalizedData(migratedData));
+
+        return {
+          fileName: MAIN_WORKSPACE_FILE_NAME,
+          fileKind: "workspace",
+          disposition: "migrated",
+          sourceVersion: rawData.version,
+          counts: validation.counts,
+          validationErrors: [],
+          message: "Migrated workspace file to persisted v2.1.",
+        };
+      }
+
+      const sourceVersion =
+        rawData && typeof rawData === "object" && "version" in rawData && typeof rawData.version === "string"
+          ? rawData.version
+          : null;
+
+      return {
+        fileName: MAIN_WORKSPACE_FILE_NAME,
+        fileKind: "workspace",
+        disposition: "failed",
+        sourceVersion,
+        counts: summarizeUnknownCounts(rawData),
+        validationErrors: [],
+        message: "Unsupported workspace data format.",
+      };
+    } catch (error) {
+      return {
+        fileName: MAIN_WORKSPACE_FILE_NAME,
+        fileKind: "workspace",
+        disposition: "failed",
+        sourceVersion: null,
+        counts: createEmptyMigrationCounts(),
+        validationErrors: [],
+        message: extractErrorMessage(error),
+      };
+    }
+  }
+
+  private async migrateArchiveFile(fileName: string): Promise<WorkspaceMigrationFileReport> {
+    try {
+      const rawData = await this.fileService.readNamedFile(fileName);
+
+      if (!rawData) {
+        return {
+          fileName,
+          fileKind: "archive",
+          disposition: "skipped",
+          sourceVersion: null,
+          counts: createEmptyMigrationCounts(),
+          validationErrors: [],
+          message: "Archive file could not be read.",
+        };
+      }
+
+      const migratedArchive = migrateArchiveDataToPersistedV21(rawData, fileName);
+      if (!migratedArchive.data) {
+        return {
+          fileName,
+          fileKind: "archive",
+          disposition: "failed",
+          sourceVersion: migratedArchive.sourceVersion,
+          counts: summarizeUnknownCounts(rawData),
+          validationErrors: migratedArchive.error ? [migratedArchive.error] : [],
+          message: migratedArchive.error ?? "Unsupported archive data format.",
+        };
+      }
+
+      const validation = validatePersistedV21Data(migratedArchive.data);
+      if (validation.validationErrors.length > 0) {
+        return {
+          fileName,
+          fileKind: "archive",
+          disposition: "failed",
+          sourceVersion: migratedArchive.sourceVersion,
+          counts: validation.counts,
+          validationErrors: validation.validationErrors,
+          message: "Archive validation failed after migration.",
+        };
+      }
+
+      if (migratedArchive.needsWrite) {
+        const writeSucceeded = await this.fileService.writeNamedFile(fileName, migratedArchive.data);
+        if (!writeSucceeded) {
+          return {
+            fileName,
+            fileKind: "archive",
+            disposition: "failed",
+            sourceVersion: migratedArchive.sourceVersion,
+            counts: validation.counts,
+            validationErrors: [],
+            message: "Archive write returned false.",
+          };
+        }
+      }
+
+      return {
+        fileName,
+        fileKind: "archive",
+        disposition: migratedArchive.needsWrite ? "migrated" : "already-v2.1",
+        sourceVersion: migratedArchive.sourceVersion,
+        counts: validation.counts,
+        validationErrors: [],
+        message: migratedArchive.needsWrite
+          ? "Migrated archive file to persisted v2.1."
+          : "Already persisted as v2.1.",
+      };
+    } catch (error) {
+      return {
+        fileName,
+        fileKind: "archive",
+        disposition: "failed",
+        sourceVersion: null,
+        counts: createEmptyMigrationCounts(),
+        validationErrors: [],
+        message: extractErrorMessage(error),
+      };
+    }
   }
 }

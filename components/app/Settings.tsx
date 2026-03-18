@@ -9,6 +9,7 @@ import { Separator } from "../ui/separator";
 import FileStorageSettings from "../diagnostics/FileStorageSettings";
 import { FileStorageDiagnostics } from "../diagnostics/FileStorageDiagnostics";
 import { LegacyMigrationPanel } from "../diagnostics/LegacyMigrationPanel";
+import { WorkspaceMigrationPanel } from "../diagnostics/WorkspaceMigrationPanel";
 import { ErrorBoundaryTest } from "../error/ErrorBoundaryTest";
 import { ErrorReportViewer } from "../error/ErrorReportViewer";
 import { FeedbackPanel } from "../error/ErrorFeedbackForm";
@@ -348,6 +349,7 @@ export function Settings({ cases, onAlertsCsvImported }: SettingsProps) {
         <TabsContent value="storage" className="space-y-6">
           <div className="grid gap-6">
             <FileStorageSettings />
+            <WorkspaceMigrationPanel />
             <FileStorageDiagnostics />
             
             {/* Legacy Migration Panel - shown when feature flag is enabled */}
