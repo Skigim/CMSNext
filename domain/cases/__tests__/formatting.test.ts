@@ -388,7 +388,7 @@ describe("formatCaseDisplayName", () => {
     expect(formatTransitionalCaseDisplayName(caseData)).toBe("Primary Applicant");
   });
 
-  it("falls back to the first linked person when no normalized primary ref is flagged", () => {
+  it("returns Unknown Case when no normalized primary ref is flagged", () => {
     const caseData = createCaseWithLinkedPeople({
       primaryPersonId: "person-2",
       primaryFirstName: "Referenced",
@@ -396,6 +396,6 @@ describe("formatCaseDisplayName", () => {
       isPrimaryFlagged: false,
     });
 
-    expect(formatTransitionalCaseDisplayName(caseData)).toBe("Linked Member");
+    expect(formatTransitionalCaseDisplayName(caseData)).toBe("Unknown Case");
   });
 });

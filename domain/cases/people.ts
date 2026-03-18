@@ -60,11 +60,7 @@ export function getPrimaryCasePersonRef(
 ): LinkedPersonRef | null {
   const linkedPeople = getLinkedPeople(source);
 
-  return (
-    linkedPeople.find(({ ref }) => ref.isPrimary)?.ref ??
-    linkedPeople[0]?.ref ??
-    null
-  );
+  return linkedPeople.find(({ ref }) => ref.isPrimary)?.ref ?? null;
 }
 
 export function getPrimaryCasePersonForDisplay(source: CasePeopleSource): Person | null {
@@ -74,12 +70,7 @@ export function getPrimaryCasePersonForDisplay(source: CasePeopleSource): Person
     ? linkedPeople.find(({ ref }) => ref.personId === primaryRef.personId)
     : undefined;
 
-  return (
-    primaryLinkedPerson?.person ??
-    linkedPeople[0]?.person ??
-    source.person ??
-    null
-  );
+  return primaryLinkedPerson?.person ?? null;
 }
 
 export function getPrimaryCasePerson(source: CasePeopleSource): Person | null {

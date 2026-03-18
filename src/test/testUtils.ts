@@ -113,7 +113,7 @@ export const createMockCaseDisplay = (overrides: Partial<CaseDisplay> = {}): Cas
     id: 'case-test-1',
     name: `${person.firstName} ${person.lastName}`,
     mcn: 'MCN123456',
-  status: 'Pending',
+    status: 'Pending',
     priority: false,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
@@ -128,9 +128,41 @@ export const createMockCaseDisplay = (overrides: Partial<CaseDisplay> = {}): Cas
  */
 
 export const createMockStoredCase = (overrides: Partial<StoredCase> = {}): StoredCase => {
-  const person = createMockPerson()
+  const basePerson = createMockPerson()
+  const person = overrides.person ?? basePerson
   const timestamp = new Date().toISOString()
-  
+  const people = overrides.people ?? [{ personId: person.id, role: 'applicant', isPrimary: true }]
+  const primaryRefForPerson =
+    people.find((ref) => ref.personId === person.id && ref.isPrimary) ??
+    people.find((ref) => ref.personId === person.id) ??
+    { personId: person.id, role: 'applicant' as const, isPrimary: true }
+  const linkedPeople = overrides.linkedPeople ?? [
+    {
+      ref: primaryRefForPerson,
+      person,
+    },
+  ]
+  const caseRecord: StoredCase['caseRecord'] = {
+    id: 'case-record-test-1',
+    mcn: 'MCN123456',
+    applicationDate: timestamp,
+    caseType: 'Medical Assistance',
+    personId: person.id,
+    spouseId: '',
+    status: 'Pending',
+    description: 'Test case description',
+    priority: false,
+    livingArrangement: 'Home',
+    withWaiver: false,
+    admissionDate: timestamp,
+    organizationId: 'org-1',
+    authorizedReps: [],
+    retroRequested: '',
+    createdDate: timestamp,
+    updatedDate: timestamp,
+    ...overrides.caseRecord,
+  }
+   
   return {
     id: 'case-test-1',
     name: `${person.firstName} ${person.lastName}`,
@@ -139,27 +171,10 @@ export const createMockStoredCase = (overrides: Partial<StoredCase> = {}): Store
     priority: false,
     createdAt: timestamp,
     updatedAt: timestamp,
-    people: [{ personId: person.id, role: 'applicant', isPrimary: true }],
+    people,
     person,
-    caseRecord: {
-      id: 'case-record-test-1',
-      mcn: 'MCN123456',
-      applicationDate: timestamp,
-      caseType: 'Medical Assistance',
-      personId: 'person-test-1',
-      spouseId: '',
-      status: 'Pending',
-      description: 'Test case description',
-      priority: false,
-      livingArrangement: 'Home',
-      withWaiver: false,
-      admissionDate: timestamp,
-      organizationId: 'org-1',
-      authorizedReps: [],
-      retroRequested: '',
-      createdDate: timestamp,
-      updatedDate: timestamp,
-    },
+    linkedPeople,
+    caseRecord,
     ...overrides
   }
 }

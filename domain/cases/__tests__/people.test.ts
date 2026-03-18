@@ -158,7 +158,7 @@ describe("case people helpers", () => {
     expect(result).toMatchObject(expectedPerson);
   });
 
-  it("falls back to the first linked ref when no explicit primary ref exists", () => {
+  it("returns null when no normalized primary ref exists", () => {
     // Arrange
     const firstLinkedPerson = createLinkedPerson("person-10", "household_member", {
       firstName: "First",
@@ -179,11 +179,7 @@ describe("case people helpers", () => {
     const result = getPrimaryCasePersonRef(caseData);
 
     // Assert
-    expect(result).toEqual({
-      personId: "person-10",
-      role: "household_member",
-      isPrimary: false,
-    });
+    expect(result).toBeNull();
   });
 
   it.each([

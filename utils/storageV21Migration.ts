@@ -139,6 +139,9 @@ function normalizeName(value: string): string {
 function buildCasePeopleRefs(
   caseItem: Pick<StoredCase, "id" | "people">,
 ): CasePersonRef[] {
+  // Canonical persisted v2.1 data must already carry explicit people[] refs on
+  // every runtime case. This helper now enforces that invariant instead of
+  // reconstructing refs from other hydrated fields.
   const existingPeople = caseItem.people?.filter((ref) => Boolean(ref.personId)) ?? [];
   if (existingPeople.length === 0) {
     throw new Error(`Case ${caseItem.id} cannot be dehydrated without canonical people[] refs`);
