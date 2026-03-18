@@ -4,6 +4,7 @@ import { FileStorageService, LegacyFormatError } from "@/utils/services/FileStor
 import {
   createMockNormalizedFileData,
   createMockNormalizedFileDataV20,
+  createMockPersistedNormalizedFileData,
   createMockPerson,
   createMockStoredCase,
 } from "@/src/test/testUtils";
@@ -60,37 +61,35 @@ describe("FileStorageService v2.1", () => {
 
   it("hydrates persisted v2.1 data on read without rewriting it", async () => {
     // ARRANGE
-    mockFileService.readFile.mockResolvedValue(createMockNormalizedFileData({
-      people: [
-        {
-          ...createMockPerson({
-            id: "person-1",
-            firstName: "Hydrated",
-            lastName: "Person",
-            name: "Hydrated Person",
-            createdAt: "2026-01-01T00:00:00.000Z",
-            updatedAt: "2026-01-02T00:00:00.000Z",
-            dateAdded: "2026-01-01T00:00:00.000Z",
-          }),
-          familyMemberIds: [],
-          relationships: [],
-        },
-      ],
+    const hydratedPerson = {
+      ...createMockPerson({
+        id: "person-1",
+        firstName: "Hydrated",
+        lastName: "Person",
+        name: "Hydrated Person",
+        createdAt: "2026-01-01T00:00:00.000Z",
+        updatedAt: "2026-01-02T00:00:00.000Z",
+        dateAdded: "2026-01-01T00:00:00.000Z",
+      }),
+      familyMemberIds: [],
+      relationships: [],
+    };
+    mockFileService.readFile.mockResolvedValue(createMockPersistedNormalizedFileData({
+      people: [hydratedPerson],
       cases: [
-        {
+        createMockStoredCase({
           id: "case-1",
           name: "Hydrated Person",
           mcn: "MCN123456",
-          status: "Pending",
-          priority: false,
           createdAt: "2026-01-01T00:00:00.000Z",
           updatedAt: "2026-01-02T00:00:00.000Z",
+          person: hydratedPerson,
           people: [{ personId: "person-1", role: "applicant", isPrimary: true }],
           caseRecord: {
             ...createMockStoredCase().caseRecord,
             personId: "person-1",
           },
-        },
+        }),
       ],
       exported_at: "2026-03-01T00:00:00.000Z",
       total_cases: 1,

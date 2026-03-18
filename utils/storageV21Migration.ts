@@ -58,6 +58,16 @@ export interface RuntimeNormalizedFileDataV21 {
   templates?: Template[];
 }
 
+/**
+ * Type guard for persisted normalized v2.0 workspace/archive payloads.
+ *
+ * This is used only by explicit migration codepaths that still need to
+ * recognize legacy-but-migratable persisted files after the normal runtime
+ * read path became strict v2.1-only.
+ *
+ * @param {unknown} data - Raw persisted data to inspect
+ * @returns {boolean} True when the payload has the required persisted v2.0 shape
+ */
 export function isPersistedNormalizedFileDataV20(data: unknown): data is NormalizedFileDataV20 {
   return (
     data !== null &&

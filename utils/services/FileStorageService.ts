@@ -186,7 +186,7 @@ export class LegacyFormatError extends Error {
    */
   constructor(detectedFormat: string) {
     const migrationGuidance =
-      detectedFormat === "v2.0" || detectedFormat === "invalid v2.1 workspace"
+      detectedFormat === "v2.0" || detectedFormat.startsWith("invalid v2.1 workspace")
         ? `Use the persisted v${NORMALIZED_VERSION} migration tool in Settings → Diagnostics, then reopen the workspace.`
         : `Use the available migration tooling or contact support for assistance moving this data to v${NORMALIZED_VERSION}.`;
 
@@ -378,7 +378,11 @@ export class FileStorageService {
           logger.error("Persisted v2.1 data failed canonical hydration", {
             error: error instanceof Error ? error.message : "Unknown error",
           });
-          throw new LegacyFormatError("invalid v2.1 workspace");
+          const hydrationError =
+            error instanceof Error && error.message.trim().length > 0
+              ? error.message
+              : "unknown hydration error";
+          throw new LegacyFormatError(`invalid v2.1 workspace: ${hydrationError}`);
         }
 
         // Auto-migrate financial items without history entries
@@ -476,7 +480,9 @@ export class FileStorageService {
 
     // By the time we reach this branch, canonical v2.1 payloads have already been
     // accepted and hydrated successfully, so this specifically identifies payloads
-    // that claim to be v2.1 but are still invalid for runtime use.
+    // that claim to be v2.1 but are still invalid for runtime use, such as files
+    // missing required root collections/metadata or carrying malformed persisted
+    // references that prevent successful canonical hydration.
     if ("version" in obj && obj.version === NORMALIZED_VERSION) {
       return "invalid v2.1 workspace";
     }

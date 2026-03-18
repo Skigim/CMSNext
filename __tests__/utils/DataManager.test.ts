@@ -481,26 +481,27 @@ describe("DataManager", () => {
 
     it("reports validation failures for invalid persisted v2.1 files", async () => {
       // ARRANGE
-      const invalidWorkspace = createMockNormalizedFileData({
-        people: [],
-        cases: [
-          {
-            ...createMockStoredCase({
+      const persistedInvalidCase = dehydrateNormalizedData(
+        createMockNormalizedFileData({
+          cases: [
+            createMockStoredCase({
               id: "case-invalid",
               person: createMockPerson({ id: "person-missing" }),
               people: [{ personId: "person-missing", role: "applicant", isPrimary: true }],
+              caseRecord: {
+                ...createMockStoredCase().caseRecord,
+                personId: "person-missing",
+              },
             }),
-            person: undefined,
-            linkedPeople: undefined,
-            caseRecord: {
-              ...createMockStoredCase().caseRecord,
-              personId: "person-missing",
-            },
-          },
-        ],
-        exported_at: "2026-03-01T00:00:00.000Z",
-        total_cases: 1,
-      });
+          ],
+          exported_at: "2026-03-01T00:00:00.000Z",
+          total_cases: 1,
+        }),
+      );
+      const invalidWorkspace = {
+        ...persistedInvalidCase,
+        people: [],
+      };
 
       (mockFileStorageService.readRawFileData as ReturnType<typeof vi.fn>).mockResolvedValue(invalidWorkspace);
       (mockFileService.listDataFiles as ReturnType<typeof vi.fn>).mockResolvedValue([]);
