@@ -285,6 +285,9 @@ export class CaseService {
       alerts: _dehydratedAlerts,
       ...dehydratedCase
     } = dehydrateStoredCase(caseItem) as PersistedCase & { alerts?: AlertRecord[] };
+    // dehydrateStoredCase() already falls back through people → linkedPeople → person
+    // when rebuilding persisted refs, so an empty result here indicates an invalid
+    // runtime case shape rather than a recoverable compatibility scenario.
     const casePeople = dehydratedCase.people;
 
     if (!casePeople?.length) {

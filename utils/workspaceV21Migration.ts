@@ -4,8 +4,8 @@ import { mergeCategoryConfig } from "@/types/categoryConfig";
 import {
   dehydrateNormalizedData,
   hydrateNormalizedData,
+  isPersistedNormalizedFileDataV20,
   migrateV20ToV21,
-  type NormalizedFileDataV20,
   type PersistedNormalizedFileDataV21,
 } from "@/utils/storageV21Migration";
 import { isCaseArchiveData, parseArchiveYear } from "@/types/archive";
@@ -55,18 +55,6 @@ export interface PersistedCaseArchiveDataV21 extends PersistedNormalizedFileData
   archiveType: "cases";
   archiveYear: number;
   archivedAt: string;
-}
-
-function isMigratableV20Data(data: unknown): data is NormalizedFileDataV20 {
-  return (
-    data !== null &&
-    typeof data === "object" &&
-    (data as { version?: unknown }).version === "2.0" &&
-    Array.isArray((data as { cases?: unknown }).cases) &&
-    Array.isArray((data as { financials?: unknown }).financials) &&
-    Array.isArray((data as { notes?: unknown }).notes) &&
-    Array.isArray((data as { alerts?: unknown }).alerts)
-  );
 }
 
 export function createEmptyMigrationCounts(): WorkspaceMigrationCounts {
@@ -357,7 +345,7 @@ export function migrateArchiveDataToPersistedV21(
     };
   }
 
-  if (isMigratableV20Data(rawData)) {
+  if (isPersistedNormalizedFileDataV20(rawData)) {
     return {
       data: {
         ...migrateV20ToV21(rawData),

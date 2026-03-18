@@ -190,16 +190,23 @@ export function LegacyMigrationPanel({
               </Badge>
             </div>
 
-            {(state.format === "v2.0" || state.format === "v2.1") && (
+            {state.format === "v2.1" && (
               <Alert>
                 <Check className="h-4 w-4" />
-                <AlertTitle>
-                  {state.format === "v2.1" ? "Already Current" : "Migration Required"}
-                </AlertTitle>
+                <AlertTitle>Already Current</AlertTitle>
                 <AlertDescription>
-                  {state.format === "v2.1"
-                    ? "Your data is already in the v2.1 format. No migration is needed."
-                    : "Your data is in the legacy v2.0 format. Run this migration before opening the workspace in the normal app flow."}
+                  Your data is already in the v2.1 format. No migration is needed.
+                </AlertDescription>
+              </Alert>
+            )}
+
+            {state.format === "v2.0" && (
+              <Alert>
+                <Check className="h-4 w-4" />
+                <AlertTitle>Migration Required</AlertTitle>
+                <AlertDescription>
+                  Your data is in the legacy v2.0 format. Run this migration before opening the
+                  workspace in the normal app flow.
                 </AlertDescription>
               </Alert>
             )}

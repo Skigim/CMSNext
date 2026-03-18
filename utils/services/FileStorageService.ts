@@ -474,6 +474,9 @@ export class FileStorageService {
       return "v2.0";
     }
 
+    // By the time we reach this branch, canonical v2.1 payloads have already been
+    // accepted and hydrated successfully, so this specifically identifies payloads
+    // that claim to be v2.1 but are still invalid for runtime use.
     if ("version" in obj && obj.version === NORMALIZED_VERSION) {
       return "invalid v2.1 workspace";
     }

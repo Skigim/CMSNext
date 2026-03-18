@@ -66,8 +66,8 @@ import { parseArchiveYear } from "@/types/archive";
 import { isNormalizedFileData } from "./services/FileStorageService";
 import {
   hydrateNormalizedData,
+  isPersistedNormalizedFileDataV20,
   migrateV20ToV21,
-  type NormalizedFileDataV20,
 } from "./storageV21Migration";
 
 // ============================================================================
@@ -1644,17 +1644,8 @@ export class DataManager {
         };
       }
 
-      const isMigratableV20Workspace =
-        rawData !== null &&
-        typeof rawData === "object" &&
-        (rawData as { version?: unknown }).version === "2.0" &&
-        Array.isArray((rawData as { cases?: unknown }).cases) &&
-        Array.isArray((rawData as { financials?: unknown }).financials) &&
-        Array.isArray((rawData as { notes?: unknown }).notes) &&
-        Array.isArray((rawData as { alerts?: unknown }).alerts);
-
-      if (isMigratableV20Workspace) {
-        const migratedData = migrateV20ToV21(rawData as NormalizedFileDataV20);
+      if (isPersistedNormalizedFileDataV20(rawData)) {
+        const migratedData = migrateV20ToV21(rawData);
         const validation = validatePersistedV21Data(migratedData);
 
         if (validation.validationErrors.length > 0) {
