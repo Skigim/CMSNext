@@ -58,6 +58,47 @@ export interface RuntimeNormalizedFileDataV21 {
   templates?: Template[];
 }
 
+type NormalizedDataShapeCandidate = {
+  version?: unknown;
+  people?: unknown;
+  cases?: unknown;
+  financials?: unknown;
+  notes?: unknown;
+  alerts?: unknown;
+  exported_at?: unknown;
+  total_cases?: unknown;
+  categoryConfig?: unknown;
+  activityLog?: unknown;
+  templates?: unknown;
+};
+
+function asNormalizedDataShapeCandidate(data: unknown): NormalizedDataShapeCandidate | null {
+  if (data === null || typeof data !== "object" || Array.isArray(data)) {
+    return null;
+  }
+
+  return data as NormalizedDataShapeCandidate;
+}
+
+function hasOptionalTemplatesArray(candidate: NormalizedDataShapeCandidate): boolean {
+  return candidate.templates === undefined || Array.isArray(candidate.templates);
+}
+
+function hasNormalizedCollectionsAndMetadata(candidate: NormalizedDataShapeCandidate): boolean {
+  return (
+    Array.isArray(candidate.cases) &&
+    Array.isArray(candidate.financials) &&
+    Array.isArray(candidate.notes) &&
+    Array.isArray(candidate.alerts) &&
+    typeof candidate.exported_at === "string" &&
+    typeof candidate.total_cases === "number" &&
+    candidate.categoryConfig !== null &&
+    typeof candidate.categoryConfig === "object" &&
+    Array.isArray(candidate.activityLog) &&
+    hasOptionalTemplatesArray(candidate)
+  );
+}
+
 /**
  * Type guard for persisted normalized v2.0 workspace/archive payloads.
  *
@@ -69,24 +110,27 @@ export interface RuntimeNormalizedFileDataV21 {
  * @returns {boolean} True when the payload has the required persisted v2.0 shape
  */
 export function isPersistedNormalizedFileDataV20(data: unknown): data is NormalizedFileDataV20 {
+  const candidate = asNormalizedDataShapeCandidate(data);
+
+  return candidate?.version === "2.0" && hasNormalizedCollectionsAndMetadata(candidate);
+}
+
+/**
+ * Type guard for canonical persisted normalized v2.1 workspace/archive payloads.
+ *
+ * This is shared by runtime readers and migration tooling so that the persisted
+ * v2.1 envelope is validated consistently in one place.
+ *
+ * @param {unknown} data - Raw persisted data to inspect
+ * @returns {boolean} True when the payload has the required persisted v2.1 shape
+ */
+export function isPersistedNormalizedFileDataV21(data: unknown): data is PersistedNormalizedFileDataV21 {
+  const candidate = asNormalizedDataShapeCandidate(data);
+
   return (
-    data !== null &&
-    typeof data === "object" &&
-    (data as { version?: unknown }).version === "2.0" &&
-    Array.isArray((data as { cases?: unknown }).cases) &&
-    Array.isArray((data as { financials?: unknown }).financials) &&
-    Array.isArray((data as { notes?: unknown }).notes) &&
-    Array.isArray((data as { alerts?: unknown }).alerts) &&
-    typeof (data as { exported_at?: unknown }).exported_at === "string" &&
-    typeof (data as { total_cases?: unknown }).total_cases === "number" &&
-    (data as { categoryConfig?: unknown }).categoryConfig !== null &&
-    typeof (data as { categoryConfig?: unknown }).categoryConfig === "object" &&
-    Array.isArray((data as { activityLog?: unknown }).activityLog) &&
-    (
-      !("templates" in data) ||
-      (data as { templates?: unknown }).templates === undefined ||
-      Array.isArray((data as { templates?: unknown }).templates)
-    )
+    candidate?.version === "2.1" &&
+    Array.isArray(candidate.people) &&
+    hasNormalizedCollectionsAndMetadata(candidate)
   );
 }
 

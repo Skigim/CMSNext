@@ -19,6 +19,7 @@ import {
   dehydrateNormalizedData,
   hydrateNormalizedData,
   hydrateStoredCase,
+  isPersistedNormalizedFileDataV21,
   type PersistedNormalizedFileDataV21,
 } from "../storageV21Migration";
 
@@ -143,27 +144,7 @@ function isCaseDehydratedNormalizedWriteData(
  * @returns {boolean} true if data is NormalizedFileData
  */
 export function isNormalizedFileData(data: unknown): data is PersistedNormalizedFileDataV21 {
-  return (
-    data !== null &&
-    typeof data === "object" &&
-    "version" in data &&
-    (data as { version: unknown }).version === NORMALIZED_VERSION &&
-    Array.isArray((data as { people?: unknown }).people) &&
-    Array.isArray((data as { cases?: unknown }).cases) &&
-    Array.isArray((data as { financials?: unknown }).financials) &&
-    Array.isArray((data as { notes?: unknown }).notes) &&
-    Array.isArray((data as { alerts?: unknown }).alerts) &&
-    typeof (data as { exported_at?: unknown }).exported_at === "string" &&
-    typeof (data as { total_cases?: unknown }).total_cases === "number" &&
-    (data as { categoryConfig?: unknown }).categoryConfig !== null &&
-    typeof (data as { categoryConfig?: unknown }).categoryConfig === "object" &&
-    Array.isArray((data as { activityLog?: unknown }).activityLog) &&
-    (
-      !("templates" in data) ||
-      (data as { templates?: unknown }).templates === undefined ||
-      Array.isArray((data as { templates?: unknown }).templates)
-    )
-  );
+  return isPersistedNormalizedFileDataV21(data);
 }
 
 /**

@@ -4,12 +4,57 @@ import type { NormalizedFileDataV20, PersistedNormalizedFileDataV21 } from "@/ut
 import {
   dehydrateNormalizedData,
   hydrateNormalizedData,
+  isPersistedNormalizedFileDataV20,
+  isPersistedNormalizedFileDataV21,
   migrateV20ToV21,
 } from "@/utils/storageV21Migration";
 import { createMockPerson, createMockStoredCase } from "@/src/test/testUtils";
 import { mergeCategoryConfig } from "@/types/categoryConfig";
 
 describe("storageV21Migration", () => {
+  it("recognizes persisted normalized v2.0 payloads using the shared envelope guard", () => {
+    // ARRANGE
+    const v20Data: NormalizedFileDataV20 = {
+      version: "2.0",
+      cases: [],
+      financials: [],
+      notes: [],
+      alerts: [],
+      exported_at: "2026-03-01T00:00:00.000Z",
+      total_cases: 0,
+      categoryConfig: mergeCategoryConfig(),
+      activityLog: [],
+    };
+
+    // ACT
+    const result = isPersistedNormalizedFileDataV20(v20Data);
+
+    // ASSERT
+    expect(result).toBe(true);
+  });
+
+  it("recognizes persisted normalized v2.1 payloads using the shared envelope guard", () => {
+    // ARRANGE
+    const v21Data: PersistedNormalizedFileDataV21 = {
+      version: "2.1",
+      people: [],
+      cases: [],
+      financials: [],
+      notes: [],
+      alerts: [],
+      exported_at: "2026-03-01T00:00:00.000Z",
+      total_cases: 0,
+      categoryConfig: mergeCategoryConfig(),
+      activityLog: [],
+    };
+
+    // ACT
+    const result = isPersistedNormalizedFileDataV21(v21Data);
+
+    // ASSERT
+    expect(result).toBe(true);
+  });
+
   it("migrates v2.0 embedded person data into a root people registry without losing legacy family member names", () => {
     const primaryPersonId = "11111111-1111-4111-8111-111111111111";
     const familyMemberId = "33333333-3333-4333-8333-333333333333";
