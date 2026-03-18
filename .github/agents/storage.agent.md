@@ -183,7 +183,7 @@ interface NormalizedFileData {
 }
 ```
 
-**Legacy v2.0 files are auto-migrated on read.** Pre-v2.0 nested formats still require explicit migration support.
+**Normal runtime reads accept only canonical persisted v2.1 files.** Use the explicit migration tooling for v2.0 workspaces; pre-v2.0 nested formats still require explicit migration support.
 
 ## Autosave Timing
 

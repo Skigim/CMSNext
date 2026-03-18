@@ -63,8 +63,12 @@ import {
   type WorkspaceMigrationReport,
 } from "./workspaceV21Migration";
 import { parseArchiveYear } from "@/types/archive";
-import { isNormalizedFileData, isNormalizedFileDataV20 } from "./services/FileStorageService";
-import { hydrateNormalizedData, migrateV20ToV21 } from "./storageV21Migration";
+import { isNormalizedFileData } from "./services/FileStorageService";
+import {
+  hydrateNormalizedData,
+  isPersistedNormalizedFileDataV20,
+  migrateV20ToV21,
+} from "./storageV21Migration";
 
 // ============================================================================
 // Configuration & Logging
@@ -271,35 +275,10 @@ export class DataManager {
    * 
    * @private
    * @returns {Promise<NormalizedFileData | null>} The normalized file data, or null if no file exists
-   * @throws {LegacyFormatError} If file contains legacy (pre-v2.0) format data
+   * @throws {LegacyFormatError} If file is not canonical persisted v2.1 data
    */
   private async readFileData(): Promise<NormalizedFileData | null> {
     return this.fileStorage.readFileData();
-  }
-
-  /**
-   * Read normalized data and ensure case entries are hydrated for DataManager consumers.
-   *
-   * FileStorageService already returns runtime-ready data, but this helper re-runs the
-   * CaseService hydration boundary only for case records missing linked runtime data so
-   * DataManager reads stay consistent without broad consumer refactors.
-   */
-  private async readHydratedCaseData(): Promise<NormalizedFileData | null> {
-    const data = await this.readFileData();
-    if (!data) {
-      return null;
-    }
-
-    return {
-      ...data,
-      cases: data.cases.map((caseItem) => {
-        if (caseItem.person && caseItem.linkedPeople?.length === (caseItem.people?.length ?? 0)) {
-          return caseItem;
-        }
-
-        return this.cases.hydrate(this.cases.dehydrate(caseItem), data.people);
-      }),
-    };
   }
 
   /**
@@ -370,7 +349,7 @@ export class DataManager {
    * console.log(`Found ${cases.length} cases`);
    */
   async getAllCases(): Promise<StoredCase[]> {
-    const data = await this.readHydratedCaseData();
+    const data = await this.readFileData();
     return data?.cases ?? [];
   }
 
@@ -452,7 +431,7 @@ export class DataManager {
    * }
    */
   async getCaseById(caseId: string): Promise<StoredCase | null> {
-    const data = await this.readHydratedCaseData();
+    const data = await this.readFileData();
     if (!data) {
       return null;
     }
@@ -1665,7 +1644,7 @@ export class DataManager {
         };
       }
 
-      if (isNormalizedFileDataV20(rawData)) {
+      if (isPersistedNormalizedFileDataV20(rawData)) {
         const migratedData = migrateV20ToV21(rawData);
         const validation = validatePersistedV21Data(migratedData);
 

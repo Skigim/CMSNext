@@ -4,14 +4,13 @@ import { mergeCategoryConfig } from "@/types/categoryConfig";
 import {
   dehydrateNormalizedData,
   hydrateNormalizedData,
+  isPersistedNormalizedFileDataV20,
   migrateV20ToV21,
-  type NormalizedFileDataV20,
   type PersistedNormalizedFileDataV21,
 } from "@/utils/storageV21Migration";
 import { isCaseArchiveData, parseArchiveYear } from "@/types/archive";
 import {
   isNormalizedFileData,
-  isNormalizedFileDataV20,
   type NormalizedFileData,
 } from "@/utils/services/FileStorageService";
 
@@ -346,10 +345,10 @@ export function migrateArchiveDataToPersistedV21(
     };
   }
 
-  if (isNormalizedFileDataV20(rawData)) {
+  if (isPersistedNormalizedFileDataV20(rawData)) {
     return {
       data: {
-        ...migrateV20ToV21(rawData as NormalizedFileDataV20),
+        ...migrateV20ToV21(rawData),
         archiveType: "cases",
         archiveYear,
         archivedAt: rawData.exported_at,

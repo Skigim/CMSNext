@@ -13,7 +13,6 @@
 import {
   type NormalizedFileData,
   isNormalizedFileData,
-  isNormalizedFileDataV20,
 } from "./services/FileStorageService";
 import type {
   StoredCase,
@@ -27,7 +26,11 @@ import type { CategoryConfig } from "@/types/categoryConfig";
 import { mergeCategoryConfig } from "@/types/categoryConfig";
 import { discoverStatusesFromCases, discoverAlertTypesFromAlerts } from "./categoryConfigMigration";
 import { createLogger } from "./logger";
-import { hydrateNormalizedData, migrateV20ToV21 } from "./storageV21Migration";
+import {
+  hydrateNormalizedData,
+  isPersistedNormalizedFileDataV20,
+  migrateV20ToV21,
+} from "./storageV21Migration";
 
 const logger = createLogger("LegacyMigration");
 
@@ -354,7 +357,7 @@ export function migrateLegacyData(rawData: unknown): MigrationResult {
       if (format === "v2.1") {
        if (!isNormalizedFileData(rawData)) {
          throw new Error(
-           "Detected v2.1 data is missing the required persisted arrays for people or cases",
+           "Detected v2.1 data is missing required normalized structure (people, cases, or associated metadata)",
          );
        }
         logger.info("Data is already in v2.1 format, no migration needed");
@@ -367,9 +370,9 @@ export function migrateLegacyData(rawData: unknown): MigrationResult {
       }
 
       if (format === "v2.0") {
-        if (!isNormalizedFileDataV20(rawData)) {
+        if (!isPersistedNormalizedFileDataV20(rawData)) {
           throw new Error(
-            "Detected v2.0 data is missing the required normalized arrays for cases or financials",
+            "Detected v2.0 data is missing required normalized structure (cases, financials, notes, alerts, or metadata such as exported_at, total_cases, categoryConfig, activityLog, or templates)",
           );
         }
         logger.info("Data is in v2.0 format, migrating to v2.1");

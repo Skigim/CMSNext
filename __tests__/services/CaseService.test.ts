@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
   createMockCaseDisplay,
+  createMockPersistedNormalizedFileData,
   createMockNewCaseRecordData,
   createMockNewPersonData,
   createMockPerson,
@@ -11,8 +12,6 @@ import type AutosaveFileService from "@/utils/AutosaveFileService";
 import { FileStorageService, type NormalizedFileData } from "@/utils/services/FileStorageService";
 import { CaseService } from "@/utils/services/CaseService";
 import type { PersistedCase } from "@/types/case";
-import { mergeCategoryConfig } from "@/types/categoryConfig";
-import { dehydrateNormalizedData } from "@/utils/storageV21Migration";
 
 type MockAutosaveFileService = Pick<AutosaveFileService, "readFile" | "writeFile" | "broadcastDataUpdate">;
 
@@ -80,24 +79,6 @@ function createLinkedRuntimeCase() {
       ],
     }),
   };
-}
-
-function createPersistedNormalizedData(
-  overrides: Partial<Parameters<typeof dehydrateNormalizedData>[0]> = {},
-) {
-  return dehydrateNormalizedData({
-    version: "2.1",
-    people: [],
-    cases: [],
-    financials: [],
-    notes: [],
-    alerts: [],
-    exported_at: "2026-01-01T00:00:00.000Z",
-    total_cases: 0,
-    categoryConfig: mergeCategoryConfig(),
-    activityLog: [],
-    ...overrides,
-  });
 }
 
 describe("CaseService hydration seam", () => {
@@ -259,7 +240,7 @@ describe("CaseService hydration seam", () => {
         mcn: "MCN-1000",
         personId: "",
       });
-      vi.mocked(mockFileService.readFile).mockResolvedValue(createPersistedNormalizedData());
+      vi.mocked(mockFileService.readFile).mockResolvedValue(createMockPersistedNormalizedFileData());
       vi.mocked(mockFileService.writeFile).mockResolvedValue(true);
 
       // ACT
@@ -302,7 +283,7 @@ describe("CaseService hydration seam", () => {
 
     it("creates additional household members as standalone linked people", async () => {
       // ARRANGE
-      vi.mocked(mockFileService.readFile).mockResolvedValue(createPersistedNormalizedData());
+      vi.mocked(mockFileService.readFile).mockResolvedValue(createMockPersistedNormalizedFileData());
       vi.mocked(mockFileService.writeFile).mockResolvedValue(true);
 
       // ACT
@@ -413,7 +394,7 @@ describe("CaseService hydration seam", () => {
         name: "Existing Person",
       });
       vi.mocked(mockFileService.readFile).mockResolvedValue(
-        createPersistedNormalizedData({
+        createMockPersistedNormalizedFileData({
           people: [existingPerson],
         }),
       );
@@ -454,7 +435,7 @@ describe("CaseService hydration seam", () => {
 
     it("fails when create-case input references a missing person", async () => {
       // ARRANGE
-      vi.mocked(mockFileService.readFile).mockResolvedValue(createPersistedNormalizedData());
+      vi.mocked(mockFileService.readFile).mockResolvedValue(createMockPersistedNormalizedFileData());
 
       // ACT & ASSERT
       await expect(
@@ -474,7 +455,7 @@ describe("CaseService hydration seam", () => {
         id: "case-existing-1",
       });
       vi.mocked(mockFileService.readFile).mockResolvedValue(
-        createPersistedNormalizedData({
+        createMockPersistedNormalizedFileData({
           people: [existingRuntimeCase.person],
           cases: [existingRuntimeCase],
         }),

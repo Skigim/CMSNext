@@ -285,13 +285,12 @@ export class CaseService {
       alerts: _dehydratedAlerts,
       ...dehydratedCase
     } = dehydrateStoredCase(caseItem) as PersistedCase & { alerts?: AlertRecord[] };
-    const casePeople = dehydratedCase.people?.length
-      ? dehydratedCase.people
-      : caseItem.person
-        ? [{ personId: caseItem.person.id, role: PRIMARY_CASE_PERSON_ROLE, isPrimary: true }]
-        : null;
+    // dehydrateStoredCase() already falls back through people → linkedPeople → person
+    // when rebuilding persisted refs, so an empty result here indicates an invalid
+    // runtime case shape rather than a recoverable compatibility scenario.
+    const casePeople = dehydratedCase.people;
 
-    if (!casePeople) {
+    if (!casePeople?.length) {
       throw new Error(`Case ${caseItem.id} cannot be dehydrated without linked people or a primary person`);
     }
     const caseRecordWithRuntimeFields:

@@ -1,9 +1,15 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { FileStorageService } from "@/utils/services/FileStorageService";
-import { createMockPerson, createMockStoredCase } from "@/src/test/testUtils";
-import { mergeCategoryConfig } from "@/types/categoryConfig";
+import { FileStorageService, LegacyFormatError } from "@/utils/services/FileStorageService";
+import {
+  createMockNormalizedFileData,
+  createMockNormalizedFileDataV20,
+  createMockPersistedNormalizedFileData,
+  createMockPerson,
+  createMockStoredCase,
+} from "@/src/test/testUtils";
 import type AutosaveFileService from "@/utils/AutosaveFileService";
+import { migrateV20ToV21 } from "@/utils/storageV21Migration";
 
 describe("FileStorageService v2.1", () => {
   let fileStorage: FileStorageService;
@@ -25,9 +31,9 @@ describe("FileStorageService v2.1", () => {
     });
   });
 
-  it("migrates v2.0 files to hydrated v2.1 data on read", async () => {
-    mockFileService.readFile.mockResolvedValue({
-      version: "2.0",
+  it("rejects persisted v2.0 files during normal runtime reads", async () => {
+    // ARRANGE
+    mockFileService.readFile.mockResolvedValue(createMockNormalizedFileDataV20({
       cases: [
         createMockStoredCase({
           id: "case-1",
@@ -40,72 +46,59 @@ describe("FileStorageService v2.1", () => {
           people: undefined,
         }),
       ],
-      financials: [],
-      notes: [],
-      alerts: [],
       exported_at: "2026-03-01T00:00:00.000Z",
       total_cases: 1,
-      categoryConfig: mergeCategoryConfig(),
-      activityLog: [],
-    });
+    }));
 
-    const result = await fileStorage.readFileData();
-
-    expect(result?.version).toBe("2.1");
-    expect(result?.people).toHaveLength(1);
-    expect(result?.people[0].updatedAt).toBe("2026-01-01T00:00:00.000Z");
-    expect(result?.cases[0].people).toEqual([
-      { personId: "person-1", role: "applicant", isPrimary: true },
-    ]);
-    expect(result?.cases[0].person.id).toBe("person-1");
-    expect(mockFileService.writeFile).toHaveBeenCalledTimes(1);
+    // ACT & ASSERT
+    const readPromise = fileStorage.readFileData();
+    await expect(readPromise).rejects.toThrow(LegacyFormatError);
+    await expect(readPromise).rejects.toThrow(
+      "Use the persisted v2.1 migration tool in Settings → Diagnostics",
+    );
+    expect(mockFileService.writeFile).not.toHaveBeenCalled();
   });
 
   it("hydrates persisted v2.1 data on read without rewriting it", async () => {
-    mockFileService.readFile.mockResolvedValue({
-      version: "2.1",
-      people: [
-        {
-          ...createMockPerson({
-            id: "person-1",
-            firstName: "Hydrated",
-            lastName: "Person",
-            name: "Hydrated Person",
-            createdAt: "2026-01-01T00:00:00.000Z",
-            updatedAt: "2026-01-02T00:00:00.000Z",
-            dateAdded: "2026-01-01T00:00:00.000Z",
-          }),
-          familyMemberIds: [],
-          relationships: [],
-        },
-      ],
+    // ARRANGE
+    const hydratedPerson = {
+      ...createMockPerson({
+        id: "person-1",
+        firstName: "Hydrated",
+        lastName: "Person",
+        name: "Hydrated Person",
+        createdAt: "2026-01-01T00:00:00.000Z",
+        updatedAt: "2026-01-02T00:00:00.000Z",
+        dateAdded: "2026-01-01T00:00:00.000Z",
+      }),
+      familyMemberIds: [],
+      relationships: [],
+    };
+    mockFileService.readFile.mockResolvedValue(createMockPersistedNormalizedFileData({
+      people: [hydratedPerson],
       cases: [
-        {
+        createMockStoredCase({
           id: "case-1",
           name: "Hydrated Person",
           mcn: "MCN123456",
-          status: "Pending",
-          priority: false,
           createdAt: "2026-01-01T00:00:00.000Z",
           updatedAt: "2026-01-02T00:00:00.000Z",
+          person: hydratedPerson,
           people: [{ personId: "person-1", role: "applicant", isPrimary: true }],
           caseRecord: {
             ...createMockStoredCase().caseRecord,
             personId: "person-1",
           },
-        },
+        }),
       ],
-      financials: [],
-      notes: [],
-      alerts: [],
       exported_at: "2026-03-01T00:00:00.000Z",
       total_cases: 1,
-      categoryConfig: mergeCategoryConfig(),
-      activityLog: [],
-    });
+    }));
 
+    // ACT
     const result = await fileStorage.readFileData();
 
+    // ASSERT
     expect(result?.version).toBe("2.1");
     expect(result?.people).toHaveLength(1);
     expect(result?.cases[0].person.name).toBe("Hydrated Person");
@@ -125,9 +118,78 @@ describe("FileStorageService v2.1", () => {
     expect(mockFileService.writeFile).not.toHaveBeenCalled();
   });
 
+  it("rejects invalid persisted v2.1 payloads that fail hydration", async () => {
+    // ARRANGE
+    const invalidPersistedData = createMockPersistedNormalizedFileData({
+      cases: [
+        createMockStoredCase({
+          id: "case-invalid",
+          person: createMockPerson({ id: "person-missing" }),
+          people: [{ personId: "person-missing", role: "applicant", isPrimary: true }],
+          caseRecord: {
+            ...createMockStoredCase().caseRecord,
+            personId: "person-missing",
+          },
+        }),
+      ],
+      exported_at: "2026-03-01T00:00:00.000Z",
+      total_cases: 1,
+    });
+    mockFileService.readFile.mockResolvedValue({
+      ...invalidPersistedData,
+      people: [],
+    });
+
+    // ACT & ASSERT
+    const readPromise = fileStorage.readFileData();
+    await expect(readPromise).rejects.toThrow(LegacyFormatError);
+    await expect(readPromise).rejects.toThrow("invalid v2.1 workspace");
+    await expect(readPromise).rejects.toThrow(
+      "Use the persisted v2.1 migration tool in Settings → Diagnostics",
+    );
+  });
+
+  it("hydrates v2.1 workspaces that were migrated from v2.0", async () => {
+    // ARRANGE
+    const migratedPersistedData = migrateV20ToV21({
+      ...createMockNormalizedFileDataV20(),
+      cases: [
+        createMockStoredCase({
+          id: "case-1",
+          person: createMockPerson({
+            id: "person-1",
+            firstName: "Migrated",
+            lastName: "Workspace",
+            name: "Migrated Workspace",
+            relationships: undefined,
+            createdAt: "2026-01-01T00:00:00.000Z",
+            updatedAt: undefined,
+          }),
+          people: undefined,
+        }),
+      ],
+      exported_at: "2026-03-01T00:00:00.000Z",
+      total_cases: 1,
+    });
+    mockFileService.readFile.mockResolvedValue(migratedPersistedData);
+
+    // ACT
+    const result = await fileStorage.readFileData();
+
+    // ASSERT
+    expect(result?.version).toBe("2.1");
+    expect(result?.people).toHaveLength(1);
+    expect(result?.people[0].id).toBe("person-1");
+    expect(result?.cases[0].person.name).toBe("Migrated Workspace");
+    expect(result?.cases[0].people).toEqual([
+      { personId: "person-1", role: "applicant", isPrimary: true },
+    ]);
+    expect(mockFileService.writeFile).not.toHaveBeenCalled();
+  });
+
   it("dehydrates runtime data to root people plus case refs on write", async () => {
-    const runtimeData = {
-      version: "2.1" as const,
+    // ARRANGE
+    const runtimeData = createMockNormalizedFileData({
       people: [],
       cases: [
         createMockStoredCase({
@@ -144,19 +206,16 @@ describe("FileStorageService v2.1", () => {
           people: [{ personId: "person-1", role: "applicant", isPrimary: true }],
         }),
       ],
-      financials: [],
-      notes: [],
-      alerts: [],
       exported_at: "2026-03-01T00:00:00.000Z",
       total_cases: 1,
-      categoryConfig: mergeCategoryConfig(),
-      activityLog: [],
-    };
+    });
 
     mockFileService.readFile.mockResolvedValue(null);
 
+    // ACT
     const writtenRuntimeData = await fileStorage.writeNormalizedData(runtimeData);
 
+    // ASSERT
     const writtenData = mockFileService.writeFile.mock.calls[0][0];
 
     expect(writtenData.version).toBe("2.1");
