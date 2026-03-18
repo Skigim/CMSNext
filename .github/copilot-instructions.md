@@ -64,6 +64,12 @@ When starting a task, prefer this order:
 4. Validate with the standard command sequence.
 5. Update documentation only when behavior or workflow meaningfully changes.
 
+### Instruction Hierarchy
+
+- Treat this file as the repository-wide baseline for all tasks.
+- When a task touches files matched by `.github/instructions/*.instructions.md`, follow those scoped instructions in addition to this file.
+- Prefer the scoped instruction file that is closest to the kind of work you are doing (implementation, frontend, or tests) before searching more broadly.
+
 ## Architecture
 
 The application follows a layered, local-first architecture designed to keep business logic pure, storage concerns isolated, and React code focused on UI and state orchestration.

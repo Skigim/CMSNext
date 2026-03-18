@@ -200,7 +200,6 @@ CMSNext/
 ├── styles/                     # Global CSS, theme definitions
 ├── public/                     # Static assets
 ├── components.json             # shadcn/ui configuration
-├── tailwind.config.js          # Tailwind v4 configuration
 ├── vite.config.ts              # Vite + chunk splitting + compression
 ├── vitest.config.ts            # Vitest + jsdom + coverage thresholds
 ├── tsconfig.json               # Strict TypeScript (ES2021, noUnusedLocals)
