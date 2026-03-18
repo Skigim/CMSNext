@@ -163,8 +163,8 @@ export function WorkspaceMigrationPanel() {
                     <div className="mt-3 rounded-md border border-destructive/30 bg-destructive/5 p-3">
                       <p className="text-sm font-medium text-destructive">Validation errors</p>
                       <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-destructive">
-                        {file.validationErrors.map((error) => (
-                          <li key={`${file.fileName}-${error}`}>{error}</li>
+                        {file.validationErrors.map((error, index) => (
+                          <li key={`${file.fileName}-${index}`}>{error}</li>
                         ))}
                       </ul>
                     </div>

@@ -115,12 +115,12 @@ function cloneArchiveCases(cases: CaseArchiveData["cases"]): CaseArchiveData["ca
   return cases.map((caseItem) => ({
     ...caseItem,
     people: caseItem.people?.map((ref) => ({ ...ref })),
-    person: caseItem.person ? { ...caseItem.person } : caseItem.person,
+    person: { ...caseItem.person },
     linkedPeople: caseItem.linkedPeople?.map((linked) => ({
       ref: { ...linked.ref },
       person: { ...linked.person },
     })),
-    caseRecord: caseItem.caseRecord ? { ...caseItem.caseRecord } : caseItem.caseRecord,
+    caseRecord: { ...caseItem.caseRecord },
   }));
 }
 

@@ -122,7 +122,7 @@ function createLinkedRuntimeWriteData(): NormalizedFileData {
       },
     ],
     caseRecord: {
-      ...createMockStoredCase().caseRecord,
+      ...createMockCaseDisplay().caseRecord,
       personId: "person-1",
     },
     alerts: [createMockAlertRecord("alert-1")],

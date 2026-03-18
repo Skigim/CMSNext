@@ -1670,14 +1670,16 @@ export class DataManager {
         };
       }
 
+      const sourceVersion =
+        rawData && typeof rawData === "object" && "version" in rawData && typeof rawData.version === "string"
+          ? rawData.version
+          : null;
+
       return {
         fileName: MAIN_WORKSPACE_FILE_NAME,
         fileKind: "workspace",
         disposition: "failed",
-        sourceVersion:
-          typeof (rawData as { version?: unknown })?.version === "string"
-            ? (rawData as { version: string }).version
-            : null,
+        sourceVersion,
         counts: summarizeUnknownCounts(rawData),
         validationErrors: [],
         message: "Unsupported workspace data format.",
