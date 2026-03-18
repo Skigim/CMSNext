@@ -38,6 +38,7 @@ export function WorkspaceMigrationPanel() {
     }
 
     setIsMigrating(true);
+    setReport(null);
     const toastId = toast.loading("Scanning workspace files for v2.1 migration...");
 
     try {

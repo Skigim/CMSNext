@@ -37,6 +37,7 @@ import {
 } from "../../domain/archive";
 import type { FileStorageService, NormalizedFileData } from "./FileStorageService";
 import AutosaveFileService from "../AutosaveFileService";
+import { safeNotifyFileStorageChange } from "../fileStorageNotify";
 import { createLogger } from "../logger";
 import {
   buildPersistedArchiveDataV21,
@@ -434,18 +435,25 @@ export class CaseArchiveService {
    * Attempt to read an existing archive file, returning null if not found.
    */
   private async readExistingArchive(archiveFileName: string): Promise<ExistingArchiveSnapshot> {
-    try {
-      const existingData = await this.fileService.readNamedFile(archiveFileName);
-      return {
-        normalizedArchive: this.normalizeArchiveData(existingData, archiveFileName),
-        rawArchiveData: existingData,
-      };
-    } catch {
+    const existingData = await this.fileService.readNamedFile(archiveFileName);
+    if (existingData === null) {
       logger.debug("No existing archive file", { archiveFileName });
+      return {
+        normalizedArchive: null,
+        rawArchiveData: null,
+      };
     }
+
+    const normalizedArchive = this.normalizeArchiveData(existingData, archiveFileName);
+    if (!normalizedArchive) {
+      throw new Error(
+        `Existing archive file could not be normalized due to an unsupported or corrupted format: ${archiveFileName}`,
+      );
+    }
+
     return {
-      normalizedArchive: null,
-      rawArchiveData: null,
+      normalizedArchive,
+      rawArchiveData: existingData,
     };
   }
 
@@ -720,6 +728,12 @@ export class CaseArchiveService {
     archiveData: CaseArchiveData,
   ): Promise<boolean> {
     const persistedArchive = buildPersistedArchiveDataV21(archiveData);
-    return this.fileService.writeNamedFile(archiveFileName, persistedArchive);
+    const writeSucceeded = await this.fileService.writeNamedFile(archiveFileName, persistedArchive);
+    if (!writeSucceeded) {
+      return false;
+    }
+
+    safeNotifyFileStorageChange();
+    return true;
   }
 }

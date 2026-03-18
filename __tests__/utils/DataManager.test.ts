@@ -51,6 +51,9 @@ function createMockFileService(): AutosaveFileService {
     writeNormalizedData: vi.fn().mockResolvedValue(undefined),
     onDataChange: vi.fn(),
     onError: vi.fn(),
+    getStatus: vi.fn().mockReturnValue({
+      permissionStatus: "granted",
+    }),
   } as unknown as AutosaveFileService;
 }
 
@@ -337,6 +340,31 @@ describe("DataManager", () => {
       expect(writtenData.version).toBe("2.1");
       expect(writtenData.people).toHaveLength(1);
       expect(writtenData.cases[0].person.id).toBe("person-1");
+    });
+
+    it("fails fast for archive migration when the workspace is not connected", async () => {
+      // ARRANGE
+      (mockFileStorageService.readRawFileData as ReturnType<typeof vi.fn>).mockResolvedValue(null);
+      (mockFileService.getStatus as ReturnType<typeof vi.fn>).mockReturnValue({
+        permissionStatus: "prompt",
+      });
+
+      // ACT
+      const result = await dataManager.migrateWorkspaceToV21();
+
+      // ASSERT
+      expect(result.files).toHaveLength(2);
+      expect(result.files[0]).toMatchObject({
+        fileName: MAIN_WORKSPACE_FILE_NAME,
+        disposition: "skipped",
+      });
+      expect(result.files[1]).toMatchObject({
+        fileName: "archived-cases-*.json",
+        fileKind: "archive",
+        disposition: "failed",
+        message: "Workspace folder is not connected or permission has not been granted.",
+      });
+      expect(mockFileService.listDataFiles).not.toHaveBeenCalled();
     });
 
     it("migrates supported archive files to persisted v2.1", async () => {
