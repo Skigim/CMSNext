@@ -357,7 +357,7 @@ export function migrateLegacyData(rawData: unknown): MigrationResult {
       if (format === "v2.1") {
        if (!isNormalizedFileData(rawData)) {
          throw new Error(
-           "Detected v2.1 data is missing the required persisted arrays for people or cases",
+           "Detected v2.1 data is missing required normalized structure (people, cases, or associated metadata)",
          );
        }
         logger.info("Data is already in v2.1 format, no migration needed");
@@ -372,7 +372,7 @@ export function migrateLegacyData(rawData: unknown): MigrationResult {
       if (format === "v2.0") {
         if (!isPersistedNormalizedFileDataV20(rawData)) {
           throw new Error(
-            "Detected v2.0 data is missing the required normalized arrays for cases, financials, notes, or alerts",
+            "Detected v2.0 data is missing required normalized structure (cases, financials, notes, alerts, or metadata such as exported_at, total_cases, categoryConfig, activityLog, or templates)",
           );
         }
         logger.info("Data is in v2.0 format, migrating to v2.1");
