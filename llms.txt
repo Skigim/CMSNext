@@ -14,7 +14,7 @@
 - README.md
 - .github/copilot-instructions.md
 - .github/instructions/
-- docs/development/ROADMAP_FEB_2026.md
+- docs/development/ROADMAP_MAR_2026.md
 
 ## Architecture Guides
 
@@ -42,7 +42,7 @@
 
 - docs/audit/sonarcloud-cloud-issues-summary.md
 - docs/audit/sonarcloud-open-issues.json
-- docs/development/ROADMAP_FEB_2026.md
+- docs/development/ROADMAP_MAR_2026.md
 
 ## Review Priorities
 
