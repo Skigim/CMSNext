@@ -306,20 +306,18 @@ export class DataManager {
       }
     }
 
-    // Collect people referenced directly on cases and linkedPeople.
+    // Runtime cases are hydrated with person/link details for UI consumers.
+    // Merge those hydrated people back into the root registry before
+    // dehydration so in-memory edits stay aligned with the canonical people[]
+    // registry that writeNormalizedData persists.
     for (const caseItem of data.cases) {
-      const primaryPerson = (caseItem as any).person;
-      if (primaryPerson && typeof primaryPerson.id === "string") {
-        peopleById.set(primaryPerson.id, primaryPerson);
+      if (caseItem.person && typeof caseItem.person.id === "string") {
+        peopleById.set(caseItem.person.id, caseItem.person);
       }
 
-      const linkedPeople = (caseItem as any).linkedPeople as Array<{ person?: { id?: string } }> | undefined;
-      if (Array.isArray(linkedPeople)) {
-        for (const linked of linkedPeople) {
-          const linkedPerson = linked?.person as { id?: string } | undefined;
-          if (linkedPerson && typeof linkedPerson.id === "string") {
-            peopleById.set(linkedPerson.id, linkedPerson as (typeof data.people)[number]);
-          }
+      for (const linked of caseItem.linkedPeople ?? []) {
+        if (linked.person && typeof linked.person.id === "string") {
+          peopleById.set(linked.person.id, linked.person);
         }
       }
     }

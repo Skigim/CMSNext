@@ -274,6 +274,13 @@ export function validatePersistedV21Data(
       }
     });
 
+    const primaryRefs = caseItem.people.filter((personRef) => personRef.isPrimary === true);
+    if (primaryRefs.length === 0) {
+      validationErrors.push(`Case ${caseLabel} is missing a primary people[] ref.`);
+    } else if (primaryRefs.length > 1) {
+      validationErrors.push(`Case ${caseLabel} has multiple primary people[] refs.`);
+    }
+
     const caseRecordPersonId = caseItem.caseRecord?.personId;
     if (typeof caseRecordPersonId !== "string" || caseRecordPersonId.length === 0) {
       validationErrors.push(`Case ${caseLabel} is missing caseRecord.personId.`);
@@ -281,6 +288,13 @@ export function validatePersistedV21Data(
       validationErrors.push(
         `Case ${caseLabel} caseRecord.personId "${caseRecordPersonId}" does not resolve to a person record.`,
       );
+    } else if (primaryRefs.length === 1) {
+      const [primaryRef] = primaryRefs;
+      if (primaryRef.personId !== caseRecordPersonId) {
+        validationErrors.push(
+          `Case ${caseLabel} caseRecord.personId "${caseRecordPersonId}" does not match primary people[] ref "${primaryRef.personId}".`,
+        );
+      }
     }
   });
 

@@ -18,20 +18,24 @@ function createHouseholdHydrationCase(options: {
   linkedHouseholdMember: Person;
   normalizedRelationships: PersonRelationship[];
 }) {
+  const primaryPerson = createPrimaryLinkedPerson();
+
   return createMockStoredCase({
-    person: createMockPerson({
-      firstName: "Sam",
-      lastName: "Tester",
+    person: {
+      ...primaryPerson,
       normalizedRelationships: options.normalizedRelationships,
-    }),
+    },
     people: [
-      { personId: "person-test-1", role: "applicant", isPrimary: true },
+      { personId: primaryPerson.id, role: "applicant", isPrimary: true },
       { personId: "person-2", role: "household_member", isPrimary: false },
     ],
     linkedPeople: [
       {
-        ref: { personId: "person-test-1", role: "applicant", isPrimary: true },
-        person: createPrimaryLinkedPerson(),
+        ref: { personId: primaryPerson.id, role: "applicant", isPrimary: true },
+        person: {
+          ...primaryPerson,
+          normalizedRelationships: options.normalizedRelationships,
+        },
       },
       {
         ref: { personId: "person-2", role: "household_member", isPrimary: false },
@@ -417,7 +421,7 @@ describe("createIntakeFormData", () => {
     expect(result.householdMembers[0]?.relationshipId).toBeUndefined();
   });
 
-  it("falls back to legacy relationships when linked people are unavailable", () => {
+  it("does not project relationship-only entries into household drafts without linked people", () => {
     // Arrange
     const existingCase = createMockStoredCase({
       person: createMockPerson({
@@ -431,11 +435,11 @@ describe("createIntakeFormData", () => {
     const result = createIntakeFormData(existingCase);
 
     // Assert
-    expect(result.householdMembers).toEqual([
+    expect(result.householdMembers).toEqual([]);
+    expect(result.relationships).toEqual([
       expect.objectContaining({
-        relationshipType: "Child",
-        firstName: "Casey",
-        lastName: "Tester",
+        type: "Child",
+        name: "Casey Tester",
       }),
     ]);
   });

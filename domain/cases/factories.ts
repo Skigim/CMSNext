@@ -120,29 +120,6 @@ export interface PersonDefaults {
 }
 
 /**
- * Splits a legacy free-form display name into first/last draft fields.
- *
- * Legacy relationship-only entries store one name string. Intake now prefers
- * structured first/last fields, so this uses a simple first-token / remaining
- * tokens fallback when upgrading older records into household-member drafts.
- *
- * @param name - Free-form display name from a legacy relationship entry
- * @returns Draft first/last name fields derived from the legacy name
- */
-function splitDisplayName(name: string): Pick<HouseholdMemberData, "firstName" | "lastName"> {
-  const trimmedName = name.trim();
-  if (!trimmedName) {
-    return { firstName: "", lastName: "" };
-  }
-
-  const [firstName = "", ...lastNameParts] = trimmedName.split(/\s+/);
-  return {
-    firstName,
-    lastName: lastNameParts.join(" "),
-  };
-}
-
-/**
  * Creates a blank household-member draft for intake/edit forms.
  *
  * @param defaults - Default living arrangement and address state values
@@ -411,23 +388,6 @@ export function createIntakeFormData(
     return blankForm;
   }
 
-  const fallbackHouseholdMembers = relationships.map((relationship) => {
-    const { firstName, lastName } = splitDisplayName(relationship.name);
-
-    return {
-      ...createBlankHouseholdMemberData({
-        livingArrangement: blankForm.livingArrangement,
-        defaultState: blankForm.address.state,
-      }),
-      relationshipType: relationship.type,
-      firstName,
-      lastName,
-      phone: relationship.phone,
-      organizationId: record.organizationId ?? null,
-      livingArrangement: record.livingArrangement ?? "",
-    };
-  });
-
   return {
     ...blankForm,
     firstName: person?.firstName ?? "",
@@ -484,17 +444,16 @@ export function createIntakeFormData(
     avsConsentDate: record.avsConsentDate ?? "",
     // Household
     relationships,
-    householdMembers: (householdMembers.length > 0 ? householdMembers : fallbackHouseholdMembers)
-      .map((member) => ({
-        ...member,
-        address: {
-          ...member.address,
-          apt: member.address.apt ?? "",
-        },
-        mailingAddress: {
-          ...member.mailingAddress,
-          apt: member.mailingAddress.apt ?? "",
-        },
-      })) as IntakeFormData["householdMembers"],
+    householdMembers: householdMembers.map((member) => ({
+      ...member,
+      address: {
+        ...member.address,
+        apt: member.address.apt ?? "",
+      },
+      mailingAddress: {
+        ...member.mailingAddress,
+        apt: member.mailingAddress.apt ?? "",
+      },
+    })) as IntakeFormData["householdMembers"],
   };
 }

@@ -98,7 +98,7 @@ function createHouseholdRoleLabelScenario(options: {
 describe("case people helpers", () => {
   it.each([
     {
-      title: "prefers the hydrated person for legacy non-UI callers",
+      title: "prefers the normalized primary person for all primary-person callers",
       caseData: createPrimaryLinkedCase({
         hydratedPerson: createMockPerson({
           id: "person-2",
@@ -114,7 +114,7 @@ describe("case people helpers", () => {
         }),
       }),
       resolver: getPrimaryCasePerson,
-      expectedPerson: { id: "person-2", name: "Legacy Hydrated" },
+      expectedPerson: { id: "person-1", name: "Normalized Primary" },
     },
     {
       title: "falls back to the normalized primary person when the hydrated person is missing",
@@ -158,7 +158,7 @@ describe("case people helpers", () => {
     expect(result).toMatchObject(expectedPerson);
   });
 
-  it("falls back to the first linked ref when no explicit primary ref matches", () => {
+  it("returns null when no normalized primary ref exists", () => {
     // Arrange
     const firstLinkedPerson = createLinkedPerson("person-10", "household_member", {
       firstName: "First",
@@ -173,21 +173,13 @@ describe("case people helpers", () => {
     const caseData = createMockStoredCase({
       person: createMockPerson({ id: "person-999", name: "Detached Person" }),
       linkedPeople: [firstLinkedPerson, secondLinkedPerson],
-      caseRecord: {
-        ...createMockStoredCase().caseRecord,
-        personId: "person-missing",
-      },
     });
 
     // Act
     const result = getPrimaryCasePersonRef(caseData);
 
     // Assert
-    expect(result).toEqual({
-      personId: "person-10",
-      role: "household_member",
-      isPrimary: false,
-    });
+    expect(result).toBeNull();
   });
 
   it.each([
