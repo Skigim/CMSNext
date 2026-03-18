@@ -5,6 +5,11 @@ import { FileStorageService, type NormalizedFileData } from "@/utils/services/Fi
 import type { AlertRecord, StoredCase } from "@/types/case";
 import { mergeCategoryConfig } from "@/types/categoryConfig";
 import { createMockCaseDisplay, createMockPerson, createMockStoredCase } from "@/src/test/testUtils";
+import {
+  buildPersistedArchiveDataV21,
+  MAIN_WORKSPACE_FILE_NAME,
+} from "@/utils/workspaceV21Migration";
+import { dehydrateNormalizedData } from "@/utils/storageV21Migration";
 
 // ============================================================================
 // Mocks
@@ -35,6 +40,9 @@ function createMockFileService(): AutosaveFileService {
     readData: vi.fn().mockResolvedValue(null),
     writeData: vi.fn().mockResolvedValue(undefined),
     readTextFile: vi.fn().mockResolvedValue(""),
+    readNamedFile: vi.fn().mockResolvedValue(null),
+    writeNamedFile: vi.fn().mockResolvedValue(true),
+    listDataFiles: vi.fn().mockResolvedValue([]),
     deleteFile: vi.fn().mockResolvedValue(true),
     getDirectoryHandle: vi.fn(),
     setDirectoryHandle: vi.fn(),
@@ -113,6 +121,10 @@ function createLinkedRuntimeWriteData(): NormalizedFileData {
         person: linkedPerson,
       },
     ],
+    caseRecord: {
+      ...createMockStoredCase().caseRecord,
+      personId: "person-1",
+    },
     alerts: [createMockAlertRecord("alert-1")],
   });
 
@@ -120,6 +132,56 @@ function createLinkedRuntimeWriteData(): NormalizedFileData {
     people: [primaryPerson, linkedPerson],
     cases: [runtimeCase],
   });
+}
+
+function createArchiveRuntimeData() {
+  const primaryPerson = createMockPerson({
+    id: "archive-person-1",
+    firstName: "Archive",
+    lastName: "Person",
+    name: "Archive Person",
+    createdAt: "2026-01-01T00:00:00.000Z",
+    updatedAt: "2026-01-02T00:00:00.000Z",
+    dateAdded: "2026-01-01T00:00:00.000Z",
+  });
+
+  return {
+    version: "1.0" as const,
+    archiveType: "cases" as const,
+    archivedAt: "2026-03-01T00:00:00.000Z",
+    archiveYear: 2026,
+    cases: [
+      createMockStoredCase({
+        id: "archive-case-1",
+        person: primaryPerson,
+        people: [{ personId: primaryPerson.id, role: "applicant", isPrimary: true }],
+        caseRecord: {
+          ...createMockStoredCase().caseRecord,
+          personId: primaryPerson.id,
+        },
+      }),
+    ],
+    financials: [
+      {
+        id: "archive-financial-1",
+        caseId: "archive-case-1",
+        category: "resources" as const,
+        description: "Savings",
+        amount: 150,
+        verificationStatus: "Verified",
+      },
+    ],
+    notes: [
+      {
+        id: "archive-note-1",
+        caseId: "archive-case-1",
+        category: "General",
+        content: "Archived note",
+        createdAt: "2026-03-01T00:00:00.000Z",
+        updatedAt: "2026-03-01T00:00:00.000Z",
+      },
+    ],
+  };
 }
 
 // ============================================================================
@@ -216,6 +278,195 @@ describe("DataManager", () => {
 
       const result = await dataManager.readRawFileData();
       expect(result).toBeNull();
+    });
+  });
+
+  describe("migrateWorkspaceToV21", () => {
+    it("migrates the main workspace file from v2.0 and validates the result", async () => {
+      // ARRANGE
+      const v20Data = {
+        version: "2.0" as const,
+        cases: [
+          createMockStoredCase({
+            id: "case-1",
+            person: createMockPerson({
+              id: "person-1",
+              createdAt: "2026-01-01T00:00:00.000Z",
+              updatedAt: undefined,
+            }),
+            people: undefined,
+          }),
+        ],
+        financials: [],
+        notes: [],
+        alerts: [],
+        exported_at: "2026-03-01T00:00:00.000Z",
+        total_cases: 1,
+        categoryConfig: mergeCategoryConfig(),
+        activityLog: [],
+      };
+
+      (mockFileStorageService.readRawFileData as ReturnType<typeof vi.fn>).mockResolvedValue(v20Data);
+      (mockFileService.listDataFiles as ReturnType<typeof vi.fn>).mockResolvedValue([]);
+
+      // ACT
+      const result = await dataManager.migrateWorkspaceToV21();
+
+      // ASSERT
+      expect(result.files).toHaveLength(1);
+      expect(result.files[0]).toMatchObject({
+        fileName: MAIN_WORKSPACE_FILE_NAME,
+        disposition: "migrated",
+        sourceVersion: "2.0",
+        counts: {
+          people: 1,
+          cases: 1,
+          financials: 0,
+          notes: 0,
+          alerts: 0,
+        },
+      });
+      expect(result.summary).toEqual({
+        migrated: 1,
+        alreadyV21: 0,
+        failed: 0,
+        skipped: 0,
+      });
+      expect(mockFileStorageService.writeNormalizedData).toHaveBeenCalledTimes(1);
+      const writtenData = (mockFileStorageService.writeNormalizedData as ReturnType<typeof vi.fn>).mock.calls[0][0];
+      expect(writtenData.version).toBe("2.1");
+      expect(writtenData.people).toHaveLength(1);
+      expect(writtenData.cases[0].person.id).toBe("person-1");
+    });
+
+    it("migrates supported archive files to persisted v2.1", async () => {
+      // ARRANGE
+      const archiveData = createArchiveRuntimeData();
+      (mockFileStorageService.readRawFileData as ReturnType<typeof vi.fn>).mockResolvedValue(null);
+      (mockFileService.listDataFiles as ReturnType<typeof vi.fn>).mockResolvedValue([
+        "archived-cases-2026.json",
+      ]);
+      (mockFileService.readNamedFile as ReturnType<typeof vi.fn>).mockResolvedValue(archiveData);
+
+      // ACT
+      const result = await dataManager.migrateWorkspaceToV21();
+
+      // ASSERT
+      expect(result.files).toHaveLength(2);
+      expect(result.files[0]).toMatchObject({
+        fileName: MAIN_WORKSPACE_FILE_NAME,
+        disposition: "skipped",
+      });
+      expect(result.files[1]).toMatchObject({
+        fileName: "archived-cases-2026.json",
+        fileKind: "archive",
+        disposition: "migrated",
+        sourceVersion: "1.0",
+        counts: {
+          people: 1,
+          cases: 1,
+          financials: 1,
+          notes: 1,
+          alerts: 0,
+        },
+      });
+      expect(mockFileService.writeNamedFile).toHaveBeenCalledTimes(1);
+      expect((mockFileService.writeNamedFile as ReturnType<typeof vi.fn>).mock.calls[0][0]).toBe(
+        "archived-cases-2026.json",
+      );
+      expect((mockFileService.writeNamedFile as ReturnType<typeof vi.fn>).mock.calls[0][1]).toMatchObject({
+        version: "2.1",
+        archiveType: "cases",
+        people: [expect.objectContaining({ id: "archive-person-1" })],
+        cases: [
+          expect.objectContaining({
+            people: [{ personId: "archive-person-1", role: "applicant", isPrimary: true }],
+          }),
+        ],
+      });
+    });
+
+    it("is idempotent when rerun against already-persisted v2.1 files", async () => {
+      // ARRANGE
+      const runtimeData = createLinkedRuntimeWriteData();
+      const persistedWorkspace = dehydrateNormalizedData(runtimeData);
+      const persistedArchive = buildPersistedArchiveDataV21(createArchiveRuntimeData());
+
+      (mockFileStorageService.readRawFileData as ReturnType<typeof vi.fn>).mockResolvedValue(persistedWorkspace);
+      (mockFileStorageService.writeNormalizedData as ReturnType<typeof vi.fn>).mockClear();
+      (mockFileService.listDataFiles as ReturnType<typeof vi.fn>).mockResolvedValue([
+        "archived-cases-2026.json",
+      ]);
+      (mockFileService.readNamedFile as ReturnType<typeof vi.fn>).mockResolvedValue(persistedArchive);
+      (mockFileService.writeNamedFile as ReturnType<typeof vi.fn>).mockClear();
+
+      // ACT
+      const result = await dataManager.migrateWorkspaceToV21();
+
+      // ASSERT
+      expect(result.summary).toEqual({
+        migrated: 0,
+        alreadyV21: 2,
+        failed: 0,
+        skipped: 0,
+      });
+      expect(result.files.map((file) => file.disposition)).toEqual([
+        "already-v2.1",
+        "already-v2.1",
+      ]);
+      expect(mockFileStorageService.writeNormalizedData).not.toHaveBeenCalled();
+      expect(mockFileService.writeNamedFile).not.toHaveBeenCalled();
+    });
+
+    it("reports validation failures for invalid persisted v2.1 files", async () => {
+      // ARRANGE
+      const invalidWorkspace = {
+        version: "2.1" as const,
+        people: [],
+        cases: [
+          {
+            ...createMockStoredCase({
+              id: "case-invalid",
+              person: createMockPerson({ id: "person-missing" }),
+              people: [{ personId: "person-missing", role: "applicant", isPrimary: true }],
+            }),
+            person: undefined,
+            linkedPeople: undefined,
+            caseRecord: {
+              ...createMockStoredCase().caseRecord,
+              personId: "person-missing",
+            },
+          },
+        ],
+        financials: [],
+        notes: [],
+        alerts: [],
+        exported_at: "2026-03-01T00:00:00.000Z",
+        total_cases: 1,
+        categoryConfig: mergeCategoryConfig(),
+        activityLog: [],
+      };
+
+      (mockFileStorageService.readRawFileData as ReturnType<typeof vi.fn>).mockResolvedValue(invalidWorkspace);
+      (mockFileService.listDataFiles as ReturnType<typeof vi.fn>).mockResolvedValue([]);
+
+      // ACT
+      const result = await dataManager.migrateWorkspaceToV21();
+
+      // ASSERT
+      expect(result.summary).toEqual({
+        migrated: 0,
+        alreadyV21: 0,
+        failed: 1,
+        skipped: 0,
+      });
+      expect(result.files[0].disposition).toBe("failed");
+      expect(result.files[0].validationErrors).toEqual([
+        'Case case-invalid people[0] references missing personId "person-missing".',
+        'Case case-invalid caseRecord.personId "person-missing" does not resolve to a person record.',
+        'Canonical hydration failed: Person person-missing not found for case case-invalid',
+      ]);
+      expect(mockFileStorageService.writeNormalizedData).not.toHaveBeenCalled();
     });
   });
 

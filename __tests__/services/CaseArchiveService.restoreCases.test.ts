@@ -4,38 +4,79 @@
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { CaseArchiveService } from "@/utils/services/CaseArchiveService";
+import { createMockPerson, createMockStoredCase } from "@/src/test/testUtils";
+import { buildPersistedArchiveDataV21 } from "@/utils/workspaceV21Migration";
+import type { StoredCase } from "@/types/case";
 
-function createStoredCase(id: string, status = "Archived") {
-  return {
-    id,
-    name: `Case ${id}`,
-    caseNumber: `CN-${id}`,
-    mcn: `MCN-${id}`,
-    status,
-    priority: false,
+function createStoredCase(id: string, status: StoredCase["status"] = "Archived") {
+  const person = createMockPerson({
+    id: `person-${id}`,
+    firstName: "Test",
+    lastName: id,
+    name: `Test ${id}`,
     createdAt: new Date("2025-01-01").toISOString(),
     updatedAt: new Date("2025-12-01").toISOString(),
-    person: {
-      firstName: "Test",
-      lastName: id,
-    },
-  };
+    dateAdded: new Date("2025-01-01").toISOString(),
+  });
+
+  return createMockStoredCase({
+    id,
+    name: `Case ${id}`,
+    mcn: `MCN-${id}`,
+    status,
+    createdAt: new Date("2025-01-01").toISOString(),
+    updatedAt: new Date("2025-12-01").toISOString(),
+    person,
+    people: [{ personId: person.id, role: "applicant", isPrimary: true }],
+  });
 }
 
 function createArchiveData() {
   return {
-    version: "1.0",
+    version: "1.0" as const,
     archiveType: "cases" as const,
     archivedAt: new Date("2025-12-01").toISOString(),
     archiveYear: 2025,
     cases: [createStoredCase("c1"), createStoredCase("c2")],
     financials: [
-      { id: "f1", caseId: "c1", amount: 100, type: "resource", createdAt: "2025-01-01", updatedAt: "2025-01-01" },
-      { id: "f2", caseId: "c2", amount: 200, type: "income", createdAt: "2025-01-01", updatedAt: "2025-01-01" },
+      {
+        id: "f1",
+        caseId: "c1",
+        category: "resources" as const,
+        description: "Resource 1",
+        amount: 100,
+        verificationStatus: "Verified",
+        createdAt: "2025-01-01",
+        updatedAt: "2025-01-01",
+      },
+      {
+        id: "f2",
+        caseId: "c2",
+        category: "income" as const,
+        description: "Income 1",
+        amount: 200,
+        verificationStatus: "Verified",
+        createdAt: "2025-01-01",
+        updatedAt: "2025-01-01",
+      },
     ],
     notes: [
-      { id: "n1", caseId: "c1", content: "note 1", createdAt: "2025-01-01", updatedAt: "2025-01-01" },
-      { id: "n2", caseId: "c2", content: "note 2", createdAt: "2025-01-01", updatedAt: "2025-01-01" },
+      {
+        id: "n1",
+        caseId: "c1",
+        category: "General",
+        content: "note 1",
+        createdAt: "2025-01-01",
+        updatedAt: "2025-01-01",
+      },
+      {
+        id: "n2",
+        caseId: "c2",
+        category: "General",
+        content: "note 2",
+        createdAt: "2025-01-01",
+        updatedAt: "2025-01-01",
+      },
     ],
   };
 }
@@ -97,9 +138,29 @@ describe("CaseArchiveService.restoreCases", () => {
     expect(fileService.writeNamedFile).toHaveBeenCalledWith(
       "archived-cases-2025.json",
       expect.objectContaining({
+        version: "2.1",
+        archiveType: "cases",
+        people: [expect.objectContaining({ id: "person-c2" })],
         cases: [expect.objectContaining({ id: "c2" })],
       })
     );
+  });
+
+  it("restores cases from a persisted v2.1 archive file", async () => {
+    // ARRANGE
+    fileService.readNamedFile.mockResolvedValue(buildPersistedArchiveDataV21(createArchiveData()));
+
+    // ACT
+    const result = await service.restoreCases("archived-cases-2025.json", ["c1"]);
+
+    // ASSERT
+    expect(result).toMatchObject({
+      restoredCount: 1,
+      financialsRestored: 1,
+      notesRestored: 1,
+      restoredCaseIds: ["c1"],
+    });
+    expect(fileStorage.writeNormalizedData).toHaveBeenCalledTimes(1);
   });
 
   it("returns empty result and performs no I/O for empty case IDs", async () => {

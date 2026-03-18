@@ -20,7 +20,7 @@ import type {
   ArchiveResult, 
   RestoreResult 
 } from "../../types/archive";
-import { 
+import {
   buildArchiveFileName, 
   parseArchiveYear, 
   isCaseArchiveData,
@@ -38,6 +38,12 @@ import {
 import type { FileStorageService, NormalizedFileData } from "./FileStorageService";
 import AutosaveFileService from "../AutosaveFileService";
 import { createLogger } from "../logger";
+import {
+  buildPersistedArchiveDataV21,
+  hydratePersistedArchiveDataV21,
+  isPersistedCaseArchiveDataV21,
+  migrateArchiveDataToPersistedV21,
+} from "../workspaceV21Migration";
 
 const logger = createLogger("CaseArchiveService");
 
@@ -108,17 +114,24 @@ export interface ArchiveFileInfo {
  * 
  * ## Archive File Format
  * 
- * Archive files are stored as `archived-cases-{year}.json`:
+ * Archive files are stored as `archived-cases-{year}.json` and are persisted
+ * in canonical v2.1 normalized form:
  * 
  * ```typescript
  * {
- *   version: "1.0",
+ *   version: "2.1",
  *   archiveType: "cases",
- *   archivedAt: "2026-01-22T10:30:00.000Z",
- *   archiveYear: 2025,
+ *   people: [...],
  *   cases: [...],
  *   financials: [...],
- *   notes: [...]
+ *   notes: [...],
+ *   alerts: [],
+ *   exported_at: "2026-01-22T10:30:00.000Z",
+ *   total_cases: 12,
+ *   categoryConfig: {...},
+ *   activityLog: [],
+ *   archiveYear: 2025,
+ *   archivedAt: "2026-01-22T10:30:00.000Z"
  * }
  * ```
  * 
@@ -378,7 +391,7 @@ export class CaseArchiveService {
     );
 
     // Write archive file first
-    const writeSuccess = await this.fileService.writeNamedFile(archiveFileName, mergedArchive);
+    const writeSuccess = await this.writeArchiveFile(archiveFileName, mergedArchive);
     if (!writeSuccess) {
       throw new Error(`Failed to write archive file: ${archiveFileName}`);
     }
@@ -418,9 +431,7 @@ export class CaseArchiveService {
   private async readExistingArchive(archiveFileName: string): Promise<CaseArchiveData | null> {
     try {
       const existingData = await this.fileService.readNamedFile(archiveFileName);
-      if (existingData && isCaseArchiveData(existingData)) {
-        return existingData;
-      }
+      return this.normalizeArchiveData(existingData, archiveFileName);
     } catch {
       logger.debug("No existing archive file", { archiveFileName });
     }
@@ -437,7 +448,7 @@ export class CaseArchiveService {
     logger.warn("Main file write failed, rolling back archive write", { archiveFileName });
     try {
       if (existingArchive) {
-        await this.fileService.writeNamedFile(archiveFileName, existingArchive);
+        await this.writeArchiveFile(archiveFileName, existingArchive);
       } else {
         logger.warn("Cannot delete newly created archive file on rollback - duplicates may exist temporarily");
       }
@@ -493,19 +504,20 @@ export class CaseArchiveService {
         return null;
       }
 
-      if (!isCaseArchiveData(data)) {
+      const normalizedArchive = this.normalizeArchiveData(data, fileName);
+      if (!normalizedArchive) {
         logger.warn("Invalid archive file format", { fileName });
         return null;
       }
 
       logger.info("Loaded archive file", {
         fileName,
-        caseCount: data.cases.length,
-        financialCount: data.financials.length,
-        noteCount: data.notes.length,
+        caseCount: normalizedArchive.cases.length,
+        financialCount: normalizedArchive.financials.length,
+        noteCount: normalizedArchive.notes.length,
       });
 
-      return data;
+      return normalizedArchive;
     } catch (error) {
       logger.error("Failed to load archive file", {
         fileName,
@@ -639,7 +651,7 @@ export class CaseArchiveService {
         financials: [],
         notes: [],
       };
-      const archiveWriteSuccess = await this.fileService.writeNamedFile(archiveFileName, archiveToWrite);
+      const archiveWriteSuccess = await this.writeArchiveFile(archiveFileName, archiveToWrite);
       if (!archiveWriteSuccess) {
         throw new Error("Archive write returned false");
       }
@@ -673,5 +685,30 @@ export class CaseArchiveService {
       return 0;
     }
     return getCasesInArchivalQueue(currentData.cases).length;
+  }
+
+  private normalizeArchiveData(data: unknown, fileName: string): CaseArchiveData | null {
+    if (isCaseArchiveData(data)) {
+      return data;
+    }
+
+    if (isPersistedCaseArchiveDataV21(data)) {
+      return hydratePersistedArchiveDataV21(data);
+    }
+
+    const migratedArchive = migrateArchiveDataToPersistedV21(data, fileName);
+    if (migratedArchive.data) {
+      return hydratePersistedArchiveDataV21(migratedArchive.data);
+    }
+
+    return null;
+  }
+
+  private async writeArchiveFile(
+    archiveFileName: string,
+    archiveData: CaseArchiveData,
+  ): Promise<boolean> {
+    const persistedArchive = buildPersistedArchiveDataV21(archiveData);
+    return this.fileService.writeNamedFile(archiveFileName, persistedArchive);
   }
 }
