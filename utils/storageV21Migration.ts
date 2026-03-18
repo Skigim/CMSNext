@@ -137,35 +137,23 @@ function normalizeName(value: string): string {
 }
 
 function buildCasePeopleRefs(
-  caseItem: Pick<StoredCase, "people" | "linkedPeople" | "person" | "caseRecord">,
+  caseItem: Pick<StoredCase, "id" | "people">,
 ): CasePersonRef[] {
   const existingPeople = caseItem.people?.filter((ref) => Boolean(ref.personId)) ?? [];
-  if (existingPeople.length > 0) {
-    const hasPrimary = existingPeople.some((ref) => ref.isPrimary);
-    return existingPeople.map((ref, index) => ({
-      ...ref,
-      role: ref.role ?? "applicant",
-      isPrimary: hasPrimary ? ref.isPrimary : index === 0,
-    }));
+  if (existingPeople.length === 0) {
+    throw new Error(`Case ${caseItem.id} cannot be dehydrated without canonical people[] refs`);
   }
 
-  const linkedPeopleRefs = caseItem.linkedPeople?.map(({ ref }) => ref) ?? [];
-  if (linkedPeopleRefs.length > 0) {
-    const hasPrimary = linkedPeopleRefs.some((ref) => ref.isPrimary);
-    return linkedPeopleRefs.map((ref, index) => ({
-      ...ref,
-      role: ref.role ?? "applicant",
-      isPrimary: hasPrimary ? ref.isPrimary : index === 0,
-    }));
+  const primaryPeople = existingPeople.filter((ref) => ref.isPrimary);
+  if (primaryPeople.length !== 1) {
+    throw new Error(`Case ${caseItem.id} must have exactly one primary person ref`);
   }
 
-  return [
-    {
-      personId: caseItem.person.id,
-      role: "applicant",
-      isPrimary: true,
-    },
-  ];
+  return existingPeople.map((ref) => ({
+    ...ref,
+    role: ref.role ?? "applicant",
+    isPrimary: ref.isPrimary,
+  }));
 }
 
 function resolvePersonTimestamps(person: Pick<Person, "createdAt" | "updatedAt" | "dateAdded">): {
@@ -348,22 +336,22 @@ export function toRuntimePerson(person: StoredPerson, allPeople: StoredPerson[])
 
 function resolvePrimaryPersonRef(
   caseItem: PersistedCase,
-  peopleById: Map<string, Person>,
 ): CasePersonRef {
   if (caseItem.people.length === 0) {
     throw new Error(`Case ${caseItem.id} has no linked people`);
   }
 
-  return (
-    caseItem.people.find((ref) => ref.isPrimary) ??
-    caseItem.people.find((ref) => ref.personId === caseItem.caseRecord.personId && peopleById.has(ref.personId)) ??
-    caseItem.people[0]
-  );
+  const primaryPeople = caseItem.people.filter((ref) => ref.isPrimary);
+  if (primaryPeople.length !== 1) {
+    throw new Error(`Case ${caseItem.id} must have exactly one primary person ref`);
+  }
+
+  return primaryPeople[0];
 }
 
 export function hydrateStoredCase(caseItem: PersistedCase, people: Person[]): StoredCase {
   const peopleById = new Map(people.map((person) => [person.id, person] as const));
-  const primaryRef = resolvePrimaryPersonRef(caseItem, peopleById);
+  const primaryRef = resolvePrimaryPersonRef(caseItem);
 
   const linkedPeople = caseItem.people.map((ref) => {
     const person = peopleById.get(ref.personId);

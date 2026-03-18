@@ -147,7 +147,7 @@ describe("CaseService hydration seam", () => {
     ]);
   });
 
-  it("falls back to the case record person reference when no primary flag exists", () => {
+  it("fails to hydrate when a persisted case has no explicit primary ref", () => {
     const primaryPerson = createMockPerson({ id: "person-1" });
     const storedCase = createMockStoredCase({
       id: "case-1",
@@ -160,15 +160,9 @@ describe("CaseService hydration seam", () => {
     });
     const persistedCaseData = toPersistedCase(storedCase);
 
-    const result = caseService.hydrate(persistedCaseData, [primaryPerson]);
-
-    expect(result.person).toMatchObject({ id: "person-1" });
-    expect(result.linkedPeople).toEqual([
-      {
-        ref: { personId: "person-1", role: "applicant", isPrimary: false },
-        person: expect.objectContaining({ id: "person-1" }),
-      },
-    ]);
+    expect(() => caseService.hydrate(persistedCaseData, [primaryPerson])).toThrow(
+      "Case case-1 must have exactly one primary person ref",
+    );
   });
 
   it("fails to hydrate when a referenced person is missing", () => {
@@ -204,29 +198,15 @@ describe("CaseService hydration seam", () => {
     ]);
   });
 
-  it("rebuilds persisted people refs from linkedPeople when people is missing", () => {
-    const { primaryPerson, linkedPerson, runtimeCase } = createLinkedRuntimeCase();
+  it("fails to dehydrate runtime cases without canonical people refs", () => {
+    const { runtimeCase } = createLinkedRuntimeCase();
 
-    const result = caseService.dehydrate({
-      ...runtimeCase,
-      people: undefined,
-      person: primaryPerson,
-      linkedPeople: [
-        {
-          ref: { personId: "person-1", role: "applicant", isPrimary: true },
-          person: primaryPerson,
-        },
-        {
-          ref: { personId: "person-2", role: "household_member", isPrimary: false },
-          person: linkedPerson,
-        },
-      ],
-    });
-
-    expect(result.people).toEqual([
-      { personId: "person-1", role: "applicant", isPrimary: true },
-      { personId: "person-2", role: "household_member", isPrimary: false },
-    ]);
+    expect(() =>
+      caseService.dehydrate({
+        ...runtimeCase,
+        people: undefined,
+      }),
+    ).toThrow("Case case-1 cannot be dehydrated without canonical people[] refs");
   });
 
   describe("createCompleteCase", () => {

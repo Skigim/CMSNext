@@ -271,7 +271,7 @@ export class CaseService {
    *
    * @param {StoredCase & { alerts?: AlertRecord[] }} caseItem - Runtime case data
    * @returns {PersistedCase} Persisted-style case data suitable for storage writes
-   * @throws {Error} If neither linked people nor a primary person is available
+   * @throws {Error} If the runtime case is missing canonical people[] refs
    */
   dehydrate(caseItem: StoredCase & { alerts?: AlertRecord[] }): PersistedCase {
     const {
@@ -285,13 +285,10 @@ export class CaseService {
       alerts: _dehydratedAlerts,
       ...dehydratedCase
     } = dehydrateStoredCase(caseItem) as PersistedCase & { alerts?: AlertRecord[] };
-    // dehydrateStoredCase() already falls back through people → linkedPeople → person
-    // when rebuilding persisted refs, so an empty result here indicates an invalid
-    // runtime case shape rather than a recoverable compatibility scenario.
     const casePeople = dehydratedCase.people;
 
     if (!casePeople?.length) {
-      throw new Error(`Case ${caseItem.id} cannot be dehydrated without linked people or a primary person`);
+      throw new Error(`Case ${caseItem.id} cannot be dehydrated without canonical people[] refs`);
     }
     const caseRecordWithRuntimeFields:
       StoredCase["caseRecord"] & Partial<Pick<CaseRecord, "financials" | "notes">> = caseRecord;

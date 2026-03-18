@@ -308,18 +308,13 @@ export class DataManager {
 
     // Collect people referenced directly on cases and linkedPeople.
     for (const caseItem of data.cases) {
-      const primaryPerson = (caseItem as any).person;
-      if (primaryPerson && typeof primaryPerson.id === "string") {
-        peopleById.set(primaryPerson.id, primaryPerson);
+      if (typeof caseItem.person.id === "string") {
+        peopleById.set(caseItem.person.id, caseItem.person);
       }
 
-      const linkedPeople = (caseItem as any).linkedPeople as Array<{ person?: { id?: string } }> | undefined;
-      if (Array.isArray(linkedPeople)) {
-        for (const linked of linkedPeople) {
-          const linkedPerson = linked?.person as { id?: string } | undefined;
-          if (linkedPerson && typeof linkedPerson.id === "string") {
-            peopleById.set(linkedPerson.id, linkedPerson as (typeof data.people)[number]);
-          }
+      for (const linked of caseItem.linkedPeople ?? []) {
+        if (typeof linked.person.id === "string") {
+          peopleById.set(linked.person.id, linked.person);
         }
       }
     }
