@@ -682,6 +682,8 @@ export class CaseArchiveService {
       
       try {
         await this.fileStorage.writeNormalizedData(originalMainData);
+        // Notify listeners that the main file has been rolled back to its original state
+        safeNotifyFileStorageChange();
       } catch (rollbackError) {
         logger.error("Failed to rollback main file after archive write failure - duplicates may exist", {
           archiveFileName,
