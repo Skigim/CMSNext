@@ -1,10 +1,11 @@
 import { vi } from 'vitest'
 import { AmountHistoryEntry, CaseDisplay, FinancialItem, Note, Person, CaseRecord, CaseCategory, NewPersonData, NewCaseRecordData, type HouseholdMemberData } from '@/types/case'
-import type { StoredCase, StoredFinancialItem, StoredNote } from '@/utils/services/FileStorageService'
+import type { NormalizedFileData, StoredCase, StoredFinancialItem, StoredNote } from '@/utils/services/FileStorageService'
 import type { FileStorageLifecycleSelectors } from '@/contexts/FileStorageContext'
 import { mergeCategoryConfig } from '@/types/categoryConfig'
 import { createBlankHouseholdMemberData, normalizeHouseholdMemberDraft } from '@/domain/cases'
 import type { IntakeFormData } from '@/domain/validation/intake.schema'
+import { dehydrateNormalizedData, type NormalizedFileDataV20, type PersistedNormalizedFileDataV21 } from '@/utils/storageV21Migration'
 
 /**
  * Test data factories for creating mock data objects
@@ -162,6 +163,41 @@ export const createMockStoredCase = (overrides: Partial<StoredCase> = {}): Store
     ...overrides
   }
 }
+
+export const createMockNormalizedFileData = (
+  overrides: Partial<NormalizedFileData> = {},
+): NormalizedFileData => ({
+  version: '2.1',
+  people: [],
+  cases: [],
+  financials: [],
+  notes: [],
+  alerts: [],
+  exported_at: '2026-01-01T00:00:00.000Z',
+  total_cases: 0,
+  categoryConfig: mergeCategoryConfig(),
+  activityLog: [],
+  ...overrides,
+})
+
+export const createMockPersistedNormalizedFileData = (
+  overrides: Partial<NormalizedFileData> = {},
+): PersistedNormalizedFileDataV21 => dehydrateNormalizedData(createMockNormalizedFileData(overrides))
+
+export const createMockNormalizedFileDataV20 = (
+  overrides: Partial<NormalizedFileDataV20> = {},
+): NormalizedFileDataV20 => ({
+  version: '2.0',
+  cases: [],
+  financials: [],
+  notes: [],
+  alerts: [],
+  exported_at: '2026-01-01T00:00:00.000Z',
+  total_cases: 0,
+  categoryConfig: mergeCategoryConfig(),
+  activityLog: [],
+  ...overrides,
+})
 
 export const omitHydratedPerson = <T extends StoredCase>({
   person: _omittedPerson,

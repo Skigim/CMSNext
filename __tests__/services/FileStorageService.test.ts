@@ -1,8 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { FileStorageService, LegacyFormatError } from "@/utils/services/FileStorageService";
-import { createMockPerson, createMockStoredCase } from "@/src/test/testUtils";
-import { mergeCategoryConfig } from "@/types/categoryConfig";
+import {
+  createMockNormalizedFileData,
+  createMockNormalizedFileDataV20,
+  createMockPerson,
+  createMockStoredCase,
+} from "@/src/test/testUtils";
 import type AutosaveFileService from "@/utils/AutosaveFileService";
 import { migrateV20ToV21 } from "@/utils/storageV21Migration";
 
@@ -28,8 +32,7 @@ describe("FileStorageService v2.1", () => {
 
   it("rejects persisted v2.0 files during normal runtime reads", async () => {
     // ARRANGE
-    mockFileService.readFile.mockResolvedValue({
-      version: "2.0",
+    mockFileService.readFile.mockResolvedValue(createMockNormalizedFileDataV20({
       cases: [
         createMockStoredCase({
           id: "case-1",
@@ -42,14 +45,9 @@ describe("FileStorageService v2.1", () => {
           people: undefined,
         }),
       ],
-      financials: [],
-      notes: [],
-      alerts: [],
       exported_at: "2026-03-01T00:00:00.000Z",
       total_cases: 1,
-      categoryConfig: mergeCategoryConfig(),
-      activityLog: [],
-    });
+    }));
 
     // ACT & ASSERT
     const readPromise = fileStorage.readFileData();
@@ -62,8 +60,7 @@ describe("FileStorageService v2.1", () => {
 
   it("hydrates persisted v2.1 data on read without rewriting it", async () => {
     // ARRANGE
-    mockFileService.readFile.mockResolvedValue({
-      version: "2.1",
+    mockFileService.readFile.mockResolvedValue(createMockNormalizedFileData({
       people: [
         {
           ...createMockPerson({
@@ -95,14 +92,9 @@ describe("FileStorageService v2.1", () => {
           },
         },
       ],
-      financials: [],
-      notes: [],
-      alerts: [],
       exported_at: "2026-03-01T00:00:00.000Z",
       total_cases: 1,
-      categoryConfig: mergeCategoryConfig(),
-      activityLog: [],
-    });
+    }));
 
     // ACT
     const result = await fileStorage.readFileData();
@@ -130,7 +122,7 @@ describe("FileStorageService v2.1", () => {
   it("preserves hydration behavior for manually migrated v2.1 workspaces", async () => {
     // ARRANGE
     const migratedPersistedData = migrateV20ToV21({
-      version: "2.0",
+      ...createMockNormalizedFileDataV20(),
       cases: [
         createMockStoredCase({
           id: "case-1",
@@ -146,13 +138,8 @@ describe("FileStorageService v2.1", () => {
           people: undefined,
         }),
       ],
-      financials: [],
-      notes: [],
-      alerts: [],
       exported_at: "2026-03-01T00:00:00.000Z",
       total_cases: 1,
-      categoryConfig: mergeCategoryConfig(),
-      activityLog: [],
     });
     mockFileService.readFile.mockResolvedValue(migratedPersistedData);
 
@@ -172,8 +159,7 @@ describe("FileStorageService v2.1", () => {
 
   it("dehydrates runtime data to root people plus case refs on write", async () => {
     // ARRANGE
-    const runtimeData = {
-      version: "2.1" as const,
+    const runtimeData = createMockNormalizedFileData({
       people: [],
       cases: [
         createMockStoredCase({
@@ -190,14 +176,9 @@ describe("FileStorageService v2.1", () => {
           people: [{ personId: "person-1", role: "applicant", isPrimary: true }],
         }),
       ],
-      financials: [],
-      notes: [],
-      alerts: [],
       exported_at: "2026-03-01T00:00:00.000Z",
       total_cases: 1,
-      categoryConfig: mergeCategoryConfig(),
-      activityLog: [],
-    };
+    });
 
     mockFileService.readFile.mockResolvedValue(null);
 

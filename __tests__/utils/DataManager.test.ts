@@ -3,8 +3,13 @@ import { DataManager } from "@/utils/DataManager";
 import type AutosaveFileService from "@/utils/AutosaveFileService";
 import { FileStorageService, type NormalizedFileData } from "@/utils/services/FileStorageService";
 import type { AlertRecord, StoredCase } from "@/types/case";
-import { mergeCategoryConfig } from "@/types/categoryConfig";
-import { createMockCaseDisplay, createMockPerson, createMockStoredCase } from "@/src/test/testUtils";
+import {
+  createMockCaseDisplay,
+  createMockNormalizedFileData,
+  createMockNormalizedFileDataV20,
+  createMockPerson,
+  createMockStoredCase,
+} from "@/src/test/testUtils";
 import {
   buildPersistedArchiveDataV21,
   MAIN_WORKSPACE_FILE_NAME,
@@ -55,22 +60,6 @@ function createMockFileService(): AutosaveFileService {
       permissionStatus: "granted",
     }),
   } as unknown as AutosaveFileService;
-}
-
-function createMockNormalizedData(overrides: Partial<NormalizedFileData> = {}): NormalizedFileData {
-  return {
-    version: "2.1",
-    people: [],
-    cases: [],
-    financials: [],
-    notes: [],
-    alerts: [],
-    exported_at: new Date().toISOString(),
-    total_cases: 0,
-    categoryConfig: mergeCategoryConfig(),
-    activityLog: [],
-    ...overrides,
-  };
 }
 
 function createMockAlertRecord(id: string, overrides: Partial<AlertRecord> = {}): AlertRecord {
@@ -136,7 +125,7 @@ function createLinkedRuntimeWriteData(): NormalizedFileData {
     alerts: [createMockAlertRecord("alert-1")],
   });
 
-  return createMockNormalizedData({
+  return createMockNormalizedFileData({
     people: [primaryPerson, linkedPerson],
     cases: [runtimeCase],
   });
@@ -228,7 +217,7 @@ describe("DataManager", () => {
         status: "new",
       });
 
-      const mockData = createMockNormalizedData({ alerts: [oldResolved, openAlert] });
+      const mockData = createMockNormalizedFileData({ alerts: [oldResolved, openAlert] });
       (mockFileStorageService.readFileData as ReturnType<typeof vi.fn>).mockResolvedValue(mockData);
 
       const result = await dataManager.getAlertsIndex({
@@ -251,7 +240,7 @@ describe("DataManager", () => {
         status: "resolved",
         resolvedAt: new Date().toISOString(),
       });
-      const mockData = createMockNormalizedData({ alerts: [recentResolved] });
+      const mockData = createMockNormalizedFileData({ alerts: [recentResolved] });
       (mockFileStorageService.readFileData as ReturnType<typeof vi.fn>).mockResolvedValue(mockData);
 
       await dataManager.getAlertsIndex({
@@ -292,8 +281,7 @@ describe("DataManager", () => {
   describe("migrateWorkspaceToV21", () => {
     it("migrates the main workspace file from v2.0 and validates the result", async () => {
       // ARRANGE
-      const v20Data = {
-        version: "2.0" as const,
+      const v20Data = createMockNormalizedFileDataV20({
         cases: [
           createMockStoredCase({
             id: "case-1",
@@ -305,14 +293,9 @@ describe("DataManager", () => {
             people: undefined,
           }),
         ],
-        financials: [],
-        notes: [],
-        alerts: [],
         exported_at: "2026-03-01T00:00:00.000Z",
         total_cases: 1,
-        categoryConfig: mergeCategoryConfig(),
-        activityLog: [],
-      };
+      });
 
       (mockFileStorageService.readRawFileData as ReturnType<typeof vi.fn>).mockResolvedValue(v20Data);
       (mockFileService.listDataFiles as ReturnType<typeof vi.fn>).mockResolvedValue([]);
@@ -498,8 +481,7 @@ describe("DataManager", () => {
 
     it("reports validation failures for invalid persisted v2.1 files", async () => {
       // ARRANGE
-      const invalidWorkspace = {
-        version: "2.1" as const,
+      const invalidWorkspace = createMockNormalizedFileData({
         people: [],
         cases: [
           {
@@ -516,14 +498,9 @@ describe("DataManager", () => {
             },
           },
         ],
-        financials: [],
-        notes: [],
-        alerts: [],
         exported_at: "2026-03-01T00:00:00.000Z",
         total_cases: 1,
-        categoryConfig: mergeCategoryConfig(),
-        activityLog: [],
-      };
+      });
 
       (mockFileStorageService.readRawFileData as ReturnType<typeof vi.fn>).mockResolvedValue(invalidWorkspace);
       (mockFileService.listDataFiles as ReturnType<typeof vi.fn>).mockResolvedValue([]);
@@ -569,7 +546,7 @@ describe("DataManager", () => {
         updatedAt: new Date().toISOString(),
       } as StoredCase;
 
-      const mockData = createMockNormalizedData({ cases: [existingCase] });
+      const mockData = createMockNormalizedFileData({ cases: [existingCase] });
       (mockFileStorageService.readFileData as ReturnType<typeof vi.fn>).mockResolvedValue(mockData);
 
       // The alerts service mergeAlertsFromCsvContent is called on the actual service
@@ -597,7 +574,7 @@ describe("DataManager", () => {
   describe("refreshArchivalQueue - nullish coalescing assignment", () => {
     it("uses provided settings when passed", async () => {
       // Mock the fileStorageService to return data so archival has something to work with
-      const mockData = createMockNormalizedData({
+      const mockData = createMockNormalizedFileData({
         cases: [{
           id: "c1",
           mcn: "MCN001",
@@ -623,7 +600,7 @@ describe("DataManager", () => {
 
     it("uses default settings when none provided (??= path)", async () => {
       (mockFileStorageService.readFileData as ReturnType<typeof vi.fn>).mockResolvedValue(
-        createMockNormalizedData()
+        createMockNormalizedFileData()
       );
 
       // Call without settings to exercise the ??= fallback path
@@ -648,7 +625,7 @@ describe("DataManager", () => {
 
     it("returns cases from file data", async () => {
       const { person: primaryPerson, caseItem } = createHydratedStoredCase("c1", "person-1", "Case 1");
-      const mockData = createMockNormalizedData({
+        const mockData = createMockNormalizedFileData({
         people: [primaryPerson],
         cases: [caseItem],
       });
@@ -677,7 +654,7 @@ describe("DataManager", () => {
         "Hydrated Case",
       );
       (mockFileStorageService.readFileData as ReturnType<typeof vi.fn>).mockResolvedValue(
-        createMockNormalizedData({
+        createMockNormalizedFileData({
           people: [primaryPerson],
           cases: [caseItem],
         }),
@@ -722,7 +699,7 @@ describe("DataManager", () => {
   describe("getCategoryConfig", () => {
     it("delegates to categoryConfig service", async () => {
       // The categoryConfig service reads from fileStorage
-      const mockData = createMockNormalizedData();
+      const mockData = createMockNormalizedFileData();
       (mockFileStorageService.readFileData as ReturnType<typeof vi.fn>).mockResolvedValue(mockData);
 
       const config = await dataManager.getCategoryConfig();
