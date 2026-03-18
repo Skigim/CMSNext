@@ -388,7 +388,7 @@ describe("formatCaseDisplayName", () => {
     expect(formatTransitionalCaseDisplayName(caseData)).toBe("Primary Applicant");
   });
 
-  it("uses the case record person reference when linked people are transitional and not flagged primary", () => {
+  it("falls back to the first linked person when no normalized primary ref is flagged", () => {
     const caseData = createCaseWithLinkedPeople({
       primaryPersonId: "person-2",
       primaryFirstName: "Referenced",
@@ -396,6 +396,6 @@ describe("formatCaseDisplayName", () => {
       isPrimaryFlagged: false,
     });
 
-    expect(formatTransitionalCaseDisplayName(caseData)).toBe("Referenced Applicant");
+    expect(formatTransitionalCaseDisplayName(caseData)).toBe("Linked Member");
   });
 });

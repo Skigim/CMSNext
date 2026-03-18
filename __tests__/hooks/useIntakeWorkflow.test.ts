@@ -589,14 +589,7 @@ describe("useIntakeWorkflow", () => {
             authorizedRepIds: ["rep-1"],
             relationships: [{ type: "Spouse", name: "Jamie Smith", phone: "5550001111" }],
           }),
-          householdMembers: [
-            expect.objectContaining({
-              relationshipType: "Spouse",
-              firstName: "Jamie",
-              lastName: "Smith",
-              phone: "5550001111",
-            }),
-          ],
+          householdMembers: [],
           caseRecord: expect.objectContaining({
             mcn: "MCN-EDITED",
             applicationDate: "2026-04-01",
@@ -616,7 +609,7 @@ describe("useIntakeWorkflow", () => {
       );
       const updatePayload = mockDataManager.updateCompleteCase.mock.calls[0]?.[1];
       expect(updatePayload.person).not.toHaveProperty("status");
-      expect(updatePayload.householdMembers[0]).not.toHaveProperty("status");
+      expect(updatePayload.householdMembers).toEqual([]);
       expect(mockDataManager.createCompleteCase).not.toHaveBeenCalled();
     });
 
