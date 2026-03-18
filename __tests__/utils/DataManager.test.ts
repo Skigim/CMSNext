@@ -626,7 +626,7 @@ describe("DataManager", () => {
 
     it("returns cases from file data", async () => {
       const { person: primaryPerson, caseItem } = createHydratedStoredCase("c1", "person-1", "Case 1");
-        const mockData = createMockNormalizedFileData({
+      const mockData = createMockNormalizedFileData({
         people: [primaryPerson],
         cases: [caseItem],
       });
