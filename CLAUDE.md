@@ -678,7 +678,7 @@ if (!api) {
 | Hook patterns                   | `.github/agents/hooks.agent.md`                |
 | Repository memories             | `.github/agents/memories.agent.md`             |
 | Prompt templates                | `.github/agents/templates.agent.md`            |
-| Current roadmap                 | `docs/development/ROADMAP_FEB_2026.md`   |
+| Current roadmap                 | `docs/development/ROADMAP_MAR_2026.md`   |
 | Feature catalogue               | `docs/development/feature-catalogue.md`  |
 | Deployment                      | `docs/DeploymentGuide.md`                |
 | SonarCloud issues               | `docs/audit/sonarcloud-open-issues.md`   |

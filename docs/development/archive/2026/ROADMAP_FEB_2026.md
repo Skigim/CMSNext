@@ -5,7 +5,8 @@
 **Report Date:** February 18, 2026  
 **Branch:** main  
 **Focus:** Audit Remediation + Archive Completion + SonarCloud Remediation  
-**Status:** Week 3 In Progress — Wave 1 Complete ✅
+**Status:** Archived on March 19, 2026 — superseded by the March 2026 roadmap  
+**Archive Note:** Archive/restore delivery shipped ✅ | Wave 1 SonarCloud remediation complete ✅
 
 ---
 
@@ -249,7 +250,7 @@ _Focus: Complete archive system and data management improvements_
 
 _Focus: Resolve all SonarCloud issues — 614 open (434 prod, 155 scripts, 25 tests)_
 
-> **Source:** [sonarcloud-open-issues.md](../audit/sonarcloud-open-issues.md) snapshot from 2026-03-19
+> **Source:** [sonarcloud-open-issues.md](../../../audit/sonarcloud-open-issues.md) snapshot from 2026-03-19
 > **Latest refresh:** 2026-03-19T14:43:53Z — 227 open (14 critical, 27 major, 184 minor, 2 info)
 
 #### Wave 1: Critical & Major Severity (Mon-Tue)
@@ -431,8 +432,8 @@ _Focus: Ship deferred UX features, final polish, and March planning_
 - [ ] Add keyboard navigation tests
 - [ ] Create February changelog
 - [ ] Update feature catalogue ratings
-- [ ] Plan March roadmap
-- [ ] Archive February roadmap
+- [x] Plan March roadmap
+- [x] Archive February roadmap
 
 ---
 
@@ -493,17 +494,17 @@ _Focus: Ship deferred UX features, final polish, and March planning_
 
 ## 📚 Related Documents
 
-- [Feature Catalogue](feature-catalogue.md) - Complete feature inventory
-- [January 2026 Roadmap](archive/2026/ROADMAP_JAN_2026.md) - Previous month
-- [UI Audit Report](../audit/UI_AUDIT_REPORT.md) - Outstanding UI items
-- [Hooks Audit](../audit/HOOKS_AUDIT.md) - Console statement findings
-- [Security Audit](../audit/SECURITY_AUDIT.md) - Error handling findings
-- [SonarCloud Open Issues](../audit/sonarcloud-open-issues.md) - Issue snapshot (227 open, 2026-03-19)
-- [SonarCloud Hotspots](../audit/sonarcloud-hotspots.json) - Security hotspot review
+- [Feature Catalogue](../../feature-catalogue.md) - Complete feature inventory
+- [January 2026 Roadmap](./ROADMAP_JAN_2026.md) - Previous month
+- [UI Audit Report](../../../audit/UI_AUDIT_REPORT.md) - Outstanding UI items
+- [Hooks Audit](../../../audit/HOOKS_AUDIT.md) - Console statement findings
+- [Security Audit](../../../audit/SECURITY_AUDIT.md) - Error handling findings
+- [SonarCloud Open Issues](../../../audit/sonarcloud-open-issues.md) - Issue snapshot (227 open, 2026-03-19)
+- [SonarCloud Hotspots](../../../audit/sonarcloud-hotspots.json) - Security hotspot review
 
 ---
 
-_Last updated: February 19, 2026 (Live Sonar snapshot refreshed)_
+_Last updated: March 19, 2026 (Archived)_
 
 ---
 

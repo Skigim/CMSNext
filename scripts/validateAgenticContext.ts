@@ -47,7 +47,7 @@ const OPTIONAL_FILES = [
   '.github/README.md',
   '.github/BRANCHING.md',
   '.github/copilot-prebuild.yml',
-  'docs/development/ROADMAP_FEB_2026.md',
+  'docs/development/archive/2026/ROADMAP_FEB_2026.md',
 ];
 
 async function validateFile(filePath: string): Promise<ValidationResult> {
