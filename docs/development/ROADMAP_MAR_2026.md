@@ -6,6 +6,8 @@
 **Build:** Production-ready ✅  
 **Average Feature Rating:** 85.5/100
 
+**Milestone Update (March 19, 2026):** v2.1 data migration complete ✅
+
 ---
 
 ## 🎯 March Objectives
@@ -48,13 +50,13 @@
 
 #### Features
 
-- [ ] Update `NormalizedFileData` to track `people: Person[]` globally.
-- [ ] Build v2.0-to-v2.1 storage migration to extract embedded people to the root array.
-- [ ] Create `PersonService` for independent people CRUD operations.
+- [x] Update `NormalizedFileData` to track `people: Person[]` globally.
+- [x] Build v2.0-to-v2.1 storage migration to extract embedded people to the root array.
+- [x] Create `PersonService` for independent people CRUD operations.
 
 #### Refactoring & Polish
 
-- [ ] Add unit tests for `PersonService` and the migration handlers.
+- [x] Add unit tests for `PersonService` and the migration handlers.
 - [ ] Clean up redundant type properties during schema transitions.
 
 ---
