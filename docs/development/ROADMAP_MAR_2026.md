@@ -4,17 +4,27 @@
 **Branch:** main (stable)  
 **Tests:** 1141/1141 passing ✅  
 **Build:** Production-ready ✅  
-**Average Feature Rating:** 85.5/100
+**Average Feature Rating:** 85.5/100  
+**Status:** Week 1 complete ✅ | Week 2 complete ✅ | Week 3 migration + hydration complete ✅ | Week 4 UI follow-through next
 
-**Milestone Update (March 19, 2026):** v2.1 data migration complete ✅
+**Milestone Update (March 19, 2026):** Persisted v2.1 migration, runtime hydration, and linked-person intake/save flows are complete ✅
+
+---
+
+## ✅ Recent Completed Work (March 19, 2026)
+
+- [x] Shipped the persisted v2.1 workspace + archive migration path from Settings.
+- [x] Wired `FileStorageService`, `DataManager`, and `CaseService` to hydrate normalized people data at runtime.
+- [x] Added `PersonService` plus relationship-aware linked-person handling for normalized cases.
+- [x] Expanded intake/edit workflow coverage for linked-person save payloads and existing-case updates.
 
 ---
 
 ## 🎯 March Objectives
 
-1. **UX and Personalization** - Keyboard shortcut configuration, dashboard widgets.
-2. **Database Normalization** - Decoupling `Person` entities from `Case` objects and instituting native relational storage for families and individuals.
-3. **Data Hydration & UI Overhaul** - Restructuring the orchestrator and UI flows (like Case Creation and Household views) to support normalized people data.
+1. **UX and Personalization** - Keyboard shortcut configuration shipped; dashboard widget personalization remains open.
+2. **Database Normalization** - Global `people[]` storage, v2.1 migration, and explicit workspace/archive upgrade tooling are complete.
+3. **Data Hydration & UI Overhaul** - Service-layer hydration is complete; the remaining work is the Week 4 UI follow-through for creation/edit and household views.
 
 ---
 
@@ -45,8 +55,8 @@
 
 #### Prep Work
 
-- [ ] Plan exact schema modifications for `Person` and `CaseRecord`.
-- [ ] Diagram hydration logic requirements for `DataManager`.
+- [x] Plan exact schema modifications for `Person` and `CaseRecord`.
+- [x] Document hydration logic requirements for `DataManager`.
 
 #### Features
 
@@ -69,14 +79,14 @@
 
 #### Features
 
-- [ ] Modify `DataManager.ts` and `CaseService.ts` to hydrate Cases with People dynamically.
-- [ ] Update domain logic (`domain/cases/`) to handle uncoupled people patterns.
-- [ ] Enable robust relational linking inside the `Person` structure (spouses/dependents).
+- [x] Modify `DataManager.ts` and `CaseService.ts` to hydrate Cases with People dynamically.
+- [x] Update domain logic (`domain/cases/`) to handle uncoupled people patterns.
+- [x] Enable robust relational linking inside the `Person` structure (spouses/dependents).
 
 #### Refactoring & Polish
 
 - [ ] Thoroughly test hydration and mapping performance.
-- [ ] Resolve any strict type-checking violations caused by schema changes.
+- [x] Resolve any strict type-checking violations caused by schema changes.
 
 ---
 
@@ -118,6 +128,14 @@
 
 ---
 
+## 📚 Related Documents
+
+- [v2.1 Storage Design](./v21-storage-design.md) - Schema and hydration design used for Weeks 2-3
+- [February 2026 Roadmap](./archive/2026/ROADMAP_FEB_2026.md) - Archived previous month
+- [Feature Catalogue](./feature-catalogue.md) - Feature inventory pending next refresh
+
+---
+
 ## 📝 Notes
 
 ### AI-Assisted Development Model
@@ -137,7 +155,11 @@ Every feature must:
 3. Follow established patterns (hooks delegate to services)
 4. Be documented in feature catalogue
 
+### Recommended Next Step
+
+Prioritize the Week 4 case-creation and household UI follow-through so users can search/reuse existing people before creating new records, then render those normalized relationships directly throughout the household experience.
+
 ---
 
 **Prepared by:** GitHub Copilot  
-**Last updated:** March 2, 2026
+**Last updated:** March 19, 2026
