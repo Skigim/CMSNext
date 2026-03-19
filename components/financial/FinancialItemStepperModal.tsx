@@ -806,7 +806,7 @@ export function FinancialItemStepperModal({
     () =>
       currentStep === "details" ||
       (isEntryEditing
-        ? Boolean(entryFormData.amount && entryFormData.startDate)
+        ? Boolean(entryFormData.startDate && parseEntryAmount(entryFormData.amount) !== null)
         : canSave && !isSubmitting),
     [
       canSave,
