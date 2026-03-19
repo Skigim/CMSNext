@@ -5,7 +5,7 @@
 **Tests:** 1141/1141 passing ✅  
 **Build:** Production-ready ✅  
 **Average Feature Rating:** 85.5/100  
-**Status:** Week 1 complete ✅ | Week 2 complete ✅ | Week 3 migration + hydration complete ✅ | Week 4 UI follow-through next
+**Status:** Week 1 complete ✅ | Week 2 complete ✅ | Week 3 migration + hydration milestone complete ✅ (remaining Week 3 validation in progress) | Week 4 UI follow-through next
 
 **Milestone Update (March 19, 2026):** Persisted v2.1 migration, runtime hydration, and linked-person intake/save flows are complete ✅
 
