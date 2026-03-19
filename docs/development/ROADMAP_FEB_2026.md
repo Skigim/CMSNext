@@ -145,21 +145,12 @@ Files like `table.tsx`, `breadcrumb.tsx`, `card.tsx`, `calendar.tsx`, `chart.tsx
 
 ### SonarCloud Issue Data Files
 
-| File                                            | Contents                                          |
-| ----------------------------------------------- | ------------------------------------------------- |
-| `docs/audit/sonarcloud-cloud-issues-summary.md` | Aggregated counts by rule/file/severity           |
-| `docs/audit/sonarcloud-open-issues.json`        | Full 614-issue detail (rule, file, line, message) |
-| `docs/audit/sonarcloud-hotspots.json`           | 37 security hotspots (all REVIEWED/SAFE)          |
+| File                                       | Contents                                                           |
+| ------------------------------------------ | ------------------------------------------------------------------ |
+| `docs/audit/sonarcloud-open-issues.md`     | Canonical markdown report — severity/type breakdown + full issue list (227 open as of 2026-03-19) |
+| `docs/audit/sonarcloud-hotspots.json`      | 37 security hotspots (all REVIEWED/SAFE)                           |
 
-GPT can `jq` query the JSON file for per-file or per-rule issue lists:
-
-```bash
-# All issues for a specific file
-jq '[.issues[] | select(.component | endswith("CaseTable.tsx"))]' docs/audit/sonarcloud-open-issues.json
-
-# All issues for a specific rule
-jq '[.issues[] | select(.rule == "typescript:S3358")]' docs/audit/sonarcloud-open-issues.json
-```
+The issue data is now a Markdown report. Use the "All Open Issues" section in `docs/audit/sonarcloud-open-issues.md` to look up per-file or per-rule entries, or re-generate the file via the SonarQube MCP `analyze_file_list` / `search_sonar_issues_in_projects` tools.
 
 ---
 
@@ -258,14 +249,14 @@ _Focus: Complete archive system and data management improvements_
 
 _Focus: Resolve all SonarCloud issues — 614 open (434 prod, 155 scripts, 25 tests)_
 
-> **Source:** [sonarcloud-cloud-issues-summary.md](../audit/sonarcloud-cloud-issues-summary.md) snapshot from 2026-02-13
-> **Latest refresh:** 2026-02-19T21:49:35Z — 206 open (1 critical, 24 major, 179 minor, 2 info)
+> **Source:** [sonarcloud-open-issues.md](../audit/sonarcloud-open-issues.md) snapshot from 2026-03-19
+> **Latest refresh:** 2026-03-19T14:43:53Z — 227 open (14 critical, 27 major, 184 minor, 2 info)
 
 #### Wave 1: Critical & Major Severity (Mon-Tue)
 
 _9 Critical + 108 Major production code issues_
 
-> **GPT:** Start each rule group by querying `docs/audit/sonarcloud-open-issues.json` for exact file:line locations. Commit per rule family. Run `npm test` after each commit.
+> **GPT:** Start each rule group by searching `docs/audit/sonarcloud-open-issues.md` for exact file:line locations. Commit per rule family. Run `npm test` after each commit.
 
 ##### Session Progress Update (Feb 17)
 
@@ -330,7 +321,7 @@ _9 Critical + 108 Major production code issues_
 
 _Tackle the top 5 rules by count across production code_
 
-> **GPT:** These are mechanical sweeps. For each rule, apply the fix pattern uniformly. Use `jq '[.issues[] | select(.rule == "typescript:SXXXX") | .component]' docs/audit/sonarcloud-open-issues.json | sort -u` to get the file list. Commit one rule at a time.
+> **GPT:** These are mechanical sweeps. For each rule, apply the fix pattern uniformly. Search `docs/audit/sonarcloud-open-issues.md` for the rule ID to get the affected file list. Commit one rule at a time.
 
 ##### S6759 — Nested React Components (117 issues)
 
@@ -409,7 +400,7 @@ _155 script issues across 3 files + 25 test-file issues_
 - [ ] `npm test` — verify all 1141+ tests pass (zero failures)
 - [ ] `npm run build` — verify zero build errors, check bundle size delta
 - [ ] `npx tsc --noEmit` — verify zero type errors
-- [ ] Re-fetch SonarCloud scan and update `docs/audit/sonarcloud-cloud-issues-summary.md` with post-remediation counts
+- [ ] Re-fetch SonarCloud scan and update `docs/audit/sonarcloud-open-issues.md` with post-remediation counts
 - [ ] Commit any remaining changes in logical batches
 - [ ] Document any issues deferred or marked as false positives in a `docs/audit/sonarcloud-deferred.md` file
 - [ ] **Claude review:** Tag Claude for architectural review of any changes to Context providers, DataManager, or shared utilities
@@ -507,8 +498,7 @@ _Focus: Ship deferred UX features, final polish, and March planning_
 - [UI Audit Report](../audit/UI_AUDIT_REPORT.md) - Outstanding UI items
 - [Hooks Audit](../audit/HOOKS_AUDIT.md) - Console statement findings
 - [Security Audit](../audit/SECURITY_AUDIT.md) - Error handling findings
-- [SonarCloud Issues Summary](../audit/sonarcloud-cloud-issues-summary.md) - Issue snapshot (206 open)
-- [SonarCloud Open Issues](../audit/sonarcloud-open-issues.json) - Full issue detail
+- [SonarCloud Open Issues](../audit/sonarcloud-open-issues.md) - Issue snapshot (227 open, 2026-03-19)
 - [SonarCloud Hotspots](../audit/sonarcloud-hotspots.json) - Security hotspot review
 
 ---
@@ -529,7 +519,7 @@ This roadmap reflects a dual-agent workflow adopted mid-February 2026:
 **Communication contract:**
 
 1. GPT reads this roadmap as its task specification.
-2. GPT can reference `docs/audit/sonarcloud-open-issues.json` for exact issue locations.
+2. GPT can reference `docs/audit/sonarcloud-open-issues.md` for exact issue locations.
 3. GPT should read `.github/copilot-instructions.md` and `.github/implementation-guide.md` for patterns.
 4. Changes to Context providers or shared utilities require Claude review before merge.
 5. Test suite must pass after every commit (`npm test`).
