@@ -681,5 +681,5 @@ if (!api) {
 | Current roadmap                 | `docs/development/ROADMAP_FEB_2026.md`   |
 | Feature catalogue               | `docs/development/feature-catalogue.md`  |
 | Deployment                      | `docs/DeploymentGuide.md`                |
-| SonarCloud issues               | `docs/audit/sonarcloud-open-issues.json` |
+| SonarCloud issues               | `docs/audit/sonarcloud-open-issues.md`   |
 | LLM index                       | `llms.txt`                               |
