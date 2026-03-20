@@ -372,6 +372,10 @@ export function hydrateStoredCase(caseItem: PersistedCase, people: Person[]): St
 
   return {
     ...caseItem,
+    caseRecord: {
+      ...caseItem.caseRecord,
+      intakeCompleted: caseItem.caseRecord.intakeCompleted ?? true,
+    },
     people: caseItem.people.map((ref) => ({ ...ref })),
     person: primaryPerson,
     linkedPeople,
@@ -383,6 +387,10 @@ export function dehydrateStoredCase(caseItem: StoredCase): PersistedCase {
 
   return {
     ...rest,
+    caseRecord: {
+      ...rest.caseRecord,
+      intakeCompleted: rest.caseRecord.intakeCompleted ?? true,
+    },
     people: buildCasePeopleRefs(caseItem),
   };
 }

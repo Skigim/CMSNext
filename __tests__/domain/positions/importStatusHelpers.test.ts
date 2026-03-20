@@ -50,6 +50,7 @@ function createCase(id: string, status: CaseStatus = "Active"): StoredCase {
       retroRequested: "",
       createdDate: new Date().toISOString(),
       updatedDate: new Date().toISOString(),
+      intakeCompleted: true,
     },
   };
 }

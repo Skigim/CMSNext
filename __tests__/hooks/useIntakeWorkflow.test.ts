@@ -531,6 +531,7 @@ describe("useIntakeWorkflow", () => {
           caseRecord: expect.objectContaining({
             mcn: "12345",
             applicationDate: "2026-01-01",
+            intakeCompleted: true,
           }),
         }),
       );
@@ -604,6 +605,7 @@ describe("useIntakeWorkflow", () => {
             reviewPriorBudgets: true,
             reviewPriorNarr: true,
             authorizedReps: ["rep-1"],
+            intakeCompleted: true,
           }),
         }),
       );

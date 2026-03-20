@@ -481,6 +481,7 @@ export class CaseService {
         avsConsentDate: caseData.caseRecord.avsConsentDate ?? '',
         maritalStatus: caseData.caseRecord.maritalStatus ?? '',
         voterFormStatus: caseData.caseRecord.voterFormStatus ?? '',
+        intakeCompleted: caseData.caseRecord.intakeCompleted ?? true,
         // Note: financials and notes are NOT included in StoredCase
         createdDate: timestamp,
         updatedDate: timestamp
@@ -602,12 +603,14 @@ export class CaseService {
       reviewVRs: caseData.caseRecord.reviewVRs ?? existingCase.caseRecord.reviewVRs ?? false,
       reviewPriorBudgets: caseData.caseRecord.reviewPriorBudgets ?? existingCase.caseRecord.reviewPriorBudgets ?? false,
       reviewPriorNarr: caseData.caseRecord.reviewPriorNarr ?? existingCase.caseRecord.reviewPriorNarr ?? false,
-      pregnancy: caseData.caseRecord.pregnancy ?? existingCase.caseRecord.pregnancy ?? false,
-      avsConsentDate: caseData.caseRecord.avsConsentDate ?? existingCase.caseRecord.avsConsentDate ?? '',
-      maritalStatus: caseData.caseRecord.maritalStatus ?? existingCase.caseRecord.maritalStatus ?? '',
-      voterFormStatus: caseData.caseRecord.voterFormStatus ?? existingCase.caseRecord.voterFormStatus ?? '',
-      updatedDate: timestamp
-    };
+       pregnancy: caseData.caseRecord.pregnancy ?? existingCase.caseRecord.pregnancy ?? false,
+       avsConsentDate: caseData.caseRecord.avsConsentDate ?? existingCase.caseRecord.avsConsentDate ?? '',
+       maritalStatus: caseData.caseRecord.maritalStatus ?? existingCase.caseRecord.maritalStatus ?? '',
+       voterFormStatus: caseData.caseRecord.voterFormStatus ?? existingCase.caseRecord.voterFormStatus ?? '',
+       intakeCompleted:
+         caseData.caseRecord.intakeCompleted ?? existingCase.caseRecord.intakeCompleted ?? true,
+       updatedDate: timestamp
+     };
 
     const caseWithChanges: StoredCase = {
       ...existingCase,

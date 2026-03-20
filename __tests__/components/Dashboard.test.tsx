@@ -110,6 +110,7 @@ const baseCase: CaseDisplay = {
     notes: [],
     createdDate: "2025-08-01T00:00:00.000Z",
     updatedDate: "2025-09-21T00:00:00.000Z",
+    intakeCompleted: true,
   },
 };
 

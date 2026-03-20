@@ -223,6 +223,7 @@ export interface CaseRecord {
   avsConsentDate?: string;
   maritalStatus?: string;
   voterFormStatus?: VoterFormStatus;
+  intakeCompleted: boolean;
 }
 
 // Main data structure
@@ -319,6 +320,7 @@ export interface NewCaseRecordData {
   avsConsentDate?: string;
   maritalStatus?: string;
   voterFormStatus?: VoterFormStatus;
+  intakeCompleted: boolean;
 }
 
 export interface NewNoteData {

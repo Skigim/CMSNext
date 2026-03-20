@@ -1199,6 +1199,7 @@ describe('calculatePriorityScore with tiered age multipliers', () => {
         retroRequested: '',
         createdDate: '2025-12-11',
         updatedDate: '2025-12-11',
+        intakeCompleted: true,
       },
     });
 
@@ -1231,6 +1232,7 @@ describe('calculatePriorityScore with tiered age multipliers', () => {
         retroRequested: '',
         createdDate: '2025-12-31',
         updatedDate: '2025-12-31',
+        intakeCompleted: true,
       },
     });
 
@@ -1274,6 +1276,7 @@ describe('calculatePriorityScore with tiered age multipliers', () => {
         retroRequested: '',
         createdDate: '2025-11-11',
         updatedDate: '2025-11-11',
+        intakeCompleted: true,
       },
     });
 
@@ -1317,6 +1320,7 @@ describe('calculatePriorityScore with tiered age multipliers', () => {
         retroRequested: '',
         createdDate: '2025-12-11',
         updatedDate: '2025-12-11',
+        intakeCompleted: true,
       },
     });
 
@@ -1355,6 +1359,7 @@ describe('calculatePriorityScore with tiered age multipliers', () => {
         retroRequested: '',
         createdDate: '2025-12-11',
         updatedDate: '2025-12-11',
+        intakeCompleted: true,
       },
     });
 
@@ -1410,6 +1415,7 @@ describe('calculatePriorityScore with tiered age multipliers', () => {
         retroRequested: '',
         createdDate: '2025-12-11',
         updatedDate: '2025-12-11',
+        intakeCompleted: true,
       },
     });
 
@@ -1447,6 +1453,7 @@ describe('calculatePriorityScore with tiered age multipliers', () => {
         retroRequested: '',
         createdDate: '2025-12-11',
         updatedDate: '2025-12-11',
+        intakeCompleted: true,
       },
     });
 

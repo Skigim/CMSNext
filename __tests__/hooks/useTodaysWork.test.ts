@@ -57,6 +57,7 @@ function createMockCase(overrides: Partial<StoredCase> = {}): StoredCase {
       retroRequested: '',
       createdDate: '',
       updatedDate: '',
+      intakeCompleted: true,
     },
     ...overrides,
   };

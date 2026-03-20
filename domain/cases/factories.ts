@@ -106,6 +106,7 @@ export function createCaseRecordData(
     avsConsentDate: record?.avsConsentDate ?? "",
     maritalStatus: record?.maritalStatus ?? "",
     voterFormStatus: record?.voterFormStatus ?? "",
+    intakeCompleted: record?.intakeCompleted ?? true,
   };
 }
 

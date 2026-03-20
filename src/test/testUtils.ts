@@ -102,6 +102,7 @@ export const createMockCaseRecord = (overrides: Partial<CaseRecord> = {}): CaseR
   notes: [createMockNote()],
   createdDate: new Date().toISOString(),
   updatedDate: new Date().toISOString(),
+  intakeCompleted: true,
   ...overrides
 })
 
@@ -168,6 +169,7 @@ export const createMockStoredCase = (overrides: Partial<StoredCase> = {}): Store
     retroRequested: '',
     createdDate: timestamp,
     updatedDate: timestamp,
+    intakeCompleted: true,
     ...overrides.caseRecord,
   }
    
@@ -303,6 +305,7 @@ export const createMockNewCaseRecordData = (overrides: Partial<NewCaseRecordData
   organizationId: 'org-1',
   authorizedReps: [],
   retroRequested: '',
+  intakeCompleted: true,
   ...overrides,
 })
 

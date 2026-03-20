@@ -181,6 +181,7 @@ export const CaseRecordSchema = z.object({
   organizationId: stringRequired("Organization ID"),
   authorizedReps: z.array(z.string()).optional().default([]),
   retroRequested: stringOptional,
+  intakeCompleted: z.boolean().optional().default(true),
 });
 
 // ============================================================================

@@ -297,7 +297,8 @@ const generateCaseRecord = (
     },
     notes: generateNotes(noteId),
     createdDate,
-    updatedDate: generateDateBetween(createdDate, new Date().toISOString())
+    updatedDate: generateDateBetween(createdDate, new Date().toISOString()),
+    intakeCompleted: true,
   };
 };
 
