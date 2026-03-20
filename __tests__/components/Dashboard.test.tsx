@@ -1,9 +1,14 @@
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { Dashboard } from "@/components/app/Dashboard";
-import type { AlertsIndex, AlertWithMatch } from "@/utils/alertsData";
+import {
+  createAlertsIndexFromAlerts,
+  createEmptyAlertsIndex,
+  type AlertsIndex,
+  type AlertWithMatch,
+} from "@/utils/alertsData";
 import type { CaseActivityLogState, DailyActivityReport } from "@/types/activityLog";
-import { createCaseDisplayFixture } from "@/src/test/caseDisplayFactory";
+import { createMockCaseDisplay } from "@/src/test/testUtils";
 
 vi.mock("@/contexts/CategoryConfigContext", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/contexts/CategoryConfigContext")>();
@@ -60,7 +65,7 @@ function createAlert(overrides: Partial<AlertWithMatch> = {}): AlertWithMatch {
   } satisfies AlertWithMatch;
 }
 
-const baseCase = createCaseDisplayFixture({
+const baseCase = createMockCaseDisplay({
   id: "case-1",
   name: "Jamie Rivera",
   mcn: "MCN123",
@@ -125,37 +130,11 @@ const baseCase = createCaseDisplayFixture({
   },
 });
 
-function createAlertsIndex(alerts: AlertWithMatch[] = []): AlertsIndex {
-  const alertsByCaseId = alerts.reduce<Map<string, AlertWithMatch[]>>((map, alert) => {
-    if (!alert.matchedCaseId) {
-      return map;
-    }
-
-    const existingAlerts = map.get(alert.matchedCaseId) ?? [];
-    map.set(alert.matchedCaseId, [...existingAlerts, alert]);
-    return map;
-  }, new Map<string, AlertWithMatch[]>());
-
-  return {
-    alerts,
-    summary: {
-      total: alerts.length,
-      matched: alerts.filter((alert) => alert.matchStatus === "matched").length,
-      unmatched: alerts.filter((alert) => alert.matchStatus === "unmatched").length,
-      missingMcn: alerts.filter((alert) => alert.matchStatus === "missing-mcn").length,
-      latestUpdated: null,
-    },
-    alertsByCaseId,
-    unmatched: alerts.filter((alert) => alert.matchStatus === "unmatched"),
-    missingMcn: alerts.filter((alert) => alert.matchStatus === "missing-mcn"),
-  };
-}
-
 function renderDashboard({
   cases = [],
-  alerts = createAlertsIndex(),
+  alerts = createEmptyAlertsIndex(),
 }: {
-  cases?: ReturnType<typeof createCaseDisplayFixture>[];
+  cases?: ReturnType<typeof createMockCaseDisplay>[];
   alerts?: AlertsIndex;
 } = {}) {
   return render(
@@ -204,7 +183,7 @@ describe("Dashboard", () => {
 
     renderDashboard({
       cases: [baseCase],
-      alerts: createAlertsIndex([
+      alerts: createAlertsIndexFromAlerts([
         createAlert({
           ...matchedAlert,
           matchedCaseId: baseCase.id,

@@ -106,9 +106,17 @@ export const createMockCaseRecord = (overrides: Partial<CaseRecord> = {}): CaseR
   ...overrides
 })
 
-export const createMockCaseDisplay = (overrides: Partial<CaseDisplay> = {}): CaseDisplay => {
-  const person = createMockPerson()
-  const caseRecord = createMockCaseRecord()
+export type CaseDisplayOverrides = Partial<Omit<CaseDisplay, 'person' | 'caseRecord'>> & {
+  person?: Partial<CaseDisplay['person']>
+  caseRecord?: Partial<CaseDisplay['caseRecord']>
+}
+
+export const createMockCaseDisplay = (overrides: CaseDisplayOverrides = {}): CaseDisplay => {
+  const person = createMockPerson(overrides.person ?? {})
+  const caseRecord = createMockCaseRecord({
+    personId: person.id,
+    ...overrides.caseRecord,
+  })
   
   return {
     id: 'case-test-1',
@@ -118,9 +126,9 @@ export const createMockCaseDisplay = (overrides: Partial<CaseDisplay> = {}): Cas
     priority: false,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
+    ...overrides,
     person,
     caseRecord,
-    ...overrides
   }
 }
 
@@ -456,21 +464,23 @@ export const createMockCategoryConfigValue = (configOverrides?: Parameters<typeo
  * Component test helpers
  */
 
-export const mockToast = {
+const hoistedMockToast = vi.hoisted(() => ({
   success: vi.fn(),
   error: vi.fn(),
   info: vi.fn(),
   warning: vi.fn(),
   loading: vi.fn(),
   dismiss: vi.fn()
-}
+}))
+
+export const mockToast = hoistedMockToast
 
 // Mock the toast library while preserving other exports like Toaster
 vi.mock('sonner', async (importOriginal) => {
   const actual = await importOriginal<typeof import('sonner')>();
   return {
     ...actual,
-    toast: mockToast
+    toast: hoistedMockToast
   };
 })
 

@@ -2,7 +2,7 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { Settings } from "@/components/app/Settings";
-import { createCaseDisplayFixture, type CaseDisplayOverrides } from "@/src/test/caseDisplayFactory";
+import { createMockCaseDisplay, type CaseDisplayOverrides } from "@/src/test/testUtils";
 import { mergeCategoryConfig } from "@/types/categoryConfig";
 
 const mocks = vi.hoisted(() => ({
@@ -104,7 +104,7 @@ vi.mock("@/components/error/ErrorFeedbackForm", () => ({
 }));
 
 const createCase = (overrides: CaseDisplayOverrides = {}) =>
-  createCaseDisplayFixture(overrides);
+  createMockCaseDisplay(overrides);
 
 describe("Settings", () => {
   beforeEach(() => {
