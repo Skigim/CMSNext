@@ -3,7 +3,12 @@ import { describe, expect, it } from "vitest";
 import { createMockPerson, createMockStoredCase, omitHydratedPerson } from "@/src/test/testUtils";
 import type { Person, PersonRelationship, StoredCase } from "@/types/case";
 
-import { createCaseRecordData, createIntakeFormData, createPersonData } from "../factories";
+import {
+  createCaseRecordData,
+  createIntakeFormData,
+  createPersonData,
+  resolveCaseRecordIntakeCompleted,
+} from "../factories";
 
 function createPrimaryLinkedPerson() {
   return createMockPerson({
@@ -173,6 +178,26 @@ describe("createCaseRecordData", () => {
 
     // Assert
     expect(result.intakeCompleted).toBe(false);
+  });
+});
+
+describe("resolveCaseRecordIntakeCompleted", () => {
+  it("defaults to true when all candidate values are missing", () => {
+    // Arrange / Act
+    const result = resolveCaseRecordIntakeCompleted(undefined, null);
+
+    // Assert
+    expect(result).toBe(true);
+  });
+
+  it("preserves the first defined value including false", () => {
+    // Arrange / Act
+    const falseResult = resolveCaseRecordIntakeCompleted(false, true);
+    const trueResult = resolveCaseRecordIntakeCompleted(undefined, true);
+
+    // Assert
+    expect(falseResult).toBe(false);
+    expect(trueResult).toBe(true);
   });
 });
 

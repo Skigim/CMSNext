@@ -41,6 +41,7 @@ export {
   createBlankHouseholdMemberData,
   createIntakeFormData,
   createPersonData,
+  resolveCaseRecordIntakeCompleted,
   type CaseRecordDefaults,
   type PersonDefaults,
 } from "./factories";

@@ -19,6 +19,7 @@ import type { FileStorageService, NormalizedFileData } from './FileStorageServic
 import { ActivityLogService } from './ActivityLogService';
 import { CaseBulkOperationsService } from './CaseBulkOperationsService';
 import { PersonService } from './PersonService';
+import { resolveCaseRecordIntakeCompleted } from '@/domain/cases';
 import { toLocalDateString } from '../../domain/common';
 import { formatCaseDisplayName } from '../../domain/cases/formatting';
 import type { AlertWithMatch } from '@/domain/alerts';
@@ -481,7 +482,7 @@ export class CaseService {
         avsConsentDate: caseData.caseRecord.avsConsentDate ?? '',
         maritalStatus: caseData.caseRecord.maritalStatus ?? '',
         voterFormStatus: caseData.caseRecord.voterFormStatus ?? '',
-        intakeCompleted: caseData.caseRecord.intakeCompleted ?? true,
+        intakeCompleted: resolveCaseRecordIntakeCompleted(caseData.caseRecord.intakeCompleted),
         // Note: financials and notes are NOT included in StoredCase
         createdDate: timestamp,
         updatedDate: timestamp
@@ -607,8 +608,10 @@ export class CaseService {
        avsConsentDate: caseData.caseRecord.avsConsentDate ?? existingCase.caseRecord.avsConsentDate ?? '',
        maritalStatus: caseData.caseRecord.maritalStatus ?? existingCase.caseRecord.maritalStatus ?? '',
        voterFormStatus: caseData.caseRecord.voterFormStatus ?? existingCase.caseRecord.voterFormStatus ?? '',
-       intakeCompleted:
-         caseData.caseRecord.intakeCompleted ?? existingCase.caseRecord.intakeCompleted ?? true,
+       intakeCompleted: resolveCaseRecordIntakeCompleted(
+         caseData.caseRecord.intakeCompleted,
+         existingCase.caseRecord.intakeCompleted,
+       ),
        updatedDate: timestamp
      };
 

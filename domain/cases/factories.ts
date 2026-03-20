@@ -41,6 +41,24 @@ export interface CaseRecordDefaults {
 }
 
 /**
+ * Resolves the intake-completion flag from one or more fallback sources.
+ *
+ * @param values - Candidate boolean, null, or undefined values in precedence order.
+ * @returns The first non-null and non-undefined boolean value, or true if none are provided.
+ */
+export function resolveCaseRecordIntakeCompleted(
+  ...values: Array<boolean | null | undefined>
+): boolean {
+  for (const value of values) {
+    if (value !== undefined && value !== null) {
+      return value;
+    }
+  }
+
+  return true;
+}
+
+/**
  * Creates a new NewCaseRecordData object with all fields initialized.
  * 
  * Use this factory instead of inline object literals to ensure all fields
@@ -106,7 +124,7 @@ export function createCaseRecordData(
     avsConsentDate: record?.avsConsentDate ?? "",
     maritalStatus: record?.maritalStatus ?? "",
     voterFormStatus: record?.voterFormStatus ?? "",
-    intakeCompleted: record?.intakeCompleted ?? true,
+    intakeCompleted: resolveCaseRecordIntakeCompleted(record?.intakeCompleted),
   };
 }
 
