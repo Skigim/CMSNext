@@ -20,6 +20,8 @@ import { getDisplayPhoneNumber } from "@/domain/common";
 import { getAlertDisplayDescription, getAlertDueDateInfo } from "@/utils/alertDisplay";
 import { calculatePriorityScore } from "@/domain/dashboard/priorityQueue";
 import { useCategoryConfig } from "@/contexts/CategoryConfigContext";
+import { caseNeedsIntake } from "@/domain/cases";
+import { NeedsIntakeBadge } from "@/components/case/NeedsIntakeBadge";
 
 /** Compare two expanded rows for sorting. */
 function compareExpandedRows(
@@ -228,6 +230,7 @@ export const CaseTable = memo(function CaseTable({
           primaryContact,
           alerts: allCaseAlerts,
           score,
+          needsIntake: caseNeedsIntake(item),
         };
       }),
     [alertsByCaseId, cases, config.caseStatuses, config.alertTypes],
@@ -362,6 +365,9 @@ export const CaseTable = memo(function CaseTable({
                         <span className="sr-only">High priority case</span>
                       </>
                     )}
+                    {row.needsIntake ? (
+                      <NeedsIntakeBadge className="text-[10px] px-1.5 py-0" />
+                    ) : null}
                   </div>
                 </div>
               </TableCell>

@@ -84,7 +84,31 @@ describe("useNavigationFlow", () => {
     );
     expect(endMeasurementMock).toHaveBeenCalledWith(
       "navigation:viewCase",
-      expect.objectContaining({ caseId: existingCase.id, blocked: false }),
+      expect.objectContaining({ caseId: existingCase.id, blocked: false, result: "details" }),
+    );
+  });
+
+  it("routes incomplete cases into intake instead of details", () => {
+    const incompleteCase = createMockStoredCase({
+      id: "case-incomplete",
+      caseRecord: {
+        ...createMockStoredCase().caseRecord,
+        intakeCompleted: false,
+      },
+    });
+    const { result } = renderNavigationFlow({
+      cases: [incompleteCase],
+    });
+
+    act(() => {
+      result.current.viewCase(incompleteCase.id);
+    });
+
+    expect(result.current.currentView).toBe("intake");
+    expect(result.current.selectedCaseId).toBe(incompleteCase.id);
+    expect(endMeasurementMock).toHaveBeenCalledWith(
+      "navigation:viewCase",
+      expect.objectContaining({ caseId: incompleteCase.id, blocked: false, result: "intake" }),
     );
   });
 
@@ -152,6 +176,24 @@ describe("useNavigationFlow", () => {
     expect(endMeasurementMock).toHaveBeenCalledWith(
       "navigation:newCase",
       expect.objectContaining({ result: "intake", source: "dashboard" }),
+    );
+  });
+
+  it("opens Quick Add without leaving the current view", () => {
+    const { result } = renderNavigationFlow();
+
+    expect(result.current.currentView).toBe("dashboard");
+    expect(result.current.showNewCaseModal).toBe(false);
+
+    act(() => {
+      result.current.quickAdd();
+    });
+
+    expect(result.current.currentView).toBe("dashboard");
+    expect(result.current.showNewCaseModal).toBe(true);
+    expect(endMeasurementMock).toHaveBeenCalledWith(
+      "navigation:quickAdd",
+      expect.objectContaining({ result: "modal", source: "dashboard" }),
     );
   });
 
@@ -333,5 +375,39 @@ describe("useNavigationFlow", () => {
 
     expect(result.current.currentView).toBe("list");
     expect(result.current.selectedCaseId).toBeNull();
+  });
+
+  it("routes newly quick-added cases into intake after save", async () => {
+    const quickAddedCase = createMockStoredCase({
+      id: "quick-add-case",
+      caseRecord: {
+        ...createMockStoredCase().caseRecord,
+        intakeCompleted: false,
+      },
+    });
+    const personForm = createMockNewPersonData();
+    const caseRecordForm = createMockNewCaseRecordData({ intakeCompleted: false });
+    const { result } = renderNavigationFlow({
+      saveCase: createSaveCaseMock(quickAddedCase),
+    });
+
+    act(() => {
+      result.current.quickAdd();
+    });
+
+    await act(async () => {
+      await result.current.saveCaseWithNavigation({
+        person: personForm,
+        caseRecord: caseRecordForm,
+      });
+    });
+
+    expect(result.current.showNewCaseModal).toBe(false);
+    expect(result.current.currentView).toBe("intake");
+    expect(result.current.selectedCaseId).toBe(quickAddedCase.id);
+    expect(endMeasurementMock).toHaveBeenCalledWith(
+      "navigation:completeNewCase",
+      expect.objectContaining({ caseId: quickAddedCase.id, result: "intake" }),
+    );
   });
 });

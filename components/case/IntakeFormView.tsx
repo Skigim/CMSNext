@@ -1568,6 +1568,7 @@ export function IntakeFormView({
 }: Readonly<IntakeFormViewProps>) {
   const hasSeededInitialData = useRef(false);
   const stepContentRef = useRef<HTMLDivElement>(null);
+  const isCompletingIntake = existingCase?.caseRecord.intakeCompleted === false;
   const {
     currentStep,
     visitedSteps,
@@ -1643,11 +1644,16 @@ export function IntakeFormView({
         )}
         <div className="flex-1">
           <h1 className="text-lg font-semibold">
-            {isEditing ? "Edit Case" : "New Case Intake"}
+            {isCompletingIntake
+              ? "Complete Case Intake"
+              : isEditing
+                ? "Edit Case"
+                : "New Case Intake"}
           </h1>
           <p className="text-sm text-muted-foreground">
-            Step {currentStep + 1} of {INTAKE_STEPS.length} –{" "}
-            {INTAKE_STEPS[currentStep].label}
+            {isCompletingIntake
+              ? "This preliminary case must finish intake before it can be used normally in the workspace."
+              : `Step ${currentStep + 1} of ${INTAKE_STEPS.length} – ${INTAKE_STEPS[currentStep].label}`}
           </p>
         </div>
         <Badge variant="outline" className="text-xs">

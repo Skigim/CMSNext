@@ -9,6 +9,8 @@ import type { AlertsIndex } from '@/utils/alertsData';
 import type { WidgetMetadata } from './WidgetRegistry';
 import { useTodaysWork } from '@/hooks/useTodaysWork';
 import { useCategoryConfig } from '@/contexts/CategoryConfigContext';
+import { caseNeedsIntake } from '@/domain/cases';
+import { NeedsIntakeBadge } from '@/components/case/NeedsIntakeBadge';
 
 /**
  * Props for the Today's Work Widget.
@@ -105,6 +107,9 @@ export function TodaysWorkWidget({
                           ) : (
                             <p className="text-sm font-medium truncate">{caseData.name}</p>
                           )}
+                          {caseNeedsIntake(caseData) ? (
+                            <NeedsIntakeBadge className="mt-1 text-[10px] px-1.5 py-0" />
+                          ) : null}
                         </div>
                         <div className="flex items-center gap-1 flex-shrink-0">
                           <PinButton caseId={caseData.id} caseName={caseData.name} size="sm" />

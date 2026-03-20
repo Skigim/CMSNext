@@ -59,6 +59,22 @@ export function resolveCaseRecordIntakeCompleted(
 }
 
 /**
+ * Determines whether a case still requires intake completion.
+ *
+ * Missing historical values are treated as complete.
+ *
+ * @param caseData - Stored case or case-like object containing a case record.
+ * @returns True when the case should route to intake before normal workspace use.
+ */
+export function caseNeedsIntake(
+  caseData?: Pick<StoredCase, "caseRecord"> | null,
+): boolean {
+  return resolveCaseRecordIntakeCompleted(
+    caseData?.caseRecord?.intakeCompleted,
+  ) === false;
+}
+
+/**
  * Creates a new NewCaseRecordData object with all fields initialized.
  * 
  * Use this factory instead of inline object literals to ensure all fields

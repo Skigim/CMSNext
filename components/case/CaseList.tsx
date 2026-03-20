@@ -403,6 +403,7 @@ interface CaseListProps {
   cases: StoredCase[];
   onViewCase: (caseId: string) => void;
   onNewCase: () => void;
+  onQuickAdd?: () => void;
   onRefresh?: () => void;
   alertsSummary?: AlertsSummary;
   alertsByCaseId?: Map<string, AlertWithMatch[]>;
@@ -425,6 +426,7 @@ export function CaseList({
   cases,
   onViewCase,
   onNewCase,
+  onQuickAdd,
   onRefresh,
   alertsSummary: _alertsSummary,
   alertsByCaseId,
@@ -865,6 +867,12 @@ export function CaseList({
               </DropdownMenuContent>
             </DropdownMenu>
           )}
+          {onQuickAdd ? (
+            <Button variant="outline" onClick={onQuickAdd}>
+              <Plus className="h-4 w-4" />
+              Quick Add
+            </Button>
+          ) : null}
           <Button onClick={onNewCase}>
             <Plus className="h-4 w-4" />
             New case

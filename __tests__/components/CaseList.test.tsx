@@ -64,6 +64,53 @@ describe("CaseList status interactions", () => {
     await screen.findByText("Approved");
     expect(within(trigger).getByText("Approved")).toBeInTheDocument();
   });
+
+  it("shows Quick Add when a secondary quick-add handler is provided", async () => {
+    const user = userEvent.setup();
+    const onQuickAdd = vi.fn();
+
+    render(
+      <CaseList
+        cases={[createMockCaseDisplay({ id: "case-1" })]}
+        onViewCase={vi.fn()}
+        onNewCase={vi.fn()}
+        onQuickAdd={onQuickAdd}
+        alertsSummary={undefined}
+        alertsByCaseId={new Map()}
+        alerts={[]}
+      />,
+      { categoryConfig: testCategoryConfig }
+    );
+
+    await user.click(screen.getByRole("button", { name: /quick add/i }));
+
+    expect(onQuickAdd).toHaveBeenCalledTimes(1);
+  });
+
+  it("shows Needs Intake for incomplete cases in the table", () => {
+    const baseCase = createMockCaseDisplay();
+    const incompleteCase = createMockCaseDisplay({
+      id: "case-needs-intake",
+      caseRecord: {
+        ...baseCase.caseRecord,
+        intakeCompleted: false,
+      },
+    });
+
+    render(
+      <CaseList
+        cases={[incompleteCase]}
+        onViewCase={vi.fn()}
+        onNewCase={vi.fn()}
+        alertsSummary={undefined}
+        alertsByCaseId={new Map()}
+        alerts={[]}
+      />,
+      { categoryConfig: testCategoryConfig }
+    );
+
+    expect(screen.getByText("Needs Intake")).toBeInTheDocument();
+  });
 });
 
 describe("CaseList pagination", () => {

@@ -3,6 +3,7 @@ import { AppView } from "../../types/view";
 import type { AlertsIndex, AlertWithMatch } from "../../utils/alertsData";
 import type { CaseActivityLogState } from "../../types/activityLog";
 import { exportCasesToJSON, triggerImportDialog, triggerAlertsCsvImport } from "../../utils/dataExportImport";
+import { caseNeedsIntake } from "@/domain/cases";
 
 // Direct imports for high-turnover components - no lazy loading for snappiness
 import { Dashboard } from "../app/Dashboard";
@@ -22,6 +23,7 @@ export type View = AppView;
 export interface CaseViewHandlers {
   handleViewCase: (caseId: string) => void;
   handleNewCase: () => void;
+  handleQuickAdd: () => void;
   handleCancelNewCase: () => void;
   handleCompleteNewCase: (caseId: string) => void;
   handleCloseNewCaseModal: () => void;
@@ -88,6 +90,7 @@ export function ViewRenderer({
   // Navigation handlers
   handleViewCase,
   handleNewCase,
+  handleQuickAdd,
   handleCancelNewCase,
   handleCompleteNewCase,
   handleCloseNewCaseModal: _handleCloseNewCaseModal,
@@ -143,6 +146,7 @@ export function ViewRenderer({
           onCancelArchival={handleCancelArchival}
           isArchiving={isArchiving}
           onNewCase={handleNewCase}
+          onQuickAdd={handleQuickAdd}
           onResolveAlert={handleResolveAlert}
           onUpdateCaseStatus={handleUpdateCaseStatus}
         />
@@ -159,6 +163,15 @@ export function ViewRenderer({
 
     case 'details':
       return selectedCase ? (
+        caseNeedsIntake(selectedCase) ? (
+          <IntakeFormView
+            existingCase={selectedCase}
+            onSuccess={(savedCase) => {
+              handleCompleteNewCase(savedCase.id);
+            }}
+            onCancel={handleCancelNewCase}
+          />
+        ) : (
         <CaseDetails
           case={selectedCase}
           alerts={alerts.alertsByCaseId.get(selectedCase.id) ?? []}
@@ -173,6 +186,7 @@ export function ViewRenderer({
           onResolveAlert={handleResolveAlert}
           onUpdatePriority={handleUpdateCasesPriority}
         />
+        )
       ) : (
         <div className="text-center p-8">Case not found</div>
       );
@@ -180,6 +194,7 @@ export function ViewRenderer({
     case 'intake':
       return (
         <IntakeFormView
+          existingCase={caseNeedsIntake(selectedCase) ? selectedCase ?? undefined : undefined}
           onSuccess={(createdCase) => {
             handleCompleteNewCase(createdCase.id);
           }}

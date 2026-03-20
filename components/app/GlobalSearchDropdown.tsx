@@ -9,6 +9,8 @@ import type { StoredCase } from "@/types/case";
 import type { AlertWithMatch } from "@/utils/alertsData";
 import { slotClassMap } from "@/types/colorSlots";
 import { useCategoryConfig } from "@/contexts/CategoryConfigContext";
+import { caseNeedsIntake } from "@/domain/cases";
+import { NeedsIntakeBadge } from "@/components/case/NeedsIntakeBadge";
 
 export interface GlobalSearchDropdownProps {
   /** Available cases to search */
@@ -319,6 +321,9 @@ const CaseResultItem = memo(function CaseResultItem({
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2">
           <span className="font-medium truncate">{caseData.name}</span>
+          {caseNeedsIntake(caseData) ? (
+            <NeedsIntakeBadge className="text-[10px] px-1.5 py-0" />
+          ) : null}
           <Badge variant="outline" className={cn("text-xs shrink-0", getStatusClass(caseData.status))}>
             {caseData.status}
           </Badge>

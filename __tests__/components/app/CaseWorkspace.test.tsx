@@ -70,6 +70,7 @@ describe("CaseWorkspace", () => {
   const baseViewHandlers: CaseWorkspaceProps["viewHandlers"] = {
     handleViewCase: vi.fn(),
     handleNewCase: vi.fn(),
+    handleQuickAdd: vi.fn(),
     handleCancelNewCase: vi.fn(),
     handleCompleteNewCase: vi.fn(),
     handleCloseNewCaseModal: vi.fn(),

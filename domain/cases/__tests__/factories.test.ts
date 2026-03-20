@@ -8,6 +8,7 @@ import {
   createIntakeFormData,
   createPersonData,
   resolveCaseRecordIntakeCompleted,
+  caseNeedsIntake,
 } from "../factories";
 
 function createPrimaryLinkedPerson() {
@@ -198,6 +199,27 @@ describe("resolveCaseRecordIntakeCompleted", () => {
     // Assert
     expect(falseResult).toBe(false);
     expect(trueResult).toBe(true);
+  });
+});
+
+describe("caseNeedsIntake", () => {
+  it("returns true only for explicitly incomplete cases", () => {
+    const incompleteCase = createMockStoredCase({
+      caseRecord: {
+        ...createMockStoredCase().caseRecord,
+        intakeCompleted: false,
+      },
+    });
+    const completeCase = createMockStoredCase({
+      caseRecord: {
+        ...createMockStoredCase().caseRecord,
+        intakeCompleted: true,
+      },
+    });
+
+    expect(caseNeedsIntake(incompleteCase)).toBe(true);
+    expect(caseNeedsIntake(completeCase)).toBe(false);
+    expect(caseNeedsIntake(undefined)).toBe(false);
   });
 });
 

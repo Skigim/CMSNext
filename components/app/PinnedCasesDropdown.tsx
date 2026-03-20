@@ -13,6 +13,8 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { usePinnedCases } from "@/hooks/usePinnedCases";
 import type { StoredCase } from "@/types/case";
+import { caseNeedsIntake } from "@/domain/cases";
+import { NeedsIntakeBadge } from "@/components/case/NeedsIntakeBadge";
 
 export interface PinnedCasesDropdownProps {
   /** All cases from data manager (to resolve IDs to case data) */
@@ -110,7 +112,12 @@ export const PinnedCasesDropdown = memo(function PinnedCasesDropdown({
                     onSelect={() => onViewCase(caseData.id)}
                   >
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium truncate">{caseData.name}</p>
+                      <div className="flex items-center gap-2 min-w-0">
+                        <p className="text-sm font-medium truncate">{caseData.name}</p>
+                        {caseNeedsIntake(caseData) ? (
+                          <NeedsIntakeBadge className="text-[10px] px-1.5 py-0" />
+                        ) : null}
+                      </div>
                       <p className="text-xs text-muted-foreground truncate">
                         {caseData.mcn || "No MCN"}
                       </p>

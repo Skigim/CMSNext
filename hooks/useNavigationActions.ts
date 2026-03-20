@@ -5,6 +5,7 @@ import { AppView } from "../types/view";
 import { startMeasurement, endMeasurement } from "../utils/performanceTracker";
 import { createLogger } from "@/utils/logger";
 import { extractErrorMessage } from "@/utils/errorUtils";
+import { caseNeedsIntake } from "@/domain/cases";
 
 const logger = createLogger("useNavigationActions");
 
@@ -28,6 +29,19 @@ function resolveCreatedCaseSourceView(formState: FormState): AppView {
 function clearDetailsSourceView(formState: FormState): FormState {
   return {
     ...formState,
+    detailsSourceView: undefined,
+  };
+}
+
+function buildIntakeRedirectState(
+  formState: FormState,
+  currentView: AppView,
+  selectedCaseId: string | null,
+): FormState {
+  return {
+    ...formState,
+    previousView: currentView,
+    returnToCaseId: currentView === "details" ? selectedCaseId ?? undefined : undefined,
     detailsSourceView: undefined,
   };
 }
@@ -126,17 +140,27 @@ export function useNavigationActions({
   const viewCase = useCallback((caseId: string) => {
     startMeasurement("navigation:viewCase", { caseId, locked: isLocked });
     if (guardCaseInteraction()) return endMeasurement("navigation:viewCase", { caseId, blocked: true });
-    // Track where we came from for back navigation
-    setFormState({ ...formState, detailsSourceView: currentView });
-    setSelectedCaseId(caseId);
-    setCurrentView("details");
-    // Log case view activity (replaces localStorage-based recent cases)
     const caseData = cases.find((c) => c.id === caseId);
+    const nextView = caseNeedsIntake(caseData) ? "intake" : "details";
+
+    if (nextView === "intake") {
+      setFormState(buildIntakeRedirectState(formState, currentView, selectedCaseId));
+    } else {
+      setFormState({ ...formState, detailsSourceView: currentView });
+    }
+
+    setSelectedCaseId(caseId);
+    setCurrentView(nextView);
+    // Log case view activity (replaces localStorage-based recent cases)
     if (caseData && logCaseView) {
       logCaseView(caseData);
     }
-    endMeasurement("navigation:viewCase", { caseId, blocked: false });
-  }, [cases, currentView, formState, guardCaseInteraction, isLocked, logCaseView, setCurrentView, setFormState, setSelectedCaseId]);
+    endMeasurement("navigation:viewCase", {
+      caseId,
+      blocked: false,
+      result: nextView,
+    });
+  }, [cases, currentView, formState, guardCaseInteraction, isLocked, logCaseView, selectedCaseId, setCurrentView, setFormState, setSelectedCaseId]);
 
   const newCase = useCallback(() => {
     startMeasurement("navigation:newCase", { locked: isLocked });
@@ -151,6 +175,14 @@ export function useNavigationActions({
     setCurrentView("intake");
     endMeasurement("navigation:newCase", { result: "intake", source: currentView });
   }, [currentView, formState, guardCaseInteraction, isLocked, selectedCaseId, setCurrentView, setFormState, setSelectedCaseId]);
+
+  const quickAdd = useCallback(() => {
+    startMeasurement("navigation:quickAdd", { locked: isLocked });
+    if (guardCaseInteraction()) return endMeasurement("navigation:quickAdd", { blocked: true });
+
+    setShowNewCaseModal(true);
+    endMeasurement("navigation:quickAdd", { result: "modal", source: currentView });
+  }, [currentView, guardCaseInteraction, isLocked, setShowNewCaseModal]);
 
   const cancelNewCase = useCallback(() => {
     startMeasurement("navigation:cancelNewCase");
@@ -168,10 +200,12 @@ export function useNavigationActions({
     endMeasurement("navigation:cancelNewCase", { result: formState.previousView });
   }, [formState, setCurrentView, setFormState, setSelectedCaseId]);
 
-  const completeNewCase = useCallback((caseId: string) => {
+  const completeNewCase = useCallback((caseId: string, savedCase?: StoredCase) => {
     startMeasurement("navigation:completeNewCase", { caseId });
 
     const detailsSourceView = resolveCreatedCaseSourceView(formState);
+    const nextCase = savedCase ?? cases.find((caseData) => caseData.id === caseId);
+    const nextView = caseNeedsIntake(nextCase) ? "intake" : "details";
 
     setFormState({
       ...formState,
@@ -180,14 +214,14 @@ export function useNavigationActions({
       returnToCaseId: undefined,
     });
     setSelectedCaseId(caseId);
-    setCurrentView("details");
+    setCurrentView(nextView);
 
     endMeasurement("navigation:completeNewCase", {
       caseId,
-      result: "details",
+      result: nextView,
       source: detailsSourceView,
     });
-  }, [formState, setCurrentView, setFormState, setSelectedCaseId]);
+  }, [cases, formState, setCurrentView, setFormState, setSelectedCaseId]);
 
   const closeNewCaseModal = useCallback(() => {
     startMeasurement("navigation:closeNewCaseModal");
@@ -230,7 +264,7 @@ export function useNavigationActions({
       
       // If we created a new case, navigate to it
       if (savedCase && isCreating) {
-        completeNewCase(savedCase.id);
+        completeNewCase(savedCase.id, savedCase);
       }
       
       endMeasurement("navigation:saveCase", { result: isCreating ? "create" : "update" });
@@ -285,7 +319,7 @@ export function useNavigationActions({
     endMeasurement("navigation:navigate", { target: view });
   }, [backToDashboard, backToList, formState, guardCaseInteraction, newCase, selectedCaseId, setCurrentView, setForcedView, setFormState, setSelectedCaseId]);
 
-  return { navigate, viewCase, newCase, cancelNewCase, completeNewCase, closeNewCaseModal, saveCaseWithNavigation, deleteCaseWithNavigation, backToList, backToDashboard };
+  return { navigate, viewCase, newCase, quickAdd, cancelNewCase, completeNewCase, closeNewCaseModal, saveCaseWithNavigation, deleteCaseWithNavigation, backToList, backToDashboard };
 }
 
 export { RESTRICTED_VIEWS };
