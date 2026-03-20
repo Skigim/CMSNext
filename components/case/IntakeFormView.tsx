@@ -330,14 +330,25 @@ function ContactStep({ formData, onChange }: Readonly<ContactStepProps>) {
 
       <div className="space-y-3">
         <h3 className="text-sm font-medium">Physical Address</h3>
-        <div className="space-y-1.5">
-          <Label htmlFor="intake-street">Street</Label>
-          <Input
-            id="intake-street"
-            value={formData.address.street ?? ""}
-            onChange={(e) => handleAddressChange("street", e.target.value)}
-            placeholder="123 Main St"
-          />
+        <div className="grid grid-cols-[1fr_auto] gap-3">
+          <div className="space-y-1.5">
+            <Label htmlFor="intake-street">Street</Label>
+            <Input
+              id="intake-street"
+              value={formData.address.street ?? ""}
+              onChange={(e) => handleAddressChange("street", e.target.value)}
+              placeholder="123 Main St"
+            />
+          </div>
+          <div className="w-24 space-y-1.5">
+            <Label htmlFor="intake-apt">Apt</Label>
+            <Input
+              id="intake-apt"
+              value={formData.address.apt ?? ""}
+              onChange={(e) => handleAddressChange("apt", e.target.value)}
+              placeholder="Apt"
+            />
+          </div>
         </div>
         <div className="grid grid-cols-3 gap-3">
           <div className="col-span-1 space-y-1.5">
