@@ -3,10 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 import { Dashboard } from "@/components/app/Dashboard";
 import type { AlertsIndex, AlertWithMatch } from "@/utils/alertsData";
 import type { CaseActivityLogState, DailyActivityReport } from "@/types/activityLog";
-import {
-  createCaseDisplayFixture,
-  type CaseDisplayOverrides,
-} from "@/src/test/caseDisplayFactory";
+import { createCaseDisplayFixture } from "@/src/test/caseDisplayFactory";
 
 vi.mock("@/contexts/CategoryConfigContext", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/contexts/CategoryConfigContext")>();
@@ -129,6 +126,16 @@ const baseCase = createCaseDisplayFixture({
 });
 
 function createAlertsIndex(alerts: AlertWithMatch[] = []): AlertsIndex {
+  const alertsByCaseId = alerts.reduce<Map<string, AlertWithMatch[]>>((map, alert) => {
+    if (!alert.matchedCaseId) {
+      return map;
+    }
+
+    const existingAlerts = map.get(alert.matchedCaseId) ?? [];
+    map.set(alert.matchedCaseId, [...existingAlerts, alert]);
+    return map;
+  }, new Map<string, AlertWithMatch[]>());
+
   return {
     alerts,
     summary: {
@@ -138,11 +145,7 @@ function createAlertsIndex(alerts: AlertWithMatch[] = []): AlertsIndex {
       missingMcn: alerts.filter((alert) => alert.matchStatus === "missing-mcn").length,
       latestUpdated: null,
     },
-    alertsByCaseId: new Map(
-      alerts
-        .filter((alert) => alert.matchedCaseId)
-        .map((alert) => [alert.matchedCaseId, alerts.filter((item) => item.matchedCaseId === alert.matchedCaseId)]),
-    ),
+    alertsByCaseId,
     unmatched: alerts.filter((alert) => alert.matchStatus === "unmatched"),
     missingMcn: alerts.filter((alert) => alert.matchStatus === "missing-mcn"),
   };
