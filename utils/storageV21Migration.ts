@@ -15,6 +15,7 @@ import type {
 import type { CaseActivityEntry } from "@/types/activityLog";
 import type { CategoryConfig } from "@/types/categoryConfig";
 import type { Template } from "@/types/template";
+import { resolveCaseRecordIntakeCompleted } from "@/domain/cases";
 import { splitFamilyMembers } from "@/utils/personNormalization";
 
 export interface NormalizedFileDataV20 {
@@ -372,6 +373,10 @@ export function hydrateStoredCase(caseItem: PersistedCase, people: Person[]): St
 
   return {
     ...caseItem,
+    caseRecord: {
+      ...caseItem.caseRecord,
+      intakeCompleted: resolveCaseRecordIntakeCompleted(caseItem.caseRecord.intakeCompleted),
+    },
     people: caseItem.people.map((ref) => ({ ...ref })),
     person: primaryPerson,
     linkedPeople,
@@ -383,6 +388,10 @@ export function dehydrateStoredCase(caseItem: StoredCase): PersistedCase {
 
   return {
     ...rest,
+    caseRecord: {
+      ...rest.caseRecord,
+      intakeCompleted: resolveCaseRecordIntakeCompleted(rest.caseRecord.intakeCompleted),
+    },
     people: buildCasePeopleRefs(caseItem),
   };
 }

@@ -3,7 +3,12 @@ import { describe, expect, it } from "vitest";
 import { createMockPerson, createMockStoredCase, omitHydratedPerson } from "@/src/test/testUtils";
 import type { Person, PersonRelationship, StoredCase } from "@/types/case";
 
-import { createIntakeFormData, createPersonData } from "../factories";
+import {
+  createCaseRecordData,
+  createIntakeFormData,
+  createPersonData,
+  resolveCaseRecordIntakeCompleted,
+} from "../factories";
 
 function createPrimaryLinkedPerson() {
   return createMockPerson({
@@ -141,6 +146,58 @@ describe("createPersonData", () => {
       },
     });
     expect(result).not.toHaveProperty("status");
+  });
+});
+
+describe("createCaseRecordData", () => {
+  it("defaults intakeCompleted to true for new and historical cases", () => {
+    // Arrange
+    const historicalCase = createMockStoredCase();
+    delete (historicalCase.caseRecord as { intakeCompleted?: boolean }).intakeCompleted;
+
+    // Act
+    const blankRecord = createCaseRecordData();
+    const historicalRecord = createCaseRecordData(historicalCase);
+
+    // Assert
+    expect(blankRecord.intakeCompleted).toBe(true);
+    expect(historicalRecord.intakeCompleted).toBe(true);
+  });
+
+  it("preserves an existing incomplete quick-add case flag", () => {
+    // Arrange
+    const existingCase = createMockStoredCase({
+      caseRecord: {
+        ...createMockStoredCase().caseRecord,
+        intakeCompleted: false,
+      },
+    });
+
+    // Act
+    const result = createCaseRecordData(existingCase);
+
+    // Assert
+    expect(result.intakeCompleted).toBe(false);
+  });
+});
+
+describe("resolveCaseRecordIntakeCompleted", () => {
+  it("defaults to true when all candidate values are missing", () => {
+    // Arrange / Act
+    const result = resolveCaseRecordIntakeCompleted(undefined, null);
+
+    // Assert
+    expect(result).toBe(true);
+  });
+
+  it("preserves the first defined value including false", () => {
+    // Arrange / Act
+    const falseResult = resolveCaseRecordIntakeCompleted(false, true);
+    const trueResult = resolveCaseRecordIntakeCompleted(undefined, true);
+
+    // Assert
+    expect(falseResult).toBe(false);
+    expect(trueResult).toBe(true);
   });
 });
 

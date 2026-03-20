@@ -187,6 +187,55 @@ describe("storageV21Migration", () => {
     expect(hydrated.cases[0].linkedPeople?.[0].person.id).toBe("person-2");
   });
 
+  it("defaults missing intakeCompleted to true when hydrating persisted cases", () => {
+    // ARRANGE
+    const runtimeCase = createMockStoredCase();
+    delete (runtimeCase.caseRecord as { intakeCompleted?: boolean }).intakeCompleted;
+    const persistedData = dehydrateNormalizedData({
+      version: "2.1",
+      people: [createMockPerson()],
+      cases: [runtimeCase],
+      financials: [],
+      notes: [],
+      alerts: [],
+      exported_at: "2026-03-01T00:00:00.000Z",
+      total_cases: 1,
+      categoryConfig: mergeCategoryConfig(),
+      activityLog: [],
+    });
+    delete (persistedData.cases[0].caseRecord as { intakeCompleted?: boolean }).intakeCompleted;
+
+    // ACT
+    const hydrated = hydrateNormalizedData(persistedData);
+
+    // ASSERT
+    expect(hydrated.cases[0].caseRecord.intakeCompleted).toBe(true);
+  });
+
+  it("writes intakeCompleted as true when dehydrating historical runtime cases without the field", () => {
+    // ARRANGE
+    const runtimeCase = createMockStoredCase();
+    delete (runtimeCase.caseRecord as { intakeCompleted?: boolean }).intakeCompleted;
+    const runtimeData = {
+      version: "2.1" as const,
+      people: [createMockPerson()],
+      cases: [runtimeCase],
+      financials: [],
+      notes: [],
+      alerts: [],
+      exported_at: "2026-03-01T00:00:00.000Z",
+      total_cases: 1,
+      categoryConfig: mergeCategoryConfig(),
+      activityLog: [],
+    };
+
+    // ACT
+    const dehydrated = dehydrateNormalizedData(runtimeData);
+
+    // ASSERT
+    expect(dehydrated.cases[0].caseRecord.intakeCompleted).toBe(true);
+  });
+
   it("dehydrates runtime familyMembers into familyMemberIds and legacyFamilyMemberNames", () => {
     const runtimeData = hydrateNormalizedData(
       migrateV20ToV21({

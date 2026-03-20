@@ -2,7 +2,7 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { Settings } from "@/components/app/Settings";
-import type { CaseDisplay } from "@/types/case";
+import { createMockCaseDisplay, type CaseDisplayOverrides } from "@/src/test/testUtils";
 import { mergeCategoryConfig } from "@/types/categoryConfig";
 
 const mocks = vi.hoisted(() => ({
@@ -103,84 +103,8 @@ vi.mock("@/components/error/ErrorFeedbackForm", () => ({
   FeedbackPanel: () => <div data-testid="feedback-panel" />,
 }));
 
-const createCase = (overrides: Partial<CaseDisplay> = {}): CaseDisplay => {
-  const base: CaseDisplay = {
-    id: "case-1",
-    name: "Test Case",
-    mcn: "MCN-001",
-    status: "Pending",
-    priority: false,
-    createdAt: "2024-01-01T00:00:00.000Z",
-    updatedAt: "2024-01-01T00:00:00.000Z",
-    person: {
-      id: "person-1",
-      firstName: "Test",
-      lastName: "User",
-      name: "Test User",
-      email: "test@example.com",
-      phone: "555-555-5555",
-      dateOfBirth: "1990-01-01",
-      ssn: "123-45-6789",
-      organizationId: null,
-      livingArrangement: "Apartment",
-      address: {
-        street: "123 Main St",
-        city: "Anytown",
-        state: "CA",
-        zip: "90210",
-      },
-      mailingAddress: {
-        street: "123 Main St",
-        city: "Anytown",
-        state: "CA",
-        zip: "90210",
-        sameAsPhysical: true,
-      },
-      authorizedRepIds: [],
-      familyMembers: [],
-      createdAt: "2024-01-01T00:00:00.000Z",
-      dateAdded: "2024-01-01T00:00:00.000Z",
-    },
-    caseRecord: {
-      id: "case-record-1",
-      mcn: "MCN-001",
-      applicationDate: "2024-01-10",
-      caseType: "LTC",
-      personId: "person-1",
-      spouseId: "",
-      status: "Pending",
-      description: "",
-      priority: false,
-      livingArrangement: "Apartment",
-      withWaiver: false,
-      admissionDate: "",
-      organizationId: "",
-      authorizedReps: [],
-      retroRequested: "",
-      financials: {
-        resources: [],
-        income: [],
-        expenses: [],
-      },
-      notes: [],
-      createdDate: "2024-01-01T00:00:00.000Z",
-      updatedDate: "2024-01-01T00:00:00.000Z",
-    },
-  };
-
-  return {
-    ...base,
-    ...overrides,
-    person: {
-      ...base.person,
-      ...overrides.person,
-    },
-    caseRecord: {
-      ...base.caseRecord,
-      ...overrides.caseRecord,
-    },
-  };
-};
+const createCase = (overrides: CaseDisplayOverrides = {}) =>
+  createMockCaseDisplay(overrides);
 
 describe("Settings", () => {
   beforeEach(() => {
@@ -198,12 +122,15 @@ describe("Settings", () => {
   });
 
   it("exports current data as JSON and notifies the user", async () => {
-  const user = userEvent.setup();
-  const firstCase = createCase();
-  const secondCase = createCase();
-  secondCase.id = "case-2";
-  secondCase.caseRecord.id = "case-record-2";
-  const testCases = [firstCase, secondCase];
+    const user = userEvent.setup();
+    const firstCase = createCase();
+    const secondCase = createCase({
+      id: "case-2",
+      caseRecord: {
+        id: "case-record-2",
+      },
+    });
+    const testCases = [firstCase, secondCase];
 
     const originalCreateElement = document.createElement.bind(document);
     const createElementSpy = vi.spyOn(document, "createElement");

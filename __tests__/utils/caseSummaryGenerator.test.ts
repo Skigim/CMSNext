@@ -95,6 +95,7 @@ function createMockCase(overrides: Partial<StoredCase> = {}): StoredCase {
       updatedDate: '2024-06-15T00:00:00.000Z',
       citizenshipVerified: false,
       agedDisabledVerified: false,
+      intakeCompleted: true,
     },
     ...overrides,
   };

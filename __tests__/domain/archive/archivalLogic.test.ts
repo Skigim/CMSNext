@@ -69,6 +69,7 @@ function createTestCase(overrides: Partial<StoredCase> & { applicationDate?: str
       retroRequested: "",
       createdDate: new Date().toISOString(),
       updatedDate: new Date().toISOString(),
+      intakeCompleted: true,
     },
     ...restOverrides,
   };

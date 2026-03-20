@@ -413,6 +413,45 @@ describe("CaseService hydration seam", () => {
       });
     });
 
+    it("defaults intakeCompleted to true when create-case input omits it", async () => {
+      // ARRANGE
+      const newCaseRecordData = createMockNewCaseRecordData({
+        personId: "",
+      });
+      delete (newCaseRecordData as { intakeCompleted?: boolean }).intakeCompleted;
+      vi.mocked(mockFileService.readFile).mockResolvedValue(createMockPersistedNormalizedFileData());
+      vi.mocked(mockFileService.writeFile).mockResolvedValue(true);
+
+      // ACT
+      await caseService.createCompleteCase({
+        person: createMockNewPersonData(),
+        caseRecord: newCaseRecordData,
+      });
+
+      // ASSERT
+      const writtenData = vi.mocked(mockFileService.writeFile).mock.calls[0][0];
+      expect(writtenData.cases[0].caseRecord.intakeCompleted).toBe(true);
+    });
+
+    it("preserves an explicitly incomplete quick-add case flag", async () => {
+      // ARRANGE
+      vi.mocked(mockFileService.readFile).mockResolvedValue(createMockPersistedNormalizedFileData());
+      vi.mocked(mockFileService.writeFile).mockResolvedValue(true);
+
+      // ACT
+      await caseService.createCompleteCase({
+        person: createMockNewPersonData(),
+        caseRecord: createMockNewCaseRecordData({
+          intakeCompleted: false,
+          personId: "",
+        }),
+      });
+
+      // ASSERT
+      const writtenData = vi.mocked(mockFileService.writeFile).mock.calls[0][0];
+      expect(writtenData.cases[0].caseRecord.intakeCompleted).toBe(false);
+    });
+
     it("fails when create-case input references a missing person", async () => {
       // ARRANGE
       vi.mocked(mockFileService.readFile).mockResolvedValue(createMockPersistedNormalizedFileData());

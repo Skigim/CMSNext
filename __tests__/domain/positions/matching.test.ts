@@ -64,6 +64,7 @@ function createTestCase(
       retroRequested: "",
       createdDate: new Date().toISOString(),
       updatedDate: new Date().toISOString(),
+      intakeCompleted: true,
     },
     ...overrides,
   };

@@ -28,6 +28,7 @@ import {
 } from '../../../domain/dashboard/priorityQueue';
 import type { StoredCase, CaseStatus } from '../../../types/case';
 import type { AlertWithMatch } from '../../../utils/alertsData';
+import { createMockStoredCase } from '@/src/test/testUtils';
 
 const SCORE_INTAKE = 5000;
 const SCORE_AVS_DAY_5 = 500;
@@ -48,7 +49,8 @@ function classifyAlert(alert: AlertWithMatch) {
 // but aren't in the strict enum. The domain logic handles this gracefully.
 // Default status is 'Pending' (not 'Active') because Active is excluded from priority queue.
 function createMockCase(overrides: Partial<Omit<StoredCase, 'status'> & { status?: string }> = {}): StoredCase {
-  return {
+  const baseStoredCase = createMockStoredCase();
+  const baseCase = createMockStoredCase({
     id: 'case-1',
     name: 'Test Case',
     mcn: 'MCN123',
@@ -57,6 +59,7 @@ function createMockCase(overrides: Partial<Omit<StoredCase, 'status'> & { status
     createdAt: '2024-01-01T00:00:00.000Z',
     updatedAt: '2024-01-01T00:00:00.000Z',
     person: {
+      ...baseStoredCase.person,
       id: 'person-1',
       firstName: 'John',
       lastName: 'Doe',
@@ -71,11 +74,10 @@ function createMockCase(overrides: Partial<Omit<StoredCase, 'status'> & { status
       mailingAddress: { street: '', city: '', state: '', zip: '', sameAsPhysical: true },
       authorizedRepIds: [],
       familyMembers: [],
-      status: '',
       createdAt: '',
       dateAdded: '',
     },
-    caseRecord: {
+    caseRecord: createMockCaseRecord(baseStoredCase, {
       id: 'case-rec-1',
       mcn: 'MCN123',
       applicationDate: '',
@@ -93,9 +95,60 @@ function createMockCase(overrides: Partial<Omit<StoredCase, 'status'> & { status
       retroRequested: '',
       createdDate: '',
       updatedDate: '',
-    },
+      intakeCompleted: true,
+    }),
+  });
+
+  return {
+    ...baseCase,
     ...overrides,
+    person: {
+      ...baseCase.person,
+      ...overrides.person,
+    },
+    caseRecord: {
+      ...baseCase.caseRecord,
+      ...overrides.caseRecord,
+    },
   } as StoredCase;
+}
+
+function createMockCaseRecord(
+  baseStoredCase: StoredCase,
+  overrides: Partial<StoredCase['caseRecord']> = {},
+): StoredCase['caseRecord'] {
+  return {
+    ...baseStoredCase.caseRecord,
+    ...overrides,
+  };
+}
+
+function createCaseWithApplicationDate(
+  applicationDate: string,
+  status: CaseStatus,
+): StoredCase["caseRecord"] {
+  const baseStoredCase = createMockStoredCase();
+  return {
+    ...createMockCaseRecord(baseStoredCase),
+    id: 'record-1',
+    mcn: 'MCN123',
+    applicationDate,
+    caseType: 'Type A',
+    personId: 'person-1',
+    spouseId: '',
+    status,
+    description: '',
+    priority: false,
+    livingArrangement: '',
+    withWaiver: false,
+    admissionDate: '',
+    organizationId: '',
+    authorizedReps: [],
+    retroRequested: '',
+    createdDate: applicationDate,
+    updatedDate: applicationDate,
+    intakeCompleted: true,
+  };
 }
 
 function createMockAlert(overrides: Partial<AlertWithMatch> = {}): AlertWithMatch {
@@ -1181,25 +1234,7 @@ describe('calculatePriorityScore with tiered age multipliers', () => {
     // 35 days old application = 4x multiplier
     const caseData = createMockCase({
       updatedAt: '2020-01-01T00:00:00.000Z', // No recent mod points
-      caseRecord: {
-        id: 'record-1',
-        mcn: 'MCN123',
-        applicationDate: '2025-12-11', // 35 days before Jan 15
-        caseType: 'Type A',
-        personId: 'person-1',
-        spouseId: '',
-        status: 'Pending' as import('@/types/case').CaseStatus,
-        description: '',
-        priority: false,
-        livingArrangement: '',
-        withWaiver: false,
-        admissionDate: '',
-        organizationId: '',
-        authorizedReps: [],
-        retroRequested: '',
-        createdDate: '2025-12-11',
-        updatedDate: '2025-12-11',
-      },
+      caseRecord: createCaseWithApplicationDate('2025-12-11', 'Pending' as CaseStatus),
     });
 
     const score = calculatePriorityScore(caseData, []);
@@ -1213,25 +1248,7 @@ describe('calculatePriorityScore with tiered age multipliers', () => {
     // 7 days old alert = 2x multiplier
     const caseData = createMockCase({
       updatedAt: '2020-01-01T00:00:00.000Z',
-      caseRecord: {
-        id: 'record-1',
-        mcn: 'MCN123',
-        applicationDate: '2025-12-31', // 15 days before Jan 15
-        caseType: 'Type A',
-        personId: 'person-1',
-        spouseId: '',
-        status: 'Pending' as import('@/types/case').CaseStatus,
-        description: '',
-        priority: false,
-        livingArrangement: '',
-        withWaiver: false,
-        admissionDate: '',
-        organizationId: '',
-        authorizedReps: [],
-        retroRequested: '',
-        createdDate: '2025-12-31',
-        updatedDate: '2025-12-31',
-      },
+      caseRecord: createCaseWithApplicationDate('2025-12-31', 'Pending' as CaseStatus),
     });
 
     const alerts = [
@@ -1256,25 +1273,7 @@ describe('calculatePriorityScore with tiered age multipliers', () => {
     // 65 days old alert = 8x multiplier
     const caseData = createMockCase({
       updatedAt: '2020-01-01T00:00:00.000Z',
-      caseRecord: {
-        id: 'record-1',
-        mcn: 'MCN123',
-        applicationDate: '2025-11-11', // 65 days before Jan 15
-        caseType: 'Type A',
-        personId: 'person-1',
-        spouseId: '',
-        status: 'Pending' as import('@/types/case').CaseStatus,
-        description: '',
-        priority: false,
-        livingArrangement: '',
-        withWaiver: false,
-        admissionDate: '',
-        organizationId: '',
-        authorizedReps: [],
-        retroRequested: '',
-        createdDate: '2025-11-11',
-        updatedDate: '2025-11-11',
-      },
+      caseRecord: createCaseWithApplicationDate('2025-11-11', 'Pending' as CaseStatus),
     });
 
     const alerts = [
@@ -1299,25 +1298,7 @@ describe('calculatePriorityScore with tiered age multipliers', () => {
     const caseData = createMockCase({
       status: 'Approved',
       updatedAt: '2020-01-01T00:00:00.000Z',
-      caseRecord: {
-        id: 'record-1',
-        mcn: 'MCN123',
-        applicationDate: '2025-12-11', // 35 days before Jan 15
-        caseType: 'Type A',
-        personId: 'person-1',
-        spouseId: '',
-        status: 'Approved' as import('@/types/case').CaseStatus,
-        description: '',
-        priority: false,
-        livingArrangement: '',
-        withWaiver: false,
-        admissionDate: '',
-        organizationId: '',
-        authorizedReps: [],
-        retroRequested: '',
-        createdDate: '2025-12-11',
-        updatedDate: '2025-12-11',
-      },
+      caseRecord: createCaseWithApplicationDate('2025-12-11', 'Approved' as CaseStatus),
     });
 
     const config = {
@@ -1337,25 +1318,7 @@ describe('calculatePriorityScore with tiered age multipliers', () => {
     const caseData = createMockCase({
       status: 'Closed',
       updatedAt: '2020-01-01T00:00:00.000Z',
-      caseRecord: {
-        id: 'record-1',
-        mcn: 'MCN123',
-        applicationDate: '2025-12-11', // 35 days before Jan 15
-        caseType: 'Type A',
-        personId: 'person-1',
-        spouseId: '',
-        status: 'Closed' as import('@/types/case').CaseStatus,
-        description: '',
-        priority: false,
-        livingArrangement: '',
-        withWaiver: false,
-        admissionDate: '',
-        organizationId: '',
-        authorizedReps: [],
-        retroRequested: '',
-        createdDate: '2025-12-11',
-        updatedDate: '2025-12-11',
-      },
+      caseRecord: createCaseWithApplicationDate('2025-12-11', 'Closed' as CaseStatus),
     });
 
     const alerts = [
@@ -1392,25 +1355,7 @@ describe('calculatePriorityScore with tiered age multipliers', () => {
     const caseData = createMockCase({
       status: 'In Review' as import('@/types/case').CaseStatus,
       updatedAt: '2020-01-01T00:00:00.000Z',
-      caseRecord: {
-        id: 'record-1',
-        mcn: 'MCN123',
-        applicationDate: '2025-12-11', // 35 days before Jan 15
-        caseType: 'Type A',
-        personId: 'person-1',
-        spouseId: '',
-        status: 'In Review' as import('@/types/case').CaseStatus,
-        description: '',
-        priority: false,
-        livingArrangement: '',
-        withWaiver: false,
-        admissionDate: '',
-        organizationId: '',
-        authorizedReps: [],
-        retroRequested: '',
-        createdDate: '2025-12-11',
-        updatedDate: '2025-12-11',
-      },
+      caseRecord: createCaseWithApplicationDate('2025-12-11', 'In Review' as CaseStatus),
     });
 
     const score = calculatePriorityScore(caseData, [], config);
@@ -1429,25 +1374,7 @@ describe('calculatePriorityScore with tiered age multipliers', () => {
     const caseData = createMockCase({
       status: 'Processing' as import('@/types/case').CaseStatus,
       updatedAt: '2020-01-01T00:00:00.000Z',
-      caseRecord: {
-        id: 'record-1',
-        mcn: 'MCN123',
-        applicationDate: '2025-12-11', // 35 days before Jan 15
-        caseType: 'Type A',
-        personId: 'person-1',
-        spouseId: '',
-        status: 'Processing' as import('@/types/case').CaseStatus,
-        description: '',
-        priority: false,
-        livingArrangement: '',
-        withWaiver: false,
-        admissionDate: '',
-        organizationId: '',
-        authorizedReps: [],
-        retroRequested: '',
-        createdDate: '2025-12-11',
-        updatedDate: '2025-12-11',
-      },
+      caseRecord: createCaseWithApplicationDate('2025-12-11', 'Processing' as CaseStatus),
     });
 
     const score = calculatePriorityScore(caseData, [], config);

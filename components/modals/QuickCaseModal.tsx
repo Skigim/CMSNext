@@ -123,6 +123,7 @@ export function QuickCaseModal({ isOpen, onClose, onSave }: QuickCaseModalProps)
           applicationDate: applicationDate,
         }),
         mcn: mcn.trim(),
+        intakeCompleted: false,
       };
 
       await onSave(

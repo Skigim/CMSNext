@@ -421,6 +421,7 @@ export function useIntakeWorkflow({
         pregnancy: validatedFormData.pregnancy ?? false,
         avsConsentDate: normalizedAvsConsentDate ?? caseRecordBase.avsConsentDate ?? "",
         maritalStatus: validatedFormData.maritalStatus ?? "",
+        intakeCompleted: true,
       };
 
       const savedCase = isEditing && activeExistingCase

@@ -71,7 +71,11 @@ describe("QuickCaseModal", () => {
       expect(mockOnSave).toHaveBeenCalledTimes(1);
       // Verify skipNavigation is false when "add another" is not checked
       expect(mockOnSave).toHaveBeenCalledWith(
-        expect.any(Object),
+        expect.objectContaining({
+          caseRecord: expect.objectContaining({
+            intakeCompleted: false,
+          }),
+        }),
         { skipNavigation: false }
       );
     });

@@ -230,6 +230,7 @@ function migrateCase(legacyCase: LegacyCaseDisplay): StoredCase {
       retroRequested: caseRecord.retroRequested || "",
       createdDate: caseRecord.createdDate || new Date().toISOString(),
       updatedDate: caseRecord.updatedDate || new Date().toISOString(),
+      intakeCompleted: true,
     },
   };
 

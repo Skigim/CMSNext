@@ -793,6 +793,7 @@ export class DataManager {
             livingArrangement: "",
             admissionDate: "",
             organizationId: "",
+            intakeCompleted: false,
           },
         });
         createdCases.push(skeletonCase);

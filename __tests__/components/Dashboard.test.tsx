@@ -1,9 +1,14 @@
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { Dashboard } from "@/components/app/Dashboard";
-import type { AlertsIndex, AlertWithMatch } from "@/utils/alertsData";
-import type { CaseDisplay } from "@/types/case";
+import {
+  createAlertsIndexFromAlerts,
+  createEmptyAlertsIndex,
+  type AlertsIndex,
+  type AlertWithMatch,
+} from "@/utils/alertsData";
 import type { CaseActivityLogState, DailyActivityReport } from "@/types/activityLog";
+import { createMockCaseDisplay } from "@/src/test/testUtils";
 
 vi.mock("@/contexts/CategoryConfigContext", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/contexts/CategoryConfigContext")>();
@@ -14,6 +19,17 @@ vi.mock("@/contexts/CategoryConfigContext", async (importOriginal) => {
         caseStatuses: ["Pending", "Approved", "Denied"],
       },
     }),
+  };
+});
+
+vi.mock("@/contexts/FileStorageContext", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/contexts/FileStorageContext")>();
+  return {
+    ...actual,
+    useFileStorage: () => ({
+      registerDataLoadHandler: () => () => undefined,
+    }),
+    useFileStorageDataChange: () => 0,
   };
 });
 
@@ -49,7 +65,7 @@ function createAlert(overrides: Partial<AlertWithMatch> = {}): AlertWithMatch {
   } satisfies AlertWithMatch;
 }
 
-const baseCase: CaseDisplay = {
+const baseCase = createMockCaseDisplay({
   id: "case-1",
   name: "Jamie Rivera",
   mcn: "MCN123",
@@ -110,8 +126,27 @@ const baseCase: CaseDisplay = {
     notes: [],
     createdDate: "2025-08-01T00:00:00.000Z",
     updatedDate: "2025-09-21T00:00:00.000Z",
+    intakeCompleted: true,
   },
-};
+});
+
+function renderDashboard({
+  cases = [],
+  alerts = createEmptyAlertsIndex(),
+}: {
+  cases?: ReturnType<typeof createMockCaseDisplay>[];
+  alerts?: AlertsIndex;
+} = {}) {
+  return render(
+    <Dashboard
+      cases={cases}
+      alerts={alerts}
+      activityLogState={mockActivityLogState}
+      onNewCase={vi.fn()}
+      onViewCase={vi.fn()}
+    />,
+  );
+}
 
 const emptyReport: DailyActivityReport = {
   date: "2025-01-01",
@@ -146,29 +181,15 @@ describe("Dashboard", () => {
       matchedCaseName: baseCase.name,
     });
 
-    const alertsIndex: AlertsIndex = {
-      alerts: [matchedAlert],
-      summary: {
-        total: 1,
-        matched: 1,
-        unmatched: 0,
-        missingMcn: 0,
-        latestUpdated: null,
-      },
-      alertsByCaseId: new Map([[baseCase.id, [matchedAlert]]]),
-      unmatched: [],
-      missingMcn: [],
-    };
-
-    render(
-      <Dashboard
-        cases={[baseCase]}
-        alerts={alertsIndex}
-        activityLogState={mockActivityLogState}
-        onNewCase={vi.fn()}
-        onViewCase={vi.fn()}
-      />,
-    );
+    renderDashboard({
+      cases: [baseCase],
+      alerts: createAlertsIndexFromAlerts([
+        createAlert({
+          ...matchedAlert,
+          matchedCaseId: baseCase.id,
+        }),
+      ]),
+    });
 
     // Check that the Recent Activity header is rendered
     expect(screen.getByRole("heading", { name: /recent activity/i })).toBeInTheDocument();
@@ -182,29 +203,7 @@ describe("Dashboard", () => {
   });
 
   it("displays Recent Activity section in overview tab", async () => {
-    const alertsIndex: AlertsIndex = {
-      alerts: [],
-      summary: {
-        total: 0,
-        matched: 0,
-        unmatched: 0,
-        missingMcn: 0,
-        latestUpdated: null,
-      },
-      alertsByCaseId: new Map(),
-      unmatched: [],
-      missingMcn: [],
-    };
-
-    render(
-      <Dashboard
-        cases={[]}
-        alerts={alertsIndex}
-        activityLogState={mockActivityLogState}
-        onNewCase={vi.fn()}
-        onViewCase={vi.fn()}
-      />,
-    );
+    renderDashboard();
 
     // Check that Recent Activity section is displayed
     expect(screen.getByRole("heading", { name: /recent activity/i })).toBeInTheDocument();
