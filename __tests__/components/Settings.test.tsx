@@ -3,6 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { Settings } from "@/components/app/Settings";
 import type { CaseDisplay } from "@/types/case";
+import { createMockCaseDisplay } from "@/src/test/testUtils";
 import { mergeCategoryConfig } from "@/types/categoryConfig";
 
 const mocks = vi.hoisted(() => ({
@@ -103,8 +104,14 @@ vi.mock("@/components/error/ErrorFeedbackForm", () => ({
   FeedbackPanel: () => <div data-testid="feedback-panel" />,
 }));
 
-const createCase = (overrides: Partial<CaseDisplay> = {}): CaseDisplay => {
-  const base: CaseDisplay = {
+type CaseDisplayOverrides = Partial<Omit<CaseDisplay, "person" | "caseRecord">> & {
+  person?: Partial<CaseDisplay["person"]>;
+  caseRecord?: Partial<CaseDisplay["caseRecord"]>;
+};
+
+const createCase = (overrides: CaseDisplayOverrides = {}): CaseDisplay => {
+  const baseMockCase = createMockCaseDisplay();
+  const base = createMockCaseDisplay({
     id: "case-1",
     name: "Test Case",
     mcn: "MCN-001",
@@ -113,6 +120,7 @@ const createCase = (overrides: Partial<CaseDisplay> = {}): CaseDisplay => {
     createdAt: "2024-01-01T00:00:00.000Z",
     updatedAt: "2024-01-01T00:00:00.000Z",
     person: {
+      ...baseMockCase.person,
       id: "person-1",
       firstName: "Test",
       lastName: "User",
@@ -142,6 +150,7 @@ const createCase = (overrides: Partial<CaseDisplay> = {}): CaseDisplay => {
       dateAdded: "2024-01-01T00:00:00.000Z",
     },
     caseRecord: {
+      ...baseMockCase.caseRecord,
       id: "case-record-1",
       mcn: "MCN-001",
       applicationDate: "2024-01-10",
@@ -167,7 +176,7 @@ const createCase = (overrides: Partial<CaseDisplay> = {}): CaseDisplay => {
       updatedDate: "2024-01-01T00:00:00.000Z",
       intakeCompleted: true,
     },
-  };
+  });
 
   return {
     ...base,
@@ -199,12 +208,15 @@ describe("Settings", () => {
   });
 
   it("exports current data as JSON and notifies the user", async () => {
-  const user = userEvent.setup();
-  const firstCase = createCase();
-  const secondCase = createCase();
-  secondCase.id = "case-2";
-  secondCase.caseRecord.id = "case-record-2";
-  const testCases = [firstCase, secondCase];
+    const user = userEvent.setup();
+    const firstCase = createCase();
+    const secondCase = createCase({
+      id: "case-2",
+      caseRecord: {
+        id: "case-record-2",
+      },
+    });
+    const testCases = [firstCase, secondCase];
 
     const originalCreateElement = document.createElement.bind(document);
     const createElementSpy = vi.spyOn(document, "createElement");

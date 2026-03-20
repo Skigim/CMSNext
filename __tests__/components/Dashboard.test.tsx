@@ -2,8 +2,8 @@ import { render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { Dashboard } from "@/components/app/Dashboard";
 import type { AlertsIndex, AlertWithMatch } from "@/utils/alertsData";
-import type { CaseDisplay } from "@/types/case";
 import type { CaseActivityLogState, DailyActivityReport } from "@/types/activityLog";
+import { createMockCaseDisplay } from "@/src/test/testUtils";
 
 vi.mock("@/contexts/CategoryConfigContext", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/contexts/CategoryConfigContext")>();
@@ -14,6 +14,17 @@ vi.mock("@/contexts/CategoryConfigContext", async (importOriginal) => {
         caseStatuses: ["Pending", "Approved", "Denied"],
       },
     }),
+  };
+});
+
+vi.mock("@/contexts/FileStorageContext", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/contexts/FileStorageContext")>();
+  return {
+    ...actual,
+    useFileStorage: () => ({
+      registerDataLoadHandler: () => () => undefined,
+    }),
+    useFileStorageDataChange: () => 0,
   };
 });
 
@@ -49,7 +60,9 @@ function createAlert(overrides: Partial<AlertWithMatch> = {}): AlertWithMatch {
   } satisfies AlertWithMatch;
 }
 
-const baseCase: CaseDisplay = {
+const baseMockCase = createMockCaseDisplay();
+
+const baseCase = createMockCaseDisplay({
   id: "case-1",
   name: "Jamie Rivera",
   mcn: "MCN123",
@@ -58,6 +71,7 @@ const baseCase: CaseDisplay = {
   createdAt: "2025-08-01T00:00:00.000Z",
   updatedAt: "2025-09-25T00:00:00.000Z",
   person: {
+    ...baseMockCase.person,
     id: "person-1",
     firstName: "Jamie",
     lastName: "Rivera",
@@ -87,6 +101,7 @@ const baseCase: CaseDisplay = {
     dateAdded: "2025-09-01T00:00:00.000Z",
   },
   caseRecord: {
+    ...baseMockCase.caseRecord,
     id: "case-record-1",
     mcn: "MCN123",
     applicationDate: "2025-08-15T00:00:00.000Z",
@@ -112,7 +127,7 @@ const baseCase: CaseDisplay = {
     updatedDate: "2025-09-21T00:00:00.000Z",
     intakeCompleted: true,
   },
-};
+});
 
 const emptyReport: DailyActivityReport = {
   date: "2025-01-01",
