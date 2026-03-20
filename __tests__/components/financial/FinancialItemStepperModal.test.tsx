@@ -136,6 +136,25 @@ describe("FinancialItemStepperModal", () => {
     );
   });
 
+  it("uses Ctrl+Enter to add an entry when amount field is blank (normalizes to zero)", async () => {
+    // ARRANGE
+    const user = userEvent.setup();
+    renderModal({ applicationDate: "2025-06-15" });
+
+    // ACT
+    await goToAmountsStep(user, "Test Item");
+
+    const amountInput = await screen.findByLabelText(/Amount \*/i);
+    expect((amountInput as HTMLInputElement).value).toBe("");
+
+    // Focus the amount input and fire Ctrl+Enter without typing an amount
+    await user.click(amountInput);
+    await user.keyboard("{Control>}{Enter}{/Control}");
+
+    // ASSERT — blank amount normalizes to $0.00 and the entry appears
+    expect(await screen.findByText("$0.00")).toBeInTheDocument();
+  });
+
   it("keeps Add another checked after saving so the next item starts with the toggle preserved", async () => {
     // ARRANGE
     const user = userEvent.setup();
