@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 import { Dashboard } from "@/components/app/Dashboard";
 import type { AlertsIndex, AlertWithMatch } from "@/utils/alertsData";
 import type { CaseActivityLogState, DailyActivityReport } from "@/types/activityLog";
-import { createMockCaseDisplay } from "@/src/test/testUtils";
+import { createCaseDisplayFixture } from "@/src/test/caseDisplayFactory";
 
 vi.mock("@/contexts/CategoryConfigContext", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/contexts/CategoryConfigContext")>();
@@ -60,9 +60,7 @@ function createAlert(overrides: Partial<AlertWithMatch> = {}): AlertWithMatch {
   } satisfies AlertWithMatch;
 }
 
-const baseMockCase = createMockCaseDisplay();
-
-const baseCase = createMockCaseDisplay({
+const baseCase = createCaseDisplayFixture({
   id: "case-1",
   name: "Jamie Rivera",
   mcn: "MCN123",
@@ -71,7 +69,6 @@ const baseCase = createMockCaseDisplay({
   createdAt: "2025-08-01T00:00:00.000Z",
   updatedAt: "2025-09-25T00:00:00.000Z",
   person: {
-    ...baseMockCase.person,
     id: "person-1",
     firstName: "Jamie",
     lastName: "Rivera",
@@ -101,7 +98,6 @@ const baseCase = createMockCaseDisplay({
     dateAdded: "2025-09-01T00:00:00.000Z",
   },
   caseRecord: {
-    ...baseMockCase.caseRecord,
     id: "case-record-1",
     mcn: "MCN123",
     applicationDate: "2025-08-15T00:00:00.000Z",

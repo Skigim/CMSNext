@@ -2,8 +2,7 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { Settings } from "@/components/app/Settings";
-import type { CaseDisplay } from "@/types/case";
-import { createMockCaseDisplay } from "@/src/test/testUtils";
+import { createCaseDisplayFixture, type CaseDisplayOverrides } from "@/src/test/caseDisplayFactory";
 import { mergeCategoryConfig } from "@/types/categoryConfig";
 
 const mocks = vi.hoisted(() => ({
@@ -104,14 +103,8 @@ vi.mock("@/components/error/ErrorFeedbackForm", () => ({
   FeedbackPanel: () => <div data-testid="feedback-panel" />,
 }));
 
-type CaseDisplayOverrides = Partial<Omit<CaseDisplay, "person" | "caseRecord">> & {
-  person?: Partial<CaseDisplay["person"]>;
-  caseRecord?: Partial<CaseDisplay["caseRecord"]>;
-};
-
-const createCase = (overrides: CaseDisplayOverrides = {}): CaseDisplay => {
-  const baseMockCase = createMockCaseDisplay();
-  const base = createMockCaseDisplay({
+const createCase = (overrides: CaseDisplayOverrides = {}) =>
+  createCaseDisplayFixture({
     id: "case-1",
     name: "Test Case",
     mcn: "MCN-001",
@@ -120,7 +113,6 @@ const createCase = (overrides: CaseDisplayOverrides = {}): CaseDisplay => {
     createdAt: "2024-01-01T00:00:00.000Z",
     updatedAt: "2024-01-01T00:00:00.000Z",
     person: {
-      ...baseMockCase.person,
       id: "person-1",
       firstName: "Test",
       lastName: "User",
@@ -150,7 +142,6 @@ const createCase = (overrides: CaseDisplayOverrides = {}): CaseDisplay => {
       dateAdded: "2024-01-01T00:00:00.000Z",
     },
     caseRecord: {
-      ...baseMockCase.caseRecord,
       id: "case-record-1",
       mcn: "MCN-001",
       applicationDate: "2024-01-10",
@@ -176,21 +167,8 @@ const createCase = (overrides: CaseDisplayOverrides = {}): CaseDisplay => {
       updatedDate: "2024-01-01T00:00:00.000Z",
       intakeCompleted: true,
     },
-  });
-
-  return {
-    ...base,
     ...overrides,
-    person: {
-      ...base.person,
-      ...overrides.person,
-    },
-    caseRecord: {
-      ...base.caseRecord,
-      ...overrides.caseRecord,
-    },
-  };
-};
+  });
 
 describe("Settings", () => {
   beforeEach(() => {
