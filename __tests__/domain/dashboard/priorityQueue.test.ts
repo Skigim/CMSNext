@@ -77,8 +77,7 @@ function createMockCase(overrides: Partial<Omit<StoredCase, 'status'> & { status
       createdAt: '',
       dateAdded: '',
     },
-    caseRecord: {
-      ...baseStoredCase.caseRecord,
+    caseRecord: createMockCaseRecord(baseStoredCase, {
       id: 'case-rec-1',
       mcn: 'MCN123',
       applicationDate: '',
@@ -97,7 +96,7 @@ function createMockCase(overrides: Partial<Omit<StoredCase, 'status'> & { status
       createdDate: '',
       updatedDate: '',
       intakeCompleted: true,
-    },
+    }),
   });
 
   return {
@@ -114,12 +113,23 @@ function createMockCase(overrides: Partial<Omit<StoredCase, 'status'> & { status
   } as StoredCase;
 }
 
+function createMockCaseRecord(
+  baseStoredCase: StoredCase,
+  overrides: Partial<StoredCase['caseRecord']> = {},
+): StoredCase['caseRecord'] {
+  return {
+    ...baseStoredCase.caseRecord,
+    ...overrides,
+  };
+}
+
 function createCaseWithApplicationDate(
   applicationDate: string,
   status: CaseStatus,
 ): StoredCase["caseRecord"] {
+  const baseStoredCase = createMockStoredCase();
   return {
-    ...createMockCase().caseRecord,
+    ...createMockCaseRecord(baseStoredCase),
     id: 'record-1',
     mcn: 'MCN123',
     applicationDate,

@@ -3,7 +3,10 @@ import { describe, expect, it, vi } from "vitest";
 import { Dashboard } from "@/components/app/Dashboard";
 import type { AlertsIndex, AlertWithMatch } from "@/utils/alertsData";
 import type { CaseActivityLogState, DailyActivityReport } from "@/types/activityLog";
-import { createCaseDisplayFixture } from "@/src/test/caseDisplayFactory";
+import {
+  createCaseDisplayFixture,
+  type CaseDisplayOverrides,
+} from "@/src/test/caseDisplayFactory";
 
 vi.mock("@/contexts/CategoryConfigContext", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/contexts/CategoryConfigContext")>();
@@ -125,6 +128,44 @@ const baseCase = createCaseDisplayFixture({
   },
 });
 
+function createAlertsIndex(alerts: AlertWithMatch[] = []): AlertsIndex {
+  return {
+    alerts,
+    summary: {
+      total: alerts.length,
+      matched: alerts.filter((alert) => alert.matchStatus === "matched").length,
+      unmatched: alerts.filter((alert) => alert.matchStatus === "unmatched").length,
+      missingMcn: alerts.filter((alert) => alert.matchStatus === "missing-mcn").length,
+      latestUpdated: null,
+    },
+    alertsByCaseId: new Map(
+      alerts
+        .filter((alert) => alert.matchedCaseId)
+        .map((alert) => [alert.matchedCaseId, alerts.filter((item) => item.matchedCaseId === alert.matchedCaseId)]),
+    ),
+    unmatched: alerts.filter((alert) => alert.matchStatus === "unmatched"),
+    missingMcn: alerts.filter((alert) => alert.matchStatus === "missing-mcn"),
+  };
+}
+
+function renderDashboard({
+  cases = [],
+  alerts = createAlertsIndex(),
+}: {
+  cases?: ReturnType<typeof createCaseDisplayFixture>[];
+  alerts?: AlertsIndex;
+} = {}) {
+  return render(
+    <Dashboard
+      cases={cases}
+      alerts={alerts}
+      activityLogState={mockActivityLogState}
+      onNewCase={vi.fn()}
+      onViewCase={vi.fn()}
+    />,
+  );
+}
+
 const emptyReport: DailyActivityReport = {
   date: "2025-01-01",
   totals: {
@@ -158,29 +199,15 @@ describe("Dashboard", () => {
       matchedCaseName: baseCase.name,
     });
 
-    const alertsIndex: AlertsIndex = {
-      alerts: [matchedAlert],
-      summary: {
-        total: 1,
-        matched: 1,
-        unmatched: 0,
-        missingMcn: 0,
-        latestUpdated: null,
-      },
-      alertsByCaseId: new Map([[baseCase.id, [matchedAlert]]]),
-      unmatched: [],
-      missingMcn: [],
-    };
-
-    render(
-      <Dashboard
-        cases={[baseCase]}
-        alerts={alertsIndex}
-        activityLogState={mockActivityLogState}
-        onNewCase={vi.fn()}
-        onViewCase={vi.fn()}
-      />,
-    );
+    renderDashboard({
+      cases: [baseCase],
+      alerts: createAlertsIndex([
+        createAlert({
+          ...matchedAlert,
+          matchedCaseId: baseCase.id,
+        }),
+      ]),
+    });
 
     // Check that the Recent Activity header is rendered
     expect(screen.getByRole("heading", { name: /recent activity/i })).toBeInTheDocument();
@@ -194,29 +221,7 @@ describe("Dashboard", () => {
   });
 
   it("displays Recent Activity section in overview tab", async () => {
-    const alertsIndex: AlertsIndex = {
-      alerts: [],
-      summary: {
-        total: 0,
-        matched: 0,
-        unmatched: 0,
-        missingMcn: 0,
-        latestUpdated: null,
-      },
-      alertsByCaseId: new Map(),
-      unmatched: [],
-      missingMcn: [],
-    };
-
-    render(
-      <Dashboard
-        cases={[]}
-        alerts={alertsIndex}
-        activityLogState={mockActivityLogState}
-        onNewCase={vi.fn()}
-        onViewCase={vi.fn()}
-      />,
-    );
+    renderDashboard();
 
     // Check that Recent Activity section is displayed
     expect(screen.getByRole("heading", { name: /recent activity/i })).toBeInTheDocument();
