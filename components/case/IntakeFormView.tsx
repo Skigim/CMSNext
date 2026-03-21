@@ -414,14 +414,25 @@ function ContactStep({ formData, onChange }: Readonly<ContactStepProps>) {
 
         {!formData.mailingAddress.sameAsPhysical && (
           <>
-            <div className="space-y-1.5">
-              <Label htmlFor="intake-mailStreet">Street</Label>
-              <Input
-                id="intake-mailStreet"
-                value={formData.mailingAddress.street ?? ""}
-                onChange={(e) => handleMailingChange("street", e.target.value)}
-                placeholder="123 Main St"
-              />
+            <div className="grid grid-cols-[1fr_auto] gap-3">
+              <div className="space-y-1.5">
+                <Label htmlFor="intake-mailStreet">Street</Label>
+                <Input
+                  id="intake-mailStreet"
+                  value={formData.mailingAddress.street ?? ""}
+                  onChange={(e) => handleMailingChange("street", e.target.value)}
+                  placeholder="123 Main St"
+                />
+              </div>
+              <div className="w-24 space-y-1.5">
+                <Label htmlFor="intake-mailApt">Apt</Label>
+                <Input
+                  id="intake-mailApt"
+                  value={formData.mailingAddress.apt ?? ""}
+                  onChange={(e) => handleMailingChange("apt", e.target.value)}
+                  placeholder="Apt"
+                />
+              </div>
             </div>
             <div className="grid grid-cols-3 gap-3">
               <div className="col-span-1 space-y-1.5">
