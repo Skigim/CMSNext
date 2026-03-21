@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { axe, toHaveNoViolations } from "jest-axe";
 import { describe, expect, it, vi, beforeEach } from "vitest";
@@ -256,6 +256,28 @@ describe("IntakeFormView", () => {
 
       // ASSERT
       expect(screen.getByText("(555) 123-4567")).toBeInTheDocument();
+    });
+  });
+
+  describe("Contact step", () => {
+    it("renders the applicant Apt field and updates the nested address", async () => {
+      // ARRANGE
+      withHookState(createStepState(1));
+
+      // ACT
+      renderIntakeFormView();
+      const aptInput = screen.getByLabelText("Apt");
+      fireEvent.change(aptInput, { target: { value: "2B" } });
+
+      // ASSERT
+      expect(aptInput).toBeInTheDocument();
+      expect(mockUpdateField).toHaveBeenLastCalledWith("address", {
+        street: "",
+        apt: "2B",
+        city: "",
+        state: "NE",
+        zip: "",
+      });
     });
   });
 
