@@ -279,6 +279,18 @@ describe("IntakeFormView", () => {
         zip: "",
       });
     });
+
+    it("has no accessibility violations on the contact step", async () => {
+      // ARRANGE
+      withHookState(createStepState(1));
+
+      // ACT
+      const { container } = renderIntakeFormView();
+      const results = await axe(container);
+
+      // ASSERT
+      expect(results).toHaveNoViolations();
+    });
   });
 
   describe("focus management", () => {
