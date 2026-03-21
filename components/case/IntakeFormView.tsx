@@ -816,8 +816,7 @@ function HouseholdStep({ formData, onChange }: Readonly<HouseholdStepProps>) {
   useEffect(() => {
     const previousHouseholdMembers = previousHouseholdMembersRef.current;
     const previousMembersWereUnpopulated =
-      previousHouseholdMembers.length === 0
-      || previousHouseholdMembers.every((member) => !isHouseholdMemberPopulated(member));
+      previousHouseholdMembers.every((member) => !isHouseholdMemberPopulated(member));
     const householdMembersChangedMeaningfully =
       previousHouseholdMembers.length !== householdMembers.length
       || previousHouseholdMembers.some((member, index) => {
@@ -851,7 +850,7 @@ function HouseholdStep({ formData, onChange }: Readonly<HouseholdStepProps>) {
     (nextMembers: HouseholdMemberData[]) => {
       onChange(
         "householdMembers",
-        nextMembers.map(normalizeHouseholdMemberDraft) as IntakeFormData["householdMembers"],
+        nextMembers.map((member) => normalizeHouseholdMemberDraft(member)) as IntakeFormData["householdMembers"],
       );
     },
     [onChange],
@@ -1376,11 +1375,11 @@ interface ReviewStepProps {
 
 function ReviewStep({ formData, onGoToStep }: Readonly<ReviewStepProps>) {
   const populatedRelationships = useMemo(
-    () => ((formData.relationships ?? []) as Relationship[]).filter(isRelationshipPopulated),
+    () => ((formData.relationships ?? []) as Relationship[]).filter((rel) => isRelationshipPopulated(rel)),
     [formData.relationships],
   );
   const populatedHouseholdMembers = useMemo(
-    () => ((formData.householdMembers ?? []) as HouseholdMemberData[]).filter(isHouseholdMemberPopulated),
+    () => ((formData.householdMembers ?? []) as HouseholdMemberData[]).filter((member) => isHouseholdMemberPopulated(member)),
     [formData.householdMembers],
   );
   const sections: {
@@ -1648,6 +1647,9 @@ export function IntakeFormView({
   const isLastStep = currentStep === INTAKE_STEPS.length - 1;
   const isFirstStep = currentStep === 0;
 
+  const submitButtonLoadingText = isEditing ? "Saving…" : "Creating…";
+  const submitButtonText = isEditing ? "Save Changes" : "Submit Case";
+
   return (
     <div className="flex flex-col h-full">
       {/* Header */}
@@ -1755,10 +1757,10 @@ export function IntakeFormView({
                   {isSubmitting ? (
                     <>
                       <Loader2 className="h-4 w-4 animate-spin" />
-                      {isEditing ? "Saving…" : "Creating…"}
+                      {submitButtonLoadingText}
                     </>
                   ) : (
-                    (isEditing ? "Save Changes" : "Submit Case")
+                    submitButtonText
                   )}
                 </Button>
               ) : (
