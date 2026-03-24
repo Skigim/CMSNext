@@ -24,6 +24,7 @@ import { dateInputValueToISO, normalizePhoneNumber } from "@/domain/common";
 import { useDataManagerSafe } from "../contexts/DataManagerContext";
 import { useCategoryConfig } from "../contexts/CategoryConfigContext";
 import {
+  caseNeedsIntake,
   createBlankHouseholdMemberData,
   createCaseRecordData,
   isHouseholdMemberPopulated,
@@ -58,7 +59,7 @@ function createInitialVisitedSteps(existingCase?: StoredCase): Set<number> {
 }
 
 function createInitialCurrentStep(existingCase?: StoredCase): number {
-  if (existingCase?.caseRecord.intakeCompleted) {
+  if (existingCase && !caseNeedsIntake(existingCase)) {
     return INTAKE_STEPS.length - 1;
   }
 

@@ -126,6 +126,18 @@ describe("useIntakeWorkflow", () => {
       expect(result.current.currentStep).toBe(0);
     });
 
+    it("starts on the summary step when editing a legacy case without intakeCompleted", () => {
+      // Arrange
+      const existingCase = createMockStoredCase();
+      delete (existingCase.caseRecord as { intakeCompleted?: boolean }).intakeCompleted;
+
+      // Act
+      const { result } = renderIntakeHook({ existingCase });
+
+      // Assert
+      expect(result.current.currentStep).toBe(REVIEW_STEP_INDEX);
+    });
+
     it("has step 0 in visited set", () => {
       const { result } = renderIntakeHook();
       expect(result.current.visitedSteps.has(0)).toBe(true);
