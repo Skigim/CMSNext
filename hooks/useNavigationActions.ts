@@ -180,9 +180,14 @@ export function useNavigationActions({
     startMeasurement("navigation:quickAdd", { locked: isLocked });
     if (guardCaseInteraction()) return endMeasurement("navigation:quickAdd", { blocked: true });
 
+    setFormState({
+      ...formState,
+      previousView: currentView,
+      returnToCaseId: currentView === "details" ? selectedCaseId ?? undefined : undefined,
+    });
     setShowNewCaseModal(true);
     endMeasurement("navigation:quickAdd", { result: "modal", source: currentView });
-  }, [currentView, guardCaseInteraction, isLocked, setShowNewCaseModal]);
+  }, [currentView, formState, guardCaseInteraction, isLocked, selectedCaseId, setFormState, setShowNewCaseModal]);
 
   const cancelNewCase = useCallback(() => {
     startMeasurement("navigation:cancelNewCase");
@@ -207,8 +212,13 @@ export function useNavigationActions({
     const nextCase = savedCase ?? cases.find((caseData) => caseData.id === caseId);
     if (!nextCase) {
       logger.error("completeNewCase: could not find case for id", { caseId });
+      endMeasurement("navigation:completeNewCase", {
+        caseId,
+        result: "missing-case",
+      });
+      return;
     }
-    const nextView = nextCase && caseNeedsIntake(nextCase) ? "intake" : "details";
+    const nextView = caseNeedsIntake(nextCase) ? "intake" : "details";
 
     setFormState({
       ...formState,

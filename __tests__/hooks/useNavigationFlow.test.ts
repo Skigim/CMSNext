@@ -180,21 +180,53 @@ describe("useNavigationFlow", () => {
   });
 
   it("opens Quick Add without leaving the current view", () => {
+    // ARRANGE
     const { result } = renderNavigationFlow();
 
     expect(result.current.currentView).toBe("dashboard");
     expect(result.current.showNewCaseModal).toBe(false);
 
+    // ACT
     act(() => {
       result.current.quickAdd();
     });
 
+    // ASSERT
     expect(result.current.currentView).toBe("dashboard");
     expect(result.current.showNewCaseModal).toBe(true);
     expect(endMeasurementMock).toHaveBeenCalledWith(
       "navigation:quickAdd",
       expect.objectContaining({ result: "modal", source: "dashboard" }),
     );
+  });
+
+  it("returns to the list after saving a quick add opened from list", () => {
+    // ARRANGE
+    const createdCase = createMockStoredCase({ id: "case-created" });
+    const { result } = renderNavigationFlow({
+      cases: [createdCase],
+    });
+
+    act(() => {
+      result.current.navigate("list");
+    });
+
+    // ACT
+    act(() => {
+      result.current.quickAdd();
+    });
+
+    act(() => {
+      result.current.completeNewCase(createdCase.id, createdCase);
+    });
+
+    act(() => {
+      result.current.backToList();
+    });
+
+    // ASSERT
+    expect(result.current.currentView).toBe("list");
+    expect(result.current.selectedCaseId).toBeNull();
   });
 
   it("returns to the originating details view when intake is canceled", () => {
@@ -229,12 +261,14 @@ describe("useNavigationFlow", () => {
   });
 
   it("returns to the prior non-intake source after opening a created case", () => {
+    // ARRANGE
     const existingCase = createMockStoredCase({ id: "case-origin" });
     const createdCase = createMockStoredCase({ id: "case-created" });
     const { result } = renderNavigationFlow({
       cases: [existingCase, createdCase],
     });
 
+    // ACT
     act(() => {
       result.current.navigate("list");
     });
@@ -260,6 +294,7 @@ describe("useNavigationFlow", () => {
       result.current.backToList();
     });
 
+    // ASSERT
     expect(result.current.currentView).toBe("list");
     expect(result.current.selectedCaseId).toBeNull();
 
@@ -268,6 +303,26 @@ describe("useNavigationFlow", () => {
       caseId: createdCase.id,
       result: "details",
       source: "list",
+    });
+  });
+
+  it("does not navigate when completeNewCase cannot resolve the case", () => {
+    // ARRANGE
+    const { result } = renderNavigationFlow();
+
+    // ACT
+    act(() => {
+      result.current.completeNewCase("missing-case");
+    });
+
+    // ASSERT
+    expect(result.current.currentView).toBe("dashboard");
+    expect(result.current.selectedCaseId).toBeNull();
+
+    const lastMeasurement = getLastMeasurementMetadata("navigation:completeNewCase");
+    expect(lastMeasurement).toMatchObject({
+      caseId: "missing-case",
+      result: "missing-case",
     });
   });
 
