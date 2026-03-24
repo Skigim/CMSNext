@@ -42,6 +42,8 @@ import { useIntakeWorkflow } from "@/hooks/useIntakeWorkflow";
 
 // ---- Helpers ----------------------------------------------------------------
 
+const REVIEW_STEP_INDEX = INTAKE_STEPS.length - 1;
+
 function renderIntakeHook(options: Parameters<typeof useIntakeWorkflow>[0] = {}) {
   return renderHook(() => useIntakeWorkflow(options));
 }
@@ -85,8 +87,55 @@ describe("useIntakeWorkflow", () => {
 
   describe("initial state", () => {
     it("starts on step 0", () => {
+      // Arrange / Act
       const { result } = renderIntakeHook();
+
+      // Assert
       expect(result.current.currentStep).toBe(0);
+    });
+
+    it("starts on the summary step when editing a completed intake case", () => {
+      // Arrange
+      const existingCase = createMockStoredCase({
+        caseRecord: {
+          ...createMockStoredCase().caseRecord,
+          intakeCompleted: true,
+        },
+      });
+
+      // Act
+      const { result } = renderIntakeHook({ existingCase });
+
+      // Assert
+      expect(result.current.currentStep).toBe(REVIEW_STEP_INDEX);
+    });
+
+    it("starts on step 0 when editing an incomplete intake case", () => {
+      // Arrange
+      const existingCase = createMockStoredCase({
+        caseRecord: {
+          ...createMockStoredCase().caseRecord,
+          intakeCompleted: false,
+        },
+      });
+
+      // Act
+      const { result } = renderIntakeHook({ existingCase });
+
+      // Assert
+      expect(result.current.currentStep).toBe(0);
+    });
+
+    it("starts on the summary step when editing a legacy case without intakeCompleted", () => {
+      // Arrange
+      const existingCase = createMockStoredCase();
+      delete (existingCase.caseRecord as { intakeCompleted?: boolean }).intakeCompleted;
+
+      // Act
+      const { result } = renderIntakeHook({ existingCase });
+
+      // Assert
+      expect(result.current.currentStep).toBe(REVIEW_STEP_INDEX);
     });
 
     it("has step 0 in visited set", () => {
@@ -480,7 +529,7 @@ describe("useIntakeWorkflow", () => {
       });
 
       // Assert
-      expect(result.current.currentStep).toBe(0);
+      expect(result.current.currentStep).toBe(REVIEW_STEP_INDEX);
       expect(result.current.formData.firstName).toBe("Latest");
       expect(result.current.formData.lastName).toBe("Applicant");
       expect(result.current.formData.mcn).toBe("MCN-SAVED");
