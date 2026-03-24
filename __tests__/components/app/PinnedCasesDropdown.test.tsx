@@ -80,6 +80,7 @@ describe("PinnedCasesDropdown", () => {
   });
 
   it("shows the stored pin reason with the pinned case", async () => {
+    // ARRANGE
     usePinnedCasesMock.mockReturnValue({
       pinnedCaseIds: ["case-1"],
       pin: vi.fn(),
@@ -95,7 +96,7 @@ describe("PinnedCasesDropdown", () => {
       pruneStale: vi.fn(),
     });
 
-    const { baseElement, getByRole, findByText } = render(
+    const { getByRole, getByTestId, findByText } = render(
       <PinnedCasesDropdown
         cases={[createMockStoredCase({ id: "case-1", name: "Case One" })]}
         hasLoadedData={true}
@@ -103,11 +104,13 @@ describe("PinnedCasesDropdown", () => {
       />,
     );
 
+    // ACT
     fireEvent.pointerDown(getByRole("button", { name: "Pinned cases (1)" }));
 
+    // ASSERT
     expect(await findByText("Pending morning triage")).toBeInTheDocument();
-    expect(baseElement.querySelector(".overflow-hidden.flex.flex-col.max-h-64")).not.toBeNull();
-    expect(baseElement.querySelector(".h-full.max-h-64")).not.toBeNull();
+    expect(getByTestId("pinned-cases-scroll-wrapper")).toBeInTheDocument();
+    expect(getByTestId("pinned-cases-scroll-area")).toBeInTheDocument();
   });
 
   it("shows Needs Intake for pinned incomplete cases", async () => {

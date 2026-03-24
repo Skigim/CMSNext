@@ -101,8 +101,14 @@ export const PinnedCasesDropdown = memo(function PinnedCasesDropdown({
         <DropdownMenuLabel>Pinned Cases</DropdownMenuLabel>
         <DropdownMenuSeparator />
         {hasPinnedCases ? (
-          <div className="overflow-hidden flex flex-col max-h-64">
-            <ScrollArea className="h-full max-h-64">
+          <div
+            className="overflow-hidden flex flex-col max-h-64"
+            data-testid="pinned-cases-scroll-wrapper"
+          >
+            <ScrollArea
+              className="h-full max-h-64"
+              data-testid="pinned-cases-scroll-area"
+            >
               {pinnedCases.map((caseData) => {
                 const pinReason = getPinReason(caseData.id);
 
