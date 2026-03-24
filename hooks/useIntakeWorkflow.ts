@@ -57,6 +57,14 @@ function createInitialVisitedSteps(existingCase?: StoredCase): Set<number> {
   return new Set(INTAKE_STEPS.map((_, index) => index));
 }
 
+function createInitialCurrentStep(existingCase?: StoredCase): number {
+  if (existingCase?.caseRecord.intakeCompleted) {
+    return INTAKE_STEPS.length - 1;
+  }
+
+  return 0;
+}
+
 // ============================================================================
 // Types
 // ============================================================================
@@ -149,9 +157,10 @@ export function useIntakeWorkflow({
     existingCase,
   );
   const activeExistingCase = editSourceCase ?? existingCase;
+  const initialCurrentStep = createInitialCurrentStep(existingCase);
 
   // ---- State ----------------------------------------------------------------
-  const [currentStep, setCurrentStep] = useState(0);
+  const [currentStep, setCurrentStep] = useState(initialCurrentStep);
   const currentStepRef = useRef(currentStep);
   const [visitedSteps, setVisitedSteps] = useState<Set<number>>(
     () => createInitialVisitedSteps(existingCase),
@@ -164,9 +173,10 @@ export function useIntakeWorkflow({
 
   const initializeWorkflowState = useCallback((sourceCase?: StoredCase) => {
     const nextSourceCase = sourceCase ?? existingCase;
+    const nextStep = createInitialCurrentStep(nextSourceCase);
     editSourceCaseRef.current = nextSourceCase;
-    currentStepRef.current = 0;
-    setCurrentStep(0);
+    currentStepRef.current = nextStep;
+    setCurrentStep(nextStep);
     setVisitedSteps(createInitialVisitedSteps(nextSourceCase));
     setEditSourceCase(nextSourceCase);
     setFormData(createIntakeFormData(nextSourceCase));
