@@ -15,17 +15,18 @@
 
 import type { StoredCase } from "../../types/case";
 import type { 
+  ArchiveFileInfo,
   CaseArchiveData, 
   ArchivalSettings, 
   ArchiveResult, 
   RestoreResult 
-} from "../../types/archive";
+} from "@/types/archive";
 import {
   buildArchiveFileName, 
   parseArchiveYear, 
   isCaseArchiveData,
   DEFAULT_ARCHIVAL_SETTINGS 
-} from "../../types/archive";
+} from "@/types/archive";
 import { 
   findArchivalEligibleCases,
   collectRelatedData,
@@ -77,18 +78,6 @@ export interface RefreshQueueResult {
   totalPending: number;
   /** IDs of newly marked cases */
   newlyMarkedIds: string[];
-}
-
-/**
- * Information about an archive file.
- */
-export interface ArchiveFileInfo {
-  /** Filename (e.g., "archived-cases-2025.json") */
-  fileName: string;
-  /** Year extracted from filename */
-  year: number;
-  /** Number of cases in the archive (if loaded) */
-  caseCount?: number;
 }
 
 // ============================================================================

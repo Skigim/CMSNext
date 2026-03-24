@@ -10,8 +10,8 @@
 import { useCallback, useState, useMemo } from 'react';
 import { toast } from 'sonner';
 import type { DataManager } from '@/utils/DataManager';
-import type { ArchiveFileInfo, RefreshQueueResult } from '@/utils/services/CaseArchiveService';
-import type { CaseArchiveData, ArchiveResult, RestoreResult } from '@/types/archive';
+import type { RefreshQueueResult } from '@/utils/services/CaseArchiveService';
+import type { ArchiveFileInfo, CaseArchiveData, ArchiveResult, RestoreResult } from '@/types/archive';
 import { createDataManagerGuard } from '@/utils/guardUtils';
 
 const NOT_AVAILABLE_MSG = 'Data storage is not available. Please connect to a folder first.';

@@ -88,6 +88,18 @@ export interface ArchivalSettings {
 }
 
 /**
+ * Summary information about an archive file available for browsing.
+ */
+export interface ArchiveFileInfo {
+  /** Filename (e.g., "archived-cases-2025.json") */
+  fileName: string;
+  /** Year extracted from filename */
+  year: number;
+  /** Number of cases in the archive (if loaded) */
+  caseCount?: number;
+}
+
+/**
  * Default archival settings.
  * - 12 months threshold
  * - Only archive closed cases

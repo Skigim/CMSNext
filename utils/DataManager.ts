@@ -15,8 +15,14 @@ import {
 } from "../types/case";
 import type { CaseActivityEntry } from "../types/activityLog";
 import type { Template, NewTemplateData } from "../types/template";
-import type { ArchivalSettings, CaseArchiveData, ArchiveResult, RestoreResult } from "../types/archive";
-import { DEFAULT_ARCHIVAL_SETTINGS } from "../types/archive";
+import type {
+  ArchivalSettings,
+  ArchiveFileInfo,
+  ArchiveResult,
+  CaseArchiveData,
+  RestoreResult,
+} from "../types/archive";
+import { DEFAULT_ARCHIVAL_SETTINGS, parseArchiveYear } from "../types/archive";
 import AutosaveFileService from './AutosaveFileService';
 import { createLogger } from './logger';
 import { extractErrorMessage } from './errorUtils';
@@ -51,7 +57,7 @@ import { CaseService } from "./services/CaseService";
 import { PersonService } from "./services/PersonService";
 import { AlertsService } from "./services/AlertsService";
 import { TemplateService } from "./services/TemplateService";
-import { CaseArchiveService, type RefreshQueueResult, type ArchiveFileInfo } from "./services/CaseArchiveService";
+import { CaseArchiveService, type RefreshQueueResult } from "./services/CaseArchiveService";
 import {
   MAIN_WORKSPACE_FILE_NAME,
   buildWorkspaceMigrationReport,
@@ -62,7 +68,6 @@ import {
   type WorkspaceMigrationFileReport,
   type WorkspaceMigrationReport,
 } from "./workspaceV21Migration";
-import { parseArchiveYear } from "@/types/archive";
 import { isNormalizedFileData } from "./services/FileStorageService";
 import {
   hydrateNormalizedData,
