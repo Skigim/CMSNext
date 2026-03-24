@@ -3,6 +3,7 @@ import { render, screen } from "@testing-library/react";
 import { axe, toHaveNoViolations } from "jest-axe";
 import { CaseFiltersDialog } from "@/components/case/CaseFiltersDialog";
 import { createEmptyAdvancedFilter } from "@/domain/alerts";
+import type { FilterCriterion } from "@/domain/alerts";
 import type { UseAdvancedAlertFilterResult } from "@/hooks/useAdvancedAlertFilter";
 import type { CaseFilters } from "@/hooks/useCaseListPreferences";
 
@@ -26,13 +27,15 @@ const advancedAlertFilterState: UseAdvancedAlertFilterResult = {
   filter: createEmptyAdvancedFilter(),
   includeCriteria: [],
   excludeCriteria: [],
-  addCriterion: vi.fn(),
-  addExcludeCriterion: vi.fn(),
-  updateCriterion: vi.fn(),
-  removeCriterion: vi.fn(),
-  toggleNegate: vi.fn(),
-  setLogic: vi.fn(),
-  resetFilter: vi.fn(),
+  addCriterion: vi.fn<(criterion?: FilterCriterion) => void>(),
+  addExcludeCriterion: vi.fn<(criterion?: FilterCriterion) => void>(),
+  updateCriterion: vi.fn<
+    (id: string, updates: Partial<Omit<FilterCriterion, "id">>) => void
+  >(),
+  removeCriterion: vi.fn<(id: string) => void>(),
+  toggleNegate: vi.fn<(id: string) => void>(),
+  setLogic: vi.fn<(logic: "and" | "or") => void>(),
+  resetFilter: vi.fn<() => void>(),
   hasActiveAdvancedFilters: false,
 };
 

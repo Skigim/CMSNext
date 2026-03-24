@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { axe } from "jest-axe";
 import { fireEvent, render } from "@/src/test/reactTestUtils";
 import { PinnedCasesDropdown } from "@/components/app/PinnedCasesDropdown";
 import { usePinnedCases } from "@/hooks/usePinnedCases";
@@ -96,7 +97,7 @@ describe("PinnedCasesDropdown", () => {
       pruneStale: vi.fn(),
     });
 
-    const { getByRole, getByTestId, findByText } = render(
+    const { baseElement, getByRole, getByTestId, findByText } = render(
       <PinnedCasesDropdown
         cases={[createMockStoredCase({ id: "case-1", name: "Case One" })]}
         hasLoadedData={true}
@@ -106,8 +107,14 @@ describe("PinnedCasesDropdown", () => {
 
     // ACT
     fireEvent.pointerDown(getByRole("button", { name: "Pinned cases (1)" }));
+    const results = await axe(baseElement, {
+      rules: {
+        region: { enabled: false },
+      },
+    });
 
     // ASSERT
+    expect(results).toHaveNoViolations();
     expect(await findByText("Pending morning triage")).toBeInTheDocument();
     expect(getByTestId("pinned-cases-scroll-wrapper")).toBeInTheDocument();
     expect(getByTestId("pinned-cases-scroll-area")).toBeInTheDocument();

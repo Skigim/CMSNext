@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
+import { axe } from "jest-axe";
 import { render, screen } from "@/src/test/reactTestUtils";
 import { createMockStoredCase } from "@/src/test/testUtils";
 import { CaseEditModal } from "@/components/modals/CaseEditModal";
@@ -18,16 +19,24 @@ vi.mock("@/hooks/useSubmitShortcut", () => ({
 }));
 
 describe("CaseEditModal", () => {
-  it("provides an accessible description for the edit dialog", () => {
-    render(
+  it("provides an accessible description for the edit dialog", async () => {
+    // Arrange
+    const onClose = vi.fn();
+    const onSave = vi.fn().mockResolvedValue(undefined);
+
+    // Act
+    const { baseElement } = render(
       <CaseEditModal
         isOpen={true}
-        onClose={vi.fn()}
+        onClose={onClose}
         caseData={createMockStoredCase()}
-        onSave={vi.fn().mockResolvedValue(undefined)}
+        onSave={onSave}
       />,
     );
+    const results = await axe(baseElement);
 
+    // Assert
+    expect(results).toHaveNoViolations();
     expect(screen.getByRole("dialog", { name: /Edit Case:/i })).toHaveAccessibleDescription(
       "Update the case details, contact information, eligibility data, and relationships, then save your changes when you are finished.",
     );

@@ -20,13 +20,13 @@ import type {
   ArchivalSettings, 
   ArchiveResult, 
   RestoreResult 
-} from "../../types/archive";
+} from "@/types/archive";
 import {
   buildArchiveFileName, 
   parseArchiveYear, 
   isCaseArchiveData,
   DEFAULT_ARCHIVAL_SETTINGS 
-} from "../../types/archive";
+} from "@/types/archive";
 import { 
   findArchivalEligibleCases,
   collectRelatedData,

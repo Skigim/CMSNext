@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
+import { axe } from "jest-axe";
 import { render, screen, waitFor } from "@testing-library/react";
 import { LoginModal } from "@/components/modals/LoginModal";
 
@@ -33,7 +34,8 @@ vi.mock("@/components/modals/AuthBackdrop", () => ({
 
 describe("LoginModal", () => {
   it("keeps the loading dialog described for assistive technology", async () => {
-    render(
+    // Arrange
+    const { baseElement } = render(
       <LoginModal
         isOpen={true}
         onLoginComplete={vi.fn()}
@@ -41,10 +43,14 @@ describe("LoginModal", () => {
       />,
     );
 
+    // Act
     await waitFor(() => {
       expect(checkFileEncryptionStatus).toHaveBeenCalledTimes(1);
     });
+    const results = await axe(baseElement);
 
+    // Assert
+    expect(results).toHaveNoViolations();
     expect(screen.getByRole("dialog", { name: "Loading" })).toHaveAccessibleDescription(
       "Checking your data before unlocking your workspace.",
     );
