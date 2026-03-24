@@ -1,5 +1,16 @@
 import React from 'react';
+import { AlertTriangle } from 'lucide-react';
 import { toast } from 'sonner';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Button } from '@/components/ui/button';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
+import { clickToCopy } from '@/utils/clipboard';
 import {
   BaseErrorBoundary,
   type BaseErrorBoundaryProps,
@@ -37,7 +48,7 @@ export class ErrorBoundary extends BaseErrorBoundary<
     return {
       hasError: true,
       error,
-      errorId: `error-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      errorId: `error-${Date.now()}-${Math.random().toString(36).slice(2, 11)}`,
     };
   }
 
@@ -61,7 +72,7 @@ export class ErrorBoundary extends BaseErrorBoundary<
 
   // -- Copy error details ----------------------------------------------------
 
-  private readonly handleCopyError = () => {
+  private readonly handleCopyError = async () => {
     const { error, errorInfo, errorId } = this.state;
     if (!error) return;
 
@@ -78,78 +89,53 @@ export class ErrorBoundary extends BaseErrorBoundary<
 
     const errorText = JSON.stringify(errorDetails, null, 2);
 
-    navigator.clipboard
-      .writeText(errorText)
-      .then(() => {
-        toast.success('Error details copied to clipboard');
-      })
-      .catch(() => {
-        const textArea = document.createElement('textarea');
-        textArea.value = errorText;
-        document.body.appendChild(textArea);
-        textArea.select();
-        document.execCommand('copy');
-        textArea.remove();
-        toast.success('Error details copied to clipboard');
-      });
+    await clickToCopy(errorText, {
+      successMessage: 'Error details copied to clipboard',
+      errorMessage: 'Unable to copy error details',
+      toastApi: toast,
+    });
   };
 
   // -- Fallback UI -----------------------------------------------------------
 
   protected renderFallback(): React.ReactNode {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <div className="max-w-md w-full mx-4 p-6 bg-card border border-border rounded-lg shadow-lg">
-          <div className="text-center">
-            <div className="w-12 h-12 mx-auto mb-4 bg-destructive/20 rounded-full flex items-center justify-center">
-              <svg
-                className="w-6 h-6 text-destructive"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z"
-                />
-              </svg>
+      <div className="flex min-h-screen items-center justify-center bg-background px-4">
+        <Card className="w-full max-w-md shadow-lg">
+          <CardHeader className="items-center text-center">
+            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-destructive/20">
+              <AlertTriangle aria-hidden="true" className="h-6 w-6 text-destructive" />
             </div>
-
-            <h2 className="text-xl font-semibold text-foreground mb-2">
-              Something went wrong
-            </h2>
-
-            <p className="text-muted-foreground mb-6">
+            <CardTitle className="text-xl font-semibold">Something went wrong</CardTitle>
+            <CardDescription>
               The application encountered an unexpected error. You can try
-              reloading the page or contact support if the problem persists.
-            </p>
+              again or reload the page if the problem persists.
+            </CardDescription>
+          </CardHeader>
 
-            <div className="space-y-3">
-              <button
-                onClick={this.handleRetry}
-                className="w-full px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors"
-              >
-                Try Again
-              </button>
+          <CardContent className="space-y-4">
+            <Alert variant="destructive">
+              <AlertTriangle aria-hidden="true" className="h-4 w-4" />
+              <AlertTitle>Unexpected application error</AlertTitle>
+              <AlertDescription>
+                Reload the page if retrying does not recover the application.
+              </AlertDescription>
+            </Alert>
 
-              <button
-                onClick={() => globalThis.location.reload()}
-                className="w-full px-4 py-2 bg-secondary text-secondary-foreground rounded-md hover:bg-secondary/90 transition-colors"
-              >
+            <div className="flex flex-col gap-3">
+              <Button onClick={this.handleRetry}>Try Again</Button>
+              <Button variant="secondary" onClick={() => globalThis.location.reload()}>
                 Reload Page
-              </button>
+              </Button>
             </div>
 
-            {/* Development error details */}
             {process.env.NODE_ENV === 'development' && this.state.error && (
-              <details className="mt-6 text-left">
+              <details className="text-left">
                 <summary className="cursor-pointer text-sm text-muted-foreground hover:text-foreground">
                   Error Details (Development)
                 </summary>
-                <div className="mt-3 p-3 bg-muted rounded text-xs font-mono overflow-auto max-h-32">
-                  <div className="text-destructive font-semibold mb-1">
+                <div className="mt-3 rounded bg-muted p-3 text-xs font-mono max-h-32 overflow-auto">
+                  <div className="mb-1 font-semibold text-destructive">
                     {this.state.error.name}: {this.state.error.message}
                   </div>
                   {this.state.error.stack && (
@@ -158,16 +144,13 @@ export class ErrorBoundary extends BaseErrorBoundary<
                     </pre>
                   )}
                 </div>
-                <button
-                  onClick={this.handleCopyError}
-                  className="mt-2 px-3 py-1 text-xs bg-muted-foreground text-background rounded hover:bg-foreground transition-colors"
-                >
-                  📋 Copy Error Details
-                </button>
+                <Button className="mt-2" size="sm" variant="secondary" onClick={this.handleCopyError}>
+                  Copy Error Details
+                </Button>
               </details>
             )}
-          </div>
-        </div>
+          </CardContent>
+        </Card>
       </div>
     );
   }
