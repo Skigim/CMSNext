@@ -23,6 +23,8 @@ export default [{
     'scripts/',
     'supabase/',
     'archive/',
+    '.github/agents/**',
+    '.github/skills/**',
     'docs/development/performance/**/*.html',
   ],
 }, {

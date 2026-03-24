@@ -64,6 +64,21 @@ When starting a task, prefer this order:
 4. Validate with the standard command sequence.
 5. Update documentation only when behavior or workflow meaningfully changes.
 
+### Automatic Agent Delegation
+
+- The default agent should delegate automatically when a task clearly matches one of the workspace custom agents.
+- Delegate to `audit` for code reviews, security analysis, accessibility checks, performance investigations, regression hunting, release readiness, or architecture compliance checks.
+- Delegate to `testing` for unit, integration, hook, component, or accessibility test work; test failure triage; coverage improvements; and Vitest or React Testing Library changes.
+- Delegate to `services` for DataManager changes, service orchestration, read-modify-write flows, activity logging, or file-backed mutation behavior outside the storage plumbing itself.
+- Delegate to `domain` for pure business logic, calculations, validation, transformations, formatting helpers, or extracting logic into `domain/*` modules.
+- Delegate to `frontend` for component implementation, UI refactors, interaction design, accessibility-sensitive component work, styling, layout, or app-shell behavior.
+- Delegate to `hooks` for custom hook design, hook refactors, React state orchestration, effect bugs, callback stability issues, or extracting logic from components into hooks.
+- Delegate to `storage` for File System Access API work, file handle flows, autosave behavior, persistence bugs, storage migrations, storage diagnostics, or local-first data integrity concerns.
+- Delegate to `Explore` for broad read-only discovery when the right files, patterns, or code paths are not yet clear.
+- If a task spans multiple areas, delegate the investigation or implementation slice to the most specific agent first, then continue with the next agent only if the scope genuinely crosses boundaries.
+- Keep work in the default agent when the task is narrow, the affected files are already obvious, and context isolation would add overhead without improving outcome quality.
+- When delegating, include the goal, relevant files or feature area, whether the agent should remain read-only or edit files, and the expected return format.
+
 ### Instruction Hierarchy
 
 - Treat this file as the repository-wide baseline for all tasks.

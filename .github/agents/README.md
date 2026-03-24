@@ -1,34 +1,45 @@
-# Agent Instructions
+# Custom Agents
 
-This directory contains specialized instruction files for delegating tasks to AI subagents. Each file provides context, patterns, and verification steps for a specific area of the CMSNext codebase.
+This directory contains focused custom agent definitions for delegating bounded work to Copilot subagents. Reference material and reusable workflows now live under `.github/skills/` rather than being modeled as agents.
 
 ## Usage
 
-When dispatching a subagent, reference the relevant `*.agent.md` instruction file:
+When dispatching a subagent, reference the relevant agent definition for the target domain.
 
 ```
-"Read .github/agents/storage.agent.md for context, then [task description]..."
+"Read the storage agent definition for context, then [task description]..."
 ```
+
+The default workspace agent is also instructed through `.github/copilot-instructions.md` to delegate automatically when a task clearly matches one of these domains.
 
 ## Available Agents
 
-| File                           | Domain        | Use For                                       |
-| ------------------------------ | ------------- | --------------------------------------------- |
-| [storage.agent.md](storage.agent.md)       | Storage layer | File System Access API, autosave, persistence |
-| [hooks.agent.md](hooks.agent.md)           | Custom hooks  | State management, service integration         |
-| [audit.agent.md](audit.agent.md)           | Quality       | Security, a11y, performance audits            |
-| [templates.agent.md](templates.agent.md)   | Delegation    | Ready-to-use prompt templates                 |
-| [memories.agent.md](memories.agent.md)     | Context       | Repository-level AI memories                  |
+| Agent | Domain | Use For |
+| --- | --- | --- |
+| Frontend | Frontend and UI | Components, app-shell flows, styling, accessibility, and visual behavior |
+| Domain | Domain logic | Pure business rules, validation, calculations, and transformations |
+| Services | Services and DataManager | Orchestration, read-modify-write flows, and file-backed mutations |
+| Testing | Testing | Vitest, React Testing Library, jest-axe, failures, and coverage |
+| Storage | Storage layer | File System Access API, autosave, persistence |
+| Hooks | Custom hooks | State management, service integration |
+| Audit | Quality | Security, accessibility, performance, and architecture audits |
+
+## Related Skills
+
+| Skill | Purpose |
+| --- | --- |
+| Repo memories | Concentrated repository conventions and reminders |
+| Agent delegation | Choosing the right customization primitive and drafting delegation prompts |
 
 ## Consolidated Guides
 
-For major development areas, see the consolidated guides in `.github/`:
+For major development areas, see the consolidated guides in the `.github` folder:
 
 | Guide                     | Focus                                |
 | ------------------------- | ------------------------------------ |
-| `implementation-guide.md` | Services, domain, hooks, data flow   |
-| `ui-guide.md`             | React components, shadcn/ui, Tailwind|
-| `testing-guide.md`        | Vitest, RTL, mocking patterns        |
+| Implementation guide | Services, domain, hooks, data flow   |
+| UI guide | React components, shadcn/ui, Tailwind|
+| Testing guide | Vitest, RTL, mocking patterns        |
 
 ## Quick Reference
 

@@ -1,4 +1,5 @@
 ---
+description: "Use when writing or updating tests. Covers Vitest, React Testing Library, AAA structure, strict assertions, typed mocks, and accessibility checks."
 applyTo: "__tests__/**/*.ts,__tests__/**/*.tsx,domain/**/*.test.ts,domain/**/*.test.tsx,src/test/**/*.ts,src/test/**/*.tsx"
 ---
 

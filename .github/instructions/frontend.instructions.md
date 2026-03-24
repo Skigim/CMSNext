@@ -1,4 +1,5 @@
 ---
+description: "Use when changing React components, app shells, or styles. Covers shadcn/ui usage, Tailwind patterns, accessibility, and visual verification."
 applyTo: "App.tsx,main.tsx,components/**/*.ts,components/**/*.tsx,styles/**/*.css"
 ---
 

@@ -1,4 +1,5 @@
 ---
+description: "Use when working with SonarQube analysis, security issues, or connected-mode workflows. Covers project-key lookup, branch context, and analysis caveats."
 applyTo: "**/*"
 ---
 

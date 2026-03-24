@@ -1,4 +1,5 @@
 ---
+description: "Use when changing domain logic, hooks, services, types, or contexts. Covers layered architecture, DataManager flows, storage rules, and validation commands."
 applyTo: "domain/**/*.ts,domain/**/*.tsx,hooks/**/*.ts,hooks/**/*.tsx,utils/**/*.ts,utils/**/*.tsx,types/**/*.ts,types/**/*.tsx,contexts/**/*.ts,contexts/**/*.tsx"
 ---
 
