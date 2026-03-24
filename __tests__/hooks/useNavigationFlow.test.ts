@@ -84,7 +84,31 @@ describe("useNavigationFlow", () => {
     );
     expect(endMeasurementMock).toHaveBeenCalledWith(
       "navigation:viewCase",
-      expect.objectContaining({ caseId: existingCase.id, blocked: false }),
+      expect.objectContaining({ caseId: existingCase.id, blocked: false, result: "details" }),
+    );
+  });
+
+  it("routes incomplete cases into intake instead of details", () => {
+    const incompleteCase = createMockStoredCase({
+      id: "case-incomplete",
+      caseRecord: {
+        ...createMockStoredCase().caseRecord,
+        intakeCompleted: false,
+      },
+    });
+    const { result } = renderNavigationFlow({
+      cases: [incompleteCase],
+    });
+
+    act(() => {
+      result.current.viewCase(incompleteCase.id);
+    });
+
+    expect(result.current.currentView).toBe("intake");
+    expect(result.current.selectedCaseId).toBe(incompleteCase.id);
+    expect(endMeasurementMock).toHaveBeenCalledWith(
+      "navigation:viewCase",
+      expect.objectContaining({ caseId: incompleteCase.id, blocked: false, result: "intake" }),
     );
   });
 
@@ -155,6 +179,56 @@ describe("useNavigationFlow", () => {
     );
   });
 
+  it("opens Quick Add without leaving the current view", () => {
+    // ARRANGE
+    const { result } = renderNavigationFlow();
+
+    expect(result.current.currentView).toBe("dashboard");
+    expect(result.current.showNewCaseModal).toBe(false);
+
+    // ACT
+    act(() => {
+      result.current.quickAdd();
+    });
+
+    // ASSERT
+    expect(result.current.currentView).toBe("dashboard");
+    expect(result.current.showNewCaseModal).toBe(true);
+    expect(endMeasurementMock).toHaveBeenCalledWith(
+      "navigation:quickAdd",
+      expect.objectContaining({ result: "modal", source: "dashboard" }),
+    );
+  });
+
+  it("returns to the list after saving a quick add opened from list", () => {
+    // ARRANGE
+    const createdCase = createMockStoredCase({ id: "case-created" });
+    const { result } = renderNavigationFlow({
+      cases: [createdCase],
+    });
+
+    act(() => {
+      result.current.navigate("list");
+    });
+
+    // ACT
+    act(() => {
+      result.current.quickAdd();
+    });
+
+    act(() => {
+      result.current.completeNewCase(createdCase.id, createdCase);
+    });
+
+    act(() => {
+      result.current.backToList();
+    });
+
+    // ASSERT
+    expect(result.current.currentView).toBe("list");
+    expect(result.current.selectedCaseId).toBeNull();
+  });
+
   it("returns to the originating details view when intake is canceled", () => {
     const existingCase = createMockStoredCase({ id: "case-origin" });
     const { result } = renderNavigationFlow({
@@ -187,12 +261,14 @@ describe("useNavigationFlow", () => {
   });
 
   it("returns to the prior non-intake source after opening a created case", () => {
+    // ARRANGE
     const existingCase = createMockStoredCase({ id: "case-origin" });
     const createdCase = createMockStoredCase({ id: "case-created" });
     const { result } = renderNavigationFlow({
       cases: [existingCase, createdCase],
     });
 
+    // ACT
     act(() => {
       result.current.navigate("list");
     });
@@ -218,6 +294,7 @@ describe("useNavigationFlow", () => {
       result.current.backToList();
     });
 
+    // ASSERT
     expect(result.current.currentView).toBe("list");
     expect(result.current.selectedCaseId).toBeNull();
 
@@ -226,6 +303,26 @@ describe("useNavigationFlow", () => {
       caseId: createdCase.id,
       result: "details",
       source: "list",
+    });
+  });
+
+  it("does not navigate when completeNewCase cannot resolve the case", () => {
+    // ARRANGE
+    const { result } = renderNavigationFlow();
+
+    // ACT
+    act(() => {
+      result.current.completeNewCase("missing-case");
+    });
+
+    // ASSERT
+    expect(result.current.currentView).toBe("dashboard");
+    expect(result.current.selectedCaseId).toBeNull();
+
+    const lastMeasurement = getLastMeasurementMetadata("navigation:completeNewCase");
+    expect(lastMeasurement).toMatchObject({
+      caseId: "missing-case",
+      result: "missing-case",
     });
   });
 
@@ -333,5 +430,39 @@ describe("useNavigationFlow", () => {
 
     expect(result.current.currentView).toBe("list");
     expect(result.current.selectedCaseId).toBeNull();
+  });
+
+  it("routes newly quick-added cases into intake after save", async () => {
+    const quickAddedCase = createMockStoredCase({
+      id: "quick-add-case",
+      caseRecord: {
+        ...createMockStoredCase().caseRecord,
+        intakeCompleted: false,
+      },
+    });
+    const personForm = createMockNewPersonData();
+    const caseRecordForm = createMockNewCaseRecordData({ intakeCompleted: false });
+    const { result } = renderNavigationFlow({
+      saveCase: createSaveCaseMock(quickAddedCase),
+    });
+
+    act(() => {
+      result.current.quickAdd();
+    });
+
+    await act(async () => {
+      await result.current.saveCaseWithNavigation({
+        person: personForm,
+        caseRecord: caseRecordForm,
+      });
+    });
+
+    expect(result.current.showNewCaseModal).toBe(false);
+    expect(result.current.currentView).toBe("intake");
+    expect(result.current.selectedCaseId).toBe(quickAddedCase.id);
+    expect(endMeasurementMock).toHaveBeenCalledWith(
+      "navigation:completeNewCase",
+      expect.objectContaining({ caseId: quickAddedCase.id, result: "intake" }),
+    );
   });
 });

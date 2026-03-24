@@ -2,6 +2,7 @@ import { useMemo, useState, useCallback, useEffect, useRef } from "react";
 import Fuse, { type IFuseOptions } from "fuse.js";
 import type { StoredCase } from "@/types/case";
 import type { AlertWithMatch } from "@/utils/alertsData";
+import { caseNeedsIntake } from "@/domain/cases";
 
 export interface CaseSearchResult {
   type: "case";
@@ -23,6 +24,10 @@ export interface AlertSearchResult {
     value?: string;
     indices: ReadonlyArray<readonly [number, number]>;
   }>;
+}
+
+export interface CaseSearchResultWithNeedsIntake extends CaseSearchResult {
+  needsIntake: boolean;
 }
 
 export type SearchResult = CaseSearchResult | AlertSearchResult;
@@ -51,6 +56,19 @@ const DEFAULT_OPTIONS: Required<UseFuzzySearchOptions> = {
   minChars: 2,
   threshold: 0.4,
 };
+
+export function useCaseSearchResultsWithNeedsIntake(
+  results: CaseSearchResult[],
+): CaseSearchResultWithNeedsIntake[] {
+  return useMemo(
+    () =>
+      results.map((result) => ({
+        ...result,
+        needsIntake: caseNeedsIntake(result.item),
+      })),
+    [results],
+  );
+}
 
 /**
  * Fuse.js configuration for cases

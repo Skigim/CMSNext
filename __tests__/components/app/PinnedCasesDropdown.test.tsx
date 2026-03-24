@@ -107,4 +107,44 @@ describe("PinnedCasesDropdown", () => {
 
     expect(await findByText("Pending morning triage")).toBeInTheDocument();
   });
+
+  it("shows Needs Intake for pinned incomplete cases", async () => {
+    // ARRANGE
+    usePinnedCasesMock.mockReturnValue({
+      pinnedCaseIds: ["case-1"],
+      pin: vi.fn(),
+      unpin: vi.fn(),
+      togglePin: vi.fn(),
+      isPinned: vi.fn(),
+      getPinReason: vi.fn(),
+      canPinMore: true,
+      pinnedCount: 1,
+      reorder: vi.fn(),
+      pruneStale: vi.fn(),
+    });
+
+    const baseCase = createMockStoredCase();
+    const { getByRole, findByText } = render(
+      <PinnedCasesDropdown
+        cases={[
+          createMockStoredCase({
+            id: "case-1",
+            name: "Case One",
+            caseRecord: {
+              ...baseCase.caseRecord,
+              intakeCompleted: false,
+            },
+          }),
+        ]}
+        hasLoadedData={true}
+        onViewCase={vi.fn()}
+      />,
+    );
+
+    // ACT
+    fireEvent.pointerDown(getByRole("button", { name: "Pinned cases (1)" }));
+
+    // ASSERT
+    expect(await findByText("Needs Intake")).toBeInTheDocument();
+  });
 });

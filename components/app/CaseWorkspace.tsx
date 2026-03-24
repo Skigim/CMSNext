@@ -107,6 +107,7 @@ export const CaseWorkspace = memo(function CaseWorkspace({
         alerts={alerts}
         handleViewCase={viewHandlers.handleViewCase}
         handleNewCase={viewHandlers.handleNewCase}
+        handleQuickAdd={viewHandlers.handleQuickAdd}
         handleCancelNewCase={viewHandlers.handleCancelNewCase}
         handleCompleteNewCase={viewHandlers.handleCompleteNewCase}
         handleCloseNewCaseModal={viewHandlers.handleCloseNewCaseModal}

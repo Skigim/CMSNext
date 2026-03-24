@@ -95,6 +95,7 @@ export const AppContent = memo(function AppContent() {
     navigate: handleNavigate,
     viewCase: handleViewCase,
     newCase: handleNewCase,
+    quickAdd: handleQuickAdd,
     cancelNewCase: handleCancelNewCase,
     completeNewCase: handleCompleteNewCase,
     closeNewCaseModal: handleCloseNewCaseModal,
@@ -314,6 +315,7 @@ export const AppContent = memo(function AppContent() {
     () => ({
       handleViewCase,
       handleNewCase,
+      handleQuickAdd,
       handleCancelNewCase,
       handleCompleteNewCase,
       handleCloseNewCaseModal,
@@ -339,6 +341,7 @@ export const AppContent = memo(function AppContent() {
       handleCancelNewCase,
       handleCompleteNewCase,
       handleNewCase,
+      handleQuickAdd,
       handleSaveCase,
       handleViewCase,
       archival.approveArchival,

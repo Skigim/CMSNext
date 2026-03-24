@@ -181,10 +181,10 @@ export function QuickCaseModal({ isOpen, onClose, onSave }: QuickCaseModalProps)
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Plus className="h-5 w-5" />
-              New Case
+              Quick Add
             </DialogTitle>
             <DialogDescription>
-              Enter the basic information to create a new case. You can add more details after.
+              Capture a preliminary case with the minimum required information. Quick-added cases stay marked Needs Intake until the full intake workflow is completed.
             </DialogDescription>
           </DialogHeader>
 
@@ -247,7 +247,7 @@ export function QuickCaseModal({ isOpen, onClose, onSave }: QuickCaseModalProps)
                 disabled={isSaving}
               />
               <Label htmlFor="addAnother" className="text-sm font-normal cursor-pointer">
-                Add another case after saving
+                Keep Quick Add open for another case
               </Label>
             </div>
             <div className="flex gap-2">
@@ -266,12 +266,12 @@ export function QuickCaseModal({ isOpen, onClose, onSave }: QuickCaseModalProps)
               {isSaving ? (
                 <>
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Creating...
+                  Saving...
                 </>
               ) : (
                 <>
                   <Plus className="h-4 w-4 mr-2" />
-                  Create Case
+                  Save Quick Add
                 </>
               )}
             </Button>

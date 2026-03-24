@@ -3,6 +3,7 @@ import { AppView } from "../../types/view";
 import type { AlertsIndex, AlertWithMatch } from "../../utils/alertsData";
 import type { CaseActivityLogState } from "../../types/activityLog";
 import { exportCasesToJSON, triggerImportDialog, triggerAlertsCsvImport } from "../../utils/dataExportImport";
+import { caseNeedsIntake } from "@/domain/cases";
 
 // Direct imports for high-turnover components - no lazy loading for snappiness
 import { Dashboard } from "../app/Dashboard";
@@ -22,8 +23,9 @@ export type View = AppView;
 export interface CaseViewHandlers {
   handleViewCase: (caseId: string) => void;
   handleNewCase: () => void;
+  handleQuickAdd: () => void;
   handleCancelNewCase: () => void;
-  handleCompleteNewCase: (caseId: string) => void;
+  handleCompleteNewCase: (caseId: string, savedCase?: StoredCase) => void;
   handleCloseNewCaseModal: () => void;
   handleBackToList: () => void;
   handleSaveCase: (
@@ -61,6 +63,65 @@ interface ViewRendererProps extends CaseViewHandlers {
   onAlertsCsvImported?: (index: AlertsIndex) => void;
 }
 
+function DetailsViewContent({
+  selectedCase,
+  alerts,
+  handleCompleteNewCase,
+  handleCancelNewCase,
+  handleBackToList,
+  handleDeleteCase,
+  handleApproveArchival,
+  isArchiving,
+  handleUpdateCaseStatus,
+  handleResolveAlert,
+  handleUpdateCasesPriority,
+}: Readonly<{
+  selectedCase: StoredCase;
+  alerts: AlertsIndex;
+  handleCompleteNewCase: (caseId: string, savedCase?: StoredCase) => void;
+  handleCancelNewCase: () => void;
+  handleBackToList: () => void;
+  handleDeleteCase: (caseId: string) => Promise<void>;
+  handleApproveArchival?: (caseIds: string[]) => Promise<unknown>;
+  isArchiving?: boolean;
+  handleUpdateCaseStatus?: (caseId: string, status: StoredCase["status"]) =>
+    | Promise<StoredCase | null>
+    | StoredCase
+    | null
+    | void;
+  handleResolveAlert?: (alert: AlertWithMatch) => Promise<void> | void;
+  handleUpdateCasesPriority: (caseIds: string[], priority: boolean) => Promise<number>;
+}>) {
+  if (caseNeedsIntake(selectedCase)) {
+    return (
+      <IntakeFormView
+        existingCase={selectedCase}
+        onSuccess={(savedCase) => {
+          handleCompleteNewCase(savedCase.id, savedCase);
+        }}
+        onCancel={handleCancelNewCase}
+      />
+    );
+  }
+
+  return (
+    <CaseDetails
+      case={selectedCase}
+      alerts={alerts.alertsByCaseId.get(selectedCase.id) ?? []}
+      onBack={handleBackToList}
+      onDelete={() => handleDeleteCase(selectedCase.id)}
+      onArchive={handleApproveArchival ? async () => {
+        await handleApproveArchival([selectedCase.id]);
+        handleBackToList();
+      } : undefined}
+      isArchiving={isArchiving}
+      onUpdateStatus={handleUpdateCaseStatus}
+      onResolveAlert={handleResolveAlert}
+      onUpdatePriority={handleUpdateCasesPriority}
+    />
+  );
+}
+
 /**
  * ViewRenderer component handles rendering of different views based on current route
  * 
@@ -88,6 +149,7 @@ export function ViewRenderer({
   // Navigation handlers
   handleViewCase,
   handleNewCase,
+  handleQuickAdd,
   handleCancelNewCase,
   handleCompleteNewCase,
   handleCloseNewCaseModal: _handleCloseNewCaseModal,
@@ -143,6 +205,7 @@ export function ViewRenderer({
           onCancelArchival={handleCancelArchival}
           isArchiving={isArchiving}
           onNewCase={handleNewCase}
+          onQuickAdd={handleQuickAdd}
           onResolveAlert={handleResolveAlert}
           onUpdateCaseStatus={handleUpdateCaseStatus}
         />
@@ -159,19 +222,18 @@ export function ViewRenderer({
 
     case 'details':
       return selectedCase ? (
-        <CaseDetails
-          case={selectedCase}
-          alerts={alerts.alertsByCaseId.get(selectedCase.id) ?? []}
-          onBack={handleBackToList}
-          onDelete={() => handleDeleteCase(selectedCase.id)}
-          onArchive={handleApproveArchival ? async () => {
-            await handleApproveArchival([selectedCase.id]);
-            handleBackToList();
-          } : undefined}
+        <DetailsViewContent
+          selectedCase={selectedCase}
+          alerts={alerts}
+          handleCompleteNewCase={handleCompleteNewCase}
+          handleCancelNewCase={handleCancelNewCase}
+          handleBackToList={handleBackToList}
+          handleDeleteCase={handleDeleteCase}
+          handleApproveArchival={handleApproveArchival}
           isArchiving={isArchiving}
-          onUpdateStatus={handleUpdateCaseStatus}
-          onResolveAlert={handleResolveAlert}
-          onUpdatePriority={handleUpdateCasesPriority}
+          handleUpdateCaseStatus={handleUpdateCaseStatus}
+          handleResolveAlert={handleResolveAlert}
+          handleUpdateCasesPriority={handleUpdateCasesPriority}
         />
       ) : (
         <div className="text-center p-8">Case not found</div>
@@ -180,8 +242,9 @@ export function ViewRenderer({
     case 'intake':
       return (
         <IntakeFormView
+          existingCase={caseNeedsIntake(selectedCase) ? selectedCase ?? undefined : undefined}
           onSuccess={(createdCase) => {
-            handleCompleteNewCase(createdCase.id);
+            handleCompleteNewCase(createdCase.id, createdCase);
           }}
           onCancel={handleCancelNewCase}
         />

@@ -1,7 +1,10 @@
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { axe, toHaveNoViolations } from "jest-axe";
 import { describe, expect, it, vi, beforeEach } from "vitest";
 import { QuickCaseModal } from "@/components/modals/QuickCaseModal";
+
+expect.extend(toHaveNoViolations);
 
 // Mock CategoryConfigContext
 vi.mock("@/contexts/CategoryConfigContext", async (importOriginal) => {
@@ -34,18 +37,23 @@ describe("QuickCaseModal", () => {
     );
   };
 
-  it("renders the modal when open", () => {
-    renderModal();
-    expect(screen.getByText("New Case")).toBeInTheDocument();
+  it("renders the modal when open", async () => {
+    // ARRANGE
+    const { container } = renderModal();
+
+    // ASSERT
+    expect(screen.getByText("Quick Add")).toBeInTheDocument();
     expect(screen.getByLabelText(/First Name/)).toBeInTheDocument();
     expect(screen.getByLabelText(/Last Name/)).toBeInTheDocument();
     expect(screen.getByLabelText(/MCN/)).toBeInTheDocument();
     expect(screen.getByLabelText(/Application Date/)).toBeInTheDocument();
+    expect(screen.getByText(/Capture a preliminary case/i)).toBeInTheDocument();
+    expect(await axe(container)).toHaveNoViolations();
   });
 
   it("shows add another checkbox", () => {
     renderModal();
-    expect(screen.getByLabelText(/Add another case after saving/)).toBeInTheDocument();
+    expect(screen.getByLabelText(/Keep Quick Add open for another case/)).toBeInTheDocument();
   });
 
   it("calls onClose when cancel is clicked", async () => {
@@ -65,7 +73,7 @@ describe("QuickCaseModal", () => {
     await user.type(screen.getByLabelText(/Last Name/), "Doe");
     await user.type(screen.getByLabelText(/MCN/), "MCN123");
 
-    await user.click(screen.getByRole("button", { name: /Create Case/ }));
+    await user.click(screen.getByRole("button", { name: /Save Quick Add/ }));
 
     await waitFor(() => {
       expect(mockOnSave).toHaveBeenCalledTimes(1);
@@ -110,10 +118,10 @@ describe("QuickCaseModal", () => {
     await user.type(screen.getByLabelText(/MCN/), "MCN123");
 
     // Check "add another"
-    await user.click(screen.getByLabelText(/Add another case after saving/));
+    await user.click(screen.getByLabelText(/Keep Quick Add open for another case/));
 
     // Submit the form
-    await user.click(screen.getByRole("button", { name: /Create Case/ }));
+    await user.click(screen.getByRole("button", { name: /Save Quick Add/ }));
 
     // Wait for save to complete
     await waitFor(() => {
@@ -141,13 +149,13 @@ describe("QuickCaseModal", () => {
     renderModal();
 
     // Check "add another" first
-    await user.click(screen.getByLabelText(/Add another case after saving/));
+    await user.click(screen.getByLabelText(/Keep Quick Add open for another case/));
 
     // Create first case
     await user.type(screen.getByLabelText(/First Name/), "John");
     await user.type(screen.getByLabelText(/Last Name/), "Doe");
     await user.type(screen.getByLabelText(/MCN/), "MCN123");
-    await user.click(screen.getByRole("button", { name: /Create Case/ }));
+    await user.click(screen.getByRole("button", { name: /Save Quick Add/ }));
 
     await waitFor(() => {
       expect(mockOnSave).toHaveBeenCalledTimes(1);
@@ -162,7 +170,7 @@ describe("QuickCaseModal", () => {
     await user.type(screen.getByLabelText(/First Name/), "Jane");
     await user.type(screen.getByLabelText(/Last Name/), "Smith");
     await user.type(screen.getByLabelText(/MCN/), "MCN456");
-    await user.click(screen.getByRole("button", { name: /Create Case/ }));
+    await user.click(screen.getByRole("button", { name: /Save Quick Add/ }));
 
     await waitFor(() => {
       expect(mockOnSave).toHaveBeenCalledTimes(2);
@@ -176,7 +184,7 @@ describe("QuickCaseModal", () => {
     const { rerender } = renderModal();
 
     // Check "add another"
-    const checkbox = screen.getByLabelText(/Add another case after saving/);
+    const checkbox = screen.getByLabelText(/Keep Quick Add open for another case/);
     fireEvent.click(checkbox);
     expect(checkbox).toBeChecked();
 
@@ -190,7 +198,7 @@ describe("QuickCaseModal", () => {
 
     // Checkbox should be unchecked
     await waitFor(() => {
-      expect(screen.getByLabelText(/Add another case after saving/)).not.toBeChecked();
+      expect(screen.getByLabelText(/Keep Quick Add open for another case/)).not.toBeChecked();
     });
   });
 
@@ -207,13 +215,13 @@ describe("QuickCaseModal", () => {
     await user.type(screen.getByLabelText(/Last Name/), "Doe");
     await user.type(screen.getByLabelText(/MCN/), "MCN123");
 
-    await user.click(screen.getByRole("button", { name: /Create Case/ }));
+    await user.click(screen.getByRole("button", { name: /Save Quick Add/ }));
 
     // Check that inputs are disabled while saving
     expect(screen.getByLabelText(/First Name/)).toBeDisabled();
     expect(screen.getByLabelText(/Last Name/)).toBeDisabled();
     expect(screen.getByLabelText(/MCN/)).toBeDisabled();
-    expect(screen.getByLabelText(/Add another case after saving/)).toBeDisabled();
+    expect(screen.getByLabelText(/Keep Quick Add open for another case/)).toBeDisabled();
 
     await waitFor(() => {
       expect(mockOnSave).toHaveBeenCalled();

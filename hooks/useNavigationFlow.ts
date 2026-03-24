@@ -30,8 +30,9 @@ interface NavigationHandlers {
   navigate: (view: AppView) => void;
   viewCase: (caseId: string) => void;
   newCase: () => void;
+  quickAdd: () => void;
   cancelNewCase: () => void;
-  completeNewCase: (caseId: string) => void;
+  completeNewCase: (caseId: string, savedCase?: StoredCase) => void;
   closeNewCaseModal: () => void;
   saveCaseWithNavigation: (
     caseData: { person: NewPersonData; caseRecord: NewCaseRecordData },

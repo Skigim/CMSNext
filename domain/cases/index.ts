@@ -41,6 +41,7 @@ export {
   createBlankHouseholdMemberData,
   createIntakeFormData,
   createPersonData,
+  caseNeedsIntake,
   resolveCaseRecordIntakeCompleted,
   type CaseRecordDefaults,
   type PersonDefaults,
