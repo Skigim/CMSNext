@@ -1,11 +1,11 @@
 /**
  * VR Generator Modal
- * 
+ *
  * Modal for generating Verification Request letters from financial items.
  * User selects a script template, checks items to include, and copies the result.
  */
 
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useCallback, useMemo } from "react";
 import {
   Dialog,
   DialogContent,
@@ -49,8 +49,30 @@ export function VRGeneratorModal({
   financialItems,
   vrTemplates,
 }: Readonly<VRGeneratorModalProps>) {
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      {open ? (
+        <VRGeneratorModalContent
+          onOpenChange={onOpenChange}
+          storedCase={storedCase}
+          financialItems={financialItems}
+          vrTemplates={vrTemplates}
+        />
+      ) : null}
+    </Dialog>
+  );
+}
+
+function VRGeneratorModalContent({
+  onOpenChange,
+  storedCase,
+  financialItems,
+  vrTemplates,
+}: Readonly<Omit<VRGeneratorModalProps, "open">>) {
   // Local state
-  const [selectedScriptId, setSelectedScriptId] = useState<string | null>(null);
+  const [selectedScriptId, setSelectedScriptId] = useState<string | null>(
+    () => vrTemplates[0]?.id ?? null,
+  );
   const [selectedItemIds, setSelectedItemIds] = useState<Set<string>>(new Set());
   const [renderedText, setRenderedText] = useState("");
 
@@ -68,20 +90,6 @@ export function VRGeneratorModal({
   const selectedCount = selectableItems.filter(i => i.selected).length;
   const allSelected = selectedCount === totalItems && totalItems > 0;
   const noneSelected = selectedCount === 0;
-
-  // Reset state when modal opens
-  useEffect(() => {
-    if (open) {
-      const frameId = globalThis.requestAnimationFrame(() => {
-        // Select no items by default
-        setSelectedItemIds(new Set());
-        // Select first script if available (but don't auto-populate)
-        setSelectedScriptId(vrTemplates[0]?.id ?? null);
-        setRenderedText("");
-      });
-      return () => globalThis.cancelAnimationFrame(frameId);
-    }
-  }, [open, vrTemplates]);
 
   const handleToggleItem = useCallback((itemId: string) => {
     setSelectedItemIds(prev => {
@@ -178,7 +186,6 @@ export function VRGeneratorModal({
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent data-papercut-context="VRGenerator" className="max-w-4xl max-h-[90vh] flex flex-col">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
@@ -351,7 +358,6 @@ export function VRGeneratorModal({
           </Button>
         </DialogFooter>
       </DialogContent>
-    </Dialog>
   );
 }
 
