@@ -1,9 +1,12 @@
 import { describe, expect, it, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
+import { axe, toHaveNoViolations } from "jest-axe";
 import { CaseFiltersDialog } from "@/components/case/CaseFiltersDialog";
 import { createEmptyAdvancedFilter } from "@/domain/alerts";
 import type { UseAdvancedAlertFilterResult } from "@/hooks/useAdvancedAlertFilter";
 import type { CaseFilters } from "@/hooks/useCaseListPreferences";
+
+expect.extend(toHaveNoViolations);
 
 vi.mock("@/contexts/CategoryConfigContext", () => ({
   useCategoryConfig: () => ({
@@ -44,8 +47,9 @@ const filters: CaseFilters = {
 };
 
 describe("CaseFiltersDialog", () => {
-  it("provides an accessible dialog description", () => {
-    render(
+  it("provides an accessible dialog description", async () => {
+    // Arrange
+    const { container } = render(
       <CaseFiltersDialog
         open={true}
         onOpenChange={vi.fn()}
@@ -55,6 +59,11 @@ describe("CaseFiltersDialog", () => {
       />,
     );
 
+    // Act
+    const results = await axe(container);
+
+    // Assert
+    expect(results).toHaveNoViolations();
     expect(screen.getByRole("dialog", { name: "Filter cases" })).toHaveAccessibleDescription(
       "Narrow the case list by status, priority, date range, completion state, and alert filters.",
     );
