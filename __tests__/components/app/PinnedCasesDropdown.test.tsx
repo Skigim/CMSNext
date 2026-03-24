@@ -95,7 +95,7 @@ describe("PinnedCasesDropdown", () => {
       pruneStale: vi.fn(),
     });
 
-    const { getByRole, findByText } = render(
+    const { baseElement, getByRole, findByText } = render(
       <PinnedCasesDropdown
         cases={[createMockStoredCase({ id: "case-1", name: "Case One" })]}
         hasLoadedData={true}
@@ -106,6 +106,8 @@ describe("PinnedCasesDropdown", () => {
     fireEvent.pointerDown(getByRole("button", { name: "Pinned cases (1)" }));
 
     expect(await findByText("Pending morning triage")).toBeInTheDocument();
+    expect(baseElement.querySelector(".overflow-hidden.flex.flex-col.max-h-64")).not.toBeNull();
+    expect(baseElement.querySelector(".h-full.max-h-64")).not.toBeNull();
   });
 
   it("shows Needs Intake for pinned incomplete cases", async () => {

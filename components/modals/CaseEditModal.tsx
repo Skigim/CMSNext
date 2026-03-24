@@ -1,5 +1,12 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "../ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "../ui/dialog";
 import { Button } from "../ui/button";
 import { Badge } from "../ui/badge";
 import { Save, X, AlertCircle } from "lucide-react";
@@ -259,6 +266,10 @@ export function CaseEditModal({ isOpen, onClose, caseData, onSave }: Readonly<Ca
                 )}
               </div>
             </div>
+            <DialogDescription>
+              Update the case details, contact information, eligibility data, and relationships,
+              then save your changes when you are finished.
+            </DialogDescription>
           </DialogHeader>
 
           <ScrollArea className="flex-1 px-6">

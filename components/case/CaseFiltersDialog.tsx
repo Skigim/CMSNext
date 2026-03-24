@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
@@ -275,6 +276,10 @@ export function CaseFiltersDialog({
               </Button>
             )}
           </DialogTitle>
+          <DialogDescription>
+            Narrow the case list by status, priority, date range, completion state, and alert
+            filters.
+          </DialogDescription>
         </DialogHeader>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">

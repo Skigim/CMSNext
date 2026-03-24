@@ -53,8 +53,7 @@ import { createLogger } from "@/utils/logger";
 const logger = createLogger("ArchivalSettingsPanel");
 import { useCaseArchival, useFuzzySearch, usePositionAssignmentsImport } from "@/hooks";
 import { PositionAssignmentsReviewModal } from "@/components/modals/PositionAssignmentsReviewModal";
-import type { ArchiveFileInfo } from "@/utils/services/CaseArchiveService";
-import type { CaseArchiveData, ArchivalSettings } from "@/types/archive";
+import type { ArchiveFileInfo, CaseArchiveData, ArchivalSettings } from "@/types/archive";
 import { DEFAULT_ARCHIVAL_SETTINGS } from "@/types/archive";
 import type { StoredCase } from "@/types/case";
 

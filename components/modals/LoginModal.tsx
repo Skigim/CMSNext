@@ -83,8 +83,8 @@ export function LoginModal({
           // No file exists - shouldn't be on login screen
           setFileExists(false);
         }
-      } catch (err) {
-        logger.warn("File check failed", { error: String(err) });
+      } catch (error) {
+        logger.warn("File check failed", { error: String(error) });
       } finally {
         setIsCheckingFile(false);
       }
@@ -150,12 +150,12 @@ export function LoginModal({
 
       logger.info("Login successful");
       onLoginComplete();
-    } catch (err) {
-      if (err instanceof EncryptionError) {
+    } catch (error) {
+      if (error instanceof EncryptionError) {
         encryption.setPendingPassword(null);
         
         // Handle specific error codes
-        switch (err.code) {
+        switch (error.code) {
           case 'wrong_password':
             logger.warn("Decryption failed - wrong password");
             encryption.clearCredentials();
@@ -168,13 +168,13 @@ export function LoginModal({
             break;
           case 'system_error':
             logger.error("Decryption failed - system error");
-            setError(`System error: ${err.message}`);
+            setError(`System error: ${error.message}`);
             break;
           default:
-            logger.error("Decryption failed - unknown code", { code: err.code });
-            setError(err.message);
+            logger.error("Decryption failed - unknown code", { code: error.code });
+            setError(error.message);
         }
-      } else if (isDecryptionError(err)) {
+      } else if (isDecryptionError(error)) {
         // Fallback for non-typed errors
         logger.warn("Decryption failed - wrong password (generic mismatch)");
         encryption.setPendingPassword(null);
@@ -182,9 +182,9 @@ export function LoginModal({
         setPassword("");
         setError("Incorrect password. Please try again.");
       } else {
-        logger.error("Login error", { error: String(err) });
+        logger.error("Login error", { error: String(error) });
         encryption.setPendingPassword(null);
-        setError(`Error: ${err instanceof Error ? err.message : "Unknown error"}`);
+        setError(`Error: ${error instanceof Error ? error.message : "Unknown error"}`);
       }
     } finally {
       setIsLoading(false);
@@ -202,9 +202,12 @@ export function LoginModal({
       <>
         <AuthBackdrop isOpen={isOpen} />
         <Dialog open={isOpen}>
-          <DialogContent hideCloseButton className="sm:max-w-md" aria-describedby={undefined}>
+          <DialogContent hideCloseButton className="sm:max-w-md">
             <DialogHeader className="sr-only">
               <DialogTitle>Loading</DialogTitle>
+              <DialogDescription>
+                Checking your data before unlocking your workspace.
+              </DialogDescription>
             </DialogHeader>
             <div className="flex flex-col items-center justify-center py-8 gap-4">
               <Loader2 className="h-8 w-8 animate-spin text-primary" />
