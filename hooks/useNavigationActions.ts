@@ -205,7 +205,10 @@ export function useNavigationActions({
 
     const detailsSourceView = resolveCreatedCaseSourceView(formState);
     const nextCase = savedCase ?? cases.find((caseData) => caseData.id === caseId);
-    const nextView = caseNeedsIntake(nextCase) ? "intake" : "details";
+    if (!nextCase) {
+      logger.error("completeNewCase: could not find case for id", { caseId });
+    }
+    const nextView = nextCase && caseNeedsIntake(nextCase) ? "intake" : "details";
 
     setFormState({
       ...formState,
