@@ -204,6 +204,7 @@ describe("resolveCaseRecordIntakeCompleted", () => {
 
 describe("caseNeedsIntake", () => {
   it("returns true only for explicitly incomplete cases", () => {
+    // Arrange
     const incompleteCase = createMockStoredCase({
       caseRecord: {
         ...createMockStoredCase().caseRecord,
@@ -217,9 +218,15 @@ describe("caseNeedsIntake", () => {
       },
     });
 
-    expect(caseNeedsIntake(incompleteCase)).toBe(true);
-    expect(caseNeedsIntake(completeCase)).toBe(false);
-    expect(caseNeedsIntake(undefined)).toBe(false);
+    // Act
+    const incompleteResult = caseNeedsIntake(incompleteCase);
+    const completeResult = caseNeedsIntake(completeCase);
+    const undefinedResult = caseNeedsIntake();
+
+    // Assert
+    expect(incompleteResult).toBe(true);
+    expect(completeResult).toBe(false);
+    expect(undefinedResult).toBe(false);
   });
 });
 

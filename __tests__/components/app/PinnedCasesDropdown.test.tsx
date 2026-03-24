@@ -109,6 +109,7 @@ describe("PinnedCasesDropdown", () => {
   });
 
   it("shows Needs Intake for pinned incomplete cases", async () => {
+    // ARRANGE
     usePinnedCasesMock.mockReturnValue({
       pinnedCaseIds: ["case-1"],
       pin: vi.fn(),
@@ -140,8 +141,10 @@ describe("PinnedCasesDropdown", () => {
       />,
     );
 
+    // ACT
     fireEvent.pointerDown(getByRole("button", { name: "Pinned cases (1)" }));
 
+    // ASSERT
     expect(await findByText("Needs Intake")).toBeInTheDocument();
   });
 });

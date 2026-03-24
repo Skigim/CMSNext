@@ -4,12 +4,17 @@ import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Search, User, AlertCircle, Loader2, X } from "lucide-react";
 import { cn } from "@/components/ui/utils";
-import { useFuzzySearch, type SearchResult, type CaseSearchResult, type AlertSearchResult } from "@/hooks/useFuzzySearch";
+import {
+  useFuzzySearch,
+  useCaseSearchResultsWithNeedsIntake,
+  type SearchResult,
+  type CaseSearchResultWithNeedsIntake,
+  type AlertSearchResult,
+} from "@/hooks/useFuzzySearch";
 import type { StoredCase } from "@/types/case";
 import type { AlertWithMatch } from "@/utils/alertsData";
 import { slotClassMap } from "@/types/colorSlots";
 import { useCategoryConfig } from "@/contexts/CategoryConfigContext";
-import { caseNeedsIntake } from "@/domain/cases";
 import { NeedsIntakeBadge } from "@/components/case/NeedsIntakeBadge";
 
 export interface GlobalSearchDropdownProps {
@@ -66,6 +71,7 @@ export const GlobalSearchDropdown = memo(function GlobalSearchDropdown({
     alerts,
     options: { debounceMs: 500, maxResults: 10 },
   });
+  const caseResults = useCaseSearchResultsWithNeedsIntake(results.cases);
 
   const handleClickOutside = useCallback((event: MouseEvent) => {
     if (
@@ -178,12 +184,12 @@ export const GlobalSearchDropdown = memo(function GlobalSearchDropdown({
       return (
         <div className="py-1">
           {/* Cases Section */}
-          {results.cases.length > 0 && (
+          {caseResults.length > 0 && (
             <div>
               <div className="px-3 py-1.5 text-xs font-medium text-muted-foreground bg-muted/50">
-                Cases ({results.cases.length})
+                Cases ({caseResults.length})
               </div>
-              {results.cases.map((result, index) => (
+              {caseResults.map((result, index) => (
                 <CaseResultItem
                   key={result.item.id}
                   optionId={`${dropdownId}-option-${index}`}
@@ -205,9 +211,9 @@ export const GlobalSearchDropdown = memo(function GlobalSearchDropdown({
               {results.alerts.map((result, index) => (
                 <AlertResultItem
                   key={`${result.item.id}-${index}`}
-                  optionId={`${dropdownId}-option-${results.cases.length + index}`}
+                  optionId={`${dropdownId}-option-${caseResults.length + index}`}
                   result={result}
-                  isSelected={clampedSelectedIndex === results.cases.length + index}
+                  isSelected={clampedSelectedIndex === caseResults.length + index}
                   onSelect={() => handleSelectResult(result)}
                 />
               ))}
@@ -298,7 +304,7 @@ const CaseResultItem = memo(function CaseResultItem({
   getStatusClass,
 }: {
   optionId: string;
-  result: CaseSearchResult;
+  result: CaseSearchResultWithNeedsIntake;
   isSelected: boolean;
   onSelect: () => void;
   getStatusClass: (status: string) => string;
@@ -321,7 +327,7 @@ const CaseResultItem = memo(function CaseResultItem({
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2">
           <span className="font-medium truncate">{caseData.name}</span>
-          {caseNeedsIntake(caseData) ? (
+          {result.needsIntake ? (
             <NeedsIntakeBadge className="text-[10px] px-1.5 py-0" />
           ) : null}
           <Badge variant="outline" className={cn("text-xs shrink-0", getStatusClass(caseData.status))}>

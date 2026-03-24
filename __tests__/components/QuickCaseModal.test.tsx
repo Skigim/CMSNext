@@ -1,7 +1,10 @@
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { axe, toHaveNoViolations } from "jest-axe";
 import { describe, expect, it, vi, beforeEach } from "vitest";
 import { QuickCaseModal } from "@/components/modals/QuickCaseModal";
+
+expect.extend(toHaveNoViolations);
 
 // Mock CategoryConfigContext
 vi.mock("@/contexts/CategoryConfigContext", async (importOriginal) => {
@@ -34,14 +37,18 @@ describe("QuickCaseModal", () => {
     );
   };
 
-  it("renders the modal when open", () => {
-    renderModal();
+  it("renders the modal when open", async () => {
+    // ARRANGE
+    const { container } = renderModal();
+
+    // ASSERT
     expect(screen.getByText("Quick Add")).toBeInTheDocument();
     expect(screen.getByLabelText(/First Name/)).toBeInTheDocument();
     expect(screen.getByLabelText(/Last Name/)).toBeInTheDocument();
     expect(screen.getByLabelText(/MCN/)).toBeInTheDocument();
     expect(screen.getByLabelText(/Application Date/)).toBeInTheDocument();
     expect(screen.getByText(/Capture a preliminary case/i)).toBeInTheDocument();
+    expect(await axe(container)).toHaveNoViolations();
   });
 
   it("shows add another checkbox", () => {

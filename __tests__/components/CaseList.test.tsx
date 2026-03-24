@@ -66,6 +66,7 @@ describe("CaseList status interactions", () => {
   });
 
   it("shows Quick Add when a secondary quick-add handler is provided", async () => {
+    // ARRANGE
     const user = userEvent.setup();
     const onQuickAdd = vi.fn();
 
@@ -82,12 +83,15 @@ describe("CaseList status interactions", () => {
       { categoryConfig: testCategoryConfig }
     );
 
+    // ACT
     await user.click(screen.getByRole("button", { name: /quick add/i }));
 
+    // ASSERT
     expect(onQuickAdd).toHaveBeenCalledTimes(1);
   });
 
   it("shows Needs Intake for incomplete cases in the table", () => {
+    // ARRANGE
     const baseCase = createMockCaseDisplay();
     const incompleteCase = createMockCaseDisplay({
       id: "case-needs-intake",
@@ -109,6 +113,7 @@ describe("CaseList status interactions", () => {
       { categoryConfig: testCategoryConfig }
     );
 
+    // ASSERT
     expect(screen.getByText("Needs Intake")).toBeInTheDocument();
   });
 });
