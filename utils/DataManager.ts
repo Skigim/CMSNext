@@ -22,7 +22,7 @@ import type {
   CaseArchiveData,
   RestoreResult,
 } from "../types/archive";
-import { DEFAULT_ARCHIVAL_SETTINGS } from "../types/archive";
+import { DEFAULT_ARCHIVAL_SETTINGS, parseArchiveYear } from "../types/archive";
 import AutosaveFileService from './AutosaveFileService';
 import { createLogger } from './logger';
 import { extractErrorMessage } from './errorUtils';
@@ -68,7 +68,6 @@ import {
   type WorkspaceMigrationFileReport,
   type WorkspaceMigrationReport,
 } from "./workspaceV21Migration";
-import { parseArchiveYear } from "@/types/archive";
 import { isNormalizedFileData } from "./services/FileStorageService";
 import {
   hydrateNormalizedData,
