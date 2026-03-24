@@ -5,7 +5,49 @@
     "$schema": {
       "type": "string"
     },
+    "servers": {
+      "$ref": "#/definitions/serverMap"
+    },
     "mcpServers": {
+      "$ref": "#/definitions/serverMap"
+    },
+    "inputs": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "password": {
+            "type": "boolean"
+          },
+          "default": {
+            "type": "string"
+          }
+        },
+        "required": ["id", "type"],
+        "additionalProperties": false
+      }
+    }
+  },
+  "anyOf": [
+    {
+      "required": ["servers"]
+    },
+    {
+      "required": ["mcpServers"]
+    }
+  ],
+  "additionalProperties": false,
+  "definitions": {
+    "serverMap": {
       "type": "object",
       "additionalProperties": {
         "type": "object",
@@ -18,13 +60,17 @@
             "items": {
               "type": "string"
             }
+          },
+          "env": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            }
           }
         },
         "required": ["command", "args"],
         "additionalProperties": false
       }
     }
-  },
-  "required": ["mcpServers"],
-  "additionalProperties": false
+  }
 }

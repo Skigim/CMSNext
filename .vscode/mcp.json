@@ -1,6 +1,6 @@
 {
   "$schema": "./mcp.schema.json",
-  "mcpServers": {
+  "servers": {
     "shadcn": {
       "command": "npx",
       "args": ["shadcn@latest", "mcp"]
@@ -49,7 +49,7 @@
     {
       "id": "sonarqubeToken",
       "type": "promptString",
-      "description": "SonarQube Cloud User Token (from sonarcloud.io → My Account → Security)",
+      "description": "SonarQube Cloud User Token (from sonarcloud.io -> My Account -> Security)",
       "password": true
     },
     {

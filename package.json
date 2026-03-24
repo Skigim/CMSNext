@@ -106,6 +106,7 @@
     "postcss": "^8.5.6",
     "puppeteer": "^24.26.1",
     "rollup-plugin-visualizer": "^5.13.0",
+    "shadcn": "^4.1.0",
     "tailwindcss": "^4.1.13",
     "terser": "^5.44.0",
     "tsx": "^4.20.6",
