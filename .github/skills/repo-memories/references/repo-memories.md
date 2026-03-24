@@ -10,6 +10,7 @@
 
 - Case data is persisted through the File System Access API.
 - UI preferences go through `createLocalStorageAdapter`, never direct `window.localStorage` access.
+- LocalStorage keys created via `createLocalStorageAdapter` must use the `cmsnext-[feature-name]` pattern, where `[feature-name]` is a short kebab-case identifier.
 - Passwords and sensitive session secrets belong in `useRef` or transient session state, not persisted storage.
 - The main persisted format is normalized v2.1 with `people`, `cases`, `financials`, `notes`, `alerts`, `categoryConfig`, `activityLog`, and optional `templates`.
 

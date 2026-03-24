@@ -7,39 +7,40 @@ This directory contains focused custom agent definitions for delegating bounded 
 When dispatching a subagent, reference the relevant agent definition for the target domain.
 
 ```
-"Read the storage agent definition for context, then [task description]..."
+"Read the `storage` agent definition for context, then [task description]..."
 ```
 
-The default workspace agent is also instructed through `.github/copilot-instructions.md` to delegate automatically when a task clearly matches one of these domains.
+The default workspace agent is also instructed through `.github/copilot-instructions.md` to delegate automatically when a task clearly matches one of these domains. `Explore` is a built-in read-only discovery agent, not a repository-defined agent in this folder.
 
 ## Available Agents
 
-| Agent | Domain | Use For |
-| --- | --- | --- |
-| Frontend | Frontend and UI | Components, app-shell flows, styling, accessibility, and visual behavior |
-| Domain | Domain logic | Pure business rules, validation, calculations, and transformations |
-| Services | Services and DataManager | Orchestration, read-modify-write flows, and file-backed mutations |
-| Testing | Testing | Vitest, React Testing Library, jest-axe, failures, and coverage |
-| Storage | Storage layer | File System Access API, autosave, persistence |
-| Hooks | Custom hooks | State management, service integration |
-| Audit | Quality | Security, accessibility, performance, and architecture audits |
+| Agent      | Domain                   | Use For                                                                        |
+| ---------- | ------------------------ | ------------------------------------------------------------------------------ |
+| `frontend` | Frontend and UI          | Components, app-shell flows, styling, accessibility, and visual behavior       |
+| `domain`   | Domain logic             | Pure business rules, validation, calculations, and transformations             |
+| `services` | Services and DataManager | Orchestration, read-modify-write flows, and file-backed mutations              |
+| `testing`  | Testing                  | Vitest, React Testing Library, jest-axe, failures, and coverage                |
+| `storage`  | Storage layer            | File System Access API, autosave, persistence                                  |
+| `hooks`    | Custom hooks             | State management, service integration                                          |
+| `audit`    | Quality                  | Security, accessibility, performance, and architecture audits                  |
+| `Explore`  | Built-in discovery       | Broad read-only discovery when the right files or code paths are not yet clear |
 
 ## Related Skills
 
-| Skill | Purpose |
-| --- | --- |
-| Repo memories | Concentrated repository conventions and reminders |
+| Skill            | Purpose                                                                    |
+| ---------------- | -------------------------------------------------------------------------- |
+| Repo memories    | Concentrated repository conventions and reminders                          |
 | Agent delegation | Choosing the right customization primitive and drafting delegation prompts |
 
 ## Consolidated Guides
 
 For major development areas, see the consolidated guides in the `.github` folder:
 
-| Guide                     | Focus                                |
-| ------------------------- | ------------------------------------ |
-| Implementation guide | Services, domain, hooks, data flow   |
-| UI guide | React components, shadcn/ui, Tailwind|
-| Testing guide | Vitest, RTL, mocking patterns        |
+| Guide                | Focus                                 |
+| -------------------- | ------------------------------------- |
+| Implementation guide | Services, domain, hooks, data flow    |
+| UI guide             | React components, shadcn/ui, Tailwind |
+| Testing guide        | Vitest, RTL, mocking patterns         |
 
 ## Quick Reference
 
