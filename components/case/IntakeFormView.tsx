@@ -179,8 +179,8 @@ function SummaryRow({
 }: Readonly<{ label: string; value: string | undefined | null }>) {
   if (!value) return null;
   return (
-    <div className="grid gap-1 text-sm sm:grid-cols-[9rem_minmax(0,1fr)] sm:gap-2">
-      <span className="text-muted-foreground">{label}</span>
+    <div className="grid gap-1 text-sm sm:flex">
+      <span className="text-muted-foreground sm:w-40 sm:shrink-0">{label}</span>
       <CopyButton
         value={value}
         displayText={value}
