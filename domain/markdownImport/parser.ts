@@ -237,7 +237,9 @@ function splitName(value: string): { firstName: string; lastName: string; warnin
   }
 
   if (normalized.includes(",")) {
-    const [lastName, firstName] = normalized.split(",", 2).map((part) => normalizeWhitespace(part));
+    const [lastName = "", firstName = ""] = normalized
+      .split(",", 2)
+      .map((part) => normalizeWhitespace(part));
     return { firstName, lastName };
   }
 
@@ -246,7 +248,7 @@ function splitName(value: string): { firstName: string; lastName: string; warnin
     return {
       firstName: parts[0] ?? "",
       lastName: "",
-      warning: `Could not confidently split name \"${normalized}\" into first and last name.`,
+      warning: `Could not confidently split name "${normalized}" into first and last name.`,
     };
   }
 
@@ -272,7 +274,12 @@ function parseDate(value: string): string | null {
   const slashDateMatch = normalized.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
   if (slashDateMatch) {
     const [, month, day, year] = slashDateMatch;
-    return `${year}-${month.padStart(2, "0")}-${day.padStart(2, "0")}`;
+    const numericMonth = Number.parseInt(month, 10);
+    const numericDay = Number.parseInt(day, 10);
+    if (numericMonth >= 1 && numericMonth <= 12 && numericDay >= 1 && numericDay <= 31) {
+      return `${year}-${month.padStart(2, "0")}-${day.padStart(2, "0")}`;
+    }
+    return null;
   }
 
   return dateInputValueToISO(normalized);
@@ -351,6 +358,19 @@ function recordUnsupportedField(
   });
 }
 
+function shouldAssignScalarField(
+  currentValue: unknown,
+  supportedSection: MarkdownImportSectionName,
+): boolean {
+  if (currentValue === undefined) {
+    return true;
+  }
+
+  // Contact Info can safely backfill shared phone/email fields, but it should not
+  // overwrite explicit values already parsed from Person Info.
+  return supportedSection !== "Contact Info";
+}
+
 function applyAddressValue(
   target: "address" | "mailingAddress",
   value: string,
@@ -419,7 +439,7 @@ function parseHouseholdSection(
 
       const parsedDateOfBirth = parseDate(dateOfBirth);
       if (dateOfBirth.length > 0 && !parsedDateOfBirth) {
-        result.warnings.push(`Household: could not parse DOB \"${dateOfBirth}\" for ${name || "unnamed member"}.`);
+        result.warnings.push(`Household: could not parse DOB "${dateOfBirth}" for ${name || "unnamed member"}.`);
       }
 
       const blankMember = createBlankHouseholdMemberData({
@@ -543,7 +563,7 @@ export function parseMarkdownCaseImport(input: string): MarkdownCaseImportResult
         case "email":
         case "mcn":
         case "retroRequested": {
-          if ((result.initialData as Record<string, unknown>)[target] === undefined || supportedSection !== "Contact Info") {
+          if (shouldAssignScalarField((result.initialData as Record<string, unknown>)[target], supportedSection)) {
             (result.initialData as Record<string, unknown>)[target] = trimmedValue;
             recordMappedField(result.mappedFields, supportedSection, entry.label, trimmedValue, target);
           }
@@ -553,7 +573,7 @@ export function parseMarkdownCaseImport(input: string): MarkdownCaseImportResult
         case "applicationDate": {
           const parsedDate = parseDate(trimmedValue);
           if (!parsedDate) {
-            result.warnings.push(`${supportedSection}: could not parse ${entry.label} value \"${trimmedValue}\" as a date.`);
+            result.warnings.push(`${supportedSection}: could not parse ${entry.label} value "${trimmedValue}" as a date.`);
             break;
           }
           (result.initialData as Record<string, unknown>)[target] = parsedDate;
@@ -563,7 +583,7 @@ export function parseMarkdownCaseImport(input: string): MarkdownCaseImportResult
         case "withWaiver": {
           const parsedBoolean = parseBoolean(trimmedValue);
           if (parsedBoolean === null) {
-            result.warnings.push(`Case Info: could not interpret ${entry.label} value \"${trimmedValue}\" as yes/no.`);
+            result.warnings.push(`Case Info: could not interpret ${entry.label} value "${trimmedValue}" as yes/no.`);
             break;
           }
           result.initialData.withWaiver = parsedBoolean;
@@ -578,7 +598,7 @@ export function parseMarkdownCaseImport(input: string): MarkdownCaseImportResult
         case "mailingAddress.sameAsPhysical": {
           const parsedBoolean = parseBoolean(trimmedValue);
           if (parsedBoolean === null) {
-            result.warnings.push(`Contact Info: could not interpret ${entry.label} value \"${trimmedValue}\" as yes/no.`);
+            result.warnings.push(`Contact Info: could not interpret ${entry.label} value "${trimmedValue}" as yes/no.`);
             break;
           }
           result.initialData.mailingAddress = {

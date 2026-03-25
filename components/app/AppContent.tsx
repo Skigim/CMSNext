@@ -121,11 +121,10 @@ export const AppContent = memo(function AppContent() {
     onStartIntake: handleNewCase,
   });
 
-  useEffect(() => {
-    if (importDraft && currentView !== "intake") {
-      clearImportDraft();
-    }
-  }, [clearImportDraft, currentView, importDraft]);
+  const handleStartFreshNewCase = useCallback(() => {
+    clearImportDraft();
+    handleNewCase();
+  }, [clearImportDraft, handleNewCase]);
 
   const handleCancelImportedNewCase = useCallback(() => {
     clearImportDraft();
@@ -147,7 +146,7 @@ export const AppContent = memo(function AppContent() {
     };
 
     const handleNewCaseEvent = () => {
-      handleNewCase();
+      handleStartFreshNewCase();
     };
 
     const handleFocusSearchEvent = () => {
@@ -171,7 +170,7 @@ export const AppContent = memo(function AppContent() {
       globalThis.removeEventListener("app:focussearch", handleFocusSearchEvent);
       globalThis.removeEventListener("app:togglesidebar", handleToggleSidebarEvent);
     };
-  }, [handleNavigate, handleNewCase, setSidebarOpen, sidebarOpen]);
+  }, [handleNavigate, handleStartFreshNewCase, setSidebarOpen, sidebarOpen]);
 
   const {
     showConnectModal,
@@ -333,19 +332,19 @@ export const AppContent = memo(function AppContent() {
       breadcrumbSourceView: detailsSourceView,
       sidebarOpen,
       onNavigate: handleNavigate,
-      onNewCase: handleNewCase,
+      onNewCase: handleStartFreshNewCase,
       onSidebarOpenChange: handleSidebarOpenChange,
       cases,
       hasLoadedData,
       onViewCase: handleViewCase,
     }),
-    [breadcrumbTitle, cases, currentView, detailsSourceView, handleNavigate, handleNewCase, handleSidebarOpenChange, handleViewCase, hasLoadedData, sidebarOpen],
+    [breadcrumbTitle, cases, currentView, detailsSourceView, handleNavigate, handleSidebarOpenChange, handleStartFreshNewCase, handleViewCase, hasLoadedData, sidebarOpen],
   );
 
   const viewHandlers = useMemo(
     () => ({
       handleViewCase,
-      handleNewCase,
+      handleNewCase: handleStartFreshNewCase,
       handleQuickAdd,
       handleCancelNewCase: handleCancelImportedNewCase,
       handleCompleteNewCase: handleCompleteImportedNewCase,
@@ -371,7 +370,7 @@ export const AppContent = memo(function AppContent() {
       handleBulkResolveAlerts,
       handleCancelImportedNewCase,
       handleCompleteImportedNewCase,
-      handleNewCase,
+      handleStartFreshNewCase,
       handleQuickAdd,
       handleSaveCase,
       handleViewCase,

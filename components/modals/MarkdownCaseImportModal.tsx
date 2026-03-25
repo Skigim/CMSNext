@@ -114,8 +114,8 @@ export function MarkdownCaseImportModal({
                     <section key={section} className="space-y-2">
                       <h3 className="text-sm font-semibold">{section}</h3>
                       <div className="space-y-2 rounded-md border p-3">
-                        {fields.map((field) => (
-                          <div key={`${field.section}-${field.label}-${field.target}`} className="flex flex-col gap-1 sm:flex-row sm:items-start sm:justify-between">
+                        {fields.map((field, index) => (
+                          <div key={`${field.section}-${field.label}-${field.target}-${index}`} className="flex flex-col gap-1 sm:flex-row sm:items-start sm:justify-between">
                             <div>
                               <p className="text-sm font-medium">{field.label}</p>
                               <p className="text-xs text-muted-foreground break-all">{field.value}</p>
@@ -131,8 +131,8 @@ export function MarkdownCaseImportModal({
                     <section className="space-y-2">
                       <h3 className="text-sm font-semibold">Ignored fields</h3>
                       <div className="rounded-md border p-3 space-y-2">
-                        {review.unsupportedFields.map((field) => (
-                          <div key={`${field.section}-${field.label}-${field.value}`} className="space-y-1">
+                        {review.unsupportedFields.map((field, index) => (
+                          <div key={`${field.section}-${field.label}-${field.value}-${index}`} className="space-y-1">
                             <p className="text-sm font-medium">{field.section}: {field.label}</p>
                             <p className="text-xs text-muted-foreground break-all">{field.value}</p>
                             <p className="text-xs text-muted-foreground">{field.reason}</p>
