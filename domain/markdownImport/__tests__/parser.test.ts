@@ -2,43 +2,50 @@ import { describe, expect, it } from "vitest";
 import { parseMarkdownCaseImport } from "@/domain/markdownImport";
 
 const strictMarkdownFixture = `
-## **Person Info**
-| Field | Value |
-| --- | --- |
-| Applicant Name | Jane Q. Doe |
-| First Name | Jane |
-| Last Name | Doe |
-| DOB | 02/03/1980 |
-| Marital Status | Married |
-| Phone | (402) 555-0101 |
-| Email | jane@example.com |
-| SSN | 123-45-6789 |
+## Person Info
+| Applicant Name | First Name | Last Name | DOB | SSN | Marital Status | Phone | Email |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| John Doe | John | Doe | 05/14/1982 | - | Single | 555-0198 | j.doe@example.com |
 
 ## Case Info
-| Field | Value |
-| :--- | :--- |
-| Case ID | MCN-123 |
-| Waiver Requested | Yes |
-| Retro Months Requested | Jan, Feb 2026 |
-| Application Date | 03/01/2026 |
-| Case Type | Medicaid |
+| Case ID | Waiver Requested | Retro Months Requested | Application Date | Notes |
+| --- | --- | --- | --- | --- |
+| CASE-98765 | Yes | 3 | 10/12/2023 | - |
 
 ## Contact Info
-| Field | Value |
-| --- | --- |
-| Physical Address | 123 Main St, Apt 4B, Omaha, NE 68102 |
-| Mailing Same as Physical | Yes |
-| Email for Notices | notices@example.com |
+| Physical Address | Mailing Same As Physical | Mailing Address | Best Contact Number | Additional Contact Number | Preferred Message Delivery | Email for Notices |
+| --- | --- | --- | --- | --- | --- | --- |
+| 123 Maple St, Apt 4B, Springfield, IL 62701 | Yes | - | 555-0198 | - | Email | j.doe@example.com |
 
 ## Household
-| Name | Relationship | DOB | Phone | Notes |
+| Household Member Name | Relationship | DOB | Phone | Notes |
 | --- | --- | --- | --- | --- |
-| John Doe | Spouse | 01/15/1979 | 402-555-0102 | Needs follow-up |
+| Jane Doe | Daughter | 11/22/2015 | - | - |
 
-## Benefits
-| Field | Value |
-| --- | --- |
-| Income | $1000 |
+## Authorized Reps
+| Rep Name | Rep Contact Info | Rep Address | Notes |
+| --- | --- | --- | --- |
+| - | - | - | - |
+
+## Income
+| Income Category | Description | Account Number | Owner | Amount | Frequency | Notes |
+| --- | --- | --- | --- | --- | --- | --- |
+| Wages | Cashier at Grocery Store | - | John Doe | 1200 | Monthly | - |
+
+## Resources
+| Account Type | Financial Institution | Account Number | Owner | Amount | Frequency | Notes |
+| --- | --- | --- | --- | --- | --- | --- |
+| Checking | First National Bank | 9988 | John Doe | 350 | - | - |
+
+## Expenses
+| Expense Category | Description | Account Number | Owner | Amount | Frequency | Notes |
+| --- | --- | --- | --- | --- | --- | --- |
+| Rent | Apartment Monthly Rent | - | John Doe | 800 | Monthly | - |
+
+## Review Items
+| Missing Info | Conflicts | Follow Up |
+| --- | --- | --- |
+| Missing recent pay stubs | - | Request proof of income for October |
 `;
 
 describe("parseMarkdownCaseImport", () => {
@@ -48,22 +55,22 @@ describe("parseMarkdownCaseImport", () => {
 
     // ASSERT
     expect(result.initialData).toMatchObject({
-      firstName: "Jane",
+      firstName: "John",
       lastName: "Doe",
-      dateOfBirth: "1980-02-03",
-      maritalStatus: "Married",
-      phone: "(402) 555-0101",
-      email: "jane@example.com",
-      mcn: "MCN-123",
+      dateOfBirth: "1982-05-14",
+      maritalStatus: "Single",
+      phone: "555-0198",
+      email: "j.doe@example.com",
+      mcn: "CASE-98765",
       withWaiver: true,
-      retroRequested: "Jan, Feb 2026",
-      applicationDate: "2026-03-01",
+      retroRequested: "3",
+      applicationDate: "2023-10-12",
       address: {
-        street: "123 Main St",
+        street: "123 Maple St",
         apt: "Apt 4B",
-        city: "Omaha",
-        state: "NE",
-        zip: "68102",
+        city: "Springfield",
+        state: "IL",
+        zip: "62701",
       },
       mailingAddress: {
         sameAsPhysical: true,
@@ -71,20 +78,28 @@ describe("parseMarkdownCaseImport", () => {
     });
     expect(result.initialData.householdMembers).toHaveLength(1);
     expect(result.initialData.householdMembers?.[0]).toMatchObject({
-      firstName: "John",
+      firstName: "Jane",
       lastName: "Doe",
-      relationshipType: "Spouse",
-      dateOfBirth: "1979-01-15",
-      phone: "402-555-0102",
+      relationshipType: "Daughter",
+      dateOfBirth: "2015-11-22",
+      phone: "",
     });
     expect(result.unsupportedFields).toEqual(
       expect.arrayContaining([
-        expect.objectContaining({ label: "SSN", reason: "SSN is intentionally out of scope for MVP import." }),
-        expect.objectContaining({ label: "Case Type" }),
-        expect.objectContaining({ section: "Household", label: "notes" }),
+        expect.objectContaining({
+          section: "Contact Info",
+          label: "Preferred Message Delivery",
+          value: "Email",
+        }),
       ]),
     );
-    expect(result.unsupportedSections).toEqual(["Benefits"]);
+    expect(result.unsupportedSections).toEqual([
+      "Authorized Reps",
+      "Income",
+      "Resources",
+      "Expenses",
+      "Review Items",
+    ]);
     expect(result.hasImportedData).toBe(true);
   });
 
