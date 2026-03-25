@@ -65,6 +65,31 @@ describe("CaseWorkspace", () => {
     clearReportForDate: vi.fn(),
   };
 
+  const markdownImportProps = {
+    importDraft: null,
+    markdownImportState: {
+      isOpen: false,
+      rawInput: "",
+      review: null,
+    },
+    onOpenMarkdownImport: vi.fn(),
+    onMarkdownImportInputChange: vi.fn(),
+    onCloseMarkdownImport: vi.fn(),
+    onConfirmMarkdownImport: vi.fn(),
+    onClearMarkdownImport: vi.fn(),
+    canConfirmMarkdownImport: false,
+  } satisfies Pick<
+    CaseWorkspaceProps,
+    | "importDraft"
+    | "markdownImportState"
+    | "onOpenMarkdownImport"
+    | "onMarkdownImportInputChange"
+    | "onCloseMarkdownImport"
+    | "onConfirmMarkdownImport"
+    | "onClearMarkdownImport"
+    | "canConfirmMarkdownImport"
+  >;
+
   const asyncVoid = () => vi.fn(async (..._args: any[]) => undefined);
 
   const baseViewHandlers: CaseWorkspaceProps["viewHandlers"] = {
@@ -131,6 +156,7 @@ describe("CaseWorkspace", () => {
         alerts={alertsIndex}
         onUpdateCaseStatus={vi.fn()}
         activityLogState={activityLogState}
+        {...markdownImportProps}
       />,
     );
 
@@ -172,6 +198,7 @@ describe("CaseWorkspace", () => {
         alerts={alertsIndex}
         onUpdateCaseStatus={vi.fn()}
         activityLogState={activityLogState}
+        {...markdownImportProps}
       />,
     );
 

@@ -79,6 +79,10 @@ export { useAlertsFlow } from './useAlertsFlow';
 export { useAVSImportFlow } from './useAVSImportFlow';
 export type { AVSImportState } from './useAVSImportFlow';
 
+// Markdown case import flow management
+export { useMarkdownCaseImportFlow } from './useMarkdownCaseImportFlow';
+export type { MarkdownCaseImportState } from './useMarkdownCaseImportFlow';
+
 // Encryption file hooks
 export { useEncryptionFileHooks } from './useEncryptionFileHooks';
 

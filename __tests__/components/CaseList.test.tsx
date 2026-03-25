@@ -90,6 +90,31 @@ describe("CaseList status interactions", () => {
     expect(onQuickAdd).toHaveBeenCalledTimes(1);
   });
 
+  it("shows Import Markdown when a fallback import handler is provided", async () => {
+    // ARRANGE
+    const user = userEvent.setup();
+    const onImportMarkdown = vi.fn();
+
+    render(
+      <CaseList
+        cases={[createMockCaseDisplay({ id: "case-1" })]}
+        onViewCase={vi.fn()}
+        onNewCase={vi.fn()}
+        onImportMarkdown={onImportMarkdown}
+        alertsSummary={undefined}
+        alertsByCaseId={new Map()}
+        alerts={[]}
+      />,
+      { categoryConfig: testCategoryConfig }
+    );
+
+    // ACT
+    await user.click(screen.getByRole("button", { name: /import markdown/i }));
+
+    // ASSERT
+    expect(onImportMarkdown).toHaveBeenCalledTimes(1);
+  });
+
   it("shows Needs Intake for incomplete cases in the table", () => {
     // ARRANGE
     const baseCase = createMockCaseDisplay();

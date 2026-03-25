@@ -75,6 +75,7 @@ const mockAlerts: never[] = [];
 describe("QuickActionsBar", () => {
   const mockHandlers = {
     onNewCase: vi.fn(),
+    onImportMarkdown: vi.fn(),
     onViewCase: vi.fn(),
     cases: mockCases,
     alerts: mockAlerts,
@@ -117,6 +118,21 @@ describe("QuickActionsBar", () => {
 
     fireEvent.click(screen.getByRole("button", { name: /new case/i }));
     expect(mockHandlers.onNewCase).toHaveBeenCalledTimes(1);
+  });
+
+  it("calls onImportMarkdown when Import Markdown button is clicked", () => {
+    // ARRANGE
+    render(
+      <TestWrapper>
+        <QuickActionsBar {...mockHandlers} />
+      </TestWrapper>
+    );
+
+    // ACT
+    fireEvent.click(screen.getByRole("button", { name: /import markdown/i }));
+
+    // ASSERT
+    expect(mockHandlers.onImportMarkdown).toHaveBeenCalledTimes(1);
   });
 
   it("shows bulk actions dropdown when showBulkOperations is true", () => {
