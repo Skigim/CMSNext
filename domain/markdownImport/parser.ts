@@ -123,12 +123,62 @@ function normalizeWhitespace(value: string): string {
   return value.replaceAll(/\s+/g, " ").trim();
 }
 
-function isHeadingLine(line: string): boolean {
+function unwrapDelimitedSectionTitle(
+  line: string,
+  delimiter: "**" | "__",
+): string | null {
   const trimmed = line.trim();
-  return /^(#{1,6})\s+.+$/.test(trimmed) || /^(\*\*|__)[^*_].*(\*\*|__):?$/.test(trimmed);
+  const withoutColon = trimmed.endsWith(":")
+    ? trimmed.slice(0, -1).trimEnd()
+    : trimmed;
+
+  if (
+    !withoutColon.startsWith(delimiter)
+    || !withoutColon.endsWith(delimiter)
+    || withoutColon.length <= delimiter.length * 2
+  ) {
+    return null;
+  }
+
+  const innerTitle = normalizeWhitespace(
+    withoutColon.slice(delimiter.length, -delimiter.length),
+  );
+
+  return innerTitle.length > 0 ? innerTitle : null;
+}
+
+function isSectionTitleLine(line: string): boolean {
+  const trimmed = line.trim();
+
+  if (trimmed.startsWith("#")) {
+    let hashCount = 0;
+    while (hashCount < trimmed.length && trimmed[hashCount] === "#") {
+      hashCount += 1;
+    }
+
+    return (
+      hashCount > 0
+      && hashCount <= 6
+      && trimmed[hashCount] === " "
+      && normalizeWhitespace(trimmed.slice(hashCount + 1)).length > 0
+    );
+  }
+
+  return (
+    unwrapDelimitedSectionTitle(trimmed, "**") !== null
+    || unwrapDelimitedSectionTitle(trimmed, "__") !== null
+  );
 }
 
 function extractHeadingTitle(line: string): string {
+  const boldTitle =
+    unwrapDelimitedSectionTitle(line, "**")
+    ?? unwrapDelimitedSectionTitle(line, "__");
+
+  if (boldTitle) {
+    return boldTitle;
+  }
+
   return normalizeWhitespace(
     line
       .trim()
@@ -145,7 +195,7 @@ function extractSections(input: string): ParsedSection[] {
 
   for (const rawLine of normalized.split("\n")) {
     const line = rawLine.trimEnd();
-    if (isHeadingLine(line)) {
+    if (isSectionTitleLine(line)) {
       const title = extractHeadingTitle(line);
       currentSection = { title, lines: [] };
       sections.push(currentSection);
@@ -218,13 +268,36 @@ function parseKeyValueLines(lines: string[]): Array<{ label: string; value: stri
     .map((line) => normalizeWhitespace(line))
     .filter((line) => line.length > 0)
     .map((line) => {
-      const match = line.match(/^(?:[-*]\s*)?(?:\*\*)?([^:*][^:]*?)(?:\*\*)?\s*:\s*(.+)$/);
-      if (!match) {
+      const withoutListMarker = line.startsWith("- ") || line.startsWith("* ")
+        ? line.slice(2).trimStart()
+        : line;
+      const separatorIndex = withoutListMarker.indexOf(":");
+
+      if (
+        separatorIndex <= 0
+        || separatorIndex === withoutListMarker.length - 1
+      ) {
         return null;
       }
+
+      const rawLabel = withoutListMarker.slice(0, separatorIndex).trim();
+      const rawValue = withoutListMarker.slice(separatorIndex + 1).trim();
+      const trimmedLabel = rawLabel.trim();
+      const label = unwrapDelimitedSectionTitle(trimmedLabel, "**")
+        ?? unwrapDelimitedSectionTitle(trimmedLabel, "__")
+        ?? trimmedLabel;
+
+      if (
+        label.length === 0
+        || label.includes(":")
+        || rawValue.length === 0
+      ) {
+        return null;
+      }
+
       return {
-        label: normalizeWhitespace(match[1] ?? ""),
-        value: normalizeWhitespace(match[2] ?? ""),
+        label: normalizeWhitespace(label),
+        value: normalizeWhitespace(rawValue),
       };
     })
     .filter((entry): entry is { label: string; value: string } => entry !== null);
