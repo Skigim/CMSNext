@@ -189,6 +189,7 @@ function SummaryRow({
         showLabel={false}
         variant="plain"
         tooltip="Click to copy"
+        showTooltip={false}
         className="min-w-0"
         buttonClassName="min-w-0 max-w-full justify-start text-left"
         textClassName="font-medium whitespace-normal break-words text-foreground"
@@ -1665,6 +1666,7 @@ export function IntakeFormView({
   const canUseSubmitShortcut = isLastStep
     ? canSubmit && !isSubmitting
     : isCurrentStepComplete && !isSubmitting;
+  const contentWidthClassName = isLastStep ? "max-w-4xl" : "max-w-2xl";
 
   const handleSubmitShortcut = useSubmitShortcut<HTMLDivElement>({
     canSubmit: canUseSubmitShortcut,
@@ -1725,7 +1727,7 @@ export function IntakeFormView({
 
         {/* Main content */}
         <main className="flex-1 overflow-y-auto px-8 py-6">
-          <div className="max-w-2xl mx-auto space-y-6">
+          <div className={cn("mx-auto space-y-6", contentWidthClassName)}>
             {/* Step title */}
             <div>
               <h2 className="text-base font-semibold">

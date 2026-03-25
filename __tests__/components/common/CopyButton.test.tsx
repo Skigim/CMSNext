@@ -117,4 +117,37 @@ describe("CopyButton", () => {
       successMessage: "Custom toast message",
     });
   });
+
+  it("renders a tooltip when tooltip text is provided", async () => {
+    // ARRANGE
+    const user = userEvent.setup();
+    render(
+      <CopyButton value="test" label="Test" tooltip="Click to copy" />
+    );
+
+    // ACT
+    await user.hover(screen.getByRole("button", { name: "Copy Test test" }));
+
+    // ASSERT
+    expect(await screen.findByRole("tooltip")).toHaveTextContent("Click to copy");
+  });
+
+  it("suppresses the tooltip when showTooltip is false", async () => {
+    // ARRANGE
+    const user = userEvent.setup();
+    render(
+      <CopyButton
+        value="test"
+        label="Test"
+        tooltip="Click to copy"
+        showTooltip={false}
+      />
+    );
+
+    // ACT
+    await user.hover(screen.getByRole("button", { name: "Copy Test test" }));
+
+    // ASSERT
+    expect(screen.queryByText("Click to copy")).not.toBeInTheDocument();
+  });
 });
