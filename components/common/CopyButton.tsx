@@ -33,6 +33,8 @@ export interface CopyButtonProps {
   mono?: boolean;
   /** Optional tooltip text shown on hover */
   tooltip?: string;
+  /** Whether tooltip content should render when tooltip text is provided */
+  showTooltip?: boolean;
   /** Which side to show the tooltip on */
   tooltipSide?: "top" | "right" | "bottom" | "left";
   /** Container className */
@@ -93,6 +95,7 @@ export const CopyButton = memo(function CopyButton({
   interactive = true,
   mono = false,
   tooltip,
+  showTooltip = true,
   tooltipSide,
   className,
   labelClassName,
@@ -193,7 +196,7 @@ export const CopyButton = memo(function CopyButton({
     <span className={wrapperClasses}>
       {labelElement}
       <span className="sr-only">{accessibleLabel}</span>
-      {tooltip ? (
+      {tooltip && showTooltip ? (
         <Tooltip>
           <TooltipTrigger asChild>{buttonElement}</TooltipTrigger>
           <TooltipContent side={tooltipSide}>{tooltip}</TooltipContent>

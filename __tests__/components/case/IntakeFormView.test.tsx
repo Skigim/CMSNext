@@ -270,6 +270,30 @@ describe("IntakeFormView", () => {
   });
 
   describe("review step", () => {
+    it("widens the review step layout without widening other steps", () => {
+      // ARRANGE
+      withReviewStepState();
+
+      // ACT
+      const { rerender } = renderIntakeFormView();
+
+      // ASSERT
+      expect(screen.getByTestId("intake-step-content").parentElement).toHaveClass(
+        "max-w-4xl",
+      );
+
+      // ARRANGE
+      withHookState(createStepState(0));
+
+      // ACT
+      rerender(<IntakeFormView />);
+
+      // ASSERT
+      expect(screen.getByTestId("intake-step-content").parentElement).toHaveClass(
+        "max-w-2xl",
+      );
+    });
+
     it("renders the review cards in a two-column grid", () => {
       // ARRANGE
       withReviewStepState();
@@ -305,6 +329,19 @@ describe("IntakeFormView", () => {
       expect(mockClickToCopy).toHaveBeenCalledWith("Alice", {
         successMessage: "First Name copied to clipboard",
       });
+    });
+
+    it("does not show the click-to-copy tooltip on the review step", async () => {
+      // ARRANGE
+      const user = userEvent.setup();
+      withReviewStepState();
+
+      // ACT
+      renderIntakeFormView();
+      await user.hover(screen.getByRole("button", { name: "Copy First Name Alice" }));
+
+      // ASSERT
+      expect(screen.queryByText("Click to copy")).not.toBeInTheDocument();
     });
   });
 
