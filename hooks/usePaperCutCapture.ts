@@ -13,7 +13,7 @@ interface UsePaperCutCaptureResult {
 }
 
 function getCurrentRoute(): string {
-  if (typeof window === "undefined") return "";
+  if (globalThis.window === undefined) return "";
   return globalThis.location.pathname;
 }
 
@@ -24,7 +24,7 @@ function getNearestContext(): string {
   const start = document.activeElement;
   if (start instanceof HTMLElement) {
     const el = start.closest<HTMLElement>("[data-papercut-context]");
-    if (el) return el.getAttribute("data-papercut-context") ?? "";
+    if (el) return el.dataset.papercutContext ?? "";
 
     // Fallback: scan the DOM for the first visible [data-papercut-context] element.
     // This handles the global hotkey scenario where focus is on document.body or
@@ -41,7 +41,7 @@ function getNearestContext(): string {
         rect.right > 0
       );
     });
-    return visible?.getAttribute("data-papercut-context") ?? "";
+    return visible?.dataset.papercutContext ?? "";
   }
 
   return "";

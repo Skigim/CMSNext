@@ -8,6 +8,7 @@ import {
   isStatusConfigArray,
 } from "@/utils/categoryConfigMigration";
 import type { StatusConfig, AlertTypeConfig } from "@/types/categoryConfig";
+import { COLOR_SLOTS } from "@/types/colorSlots";
 
 describe("categoryConfigMigration", () => {
   describe("discoverStatusesFromCases", () => {
@@ -159,6 +160,22 @@ describe("categoryConfigMigration", () => {
       // Should not add duplicates
       expect(result).toHaveLength(1);
       expect(result[0].name).toBe("Overdue Documentation");
+    });
+
+    it("hashes non-BMP alert names by code point when all slots are used", () => {
+      // Arrange
+      const existing: AlertTypeConfig[] = COLOR_SLOTS.map((slot, index) => ({
+        name: `Existing ${index}`,
+        colorSlot: slot,
+      }));
+      const alerts = [{ description: "A😀" }];
+
+      // Act
+      const result = discoverAlertTypesFromAlerts(existing, alerts);
+
+      // Assert
+      expect(result).toHaveLength(COLOR_SLOTS.length + 1);
+      expect(result[result.length - 1]).toEqual({ name: "A😀", colorSlot: "rose" });
     });
   });
 

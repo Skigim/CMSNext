@@ -23,7 +23,7 @@ interface CasesByStatusWidgetProps {
   metadata?: WidgetMetadata;
 }
 
-export function CasesByStatusWidget({ cases = [], metadata }: CasesByStatusWidgetProps) {
+export function CasesByStatusWidget({ cases = [], metadata }: Readonly<CasesByStatusWidgetProps>) {
   const { config } = useCategoryConfig();
   
   const fetchData = useCallback(async () => {

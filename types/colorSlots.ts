@@ -99,7 +99,10 @@ export function autoAssignColorSlot(
   }
 
   // All slots used, cycle based on status name hash
-  const hash = statusName.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+  let hash = 0;
+  for (const char of statusName) {
+    hash += char.codePointAt(0) ?? 0;
+  }
   return COLOR_SLOTS[hash % COLOR_SLOTS.length];
 }
 

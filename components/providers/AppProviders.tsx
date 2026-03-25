@@ -27,7 +27,7 @@ interface AppProvidersProps {
  * 
  * @param children - The application content to be wrapped with providers
  */
-export function AppProviders({ children }: AppProvidersProps) {
+export function AppProviders({ children }: Readonly<AppProvidersProps>) {
   logger.lifecycle("Rendering provider hierarchy");
 
   return (

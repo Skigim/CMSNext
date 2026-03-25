@@ -33,7 +33,7 @@ const logger = createLogger("localStorage");
  * Handles SSR, tests, and incognito mode.
  */
 export function hasLocalStorage(): boolean {
-  if (typeof window === "undefined") {
+  if (globalThis.window === undefined) {
     return false;
   }
 

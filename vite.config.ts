@@ -2,8 +2,8 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import compression from 'vite-plugin-compression'
 import { visualizer } from 'rollup-plugin-visualizer'
-import path from 'path'
-import { fileURLToPath } from 'url'
+import path from 'node:path'
+import { fileURLToPath } from 'node:url'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
@@ -18,10 +18,12 @@ export default defineConfig(({ command, mode }) => {
     'X-XSS-Protection': '1; mode=block',
     'Referrer-Policy': 'strict-origin-when-cross-origin',
   } as const;
-  const serverConfig = !isProduction ? { 
-    headers: securityHeaders,
-    host: '127.0.0.1', // Force IPv4 for Windows compatibility
-  } : undefined;
+  const serverConfig: import('vite').ServerOptions | undefined = isProduction
+    ? undefined
+    : {
+        headers: securityHeaders,
+        host: '127.0.0.1', // Force IPv4 for Windows compatibility
+      };
   const previewConfig = isProduction ? { headers: securityHeaders } : undefined;
 
   return {
