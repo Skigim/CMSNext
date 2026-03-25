@@ -151,6 +151,10 @@ function getSubmitButton() {
   return screen.getByRole("button", { name: /Submit Case/i });
 }
 
+function getStepContent() {
+  return screen.getByTestId("intake-step-content");
+}
+
 function getCancelButton() {
   return screen.queryByRole("button", { name: /Cancel/i });
 }
@@ -427,6 +431,82 @@ describe("IntakeFormView", () => {
 
       // ASSERT
       expect(mockGoNext).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe("keyboard shortcut", () => {
+    it("advances to the next step on Ctrl+Enter when the current step is complete", () => {
+      // ARRANGE
+      withHookState({
+        isCurrentStepComplete: true,
+      });
+      renderIntakeFormView();
+
+      // ACT
+      fireEvent.keyDown(getStepContent(), {
+        key: "Enter",
+        ctrlKey: true,
+      });
+
+      // ASSERT
+      expect(mockGoNext).toHaveBeenCalledTimes(1);
+      expect(mockSubmit).not.toHaveBeenCalled();
+    });
+
+    it("does not advance to the next step on Ctrl+Enter when the current step is incomplete", () => {
+      // ARRANGE
+      renderIntakeFormView();
+
+      // ACT
+      fireEvent.keyDown(getStepContent(), {
+        key: "Enter",
+        ctrlKey: true,
+      });
+
+      // ASSERT
+      expect(mockGoNext).not.toHaveBeenCalled();
+      expect(mockSubmit).not.toHaveBeenCalled();
+    });
+
+    it.each([
+      {
+        name: "Ctrl+Enter",
+        keyboardEvent: { key: "Enter", ctrlKey: true },
+      },
+      {
+        name: "Cmd+Enter",
+        keyboardEvent: { key: "Enter", metaKey: true },
+      },
+    ])("submits on the review step with $name when submission is allowed", ({ keyboardEvent }) => {
+      // ARRANGE
+      mockSubmit.mockResolvedValue(undefined);
+      withReviewStepState();
+      renderIntakeFormView();
+
+      // ACT
+      fireEvent.keyDown(getStepContent(), keyboardEvent);
+
+      // ASSERT
+      expect(mockSubmit).toHaveBeenCalledTimes(1);
+      expect(mockGoNext).not.toHaveBeenCalled();
+    });
+
+    it("does not submit on the review step shortcut while submitting", () => {
+      // ARRANGE
+      withReviewStepState({
+        isSubmitting: true,
+      });
+      renderIntakeFormView();
+
+      // ACT
+      fireEvent.keyDown(getStepContent(), {
+        key: "Enter",
+        ctrlKey: true,
+      });
+
+      // ASSERT
+      expect(mockSubmit).not.toHaveBeenCalled();
+      expect(mockGoNext).not.toHaveBeenCalled();
     });
   });
 

@@ -53,6 +53,7 @@ import {
   useIntakeWorkflow,
   type UseIntakeWorkflowOptions,
 } from "@/hooks/useIntakeWorkflow";
+import { useSubmitShortcut } from "@/hooks/useSubmitShortcut";
 import {
   isoToDateInputValue,
   dateInputValueToISO,
@@ -1647,6 +1648,20 @@ export function IntakeFormView({
 
   const isLastStep = currentStep === INTAKE_STEPS.length - 1;
   const isFirstStep = currentStep === 0;
+  const canUseSubmitShortcut = isLastStep
+    ? canSubmit && !isSubmitting
+    : isCurrentStepComplete && !isSubmitting;
+
+  const handleSubmitShortcut = useSubmitShortcut<HTMLDivElement>({
+    canSubmit: canUseSubmitShortcut,
+    onSubmit: () => {
+      if (isLastStep) {
+        return submit();
+      }
+
+      goNext();
+    },
+  });
 
   const submitButtonLoadingText = isEditing ? "Saving…" : "Creating…";
   const submitButtonText = isEditing ? "Save Changes" : "Submit Case";
@@ -1711,6 +1726,7 @@ export function IntakeFormView({
             <div
               ref={stepContentRef}
               tabIndex={-1}
+              onKeyDown={handleSubmitShortcut}
               data-testid="intake-step-content"
             >
               {currentStep === 0 && (
