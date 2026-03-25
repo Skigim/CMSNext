@@ -18,14 +18,12 @@ export default defineConfig(({ command, mode }) => {
     'X-XSS-Protection': '1; mode=block',
     'Referrer-Policy': 'strict-origin-when-cross-origin',
   } as const;
-  let serverConfig;
-
-  if (isProduction === false) {
-    serverConfig = {
-      headers: securityHeaders,
-      host: '127.0.0.1', // Force IPv4 for Windows compatibility
-    };
-  }
+  const serverConfig: import('vite').ServerOptions | undefined = isProduction
+    ? undefined
+    : {
+        headers: securityHeaders,
+        host: '127.0.0.1', // Force IPv4 for Windows compatibility
+      };
   const previewConfig = isProduction ? { headers: securityHeaders } : undefined;
 
   return {

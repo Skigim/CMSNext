@@ -278,7 +278,10 @@ function autoAssignAlertColorSlot(
   }
 
   // All slots used, cycle based on alert type name hash
-  const hash = alertTypeName.split('').reduce((acc, char) => acc + (char.codePointAt(0) ?? 0), 0);
+  let hash = 0;
+  for (const char of alertTypeName) {
+    hash += char.codePointAt(0) ?? 0;
+  }
   return COLOR_SLOTS[hash % COLOR_SLOTS.length];
 }
 
