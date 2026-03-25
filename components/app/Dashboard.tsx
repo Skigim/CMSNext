@@ -12,6 +12,7 @@ interface DashboardProps {
   alerts: AlertsIndex;
   activityLogState: CaseActivityLogState;
   onNewCase: () => void;
+  onImportMarkdown?: () => void;
   onViewCase: (caseId: string) => void;
   onBulkStatusUpdate?: (status: CaseStatus) => void;
   onExport?: () => void;
@@ -69,6 +70,7 @@ export function Dashboard({
   alerts, 
   activityLogState, 
   onNewCase, 
+  onImportMarkdown,
   onViewCase,
   onBulkStatusUpdate,
   onExport,
@@ -233,6 +235,7 @@ export function Dashboard({
       {/* Quick Actions Bar */}
       <QuickActionsBar
         onNewCase={onNewCase}
+        onImportMarkdown={onImportMarkdown}
         cases={cases}
         alerts={allAlerts}
         onViewCase={onViewCase}

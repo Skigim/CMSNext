@@ -32,6 +32,8 @@ import { GlobalSearchDropdown } from "./GlobalSearchDropdown";
 export interface QuickActionsBarProps {
   /** Handler for new case creation */
   onNewCase: () => void;
+  /** Handler for markdown-to-intake import */
+  onImportMarkdown?: () => void;
   /** Cases available for search */
   cases: StoredCase[];
   /** Alerts available for search */
@@ -63,6 +65,7 @@ export interface QuickActionsBarProps {
  */
 export const QuickActionsBar = memo(function QuickActionsBar({
   onNewCase,
+  onImportMarkdown,
   cases,
   alerts,
   onViewCase,
@@ -108,6 +111,13 @@ export const QuickActionsBar = memo(function QuickActionsBar({
               <kbd className="ml-2 text-xs opacity-70">Ctrl+N</kbd>
             </TooltipContent>
           </Tooltip>
+
+          {onImportMarkdown ? (
+            <Button variant="outline" onClick={onImportMarkdown} className="gap-2">
+              <Upload className="h-4 w-4" />
+              <span className="hidden sm:inline">Import Markdown</span>
+            </Button>
+          ) : null}
 
           {/* Bulk Operations */}
           {showBulkOperations && onBulkStatusUpdate && (

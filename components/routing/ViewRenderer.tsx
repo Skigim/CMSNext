@@ -4,14 +4,17 @@ import type { AlertsIndex, AlertWithMatch } from "../../utils/alertsData";
 import type { CaseActivityLogState } from "../../types/activityLog";
 import { exportCasesToJSON, triggerImportDialog, triggerAlertsCsvImport } from "../../utils/dataExportImport";
 import { caseNeedsIntake } from "@/domain/cases";
+import type { IntakeFormData } from "@/domain/validation/intake.schema";
 
 // Direct imports for high-turnover components - no lazy loading for snappiness
 import { Dashboard } from "../app/Dashboard";
 import { CaseList } from "../case/CaseList";
 import CaseDetails from "../case/CaseDetails";
 import { QuickCaseModal } from "../modals/QuickCaseModal";
+import { MarkdownCaseImportModal } from "../modals/MarkdownCaseImportModal";
 import { Settings } from "../app/Settings";
 import { IntakeFormView } from "../case/IntakeFormView";
+import type { MarkdownCaseImportState } from "@/hooks/useMarkdownCaseImportFlow";
 
 export type View = AppView;
 
@@ -47,6 +50,8 @@ interface ViewRendererProps extends CaseViewHandlers {
   currentView: View;
   selectedCase: StoredCase | null | undefined;
   showNewCaseModal: boolean;
+  importDraft?: Partial<IntakeFormData> | null;
+  markdownImportState: MarkdownCaseImportState;
 
   // Data props
   cases: StoredCase[];
@@ -61,6 +66,12 @@ interface ViewRendererProps extends CaseViewHandlers {
     | void;
   handleResolveAlert?: (alert: AlertWithMatch) => Promise<void> | void;
   onAlertsCsvImported?: (index: AlertsIndex) => void;
+  handleOpenMarkdownImport: () => void;
+  handleMarkdownImportInputChange: (input: string) => void;
+  handleCloseMarkdownImport: () => void;
+  handleConfirmMarkdownImport: () => void;
+  handleClearMarkdownImport: () => void;
+  canConfirmMarkdownImport: boolean;
 }
 
 function DetailsViewContent({
@@ -140,6 +151,8 @@ export function ViewRenderer({
   currentView,
   selectedCase,
   showNewCaseModal: _showNewCaseModal,
+  importDraft,
+  markdownImportState: _markdownImportState,
 
   // Data props
   cases,
@@ -167,6 +180,12 @@ export function ViewRenderer({
   handleUpdateCaseStatus,
   handleResolveAlert,
   onAlertsCsvImported,
+  handleOpenMarkdownImport,
+  handleMarkdownImportInputChange: _handleMarkdownImportInputChange,
+  handleCloseMarkdownImport: _handleCloseMarkdownImport,
+  handleConfirmMarkdownImport: _handleConfirmMarkdownImport,
+  handleClearMarkdownImport: _handleClearMarkdownImport,
+  canConfirmMarkdownImport: _canConfirmMarkdownImport,
 }: Readonly<ViewRendererProps>) {
   
   switch (currentView) {
@@ -177,6 +196,7 @@ export function ViewRenderer({
           alerts={alerts}
           activityLogState={activityLogState}
           onNewCase={handleNewCase}
+          onImportMarkdown={handleOpenMarkdownImport}
           onViewCase={handleViewCase}
           onBulkStatusUpdate={(status: CaseStatus) => {
             // Note: This is a placeholder - actual implementation would need case selection
@@ -205,6 +225,7 @@ export function ViewRenderer({
           onCancelArchival={handleCancelArchival}
           isArchiving={isArchiving}
           onNewCase={handleNewCase}
+          onImportMarkdown={handleOpenMarkdownImport}
           onQuickAdd={handleQuickAdd}
           onResolveAlert={handleResolveAlert}
           onUpdateCaseStatus={handleUpdateCaseStatus}
@@ -243,6 +264,7 @@ export function ViewRenderer({
       return (
         <IntakeFormView
           existingCase={caseNeedsIntake(selectedCase) ? selectedCase ?? undefined : undefined}
+          initialData={selectedCase ? undefined : importDraft ?? undefined}
           onSuccess={(createdCase) => {
             handleCompleteNewCase(createdCase.id, createdCase);
           }}
@@ -266,6 +288,14 @@ export function ViewRendererWithModal(props: Readonly<ViewRendererProps>) {
         isOpen={props.showNewCaseModal}
         onClose={props.handleCloseNewCaseModal}
         onSave={props.handleSaveCase}
+      />
+      <MarkdownCaseImportModal
+        importState={props.markdownImportState}
+        onInputChange={props.handleMarkdownImportInputChange}
+        onClear={props.handleClearMarkdownImport}
+        onClose={props.handleCloseMarkdownImport}
+        onConfirm={props.handleConfirmMarkdownImport}
+        canConfirm={props.canConfirmMarkdownImport}
       />
     </>
   );
