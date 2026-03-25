@@ -1,6 +1,13 @@
 import { renderHook, act } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { useMarkdownCaseImportFlow } from "@/hooks/useMarkdownCaseImportFlow";
+import { toast } from "sonner";
+
+vi.mock("sonner", () => ({
+  toast: {
+    error: vi.fn(),
+  },
+}));
 
 const importFixture = `
 ## Person Info
@@ -12,6 +19,15 @@ const importFixture = `
 `;
 
 describe("useMarkdownCaseImportFlow", () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
   it("creates an ephemeral intake draft on confirm and starts intake", () => {
     // ARRANGE
     const onStartIntake = vi.fn();
@@ -21,6 +37,9 @@ describe("useMarkdownCaseImportFlow", () => {
     act(() => {
       result.current.openImportModal();
       result.current.handleInputChange(importFixture);
+    });
+    act(() => {
+      vi.advanceTimersByTime(250);
     });
 
     let didConfirm = false;
@@ -54,6 +73,9 @@ describe("useMarkdownCaseImportFlow", () => {
       result.current.openImportModal();
       result.current.handleInputChange("## Notes\n- Something: else");
     });
+    act(() => {
+      vi.advanceTimersByTime(250);
+    });
 
     let didConfirm = true;
     act(() => {
@@ -64,6 +86,7 @@ describe("useMarkdownCaseImportFlow", () => {
     expect(didConfirm).toBe(false);
     expect(onStartIntake).not.toHaveBeenCalled();
     expect(result.current.importDraft).toBeNull();
+    expect(toast.error).toHaveBeenCalledWith("No intake fields could be imported from that markdown.");
   });
 
   it("clears the ephemeral draft when requested", () => {
@@ -73,11 +96,35 @@ describe("useMarkdownCaseImportFlow", () => {
     // ACT
     act(() => {
       result.current.handleInputChange(importFixture);
+      vi.advanceTimersByTime(250);
       result.current.confirmImport();
       result.current.clearImportDraft();
     });
 
     // ASSERT
     expect(result.current.importDraft).toBeNull();
+  });
+
+  it("waits for the debounce window before parsing review data", () => {
+    // ARRANGE
+    const { result } = renderHook(() => useMarkdownCaseImportFlow({ onStartIntake: vi.fn() }));
+
+    // ACT
+    act(() => {
+      result.current.handleInputChange(importFixture);
+    });
+
+    // ASSERT
+    expect(result.current.importState.review).toBeNull();
+    expect(result.current.canConfirmImport).toBe(false);
+
+    // ACT
+    act(() => {
+      vi.advanceTimersByTime(250);
+    });
+
+    // ASSERT
+    expect(result.current.importState.review?.hasImportedData).toBe(true);
+    expect(result.current.canConfirmImport).toBe(true);
   });
 });

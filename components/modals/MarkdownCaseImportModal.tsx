@@ -99,14 +99,14 @@ export function MarkdownCaseImportModal({
                   {review.warnings.length > 0 ? (
                     <Alert>
                       <AlertTriangle className="h-4 w-4" />
-                      <AlertTitle>Review warnings</AlertTitle>
-                      <AlertDescription>
-                        <ul className="list-disc pl-5 space-y-1">
-                          {review.warnings.map((warning) => (
-                            <li key={warning}>{warning}</li>
-                          ))}
-                        </ul>
-                      </AlertDescription>
+                          <AlertTitle>Review warnings</AlertTitle>
+                          <AlertDescription>
+                            <ul className="list-disc pl-5 space-y-1">
+                              {review.warnings.map((warning, index) => (
+                                <li key={index}>{warning}</li>
+                              ))}
+                            </ul>
+                          </AlertDescription>
                     </Alert>
                   ) : null}
 

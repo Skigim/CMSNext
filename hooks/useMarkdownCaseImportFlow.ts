@@ -1,10 +1,12 @@
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
 import {
   parseMarkdownCaseImport,
   type MarkdownCaseImportResult,
 } from "@/domain/markdownImport";
 import type { IntakeFormData } from "@/domain/validation/intake.schema";
+
+const MARKDOWN_IMPORT_PARSE_DEBOUNCE_MS = 250;
 
 export interface MarkdownCaseImportState {
   isOpen: boolean;
@@ -31,64 +33,77 @@ interface UseMarkdownCaseImportFlowResult {
 export function useMarkdownCaseImportFlow({
   onStartIntake,
 }: UseMarkdownCaseImportFlowOptions): UseMarkdownCaseImportFlowResult {
-  const [importState, setImportState] = useState<MarkdownCaseImportState>({
-    isOpen: false,
-    rawInput: "",
-    review: null,
-  });
+  const [isOpen, setIsOpen] = useState(false);
+  const [rawInput, setRawInput] = useState("");
+  const [review, setReview] = useState<MarkdownCaseImportResult | null>(null);
   const [importDraft, setImportDraft] = useState<Partial<IntakeFormData> | null>(null);
 
   const openImportModal = useCallback(() => {
-    setImportState({
-      isOpen: true,
-      rawInput: "",
-      review: null,
-    });
+    setIsOpen(true);
+    setRawInput("");
+    setReview(null);
   }, []);
 
   const closeImportModal = useCallback(() => {
-    setImportState({
-      isOpen: false,
-      rawInput: "",
-      review: null,
-    });
+    setIsOpen(false);
+    setRawInput("");
+    setReview(null);
   }, []);
 
   const handleInputChange = useCallback((input: string) => {
-    setImportState({
-      isOpen: true,
-      rawInput: input,
-      review: input.trim().length > 0 ? parseMarkdownCaseImport(input) : null,
-    });
+    setIsOpen(true);
+    setRawInput(input);
+    if (input.trim().length === 0) {
+      setReview(null);
+    }
   }, []);
 
   const clearInput = useCallback(() => {
-    setImportState((prev) => ({
-      ...prev,
-      rawInput: "",
-      review: null,
-    }));
+    setRawInput("");
+    setReview(null);
   }, []);
 
   const clearImportDraft = useCallback(() => {
     setImportDraft(null);
   }, []);
 
+  useEffect(() => {
+    if (!isOpen) {
+      return;
+    }
+
+    if (rawInput.trim().length === 0) {
+      return;
+    }
+
+    const timeoutId = globalThis.setTimeout(() => {
+      setReview(parseMarkdownCaseImport(rawInput));
+    }, MARKDOWN_IMPORT_PARSE_DEBOUNCE_MS);
+
+    return () => {
+      globalThis.clearTimeout(timeoutId);
+    };
+  }, [isOpen, rawInput]);
+
   const confirmImport = useCallback(() => {
-    if (!importState.review?.hasImportedData) {
+    if (!review?.hasImportedData) {
       toast.error("No intake fields could be imported from that markdown.");
       return false;
     }
 
-    setImportDraft(importState.review.initialData);
-    setImportState({
-      isOpen: false,
-      rawInput: "",
-      review: null,
-    });
+    setImportDraft(review.initialData);
+    setIsOpen(false);
+    setRawInput("");
+    setReview(null);
     onStartIntake();
     return true;
-  }, [importState.review, onStartIntake]);
+  }, [onStartIntake, review]);
+
+  const importState: MarkdownCaseImportState = {
+    isOpen,
+    rawInput,
+    review,
+  };
 
   return {
     importState,
@@ -99,6 +114,6 @@ export function useMarkdownCaseImportFlow({
     clearInput,
     confirmImport,
     clearImportDraft,
-    canConfirmImport: importState.review?.hasImportedData ?? false,
+    canConfirmImport: review?.hasImportedData ?? false,
   };
 }
