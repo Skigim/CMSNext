@@ -90,14 +90,19 @@ describe("useMarkdownCaseImportFlow", () => {
   });
 
   it("clears the ephemeral draft when requested", () => {
+  it("clears the ephemeral draft when requested", () => {
     // ARRANGE
     const { result } = renderHook(() => useMarkdownCaseImportFlow({ onStartIntake: vi.fn() }));
 
     // ACT
     act(() => {
+      result.current.openImportModal();
       result.current.handleInputChange(importFixture);
-      vi.advanceTimersByTime(250);
+    });
+    act(() => {
       result.current.confirmImport();
+    });
+    act(() => {
       result.current.clearImportDraft();
     });
 
