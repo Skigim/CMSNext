@@ -74,7 +74,7 @@ export function Dashboard({
   onExport,
   onImport,
   onImportAlerts,
-}: DashboardProps) {
+}: Readonly<DashboardProps>) {
   const { featureFlags } = useAppViewState();
 
   const allAlerts = useMemo(() => alerts.alerts ?? [], [alerts.alerts]);

@@ -19,7 +19,7 @@ interface SpinnerProps extends React.ComponentProps<"div"> {
  * <Spinner size={48} className="text-primary" />
  * ```
  */
-function Spinner({ size = 32, className, style, ...props }: SpinnerProps) {
+function Spinner({ size = 32, className, style, ...props }: Readonly<SpinnerProps>) {
   return (
     <div
       data-slot="spinner"

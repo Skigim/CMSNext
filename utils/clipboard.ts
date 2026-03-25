@@ -3,20 +3,18 @@ import { toast } from "sonner";
 /**
  * Clipboard Utilities
  * ===================
- * Cross-browser clipboard operations with fallback support.
- * Handles both modern Clipboard API and legacy execCommand approach.
+ * Clipboard operations for supported browsers.
+ * CMSNext is Chromium-first, so copy uses the modern Clipboard API.
  * 
  * ## Features
  * 
  * - **Modern Clipboard API**: Uses navigator.clipboard when available
- * - **Legacy Fallback**: Falls back to execCommand for older browsers
  * - **Toast Feedback**: Optional Sonner toast notifications
  * - **Custom Messages**: Configurable success/error messages
  * 
  * ## Browser Support
  * 
- * - Modern: Chrome 63+, Firefox 53+, Safari 13.1+, Edge 79+
- * - Legacy: IE 9+ via execCommand fallback
+ * - Chrome 63+, Edge 79+, and other browsers exposing navigator.clipboard
  * 
  * ## Usage Example
  * 
@@ -66,43 +64,9 @@ async function writeWithNavigatorClipboard(text: string): Promise<boolean> {
 }
 
 /**
- * Write to clipboard using legacy execCommand (fallback).
- * Creates a temporary textarea, selects it, and executes copy command.
+ * Copy text to clipboard with toast notifications.
  * 
- * @private
- * @param {string} text - Text to copy
- * @returns {boolean} True if copy succeeded
- */
-function writeWithExecCommand(text: string): boolean {
-  if (typeof document === "undefined" || typeof window === "undefined") {
-    return false;
-  }
-
-  const textarea = document.createElement("textarea");
-  textarea.value = text;
-  textarea.setAttribute("readonly", "true");
-  textarea.style.position = "fixed";
-  textarea.style.top = "-1000px";
-  textarea.style.opacity = "0";
-
-  document.body.appendChild(textarea);
-  textarea.select();
-
-  let successful = false;
-  try {
-    successful = document.execCommand("copy");
-  } catch {
-    successful = false;
-  }
-
-  textarea.remove();
-  return successful;
-}
-
-/**
- * Copy text to clipboard with automatic fallback and toast notifications.
- * 
- * Tries modern Clipboard API first, then falls back to execCommand if needed.
+ * Uses the modern Clipboard API supported by CMSNext's target browsers.
  * Automatically shows success/error toasts unless disabled.
  * 
  * @param {string} text - Text to copy to clipboard
@@ -124,10 +88,7 @@ export async function clickToCopy(
     toastApi = toast,
   } = options;
 
-  const usingNavigator = await writeWithNavigatorClipboard(text);
-
-  const success =
-    usingNavigator || (!usingNavigator && writeWithExecCommand(text));
+  const success = await writeWithNavigatorClipboard(text);
 
   if (success) {
     if (showToast) {

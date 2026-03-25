@@ -17,9 +17,6 @@ const getClipboard = () => navigator.clipboard as unknown as {
 };
 
 describe("clickToCopy", () => {
-  let execCommandMock: ReturnType<typeof vi.fn>;
-  let originalExecCommand: (typeof document.execCommand) | undefined;
-
   beforeEach(() => {
     vi.clearAllMocks();
 
@@ -29,22 +26,9 @@ describe("clickToCopy", () => {
       },
       configurable: true,
     });
-
-    originalExecCommand = document.execCommand;
-    execCommandMock = vi.fn().mockReturnValue(true);
-    Object.defineProperty(document, "execCommand", {
-      value: execCommandMock,
-      configurable: true,
-      writable: true,
-    });
   });
 
   afterEach(() => {
-    Object.defineProperty(document, "execCommand", {
-      value: originalExecCommand,
-      configurable: true,
-      writable: true,
-    });
     delete (navigator as { clipboard?: unknown }).clipboard;
   });
 
@@ -52,28 +36,16 @@ describe("clickToCopy", () => {
     const result = await clickToCopy("case-123");
 
     expect(getClipboard().writeText).toHaveBeenCalledWith("case-123");
-  expect(execCommandMock).not.toHaveBeenCalled();
     expect(toast.success).toHaveBeenCalledWith("Copied to clipboard");
     expect(result).toBe(true);
   });
 
-  it("falls back to document.execCommand when the async clipboard API fails", async () => {
+  it("emits an error toast when the async clipboard API fails", async () => {
     getClipboard().writeText.mockRejectedValue(new Error("denied"));
-
-    const result = await clickToCopy("fallback");
-
-    expect(getClipboard().writeText).toHaveBeenCalledWith("fallback");
-  expect(execCommandMock).toHaveBeenCalledWith("copy");
-    expect(toast.success).toHaveBeenCalledWith("Copied to clipboard");
-    expect(result).toBe(true);
-  });
-
-  it("emits an error toast when both clipboard strategies fail", async () => {
-    getClipboard().writeText.mockRejectedValue(new Error("denied"));
-  execCommandMock.mockReturnValue(false);
 
     const result = await clickToCopy("broken");
 
+    expect(getClipboard().writeText).toHaveBeenCalledWith("broken");
     expect(result).toBe(false);
     expect(toast.error).toHaveBeenCalledWith("Unable to copy to clipboard");
   });

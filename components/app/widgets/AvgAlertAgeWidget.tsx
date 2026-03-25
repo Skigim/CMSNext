@@ -21,7 +21,7 @@ function formatDays(value: number | null, formatter: Intl.NumberFormat): string 
   return `${formatter.format(value)} days`;
 }
 
-export function AvgAlertAgeWidget({ alerts = [], metadata }: AvgAlertAgeWidgetProps) {
+export function AvgAlertAgeWidget({ alerts = [], metadata }: Readonly<AvgAlertAgeWidgetProps>) {
   const formatter = useMemo(() => new Intl.NumberFormat('en-US', { maximumFractionDigits: 1, minimumFractionDigits: 0 }), []);
 
   const refreshKey = alerts.length

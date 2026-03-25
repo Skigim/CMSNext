@@ -55,17 +55,14 @@ interface PerformanceMetaEnv {
 
 const performanceLogger = createLogger("Performance");
 
-const env: PerformanceMetaEnv =
-  typeof import.meta !== "undefined" && typeof import.meta.env === "object"
-    ? (import.meta.env as PerformanceMetaEnv)
-    : {};
+const env: PerformanceMetaEnv = (import.meta.env ?? {}) as PerformanceMetaEnv;
 const mode = env?.MODE ?? env?.mode;
 const dev = env?.DEV ?? env?.dev;
-const nodeEnv = typeof process !== "undefined" ? process.env.NODE_ENV : undefined;
+const nodeEnv = globalThis.process?.env.NODE_ENV;
 const shouldTrack = Boolean(dev || mode === "analyze" || nodeEnv === "test");
 let idCounter = 0;
 
-const hasPerformanceApi = typeof performance !== "undefined" &&
+const hasPerformanceApi = globalThis.performance !== undefined &&
   typeof performance.mark === "function" &&
   typeof performance.measure === "function" &&
   typeof performance.clearMarks === "function" &&
