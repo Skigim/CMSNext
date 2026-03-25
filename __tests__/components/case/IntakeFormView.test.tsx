@@ -5,6 +5,7 @@ import { describe, expect, it, vi, beforeEach } from "vitest";
 import { createBlankIntakeForm } from "@/domain/validation/intake.schema";
 import { INTAKE_STEPS } from "@/domain/cases/intake-steps";
 import { createMockHouseholdMemberData } from "@/src/test/testUtils";
+import { clickToCopy } from "@/utils/clipboard";
 
 expect.extend(toHaveNoViolations);
 
@@ -62,6 +63,10 @@ vi.mock("@/hooks/useIntakeWorkflow", () => ({
   useIntakeWorkflow: () => hookState,
 }));
 
+vi.mock("@/utils/clipboard", () => ({
+  clickToCopy: vi.fn().mockResolvedValue(true),
+}));
+
 // Import after mocks
 import { IntakeFormView } from "@/components/case/IntakeFormView";
 
@@ -70,6 +75,7 @@ import { IntakeFormView } from "@/components/case/IntakeFormView";
 const HOUSEHOLD_STEP_INDEX = 4;
 const REVIEW_STEP_INDEX = INTAKE_STEPS.length - 1;
 const HOUSEHOLD_MEMBER_SUMMARY = /Spouse · Jordan Tester · 5559876543/i;
+const mockClickToCopy = vi.mocked(clickToCopy);
 
 function createVisitedStepsThrough(stepIndex: number): ReadonlySet<number> {
   return new Set(Array.from({ length: stepIndex + 1 }, (_, index) => index));
@@ -255,7 +261,46 @@ describe("IntakeFormView", () => {
       renderIntakeFormView();
 
       // ASSERT
-      expect(screen.getByText("(555) 123-4567")).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "Copy Phone (555) 123-4567" })).toBeInTheDocument();
+    });
+  });
+
+  describe("review step", () => {
+    it("renders the review cards in a two-column grid", () => {
+      // ARRANGE
+      withReviewStepState();
+
+      // ACT
+      renderIntakeFormView();
+
+      // ASSERT
+      expect(screen.getByTestId("intake-review-grid")).toHaveClass(
+        "grid",
+        "gap-6",
+        "md:grid-cols-2",
+      );
+    });
+
+    it("renders review field values as copy buttons", async () => {
+      // ARRANGE
+      const user = userEvent.setup();
+      withReviewStepState({
+        formData: createReviewFormData({
+          phone: "5551234567",
+          email: "alice@example.com",
+        }),
+      });
+
+      // ACT
+      renderIntakeFormView();
+      await user.click(screen.getByRole("button", { name: "Copy First Name Alice" }));
+
+      // ASSERT
+      expect(screen.getByRole("button", { name: "Copy Last Name Smith" })).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "Copy Phone (555) 123-4567" })).toBeInTheDocument();
+      expect(mockClickToCopy).toHaveBeenCalledWith("Alice", {
+        successMessage: "First Name copied to clipboard",
+      });
     });
   });
 
@@ -634,8 +679,12 @@ describe("IntakeFormView", () => {
       });
       const { container } = renderIntakeFormView();
       const results = await axe(container);
-      expect(screen.getByText(/Jordan Tester/)).toBeInTheDocument();
-      expect(screen.getByText(/jordan@example.com/)).toBeInTheDocument();
+      expect(
+        screen.getByRole("button", { name: "Copy Spouse Jordan Tester" }),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByRole("button", { name: /Copy Contact.*jordan@example.com/i }),
+      ).toBeInTheDocument();
       expect(screen.getByText("Date of Birth")).toBeInTheDocument();
       expect(screen.queryByText("DOB / Status")).not.toBeInTheDocument();
       expect(results).toHaveNoViolations();
