@@ -117,6 +117,13 @@ Object.defineProperty(globalThis, 'ResizeObserver', {
   configurable: true,
 })
 
+// Mock scrollIntoView for keyboard-navigable list primitives like cmdk
+Object.defineProperty(HTMLElement.prototype, 'scrollIntoView', {
+  value: vi.fn(),
+  writable: true,
+  configurable: true,
+})
+
 // Mock IntersectionObserver 
 class IntersectionObserverMock {
   observe = vi.fn()
