@@ -38,6 +38,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/components/ui/utils";
 import { useCategoryConfig } from "@/contexts/CategoryConfigContext";
+import { CopyButton } from "@/components/common/CopyButton";
 import {
   createBlankHouseholdMemberData,
   formatHouseholdMemberAccordionSummary,
@@ -179,9 +180,19 @@ function SummaryRow({
 }: Readonly<{ label: string; value: string | undefined | null }>) {
   if (!value) return null;
   return (
-    <div className="flex gap-2 text-sm">
-      <span className="text-muted-foreground w-40 shrink-0">{label}</span>
-      <span className="font-medium">{value}</span>
+    <div className="grid gap-1 text-sm sm:flex">
+      <span className="text-muted-foreground sm:w-40 sm:shrink-0">{label}</span>
+      <CopyButton
+        value={value}
+        displayText={value}
+        label={label}
+        showLabel={false}
+        variant="plain"
+        tooltip="Click to copy"
+        className="min-w-0"
+        buttonClassName="min-w-0 max-w-full justify-start text-left"
+        textClassName="font-medium whitespace-normal break-words text-foreground"
+      />
     </div>
   );
 }
@@ -1473,7 +1484,10 @@ function ReviewStep({ formData, onGoToStep }: Readonly<ReviewStepProps>) {
   ];
 
   return (
-    <div className="space-y-6">
+    <div
+      className="grid gap-6 md:grid-cols-2"
+      data-testid="intake-review-grid"
+    >
       {sections.map((section) => (
         <div key={section.title} className="space-y-2">
           <div className="flex items-center justify-between">
