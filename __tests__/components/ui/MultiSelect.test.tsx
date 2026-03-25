@@ -79,7 +79,9 @@ describe("MultiSelect", () => {
 
     // ACT
     await user.click(
-      screen.getByRole("button", { name: "Select note categories" }),
+      screen.getByRole("button", {
+        name: "Select note categories: Select categories",
+      }),
     );
     await user.click(screen.getByText("General"));
     await user.click(screen.getByText("Follow Up"));
@@ -87,7 +89,9 @@ describe("MultiSelect", () => {
     // ASSERT
     expect(screen.getByPlaceholderText("Search categories")).toBeInTheDocument();
     expect(
-      screen.getByRole("button", { name: "Select note categories" }),
+      screen.getByRole("button", {
+        name: "Select note categories: 2 selected",
+      }),
     ).toHaveTextContent("2 selected");
     expect(screen.getAllByText("Selected")).toHaveLength(2);
   });
@@ -122,15 +126,19 @@ describe("MultiSelect", () => {
 
     // ACT
     await user.click(
-      screen.getByRole("button", { name: "Select note categories" }),
+      screen.getByRole("button", {
+        name: "Select note categories: Important",
+      }),
     );
 
     // ASSERT
     expect(
-      screen.getByRole("button", { name: "Select note categories" }),
+      screen.getByRole("button", {
+        name: "Select note categories: Important",
+      }),
     ).toHaveTextContent("Important");
     expect(
-      screen.getByRole("option", { name: /ImportantSelected/ }),
+      screen.getByRole("option", { name: /Important\s*Selected/ }),
     ).toBeInTheDocument();
     expect(screen.getByText("Selected")).toBeInTheDocument();
   });
@@ -142,7 +150,9 @@ describe("MultiSelect", () => {
 
     // ACT
     await user.click(
-      screen.getByRole("button", { name: "Select note categories" }),
+      screen.getByRole("button", {
+        name: "Select note categories: Select categories",
+      }),
     );
     await user.type(screen.getByPlaceholderText("Search categories"), "missing");
 
@@ -157,7 +167,9 @@ describe("MultiSelect", () => {
 
     // ACT
     await user.click(
-      screen.getByRole("button", { name: "Select note categories" }),
+      screen.getByRole("button", {
+        name: "Select note categories: Select categories",
+      }),
     );
 
     // ASSERT

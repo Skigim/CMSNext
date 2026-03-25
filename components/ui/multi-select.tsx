@@ -3,8 +3,6 @@
 import * as React from "react";
 import { CheckIcon, ChevronDownIcon } from "lucide-react";
 
-import { cn } from "@/lib/utils";
-
 import { Badge } from "./badge";
 import { Button } from "./button";
 import {
@@ -16,6 +14,8 @@ import {
   CommandList,
 } from "./command";
 import { Popover, PopoverContent, PopoverTrigger } from "./popover";
+import { ScrollArea } from "./scroll-area";
+import { cn } from "./utils";
 
 export type MultiSelectOption = {
   label: string;
@@ -73,6 +73,9 @@ const MultiSelect = React.forwardRef<HTMLButtonElement, MultiSelectProps>(
       () => getTriggerLabel(selectedOptions, placeholder),
       [placeholder, selectedOptions],
     );
+    const triggerAriaLabel = ariaLabel
+      ? `${ariaLabel}: ${triggerLabel}`
+      : triggerLabel;
 
     const handleSelect = React.useCallback(
       (optionValue: string) => {
@@ -99,7 +102,7 @@ const MultiSelect = React.forwardRef<HTMLButtonElement, MultiSelectProps>(
             variant="outline"
             size="sm"
             disabled={disabled}
-            aria-label={ariaLabel ?? triggerLabel}
+            aria-label={triggerAriaLabel}
             className={cn(
               "h-7 w-full justify-between gap-2 px-2.5 text-xs font-normal shadow-none",
               selectedOptions.length === 0 && "text-muted-foreground",
@@ -127,52 +130,62 @@ const MultiSelect = React.forwardRef<HTMLButtonElement, MultiSelectProps>(
         >
           <Command>
             <div className="border-b py-1">
-              <CommandInput placeholder={searchPlaceholder} />
+              <CommandInput
+                placeholder={searchPlaceholder}
+                aria-label={searchPlaceholder}
+              />
             </div>
-            <CommandList>
-              <CommandEmpty>{emptyText}</CommandEmpty>
-              <CommandGroup>
-                {options.map((option) => {
-                  const isSelected = value.includes(option.value);
+            <div
+              className="overflow-hidden flex flex-col"
+              style={{ maxHeight: "32rem" }}
+            >
+              <ScrollArea className="h-full max-h-80">
+                <CommandList className="h-full">
+                  <CommandEmpty>{emptyText}</CommandEmpty>
+                  <CommandGroup>
+                    {options.map((option) => {
+                      const isSelected = value.includes(option.value);
 
-                  return (
-                    <CommandItem
-                      key={option.value}
-                      value={option.value}
-                      keywords={[option.label, option.value]}
-                      onSelect={handleSelect}
-                      className="justify-between gap-3 py-2 text-xs"
-                    >
-                      <span className="flex min-w-0 items-center gap-2">
-                        <span
-                          className={cn(
-                            "border-muted-foreground/30 flex size-4 shrink-0 items-center justify-center rounded-sm border",
-                            isSelected &&
-                              "border-primary bg-primary text-primary-foreground",
-                          )}
+                      return (
+                        <CommandItem
+                          key={option.value}
+                          value={option.value}
+                          keywords={[option.label, option.value]}
+                          onSelect={handleSelect}
+                          className="justify-between gap-3 py-2 text-xs"
                         >
-                          <CheckIcon
-                            className={cn(
-                              "size-3",
-                              isSelected ? "opacity-100" : "opacity-0",
-                            )}
-                          />
-                        </span>
-                        <span className="truncate">{option.label}</span>
-                      </span>
-                      {isSelected ? (
-                        <Badge
-                          variant="secondary"
-                          className="h-5 shrink-0 px-1.5 text-[10px] font-medium"
-                        >
-                          Selected
-                        </Badge>
-                      ) : null}
-                    </CommandItem>
-                  );
-                })}
-              </CommandGroup>
-            </CommandList>
+                          <span className="flex min-w-0 items-center gap-2">
+                            <span
+                              className={cn(
+                                "border-muted-foreground/30 flex size-4 shrink-0 items-center justify-center rounded-sm border",
+                                isSelected &&
+                                  "border-primary bg-primary text-primary-foreground",
+                              )}
+                            >
+                              <CheckIcon
+                                className={cn(
+                                  "size-3",
+                                  isSelected ? "opacity-100" : "opacity-0",
+                                )}
+                              />
+                            </span>
+                            <span className="truncate">{option.label}</span>
+                          </span>
+                          {isSelected ? (
+                            <Badge
+                              variant="secondary"
+                              className="h-5 shrink-0 px-1.5 text-[10px] font-medium"
+                            >
+                              Selected
+                            </Badge>
+                          ) : null}
+                        </CommandItem>
+                      );
+                    })}
+                  </CommandGroup>
+                </CommandList>
+              </ScrollArea>
+            </div>
           </Command>
         </PopoverContent>
       </Popover>
