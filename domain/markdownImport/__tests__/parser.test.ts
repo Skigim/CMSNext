@@ -100,6 +100,12 @@ describe("parseMarkdownCaseImport", () => {
       "Expenses",
       "Review Items",
     ]);
+    expect(result.unsupportedFields).not.toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ section: "Authorized Reps" }),
+      ]),
+    );
+    expect(result.warnings).toEqual([]);
     expect(result.hasImportedData).toBe(true);
   });
 

@@ -111,6 +111,11 @@ const HOUSEHOLD_SUPPORTED_COLUMNS = new Set([
   "phone",
 ]);
 
+const FIELD_VALUE_TABLE_LABEL_HEADERS = new Set(["field", "label", "key"]);
+const FIELD_VALUE_TABLE_VALUE_HEADERS = new Set(["value", "answer"]);
+const HOUSEHOLD_NAME_COLUMNS = ["name", "household member name"] as const;
+const HOUSEHOLD_DOB_COLUMNS = ["dob", "date of birth"] as const;
+
 function normalizeLabel(value: string): string {
   return value
     .replaceAll(/[*_`]/g, "")
@@ -127,6 +132,20 @@ function normalizeWhitespace(value: string): string {
 function normalizeImportedValue(value: string): string {
   const normalized = normalizeWhitespace(value);
   return normalized === "-" ? "" : normalized;
+}
+
+function getFirstColumnValue(
+  row: Record<string, string>,
+  columnNames: readonly string[],
+): string {
+  for (const columnName of columnNames) {
+    const value = normalizeImportedValue(row[columnName] ?? "");
+    if (value.length > 0) {
+      return value;
+    }
+  }
+
+  return "";
 }
 
 function unwrapDelimitedSectionTitle(
@@ -267,8 +286,8 @@ function parseKeyValueLines(lines: string[]): Array<{ label: string; value: stri
   if (table && table.rows.length > 0) {
     const normalizedHeaders = table.headers.map(normalizeLabel);
     const isFieldValueTable = normalizedHeaders.length >= 2
-      && ["field", "label", "key"].includes(normalizedHeaders[0] ?? "")
-      && ["value", "answer"].includes(normalizedHeaders[1] ?? "");
+      && FIELD_VALUE_TABLE_LABEL_HEADERS.has(normalizedHeaders[0] ?? "")
+      && FIELD_VALUE_TABLE_VALUE_HEADERS.has(normalizedHeaders[1] ?? "");
 
     if (isFieldValueTable) {
       return table.rows
@@ -535,9 +554,9 @@ function parseHouseholdSection(
         }
       }
 
-      const name = normalizeImportedValue(row.name ?? row["household member name"] ?? "");
+      const name = getFirstColumnValue(row, HOUSEHOLD_NAME_COLUMNS);
       const relationship = normalizeImportedValue(row.relationship ?? "");
-      const dateOfBirth = normalizeImportedValue(row.dob ?? row["date of birth"] ?? "");
+      const dateOfBirth = getFirstColumnValue(row, HOUSEHOLD_DOB_COLUMNS);
       const phone = normalizeImportedValue(row.phone ?? "");
       const split = splitName(name);
       if (split.warning) {
