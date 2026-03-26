@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import type { AlertWithMatch } from "@/utils/alertsData";
-import type { CaseActivityEntry } from "@/types/activityLog";
+import type { CaseActivityEntry, CaseStatusChangeActivity } from "@/types/activityLog";
 import { CASE_STATUS, type CaseDisplay } from "@/types/case";
 import {
   calculateAlertsClearedPerDay,
@@ -133,9 +133,9 @@ function buildStatusChangeEntry(
     caseId?: string;
     caseName?: string;
     fromStatus?: string;
-    toStatus?: string;
+    toStatus: string;
   }
-): CaseActivityEntry {
+): CaseStatusChangeActivity {
   return {
     id: partial.id ?? "status-change-1",
     type: "status-change",
@@ -146,7 +146,7 @@ function buildStatusChangeEntry(
       fromStatus: partial.fromStatus,
       toStatus: partial.toStatus,
     },
-  } as CaseActivityEntry;
+  };
 }
 
 function buildNoteAddedEntry(

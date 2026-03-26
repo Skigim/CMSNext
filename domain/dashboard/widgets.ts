@@ -62,6 +62,11 @@ export interface ProcessingTimeStats {
   previousAverageDays: number | null;
 }
 
+interface TimestampedStatusChange {
+  entry: CaseStatusChangeActivity;
+  timestampMs: number;
+}
+
 interface DateWindowOptions {
   referenceDate?: Date;
   days?: number;
@@ -243,7 +248,7 @@ export function calculateCasesProcessedPerDay(
   // can be evaluated from its starting state to its ending state.
   const statusChangesByDay = new Map<
     string,
-    Map<string, CaseStatusChangeActivity[]>
+    Map<string, TimestampedStatusChange[]>
   >();
 
   // Build an index of cases that have notes added on each day (if filtering is enabled)
@@ -284,7 +289,10 @@ export function calculateCasesProcessedPerDay(
     if (!casesForDay.has(entry.caseId)) {
       casesForDay.set(entry.caseId, []);
     }
-    casesForDay.get(entry.caseId)?.push(entry);
+    casesForDay.get(entry.caseId)?.push({
+      entry,
+      timestampMs: timestamp.getTime(),
+    });
   });
 
   statusChangesByDay.forEach((casesForDay, key) => {
@@ -300,22 +308,20 @@ export function calculateCasesProcessedPerDay(
         }
       }
 
-      const firstCaseEntry = entries[0];
-      const firstCaseEntryTimestamp = Date.parse(firstCaseEntry.timestamp);
-      let dayStartEntry = firstCaseEntry;
-      let dayStartTimestamp = firstCaseEntryTimestamp;
-      let dayEndEntry = firstCaseEntry;
-      let dayEndTimestamp = firstCaseEntryTimestamp;
+      const firstStatusChange = entries[0];
+      let dayStartEntry = firstStatusChange.entry;
+      let dayStartTimestamp = firstStatusChange.timestampMs;
+      let dayEndEntry = firstStatusChange.entry;
+      let dayEndTimestamp = firstStatusChange.timestampMs;
 
-      for (const entry of entries) {
-        const entryTimestamp = Date.parse(entry.timestamp);
-        if (entryTimestamp < dayStartTimestamp) {
-          dayStartEntry = entry;
-          dayStartTimestamp = entryTimestamp;
+      for (const statusChange of entries) {
+        if (statusChange.timestampMs < dayStartTimestamp) {
+          dayStartEntry = statusChange.entry;
+          dayStartTimestamp = statusChange.timestampMs;
         }
-        if (entryTimestamp > dayEndTimestamp) {
-          dayEndEntry = entry;
-          dayEndTimestamp = entryTimestamp;
+        if (statusChange.timestampMs > dayEndTimestamp) {
+          dayEndEntry = statusChange.entry;
+          dayEndTimestamp = statusChange.timestampMs;
         }
       }
 
