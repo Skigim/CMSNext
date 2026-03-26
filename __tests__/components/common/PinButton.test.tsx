@@ -112,6 +112,40 @@ describe("PinButton", () => {
     expect(pin).toHaveBeenCalledWith("case-1", "Needs quick access");
   });
 
+  it("submits the pin dialog with Cmd+Enter", () => {
+    // ARRANGE
+    const pin = vi.fn();
+
+    usePinnedCasesMock.mockReturnValue({
+      pinnedCaseIds: [],
+      pin,
+      unpin: vi.fn(),
+      togglePin: vi.fn(),
+      isPinned: vi.fn(() => false),
+      getPinReason: vi.fn(),
+      canPinMore: true,
+      pinnedCount: 0,
+      reorder: vi.fn(),
+      pruneStale: vi.fn(),
+    });
+
+    const { getByRole } = render(<PinButton caseId="case-1" caseName="Case One" />);
+
+    // ACT
+    fireEvent.click(getByRole("button", { name: "Pin case" }));
+    const dialog = getByRole("dialog");
+    fireEvent.change(within(dialog).getByLabelText("Pin reason (optional)"), {
+      target: { value: "Mac shortcut works too" },
+    });
+    fireEvent.keyDown(within(dialog).getByLabelText("Pin reason (optional)"), {
+      key: "Enter",
+      metaKey: true,
+    });
+
+    // ASSERT
+    expect(pin).toHaveBeenCalledWith("case-1", "Mac shortcut works too");
+  });
+
   it("does not show the dialog when unpinning an already pinned case", () => {
     const unpin = vi.fn();
 

@@ -90,14 +90,6 @@ export function PinButton({
     return `Pin ${caseName}`;
   }, [caseName]);
 
-  const isMac = useMemo(() => {
-    if (typeof navigator === "undefined") {
-      return false;
-    }
-
-    return /Mac|iPhone|iPad|iPod/i.test(navigator.platform ?? navigator.userAgent ?? "");
-  }, []);
-
   const handleSubmit = () => {
     pin(caseId, reason);
     setIsReasonDialogOpen(false);
@@ -201,7 +193,7 @@ export function PinButton({
                 autoFocus
               />
               <p className="text-xs text-muted-foreground text-right">
-                Press <Kbd><span className="text-xs">{isMac ? "⌘" : "Ctrl"}</span>+Enter</Kbd> to pin
+                Press <Kbd>Ctrl</Kbd>/<Kbd>⌘</Kbd>+<Kbd>Enter</Kbd> to pin
               </p>
             </div>
 
