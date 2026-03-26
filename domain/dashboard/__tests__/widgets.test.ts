@@ -114,6 +114,17 @@ function buildCase(partial: Partial<CaseDisplay>): CaseDisplay {
 type ProcessedCountOptions = Parameters<typeof calculateCasesProcessedPerDay>[1];
 
 const processedCountDate = "2025-10-21";
+const processedTimes = {
+  previousMorning: isoLocal(2025, 9, 20, 9, 0, 0),
+  previousAfternoon: isoLocal(2025, 9, 20, 14, 0, 0),
+  morning: isoLocal(2025, 9, 21, 9, 0, 0),
+  afternoon: isoLocal(2025, 9, 21, 14, 0, 0),
+  laterAfternoon: isoLocal(2025, 9, 21, 16, 0, 0),
+  evening: isoLocal(2025, 9, 21, 17, 0, 0),
+} as const;
+const requireNoteOnSameDay: ProcessedCountOptions = {
+  requireNoteOnSameDay: true,
+};
 
 function buildStatusChangeEntry(
   partial: {
@@ -176,15 +187,38 @@ function getProcessedCountForReferenceDate(
   return stats.find((entry) => entry.date === date)?.processedCount;
 }
 
+function getProcessedCountRequiringSameDayNote(
+  activityLog: CaseActivityEntry[],
+  date = processedCountDate
+): number | undefined {
+  return getProcessedCountForReferenceDate(
+    activityLog,
+    date,
+    requireNoteOnSameDay
+  );
+}
+
+function buildPendingToApprovedEntry(
+  timestamp = processedTimes.afternoon,
+  partial: Omit<Parameters<typeof buildStatusChangeEntry>[0], "timestamp" | "fromStatus" | "toStatus"> = {}
+): CaseActivityEntry {
+  return buildStatusChangeEntry({
+    timestamp,
+    fromStatus: "Pending",
+    toStatus: "Approved",
+    ...partial,
+  });
+}
+
 describe("widgetDataProcessors", () => {
   describe("calculateAlertsClearedPerDay", () => {
     it("counts resolved alerts across the last seven days", () => {
-      // Use local time construction to avoid timezone issues
-  const day22 = isoLocal(2025, 9, 22, 10, 0, 0);
-  const day20 = isoLocal(2025, 9, 20, 8, 0, 0);
-  const day18 = isoLocal(2025, 9, 18, 12, 0, 0);
-  const day05 = isoLocal(2025, 9, 5, 12, 0, 0);
-      
+      // ARRANGE
+      const day22 = isoLocal(2025, 9, 22, 10, 0, 0);
+      const day20 = isoLocal(2025, 9, 20, 8, 0, 0);
+      const day18 = isoLocal(2025, 9, 18, 12, 0, 0);
+      const day05 = isoLocal(2025, 9, 5, 12, 0, 0);
+
       const alerts: AlertWithMatch[] = [
         buildAlert({ id: "a1", resolvedAt: day22, status: "resolved" }),
         buildAlert({ id: "a2", resolvedAt: day20, status: "resolved" }),
@@ -193,8 +227,10 @@ describe("widgetDataProcessors", () => {
         buildAlert({ id: "a5", resolvedAt: null, status: "in-progress" }),
       ];
 
+      // ACT
       const stats = calculateAlertsClearedPerDay(alerts, { referenceDate });
 
+      // ASSERT
       expect(stats).toHaveLength(7);
       const counts = stats.map((entry) => entry.clearedCount);
       expect(counts.reduce((sum, value) => sum + value, 0)).toBe(3);
@@ -265,19 +301,16 @@ describe("widgetDataProcessors", () => {
 
     it("counts as zero when a case reaches terminal and reverts to non-terminal on the same day", () => {
       // ARRANGE
-      const day21 = isoLocal(2025, 9, 21, 14, 0, 0);
-      const day21Later = isoLocal(2025, 9, 21, 16, 0, 0);
-
       const activity: CaseActivityEntry[] = [
         buildStatusChangeEntry({
           id: "c1",
-          timestamp: day21,
+          timestamp: processedTimes.afternoon,
           fromStatus: "Pending",
           toStatus: "Approved",
         }),
         buildStatusChangeEntry({
           id: "c2",
-          timestamp: day21Later,
+          timestamp: processedTimes.laterAfternoon,
           fromStatus: "Approved",
           toStatus: "Pending",
         }),
@@ -292,12 +325,10 @@ describe("widgetDataProcessors", () => {
 
     it("does not count as processed when the case started the day in a completion status", () => {
       // ARRANGE
-      const day21 = isoLocal(2025, 9, 21, 9, 0, 0);
-
       const activity = [
         buildStatusChangeEntry({
           id: "c1",
-          timestamp: day21,
+          timestamp: processedTimes.morning,
           fromStatus: "Approved",
           toStatus: "Pending",
         }),
@@ -312,13 +343,12 @@ describe("widgetDataProcessors", () => {
 
     it("does not count as processed when a case starts and ends the day in a completion status despite reopening", () => {
       // ARRANGE
-      const day21Morning = isoLocal(2025, 9, 21, 9, 0, 0);
       const day21Afternoon = isoLocal(2025, 9, 21, 13, 0, 0);
 
       const activity: CaseActivityEntry[] = [
         buildStatusChangeEntry({
           id: "c1",
-          timestamp: day21Morning,
+          timestamp: processedTimes.morning,
           fromStatus: "Approved",
           toStatus: "Pending",
         }),
@@ -339,12 +369,10 @@ describe("widgetDataProcessors", () => {
 
     it("does not change count when moving between completion statuses", () => {
       // ARRANGE
-      const day21 = isoLocal(2025, 9, 21, 14, 0, 0);
-
       const activity = [
         buildStatusChangeEntry({
           id: "c1",
-          timestamp: day21,
+          timestamp: processedTimes.afternoon,
           fromStatus: "Approved",
           toStatus: "Denied",
         }),
@@ -360,21 +388,10 @@ describe("widgetDataProcessors", () => {
     describe("requireNoteOnSameDay option", () => {
       it("counts status changes without notes when disabled (default)", () => {
         // ARRANGE
-        const day21 = isoLocal(2025, 9, 21, 14, 0, 0);
-
-        const activity = [
-          buildStatusChangeEntry({
-            id: "c1",
-            timestamp: day21,
-            fromStatus: "Pending",
-            toStatus: "Approved",
-          }),
-        ];
+        const activity = [buildPendingToApprovedEntry(processedTimes.afternoon, { id: "c1" })];
 
         // ACT
-        const processedCount = getProcessedCountForReferenceDate(activity, processedCountDate, {
-          requireNoteOnSameDay: false,
-        });
+        const processedCount = getProcessedCountForReferenceDate(activity);
 
         // ASSERT
         expect(processedCount).toBe(1);
@@ -382,21 +399,10 @@ describe("widgetDataProcessors", () => {
 
       it("excludes status changes without notes when enabled", () => {
         // ARRANGE
-        const day21 = isoLocal(2025, 9, 21, 14, 0, 0);
-
-        const activity = [
-          buildStatusChangeEntry({
-            id: "c1",
-            timestamp: day21,
-            fromStatus: "Pending",
-            toStatus: "Approved",
-          }),
-        ];
+        const activity = [buildPendingToApprovedEntry(processedTimes.afternoon, { id: "c1" })];
 
         // ACT
-        const processedCount = getProcessedCountForReferenceDate(activity, processedCountDate, {
-          requireNoteOnSameDay: true,
-        });
+        const processedCount = getProcessedCountRequiringSameDayNote(activity);
 
         // ASSERT
         expect(processedCount).toBe(0);
@@ -404,23 +410,13 @@ describe("widgetDataProcessors", () => {
 
       it("counts status changes with notes on the same day when enabled", () => {
         // ARRANGE
-        const day21Morning = isoLocal(2025, 9, 21, 9, 0, 0);
-        const day21Afternoon = isoLocal(2025, 9, 21, 14, 0, 0);
-
         const activity: CaseActivityEntry[] = [
-          buildNoteAddedEntry({ id: "n1", timestamp: day21Morning }),
-          buildStatusChangeEntry({
-            id: "c1",
-            timestamp: day21Afternoon,
-            fromStatus: "Pending",
-            toStatus: "Approved",
-          }),
+          buildNoteAddedEntry({ id: "n1", timestamp: processedTimes.morning }),
+          buildPendingToApprovedEntry(processedTimes.afternoon, { id: "c1" }),
         ];
 
         // ACT
-        const processedCount = getProcessedCountForReferenceDate(activity, processedCountDate, {
-          requireNoteOnSameDay: true,
-        });
+        const processedCount = getProcessedCountRequiringSameDayNote(activity);
 
         // ASSERT
         expect(processedCount).toBe(1);
@@ -428,23 +424,13 @@ describe("widgetDataProcessors", () => {
 
       it("does not count if note is on a different day than status change", () => {
         // ARRANGE
-        const day20 = isoLocal(2025, 9, 20, 14, 0, 0);
-        const day21 = isoLocal(2025, 9, 21, 14, 0, 0);
-
         const activity: CaseActivityEntry[] = [
-          buildNoteAddedEntry({ id: "n1", timestamp: day20 }),
-          buildStatusChangeEntry({
-            id: "c1",
-            timestamp: day21,
-            fromStatus: "Pending",
-            toStatus: "Approved",
-          }),
+          buildNoteAddedEntry({ id: "n1", timestamp: processedTimes.previousAfternoon }),
+          buildPendingToApprovedEntry(processedTimes.afternoon, { id: "c1" }),
         ];
 
         // ACT
-        const processedCount = getProcessedCountForReferenceDate(activity, processedCountDate, {
-          requireNoteOnSameDay: true,
-        });
+        const processedCount = getProcessedCountRequiringSameDayNote(activity);
 
         // ASSERT
         expect(processedCount).toBe(0);
@@ -452,25 +438,16 @@ describe("widgetDataProcessors", () => {
 
       it("handles multiple cases with mixed note presence", () => {
         // ARRANGE
-        const day21Morning = isoLocal(2025, 9, 21, 9, 0, 0);
-        const day21Afternoon = isoLocal(2025, 9, 21, 14, 0, 0);
-        const day21Evening = isoLocal(2025, 9, 21, 17, 0, 0);
-
         const activity: CaseActivityEntry[] = [
           buildNoteAddedEntry({
             id: "n1",
-            timestamp: day21Morning,
+            timestamp: processedTimes.morning,
             preview: "Worked on case",
           }),
-          buildStatusChangeEntry({
-            id: "c1",
-            timestamp: day21Afternoon,
-            fromStatus: "Pending",
-            toStatus: "Approved",
-          }),
+          buildPendingToApprovedEntry(processedTimes.afternoon, { id: "c1" }),
           buildStatusChangeEntry({
             id: "c2",
-            timestamp: day21Afternoon,
+            timestamp: processedTimes.afternoon,
             caseId: "case-2",
             caseName: "Case 2",
             fromStatus: "Pending",
@@ -478,7 +455,7 @@ describe("widgetDataProcessors", () => {
           }),
           buildNoteAddedEntry({
             id: "n3",
-            timestamp: day21Afternoon,
+            timestamp: processedTimes.afternoon,
             caseId: "case-3",
             caseName: "Case 3",
             noteId: "note-3",
@@ -486,7 +463,7 @@ describe("widgetDataProcessors", () => {
           }),
           buildStatusChangeEntry({
             id: "c3",
-            timestamp: day21Evening,
+            timestamp: processedTimes.evening,
             caseId: "case-3",
             caseName: "Case 3",
             fromStatus: "Pending",
@@ -495,9 +472,7 @@ describe("widgetDataProcessors", () => {
         ];
 
         // ACT
-        const processedCount = getProcessedCountForReferenceDate(activity, processedCountDate, {
-          requireNoteOnSameDay: true,
-        });
+        const processedCount = getProcessedCountRequiringSameDayNote(activity);
 
         // ASSERT
         expect(processedCount).toBe(2);
@@ -505,34 +480,23 @@ describe("widgetDataProcessors", () => {
 
       it("still applies reversion logic when requireNoteOnSameDay is enabled", () => {
         // ARRANGE
-        const day21Morning = isoLocal(2025, 9, 21, 9, 0, 0);
-        const day21Afternoon = isoLocal(2025, 9, 21, 14, 0, 0);
-        const day21Evening = isoLocal(2025, 9, 21, 17, 0, 0);
-
         const activity: CaseActivityEntry[] = [
           buildNoteAddedEntry({
             id: "n1",
-            timestamp: day21Morning,
+            timestamp: processedTimes.morning,
             preview: "Working on it",
           }),
-          buildStatusChangeEntry({
-            id: "c1",
-            timestamp: day21Afternoon,
-            fromStatus: "Pending",
-            toStatus: "Approved",
-          }),
+          buildPendingToApprovedEntry(processedTimes.afternoon, { id: "c1" }),
           buildStatusChangeEntry({
             id: "c2",
-            timestamp: day21Evening,
+            timestamp: processedTimes.evening,
             fromStatus: "Approved",
             toStatus: "Pending",
           }),
         ];
 
         // ACT
-        const processedCount = getProcessedCountForReferenceDate(activity, processedCountDate, {
-          requireNoteOnSameDay: true,
-        });
+        const processedCount = getProcessedCountRequiringSameDayNote(activity);
 
         // ASSERT
         expect(processedCount).toBe(0);
@@ -540,27 +504,22 @@ describe("widgetDataProcessors", () => {
 
       it("does not count a same-day reopen when the case started terminal even if a note exists", () => {
         // ARRANGE
-        const day21Morning = isoLocal(2025, 9, 21, 9, 0, 0);
-        const day21Afternoon = isoLocal(2025, 9, 21, 14, 0, 0);
-
         const activity: CaseActivityEntry[] = [
           buildNoteAddedEntry({
             id: "n1",
-            timestamp: day21Morning,
+            timestamp: processedTimes.morning,
             preview: "Reviewed reopened case",
           }),
           buildStatusChangeEntry({
             id: "c1",
-            timestamp: day21Afternoon,
+            timestamp: processedTimes.afternoon,
             fromStatus: "Approved",
             toStatus: "Pending",
           }),
         ];
 
         // ACT
-        const processedCount = getProcessedCountForReferenceDate(activity, processedCountDate, {
-          requireNoteOnSameDay: true,
-        });
+        const processedCount = getProcessedCountRequiringSameDayNote(activity);
 
         // ASSERT
         expect(processedCount).toBe(0);
@@ -622,47 +581,48 @@ describe("widgetDataProcessors", () => {
 
   describe("calculateAvgCaseProcessingTime", () => {
     it("summarizes processing durations and previous baseline", () => {
+      // ARRANGE
       const case1 = buildCase({ id: "case-1", status: CASE_STATUS.Active });
-  case1.caseRecord.createdDate = isoLocal(2025, 9, 1);
+      case1.caseRecord.createdDate = isoLocal(2025, 9, 1);
       const case2 = buildCase({ id: "case-2", status: CASE_STATUS.Closed });
-  case2.caseRecord.createdDate = isoLocal(2025, 9, 5);
+      case2.caseRecord.createdDate = isoLocal(2025, 9, 5);
       const case3 = buildCase({ id: "case-3", status: CASE_STATUS.Closed });
-  case3.caseRecord.createdDate = isoLocal(2025, 7, 20);
+      case3.caseRecord.createdDate = isoLocal(2025, 7, 20);
 
       const cases: CaseDisplay[] = [case1, case2, case3];
 
       const activity: CaseActivityEntry[] = [
-        {
+        buildStatusChangeEntry({
           id: "act-1",
-          type: "status-change",
           timestamp: isoLocal(2025, 9, 10, 12),
-          caseId: "case-1",
-          caseName: "Case 1",
-          payload: { toStatus: "Approved", fromStatus: "Pending" },
-        },
-        {
+          fromStatus: "Pending",
+          toStatus: "Approved",
+        }),
+        buildStatusChangeEntry({
           id: "act-2",
-          type: "status-change",
           timestamp: isoLocal(2025, 9, 18, 9),
           caseId: "case-2",
           caseName: "Case 2",
-          payload: { toStatus: "Denied", fromStatus: "Pending" },
-        },
-        {
+          fromStatus: "Pending",
+          toStatus: "Denied",
+        }),
+        buildStatusChangeEntry({
           id: "act-3",
-          type: "status-change",
           timestamp: isoLocal(2025, 8, 5, 9),
           caseId: "case-3",
           caseName: "Case 3",
-          payload: { toStatus: "Closed", fromStatus: "Pending" },
-        },
+          fromStatus: "Pending",
+          toStatus: "Closed",
+        }),
       ];
 
+      // ACT
       const stats = calculateAvgCaseProcessingTime(activity, cases, {
         referenceDate,
         windowInDays: 30,
       });
 
+      // ASSERT
       expect(stats.sampleSize).toBe(2);
       expect(stats.averageDays).toBeCloseTo(11, 1);
       expect(stats.medianDays).toBeCloseTo(11, 1);
