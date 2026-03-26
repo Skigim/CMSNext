@@ -163,7 +163,7 @@ function buildNoteAddedEntry(
   } as CaseActivityEntry;
 }
 
-function getProcessedCountForDate(
+function getProcessedCountForReferenceDate(
   activityLog: CaseActivityEntry[],
   date = processedCountDate,
   options: ProcessedCountOptions = {}
@@ -205,6 +205,8 @@ describe("widgetDataProcessors", () => {
 
     it("handles empty input", () => {
       // ARRANGE
+
+      // ACT
       const stats = calculateAlertsClearedPerDay([], { referenceDate });
 
       // ASSERT
@@ -282,7 +284,7 @@ describe("widgetDataProcessors", () => {
       ];
 
       // ACT
-      const processedCount = getProcessedCountForDate(activity);
+      const processedCount = getProcessedCountForReferenceDate(activity);
 
       // ASSERT
       expect(processedCount).toBe(0);
@@ -302,7 +304,7 @@ describe("widgetDataProcessors", () => {
       ];
 
       // ACT
-      const processedCount = getProcessedCountForDate(activity);
+      const processedCount = getProcessedCountForReferenceDate(activity);
 
       // ASSERT
       expect(processedCount).toBe(0);
@@ -329,7 +331,7 @@ describe("widgetDataProcessors", () => {
       ];
 
       // ACT
-      const processedCount = getProcessedCountForDate(activity);
+      const processedCount = getProcessedCountForReferenceDate(activity);
 
       // ASSERT
       expect(processedCount).toBe(0);
@@ -349,7 +351,7 @@ describe("widgetDataProcessors", () => {
       ];
 
       // ACT
-      const processedCount = getProcessedCountForDate(activity);
+      const processedCount = getProcessedCountForReferenceDate(activity);
 
       // ASSERT
       expect(processedCount).toBe(0);
@@ -370,7 +372,7 @@ describe("widgetDataProcessors", () => {
         ];
 
         // ACT
-        const processedCount = getProcessedCountForDate(activity, processedCountDate, {
+        const processedCount = getProcessedCountForReferenceDate(activity, processedCountDate, {
           requireNoteOnSameDay: false,
         });
 
@@ -392,7 +394,7 @@ describe("widgetDataProcessors", () => {
         ];
 
         // ACT
-        const processedCount = getProcessedCountForDate(activity, processedCountDate, {
+        const processedCount = getProcessedCountForReferenceDate(activity, processedCountDate, {
           requireNoteOnSameDay: true,
         });
 
@@ -416,7 +418,7 @@ describe("widgetDataProcessors", () => {
         ];
 
         // ACT
-        const processedCount = getProcessedCountForDate(activity, processedCountDate, {
+        const processedCount = getProcessedCountForReferenceDate(activity, processedCountDate, {
           requireNoteOnSameDay: true,
         });
 
@@ -440,7 +442,7 @@ describe("widgetDataProcessors", () => {
         ];
 
         // ACT
-        const processedCount = getProcessedCountForDate(activity, processedCountDate, {
+        const processedCount = getProcessedCountForReferenceDate(activity, processedCountDate, {
           requireNoteOnSameDay: true,
         });
 
@@ -493,7 +495,7 @@ describe("widgetDataProcessors", () => {
         ];
 
         // ACT
-        const processedCount = getProcessedCountForDate(activity, processedCountDate, {
+        const processedCount = getProcessedCountForReferenceDate(activity, processedCountDate, {
           requireNoteOnSameDay: true,
         });
 
@@ -528,7 +530,7 @@ describe("widgetDataProcessors", () => {
         ];
 
         // ACT
-        const processedCount = getProcessedCountForDate(activity, processedCountDate, {
+        const processedCount = getProcessedCountForReferenceDate(activity, processedCountDate, {
           requireNoteOnSameDay: true,
         });
 
@@ -556,7 +558,7 @@ describe("widgetDataProcessors", () => {
         ];
 
         // ACT
-        const processedCount = getProcessedCountForDate(activity, processedCountDate, {
+        const processedCount = getProcessedCountForReferenceDate(activity, processedCountDate, {
           requireNoteOnSameDay: true,
         });
 
