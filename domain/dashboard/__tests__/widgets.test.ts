@@ -196,7 +196,7 @@ describe("widgetDataProcessors", () => {
       expect(day.processedCount).toBe(1);
     });
 
-    it("decrements count when reverting from a completion status", () => {
+    it("counts as zero when a case reaches terminal and reverts to non-terminal on the same day", () => {
       const day21 = isoLocal(2025, 9, 21, 14, 0, 0);
       const day21Later = isoLocal(2025, 9, 21, 16, 0, 0);
 
@@ -224,7 +224,7 @@ describe("widgetDataProcessors", () => {
       expect(day?.processedCount).toBe(0); // +1 then -1 = net 0
     });
 
-    it("does not decrement when the case started the day in a completion status", () => {
+    it("does not count as processed when the case started the day in a completion status", () => {
       const day21 = isoLocal(2025, 9, 21, 9, 0, 0);
 
       const activity: CaseActivityEntry[] = [
@@ -243,7 +243,7 @@ describe("widgetDataProcessors", () => {
       expect(day?.processedCount).toBe(0);
     });
 
-    it("does not count a case that started terminal, reopened, and re-closed the same day", () => {
+    it("does not count as processed when a case starts and ends the day in a completion status despite reopening", () => {
       const day21Morning = isoLocal(2025, 9, 21, 9, 0, 0);
       const day21Afternoon = isoLocal(2025, 9, 21, 13, 0, 0);
 

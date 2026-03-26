@@ -239,6 +239,8 @@ export function calculateCasesProcessedPerDay(
     return keys.map((date) => ({ date, processedCount: 0 }));
   }
 
+  // Group status-change entries by local day and then by case so each case/day
+  // can be evaluated from its starting state to its ending state.
   const statusChangesByDay = new Map<
     string,
     Map<string, CaseStatusChangeActivity[]>
@@ -276,14 +278,21 @@ export function calculateCasesProcessedPerDay(
     }
 
     const casesForDay = statusChangesByDay.get(key);
-    if (!casesForDay?.has(entry.caseId)) {
-      casesForDay?.set(entry.caseId, []);
+    if (!casesForDay) {
+      return;
     }
-    casesForDay?.get(entry.caseId)?.push(entry);
+    if (!casesForDay.has(entry.caseId)) {
+      casesForDay.set(entry.caseId, []);
+    }
+    casesForDay.get(entry.caseId)?.push(entry);
   });
 
   statusChangesByDay.forEach((casesForDay, key) => {
     casesForDay.forEach((entries, caseId) => {
+      if (entries.length === 0) {
+        return;
+      }
+
       if (requireNoteOnSameDay) {
         const notesForDay = casesWithNotesByDay.get(key);
         if (!notesForDay || !notesForDay.has(caseId)) {
@@ -291,19 +300,35 @@ export function calculateCasesProcessedPerDay(
         }
       }
 
-      const orderedEntries = [...entries].sort(
-        (a, b) =>
-          new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
-      );
-      const firstEntry = orderedEntries[0];
-      const lastEntry = orderedEntries[orderedEntries.length - 1];
-      const startingStatus = firstEntry.payload?.fromStatus?.toLowerCase();
-      const endingStatus = lastEntry.payload?.toStatus?.toLowerCase();
-      const startedInCompletion = startingStatus
-        ? completionStatuses.has(startingStatus)
+      const firstCaseEntry = entries[0];
+      const firstCaseEntryTimestamp = Date.parse(firstCaseEntry.timestamp);
+      let dayStartEntry = firstCaseEntry;
+      let dayStartTimestamp = firstCaseEntryTimestamp;
+      let dayEndEntry = firstCaseEntry;
+      let dayEndTimestamp = firstCaseEntryTimestamp;
+
+      for (const entry of entries) {
+        const entryTimestamp = Date.parse(entry.timestamp);
+        if (entryTimestamp < dayStartTimestamp) {
+          dayStartEntry = entry;
+          dayStartTimestamp = entryTimestamp;
+        }
+        if (entryTimestamp > dayEndTimestamp) {
+          dayEndEntry = entry;
+          dayEndTimestamp = entryTimestamp;
+        }
+      }
+
+      // We treat the earliest status-change's `fromStatus` as the case's local
+      // day-start state and the latest status-change's `toStatus` as the day-end
+      // state, which matches the existing activity log model for intra-day moves.
+      const dayStartStatus = dayStartEntry.payload?.fromStatus?.toLowerCase();
+      const dayEndStatus = dayEndEntry.payload?.toStatus?.toLowerCase();
+      const startedInCompletion = dayStartStatus
+        ? completionStatuses.has(dayStartStatus)
         : false;
-      const endedInCompletion = endingStatus
-        ? completionStatuses.has(endingStatus)
+      const endedInCompletion = dayEndStatus
+        ? completionStatuses.has(dayEndStatus)
         : false;
 
       if (!startedInCompletion && endedInCompletion) {
