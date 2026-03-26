@@ -224,6 +224,53 @@ describe("widgetDataProcessors", () => {
       expect(day?.processedCount).toBe(0); // +1 then -1 = net 0
     });
 
+    it("does not decrement when the case started the day in a completion status", () => {
+      const day21 = isoLocal(2025, 9, 21, 9, 0, 0);
+
+      const activity: CaseActivityEntry[] = [
+        {
+          id: "c1",
+          type: "status-change",
+          timestamp: day21,
+          caseId: "case-1",
+          caseName: "Case 1",
+          payload: { fromStatus: "Approved", toStatus: "Pending" },
+        },
+      ];
+
+      const stats = calculateCasesProcessedPerDay(activity, { referenceDate });
+      const day = stats.find((s) => s.date === "2025-10-21");
+      expect(day?.processedCount).toBe(0);
+    });
+
+    it("does not count a case that started terminal, reopened, and re-closed the same day", () => {
+      const day21Morning = isoLocal(2025, 9, 21, 9, 0, 0);
+      const day21Afternoon = isoLocal(2025, 9, 21, 13, 0, 0);
+
+      const activity: CaseActivityEntry[] = [
+        {
+          id: "c1",
+          type: "status-change",
+          timestamp: day21Morning,
+          caseId: "case-1",
+          caseName: "Case 1",
+          payload: { fromStatus: "Approved", toStatus: "Pending" },
+        },
+        {
+          id: "c2",
+          type: "status-change",
+          timestamp: day21Afternoon,
+          caseId: "case-1",
+          caseName: "Case 1",
+          payload: { fromStatus: "Pending", toStatus: "Closed" },
+        },
+      ];
+
+      const stats = calculateCasesProcessedPerDay(activity, { referenceDate });
+      const day = stats.find((s) => s.date === "2025-10-21");
+      expect(day?.processedCount).toBe(0);
+    });
+
     it("does not change count when moving between completion statuses", () => {
       const day21 = isoLocal(2025, 9, 21, 14, 0, 0);
 
@@ -450,6 +497,41 @@ describe("widgetDataProcessors", () => {
         });
         const day = stats.find((s) => s.date === "2025-10-21");
         expect(day?.processedCount).toBe(0); // +1 then -1 = net 0 (both have notes)
+      });
+
+      it("does not count a same-day reopen when the case started terminal even if a note exists", () => {
+        const day21Morning = isoLocal(2025, 9, 21, 9, 0, 0);
+        const day21Afternoon = isoLocal(2025, 9, 21, 14, 0, 0);
+
+        const activity: CaseActivityEntry[] = [
+          {
+            id: "n1",
+            type: "note-added",
+            timestamp: day21Morning,
+            caseId: "case-1",
+            caseName: "Case 1",
+            payload: {
+              noteId: "note-1",
+              category: "General",
+              preview: "Reviewed reopened case",
+            },
+          },
+          {
+            id: "c1",
+            type: "status-change",
+            timestamp: day21Afternoon,
+            caseId: "case-1",
+            caseName: "Case 1",
+            payload: { fromStatus: "Approved", toStatus: "Pending" },
+          },
+        ];
+
+        const stats = calculateCasesProcessedPerDay(activity, {
+          referenceDate,
+          requireNoteOnSameDay: true,
+        });
+        const day = stats.find((s) => s.date === "2025-10-21");
+        expect(day?.processedCount).toBe(0);
       });
     });
   });

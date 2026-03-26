@@ -16,7 +16,10 @@
 
 import { isAlertResolved, type AlertWithMatch } from "@/utils/alertsData";
 import type { StoredCase } from "@/types/case";
-import type { CaseActivityEntry } from "@/types/activityLog";
+import type {
+  CaseActivityEntry,
+  CaseStatusChangeActivity,
+} from "@/types/activityLog";
 
 export interface DailyAlertStats {
   date: string;
@@ -236,28 +239,16 @@ export function calculateCasesProcessedPerDay(
     return keys.map((date) => ({ date, processedCount: 0 }));
   }
 
+  const statusChangesByDay = new Map<
+    string,
+    Map<string, CaseStatusChangeActivity[]>
+  >();
+
   // Build an index of cases that have notes added on each day (if filtering is enabled)
   // Map<dateKey, Set<caseId>>
   const casesWithNotesByDay = new Map<string, Set<string>>();
-  if (requireNoteOnSameDay) {
-    activityLog.forEach((entry) => {
-      if (!entry || entry.type !== "note-added") {
-        return;
-      }
-      const timestamp = safeParseDate(entry.timestamp);
-      if (!timestamp || !isWithinRange(timestamp, start, referenceDate)) {
-        return;
-      }
-      const key = isoDateKey(timestamp);
-      if (!casesWithNotesByDay.has(key)) {
-        casesWithNotesByDay.set(key, new Set());
-      }
-      casesWithNotesByDay.get(key)?.add(entry.caseId);
-    });
-  }
-
   activityLog.forEach((entry) => {
-    if (!entry || entry.type !== "status-change") {
+    if (!entry) {
       return;
     }
 
@@ -267,27 +258,58 @@ export function calculateCasesProcessedPerDay(
     }
 
     const key = isoDateKey(timestamp);
-    const toStatus = entry.payload?.toStatus?.toLowerCase();
-    const fromStatus = entry.payload?.fromStatus?.toLowerCase();
 
-    const movedToCompletion = toStatus ? completionStatuses.has(toStatus) : false;
-    const movedFromCompletion = fromStatus ? completionStatuses.has(fromStatus) : false;
-
-    // If requireNoteOnSameDay is enabled, only count if this case has a note on the same day
-    if (requireNoteOnSameDay) {
-      const notesForDay = casesWithNotesByDay.get(key);
-      if (!notesForDay || !notesForDay.has(entry.caseId)) {
-        return; // Skip: no note added for this case on this day
+    if (entry.type === "note-added" && requireNoteOnSameDay) {
+      if (!casesWithNotesByDay.has(key)) {
+        casesWithNotesByDay.set(key, new Set());
       }
+      casesWithNotesByDay.get(key)?.add(entry.caseId);
+      return;
     }
 
-    // Net change: +1 when moving TO completion, -1 when moving FROM completion
-    if (movedToCompletion && !movedFromCompletion) {
-      counts.set(key, (counts.get(key) ?? 0) + 1);
-    } else if (movedFromCompletion && !movedToCompletion) {
-      counts.set(key, (counts.get(key) ?? 0) - 1);
+    if (entry.type !== "status-change") {
+      return;
     }
-    // If moving between two completion statuses, net change is 0
+
+    if (!statusChangesByDay.has(key)) {
+      statusChangesByDay.set(key, new Map());
+    }
+
+    const casesForDay = statusChangesByDay.get(key);
+    if (!casesForDay?.has(entry.caseId)) {
+      casesForDay?.set(entry.caseId, []);
+    }
+    casesForDay?.get(entry.caseId)?.push(entry);
+  });
+
+  statusChangesByDay.forEach((casesForDay, key) => {
+    casesForDay.forEach((entries, caseId) => {
+      if (requireNoteOnSameDay) {
+        const notesForDay = casesWithNotesByDay.get(key);
+        if (!notesForDay || !notesForDay.has(caseId)) {
+          return;
+        }
+      }
+
+      const orderedEntries = [...entries].sort(
+        (a, b) =>
+          new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+      );
+      const firstEntry = orderedEntries[0];
+      const lastEntry = orderedEntries[orderedEntries.length - 1];
+      const startingStatus = firstEntry.payload?.fromStatus?.toLowerCase();
+      const endingStatus = lastEntry.payload?.toStatus?.toLowerCase();
+      const startedInCompletion = startingStatus
+        ? completionStatuses.has(startingStatus)
+        : false;
+      const endedInCompletion = endingStatus
+        ? completionStatuses.has(endingStatus)
+        : false;
+
+      if (!startedInCompletion && endedInCompletion) {
+        counts.set(key, (counts.get(key) ?? 0) + 1);
+      }
+    });
   });
 
   return keys.map((date) => ({
