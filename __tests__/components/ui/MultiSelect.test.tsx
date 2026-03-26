@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { axe } from "jest-axe";
 import { describe, expect, it, vi } from "vitest";
@@ -17,9 +17,9 @@ const options: MultiSelectOption[] = [
 
 function ControlledMultiSelect({
   initialValue = [],
-}: {
+}: Readonly<{
   initialValue?: string[];
-}) {
+}>) {
   const [value, setValue] = useState<string[]>(initialValue);
 
   return (
@@ -137,10 +137,10 @@ describe("MultiSelect", () => {
         name: "Select note categories: Important",
       }),
     ).toHaveTextContent("Important");
-    expect(
-      screen.getByRole("option", { name: /Important\s*Selected/ }),
-    ).toBeInTheDocument();
-    expect(screen.getByText("Selected")).toBeInTheDocument();
+    const importantOption = screen.getByRole("option", { name: /Important/ });
+
+    expect(importantOption).toBeInTheDocument();
+    expect(within(importantOption).getByText("Selected")).toBeInTheDocument();
   });
 
   it("shows the empty state when search returns no results", async () => {
