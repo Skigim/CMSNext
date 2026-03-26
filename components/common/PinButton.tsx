@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -98,11 +98,11 @@ export function PinButton({
     return /Mac|iPhone|iPad|iPod/i.test(navigator.platform ?? navigator.userAgent ?? "");
   }, []);
 
-  const handleSubmit = useCallback(() => {
+  const handleSubmit = () => {
     pin(caseId, reason);
     setIsReasonDialogOpen(false);
     setReason("");
-  }, [caseId, pin, reason]);
+  };
 
   const handleSubmitShortcut = useSubmitShortcut<HTMLTextAreaElement>({
     onSubmit: handleSubmit,
