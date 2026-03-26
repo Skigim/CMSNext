@@ -1,6 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import type { useNotes } from "@/hooks/useNotes";
+
+type UseNotesResult = ReturnType<typeof useNotes>;
+type AddNoteMock = UseNotesResult["addNote"];
+type UpdateNoteMock = UseNotesResult["updateNote"];
+type DeleteNoteMock = UseNotesResult["deleteNote"];
 
 const {
   mockAddNote,
@@ -8,15 +14,9 @@ const {
   mockDeleteNote,
   mockCategoryConfig,
 } = vi.hoisted(() => ({
-  mockAddNote: vi.fn<
-    [string, { content: string; category: string; categories: string[] }],
-    Promise<null>
-  >(),
-  mockUpdateNote: vi.fn<
-    [string, string, { content: string; category: string; categories: string[] }],
-    Promise<null>
-  >(),
-  mockDeleteNote: vi.fn<[string, string], Promise<void>>(),
+  mockAddNote: vi.fn<AddNoteMock>(),
+  mockUpdateNote: vi.fn<UpdateNoteMock>(),
+  mockDeleteNote: vi.fn<DeleteNoteMock>(),
   mockCategoryConfig: {
     config: {
       caseStatuses: [],
@@ -88,10 +88,10 @@ describe("NotesPopover", () => {
     vi.clearAllMocks();
     mockAddNote.mockResolvedValue(null);
     mockUpdateNote.mockResolvedValue(null);
-    mockDeleteNote.mockResolvedValue();
+    mockDeleteNote.mockResolvedValue(undefined);
   });
 
-  it("renders without error", () => {
+  it("renders the notes trigger button with the note count", () => {
     // ARRANGE & ACT
     render(<NotesPopover caseId="case-1" />);
 
@@ -99,12 +99,19 @@ describe("NotesPopover", () => {
     expect(screen.getByRole("button", { name: /notes \(1\)/i })).toBeInTheDocument();
   });
 
-  it("note view mode elements have role=button, tabIndex, and onKeyDown", () => {
-    // ARRANGE & ACT
-    const { container } = render(<NotesPopover caseId="case-1" />);
+  it("renders note content as an interactive button in view mode", async () => {
+    // ARRANGE
+    const user = userEvent.setup();
+    render(<NotesPopover caseId="case-1" />);
+
+    // ACT
+    await user.click(screen.getByRole("button", { name: /notes/i }));
 
     // ASSERT
-    expect(container.querySelector("button")).not.toBeNull();
+    expect(screen.getByRole("button", { name: /test note content/i })).toHaveAttribute(
+      "type",
+      "button",
+    );
   });
 
   it("shows all note categories when a note has multiple categories", async () => {
