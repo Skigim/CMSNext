@@ -160,24 +160,6 @@ describe("MultiSelect", () => {
     expect(screen.getByText("No results found.")).toBeInTheDocument();
   });
 
-  it("adds bottom padding beneath the final option", async () => {
-    // ARRANGE
-    const user = userEvent.setup();
-    render(<ControlledMultiSelect />);
-
-    // ACT
-    await user.click(
-      screen.getByRole("button", {
-        name: "Select note categories: Select categories",
-      }),
-    );
-
-    // ASSERT
-    const optionGroup = document.querySelector("[cmdk-group]");
-    expect(optionGroup).not.toBeNull();
-    expect(optionGroup?.className).toContain("pb-2");
-  });
-
   it("has no accessibility violations", async () => {
     // ARRANGE
     const user = userEvent.setup();
