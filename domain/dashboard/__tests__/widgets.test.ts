@@ -111,6 +111,71 @@ function buildCase(partial: Partial<CaseDisplay>): CaseDisplay {
   } as CaseDisplay;
 }
 
+type ProcessedCountOptions = Parameters<typeof calculateCasesProcessedPerDay>[1];
+
+const processedCountDate = "2025-10-21";
+
+function buildStatusChangeEntry(
+  partial: {
+    id?: string;
+    timestamp: string;
+    caseId?: string;
+    caseName?: string;
+    fromStatus?: string;
+    toStatus?: string;
+  }
+): CaseActivityEntry {
+  return {
+    id: partial.id ?? "status-change-1",
+    type: "status-change",
+    timestamp: partial.timestamp,
+    caseId: partial.caseId ?? "case-1",
+    caseName: partial.caseName ?? "Case 1",
+    payload: {
+      fromStatus: partial.fromStatus,
+      toStatus: partial.toStatus,
+    },
+  } as CaseActivityEntry;
+}
+
+function buildNoteAddedEntry(
+  partial: {
+    id?: string;
+    timestamp: string;
+    caseId?: string;
+    caseName?: string;
+    noteId?: string;
+    category?: string;
+    preview?: string;
+  }
+): CaseActivityEntry {
+  return {
+    id: partial.id ?? "note-added-1",
+    type: "note-added",
+    timestamp: partial.timestamp,
+    caseId: partial.caseId ?? "case-1",
+    caseName: partial.caseName ?? "Case 1",
+    payload: {
+      noteId: partial.noteId ?? "note-1",
+      category: partial.category ?? "General",
+      preview: partial.preview ?? "Reviewed documentation",
+    },
+  } as CaseActivityEntry;
+}
+
+function getProcessedCountForDate(
+  activityLog: CaseActivityEntry[],
+  date = processedCountDate,
+  options: ProcessedCountOptions = {}
+): number | undefined {
+  const stats = calculateCasesProcessedPerDay(activityLog, {
+    referenceDate,
+    ...options,
+  });
+
+  return stats.find((entry) => entry.date === date)?.processedCount;
+}
+
 describe("widgetDataProcessors", () => {
   describe("calculateAlertsClearedPerDay", () => {
     it("counts resolved alerts across the last seven days", () => {
@@ -139,399 +204,364 @@ describe("widgetDataProcessors", () => {
     });
 
     it("handles empty input", () => {
+      // ARRANGE
       const stats = calculateAlertsClearedPerDay([], { referenceDate });
+
+      // ASSERT
       expect(stats).toHaveLength(7);
-      expect(stats.every((entry) => entry.clearedCount === 0)).toBe(true);
+      expect(stats.map((entry) => entry.clearedCount)).toEqual([
+        0, 0, 0, 0, 0, 0, 0,
+      ]);
     });
   });
 
   describe("calculateCasesProcessedPerDay", () => {
     it("groups completed status changes", () => {
-      // Use local time construction
-  const day21 = isoLocal(2025, 9, 21, 14, 0, 0);
-  const day20 = isoLocal(2025, 9, 20, 9, 0, 0);
-  const day15 = isoLocal(2025, 9, 15, 10, 0, 0);
-  const day22 = isoLocal(2025, 9, 22, 11, 0, 0);
-      
+      // ARRANGE
+      const day21 = isoLocal(2025, 9, 21, 14, 0, 0);
+      const day20 = isoLocal(2025, 9, 20, 9, 0, 0);
+      const day15 = isoLocal(2025, 9, 15, 10, 0, 0);
+      const day22 = isoLocal(2025, 9, 22, 11, 0, 0);
+
       const activity: CaseActivityEntry[] = [
-        {
-          id: "c1",
-          type: "status-change",
-          timestamp: day21,
-          caseId: "case-1",
-          caseName: "Case 1",
-          payload: { toStatus: "Approved" },
-        },
-        {
+        buildStatusChangeEntry({ id: "c1", timestamp: day21, toStatus: "Approved" }),
+        buildStatusChangeEntry({
           id: "c2",
-          type: "status-change",
           timestamp: day20,
           caseId: "case-2",
           caseName: "Case 2",
-          payload: { toStatus: "Closed" },
-        },
-        {
+          toStatus: "Closed",
+        }),
+        buildStatusChangeEntry({
           id: "c3",
-          type: "status-change",
           timestamp: day15,
           caseId: "case-3",
           caseName: "Case 3",
-          payload: { toStatus: "Pending" },
-        },
-        {
+          toStatus: "Pending",
+        }),
+        buildNoteAddedEntry({
           id: "c4",
-          type: "note-added",
           timestamp: day22,
           caseId: "case-4",
           caseName: "Case 4",
-          payload: { noteId: "n1", category: "General", preview: "note" },
-        },
+          preview: "note",
+        }),
       ];
 
+      // ACT
       const stats = calculateCasesProcessedPerDay(activity, { referenceDate });
+
+      // ASSERT
       expect(stats).toHaveLength(7);
-      expect(stats.map((entry) => entry.processedCount).reduce((sum, value) => sum + value, 0)).toBe(2);
+      expect(
+        stats.map((entry) => entry.processedCount).reduce((sum, value) => sum + value, 0)
+      ).toBe(2);
       const day = stats[stats.length - 2];
       expect(day.date).toBe("2025-10-21");
       expect(day.processedCount).toBe(1);
     });
 
     it("counts as zero when a case reaches terminal and reverts to non-terminal on the same day", () => {
+      // ARRANGE
       const day21 = isoLocal(2025, 9, 21, 14, 0, 0);
       const day21Later = isoLocal(2025, 9, 21, 16, 0, 0);
 
       const activity: CaseActivityEntry[] = [
-        {
+        buildStatusChangeEntry({
           id: "c1",
-          type: "status-change",
           timestamp: day21,
-          caseId: "case-1",
-          caseName: "Case 1",
-          payload: { fromStatus: "Pending", toStatus: "Approved" },
-        },
-        {
+          fromStatus: "Pending",
+          toStatus: "Approved",
+        }),
+        buildStatusChangeEntry({
           id: "c2",
-          type: "status-change",
           timestamp: day21Later,
-          caseId: "case-1",
-          caseName: "Case 1",
-          payload: { fromStatus: "Approved", toStatus: "Pending" },
-        },
+          fromStatus: "Approved",
+          toStatus: "Pending",
+        }),
       ];
 
-      const stats = calculateCasesProcessedPerDay(activity, { referenceDate });
-      const day = stats.find((s) => s.date === "2025-10-21");
-      expect(day?.processedCount).toBe(0); // +1 then -1 = net 0
+      // ACT
+      const processedCount = getProcessedCountForDate(activity);
+
+      // ASSERT
+      expect(processedCount).toBe(0);
     });
 
     it("does not count as processed when the case started the day in a completion status", () => {
+      // ARRANGE
       const day21 = isoLocal(2025, 9, 21, 9, 0, 0);
 
-      const activity: CaseActivityEntry[] = [
-        {
+      const activity = [
+        buildStatusChangeEntry({
           id: "c1",
-          type: "status-change",
           timestamp: day21,
-          caseId: "case-1",
-          caseName: "Case 1",
-          payload: { fromStatus: "Approved", toStatus: "Pending" },
-        },
+          fromStatus: "Approved",
+          toStatus: "Pending",
+        }),
       ];
 
-      const stats = calculateCasesProcessedPerDay(activity, { referenceDate });
-      const day = stats.find((s) => s.date === "2025-10-21");
-      expect(day?.processedCount).toBe(0);
+      // ACT
+      const processedCount = getProcessedCountForDate(activity);
+
+      // ASSERT
+      expect(processedCount).toBe(0);
     });
 
     it("does not count as processed when a case starts and ends the day in a completion status despite reopening", () => {
+      // ARRANGE
       const day21Morning = isoLocal(2025, 9, 21, 9, 0, 0);
       const day21Afternoon = isoLocal(2025, 9, 21, 13, 0, 0);
 
       const activity: CaseActivityEntry[] = [
-        {
+        buildStatusChangeEntry({
           id: "c1",
-          type: "status-change",
           timestamp: day21Morning,
-          caseId: "case-1",
-          caseName: "Case 1",
-          payload: { fromStatus: "Approved", toStatus: "Pending" },
-        },
-        {
+          fromStatus: "Approved",
+          toStatus: "Pending",
+        }),
+        buildStatusChangeEntry({
           id: "c2",
-          type: "status-change",
           timestamp: day21Afternoon,
-          caseId: "case-1",
-          caseName: "Case 1",
-          payload: { fromStatus: "Pending", toStatus: "Closed" },
-        },
+          fromStatus: "Pending",
+          toStatus: "Closed",
+        }),
       ];
 
-      const stats = calculateCasesProcessedPerDay(activity, { referenceDate });
-      const day = stats.find((s) => s.date === "2025-10-21");
-      expect(day?.processedCount).toBe(0);
+      // ACT
+      const processedCount = getProcessedCountForDate(activity);
+
+      // ASSERT
+      expect(processedCount).toBe(0);
     });
 
     it("does not change count when moving between completion statuses", () => {
+      // ARRANGE
       const day21 = isoLocal(2025, 9, 21, 14, 0, 0);
 
-      const activity: CaseActivityEntry[] = [
-        {
+      const activity = [
+        buildStatusChangeEntry({
           id: "c1",
-          type: "status-change",
           timestamp: day21,
-          caseId: "case-1",
-          caseName: "Case 1",
-          payload: { fromStatus: "Approved", toStatus: "Denied" },
-        },
+          fromStatus: "Approved",
+          toStatus: "Denied",
+        }),
       ];
 
-      const stats = calculateCasesProcessedPerDay(activity, { referenceDate });
-      const day = stats.find((s) => s.date === "2025-10-21");
-      expect(day?.processedCount).toBe(0); // Moving between completions = no net change
+      // ACT
+      const processedCount = getProcessedCountForDate(activity);
+
+      // ASSERT
+      expect(processedCount).toBe(0);
     });
 
     describe("requireNoteOnSameDay option", () => {
       it("counts status changes without notes when disabled (default)", () => {
+        // ARRANGE
         const day21 = isoLocal(2025, 9, 21, 14, 0, 0);
 
-        const activity: CaseActivityEntry[] = [
-          {
+        const activity = [
+          buildStatusChangeEntry({
             id: "c1",
-            type: "status-change",
             timestamp: day21,
-            caseId: "case-1",
-            caseName: "Case 1",
-            payload: { fromStatus: "Pending", toStatus: "Approved" },
-          },
+            fromStatus: "Pending",
+            toStatus: "Approved",
+          }),
         ];
 
-        const stats = calculateCasesProcessedPerDay(activity, { 
-          referenceDate,
+        // ACT
+        const processedCount = getProcessedCountForDate(activity, processedCountDate, {
           requireNoteOnSameDay: false,
         });
-        const day = stats.find((s) => s.date === "2025-10-21");
-        expect(day?.processedCount).toBe(1);
+
+        // ASSERT
+        expect(processedCount).toBe(1);
       });
 
       it("excludes status changes without notes when enabled", () => {
+        // ARRANGE
         const day21 = isoLocal(2025, 9, 21, 14, 0, 0);
 
-        const activity: CaseActivityEntry[] = [
-          {
+        const activity = [
+          buildStatusChangeEntry({
             id: "c1",
-            type: "status-change",
             timestamp: day21,
-            caseId: "case-1",
-            caseName: "Case 1",
-            payload: { fromStatus: "Pending", toStatus: "Approved" },
-          },
+            fromStatus: "Pending",
+            toStatus: "Approved",
+          }),
         ];
 
-        const stats = calculateCasesProcessedPerDay(activity, { 
-          referenceDate,
+        // ACT
+        const processedCount = getProcessedCountForDate(activity, processedCountDate, {
           requireNoteOnSameDay: true,
         });
-        const day = stats.find((s) => s.date === "2025-10-21");
-        expect(day?.processedCount).toBe(0); // No note added = not counted
+
+        // ASSERT
+        expect(processedCount).toBe(0);
       });
 
       it("counts status changes with notes on the same day when enabled", () => {
+        // ARRANGE
         const day21Morning = isoLocal(2025, 9, 21, 9, 0, 0);
         const day21Afternoon = isoLocal(2025, 9, 21, 14, 0, 0);
 
         const activity: CaseActivityEntry[] = [
-          {
-            id: "n1",
-            type: "note-added",
-            timestamp: day21Morning,
-            caseId: "case-1",
-            caseName: "Case 1",
-            payload: { noteId: "note-1", category: "General", preview: "Reviewed documentation" },
-          },
-          {
+          buildNoteAddedEntry({ id: "n1", timestamp: day21Morning }),
+          buildStatusChangeEntry({
             id: "c1",
-            type: "status-change",
             timestamp: day21Afternoon,
-            caseId: "case-1",
-            caseName: "Case 1",
-            payload: { fromStatus: "Pending", toStatus: "Approved" },
-          },
+            fromStatus: "Pending",
+            toStatus: "Approved",
+          }),
         ];
 
-        const stats = calculateCasesProcessedPerDay(activity, { 
-          referenceDate,
+        // ACT
+        const processedCount = getProcessedCountForDate(activity, processedCountDate, {
           requireNoteOnSameDay: true,
         });
-        const day = stats.find((s) => s.date === "2025-10-21");
-        expect(day?.processedCount).toBe(1); // Note added = counted
+
+        // ASSERT
+        expect(processedCount).toBe(1);
       });
 
       it("does not count if note is on a different day than status change", () => {
+        // ARRANGE
         const day20 = isoLocal(2025, 9, 20, 14, 0, 0);
         const day21 = isoLocal(2025, 9, 21, 14, 0, 0);
 
         const activity: CaseActivityEntry[] = [
-          {
-            id: "n1",
-            type: "note-added",
-            timestamp: day20,
-            caseId: "case-1",
-            caseName: "Case 1",
-            payload: { noteId: "note-1", category: "General", preview: "Reviewed documentation" },
-          },
-          {
+          buildNoteAddedEntry({ id: "n1", timestamp: day20 }),
+          buildStatusChangeEntry({
             id: "c1",
-            type: "status-change",
             timestamp: day21,
-            caseId: "case-1",
-            caseName: "Case 1",
-            payload: { fromStatus: "Pending", toStatus: "Approved" },
-          },
+            fromStatus: "Pending",
+            toStatus: "Approved",
+          }),
         ];
 
-        const stats = calculateCasesProcessedPerDay(activity, { 
-          referenceDate,
+        // ACT
+        const processedCount = getProcessedCountForDate(activity, processedCountDate, {
           requireNoteOnSameDay: true,
         });
-        const day21Stats = stats.find((s) => s.date === "2025-10-21");
-        expect(day21Stats?.processedCount).toBe(0); // Note on different day = not counted
+
+        // ASSERT
+        expect(processedCount).toBe(0);
       });
 
       it("handles multiple cases with mixed note presence", () => {
+        // ARRANGE
         const day21Morning = isoLocal(2025, 9, 21, 9, 0, 0);
         const day21Afternoon = isoLocal(2025, 9, 21, 14, 0, 0);
         const day21Evening = isoLocal(2025, 9, 21, 17, 0, 0);
 
         const activity: CaseActivityEntry[] = [
-          // Case 1: has note
-          {
+          buildNoteAddedEntry({
             id: "n1",
-            type: "note-added",
             timestamp: day21Morning,
-            caseId: "case-1",
-            caseName: "Case 1",
-            payload: { noteId: "note-1", category: "General", preview: "Worked on case" },
-          },
-          {
+            preview: "Worked on case",
+          }),
+          buildStatusChangeEntry({
             id: "c1",
-            type: "status-change",
             timestamp: day21Afternoon,
-            caseId: "case-1",
-            caseName: "Case 1",
-            payload: { fromStatus: "Pending", toStatus: "Approved" },
-          },
-          // Case 2: no note (cleanup)
-          {
+            fromStatus: "Pending",
+            toStatus: "Approved",
+          }),
+          buildStatusChangeEntry({
             id: "c2",
-            type: "status-change",
             timestamp: day21Afternoon,
             caseId: "case-2",
             caseName: "Case 2",
-            payload: { fromStatus: "Pending", toStatus: "Closed" },
-          },
-          // Case 3: has note
-          {
+            fromStatus: "Pending",
+            toStatus: "Closed",
+          }),
+          buildNoteAddedEntry({
             id: "n3",
-            type: "note-added",
             timestamp: day21Afternoon,
             caseId: "case-3",
             caseName: "Case 3",
-            payload: { noteId: "note-3", category: "General", preview: "Final review" },
-          },
-          {
+            noteId: "note-3",
+            preview: "Final review",
+          }),
+          buildStatusChangeEntry({
             id: "c3",
-            type: "status-change",
             timestamp: day21Evening,
             caseId: "case-3",
             caseName: "Case 3",
-            payload: { fromStatus: "Pending", toStatus: "Denied" },
-          },
+            fromStatus: "Pending",
+            toStatus: "Denied",
+          }),
         ];
 
-        const stats = calculateCasesProcessedPerDay(activity, { 
-          referenceDate,
+        // ACT
+        const processedCount = getProcessedCountForDate(activity, processedCountDate, {
           requireNoteOnSameDay: true,
         });
-        const day = stats.find((s) => s.date === "2025-10-21");
-        expect(day?.processedCount).toBe(2); // Only cases 1 and 3 have notes
+
+        // ASSERT
+        expect(processedCount).toBe(2);
       });
 
       it("still applies reversion logic when requireNoteOnSameDay is enabled", () => {
+        // ARRANGE
         const day21Morning = isoLocal(2025, 9, 21, 9, 0, 0);
         const day21Afternoon = isoLocal(2025, 9, 21, 14, 0, 0);
         const day21Evening = isoLocal(2025, 9, 21, 17, 0, 0);
 
         const activity: CaseActivityEntry[] = [
-          // Note added
-          {
+          buildNoteAddedEntry({
             id: "n1",
-            type: "note-added",
             timestamp: day21Morning,
-            caseId: "case-1",
-            caseName: "Case 1",
-            payload: { noteId: "note-1", category: "General", preview: "Working on it" },
-          },
-          // Approved
-          {
+            preview: "Working on it",
+          }),
+          buildStatusChangeEntry({
             id: "c1",
-            type: "status-change",
             timestamp: day21Afternoon,
-            caseId: "case-1",
-            caseName: "Case 1",
-            payload: { fromStatus: "Pending", toStatus: "Approved" },
-          },
-          // Reverted
-          {
+            fromStatus: "Pending",
+            toStatus: "Approved",
+          }),
+          buildStatusChangeEntry({
             id: "c2",
-            type: "status-change",
             timestamp: day21Evening,
-            caseId: "case-1",
-            caseName: "Case 1",
-            payload: { fromStatus: "Approved", toStatus: "Pending" },
-          },
+            fromStatus: "Approved",
+            toStatus: "Pending",
+          }),
         ];
 
-        const stats = calculateCasesProcessedPerDay(activity, { 
-          referenceDate,
+        // ACT
+        const processedCount = getProcessedCountForDate(activity, processedCountDate, {
           requireNoteOnSameDay: true,
         });
-        const day = stats.find((s) => s.date === "2025-10-21");
-        expect(day?.processedCount).toBe(0); // +1 then -1 = net 0 (both have notes)
+
+        // ASSERT
+        expect(processedCount).toBe(0);
       });
 
       it("does not count a same-day reopen when the case started terminal even if a note exists", () => {
+        // ARRANGE
         const day21Morning = isoLocal(2025, 9, 21, 9, 0, 0);
         const day21Afternoon = isoLocal(2025, 9, 21, 14, 0, 0);
 
         const activity: CaseActivityEntry[] = [
-          {
+          buildNoteAddedEntry({
             id: "n1",
-            type: "note-added",
             timestamp: day21Morning,
-            caseId: "case-1",
-            caseName: "Case 1",
-            payload: {
-              noteId: "note-1",
-              category: "General",
-              preview: "Reviewed reopened case",
-            },
-          },
-          {
+            preview: "Reviewed reopened case",
+          }),
+          buildStatusChangeEntry({
             id: "c1",
-            type: "status-change",
             timestamp: day21Afternoon,
-            caseId: "case-1",
-            caseName: "Case 1",
-            payload: { fromStatus: "Approved", toStatus: "Pending" },
-          },
+            fromStatus: "Approved",
+            toStatus: "Pending",
+          }),
         ];
 
-        const stats = calculateCasesProcessedPerDay(activity, {
-          referenceDate,
+        // ACT
+        const processedCount = getProcessedCountForDate(activity, processedCountDate, {
           requireNoteOnSameDay: true,
         });
-        const day = stats.find((s) => s.date === "2025-10-21");
-        expect(day?.processedCount).toBe(0);
+
+        // ASSERT
+        expect(processedCount).toBe(0);
       });
     });
   });
