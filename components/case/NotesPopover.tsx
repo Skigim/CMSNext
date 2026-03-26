@@ -44,11 +44,29 @@ export function NotesPopover({ caseId, className }: NotesPopoverProps) {
   }, [noteCategories]);
 
   const noteCategoryOptions = useMemo(() => {
-    return noteCategories.map((category) => ({
+    const categorySet = new Set<string>(noteCategories);
+
+    if (notes) {
+      for (const note of notes) {
+        if (note.category) {
+          categorySet.add(note.category);
+        }
+
+        if (note.categories) {
+          for (const category of note.categories) {
+            if (category) {
+              categorySet.add(category);
+            }
+          }
+        }
+      }
+    }
+
+    return Array.from(categorySet).map((category) => ({
       label: category,
       value: category,
     }));
-  }, [noteCategories]);
+  }, [noteCategories, notes]);
 
   const getCategoryColor = useCallback(
     (category: string) => getStaticNoteCategoryColor(category),
