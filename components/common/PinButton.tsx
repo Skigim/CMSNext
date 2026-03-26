@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -9,6 +9,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
+import { Kbd } from "@/components/ui/kbd";
 import { Textarea } from "@/components/ui/textarea";
 import {
   Tooltip,
@@ -17,6 +18,7 @@ import {
 } from "@/components/ui/tooltip";
 import { Pin, PinOff } from "lucide-react";
 import { usePinnedCases } from "@/hooks/usePinnedCases";
+import { useSubmitShortcut } from "@/hooks/useSubmitShortcut";
 import { cn } from "@/lib/utils";
 import { MAX_PIN_REASON_LENGTH } from "@/utils/pinnedCaseReason";
 
@@ -87,6 +89,24 @@ export function PinButton({
 
     return `Pin ${caseName}`;
   }, [caseName]);
+
+  const isMac = useMemo(() => {
+    if (typeof navigator === "undefined") {
+      return false;
+    }
+
+    return /Mac|iPhone|iPad|iPod/i.test(navigator.platform ?? navigator.userAgent ?? "");
+  }, []);
+
+  const handleSubmit = useCallback(() => {
+    pin(caseId, reason);
+    setIsReasonDialogOpen(false);
+    setReason("");
+  }, [caseId, pin, reason]);
+
+  const handleSubmitShortcut = useSubmitShortcut<HTMLTextAreaElement>({
+    onSubmit: handleSubmit,
+  });
 
   const button = (
     <Button
@@ -164,9 +184,7 @@ export function PinButton({
             className="space-y-4"
             onSubmit={(event) => {
               event.preventDefault();
-              pin(caseId, reason);
-              setIsReasonDialogOpen(false);
-              setReason("");
+              handleSubmit();
             }}
           >
             <div className="space-y-2">
@@ -179,8 +197,12 @@ export function PinButton({
                 className="min-h-24"
                 maxLength={MAX_PIN_REASON_LENGTH}
                 aria-describedby={`pin-reason-description-${caseId}`}
+                onKeyDown={handleSubmitShortcut}
                 autoFocus
               />
+              <p className="text-xs text-muted-foreground text-right">
+                Press <Kbd><span className="text-xs">{isMac ? "⌘" : "Ctrl"}</span>+Enter</Kbd> to pin
+              </p>
             </div>
 
             <DialogFooter>
