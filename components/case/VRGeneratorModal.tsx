@@ -173,7 +173,7 @@ function VRGeneratorModalContent({
       return;
     }
 
-    await clickToCopy(buildVrClipboardText(renderedText, includeFooterOnCopy), {
+    await clickToCopy(buildVRClipboardText(renderedText, includeFooterOnCopy), {
       successMessage: "VR copied to clipboard",
       errorMessage: "Failed to copy to clipboard",
     });
