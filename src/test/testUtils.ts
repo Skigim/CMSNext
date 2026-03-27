@@ -375,16 +375,13 @@ export const createMockCaseActivityLogState = (
   }
 }
 
-let mockAlertWithMatchCounter = 0
-
 export const createMockAlertWithMatch = (
   overrides: Partial<AlertWithMatch> = {},
 ): AlertWithMatch => {
-  mockAlertWithMatchCounter += 1
   const timestamp = '2025-09-01T00:00:00.000Z'
 
   return {
-    id: `alert-${mockAlertWithMatchCounter}`,
+    id: globalThis.crypto.randomUUID(),
     reportId: 'report-1',
     alertCode: 'AL-1',
     alertType: 'Notice',

@@ -15,6 +15,7 @@ vi.mock("@/hooks/useDataSync", async (importOriginal) => {
   };
 });
 
+// Pinning is covered separately; keep this test focused on activity rendering.
 vi.mock("@/components/common/PinButton", () => ({
   PinButton: () => <button aria-label="Pin case" type="button">Pin</button>,
 }));
