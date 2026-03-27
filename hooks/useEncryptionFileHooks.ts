@@ -7,6 +7,7 @@ import {
 } from "@/utils/encryption";
 import {
   isEncryptedPayload,
+  ENCRYPTION_ERROR_CODES,
   EncryptionError,
   type EncryptionErrorCode,
   type EncryptedPayload,
@@ -103,6 +104,8 @@ export function useEncryptionFileHooks(): UseEncryptionFileHooksResult {
   const storePassword = useCallback((password: string) => {
     if (encryption.requiresPassword) {
       encryption.setPendingPassword(password);
+    } else {
+      logger.debug("Skipping pending password storage because this environment does not require it");
     }
   }, [encryption]);
 
@@ -113,6 +116,8 @@ export function useEncryptionFileHooks(): UseEncryptionFileHooksResult {
 
   // Create encryption hooks for the file service
   const encryptionHooks = useMemo(() => {
+    // Noop/disabled environments intentionally leave files readable on disk,
+    // so the file service should operate without encryption hooks in those modes.
     if (!encryption.isAuthenticated || !encryption.isEncryptionEnabled) {
       return null;
     }
@@ -203,16 +208,9 @@ export function useEncryptionFileHooks(): UseEncryptionFileHooksResult {
           const keyDerivationResult = await encryption.deriveKeyFromFileSalt(data.salt, data.iterations);
           
           if (!keyDerivationResult.success || !keyDerivationResult.data) {
-            // Validate error code against known values
-            const validCodes: readonly EncryptionErrorCode[] = [
-              "missing_password",
-              "wrong_password",
-              "corrupt_salt",
-              "system_error",
-            ];
             const rawErrorCode = keyDerivationResult.error;
             const errorCode: EncryptionErrorCode =
-              rawErrorCode && validCodes.includes(rawErrorCode)
+              rawErrorCode && ENCRYPTION_ERROR_CODES.includes(rawErrorCode)
                 ? rawErrorCode
                 : "system_error";
             let errorMsg: string;

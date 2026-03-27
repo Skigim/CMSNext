@@ -127,7 +127,7 @@ export function LoginModal({
   const handleLogin = useCallback(async () => {
     if (fileIsEncrypted && !encryption.isEncryptionEnabled) {
       setError(
-        "This environment cannot open encrypted workspaces. Use ENCRYPTION_MODE=full or choose a different folder.",
+        "This workspace is encrypted, but the current environment is configured for readable on-disk data. Choose a different folder or reopen it in a full-encryption environment.",
       );
       return;
     }

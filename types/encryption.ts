@@ -64,6 +64,13 @@ export type EncryptionErrorCode =
   | 'corrupt_salt'
   | 'system_error';
 
+export const ENCRYPTION_ERROR_CODES: readonly EncryptionErrorCode[] = [
+  "missing_password",
+  "wrong_password",
+  "corrupt_salt",
+  "system_error",
+];
+
 /**
  * Custom error class for encryption failures with specific codes
  */

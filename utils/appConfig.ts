@@ -23,6 +23,22 @@ type AppConfigEnvKey =
   | "PROD";
 
 export type AppConfigEnvSource = Partial<Record<AppConfigEnvKey, RawEnvValue>>;
+type ConfigurableEnvKey = Exclude<AppConfigEnvKey, "MODE" | "NODE_ENV" | "DEV" | "PROD">;
+
+const CONFIG_ENV_VITE_KEYS: Record<ConfigurableEnvKey, keyof AppConfigEnvSource> = {
+  APP_ENV: "VITE_APP_ENV",
+  ENCRYPTION_MODE: "VITE_ENCRYPTION_MODE",
+  DEVTOOLS_ENABLED: "VITE_DEVTOOLS_ENABLED",
+  SCHEMA_INSPECTOR_ENABLED: "VITE_SCHEMA_INSPECTOR_ENABLED",
+  DATA_FLOW_DEBUG_ENABLED: "VITE_DATA_FLOW_DEBUG_ENABLED",
+  VERBOSE_LOGGING: "VITE_VERBOSE_LOGGING",
+  VITE_APP_ENV: "VITE_APP_ENV",
+  VITE_ENCRYPTION_MODE: "VITE_ENCRYPTION_MODE",
+  VITE_DEVTOOLS_ENABLED: "VITE_DEVTOOLS_ENABLED",
+  VITE_SCHEMA_INSPECTOR_ENABLED: "VITE_SCHEMA_INSPECTOR_ENABLED",
+  VITE_DATA_FLOW_DEBUG_ENABLED: "VITE_DATA_FLOW_DEBUG_ENABLED",
+  VITE_VERBOSE_LOGGING: "VITE_VERBOSE_LOGGING",
+};
 
 export interface AppConfig {
   appEnv: AppEnvironment;
@@ -61,8 +77,8 @@ function normalizeEnvValue(value: RawEnvValue): string | undefined {
   return undefined;
 }
 
-function getEnvValue(env: AppConfigEnvSource, key: Exclude<AppConfigEnvKey, "MODE" | "NODE_ENV" | "DEV" | "PROD">): string | undefined {
-  const viteKey = `VITE_${key}` as keyof AppConfigEnvSource;
+function getEnvValue(env: AppConfigEnvSource, key: ConfigurableEnvKey): string | undefined {
+  const viteKey = CONFIG_ENV_VITE_KEYS[key];
 
   return normalizeEnvValue(env[viteKey]) ?? normalizeEnvValue(env[key]);
 }
@@ -210,4 +226,11 @@ export function createAppConfig(env: AppConfigEnvSource = {}): AppConfig {
   return config;
 }
 
+/**
+ * Immutable runtime app configuration.
+ *
+ * This is resolved at module load time and intentionally fails fast when the
+ * environment is invalid or unsafe. See `validateAppConfig()` for the enforced
+ * production and staging safety constraints.
+ */
 export const APP_CONFIG = createAppConfig();

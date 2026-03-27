@@ -46,7 +46,7 @@ import {
   generateSalt,
   isFullEncryptionMode,
   isEncryptionSupported,
-  requiresEncryptionPassword,
+  requiresAuthenticationPassword,
 } from "../utils/encryption";
 import { DEFAULT_ENCRYPTION_CONFIG } from "../types/encryption";
 import type {
@@ -184,7 +184,7 @@ interface EncryptionProviderProps {
 export function EncryptionProvider({ children }: Readonly<EncryptionProviderProps>) {
   const encryptionMode = APP_CONFIG.encryptionMode;
   const isEncryptionEnabled = isFullEncryptionMode(encryptionMode);
-  const requiresPassword = requiresEncryptionPassword(encryptionMode);
+  const requiresPassword = requiresAuthenticationPassword(encryptionMode);
 
   const [state, setState] = useState<EncryptionState>({
     isAuthenticated: false,
@@ -199,10 +199,7 @@ export function EncryptionProvider({ children }: Readonly<EncryptionProviderProp
   // Using useRef instead of useState to prevent password from appearing in React DevTools
   const pendingPasswordRef = useRef<string | null>(null);
 
-  const isSupported = useMemo(
-    () => !isEncryptionEnabled || isEncryptionSupported(),
-    [isEncryptionEnabled],
-  );
+  const isSupported = useMemo(() => isEncryptionSupported(), []);
   
   /**
    * Store password temporarily for key derivation when file salt is discovered.

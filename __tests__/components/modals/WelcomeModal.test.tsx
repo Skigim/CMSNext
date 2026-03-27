@@ -87,4 +87,32 @@ describe("WelcomeModal", () => {
     });
     expect(screen.queryByText("Create Your Password")).not.toBeInTheDocument();
   });
+
+  it("shows an error when bypass mode cannot initialize workspace access", async () => {
+    // ARRANGE
+    const user = userEvent.setup();
+    mockEncryptionContext.requiresPassword = false;
+    mockEncryptionContext.isEncryptionEnabled = false;
+    authenticate.mockResolvedValue(false);
+
+    render(
+      <WelcomeModal
+        isOpen={true}
+        isSupported={true}
+        onSetupComplete={vi.fn()}
+        onGoToSettings={vi.fn()}
+      />,
+    );
+
+    // ACT
+    await user.click(screen.getByRole("button", { name: "Choose Save Folder" }));
+
+    // ASSERT
+    await waitFor(() => {
+      expect(
+        screen.getByText("Failed to initialize workspace access in this environment."),
+      ).toBeInTheDocument();
+    });
+    expect(loadExistingData).not.toHaveBeenCalled();
+  });
 });

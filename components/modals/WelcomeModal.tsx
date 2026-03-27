@@ -89,7 +89,7 @@ export function WelcomeModal({
         setError(
           encryption.isEncryptionEnabled
             ? "This folder already has encrypted data. Choose a different folder or use the login screen."
-            : "This folder already has encrypted data. Switch to ENCRYPTION_MODE=full or choose a different folder."
+            : "This folder already has encrypted data. Choose a different folder or reopen it in a full-encryption environment."
         );
         return;
       }
@@ -97,7 +97,7 @@ export function WelcomeModal({
       if (!passwordRequired) {
         const authSuccess = await encryption.authenticate("admin", "");
         if (!authSuccess) {
-          setError("Failed to set up workspace access");
+          setError("Failed to initialize workspace access in this environment.");
           return;
         }
 

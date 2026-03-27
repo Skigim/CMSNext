@@ -25,7 +25,7 @@ export function isFullEncryptionMode(mode: EncryptionMode): boolean {
   return mode === "full";
 }
 
-export function requiresEncryptionPassword(mode: EncryptionMode): boolean {
+export function requiresAuthenticationPassword(mode: EncryptionMode): boolean {
   return mode !== "disabled";
 }
 
