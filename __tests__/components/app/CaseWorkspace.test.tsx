@@ -1,19 +1,20 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi, beforeEach } from "vitest";
-import { createMockCaseDisplay } from "@/src/test/testUtils";
-import type { AlertsIndex } from "@/utils/alertsData";
-import type { AppView } from "@/types/view";
+import {
+  createMockAppNavigation,
+  createMockCaseActivityLogState,
+  createMockCaseDisplay,
+} from "@/src/test/testUtils";
+import { createEmptyAlertsIndex } from "@/utils/alertsData";
 import type { CaseWorkspaceProps } from "@/components/app/CaseWorkspace";
 import type { CaseCategory } from "@/types/case";
 
 const viewRendererSpy = vi.fn();
 
-vi.mock("@/components/app/AppNavigationShell", () => ({
-  AppNavigationShell: ({ children }: any) => (
-    <div data-testid="app-navigation-shell">{children}</div>
-  ),
-}));
+vi.mock("@/components/app/AppNavigationShell", () =>
+  import("../../__mocks__/AppNavigationShellStub"),
+);
 
 vi.mock("@/components/routing/ViewRenderer", () => ({
   ViewRenderer: (props: any) => {
@@ -36,34 +37,14 @@ vi.mock("@/components/modals/FinancialItemModal", () => ({
 }));
 
 describe("CaseWorkspace", () => {
-  const navigation = {
-    currentView: "list" as AppView,
+  const navigation = createMockAppNavigation({
+    currentView: "list",
     breadcrumbTitle: "Cases",
-    sidebarOpen: true,
-    onNavigate: vi.fn(),
-    onNewCase: vi.fn(),
-    onSidebarOpenChange: vi.fn(),
-  };
+  });
 
-  const alertsIndex: AlertsIndex = {
-    alerts: [],
-    alertsByCaseId: new Map(),
-    summary: { total: 0, matched: 0, unmatched: 0, missingMcn: 0 },
-    unmatched: [],
-    missingMcn: [],
-  };
+  const alertsIndex = createEmptyAlertsIndex();
 
-  const activityLogState = {
-    activityLog: [],
-    dailyReports: [],
-    todayReport: null,
-    yesterdayReport: null,
-    loading: false,
-    error: null,
-    refreshActivityLog: vi.fn(),
-    getReportForDate: vi.fn(),
-    clearReportForDate: vi.fn(),
-  };
+  const activityLogState = createMockCaseActivityLogState();
 
   const markdownImportProps = {
     importDraft: null,

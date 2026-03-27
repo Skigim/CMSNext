@@ -1,28 +1,19 @@
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
-import type { AppView } from "@/types/view";
+import { createMockAppNavigation } from "@/src/test/testUtils";
 
-vi.mock("@/components/app/AppNavigationShell", () => ({
-  AppNavigationShell: ({ children, ...props }: any) => (
-    <div data-testid="app-navigation-shell" data-current-view={props.currentView}>
-      {children}
-    </div>
-  ),
-}));
+vi.mock("@/components/app/AppNavigationShell", () =>
+  import("../../__mocks__/AppNavigationShellStub"),
+);
 
 vi.mock("@/components/modals/ConnectToExistingModal", () =>
   import("../../__mocks__/ConnectToExistingModalStub"),
 );
 
 describe("ConnectionOnboarding", () => {
-  const baseNavigation = {
-    currentView: "dashboard" as AppView,
-    breadcrumbTitle: "Dashboard",
+  const baseNavigation = createMockAppNavigation({
     sidebarOpen: false,
-    onNavigate: vi.fn(),
-    onNewCase: vi.fn(),
-    onSidebarOpenChange: vi.fn(),
-  };
+  });
 
   const defaultProps = {
     navigation: baseNavigation,

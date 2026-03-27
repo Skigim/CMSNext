@@ -5,10 +5,12 @@ import {
   createAlertsIndexFromAlerts,
   createEmptyAlertsIndex,
   type AlertsIndex,
-  type AlertWithMatch,
 } from "@/utils/alertsData";
-import type { CaseActivityLogState, DailyActivityReport } from "@/types/activityLog";
-import { createMockCaseDisplay } from "@/src/test/testUtils";
+import {
+  createMockAlertWithMatch,
+  createMockCaseActivityLogState,
+  createMockCaseDisplay,
+} from "@/src/test/testUtils";
 
 vi.mock("@/contexts/CategoryConfigContext", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/contexts/CategoryConfigContext")>();
@@ -36,34 +38,6 @@ vi.mock("@/contexts/FileStorageContext", async (importOriginal) => {
 vi.mock("@/components/diagnostics/FileServiceDiagnostic", () => ({
   FileServiceDiagnostic: () => null,
 }));
-
-function createAlert(overrides: Partial<AlertWithMatch> = {}): AlertWithMatch {
-  const timestamp = "2025-09-01T00:00:00.000Z";
-  return {
-    id: overrides.id ?? `alert-${Math.random().toString(36).slice(2)}`,
-    reportId: overrides.reportId ?? "report-1",
-    alertCode: overrides.alertCode ?? "AL-1",
-    alertType: overrides.alertType ?? "Notice",
-    alertDate: overrides.alertDate ?? timestamp,
-    createdAt: overrides.createdAt ?? timestamp,
-    updatedAt: overrides.updatedAt ?? timestamp,
-    mcNumber: overrides.mcNumber ?? "MCN123",
-    personName: overrides.personName ?? "Jamie Rivera",
-    program: overrides.program ?? "Medicaid",
-    region: overrides.region ?? "Region 1",
-    state: overrides.state ?? "FL",
-    source: overrides.source ?? "Import",
-    description: overrides.description ?? "Follow up with client",
-    status: overrides.status ?? "new",
-    resolvedAt: overrides.resolvedAt ?? null,
-    resolutionNotes: overrides.resolutionNotes,
-    metadata: overrides.metadata ?? {},
-    matchStatus: overrides.matchStatus ?? "matched",
-    matchedCaseId: overrides.matchedCaseId,
-    matchedCaseName: overrides.matchedCaseName,
-    matchedCaseStatus: overrides.matchedCaseStatus,
-  } satisfies AlertWithMatch;
-}
 
 const baseCase = createMockCaseDisplay({
   id: "case-1",
@@ -141,40 +115,16 @@ function renderDashboard({
     <Dashboard
       cases={cases}
       alerts={alerts}
-      activityLogState={mockActivityLogState}
+      activityLogState={createMockCaseActivityLogState()}
       onNewCase={vi.fn()}
       onViewCase={vi.fn()}
     />,
   );
 }
 
-const emptyReport: DailyActivityReport = {
-  date: "2025-01-01",
-  totals: {
-    total: 0,
-    statusChanges: 0,
-    priorityChanges: 0,
-    notesAdded: 0,
-  },
-  entries: [],
-  cases: [],
-};
-
-const mockActivityLogState: CaseActivityLogState = {
-  activityLog: [],
-  dailyReports: [],
-  todayReport: null,
-  yesterdayReport: null,
-  loading: false,
-  error: null,
-  refreshActivityLog: vi.fn().mockResolvedValue(undefined),
-  getReportForDate: () => emptyReport,
-  clearReportForDate: vi.fn().mockResolvedValue(0),
-};
-
 describe("Dashboard", () => {
   it("renders without crashing with basic props", async () => {
-    const matchedAlert = createAlert({
+    const matchedAlert = createMockAlertWithMatch({
       id: "alert-matched",
       matchStatus: "matched",
       matchedCaseId: baseCase.id,
@@ -184,7 +134,7 @@ describe("Dashboard", () => {
     renderDashboard({
       cases: [baseCase],
       alerts: createAlertsIndexFromAlerts([
-        createAlert({
+        createMockAlertWithMatch({
           ...matchedAlert,
           matchedCaseId: baseCase.id,
         }),
