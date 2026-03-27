@@ -251,13 +251,7 @@ describe("VRGeneratorModal - keyboard accessibility", () => {
       updatedAt: new Date().toISOString(),
       sortOrder: 0,
     };
-    vi.mocked(renderTemplate).mockImplementation((template: string) => {
-      if (template === footerTemplate.template) {
-        return "Handled by Test Case";
-      }
-
-      return "Template output";
-    });
+    vi.mocked(renderTemplate).mockReturnValue("Handled by Test Case");
     const user = userEvent.setup();
     renderVRGeneratorModal(footerTemplate);
 
