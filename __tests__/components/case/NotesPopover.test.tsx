@@ -89,6 +89,24 @@ vi.mock("@/utils/logger", () => ({
 
 import { NotesPopover } from "@/components/case/NotesPopover";
 
+function renderNotesPopover() {
+  return render(<NotesPopover caseId="case-1" />);
+}
+
+async function openNotesPopover(user: ReturnType<typeof userEvent.setup>) {
+  await user.click(screen.getByRole("button", { name: /notes/i }));
+}
+
+async function openQuickAdd(user: ReturnType<typeof userEvent.setup>) {
+  await openNotesPopover(user);
+  await user.click(screen.getByRole("button", { name: /add/i }));
+}
+
+async function openEditMode(user: ReturnType<typeof userEvent.setup>) {
+  await openNotesPopover(user);
+  await user.click(screen.getByRole("button", { name: /test note content/i }));
+}
+
 describe("NotesPopover", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -100,7 +118,7 @@ describe("NotesPopover", () => {
 
   it("renders the notes trigger button with the note count", () => {
     // ARRANGE & ACT
-    render(<NotesPopover caseId="case-1" />);
+    renderNotesPopover();
 
     // ASSERT
     expect(screen.getByRole("button", { name: /notes \(1\)/i })).toBeInTheDocument();
@@ -109,10 +127,10 @@ describe("NotesPopover", () => {
   it("renders note content as an interactive button in view mode", async () => {
     // ARRANGE
     const user = userEvent.setup();
-    render(<NotesPopover caseId="case-1" />);
+    renderNotesPopover();
 
     // ACT
-    await user.click(screen.getByRole("button", { name: /notes/i }));
+    await openNotesPopover(user);
 
     // ASSERT
     expect(screen.getByRole("button", { name: /test note content/i })).toHaveAttribute(
@@ -124,10 +142,10 @@ describe("NotesPopover", () => {
   it("shows all note categories when a note has multiple categories", async () => {
     // ARRANGE
     const user = userEvent.setup();
-    render(<NotesPopover caseId="case-1" />);
+    renderNotesPopover();
 
     // ACT
-    await user.click(screen.getByRole("button", { name: /notes/i }));
+    await openNotesPopover(user);
 
     // ASSERT
     expect(await screen.findByText("General")).toBeInTheDocument();
@@ -137,11 +155,10 @@ describe("NotesPopover", () => {
   it("layout containment: keeps quick add controls within a wider popover", async () => {
     // ARRANGE
     const user = userEvent.setup();
-    render(<NotesPopover caseId="case-1" />);
+    renderNotesPopover();
 
     // ACT
-    await user.click(screen.getByRole("button", { name: /notes/i }));
-    await user.click(screen.getByRole("button", { name: /add/i }));
+    await openQuickAdd(user);
 
     // ASSERT
     const popoverContent = await screen.findByRole("dialog");
@@ -154,11 +171,10 @@ describe("NotesPopover", () => {
   it("saves selected quick-add categories in the addNote payload", async () => {
     // ARRANGE
     const user = userEvent.setup();
-    render(<NotesPopover caseId="case-1" />);
+    renderNotesPopover();
 
     // ACT
-    await user.click(screen.getByRole("button", { name: /notes/i }));
-    await user.click(screen.getByRole("button", { name: /add/i }));
+    await openQuickAdd(user);
     await user.type(screen.getByPlaceholderText("Type your note..."), "Quick add note");
     await user.click(
       screen.getByRole("button", {
@@ -182,11 +198,10 @@ describe("NotesPopover", () => {
   it("falls back to the default category when quick-add selection is cleared", async () => {
     // ARRANGE
     const user = userEvent.setup();
-    render(<NotesPopover caseId="case-1" />);
+    renderNotesPopover();
 
     // ACT
-    await user.click(screen.getByRole("button", { name: /notes/i }));
-    await user.click(screen.getByRole("button", { name: /add/i }));
+    await openQuickAdd(user);
     await user.type(
       screen.getByPlaceholderText("Type your note..."),
       "Fallback quick add",
@@ -213,11 +228,10 @@ describe("NotesPopover", () => {
   it("saves edited category changes in the updateNote payload", async () => {
     // ARRANGE
     const user = userEvent.setup();
-    render(<NotesPopover caseId="case-1" />);
+    renderNotesPopover();
 
     // ACT
-    await user.click(screen.getByRole("button", { name: /notes/i }));
-    await user.click(screen.getByRole("button", { name: /test note content/i }));
+    await openEditMode(user);
     const editTextarea = screen.getByDisplayValue("Test note content");
     await user.clear(editTextarea);
     await user.type(editTextarea, "Updated note content");
@@ -243,10 +257,10 @@ describe("NotesPopover", () => {
   it("shows a success toast when a note is copied", async () => {
     // ARRANGE
     const user = userEvent.setup();
-    render(<NotesPopover caseId="case-1" />);
+    renderNotesPopover();
 
     // ACT
-    await user.click(screen.getByRole("button", { name: /notes/i }));
+    await openNotesPopover(user);
     await user.click(screen.getByRole("button", { name: /copy note/i }));
 
     // ASSERT
@@ -260,11 +274,10 @@ describe("NotesPopover", () => {
   it("falls back to the original note categories when edit selection is cleared", async () => {
     // ARRANGE
     const user = userEvent.setup();
-    render(<NotesPopover caseId="case-1" />);
+    renderNotesPopover();
 
     // ACT
-    await user.click(screen.getByRole("button", { name: /notes/i }));
-    await user.click(screen.getByRole("button", { name: /test note content/i }));
+    await openEditMode(user);
     await user.click(
       screen.getByRole("button", {
         name: "Edit note categories: 2 selected",
