@@ -183,7 +183,7 @@ describe("CaseDetails linked people rendering", () => {
       email: "single@example.com",
     });
     const caseData = createMockStoredCase({
-      name: "Single Case",
+      name: "Single Applicant",
       person: primaryPerson,
       people: [{ personId: primaryPerson.id, role: "applicant", isPrimary: true }],
       linkedPeople: [
@@ -202,8 +202,10 @@ describe("CaseDetails linked people rendering", () => {
     renderCaseDetails(caseData);
 
     // Assert
-    expect(screen.getByText("Single Applicant")).toBeInTheDocument();
-    expect(screen.getByText("Applicant")).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { level: 1, name: "Single Applicant" }),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/^Applicant$/)).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Copy Phone 5551234567" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Copy Email single@example.com" })).toBeInTheDocument();
     expect(screen.queryByText("Household member")).not.toBeInTheDocument();
@@ -295,7 +297,9 @@ describe("CaseDetails linked people rendering", () => {
     await user.click(householdChip);
 
     // ASSERT
-    expect(screen.getByText("Primary Applicant")).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: /Applicant: Primary Applicant/i }),
+    ).not.toBeInTheDocument();
     expect(within(householdChip).getByText("Morgan Member")).toBeInTheDocument();
     expect(within(householdChip).getByText("Spouse")).toBeInTheDocument();
     expect(householdChip).not.toHaveTextContent("Spouse / Morgan / Member");
@@ -444,7 +448,9 @@ describe("CaseDetails linked people rendering", () => {
     await user.click(secondaryChip);
 
     // Assert
-    expect(screen.getByText("Primary Applicant")).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: /Applicant: Primary Applicant/i }),
+    ).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Copy Phone 5550001111" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Copy Email primary@example.com" })).toBeInTheDocument();
     expect(within(secondaryChip).getByText("Secondary Person")).toBeInTheDocument();
