@@ -9,6 +9,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
+import { Kbd } from "@/components/ui/kbd";
 import { Textarea } from "@/components/ui/textarea";
 import {
   Tooltip,
@@ -17,6 +18,7 @@ import {
 } from "@/components/ui/tooltip";
 import { Pin, PinOff } from "lucide-react";
 import { usePinnedCases } from "@/hooks/usePinnedCases";
+import { useSubmitShortcut } from "@/hooks/useSubmitShortcut";
 import { cn } from "@/lib/utils";
 import { MAX_PIN_REASON_LENGTH } from "@/utils/pinnedCaseReason";
 
@@ -87,6 +89,16 @@ export function PinButton({
 
     return `Pin ${caseName}`;
   }, [caseName]);
+
+  const handleSubmit = () => {
+    pin(caseId, reason);
+    setIsReasonDialogOpen(false);
+    setReason("");
+  };
+
+  const handleSubmitShortcut = useSubmitShortcut<HTMLTextAreaElement>({
+    onSubmit: handleSubmit,
+  });
 
   const button = (
     <Button
@@ -164,9 +176,7 @@ export function PinButton({
             className="space-y-4"
             onSubmit={(event) => {
               event.preventDefault();
-              pin(caseId, reason);
-              setIsReasonDialogOpen(false);
-              setReason("");
+              handleSubmit();
             }}
           >
             <div className="space-y-2">
@@ -178,9 +188,16 @@ export function PinButton({
                 placeholder="Add an optional reason for pinning this case"
                 className="min-h-24"
                 maxLength={MAX_PIN_REASON_LENGTH}
-                aria-describedby={`pin-reason-description-${caseId}`}
+                aria-describedby={`pin-reason-description-${caseId} pin-reason-shortcut-${caseId}`}
+                onKeyDown={handleSubmitShortcut}
                 autoFocus
               />
+              <p
+                id={`pin-reason-shortcut-${caseId}`}
+                className="text-xs text-muted-foreground text-right"
+              >
+                Press <Kbd>Ctrl</Kbd>/<Kbd>⌘</Kbd>+<Kbd>Enter</Kbd> to pin
+              </p>
             </div>
 
             <DialogFooter>
