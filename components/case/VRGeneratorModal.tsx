@@ -72,7 +72,15 @@ function buildVrClipboardText(renderedText: string, includeFooter: boolean): str
     return renderedText;
   }
 
-  return `${renderedText.trimEnd()}\n\n${VR_COPY_FOOTER}`;
+  // Preserve the user's rendered text exactly and just ensure a clear separator before the footer.
+  // If the text already ends with two or more newlines, don't add extra spacing.
+  // If it ends with one newline, add one more; otherwise add two newlines.
+  let separator = "";
+  if (!renderedText.endsWith("\n\n")) {
+    separator = renderedText.endsWith("\n") ? "\n" : "\n\n";
+  }
+
+  return `${renderedText}${separator}${VR_COPY_FOOTER}`;
 }
 
 function VRGeneratorModalContent({
