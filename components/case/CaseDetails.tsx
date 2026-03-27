@@ -28,7 +28,6 @@ import { useTemplates } from "@/contexts/TemplateContext";
 import {
   formatCasePersonDisplayName,
   getLinkedCasePersonRoleLabel,
-  getCasePersonRoleLabel,
   getPrimaryCasePersonForDisplay,
   getPrimaryCasePersonRef,
 } from "@/domain/cases";
@@ -256,16 +255,8 @@ export function CaseDetails(props: Readonly<CaseDetailsProps>) {
                   </span>
                 )}
               </div>
-              {(primaryPerson || additionalLinkedPeople.length > 0) && (
+              {additionalLinkedPeople.length > 0 && (
                 <div className="flex flex-wrap items-center gap-2 text-sm">
-                  {primaryPerson && (
-                    <span className="inline-flex items-center gap-1.5 rounded-full border bg-muted/40 px-2 py-0.5 text-muted-foreground">
-                      <span className="font-medium text-foreground">
-                        {formatCasePersonDisplayName(primaryPerson)}
-                      </span>
-                      <span>{getCasePersonRoleLabel(primaryPersonRef?.role)}</span>
-                    </span>
-                  )}
                   {additionalLinkedPeople.map(({ ref, person }) => {
                     const phone = person.phone?.trim() || null;
                     const email = person.email?.trim() || null;
