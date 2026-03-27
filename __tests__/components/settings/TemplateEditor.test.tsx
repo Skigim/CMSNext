@@ -1,31 +1,30 @@
 import { describe, it, expect, vi } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
+import {
+  createTemplateContextMockValue,
+  settingsTemplateTestMocks,
+} from "@/src/test/settingsTemplateTestUtils";
+
+const templateContextValue = createTemplateContextMockValue({
+  templates: [
+    {
+      id: "tmpl-1",
+      name: "Test Template",
+      category: "vr",
+      template: "Hello {{name}}",
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      sortOrder: 0,
+    },
+  ],
+});
 
 // ============================================================================
 // Mocks
 // ============================================================================
 
 vi.mock("@/contexts/TemplateContext", () => ({
-  useTemplates: () => ({
-    templates: [
-      {
-        id: "tmpl-1",
-        name: "Test Template",
-        category: "vr",
-        template: "Hello {{name}}",
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-        sortOrder: 0,
-      },
-    ],
-    loading: false,
-    error: null,
-    refresh: vi.fn(),
-    createTemplate: vi.fn(),
-    updateTemplate: vi.fn(),
-    deleteTemplate: vi.fn(),
-    reorderTemplates: vi.fn(),
-  }),
+  useTemplates: () => templateContextValue,
 }));
 
 vi.mock("@/contexts/DataManagerContext", () => ({
@@ -33,21 +32,11 @@ vi.mock("@/contexts/DataManagerContext", () => ({
 }));
 
 vi.mock("sonner", () => ({
-  toast: {
-    success: vi.fn(),
-    error: vi.fn(),
-    loading: vi.fn(() => "id"),
-  },
+  toast: settingsTemplateTestMocks.toast,
 }));
 
 vi.mock("@/utils/logger", () => ({
-  createLogger: () => ({
-    info: vi.fn(),
-    warn: vi.fn(),
-    error: vi.fn(),
-    debug: vi.fn(),
-    lifecycle: vi.fn(),
-  }),
+  createLogger: () => settingsTemplateTestMocks.logger,
 }));
 
 import { TemplateEditor } from "@/components/settings/TemplateEditor";
