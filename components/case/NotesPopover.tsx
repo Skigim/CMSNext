@@ -13,6 +13,7 @@ import { StickyNote, Plus, Trash2, X, Pencil, Check, Copy } from "lucide-react";
 import { useNotes } from "@/hooks/useNotes";
 import { useCategoryConfig } from "@/contexts/CategoryConfigContext";
 import { getStaticNoteCategoryColor } from "@/utils/styleUtils";
+import { clickToCopy } from "@/utils/clipboard";
 import type { Note } from "@/types/case";
 
 interface NotesPopoverProps {
@@ -344,7 +345,9 @@ export function NotesPopover({ caseId, className }: NotesPopoverProps) {
                           size="sm"
                           className="h-6 w-6 p-0 text-muted-foreground hover:text-foreground"
                           onClick={() => {
-                            navigator.clipboard.writeText(note.content);
+                            void clickToCopy(note.content, {
+                              successMessage: "Note copied to clipboard",
+                            });
                           }}
                           aria-label="Copy note"
                         >
