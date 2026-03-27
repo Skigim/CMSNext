@@ -2,11 +2,11 @@ import { describe, expect, it, vi } from "vitest";
 import { render, screen } from "@/src/test/reactTestUtils";
 import { MainLayout } from "@/components/app/MainLayout";
 
-vi.mock("@/components/ui/sidebar", () => ({
-  SidebarProvider: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
-  SidebarInset: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
-  SidebarTrigger: () => <button type="button">Toggle Sidebar</button>,
-}));
+vi.mock("@/components/ui/sidebar", () =>
+  import("@/__tests__/__mocks__/sidebarPrimitives").then((module) =>
+    module.createSidebarLayoutModuleMock(),
+  ),
+);
 
 vi.mock("@/components/app/AppSidebar", () => ({
   AppSidebar: () => <div data-testid="app-sidebar">Sidebar</div>,
@@ -24,9 +24,11 @@ vi.mock("@/components/app/PinnedCasesDropdown", () => ({
   PinnedCasesDropdown: () => null,
 }));
 
-vi.mock("@/components/app/ThemeToggle", () => ({
-  ThemeToggle: () => <button type="button">Theme</button>,
-}));
+vi.mock("@/components/app/ThemeToggle", () =>
+  import("@/__tests__/__mocks__/sidebarPrimitives").then((module) => ({
+    ThemeToggle: module.ThemeToggle,
+  })),
+);
 
 describe("MainLayout", () => {
   it("renders intake breadcrumbs under the cases section", () => {
