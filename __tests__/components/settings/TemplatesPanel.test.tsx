@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import {
@@ -31,6 +31,11 @@ vi.mock("@/utils/logger", () => ({
 import { TemplatesPanel } from "@/components/settings/TemplatesPanel";
 
 describe("TemplatesPanel", () => {
+  beforeEach(() => {
+    templateContextValue.templates = [];
+    vi.clearAllMocks();
+  });
+
   function renderTemplatesPanel() {
     return render(<TemplatesPanel />);
   }
@@ -64,6 +69,29 @@ describe("TemplatesPanel", () => {
     ).toBeInTheDocument();
     expect(
       screen.queryByRole("button", { name: "Description" }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("hides the add button when a VR footer template already exists", () => {
+    // ARRANGE
+    templateContextValue.templates = [
+      {
+        id: "vr-footer-1",
+        name: "Existing Footer",
+        category: "vrFooter",
+        template: "Footer",
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        sortOrder: 0,
+      },
+    ];
+
+    // ACT
+    renderTemplatesPanel();
+
+    // ASSERT
+    expect(
+      screen.queryByRole("button", { name: "Add VR Copy Footer Template" }),
     ).not.toBeInTheDocument();
   });
 });
