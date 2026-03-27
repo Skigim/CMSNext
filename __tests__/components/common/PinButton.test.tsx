@@ -13,14 +13,14 @@ vi.mock("@/hooks/usePinnedCases", () => ({
 
 const usePinnedCasesMock = vi.mocked(usePinnedCases);
 
-type PinnedCasesHookResult = ReturnType<typeof usePinnedCases>;
-type PinnedCasesHookOverrides = Partial<PinnedCasesHookResult>;
-type KeyboardModifier = Pick<KeyboardEvent, "ctrlKey" | "metaKey">;
-type PinButtonProps = Partial<ComponentProps<typeof PinButton>>;
+type PinnedCasesHookMock = ReturnType<typeof usePinnedCases>;
+type PinnedCasesHookMockOverrides = Partial<PinnedCasesHookMock>;
+type SubmitKeyModifier = Pick<KeyboardEvent, "ctrlKey" | "metaKey">;
+type PinButtonTestProps = Partial<ComponentProps<typeof PinButton>>;
 
 function createPinnedCasesHookResult(
-  overrides: PinnedCasesHookOverrides = {},
-): PinnedCasesHookResult {
+  overrides: PinnedCasesHookMockOverrides = {},
+): PinnedCasesHookMock {
   return {
     pinnedCaseIds: [],
     pin: vi.fn(),
@@ -36,13 +36,13 @@ function createPinnedCasesHookResult(
   };
 }
 
-function renderPinButton(props: PinButtonProps = {}) {
+function renderPinButton(props: PinButtonTestProps = {}) {
   return render(<PinButton caseId="case-1" caseName="Case One" {...props} />);
 }
 
 function setupPinButton(
-  hookOverrides: PinnedCasesHookOverrides = {},
-  props: PinButtonProps = {},
+  hookOverrides: PinnedCasesHookMockOverrides = {},
+  props: PinButtonTestProps = {},
 ) {
   const hookResult = createPinnedCasesHookResult(hookOverrides);
   usePinnedCasesMock.mockReturnValue(hookResult);
@@ -53,9 +53,9 @@ function setupPinButton(
   };
 }
 
-function openPinDialog(renderResult: ReturnType<typeof renderPinButton>) {
+async function openPinDialog(renderResult: ReturnType<typeof renderPinButton>) {
   fireEvent.click(renderResult.getByRole("button", { name: "Pin case" }));
-  return getPinDialog(renderResult);
+  return renderResult.findByRole("dialog");
 }
 
 function getPinDialog(renderResult: ReturnType<typeof renderPinButton>) {
@@ -76,7 +76,7 @@ function submitPinDialog(renderResult: ReturnType<typeof renderPinButton>) {
 
 function submitPinDialogWithShortcut(
   renderResult: ReturnType<typeof renderPinButton>,
-  modifier: KeyboardModifier,
+  modifier: SubmitKeyModifier,
 ) {
   fireEvent.keyDown(getPinReasonField(renderResult), {
     key: "Enter",
@@ -89,12 +89,12 @@ describe("PinButton", () => {
     usePinnedCasesMock.mockReset();
   });
 
-  it("prompts for an optional reason before pinning", () => {
+  it("prompts for an optional reason before pinning", async () => {
     // ARRANGE
     const { pin, renderResult } = setupPinButton();
 
     // ACT
-    const dialog = openPinDialog(renderResult);
+    const dialog = await openPinDialog(renderResult);
     expect(
       within(dialog).getByText(
         "Add an optional reason for pinning this case. This stays attached to the pin only and does not create a note.",
@@ -107,12 +107,12 @@ describe("PinButton", () => {
     expect(pin).toHaveBeenCalledWith("case-1", "Pending morning triage");
   });
 
-  it("pin dialog can be submitted without a reason", () => {
+  it("pin dialog can be submitted without a reason", async () => {
     // ARRANGE
     const { pin, renderResult } = setupPinButton({}, { caseName: undefined });
 
     // ACT
-    openPinDialog(renderResult);
+    await openPinDialog(renderResult);
     submitPinDialog(renderResult);
 
     // ASSERT
@@ -124,19 +124,37 @@ describe("PinButton", () => {
     [{ ctrlKey: false, metaKey: true }, "Mac shortcut works too"],
   ] as const)(
     "submits the pin dialog with keyboard shortcut %j",
-    (modifier, reason) => {
+    async (modifier, reason) => {
       // ARRANGE
       const { pin, renderResult } = setupPinButton();
 
       // ACT
-      openPinDialog(renderResult);
+      const dialog = await openPinDialog(renderResult);
       fillPinReason(renderResult, reason);
+      expect(await axe(dialog)).toHaveNoViolations();
       submitPinDialogWithShortcut(renderResult, modifier);
 
       // ASSERT
+      expect(pin).toHaveBeenCalledTimes(1);
       expect(pin).toHaveBeenCalledWith("case-1", reason);
     },
   );
+
+  it("does not submit the pin dialog for Enter without modifiers", async () => {
+    // ARRANGE
+    const { pin, renderResult } = setupPinButton();
+
+    // ACT
+    await openPinDialog(renderResult);
+    fillPinReason(renderResult, "Do not submit");
+    submitPinDialogWithShortcut(renderResult, {
+      ctrlKey: false,
+      metaKey: false,
+    });
+
+    // ASSERT
+    expect(pin).not.toHaveBeenCalled();
+  });
 
   it("does not show the dialog when unpinning an already pinned case", () => {
     // ARRANGE

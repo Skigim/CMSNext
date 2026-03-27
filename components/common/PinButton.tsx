@@ -188,11 +188,14 @@ export function PinButton({
                 placeholder="Add an optional reason for pinning this case"
                 className="min-h-24"
                 maxLength={MAX_PIN_REASON_LENGTH}
-                aria-describedby={`pin-reason-description-${caseId}`}
+                aria-describedby={`pin-reason-description-${caseId} pin-reason-shortcut-${caseId}`}
                 onKeyDown={handleSubmitShortcut}
                 autoFocus
               />
-              <p className="text-xs text-muted-foreground text-right">
+              <p
+                id={`pin-reason-shortcut-${caseId}`}
+                className="text-xs text-muted-foreground text-right"
+              >
                 Press <Kbd>Ctrl</Kbd>/<Kbd>⌘</Kbd>+<Kbd>Enter</Kbd> to pin
               </p>
             </div>
