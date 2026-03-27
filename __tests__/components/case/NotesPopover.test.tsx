@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { useNotes } from "@/hooks/useNotes";
+import { toast } from "sonner";
 
 type UseNotesResult = ReturnType<typeof useNotes>;
 type AddNoteMock = UseNotesResult["addNote"];
@@ -13,12 +14,10 @@ const {
   mockUpdateNote,
   mockDeleteNote,
   mockCategoryConfig,
-  mockClickToCopy,
 } = vi.hoisted(() => ({
   mockAddNote: vi.fn<AddNoteMock>(),
   mockUpdateNote: vi.fn<UpdateNoteMock>(),
   mockDeleteNote: vi.fn<DeleteNoteMock>(),
-  mockClickToCopy: vi.fn<(text: string, options?: unknown) => Promise<boolean>>(),
   mockCategoryConfig: {
     config: {
       caseStatuses: [],
@@ -63,10 +62,6 @@ vi.mock("@/hooks/useNotes", () => ({
     deleteNote: mockDeleteNote,
     isLoading: false,
   }),
-}));
-
-vi.mock("@/utils/clipboard", () => ({
-  clickToCopy: mockClickToCopy,
 }));
 
 vi.mock("sonner", () => ({
@@ -143,7 +138,12 @@ describe("NotesPopover", () => {
     mockAddNote.mockResolvedValue(null);
     mockUpdateNote.mockResolvedValue(null);
     mockDeleteNote.mockResolvedValue(undefined);
-    mockClickToCopy.mockResolvedValue(true);
+    Object.defineProperty(globalThis.navigator, "clipboard", {
+      value: {
+        writeText: vi.fn().mockResolvedValue(undefined),
+      },
+      configurable: true,
+    });
   });
 
   it("renders the notes trigger button with the note count", () => {
@@ -209,9 +209,7 @@ describe("NotesPopover", () => {
 
     // ASSERT
     await waitFor(() => {
-      expect(mockClickToCopy).toHaveBeenCalledWith("Test note content", {
-        successMessage: "Note copied to clipboard",
-      });
+      expect(toast.success).toHaveBeenCalledWith("Note copied to clipboard");
     });
   });
 
