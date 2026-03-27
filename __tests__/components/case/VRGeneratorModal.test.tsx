@@ -1,6 +1,9 @@
-import { describe, it, expect, vi } from "vitest";
+import { beforeEach, describe, it, expect, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
+import { axe, toHaveNoViolations } from "jest-axe";
 import userEvent from "@testing-library/user-event";
+
+expect.extend(toHaveNoViolations);
 
 // ============================================================================
 // Mocks
@@ -28,6 +31,10 @@ vi.mock("@/utils/vrGenerator", () => ({
   renderTemplate: vi.fn().mockReturnValue("Template output"),
 }));
 
+vi.mock("@/utils/clipboard", () => ({
+  clickToCopy: vi.fn().mockResolvedValue(true),
+}));
+
 vi.mock("sonner", () => ({
   toast: {
     success: vi.fn(),
@@ -47,6 +54,7 @@ vi.mock("@/utils/logger", () => ({
 }));
 
 import { VRGeneratorModal } from "@/components/case/VRGeneratorModal";
+import { clickToCopy } from "@/utils/clipboard";
 import type { StoredCase, StoredFinancialItem } from "@/types/case";
 import type { Template } from "@/types/template";
 import {
@@ -111,6 +119,8 @@ const mockTemplates: Template[] = [
   },
 ];
 
+const VR_COPY_FOOTER = "Please return the requested verification as soon as possible.\n\nThank you.";
+
 describe("VRGeneratorModal - keyboard accessibility", () => {
   function renderVRGeneratorModal() {
     return render(
@@ -123,6 +133,10 @@ describe("VRGeneratorModal - keyboard accessibility", () => {
       />,
     );
   }
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
 
   it("renders the modal when open", () => {
     // ARRANGE
@@ -170,5 +184,66 @@ describe("VRGeneratorModal - keyboard accessibility", () => {
 
     // ASSERT
     expect(itemToggle).toHaveFocus();
+  });
+
+  it("shows an enabled footer toggle with helper text for copy behavior", () => {
+    // ARRANGE
+    renderVRGeneratorModal();
+
+    // ASSERT
+    expect(
+      screen.getByRole("checkbox", { name: "Append footer when copying" }),
+    ).toBeChecked();
+    expect(
+      screen.getByText(/Adds this footer to clipboard text only:/i),
+    ).toBeInTheDocument();
+    expect(screen.getByText(/Please return the requested verification/i)).toBeInTheDocument();
+  });
+
+  it("appends the default footer when copying by default", async () => {
+    // ARRANGE
+    const user = userEvent.setup();
+    renderVRGeneratorModal();
+
+    // ACT
+    await user.type(screen.getByLabelText("Preview"), "Template output");
+    await user.click(screen.getByRole("button", { name: "Copy to Clipboard" }));
+
+    // ASSERT
+    expect(clickToCopy).toHaveBeenCalledWith(
+      `Template output\n\n${VR_COPY_FOOTER}`,
+      {
+        successMessage: "VR copied to clipboard",
+        errorMessage: "Failed to copy to clipboard",
+      },
+    );
+  });
+
+  it("skips the footer when the checkbox is unchecked before copying", async () => {
+    // ARRANGE
+    const user = userEvent.setup();
+    renderVRGeneratorModal();
+
+    // ACT
+    await user.click(screen.getByRole("checkbox", { name: "Append footer when copying" }));
+    await user.type(screen.getByLabelText("Preview"), "Template output");
+    await user.click(screen.getByRole("button", { name: "Copy to Clipboard" }));
+
+    // ASSERT
+    expect(clickToCopy).toHaveBeenCalledWith("Template output", {
+      successMessage: "VR copied to clipboard",
+      errorMessage: "Failed to copy to clipboard",
+    });
+  });
+
+  it("has no accessibility violations with the footer toggle enabled", async () => {
+    // ARRANGE
+    const { container } = renderVRGeneratorModal();
+
+    // ACT
+    const results = await axe(container);
+
+    // ASSERT
+    expect(results).toHaveNoViolations();
   });
 });
