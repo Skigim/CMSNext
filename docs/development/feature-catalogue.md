@@ -677,7 +677,7 @@ Repository-wide and path-scoped Copilot instruction files now follow GitHub's cu
 | `.github/copilot-instructions.md`                  | Repository-wide   | Architecture, validation, constraints |
 | `.github/instructions/implementation.instructions.md` | Path-scoped    | Services, hooks, domain, data flow |
 | `.github/instructions/frontend.instructions.md`    | Path-scoped       | UI components, shadcn, Tailwind |
-| `.github/instructions/testing.instructions.md`     | Path-scoped       | Vitest, RTL, mocking patterns   |
+| `.github/instructions/tests.instructions.md`       | Path-scoped       | Vitest, RTL, mocking patterns   |
 
 ### Keyboard Shortcuts (Planned - December 2025)
 
