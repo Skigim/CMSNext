@@ -15,6 +15,7 @@ import {
   DialogFooter,
 } from "../ui/dialog";
 import { Button } from "../ui/button";
+import { Checkbox } from "../ui/checkbox";
 import { Label } from "../ui/label";
 import { Textarea } from "../ui/textarea";
 import {
@@ -32,6 +33,7 @@ import { toast } from "sonner";
 import type { StoredCase, StoredFinancialItem } from "@/types/case";
 import type { Template } from "@/types/template";
 import { renderMultipleVRs, buildCaseLevelContext, renderTemplate } from "@/utils/vrGenerator";
+import { clickToCopy } from "@/utils/clipboard";
 import { cn } from "@/lib/utils";
 
 interface VRGeneratorModalProps {
@@ -63,6 +65,16 @@ export function VRGeneratorModal({
   );
 }
 
+const VR_COPY_FOOTER = "Please return the requested verification as soon as possible.\n\nThank you.";
+
+function buildVrClipboardText(renderedText: string, includeFooter: boolean): string {
+  if (!includeFooter) {
+    return renderedText;
+  }
+
+  return `${renderedText.trimEnd()}\n\n${VR_COPY_FOOTER}`;
+}
+
 function VRGeneratorModalContent({
   onOpenChange,
   storedCase,
@@ -75,6 +87,7 @@ function VRGeneratorModalContent({
   );
   const [selectedItemIds, setSelectedItemIds] = useState<Set<string>>(new Set());
   const [renderedText, setRenderedText] = useState("");
+  const [includeFooterOnCopy, setIncludeFooterOnCopy] = useState(true);
 
   // Build selectable items list
   const selectableItems = useMemo(() => {
@@ -152,12 +165,10 @@ function VRGeneratorModalContent({
       return;
     }
 
-    try {
-      await navigator.clipboard.writeText(renderedText);
-      toast.success("VR copied to clipboard");
-    } catch {
-      toast.error("Failed to copy to clipboard");
-    }
+    await clickToCopy(buildVrClipboardText(renderedText, includeFooterOnCopy), {
+      successMessage: "VR copied to clipboard",
+      errorMessage: "Failed to copy to clipboard",
+    });
   };
 
   const getItemTypeLabel = (type: "resources" | "income" | "expenses") => {
@@ -333,6 +344,30 @@ function VRGeneratorModalContent({
                   Copy
                 </Button>
               </div>
+              <div className="rounded-md border border-dashed bg-muted/30 p-3">
+                <div className="flex items-start gap-3">
+                  <Checkbox
+                    id="vr-copy-footer"
+                    checked={includeFooterOnCopy}
+                    onCheckedChange={(checked) => setIncludeFooterOnCopy(checked === true)}
+                    aria-describedby="vr-copy-footer-help"
+                    className="mt-0.5"
+                  />
+                  <div className="space-y-1">
+                    <Label htmlFor="vr-copy-footer" className="cursor-pointer">
+                      Append footer when copying
+                    </Label>
+                    <p
+                      id="vr-copy-footer-help"
+                      className="whitespace-pre-line text-xs text-muted-foreground"
+                    >
+                      Adds this footer to clipboard text only:
+                      {"\n"}
+                      {VR_COPY_FOOTER}
+                    </p>
+                  </div>
+                </div>
+              </div>
               <Textarea
                 id="vr-preview"
                 value={renderedText}
@@ -360,4 +395,3 @@ function VRGeneratorModalContent({
       </DialogContent>
   );
 }
-
