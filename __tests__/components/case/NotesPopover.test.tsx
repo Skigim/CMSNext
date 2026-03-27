@@ -107,6 +107,36 @@ async function openEditMode(user: ReturnType<typeof userEvent.setup>) {
   await user.click(screen.getByRole("button", { name: /test note content/i }));
 }
 
+async function setupQuickAdd() {
+  const user = userEvent.setup();
+  renderNotesPopover();
+  await openQuickAdd(user);
+  return { user };
+}
+
+async function setupEditModeScenario() {
+  const user = userEvent.setup();
+  renderNotesPopover();
+  await openEditMode(user);
+  return { user };
+}
+
+async function selectCategories(
+  user: ReturnType<typeof userEvent.setup>,
+  triggerName: string,
+  optionNames: string[],
+) {
+  await user.click(
+    screen.getByRole("button", {
+      name: triggerName,
+    }),
+  );
+
+  for (const optionName of optionNames) {
+    await user.click(screen.getByRole("option", { name: new RegExp(optionName, "i") }));
+  }
+}
+
 describe("NotesPopover", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -168,92 +198,6 @@ describe("NotesPopover", () => {
     expect(quickAddActionsRow.className).toContain("flex-wrap");
   });
 
-  it("saves selected quick-add categories in the addNote payload", async () => {
-    // ARRANGE
-    const user = userEvent.setup();
-    renderNotesPopover();
-
-    // ACT
-    await openQuickAdd(user);
-    await user.type(screen.getByPlaceholderText("Type your note..."), "Quick add note");
-    await user.click(
-      screen.getByRole("button", {
-        name: "Select note categories: General",
-      }),
-    );
-    await user.click(screen.getByRole("option", { name: /Important/ }));
-    await user.click(screen.getByRole("option", { name: /Follow Up/ }));
-    await user.click(screen.getByRole("button", { name: /^save$/i }));
-
-    // ASSERT
-    await waitFor(() => {
-      expect(mockAddNote).toHaveBeenCalledWith("case-1", {
-        content: "Quick add note",
-        category: "Important",
-        categories: ["Important", "Follow Up"],
-      });
-    });
-  });
-
-  it("falls back to the default category when quick-add selection is cleared", async () => {
-    // ARRANGE
-    const user = userEvent.setup();
-    renderNotesPopover();
-
-    // ACT
-    await openQuickAdd(user);
-    await user.type(
-      screen.getByPlaceholderText("Type your note..."),
-      "Fallback quick add",
-    );
-    await user.click(
-      screen.getByRole("button", {
-        name: "Select note categories: General",
-      }),
-    );
-    await user.click(screen.getByRole("option", { name: /Important/ }));
-    await user.click(screen.getByRole("option", { name: /Important/ }));
-    await user.click(screen.getByRole("button", { name: /^save$/i }));
-
-    // ASSERT
-    await waitFor(() => {
-      expect(mockAddNote).toHaveBeenCalledWith("case-1", {
-        content: "Fallback quick add",
-        category: "General",
-        categories: ["General"],
-      });
-    });
-  });
-
-  it("saves edited category changes in the updateNote payload", async () => {
-    // ARRANGE
-    const user = userEvent.setup();
-    renderNotesPopover();
-
-    // ACT
-    await openEditMode(user);
-    const editTextarea = screen.getByDisplayValue("Test note content");
-    await user.clear(editTextarea);
-    await user.type(editTextarea, "Updated note content");
-    await user.click(
-      screen.getByRole("button", {
-        name: "Edit note categories: 2 selected",
-      }),
-    );
-    await user.click(screen.getByRole("option", { name: /General/ }));
-    await user.click(screen.getByRole("option", { name: /Follow Up/ }));
-    await user.click(screen.getByRole("button", { name: /^save$/i }));
-
-    // ASSERT
-    await waitFor(() => {
-      expect(mockUpdateNote).toHaveBeenCalledWith("case-1", "note-1", {
-        content: "Updated note content",
-        category: "Important",
-        categories: ["Important", "Follow Up"],
-      });
-    });
-  });
-
   it("shows a success toast when a note is copied", async () => {
     // ARRANGE
     const user = userEvent.setup();
@@ -271,29 +215,79 @@ describe("NotesPopover", () => {
     });
   });
 
-  it("falls back to the original note categories when edit selection is cleared", async () => {
+  it.each([
+    {
+      name: "saves selected quick-add categories in the addNote payload",
+      content: "Quick add note",
+      optionNames: ["Important", "Follow Up"],
+      expectedPayload: {
+        content: "Quick add note",
+        category: "Important",
+        categories: ["Important", "Follow Up"],
+      },
+    },
+    {
+      name: "falls back to the default category when quick-add selection is cleared",
+      content: "Fallback quick add",
+      optionNames: ["Important", "Important"],
+      expectedPayload: {
+        content: "Fallback quick add",
+        category: "General",
+        categories: ["General"],
+      },
+    },
+  ])("$name", async ({ content, optionNames, expectedPayload }) => {
     // ARRANGE
-    const user = userEvent.setup();
-    renderNotesPopover();
+    const { user } = await setupQuickAdd();
 
     // ACT
-    await openEditMode(user);
-    await user.click(
-      screen.getByRole("button", {
-        name: "Edit note categories: 2 selected",
-      }),
-    );
-    await user.click(screen.getByRole("option", { name: /General/ }));
-    await user.click(screen.getByRole("option", { name: /Important/ }));
+    await user.type(screen.getByPlaceholderText("Type your note..."), content);
+    await selectCategories(user, "Select note categories: General", optionNames);
     await user.click(screen.getByRole("button", { name: /^save$/i }));
 
     // ASSERT
     await waitFor(() => {
-      expect(mockUpdateNote).toHaveBeenCalledWith("case-1", "note-1", {
+      expect(mockAddNote).toHaveBeenCalledWith("case-1", expectedPayload);
+    });
+  });
+
+  it.each([
+    {
+      name: "saves edited category changes in the updateNote payload",
+      updatedContent: "Updated note content",
+      optionNames: ["General", "Follow Up"],
+      expectedPayload: {
+        content: "Updated note content",
+        category: "Important",
+        categories: ["Important", "Follow Up"],
+      },
+    },
+    {
+      name: "falls back to the original note categories when edit selection is cleared",
+      updatedContent: null,
+      optionNames: ["General", "Important"],
+      expectedPayload: {
         content: "Test note content",
         category: "General",
         categories: ["General", "Important"],
-      });
+      },
+    },
+  ])("$name", async ({ updatedContent, optionNames, expectedPayload }) => {
+    // ARRANGE
+    const { user } = await setupEditModeScenario();
+
+    // ACT
+    if (updatedContent !== null) {
+      const editTextarea = screen.getByDisplayValue("Test note content");
+      await user.clear(editTextarea);
+      await user.type(editTextarea, updatedContent);
+    }
+    await selectCategories(user, "Edit note categories: 2 selected", optionNames);
+    await user.click(screen.getByRole("button", { name: /^save$/i }));
+
+    // ASSERT
+    await waitFor(() => {
+      expect(mockUpdateNote).toHaveBeenCalledWith("case-1", "note-1", expectedPayload);
     });
   });
 });
