@@ -67,7 +67,7 @@ export function VRGeneratorModal({
 
 const VR_COPY_FOOTER = "Please return the requested verification as soon as possible.\n\nThank you.";
 
-function buildVrClipboardText(renderedText: string, includeFooter: boolean): string {
+function buildVRClipboardText(renderedText: string, includeFooter: boolean): string {
   if (!includeFooter) {
     return renderedText;
   }
