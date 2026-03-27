@@ -15,13 +15,14 @@ import type { SummarySectionKey } from './categoryConfig';
  * Template categories determine where the template appears in the UI
  * and what placeholder fields are available.
  */
-export type TemplateCategory = 'vr' | 'summary' | 'narrative';
+export type TemplateCategory = 'vr' | 'vrFooter' | 'summary' | 'narrative';
 
 /**
  * Human-readable labels for template categories.
  */
 export const TEMPLATE_CATEGORY_LABELS: Record<TemplateCategory, string> = {
   vr: 'Verification Request',
+  vrFooter: 'VR Copy Footer',
   summary: 'Case Summary',
   narrative: 'Narrative',
 };
