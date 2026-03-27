@@ -12,216 +12,186 @@ vi.mock("@/hooks/usePinnedCases", () => ({
 
 const usePinnedCasesMock = vi.mocked(usePinnedCases);
 
+type PinnedCasesHookResult = ReturnType<typeof usePinnedCases>;
+type PinnedCasesHookOverrides = Partial<PinnedCasesHookResult>;
+type KeyboardModifier = Pick<KeyboardEvent, "ctrlKey" | "metaKey">;
+
+function createPinnedCasesHookResult(
+  overrides: PinnedCasesHookOverrides = {},
+): PinnedCasesHookResult {
+  return {
+    pinnedCaseIds: [],
+    pin: vi.fn(),
+    unpin: vi.fn(),
+    togglePin: vi.fn(),
+    isPinned: vi.fn(() => false),
+    getPinReason: vi.fn(),
+    canPinMore: true,
+    pinnedCount: 0,
+    reorder: vi.fn(),
+    pruneStale: vi.fn(),
+    ...overrides,
+  };
+}
+
+function renderPinButton(props: Partial<React.ComponentProps<typeof PinButton>> = {}) {
+  return render(<PinButton caseId="case-1" caseName="Case One" {...props} />);
+}
+
+function openPinDialog() {
+  fireEvent.click(renderPinButtonResult().getByRole("button", { name: "Pin case" }));
+  return getPinDialog();
+}
+
+let renderPinButtonResult: ReturnType<typeof renderPinButton>;
+
+function getPinDialog() {
+  return renderPinButtonResult.getByRole("dialog");
+}
+
+function getPinReasonField() {
+  return within(getPinDialog()).getByLabelText("Pin reason (optional)");
+}
+
+function fillPinReason(reason: string) {
+  fireEvent.change(getPinReasonField(), { target: { value: reason } });
+}
+
+function submitPinDialog() {
+  fireEvent.click(within(getPinDialog()).getByRole("button", { name: "Pin case" }));
+}
+
+function submitPinDialogWithShortcut(modifier: KeyboardModifier) {
+  fireEvent.keyDown(getPinReasonField(), {
+    key: "Enter",
+    ...modifier,
+  });
+}
+
 describe("PinButton", () => {
   beforeEach(() => {
     usePinnedCasesMock.mockReset();
   });
 
   it("prompts for an optional reason before pinning", () => {
+    // ARRANGE
     const pin = vi.fn();
+    usePinnedCasesMock.mockReturnValue(createPinnedCasesHookResult({ pin }));
+    renderPinButtonResult = renderPinButton();
 
-    usePinnedCasesMock.mockReturnValue({
-      pinnedCaseIds: [],
-      pin,
-      unpin: vi.fn(),
-      togglePin: vi.fn(),
-      isPinned: vi.fn(() => false),
-      getPinReason: vi.fn(),
-      canPinMore: true,
-      pinnedCount: 0,
-      reorder: vi.fn(),
-      pruneStale: vi.fn(),
-    });
+    // ACT
+    openPinDialog();
+    fillPinReason("Pending morning triage");
+    submitPinDialog();
 
-    const { getByRole, getByText } = render(
-      <PinButton caseId="case-1" caseName="Case One" />
-    );
-
-    fireEvent.click(getByRole("button", { name: "Pin case" }));
-
+    // ASSERT
     expect(
-      getByText("Add an optional reason for pinning this case. This stays attached to the pin only and does not create a note.")
+      renderPinButtonResult.getByText(
+        "Add an optional reason for pinning this case. This stays attached to the pin only and does not create a note.",
+      ),
     ).toBeInTheDocument();
-
-    const dialog = getByRole("dialog");
-    fireEvent.change(within(dialog).getByLabelText("Pin reason (optional)"), {
-      target: { value: "Pending morning triage" },
-    });
-    fireEvent.click(within(dialog).getByRole("button", { name: "Pin case" }));
-
     expect(pin).toHaveBeenCalledWith("case-1", "Pending morning triage");
   });
 
   it("pin dialog can be submitted without a reason", () => {
+    // ARRANGE
     const pin = vi.fn();
+    usePinnedCasesMock.mockReturnValue(createPinnedCasesHookResult({ pin }));
+    renderPinButtonResult = renderPinButton({ caseName: undefined });
 
-    usePinnedCasesMock.mockReturnValue({
-      pinnedCaseIds: [],
-      pin,
-      unpin: vi.fn(),
-      togglePin: vi.fn(),
-      isPinned: vi.fn(() => false),
-      getPinReason: vi.fn(),
-      canPinMore: true,
-      pinnedCount: 0,
-      reorder: vi.fn(),
-      pruneStale: vi.fn(),
-    });
+    // ACT
+    openPinDialog();
+    submitPinDialog();
 
-    const { getByRole } = render(<PinButton caseId="case-1" />);
-
-    fireEvent.click(getByRole("button", { name: "Pin case" }));
-
-    const dialog = getByRole("dialog");
-    fireEvent.click(within(dialog).getByRole("button", { name: "Pin case" }));
-
+    // ASSERT
     expect(pin).toHaveBeenCalledWith("case-1", "");
   });
 
-  it("submits the pin dialog with Ctrl+Enter", () => {
-    // ARRANGE
-    const pin = vi.fn();
+  it.each([
+    [{ ctrlKey: true, metaKey: false }, "Needs quick access"],
+    [{ ctrlKey: false, metaKey: true }, "Mac shortcut works too"],
+  ] as const)(
+    "submits the pin dialog with keyboard shortcut %j",
+    (modifier, reason) => {
+      // ARRANGE
+      const pin = vi.fn();
+      usePinnedCasesMock.mockReturnValue(createPinnedCasesHookResult({ pin }));
+      renderPinButtonResult = renderPinButton();
 
-    usePinnedCasesMock.mockReturnValue({
-      pinnedCaseIds: [],
-      pin,
-      unpin: vi.fn(),
-      togglePin: vi.fn(),
-      isPinned: vi.fn(() => false),
-      getPinReason: vi.fn(),
-      canPinMore: true,
-      pinnedCount: 0,
-      reorder: vi.fn(),
-      pruneStale: vi.fn(),
-    });
+      // ACT
+      openPinDialog();
+      fillPinReason(reason);
+      submitPinDialogWithShortcut(modifier);
 
-    const { getByRole } = render(<PinButton caseId="case-1" caseName="Case One" />);
-
-    // ACT
-    fireEvent.click(getByRole("button", { name: "Pin case" }));
-    const dialog = getByRole("dialog");
-    fireEvent.change(within(dialog).getByLabelText("Pin reason (optional)"), {
-      target: { value: "Needs quick access" },
-    });
-    fireEvent.keyDown(within(dialog).getByLabelText("Pin reason (optional)"), {
-      key: "Enter",
-      ctrlKey: true,
-    });
-
-    // ASSERT
-    expect(pin).toHaveBeenCalledWith("case-1", "Needs quick access");
-  });
-
-  it("submits the pin dialog with Cmd+Enter", () => {
-    // ARRANGE
-    const pin = vi.fn();
-
-    usePinnedCasesMock.mockReturnValue({
-      pinnedCaseIds: [],
-      pin,
-      unpin: vi.fn(),
-      togglePin: vi.fn(),
-      isPinned: vi.fn(() => false),
-      getPinReason: vi.fn(),
-      canPinMore: true,
-      pinnedCount: 0,
-      reorder: vi.fn(),
-      pruneStale: vi.fn(),
-    });
-
-    const { getByRole } = render(<PinButton caseId="case-1" caseName="Case One" />);
-
-    // ACT
-    fireEvent.click(getByRole("button", { name: "Pin case" }));
-    const dialog = getByRole("dialog");
-    fireEvent.change(within(dialog).getByLabelText("Pin reason (optional)"), {
-      target: { value: "Mac shortcut works too" },
-    });
-    fireEvent.keyDown(within(dialog).getByLabelText("Pin reason (optional)"), {
-      key: "Enter",
-      metaKey: true,
-    });
-
-    // ASSERT
-    expect(pin).toHaveBeenCalledWith("case-1", "Mac shortcut works too");
-  });
+      // ASSERT
+      expect(pin).toHaveBeenCalledWith("case-1", reason);
+    },
+  );
 
   it("does not show the dialog when unpinning an already pinned case", () => {
+    // ARRANGE
     const unpin = vi.fn();
+    usePinnedCasesMock.mockReturnValue(
+      createPinnedCasesHookResult({
+        pinnedCaseIds: ["case-1"],
+        unpin,
+        isPinned: vi.fn(() => true),
+        getPinReason: vi.fn(() => "Needs follow up"),
+        pinnedCount: 1,
+      }),
+    );
+    renderPinButtonResult = renderPinButton({ caseName: undefined });
 
-    usePinnedCasesMock.mockReturnValue({
-      pinnedCaseIds: ["case-1"],
-      pin: vi.fn(),
-      unpin,
-      togglePin: vi.fn(),
-      isPinned: vi.fn(() => true),
-      getPinReason: vi.fn(() => "Needs follow up"),
-      canPinMore: true,
-      pinnedCount: 1,
-      reorder: vi.fn(),
-      pruneStale: vi.fn(),
-    });
+    // ACT
+    fireEvent.click(renderPinButtonResult.getByRole("button", { name: /Unpin case/ }));
 
-    const { getByRole, queryByRole } = render(<PinButton caseId="case-1" />);
-
-    fireEvent.click(getByRole("button", { name: /Unpin case/ }));
-
+    // ASSERT
     expect(unpin).toHaveBeenCalledWith("case-1");
-    expect(queryByRole("dialog")).not.toBeInTheDocument();
+    expect(renderPinButtonResult.queryByRole("dialog")).not.toBeInTheDocument();
   });
 
   it("disables pinning when the max pinned-case limit is reached", async () => {
-    // Arrange
-    usePinnedCasesMock.mockReturnValue({
-      pinnedCaseIds: ["case-1", "case-2"],
-      pin: vi.fn(),
-      unpin: vi.fn(),
-      togglePin: vi.fn(),
-      isPinned: vi.fn(() => false),
-      getPinReason: vi.fn(),
-      canPinMore: false,
-      pinnedCount: 2,
-      reorder: vi.fn(),
-      pruneStale: vi.fn(),
-    });
+    // ARRANGE
+    usePinnedCasesMock.mockReturnValue(
+      createPinnedCasesHookResult({
+        pinnedCaseIds: ["case-1", "case-2"],
+        canPinMore: false,
+        pinnedCount: 2,
+      }),
+    );
+    renderPinButtonResult = renderPinButton({ caseId: "case-3", caseName: undefined });
 
-    const { container, getByRole, queryByRole } = render(<PinButton caseId="case-3" />);
-
-    // Act
-    const button = getByRole("button", { name: "Pin case" });
+    // ACT
+    const button = renderPinButtonResult.getByRole("button", { name: "Pin case" });
     fireEvent.click(button);
 
-    // Assert
+    // ASSERT
     expect(button).toBeDisabled();
-    expect(queryByRole("dialog")).not.toBeInTheDocument();
-
-    const results = await axe(container);
-    expect(results).toHaveNoViolations();
+    expect(renderPinButtonResult.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(await axe(renderPinButtonResult.container)).toHaveNoViolations();
   });
 
   it("shows a tooltip explaining why pinning is disabled", async () => {
-    // Arrange
-    usePinnedCasesMock.mockReturnValue({
-      pinnedCaseIds: ["case-1", "case-2"],
-      pin: vi.fn(),
-      unpin: vi.fn(),
-      togglePin: vi.fn(),
-      isPinned: vi.fn(() => false),
-      getPinReason: vi.fn(),
-      canPinMore: false,
-      pinnedCount: 2,
-      reorder: vi.fn(),
-      pruneStale: vi.fn(),
-    });
+    // ARRANGE
+    usePinnedCasesMock.mockReturnValue(
+      createPinnedCasesHookResult({
+        pinnedCaseIds: ["case-1", "case-2"],
+        canPinMore: false,
+        pinnedCount: 2,
+      }),
+    );
+    renderPinButtonResult = renderPinButton({ caseId: "case-3", caseName: undefined });
 
-    const { findByRole, getByRole } = render(<PinButton caseId="case-3" />);
-
-    // Act
-    const trigger = getByRole("button", { name: "Pin case" }).parentElement as HTMLElement;
+    // ACT
+    const trigger = renderPinButtonResult.getByRole("button", {
+      name: "Pin case",
+    }).parentElement as HTMLElement;
     fireEvent.pointerMove(trigger);
     fireEvent.mouseOver(trigger);
 
-    // Assert
-    expect(await findByRole("tooltip", { name: "Pin limit reached" })).toBeInTheDocument();
+    // ASSERT
+    expect(
+      await renderPinButtonResult.findByRole("tooltip", { name: "Pin limit reached" }),
+    ).toBeInTheDocument();
   });
 });
