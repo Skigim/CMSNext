@@ -13,10 +13,12 @@ const {
   mockUpdateNote,
   mockDeleteNote,
   mockCategoryConfig,
+  mockClickToCopy,
 } = vi.hoisted(() => ({
   mockAddNote: vi.fn<AddNoteMock>(),
   mockUpdateNote: vi.fn<UpdateNoteMock>(),
   mockDeleteNote: vi.fn<DeleteNoteMock>(),
+  mockClickToCopy: vi.fn<(text: string, options?: unknown) => Promise<boolean>>(),
   mockCategoryConfig: {
     config: {
       caseStatuses: [],
@@ -63,6 +65,10 @@ vi.mock("@/hooks/useNotes", () => ({
   }),
 }));
 
+vi.mock("@/utils/clipboard", () => ({
+  clickToCopy: mockClickToCopy,
+}));
+
 vi.mock("sonner", () => ({
   toast: {
     success: vi.fn(),
@@ -89,6 +95,7 @@ describe("NotesPopover", () => {
     mockAddNote.mockResolvedValue(null);
     mockUpdateNote.mockResolvedValue(null);
     mockDeleteNote.mockResolvedValue(undefined);
+    mockClickToCopy.mockResolvedValue(true);
   });
 
   it("renders the notes trigger button with the note count", () => {
@@ -115,11 +122,14 @@ describe("NotesPopover", () => {
   });
 
   it("shows all note categories when a note has multiple categories", async () => {
+    // ARRANGE
     const user = userEvent.setup();
     render(<NotesPopover caseId="case-1" />);
 
+    // ACT
     await user.click(screen.getByRole("button", { name: /notes/i }));
 
+    // ASSERT
     expect(await screen.findByText("General")).toBeInTheDocument();
     expect(await screen.findByText("Important")).toBeInTheDocument();
   });
@@ -226,6 +236,23 @@ describe("NotesPopover", () => {
         content: "Updated note content",
         category: "Important",
         categories: ["Important", "Follow Up"],
+      });
+    });
+  });
+
+  it("shows a success toast when a note is copied", async () => {
+    // ARRANGE
+    const user = userEvent.setup();
+    render(<NotesPopover caseId="case-1" />);
+
+    // ACT
+    await user.click(screen.getByRole("button", { name: /notes/i }));
+    await user.click(screen.getByRole("button", { name: /copy note/i }));
+
+    // ASSERT
+    await waitFor(() => {
+      expect(mockClickToCopy).toHaveBeenCalledWith("Test note content", {
+        successMessage: "Note copied to clipboard",
       });
     });
   });
