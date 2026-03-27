@@ -101,7 +101,9 @@ export function useEncryptionFileHooks(): UseEncryptionFileHooksResult {
 
   // Expose storePassword as a pass-through to context
   const storePassword = useCallback((password: string) => {
-    encryption.setPendingPassword(password);
+    if (encryption.requiresPassword) {
+      encryption.setPendingPassword(password);
+    }
   }, [encryption]);
 
   // Clear error helper
@@ -111,7 +113,7 @@ export function useEncryptionFileHooks(): UseEncryptionFileHooksResult {
 
   // Create encryption hooks for the file service
   const encryptionHooks = useMemo(() => {
-    if (!encryption.isAuthenticated) {
+    if (!encryption.isAuthenticated || !encryption.isEncryptionEnabled) {
       return null;
     }
 
@@ -202,10 +204,17 @@ export function useEncryptionFileHooks(): UseEncryptionFileHooksResult {
           
           if (!keyDerivationResult.success || !keyDerivationResult.data) {
             // Validate error code against known values
-            const validCodes = ['missing_password', 'wrong_password', 'corrupt_salt', 'system_error'] as const;
-            const errorCode: EncryptionErrorCode = validCodes.includes(keyDerivationResult.error as any)
-              ? (keyDerivationResult.error as EncryptionErrorCode)
-              : 'system_error';
+            const validCodes: readonly EncryptionErrorCode[] = [
+              "missing_password",
+              "wrong_password",
+              "corrupt_salt",
+              "system_error",
+            ];
+            const rawErrorCode = keyDerivationResult.error;
+            const errorCode: EncryptionErrorCode =
+              rawErrorCode && validCodes.includes(rawErrorCode)
+                ? rawErrorCode
+                : "system_error";
             let errorMsg: string;
             
             switch (errorCode) {
@@ -279,4 +288,3 @@ export function useEncryptionFileHooks(): UseEncryptionFileHooksResult {
     storePassword,
   };
 }
-

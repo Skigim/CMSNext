@@ -54,6 +54,9 @@ export interface EncryptionConfig {
   ivLength?: number;
 }
 
+/** Runtime encryption mode. */
+export type EncryptionMode = "disabled" | "noop" | "full";
+
 /** Error codes for encryption operations */
 export type EncryptionErrorCode = 
   | 'missing_password'

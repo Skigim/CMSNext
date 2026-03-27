@@ -21,6 +21,8 @@
  * @module logger
  */
 
+import { APP_CONFIG } from "@/utils/appConfig";
+
 type LogLevel = "debug" | "info" | "warn" | "error";
 
 type LogMethod = (message: string, context?: Record<string, unknown>, options?: LogOptions) => void;
@@ -63,9 +65,7 @@ const DEFAULT_LEVEL: LogLevel = (() => {
   if (explicitLevel && explicitLevel in levelPriority) {
     return explicitLevel as LogLevel;
   }
-  // Changed from 'debug' to 'info' in dev to reduce console spam
-  // Use VITE_LOG_LEVEL=debug in .env to enable debug logs when needed
-  return env?.DEV ? "info" : "warn";
+  return APP_CONFIG.verboseLogging ? "info" : "warn";
 })();
 
 const currentLevel: LogLevel = DEFAULT_LEVEL;

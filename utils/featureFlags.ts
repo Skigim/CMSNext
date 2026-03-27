@@ -1,3 +1,5 @@
+import { APP_CONFIG } from "@/utils/appConfig";
+
 /**
  * Feature flag catalogue for CMSNext.
  * Keys follow the <area>.<feature>.<subfeature> naming convention for clarity.
@@ -58,8 +60,8 @@ const FEATURE_FLAG_DEFAULTS: FeatureFlags = {
 	"reports.advancedFilters": false,
 	"alerts.advancedFilters": true,
 	"cases.bulkActions": false,
-	"settings.devTools": import.meta.env.DEV,
-	"settings.legacyMigration": import.meta.env.DEV,
+	"settings.devTools": APP_CONFIG.devtoolsEnabled,
+	"settings.legacyMigration": APP_CONFIG.devtoolsEnabled,
 };
 
 /** Immutable default feature flag configuration. */

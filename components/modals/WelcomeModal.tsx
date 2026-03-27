@@ -47,6 +47,7 @@ export function WelcomeModal({
 }: WelcomeModalProps) {
   const encryption = useEncryption();
   const { service, connectToFolder, loadExistingData } = useFileStorage();
+  const passwordRequired = encryption.requiresPassword;
 
   const [step, setStep] = useState<WelcomeStep>("welcome");
   const [isConnecting, setIsConnecting] = useState(false);
@@ -86,20 +87,35 @@ export function WelcomeModal({
       if (status.exists && status.encrypted) {
         // User chose a folder with existing encrypted data
         setError(
-          "This folder already has encrypted data. Choose a different folder or use the login screen."
+          encryption.isEncryptionEnabled
+            ? "This folder already has encrypted data. Choose a different folder or use the login screen."
+            : "This folder already has encrypted data. Switch to ENCRYPTION_MODE=full or choose a different folder."
         );
+        return;
+      }
+
+      if (!passwordRequired) {
+        const authSuccess = await encryption.authenticate("admin", "");
+        if (!authSuccess) {
+          setError("Failed to set up workspace access");
+          return;
+        }
+
+        await loadExistingData();
+        logger.info("Setup complete without password gating");
+        onSetupComplete();
         return;
       }
 
       // New folder or unencrypted - proceed to password creation
       setStep("password");
-    } catch (err) {
-      logger.error("Folder selection error", { error: String(err) });
-      setError(`Error: ${err instanceof Error ? err.message : "Unknown error"}`);
+    } catch (error) {
+      logger.error("Folder selection error", { error: String(error) });
+      setError(`Error: ${error instanceof Error ? error.message : "Unknown error"}`);
     } finally {
       setIsConnecting(false);
     }
-  }, [connectToFolder, service]);
+  }, [connectToFolder, encryption, loadExistingData, onSetupComplete, passwordRequired, service]);
 
   // Handle password creation
   const handleCreatePassword = useCallback(async () => {
@@ -134,10 +150,10 @@ export function WelcomeModal({
 
       logger.info("Setup complete");
       onSetupComplete();
-    } catch (err) {
-      logger.error("Password setup error", { error: String(err) });
+    } catch (error) {
+      logger.error("Password setup error", { error: String(error) });
       encryption.setPendingPassword(null);
-      setError(`Error: ${err instanceof Error ? err.message : "Unknown error"}`);
+      setError(`Error: ${error instanceof Error ? error.message : "Unknown error"}`);
     } finally {
       setIsProcessingPassword(false);
     }
@@ -210,7 +226,9 @@ export function WelcomeModal({
                 Create Your Password
               </DialogTitle>
               <DialogDescription className="text-xs sm:text-sm">
-                This password encrypts your data. Choose something memorable.
+                {encryption.isEncryptionEnabled
+                  ? "This password encrypts your data. Choose something memorable."
+                  : "This environment preserves the unlock flow, but data stays readable on disk for inspection."}
               </DialogDescription>
             </DialogHeader>
 
@@ -271,8 +289,14 @@ export function WelcomeModal({
               )}
 
               <p className="text-xs text-muted-foreground text-center">
-                <span className="text-amber-600 dark:text-amber-400">Remember this password</span>
-                {" — "}there's no way to recover it if forgotten.
+                {encryption.isEncryptionEnabled ? (
+                  <>
+                    <span className="text-amber-600 dark:text-amber-400">Remember this password</span>
+                    {" — "}there&apos;s no way to recover it if forgotten.
+                  </>
+                ) : (
+                  "This password keeps the environment-specific unlock flow, but the workspace is still stored in readable JSON."
+                )}
               </p>
             </form>
 
@@ -336,7 +360,9 @@ export function WelcomeModal({
                 <div>
                   <p className="font-medium">Private & Secure</p>
                   <p className="text-xs text-muted-foreground">
-                    AES-256 encryption keeps your data safe on your computer
+                    {encryption.isEncryptionEnabled
+                      ? "AES-256 encryption keeps your data safe on your computer"
+                      : "This environment keeps workspace files readable on disk for inspection and development"}
                   </p>
                 </div>
               </div>
