@@ -28,6 +28,7 @@ describe("CaseList status interactions", () => {
 
   afterEach(() => {
     localStorage.clear();
+    vi.useRealTimers();
   });
 
   it("CaseList table updates status when a new option is selected", async () => {
@@ -144,6 +145,7 @@ describe("CaseList status interactions", () => {
 
   it("applies a requested archival-review segment and filters to pending archival cases", async () => {
     // ARRANGE
+    vi.useFakeTimers();
     const pendingCase = createMockStoredCase({
       id: "case-pending",
       name: "Pending Archival",
@@ -154,6 +156,7 @@ describe("CaseList status interactions", () => {
       name: "Regular Case",
       pendingArchival: false,
     });
+    const onRequestedSegmentApplied = vi.fn();
 
     render(
       <CaseList
@@ -165,6 +168,7 @@ describe("CaseList status interactions", () => {
         alerts={[]}
         requestedSegment="archival-review"
         requestedSegmentKey={1}
+        onRequestedSegmentApplied={onRequestedSegmentApplied}
       />,
       { categoryConfig: testCategoryConfig }
     );
@@ -175,6 +179,14 @@ describe("CaseList status interactions", () => {
     });
     expect(screen.getByText("Pending Archival")).toBeInTheDocument();
     expect(screen.queryByText("Regular Case")).not.toBeInTheDocument();
+    expect(onRequestedSegmentApplied).toHaveBeenCalledWith(1);
+
+    act(() => {
+      vi.advanceTimersByTime(300);
+    });
+
+    const savedPreferences = globalThis.localStorage.getItem("cmsnext-case-list-preferences");
+    expect(savedPreferences ? JSON.parse(savedPreferences).segment : "all").toBe("all");
   });
 });
 
@@ -194,6 +206,7 @@ describe("CaseList pagination", () => {
 
   afterEach(() => {
     localStorage.clear();
+    vi.useRealTimers();
   });
 
   it("shows pagination when there are more than 20 cases", () => {

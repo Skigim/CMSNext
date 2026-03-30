@@ -70,6 +70,7 @@ export interface CaseWorkspaceProps {
   canConfirmMarkdownImport: boolean;
   requestedCaseListSegment?: CaseListSegment | null;
   requestedCaseListSegmentKey?: number;
+  onRequestedCaseListSegmentApplied?: (requestKey: number) => void;
 }
 
 /**
@@ -101,6 +102,7 @@ export const CaseWorkspace = memo(function CaseWorkspace({
   canConfirmMarkdownImport,
   requestedCaseListSegment,
   requestedCaseListSegmentKey,
+  onRequestedCaseListSegmentApplied,
 }: CaseWorkspaceProps) {
   return (
     <AppNavigationShell {...navigation}>
@@ -157,6 +159,7 @@ export const CaseWorkspace = memo(function CaseWorkspace({
         canConfirmMarkdownImport={canConfirmMarkdownImport}
         requestedCaseListSegment={requestedCaseListSegment}
         requestedCaseListSegmentKey={requestedCaseListSegmentKey}
+        onRequestedCaseListSegmentApplied={onRequestedCaseListSegmentApplied}
         activityLogState={activityLogState}
       />
 

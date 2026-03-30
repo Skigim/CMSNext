@@ -32,6 +32,7 @@ interface NavigationHandlers {
   navigationLock: NavigationLock;
   navigate: (view: AppView) => void;
   navigateToListSegment: (segment: CaseListSegment) => void;
+  consumeRequestedCaseListSegment: (requestKey: number) => void;
   viewCase: (caseId: string) => void;
   newCase: () => void;
   quickAdd: () => void;
@@ -153,6 +154,14 @@ export function useNavigationFlow({
     actions.navigate("list");
   }, [actions]);
 
+  const consumeRequestedCaseListSegment = useCallback((requestKey: number) => {
+    if (requestedCaseListSegmentKey !== requestKey) {
+      return;
+    }
+
+    setRequestedCaseListSegment(null);
+  }, [requestedCaseListSegmentKey]);
+
   // Auto-redirect when locked/unlocked
   // Loop-safe: When locked + currentView ∈ RESTRICTED_VIEWS, we set currentView to "settings"
   // which is NOT in RESTRICTED_VIEWS, so the effect short-circuits on next render.
@@ -198,5 +207,6 @@ export function useNavigationFlow({
     ...actions,
     navigate,
     navigateToListSegment,
+    consumeRequestedCaseListSegment,
   };
 }
