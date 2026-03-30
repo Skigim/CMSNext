@@ -180,6 +180,8 @@ describe("CaseList status interactions", () => {
     expect(screen.queryByText("Regular Case")).not.toBeInTheDocument();
     expect(onRequestedSegmentApplied).toHaveBeenCalledWith(1);
 
+    // Use real timers here because this component test relies on normal effect
+    // flushing after render; fake timers caused the render/waitFor path to stall.
     await act(async () => {
       await new Promise((resolve) => {
         globalThis.setTimeout(resolve, 350);

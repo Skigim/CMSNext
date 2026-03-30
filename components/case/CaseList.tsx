@@ -474,6 +474,7 @@ export function CaseList({
   const [showSampleDataDialog, setShowSampleDataDialog] = useState(false);
   const [transientSegmentOverride, setTransientSegmentOverride] = useState<CaseListSegment | null>(null);
   const lastAppliedRequestedSegmentKeyRef = useRef<number | null>(null);
+  const onRequestedSegmentAppliedCallbackRef = useRef(onRequestedSegmentApplied);
 
   // Pagination
   const PAGE_SIZE = 20;
@@ -652,6 +653,10 @@ export function CaseList({
   }, [searchTerm, effectiveSegment, filters, sortConfigs]);
 
   useEffect(() => {
+    onRequestedSegmentAppliedCallbackRef.current = onRequestedSegmentApplied;
+  }, [onRequestedSegmentApplied]);
+
+  useEffect(() => {
     if (!requestedSegment || requestedSegmentKey === undefined) {
       return;
     }
@@ -662,8 +667,8 @@ export function CaseList({
 
     lastAppliedRequestedSegmentKeyRef.current = requestedSegmentKey;
     setTransientSegmentOverride(requestedSegment);
-    onRequestedSegmentApplied?.(requestedSegmentKey);
-  }, [onRequestedSegmentApplied, requestedSegment, requestedSegmentKey]);
+    onRequestedSegmentAppliedCallbackRef.current?.(requestedSegmentKey);
+  }, [requestedSegment, requestedSegmentKey]);
 
   const noMatches = effectiveSegment === "alerts" ? totalAlertRows === 0 : sortedCases.length === 0;
 

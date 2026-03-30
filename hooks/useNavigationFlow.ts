@@ -108,6 +108,7 @@ export function useNavigationFlow({
   const [requestedCaseListSegment, setRequestedCaseListSegment] = useState<CaseListSegment | null>(null);
   const [requestedCaseListSegmentKey, setRequestedCaseListSegmentKey] = useState(0);
   const forcedViewRef = useRef<AppView | null>(null);
+  const requestedCaseListSegmentKeyRef = useRef(0);
 
   // Lock state from connection
   const { navigationLock, guardCaseInteraction } = useNavigationLock({ connectionState });
@@ -155,17 +156,21 @@ export function useNavigationFlow({
   }, [actions]);
 
   const consumeRequestedCaseListSegment = useCallback((requestKey: number) => {
-    if (requestedCaseListSegmentKey !== requestKey) {
+    if (requestedCaseListSegmentKeyRef.current !== requestKey) {
       return;
     }
 
     setRequestedCaseListSegment(null);
-  }, [requestedCaseListSegmentKey]);
+  }, []);
 
   // Auto-redirect when locked/unlocked
   // Loop-safe: When locked + currentView ∈ RESTRICTED_VIEWS, we set currentView to "settings"
   // which is NOT in RESTRICTED_VIEWS, so the effect short-circuits on next render.
   // When unlocked, we restore the prior view then clear the ref, exiting on next run.
+  useEffect(() => {
+    requestedCaseListSegmentKeyRef.current = requestedCaseListSegmentKey;
+  }, [requestedCaseListSegmentKey]);
+
   useEffect(() => {
     if (navigationLock.locked && RESTRICTED_VIEWS.includes(currentView)) {
       if (!forcedViewRef.current) {
