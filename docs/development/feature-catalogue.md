@@ -2,7 +2,7 @@
 
 > Living index of marketable features, their current implementation status, quality, and future investments.
 
-**Last Updated:** February 13, 2026
+**Last Updated:** March 30, 2026
 
 ## How to Use This Document
 
@@ -16,27 +16,27 @@
 
 ---
 
-## Quick Reference (February 2026)
+## Quick Reference (March 2026)
 
-| Feature               | Rating | Trend | Notes                                          |
-| --------------------- | ------ | ----- | ---------------------------------------------- |
-| Case Management       | 95     | ↑     | UI reorganization, conditional retro input     |
-| Financial Operations  | 92     | ↑     | Domain logic extracted, extensive test cov     |
-| Template System       | 92     | ↑     | Unified VR/Summary/Narrative templates         |
-| Local-First Storage   | 90     | →     | AES-256 encryption, split login/welcome UX     |
-| Developer Enablement  | 89     | ↑     | 1117 tests, IndexedDBHandleStore extracted     |
-| Dashboard & Insights  | 88     | ↑     | Config-driven priority scoring, zero fallbacks |
-| Premium UI/UX         | 87     | →     | Stable scrollbar, instant sidebar, tooltips    |
-| Notes & Collaboration | 84     | →     | Click-to-copy notes, popover UI                |
-| Case Archival         | 88     | ↑     | Restore flow, archive search/filter, metadata  |
-| Data Portability      | 82     | →     | AVS import with update capability              |
-| Configurable Statuses | 78     | →     | Recently stabilized                            |
-| Legacy Migration      | 75     | →     | Dev-only, one-way                              |
-| Autosave & Recovery   | 75     | →     | IndexedDBHandleStore modularized               |
-| Feature Flags         | 72     | →     | In-memory only                                 |
+| Feature               | Rating | Trend | Notes                                                                      |
+| --------------------- | ------ | ----- | -------------------------------------------------------------------------- |
+| Case Management       | 95     | ↑     | Normalized people hydration complete; Week 4 UI follow-through remains     |
+| Financial Operations  | 92     | →     | Mature CRUD/history flows; month-view follow-through remains               |
+| Template System       | 93     | ↑     | Unified templates now cover VR, footer, summary, and narrative flows       |
+| Local-First Storage   | 91     | ↑     | Persisted v2.1 workspace/archive migration path shipped                    |
+| Developer Enablement  | 90     | ↑     | 1141 passing tests, March instruction refresh, keyboard shortcuts shipped  |
+| Dashboard & Insights  | 88     | →     | Priority scoring solid; widget personalization still open                  |
+| Premium UI/UX         | 88     | ↑     | Keyboard shortcut customization shipped; accessibility audit still pending |
+| Notes & Collaboration | 84     | →     | Stable note/case summary workflows, no cross-case search yet               |
+| Case Archival         | 89     | ↑     | Archive migration path now aligned with persisted v2.1 workspaces          |
+| Data Portability      | 86     | ↑     | Explicit upgrade tooling now covers active workspace and archive files     |
+| Configurable Statuses | 78     | →     | Stable and integrated into dashboard metrics                               |
+| Legacy Migration      | 84     | ↑     | v2.0-to-v2.1 upgrade tooling shipped through Settings                      |
+| Autosave & Recovery   | 75     | →     | Reliable debounce/retry flow; richer visibility still open                 |
+| Feature Flags         | 72     | →     | Infrastructure intact; still mostly in-memory/dev-facing                   |
 
-**Average Rating:** 85.5/100  
-**Test Status:** 1117 tests passing
+**Average Rating:** 86.8/100  
+**Test Status:** 1141 tests passing
 
 ---
 
@@ -58,7 +58,7 @@
 4. [Case Archival System](#case-archival-system)
 5. [Financial Operations Suite](#financial-operations-suite)
 6. [Notes & Collaboration Aids](#notes--collaboration-aids)
-7. [VR Generator & Templates](#vr-generator--templates)
+7. [Unified Template System](#unified-template-system)
 8. [Intelligent Dashboard & Insights](#intelligent-dashboard--insights)
 9. [Data Portability & Migration](#data-portability--migration)
 10. [Premium UI/UX Layer](#premium-uiux-layer)
@@ -73,13 +73,13 @@
 
 ### Implementation Snapshot
 
-**Rating: 90/100**
+**Rating: 91/100** _(Updated March 30, 2026)_
 
-File System Access integration is production-ready with AES-256-GCM encryption, context-managed lifecycle (`FileStorageContext`), autosave-backed persistence, and timestamped backups. The connection flow features a polished split UX: returning users see a streamlined `LoginModal` with password entry, while first-time users get a welcoming `WelcomeModal` onboarding experience.
+File System Access integration is production-ready with AES-256-GCM encryption, context-managed lifecycle (`FileStorageContext`), autosave-backed persistence, and timestamped backups. March 2026 completed the persisted v2.1 workspace and archive migration path, so the storage layer now has an explicit upgrade flow for normalized data instead of relying on legacy runtime coercion.
 
 ### Strengths
 
-- **AES-256-GCM encryption** with PBKDF2 key derivation (100k iterations) — all data encrypted at rest
+- **AES-256-GCM encryption** with PBKDF2 key derivation (600k iterations) — all data encrypted at rest
 - Password never stored; derived key used only in memory during session
 - True offline-first experience; no servers, accounts, or network required
 - Split modal architecture: `LoginModal` for returning users (instant password prompt), `WelcomeModal` for new users (onboarding flow)
@@ -88,6 +88,7 @@ File System Access integration is production-ready with AES-256-GCM encryption, 
 - Directory reconnect via IndexedDB remembers previous handles across sessions
 - `checkFileEncryptionStatus()` detects encrypted files without requiring password first
 - Automatic backup strategy safeguards against data loss before imports or destructive saves
+- **Persisted v2.1 upgrade tooling** migrates active workspaces and archives through Settings before normal runtime use
 - Comprehensive documentation in `DeploymentGuide.md`, `file-storage-toast-catalogue.md`, and `error-boundary-guide.md`
 
 ### Gaps / Risks
@@ -167,9 +168,9 @@ Maintained by the storage + autosave working group. Align telemetry follow-ups w
 
 ### Implementation Snapshot
 
-**Rating: 95/100** _(Updated January 14, 2026)_
+**Rating: 95/100** _(Updated March 30, 2026)_
 
-Core case CRUD is highly mature. Recent enhancements focused on "at-a-glance" comprehension: priority scoring integration, terminal status visibility flags, enhanced sorting options, and streamlined 2-column case details layout.
+Core case CRUD is highly mature. March 2026 completed the normalized people hydration milestone: cases now hydrate people data through the service layer, linked-person save flows are in place, and the remaining work is the Week 4 UI follow-through for existing-person reuse and household rendering.
 
 **January 14, 2026:** Case details restructured to 2-column layout - IntakeColumn removed entirely with fields redistributed across PersonColumn (intake verification, relationships) and CaseColumn (application validated, AVS/voter fields, reviews). Internal 3-column grids optimize space utilization. Retro months input appears directly below retro requested checkbox for logical grouping.
 
@@ -194,6 +195,8 @@ Core case CRUD is highly mature. Recent enhancements focused on "at-a-glance" co
 - **Navigation Integration**: `useNavigationFlow` ensures consistent transitions and performance measurement logging across views
 - **Comprehensive Test Coverage**: 912/912 tests passing (100%) including service tests, integration tests, and component tests
 - **Data Model Integrity**: Normalized structures (`CaseDisplay`, `CaseRecord`, `Person`, `Relationship`) with strict TypeScript validation
+- **Runtime Hydration**: `DataManager`, `CaseService`, and related domain helpers now hydrate normalized `people[]` data into runtime case displays
+- **Linked-Person Save Flows**: Intake/edit pipelines now persist relationship-aware linked people against the normalized store
 - **Import/Export**: Bulk operations with duplicate detection and progress indicators
 - **Autosave Integration**: Forms seamlessly integrate with AutosaveFileService for reliable persistence
 - **Filter/Sort Persistence**: Case list preferences saved to localStorage with reset button
@@ -201,20 +204,22 @@ Core case CRUD is highly mature. Recent enhancements focused on "at-a-glance" co
 
 ### Gaps / Risks
 
-- Case list filtering/search UX exposes basic predicates; advanced combos could benefit from saved filter presets
+- Existing-person lookup/reuse is not yet the default case-creation path
+- Household view still needs a full relational rendering pass for normalized family links
 - Accessibility audits for complex forms remain ad hoc
 
 ### Expansion Opportunities
 
 - **Saved Filter Views**: Introduce user-configurable filter presets
 - **Relationship Search**: Enable filtering/searching by relationship data
+- **Existing Person Reuse**: Search and attach existing people during case creation/edit instead of always creating new person payloads
 - **Virtualization**: Consider virtual scrolling for 1k+ datasets if pagination proves insufficient
 - **Bulk Edit Fields**: Extend bulk actions to edit other case fields
 
 ### Coverage & Telemetry
 
-- **Service Layer**: CaseService fully tested with 100% coverage for CRUD operations, bulk operations, import/export, and activity logging
-- **Test Suite Status**: 347 tests passing across 45 test files (100%) as of December 4, 2025
+- **Service Layer**: CaseService and hydration flows are covered across service, hook, and integration tests for CRUD operations, bulk operations, import/export, and linked-person persistence
+- **Test Suite Status**: 1141 tests passing as of March 2026 roadmap status
 - **Bulk Operations**: `deleteCases()` and `updateCasesStatus()` with single read/write pattern
 - **Performance**: Pagination provides immediate relief; telemetry infrastructure ready for benchmarking
 
@@ -427,19 +432,21 @@ Collaboration feature group; capture planned enhancements in updated documentati
 
 ### Implementation Snapshot
 
-**Rating: 92/100** _(Updated January 9, 2026)_
+**Rating: 93/100** _(Updated March 30, 2026)_
 
-Formerly "VR Generator," this feature has expanded into a complete **Unified Template System** managing Verification Requests, Case Summaries, and Narrative templates. It provides a centralized editor for all text-generation needs with drag-and-drop reordering, section management, and dynamic placeholder insertion.
+Formerly "VR Generator," this feature has expanded into a complete **Unified Template System** managing Verification Requests, VR copy footer templates, Case Summaries, and Narrative templates. It provides a centralized editor for text-generation workflows with dynamic placeholder insertion, drag-and-drop ordering for summary sections, and category-specific placeholder restrictions.
 
 ### Strengths
 
 - **Unified Architecture**: Single `TemplateContext` manages all template types (VR, Summary, Narrative)
+- **VR Copy Footer Templates**: Dedicated footer templates append reusable case/person/system context when copying generated VR text
 - **Drag-and-Drop Reordering**: Users can reorder template sections intuitively (Optimistic UI updates)
 - **Summary Templates**: customizable sections for the Case Summary Generator (e.g., "Medical History", "Financial Overview")
 - **Date Offset Syntax**: Generic `{fieldName+N}` pattern supports offsets on any date field
 - **Dynamic Placeholders**: Extensive library of placeholders for Case, Financial, and Person data
+- **Category-Specific Placeholder Filtering**: Footer templates intentionally restrict placeholder categories to case, person, and system fields
 - **Template Editor**: Rich text editor with placeholder palette, validation, and live preview references
-- **Persistence**: Templates stored in CategoryConfig, surviving sessions and exports
+- **Persistence**: Templates stored in normalized workspace data (`NormalizedFileData.templates`), surviving sessions and exports
 - **Migration**: Automatic migration from legacy `vrScripts` to the new unified format
 
 ### Gaps / Risks
@@ -512,15 +519,16 @@ Dashboard framework maintained by insights platform team. Widget development fol
 
 ### Implementation Snapshot
 
-**Rating: 82/100** _(Updated December 8, 2025)_
+**Rating: 86/100** _(Updated March 30, 2026)_
 
-JSON import/export flows are stable with schema validation, autosave-aware backups, and legacy migration helpers. **December 8, 2025:** AVS import enhanced with duplicate detection - matches existing items by accountNumber + description and updates them instead of creating duplicates. Preview UI shows New/Update badges, selection checkboxes, and Select All toggle. Parser improved to handle bank-specific "Account Owner:" format and "Checking Account" type suffixes.
+JSON import/export flows are stable with schema validation, autosave-aware backups, and explicit migration helpers. March 2026 added a persisted v2.1 upgrade path for active workspaces and archive files through Settings, moving normalization out of implicit runtime fallback and into a user-visible, auditable workflow.
 
 ### Strengths
 
 - **AVS Duplicate Detection**: Matches existing items by accountNumber + description, updates instead of creating duplicates
 - **AVS Preview Checkboxes**: Select/deselect individual accounts before import with New/Update badges
 - **Smart Alert Import**: Unmatched alerts with MCNs automatically create skeleton cases with properly-cased names (handles ALL CAPS, Mc/Mac/O' prefixes)
+- **Workspace + Archive Upgrade Tooling**: Explicit Settings-driven migration upgrades persisted data to canonical v2.1 for both live and archived workspaces
 - Import process validates structure, migrates legacy payloads, and records failures with descriptive toasts
 - Automatic backups (`case-tracker-data.backup-[timestamp].json`) protect against destructive imports
 - Exported data includes metadata (exported_at, totals) ensuring compatibility across environments
@@ -532,7 +540,7 @@ JSON import/export flows are stable with schema validation, autosave-aware backu
 - Import error reporting is technical; non-technical users may struggle to resolve malformed files
 - No differential import—large datasets require full reloads even for small changes
 - Lack of built-in anonymization tooling when sharing exports
-- Migration helpers mostly tested via unit coverage; limited integration testing with real-world datasets
+- Runtime migration performance on very large real-world datasets still needs more validation
 
 ### Expansion Opportunities
 
@@ -543,7 +551,7 @@ JSON import/export flows are stable with schema validation, autosave-aware backu
 
 ### Coverage & Telemetry
 
-- Unit tests for `DataManager`, `DataNormalization`, and CSV parser cover transformation logic
+- Unit tests for `DataManager`, data normalization, persisted migration handlers, and CSV parsing cover transformation logic
 - Integration tests ensure connection flow handles imports with backups
 - No telemetry yet; future usage metrics could log import frequency and file sizes
 - Manual QA relies on generated fixtures—consider automating smoke imports in CI
@@ -558,9 +566,9 @@ Data platform group. Coordinate with documentation team to keep `SeedDataSystem.
 
 ### Implementation Snapshot
 
-**Rating: 87/100** _(Updated December 18, 2025)_
+**Rating: 88/100** _(Updated March 30, 2026)_
 
-Eight-theme system built on shadcn/ui delivers polished, responsive layouts. Tailwind CSS v4 tokens and component decomposition keep styling consistent. **December 18, 2025:** Added `scrollbar-gutter: stable` to prevent layout shift when modals open, plus instant sidebar collapse and CopyButton tooltipSide prop.
+Eight-theme system built on shadcn/ui delivers polished, responsive layouts. Tailwind CSS v4 tokens and component decomposition keep styling consistent. March 2026 shipped keyboard shortcut customization on top of the existing sidebar, tooltip, and stable-scrollbar polish, while formal accessibility automation still remains open.
 
 ### Strengths
 
@@ -608,19 +616,21 @@ Eight-theme system built on shadcn/ui delivers polished, responsive layouts. Tai
 
 ### Implementation Snapshot
 
-**Rating: 84/100** _(Updated December 5, 2025)_
+**Rating: 90/100** _(Updated March 30, 2026)_
 
-Tooling stack (Vitest, ESLint 9 flat config, Tailwind v4 pipeline) covers day-to-day development with scripted performance baselines, seed data generators, and comprehensive architecture documentation. Service extraction established clean DataManager + Services pattern with dependency injection. **December 5, 2025:** 347 tests passing. Unified CopyButton component demonstrates pattern consolidation. `formatDateForDisplay()` utility added. Test coverage includes CopyButton (11 tests), CaseListCopy, and financial card actions.
+Tooling stack (Vitest, ESLint 9 flat config, Tailwind v4 pipeline) covers day-to-day development with scripted performance baselines, seed data generators, and comprehensive architecture documentation. March 2026 strengthened the repo's custom-instruction layout, shipped keyboard shortcut customization, and pushed the suite to 1141 passing tests while the normalized data migration/hydration work landed.
 
 ### Strengths
 
-- **Comprehensive test harness**: 340 tests passing across unit, RTL, integration, and performance scripts with coverage reporting
+- **Comprehensive test harness**: 1141 passing tests across unit, RTL, integration, and domain suites with coverage reporting
 - **Service Architecture**: DataManager (461 lines) + 7 focused services totaling 2,265 lines
 - **Dependency Injection**: Clean service composition with focused responsibilities
 - **Storage Normalization**: v2.1 normalized format with automatic migration from v2.0 and older legacy formats
 - **Dev container** and documented setup enable consistent onboarding
 - **CLI utilities** (`scripts/`) generate sample data, run performance baselines, and capture usage reports
 - **Linting/formatting** standardized via ESLint 9 + Prettier; zero warning baseline
+- **Scoped Copilot Instructions**: Repository-wide and path-scoped instructions now align with GitHub's current custom-instructions structure
+- **Keyboard Shortcut Customization**: User-rebindable shortcuts shipped through Settings instead of remaining a planned item
 
 ### Hook Complexity Status
 
@@ -672,16 +682,16 @@ Friction-logging infrastructure for capturing UX pain points during development 
 
 Repository-wide and path-scoped Copilot instruction files now follow GitHub's current custom-instructions layout:
 
-| File                                               | Scope             | Focus                           |
-| -------------------------------------------------- | ----------------- | ------------------------------- |
-| `.github/copilot-instructions.md`                  | Repository-wide   | Architecture, validation, constraints |
-| `.github/instructions/implementation.instructions.md` | Path-scoped    | Services, hooks, domain, data flow |
-| `.github/instructions/frontend.instructions.md`    | Path-scoped       | UI components, shadcn, Tailwind |
-| `.github/instructions/tests.instructions.md`       | Path-scoped       | Vitest, RTL, mocking patterns   |
+| File                                                  | Scope           | Focus                                 |
+| ----------------------------------------------------- | --------------- | ------------------------------------- |
+| `.github/copilot-instructions.md`                     | Repository-wide | Architecture, validation, constraints |
+| `.github/instructions/implementation.instructions.md` | Path-scoped     | Services, hooks, domain, data flow    |
+| `.github/instructions/frontend.instructions.md`       | Path-scoped     | UI components, shadcn, Tailwind       |
+| `.github/instructions/tests.instructions.md`          | Path-scoped     | Vitest, RTL, mocking patterns         |
 
-### Keyboard Shortcuts (Planned - December 2025)
+### Keyboard Shortcuts (Shipped - March 2026)
 
-Comprehensive keyboard navigation with chord support and user customization:
+Keyboard navigation now includes user customization through Settings:
 
 - **Chord Navigation**: `Ctrl+G` leader key → `D` (dashboard), `L` (list), `S` (settings)
 - **Actions**: `Ctrl+N` (new case), `/` (search), `?` (help modal)
@@ -690,10 +700,9 @@ Comprehensive keyboard navigation with chord support and user customization:
 
 ### Gaps / Risks
 
-- No automated release packaging
 - Usage telemetry service still conceptual
 - Accessibility and visual regression tooling not in CI
-- Keyboard shortcuts not yet implemented
+- Release packaging remains manual
 
 ### Expansion Opportunities
 
@@ -704,7 +713,7 @@ Comprehensive keyboard navigation with chord support and user customization:
 
 ### Coverage & Telemetry
 
-- **Vitest suites**: 347 tests across 45 test files (100% passing)
+- **Vitest suites**: 1141 tests passing per the March 2026 roadmap snapshot
 - **Service tests**: Complete coverage for all 7 services
 - **Toast utilities**: 14 tests covering loading/success/error states, isMounted guards
 - **Pagination tests**: 7 tests covering navigation, disabled states, empty state
@@ -770,14 +779,15 @@ Feature flag infrastructure lives in `utils/featureFlags.ts` with immutable defa
 
 ### Implementation Snapshot
 
-**Rating: 75/100** _(Added November 26, 2025)_
+**Rating: 84/100** _(Updated March 30, 2026)_
 
-A dedicated migration utility (`utils/legacyMigration.ts`) enables users with v1.x data files to migrate to the current v2.1 normalized format. The utility is accessible through Settings when the `settings.legacyMigration` feature flag is enabled.
+A dedicated migration toolchain now covers both older legacy formats and the mainstream March 2026 v2.0-to-v2.1 upgrade path. The practical center of gravity has shifted from dev-only migration utilities toward explicit Settings-driven upgrades for active workspaces and archive files before canonical runtime reads.
 
 ### Strengths
 
 - **Comprehensive Transformation**: Migrates nested v1.x format (cases with embedded financials/notes) to the flat v2.1 relational format with a global `people` registry
 - **Safe Migration Flow**: Preview before apply, with detailed statistics on what will be migrated
+- **Persisted Upgrade Path**: Active workspaces and archive files can be upgraded to canonical v2.1 from Settings instead of relying on runtime compatibility shims
 - **Category Discovery**: Auto-discovers statuses and alert types from legacy data and merges with existing config
 - **User-Friendly UI**: `LegacyMigrationPanel` component provides guided migration with progress feedback
 - **Feature-Gated**: Only visible in dev mode via `settings.legacyMigration` flag
@@ -803,7 +813,7 @@ A dedicated migration utility (`utils/legacyMigration.ts`) enables users with v1
 
 - Migration is one-way; no rollback mechanism built-in (though backups are created)
 - Large datasets (1000+ cases) may have performance considerations
-- Limited testing with real-world legacy files (mostly synthetic test data)
+- Limited testing with very large real-world legacy files (mostly synthetic test data)
 
 ### Expansion Opportunities
 
@@ -815,7 +825,7 @@ A dedicated migration utility (`utils/legacyMigration.ts`) enables users with v1
 ### Coverage & Telemetry
 
 - Core transformation logic tested via unit tests
-- UI component integration tested through Settings panel
+- UI component integration tested through Settings panel, with March migration handlers additionally covered in storage/service tests
 - No dedicated telemetry yet; migration events logged to activity log
 
 ### Owners / Notes
