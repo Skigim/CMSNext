@@ -67,9 +67,11 @@ describe("TemplatesPanel", () => {
     expect(
       screen.getByRole("button", { name: "Current Date" }),
     ).toBeInTheDocument();
-    expect(
-      screen.queryByRole("button", { name: "Description" }),
-    ).not.toBeInTheDocument();
+    expect(screen.getByText("Case")).toBeInTheDocument();
+    expect(screen.getByText("Person")).toBeInTheDocument();
+    expect(screen.getByText("System")).toBeInTheDocument();
+    expect(screen.queryByText("Financial Item")).not.toBeInTheDocument();
+    expect(screen.queryByText("Amount History")).not.toBeInTheDocument();
   });
 
   it("hides the add button when a VR footer template already exists", () => {

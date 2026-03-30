@@ -8,9 +8,13 @@ import {
   type PlaceholderField,
 } from "@/types/template";
 
+const VR_FOOTER_PLACEHOLDER_CATEGORIES = new Set(["Case", "Person", "System"]);
+
 const VR_FOOTER_PLACEHOLDER_FIELDS = Object.fromEntries(
   Object.entries(TEMPLATE_PLACEHOLDER_FIELDS)
-    .filter(([, field]) => field.availableFor.includes("vr"))
+    .filter(([, field]) =>
+      VR_FOOTER_PLACEHOLDER_CATEGORIES.has(field.fieldCategory),
+    )
     .map(([key, field]) => [
       key,
       {
