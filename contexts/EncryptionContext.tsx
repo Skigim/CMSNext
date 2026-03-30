@@ -44,11 +44,18 @@ import {
   deriveKey,
   deriveKeyFromSaltString,
   generateSalt,
+  isFullEncryptionMode,
   isEncryptionSupported,
+  requiresAuthenticationPassword,
 } from "../utils/encryption";
 import { DEFAULT_ENCRYPTION_CONFIG } from "../types/encryption";
-import type { EncryptionState, EncryptionErrorCode } from "../types/encryption";
+import type {
+  EncryptionState,
+  EncryptionErrorCode,
+  EncryptionMode,
+} from "../types/encryption";
 import { createLogger } from "../utils/logger";
+import { APP_CONFIG } from "../utils/appConfig";
 
 const logger = createLogger("EncryptionContext");
 
@@ -69,6 +76,12 @@ export interface EncryptionResult<T> {
  * @interface EncryptionContextValue
  */
 interface EncryptionContextValue extends EncryptionState {
+  /** Active runtime encryption mode from app config */
+  encryptionMode: EncryptionMode;
+  /** Whether this environment expects password entry before workspace access */
+  requiresPassword: boolean;
+  /** Whether full file encryption is active for this environment */
+  isEncryptionEnabled: boolean;
   /** Whether encryption is supported in this browser (Web Crypto API available) */
   isSupported: boolean;
   /** Authenticate user and optionally derive encryption key */
@@ -169,6 +182,10 @@ interface EncryptionProviderProps {
  * @see {@link DEFAULT_ENCRYPTION_CONFIG} for PBKDF2 settings
  */
 export function EncryptionProvider({ children }: Readonly<EncryptionProviderProps>) {
+  const encryptionMode = APP_CONFIG.encryptionMode;
+  const isEncryptionEnabled = isFullEncryptionMode(encryptionMode);
+  const requiresPassword = requiresAuthenticationPassword(encryptionMode);
+
   const [state, setState] = useState<EncryptionState>({
     isAuthenticated: false,
     username: DEFAULT_USERNAME,
@@ -206,6 +223,21 @@ export function EncryptionProvider({ children }: Readonly<EncryptionProviderProp
       logger.lifecycle("Authenticating user", { username, hasSalt: !!salt });
 
       try {
+        if (encryptionMode === "disabled") {
+          setState((prev) => ({
+            ...prev,
+            isAuthenticated: true,
+            username,
+            derivedKey: null,
+            currentSalt: null,
+            currentIterations: null,
+            fileIsEncrypted: false,
+          }));
+          pendingPasswordRef.current = null;
+          logger.info("Authentication completed with password bypass", { encryptionMode });
+          return true;
+        }
+
         let derivedKey: CryptoKey | null = null;
 
         if (salt) {
@@ -236,7 +268,7 @@ export function EncryptionProvider({ children }: Readonly<EncryptionProviderProp
         return false;
       }
     },
-    []
+    [encryptionMode]
   );
 
   /**
@@ -256,6 +288,13 @@ export function EncryptionProvider({ children }: Readonly<EncryptionProviderProp
    */
   const initializeEncryption = useCallback(
     async (password: string): Promise<{ salt: string; key: CryptoKey } | null> => {
+      if (!isEncryptionEnabled) {
+        logger.warn("Encryption initialization requested when encryption is not enabled", {
+          encryptionMode,
+        });
+        return null;
+      }
+
       try {
         const salt = generateSalt();
         const saltBuffer = Uint8Array.from(atob(salt), (c) => c.codePointAt(0)!).buffer;
@@ -282,7 +321,7 @@ export function EncryptionProvider({ children }: Readonly<EncryptionProviderProp
         return null;
       }
     },
-    []
+    [encryptionMode, isEncryptionEnabled]
   );
 
   /**
@@ -308,6 +347,17 @@ export function EncryptionProvider({ children }: Readonly<EncryptionProviderProp
    */
   const deriveKeyFromFileSalt = useCallback(
     async (salt: string, iterations?: number): Promise<EncryptionResult<CryptoKey>> => {
+      if (!isEncryptionEnabled) {
+        logger.warn("Key derivation requested when encryption is not enabled", {
+          encryptionMode,
+        });
+        return {
+          success: false,
+          error: "system_error",
+          message: "Encryption is not enabled for this environment.",
+        };
+      }
+
       const password = pendingPasswordRef.current;
       if (!password) {
         logger.error("No pending password for key derivation");
@@ -344,12 +394,15 @@ export function EncryptionProvider({ children }: Readonly<EncryptionProviderProp
         return { success: false, error: 'system_error', message };
       }
     },
-    []
+    [encryptionMode, isEncryptionEnabled]
   );
 
   const value = useMemo<EncryptionContextValue>(
     () => ({
       ...state,
+      encryptionMode,
+      requiresPassword,
+      isEncryptionEnabled,
       isSupported,
       authenticate,
       setFileEncrypted,
@@ -364,6 +417,9 @@ export function EncryptionProvider({ children }: Readonly<EncryptionProviderProp
     }),
     [
       state,
+      encryptionMode,
+      requiresPassword,
+      isEncryptionEnabled,
       isSupported,
       authenticate,
       setFileEncrypted,

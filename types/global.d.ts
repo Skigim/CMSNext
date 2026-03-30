@@ -40,7 +40,19 @@ declare global {
   var FileService: unknown;
 
   interface ImportMetaEnv {
+    readonly APP_ENV?: string;
+    readonly ENCRYPTION_MODE?: string;
+    readonly DEVTOOLS_ENABLED?: string;
+    readonly SCHEMA_INSPECTOR_ENABLED?: string;
+    readonly DATA_FLOW_DEBUG_ENABLED?: string;
+    readonly VERBOSE_LOGGING?: string;
     readonly VITE_PERSIST_NORMALIZATION_FIXES?: string;
+    readonly VITE_APP_ENV?: string;
+    readonly VITE_ENCRYPTION_MODE?: string;
+    readonly VITE_DEVTOOLS_ENABLED?: string;
+    readonly VITE_SCHEMA_INSPECTOR_ENABLED?: string;
+    readonly VITE_DATA_FLOW_DEBUG_ENABLED?: string;
+    readonly VITE_VERBOSE_LOGGING?: string;
   }
 
   interface ImportMeta {

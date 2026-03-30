@@ -14,11 +14,20 @@ import type {
   EncryptionResult,
   DecryptionResult,
   EncryptionConfig,
+  EncryptionMode,
 } from "../types/encryption";
 import { DEFAULT_ENCRYPTION_CONFIG } from "../types/encryption";
 import { createLogger } from "./logger";
 
 const logger = createLogger("encryption");
+
+export function isFullEncryptionMode(mode: EncryptionMode): boolean {
+  return mode === "full";
+}
+
+export function requiresAuthenticationPassword(mode: EncryptionMode): boolean {
+  return mode !== "disabled";
+}
 
 /**
  * Converts ArrayBuffer to base64 string
