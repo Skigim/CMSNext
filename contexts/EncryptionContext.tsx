@@ -223,7 +223,7 @@ export function EncryptionProvider({ children }: Readonly<EncryptionProviderProp
       logger.lifecycle("Authenticating user", { username, hasSalt: !!salt });
 
       try {
-        if (!isEncryptionEnabled) {
+        if (encryptionMode === "disabled") {
           setState((prev) => ({
             ...prev,
             isAuthenticated: true,
@@ -234,7 +234,7 @@ export function EncryptionProvider({ children }: Readonly<EncryptionProviderProp
             fileIsEncrypted: false,
           }));
           pendingPasswordRef.current = null;
-          logger.info("Authentication completed without encryption", { encryptionMode });
+          logger.info("Authentication completed with password bypass", { encryptionMode });
           return true;
         }
 
