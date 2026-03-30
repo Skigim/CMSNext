@@ -140,10 +140,27 @@ function getEntryCreatedAtTime(entry: Pick<AmountHistoryEntry, "createdAt">): nu
 }
 
 function compareCreatedAtDescending(
-  entryA: Pick<AmountHistoryEntry, "createdAt">,
-  entryB: Pick<AmountHistoryEntry, "createdAt">
+  entryA: Pick<AmountHistoryEntry, "createdAt"> & Partial<Pick<AmountHistoryEntry, "id">>,
+  entryB: Pick<AmountHistoryEntry, "createdAt"> & Partial<Pick<AmountHistoryEntry, "id">>
 ): number {
-  return getEntryCreatedAtTime(entryB) - getEntryCreatedAtTime(entryA);
+  const timeA = getEntryCreatedAtTime(entryA);
+  const timeB = getEntryCreatedAtTime(entryB);
+
+  // Primary sort: createdAt descending
+  if (timeA !== timeB) {
+    return timeB - timeA;
+  }
+
+  // Tiebreaker: stable ordering by id when available
+  if (entryA.id !== undefined && entryB.id !== undefined && entryA.id !== entryB.id) {
+    const idA = String(entryA.id);
+    const idB = String(entryB.id);
+    // Use ascending id as deterministic tiebreaker
+    return idA < idB ? -1 : 1;
+  }
+
+  // Final fallback: treat as equal
+  return 0;
 }
 
 /**
