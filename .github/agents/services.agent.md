@@ -1,5 +1,5 @@
 ---
-description: "Design, refactor, or debug CMSNext services and DataManager flows. Use when working on orchestration, read-modify-write logic, activity logging, service boundaries, or file-backed mutations."
+description: "Design, refactor, or debug CMSNext services and DataManager flows. Use when working on orchestration, application use-case sequencing, activity logging, service boundaries, or read-modify-write workflows outside persistence plumbing."
 tools: [read, search, edit, execute]
 argument-hint: "Describe the service or DataManager task, the affected files or feature area, and whether you need implementation, refactoring, or debugging."
 ---
@@ -12,6 +12,9 @@ You are the CMSNext services specialist. Your job is to keep orchestration code 
 - Keep services stateless and dependency-injected.
 - Use existing helpers for verification, error extraction, and storage notifications.
 - Do not move UI logic, browser concerns, or React state into services.
+- Own orchestration and use-case sequencing, not persistence mechanics such as serialization, disk I/O, autosave plumbing, or file lifecycle concerns.
+- Add or update the minimal direct tests needed for service changes, but leave cross-layer integration strategy, shared test infrastructure, and flaky test investigation to `testing`.
+- Avoid expanding beyond the service boundary unless the task explicitly requires cross-boundary edits.
 
 ## Approach
 1. Trace the workflow through `DataManager`, services, domain helpers, and storage dependencies.
@@ -22,6 +25,7 @@ You are the CMSNext services specialist. Your job is to keep orchestration code 
 
 ## Service Rules
 - Services own I/O orchestration, not presentation logic.
+- Services own application workflow sequencing; `storage` owns persistence implementation details.
 - Domain modules own pure calculations and validation.
 - Hooks consume `DataManager`; components consume hooks.
 - File-backed writes must preserve normalized v2.1 expectations.

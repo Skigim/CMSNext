@@ -67,15 +67,19 @@ When starting a task, prefer this order:
 ### Automatic Agent Delegation
 
 - The default agent should delegate automatically when a task clearly matches one of the workspace custom agents.
+- Route ambiguous tasks by **responsibility and architectural ownership first**, then use file proximity as a tiebreaker.
 - Delegate to `audit` for code reviews, security analysis, accessibility checks, performance investigations, regression hunting, release readiness, or architecture compliance checks.
-- Delegate to `testing` for unit, integration, hook, component, or accessibility test work; test failure triage; coverage improvements; and Vitest or React Testing Library changes.
-- Delegate to `services` for DataManager changes, service orchestration, read-modify-write flows, activity logging, or file-backed mutation behavior outside the storage plumbing itself.
+- Keep `audit` in a verifier role for cross-cutting concerns rather than the default implementation owner.
+- Specialist agents should add or update the **minimal direct tests** for the code they change. Delegate to `testing` for cross-layer integration work, accessibility-focused testing work, regression coverage, shared test utilities or mocks, and flaky or failing test investigation.
+- Delegate to `services` for DataManager changes, service orchestration, application use-case sequencing, activity logging, and read-modify-write flows that do not change persistence mechanics.
 - Delegate to `domain` for pure business logic, calculations, validation, transformations, formatting helpers, or extracting logic into `domain/*` modules.
 - Delegate to `frontend` for component implementation, UI refactors, interaction design, accessibility-sensitive component work, styling, layout, or app-shell behavior.
 - Delegate to `hooks` for custom hook design, hook refactors, React state orchestration, effect bugs, callback stability issues, or extracting logic from components into hooks.
-- Delegate to `storage` for File System Access API work, file handle flows, autosave behavior, persistence bugs, storage migrations, storage diagnostics, or local-first data integrity concerns.
+- Delegate to `storage` for File System Access API work, file handle flows, autosave behavior, serialization and deserialization, disk read/write mechanics, file lifecycle on disk, persistence bugs, storage migrations, storage diagnostics, or local-first data integrity concerns.
+- Route app-wide logging, telemetry, performance instrumentation, and error handling to the agent that owns the layer implementing the change: `storage` for persistence-path concerns, `services` for orchestration and workflow concerns, `hooks` for React workflow-state coordination, and `frontend` for UI rendering and interaction concerns. Use `audit` to verify compliance, not as the default implementer.
 - Delegate to `Explore` for broad read-only discovery when the right files, patterns, or code paths are not yet clear.
-- If a task spans multiple areas, delegate the investigation or implementation slice to the most specific agent first, then continue with the next agent only if the scope genuinely crosses boundaries.
+- If a task spans multiple areas, choose one **primary owner** based on responsibility, then involve a secondary agent only when the task explicitly requires a cross-boundary change.
+- Specialist agents should avoid expanding beyond their owned boundary unless the task explicitly requires cross-boundary edits.
 - Keep work in the default agent when the task is narrow, the affected files are already obvious, and context isolation would add overhead without improving outcome quality.
 - When delegating, include the goal, relevant files or feature area, whether the agent should remain read-only or edit files, and the expected return format.
 
