@@ -14,7 +14,6 @@ import {
   useFileDataSync,
   useFinancialItemFlow,
   useImportListeners,
-  useMarkdownCaseImportFlow,
   useNavigationFlow,
   useNoteFlow,
 } from "../../hooks";
@@ -112,35 +111,6 @@ export const AppContent = memo(function AppContent() {
     navigationLock,
   } = navigationFlow;
 
-  const {
-    importState: markdownImportState,
-    importDraft,
-    openImportModal: handleOpenMarkdownImport,
-    closeImportModal: handleCloseMarkdownImport,
-    handleInputChange: handleMarkdownImportInputChange,
-    clearInput: handleClearMarkdownImport,
-    confirmImport: handleConfirmMarkdownImport,
-    clearImportDraft,
-    canConfirmImport: canConfirmMarkdownImport,
-  } = useMarkdownCaseImportFlow({
-    onStartIntake: handleNewCase,
-  });
-
-  const handleStartFreshNewCase = useCallback(() => {
-    clearImportDraft();
-    handleNewCase();
-  }, [clearImportDraft, handleNewCase]);
-
-  const handleCancelImportedNewCase = useCallback(() => {
-    clearImportDraft();
-    handleCancelNewCase();
-  }, [clearImportDraft, handleCancelNewCase]);
-
-  const handleCompleteImportedNewCase = useCallback((caseId: string, savedCase?: StoredCase) => {
-    clearImportDraft();
-    handleCompleteNewCase(caseId, savedCase);
-  }, [clearImportDraft, handleCompleteNewCase]);
-
   // Listen for keyboard shortcut navigation events from App.tsx
   useEffect(() => {
     const handleNavigationEvent = (e: Event) => {
@@ -154,7 +124,7 @@ export const AppContent = memo(function AppContent() {
     };
 
     const handleNewCaseEvent = () => {
-      handleStartFreshNewCase();
+      handleNewCase();
     };
 
     const handleFocusSearchEvent = () => {
@@ -178,7 +148,7 @@ export const AppContent = memo(function AppContent() {
       globalThis.removeEventListener("app:focussearch", handleFocusSearchEvent);
       globalThis.removeEventListener("app:togglesidebar", handleToggleSidebarEvent);
     };
-  }, [handleNavigate, handleNavigateToListSegment, handleStartFreshNewCase, setSidebarOpen, sidebarOpen]);
+  }, [handleNavigate, handleNavigateToListSegment, handleNewCase, setSidebarOpen, sidebarOpen]);
 
   const {
     showConnectModal,
@@ -340,22 +310,22 @@ export const AppContent = memo(function AppContent() {
       breadcrumbSourceView: detailsSourceView,
       sidebarOpen,
       onNavigate: handleNavigate,
-      onNewCase: handleStartFreshNewCase,
+      onNewCase: handleNewCase,
       onSidebarOpenChange: handleSidebarOpenChange,
       cases,
       hasLoadedData,
       onViewCase: handleViewCase,
     }),
-    [breadcrumbTitle, cases, currentView, detailsSourceView, handleNavigate, handleSidebarOpenChange, handleStartFreshNewCase, handleViewCase, hasLoadedData, sidebarOpen],
+    [breadcrumbTitle, cases, currentView, detailsSourceView, handleNavigate, handleSidebarOpenChange, handleNewCase, handleViewCase, hasLoadedData, sidebarOpen],
   );
 
   const viewHandlers = useMemo(
     () => ({
       handleViewCase,
-      handleNewCase: handleStartFreshNewCase,
+      handleNewCase,
       handleQuickAdd,
-      handleCancelNewCase: handleCancelImportedNewCase,
-      handleCompleteNewCase: handleCompleteImportedNewCase,
+      handleCancelNewCase,
+      handleCompleteNewCase,
       handleCloseNewCaseModal,
       handleBackToList,
       handleSaveCase,
@@ -376,9 +346,9 @@ export const AppContent = memo(function AppContent() {
       updateCasesStatus,
       updateCasesPriority,
       handleBulkResolveAlerts,
-      handleCancelImportedNewCase,
-      handleCompleteImportedNewCase,
-      handleStartFreshNewCase,
+      handleCancelNewCase,
+      handleCompleteNewCase,
+      handleNewCase,
       handleQuickAdd,
       handleSaveCase,
       handleViewCase,
@@ -458,14 +428,6 @@ export const AppContent = memo(function AppContent() {
       onUpdateCaseStatus: handleUpdateCaseStatus,
       onResolveAlert: handleResolveAlert,
       onAlertsCsvImported: handleAlertsCsvImported,
-      importDraft,
-      markdownImportState,
-      onOpenMarkdownImport: handleOpenMarkdownImport,
-      onMarkdownImportInputChange: handleMarkdownImportInputChange,
-      onCloseMarkdownImport: handleCloseMarkdownImport,
-      onConfirmMarkdownImport: handleConfirmMarkdownImport,
-      onClearMarkdownImport: handleClearMarkdownImport,
-      canConfirmMarkdownImport,
       requestedCaseListSegment,
       requestedCaseListSegmentKey,
       onRequestedCaseListSegmentApplied: handleConsumeRequestedCaseListSegment,
@@ -493,27 +455,19 @@ export const AppContent = memo(function AppContent() {
       financialFlow,
       handleAlertsCsvImported,
       handleDismissError,
-      handleOpenMarkdownImport,
-       handleMarkdownImportInputChange,
-       handleCloseMarkdownImport,
-       handleConfirmMarkdownImport,
-       handleClearMarkdownImport,
-       handleConsumeRequestedCaseListSegment,
-       handleResolveAlert,
-       handleUpdateCaseStatus,
-       importDraft,
-       markdownImportState,
-       noteFlow,
-       requestedCaseListSegment,
-       requestedCaseListSegmentKey,
-       refreshActivityLog,
-       selectedCase,
-       todayActivityReport,
+      handleConsumeRequestedCaseListSegment,
+      handleResolveAlert,
+      handleUpdateCaseStatus,
+      noteFlow,
+      requestedCaseListSegment,
+      requestedCaseListSegmentKey,
+      refreshActivityLog,
+      selectedCase,
+      todayActivityReport,
       viewHandlers,
       yesterdayActivityReport,
       getReportForDate,
       clearReportForDate,
-      canConfirmMarkdownImport,
     ],
   );
 
