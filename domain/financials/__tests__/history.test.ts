@@ -305,6 +305,26 @@ describe("financialHistory utilities", () => {
       // ASSERT
       expect(result).toEqual(latestEntry);
     });
+
+    it("uses createdAt as a deterministic tiebreaker when start dates match", () => {
+      // ARRANGE
+      const earlierEntry = createMockAmountHistoryEntry({
+        id: "entry-earlier",
+        startDate: "2026-03-24",
+        createdAt: "2026-03-24T08:00:00.000Z",
+      });
+      const laterEntry = createMockAmountHistoryEntry({
+        id: "entry-later",
+        startDate: "2026-03-24",
+        createdAt: "2026-03-24T12:00:00.000Z",
+      });
+
+      // ACT
+      const result = getLatestHistoryEntry([earlierEntry, laterEntry]);
+
+      // ASSERT
+      expect(result).toEqual(laterEntry);
+    });
   });
 
   describe("createHistoryEntry", () => {

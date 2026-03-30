@@ -83,7 +83,11 @@ export function sortHistoryEntries(entries: AmountHistoryEntry[]): AmountHistory
       return -1;
     }
 
-    return entryTimeB - entryTimeA;
+    if (entryTimeB !== entryTimeA) {
+      return entryTimeB - entryTimeA;
+    }
+
+    return compareCreatedAtDescending(a, b);
   });
 }
 
@@ -100,16 +104,26 @@ export function getLatestHistoryEntry(
 
   let latestEntry: AmountHistoryEntry | undefined;
   let latestTime = Number.NEGATIVE_INFINITY;
+  let latestCreatedAtTime = Number.NEGATIVE_INFINITY;
 
   for (const entry of entries) {
     const entryTime = getEntryStartTime(entry);
+    const entryCreatedAtTime = getEntryCreatedAtTime(entry);
 
-    if (entryTime === null || entryTime <= latestTime) {
+    if (entryTime === null) {
+      continue;
+    }
+
+    if (
+      entryTime < latestTime ||
+      (entryTime === latestTime && entryCreatedAtTime <= latestCreatedAtTime)
+    ) {
       continue;
     }
 
     latestEntry = entry;
     latestTime = entryTime;
+    latestCreatedAtTime = entryCreatedAtTime;
   }
 
   return latestEntry;
@@ -118,6 +132,18 @@ export function getLatestHistoryEntry(
 function getEntryStartTime(entry: Pick<AmountHistoryEntry, "startDate">): number | null {
   const parsedDate = parseLocalDate(entry.startDate);
   return parsedDate ? parsedDate.getTime() : null;
+}
+
+function getEntryCreatedAtTime(entry: Pick<AmountHistoryEntry, "createdAt">): number {
+  const parsedDate = parseLocalDate(entry.createdAt);
+  return parsedDate ? parsedDate.getTime() : Number.NEGATIVE_INFINITY;
+}
+
+function compareCreatedAtDescending(
+  entryA: Pick<AmountHistoryEntry, "createdAt">,
+  entryB: Pick<AmountHistoryEntry, "createdAt">
+): number {
+  return getEntryCreatedAtTime(entryB) - getEntryCreatedAtTime(entryA);
 }
 
 /**
