@@ -268,7 +268,7 @@ export function EncryptionProvider({ children }: Readonly<EncryptionProviderProp
         return false;
       }
     },
-    [encryptionMode, isEncryptionEnabled]
+    [encryptionMode]
   );
 
   /**
