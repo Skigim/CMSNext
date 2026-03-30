@@ -1,8 +1,26 @@
-import { FileText, FileCheck, FileSignature } from "lucide-react";
+import { Copy, FileText, FileCheck, FileSignature } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../ui/card";
 import { TemplateEditor } from "./TemplateEditor";
 import { SortableSummaryTemplates } from "./SortableSummaryTemplates";
 import { useTemplates } from "@/contexts/TemplateContext";
+import {
+  TEMPLATE_PLACEHOLDER_FIELDS,
+  type PlaceholderField,
+} from "@/types/template";
+
+const VR_FOOTER_PLACEHOLDER_FIELDS = Object.fromEntries(
+  Object.entries(TEMPLATE_PLACEHOLDER_FIELDS)
+    .filter(([, field]) => field.availableFor.includes("vr"))
+    .map(([key, field]) => [
+      key,
+      {
+        ...field,
+        availableFor: field.availableFor.includes("vrFooter")
+          ? field.availableFor
+          : [...field.availableFor, "vrFooter"],
+      },
+    ]),
+) as Record<string, PlaceholderField>;
 
 /**
  * TemplatesPanel - Consolidated text generation templates management
@@ -46,6 +64,7 @@ export function TemplatesPanel() {
                 <p><strong>Available template types:</strong></p>
                 <ul className="list-disc list-inside ml-2 space-y-0.5">
                   <li>VR Scripts - Verification Request templates</li>
+                  <li>VR Copy Footer - Optional footer appended when copying generated VR text</li>
                   <li>Case Summaries - Configurable case information exports</li>
                   <li>Narratives - Case note and narrative templates</li>
                 </ul>
@@ -71,6 +90,28 @@ export function TemplatesPanel() {
           <TemplateEditor
             category="vr"
             isGloballyLoading={loading}
+          />
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <div className="flex items-center gap-2">
+            <Copy className="h-5 w-5 text-primary" />
+            <CardTitle>VR Copy Footer</CardTitle>
+          </div>
+          <CardDescription>
+            Customize the footer appended when you copy generated VR text. This footer is
+            rendered from a template using case, person, and date placeholders, and only one
+            footer template is used at a time.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <TemplateEditor
+            category="vrFooter"
+            customPlaceholders={VR_FOOTER_PLACEHOLDER_FIELDS}
+            isGloballyLoading={loading}
+            maxTemplates={1}
           />
         </CardContent>
       </Card>

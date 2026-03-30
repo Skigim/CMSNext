@@ -55,6 +55,7 @@ vi.mock("@/utils/logger", () => ({
 
 import { VRGeneratorModal } from "@/components/case/VRGeneratorModal";
 import { clickToCopy } from "@/utils/clipboard";
+import { renderTemplate } from "@/utils/vrGenerator";
 import type { StoredCase, StoredFinancialItem } from "@/types/case";
 import type { Template } from "@/types/template";
 import {
@@ -119,10 +120,11 @@ const mockTemplates: Template[] = [
   },
 ];
 
-const VR_COPY_FOOTER = "Please return the requested verification as soon as possible.\n\nThank you.";
+const DEFAULT_VR_COPY_FOOTER =
+  "Please return the requested verification as soon as possible.\n\nThank you.";
 
 describe("VRGeneratorModal - keyboard accessibility", () => {
-  function renderVRGeneratorModal() {
+  function renderVRGeneratorModal(footerTemplate?: Template | null) {
     return render(
       <VRGeneratorModal
         open={true}
@@ -130,12 +132,14 @@ describe("VRGeneratorModal - keyboard accessibility", () => {
         storedCase={mockCase}
         financialItems={mockFinancialItems}
         vrTemplates={mockTemplates}
+        footerTemplate={footerTemplate}
       />,
     );
   }
 
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.mocked(renderTemplate).mockReturnValue("Template output");
   });
 
   it("renders the modal when open", () => {
@@ -211,7 +215,7 @@ describe("VRGeneratorModal - keyboard accessibility", () => {
 
     // ASSERT
     expect(clickToCopy).toHaveBeenCalledWith(
-      `Template output\n\n${VR_COPY_FOOTER}`,
+      `Template output\n\n${DEFAULT_VR_COPY_FOOTER}`,
       {
         successMessage: "VR copied to clipboard",
         errorMessage: "Failed to copy to clipboard",
@@ -231,6 +235,35 @@ describe("VRGeneratorModal - keyboard accessibility", () => {
 
     // ASSERT
     expect(clickToCopy).toHaveBeenCalledWith("Template output", {
+      successMessage: "VR copied to clipboard",
+      errorMessage: "Failed to copy to clipboard",
+    });
+  });
+
+  it("uses the configured footer template preview and copy text when provided", async () => {
+    // ARRANGE
+    const footerTemplate: Template = {
+      id: "footer-1",
+      name: "Custom Footer",
+      category: "vrFooter",
+      template: "Handled by {caseName}",
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      sortOrder: 0,
+    };
+    vi.mocked(renderTemplate).mockReturnValue("Handled by Test Case");
+    const user = userEvent.setup();
+    renderVRGeneratorModal(footerTemplate);
+
+    // ASSERT
+    expect(screen.getByText(/Handled by Test Case/i)).toBeInTheDocument();
+
+    // ACT
+    await user.type(screen.getByLabelText("Preview"), "Template output");
+    await user.click(screen.getByRole("button", { name: "Copy to Clipboard" }));
+
+    // ASSERT
+    expect(clickToCopy).toHaveBeenCalledWith("Template output\n\nHandled by Test Case", {
       successMessage: "VR copied to clipboard",
       errorMessage: "Failed to copy to clipboard",
     });

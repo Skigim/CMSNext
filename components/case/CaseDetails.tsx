@@ -102,6 +102,10 @@ export function CaseDetails(props: Readonly<CaseDetailsProps>) {
   // Get VR templates from unified template system
   const { getTemplatesByCategory } = useTemplates();
   const vrTemplates = useMemo(() => getTemplatesByCategory('vr'), [getTemplatesByCategory]);
+  const vrFooterTemplate = useMemo(
+    () => getTemplatesByCategory("vrFooter")[0] ?? null,
+    [getTemplatesByCategory],
+  );
   const primaryPerson = getPrimaryCasePersonForDisplay(caseData);
   const primaryPersonRef = getPrimaryCasePersonRef(caseData);
   const resolvedPrimaryPersonId = primaryPersonRef?.personId ?? primaryPerson?.id;
@@ -473,6 +477,7 @@ export function CaseDetails(props: Readonly<CaseDetailsProps>) {
         storedCase={caseData}
         financialItems={financialItemsList}
         vrTemplates={vrTemplates}
+        footerTemplate={vrFooterTemplate}
       />
 
       <NarrativeGeneratorModal

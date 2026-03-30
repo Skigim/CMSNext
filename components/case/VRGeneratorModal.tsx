@@ -42,6 +42,7 @@ interface VRGeneratorModalProps {
   storedCase: StoredCase;
   financialItems: StoredFinancialItem[];
   vrTemplates: Template[];
+  footerTemplate?: Template | null;
 }
 
 export function VRGeneratorModal({
@@ -50,6 +51,7 @@ export function VRGeneratorModal({
   storedCase,
   financialItems,
   vrTemplates,
+  footerTemplate = null,
 }: Readonly<VRGeneratorModalProps>) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -59,16 +61,22 @@ export function VRGeneratorModal({
           storedCase={storedCase}
           financialItems={financialItems}
           vrTemplates={vrTemplates}
+          footerTemplate={footerTemplate}
         />
       ) : null}
     </Dialog>
   );
 }
 
-const VR_COPY_FOOTER = "Please return the requested verification as soon as possible.\n\nThank you.";
+export const DEFAULT_VR_COPY_FOOTER =
+  "Please return the requested verification as soon as possible.\n\nThank you.";
 
-function buildVRClipboardText(renderedText: string, includeFooter: boolean): string {
-  if (!includeFooter) {
+function buildVRClipboardText(
+  renderedText: string,
+  footerText: string,
+  includeFooter: boolean,
+): string {
+  if (!includeFooter || footerText.trim().length === 0) {
     return renderedText;
   }
 
@@ -80,7 +88,7 @@ function buildVRClipboardText(renderedText: string, includeFooter: boolean): str
     separator = renderedText.endsWith("\n") ? "\n" : "\n\n";
   }
 
-  return `${renderedText}${separator}${VR_COPY_FOOTER}`;
+  return `${renderedText}${separator}${footerText}`;
 }
 
 function VRGeneratorModalContent({
@@ -88,6 +96,7 @@ function VRGeneratorModalContent({
   storedCase,
   financialItems,
   vrTemplates,
+  footerTemplate,
 }: Readonly<Omit<VRGeneratorModalProps, "open">>) {
   // Local state
   const [selectedScriptId, setSelectedScriptId] = useState<string | null>(
@@ -96,6 +105,7 @@ function VRGeneratorModalContent({
   const [selectedItemIds, setSelectedItemIds] = useState<Set<string>>(new Set());
   const [renderedText, setRenderedText] = useState("");
   const [includeFooterOnCopy, setIncludeFooterOnCopy] = useState(true);
+  const caseContext = useMemo(() => buildCaseLevelContext(storedCase), [storedCase]);
 
   // Build selectable items list
   const selectableItems = useMemo(() => {
@@ -107,6 +117,14 @@ function VRGeneratorModalContent({
   }, [financialItems, selectedItemIds]);
 
   const selectedScript = vrTemplates.find(s => s.id === selectedScriptId);
+  const copyFooterText = useMemo(() => {
+    if (!footerTemplate) {
+      return DEFAULT_VR_COPY_FOOTER;
+    }
+
+    return renderTemplate(footerTemplate.template, caseContext);
+  }, [caseContext, footerTemplate]);
+  const hasCopyFooterText = copyFooterText.trim().length > 0;
   const totalItems = selectableItems.length;
   const selectedCount = selectableItems.filter(i => i.selected).length;
   const allSelected = selectedCount === totalItems && totalItems > 0;
@@ -153,7 +171,6 @@ function VRGeneratorModalContent({
       );
     } else if (storedCase) {
       // No items selected - render with case-level placeholders filled
-      const caseContext = buildCaseLevelContext(storedCase);
       textToAdd = renderTemplate(selectedScript.template, caseContext);
     }
 
@@ -165,19 +182,19 @@ function VRGeneratorModalContent({
     }
 
     toast.success("Script added");
-  }, [selectedScript, selectableItems, renderedText, storedCase]);
+  }, [caseContext, selectedScript, selectableItems, renderedText, storedCase]);
 
-  const handleCopy = async () => {
+  const handleCopy = useCallback(async () => {
     if (!renderedText) {
       toast.error("Nothing to copy");
       return;
     }
 
-    await clickToCopy(buildVRClipboardText(renderedText, includeFooterOnCopy), {
+    await clickToCopy(buildVRClipboardText(renderedText, copyFooterText, includeFooterOnCopy), {
       successMessage: "VR copied to clipboard",
       errorMessage: "Failed to copy to clipboard",
     });
-  };
+  }, [copyFooterText, includeFooterOnCopy, renderedText]);
 
   const getItemTypeLabel = (type: "resources" | "income" | "expenses") => {
     const labels = {
@@ -369,9 +386,9 @@ function VRGeneratorModalContent({
                       id="vr-copy-footer-help"
                       className="whitespace-pre-line text-xs text-muted-foreground"
                     >
-                      Adds this footer to clipboard text only:
-                      {"\n"}
-                      {VR_COPY_FOOTER}
+                      {hasCopyFooterText
+                        ? `Adds this footer to clipboard text only:\n${copyFooterText}`
+                        : "Footer template is currently blank. Update it in Settings → Templates if you want copy actions to append footer text."}
                     </p>
                   </div>
                 </div>
