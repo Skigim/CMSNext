@@ -1,8 +1,25 @@
 import { act, renderHook } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+const mockToast = vi.hoisted(() => ({
+  success: vi.fn(),
+  error: vi.fn(),
+  info: vi.fn(),
+  warning: vi.fn(),
+  loading: vi.fn(),
+  dismiss: vi.fn(),
+}));
+
+vi.mock("sonner", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("sonner")>();
+  return {
+    ...actual,
+    toast: mockToast,
+  };
+});
+
 import { useCaseArchival } from "@/hooks/useCaseArchival";
-import { createMockDataManager, toast as mockToast } from "@/src/test/testUtils";
+import { createMockDataManager } from "@/src/test/testUtils";
 import type { DataManager } from "@/utils/DataManager";
 import type { RefreshQueueResult } from "@/utils/services/CaseArchiveService";
 

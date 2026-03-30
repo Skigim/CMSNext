@@ -3,7 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { CaseList } from "@/components/case/CaseList";
 import { render } from "@/src/test/reactTestUtils";
-import { createMockCaseDisplay } from "@/src/test/testUtils";
+import { createMockCaseDisplay, createMockStoredCase } from "@/src/test/testUtils";
 
 /**
  * CaseList Integration Tests
@@ -144,12 +144,12 @@ describe("CaseList status interactions", () => {
 
   it("applies a requested archival-review segment and filters to pending archival cases", async () => {
     // ARRANGE
-    const pendingCase = createMockCaseDisplay({
+    const pendingCase = createMockStoredCase({
       id: "case-pending",
       name: "Pending Archival",
       pendingArchival: true,
     });
-    const regularCase = createMockCaseDisplay({
+    const regularCase = createMockStoredCase({
       id: "case-regular",
       name: "Regular Case",
       pendingArchival: false,
@@ -171,7 +171,7 @@ describe("CaseList status interactions", () => {
 
     // ACT & ASSERT
     await waitFor(() => {
-      expect(screen.getByRole("button", { name: /archival review/i })).toHaveAttribute("aria-pressed", "true");
+      expect(screen.getByText(/Showing 1–1 of 1 cases/)).toBeInTheDocument();
     });
     expect(screen.getByText("Pending Archival")).toBeInTheDocument();
     expect(screen.queryByText("Regular Case")).not.toBeInTheDocument();
