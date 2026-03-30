@@ -10,6 +10,7 @@ import type {
   FinancialItem,
 } from "../../types/case";
 import type { ItemFormState, FinancialFormData, FinancialFormErrors } from "../../hooks/useFinancialItemFlow";
+import type { CaseListSegment } from "@/hooks/useCaseListPreferences";
 import type { AlertsIndex, AlertWithMatch } from "../../utils/alertsData";
 import type { CaseActivityLogState } from "../../types/activityLog";
 import { Alert, AlertTitle, AlertDescription } from "../ui/alert";
@@ -67,6 +68,8 @@ export interface CaseWorkspaceProps {
   onConfirmMarkdownImport: () => void;
   onClearMarkdownImport: () => void;
   canConfirmMarkdownImport: boolean;
+  requestedCaseListSegment?: CaseListSegment | null;
+  requestedCaseListSegmentKey?: number;
 }
 
 /**
@@ -96,6 +99,8 @@ export const CaseWorkspace = memo(function CaseWorkspace({
   onConfirmMarkdownImport,
   onClearMarkdownImport,
   canConfirmMarkdownImport,
+  requestedCaseListSegment,
+  requestedCaseListSegmentKey,
 }: CaseWorkspaceProps) {
   return (
     <AppNavigationShell {...navigation}>
@@ -150,6 +155,8 @@ export const CaseWorkspace = memo(function CaseWorkspace({
         handleConfirmMarkdownImport={onConfirmMarkdownImport}
         handleClearMarkdownImport={onClearMarkdownImport}
         canConfirmMarkdownImport={canConfirmMarkdownImport}
+        requestedCaseListSegment={requestedCaseListSegment}
+        requestedCaseListSegmentKey={requestedCaseListSegmentKey}
         activityLogState={activityLogState}
       />
 

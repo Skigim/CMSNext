@@ -179,6 +179,31 @@ describe("useNavigationFlow", () => {
     );
   });
 
+  it("tracks an archival-review list segment request without changing normal list navigation", () => {
+    // ARRANGE
+    const { result } = renderNavigationFlow();
+
+    // ACT
+    act(() => {
+      result.current.navigateToListSegment("archival-review");
+    });
+
+    // ASSERT
+    expect(result.current.currentView).toBe("list");
+    expect(result.current.requestedCaseListSegment).toBe("archival-review");
+    expect(result.current.requestedCaseListSegmentKey).toBe(1);
+
+    // ACT
+    act(() => {
+      result.current.navigate("list");
+    });
+
+    // ASSERT
+    expect(result.current.currentView).toBe("list");
+    expect(result.current.requestedCaseListSegment).toBeNull();
+    expect(result.current.requestedCaseListSegmentKey).toBe(1);
+  });
+
   it("opens Quick Add without leaving the current view", () => {
     // ARRANGE
     const { result } = renderNavigationFlow();

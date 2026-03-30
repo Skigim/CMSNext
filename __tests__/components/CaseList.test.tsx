@@ -1,4 +1,4 @@
-import { screen, within } from "@testing-library/react";
+import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { CaseList } from "@/components/case/CaseList";
@@ -140,6 +140,41 @@ describe("CaseList status interactions", () => {
 
     // ASSERT
     expect(screen.getByText("Needs Intake")).toBeInTheDocument();
+  });
+
+  it("applies a requested archival-review segment and filters to pending archival cases", async () => {
+    // ARRANGE
+    const pendingCase = createMockCaseDisplay({
+      id: "case-pending",
+      name: "Pending Archival",
+      pendingArchival: true,
+    });
+    const regularCase = createMockCaseDisplay({
+      id: "case-regular",
+      name: "Regular Case",
+      pendingArchival: false,
+    });
+
+    render(
+      <CaseList
+        cases={[pendingCase, regularCase]}
+        onViewCase={vi.fn()}
+        onNewCase={vi.fn()}
+        alertsSummary={undefined}
+        alertsByCaseId={new Map()}
+        alerts={[]}
+        requestedSegment="archival-review"
+        requestedSegmentKey={1}
+      />,
+      { categoryConfig: testCategoryConfig }
+    );
+
+    // ACT & ASSERT
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: /archival review/i })).toHaveAttribute("aria-pressed", "true");
+    });
+    expect(screen.getByText("Pending Archival")).toBeInTheDocument();
+    expect(screen.queryByText("Regular Case")).not.toBeInTheDocument();
   });
 });
 

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigationLock, type NavigationLock } from "./useNavigationLock";
 import { useNavigationActions, RESTRICTED_VIEWS, type FormState } from "./useNavigationActions";
+import type { CaseListSegment } from "./useCaseListPreferences";
 import { NewCaseRecordData, NewPersonData, StoredCase } from "../types/case";
 import { AppView } from "../types/view";
 import type { FileStorageLifecycleSelectors } from "../contexts/FileStorageContext";
@@ -26,8 +27,11 @@ interface NavigationHandlers {
   breadcrumbTitle?: string;
   /** The view from which the user navigated to case details (for breadcrumb context) */
   detailsSourceView?: AppView;
+  requestedCaseListSegment: CaseListSegment | null;
+  requestedCaseListSegmentKey: number;
   navigationLock: NavigationLock;
   navigate: (view: AppView) => void;
+  navigateToListSegment: (segment: CaseListSegment) => void;
   viewCase: (caseId: string) => void;
   newCase: () => void;
   quickAdd: () => void;
@@ -100,6 +104,8 @@ export function useNavigationFlow({
   const [showNewCaseModal, setShowNewCaseModal] = useState(false);
   const [formState, setFormState] = useState<FormState>({ previousView: "list" });
   const [sidebarOpen, setSidebarOpen] = useState<boolean>(true);
+  const [requestedCaseListSegment, setRequestedCaseListSegment] = useState<CaseListSegment | null>(null);
+  const [requestedCaseListSegmentKey, setRequestedCaseListSegmentKey] = useState(0);
   const forcedViewRef = useRef<AppView | null>(null);
 
   // Lock state from connection
@@ -135,6 +141,17 @@ export function useNavigationFlow({
     deleteCase,
     logCaseView,
   });
+
+  const navigate = useCallback((view: AppView) => {
+    setRequestedCaseListSegment(null);
+    actions.navigate(view);
+  }, [actions]);
+
+  const navigateToListSegment = useCallback((segment: CaseListSegment) => {
+    setRequestedCaseListSegment(segment);
+    setRequestedCaseListSegmentKey((currentKey) => currentKey + 1);
+    actions.navigate("list");
+  }, [actions]);
 
   // Auto-redirect when locked/unlocked
   // Loop-safe: When locked + currentView ∈ RESTRICTED_VIEWS, we set currentView to "settings"
@@ -174,8 +191,12 @@ export function useNavigationFlow({
     sidebarOpen,
     breadcrumbTitle,
     detailsSourceView: formState.detailsSourceView,
+    requestedCaseListSegment,
+    requestedCaseListSegmentKey,
     navigationLock,
     setSidebarOpen,
     ...actions,
+    navigate,
+    navigateToListSegment,
   };
 }

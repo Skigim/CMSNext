@@ -421,6 +421,8 @@ interface CaseListProps {
   onApproveArchival?: (caseIds: string[]) => Promise<unknown>;
   onCancelArchival?: (caseIds: string[]) => Promise<unknown>;
   isArchiving?: boolean;
+  requestedSegment?: CaseListSegment;
+  requestedSegmentKey?: number;
 }
 
 // NOSONAR - Component intentionally coordinates list state, selection, and pagination in one container.
@@ -443,6 +445,8 @@ export function CaseList({
   onApproveArchival,
   onCancelArchival,
   isArchiving = false,
+  requestedSegment,
+  requestedSegmentKey,
 }: Readonly<CaseListProps>) {
   const { featureFlags } = useAppViewState();
   const showDevTools = isFeatureEnabled("settings.devTools", featureFlags);
@@ -640,6 +644,12 @@ export function CaseList({
   useEffect(() => {
     setCurrentPage(1);
   }, [searchTerm, segment, filters, sortConfigs]);
+
+  useEffect(() => {
+    if (requestedSegment) {
+      setSegment(requestedSegment);
+    }
+  }, [requestedSegment, requestedSegmentKey, setSegment]);
 
   const noMatches = segment === "alerts" ? totalAlertRows === 0 : sortedCases.length === 0;
 

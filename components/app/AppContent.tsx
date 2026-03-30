@@ -24,6 +24,7 @@ import { useAppContentViewModel } from "./useAppContentViewModel";
 import { formatCaseDisplayName } from "../../domain/cases";
 import type { CaseCategory, StoredCase, FinancialItem, NewNoteData } from "../../types/case";
 import type { AlertWithMatch } from "../../utils/alertsData";
+import type { CaseListSegment } from "@/hooks/useCaseListPreferences";
 
 export const AppContent = memo(function AppContent() {
   const { isSupported, hasStoredHandle, service, fileStorageService } = useFileStorage();
@@ -93,7 +94,10 @@ export const AppContent = memo(function AppContent() {
     sidebarOpen,
     breadcrumbTitle,
     detailsSourceView,
+    requestedCaseListSegment,
+    requestedCaseListSegmentKey,
     navigate: handleNavigate,
+    navigateToListSegment: handleNavigateToListSegment,
     viewCase: handleViewCase,
     newCase: handleNewCase,
     quickAdd: handleQuickAdd,
@@ -139,9 +143,12 @@ export const AppContent = memo(function AppContent() {
   // Listen for keyboard shortcut navigation events from App.tsx
   useEffect(() => {
     const handleNavigationEvent = (e: Event) => {
-      const path = (e as CustomEvent).detail?.path;
+      const detail = (e as CustomEvent<{ path?: string; caseListSegment?: CaseListSegment }>).detail;
+      const path = detail?.path;
       if (path === "/dashboard") handleNavigate("dashboard");
-      else if (path === "/cases") handleNavigate("list");
+      else if (path === "/cases" && detail?.caseListSegment === "archival-review") {
+        handleNavigateToListSegment("archival-review");
+      } else if (path === "/cases") handleNavigate("list");
       else if (path === "/settings") handleNavigate("settings");
     };
 
@@ -170,7 +177,7 @@ export const AppContent = memo(function AppContent() {
       globalThis.removeEventListener("app:focussearch", handleFocusSearchEvent);
       globalThis.removeEventListener("app:togglesidebar", handleToggleSidebarEvent);
     };
-  }, [handleNavigate, handleStartFreshNewCase, setSidebarOpen, sidebarOpen]);
+  }, [handleNavigate, handleNavigateToListSegment, handleStartFreshNewCase, setSidebarOpen, sidebarOpen]);
 
   const {
     showConnectModal,
@@ -458,6 +465,8 @@ export const AppContent = memo(function AppContent() {
       onConfirmMarkdownImport: handleConfirmMarkdownImport,
       onClearMarkdownImport: handleClearMarkdownImport,
       canConfirmMarkdownImport,
+      requestedCaseListSegment,
+      requestedCaseListSegmentKey,
       activityLogState: {
         activityLog,
         dailyReports: dailyActivityReports,
@@ -487,13 +496,15 @@ export const AppContent = memo(function AppContent() {
       handleCloseMarkdownImport,
       handleConfirmMarkdownImport,
       handleClearMarkdownImport,
-      handleResolveAlert,
-      handleUpdateCaseStatus,
-      importDraft,
-      markdownImportState,
-      noteFlow,
-      refreshActivityLog,
-      selectedCase,
+       handleResolveAlert,
+       handleUpdateCaseStatus,
+       importDraft,
+       markdownImportState,
+       noteFlow,
+       requestedCaseListSegment,
+       requestedCaseListSegmentKey,
+       refreshActivityLog,
+       selectedCase,
       todayActivityReport,
       viewHandlers,
       yesterdayActivityReport,
