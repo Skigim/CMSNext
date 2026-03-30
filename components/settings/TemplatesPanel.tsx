@@ -10,14 +10,14 @@ import {
 
 const VR_FOOTER_PLACEHOLDER_FIELDS = Object.fromEntries(
   Object.entries(TEMPLATE_PLACEHOLDER_FIELDS)
-    .filter(([, field]) =>
-      ["Case", "Person", "System"].includes(field.fieldCategory),
-    )
+    .filter(([, field]) => field.availableFor.includes("vr"))
     .map(([key, field]) => [
       key,
       {
         ...field,
-        availableFor: ["vrFooter"],
+        availableFor: field.availableFor.includes("vrFooter")
+          ? field.availableFor
+          : [...field.availableFor, "vrFooter"],
       },
     ]),
 ) as Record<string, PlaceholderField>;
