@@ -130,15 +130,23 @@ function deriveDefaultAppEnvironment(env: AppConfigEnvSource): AppEnvironment {
   const isDev = normalizeEnvValue(env.DEV) === "true";
   const isProd = normalizeEnvValue(env.PROD) === "true";
 
-  if (mode === "development" || isDev) {
-    return "dev";
-  }
-
+  // Treat any explicit production signal as production.
   if (mode === "production" || nodeEnv === "production" || isProd) {
     return "production";
   }
 
-  return "production";
+  // Treat typical dev/test signals as development.
+  if (
+    mode === "development" ||
+    nodeEnv === "development" ||
+    nodeEnv === "test" ||
+    isDev
+  ) {
+    return "dev";
+  }
+
+  // Fallback to a safe non-production default when environment is ambiguous.
+  return "dev";
 }
 
 export function validateAppConfig(config: AppConfig): void {
