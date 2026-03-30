@@ -1,4 +1,4 @@
-import { screen, waitFor, within } from "@testing-library/react";
+import { act, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { CaseList } from "@/components/case/CaseList";
@@ -145,7 +145,6 @@ describe("CaseList status interactions", () => {
 
   it("applies a requested archival-review segment and filters to pending archival cases", async () => {
     // ARRANGE
-    vi.useFakeTimers();
     const pendingCase = createMockStoredCase({
       id: "case-pending",
       name: "Pending Archival",
@@ -181,8 +180,10 @@ describe("CaseList status interactions", () => {
     expect(screen.queryByText("Regular Case")).not.toBeInTheDocument();
     expect(onRequestedSegmentApplied).toHaveBeenCalledWith(1);
 
-    act(() => {
-      vi.advanceTimersByTime(300);
+    await act(async () => {
+      await new Promise((resolve) => {
+        globalThis.setTimeout(resolve, 350);
+      });
     });
 
     const savedPreferences = globalThis.localStorage.getItem("cmsnext-case-list-preferences");
