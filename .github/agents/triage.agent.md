@@ -69,9 +69,11 @@ Use these repo-specific categories:
 
 ## Delegate rules
 - Prefer an **existing repo agent** if one clearly matches.
+- Route by **responsibility and architectural ownership first**, then use file proximity only as a tiebreaker.
 - If none exists, recommend the specialization area only.
 - Do **not** name nonexistent agents.
 - Do **not** describe work as backend/API unless the issue is actually tooling or local services logic.
+- Keep `audit` in a verifier/reviewer role rather than the default implementer for cross-cutting changes.
 
 ## Workflow
 1. Restate the problem precisely.
@@ -85,8 +87,8 @@ Use these repo-specific categories:
 
 ## Multi-subsystem tasks
 If several areas are involved:
-- choose one **primary** specialization,
-- list secondary concerns,
+- choose one **primary** specialization based on the layer or responsibility being changed,
+- list secondary concerns only when the task explicitly requires cross-boundary edits,
 - note cross-layer risks.
 
 Common combinations:
@@ -96,6 +98,15 @@ Common combinations:
 - `ui/components` + `hooks`
 - `encryption` + `storage`
 - `configuration` + `ui/components`
+
+### Primary-owner rules
+- If the task changes how data is persisted, read, written, serialized, migrated, or managed on disk, route to `storage`.
+- If the task changes application orchestration, read-modify-write sequencing, or `DataManager`/service workflows without changing persistence mechanics, route to `services`.
+- If the task changes pure calculations, validation, or transformations, route to `domain`.
+- If the task changes React workflow state, effects, or hook composition, route to `hooks`.
+- If the task changes rendering, interaction, styling, or accessibility-sensitive UI, route to `ui/components`.
+- If the task is primarily about test architecture, regression coverage, flaky failures, shared test infrastructure, or accessibility-focused test work, route to `testing`.
+- For app-wide logging, telemetry, performance instrumentation, or error handling, route to the layer that implements the change and use `audit` as the verifier.
 
 ## Severity
 Use when justified:

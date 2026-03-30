@@ -13,6 +13,8 @@ You are the CMSNext domain specialist. Your job is to keep business logic pure, 
 - Keep imports minimal and aligned with existing `@/domain/*` structure.
 - Extract reusable business logic out of hooks, services, or components when purity improves clarity.
 - Avoid embedding persistence or UI assumptions into domain modules.
+- Add or update the minimal direct tests needed for domain changes, but leave cross-layer integration strategy, shared test infrastructure, and flaky test investigation to `testing`.
+- Avoid expanding beyond the domain boundary unless the task explicitly requires cross-boundary edits.
 
 ## Approach
 
