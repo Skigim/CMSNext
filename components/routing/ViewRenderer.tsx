@@ -5,6 +5,7 @@ import type { CaseActivityLogState } from "../../types/activityLog";
 import { exportCasesToJSON, triggerImportDialog, triggerAlertsCsvImport } from "../../utils/dataExportImport";
 import { caseNeedsIntake } from "@/domain/cases";
 import type { IntakeFormData } from "@/domain/validation/intake.schema";
+import type { CaseListSegment } from "@/hooks/useCaseListPreferences";
 
 // Direct imports for high-turnover components - no lazy loading for snappiness
 import { Dashboard } from "../app/Dashboard";
@@ -72,6 +73,9 @@ interface ViewRendererProps extends CaseViewHandlers {
   handleConfirmMarkdownImport: () => void;
   handleClearMarkdownImport: () => void;
   canConfirmMarkdownImport: boolean;
+  requestedCaseListSegment?: CaseListSegment | null;
+  requestedCaseListSegmentKey?: number;
+  onRequestedCaseListSegmentApplied?: (requestKey: number) => void;
 }
 
 function DetailsViewContent({
@@ -186,6 +190,9 @@ export function ViewRenderer({
   handleConfirmMarkdownImport: _handleConfirmMarkdownImport,
   handleClearMarkdownImport: _handleClearMarkdownImport,
   canConfirmMarkdownImport: _canConfirmMarkdownImport,
+  requestedCaseListSegment,
+  requestedCaseListSegmentKey,
+  onRequestedCaseListSegmentApplied,
 }: Readonly<ViewRendererProps>) {
   
   switch (currentView) {
@@ -229,6 +236,9 @@ export function ViewRenderer({
           onQuickAdd={handleQuickAdd}
           onResolveAlert={handleResolveAlert}
           onUpdateCaseStatus={handleUpdateCaseStatus}
+          requestedSegment={requestedCaseListSegment ?? undefined}
+          requestedSegmentKey={requestedCaseListSegmentKey}
+          onRequestedSegmentApplied={onRequestedCaseListSegmentApplied}
         />
       );
 

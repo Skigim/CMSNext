@@ -15,6 +15,19 @@ import type { ArchiveFileInfo, CaseArchiveData, ArchiveResult, RestoreResult } f
 import { createDataManagerGuard } from '@/utils/guardUtils';
 
 const NOT_AVAILABLE_MSG = 'Data storage is not available. Please connect to a folder first.';
+const APP_NAVIGATE_EVENT = 'app:navigate';
+const ARCHIVAL_REVIEW_SEGMENT = 'archival-review';
+
+function dispatchArchivalReviewNavigation(): void {
+  globalThis.dispatchEvent(
+    new CustomEvent(APP_NAVIGATE_EVENT, {
+      detail: {
+        path: '/cases',
+        caseListSegment: ARCHIVAL_REVIEW_SEGMENT,
+      },
+    }),
+  );
+}
 
 export interface CaseArchivalConfig {
   dataManager: DataManager | null;
@@ -110,9 +123,7 @@ export function useCaseArchival(config: CaseArchivalConfig) {
           description: 'Review in the Archival Review tab',
           action: {
             label: 'View',
-            onClick: () => {
-              // This will be handled by the UI component that receives this hook
-            },
+            onClick: dispatchArchivalReviewNavigation,
           },
         });
         onCasesChanged?.();
