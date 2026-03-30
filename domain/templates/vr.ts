@@ -16,6 +16,7 @@ import type {
 } from "@/types/template";
 import { TEMPLATE_PLACEHOLDER_FIELDS } from "@/types/template";
 import { parseLocalDate, formatDateForDisplay, formatPhoneNumber } from "@/domain/common";
+import { getLatestHistoryEntry } from "@/domain/financials";
 
 // ============================================================================
 // Date Formatting Helpers
@@ -110,16 +111,6 @@ function formatAddress(person?: Person): string {
 // Financial Item Helpers
 // ============================================================================
 
-/**
- * Get the most recent amount history entry.
- */
-function getLatestHistoryEntry(item: FinancialItem) {
-  if (!item.amountHistory?.length) return null;
-  return [...item.amountHistory].sort(
-    (a, b) => new Date(b.startDate).getTime() - new Date(a.startDate).getTime()
-  )[0];
-}
-
 // ============================================================================
 // Context Builders
 // ============================================================================
@@ -187,7 +178,7 @@ export function buildRenderContext(
   storedCase: StoredCase
 ): TemplateRenderContext {
   const { caseRecord, person } = storedCase;
-  const latestHistory = getLatestHistoryEntry(item);
+  const latestHistory = getLatestHistoryEntry(item.amountHistory);
 
   // Get the date to use for "last updated" - prefer history entry date
   const lastUpdatedDate = latestHistory?.startDate || item.dateAdded;

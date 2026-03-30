@@ -12,6 +12,7 @@
  */
 
 import type { FinancialItem } from "@/types/case";
+import { getLatestHistoryEntry } from "@/domain/financials";
 
 export interface NormalizedItem {
   displayName: string;
@@ -49,29 +50,12 @@ const generateFallbackId = (): string => {
 };
 
 /**
- * Get the most recent date from amount history entries
- * Returns the latest startDate from the history, or null if no history
- */
-const getMostRecentHistoryDate = (amountHistory?: { startDate: string }[]): string | null => {
-  if (!amountHistory || amountHistory.length === 0) {
-    return null;
-  }
-
-  // Find the entry with the most recent startDate
-  const sorted = [...amountHistory].sort(
-    (a, b) => new Date(b.startDate).getTime() - new Date(a.startDate).getTime(),
-  );
-
-  return sorted[0].startDate;
-};
-
-/**
  * Normalize financial item data with backward compatibility fallbacks
  * @deprecated Remove when legacy data migration is complete
  */
 export const getNormalizedItem = (sourceItem: FinancialItem): NormalizedItem => {
   // Use most recent history entry date, fallback to dateAdded, then 'No date'
-  const historyDate = getMostRecentHistoryDate(sourceItem.amountHistory);
+  const historyDate = getLatestHistoryEntry(sourceItem.amountHistory)?.startDate ?? null;
   const displayDate = historyDate || sourceItem.dateAdded || "No date";
 
   return {
