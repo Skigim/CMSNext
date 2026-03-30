@@ -232,4 +232,77 @@ describe("FinancialItemCard", () => {
     // ASSERT - should display verification status
     expect(screen.getByText("VR Pending")).toBeInTheDocument();
   });
+
+  it("shows the most recent valid history date instead of relying on array order", () => {
+    // ARRANGE
+    const item = createMockFinancialItem("income", {
+      id: "item-history-date",
+      description: "Unearned income",
+      amountHistory: [
+        {
+          id: "entry-older",
+          amount: 1000,
+          startDate: "2026-03-01",
+          endDate: null,
+          verificationStatus: "Needs VR",
+          createdAt: "2026-03-01T00:00:00.000Z",
+        },
+        {
+          id: "entry-latest",
+          amount: 1100,
+          startDate: "2026-03-24",
+          endDate: null,
+          verificationStatus: "Verified",
+          createdAt: "2026-03-24T00:00:00.000Z",
+        },
+      ],
+      dateAdded: "2026-02-01T00:00:00.000Z",
+    });
+
+    // ACT
+    render(
+      <FinancialItemCard
+        item={item}
+        itemType="income"
+        onDelete={vi.fn()}
+        onOpenStepperEdit={vi.fn()}
+      />
+    );
+
+    // ASSERT
+    expect(screen.getByText("03/24/2026")).toBeInTheDocument();
+    expect(screen.queryByText("03/01/2026")).not.toBeInTheDocument();
+  });
+
+  it("falls back to item date when history is empty or has only invalid dates", () => {
+    // ARRANGE
+    const item = createMockFinancialItem("income", {
+      id: "item-invalid-history-date",
+      description: "Fallback item",
+      amountHistory: [
+        {
+          id: "entry-invalid",
+          amount: 900,
+          startDate: "",
+          endDate: null,
+          verificationStatus: "Needs VR",
+          createdAt: "2026-03-24T00:00:00.000Z",
+        },
+      ],
+      dateAdded: "2026-02-01T00:00:00.000Z",
+    });
+
+    // ACT
+    render(
+      <FinancialItemCard
+        item={item}
+        itemType="income"
+        onDelete={vi.fn()}
+        onOpenStepperEdit={vi.fn()}
+      />
+    );
+
+    // ASSERT
+    expect(screen.getByText("02/01/2026")).toBeInTheDocument();
+  });
 });

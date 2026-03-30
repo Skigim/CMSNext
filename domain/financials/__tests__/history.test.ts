@@ -7,6 +7,7 @@ import {
   getAmountInfoForMonth,
   getEntryForMonth,
   sortHistoryEntries,
+  getLatestHistoryEntry,
   createHistoryEntry,
   closePreviousOngoingEntry,
   getAutoEndDateForNewEntry,
@@ -231,6 +232,78 @@ describe("financialHistory utilities", () => {
       const sorted = sortHistoryEntries(entries);
       expect(entries[0].id).toBe("entry-test-1"); // Original unchanged
       expect(sorted[0].id).toBe("entry-test-2");
+    });
+
+    it("sorts valid dates ahead of invalid dates using parsed date values", () => {
+      // ARRANGE
+      const entries = [
+        createMockAmountHistoryEntry({ id: "entry-invalid", startDate: "not-a-date", createdAt: "" }),
+        createMockAmountHistoryEntry({ id: "entry-march", startDate: "2026-03-01", createdAt: "" }),
+        createMockAmountHistoryEntry({ id: "entry-late-march", startDate: "2026-03-24", createdAt: "" }),
+      ];
+
+      // ACT
+      const sorted = sortHistoryEntries(entries);
+
+      // ASSERT
+      expect(sorted.map((entry) => entry.id)).toEqual([
+        "entry-late-march",
+        "entry-march",
+        "entry-invalid",
+      ]);
+    });
+  });
+
+  describe("getLatestHistoryEntry", () => {
+    it("returns undefined when history is empty", () => {
+      // ACT & ASSERT
+      expect(getLatestHistoryEntry([])).toBeUndefined();
+      expect(getLatestHistoryEntry(undefined)).toBeUndefined();
+    });
+
+    it("selects the latest entry even when history is out of order", () => {
+      // ARRANGE
+      const olderEntry = createMockAmountHistoryEntry({
+        id: "entry-older",
+        startDate: "2026-03-01",
+        createdAt: "2026-03-01T00:00:00.000Z",
+      });
+      const latestEntry = createMockAmountHistoryEntry({
+        id: "entry-latest",
+        startDate: "2026-03-24",
+        createdAt: "2026-03-24T00:00:00.000Z",
+      });
+
+      // ACT
+      const result = getLatestHistoryEntry([olderEntry, latestEntry]);
+
+      // ASSERT
+      expect(result).toEqual(latestEntry);
+    });
+
+    it("ignores invalid or missing start dates when selecting the latest entry", () => {
+      // ARRANGE
+      const invalidEntry = createMockAmountHistoryEntry({
+        id: "entry-invalid",
+        startDate: "",
+        createdAt: "2026-03-25T00:00:00.000Z",
+      });
+      const olderEntry = createMockAmountHistoryEntry({
+        id: "entry-older",
+        startDate: "2026-03-01",
+        createdAt: "2026-03-01T00:00:00.000Z",
+      });
+      const latestEntry = createMockAmountHistoryEntry({
+        id: "entry-latest",
+        startDate: "2026-03-24",
+        createdAt: "2026-03-24T00:00:00.000Z",
+      });
+
+      // ACT
+      const result = getLatestHistoryEntry([invalidEntry, olderEntry, latestEntry]);
+
+      // ASSERT
+      expect(result).toEqual(latestEntry);
     });
   });
 

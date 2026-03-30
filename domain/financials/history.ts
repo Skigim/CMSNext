@@ -6,6 +6,7 @@
  */
 
 import { v4 as uuidv4 } from "uuid";
+import { parseLocalDate } from "@/domain/common/dates";
 import type { AmountHistoryEntry, FinancialItem } from "@/types/case";
 
 /**
@@ -67,9 +68,56 @@ export function isDateInEntryRange(
  */
 export function sortHistoryEntries(entries: AmountHistoryEntry[]): AmountHistoryEntry[] {
   return [...entries].sort((a, b) => {
-    // Simple string comparison works for YYYY-MM-DD format
-    return b.startDate.localeCompare(a.startDate);
+    const entryTimeA = getEntryStartTime(a);
+    const entryTimeB = getEntryStartTime(b);
+
+    if (entryTimeA === null && entryTimeB === null) {
+      return 0;
+    }
+
+    if (entryTimeA === null) {
+      return 1;
+    }
+
+    if (entryTimeB === null) {
+      return -1;
+    }
+
+    return entryTimeB - entryTimeA;
   });
+}
+
+/**
+ * Gets the most recent valid history entry by startDate.
+ * Invalid or missing start dates are ignored.
+ */
+export function getLatestHistoryEntry(
+  entries: AmountHistoryEntry[] | undefined
+): AmountHistoryEntry | undefined {
+  if (!entries?.length) {
+    return undefined;
+  }
+
+  let latestEntry: AmountHistoryEntry | undefined;
+  let latestTime = Number.NEGATIVE_INFINITY;
+
+  for (const entry of entries) {
+    const entryTime = getEntryStartTime(entry);
+
+    if (entryTime === null || entryTime <= latestTime) {
+      continue;
+    }
+
+    latestEntry = entry;
+    latestTime = entryTime;
+  }
+
+  return latestEntry;
+}
+
+function getEntryStartTime(entry: Pick<AmountHistoryEntry, "startDate">): number | null {
+  const parsedDate = parseLocalDate(entry.startDate);
+  return parsedDate ? parsedDate.getTime() : null;
 }
 
 /**
