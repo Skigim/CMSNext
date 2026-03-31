@@ -94,14 +94,12 @@ describe("ActivityWidget", () => {
      await user.click(jamieRow);
 
      const dialog = await screen.findByRole("dialog");
-     const dialogContent = document.querySelector('[data-slot="dialog-content"]');
      const scrollArea = within(dialog).getByTestId("activity-detail-scroll-area");
      expect(within(dialog).getByText("Activity for Jamie Rivera")).toBeInTheDocument();
      expect(within(dialog).getByText("Status: Pending → Approved")).toBeInTheDocument();
      expect(within(dialog).getByText("Note added")).toBeInTheDocument();
      expect(within(dialog).getByText("Case viewed")).toBeInTheDocument();
-     expect(dialogContent).not.toBeNull();
-     expect(dialogContent).toHaveClass("flex", "flex-col", "overflow-hidden");
+     expect(dialog).toHaveClass("flex", "flex-col", "overflow-hidden");
      expect(scrollArea).toHaveClass("h-full", "max-h-[32rem]");
 
      await user.click(within(dialog).getByRole("button", { name: "Open case" }));
