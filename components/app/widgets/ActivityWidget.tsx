@@ -798,7 +798,7 @@ export function ActivityWidget({ activityLogState, metadata, onViewCase }: Reado
               </div>
 
               <div className="flex min-h-0 flex-1 flex-col overflow-hidden" style={{ maxHeight: "32rem" }}>
-                <ScrollArea className="h-full max-h-[32rem]">
+                <ScrollArea className="h-full max-h-[32rem]" data-testid="activity-detail-scroll-area">
                   <div className="space-y-2 pr-3">
                     {selectedTimelineItem.entries.map((entry) => {
                       const Icon = entry.icon;
