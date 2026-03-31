@@ -766,7 +766,7 @@ export function ActivityWidget({ activityLogState, metadata, onViewCase }: Reado
         </CardContent>
       </Tabs>
       <Dialog open={selectedTimelineItem !== null} onOpenChange={handleTimelineDialogOpenChange}>
-        <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col">
+        <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col overflow-hidden">
           <DialogHeader>
             <DialogTitle>
               {selectedTimelineItem ? `Activity for ${selectedTimelineItem.caseName}` : 'Case activity'}
@@ -779,8 +779,8 @@ export function ActivityWidget({ activityLogState, metadata, onViewCase }: Reado
           </DialogHeader>
 
           {selectedTimelineItem && (
-            <div className="space-y-4">
-              <div className="flex items-center gap-2 text-xs text-muted-foreground">
+            <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-hidden">
+              <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
                 <CopyButton
                   value={selectedTimelineItem.caseMcn}
                   label="MCN"
@@ -797,8 +797,8 @@ export function ActivityWidget({ activityLogState, metadata, onViewCase }: Reado
                 <span>Latest activity {selectedTimelineItem.relativeTime}</span>
               </div>
 
-              <div className="overflow-hidden flex flex-col max-h-[32rem]">
-                <ScrollArea className="h-full max-h-80">
+              <div className="flex min-h-0 flex-1 flex-col overflow-hidden" style={{ maxHeight: "32rem" }}>
+                <ScrollArea className="h-full max-h-[32rem]">
                   <div className="space-y-2 pr-3">
                     {selectedTimelineItem.entries.map((entry) => {
                       const Icon = entry.icon;
