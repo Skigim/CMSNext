@@ -1,9 +1,9 @@
-import { screen, within } from "@testing-library/react";
+import { act, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { CaseList } from "@/components/case/CaseList";
 import { render } from "@/src/test/reactTestUtils";
-import { createMockCaseDisplay } from "@/src/test/testUtils";
+import { createMockCaseDisplay, createMockStoredCase } from "@/src/test/testUtils";
 
 /**
  * CaseList Integration Tests
@@ -28,6 +28,7 @@ describe("CaseList status interactions", () => {
 
   afterEach(() => {
     localStorage.clear();
+    vi.useRealTimers();
   });
 
   it("CaseList table updates status when a new option is selected", async () => {
@@ -141,6 +142,55 @@ describe("CaseList status interactions", () => {
     // ASSERT
     expect(screen.getByText("Needs Intake")).toBeInTheDocument();
   });
+
+  it("applies a requested archival-review segment and filters to pending archival cases", async () => {
+    // ARRANGE
+    const pendingCase = createMockStoredCase({
+      id: "case-pending",
+      name: "Pending Archival",
+      pendingArchival: true,
+    });
+    const regularCase = createMockStoredCase({
+      id: "case-regular",
+      name: "Regular Case",
+      pendingArchival: false,
+    });
+    const onRequestedSegmentApplied = vi.fn();
+
+    render(
+      <CaseList
+        cases={[pendingCase, regularCase]}
+        onViewCase={vi.fn()}
+        onNewCase={vi.fn()}
+        alertsSummary={undefined}
+        alertsByCaseId={new Map()}
+        alerts={[]}
+        requestedSegment="archival-review"
+        requestedSegmentKey={1}
+        onRequestedSegmentApplied={onRequestedSegmentApplied}
+      />,
+      { categoryConfig: testCategoryConfig }
+    );
+
+    // ACT & ASSERT
+    await waitFor(() => {
+      expect(screen.getByText(/Showing 1–1 of 1 cases/)).toBeInTheDocument();
+    });
+    expect(screen.getByText("Pending Archival")).toBeInTheDocument();
+    expect(screen.queryByText("Regular Case")).not.toBeInTheDocument();
+    expect(onRequestedSegmentApplied).toHaveBeenCalledWith(1);
+
+    // Use real timers here because this component test relies on normal effect
+    // flushing after render; fake timers caused the render/waitFor path to stall.
+    await act(async () => {
+      await new Promise((resolve) => {
+        globalThis.setTimeout(resolve, 350);
+      });
+    });
+
+    const savedPreferences = globalThis.localStorage.getItem("cmsnext-case-list-preferences");
+    expect(savedPreferences ? JSON.parse(savedPreferences).segment : "all").toBe("all");
+  });
 });
 
 describe("CaseList pagination", () => {
@@ -159,6 +209,7 @@ describe("CaseList pagination", () => {
 
   afterEach(() => {
     localStorage.clear();
+    vi.useRealTimers();
   });
 
   it("shows pagination when there are more than 20 cases", () => {

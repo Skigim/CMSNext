@@ -142,7 +142,7 @@ const MultiSelect = React.forwardRef<HTMLButtonElement, MultiSelectProps>(
               <ScrollArea className="h-full max-h-80">
                 <CommandList className="h-full">
                   <CommandEmpty>{emptyText}</CommandEmpty>
-                  <CommandGroup>
+                  <CommandGroup className="pb-2">
                     {options.map((option) => {
                       const isSelected = value.includes(option.value);
 

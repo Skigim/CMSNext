@@ -24,7 +24,7 @@ const REQUIRED_FILES: ContextConfig = {
     '.github/copilot-instructions.md',
     '.github/instructions/implementation.instructions.md',
     '.github/instructions/frontend.instructions.md',
-    '.github/instructions/testing.instructions.md',
+    '.github/instructions/tests.instructions.md',
     'docs/development/feature-catalogue.md',
     'docs/development/ROADMAP_MAR_2026.md',
   ],

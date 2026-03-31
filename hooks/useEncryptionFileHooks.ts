@@ -7,6 +7,7 @@ import {
 } from "@/utils/encryption";
 import {
   isEncryptedPayload,
+  ENCRYPTION_ERROR_CODES,
   EncryptionError,
   type EncryptionErrorCode,
   type EncryptedPayload,
@@ -101,7 +102,11 @@ export function useEncryptionFileHooks(): UseEncryptionFileHooksResult {
 
   // Expose storePassword as a pass-through to context
   const storePassword = useCallback((password: string) => {
-    encryption.setPendingPassword(password);
+    if (encryption.requiresPassword) {
+      encryption.setPendingPassword(password);
+    } else {
+      logger.debug("Skipping pending password storage because this environment does not require it");
+    }
   }, [encryption]);
 
   // Clear error helper
@@ -111,7 +116,9 @@ export function useEncryptionFileHooks(): UseEncryptionFileHooksResult {
 
   // Create encryption hooks for the file service
   const encryptionHooks = useMemo(() => {
-    if (!encryption.isAuthenticated) {
+    // Noop/disabled environments intentionally leave files readable on disk,
+    // so the file service should operate without encryption hooks in those modes.
+    if (!encryption.isAuthenticated || !encryption.isEncryptionEnabled) {
       return null;
     }
 
@@ -201,11 +208,11 @@ export function useEncryptionFileHooks(): UseEncryptionFileHooksResult {
           const keyDerivationResult = await encryption.deriveKeyFromFileSalt(data.salt, data.iterations);
           
           if (!keyDerivationResult.success || !keyDerivationResult.data) {
-            // Validate error code against known values
-            const validCodes = ['missing_password', 'wrong_password', 'corrupt_salt', 'system_error'] as const;
-            const errorCode: EncryptionErrorCode = validCodes.includes(keyDerivationResult.error as any)
-              ? (keyDerivationResult.error as EncryptionErrorCode)
-              : 'system_error';
+            const rawErrorCode = keyDerivationResult.error;
+            const errorCode: EncryptionErrorCode =
+              rawErrorCode && ENCRYPTION_ERROR_CODES.includes(rawErrorCode)
+                ? rawErrorCode
+                : "system_error";
             let errorMsg: string;
             
             switch (errorCode) {
@@ -279,4 +286,3 @@ export function useEncryptionFileHooks(): UseEncryptionFileHooksResult {
     storePassword,
   };
 }
-

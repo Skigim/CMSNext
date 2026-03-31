@@ -1,14 +1,11 @@
 import { axe } from "jest-axe";
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { ActivityWidget } from "@/components/app/widgets/ActivityWidget";
-import type {
-  CaseActivityEntry,
-  CaseActivityLogState,
-  DailyActivityReport,
-} from "@/types/activityLog";
+import type { CaseActivityEntry } from "@/types/activityLog";
+import { createMockCaseActivityLogState } from "@/src/test/testUtils";
 
 vi.mock("@/hooks/useDataSync", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/hooks/useDataSync")>();
@@ -18,42 +15,12 @@ vi.mock("@/hooks/useDataSync", async (importOriginal) => {
   };
 });
 
-function createEmptyReport(): DailyActivityReport {
-  return {
-    date: "2025-10-05",
-    totals: {
-      total: 0,
-      statusChanges: 0,
-      priorityChanges: 0,
-      notesAdded: 0,
-    },
-    entries: [],
-    cases: [],
-  };
-}
-
-function createActivityLogState(activityLog: CaseActivityEntry[]): CaseActivityLogState {
-  return {
-    activityLog,
-    dailyReports: [],
-    todayReport: null,
-    yesterdayReport: null,
-    loading: false,
-    error: null,
-    refreshActivityLog: vi.fn().mockResolvedValue(undefined),
-    getReportForDate: vi.fn(() => createEmptyReport()),
-    clearReportForDate: vi.fn().mockResolvedValue(0),
-  };
-}
+// Pinning is covered separately; keep this test focused on activity rendering.
+vi.mock("@/components/common/PinButton", () => ({
+  PinButton: () => <button aria-label="Pin case" type="button">Pin</button>,
+}));
 
 describe("ActivityWidget", () => {
-  beforeEach(() => {
-    globalThis.localStorage.clear();
-    globalThis.localStorage.setItem("cmsnext-error-reports", "[]");
-    globalThis.localStorage.setItem("cmsnext-pinned-cases", "[]");
-    globalThis.localStorage.setItem("cmsnext-pinned-case-reasons", "{}");
-  });
-
   afterEach(() => {
     vi.clearAllMocks();
   });
@@ -109,7 +76,12 @@ describe("ActivityWidget", () => {
     ];
     const onViewCase = vi.fn();
 
-    render(<ActivityWidget activityLogState={createActivityLogState(activityLog)} onViewCase={onViewCase} />);
+    render(
+      <ActivityWidget
+        activityLogState={createMockCaseActivityLogState({ activityLog })}
+        onViewCase={onViewCase}
+      />,
+    );
 
     // ACT
     const jamieRow = await screen.findByRole("button", { name: "View activity for Jamie Rivera" });
@@ -164,7 +136,12 @@ describe("ActivityWidget", () => {
       },
     ];
 
-    render(<ActivityWidget activityLogState={createActivityLogState(activityLog)} onViewCase={vi.fn()} />);
+    render(
+      <ActivityWidget
+        activityLogState={createMockCaseActivityLogState({ activityLog })}
+        onViewCase={vi.fn()}
+      />,
+    );
 
     // ACT
     const groupedRow = await screen.findByRole("button", { name: "View activity for Updated Name" });
@@ -195,7 +172,10 @@ describe("ActivityWidget", () => {
 
     // ACT
     const { container } = render(
-      <ActivityWidget activityLogState={createActivityLogState(activityLog)} onViewCase={vi.fn()} />
+      <ActivityWidget
+        activityLogState={createMockCaseActivityLogState({ activityLog })}
+        onViewCase={vi.fn()}
+      />
     );
     await screen.findByRole("button", { name: "View activity for Jamie Rivera" });
 

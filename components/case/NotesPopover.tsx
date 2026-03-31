@@ -1,7 +1,7 @@
 import { useState, useMemo, useCallback } from "react";
 import { formatShortDate } from "@/domain/common";
 import { Button } from "../ui/button";
-import { ButtonGroup } from "../ui/button-group";
+import { MultiSelect } from "../ui/multi-select";
 import { Textarea } from "../ui/textarea";
 import {
   Popover,
@@ -9,10 +9,11 @@ import {
   PopoverTrigger,
 } from "../ui/popover";
 import { Badge } from "../ui/badge";
-import { StickyNote, Plus, Trash2, X, Pencil, Check, Copy, ChevronDown } from "lucide-react";
+import { StickyNote, Plus, Trash2, X, Pencil, Check, Copy } from "lucide-react";
 import { useNotes } from "@/hooks/useNotes";
 import { useCategoryConfig } from "@/contexts/CategoryConfigContext";
 import { getStaticNoteCategoryColor } from "@/utils/styleUtils";
+import { clickToCopy } from "@/utils/clipboard";
 import type { Note } from "@/types/case";
 
 interface NotesPopoverProps {
@@ -43,6 +44,31 @@ export function NotesPopover({ caseId, className }: NotesPopoverProps) {
     return noteCategories[0] ?? "General";
   }, [noteCategories]);
 
+  const noteCategoryOptions = useMemo(() => {
+    const categorySet = new Set<string>(noteCategories);
+
+    if (notes) {
+      for (const note of notes) {
+        if (note.category) {
+          categorySet.add(note.category);
+        }
+
+        if (note.categories) {
+          for (const category of note.categories) {
+            if (category) {
+              categorySet.add(category);
+            }
+          }
+        }
+      }
+    }
+
+    return Array.from(categorySet).map((category) => ({
+      label: category,
+      value: category,
+    }));
+  }, [noteCategories, notes]);
+
   const getCategoryColor = useCallback(
     (category: string) => getStaticNoteCategoryColor(category),
     []
@@ -52,12 +78,6 @@ export function NotesPopover({ caseId, className }: NotesPopoverProps) {
     const categories = note.categories?.filter(Boolean) ?? [];
     return categories.length > 0 ? categories : [note.category || defaultCategory];
   }, [defaultCategory]);
-
-  const toggleCategory = useCallback((categories: string[], category: string) => {
-    return categories.includes(category)
-      ? categories.filter(existing => existing !== category)
-      : [...categories, category];
-  }, []);
 
   const handleAddNote = useCallback(async () => {
     if (!newNoteContent.trim()) return;
@@ -187,50 +207,16 @@ export function NotesPopover({ caseId, className }: NotesPopoverProps) {
               autoFocus
             />
             <div data-testid="notes-quick-add-actions" className="flex flex-wrap items-center gap-2">
-              <Popover>
-                <ButtonGroup className="h-7">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    className="h-7 rounded-r-none pr-2"
-                  >
-                    {newNoteCategories.length > 0
-                      ? `${newNoteCategories.length} ${newNoteCategories.length === 1 ? "category" : "categories"}`
-                      : defaultCategory}
-                  </Button>
-                  <PopoverTrigger asChild>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      className="h-7 rounded-l-none border-l-0 px-2"
-                      aria-label="Select note categories"
-                    >
-                      <ChevronDown className="h-3 w-3" />
-                    </Button>
-                  </PopoverTrigger>
-                </ButtonGroup>
-                <PopoverContent className="w-44 p-1" align="start">
-                  <div className="space-y-1">
-                    {noteCategories.map((cat) => {
-                      const isSelected = newNoteCategories.includes(cat);
-                      return (
-                        <Button
-                          key={cat}
-                          type="button"
-                          variant={isSelected ? "secondary" : "ghost"}
-                          size="sm"
-                          className="h-7 w-full justify-start text-xs"
-                          onClick={() => setNewNoteCategories(currentCategories => toggleCategory(currentCategories, cat))}
-                        >
-                          {cat}
-                        </Button>
-                      );
-                    })}
-                  </div>
-                </PopoverContent>
-              </Popover>
+              <MultiSelect
+                options={noteCategoryOptions}
+                value={newNoteCategories}
+                onValueChange={setNewNoteCategories}
+                placeholder={defaultCategory}
+                searchPlaceholder="Search categories..."
+                emptyText="No categories found."
+                ariaLabel="Select note categories"
+                className="w-auto min-w-[10rem] max-w-full"
+              />
               <span className="text-xs text-muted-foreground flex-1">
                 {navigator.platform.includes("Mac") ? "⌘" : "Ctrl"}+Enter
               </span>
@@ -279,50 +265,16 @@ export function NotesPopover({ caseId, className }: NotesPopoverProps) {
                     /* Edit Mode */
                     <div className="space-y-2">
                       <div className="flex items-center gap-2 mb-1">
-                        <Popover>
-                          <ButtonGroup className="h-6">
-                            <Button
-                              type="button"
-                              variant="outline"
-                              size="sm"
-                              className="h-6 rounded-r-none px-2 text-xs"
-                            >
-                              {editCategories.length > 0
-                                ? `${editCategories.length} ${editCategories.length === 1 ? "category" : "categories"}`
-                                : getNoteCategories(note)[0]}
-                            </Button>
-                            <PopoverTrigger asChild>
-                              <Button
-                                type="button"
-                                variant="outline"
-                                size="sm"
-                                className="h-6 rounded-l-none border-l-0 px-1.5"
-                                aria-label="Edit note categories"
-                              >
-                                <ChevronDown className="h-3 w-3" />
-                              </Button>
-                            </PopoverTrigger>
-                          </ButtonGroup>
-                          <PopoverContent className="w-44 p-1" align="start">
-                            <div className="space-y-1">
-                              {noteCategories.map((cat) => {
-                                const isSelected = editCategories.includes(cat);
-                                return (
-                                  <Button
-                                    key={cat}
-                                    type="button"
-                                    variant={isSelected ? "secondary" : "ghost"}
-                                    size="sm"
-                                    className="h-7 w-full justify-start text-xs"
-                                    onClick={() => setEditCategories(currentCategories => toggleCategory(currentCategories, cat))}
-                                  >
-                                    {cat}
-                                  </Button>
-                                );
-                              })}
-                            </div>
-                          </PopoverContent>
-                        </Popover>
+                        <MultiSelect
+                          options={noteCategoryOptions}
+                          value={editCategories}
+                          onValueChange={setEditCategories}
+                          placeholder={getNoteCategories(note)[0]}
+                          searchPlaceholder="Search categories..."
+                          emptyText="No categories found."
+                          ariaLabel="Edit note categories"
+                          className="h-6 w-auto min-w-[8rem] max-w-full px-2"
+                        />
                         <span className="text-xs text-muted-foreground">
                           {formatDate(note.createdAt)}
                         </span>
@@ -393,7 +345,9 @@ export function NotesPopover({ caseId, className }: NotesPopoverProps) {
                           size="sm"
                           className="h-6 w-6 p-0 text-muted-foreground hover:text-foreground"
                           onClick={() => {
-                            navigator.clipboard.writeText(note.content);
+                            void clickToCopy(note.content, {
+                              successMessage: "Note copied to clipboard",
+                            });
                           }}
                           aria-label="Copy note"
                         >

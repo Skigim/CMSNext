@@ -96,19 +96,25 @@ const CONTACT_FIELD_TARGETS = new Map<string, string>([
   ["phone number", "phone"],
   ["email", "email"],
   ["email address", "email"],
-  ["best contact number", "ignored"],
+  ["best contact number", "phone"],
   ["additional contact number", "ignored"],
   ["preferred message delivery", "ignored"],
-  ["email for notices", "ignored"],
+  ["email for notices", "email"],
 ]);
 
 const HOUSEHOLD_SUPPORTED_COLUMNS = new Set([
   "name",
+  "household member name",
   "relationship",
   "dob",
   "date of birth",
   "phone",
 ]);
+
+const FIELD_VALUE_TABLE_LABEL_HEADERS = new Set(["field", "label", "key"]);
+const FIELD_VALUE_TABLE_VALUE_HEADERS = new Set(["value", "answer"]);
+const HOUSEHOLD_NAME_COLUMNS = ["name", "household member name"] as const;
+const HOUSEHOLD_DOB_COLUMNS = ["dob", "date of birth"] as const;
 
 function normalizeLabel(value: string): string {
   return value
@@ -121,6 +127,25 @@ function normalizeLabel(value: string): string {
 
 function normalizeWhitespace(value: string): string {
   return value.replaceAll(/\s+/g, " ").trim();
+}
+
+function normalizeImportedValue(value: string): string {
+  const normalized = normalizeWhitespace(value);
+  return normalized === "-" ? "" : normalized;
+}
+
+function getFirstColumnValue(
+  row: Record<string, string>,
+  columnNames: readonly string[],
+): string {
+  for (const columnName of columnNames) {
+    const value = normalizeImportedValue(row[columnName] ?? "");
+    if (value.length > 0) {
+      return value;
+    }
+  }
+
+  return "";
 }
 
 function unwrapDelimitedSectionTitle(
@@ -225,42 +250,68 @@ function isSeparatorRow(cells: string[]): boolean {
   return cells.length > 0 && cells.every((cell) => /^:?-{3,}:?$/.test(cell));
 }
 
-function parseMarkdownTable(lines: string[]): Array<Record<string, string>> {
+interface ParsedMarkdownTable {
+  headers: string[];
+  rows: Array<Record<string, string>>;
+}
+
+function parseMarkdownTable(lines: string[]): ParsedMarkdownTable | null {
   const tableLines = lines.filter((line) => line.trim().startsWith("|"));
   if (tableLines.length < 2) {
-    return [];
+    return null;
   }
 
   const headerCells = splitTableCells(tableLines[0] ?? "");
   if (headerCells.length === 0) {
-    return [];
+    return null;
   }
 
   const rows = tableLines.slice(1).map(splitTableCells).filter((cells) => cells.length > 0);
   const dataRows = rows.filter((cells) => !isSeparatorRow(cells));
 
-  return dataRows.map((cells) => {
-    const record: Record<string, string> = {};
-    headerCells.forEach((header, index) => {
-      record[normalizeLabel(header)] = cells[index] ?? "";
-    });
-    return record;
-  });
+  return {
+    headers: headerCells,
+    rows: dataRows.map((cells) => {
+      const record: Record<string, string> = {};
+      headerCells.forEach((header, index) => {
+        record[normalizeLabel(header)] = cells[index] ?? "";
+      });
+      return record;
+    }),
+  };
 }
 
 function parseKeyValueLines(lines: string[]): Array<{ label: string; value: string }> {
-  const tableRows = parseMarkdownTable(lines);
-  if (tableRows.length > 0) {
-    return tableRows
-      .map((row) => {
-        const entries = Object.entries(row);
-        const label = entries[0]?.[1] ?? "";
-        const value = entries[1]?.[1] ?? "";
-        return {
-          label: normalizeWhitespace(label),
-          value: normalizeWhitespace(value),
-        };
-      })
+  const table = parseMarkdownTable(lines);
+  if (table && table.rows.length > 0) {
+    const normalizedHeaders = table.headers.map(normalizeLabel);
+    const isFieldValueTable = normalizedHeaders.length >= 2
+      && FIELD_VALUE_TABLE_LABEL_HEADERS.has(normalizedHeaders[0] ?? "")
+      && FIELD_VALUE_TABLE_VALUE_HEADERS.has(normalizedHeaders[1] ?? "");
+
+    if (isFieldValueTable) {
+      return table.rows
+        .map((row) => {
+          const label = normalizeImportedValue(row[normalizedHeaders[0] ?? ""] ?? "");
+          const value = normalizeImportedValue(row[normalizedHeaders[1] ?? ""] ?? "");
+          return {
+            label,
+            value,
+          };
+        })
+        .filter(({ label, value }) => label.length > 0 && value.length > 0);
+    }
+
+    const firstRow = table.rows[0];
+    if (!firstRow) {
+      return [];
+    }
+
+    return table.headers
+      .map((header) => ({
+        label: normalizeWhitespace(header),
+        value: normalizeImportedValue(firstRow[normalizeLabel(header)] ?? ""),
+      }))
       .filter(({ label, value }) => label.length > 0 && value.length > 0);
   }
 
@@ -297,7 +348,7 @@ function parseKeyValueLines(lines: string[]): Array<{ label: string; value: stri
 
       return {
         label: normalizeWhitespace(label),
-        value: normalizeWhitespace(rawValue),
+        value: normalizeImportedValue(rawValue),
       };
     })
     .filter((entry): entry is { label: string; value: string } => entry !== null);
@@ -482,7 +533,8 @@ function parseHouseholdSection(
   result: MarkdownCaseImportResult,
   blankForm: IntakeFormData,
 ): void {
-  const rows = parseMarkdownTable(lines);
+  const table = parseMarkdownTable(lines);
+  const rows = table?.rows ?? [];
   if (rows.length === 0) {
     return;
   }
@@ -490,21 +542,22 @@ function parseHouseholdSection(
   const members: IntakeFormData["householdMembers"] = rows
     .map((row) => {
       for (const [column, cellValue] of Object.entries(row)) {
-        if (!HOUSEHOLD_SUPPORTED_COLUMNS.has(column) && cellValue.trim().length > 0) {
+        const normalizedValue = normalizeImportedValue(cellValue);
+        if (!HOUSEHOLD_SUPPORTED_COLUMNS.has(column) && normalizedValue.length > 0) {
           recordUnsupportedField(
             result.unsupportedFields,
             "Household",
             column,
-            cellValue,
+            normalizedValue,
             "Unsupported household column for MVP import.",
           );
         }
       }
 
-      const name = row.name ?? "";
-      const relationship = row.relationship ?? "";
-      const dateOfBirth = row.dob || row["date of birth"] || "";
-      const phone = row.phone ?? "";
+      const name = getFirstColumnValue(row, HOUSEHOLD_NAME_COLUMNS);
+      const relationship = normalizeImportedValue(row.relationship ?? "");
+      const dateOfBirth = getFirstColumnValue(row, HOUSEHOLD_DOB_COLUMNS);
+      const phone = normalizeImportedValue(row.phone ?? "");
       const split = splitName(name);
       if (split.warning) {
         result.warnings.push(`Household: ${split.warning}`);

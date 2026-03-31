@@ -44,8 +44,12 @@ export function LoginModal({
   const [isLoading, setIsLoading] = useState(false);
   const [isCheckingFile, setIsCheckingFile] = useState(true);
   const [fileExists, setFileExists] = useState(true);
+  const [fileIsEncrypted, setFileIsEncrypted] = useState(false);
 
   const hasCheckedRef = useRef(false);
+  const passwordRequired = encryption.requiresPassword;
+  const submitLabel = passwordRequired ? "Unlock" : "Open Workspace";
+  const submitProgressLabel = passwordRequired ? "Unlocking..." : "Opening...";
 
   // E2E Mock Mode: bypass login entirely
   useEffect(() => {
@@ -83,6 +87,8 @@ export function LoginModal({
           // No file exists - shouldn't be on login screen
           setFileExists(false);
         }
+
+        setFileIsEncrypted(status?.encrypted ?? false);
       } catch (error) {
         logger.warn("File check failed", { error: String(error) });
       } finally {
@@ -102,6 +108,7 @@ export function LoginModal({
       setIsLoading(false);
       setIsCheckingFile(true);
       setFileExists(true);
+      setFileIsEncrypted(false);
     }
   }, [isOpen]);
 
@@ -118,7 +125,14 @@ export function LoginModal({
   };
 
   const handleLogin = useCallback(async () => {
-    if (!password.trim()) {
+    if (fileIsEncrypted && !encryption.isEncryptionEnabled) {
+      setError(
+        "This workspace is encrypted, but the current environment is configured for readable on-disk data. Choose a different folder or reopen it in a full-encryption environment.",
+      );
+      return;
+    }
+
+    if (passwordRequired && !password.trim()) {
       setError("Password is required");
       return;
     }
@@ -137,8 +151,16 @@ export function LoginModal({
       }
 
       // Step 2: Set up encryption with password
-      encryption.setPendingPassword(password);
-      const authSuccess = await encryption.authenticate("admin", password);
+      if (passwordRequired) {
+        encryption.setPendingPassword(password);
+      } else {
+        encryption.setPendingPassword(null);
+      }
+
+      const authSuccess = await encryption.authenticate(
+        "admin",
+        passwordRequired ? password : "",
+      );
       if (!authSuccess) {
         encryption.setPendingPassword(null);
         setError("Failed to set up encryption");
@@ -189,11 +211,19 @@ export function LoginModal({
     } finally {
       setIsLoading(false);
     }
-  }, [password, connectToExisting, encryption, loadExistingData, onLoginComplete]);
+  }, [
+    password,
+    fileIsEncrypted,
+    passwordRequired,
+    connectToExisting,
+    encryption,
+    loadExistingData,
+    onLoginComplete,
+  ]);
 
   const handleSubmitShortcut = useSubmitShortcut<HTMLFormElement>({
     onSubmit: handleLogin,
-    canSubmit: !isLoading && Boolean(password.trim()),
+    canSubmit: !isLoading && (!passwordRequired || Boolean(password.trim())),
   });
 
   // Loading state while checking file
@@ -266,39 +296,43 @@ export function LoginModal({
             Welcome Back
           </DialogTitle>
           <DialogDescription className="text-xs sm:text-sm">
-            Enter your password to unlock and access your data.
+            {passwordRequired
+              ? "Enter your password to unlock and access your data."
+              : "Open your workspace without password gating in this environment."}
           </DialogDescription>
         </DialogHeader>
 
         <form
           onSubmit={(e) => {
             e.preventDefault();
-            if (!isLoading && password.trim()) {
+            if (!isLoading && (!passwordRequired || password.trim())) {
               void handleLogin();
             }
           }}
           onKeyDown={handleSubmitShortcut}
           className="space-y-4 py-2"
         >
-          <div className="space-y-2">
-            <Label htmlFor="login-password" className="text-sm font-medium">
-              Password
-            </Label>
-            <div className="relative">
-              <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                id="login-password"
-                type="password"
-                autoComplete="current-password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="Enter your password"
-                className="pl-10"
-                disabled={isLoading}
-                autoFocus
-              />
+          {passwordRequired ? (
+            <div className="space-y-2">
+              <Label htmlFor="login-password" className="text-sm font-medium">
+                Password
+              </Label>
+              <div className="relative">
+                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  id="login-password"
+                  type="password"
+                  autoComplete="current-password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="Enter your password"
+                  className="pl-10"
+                  disabled={isLoading}
+                  autoFocus
+                />
+              </div>
             </div>
-          </div>
+          ) : null}
 
           {error && (
             <Alert variant="destructive">
@@ -308,7 +342,11 @@ export function LoginModal({
           )}
 
           <p className="text-xs text-muted-foreground">
-            Your data is encrypted locally using AES-256. The password never leaves your device.
+            {encryption.isEncryptionEnabled
+              ? "Your data is encrypted locally using AES-256. The password never leaves your device."
+              : passwordRequired
+                ? "This environment preserves the unlock flow, but workspace files remain readable on disk for inspection."
+                : "This environment bypasses unlock gating and leaves workspace files readable on disk for inspection."}
           </p>
         </form>
 
@@ -324,18 +362,18 @@ export function LoginModal({
           </Button>
           <Button
             onClick={handleLogin}
-            disabled={isLoading || !password.trim()}
+            disabled={isLoading || (passwordRequired && !password.trim())}
             className="w-full sm:w-auto"
           >
             {isLoading ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Unlocking...
+                {submitProgressLabel}
               </>
             ) : (
               <>
                 <Lock className="mr-2 h-4 w-4" />
-                Unlock
+                {submitLabel}
               </>
             )}
           </Button>

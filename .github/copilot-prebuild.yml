@@ -32,7 +32,7 @@ context:
       priority: high
       description: Path-scoped frontend instructions for components and app shell work
 
-    - path: .github/instructions/testing.instructions.md
+    - path: .github/instructions/tests.instructions.md
       priority: high
       description: Path-scoped testing instructions for Vitest, RTL, and shared test helpers
     

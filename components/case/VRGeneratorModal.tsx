@@ -15,6 +15,7 @@ import {
   DialogFooter,
 } from "../ui/dialog";
 import { Button } from "../ui/button";
+import { Checkbox } from "../ui/checkbox";
 import { Label } from "../ui/label";
 import { Textarea } from "../ui/textarea";
 import {
@@ -32,6 +33,7 @@ import { toast } from "sonner";
 import type { StoredCase, StoredFinancialItem } from "@/types/case";
 import type { Template } from "@/types/template";
 import { renderMultipleVRs, buildCaseLevelContext, renderTemplate } from "@/utils/vrGenerator";
+import { clickToCopy } from "@/utils/clipboard";
 import { cn } from "@/lib/utils";
 
 interface VRGeneratorModalProps {
@@ -40,6 +42,7 @@ interface VRGeneratorModalProps {
   storedCase: StoredCase;
   financialItems: StoredFinancialItem[];
   vrTemplates: Template[];
+  footerTemplate?: Template | null;
 }
 
 export function VRGeneratorModal({
@@ -48,6 +51,7 @@ export function VRGeneratorModal({
   storedCase,
   financialItems,
   vrTemplates,
+  footerTemplate = null,
 }: Readonly<VRGeneratorModalProps>) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -57,10 +61,34 @@ export function VRGeneratorModal({
           storedCase={storedCase}
           financialItems={financialItems}
           vrTemplates={vrTemplates}
+          footerTemplate={footerTemplate}
         />
       ) : null}
     </Dialog>
   );
+}
+
+export const DEFAULT_VR_COPY_FOOTER =
+  "Please return the requested verification as soon as possible.\n\nThank you.";
+
+function buildVRClipboardText(
+  renderedText: string,
+  footerText: string,
+  includeFooter: boolean,
+): string {
+  if (!includeFooter || footerText.trim().length === 0) {
+    return renderedText;
+  }
+
+  // Preserve the user's rendered text exactly and just ensure a clear separator before the footer.
+  // If the text already ends with two or more newlines, don't add extra spacing.
+  // If it ends with one newline, add one more; otherwise add two newlines.
+  let separator = "";
+  if (!renderedText.endsWith("\n\n")) {
+    separator = renderedText.endsWith("\n") ? "\n" : "\n\n";
+  }
+
+  return `${renderedText}${separator}${footerText}`;
 }
 
 function VRGeneratorModalContent({
@@ -68,6 +96,7 @@ function VRGeneratorModalContent({
   storedCase,
   financialItems,
   vrTemplates,
+  footerTemplate,
 }: Readonly<Omit<VRGeneratorModalProps, "open">>) {
   // Local state
   const [selectedScriptId, setSelectedScriptId] = useState<string | null>(
@@ -75,6 +104,8 @@ function VRGeneratorModalContent({
   );
   const [selectedItemIds, setSelectedItemIds] = useState<Set<string>>(new Set());
   const [renderedText, setRenderedText] = useState("");
+  const [includeFooterOnCopy, setIncludeFooterOnCopy] = useState(true);
+  const caseContext = useMemo(() => buildCaseLevelContext(storedCase), [storedCase]);
 
   // Build selectable items list
   const selectableItems = useMemo(() => {
@@ -86,6 +117,14 @@ function VRGeneratorModalContent({
   }, [financialItems, selectedItemIds]);
 
   const selectedScript = vrTemplates.find(s => s.id === selectedScriptId);
+  const copyFooterText = useMemo(() => {
+    if (!footerTemplate) {
+      return DEFAULT_VR_COPY_FOOTER;
+    }
+
+    return renderTemplate(footerTemplate.template, caseContext);
+  }, [caseContext, footerTemplate]);
+  const hasCopyFooterText = copyFooterText.trim().length > 0;
   const totalItems = selectableItems.length;
   const selectedCount = selectableItems.filter(i => i.selected).length;
   const allSelected = selectedCount === totalItems && totalItems > 0;
@@ -132,7 +171,6 @@ function VRGeneratorModalContent({
       );
     } else if (storedCase) {
       // No items selected - render with case-level placeholders filled
-      const caseContext = buildCaseLevelContext(storedCase);
       textToAdd = renderTemplate(selectedScript.template, caseContext);
     }
 
@@ -144,21 +182,19 @@ function VRGeneratorModalContent({
     }
 
     toast.success("Script added");
-  }, [selectedScript, selectableItems, renderedText, storedCase]);
+  }, [caseContext, selectedScript, selectableItems, renderedText, storedCase]);
 
-  const handleCopy = async () => {
+  const handleCopy = useCallback(async () => {
     if (!renderedText) {
       toast.error("Nothing to copy");
       return;
     }
 
-    try {
-      await navigator.clipboard.writeText(renderedText);
-      toast.success("VR copied to clipboard");
-    } catch {
-      toast.error("Failed to copy to clipboard");
-    }
-  };
+    await clickToCopy(buildVRClipboardText(renderedText, copyFooterText, includeFooterOnCopy), {
+      successMessage: "VR copied to clipboard",
+      errorMessage: "Failed to copy to clipboard",
+    });
+  }, [copyFooterText, includeFooterOnCopy, renderedText]);
 
   const getItemTypeLabel = (type: "resources" | "income" | "expenses") => {
     const labels = {
@@ -333,6 +369,30 @@ function VRGeneratorModalContent({
                   Copy
                 </Button>
               </div>
+              <div className="rounded-md border border-dashed bg-muted/30 p-3">
+                <div className="flex items-start gap-3">
+                  <Checkbox
+                    id="vr-copy-footer"
+                    checked={includeFooterOnCopy}
+                    onCheckedChange={(checked) => setIncludeFooterOnCopy(checked === true)}
+                    aria-describedby="vr-copy-footer-help"
+                    className="mt-0.5"
+                  />
+                  <div className="space-y-1">
+                    <Label htmlFor="vr-copy-footer" className="cursor-pointer">
+                      Append footer when copying
+                    </Label>
+                    <p
+                      id="vr-copy-footer-help"
+                      className="whitespace-pre-line text-xs text-muted-foreground"
+                    >
+                      {hasCopyFooterText
+                        ? `Adds this footer to clipboard text only:\n${copyFooterText}`
+                        : "Footer template is currently blank. Update it in Settings → Templates if you want copy actions to append footer text."}
+                    </p>
+                  </div>
+                </div>
+              </div>
               <Textarea
                 id="vr-preview"
                 value={renderedText}
@@ -360,4 +420,3 @@ function VRGeneratorModalContent({
       </DialogContent>
   );
 }
-

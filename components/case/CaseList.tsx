@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState, type Dispatch, type SetStateAction } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type Dispatch, type SetStateAction } from "react";
 import { toastPromise } from "@/utils/withToast";
 import { toast } from "sonner";
 import { Button } from "../ui/button";
@@ -421,6 +421,9 @@ interface CaseListProps {
   onApproveArchival?: (caseIds: string[]) => Promise<unknown>;
   onCancelArchival?: (caseIds: string[]) => Promise<unknown>;
   isArchiving?: boolean;
+  requestedSegment?: CaseListSegment;
+  requestedSegmentKey?: number;
+  onRequestedSegmentApplied?: (requestKey: number) => void;
 }
 
 // NOSONAR - Component intentionally coordinates list state, selection, and pagination in one container.
@@ -443,6 +446,9 @@ export function CaseList({
   onApproveArchival,
   onCancelArchival,
   isArchiving = false,
+  requestedSegment,
+  requestedSegmentKey,
+  onRequestedSegmentApplied,
 }: Readonly<CaseListProps>) {
   const { featureFlags } = useAppViewState();
   const showDevTools = isFeatureEnabled("settings.devTools", featureFlags);
@@ -466,10 +472,14 @@ export function CaseList({
   const [searchTerm, setSearchTerm] = useState("");
   const [isSettingUpData, setIsSettingUpData] = useState(false);
   const [showSampleDataDialog, setShowSampleDataDialog] = useState(false);
+  const [transientSegmentOverride, setTransientSegmentOverride] = useState<CaseListSegment | null>(null);
+  const lastAppliedRequestedSegmentKeyRef = useRef<number | null>(null);
+  const onRequestedSegmentAppliedCallbackRef = useRef(onRequestedSegmentApplied);
 
   // Pagination
   const PAGE_SIZE = 20;
   const [currentPage, setCurrentPage] = useState(1);
+  const effectiveSegment = transientSegmentOverride ?? segment;
 
   const matchedAlertsByCase = useMemo(
     () => alertsByCaseId ?? new Map<string, AlertWithMatch[]>(),
@@ -493,7 +503,7 @@ export function CaseList({
   }, [matchedAlertsByCase]);
 
   const filteredAlertsByCase = useMemo(() => {
-    if (segment !== "alerts") {
+    if (effectiveSegment !== "alerts") {
       return openAlertsByCase;
     }
 
@@ -528,7 +538,7 @@ export function CaseList({
 
     return next;
   }, [
-    segment,
+    effectiveSegment,
     openAlertsByCase,
     enableAdvancedAlertFilters,
     hasActiveAdvancedFilters,
@@ -552,9 +562,9 @@ export function CaseList({
   const hasCustomPreferences = useMemo(() => {
     const hasFilters = filters.statuses.length > 0 || filters.priorityOnly || filters.dateRange.from || filters.dateRange.to;
     const hasCustomSort = sortConfigs.length > 1 || sortConfigs[0]?.key !== "name" || sortConfigs[0]?.direction !== "asc";
-    const hasCustomSegment = segment !== "all";
+    const hasCustomSegment = effectiveSegment !== "all";
     return hasFilters || hasCustomSort || hasCustomSegment;
-  }, [filters, sortConfigs, segment]);
+  }, [effectiveSegment, filters, sortConfigs]);
 
   const handleSetupSampleData = useCallback(async () => {
     setIsSettingUpData(true);
@@ -579,6 +589,7 @@ export function CaseList({
 
   const handleSegmentChange = useCallback((value: string) => {
     if (isValidCaseListSegment(value)) {
+      setTransientSegmentOverride(null);
       setSegment(value);
     }
   }, [setSegment]);
@@ -597,10 +608,10 @@ export function CaseList({
       cases,
       searchTerm,
       filters,
-      segment,
+      effectiveSegment,
       config.caseStatuses as Array<{ name: string; countsAsCompleted?: boolean }>,
     );
-  }, [cases, searchTerm, segment, filters, config.caseStatuses]);
+  }, [cases, searchTerm, effectiveSegment, filters, config.caseStatuses]);
 
   const sortedCases = useMemo(() => {
     const priorityConfig = { caseStatuses: config.caseStatuses, alertTypes: config.alertTypes };
@@ -611,7 +622,7 @@ export function CaseList({
 
   // When in alerts mode, count total open alerts for pagination (respecting description filter)
   const totalAlertRows = useMemo(() => {
-    if (segment !== "alerts") {
+    if (effectiveSegment !== "alerts") {
       return 0;
     }
     let count = 0;
@@ -622,10 +633,10 @@ export function CaseList({
       }
     }
     return count;
-  }, [segment, sortedCases, filteredAlertsByCase]);
+  }, [effectiveSegment, sortedCases, filteredAlertsByCase]);
 
   // Pagination computed values - use alert count when in alerts mode
-  const totalItems = segment === "alerts" ? totalAlertRows : sortedCases.length;
+  const totalItems = effectiveSegment === "alerts" ? totalAlertRows : sortedCases.length;
   const totalPages = Math.ceil(totalItems / PAGE_SIZE);
   const startIndex = (currentPage - 1) * PAGE_SIZE;
   const endIndex = startIndex + PAGE_SIZE;
@@ -639,30 +650,48 @@ export function CaseList({
   // Reset to page 1 when filters/search change
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchTerm, segment, filters, sortConfigs]);
+  }, [searchTerm, effectiveSegment, filters, sortConfigs]);
 
-  const noMatches = segment === "alerts" ? totalAlertRows === 0 : sortedCases.length === 0;
+  useEffect(() => {
+    onRequestedSegmentAppliedCallbackRef.current = onRequestedSegmentApplied;
+  }, [onRequestedSegmentApplied]);
+
+  useEffect(() => {
+    if (!requestedSegment || requestedSegmentKey === undefined) {
+      return;
+    }
+
+    if (lastAppliedRequestedSegmentKeyRef.current === requestedSegmentKey) {
+      return;
+    }
+
+    lastAppliedRequestedSegmentKeyRef.current = requestedSegmentKey;
+    setTransientSegmentOverride(requestedSegment);
+    onRequestedSegmentAppliedCallbackRef.current?.(requestedSegmentKey);
+  }, [requestedSegment, requestedSegmentKey]);
+
+  const noMatches = effectiveSegment === "alerts" ? totalAlertRows === 0 : sortedCases.length === 0;
 
   const alertDescriptionFilterForTable = useMemo(() => {
-    if (segment === "alerts") {
+    if (effectiveSegment === "alerts") {
       return undefined;
     }
     if (filters.alertDescription === "all") {
       return undefined;
     }
     return filters.alertDescription;
-  }, [segment, filters.alertDescription]);
+  }, [effectiveSegment, filters.alertDescription]);
 
   // Selection management - operates on all visible/filtered cases
   // When in alerts view with description filter, only include cases with matching alerts
   const allFilteredCaseIds = useMemo(() => {
-    if (segment === "alerts") {
+    if (effectiveSegment === "alerts") {
       return sortedCases
         .filter((caseData) => (filteredAlertsByCase.get(caseData.id)?.length ?? 0) > 0)
         .map((caseData) => caseData.id);
     }
     return sortedCases.map(c => c.id);
-  }, [sortedCases, segment, filteredAlertsByCase]);
+  }, [sortedCases, effectiveSegment, filteredAlertsByCase]);
   
   const {
     selectedCount,
@@ -774,13 +803,18 @@ export function CaseList({
     return getSelectedCaseIdsFromFilter(allFilteredCaseIds, isSelected);
   }, [allFilteredCaseIds, isSelected]);
 
-  // Get the active alert description filter (only when in alerts segment and not "all")
+    // Get the active alert description filter (only when in alerts segment and not "all")
   const activeAlertDescriptionFilter = useMemo(() => {
-    if (segment === "alerts" && filters.alertDescription !== "all") {
+    if (effectiveSegment === "alerts" && filters.alertDescription !== "all") {
       return filters.alertDescription;
     }
     return undefined;
-  }, [segment, filters.alertDescription]);
+  }, [effectiveSegment, filters.alertDescription]);
+
+  const handleResetPreferences = useCallback(() => {
+    setTransientSegmentOverride(null);
+    resetPreferences();
+  }, [resetPreferences]);
 
   // Compute the count of matching alerts for SELECTED cases only
   const alertCountForSelection = useMemo(() => {
@@ -903,7 +937,7 @@ export function CaseList({
         <MultiSortConfig sortConfigs={sortConfigs} onSortConfigsChange={setSortConfigs} />
         <ToggleGroup
           type="single"
-          value={segment}
+          value={effectiveSegment}
           onValueChange={handleSegmentChange}
           variant="outline"
           size="sm"
@@ -925,7 +959,7 @@ export function CaseList({
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={resetPreferences}
+                onClick={handleResetPreferences}
                 aria-label="Reset all filters and sorting"
               >
                 <RotateCcw className="h-4 w-4" />
@@ -939,16 +973,16 @@ export function CaseList({
       </div>
 
       <CaseTable
-        cases={segment === "alerts" ? sortedCases : paginatedCases}
+        cases={effectiveSegment === "alerts" ? sortedCases : paginatedCases}
         sortKey={sortKey}
         sortDirection={sortDirection}
         onRequestSort={handleTableSortRequest}
         onViewCase={onViewCase}
-        alertsByCaseId={segment === "alerts" ? filteredAlertsByCase : matchedAlertsByCase}
+        alertsByCaseId={effectiveSegment === "alerts" ? filteredAlertsByCase : matchedAlertsByCase}
         onResolveAlert={onResolveAlert ? handleResolveAlert : undefined}
         onUpdateCaseStatus={onUpdateCaseStatus}
-        expandAlerts={segment === "alerts"}
-        alertPageRange={segment === "alerts" ? { start: startIndex, end: endIndex } : undefined}
+        expandAlerts={effectiveSegment === "alerts"}
+        alertPageRange={effectiveSegment === "alerts" ? { start: startIndex, end: endIndex } : undefined}
         alertDescriptionFilter={alertDescriptionFilterForTable}
         selectionEnabled={selectionEnabled}
         isSelected={isSelected}
@@ -960,7 +994,7 @@ export function CaseList({
 
       {noMatches && (
         <div className="py-12 text-center">
-          <p className="text-muted-foreground">{segment === "alerts" ? "No open alerts to display." : "No cases match the current filters."}</p>
+          <p className="text-muted-foreground">{effectiveSegment === "alerts" ? "No open alerts to display." : "No cases match the current filters."}</p>
         </div>
       )}
 
@@ -968,7 +1002,7 @@ export function CaseList({
             totalItems={totalItems}
             startIndex={startIndex}
             endIndex={endIndex}
-            segment={segment}
+            segment={effectiveSegment}
             totalPages={totalPages}
             currentPage={currentPage}
             setCurrentPage={setCurrentPage}
@@ -986,7 +1020,7 @@ export function CaseList({
           isDeleting={isBulkDeleting}
           isUpdating={isBulkUpdating}
           selectedPriorityState={selectedPriorityState}
-          showArchivalActions={segment === "archival-review"}
+          showArchivalActions={effectiveSegment === "archival-review"}
           onApproveArchival={onApproveArchival ? handleApproveArchival : undefined}
           onCancelArchival={onCancelArchival ? handleCancelArchival : undefined}
           isArchiving={isArchiving}

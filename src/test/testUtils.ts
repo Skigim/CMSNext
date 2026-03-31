@@ -6,6 +6,9 @@ import { mergeCategoryConfig } from '@/types/categoryConfig'
 import { createBlankHouseholdMemberData, normalizeHouseholdMemberDraft } from '@/domain/cases'
 import type { IntakeFormData } from '@/domain/validation/intake.schema'
 import { dehydrateNormalizedData, type NormalizedFileDataV20, type PersistedNormalizedFileDataV21 } from '@/utils/storageV21Migration'
+import type { DailyActivityReport, CaseActivityLogState } from '@/types/activityLog'
+import type { AlertWithMatch } from '@/utils/alertsData'
+import type { AppNavigationConfig } from '@/components/app/AppNavigationShell'
 
 /**
  * Test data factories for creating mock data objects
@@ -330,6 +333,89 @@ export const createMockFileStorageLifecycleSelectors = (
   hasStoredHandle: true,
   isConnected: true,
   lastError: null,
+  ...overrides,
+})
+
+export const createMockDailyActivityReport = (
+  overrides: Partial<DailyActivityReport> = {},
+): DailyActivityReport => {
+  const { totals, ...remainingOverrides } = overrides
+
+  return {
+    date: '2025-01-01',
+    entries: [],
+    cases: [],
+    ...remainingOverrides,
+    totals: {
+      total: 0,
+      statusChanges: 0,
+      priorityChanges: 0,
+      notesAdded: 0,
+      ...totals,
+    },
+  }
+}
+
+export const createMockCaseActivityLogState = (
+  overrides: Partial<CaseActivityLogState> = {},
+): CaseActivityLogState => {
+  const emptyReport = createMockDailyActivityReport()
+
+  return {
+    activityLog: [],
+    dailyReports: [],
+    todayReport: null,
+    yesterdayReport: null,
+    loading: false,
+    error: null,
+    refreshActivityLog: vi.fn().mockResolvedValue(undefined),
+    getReportForDate: vi.fn(() => emptyReport),
+    clearReportForDate: vi.fn().mockResolvedValue(0),
+    ...overrides,
+  }
+}
+
+export const createMockAlertWithMatch = (
+  overrides: Partial<AlertWithMatch> = {},
+): AlertWithMatch => {
+  const timestamp = '2025-09-01T00:00:00.000Z'
+
+  return {
+    id: globalThis.crypto.randomUUID(),
+    reportId: 'report-1',
+    alertCode: 'AL-1',
+    alertType: 'Notice',
+    alertDate: timestamp,
+    createdAt: timestamp,
+    updatedAt: timestamp,
+    mcNumber: 'MCN123',
+    personName: 'Jamie Rivera',
+    program: 'Medicaid',
+    region: 'Region 1',
+    state: 'FL',
+    source: 'Import',
+    description: 'Follow up with client',
+    status: 'new',
+    resolvedAt: null,
+    resolutionNotes: undefined,
+    metadata: {},
+    matchStatus: 'matched',
+    matchedCaseId: undefined,
+    matchedCaseName: undefined,
+    matchedCaseStatus: undefined,
+    ...overrides,
+  }
+}
+
+export const createMockAppNavigation = (
+  overrides: Partial<AppNavigationConfig> = {},
+): AppNavigationConfig => ({
+  currentView: 'dashboard',
+  breadcrumbTitle: 'Dashboard',
+  sidebarOpen: true,
+  onNavigate: vi.fn(),
+  onNewCase: vi.fn(),
+  onSidebarOpenChange: vi.fn(),
   ...overrides,
 })
 

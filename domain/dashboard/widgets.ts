@@ -16,7 +16,10 @@
 
 import { isAlertResolved, type AlertWithMatch } from "@/utils/alertsData";
 import type { StoredCase } from "@/types/case";
-import type { CaseActivityEntry } from "@/types/activityLog";
+import type {
+  CaseActivityEntry,
+  CaseStatusChangeActivity,
+} from "@/types/activityLog";
 
 export interface DailyAlertStats {
   date: string;
@@ -57,6 +60,11 @@ export interface ProcessingTimeStats {
   sampleSize: number;
   byStatus: Record<string, number>;
   previousAverageDays: number | null;
+}
+
+interface TimestampedStatusChange {
+  entry: CaseStatusChangeActivity;
+  timestampMs: number;
 }
 
 interface DateWindowOptions {
@@ -236,28 +244,18 @@ export function calculateCasesProcessedPerDay(
     return keys.map((date) => ({ date, processedCount: 0 }));
   }
 
+  // Group status-change entries by local day and then by case so each case/day
+  // can be evaluated from its starting state to its ending state.
+  const statusChangesByDay = new Map<
+    string,
+    Map<string, TimestampedStatusChange[]>
+  >();
+
   // Build an index of cases that have notes added on each day (if filtering is enabled)
   // Map<dateKey, Set<caseId>>
   const casesWithNotesByDay = new Map<string, Set<string>>();
-  if (requireNoteOnSameDay) {
-    activityLog.forEach((entry) => {
-      if (!entry || entry.type !== "note-added") {
-        return;
-      }
-      const timestamp = safeParseDate(entry.timestamp);
-      if (!timestamp || !isWithinRange(timestamp, start, referenceDate)) {
-        return;
-      }
-      const key = isoDateKey(timestamp);
-      if (!casesWithNotesByDay.has(key)) {
-        casesWithNotesByDay.set(key, new Set());
-      }
-      casesWithNotesByDay.get(key)?.add(entry.caseId);
-    });
-  }
-
   activityLog.forEach((entry) => {
-    if (!entry || entry.type !== "status-change") {
+    if (!entry) {
       return;
     }
 
@@ -267,27 +265,82 @@ export function calculateCasesProcessedPerDay(
     }
 
     const key = isoDateKey(timestamp);
-    const toStatus = entry.payload?.toStatus?.toLowerCase();
-    const fromStatus = entry.payload?.fromStatus?.toLowerCase();
 
-    const movedToCompletion = toStatus ? completionStatuses.has(toStatus) : false;
-    const movedFromCompletion = fromStatus ? completionStatuses.has(fromStatus) : false;
-
-    // If requireNoteOnSameDay is enabled, only count if this case has a note on the same day
-    if (requireNoteOnSameDay) {
-      const notesForDay = casesWithNotesByDay.get(key);
-      if (!notesForDay || !notesForDay.has(entry.caseId)) {
-        return; // Skip: no note added for this case on this day
+    if (entry.type === "note-added" && requireNoteOnSameDay) {
+      if (!casesWithNotesByDay.has(key)) {
+        casesWithNotesByDay.set(key, new Set());
       }
+      casesWithNotesByDay.get(key)?.add(entry.caseId);
+      return;
     }
 
-    // Net change: +1 when moving TO completion, -1 when moving FROM completion
-    if (movedToCompletion && !movedFromCompletion) {
-      counts.set(key, (counts.get(key) ?? 0) + 1);
-    } else if (movedFromCompletion && !movedToCompletion) {
-      counts.set(key, (counts.get(key) ?? 0) - 1);
+    if (entry.type !== "status-change") {
+      return;
     }
-    // If moving between two completion statuses, net change is 0
+
+    if (!statusChangesByDay.has(key)) {
+      statusChangesByDay.set(key, new Map());
+    }
+
+    const casesForDay = statusChangesByDay.get(key);
+    if (!casesForDay) {
+      return;
+    }
+    if (!casesForDay.has(entry.caseId)) {
+      casesForDay.set(entry.caseId, []);
+    }
+    casesForDay.get(entry.caseId)?.push({
+      entry,
+      timestampMs: timestamp.getTime(),
+    });
+  });
+
+  statusChangesByDay.forEach((casesForDay, key) => {
+    casesForDay.forEach((entries, caseId) => {
+      if (entries.length === 0) {
+        return;
+      }
+
+      if (requireNoteOnSameDay) {
+        const notesForDay = casesWithNotesByDay.get(key);
+        if (!notesForDay || !notesForDay.has(caseId)) {
+          return;
+        }
+      }
+
+      const firstStatusChange = entries[0];
+      let dayStartEntry = firstStatusChange.entry;
+      let dayStartTimestamp = firstStatusChange.timestampMs;
+      let dayEndEntry = firstStatusChange.entry;
+      let dayEndTimestamp = firstStatusChange.timestampMs;
+
+      for (const statusChange of entries) {
+        if (statusChange.timestampMs < dayStartTimestamp) {
+          dayStartEntry = statusChange.entry;
+          dayStartTimestamp = statusChange.timestampMs;
+        }
+        if (statusChange.timestampMs > dayEndTimestamp) {
+          dayEndEntry = statusChange.entry;
+          dayEndTimestamp = statusChange.timestampMs;
+        }
+      }
+
+      // We treat the earliest status-change's `fromStatus` as the case's local
+      // day-start state and the latest status-change's `toStatus` as the day-end
+      // state, which matches the existing activity log model for intra-day moves.
+      const dayStartStatus = dayStartEntry.payload?.fromStatus?.toLowerCase();
+      const dayEndStatus = dayEndEntry.payload?.toStatus?.toLowerCase();
+      const startedInCompletion = dayStartStatus
+        ? completionStatuses.has(dayStartStatus)
+        : false;
+      const endedInCompletion = dayEndStatus
+        ? completionStatuses.has(dayEndStatus)
+        : false;
+
+      if (!startedInCompletion && endedInCompletion) {
+        counts.set(key, (counts.get(key) ?? 0) + 1);
+      }
+    });
   });
 
   return keys.map((date) => ({

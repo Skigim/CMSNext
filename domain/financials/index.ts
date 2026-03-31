@@ -24,6 +24,7 @@ export {
   getLastOfMonth,
   isDateInEntryRange,
   sortHistoryEntries,
+  getLatestHistoryEntry,
   getAmountForMonth,
   getAmountInfoForMonth,
   type AmountInfo,

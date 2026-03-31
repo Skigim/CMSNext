@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigationLock, type NavigationLock } from "./useNavigationLock";
 import { useNavigationActions, RESTRICTED_VIEWS, type FormState } from "./useNavigationActions";
+import type { CaseListSegment } from "./useCaseListPreferences";
 import { NewCaseRecordData, NewPersonData, StoredCase } from "../types/case";
 import { AppView } from "../types/view";
 import type { FileStorageLifecycleSelectors } from "../contexts/FileStorageContext";
@@ -26,8 +27,12 @@ interface NavigationHandlers {
   breadcrumbTitle?: string;
   /** The view from which the user navigated to case details (for breadcrumb context) */
   detailsSourceView?: AppView;
+  requestedCaseListSegment: CaseListSegment | null;
+  requestedCaseListSegmentKey: number;
   navigationLock: NavigationLock;
   navigate: (view: AppView) => void;
+  navigateToListSegment: (segment: CaseListSegment) => void;
+  consumeRequestedCaseListSegment: (requestKey: number) => void;
   viewCase: (caseId: string) => void;
   newCase: () => void;
   quickAdd: () => void;
@@ -100,7 +105,10 @@ export function useNavigationFlow({
   const [showNewCaseModal, setShowNewCaseModal] = useState(false);
   const [formState, setFormState] = useState<FormState>({ previousView: "list" });
   const [sidebarOpen, setSidebarOpen] = useState<boolean>(true);
+  const [requestedCaseListSegment, setRequestedCaseListSegment] = useState<CaseListSegment | null>(null);
+  const [requestedCaseListSegmentKey, setRequestedCaseListSegmentKey] = useState(0);
   const forcedViewRef = useRef<AppView | null>(null);
+  const requestedCaseListSegmentKeyRef = useRef(0);
 
   // Lock state from connection
   const { navigationLock, guardCaseInteraction } = useNavigationLock({ connectionState });
@@ -136,10 +144,33 @@ export function useNavigationFlow({
     logCaseView,
   });
 
+  const navigate = useCallback((view: AppView) => {
+    setRequestedCaseListSegment(null);
+    actions.navigate(view);
+  }, [actions]);
+
+  const navigateToListSegment = useCallback((segment: CaseListSegment) => {
+    setRequestedCaseListSegment(segment);
+    setRequestedCaseListSegmentKey((currentKey) => currentKey + 1);
+    actions.navigate("list");
+  }, [actions]);
+
+  const consumeRequestedCaseListSegment = useCallback((requestKey: number) => {
+    if (requestedCaseListSegmentKeyRef.current !== requestKey) {
+      return;
+    }
+
+    setRequestedCaseListSegment(null);
+  }, []);
+
   // Auto-redirect when locked/unlocked
   // Loop-safe: When locked + currentView ∈ RESTRICTED_VIEWS, we set currentView to "settings"
   // which is NOT in RESTRICTED_VIEWS, so the effect short-circuits on next render.
   // When unlocked, we restore the prior view then clear the ref, exiting on next run.
+  useEffect(() => {
+    requestedCaseListSegmentKeyRef.current = requestedCaseListSegmentKey;
+  }, [requestedCaseListSegmentKey]);
+
   useEffect(() => {
     if (navigationLock.locked && RESTRICTED_VIEWS.includes(currentView)) {
       if (!forcedViewRef.current) {
@@ -174,8 +205,13 @@ export function useNavigationFlow({
     sidebarOpen,
     breadcrumbTitle,
     detailsSourceView: formState.detailsSourceView,
+    requestedCaseListSegment,
+    requestedCaseListSegmentKey,
     navigationLock,
     setSidebarOpen,
     ...actions,
+    navigate,
+    navigateToListSegment,
+    consumeRequestedCaseListSegment,
   };
 }

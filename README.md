@@ -250,6 +250,37 @@ npm run analyze
 npm run dead-code
 ```
 
+## Runtime Environment Configuration
+
+CMSNext now centralizes runtime behavior in a typed app config layer. In Vite-powered builds, set these as `VITE_*` variables in `.env` files or CI; the app config also accepts the unprefixed names in Node/test contexts.
+
+- `APP_ENV=dev|staging|production`
+- `ENCRYPTION_MODE=disabled|noop|full`
+- `DEVTOOLS_ENABLED=true|false`
+- `SCHEMA_INSPECTOR_ENABLED=true|false`
+- `DATA_FLOW_DEBUG_ENABLED=true|false`
+- `VERBOSE_LOGGING=true|false`
+
+### Encryption modes
+
+- `full` — current production behavior with real AES-256-GCM encryption
+- `noop` — preserves the app-facing unlock flow, but stores readable JSON on disk
+- `disabled` — bypasses unlock/password gating and stores readable JSON on disk
+
+### Intended branch mapping
+
+- `dev` → `APP_ENV=dev`, `ENCRYPTION_MODE=noop` or `disabled`, dev tooling on
+- `staging` → `APP_ENV=staging`, `ENCRYPTION_MODE=full`, dev tooling on
+- `main` → `APP_ENV=production`, `ENCRYPTION_MODE=full`, dev tooling off
+
+### Safety validation
+
+The config layer fails fast for unsafe combinations:
+
+- `production` requires `ENCRYPTION_MODE=full`
+- `production` requires dev tools, schema inspection, data-flow debug, and verbose logging to be disabled
+- `staging` requires `ENCRYPTION_MODE=full`
+
 ### Quality gates
 
 The intended verification flow for code changes is:

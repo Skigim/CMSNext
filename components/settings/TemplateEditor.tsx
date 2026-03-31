@@ -36,6 +36,8 @@ type TemplateEditorProps = {
   customPlaceholders?: Record<string, PlaceholderField>;
   /** Whether the parent context is loading */
   isGloballyLoading?: boolean;
+  /** Optional maximum number of templates allowed for this category */
+  maxTemplates?: number;
 };
 
 // ============================================================================
@@ -373,6 +375,7 @@ export function TemplateEditor({
   category,
   customPlaceholders,
   isGloballyLoading = false,
+  maxTemplates,
 }: Readonly<TemplateEditorProps>) {
   const { templates, loading, addTemplate, updateTemplate, deleteTemplate } = useTemplates();
   
@@ -390,6 +393,8 @@ export function TemplateEditor({
   const [isSaving, setIsSaving] = useState(false);
 
   const isDisabled = loading || isGloballyLoading || isSaving;
+  const hasReachedTemplateLimit =
+    maxTemplates !== undefined && categoryTemplates.length >= maxTemplates;
 
   // Reset editing state when templates change
   useEffect(() => {
@@ -501,7 +506,7 @@ export function TemplateEditor({
       )}
 
       {/* Add Button */}
-      {!isCreating && !editingId && (
+      {!isCreating && !editingId && !hasReachedTemplateLimit && (
         <Button
           variant="outline"
           size="sm"
@@ -542,4 +547,3 @@ export function TemplateEditor({
     </div>
   );
 }
-

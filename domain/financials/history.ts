@@ -6,6 +6,7 @@
  */
 
 import { v4 as uuidv4 } from "uuid";
+import { parseLocalDate } from "@/domain/common/dates";
 import type { AmountHistoryEntry, FinancialItem } from "@/types/case";
 
 /**
@@ -67,9 +68,99 @@ export function isDateInEntryRange(
  */
 export function sortHistoryEntries(entries: AmountHistoryEntry[]): AmountHistoryEntry[] {
   return [...entries].sort((a, b) => {
-    // Simple string comparison works for YYYY-MM-DD format
-    return b.startDate.localeCompare(a.startDate);
+    const entryTimeA = getEntryStartTime(a);
+    const entryTimeB = getEntryStartTime(b);
+
+    if (entryTimeA === null && entryTimeB === null) {
+      return 0;
+    }
+
+    if (entryTimeA === null) {
+      return 1;
+    }
+
+    if (entryTimeB === null) {
+      return -1;
+    }
+
+    if (entryTimeB !== entryTimeA) {
+      return entryTimeB - entryTimeA;
+    }
+
+    return compareCreatedAtDescending(a, b);
   });
+}
+
+/**
+ * Gets the most recent valid history entry by startDate.
+ * Invalid or missing start dates are ignored.
+ */
+export function getLatestHistoryEntry(
+  entries: AmountHistoryEntry[] | undefined
+): AmountHistoryEntry | undefined {
+  if (!entries?.length) {
+    return undefined;
+  }
+
+  let latestEntry: AmountHistoryEntry | undefined;
+  let latestTime = Number.NEGATIVE_INFINITY;
+  let latestCreatedAtTime = Number.NEGATIVE_INFINITY;
+
+  for (const entry of entries) {
+    const entryTime = getEntryStartTime(entry);
+    const entryCreatedAtTime = getEntryCreatedAtTime(entry);
+
+    if (entryTime === null) {
+      continue;
+    }
+
+    if (
+      entryTime < latestTime ||
+      (entryTime === latestTime && entryCreatedAtTime <= latestCreatedAtTime)
+    ) {
+      continue;
+    }
+
+    latestEntry = entry;
+    latestTime = entryTime;
+    latestCreatedAtTime = entryCreatedAtTime;
+  }
+
+  return latestEntry;
+}
+
+function getEntryStartTime(entry: Pick<AmountHistoryEntry, "startDate">): number | null {
+  const parsedDate = parseLocalDate(entry.startDate);
+  return parsedDate ? parsedDate.getTime() : null;
+}
+
+function getEntryCreatedAtTime(entry: Pick<AmountHistoryEntry, "createdAt">): number {
+  const parsedDate = parseLocalDate(entry.createdAt);
+  return parsedDate ? parsedDate.getTime() : Number.NEGATIVE_INFINITY;
+}
+
+function compareCreatedAtDescending(
+  entryA: Pick<AmountHistoryEntry, "createdAt"> & Partial<Pick<AmountHistoryEntry, "id">>,
+  entryB: Pick<AmountHistoryEntry, "createdAt"> & Partial<Pick<AmountHistoryEntry, "id">>
+): number {
+  const timeA = getEntryCreatedAtTime(entryA);
+  const timeB = getEntryCreatedAtTime(entryB);
+
+  // Primary sort: createdAt descending
+  if (timeA !== timeB) {
+    return timeB - timeA;
+  }
+
+  // Tiebreaker: stable ordering by id when available
+  if (entryA.id !== undefined && entryB.id !== undefined && entryA.id !== entryB.id) {
+    const idA = String(entryA.id);
+    const idB = String(entryB.id);
+    // Use ascending id as deterministic tiebreaker
+    return idA < idB ? -1 : 1;
+  }
+
+  // Final fallback: treat as equal
+  return 0;
 }
 
 /**

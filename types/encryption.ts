@@ -54,12 +54,22 @@ export interface EncryptionConfig {
   ivLength?: number;
 }
 
+/** Runtime encryption mode. */
+export type EncryptionMode = "disabled" | "noop" | "full";
+
 /** Error codes for encryption operations */
 export type EncryptionErrorCode = 
   | 'missing_password'
   | 'wrong_password' 
   | 'corrupt_salt'
   | 'system_error';
+
+export const ENCRYPTION_ERROR_CODES: readonly EncryptionErrorCode[] = [
+  "missing_password",
+  "wrong_password",
+  "corrupt_salt",
+  "system_error",
+];
 
 /**
  * Custom error class for encryption failures with specific codes
