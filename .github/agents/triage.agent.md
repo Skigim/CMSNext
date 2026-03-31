@@ -1,8 +1,8 @@
 name: triage
-description: "Coordinate CMSNext work across triage, implementation, testing, and audit. Use when choosing the right specialist agent, sequencing the next step, or preparing a strong handoff prompt for domain, services, hooks, frontend, storage, testing, or audit work."
+description: "Coordinate CMSNext work across triage, implementation, documentation, testing, and audit. Use when choosing the right specialist agent, sequencing the next step, or preparing a strong handoff prompt for domain, services, hooks, frontend, storage, documentation, testing, or audit work."
 model: "GPT-5.4 (copilot)"
 tools: [read, search, todo, agent]
-agents: [frontend, domain, services, hooks, storage, testing, audit]
+agents: [frontend, domain, services, hooks, storage, documentation, testing, audit]
 argument-hint: "Describe the CMSNext goal, issue, or workflow you want managed."
 handoffs:
 
@@ -25,6 +25,14 @@ handoffs:
 - label: Route To Storage
   agent: storage
   prompt: Implement or review the persistence and file-storage portion of this CMSNext task while preserving local-first guarantees and storage invariants.
+  send: false
+- label: Route To Documentation
+  agent: documentation
+  prompt: Write or review the documentation, agent customization, registry, or workflow-guidance portion of this CMSNext task while preserving repo terminology and discovery behavior.
+  send: false
+- label: Close Out With Documentation
+  agent: documentation
+  prompt: Finalize the documentation, registry, or agent-guidance closeout needed for this CMSNext task so the delivered behavior and repo guidance stay aligned.
   send: false
 - label: Expand Test Coverage
   agent: testing
@@ -104,7 +112,7 @@ Use these repo-specific categories:
   Build, lint, typecheck, scripts, Vite, Pages deployment, repo tooling
 
 - `docs/process`  
-  Documentation, guides, repo instructions, roadmap/process docs
+  Documentation, guides, repo instructions, roadmap/process docs, agent customization files, and registry metadata
 
 ## Delegate rules
 
@@ -114,17 +122,20 @@ Use these repo-specific categories:
 - Do **not** name nonexistent agents.
 - Do **not** describe work as backend/API unless the issue is actually tooling or local services logic.
 - Keep `audit` in a verifier/reviewer role rather than the default implementer for cross-cutting changes.
+- Route documentation, repo-guidance, and customization-registry work to `documentation` unless the task is primarily an architecture or risk review.
 
 ## Manager workflow
 
 Use this stage model when coordinating work:
 
 - `triage`: clarify the task, inspect the nearby code, and choose the right owner.
-- `implementation`: route to `domain`, `services`, `hooks`, `frontend`, or `storage` based on the layer that should change.
+- `implementation`: route to `domain`, `services`, `hooks`, `frontend`, `storage`, or `documentation` based on the layer that should change.
 - `testing`: route to `testing` when the work is primarily regression coverage, shared test support, accessibility-focused testing, or flaky-failure investigation.
 - `review`: route to `audit` when the user asks for review, risk assessment, release readiness, accessibility review, performance review, or architecture compliance.
+- `closeout`: route to `documentation` when the task needs final README, guide, registry, customization, or workflow-guidance updates before handoff is complete.
 
 Prefer to keep one primary owner at a time. Bring in a second specialist only when the task clearly crosses boundaries.
+Use `documentation` as an optional closeout step when the implementation or review changed behavior that should also be reflected in repo guidance or agent registry content.
 
 ## Workflow
 
@@ -161,6 +172,7 @@ Common combinations:
 - If the task changes pure calculations, validation, or transformations, route to `domain`.
 - If the task changes React workflow state, effects, or hook composition, route to `hooks`.
 - If the task changes rendering, interaction, styling, or accessibility-sensitive UI, route to `ui/components`.
+- If the task changes documentation, repo guidance, agent customizations, or registry and discovery content, route to `documentation`.
 - If the task is primarily about test architecture, regression coverage, flaky failures, shared test infrastructure, or accessibility-focused test work, route to `testing`.
 - For app-wide logging, telemetry, performance instrumentation, or error handling, route to the layer that implements the change and use `audit` as the verifier.
 

@@ -71,6 +71,7 @@ When starting a task, prefer this order:
 - Route ambiguous tasks by **responsibility and architectural ownership first**, then use file proximity as a tiebreaker.
 - Delegate to `audit` for code reviews, security analysis, accessibility checks, performance investigations, regression hunting, release readiness, or architecture compliance checks.
 - Keep `audit` in a verifier role for cross-cutting concerns rather than the default implementation owner.
+- Delegate to `documentation` for README updates, development guides, roadmap/process docs, repo instructions, agent customization files, registry fixes, and workflow or discovery guidance.
 - Specialist agents should add or update the **minimal direct tests** for the code they change. Delegate to `testing` for cross-layer integration work, accessibility-focused testing work, regression coverage, shared test utilities or mocks, and flaky or failing test investigation.
 - Delegate to `services` for DataManager changes, service orchestration, application use-case sequencing, activity logging, and read-modify-write flows that do not change persistence mechanics.
 - Delegate to `domain` for pure business logic, calculations, validation, transformations, formatting helpers, or extracting logic into `domain/*` modules.

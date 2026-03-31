@@ -13,7 +13,7 @@
 ## Use A Custom Agent
 
 - For a focused persona with a bounded tool set.
-- In this repo, the custom agents are best for audit, frontend, domain, hooks, services, storage, and testing work.
+- In this repo, the custom agents are best for documentation, audit, frontend, domain, hooks, services, storage, and testing work.
 
 ## Use A Skill
 
