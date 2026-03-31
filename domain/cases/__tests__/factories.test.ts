@@ -285,6 +285,7 @@ describe("createIntakeFormData", () => {
 
     // Assert
     expect(result).toMatchObject({
+      applicantPersonId: existingCase.person.id,
       firstName: "Pat",
       lastName: "Editor",
       phone: "5551234567",

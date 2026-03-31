@@ -43,6 +43,7 @@ import type {
   HouseholdMemberData,
   NewCaseRecordData,
   NewPersonData,
+  Person,
   StoredCase,
 } from "../types/case";
 import { createLogger } from "../utils/logger";
@@ -86,6 +87,8 @@ export interface UseIntakeWorkflowReturn {
   visitedSteps: ReadonlySet<number>;
   /** Live form data draft */
   formData: IntakeFormData;
+  /** Reusable people available in the workspace registry */
+  availablePeople: Person[];
   /** Whether the workflow is editing an existing case */
   isEditing: boolean;
   /** Whether a submission is in progress */
@@ -118,6 +121,170 @@ export interface UseIntakeWorkflowReturn {
   isCurrentStepComplete: boolean;
   /** Whether the review step (last step) can be reached */
   canSubmit: boolean;
+}
+
+interface PreparedIntakeSubmission {
+  normalizedHouseholdMembers: HouseholdMemberData[];
+  person: NewPersonData;
+  caseRecord: NewCaseRecordData;
+}
+
+interface PrepareIntakeSubmissionParams {
+  validatedFormData: IntakeFormData;
+  activeExistingCase?: StoredCase;
+  config: {
+    livingArrangements: string[];
+    caseStatuses: Array<{ name: string }>;
+    caseTypes: string[];
+  };
+  isEditing: boolean;
+}
+
+function prepareIntakeSubmission({
+  validatedFormData,
+  activeExistingCase,
+  config,
+  isEditing,
+}: PrepareIntakeSubmissionParams): PreparedIntakeSubmission {
+  const populatedRelationships = (validatedFormData.relationships ?? []).filter(
+    isRelationshipPopulated,
+  );
+  const defaultHouseholdMember = createBlankHouseholdMemberData({
+    livingArrangement: validatedFormData.livingArrangement || config.livingArrangements[0] || "",
+    defaultState: validatedFormData.address.state || "NE",
+  });
+  const populatedHouseholdMembers = (validatedFormData.householdMembers ?? []).filter(
+    isHouseholdMemberPopulated,
+  );
+  const normalizedHouseholdMembers = populatedHouseholdMembers.map((member) =>
+    normalizeHouseholdMemberForSave(member, defaultHouseholdMember, validatedFormData),
+  );
+  const requestedApplicantPersonId =
+    validatedFormData.applicantPersonId?.trim() ?? "";
+  const trimmedFirstName = validatedFormData.firstName.trim();
+  const trimmedLastName = validatedFormData.lastName.trim();
+  const trimmedMcn = validatedFormData.mcn.trim();
+  const normalizedDateOfBirth = dateInputValueToISO(
+    validatedFormData.dateOfBirth,
+  );
+  const normalizedApplicationDate = dateInputValueToISO(
+    validatedFormData.applicationDate,
+  );
+  const normalizedAdmissionDate = dateInputValueToISO(
+    validatedFormData.admissionDate,
+  );
+  const normalizedAvsConsentDate = dateInputValueToISO(
+    validatedFormData.avsConsentDate,
+  );
+  const defaultLivingArrangement = config.livingArrangements[0] || "";
+  const personBase = createPersonData(activeExistingCase, {
+    livingArrangement: defaultLivingArrangement,
+  });
+  const defaultStatus =
+    (config.caseStatuses[0]?.name as CaseStatus | undefined) ??
+    ("Intake" as CaseStatus);
+  const caseRecordBase = createCaseRecordData(activeExistingCase, {
+    caseType: config.caseTypes[0],
+    caseStatus: activeExistingCase?.caseRecord.status ?? defaultStatus,
+    livingArrangement: defaultLivingArrangement,
+  });
+
+  if (
+    isEditing &&
+    requestedApplicantPersonId.length > 0 &&
+    requestedApplicantPersonId !== caseRecordBase.personId
+  ) {
+    throw new Error("Changing the applicant from intake edit is not supported yet.");
+  }
+
+  const resolvedApplicantPersonId =
+    !isEditing && requestedApplicantPersonId.length > 0
+      ? requestedApplicantPersonId
+      : caseRecordBase.personId;
+
+  return {
+    normalizedHouseholdMembers,
+    person: {
+      ...personBase,
+      firstName: trimmedFirstName,
+      lastName: trimmedLastName,
+      dateOfBirth: normalizedDateOfBirth ?? "",
+      ssn: validatedFormData.ssn ?? "",
+      email: validatedFormData.email ?? "",
+      phone: normalizePhoneNumber(validatedFormData.phone ?? ""),
+      organizationId: validatedFormData.organizationId ?? null,
+      livingArrangement:
+        validatedFormData.livingArrangement ||
+        personBase.livingArrangement ||
+        defaultLivingArrangement,
+      address: {
+        ...personBase.address,
+        street: validatedFormData.address.street ?? "",
+        apt: validatedFormData.address.apt ?? undefined,
+        city: validatedFormData.address.city ?? "",
+        state: validatedFormData.address.state ?? "NE",
+        zip: validatedFormData.address.zip ?? "",
+      },
+      mailingAddress: {
+        ...personBase.mailingAddress,
+        street: validatedFormData.mailingAddress.street ?? "",
+        apt: validatedFormData.mailingAddress.apt ?? undefined,
+        city: validatedFormData.mailingAddress.city ?? "",
+        state: validatedFormData.mailingAddress.state ?? "NE",
+        zip: validatedFormData.mailingAddress.zip ?? "",
+        sameAsPhysical: validatedFormData.mailingAddress.sameAsPhysical,
+      },
+      familyMembers: normalizedHouseholdMembers
+        .filter((member): member is HouseholdMemberData & { personId: string } => Boolean(member.personId))
+        .map((member) => member.personId),
+      relationships:
+        normalizedHouseholdMembers.length > 0
+          ? normalizedHouseholdMembers.map((member) => ({
+              type: member.relationshipType,
+              name: `${member.firstName} ${member.lastName}`.trim(),
+              phone: member.phone,
+            }))
+          : populatedRelationships,
+    },
+    caseRecord: {
+      ...caseRecordBase,
+      mcn: trimmedMcn,
+      applicationDate:
+        normalizedApplicationDate ??
+        validatedFormData.applicationDate ??
+        caseRecordBase.applicationDate,
+      caseType:
+        validatedFormData.caseType || caseRecordBase.caseType || config.caseTypes[0] || "",
+      applicationType:
+        validatedFormData.applicationType ?? caseRecordBase.applicationType ?? "",
+      personId: resolvedApplicantPersonId,
+      status: caseRecordBase.status || defaultStatus,
+      livingArrangement:
+        validatedFormData.livingArrangement ||
+        caseRecordBase.livingArrangement ||
+        defaultLivingArrangement,
+      withWaiver: validatedFormData.withWaiver ?? false,
+      admissionDate: normalizedAdmissionDate ?? caseRecordBase.admissionDate ?? "",
+      organizationId:
+        validatedFormData.organizationId ?? caseRecordBase.organizationId ?? "",
+      retroRequested:
+        validatedFormData.retroRequested ?? caseRecordBase.retroRequested ?? "",
+      appValidated: validatedFormData.appValidated ?? false,
+      agedDisabledVerified: validatedFormData.agedDisabledVerified ?? false,
+      citizenshipVerified: validatedFormData.citizenshipVerified ?? false,
+      residencyVerified: validatedFormData.residencyVerified ?? false,
+      contactMethods: (validatedFormData.contactMethods ?? []) as NonNullable<
+        NewCaseRecordData["contactMethods"]
+      >,
+      voterFormStatus: (validatedFormData.voterFormStatus ?? "") as NonNullable<
+        NewCaseRecordData["voterFormStatus"]
+      >,
+      pregnancy: validatedFormData.pregnancy ?? false,
+      avsConsentDate: normalizedAvsConsentDate ?? caseRecordBase.avsConsentDate ?? "",
+      maritalStatus: validatedFormData.maritalStatus ?? "",
+      intakeCompleted: true,
+    },
+  };
 }
 
 // ============================================================================
@@ -169,6 +336,7 @@ export function useIntakeWorkflow({
   const [formData, setFormData] = useState<IntakeFormData>(() =>
     createIntakeFormData(activeExistingCase),
   );
+  const [availablePeople, setAvailablePeople] = useState<Person[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -200,6 +368,42 @@ export function useIntakeWorkflow({
   useEffect(() => {
     initializeWorkflowState(existingCase);
   }, [existingCase, initializeWorkflowState]);
+
+  useEffect(() => {
+    if (!dataManager || typeof dataManager.getAllPeople !== "function") {
+      setAvailablePeople([]);
+      return;
+    }
+
+    let isDisposed = false;
+
+    const loadAvailablePeople = async () => {
+      try {
+        const people = await dataManager.getAllPeople();
+
+        if (isDisposed) {
+          return;
+        }
+
+        setAvailablePeople(people);
+      } catch (error) {
+        if (isDisposed) {
+          return;
+        }
+
+        logger.warn("Failed to load available people for intake", {
+          error: extractErrorMessage(error),
+        });
+        setAvailablePeople([]);
+      }
+    };
+
+    void loadAvailablePeople();
+
+    return () => {
+      isDisposed = true;
+    };
+  }, [dataManager]);
 
   // ---- Derived values -------------------------------------------------------
   const isCurrentStepComplete = useMemo(
@@ -305,19 +509,6 @@ export function useIntakeWorkflow({
     }
 
     const validatedFormData = validationResult.data;
-    const populatedRelationships = (validatedFormData.relationships ?? []).filter(
-      isRelationshipPopulated,
-    );
-    const defaultHouseholdMember = createBlankHouseholdMemberData({
-      livingArrangement: validatedFormData.livingArrangement || config.livingArrangements[0] || "",
-      defaultState: validatedFormData.address.state || "NE",
-    });
-    const populatedHouseholdMembers = (validatedFormData.householdMembers ?? []).filter(
-      isHouseholdMemberPopulated,
-    );
-    const normalizedHouseholdMembers = populatedHouseholdMembers.map((member) =>
-      normalizeHouseholdMemberForSave(member, defaultHouseholdMember, validatedFormData),
-    );
 
     setIsSubmitting(true);
     setError(null);
@@ -325,115 +516,16 @@ export function useIntakeWorkflow({
     const toastId = toast.loading(isEditing ? "Saving changes…" : "Creating case…");
 
     try {
-      const trimmedFirstName = validatedFormData.firstName.trim();
-      const trimmedLastName = validatedFormData.lastName.trim();
-      const trimmedMcn = validatedFormData.mcn.trim();
-      const normalizedDateOfBirth = dateInputValueToISO(
-        validatedFormData.dateOfBirth,
-      );
-      const normalizedApplicationDate = dateInputValueToISO(
-        validatedFormData.applicationDate,
-      );
-      const normalizedAdmissionDate = dateInputValueToISO(
-        validatedFormData.admissionDate,
-      );
-      const normalizedAvsConsentDate = dateInputValueToISO(
-        validatedFormData.avsConsentDate,
-      );
-      const defaultLivingArrangement = config.livingArrangements[0] || "";
-      const personBase = createPersonData(activeExistingCase, {
-        livingArrangement: defaultLivingArrangement,
+      const {
+        normalizedHouseholdMembers,
+        person,
+        caseRecord,
+      } = prepareIntakeSubmission({
+        validatedFormData,
+        activeExistingCase,
+        config,
+        isEditing,
       });
-      const defaultStatus =
-        (config.caseStatuses[0]?.name as CaseStatus | undefined) ??
-        ("Intake" as CaseStatus);
-      const caseRecordBase = createCaseRecordData(activeExistingCase, {
-        caseType: config.caseTypes[0],
-        caseStatus: activeExistingCase?.caseRecord.status ?? defaultStatus,
-        livingArrangement: defaultLivingArrangement,
-      });
-
-      const person: NewPersonData = {
-        ...personBase,
-        firstName: trimmedFirstName,
-        lastName: trimmedLastName,
-        dateOfBirth: normalizedDateOfBirth ?? "",
-        ssn: validatedFormData.ssn ?? "",
-        email: validatedFormData.email ?? "",
-        phone: normalizePhoneNumber(validatedFormData.phone ?? ""),
-        organizationId: validatedFormData.organizationId ?? null,
-        livingArrangement:
-          validatedFormData.livingArrangement ||
-          personBase.livingArrangement ||
-          defaultLivingArrangement,
-        address: {
-          ...personBase.address,
-          street: validatedFormData.address.street ?? "",
-          apt: validatedFormData.address.apt ?? undefined,
-          city: validatedFormData.address.city ?? "",
-          state: validatedFormData.address.state ?? "NE",
-          zip: validatedFormData.address.zip ?? "",
-        },
-        mailingAddress: {
-          ...personBase.mailingAddress,
-          street: validatedFormData.mailingAddress.street ?? "",
-          apt: validatedFormData.mailingAddress.apt ?? undefined,
-          city: validatedFormData.mailingAddress.city ?? "",
-          state: validatedFormData.mailingAddress.state ?? "NE",
-          zip: validatedFormData.mailingAddress.zip ?? "",
-          sameAsPhysical: validatedFormData.mailingAddress.sameAsPhysical,
-        },
-        familyMembers: normalizedHouseholdMembers
-          .filter((member): member is HouseholdMemberData & { personId: string } => Boolean(member.personId))
-          .map((member) => member.personId),
-        relationships:
-          normalizedHouseholdMembers.length > 0
-            ? normalizedHouseholdMembers.map((member) => ({
-                type: member.relationshipType,
-                name: `${member.firstName} ${member.lastName}`.trim(),
-                phone: member.phone,
-              }))
-            : populatedRelationships,
-      };
-
-      const caseRecord: NewCaseRecordData = {
-        ...caseRecordBase,
-        mcn: trimmedMcn,
-        applicationDate:
-          normalizedApplicationDate ??
-          validatedFormData.applicationDate ??
-          caseRecordBase.applicationDate,
-        caseType:
-          validatedFormData.caseType || caseRecordBase.caseType || config.caseTypes[0] || "",
-        applicationType:
-          validatedFormData.applicationType ?? caseRecordBase.applicationType ?? "",
-        personId: caseRecordBase.personId,
-        status: caseRecordBase.status || defaultStatus,
-        livingArrangement:
-          validatedFormData.livingArrangement ||
-          caseRecordBase.livingArrangement ||
-          defaultLivingArrangement,
-        withWaiver: validatedFormData.withWaiver ?? false,
-        admissionDate: normalizedAdmissionDate ?? caseRecordBase.admissionDate ?? "",
-        organizationId:
-          validatedFormData.organizationId ?? caseRecordBase.organizationId ?? "",
-        retroRequested:
-          validatedFormData.retroRequested ?? caseRecordBase.retroRequested ?? "",
-        appValidated: validatedFormData.appValidated ?? false,
-        agedDisabledVerified: validatedFormData.agedDisabledVerified ?? false,
-        citizenshipVerified: validatedFormData.citizenshipVerified ?? false,
-        residencyVerified: validatedFormData.residencyVerified ?? false,
-        contactMethods: (validatedFormData.contactMethods ?? []) as NonNullable<
-          NewCaseRecordData["contactMethods"]
-        >,
-        voterFormStatus: (validatedFormData.voterFormStatus ?? "") as NonNullable<
-          NewCaseRecordData["voterFormStatus"]
-        >,
-        pregnancy: validatedFormData.pregnancy ?? false,
-        avsConsentDate: normalizedAvsConsentDate ?? caseRecordBase.avsConsentDate ?? "",
-        maritalStatus: validatedFormData.maritalStatus ?? "",
-        intakeCompleted: true,
-      };
 
       const savedCase = isEditing && activeExistingCase
         ? await dataManager.updateCompleteCase(activeExistingCase.id, {
@@ -489,6 +581,7 @@ export function useIntakeWorkflow({
     currentStep,
     visitedSteps,
     formData,
+    availablePeople,
     isEditing,
     isSubmitting,
     error,

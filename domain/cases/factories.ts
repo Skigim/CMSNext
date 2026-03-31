@@ -104,6 +104,7 @@ export function createCaseRecordData(
   defaults: CaseRecordDefaults = {}
 ): NewCaseRecordData {
   const record = existingCase?.caseRecord;
+  const status: CaseStatus = record?.status ?? defaults.caseStatus ?? "Pending";
   
   return {
     // Core fields
@@ -113,7 +114,7 @@ export function createCaseRecordData(
     applicationType: record?.applicationType ?? "",
     personId: record?.personId ?? "",
     spouseId: record?.spouseId ?? "",
-    status: (record?.status ?? defaults.caseStatus ?? "Pending") as CaseStatus,
+    status,
     description: record?.description ?? "",
     priority: record?.priority ?? false,
     livingArrangement: record?.livingArrangement ?? defaults.livingArrangement ?? "",
@@ -230,7 +231,7 @@ function buildRelationshipTypeMap(
  * @returns Normalized display name suitable for equality checks
  */
 function normalizeRelationshipDisplayName(value: string | undefined): string {
-  return (value ?? "").trim().replace(/\s+/g, " ").toLowerCase();
+  return (value ?? "").trim().replaceAll(/\s+/g, " ").toLowerCase();
 }
 
 /**
@@ -423,8 +424,16 @@ export function createIntakeFormData(
     return blankForm;
   }
 
+  let retroRequested = "";
+  if (record.retroRequested && record.retroRequested.trim().length > 0) {
+    retroRequested = record.retroRequested;
+  } else if (record.retroMonths && record.retroMonths.length > 0) {
+    retroRequested = record.retroMonths.join(", ");
+  }
+
   return {
     ...blankForm,
+    applicantPersonId: person?.id ?? record.personId ?? "",
     firstName: person?.firstName ?? "",
     lastName: person?.lastName ?? "",
     dateOfBirth: person?.dateOfBirth ?? "",
@@ -463,12 +472,7 @@ export function createIntakeFormData(
     // as the free-text retroRequested string. Intake edit mode uses the text
     // field, so prefer the user-entered retroRequested text when present and
     // only fall back to formatted retroMonths when the text is empty.
-    retroRequested:
-      record.retroRequested && record.retroRequested.trim().length > 0
-        ? record.retroRequested
-        : record.retroMonths && record.retroMonths.length > 0
-          ? record.retroMonths.join(", ")
-          : "",
+    retroRequested,
     appValidated: record.appValidated ?? false,
     agedDisabledVerified: record.agedDisabledVerified ?? false,
     citizenshipVerified: record.citizenshipVerified ?? false,

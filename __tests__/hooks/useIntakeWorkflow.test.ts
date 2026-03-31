@@ -1,12 +1,12 @@
 import { act, renderHook, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { toast as mockToast } from "@/src/test/testUtils";
 import { createBlankIntakeForm } from "@/domain/validation/intake.schema";
 import { INTAKE_STEPS } from "@/domain/cases/intake-steps";
 import {
   createMockHouseholdMemberData,
   createMockPerson,
   createMockStoredCase,
+  toast as mockToast,
 } from "@/src/test/testUtils";
 
 // ---- Mocks -----------------------------------------------------------------
@@ -19,6 +19,7 @@ vi.mock("@/utils/performanceTracker", () => ({
 const mockDataManager = {
   createCompleteCase: vi.fn(),
   updateCompleteCase: vi.fn(),
+  getAllPeople: vi.fn(),
 };
 
 vi.mock("@/contexts/DataManagerContext", () => ({
@@ -81,6 +82,7 @@ describe("useIntakeWorkflow", () => {
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     });
+    mockDataManager.getAllPeople.mockResolvedValue([]);
   });
 
   // --- Initial state --------------------------------------------------------
@@ -587,6 +589,31 @@ describe("useIntakeWorkflow", () => {
       expect(mockDataManager.updateCompleteCase).not.toHaveBeenCalled();
     });
 
+    it("maps applicantPersonId into the create-case contract for applicant reuse", async () => {
+      // Arrange
+      const { result } = renderIntakeHook();
+
+      fillMinimumRequiredFields(result);
+      act(() => {
+        result.current.updateField("applicantPersonId", "person-existing-1");
+      });
+
+      // Act
+      await act(async () => {
+        await result.current.submit();
+      });
+
+      // Assert
+      expect(mockDataManager.createCompleteCase).toHaveBeenCalledWith(
+        expect.objectContaining({
+          caseRecord: expect.objectContaining({
+            personId: "person-existing-1",
+          }),
+        }),
+      );
+      expect(mockDataManager.updateCompleteCase).not.toHaveBeenCalled();
+    });
+
     it("updates an existing case in edit mode while preserving unsupported fields", async () => {
       // Arrange
       const existingCase = createMockStoredCase({
@@ -661,6 +688,49 @@ describe("useIntakeWorkflow", () => {
       const updatePayload = mockDataManager.updateCompleteCase.mock.calls[0]?.[1];
       expect(updatePayload.person).not.toHaveProperty("status");
       expect(updatePayload.householdMembers).toEqual([]);
+      expect(mockDataManager.createCompleteCase).not.toHaveBeenCalled();
+    });
+
+    it("blocks intake edit when the applicant personId changes", async () => {
+      // Arrange
+      const existingCase = createMockStoredCase({
+        id: "case-edit-1",
+        caseRecord: {
+          ...createMockStoredCase().caseRecord,
+          personId: "person-edit-1",
+        },
+        person: createMockPerson({
+          id: "person-edit-1",
+          firstName: "Existing",
+          lastName: "Applicant",
+          name: "Existing Applicant",
+          phone: "5551234567",
+          ssn: "",
+        }),
+      });
+      const { result } = renderIntakeHook({ existingCase });
+
+      fillMinimumRequiredFields(result);
+      act(() => {
+        result.current.updateField("applicantPersonId", "person-other-2");
+      });
+
+      // Act
+      await act(async () => {
+        await result.current.submit();
+      });
+
+      // Assert
+      await waitFor(() => {
+        expect(result.current.error).toBe(
+          "Changing the applicant from intake edit is not supported yet.",
+        );
+      });
+      expect(mockToast.error).toHaveBeenCalledWith(
+        "Changing the applicant from intake edit is not supported yet.",
+        { id: undefined },
+      );
+      expect(mockDataManager.updateCompleteCase).not.toHaveBeenCalled();
       expect(mockDataManager.createCompleteCase).not.toHaveBeenCalled();
     });
 

@@ -34,6 +34,7 @@ const phoneSchema = z
  * Schema for the Applicant Information step.
  */
 export const IntakeApplicantSchema = z.object({
+  applicantPersonId: z.string().optional().default(""),
   firstName: stringRequired("First name").max(100),
   lastName: stringRequired("Last name").max(100),
   dateOfBirth: z.string().optional().default(""),
@@ -231,6 +232,7 @@ export function validateIntakeForm(
 export function createBlankIntakeForm(): IntakeFormData {
   return {
     // Applicant
+    applicantPersonId: "",
     firstName: "",
     lastName: "",
     dateOfBirth: "",

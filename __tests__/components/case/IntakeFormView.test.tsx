@@ -4,8 +4,12 @@ import { axe, toHaveNoViolations } from "jest-axe";
 import { describe, expect, it, vi, beforeEach } from "vitest";
 import { createBlankIntakeForm } from "@/domain/validation/intake.schema";
 import { INTAKE_STEPS } from "@/domain/cases/intake-steps";
-import { createMockHouseholdMemberData } from "@/src/test/testUtils";
+import {
+  createMockHouseholdMemberData,
+  createMockPerson,
+} from "@/src/test/testUtils";
 import { clickToCopy } from "@/utils/clipboard";
+import type { Person } from "@/types/case";
 
 expect.extend(toHaveNoViolations);
 
@@ -34,12 +38,65 @@ const mockSubmit = vi.fn();
 const mockUpdateField = vi.fn();
 const mockSetFormData = vi.fn();
 const mockReset = vi.fn();
+const existingApplicant = createMockPerson({
+  id: "person-existing-1",
+  firstName: "Alex",
+  lastName: "Existing",
+  name: "Alex Existing",
+  phone: "5552223333",
+  email: "alex@example.com",
+  dateOfBirth: "1988-05-01",
+  ssn: "111-22-3333",
+  livingArrangement: "Community",
+  address: {
+    street: "12 Shared St",
+    apt: "4B",
+    city: "Omaha",
+    state: "NE",
+    zip: "68102",
+  },
+  mailingAddress: {
+    street: "PO Box 12",
+    apt: "",
+    city: "Omaha",
+    state: "NE",
+    zip: "68101",
+    sameAsPhysical: false,
+  },
+});
+const existingHouseholdPerson = createMockPerson({
+  id: "person-existing-2",
+  firstName: "Morgan",
+  lastName: "Linked",
+  name: "Morgan Linked",
+  phone: "5554445555",
+  email: "morgan@example.com",
+  dateOfBirth: "1992-09-09",
+  ssn: "222-33-4444",
+  livingArrangement: "Community",
+  address: {
+    street: "88 Oak Ave",
+    apt: "",
+    city: "Lincoln",
+    state: "NE",
+    zip: "68508",
+  },
+  mailingAddress: {
+    street: "88 Oak Ave",
+    apt: "",
+    city: "Lincoln",
+    state: "NE",
+    zip: "68508",
+    sameAsPhysical: true,
+  },
+});
 
 function createDefaultTestHookState() {
   return {
     currentStep: 0,
     visitedSteps: new Set([0]) as ReadonlySet<number>,
     formData: createBlankIntakeForm(),
+    availablePeople: [] as Person[],
     isEditing: false,
     isSubmitting: false,
     error: null as string | null,
@@ -231,8 +288,91 @@ describe("IntakeFormView", () => {
       expect(screen.getByRole("button", { name: /Save Changes/i })).toBeInTheDocument();
     });
 
+    it("keeps applicant reassignment out of edit mode and explains shared edits", () => {
+      // ARRANGE
+      withHookState({
+        isEditing: true,
+        formData: {
+          ...createBlankIntakeForm(),
+          applicantPersonId: existingApplicant.id,
+          firstName: existingApplicant.firstName,
+          lastName: existingApplicant.lastName,
+        },
+        availablePeople: [existingApplicant],
+      });
+
+      // ACT
+      renderIntakeFormView();
+
+      // ASSERT
+      expect(
+        screen.getByText(/applicant reassignment isn't supported from intake edit/i),
+      ).toBeInTheDocument();
+      expect(
+        screen.queryByRole("button", { name: /create new applicant/i }),
+      ).not.toBeInTheDocument();
+    });
+
     it("keeps case-level status options configured for the intake flow", () => {
       expect(mockCategoryConfig.caseStatuses.map((status) => status.name)).toEqual(["Intake"]);
+    });
+  });
+
+  describe("Applicant step existing-person reuse", () => {
+    it("maps a selected existing applicant into the intake draft in create mode", async () => {
+      // ARRANGE
+      const user = userEvent.setup();
+      withHookState({
+        availablePeople: [existingApplicant],
+      });
+
+      // ACT
+      renderIntakeFormView();
+      await user.click(screen.getByRole("button", { name: /create new applicant/i }));
+      await user.click(screen.getByText("Alex Existing"));
+
+      // ASSERT
+      expect(mockSetFormData).toHaveBeenCalledTimes(1);
+      const updater = mockSetFormData.mock.lastCall?.[0] as
+        | ((previous: ReturnType<typeof createBlankIntakeForm>) => ReturnType<typeof createBlankIntakeForm>)
+        | undefined;
+      expect(updater).toBeTypeOf("function");
+      const nextFormData = updater?.(createBlankIntakeForm());
+      expect(nextFormData).toMatchObject({
+        applicantPersonId: existingApplicant.id,
+        firstName: existingApplicant.firstName,
+        lastName: existingApplicant.lastName,
+        dateOfBirth: existingApplicant.dateOfBirth,
+        ssn: existingApplicant.ssn,
+        phone: existingApplicant.phone,
+        email: existingApplicant.email,
+        livingArrangement: existingApplicant.livingArrangement,
+        organizationId: existingApplicant.organizationId ?? "",
+        address: existingApplicant.address,
+        mailingAddress: existingApplicant.mailingAddress,
+      });
+    });
+
+    it("shows shared-person helper text when the draft already targets an existing applicant", () => {
+      // ARRANGE
+      withHookState({
+        availablePeople: [existingApplicant],
+        formData: {
+          ...createBlankIntakeForm(),
+          applicantPersonId: existingApplicant.id,
+          firstName: existingApplicant.firstName,
+          lastName: existingApplicant.lastName,
+        },
+      });
+
+      // ACT
+      renderIntakeFormView();
+
+      // ASSERT
+      expect(screen.getByText("Existing person")).toBeInTheDocument();
+      expect(
+        screen.getByText(/changes here update the selected shared person record on submit/i),
+      ).toBeInTheDocument();
     });
   });
 
@@ -772,6 +912,93 @@ describe("IntakeFormView", () => {
 
       // ASSERT
       expect(screen.queryByLabelText("Status")).not.toBeInTheDocument();
+    });
+
+    it("maps a selected existing household person into the row draft", async () => {
+      // ARRANGE
+      const user = userEvent.setup();
+      withHouseholdStepState({
+        availablePeople: [existingHouseholdPerson],
+        formData: {
+          ...createBlankIntakeForm(),
+          householdMembers: [
+            createMockHouseholdMemberData({
+              personId: undefined,
+              relationshipType: "Spouse",
+              firstName: "",
+              lastName: "",
+              phone: "",
+              email: "",
+              dateOfBirth: "",
+              ssn: "",
+            }),
+          ],
+        },
+      });
+
+      // ACT
+      renderIntakeFormView();
+      await user.click(
+        screen.getByRole("button", {
+          name: /spouse.*linked as spouse.*new person/i,
+        }),
+      );
+      await user.click(
+        screen.getByRole("button", { name: /create new linked person/i }),
+      );
+      await user.click(screen.getByText("Morgan Linked"));
+
+      // ASSERT
+      expect(mockUpdateField).toHaveBeenLastCalledWith(
+        "householdMembers",
+        expect.arrayContaining([
+          expect.objectContaining({
+            personId: existingHouseholdPerson.id,
+            relationshipType: "Spouse",
+            firstName: existingHouseholdPerson.firstName,
+            lastName: existingHouseholdPerson.lastName,
+            phone: existingHouseholdPerson.phone,
+            email: existingHouseholdPerson.email,
+            dateOfBirth: existingHouseholdPerson.dateOfBirth,
+            ssn: existingHouseholdPerson.ssn,
+          }),
+        ]),
+      );
+    });
+
+    it("shows shared-person helper text for existing household links", async () => {
+      // ARRANGE
+      const user = userEvent.setup();
+      withHouseholdStepState({
+        availablePeople: [existingHouseholdPerson],
+        formData: {
+          ...createBlankIntakeForm(),
+          householdMembers: [
+            createMockHouseholdMemberData({
+              personId: existingHouseholdPerson.id,
+              relationshipType: "Spouse",
+              firstName: existingHouseholdPerson.firstName,
+              lastName: existingHouseholdPerson.lastName,
+              phone: existingHouseholdPerson.phone,
+              email: existingHouseholdPerson.email,
+            }),
+          ],
+        },
+      });
+
+      // ACT
+      renderIntakeFormView();
+      await user.click(
+        screen.getByRole("button", {
+          name: /morgan linked.*existing person/i,
+        }),
+      );
+
+      // ASSERT
+      expect(screen.getAllByText("Existing person")).toHaveLength(2);
+      expect(
+        screen.getByText(/changes here update the shared person record on submit/i),
+      ).toBeInTheDocument();
     });
   });
 

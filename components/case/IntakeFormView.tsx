@@ -7,7 +7,15 @@
  * Wires to useIntakeWorkflow for all state and persistence.
  */
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type Dispatch,
+  type SetStateAction,
+} from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -22,6 +30,20 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   User,
   Phone,
@@ -54,7 +76,6 @@ import {
   useIntakeWorkflow,
   type UseIntakeWorkflowOptions,
 } from "@/hooks/useIntakeWorkflow";
-import { useSubmitShortcut } from "@/hooks/useSubmitShortcut";
 import {
   isoToDateInputValue,
   dateInputValueToISO,
@@ -66,7 +87,7 @@ import {
 } from "@/domain/common";
 import { isRelationshipPopulated } from "@/domain/cases/relationships";
 import { RelationshipsSection } from "@/components/case/CaseEditSections";
-import type { HouseholdMemberData, Relationship } from "@/types/case";
+import type { HouseholdMemberData, Person, Relationship } from "@/types/case";
 
 const STEP_FOCUSABLE_SELECTOR = [
   'input:not([type="hidden"]):not([disabled])',
@@ -198,6 +219,247 @@ function SummaryRow({
   );
 }
 
+interface ExistingPersonPickerOption {
+  personId: string;
+  label: string;
+  meta: string[];
+}
+
+function buildPersonPickerLabel(person: Person): string {
+  const trimmedName = person.name?.trim();
+
+  if (trimmedName) {
+    return trimmedName;
+  }
+
+  const combinedName = [person.firstName, person.lastName]
+    .map((value) => (typeof value === "string" ? value.trim() : ""))
+    .filter(Boolean)
+    .join(" ");
+
+  return combinedName || "Unnamed person";
+}
+
+function buildPersonPickerMeta(person: Person): string[] {
+  const metadata = [
+    person.dateOfBirth ? `DOB ${formatDateForDisplay(person.dateOfBirth)}` : null,
+    getDisplayPhoneNumber(person.phone) || null,
+    person.email?.trim() || null,
+  ];
+
+  return metadata.filter((value): value is string => Boolean(value));
+}
+
+function createExistingPersonPickerOptions(people: Person[]): ExistingPersonPickerOption[] {
+  return [...people]
+    .sort((leftPerson, rightPerson) =>
+      buildPersonPickerLabel(leftPerson).localeCompare(buildPersonPickerLabel(rightPerson)),
+    )
+    .map((person) => ({
+      personId: person.id,
+      label: buildPersonPickerLabel(person),
+      meta: buildPersonPickerMeta(person),
+    }));
+}
+
+function applyApplicantPersonSelection(
+  previousFormData: IntakeFormData,
+  selectedPerson: Person | null,
+): IntakeFormData {
+  if (!selectedPerson) {
+    return {
+      ...previousFormData,
+      applicantPersonId: "",
+    };
+  }
+
+  return {
+    ...previousFormData,
+    applicantPersonId: selectedPerson.id,
+    firstName: selectedPerson.firstName ?? "",
+    lastName: selectedPerson.lastName ?? "",
+    dateOfBirth: selectedPerson.dateOfBirth ?? "",
+    ssn: selectedPerson.ssn ?? "",
+    phone: selectedPerson.phone ?? "",
+    email: selectedPerson.email ?? "",
+    livingArrangement:
+      selectedPerson.livingArrangement ?? previousFormData.livingArrangement,
+    organizationId: selectedPerson.organizationId ?? "",
+    address: {
+      street: selectedPerson.address?.street ?? "",
+      apt: selectedPerson.address?.apt ?? "",
+      city: selectedPerson.address?.city ?? "",
+      state: selectedPerson.address?.state ?? "NE",
+      zip: selectedPerson.address?.zip ?? "",
+    },
+    mailingAddress: {
+      street: selectedPerson.mailingAddress?.street ?? "",
+      apt: selectedPerson.mailingAddress?.apt ?? "",
+      city: selectedPerson.mailingAddress?.city ?? "",
+      state: selectedPerson.mailingAddress?.state ?? "NE",
+      zip: selectedPerson.mailingAddress?.zip ?? "",
+      sameAsPhysical: selectedPerson.mailingAddress?.sameAsPhysical ?? true,
+    },
+  };
+}
+
+function applyHouseholdPersonSelection(
+  currentMember: HouseholdMemberData,
+  selectedPerson: Person | null,
+): HouseholdMemberData {
+  if (!selectedPerson) {
+    return {
+      ...currentMember,
+      personId: undefined,
+    };
+  }
+
+  return {
+    ...currentMember,
+    personId: selectedPerson.id,
+    firstName: selectedPerson.firstName ?? "",
+    lastName: selectedPerson.lastName ?? "",
+    dateOfBirth: selectedPerson.dateOfBirth ?? "",
+    ssn: selectedPerson.ssn ?? "",
+    phone: selectedPerson.phone ?? "",
+    email: selectedPerson.email ?? "",
+    organizationId: selectedPerson.organizationId ?? null,
+    livingArrangement:
+      selectedPerson.livingArrangement ?? currentMember.livingArrangement,
+    address: {
+      street: selectedPerson.address?.street ?? "",
+      apt: selectedPerson.address?.apt ?? "",
+      city: selectedPerson.address?.city ?? "",
+      state: selectedPerson.address?.state ?? "NE",
+      zip: selectedPerson.address?.zip ?? "",
+    },
+    mailingAddress: {
+      street: selectedPerson.mailingAddress?.street ?? "",
+      apt: selectedPerson.mailingAddress?.apt ?? "",
+      city: selectedPerson.mailingAddress?.city ?? "",
+      state: selectedPerson.mailingAddress?.state ?? "NE",
+      zip: selectedPerson.mailingAddress?.zip ?? "",
+      sameAsPhysical: selectedPerson.mailingAddress?.sameAsPhysical ?? true,
+    },
+  };
+}
+
+interface ExistingPersonPickerProps {
+  options: ExistingPersonPickerOption[];
+  value: string;
+  onValueChange: (personId: string) => void;
+  emptySelectionLabel: string;
+  searchPlaceholder: string;
+  emptyText: string;
+}
+
+function ExistingPersonPicker({
+  options,
+  value,
+  onValueChange,
+  emptySelectionLabel,
+  searchPlaceholder,
+  emptyText,
+}: Readonly<ExistingPersonPickerProps>) {
+  const [isOpen, setIsOpen] = useState(false);
+  const selectedOption = useMemo(
+    () => options.find((option) => option.personId === value) ?? null,
+    [options, value],
+  );
+
+  const handleSelect = useCallback(
+    (personId: string) => {
+      onValueChange(personId);
+      setIsOpen(false);
+    },
+    [onValueChange],
+  );
+
+  return (
+    <Popover open={isOpen} onOpenChange={setIsOpen}>
+      <PopoverTrigger asChild>
+        <Button
+          type="button"
+          variant="outline"
+          className={cn(
+            "w-full justify-between gap-3 px-3 text-left font-normal shadow-none",
+            !selectedOption && "text-muted-foreground",
+          )}
+        >
+          <span className="min-w-0 flex-1 truncate">
+            {selectedOption?.label ?? emptySelectionLabel}
+          </span>
+          <ChevronDown className="h-4 w-4 shrink-0 opacity-60" aria-hidden />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent
+        align="start"
+        className="w-[var(--radix-popover-trigger-width)] min-w-64 p-0"
+      >
+        <Command>
+          <div className="border-b py-1">
+            <CommandInput
+              placeholder={searchPlaceholder}
+              aria-label={searchPlaceholder}
+            />
+          </div>
+          <div className="overflow-hidden flex flex-col" style={{ maxHeight: "32rem" }}>
+            <ScrollArea className="h-full max-h-80">
+              <CommandList className="h-full">
+                <CommandEmpty>{emptyText}</CommandEmpty>
+                <CommandGroup className="pb-2">
+                  <CommandItem
+                    value={emptySelectionLabel}
+                    keywords={[emptySelectionLabel, "new", "create"]}
+                    onSelect={() => handleSelect("")}
+                    className="justify-between gap-3 py-2"
+                  >
+                    <span className="text-sm">{emptySelectionLabel}</span>
+                    {value.length === 0 ? (
+                      <Badge variant="secondary" className="h-5 px-1.5 text-[10px]">
+                        Selected
+                      </Badge>
+                    ) : null}
+                  </CommandItem>
+                  {options.map((option) => {
+                    const isSelected = option.personId === value;
+
+                    return (
+                      <CommandItem
+                        key={option.personId}
+                        value={`${option.label} ${option.meta.join(" ")}`.trim()}
+                        keywords={[option.label, ...option.meta]}
+                        onSelect={() => handleSelect(option.personId)}
+                        className="justify-between gap-3 py-2"
+                      >
+                        <span className="min-w-0 flex-1">
+                          <span className="block truncate text-sm font-medium">
+                            {option.label}
+                          </span>
+                          {option.meta.length > 0 ? (
+                            <span className="block truncate text-xs text-muted-foreground">
+                              {option.meta.join(" • ")}
+                            </span>
+                          ) : null}
+                        </span>
+                        {isSelected ? (
+                          <Badge variant="secondary" className="h-5 px-1.5 text-[10px]">
+                            Selected
+                          </Badge>
+                        ) : null}
+                      </CommandItem>
+                    );
+                  })}
+                </CommandGroup>
+              </CommandList>
+            </ScrollArea>
+          </div>
+        </Command>
+      </PopoverContent>
+    </Popover>
+  );
+}
+
 // ============================================================================
 // Step form panels
 // ============================================================================
@@ -205,20 +467,95 @@ function SummaryRow({
 // --- Step 0: Applicant ---
 interface ApplicantStepProps {
   formData: IntakeFormData;
+  availablePeople: Person[];
+  isEditing: boolean;
   onChange: <K extends keyof IntakeFormData>(
     field: K,
     value: IntakeFormData[K],
   ) => void;
+  setFormData: Dispatch<SetStateAction<IntakeFormData>>;
 }
 
 function ApplicantStep({
   formData,
+  availablePeople,
+  isEditing,
   onChange,
+  setFormData,
 }: Readonly<ApplicantStepProps>) {
   const MARITAL_STATUSES = ["Single", "Married", "Divorced", "Widowed", "Separated"];
+  const applicantOptions = useMemo(() => {
+    const selectedHouseholdPersonIds = new Set(
+      (formData.householdMembers ?? [])
+        .map((member) => member.personId?.trim() ?? "")
+        .filter(Boolean),
+    );
+
+    return createExistingPersonPickerOptions(
+      availablePeople.filter((person) =>
+        person.id === formData.applicantPersonId || !selectedHouseholdPersonIds.has(person.id),
+      ),
+    );
+  }, [availablePeople, formData.applicantPersonId, formData.householdMembers]);
+  const selectedApplicantLabel = useMemo(
+    () => applicantOptions.find((option) => option.personId === formData.applicantPersonId)?.label ?? null,
+    [applicantOptions, formData.applicantPersonId],
+  );
+  const handleApplicantPersonChange = useCallback(
+    (personId: string) => {
+      const selectedPerson = availablePeople.find((person) => person.id === personId) ?? null;
+      setFormData((previousFormData) =>
+        applyApplicantPersonSelection(previousFormData, selectedPerson),
+      );
+    },
+    [availablePeople, setFormData],
+  );
+  let applicantRecordDescription = "Create a new applicant or reuse an existing shared person record.";
+  let applicantRecordBadgeLabel = "New applicant";
+
+  if (isEditing) {
+    applicantRecordDescription = "This case stays linked to its current primary applicant.";
+    applicantRecordBadgeLabel = "Current applicant";
+  } else if (formData.applicantPersonId) {
+    applicantRecordBadgeLabel = "Existing person";
+  }
 
   return (
     <div className="space-y-4">
+      <div className="rounded-lg border bg-muted/20 p-4">
+        <div className="flex items-start justify-between gap-3">
+          <div className="space-y-1">
+            <h3 className="text-sm font-medium">Applicant Record</h3>
+            <p className="text-sm text-muted-foreground">{applicantRecordDescription}</p>
+          </div>
+          <Badge variant="secondary" className="shrink-0">
+            {applicantRecordBadgeLabel}
+          </Badge>
+        </div>
+
+        {isEditing ? (
+          <p className="mt-3 text-sm text-muted-foreground">
+            Applicant reassignment isn't supported from intake edit. Changes below update the linked shared person record.
+          </p>
+        ) : (
+          <div className="mt-3 space-y-3">
+            <ExistingPersonPicker
+              options={applicantOptions}
+              value={formData.applicantPersonId}
+              onValueChange={handleApplicantPersonChange}
+              emptySelectionLabel="Create new applicant"
+              searchPlaceholder="Search people..."
+              emptyText="No existing people available yet."
+            />
+            <p className="text-sm text-muted-foreground">
+              {formData.applicantPersonId
+                ? `Using ${selectedApplicantLabel ?? "an existing person"}. Changes here update the selected shared person record on submit.`
+                : "Leave this as a new applicant to create a separate person record for this intake."}
+            </p>
+          </div>
+        )}
+      </div>
+
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-1.5">
           <Label htmlFor="intake-firstName">
@@ -796,13 +1133,18 @@ function ChecklistStep({
 // --- Step 4: Household ---
 interface HouseholdStepProps {
   formData: IntakeFormData;
+  availablePeople: Person[];
   onChange: <K extends keyof IntakeFormData>(
     field: K,
     value: IntakeFormData[K],
   ) => void;
 }
 
-function HouseholdStep({ formData, onChange }: Readonly<HouseholdStepProps>) {
+function HouseholdStep({
+  formData,
+  availablePeople,
+  onChange,
+}: Readonly<HouseholdStepProps>) {
   const { config } = useCategoryConfig();
   const householdMembers = useMemo(
     () => (formData.householdMembers ?? []) as HouseholdMemberData[],
@@ -908,6 +1250,17 @@ function HouseholdStep({ formData, onChange }: Readonly<HouseholdStepProps>) {
     },
     [householdMembers, updateHouseholdMembers],
   );
+  const handleHouseholdPersonSelection = useCallback(
+    (index: number, personId: string) => {
+      const selectedPerson =
+        availablePeople.find((person) => person.id === personId) ?? null;
+
+      updateMember(index, (currentMember) =>
+        applyHouseholdPersonSelection(currentMember, selectedPerson),
+      );
+    },
+    [availablePeople, updateMember],
+  );
 
   return (
     <div className="space-y-4">
@@ -915,7 +1268,7 @@ function HouseholdStep({ formData, onChange }: Readonly<HouseholdStepProps>) {
         <div>
           <h3 className="text-base font-semibold">Household Members</h3>
           <p className="text-sm text-muted-foreground">
-            Add each household member as a linked person record.
+            Each household member can reuse an existing shared person or remain a new linked person.
           </p>
         </div>
         <Button type="button" variant="outline" size="sm" onClick={handleAdd}>
@@ -953,12 +1306,17 @@ function HouseholdStep({ formData, onChange }: Readonly<HouseholdStepProps>) {
                             || `Household Member ${index + 1}`)
                         : `Household Member ${index + 1}`}
                     </h4>
-                    <p className="text-xs text-muted-foreground">
-                      Linked as{" "}
-                      {member.role === "household_member"
-                        ? (member.relationshipType?.trim() || "Household member")
-                        : getCasePersonRoleLabel(member.role)}
-                    </p>
+                    <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                      <span>
+                        Linked as{" "}
+                        {member.role === "household_member"
+                          ? (member.relationshipType?.trim() || "Household member")
+                          : getCasePersonRoleLabel(member.role)}
+                      </span>
+                      <Badge variant="secondary" className="h-5 px-1.5 text-[10px]">
+                        {member.personId ? "Existing person" : "New person"}
+                      </Badge>
+                    </div>
                   </div>
                   {activeExpandedMemberIndex === index ? (
                     <ChevronUp className="h-4 w-4 text-muted-foreground" aria-hidden />
@@ -981,6 +1339,63 @@ function HouseholdStep({ formData, onChange }: Readonly<HouseholdStepProps>) {
                   id={`household-member-panel-${index}`}
                   className="space-y-4 border-t px-4 py-4"
                 >
+                  {(() => {
+                    const selectedOtherHouseholdPersonIds = new Set(
+                      householdMembers
+                        .flatMap((otherMember, otherIndex) =>
+                          otherIndex !== index && otherMember.personId
+                            ? [otherMember.personId]
+                            : [],
+                        ),
+                    );
+                    const memberOptions = createExistingPersonPickerOptions(
+                      availablePeople.filter((person) => {
+                        if (person.id === member.personId) {
+                          return true;
+                        }
+
+                        if (person.id === formData.applicantPersonId) {
+                          return false;
+                        }
+
+                        return !selectedOtherHouseholdPersonIds.has(person.id);
+                      }),
+                    );
+
+                    return (
+                      <div className="rounded-lg border bg-muted/20 p-4">
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="space-y-1">
+                            <h5 className="text-sm font-medium">Person Record</h5>
+                            <p className="text-sm text-muted-foreground">
+                              Reuse an existing shared person or keep this row as a new linked person.
+                            </p>
+                          </div>
+                          <Badge variant="secondary" className="shrink-0">
+                            {member.personId ? "Existing person" : "New person"}
+                          </Badge>
+                        </div>
+                        <div className="mt-3 space-y-3">
+                          <ExistingPersonPicker
+                            options={memberOptions}
+                            value={member.personId ?? ""}
+                            onValueChange={(personId) =>
+                              handleHouseholdPersonSelection(index, personId)
+                            }
+                            emptySelectionLabel="Create new linked person"
+                            searchPlaceholder="Search people..."
+                            emptyText="No reusable people available for this row."
+                          />
+                          <p className="text-sm text-muted-foreground">
+                            {member.personId
+                              ? "Changes here update the shared person record on submit."
+                              : "Leave this as a new linked person to create a separate household record."}
+                          </p>
+                        </div>
+                      </div>
+                    );
+                  })()}
+
                   <div className="flex justify-end">
                     <Button
                       type="button"
@@ -1604,12 +2019,13 @@ export function IntakeFormView({
   onCancel,
 }: Readonly<IntakeFormViewProps>) {
   const hasSeededInitialData = useRef(false);
-  const stepContentRef = useRef<HTMLDivElement>(null);
+  const stepContentRef = useRef<HTMLFormElement>(null);
   const isCompletingIntake = existingCase?.caseRecord.intakeCompleted === false;
   const {
     currentStep,
     visitedSteps,
     formData,
+    availablePeople,
     isEditing,
     isSubmitting,
     error,
@@ -1668,19 +2084,49 @@ export function IntakeFormView({
     : isCurrentStepComplete && !isSubmitting;
   const contentWidthClassName = isLastStep ? "max-w-4xl" : "max-w-2xl";
 
-  const handleSubmitShortcut = useSubmitShortcut<HTMLDivElement>({
-    canSubmit: canUseSubmitShortcut,
-    onSubmit: () => {
+  useEffect(() => {
+    const stepContent = stepContentRef.current;
+    if (!stepContent) {
+      return undefined;
+    }
+
+    const handleStepContentKeyDown = (event: KeyboardEvent) => {
+      if (
+        event.key !== "Enter" ||
+        (!event.ctrlKey && !event.metaKey) ||
+        !canUseSubmitShortcut
+      ) {
+        return;
+      }
+
+      event.preventDefault();
+
       if (isLastStep) {
-        return submit();
+        void submit();
+        return;
       }
 
       goNext();
-    },
-  });
+    };
+
+    stepContent.addEventListener("keydown", handleStepContentKeyDown);
+
+    return () => {
+      stepContent.removeEventListener("keydown", handleStepContentKeyDown);
+    };
+  }, [canUseSubmitShortcut, goNext, isLastStep, submit]);
 
   const submitButtonLoadingText = isEditing ? "Saving…" : "Creating…";
   const submitButtonText = isEditing ? "Save Changes" : "Submit Case";
+  let intakeTitle = "New Case Intake";
+  let intakeSubtitle = `Step ${currentStep + 1} of ${INTAKE_STEPS.length} – ${INTAKE_STEPS[currentStep].label}`;
+
+  if (isCompletingIntake) {
+    intakeTitle = "Complete Case Intake";
+    intakeSubtitle = "This preliminary case must finish intake before it can be used normally in the workspace.";
+  } else if (isEditing) {
+    intakeTitle = "Edit Case";
+  }
 
   return (
     <div className="flex flex-col h-full">
@@ -1698,18 +2144,8 @@ export function IntakeFormView({
           </Button>
         )}
         <div className="flex-1">
-          <h1 className="text-lg font-semibold">
-            {isCompletingIntake
-              ? "Complete Case Intake"
-              : isEditing
-                ? "Edit Case"
-                : "New Case Intake"}
-          </h1>
-          <p className="text-sm text-muted-foreground">
-            {isCompletingIntake
-              ? "This preliminary case must finish intake before it can be used normally in the workspace."
-              : `Step ${currentStep + 1} of ${INTAKE_STEPS.length} – ${INTAKE_STEPS[currentStep].label}`}
-          </p>
+          <h1 className="text-lg font-semibold">{intakeTitle}</h1>
+          <p className="text-sm text-muted-foreground">{intakeSubtitle}</p>
         </div>
         <Badge variant="outline" className="text-xs">
           {INTAKE_STEPS[currentStep].description}
@@ -1739,14 +2175,21 @@ export function IntakeFormView({
             </div>
 
             {/* Step form */}
-            <div
+            <form
               ref={stepContentRef}
               tabIndex={-1}
-              onKeyDown={handleSubmitShortcut}
+              aria-label={`${INTAKE_STEPS[currentStep].label} form`}
+              onSubmit={(event) => event.preventDefault()}
               data-testid="intake-step-content"
             >
               {currentStep === 0 && (
-                <ApplicantStep formData={formData} onChange={updateField} />
+                <ApplicantStep
+                  formData={formData}
+                  availablePeople={availablePeople}
+                  isEditing={isEditing}
+                  onChange={updateField}
+                  setFormData={setFormData}
+                />
               )}
               {currentStep === 1 && (
                 <ContactStep formData={formData} onChange={updateField} />
@@ -1758,12 +2201,16 @@ export function IntakeFormView({
                 <ChecklistStep formData={formData} onChange={updateField} />
               )}
               {currentStep === 4 && (
-                <HouseholdStep formData={formData} onChange={updateField} />
+                <HouseholdStep
+                  formData={formData}
+                  availablePeople={availablePeople}
+                  onChange={updateField}
+                />
               )}
               {currentStep === 5 && (
                 <ReviewStep formData={formData} onGoToStep={goToStep} />
               )}
-            </div>
+            </form>
 
             {/* Error */}
             {error && (

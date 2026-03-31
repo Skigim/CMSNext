@@ -184,14 +184,12 @@ export function CaseDetails(props: Readonly<CaseDetailsProps>) {
                     )}
                   </Button>
                 )}
-                {/* Pin button */}
                 <PinButton
                   caseId={caseData.id}
                   caseName={caseData.name}
                   size="default"
                   className="h-7 w-auto px-2"
                 />
-                {/* Retro/Waiver indicators */}
                 {caseData.caseRecord?.withWaiver && (
                   <span className="inline-flex items-center rounded-full bg-purple-100 px-2 py-0.5 text-xs font-medium text-purple-700 dark:bg-purple-900/30 dark:text-purple-300">
                     Waiver
@@ -260,61 +258,65 @@ export function CaseDetails(props: Readonly<CaseDetailsProps>) {
                 )}
               </div>
               {additionalLinkedPeople.length > 0 && (
-                <div className="flex flex-wrap items-center gap-2 text-sm">
-                  {additionalLinkedPeople.map(({ ref, person }) => {
-                    const phone = person.phone?.trim() || null;
-                    const email = person.email?.trim() || null;
-                    const { name, roleLabel } = getLinkedPersonChipContent(caseData, person, ref.role);
-                    const accessibleLabel = `${roleLabel}: ${name}`;
-                    const formattedPhone = phone ? formatUSPhone(phone) : null;
+                <div className="space-y-2 text-sm">
+                  <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                    Household & contacts
+                  </p>
+                  <div className="flex flex-wrap items-center gap-2">
+                    {additionalLinkedPeople.map(({ ref, person }) => {
+                      const phone = person.phone?.trim() || null;
+                      const email = person.email?.trim() || null;
+                      const { name, roleLabel } = getLinkedPersonChipContent(caseData, person, ref.role);
+                      const accessibleLabel = `${roleLabel}: ${name}`;
+                      const formattedPhone = phone ? formatUSPhone(phone) : null;
+                      const copyLabel = `${roleLabel} ${name}`;
 
-                    return (
-                      <Tooltip key={`${ref.personId}-${ref.role}`}>
-                        <TooltipTrigger asChild>
-                          {phone ? (
-                            <button
-                              type="button"
-                              className={cn(
-                                "inline-flex items-center rounded-full border bg-muted/40 px-2.5 py-1 text-xs font-medium text-foreground transition-colors",
-                                interactiveHoverClasses,
-                              )}
-                              aria-label={`Copy ${formatCasePersonDisplayName(person)} phone ${formattedPhone}`}
-                              onClick={() =>
-                                clickToCopy(phone, {
-                                  successMessage: "Phone number copied",
-                                })
-                              }
-                            >
-                              <span className="font-medium text-foreground">{name}</span>
-                              <span className="ml-1 text-muted-foreground">{roleLabel}</span>
-                            </button>
-                          ) : (
-                            <button
-                              type="button"
-                              aria-disabled="true"
-                              className="inline-flex items-center rounded-full border bg-muted/40 px-2.5 py-1 text-xs font-medium text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
-                              aria-label={accessibleLabel}
-                            >
-                              <span className="font-medium text-foreground">{name}</span>
-                              <span className="ml-1 text-muted-foreground">{roleLabel}</span>
-                            </button>
-                          )}
-                        </TooltipTrigger>
-                        <TooltipContent side="bottom">
-                          <dl className="space-y-1">
-                            <div className="flex gap-1">
-                              <dt className="font-medium">Phone:</dt>
-                              <dd>{formattedPhone || "Not provided"}</dd>
-                            </div>
-                            <div className="flex gap-1">
-                              <dt className="font-medium">Email:</dt>
-                              <dd>{email || "Not provided"}</dd>
-                            </div>
-                          </dl>
-                        </TooltipContent>
-                      </Tooltip>
-                    );
-                  })}
+                      return (
+                        <Tooltip key={`${ref.personId}-${ref.role}`}>
+                          <TooltipTrigger asChild>
+                            {phone ? (
+                              <button
+                                type="button"
+                                className={cn(
+                                  "inline-flex items-center rounded-full border bg-muted/40 px-2.5 py-1 text-xs font-medium text-foreground transition-colors",
+                                  interactiveHoverClasses,
+                                )}
+                                aria-label={`Copy ${copyLabel} phone ${formattedPhone}`}
+                                onClick={() =>
+                                  clickToCopy(phone, {
+                                    successMessage: "Phone number copied",
+                                  })
+                                }
+                              >
+                                <span className="text-muted-foreground">{roleLabel}</span>
+                                <span className="ml-1 font-medium text-foreground">{name}</span>
+                              </button>
+                            ) : (
+                              <span
+                                className="inline-flex items-center rounded-full border bg-muted/40 px-2.5 py-1 text-xs font-medium text-foreground"
+                                aria-label={accessibleLabel}
+                              >
+                                <span className="text-muted-foreground">{roleLabel}</span>
+                                <span className="ml-1 font-medium text-foreground">{name}</span>
+                              </span>
+                            )}
+                          </TooltipTrigger>
+                          <TooltipContent side="bottom">
+                            <dl className="space-y-1">
+                              <div className="flex gap-1">
+                                <dt className="font-medium">Phone:</dt>
+                                <dd>{formattedPhone || "Not provided"}</dd>
+                              </div>
+                              <div className="flex gap-1">
+                                <dt className="font-medium">Email:</dt>
+                                <dd>{email || "Not provided"}</dd>
+                              </div>
+                            </dl>
+                          </TooltipContent>
+                        </Tooltip>
+                      );
+                    })}
+                  </div>
                 </div>
               )}
             </div>

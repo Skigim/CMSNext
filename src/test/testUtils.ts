@@ -487,6 +487,7 @@ export const createMockDirectoryHandle = () => ({
 export const createMockDataManager = () => ({
   // Case operations
   getAllCases: vi.fn().mockResolvedValue([createMockStoredCase()]),
+  getAllPeople: vi.fn().mockResolvedValue([createMockPerson()]),
   createCompleteCase: vi.fn().mockImplementation((data) => 
     Promise.resolve(createMockStoredCase({ ...data, id: 'new-case-id' }))
   ),

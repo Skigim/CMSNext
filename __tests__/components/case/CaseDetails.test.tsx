@@ -291,8 +291,9 @@ describe("CaseDetails linked people rendering", () => {
 
     // ACT
     renderCaseDetails(caseData);
+    expect(screen.getByText("Household & contacts")).toBeInTheDocument();
     const householdChip = screen.getByRole("button", {
-      name: "Copy Morgan Member phone (555) 000-2222",
+      name: "Copy Spouse Morgan Member phone (555) 000-2222",
     });
     await user.click(householdChip);
 
@@ -300,8 +301,8 @@ describe("CaseDetails linked people rendering", () => {
     expect(
       screen.queryByRole("button", { name: /Applicant: Primary Applicant/i }),
     ).not.toBeInTheDocument();
-    expect(within(householdChip).getByText("Morgan Member")).toBeInTheDocument();
     expect(within(householdChip).getByText("Spouse")).toBeInTheDocument();
+    expect(within(householdChip).getByText("Morgan Member")).toBeInTheDocument();
     expect(householdChip).not.toHaveTextContent("Spouse / Morgan / Member");
     expect(householdChip).not.toHaveTextContent("/");
     const dependentChip = screen.getByRole("button", {
@@ -443,7 +444,7 @@ describe("CaseDetails linked people rendering", () => {
     // Act
     renderCaseDetails(caseData);
     const secondaryChip = screen.getByRole("button", {
-      name: "Copy Secondary Person phone (555) 000-2222",
+      name: "Copy Spouse Secondary Person phone (555) 000-2222",
     });
     await user.click(secondaryChip);
 
@@ -504,9 +505,9 @@ describe("CaseDetails linked people rendering", () => {
 
     // Assert
     const householdChip = screen.getByRole("button", {
-      name: /Copy Morgan Member phone/i,
+      name: /Copy Household member Morgan Member phone/i,
     });
-    expect(within(householdChip).getByText("Morgan Member")).toBeInTheDocument();
     expect(within(householdChip).getByText("Household member")).toBeInTheDocument();
+    expect(within(householdChip).getByText("Morgan Member")).toBeInTheDocument();
   });
 });
