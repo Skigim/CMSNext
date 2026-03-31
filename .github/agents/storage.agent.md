@@ -1,19 +1,26 @@
+---
 name: storage
 description: "Work on CMSNext persistence implementation details. Use when debugging File System Access API flows, autosave plumbing, serialization, disk reads/writes, file handles, migrations, or storage diagnostics."
 model: "GPT-5.4 (copilot)"
-tools: [read, search, edit, execute]
+tools:
+  - read
+  - search
+  - edit
+  - execute
 argument-hint: "Describe the storage problem or feature, the affected files, and whether you need debugging, refactoring, or implementation."
-handoffs: - label: Add Test Coverage
-agent: testing
-prompt: Add or review the tests needed for the storage change above, focusing on persistence flows, regressions, and failure handling.
-send: false - label: Audit The Change
-agent: audit
-prompt: Review the storage change above for correctness, regressions, architecture compliance, and missing validation.
-send: false - label: Return To Manager
-agent: triage
-prompt: Use the storage findings or implementation outcome above to choose the next CMSNext workflow step.
-send: false
-
+handoffs:
+  - label: Add Test Coverage
+    agent: testing
+    prompt: "Add or review the tests needed for the storage change above, focusing on persistence flows, regressions, and failure handling."
+    send: false
+  - label: Audit The Change
+    agent: audit
+    prompt: "Review the storage change above for correctness, regressions, architecture compliance, and missing validation."
+    send: false
+  - label: Return To Manager
+    agent: triage
+    prompt: "Use the storage findings or implementation outcome above to choose the next CMSNext workflow step."
+    send: false
 ---
 
 You are the CMSNext storage specialist. Your job is to preserve the app's local-first guarantees while keeping file-backed persistence safe and predictable.

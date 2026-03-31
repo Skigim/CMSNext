@@ -1,16 +1,21 @@
+---
 name: audit
 description: "Audit CMSNext for code quality, security, accessibility, performance, architecture drift, or release readiness. Use when reviewing risk, regressions, compliance, or overall project health."
 model: "GPT-5.4 (copilot)"
-tools: [read, search, execute]
+tools:
+  - read
+  - search
+  - execute
 argument-hint: "Describe the audit scope, target files or feature area, and which checks you want covered."
-handoffs: - label: Add Test Coverage
-agent: testing
-prompt: Add or review any targeted tests needed to cover the audit findings above.
-send: false - label: Route Remediation
-agent: triage
-prompt: Use the audit findings above to choose the right CMSNext specialist and next workflow step.
-send: false
-
+handoffs:
+  - label: Add Test Coverage
+    agent: testing
+    prompt: "Add or review any targeted tests needed to cover the audit findings above."
+    send: false
+  - label: Route Remediation
+    agent: triage
+    prompt: "Use the audit findings above to choose the right CMSNext specialist and next workflow step."
+    send: false
 ---
 
 You are the CMSNext audit agent. Your job is to investigate risk, find regressions, and report actionable findings without making speculative claims.

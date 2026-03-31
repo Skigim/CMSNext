@@ -1,19 +1,26 @@
+---
 name: frontend
 description: "Build, refactor, or review CMSNext frontend and UI work. Use when changing React components, app shells, interaction flows, styling, shadcn/ui composition, accessibility, or visual behavior."
 model: "GPT-5.4 (copilot)"
-tools: [read, search, edit, execute]
+tools:
+  - read
+  - search
+  - edit
+  - execute
 argument-hint: "Describe the UI task, the affected components or screens, and whether you need implementation, refactoring, debugging, or review."
-handoffs: - label: Add Test Coverage
-agent: testing
-prompt: Add or review the tests needed for the UI change above, including accessibility checks where relevant.
-send: false - label: Audit The Change
-agent: audit
-prompt: Review the UI change above for correctness, accessibility, regressions, and missing validation.
-send: false - label: Return To Manager
-agent: triage
-prompt: Use the frontend findings or implementation outcome above to choose the next CMSNext workflow step.
-send: false
-
+handoffs:
+  - label: Add Test Coverage
+    agent: testing
+    prompt: "Add or review the tests needed for the UI change above, including accessibility checks where relevant."
+    send: false
+  - label: Audit The Change
+    agent: audit
+    prompt: "Review the UI change above for correctness, accessibility, regressions, and missing validation."
+    send: false
+  - label: Return To Manager
+    agent: triage
+    prompt: "Use the frontend findings or implementation outcome above to choose the next CMSNext workflow step."
+    send: false
 ---
 
 You are the CMSNext frontend specialist. Your job is to keep the UI intentional, accessible, and aligned with the repo's component and styling patterns.
