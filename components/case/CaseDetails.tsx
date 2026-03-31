@@ -84,7 +84,7 @@ export function CaseDetails(props: Readonly<CaseDetailsProps>) {
   } = props;
   const [mostRecentlySavedCase, setMostRecentlySavedCase] = useState<StoredCase | null>(null);
   const caseData = useMemo(() => {
-    if (!mostRecentlySavedCase || mostRecentlySavedCase.id !== initialCase.id) {
+    if (mostRecentlySavedCase?.id !== initialCase.id) {
       return initialCase;
     }
 
