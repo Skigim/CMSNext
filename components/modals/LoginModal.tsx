@@ -221,7 +221,7 @@ export function LoginModal({
       await loadExistingData();
 
       logger.info("Login successful");
-      await Promise.resolve(onLoginComplete());
+      await onLoginComplete();
     } catch (error) {
       if (error instanceof EncryptionError) {
         handleTypedEncryptionError(error);
@@ -374,7 +374,7 @@ export function LoginModal({
           </Button>
           <Button
             onClick={handleLogin}
-            disabled={isLoading || (passwordRequired && !password.trim())}
+            disabled={!canSubmit}
             className="w-full sm:w-auto"
           >
             {isLoading ? (
