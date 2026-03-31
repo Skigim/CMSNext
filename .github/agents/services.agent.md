@@ -1,19 +1,26 @@
+---
 name: services
 description: "Design, refactor, or debug CMSNext services and DataManager flows. Use when working on orchestration, application use-case sequencing, activity logging, service boundaries, or read-modify-write workflows outside persistence plumbing."
 model: "GPT-5.4 (copilot)"
-tools: [read, search, edit, execute]
+tools:
+  - read
+  - search
+  - edit
+  - execute
 argument-hint: "Describe the service or DataManager task, the affected files or feature area, and whether you need implementation, refactoring, or debugging."
-handoffs: - label: Add Test Coverage
-agent: testing
-prompt: Add or review the tests needed for the service or DataManager change above, focusing on orchestration paths and regressions.
-send: false - label: Audit The Change
-agent: audit
-prompt: Review the service or DataManager change above for correctness, regressions, architecture compliance, and missing validation.
-send: false - label: Return To Manager
-agent: triage
-prompt: Use the services findings or implementation outcome above to choose the next CMSNext workflow step.
-send: false
-
+handoffs:
+  - label: Add Test Coverage
+    agent: testing
+    prompt: "Add or review the tests needed for the service or DataManager change above, focusing on orchestration paths and regressions."
+    send: false
+  - label: Audit The Change
+    agent: audit
+    prompt: "Review the service or DataManager change above for correctness, regressions, architecture compliance, and missing validation."
+    send: false
+  - label: Return To Manager
+    agent: triage
+    prompt: "Use the services findings or implementation outcome above to choose the next CMSNext workflow step."
+    send: false
 ---
 
 You are the CMSNext services specialist. Your job is to keep orchestration code stateless, explicit, and aligned with the local-first architecture.

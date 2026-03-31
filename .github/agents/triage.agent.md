@@ -1,47 +1,59 @@
+---
 name: triage
 description: "Coordinate CMSNext work across triage, implementation, documentation, testing, and audit. Use when choosing the right specialist agent, sequencing the next step, or preparing a strong handoff prompt for domain, services, hooks, frontend, storage, documentation, testing, or audit work."
 model: "GPT-5.4 (copilot)"
-tools: [read, search, todo, agent]
-agents: [frontend, domain, services, hooks, storage, documentation, testing, audit]
+tools:
+  - read
+  - search
+  - todo
+  - agent
+agents:
+  - frontend
+  - domain
+  - services
+  - hooks
+  - storage
+  - documentation
+  - testing
+  - audit
 argument-hint: "Describe the CMSNext goal, issue, or workflow you want managed."
 handoffs:
-
-- label: Route To Domain
-  agent: domain
-  prompt: Implement or review the domain logic portion of this CMSNext task while preserving purity and repo conventions.
-  send: false
-- label: Route To Services
-  agent: services
-  prompt: Implement or review the service or DataManager orchestration work for this CMSNext task while preserving service boundaries.
-  send: false
-- label: Route To Hooks
-  agent: hooks
-  prompt: Implement or review the hook orchestration work for this CMSNext task while preserving hook, service, and domain boundaries.
-  send: false
-- label: Route To Frontend
-  agent: frontend
-  prompt: Implement or review the UI portion of this CMSNext task while preserving component boundaries, accessibility, and repo styling patterns.
-  send: false
-- label: Route To Storage
-  agent: storage
-  prompt: Implement or review the persistence and file-storage portion of this CMSNext task while preserving local-first guarantees and storage invariants.
-  send: false
-- label: Route To Documentation
-  agent: documentation
-  prompt: Write or review the documentation, agent customization, registry, or workflow-guidance portion of this CMSNext task while preserving repo terminology and discovery behavior.
-  send: false
-- label: Close Out With Documentation
-  agent: documentation
-  prompt: Finalize the documentation, registry, or agent-guidance closeout needed for this CMSNext task so the delivered behavior and repo guidance stay aligned.
-  send: false
-- label: Expand Test Coverage
-  agent: testing
-  prompt: Add, debug, or review the test coverage needed for this CMSNext task, including regression and accessibility checks where appropriate.
-  send: false
-- label: Audit The Work
-  agent: audit
-  prompt: Review the current code, plan, or implementation for correctness, regressions, architecture drift, accessibility, performance, and missing validation.
-  send: false
+  - label: Route To Domain
+    agent: domain
+    prompt: "Implement or review the domain logic portion of this CMSNext task while preserving purity and repo conventions."
+    send: false
+  - label: Route To Services
+    agent: services
+    prompt: "Implement or review the service or DataManager orchestration work for this CMSNext task while preserving service boundaries."
+    send: false
+  - label: Route To Hooks
+    agent: hooks
+    prompt: "Implement or review the hook orchestration work for this CMSNext task while preserving hook, service, and domain boundaries."
+    send: false
+  - label: Route To Frontend
+    agent: frontend
+    prompt: "Implement or review the UI portion of this CMSNext task while preserving component boundaries, accessibility, and repo styling patterns."
+    send: false
+  - label: Route To Storage
+    agent: storage
+    prompt: "Implement or review the persistence and file-storage portion of this CMSNext task while preserving local-first guarantees and storage invariants."
+    send: false
+  - label: Route To Documentation
+    agent: documentation
+    prompt: "Write or review the documentation, agent customization, registry, or workflow-guidance portion of this CMSNext task while preserving repo terminology and discovery behavior."
+    send: false
+  - label: Close Out With Documentation
+    agent: documentation
+    prompt: "Finalize the documentation, registry, or agent-guidance closeout needed for this CMSNext task so the delivered behavior and repo guidance stay aligned."
+    send: false
+  - label: Expand Test Coverage
+    agent: testing
+    prompt: "Add, debug, or review the test coverage needed for this CMSNext task, including regression and accessibility checks where appropriate."
+    send: false
+  - label: Audit The Work
+    agent: audit
+    prompt: "Review the current code, plan, or implementation for correctness, regressions, architecture drift, accessibility, performance, and missing validation."
+    send: false
 
 ---
 

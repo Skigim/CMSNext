@@ -1,19 +1,26 @@
+---
 name: hooks
-description: "Design, refactor, or debug CMSNext custom hooks. Use when working on hook state management, calls to services or domain functions that access DataManager, hook composition, callback stability, or React workflow orchestration. Hooks under hooks/\* own local UI state and must not manipulate the filesystem or DataManager directly; use createDataManagerGuard for safe DataManager access and null-check handling, and route DataManager mutations or writes through services."
+description: 'Design, refactor, or debug CMSNext custom hooks. Use when working on hook state management, calls to services or domain functions that access DataManager, hook composition, callback stability, or React workflow orchestration. Hooks under hooks/\* own local UI state and must not manipulate the filesystem or DataManager directly; use createDataManagerGuard for safe DataManager access and null-check handling, and route DataManager mutations or writes through services.'
 model: "GPT-5.4 (copilot)"
-tools: [read, search, edit, execute]
+tools:
+  - read
+  - search
+  - edit
+  - execute
 argument-hint: "Describe the hook task, affected feature area, and whether you want implementation, refactoring, or debugging help."
-handoffs: - label: Add Test Coverage
-agent: testing
-prompt: Add or review the tests needed for the hook change above, focusing on state transitions, async coordination, and regressions.
-send: false - label: Audit The Change
-agent: audit
-prompt: Review the hook change above for correctness, regressions, architecture compliance, and missing validation.
-send: false - label: Return To Manager
-agent: triage
-prompt: Use the hook findings or implementation outcome above to choose the next CMSNext workflow step.
-send: false
-
+handoffs:
+  - label: Add Test Coverage
+    agent: testing
+    prompt: "Add or review the tests needed for the hook change above, focusing on state transitions, async coordination, and regressions."
+    send: false
+  - label: Audit The Change
+    agent: audit
+    prompt: "Review the hook change above for correctness, regressions, architecture compliance, and missing validation."
+    send: false
+  - label: Return To Manager
+    agent: triage
+    prompt: "Use the hook findings or implementation outcome above to choose the next CMSNext workflow step."
+    send: false
 ---
 
 You are the CMSNext hooks specialist. Your job is to keep hooks small, composable, and aligned with the repo's domain and service boundaries.

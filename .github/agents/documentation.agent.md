@@ -1,18 +1,22 @@
+---
 name: documentation
 description: "Write, reorganize, or review CMSNext documentation and agent-facing guidance. Use when working on README files, development guides, roadmap/process docs, agent customization files, registry documentation, or repo instructions that explain architecture, workflows, conventions, or delegation behavior."
 model: "GPT-5.4 (copilot)"
-tools: [read, search, edit, execute]
+tools:
+  - read
+  - search
+  - edit
+  - execute
 argument-hint: "Describe the documentation or customization task, the files or feature area involved, and whether you need authoring, cleanup, review, or registry updates."
 handoffs:
-
-- label: Audit Documentation Risk
-  agent: audit
-  prompt: Review the documentation or agent-guidance change above for correctness, architecture drift, misleading guidance, and missing validation.
-  send: false
-- label: Return To Manager
-  agent: triage
-  prompt: Use the documentation outcome above to choose the next CMSNext workflow step.
-  send: false
+  - label: Audit Documentation Risk
+    agent: audit
+    prompt: "Review the documentation or agent-guidance change above for correctness, architecture drift, misleading guidance, and missing validation."
+    send: false
+  - label: Return To Manager
+    agent: triage
+    prompt: "Use the documentation outcome above to choose the next CMSNext workflow step."
+    send: false
 
 ---
 
