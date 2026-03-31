@@ -1,6 +1,6 @@
 # Custom Agents
 
-This directory contains focused custom agent definitions for delegating bounded work to Copilot subagents. Reference material and reusable workflows now live under `.github/skills/` rather than being modeled as agents.
+This directory contains focused custom agent definitions for delegating bounded work to Copilot subagents. The `triage` agent acts as the CMSNext manager and routes work to the right specialist through explicit handoffs in VS Code chat. Reference material and reusable workflows now live under `.github/skills/` rather than being modeled as agents.
 
 ## Usage
 
@@ -10,35 +10,45 @@ When dispatching a subagent, reference the relevant agent definition for the tar
 "Read the `storage` agent definition for context, then [task description]..."
 ```
 
-The default workspace agent is also instructed through `.github/copilot-instructions.md` to delegate automatically when a task clearly matches one of these domains. `Explore` is a built-in read-only discovery agent, not a repository-defined agent in this folder.
+The default workspace agent is also instructed through `.github/copilot-instructions.md` to delegate automatically when a task clearly matches one of these domains. Start with `triage` when a task is ambiguous, multi-stage, or needs a visible handoff path in VS Code chat. `Explore` is a built-in read-only discovery agent, not a repository-defined agent in this folder.
 
 ## Available Agents
 
-| Agent      | Domain                   | Use For                                                                        |
-| ---------- | ------------------------ | ------------------------------------------------------------------------------ |
-| `triage`   | Issue routing            | Responsibility-first investigation, subsystem identification, and handoff prep |
-| `frontend` | Frontend and UI          | Components, app-shell flows, styling, accessibility, and visual behavior       |
-| `domain`   | Domain logic             | Pure business rules, validation, calculations, and transformations             |
-| `services` | Services and DataManager | Use-case orchestration, workflow sequencing, and read-modify-write flows       |
-| `testing`  | Testing                  | Cross-layer testing, regressions, accessibility coverage, and test failures    |
-| `storage`  | Storage layer            | File System Access API, autosave, serialization, and persistence mechanics     |
-| `hooks`    | Custom hooks             | State management, service integration                                          |
-| `audit`    | Quality                  | Security, accessibility, performance, and architecture audits                  |
-| `Explore`  | Built-in discovery       | Broad read-only discovery when the right files or code paths are not yet clear |
+| Agent      | Domain                   | Use For                                                                                 |
+| ---------- | ------------------------ | --------------------------------------------------------------------------------------- |
+| `triage`   | Workflow manager         | Responsibility-first investigation, subsystem identification, and handoff orchestration |
+| `frontend` | Frontend and UI          | Components, app-shell flows, styling, accessibility, and visual behavior                |
+| `domain`   | Domain logic             | Pure business rules, validation, calculations, and transformations                      |
+| `services` | Services and DataManager | Use-case orchestration, workflow sequencing, and read-modify-write flows                |
+| `testing`  | Testing                  | Cross-layer testing, regressions, accessibility coverage, and test failures             |
+| `storage`  | Storage layer            | File System Access API, autosave, serialization, and persistence mechanics              |
+| `hooks`    | Custom hooks             | State management, service integration                                                   |
+| `audit`    | Quality                  | Security, accessibility, performance, and architecture audits                           |
+| `Explore`  | Built-in discovery       | Broad read-only discovery when the right files or code paths are not yet clear          |
 
 ## Ownership Matrix
 
-| Responsibility | Primary owner | Notes |
-| -------------- | ------------- | ----- |
-| Business rules, validation, transformations | `domain` | Pure logic only; no React or persistence |
-| Application orchestration and use-case sequencing | `services` | `DataManager` and services coordinate workflows |
-| Persistence implementation and file lifecycle | `storage` | File System Access API, autosave, serialization, disk reads/writes |
-| React workflow state and coordination | `hooks` | Local UI state and React-side orchestration |
-| Rendering, interaction, and visual behavior | `frontend` | Components, accessibility-sensitive UI, styling |
-| Minimal direct tests for owned changes | Specialist agent | Each specialist updates the narrow tests for its own change |
-| Cross-layer integration, regression, accessibility test strategy, shared test infra, flaky/failing tests | `testing` | Owns test-heavy work that crosses feature or layer boundaries |
-| Cross-cutting logging, telemetry, performance, and error handling | Layer owner (`storage` / `services` / `hooks` / `frontend`) | Route by implementation responsibility; `audit` verifies |
-| Routing ambiguous requests | `triage` | Choose a primary owner by responsibility first |
+| Responsibility                                                                                           | Primary owner                                               | Notes                                                                     |
+| -------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------- | ------------------------------------------------------------------------- |
+| Business rules, validation, transformations                                                              | `domain`                                                    | Pure logic only; no React or persistence                                  |
+| Application orchestration and use-case sequencing                                                        | `services`                                                  | `DataManager` and services coordinate workflows                           |
+| Persistence implementation and file lifecycle                                                            | `storage`                                                   | File System Access API, autosave, serialization, disk reads/writes        |
+| React workflow state and coordination                                                                    | `hooks`                                                     | Local UI state and React-side orchestration                               |
+| Rendering, interaction, and visual behavior                                                              | `frontend`                                                  | Components, accessibility-sensitive UI, styling                           |
+| Minimal direct tests for owned changes                                                                   | Specialist agent                                            | Each specialist updates the narrow tests for its own change               |
+| Cross-layer integration, regression, accessibility test strategy, shared test infra, flaky/failing tests | `testing`                                                   | Owns test-heavy work that crosses feature or layer boundaries             |
+| Cross-cutting logging, telemetry, performance, and error handling                                        | Layer owner (`storage` / `services` / `hooks` / `frontend`) | Route by implementation responsibility; `audit` verifies                  |
+| Routing ambiguous or multi-stage requests                                                                | `triage`                                                    | Choose a primary owner by responsibility first and keep handoffs explicit |
+
+## Handoff Workflow
+
+Use `triage` as the manager when the task needs discovery, routing, or stage changes. Typical flow:
+
+1. `triage` investigates and picks the primary owner.
+2. A specialist agent implements or reviews the targeted layer.
+3. `testing` adds or verifies broader regression coverage when needed.
+4. `audit` reviews risk, regressions, accessibility, performance, or architecture compliance.
+5. Specialists hand back to `triage` when the next step is no longer obvious.
 
 ## Related Skills
 

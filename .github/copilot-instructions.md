@@ -66,6 +66,7 @@ When starting a task, prefer this order:
 
 ### Automatic Agent Delegation
 
+- Use `triage` as the manager/orchestrator when a task is ambiguous, spans stages, or would benefit from explicit handoff prompts in VS Code chat.
 - The default agent should delegate automatically when a task clearly matches one of the workspace custom agents.
 - Route ambiguous tasks by **responsibility and architectural ownership first**, then use file proximity as a tiebreaker.
 - Delegate to `audit` for code reviews, security analysis, accessibility checks, performance investigations, regression hunting, release readiness, or architecture compliance checks.
