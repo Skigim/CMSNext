@@ -25,7 +25,6 @@ import {
   RefreshCcw,
   RotateCcw,
   Archive,
-  Upload,
 } from "lucide-react";
 import { ToggleGroup, ToggleGroupItem } from "../ui/toggle-group";
 import {
@@ -404,7 +403,6 @@ interface CaseListProps {
   cases: StoredCase[];
   onViewCase: (caseId: string) => void;
   onNewCase: () => void;
-  onImportMarkdown?: () => void;
   onQuickAdd?: () => void;
   onRefresh?: () => void;
   alertsSummary?: AlertsSummary;
@@ -431,7 +429,6 @@ export function CaseList({
   cases,
   onViewCase,
   onNewCase,
-  onImportMarkdown,
   onQuickAdd,
   onRefresh,
   alertsSummary: _alertsSummary,
@@ -908,12 +905,6 @@ export function CaseList({
             <Button variant="outline" onClick={onQuickAdd}>
               <Plus className="h-4 w-4" />
               Quick Add
-            </Button>
-          ) : null}
-          {onImportMarkdown ? (
-            <Button variant="outline" onClick={onImportMarkdown}>
-              <Upload className="h-4 w-4" />
-              Import Markdown
             </Button>
           ) : null}
           <Button onClick={onNewCase}>

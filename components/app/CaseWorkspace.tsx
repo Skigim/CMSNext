@@ -15,8 +15,6 @@ import type { AlertsIndex, AlertWithMatch } from "../../utils/alertsData";
 import type { CaseActivityLogState } from "../../types/activityLog";
 import { Alert, AlertTitle, AlertDescription } from "../ui/alert";
 import { Button } from "../ui/button";
-import type { IntakeFormData } from "@/domain/validation/intake.schema";
-import type { MarkdownCaseImportState } from "@/hooks/useMarkdownCaseImportFlow";
 
 const FinancialItemModal = lazy(() => import("../modals/FinancialItemModal"));
 
@@ -60,14 +58,6 @@ export interface CaseWorkspaceProps {
   onResolveAlert?: (alert: AlertWithMatch) => Promise<void> | void;
   onAlertsCsvImported?: (index: AlertsIndex) => void;
   activityLogState: CaseActivityLogState;
-  importDraft?: Partial<IntakeFormData> | null;
-  markdownImportState: MarkdownCaseImportState;
-  onOpenMarkdownImport: () => void;
-  onMarkdownImportInputChange: (input: string) => void;
-  onCloseMarkdownImport: () => void;
-  onConfirmMarkdownImport: () => void;
-  onClearMarkdownImport: () => void;
-  canConfirmMarkdownImport: boolean;
   requestedCaseListSegment?: CaseListSegment | null;
   requestedCaseListSegmentKey?: number;
   onRequestedCaseListSegmentApplied?: (requestKey: number) => void;
@@ -92,14 +82,6 @@ export const CaseWorkspace = memo(function CaseWorkspace({
   onResolveAlert,
   onAlertsCsvImported,
   activityLogState,
-  importDraft,
-  markdownImportState,
-  onOpenMarkdownImport,
-  onMarkdownImportInputChange,
-  onCloseMarkdownImport,
-  onConfirmMarkdownImport,
-  onClearMarkdownImport,
-  canConfirmMarkdownImport,
   requestedCaseListSegment,
   requestedCaseListSegmentKey,
   onRequestedCaseListSegmentApplied,
@@ -128,8 +110,6 @@ export const CaseWorkspace = memo(function CaseWorkspace({
         currentView={navigation.currentView}
         selectedCase={selectedCase}
         showNewCaseModal={showNewCaseModal}
-        importDraft={importDraft}
-        markdownImportState={markdownImportState}
         cases={cases}
         alerts={alerts}
         handleViewCase={viewHandlers.handleViewCase}
@@ -151,12 +131,6 @@ export const CaseWorkspace = memo(function CaseWorkspace({
         handleUpdateCaseStatus={onUpdateCaseStatus}
         handleResolveAlert={onResolveAlert}
         onAlertsCsvImported={onAlertsCsvImported}
-        handleOpenMarkdownImport={onOpenMarkdownImport}
-        handleMarkdownImportInputChange={onMarkdownImportInputChange}
-        handleCloseMarkdownImport={onCloseMarkdownImport}
-        handleConfirmMarkdownImport={onConfirmMarkdownImport}
-        handleClearMarkdownImport={onClearMarkdownImport}
-        canConfirmMarkdownImport={canConfirmMarkdownImport}
         requestedCaseListSegment={requestedCaseListSegment}
         requestedCaseListSegmentKey={requestedCaseListSegmentKey}
         onRequestedCaseListSegmentApplied={onRequestedCaseListSegmentApplied}
