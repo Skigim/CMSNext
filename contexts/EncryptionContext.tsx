@@ -98,6 +98,12 @@ interface EncryptionContextValue extends EncryptionState {
   pendingPassword: string | null;
   /** Store password temporarily for key derivation when file salt is discovered */
   setPendingPassword: (password: string | null) => void;
+  /** Whether startup encrypted-workspace reads can safely proceed */
+  isStartupUnlockReady: boolean;
+  /** Wait until startup encrypted-workspace decryption hooks are ready */
+  waitForStartupUnlockReady: () => Promise<void>;
+  /** Update startup encrypted-workspace readiness from hook orchestration */
+  setStartupUnlockReady: (isReady: boolean) => void;
 }
 
 const EncryptionContext = createContext<EncryptionContextValue | null>(null);
@@ -194,12 +200,45 @@ export function EncryptionProvider({ children }: Readonly<EncryptionProviderProp
     currentSalt: null,
     currentIterations: null,
   });
+  const [isStartupUnlockReady, setIsStartupUnlockReadyState] = useState(!isEncryptionEnabled);
   
   // Temporary password storage - cleared after key derivation
   // Using useRef instead of useState to prevent password from appearing in React DevTools
   const pendingPasswordRef = useRef<string | null>(null);
+  const startupUnlockReadyPromiseRef = useRef<Promise<void> | null>(null);
+  const resolveStartupUnlockReadyRef = useRef<(() => void) | null>(null);
 
   const isSupported = useMemo(() => isEncryptionSupported(), []);
+
+  const setStartupUnlockReady = useCallback((isReady: boolean) => {
+    setIsStartupUnlockReadyState(isReady);
+
+    if (isReady) {
+      resolveStartupUnlockReadyRef.current?.();
+      resolveStartupUnlockReadyRef.current = null;
+      startupUnlockReadyPromiseRef.current = null;
+      return;
+    }
+
+    if (!startupUnlockReadyPromiseRef.current) {
+      startupUnlockReadyPromiseRef.current = new Promise<void>((resolve) => {
+        resolveStartupUnlockReadyRef.current = resolve;
+      });
+    }
+  }, []);
+
+  const waitForStartupUnlockReady = useCallback(async (): Promise<void> => {
+    if (isStartupUnlockReady) {
+      return;
+    }
+
+    if (!startupUnlockReadyPromiseRef.current) {
+      startupUnlockReadyPromiseRef.current = new Promise<void>((resolve) => {
+        resolveStartupUnlockReadyRef.current = resolve;
+      });
+    }
+    await startupUnlockReadyPromiseRef.current;
+  }, [isStartupUnlockReady]);
   
   /**
    * Store password temporarily for key derivation when file salt is discovered.
@@ -224,6 +263,7 @@ export function EncryptionProvider({ children }: Readonly<EncryptionProviderProp
 
       try {
         if (encryptionMode === "disabled") {
+          setStartupUnlockReady(true);
           setState((prev) => ({
             ...prev,
             isAuthenticated: true,
@@ -237,6 +277,8 @@ export function EncryptionProvider({ children }: Readonly<EncryptionProviderProp
           logger.info("Authentication completed with password bypass", { encryptionMode });
           return true;
         }
+
+        setStartupUnlockReady(!isEncryptionEnabled);
 
         let derivedKey: CryptoKey | null = null;
 
@@ -262,13 +304,14 @@ export function EncryptionProvider({ children }: Readonly<EncryptionProviderProp
 
         return true;
       } catch (error) {
+        setStartupUnlockReady(true);
         logger.error("Authentication failed", {
           error: error instanceof Error ? error.message : String(error),
         });
         return false;
       }
     },
-    [encryptionMode]
+    [encryptionMode, isEncryptionEnabled, setStartupUnlockReady]
   );
 
   /**
@@ -337,8 +380,9 @@ export function EncryptionProvider({ children }: Readonly<EncryptionProviderProp
       currentIterations: null,
     });
     pendingPasswordRef.current = null;
+    setStartupUnlockReady(true);
     logger.lifecycle("Credentials cleared");
-  }, []);
+  }, [setStartupUnlockReady]);
 
   /**
    * Derive key from file salt using pending password.
@@ -409,6 +453,9 @@ export function EncryptionProvider({ children }: Readonly<EncryptionProviderProp
       initializeEncryption,
       deriveKeyFromFileSalt,
       clearCredentials,
+      isStartupUnlockReady,
+      waitForStartupUnlockReady,
+      setStartupUnlockReady,
       // Expose getter for pendingPassword to avoid stale ref issues in consumers
       get pendingPassword() {
         return pendingPasswordRef.current;
@@ -426,6 +473,9 @@ export function EncryptionProvider({ children }: Readonly<EncryptionProviderProp
       initializeEncryption,
       deriveKeyFromFileSalt,
       clearCredentials,
+      isStartupUnlockReady,
+      waitForStartupUnlockReady,
+      setStartupUnlockReady,
       setPendingPassword,
     ]
   );

@@ -41,6 +41,7 @@ export function LoginModal({
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [isPreparingUnlock, setIsPreparingUnlock] = useState(false);
   const [isCheckingFile, setIsCheckingFile] = useState(true);
   const [fileExists, setFileExists] = useState(true);
   const [fileIsEncrypted, setFileIsEncrypted] = useState(false);
@@ -48,7 +49,11 @@ export function LoginModal({
   const hasCheckedRef = useRef(false);
   const passwordRequired = encryption.requiresPassword;
   const submitLabel = passwordRequired ? "Unlock" : "Open Workspace";
-  const submitProgressLabel = passwordRequired ? "Unlocking..." : "Opening...";
+  const submitProgressLabel = isPreparingUnlock
+    ? "Preparing workspace..."
+    : passwordRequired
+      ? "Unlocking..."
+      : "Opening...";
   const canSubmit = !isLoading && (!passwordRequired || Boolean(password.trim()));
   let workspaceAccessHint = "This environment bypasses unlock gating and leaves workspace files readable on disk for inspection.";
   if (encryption.isEncryptionEnabled) {
@@ -112,6 +117,7 @@ export function LoginModal({
       setPassword("");
       setError(null);
       setIsLoading(false);
+      setIsPreparingUnlock(false);
       setIsCheckingFile(true);
       setFileExists(true);
       setFileIsEncrypted(false);
@@ -218,6 +224,11 @@ export function LoginModal({
         return;
       }
 
+      if (fileIsEncrypted && encryption.isEncryptionEnabled) {
+        setIsPreparingUnlock(true);
+        await encryption.waitForStartupUnlockReady();
+      }
+
       await loadExistingData();
 
       logger.info("Login successful");
@@ -230,6 +241,7 @@ export function LoginModal({
 
       handleUnknownLoginError(error);
     } finally {
+      setIsPreparingUnlock(false);
       setIsLoading(false);
     }
   }, [
