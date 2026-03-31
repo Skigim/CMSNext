@@ -232,6 +232,11 @@ export function EncryptionProvider({ children }: Readonly<EncryptionProviderProp
       return;
     }
 
+    if (!startupUnlockReadyPromiseRef.current) {
+      startupUnlockReadyPromiseRef.current = new Promise<void>((resolve) => {
+        resolveStartupUnlockReadyRef.current = resolve;
+      });
+    }
     await startupUnlockReadyPromiseRef.current;
   }, [isStartupUnlockReady]);
   
