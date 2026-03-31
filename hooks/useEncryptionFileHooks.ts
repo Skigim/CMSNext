@@ -268,16 +268,20 @@ export function useEncryptionFileHooks(): UseEncryptionFileHooksResult {
     if (encryptionHooks) {
       logger.lifecycle("Setting encryption hooks on file service");
       service.setEncryptionHooks(encryptionHooks);
+      encryption.setStartupUnlockReady(true);
     } else {
       logger.lifecycle("Clearing encryption hooks from file service");
       service.setEncryptionHooks(null);
+      if (!encryption.isEncryptionEnabled || !encryption.isAuthenticated) {
+        encryption.setStartupUnlockReady(true);
+      }
     }
 
     // Cleanup on unmount
     return () => {
       service.setEncryptionHooks(null);
     };
-  }, [service, encryptionHooks]);
+  }, [service, encryption, encryptionHooks]);
 
   return {
     isActive: !!encryptionHooks,

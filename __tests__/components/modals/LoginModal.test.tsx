@@ -3,6 +3,7 @@ import { axe } from "jest-axe";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { LoginModal } from "@/components/modals/LoginModal";
+import { EncryptionError } from "@/types/encryption";
 
 const checkFileEncryptionStatus = vi.fn();
 const connectToExisting = vi.fn();
@@ -10,13 +11,16 @@ const loadExistingData = vi.fn();
 const setPendingPassword = vi.fn();
 const authenticate = vi.fn();
 const clearCredentials = vi.fn();
+const waitForStartupUnlockReady = vi.fn();
 
 const mockEncryptionContext = {
   setPendingPassword,
   authenticate,
   clearCredentials,
+  waitForStartupUnlockReady,
   requiresPassword: true,
   isEncryptionEnabled: true,
+  isStartupUnlockReady: true,
 };
 
 vi.mock("@/contexts/EncryptionContext", () => ({
@@ -50,13 +54,16 @@ describe("LoginModal", () => {
     setPendingPassword.mockReset();
     authenticate.mockReset();
     clearCredentials.mockReset();
+    waitForStartupUnlockReady.mockReset();
 
     mockEncryptionContext.requiresPassword = true;
     mockEncryptionContext.isEncryptionEnabled = true;
+    mockEncryptionContext.isStartupUnlockReady = true;
 
     connectToExisting.mockResolvedValue(true);
     loadExistingData.mockResolvedValue(undefined);
     authenticate.mockResolvedValue(true);
+    waitForStartupUnlockReady.mockResolvedValue(undefined);
     checkFileEncryptionStatus.mockImplementation(() => new Promise<never>(() => {}));
   });
 
@@ -114,5 +121,91 @@ describe("LoginModal", () => {
       expect(onLoginComplete).toHaveBeenCalledTimes(1);
     });
     expect(screen.queryByLabelText("Password")).not.toBeInTheDocument();
+  });
+
+  it("waits for startup unlock readiness before loading encrypted workspace data", async () => {
+    // ARRANGE
+    const user = userEvent.setup();
+    const onLoginComplete = vi.fn();
+    let resolveStartupUnlockReady: () => void = () => {};
+    waitForStartupUnlockReady.mockImplementation(
+      () =>
+        new Promise<void>((resolve) => {
+          resolveStartupUnlockReady = resolve;
+        }),
+    );
+    checkFileEncryptionStatus.mockResolvedValue({ exists: true, encrypted: true });
+
+    render(
+      <LoginModal
+        isOpen={true}
+        onLoginComplete={onLoginComplete}
+        onChooseDifferentFolder={vi.fn()}
+      />,
+    );
+
+    await waitFor(() => {
+      expect(checkFileEncryptionStatus).toHaveBeenCalledTimes(1);
+    });
+
+    // ACT
+    await user.type(screen.getByLabelText("Password"), "correct horse battery staple");
+    await user.click(screen.getByRole("button", { name: "Unlock" }));
+
+    // ASSERT
+    await waitFor(() => {
+      expect(connectToExisting).toHaveBeenCalledTimes(1);
+      expect(authenticate).toHaveBeenCalledWith("admin", "correct horse battery staple");
+      expect(waitForStartupUnlockReady).toHaveBeenCalledTimes(1);
+    });
+    expect(loadExistingData).not.toHaveBeenCalled();
+    expect(
+      screen.queryByText("Incorrect password. Please try again."),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Preparing workspace..." }),
+    ).toBeDisabled();
+
+    resolveStartupUnlockReady();
+
+    await waitFor(() => {
+      expect(loadExistingData).toHaveBeenCalledTimes(1);
+      expect(onLoginComplete).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  it("shows the invalid-password error only after a real decrypt failure once startup readiness is complete", async () => {
+    // ARRANGE
+    const user = userEvent.setup();
+    checkFileEncryptionStatus.mockResolvedValue({ exists: true, encrypted: true });
+    loadExistingData.mockRejectedValue(
+      new EncryptionError("wrong_password", "Incorrect password."),
+    );
+
+    render(
+      <LoginModal
+        isOpen={true}
+        onLoginComplete={vi.fn()}
+        onChooseDifferentFolder={vi.fn()}
+      />,
+    );
+
+    await waitFor(() => {
+      expect(checkFileEncryptionStatus).toHaveBeenCalledTimes(1);
+    });
+
+    // ACT
+    await user.type(screen.getByLabelText("Password"), "wrong password");
+    await user.click(screen.getByRole("button", { name: "Unlock" }));
+
+    // ASSERT
+    await waitFor(() => {
+      expect(waitForStartupUnlockReady).toHaveBeenCalledTimes(1);
+      expect(loadExistingData).toHaveBeenCalledTimes(1);
+    });
+    expect(clearCredentials).toHaveBeenCalledTimes(1);
+    expect(
+      await screen.findByText("Incorrect password. Please try again."),
+    ).toBeInTheDocument();
   });
 });
