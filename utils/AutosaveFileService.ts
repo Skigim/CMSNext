@@ -878,73 +878,98 @@ class AutosaveFileService {
    * }
    */
   async readFile(): Promise<any> {
-    if (!this.directoryHandle) {
-      logger.debug('readFile skipped - directory handle is not available');
-      return null;
-    }
-
-    const permission = await this.checkPermission();
-    if (permission !== 'granted') {
-      logger.debug('readFile skipped - permission not granted', { permission });
-      return null;
-    }
-
-    // Double-check the handle hasn't become null between checks
-    if (!this.directoryHandle) {
-      logger.warn('Directory handle became null during readFile execution');
+    if (!await this.canReadFile()) {
       return null;
     }
 
     const contents = await this.readWithRetry(this.fileName, 'readFile');
     if (contents === null) {
-      // Distinguish between "file missing" and "file unreadable after retries"
-      try {
-        // If the file handle cannot be obtained due to NotFoundError, treat as "no file"
-        await this.directoryHandle.getFileHandle(this.fileName, { create: false });
-      } catch (existenceError) {
-        if (existenceError instanceof DOMException && existenceError.name === 'NotFoundError') {
-          logger.debug('Primary data file not found during readFile', {
-            fileName: this.fileName,
-          });
-          return null;
-        }
-
-        const message =
-          existenceError instanceof Error ? existenceError.message : 'Unknown error';
-        logger.error('Failed to verify primary data file existence', {
-          fileName: this.fileName,
-          error: message,
-        });
-        this.errorCallback({
-          message: `Error checking existence of file "${this.fileName}": ${message}`,
-          type: 'error',
-          error: existenceError,
-          context: { operation: 'readData', fileName: this.fileName },
-        });
-        throw existenceError;
-      }
-
-      const message = `Unable to read file "${this.fileName}" after multiple attempts.`;
-      logger.error('Failed to read primary data file after retries', {
-        fileName: this.fileName,
-      });
-      this.errorCallback({
-        message,
-        type: 'error',
-        error: new Error(message),
-        context: { operation: 'readData', fileName: this.fileName },
-      });
-      throw new Error(message);
+      await this.handleMissingFile();
+      return null;
     }
 
+    return await this.parseAndDecryptContents(contents);
+  }
+
+  /**
+   * Check if we can read the file (handle and permissions).
+   * @private
+   */
+  private async canReadFile(): Promise<boolean> {
+    if (!this.directoryHandle) {
+      logger.debug('readFile skipped - directory handle is not available');
+      return false;
+    }
+
+    const permission = await this.checkPermission();
+    if (permission !== 'granted') {
+      logger.debug('readFile skipped - permission not granted', { permission });
+      return false;
+    }
+
+    // Double-check the handle hasn't become null between checks
+    if (!this.directoryHandle) {
+      logger.warn('Directory handle became null during readFile execution');
+      return false;
+    }
+
+    return true;
+  }
+
+  /**
+   * Handle the case where file read failed - distinguish between missing and unreadable.
+   * @private
+   */
+  private async handleMissingFile(): Promise<void> {
+    try {
+      await this.directoryHandle!.getFileHandle(this.fileName, { create: false });
+    } catch (existenceError) {
+      if (existenceError instanceof DOMException && existenceError.name === 'NotFoundError') {
+        logger.debug('Primary data file not found during readFile', {
+          fileName: this.fileName,
+        });
+        return;
+      }
+
+      const message = existenceError instanceof Error ? existenceError.message : 'Unknown error';
+      logger.error('Failed to verify primary data file existence', {
+        fileName: this.fileName,
+        error: message,
+      });
+      this.errorCallback({
+        message: `Error checking existence of file "${this.fileName}": ${message}`,
+        type: 'error',
+        error: existenceError,
+        context: { operation: 'readData', fileName: this.fileName },
+      });
+      throw existenceError;
+    }
+
+    const message = `Unable to read file "${this.fileName}" after multiple attempts.`;
+    logger.error('Failed to read primary data file after retries', {
+      fileName: this.fileName,
+    });
+    this.errorCallback({
+      message,
+      type: 'error',
+      error: new Error(message),
+      context: { operation: 'readData', fileName: this.fileName },
+    });
+    throw new Error(message);
+  }
+
+  /**
+   * Parse JSON contents and decrypt if needed.
+   * @private
+   */
+  private async parseAndDecryptContents(contents: string): Promise<any> {
     try {
       const rawData = JSON.parse(contents);
 
       // Check if data is encrypted and decrypt if hooks are available
       if (this.encryptionHooks?.isEncrypted(rawData)) {
         logger.debug('Encrypted file detected, decrypting...');
-        const decryptedData = await this.encryptionHooks.decrypt(rawData);
-        return decryptedData;
+        return await this.encryptionHooks.decrypt(rawData);
       }
 
       return rawData;

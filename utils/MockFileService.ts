@@ -1,4 +1,6 @@
 import AutosaveFileService from './AutosaveFileService';
+import { mergeCategoryConfig } from '@/types/categoryConfig';
+import type { PersistedNormalizedFileDataV21 } from '@/utils/storageV21Migration';
 
 /**
  * MockFileService — E2E Testing Mock for AutosaveFileService
@@ -7,8 +9,8 @@ import AutosaveFileService from './AutosaveFileService';
  * Bypasses the native File System Access API so headless Playwright tests
  * run deterministically without OS dialog blockers.
  *
- * Uses dynamic imports for sample-data.json so it is never bundled into
- * production builds.
+ * Returns an in-memory empty workspace fixture so E2E runs do not depend on
+ * missing repo sample files or OS file dialogs.
  */
 
 type AnyFn = (...args: any[]) => any;
@@ -22,6 +24,22 @@ interface MockStatus {
   isSupported: boolean;
   pendingWrites: number;
   lastDataChange: number | null;
+}
+
+function createMockWorkspaceData(): PersistedNormalizedFileDataV21 {
+  return {
+    version: '2.1',
+    people: [],
+    cases: [],
+    financials: [],
+    notes: [],
+    alerts: [],
+    exported_at: new Date().toISOString(),
+    total_cases: 0,
+    categoryConfig: mergeCategoryConfig(),
+    activityLog: [],
+    templates: [],
+  };
 }
 
 /** Delay before emitting the initial status callback, matching real service async init. */
@@ -81,19 +99,15 @@ export class MockFileService extends AutosaveFileService {
   }
 
   async loadExistingData(): Promise<unknown> {
-    // Dynamic import prevents bundle bloat in production
-    const { default: sampleData } = await import('../sample-data.json');
-    return sampleData;
+    return createMockWorkspaceData();
   }
 
   async loadDataFromFile(_fileName: string): Promise<unknown> {
-    const { default: sampleData } = await import('../sample-data.json');
-    return sampleData;
+    return createMockWorkspaceData();
   }
 
   async readFile(): Promise<unknown> {
-    const { default: sampleData } = await import('../sample-data.json');
-    return sampleData;
+    return createMockWorkspaceData();
   }
 
   async readTextFile(_fileName: string): Promise<string | null> {
@@ -144,7 +158,7 @@ export class MockFileService extends AutosaveFileService {
 
   setDataLoadCallback(cb?: ((data: unknown) => void) | null): void {
     if (cb) {
-      import('../sample-data.json').then(({ default: sampleData }) => cb(sampleData));
+      cb(createMockWorkspaceData());
     }
   }
 

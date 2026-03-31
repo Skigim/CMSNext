@@ -269,7 +269,8 @@ CMSNext now centralizes runtime behavior in a typed app config layer. In Vite-po
 
 ### Intended branch mapping
 
-- `dev` → `APP_ENV=dev`, `ENCRYPTION_MODE=noop` or `disabled`, dev tooling on
+- `dev` → `APP_ENV=dev`, `ENCRYPTION_MODE=disabled` by default, dev tooling on
+- `dev` override → set `ENCRYPTION_MODE=noop` if you want password gating without encrypted files
 - `staging` → `APP_ENV=staging`, `ENCRYPTION_MODE=full`, dev tooling on
 - `main` → `APP_ENV=production`, `ENCRYPTION_MODE=full`, dev tooling off
 

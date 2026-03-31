@@ -134,7 +134,7 @@ export function isPersistedNormalizedFileDataV21(data: unknown): data is Persist
 }
 
 function normalizeName(value: string): string {
-  return value.trim().replace(/\s+/g, " ").toLowerCase();
+  return value.trim().replaceAll(/\s+/g, " ").toLowerCase();
 }
 
 function buildCasePeopleRefs(

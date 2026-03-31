@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useRef } from "react";
+import { useState, useCallback, useEffect, useRef, type FormEvent } from "react";
 import {
   Dialog,
   DialogContent,
@@ -15,7 +15,6 @@ import { AlertCircle, Loader2, Lock, KeyRound, FolderOpen } from "lucide-react";
 import { useEncryption } from "@/contexts/EncryptionContext";
 import { useFileStorage } from "@/contexts/FileStorageContext";
 import { createLogger } from "@/utils/logger";
-import { useSubmitShortcut } from "@/hooks/useSubmitShortcut";
 import { AuthBackdrop } from "./AuthBackdrop";
 import { EncryptionError } from "@/types/encryption";
 
@@ -35,7 +34,7 @@ export function LoginModal({
   isOpen,
   onLoginComplete,
   onChooseDifferentFolder,
-}: LoginModalProps) {
+}: Readonly<LoginModalProps>) {
   const encryption = useEncryption();
   const { service, connectToExisting, loadExistingData } = useFileStorage();
 
@@ -50,6 +49,13 @@ export function LoginModal({
   const passwordRequired = encryption.requiresPassword;
   const submitLabel = passwordRequired ? "Unlock" : "Open Workspace";
   const submitProgressLabel = passwordRequired ? "Unlocking..." : "Opening...";
+  const canSubmit = !isLoading && (!passwordRequired || Boolean(password.trim()));
+  let workspaceAccessHint = "This environment bypasses unlock gating and leaves workspace files readable on disk for inspection.";
+  if (encryption.isEncryptionEnabled) {
+    workspaceAccessHint = "Your data is encrypted locally using AES-256. The password never leaves your device.";
+  } else if (passwordRequired) {
+    workspaceAccessHint = "This environment preserves the unlock flow, but workspace files remain readable on disk for inspection.";
+  }
 
   // E2E Mock Mode: bypass login entirely
   useEffect(() => {
@@ -112,7 +118,7 @@ export function LoginModal({
     }
   }, [isOpen]);
 
-  const isDecryptionError = (error: unknown): boolean => {
+  const isDecryptionError = useCallback((error: unknown): boolean => {
     if (error instanceof EncryptionError) return true;
     
     const message = error instanceof Error ? error.message : String(error);
@@ -122,7 +128,70 @@ export function LoginModal({
       message.includes("Failed to derive key") ||
       message.includes("Decryption failed")
     );
-  };
+  }, []);
+
+  const connectAndAuthenticate = useCallback(async (): Promise<string | null> => {
+    const connected = await connectToExisting();
+    if (!connected) {
+      return "Failed to access data folder. Please try again or choose a different folder.";
+    }
+
+    encryption.setPendingPassword(passwordRequired ? password : null);
+
+    const authSuccess = await encryption.authenticate(
+      "admin",
+      passwordRequired ? password : "",
+    );
+
+    if (!authSuccess) {
+      encryption.setPendingPassword(null);
+      return "Failed to set up encryption";
+    }
+
+    return null;
+  }, [connectToExisting, encryption, password, passwordRequired]);
+
+  const handleTypedEncryptionError = useCallback((error: EncryptionError) => {
+    encryption.setPendingPassword(null);
+
+    if (error.code === "wrong_password") {
+      logger.warn("Decryption failed - wrong password");
+      encryption.clearCredentials();
+      setPassword("");
+      setError("Incorrect password. Please try again.");
+      return;
+    }
+
+    if (error.code === "corrupt_salt") {
+      logger.error("Decryption failed - corrupt salt");
+      setError("Data file appears corrupted (invalid salt). Cannot decrypt.");
+      return;
+    }
+
+    if (error.code === "system_error") {
+      logger.error("Decryption failed - system error");
+      setError(`System error: ${error.message}`);
+      return;
+    }
+
+    logger.error("Decryption failed - unknown code", { code: error.code });
+    setError(error.message);
+  }, [encryption]);
+
+  const handleUnknownLoginError = useCallback((error: unknown) => {
+    if (isDecryptionError(error)) {
+      logger.warn("Decryption failed - wrong password (generic mismatch)");
+      encryption.setPendingPassword(null);
+      encryption.clearCredentials();
+      setPassword("");
+      setError("Incorrect password. Please try again.");
+      return;
+    }
+
+    logger.error("Login error", { error: String(error) });
+    encryption.setPendingPassword(null);
+    setError(`Error: ${error instanceof Error ? error.message : "Unknown error"}`);
+  }, [encryption, isDecryptionError]);
 
   const handleLogin = useCallback(async () => {
     if (fileIsEncrypted && !encryption.isEncryptionEnabled) {
@@ -143,88 +212,44 @@ export function LoginModal({
     try {
       logger.lifecycle("Logging in - connecting and decrypting");
 
-      // Step 1: Connect to existing directory (requests permission)
-      const connected = await connectToExisting();
-      if (!connected) {
-        setError("Failed to access data folder. Please try again or choose a different folder.");
+      const setupError = await connectAndAuthenticate();
+      if (setupError) {
+        setError(setupError);
         return;
       }
 
-      // Step 2: Set up encryption with password
-      if (passwordRequired) {
-        encryption.setPendingPassword(password);
-      } else {
-        encryption.setPendingPassword(null);
-      }
-
-      const authSuccess = await encryption.authenticate(
-        "admin",
-        passwordRequired ? password : "",
-      );
-      if (!authSuccess) {
-        encryption.setPendingPassword(null);
-        setError("Failed to set up encryption");
-        return;
-      }
-
-      // Step 3: Load and decrypt data
       await loadExistingData();
 
       logger.info("Login successful");
-      onLoginComplete();
+      await Promise.resolve(onLoginComplete());
     } catch (error) {
       if (error instanceof EncryptionError) {
-        encryption.setPendingPassword(null);
-        
-        // Handle specific error codes
-        switch (error.code) {
-          case 'wrong_password':
-            logger.warn("Decryption failed - wrong password");
-            encryption.clearCredentials();
-            setPassword("");
-            setError("Incorrect password. Please try again.");
-            break;
-          case 'corrupt_salt':
-            logger.error("Decryption failed - corrupt salt");
-            setError("Data file appears corrupted (invalid salt). Cannot decrypt.");
-            break;
-          case 'system_error':
-            logger.error("Decryption failed - system error");
-            setError(`System error: ${error.message}`);
-            break;
-          default:
-            logger.error("Decryption failed - unknown code", { code: error.code });
-            setError(error.message);
-        }
-      } else if (isDecryptionError(error)) {
-        // Fallback for non-typed errors
-        logger.warn("Decryption failed - wrong password (generic mismatch)");
-        encryption.setPendingPassword(null);
-        encryption.clearCredentials();
-        setPassword("");
-        setError("Incorrect password. Please try again.");
-      } else {
-        logger.error("Login error", { error: String(error) });
-        encryption.setPendingPassword(null);
-        setError(`Error: ${error instanceof Error ? error.message : "Unknown error"}`);
+        handleTypedEncryptionError(error);
+        return;
       }
+
+      handleUnknownLoginError(error);
     } finally {
       setIsLoading(false);
     }
   }, [
-    password,
     fileIsEncrypted,
+    password,
     passwordRequired,
-    connectToExisting,
+    connectAndAuthenticate,
     encryption,
+    handleTypedEncryptionError,
+    handleUnknownLoginError,
     loadExistingData,
     onLoginComplete,
   ]);
 
-  const handleSubmitShortcut = useSubmitShortcut<HTMLFormElement>({
-    onSubmit: handleLogin,
-    canSubmit: !isLoading && (!passwordRequired || Boolean(password.trim())),
-  });
+  const handleFormSubmit = useCallback((event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (canSubmit) {
+      void handleLogin();
+    }
+  }, [canSubmit, handleLogin]);
 
   // Loading state while checking file
   if (isCheckingFile) {
@@ -302,16 +327,7 @@ export function LoginModal({
           </DialogDescription>
         </DialogHeader>
 
-        <form
-          onSubmit={(e) => {
-            e.preventDefault();
-            if (!isLoading && (!passwordRequired || password.trim())) {
-              void handleLogin();
-            }
-          }}
-          onKeyDown={handleSubmitShortcut}
-          className="space-y-4 py-2"
-        >
+        <form onSubmit={handleFormSubmit} className="space-y-4 py-2">
           {passwordRequired ? (
             <div className="space-y-2">
               <Label htmlFor="login-password" className="text-sm font-medium">
@@ -342,11 +358,7 @@ export function LoginModal({
           )}
 
           <p className="text-xs text-muted-foreground">
-            {encryption.isEncryptionEnabled
-              ? "Your data is encrypted locally using AES-256. The password never leaves your device."
-              : passwordRequired
-                ? "This environment preserves the unlock flow, but workspace files remain readable on disk for inspection."
-                : "This environment bypasses unlock gating and leaves workspace files readable on disk for inspection."}
+            {workspaceAccessHint}
           </p>
         </form>
 

@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { createAppConfig } from "@/utils/appConfig";
 
 describe("appConfig", () => {
-  it("derives dev defaults while keeping full encryption enabled", () => {
+  it("derives dev defaults with encryption disabled", () => {
     // ARRANGE & ACT
     const config = createAppConfig({
       DEV: true,
@@ -12,7 +12,7 @@ describe("appConfig", () => {
     // ASSERT
     expect(config).toEqual({
       appEnv: "dev",
-      encryptionMode: "full",
+      encryptionMode: "disabled",
       devtoolsEnabled: true,
       schemaInspectorEnabled: true,
       dataFlowDebugEnabled: true,

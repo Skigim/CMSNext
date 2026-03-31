@@ -12,6 +12,7 @@
  */
 
 import type { FinancialItem } from "@/types/case";
+import { dateInputValueToISO } from "./dates";
 import { getLatestHistoryEntry } from "@/domain/financials";
 
 export interface NormalizedItem {
@@ -56,7 +57,8 @@ const generateFallbackId = (): string => {
 export const getNormalizedItem = (sourceItem: FinancialItem): NormalizedItem => {
   // Use most recent history entry date, fallback to dateAdded, then 'No date'
   const historyDate = getLatestHistoryEntry(sourceItem.amountHistory)?.startDate ?? null;
-  const displayDate = historyDate || sourceItem.dateAdded || "No date";
+  const normalizedDateAdded = dateInputValueToISO(sourceItem.dateAdded) ?? sourceItem.dateAdded;
+  const displayDate = historyDate || normalizedDateAdded || "No date";
 
   return {
     displayName: sourceItem.description || sourceItem.name || "Untitled Item", // Legacy: item.name

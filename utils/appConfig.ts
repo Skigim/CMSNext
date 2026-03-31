@@ -57,7 +57,7 @@ function readImportMetaEnv(): AppConfigEnvSource {
 }
 
 function readProcessEnv(): AppConfigEnvSource {
-  if (typeof process === "undefined" || typeof process.env === "undefined") {
+  if (typeof process === "undefined" || process.env === undefined) {
     return {};
   }
 
@@ -193,11 +193,13 @@ export function createAppConfig(env: AppConfigEnvSource = {}): AppConfig {
     deriveDefaultAppEnvironment(mergedEnv),
   );
 
+  const defaultEncryptionMode: EncryptionMode = appEnv === "dev" ? "disabled" : "full";
+
   const encryptionMode = parseEnumValue(
     getEnvValue(mergedEnv, "ENCRYPTION_MODE"),
     "ENCRYPTION_MODE",
     ENCRYPTION_MODE_VALUES,
-    "full",
+    defaultEncryptionMode,
   );
 
   const devtoolsEnabled = parseBooleanEnv(
