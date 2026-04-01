@@ -120,6 +120,7 @@ describe("LoginModal", () => {
     // ASSERT
     await waitFor(() => {
       expect(connectToExisting).toHaveBeenCalledTimes(1);
+      expect(checkFileEncryptionStatus).toHaveBeenCalledTimes(2);
       expect(authenticate).toHaveBeenCalledWith("admin", "");
       expect(loadExistingData).toHaveBeenCalledTimes(1);
       expect(onLoginComplete).toHaveBeenCalledTimes(1);
@@ -153,6 +154,7 @@ describe("LoginModal", () => {
     // ASSERT
     await waitFor(() => {
       expect(connectToExisting).toHaveBeenCalledTimes(1);
+      expect(checkFileEncryptionStatus).toHaveBeenCalledTimes(2);
       expect(authenticate).toHaveBeenCalledWith("admin", "correct horse battery staple");
       expect(loadExistingData).toHaveBeenCalledTimes(1);
     });
@@ -192,6 +194,7 @@ describe("LoginModal", () => {
 
     // ASSERT
     await waitFor(() => {
+      expect(checkFileEncryptionStatus).toHaveBeenCalledTimes(2);
       expect(loadExistingData).toHaveBeenCalledTimes(1);
     });
     expect(waitForStartupUnlockReady).not.toHaveBeenCalled();
@@ -237,7 +240,43 @@ describe("LoginModal", () => {
 
     // ASSERT
     await waitFor(() => {
+      expect(checkFileEncryptionStatus).toHaveBeenCalledTimes(3);
       expect(loadExistingData).toHaveBeenCalledTimes(2);
+      expect(onLoginComplete).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  it("re-checks encryption status after reconnect when the initial pre-check is unknown", async () => {
+    // ARRANGE
+    const user = userEvent.setup();
+    const onLoginComplete = vi.fn();
+    checkFileEncryptionStatus
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce({ exists: true, encrypted: true });
+
+    render(
+      <LoginModal
+        isOpen={true}
+        onLoginComplete={onLoginComplete}
+        onChooseDifferentFolder={vi.fn()}
+      />,
+    );
+
+    await waitFor(() => {
+      expect(checkFileEncryptionStatus).toHaveBeenCalledTimes(1);
+    });
+    expect(setFileEncrypted).toHaveBeenCalledWith(null);
+
+    // ACT
+    await user.type(screen.getByLabelText("Password"), "correct horse battery staple");
+    await user.click(screen.getByRole("button", { name: "Unlock" }));
+
+    // ASSERT
+    await waitFor(() => {
+      expect(checkFileEncryptionStatus).toHaveBeenCalledTimes(2);
+      expect(setFileEncrypted).toHaveBeenLastCalledWith(true);
+      expect(authenticate).toHaveBeenCalledWith("admin", "correct horse battery staple");
+      expect(loadExistingData).toHaveBeenCalledTimes(1);
       expect(onLoginComplete).toHaveBeenCalledTimes(1);
     });
   });

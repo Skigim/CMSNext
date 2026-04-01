@@ -96,6 +96,7 @@ describe("EncryptionContext", () => {
     expect(result.current.requiresPassword).toBe(false);
     expect(result.current.isAuthenticated).toBe(true);
     expect(result.current.derivedKey).toBeNull();
+    expect(result.current.fileEncryptionStatus).toBe("unencrypted");
     expect(result.current.currentSalt).toBeNull();
     expect(result.current.currentIterations).toBeNull();
     expect(result.current.pendingPassword).toBeNull();
@@ -125,6 +126,7 @@ describe("EncryptionContext", () => {
     expect(result.current.requiresPassword).toBe(true);
     expect(result.current.isAuthenticated).toBe(true);
     expect(result.current.derivedKey).toBe(derivedKey);
+    expect(result.current.fileEncryptionStatus).toBe("encrypted");
     expect(result.current.currentSalt).toBe("existing-salt");
     expect(result.current.currentIterations).toBe(DEFAULT_ENCRYPTION_CONFIG.iterations);
   });
@@ -142,6 +144,7 @@ describe("EncryptionContext", () => {
 
     // ASSERT
     expect(result.current.fileIsEncrypted).toBe(true);
+    expect(result.current.fileEncryptionStatus).toBe("encrypted");
     expect(result.current.isAuthenticated).toBe(true);
     expect(result.current.isStartupUnlockReady).toBe(false);
 
@@ -172,11 +175,31 @@ describe("EncryptionContext", () => {
 
     // ASSERT
     expect(result.current.fileIsEncrypted).toBe(true);
+    expect(result.current.fileEncryptionStatus).toBe("encrypted");
     expect(result.current.isAuthenticated).toBe(false);
     expect(result.current.isStartupUnlockReady).toBe(false);
     await expect(result.current.waitForStartupUnlockReady()).rejects.toThrow(
       "Encrypted workspace unlock is blocked until a later retry succeeds.",
     );
+  });
+
+  it("keeps full-encryption startup pending while file encryption status is unknown", async () => {
+    // ARRANGE
+    const wrapper = createWrapper();
+    const { result } = renderHook(() => useEncryption(), { wrapper });
+
+    // ASSERT
+    expect(result.current.fileEncryptionStatus).toBe("unknown");
+    expect(result.current.isStartupUnlockReady).toBe(false);
+
+    // ACT
+    await act(async () => {
+      result.current.setFileEncrypted(false);
+    });
+
+    // ASSERT
+    expect(result.current.fileEncryptionStatus).toBe("unencrypted");
+    expect(result.current.isStartupUnlockReady).toBe(true);
   });
 
   it("codePointAt handles basic ASCII characters", () => {

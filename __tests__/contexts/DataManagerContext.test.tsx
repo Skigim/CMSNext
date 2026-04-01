@@ -24,6 +24,7 @@ let mockFileStorageContext = {
 
 let mockEncryptionContext = {
   isEncryptionEnabled: true,
+  fileEncryptionStatus: "encrypted",
   fileIsEncrypted: true,
   isStartupUnlockReady: false,
 };
@@ -65,6 +66,7 @@ describe("DataManagerContext", () => {
     };
     mockEncryptionContext = {
       isEncryptionEnabled: true,
+      fileEncryptionStatus: "encrypted",
       fileIsEncrypted: true,
       isStartupUnlockReady: false,
     };
@@ -119,6 +121,7 @@ describe("DataManagerContext", () => {
     migrateFinancialsWithoutHistory.mockResolvedValue(0);
     mockEncryptionContext = {
       isEncryptionEnabled: true,
+      fileEncryptionStatus: "unencrypted",
       fileIsEncrypted: false,
       isStartupUnlockReady: false,
     };
@@ -134,5 +137,25 @@ describe("DataManagerContext", () => {
     await waitFor(() => {
       expect(migrateFinancialsWithoutHistory).toHaveBeenCalledTimes(1);
     });
+  });
+
+  it("defers startup migration while file encryption status is still unknown", () => {
+    // ARRANGE
+    mockEncryptionContext = {
+      isEncryptionEnabled: true,
+      fileEncryptionStatus: "unknown",
+      fileIsEncrypted: false,
+      isStartupUnlockReady: false,
+    };
+
+    // ACT
+    render(
+      <DataManagerProvider>
+        <TestChild />
+      </DataManagerProvider>,
+    );
+
+    // ASSERT
+    expect(migrateFinancialsWithoutHistory).not.toHaveBeenCalled();
   });
 });

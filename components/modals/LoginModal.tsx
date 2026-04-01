@@ -45,7 +45,7 @@ export function LoginModal({
   const [isPreparingUnlock, setIsPreparingUnlock] = useState(false);
   const [isCheckingFile, setIsCheckingFile] = useState(true);
   const [fileExists, setFileExists] = useState(true);
-  const [fileIsEncrypted, setFileIsEncrypted] = useState(false);
+  const [fileIsEncrypted, setFileIsEncrypted] = useState<boolean | null>(null);
 
   const hasCheckedRef = useRef(false);
   const passwordRequired = encryption.requiresPassword;
@@ -95,13 +95,13 @@ export function LoginModal({
         const status = await service?.checkFileEncryptionStatus();
         logger.info("File check on login", { status });
 
-        if (!status?.exists) {
+        if (status?.exists === false) {
           // No file exists - shouldn't be on login screen
           setFileExists(false);
         }
 
-        setFileIsEncrypted(status?.encrypted ?? false);
-        setFileEncrypted(status?.encrypted ?? false);
+        setFileIsEncrypted(status?.encrypted ?? null);
+        setFileEncrypted(status?.encrypted ?? null);
       } catch (error) {
         logger.warn("File check failed", { error: String(error) });
       } finally {
@@ -122,10 +122,9 @@ export function LoginModal({
       setIsPreparingUnlock(false);
       setIsCheckingFile(true);
       setFileExists(true);
-      setFileIsEncrypted(false);
-      setFileEncrypted(false);
+      setFileIsEncrypted(null);
     }
-  }, [isOpen, setFileEncrypted]);
+  }, [isOpen]);
 
   const isDecryptionError = useCallback((error: unknown): boolean => {
     if (error instanceof EncryptionError) return true;
@@ -139,26 +138,68 @@ export function LoginModal({
     );
   }, []);
 
-  const connectAndAuthenticate = useCallback(async (): Promise<string | null> => {
-    const connected = await connectToExisting();
-    if (!connected) {
-      return "Failed to access data folder. Please try again or choose a different folder.";
-    }
+  const connectAndAuthenticate = useCallback(
+    async (): Promise<{ setupError: string | null; effectiveFileIsEncrypted: boolean }> => {
+      const connected = await connectToExisting();
+      if (!connected) {
+        return {
+          setupError: "Failed to access data folder. Please try again or choose a different folder.",
+          effectiveFileIsEncrypted: false,
+        };
+      }
 
-    encryption.setPendingPassword(passwordRequired ? password : null);
+      const refreshedEncryptionStatus = await service?.checkFileEncryptionStatus();
+      logger.info("File check after reconnect", { status: refreshedEncryptionStatus });
+      const effectiveFileIsEncrypted = refreshedEncryptionStatus?.encrypted ?? fileIsEncrypted;
 
-    const authSuccess = await encryption.authenticate(
-      "admin",
-      passwordRequired ? password : "",
-    );
+      if (refreshedEncryptionStatus) {
+        setFileExists(refreshedEncryptionStatus.exists);
+        setFileIsEncrypted(refreshedEncryptionStatus.encrypted);
+        setFileEncrypted(refreshedEncryptionStatus.encrypted);
+      } else {
+        setFileIsEncrypted(null);
+        setFileEncrypted(null);
+      }
 
-    if (!authSuccess) {
-      encryption.setPendingPassword(null);
-      return "Failed to set up encryption";
-    }
+      if (effectiveFileIsEncrypted && !encryption.isEncryptionEnabled) {
+        encryption.setPendingPassword(null);
+        return {
+          setupError:
+            "This workspace is encrypted, but the current environment is configured for readable on-disk data. Choose a different folder or reopen it in a full-encryption environment.",
+          effectiveFileIsEncrypted: true,
+        };
+      }
 
-    return null;
-  }, [connectToExisting, encryption, password, passwordRequired]);
+      encryption.setPendingPassword(passwordRequired ? password : null);
+
+      const authSuccess = await encryption.authenticate(
+        "admin",
+        passwordRequired ? password : "",
+      );
+
+      if (!authSuccess) {
+        encryption.setPendingPassword(null);
+        return {
+          setupError: "Failed to set up encryption",
+          effectiveFileIsEncrypted: effectiveFileIsEncrypted === true,
+        };
+      }
+
+      return {
+        setupError: null,
+        effectiveFileIsEncrypted: effectiveFileIsEncrypted === true,
+      };
+    },
+    [
+      connectToExisting,
+      encryption,
+      fileIsEncrypted,
+      password,
+      passwordRequired,
+      setFileEncrypted,
+      service,
+    ],
+  );
 
   const handleTypedEncryptionError = useCallback((error: EncryptionError) => {
     encryption.setPendingPassword(null);
@@ -203,7 +244,7 @@ export function LoginModal({
   }, [encryption, isDecryptionError]);
 
   const handleLogin = useCallback(async () => {
-    if (fileIsEncrypted && !encryption.isEncryptionEnabled) {
+    if (fileIsEncrypted === true && !encryption.isEncryptionEnabled) {
       setError(
         "This workspace is encrypted, but the current environment is configured for readable on-disk data. Choose a different folder or reopen it in a full-encryption environment.",
       );
@@ -221,13 +262,13 @@ export function LoginModal({
     try {
       logger.lifecycle("Logging in - connecting and decrypting");
 
-      const setupError = await connectAndAuthenticate();
+      const { setupError, effectiveFileIsEncrypted } = await connectAndAuthenticate();
       if (setupError) {
         setError(setupError);
         return;
       }
 
-      setIsPreparingUnlock(fileIsEncrypted && encryption.isEncryptionEnabled);
+      setIsPreparingUnlock(effectiveFileIsEncrypted && encryption.isEncryptionEnabled);
       await loadExistingData();
 
       logger.info("Login successful");

@@ -116,7 +116,7 @@ export function DataManagerProvider({ children }: Readonly<DataManagerProviderPr
     if (!dataManager || !isConnected || isMigrationCompleted.current || isMigrationInProgress.current) return;
     if (
       encryption.isEncryptionEnabled &&
-      encryption.fileIsEncrypted &&
+      encryption.fileEncryptionStatus !== 'unencrypted' &&
       !encryption.isStartupUnlockReady
     ) {
       logger.debug('Deferring financial migration until startup unlock is ready');
@@ -143,7 +143,7 @@ export function DataManagerProvider({ children }: Readonly<DataManagerProviderPr
     });
   }, [
     dataManager,
-    encryption.fileIsEncrypted,
+    encryption.fileEncryptionStatus,
     encryption.isEncryptionEnabled,
     encryption.isStartupUnlockReady,
     isConnected,
