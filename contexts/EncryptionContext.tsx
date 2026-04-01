@@ -123,6 +123,8 @@ interface EncryptionProviderProps {
 }
 
 type StartupUnlockState = "ready" | "pending" | "blocked";
+const STARTUP_UNLOCK_BLOCKED_MESSAGE =
+  "Encrypted workspace unlock is blocked until a later retry succeeds.";
 
 /**
  * EncryptionProvider - Manages encryption state and key derivation.
@@ -248,9 +250,7 @@ export function EncryptionProvider({ children }: Readonly<EncryptionProviderProp
     }
 
     if (nextState === "blocked") {
-      rejectStartupUnlockReadyRef.current?.(
-        new Error("Encrypted workspace unlock is blocked until a later retry succeeds."),
-      );
+      rejectStartupUnlockReadyRef.current?.(new Error(STARTUP_UNLOCK_BLOCKED_MESSAGE));
       finalizeStartupUnlockWait();
       return;
     }
@@ -277,7 +277,7 @@ export function EncryptionProvider({ children }: Readonly<EncryptionProviderProp
     }
 
     if (startupUnlockState === "blocked") {
-      throw new Error("Encrypted workspace unlock is blocked until a later retry succeeds.");
+      throw new Error(STARTUP_UNLOCK_BLOCKED_MESSAGE);
     }
 
     if (!startupUnlockReadyPromiseRef.current) {
@@ -327,10 +327,10 @@ export function EncryptionProvider({ children }: Readonly<EncryptionProviderProp
           return true;
         }
 
-        const requiresVerifiedUnlock =
+        const requiresVerifiedDecrypt =
           isEncryptionEnabled &&
           (Boolean(salt) || encryptionStateRef.current.fileIsEncrypted);
-        setStartupUnlockReady(!requiresVerifiedUnlock);
+        setStartupUnlockReady(!requiresVerifiedDecrypt);
 
         let derivedKey: CryptoKey | null = null;
 
