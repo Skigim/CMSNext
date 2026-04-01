@@ -2,15 +2,67 @@ import { act, renderHook, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { EncryptedPayload } from "@/types/encryption";
 import { useEncryptionFileHooks } from "@/hooks/useEncryptionFileHooks";
-import { mergeCategoryConfig } from "@/types/categoryConfig";
+import { createMockNormalizedFileData } from "@/src/test/testUtils";
 import type { NormalizedFileData } from "@/utils/services/FileStorageService";
 
 const setEncryptionHooks = vi.fn<(hooks: unknown) => void>();
 const mockEncryptWithKey = vi.hoisted(() => vi.fn());
 const mockDecryptWithKey = vi.hoisted(() => vi.fn());
+const WORKSPACE_PASSWORD = "correct horse battery staple";
+const WORKSPACE_SALT = "workspace-salt";
+const WORKSPACE_ITERATIONS = 600_000;
+
 let mockFileStorageService: { setEncryptionHooks: typeof setEncryptionHooks } | null = {
   setEncryptionHooks,
 };
+
+function createWorkspaceData(
+  overrides: Partial<NormalizedFileData> = {},
+): NormalizedFileData {
+  return createMockNormalizedFileData({
+    exported_at: "2026-04-01T00:00:00.000Z",
+    templates: [],
+    ...overrides,
+  });
+}
+
+function createEncryptedPayload(
+  overrides: Partial<EncryptedPayload> = {},
+): EncryptedPayload {
+  return {
+    version: 1,
+    algorithm: "AES-256-GCM",
+    salt: WORKSPACE_SALT,
+    iv: "workspace-iv",
+    ciphertext: "workspace-ciphertext",
+    iterations: WORKSPACE_ITERATIONS,
+    encryptedAt: "2026-04-01T00:00:00.000Z",
+    ...overrides,
+  };
+}
+
+function createStartupUnlockGate() {
+  let resolveStartupUnlockReady: () => void = () => {};
+  const startupUnlockPromise = new Promise<void>((resolve) => {
+    resolveStartupUnlockReady = resolve;
+  });
+
+  return {
+    resolveStartupUnlockReady,
+    startupUnlockPromise,
+  };
+}
+
+async function waitForInstalledHooks<T>(): Promise<T> {
+  await waitFor(() => {
+    expect(setEncryptionHooks).toHaveBeenCalledTimes(1);
+  });
+
+  const installedHooks = setEncryptionHooks.mock.calls[0]?.[0];
+  expect(installedHooks).not.toBeNull();
+
+  return installedHooks as T;
+}
 
 function createMockEncryptionContext() {
   return {
@@ -120,47 +172,19 @@ describe("useEncryptionFileHooks", () => {
 
   it("waits for startup unlock readiness before attempting encrypted startup decrypts", async () => {
     // ARRANGE
-    let resolveStartupUnlockReady: () => void = () => {};
     const derivedKey = { type: "secret" } as CryptoKey;
-    const decryptedWorkspace: NormalizedFileData = {
-      version: "2.1",
-      people: [],
-      cases: [],
-      financials: [],
-      notes: [],
-      alerts: [],
-      exported_at: "2026-04-01T00:00:00.000Z",
-      total_cases: 0,
-      categoryConfig: mergeCategoryConfig(),
-      activityLog: [],
-      templates: [],
-    };
-    const encryptedPayload: EncryptedPayload = {
-      version: 1,
-      algorithm: "AES-256-GCM",
-      salt: "workspace-salt",
-      iv: "workspace-iv",
-      ciphertext: "workspace-ciphertext",
-      iterations: 600_000,
-      encryptedAt: "2026-04-01T00:00:00.000Z",
-    };
+    const startupUnlockGate = createStartupUnlockGate();
+    const decryptedWorkspace = createWorkspaceData();
+    const encryptedPayload = createEncryptedPayload();
 
     mockEncryptionContext.waitForStartupUnlockReady.mockImplementation(
-      () =>
-        new Promise<void>((resolve) => {
-          resolveStartupUnlockReady = resolve;
-        }),
+      () => startupUnlockGate.startupUnlockPromise,
     );
 
     const { rerender } = renderHook(() => useEncryptionFileHooks());
-
-    await waitFor(() => {
-      expect(setEncryptionHooks).toHaveBeenCalledTimes(1);
-    });
-
-    const installedHooks = setEncryptionHooks.mock.calls[0]?.[0] as {
+    const installedHooks = await waitForInstalledHooks<{
       decrypt: (payload: EncryptedPayload) => Promise<NormalizedFileData>;
-    };
+    }>();
 
     // ACT
     const decryptPromise = installedHooks.decrypt(encryptedPayload);
@@ -176,7 +200,7 @@ describe("useEncryptionFileHooks", () => {
       ...mockEncryptionContext,
       isAuthenticated: true,
       isStartupUnlockReady: true,
-      pendingPassword: "correct horse battery staple",
+      pendingPassword: WORKSPACE_PASSWORD,
     };
     mockEncryptionContext.deriveKeyFromFileSalt.mockResolvedValue({
       success: true,
@@ -187,51 +211,31 @@ describe("useEncryptionFileHooks", () => {
       data: decryptedWorkspace,
     });
     rerender();
-    resolveStartupUnlockReady();
+    startupUnlockGate.resolveStartupUnlockReady();
 
     // ASSERT
     await expect(decryptPromise).resolves.toEqual(decryptedWorkspace);
     expect(mockEncryptionContext.deriveKeyFromFileSalt).toHaveBeenCalledWith(
-      "workspace-salt",
-      600_000,
+      WORKSPACE_SALT,
+      WORKSPACE_ITERATIONS,
     );
     expect(mockDecryptWithKey).toHaveBeenCalledWith(encryptedPayload, derivedKey);
   });
 
   it("fails closed for encrypted startup writes until the existing workspace has been decrypted", async () => {
     // ARRANGE
-    let resolveStartupUnlockReady: () => void = () => {};
-    const workspaceData: NormalizedFileData = {
-      version: "2.1",
-      people: [],
-      cases: [],
-      financials: [],
-      notes: [],
-      alerts: [],
-      exported_at: "2026-04-01T00:00:00.000Z",
-      total_cases: 0,
-      categoryConfig: mergeCategoryConfig(),
-      activityLog: [],
-      templates: [],
-    };
+    const startupUnlockGate = createStartupUnlockGate();
+    const workspaceData = createWorkspaceData();
 
     mockEncryptionContext.fileIsEncrypted = true;
     mockEncryptionContext.waitForStartupUnlockReady.mockImplementation(
-      () =>
-        new Promise<void>((resolve) => {
-          resolveStartupUnlockReady = resolve;
-        }),
+      () => startupUnlockGate.startupUnlockPromise,
     );
 
     const { rerender } = renderHook(() => useEncryptionFileHooks());
-
-    await waitFor(() => {
-      expect(setEncryptionHooks).toHaveBeenCalledTimes(1);
-    });
-
-    const installedHooks = setEncryptionHooks.mock.calls[0]?.[0] as {
+    const installedHooks = await waitForInstalledHooks<{
       encrypt: (data: NormalizedFileData) => Promise<EncryptedPayload | NormalizedFileData>;
-    };
+    }>();
 
     // ACT
     const encryptPromise = installedHooks.encrypt(workspaceData);
@@ -253,10 +257,10 @@ describe("useEncryptionFileHooks", () => {
         ...mockEncryptionContext,
         isAuthenticated: true,
         isStartupUnlockReady: true,
-        pendingPassword: "correct horse battery staple",
+        pendingPassword: WORKSPACE_PASSWORD,
       };
       rerender();
-      resolveStartupUnlockReady();
+      startupUnlockGate.resolveStartupUnlockReady();
     });
 
     // ASSERT
