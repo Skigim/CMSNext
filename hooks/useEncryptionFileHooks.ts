@@ -18,7 +18,7 @@ import { createLogger } from "@/utils/logger";
 const logger = createLogger("useEncryptionFileHooks");
 
 interface UseEncryptionFileHooksResult {
-  /** Whether encryption hooks are currently installed on the file service */
+  /** Whether the active file service is in full-encryption mode and should have hooks applied */
   isActive: boolean;
   /** Error from last encryption/decryption operation */
   lastError: string | null;
@@ -99,7 +99,6 @@ export function useEncryptionFileHooks(): UseEncryptionFileHooksResult {
   const encryption = useEncryption();
   const { service } = useFileStorage();
   const [lastError, setLastError] = useState<string | null>(null);
-  const [hasInstalledHooks, setHasInstalledHooks] = useState(false);
   const encryptionRef = useRef(encryption);
 
   useEffect(() => {
@@ -180,11 +179,12 @@ export function useEncryptionFileHooks(): UseEncryptionFileHooksResult {
               currentEncryption.pendingPassword,
             );
             if (!initResult) {
-              failClosed("system_error", "Failed to initialize encryption.");
+              return failClosed("system_error", "Failed to initialize encryption.");
             }
+            const { key: initializedKey, salt: initializedSalt } = initResult;
             // Use the returned key/salt directly (state update is async)
-            key = initResult.key;
-            salt = initResult.salt;
+            key = initializedKey;
+            salt = initializedSalt;
             // Clear pending password after use
             currentEncryption.setPendingPassword(null);
             logger.info("Encryption initialized for new file");
@@ -198,13 +198,15 @@ export function useEncryptionFileHooks(): UseEncryptionFileHooksResult {
 
         // At this point we should have both key and salt
         if (!key || !salt) {
-          failClosed("system_error", "Missing encryption key or salt after initialization.");
+          return failClosed("system_error", "Missing encryption key or salt after initialization.");
         }
 
+        const encryptionKey = key;
+        const encryptionSalt = salt;
         const encryptResult = await encryptWithKey(
           data,
-          key,
-          salt,
+          encryptionKey,
+          encryptionSalt,
           // Use the iterations that were used to derive the cached key
           // so the payload metadata matches the actual key derivation params
           currentEncryption.currentIterations
@@ -212,14 +214,15 @@ export function useEncryptionFileHooks(): UseEncryptionFileHooksResult {
             : {}
         );
 
-        if (!encryptResult.success || !encryptResult.payload) {
-          failClosed(
+        const payload = encryptResult.payload;
+        if (!encryptResult.success || !payload) {
+          return failClosed(
             "system_error",
             encryptResult.error || "Encryption failed.",
           );
         }
 
-        return encryptResult.payload;
+        return payload;
       },
 
       /**
@@ -227,7 +230,7 @@ export function useEncryptionFileHooks(): UseEncryptionFileHooksResult {
        * Handles key derivation if needed (first read of encrypted file).
        */
       decrypt: async (data: EncryptedPayload): Promise<NormalizedFileData> => {
-        let currentEncryption = await waitForStartupUnlock();
+        const currentEncryption = await waitForStartupUnlock();
 
         logger.debug("Decryption hook called", {
           hasKey: !!currentEncryption.derivedKey,
@@ -309,17 +312,14 @@ export function useEncryptionFileHooks(): UseEncryptionFileHooksResult {
     if (encryptionHooks) {
       logger.lifecycle("Setting encryption hooks on file service");
       service.setEncryptionHooks(encryptionHooks);
-      setHasInstalledHooks(true);
     } else {
       logger.lifecycle("Clearing encryption hooks from file service");
       service.setEncryptionHooks(null);
-      setHasInstalledHooks(false);
     }
 
     // Cleanup on unmount
     return () => {
       service.setEncryptionHooks(null);
-      setHasInstalledHooks(false);
     };
   }, [service, encryptionHooks]);
 
@@ -330,7 +330,7 @@ export function useEncryptionFileHooks(): UseEncryptionFileHooksResult {
   }, [encryption]);
 
   return {
-    isActive: hasInstalledHooks,
+    isActive: Boolean(service && encryption.isEncryptionEnabled),
     lastError,
     clearError,
     storePassword,

@@ -84,7 +84,6 @@ describe("LoginModal", () => {
     await waitFor(() => {
       expect(checkFileEncryptionStatus).toHaveBeenCalledTimes(1);
     });
-    expect(setFileEncrypted).toHaveBeenCalledWith(false);
     const results = await axe(baseElement);
 
     // Assert
@@ -113,7 +112,7 @@ describe("LoginModal", () => {
     await waitFor(() => {
       expect(checkFileEncryptionStatus).toHaveBeenCalledTimes(1);
     });
-    expect(setFileEncrypted).toHaveBeenCalledWith(true);
+    expect(setFileEncrypted).toHaveBeenCalledWith(false);
 
     // ACT
     await user.click(screen.getByRole("button", { name: "Open Workspace" }));

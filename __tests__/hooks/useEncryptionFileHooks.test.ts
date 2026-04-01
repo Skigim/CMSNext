@@ -1,6 +1,6 @@
-import { renderHook, waitFor } from "@testing-library/react";
+import { act, renderHook, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { EncryptionError, type EncryptedPayload } from "@/types/encryption";
+import type { EncryptedPayload } from "@/types/encryption";
 import { useEncryptionFileHooks } from "@/hooks/useEncryptionFileHooks";
 import { mergeCategoryConfig } from "@/types/categoryConfig";
 import type { NormalizedFileData } from "@/utils/services/FileStorageService";
@@ -230,22 +230,25 @@ describe("useEncryptionFileHooks", () => {
     });
     expect(mockEncryptionContext.initializeEncryption).not.toHaveBeenCalled();
     expect(mockEncryptWithKey).not.toHaveBeenCalled();
-
-    // ACT
-    mockEncryptionContext = {
-      ...mockEncryptionContext,
-      isAuthenticated: true,
-      isStartupUnlockReady: true,
-      pendingPassword: "correct horse battery staple",
-    };
-    rerender();
-    resolveStartupUnlockReady();
-
-    // ASSERT
-    await expect(encryptPromise).rejects.toMatchObject<Partial<EncryptionError>>({
+    const failedWriteExpectation = expect(encryptPromise).rejects.toMatchObject({
       code: "system_error",
       message: "Encrypted workspace must be unlocked before saving.",
     });
+
+    // ACT
+    await act(async () => {
+      mockEncryptionContext = {
+        ...mockEncryptionContext,
+        isAuthenticated: true,
+        isStartupUnlockReady: true,
+        pendingPassword: "correct horse battery staple",
+      };
+      rerender();
+      resolveStartupUnlockReady();
+    });
+
+    // ASSERT
+    await failedWriteExpectation;
     expect(mockEncryptionContext.initializeEncryption).not.toHaveBeenCalled();
     expect(mockEncryptWithKey).not.toHaveBeenCalled();
   });

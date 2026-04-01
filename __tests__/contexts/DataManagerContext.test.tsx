@@ -5,11 +5,10 @@ import { DataManagerProvider } from "@/contexts/DataManagerContext";
 
 const migrateFinancialsWithoutHistory = vi.fn<() => Promise<number>>();
 
-const mockDataManagerClass = vi.hoisted(() => {
-  return vi.fn().mockImplementation(() => ({
-    migrateFinancialsWithoutHistory,
-  }));
-});
+const mockDataManagerClass = vi.hoisted(() => vi.fn());
+let mockDataManagerInstance = {
+  migrateFinancialsWithoutHistory,
+};
 
 let mockFileStorageContext = {
   service: {
@@ -48,6 +47,10 @@ describe("DataManagerContext", () => {
   beforeEach(() => {
     migrateFinancialsWithoutHistory.mockReset();
     mockDataManagerClass.mockClear();
+    mockDataManagerInstance = {
+      migrateFinancialsWithoutHistory,
+    };
+    mockDataManagerClass.mockImplementation(() => mockDataManagerInstance);
     mockFileStorageContext = {
       service: {
         getStatus: vi.fn(() => ({ isRunning: false })),
