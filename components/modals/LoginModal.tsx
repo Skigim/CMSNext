@@ -36,6 +36,7 @@ export function LoginModal({
   onChooseDifferentFolder,
 }: Readonly<LoginModalProps>) {
   const encryption = useEncryption();
+  const { setFileEncrypted } = encryption;
   const { service, connectToExisting, loadExistingData } = useFileStorage();
 
   const [password, setPassword] = useState("");
@@ -100,6 +101,7 @@ export function LoginModal({
         }
 
         setFileIsEncrypted(status?.encrypted ?? false);
+        setFileEncrypted(status?.encrypted ?? false);
       } catch (error) {
         logger.warn("File check failed", { error: String(error) });
       } finally {
@@ -108,7 +110,7 @@ export function LoginModal({
     };
 
     checkFile();
-  }, [isOpen, service]);
+  }, [isOpen, service, setFileEncrypted]);
 
   // Reset state when modal closes
   useEffect(() => {
@@ -121,8 +123,9 @@ export function LoginModal({
       setIsCheckingFile(true);
       setFileExists(true);
       setFileIsEncrypted(false);
+      setFileEncrypted(false);
     }
-  }, [isOpen]);
+  }, [isOpen, setFileEncrypted]);
 
   const isDecryptionError = useCallback((error: unknown): boolean => {
     if (error instanceof EncryptionError) return true;

@@ -9,11 +9,13 @@ const checkFileEncryptionStatus = vi.fn();
 const setPendingPassword = vi.fn();
 const authenticate = vi.fn();
 const clearCredentials = vi.fn();
+const setFileEncrypted = vi.fn();
 
 const mockEncryptionContext = {
   setPendingPassword,
   authenticate,
   clearCredentials,
+  setFileEncrypted,
   requiresPassword: true,
   isEncryptionEnabled: true,
 };
@@ -49,6 +51,7 @@ describe("WelcomeModal", () => {
     setPendingPassword.mockReset();
     authenticate.mockReset();
     clearCredentials.mockReset();
+    setFileEncrypted.mockReset();
 
     mockEncryptionContext.requiresPassword = true;
     mockEncryptionContext.isEncryptionEnabled = true;
@@ -85,6 +88,7 @@ describe("WelcomeModal", () => {
       expect(loadExistingData).toHaveBeenCalledTimes(1);
       expect(onSetupComplete).toHaveBeenCalledTimes(1);
     });
+    expect(setFileEncrypted).toHaveBeenCalledWith(false);
     expect(screen.queryByText("Create Your Password")).not.toBeInTheDocument();
   });
 
@@ -113,6 +117,7 @@ describe("WelcomeModal", () => {
         screen.getByText("Failed to initialize workspace access in this environment."),
       ).toBeInTheDocument();
     });
+    expect(setFileEncrypted).toHaveBeenCalledWith(false);
     expect(loadExistingData).not.toHaveBeenCalled();
   });
 });

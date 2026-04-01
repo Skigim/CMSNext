@@ -84,6 +84,8 @@ export function WelcomeModal({
         return;
       }
 
+      encryption.setFileEncrypted(status.encrypted);
+
       if (status.exists && status.encrypted) {
         // User chose a folder with existing encrypted data
         setError(

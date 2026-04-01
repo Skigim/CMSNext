@@ -1,4 +1,4 @@
-import { useEffect, useCallback, useMemo, useState } from "react";
+import { useEffect, useCallback, useMemo, useRef, useState } from "react";
 import { useEncryption } from "@/contexts/EncryptionContext";
 import { useFileStorage } from "@/contexts/FileStorageContext";
 import {
@@ -18,7 +18,7 @@ import { createLogger } from "@/utils/logger";
 const logger = createLogger("useEncryptionFileHooks");
 
 interface UseEncryptionFileHooksResult {
-  /** Whether encryption is active (key derived and hooks set) */
+  /** Whether the current service/mode combination should expose active encryption hooks */
   isActive: boolean;
   /** Error from last encryption/decryption operation */
   lastError: string | null;
@@ -57,8 +57,8 @@ interface UseEncryptionFileHooksResult {
  * - Format: { iv, authTag, ciphertext, salt } in EncryptedPayload
  * 
  * **Error Handling:**
- * - Missing password: Falls back to unencrypted storage
- * - Failed initialization: Logs error, returns data unencrypted, allows work to continue
+ * - Missing password or startup-unready writes: Fail closed without writing plaintext
+ * - Failed initialization: Throws and leaves the on-disk file untouched
  * - Invalid encrypted file: Throws error (decryption must succeed or user is notified)
  * 
  * **Usage Example:**
@@ -99,15 +99,29 @@ export function useEncryptionFileHooks(): UseEncryptionFileHooksResult {
   const encryption = useEncryption();
   const { service } = useFileStorage();
   const [lastError, setLastError] = useState<string | null>(null);
+  const {
+    isAuthenticated,
+    isEncryptionEnabled,
+    requiresPassword,
+    setPendingPassword,
+    setStartupUnlockReady,
+  } = encryption;
+  const encryptionRef = useRef(encryption);
+
+  useEffect(() => {
+    // Keep async hook callbacks pointed at the latest encryption state without
+    // reinstalling file-service hooks on every context field change.
+    encryptionRef.current = encryption;
+  }, [encryption]);
 
   // Expose storePassword as a pass-through to context
   const storePassword = useCallback((password: string) => {
-    if (encryption.requiresPassword) {
-      encryption.setPendingPassword(password);
+    if (requiresPassword) {
+      setPendingPassword(password);
     } else {
       logger.debug("Skipping pending password storage because this environment does not require it");
     }
-  }, [encryption]);
+  }, [requiresPassword, setPendingPassword]);
 
   // Clear error helper
   const clearError = useCallback(() => {
@@ -118,9 +132,34 @@ export function useEncryptionFileHooks(): UseEncryptionFileHooksResult {
   const encryptionHooks = useMemo(() => {
     // Noop/disabled environments intentionally leave files readable on disk,
     // so the file service should operate without encryption hooks in those modes.
-    if (!encryption.isAuthenticated || !encryption.isEncryptionEnabled) {
+    if (!isEncryptionEnabled) {
       return null;
     }
+
+    const failClosed = (
+      errorCode: EncryptionErrorCode,
+      message: string,
+    ): never => {
+      logger.error(message);
+      setLastError(message);
+      throw new EncryptionError(errorCode, message);
+    };
+
+    /**
+     * Wait until startup unlock orchestration has settled before touching
+     * encrypted workspace data. Re-read the ref after the await so encrypt and
+     * decrypt use any key/password state that changed while startup completed.
+     */
+    const waitForStartupUnlock = async () => {
+      let currentEncryption = encryptionRef.current;
+
+      if (!currentEncryption.isStartupUnlockReady) {
+        await currentEncryption.waitForStartupUnlockReady();
+        currentEncryption = encryptionRef.current;
+      }
+
+      return currentEncryption;
+    };
 
     return {
       /**
@@ -128,62 +167,76 @@ export function useEncryptionFileHooks(): UseEncryptionFileHooksResult {
        * Uses cached key if available, derives new one for first encryption.
        */
       encrypt: async (data: NormalizedFileData): Promise<EncryptedPayload | NormalizedFileData> => {
+        const currentEncryption = await waitForStartupUnlock();
         logger.debug("Encryption hook called", {
-          hasKey: !!encryption.derivedKey,
-          hasSalt: !!encryption.currentSalt,
-          hasPendingPassword: !!encryption.pendingPassword,
+          hasKey: !!currentEncryption.derivedKey,
+          hasSalt: !!currentEncryption.currentSalt,
+          hasPendingPassword: !!currentEncryption.pendingPassword,
+          fileIsEncrypted: currentEncryption.fileIsEncrypted,
         });
 
-        let key = encryption.derivedKey;
-        let salt = encryption.currentSalt;
+        let key = currentEncryption.derivedKey;
+        let salt = currentEncryption.currentSalt;
 
-        // If no key yet (unencrypted file), initialize encryption with pending password
+        // Existing encrypted workspaces must be decrypted before any write can proceed.
+        if (currentEncryption.fileIsEncrypted && (!key || !salt)) {
+          failClosed(
+            "system_error",
+            "Encrypted workspace must be unlocked before saving.",
+          );
+        }
+
+        // If no key yet (new/unencrypted file), initialize encryption with pending password.
         if (!key || !salt) {
-          if (encryption.pendingPassword) {
-            const initResult = await encryption.initializeEncryption(encryption.pendingPassword);
+          if (currentEncryption.pendingPassword) {
+            const initResult = await currentEncryption.initializeEncryption(
+              currentEncryption.pendingPassword,
+            );
             if (!initResult) {
-              logger.error("Failed to initialize encryption");
-              setLastError("Failed to initialize encryption");
-              return data; // Return unencrypted on failure
+              return failClosed("system_error", "Failed to initialize encryption.");
             }
+            const { key: initializedKey, salt: initializedSalt } = initResult;
             // Use the returned key/salt directly (state update is async)
-            key = initResult.key;
-            salt = initResult.salt;
+            key = initializedKey;
+            salt = initializedSalt;
             // Clear pending password after use
-            encryption.setPendingPassword(null);
+            currentEncryption.setPendingPassword(null);
             logger.info("Encryption initialized for new file");
           } else {
-            // No password stored - return data unencrypted
-            // This happens on reconnection without re-entering password
-            logger.debug("No password available, skipping encryption");
-            return data;
+            failClosed(
+              "missing_password",
+              "Workspace password is required before saving encrypted data.",
+            );
           }
         }
 
         // At this point we should have both key and salt
         if (!key || !salt) {
-          logger.warn("Missing key or salt after initialization");
-          return data;
+          return failClosed("system_error", "Missing encryption key or salt after initialization.");
         }
 
+        const encryptionKey = key;
+        const encryptionSalt = salt;
         const encryptResult = await encryptWithKey(
           data,
-          key,
-          salt,
+          encryptionKey,
+          encryptionSalt,
           // Use the iterations that were used to derive the cached key
           // so the payload metadata matches the actual key derivation params
-          encryption.currentIterations
-            ? { iterations: encryption.currentIterations }
+          currentEncryption.currentIterations
+            ? { iterations: currentEncryption.currentIterations }
             : {}
         );
 
-        if (!encryptResult.success || !encryptResult.payload) {
-          setLastError(encryptResult.error || "Encryption failed");
-          logger.error("Encryption failed", { error: encryptResult.error });
-          return data; // Return unencrypted on failure
+        const payload = encryptResult.payload;
+        if (!encryptResult.success || !payload) {
+          return failClosed(
+            "system_error",
+            encryptResult.error || "Encryption failed.",
+          );
         }
 
-        return encryptResult.payload;
+        return payload;
       },
 
       /**
@@ -191,21 +244,26 @@ export function useEncryptionFileHooks(): UseEncryptionFileHooksResult {
        * Handles key derivation if needed (first read of encrypted file).
        */
       decrypt: async (data: EncryptedPayload): Promise<NormalizedFileData> => {
+        const currentEncryption = await waitForStartupUnlock();
+
         logger.debug("Decryption hook called", {
-          hasKey: !!encryption.derivedKey,
-          hasSalt: !!encryption.currentSalt,
-          hasPendingPassword: !!encryption.pendingPassword,
+          hasKey: !!currentEncryption.derivedKey,
+          hasSalt: !!currentEncryption.currentSalt,
+          hasPendingPassword: !!currentEncryption.pendingPassword,
           dataSalt: data.salt,
         });
 
-        let key = encryption.derivedKey;
+        let key = currentEncryption.derivedKey;
 
         // If we don't have a key yet, derive from pending password and file salt
         if (!key) {
           // Use the context method to derive key from file salt
           // Pass the payload's iteration count so files encrypted with older
           // iteration settings can still be decrypted correctly
-          const keyDerivationResult = await encryption.deriveKeyFromFileSalt(data.salt, data.iterations);
+          const keyDerivationResult = await currentEncryption.deriveKeyFromFileSalt(
+            data.salt,
+            data.iterations,
+          );
           
           if (!keyDerivationResult.success || !keyDerivationResult.data) {
             const rawErrorCode = keyDerivationResult.error;
@@ -259,7 +317,7 @@ export function useEncryptionFileHooks(): UseEncryptionFileHooksResult {
         return isEncryptedPayload(data);
       },
     };
-  }, [encryption]);
+  }, [isEncryptionEnabled]);
 
   // Set/clear encryption hooks on service when they change
   useEffect(() => {
@@ -268,23 +326,23 @@ export function useEncryptionFileHooks(): UseEncryptionFileHooksResult {
     if (encryptionHooks) {
       logger.lifecycle("Setting encryption hooks on file service");
       service.setEncryptionHooks(encryptionHooks);
-      encryption.setStartupUnlockReady(true);
     } else {
       logger.lifecycle("Clearing encryption hooks from file service");
       service.setEncryptionHooks(null);
-      if (!encryption.isEncryptionEnabled || !encryption.isAuthenticated) {
-        encryption.setStartupUnlockReady(true);
-      }
     }
 
     // Cleanup on unmount
     return () => {
       service.setEncryptionHooks(null);
     };
-  }, [service, encryption, encryptionHooks]);
+  }, [service, encryptionHooks]);
+
+  useEffect(() => {
+    setStartupUnlockReady(!isEncryptionEnabled || isAuthenticated);
+  }, [isAuthenticated, isEncryptionEnabled, setStartupUnlockReady]);
 
   return {
-    isActive: !!encryptionHooks,
+    isActive: Boolean(service && isEncryptionEnabled),
     lastError,
     clearError,
     storePassword,
