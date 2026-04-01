@@ -1,4 +1,4 @@
-import { useEffect, useCallback, useMemo, useState } from "react";
+import { useEffect, useCallback, useMemo, useRef, useState } from "react";
 import { useEncryption } from "@/contexts/EncryptionContext";
 import { useFileStorage } from "@/contexts/FileStorageContext";
 import {
@@ -99,6 +99,8 @@ export function useEncryptionFileHooks(): UseEncryptionFileHooksResult {
   const encryption = useEncryption();
   const { service } = useFileStorage();
   const [lastError, setLastError] = useState<string | null>(null);
+  const encryptionRef = useRef(encryption);
+  encryptionRef.current = encryption;
 
   // Expose storePassword as a pass-through to context
   const storePassword = useCallback((password: string) => {
@@ -118,7 +120,7 @@ export function useEncryptionFileHooks(): UseEncryptionFileHooksResult {
   const encryptionHooks = useMemo(() => {
     // Noop/disabled environments intentionally leave files readable on disk,
     // so the file service should operate without encryption hooks in those modes.
-    if (!encryption.isAuthenticated || !encryption.isEncryptionEnabled) {
+    if (!encryption.isEncryptionEnabled) {
       return null;
     }
 
@@ -128,19 +130,22 @@ export function useEncryptionFileHooks(): UseEncryptionFileHooksResult {
        * Uses cached key if available, derives new one for first encryption.
        */
       encrypt: async (data: NormalizedFileData): Promise<EncryptedPayload | NormalizedFileData> => {
+        const currentEncryption = encryptionRef.current;
         logger.debug("Encryption hook called", {
-          hasKey: !!encryption.derivedKey,
-          hasSalt: !!encryption.currentSalt,
-          hasPendingPassword: !!encryption.pendingPassword,
+          hasKey: !!currentEncryption.derivedKey,
+          hasSalt: !!currentEncryption.currentSalt,
+          hasPendingPassword: !!currentEncryption.pendingPassword,
         });
 
-        let key = encryption.derivedKey;
-        let salt = encryption.currentSalt;
+        let key = currentEncryption.derivedKey;
+        let salt = currentEncryption.currentSalt;
 
         // If no key yet (unencrypted file), initialize encryption with pending password
         if (!key || !salt) {
-          if (encryption.pendingPassword) {
-            const initResult = await encryption.initializeEncryption(encryption.pendingPassword);
+          if (currentEncryption.pendingPassword) {
+            const initResult = await currentEncryption.initializeEncryption(
+              currentEncryption.pendingPassword,
+            );
             if (!initResult) {
               logger.error("Failed to initialize encryption");
               setLastError("Failed to initialize encryption");
@@ -150,7 +155,7 @@ export function useEncryptionFileHooks(): UseEncryptionFileHooksResult {
             key = initResult.key;
             salt = initResult.salt;
             // Clear pending password after use
-            encryption.setPendingPassword(null);
+            currentEncryption.setPendingPassword(null);
             logger.info("Encryption initialized for new file");
           } else {
             // No password stored - return data unencrypted
@@ -172,8 +177,8 @@ export function useEncryptionFileHooks(): UseEncryptionFileHooksResult {
           salt,
           // Use the iterations that were used to derive the cached key
           // so the payload metadata matches the actual key derivation params
-          encryption.currentIterations
-            ? { iterations: encryption.currentIterations }
+          currentEncryption.currentIterations
+            ? { iterations: currentEncryption.currentIterations }
             : {}
         );
 
@@ -191,21 +196,31 @@ export function useEncryptionFileHooks(): UseEncryptionFileHooksResult {
        * Handles key derivation if needed (first read of encrypted file).
        */
       decrypt: async (data: EncryptedPayload): Promise<NormalizedFileData> => {
+        let currentEncryption = encryptionRef.current;
+
+        if (!currentEncryption.isStartupUnlockReady) {
+          await currentEncryption.waitForStartupUnlockReady();
+          currentEncryption = encryptionRef.current;
+        }
+
         logger.debug("Decryption hook called", {
-          hasKey: !!encryption.derivedKey,
-          hasSalt: !!encryption.currentSalt,
-          hasPendingPassword: !!encryption.pendingPassword,
+          hasKey: !!currentEncryption.derivedKey,
+          hasSalt: !!currentEncryption.currentSalt,
+          hasPendingPassword: !!currentEncryption.pendingPassword,
           dataSalt: data.salt,
         });
 
-        let key = encryption.derivedKey;
+        let key = currentEncryption.derivedKey;
 
         // If we don't have a key yet, derive from pending password and file salt
         if (!key) {
           // Use the context method to derive key from file salt
           // Pass the payload's iteration count so files encrypted with older
           // iteration settings can still be decrypted correctly
-          const keyDerivationResult = await encryption.deriveKeyFromFileSalt(data.salt, data.iterations);
+          const keyDerivationResult = await currentEncryption.deriveKeyFromFileSalt(
+            data.salt,
+            data.iterations,
+          );
           
           if (!keyDerivationResult.success || !keyDerivationResult.data) {
             const rawErrorCode = keyDerivationResult.error;
@@ -259,7 +274,7 @@ export function useEncryptionFileHooks(): UseEncryptionFileHooksResult {
         return isEncryptedPayload(data);
       },
     };
-  }, [encryption]);
+  }, [encryption.isEncryptionEnabled]);
 
   // Set/clear encryption hooks on service when they change
   useEffect(() => {
@@ -268,20 +283,26 @@ export function useEncryptionFileHooks(): UseEncryptionFileHooksResult {
     if (encryptionHooks) {
       logger.lifecycle("Setting encryption hooks on file service");
       service.setEncryptionHooks(encryptionHooks);
-      encryption.setStartupUnlockReady(true);
     } else {
       logger.lifecycle("Clearing encryption hooks from file service");
       service.setEncryptionHooks(null);
-      if (!encryption.isEncryptionEnabled || !encryption.isAuthenticated) {
-        encryption.setStartupUnlockReady(true);
-      }
     }
 
     // Cleanup on unmount
     return () => {
       service.setEncryptionHooks(null);
     };
-  }, [service, encryption, encryptionHooks]);
+  }, [service, encryptionHooks]);
+
+  useEffect(() => {
+    encryption.setStartupUnlockReady(
+      !encryption.isEncryptionEnabled || encryption.isAuthenticated,
+    );
+  }, [
+    encryption.isAuthenticated,
+    encryption.isEncryptionEnabled,
+    encryption.setStartupUnlockReady,
+  ]);
 
   return {
     isActive: !!encryptionHooks,

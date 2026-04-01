@@ -1,5 +1,6 @@
 import { useContext, createContext, ReactNode, useMemo, useEffect, useRef } from 'react';
 import { DataManager } from '@/utils/DataManager';
+import { useEncryption } from '@/contexts/EncryptionContext';
 import { useFileStorage } from '@/contexts/FileStorageContext';
 import { createLogger } from '@/utils/logger';
 
@@ -82,6 +83,7 @@ interface DataManagerProviderProps {
  */
 export function DataManagerProvider({ children }: Readonly<DataManagerProviderProps>) {
   const { service, fileStorageService, isConnected, status } = useFileStorage();
+  const encryption = useEncryption();
   const hasMigrated = useRef(false);
   
   // Memoize DataManager creation to prevent recreation on every render
@@ -109,16 +111,25 @@ export function DataManagerProvider({ children }: Readonly<DataManagerProviderPr
   // Run financial history migration once when connected
   useEffect(() => {
     if (!dataManager || !isConnected || hasMigrated.current) return;
+    if (encryption.isEncryptionEnabled && !encryption.isStartupUnlockReady) {
+      logger.debug('Deferring financial migration until startup unlock is ready');
+      return;
+    }
     
     hasMigrated.current = true;
     dataManager.migrateFinancialsWithoutHistory().then((count) => {
       if (count > 0) {
         logger.info('Migrated financial items without history', { count });
       }
-    }).catch((err) => {
-      logger.error('Failed to migrate financial items', { error: err });
+    }).catch((error) => {
+      logger.error('Failed to migrate financial items', { error });
     });
-  }, [dataManager, isConnected]);
+  }, [
+    dataManager,
+    encryption.isEncryptionEnabled,
+    encryption.isStartupUnlockReady,
+    isConnected,
+  ]);
 
   const contextValue = useMemo(() => ({ dataManager }), [dataManager]);
 
