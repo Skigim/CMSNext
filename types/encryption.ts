@@ -123,6 +123,8 @@ export function isEncryptedPayload(data: unknown): data is EncryptedPayload {
 /**
  * Encryption context state
  */
+export type FileEncryptionStatus = "unknown" | "encrypted" | "unencrypted";
+
 export interface EncryptionState {
   /** Whether user has authenticated this session */
   isAuthenticated: boolean;
@@ -130,6 +132,8 @@ export interface EncryptionState {
   username: string;
   /** Cached derived key for encryption/decryption */
   derivedKey: CryptoKey | null;
+  /** Whether file encryption status is unknown, encrypted, or unencrypted */
+  fileEncryptionStatus: FileEncryptionStatus;
   /** Whether the current file is encrypted */
   fileIsEncrypted: boolean;
   /** Salt from current encrypted file (needed for key derivation) */

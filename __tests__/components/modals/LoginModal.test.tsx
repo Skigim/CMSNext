@@ -120,6 +120,7 @@ describe("LoginModal", () => {
     // ASSERT
     await waitFor(() => {
       expect(connectToExisting).toHaveBeenCalledTimes(1);
+      expect(checkFileEncryptionStatus).toHaveBeenCalledTimes(2);
       expect(authenticate).toHaveBeenCalledWith("admin", "");
       expect(loadExistingData).toHaveBeenCalledTimes(1);
       expect(onLoginComplete).toHaveBeenCalledTimes(1);
@@ -127,17 +128,10 @@ describe("LoginModal", () => {
     expect(screen.queryByLabelText("Password")).not.toBeInTheDocument();
   });
 
-  it("waits for startup unlock readiness before loading encrypted workspace data", async () => {
+  it("loads encrypted workspace data immediately after authentication and lets decrypt verification drive readiness", async () => {
     // ARRANGE
     const user = userEvent.setup();
     const onLoginComplete = vi.fn();
-    let resolveStartupUnlockReady: () => void = () => {};
-    waitForStartupUnlockReady.mockImplementation(
-      () =>
-        new Promise<void>((resolve) => {
-          resolveStartupUnlockReady = resolve;
-        }),
-    );
     checkFileEncryptionStatus.mockResolvedValue({ exists: true, encrypted: true });
 
     render(
@@ -160,21 +154,16 @@ describe("LoginModal", () => {
     // ASSERT
     await waitFor(() => {
       expect(connectToExisting).toHaveBeenCalledTimes(1);
+      expect(checkFileEncryptionStatus).toHaveBeenCalledTimes(2);
       expect(authenticate).toHaveBeenCalledWith("admin", "correct horse battery staple");
-      expect(waitForStartupUnlockReady).toHaveBeenCalledTimes(1);
+      expect(loadExistingData).toHaveBeenCalledTimes(1);
     });
-    expect(loadExistingData).not.toHaveBeenCalled();
+    expect(waitForStartupUnlockReady).not.toHaveBeenCalled();
     expect(
       screen.queryByText("Incorrect password. Please try again."),
     ).not.toBeInTheDocument();
-    expect(
-      screen.getByRole("button", { name: "Preparing workspace..." }),
-    ).toBeDisabled();
-
-    resolveStartupUnlockReady();
 
     await waitFor(() => {
-      expect(loadExistingData).toHaveBeenCalledTimes(1);
       expect(onLoginComplete).toHaveBeenCalledTimes(1);
     });
   });
@@ -205,12 +194,90 @@ describe("LoginModal", () => {
 
     // ASSERT
     await waitFor(() => {
-      expect(waitForStartupUnlockReady).toHaveBeenCalledTimes(1);
+      expect(checkFileEncryptionStatus).toHaveBeenCalledTimes(2);
       expect(loadExistingData).toHaveBeenCalledTimes(1);
     });
+    expect(waitForStartupUnlockReady).not.toHaveBeenCalled();
     expect(clearCredentials).toHaveBeenCalledTimes(1);
     expect(
       await screen.findByText("Incorrect password. Please try again."),
     ).toBeInTheDocument();
+  });
+
+  it("allows retry after a failed encrypted unlock attempt", async () => {
+    // ARRANGE
+    const user = userEvent.setup();
+    const onLoginComplete = vi.fn();
+    checkFileEncryptionStatus.mockResolvedValue({ exists: true, encrypted: true });
+    loadExistingData
+      .mockRejectedValueOnce(new EncryptionError("wrong_password", "Incorrect password."))
+      .mockResolvedValueOnce(undefined);
+
+    render(
+      <LoginModal
+        isOpen={true}
+        onLoginComplete={onLoginComplete}
+        onChooseDifferentFolder={vi.fn()}
+      />,
+    );
+
+    await waitFor(() => {
+      expect(checkFileEncryptionStatus).toHaveBeenCalledTimes(1);
+    });
+
+    // ACT
+    await user.type(screen.getByLabelText("Password"), "wrong password");
+    await user.click(screen.getByRole("button", { name: "Unlock" }));
+
+    // ASSERT
+    expect(
+      await screen.findByText("Incorrect password. Please try again."),
+    ).toBeInTheDocument();
+
+    // ACT
+    await user.type(screen.getByLabelText("Password"), "correct password");
+    await user.click(screen.getByRole("button", { name: "Unlock" }));
+
+    // ASSERT
+    await waitFor(() => {
+      expect(checkFileEncryptionStatus).toHaveBeenCalledTimes(3);
+      expect(loadExistingData).toHaveBeenCalledTimes(2);
+      expect(onLoginComplete).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  it("re-checks encryption status after reconnect when the initial pre-check is unknown", async () => {
+    // ARRANGE
+    const user = userEvent.setup();
+    const onLoginComplete = vi.fn();
+    checkFileEncryptionStatus
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce({ exists: true, encrypted: true });
+
+    render(
+      <LoginModal
+        isOpen={true}
+        onLoginComplete={onLoginComplete}
+        onChooseDifferentFolder={vi.fn()}
+      />,
+    );
+
+    await waitFor(() => {
+      expect(checkFileEncryptionStatus).toHaveBeenCalledTimes(1);
+    });
+    expect(setFileEncrypted).toHaveBeenCalledWith(null);
+
+    // ACT
+    await user.type(screen.getByLabelText("Password"), "correct horse battery staple");
+    await user.click(screen.getByRole("button", { name: "Unlock" }));
+
+    // ASSERT
+    await waitFor(() => {
+      expect(checkFileEncryptionStatus).toHaveBeenCalledTimes(2);
+      expect(setFileEncrypted).toHaveBeenLastCalledWith(true);
+      expect(authenticate).toHaveBeenCalledWith("admin", "correct horse battery staple");
+      expect(loadExistingData).toHaveBeenCalledTimes(1);
+      expect(onLoginComplete).toHaveBeenCalledTimes(1);
+    });
   });
 });

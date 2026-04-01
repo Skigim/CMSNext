@@ -35,6 +35,7 @@ import {
   createContext,
   useContext,
   useState,
+  useEffect,
   useCallback,
   useMemo,
   useRef,
@@ -53,6 +54,7 @@ import type {
   EncryptionState,
   EncryptionErrorCode,
   EncryptionMode,
+  FileEncryptionStatus,
 } from "../types/encryption";
 import { createLogger } from "../utils/logger";
 import { APP_CONFIG } from "../utils/appConfig";
@@ -87,7 +89,7 @@ interface EncryptionContextValue extends EncryptionState {
   /** Authenticate user and optionally derive encryption key */
   authenticate: (username: string, password: string, salt?: string) => Promise<boolean>;
   /** Update file encryption status (called after reading file metadata) */
-  setFileEncrypted: (isEncrypted: boolean, salt?: string) => void;
+  setFileEncrypted: (isEncrypted: boolean | null, salt?: string) => void;
   /** Generate new salt and derive key for new encrypted file */
   initializeEncryption: (password: string) => Promise<{ salt: string; key: CryptoKey } | null>;
   /** Derive key from existing file salt using pending password */
@@ -104,6 +106,8 @@ interface EncryptionContextValue extends EncryptionState {
   waitForStartupUnlockReady: () => Promise<void>;
   /** Update startup encrypted-workspace readiness from hook orchestration */
   setStartupUnlockReady: (isReady: boolean) => void;
+  /** Block startup encrypted-workspace reads until a later unlock attempt succeeds */
+  blockStartupUnlock: () => void;
 }
 
 const EncryptionContext = createContext<EncryptionContextValue | null>(null);
@@ -117,6 +121,14 @@ const DEFAULT_USERNAME = "admin";
 interface EncryptionProviderProps {
   /** React child components */
   children: ReactNode;
+}
+
+type EncryptedStartupState = "ready" | "pending" | "blocked";
+const STARTUP_UNLOCK_BLOCKED_MESSAGE =
+  "Encrypted workspace unlock is blocked until a later retry succeeds.";
+
+function getInitialFileEncryptionStatus(isEncryptionEnabled: boolean): FileEncryptionStatus {
+  return isEncryptionEnabled ? "unknown" : "unencrypted";
 }
 
 /**
@@ -196,49 +208,96 @@ export function EncryptionProvider({ children }: Readonly<EncryptionProviderProp
     isAuthenticated: false,
     username: DEFAULT_USERNAME,
     derivedKey: null,
+    fileEncryptionStatus: getInitialFileEncryptionStatus(isEncryptionEnabled),
     fileIsEncrypted: false,
     currentSalt: null,
     currentIterations: null,
   });
-  const [isStartupUnlockReady, setIsStartupUnlockReadyState] = useState(!isEncryptionEnabled);
+  // Async authentication/decryption callbacks need the latest encryption state
+  // immediately, even before React commits a rerender for `state`.
+  const encryptionStateRef = useRef(state);
+  const [startupUnlockState, setStartupUnlockStateValue] = useState<EncryptedStartupState>(
+    isEncryptionEnabled ? "pending" : "ready",
+  );
   
   // Temporary password storage - cleared after key derivation
   // Using useRef instead of useState to prevent password from appearing in React DevTools
   const pendingPasswordRef = useRef<string | null>(null);
   const startupUnlockReadyPromiseRef = useRef<Promise<void> | null>(null);
   const resolveStartupUnlockReadyRef = useRef<(() => void) | null>(null);
+  const rejectStartupUnlockReadyRef = useRef<((reason?: unknown) => void) | null>(null);
 
   const isSupported = useMemo(() => isEncryptionSupported(), []);
 
-  const setStartupUnlockReady = useCallback((isReady: boolean) => {
-    setIsStartupUnlockReadyState(isReady);
+  useEffect(() => {
+    encryptionStateRef.current = state;
+  }, [state]);
 
-    if (isReady) {
-      resolveStartupUnlockReadyRef.current?.();
-      resolveStartupUnlockReadyRef.current = null;
-      startupUnlockReadyPromiseRef.current = null;
-      return;
-    }
-
-    if (!startupUnlockReadyPromiseRef.current) {
-      startupUnlockReadyPromiseRef.current = new Promise<void>((resolve) => {
-        resolveStartupUnlockReadyRef.current = resolve;
+  const updateEncryptionState = useCallback(
+    (updater: (previousState: EncryptionState) => EncryptionState) => {
+      setState((previousState) => {
+        const nextState = updater(previousState);
+        encryptionStateRef.current = nextState;
+        return nextState;
       });
-    }
+    },
+    [],
+  );
+
+  const finalizeStartupUnlockWait = useCallback(() => {
+    startupUnlockReadyPromiseRef.current = null;
+    resolveStartupUnlockReadyRef.current = null;
+    rejectStartupUnlockReadyRef.current = null;
   }, []);
 
-  const waitForStartupUnlockReady = useCallback(async (): Promise<void> => {
-    if (isStartupUnlockReady) {
+  const setStartupUnlockState = useCallback((nextState: EncryptedStartupState) => {
+    setStartupUnlockStateValue(nextState);
+
+    if (nextState === "ready") {
+      resolveStartupUnlockReadyRef.current?.();
+      finalizeStartupUnlockWait();
+      return;
+    }
+
+    if (nextState === "blocked") {
+      rejectStartupUnlockReadyRef.current?.(new Error(STARTUP_UNLOCK_BLOCKED_MESSAGE));
+      finalizeStartupUnlockWait();
       return;
     }
 
     if (!startupUnlockReadyPromiseRef.current) {
-      startupUnlockReadyPromiseRef.current = new Promise<void>((resolve) => {
+      startupUnlockReadyPromiseRef.current = new Promise<void>((resolve, reject) => {
         resolveStartupUnlockReadyRef.current = resolve;
+        rejectStartupUnlockReadyRef.current = reject;
+      });
+    }
+  }, [finalizeStartupUnlockWait]);
+
+  const setStartupUnlockReady = useCallback((isReady: boolean) => {
+    setStartupUnlockState(isReady ? "ready" : "pending");
+  }, [setStartupUnlockState]);
+
+  const blockStartupUnlock = useCallback(() => {
+    setStartupUnlockState("blocked");
+  }, [setStartupUnlockState]);
+
+  const waitForStartupUnlockReady = useCallback(async (): Promise<void> => {
+    if (startupUnlockState === "ready") {
+      return;
+    }
+
+    if (startupUnlockState === "blocked") {
+      throw new Error(STARTUP_UNLOCK_BLOCKED_MESSAGE);
+    }
+
+    if (!startupUnlockReadyPromiseRef.current) {
+      startupUnlockReadyPromiseRef.current = new Promise<void>((resolve, reject) => {
+        resolveStartupUnlockReadyRef.current = resolve;
+        rejectStartupUnlockReadyRef.current = reject;
       });
     }
     await startupUnlockReadyPromiseRef.current;
-  }, [isStartupUnlockReady]);
+  }, [startupUnlockState]);
   
   /**
    * Store password temporarily for key derivation when file salt is discovered.
@@ -252,6 +311,28 @@ export function EncryptionProvider({ children }: Readonly<EncryptionProviderProp
     }
   }, []);
 
+  const resolveFileEncryptionStatus = useCallback(
+    (isEncrypted: boolean | null): FileEncryptionStatus => {
+      if (!isEncryptionEnabled) {
+        return "unencrypted";
+      }
+
+      if (isEncrypted === null) {
+        return "unknown";
+      }
+
+      return isEncrypted ? "encrypted" : "unencrypted";
+    },
+    [isEncryptionEnabled],
+  );
+
+  const requiresVerifiedDecrypt = useCallback(
+    (salt?: string) =>
+      isEncryptionEnabled &&
+      (Boolean(salt) || encryptionStateRef.current.fileEncryptionStatus !== "unencrypted"),
+    [isEncryptionEnabled],
+  );
+
   /**
    * Authenticate user and optionally derive encryption key.
    * If salt is provided (from encrypted file), derive key immediately.
@@ -264,11 +345,12 @@ export function EncryptionProvider({ children }: Readonly<EncryptionProviderProp
       try {
         if (encryptionMode === "disabled") {
           setStartupUnlockReady(true);
-          setState((prev) => ({
+          updateEncryptionState((prev) => ({
             ...prev,
             isAuthenticated: true,
             username,
             derivedKey: null,
+            fileEncryptionStatus: "unencrypted",
             currentSalt: null,
             currentIterations: null,
             fileIsEncrypted: false,
@@ -278,7 +360,7 @@ export function EncryptionProvider({ children }: Readonly<EncryptionProviderProp
           return true;
         }
 
-        setStartupUnlockReady(!isEncryptionEnabled);
+        setStartupUnlockReady(!requiresVerifiedDecrypt(salt));
 
         let derivedKey: CryptoKey | null = null;
 
@@ -293,37 +375,75 @@ export function EncryptionProvider({ children }: Readonly<EncryptionProviderProp
         }
         // If no salt, we'll derive key later when encrypting
 
-        setState((prev) => ({
+        updateEncryptionState((prev) => ({
           ...prev,
           isAuthenticated: true,
           username,
           derivedKey,
+          fileEncryptionStatus: salt ? "encrypted" : prev.fileEncryptionStatus,
+          fileIsEncrypted: salt ? true : prev.fileIsEncrypted,
           currentSalt: salt ?? null,
           currentIterations: salt ? DEFAULT_ENCRYPTION_CONFIG.iterations : null,
         }));
 
         return true;
       } catch (error) {
-        setStartupUnlockReady(true);
+        if (requiresVerifiedDecrypt(salt)) {
+          blockStartupUnlock();
+        } else {
+          setStartupUnlockReady(true);
+        }
         logger.error("Authentication failed", {
           error: error instanceof Error ? error.message : String(error),
         });
         return false;
       }
     },
-    [encryptionMode, isEncryptionEnabled, setStartupUnlockReady]
+    [
+      blockStartupUnlock,
+      encryptionMode,
+      requiresVerifiedDecrypt,
+      setStartupUnlockReady,
+      updateEncryptionState,
+    ]
   );
 
   /**
    * Update file encryption status after reading file.
    */
-  const setFileEncrypted = useCallback((isEncrypted: boolean, salt?: string) => {
-    setState((prev) => ({
+  const setFileEncrypted = useCallback((isEncrypted: boolean | null, salt?: string) => {
+    const fileEncryptionStatus = resolveFileEncryptionStatus(isEncrypted);
+    updateEncryptionState((prev) => ({
       ...prev,
-      fileIsEncrypted: isEncrypted,
-      currentSalt: salt ?? prev.currentSalt,
+      fileEncryptionStatus,
+      fileIsEncrypted: fileEncryptionStatus === "encrypted",
+      currentSalt:
+        fileEncryptionStatus === "encrypted" ? (salt ?? prev.currentSalt) : null,
     }));
-  }, []);
+
+    if (!isEncryptionEnabled || fileEncryptionStatus === "unencrypted") {
+      setStartupUnlockReady(true);
+      return;
+    }
+
+    if (fileEncryptionStatus === "unknown") {
+      setStartupUnlockReady(false);
+      return;
+    }
+
+    if (encryptionStateRef.current.derivedKey) {
+      setStartupUnlockReady(true);
+      return;
+    }
+
+    blockStartupUnlock();
+  }, [
+    blockStartupUnlock,
+    isEncryptionEnabled,
+    resolveFileEncryptionStatus,
+    setStartupUnlockReady,
+    updateEncryptionState,
+  ]);
 
   /**
    * Initialize encryption for a new/unencrypted file.
@@ -347,13 +467,15 @@ export function EncryptionProvider({ children }: Readonly<EncryptionProviderProp
           DEFAULT_ENCRYPTION_CONFIG.iterations
         );
 
-        setState((prev) => ({
+        updateEncryptionState((prev) => ({
           ...prev,
           derivedKey: key,
+          fileEncryptionStatus: "encrypted",
           currentSalt: salt,
           fileIsEncrypted: true,
           currentIterations: DEFAULT_ENCRYPTION_CONFIG.iterations,
         }));
+        setStartupUnlockReady(true);
 
         logger.info("Encryption initialized with new salt");
         return { salt, key };
@@ -361,28 +483,44 @@ export function EncryptionProvider({ children }: Readonly<EncryptionProviderProp
         logger.error("Failed to initialize encryption", {
           error: error instanceof Error ? error.message : String(error),
         });
+        blockStartupUnlock();
         return null;
       }
     },
-    [encryptionMode, isEncryptionEnabled]
+    [blockStartupUnlock, encryptionMode, isEncryptionEnabled, setStartupUnlockReady, updateEncryptionState]
   );
 
   /**
    * Clear all credentials (logout).
    */
   const clearCredentials = useCallback(() => {
-    setState({
+    const workspaceIsEncrypted = encryptionStateRef.current.fileIsEncrypted;
+    const fileEncryptionStatus = encryptionStateRef.current.fileEncryptionStatus;
+    const workspaceSalt = encryptionStateRef.current.currentSalt;
+    const workspaceIterations = encryptionStateRef.current.currentIterations;
+
+    updateEncryptionState(() => ({
       isAuthenticated: false,
       username: DEFAULT_USERNAME,
       derivedKey: null,
-      fileIsEncrypted: false,
-      currentSalt: null,
-      currentIterations: null,
-    });
+      fileEncryptionStatus,
+      fileIsEncrypted: workspaceIsEncrypted,
+      currentSalt: workspaceSalt,
+      currentIterations: workspaceIterations,
+    }));
     pendingPasswordRef.current = null;
-    setStartupUnlockReady(true);
+    if (isEncryptionEnabled && fileEncryptionStatus !== "unencrypted") {
+      blockStartupUnlock();
+    } else {
+      setStartupUnlockReady(true);
+    }
     logger.lifecycle("Credentials cleared");
-  }, [setStartupUnlockReady]);
+  }, [
+    blockStartupUnlock,
+    isEncryptionEnabled,
+    setStartupUnlockReady,
+    updateEncryptionState,
+  ]);
 
   /**
    * Derive key from file salt using pending password.
@@ -416,9 +554,10 @@ export function EncryptionProvider({ children }: Readonly<EncryptionProviderProp
           effectiveIterations
         );
 
-        setState((prev) => ({
+        updateEncryptionState((prev) => ({
           ...prev,
           derivedKey: key,
+          fileEncryptionStatus: "encrypted",
           currentSalt: salt,
           fileIsEncrypted: true,
           currentIterations: effectiveIterations,
@@ -438,7 +577,7 @@ export function EncryptionProvider({ children }: Readonly<EncryptionProviderProp
         return { success: false, error: 'system_error', message };
       }
     },
-    [encryptionMode, isEncryptionEnabled]
+    [encryptionMode, isEncryptionEnabled, updateEncryptionState]
   );
 
   const value = useMemo<EncryptionContextValue>(
@@ -453,9 +592,10 @@ export function EncryptionProvider({ children }: Readonly<EncryptionProviderProp
       initializeEncryption,
       deriveKeyFromFileSalt,
       clearCredentials,
-      isStartupUnlockReady,
+      isStartupUnlockReady: startupUnlockState === "ready",
       waitForStartupUnlockReady,
       setStartupUnlockReady,
+      blockStartupUnlock,
       // Expose getter for pendingPassword to avoid stale ref issues in consumers
       get pendingPassword() {
         return pendingPasswordRef.current;
@@ -473,9 +613,10 @@ export function EncryptionProvider({ children }: Readonly<EncryptionProviderProp
       initializeEncryption,
       deriveKeyFromFileSalt,
       clearCredentials,
-      isStartupUnlockReady,
+      startupUnlockState,
       waitForStartupUnlockReady,
       setStartupUnlockReady,
+      blockStartupUnlock,
       setPendingPassword,
     ]
   );

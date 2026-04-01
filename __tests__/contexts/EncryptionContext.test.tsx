@@ -96,6 +96,7 @@ describe("EncryptionContext", () => {
     expect(result.current.requiresPassword).toBe(false);
     expect(result.current.isAuthenticated).toBe(true);
     expect(result.current.derivedKey).toBeNull();
+    expect(result.current.fileEncryptionStatus).toBe("unencrypted");
     expect(result.current.currentSalt).toBeNull();
     expect(result.current.currentIterations).toBeNull();
     expect(result.current.pendingPassword).toBeNull();
@@ -125,8 +126,80 @@ describe("EncryptionContext", () => {
     expect(result.current.requiresPassword).toBe(true);
     expect(result.current.isAuthenticated).toBe(true);
     expect(result.current.derivedKey).toBe(derivedKey);
+    expect(result.current.fileEncryptionStatus).toBe("encrypted");
     expect(result.current.currentSalt).toBe("existing-salt");
     expect(result.current.currentIterations).toBe(DEFAULT_ENCRYPTION_CONFIG.iterations);
+  });
+
+  it("keeps encrypted reconnect startup blocked until decrypt verification succeeds", async () => {
+    // ARRANGE
+    const wrapper = createWrapper();
+    const { result } = renderHook(() => useEncryption(), { wrapper });
+
+    // ACT
+    await act(async () => {
+      result.current.setFileEncrypted(true, "workspace-salt");
+      await result.current.authenticate("admin", "secret");
+    });
+
+    // ASSERT
+    expect(result.current.fileIsEncrypted).toBe(true);
+    expect(result.current.fileEncryptionStatus).toBe("encrypted");
+    expect(result.current.isAuthenticated).toBe(true);
+    expect(result.current.isStartupUnlockReady).toBe(false);
+
+    // ACT
+    await act(async () => {
+      result.current.setStartupUnlockReady(true);
+    });
+
+    // ASSERT
+    expect(result.current.isStartupUnlockReady).toBe(true);
+  });
+
+  it("keeps encrypted startup blocked after credentials are cleared and rejects startup waits until retry", async () => {
+    // ARRANGE
+    const wrapper = createWrapper();
+    const { result } = renderHook(() => useEncryption(), { wrapper });
+
+    await act(async () => {
+      result.current.setFileEncrypted(true, "workspace-salt");
+      result.current.setStartupUnlockReady(true);
+    });
+    expect(result.current.isStartupUnlockReady).toBe(true);
+
+    // ACT
+    await act(async () => {
+      result.current.clearCredentials();
+    });
+
+    // ASSERT
+    expect(result.current.fileIsEncrypted).toBe(true);
+    expect(result.current.fileEncryptionStatus).toBe("encrypted");
+    expect(result.current.isAuthenticated).toBe(false);
+    expect(result.current.isStartupUnlockReady).toBe(false);
+    await expect(result.current.waitForStartupUnlockReady()).rejects.toThrow(
+      "Encrypted workspace unlock is blocked until a later retry succeeds.",
+    );
+  });
+
+  it("keeps full-encryption startup pending while file encryption status is unknown", async () => {
+    // ARRANGE
+    const wrapper = createWrapper();
+    const { result } = renderHook(() => useEncryption(), { wrapper });
+
+    // ASSERT
+    expect(result.current.fileEncryptionStatus).toBe("unknown");
+    expect(result.current.isStartupUnlockReady).toBe(false);
+
+    // ACT
+    await act(async () => {
+      result.current.setFileEncrypted(false);
+    });
+
+    // ASSERT
+    expect(result.current.fileEncryptionStatus).toBe("unencrypted");
+    expect(result.current.isStartupUnlockReady).toBe(true);
   });
 
   it("codePointAt handles basic ASCII characters", () => {
