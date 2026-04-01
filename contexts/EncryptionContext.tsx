@@ -123,9 +123,13 @@ interface EncryptionProviderProps {
   children: ReactNode;
 }
 
-type StartupUnlockState = "ready" | "pending" | "blocked";
+type EncryptedStartupState = "ready" | "pending" | "blocked";
 const STARTUP_UNLOCK_BLOCKED_MESSAGE =
   "Encrypted workspace unlock is blocked until a later retry succeeds.";
+
+function getInitialFileEncryptionStatus(isEncryptionEnabled: boolean): FileEncryptionStatus {
+  return isEncryptionEnabled ? "unknown" : "unencrypted";
+}
 
 /**
  * EncryptionProvider - Manages encryption state and key derivation.
@@ -204,13 +208,15 @@ export function EncryptionProvider({ children }: Readonly<EncryptionProviderProp
     isAuthenticated: false,
     username: DEFAULT_USERNAME,
     derivedKey: null,
-    fileEncryptionStatus: isEncryptionEnabled ? "unknown" : "unencrypted",
+    fileEncryptionStatus: getInitialFileEncryptionStatus(isEncryptionEnabled),
     fileIsEncrypted: false,
     currentSalt: null,
     currentIterations: null,
   });
+  // Async authentication/decryption callbacks need the latest encryption state
+  // immediately, even before React commits a rerender for `state`.
   const encryptionStateRef = useRef(state);
-  const [startupUnlockState, setStartupUnlockStateValue] = useState<StartupUnlockState>(
+  const [startupUnlockState, setStartupUnlockStateValue] = useState<EncryptedStartupState>(
     isEncryptionEnabled ? "pending" : "ready",
   );
   
@@ -244,7 +250,7 @@ export function EncryptionProvider({ children }: Readonly<EncryptionProviderProp
     rejectStartupUnlockReadyRef.current = null;
   }, []);
 
-  const setStartupUnlockState = useCallback((nextState: StartupUnlockState) => {
+  const setStartupUnlockState = useCallback((nextState: EncryptedStartupState) => {
     setStartupUnlockStateValue(nextState);
 
     if (nextState === "ready") {
@@ -320,6 +326,13 @@ export function EncryptionProvider({ children }: Readonly<EncryptionProviderProp
     [isEncryptionEnabled],
   );
 
+  const requiresVerifiedDecrypt = useCallback(
+    (salt?: string) =>
+      isEncryptionEnabled &&
+      (Boolean(salt) || encryptionStateRef.current.fileEncryptionStatus !== "unencrypted"),
+    [isEncryptionEnabled],
+  );
+
   /**
    * Authenticate user and optionally derive encryption key.
    * If salt is provided (from encrypted file), derive key immediately.
@@ -347,10 +360,7 @@ export function EncryptionProvider({ children }: Readonly<EncryptionProviderProp
           return true;
         }
 
-        const requiresVerifiedDecrypt =
-          isEncryptionEnabled &&
-          (Boolean(salt) || encryptionStateRef.current.fileEncryptionStatus !== "unencrypted");
-        setStartupUnlockReady(!requiresVerifiedDecrypt);
+        setStartupUnlockReady(!requiresVerifiedDecrypt(salt));
 
         let derivedKey: CryptoKey | null = null;
 
@@ -378,10 +388,7 @@ export function EncryptionProvider({ children }: Readonly<EncryptionProviderProp
 
         return true;
       } catch (error) {
-        if (
-          isEncryptionEnabled &&
-          (Boolean(salt) || encryptionStateRef.current.fileEncryptionStatus !== "unencrypted")
-        ) {
+        if (requiresVerifiedDecrypt(salt)) {
           blockStartupUnlock();
         } else {
           setStartupUnlockReady(true);
@@ -392,7 +399,13 @@ export function EncryptionProvider({ children }: Readonly<EncryptionProviderProp
         return false;
       }
     },
-    [blockStartupUnlock, encryptionMode, isEncryptionEnabled, setStartupUnlockReady, updateEncryptionState]
+    [
+      blockStartupUnlock,
+      encryptionMode,
+      requiresVerifiedDecrypt,
+      setStartupUnlockReady,
+      updateEncryptionState,
+    ]
   );
 
   /**

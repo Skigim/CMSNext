@@ -244,6 +244,9 @@ export function useEncryptionFileHooks(): UseEncryptionFileHooksResult {
        * Handles key derivation if needed (first read of encrypted file).
        */
       decrypt: async (data: EncryptedPayload): Promise<NormalizedFileData> => {
+        // During decryption, we use the latest encryption state directly
+        // without waiting for startup readiness, since decryption itself is
+        // what establishes that readiness.
         const currentEncryption = encryptionRef.current;
 
         logger.debug("Decryption hook called", {

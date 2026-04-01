@@ -139,18 +139,18 @@ export function LoginModal({
   }, []);
 
   const connectAndAuthenticate = useCallback(
-    async (): Promise<{ setupError: string | null; effectiveFileIsEncrypted: boolean }> => {
+    async (): Promise<{ setupError: string | null; resolvedFileIsEncrypted: boolean }> => {
       const connected = await connectToExisting();
       if (!connected) {
         return {
           setupError: "Failed to access data folder. Please try again or choose a different folder.",
-          effectiveFileIsEncrypted: false,
+          resolvedFileIsEncrypted: false,
         };
       }
 
       const refreshedEncryptionStatus = await service?.checkFileEncryptionStatus();
       logger.info("File check after reconnect", { status: refreshedEncryptionStatus });
-      const effectiveFileIsEncrypted = refreshedEncryptionStatus?.encrypted ?? fileIsEncrypted;
+      const resolvedFileIsEncrypted = refreshedEncryptionStatus?.encrypted ?? (fileIsEncrypted ?? false);
 
       if (refreshedEncryptionStatus) {
         setFileExists(refreshedEncryptionStatus.exists);
@@ -161,12 +161,12 @@ export function LoginModal({
         setFileEncrypted(null);
       }
 
-      if (effectiveFileIsEncrypted && !encryption.isEncryptionEnabled) {
+      if (resolvedFileIsEncrypted && !encryption.isEncryptionEnabled) {
         encryption.setPendingPassword(null);
         return {
           setupError:
             "This workspace is encrypted, but the current environment is configured for readable on-disk data. Choose a different folder or reopen it in a full-encryption environment.",
-          effectiveFileIsEncrypted: true,
+          resolvedFileIsEncrypted: true,
         };
       }
 
@@ -181,13 +181,13 @@ export function LoginModal({
         encryption.setPendingPassword(null);
         return {
           setupError: "Failed to set up encryption",
-          effectiveFileIsEncrypted: effectiveFileIsEncrypted === true,
+          resolvedFileIsEncrypted: resolvedFileIsEncrypted === true,
         };
       }
 
       return {
         setupError: null,
-        effectiveFileIsEncrypted: effectiveFileIsEncrypted === true,
+        resolvedFileIsEncrypted: resolvedFileIsEncrypted === true,
       };
     },
     [
@@ -262,13 +262,13 @@ export function LoginModal({
     try {
       logger.lifecycle("Logging in - connecting and decrypting");
 
-      const { setupError, effectiveFileIsEncrypted } = await connectAndAuthenticate();
+      const { setupError, resolvedFileIsEncrypted } = await connectAndAuthenticate();
       if (setupError) {
         setError(setupError);
         return;
       }
 
-      setIsPreparingUnlock(effectiveFileIsEncrypted && encryption.isEncryptionEnabled);
+      setIsPreparingUnlock(resolvedFileIsEncrypted && encryption.isEncryptionEnabled);
       await loadExistingData();
 
       logger.info("Login successful");
