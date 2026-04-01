@@ -2,27 +2,32 @@ import { renderHook, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { useEncryptionFileHooks } from "@/hooks/useEncryptionFileHooks";
 import type { EncryptedPayload } from "@/types/encryption";
+import { mergeCategoryConfig } from "@/types/categoryConfig";
 import type { NormalizedFileData } from "@/utils/services/FileStorageService";
 
-const setEncryptionHooks = vi.fn<[unknown], void>();
+const setEncryptionHooks = vi.fn<(hooks: unknown) => void>();
 const mockEncryptWithKey = vi.hoisted(() => vi.fn());
 const mockDecryptWithKey = vi.hoisted(() => vi.fn());
 
-const mockEncryptionContext = {
-  requiresPassword: true,
-  isEncryptionEnabled: true,
-  isAuthenticated: false,
-  derivedKey: null as CryptoKey | null,
-  currentSalt: null as string | null,
-  currentIterations: null as number | null,
-  pendingPassword: null as string | null,
-  isStartupUnlockReady: false,
-  initializeEncryption: vi.fn(),
-  deriveKeyFromFileSalt: vi.fn(),
-  waitForStartupUnlockReady: vi.fn<[], Promise<void>>(),
-  setPendingPassword: vi.fn<[string | null], void>(),
-  setStartupUnlockReady: vi.fn<[boolean], void>(),
-};
+function createMockEncryptionContext() {
+  return {
+    requiresPassword: true,
+    isEncryptionEnabled: true,
+    isAuthenticated: false,
+    derivedKey: null as CryptoKey | null,
+    currentSalt: null as string | null,
+    currentIterations: null as number | null,
+    pendingPassword: null as string | null,
+    isStartupUnlockReady: false,
+    initializeEncryption: vi.fn(),
+    deriveKeyFromFileSalt: vi.fn(),
+    waitForStartupUnlockReady: vi.fn<() => Promise<void>>(),
+    setPendingPassword: vi.fn<(password: string | null) => void>(),
+    setStartupUnlockReady: vi.fn<(isReady: boolean) => void>(),
+  };
+}
+
+let mockEncryptionContext = createMockEncryptionContext();
 
 vi.mock("@/contexts/EncryptionContext", () => ({
   useEncryption: () => mockEncryptionContext,
@@ -47,20 +52,7 @@ describe("useEncryptionFileHooks", () => {
     setEncryptionHooks.mockReset();
     mockEncryptWithKey.mockReset();
     mockDecryptWithKey.mockReset();
-    mockEncryptionContext.initializeEncryption.mockReset();
-    mockEncryptionContext.deriveKeyFromFileSalt.mockReset();
-    mockEncryptionContext.waitForStartupUnlockReady.mockReset();
-    mockEncryptionContext.setPendingPassword.mockReset();
-    mockEncryptionContext.setStartupUnlockReady.mockReset();
-
-    mockEncryptionContext.requiresPassword = true;
-    mockEncryptionContext.isEncryptionEnabled = true;
-    mockEncryptionContext.isAuthenticated = false;
-    mockEncryptionContext.derivedKey = null;
-    mockEncryptionContext.currentSalt = null;
-    mockEncryptionContext.currentIterations = null;
-    mockEncryptionContext.pendingPassword = null;
-    mockEncryptionContext.isStartupUnlockReady = false;
+    mockEncryptionContext = createMockEncryptionContext();
   });
 
   it("installs encryption hooks before authentication and keeps startup readiness tied to authentication", async () => {
@@ -75,7 +67,10 @@ describe("useEncryptionFileHooks", () => {
     expect(mockEncryptionContext.setStartupUnlockReady).toHaveBeenLastCalledWith(false);
 
     // ACT
-    mockEncryptionContext.isAuthenticated = true;
+    mockEncryptionContext = {
+      ...mockEncryptionContext,
+      isAuthenticated: true,
+    };
     rerender();
 
     // ASSERT
@@ -97,7 +92,7 @@ describe("useEncryptionFileHooks", () => {
       alerts: [],
       exported_at: "2026-04-01T00:00:00.000Z",
       total_cases: 0,
-      categoryConfig: {},
+      categoryConfig: mergeCategoryConfig(),
       activityLog: [],
       templates: [],
     };
@@ -138,9 +133,12 @@ describe("useEncryptionFileHooks", () => {
     expect(mockEncryptionContext.deriveKeyFromFileSalt).not.toHaveBeenCalled();
 
     // ACT
-    mockEncryptionContext.isAuthenticated = true;
-    mockEncryptionContext.isStartupUnlockReady = true;
-    mockEncryptionContext.pendingPassword = "correct horse battery staple";
+    mockEncryptionContext = {
+      ...mockEncryptionContext,
+      isAuthenticated: true,
+      isStartupUnlockReady: true,
+      pendingPassword: "correct horse battery staple",
+    };
     mockEncryptionContext.deriveKeyFromFileSalt.mockResolvedValue({
       success: true,
       data: derivedKey,

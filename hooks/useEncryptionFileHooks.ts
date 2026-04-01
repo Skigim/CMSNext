@@ -100,7 +100,10 @@ export function useEncryptionFileHooks(): UseEncryptionFileHooksResult {
   const { service } = useFileStorage();
   const [lastError, setLastError] = useState<string | null>(null);
   const encryptionRef = useRef(encryption);
-  encryptionRef.current = encryption;
+
+  useEffect(() => {
+    encryptionRef.current = encryption;
+  }, [encryption]);
 
   // Expose storePassword as a pass-through to context
   const storePassword = useCallback((password: string) => {
@@ -274,7 +277,7 @@ export function useEncryptionFileHooks(): UseEncryptionFileHooksResult {
         return isEncryptedPayload(data);
       },
     };
-  }, [encryption.isEncryptionEnabled]);
+  }, [encryption]);
 
   // Set/clear encryption hooks on service when they change
   useEffect(() => {
@@ -298,14 +301,10 @@ export function useEncryptionFileHooks(): UseEncryptionFileHooksResult {
     encryption.setStartupUnlockReady(
       !encryption.isEncryptionEnabled || encryption.isAuthenticated,
     );
-  }, [
-    encryption.isAuthenticated,
-    encryption.isEncryptionEnabled,
-    encryption.setStartupUnlockReady,
-  ]);
+  }, [encryption]);
 
   return {
-    isActive: !!encryptionHooks,
+    isActive: encryption.isEncryptionEnabled,
     lastError,
     clearError,
     storePassword,
