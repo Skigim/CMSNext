@@ -28,6 +28,7 @@ function removeDangerousPatterns(text: string): string {
       // Remove potential script injection patterns
       .replaceAll(/javascript:/gi, "")
       .replaceAll(/vbscript:/gi, "")
+      .replaceAll(/data:/gi, "")
       .replaceAll(/data:text\/html/gi, "")
       .replaceAll(/data:application\/javascript/gi, "")
       // Remove event handler patterns
