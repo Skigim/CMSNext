@@ -24,6 +24,7 @@ let mockFileStorageContext = {
 
 let mockEncryptionContext = {
   isEncryptionEnabled: true,
+  fileIsEncrypted: true,
   isStartupUnlockReady: false,
 };
 
@@ -64,6 +65,7 @@ describe("DataManagerContext", () => {
     };
     mockEncryptionContext = {
       isEncryptionEnabled: true,
+      fileIsEncrypted: true,
       isStartupUnlockReady: false,
     };
   });
@@ -109,6 +111,28 @@ describe("DataManagerContext", () => {
     // ASSERT
     await waitFor(() => {
       expect(migrateFinancialsWithoutHistory).toHaveBeenCalledTimes(2);
+    });
+  });
+
+  it("does not block startup migration for unencrypted workspaces even when encryption mode is enabled", async () => {
+    // ARRANGE
+    migrateFinancialsWithoutHistory.mockResolvedValue(0);
+    mockEncryptionContext = {
+      isEncryptionEnabled: true,
+      fileIsEncrypted: false,
+      isStartupUnlockReady: false,
+    };
+
+    // ACT
+    render(
+      <DataManagerProvider>
+        <TestChild />
+      </DataManagerProvider>,
+    );
+
+    // ASSERT
+    await waitFor(() => {
+      expect(migrateFinancialsWithoutHistory).toHaveBeenCalledTimes(1);
     });
   });
 });

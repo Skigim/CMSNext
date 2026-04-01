@@ -227,11 +227,7 @@ export function LoginModal({
         return;
       }
 
-      if (fileIsEncrypted && encryption.isEncryptionEnabled) {
-        setIsPreparingUnlock(true);
-        await encryption.waitForStartupUnlockReady();
-      }
-
+      setIsPreparingUnlock(fileIsEncrypted && encryption.isEncryptionEnabled);
       await loadExistingData();
 
       logger.info("Login successful");

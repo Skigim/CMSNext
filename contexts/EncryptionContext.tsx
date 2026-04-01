@@ -35,6 +35,7 @@ import {
   createContext,
   useContext,
   useState,
+  useEffect,
   useCallback,
   useMemo,
   useRef,
@@ -104,6 +105,8 @@ interface EncryptionContextValue extends EncryptionState {
   waitForStartupUnlockReady: () => Promise<void>;
   /** Update startup encrypted-workspace readiness from hook orchestration */
   setStartupUnlockReady: (isReady: boolean) => void;
+  /** Block startup encrypted-workspace reads until a later unlock attempt succeeds */
+  blockStartupUnlock: () => void;
 }
 
 const EncryptionContext = createContext<EncryptionContextValue | null>(null);
@@ -118,6 +121,8 @@ interface EncryptionProviderProps {
   /** React child components */
   children: ReactNode;
 }
+
+type StartupUnlockState = "ready" | "pending" | "blocked";
 
 /**
  * EncryptionProvider - Manages encryption state and key derivation.
@@ -200,45 +205,89 @@ export function EncryptionProvider({ children }: Readonly<EncryptionProviderProp
     currentSalt: null,
     currentIterations: null,
   });
-  const [isStartupUnlockReady, setIsStartupUnlockReadyState] = useState(!isEncryptionEnabled);
+  const encryptionStateRef = useRef(state);
+  const [startupUnlockState, setStartupUnlockStateValue] = useState<StartupUnlockState>("ready");
   
   // Temporary password storage - cleared after key derivation
   // Using useRef instead of useState to prevent password from appearing in React DevTools
   const pendingPasswordRef = useRef<string | null>(null);
   const startupUnlockReadyPromiseRef = useRef<Promise<void> | null>(null);
   const resolveStartupUnlockReadyRef = useRef<(() => void) | null>(null);
+  const rejectStartupUnlockReadyRef = useRef<((reason?: unknown) => void) | null>(null);
 
   const isSupported = useMemo(() => isEncryptionSupported(), []);
 
-  const setStartupUnlockReady = useCallback((isReady: boolean) => {
-    setIsStartupUnlockReadyState(isReady);
+  useEffect(() => {
+    encryptionStateRef.current = state;
+  }, [state]);
 
-    if (isReady) {
-      resolveStartupUnlockReadyRef.current?.();
-      resolveStartupUnlockReadyRef.current = null;
-      startupUnlockReadyPromiseRef.current = null;
-      return;
-    }
-
-    if (!startupUnlockReadyPromiseRef.current) {
-      startupUnlockReadyPromiseRef.current = new Promise<void>((resolve) => {
-        resolveStartupUnlockReadyRef.current = resolve;
+  const updateEncryptionState = useCallback(
+    (updater: (previousState: EncryptionState) => EncryptionState) => {
+      setState((previousState) => {
+        const nextState = updater(previousState);
+        encryptionStateRef.current = nextState;
+        return nextState;
       });
-    }
+    },
+    [],
+  );
+
+  const finalizeStartupUnlockWait = useCallback(() => {
+    startupUnlockReadyPromiseRef.current = null;
+    resolveStartupUnlockReadyRef.current = null;
+    rejectStartupUnlockReadyRef.current = null;
   }, []);
 
-  const waitForStartupUnlockReady = useCallback(async (): Promise<void> => {
-    if (isStartupUnlockReady) {
+  const setStartupUnlockState = useCallback((nextState: StartupUnlockState) => {
+    setStartupUnlockStateValue(nextState);
+
+    if (nextState === "ready") {
+      resolveStartupUnlockReadyRef.current?.();
+      finalizeStartupUnlockWait();
+      return;
+    }
+
+    if (nextState === "blocked") {
+      rejectStartupUnlockReadyRef.current?.(
+        new Error("Encrypted workspace unlock is blocked until a later retry succeeds."),
+      );
+      finalizeStartupUnlockWait();
       return;
     }
 
     if (!startupUnlockReadyPromiseRef.current) {
-      startupUnlockReadyPromiseRef.current = new Promise<void>((resolve) => {
+      startupUnlockReadyPromiseRef.current = new Promise<void>((resolve, reject) => {
         resolveStartupUnlockReadyRef.current = resolve;
+        rejectStartupUnlockReadyRef.current = reject;
+      });
+    }
+  }, [finalizeStartupUnlockWait]);
+
+  const setStartupUnlockReady = useCallback((isReady: boolean) => {
+    setStartupUnlockState(isReady ? "ready" : "pending");
+  }, [setStartupUnlockState]);
+
+  const blockStartupUnlock = useCallback(() => {
+    setStartupUnlockState("blocked");
+  }, [setStartupUnlockState]);
+
+  const waitForStartupUnlockReady = useCallback(async (): Promise<void> => {
+    if (startupUnlockState === "ready") {
+      return;
+    }
+
+    if (startupUnlockState === "blocked") {
+      throw new Error("Encrypted workspace unlock is blocked until a later retry succeeds.");
+    }
+
+    if (!startupUnlockReadyPromiseRef.current) {
+      startupUnlockReadyPromiseRef.current = new Promise<void>((resolve, reject) => {
+        resolveStartupUnlockReadyRef.current = resolve;
+        rejectStartupUnlockReadyRef.current = reject;
       });
     }
     await startupUnlockReadyPromiseRef.current;
-  }, [isStartupUnlockReady]);
+  }, [startupUnlockState]);
   
   /**
    * Store password temporarily for key derivation when file salt is discovered.
@@ -264,7 +313,7 @@ export function EncryptionProvider({ children }: Readonly<EncryptionProviderProp
       try {
         if (encryptionMode === "disabled") {
           setStartupUnlockReady(true);
-          setState((prev) => ({
+          updateEncryptionState((prev) => ({
             ...prev,
             isAuthenticated: true,
             username,
@@ -278,7 +327,10 @@ export function EncryptionProvider({ children }: Readonly<EncryptionProviderProp
           return true;
         }
 
-        setStartupUnlockReady(!isEncryptionEnabled);
+        const requiresVerifiedUnlock =
+          isEncryptionEnabled &&
+          (Boolean(salt) || encryptionStateRef.current.fileIsEncrypted);
+        setStartupUnlockReady(!requiresVerifiedUnlock);
 
         let derivedKey: CryptoKey | null = null;
 
@@ -293,7 +345,7 @@ export function EncryptionProvider({ children }: Readonly<EncryptionProviderProp
         }
         // If no salt, we'll derive key later when encrypting
 
-        setState((prev) => ({
+        updateEncryptionState((prev) => ({
           ...prev,
           isAuthenticated: true,
           username,
@@ -304,26 +356,41 @@ export function EncryptionProvider({ children }: Readonly<EncryptionProviderProp
 
         return true;
       } catch (error) {
-        setStartupUnlockReady(true);
+        if (isEncryptionEnabled && (Boolean(salt) || encryptionStateRef.current.fileIsEncrypted)) {
+          blockStartupUnlock();
+        } else {
+          setStartupUnlockReady(true);
+        }
         logger.error("Authentication failed", {
           error: error instanceof Error ? error.message : String(error),
         });
         return false;
       }
     },
-    [encryptionMode, isEncryptionEnabled, setStartupUnlockReady]
+    [blockStartupUnlock, encryptionMode, isEncryptionEnabled, setStartupUnlockReady, updateEncryptionState]
   );
 
   /**
    * Update file encryption status after reading file.
    */
   const setFileEncrypted = useCallback((isEncrypted: boolean, salt?: string) => {
-    setState((prev) => ({
+    updateEncryptionState((prev) => ({
       ...prev,
       fileIsEncrypted: isEncrypted,
       currentSalt: salt ?? prev.currentSalt,
     }));
-  }, []);
+    if (!isEncryptionEnabled || !isEncrypted) {
+      setStartupUnlockReady(true);
+      return;
+    }
+
+    if (encryptionStateRef.current.derivedKey) {
+      setStartupUnlockReady(true);
+      return;
+    }
+
+    blockStartupUnlock();
+  }, [blockStartupUnlock, isEncryptionEnabled, setStartupUnlockReady, updateEncryptionState]);
 
   /**
    * Initialize encryption for a new/unencrypted file.
@@ -347,13 +414,14 @@ export function EncryptionProvider({ children }: Readonly<EncryptionProviderProp
           DEFAULT_ENCRYPTION_CONFIG.iterations
         );
 
-        setState((prev) => ({
+        updateEncryptionState((prev) => ({
           ...prev,
           derivedKey: key,
           currentSalt: salt,
           fileIsEncrypted: true,
           currentIterations: DEFAULT_ENCRYPTION_CONFIG.iterations,
         }));
+        setStartupUnlockReady(true);
 
         logger.info("Encryption initialized with new salt");
         return { salt, key };
@@ -361,28 +429,42 @@ export function EncryptionProvider({ children }: Readonly<EncryptionProviderProp
         logger.error("Failed to initialize encryption", {
           error: error instanceof Error ? error.message : String(error),
         });
+        blockStartupUnlock();
         return null;
       }
     },
-    [encryptionMode, isEncryptionEnabled]
+    [blockStartupUnlock, encryptionMode, isEncryptionEnabled, setStartupUnlockReady, updateEncryptionState]
   );
 
   /**
    * Clear all credentials (logout).
    */
   const clearCredentials = useCallback(() => {
-    setState({
+    const workspaceIsEncrypted = encryptionStateRef.current.fileIsEncrypted;
+    const workspaceSalt = encryptionStateRef.current.currentSalt;
+    const workspaceIterations = encryptionStateRef.current.currentIterations;
+
+    updateEncryptionState(() => ({
       isAuthenticated: false,
       username: DEFAULT_USERNAME,
       derivedKey: null,
-      fileIsEncrypted: false,
-      currentSalt: null,
-      currentIterations: null,
-    });
+      fileIsEncrypted: workspaceIsEncrypted,
+      currentSalt: workspaceSalt,
+      currentIterations: workspaceIterations,
+    }));
     pendingPasswordRef.current = null;
-    setStartupUnlockReady(true);
+    if (isEncryptionEnabled && workspaceIsEncrypted) {
+      blockStartupUnlock();
+    } else {
+      setStartupUnlockReady(true);
+    }
     logger.lifecycle("Credentials cleared");
-  }, [setStartupUnlockReady]);
+  }, [
+    blockStartupUnlock,
+    isEncryptionEnabled,
+    setStartupUnlockReady,
+    updateEncryptionState,
+  ]);
 
   /**
    * Derive key from file salt using pending password.
@@ -416,7 +498,7 @@ export function EncryptionProvider({ children }: Readonly<EncryptionProviderProp
           effectiveIterations
         );
 
-        setState((prev) => ({
+        updateEncryptionState((prev) => ({
           ...prev,
           derivedKey: key,
           currentSalt: salt,
@@ -438,7 +520,7 @@ export function EncryptionProvider({ children }: Readonly<EncryptionProviderProp
         return { success: false, error: 'system_error', message };
       }
     },
-    [encryptionMode, isEncryptionEnabled]
+    [encryptionMode, isEncryptionEnabled, updateEncryptionState]
   );
 
   const value = useMemo<EncryptionContextValue>(
@@ -453,9 +535,10 @@ export function EncryptionProvider({ children }: Readonly<EncryptionProviderProp
       initializeEncryption,
       deriveKeyFromFileSalt,
       clearCredentials,
-      isStartupUnlockReady,
+      isStartupUnlockReady: startupUnlockState === "ready",
       waitForStartupUnlockReady,
       setStartupUnlockReady,
+      blockStartupUnlock,
       // Expose getter for pendingPassword to avoid stale ref issues in consumers
       get pendingPassword() {
         return pendingPasswordRef.current;
@@ -473,9 +556,10 @@ export function EncryptionProvider({ children }: Readonly<EncryptionProviderProp
       initializeEncryption,
       deriveKeyFromFileSalt,
       clearCredentials,
-      isStartupUnlockReady,
+      startupUnlockState,
       waitForStartupUnlockReady,
       setStartupUnlockReady,
+      blockStartupUnlock,
       setPendingPassword,
     ]
   );

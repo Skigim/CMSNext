@@ -114,7 +114,11 @@ export function DataManagerProvider({ children }: Readonly<DataManagerProviderPr
   // Run financial history migration once when connected
   useEffect(() => {
     if (!dataManager || !isConnected || isMigrationCompleted.current || isMigrationInProgress.current) return;
-    if (encryption.isEncryptionEnabled && !encryption.isStartupUnlockReady) {
+    if (
+      encryption.isEncryptionEnabled &&
+      encryption.fileIsEncrypted &&
+      !encryption.isStartupUnlockReady
+    ) {
       logger.debug('Deferring financial migration until startup unlock is ready');
       return;
     }
@@ -139,6 +143,7 @@ export function DataManagerProvider({ children }: Readonly<DataManagerProviderPr
     });
   }, [
     dataManager,
+    encryption.fileIsEncrypted,
     encryption.isEncryptionEnabled,
     encryption.isStartupUnlockReady,
     isConnected,

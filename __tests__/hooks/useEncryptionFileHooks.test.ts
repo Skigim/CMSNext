@@ -28,6 +28,7 @@ function createMockEncryptionContext() {
     waitForStartupUnlockReady: vi.fn<() => Promise<void>>(),
     setPendingPassword: vi.fn<(password: string | null) => void>(),
     setStartupUnlockReady: vi.fn<(isReady: boolean) => void>(),
+    blockStartupUnlock: vi.fn<() => void>(),
     setFileEncrypted: vi.fn<(isEncrypted: boolean, salt?: string) => void>(),
   };
 }
@@ -94,33 +95,20 @@ describe("useEncryptionFileHooks", () => {
     expect(setEncryptionHooks).toHaveBeenCalledWith(null);
   });
 
-  it("installs encryption hooks before authentication and keeps startup readiness tied to authentication", async () => {
+  it("installs encryption hooks before authentication without marking encrypted startup as ready", async () => {
     // ARRANGE
-    const { rerender } = renderHook(() => useEncryptionFileHooks());
+    renderHook(() => useEncryptionFileHooks());
 
     // ASSERT
     await waitFor(() => {
       expect(setEncryptionHooks).toHaveBeenCalledTimes(1);
     });
     expect(setEncryptionHooks.mock.calls[0]?.[0]).not.toBeNull();
-    expect(mockEncryptionContext.setStartupUnlockReady).toHaveBeenLastCalledWith(false);
-
-    // ACT
-    mockEncryptionContext = {
-      ...mockEncryptionContext,
-      isAuthenticated: true,
-    };
-    rerender();
-
-    // ASSERT
-    await waitFor(() => {
-      expect(mockEncryptionContext.setStartupUnlockReady).toHaveBeenLastCalledWith(true);
-    });
+    expect(mockEncryptionContext.setStartupUnlockReady).not.toHaveBeenCalled();
   });
 
-  it("waits for startup unlock readiness before attempting encrypted startup decrypts", async () => {
+  it("uses the login-submitted password to decrypt encrypted startup data without waiting on the readiness gate first", async () => {
     // ARRANGE
-    let resolveStartupUnlockReady: () => void = () => {};
     const derivedKey = { type: "secret" } as CryptoKey;
     const decryptedWorkspace: NormalizedFileData = {
       version: "2.1",
@@ -145,14 +133,17 @@ describe("useEncryptionFileHooks", () => {
       encryptedAt: "2026-04-01T00:00:00.000Z",
     };
 
-    mockEncryptionContext.waitForStartupUnlockReady.mockImplementation(
-      () =>
-        new Promise<void>((resolve) => {
-          resolveStartupUnlockReady = resolve;
-        }),
-    );
+    mockEncryptionContext.pendingPassword = "correct horse battery staple";
+    mockEncryptionContext.deriveKeyFromFileSalt.mockResolvedValue({
+      success: true,
+      data: derivedKey,
+    });
+    mockDecryptWithKey.mockResolvedValue({
+      success: true,
+      data: decryptedWorkspace,
+    });
 
-    const { rerender } = renderHook(() => useEncryptionFileHooks());
+    renderHook(() => useEncryptionFileHooks());
 
     await waitFor(() => {
       expect(setEncryptionHooks).toHaveBeenCalledTimes(1);
@@ -166,28 +157,7 @@ describe("useEncryptionFileHooks", () => {
     const decryptPromise = installedHooks.decrypt(encryptedPayload);
 
     // ASSERT
-    await waitFor(() => {
-      expect(mockEncryptionContext.waitForStartupUnlockReady).toHaveBeenCalledTimes(1);
-    });
-    expect(mockEncryptionContext.deriveKeyFromFileSalt).not.toHaveBeenCalled();
-
-    // ACT
-    mockEncryptionContext = {
-      ...mockEncryptionContext,
-      isAuthenticated: true,
-      isStartupUnlockReady: true,
-      pendingPassword: "correct horse battery staple",
-    };
-    mockEncryptionContext.deriveKeyFromFileSalt.mockResolvedValue({
-      success: true,
-      data: derivedKey,
-    });
-    mockDecryptWithKey.mockResolvedValue({
-      success: true,
-      data: decryptedWorkspace,
-    });
-    rerender();
-    resolveStartupUnlockReady();
+    expect(mockEncryptionContext.waitForStartupUnlockReady).not.toHaveBeenCalled();
 
     // ASSERT
     await expect(decryptPromise).resolves.toEqual(decryptedWorkspace);
@@ -196,6 +166,7 @@ describe("useEncryptionFileHooks", () => {
       600_000,
     );
     expect(mockDecryptWithKey).toHaveBeenCalledWith(encryptedPayload, derivedKey);
+    expect(mockEncryptionContext.setStartupUnlockReady).toHaveBeenCalledWith(true);
   });
 
   it("fails closed for encrypted startup writes until the existing workspace has been decrypted", async () => {
@@ -263,5 +234,70 @@ describe("useEncryptionFileHooks", () => {
     await failedWriteExpectation;
     expect(mockEncryptionContext.initializeEncryption).not.toHaveBeenCalled();
     expect(mockEncryptWithKey).not.toHaveBeenCalled();
+  });
+
+  it("blocks startup unlock after a decrypt failure and allows a later retry to succeed", async () => {
+    // ARRANGE
+    const derivedKey = { type: "secret" } as CryptoKey;
+    const decryptedWorkspace: NormalizedFileData = {
+      version: "2.1",
+      people: [],
+      cases: [],
+      financials: [],
+      notes: [],
+      alerts: [],
+      exported_at: "2026-04-01T00:00:00.000Z",
+      total_cases: 0,
+      categoryConfig: mergeCategoryConfig(),
+      activityLog: [],
+      templates: [],
+    };
+    const encryptedPayload: EncryptedPayload = {
+      version: 1,
+      algorithm: "AES-256-GCM",
+      salt: "workspace-salt",
+      iv: "workspace-iv",
+      ciphertext: "workspace-ciphertext",
+      iterations: 600_000,
+      encryptedAt: "2026-04-01T00:00:00.000Z",
+    };
+
+    mockEncryptionContext.pendingPassword = "first try";
+    mockEncryptionContext.deriveKeyFromFileSalt.mockResolvedValue({
+      success: true,
+      data: derivedKey,
+    });
+    mockDecryptWithKey.mockResolvedValueOnce({
+      success: false,
+      error: "Invalid password or corrupted data",
+    });
+
+    renderHook(() => useEncryptionFileHooks());
+
+    await waitFor(() => {
+      expect(setEncryptionHooks).toHaveBeenCalledTimes(1);
+    });
+
+    const installedHooks = setEncryptionHooks.mock.calls[0]?.[0] as {
+      decrypt: (payload: EncryptedPayload) => Promise<NormalizedFileData>;
+    };
+
+    // ACT & ASSERT
+    await expect(installedHooks.decrypt(encryptedPayload)).rejects.toThrow(
+      "Invalid password or corrupted data",
+    );
+    expect(mockEncryptionContext.blockStartupUnlock).toHaveBeenCalledTimes(1);
+    expect(mockEncryptionContext.setStartupUnlockReady).not.toHaveBeenCalledWith(true);
+
+    // ACT
+    mockEncryptionContext.pendingPassword = "second try";
+    mockDecryptWithKey.mockResolvedValueOnce({
+      success: true,
+      data: decryptedWorkspace,
+    });
+
+    // ASSERT
+    await expect(installedHooks.decrypt(encryptedPayload)).resolves.toEqual(decryptedWorkspace);
+    expect(mockEncryptionContext.setStartupUnlockReady).toHaveBeenCalledWith(true);
   });
 });

@@ -100,11 +100,11 @@ export function useEncryptionFileHooks(): UseEncryptionFileHooksResult {
   const { service } = useFileStorage();
   const [lastError, setLastError] = useState<string | null>(null);
   const {
-    isAuthenticated,
     isEncryptionEnabled,
     requiresPassword,
     setPendingPassword,
     setStartupUnlockReady,
+    blockStartupUnlock,
   } = encryption;
   const encryptionRef = useRef(encryption);
 
@@ -244,7 +244,7 @@ export function useEncryptionFileHooks(): UseEncryptionFileHooksResult {
        * Handles key derivation if needed (first read of encrypted file).
        */
       decrypt: async (data: EncryptedPayload): Promise<NormalizedFileData> => {
-        const currentEncryption = await waitForStartupUnlock();
+        const currentEncryption = encryptionRef.current;
 
         logger.debug("Decryption hook called", {
           hasKey: !!currentEncryption.derivedKey,
@@ -292,6 +292,7 @@ export function useEncryptionFileHooks(): UseEncryptionFileHooksResult {
             
             logger.error(errorMsg);
             setLastError(errorMsg);
+            blockStartupUnlock();
             throw new EncryptionError(errorCode, errorMsg);
           }
           
@@ -303,10 +304,12 @@ export function useEncryptionFileHooks(): UseEncryptionFileHooksResult {
         if (!decryptResult.success || !decryptResult.data) {
           const error = decryptResult.error || "Decryption failed";
           setLastError(error);
+          blockStartupUnlock();
           logger.error("Decryption failed", { error });
           throw new Error(error);
         }
 
+        setStartupUnlockReady(true);
         return decryptResult.data;
       },
 
@@ -317,7 +320,7 @@ export function useEncryptionFileHooks(): UseEncryptionFileHooksResult {
         return isEncryptedPayload(data);
       },
     };
-  }, [isEncryptionEnabled]);
+  }, [blockStartupUnlock, isEncryptionEnabled, setStartupUnlockReady]);
 
   // Set/clear encryption hooks on service when they change
   useEffect(() => {
@@ -336,10 +339,6 @@ export function useEncryptionFileHooks(): UseEncryptionFileHooksResult {
       service.setEncryptionHooks(null);
     };
   }, [service, encryptionHooks]);
-
-  useEffect(() => {
-    setStartupUnlockReady(!isEncryptionEnabled || isAuthenticated);
-  }, [isAuthenticated, isEncryptionEnabled, setStartupUnlockReady]);
 
   return {
     isActive: Boolean(service && isEncryptionEnabled),
