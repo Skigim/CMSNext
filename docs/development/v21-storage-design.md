@@ -441,10 +441,15 @@ Archived cases (`*.archive.json`, if any) use the same schema.  Options:
 
 | Term | Meaning |
 |---|---|
-| **Normalized (stored)** | `StoredCase` with `people: CasePersonRef[]` — what lives on disk |
-| **Hydrated (runtime)** | `CaseDisplay` with `person: Person` (primary) + `linkedPeople` — what the UI uses |
+| **Canonical persisted model** | `PersistedNormalizedFileDataV21` with `StoredPerson[]` and `PersistedCase[]` — what normal runtime reads accept from disk |
+| **Hydrated runtime/workspace model** | `NormalizedFileData` / `StoredCase` with resolved `Person` data plus the overlapping `CaseDisplay` UI surface — what services and UI consume after hydration |
+| **Compatibility/transitional surface** | `CaseRecord`, `NewCaseRecordData`, and related legacy fields retained to bridge older flows while cleanup is still in progress |
 | **Hydrate** | Resolve each `personId` in `CasePersonRef[]` → full `Person` objects at read time |
 | **Dehydrate** | Strip resolved `Person` objects back to `CasePersonRef[]` (ID refs only) at write time |
+
+> **Current repo naming note:** this design doc originally used `StoredCase` for the on-disk normalized shape. The current code distinguishes that persisted shape as `PersistedCase`, while `StoredCase` is the hydrated runtime case returned by services. Future documentation and cleanup work should follow the current code terminology.
+>
+> **`CaseRecord` note:** `CaseRecord` is not the canonical persisted v2.1 case model. In today's code, `CaseRecord.financials` and `CaseRecord.notes` are stale nested-case debt, while `CaseRecord.personId` and `CaseRecord.spouseId` remain active compatibility scaffolding until the remaining type cleanup lands. New persisted work should target normalized storage types; new runtime/UI work should target the hydrated case composite/view model.
 
 ### 7.2 Hydration in `CaseService`
 

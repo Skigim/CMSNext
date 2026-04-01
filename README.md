@@ -80,13 +80,13 @@ The main workspace file is:
 case-tracker-data.json
 ```
 
-The app currently uses a normalized v2.1 format with flat collections and foreign keys:
+The app currently persists a canonical normalized v2.1 format with flat collections and foreign keys:
 
 ```ts
-interface NormalizedFileData {
+interface PersistedNormalizedFileDataV21 {
   version: "2.1";
-  people: Person[];
-  cases: StoredCase[];
+  people: StoredPerson[];
+  cases: PersistedCase[];
   financials: StoredFinancialItem[];
   notes: StoredNote[];
   alerts: AlertRecord[];
@@ -99,6 +99,22 @@ interface NormalizedFileData {
 ```
 
 Persisted v2.1 data is hydrated and dehydrated through the storage helpers. Normal runtime reads now accept only canonical persisted v2.1 workspaces; legacy v2.0 and older formats must be upgraded first with the explicit migration tooling.
+
+### Case-model surfaces
+
+When working on case-model changes, distinguish these three layers:
+
+1. **Canonical persisted model** — the file on disk stores normalized top-level collections and uses persisted types such as `PersistedCase` and `StoredPerson`. This is the source of truth for storage work.
+2. **Hydrated runtime/workspace model** — `FileStorageService` and `CaseService` resolve persisted references into runtime shapes such as `NormalizedFileData`, `StoredCase`, and the overlapping `CaseDisplay` surface used by current UI flows. This is the target for runtime UI and workspace behavior.
+3. **Compatibility/transitional type surface** — `CaseRecord` and related compatibility-oriented fields still exist to bridge older flows and current type debt. `CaseRecord` is **not** the canonical persisted v2.1 case model.
+
+Current `CaseRecord` guidance:
+
+- `financials` and `notes` are stale compatibility debt; canonical v2.1 stores them in top-level `financials[]` and `notes[]`, not inside each case.
+- `personId` and `spouseId` are still active compatibility scaffolding in some flows, but authoritative person linkage is `PersistedCase.people[]`, with runtime hydration exposing `person` and `linkedPeople`.
+- Other case metadata on `CaseRecord` can still be active, so contributors should remove or reshape only the explicitly transitional fields rather than treating the whole type as dead.
+
+Type cleanup is still in progress. New persisted-model work should target normalized storage and persisted case types; new runtime/UI work should target the hydrated case composite/view model rather than extending `CaseRecord`.
 
 ### Additional files you may see
 
