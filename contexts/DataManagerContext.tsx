@@ -84,9 +84,9 @@ interface DataManagerProviderProps {
 export function DataManagerProvider({ children }: Readonly<DataManagerProviderProps>) {
   const { service, fileStorageService, isConnected, status } = useFileStorage();
   const encryption = useEncryption();
-  const hasMigrated = useRef(false);
-  const isMigrating = useRef(false);
-  const hasScheduledMigrationRetry = useRef(false);
+  const isMigrationCompleted = useRef(false);
+  const isMigrationInProgress = useRef(false);
+  const hasMigrationRetryScheduled = useRef(false);
   const [migrationRetryKey, setMigrationRetryKey] = useState(0);
   
   // Memoize DataManager creation to prevent recreation on every render
@@ -113,26 +113,29 @@ export function DataManagerProvider({ children }: Readonly<DataManagerProviderPr
 
   // Run financial history migration once when connected
   useEffect(() => {
-    if (!dataManager || !isConnected || hasMigrated.current || isMigrating.current) return;
+    if (!dataManager || !isConnected || isMigrationCompleted.current || isMigrationInProgress.current) return;
     if (encryption.isEncryptionEnabled && !encryption.isStartupUnlockReady) {
       logger.debug('Deferring financial migration until startup unlock is ready');
       return;
     }
 
-    isMigrating.current = true;
+    isMigrationInProgress.current = true;
     dataManager.migrateFinancialsWithoutHistory().then((count) => {
-      hasMigrated.current = true;
+      isMigrationCompleted.current = true;
       if (count > 0) {
         logger.info('Migrated financial items without history', { count });
       }
     }).catch((error) => {
       logger.error('Failed to migrate financial items', { error });
-      if (!hasScheduledMigrationRetry.current) {
-        hasScheduledMigrationRetry.current = true;
+      // Retry once on a transient startup failure so the first rejected read
+      // does not suppress migration for the whole session, but avoid loops if
+      // the workspace is persistently unreadable.
+      if (!hasMigrationRetryScheduled.current) {
+        hasMigrationRetryScheduled.current = true;
         setMigrationRetryKey((current) => current + 1);
       }
     }).finally(() => {
-      isMigrating.current = false;
+      isMigrationInProgress.current = false;
     });
   }, [
     dataManager,

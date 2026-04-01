@@ -18,7 +18,7 @@ import { createLogger } from "@/utils/logger";
 const logger = createLogger("useEncryptionFileHooks");
 
 interface UseEncryptionFileHooksResult {
-  /** Whether the active file service is in full-encryption mode and should have hooks applied */
+  /** Whether the current service/mode combination should expose active encryption hooks */
   isActive: boolean;
   /** Error from last encryption/decryption operation */
   lastError: string | null;
@@ -99,20 +99,29 @@ export function useEncryptionFileHooks(): UseEncryptionFileHooksResult {
   const encryption = useEncryption();
   const { service } = useFileStorage();
   const [lastError, setLastError] = useState<string | null>(null);
+  const {
+    isAuthenticated,
+    isEncryptionEnabled,
+    requiresPassword,
+    setPendingPassword,
+    setStartupUnlockReady,
+  } = encryption;
   const encryptionRef = useRef(encryption);
 
   useEffect(() => {
+    // Keep async hook callbacks pointed at the latest encryption state without
+    // reinstalling file-service hooks on every context field change.
     encryptionRef.current = encryption;
   }, [encryption]);
 
   // Expose storePassword as a pass-through to context
   const storePassword = useCallback((password: string) => {
-    if (encryption.requiresPassword) {
-      encryption.setPendingPassword(password);
+    if (requiresPassword) {
+      setPendingPassword(password);
     } else {
       logger.debug("Skipping pending password storage because this environment does not require it");
     }
-  }, [encryption]);
+  }, [requiresPassword, setPendingPassword]);
 
   // Clear error helper
   const clearError = useCallback(() => {
@@ -123,7 +132,7 @@ export function useEncryptionFileHooks(): UseEncryptionFileHooksResult {
   const encryptionHooks = useMemo(() => {
     // Noop/disabled environments intentionally leave files readable on disk,
     // so the file service should operate without encryption hooks in those modes.
-    if (!encryption.isEncryptionEnabled) {
+    if (!isEncryptionEnabled) {
       return null;
     }
 
@@ -136,6 +145,11 @@ export function useEncryptionFileHooks(): UseEncryptionFileHooksResult {
       throw new EncryptionError(errorCode, message);
     };
 
+    /**
+     * Wait until startup unlock orchestration has settled before touching
+     * encrypted workspace data. Re-read the ref after the await so encrypt and
+     * decrypt use any key/password state that changed while startup completed.
+     */
     const waitForStartupUnlock = async () => {
       let currentEncryption = encryptionRef.current;
 
@@ -303,7 +317,7 @@ export function useEncryptionFileHooks(): UseEncryptionFileHooksResult {
         return isEncryptedPayload(data);
       },
     };
-  }, [encryption]);
+  }, [isEncryptionEnabled]);
 
   // Set/clear encryption hooks on service when they change
   useEffect(() => {
@@ -324,13 +338,11 @@ export function useEncryptionFileHooks(): UseEncryptionFileHooksResult {
   }, [service, encryptionHooks]);
 
   useEffect(() => {
-    encryption.setStartupUnlockReady(
-      !encryption.isEncryptionEnabled || encryption.isAuthenticated,
-    );
-  }, [encryption]);
+    setStartupUnlockReady(!isEncryptionEnabled || isAuthenticated);
+  }, [isAuthenticated, isEncryptionEnabled, setStartupUnlockReady]);
 
   return {
-    isActive: Boolean(service && encryption.isEncryptionEnabled),
+    isActive: Boolean(service && isEncryptionEnabled),
     lastError,
     clearError,
     storePassword,

@@ -82,6 +82,18 @@ describe("useEncryptionFileHooks", () => {
     });
   });
 
+  it("stays inactive when full encryption is disabled even if the file service is available", () => {
+    // ARRANGE
+    mockEncryptionContext.isEncryptionEnabled = false;
+
+    // ACT
+    const { result } = renderHook(() => useEncryptionFileHooks());
+
+    // ASSERT
+    expect(result.current.isActive).toBe(false);
+    expect(setEncryptionHooks).toHaveBeenCalledWith(null);
+  });
+
   it("installs encryption hooks before authentication and keeps startup readiness tied to authentication", async () => {
     // ARRANGE
     const { rerender } = renderHook(() => useEncryptionFileHooks());
