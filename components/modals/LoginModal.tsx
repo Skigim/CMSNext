@@ -100,6 +100,7 @@ export function LoginModal({
         }
 
         setFileIsEncrypted(status?.encrypted ?? false);
+        encryption.setFileEncrypted(status?.encrypted ?? false);
       } catch (error) {
         logger.warn("File check failed", { error: String(error) });
       } finally {
@@ -121,8 +122,9 @@ export function LoginModal({
       setIsCheckingFile(true);
       setFileExists(true);
       setFileIsEncrypted(false);
+      encryption.setFileEncrypted(false);
     }
-  }, [isOpen]);
+  }, [encryption, isOpen]);
 
   const isDecryptionError = useCallback((error: unknown): boolean => {
     if (error instanceof EncryptionError) return true;

@@ -1,4 +1,4 @@
-import { useContext, createContext, ReactNode, useMemo, useEffect, useRef } from 'react';
+import { useContext, createContext, ReactNode, useMemo, useEffect, useRef, useState } from 'react';
 import { DataManager } from '@/utils/DataManager';
 import { useEncryption } from '@/contexts/EncryptionContext';
 import { useFileStorage } from '@/contexts/FileStorageContext';
@@ -85,6 +85,9 @@ export function DataManagerProvider({ children }: Readonly<DataManagerProviderPr
   const { service, fileStorageService, isConnected, status } = useFileStorage();
   const encryption = useEncryption();
   const hasMigrated = useRef(false);
+  const isMigrating = useRef(false);
+  const hasScheduledMigrationRetry = useRef(false);
+  const [migrationRetryKey, setMigrationRetryKey] = useState(0);
   
   // Memoize DataManager creation to prevent recreation on every render
   const dataManager = useMemo(() => {
@@ -110,25 +113,33 @@ export function DataManagerProvider({ children }: Readonly<DataManagerProviderPr
 
   // Run financial history migration once when connected
   useEffect(() => {
-    if (!dataManager || !isConnected || hasMigrated.current) return;
+    if (!dataManager || !isConnected || hasMigrated.current || isMigrating.current) return;
     if (encryption.isEncryptionEnabled && !encryption.isStartupUnlockReady) {
       logger.debug('Deferring financial migration until startup unlock is ready');
       return;
     }
-    
-    hasMigrated.current = true;
+
+    isMigrating.current = true;
     dataManager.migrateFinancialsWithoutHistory().then((count) => {
+      hasMigrated.current = true;
       if (count > 0) {
         logger.info('Migrated financial items without history', { count });
       }
     }).catch((error) => {
       logger.error('Failed to migrate financial items', { error });
+      if (!hasScheduledMigrationRetry.current) {
+        hasScheduledMigrationRetry.current = true;
+        setMigrationRetryKey((current) => current + 1);
+      }
+    }).finally(() => {
+      isMigrating.current = false;
     });
   }, [
     dataManager,
     encryption.isEncryptionEnabled,
     encryption.isStartupUnlockReady,
     isConnected,
+    migrationRetryKey,
   ]);
 
   const contextValue = useMemo(() => ({ dataManager }), [dataManager]);

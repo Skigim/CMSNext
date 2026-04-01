@@ -12,12 +12,14 @@ const setPendingPassword = vi.fn();
 const authenticate = vi.fn();
 const clearCredentials = vi.fn();
 const waitForStartupUnlockReady = vi.fn();
+const setFileEncrypted = vi.fn();
 
 const mockEncryptionContext = {
   setPendingPassword,
   authenticate,
   clearCredentials,
   waitForStartupUnlockReady,
+  setFileEncrypted,
   requiresPassword: true,
   isEncryptionEnabled: true,
   isStartupUnlockReady: true,
@@ -55,6 +57,7 @@ describe("LoginModal", () => {
     authenticate.mockReset();
     clearCredentials.mockReset();
     waitForStartupUnlockReady.mockReset();
+    setFileEncrypted.mockReset();
 
     mockEncryptionContext.requiresPassword = true;
     mockEncryptionContext.isEncryptionEnabled = true;
@@ -81,6 +84,7 @@ describe("LoginModal", () => {
     await waitFor(() => {
       expect(checkFileEncryptionStatus).toHaveBeenCalledTimes(1);
     });
+    expect(setFileEncrypted).toHaveBeenCalledWith(false);
     const results = await axe(baseElement);
 
     // Assert
@@ -109,6 +113,7 @@ describe("LoginModal", () => {
     await waitFor(() => {
       expect(checkFileEncryptionStatus).toHaveBeenCalledTimes(1);
     });
+    expect(setFileEncrypted).toHaveBeenCalledWith(true);
 
     // ACT
     await user.click(screen.getByRole("button", { name: "Open Workspace" }));
@@ -147,6 +152,7 @@ describe("LoginModal", () => {
     await waitFor(() => {
       expect(checkFileEncryptionStatus).toHaveBeenCalledTimes(1);
     });
+    expect(setFileEncrypted).toHaveBeenCalledWith(true);
 
     // ACT
     await user.type(screen.getByLabelText("Password"), "correct horse battery staple");
