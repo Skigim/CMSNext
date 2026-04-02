@@ -441,10 +441,15 @@ Archived cases (`*.archive.json`, if any) use the same schema.  Options:
 
 | Term | Meaning |
 |---|---|
-| **Normalized (stored)** | `StoredCase` with `people: CasePersonRef[]` — what lives on disk |
-| **Hydrated (runtime)** | `CaseDisplay` with `person: Person` (primary) + `linkedPeople` — what the UI uses |
+| **Canonical persisted model** | `PersistedNormalizedFileDataV21` with `StoredPerson[]` and `PersistedCase[]` — what normal runtime reads accept from disk |
+| **Hydrated runtime/workspace model** | `NormalizedFileData` / `StoredCase` with resolved `Person` data plus the overlapping `CaseDisplay` UI surface — what services and UI consume after hydration |
+| **Compatibility/transitional surface** | `CaseRecord`, `NewCaseRecordData`, and related legacy fields retained to bridge older flows while cleanup is still in progress |
 | **Hydrate** | Resolve each `personId` in `CasePersonRef[]` → full `Person` objects at read time |
 | **Dehydrate** | Strip resolved `Person` objects back to `CasePersonRef[]` (ID refs only) at write time |
+
+> **Current repo naming note:** The codebase uses `StoredPerson` for persisted people and `PersistedCase` for persisted cases, which appears inconsistent but reflects the evolution of the type system. `StoredPerson` was named to distinguish it from the hydrated `Person` type (which includes circular references like `familyMembers`), while `PersistedCase` was introduced later to distinguish the on-disk shape from `StoredCase` (the hydrated runtime case). Other entities use the `Stored*` prefix (`StoredFinancialItem`, `StoredNote`). This mixed naming convention is intentional and distinguishes between persisted formats and runtime hydration layers.
+>
+> **`CaseRecord` note:** `CaseRecord` is not the canonical persisted v2.1 case model. In today's code, `CaseRecord.financials` and `CaseRecord.notes` are stale nested-case debt, while `CaseRecord.personId` and `CaseRecord.spouseId` remain active compatibility scaffolding until the remaining type cleanup lands. New persisted work should target normalized storage types; new runtime/UI work should target the hydrated case composite/view model.
 
 ### 7.2 Hydration in `CaseService`
 
