@@ -476,11 +476,13 @@ Document generation feature group. Major refactor completed Jan 2026 to unify al
 
 ### Implementation Snapshot
 
-**Rating: 88/100** _(Updated January 14, 2026)_
+**Rating: 88/100** _(Updated April 2, 2026)_
 
 Dashboard Transformation is well underway with **Phases 1-4 Complete**. The dashboard now serves as a true command center with global quick actions, a priority task queue, and instant access to recent/pinned cases. The infrastructure is robust with a widget registry, lazy loading, and purely domain-driven data logic.
 
 **January 14, 2026:** Priority scoring system now fully config-driven with no hardcoded fallbacks (EXCLUDED_STATUSES removed) - all scoring functions require explicit `StatusConfig.countsAsCompleted` flags and `AlertTypeConfig` weights. System fails open when config missing, preventing silent bugs from masked misconfiguration.
+
+**April 2, 2026:** Case-specific activity detail dialogs in the dashboard now keep the dialog shell bounded while long timelines scroll internally, preserving header/footer access and aligning the widget with the repo's bounded-scroll dialog pattern.
 
 ### Strengths
 
@@ -489,6 +491,7 @@ Dashboard Transformation is well underway with **Phases 1-4 Complete**. The dash
 - **Today's Work Widget (Phase 2)**: Priority task queue using weighted scoring (Intake status 5000pts, alerts 500-100pts by type, age factors) to surface critical cases
 - **Recent & Pinned Cases (Phase 3)**: Dedicated widgets tracking user history and favorites with one-click navigation
 - **Card Actions (Phase 4)**: Inline actions on dashboard cards (Pin, Quick Note) without leaving the view
+- **Case Activity Drill-Down**: Activity widget rows open a case-specific detail dialog with an internally scrollable timeline so long histories remain reviewable without pushing the modal off-screen
 - **Domain-Driven Logic**: All dashboard logic (priority, recency, pinning) resides in `domain/dashboard/*.ts` with high test coverage
 - **Performance**: Lazy loading via Suspense + error boundaries per widget; telemetry tracks load times
 - **Responsive Layout**: 2-column or 3-column grid adapting to content and screen size
@@ -505,10 +508,10 @@ Dashboard Transformation is well underway with **Phases 1-4 Complete**. The dash
 
 ### Coverage & Telemetry
 
-ests: `__tests__/domain/dashboard/priorityQueue.test.ts` - 59 tests for priority scoring logic
+- Tests: `__tests__/domain/dashboard/priorityQueue.test.ts` - 59 tests for priority scoring logic
 
 - Hook suites: `useWidgetData` tested for data fetching, freshness tracking, and refresh intervals
-- Widget-specific tests verify data aggregation and rendering
+- Widget-specific tests verify data aggregation, rendering, and activity detail dialog layout
 - Performance markers tracked via `recordPerformanceMarker()` for each widget data fetch
 
 ### Owners / Notes

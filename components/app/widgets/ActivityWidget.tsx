@@ -798,13 +798,10 @@ export function ActivityWidget({ activityLogState, metadata, onViewCase }: Reado
               </div>
 
               <div
-                className="mt-3 flex flex-1 flex-col overflow-hidden max-h-[50vh] sm:max-h-[60vh]"
+                className="mt-3 flex min-h-0 flex-1 flex-col overflow-hidden"
                 data-testid="activity-detail-scroll-container"
               >
-                <ScrollArea
-                  className="h-full max-h-[50vh] sm:max-h-[60vh]"
-                  data-testid="activity-detail-scroll-area"
-                >
+                <ScrollArea className="min-h-0 flex-1" data-testid="activity-detail-scroll-area">
                   <div className="space-y-2 pr-4">
                     {selectedTimelineItem.entries.map((entry) => {
                       const Icon = entry.icon;

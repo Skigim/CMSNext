@@ -42,8 +42,8 @@ The current app combines:
 
 ### Dashboard and productivity
 
-- The dashboard includes quick actions, today's work, activity, and analytics widgets.
-- Activity logging is built into the data layer and feeds dashboard reporting.
+- The dashboard includes quick actions, today's work, activity, and analytics widgets, including case-specific activity drill-down dialogs.
+- Activity logging is built into the data layer and feeds dashboard reporting, including bounded in-dialog review of recent case timelines.
 - Keyboard shortcuts, sidebar navigation events, and search shortcuts are implemented in the app shell.
 
 ### Templates and generated text
@@ -85,8 +85,8 @@ The app currently persists a canonical normalized v2.1 format with flat collecti
 ```ts
 interface PersistedNormalizedFileDataV21 {
   version: "2.1";
-  people: StoredPerson[];        // Note: uses StoredPerson, not PersistedPerson
-  cases: PersistedCase[];         // Note: uses PersistedCase, not StoredCase
+  people: StoredPerson[]; // Note: uses StoredPerson, not PersistedPerson
+  cases: PersistedCase[]; // Note: uses PersistedCase, not StoredCase
   financials: StoredFinancialItem[];
   notes: StoredNote[];
   alerts: AlertRecord[];

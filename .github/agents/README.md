@@ -53,6 +53,8 @@ Use `triage` as the manager when the task needs discovery, routing, or stage cha
 5. `documentation` closes out the task when repo guidance, registry metadata, or customization docs need to be synchronized with the delivered change.
 6. Specialists hand back to `triage` when the next step is no longer obvious.
 
+When an `audit` result is mostly about missing regression coverage, accessibility validation, or unverified browser behavior rather than a confirmed implementation bug, hand off to `testing` first. Return to `frontend` only if targeted tests or required manual Chromium verification confirm a real UI defect.
+
 ## Related Skills
 
 | Skill            | Purpose                                                                    |

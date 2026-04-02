@@ -10,7 +10,7 @@ argument-hint: "Describe the audit scope, target files or feature area, and whic
 handoffs:
   - label: Add Test Coverage
     agent: testing
-    prompt: "Add or review any targeted tests needed to cover the audit findings above."
+    prompt: "Add or review any targeted tests and required manual Chromium verification needed to cover the audit findings above."
     send: false
   - label: Route Remediation
     agent: triage

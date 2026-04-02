@@ -25,6 +25,53 @@ describe("ActivityWidget", () => {
     vi.clearAllMocks();
   });
 
+  function createActivityEntry(
+    index: number,
+    timestamp: number,
+    type: CaseActivityEntry["type"],
+  ): CaseActivityEntry {
+    if (type === "note-added") {
+      return {
+        id: `note-${index}`,
+        timestamp: new Date(timestamp).toISOString(),
+        caseId: "case-1",
+        caseName: "Jamie Rivera",
+        caseMcn: "MCN123",
+        type,
+        payload: {
+          noteId: `note-${index}`,
+          category: "Follow-up",
+          preview: `Client update ${index}`,
+        },
+      };
+    }
+
+    if (type === "status-change") {
+      return {
+        id: `status-${index}`,
+        timestamp: new Date(timestamp).toISOString(),
+        caseId: "case-1",
+        caseName: "Jamie Rivera",
+        caseMcn: "MCN123",
+        type,
+        payload: {
+          fromStatus: "Pending",
+          toStatus: `Approved ${index}`,
+        },
+      };
+    }
+
+    return {
+      id: `view-${index}`,
+      timestamp: new Date(timestamp).toISOString(),
+      caseId: "case-1",
+      caseName: "Jamie Rivera",
+      caseMcn: "MCN123",
+      type,
+      payload: {},
+    };
+  }
+
   it("consolidates recent activity to one row per case and opens a detail dialog", async () => {
     // ARRANGE
     const user = userEvent.setup();
@@ -96,6 +143,8 @@ describe("ActivityWidget", () => {
     const dialog = await screen.findByRole("dialog");
     const scrollContainer = within(dialog).getByTestId("activity-detail-scroll-container");
     const scrollArea = within(dialog).getByTestId("activity-detail-scroll-area");
+    const scrollViewport = scrollArea.querySelector("[data-radix-scroll-area-viewport]");
+    const openCaseButton = within(dialog).getByRole("button", { name: "Open case" });
     expect(within(dialog).getByText("Activity for Jamie Rivera")).toBeInTheDocument();
     expect(within(dialog).getByText("Status: Pending → Approved")).toBeInTheDocument();
     expect(within(dialog).getByText("Note added")).toBeInTheDocument();
@@ -104,13 +153,16 @@ describe("ActivityWidget", () => {
     expect(scrollContainer).toHaveClass(
       "mt-3",
       "flex",
+      "min-h-0",
       "flex-1",
       "flex-col",
       "overflow-hidden",
-      "max-h-[50vh]",
-      "sm:max-h-[60vh]",
     );
-    expect(scrollArea).toHaveClass("h-full", "max-h-[50vh]", "sm:max-h-[60vh]");
+    expect(scrollArea).toHaveClass("min-h-0", "flex-1");
+    expect(scrollViewport).not.toBeNull();
+    expect(scrollViewport).toHaveClass("size-full");
+    expect(scrollViewport).toContainElement(within(dialog).getByText("Case viewed"));
+    expect(scrollViewport).not.toContainElement(openCaseButton);
     expect(scrollContainer.parentElement).toHaveClass(
       "flex",
       "min-h-0",
@@ -118,9 +170,9 @@ describe("ActivityWidget", () => {
       "flex-col",
       "overflow-hidden",
     );
-    expect(within(dialog).getByRole("button", { name: "Open case" })).toBeInTheDocument();
+    expect(openCaseButton).toBeInTheDocument();
 
-    await user.click(within(dialog).getByRole("button", { name: "Open case" }));
+    await user.click(openCaseButton);
 
     expect(onViewCase).toHaveBeenCalledWith("case-1");
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
@@ -179,29 +231,24 @@ describe("ActivityWidget", () => {
   it("has no accessibility violations", async () => {
     // ARRANGE
     const now = Date.now();
-    const activityLog: CaseActivityEntry[] = [
-      {
-        id: "view-1",
-        timestamp: new Date(now - 15 * 60 * 1000).toISOString(),
-        caseId: "case-1",
-        caseName: "Jamie Rivera",
-        caseMcn: "MCN123",
-        type: "case-viewed",
-        payload: {},
-      },
-    ];
+    const activityLog: CaseActivityEntry[] = Array.from({ length: 12 }, (_, index) => {
+      const entryType = index % 3 === 0 ? "case-viewed" : index % 3 === 1 ? "note-added" : "status-change";
+      return createActivityEntry(index + 1, now - (index + 1) * 5 * 60 * 1000, entryType);
+    });
+    const user = userEvent.setup();
 
     // ACT
-    const { container } = render(
+    render(
       <ActivityWidget
         activityLogState={createMockCaseActivityLogState({ activityLog })}
         onViewCase={vi.fn()}
       />
     );
-    await screen.findByRole("button", { name: "View activity for Jamie Rivera" });
+    await user.click(await screen.findByRole("button", { name: "View activity for Jamie Rivera" }));
+    await screen.findByRole("dialog", { name: "Activity for Jamie Rivera" });
 
     // ASSERT
-    const results = await axe(container);
+    const results = await axe(document.body);
     expect(results).toHaveNoViolations();
   });
 });

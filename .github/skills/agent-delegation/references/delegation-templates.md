@@ -56,4 +56,6 @@ Choose the most specific agent that matches the center of gravity of the task:
 - storage: File System Access API, autosave, file handles, persistence bugs and migrations
 - testing: Vitest, React Testing Library, jest-axe, failures, coverage gaps
 - Explore: broad read-only discovery when the right files or code paths are not clear yet
+
+If an audit finds mainly validation gaps, missing accessibility coverage, or browser-only uncertainty rather than a confirmed code defect, route the next step to testing first. Escalate to frontend only when targeted tests or manual Chromium verification show a real UI problem.
 ```
