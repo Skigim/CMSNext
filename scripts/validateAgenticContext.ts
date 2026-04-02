@@ -26,7 +26,8 @@ const REQUIRED_FILES: ContextConfig = {
     '.github/instructions/frontend.instructions.md',
     '.github/instructions/tests.instructions.md',
     'docs/development/feature-catalogue.md',
-    'docs/development/ROADMAP_MAR_2026.md',
+    'docs/development/ROADMAP_APR_2026.md',
+    'docs/development/features/README.md',
   ],
   development: [
     '.github/COMMIT_STYLE.md',

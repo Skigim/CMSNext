@@ -191,11 +191,12 @@ CMSNext/
 │   ├── testing-guide.md        # Vitest/RTL patterns
 │   ├── BRANCHING.md            # Git workflow
 │   ├── COMMIT_STYLE.md         # Commit message format
-│   └── agents/                 # Specialized agent guides
-│       ├── storage.agent.md    # File System Access API patterns
-│       ├── hooks.agent.md      # Custom hook patterns
-│       ├── memories.agent.md   # Repository memory index
-│       └── templates.agent.md  # Ready-to-use prompt templates
+│   ├── agents/                 # Specialized agent guides
+│   │   ├── storage.agent.md    # File System Access API patterns
+│   │   └── hooks.agent.md      # Custom hook patterns
+│   └── skills/                 # On-demand workflow and memory skills
+│       ├── agent-delegation/   # Delegation workflow references
+│       └── repo-memories/      # Repository memory index
 │
 ├── styles/                     # Global CSS, theme definitions
 ├── public/                     # Static assets
@@ -668,18 +669,19 @@ if (!api) {
 
 ## Key Documentation
 
-| Resource                        | Location                                 |
-| ------------------------------- | ---------------------------------------- |
-| Architecture overview           | `.github/copilot-instructions.md`        |
-| Service/domain/hook patterns    | `.github/implementation-guide.md`        |
-| Component and Tailwind patterns | `.github/ui-guide.md`                    |
-| Testing standards               | `.github/testing-guide.md`               |
-| Storage layer guide             | `.github/agents/storage.agent.md`              |
-| Hook patterns                   | `.github/agents/hooks.agent.md`                |
-| Repository memories             | `.github/agents/memories.agent.md`             |
-| Prompt templates                | `.github/agents/templates.agent.md`            |
-| Current roadmap                 | `docs/development/ROADMAP_MAR_2026.md`   |
-| Feature catalogue               | `docs/development/feature-catalogue.md`  |
-| Deployment                      | `docs/DeploymentGuide.md`                |
-| SonarCloud issues               | `docs/audit/sonarcloud-open-issues.md`   |
-| LLM index                       | `llms.txt`                               |
+| Resource                        | Location                                   |
+| ------------------------------- | ------------------------------------------ |
+| Architecture overview           | `.github/copilot-instructions.md`          |
+| Service/domain/hook patterns    | `.github/implementation-guide.md`          |
+| Component and Tailwind patterns | `.github/ui-guide.md`                      |
+| Testing standards               | `.github/testing-guide.md`                 |
+| Storage layer guide             | `.github/agents/storage.agent.md`          |
+| Hook patterns                   | `.github/agents/hooks.agent.md`            |
+| Repository memories             | `.github/skills/repo-memories/SKILL.md`    |
+| Agent delegation skill          | `.github/skills/agent-delegation/SKILL.md` |
+| Current roadmap                 | `docs/development/ROADMAP_APR_2026.md`     |
+| Feature workflow                | `docs/development/features/README.md`      |
+| Feature catalogue               | `docs/development/feature-catalogue.md`    |
+| Deployment                      | `docs/DeploymentGuide.md`                  |
+| SonarCloud issues               | `docs/audit/sonarcloud-open-issues.md`     |
+| LLM index                       | `llms.txt`                                 |

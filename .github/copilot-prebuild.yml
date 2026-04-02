@@ -35,29 +35,33 @@ context:
     - path: .github/instructions/tests.instructions.md
       priority: high
       description: Path-scoped testing instructions for Vitest, RTL, and shared test helpers
-    
+
     - path: docs/development/feature-catalogue.md
       priority: high
       description: Complete feature inventory and implementation status
-    
-    - path: docs/development/ROADMAP_MAR_2026.md
+
+    - path: docs/development/ROADMAP_APR_2026.md
       priority: medium
       description: Current roadmap and planned features
-    
+
+    - path: docs/development/features/README.md
+      priority: medium
+      description: Feature delivery workflow, artifact tree, and stage gates for larger work
+
     - path: README.md
       priority: medium
       description: Product overview, architecture summary, and command reference
-  
+
   # Development guidelines
   development:
     - path: .github/COMMIT_STYLE.md
       priority: high
       description: Commit message conventions and examples
-    
+
     - path: .github/implementation-guide.md
       priority: high
       description: Service, domain, hook, and data flow implementation patterns
-    
+
     - path: .github/testing-guide.md
       priority: medium
       description: Testing stack, patterns, and strict assertion guidance
@@ -65,35 +69,35 @@ context:
     - path: .github/ui-guide.md
       priority: medium
       description: UI component, accessibility, and Tailwind guidance
-  
+
   # Configuration files
   config:
     - path: vite.config.ts
       priority: high
       description: Build configuration and optimizations
-    
+
     - path: vitest.config.ts
       priority: high
       description: Testing configuration and coverage thresholds
-    
+
     - path: eslint.config.js
       priority: medium
       description: Linting rules (ESLint 9 flat config)
-    
+
     - path: components.json
       priority: medium
       description: shadcn/ui component registry and alias configuration
-  
+
   # Core patterns and utilities
   patterns:
     - path: components/profiling/
       priority: medium
       description: Performance profiling patterns
-    
+
     - path: scripts/
       priority: low
       description: Development scripts and tooling
-    
+
     - path: contexts/
       priority: high
       description: React context patterns (FileStorage, Theme, DataManager)
@@ -112,12 +116,12 @@ prompts:
       - Maintain accessibility (keyboard navigation, focus management)
       - Use Tailwind v4 tokens only
       - Document in feature-catalogue.md
-    
+
     examples:
       - Add a new case status filter
       - Implement bulk case operations
       - Create custom report generator
-  
+
   # Bug fix prompts
   bugfix:
     template: |
@@ -128,12 +132,12 @@ prompts:
       - Add regression test to prevent recurrence
       - Use conventional commit format (fix: description)
       - Toast error messages via Sonner
-    
+
     examples:
       - File storage synchronization issue
       - Theme switching visual glitch
       - Autosave not triggering
-  
+
   # Refactoring prompts
   refactor:
     template: |
@@ -145,12 +149,12 @@ prompts:
       - No localStorage/sessionStorage/network APIs
       - Update tests to match refactored code
       - Document changes in commit message body
-    
+
     examples:
       - Extract reusable hook from component
       - Simplify complex component logic
       - Consolidate duplicate code patterns
-  
+
   # Testing prompts
   testing:
     template: |
@@ -161,7 +165,7 @@ prompts:
       - Include happy path + error cases + edge cases
       - Test accessibility with jest-axe
       - Mock autosave with proper debounce simulation
-    
+
     examples:
       - Test case creation flow
       - Test file storage error handling
@@ -173,12 +177,12 @@ antipatterns:
     - "❌ No localStorage/sessionStorage"
     - "❌ No direct filesystem calls outside provider stack"
     - "❌ No network APIs or databases"
-  
+
   ui:
     - "❌ No alert() dialogs"
     - "❌ No bespoke component libraries"
     - "❌ No inline styles diverging from shadcn"
-  
+
   state:
     - "❌ No mutations without storage notification"
     - "❌ No optimistic UI ignoring autosave timing"
@@ -191,11 +195,11 @@ patterns:
     example: |
       const api = fileDataProvider.getAPI();
       if (!api) return;
-      
+
       await api.updateCase(caseId, updates);
       safeNotifyFileStorageChange();
       toast.success("Case updated");
-  
+
   component_with_hook:
     description: "Use domain hooks for data access"
     example: |
@@ -205,12 +209,12 @@ patterns:
         
         // Component logic...
       }
-  
+
   toast_feedback:
     description: "User feedback with Sonner toasts"
     example: |
       import { toast } from "sonner";
-      
+
       toast.loading("Saving...");
       try {
         await saveData();
@@ -225,18 +229,18 @@ file_organization:
     - "Place UI components in components/"
     - "Use shadcn/ui primitives from components/ui/"
     - "Domain-specific components in subfolders (financial/, diagnostics/)"
-  
+
   contexts:
     - "React contexts in contexts/"
     - "FileStorageContext for permissions/handles"
     - "ThemeContext for theme management"
     - "DataManagerContext for data operations"
-  
+
   utils:
     - "Pure utility functions in utils/"
     - "Type definitions in types/"
     - "Keep utils stateless and testable"
-  
+
   tests:
     - "Tests alongside source files: *.test.tsx"
     - "Shared test setup in src/test/setup.ts"
@@ -249,7 +253,7 @@ integrations:
       command: npx shadcn@latest mcp
       config_path: ~/.codex/config.toml
       description: MCP server for shadcn component installation
-  
+
   github_actions:
     - workflow: .github/workflows/deploy.yml
       triggers: [push to main, manual dispatch]
@@ -261,7 +265,7 @@ performance:
     - "Autosave debounce: 5 seconds"
     - "Test coverage: 70%+ (all categories)"
     - "Bundle analysis available via npm run build:analyze"
-  
+
   tools:
     - scripts/autosaveBenchmark.ts
     - scripts/dashboardLoadBenchmark.ts
@@ -275,14 +279,14 @@ workflow:
     - "Review .github/copilot-instructions.md"
     - "Review matching files in .github/instructions/"
     - "Run .github/setup-commit-template.sh"
-  
+
   development:
     - npm run typecheck
     - npm run lint
     - npm run test:run
     - npm run build
     - npm run dev
-  
+
   production:
     - npm run build:pages
     - npm run preview
@@ -301,12 +305,13 @@ documentation:
     - "Use conventional commits (feat, fix, refactor, etc.)"
     - "Reference .github/COMMIT_STYLE.md"
     - "Include bullet points for complex changes"
-  
+
   code_comments:
     - "Document complex business logic"
     - "Explain non-obvious patterns"
     - "Add JSDoc for public APIs"
-  
+
   feature_tracking:
     - "Update docs/development/feature-catalogue.md"
     - "Update the active docs/development/ROADMAP_*.md file when planning"
+    - "Use docs/development/features/README.md artifacts for larger or cross-layer feature work"
