@@ -91,7 +91,7 @@ describe("ActivityWidget", () => {
     expect(jamieRow).toBeInTheDocument();
     expect(screen.getByText("3 actions · 1 view · 1 status · 1 note")).toBeInTheDocument();
 
-     await user.click(jamieRow);
+    await user.click(jamieRow);
 
     const dialog = await screen.findByRole("dialog");
     const scrollArea = within(dialog).getByTestId("activity-detail-scroll-area");
