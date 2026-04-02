@@ -4,17 +4,22 @@ AI instruction files and Git workflow tools for CMSNext.
 
 ## AI Instructions
 
-| File                             | Purpose                                                                                                      |
-| -------------------------------- | ------------------------------------------------------------------------------------------------------------ |
-| `copilot-instructions.md`        | Master AI instruction file (architecture)                                                                    |
-| `instructions/*.instructions.md` | Path-scoped Copilot instructions for implementation, frontend, and tests                                     |
-| `agents/*.agent.md`              | Focused custom agents for audit, frontend, domain, hooks, services, storage, documentation, and testing work |
-| `skills/*/SKILL.md`              | On-demand skills for repo memory and delegation workflows                                                    |
-| `implementation-guide.md`        | Services, domain, hooks, data flow                                                                           |
-| `ui-guide.md`                    | React components, shadcn/ui, Tailwind                                                                        |
-| `testing-guide.md`               | Vitest, RTL, mocking patterns                                                                                |
-| `agents/`                        | Custom agent definitions                                                                                     |
-| `skills/`                        | Skill folders with references and assets                                                                     |
+| File                             | Purpose                                                                                                              |
+| -------------------------------- | -------------------------------------------------------------------------------------------------------------------- |
+| `copilot-instructions.md`        | Master AI instruction file (architecture)                                                                            |
+| `instructions/*.instructions.md` | Path-scoped Copilot instructions for implementation, frontend, and tests                                             |
+| `agents/*.agent.md`              | Focused custom agents for triage, audit, frontend, domain, hooks, services, storage, documentation, and testing work |
+| `skills/*/SKILL.md`              | On-demand skills for repo memory and delegation workflows                                                            |
+| `implementation-guide.md`        | Services, domain, hooks, data flow                                                                                   |
+| `ui-guide.md`                    | React components, shadcn/ui, Tailwind                                                                                |
+| `testing-guide.md`               | Vitest, RTL, mocking patterns                                                                                        |
+| `agents/`                        | Custom agent definitions                                                                                             |
+| `skills/`                        | Skill folders with references and assets                                                                             |
+
+## Workflow Docs
+
+- `docs/development/features/README.md` defines the repo-native feature delivery workflow and artifact tree for spec, design, task plan, and alignment work.
+- `docs/development/features/templates/` contains the starter templates for those artifacts.
 
 ## Copilot Customization Structure
 
