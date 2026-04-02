@@ -2,7 +2,7 @@
 
 > Living index of marketable features, their current implementation status, quality, and future investments.
 
-**Last Updated:** March 30, 2026
+**Last Updated:** April 2, 2026
 
 ## How to Use This Document
 
@@ -16,24 +16,24 @@
 
 ---
 
-## Quick Reference (March 2026)
+## Quick Reference (April 2026)
 
-| Feature               | Rating | Trend | Notes                                                                      |
-| --------------------- | ------ | ----- | -------------------------------------------------------------------------- |
-| Case Management       | 95     | ↑     | Normalized people hydration complete; Week 4 UI follow-through remains     |
-| Financial Operations  | 92     | →     | Mature CRUD/history flows; month-view follow-through remains               |
-| Template System       | 93     | ↑     | Unified templates now cover VR, footer, summary, and narrative flows       |
-| Local-First Storage   | 91     | ↑     | Persisted v2.1 workspace/archive migration path shipped                    |
-| Developer Enablement  | 90     | ↑     | 1141 passing tests, March instruction refresh, keyboard shortcuts shipped  |
-| Dashboard & Insights  | 88     | →     | Priority scoring solid; widget personalization still open                  |
-| Premium UI/UX         | 88     | ↑     | Keyboard shortcut customization shipped; accessibility audit still pending |
-| Notes & Collaboration | 84     | →     | Stable note/case summary workflows, no cross-case search yet               |
-| Case Archival         | 89     | ↑     | Archive migration path now aligned with persisted v2.1 workspaces          |
-| Data Portability      | 86     | ↑     | Explicit upgrade tooling now covers active workspace and archive files     |
-| Configurable Statuses | 78     | →     | Stable and integrated into dashboard metrics                               |
-| Legacy Migration      | 84     | ↑     | v2.0-to-v2.1 upgrade tooling shipped through Settings                      |
-| Autosave & Recovery   | 75     | →     | Reliable debounce/retry flow; richer visibility still open                 |
-| Feature Flags         | 72     | →     | Infrastructure intact; still mostly in-memory/dev-facing                   |
+| Feature               | Rating | Trend | Notes                                                                                                      |
+| --------------------- | ------ | ----- | ---------------------------------------------------------------------------------------------------------- |
+| Case Management       | 95     | ↑     | Normalized people reuse and household rendering are shipped; one edit-mode reassignment limitation remains |
+| Financial Operations  | 92     | →     | Mature CRUD/history flows; month-view follow-through remains                                               |
+| Template System       | 93     | ↑     | Unified templates now cover VR, footer, summary, and narrative flows                                       |
+| Local-First Storage   | 91     | ↑     | Persisted v2.1 workspace/archive migration path shipped                                                    |
+| Developer Enablement  | 90     | ↑     | 1141 passing tests, March instruction refresh, keyboard shortcuts shipped                                  |
+| Dashboard & Insights  | 88     | →     | Priority scoring solid; widget personalization still open                                                  |
+| Premium UI/UX         | 88     | ↑     | Keyboard shortcut customization shipped; accessibility audit still pending                                 |
+| Notes & Collaboration | 84     | →     | Stable note/case summary workflows, no cross-case search yet                                               |
+| Case Archival         | 89     | ↑     | Archive migration path now aligned with persisted v2.1 workspaces                                          |
+| Data Portability      | 86     | ↑     | Explicit upgrade tooling now covers active workspace and archive files                                     |
+| Configurable Statuses | 78     | →     | Stable and integrated into dashboard metrics                                                               |
+| Legacy Migration      | 84     | ↑     | v2.0-to-v2.1 upgrade tooling shipped through Settings                                                      |
+| Autosave & Recovery   | 75     | →     | Reliable debounce/retry flow; richer visibility still open                                                 |
+| Feature Flags         | 72     | →     | Infrastructure intact; still mostly in-memory/dev-facing                                                   |
 
 **Average Rating:** 86.8/100  
 **Test Status:** 1141 tests passing
@@ -168,9 +168,9 @@ Maintained by the storage + autosave working group. Align telemetry follow-ups w
 
 ### Implementation Snapshot
 
-**Rating: 95/100** _(Updated March 30, 2026)_
+**Rating: 95/100** _(Updated April 2, 2026)_
 
-Core case CRUD is highly mature. March 2026 completed the normalized people hydration milestone: cases now hydrate people data through the service layer, linked-person save flows are in place, and the remaining work is the Week 4 UI follow-through for existing-person reuse and household rendering.
+Core case CRUD is highly mature. March 2026 completed the normalized people hydration milestone, and the audited April follow-through confirmed that existing-person reuse and relationship-driven household rendering are already live in the intake and case-details UI. The remaining narrow limitation is that intake edit does not yet support reassigning the primary applicant to a different existing person.
 
 **January 14, 2026:** Case details restructured to 2-column layout - IntakeColumn removed entirely with fields redistributed across PersonColumn (intake verification, relationships) and CaseColumn (application validated, AVS/voter fields, reviews). Internal 3-column grids optimize space utilization. Retro months input appears directly below retro requested checkbox for logical grouping.
 
@@ -197,6 +197,8 @@ Core case CRUD is highly mature. March 2026 completed the normalized people hydr
 - **Data Model Integrity**: Normalized structures (`CaseDisplay`, `CaseRecord`, `Person`, `Relationship`) with strict TypeScript validation
 - **Runtime Hydration**: `DataManager`, `CaseService`, and related domain helpers now hydrate normalized `people[]` data into runtime case displays
 - **Linked-Person Save Flows**: Intake/edit pipelines now persist relationship-aware linked people against the normalized store
+- **Existing Person Reuse in Intake**: New intake flows can search for and reuse existing applicant and household person records instead of always creating duplicates
+- **Relationship-Driven Household Rendering**: Case details and intake hydration render household links from normalized relationship data rather than legacy embedded payload assumptions
 - **Import/Export**: Bulk operations with duplicate detection and progress indicators
 - **Autosave Integration**: Forms seamlessly integrate with AutosaveFileService for reliable persistence
 - **Filter/Sort Persistence**: Case list preferences saved to localStorage with reset button
@@ -204,15 +206,15 @@ Core case CRUD is highly mature. March 2026 completed the normalized people hydr
 
 ### Gaps / Risks
 
-- Existing-person lookup/reuse is not yet the default case-creation path
-- Household view still needs a full relational rendering pass for normalized family links
+- Intake edit cannot yet reassign the primary applicant to a different existing person
+- Cross-case shared-person propagation is implemented through the shared people registry, but the suite would benefit from one direct regression test proving that behavior across multiple linked cases
 - Accessibility audits for complex forms remain ad hoc
 
 ### Expansion Opportunities
 
 - **Saved Filter Views**: Introduce user-configurable filter presets
 - **Relationship Search**: Enable filtering/searching by relationship data
-- **Existing Person Reuse**: Search and attach existing people during case creation/edit instead of always creating new person payloads
+- **Applicant Reassignment in Intake Edit**: If product direction requires it, allow an existing case to switch its primary applicant link to a different shared person record
 - **Virtualization**: Consider virtual scrolling for 1k+ datasets if pagination proves insufficient
 - **Bulk Edit Fields**: Extend bulk actions to edit other case fields
 

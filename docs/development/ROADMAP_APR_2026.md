@@ -15,13 +15,14 @@
 - [x] Wired `FileStorageService`, `DataManager`, and `CaseService` to hydrate normalized people data at runtime.
 - [x] Added `PersonService` plus relationship-aware linked-person handling for normalized cases.
 - [x] Expanded intake/edit workflow coverage for linked-person save payloads and existing-case updates.
-- [ ] Complete the remaining March UI follow-through for case creation, household rendering, and linked-person updates.
+- [x] Landed create-time existing-person reuse plus relationship-driven household rendering in the intake and case-details UI.
+- [ ] Decide whether intake edit should support applicant reassignment to a different existing person or document the current limitation as intentional.
 
 ---
 
 ## 🎯 April Objectives
 
-1. **Finish the v2.1 UI Follow-Through** - Complete the remaining case-creation, household, and linked-person editing work from March so the normalized people/cases model is fully reflected in the UI.
+1. **Close the v2.1 UI Follow-Through** - Update docs to reflect the shipped normalized people UI work and decide whether edit-time applicant reassignment is still a required follow-up.
 2. **Begin v2.2: Intake & Application Layer** - Separate application lifecycle data from the long-lived case record and introduce a normalized `applications[]` collection.
 3. **Establish Migration-Safe Foundations for v3.0** - Add new structures incrementally with explicit migration planning so the daily case-management workflow remains stable throughout the roadmap.
 
@@ -33,19 +34,19 @@
 
 #### Prep Work
 
-- [ ] Audit all remaining create/edit surfaces that still assume embedded person payloads.
-- [ ] Map all case creation, intake, and household rendering paths that need normalized people references.
+- [x] Audit the create/edit surfaces that previously assumed embedded person payloads.
+- [x] Verify the intake, case-details, and household rendering paths against the normalized people model and current tests.
 
 #### Features
 
-- [ ] Rework Case Creation Flow to search/reuse existing people before creating new records.
-- [ ] Update `HouseholdTab` rendering to use relationship-driven and linked-person data natively.
-- [ ] Ensure edits to a person propagate correctly across all linked cases and household views.
+- [x] Rework case creation so intake can search for and reuse existing people before creating new records.
+- [x] Update the household rendering surfaces to use relationship-driven and linked-person data natively.
+- [ ] Decide whether intake edit should support reassigning the primary applicant to a different existing person.
 
 #### Refactoring & Polish
 
-- [ ] Finalize unit testing for the normalized creation/edit pipelines.
-- [ ] Resolve any remaining transitional assumptions tied to pre-v2.1 embedded person structures.
+- [x] Finalize targeted test coverage for normalized creation, reuse, and household rendering pipelines.
+- [ ] Add a direct regression test for cross-case shared-person propagation if we want explicit proof beyond the current shared-registry write path.
 
 ---
 
@@ -113,13 +114,13 @@
 
 ## 📊 Success Metrics
 
-| Metric                                 | Start | Target |
-| -------------------------------------- | ----- | ------ |
-| Tests passing                          | 1141  | 1250+  |
-| Remaining embedded-person UI paths     | Many  | 0      |
-| v2.2 schema + migration design status  | 0%    | 100%   |
-| Application service/storage wiring     | 0%    | 100%   |
-| Average feature rating                 | 85.5  | 88+    |
+| Metric                                 | Start | Target          |
+| -------------------------------------- | ----- | --------------- |
+| Tests passing                          | 1141  | 1250+           |
+| Remaining verified v2.1 UI limitations | 1     | 0 or documented |
+| v2.2 schema + migration design status  | 0%    | 100%            |
+| Application service/storage wiring     | 0%    | 100%            |
+| Average feature rating                 | 85.5  | 88+             |
 
 ---
 
@@ -149,6 +150,7 @@ April begins the first post-v2.1 schema evolution step:
 - **Result:** a single case can support multiple application events over time without overloading `CaseRecord`
 
 This is the first intentional step toward the longer v3.0 single-program platform roadmap:
+
 - v2.2 — applications
 - v2.3 — verification requests and tasks
 - v2.4 — deep evidence (income/assets/expenses)
@@ -162,7 +164,7 @@ This roadmap reflects our accelerated development pace with direct AI assistance
 
 - **Traditional estimate:** 1-2 features per week
 - **AI-assisted reality:** 3-4 features per week with full test coverage
-- **April target:** complete the remaining v2.1 UI follow-through and land the full v2.2 schema, migration, service-layer, and initial UI integration work in one month
+- **April target:** close out the remaining v2.1 documentation and decision work, then land the full v2.2 schema, migration, service-layer, and initial UI integration work in one month
 
 ### Quality Gates
 
@@ -176,9 +178,9 @@ Every feature must:
 
 ### Recommended Next Step
 
-Prioritize closing the remaining March UI gaps first, then lock the `Application` entity design early in April so the service layer, migration tooling, and intake UI can all move against a stable v2.2 target.
+Refresh the roadmap and feature catalogue to reflect the shipped normalized people UI work, then decide whether edit-time applicant reassignment is a real product requirement before spending more implementation time in the v2.1 layer.
 
 ---
 
 **Prepared by:** GitHub Copilot  
-**Last updated:** March 27, 2026
+**Last updated:** April 2, 2026
