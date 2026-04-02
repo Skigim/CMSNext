@@ -93,16 +93,18 @@ describe("ActivityWidget", () => {
 
      await user.click(jamieRow);
 
-     const dialog = await screen.findByRole("dialog");
-     const scrollArea = within(dialog).getByTestId("activity-detail-scroll-area");
-     expect(within(dialog).getByText("Activity for Jamie Rivera")).toBeInTheDocument();
-     expect(within(dialog).getByText("Status: Pending → Approved")).toBeInTheDocument();
-     expect(within(dialog).getByText("Note added")).toBeInTheDocument();
-     expect(within(dialog).getByText("Case viewed")).toBeInTheDocument();
-     expect(dialog).toHaveClass("flex", "flex-col", "overflow-hidden");
-     expect(scrollArea).toHaveClass("h-full", "max-h-[32rem]");
+    const dialog = await screen.findByRole("dialog");
+    const scrollArea = within(dialog).getByTestId("activity-detail-scroll-area");
+    expect(within(dialog).getByText("Activity for Jamie Rivera")).toBeInTheDocument();
+    expect(within(dialog).getByText("Status: Pending → Approved")).toBeInTheDocument();
+    expect(within(dialog).getByText("Note added")).toBeInTheDocument();
+    expect(within(dialog).getByText("Case viewed")).toBeInTheDocument();
+    expect(dialog).toHaveClass("flex", "flex-col", "overflow-hidden");
+    expect(scrollArea).toHaveClass("min-h-0", "flex-1");
+    expect(scrollArea.parentElement).toHaveClass("flex", "min-h-0", "flex-1", "flex-col", "overflow-hidden");
+    expect(within(dialog).getByRole("button", { name: "Open case" })).toBeInTheDocument();
 
-     await user.click(within(dialog).getByRole("button", { name: "Open case" }));
+    await user.click(within(dialog).getByRole("button", { name: "Open case" }));
 
     expect(onViewCase).toHaveBeenCalledWith("case-1");
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();

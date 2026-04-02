@@ -766,7 +766,7 @@ export function ActivityWidget({ activityLogState, metadata, onViewCase }: Reado
         </CardContent>
       </Tabs>
       <Dialog open={selectedTimelineItem !== null} onOpenChange={handleTimelineDialogOpenChange}>
-        <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col overflow-hidden">
+        <DialogContent className="flex max-h-[90vh] max-w-2xl flex-col overflow-hidden">
           <DialogHeader>
             <DialogTitle>
               {selectedTimelineItem ? `Activity for ${selectedTimelineItem.caseName}` : 'Case activity'}
@@ -779,7 +779,7 @@ export function ActivityWidget({ activityLogState, metadata, onViewCase }: Reado
           </DialogHeader>
 
           {selectedTimelineItem && (
-            <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-hidden">
+            <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
               <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
                 <CopyButton
                   value={selectedTimelineItem.caseMcn}
@@ -797,44 +797,42 @@ export function ActivityWidget({ activityLogState, metadata, onViewCase }: Reado
                 <span>Latest activity {selectedTimelineItem.relativeTime}</span>
               </div>
 
-              <div className="flex min-h-0 flex-1 flex-col overflow-hidden" style={{ maxHeight: "32rem" }}>
-                <ScrollArea className="h-full max-h-[32rem]" data-testid="activity-detail-scroll-area">
-                  <div className="space-y-2 pr-3">
-                    {selectedTimelineItem.entries.map((entry) => {
-                      const Icon = entry.icon;
-                      return (
-                        <div
-                          key={entry.id}
-                          className="rounded-lg border border-border/60 bg-muted/20 p-3"
-                        >
-                          <div className="flex items-start gap-3">
-                            <div className="mt-0.5 flex-shrink-0">
-                              <Icon className="h-4 w-4 text-muted-foreground" />
-                            </div>
-                            <div className="min-w-0 flex-1">
-                              <div className="flex items-start justify-between gap-2">
-                                <div className="min-w-0">
-                                  <p className="text-sm font-medium">{entry.title}</p>
-                                  <p className="text-xs text-muted-foreground break-words">
-                                    {entry.description}
-                                  </p>
-                                </div>
-                                <Badge
-                                  variant="secondary"
-                                  className={`text-xs flex-shrink-0 ${entry.badgeColor}`}
-                                >
-                                  {entry.badgeText}
-                                </Badge>
+              <ScrollArea className="min-h-0 flex-1" data-testid="activity-detail-scroll-area">
+                <div className="space-y-2 pr-4">
+                  {selectedTimelineItem.entries.map((entry) => {
+                    const Icon = entry.icon;
+                    return (
+                      <div
+                        key={entry.id}
+                        className="rounded-lg border border-border/60 bg-muted/20 p-3"
+                      >
+                        <div className="flex items-start gap-3">
+                          <div className="mt-0.5 flex-shrink-0">
+                            <Icon className="h-4 w-4 text-muted-foreground" />
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-start justify-between gap-2">
+                              <div className="min-w-0">
+                                <p className="text-sm font-medium">{entry.title}</p>
+                                <p className="text-xs text-muted-foreground break-words">
+                                  {entry.description}
+                                </p>
                               </div>
-                              <p className="mt-2 text-xs text-muted-foreground">{entry.relativeTime}</p>
+                              <Badge
+                                variant="secondary"
+                                className={`text-xs flex-shrink-0 ${entry.badgeColor}`}
+                              >
+                                {entry.badgeText}
+                              </Badge>
                             </div>
+                            <p className="mt-2 text-xs text-muted-foreground">{entry.relativeTime}</p>
                           </div>
                         </div>
-                      );
-                    })}
-                  </div>
-                </ScrollArea>
-              </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </ScrollArea>
             </div>
           )}
 
