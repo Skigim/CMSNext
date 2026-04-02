@@ -305,13 +305,15 @@ describe("CaseDetails linked people rendering", () => {
     expect(within(householdChip).getByText("Morgan Member")).toBeInTheDocument();
     expect(householdChip).not.toHaveTextContent("Spouse / Morgan / Member");
     expect(householdChip).not.toHaveTextContent("/");
-    const dependentChip = screen.getByRole("button", {
-      name: "Dependent: Devon Dependent",
-    });
-    expect(dependentChip).toHaveAttribute("aria-disabled", "true");
-    expect(within(dependentChip).getByText("Devon Dependent")).toBeInTheDocument();
-    expect(within(dependentChip).getByText("Dependent")).toBeInTheDocument();
-    await user.click(dependentChip);
+      expect(
+        screen.queryByRole("button", { name: "Dependent: Devon Dependent" }),
+      ).not.toBeInTheDocument();
+      const dependentChip = screen.getByText("Devon Dependent").parentElement;
+      expect(dependentChip).not.toBeNull();
+      expect(dependentChip?.tagName).toBe("SPAN");
+      expect(dependentChip).toHaveAttribute("aria-label", "Dependent: Devon Dependent");
+      expect(within(dependentChip as HTMLElement).getByText("Devon Dependent")).toBeInTheDocument();
+      expect(within(dependentChip as HTMLElement).getByText("Dependent")).toBeInTheDocument();
     expect(screen.getByText("(555) 000-2222")).toBeInTheDocument();
     expect(screen.getByText("morgan@example.com")).toBeInTheDocument();
     expect(clickToCopy).toHaveBeenCalledWith("5550002222", {

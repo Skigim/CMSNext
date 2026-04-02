@@ -727,7 +727,7 @@ describe("useIntakeWorkflow", () => {
         );
       });
       expect(mockToast.error).toHaveBeenCalledWith(
-        "Changing the applicant from intake edit is not supported yet.",
+          "Failed to save changes: Changing the applicant from intake edit is not supported yet.",
         { id: undefined },
       );
       expect(mockDataManager.updateCompleteCase).not.toHaveBeenCalled();
