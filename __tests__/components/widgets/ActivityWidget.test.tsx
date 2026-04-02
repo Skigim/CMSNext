@@ -61,6 +61,21 @@ describe("ActivityWidget", () => {
       };
     }
 
+    if (type === "priority-change") {
+      return {
+        id: `priority-${index}`,
+        timestamp: new Date(timestamp).toISOString(),
+        caseId: "case-1",
+        caseName: "Jamie Rivera",
+        caseMcn: "MCN123",
+        type,
+        payload: {
+          fromPriority: false,
+          toPriority: true,
+        },
+      };
+    }
+
     return {
       id: `view-${index}`,
       timestamp: new Date(timestamp).toISOString(),
@@ -237,13 +252,14 @@ describe("ActivityWidget", () => {
     });
     const user = userEvent.setup();
 
-    // ACT
     render(
       <ActivityWidget
         activityLogState={createMockCaseActivityLogState({ activityLog })}
         onViewCase={vi.fn()}
       />
     );
+
+    // ACT
     await user.click(await screen.findByRole("button", { name: "View activity for Jamie Rivera" }));
     await screen.findByRole("dialog", { name: "Activity for Jamie Rivera" });
 
