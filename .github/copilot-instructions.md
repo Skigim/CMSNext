@@ -140,7 +140,7 @@ The application follows a layered, local-first architecture designed to keep bus
 
 - **Components:** UI lives under `components/*` and should be built from shadcn/ui primitives in `components/ui/*` plus Tailwind utility classes.
 - **Hooks:** React hooks under `hooks/*` own local UI state and call services/domain functions; they must not talk to the filesystem or `DataManager` directly from components.
-- **Themes:** A small, fixed set of theme families (light/dark variants) is exposed via `ThemeContext`. New UI should consume theme tokens instead of hard-coded colors.
+- **Themes:** A fixed 4-theme system is exposed via `ThemeContext`: `light`, `paperwhite`, `sterling`, and `dark`. Global theme tokens live in `styles/globals.css`; new UI should consume those tokens instead of hard-coded colors.
 - **Color slots:** Status and category colors use a fixed semantic slot set (e.g., `"blue"`, `"green"`, `"red"`, `"amber"`, `"purple"`, `"slate"`, `"teal"`, `"rose"`, `"orange"`, `"cyan"`). Use the existing CSS variables for foreground, background, and border styling.
 
 ### Layered Code Organization

@@ -179,16 +179,16 @@ const handleSave = async () => {
 
 ## Theme System
 
-8 themes in 4 families:
+4 built-in themes are exposed via `useTheme()` from `ThemeContext`:
 
-| Family  | Light         | Dark         |
-| ------- | ------------- | ------------ |
-| Neutral | `light`       | `dark`       |
-| Slate   | `slate-light` | `slate-dark` |
-| Stone   | `stone-light` | `stone-dark` |
-| Zinc    | `zinc-light`  | `zinc-dark`  |
+| Theme        | Direction                       |
+| ------------ | ------------------------------- |
+| `light`      | Cool paper workspace            |
+| `paperwhite` | Warm paper workspace            |
+| `sterling`   | Slate midtone companion         |
+| `dark`       | Caseworker workspace dark slate |
 
-Access via `useTheme()` from `ThemeContext`.
+Global theme tokens live in `styles/globals.css` under `:root`, `.paperwhite`, `.sterling`, and `.dark`. Prefer these tokens and existing Tailwind theme values over hard-coded colors when updating UI.
 
 ## Color Slots
 

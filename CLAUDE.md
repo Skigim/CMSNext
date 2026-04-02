@@ -101,7 +101,7 @@ CMSNext/
 │   ├── FileStorageContext.tsx  # File handle and permission management
 │   ├── fileStorageMachine.ts   # State machine for storage states
 │   ├── EncryptionContext.tsx   # AES-256-GCM encryption session
-│   ├── ThemeContext.tsx        # 8-theme system (4 families × light/dark)
+│   ├── ThemeContext.tsx        # 4-theme system (Light, Paperwhite, Sterling, Dark)
 │   ├── CategoryConfigContext.tsx
 │   ├── SelectedMonthContext.tsx
 │   └── TemplateContext.tsx
@@ -466,16 +466,18 @@ dispatchToggleSidebarEvent(); // "app:togglesidebar"
 
 ## Theme System
 
-8 themes in 4 families:
+4 built-in themes are exposed through `ThemeContext`:
 
-| Family  | Light         | Dark         |
-| ------- | ------------- | ------------ |
-| Neutral | `light`       | `dark`       |
-| Slate   | `slate-light` | `slate-dark` |
-| Stone   | `stone-light` | `stone-dark` |
-| Zinc    | `zinc-light`  | `zinc-dark`  |
+| Theme        | Direction                       |
+| ------------ | ------------------------------- |
+| `light`      | Cool paper workspace            |
+| `paperwhite` | Warm paper workspace            |
+| `sterling`   | Slate midtone companion         |
+| `dark`       | Caseworker workspace dark slate |
 
-Access via `ThemeContext`. 10 semantic **color slots** for status customization:
+Theme tokens live in `styles/globals.css` under `:root`, `.paperwhite`, `.sterling`, and `.dark`, with Tailwind values mapped through the inline `@theme` block. New UI should consume these tokens instead of hard-coded colors.
+
+10 semantic **color slots** remain available for status customization:
 
 ```typescript
 type ColorSlot =
