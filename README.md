@@ -85,8 +85,8 @@ The app currently persists a canonical normalized v2.1 format with flat collecti
 ```ts
 interface PersistedNormalizedFileDataV21 {
   version: "2.1";
-  people: StoredPerson[];
-  cases: PersistedCase[];
+  people: StoredPerson[];        // Note: uses StoredPerson, not PersistedPerson
+  cases: PersistedCase[];         // Note: uses PersistedCase, not StoredCase
   financials: StoredFinancialItem[];
   notes: StoredNote[];
   alerts: AlertRecord[];
@@ -97,6 +97,8 @@ interface PersistedNormalizedFileDataV21 {
   templates?: Template[];
 }
 ```
+
+> **Naming convention note:** The mixed use of `StoredPerson` and `PersistedCase` reflects the evolution of the type system. `StoredPerson` distinguishes the persisted shape from the hydrated `Person` (which includes circular references), while `PersistedCase` distinguishes the on-disk format from `StoredCase` (the hydrated runtime case). This intentional distinction helps developers understand the different transformation layers.
 
 Persisted v2.1 data is hydrated and dehydrated through the storage helpers. Normal runtime reads now accept only canonical persisted v2.1 workspaces; legacy v2.0 and older formats must be upgraded first with the explicit migration tooling.
 
