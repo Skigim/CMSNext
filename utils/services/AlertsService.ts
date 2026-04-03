@@ -323,7 +323,11 @@ export class AlertsService {
     // Set resolvedAt only when status is 'resolved'
     if (nextStatus === 'resolved') {
       // Use provided resolvedAt or generate new timestamp
-      nextResolvedAt = updates.resolvedAt !== undefined ? updates.resolvedAt : (targetAlert.resolvedAt ?? new Date().toISOString());
+      if (updates.resolvedAt === undefined) {
+        nextResolvedAt = targetAlert.resolvedAt ?? new Date().toISOString();
+      } else {
+        nextResolvedAt = updates.resolvedAt;
+      }
     } else {
       // Force null when not resolved
       nextResolvedAt = null;
@@ -527,6 +531,10 @@ export class AlertsService {
     return { matchedIndex: -1, matchedExisting: null };
   }
 
+  /**
+   * Return the first candidate index that has not already been consumed by a prior match.
+   * Used with precomputed index lists (such as exact-ID matches) to avoid repeated scans.
+   */
   private findFirstUnusedIndex(
     indices: number[] | undefined,
     existing: AlertWithMatch[],
@@ -609,7 +617,9 @@ export class AlertsService {
     existing.forEach((alert, index) => {
       if (usedIndices.has(index)) return;
 
-      if (alert.status !== 'resolved') {
+      if (alert.status === 'resolved') {
+        alerts.push(alert);
+      } else {
         const now = new Date().toISOString();
         alerts.push({
           ...alert,
@@ -618,8 +628,6 @@ export class AlertsService {
           updatedAt: now,
         });
         updatedCount += 1;
-      } else {
-        alerts.push(alert);
       }
     });
 
