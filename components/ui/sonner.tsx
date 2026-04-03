@@ -1,5 +1,6 @@
 "use client";
 
+import type { CSSProperties } from "react";
 import { Toaster as Sonner, ToasterProps } from "sonner";
 import { useTheme } from "@/contexts/ThemeContext";
 import { cn } from "@/lib/utils";
@@ -20,7 +21,7 @@ const Toaster = ({ ...props }: ToasterProps) => {
           "--normal-text": "var(--popover-foreground)",
           "--normal-border": "var(--border)",
           ...style,
-        } as React.CSSProperties
+        } as CSSProperties
       }
       toastOptions={{
         ...toastOptions,

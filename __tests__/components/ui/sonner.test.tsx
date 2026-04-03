@@ -1,5 +1,6 @@
 import { render } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import type { ToasterProps } from "sonner";
 
 import { Toaster } from "@/components/ui/sonner";
 
@@ -7,7 +8,7 @@ const sonnerMock = vi.fn();
 const useThemeMock = vi.fn();
 
 vi.mock("sonner", () => ({
-  Toaster: (props: unknown) => {
+  Toaster: (props: ToasterProps) => {
     sonnerMock(props);
     return <div data-testid="sonner-toaster" />;
   },
