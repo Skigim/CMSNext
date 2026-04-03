@@ -397,6 +397,8 @@ describe('AlertsService', () => {
 
       // ASSERT – should be 0 added (matched to existing), 1 updated, no duplicate IDs
       expect(result.added).toBe(0);
+      expect(result.updated).toBe(1);
+      expect(result.total).toBe(1);
 
       const uniqueIds = new Set(result.alerts.map(a => a.id));
       expect(uniqueIds.size).toBe(result.alerts.length);
@@ -423,9 +425,12 @@ describe('AlertsService', () => {
       );
 
       // ASSERT – no duplicate IDs; existing workflow status should be preserved (in-progress > new)
+      expect(result.updated).toBe(1);
+      expect(result.total).toBe(1);
       const ids = result.alerts.map(a => a.id);
       const uniqueIds = new Set(ids);
       expect(uniqueIds.size).toBe(ids.length);
+      expect(result.alerts[0]?.status).toBe('in-progress');
     });
   });
 

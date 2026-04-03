@@ -123,7 +123,7 @@ class AlertWriteQueue {
   }
 
   /**
-   * Get count of total pending writes across all alerts (excludes the in-flight write).
+   * Get count of total pending and in-flight writes across all alerts.
    */
   getPendingCount(): number {
     return this.queue.length + (this.isProcessing ? 1 : 0);

@@ -398,7 +398,7 @@ export class AlertsService {
     }
 
     // Build lookup maps for efficient matching
-    const { strongCandidates, fallbackCandidates } = this.buildCandidateMaps(existing);
+    const { strongCandidates, fallbackCandidates, exactIdCandidates } = this.buildCandidateMaps(existing);
 
     const usedIndices = new Set<number>();
     const merged: AlertWithMatch[] = [];
@@ -408,7 +408,7 @@ export class AlertsService {
     // Match incoming alerts against existing
     for (const incomingAlert of incoming) {
       const { matchedIndex, matchedExisting } = this.findBestMatch(
-        incomingAlert, existing, strongCandidates, fallbackCandidates, usedIndices
+        incomingAlert, existing, strongCandidates, fallbackCandidates, exactIdCandidates, usedIndices
       );
 
       if (matchedExisting) {
@@ -443,11 +443,22 @@ export class AlertsService {
   private buildCandidateMaps(existing: AlertWithMatch[]): {
     strongCandidates: Map<string, number[]>;
     fallbackCandidates: Map<string, number[]>;
+    exactIdCandidates: Map<string, number[]>;
   } {
     const strongCandidates = new Map<string, number[]>();
     const fallbackCandidates = new Map<string, number[]>();
+    const exactIdCandidates = new Map<string, number[]>();
 
     existing.forEach((alert, index) => {
+      if (alert.id) {
+        const exactIdIndices = exactIdCandidates.get(alert.id);
+        if (exactIdIndices) {
+          exactIdIndices.push(index);
+        } else {
+          exactIdCandidates.set(alert.id, [index]);
+        }
+      }
+
       this.buildAlertLookupCandidates(alert).forEach(candidate => {
         const target = candidate.fallback ? fallbackCandidates : strongCandidates;
         const indices = target.get(candidate.key);
@@ -459,7 +470,7 @@ export class AlertsService {
       });
     });
 
-    return { strongCandidates, fallbackCandidates };
+    return { strongCandidates, fallbackCandidates, exactIdCandidates };
   }
 
   /**
@@ -470,6 +481,7 @@ export class AlertsService {
     existing: AlertWithMatch[],
     strongCandidates: Map<string, number[]>,
     fallbackCandidates: Map<string, number[]>,
+    exactIdCandidates: Map<string, number[]>,
     usedIndices: Set<number>
   ): { matchedIndex: number; matchedExisting: AlertWithMatch | null } {
     const candidates = this.buildAlertLookupCandidates(incomingAlert);
@@ -489,11 +501,13 @@ export class AlertsService {
     // This handles re-imports where matchStatus changed (e.g. "unmatched" → "matched" after a
     // case was created), which causes buildAlertStorageKey to differ and breaks strong matching.
     if (incomingAlert.id) {
-      const exactIdIndex = existing.findIndex(
-        (a, idx) => !usedIndices.has(idx) && a.id === incomingAlert.id
+      const exactIdMatch = this.findFirstUnusedIndex(
+        exactIdCandidates.get(incomingAlert.id),
+        existing,
+        usedIndices
       );
-      if (exactIdIndex !== -1) {
-        return { matchedIndex: exactIdIndex, matchedExisting: existing[exactIdIndex] };
+      if (exactIdMatch) {
+        return exactIdMatch;
       }
     }
 
@@ -511,6 +525,24 @@ export class AlertsService {
     }
 
     return { matchedIndex: -1, matchedExisting: null };
+  }
+
+  private findFirstUnusedIndex(
+    indices: number[] | undefined,
+    existing: AlertWithMatch[],
+    usedIndices: Set<number>
+  ): { matchedIndex: number; matchedExisting: AlertWithMatch } | null {
+    if (!indices?.length) {
+      return null;
+    }
+
+    for (const index of indices) {
+      if (!usedIndices.has(index)) {
+        return { matchedIndex: index, matchedExisting: existing[index] };
+      }
+    }
+
+    return null;
   }
 
   /**

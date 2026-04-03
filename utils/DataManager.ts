@@ -565,8 +565,9 @@ export class DataManager {
   /**
    * Update the status of a specific alert.
    * 
-   * Handles alerts with duplicate IDs (from CSV imports) by updating all matching alerts.
-   * Writes the updated alerts back to the file system.
+   * Updates the first stored alert with the matching ID and removes any additional duplicates
+   * that may have been persisted by earlier CSV import edge cases.
+   * Writes the repaired alert collection back to the file system.
    * 
    * @param {string} alertId - The unique identifier of the alert to update
    * @param {Object} updates - The status updates to apply
