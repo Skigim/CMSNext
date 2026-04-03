@@ -607,22 +607,29 @@ export class DataManager {
       return null;
     }
 
-    // Replace ALL alerts with matching ID (handles duplicate IDs from CSV import)
-    // findIndex only finds the first occurrence, but there may be duplicates
+    // Replace the alert with the matching ID, deduplicating pre-existing duplicate IDs.
+    // Duplicate IDs can arise from CSV re-imports where deduplication was missed; clean them
+    // up here so the warning is self-healing rather than persistent.
     let foundCount = 0;
-    const newAlerts = rawAlerts.map(a => {
+    const newAlerts: AlertRecord[] = [];
+    for (const a of rawAlerts) {
       if (a.id === updatedAlert.id) {
         foundCount++;
-        return updatedAlert;
+        if (foundCount === 1) {
+          // Replace first occurrence with the updated alert
+          newAlerts.push(updatedAlert);
+        }
+        // else: skip duplicate entries — they are removed from storage here
+      } else {
+        newAlerts.push(a);
       }
-      return a;
-    });
-    
+    }
+
     if (foundCount === 0) {
       // Should not happen if updateAlertStatus found it, but safe fallback
       newAlerts.push(updatedAlert);
     } else if (foundCount > 1) {
-      logger.warn('Multiple alerts with same ID updated', { alertId, count: foundCount });
+      logger.warn('Deduplicated alerts with same ID during update', { alertId, removedCount: foundCount - 1 });
     }
 
     // Save updated alerts to storage using normalized format

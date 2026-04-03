@@ -334,6 +334,94 @@ describe('AlertsService', () => {
     });
   });
 
+  describe("mergeAlertsFromCsvContent - exact ID matching across matchStatus changes", () => {
+    it("does not create duplicate IDs when the same alert is re-imported after its matchStatus changed", async () => {
+      // ARRANGE – existing alert originally stored as 'unmatched' (no case present at import time)
+      const alertId = "ALERT-NUM-42";
+      const existingAlert: AlertWithMatch = {
+        ...createMockAlert(alertId, "MCN-999"),
+        matchStatus: "unmatched",
+        description: "Benefit calculation discrepancy",
+        alertDate: "2024-06-15",
+        reportId: alertId,
+        status: "new",
+      };
+
+      // Incoming CSV alert has the same id, same description/date but matchStatus='matched'
+      // (a case with MCN-999 was created after the first import)
+      const incomingAlert: AlertWithMatch = {
+        ...existingAlert,
+        matchStatus: "matched",
+        matchedCaseId: "case-100",
+        matchedCaseName: "Smith, Jane",
+      };
+
+      vi.mocked(parseAlertsFromCsv).mockReturnValue({
+        alerts: [incomingAlert],
+        summary: { total: 1, matched: 1, unmatched: 0, missingMcn: 0 },
+        alertsByCaseId: new Map([["case-100", [incomingAlert]]]),
+        unmatched: [],
+        missingMcn: [],
+      });
+
+      // ACT
+      const result = await service.mergeAlertsFromCsvContent(
+        "dummy-csv-content",
+        [existingAlert],
+        [],
+      );
+
+      // ASSERT – should be 0 added (matched to existing), 1 updated, no duplicate IDs
+      expect(result.added).toBe(0);
+
+      const uniqueIds = new Set(result.alerts.map(a => a.id));
+      expect(uniqueIds.size).toBe(result.alerts.length);
+      expect(uniqueIds.has(alertId)).toBe(true);
+    });
+
+    it("does not create duplicate IDs when strong key differs only by matchStatus (empty description)", async () => {
+      // ARRANGE – edge case: same alert, no description, matchStatus changed
+      // Without exact-ID matching this would fail shouldMatchUsingFallback and create a duplicate
+      const alertId = "BARE-ALERT-7";
+      const existingAlert: AlertWithMatch = {
+        ...createMockAlert(alertId, "MCN-456"),
+        description: "",
+        matchStatus: "unmatched",
+        reportId: alertId,
+        status: "in-progress",
+      };
+
+      const incomingAlert: AlertWithMatch = {
+        ...existingAlert,
+        description: "",
+        matchStatus: "matched",
+        matchedCaseId: "case-200",
+        status: "new",
+      };
+
+      vi.mocked(parseAlertsFromCsv).mockReturnValue({
+        alerts: [incomingAlert],
+        summary: { total: 1, matched: 1, unmatched: 0, missingMcn: 0 },
+        alertsByCaseId: new Map([["case-200", [incomingAlert]]]),
+        unmatched: [],
+        missingMcn: [],
+      });
+
+      // ACT
+      const result = await service.mergeAlertsFromCsvContent(
+        "dummy-csv-content",
+        [existingAlert],
+        [],
+      );
+
+      // ASSERT – no duplicate IDs; existing workflow status should be preserved (in-progress > new)
+      const ids = result.alerts.map(a => a.id);
+      const uniqueIds = new Set(ids);
+      expect(uniqueIds.size).toBe(ids.length);
+    });
+  });
+
+
   describe('Alert matching logic', () => {
     it('should normalize MCN for matching', () => {
       const cases = [createMockCase('case-1', ' mcn-123 ')]; // Extra whitespace

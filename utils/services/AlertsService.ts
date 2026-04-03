@@ -484,6 +484,19 @@ export class AlertsService {
     );
     if (strongResult.matchedExisting) return strongResult;
 
+    // Try exact ID matching: if the incoming alert's id directly matches an existing alert's id,
+    // treat them as the same alert regardless of matchStatus or other derived fields.
+    // This handles re-imports where matchStatus changed (e.g. "unmatched" → "matched" after a
+    // case was created), which causes buildAlertStorageKey to differ and breaks strong matching.
+    if (incomingAlert.id) {
+      const exactIdIndex = existing.findIndex(
+        (a, idx) => !usedIndices.has(idx) && a.id === incomingAlert.id
+      );
+      if (exactIdIndex !== -1) {
+        return { matchedIndex: exactIdIndex, matchedExisting: existing[exactIdIndex] };
+      }
+    }
+
     // Fall back to broader matching with validation
     for (const { key: candidate } of candidates) {
       const indices = fallbackCandidates.get(candidate);
