@@ -44,6 +44,14 @@ class AlertWriteQueue {
   private currentAlertId: string | null = null;
   private callbacks: WriteQueueCallbacks = {};
 
+  private enqueueWrite(queuedWrite: QueuedWrite): void {
+    this.queue.push(queuedWrite);
+
+    if (!this.isProcessing) {
+      void this.processQueue();
+    }
+  }
+
   /**
    * Set global callbacks for write results
    */
@@ -56,16 +64,12 @@ class AlertWriteQueue {
    * Returns immediately - write happens in background via the global serial queue.
    */
   enqueue(alertId: string, writeOperation: () => Promise<void>): void {
-    this.queue.push({
+    this.enqueueWrite({
       alertId,
       execute: writeOperation,
       resolve: () => {},
       reject: () => {},
     });
-
-    if (!this.isProcessing) {
-      void this.processQueue();
-    }
   }
 
   /**
@@ -74,11 +78,7 @@ class AlertWriteQueue {
    */
   async enqueueAndWait(alertId: string, writeOperation: () => Promise<void>): Promise<void> {
     return new Promise((resolve, reject) => {
-      this.queue.push({ alertId, execute: writeOperation, resolve, reject });
-
-      if (!this.isProcessing) {
-        void this.processQueue();
-      }
+      this.enqueueWrite({ alertId, execute: writeOperation, resolve, reject });
     });
   }
 
@@ -141,4 +141,3 @@ class AlertWriteQueue {
 
 // Singleton instance
 export const alertWriteQueue = new AlertWriteQueue();
-

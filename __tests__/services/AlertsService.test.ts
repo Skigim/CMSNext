@@ -43,6 +43,46 @@ describe('AlertsService', () => {
     updatedAt: '2024-01-15T10:00:00Z',
   });
 
+  const mockParsedCsvResult = (incomingAlert: AlertWithMatch, matchedCaseId?: string) => {
+    vi.mocked(parseAlertsFromCsv).mockReturnValue({
+      alerts: [incomingAlert],
+      summary: {
+        total: 1,
+        matched: matchedCaseId ? 1 : 0,
+        unmatched: matchedCaseId ? 0 : 1,
+        missingMcn: 0,
+      },
+      alertsByCaseId: matchedCaseId ? new Map([[matchedCaseId, [incomingAlert]]]) : new Map(),
+      unmatched: matchedCaseId ? [] : [incomingAlert],
+      missingMcn: [],
+    });
+  };
+
+  const createReimportAlertPair = (options: {
+    alertId: string;
+    mcNumber: string;
+    description: string;
+    initialStatus?: AlertWithMatch['status'];
+    matchedCaseId: string;
+  }) => {
+    const existingAlert: AlertWithMatch = {
+      ...createMockAlert(options.alertId, options.mcNumber),
+      description: options.description,
+      matchStatus: 'unmatched',
+      reportId: options.alertId,
+      status: options.initialStatus ?? 'new',
+    };
+
+    const incomingAlert: AlertWithMatch = {
+      ...existingAlert,
+      matchStatus: 'matched',
+      matchedCaseId: options.matchedCaseId,
+      matchedCaseName: `Case ${options.matchedCaseId}`,
+    };
+
+    return { existingAlert, incomingAlert };
+  };
+
   beforeEach(() => {
     service = new AlertsService();
   });
@@ -336,33 +376,17 @@ describe('AlertsService', () => {
 
   describe("mergeAlertsFromCsvContent - exact ID matching across matchStatus changes", () => {
     it("does not create duplicate IDs when the same alert is re-imported after its matchStatus changed", async () => {
-      // ARRANGE – existing alert originally stored as 'unmatched' (no case present at import time)
       const alertId = "ALERT-NUM-42";
-      const existingAlert: AlertWithMatch = {
-        ...createMockAlert(alertId, "MCN-999"),
-        matchStatus: "unmatched",
-        description: "Benefit calculation discrepancy",
-        alertDate: "2024-06-15",
-        reportId: alertId,
-        status: "new",
-      };
-
-      // Incoming CSV alert has the same id, same description/date but matchStatus='matched'
-      // (a case with MCN-999 was created after the first import)
-      const incomingAlert: AlertWithMatch = {
-        ...existingAlert,
-        matchStatus: "matched",
-        matchedCaseId: "case-100",
-        matchedCaseName: "Smith, Jane",
-      };
-
-      vi.mocked(parseAlertsFromCsv).mockReturnValue({
-        alerts: [incomingAlert],
-        summary: { total: 1, matched: 1, unmatched: 0, missingMcn: 0 },
-        alertsByCaseId: new Map([["case-100", [incomingAlert]]]),
-        unmatched: [],
-        missingMcn: [],
+      const { existingAlert, incomingAlert } = createReimportAlertPair({
+        alertId,
+        mcNumber: 'MCN-999',
+        description: 'Benefit calculation discrepancy',
+        matchedCaseId: 'case-100',
       });
+      incomingAlert.alertDate = '2024-06-15';
+      existingAlert.alertDate = '2024-06-15';
+      incomingAlert.matchedCaseName = 'Smith, Jane';
+      mockParsedCsvResult(incomingAlert, 'case-100');
 
       // ACT
       const result = await service.mergeAlertsFromCsvContent(
@@ -380,32 +404,16 @@ describe('AlertsService', () => {
     });
 
     it("does not create duplicate IDs when strong key differs only by matchStatus (empty description)", async () => {
-      // ARRANGE – edge case: same alert, no description, matchStatus changed
-      // Without exact-ID matching this would fail shouldMatchUsingFallback and create a duplicate
       const alertId = "BARE-ALERT-7";
-      const existingAlert: AlertWithMatch = {
-        ...createMockAlert(alertId, "MCN-456"),
-        description: "",
-        matchStatus: "unmatched",
-        reportId: alertId,
-        status: "in-progress",
-      };
-
-      const incomingAlert: AlertWithMatch = {
-        ...existingAlert,
-        description: "",
-        matchStatus: "matched",
-        matchedCaseId: "case-200",
-        status: "new",
-      };
-
-      vi.mocked(parseAlertsFromCsv).mockReturnValue({
-        alerts: [incomingAlert],
-        summary: { total: 1, matched: 1, unmatched: 0, missingMcn: 0 },
-        alertsByCaseId: new Map([["case-200", [incomingAlert]]]),
-        unmatched: [],
-        missingMcn: [],
+      const { existingAlert, incomingAlert } = createReimportAlertPair({
+        alertId,
+        mcNumber: 'MCN-456',
+        description: '',
+        initialStatus: 'in-progress',
+        matchedCaseId: 'case-200',
       });
+      incomingAlert.status = 'new';
+      mockParsedCsvResult(incomingAlert, 'case-200');
 
       // ACT
       const result = await service.mergeAlertsFromCsvContent(

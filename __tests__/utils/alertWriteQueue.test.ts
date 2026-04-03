@@ -10,6 +10,32 @@ vi.mock('@/utils/logger', () => ({
   }),
 }));
 
+function createTrackedWrite(order: string[], label: string) {
+  return vi.fn(async () => {
+    order.push(`start-${label}`);
+    await Promise.resolve();
+    order.push(`end-${label}`);
+  });
+}
+
+function createBlockedWrite() {
+  let resolve!: () => void;
+  const promise = new Promise<void>((res) => {
+    resolve = res;
+  });
+
+  return {
+    resolve,
+    write: async () => {
+      await promise;
+    },
+  };
+}
+
+async function waitForQueueToDrain() {
+  await alertWriteQueue.enqueueAndWait('alert-sentinel', async () => {});
+}
+
 describe('alertWriteQueue', () => {
   beforeEach(() => {
     alertWriteQueue.clear();
@@ -20,25 +46,15 @@ describe('alertWriteQueue', () => {
     it('serializes writes for different alert IDs so they never run concurrently', async () => {
       // ARRANGE – track the order writes START and FINISH
       const order: string[] = [];
-
-      const write1 = vi.fn(async () => {
-        order.push('start-A');
-        await Promise.resolve(); // yield to allow concurrent execution if not serialized
-        order.push('end-A');
-      });
-
-      const write2 = vi.fn(async () => {
-        order.push('start-B');
-        await Promise.resolve();
-        order.push('end-B');
-      });
+      const write1 = createTrackedWrite(order, 'A');
+      const write2 = createTrackedWrite(order, 'B');
 
       // ACT – enqueue writes for two different alert IDs back-to-back
       alertWriteQueue.enqueue('alert-A', write1);
       alertWriteQueue.enqueue('alert-B', write2);
 
       // Wait for both writes to complete via enqueueAndWait on a third sentinel
-      await alertWriteQueue.enqueueAndWait('alert-sentinel', async () => {});
+      await waitForQueueToDrain();
 
       // ASSERT – writes must have executed sequentially (A fully before B starts)
       expect(order).toEqual(['start-A', 'end-A', 'start-B', 'end-B']);
@@ -47,17 +63,8 @@ describe('alertWriteQueue', () => {
     it('serializes multiple writes for the same alert ID', async () => {
       // ARRANGE
       const order: string[] = [];
-
-      const write1 = vi.fn(async () => {
-        order.push('start-1');
-        await Promise.resolve();
-        order.push('end-1');
-      });
-      const write2 = vi.fn(async () => {
-        order.push('start-2');
-        await Promise.resolve();
-        order.push('end-2');
-      });
+      const write1 = createTrackedWrite(order, '1');
+      const write2 = createTrackedWrite(order, '2');
 
       // ACT
       alertWriteQueue.enqueue('alert-X', write1);
@@ -118,18 +125,17 @@ describe('alertWriteQueue', () => {
 
     it('returns true while a write for that alertId is pending in the queue', async () => {
       // ARRANGE – block the queue with a long-running first write
-      let resolveFirst!: () => void;
-      const firstWritePromise = new Promise<void>(res => { resolveFirst = res; });
+      const blocker = createBlockedWrite();
 
-      alertWriteQueue.enqueue('blocker', async () => { await firstWritePromise; });
+      alertWriteQueue.enqueue('blocker', blocker.write);
       alertWriteQueue.enqueue('target', async () => {});
 
       // ASSERT – 'target' is pending because 'blocker' is in-flight
       expect(alertWriteQueue.hasPendingWrites('target')).toBe(true);
 
       // ACT – unblock
-      resolveFirst();
-      await alertWriteQueue.enqueueAndWait('sentinel', async () => {});
+      blocker.resolve();
+      await waitForQueueToDrain();
 
       // ASSERT – target write has completed
       expect(alertWriteQueue.hasPendingWrites('target')).toBe(false);
@@ -143,17 +149,16 @@ describe('alertWriteQueue', () => {
 
     it('returns the correct count when multiple writes are queued', async () => {
       // ARRANGE – block the queue
-      let resolveFirst!: () => void;
-      const blocker = new Promise<void>(res => { resolveFirst = res; });
+      const blocker = createBlockedWrite();
 
-      alertWriteQueue.enqueue('a', async () => { await blocker; });
+      alertWriteQueue.enqueue('a', blocker.write);
       alertWriteQueue.enqueue('b', async () => {});
       alertWriteQueue.enqueue('c', async () => {});
 
       // One in-flight + two queued = 3
       expect(alertWriteQueue.getPendingCount()).toBe(3);
 
-      resolveFirst();
+      blocker.resolve();
       await alertWriteQueue.enqueueAndWait('d', async () => {});
       expect(alertWriteQueue.getPendingCount()).toBe(0);
     });
