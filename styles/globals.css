@@ -213,6 +213,27 @@
   --chart-4: oklch(0.58 0.2 300); /* Purple */
   --chart-5: oklch(0.55 0.22 25); /* Red */
 
+  /* Color slots for paperwhite - warm-balanced semantic palette */
+  --color-slot-blue: oklch(0.6 0.15 234);
+
+  --color-slot-green: oklch(0.62 0.14 154);
+
+  --color-slot-red: oklch(0.6 0.22 28);
+
+  --color-slot-amber: oklch(0.77 0.18 72);
+
+  --color-slot-purple: oklch(0.61 0.23 304);
+
+  --color-slot-slate: oklch(0.57 0.028 78);
+
+  --color-slot-teal: oklch(0.61 0.11 188);
+
+  --color-slot-rose: oklch(0.66 0.22 18);
+
+  --color-slot-orange: oklch(0.72 0.2 50);
+
+  --color-slot-cyan: oklch(0.72 0.13 214);
+
   /* Status-specific chart colors */
   --chart-status-pending: var(--chart-2);
   --chart-status-approved: var(--chart-1);
