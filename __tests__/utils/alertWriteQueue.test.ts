@@ -71,7 +71,7 @@ describe('alertWriteQueue', () => {
 
     it('invokes onSuccess callback after each successful write', async () => {
       // ARRANGE
-      const onSuccess = vi.fn((alertId: string) => { void alertId; });
+      const onSuccess = vi.fn((_alertId: string) => {});
       alertWriteQueue.setCallbacks({ onSuccess });
 
       // ACT
@@ -84,8 +84,8 @@ describe('alertWriteQueue', () => {
 
     it('invokes onError callback and continues processing after a failed write', async () => {
       // ARRANGE
-      const onError = vi.fn((alertId: string, error: Error) => { void alertId; void error; });
-      const onSuccess = vi.fn((alertId: string) => { void alertId; });
+      const onError = vi.fn((_alertId: string, _error: Error) => {});
+      const onSuccess = vi.fn((_alertId: string) => {});
       alertWriteQueue.setCallbacks({ onError, onSuccess });
 
       const failingWrite = vi.fn(async () => {

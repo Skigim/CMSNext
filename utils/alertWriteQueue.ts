@@ -11,6 +11,13 @@ import { createLogger } from './logger';
 
 const logger = createLogger('AlertWriteQueue');
 
+/**
+ * A single write operation waiting in or processing through the global queue.
+ * - `alertId`: the alert being written; used for callbacks and `hasPendingWrites` tracking
+ * - `execute`: the async write function to invoke
+ * - `resolve`: called when `execute` completes successfully (no-op for fire-and-forget enqueues)
+ * - `reject`: called with the thrown `Error` when `execute` rejects (no-op for fire-and-forget)
+ */
 interface QueuedWrite {
   alertId: string;
   execute: () => Promise<void>;
