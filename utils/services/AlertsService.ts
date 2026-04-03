@@ -527,6 +527,10 @@ export class AlertsService {
     return { matchedIndex: -1, matchedExisting: null };
   }
 
+  /**
+   * Return the first candidate index that has not already been consumed by a prior match.
+   * Used with precomputed index lists (such as exact-ID matches) to avoid repeated scans.
+   */
   private findFirstUnusedIndex(
     indices: number[] | undefined,
     existing: AlertWithMatch[],

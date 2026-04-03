@@ -427,10 +427,11 @@ describe('AlertsService', () => {
       // ASSERT – no duplicate IDs; existing workflow status should be preserved (in-progress > new)
       expect(result.updated).toBe(1);
       expect(result.total).toBe(1);
+      expect(result.alerts).toHaveLength(1);
       const ids = result.alerts.map(a => a.id);
       const uniqueIds = new Set(ids);
       expect(uniqueIds.size).toBe(ids.length);
-      expect(result.alerts[0]?.status).toBe('in-progress');
+      expect(result.alerts[0].status).toBe('in-progress');
     });
   });
 
