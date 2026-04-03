@@ -1,5 +1,5 @@
 import { render } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { Toaster } from "@/components/ui/sonner";
 
@@ -18,6 +18,11 @@ vi.mock("@/contexts/ThemeContext", () => ({
 }));
 
 describe("Toaster", () => {
+  beforeEach(() => {
+    sonnerMock.mockClear();
+    useThemeMock.mockReset();
+  });
+
   it("uses light Sonner mode and readable description tokens for sterling", () => {
     // ARRANGE
     useThemeMock.mockReturnValue({ theme: "sterling" });
@@ -26,17 +31,15 @@ describe("Toaster", () => {
     render(<Toaster />);
 
     // ASSERT
-    expect(sonnerMock).toHaveBeenCalledWith(
-      expect.objectContaining({
-        theme: "light",
-        toastOptions: {
-          classNames: {
-            description: "text-muted-foreground",
-          },
+    const [props] = sonnerMock.mock.calls[0] ?? [];
+    expect(props).toMatchObject({
+      theme: "light",
+      toastOptions: {
+        classNames: {
+          description: "text-muted-foreground",
         },
-      }),
-      undefined,
-    );
+      },
+    });
   });
 
   it("preserves caller toast classNames while merging the description token", () => {
@@ -56,17 +59,15 @@ describe("Toaster", () => {
     );
 
     // ASSERT
-    expect(sonnerMock).toHaveBeenCalledWith(
-      expect.objectContaining({
-        toastOptions: {
-          classNames: {
-            toast: "custom-toast",
-            description: "text-muted-foreground tracking-tight",
-          },
+    const [props] = sonnerMock.mock.calls[0] ?? [];
+    expect(props).toMatchObject({
+      toastOptions: {
+        classNames: {
+          toast: "custom-toast",
+          description: "text-muted-foreground tracking-tight",
         },
-      }),
-      undefined,
-    );
+      },
+    });
   });
 
   it("uses dark Sonner mode for the dark theme", () => {
@@ -77,11 +78,9 @@ describe("Toaster", () => {
     render(<Toaster />);
 
     // ASSERT
-    expect(sonnerMock).toHaveBeenCalledWith(
-      expect.objectContaining({
-        theme: "dark",
-      }),
-      undefined,
-    );
+    const [props] = sonnerMock.mock.calls[0] ?? [];
+    expect(props).toMatchObject({
+      theme: "dark",
+    });
   });
 });
