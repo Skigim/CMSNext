@@ -207,6 +207,72 @@ describe("DataManager", () => {
     });
   });
 
+  describe("updateAlertStatus - duplicate ID deduplication", () => {
+    it("deduplicates persisted alerts with duplicate IDs when updating status", async () => {
+      // ARRANGE – simulate pre-existing duplicate alert IDs in persisted data
+      // (can occur after certain CSV re-import edge cases)
+      const duplicateId = "alert-dup-1";
+      const original = createMockAlertRecord(duplicateId, { status: "new" });
+      const duplicate = createMockAlertRecord(duplicateId, { status: "new" });
+      const unrelated = createMockAlertRecord("alert-other", { status: "new" });
+
+      const mockData = createMockNormalizedFileData({
+        alerts: [original, duplicate, unrelated],
+      });
+      (mockFileStorageService.readFileData as ReturnType<typeof vi.fn>).mockResolvedValue(mockData);
+      (mockFileStorageService.writeNormalizedData as ReturnType<typeof vi.fn>).mockResolvedValue(undefined);
+
+      // ACT
+      const result = await dataManager.updateAlertStatus(duplicateId, { status: "resolved" });
+
+      // ASSERT – result should be non-null with resolved status
+      expect(result).not.toBeNull();
+      expect(result?.status).toBe("resolved");
+
+      // The write should have been called exactly once
+      expect(mockFileStorageService.writeNormalizedData).toHaveBeenCalledTimes(1);
+      const writtenData = (mockFileStorageService.writeNormalizedData as ReturnType<typeof vi.fn>).mock
+        .calls[0][0];
+
+      // Duplicate should be removed — exactly two alerts remain (deduplicated + unrelated)
+      expect(writtenData.alerts).toHaveLength(2);
+      const ids = writtenData.alerts.map((a: AlertRecord) => a.id);
+      expect(ids).toEqual([duplicateId, "alert-other"]);
+
+      // The surviving alert should be the resolved one
+      const updatedAlert = writtenData.alerts.find((a: AlertRecord) => a.id === duplicateId);
+      expect(updatedAlert?.status).toBe("resolved");
+
+      // A warning should have been logged about the deduplication
+      expect(mockLogger.warn).toHaveBeenCalledWith(
+        "Deduplicated alerts with same ID during update",
+        expect.objectContaining({ alertId: duplicateId, removedCount: 1 }),
+      );
+    });
+
+    it("writes a single alert when there are no duplicates", async () => {
+      // ARRANGE
+      const alertId = "alert-unique";
+      const alert = createMockAlertRecord(alertId, { status: "new" });
+      const mockData = createMockNormalizedFileData({ alerts: [alert] });
+      (mockFileStorageService.readFileData as ReturnType<typeof vi.fn>).mockResolvedValue(mockData);
+      (mockFileStorageService.writeNormalizedData as ReturnType<typeof vi.fn>).mockResolvedValue(undefined);
+
+      // ACT
+      const result = await dataManager.updateAlertStatus(alertId, { status: "resolved" });
+
+      // ASSERT
+      expect(result).not.toBeNull();
+      expect(result?.status).toBe("resolved");
+      const writtenData = (mockFileStorageService.writeNormalizedData as ReturnType<typeof vi.fn>).mock
+        .calls[0][0];
+      expect(writtenData.alerts).toHaveLength(1);
+      expect(writtenData.alerts[0].status).toBe("resolved");
+      expect(mockLogger.warn).not.toHaveBeenCalled();
+    });
+  });
+
+
   describe("getAlertsIndex - pruning integration", () => {
     it("prunes old resolved alerts, writes pruned data, and returns pruned index", async () => {
       const oldResolved = createMockAlertRecord("old-resolved", {

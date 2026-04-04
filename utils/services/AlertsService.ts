@@ -323,7 +323,11 @@ export class AlertsService {
     // Set resolvedAt only when status is 'resolved'
     if (nextStatus === 'resolved') {
       // Use provided resolvedAt or generate new timestamp
-      nextResolvedAt = updates.resolvedAt !== undefined ? updates.resolvedAt : (targetAlert.resolvedAt ?? new Date().toISOString());
+      if (updates.resolvedAt === undefined) {
+        nextResolvedAt = targetAlert.resolvedAt ?? new Date().toISOString();
+      } else {
+        nextResolvedAt = updates.resolvedAt;
+      }
     } else {
       // Force null when not resolved
       nextResolvedAt = null;
@@ -398,7 +402,7 @@ export class AlertsService {
     }
 
     // Build lookup maps for efficient matching
-    const { strongCandidates, fallbackCandidates } = this.buildCandidateMaps(existing);
+    const { strongCandidates, fallbackCandidates, exactIdCandidates } = this.buildCandidateMaps(existing);
 
     const usedIndices = new Set<number>();
     const merged: AlertWithMatch[] = [];
@@ -408,7 +412,7 @@ export class AlertsService {
     // Match incoming alerts against existing
     for (const incomingAlert of incoming) {
       const { matchedIndex, matchedExisting } = this.findBestMatch(
-        incomingAlert, existing, strongCandidates, fallbackCandidates, usedIndices
+        incomingAlert, existing, strongCandidates, fallbackCandidates, exactIdCandidates, usedIndices
       );
 
       if (matchedExisting) {
@@ -443,11 +447,22 @@ export class AlertsService {
   private buildCandidateMaps(existing: AlertWithMatch[]): {
     strongCandidates: Map<string, number[]>;
     fallbackCandidates: Map<string, number[]>;
+    exactIdCandidates: Map<string, number[]>;
   } {
     const strongCandidates = new Map<string, number[]>();
     const fallbackCandidates = new Map<string, number[]>();
+    const exactIdCandidates = new Map<string, number[]>();
 
     existing.forEach((alert, index) => {
+      if (alert.id) {
+        const exactIdIndices = exactIdCandidates.get(alert.id);
+        if (exactIdIndices) {
+          exactIdIndices.push(index);
+        } else {
+          exactIdCandidates.set(alert.id, [index]);
+        }
+      }
+
       this.buildAlertLookupCandidates(alert).forEach(candidate => {
         const target = candidate.fallback ? fallbackCandidates : strongCandidates;
         const indices = target.get(candidate.key);
@@ -459,7 +474,7 @@ export class AlertsService {
       });
     });
 
-    return { strongCandidates, fallbackCandidates };
+    return { strongCandidates, fallbackCandidates, exactIdCandidates };
   }
 
   /**
@@ -470,6 +485,7 @@ export class AlertsService {
     existing: AlertWithMatch[],
     strongCandidates: Map<string, number[]>,
     fallbackCandidates: Map<string, number[]>,
+    exactIdCandidates: Map<string, number[]>,
     usedIndices: Set<number>
   ): { matchedIndex: number; matchedExisting: AlertWithMatch | null } {
     const candidates = this.buildAlertLookupCandidates(incomingAlert);
@@ -483,6 +499,21 @@ export class AlertsService {
       usedIndices
     );
     if (strongResult.matchedExisting) return strongResult;
+
+    // Try exact ID matching: if the incoming alert's id directly matches an existing alert's id,
+    // treat them as the same alert regardless of matchStatus or other derived fields.
+    // This handles re-imports where matchStatus changed (e.g. "unmatched" → "matched" after a
+    // case was created), which causes buildAlertStorageKey to differ and breaks strong matching.
+    if (incomingAlert.id) {
+      const exactIdMatch = this.findFirstUnusedIndex(
+        exactIdCandidates.get(incomingAlert.id),
+        existing,
+        usedIndices
+      );
+      if (exactIdMatch) {
+        return exactIdMatch;
+      }
+    }
 
     // Fall back to broader matching with validation
     for (const { key: candidate } of candidates) {
@@ -498,6 +529,28 @@ export class AlertsService {
     }
 
     return { matchedIndex: -1, matchedExisting: null };
+  }
+
+  /**
+   * Return the first candidate index that has not already been consumed by a prior match.
+   * Used with precomputed index lists (such as exact-ID matches) to avoid repeated scans.
+   */
+  private findFirstUnusedIndex(
+    indices: number[] | undefined,
+    existing: AlertWithMatch[],
+    usedIndices: Set<number>
+  ): { matchedIndex: number; matchedExisting: AlertWithMatch } | null {
+    if (!indices?.length) {
+      return null;
+    }
+
+    for (const index of indices) {
+      if (!usedIndices.has(index)) {
+        return { matchedIndex: index, matchedExisting: existing[index] };
+      }
+    }
+
+    return null;
   }
 
   /**
@@ -564,7 +617,9 @@ export class AlertsService {
     existing.forEach((alert, index) => {
       if (usedIndices.has(index)) return;
 
-      if (alert.status !== 'resolved') {
+      if (alert.status === 'resolved') {
+        alerts.push(alert);
+      } else {
         const now = new Date().toISOString();
         alerts.push({
           ...alert,
@@ -573,8 +628,6 @@ export class AlertsService {
           updatedAt: now,
         });
         updatedCount += 1;
-      } else {
-        alerts.push(alert);
       }
     });
 

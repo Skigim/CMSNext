@@ -43,6 +43,46 @@ describe('AlertsService', () => {
     updatedAt: '2024-01-15T10:00:00Z',
   });
 
+  const mockParsedCsvResult = (incomingAlert: AlertWithMatch, matchedCaseId?: string) => {
+    vi.mocked(parseAlertsFromCsv).mockReturnValue({
+      alerts: [incomingAlert],
+      summary: {
+        total: 1,
+        matched: matchedCaseId ? 1 : 0,
+        unmatched: matchedCaseId ? 0 : 1,
+        missingMcn: 0,
+      },
+      alertsByCaseId: matchedCaseId ? new Map([[matchedCaseId, [incomingAlert]]]) : new Map(),
+      unmatched: matchedCaseId ? [] : [incomingAlert],
+      missingMcn: [],
+    });
+  };
+
+  const createReimportAlertPair = (options: {
+    alertId: string;
+    mcNumber: string;
+    description: string;
+    initialStatus?: AlertWithMatch['status'];
+    matchedCaseId: string;
+  }) => {
+    const existingAlert: AlertWithMatch = {
+      ...createMockAlert(options.alertId, options.mcNumber),
+      description: options.description,
+      matchStatus: 'unmatched',
+      reportId: options.alertId,
+      status: options.initialStatus ?? 'new',
+    };
+
+    const incomingAlert: AlertWithMatch = {
+      ...existingAlert,
+      matchStatus: 'matched',
+      matchedCaseId: options.matchedCaseId,
+      matchedCaseName: `Case ${options.matchedCaseId}`,
+    };
+
+    return { existingAlert, incomingAlert };
+  };
+
   beforeEach(() => {
     service = new AlertsService();
   });
@@ -333,6 +373,68 @@ describe('AlertsService', () => {
       expect(result.added).toBe(0);
     });
   });
+
+  describe("mergeAlertsFromCsvContent - exact ID matching across matchStatus changes", () => {
+    it("does not create duplicate IDs when the same alert is re-imported after its matchStatus changed", async () => {
+      const alertId = "ALERT-NUM-42";
+      const { existingAlert, incomingAlert } = createReimportAlertPair({
+        alertId,
+        mcNumber: 'MCN-999',
+        description: 'Benefit calculation discrepancy',
+        matchedCaseId: 'case-100',
+      });
+      incomingAlert.alertDate = '2024-06-15';
+      existingAlert.alertDate = '2024-06-15';
+      incomingAlert.matchedCaseName = 'Smith, Jane';
+      mockParsedCsvResult(incomingAlert, 'case-100');
+
+      // ACT
+      const result = await service.mergeAlertsFromCsvContent(
+        "dummy-csv-content",
+        [existingAlert],
+        [],
+      );
+
+      // ASSERT – should be 0 added (matched to existing), 1 updated, no duplicate IDs
+      expect(result.added).toBe(0);
+      expect(result.updated).toBe(1);
+      expect(result.total).toBe(1);
+
+      const uniqueIds = new Set(result.alerts.map(a => a.id));
+      expect(uniqueIds.size).toBe(result.alerts.length);
+      expect(uniqueIds.has(alertId)).toBe(true);
+    });
+
+    it("does not create duplicate IDs when strong key differs only by matchStatus (empty description)", async () => {
+      const alertId = "BARE-ALERT-7";
+      const { existingAlert, incomingAlert } = createReimportAlertPair({
+        alertId,
+        mcNumber: 'MCN-456',
+        description: '',
+        initialStatus: 'in-progress',
+        matchedCaseId: 'case-200',
+      });
+      incomingAlert.status = 'new';
+      mockParsedCsvResult(incomingAlert, 'case-200');
+
+      // ACT
+      const result = await service.mergeAlertsFromCsvContent(
+        "dummy-csv-content",
+        [existingAlert],
+        [],
+      );
+
+      // ASSERT – no duplicate IDs; existing workflow status should be preserved (in-progress > new)
+      expect(result.updated).toBe(1);
+      expect(result.total).toBe(1);
+      expect(result.alerts).toHaveLength(1);
+      const ids = result.alerts.map(a => a.id);
+      const uniqueIds = new Set(ids);
+      expect(uniqueIds.size).toBe(ids.length);
+      expect(result.alerts[0].status).toBe('in-progress');
+    });
+  });
+
 
   describe('Alert matching logic', () => {
     it('should normalize MCN for matching', () => {
