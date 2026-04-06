@@ -21,7 +21,7 @@ describe("APPLICATION_OWNED_CASE_RECORD_FIELDS", () => {
     expect(ownedFields).toEqual([
       "applicationDate",
       "applicationType",
-      "hasWaiver",
+      "withWaiver",
       "retroRequested",
       "appValidated",
       "retroMonths",

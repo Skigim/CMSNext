@@ -2,7 +2,7 @@ import type { CaseRecord } from "@/types/case";
 import {
   APPLICATION_STATUS,
   type Application,
-  type ApplicationOwnedCaseRecordField,
+  type ApplicationOwnedLegacyCaseRecordField,
   type ApplicationOwnedCaseRecordSnapshot,
   type ApplicationStatusHistory,
   type CaseOwnedAfterApplicationMigrationField,
@@ -12,7 +12,7 @@ import {
 export const APPLICATION_OWNED_CASE_RECORD_FIELDS = [
   "applicationDate",
   "applicationType",
-  "hasWaiver",
+  "withWaiver",
   "retroRequested",
   "appValidated",
   "retroMonths",
@@ -28,7 +28,7 @@ export const APPLICATION_OWNED_CASE_RECORD_FIELDS = [
   "avsConsentDate",
   "voterFormStatus",
   "intakeCompleted",
-] as const satisfies readonly ApplicationOwnedCaseRecordField[];
+] as const satisfies readonly ApplicationOwnedLegacyCaseRecordField[];
 
 export const CASE_OWNED_AFTER_APPLICATION_MIGRATION_FIELDS = [
   "id",

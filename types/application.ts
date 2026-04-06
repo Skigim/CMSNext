@@ -75,10 +75,10 @@ export interface Application {
   updatedAt: string;
 }
 
-export type ApplicationOwnedCaseRecordField =
+export type ApplicationOwnedLegacyCaseRecordField =
   | "applicationDate"
   | "applicationType"
-  | "hasWaiver"
+  | "withWaiver"
   | "retroRequested"
   | "appValidated"
   | "retroMonths"
@@ -97,7 +97,7 @@ export type ApplicationOwnedCaseRecordField =
 
 export type CaseOwnedAfterApplicationMigrationField = Exclude<
   keyof CaseRecord,
-  ApplicationOwnedCaseRecordField | "financials" | "notes"
+  ApplicationOwnedLegacyCaseRecordField | "financials" | "notes"
 >;
 
 export interface MigratedApplicationStatusDecision {
