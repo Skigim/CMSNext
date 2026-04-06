@@ -430,7 +430,7 @@ describe("CaseService hydration seam", () => {
 
       // ASSERT
       const writtenData = vi.mocked(mockFileService.writeFile).mock.calls[0][0];
-      expect(writtenData.cases[0].caseRecord.intakeCompleted).toBe(true);
+      expect(writtenData.applications[0].verification.isIntakeCompleted).toBe(true);
     });
 
     it("preserves an explicitly incomplete quick-add case flag", async () => {
@@ -449,7 +449,7 @@ describe("CaseService hydration seam", () => {
 
       // ASSERT
       const writtenData = vi.mocked(mockFileService.writeFile).mock.calls[0][0];
-      expect(writtenData.cases[0].caseRecord.intakeCompleted).toBe(false);
+      expect(writtenData.applications[0].verification.isIntakeCompleted).toBe(false);
     });
 
     it("fails when create-case input references a missing person", async () => {

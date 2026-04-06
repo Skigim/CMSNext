@@ -1,7 +1,7 @@
 ---
 name: frontend
 description: "Build, refactor, or review CMSNext frontend and UI work. Use when changing React components, app shells, interaction flows, styling, shadcn/ui composition, accessibility, or visual behavior."
-model: "GPT-5.4 (copilot)"
+model: "Gemini 3.1 Pro"
 tools:
   - read
   - search

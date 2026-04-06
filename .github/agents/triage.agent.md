@@ -1,7 +1,7 @@
 ---
 name: triage
 description: "Coordinate CMSNext work across triage, implementation, documentation, testing, and audit. Use when choosing the right specialist agent, sequencing the next step, or preparing a strong handoff prompt for domain, services, hooks, frontend, storage, documentation, testing, or audit work."
-model: "GPT-5.4 (copilot)"
+model: "Opus 4.6"
 tools:
   - read
   - search

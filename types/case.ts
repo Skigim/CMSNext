@@ -351,8 +351,16 @@ export interface StoredCase extends Omit<CaseDisplay, "caseRecord" | "alerts"> {
   pendingArchival?: boolean;
 }
 
-export interface PersistedCase extends Omit<StoredCase, 'person' | 'linkedPeople'> {
+import type { CaseOwnedAfterApplicationMigrationField } from "@/types/application";
+
+export type PersistedCaseRecord = Pick<
+  CaseRecord,
+  CaseOwnedAfterApplicationMigrationField
+>;
+
+export interface PersistedCase extends Omit<StoredCase, 'person' | 'linkedPeople' | 'caseRecord'> {
   people: CasePersonRef[];
+  caseRecord: PersistedCaseRecord;
 }
 
 export interface StoredFinancialItem extends FinancialItem {

@@ -15,6 +15,7 @@ import {
 } from "../types/case";
 import type { CaseActivityEntry } from "../types/activityLog";
 import type { Template, NewTemplateData } from "../types/template";
+import type { Application, ApplicationStatusHistory } from "../types/application";
 import type {
   ArchivalSettings,
   ArchiveFileInfo,
@@ -57,6 +58,7 @@ import { CaseService } from "./services/CaseService";
 import { PersonService } from "./services/PersonService";
 import { AlertsService } from "./services/AlertsService";
 import { TemplateService } from "./services/TemplateService";
+import { ApplicationService } from "./services/ApplicationService";
 import { CaseArchiveService, type RefreshQueueResult } from "./services/CaseArchiveService";
 import {
   MAIN_WORKSPACE_FILE_NAME,
@@ -221,6 +223,8 @@ export class DataManager {
   private readonly alerts: AlertsService;
   /** Template service for managing templates */
   private readonly templates: TemplateService;
+  /** Application service for normalized application records */
+  private readonly applications: ApplicationService;
   /** Case archive service for archival operations */
   private readonly archive: CaseArchiveService;
 
@@ -260,6 +264,9 @@ export class DataManager {
     });
     this.alerts = new AlertsService();
     this.templates = new TemplateService({
+      fileStorage: this.fileStorage,
+    });
+    this.applications = new ApplicationService({
       fileStorage: this.fileStorage,
     });
     this.archive = new CaseArchiveService({
@@ -492,6 +499,28 @@ export class DataManager {
    */
   async getNotesForCase(caseId: string): Promise<StoredNote[]> {
     return this.notes.getNotesForCase(caseId);
+  }
+
+  async getApplicationsForCase(caseId: string): Promise<Application[]> {
+    return this.applications.getApplicationsForCase(caseId);
+  }
+
+  async addApplication(application: Application): Promise<Application> {
+    return this.applications.addApplication(application);
+  }
+
+  async updateApplication(
+    applicationId: string,
+    updates: Partial<Application>,
+  ): Promise<Application> {
+    return this.applications.updateApplication(applicationId, updates);
+  }
+
+  async addApplicationStatusHistory(
+    applicationId: string,
+    entry: ApplicationStatusHistory,
+  ): Promise<Application> {
+    return this.applications.addStatusHistory(applicationId, entry);
   }
 
   // ==========================================================================

@@ -6,7 +6,6 @@ import type {
   NewCaseRecordData,
   CaseStatus,
   NewNoteData,
-  CaseRecord,
   AlertRecord,
   Person,
   PersonRelationship,
@@ -23,7 +22,7 @@ import { resolveCaseRecordIntakeCompleted } from '@/domain/cases';
 import { toLocalDateString } from '../../domain/common';
 import { formatCaseDisplayName } from '../../domain/cases/formatting';
 import type { AlertWithMatch } from '@/domain/alerts';
-import { dehydrateStoredCase, hydrateStoredCase } from '../storageV21Migration';
+import { dehydrateStoredCase, hydrateStoredCase, syncRuntimeApplications } from '../storageV21Migration';
 
 // formatCaseDisplayName imported from domain layer
 const PRIMARY_CASE_PERSON_ROLE: CasePersonRole = 'applicant';
@@ -276,27 +275,10 @@ export class CaseService {
    */
   dehydrate(caseItem: StoredCase & { alerts?: AlertRecord[] }): PersistedCase {
     const {
-      person: _person,
-      linkedPeople: _linkedPeople,
-      alerts: _alerts,
-      caseRecord,
-      ...rest
-    } = caseItem;
-    const {
       alerts: _dehydratedAlerts,
       ...dehydratedCase
     } = dehydrateStoredCase(caseItem) as PersistedCase & { alerts?: AlertRecord[] };
-    const caseRecordWithRuntimeFields:
-      StoredCase["caseRecord"] & Partial<Pick<CaseRecord, "financials" | "notes">> = caseRecord;
-    const { financials: _financials, notes: _notes, ...storedCaseRecord } =
-      caseRecordWithRuntimeFields;
-
-    return {
-      ...dehydratedCase,
-      ...rest,
-      people: dehydratedCase.people.map((ref) => ({ ...ref })),
-      caseRecord: storedCaseRecord,
-    };
+    return dehydratedCase;
   }
 
   // =============================================================================
@@ -437,7 +419,7 @@ export class CaseService {
     };
     const personId = primaryPerson.id;
 
-    const newCase: PersistedCase = {
+    const newCase: StoredCase = {
       id: caseId,
       name: primaryPerson.name,
       mcn: caseData.caseRecord.mcn,
@@ -448,6 +430,14 @@ export class CaseService {
       people: [
         { personId, role: PRIMARY_CASE_PERSON_ROLE, isPrimary: true },
         ...resolvedHouseholdMembers.map(({ ref }) => ref),
+      ],
+      person: primaryPerson,
+      linkedPeople: [
+        {
+          ref: { personId, role: PRIMARY_CASE_PERSON_ROLE, isPrimary: true },
+          person: primaryPerson,
+        },
+        ...resolvedHouseholdMembers.map(({ ref, person }) => ({ ref, person })),
       ],
       caseRecord: {
         id: uuidv4(),
@@ -495,17 +485,24 @@ export class CaseService {
       ...resolvedHouseholdMembers.map(({ person }) => person),
     ]);
     const updatedPeople = updatedDataWithPeople.people;
-    const createdRuntimeCase = this.hydrate(newCase, updatedPeople);
 
     const updatedData: NormalizedFileData = {
       ...updatedDataWithPeople,
       people: updatedPeople,
-      cases: [...currentData.cases, createdRuntimeCase],
+      cases: [...currentData.cases, newCase],
+      applications: syncRuntimeApplications(
+        {
+          ...updatedDataWithPeople,
+          people: updatedPeople,
+          cases: [...currentData.cases, newCase],
+        },
+        true,
+      ).applications,
     };
 
     const writtenData = await this.fileStorage.writeNormalizedData(updatedData);
 
-    return writtenData.cases.find((caseItem) => caseItem.id === caseId) ?? createdRuntimeCase;
+    return writtenData.cases.find((caseItem) => caseItem.id === caseId) ?? newCase;
   }
 
   /**
@@ -659,6 +656,8 @@ export class CaseService {
       },
       [updatedPerson, ...resolvedHouseholdMembers.map(({ person }) => person)],
     );
+
+    updatedData.applications = syncRuntimeApplications(updatedData, true).applications;
 
     await this.fileStorage.writeNormalizedData(updatedData);
 
