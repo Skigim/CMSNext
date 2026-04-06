@@ -12,7 +12,7 @@ import {
 export const APPLICATION_OWNED_CASE_RECORD_FIELDS = [
   "applicationDate",
   "applicationType",
-  "withWaiver",
+  "hasWaiver",
   "retroRequested",
   "appValidated",
   "retroMonths",
@@ -56,7 +56,7 @@ export interface CreateMigratedApplicationInput {
   caseId: string;
   applicantPersonId: string;
   migratedAt: string;
-  caseRecord: Pick<CaseRecord, keyof CaseRecord>;
+  caseRecord: CaseRecord;
 }
 
 export function deriveMigratedApplicationStatus(
@@ -78,12 +78,12 @@ export function normalizeRetroRequestedAt(
 }
 
 export function pickApplicationOwnedCaseRecordFields(
-  caseRecord: Pick<CaseRecord, keyof CaseRecord>,
+  caseRecord: CaseRecord,
 ): ApplicationOwnedCaseRecordSnapshot {
   return {
     applicationDate: caseRecord.applicationDate,
     applicationType: caseRecord.applicationType ?? "",
-    withWaiver: caseRecord.withWaiver,
+    hasWaiver: caseRecord.withWaiver,
     retroRequested: caseRecord.retroRequested,
     appValidated: caseRecord.appValidated ?? false,
     retroMonths: caseRecord.retroMonths ?? [],
@@ -142,25 +142,25 @@ export function createMigratedApplication(
     applicationType: applicationFields.applicationType,
     status: statusHistory[0].status,
     statusHistory,
-    withWaiver: applicationFields.withWaiver,
+    hasWaiver: applicationFields.hasWaiver,
     retroRequestedAt: normalizeRetroRequestedAt(
       applicationFields.retroRequested,
     ),
     retroMonths: applicationFields.retroMonths,
     verification: {
-      appValidated: applicationFields.appValidated,
-      agedDisabledVerified: applicationFields.agedDisabledVerified,
-      citizenshipVerified: applicationFields.citizenshipVerified,
-      residencyVerified: applicationFields.residencyVerified,
-      avsSubmitted: applicationFields.avsSubmitted,
+      isAppValidated: applicationFields.appValidated,
+      isAgedDisabledVerified: applicationFields.agedDisabledVerified,
+      isCitizenshipVerified: applicationFields.citizenshipVerified,
+      isResidencyVerified: applicationFields.residencyVerified,
+      isAvsSubmitted: applicationFields.avsSubmitted,
       avsSubmitDate: applicationFields.avsSubmitDate,
-      interfacesReviewed: applicationFields.interfacesReviewed,
+      hasInterfacesReviewed: applicationFields.interfacesReviewed,
       reviewVRs: applicationFields.reviewVRs,
       reviewPriorBudgets: applicationFields.reviewPriorBudgets,
       reviewPriorNarr: applicationFields.reviewPriorNarr,
       avsConsentDate: applicationFields.avsConsentDate,
       voterFormStatus: applicationFields.voterFormStatus,
-      intakeCompleted: applicationFields.intakeCompleted,
+      isIntakeCompleted: applicationFields.intakeCompleted,
     },
     createdAt: input.migratedAt,
     updatedAt: input.migratedAt,

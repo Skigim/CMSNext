@@ -23,25 +23,25 @@ export interface ApplicationStatusHistory {
 }
 
 export interface ApplicationVerificationSnapshot {
-  appValidated: boolean;
-  agedDisabledVerified: boolean;
-  citizenshipVerified: boolean;
-  residencyVerified: boolean;
-  avsSubmitted: boolean;
+  isAppValidated: boolean;
+  isAgedDisabledVerified: boolean;
+  isCitizenshipVerified: boolean;
+  isResidencyVerified: boolean;
+  isAvsSubmitted: boolean;
   avsSubmitDate: string;
-  interfacesReviewed: boolean;
+  hasInterfacesReviewed: boolean;
   reviewVRs: boolean;
   reviewPriorBudgets: boolean;
   reviewPriorNarr: boolean;
   avsConsentDate: string;
   voterFormStatus: VoterFormStatus;
-  intakeCompleted: boolean;
+  isIntakeCompleted: boolean;
 }
 
 export interface ApplicationOwnedCaseRecordSnapshot {
   applicationDate: string;
   applicationType: string;
-  withWaiver: boolean;
+  hasWaiver: boolean;
   retroRequested: string;
   appValidated: boolean;
   retroMonths: string[];
@@ -67,7 +67,7 @@ export interface Application {
   applicationType: string;
   status: ApplicationStatus;
   statusHistory: ApplicationStatusHistory[];
-  withWaiver: boolean;
+  hasWaiver: boolean;
   retroRequestedAt: string | null;
   retroMonths: string[];
   verification: ApplicationVerificationSnapshot;
@@ -78,7 +78,7 @@ export interface Application {
 export type ApplicationOwnedCaseRecordField =
   | "applicationDate"
   | "applicationType"
-  | "withWaiver"
+  | "hasWaiver"
   | "retroRequested"
   | "appValidated"
   | "retroMonths"
