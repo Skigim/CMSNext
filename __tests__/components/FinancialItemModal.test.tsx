@@ -1,9 +1,12 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { act, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { axe, toHaveNoViolations } from "jest-axe";
 import { describe, expect, it, vi } from "vitest";
 import FinancialItemModal from "@/components/modals/FinancialItemModal";
 import type { FinancialFormData, FinancialFormErrors } from "@/hooks/useFinancialItemFlow";
 import { createMockStoredCase } from "@/src/test/testUtils";
+
+expect.extend(toHaveNoViolations);
 
 const baseFormData: FinancialFormData = {
   id: null,
@@ -21,8 +24,47 @@ const baseFormData: FinancialFormData = {
 
 const baseFormErrors: FinancialFormErrors = {};
 
+function createDeferredPromise<T>() {
+  let resolvePromise: (value: T) => void;
+
+  const promise = new Promise<T>((resolve) => {
+    resolvePromise = resolve;
+  });
+
+  return {
+    promise,
+    resolve: (value: T) => resolvePromise(value),
+  };
+}
+
 describe("FinancialItemModal", () => {
+  it("has no accessibility violations when the dialog is open", async () => {
+    // ARRANGE
+    const { baseElement } = render(
+      <FinancialItemModal
+        isOpen={true}
+        onClose={vi.fn()}
+        onSave={vi.fn().mockResolvedValue(true)}
+        caseData={createMockStoredCase()}
+        itemType="resources"
+        isEditing={false}
+        formData={baseFormData}
+        formErrors={baseFormErrors}
+        addAnother={false}
+        onFormFieldChange={vi.fn()}
+        onAddAnotherChange={vi.fn()}
+      />,
+    );
+
+    // ACT
+    const results = await axe(baseElement);
+
+    // ASSERT
+    expect(results).toHaveNoViolations();
+  });
+
   it("keeps save enabled so existing validation can surface errors", () => {
+    // ARRANGE / ACT
     render(
       <FinancialItemModal
         isOpen={true}
@@ -43,14 +85,15 @@ describe("FinancialItemModal", () => {
       />,
     );
 
+    // ASSERT
     expect(screen.getByRole("button", { name: /save item/i })).toBeEnabled();
   });
 
-  it("submits with Ctrl+Enter when not already submitting", async () => {
+  it("submits once with Ctrl+Enter and settles the async save before teardown", async () => {
+    // ARRANGE
     const user = userEvent.setup();
-    const onSave = vi.fn().mockImplementation(
-      () => new Promise<boolean>((resolve) => setTimeout(() => resolve(true), 50)),
-    );
+    const saveOperation = createDeferredPromise<boolean>();
+    const onSave = vi.fn().mockReturnValue(saveOperation.promise);
 
     render(
       <FinancialItemModal
@@ -68,11 +111,25 @@ describe("FinancialItemModal", () => {
       />,
     );
 
+    // ACT
     await user.click(screen.getByLabelText(/item name/i));
     await user.keyboard("{Control>}{Enter}{/Control}");
 
     await waitFor(() => {
       expect(onSave).toHaveBeenCalledTimes(1);
     });
+
+    expect(screen.getByRole("button", { name: /save item/i })).toBeDisabled();
+
+    await user.keyboard("{Control>}{Enter}{/Control}");
+    expect(onSave).toHaveBeenCalledTimes(1);
+
+    await act(async () => {
+      saveOperation.resolve(true);
+      await saveOperation.promise;
+    });
+
+    // ASSERT
+    expect(screen.getByRole("button", { name: /save item/i })).toBeEnabled();
   });
 });

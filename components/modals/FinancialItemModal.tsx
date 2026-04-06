@@ -195,7 +195,7 @@ function FinancialItemModal({
                   onValueChange={(value) => onFormFieldChange('frequency', value)}
                   disabled={isSubmitting}
                 >
-                  <SelectTrigger>
+                  <SelectTrigger id="frequency">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -219,7 +219,7 @@ function FinancialItemModal({
                 onValueChange={(value) => onFormFieldChange('verificationStatus', value)}
                 disabled={isSubmitting}
               >
-                <SelectTrigger>
+                <SelectTrigger id="verificationStatus">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -264,7 +264,7 @@ function FinancialItemModal({
                   onValueChange={(value) => onFormFieldChange('owner', value)}
                   disabled={isSubmitting}
                 >
-                  <SelectTrigger>
+                  <SelectTrigger id="owner">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
