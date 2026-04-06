@@ -5,12 +5,12 @@ import type {
   StoredCase,
   StoredFinancialItem,
   StoredNote,
-} from "../../types/case";
-import type { Application } from "../../types/application";
-import type { CaseActivityEntry } from "../../types/activityLog";
-import type { CategoryConfig } from "../../types/categoryConfig";
-import type { Template } from "../../types/template";
-import { mergeCategoryConfig } from "../../types/categoryConfig";
+} from "@/types/case";
+import type { Application } from "@/types/application";
+import type { CaseActivityEntry } from "@/types/activityLog";
+import type { CategoryConfig } from "@/types/categoryConfig";
+import type { Template } from "@/types/template";
+import { mergeCategoryConfig } from "@/types/categoryConfig";
 import { discoverStatusesFromCases, discoverAlertTypesFromAlerts } from "../categoryConfigMigration";
 import { migrateFinancialItems, hasItemsNeedingMigration } from "../financialItemMigration";
 import AutosaveFileService from "../AutosaveFileService";
@@ -375,14 +375,14 @@ export class FileStorageService {
           throw new LegacyFormatError(`${INVALID_V2_1_FORMAT_PREFIX}: ${hydrationError}`);
         }
 
-        const { applications: syncedApplications, changed: applicationsChanged } =
+        const { applications: syncedApplications, hasChanged: hasApplicationsChanged } =
           syncRuntimeApplications(hydratedData);
-        const requiresApplicationRewrite =
-          applicationsChanged ||
+        const shouldRewriteApplications =
+          hasApplicationsChanged ||
           persistedCasesContainLegacyApplicationFields(rawData.cases) ||
           ((rawData.applications?.length ?? 0) === 0 && rawData.cases.length > 0);
 
-        let canonicalData: NormalizedFileData = applicationsChanged
+        let canonicalData: NormalizedFileData = hasApplicationsChanged
           ? {
               ...hydratedData,
               applications: syncedApplications,
@@ -390,7 +390,8 @@ export class FileStorageService {
           : hydratedData;
 
         // Auto-migrate financial items without history entries
-        if (hasItemsNeedingMigration(canonicalData.financials)) {
+        const hasFinancialMigration = hasItemsNeedingMigration(canonicalData.financials);
+        if (hasFinancialMigration) {
           const [migratedFinancials, count] = migrateFinancialItems(canonicalData.financials);
           logger.info(`Migrated ${count} financial items to include history entries`);
 
@@ -400,14 +401,14 @@ export class FileStorageService {
           };
         }
 
-        if (requiresApplicationRewrite) {
+        if (shouldRewriteApplications) {
           logger.info("Migrated workspace applications into canonical persisted records", {
             caseCount: canonicalData.cases.length,
             applicationCount: canonicalData.applications?.length ?? 0,
           });
         }
 
-        if (requiresApplicationRewrite || hasItemsNeedingMigration(hydratedData.financials)) {
+        if (shouldRewriteApplications || hasFinancialMigration) {
           await this.writeNormalizedData(canonicalData);
           return canonicalData;
         }

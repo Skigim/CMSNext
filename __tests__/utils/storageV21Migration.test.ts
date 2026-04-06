@@ -234,7 +234,9 @@ describe("storageV21Migration", () => {
     const dehydrated = dehydrateNormalizedData(runtimeData);
 
     // ASSERT
-    expect(dehydrated.applications?.[0].verification.isIntakeCompleted).toBe(true);
+    expect(dehydrated.applications).toBeDefined();
+    expect(dehydrated.applications).toHaveLength(1);
+    expect(dehydrated.applications![0].verification.isIntakeCompleted).toBe(true);
   });
 
   it("stores applications canonically and strips application-owned case fields during dehydration", () => {

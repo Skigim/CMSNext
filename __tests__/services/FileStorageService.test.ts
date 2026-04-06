@@ -332,5 +332,16 @@ describe("FileStorageService v2.1", () => {
     expect(writtenRuntimeData.applications).toHaveLength(1);
     expect(writtenRuntimeData.cases[0].caseRecord.applicationType).toBe("Renewal");
     expect(writtenRuntimeData.cases[0].caseRecord.retroRequested).toBe("2026-02-01");
+
+    // Verify persists both the explicit application and the hydrated case legacy field
+    expect(mockFileService.writeFile).toHaveBeenCalledTimes(1);
+    const writtenData = mockFileService.writeFile.mock.calls[0][0];
+    expect(writtenData.applications).toHaveLength(1);
+    expect(writtenData.applications[0]).toMatchObject({
+      id: "application-1",
+      caseId: "case-1",
+      applicationType: "Renewal",
+      retroRequestedAt: "2026-02-01",
+    });
   });
 });

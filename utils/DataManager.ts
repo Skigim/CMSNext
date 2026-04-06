@@ -501,26 +501,72 @@ export class DataManager {
     return this.notes.getNotesForCase(caseId);
   }
 
+  /**
+   * Get all applications for a specific case.
+   * 
+   * Returns normalized application records with caseId foreign key references.
+   * Always reads fresh data from disk.
+   * 
+   * @param {string} caseId - The case ID to get applications for
+   * @returns {Promise<Application[]>} Array of applications for the case
+   * @throws {Error} If the underlying read operation fails
+   */
   async getApplicationsForCase(caseId: string): Promise<Application[]> {
     return this.applications.getApplicationsForCase(caseId);
   }
 
+  /**
+   * Add a new application record.
+   * 
+   * Writes the application through the canonical application service path.
+   * The target case must already exist.
+   * 
+   * @param {Application} application - The normalized application record to create
+   * @returns {Promise<Application>} The created application record
+   * @throws {Error} If the target case does not exist or the write fails
+   */
   async addApplication(application: Application): Promise<Application> {
     return this.applications.addApplication(application);
   }
 
+  /**
+   * Update an existing application record.
+   * 
+   * Applies partial updates while preserving immutable identifiers and routing
+   * the write through the canonical application service path.
+   * 
+   * @param {string} caseId - The case ID the application belongs to
+   * @param {string} applicationId - The application ID to update
+   * @param {Partial<Application>} updates - Partial application fields to update
+   * @returns {Promise<Application>} The updated application record
+   * @throws {Error} If the application is not found or the write fails
+   */
   async updateApplication(
+    caseId: string,
     applicationId: string,
     updates: Partial<Application>,
   ): Promise<Application> {
-    return this.applications.updateApplication(applicationId, updates);
+    return this.applications.updateApplication(caseId, applicationId, updates);
   }
 
+  /**
+   * Add a status history entry to an application.
+   * 
+   * Appends a new status history record, updates the application's current
+   * status, and writes the change through the canonical application service path.
+   * 
+   * @param {string} caseId - The case ID the application belongs to
+   * @param {string} applicationId - The application ID to update
+   * @param {ApplicationStatusHistory} entry - The status history entry to append
+   * @returns {Promise<Application>} The updated application record
+   * @throws {Error} If the application is not found or the write fails
+   */
   async addApplicationStatusHistory(
+    caseId: string,
     applicationId: string,
     entry: ApplicationStatusHistory,
   ): Promise<Application> {
-    return this.applications.addStatusHistory(applicationId, entry);
+    return this.applications.addStatusHistory(caseId, applicationId, entry);
   }
 
   // ==========================================================================
@@ -1536,7 +1582,7 @@ export class DataManager {
    * Cases become eligible based on archivalSettings:
    * - Age exceeds thresholdMonths (based on updatedAt)
    * - If archiveClosedOnly is true, status must be marked as "completed" in config
-   * - Not already marked as pendingArchival
+   * - Not already marked as isPendingArchival
    * 
    * Call this on app load to auto-identify cases for archival review.
    * 

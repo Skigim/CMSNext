@@ -369,13 +369,12 @@ function resolvePrimaryPersonRef(
   return primaryPeople[0];
 }
 
+/**
+ * Returns a deep clone of an application record to ensure runtime mutations
+ * do not bleed back into the storage layer or other shared references.
+ */
 function cloneApplication(application: Application): Application {
-  return {
-    ...application,
-    retroMonths: [...application.retroMonths],
-    statusHistory: application.statusHistory.map((entry) => ({ ...entry })),
-    verification: { ...application.verification },
-  };
+  return globalThis.structuredClone(application);
 }
 
 function getPrimaryApplicationForCase(
@@ -532,7 +531,7 @@ function syncApplicationWithCase(
   caseItem: StoredCase,
   existingApplication: Application | null,
   timestamp: string,
-): { application: Application; changed: boolean } {
+): { application: Application; hasChanged: boolean } {
   const sourceCaseRecord = createApplicationSourceCase(caseItem);
 
   if (!existingApplication) {
@@ -545,7 +544,7 @@ function syncApplicationWithCase(
         migratedAt: timestamp,
         caseRecord: sourceCaseRecord,
       }),
-      changed: true,
+      hasChanged: true,
     };
   }
 
@@ -576,30 +575,32 @@ function syncApplicationWithCase(
     },
   };
 
-  const changed =
+  const hasChanged =
     candidate.applicantPersonId !== existingApplication.applicantPersonId ||
     candidate.applicationDate !== existingApplication.applicationDate ||
     candidate.applicationType !== existingApplication.applicationType ||
     candidate.hasWaiver !== existingApplication.hasWaiver ||
     candidate.retroRequestedAt !== existingApplication.retroRequestedAt ||
-    JSON.stringify(candidate.retroMonths) !== JSON.stringify(existingApplication.retroMonths) ||
-    JSON.stringify(candidate.verification) !== JSON.stringify(existingApplication.verification);
+    globalThis.JSON.stringify(candidate.retroMonths) !==
+      globalThis.JSON.stringify(existingApplication.retroMonths) ||
+    globalThis.JSON.stringify(candidate.verification) !==
+      globalThis.JSON.stringify(existingApplication.verification);
 
   return {
-    application: changed
+    application: hasChanged
       ? {
           ...candidate,
           updatedAt: timestamp,
         }
       : cloneApplication(existingApplication),
-    changed,
+    hasChanged,
   };
 }
 
 export function syncRuntimeApplications(
   data: RuntimeNormalizedFileDataV21,
   preferRuntimeCaseFields = false,
-): { applications: Application[]; changed: boolean } {
+): { applications: Application[]; hasChanged: boolean } {
   const existingApplications = data.applications?.map(cloneApplication) ?? [];
   const applicationsByCaseId = new Map<string, Application[]>();
 
@@ -610,7 +611,7 @@ export function syncRuntimeApplications(
   }
 
   const timestamp = new Date().toISOString();
-  let changed = false;
+  let hasChanged = false;
   const syncedApplications = [...existingApplications];
 
   for (const caseItem of data.cases) {
@@ -621,7 +622,7 @@ export function syncRuntimeApplications(
       continue;
     }
 
-    const { application, changed: applicationChanged } = syncApplicationWithCase(
+    const { application, hasChanged: applicationChanged } = syncApplicationWithCase(
       caseItem,
       primaryApplication,
       timestamp,
@@ -630,7 +631,7 @@ export function syncRuntimeApplications(
     if (!primaryApplication) {
       syncedApplications.push(application);
       applicationsByCaseId.set(caseItem.id, [...existingForCase, application]);
-      changed = true;
+      hasChanged = true;
       continue;
     }
 
@@ -638,16 +639,18 @@ export function syncRuntimeApplications(
       continue;
     }
 
-    const index = syncedApplications.findIndex((candidate) => candidate.id === primaryApplication.id);
+    const index = syncedApplications.findIndex(
+      (candidate) => candidate.id === primaryApplication.id,
+    );
     if (index !== -1) {
       syncedApplications[index] = application;
-      changed = true;
+      hasChanged = true;
     }
   }
 
   return {
     applications: syncedApplications,
-    changed,
+    hasChanged,
   };
 }
 
@@ -901,7 +904,7 @@ export function migrateV20ToV21(data: NormalizedFileDataV20): PersistedNormalize
           ...caseItem.caseRecord,
           personId: migratedPersonId,
         },
-        pendingArchival: caseItem.pendingArchival,
+        isPendingArchival: caseItem.isPendingArchival,
       };
     }),
     financials: data.financials.map((financial) => ({ ...financial })),

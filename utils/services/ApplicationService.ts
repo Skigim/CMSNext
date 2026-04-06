@@ -1,19 +1,18 @@
 import type { Application, ApplicationStatusHistory } from "@/types/application";
+import { readDataAndRequireCase } from "@/utils/serviceHelpers";
 
 import type { FileStorageService } from "./FileStorageService";
-import { readDataAndRequireCase } from "@/utils/serviceHelpers";
 
 interface ApplicationServiceConfig {
   fileStorage: FileStorageService;
 }
 
+/**
+ * Returns a deep clone of an application record to ensure runtime mutations
+ * do not bleed back into the storage layer or other shared references.
+ */
 function cloneApplication(application: Application): Application {
-  return {
-    ...application,
-    retroMonths: [...application.retroMonths],
-    statusHistory: application.statusHistory.map((entry) => ({ ...entry })),
-    verification: { ...application.verification },
-  };
+  return globalThis.structuredClone(application);
 }
 
 export class ApplicationService {
@@ -24,10 +23,7 @@ export class ApplicationService {
   }
 
   async getApplicationsForCase(caseId: string): Promise<Application[]> {
-    const data = await this.fileStorage.readFileData();
-    if (!data) {
-      return [];
-    }
+    const data = await readDataAndRequireCase(this.fileStorage, caseId);
 
     return (data.applications ?? [])
       .filter((application) => application.caseId === caseId)
@@ -36,6 +32,7 @@ export class ApplicationService {
 
   async addApplication(application: Application): Promise<Application> {
     const currentData = await readDataAndRequireCase(this.fileStorage, application.caseId);
+
     const existingApplication = (currentData.applications ?? []).find(
       (candidate) => candidate.id === application.id,
     );
@@ -55,13 +52,14 @@ export class ApplicationService {
   }
 
   async updateApplication(
+    caseId: string,
     applicationId: string,
     updates: Partial<Application>,
   ): Promise<Application> {
-    const currentData = await this.fileStorage.readFileData();
-    if (!currentData) {
-      throw new Error("Failed to read current data");
-    }
+    const currentData = await readDataAndRequireCase(
+      this.fileStorage,
+      caseId,
+    );
 
     const applications = currentData.applications ?? [];
     const applicationIndex = applications.findIndex(
@@ -73,15 +71,21 @@ export class ApplicationService {
     }
 
     const existingApplication = applications[applicationIndex];
+    if (existingApplication.caseId !== caseId) {
+      throw new Error("Application does not belong to the specified case");
+    }
+
     const updatedApplication: Application = {
       ...existingApplication,
       ...updates,
       id: existingApplication.id,
       caseId: existingApplication.caseId,
       retroMonths: [...(updates.retroMonths ?? existingApplication.retroMonths)],
-      statusHistory: (updates.statusHistory ?? existingApplication.statusHistory).map((entry: ApplicationStatusHistory) => ({
-        ...entry,
-      })),
+      statusHistory: (updates.statusHistory ?? existingApplication.statusHistory).map(
+        (entry: ApplicationStatusHistory) => ({
+          ...entry,
+        }),
+      ),
       verification: {
         ...existingApplication.verification,
         ...updates.verification,
@@ -102,13 +106,14 @@ export class ApplicationService {
   }
 
   async addStatusHistory(
+    caseId: string,
     applicationId: string,
     entry: ApplicationStatusHistory,
   ): Promise<Application> {
-    const currentData = await this.fileStorage.readFileData();
-    if (!currentData) {
-      throw new Error("Failed to read current data");
-    }
+    const currentData = await readDataAndRequireCase(
+      this.fileStorage,
+      caseId,
+    );
 
     const applications = currentData.applications ?? [];
     const applicationIndex = applications.findIndex(
@@ -120,10 +125,17 @@ export class ApplicationService {
     }
 
     const existingApplication = applications[applicationIndex];
+    if (existingApplication.caseId !== caseId) {
+      throw new Error("Application does not belong to the specified case");
+    }
+
     const updatedApplication: Application = {
       ...existingApplication,
       status: entry.status,
-      statusHistory: [...existingApplication.statusHistory.map((historyEntry: ApplicationStatusHistory) => ({ ...historyEntry })), { ...entry }],
+      statusHistory: [
+        ...globalThis.structuredClone(existingApplication.statusHistory),
+        globalThis.structuredClone(entry),
+      ],
       updatedAt: new Date().toISOString(),
     };
 

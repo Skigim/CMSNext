@@ -22,7 +22,7 @@ import { resolveCaseRecordIntakeCompleted } from '@/domain/cases';
 import { toLocalDateString } from '../../domain/common';
 import { formatCaseDisplayName } from '../../domain/cases/formatting';
 import type { AlertWithMatch } from '@/domain/alerts';
-import { dehydrateStoredCase, hydrateStoredCase, syncRuntimeApplications } from '../storageV21Migration';
+import { dehydrateStoredCase, hydrateStoredCase, syncRuntimeApplications } from '@/utils/storageV21Migration';
 
 // formatCaseDisplayName imported from domain layer
 const PRIMARY_CASE_PERSON_ROLE: CasePersonRole = 'applicant';
@@ -485,16 +485,17 @@ export class CaseService {
       ...resolvedHouseholdMembers.map(({ person }) => person),
     ]);
     const updatedPeople = updatedDataWithPeople.people;
+    const newCases = [...currentData.cases, newCase];
 
     const updatedData: NormalizedFileData = {
       ...updatedDataWithPeople,
       people: updatedPeople,
-      cases: [...currentData.cases, newCase],
+      cases: newCases,
       applications: syncRuntimeApplications(
         {
           ...updatedDataWithPeople,
           people: updatedPeople,
-          cases: [...currentData.cases, newCase],
+          cases: newCases,
         },
         true,
       ).applications,

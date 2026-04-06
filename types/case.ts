@@ -1,4 +1,6 @@
 // Address interface
+import type { CaseOwnedAfterApplicationMigrationField } from "@/types/application";
+
 export interface Address {
   street: string;
   apt?: string;
@@ -348,10 +350,8 @@ export interface CaseDisplay {
 export interface StoredCase extends Omit<CaseDisplay, "caseRecord" | "alerts"> {
   caseRecord: Omit<CaseRecord, "financials" | "notes">;
   /** When true, case is pending archival review (set by auto-refresh on app load) */
-  pendingArchival?: boolean;
+  isPendingArchival?: boolean;
 }
-
-import type { CaseOwnedAfterApplicationMigrationField } from "@/types/application";
 
 export type PersistedCaseRecord = Pick<
   CaseRecord,
