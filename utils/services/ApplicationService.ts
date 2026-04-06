@@ -1,10 +1,13 @@
 import type { Application, ApplicationStatusHistory } from "@/types/application";
-import { readDataAndRequireCase } from "@/utils/serviceHelpers";
+import { readDataAndRequireCase, type FileDataReader } from "@/utils/serviceHelpers";
 
 import type { FileStorageService } from "./FileStorageService";
 
+export type ApplicationFileStorage = FileDataReader &
+  Pick<FileStorageService, "writeNormalizedData">;
+
 interface ApplicationServiceConfig {
-  fileStorage: FileStorageService;
+  fileStorage: ApplicationFileStorage;
 }
 
 /**
@@ -16,7 +19,7 @@ function cloneApplication(application: Application): Application {
 }
 
 export class ApplicationService {
-  private readonly fileStorage: FileStorageService;
+  private readonly fileStorage: ApplicationFileStorage;
 
   constructor(config: ApplicationServiceConfig) {
     this.fileStorage = config.fileStorage;

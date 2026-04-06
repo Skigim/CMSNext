@@ -1,13 +1,13 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { createMockApplication, createMockNormalizedFileData, createMockStoredCase } from "@/src/test/testUtils";
-import { ApplicationService } from "@/utils/services/ApplicationService";
-import type { FileStorageService, NormalizedFileData } from "@/utils/services/FileStorageService";
+import {
+  ApplicationService,
+  type ApplicationFileStorage,
+} from "@/utils/services/ApplicationService";
+import type { NormalizedFileData } from "@/utils/services/FileStorageService";
 
-type ApplicationServiceFileStorageMock = Pick<
-  FileStorageService,
-  "readFileData" | "writeNormalizedData"
->;
+type ApplicationServiceFileStorageMock = ApplicationFileStorage;
 
 describe("ApplicationService", () => {
   let service: ApplicationService;
@@ -49,7 +49,7 @@ describe("ApplicationService", () => {
   beforeEach(() => {
     mockFileStorage = createMockFileStorage();
     service = new ApplicationService({
-      fileStorage: mockFileStorage as unknown as FileStorageService,
+      fileStorage: mockFileStorage,
     });
   });
 

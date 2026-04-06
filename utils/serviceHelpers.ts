@@ -9,6 +9,8 @@
 
 import type { FileStorageService, NormalizedFileData, StoredCase } from './services/FileStorageService';
 
+export type FileDataReader = Pick<FileStorageService, 'readFileData'>;
+
 /**
  * Result of reading and verifying case exists (without index).
  * 
@@ -36,7 +38,7 @@ export interface VerifiedCaseExistsResult {
  * @throws {Error} If failed to read data or case not found
  */
 export async function readDataAndFindCase(
-  fileStorage: FileStorageService,
+  fileStorage: FileDataReader,
   caseId: string
 ): Promise<VerifiedCaseExistsResult> {
   const data = await fileStorage.readFileData();
@@ -64,7 +66,7 @@ export async function readDataAndFindCase(
  * @throws {Error} If failed to read data or case not found
  */
 export async function readDataAndRequireCase(
-  fileStorage: FileStorageService,
+  fileStorage: FileDataReader,
   caseId: string
 ): Promise<NormalizedFileData> {
   const data = await fileStorage.readFileData();
