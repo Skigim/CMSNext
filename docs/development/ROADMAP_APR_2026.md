@@ -5,7 +5,7 @@
 **Tests:** 1141/1141 passing ✅  
 **Build:** Production-ready ✅  
 **Average Feature Rating:** 85.5/100  
-**Status:** Planned | v2.2 kickoff month | Intake & Application Layer
+**Status:** In progress | Week 2A domain slice landed | Intake & Application Layer
 
 ---
 
@@ -16,6 +16,7 @@
 - [x] Added `PersonService` plus relationship-aware linked-person handling for normalized cases.
 - [x] Expanded intake/edit workflow coverage for linked-person save payloads and existing-case updates.
 - [x] Landed create-time existing-person reuse plus relationship-driven household rendering in the intake and case-details UI.
+- [x] Landed the Week 2A application-domain foundation: `Application`/`ApplicationStatusHistory` types, migration field ownership rules, and initial migration helpers/tests.
 - [ ] Decide whether intake edit should support applicant reassignment to a different existing person or document the current limitation as intentional.
 
 ---
@@ -54,27 +55,30 @@
 
 #### First Clean Slice: Week 2A - Application Model & Migration Design
 
-- [ ] Lock the `Application` entity boundary before touching storage wiring or UI flows.
-- [ ] Define `ApplicationStatusHistory` as the canonical status timeline model for v2.2.
-- [ ] Map current case-embedded intake/application fields into normalized `applications[]` records.
-- [ ] Capture naming, ownership, and optionality decisions in docs before Week 3 service work begins.
+Status on `feat/application-domain-week2a`: the domain/model slice is landed; storage persistence, `DataManager`/service wiring, and UI integration remain downstream.
+
+- [x] Lock the `Application` entity boundary before touching storage wiring or UI flows.
+- [x] Define `ApplicationStatusHistory` as the canonical status timeline model for v2.2.
+- [x] Map current case-embedded intake/application fields into normalized `applications[]` records.
+- [x] Capture naming, ownership, and optionality decisions in docs before Week 3 service work begins.
 
 #### Prep Work
 
-- [ ] Design the `Application` entity and determine which intake/application fields must move out of `CaseRecord`.
-- [ ] Define application status model and history requirements (`Received`, `Pending`, `Withdrawn`, `Approved`, `Denied`).
-- [ ] Document migration rules from current case-embedded intake data into normalized application records.
+- [x] Design the `Application` entity and determine which intake/application fields must move out of `CaseRecord`.
+- [x] Define application status model and history requirements (`Received`, `Pending`, `Withdrawn`, `Approved`, `Denied`).
+- [x] Document migration rules from current case-embedded intake data into normalized application records.
 
 #### Features
 
 - [ ] Add `applications[]` to the persisted schema design for v2.2.
-- [ ] Introduce `Application` and `ApplicationStatusHistory` TypeScript/domain types.
-- [ ] Build initial migration utilities to derive normalized application records from existing v2.1 case data.
+- [x] Introduce `Application` and `ApplicationStatusHistory` TypeScript/domain types.
+- [x] Build initial migration utilities to derive normalized application records from existing v2.1 case data.
 
 #### Refactoring & Polish
 
-- [ ] Add tests for schema guards and migration helpers covering partial, missing, and legacy intake data.
-- [ ] Review naming and field optionality to keep the v2.2 schema clean before UI wiring begins.
+- [x] Add initial tests for migration helpers covering field ownership, defaults, and conservative status derivation.
+- [x] Review naming and field optionality to keep the v2.2 schema clean before UI wiring begins.
+- [ ] Extend coverage to persisted schema guards and broader partial/legacy intake edge cases once storage wiring begins.
 
 ---
 
@@ -171,7 +175,7 @@ This roadmap reflects our accelerated development pace with direct AI assistance
 
 - **Traditional estimate:** 1-2 features per week
 - **AI-assisted reality:** 3-4 features per week with full test coverage
-- **April target:** close out the remaining v2.1 documentation and decision work, then land the full v2.2 schema, migration, service-layer, and initial UI integration work in one month
+- **April target:** close out the remaining v2.1 documentation and decision work, land the Week 2A application-domain foundation, then finish the v2.2 storage, service-layer, and initial UI integration slices
 
 ### Quality Gates
 
@@ -185,7 +189,7 @@ Every feature must:
 
 ### Recommended Next Step
 
-Start April with the Week 2A application-model design slice: lock the `Application` and `ApplicationStatusHistory` boundaries, define the migration mapping into `applications[]`, and defer service/storage wiring and UI work until that design pass is settled.
+Carry the landed Week 2A domain slice into Week 3 by wiring persisted `applications[]` support through storage, `DataManager`, and the service layer before any intake/UI changes begin.
 
 ---
 

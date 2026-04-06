@@ -1,0 +1,168 @@
+import type { CaseRecord } from "@/types/case";
+import {
+  APPLICATION_STATUS,
+  type Application,
+  type ApplicationOwnedCaseRecordField,
+  type ApplicationOwnedCaseRecordSnapshot,
+  type ApplicationStatusHistory,
+  type CaseOwnedAfterApplicationMigrationField,
+  type MigratedApplicationStatusDecision,
+} from "@/types/application";
+
+export const APPLICATION_OWNED_CASE_RECORD_FIELDS = [
+  "applicationDate",
+  "applicationType",
+  "withWaiver",
+  "retroRequested",
+  "appValidated",
+  "retroMonths",
+  "agedDisabledVerified",
+  "citizenshipVerified",
+  "residencyVerified",
+  "avsSubmitted",
+  "avsSubmitDate",
+  "interfacesReviewed",
+  "reviewVRs",
+  "reviewPriorBudgets",
+  "reviewPriorNarr",
+  "avsConsentDate",
+  "voterFormStatus",
+  "intakeCompleted",
+] as const satisfies readonly ApplicationOwnedCaseRecordField[];
+
+export const CASE_OWNED_AFTER_APPLICATION_MIGRATION_FIELDS = [
+  "id",
+  "mcn",
+  "caseType",
+  "personId",
+  "spouseId",
+  "status",
+  "description",
+  "priority",
+  "livingArrangement",
+  "admissionDate",
+  "organizationId",
+  "authorizedReps",
+  "createdDate",
+  "updatedDate",
+  "contactMethods",
+  "pregnancy",
+  "maritalStatus",
+] as const satisfies readonly CaseOwnedAfterApplicationMigrationField[];
+
+export interface CreateMigratedApplicationInput {
+  applicationId: string;
+  initialHistoryId: string;
+  caseId: string;
+  applicantPersonId: string;
+  migratedAt: string;
+  caseRecord: Pick<CaseRecord, keyof CaseRecord>;
+}
+
+export function deriveMigratedApplicationStatus(
+  caseRecord: Pick<CaseRecord, "status">,
+): MigratedApplicationStatusDecision {
+  return {
+    status: APPLICATION_STATUS.Pending,
+    legacyCaseStatus: caseRecord.status,
+    notes:
+      "Migrated from legacy case-embedded application fields; v2.1 case status did not distinguish received, withdrawn, approved, or denied application outcomes.",
+  };
+}
+
+export function normalizeRetroRequestedAt(
+  retroRequested: string | null | undefined,
+): string | null {
+  const normalized = retroRequested?.trim() ?? "";
+  return normalized.length > 0 ? normalized : null;
+}
+
+export function pickApplicationOwnedCaseRecordFields(
+  caseRecord: Pick<CaseRecord, keyof CaseRecord>,
+): ApplicationOwnedCaseRecordSnapshot {
+  return {
+    applicationDate: caseRecord.applicationDate,
+    applicationType: caseRecord.applicationType ?? "",
+    withWaiver: caseRecord.withWaiver,
+    retroRequested: caseRecord.retroRequested,
+    appValidated: caseRecord.appValidated ?? false,
+    retroMonths: caseRecord.retroMonths ?? [],
+    agedDisabledVerified: caseRecord.agedDisabledVerified ?? false,
+    citizenshipVerified: caseRecord.citizenshipVerified ?? false,
+    residencyVerified: caseRecord.residencyVerified ?? false,
+    avsSubmitted: caseRecord.avsSubmitted ?? false,
+    avsSubmitDate: caseRecord.avsSubmitDate ?? "",
+    interfacesReviewed: caseRecord.interfacesReviewed ?? false,
+    reviewVRs: caseRecord.reviewVRs ?? false,
+    reviewPriorBudgets: caseRecord.reviewPriorBudgets ?? false,
+    reviewPriorNarr: caseRecord.reviewPriorNarr ?? false,
+    avsConsentDate: caseRecord.avsConsentDate ?? "",
+    voterFormStatus: caseRecord.voterFormStatus ?? "",
+    intakeCompleted: caseRecord.intakeCompleted,
+  };
+}
+
+export function createMigratedApplicationStatusHistory(
+  initialHistoryId: string,
+  caseRecord: Pick<CaseRecord, "applicationDate" | "status">,
+  migratedAt: string,
+): ApplicationStatusHistory[] {
+  const statusDecision = deriveMigratedApplicationStatus(caseRecord);
+
+  return [
+    {
+      id: initialHistoryId,
+      status: statusDecision.status,
+      effectiveDate: caseRecord.applicationDate,
+      changedAt: migratedAt,
+      source: "migration",
+      notes: statusDecision.notes,
+    },
+  ];
+}
+
+export function createMigratedApplication(
+  input: CreateMigratedApplicationInput,
+): Application {
+  const applicationFields = pickApplicationOwnedCaseRecordFields(input.caseRecord);
+  const statusHistory = createMigratedApplicationStatusHistory(
+    input.initialHistoryId,
+    {
+      applicationDate: input.caseRecord.applicationDate,
+      status: input.caseRecord.status,
+    },
+    input.migratedAt,
+  );
+
+  return {
+    id: input.applicationId,
+    caseId: input.caseId,
+    applicantPersonId: input.applicantPersonId,
+    applicationDate: applicationFields.applicationDate,
+    applicationType: applicationFields.applicationType,
+    status: statusHistory[0].status,
+    statusHistory,
+    withWaiver: applicationFields.withWaiver,
+    retroRequestedAt: normalizeRetroRequestedAt(
+      applicationFields.retroRequested,
+    ),
+    retroMonths: applicationFields.retroMonths,
+    verification: {
+      appValidated: applicationFields.appValidated,
+      agedDisabledVerified: applicationFields.agedDisabledVerified,
+      citizenshipVerified: applicationFields.citizenshipVerified,
+      residencyVerified: applicationFields.residencyVerified,
+      avsSubmitted: applicationFields.avsSubmitted,
+      avsSubmitDate: applicationFields.avsSubmitDate,
+      interfacesReviewed: applicationFields.interfacesReviewed,
+      reviewVRs: applicationFields.reviewVRs,
+      reviewPriorBudgets: applicationFields.reviewPriorBudgets,
+      reviewPriorNarr: applicationFields.reviewPriorNarr,
+      avsConsentDate: applicationFields.avsConsentDate,
+      voterFormStatus: applicationFields.voterFormStatus,
+      intakeCompleted: applicationFields.intakeCompleted,
+    },
+    createdAt: input.migratedAt,
+    updatedAt: input.migratedAt,
+  };
+}
