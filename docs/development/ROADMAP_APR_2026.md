@@ -78,6 +78,7 @@ Status on `feat/application-domain-week2a`: the domain/model slice is landed; st
 
 - [x] Add initial tests for migration helpers covering field ownership, defaults, and conservative status derivation.
 - [x] Review naming and field optionality to keep the v2.2 schema clean before UI wiring begins.
+- [ ] Revisit whether the intermediate application migration snapshot should adopt the final normalized verification field names; keep that cleanup out of the landed Week 2A slice unless we intentionally remove the current legacy-extraction seam later this week.
 - [ ] Extend coverage to persisted schema guards and broader partial/legacy intake edge cases once storage wiring begins.
 
 ---
