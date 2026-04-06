@@ -86,7 +86,7 @@ export function pickApplicationOwnedCaseRecordFields(
     hasWaiver: caseRecord.withWaiver,
     retroRequested: caseRecord.retroRequested,
     appValidated: caseRecord.appValidated ?? false,
-    retroMonths: caseRecord.retroMonths ?? [],
+    retroMonths: caseRecord.retroMonths ? [...caseRecord.retroMonths] : [],
     agedDisabledVerified: caseRecord.agedDisabledVerified ?? false,
     citizenshipVerified: caseRecord.citizenshipVerified ?? false,
     residencyVerified: caseRecord.residencyVerified ?? false,
@@ -124,6 +124,12 @@ export function createMigratedApplicationStatusHistory(
 export function createMigratedApplication(
   input: CreateMigratedApplicationInput,
 ): Application {
+  if (input.caseId !== input.caseRecord.id) {
+    throw new Error(
+      `Cannot create migrated application: caseId "${input.caseId}" does not match caseRecord.id "${input.caseRecord.id}".`,
+    );
+  }
+
   const applicationFields = pickApplicationOwnedCaseRecordFields(input.caseRecord);
   const statusHistory = createMigratedApplicationStatusHistory(
     input.initialHistoryId,
@@ -146,7 +152,7 @@ export function createMigratedApplication(
     retroRequestedAt: normalizeRetroRequestedAt(
       applicationFields.retroRequested,
     ),
-    retroMonths: applicationFields.retroMonths,
+    retroMonths: [...applicationFields.retroMonths],
     verification: {
       isAppValidated: applicationFields.appValidated,
       isAgedDisabledVerified: applicationFields.agedDisabledVerified,
