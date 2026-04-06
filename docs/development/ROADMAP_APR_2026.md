@@ -52,6 +52,13 @@
 
 ### Week 2: v2.2 Schema Design & Application Domain Planning (April 6-12)
 
+#### First Clean Slice: Week 2A - Application Model & Migration Design
+
+- [ ] Lock the `Application` entity boundary before touching storage wiring or UI flows.
+- [ ] Define `ApplicationStatusHistory` as the canonical status timeline model for v2.2.
+- [ ] Map current case-embedded intake/application fields into normalized `applications[]` records.
+- [ ] Capture naming, ownership, and optionality decisions in docs before Week 3 service work begins.
+
 #### Prep Work
 
 - [ ] Design the `Application` entity and determine which intake/application fields must move out of `CaseRecord`.
@@ -133,7 +140,7 @@
 
 ## 📚 Related Documents
 
-- [March 2026 Roadmap](./ROADMAP_MAR_2026.md) - Previous month roadmap and v2.1 normalization follow-through
+- [March 2026 Roadmap](./archive/2026/ROADMAP_MAR_2026.md) - Archived previous month roadmap and v2.1 normalization follow-through
 - [v2.1 Storage Design](./v21-storage-design.md) - Normalized storage and hydration design foundation
 - [Feature Catalogue](./feature-catalogue.md) - Feature inventory pending next refresh
 
@@ -178,9 +185,9 @@ Every feature must:
 
 ### Recommended Next Step
 
-Refresh the roadmap and feature catalogue to reflect the shipped normalized people UI work, then decide whether edit-time applicant reassignment is a real product requirement before spending more implementation time in the v2.1 layer.
+Start April with the Week 2A application-model design slice: lock the `Application` and `ApplicationStatusHistory` boundaries, define the migration mapping into `applications[]`, and defer service/storage wiring and UI work until that design pass is settled.
 
 ---
 
 **Prepared by:** GitHub Copilot  
-**Last updated:** April 2, 2026
+**Last updated:** April 6, 2026

@@ -5,7 +5,8 @@
 **Tests:** 1141/1141 passing ✅  
 **Build:** Production-ready ✅  
 **Average Feature Rating:** 85.5/100  
-**Status:** Week 1 complete ✅ | Week 2 complete ✅ | Week 3 migration + hydration milestone complete ✅ (remaining Week 3 validation in progress) | Week 4 UI follow-through next
+**Status:** Archived on April 6, 2026 — superseded by the April 2026 roadmap  
+**Archive Note:** Persisted v2.1 migration, normalized people hydration, and the create-time existing-person reuse plus household UI follow-through shipped ✅
 
 **Milestone Update (March 19, 2026):** Persisted v2.1 migration, runtime hydration, and linked-person intake/save flows are complete ✅
 
@@ -130,9 +131,9 @@
 
 ## 📚 Related Documents
 
-- [v2.1 Storage Design](./v21-storage-design.md) - Schema and hydration design used for Weeks 2-3
-- [February 2026 Roadmap](./archive/2026/ROADMAP_FEB_2026.md) - Archived previous month
-- [Feature Catalogue](./feature-catalogue.md) - Feature inventory pending next refresh
+- [v2.1 Storage Design](../../v21-storage-design.md) - Schema and hydration design used for Weeks 2-3
+- [February 2026 Roadmap](./ROADMAP_FEB_2026.md) - Archived previous month
+- [Feature Catalogue](../../feature-catalogue.md) - Feature inventory pending next refresh
 
 ---
 
@@ -157,9 +158,9 @@ Every feature must:
 
 ### Recommended Next Step
 
-Prioritize the Week 4 case-creation and household UI follow-through so users can search/reuse existing people before creating new records, then render those normalized relationships directly throughout the household experience.
+The shipped March normalization work is now closed out. April should begin with the v2.2 application-model design slice so the schema, migration mapping, and domain vocabulary are settled before any service-layer or UI wiring begins.
 
 ---
 
 **Prepared by:** GitHub Copilot  
-**Last updated:** March 19, 2026
+**Last updated:** April 6, 2026 (Archived)
