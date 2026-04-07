@@ -66,6 +66,14 @@ When starting a task, prefer this order:
 5. Validate with the standard command sequence.
 6. Update documentation or repository memory when behavior, workflow, or durable conventions meaningfully change.
 
+### Superpowers Skill Overlay
+
+- If the current harness exposes installed Superpowers skills, check whether a relevant skill applies before deeper reasoning, clarifying questions, delegation, or implementation.
+- Treat Superpowers as a workflow overlay, not a replacement for direct user instructions, repo instructions, or CMSNext's responsibility-first routing rules.
+- Prefer planning and collaboration skills such as `brainstorming`, `writing-plans`, and `subagent-driven-development` for ambiguous, multi-stage, or implementation-heavy work when the harness supports them.
+- Prefer `systematic-debugging` for bug investigation, `test-driven-development` for behavior-changing implementation work, `requesting-code-review` for completed implementation chunks, and `verification-before-completion` before closing out substantial tasks.
+- If a recommended skill is unavailable in the current harness, continue with the repo workflow described here instead of inventing a parallel custom process.
+
 ### Automatic Agent Delegation
 
 - Use the default workspace agent as the primary conversational and orchestration surface for discussing CMSNext work in plain English, gathering context, and deciding when delegation is actually needed.

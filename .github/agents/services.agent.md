@@ -36,6 +36,13 @@ You are the CMSNext services specialist. Your job is to keep orchestration code 
 - Add or update the minimal direct tests needed for service changes, but leave cross-layer integration strategy, shared test infrastructure, and flaky test investigation to `testing`.
 - Avoid expanding beyond the service boundary unless the task explicitly requires cross-boundary edits.
 
+## Superpowers Workflow Overlay
+
+- Check `test-driven-development` before behavior-changing service or DataManager work when tests can drive the orchestration change.
+- Check `systematic-debugging` when a workflow bug, regression, or sequencing issue is not yet understood.
+- Check `requesting-code-review` for substantial orchestration changes and `verification-before-completion` before closeout.
+- Keep CMSNext service boundaries and local-first invariants above generic skill defaults.
+
 ## Approach
 
 1. Trace the workflow through `DataManager`, services, domain helpers, and storage dependencies.

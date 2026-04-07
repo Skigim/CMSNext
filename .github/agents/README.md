@@ -12,6 +12,17 @@ When dispatching a subagent, reference the relevant agent definition for the tar
 
 The default workspace agent is also instructed through `.github/copilot-instructions.md` to delegate automatically when a task clearly matches one of these domains. Start with `triage` when a task is ambiguous, multi-stage, or needs a visible handoff path in VS Code chat. `Explore` is a built-in read-only discovery agent, not a repository-defined agent in this folder.
 
+## Superpowers Overlay
+
+When the active harness exposes installed Superpowers skills, use them as a process overlay on top of these CMSNext agents rather than as a replacement for them.
+
+- Start with `repo-memories`, then check whether a relevant Superpowers skill applies.
+- `triage` should bias toward `brainstorming`, `writing-plans`, and related planning skills for ambiguous or multi-stage work.
+- Implementation specialists should bias toward `test-driven-development`, `systematic-debugging`, `requesting-code-review`, and `verification-before-completion` as the work moves from diagnosis to implementation to closeout.
+- `documentation` should keep repo instructions, registry text, and discovery guidance aligned when workflow or skill expectations change.
+
+This keeps skill selection process-oriented while the repo agents stay responsibility-oriented.
+
 ## Available Agents
 
 | Agent           | Domain                     | Use For                                                                                  |
@@ -57,10 +68,11 @@ When an `audit` result is mostly about missing regression coverage, accessibilit
 
 ## Related Skills
 
-| Skill            | Purpose                                                                    |
-| ---------------- | -------------------------------------------------------------------------- |
-| Repo memories    | Concentrated repository conventions and reminders                          |
-| Agent delegation | Choosing the right customization primitive and drafting delegation prompts |
+| Skill            | Purpose                                                                      |
+| ---------------- | ---------------------------------------------------------------------------- |
+| Repo memories    | Concentrated repository conventions and reminders                            |
+| Agent delegation | Choosing the right customization primitive and drafting delegation prompts   |
+| Superpowers      | Optional workflow overlay for planning, debugging, TDD, review, and closeout |
 
 ## Consolidated Guides
 
