@@ -1,3 +1,5 @@
+import type { ApplicationStatus, ApplicationStatusHistorySource } from "./application";
+
 interface CaseActivityBase {
   id: string;
   timestamp: string;
@@ -37,7 +39,43 @@ export interface CaseViewedActivity extends CaseActivityBase {
   payload: Record<string, never>;
 }
 
-export type CaseActivityEntry = CaseStatusChangeActivity | CaseNoteAddedActivity | CasePriorityChangeActivity | CaseViewedActivity;
+export interface CaseApplicationAddedActivity extends CaseActivityBase {
+  type: "application-added";
+  payload: {
+    applicationId: string;
+    applicationType: string;
+    status: ApplicationStatus;
+    applicationDate: string;
+  };
+}
+
+export interface CaseApplicationUpdatedActivity extends CaseActivityBase {
+  type: "application-updated";
+  payload: {
+    applicationId: string;
+    changedFields: string[];
+  };
+}
+
+export interface CaseApplicationStatusChangeActivity extends CaseActivityBase {
+  type: "application-status-change";
+  payload: {
+    applicationId: string;
+    fromStatus: ApplicationStatus;
+    toStatus: ApplicationStatus;
+    effectiveDate: string;
+    source: ApplicationStatusHistorySource;
+  };
+}
+
+export type CaseActivityEntry =
+  | CaseStatusChangeActivity
+  | CaseNoteAddedActivity
+  | CasePriorityChangeActivity
+  | CaseViewedActivity
+  | CaseApplicationAddedActivity
+  | CaseApplicationUpdatedActivity
+  | CaseApplicationStatusChangeActivity;
 
 export interface DailyCaseActivityBreakdown {
   caseId: string;

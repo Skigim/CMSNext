@@ -741,6 +741,17 @@ export class FileStorageService {
   }
 
   /**
+   * Get all applications for a specific case.
+   * 
+   * @param {NormalizedFileData} data - The normalized data to query
+   * @param {string} caseId - The case ID to filter by
+   * @returns {Application[]} Applications for the case
+   */
+  getApplicationsForCase(data: NormalizedFileData, caseId: string): Application[] {
+    return (data.applications ?? []).filter((application) => application.caseId === caseId);
+  }
+
+  /**
    * Get all alerts for a specific case by MCN (Medical Case Number).
    * 
    * @param {NormalizedFileData} data - The normalized data to query

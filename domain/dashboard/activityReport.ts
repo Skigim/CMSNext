@@ -200,10 +200,29 @@ function getEntryDetail(entry: CaseActivityEntry): string {
     return `Status changed from ${fromStatus} to ${toStatus}`;
   }
 
+  if (entry.type === "application-status-change") {
+    return `Application status changed from ${entry.payload.fromStatus} to ${entry.payload.toStatus}`;
+  }
+
+  if (entry.type === "application-added") {
+    return `Application added (${entry.payload.applicationType}) on ${entry.payload.applicationDate}`;
+  }
+
+  if (entry.type === "application-updated") {
+    if (entry.payload.changedFields.length === 0) {
+      return "Application updated";
+    }
+    return `Application updated (${entry.payload.changedFields.join(", ")})`;
+  }
+
   if (entry.type === "priority-change") {
     const from = entry.payload.fromPriority ? "Priority" : "Normal";
     const to = entry.payload.toPriority ? "Priority" : "Normal";
     return `Priority changed from ${from} to ${to}`;
+  }
+
+  if (entry.type === "case-viewed") {
+    return "Case viewed";
   }
 
   const preview = entry.payload.preview.replaceAll(/\s+/g, " ").trim();

@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 
-import { createMockApplication } from "@/src/test/testUtils";
+import {
+  createMockApplication,
+  createMockNormalizedFileData,
+  createMockPersistedNormalizedFileData,
+} from "@/src/test/testUtils";
 import type { NormalizedFileDataV20, PersistedNormalizedFileDataV21 } from "@/utils/storageV21Migration";
 import {
   dehydrateNormalizedData,
@@ -8,6 +12,8 @@ import {
   isPersistedNormalizedFileDataV20,
   isPersistedNormalizedFileDataV21,
   migrateV20ToV21,
+  persistedCasesContainLegacyApplicationFields,
+  syncRuntimeApplications,
 } from "@/utils/storageV21Migration";
 import { createMockPerson, createMockStoredCase } from "@/src/test/testUtils";
 import { mergeCategoryConfig } from "@/types/categoryConfig";
@@ -327,6 +333,155 @@ describe("storageV21Migration", () => {
     expect(hydrated.cases[0].caseRecord.retroRequested).toBe("2026-02-01");
     expect(hydrated.cases[0].caseRecord.withWaiver).toBe(true);
     expect(hydrated.cases[0].caseRecord.intakeCompleted).toBe(false);
+  });
+
+  it("preserves canonical applications when runtime case fields differ and runtime sync is not preferred", () => {
+    // ARRANGE
+    const runtimeData = createMockNormalizedFileData({
+      people: [createMockPerson({ id: "person-1" })],
+      cases: [
+        createMockStoredCase({
+          id: "case-1",
+          person: createMockPerson({ id: "person-1" }),
+          people: [{ personId: "person-1", role: "applicant", isPrimary: true }],
+          caseRecord: {
+            ...createMockStoredCase().caseRecord,
+            personId: "person-1",
+            applicationDate: "2026-03-15",
+            applicationType: "Legacy Runtime Value",
+            withWaiver: false,
+            retroRequested: "2026-02-01",
+          },
+        }),
+      ],
+      applications: [
+        createMockApplication({
+          id: "application-1",
+          caseId: "case-1",
+          applicantPersonId: "person-1",
+          applicationDate: "2026-03-01",
+          applicationType: "Canonical Value",
+          hasWaiver: true,
+          retroRequestedAt: null,
+        }),
+      ],
+    });
+
+    // ACT
+    const result = syncRuntimeApplications(runtimeData);
+
+    // ASSERT
+    expect(result.hasChanged).toBe(false);
+    expect(result.applications).toHaveLength(1);
+    expect(result.applications[0]).toMatchObject({
+      id: "application-1",
+      applicationDate: "2026-03-01",
+      applicationType: "Canonical Value",
+      hasWaiver: true,
+      retroRequestedAt: null,
+    });
+  });
+
+  it("updates canonical applications from runtime case fields when runtime sync is preferred", () => {
+    // ARRANGE
+    const preservedApplication = createMockApplication({
+      id: "application-2",
+      caseId: "case-2",
+      applicantPersonId: "person-2",
+      applicationType: "Unchanged",
+    });
+    const runtimeData = createMockNormalizedFileData({
+      people: [createMockPerson({ id: "person-1" }), createMockPerson({ id: "person-2" })],
+      cases: [
+        createMockStoredCase({
+          id: "case-1",
+          person: createMockPerson({ id: "person-1" }),
+          people: [{ personId: "person-1", role: "applicant", isPrimary: true }],
+          caseRecord: {
+            ...createMockStoredCase().caseRecord,
+            personId: "person-1",
+            applicationDate: "2026-03-20",
+            applicationType: "Converted From Case",
+            withWaiver: true,
+            retroRequested: "2026-02-01",
+          },
+        }),
+      ],
+      applications: [
+        createMockApplication({
+          id: "application-1",
+          caseId: "case-1",
+          applicantPersonId: "person-1",
+          applicationType: "Stale Canonical Value",
+          hasWaiver: false,
+          retroRequestedAt: null,
+        }),
+        preservedApplication,
+      ],
+    });
+
+    // ACT
+    const result = syncRuntimeApplications(runtimeData, true);
+
+    // ASSERT
+    expect(result.hasChanged).toBe(true);
+    expect(result.applications).toHaveLength(2);
+    expect(result.applications.find((application) => application.id === "application-1")).toMatchObject({
+      caseId: "case-1",
+      applicationType: "Converted From Case",
+      hasWaiver: true,
+      retroRequestedAt: "2026-02-01",
+    });
+    expect(result.applications.find((application) => application.id === "application-2")).toEqual(
+      preservedApplication,
+    );
+  });
+
+  it("detects persisted cases with legacy application fields", () => {
+    // ARRANGE
+    const persistedData = createMockPersistedNormalizedFileData({
+      people: [createMockPerson({ id: "person-1" })],
+      cases: [
+        createMockStoredCase({
+          id: "case-1",
+          person: createMockPerson({ id: "person-1" }),
+          people: [{ personId: "person-1", role: "applicant", isPrimary: true }],
+        }),
+      ],
+    });
+    (persistedData.cases[0].caseRecord as Record<string, unknown>).applicationDate = "2026-03-01";
+
+    // ACT
+    const result = persistedCasesContainLegacyApplicationFields(persistedData.cases);
+
+    // ASSERT
+    expect(result).toBe(true);
+  });
+
+  it("ignores canonical persisted cases without legacy application fields", () => {
+    // ARRANGE
+    const runtimeCase = createMockStoredCase({
+      id: "case-1",
+      person: createMockPerson({ id: "person-1" }),
+      people: [{ personId: "person-1", role: "applicant", isPrimary: true }],
+    });
+    const persistedData = createMockPersistedNormalizedFileData({
+      people: [createMockPerson({ id: "person-1" })],
+      cases: [runtimeCase],
+      applications: [
+        createMockApplication({
+          id: "application-1",
+          caseId: "case-1",
+          applicantPersonId: "person-1",
+        }),
+      ],
+    });
+
+    // ACT
+    const result = persistedCasesContainLegacyApplicationFields(persistedData.cases);
+
+    // ASSERT
+    expect(result).toBe(false);
   });
 
   it("dehydrates runtime familyMembers into familyMemberIds and legacyFamilyMemberNames", () => {

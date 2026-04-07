@@ -155,6 +155,63 @@ function formatActivityEntry(entry: CaseActivityEntry): TimelineItem {
     };
   }
 
+  if (entry.type === 'application-status-change') {
+    return {
+      id: entry.id,
+      entryType: entry.type,
+      type: 'save',
+      title: `Application: ${entry.payload.fromStatus} → ${entry.payload.toStatus}`,
+      description: `Effective ${entry.payload.effectiveDate}`,
+      timestamp: entry.timestamp,
+      relativeTime,
+      caseId: entry.caseId,
+      caseName: entry.caseName,
+      caseMcn: entry.caseMcn,
+      icon: Save,
+      badgeColor: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300',
+      badgeText: 'Application',
+    };
+  }
+
+  if (entry.type === 'application-added') {
+    return {
+      id: entry.id,
+      entryType: entry.type,
+      type: 'save',
+      title: 'Application added',
+      description: `${entry.payload.applicationType} · ${entry.payload.status}`,
+      timestamp: entry.timestamp,
+      relativeTime,
+      caseId: entry.caseId,
+      caseName: entry.caseName,
+      caseMcn: entry.caseMcn,
+      icon: Save,
+      badgeColor: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300',
+      badgeText: 'Application',
+    };
+  }
+
+  if (entry.type === 'application-updated') {
+    return {
+      id: entry.id,
+      entryType: entry.type,
+      type: 'save',
+      title: 'Application updated',
+      description:
+        entry.payload.changedFields.length === 0
+          ? 'Application details changed'
+          : `Changed: ${entry.payload.changedFields.join(', ')}`,
+      timestamp: entry.timestamp,
+      relativeTime,
+      caseId: entry.caseId,
+      caseName: entry.caseName,
+      caseMcn: entry.caseMcn,
+      icon: Save,
+      badgeColor: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300',
+      badgeText: 'Application',
+    };
+  }
+
   if (entry.type === 'priority-change') {
     const action = entry.payload.toPriority ? 'marked as priority' : 'unmarked as priority';
     return {
@@ -210,9 +267,16 @@ function getCaseTimelineDescription(entries: TimelineItem[]): string {
       if (entry.entryType === 'note-added') {
         totals.notesAdded += 1;
       }
+      if (
+        entry.entryType === 'application-added' ||
+        entry.entryType === 'application-updated' ||
+        entry.entryType === 'application-status-change'
+      ) {
+        totals.applicationChanges += 1;
+      }
       return totals;
     },
-    { views: 0, statusChanges: 0, priorityChanges: 0, notesAdded: 0 }
+    { views: 0, statusChanges: 0, priorityChanges: 0, notesAdded: 0, applicationChanges: 0 }
   );
 
   const summaryParts: string[] = [];
@@ -228,6 +292,11 @@ function getCaseTimelineDescription(entries: TimelineItem[]): string {
   }
   if (counts.notesAdded > 0) {
     summaryParts.push(`${counts.notesAdded} note${counts.notesAdded === 1 ? '' : 's'}`);
+  }
+  if (counts.applicationChanges > 0) {
+    summaryParts.push(
+      `${counts.applicationChanges} application${counts.applicationChanges === 1 ? '' : 's'}`,
+    );
   }
 
   if (summaryParts.length === 0) {

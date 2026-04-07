@@ -1,10 +1,19 @@
-import type { Application, ApplicationStatusHistory } from "@/types/application";
-import { readDataAndRequireCase, type FileDataReader } from "@/utils/serviceHelpers";
+import { v4 as uuidv4 } from "uuid";
 
+import { formatCaseDisplayName } from "@/domain/cases/formatting";
+import type { CaseActivityEntry } from "@/types/activityLog";
+import type { Application, ApplicationStatusHistory } from "@/types/application";
+import {
+  readDataAndFindCase,
+  readDataAndRequireCase,
+  type FileDataReader,
+} from "@/utils/serviceHelpers";
+
+import { ActivityLogService } from "./ActivityLogService";
 import type { FileStorageService } from "./FileStorageService";
 
 export type ApplicationFileStorage = FileDataReader &
-  Pick<FileStorageService, "writeNormalizedData">;
+  Pick<FileStorageService, "getApplicationsForCase" | "touchCaseTimestamps" | "writeNormalizedData">;
 
 interface ApplicationServiceConfig {
   fileStorage: ApplicationFileStorage;
@@ -16,6 +25,49 @@ interface ApplicationServiceConfig {
  */
 function cloneApplication(application: Application): Application {
   return globalThis.structuredClone(application);
+}
+
+function getChangedApplicationFields(
+  existingApplication: Application,
+  updatedApplication: Application,
+): string[] {
+  const changedFields: string[] = [];
+
+  if (existingApplication.applicationDate !== updatedApplication.applicationDate) {
+    changedFields.push("applicationDate");
+  }
+  if (existingApplication.applicationType !== updatedApplication.applicationType) {
+    changedFields.push("applicationType");
+  }
+  if (existingApplication.status !== updatedApplication.status) {
+    changedFields.push("status");
+  }
+  if (existingApplication.hasWaiver !== updatedApplication.hasWaiver) {
+    changedFields.push("hasWaiver");
+  }
+  if (existingApplication.retroRequestedAt !== updatedApplication.retroRequestedAt) {
+    changedFields.push("retroRequestedAt");
+  }
+  if (
+    globalThis.JSON.stringify(existingApplication.retroMonths) !==
+    globalThis.JSON.stringify(updatedApplication.retroMonths)
+  ) {
+    changedFields.push("retroMonths");
+  }
+  if (
+    globalThis.JSON.stringify(existingApplication.statusHistory) !==
+    globalThis.JSON.stringify(updatedApplication.statusHistory)
+  ) {
+    changedFields.push("statusHistory");
+  }
+  if (
+    globalThis.JSON.stringify(existingApplication.verification) !==
+    globalThis.JSON.stringify(updatedApplication.verification)
+  ) {
+    changedFields.push("verification");
+  }
+
+  return changedFields;
 }
 
 export class ApplicationService {
@@ -60,13 +112,14 @@ export class ApplicationService {
   async getApplicationsForCase(caseId: string): Promise<Application[]> {
     const data = await readDataAndRequireCase(this.fileStorage, caseId);
 
-    return (data.applications ?? [])
-      .filter((application) => application.caseId === caseId)
-      .map(cloneApplication);
+    return this.fileStorage.getApplicationsForCase(data, caseId).map(cloneApplication);
   }
 
   async addApplication(application: Application): Promise<Application> {
-    const currentData = await readDataAndRequireCase(this.fileStorage, application.caseId);
+    const { data: currentData, targetCase } = await readDataAndFindCase(
+      this.fileStorage,
+      application.caseId,
+    );
 
     const existingApplication = (currentData.applications ?? []).find(
       (candidate) => candidate.id === application.id,
@@ -76,9 +129,28 @@ export class ApplicationService {
       throw new Error(`Application ${application.id} already exists`);
     }
 
+    const timestamp = new Date().toISOString();
+    const updatedCases = this.fileStorage.touchCaseTimestamps(currentData.cases, [application.caseId]);
+    const activityEntry: CaseActivityEntry = {
+      id: uuidv4(),
+      timestamp,
+      caseId: targetCase.id,
+      caseName: formatCaseDisplayName(targetCase),
+      caseMcn: targetCase.caseRecord?.mcn ?? targetCase.mcn ?? null,
+      type: "application-added",
+      payload: {
+        applicationId: application.id,
+        applicationType: application.applicationType,
+        status: application.status,
+        applicationDate: application.applicationDate,
+      },
+    };
+
     const updatedData = {
       ...currentData,
+      cases: updatedCases,
       applications: [...(currentData.applications ?? []), cloneApplication(application)],
+      activityLog: ActivityLogService.mergeActivityEntries(currentData.activityLog, [activityEntry]),
     };
 
     await this.fileStorage.writeNormalizedData(updatedData);
@@ -91,7 +163,7 @@ export class ApplicationService {
     applicationId: string,
     updates: Partial<Application>,
   ): Promise<Application> {
-    const currentData = await readDataAndRequireCase(
+    const { data: currentData, targetCase } = await readDataAndFindCase(
       this.fileStorage,
       caseId,
     );
@@ -121,9 +193,31 @@ export class ApplicationService {
       index === applicationIndex ? updatedApplication : cloneApplication(application),
     );
 
+    const updatedCases = this.fileStorage.touchCaseTimestamps(currentData.cases, [caseId]);
+    const changedFields = getChangedApplicationFields(existingApplication, updatedApplication);
+    const activityEntries: CaseActivityEntry[] =
+      changedFields.length === 0
+        ? []
+        : [
+            {
+              id: uuidv4(),
+              timestamp: updatedApplication.updatedAt,
+              caseId: targetCase.id,
+              caseName: formatCaseDisplayName(targetCase),
+              caseMcn: targetCase.caseRecord?.mcn ?? targetCase.mcn ?? null,
+              type: "application-updated",
+              payload: {
+                applicationId: updatedApplication.id,
+                changedFields,
+              },
+            },
+          ];
+
     await this.fileStorage.writeNormalizedData({
       ...currentData,
+      cases: updatedCases,
       applications: updatedApplications,
+      activityLog: ActivityLogService.mergeActivityEntries(currentData.activityLog, activityEntries),
     });
 
     return cloneApplication(updatedApplication);
@@ -134,7 +228,7 @@ export class ApplicationService {
     applicationId: string,
     entry: ApplicationStatusHistory,
   ): Promise<Application> {
-    const currentData = await readDataAndRequireCase(
+    const { data: currentData, targetCase } = await readDataAndFindCase(
       this.fileStorage,
       caseId,
     );
@@ -156,9 +250,28 @@ export class ApplicationService {
       index === applicationIndex ? updatedApplication : cloneApplication(application),
     );
 
+    const updatedCases = this.fileStorage.touchCaseTimestamps(currentData.cases, [caseId]);
+    const activityEntry: CaseActivityEntry = {
+      id: uuidv4(),
+      timestamp: updatedApplication.updatedAt,
+      caseId: targetCase.id,
+      caseName: formatCaseDisplayName(targetCase),
+      caseMcn: targetCase.caseRecord?.mcn ?? targetCase.mcn ?? null,
+      type: "application-status-change",
+      payload: {
+        applicationId: updatedApplication.id,
+        fromStatus: existingApplication.status,
+        toStatus: entry.status,
+        effectiveDate: entry.effectiveDate,
+        source: entry.source,
+      },
+    };
+
     await this.fileStorage.writeNormalizedData({
       ...currentData,
+      cases: updatedCases,
       applications: updatedApplications,
+      activityLog: ActivityLogService.mergeActivityEntries(currentData.activityLog, [activityEntry]),
     });
 
     return cloneApplication(updatedApplication);

@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { createMockApplication, createMockNormalizedFileData, createMockStoredCase } from "@/src/test/testUtils";
+import type { Application } from "@/types/application";
 import {
   ApplicationService,
   type ApplicationFileStorage,
@@ -15,7 +16,12 @@ describe("ApplicationService", () => {
 
   function createMockFileStorage() {
     let storedData = createMockNormalizedFileData({
-      cases: [createMockStoredCase({ id: "case-1" })],
+      cases: [
+        createMockStoredCase({
+          id: "case-1",
+          updatedAt: "2026-01-01T00:00:00.000Z",
+        }),
+      ],
       applications: [
         createMockApplication({
           id: "application-1",
@@ -35,9 +41,35 @@ describe("ApplicationService", () => {
         return Promise.resolve(data);
       });
 
+    const getApplicationsForCase = vi
+      .fn<(data: NormalizedFileData, caseId: string) => Application[]>()
+      .mockImplementation((data, caseId) =>
+        (data.applications ?? []).filter((application) => application.caseId === caseId),
+      );
+
+    const touchCaseTimestamps = vi
+      .fn<(cases: NormalizedFileData["cases"], touchedCaseIds?: Iterable<string>) => NormalizedFileData["cases"]>()
+      .mockImplementation((cases, touchedCaseIds) => {
+        if (!touchedCaseIds) {
+          return cases;
+        }
+
+        const caseIds = new Set(touchedCaseIds);
+        if (caseIds.size === 0) {
+          return cases;
+        }
+
+        const timestamp = new Date().toISOString();
+        return cases.map((caseItem) =>
+          caseIds.has(caseItem.id) ? { ...caseItem, updatedAt: timestamp } : caseItem,
+        );
+      });
+
     return {
       readFileData,
       writeNormalizedData,
+      getApplicationsForCase,
+      touchCaseTimestamps,
       setData: (data: typeof storedData) => {
         storedData = data;
       },
@@ -85,6 +117,17 @@ describe("ApplicationService", () => {
     expect(mockFileStorage.writeNormalizedData).toHaveBeenCalledTimes(1);
     const writtenData = mockFileStorage.writeNormalizedData.mock.calls[0][0] as NormalizedFileData;
     expect(writtenData.applications).toHaveLength(2);
+    expect(writtenData.activityLog).toHaveLength(1);
+    expect(writtenData.activityLog[0]).toMatchObject({
+      caseId: "case-1",
+      type: "application-added",
+      payload: {
+        applicationId: "application-2",
+        applicationType: application.applicationType,
+        status: application.status,
+      },
+    });
+    expect(writtenData.cases[0].updatedAt).not.toBe("2026-01-01T00:00:00.000Z");
   });
 
   it("updates an application while preserving immutable identifiers", async () => {
@@ -109,6 +152,21 @@ describe("ApplicationService", () => {
     });
     expect(result.verification.isAppValidated).toBe(true);
     expect(mockFileStorage.writeNormalizedData).toHaveBeenCalledTimes(1);
+    const writtenData = mockFileStorage.writeNormalizedData.mock.calls[0][0] as NormalizedFileData;
+    expect(writtenData.activityLog).toHaveLength(1);
+    expect(writtenData.activityLog[0]).toMatchObject({
+      caseId: "case-1",
+      type: "application-updated",
+      payload: {
+        applicationId: "application-1",
+        changedFields: expect.arrayContaining([
+          "applicationType",
+          "retroMonths",
+          "verification",
+        ]),
+      },
+    });
+    expect(writtenData.cases[0].updatedAt).not.toBe("2026-01-01T00:00:00.000Z");
   });
 
   it("fails to update application if it belongs to a different case", async () => {
@@ -175,6 +233,21 @@ describe("ApplicationService", () => {
       id: "history-2",
       status: "Approved",
     });
+    expect(mockFileStorage.writeNormalizedData).toHaveBeenCalledTimes(1);
+    const writtenData = mockFileStorage.writeNormalizedData.mock.calls[0][0] as NormalizedFileData;
+    expect(writtenData.activityLog).toHaveLength(1);
+    expect(writtenData.activityLog[0]).toMatchObject({
+      caseId: "case-1",
+      type: "application-status-change",
+      payload: {
+        applicationId: "application-1",
+        fromStatus: "Pending",
+        toStatus: "Approved",
+        effectiveDate: "2026-02-01",
+        source: "user",
+      },
+    });
+    expect(writtenData.cases[0].updatedAt).not.toBe("2026-01-01T00:00:00.000Z");
   });
 
   it("fails to add status history if application belongs to a different case", async () => {

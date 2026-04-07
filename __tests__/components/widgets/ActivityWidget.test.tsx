@@ -28,7 +28,7 @@ describe("ActivityWidget", () => {
   function createActivityEntry(
     index: number,
     timestamp: number,
-    type: CaseActivityEntry["type"],
+    type: "case-viewed" | "note-added" | "status-change" | "priority-change",
   ): CaseActivityEntry {
     if (type === "note-added") {
       return {

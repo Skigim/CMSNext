@@ -92,14 +92,14 @@ Status on `feat/application-domain-week2a`: the domain/model slice is landed; st
 
 #### Features
 
-- [ ] Update storage interfaces to support persisted and runtime `applications[]`.
-- [ ] Add `ApplicationService` for CRUD operations and status-history management.
-- [ ] Wire `FileStorageService` and migration paths so v2.1 workspaces can safely upgrade to the new v2.2 structure.
+- [x] Update storage interfaces to support persisted and runtime `applications[]`.
+- [x] Add `ApplicationService` for CRUD operations and status-history management.
+- [x] Wire `FileStorageService` and migration paths so v2.1 workspaces can safely upgrade to the new v2.2 structure.
 
 #### Refactoring & Polish
 
-- [ ] Add unit tests for `ApplicationService`, storage hydration, and migration validation.
-- [ ] Ensure canonical read/write flows remain strict and migration-driven rather than silently mutating old files.
+- [x] Add unit tests for `ApplicationService`, storage hydration, and migration validation.
+- [x] Ensure canonical read/write flows remain strict and migration-driven rather than silently mutating old files.
 
 ---
 
