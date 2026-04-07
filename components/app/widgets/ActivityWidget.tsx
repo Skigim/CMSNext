@@ -306,6 +306,30 @@ function getCaseTimelineDescription(entries: TimelineItem[]): string {
   return summaryParts.join(' · ');
 }
 
+function formatReportCaseSummary(caseSummary: {
+  statusChanges: number;
+  priorityChanges: number;
+  notesAdded: number;
+  applicationChanges: number;
+}): string {
+  const total =
+    caseSummary.statusChanges +
+    caseSummary.priorityChanges +
+    caseSummary.notesAdded +
+    caseSummary.applicationChanges;
+
+  const breakdown = [
+    caseSummary.statusChanges > 0 ? `${caseSummary.statusChanges}s` : null,
+    caseSummary.priorityChanges > 0 ? `${caseSummary.priorityChanges}p` : null,
+    caseSummary.notesAdded > 0 ? `${caseSummary.notesAdded}n` : null,
+    caseSummary.applicationChanges > 0
+      ? `${caseSummary.applicationChanges} app${caseSummary.applicationChanges === 1 ? '' : 's'}`
+      : null,
+  ].filter((value): value is string => value !== null);
+
+  return [String(total), ...breakdown].join(' · ');
+}
+
 function getReportExportConfig(format: ActivityReportFormat): { mimeType: string; extension: string } {
   if (format === 'json') {
     return { mimeType: 'application/json', extension: 'json' };
@@ -754,7 +778,7 @@ export function ActivityWidget({ activityLogState, metadata, onViewCase }: Reado
               </div>
             ) : (
               <div className="space-y-3">
-                <div className="grid grid-cols-3 gap-2">
+                <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
                   <div className="rounded border bg-muted/40 p-2 text-center">
                     <div className="text-xs text-muted-foreground">Total</div>
                     <div className="text-lg font-semibold">
@@ -773,6 +797,12 @@ export function ActivityWidget({ activityLogState, metadata, onViewCase }: Reado
                       {selectedActivityReport.totals.notesAdded}
                     </div>
                   </div>
+                  <div className="rounded border bg-muted/40 p-2 text-center">
+                    <div className="text-xs text-muted-foreground">Applications</div>
+                    <div className="text-lg font-semibold">
+                      {selectedActivityReport.totals.applicationChanges}
+                    </div>
+                  </div>
                 </div>
 
                 {hasSelectedActivity && topCasesForSelectedDate.length > 0 && (
@@ -780,7 +810,6 @@ export function ActivityWidget({ activityLogState, metadata, onViewCase }: Reado
                     <h5 className="text-xs font-medium text-muted-foreground mb-2">Top cases</h5>
                     <ul className="space-y-1 text-sm">
                       {topCasesForSelectedDate.slice(0, 3).map((caseSummary) => {
-                        const total = caseSummary.statusChanges + caseSummary.notesAdded;
                         return (
                           <li
                             key={caseSummary.caseId}
@@ -788,7 +817,7 @@ export function ActivityWidget({ activityLogState, metadata, onViewCase }: Reado
                           >
                             <span className="font-medium truncate">{caseSummary.caseName}</span>
                             <span className="text-xs text-muted-foreground flex-shrink-0">
-                              {total} · {caseSummary.statusChanges}s · {caseSummary.notesAdded}n
+                              {formatReportCaseSummary(caseSummary)}
                             </span>
                           </li>
                         );

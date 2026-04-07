@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { serializeDailyActivityReport } from "../../utils/activityReport";
+import {
+  generateDailyActivityReport,
+  serializeDailyActivityReport,
+} from "../../utils/activityReport";
 import type {
   CaseActivityEntry,
   DailyActivityReport,
@@ -17,6 +20,12 @@ describe("serializeDailyActivityReport - txt format", () => {
       statusChanges: entries.filter(entry => entry.type === "status-change").length,
       priorityChanges: entries.filter(entry => entry.type === "priority-change").length,
       notesAdded: entries.filter(entry => entry.type === "note-added").length,
+      applicationChanges: entries.filter(
+        entry =>
+          entry.type === "application-added" ||
+          entry.type === "application-updated" ||
+          entry.type === "application-status-change",
+      ).length,
     },
     entries,
     cases,
@@ -59,6 +68,7 @@ describe("serializeDailyActivityReport - txt format", () => {
         statusChanges: 1,
         priorityChanges: 0,
         notesAdded: 1,
+        applicationChanges: 0,
         entries: [statusEntry, noteEntry],
       },
     ]);
@@ -101,6 +111,7 @@ describe("serializeDailyActivityReport - txt format", () => {
         statusChanges: 0,
         priorityChanges: 0,
         notesAdded: 1,
+        applicationChanges: 0,
         entries: [noteEntry],
       },
     ]);
@@ -141,10 +152,111 @@ describe("serializeDailyActivityReport - txt format", () => {
         statusChanges: 1,
         priorityChanges: 0,
         notesAdded: 0,
+        applicationChanges: 0,
         entries: [statusEntry],
       },
     ]);
 
     expect(serializeDailyActivityReport(report, "txt")).toBe("No note activity recorded.");
+  });
+});
+
+describe("generateDailyActivityReport", () => {
+  it("counts application activity in daily totals and case breakdowns", () => {
+    // ARRANGE
+    const applicationAddedEntry: CaseActivityEntry = {
+      id: "application-added-1",
+      timestamp: "2025-10-05T09:00:00.000Z",
+      caseId: "case-1",
+      caseName: "Alice Example",
+      caseMcn: "12345",
+      type: "application-added",
+      payload: {
+        applicationId: "app-1",
+        applicationType: "Medicaid",
+        status: "Pending",
+        applicationDate: "2025-10-05",
+      },
+    };
+
+    const applicationUpdatedEntry: CaseActivityEntry = {
+      id: "application-updated-1",
+      timestamp: "2025-10-05T10:00:00.000Z",
+      caseId: "case-1",
+      caseName: "Alice Example",
+      caseMcn: "12345",
+      type: "application-updated",
+      payload: {
+        applicationId: "app-1",
+        changedFields: ["applicationType"],
+      },
+    };
+
+    const applicationStatusChangeEntry: CaseActivityEntry = {
+      id: "application-status-change-1",
+      timestamp: "2025-10-05T11:00:00.000Z",
+      caseId: "case-2",
+      caseName: "Bob Citizen",
+      caseMcn: "67890",
+      type: "application-status-change",
+      payload: {
+        applicationId: "app-2",
+        fromStatus: "Pending",
+        toStatus: "Approved",
+        effectiveDate: "2025-10-05",
+        source: "user",
+      },
+    };
+
+    const noteEntry: CaseActivityEntry = {
+      id: "note-3",
+      timestamp: "2025-10-05T12:00:00.000Z",
+      caseId: "case-2",
+      caseName: "Bob Citizen",
+      caseMcn: "67890",
+      type: "note-added",
+      payload: {
+        noteId: "note-3",
+        category: "General",
+        preview: "Followed up with applicant.",
+      },
+    };
+
+    // ACT
+    const report = generateDailyActivityReport(
+      [applicationAddedEntry, applicationUpdatedEntry, applicationStatusChangeEntry, noteEntry],
+      "2025-10-05",
+    );
+
+    // ASSERT
+    expect(report.totals).toEqual({
+      total: 4,
+      statusChanges: 0,
+      priorityChanges: 0,
+      notesAdded: 1,
+      applicationChanges: 3,
+    });
+    expect(report.cases).toEqual([
+      {
+        caseId: "case-1",
+        caseName: "Alice Example",
+        caseMcn: "12345",
+        statusChanges: 0,
+        priorityChanges: 0,
+        notesAdded: 0,
+        applicationChanges: 2,
+        entries: [applicationUpdatedEntry, applicationAddedEntry],
+      },
+      {
+        caseId: "case-2",
+        caseName: "Bob Citizen",
+        caseMcn: "67890",
+        statusChanges: 0,
+        priorityChanges: 0,
+        notesAdded: 1,
+        applicationChanges: 1,
+        entries: [noteEntry, applicationStatusChangeEntry],
+      },
+    ]);
   });
 });

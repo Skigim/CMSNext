@@ -394,6 +394,7 @@ export const createMockDailyActivityReport = (
       statusChanges: 0,
       priorityChanges: 0,
       notesAdded: 0,
+      applicationChanges: 0,
       ...totals,
     },
   }

@@ -91,10 +91,20 @@ export function groupActivityEntriesByDate(
  */
 
 /** Map activity type to the counter field it increments. */
-const ACTIVITY_TYPE_COUNTER: Record<string, keyof Pick<DailyCaseActivityBreakdown, 'statusChanges' | 'priorityChanges' | 'notesAdded'>> = {
+const ACTIVITY_TYPE_COUNTER: Record<
+  CaseActivityEntry["type"],
+  keyof Pick<
+    DailyCaseActivityBreakdown,
+    "statusChanges" | "priorityChanges" | "notesAdded" | "applicationChanges"
+  > | null
+> = {
   "status-change": "statusChanges",
   "priority-change": "priorityChanges",
   "note-added": "notesAdded",
+  "case-viewed": null,
+  "application-added": "applicationChanges",
+  "application-updated": "applicationChanges",
+  "application-status-change": "applicationChanges",
 };
 
 function summarizeCaseEntries(entries: CaseActivityEntry[]): DailyCaseActivityBreakdown[] {
@@ -110,6 +120,12 @@ function summarizeCaseEntries(entries: CaseActivityEntry[]): DailyCaseActivityBr
         statusChanges: entry.type === "status-change" ? 1 : 0,
         priorityChanges: entry.type === "priority-change" ? 1 : 0,
         notesAdded: entry.type === "note-added" ? 1 : 0,
+        applicationChanges:
+          entry.type === "application-added" ||
+          entry.type === "application-updated" ||
+          entry.type === "application-status-change"
+            ? 1
+            : 0,
         entries: [entry],
       });
       continue;
@@ -123,8 +139,10 @@ function summarizeCaseEntries(entries: CaseActivityEntry[]): DailyCaseActivityBr
   }
 
   return Array.from(caseMap.values()).sort((a, b) => {
-    const aTotal = a.statusChanges + a.priorityChanges + a.notesAdded;
-    const bTotal = b.statusChanges + b.priorityChanges + b.notesAdded;
+    const aTotal =
+      a.statusChanges + a.priorityChanges + a.notesAdded + a.applicationChanges;
+    const bTotal =
+      b.statusChanges + b.priorityChanges + b.notesAdded + b.applicationChanges;
     if (bTotal !== aTotal) {
       return bTotal - aTotal;
     }
@@ -153,6 +171,12 @@ export function generateDailyActivityReport(
   const statusChanges = filteredEntries.filter(entry => entry.type === "status-change").length;
   const priorityChanges = filteredEntries.filter(entry => entry.type === "priority-change").length;
   const notesAdded = filteredEntries.filter(entry => entry.type === "note-added").length;
+  const applicationChanges = filteredEntries.filter(
+    entry =>
+      entry.type === "application-added" ||
+      entry.type === "application-updated" ||
+      entry.type === "application-status-change",
+  ).length;
 
   return {
     date: toActivityDateKey(targetDate),
@@ -161,6 +185,7 @@ export function generateDailyActivityReport(
       statusChanges,
       priorityChanges,
       notesAdded,
+      applicationChanges,
     },
     entries: filteredEntries,
     cases: summarizeCaseEntries(filteredEntries),

@@ -5,7 +5,10 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { ActivityWidget } from "@/components/app/widgets/ActivityWidget";
 import type { CaseActivityEntry } from "@/types/activityLog";
-import { createMockCaseActivityLogState } from "@/src/test/testUtils";
+import {
+  createMockCaseActivityLogState,
+  createMockDailyActivityReport,
+} from "@/src/test/testUtils";
 
 vi.mock("@/hooks/useDataSync", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/hooks/useDataSync")>();
@@ -266,5 +269,49 @@ describe("ActivityWidget", () => {
     // ASSERT
     const results = await axe(document.body);
     expect(results).toHaveNoViolations();
+  });
+
+  it("shows application changes in the export summary", async () => {
+    // ARRANGE
+    const user = userEvent.setup();
+    const report = createMockDailyActivityReport({
+      totals: {
+        total: 3,
+        statusChanges: 1,
+        priorityChanges: 0,
+        notesAdded: 1,
+        applicationChanges: 1,
+      },
+      cases: [
+        {
+          caseId: "case-1",
+          caseName: "Jamie Rivera",
+          caseMcn: "MCN123",
+          statusChanges: 1,
+          priorityChanges: 0,
+          notesAdded: 1,
+          applicationChanges: 1,
+          entries: [],
+        },
+      ],
+    });
+
+    render(
+      <ActivityWidget
+        activityLogState={createMockCaseActivityLogState({
+          getReportForDate: vi.fn(() => report),
+        })}
+        onViewCase={vi.fn()}
+      />,
+    );
+
+    // ACT
+    await user.click(screen.getByRole("tab", { name: "Export" }));
+
+    // ASSERT
+    const applicationsCard = screen.getByText("Applications").parentElement;
+    expect(applicationsCard).not.toBeNull();
+    expect(within(applicationsCard as HTMLElement).getByText("1")).toBeInTheDocument();
+    expect(screen.getByText("3 · 1s · 1n · 1 app")).toBeInTheDocument();
   });
 });

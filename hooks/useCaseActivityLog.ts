@@ -219,7 +219,13 @@ export function useCaseActivityLog(): UseCaseActivityLogResult {
 
         return {
           date: fallbackDateKey,
-          totals: { total: 0, statusChanges: 0, priorityChanges: 0, notesAdded: 0 },
+          totals: {
+            total: 0,
+            statusChanges: 0,
+            priorityChanges: 0,
+            notesAdded: 0,
+            applicationChanges: 0,
+          },
           entries: [],
           cases: [],
         } as DailyActivityReport;

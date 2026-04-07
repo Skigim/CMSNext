@@ -84,6 +84,7 @@ export interface DailyCaseActivityBreakdown {
   statusChanges: number;
   priorityChanges: number;
   notesAdded: number;
+  applicationChanges: number;
   entries: CaseActivityEntry[];
 }
 
@@ -94,6 +95,7 @@ export interface DailyActivityReport {
     statusChanges: number;
     priorityChanges: number;
     notesAdded: number;
+    applicationChanges: number;
   };
   entries: CaseActivityEntry[];
   cases: DailyCaseActivityBreakdown[];
