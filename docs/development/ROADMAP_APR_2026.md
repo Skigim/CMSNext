@@ -87,8 +87,8 @@ Status on `feat/application-domain-week2a`: the domain/model slice is landed; st
 
 #### Prep Work
 
-- [ ] Identify all `DataManager`, `CaseService`, and storage layer touchpoints that must recognize `applications[]`.
-- [ ] Define hydration/dehydration expectations for application-linked runtime views.
+- [x] Identify all `DataManager`, `CaseService`, and storage layer touchpoints that must recognize `applications[]`.
+- [x] Define hydration/dehydration expectations for application-linked runtime views.
 
 #### Features
 
@@ -195,4 +195,4 @@ Carry the landed Week 2A domain slice into Week 3 by wiring persisted `applicati
 ---
 
 **Prepared by:** GitHub Copilot  
-**Last updated:** April 6, 2026
+**Last updated:** April 7, 2026
