@@ -109,7 +109,7 @@ export function findArchivalEligibleCases(
   
   for (const caseItem of cases) {
     // Skip if already pending archival
-    if (caseItem.pendingArchival) {
+    if (caseItem.isPendingArchival) {
       continue;
     }
     
@@ -196,7 +196,7 @@ export function markCasesForArchival(
   
   return cases.map(caseItem => {
     if (idsToMark.has(caseItem.id)) {
-      return { ...caseItem, pendingArchival: true };
+      return { ...caseItem, isPendingArchival: true };
     }
     return caseItem;
   });
@@ -221,8 +221,8 @@ export function unmarkCasesForArchival(
   
   return cases.map(caseItem => {
     if (idsToUnmark.has(caseItem.id)) {
-      // Create new object without pendingArchival
-      const { pendingArchival: _pendingArchival, ...rest } = caseItem;
+      // Create new object without isPendingArchival
+      const { isPendingArchival: _pendingArchival, ...rest } = caseItem;
       return rest as StoredCase;
     }
     return caseItem;
@@ -233,10 +233,10 @@ export function unmarkCasesForArchival(
  * Get all cases currently in the archival review queue.
  * 
  * @param cases - All cases
- * @returns Cases with pendingArchival === true
+ * @returns Cases with isPendingArchival === true
  */
 export function getCasesInArchivalQueue(cases: StoredCase[]): StoredCase[] {
-  return cases.filter(c => c.pendingArchival === true);
+  return cases.filter(c => c.isPendingArchival === true);
 }
 
 /**

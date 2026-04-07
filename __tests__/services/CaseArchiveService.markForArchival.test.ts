@@ -9,6 +9,8 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { CaseArchiveService } from "@/utils/services/CaseArchiveService";
 import type { StoredCase } from "@/types/case";
 import { createMockStoredCase } from "@/src/test/testUtils";
+import type { FileStorageService } from "@/utils/services/FileStorageService";
+import type AutosaveFileService from "@/utils/AutosaveFileService";
 
 // ============================================================================
 // Mocks
@@ -25,7 +27,7 @@ function createMockFileStorage(cases: StoredCase[]) {
       activityLog: [],
     }),
     writeNormalizedData: vi.fn().mockResolvedValue(undefined),
-  };
+  } as unknown as FileStorageService;
 }
 
 function createMockFileService() {
@@ -33,7 +35,8 @@ function createMockFileService() {
     readExistingContent: vi.fn().mockResolvedValue(null),
     writeContentToFile: vi.fn().mockResolvedValue(undefined),
     listJsonFiles: vi.fn().mockResolvedValue([]),
-  };
+    getStatus: vi.fn().mockReturnValue({ isRunning: false }),
+  } as unknown as AutosaveFileService;
 }
 
 // ============================================================================
@@ -48,13 +51,13 @@ describe("CaseArchiveService.markForArchival", () => {
     const cases = [
       createMockStoredCase({ id: "c1", mcn: "100001" }),
       createMockStoredCase({ id: "c2", mcn: "200002" }),
-      createMockStoredCase({ id: "c3", mcn: "300003", pendingArchival: true }),
+      createMockStoredCase({ id: "c3", mcn: "300003", isPendingArchival: true }),
     ];
     mockFileStorage = createMockFileStorage(cases);
 
     service = new CaseArchiveService({
-      fileStorage: mockFileStorage as any,
-      fileService: createMockFileService() as any,
+      fileStorage: mockFileStorage,
+      fileService: createMockFileService(),
     });
   });
 
@@ -65,9 +68,9 @@ describe("CaseArchiveService.markForArchival", () => {
     expect(result.markedIds).toEqual(["c1", "c2"]);
     expect(mockFileStorage.writeNormalizedData).toHaveBeenCalledTimes(1);
 
-    const writtenData = mockFileStorage.writeNormalizedData.mock.calls[0][0];
+    const writtenData = (mockFileStorage.writeNormalizedData as any).mock.calls[0][0];
     const markedCases = writtenData.cases.filter(
-      (c: StoredCase) => c.pendingArchival
+      (c: StoredCase) => c.isPendingArchival
     );
     expect(markedCases).toHaveLength(3); // c1, c2, and c3 (already pending)
   });
@@ -90,7 +93,7 @@ describe("CaseArchiveService.markForArchival", () => {
   });
 
   it("should return empty result when file data is null", async () => {
-    mockFileStorage.readFileData.mockResolvedValue(null);
+    (mockFileStorage.readFileData as ReturnType<typeof vi.fn>).mockResolvedValue(null);
 
     const result = await service.markForArchival(["c1"]);
 

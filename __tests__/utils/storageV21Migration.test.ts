@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 
+import { createMockApplication } from "@/src/test/testUtils";
 import type { NormalizedFileDataV20, PersistedNormalizedFileDataV21 } from "@/utils/storageV21Migration";
 import {
   dehydrateNormalizedData,
@@ -233,7 +234,99 @@ describe("storageV21Migration", () => {
     const dehydrated = dehydrateNormalizedData(runtimeData);
 
     // ASSERT
-    expect(dehydrated.cases[0].caseRecord.intakeCompleted).toBe(true);
+    expect(dehydrated.applications).toBeDefined();
+    expect(dehydrated.applications).toHaveLength(1);
+    expect(dehydrated.applications![0].verification.isIntakeCompleted).toBe(true);
+  });
+
+  it("stores applications canonically and strips application-owned case fields during dehydration", () => {
+    // ARRANGE
+    const runtimeCase = createMockStoredCase({
+      id: "case-1",
+      person: createMockPerson({ id: "person-1" }),
+      people: [{ personId: "person-1", role: "applicant", isPrimary: true }],
+      caseRecord: {
+        ...createMockStoredCase().caseRecord,
+        applicationDate: "2026-03-01",
+        applicationType: "Renewal",
+        withWaiver: true,
+        retroRequested: "2026-02-01",
+      },
+    });
+
+    // ACT
+    const dehydrated = dehydrateNormalizedData({
+      version: "2.1",
+      people: [createMockPerson({ id: "person-1" })],
+      cases: [runtimeCase],
+      applications: [],
+      financials: [],
+      notes: [],
+      alerts: [],
+      exported_at: "2026-03-01T00:00:00.000Z",
+      total_cases: 1,
+      categoryConfig: mergeCategoryConfig(),
+      activityLog: [],
+    });
+
+    // ASSERT
+    expect(dehydrated.applications).toHaveLength(1);
+    expect(dehydrated.applications?.[0]).toMatchObject({
+      caseId: "case-1",
+      applicationType: "Renewal",
+      hasWaiver: true,
+      retroRequestedAt: "2026-02-01",
+    });
+    expect(dehydrated.cases[0].caseRecord).not.toHaveProperty("applicationDate");
+    expect(dehydrated.cases[0].caseRecord).not.toHaveProperty("retroRequested");
+    expect(dehydrated.cases[0].caseRecord).not.toHaveProperty("withWaiver");
+  });
+
+  it("hydrates runtime case fields back from canonical applications", () => {
+    // ARRANGE
+    const persistedData = dehydrateNormalizedData({
+      version: "2.1",
+      people: [createMockPerson({ id: "person-1" })],
+      cases: [
+        createMockStoredCase({
+          id: "case-1",
+          person: createMockPerson({ id: "person-1" }),
+          people: [{ personId: "person-1", role: "applicant", isPrimary: true }],
+        }),
+      ],
+      applications: [
+        createMockApplication({
+          id: "application-1",
+          caseId: "case-1",
+          applicantPersonId: "person-1",
+          applicationDate: "2026-03-01",
+          applicationType: "Renewal",
+          retroRequestedAt: "2026-02-01",
+          hasWaiver: true,
+          verification: {
+            ...createMockApplication().verification,
+            isIntakeCompleted: false,
+          },
+        }),
+      ],
+      financials: [],
+      notes: [],
+      alerts: [],
+      exported_at: "2026-03-01T00:00:00.000Z",
+      total_cases: 1,
+      categoryConfig: mergeCategoryConfig(),
+      activityLog: [],
+    });
+
+    // ACT
+    const hydrated = hydrateNormalizedData(persistedData);
+
+    // ASSERT
+    expect(hydrated.applications).toHaveLength(1);
+    expect(hydrated.cases[0].caseRecord.applicationType).toBe("Renewal");
+    expect(hydrated.cases[0].caseRecord.retroRequested).toBe("2026-02-01");
+    expect(hydrated.cases[0].caseRecord.withWaiver).toBe(true);
+    expect(hydrated.cases[0].caseRecord.intakeCompleted).toBe(false);
   });
 
   it("dehydrates runtime familyMembers into familyMemberIds and legacyFamilyMemberNames", () => {

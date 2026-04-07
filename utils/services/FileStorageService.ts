@@ -5,11 +5,12 @@ import type {
   StoredCase,
   StoredFinancialItem,
   StoredNote,
-} from "../../types/case";
-import type { CaseActivityEntry } from "../../types/activityLog";
-import type { CategoryConfig } from "../../types/categoryConfig";
-import type { Template } from "../../types/template";
-import { mergeCategoryConfig } from "../../types/categoryConfig";
+} from "@/types/case";
+import type { Application } from "@/types/application";
+import type { CaseActivityEntry } from "@/types/activityLog";
+import type { CategoryConfig } from "@/types/categoryConfig";
+import type { Template } from "@/types/template";
+import { mergeCategoryConfig } from "@/types/categoryConfig";
 import { discoverStatusesFromCases, discoverAlertTypesFromAlerts } from "../categoryConfigMigration";
 import { migrateFinancialItems, hasItemsNeedingMigration } from "../financialItemMigration";
 import AutosaveFileService from "../AutosaveFileService";
@@ -20,6 +21,8 @@ import {
   hydrateNormalizedData,
   hydrateStoredCase,
   isPersistedNormalizedFileDataV21,
+  persistedCasesContainLegacyApplicationFields,
+  syncRuntimeApplications,
   type PersistedNormalizedFileDataV21,
 } from "../storageV21Migration";
 
@@ -87,6 +90,8 @@ export interface NormalizedFileData {
   people: Person[];
   /** Runtime-hydrated cases */
   cases: StoredCase[];
+  /** Canonical application records keyed by caseId */
+  applications?: Application[];
   /** Flat array of financial items with caseId foreign keys */
   financials: StoredFinancialItem[];
   /** Flat array of notes with caseId foreign keys */
@@ -342,6 +347,7 @@ export class FileStorageService {
           version: NORMALIZED_VERSION as "2.1",
           people: [],
           cases: [],
+          applications: [],
           financials: [],
           notes: [],
           alerts: [],
@@ -369,22 +375,45 @@ export class FileStorageService {
           throw new LegacyFormatError(`${INVALID_V2_1_FORMAT_PREFIX}: ${hydrationError}`);
         }
 
+        const { applications: syncedApplications, hasChanged: hasApplicationsChanged } =
+          syncRuntimeApplications(hydratedData);
+        const shouldRewriteApplications =
+          hasApplicationsChanged ||
+          persistedCasesContainLegacyApplicationFields(rawData.cases) ||
+          ((rawData.applications?.length ?? 0) === 0 && rawData.cases.length > 0);
+
+        let canonicalData: NormalizedFileData = hasApplicationsChanged
+          ? {
+              ...hydratedData,
+              applications: syncedApplications,
+            }
+          : hydratedData;
+
         // Auto-migrate financial items without history entries
-        if (hasItemsNeedingMigration(hydratedData.financials)) {
-          const [migratedFinancials, count] = migrateFinancialItems(hydratedData.financials);
+        const hasFinancialMigration = hasItemsNeedingMigration(canonicalData.financials);
+        if (hasFinancialMigration) {
+          const [migratedFinancials, count] = migrateFinancialItems(canonicalData.financials);
           logger.info(`Migrated ${count} financial items to include history entries`);
 
-          const migratedData: NormalizedFileData = {
-            ...hydratedData,
+          canonicalData = {
+            ...canonicalData,
             financials: migratedFinancials,
           };
-
-          // Write migrated data back to file
-          await this.writeNormalizedData(migratedData);
-          return migratedData;
         }
 
-        return hydratedData;
+        if (shouldRewriteApplications) {
+          logger.info("Migrated workspace applications into canonical persisted records", {
+            caseCount: canonicalData.cases.length,
+            applicationCount: canonicalData.applications?.length ?? 0,
+          });
+        }
+
+        if (shouldRewriteApplications || hasFinancialMigration) {
+          await this.writeNormalizedData(canonicalData);
+          return canonicalData;
+        }
+
+        return canonicalData;
       }
 
       // Detect legacy format and throw user-friendly error
@@ -559,7 +588,13 @@ export class FileStorageService {
         : isCaseDehydratedNormalizedWriteData(data)
           ? {
               ...data,
-              cases: data.cases.map((caseItem) => hydrateStoredCase(caseItem, data.people)),
+              cases: data.cases.map((caseItem) =>
+                hydrateStoredCase(
+                  caseItem,
+                  data.people,
+                  data.applications?.find((application) => application.caseId === caseItem.id) ?? null,
+                ),
+              ),
             }
           : hydrateNormalizedData(data);
 
@@ -581,6 +616,12 @@ export class FileStorageService {
         version: NORMALIZED_VERSION as "2.1",
         people: runtimeData.people.map((person) => ({ ...person })),
         cases: runtimeData.cases.map((caseItem) => ({ ...caseItem })),
+        applications: runtimeData.applications?.map((application) => ({
+          ...application,
+          retroMonths: [...application.retroMonths],
+          statusHistory: application.statusHistory.map((entry: Application["statusHistory"][number]) => ({ ...entry })),
+          verification: { ...application.verification },
+        })),
         financials: runtimeData.financials.map((financial) => ({ ...financial })),
         notes: runtimeData.notes.map((note) => ({ ...note })),
         alerts: runtimeData.alerts.map((alert) => ({ ...alert })),

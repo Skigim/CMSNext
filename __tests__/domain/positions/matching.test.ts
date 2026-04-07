@@ -149,7 +149,7 @@ describe("compareAssignments", () => {
     it("should exclude cases already pending archival", () => {
       const cases: StoredCase[] = [
         createTestCase({ id: "c1", mcn: "100001" }),
-        createTestCase({ id: "c2", mcn: "200002", pendingArchival: true }),
+        createTestCase({ id: "c2", mcn: "200002", isPendingArchival: true }),
         createTestCase({ id: "c3", mcn: "300003" }),
       ];
       // Only case 1 is on the list
@@ -328,7 +328,7 @@ describe("compareAssignments", () => {
         createTestCase({ id: "c1", mcn: "100001", status: "Active" }),
         createTestCase({ id: "c2", mcn: "200002", status: "Pending" }),
         createTestCase({ id: "c3", mcn: "300003", status: "Archived" }),
-        createTestCase({ id: "c4", mcn: "400004", pendingArchival: true }),
+        createTestCase({ id: "c4", mcn: "400004", isPendingArchival: true }),
         createTestCase({ id: "c5", mcn: "500005" }),
       ];
       // Only cases 1 and 5 are on the assignment list

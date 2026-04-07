@@ -90,7 +90,7 @@ export interface RefreshQueueResult {
  * This service manages the case archival workflow:
  * 
  * 1. **Queue Refresh**: Automatically identifies cases eligible for archival
- *    based on age and status, marking them as `pendingArchival`.
+ *    based on age and status, marking them as `isPendingArchival`.
  * 
  * 2. **User Review**: Users review pending cases in the "archival-review" segment.
  * 
@@ -156,7 +156,7 @@ export class CaseArchiveService {
    * Cases become eligible based on archivalSettings:
    * - Age exceeds thresholdMonths (based on updatedAt)
    * - If archiveClosedOnly is true, status must be marked as "completed" in config
-   * - Not already marked as pendingArchival
+   * - Not already marked as isPendingArchival
    * 
    * @param settings - Archival settings (threshold, closedOnly flag)
    * @param completedStatuses - Set of status names that count as completed
@@ -284,7 +284,7 @@ export class CaseArchiveService {
     const uniqueRequestedIds = [...new Set(caseIds)];
     const caseIdSet = new Set(currentData.cases.map(c => c.id));
     const alreadyPending = new Set(
-      currentData.cases.filter(c => c.pendingArchival).map(c => c.id)
+      currentData.cases.filter(c => c.isPendingArchival).map(c => c.id)
     );
     const newIds = uniqueRequestedIds.filter(
       id => caseIdSet.has(id) && !alreadyPending.has(id)
@@ -298,7 +298,7 @@ export class CaseArchiveService {
 
     // Count actual changes by comparing before/after
     const markedIds = updatedCases
-      .filter(c => c.pendingArchival && !alreadyPending.has(c.id) && newIds.includes(c.id))
+      .filter(c => c.isPendingArchival && !alreadyPending.has(c.id) && newIds.includes(c.id))
       .map(c => c.id);
 
     const updatedData: NormalizedFileData = {
@@ -370,9 +370,9 @@ export class CaseArchiveService {
     // Read existing archive (if any)
     const existingArchive = await this.readExistingArchive(archiveFileName);
 
-    // Remove pendingArchival flag from cases before archiving
+    // Remove isPendingArchival flag from cases before archiving
     const cleanedCases = casesToArchive.map(c => {
-      const { pendingArchival: _pendingArchival, ...rest } = c;
+      const { isPendingArchival: _pendingArchival, ...rest } = c;
       return rest as StoredCase;
     });
 

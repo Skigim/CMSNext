@@ -27,7 +27,7 @@ function createArchivableCase(id: string) {
       ...createMockStoredCase().caseRecord,
       personId: person.id,
     },
-    pendingArchival: true,
+    isPendingArchival: true,
   });
 }
 

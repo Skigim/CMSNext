@@ -55,7 +55,7 @@ export interface AssignmentsSummary {
   statusUpdateCandidates: number;
   /** Number of stored cases NOT found on the list (candidates for archival) */
   unmatched: number;
-  /** Number of unmatched cases already flagged as pendingArchival (excluded) */
+  /** Number of unmatched cases already flagged as isPendingArchival (excluded) */
   alreadyFlagged: number;
   /** Number of archived cases excluded from comparison */
   archivedExcluded: number;
@@ -99,7 +99,7 @@ function buildAssignmentMcnMap(
  *
  * Compares all stored cases (excluding Archived status) against the parsed
  * assignment entries by MCN. Cases not found on the list are candidates for
- * archival. Cases already flagged as `pendingArchival` are excluded from
+ * archival. Cases already flagged as `isPendingArchival` are excluded from
  * the result but counted in the summary.
  *
  * @param cases - All stored cases in the system
@@ -133,7 +133,7 @@ export function compareAssignments(
 
     if (!caseMcn) {
       // Cases without an MCN can't be matched — treat as unmatched
-      if (caseItem.pendingArchival) {
+      if (caseItem.isPendingArchival) {
         alreadyFlagged++;
       } else {
         unmatchedCases.push(caseItem);
@@ -157,7 +157,7 @@ export function compareAssignments(
           currentStatus: caseItem.status,
         });
       }
-    } else if (caseItem.pendingArchival) {
+    } else if (caseItem.isPendingArchival) {
       alreadyFlagged++;
     } else {
       unmatchedCases.push(caseItem);

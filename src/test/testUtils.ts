@@ -1,5 +1,6 @@
 import { vi } from 'vitest'
 import { AmountHistoryEntry, CaseDisplay, FinancialItem, Note, Person, CaseRecord, CaseCategory, NewPersonData, NewCaseRecordData, type HouseholdMemberData } from '@/types/case'
+import { APPLICATION_STATUS, type Application } from '@/types/application'
 import type { NormalizedFileData, StoredCase, StoredFinancialItem, StoredNote } from '@/utils/services/FileStorageService'
 import type { FileStorageLifecycleSelectors } from '@/contexts/FileStorageContext'
 import { mergeCategoryConfig } from '@/types/categoryConfig'
@@ -206,6 +207,7 @@ export const createMockNormalizedFileData = (
   version: '2.1',
   people: [],
   cases: [],
+  applications: [],
   financials: [],
   notes: [],
   alerts: [],
@@ -219,6 +221,47 @@ export const createMockNormalizedFileData = (
 export const createMockPersistedNormalizedFileData = (
   overrides: Partial<NormalizedFileData> = {},
 ): PersistedNormalizedFileDataV21 => dehydrateNormalizedData(createMockNormalizedFileData(overrides))
+
+export const createMockApplication = (
+  overrides: Partial<Application> = {},
+): Application => ({
+  id: 'application-test-1',
+  caseId: 'case-test-1',
+  applicantPersonId: 'person-test-1',
+  applicationDate: '2026-01-01',
+  applicationType: 'New',
+  status: APPLICATION_STATUS.Pending,
+  statusHistory: [
+    {
+      id: 'application-history-1',
+      status: APPLICATION_STATUS.Pending,
+      effectiveDate: '2026-01-01',
+      changedAt: '2026-01-01T00:00:00.000Z',
+      source: 'migration',
+    },
+  ],
+  hasWaiver: false,
+  retroRequestedAt: null,
+  retroMonths: [],
+  verification: {
+    isAppValidated: false,
+    isAgedDisabledVerified: false,
+    isCitizenshipVerified: false,
+    isResidencyVerified: false,
+    isAvsSubmitted: false,
+    avsSubmitDate: '',
+    hasInterfacesReviewed: false,
+    reviewVRs: false,
+    reviewPriorBudgets: false,
+    reviewPriorNarr: false,
+    avsConsentDate: '',
+    voterFormStatus: '',
+    isIntakeCompleted: true,
+  },
+  createdAt: '2026-01-01T00:00:00.000Z',
+  updatedAt: '2026-01-01T00:00:00.000Z',
+  ...overrides,
+})
 
 export const createMockNormalizedFileDataV20 = (
   overrides: Partial<NormalizedFileDataV20> = {},

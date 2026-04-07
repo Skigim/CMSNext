@@ -109,7 +109,7 @@ function caseMatchesSegment(
   recentThreshold: number,
 ): boolean {
   if (segment === "priority") return Boolean(caseData.priority);
-  if (segment === "archival-review") return Boolean(caseData.pendingArchival);
+  if (segment === "archival-review") return Boolean(caseData.isPendingArchival);
   if (segment === "recent") {
     const updatedAt = Date.parse(caseData.updatedAt || caseData.caseRecord?.updatedDate || "");
     return Number.isFinite(updatedAt) && updatedAt >= recentThreshold;

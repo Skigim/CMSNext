@@ -141,12 +141,12 @@ describe("CaseList status interactions", () => {
     const pendingCase = createMockStoredCase({
       id: "case-pending",
       name: "Pending Archival",
-      pendingArchival: true,
+      isPendingArchival: true,
     });
     const regularCase = createMockStoredCase({
       id: "case-regular",
       name: "Regular Case",
-      pendingArchival: false,
+      isPendingArchival: false,
     });
     const onRequestedSegmentApplied = vi.fn();
 

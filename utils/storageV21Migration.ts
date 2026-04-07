@@ -2,8 +2,10 @@ import { v4 as uuidv4 } from "uuid";
 
 import type {
   AlertRecord,
+  CaseRecord,
   CasePersonRef,
   PersistedCase,
+  PersistedCaseRecord,
   Person,
   PersonRelationship,
   Relationship,
@@ -12,6 +14,12 @@ import type {
   StoredNote,
   StoredPerson,
 } from "@/types/case";
+import type { Application } from "@/types/application";
+import {
+  createMigratedApplication,
+  normalizeRetroRequestedAt,
+  pickApplicationOwnedCaseRecordFields,
+} from "@/domain/applications";
 import type { CaseActivityEntry } from "@/types/activityLog";
 import type { CategoryConfig } from "@/types/categoryConfig";
 import type { Template } from "@/types/template";
@@ -35,6 +43,7 @@ export interface PersistedNormalizedFileDataV21 {
   version: "2.1";
   people: StoredPerson[];
   cases: PersistedCase[];
+  applications?: Application[];
   financials: StoredFinancialItem[];
   notes: StoredNote[];
   alerts: AlertRecord[];
@@ -49,6 +58,7 @@ export interface RuntimeNormalizedFileDataV21 {
   version: "2.1";
   people: Person[];
   cases: StoredCase[];
+  applications?: Application[];
   financials: StoredFinancialItem[];
   notes: StoredNote[];
   alerts: AlertRecord[];
@@ -63,6 +73,7 @@ type NormalizedDataShapeCandidate = {
   version?: unknown;
   people?: unknown;
   cases?: unknown;
+  applications?: unknown;
   financials?: unknown;
   notes?: unknown;
   alerts?: unknown;
@@ -85,9 +96,14 @@ function hasOptionalTemplatesArray(candidate: NormalizedDataShapeCandidate): boo
   return candidate.templates === undefined || Array.isArray(candidate.templates);
 }
 
+function hasOptionalApplicationsArray(candidate: NormalizedDataShapeCandidate): boolean {
+  return candidate.applications === undefined || Array.isArray(candidate.applications);
+}
+
 function hasNormalizedCollectionsAndMetadata(candidate: NormalizedDataShapeCandidate): boolean {
   return (
     Array.isArray(candidate.cases) &&
+    hasOptionalApplicationsArray(candidate) &&
     Array.isArray(candidate.financials) &&
     Array.isArray(candidate.notes) &&
     Array.isArray(candidate.alerts) &&
@@ -353,7 +369,311 @@ function resolvePrimaryPersonRef(
   return primaryPeople[0];
 }
 
-export function hydrateStoredCase(caseItem: PersistedCase, people: Person[]): StoredCase {
+/**
+ * Returns a deep clone of an application record to ensure runtime mutations
+ * do not bleed back into the storage layer or other shared references.
+ */
+function cloneApplication(application: Application): Application {
+  return globalThis.structuredClone(application);
+}
+
+function getPrimaryApplicationForCase(
+  applications: Application[] | undefined,
+  caseId: string,
+): Application | null {
+  const caseApplications =
+    applications?.filter((application) => application.caseId === caseId) ?? [];
+  if (caseApplications.length === 0) {
+    return null;
+  }
+
+  return [...caseApplications].sort((left, right) => {
+    const updatedDifference =
+      new Date(right.updatedAt).getTime() - new Date(left.updatedAt).getTime();
+    if (updatedDifference !== 0) {
+      return updatedDifference;
+    }
+
+    const createdDifference =
+      new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime();
+    if (createdDifference !== 0) {
+      return createdDifference;
+    }
+
+    return right.id.localeCompare(left.id);
+  })[0];
+}
+
+function buildRuntimeApplicationCaseFields(
+  caseItem: PersistedCase,
+  application: Application | null,
+): Pick<StoredCase["caseRecord"],
+  | "applicationDate"
+  | "applicationType"
+  | "withWaiver"
+  | "retroRequested"
+  | "appValidated"
+  | "retroMonths"
+  | "agedDisabledVerified"
+  | "citizenshipVerified"
+  | "residencyVerified"
+  | "avsSubmitted"
+  | "avsSubmitDate"
+  | "interfacesReviewed"
+  | "reviewVRs"
+  | "reviewPriorBudgets"
+  | "reviewPriorNarr"
+  | "avsConsentDate"
+  | "voterFormStatus"
+  | "intakeCompleted"
+> {
+  const legacyCaseRecord = caseItem.caseRecord as Partial<StoredCase["caseRecord"]>;
+
+  if (!application) {
+    return {
+      applicationDate: legacyCaseRecord.applicationDate ?? "",
+      applicationType: legacyCaseRecord.applicationType ?? "",
+      withWaiver: legacyCaseRecord.withWaiver ?? false,
+      retroRequested: legacyCaseRecord.retroRequested ?? "",
+      appValidated: legacyCaseRecord.appValidated ?? false,
+      retroMonths: [...(legacyCaseRecord.retroMonths ?? [])],
+      agedDisabledVerified: legacyCaseRecord.agedDisabledVerified ?? false,
+      citizenshipVerified: legacyCaseRecord.citizenshipVerified ?? false,
+      residencyVerified: legacyCaseRecord.residencyVerified ?? false,
+      avsSubmitted: legacyCaseRecord.avsSubmitted ?? false,
+      avsSubmitDate: legacyCaseRecord.avsSubmitDate ?? "",
+      interfacesReviewed: legacyCaseRecord.interfacesReviewed ?? false,
+      reviewVRs: legacyCaseRecord.reviewVRs ?? false,
+      reviewPriorBudgets: legacyCaseRecord.reviewPriorBudgets ?? false,
+      reviewPriorNarr: legacyCaseRecord.reviewPriorNarr ?? false,
+      avsConsentDate: legacyCaseRecord.avsConsentDate ?? "",
+      voterFormStatus: legacyCaseRecord.voterFormStatus ?? "",
+      intakeCompleted: resolveCaseRecordIntakeCompleted(legacyCaseRecord.intakeCompleted),
+    };
+  }
+
+  return {
+    applicationDate: application.applicationDate,
+    applicationType: application.applicationType,
+    withWaiver: application.hasWaiver,
+    retroRequested: application.retroRequestedAt ?? "",
+    appValidated: application.verification.isAppValidated,
+    retroMonths: [...application.retroMonths],
+    agedDisabledVerified: application.verification.isAgedDisabledVerified,
+    citizenshipVerified: application.verification.isCitizenshipVerified,
+    residencyVerified: application.verification.isResidencyVerified,
+    avsSubmitted: application.verification.isAvsSubmitted,
+    avsSubmitDate: application.verification.avsSubmitDate,
+    interfacesReviewed: application.verification.hasInterfacesReviewed,
+    reviewVRs: application.verification.reviewVRs,
+    reviewPriorBudgets: application.verification.reviewPriorBudgets,
+    reviewPriorNarr: application.verification.reviewPriorNarr,
+    avsConsentDate: application.verification.avsConsentDate,
+    voterFormStatus: application.verification.voterFormStatus,
+    intakeCompleted: resolveCaseRecordIntakeCompleted(
+      application.verification.isIntakeCompleted,
+    ),
+  };
+}
+
+function buildPersistedCaseRecord(
+  caseRecord: StoredCase["caseRecord"],
+): PersistedCaseRecord {
+  return {
+    id: caseRecord.id,
+    mcn: caseRecord.mcn,
+    caseType: caseRecord.caseType,
+    personId: caseRecord.personId,
+    spouseId: caseRecord.spouseId,
+    status: caseRecord.status,
+    description: caseRecord.description,
+    priority: caseRecord.priority,
+    livingArrangement: caseRecord.livingArrangement,
+    admissionDate: caseRecord.admissionDate,
+    organizationId: caseRecord.organizationId,
+    authorizedReps: [...caseRecord.authorizedReps],
+    createdDate: caseRecord.createdDate,
+    updatedDate: caseRecord.updatedDate,
+    contactMethods: caseRecord.contactMethods ? [...caseRecord.contactMethods] : undefined,
+    pregnancy: caseRecord.pregnancy,
+    maritalStatus: caseRecord.maritalStatus,
+  };
+}
+
+function resolveApplicationApplicantPersonId(caseItem: StoredCase): string {
+  const primaryRef = caseItem.people?.find((ref) => ref.isPrimary);
+  return primaryRef?.personId ?? caseItem.caseRecord.personId;
+}
+
+function createApplicationSourceCase(caseItem: StoredCase): CaseRecord {
+  const normalizedCaseRecord: CaseRecord = {
+    ...caseItem.caseRecord,
+    financials: {
+      resources: [],
+      income: [],
+      expenses: [],
+    },
+    notes: [],
+    intakeCompleted: resolveCaseRecordIntakeCompleted(caseItem.caseRecord.intakeCompleted),
+  };
+
+  if (normalizedCaseRecord.id === caseItem.id) {
+    return normalizedCaseRecord;
+  }
+
+  return {
+    ...normalizedCaseRecord,
+    id: caseItem.id,
+  };
+}
+
+function syncApplicationWithCase(
+  caseItem: StoredCase,
+  existingApplication: Application | null,
+  timestamp: string,
+): { application: Application; hasChanged: boolean } {
+  const sourceCaseRecord = createApplicationSourceCase(caseItem);
+
+  if (!existingApplication) {
+    return {
+      application: createMigratedApplication({
+        applicationId: uuidv4(),
+        initialHistoryId: uuidv4(),
+        caseId: caseItem.id,
+        applicantPersonId: resolveApplicationApplicantPersonId(caseItem),
+        migratedAt: timestamp,
+        caseRecord: sourceCaseRecord,
+      }),
+      hasChanged: true,
+    };
+  }
+
+  const migratedFields = pickApplicationOwnedCaseRecordFields(sourceCaseRecord);
+  const applicantPersonId = resolveApplicationApplicantPersonId(caseItem);
+  const candidate: Application = {
+    ...existingApplication,
+    applicantPersonId,
+    applicationDate: migratedFields.applicationDate,
+    applicationType: migratedFields.applicationType,
+    hasWaiver: migratedFields.hasWaiver,
+    retroRequestedAt: normalizeRetroRequestedAt(migratedFields.retroRequested),
+    retroMonths: [...migratedFields.retroMonths],
+    verification: {
+      isAppValidated: migratedFields.appValidated,
+      isAgedDisabledVerified: migratedFields.agedDisabledVerified,
+      isCitizenshipVerified: migratedFields.citizenshipVerified,
+      isResidencyVerified: migratedFields.residencyVerified,
+      isAvsSubmitted: migratedFields.avsSubmitted,
+      avsSubmitDate: migratedFields.avsSubmitDate,
+      hasInterfacesReviewed: migratedFields.interfacesReviewed,
+      reviewVRs: migratedFields.reviewVRs,
+      reviewPriorBudgets: migratedFields.reviewPriorBudgets,
+      reviewPriorNarr: migratedFields.reviewPriorNarr,
+      avsConsentDate: migratedFields.avsConsentDate,
+      voterFormStatus: migratedFields.voterFormStatus,
+      isIntakeCompleted: migratedFields.intakeCompleted,
+    },
+  };
+
+  const hasChanged =
+    candidate.applicantPersonId !== existingApplication.applicantPersonId ||
+    candidate.applicationDate !== existingApplication.applicationDate ||
+    candidate.applicationType !== existingApplication.applicationType ||
+    candidate.hasWaiver !== existingApplication.hasWaiver ||
+    candidate.retroRequestedAt !== existingApplication.retroRequestedAt ||
+    globalThis.JSON.stringify(candidate.retroMonths) !==
+      globalThis.JSON.stringify(existingApplication.retroMonths) ||
+    globalThis.JSON.stringify(candidate.verification) !==
+      globalThis.JSON.stringify(existingApplication.verification);
+
+  return {
+    application: hasChanged
+      ? {
+          ...candidate,
+          updatedAt: timestamp,
+        }
+      : cloneApplication(existingApplication),
+    hasChanged,
+  };
+}
+
+export function syncRuntimeApplications(
+  data: RuntimeNormalizedFileDataV21,
+  preferRuntimeCaseFields = false,
+): { applications: Application[]; hasChanged: boolean } {
+  const existingApplications = data.applications?.map(cloneApplication) ?? [];
+  const applicationsByCaseId = new Map<string, Application[]>();
+
+  for (const application of existingApplications) {
+    const caseApplications = applicationsByCaseId.get(application.caseId) ?? [];
+    caseApplications.push(application);
+    applicationsByCaseId.set(application.caseId, caseApplications);
+  }
+
+  const timestamp = new Date().toISOString();
+  let hasChanged = false;
+  const syncedApplications = [...existingApplications];
+
+  for (const caseItem of data.cases) {
+    const existingForCase = applicationsByCaseId.get(caseItem.id) ?? [];
+    const primaryApplication = getPrimaryApplicationForCase(existingForCase, caseItem.id);
+
+    if (primaryApplication && !preferRuntimeCaseFields) {
+      continue;
+    }
+
+    const { application, hasChanged: applicationChanged } = syncApplicationWithCase(
+      caseItem,
+      primaryApplication,
+      timestamp,
+    );
+
+    if (!primaryApplication) {
+      syncedApplications.push(application);
+      applicationsByCaseId.set(caseItem.id, [...existingForCase, application]);
+      hasChanged = true;
+      continue;
+    }
+
+    if (!applicationChanged) {
+      continue;
+    }
+
+    const index = syncedApplications.findIndex(
+      (candidate) => candidate.id === primaryApplication.id,
+    );
+    if (index !== -1) {
+      syncedApplications[index] = application;
+      hasChanged = true;
+    }
+  }
+
+  return {
+    applications: syncedApplications,
+    hasChanged,
+  };
+}
+
+export function persistedCasesContainLegacyApplicationFields(
+  cases: PersistedCase[],
+): boolean {
+  return cases.some((caseItem) => {
+    const legacyCaseRecord = caseItem.caseRecord as Record<string, unknown>;
+    return (
+      "applicationDate" in legacyCaseRecord ||
+      "applicationType" in legacyCaseRecord ||
+      "withWaiver" in legacyCaseRecord ||
+      "retroRequested" in legacyCaseRecord ||
+      "intakeCompleted" in legacyCaseRecord
+    );
+  });
+}
+
+export function hydrateStoredCase(
+  caseItem: PersistedCase,
+  people: Person[],
+  application: Application | null = null,
+): StoredCase {
   const peopleById = new Map(people.map((person) => [person.id, person] as const));
   const primaryRef = resolvePrimaryPersonRef(caseItem);
 
@@ -375,7 +695,7 @@ export function hydrateStoredCase(caseItem: PersistedCase, people: Person[]): St
     ...caseItem,
     caseRecord: {
       ...caseItem.caseRecord,
-      intakeCompleted: resolveCaseRecordIntakeCompleted(caseItem.caseRecord.intakeCompleted),
+      ...buildRuntimeApplicationCaseFields(caseItem, application),
     },
     people: caseItem.people.map((ref) => ({ ...ref })),
     person: primaryPerson,
@@ -388,10 +708,7 @@ export function dehydrateStoredCase(caseItem: StoredCase): PersistedCase {
 
   return {
     ...rest,
-    caseRecord: {
-      ...rest.caseRecord,
-      intakeCompleted: resolveCaseRecordIntakeCompleted(rest.caseRecord.intakeCompleted),
-    },
+    caseRecord: buildPersistedCaseRecord(rest.caseRecord),
     people: buildCasePeopleRefs(caseItem),
   };
 }
@@ -400,11 +717,15 @@ export function hydrateNormalizedData(
   data: PersistedNormalizedFileDataV21,
 ): RuntimeNormalizedFileDataV21 {
   const people = data.people.map((person) => toRuntimePerson(person, data.people));
+  const applications = data.applications?.map(cloneApplication) ?? [];
 
   return {
     version: "2.1",
     people,
-    cases: data.cases.map((caseItem) => hydrateStoredCase(caseItem, people)),
+    cases: data.cases.map((caseItem) =>
+      hydrateStoredCase(caseItem, people, getPrimaryApplicationForCase(applications, caseItem.id)),
+    ),
+    applications,
     financials: data.financials.map((financial) => ({ ...financial })),
     notes: data.notes.map((note) => ({ ...note })),
     alerts: data.alerts.map((alert) => ({ ...alert })),
@@ -419,6 +740,7 @@ export function hydrateNormalizedData(
 export function dehydrateNormalizedData(
   data: RuntimeNormalizedFileDataV21,
 ): PersistedNormalizedFileDataV21 {
+  const { applications } = syncRuntimeApplications(data);
   const peopleRegistry = new Map<string, Person>();
 
   for (const person of data.people) {
@@ -439,6 +761,7 @@ export function dehydrateNormalizedData(
     version: "2.1",
     people: persistedPeople,
     cases: data.cases.map((caseItem) => dehydrateStoredCase(caseItem)),
+    applications: applications.map(cloneApplication),
     financials: data.financials.map((financial) => ({ ...financial })),
     notes: data.notes.map((note) => ({ ...note })),
     alerts: data.alerts.map((alert) => ({ ...alert })),
@@ -581,7 +904,7 @@ export function migrateV20ToV21(data: NormalizedFileDataV20): PersistedNormalize
           ...caseItem.caseRecord,
           personId: migratedPersonId,
         },
-        pendingArchival: caseItem.pendingArchival,
+        isPendingArchival: caseItem.isPendingArchival,
       };
     }),
     financials: data.financials.map((financial) => ({ ...financial })),

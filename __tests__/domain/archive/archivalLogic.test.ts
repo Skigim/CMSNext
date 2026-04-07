@@ -177,7 +177,7 @@ describe("findArchivalEligibleCases", () => {
     oldDate.setMonth(oldDate.getMonth() - 18);
     
     const cases: StoredCase[] = [
-      createTestCase({ id: "already-pending", applicationDate: oldDate.toISOString(), status: "Closed", pendingArchival: true }),
+      createTestCase({ id: "already-pending", applicationDate: oldDate.toISOString(), status: "Closed", isPendingArchival: true }),
       createTestCase({ id: "not-pending", applicationDate: oldDate.toISOString(), status: "Closed" }),
     ];
     
@@ -279,9 +279,9 @@ describe("markCasesForArchival", () => {
     
     const result = markCasesForArchival(cases, ["case-1", "case-3"]);
     
-    expect(result.find(c => c.id === "case-1")?.pendingArchival).toBe(true);
-    expect(result.find(c => c.id === "case-2")?.pendingArchival).toBeUndefined();
-    expect(result.find(c => c.id === "case-3")?.pendingArchival).toBe(true);
+    expect(result.find(c => c.id === "case-1")?.isPendingArchival).toBe(true);
+    expect(result.find(c => c.id === "case-2")?.isPendingArchival).toBeUndefined();
+    expect(result.find(c => c.id === "case-3")?.isPendingArchival).toBe(true);
   });
 
   it("should not mutate original array", () => {
@@ -290,30 +290,30 @@ describe("markCasesForArchival", () => {
     const result = markCasesForArchival(cases, ["case-1"]);
     
     expect(result).not.toBe(cases);
-    expect(cases[0].pendingArchival).toBeUndefined();
+    expect(cases[0].isPendingArchival).toBeUndefined();
   });
 });
 
 describe("unmarkCasesForArchival", () => {
   it("should remove pending archival flag from specified cases", () => {
     const cases: StoredCase[] = [
-      createTestCase({ id: "case-1", pendingArchival: true }),
-      createTestCase({ id: "case-2", pendingArchival: true }),
+      createTestCase({ id: "case-1", isPendingArchival: true }),
+      createTestCase({ id: "case-2", isPendingArchival: true }),
     ];
     
     const result = unmarkCasesForArchival(cases, ["case-1"]);
     
-    expect(result.find(c => c.id === "case-1")?.pendingArchival).toBeUndefined();
-    expect(result.find(c => c.id === "case-2")?.pendingArchival).toBe(true);
+    expect(result.find(c => c.id === "case-1")?.isPendingArchival).toBeUndefined();
+    expect(result.find(c => c.id === "case-2")?.isPendingArchival).toBe(true);
   });
 });
 
 describe("getCasesInArchivalQueue", () => {
-  it("should return only cases with pendingArchival true", () => {
+  it("should return only cases with isPendingArchival true", () => {
     const cases: StoredCase[] = [
-      createTestCase({ id: "case-1", pendingArchival: true }),
+      createTestCase({ id: "case-1", isPendingArchival: true }),
       createTestCase({ id: "case-2" }),
-      createTestCase({ id: "case-3", pendingArchival: true }),
+      createTestCase({ id: "case-3", isPendingArchival: true }),
     ];
     
     const result = getCasesInArchivalQueue(cases);
