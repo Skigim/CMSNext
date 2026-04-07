@@ -37,6 +37,9 @@ You are the CMSNext domain specialist. Your job is to keep business logic pure, 
 
 ## Superpowers Workflow Overlay
 
+- Immediately after loading `repo-memories`, check for an applicable Superpowers skill before any other domain task action.
+- If a relevant Superpowers skill is available, load and invoke it before pure-logic analysis, implementation, review, or closeout.
+- Treat this check as mandatory for every CMSNext domain task.
 - Check `test-driven-development` before behavior-changing domain work so pure logic is driven from narrow failing tests.
 - Check `systematic-debugging` when a business-rule defect or regression is not yet explained.
 - Check `requesting-code-review` for substantial logic changes and `verification-before-completion` before closeout.

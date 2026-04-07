@@ -38,6 +38,9 @@ You are the CMSNext services specialist. Your job is to keep orchestration code 
 
 ## Superpowers Workflow Overlay
 
+- Immediately after loading `repo-memories`, check for an applicable Superpowers skill before any other service task action.
+- If a relevant Superpowers skill is available, load and invoke it before workflow tracing, implementation, review, or closeout.
+- Treat this check as mandatory for every CMSNext services task.
 - Check `test-driven-development` before behavior-changing service or DataManager work when tests can drive the orchestration change.
 - Check `systematic-debugging` when a workflow bug, regression, or sequencing issue is not yet understood.
 - Check `requesting-code-review` for substantial orchestration changes and `verification-before-completion` before closeout.

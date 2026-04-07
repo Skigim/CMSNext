@@ -77,7 +77,10 @@ Your job is to investigate requests enough to reduce ambiguity, identify the rig
 
 ## Superpowers Workflow Overlay
 
-If Superpowers skills are available in the current harness, use them to shape process before routing work.
+If Superpowers skills are available in the current harness, check for an applicable skill immediately after `repo-memories` and before any other action.
+
+- If a relevant Superpowers skill is available, load and invoke it before read-only exploration, clarifying questions, planning, or routing work.
+- Treat this check as mandatory for every CMSNext triage task, not as an optional optimization.
 
 - Check `brainstorming` for ambiguous feature requests, design exploration, or requirements refinement.
 - Check `writing-plans` for approved multi-step work that needs an implementation-ready plan.

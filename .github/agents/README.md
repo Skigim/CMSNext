@@ -16,7 +16,10 @@ The default workspace agent is also instructed through `.github/copilot-instruct
 
 When the active harness exposes installed Superpowers skills, use them as a process overlay on top of these CMSNext agents rather than as a replacement for them.
 
-- Start with `repo-memories`, then check whether a relevant Superpowers skill applies.
+- Start with `repo-memories`, then immediately check whether a relevant Superpowers skill applies before any other action.
+- If a relevant Superpowers skill is available, load and invoke it rather than treating the check as optional.
+- This is mandatory for every CMSNext task, including read-only investigation, planning, delegation, implementation, review, and closeout.
+- When workspace hooks are enabled, record startup completion with `node .github/hooks/scripts/mark-startup-complete.mjs <skill-name|none>` before any non-startup tool use.
 - `triage` should bias toward `brainstorming`, `writing-plans`, and related planning skills for ambiguous or multi-stage work.
 - Implementation specialists should bias toward `test-driven-development`, `systematic-debugging`, `requesting-code-review`, and `verification-before-completion` as the work moves from diagnosis to implementation to closeout.
 - `documentation` should keep repo instructions, registry text, and discovery guidance aligned when workflow or skill expectations change.

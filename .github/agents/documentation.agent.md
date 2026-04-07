@@ -33,6 +33,9 @@ You are the CMSNext documentation specialist. Your job is to keep project guidan
 
 ## Superpowers Workflow Overlay
 
+- Immediately after loading `repo-memories`, check for an applicable Superpowers skill before any other documentation task action.
+- If a relevant Superpowers skill is available, load and invoke it before repo-guidance analysis, authoring, review, or closeout.
+- Treat this check as mandatory for every CMSNext documentation task.
 - Check `brainstorming` for ambiguous workflow or process changes and `writing-plans` for larger multi-file documentation or customization updates.
 - Check `verification-before-completion` before closing out agent, instruction, skill, or registry changes.
 - Keep CMSNext terminology, discovery wording, and customization distinctions above generic skill defaults.

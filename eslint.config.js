@@ -78,4 +78,12 @@ caughtErrorsIgnorePattern: '^(err|error|e|_)$'
     '@typescript-eslint/no-unused-vars': 'off',
     'no-var': 'off',
   },
+}, {
+  files: ['.github/hooks/scripts/**/*.mjs'],
+  languageOptions: {
+    globals: {
+      ...globals.node,
+      ...globals.es2020,
+    },
+  },
 }];

@@ -32,6 +32,9 @@ You are the CMSNext testing specialist. Your job is to create reliable, strict, 
 
 ## Superpowers Workflow Overlay
 
+- Immediately after loading `repo-memories`, check for an applicable Superpowers skill before any other testing task action.
+- If a relevant Superpowers skill is available, load and invoke it before test design, implementation, review, or closeout.
+- Treat this check as mandatory for every CMSNext testing task.
 - Check `test-driven-development` when the assignment includes driving implementation from a failing test or reproducing a bug with a new regression test.
 - Check `systematic-debugging` when failures are flaky, environment-sensitive, or the root cause is not yet clear.
 - Check `verification-before-completion` before declaring a broken suite or regression fixed.

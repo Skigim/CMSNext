@@ -60,15 +60,20 @@ Treat failures in any step as blockers before considering the work complete.
 When starting a task, prefer this order:
 
 1. Load `repo-memories` first.
-2. Inspect existing docs and patterns.
-3. Find the nearest existing implementation.
-4. Make the smallest coherent change.
-5. Validate with the standard command sequence.
-6. Update documentation or repository memory when behavior, workflow, or durable conventions meaningfully change.
+2. Immediately check whether any installed Superpowers skill applies and, if one does, load and invoke it before any other action.
+3. When workspace hooks are enabled, run `node .github/hooks/scripts/mark-startup-complete.mjs <skill-name|none>` immediately after `repo-memories` and any required Superpowers skill.
+4. Inspect existing docs and patterns.
+5. Find the nearest existing implementation.
+6. Make the smallest coherent change.
+7. Validate with the standard command sequence.
+8. Update documentation or repository memory when behavior, workflow, or durable conventions meaningfully change.
 
 ### Superpowers Skill Overlay
 
-- If the current harness exposes installed Superpowers skills, check whether a relevant skill applies before deeper reasoning, clarifying questions, delegation, or implementation.
+- If the current harness exposes installed Superpowers skills, the agent must check whether a relevant skill applies immediately after loading `repo-memories` and before taking any other action.
+- If a relevant Superpowers skill is available, the agent must load and invoke it for the task rather than merely noting that it exists.
+- This requirement is unconditional for CMSNext work and applies to read-only exploration, clarifying questions, delegation, planning, implementation, review, and closeout.
+- When the workspace startup guard hook is enabled, the agent must record completion of this startup sequence by running `node .github/hooks/scripts/mark-startup-complete.mjs <skill-name|none>` before any non-startup tool use.
 - Treat Superpowers as a workflow overlay, not a replacement for direct user instructions, repo instructions, or CMSNext's responsibility-first routing rules.
 - Prefer planning and collaboration skills such as `brainstorming`, `writing-plans`, and `subagent-driven-development` for ambiguous, multi-stage, or implementation-heavy work when the harness supports them.
 - Prefer `systematic-debugging` for bug investigation, `test-driven-development` for behavior-changing implementation work, `requesting-code-review` for completed implementation chunks, and `verification-before-completion` before closing out substantial tasks.

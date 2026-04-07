@@ -37,6 +37,9 @@ You are the CMSNext storage specialist. Your job is to preserve the app's local-
 
 ## Superpowers Workflow Overlay
 
+- Immediately after loading `repo-memories`, check for an applicable Superpowers skill before any other storage task action.
+- If a relevant Superpowers skill is available, load and invoke it before persistence debugging, implementation, review, or closeout.
+- Treat this check as mandatory for every CMSNext storage task.
 - Check `test-driven-development` before behavior-changing storage work when the persistence path can be driven from a failing test.
 - Check `systematic-debugging` for autosave, file I/O, migration, or permission regressions before choosing a fix.
 - Check `requesting-code-review` for substantial persistence changes and `verification-before-completion` before closeout.
