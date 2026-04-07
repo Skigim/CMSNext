@@ -25,6 +25,38 @@ export class ApplicationService {
     this.fileStorage = config.fileStorage;
   }
 
+  private getApplicationIndexAndValidate(
+    currentData: Awaited<ReturnType<ApplicationFileStorage["readFileData"]>> extends infer T
+      ? NonNullable<T>
+      : never,
+    applicationId: string,
+    caseId: string,
+  ): {
+    applications: Application[];
+    applicationIndex: number;
+    existingApplication: Application;
+  } {
+    const applications = currentData.applications ?? [];
+    const applicationIndex = applications.findIndex(
+      (application) => application.id === applicationId,
+    );
+
+    if (applicationIndex === -1) {
+      throw new Error("Application not found");
+    }
+
+    const existingApplication = applications[applicationIndex];
+    if (existingApplication.caseId !== caseId) {
+      throw new Error("Application does not belong to the specified case");
+    }
+
+    return {
+      applications,
+      applicationIndex,
+      existingApplication,
+    };
+  }
+
   async getApplicationsForCase(caseId: string): Promise<Application[]> {
     const data = await readDataAndRequireCase(this.fileStorage, caseId);
 
@@ -64,19 +96,8 @@ export class ApplicationService {
       caseId,
     );
 
-    const applications = currentData.applications ?? [];
-    const applicationIndex = applications.findIndex(
-      (application) => application.id === applicationId,
-    );
-
-    if (applicationIndex === -1) {
-      throw new Error("Application not found");
-    }
-
-    const existingApplication = applications[applicationIndex];
-    if (existingApplication.caseId !== caseId) {
-      throw new Error("Application does not belong to the specified case");
-    }
+    const { applications, applicationIndex, existingApplication } =
+      this.getApplicationIndexAndValidate(currentData, applicationId, caseId);
 
     const updatedApplication: Application = {
       ...existingApplication,
@@ -118,19 +139,8 @@ export class ApplicationService {
       caseId,
     );
 
-    const applications = currentData.applications ?? [];
-    const applicationIndex = applications.findIndex(
-      (application) => application.id === applicationId,
-    );
-
-    if (applicationIndex === -1) {
-      throw new Error("Application not found");
-    }
-
-    const existingApplication = applications[applicationIndex];
-    if (existingApplication.caseId !== caseId) {
-      throw new Error("Application does not belong to the specified case");
-    }
+    const { applications, applicationIndex, existingApplication } =
+      this.getApplicationIndexAndValidate(currentData, applicationId, caseId);
 
     const updatedApplication: Application = {
       ...existingApplication,

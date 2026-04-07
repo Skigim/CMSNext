@@ -126,6 +126,17 @@ describe("ApplicationService", () => {
     ).rejects.toThrow("Application does not belong to the specified case");
   });
 
+  it("fails to update an application that does not exist", async () => {
+    // Arrange
+
+    // Act & Assert
+    await expect(
+      service.updateApplication("case-1", "application-missing", {
+        applicationType: "Renewal",
+      }),
+    ).rejects.toThrow("Application not found");
+  });
+
   it("appends status history and updates the top-level status", async () => {
     // Arrange
     const initialApplication = createMockApplication({
