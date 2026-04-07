@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   generateDailyActivityReport,
   serializeDailyActivityReport,
-} from "../../utils/activityReport";
+} from "@/utils/activityReport";
 import type {
   CaseActivityEntry,
   DailyActivityReport,

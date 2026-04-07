@@ -4,7 +4,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { ActivityWidget } from "@/components/app/widgets/ActivityWidget";
-import type { CaseActivityEntry } from "@/types/activityLog";
+import type { CaseActivityEntry, CaseActivityLogState } from "@/types/activityLog";
 import {
   createMockCaseActivityLogState,
   createMockDailyActivityReport,
@@ -296,10 +296,14 @@ describe("ActivityWidget", () => {
       ],
     });
 
+    const getReportForDate = vi.fn<CaseActivityLogState["getReportForDate"]>(
+      (_date) => report,
+    );
+
     render(
       <ActivityWidget
         activityLogState={createMockCaseActivityLogState({
-          getReportForDate: vi.fn(() => report),
+          getReportForDate,
         })}
         onViewCase={vi.fn()}
       />,
@@ -309,9 +313,8 @@ describe("ActivityWidget", () => {
     await user.click(screen.getByRole("tab", { name: "Export" }));
 
     // ASSERT
-    const applicationsCard = screen.getByText("Applications").parentElement;
-    expect(applicationsCard).not.toBeNull();
-    expect(within(applicationsCard as HTMLElement).getByText("1")).toBeInTheDocument();
+    const applicationsCard = screen.getByTestId("applications-card");
+    expect(within(applicationsCard).getByText("1")).toBeInTheDocument();
     expect(screen.getByText("3 · 1s · 1n · 1 app")).toBeInTheDocument();
   });
 });

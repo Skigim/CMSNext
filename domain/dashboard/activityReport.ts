@@ -16,6 +16,15 @@ import type {
 } from "@/types/activityLog";
 
 const NOTE_PREVIEW_MAX_LENGTH = 80;
+const APPLICATION_ACTIVITY_TYPES = new Set<CaseActivityEntry["type"]>([
+  "application-added",
+  "application-updated",
+  "application-status-change",
+]);
+
+export function isApplicationActivityType(type: CaseActivityEntry["type"]): boolean {
+  return APPLICATION_ACTIVITY_TYPES.has(type);
+}
 
 function parseDateInput(targetDate: string | Date): Date {
   if (targetDate instanceof Date) {
@@ -120,12 +129,7 @@ function summarizeCaseEntries(entries: CaseActivityEntry[]): DailyCaseActivityBr
         statusChanges: entry.type === "status-change" ? 1 : 0,
         priorityChanges: entry.type === "priority-change" ? 1 : 0,
         notesAdded: entry.type === "note-added" ? 1 : 0,
-        applicationChanges:
-          entry.type === "application-added" ||
-          entry.type === "application-updated" ||
-          entry.type === "application-status-change"
-            ? 1
-            : 0,
+        applicationChanges: isApplicationActivityType(entry.type) ? 1 : 0,
         entries: [entry],
       });
       continue;
@@ -171,12 +175,7 @@ export function generateDailyActivityReport(
   const statusChanges = filteredEntries.filter(entry => entry.type === "status-change").length;
   const priorityChanges = filteredEntries.filter(entry => entry.type === "priority-change").length;
   const notesAdded = filteredEntries.filter(entry => entry.type === "note-added").length;
-  const applicationChanges = filteredEntries.filter(
-    entry =>
-      entry.type === "application-added" ||
-      entry.type === "application-updated" ||
-      entry.type === "application-status-change",
-  ).length;
+  const applicationChanges = filteredEntries.filter(entry => isApplicationActivityType(entry.type)).length;
 
   return {
     date: toActivityDateKey(targetDate),
@@ -205,6 +204,30 @@ export function getTopCasesForReport(
   limit = 3,
 ): DailyCaseActivityBreakdown[] {
   return report.cases.slice(0, Math.max(0, limit));
+}
+
+export function formatReportCaseSummary(caseSummary: {
+  statusChanges: number;
+  priorityChanges: number;
+  notesAdded: number;
+  applicationChanges: number;
+}): string {
+  const total =
+    caseSummary.statusChanges +
+    caseSummary.priorityChanges +
+    caseSummary.notesAdded +
+    caseSummary.applicationChanges;
+
+  const breakdown = [
+    caseSummary.statusChanges > 0 ? `${caseSummary.statusChanges}s` : null,
+    caseSummary.priorityChanges > 0 ? `${caseSummary.priorityChanges}p` : null,
+    caseSummary.notesAdded > 0 ? `${caseSummary.notesAdded}n` : null,
+    caseSummary.applicationChanges > 0
+      ? `${caseSummary.applicationChanges} app${caseSummary.applicationChanges === 1 ? "" : "s"}`
+      : null,
+  ].filter((value): value is string => value !== null);
+
+  return [String(total), ...breakdown].join(" · ");
 }
 
 /**

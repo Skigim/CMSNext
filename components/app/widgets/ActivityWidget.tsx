@@ -49,7 +49,9 @@ import type {
 } from '@/types/activityLog';
 import type { WidgetMetadata } from './WidgetRegistry';
 import {
+  formatReportCaseSummary,
   getTopCasesForReport,
+  isApplicationActivityType,
   serializeDailyActivityReport,
   toActivityDateKey,
 } from '@/utils/activityReport';
@@ -267,11 +269,7 @@ function getCaseTimelineDescription(entries: TimelineItem[]): string {
       if (entry.entryType === 'note-added') {
         totals.notesAdded += 1;
       }
-      if (
-        entry.entryType === 'application-added' ||
-        entry.entryType === 'application-updated' ||
-        entry.entryType === 'application-status-change'
-      ) {
+      if (isApplicationActivityType(entry.entryType)) {
         totals.applicationChanges += 1;
       }
       return totals;
@@ -305,31 +303,6 @@ function getCaseTimelineDescription(entries: TimelineItem[]): string {
 
   return summaryParts.join(' · ');
 }
-
-function formatReportCaseSummary(caseSummary: {
-  statusChanges: number;
-  priorityChanges: number;
-  notesAdded: number;
-  applicationChanges: number;
-}): string {
-  const total =
-    caseSummary.statusChanges +
-    caseSummary.priorityChanges +
-    caseSummary.notesAdded +
-    caseSummary.applicationChanges;
-
-  const breakdown = [
-    caseSummary.statusChanges > 0 ? `${caseSummary.statusChanges}s` : null,
-    caseSummary.priorityChanges > 0 ? `${caseSummary.priorityChanges}p` : null,
-    caseSummary.notesAdded > 0 ? `${caseSummary.notesAdded}n` : null,
-    caseSummary.applicationChanges > 0
-      ? `${caseSummary.applicationChanges} app${caseSummary.applicationChanges === 1 ? '' : 's'}`
-      : null,
-  ].filter((value): value is string => value !== null);
-
-  return [String(total), ...breakdown].join(' · ');
-}
-
 function getReportExportConfig(format: ActivityReportFormat): { mimeType: string; extension: string } {
   if (format === 'json') {
     return { mimeType: 'application/json', extension: 'json' };
@@ -797,7 +770,7 @@ export function ActivityWidget({ activityLogState, metadata, onViewCase }: Reado
                       {selectedActivityReport.totals.notesAdded}
                     </div>
                   </div>
-                  <div className="rounded border bg-muted/40 p-2 text-center">
+                  <div data-testid="applications-card" className="rounded border bg-muted/40 p-2 text-center">
                     <div className="text-xs text-muted-foreground">Applications</div>
                     <div className="text-lg font-semibold">
                       {selectedActivityReport.totals.applicationChanges}

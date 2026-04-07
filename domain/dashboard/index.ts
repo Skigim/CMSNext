@@ -54,7 +54,9 @@ export {
   toActivityDateKey,
   filterActivityEntriesByDate,
   groupActivityEntriesByDate,
+  formatReportCaseSummary,
   generateDailyActivityReport,
   getTopCasesForReport,
+  isApplicationActivityType,
   serializeDailyActivityReport,
 } from './activityReport';
