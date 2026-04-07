@@ -1,5 +1,6 @@
 ## General Approach
 
+- Start every CMSNext task by loading the `repo-memories` skill/reference before deeper reasoning, repo exploration, delegation, review, or implementation work, even for small tasks.
 - For every action, check for existing patterns and documentation first — do not invent new solutions until certain one does not already exist.
 - Prioritize clarity and maintainability over cleverness.
 - Break complex work into logical steps; track via todo lists.
@@ -58,15 +59,18 @@ Treat failures in any step as blockers before considering the work complete.
 
 When starting a task, prefer this order:
 
-1. Inspect existing docs and patterns.
-2. Find the nearest existing implementation.
-3. Make the smallest coherent change.
-4. Validate with the standard command sequence.
-5. Update documentation only when behavior or workflow meaningfully changes.
+1. Load `repo-memories` first.
+2. Inspect existing docs and patterns.
+3. Find the nearest existing implementation.
+4. Make the smallest coherent change.
+5. Validate with the standard command sequence.
+6. Update documentation or repository memory when behavior, workflow, or durable conventions meaningfully change.
 
 ### Automatic Agent Delegation
 
-- Use `triage` as the manager/orchestrator when a task is ambiguous, spans stages, or would benefit from explicit handoff prompts in VS Code chat.
+- Use the default workspace agent as the primary conversational and orchestration surface for discussing CMSNext work in plain English, gathering context, and deciding when delegation is actually needed.
+- Do not route to `triage` by default just because a task is ambiguous or multi-stage; keep the user in the main conversation unless context isolation or a structured handoff artifact would materially help.
+- Use `triage` as a subagent when the task specifically benefits from responsibility-first problem framing, ownership mapping, stage planning, or a handoff-ready prompt for another specialist.
 - The default agent should delegate automatically when a task clearly matches one of the workspace custom agents.
 - Route ambiguous tasks by **responsibility and architectural ownership first**, then use file proximity as a tiebreaker.
 - Delegate to `audit` for code reviews, security analysis, accessibility checks, performance investigations, regression hunting, release readiness, or architecture compliance checks.
@@ -80,6 +84,7 @@ When starting a task, prefer this order:
 - Delegate to `storage` for File System Access API work, file handle flows, autosave behavior, serialization and deserialization, disk read/write mechanics, file lifecycle on disk, persistence bugs, storage migrations, storage diagnostics, or local-first data integrity concerns.
 - Route app-wide logging, telemetry, performance instrumentation, and error handling to the agent that owns the layer implementing the change: `storage` for persistence-path concerns, `services` for orchestration and workflow concerns, `hooks` for React workflow-state coordination, and `frontend` for UI rendering and interaction concerns. Use `audit` to verify compliance, not as the default implementer.
 - Delegate to `Explore` for broad read-only discovery when the right files, patterns, or code paths are not yet clear.
+- Use `triage` only when you want a bounded subagent pass that returns a responsibility-focused problem statement, recommended owner, risks, and a clean handoff prompt.
 - If a task spans multiple areas, choose one **primary owner** based on responsibility, then involve a secondary agent only when the task explicitly requires a cross-boundary change.
 - Specialist agents should avoid expanding beyond their owned boundary unless the task explicitly requires cross-boundary edits.
 - Keep work in the default agent when the task is narrow, the affected files are already obvious, and context isolation would add overhead without improving outcome quality.

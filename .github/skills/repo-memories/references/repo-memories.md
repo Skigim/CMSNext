@@ -1,5 +1,7 @@
 # CMSNext Repository Memory Reference
 
+Use this reference first on every CMSNext task before deeper reasoning, searches, edits, reviews, or delegation.
+
 ## Architecture And Data Flow
 
 - `DataManager` orchestrates stateless services in `utils/services/*`.
@@ -34,3 +36,8 @@
 - `npm run lint`
 - `npm run test:run`
 - `npm run build`
+
+## Memory Maintenance
+
+- If a task establishes or clarifies a durable repo convention, update this reference before closing out the work.
+- Keep additions short and operational so this file stays fast to load at the start of every task.
