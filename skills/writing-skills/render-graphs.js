@@ -20,7 +20,7 @@ import { execSync } from 'node:child_process';
 
 function extractDotBlocks(markdown) {
   const blocks = [];
-  const regex = /```dot\n([\s\S]*?)```/g;
+  const regex = /```dot\r?\n([\s\S]*?)\r?\n```/g;
   let match;
 
   while ((match = regex.exec(markdown)) !== null) {

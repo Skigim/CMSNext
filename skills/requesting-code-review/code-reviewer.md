@@ -199,8 +199,9 @@ Summarize review conclusions here as categorized issues and recommendations. Do 
 
 ## Example Output
 
-```
+```markdown
 ### Strengths
+
 - Clean database schema with proper migrations (db.ts:15-42)
 - Comprehensive test coverage (18 tests, all edge cases)
 - Good error handling with fallbacks (summarizer.ts:85-92)
@@ -208,6 +209,7 @@ Summarize review conclusions here as categorized issues and recommendations. Do 
 ### Issues
 
 #### Important
+
 1. **Missing help text in CLI wrapper**
    - File: index-conversations.ts:1-31
    - Issue: No --help flag, users won't discover --concurrency
@@ -219,12 +221,14 @@ Summarize review conclusions here as categorized issues and recommendations. Do 
    - Fix: Validate ISO format, throw error with example
 
 #### Minor
+
 1. **Progress indicators**
    - File: indexer.ts:130
    - Issue: No "X of Y" counter for long operations
    - Impact: Users don't know how long to wait
 
 ### Recommendations
+
 - Add progress reporting for user experience
 - Consider config file for excluded projects (portability)
 

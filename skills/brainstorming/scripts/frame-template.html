@@ -285,6 +285,22 @@
         }
       }
 
+      function isMultiselectContainer(container) {
+        return container?.dataset.multiselect !== undefined
+          && container.dataset.multiselect !== 'false';
+      }
+
+      function syncSelectedChoice(container, items, isMultiselect) {
+        const selectedValues = items
+          .filter((candidate) => candidate.classList.contains('selected'))
+          .map((candidate) => candidate.dataset.choice)
+          .filter((value) => value !== undefined && value !== '');
+
+        runtime.selectedChoice = isMultiselect
+          ? selectedValues
+          : (selectedValues[0] ?? null);
+      }
+
       function toggleLocalSelection(item) {
         const optionContainer = item.closest('.options');
         const cardContainer = item.closest('.cards');
@@ -295,16 +311,17 @@
 
         const selector = optionContainer ? '.option' : '.card';
         const items = Array.from(container.querySelectorAll(selector));
-        const isMultiselect = container.hasAttribute('data-multiselect') || container.dataset.multiselect === 'true';
+        const isMultiselect = isMultiselectContainer(container);
 
         if (isMultiselect) {
           item.classList.toggle('selected');
-          return;
+        } else {
+          items.forEach((candidate) => {
+            candidate.classList.toggle('selected', candidate === item);
+          });
         }
 
-        items.forEach((candidate) => {
-          candidate.classList.toggle('selected', candidate === item);
-        });
+        syncSelectedChoice(container, items, isMultiselect);
       }
 
       function applySelection(item) {
@@ -408,7 +425,7 @@
           container.setAttribute('role', 'listbox');
           container.setAttribute(
             'aria-multiselectable',
-            String(container.hasAttribute('data-multiselect') || container.dataset.multiselect === 'true')
+            String(isMultiselectContainer(container))
           );
 
           const items = Array.from(container.querySelectorAll('.option'));

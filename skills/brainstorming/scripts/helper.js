@@ -145,7 +145,8 @@
 
   runtime.toggleSelect = function(el) {
     const container = el.closest('.options') || el.closest('.cards');
-    const multi = container?.dataset.multiselect !== undefined;
+    const multi = container?.dataset.multiselect !== undefined
+      && container.dataset.multiselect !== 'false';
     if (container && !multi) {
       container.querySelectorAll('.option, .card').forEach(o => o.classList.remove('selected'));
     }
@@ -155,7 +156,12 @@
       el.classList.add('selected');
     }
     syncSelectableState(container);
-    runtime.selectedChoice = el.dataset.choice;
+    const selectedValues = container
+      ? Array.from(container.querySelectorAll('.option.selected, .card.selected'))
+        .map((item) => item.dataset.choice)
+        .filter((value) => value !== undefined && value !== '')
+      : [];
+    runtime.selectedChoice = multi ? selectedValues : (selectedValues[0] ?? null);
   };
 
   // Expose API for explicit use

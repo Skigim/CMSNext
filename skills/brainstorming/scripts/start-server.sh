@@ -23,6 +23,25 @@ FORCE_BACKGROUND="false"
 BIND_HOST="127.0.0.1"
 URL_HOST=""
 
+resolve_path() {
+  local target_path="$1"
+
+  if command -v realpath >/dev/null 2>&1; then
+    realpath -m -- "$target_path"
+    return
+  fi
+
+  if command -v python3 >/dev/null 2>&1; then
+    python3 -c 'import os, sys; print(os.path.abspath(sys.argv[1]))' "$target_path"
+    return
+  fi
+
+  case "$target_path" in
+    /*) printf '%s\n' "$target_path" ;;
+    *) printf '%s/%s\n' "$(pwd -P)" "$target_path" ;;
+  esac
+}
+
 json_error() {
   node -e 'const message = process.argv.slice(1).join(" "); process.stderr.write(JSON.stringify({ error: message }) + "\n");' "$@"
   exit 1
@@ -56,9 +75,11 @@ while [[ $# -gt 0 ]]; do
       ;;
     --foreground|--no-daemon)
       FOREGROUND="true"
+      FORCE_BACKGROUND="false"
       shift
       ;;
     --background|--daemon)
+      FOREGROUND="false"
       FORCE_BACKGROUND="true"
       shift
       ;;
@@ -95,6 +116,7 @@ fi
 SESSION_ID="$$-$(date +%s)"
 
 if [[ -n "$PROJECT_DIR" ]]; then
+  PROJECT_DIR="$(resolve_path "$PROJECT_DIR")"
   SESSION_DIR="${PROJECT_DIR}/.superpowers/brainstorm/${SESSION_ID}"
 else
   SESSION_DIR="/tmp/brainstorm-${SESSION_ID}"
@@ -105,7 +127,7 @@ PID_FILE="${STATE_DIR}/server.pid"
 LOG_FILE="${STATE_DIR}/server.log"
 
 # Create fresh session directory with content and state peers
-mkdir -p "${SESSION_DIR}/content" "$STATE_DIR"
+mkdir -p "${SESSION_DIR}/content" "$STATE_DIR" || json_error "Failed to create session directory: $SESSION_DIR"
 
 cd "$SCRIPT_DIR" || json_error "Failed to change to script directory: $SCRIPT_DIR"
 
