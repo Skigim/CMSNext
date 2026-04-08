@@ -7,6 +7,7 @@ import { ActivityLogService } from './ActivityLogService';
 import { formatCaseDisplayName } from '../../domain/cases/formatting';
 import { createLogger } from '../logger';
 import { resolveNoteCategories } from '../noteCategories';
+import { syncRuntimeApplications } from '../storageV21Migration';
 import type { AlertWithMatch } from '@/domain/alerts';
 
 const logger = createLogger('CaseBulkOperationsService');
@@ -233,15 +234,28 @@ export class CaseBulkOperationsService {
       return updatedCase;
     });
 
+    const touchedCaseIds = caseIds.filter(id => existingIds.has(id));
     const casesWithTouchedTimestamps = this.fileStorage.touchCaseTimestamps(
       casesWithChanges,
-      caseIds.filter(id => existingIds.has(id))
+      touchedCaseIds,
+      timestamp,
     );
 
     // Write updated data
     const updatedData: NormalizedFileData = {
       ...currentData,
       cases: casesWithTouchedTimestamps,
+      applications: syncRuntimeApplications(
+        {
+          ...currentData,
+          cases: casesWithTouchedTimestamps,
+        },
+        {
+          preferRuntimeCaseFields: true,
+          syncMode: 'status-only',
+          transactionTimestamp: timestamp,
+        },
+      ).applications,
       activityLog: ActivityLogService.mergeActivityEntries(currentData.activityLog, activityEntries),
     };
 
@@ -339,9 +353,11 @@ export class CaseBulkOperationsService {
       return updatedCase;
     });
 
+    const touchedCaseIds = caseIds.filter(id => existingIds.has(id));
     const casesWithTouchedTimestamps = this.fileStorage.touchCaseTimestamps(
       casesWithChanges,
-      caseIds.filter(id => existingIds.has(id))
+      touchedCaseIds,
+      timestamp,
     );
 
     // Write updated data
@@ -426,7 +442,11 @@ export class CaseBulkOperationsService {
 
     const touchedCaseIds = casesToImport.map(caseItem => caseItem.id);
     const combinedCases = [...currentData.cases, ...casesToImport];
-    const casesWithTouchedTimestamps = this.fileStorage.touchCaseTimestamps(combinedCases, touchedCaseIds);
+    const casesWithTouchedTimestamps = this.fileStorage.touchCaseTimestamps(
+      combinedCases,
+      touchedCaseIds,
+      timestamp,
+    );
 
     // Write updated data
     const updatedData: NormalizedFileData = {
@@ -664,7 +684,8 @@ export class CaseBulkOperationsService {
     // Touch case timestamps
     const casesWithTouchedTimestamps = this.fileStorage.touchCaseTimestamps(
       currentData.cases,
-      validCaseIds
+      validCaseIds,
+      timestamp,
     );
 
     // Write updated data

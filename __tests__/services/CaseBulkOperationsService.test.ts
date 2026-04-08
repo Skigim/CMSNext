@@ -3,7 +3,7 @@ import { CaseBulkOperationsService } from '@/utils/services/CaseBulkOperationsSe
 import type { FileStorageService, NormalizedFileData, StoredCase } from '@/utils/services/FileStorageService';
 import type { CaseStatus } from '@/types/case';
 import type { CategoryConfig } from '@/types/categoryConfig';
-import { createMockStoredCase } from '@/src/test/testUtils';
+import { createMockApplication, createMockStoredCase } from '@/src/test/testUtils';
 
 // Mock the logger using vi.hoisted to ensure proper initialization order
 const mockLoggerFns = vi.hoisted(() => ({
@@ -31,8 +31,18 @@ describe('CaseBulkOperationsService', () => {
         storedData = data;
         return Promise.resolve();
       }),
-      touchCaseTimestamps: vi.fn().mockImplementation((cases: StoredCase[], _caseIds: string[]) => {
-        return cases.map(c => ({ ...c, updatedAt: new Date().toISOString() }));
+      touchCaseTimestamps: vi.fn().mockImplementation((cases: StoredCase[], caseIds?: Iterable<string>, timestampOverride?: string) => {
+        if (!caseIds) {
+          return cases;
+        }
+
+        const touchedIds = new Set(caseIds);
+        if (touchedIds.size === 0) {
+          return cases;
+        }
+
+        const timestamp = timestampOverride ?? new Date().toISOString();
+        return cases.map(c => (touchedIds.has(c.id) ? { ...c, updatedAt: timestamp } : c));
       }),
       setData: (data: NormalizedFileData | null) => {
         storedData = data;
@@ -245,6 +255,147 @@ describe('CaseBulkOperationsService', () => {
 
       expect(result.updated).toHaveLength(1);
       expect(result.notFound).toEqual(['case-nonexistent']);
+    });
+
+    it('should sync canonical application status history with the bulk transaction timestamp', async () => {
+      // Arrange
+      const transactionTimestamp = '2026-04-08T10:00:00.000Z';
+      const skewedTimestamp = '2026-04-08T10:00:01.000Z';
+      const primaryPersonId = 'person-1';
+      const data = createEmptyNormalizedData();
+      data.categoryConfig = {
+        ...defaultCategoryConfig,
+        caseStatuses: [
+          { name: 'Approved', colorSlot: 'green', countsAsCompleted: true },
+          { name: 'Denied', colorSlot: 'red', countsAsCompleted: true },
+          { name: 'Pending', colorSlot: 'amber', countsAsCompleted: false },
+        ],
+      };
+      data.people = [
+        {
+          ...createMockStoredCase({ person: undefined as never }).person,
+          id: primaryPersonId,
+          familyMembers: [],
+          familyMemberIds: [],
+          legacyFamilyMemberNames: [],
+          normalizedRelationships: [],
+        },
+      ];
+      data.cases = [
+        createMockCase('case-1', 'Approved' as CaseStatus),
+      ].map((caseItem) => ({
+        ...caseItem,
+        person: { ...caseItem.person, id: primaryPersonId },
+        linkedPeople: [{ ref: { personId: primaryPersonId, role: 'applicant', isPrimary: true }, person: { ...caseItem.person, id: primaryPersonId } }],
+        people: [{ personId: primaryPersonId, role: 'applicant', isPrimary: true }],
+        caseRecord: {
+          ...caseItem.caseRecord,
+          personId: primaryPersonId,
+        },
+      }));
+      data.applications = [
+        createMockApplication({
+          id: 'application-1',
+          caseId: 'case-1',
+          applicantPersonId: primaryPersonId,
+          applicationDate: '2026-01-01',
+          applicationType: 'Renewal',
+          status: 'Approved',
+          hasWaiver: true,
+          retroRequestedAt: '2025-12-01',
+          retroMonths: ['2025-12'],
+          verification: {
+            isAppValidated: true,
+            isAgedDisabledVerified: true,
+            isCitizenshipVerified: true,
+            isResidencyVerified: true,
+            avsConsentDate: '2026-01-02',
+            voterFormStatus: 'requested',
+            isIntakeCompleted: false,
+          },
+          statusHistory: [
+            {
+              id: 'history-1',
+              status: 'Approved',
+              effectiveDate: '2026-01-01',
+              changedAt: '2026-01-01T00:00:00.000Z',
+              source: 'migration',
+            },
+          ],
+          updatedAt: '2026-01-15T00:00:00.000Z',
+        }),
+      ];
+      mockFileStorage.setData(data);
+
+      vi.useFakeTimers();
+      vi.setSystemTime(new Date(transactionTimestamp));
+      mockFileStorage.touchCaseTimestamps.mockImplementation(
+        (cases: StoredCase[], caseIds?: Iterable<string>, timestampOverride?: string) => {
+          if (!caseIds) {
+            return cases;
+          }
+
+          const touchedIds = new Set(caseIds);
+          vi.setSystemTime(new Date(skewedTimestamp));
+          const timestamp = timestampOverride ?? new Date().toISOString();
+          return cases.map((caseItem) =>
+            touchedIds.has(caseItem.id) ? { ...caseItem, updatedAt: timestamp } : caseItem,
+          );
+        },
+      );
+
+      try {
+        // Act
+        const result = await service.updateCasesStatus(['case-1'], 'Pending');
+
+        // Assert
+        expect(result.updated).toHaveLength(1);
+      } finally {
+        vi.useRealTimers();
+      }
+
+      const writtenData = mockFileStorage.writeNormalizedData.mock.calls[0][0] as NormalizedFileData;
+      expect(mockFileStorage.touchCaseTimestamps).toHaveBeenCalledWith(
+        expect.any(Array),
+        ['case-1'],
+        transactionTimestamp,
+      );
+      expect(writtenData.cases[0].updatedAt).toBe(transactionTimestamp);
+      expect(writtenData.activityLog[0].timestamp).toBe(transactionTimestamp);
+      expect(writtenData.applications?.[0]).toMatchObject({
+        id: 'application-1',
+        status: 'Pending',
+        applicationDate: '2026-01-01',
+        applicationType: 'Renewal',
+        hasWaiver: true,
+        retroRequestedAt: '2025-12-01',
+        retroMonths: ['2025-12'],
+        verification: {
+          isAppValidated: true,
+          isAgedDisabledVerified: true,
+          isCitizenshipVerified: true,
+          isResidencyVerified: true,
+          avsConsentDate: '2026-01-02',
+          voterFormStatus: 'requested',
+          isIntakeCompleted: false,
+        },
+        updatedAt: transactionTimestamp,
+      });
+      expect(writtenData.applications?.[0].statusHistory).toEqual([
+        {
+          id: 'history-1',
+          status: 'Approved',
+          effectiveDate: '2026-01-01',
+          changedAt: '2026-01-01T00:00:00.000Z',
+          source: 'migration',
+        },
+        expect.objectContaining({
+          status: 'Pending',
+          effectiveDate: '2026-04-08',
+          changedAt: transactionTimestamp,
+          source: 'user',
+        }),
+      ]);
     });
   });
 

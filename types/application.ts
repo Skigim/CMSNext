@@ -27,12 +27,6 @@ export interface ApplicationVerificationSnapshot {
   isAgedDisabledVerified: boolean;
   isCitizenshipVerified: boolean;
   isResidencyVerified: boolean;
-  isAvsSubmitted: boolean;
-  avsSubmitDate: string;
-  hasInterfacesReviewed: boolean;
-  reviewVRs: boolean;
-  reviewPriorBudgets: boolean;
-  reviewPriorNarr: boolean;
   avsConsentDate: string;
   voterFormStatus: VoterFormStatus;
   isIntakeCompleted: boolean;
@@ -48,12 +42,6 @@ export interface ApplicationOwnedCaseRecordSnapshot {
   agedDisabledVerified: boolean;
   citizenshipVerified: boolean;
   residencyVerified: boolean;
-  avsSubmitted: boolean;
-  avsSubmitDate: string;
-  interfacesReviewed: boolean;
-  reviewVRs: boolean;
-  reviewPriorBudgets: boolean;
-  reviewPriorNarr: boolean;
   avsConsentDate: string;
   voterFormStatus: VoterFormStatus;
   intakeCompleted: boolean;
@@ -85,12 +73,6 @@ export type ApplicationOwnedLegacyCaseRecordField =
   | "agedDisabledVerified"
   | "citizenshipVerified"
   | "residencyVerified"
-  | "avsSubmitted"
-  | "avsSubmitDate"
-  | "interfacesReviewed"
-  | "reviewVRs"
-  | "reviewPriorBudgets"
-  | "reviewPriorNarr"
   | "avsConsentDate"
   | "voterFormStatus"
   | "intakeCompleted";

@@ -22,6 +22,8 @@ const APPLICATION_ACTIVITY_TYPES = new Set<CaseActivityEntry["type"]>([
   "application-status-change",
 ]);
 
+const DATE_ONLY_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
+
 export function isApplicationActivityType(type: CaseActivityEntry["type"]): boolean {
   return APPLICATION_ACTIVITY_TYPES.has(type);
 }
@@ -29,6 +31,11 @@ export function isApplicationActivityType(type: CaseActivityEntry["type"]): bool
 function parseDateInput(targetDate: string | Date): Date {
   if (targetDate instanceof Date) {
     return new Date(targetDate);
+  }
+
+  if (DATE_ONLY_PATTERN.test(targetDate)) {
+    const [year, month, day] = targetDate.split("-").map(Number);
+    return new Date(year, month - 1, day);
   }
 
   return new Date(targetDate);
@@ -116,37 +123,55 @@ const ACTIVITY_TYPE_COUNTER: Record<
   "application-status-change": "applicationChanges",
 };
 
+function createCaseBreakdown(entry: CaseActivityEntry): DailyCaseActivityBreakdown {
+  return {
+    caseId: entry.caseId,
+    caseName: entry.caseName,
+    caseMcn: entry.caseMcn,
+    statusChanges: entry.type === "status-change" ? 1 : 0,
+    priorityChanges: entry.type === "priority-change" ? 1 : 0,
+    notesAdded: entry.type === "note-added" ? 1 : 0,
+    applicationChanges: isApplicationActivityType(entry.type) ? 1 : 0,
+    entries: [entry],
+  };
+}
+
+function appendEntryToCaseBreakdown(
+  breakdown: DailyCaseActivityBreakdown,
+  entry: CaseActivityEntry,
+): void {
+  const counterField = ACTIVITY_TYPE_COUNTER[entry.type];
+  if (counterField) {
+    breakdown[counterField] += 1;
+  }
+  breakdown.entries.push(entry);
+}
+
+function getCaseActivityTotal(caseSummary: DailyCaseActivityBreakdown): number {
+  return (
+    caseSummary.statusChanges +
+    caseSummary.priorityChanges +
+    caseSummary.notesAdded +
+    caseSummary.applicationChanges
+  );
+}
+
 function summarizeCaseEntries(entries: CaseActivityEntry[]): DailyCaseActivityBreakdown[] {
   const caseMap = new Map<string, DailyCaseActivityBreakdown>();
 
   for (const entry of entries) {
     const existing = caseMap.get(entry.caseId);
     if (!existing) {
-      caseMap.set(entry.caseId, {
-        caseId: entry.caseId,
-        caseName: entry.caseName,
-        caseMcn: entry.caseMcn,
-        statusChanges: entry.type === "status-change" ? 1 : 0,
-        priorityChanges: entry.type === "priority-change" ? 1 : 0,
-        notesAdded: entry.type === "note-added" ? 1 : 0,
-        applicationChanges: isApplicationActivityType(entry.type) ? 1 : 0,
-        entries: [entry],
-      });
+      caseMap.set(entry.caseId, createCaseBreakdown(entry));
       continue;
     }
 
-    const counterField = ACTIVITY_TYPE_COUNTER[entry.type];
-    if (counterField) {
-      existing[counterField] += 1;
-    }
-    existing.entries.push(entry);
+    appendEntryToCaseBreakdown(existing, entry);
   }
 
   return Array.from(caseMap.values()).sort((a, b) => {
-    const aTotal =
-      a.statusChanges + a.priorityChanges + a.notesAdded + a.applicationChanges;
-    const bTotal =
-      b.statusChanges + b.priorityChanges + b.notesAdded + b.applicationChanges;
+    const aTotal = getCaseActivityTotal(a);
+    const bTotal = getCaseActivityTotal(b);
     if (bTotal !== aTotal) {
       return bTotal - aTotal;
     }
@@ -217,13 +242,15 @@ export function formatReportCaseSummary(caseSummary: {
     caseSummary.priorityChanges +
     caseSummary.notesAdded +
     caseSummary.applicationChanges;
+  const applicationChangeLabel =
+    caseSummary.applicationChanges === 1 ? "app" : "apps";
 
   const breakdown = [
     caseSummary.statusChanges > 0 ? `${caseSummary.statusChanges}s` : null,
     caseSummary.priorityChanges > 0 ? `${caseSummary.priorityChanges}p` : null,
     caseSummary.notesAdded > 0 ? `${caseSummary.notesAdded}n` : null,
     caseSummary.applicationChanges > 0
-      ? `${caseSummary.applicationChanges} app${caseSummary.applicationChanges === 1 ? "" : "s"}`
+      ? `${caseSummary.applicationChanges} ${applicationChangeLabel}`
       : null,
   ].filter((value): value is string => value !== null);
 

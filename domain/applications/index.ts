@@ -8,3 +8,5 @@ export {
   pickApplicationOwnedCaseRecordFields,
   type CreateMigratedApplicationInput,
 } from "./migration";
+
+export { selectOldestNonTerminalApplication } from "./selectors";

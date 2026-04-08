@@ -3,8 +3,12 @@ import { describe, expect, it } from "vitest";
 import {
   createMockApplication,
   createMockNormalizedFileData,
+  createMockPerson,
   createMockPersistedNormalizedFileData,
+  createMockStoredCase,
 } from "@/src/test/testUtils";
+import type { ApplicationStatus } from "@/types/application";
+import type { CaseStatus } from "@/types/case";
 import type { NormalizedFileDataV20, PersistedNormalizedFileDataV21 } from "@/utils/storageV21Migration";
 import {
   dehydrateNormalizedData,
@@ -12,10 +16,10 @@ import {
   isPersistedNormalizedFileDataV20,
   isPersistedNormalizedFileDataV21,
   migrateV20ToV21,
+  normalizePersistedApplication,
   persistedCasesContainLegacyApplicationFields,
   syncRuntimeApplications,
 } from "@/utils/storageV21Migration";
-import { createMockPerson, createMockStoredCase } from "@/src/test/testUtils";
 import { mergeCategoryConfig } from "@/types/categoryConfig";
 
 describe("storageV21Migration", () => {
@@ -219,6 +223,89 @@ describe("storageV21Migration", () => {
     expect(hydrated.cases[0].caseRecord.intakeCompleted).toBe(true);
   });
 
+  it("strips deprecated verification keys when normalizing a persisted application", () => {
+    // ARRANGE
+    const persistedApplication = {
+      ...createMockApplication(),
+      verification: {
+        ...createMockApplication().verification,
+        legacyFlag: true,
+        verificationNotes: "deprecated",
+      },
+    };
+
+    // ACT
+    const normalized = normalizePersistedApplication(
+      persistedApplication as NonNullable<PersistedNormalizedFileDataV21["applications"]>[number],
+    );
+
+    // ASSERT
+    expect(normalized.verification).toEqual({
+      isAppValidated: false,
+      isAgedDisabledVerified: false,
+      isCitizenshipVerified: false,
+      isResidencyVerified: false,
+      avsConsentDate: "",
+      voterFormStatus: "",
+      isIntakeCompleted: true,
+    });
+    expect(normalized.verification).not.toHaveProperty("legacyFlag");
+    expect(normalized.verification).not.toHaveProperty("verificationNotes");
+  });
+
+  it("normalizes persisted application verification when hydrating and dehydrating", () => {
+    // ARRANGE
+    const persistedData = createMockPersistedNormalizedFileData({
+      people: [createMockPerson({ id: "person-1" })],
+      cases: [
+        createMockStoredCase({
+          id: "case-1",
+          person: createMockPerson({ id: "person-1" }),
+          people: [{ personId: "person-1", role: "applicant", isPrimary: true }],
+        }),
+      ],
+      applications: [
+        {
+          ...createMockApplication({
+            id: "application-1",
+            caseId: "case-1",
+            applicantPersonId: "person-1",
+          }),
+          verification: {
+            ...createMockApplication().verification,
+            legacyFlag: true,
+          },
+        } as NonNullable<PersistedNormalizedFileDataV21["applications"]>[number],
+      ],
+    });
+
+    // Act
+    const hydrated = hydrateNormalizedData(persistedData);
+    const dehydrated = dehydrateNormalizedData(hydrated);
+
+    // Assert
+    expect(hydrated.applications?.[0].verification).toEqual({
+      isAppValidated: false,
+      isAgedDisabledVerified: false,
+      isCitizenshipVerified: false,
+      isResidencyVerified: false,
+      avsConsentDate: "",
+      voterFormStatus: "",
+      isIntakeCompleted: true,
+    });
+    expect(hydrated.applications?.[0].verification).not.toHaveProperty("legacyFlag");
+    expect(dehydrated.applications?.[0].verification).toEqual({
+      isAppValidated: false,
+      isAgedDisabledVerified: false,
+      isCitizenshipVerified: false,
+      isResidencyVerified: false,
+      avsConsentDate: "",
+      voterFormStatus: "",
+      isIntakeCompleted: true,
+    });
+    expect(dehydrated.applications?.[0].verification).not.toHaveProperty("legacyFlag");
+  });
+
   it("writes intakeCompleted as true when dehydrating historical runtime cases without the field", () => {
     // ARRANGE
     const runtimeCase = createMockStoredCase();
@@ -288,6 +375,131 @@ describe("storageV21Migration", () => {
     expect(dehydrated.cases[0].caseRecord).not.toHaveProperty("withWaiver");
   });
 
+  it("hydrates the oldest non-terminal application into case compatibility fields", () => {
+    // ARRANGE
+    const person = createMockPerson({ id: "person-1" });
+    const persistedData = createMockPersistedNormalizedFileData({
+      people: [person],
+      cases: [
+        createMockStoredCase({
+          id: "case-1",
+          status: "Legacy Pending" as CaseStatus,
+          person,
+          people: [{ personId: "person-1", role: "applicant", isPrimary: true }],
+          caseRecord: {
+            ...createMockStoredCase().caseRecord,
+            personId: "person-1",
+            status: "Legacy Pending" as CaseStatus,
+          },
+        }),
+      ],
+      applications: [
+        createMockApplication({
+          id: "application-approved",
+          caseId: "case-1",
+          applicationDate: "2026-01-01",
+          status: "Approved",
+          applicationType: "Closed Application",
+          updatedAt: "2026-04-03T00:00:00.000Z",
+        }),
+        createMockApplication({
+          id: "application-open-oldest",
+          caseId: "case-1",
+          applicationDate: "2026-02-01",
+          status: "Pending Review" as ApplicationStatus,
+          applicationType: "Renewal",
+          updatedAt: "2026-04-01T00:00:00.000Z",
+        }),
+        createMockApplication({
+          id: "application-open-newer",
+          caseId: "case-1",
+          applicationDate: "2026-03-01",
+          status: "Escalated" as ApplicationStatus,
+          applicationType: "Change Report",
+          updatedAt: "2026-04-05T00:00:00.000Z",
+        }),
+      ],
+      categoryConfig: mergeCategoryConfig({
+        caseStatuses: [
+          { name: "Pending Review", colorSlot: "amber", countsAsCompleted: false },
+          { name: "Escalated", colorSlot: "orange", countsAsCompleted: false },
+          { name: "Approved", colorSlot: "green", countsAsCompleted: true },
+        ],
+      }),
+    });
+
+    // ACT
+    const hydrated = hydrateNormalizedData(persistedData);
+
+    // ASSERT
+    expect(hydrated.cases[0].caseRecord.applicationType).toBe("Renewal");
+    expect(hydrated.cases[0].caseRecord.status).toBe("Pending Review");
+  });
+
+  it("hydrates terminal-only application sets from the deterministic canonical application", () => {
+    // ARRANGE
+    const person = createMockPerson({ id: "person-1" });
+    const persistedData = createMockPersistedNormalizedFileData({
+      people: [person],
+      cases: [
+        createMockStoredCase({
+          id: "case-1",
+          status: "Legacy Pending" as CaseStatus,
+          person,
+          people: [{ personId: "person-1", role: "applicant", isPrimary: true }],
+          caseRecord: {
+            ...createMockStoredCase().caseRecord,
+            personId: "person-1",
+            status: "Legacy Pending" as CaseStatus,
+            applicationDate: "1999-01-01",
+            applicationType: "Legacy Type",
+            withWaiver: false,
+            retroRequested: "1999-02-01",
+          },
+        }),
+      ],
+      applications: [
+        createMockApplication({
+          id: "application-terminal-oldest",
+          caseId: "case-1",
+          applicationDate: "2026-01-01",
+          status: "Approved",
+          applicationType: "Renewal",
+          hasWaiver: true,
+          retroRequestedAt: "2025-12-01",
+          updatedAt: "2026-04-01T00:00:00.000Z",
+        }),
+        createMockApplication({
+          id: "application-terminal-newer",
+          caseId: "case-1",
+          applicationDate: "2026-03-01",
+          status: "Denied",
+          applicationType: "Change Report",
+          hasWaiver: false,
+          retroRequestedAt: null,
+          updatedAt: "2026-04-03T00:00:00.000Z",
+        }),
+      ],
+      categoryConfig: mergeCategoryConfig({
+        caseStatuses: [
+          { name: "Approved", colorSlot: "green", countsAsCompleted: true },
+          { name: "Denied", colorSlot: "red", countsAsCompleted: true },
+          { name: "Pending Review", colorSlot: "amber", countsAsCompleted: false },
+        ],
+      }),
+    });
+
+    // ACT
+    const hydrated = hydrateNormalizedData(persistedData);
+
+    // ASSERT
+    expect(hydrated.cases[0].caseRecord.applicationDate).toBe("2026-01-01");
+    expect(hydrated.cases[0].caseRecord.applicationType).toBe("Renewal");
+    expect(hydrated.cases[0].caseRecord.withWaiver).toBe(true);
+    expect(hydrated.cases[0].caseRecord.retroRequested).toBe("2025-12-01");
+    expect(hydrated.cases[0].caseRecord.status).toBe("Approved");
+  });
+
   it("hydrates runtime case fields back from canonical applications", () => {
     // ARRANGE
     const persistedData = dehydrateNormalizedData({
@@ -296,8 +508,20 @@ describe("storageV21Migration", () => {
       cases: [
         createMockStoredCase({
           id: "case-1",
+          status: "Legacy Pending" as CaseStatus,
           person: createMockPerson({ id: "person-1" }),
           people: [{ personId: "person-1", role: "applicant", isPrimary: true }],
+          caseRecord: {
+            ...createMockStoredCase().caseRecord,
+            personId: "person-1",
+            status: "Legacy Pending" as CaseStatus,
+            avsSubmitted: true,
+            avsSubmitDate: "2026-02-10",
+            interfacesReviewed: true,
+            reviewVRs: true,
+            reviewPriorBudgets: true,
+            reviewPriorNarr: true,
+          },
         }),
       ],
       applications: [
@@ -307,6 +531,7 @@ describe("storageV21Migration", () => {
           applicantPersonId: "person-1",
           applicationDate: "2026-03-01",
           applicationType: "Renewal",
+          status: "Pending Review" as ApplicationStatus,
           retroRequestedAt: "2026-02-01",
           hasWaiver: true,
           verification: {
@@ -333,11 +558,25 @@ describe("storageV21Migration", () => {
     expect(hydrated.cases[0].caseRecord.retroRequested).toBe("2026-02-01");
     expect(hydrated.cases[0].caseRecord.withWaiver).toBe(true);
     expect(hydrated.cases[0].caseRecord.intakeCompleted).toBe(false);
+    expect(hydrated.cases[0].caseRecord.status).toBe("Pending Review");
+    expect(hydrated.cases[0].caseRecord.avsSubmitted).toBe(true);
+    expect(hydrated.cases[0].caseRecord.avsSubmitDate).toBe("2026-02-10");
+    expect(hydrated.cases[0].caseRecord.interfacesReviewed).toBe(true);
+    expect(hydrated.cases[0].caseRecord.reviewVRs).toBe(true);
+    expect(hydrated.cases[0].caseRecord.reviewPriorBudgets).toBe(true);
+    expect(hydrated.cases[0].caseRecord.reviewPriorNarr).toBe(true);
   });
 
   it("preserves canonical applications when runtime case fields differ and runtime sync is not preferred", () => {
     // ARRANGE
     const runtimeData = createMockNormalizedFileData({
+      categoryConfig: mergeCategoryConfig({
+        caseStatuses: [
+          { name: "Approved", colorSlot: "green", countsAsCompleted: true },
+          { name: "Denied", colorSlot: "red", countsAsCompleted: true },
+          { name: "Pending", colorSlot: "amber", countsAsCompleted: false },
+        ],
+      }),
       people: [createMockPerson({ id: "person-1" })],
       cases: [
         createMockStoredCase({
@@ -395,11 +634,11 @@ describe("storageV21Migration", () => {
       cases: [
         createMockStoredCase({
           id: "case-1",
-          person: createMockPerson({ id: "person-1" }),
-          people: [{ personId: "person-1", role: "applicant", isPrimary: true }],
+          person: createMockPerson({ id: "person-2" }),
+          people: [{ personId: "person-2", role: "applicant", isPrimary: true }],
           caseRecord: {
             ...createMockStoredCase().caseRecord,
-            personId: "person-1",
+            personId: "person-2",
             applicationDate: "2026-03-20",
             applicationType: "Converted From Case",
             withWaiver: true,
@@ -428,12 +667,239 @@ describe("storageV21Migration", () => {
     expect(result.applications).toHaveLength(2);
     expect(result.applications.find((application) => application.id === "application-1")).toMatchObject({
       caseId: "case-1",
+      applicantPersonId: "person-1",
       applicationType: "Converted From Case",
       hasWaiver: true,
       retroRequestedAt: "2026-02-01",
     });
     expect(result.applications.find((application) => application.id === "application-2")).toEqual(
       preservedApplication,
+    );
+  });
+
+  it("updates a deterministic terminal application when runtime sync is preferred and no non-terminal application exists", () => {
+    // ARRANGE
+    const preservedNewestTerminalApplication = createMockApplication({
+      id: "application-2",
+      caseId: "case-1",
+      applicantPersonId: "person-1",
+      applicationDate: "2026-03-01",
+      createdAt: "2026-03-01T00:00:00.000Z",
+      status: "Denied",
+      statusHistory: [
+        {
+          id: "history-2",
+          status: "Denied",
+          effectiveDate: "2026-03-01",
+          changedAt: "2026-03-01T00:00:00.000Z",
+          source: "migration",
+        },
+      ],
+    });
+    const runtimeData = createMockNormalizedFileData({
+      categoryConfig: mergeCategoryConfig({
+        caseStatuses: [
+          { name: "Approved", colorSlot: "green", countsAsCompleted: true },
+          { name: "Denied", colorSlot: "red", countsAsCompleted: true },
+          { name: "Pending", colorSlot: "amber", countsAsCompleted: false },
+        ],
+      }),
+      people: [createMockPerson({ id: "person-1" })],
+      cases: [
+        createMockStoredCase({
+          id: "case-1",
+          status: "Pending",
+          person: createMockPerson({ id: "person-1" }),
+          people: [{ personId: "person-1", role: "applicant", isPrimary: true }],
+          caseRecord: {
+            ...createMockStoredCase().caseRecord,
+            personId: "person-1",
+            status: "Pending",
+            applicationDate: "2026-04-01",
+            applicationType: "Reopened From Case",
+          },
+        }),
+      ],
+      applications: [
+        createMockApplication({
+          id: "application-1",
+          caseId: "case-1",
+          applicantPersonId: "person-1",
+          applicationDate: "2026-01-01",
+          createdAt: "2026-01-01T00:00:00.000Z",
+          status: "Approved",
+          statusHistory: [
+            {
+              id: "history-1",
+              status: "Approved",
+              effectiveDate: "2026-01-01",
+              changedAt: "2026-01-01T00:00:00.000Z",
+              source: "migration",
+            },
+          ],
+        }),
+        preservedNewestTerminalApplication,
+      ],
+    });
+
+    // ACT
+    const result = syncRuntimeApplications(runtimeData, true);
+
+    // ASSERT
+    expect(result.hasChanged).toBe(true);
+    expect(result.applications).toHaveLength(2);
+    expect(result.applications.find((application) => application.id === "application-1")).toMatchObject({
+      id: "application-1",
+      status: "Pending",
+      applicationDate: "2026-04-01",
+      applicationType: "Reopened From Case",
+    });
+    expect(result.applications.find((application) => application.id === "application-1")?.statusHistory).toHaveLength(2);
+    expect(result.applications.find((application) => application.id === "application-1")?.statusHistory[1]).toMatchObject({
+      status: "Pending",
+      source: "user",
+    });
+    expect(result.applications.find((application) => application.id === "application-2")).toEqual(
+      preservedNewestTerminalApplication,
+    );
+  });
+
+  it("preserves canonical non-status fields when status-only sync updates a deterministic terminal application", () => {
+    // ARRANGE
+    const transactionTimestamp = "2026-04-08T10:00:00.000Z";
+    const preservedNewestTerminalApplication = createMockApplication({
+      id: "application-2",
+      caseId: "case-1",
+      applicantPersonId: "person-1",
+      applicationDate: "2026-03-01",
+      createdAt: "2026-03-01T00:00:00.000Z",
+      status: "Denied",
+      statusHistory: [
+        {
+          id: "history-2",
+          status: "Denied",
+          effectiveDate: "2026-03-01",
+          changedAt: "2026-03-01T00:00:00.000Z",
+          source: "migration",
+        },
+      ],
+    });
+    const runtimeData = createMockNormalizedFileData({
+      categoryConfig: mergeCategoryConfig({
+        caseStatuses: [
+          { name: "Approved", colorSlot: "green", countsAsCompleted: true },
+          { name: "Denied", colorSlot: "red", countsAsCompleted: true },
+          { name: "Pending", colorSlot: "amber", countsAsCompleted: false },
+        ],
+      }),
+      people: [createMockPerson({ id: "person-1" })],
+      cases: [
+        createMockStoredCase({
+          id: "case-1",
+          status: "Pending",
+          person: createMockPerson({ id: "person-1" }),
+          people: [{ personId: "person-1", role: "applicant", isPrimary: true }],
+          caseRecord: {
+            ...createMockStoredCase().caseRecord,
+            personId: "person-1",
+            status: "Pending",
+            applicationDate: "1999-04-01",
+            applicationType: "Stale Legacy Type",
+            withWaiver: false,
+            retroRequested: "1999-03-01",
+            retroMonths: [],
+            appValidated: false,
+            agedDisabledVerified: false,
+            citizenshipVerified: false,
+            residencyVerified: false,
+            avsConsentDate: "",
+            voterFormStatus: "",
+            intakeCompleted: true,
+          },
+        }),
+      ],
+      applications: [
+        createMockApplication({
+          id: "application-1",
+          caseId: "case-1",
+          applicantPersonId: "person-1",
+          applicationDate: "2026-01-01",
+          applicationType: "Renewal",
+          createdAt: "2026-01-01T00:00:00.000Z",
+          status: "Approved",
+          hasWaiver: true,
+          retroRequestedAt: "2025-12-01",
+          retroMonths: ["2025-12"],
+          verification: {
+            isAppValidated: true,
+            isAgedDisabledVerified: true,
+            isCitizenshipVerified: true,
+            isResidencyVerified: true,
+            avsConsentDate: "2026-01-02",
+            voterFormStatus: "requested",
+            isIntakeCompleted: false,
+          },
+          statusHistory: [
+            {
+              id: "history-1",
+              status: "Approved",
+              effectiveDate: "2026-01-01",
+              changedAt: "2026-01-01T00:00:00.000Z",
+              source: "migration",
+            },
+          ],
+          updatedAt: "2026-01-15T00:00:00.000Z",
+        }),
+        preservedNewestTerminalApplication,
+      ],
+    });
+
+    // ACT
+    const result = syncRuntimeApplications(runtimeData, {
+      preferRuntimeCaseFields: true,
+      syncMode: "status-only",
+      transactionTimestamp,
+    });
+
+    // ASSERT
+    expect(result.hasChanged).toBe(true);
+    expect(result.applications).toHaveLength(2);
+    expect(result.applications.find((application) => application.id === "application-1")).toMatchObject({
+      id: "application-1",
+      status: "Pending",
+      applicationDate: "2026-01-01",
+      applicationType: "Renewal",
+      hasWaiver: true,
+      retroRequestedAt: "2025-12-01",
+      retroMonths: ["2025-12"],
+      verification: {
+        isAppValidated: true,
+        isAgedDisabledVerified: true,
+        isCitizenshipVerified: true,
+        isResidencyVerified: true,
+        avsConsentDate: "2026-01-02",
+        voterFormStatus: "requested",
+        isIntakeCompleted: false,
+      },
+      updatedAt: transactionTimestamp,
+    });
+    expect(result.applications.find((application) => application.id === "application-1")?.statusHistory).toEqual([
+      {
+        id: "history-1",
+        status: "Approved",
+        effectiveDate: "2026-01-01",
+        changedAt: "2026-01-01T00:00:00.000Z",
+        source: "migration",
+      },
+      expect.objectContaining({
+        status: "Pending",
+        effectiveDate: "2026-04-08",
+        changedAt: transactionTimestamp,
+        source: "user",
+      }),
+    ]);
+    expect(result.applications.find((application) => application.id === "application-2")).toEqual(
+      preservedNewestTerminalApplication,
     );
   });
 

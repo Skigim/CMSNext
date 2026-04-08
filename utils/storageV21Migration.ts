@@ -19,9 +19,13 @@ import {
   createMigratedApplication,
   normalizeRetroRequestedAt,
   pickApplicationOwnedCaseRecordFields,
+  selectOldestNonTerminalApplication,
 } from "@/domain/applications";
 import type { CaseActivityEntry } from "@/types/activityLog";
-import type { CategoryConfig } from "@/types/categoryConfig";
+import {
+  getCompletionStatusNames,
+  type CategoryConfig,
+} from "@/types/categoryConfig";
 import type { Template } from "@/types/template";
 import { resolveCaseRecordIntakeCompleted } from "@/domain/cases";
 import { splitFamilyMembers } from "@/utils/personNormalization";
@@ -67,6 +71,29 @@ export interface RuntimeNormalizedFileDataV21 {
   categoryConfig: CategoryConfig;
   activityLog: CaseActivityEntry[];
   templates?: Template[];
+}
+
+function cloneApplicationStatusHistory(
+  statusHistory: Application["statusHistory"],
+): Application["statusHistory"] {
+  return statusHistory.map((entry) => ({ ...entry }));
+}
+
+export function normalizePersistedApplication(application: Application): Application {
+  return {
+    ...application,
+    statusHistory: cloneApplicationStatusHistory(application.statusHistory),
+    retroMonths: [...application.retroMonths],
+    verification: {
+      isAppValidated: application.verification.isAppValidated,
+      isAgedDisabledVerified: application.verification.isAgedDisabledVerified,
+      isCitizenshipVerified: application.verification.isCitizenshipVerified,
+      isResidencyVerified: application.verification.isResidencyVerified,
+      avsConsentDate: application.verification.avsConsentDate,
+      voterFormStatus: application.verification.voterFormStatus,
+      isIntakeCompleted: application.verification.isIntakeCompleted,
+    },
+  };
 }
 
 type NormalizedDataShapeCandidate = {
@@ -380,28 +407,73 @@ function cloneApplication(application: Application): Application {
 function getPrimaryApplicationForCase(
   applications: Application[] | undefined,
   caseId: string,
+  completionStatuses: Set<string>,
+  fallbackToDeterministicCanonical = false,
 ): Application | null {
   const caseApplications =
     applications?.filter((application) => application.caseId === caseId) ?? [];
-  if (caseApplications.length === 0) {
+
+  const primaryApplication = selectOldestNonTerminalApplication(
+    caseApplications,
+    completionStatuses,
+  );
+
+  if (primaryApplication) {
+    return primaryApplication;
+  }
+
+  return fallbackToDeterministicCanonical
+    ? selectDeterministicCanonicalApplication(caseApplications)
+    : null;
+}
+
+function toComparableTimestamp(value: string): number | null {
+  const timestamp = new Date(value).getTime();
+  return Number.isNaN(timestamp) ? null : timestamp;
+}
+
+function compareApplicationCanonicalOrder(left: Application, right: Application): number {
+  const leftApplicationDate = toComparableTimestamp(left.applicationDate);
+  const rightApplicationDate = toComparableTimestamp(right.applicationDate);
+
+  if (leftApplicationDate !== null && rightApplicationDate !== null && leftApplicationDate !== rightApplicationDate) {
+    return leftApplicationDate - rightApplicationDate;
+  }
+
+  if (leftApplicationDate !== null && rightApplicationDate === null) {
+    return -1;
+  }
+
+  if (leftApplicationDate === null && rightApplicationDate !== null) {
+    return 1;
+  }
+
+  const leftCreatedAt = toComparableTimestamp(left.createdAt);
+  const rightCreatedAt = toComparableTimestamp(right.createdAt);
+
+  if (leftCreatedAt !== null && rightCreatedAt !== null && leftCreatedAt !== rightCreatedAt) {
+    return leftCreatedAt - rightCreatedAt;
+  }
+
+  if (leftCreatedAt !== null && rightCreatedAt === null) {
+    return -1;
+  }
+
+  if (leftCreatedAt === null && rightCreatedAt !== null) {
+    return 1;
+  }
+
+  return left.id.localeCompare(right.id);
+}
+
+function selectDeterministicCanonicalApplication(
+  applications: Application[],
+): Application | null {
+  if (applications.length === 0) {
     return null;
   }
 
-  return [...caseApplications].sort((left, right) => {
-    const updatedDifference =
-      new Date(right.updatedAt).getTime() - new Date(left.updatedAt).getTime();
-    if (updatedDifference !== 0) {
-      return updatedDifference;
-    }
-
-    const createdDifference =
-      new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime();
-    if (createdDifference !== 0) {
-      return createdDifference;
-    }
-
-    return right.id.localeCompare(left.id);
-  })[0];
+  return [...applications].sort(compareApplicationCanonicalOrder)[0];
 }
 
 function buildRuntimeApplicationCaseFields(
@@ -417,15 +489,10 @@ function buildRuntimeApplicationCaseFields(
   | "agedDisabledVerified"
   | "citizenshipVerified"
   | "residencyVerified"
-  | "avsSubmitted"
-  | "avsSubmitDate"
-  | "interfacesReviewed"
-  | "reviewVRs"
-  | "reviewPriorBudgets"
-  | "reviewPriorNarr"
   | "avsConsentDate"
   | "voterFormStatus"
   | "intakeCompleted"
+  | "status"
 > {
   const legacyCaseRecord = caseItem.caseRecord as Partial<StoredCase["caseRecord"]>;
 
@@ -440,15 +507,10 @@ function buildRuntimeApplicationCaseFields(
       agedDisabledVerified: legacyCaseRecord.agedDisabledVerified ?? false,
       citizenshipVerified: legacyCaseRecord.citizenshipVerified ?? false,
       residencyVerified: legacyCaseRecord.residencyVerified ?? false,
-      avsSubmitted: legacyCaseRecord.avsSubmitted ?? false,
-      avsSubmitDate: legacyCaseRecord.avsSubmitDate ?? "",
-      interfacesReviewed: legacyCaseRecord.interfacesReviewed ?? false,
-      reviewVRs: legacyCaseRecord.reviewVRs ?? false,
-      reviewPriorBudgets: legacyCaseRecord.reviewPriorBudgets ?? false,
-      reviewPriorNarr: legacyCaseRecord.reviewPriorNarr ?? false,
       avsConsentDate: legacyCaseRecord.avsConsentDate ?? "",
       voterFormStatus: legacyCaseRecord.voterFormStatus ?? "",
       intakeCompleted: resolveCaseRecordIntakeCompleted(legacyCaseRecord.intakeCompleted),
+      status: legacyCaseRecord.status ?? caseItem.status,
     };
   }
 
@@ -462,17 +524,12 @@ function buildRuntimeApplicationCaseFields(
     agedDisabledVerified: application.verification.isAgedDisabledVerified,
     citizenshipVerified: application.verification.isCitizenshipVerified,
     residencyVerified: application.verification.isResidencyVerified,
-    avsSubmitted: application.verification.isAvsSubmitted,
-    avsSubmitDate: application.verification.avsSubmitDate,
-    interfacesReviewed: application.verification.hasInterfacesReviewed,
-    reviewVRs: application.verification.reviewVRs,
-    reviewPriorBudgets: application.verification.reviewPriorBudgets,
-    reviewPriorNarr: application.verification.reviewPriorNarr,
     avsConsentDate: application.verification.avsConsentDate,
     voterFormStatus: application.verification.voterFormStatus,
     intakeCompleted: resolveCaseRecordIntakeCompleted(
       application.verification.isIntakeCompleted,
     ),
+    status: application.status as StoredCase["caseRecord"]["status"],
   };
 }
 
@@ -495,6 +552,12 @@ function buildPersistedCaseRecord(
     createdDate: caseRecord.createdDate,
     updatedDate: caseRecord.updatedDate,
     contactMethods: caseRecord.contactMethods ? [...caseRecord.contactMethods] : undefined,
+    avsSubmitted: caseRecord.avsSubmitted,
+    avsSubmitDate: caseRecord.avsSubmitDate,
+    interfacesReviewed: caseRecord.interfacesReviewed,
+    reviewVRs: caseRecord.reviewVRs,
+    reviewPriorBudgets: caseRecord.reviewPriorBudgets,
+    reviewPriorNarr: caseRecord.reviewPriorNarr,
     pregnancy: caseRecord.pregnancy,
     maritalStatus: caseRecord.maritalStatus,
   };
@@ -527,12 +590,66 @@ function createApplicationSourceCase(caseItem: StoredCase): CaseRecord {
   };
 }
 
+type RuntimeApplicationSyncMode = "full" | "status-only";
+
+interface SyncRuntimeApplicationsOptions {
+  preferRuntimeCaseFields?: boolean;
+  syncMode?: RuntimeApplicationSyncMode;
+  transactionTimestamp?: string;
+}
+
+function resolveSyncRuntimeApplicationsOptions(
+  optionsOrPreferRuntimeCaseFields: boolean | SyncRuntimeApplicationsOptions | undefined,
+): {
+  preferRuntimeCaseFields: boolean;
+  syncMode: RuntimeApplicationSyncMode;
+  transactionTimestamp: string;
+} {
+  if (typeof optionsOrPreferRuntimeCaseFields === "boolean") {
+    return {
+      preferRuntimeCaseFields: optionsOrPreferRuntimeCaseFields,
+      syncMode: "full",
+      transactionTimestamp: new Date().toISOString(),
+    };
+  }
+
+  return {
+    preferRuntimeCaseFields: optionsOrPreferRuntimeCaseFields?.preferRuntimeCaseFields ?? false,
+    syncMode: optionsOrPreferRuntimeCaseFields?.syncMode ?? "full",
+    transactionTimestamp:
+      optionsOrPreferRuntimeCaseFields?.transactionTimestamp ?? new Date().toISOString(),
+  };
+}
+
+function buildUpdatedStatusHistory(
+  application: Application,
+  nextStatus: Application["status"],
+  timestamp: string,
+): Application["statusHistory"] {
+  if (application.status === nextStatus) {
+    return cloneApplicationStatusHistory(application.statusHistory);
+  }
+
+  return [
+    ...cloneApplicationStatusHistory(application.statusHistory),
+    {
+      id: uuidv4(),
+      status: nextStatus,
+      effectiveDate: timestamp.slice(0, 10),
+      changedAt: timestamp,
+      source: "user",
+    },
+  ];
+}
+
 function syncApplicationWithCase(
   caseItem: StoredCase,
   existingApplication: Application | null,
   timestamp: string,
+  syncMode: RuntimeApplicationSyncMode = "full",
 ): { application: Application; hasChanged: boolean } {
   const sourceCaseRecord = createApplicationSourceCase(caseItem);
+  const nextStatus = sourceCaseRecord.status as Application["status"];
 
   if (!existingApplication) {
     return {
@@ -548,13 +665,39 @@ function syncApplicationWithCase(
     };
   }
 
+  const statusHistory = buildUpdatedStatusHistory(
+    existingApplication,
+    nextStatus,
+    timestamp,
+  );
+
+  if (syncMode === "status-only") {
+    const hasChanged =
+      nextStatus !== existingApplication.status ||
+      globalThis.JSON.stringify(statusHistory) !==
+        globalThis.JSON.stringify(existingApplication.statusHistory);
+
+    return {
+      application: hasChanged
+        ? {
+            ...existingApplication,
+            status: nextStatus,
+            statusHistory,
+            updatedAt: timestamp,
+          }
+        : cloneApplication(existingApplication),
+      hasChanged,
+    };
+  }
+
   const migratedFields = pickApplicationOwnedCaseRecordFields(sourceCaseRecord);
-  const applicantPersonId = resolveApplicationApplicantPersonId(caseItem);
   const candidate: Application = {
     ...existingApplication,
-    applicantPersonId,
+    applicantPersonId: existingApplication.applicantPersonId,
     applicationDate: migratedFields.applicationDate,
     applicationType: migratedFields.applicationType,
+    status: nextStatus,
+    statusHistory,
     hasWaiver: migratedFields.hasWaiver,
     retroRequestedAt: normalizeRetroRequestedAt(migratedFields.retroRequested),
     retroMonths: [...migratedFields.retroMonths],
@@ -563,12 +706,6 @@ function syncApplicationWithCase(
       isAgedDisabledVerified: migratedFields.agedDisabledVerified,
       isCitizenshipVerified: migratedFields.citizenshipVerified,
       isResidencyVerified: migratedFields.residencyVerified,
-      isAvsSubmitted: migratedFields.avsSubmitted,
-      avsSubmitDate: migratedFields.avsSubmitDate,
-      hasInterfacesReviewed: migratedFields.interfacesReviewed,
-      reviewVRs: migratedFields.reviewVRs,
-      reviewPriorBudgets: migratedFields.reviewPriorBudgets,
-      reviewPriorNarr: migratedFields.reviewPriorNarr,
       avsConsentDate: migratedFields.avsConsentDate,
       voterFormStatus: migratedFields.voterFormStatus,
       isIntakeCompleted: migratedFields.intakeCompleted,
@@ -576,13 +713,15 @@ function syncApplicationWithCase(
   };
 
   const hasChanged =
-    candidate.applicantPersonId !== existingApplication.applicantPersonId ||
     candidate.applicationDate !== existingApplication.applicationDate ||
     candidate.applicationType !== existingApplication.applicationType ||
+    candidate.status !== existingApplication.status ||
     candidate.hasWaiver !== existingApplication.hasWaiver ||
     candidate.retroRequestedAt !== existingApplication.retroRequestedAt ||
     globalThis.JSON.stringify(candidate.retroMonths) !==
       globalThis.JSON.stringify(existingApplication.retroMonths) ||
+    globalThis.JSON.stringify(candidate.statusHistory) !==
+      globalThis.JSON.stringify(existingApplication.statusHistory) ||
     globalThis.JSON.stringify(candidate.verification) !==
       globalThis.JSON.stringify(existingApplication.verification);
 
@@ -597,11 +736,49 @@ function syncApplicationWithCase(
   };
 }
 
+function selectTargetApplicationForSync(
+  existingForCase: Application[],
+  caseId: string,
+  completionStatuses: Set<string>,
+  preferRuntimeCaseFields: boolean,
+): Application | null {
+  const primaryApplication = getPrimaryApplicationForCase(
+    existingForCase,
+    caseId,
+    completionStatuses,
+  );
+
+  return (
+    primaryApplication ??
+    (preferRuntimeCaseFields
+      ? selectDeterministicCanonicalApplication(existingForCase)
+      : null)
+  );
+}
+
+function shouldSkipApplicationSync(
+  existingForCase: Application[],
+  targetApplication: Application | null,
+  preferRuntimeCaseFields: boolean,
+): boolean {
+  if (existingForCase.length > 0 && targetApplication === null) {
+    return true;
+  }
+
+  return Boolean(targetApplication && !preferRuntimeCaseFields);
+}
+
 export function syncRuntimeApplications(
   data: RuntimeNormalizedFileDataV21,
-  preferRuntimeCaseFields = false,
+  optionsOrPreferRuntimeCaseFields: boolean | SyncRuntimeApplicationsOptions = false,
 ): { applications: Application[]; hasChanged: boolean } {
-  const existingApplications = data.applications?.map(cloneApplication) ?? [];
+  const {
+    preferRuntimeCaseFields,
+    syncMode,
+    transactionTimestamp,
+  } = resolveSyncRuntimeApplicationsOptions(optionsOrPreferRuntimeCaseFields);
+  const existingApplications = data.applications?.map(normalizePersistedApplication) ?? [];
+  const completionStatuses = getCompletionStatusNames(data.categoryConfig);
   const applicationsByCaseId = new Map<string, Application[]>();
 
   for (const application of existingApplications) {
@@ -610,25 +787,31 @@ export function syncRuntimeApplications(
     applicationsByCaseId.set(application.caseId, caseApplications);
   }
 
-  const timestamp = new Date().toISOString();
+  const timestamp = transactionTimestamp;
   let hasChanged = false;
   const syncedApplications = [...existingApplications];
 
   for (const caseItem of data.cases) {
     const existingForCase = applicationsByCaseId.get(caseItem.id) ?? [];
-    const primaryApplication = getPrimaryApplicationForCase(existingForCase, caseItem.id);
+    const targetApplication = selectTargetApplicationForSync(
+      existingForCase,
+      caseItem.id,
+      completionStatuses,
+      preferRuntimeCaseFields,
+    );
 
-    if (primaryApplication && !preferRuntimeCaseFields) {
+    if (shouldSkipApplicationSync(existingForCase, targetApplication, preferRuntimeCaseFields)) {
       continue;
     }
 
     const { application, hasChanged: applicationChanged } = syncApplicationWithCase(
       caseItem,
-      primaryApplication,
+      targetApplication,
       timestamp,
+      syncMode,
     );
 
-    if (!primaryApplication) {
+    if (!targetApplication) {
       syncedApplications.push(application);
       applicationsByCaseId.set(caseItem.id, [...existingForCase, application]);
       hasChanged = true;
@@ -640,7 +823,7 @@ export function syncRuntimeApplications(
     }
 
     const index = syncedApplications.findIndex(
-      (candidate) => candidate.id === primaryApplication.id,
+      (candidate) => candidate.id === targetApplication.id,
     );
     if (index !== -1) {
       syncedApplications[index] = application;
@@ -691,11 +874,26 @@ export function hydrateStoredCase(
     throw new Error(`Primary person ${primaryRef.personId} not found for case ${caseItem.id}`);
   }
 
+  const runtimeApplicationFields = buildRuntimeApplicationCaseFields(caseItem, application);
+
   return {
     ...caseItem,
+    status: runtimeApplicationFields.status,
     caseRecord: {
       ...caseItem.caseRecord,
-      ...buildRuntimeApplicationCaseFields(caseItem, application),
+      ...runtimeApplicationFields,
+      avsSubmitted:
+        (caseItem.caseRecord as Partial<StoredCase["caseRecord"]>).avsSubmitted ?? false,
+      avsSubmitDate:
+        (caseItem.caseRecord as Partial<StoredCase["caseRecord"]>).avsSubmitDate ?? "",
+      interfacesReviewed:
+        (caseItem.caseRecord as Partial<StoredCase["caseRecord"]>).interfacesReviewed ?? false,
+      reviewVRs:
+        (caseItem.caseRecord as Partial<StoredCase["caseRecord"]>).reviewVRs ?? false,
+      reviewPriorBudgets:
+        (caseItem.caseRecord as Partial<StoredCase["caseRecord"]>).reviewPriorBudgets ?? false,
+      reviewPriorNarr:
+        (caseItem.caseRecord as Partial<StoredCase["caseRecord"]>).reviewPriorNarr ?? false,
     },
     people: caseItem.people.map((ref) => ({ ...ref })),
     person: primaryPerson,
@@ -717,13 +915,23 @@ export function hydrateNormalizedData(
   data: PersistedNormalizedFileDataV21,
 ): RuntimeNormalizedFileDataV21 {
   const people = data.people.map((person) => toRuntimePerson(person, data.people));
-  const applications = data.applications?.map(cloneApplication) ?? [];
+  const applications = data.applications?.map(normalizePersistedApplication) ?? [];
+  const completionStatuses = getCompletionStatusNames(data.categoryConfig);
 
   return {
     version: "2.1",
     people,
     cases: data.cases.map((caseItem) =>
-      hydrateStoredCase(caseItem, people, getPrimaryApplicationForCase(applications, caseItem.id)),
+      hydrateStoredCase(
+        caseItem,
+        people,
+        getPrimaryApplicationForCase(
+          applications,
+          caseItem.id,
+          completionStatuses,
+          true,
+        ),
+      ),
     ),
     applications,
     financials: data.financials.map((financial) => ({ ...financial })),
@@ -761,7 +969,7 @@ export function dehydrateNormalizedData(
     version: "2.1",
     people: persistedPeople,
     cases: data.cases.map((caseItem) => dehydrateStoredCase(caseItem)),
-    applications: applications.map(cloneApplication),
+    applications: applications.map(normalizePersistedApplication),
     financials: data.financials.map((financial) => ({ ...financial })),
     notes: data.notes.map((note) => ({ ...note })),
     alerts: data.alerts.map((alert) => ({ ...alert })),

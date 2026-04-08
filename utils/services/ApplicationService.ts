@@ -130,7 +130,11 @@ export class ApplicationService {
     }
 
     const timestamp = new Date().toISOString();
-    const updatedCases = this.fileStorage.touchCaseTimestamps(currentData.cases, [application.caseId]);
+    const updatedCases = this.fileStorage.touchCaseTimestamps(
+      currentData.cases,
+      [application.caseId],
+      timestamp,
+    );
     const activityEntry: CaseActivityEntry = {
       id: uuidv4(),
       timestamp,
@@ -171,6 +175,7 @@ export class ApplicationService {
     const { applications, applicationIndex, existingApplication } =
       this.getApplicationIndexAndValidate(currentData, applicationId, caseId);
 
+    const timestamp = new Date().toISOString();
     const updatedApplication: Application = {
       ...existingApplication,
       ...updates,
@@ -186,14 +191,18 @@ export class ApplicationService {
         ...existingApplication.verification,
         ...updates.verification,
       },
-      updatedAt: new Date().toISOString(),
+      updatedAt: timestamp,
     };
 
     const updatedApplications = applications.map((application, index) =>
       index === applicationIndex ? updatedApplication : cloneApplication(application),
     );
 
-    const updatedCases = this.fileStorage.touchCaseTimestamps(currentData.cases, [caseId]);
+    const updatedCases = this.fileStorage.touchCaseTimestamps(
+      currentData.cases,
+      [caseId],
+      timestamp,
+    );
     const changedFields = getChangedApplicationFields(existingApplication, updatedApplication);
     const activityEntries: CaseActivityEntry[] =
       changedFields.length === 0
@@ -236,6 +245,7 @@ export class ApplicationService {
     const { applications, applicationIndex, existingApplication } =
       this.getApplicationIndexAndValidate(currentData, applicationId, caseId);
 
+    const timestamp = entry.changedAt;
     const updatedApplication: Application = {
       ...existingApplication,
       status: entry.status,
@@ -243,14 +253,18 @@ export class ApplicationService {
         ...globalThis.structuredClone(existingApplication.statusHistory),
         globalThis.structuredClone(entry),
       ],
-      updatedAt: new Date().toISOString(),
+      updatedAt: timestamp,
     };
 
     const updatedApplications = applications.map((application, index) =>
       index === applicationIndex ? updatedApplication : cloneApplication(application),
     );
 
-    const updatedCases = this.fileStorage.touchCaseTimestamps(currentData.cases, [caseId]);
+    const updatedCases = this.fileStorage.touchCaseTimestamps(
+      currentData.cases,
+      [caseId],
+      timestamp,
+    );
     const activityEntry: CaseActivityEntry = {
       id: uuidv4(),
       timestamp: updatedApplication.updatedAt,

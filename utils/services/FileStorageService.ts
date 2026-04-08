@@ -114,8 +114,38 @@ export interface CaseDehydratedNormalizedFileData extends Omit<NormalizedFileDat
   cases: PersistedCase[];
 }
 
+type NormalizedWriteData =
+  | NormalizedFileData
+  | PersistedNormalizedFileDataV21
+  | CaseDehydratedNormalizedFileData;
+
+function createEmptyNormalizedFileData(): NormalizedFileData {
+  return {
+    version: NORMALIZED_VERSION as "2.1",
+    people: [],
+    cases: [],
+    applications: [],
+    financials: [],
+    notes: [],
+    alerts: [],
+    exported_at: new Date().toISOString(),
+    total_cases: 0,
+    categoryConfig: mergeCategoryConfig(),
+    activityLog: [],
+  };
+}
+
+function cloneApplicationForWrite(application: Application): Application {
+  return {
+    ...application,
+    retroMonths: [...application.retroMonths],
+    statusHistory: application.statusHistory.map((entry) => ({ ...entry })),
+    verification: { ...application.verification },
+  };
+}
+
 function isRuntimeNormalizedWriteData(
-  data: NormalizedFileData | PersistedNormalizedFileDataV21 | CaseDehydratedNormalizedFileData,
+  data: NormalizedWriteData,
 ): data is NormalizedFileData {
   const firstCase = data.cases[0];
   if (firstCase) {
@@ -133,7 +163,7 @@ function isRuntimeNormalizedWriteData(
 }
 
 function isCaseDehydratedNormalizedWriteData(
-  data: NormalizedFileData | PersistedNormalizedFileDataV21 | CaseDehydratedNormalizedFileData,
+  data: NormalizedWriteData,
 ): data is CaseDehydratedNormalizedFileData {
   const firstCase = data.cases[0];
   if (!firstCase || "person" in firstCase) {
@@ -342,81 +372,13 @@ export class FileStorageService {
       const rawData = await this.fileService.readFile();
 
       if (!rawData) {
-        // No file exists yet - return empty normalized structure
-        return {
-          version: NORMALIZED_VERSION as "2.1",
-          people: [],
-          cases: [],
-          applications: [],
-          financials: [],
-          notes: [],
-          alerts: [],
-          exported_at: new Date().toISOString(),
-          total_cases: 0,
-          categoryConfig: mergeCategoryConfig(),
-          activityLog: [],
-        };
+        return createEmptyNormalizedFileData();
       }
 
-      // Validate format - only canonical persisted v2.1 is accepted at runtime.
       if (isNormalizedFileData(rawData)) {
-        logger.debug("Detected normalized data format (v2.1)");
-        let hydratedData: NormalizedFileData;
-        try {
-          hydratedData = hydrateNormalizedData(rawData);
-        } catch (error) {
-          logger.error("Persisted v2.1 data failed canonical hydration", {
-            error: error instanceof Error ? error.message : "Unknown error",
-          });
-          const hydrationError =
-            error instanceof Error && error.message.trim().length > 0
-              ? error.message
-              : "unknown hydration error";
-          throw new LegacyFormatError(`${INVALID_V2_1_FORMAT_PREFIX}: ${hydrationError}`);
-        }
-
-        const { applications: syncedApplications, hasChanged: hasApplicationsChanged } =
-          syncRuntimeApplications(hydratedData);
-        const shouldRewriteApplications =
-          hasApplicationsChanged ||
-          persistedCasesContainLegacyApplicationFields(rawData.cases) ||
-          ((rawData.applications?.length ?? 0) === 0 && rawData.cases.length > 0);
-
-        let canonicalData: NormalizedFileData = hasApplicationsChanged
-          ? {
-              ...hydratedData,
-              applications: syncedApplications,
-            }
-          : hydratedData;
-
-        // Auto-migrate financial items without history entries
-        const hasFinancialMigration = hasItemsNeedingMigration(canonicalData.financials);
-        if (hasFinancialMigration) {
-          const [migratedFinancials, count] = migrateFinancialItems(canonicalData.financials);
-          logger.info(`Migrated ${count} financial items to include history entries`);
-
-          canonicalData = {
-            ...canonicalData,
-            financials: migratedFinancials,
-          };
-        }
-
-        if (shouldRewriteApplications) {
-          logger.info("Migrated workspace applications into canonical persisted records", {
-            caseCount: canonicalData.cases.length,
-            applicationCount: canonicalData.applications?.length ?? 0,
-          });
-        }
-
-        if (shouldRewriteApplications || hasFinancialMigration) {
-          await this.writeNormalizedData(canonicalData);
-          return canonicalData;
-        }
-
-        return canonicalData;
+        return await this.readCanonicalNormalizedData(rawData);
       }
 
-      // Detect legacy format and throw user-friendly error
       const detectedFormat = this.detectLegacyFormat(rawData);
       logger.error("Legacy data format detected", { detectedFormat });
       throw new LegacyFormatError(detectedFormat);
@@ -459,6 +421,93 @@ export class FileStorageService {
     }
   }
 
+  private async readCanonicalNormalizedData(
+    rawData: PersistedNormalizedFileDataV21,
+  ): Promise<NormalizedFileData> {
+    logger.debug("Detected normalized data format (v2.1)");
+
+    const hydratedData = this.hydratePersistedRuntimeData(rawData);
+    const { canonicalData, shouldRewriteApplications } = this.syncReadApplications(
+      rawData,
+      hydratedData,
+    );
+    const { normalizedData, hasFinancialMigration } = this.applyFinancialMigration(
+      canonicalData,
+    );
+
+    if (shouldRewriteApplications) {
+      logger.info("Migrated workspace applications into canonical persisted records", {
+        caseCount: normalizedData.cases.length,
+        applicationCount: normalizedData.applications?.length ?? 0,
+      });
+    }
+
+    if (shouldRewriteApplications || hasFinancialMigration) {
+      await this.writeNormalizedData(normalizedData);
+    }
+
+    return normalizedData;
+  }
+
+  private hydratePersistedRuntimeData(
+    rawData: PersistedNormalizedFileDataV21,
+  ): NormalizedFileData {
+    try {
+      return hydrateNormalizedData(rawData);
+    } catch (error) {
+      logger.error("Persisted v2.1 data failed canonical hydration", {
+        error: error instanceof Error ? error.message : "Unknown error",
+      });
+      const hydrationError =
+        error instanceof Error && error.message.trim().length > 0
+          ? error.message
+          : "unknown hydration error";
+      throw new LegacyFormatError(`${INVALID_V2_1_FORMAT_PREFIX}: ${hydrationError}`);
+    }
+  }
+
+  private syncReadApplications(
+    rawData: PersistedNormalizedFileDataV21,
+    hydratedData: NormalizedFileData,
+  ): { canonicalData: NormalizedFileData; shouldRewriteApplications: boolean } {
+    const { applications: syncedApplications, hasChanged } =
+      syncRuntimeApplications(hydratedData);
+    const shouldRewriteApplications =
+      hasChanged ||
+      persistedCasesContainLegacyApplicationFields(rawData.cases) ||
+      ((rawData.applications?.length ?? 0) === 0 && rawData.cases.length > 0);
+
+    return {
+      canonicalData: hasChanged
+        ? {
+            ...hydratedData,
+            applications: syncedApplications,
+          }
+        : hydratedData,
+      shouldRewriteApplications,
+    };
+  }
+
+  private applyFinancialMigration(
+    data: NormalizedFileData,
+  ): { normalizedData: NormalizedFileData; hasFinancialMigration: boolean } {
+    const hasFinancialMigration = hasItemsNeedingMigration(data.financials);
+    if (!hasFinancialMigration) {
+      return { normalizedData: data, hasFinancialMigration };
+    }
+
+    const [migratedFinancials, count] = migrateFinancialItems(data.financials);
+    logger.info(`Migrated ${count} financial items to include history entries`);
+
+    return {
+      normalizedData: {
+        ...data,
+        financials: migratedFinancials,
+      },
+      hasFinancialMigration,
+    };
+  }
+
   /**
    * Detect which legacy format the data is in (for error messaging)
    */
@@ -469,42 +518,57 @@ export class FileStorageService {
 
     const obj = data as Record<string, unknown>;
 
-    // Check for Nightingale raw format
-    if (Array.isArray(obj.people) && Array.isArray(obj.caseRecords)) {
+    if (this.isNightingaleRawExport(obj)) {
       return "Nightingale raw export";
     }
 
-    // Check for legacy CaseDisplay format (v1.x)
-    if (Array.isArray(obj.cases) && !("version" in obj)) {
-      const firstCase = obj.cases[0] as Record<string, unknown> | undefined;
-      if (firstCase?.caseRecord && typeof firstCase.caseRecord === "object") {
-        const caseRecord = firstCase.caseRecord as Record<string, unknown>;
-        if ("financials" in caseRecord || "notes" in caseRecord) {
-          return "v1.x nested format";
-        }
-      }
-      return "v1.x format";
+    const legacyCaseFormat = this.detectLegacyCaseFormat(obj);
+    if (legacyCaseFormat) {
+      return legacyCaseFormat;
     }
 
-    // Check for old version numbers
-    if ("version" in obj && obj.version === LEGACY_FORMAT_V2_0) {
-      return LEGACY_FORMAT_V2_0;
-    }
-
-    // By the time we reach this branch, canonical v2.1 payloads have already been
-    // accepted and hydrated successfully, so this specifically identifies payloads
-    // that claim to be v2.1 but are still invalid for runtime use, such as files
-    // missing required root collections/metadata or carrying malformed persisted
-    // references that prevent successful canonical hydration.
-    if ("version" in obj && obj.version === NORMALIZED_VERSION) {
-      return INVALID_V2_1_FORMAT_PREFIX;
-    }
-
-    if ("version" in obj && obj.version !== NORMALIZED_VERSION) {
-      return `v${obj.version}`;
+    const versionFormat = this.detectVersionFormat(obj);
+    if (versionFormat) {
+      return versionFormat;
     }
 
     return "unknown legacy format";
+  }
+
+  private isNightingaleRawExport(obj: Record<string, unknown>): boolean {
+    return Array.isArray(obj.people) && Array.isArray(obj.caseRecords);
+  }
+
+  private detectLegacyCaseFormat(obj: Record<string, unknown>): string | null {
+    if (!Array.isArray(obj.cases) || "version" in obj) {
+      return null;
+    }
+
+    const firstCase = obj.cases[0] as Record<string, unknown> | undefined;
+    if (firstCase?.caseRecord && typeof firstCase.caseRecord === "object") {
+      const caseRecord = firstCase.caseRecord as Record<string, unknown>;
+      if ("financials" in caseRecord || "notes" in caseRecord) {
+        return "v1.x nested format";
+      }
+    }
+
+    return "v1.x format";
+  }
+
+  private detectVersionFormat(obj: Record<string, unknown>): string | null {
+    if (!("version" in obj)) {
+      return null;
+    }
+
+    if (obj.version === LEGACY_FORMAT_V2_0) {
+      return LEGACY_FORMAT_V2_0;
+    }
+
+    if (obj.version === NORMALIZED_VERSION) {
+      return INVALID_V2_1_FORMAT_PREFIX;
+    }
+
+    return `v${obj.version}`;
   }
 
   /**
@@ -567,106 +631,125 @@ export class FileStorageService {
    * }
    */
   async writeNormalizedData(
-    data: NormalizedFileData | PersistedNormalizedFileDataV21 | CaseDehydratedNormalizedFileData,
+    data: NormalizedWriteData,
   ): Promise<NormalizedFileData> {
-    // Capture previous state for potential rollback
-    let previousData: NormalizedFileData | null = null;
+    const previousData = await this.capturePreviousRuntimeData();
+
+    try {
+      const runtimeData = this.toRuntimeWriteData(data);
+      const finalData = this.buildFinalWriteData(runtimeData);
+      return await this.persistRuntimeData(finalData);
+    } catch (error) {
+      this.handleWriteFailure(previousData, error);
+    }
+  }
+
+  private async capturePreviousRuntimeData(): Promise<NormalizedFileData | null> {
     try {
       const previousRawData = await this.fileService.readFile();
-      if (isNormalizedFileData(previousRawData)) {
-        previousData = hydrateNormalizedData(previousRawData);
-      }
+      return isNormalizedFileData(previousRawData)
+        ? hydrateNormalizedData(previousRawData)
+        : null;
     } catch {
-      // If we can't read previous state, rollback won't be possible
-      // but we should still attempt the write
       logger.warn("Could not capture previous state for rollback");
+      return null;
+    }
+  }
+
+  private toRuntimeWriteData(data: NormalizedWriteData): NormalizedFileData {
+    if (isRuntimeNormalizedWriteData(data)) {
+      return data;
     }
 
-    try {
-      const runtimeData = isRuntimeNormalizedWriteData(data)
-        ? data
-        : isCaseDehydratedNormalizedWriteData(data)
-          ? {
-              ...data,
-              cases: data.cases.map((caseItem) =>
-                hydrateStoredCase(
-                  caseItem,
-                  data.people,
-                  data.applications?.find((application) => application.caseId === caseItem.id) ?? null,
-                ),
-              ),
-            }
-          : hydrateNormalizedData(data);
+    if (isCaseDehydratedNormalizedWriteData(data)) {
+      return {
+        ...data,
+        cases: this.hydrateDehydratedCases(data),
+      };
+    }
 
-      // Merge category config and discover any statuses/alert types from data
-      const mergedConfig = mergeCategoryConfig(runtimeData.categoryConfig);
-      const enrichedStatuses = discoverStatusesFromCases(mergedConfig.caseStatuses, runtimeData.cases);
-      const enrichedAlertTypes = discoverAlertTypesFromAlerts(
+    return hydrateNormalizedData(data);
+  }
+
+  private hydrateDehydratedCases(
+    data: CaseDehydratedNormalizedFileData,
+  ): StoredCase[] {
+    return data.cases.map((caseItem) =>
+      hydrateStoredCase(
+        caseItem,
+        data.people,
+        data.applications?.find((application) => application.caseId === caseItem.id) ?? null,
+      ),
+    );
+  }
+
+  private buildEnrichedCategoryConfig(runtimeData: NormalizedFileData): CategoryConfig {
+    const mergedConfig = mergeCategoryConfig(runtimeData.categoryConfig);
+    return {
+      ...mergedConfig,
+      caseStatuses: discoverStatusesFromCases(
+        mergedConfig.caseStatuses,
+        runtimeData.cases,
+      ),
+      alertTypes: discoverAlertTypesFromAlerts(
         mergedConfig.alertTypes ?? [],
         runtimeData.alerts,
-      );
-      const categoryConfig: CategoryConfig = {
-        ...mergedConfig,
-        caseStatuses: enrichedStatuses,
-        alertTypes: enrichedAlertTypes,
-      };
+      ),
+    };
+  }
 
-      // Validate and clean data before writing
-      const finalData: NormalizedFileData = {
-        version: NORMALIZED_VERSION as "2.1",
-        people: runtimeData.people.map((person) => ({ ...person })),
-        cases: runtimeData.cases.map((caseItem) => ({ ...caseItem })),
-        applications: runtimeData.applications?.map((application) => ({
-          ...application,
-          retroMonths: [...application.retroMonths],
-          statusHistory: application.statusHistory.map((entry: Application["statusHistory"][number]) => ({ ...entry })),
-          verification: { ...application.verification },
-        })),
-        financials: runtimeData.financials.map((financial) => ({ ...financial })),
-        notes: runtimeData.notes.map((note) => ({ ...note })),
-        alerts: runtimeData.alerts.map((alert) => ({ ...alert })),
-        exported_at: new Date().toISOString(),
-        total_cases: runtimeData.cases.length,
-        categoryConfig,
-        activityLog: [...(runtimeData.activityLog ?? [])]
-          .map(deepCopyActivityEntry)
-          .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()),
-        // Preserve templates array (unified template system)
-        templates: runtimeData.templates ? [...runtimeData.templates] : undefined,
-      };
+  private buildFinalWriteData(runtimeData: NormalizedFileData): NormalizedFileData {
+    return {
+      version: NORMALIZED_VERSION as "2.1",
+      people: runtimeData.people.map((person) => ({ ...person })),
+      cases: runtimeData.cases.map((caseItem) => ({ ...caseItem })),
+      applications: runtimeData.applications?.map(cloneApplicationForWrite),
+      financials: runtimeData.financials.map((financial) => ({ ...financial })),
+      notes: runtimeData.notes.map((note) => ({ ...note })),
+      alerts: runtimeData.alerts.map((alert) => ({ ...alert })),
+      exported_at: new Date().toISOString(),
+      total_cases: runtimeData.cases.length,
+      categoryConfig: this.buildEnrichedCategoryConfig(runtimeData),
+      activityLog: [...(runtimeData.activityLog ?? [])]
+        .map(deepCopyActivityEntry)
+        .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()),
+      templates: runtimeData.templates ? [...runtimeData.templates] : undefined,
+    };
+  }
 
-      const persistedData = dehydrateNormalizedData(finalData);
-      const success = await this.fileService.writeFile(persistedData);
+  private async persistRuntimeData(finalData: NormalizedFileData): Promise<NormalizedFileData> {
+    const persistedData = dehydrateNormalizedData(finalData);
+    const success = await this.fileService.writeFile(persistedData);
 
-      if (!success) {
-        throw new Error("File write operation failed");
-      }
-
-      const canonicalRuntimeData = hydrateNormalizedData(persistedData);
-
-      // Notify listeners that data has changed
-      this.fileService.broadcastDataUpdate(canonicalRuntimeData);
-
-      return canonicalRuntimeData;
-    } catch (error) {
-      // ROLLBACK: If write failed, broadcast previous data to resync UI with file state
-      if (previousData) {
-        logger.warn("Write failed, broadcasting previous state to resync UI");
-        this.fileService.broadcastDataUpdate(previousData);
-      }
-      logger.error("Failed to write normalized data", {
-        error: error instanceof Error ? error.message : "Unknown error",
-      });
-
-      const errorMessage = classifyWriteError(error);
-
-      this.reportStorageError("writeData", error, {
-        method: "writeNormalizedData",
-        errorMessage,
-      });
-
-      throw new Error(`Failed to save case data: ${errorMessage}`);
+    if (!success) {
+      throw new Error("File write operation failed");
     }
+
+    const canonicalRuntimeData = hydrateNormalizedData(persistedData);
+    this.fileService.broadcastDataUpdate(canonicalRuntimeData);
+    return canonicalRuntimeData;
+  }
+
+  private handleWriteFailure(
+    previousData: NormalizedFileData | null,
+    error: unknown,
+  ): never {
+    if (previousData) {
+      logger.warn("Write failed, broadcasting previous state to resync UI");
+      this.fileService.broadcastDataUpdate(previousData);
+    }
+
+    logger.error("Failed to write normalized data", {
+      error: error instanceof Error ? error.message : "Unknown error",
+    });
+
+    const errorMessage = classifyWriteError(error);
+    this.reportStorageError("writeData", error, {
+      method: "writeNormalizedData",
+      errorMessage,
+    });
+
+    throw new Error(`Failed to save case data: ${errorMessage}`);
   }
 
   /**
@@ -677,9 +760,14 @@ export class FileStorageService {
    * 
    * @param {StoredCase[]} cases - Array of cases to update
    * @param {Iterable<string>} [touchedCaseIds] - IDs of cases to update timestamps for
+   * @param {string} [timestampOverride] - Transaction timestamp to reuse instead of reading a new clock value
    * @returns {StoredCase[]} Cases with updated timestamps
    */
-  touchCaseTimestamps(cases: StoredCase[], touchedCaseIds?: Iterable<string>): StoredCase[] {
+  touchCaseTimestamps(
+    cases: StoredCase[],
+    touchedCaseIds?: Iterable<string>,
+    timestampOverride?: string,
+  ): StoredCase[] {
     if (!touchedCaseIds) {
       return cases;
     }
@@ -689,7 +777,7 @@ export class FileStorageService {
       return cases;
     }
 
-    const timestamp = new Date().toISOString();
+    const timestamp = timestampOverride ?? new Date().toISOString();
 
     return cases.map((caseItem) => (ids.has(caseItem.id) ? { ...caseItem, updatedAt: timestamp } : caseItem));
   }
