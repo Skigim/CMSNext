@@ -15,6 +15,7 @@ POLLUTION_CHECK="$1"
 TEST_PATTERN="$2"
 
 shopt -s globstar nullglob
+IFS=$'\n'
 
 echo "🔍 Searching for test that creates: $POLLUTION_CHECK"
 echo "Test pattern: $TEST_PATTERN"
@@ -29,8 +30,18 @@ fi
 
 TOTAL=${#TEST_FILES[@]}
 
+if [ "$TOTAL" -eq 0 ]; then
+  echo "No test files found - check your pattern"
+  exit 1
+fi
+
 echo "Found $TOTAL test files"
 echo ""
+
+if [ -e "$POLLUTION_CHECK" ]; then
+  echo "Error: pollution already exists before running tests: $POLLUTION_CHECK"
+  exit 1
+fi
 
 COUNT=0
 for TEST_FILE in "${TEST_FILES[@]}"; do

@@ -21,8 +21,8 @@ Follow this priority order:
 
 ```bash
 # Check in priority order
-ls -d .worktrees 2>/dev/null     # Preferred (hidden)
-ls -d worktrees 2>/dev/null      # Alternative
+test -d .worktrees               # Preferred (hidden)
+test -d worktrees                # Alternative
 ```
 
 **If found:** Use that directory. If both exist, `.worktrees` wins.
@@ -30,7 +30,7 @@ ls -d worktrees 2>/dev/null      # Alternative
 ### 2. Check CLAUDE.md
 
 ```bash
-grep -i "worktree.*director" CLAUDE.md 2>/dev/null
+grep -i "worktree.*directory" CLAUDE.md 2>/dev/null
 ```
 
 **If preference specified:** Use it without asking.
@@ -56,6 +56,7 @@ Which would you prefer?
 
 ```bash
 # Check if directory is ignored (respects local, global, and system gitignore)
+# $LOCATION is the chosen worktree directory from the selection process above.
 WORKTREES_DIR="$LOCATION"
 git check-ignore -q "$WORKTREES_DIR" 2>/dev/null
 ```
@@ -85,6 +86,9 @@ project=$(basename "$(git rev-parse --show-toplevel)")
 ### 2. Create Worktree
 
 ```bash
+# BRANCH_NAME should come from the feature name for this task or a value the user provided.
+# LOCATION is selected earlier from .worktrees, worktrees, or the global Superpowers path.
+
 # Determine full path
 case $LOCATION in
   .worktrees|worktrees)
@@ -95,8 +99,12 @@ case $LOCATION in
     ;;
 esac
 
-# Create worktree with new branch
-git worktree add "$path" -b "$BRANCH_NAME"
+# Create worktree with branch handling that works whether the branch already exists or not
+if git rev-parse --verify "$BRANCH_NAME" >/dev/null 2>&1; then
+  git worktree add "$path" "$BRANCH_NAME"
+else
+  git worktree add "$path" -b "$BRANCH_NAME"
+fi
 cd "$path"
 ```
 

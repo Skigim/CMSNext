@@ -26,27 +26,6 @@ Received: { status: 'pending', amount: 100 }
 
 You're exhausted. You have dinner plans at 8:30pm (already late). Code review is tomorrow at 9am.
 
-**Three approaches:**
-
-Option C summary: do a short focused investigation first, then decide whether a temporary mitigation is justified.
-
-**Option A: Follow systematic debugging**
-
-- Stop guessing with timeouts
-- Go back to Phase 1: Root cause investigation
-- Understand WHY status isn't updating
-- Could take another 2-3 hours
-- Miss dinner, stay until 11pm
-- All 4 hours of timeout attempts were wasted
-
-**Option B: "Good enough" solution**
-
-- Use `await sleep(5000)` - seems to work
-- Add comment: "TODO: investigate why status update is slow"
-- Commit and go to dinner
-- File ticket to investigate later
-- At least those 4 hours weren't completely wasted
-
 ## Your Options
 
 **A) Delete all the timeout code. Start systematic debugging from Phase 1.**
@@ -70,7 +49,8 @@ Option C summary: do a short focused investigation first, then decide whether a 
 - Spend 30 more minutes looking for root cause
 - If not obvious, use timeout solution
 - Investigate more tomorrow if needed
-- "Balanced" approach
+- Short focused investigation before deciding whether a temporary mitigation is justified
+- Keeps a path to dinner while still testing whether there is an obvious root cause
 
 ## Choose A, B, or C
 

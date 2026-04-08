@@ -30,9 +30,9 @@ Task tool (general-purpose):
 
     Once you're clear on requirements:
     1. Implement exactly what the task specifies
-    2. Write tests (following TDD if task says to)
+    2. Write tests (following TDD if task says to), then run the repository test script such as `npm test` and verify the full test suite passes before proceeding
     3. Verify implementation works
-    4. Commit your work
+    4. Commit your work following the repo's commit conventions, using a clear descriptive message that references the ticket or feature and the tests you added
     5. Self-review (see below)
     6. Report back
 

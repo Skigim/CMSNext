@@ -326,6 +326,7 @@ digraph when_flowchart {
     "Small inline flowchart" [shape=box];
 
     "Need to show information?" -> "Decision where I might go wrong?" [label="yes"];
+    "Need to show information?" -> "Use markdown" [label="no"];
     "Decision where I might go wrong?" -> "Small inline flowchart" [label="yes"];
     "Decision where I might go wrong?" -> "Use markdown" [label="no"];
 }
@@ -512,14 +513,17 @@ Skills that enforce discipline (like TDD) need to resist rationalization. Agents
 
 Don't just state the rule - forbid specific workarounds:
 
-<Bad>
+**❌ Bad Example:** Uses a vague rule that leaves loopholes open.
+
 ```markdown
 Write code before test? Delete it.
 ```
-</Bad>
 
-<Good>
-```markdown
+**✅ Good Example:** States the rule and explicitly closes common escape hatches.
+
+````markdown
+<!-- Outer fence uses four backticks so the inner triple-backtick example and </Good> stay inside the sample. -->
+
 Write code before test? Delete it. Start over.
 
 **No exceptions:**
@@ -529,8 +533,9 @@ Write code before test? Delete it. Start over.
 - Don't look at it
 - Delete means delete
 
-````
-</Good>
+```
+
+```
 
 ### Address "Spirit vs Letter" Arguments
 
@@ -538,7 +543,7 @@ Add foundational principle early:
 
 ```markdown
 **Violating the letter of the rules is violating the spirit of the rules.**
-````
+```
 
 This cuts off entire class of "I'm following the spirit" rationalizations.
 
@@ -714,3 +719,4 @@ Same cycle: RED (baseline) → GREEN (write skill) → REFACTOR (close loopholes
 Same benefits: Better quality, fewer surprises, bulletproof results.
 
 If you follow TDD for code, follow it for skills. It's the same discipline applied to documentation.
+````

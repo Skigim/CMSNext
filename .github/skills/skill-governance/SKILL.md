@@ -24,9 +24,10 @@ Use this skill to choose the correct skill coverage for the next CMSNext action.
 ## Environment Assumption
 
 - CMSNext assumes Obra Superpowers has been installed for the user environment.
-- Expected install flow:
+- Expected install flow depends on the harness. For Copilot CLI, use:
   - `copilot plugin marketplace add obra/superpowers-marketplace`
   - `copilot plugin install superpowers@superpowers-marketplace`
+- For other harnesses such as Claude Code or Gemini CLI, use the platform-equivalent marketplace or skill-install flow for Obra Superpowers.
 - If an Obra Superpowers skill that should exist for the current action is missing, treat that as an environment/setup problem rather than a reason to silently skip skill coverage.
 
 ## Selection Order

@@ -162,6 +162,21 @@ For each variant:
    - "You had the doc but didn't check. Why?"
    - "How could doc be clearer?"
 
+## Test Execution Method
+
+Use a manual-but-structured execution method so each run is reproducible and comparable across variants.
+
+1. Start each run in a fresh agent context with no carry-over memory from prior runs.
+2. Load exactly one variant CLAUDE.md configuration for that run, then present one scenario as the initial user message.
+3. Observe the agent's first 3 actions or first substantive response, whichever comes first.
+4. Capture the transcript or structured log for the run so rationalizations and compliance decisions are reviewable after the fact.
+5. Mark skill checking as **unprompted** only if the agent checks before the user adds any reminder and within those first 3 actions.
+6. Code each run with one standardized outcome label:
+   - `CHECKED_SKILL` = agent checked for or loaded the relevant skill before acting
+   - `SKIPPED_SKILL` = agent acted without checking for the relevant skill
+   - `RATIONALIZED_SKIP` = agent explicitly justified skipping the skill despite the variant guidance
+7. When the agent checks the skill but fails to follow it, keep the run transcript and add a short reviewer note so the outcome code stays machine-parseable while the qualitative failure remains visible.
+
 ## Success Criteria
 
 **Variant succeeds if:**
@@ -198,3 +213,18 @@ For each variant:
 4. Compare compliance rates
 5. Identify which rationalizations break through
 6. Iterate on winning variant to close holes
+
+## Measurement Methodology
+
+Use the same measurement rules for every variant and every scenario so Step 4 compares like with like.
+
+- Run each variant × scenario combination 5 independent times.
+- Score each run with this rubric:
+  - `0` = no skill check
+  - `1` = checked the skill but did not follow it fully
+  - `2` = full compliance with the skill under the scenario pressure
+- Aggregate by calculating the mean score for each variant × scenario cell.
+- Compare variants using a t-test when the score distributions are approximately normal; otherwise use a nonparametric alternative such as Mann-Whitney.
+- Treat a variant as successful only if its mean score is at least `1.5` in every scenario and it outperforms weaker variants under the same scenario scoring method.
+
+Record the raw scores per run so reviewers can recompute the mean for any variant or scenario and verify the comparison method.

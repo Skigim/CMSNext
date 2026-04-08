@@ -1,8 +1,19 @@
 (function() {
   const runtime = globalThis;
-  const WS_URL = 'ws://' + runtime.location.host;
+  const wsProtocol = runtime.location.protocol === 'https:' ? 'wss://' : 'ws://';
+  const WS_URL = wsProtocol + runtime.location.host;
+  const reconnectBaseDelayMs = 1000;
+  const reconnectMaxDelayMs = 30000;
+  const reconnectJitterMs = 250;
   let ws = null;
   let eventQueue = [];
+  let reconnectAttempts = 0;
+
+  function getReconnectDelay() {
+    const exponentialDelay = reconnectBaseDelayMs * (2 ** reconnectAttempts);
+    const jitter = Math.floor(Math.random() * reconnectJitterMs);
+    return Math.min(exponentialDelay + jitter, reconnectMaxDelayMs);
+  }
 
   function updateIndicator(indicator, value) {
     if (!indicator) return;
@@ -22,6 +33,22 @@
     );
   }
 
+  function updateConnectionStatus(state) {
+    const status = document.querySelector('.status');
+    if (!status) return;
+
+    const statusText = {
+      connecting: 'Connecting',
+      connected: 'Connected',
+      disconnected: 'Disconnected'
+    }[state] || 'Disconnected';
+
+    status.dataset.state = state;
+    status.textContent = statusText;
+    status.setAttribute('aria-label', `Connection status: ${statusText.toLowerCase()}`);
+    status.setAttribute('aria-busy', String(state === 'connecting'));
+  }
+
   function syncSelectableState(container) {
     if (!container) return;
 
@@ -39,9 +66,12 @@
   }
 
   function connect() {
+    updateConnectionStatus('connecting');
     ws = new WebSocket(WS_URL);
 
     ws.onopen = () => {
+      reconnectAttempts = 0;
+      updateConnectionStatus('connected');
       eventQueue.forEach(e => ws.send(JSON.stringify(e)));
       eventQueue = [];
     };
@@ -61,16 +91,23 @@
     };
 
     ws.onclose = () => {
-      setTimeout(connect, 1000);
+      updateConnectionStatus('disconnected');
+      const reconnectDelay = getReconnectDelay();
+      reconnectAttempts += 1;
+      setTimeout(connect, reconnectDelay);
     };
   }
 
   function sendEvent(event) {
-    event.timestamp = Date.now();
+    const timestampedEvent = {
+      ...event,
+      timestamp: Date.now()
+    };
+
     if (ws?.readyState === WebSocket.OPEN) {
-      ws.send(JSON.stringify(event));
+      ws.send(JSON.stringify(timestampedEvent));
     } else {
-      eventQueue.push(event);
+      eventQueue.push(timestampedEvent);
     }
   }
 
@@ -124,7 +161,7 @@
   // Expose API for explicit use
   runtime.brainstorm = {
     send: sendEvent,
-    choice: (value, metadata = {}) => sendEvent({ type: 'choice', value, ...metadata })
+    choice: (value, metadata = {}) => sendEvent({ ...metadata, type: 'choice', value })
   };
 
   connect();

@@ -79,7 +79,7 @@ git pull
 git merge <feature-branch>
 
 # Verify tests on merged result
-<test command>
+npm test / cargo test / pytest / go test ./...
 
 # If tests pass
 git branch -d <feature-branch>
@@ -134,16 +134,14 @@ git checkout <base-branch>
 git branch -D <feature-branch>
 ```
 
-Then: Cleanup worktree (Step 5)
-
 ### Step 5: Cleanup Worktree
 
-**For Options 1, 2, 4:**
+**For Options 1, 4:**
 
 Check if in worktree:
 
 ```bash
-git worktree list | grep "$FEATURE_BRANCH"
+git worktree list | grep "<feature-branch>"
 ```
 
 If yes:
@@ -159,7 +157,7 @@ git worktree remove <worktree-path>
 | Option           | Merge | Push | Keep Worktree | Cleanup Branch |
 | ---------------- | ----- | ---- | ------------- | -------------- |
 | 1. Merge locally | ✓     | -    | -             | ✓              |
-| 2. Create PR     | -     | ✓    | -             | -              |
+| 2. Create PR     | -     | ✓    | ✓             | -              |
 | 3. Keep as-is    | -     | -    | ✓             | -              |
 | 4. Discard       | -     | -    | -             | ✓ (force)      |
 
@@ -178,7 +176,7 @@ git worktree remove <worktree-path>
 **Automatic worktree cleanup**
 
 - **Problem:** Remove worktree when might need it (Option 2, 3)
-- **Fix:** Only cleanup for Options 1, 2 and 4
+- **Fix:** Only cleanup for Options 1 and 4
 
 **No confirmation for discard**
 
@@ -199,7 +197,7 @@ git worktree remove <worktree-path>
 - Verify tests before offering options
 - Present exactly 4 options
 - Get typed confirmation for Option 4
-- Clean up worktree for Options 1, 2 & 4
+- Clean up worktree for Options 1 & 4
 
 ## Integration
 

@@ -20,7 +20,7 @@ Task tool (general-purpose):
 
     ## CRITICAL: Do Not Trust the Report
 
-    The implementer finished suspiciously quickly. Their report may be incomplete,
+    Their report may be incomplete,
     inaccurate, or optimistic. You MUST verify everything independently.
 
     **DO NOT:**

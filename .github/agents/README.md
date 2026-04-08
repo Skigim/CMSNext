@@ -1,6 +1,6 @@
 # Custom Agents
 
-This directory contains focused custom agent definitions for delegating bounded work to Copilot subagents. The `triage` agent acts as the CMSNext manager and routes work to the right specialist through explicit handoffs in VS Code chat. Reference material and reusable workflows still live under `.github/skills/`, repo-local Superpowers skills are vendored under `skills/`, and repo guidance or customization-registry ownership can route through the dedicated `documentation` agent.
+This directory contains focused custom agent definitions for delegating bounded work to Copilot subagents. The `triage` agent acts as the CMSNext manager and routes work to the right specialist, repo-specific CMSNext skills under `.github/skills/`, or vendored upstream Superpowers skills under `skills/` through explicit handoffs in VS Code chat. Use `.github/skills/` for CMSNext-owned workflow overlays such as `.github/skills/repo-memories/SKILL.md` and `.github/skills/skill-governance/SKILL.md`, and use `skills/` for vendored upstream Superpowers content that should stay aligned with the external source.
 
 ## Usage
 

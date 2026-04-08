@@ -51,12 +51,25 @@ function extractGraphBody(dotContent) {
   return body.trim();
 }
 
+function escapeDotLabel(value) {
+  return value
+    .replaceAll('\\', '\\\\')
+    .replaceAll('"', String.raw`\"`)
+    .replaceAll('\n', String.raw`\n`);
+}
+
+function sanitizeOutputFilename(value, extension) {
+  const baseName = path.basename(value).replaceAll(/[^A-Za-z0-9._-]/g, '_');
+  const safeName = baseName.length > 0 ? baseName : 'diagram';
+  return `${safeName}${extension}`;
+}
+
 function combineGraphs(blocks, skillName) {
   const bodies = blocks.map((block, i) => {
     const body = extractGraphBody(block.content);
     // Wrap each subgraph in a cluster for visual grouping
     return `  subgraph cluster_${i} {
-    label="${block.name}";
+    label="${escapeDotLabel(block.name)}";
     ${body.split('\n').map(line => '  ' + line).join('\n')}
   }`;
   });
@@ -118,7 +131,8 @@ function resolveArgs(args) {
 
 function ensureGraphvizInstalled() {
   try {
-    execSync('which dot', { encoding: 'utf-8' });
+    const lookupCommand = process.platform === 'win32' ? 'where dot' : 'which dot';
+    execSync(lookupCommand, { encoding: 'utf-8' });
   } catch {
     console.error('Error: graphviz (dot) not found. Install with:');
     console.error('  brew install graphviz    # macOS');
@@ -157,9 +171,10 @@ function renderSeparate(blocks, outputDir) {
   for (const block of blocks) {
     const svg = renderToSvg(block.content);
     if (svg) {
-      const outputPath = path.join(outputDir, `${block.name}.svg`);
+      const safeName = sanitizeOutputFilename(block.name, '.svg');
+      const outputPath = path.join(outputDir, safeName);
       fs.writeFileSync(outputPath, svg);
-      console.log(`  Rendered: ${block.name}.svg`);
+      console.log(`  Rendered: ${safeName}`);
     } else {
       console.error(`  Failed: ${block.name}`);
     }

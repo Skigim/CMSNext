@@ -2,8 +2,14 @@
 // From: Lace test infrastructure improvements (2025-10-03)
 // Context: Fixed 15 flaky tests by replacing arbitrary timeouts
 
-import type { ThreadManager } from '~/threads/thread-manager';
-import type { LaceEvent, LaceEventType } from '~/threads/types';
+interface LaceEvent {
+  type: string;
+  data?: Record<string, unknown>;
+}
+
+interface ThreadManager {
+  getEvents(threadId: string): LaceEvent[];
+}
 
 /**
  * Wait for a specific event type to appear in thread
@@ -20,22 +26,26 @@ import type { LaceEvent, LaceEventType } from '~/threads/types';
 export function waitForEvent(
   threadManager: ThreadManager,
   threadId: string,
-  eventType: LaceEventType,
+  eventType: string,
   timeoutMs = 5000
 ): Promise<LaceEvent> {
   return new Promise((resolve, reject) => {
     const startTime = Date.now();
 
     const check = () => {
-      const events = threadManager.getEvents(threadId);
-      const event = events.find((e) => e.type === eventType);
+      try {
+        const events = threadManager.getEvents(threadId);
+        const event = events.find((e) => e.type === eventType);
 
-      if (event) {
-        resolve(event);
-      } else if (Date.now() - startTime > timeoutMs) {
-        reject(new Error(`Timeout waiting for ${eventType} event after ${timeoutMs}ms`));
-      } else {
-        setTimeout(check, 10); // Poll every 10ms for efficiency
+        if (event) {
+          resolve(event);
+        } else if (Date.now() - startTime > timeoutMs) {
+          reject(new Error(`Timeout waiting for ${eventType} event after ${timeoutMs}ms`));
+        } else {
+          setTimeout(check, 10); // Poll every 10ms for efficiency
+        }
+      } catch (error) {
+        reject(error);
       }
     };
 
@@ -60,7 +70,7 @@ export function waitForEvent(
 export function waitForEventCount(
   threadManager: ThreadManager,
   threadId: string,
-  eventType: LaceEventType,
+  eventType: string,
   count: number,
   timeoutMs = 5000
 ): Promise<LaceEvent[]> {
@@ -68,19 +78,23 @@ export function waitForEventCount(
     const startTime = Date.now();
 
     const check = () => {
-      const events = threadManager.getEvents(threadId);
-      const matchingEvents = events.filter((e) => e.type === eventType);
+      try {
+        const events = threadManager.getEvents(threadId);
+        const matchingEvents = events.filter((e) => e.type === eventType);
 
-      if (matchingEvents.length >= count) {
-        resolve(matchingEvents);
-      } else if (Date.now() - startTime > timeoutMs) {
-        reject(
-          new Error(
-            `Timeout waiting for ${count} ${eventType} events after ${timeoutMs}ms (got ${matchingEvents.length})`
-          )
-        );
-      } else {
-        setTimeout(check, 10);
+        if (matchingEvents.length >= count) {
+          resolve(matchingEvents);
+        } else if (Date.now() - startTime > timeoutMs) {
+          reject(
+            new Error(
+              `Timeout waiting for ${count} ${eventType} events after ${timeoutMs}ms (got ${matchingEvents.length})`
+            )
+          );
+        } else {
+          setTimeout(check, 10);
+        }
+      } catch (error) {
+        reject(error);
       }
     };
 
@@ -119,15 +133,19 @@ export function waitForEventMatch(
     const startTime = Date.now();
 
     const check = () => {
-      const events = threadManager.getEvents(threadId);
-      const event = events.find(predicate);
+      try {
+        const events = threadManager.getEvents(threadId);
+        const event = events.find(predicate);
 
-      if (event) {
-        resolve(event);
-      } else if (Date.now() - startTime > timeoutMs) {
-        reject(new Error(`Timeout waiting for ${description} after ${timeoutMs}ms`));
-      } else {
-        setTimeout(check, 10);
+        if (event) {
+          resolve(event);
+        } else if (Date.now() - startTime > timeoutMs) {
+          reject(new Error(`Timeout waiting for ${description} after ${timeoutMs}ms`));
+        } else {
+          setTimeout(check, 10);
+        }
+      } catch (error) {
+        reject(error);
       }
     };
 

@@ -1,12 +1,17 @@
-const crypto = require('node:crypto');
-const http = require('node:http');
-const fs = require('node:fs');
-const path = require('node:path');
+import { Buffer } from 'node:buffer';
+import crypto from 'node:crypto';
+import fs from 'node:fs';
+import http from 'node:http';
+import path from 'node:path';
+import process from 'node:process';
+import { fileURLToPath } from 'node:url';
 
 // ========== WebSocket Protocol (RFC 6455) ==========
 
 const OPCODES = { TEXT: 0x01, CLOSE: 0x08, PING: 0x09, PONG: 0x0A };
 const WS_MAGIC = '258EAFA5-E914-47DA-95CA-C5AB0DC85B11';
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 function computeAcceptKey(clientKey) {
   return crypto.createHash('sha1').update(clientKey + WS_MAGIC).digest('base64');
@@ -62,7 +67,7 @@ function decodeFrame(buffer) {
   const totalLen = dataOffset + payloadLen;
   if (buffer.length < totalLen) return null;
 
-  const mask = buffer.slice(maskOffset, dataOffset);
+  const mask = buffer.subarray(maskOffset, dataOffset);
   const data = Buffer.alloc(payloadLen);
   for (let i = 0; i < payloadLen; i++) {
     data[i] = buffer[dataOffset + i] ^ mask[i % 4];
@@ -98,8 +103,24 @@ h1 { color: #333; } p { color: #666; }</style>
 <body><h1>Brainstorm Companion</h1>
 <p>Waiting for the agent to push a screen...</p></body></html>`;
 
-const frameTemplate = fs.readFileSync(path.join(__dirname, 'frame-template.html'), 'utf-8');
-const helperScript = fs.readFileSync(path.join(__dirname, 'helper.js'), 'utf-8');
+const frameTemplatePath = path.join(__dirname, 'frame-template.html');
+const helperScriptPath = path.join(__dirname, 'helper.js');
+
+let frameTemplate;
+let helperScript;
+
+try {
+  frameTemplate = fs.readFileSync(frameTemplatePath, 'utf-8');
+} catch (error) {
+  throw new Error(`missing frame-template.html at ${frameTemplatePath}: ${error.message}`);
+}
+
+try {
+  helperScript = fs.readFileSync(helperScriptPath, 'utf-8');
+} catch (error) {
+  throw new Error(`missing helper.js at ${helperScriptPath}: ${error.message}`);
+}
+
 const helperInjection = '<script>\n' + helperScript + '\n</script>';
 
 // ========== Helper Functions ==========
@@ -130,9 +151,12 @@ function handleRequest(req, res) {
   touchActivity();
   if (req.method === 'GET' && req.url === '/') {
     const screenFile = getNewestScreen();
-    let html = screenFile
-      ? (raw => isFullDocument(raw) ? raw : wrapInFrame(raw))(fs.readFileSync(screenFile, 'utf-8'))
-      : WAITING_PAGE;
+    let html = WAITING_PAGE;
+
+    if (screenFile) {
+      const raw = fs.readFileSync(screenFile, 'utf-8');
+      html = isFullDocument(raw) ? raw : wrapInFrame(raw);
+    }
 
     if (html.includes('</body>')) {
       html = html.replace('</body>', helperInjection + '\n</body>');
@@ -163,6 +187,7 @@ function handleRequest(req, res) {
 // ========== WebSocket Connection Handling ==========
 
 const clients = new Set();
+const MAX_BUFFER_BYTES = 1024 * 1024;
 
 function handleUpgrade(req, socket) {
   const key = req.headers['sec-websocket-key'];
@@ -180,6 +205,14 @@ function handleUpgrade(req, socket) {
   clients.add(socket);
 
   socket.on('data', (chunk) => {
+    if (buffer.length + chunk.length > MAX_BUFFER_BYTES) {
+      console.error('Closing WebSocket connection: buffered data exceeded limit of ' + MAX_BUFFER_BYTES + ' bytes');
+      socket.end(encodeFrame(OPCODES.CLOSE, Buffer.alloc(0)));
+      socket.destroy();
+      clients.delete(socket);
+      return;
+    }
+
     buffer = Buffer.concat([buffer, chunk]);
     while (buffer.length > 0) {
       let result;
@@ -192,7 +225,7 @@ function handleUpgrade(req, socket) {
         return;
       }
       if (!result) break;
-      buffer = buffer.slice(result.bytesConsumed);
+      buffer = buffer.subarray(result.bytesConsumed);
 
       switch (result.opcode) {
         case OPCODES.TEXT:
@@ -226,8 +259,8 @@ function handleMessage(text) {
   let event;
   try {
     event = JSON.parse(text);
-  } catch (e) {
-    console.error('Failed to parse WebSocket message:', e.message);
+  } catch (error) {
+    console.error('Failed to parse WebSocket message:', error.message);
     return;
   }
   touchActivity();
@@ -252,7 +285,7 @@ function broadcast(msg) {
 
 // ========== Activity Tracking ==========
 
-const IDLE_TIMEOUT_MS = 30 * 60 * 1000; // 30 minutes
+const IDLE_TIMEOUT_MS = 30 * 60 * 1000;
 let lastActivity = Date.now();
 
 function touchActivity() {
@@ -269,9 +302,6 @@ function startServer() {
   if (!fs.existsSync(CONTENT_DIR)) fs.mkdirSync(CONTENT_DIR, { recursive: true });
   if (!fs.existsSync(STATE_DIR)) fs.mkdirSync(STATE_DIR, { recursive: true });
 
-  // Track known files to distinguish new screens from updates.
-  // macOS fs.watch reports 'rename' for both new files and overwrites,
-  // so we can't rely on eventType alone.
   const knownFiles = new Set(
     fs.readdirSync(CONTENT_DIR).filter(f => f.endsWith('.html'))
   );
@@ -287,7 +317,7 @@ function startServer() {
       debounceTimers.delete(filename);
       const filePath = path.join(CONTENT_DIR, filename);
 
-      if (!fs.existsSync(filePath)) return; // file was deleted
+      if (!fs.existsSync(filePath)) return;
       touchActivity();
 
       if (knownFiles.has(filename)) {
@@ -302,7 +332,7 @@ function startServer() {
       broadcast({ type: 'reload' });
     }, 100));
   });
-  watcher.on('error', (err) => console.error('fs.watch error:', err.message));
+  watcher.on('error', (error) => console.error('fs.watch error:', error.message));
 
   function shutdown(reason) {
     console.log(JSON.stringify({ type: 'server-stopped', reason }));
@@ -319,23 +349,25 @@ function startServer() {
 
   function ownerAlive() {
     if (!ownerPid) return true;
-    try { process.kill(ownerPid, 0); return true; } catch (e) { return e.code === 'EPERM'; }
+    try {
+      process.kill(ownerPid, 0);
+      return true;
+    } catch (error) {
+      return error.code === 'EPERM';
+    }
   }
 
-  // Check every 60s: exit if owner process died or idle for 30 minutes
   const lifecycleCheck = setInterval(() => {
     if (!ownerAlive()) shutdown('owner process exited');
     else if (Date.now() - lastActivity > IDLE_TIMEOUT_MS) shutdown('idle timeout');
   }, 60 * 1000);
   lifecycleCheck.unref();
 
-  // Validate owner PID at startup. If it's already dead, the PID resolution
-  // was wrong (common on WSL, Tailscale SSH, and cross-user scenarios).
-  // Disable monitoring and rely on the idle timeout instead.
   if (ownerPid) {
-    try { process.kill(ownerPid, 0); }
-    catch (e) {
-      if (e.code !== 'EPERM') {
+    try {
+      process.kill(ownerPid, 0);
+    } catch (error) {
+      if (error.code !== 'EPERM') {
         console.log(JSON.stringify({ type: 'owner-pid-invalid', pid: ownerPid, reason: 'dead at startup' }));
         ownerPid = null;
       }
@@ -353,8 +385,8 @@ function startServer() {
   });
 }
 
-if (require.main === module) {
+if (process.argv[1] && path.resolve(process.argv[1]) === __filename) {
   startServer();
 }
 
-module.exports = { computeAcceptKey, encodeFrame, decodeFrame, OPCODES };
+export { OPCODES, computeAcceptKey, decodeFrame, encodeFrame };

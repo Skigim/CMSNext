@@ -73,8 +73,15 @@
       flex-shrink: 0;
     }
     .header h1 { font-size: 0.85rem; font-weight: 500; color: var(--text-secondary); }
+    .header-link { color: inherit; text-decoration: none; }
+    .header-link:hover,
+    .header-link:focus-visible { text-decoration: underline; }
     .header .status { font-size: 0.7rem; color: var(--success); display: flex; align-items: center; gap: 0.4rem; }
+    .header .status[data-state='connecting'] { color: var(--warning); }
+    .header .status[data-state='disconnected'] { color: var(--error); }
     .header .status::before { content: ''; width: 6px; height: 6px; background: var(--success); border-radius: 50%; }
+    .header .status[data-state='connecting']::before { background: var(--warning); }
+    .header .status[data-state='disconnected']::before { background: var(--error); }
 
     .main { flex: 1; overflow-y: auto; }
     #claude-content { padding: 2rem; min-height: 100%; }
@@ -206,8 +213,8 @@
 </head>
 <body>
   <div class="header">
-    <h1><a href="https://github.com/obra/superpowers" style="color: inherit; text-decoration: none;">Superpowers Brainstorming</a></h1>
-    <div class="status">Connected</div>
+    <h1><a class="header-link" href="https://github.com/obra/superpowers">Superpowers Brainstorming</a></h1>
+    <output class="status" data-state="connecting" aria-live="polite" aria-label="Connection status: connecting">Connecting</output>
   </div>
 
   <div class="main">
@@ -258,9 +265,10 @@
         items.forEach((item) => {
           const isSelected = item.classList.contains('selected');
           item.setAttribute('role', role);
-          item.setAttribute('aria-selected', String(isSelected));
           if (role === 'button') {
             item.setAttribute('aria-pressed', String(isSelected));
+          } else {
+            item.setAttribute('aria-selected', String(isSelected));
           }
           item.tabIndex = item === activeItem ? 0 : -1;
         });
@@ -356,18 +364,30 @@
           event.preventDefault();
           const nextIndex = (currentIndex - 1 + items.length) % items.length;
           setFocusTarget(items, nextIndex);
+          return;
+        }
+
+        if (event.key === 'Home') {
+          event.preventDefault();
+          setFocusTarget(items, 0);
+          return;
+        }
+
+        if (event.key === 'End') {
+          event.preventDefault();
+          setFocusTarget(items, items.length - 1);
         }
       }
 
       function initOptionControls() {
         document.querySelectorAll('.options').forEach((container) => {
           container.setAttribute('role', 'listbox');
-          container.setAttribute('aria-multiselectable', String(container.dataset.multiselect !== undefined));
+          container.setAttribute('aria-multiselectable', String(container.dataset.multiselect === 'true'));
 
           const items = Array.from(container.querySelectorAll('.option'));
           items.forEach((item) => {
             item.dataset.choice ??= item.querySelector('.letter')?.textContent?.trim().toLowerCase() || '';
-            if (!item.hasAttribute('onclick')) {
+            if (item.dataset.noAutoClick === undefined) {
               item.addEventListener('click', handleOptionClick);
             }
             item.addEventListener('keydown', handleOptionKeydown);
@@ -381,7 +401,7 @@
         document.querySelectorAll('.cards').forEach((container) => {
           const items = Array.from(container.querySelectorAll('.card'));
           items.forEach((item) => {
-            if (!item.hasAttribute('onclick')) {
+            if (item.dataset.noAutoClick === undefined) {
               item.addEventListener('click', handleOptionClick);
             }
             item.addEventListener('keydown', handleCardKeydown);
