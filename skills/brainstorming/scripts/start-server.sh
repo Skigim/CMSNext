@@ -27,13 +27,12 @@ resolve_path() {
   local target_path="$1"
 
   if command -v realpath >/dev/null 2>&1; then
-    realpath -m -- "$target_path"
-    return
+    realpath -m -- "$target_path" 2>/dev/null && return 0
+    realpath -- "$target_path" 2>/dev/null && return 0
   fi
 
   if command -v python3 >/dev/null 2>&1; then
-    python3 -c 'import os, sys; print(os.path.abspath(sys.argv[1]))' "$target_path"
-    return
+    python3 -c 'import os, sys; print(os.path.abspath(sys.argv[1]))' "$target_path" && return 0
   fi
 
   case "$target_path" in

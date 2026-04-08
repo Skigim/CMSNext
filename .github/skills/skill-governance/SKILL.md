@@ -43,9 +43,14 @@ Use this skill to choose the correct skill coverage for the next CMSNext action.
 
 ## Action Map
 
+Repo-local skills in this repository:
+
 - Mandatory startup discipline and skill-first workflow: `skills/using-superpowers/SKILL.md`
 - Repo startup and baseline repo workflow: `repo-memories`
 - Choosing between agents, skills, instructions, or delegation prompts: `agent-delegation`
+
+Harness-provided or extension-provided skills that may exist outside this repository:
+
 - Editing agent customization files, instructions, prompts, skills, or agents: `agent-customization`
 - Addressing pull request review comments: `address-pr-comments`
 - Summarizing a GitHub issue, pull request, or notification: `summarize-github-issue-pr-notification`
