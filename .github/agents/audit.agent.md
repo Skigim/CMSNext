@@ -29,9 +29,10 @@ You are the CMSNext audit agent. Your job is to investigate risk, find regressio
 
 ## Superpowers Workflow Overlay
 
-- Immediately after loading `repo-memories`, check for an applicable Superpowers skill before any other audit task action.
+- Load `skills/using-superpowers/SKILL.md` before any other audit reasoning, then load `repo-memories`, then load `skill-governance` to choose the applicable Superpowers skill.
 - If a relevant Superpowers skill is available, load and invoke it before evidence gathering, review, or closeout.
 - Treat this check as mandatory for every CMSNext audit task.
+- Do not rationalize, clarify, explore, or review evidence before the memory check and current `skill-governance` decision are complete.
 - Check `requesting-code-review` when reviewing a completed implementation chunk against plan, standards, or coding quality expectations.
 - Check `systematic-debugging` when the audit centers on a suspected regression or failure mode whose cause is still unclear.
 - Keep the audit read-only unless the caller explicitly asks for remediation, even if a skill would otherwise encourage implementation work.

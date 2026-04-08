@@ -26,7 +26,7 @@ process.stdout.write(
     hookSpecificOutput: {
       hookEventName: "SessionStart",
       additionalContext:
-        "CMSNext startup guard is active. After loading repo-memories and any required Superpowers skill, run `node .github/hooks/scripts/mark-startup-complete.mjs <skill-name|none>` before any non-startup tool action.",
+        "CMSNext startup guard is active. Load `skills/using-superpowers/SKILL.md` first, then `repo-memories`, then `skill-governance`, then any more specific applicable skill, and run `node .github/hooks/scripts/mark-startup-complete.mjs <skill-name|none>` before any non-startup tool action.",
     },
   }),
 );

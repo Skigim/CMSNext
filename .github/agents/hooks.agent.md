@@ -36,9 +36,10 @@ You are the CMSNext hooks specialist. Your job is to keep hooks small, composabl
 
 ## Superpowers Workflow Overlay
 
-- Immediately after loading `repo-memories`, check for an applicable Superpowers skill before any other hooks task action.
+- Load `skills/using-superpowers/SKILL.md` before any other hooks reasoning, then load `repo-memories`, then check for an applicable Superpowers skill.
 - If a relevant Superpowers skill is available, load and invoke it before hook analysis, implementation, review, or closeout.
 - Treat this check as mandatory for every CMSNext hooks task.
+- Do not rationalize, clarify, inspect hook flows, or implement before the memory check and current skill-selection decision are complete.
 - Check `test-driven-development` before behavior-changing hook work when the state transition or async path can be driven from a failing test.
 - Check `systematic-debugging` for effect bugs, race conditions, stale state, or regressions before choosing a fix.
 - Check `requesting-code-review` for substantial hook refactors and `verification-before-completion` before closeout.

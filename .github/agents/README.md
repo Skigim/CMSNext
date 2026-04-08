@@ -1,6 +1,6 @@
 # Custom Agents
 
-This directory contains focused custom agent definitions for delegating bounded work to Copilot subagents. The `triage` agent acts as the CMSNext manager and routes work to the right specialist through explicit handoffs in VS Code chat. Reference material and reusable workflows still live under `.github/skills/`, while repo guidance and customization-registry ownership can route through the dedicated `documentation` agent.
+This directory contains focused custom agent definitions for delegating bounded work to Copilot subagents. The `triage` agent acts as the CMSNext manager and routes work to the right specialist, repo-specific CMSNext skills under `.github/skills/`, or vendored upstream Superpowers skills under `skills/` through explicit handoffs in VS Code chat. Use `.github/skills/` for CMSNext-owned workflow overlays such as `.github/skills/repo-memories/SKILL.md` and `.github/skills/skill-governance/SKILL.md`, and use `skills/` for vendored upstream Superpowers content that should stay aligned with the external source.
 
 ## Usage
 
@@ -10,15 +10,16 @@ When dispatching a subagent, reference the relevant agent definition for the tar
 "Read the `storage` agent definition for context, then [task description]..."
 ```
 
-The default workspace agent is also instructed through `.github/copilot-instructions.md` to delegate automatically when a task clearly matches one of these domains. Start with `triage` when a task is ambiguous, multi-stage, or needs a visible handoff path in VS Code chat. `Explore` is a built-in read-only discovery agent, not a repository-defined agent in this folder.
+The default workspace agent is also instructed through `.github/copilot-instructions.md` to delegate automatically when a task clearly matches one of these domains. Use `triage` when responsibility mapping or an explicit handoff structure materially helps the task. `Explore` is a built-in read-only discovery agent, not a repository-defined agent in this folder.
 
 ## Superpowers Overlay
 
 When the active harness exposes installed Superpowers skills, use them as a process overlay on top of these CMSNext agents rather than as a replacement for them.
 
-- Start with `repo-memories`, then immediately check whether a relevant Superpowers skill applies before any other action.
+- Start with `skills/using-superpowers/SKILL.md`, then immediately load `repo-memories`, then load `.github/skills/skill-governance/SKILL.md` to choose the next applicable skill before any other action.
 - If a relevant Superpowers skill is available, load and invoke it rather than treating the check as optional.
 - This is mandatory for every CMSNext task, including read-only investigation, planning, delegation, implementation, review, and closeout.
+- No thought, rationalization, clarifying question, or exploratory action should occur until `skills/using-superpowers/SKILL.md`, `repo-memories`, and the current `skill-governance` decision are complete.
 - When workspace hooks are enabled, record startup completion with `node .github/hooks/scripts/mark-startup-complete.mjs <skill-name|none>` before any non-startup tool use.
 - `triage` should bias toward `brainstorming`, `writing-plans`, and related planning skills for ambiguous or multi-stage work.
 - Implementation specialists should bias toward `test-driven-development`, `systematic-debugging`, `requesting-code-review`, and `verification-before-completion` as the work moves from diagnosis to implementation to closeout.

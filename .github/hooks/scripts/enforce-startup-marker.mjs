@@ -14,7 +14,7 @@ if (state?.status === "complete") {
 if (isAllowedStartupTool(toolName)) {
   respond(
     "allow",
-    "Startup guard still pending. Complete repo-memories, any required Superpowers skill, then run `node .github/hooks/scripts/mark-startup-complete.mjs <skill-name|none>`."
+    "Startup guard still pending. Load `skills/using-superpowers/SKILL.md`, then `repo-memories`, then `skill-governance`, then any more specific applicable skill, and run `node .github/hooks/scripts/mark-startup-complete.mjs <skill-name|none>`."
   );
   process.exit(0);
 }
@@ -26,7 +26,7 @@ if (toolName === "run_in_terminal" && isMarkerCommand(input.tool_input)) {
 
 respond(
   "deny",
-  "CMSNext startup guard: load repo-memories, invoke any required Superpowers skill, then run `node .github/hooks/scripts/mark-startup-complete.mjs <skill-name|none>` before using other tools."
+  "CMSNext startup guard: load `skills/using-superpowers/SKILL.md`, then `repo-memories`, then `skill-governance`, then any more specific applicable skill, and run `node .github/hooks/scripts/mark-startup-complete.mjs <skill-name|none>` before using other tools."
 );
 
 function isAllowedStartupTool(toolName) {

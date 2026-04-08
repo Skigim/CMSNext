@@ -1,0 +1,217 @@
+#!/usr/bin/env node
+
+/**
+ * Render graphviz diagrams from a skill's SKILL.md to SVG files.
+ *
+ * Usage:
+ *   ./render-graphs.js <skill-directory>           # Render each diagram separately
+ *   ./render-graphs.js <skill-directory> --combine # Combine all into one diagram
+ *
+ * Extracts all ```dot blocks from SKILL.md and renders to SVG.
+ * Useful for helping your human partner visualize the process flows.
+ *
+ * Requires: graphviz (dot) installed on system
+ */
+
+import fs from 'node:fs';
+import path from 'node:path';
+import process from 'node:process';
+import { execSync } from 'node:child_process';
+
+function extractDotBlocks(markdown) {
+  const blocks = [];
+  const regex = /```dot\r?\n([\s\S]*?)\r?\n```/g;
+  let match;
+
+  while ((match = regex.exec(markdown)) !== null) {
+    const content = match[1].trim();
+
+    // Extract digraph name
+    const nameRegex = /digraph\s+(\w+)/;
+    const nameMatch = nameRegex.exec(content);
+    const name = nameMatch ? nameMatch[1] : `graph_${blocks.length + 1}`;
+
+    blocks.push({ name, content });
+  }
+
+  return blocks;
+}
+
+function extractGraphBody(dotContent) {
+  // Extract just the body (nodes and edges) from a digraph
+  const bodyRegex = /digraph\s+\w+\s*\{([\s\S]*)\}/;
+  const match = bodyRegex.exec(dotContent);
+  if (!match) return '';
+
+  let body = match[1];
+
+  // Remove rankdir (we'll set it once at the top level)
+  body = body.replaceAll(/^\s*rankdir\s*=\s*\w+\s*;?\s*$/gm, '');
+
+  return body.trim();
+}
+
+function escapeDotLabel(value) {
+  return value
+    .replaceAll('\\', '\\\\')
+    .replaceAll('"', String.raw`\"`)
+    .replaceAll('\n', String.raw`\n`);
+}
+
+function sanitizeOutputFilename(value, extension) {
+  const baseName = path.basename(value).replaceAll(/[^A-Za-z0-9._-]/g, '_');
+  const safeName = baseName.length > 0 ? baseName : 'diagram';
+  return `${safeName}${extension}`;
+}
+
+function combineGraphs(blocks, skillName) {
+  const bodies = blocks.map((block, i) => {
+    const body = extractGraphBody(block.content);
+    // Wrap each subgraph in a cluster for visual grouping
+    return `  subgraph cluster_${i} {
+    label="${escapeDotLabel(block.name)}";
+    ${body.split('\n').map(line => '  ' + line).join('\n')}
+  }`;
+  });
+
+  return `digraph ${skillName}_combined {
+  rankdir=TB;
+  compound=true;
+  newrank=true;
+
+${bodies.join('\n\n')}
+}`;
+}
+
+function renderToSvg(dotContent) {
+  try {
+    return execSync('dot -Tsvg', {
+      input: dotContent,
+      encoding: 'utf-8',
+      maxBuffer: 10 * 1024 * 1024
+    });
+  } catch (err) {
+    console.error('Error running dot:', err.message);
+    if (err.stderr) console.error(err.stderr.toString());
+    return null;
+  }
+}
+
+function printUsageAndExit() {
+  console.error('Usage: render-graphs.js <skill-directory> [--combine]');
+  console.error('');
+  console.error('Options:');
+  console.error('  --combine    Combine all diagrams into one SVG');
+  console.error('');
+  console.error('Example:');
+  console.error('  ./render-graphs.js ../subagent-driven-development');
+  console.error('  ./render-graphs.js ../subagent-driven-development --combine');
+  process.exit(1);
+}
+
+function resolveArgs(args) {
+  const combine = args.includes('--combine');
+  const skillDirArg = args.find(a => !a.startsWith('--'));
+
+  if (!skillDirArg) {
+    printUsageAndExit();
+  }
+
+  const skillDir = path.resolve(skillDirArg);
+  const skillFile = path.join(skillDir, 'SKILL.md');
+  const skillName = path.basename(skillDir).replaceAll('-', '_');
+
+  if (!fs.existsSync(skillFile)) {
+    console.error(`Error: ${skillFile} not found`);
+    process.exit(1);
+  }
+
+  return { combine, skillDir, skillFile, skillName };
+}
+
+function ensureGraphvizInstalled() {
+  try {
+    const lookupCommand = process.platform === 'win32' ? 'where dot' : 'which dot';
+    execSync(lookupCommand, { encoding: 'utf-8' });
+  } catch {
+    console.error('Error: graphviz (dot) not found. Install with:');
+    console.error('  brew install graphviz    # macOS');
+    console.error('  apt install graphviz     # Linux');
+    process.exit(1);
+  }
+}
+
+function ensureOutputDir(skillDir) {
+  const outputDir = path.join(skillDir, 'diagrams');
+  if (!fs.existsSync(outputDir)) {
+    fs.mkdirSync(outputDir);
+  }
+
+  return outputDir;
+}
+
+function renderCombined(blocks, outputDir, skillName) {
+  const combined = combineGraphs(blocks, skillName);
+  const svg = renderToSvg(combined);
+  if (!svg) {
+    console.error('  Failed to render combined diagram');
+    return;
+  }
+
+  const outputPath = path.join(outputDir, `${skillName}_combined.svg`);
+  fs.writeFileSync(outputPath, svg);
+  console.log(`  Rendered: ${skillName}_combined.svg`);
+
+  const dotPath = path.join(outputDir, `${skillName}_combined.dot`);
+  fs.writeFileSync(dotPath, combined);
+  console.log(`  Source: ${skillName}_combined.dot`);
+}
+
+function renderSeparate(blocks, outputDir) {
+  const seen = new Map();
+
+  for (const block of blocks) {
+    const svg = renderToSvg(block.content);
+    if (svg) {
+      const baseName = sanitizeOutputFilename(block.name, '.svg');
+      const count = seen.get(baseName) ?? 0;
+      seen.set(baseName, count + 1);
+      const safeName = count === 0
+        ? baseName
+        : baseName.replace(/\.svg$/, `-${count}.svg`);
+      const outputPath = path.join(outputDir, safeName);
+      fs.writeFileSync(outputPath, svg);
+      console.log(`  Rendered: ${safeName}`);
+    } else {
+      console.error(`  Failed: ${block.name}`);
+    }
+  }
+}
+
+function main() {
+  const { combine, skillDir, skillFile, skillName } = resolveArgs(process.argv.slice(2));
+
+  ensureGraphvizInstalled();
+
+  const markdown = fs.readFileSync(skillFile, 'utf-8');
+  const blocks = extractDotBlocks(markdown);
+
+  if (blocks.length === 0) {
+    console.log('No ```dot blocks found in', skillFile);
+    process.exit(0);
+  }
+
+  console.log(`Found ${blocks.length} diagram(s) in ${path.basename(skillDir)}/SKILL.md`);
+
+  const outputDir = ensureOutputDir(skillDir);
+
+  if (combine) {
+    renderCombined(blocks, outputDir, skillName);
+  } else {
+    renderSeparate(blocks, outputDir);
+  }
+
+  console.log(`\nOutput: ${outputDir}/`);
+}
+
+main();

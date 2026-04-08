@@ -1,6 +1,7 @@
 ## General Approach
 
-- Start every CMSNext task by loading the `repo-memories` skill/reference before deeper reasoning, repo exploration, delegation, review, or implementation work, even for small tasks.
+- Start every CMSNext task by loading `skills/using-superpowers/SKILL.md` before any reasoning, rationalization, repo exploration, delegation, review, or implementation work, even for small tasks.
+- Immediately after `skills/using-superpowers/SKILL.md`, load the `repo-memories` skill/reference before any repo-specific reasoning or action.
 - For every action, check for existing patterns and documentation first — do not invent new solutions until certain one does not already exist.
 - Prioritize clarity and maintainability over cleverness.
 - Break complex work into logical steps; track via todo lists.
@@ -59,25 +60,36 @@ Treat failures in any step as blockers before considering the work complete.
 
 When starting a task, prefer this order:
 
-1. Load `repo-memories` first.
-2. Immediately check whether any installed Superpowers skill applies and, if one does, load and invoke it before any other action.
-3. When workspace hooks are enabled, run `node .github/hooks/scripts/mark-startup-complete.mjs <skill-name|none>` immediately after `repo-memories` and any required Superpowers skill.
-4. Inspect existing docs and patterns.
-5. Find the nearest existing implementation.
-6. Make the smallest coherent change.
-7. Validate with the standard command sequence.
-8. Update documentation or repository memory when behavior, workflow, or durable conventions meaningfully change.
+1. Load `skills/using-superpowers/SKILL.md` first.
+2. Load `repo-memories` immediately after `skills/using-superpowers/SKILL.md`.
+3. Load `skill-governance` immediately after `repo-memories` to choose the skill coverage for the next action.
+4. Load any more specific applicable skill selected by `skill-governance` before taking that action.
+5. When workspace hooks are enabled, run `node .github/hooks/scripts/mark-startup-complete.mjs <skill-name|none>` immediately after `repo-memories`, `skill-governance`, and any required Superpowers skill.
+6. Inspect existing docs and patterns.
+7. Find the nearest existing implementation.
+8. Make the smallest coherent change.
+9. Validate with the standard command sequence.
+10. Update documentation or repository memory when behavior, workflow, or durable conventions meaningfully change.
 
 ### Superpowers Skill Overlay
 
-- If the current harness exposes installed Superpowers skills, the agent must check whether a relevant skill applies immediately after loading `repo-memories` and before taking any other action.
-- If a relevant Superpowers skill is available, the agent must load and invoke it for the task rather than merely noting that it exists.
+- CMSNext vendors the upstream Superpowers skill library under `skills/` in this repository.
+- `skills/using-superpowers/SKILL.md` is the mandatory first skill reference for every CMSNext task.
+- The centralized skill-selection workflow lives in `.github/skills/skill-governance/SKILL.md`.
+- CMSNext assumes the Obra Superpowers plugin is installed and available for advanced workflow skills.
+- After loading `skills/using-superpowers/SKILL.md`, the agent must load `repo-memories` before any repo-specific thought or action.
+- After loading `repo-memories`, the agent must load `skill-governance` before taking any non-startup action.
+- If `skill-governance` selects a more specific applicable skill, the agent must load and invoke it for that action rather than merely noting that it exists.
 - This requirement is unconditional for CMSNext work and applies to read-only exploration, clarifying questions, delegation, planning, implementation, review, and closeout.
+- No thought, rationalization, clarifying question, exploration, delegation, or implementation action should occur until `skills/using-superpowers/SKILL.md`, `repo-memories`, and the current `skill-governance` decision are complete.
+- Every distinct action or tool batch must be grounded in at least one loaded skill. `repo-memories` is the baseline skill for all CMSNext work, and `skill-governance` determines whether that baseline is sufficient for the current action.
+- Before each new phase of work, re-run the `skill-governance` decision instead of assuming earlier skill coverage still applies.
+- If no more specific Superpowers skill exists for the current action, explicitly proceed under `repo-memories` rather than treating the action as skill-free.
+- If an expected Obra Superpowers skill is missing, treat that as an environment problem rather than silently bypassing the workflow.
 - When the workspace startup guard hook is enabled, the agent must record completion of this startup sequence by running `node .github/hooks/scripts/mark-startup-complete.mjs <skill-name|none>` before any non-startup tool use.
 - Treat Superpowers as a workflow overlay, not a replacement for direct user instructions, repo instructions, or CMSNext's responsibility-first routing rules.
-- Prefer planning and collaboration skills such as `brainstorming`, `writing-plans`, and `subagent-driven-development` for ambiguous, multi-stage, or implementation-heavy work when the harness supports them.
-- Prefer `systematic-debugging` for bug investigation, `test-driven-development` for behavior-changing implementation work, `requesting-code-review` for completed implementation chunks, and `verification-before-completion` before closing out substantial tasks.
-- If a recommended skill is unavailable in the current harness, continue with the repo workflow described here instead of inventing a parallel custom process.
+- Prefer Obra Superpowers planning and collaboration skills such as `brainstorming`, `writing-plans`, and `subagent-driven-development` for ambiguous, multi-stage, or implementation-heavy work.
+- Prefer Obra Superpowers `systematic-debugging` for bug investigation, `test-driven-development` for behavior-changing implementation work, `requesting-code-review` for completed implementation chunks, and `verification-before-completion` before closing out substantial tasks.
 
 ### Automatic Agent Delegation
 
