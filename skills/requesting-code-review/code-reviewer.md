@@ -37,9 +37,9 @@ If git context is unavailable:
 
 Use this prompt when implementation work is complete enough for a technical review against a known plan, ticket, or requirement set.
 
-Required assumptions:
+Preferred assumptions:
 
-- You have a concrete diff range to review.
+- You have a concrete diff range to review. If unavailable, use `N/A` for `{BASE_SHA}` and `{HEAD_SHA}` and explicitly report that the review is context-limited.
 - You have access to the implementation summary and the plan, spec, or ticket.
 - The repository is in a state where file and git references are available.
 

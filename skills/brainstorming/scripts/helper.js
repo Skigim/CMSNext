@@ -57,9 +57,12 @@
 
     items.forEach((item) => {
       const isSelected = item.classList.contains('selected');
-      item.setAttribute('aria-selected', String(isSelected));
       if (item.classList.contains('card')) {
         item.setAttribute('aria-pressed', String(isSelected));
+        item.removeAttribute('aria-selected');
+      } else {
+        item.setAttribute('aria-selected', String(isSelected));
+        item.removeAttribute('aria-pressed');
       }
       item.tabIndex = item === activeItem ? 0 : -1;
     });
@@ -72,8 +75,23 @@
     ws.onopen = () => {
       reconnectAttempts = 0;
       updateConnectionStatus('connected');
-      eventQueue.forEach(e => ws.send(JSON.stringify(e)));
+      const pendingEvents = eventQueue;
       eventQueue = [];
+
+      for (let index = 0; index < pendingEvents.length; index += 1) {
+        const pendingEvent = pendingEvents[index];
+
+        try {
+          ws.send(JSON.stringify(pendingEvent));
+        } catch {
+          eventQueue = pendingEvents.slice(index).concat(eventQueue);
+          break;
+        }
+      }
+    };
+
+    ws.onerror = () => {
+      updateConnectionStatus('disconnected');
     };
 
     ws.onmessage = (msg) => {
