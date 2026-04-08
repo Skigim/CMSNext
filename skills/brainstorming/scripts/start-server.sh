@@ -23,13 +23,17 @@ FORCE_BACKGROUND="false"
 BIND_HOST="127.0.0.1"
 URL_HOST=""
 
+json_error() {
+  node -e 'const message = process.argv.slice(1).join(" "); process.stderr.write(JSON.stringify({ error: message }) + "\n");' "$@"
+  exit 1
+}
+
 require_value() {
   local option_name="$1"
   local option_value="$2"
 
   if [[ -z "$option_value" || "$option_value" == -* ]]; then
-    echo "{\"error\": \"$option_name requires a value\"}"
-    exit 1
+    json_error "$option_name requires a value"
   fi
 }
 
@@ -59,8 +63,7 @@ while [[ $# -gt 0 ]]; do
       shift
       ;;
     *)
-      echo "{\"error\": \"Unknown argument: $1\"}"
-      exit 1
+      json_error "Unknown argument: $1"
       ;;
   esac
 done
@@ -104,7 +107,7 @@ LOG_FILE="${STATE_DIR}/server.log"
 # Create fresh session directory with content and state peers
 mkdir -p "${SESSION_DIR}/content" "$STATE_DIR"
 
-cd "$SCRIPT_DIR"
+cd "$SCRIPT_DIR" || json_error "Failed to change to script directory: $SCRIPT_DIR"
 
 # Resolve the harness PID (grandparent of this script).
 # $PPID is the ephemeral shell the harness spawned to run us — it dies
@@ -140,8 +143,7 @@ for i in {1..50}; do
       sleep 0.1 2>/dev/null || sleep 1
     done
     if [[ "$alive" != "true" ]]; then
-      echo "{\"error\": \"Server started but was killed. Retry in a persistent terminal with: $SCRIPT_DIR/start-server.sh${PROJECT_DIR:+ --project-dir \\\"$PROJECT_DIR\\\"} --host $BIND_HOST --url-host $URL_HOST --foreground\"}"
-      exit 1
+      json_error "Server started but was killed. Retry in a persistent terminal with: $SCRIPT_DIR/start-server.sh${PROJECT_DIR:+ --project-dir \"$PROJECT_DIR\"} --host $BIND_HOST --url-host $URL_HOST --foreground"
     fi
     grep "server-started" "$LOG_FILE" | head -1
     exit 0
@@ -150,5 +152,4 @@ for i in {1..50}; do
 done
 
 # Timeout - server didn't start
-echo '{"error": "Server failed to start within 5 seconds"}'
-exit 1
+json_error "Server failed to start within 5 seconds"

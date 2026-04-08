@@ -45,8 +45,8 @@ Required assumptions:
 
 Invocation steps:
 
-1. Gather the implementation summary for `{WHAT_WAS_IMPLEMENTED}`.
-2. Identify the controlling spec, plan, or ticket for `{PLAN_OR_REQUIREMENTS}`.
+1. Gather the implementation summary for `{DESCRIPTION}`.
+2. Identify the controlling spec, plan, or ticket for `{PLAN_REFERENCE}`.
 3. Resolve the exact git range using `{BASE_SHA}` and `{HEAD_SHA}`.
 4. Run this prompt with those placeholders filled in before asking for a merge decision.
 
@@ -76,8 +76,8 @@ Brief examples:
 
 **Your task:**
 
-1. Review {WHAT_WAS_IMPLEMENTED}
-2. Compare against {PLAN_OR_REQUIREMENTS}
+1. Review {DESCRIPTION}
+2. Compare against {PLAN_REFERENCE}
 3. Check code quality, architecture, testing
 4. Categorize issues by severity
 5. Assess production readiness

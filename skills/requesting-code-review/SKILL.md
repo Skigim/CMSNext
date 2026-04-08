@@ -42,11 +42,10 @@ Example dispatch shape:
 Task.run(
   subagentType="superpowers:code-reviewer",
   prompt=fillTemplate("./skills/requesting-code-review/code-reviewer.md", {
-    WHAT_WAS_IMPLEMENTED: "Verification and repair functions for conversation index",
-    PLAN_OR_REQUIREMENTS: "Task 2 from docs/superpowers/plans/deployment-plan.md",
+    DESCRIPTION: "Added verifyIndex() and repairIndex() with 4 issue types",
+    PLAN_REFERENCE: "Task 2 from docs/superpowers/plans/deployment-plan.md",
     BASE_SHA: BASE_SHA,
     HEAD_SHA: HEAD_SHA,
-    DESCRIPTION: "Added verifyIndex() and repairIndex() with 4 issue types"
   })
 )
 ```
@@ -55,11 +54,10 @@ If your harness uses a different task-dispatch API, keep the same required input
 
 **Placeholders:**
 
-- `{WHAT_WAS_IMPLEMENTED}` - What you just built
-- `{PLAN_OR_REQUIREMENTS}` - What it should do
+- `{DESCRIPTION}` - What you just built
+- `{PLAN_REFERENCE}` - What it should do
 - `{BASE_SHA}` - Starting commit
 - `{HEAD_SHA}` - Ending commit
-- `{DESCRIPTION}` - Brief summary
 
 **3. Act on feedback:**
 
@@ -70,7 +68,7 @@ If your harness uses a different task-dispatch API, keep the same required input
 
 ## Example
 
-```
+```text
 [Just completed Task 2: Add verification function]
 
 You: Let me request code review before proceeding.
@@ -80,11 +78,10 @@ test -n "$BASE_SHA" || { echo "Unable to determine BASE_SHA"; exit 1; }
 HEAD_SHA=$(git rev-parse HEAD)
 
 [Dispatch superpowers:code-reviewer subagent]
-  WHAT_WAS_IMPLEMENTED: Verification and repair functions for conversation index
-  PLAN_OR_REQUIREMENTS: Task 2 from docs/superpowers/plans/deployment-plan.md
+  DESCRIPTION: Added verifyIndex() and repairIndex() with 4 issue types
+  PLAN_REFERENCE: Task 2 from docs/superpowers/plans/deployment-plan.md
   BASE_SHA: a7981ec
   HEAD_SHA: 3df7661
-  DESCRIPTION: Added verifyIndex() and repairIndex() with 4 issue types
 
 [Subagent returns]:
   Strengths: Clean architecture, real tests

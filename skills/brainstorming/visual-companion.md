@@ -151,14 +151,14 @@ Write just the content that goes inside the page. The server wraps it in the fra
 <p class="subtitle">Consider readability and visual hierarchy</p>
 
 <div class="options">
-  <div class="option" data-choice="a" onclick="toggleSelect(this)">
+  <div class="option" data-choice="a">
     <div class="letter">A</div>
     <div class="content">
       <h3>Single Column</h3>
       <p>Clean, focused reading experience</p>
     </div>
   </div>
-  <div class="option" data-choice="b" onclick="toggleSelect(this)">
+  <div class="option" data-choice="b">
     <div class="letter">B</div>
     <div class="content">
       <h3>Two Column</h3>
@@ -178,7 +178,7 @@ The frame template provides these CSS classes for your content:
 
 ```html
 <div class="options">
-  <div class="option" data-choice="a" onclick="toggleSelect(this)">
+  <div class="option" data-choice="a">
     <div class="letter">A</div>
     <div class="content">
       <h3>Title</h3>
@@ -200,7 +200,7 @@ The frame template provides these CSS classes for your content:
 
 ```html
 <div class="cards">
-  <div class="card" data-choice="design1" onclick="toggleSelect(this)">
+  <div class="card" data-choice="design1">
     <div class="card-image"><!-- mockup content --></div>
     <div class="card-body">
       <h3>Name</h3>
@@ -301,7 +301,7 @@ If `$STATE_DIR/events` doesn't exist, the user didn't interact with the browser 
 ## Cleaning Up
 
 ```bash
-scripts/stop-server.sh $SESSION_DIR
+scripts/stop-server.sh "$(dirname "$STATE_DIR")"
 ```
 
 If the session used `--project-dir`, mockup files persist in `.superpowers/brainstorm/` for later reference. Only `/tmp` sessions get deleted on stop.

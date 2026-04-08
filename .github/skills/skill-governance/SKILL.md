@@ -37,8 +37,9 @@ Use this skill to choose the correct skill coverage for the next CMSNext action.
 3. Load `skill-governance` to classify the next action.
 4. Prefer the matching Obra Superpowers skill when the action maps to one.
 5. If a more specific skill clearly applies, load it before taking the action.
-6. If no more specific skill exists for the action, proceed explicitly under `repo-memories` as the baseline skill.
-7. When the task changes phase, repeat this decision instead of assuming the previous skill still applies.
+6. After the selected-skill decision is complete, if workspace startup hooks are enabled, run `node .github/hooks/scripts/mark-startup-complete.mjs <skill-name|none>` before any non-startup tool use.
+7. If no more specific skill exists for the action, proceed explicitly under `repo-memories` as the baseline skill.
+8. When the task changes phase, repeat this decision instead of assuming the previous skill still applies.
 
 ## Action Map
 

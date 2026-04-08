@@ -10,16 +10,16 @@ When dispatching a subagent, reference the relevant agent definition for the tar
 "Read the `storage` agent definition for context, then [task description]..."
 ```
 
-The default workspace agent is also instructed through `.github/copilot-instructions.md` to delegate automatically when a task clearly matches one of these domains. Start with `triage` when a task is ambiguous, multi-stage, or needs a visible handoff path in VS Code chat. `Explore` is a built-in read-only discovery agent, not a repository-defined agent in this folder.
+The default workspace agent is also instructed through `.github/copilot-instructions.md` to delegate automatically when a task clearly matches one of these domains. Use `triage` when responsibility mapping or an explicit handoff structure materially helps the task. `Explore` is a built-in read-only discovery agent, not a repository-defined agent in this folder.
 
 ## Superpowers Overlay
 
 When the active harness exposes installed Superpowers skills, use them as a process overlay on top of these CMSNext agents rather than as a replacement for them.
 
-- Start with `skills/using-superpowers/SKILL.md`, then immediately load `repo-memories`, then check whether a relevant Superpowers skill applies before any other action.
+- Start with `skills/using-superpowers/SKILL.md`, then immediately load `repo-memories`, then load `.github/skills/skill-governance/SKILL.md` to choose the next applicable skill before any other action.
 - If a relevant Superpowers skill is available, load and invoke it rather than treating the check as optional.
 - This is mandatory for every CMSNext task, including read-only investigation, planning, delegation, implementation, review, and closeout.
-- No thought, rationalization, clarifying question, or exploratory action should occur until `skills/using-superpowers/SKILL.md`, `repo-memories`, and the current skill-selection decision are complete.
+- No thought, rationalization, clarifying question, or exploratory action should occur until `skills/using-superpowers/SKILL.md`, `repo-memories`, and the current `skill-governance` decision are complete.
 - When workspace hooks are enabled, record startup completion with `node .github/hooks/scripts/mark-startup-complete.mjs <skill-name|none>` before any non-startup tool use.
 - `triage` should bias toward `brainstorming`, `writing-plans`, and related planning skills for ambiguous or multi-stage work.
 - Implementation specialists should bias toward `test-driven-development`, `systematic-debugging`, `requesting-code-review`, and `verification-before-completion` as the work moves from diagnosis to implementation to closeout.

@@ -168,10 +168,17 @@ function renderCombined(blocks, outputDir, skillName) {
 }
 
 function renderSeparate(blocks, outputDir) {
+  const seen = new Map();
+
   for (const block of blocks) {
     const svg = renderToSvg(block.content);
     if (svg) {
-      const safeName = sanitizeOutputFilename(block.name, '.svg');
+      const baseName = sanitizeOutputFilename(block.name, '.svg');
+      const count = seen.get(baseName) ?? 0;
+      seen.set(baseName, count + 1);
+      const safeName = count === 0
+        ? baseName
+        : baseName.replace(/\.svg$/, `-${count}.svg`);
       const outputPath = path.join(outputDir, safeName);
       fs.writeFileSync(outputPath, svg);
       console.log(`  Rendered: ${safeName}`);

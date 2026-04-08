@@ -285,9 +285,33 @@
         }
       }
 
+      function toggleLocalSelection(item) {
+        const optionContainer = item.closest('.options');
+        const cardContainer = item.closest('.cards');
+        const container = optionContainer || cardContainer;
+        if (!container) {
+          return;
+        }
+
+        const selector = optionContainer ? '.option' : '.card';
+        const items = Array.from(container.querySelectorAll(selector));
+        const isMultiselect = container.hasAttribute('data-multiselect') || container.dataset.multiselect === 'true';
+
+        if (isMultiselect) {
+          item.classList.toggle('selected');
+          return;
+        }
+
+        items.forEach((candidate) => {
+          candidate.classList.toggle('selected', candidate === item);
+        });
+      }
+
       function applySelection(item) {
         if (typeof runtime.toggleSelect === 'function') {
           runtime.toggleSelect(item);
+        } else {
+          toggleLocalSelection(item);
         }
 
         const optionContainer = item.closest('.options');
@@ -382,7 +406,10 @@
       function initOptionControls() {
         document.querySelectorAll('.options').forEach((container) => {
           container.setAttribute('role', 'listbox');
-          container.setAttribute('aria-multiselectable', String(container.dataset.multiselect === 'true'));
+          container.setAttribute(
+            'aria-multiselectable',
+            String(container.hasAttribute('data-multiselect') || container.dataset.multiselect === 'true')
+          );
 
           const items = Array.from(container.querySelectorAll('.option'));
           items.forEach((item) => {

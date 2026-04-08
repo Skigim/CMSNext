@@ -124,7 +124,7 @@ Vague name, tests mock not code
 **MANDATORY. Never skip.**
 
 ```bash
-npm test path/to/test.test.ts
+npm run test:run -- path/to/test.test.ts
 ```
 
 Confirm:
@@ -180,7 +180,8 @@ Don't add features, refactor other code, or "improve" beyond the test.
 **MANDATORY.**
 
 ```bash
-npm test path/to/test.test.ts
+npm run test:run -- path/to/test.test.ts
+npm run test:run
 ```
 
 Confirm:
@@ -324,7 +325,7 @@ test("rejects empty email", async () => {
 **Verify RED**
 
 ```bash
-$ npm test
+$ npm run test:run -- path/to/test.test.ts
 FAIL: expected 'Email required', got undefined
 ```
 
@@ -342,7 +343,9 @@ function submitForm(data: FormData) {
 **Verify GREEN**
 
 ```bash
-$ npm test
+$ npm run test:run -- path/to/test.test.ts
+PASS
+$ npm run test:run
 PASS
 ```
 

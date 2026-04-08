@@ -76,7 +76,7 @@ API docs, syntax guides, tool documentation (office docs)
 
 ## Directory Structure
 
-```
+```text
 skills/
   skill-name/
     SKILL.md              # Main reference (required)
@@ -384,7 +384,7 @@ You're good at porting - one great example is enough.
 
 ### Self-Contained Skill
 
-```
+```text
 defense-in-depth/
   SKILL.md    # Everything inline
 ```
@@ -393,7 +393,7 @@ When: All content fits, no heavy reference needed
 
 ### Skill with Reusable Tool
 
-```
+```text
 condition-based-waiting/
   SKILL.md    # Overview + patterns
   example.ts  # Working helpers to adapt
@@ -403,7 +403,7 @@ When: Tool is reusable code, not just narrative
 
 ### Skill with Heavy Reference
 
-```
+```text
 pptx/
   SKILL.md       # Overview + workflows
   pptxgenjs.md   # 600 lines API reference
@@ -521,9 +521,7 @@ Write code before test? Delete it.
 
 **✅ Good Example:** States the rule and explicitly closes common escape hatches.
 
-````markdown
-<!-- Outer fence uses four backticks so the inner triple-backtick example and </Good> stay inside the sample. -->
-
+```text
 Write code before test? Delete it. Start over.
 
 **No exceptions:**
@@ -532,9 +530,6 @@ Write code before test? Delete it. Start over.
 - Don't "adapt" it while writing tests
 - Don't look at it
 - Delete means delete
-
-```
-
 ```
 
 ### Address "Spirit vs Letter" Arguments
@@ -719,4 +714,3 @@ Same cycle: RED (baseline) → GREEN (write skill) → REFACTOR (close loopholes
 Same benefits: Better quality, fewer surprises, bulletproof results.
 
 If you follow TDD for code, follow it for skills. It's the same discipline applied to documentation.
-````

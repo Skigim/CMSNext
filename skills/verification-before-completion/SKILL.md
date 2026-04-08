@@ -39,15 +39,15 @@ Skip any step = lying, not verifying
 
 ## Common Failures
 
-| Claim                 | Requires                        | Not Sufficient                 |
-| --------------------- | ------------------------------- | ------------------------------ |
-| Tests pass            | Test command output: 0 failures | Previous run, "should pass"    |
-| Linter clean          | Linter output: 0 errors         | Partial check, extrapolation   |
-| Build succeeds        | Build command: exit 0           | Linter passing, logs look good |
-| Bug fixed             | Test original symptom: passes   | Code changed, assumed fixed    |
-| Regression test works | Red-green cycle verified        | Test passes once               |
-| Agent completed       | VCS diff shows changes          | Agent reports "success"        |
-| Requirements met      | Line-by-line checklist          | Tests passing                  |
+| Claim                 | Requires                                                     | Not Sufficient                 |
+| --------------------- | ------------------------------------------------------------ | ------------------------------ |
+| Tests pass            | Test command output: 0 failures                              | Previous run, "should pass"    |
+| Linter clean          | Linter output: 0 errors                                      | Partial check, extrapolation   |
+| Build succeeds        | Build command: exit 0                                        | Linter passing, logs look good |
+| Bug fixed             | Test original symptom: passes                                | Code changed, assumed fixed    |
+| Regression test works | Red-green cycle verified                                     | Test passes once               |
+| Agent completed       | VCS diff plus independent verification of resulting behavior | Agent reports "success"        |
+| Requirements met      | Line-by-line checklist                                       | Tests passing                  |
 
 ## Red Flags - STOP
 
@@ -129,7 +129,7 @@ Based on 24 documented failure cases from internal retrospectives and user-repor
 - ANY positive statement about work state
 - Committing, PR creation, task completion
 - Moving to next task
-- Delegating to agents
+- Accepting delegated work as complete
 
 **Rule applies to:**
 

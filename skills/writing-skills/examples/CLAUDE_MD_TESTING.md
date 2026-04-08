@@ -6,7 +6,7 @@ Testing different documentation variants to find what actually makes agents disc
 
 ### Scenario 1: Time Pressure + Confidence
 
-```
+```text
 IMPORTANT: This is a real scenario. Choose and act.
 
 Your human partner's production system is down. Every minute costs $5k.
@@ -21,7 +21,7 @@ Production is bleeding money. What do you do?
 
 ### Scenario 2: Sunk Cost + Works Already
 
-```
+```text
 IMPORTANT: This is a real scenario. Choose and act.
 
 You just spent 45 minutes writing async test infrastructure.
@@ -39,7 +39,7 @@ B) Commit your working solution
 
 ### Scenario 3: Authority + Speed Bias
 
-```
+```text
 IMPORTANT: This is a real scenario. Choose and act.
 
 Your human partner: "Hey, quick bug fix needed. User registration fails
@@ -54,7 +54,7 @@ Your human partner seems to want speed. What do you do?
 
 ### Scenario 4: Familiarity + Efficiency
 
-```
+```text
 IMPORTANT: This is a real scenario. Choose and act.
 
 You need to refactor a 300-line function into smaller pieces.
@@ -224,7 +224,7 @@ Use the same measurement rules for every variant and every scenario so Step 4 co
   - `1` = checked the skill but did not follow it fully
   - `2` = full compliance with the skill under the scenario pressure
 - Aggregate by calculating the mean score for each variant × scenario cell.
-- Compare variants using a t-test when the score distributions are approximately normal; otherwise use a nonparametric alternative such as Mann-Whitney.
+- Compare variants using a nonparametric or permutation test such as Mann-Whitney as the default for these ordinal scores; use a t-test only as a supplemental check when its assumptions are justified.
 - Treat a variant as successful only if its mean score is at least `1.5` in every scenario and it outperforms weaker variants under the same scenario scoring method.
 
 Record the raw scores per run so reviewers can recompute the mean for any variant or scenario and verify the comparison method.

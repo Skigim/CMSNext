@@ -60,7 +60,7 @@ Framework designed to resist rationalization under pressure:
 
 ## Testing Approach
 
-Created 4 validation tests following skills/meta/testing-skills-with-subagents:
+Created 4 validation tests following skills/writing-skills/testing-skills-with-subagents.md:
 
 ### Test 1: Academic Context (No Pressure)
 
@@ -94,7 +94,7 @@ Created 4 validation tests following skills/meta/testing-skills-with-subagents:
 
 ### Enhancement 1: TDD Reference
 
-- Added link to skills/testing/test-driven-development
+- Added link to skills/test-driven-development/SKILL.md
 - Note explaining TDD's "simplest code" ≠ debugging's "root cause"
 - Prevents confusion between methodologies
 

@@ -28,7 +28,7 @@ resolve_path() {
 }
 
 if [[ -z "$SESSION_DIR" ]]; then
-  echo '{"error": "Usage: stop-server.sh <session_dir>"}'
+  echo '{"error": "Usage: stop-server.sh <session_dir>"}' >&2
   exit 1
 fi
 
@@ -39,23 +39,23 @@ if [[ -f "$PID_FILE" ]]; then
   pid=$(cat "$PID_FILE")
 
   if [[ -z "$pid" || ! "$pid" =~ ^[0-9]+$ ]]; then
-    echo '{"status": "failed", "error": "invalid pid file contents"}'
+    echo '{"status": "failed", "error": "invalid pid file contents"}' >&2
     exit 1
   fi
 
   if ! kill -0 "$pid" 2>/dev/null; then
-    echo '{"status": "failed", "error": "process not running"}'
+    echo '{"status": "failed", "error": "process not running"}' >&2
     exit 1
   fi
 
   # Try to stop gracefully, fallback to force if still alive
   if ! kill "$pid" 2>/dev/null; then
-    echo '{"status": "failed", "error": "unable to signal process"}'
+    echo '{"status": "failed", "error": "unable to signal process"}' >&2
     exit 1
   fi
 
   # Wait for graceful shutdown (up to ~2s)
-  for i in {1..20}; do
+  for _ in {1..20}; do
     if ! kill -0 "$pid" 2>/dev/null; then
       break
     fi
@@ -65,7 +65,7 @@ if [[ -f "$PID_FILE" ]]; then
   # If still running, escalate to SIGKILL
   if kill -0 "$pid" 2>/dev/null; then
     if ! kill -9 "$pid" 2>/dev/null; then
-      echo '{"status": "failed", "error": "unable to force stop process"}'
+      echo '{"status": "failed", "error": "unable to force stop process"}' >&2
       exit 1
     fi
 
@@ -74,11 +74,12 @@ if [[ -f "$PID_FILE" ]]; then
   fi
 
   if kill -0 "$pid" 2>/dev/null; then
-    echo '{"status": "failed", "error": "process still running"}'
+    echo '{"status": "failed", "error": "process still running"}' >&2
     exit 1
   fi
 
-  rm -f "$PID_FILE" "${STATE_DIR}/server.log"
+  rm -f "$PID_FILE" "${STATE_DIR}/server.log" "${STATE_DIR}/server-info"
+  printf '{"reason":"stopped-by-script","timestamp":%s}\n' "$(date +%s)" > "${STATE_DIR}/server-stopped"
 
   # Only delete canonicalized ephemeral /tmp directories.
   resolved_session_dir="$(resolve_path "$SESSION_DIR")"
