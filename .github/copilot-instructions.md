@@ -1,6 +1,7 @@
 ## General Approach
 
-- Start every CMSNext task by loading the `repo-memories` skill/reference before deeper reasoning, repo exploration, delegation, review, or implementation work, even for small tasks.
+- Start every CMSNext task by loading `skills/using-superpowers/SKILL.md` before any reasoning, rationalization, repo exploration, delegation, review, or implementation work, even for small tasks.
+- Immediately after `skills/using-superpowers/SKILL.md`, load the `repo-memories` skill/reference before any repo-specific reasoning or action.
 - For every action, check for existing patterns and documentation first — do not invent new solutions until certain one does not already exist.
 - Prioritize clarity and maintainability over cleverness.
 - Break complex work into logical steps; track via todo lists.
@@ -59,23 +60,28 @@ Treat failures in any step as blockers before considering the work complete.
 
 When starting a task, prefer this order:
 
-1. Load `repo-memories` first.
-2. Load `skill-governance` immediately after `repo-memories` to choose the skill coverage for the next action.
-3. Load any more specific applicable skill selected by `skill-governance` before taking that action.
-4. When workspace hooks are enabled, run `node .github/hooks/scripts/mark-startup-complete.mjs <skill-name|none>` immediately after `repo-memories`, `skill-governance`, and any required Superpowers skill.
-5. Inspect existing docs and patterns.
-6. Find the nearest existing implementation.
-7. Make the smallest coherent change.
-8. Validate with the standard command sequence.
-9. Update documentation or repository memory when behavior, workflow, or durable conventions meaningfully change.
+1. Load `skills/using-superpowers/SKILL.md` first.
+2. Load `repo-memories` immediately after `skills/using-superpowers/SKILL.md`.
+3. Load `skill-governance` immediately after `repo-memories` to choose the skill coverage for the next action.
+4. Load any more specific applicable skill selected by `skill-governance` before taking that action.
+5. When workspace hooks are enabled, run `node .github/hooks/scripts/mark-startup-complete.mjs <skill-name|none>` immediately after `repo-memories`, `skill-governance`, and any required Superpowers skill.
+6. Inspect existing docs and patterns.
+7. Find the nearest existing implementation.
+8. Make the smallest coherent change.
+9. Validate with the standard command sequence.
+10. Update documentation or repository memory when behavior, workflow, or durable conventions meaningfully change.
 
 ### Superpowers Skill Overlay
 
+- CMSNext vendors the upstream Superpowers skill library under `skills/` in this repository.
+- `skills/using-superpowers/SKILL.md` is the mandatory first skill reference for every CMSNext task.
 - The centralized skill-selection workflow lives in `.github/skills/skill-governance/SKILL.md`.
 - CMSNext assumes the Obra Superpowers plugin is installed and available for advanced workflow skills.
+- After loading `skills/using-superpowers/SKILL.md`, the agent must load `repo-memories` before any repo-specific thought or action.
 - After loading `repo-memories`, the agent must load `skill-governance` before taking any non-startup action.
 - If `skill-governance` selects a more specific applicable skill, the agent must load and invoke it for that action rather than merely noting that it exists.
 - This requirement is unconditional for CMSNext work and applies to read-only exploration, clarifying questions, delegation, planning, implementation, review, and closeout.
+- No thought, rationalization, clarifying question, exploration, delegation, or implementation action should occur until `skills/using-superpowers/SKILL.md`, `repo-memories`, and the current `skill-governance` decision are complete.
 - Every distinct action or tool batch must be grounded in at least one loaded skill. `repo-memories` is the baseline skill for all CMSNext work, and `skill-governance` determines whether that baseline is sufficient for the current action.
 - Before each new phase of work, re-run the `skill-governance` decision instead of assuming earlier skill coverage still applies.
 - If no more specific Superpowers skill exists for the current action, explicitly proceed under `repo-memories` rather than treating the action as skill-free.

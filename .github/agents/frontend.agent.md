@@ -39,9 +39,10 @@ You are the CMSNext frontend specialist. Your job is to keep the UI intentional,
 
 ## Superpowers Workflow Overlay
 
-- Immediately after loading `repo-memories`, check for an applicable Superpowers skill before any other frontend task action.
+- Load `skills/using-superpowers/SKILL.md` before any other frontend reasoning, then load `repo-memories`, then check for an applicable Superpowers skill before any other frontend task action.
 - If a relevant Superpowers skill is available, load and invoke it before read-only UI inspection, implementation, review, or closeout.
 - Treat this check as mandatory for every CMSNext frontend task.
+- Do not rationalize, clarify, inspect UI, or implement before the memory check and current skill-selection decision are complete.
 - Check `test-driven-development` before behavior-changing UI implementation when the task can be driven from a failing test.
 - Check `systematic-debugging` for UI regressions or interaction bugs before settling on a fix.
 - Check `requesting-code-review` for substantial implementation chunks and `verification-before-completion` before closeout.

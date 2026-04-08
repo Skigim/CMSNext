@@ -6,7 +6,7 @@ argument-hint: "Describe the current action or phase, such as startup, review re
 
 # CMSNext Skill Governance
 
-Use this skill to choose the correct skill coverage for the next CMSNext action. Load it immediately after `repo-memories`, and use it again whenever the task changes phase.
+Use this skill to choose the correct skill coverage for the next CMSNext action. Load it immediately after `skills/using-superpowers/SKILL.md` and `repo-memories`, and use it again whenever the task changes phase.
 
 ## Purpose
 
@@ -17,7 +17,7 @@ Use this skill to choose the correct skill coverage for the next CMSNext action.
 
 ## When To Use
 
-- Immediately after loading `repo-memories` at task start.
+- Immediately after loading `skills/using-superpowers/SKILL.md` and `repo-memories` at task start.
 - Before any new action category: exploration, planning, implementation, debugging, review, testing, delegation, documentation, or closeout.
 - When the current skill coverage is unclear or may have become stale.
 
@@ -31,15 +31,17 @@ Use this skill to choose the correct skill coverage for the next CMSNext action.
 
 ## Selection Order
 
-1. Load `repo-memories` first for every CMSNext task.
-2. Load `skill-governance` to classify the next action.
-3. Prefer the matching Obra Superpowers skill when the action maps to one.
-4. If a more specific skill clearly applies, load it before taking the action.
-5. If no more specific skill exists for the action, proceed explicitly under `repo-memories` as the baseline skill.
-6. When the task changes phase, repeat this decision instead of assuming the previous skill still applies.
+1. Load `skills/using-superpowers/SKILL.md` first for every CMSNext task.
+2. Load `repo-memories` immediately after `skills/using-superpowers/SKILL.md`.
+3. Load `skill-governance` to classify the next action.
+4. Prefer the matching Obra Superpowers skill when the action maps to one.
+5. If a more specific skill clearly applies, load it before taking the action.
+6. If no more specific skill exists for the action, proceed explicitly under `repo-memories` as the baseline skill.
+7. When the task changes phase, repeat this decision instead of assuming the previous skill still applies.
 
 ## Action Map
 
+- Mandatory startup discipline and skill-first workflow: `skills/using-superpowers/SKILL.md`
 - Repo startup and baseline repo workflow: `repo-memories`
 - Choosing between agents, skills, instructions, or delegation prompts: `agent-delegation`
 - Editing agent customization files, instructions, prompts, skills, or agents: `agent-customization`
@@ -56,6 +58,7 @@ Use this skill to choose the correct skill coverage for the next CMSNext action.
 ## Operating Rules
 
 - Do not treat skill loading as a one-time startup ritual; it must match the current action.
+- Do not allow reasoning, rationalization, clarifying questions, exploration, or delegation to begin before `skills/using-superpowers/SKILL.md`, `repo-memories`, and the current skill-selection decision are complete.
 - Do not keep using a broad baseline skill when a more specific skill clearly applies.
 - Do not invent a parallel workflow when the expected Obra Superpowers skill exists for the action.
 - If no specific skill exists for the action, state that the action is proceeding under `repo-memories`.

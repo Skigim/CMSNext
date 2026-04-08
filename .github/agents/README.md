@@ -1,6 +1,6 @@
 # Custom Agents
 
-This directory contains focused custom agent definitions for delegating bounded work to Copilot subagents. The `triage` agent acts as the CMSNext manager and routes work to the right specialist through explicit handoffs in VS Code chat. Reference material and reusable workflows still live under `.github/skills/`, while repo guidance and customization-registry ownership can route through the dedicated `documentation` agent.
+This directory contains focused custom agent definitions for delegating bounded work to Copilot subagents. The `triage` agent acts as the CMSNext manager and routes work to the right specialist through explicit handoffs in VS Code chat. Reference material and reusable workflows still live under `.github/skills/`, repo-local Superpowers skills are vendored under `skills/`, and repo guidance or customization-registry ownership can route through the dedicated `documentation` agent.
 
 ## Usage
 
@@ -16,9 +16,10 @@ The default workspace agent is also instructed through `.github/copilot-instruct
 
 When the active harness exposes installed Superpowers skills, use them as a process overlay on top of these CMSNext agents rather than as a replacement for them.
 
-- Start with `repo-memories`, then immediately check whether a relevant Superpowers skill applies before any other action.
+- Start with `skills/using-superpowers/SKILL.md`, then immediately load `repo-memories`, then check whether a relevant Superpowers skill applies before any other action.
 - If a relevant Superpowers skill is available, load and invoke it rather than treating the check as optional.
 - This is mandatory for every CMSNext task, including read-only investigation, planning, delegation, implementation, review, and closeout.
+- No thought, rationalization, clarifying question, or exploratory action should occur until `skills/using-superpowers/SKILL.md`, `repo-memories`, and the current skill-selection decision are complete.
 - When workspace hooks are enabled, record startup completion with `node .github/hooks/scripts/mark-startup-complete.mjs <skill-name|none>` before any non-startup tool use.
 - `triage` should bias toward `brainstorming`, `writing-plans`, and related planning skills for ambiguous or multi-stage work.
 - Implementation specialists should bias toward `test-driven-development`, `systematic-debugging`, `requesting-code-review`, and `verification-before-completion` as the work moves from diagnosis to implementation to closeout.
